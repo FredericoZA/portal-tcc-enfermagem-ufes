@@ -69,6 +69,14 @@ function yearPt(year: number): string {
   return String(year);
 }
 
+function hourNumberPt(hour: number): string {
+  if (hour === 1) return 'uma';
+  if (hour === 2) return 'duas';
+  if (hour === 21) return 'vinte e uma';
+  if (hour === 22) return 'vinte e duas';
+  return numberPt0To99(hour);
+}
+
 /**
  * Normalizes email by trim and lowercase as required by specs (Seção 7)
  */
@@ -227,7 +235,7 @@ export function formatTimeExtenso(timeStrOrIso: string): string {
   }
 
   if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return timeStrOrIso;
-  const hourText = hours === 1 ? 'uma hora' : `${numberPt0To99(hours)} horas`;
+  const hourText = `${hourNumberPt(hours)} ${hours === 1 ? 'hora' : 'horas'}`;
   if (minutes === 0) return hourText;
   const minuteText = minutes === 1 ? 'um minuto' : `${numberPt0To99(minutes)} minutos`;
   return `${hourText} e ${minuteText}`;
