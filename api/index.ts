@@ -80,6 +80,7 @@ function unavailable(res: Response, diagnostic: StartupFailure) {
     status: 'unavailable',
     code: diagnostic.code,
     message: diagnostic.message,
+    commit: String(process.env.VERCEL_GIT_COMMIT_SHA || ''),
     ...(diagnostic.missingGroups?.length ? { missingGroups: diagnostic.missingGroups } : {})
   });
 }
