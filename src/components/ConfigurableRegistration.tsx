@@ -5,16 +5,21 @@ import { portalNotice } from '../services/portalDialogs';
 import { evaluateStudioCondition, validateStudioAnswer } from '../utils/courseStudioValidator';
 import { registrationQuestions, registrationPayload } from '../utils/operationalConfig';
 import { registrationFindings, workflowPolicy } from '../utils/workflowOperations';
+import { normalizeRegistrationAnswers, validateRegistrationDataQuality } from '../utils/registrationDataQuality';
 import type { RegistrationAnswers, RegistrationQuestion } from '../types/operationalConfig';
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
 
-function Question({ field, value, readOnly, onChange }: { field: RegistrationQuestion; value: unknown; readOnly: boolean; onChange: (value: string|boolean)=>void }) {
+function Question({ field, value, readOnly, onChange, onBlur }: { field: RegistrationQuestion; value: unknown; readOnly: boolean; onChange: (value: string|boolean)=>void; onBlur?:()=>void }) {
+  const isIdentifier=/^(ALUNO_\d_MATRICULA|ORIENTADOR_SIAPE)$/.test(field.fieldKey);
+  const inputMode:React.HTMLAttributes<HTMLInputElement>['inputMode']=field.fieldType==='email'?'email':isIdentifier||field.fieldType==='number'?'numeric':undefined;
+  const autoComplete=field.fieldKey==='ALUNO_1_NOME'?'name':field.fieldKey==='ALUNO_1_EMAIL'?'email':'off';
+  const requiredLabel=field.required?'Obrigatório':'Opcional';
   return <label className={`block ${field.fieldType==='textarea'?'sm:col-span-2':''}`}>
-    <span className="mb-2 block text-sm font-semibold">{field.label}{field.required?' *':''}</span>
-    {field.fieldType==='checkbox'?<input type="checkbox" className="h-6 w-6" checked={value===true} onChange={e=>onChange(e.target.checked)}/>:
-      field.fieldType==='textarea'?<textarea className="portal-input" rows={5} value={String(value??'')} maxLength={field.validation?.maxLength||10000} onChange={e=>onChange(e.target.value)}/>:
-      ['select','radio'].includes(field.fieldType)?<select className="portal-input" value={String(value??'')} onChange={e=>onChange(e.target.value)}><option value="">Selecione…</option>{field.options?.map(option=><option key={option}>{option}</option>)}</select>:
-      <input className="portal-input" type={['email','number','date','datetime-local'].includes(field.fieldType)?field.fieldType:'text'} readOnly={readOnly} value={String(value??'')} placeholder={field.placeholder} maxLength={field.validation?.maxLength||500} onChange={e=>onChange(e.target.value)}/>}
+    <span className="mb-2 flex items-center gap-2 text-sm font-semibold"><span>{field.label}</span><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${field.required?'bg-rose-50 text-rose-700':'bg-slate-100 text-slate-500'}`}>{requiredLabel}</span></span>
+    {field.fieldType==='checkbox'?<input type="checkbox" className="h-6 w-6" checked={value===true} required={field.required} aria-required={field.required} onChange={e=>onChange(e.target.checked)} onBlur={onBlur}/>:
+      field.fieldType==='textarea'?<textarea className="portal-input" rows={5} value={String(value??'')} required={field.required} aria-required={field.required} minLength={field.validation?.minLength} maxLength={field.validation?.maxLength||10000} onChange={e=>onChange(e.target.value)} onBlur={onBlur}/>:
+      ['select','radio'].includes(field.fieldType)?<select className="portal-input" value={String(value??'')} required={field.required} aria-required={field.required} onChange={e=>onChange(e.target.value)} onBlur={onBlur}><option value="">Selecione…</option>{field.options?.map(option=><option key={option}>{option}</option>)}</select>:
+      <input className="portal-input" type={['email','number','date','datetime-local'].includes(field.fieldType)?field.fieldType:'text'} readOnly={readOnly} value={String(value??'')} required={field.required} aria-required={field.required} placeholder={field.placeholder} autoComplete={autoComplete} inputMode={inputMode} spellCheck={field.fieldType==='email'?false:undefined} minLength={field.validation?.minLength} maxLength={field.validation?.maxLength||500} min={field.validation?.min} max={field.validation?.max} pattern={field.validation?.pattern} onChange={e=>onChange(e.target.value)} onBlur={onBlur}/>}
     {field.helpText&&<span className="mt-1 block text-sm opacity-80">{field.helpText}</span>}
   </label>;
 }
@@ -58,13 +63,22 @@ export function ConfigurableRegistration({ onSuccess, onCancel }: { onSuccess:(i
     if(eligibility!=='ready'||busy||paused.current||isMasterAdmin)return;
     const timer=setTimeout(queueSave,900);return()=>clearTimeout(timer);
   },[answers,currentSection,eligibility,busy,studio?.revision,isMasterAdmin,draftReview]);
+  const normalizeField=(fieldKey:string)=>setAnswers(current=>{
+    const normalized=normalizeRegistrationAnswers({[fieldKey]:current[fieldKey]??''});
+    return normalized[fieldKey]===current[fieldKey]?current:{...current,[fieldKey]:normalized[fieldKey]};
+  });
   const check=(all:boolean)=>{
-    for(const field of all?visible:selected){const value=answers[field.fieldKey];
+    const scope=all?visible:selected;
+    const normalized=normalizeRegistrationAnswers(Object.fromEntries(visible.map(f=>[f.fieldKey,answers[f.fieldKey]??''])));
+    for(const field of scope){const value=normalized[field.fieldKey];
       if(field.required&&(!String(value??'').trim()||field.fieldType==='checkbox'&&value!==true))return `Preencha: ${field.label}.`;
       if(value&&field.fieldType==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value)))return `Revise o e-mail: ${field.label}.`;
       if(value&&field.options?.length&&!field.options.includes(String(value)))return `Selecione uma opção válida: ${field.label}.`;
       const issue=value!==undefined&&value!==''?validateStudioAnswer(value,field.validation):null;if(issue)return `${field.label}: ${issue}`;
-    }return '';
+    }
+    try{validateRegistrationDataQuality(Object.fromEntries(scope.map(f=>[f.fieldKey,normalized[f.fieldKey]??''])),workflowPolicy(studio));}catch(problem){return problem instanceof Error?problem.message:'Revise os dados informados.';}
+    setAnswers(current=>({...current,...normalized}));
+    return '';
   };
   const submit=async(event:React.FormEvent)=>{
     event.preventDefault();const problem=check(currentSection===sections.length-1);if(problem){setError(problem);return;}setError('');
@@ -77,10 +91,10 @@ export function ConfigurableRegistration({ onSuccess, onCancel }: { onSuccess:(i
   };
   if(eligibility!=='ready')return <section className="portal-card p-6" aria-live="polite"><p>{eligibility==='loading'?'Verificando acesso e rascunho…':eligibility==='existing'?'Você já possui um TCC. Continue em Meus TCCs.':'Não foi possível carregar o cadastro. Atualize a página para tentar novamente.'}</p><button type="button" onClick={onCancel} className="portal-action mt-4">Voltar</button></section>;
   return <form onSubmit={submit} className="portal-workspace mx-auto max-w-4xl space-y-5" aria-labelledby="registration-title">
-    <header className="portal-card p-5"><p>Etapa {currentSection+1} de {sections.length}</p><h1 id="registration-title" className="mt-1 text-2xl font-bold">{String(studio?.formTemplates?.find(f=>f.id==='form-reserva-aluno')?.title||'Cadastrar meu TCC')}</h1><p className="mt-2">O departamento receberá o pedido de reserva. Após a confirmação, registre o local autorizado para enviar o convite à banca.</p><progress aria-label="Progresso do cadastro" className="mt-3 h-2 w-full" value={currentSection+1} max={sections.length}/>{!isMasterAdmin&&<p role="status" className="mt-2 text-sm">{draftStatus} Expiração após {workflowPolicy(studio).draftExpiryDays} dias sem salvar.</p>}</header>
+    <header className="portal-card p-5"><p>Etapa {currentSection+1} de {sections.length}</p><h1 id="registration-title" className="mt-1 text-2xl font-bold">{String(studio?.formTemplates?.find(f=>f.id==='form-reserva-aluno')?.title||'Cadastrar meu TCC')}</h1><p className="mt-2">O departamento receberá o pedido de reserva. Após a confirmação, registre o local autorizado para enviar o convite à banca.</p><p className="mt-2 text-sm text-slate-600">Campos obrigatórios são identificados em cada pergunta. Nomes, e-mails e identificadores são padronizados sem alterar a informação acadêmica.</p><progress aria-label="Progresso do cadastro" className="mt-3 h-2 w-full" value={currentSection+1} max={sections.length}/>{!isMasterAdmin&&<p role="status" className="mt-2 text-sm">{draftStatus} Expiração após {workflowPolicy(studio).draftExpiryDays} dias sem salvar.</p>}</header>
     {draftReview&&<aside role="alert" className="portal-card p-4"><p>O Master publicou uma nova versão do formulário. Confira os campos recuperados; perguntas removidas não entrarão no cadastro.</p><button type="button" className="portal-action mt-3" onClick={()=>{paused.current=false;setDraftReview(false);}}>Conferi e vou usar a versão atual</button></aside>}
     {error&&<p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-red-900">{error}</p>}
-    <fieldset disabled={busy} className="portal-card grid gap-5 p-5 sm:grid-cols-2"><legend className="px-2 text-lg font-bold">{sections[currentSection]}</legend>{selected.map(field=><React.Fragment key={field.fieldKey}><Question field={field} value={answers[field.fieldKey]} readOnly={field.fieldKey==='ALUNO_1_EMAIL'&&!isMasterAdmin} onChange={value=>setAnswers(a=>({...a,[field.fieldKey]:value}))}/></React.Fragment>)}</fieldset>
+    <fieldset disabled={busy} className="portal-card grid gap-5 p-5 sm:grid-cols-2"><legend className="px-2 text-lg font-bold">{sections[currentSection]}</legend>{selected.map(field=><React.Fragment key={field.fieldKey}><Question field={field} value={answers[field.fieldKey]} readOnly={field.fieldKey==='ALUNO_1_EMAIL'&&!isMasterAdmin} onChange={value=>setAnswers(a=>({...a,[field.fieldKey]:value}))} onBlur={()=>normalizeField(field.fieldKey)}/></React.Fragment>)}</fieldset>
     {currentSection===sections.length-1&&<><p className="portal-card p-4">Horário no fuso {studio?.operationsPolicy?.timezone||'America/Sao_Paulo'}. A reserva deve ser confirmada antes do convite.</p>{findings.length>0&&<aside className="portal-card p-4"><h2 className="font-bold">Confira antes de gerar os documentos</h2><ul className="mt-2 list-disc space-y-2 pl-5">{findings.map((item,i)=><li key={i}>{fields.find(f=>f.fieldKey===item.fieldKey)?.label||item.fieldKey}: {item.message}</li>)}</ul><p className="mt-2 text-sm">São alertas de conferência. Nenhuma identidade será alterada automaticamente.</p></aside>}</>}
     <footer className="flex flex-wrap justify-between gap-3"><button type="button" className="portal-action" disabled={busy} onClick={async()=>{queueSave();await draftQueue.current;if(currentSection)setSection(currentSection-1);else if(paused.current&&!isMasterAdmin)setError('O rascunho não foi salvo. Mantenha esta tela aberta e confira a mensagem de salvamento antes de sair.');else onCancel();}}>{currentSection?'Voltar':isMasterAdmin?'Voltar':'Salvar e sair'}</button><button type="submit" className="portal-action portal-action-primary" disabled={busy}>{busy?'Cadastrando…':currentSection<sections.length-1?'Continuar':'Cadastrar e solicitar reserva'}</button></footer>
   </form>;
