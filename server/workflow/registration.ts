@@ -1,7 +1,9 @@
 import type { IntegrationStudioSettings } from '../../src/types/integrationStudio';
 import type { RegistrationAnswers } from '../../src/types/operationalConfig';
-import { operationalConfig, registrationPayload, registrationQuestions } from '../../src/utils/operationalConfig';
+import { registrationPayload, registrationQuestions } from '../../src/utils/operationalConfig';
 import { evaluateStudioCondition, validateStudioAnswer } from '../../src/utils/courseStudioValidator';
+import { workflowPolicy } from '../../src/utils/workflowOperations';
+import { normalizeRegistrationAnswers, validateRegistrationDataQuality } from '../../src/utils/registrationDataQuality';
 
 export function acceptRegistration(input: any, studio?: Partial<IntegrationStudioSettings>) {
   const timezone = studio?.operationsPolicy?.timezone || 'America/Sao_Paulo';
@@ -16,6 +18,8 @@ export function acceptRegistration(input: any, studio?: Partial<IntegrationStudi
     if (Number.isFinite(date.getTime())) answers.DEFESA_DATA_HORA = new Intl.DateTimeFormat('sv-SE', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date).replace(' ', 'T');
     answers.DEFESA_LOCAL = input?.defesa?.local || ''; answers.LOCAL_ALTERNATIVO = input?.defesa?.alternateLocation || '';
   }
+
+  answers = normalizeRegistrationAnswers(answers);
   const accepted: RegistrationAnswers = {};
   for (const question of registrationQuestions(studio)) {
     if (!evaluateStudioCondition(question.visibleWhen, answers)) continue;
@@ -30,6 +34,8 @@ export function acceptRegistration(input: any, studio?: Partial<IntegrationStudi
     if (String(value ?? '').length > 10000) throw new Error(`${question.label}: texto muito longo.`);
     if (value !== undefined) accepted[question.fieldKey] = value;
   }
+
+  validateRegistrationDataQuality(accepted, workflowPolicy(studio));
   if (accepted.LOCAL_ALTERNATIVO && accepted.LOCAL_ALTERNATIVO === accepted.DEFESA_LOCAL) throw new Error('O local alternativo deve ser diferente do preferido.');
   return registrationPayload(accepted, timezone);
 }
