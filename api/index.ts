@@ -1,7 +1,42 @@
 import type { Request, Response } from 'express';
 
-type StartupFailure = { code: string; message: string };
+type StartupFailure = { code: string; message: string; missingGroups?: string[] };
 type StartupState = { app: ((req: Request, res: Response) => unknown) | null; error: unknown };
+
+function configured(name: string, minLength = 1): boolean {
+  return String(process.env[name] || '').trim().length >= minLength;
+}
+
+function productionPreflight(): StartupFailure | null {
+  if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') return null;
+
+  const missing: string[] = [];
+  if (!configured('PORTAL_BOOTSTRAP_MASTER_EMAIL')) missing.push('MASTER');
+  if (!configured('SUPABASE_URL') || (!configured('SUPABASE_SECRET_KEY') && !configured('SUPABASE_SERVICE_ROLE_KEY')) || process.env.PORTAL_PERSISTENCE_PROVIDER !== 'supabase') missing.push('SUPABASE');
+  if (!configured('PORTAL_SESSION_SECRET', 32)) missing.push('SESSION');
+  if (!configured('PORTAL_OTP_PEPPER', 32)) missing.push('OTP');
+  if (!configured('PORTAL_SECRET_ENCRYPTION_KEY', 32)) missing.push('SECRET_STORE');
+  if (!configured('PORTAL_UPLOAD_BINDING_SECRET', 32) || !configured('SUPABASE_SECURE_FILES_BUCKET')) missing.push('FILE_TRANSPORT');
+  if (!configured('CRON_SECRET', 32)) missing.push('CRON');
+  if (!configured('PORTAL_VERIFICATION_SECRET', 32)) missing.push('DOCUMENT_VERIFICATION');
+  if (!configured('GOOGLE_OAUTH_CLIENT_ID') || !configured('GOOGLE_OAUTH_CLIENT_SECRET') || !configured('GOOGLE_OAUTH_STATE_SECRET', 32)) missing.push('GOOGLE_OAUTH');
+  if (process.env.ASTEN_INTEGRATION_ENABLED === 'true' && (!configured('ASTEN_CALLBACK_URL') || !configured('ASTEN_WEBHOOK_SECRET', 32) || process.env.ASTEN_REQUIRE_CODE === 'false')) missing.push('ASTEN');
+
+  const exclusives = [
+    'PORTAL_SESSION_SECRET', 'PORTAL_OTP_PEPPER', 'GOOGLE_OAUTH_STATE_SECRET',
+    'PORTAL_SECRET_ENCRYPTION_KEY', 'PORTAL_VERIFICATION_SECRET', 'PORTAL_UPLOAD_BINDING_SECRET',
+    'ASTEN_SESSION_ENCRYPTION_KEY', 'ASTEN_WEBHOOK_SECRET', 'CRON_SECRET'
+  ].map((name) => [name, String(process.env[name] || '').trim()] as const).filter(([, value]) => value);
+  const seen = new Set<string>();
+  if (exclusives.some(([, value]) => seen.has(value) || !seen.add(value))) missing.push('SECRET_SEPARATION');
+
+  const unique = [...new Set(missing)];
+  return unique.length ? {
+    code: 'PRODUCTION_CONFIGURATION_REQUIRED',
+    message: 'A produção ainda precisa de configuração segura antes de iniciar.',
+    missingGroups: unique
+  } : null;
+}
 
 function classifyStartupFailure(error: unknown): StartupFailure {
   const detail = error instanceof Error ? error.message : String(error || '');
@@ -36,16 +71,22 @@ function startup(): Promise<StartupState> {
   return startupPromise;
 }
 
-export default async function handler(req: Request, res: Response) {
-  const state = await startup();
-  if (state.app) return state.app(req, res);
-
-  const diagnostic = classifyStartupFailure(state.error);
+function unavailable(res: Response, diagnostic: StartupFailure) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   return res.status(503).json({
     status: 'unavailable',
     code: diagnostic.code,
-    message: diagnostic.message
+    message: diagnostic.message,
+    ...(diagnostic.missingGroups?.length ? { missingGroups: diagnostic.missingGroups } : {})
   });
+}
+
+export default async function handler(req: Request, res: Response) {
+  const preflight = productionPreflight();
+  if (preflight) return unavailable(res, preflight);
+
+  const state = await startup();
+  if (state.app) return state.app(req, res);
+  return unavailable(res, classifyStartupFailure(state.error));
 }
