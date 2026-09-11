@@ -12,14 +12,16 @@ function productionPreflight(): StartupFailure | null {
 
   const missing: string[] = [];
   if (!configured('PORTAL_BOOTSTRAP_MASTER_EMAIL')) missing.push('MASTER');
-  if (!configured('SUPABASE_URL') || (!configured('SUPABASE_SECRET_KEY') && !configured('SUPABASE_SERVICE_ROLE_KEY')) || process.env.PORTAL_PERSISTENCE_PROVIDER !== 'supabase') missing.push('SUPABASE');
+  if (!configured('SUPABASE_URL') || process.env.PORTAL_PERSISTENCE_PROVIDER !== 'supabase') missing.push('SUPABASE_BASE');
+  if (!configured('SUPABASE_SECRET_KEY') && !configured('SUPABASE_SERVICE_ROLE_KEY')) missing.push('SUPABASE_SERVER_KEY');
   if (!configured('PORTAL_SESSION_SECRET', 32)) missing.push('SESSION');
   if (!configured('PORTAL_OTP_PEPPER', 32)) missing.push('OTP');
   if (!configured('PORTAL_SECRET_ENCRYPTION_KEY', 32)) missing.push('SECRET_STORE');
   if (!configured('PORTAL_UPLOAD_BINDING_SECRET', 32) || !configured('SUPABASE_SECURE_FILES_BUCKET')) missing.push('FILE_TRANSPORT');
   if (!configured('CRON_SECRET', 32)) missing.push('CRON');
   if (!configured('PORTAL_VERIFICATION_SECRET', 32)) missing.push('DOCUMENT_VERIFICATION');
-  if (!configured('GOOGLE_OAUTH_CLIENT_ID') || !configured('GOOGLE_OAUTH_CLIENT_SECRET') || !configured('GOOGLE_OAUTH_STATE_SECRET', 32)) missing.push('GOOGLE_OAUTH');
+  if (!configured('GOOGLE_OAUTH_CLIENT_ID') || !configured('GOOGLE_OAUTH_CLIENT_SECRET')) missing.push('GOOGLE_OAUTH_CLIENT');
+  if (!configured('GOOGLE_OAUTH_STATE_SECRET', 32)) missing.push('GOOGLE_OAUTH_STATE');
   if (process.env.ASTEN_INTEGRATION_ENABLED === 'true' && (!configured('ASTEN_CALLBACK_URL') || !configured('ASTEN_WEBHOOK_SECRET', 32) || process.env.ASTEN_REQUIRE_CODE === 'false')) missing.push('ASTEN');
 
   const exclusives = [
