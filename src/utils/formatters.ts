@@ -1,5 +1,74 @@
 // Formatadores de data, hora e texto para o fluxo acadêmico configurável.
 
+const PORTAL_TIME_ZONE = 'America/Sao_Paulo';
+const MONTHS_PT = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+];
+
+interface PortalDateTimeParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+}
+
+function parsePortalDateTime(value: string): PortalDateTimeParts | null {
+  const input = String(value || '').trim();
+  if (!input) return null;
+
+  // Datas sem horário e timestamps sem offset representam valores civis do portal.
+  // Preservamos esses campos literalmente para não depender do fuso do processo Node/Vercel.
+  const civil = input.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::\d{2}(?:\.\d{1,3})?)?)?$/);
+  if (civil) {
+    const year = Number(civil[1]);
+    const month = Number(civil[2]);
+    const day = Number(civil[3]);
+    const hour = Number(civil[4] || 0);
+    const minute = Number(civil[5] || 0);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+      return { year, month, day, hour, minute };
+    }
+  }
+
+  const date = new Date(input);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: PORTAL_TIME_ZONE,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(date);
+  const valueOf = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value || 0);
+  return {
+    year: valueOf('year'), month: valueOf('month'), day: valueOf('day'),
+    hour: valueOf('hour'), minute: valueOf('minute')
+  };
+}
+
+function numberPt0To99(value: number): string {
+  const units = ['zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+  const teens: Record<number, string> = {
+    10: 'dez', 11: 'onze', 12: 'doze', 13: 'treze', 14: 'quatorze', 15: 'quinze',
+    16: 'dezesseis', 17: 'dezessete', 18: 'dezoito', 19: 'dezenove'
+  };
+  const tens: Record<number, string> = { 20: 'vinte', 30: 'trinta', 40: 'quarenta', 50: 'cinquenta', 60: 'sessenta', 70: 'setenta', 80: 'oitenta', 90: 'noventa' };
+  if (value >= 0 && value <= 9) return units[value];
+  if (value >= 10 && value <= 19) return teens[value];
+  if (value >= 20 && value <= 99) {
+    const base = Math.floor(value / 10) * 10;
+    const remainder = value % 10;
+    return remainder ? `${tens[base]} e ${units[remainder]}` : tens[base];
+  }
+  return String(value);
+}
+
+function yearPt(year: number): string {
+  if (year === 2000) return 'dois mil';
+  if (year > 2000 && year < 2100) return `dois mil e ${numberPt0To99(year - 2000)}`;
+  return String(year);
+}
+
 /**
  * Normalizes email by trim and lowercase as required by specs (Seção 7)
  */
@@ -107,99 +176,61 @@ export function formatTccTitle(title: string): string {
 }
 
 /**
- * Format date in standard Portuguese: "21 de julho de 2026"
+ * Format date in standard Portuguese: "21 de julho de 2026".
+ * Timestamps absolutos são sempre apresentados no fuso institucional de São Paulo.
  */
 export function formatDatePt(dateStr: string): string {
   if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
-
-  const months = [
-    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-  ];
-
-  const day = date.getDate();
-  const month = months[date.getMonth()];
-  const year = date.getFullYear();
-
-  return `${day} de ${month} de ${year}`;
+  const parts = parsePortalDateTime(dateStr);
+  if (!parts) return dateStr;
+  return `${parts.day} de ${MONTHS_PT[parts.month - 1]} de ${parts.year}`;
 }
 
 /**
- * Format date in numeric format: "21/07/2026"
+ * Format date in numeric format: "21/07/2026".
  */
 export function formatDateNumeric(dateStr: string): string {
   if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
-
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-
-  return `${day}/${month}/${year}`;
+  const parts = parsePortalDateTime(dateStr);
+  if (!parts) return dateStr;
+  return `${String(parts.day).padStart(2, '0')}/${String(parts.month).padStart(2, '0')}/${parts.year}`;
 }
 
 /**
- * Number to word conversion for Portuguese days and years (e.g. "vinte e quatro de agosto de dois mil e vinte e seis")
+ * Date fully written in Portuguese, e.g. "vinte e quatro de agosto de dois mil e vinte e seis".
  */
 export function formatDateExtensoTotal(dateStr: string): string {
   if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
-
-  const numbersPt: Record<number, string> = {
-    1: 'primeiro', 2: 'dois', 3: 'três', 4: 'quatro', 5: 'cinco',
-    6: 'seis', 7: 'sete', 8: 'oito', 9: 'nove', 10: 'dez',
-    11: 'onze', 12: 'doze', 13: 'treze', 14: 'quatorze', 15: 'quinze',
-    16: 'dezesseis', 17: 'dezessete', 18: 'dezoito', 19: 'dezenove',
-    20: 'vinte', 21: 'vinte e um', 22: 'vinte e dois', 23: 'vinte e três',
-    24: 'vinte e quatro', 25: 'vinte e cinco', 26: 'vinte e seis',
-    27: 'vinte e sete', 28: 'vinte e oito', 29: 'vinte e nove',
-    30: 'trinta', 31: 'trinta e um'
-  };
-
-  const months = [
-    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-  ];
-
-  const day = numbersPt[date.getDate()] || date.getDate().toString();
-  const month = months[date.getMonth()];
-  const year = date.getFullYear();
-
-  // Simple converter for 2020-2030s
-  let yearExtenso = year.toString();
-  if (year === 2026) yearExtenso = 'dois mil e vinte e seis';
-  else if (year === 2025) yearExtenso = 'dois mil e vinte e cinco';
-  else if (year === 2027) yearExtenso = 'dois mil e vinte e sete';
-  else if (year === 2024) yearExtenso = 'dois mil e vinte e quatro';
-
-  return `${day} de ${month} de ${yearExtenso}`;
+  const parts = parsePortalDateTime(dateStr);
+  if (!parts) return dateStr;
+  const day = parts.day === 1 ? 'primeiro' : numberPt0To99(parts.day);
+  return `${day} de ${MONTHS_PT[parts.month - 1]} de ${yearPt(parts.year)}`;
 }
 
 /**
- * Format time to spelled out Portuguese: "quatorze horas e trinta minutos"
+ * Format time fully written in Portuguese, e.g. "quatorze horas e trinta minutos".
  */
 export function formatTimeExtenso(timeStrOrIso: string): string {
   if (!timeStrOrIso) return '';
-  let hours = 14;
-  let minutes = 0;
+  let hours: number;
+  let minutes: number;
 
-  if (timeStrOrIso.includes('T')) {
-    const d = new Date(timeStrOrIso);
-    hours = d.getHours();
-    minutes = d.getMinutes();
-  } else if (timeStrOrIso.includes(':')) {
-    const parts = timeStrOrIso.split(':');
-    hours = parseInt(parts[0], 10);
-    minutes = parseInt(parts[1], 10);
+  const plain = timeStrOrIso.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (plain) {
+    hours = Number(plain[1]);
+    minutes = Number(plain[2]);
+  } else {
+    const parts = parsePortalDateTime(timeStrOrIso);
+    if (!parts) return timeStrOrIso;
+    hours = parts.hour;
+    minutes = parts.minute;
   }
 
-  const hPad = String(hours).padStart(2, '0');
-  const mPad = String(minutes).padStart(2, '0');
-  return `${hPad}:${mPad}`;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return timeStrOrIso;
+  const hourText = hours === 1 ? 'uma hora' : `${numberPt0To99(hours)} horas`;
+  if (minutes === 0) return hourText;
+  const minuteText = minutes === 1 ? 'um minuto' : `${numberPt0To99(minutes)} minutos`;
+  return `${hourText} e ${minuteText}`;
 }
 
 /**
