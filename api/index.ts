@@ -7,6 +7,10 @@ function configured(name: string, minLength = 1): boolean {
   return String(process.env[name] || '').trim().length >= minLength;
 }
 
+function deployedCommit(): string {
+  return String(process.env.VERCEL_GIT_COMMIT_SHA || '');
+}
+
 function productionPreflight(): StartupFailure | null {
   if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') return null;
 
@@ -80,7 +84,7 @@ function unavailable(res: Response, diagnostic: StartupFailure) {
     status: 'unavailable',
     code: diagnostic.code,
     message: diagnostic.message,
-    commit: String(process.env.VERCEL_GIT_COMMIT_SHA || ''),
+    commit: deployedCommit(),
     ...(diagnostic.missingGroups?.length ? { missingGroups: diagnostic.missingGroups } : {})
   });
 }
@@ -90,6 +94,12 @@ export default async function handler(req: Request, res: Response) {
   if (preflight) return unavailable(res, preflight);
 
   const state = await startup();
-  if (state.app) return state.app(req, res);
-  return unavailable(res, classifyStartupFailure(state.error));
+  if (!state.app) return unavailable(res, classifyStartupFailure(state.error));
+
+  const requestPath = String(req.url || '').split('?')[0];
+  if (requestPath === '/api/health' || requestPath === '/health') {
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ status: 'ok', timestamp: new Date().toISOString(), commit: deployedCommit() });
+  }
+  return state.app(req, res);
 }
