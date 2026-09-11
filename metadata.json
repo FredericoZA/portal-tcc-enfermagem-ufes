@@ -1,0 +1,10 @@
+{
+  "name": "Portal Institucional de TCC",
+  "description": "Portal configurável e aberto para gestão do ciclo de TCC de uma unidade acadêmica.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "Fluxo configurável de formulários, documentos, e-mails, assinatura Asten e Drive",
+    "Memória contínua de melhorias governada pelo Master",
+    "Panorama estatístico anonimizado dos TCCs"
+  ]
+}

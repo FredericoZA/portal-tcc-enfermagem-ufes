@@ -1,0 +1,19 @@
+node_modules/
+build/
+dist/
+coverage/
+.portal-data/
+.DS_Store
+*.log
+.env*
+!.env*.example
+
+# Configuração local de provedores e relatórios de execução
+.vercel/
+.supabase/
+.supabase-temp/
+supabase/.temp/
+review_inputs/
+test-results/
+playwright-report/
+*.zip

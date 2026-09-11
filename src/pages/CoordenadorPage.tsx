@@ -1,0 +1,970 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { apiClient } from '../services/apiClient';
+import { ProcessData } from '../types';
+import { TableScrollWrapper } from '../components/TableScrollWrapper';
+import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumeric, formatTimeExtenso } from '../utils/formatters';
+import { loadTableConfig, ColumnDef } from '../components/TableColumnSelectorPanel';
+import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
+import { SearchPopover } from '../components/SearchPopover';
+import { YinYangIcon } from '../components/YinYangIcon';
+import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
+import { 
+  TableTextFormat, 
+  DEFAULT_TABLE_TEXT_FORMAT, 
+  GLOBAL_TABLE_EVENT, 
+  loadGlobalTableConfig,
+  getTableStyles, 
+  getActionPillStyles,
+  formatColumnLabel, 
+  formatCellText, 
+  getColWidthClass,
+  getEditableTableText,
+  getColumnWeightClass
+  ,inheritsGlobalTableAppearance
+} from '../utils/tableFormatters';
+import { TABLE_LAYOUTS_EVENT } from '../utils/portalAppearanceLinks';
+import {
+  Award,
+  Download,
+  CheckCircle2,
+  FileCheck,
+  Shield,
+  CheckSquare,
+  Square,
+  Search,
+  Clock,
+  ArrowRight,
+  FileText,
+  Filter,
+  RefreshCw,
+  List,
+  FileSpreadsheet,
+  AlertCircle,
+  RotateCcw
+} from 'lucide-react';
+import { resolveInstallationProfile } from '../utils/installationProfile';
+
+const ALL_COORDINATOR_COLUMNS: ColumnDef[] = [
+  { key: 'protocolo', label: 'Nº Processo', isFixed: true },
+  { key: 'envioStatus', label: 'Envio', isFixed: true },
+  { key: 'defesaDataHora', label: 'Data e Horário' },
+  { key: 'titulo', label: 'Título do Trabalho' },
+  { key: 'aluno1', label: 'Aluno 1' },
+  { key: 'aluno2', label: 'Aluno 2' },
+  { key: 'orientador', label: 'Orientador(a)' },
+  { key: 'membro1', label: '1º Membro' },
+  { key: 'membro2', label: '2º Membro' },
+  { key: 'coorientador', label: 'Coorientador(a)' },
+  { key: 'resumo', label: 'Resumo' },
+  { key: 'palavrasChave', label: 'Palavras-Chave' },
+  { key: 'defesaLocal', label: 'Local' }
+];
+
+const DEFAULT_COORDINATOR_ORDER = ALL_COORDINATOR_COLUMNS.map((c) => c.key);
+
+const DEFAULT_COORDINATOR_VISIBLE: Record<string, boolean> = {
+  protocolo: true,
+  envioStatus: true,
+  defesaDataHora: true,
+  titulo: true,
+  aluno1: true,
+  aluno2: true,
+  orientador: true,
+  membro1: false,
+  membro2: false,
+  coorientador: false,
+  resumo: false,
+  palavrasChave: false,
+  defesaLocal: false,
+};
+
+interface CoordenadorPageProps {
+  onSelectProcess: (processId: string) => void;
+}
+
+export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProcess }) => {
+  const { settings }=useAuth();
+  const installationProfile=resolveInstallationProfile(settings);
+  const [queue, setQueue] = useState<any[]>([]);
+  const [allProcesses, setAllProcesses] = useState<ProcessData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'pendentes' | 'concluidos'>('pendentes');
+  const [searchFilter, setSearchFilter] = useState('');
+  const [downloadError, setDownloadError] = useState('');
+  
+  // Selection state for batch operations
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Download & Upload (Missing vs Sent) status tracking
+  const [downloadedIds, setDownloadedIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('coordinator_downloaded_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('coordinator_downloaded_ids', JSON.stringify(downloadedIds));
+    } catch (err) {
+      console.error('Erro ao salvar downloadedIds:', err);
+    }
+  }, [downloadedIds]);
+
+  // Column visibility state using TableColumnSelectorPanel helper
+  const initialCoordinatorConfig = loadTableConfig('coordinator', DEFAULT_COORDINATOR_ORDER, DEFAULT_COORDINATOR_VISIBLE, 25);
+  const [columnOrder, setColumnOrder] = useState<string[]>(initialCoordinatorConfig.columnOrder);
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(initialCoordinatorConfig.visibleColumns);
+  const [customLabels, setCustomLabels] = useState<Record<string, string>>(initialCoordinatorConfig.customLabels || {});
+  const [columnWidths, setColumnWidths] = useState<Record<string, string | number>>(initialCoordinatorConfig.columnWidths || {});
+  const [recordsLimit, setRecordsLimit] = useState<number | 'all'>(initialCoordinatorConfig.recordsLimit || 25);
+  const [startDate, setStartDate] = useState(initialCoordinatorConfig.startDate || '');
+  const [endDate, setEndDate] = useState(initialCoordinatorConfig.endDate || '');
+  const [coordTextFormat, setCoordTextFormat] = useState<TableTextFormat>(() => ({
+    ...loadGlobalTableConfig(),
+    ...(initialCoordinatorConfig.textFormat || {})
+  }));
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      const newFormat = (e && e.detail) ? e.detail : loadGlobalTableConfig();
+      if (inheritsGlobalTableAppearance('coordinator')) setCoordTextFormat(prev => ({ ...prev, ...newFormat }));
+    };
+    if (inheritsGlobalTableAppearance('coordinator')) setCoordTextFormat(prev => ({ ...prev, ...loadGlobalTableConfig() }));
+    window.addEventListener(GLOBAL_TABLE_EVENT, handler);
+    const handlePublishedLayout = () => {
+      const loaded = loadTableConfig('coordinator', DEFAULT_COORDINATOR_ORDER, DEFAULT_COORDINATOR_VISIBLE, 25);
+      setColumnOrder(loaded.columnOrder);
+      setVisibleColumns(loaded.visibleColumns);
+      setCustomLabels(loaded.customLabels || {});
+      setColumnWidths(loaded.columnWidths || {});
+      setRecordsLimit(loaded.recordsLimit ?? 25);
+      setStartDate(loaded.startDate || '');
+      setEndDate(loaded.endDate || '');
+      setCoordTextFormat(loaded.textFormat || loadGlobalTableConfig());
+    };
+    window.addEventListener(TABLE_LAYOUTS_EVENT, handlePublishedLayout);
+    return () => {
+      window.removeEventListener(GLOBAL_TABLE_EVENT, handler);
+      window.removeEventListener(TABLE_LAYOUTS_EVENT, handlePublishedLayout);
+    };
+  }, []);
+
+  const styles = getTableStyles(coordTextFormat);
+  const isDarkTheme = (coordTextFormat.headerTheme || 'militar') !== 'clean' && (coordTextFormat.headerTheme || 'militar') !== 'slate' && (coordTextFormat.headerTheme || 'militar') !== 'light';
+
+  // Sorting state
+  const [sortField, setSortField] = useState<string>('protocolo');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortArrow = (field: string, isDark: boolean = isDarkTheme) => {
+    if (sortField !== field) {
+      return <span className={`${isDark ? 'text-white/60 group-hover:text-white' : 'text-slate-400 group-hover:text-slate-900'} opacity-70 group-hover:opacity-100 transition-opacity ml-0.5`}>↕</span>;
+    }
+    return sortDirection === 'asc' 
+      ? <span className={`${isDark ? 'text-white' : 'text-slate-900'} font-extrabold ml-0.5`}>↑</span> 
+      : <span className={`${isDark ? 'text-white' : 'text-slate-900'} font-extrabold ml-0.5`}>↓</span>;
+  };
+
+  // Label Map for columns
+  const labelMap: Record<string, string> = {
+    protocolo: '📓 Nº Processo',
+    envioStatus: '📤 Envio',
+    defesaDataHora: '⏰ Data e Horário',
+    titulo: '📖 Título do Trabalho',
+    aluno1: '🎓 Aluno 1',
+    aluno2: '🎓 Aluno 2',
+    orientador: '👨‍🏫 Orientador(a)',
+    membro1: '👥 1º Membro',
+    membro2: '👥 2º Membro',
+    coorientador: '👥 Coorientador(a)',
+    resumo: '📝 Resumo',
+    palavrasChave: '🔑 Palavras-Chave',
+    defesaLocal: '📍 Local'
+  };
+
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [queueData, procsData] = await Promise.all([
+        apiClient.getCoordinatorQueue(),
+        apiClient.getProcesses()
+      ]);
+      setQueue(queueData || []);
+      setAllProcesses(procsData || []);
+    } catch (err) {
+      console.error('Erro ao carregar dados do Presidente:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadData();
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 500);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Filter pending vs completed
+  const pendingItems = queue.filter(item => {
+    const term = searchFilter.toLowerCase();
+    const p = item.process;
+    const defenseDate = p.defesa?.startAt?.slice(0, 10) || '';
+    if (startDate && (!defenseDate || defenseDate < startDate)) return false;
+    if (endDate && (!defenseDate || defenseDate > endDate)) return false;
+    return (
+      (p.protocolo || '').toLowerCase().includes(term) ||
+      (p.titulo || '').toLowerCase().includes(term) ||
+      (p.aluno1?.nome || '').toLowerCase().includes(term) ||
+      (p.orientador?.nome || '').toLowerCase().includes(term)
+    );
+  });
+
+  const completedItems = allProcesses.filter(p => {
+    if (p.status !== 'CONCLUIDO') return false;
+    const defenseDate = p.defesa?.startAt?.slice(0, 10) || '';
+    if (startDate && (!defenseDate || defenseDate < startDate)) return false;
+    if (endDate && (!defenseDate || defenseDate > endDate)) return false;
+    const term = searchFilter.toLowerCase();
+    return (
+      (p.protocolo || '').toLowerCase().includes(term) ||
+      (p.titulo || '').toLowerCase().includes(term) ||
+      (p.aluno1?.nome || '').toLowerCase().includes(term) ||
+      (p.orientador?.nome || '').toLowerCase().includes(term)
+    );
+  });
+
+  // Batch Selection Helpers
+  const toggleSelectAllPending = () => {
+    if (selectedIds.length === pendingItems.length && pendingItems.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(pendingItems.map(item => item.process.id));
+    }
+  };
+
+  const toggleSelectItem = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  // Download only the authenticated declaration already signed by Asten and archived in Drive.
+  const handleDownloadPdfs = async (procList: any[]) => {
+    if (procList.length === 0) return;
+    const rawProcs: ProcessData[] = procList.map((item) => item.process || item);
+    setDownloadError('');
+
+    for (const proc of rawProcs) {
+      try {
+        const { blob, fileName } = await apiClient.downloadProcessDocument(proc.id, 'doc-declaracao');
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setDownloadedIds((prev) => prev.includes(proc.id) ? prev : [...prev, proc.id]);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      } catch (error) {
+        setDownloadError(error instanceof Error ? error.message : 'Não foi possível baixar a declaração assinada.');
+        break;
+      }
+    }
+  };
+
+
+  const renderHeaderCell = (colKey: string) => {
+    if (!visibleColumns[colKey]) return null;
+
+    const colDef = ALL_COORDINATOR_COLUMNS.find(c => c.key === colKey);
+    const rawLabel = colDef?.label || labelMap[colKey] || colKey;
+    const formattedLabel = formatColumnLabel(colKey, rawLabel, coordTextFormat, customLabels);
+    const widthClass = `${getColWidthClass(colKey, columnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, coordTextFormat)}`;
+
+    const sortableKeys = ['protocolo', 'envioStatus', 'defesaDataHora', 'titulo', 'aluno1', 'aluno2', 'orientador', 'defesaLocal', 'resumo', 'palavrasChave'];
+    const isSortable = sortableKeys.includes(colKey);
+
+    return (
+      <th
+        key={colKey}
+        onClick={isSortable ? () => handleSort(colKey) : undefined}
+        className={`${styles.headerThClass} ${styles.cellPadClass} ${widthClass} ${styles.headerWeightClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerCasingClass} ${styles.headerBorderClass} ${styles.headerAlignClass} align-middle ${isSortable ? `cursor-pointer ${styles.headerThHoverClass}` : ''} select-none transition-colors group`}
+      >
+        <div className={`flex items-center justify-center gap-1 ${styles.headerWrapClass}`}>
+          <span>{formattedLabel}</span>
+          {isSortable && renderSortArrow(colKey, isDarkTheme)}
+        </div>
+      </th>
+    );
+  };
+
+  const renderCell = (item: any, colKey: string) => {
+    if (!visibleColumns[colKey]) return null;
+
+    const proc = activeTab === 'pendentes' ? item.process : item;
+    const cellClass = `${styles.cellPadClass} ${getColWidthClass(colKey, columnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, coordTextFormat)} ${styles.borderClass} align-middle ${styles.cellAlignClass}`;
+
+    const cleanInst = (str?: string) => {
+      if (!str) return '';
+      return str.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '').trim();
+    };
+
+    switch (colKey) {
+      case 'protocolo': {
+        const rawStr = (proc.protocolo || proc.id || '').trim();
+        const clean = rawStr.replace(/^TCC\s*[-/]?\s*/i, '').trim();
+        const parts = clean.split(/[-/]/);
+        let line1 = 'TCC';
+        let line2 = rawStr;
+        if (parts.length >= 2) {
+          line1 = `TCC - ${parts[0]}`;
+          line2 = parts.slice(1).join('-');
+        } else if (proc.anoLectivo) {
+          line1 = `TCC - ${proc.anoLectivo}`;
+          line2 = clean;
+        }
+        const tagLabel = formatCellText('protocolo', line1, coordTextFormat, '📓');
+        return (
+          <td
+            key={colKey}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectProcess(proc.id);
+            }}
+            className={`${cellClass} cursor-pointer ${styles.firstColCellHoverClass} group/col0 transition-colors`}
+            title="Clique aqui para abrir os detalhes e documentos deste TCC"
+          >
+            <div className={styles.firstColBtnClass}>
+              <div className={styles.firstColTagClass}>
+                {tagLabel}
+              </div>
+              <div className={`${styles.cellFontSizeClass} ${styles.cellWeightClass} tracking-wide text-slate-900`}>
+                {line2}
+              </div>
+              <span className={styles.firstColSubtextClass}>
+                Detalhes ↗
+              </span>
+            </div>
+          </td>
+        );
+      }
+
+      case 'envioStatus': {
+        const isSent = activeTab === 'concluidos';
+        return (
+          <td key={colKey} className={cellClass}>
+            <div className="flex flex-col items-center gap-1 mx-auto">
+              {activeTab === 'pendentes' ? (
+                <>
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-900 border border-slate-300 rounded-full select-none leading-none">
+                    🔴 Aguardando
+                  </span>
+                  <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('portal:navigate', { detail: 'assinaturas' }))} className="mt-1 inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-800 font-bold text-[9px] uppercase rounded-md transition-all border border-slate-300 shadow-2xs cursor-pointer"><Shield className="w-3 h-3"/><span>Central Asten</span></button>
+                </>
+              ) : (
+                <>
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-950 border border-emerald-300 rounded-full select-none leading-none">
+                    🟢 Enviada
+                  </span>
+                  <span className="text-[9.5px] text-emerald-800 font-bold flex items-center gap-0.5 select-none leading-none">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Publicada
+                  </span>
+                </>
+              )}
+            </div>
+          </td>
+        );
+      }
+
+      case 'defesaDataHora':
+        return (
+          <td key={colKey} className={`${cellClass} ${styles.cellWeightClass} ${styles.cellTextColorClass}`}>
+            <div className={`flex items-center justify-center gap-1 ${styles.cellFontSizeClass}`}>
+              <span>⏰</span>
+              <span className="text-emerald-900 font-bold">{proc.defesa?.startAt ? formatDateNumeric(proc.defesa.startAt) : 'N/A'}</span>
+            </div>
+            {proc.defesa?.startAt && (
+              <div className="text-[9.5px] text-slate-500 font-mono font-medium">{formatTimeExtenso(proc.defesa.startAt)}</div>
+            )}
+          </td>
+        );
+
+      case 'titulo':
+        return (
+          <td key={colKey} className={`${cellClass} ${styles.cellWeightClass} ${styles.cellTextColorClass}`}>
+            <div className={`${styles.cellWrapClass} ${styles.cellFontSizeClass} max-w-sm mx-auto`} title={formatTccTitle(proc.titulo)}>
+              {formatCellText('titulo', formatTccTitle(proc.titulo), coordTextFormat, '📖')}
+            </div>
+          </td>
+        );
+
+      case 'aluno1':
+        return (
+          <td key={colKey} className={cellClass}>
+            <div className="w-full mx-auto">
+              <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
+                {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), coordTextFormat, '🎓')}
+              </div>
+              {proc.aluno1?.matricula && (
+                <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5">Matrícula: {proc.aluno1.matricula}</div>
+              )}
+            </div>
+          </td>
+        );
+
+      case 'aluno2':
+        return (
+          <td key={colKey} className={cellClass}>
+            <div className="w-full mx-auto">
+              {proc.aluno2?.nome ? (
+                <>
+                  <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
+                    {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), coordTextFormat, '🎓')}
+                  </div>
+                  {proc.aluno2?.matricula && (
+                    <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5">Matrícula: {proc.aluno2.matricula}</div>
+                  )}
+                </>
+              ) : (
+                <span className="text-slate-400 font-mono text-[11px]">—</span>
+              )}
+            </div>
+          </td>
+        );
+
+      case 'orientador':
+        return (
+          <td key={colKey} className={cellClass}>
+            <div className="w-full mx-auto">
+              <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
+                {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), coordTextFormat, '👨‍🏫')}
+              </div>
+              <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
+                📍 {cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName)}
+              </div>
+            </div>
+          </td>
+        );
+
+      case 'membro1': {
+        const members = (proc.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
+        const memb = members[0];
+        return (
+          <td key={colKey} className={cellClass}>
+            <div className="w-full mx-auto">
+              {memb?.nome ? (
+                <>
+                  <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
+                    {formatCellText('membro1', formatProfessorName(memb.nome), coordTextFormat, '👥')}
+                  </div>
+                  <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
+                    📍 {cleanInst(memb.instituicao || installationProfile.defaultInstitutionName)}
+                  </div>
+                </>
+              ) : (
+                <span className="text-slate-400 font-mono text-[11px]">—</span>
+              )}
+            </div>
+          </td>
+        );
+      }
+
+      case 'membro2': {
+        const members = (proc.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
+        const memb = members[1];
+        return (
+          <td key={colKey} className={cellClass}>
+            <div className="w-full mx-auto">
+              {memb?.nome ? (
+                <>
+                  <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
+                    {formatCellText('membro2', formatProfessorName(memb.nome), coordTextFormat, '👥')}
+                  </div>
+                  <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
+                    📍 {cleanInst(memb.instituicao || installationProfile.defaultInstitutionName)}
+                  </div>
+                </>
+              ) : (
+                <span className="text-slate-400 font-mono text-[11px]">—</span>
+              )}
+            </div>
+          </td>
+        );
+      }
+
+      case 'coorientador':
+        return (
+          <td key={colKey} className={cellClass}>
+            <div className="w-full mx-auto">
+              {proc.coorientador?.nome ? (
+                <>
+                  <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
+                    {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), coordTextFormat, '👥')}
+                  </div>
+                  <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
+                    📍 {cleanInst(proc.coorientador.instituicao || installationProfile.defaultInstitutionName)}
+                  </div>
+                </>
+              ) : (
+                <span className="text-slate-400 font-mono text-[11px]">—</span>
+              )}
+            </div>
+          </td>
+        );
+
+      case 'resumo': {
+        const text = proc.acervo?.resumoSintese || (proc.titulo ? `TCC: ${proc.titulo}` : 'Sem resumo');
+        return (
+          <td key={colKey} className={`${cellClass} text-slate-500`}>
+            <div className={`${styles.cellWrapClass} ${styles.cellFontSizeClass} line-clamp-2 max-w-[200px] mx-auto`} title={text}>
+              {formatCellText('resumo', text, coordTextFormat, '📝')}
+            </div>
+          </td>
+        );
+      }
+
+      case 'palavrasChave': {
+        const keywords = (proc.acervo?.palavrasChave || []).slice(0, 5).join('; ');
+        return (
+          <td key={colKey} className={`${cellClass} text-slate-500`}>
+            <div className={`${styles.cellWrapClass} ${styles.cellFontSizeClass} line-clamp-2 max-w-[150px] mx-auto`} title={keywords}>
+              {formatCellText('palavrasChave', keywords, coordTextFormat, '🔑')}
+            </div>
+          </td>
+        );
+      }
+
+      case 'defesaLocal': {
+        const loc = proc.defesa?.local || 'A definir';
+        return (
+          <td key={colKey} className={`${cellClass} text-slate-500`}>
+            <div className={`${styles.cellWrapClass} ${styles.cellFontSizeClass} line-clamp-2 max-w-[150px] mx-auto`}>
+              {formatCellText('defesaLocal', loc, coordTextFormat, '📍')}
+            </div>
+          </td>
+        );
+      }
+
+      default:
+        return null;
+    }
+  };
+
+  const getSortedAndFilteredItems = (items: any[]) => {
+    return [...items].sort((itemA, itemB) => {
+      const pA = activeTab === 'pendentes' ? itemA.process : itemA;
+      const pB = activeTab === 'pendentes' ? itemB.process : itemB;
+
+      let valA: any = '';
+      let valB: any = '';
+
+      switch (sortField) {
+        case 'protocolo':
+          valA = pA.protocolo || pA.id || '';
+          valB = pB.protocolo || pB.id || '';
+          break;
+        case 'envioStatus':
+          valA = activeTab === 'pendentes' ? 'Aguardando Envio' : 'Enviado';
+          valB = activeTab === 'pendentes' ? 'Aguardando Envio' : 'Enviado';
+          break;
+        case 'defesaDataHora':
+          valA = pA.defesa?.startAt || '';
+          valB = pB.defesa?.startAt || '';
+          break;
+        case 'titulo':
+          valA = pA.titulo || '';
+          valB = pB.titulo || '';
+          break;
+        case 'aluno1':
+          valA = pA.aluno1?.nome || '';
+          valB = pB.aluno1?.nome || '';
+          break;
+        case 'aluno2':
+          valA = pA.aluno2?.nome || '';
+          valB = pB.aluno2?.nome || '';
+          break;
+        case 'orientador':
+          valA = pA.orientador?.nome || '';
+          valB = pB.orientador?.nome || '';
+          break;
+        case 'membro1': {
+          const membersA = (pA.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
+          const membersB = (pB.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
+          valA = membersA[0]?.nome || '';
+          valB = membersB[0]?.nome || '';
+          break;
+        }
+        case 'membro2': {
+          const membersA = (pA.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
+          const membersB = (pB.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
+          valA = membersA[1]?.nome || '';
+          valB = membersB[1]?.nome || '';
+          break;
+        }
+        case 'coorientador':
+          valA = pA.coorientador?.nome || '';
+          valB = pB.coorientador?.nome || '';
+          break;
+        case 'resumo':
+          valA = pA.acervo?.resumoSintese || '';
+          valB = pB.acervo?.resumoSintese || '';
+          break;
+        case 'palavrasChave':
+          valA = (pA.acervo?.palavrasChave || []).join(' ');
+          valB = (pB.acervo?.palavrasChave || []).join(' ');
+          break;
+        case 'defesaLocal':
+          valA = pA.defesa?.local || '';
+          valB = pB.defesa?.local || '';
+          break;
+        default:
+          break;
+      }
+
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const sortedPending = getSortedAndFilteredItems(pendingItems);
+  const sortedCompleted = getSortedAndFilteredItems(completedItems);
+
+  const limitedPending = recordsLimit === 'all' ? sortedPending : sortedPending.slice(0, recordsLimit);
+  const limitedCompleted = recordsLimit === 'all' ? sortedCompleted : sortedCompleted.slice(0, recordsLimit);
+
+  const actionStyles = getActionPillStyles(coordTextFormat);
+
+  return (
+    <div id="coordenador-page-root" className="space-y-3 max-w-7xl mx-auto py-1.5">
+      
+      {/* Botões no Topo (Acima do Cabeçalho) */}
+      <div className="flex flex-wrap items-center justify-end gap-2.5 mb-3">
+        <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('portal:navigate', { detail: 'assinaturas' }))} style={actionStyles.actionPillStyle} className={actionStyles.actionPillClass} title="Acompanhar documentos enviados diretamente para assinatura pela Asten"><Shield className="w-4 h-4"/><span>Acompanhamento Asten</span></button>
+
+        {activeTab === 'concluidos' && coordTextFormat.showBaixarSelecionadosButton !== false && (
+          <button
+            type="button"
+            disabled={selectedIds.length === 0}
+            onClick={() => {
+              if (selectedIds.length === 0) return;
+              const itemsToDownload = queue.filter(q => selectedIds.includes(q.process.id));
+              const completedToDownload = allProcesses.filter(p => selectedIds.includes(p.id));
+              const currentSelected = activeTab === 'pendentes' ? itemsToDownload : completedToDownload;
+              handleDownloadPdfs(currentSelected);
+            }}
+            style={{
+              ...actionStyles.actionPillStyle,
+              opacity: selectedIds.length === 0 ? 0.5 : actionStyles.actionPillStyle.opacity,
+            }}
+            className={`${actionStyles.actionPillClass} ${selectedIds.length === 0 ? 'cursor-not-allowed' : ''}`}
+            title={
+              selectedIds.length > 0
+                ? `Baixar ${selectedIds.length} declaração(ões) assinada(s) do Drive`
+                : 'Selecione as linhas da tabela para habilitar o download em bloco'
+            }
+          >
+            <span>{coordTextFormat.baixarSelecionadosButtonEmoji || '📦'}</span>
+            <span>
+              {selectedIds.length > 0
+                ? `Baixar assinadas (${selectedIds.length})`
+                : 'Baixar assinadas'}
+            </span>
+          </button>
+        )}
+      </div>
+      {downloadError && (
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800">
+          {downloadError}
+        </div>
+      )}
+
+      {/* CABEÇALHO UNIFICADO DA COORDENAÇÃO */}
+      <section className="space-y-3">
+        {/* UNIFIED GRAY HEADER + TABLE CARD */}
+        <div className={`bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${styles.fontFamilyClass}`} style={styles.rootStyle}>
+          {/* Header Banner */}
+          <div className={`${styles.bannerHeaderClass} p-3.5 sm:p-4 border-b space-y-3.5 transition-colors`} style={styles.bannerHeaderStyle}>
+            {/* Main Title Row */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <ColorfulHeaderIcon type="coordination" textFormat={coordTextFormat} />
+                <h1 className="text-base sm:text-lg font-black uppercase tracking-tight leading-snug">
+                  {getEditableTableText(customLabels, '__tableTitle', 'Gestão e Assinatura de Declarações')}
+                </h1>
+              </div>
+
+              {/* Right Group: Lupa, Refresh and Engrenagem Controls */}
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                {/* Lupa (Search) */}
+                <SearchPopover
+                  value={searchFilter}
+                  onChange={setSearchFilter}
+                  placeholder="Buscar declarações..."
+                  textFormat={coordTextFormat}
+                />
+
+                {/* Refresh Fila (Yin-Yang) */}
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className={`${styles.toolbarButtonClass} disabled:opacity-70`}
+                  style={styles.toolbarButtonStyle}
+                  title="Atualizar fila de declarações"
+                >
+                  <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
+                </button>
+
+                {/* Engrenagem (Settings) */}
+                <HeaderSettingsPopover
+                  recordsLimit={recordsLimit}
+                  setRecordsLimit={setRecordsLimit}
+                  allowedLimits={[25, 50, 100, 'all']}
+                  allColumns={ALL_COORDINATOR_COLUMNS}
+                  visibleColumns={visibleColumns}
+                  setVisibleColumns={setVisibleColumns}
+                  columnOrder={columnOrder}
+                  setColumnOrder={setColumnOrder}
+                  storageKey="coordinator"
+                  customLabels={customLabels}
+                  setCustomLabels={setCustomLabels}
+                  defaultColumnOrder={DEFAULT_COORDINATOR_ORDER}
+                  defaultVisibleColumns={DEFAULT_COORDINATOR_VISIBLE}
+                  defaultRecordsLimit={25}
+                  columnWidths={columnWidths}
+                  setColumnWidths={setColumnWidths}
+                  textFormat={coordTextFormat}
+                  setTextFormat={setCoordTextFormat}
+                  startDate={startDate}
+                  setStartDate={setStartDate}
+                  endDate={endDate}
+                  setEndDate={setEndDate}
+                  defaultTableTitle="Gestão e Assinatura de Declarações"
+                  defaultFilterTitle="Filtrar declarações"
+                />
+              </div>
+            </div>
+
+            {/* INTEGRATED TOOLBAR BAR (Single clean dividing line) */}
+            <div className="pt-2.5 border-t flex flex-wrap items-center justify-between gap-3 text-xs" style={styles.filterDividerStyle}>
+              {/* Filter Row Switcher with FILTRAR prefix following site standard */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] font-black uppercase tracking-wider shrink-0 opacity-80">
+                  {getEditableTableText(customLabels, '__filterTitle', 'FILTRAR:')}
+                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('pendentes');
+                      setSelectedIds([]);
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1 text-[11px] font-black uppercase rounded-full transition-all cursor-pointer border select-none ${
+                      activeTab === 'pendentes'
+                        ? styles.filterActiveChipClass
+                        : styles.filterInactiveChipClass
+                    }`}
+                    title="Filtrar por declarações pendentes"
+                  >
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                    <span>{getEditableTableText(customLabels, '__tabPendentes', 'PENDENTES')} ({queue.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('concluidos');
+                      setSelectedIds([]);
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1 text-[11px] font-black uppercase rounded-full transition-all cursor-pointer border select-none ${
+                      activeTab === 'concluidos'
+                        ? styles.filterActiveChipClass
+                        : styles.filterInactiveChipClass
+                    }`}
+                    title="Filtrar por declarações assinadas"
+                  >
+                    <FileCheck className="w-3.5 h-3.5 shrink-0" />
+                    <span>{getEditableTableText(customLabels, '__tabConcluidos', 'ASSINADAS')} ({completedItems.length})</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CONTEÚDO PRINCIPAL: TABELA E LISTA DE DECLARAÇÕES */}
+          <div className="w-full">
+            {activeTab === 'pendentes' && (
+              <>
+                {isLoading ? (
+                  <div className="p-12 text-center text-xs font-semibold text-slate-500">
+                    Carregando declarações pendentes...
+                  </div>
+                ) : pendingItems.length === 0 ? (
+                  <div className="p-12 text-center bg-slate-50 text-slate-600 text-xs font-medium space-y-1">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-700 mx-auto mb-2" />
+                    <p className="font-bold text-slate-900 uppercase">Sua fila de declarações está 100% assinada e limpa!</p>
+                    <p className="text-slate-500">Não há declarações pendentes de assinatura do Presidente neste momento.</p>
+                  </div>
+                ) : (
+                  <TableScrollWrapper>
+                    <table className="w-full text-center border-collapse text-xs">
+                      <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`} style={styles.theadStyle}>
+                        <tr>
+                          {/* Always show selection column for pending */}
+                          <th className={`${styles.headerThClass} ${styles.cellPadClass} w-10 text-center align-middle ${styles.headerBorderClass}`}>
+                            <button
+                              type="button"
+                              onClick={toggleSelectAllPending}
+                              className={`cursor-pointer ${isDarkTheme ? 'text-white/80 hover:text-white' : 'text-slate-600 hover:text-emerald-800'} flex justify-center mx-auto`}
+                              title="Selecionar/Deselecionar todos"
+                            >
+                              {selectedIds.length === pendingItems.length ? (
+                                <CheckSquare className={`w-4 h-4 ${isDarkTheme ? 'text-emerald-300' : 'text-emerald-700'}`} />
+                              ) : (
+                                <Square className={`w-4 h-4 ${isDarkTheme ? 'text-white/60' : 'text-slate-500'}`} />
+                              )}
+                            </button>
+                          </th>
+                          {columnOrder.map((colKey) => renderHeaderCell(colKey))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 bg-white">
+                        {limitedPending.map((item) => {
+                          const proc = item.process;
+                          const isSelected = selectedIds.includes(proc.id);
+                          return (
+                            <tr
+                              key={proc.id}
+                              className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-emerald-50/40' : ''}`}
+                            >
+                              {/* Selection Checkbox */}
+                              <td className={`${styles.cellPadClass} ${styles.borderClass} text-center align-middle`}>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleSelectItem(proc.id)}
+                                  className="cursor-pointer text-slate-400 hover:text-emerald-700 flex justify-center mx-auto"
+                                >
+                                  {isSelected ? (
+                                    <CheckSquare className="w-4.5 h-4.5 text-emerald-700" />
+                                  ) : (
+                                    <Square className="w-4.5 h-4.5 text-slate-300" />
+                                  )}
+                                </button>
+                              </td>
+                              {columnOrder.map((colKey) => renderCell(item, colKey))}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </TableScrollWrapper>
+                )}
+              </>
+            )}
+
+            {/* TAB 2: DECLARAÇÕES ASSINADAS (HISTÓRICO) */}
+            {activeTab === 'concluidos' && (
+              <>
+                {completedItems.length === 0 ? (
+                  <div className="p-12 text-center bg-slate-50 text-slate-600 text-xs font-medium">
+                    Nenhum processo assinado encontrado com os termos pesquisados.
+                  </div>
+                ) : (
+                  <TableScrollWrapper>
+                    <table className="w-full text-center border-collapse text-xs">
+                      <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`}>
+                        <tr>
+                          {/* Always show selection column for completed to align perfectly */}
+                          <th className={`${styles.headerThClass} ${styles.cellPadClass} w-10 text-center align-middle ${styles.headerBorderClass}`}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (selectedIds.length === completedItems.length && completedItems.length > 0) {
+                                  setSelectedIds([]);
+                                } else {
+                                  setSelectedIds(completedItems.map(p => p.id));
+                                }
+                              }}
+                              className={`cursor-pointer ${isDarkTheme ? 'text-white/80 hover:text-white' : 'text-slate-600 hover:text-emerald-800'} flex justify-center mx-auto`}
+                              title="Selecionar/Deselecionar todos"
+                            >
+                              {selectedIds.length === completedItems.length && completedItems.length > 0 ? (
+                                <CheckSquare className={`w-4 h-4 ${isDarkTheme ? 'text-emerald-300' : 'text-emerald-700'}`} />
+                              ) : (
+                                <Square className={`w-4 h-4 ${isDarkTheme ? 'text-white/60' : 'text-slate-500'}`} />
+                              )}
+                            </button>
+                          </th>
+                          {columnOrder.map((colKey) => renderHeaderCell(colKey))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 bg-white">
+                        {limitedCompleted.map((proc) => {
+                          const isSelected = selectedIds.includes(proc.id);
+                          return (
+                            <tr
+                              key={proc.id}
+                              className={`hover:bg-slate-50 transition-colors text-slate-600 ${isSelected ? 'bg-emerald-50/40' : ''}`}
+                            >
+                              {/* Selection Checkbox */}
+                              <td className={`${styles.cellPadClass} ${styles.borderClass} text-center align-middle`}>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleSelectItem(proc.id)}
+                                  className="cursor-pointer text-slate-400 hover:text-emerald-700 flex justify-center mx-auto"
+                                >
+                                  {isSelected ? (
+                                    <CheckSquare className="w-4.5 h-4.5 text-emerald-700" />
+                                  ) : (
+                                    <Square className="w-4.5 h-4.5 text-slate-300" />
+                                  )}
+                                </button>
+                              </td>
+                              {columnOrder.map((colKey) => renderCell(proc, colKey))}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </TableScrollWrapper>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+
+    </div>
+  );
+};

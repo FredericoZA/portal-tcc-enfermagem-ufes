@@ -1,0 +1,15 @@
+# Arquivos locais e saídas reproduzidas durante a implantação.
+.git/
+.vercel/
+node_modules/
+dist/
+build/
+.portal-data/
+.env*
+coverage/
+test-results/
+playwright-report/
+review_inputs/
+*.log
+*.zip
+.DS_Store

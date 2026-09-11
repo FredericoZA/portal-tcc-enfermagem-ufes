@@ -1,0 +1,65 @@
+{
+  "runtime": "v22.23.2",
+  "steps": [
+    {
+      "name": "typescript",
+      "exitCode": 0,
+      "seconds": 5.3
+    },
+    {
+      "name": "unit",
+      "exitCode": 0,
+      "seconds": 3.65
+    },
+    {
+      "name": "secure-flow",
+      "exitCode": 0,
+      "seconds": 3.85
+    },
+    {
+      "name": "accessibility",
+      "exitCode": 0,
+      "seconds": 0.06
+    },
+    {
+      "name": "clean",
+      "exitCode": 0,
+      "seconds": 0.06
+    },
+    {
+      "name": "vite",
+      "exitCode": 0,
+      "seconds": 3.72
+    },
+    {
+      "name": "server-build",
+      "exitCode": 0,
+      "seconds": 0.11
+    },
+    {
+      "name": "compiled-http",
+      "exitCode": 0,
+      "seconds": 2.46
+    }
+  ],
+  "release": "1.0.0-rc.10",
+  "date": "2026-09-10",
+  "unitTests": {
+    "passed": 95,
+    "failed": 0
+  },
+  "secureFlow": {
+    "passed": 38,
+    "failed": 0
+  },
+  "npmAudit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "browser": "NAO_CONFIRMADO",
+  "liveIntegrations": "NAO_CONFIRMADO"
+}
