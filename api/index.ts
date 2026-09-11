@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
-import { createPortalApp } from '../server';
 
 type StartupFailure = { code: string; message: string };
+type StartupState = { app: ((req: Request, res: Response) => unknown) | null; error: unknown };
 
 function classifyStartupFailure(error: unknown): StartupFailure {
   const detail = error instanceof Error ? error.message : String(error || '');
@@ -19,19 +19,28 @@ function classifyStartupFailure(error: unknown): StartupFailure {
   return { code: 'STARTUP_CONFIGURATION_ERROR', message: 'O portal ainda não concluiu a configuração segura de produção.' };
 }
 
-const appPromise = createPortalApp().then(
-  (app) => ({ app, error: null as unknown }),
-  (error) => {
-    console.error('[Startup] Falha ao inicializar o Portal TCC:', error);
-    return { app: null, error };
+let startupPromise: Promise<StartupState> | null = null;
+
+function startup(): Promise<StartupState> {
+  if (!startupPromise) {
+    startupPromise = import('../server')
+      .then(({ createPortalApp }) => createPortalApp())
+      .then(
+        (app) => ({ app: app as StartupState['app'], error: null }),
+        (error) => {
+          console.error('[Startup] Falha ao inicializar o Portal TCC:', error);
+          return { app: null, error };
+        }
+      );
   }
-);
+  return startupPromise;
+}
 
 export default async function handler(req: Request, res: Response) {
-  const startup = await appPromise;
-  if (startup.app) return startup.app(req, res);
+  const state = await startup();
+  if (state.app) return state.app(req, res);
 
-  const diagnostic = classifyStartupFailure(startup.error);
+  const diagnostic = classifyStartupFailure(state.error);
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   return res.status(503).json({
