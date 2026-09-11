@@ -36,6 +36,12 @@ jobs:
               exit 0
             fi
 
+            if [ "$attempt" -ge 3 ] && [ "$code" = "503" ] && grep -Eq '"code"[[:space:]]*:[[:space:]]*"[A-Z_]+(REQUIRED|ERROR)"' "$body"; then
+              echo "Produção respondeu com bloqueio explícito de configuração segura:" >&2
+              cat "$body" >&2
+              exit 1
+            fi
+
             echo "Tentativa $attempt/24: HTTP ${code:-000}; aguardando o deploy/runtime ficar saudável."
             sleep 10
           done
