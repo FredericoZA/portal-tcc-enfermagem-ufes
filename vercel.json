@@ -3,6 +3,25 @@
   "installCommand": "npm ci --include=dev",
   "buildCommand": "npm run build",
   "outputDirectory": "dist/client",
+  "regions": ["gru1"],
+  "env": {
+    "APP_URL": "https://portal-tcc-enfermagem-ufes.vercel.app",
+    "PORTAL_PUBLIC_URL": "https://portal-tcc-enfermagem-ufes.vercel.app",
+    "PORTAL_BOOTSTRAP_MASTER_EMAIL": "tccenfermagemufes@gmail.com",
+    "PORTAL_ALLOW_INSECURE_DEMO_AUTH": "false",
+    "PORTAL_ALLOW_LOCAL_OTP_STORE": "false",
+    "PORTAL_ALLOW_LOCAL_SECRET_STORE": "false",
+    "PORTAL_PERSISTENCE_PROVIDER": "supabase",
+    "SUPABASE_URL": "https://vvgdmycmotazqjvpywmk.supabase.co",
+    "SUPABASE_SECURE_FILES_BUCKET": "portal-secure-transfer",
+    "PORTAL_DRIVE_ROOT_FOLDER_ID": "1zkG3fBm2tJESZjZP0_7jStUuPNXCwRPS",
+    "GOOGLE_ALLOW_EXISTING_MODEL_LINKS": "true",
+    "ASTEN_INTEGRATION_ENABLED": "true",
+    "ASTEN_AUTHENTICATION_OPTION": "4",
+    "ASTEN_REQUIRE_LOGIN": "true",
+    "ASTEN_REQUIRE_CODE": "true",
+    "ASTEN_CALLBACK_URL": "https://portal-tcc-enfermagem-ufes.vercel.app/api/integrations/asten/webhook"
+  },
   "functions": {
     "api/index.ts": {
       "maxDuration": 300
