@@ -22,6 +22,7 @@ jobs:
         run: |
           set -euo pipefail
           url="https://portal-tcc-enfermagem-ufes.vercel.app/api/health"
+          expected="$GITHUB_SHA"
           body="$(mktemp)"
           trap 'rm -f "$body"' EXIT
 
@@ -30,23 +31,29 @@ jobs:
               --connect-timeout 10 --max-time 20 \
               --output "$body" --write-out '%{http_code}' "$url" || true)"
 
+            if ! grep -Eq "\"commit\"[[:space:]]*:[[:space:]]*\"${expected}\"" "$body"; then
+              echo "Tentativa $attempt/24: produção ainda não está servindo a revisão ${expected:0:12}; HTTP ${code:-000}."
+              sleep 10
+              continue
+            fi
+
             if [ "$code" = "200" ] && grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' "$body"; then
-              echo "Produção saudável: $url"
+              echo "Produção saudável na revisão esperada: $url"
               cat "$body"
               exit 0
             fi
 
-            if [ "$attempt" -ge 3 ] && [ "$code" = "503" ] && grep -Eq '"code"[[:space:]]*:[[:space:]]*"[A-Z_]+(REQUIRED|ERROR)"' "$body"; then
-              echo "Produção respondeu com bloqueio explícito de configuração segura:" >&2
+            if [ "$code" = "503" ] && grep -Eq '"code"[[:space:]]*:[[:space:]]*"[A-Z_]+(REQUIRED|ERROR)"' "$body"; then
+              echo "A revisão esperada chegou à produção, mas está bloqueada por configuração segura:" >&2
               cat "$body" >&2
               exit 1
             fi
 
-            echo "Tentativa $attempt/24: HTTP ${code:-000}; aguardando o deploy/runtime ficar saudável."
+            echo "Tentativa $attempt/24: revisão correta respondeu HTTP ${code:-000}; aguardando runtime saudável."
             sleep 10
           done
 
-          echo "Produção não ficou saudável dentro da janela de validação." >&2
+          echo "A revisão ${expected:0:12} não ficou saudável dentro da janela de validação." >&2
           echo "Última resposta HTTP: ${code:-000}" >&2
           cat "$body" >&2 || true
           exit 1
