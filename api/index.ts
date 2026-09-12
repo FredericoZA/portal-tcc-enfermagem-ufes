@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
+import { createPortalApp } from '../server';
 
 type StartupFailure = { code: string; message: string; missingGroups?: string[] };
-type StartupStage = 'IMPORT_SERVER' | 'CREATE_APP';
-type StartupState = { app: ((req: Request, res: Response) => unknown) | null; error: unknown; stage?: StartupStage };
+type StartupState = { app: ((req: Request, res: Response) => unknown) | null; error: unknown };
 
 function configured(name: string, minLength = 1): boolean {
   return String(process.env[name] || '').trim().length >= minLength;
@@ -45,9 +45,8 @@ function productionPreflight(): StartupFailure | null {
   } : null;
 }
 
-function classifyStartupFailure(error: unknown, stage?: StartupStage): StartupFailure {
+function classifyStartupFailure(error: unknown): StartupFailure {
   const detail = error instanceof Error ? error.message : String(error || '');
-  if (stage === 'IMPORT_SERVER') return { code: 'SERVER_IMPORT_ERROR', message: 'O módulo principal do Portal não conseguiu ser carregado no runtime de produção.' };
   if (detail.includes('PORTAL_BOOTSTRAP_MASTER_EMAIL')) return { code: 'MASTER_EMAIL_REQUIRED', message: 'A identidade inicial de administração ainda não foi configurada.' };
   if (detail.includes('persistência durável do Supabase')) return { code: 'SUPABASE_CONFIGURATION_REQUIRED', message: 'A persistência durável ainda não está configurada.' };
   if (
@@ -73,20 +72,13 @@ let startupPromise: Promise<StartupState> | null = null;
 
 function startup(): Promise<StartupState> {
   if (!startupPromise) {
-    startupPromise = import('../server')
-      .then(async ({ createPortalApp }) => {
-        try {
-          const app = await createPortalApp();
-          return { app: app as StartupState['app'], error: null };
-        } catch (error) {
-          console.error('[Startup] Falha ao criar a aplicação do Portal TCC:', error);
-          return { app: null, error, stage: 'CREATE_APP' as const };
-        }
-      })
-      .catch((error) => {
-        console.error('[Startup] Falha ao importar o módulo principal do Portal TCC:', error);
-        return { app: null, error, stage: 'IMPORT_SERVER' as const };
-      });
+    startupPromise = createPortalApp().then(
+      (app) => ({ app: app as StartupState['app'], error: null }),
+      (error) => {
+        console.error('[Startup] Falha ao criar a aplicação do Portal TCC:', error);
+        return { app: null, error };
+      }
+    );
   }
   return startupPromise;
 }
@@ -108,7 +100,7 @@ export default async function handler(req: Request, res: Response) {
   if (preflight) return unavailable(res, preflight);
 
   const state = await startup();
-  if (!state.app) return unavailable(res, classifyStartupFailure(state.error, state.stage));
+  if (!state.app) return unavailable(res, classifyStartupFailure(state.error));
 
   const requestPath = String(req.url || '').split('?')[0];
   if (requestPath === '/api/health' || requestPath === '/health') {
