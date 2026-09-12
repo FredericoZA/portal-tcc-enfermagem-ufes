@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
-import { ProcessData } from '../types';
+import { ProcessData, SignatureJob, AstenIntegrationStatus } from '../types';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumeric, formatTimeExtenso } from '../utils/formatters';
 import { loadTableConfig, ColumnDef } from '../components/TableColumnSelectorPanel';
@@ -16,6 +16,7 @@ import {
   loadGlobalTableConfig,
   getTableStyles, 
   getActionPillStyles,
+  getFilterChipProps,
   formatColumnLabel, 
   formatCellText, 
   getColWidthClass,
@@ -92,6 +93,10 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const [activeTab, setActiveTab] = useState<'pendentes' | 'concluidos'>('pendentes');
   const [searchFilter, setSearchFilter] = useState('');
   const [downloadError, setDownloadError] = useState('');
+  const [signatureJobs, setSignatureJobs] = useState<SignatureJob[]>([]);
+  const [astenStatus, setAstenStatus] = useState<AstenIntegrationStatus | null>(null);
+  const [signingIds, setSigningIds] = useState<string[]>([]);
+  const [signingMessage, setSigningMessage] = useState('');
   
   // Selection state for batch operations
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -201,12 +206,16 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [queueData, procsData] = await Promise.all([
+      const [queueData, procsData, jobsData, integration] = await Promise.all([
         apiClient.getCoordinatorQueue(),
-        apiClient.getProcesses()
+        apiClient.getProcesses(),
+        apiClient.getSignatureJobs(),
+        apiClient.getAstenStatus()
       ]);
       setQueue(queueData || []);
       setAllProcesses(procsData || []);
+      setSignatureJobs(jobsData || []);
+      setAstenStatus(integration || null);
     } catch (err) {
       console.error('Erro ao carregar dados do Presidente:', err);
     } finally {
@@ -270,6 +279,120 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const toggleSelectItem = (id: string) => {
     setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const getDeclarationJob = (processId: string): SignatureJob | undefined =>
+    signatureJobs
+      .filter((job) => job.processId === processId && job.documentType === 'DECLARACAO')
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+
+  const canRetryDeclarationJob = (job?: SignatureJob): boolean => Boolean(
+    job &&
+    job.providerCreationState !== 'UNCERTAIN' &&
+    ['WAITING_INTEGRATION', 'QUEUED', 'PROVIDER_ERROR'].includes(job.status)
+  );
+
+  const isDeclarationActionable = (processId: string): boolean => {
+    const job = getDeclarationJob(processId);
+    return !job || canRetryDeclarationJob(job);
+  };
+
+  const getDeclarationStatus = (processId: string): { label: string; tone: string } => {
+    const job = getDeclarationJob(processId);
+    if (!job) return { label: 'Pendente', tone: 'border-amber-300 bg-amber-50 text-amber-900' };
+    if (job.providerCreationState === 'UNCERTAIN') return { label: 'Conferir na Asten', tone: 'border-amber-400 bg-amber-100 text-amber-950' };
+    if (['WAITING_INTEGRATION', 'QUEUED'].includes(job.status)) return { label: 'Na fila Asten', tone: 'border-sky-300 bg-sky-50 text-sky-900' };
+    if (job.status === 'SENDING') return { label: 'Enviando', tone: 'border-sky-300 bg-sky-50 text-sky-900' };
+    if (job.status === 'SENT') return { label: 'Aguardando assinatura', tone: 'border-blue-300 bg-blue-50 text-blue-900' };
+    if (job.status === 'PARTIALLY_SIGNED') return { label: 'Parcialmente assinada', tone: 'border-indigo-300 bg-indigo-50 text-indigo-900' };
+    if (['SIGNED', 'DRIVE_SYNC_PENDING', 'ARCHIVED'].includes(job.status)) return { label: 'Assinada', tone: 'border-emerald-300 bg-emerald-50 text-emerald-900' };
+    if (job.status === 'PROVIDER_ERROR') return { label: 'Falha recuperável', tone: 'border-red-300 bg-red-50 text-red-900' };
+    return { label: 'Atenção', tone: 'border-red-300 bg-red-50 text-red-900' };
+  };
+
+  const dispatchDeclarationToAsten = async (processId: string) => {
+    const job = getDeclarationJob(processId);
+    if (job && canRetryDeclarationJob(job)) {
+      await apiClient.retrySignatureJob(job.id);
+      return;
+    }
+    if (!job) {
+      await apiClient.signProcessDocument(processId, 'DECLARACAO');
+      return;
+    }
+    throw new Error('Esta declaração já foi enviada para a Asten ou exige conferência antes de novo envio.');
+  };
+
+  const handleSignOne = async (processId: string) => {
+    if (signingIds.includes(processId)) return;
+    setSigningMessage('');
+    setSigningIds((prev) => [...prev, processId]);
+    try {
+      await dispatchDeclarationToAsten(processId);
+      setSigningMessage('Declaração encaminhada para assinatura pela Asten.');
+      await loadData();
+    } catch (error) {
+      setSigningMessage(error instanceof Error ? error.message : 'Não foi possível encaminhar a declaração para a Asten.');
+    } finally {
+      setSigningIds((prev) => prev.filter((id) => id !== processId));
+    }
+  };
+
+  const handleSignSelected = async () => {
+    const pendingIds = new Set(pendingItems.map((item) => item.process.id));
+    const ids = selectedIds.filter((id) => pendingIds.has(id) && isDeclarationActionable(id));
+    if (!ids.length) {
+      setSigningMessage('Selecione ao menos uma declaração que ainda possa ser enviada ou reprocessada na Asten.');
+      return;
+    }
+    setSigningMessage('');
+    setSigningIds((prev) => Array.from(new Set([...prev, ...ids])));
+    let completed = 0;
+    const failures: string[] = [];
+    for (const id of ids) {
+      try {
+        await dispatchDeclarationToAsten(id);
+        completed += 1;
+      } catch (error) {
+        const process = pendingItems.find((item) => item.process.id === id)?.process;
+        failures.push(`${process?.protocolo || id}: ${error instanceof Error ? error.message : 'falha no envio'}`);
+      }
+    }
+    setSigningIds((prev) => prev.filter((id) => !ids.includes(id)));
+    setSelectedIds([]);
+    await loadData();
+    setSigningMessage(
+      failures.length
+        ? `${completed} declaração(ões) encaminhada(s). ${failures.length} falha(s): ${failures.join(' | ')}`
+        : `${completed} declaração(ões) encaminhada(s) para assinatura pela Asten.`
+    );
+  };
+
+  const renderAstenActionCell = (proc: ProcessData) => {
+    const job = getDeclarationJob(proc.id);
+    const working = signingIds.includes(proc.id);
+    const status = getDeclarationStatus(proc.id);
+    const actionable = isDeclarationActionable(proc.id);
+    return (
+      <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[150px] text-center align-middle`}>
+        {actionable ? (
+          <button
+            type="button"
+            onClick={() => handleSignOne(proc.id)}
+            disabled={working}
+            className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-emerald-800 bg-emerald-950 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow-2xs transition-all hover:bg-black disabled:cursor-wait disabled:opacity-60"
+            title={job ? 'Reprocessar esta declaração na Asten' : 'Enviar esta declaração para assinatura do Presidente pela Asten'}
+          >
+            <Shield className="h-3.5 w-3.5 shrink-0" />
+            <span>{working ? 'Enviando…' : job ? 'Reprocessar Asten' : 'Assinar com Asten'}</span>
+          </button>
+        ) : (
+          <span className={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-black uppercase ${status.tone}`} title={job?.lastError || status.label}>
+            {status.label}
+          </span>
+        )}
+      </td>
     );
   };
 
@@ -381,14 +504,14 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         return (
           <td key={colKey} className={cellClass}>
             <div className="flex flex-col items-center gap-1 mx-auto">
-              {activeTab === 'pendentes' ? (
-                <>
-                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-900 border border-slate-300 rounded-full select-none leading-none">
-                    🔴 Aguardando
+              {activeTab === 'pendentes' ? (() => {
+                const signatureStatus = getDeclarationStatus(proc.id);
+                return (
+                  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[9px] font-black uppercase ${signatureStatus.tone}`}>
+                    {signatureStatus.label}
                   </span>
-                  <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('portal:navigate', { detail: 'assinaturas' }))} className="mt-1 inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-800 font-bold text-[9px] uppercase rounded-md transition-all border border-slate-300 shadow-2xs cursor-pointer"><Shield className="w-3 h-3"/><span>Central Asten</span></button>
-                </>
-              ) : (
+                );
+              })() : (
                 <>
                   <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-950 border border-emerald-300 rounded-full select-none leading-none">
                     🟢 Enviada
@@ -670,7 +793,19 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       
       {/* Botões no Topo (Acima do Cabeçalho) */}
       <div className="flex flex-wrap items-center justify-end gap-2.5 mb-3">
-        <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('portal:navigate', { detail: 'assinaturas' }))} style={actionStyles.actionPillStyle} className={actionStyles.actionPillClass} title="Acompanhar documentos enviados diretamente para assinatura pela Asten"><Shield className="w-4 h-4"/><span>Acompanhamento Asten</span></button>
+        {activeTab === 'pendentes' && (
+          <button
+            type="button"
+            disabled={selectedIds.length === 0 || !selectedIds.some(isDeclarationActionable) || signingIds.length > 0}
+            onClick={handleSignSelected}
+            style={{ ...actionStyles.actionPillStyle, opacity: selectedIds.length === 0 || !selectedIds.some(isDeclarationActionable) ? 0.5 : actionStyles.actionPillStyle.opacity }}
+            className={`${actionStyles.actionPillClass} ${selectedIds.length === 0 || !selectedIds.some(isDeclarationActionable) ? 'cursor-not-allowed' : ''}`}
+            title={selectedIds.length ? `Enviar ${selectedIds.length} declaração(ões) selecionada(s) para a Asten` : 'Selecione as declarações na tabela para assinar em bloco'}
+          >
+            <Shield className="w-4 h-4" />
+            <span>{selectedIds.length ? `Assinar selecionadas com Asten (${selectedIds.length})` : 'Assinar selecionadas com Asten'}</span>
+          </button>
+        )}
 
         {activeTab === 'concluidos' && coordTextFormat.showBaixarSelecionadosButton !== false && (
           <button
@@ -706,6 +841,16 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       {downloadError && (
         <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800">
           {downloadError}
+        </div>
+      )}
+      {signingMessage && (
+        <div role="status" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800">
+          {signingMessage}
+        </div>
+      )}
+      {activeTab === 'pendentes' && astenStatus && !astenStatus.dispatchEnabled && (
+        <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
+          Asten ainda requer configuração para despacho. As declarações continuam visíveis nesta fila até a integração estar pronta.
         </div>
       )}
 
@@ -780,43 +925,31 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
             <div className="pt-2.5 border-t flex flex-wrap items-center justify-between gap-3 text-xs" style={styles.filterDividerStyle}>
               {/* Filter Row Switcher with FILTRAR prefix following site standard */}
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[10px] font-black uppercase tracking-wider shrink-0 opacity-80">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
                   {getEditableTableText(customLabels, '__filterTitle', 'FILTRAR:')}
                 </span>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('pendentes');
-                      setSelectedIds([]);
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-1 text-[11px] font-black uppercase rounded-full transition-all cursor-pointer border select-none ${
-                      activeTab === 'pendentes'
-                        ? styles.filterActiveChipClass
-                        : styles.filterInactiveChipClass
-                    }`}
-                    title="Filtrar por declarações pendentes"
-                  >
-                    <Clock className="w-3.5 h-3.5 shrink-0" />
-                    <span>{getEditableTableText(customLabels, '__tabPendentes', 'PENDENTES')} ({queue.length})</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('concluidos');
-                      setSelectedIds([]);
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-1 text-[11px] font-black uppercase rounded-full transition-all cursor-pointer border select-none ${
-                      activeTab === 'concluidos'
-                        ? styles.filterActiveChipClass
-                        : styles.filterInactiveChipClass
-                    }`}
-                    title="Filtrar por declarações assinadas"
-                  >
-                    <FileCheck className="w-3.5 h-3.5 shrink-0" />
-                    <span>{getEditableTableText(customLabels, '__tabConcluidos', 'ASSINADAS')} ({completedItems.length})</span>
-                  </button>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {([
+                    { key: 'pendentes', label: getEditableTableText(customLabels, '__tabPendentes', 'Pendentes'), count: queue.length, tab: 'pendentes' as const },
+                    { key: 'assinadas', label: getEditableTableText(customLabels, '__tabConcluidos', 'Assinadas'), count: completedItems.length, tab: 'concluidos' as const }
+                  ]).map((filter) => {
+                    const isSelected = activeTab === filter.tab;
+                    const chip = getFilterChipProps(filter.key, isSelected, coordTextFormat, filter.label);
+                    return (
+                      <button
+                        key={filter.key}
+                        type="button"
+                        onClick={() => { setActiveTab(filter.tab); setSelectedIds([]); }}
+                        style={chip.buttonStyle}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-all h-7 shrink-0 border select-none ${isSelected ? 'shadow-xs scale-[1.02]' : 'opacity-85 hover:opacity-100'}`}
+                        title={`Filtrar por declarações ${filter.label.toLowerCase()}`}
+                      >
+                        <span className="w-2 h-2 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: chip.dotColor }} />
+                        <span className="whitespace-nowrap font-extrabold">{chip.label}</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded-full font-black shadow-2xs" style={chip.badgeStyle}>{filter.count}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -857,6 +990,9 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                             </button>
                           </th>
                           {columnOrder.map((colKey) => renderHeaderCell(colKey))}
+                          <th className={`${styles.headerThClass} ${styles.cellPadClass} min-w-[150px] text-center align-middle ${styles.headerBorderClass}`}>
+                            <span>Asten</span>
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 bg-white">
@@ -883,6 +1019,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                                 </button>
                               </td>
                               {columnOrder.map((colKey) => renderCell(item, colKey))}
+                              {renderAstenActionCell(proc)}
                             </tr>
                           );
                         })}

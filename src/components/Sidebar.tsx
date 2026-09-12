@@ -12,7 +12,6 @@ import {
   HelpCircle,
   LogIn,
   Settings,
-  ShieldCheck
 } from 'lucide-react';
 import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
@@ -171,20 +170,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
               replicar: { id: 'replicar', label: getNavLabel('replicar', 'Como replicar'), icon: GraduationCap, emoji: '🧩', visible: true },
               'meus-processos': { id: 'meus-processos', label: getNavLabel('meus-processos', 'Meus TCCs'), icon: FileText, emoji: '📋', visible: !isVisitor },
               coordenador: { id: 'coordenador', label: getNavLabel('coordenador', 'Área do Presidente'), icon: Award, emoji: '🏛️', visible: isMasterAdmin && !isVisitor },
-              assinaturas: { id: 'assinaturas', label: getNavLabel('assinaturas', 'Assinaturas'), icon: ShieldCheck, emoji: '🔐', visible: isMasterAdmin && !isVisitor },
               configuracoes: { id: 'configuracoes', label: getNavLabel('configuracoes', 'Configurações'), icon: Settings, emoji: '⚙️', visible: isMasterAdmin && !isVisitor },
               indicadores: { id: 'indicadores', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: '📊', visible: isMasterAdmin && !isVisitor }
             };
 
             const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0
               ? layoutConfig.sidebarNavOrder.filter((key) => key !== 'acessar-portal')
-              : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'assinaturas', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial', 'replicar'];
+              : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial', 'replicar'];
 
             const order = [...configuredOrder];
-            if (!order.includes('assinaturas')) {
-              const settingsIndex = order.indexOf('configuracoes');
-              order.splice(settingsIndex >= 0 ? settingsIndex : order.length, 0, 'assinaturas');
-            }
             if (!order.includes('indicadores')) {
               const settingsIndex = order.indexOf('configuracoes');
               order.splice(settingsIndex >= 0 ? settingsIndex + 1 : order.length, 0, 'indicadores');

@@ -21,7 +21,6 @@ const CoordenadorPage = lazy(() => import('./pages/CoordenadorPage').then((modul
 const ConfiguracoesPage = lazy(() => import('./pages/ConfiguracoesPage').then((module) => ({ default: module.ConfiguracoesPage })));
 const IndicadoresPage = lazy(() => import('./pages/IndicadoresPage').then((module) => ({ default: module.IndicadoresPage })));
 const ComoChegarPage = lazy(() => import('./pages/ComoChegarPage').then((module) => ({ default: module.ComoChegarPage })));
-const SignatureQueuePage = lazy(() => import('./pages/SignatureQueuePage').then((module) => ({ default: module.SignatureQueuePage })));
 const VerificationPage = lazy(() => import('./pages/VerificationPage').then((module) => ({ default: module.VerificationPage })));
 
 function PageLoadingFallback() {
@@ -106,9 +105,8 @@ export default function App() {
       case 'documentos':
         return <DocumentosPage onSelectProcess={(id) => handleSelectProcess(id, false)} />;
       case 'coordenador':
-        return <CoordenadorPage onSelectProcess={(id) => handleSelectProcess(id, false)} />;
       case 'assinaturas':
-        return <SignatureQueuePage />;
+        return <CoordenadorPage onSelectProcess={(id) => handleSelectProcess(id, false)} />;
       case 'configuracoes':
         return <ConfiguracoesPage />;
       case 'indicadores':
@@ -157,8 +155,7 @@ export default function App() {
                   : currentTab === 'agenda' ? 'Agenda de Defesas'
                   : currentTab === 'avaliacoes' ? 'Avaliações de TCC'
                   : currentTab === 'documentos' ? 'Documentos'
-                  : currentTab === 'coordenador' ? 'Área do Presidente'
-                  : currentTab === 'assinaturas' ? 'Central de Assinaturas'
+                  : (currentTab === 'coordenador' || currentTab === 'assinaturas') ? 'Área do Presidente'
                   : currentTab === 'configuracoes' ? 'Configurações & Modelos de Arquivos'
                   : currentTab === 'indicadores' ? 'Indicadores do Portal'
                   : 'Local das Defesas'
