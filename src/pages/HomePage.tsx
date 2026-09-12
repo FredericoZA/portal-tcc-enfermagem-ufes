@@ -2088,7 +2088,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <div className="text-[9px] text-slate-500 font-mono font-normal mt-1 uppercase tracking-tight">
                           {formatCellText('aluno1', 'Matrícula', defensesTextFormat, '🪪')}
                         </div>
-                        <div className="text-[9px] text-slate-500 font-mono font-normal leading-tight">{proc.aluno1?.matricula || '2026101890'}</div>
+                        <div className="text-[9px] text-slate-500 font-mono font-normal leading-tight">{proc.aluno1?.matricula || '—'}</div>
                       </div>
                     </td>
                   );
@@ -2104,7 +2104,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                             <div className="text-[9px] text-slate-500 font-mono font-normal mt-1 uppercase tracking-tight">
                               {formatCellText('aluno2', 'Matrícula', defensesTextFormat, '🪪')}
                             </div>
-                            <div className="text-[9px] text-slate-500 font-mono font-normal leading-tight">{proc.aluno2.matricula || '2026101891'}</div>
+                            <div className="text-[9px] text-slate-500 font-mono font-normal leading-tight">{proc.aluno2.matricula || '—'}</div>
                           </>
                         ) : (
                           <span className="text-slate-300 font-mono text-[11px]">—</span>

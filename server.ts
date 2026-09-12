@@ -611,7 +611,7 @@ function publicProcessView(p:ProcessData):ProcessData{
   // DTO por lista branca: nenhum campo interno é propagado por spread a uma rota anônima.
   return {
     id:p.id,protocolo:p.protocolo,titulo:p.titulo,etapaAtual:p.etapaAtual,status:p.status,createdByEmail:'',
-    aluno1:{nome:p.aluno1.nome,email:'',matricula:''},aluno2:p.aluno2?{nome:p.aluno2.nome,email:'',matricula:''}:null,
+    aluno1:{nome:p.aluno1.nome,email:'',matricula:p.aluno1.matricula},aluno2:p.aluno2?{nome:p.aluno2.nome,email:'',matricula:p.aluno2.matricula}:null,
     orientador:{nome:p.orientador.nome,email:''},coorientador:p.coorientador?{nome:p.coorientador.nome,email:'',instituicao:p.coorientador.instituicao||''}:null,
     banca:p.banca.map(member=>({id:member.id,nome:member.nome,email:'',funcao:member.funcao,membroTipo:member.membroTipo,instituicao:member.instituicao,profissao:member.profissao,titulacao:member.titulacao})),
     defesa:{startAt:p.defesa.startAt,endAt:p.defesa.endAt,local:p.defesa.local,localStatus:p.defesa.localStatus},
@@ -1679,7 +1679,7 @@ export async function createPortalApp() {
 
   // GET /api/processes
   app.get('/api/processes', (req, res) => {
-    const identity=getPortalIdentity(req);if(!identity)return res.json(processesStore.filter(p=>p.status==='CONCLUIDO'&&publicationRequested(p)).map(publicProcessView));const email=identity.email;
+    const identity=getPortalIdentity(req);if(!identity)return res.json(processesStore.filter(p=>p.status!=='EM_RASCUNHO').map(publicProcessView));const email=identity.email;
     const { memberships } = getUserRolesForEmail(email);
 
     // Master e Presidente da Comissão visualizam todos os processos.
@@ -2028,7 +2028,7 @@ export async function createPortalApp() {
     if (!proc) {
       return res.status(404).json({ error: 'Processo não encontrado.' });
     }
-    const identity=getPortalIdentity(req);if(!identity){if(proc.status!=='CONCLUIDO'||!publicationRequested(proc))return res.status(404).json({error:'Processo não encontrado.'});return res.json(publicProcessView(proc));}if(!canAccessProcess(identity.email,proc.id))return res.status(404).json({error:'Processo não encontrado.'});res.json(proc);
+    const identity=getPortalIdentity(req);if(!identity){if(proc.status==='EM_RASCUNHO')return res.status(404).json({error:'Processo não encontrado.'});return res.json(publicProcessView(proc));}if(!canAccessProcess(identity.email,proc.id))return res.status(404).json({error:'Processo não encontrado.'});res.json(proc);
   });
 
   // PATCH /api/processes/:id (Edit by student or advisor)

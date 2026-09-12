@@ -93,16 +93,17 @@ async function uploadArtifactPdf(input:{rootFolderId?:string;protocol?:string;ac
   let parentId = input.processFolderId;
   if(input.rootFolderId && input.protocol){
     await assertPrivateContainer(input.accessToken,input.rootFolderId);
-    const documents=await ensureFolder(input.accessToken,input.rootFolderId,'Documentos');
-    const names:Record<string,string>={CONVITE:'Convite',ATA:'Ata',TERMO:'Termo de autorização',DECLARACAO:'Declaração'};
+    const documents=await ensureFolder(input.accessToken,input.rootFolderId,'01_DOCUMENTOS');
+    const names:Record<string,string>={CONVITE:'01_CARTA_CONVITE',ATA:'02_ATA_DEFESA',TERMO:'03_TERMO_AUTORIZACAO',DECLARACAO:'04_DECLARACAO_PARTICIPACAO'};
     const typeFolder=await ensureFolder(input.accessToken,documents.id,names[input.documentType]||input.documentType);
-    const processFolder=await ensureFolder(input.accessToken,typeFolder.id,input.protocol);
+    const lifecycleFolder=await ensureFolder(input.accessToken,typeFolder.id,input.lifecycle==='GERADO'?'02_GERADOS':'03_ASSINADOS');
+    const processFolder=await ensureFolder(input.accessToken,lifecycleFolder.id,input.protocol);
     parentId=processFolder.id;
   } else {
     const legacy=await ensureFolder(input.accessToken,input.processFolderId,DOCUMENT_FOLDER[input.documentType]||'07_COMPROVANTES_ASTEN');
     parentId=legacy.id;
   }
-  const destination=await ensureFolder(input.accessToken,parentId,input.lifecycle==='GERADO'?'Gerados':'Assinados');
+  const destination=input.rootFolderId&&input.protocol?{id:parentId}:await ensureFolder(input.accessToken,parentId,input.lifecycle==='GERADO'?'Gerados':'Assinados');
   const duplicateQuery = `'${escapeQuery(destination.id)}' in parents and appProperties has { key='portalSignatureJobId' and value='${escapeQuery(input.jobId)}' } and appProperties has { key='portalLifecycle' and value='${input.lifecycle}' } and trashed = false`;
   const existingResponse = await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(duplicateQuery)}&fields=files(id,name,webViewLink,appProperties)&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true`, input.accessToken);
   const existing = (await existingResponse.json()).files || [];

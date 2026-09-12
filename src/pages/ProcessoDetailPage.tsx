@@ -193,8 +193,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     try {
       const [pData, docsData,signatureData,verificationData] = await Promise.all([
         apiClient.getProcessById(processId),
-        apiClient.getProcessDocuments(processId),
-        apiClient.getProcessSignatureJobs(processId),
+        apiClient.getProcessDocuments(processId).catch(() => []),
+        apiClient.getProcessSignatureJobs(processId).catch(() => []),
         apiClient.getProcessVerifications(processId).catch(() => [])
       ]);
       setProcess(pData);
