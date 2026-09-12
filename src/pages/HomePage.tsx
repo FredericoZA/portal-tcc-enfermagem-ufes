@@ -871,7 +871,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [isListExpanded, setIsListExpanded] = useState<boolean>(false);
 
   // Month navigation for formal calendar grid
-  const [currentCalendarDate, setCurrentCalendarDate] = useState<Date>(new Date(2026, 6, 1)); // Default July 2026
+  const [currentCalendarDate, setCurrentCalendarDate] = useState<Date>(() => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), 1); }); // Always open on the user's current month
   const [selectedFilterMonth, setSelectedFilterMonth] = useState<number | 'all'>('all'); // Show all months by default in lists
   const [selectedFilterYear, setSelectedFilterYear] = useState<number | 'all'>('all'); // Show all years by default in lists
   const [selectedDayDefenses, setSelectedDayDefenses] = useState<ProcessData[] | null>(null);
@@ -1019,10 +1019,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   };
 
   const handleGoToToday = () => {
-    const today = new Date(2026, 6, 1);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), 1);
     setCurrentCalendarDate(today);
-    setSelectedFilterYear(2026);
-    setSelectedFilterMonth(6);
+    setSelectedFilterYear(today.getFullYear());
+    setSelectedFilterMonth(today.getMonth());
     setSelectedDayDefenses(null);
     setSelectedDayGcalEvents(null);
   };
@@ -1200,7 +1201,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           type="button"
                           onClick={handleGoToToday}
                           className={`px-3 ${defStyles.calendarNavBtnClass} text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider rounded-full cursor-pointer transition-all h-7.5 shadow-2xs shrink-0`}
-                          title="Ir para Hoje (Jul/2026)"
+                          title="Ir para o mês atual"
                         >
                           Hoje
                         </button>
