@@ -84,15 +84,16 @@ jobs:
               [ "$auth_code" = "401" ] || { echo "Autenticação demo indevida em produção: HTTP ${auth_code:-000}." >&2; cat "$auth_body" >&2; exit 1; }
               grep -Eq '"code"[[:space:]]*:[[:space:]]*"AUTHENTICATION_REQUIRED"' "$auth_body" || { echo 'Endpoint protegido não devolveu o contrato de autenticação esperado.' >&2; cat "$auth_body" >&2; exit 1; }
 
+              # A antiga consulta pública de autenticidade foi deliberadamente removida
+              # da instalação UFES. O smoke garante que ela permaneça desabilitada.
               verification_code="$(curl --silent --show-error --location \
                 --connect-timeout 10 --max-time 20 \
                 --output "$verification_body" --write-out '%{http_code}' "$origin/api/public/verification/smoke-code-inexistente" || true)"
-              [ "$verification_code" = "404" ] || { echo "Consulta pública inválida respondeu HTTP ${verification_code:-000}." >&2; cat "$verification_body" >&2; exit 1; }
-              grep -Eq '"valid"[[:space:]]*:[[:space:]]*false' "$verification_body" || { echo 'Consulta pública inválida não retornou valid=false.' >&2; cat "$verification_body" >&2; exit 1; }
-              grep -Eq '"status"[[:space:]]*:[[:space:]]*"NOT_FOUND"' "$verification_body" || { echo 'Consulta pública inválida não retornou NOT_FOUND.' >&2; cat "$verification_body" >&2; exit 1; }
+              [ "$verification_code" = "404" ] || { echo "Recurso de autenticidade pública deveria estar desabilitado, mas respondeu HTTP ${verification_code:-000}." >&2; cat "$verification_body" >&2; exit 1; }
+              grep -Eq '"error"[[:space:]]*:[[:space:]]*"Recurso não habilitado nesta instalação\."' "$verification_body" || { echo 'Recurso de autenticidade pública não está no contrato desabilitado esperado.' >&2; cat "$verification_body" >&2; exit 1; }
 
               echo "Produção saudável na revisão esperada: $url"
-              echo "Setup, perfil UFES, proteção contra auth demo e consulta pública inválida aprovados."
+              echo "Setup, perfil UFES, proteção contra auth demo e módulos fora do escopo desabilitados: aprovados."
               cat "$body"
               exit 0
             fi
