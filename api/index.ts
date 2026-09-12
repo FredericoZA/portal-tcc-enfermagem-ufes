@@ -1,7 +1,8 @@
 import type { Request, Response } from 'express';
 
 type StartupFailure = { code: string; message: string; missingGroups?: string[] };
-type StartupState = { app: ((req: Request, res: Response) => unknown) | null; error: unknown };
+type StartupStage = 'IMPORT_SERVER' | 'CREATE_APP';
+type StartupState = { app: ((req: Request, res: Response) => unknown) | null; error: unknown; stage?: StartupStage };
 
 function configured(name: string, minLength = 1): boolean {
   return String(process.env[name] || '').trim().length >= minLength;
@@ -44,8 +45,9 @@ function productionPreflight(): StartupFailure | null {
   } : null;
 }
 
-function classifyStartupFailure(error: unknown): StartupFailure {
+function classifyStartupFailure(error: unknown, stage?: StartupStage): StartupFailure {
   const detail = error instanceof Error ? error.message : String(error || '');
+  if (stage === 'IMPORT_SERVER') return { code: 'SERVER_IMPORT_ERROR', message: 'O módulo principal do Portal não conseguiu ser carregado no runtime de produção.' };
   if (detail.includes('PORTAL_BOOTSTRAP_MASTER_EMAIL')) return { code: 'MASTER_EMAIL_REQUIRED', message: 'A identidade inicial de administração ainda não foi configurada.' };
   if (detail.includes('persistência durável do Supabase')) return { code: 'SUPABASE_CONFIGURATION_REQUIRED', message: 'A persistência durável ainda não está configurada.' };
   if (
@@ -64,7 +66,7 @@ function classifyStartupFailure(error: unknown): StartupFailure {
   if (detail.includes('GOOGLE_') || detail.toLowerCase().includes('oauth')) return { code: 'GOOGLE_OAUTH_SECURITY_REQUIRED', message: 'A integração Google ainda não passou na verificação de segurança.' };
   if (detail.includes('PORTAL_SESSION_SECRET') || detail.toLowerCase().includes('sessão')) return { code: 'SESSION_SECRET_REQUIRED', message: 'A proteção de sessão ainda não está configurada.' };
   if (detail.includes('migrações do Supabase') || detail.includes('outbox transacional')) return { code: 'SUPABASE_SCHEMA_REQUIRED', message: 'O esquema transacional do banco ainda não foi validado.' };
-  return { code: 'STARTUP_CONFIGURATION_ERROR', message: 'O portal ainda não concluiu a configuração segura de produção.' };
+  return { code: 'PORTAL_APP_INITIALIZATION_ERROR', message: 'A aplicação foi carregada, mas uma validação interna ainda impede a inicialização segura.' };
 }
 
 let startupPromise: Promise<StartupState> | null = null;
@@ -72,14 +74,19 @@ let startupPromise: Promise<StartupState> | null = null;
 function startup(): Promise<StartupState> {
   if (!startupPromise) {
     startupPromise = import('../server')
-      .then(({ createPortalApp }) => createPortalApp())
-      .then(
-        (app) => ({ app: app as StartupState['app'], error: null }),
-        (error) => {
-          console.error('[Startup] Falha ao inicializar o Portal TCC:', error);
-          return { app: null, error };
+      .then(async ({ createPortalApp }) => {
+        try {
+          const app = await createPortalApp();
+          return { app: app as StartupState['app'], error: null };
+        } catch (error) {
+          console.error('[Startup] Falha ao criar a aplicação do Portal TCC:', error);
+          return { app: null, error, stage: 'CREATE_APP' as const };
         }
-      );
+      })
+      .catch((error) => {
+        console.error('[Startup] Falha ao importar o módulo principal do Portal TCC:', error);
+        return { app: null, error, stage: 'IMPORT_SERVER' as const };
+      });
   }
   return startupPromise;
 }
@@ -101,7 +108,7 @@ export default async function handler(req: Request, res: Response) {
   if (preflight) return unavailable(res, preflight);
 
   const state = await startup();
-  if (!state.app) return unavailable(res, classifyStartupFailure(state.error));
+  if (!state.app) return unavailable(res, classifyStartupFailure(state.error, state.stage));
 
   const requestPath = String(req.url || '').split('?')[0];
   if (requestPath === '/api/health' || requestPath === '/health') {
