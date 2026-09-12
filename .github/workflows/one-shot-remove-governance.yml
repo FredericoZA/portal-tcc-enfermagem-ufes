@@ -1,0 +1,60 @@
+name: One-shot remove generic governance
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-remove-governance.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Remove generic installation/governance UI and make metrics permanent
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          config_path = Path('src/pages/ConfiguracoesPage.tsx')
+          text = config_path.read_text(encoding='utf-8')
+          text = text.replace("import { PortalGovernancePanel } from '../components/PortalGovernancePanel';\n", '')
+          text = re.sub(r"\n\s*governance:\s*false,", '', text)
+          text = re.sub(r"\n\s*governance:\s*true,", '', text)
+          block = re.compile(
+              r"\n\s*\{isMasterAdmin && \(\n\s*<section id=\\\"section-governanca-instalacao\\\".*?</section>\n\s*\)\}\n",
+              re.S,
+          )
+          text, count = block.subn('\n', text)
+          if count != 1:
+              raise SystemExit(f'Esperava remover 1 seção de governança; removidas: {count}')
+          config_path.write_text(text, encoding='utf-8')
+
+          governance = Path('src/components/PortalGovernancePanel.tsx')
+          if governance.exists():
+              governance.unlink()
+
+          server_path = Path('server.ts')
+          server = server_path.read_text(encoding='utf-8')
+          server = server.replace("app.get('/api/admin/metrics/definitions',requireAuthenticated,requireAdministrator,requireFeature('OPERATIONS_KPIS'),", "app.get('/api/admin/metrics/definitions',requireAuthenticated,requireAdministrator,")
+          server = server.replace("app.get('/api/admin/metrics',requireAuthenticated,requireAdministrator,requireFeature('OPERATIONS_KPIS'),", "app.get('/api/admin/metrics',requireAuthenticated,requireAdministrator,")
+          server_path.write_text(server, encoding='utf-8')
+      - name: Install dependencies
+        run: npm ci --include=dev
+      - name: Validate
+        run: npm run test:ci
+      - name: Secure flow
+        run: npm run test:security
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/one-shot-remove-governance.yml
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "refactor(config): remove instalação e governança genéricas"
+          git push
