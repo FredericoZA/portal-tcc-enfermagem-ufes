@@ -23,15 +23,21 @@ jobs:
           config_path = Path('src/pages/ConfiguracoesPage.tsx')
           text = config_path.read_text(encoding='utf-8')
           text = text.replace("import { PortalGovernancePanel } from '../components/PortalGovernancePanel';\n", '')
-          text = re.sub(r"\n\s*governance:\s*false,", '', text)
-          text = re.sub(r"\n\s*governance:\s*true,", '', text)
-          block = re.compile(
-              r"\n\s*\{isMasterAdmin && \(\n\s*<section id=\\\"section-governanca-instalacao\\\".*?</section>\n\s*\)\}\n",
-              re.S,
-          )
-          text, count = block.subn('\n', text)
-          if count != 1:
-              raise SystemExit(f'Esperava remover 1 seção de governança; removidas: {count}')
+          text = re.sub(r"\n\s*governance:\s*(?:false|true),", '', text)
+
+          marker = '<section id="section-governanca-instalacao"'
+          marker_index = text.find(marker)
+          if marker_index < 0:
+              raise SystemExit('Seção section-governanca-instalacao não encontrada.')
+          start = text.rfind('{isMasterAdmin && (', 0, marker_index)
+          if start < 0:
+              raise SystemExit('Início do bloco de governança não encontrado.')
+          close_marker = '</section>\n      )}'
+          end = text.find(close_marker, marker_index)
+          if end < 0:
+              raise SystemExit('Fim do bloco de governança não encontrado.')
+          end += len(close_marker)
+          text = text[:start] + text[end:]
           config_path.write_text(text, encoding='utf-8')
 
           governance = Path('src/components/PortalGovernancePanel.tsx')
