@@ -607,10 +607,10 @@ function preserveCurrentDriveBindings(snapshot:any,current?:ProcessData):Process
   restored.acervo=target;return restored as ProcessData;
 }
 function publicationRequested(p:ProcessData):boolean{return Boolean(p.acervo?.publishFullWork||p.acervo?.publishExpandedAbstract);}
-function publicProcessView(p:ProcessData):ProcessData{
+function publicProcessView(p:ProcessData):any{
   // DTO por lista branca: nenhum campo interno é propagado por spread a uma rota anônima.
   return {
-    id:p.id,protocolo:p.protocolo,titulo:p.titulo,etapaAtual:p.etapaAtual,status:p.status,createdByEmail:'',
+    id:p.id,protocolo:p.protocolo,titulo:p.titulo,etapaAtual:p.etapaAtual,status:p.status,
     aluno1:{nome:p.aluno1.nome,email:'',matricula:p.aluno1.matricula},aluno2:p.aluno2?{nome:p.aluno2.nome,email:'',matricula:p.aluno2.matricula}:null,
     orientador:{nome:p.orientador.nome,email:''},coorientador:p.coorientador?{nome:p.coorientador.nome,email:'',instituicao:p.coorientador.instituicao||''}:null,
     banca:p.banca.map(member=>({id:member.id,nome:member.nome,email:'',funcao:member.funcao,membroTipo:member.membroTipo,instituicao:member.instituicao,profissao:member.profissao,titulacao:member.titulacao})),
