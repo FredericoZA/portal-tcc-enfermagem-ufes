@@ -30,44 +30,61 @@ const STUDENT_ID_VALIDATION: StudioValidationRule = {
   pattern: '^\\d{5,20}$',
   errorMessage: 'Informe a matrícula completa usando somente números.'
 };
-const SIAPE_VALIDATION: StudioValidationRule = {
-  minLength: 7,
-  maxLength: 7,
-  pattern: '^\\d{7}$',
-  errorMessage: 'Informe o SIAPE com 7 algarismos.'
+const CPF_VALIDATION: StudioValidationRule = {
+  minLength: 11,
+  maxLength: 11,
+  pattern: '^\\d{11}$',
+  errorMessage: 'Informe um CPF válido com 11 algarismos.'
+};
+const CIAP_VALIDATION: StudioValidationRule = {
+  minLength: 4,
+  maxLength: 20,
+  pattern: '^[A-Za-z0-9.-]{4,20}$',
+  errorMessage: 'Informe o CIAP/identificação funcional da UFES.'
 };
 
 const q = (fieldKey: string, label: string, section: string, fieldType = 'text', visibleWhen?: RegistrationQuestion['visibleWhen'], validation?: StudioValidationRule): RegistrationQuestion => ({ id: `registration-${fieldKey}`, fieldKey, label, section, fieldType, required: true, visibleWhen, validation });
 const when = (fieldKey: string) => ({ fieldKey, operator: 'EQUALS' as const, value: 'Sim' });
 export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   q('ALUNO_1_NOME', 'Nome completo', 'Aluno', 'text', undefined, FULL_NAME_VALIDATION),
-  q('ALUNO_1_MATRICULA', 'Matrícula completa', 'Aluno', 'text', undefined, STUDENT_ID_VALIDATION),
+  q('ALUNO_1_MATRICULA', 'Matrícula do curso', 'Aluno', 'text', undefined, STUDENT_ID_VALIDATION),
+  q('ALUNO_1_CPF', 'CPF', 'Aluno', 'text', undefined, CPF_VALIDATION),
   q('ALUNO_1_EMAIL', 'E-mail institucional do aluno', 'Aluno', 'email'),
   { ...q('TEM_ALUNO_2', 'O trabalho tem segundo autor?', 'Segundo autor', 'select'), options: ['Não', 'Sim'] },
   q('ALUNO_2_NOME', 'Nome completo do segundo autor', 'Segundo autor', 'text', when('TEM_ALUNO_2'), FULL_NAME_VALIDATION),
   q('ALUNO_2_MATRICULA', 'Matrícula do segundo autor', 'Segundo autor', 'text', when('TEM_ALUNO_2'), STUDENT_ID_VALIDATION),
+  q('ALUNO_2_CPF', 'CPF do segundo autor', 'Segundo autor', 'text', when('TEM_ALUNO_2'), CPF_VALIDATION),
   q('ALUNO_2_EMAIL', 'E-mail institucional do segundo autor', 'Segundo autor', 'email', when('TEM_ALUNO_2')),
   q('ORIENTADOR_NOME', 'Nome completo do orientador', 'Orientação', 'text', undefined, FULL_NAME_VALIDATION),
   q('ORIENTADOR_EMAIL', 'E-mail do orientador', 'Orientação', 'email'),
-  q('ORIENTADOR_SIAPE', 'SIAPE do orientador', 'Orientação', 'text', undefined, SIAPE_VALIDATION),
+  q('ORIENTADOR_CPF', 'CPF do orientador', 'Orientação', 'text', undefined, CPF_VALIDATION),
+  q('ORIENTADOR_SIAPE', 'CIAP / identificação funcional UFES do orientador', 'Orientação', 'text', undefined, CIAP_VALIDATION),
   { ...q('TEM_COORIENTADOR', 'Há coorientador?', 'Coorientação', 'select'), options: ['Não', 'Sim'] },
   q('COORIENTADOR_NOME', 'Nome completo do coorientador', 'Coorientação', 'text', when('TEM_COORIENTADOR'), FULL_NAME_VALIDATION),
   q('COORIENTADOR_EMAIL', 'E-mail do coorientador', 'Coorientação', 'email', when('TEM_COORIENTADOR')),
-  { ...q('COORIENTADOR_SIAPE', 'SIAPE ou identificação do coorientador (se aplicável)', 'Coorientação', 'text', when('TEM_COORIENTADOR')), required: false },
-  { ...q('COORIENTADOR_INSTITUICAO', 'Instituição do coorientador', 'Coorientação', 'text', when('TEM_COORIENTADOR')), required: false },
+  q('COORIENTADOR_CPF', 'CPF do coorientador', 'Coorientação', 'text', when('TEM_COORIENTADOR'), CPF_VALIDATION),
+  { ...q('COORIENTADOR_SIAPE', 'CIAP / identificação funcional UFES do coorientador, se aplicável', 'Coorientação', 'text', when('TEM_COORIENTADOR'), CIAP_VALIDATION), required: false },
+  q('COORIENTADOR_INSTITUICAO', 'Instituição do coorientador', 'Coorientação', 'text', when('TEM_COORIENTADOR')),
   ...[2, 3].flatMap(n => [
     q(`EXAMINADOR_${n}_NOME`, `Nome completo do avaliador ${n - 1}`, 'Banca', 'text', undefined, FULL_NAME_VALIDATION),
     q(`EXAMINADOR_${n}_EMAIL`, `E-mail do avaliador ${n - 1}`, 'Banca', 'email'),
+    q(`EXAMINADOR_${n}_CPF`, `CPF do avaliador ${n - 1}`, 'Banca', 'text', undefined, CPF_VALIDATION),
     q(`EXAMINADOR_${n}_INSTITUICAO`, `Instituição do avaliador ${n - 1}`, 'Banca'),
-    { ...q(`EXAMINADOR_${n}_SIAPE`, `SIAPE ou identificação do avaliador ${n - 1} (se aplicável)`, 'Banca'), required: false }
+    { ...q(`EXAMINADOR_${n}_SIAPE`, `CIAP / identificação funcional UFES do avaliador ${n - 1}, se aplicável`, 'Banca', 'text', undefined, CIAP_VALIDATION), required: false }
   ]),
   q('TITULO', 'Título completo do TCC', 'Trabalho'),
   ...(['AREA_TEMATICA', 'TEMA_PRINCIPAL', 'TIPO_DE_ESTUDO', 'FINALIDADE_DO_TRABALHO'] as const).map((key, i) => ({ ...q(key, ['Área temática', 'Tema principal', 'Tipo de estudo', 'Finalidade do trabalho'][i], 'Trabalho'), required: false })),
-  q('DEFESA_DATA_HORA', 'Data e hora pretendidas', 'Reserva do local', 'datetime-local'),
-  q('DEFESA_LOCAL', 'Local de preferência', 'Reserva do local', 'select'),
+  q('DEFESA_DATA_HORA', 'Data e hora pretendidas para a defesa', 'Reserva do local', 'datetime-local'),
+  q('DEFESA_LOCAL', 'Local que pretende reservar', 'Reserva do local', 'select'),
   { ...q('LOCAL_ALTERNATIVO', 'Local alternativo se o preferido estiver ocupado', 'Reserva do local', 'select'), required: false }
 ];
-const aliases: Record<string, string> = { CAMPO_01: 'ALUNO_1_NOME', ALUNO_NOME: 'ALUNO_1_NOME', ALUNO_MATRICULA: 'ALUNO_1_MATRICULA', CAMPO_02: 'TITULO', CAMPO_03: 'ORIENTADOR_NOME', CAMPO_COORIENTADOR: 'COORIENTADOR_NOME', CAMPO_04: 'DEFESA_DATA_HORA', CAMPO_07_LOCAL: 'DEFESA_LOCAL' };
+const aliases: Record<string, string> = {
+  CAMPO_01: 'ALUNO_1_NOME', ALUNO_NOME: 'ALUNO_1_NOME', ALUNO_MATRICULA: 'ALUNO_1_MATRICULA',
+  CAMPO_02: 'TITULO', CAMPO_03: 'ORIENTADOR_NOME', CAMPO_COORIENTADOR: 'COORIENTADOR_NOME',
+  CAMPO_04: 'DEFESA_DATA_HORA', CAMPO_07_LOCAL: 'DEFESA_LOCAL',
+  ORIENTADOR_CIAP: 'ORIENTADOR_SIAPE', COORIENTADOR_CIAP: 'COORIENTADOR_SIAPE',
+  EXAMINADOR_2_CIAP: 'EXAMINADOR_2_SIAPE', EXAMINADOR_3_CIAP: 'EXAMINADOR_3_SIAPE'
+};
 export function catalogIsValid(entry: CatalogEntry, at = new Date().toISOString()): boolean {
   const day = at.slice(0, 10);
   return entry.active && (!entry.validFrom || day >= entry.validFrom) && (!entry.validUntil || day <= entry.validUntil);
@@ -92,7 +109,7 @@ export function registrationQuestions(studio?: Partial<IntegrationStudioSettings
   const config = operationalConfig(studio);
   const ordered: RegistrationQuestion[] = [];
   const visited = new Set<string>();
-  const visit = (field: RegistrationQuestion) => { if(visited.has(field.fieldKey))return;visited.add(field.fieldKey);const dependency=result.find(f=>f.fieldKey===field.visibleWhen?.fieldKey);if(dependency)visit(dependency);ordered.push(field); };
+  const visit = (field: RegistrationQuestion) => { if (visited.has(field.fieldKey)) return; visited.add(field.fieldKey); const dependency = result.find(f => f.fieldKey === field.visibleWhen?.fieldKey); if (dependency) visit(dependency); ordered.push(field); };
   result.forEach(visit);
   return ordered.map(field => {
     if (['DEFESA_LOCAL', 'LOCAL_ALTERNATIVO'].includes(field.fieldKey)) return { ...field, options: config.reservation.locations };
@@ -101,7 +118,6 @@ export function registrationQuestions(studio?: Partial<IntegrationStudioSettings
   });
 }
 
-/** Convert a wall-clock value in the installation timezone, independent of the browser timezone. */
 export function localDateTimeToIso(value: string, timezone: string): string {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) throw new Error('Informe data e hora válidas.');
   const target = Date.parse(`${value}:00Z`);
@@ -112,24 +128,19 @@ export function localDateTimeToIso(value: string, timezone: string): string {
   return new Date(instant).toISOString();
 }
 
-function cleanText(value: unknown): string {
-  return String(value ?? '').normalize('NFC').trim().replace(/\s+/g, ' ');
-}
-function normalizeStudentId(value: unknown): string {
-  return String(value ?? '').trim().replace(/[.\s-]+/g, '');
-}
+function cleanText(value: unknown): string { return String(value ?? '').normalize('NFC').trim().replace(/\s+/g, ' '); }
+function normalizeStudentId(value: unknown): string { return String(value ?? '').trim().replace(/[.\s-]+/g, ''); }
 function canonicalPerson(prefix: string, answers: RegistrationAnswers) {
   const name = cleanText(answers[`${prefix}_NOME`]);
   return {
     nome: name ? formatNameTitleCase(name) : '',
     email: normalizeEmail(cleanText(answers[`${prefix}_EMAIL`])),
     matricula: normalizeStudentId(answers[`${prefix}_MATRICULA`]),
-    siape: normalizeStudentId(answers[`${prefix}_SIAPE`]),
+    siape: cleanText(answers[`${prefix}_SIAPE`]),
     instituicao: cleanText(answers[`${prefix}_INSTITUICAO`])
   };
 }
 
-/** Canonicaliza os dados somente depois de terem passado pelas regras publicadas. */
 export function registrationPayload(a: RegistrationAnswers, timezone: string) {
   const s = (k: string) => cleanText(a[k]);
   return {
