@@ -16,7 +16,7 @@ export const NursingEmblemLogo: React.FC<NursingEmblemLogoProps> = ({ className 
     return (
       <div
         style={{ width: `${size}px`, height: `${size}px` }}
-        className={`rounded-xl bg-white border border-emerald-200 flex items-center justify-center font-black text-[#005830] text-xs shrink-0 shadow-sm ${className}`}
+        className={`flex items-center justify-center font-black text-[#b9ead0] text-xs shrink-0 ${className}`}
         aria-label="Portal TCC Enfermagem UFES"
       >
         TCC
@@ -32,7 +32,7 @@ export const NursingEmblemLogo: React.FC<NursingEmblemLogoProps> = ({ className 
       height={size}
       style={{ width: `${size}px`, height: `${size}px` }}
       onError={() => setImgError(true)}
-      className={`object-contain shrink-0 rounded-md bg-white/95 p-0.5 transition-transform duration-200 hover:scale-105 ${className}`}
+      className={`object-contain shrink-0 bg-transparent p-0 transition-transform duration-200 hover:scale-105 ${className}`}
     />
   );
 };
