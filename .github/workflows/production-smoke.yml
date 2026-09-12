@@ -27,11 +27,13 @@ jobs:
           body="$(mktemp)"
           root_body="$(mktemp)"
           root_headers="$(mktemp)"
+          logo_body="$(mktemp)"
+          logo_headers="$(mktemp)"
           setup_body="$(mktemp)"
           profile_body="$(mktemp)"
           auth_body="$(mktemp)"
           verification_body="$(mktemp)"
-          trap 'rm -f "$body" "$root_body" "$root_headers" "$setup_body" "$profile_body" "$auth_body" "$verification_body"' EXIT
+          trap 'rm -f "$body" "$root_body" "$root_headers" "$logo_body" "$logo_headers" "$setup_body" "$profile_body" "$auth_body" "$verification_body"' EXIT
 
           for attempt in $(seq 1 24); do
             code="$(curl --silent --show-error --location \
@@ -60,6 +62,14 @@ jobs:
               grep -Eqi '^strict-transport-security:' "$root_headers" || { echo 'Cabeçalho HSTS ausente.' >&2; exit 1; }
               grep -Eqi '^content-security-policy:' "$root_headers" || { echo 'Content-Security-Policy ausente.' >&2; exit 1; }
               grep -Eqi '<!doctype html|<html' "$root_body" || { echo 'Frontend não retornou um documento HTML válido.' >&2; exit 1; }
+
+              logo_code="$(curl --silent --show-error --location \
+                --connect-timeout 10 --max-time 20 \
+                --dump-header "$logo_headers" --output "$logo_body" \
+                --write-out '%{http_code}' "$origin/colenf-logo.png" || true)"
+              [ "$logo_code" = "200" ] || { echo "Logo institucional respondeu HTTP ${logo_code:-000}." >&2; exit 1; }
+              grep -Eqi '^content-type:[[:space:]]*image/png' "$logo_headers" || { echo 'Logo institucional não foi servido como image/png.' >&2; exit 1; }
+              [ "$(xxd -p -l 8 "$logo_body")" = "89504e470d0a1a0a" ] || { echo 'Arquivo colenf-logo.png não possui assinatura PNG válida.' >&2; exit 1; }
 
               setup_code="$(curl --silent --show-error --location \
                 --connect-timeout 10 --max-time 20 \
@@ -93,7 +103,7 @@ jobs:
               grep -Eq '"error"[[:space:]]*:[[:space:]]*"Recurso não habilitado nesta instalação\."' "$verification_body" || { echo 'Recurso de autenticidade pública não está no contrato desabilitado esperado.' >&2; cat "$verification_body" >&2; exit 1; }
 
               echo "Produção saudável na revisão esperada: $url"
-              echo "Setup, perfil UFES, proteção contra auth demo e módulos fora do escopo desabilitados: aprovados."
+              echo "Frontend, PNG institucional, setup, perfil UFES, proteção contra auth demo e módulos fora do escopo desabilitados: aprovados."
               cat "$body"
               exit 0
             fi
