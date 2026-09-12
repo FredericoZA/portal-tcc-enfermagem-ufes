@@ -1,5 +1,5 @@
 // Site Layout Configuration System (Header, Sidebar, Footer)
-// Allows administrators to customize institution names, logos, navigation labels, commission members, contacts, etc.
+// Nesta instalação UFES, a identidade institucional é fixa; este arquivo trata apenas de apresentação.
 
 export interface SiteLayoutConfig {
   headerInstitutionText: string;
@@ -78,22 +78,22 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
     biblioteca: 'Repositório',
     tutorial: 'Como usar',
     replicar: 'Como replicar',
-    'acessar-portal': 'Acessar Portal',
     'meus-processos': 'Meus TCCs',
     coordenador: 'Área do Presidente',
     assinaturas: 'Assinaturas',
-    configuracoes: 'Configurações'
+    configuracoes: 'Configurações',
+    indicadores: 'Indicadores'
   },
   sidebarNavEmojis: {
     home: '📅',
     biblioteca: '📚',
     tutorial: '❓',
     replicar: '🧩',
-    'acessar-portal': '🔑',
     'meus-processos': '📋',
     coordenador: '🏛️',
     assinaturas: '🔐',
-    configuracoes: '⚙️'
+    configuracoes: '⚙️',
+    indicadores: '📊'
   },
   sidebarIconMode: 'emoji',
   sidebarSessionLabel: 'Sessão ativa',
@@ -109,7 +109,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   sidebarDividerColor: '#174c3b',
   sidebarDividerStyle: 'solid',
   sidebarShowDividers: true,
-  sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'acessar-portal', 'meus-processos', 'coordenador', 'assinaturas', 'configuracoes', 'DIVIDER_2', 'tutorial', 'replicar'],
+  sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'assinaturas', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial', 'replicar'],
 
   footerLocationText: 'Departamento de Enfermagem • CCS/UFES • Campus de Maruípe • Vitória/ES',
   footerPresidentLabel: 'Presidente da Comissão',
@@ -138,35 +138,42 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
 export const SITE_LAYOUT_EVENT = 'site_layout_config_changed';
 const STORAGE_KEY = 'site_layout_custom_config_v1';
 
+function canonicalSidebarOrder(rawOrder: unknown): string[] {
+  const allowed = new Set(['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'assinaturas', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial', 'replicar']);
+  const stored = Array.isArray(rawOrder) ? rawOrder.filter((item): item is string => typeof item === 'string' && allowed.has(item)) : [];
+  const order = stored.length ? [...stored] : [...(DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavOrder || [])];
+  if (!order.includes('indicadores')) {
+    const settingsIndex = order.indexOf('configuracoes');
+    order.splice(settingsIndex >= 0 ? settingsIndex + 1 : order.length, 0, 'indicadores');
+  }
+  if (!order.includes('assinaturas')) {
+    const settingsIndex = order.indexOf('configuracoes');
+    order.splice(settingsIndex >= 0 ? settingsIndex : order.length, 0, 'assinaturas');
+  }
+  if (!order.includes('replicar')) order.push('replicar');
+  return Array.from(new Set(order));
+}
+
 export function loadSiteLayoutConfig(): SiteLayoutConfig {
   if (typeof window === 'undefined') return DEFAULT_SITE_LAYOUT_CONFIG;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_SITE_LAYOUT_CONFIG;
     const parsed = JSON.parse(raw);
-    const storedOrder = Array.isArray(parsed.sidebarNavOrder) ? parsed.sidebarNavOrder : [];
-    const canonicalOrder = [...storedOrder];
-    if (!canonicalOrder.includes('acessar-portal')) {
-      const dividerIndex = canonicalOrder.indexOf('DIVIDER_1');
-      canonicalOrder.splice(dividerIndex >= 0 ? dividerIndex + 1 : 2, 0, 'acessar-portal');
-    }
-    if (!canonicalOrder.includes('replicar')) canonicalOrder.push('replicar');
-    if (!canonicalOrder.includes('assinaturas')) {
-      const settingsIndex = canonicalOrder.indexOf('configuracoes');
-      canonicalOrder.splice(settingsIndex >= 0 ? settingsIndex : canonicalOrder.length, 0, 'assinaturas');
-    }
     return {
       ...DEFAULT_SITE_LAYOUT_CONFIG,
       ...parsed,
       sidebarIconMode: parsed.sidebarIconMode === 'lucide' ? 'lucide' : 'emoji',
-      sidebarNavOrder: canonicalOrder.length ? canonicalOrder : DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavOrder,
+      sidebarNavOrder: canonicalSidebarOrder(parsed.sidebarNavOrder),
       sidebarNavLabels: {
         ...DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavLabels,
-        ...(parsed.sidebarNavLabels || {})
+        ...(parsed.sidebarNavLabels || {}),
+        indicadores: 'Indicadores'
       },
       sidebarNavEmojis: {
         ...DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavEmojis,
-        ...(parsed.sidebarNavEmojis || {})
+        ...(parsed.sidebarNavEmojis || {}),
+        indicadores: '📊'
       },
       footerMembersList: Array.isArray(parsed.footerMembersList)
         ? parsed.footerMembersList
@@ -185,13 +192,16 @@ export function saveSiteLayoutConfig(config: Partial<SiteLayoutConfig>) {
     const updated: SiteLayoutConfig = {
       ...current,
       ...config,
+      sidebarNavOrder: canonicalSidebarOrder(config.sidebarNavOrder || current.sidebarNavOrder),
       sidebarNavLabels: {
         ...current.sidebarNavLabels,
-        ...(config.sidebarNavLabels || {})
+        ...(config.sidebarNavLabels || {}),
+        indicadores: 'Indicadores'
       },
       sidebarNavEmojis: {
         ...current.sidebarNavEmojis,
-        ...(config.sidebarNavEmojis || {})
+        ...(config.sidebarNavEmojis || {}),
+        indicadores: '📊'
       }
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
