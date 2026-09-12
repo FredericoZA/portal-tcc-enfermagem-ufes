@@ -1,9 +1,15 @@
-import { formatTimeExtenso, formatDateExtensoTotal } from './formatters';
-import type { IntegrationStudioSettings } from '../types/integrationStudio';
+import { formatTimeExtenso, formatDateExtensoTotal, formatNameTitleCase, formatTccTitle, normalizeEmail } from './formatters';
+import type { IntegrationStudioSettings, StudioValidationRule } from '../types/integrationStudio';
 import type { CatalogEntry, OperationalConfig, RegistrationAnswers, RegistrationQuestion, VariablePresentation } from '../types/operationalConfig';
 
 export const DEFAULT_OPERATIONAL_CONFIG: OperationalConfig = {
-  reservation: { departmentEmail: '', locations: ['Auditório do Departamento de Enfermagem', 'Sala de reuniões do Departamento de Enfermagem'] },
+  reservation: {
+    departmentEmail: '',
+    locations: [
+      'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES',
+      'Sala de reuniões do Departamento de Enfermagem - CCS/UFES'
+    ]
+  },
   catalogs: [], diagnostics: { staleDays: 30, minimumCoverage: 70, priority: 'P2' }, presentations: {}
 };
 export const canonicalKey = (value: unknown) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').toUpperCase();
@@ -11,18 +17,50 @@ export function operationalConfig(studio?: Partial<IntegrationStudioSettings>): 
   const config = studio?.operationalConfig;
   return { ...DEFAULT_OPERATIONAL_CONFIG, ...config, reservation: { ...DEFAULT_OPERATIONAL_CONFIG.reservation, ...config?.reservation }, diagnostics: { ...DEFAULT_OPERATIONAL_CONFIG.diagnostics, ...config?.diagnostics }, catalogs: config?.catalogs || [], presentations: config?.presentations || {} };
 }
-const q = (fieldKey: string, label: string, section: string, fieldType = 'text', visibleWhen?: RegistrationQuestion['visibleWhen']): RegistrationQuestion => ({ id: `registration-${fieldKey}`, fieldKey, label, section, fieldType, required: true, visibleWhen });
+
+const FULL_NAME_VALIDATION: StudioValidationRule = {
+  minLength: 5,
+  maxLength: 160,
+  pattern: "^[A-Za-zÀ-ÖØ-öø-ÿ'’.-]+(?:\\s+[A-Za-zÀ-ÖØ-öø-ÿ'’.-]+)+$",
+  errorMessage: 'Informe o nome completo, com pelo menos nome e sobrenome, sem números.'
+};
+const STUDENT_ID_VALIDATION: StudioValidationRule = {
+  minLength: 5,
+  maxLength: 20,
+  pattern: '^\\d{5,20}$',
+  errorMessage: 'Informe a matrícula completa usando somente números.'
+};
+const SIAPE_VALIDATION: StudioValidationRule = {
+  minLength: 7,
+  maxLength: 7,
+  pattern: '^\\d{7}$',
+  errorMessage: 'Informe o SIAPE com 7 algarismos.'
+};
+
+const q = (fieldKey: string, label: string, section: string, fieldType = 'text', visibleWhen?: RegistrationQuestion['visibleWhen'], validation?: StudioValidationRule): RegistrationQuestion => ({ id: `registration-${fieldKey}`, fieldKey, label, section, fieldType, required: true, visibleWhen, validation });
 const when = (fieldKey: string) => ({ fieldKey, operator: 'EQUALS' as const, value: 'Sim' });
 export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
-  q('ALUNO_1_NOME', 'Nome completo', 'Aluno'), q('ALUNO_1_MATRICULA', 'Matrícula completa', 'Aluno'), q('ALUNO_1_EMAIL', 'E-mail autorizado', 'Aluno', 'email'),
+  q('ALUNO_1_NOME', 'Nome completo', 'Aluno', 'text', undefined, FULL_NAME_VALIDATION),
+  q('ALUNO_1_MATRICULA', 'Matrícula completa', 'Aluno', 'text', undefined, STUDENT_ID_VALIDATION),
+  q('ALUNO_1_EMAIL', 'E-mail institucional do aluno', 'Aluno', 'email'),
   { ...q('TEM_ALUNO_2', 'O trabalho tem segundo autor?', 'Segundo autor', 'select'), options: ['Não', 'Sim'] },
-  q('ALUNO_2_NOME', 'Nome completo do segundo autor', 'Segundo autor', 'text', when('TEM_ALUNO_2')), q('ALUNO_2_MATRICULA', 'Matrícula do segundo autor', 'Segundo autor', 'text', when('TEM_ALUNO_2')), q('ALUNO_2_EMAIL', 'E-mail do segundo autor', 'Segundo autor', 'email', when('TEM_ALUNO_2')),
-  q('ORIENTADOR_NOME', 'Nome completo do orientador', 'Orientação'), q('ORIENTADOR_EMAIL', 'E-mail do orientador', 'Orientação', 'email'), q('ORIENTADOR_SIAPE', 'SIAPE do orientador', 'Orientação'),
+  q('ALUNO_2_NOME', 'Nome completo do segundo autor', 'Segundo autor', 'text', when('TEM_ALUNO_2'), FULL_NAME_VALIDATION),
+  q('ALUNO_2_MATRICULA', 'Matrícula do segundo autor', 'Segundo autor', 'text', when('TEM_ALUNO_2'), STUDENT_ID_VALIDATION),
+  q('ALUNO_2_EMAIL', 'E-mail institucional do segundo autor', 'Segundo autor', 'email', when('TEM_ALUNO_2')),
+  q('ORIENTADOR_NOME', 'Nome completo do orientador', 'Orientação', 'text', undefined, FULL_NAME_VALIDATION),
+  q('ORIENTADOR_EMAIL', 'E-mail do orientador', 'Orientação', 'email'),
+  q('ORIENTADOR_SIAPE', 'SIAPE do orientador', 'Orientação', 'text', undefined, SIAPE_VALIDATION),
   { ...q('TEM_COORIENTADOR', 'Há coorientador?', 'Coorientação', 'select'), options: ['Não', 'Sim'] },
-  q('COORIENTADOR_NOME', 'Nome completo do coorientador', 'Coorientação', 'text', when('TEM_COORIENTADOR')), q('COORIENTADOR_EMAIL', 'E-mail do coorientador', 'Coorientação', 'email', when('TEM_COORIENTADOR')),
+  q('COORIENTADOR_NOME', 'Nome completo do coorientador', 'Coorientação', 'text', when('TEM_COORIENTADOR'), FULL_NAME_VALIDATION),
+  q('COORIENTADOR_EMAIL', 'E-mail do coorientador', 'Coorientação', 'email', when('TEM_COORIENTADOR')),
   { ...q('COORIENTADOR_SIAPE', 'SIAPE ou identificação do coorientador (se aplicável)', 'Coorientação', 'text', when('TEM_COORIENTADOR')), required: false },
   { ...q('COORIENTADOR_INSTITUICAO', 'Instituição do coorientador', 'Coorientação', 'text', when('TEM_COORIENTADOR')), required: false },
-  ...[2, 3].flatMap(n => [q(`EXAMINADOR_${n}_NOME`, `Nome completo do avaliador ${n - 1}`, 'Banca'), q(`EXAMINADOR_${n}_EMAIL`, `E-mail do avaliador ${n - 1}`, 'Banca', 'email'), q(`EXAMINADOR_${n}_INSTITUICAO`, `Instituição do avaliador ${n - 1}`, 'Banca'), { ...q(`EXAMINADOR_${n}_SIAPE`, `SIAPE ou identificação do avaliador ${n - 1} (se aplicável)`, 'Banca'), required: false }]),
+  ...[2, 3].flatMap(n => [
+    q(`EXAMINADOR_${n}_NOME`, `Nome completo do avaliador ${n - 1}`, 'Banca', 'text', undefined, FULL_NAME_VALIDATION),
+    q(`EXAMINADOR_${n}_EMAIL`, `E-mail do avaliador ${n - 1}`, 'Banca', 'email'),
+    q(`EXAMINADOR_${n}_INSTITUICAO`, `Instituição do avaliador ${n - 1}`, 'Banca'),
+    { ...q(`EXAMINADOR_${n}_SIAPE`, `SIAPE ou identificação do avaliador ${n - 1} (se aplicável)`, 'Banca'), required: false }
+  ]),
   q('TITULO', 'Título completo do TCC', 'Trabalho'),
   ...(['AREA_TEMATICA', 'TEMA_PRINCIPAL', 'TIPO_DE_ESTUDO', 'FINALIDADE_DO_TRABALHO'] as const).map((key, i) => ({ ...q(key, ['Área temática', 'Tema principal', 'Tipo de estudo', 'Finalidade do trabalho'][i], 'Trabalho'), required: false })),
   q('DEFESA_DATA_HORA', 'Data e hora pretendidas', 'Reserva do local', 'datetime-local'),
@@ -48,7 +86,7 @@ export function registrationQuestions(studio?: Partial<IntegrationStudioSettings
     if (!fieldKey || seen.has(fieldKey) || ['CAMPO_06', 'BANCA_EMAILS'].includes(fieldKey)) continue;
     seen.add(fieldKey);
     const core = REGISTRATION_QUESTIONS.find(f => f.fieldKey === fieldKey);
-    result.push(core ? { ...core, ...custom, fieldKey, fieldType: core.fieldType, required: core.required || custom.required, visibleWhen: core.visibleWhen } : { ...custom, fieldKey, section: custom.section || 'Trabalho' });
+    result.push(core ? { ...core, ...custom, fieldKey, fieldType: core.fieldType, required: core.required || custom.required, visibleWhen: core.visibleWhen, validation: core.validation || custom.validation } : { ...custom, fieldKey, section: custom.section || 'Trabalho' });
   }
   for (const core of REGISTRATION_QUESTIONS) if (!seen.has(core.fieldKey)) result.push({ ...core });
   const config = operationalConfig(studio);
@@ -73,10 +111,37 @@ export function localDateTimeToIso(value: string, timezone: string): string {
   if (formatter.format(new Date(instant)).replace(' ', 'T') !== value) throw new Error('Este horário não existe no fuso configurado.');
   return new Date(instant).toISOString();
 }
+
+function cleanText(value: unknown): string {
+  return String(value ?? '').normalize('NFC').trim().replace(/\s+/g, ' ');
+}
+function normalizeStudentId(value: unknown): string {
+  return String(value ?? '').trim().replace(/[.\s-]+/g, '');
+}
+function canonicalPerson(prefix: string, answers: RegistrationAnswers) {
+  const name = cleanText(answers[`${prefix}_NOME`]);
+  return {
+    nome: name ? formatNameTitleCase(name) : '',
+    email: normalizeEmail(cleanText(answers[`${prefix}_EMAIL`])),
+    matricula: normalizeStudentId(answers[`${prefix}_MATRICULA`]),
+    siape: normalizeStudentId(answers[`${prefix}_SIAPE`]),
+    instituicao: cleanText(answers[`${prefix}_INSTITUICAO`])
+  };
+}
+
+/** Canonicaliza os dados somente depois de terem passado pelas regras publicadas. */
 export function registrationPayload(a: RegistrationAnswers, timezone: string) {
-  const s = (k: string) => String(a[k] ?? '').trim();
-  const person = (prefix: string) => ({ nome: s(`${prefix}_NOME`), email: s(`${prefix}_EMAIL`), matricula: s(`${prefix}_MATRICULA`), siape: s(`${prefix}_SIAPE`), instituicao: s(`${prefix}_INSTITUICAO`) });
-  return { aluno1: person('ALUNO_1'), aluno2: s('TEM_ALUNO_2') === 'Sim' ? person('ALUNO_2') : null, orientador: person('ORIENTADOR'), coorientador: s('TEM_COORIENTADOR') === 'Sim' ? person('COORIENTADOR') : null, titulo: s('TITULO'), banca: [2, 3].map(n => ({ ...person(`EXAMINADOR_${n}`), funcao: `EXAMINER_${n}` })), defesa: { startAt: localDateTimeToIso(s('DEFESA_DATA_HORA'), timezone), local: s('DEFESA_LOCAL'), alternateLocation: s('LOCAL_ALTERNATIVO') }, registrationAnswers: a };
+  const s = (k: string) => cleanText(a[k]);
+  return {
+    aluno1: canonicalPerson('ALUNO_1', a),
+    aluno2: s('TEM_ALUNO_2') === 'Sim' ? canonicalPerson('ALUNO_2', a) : null,
+    orientador: canonicalPerson('ORIENTADOR', a),
+    coorientador: s('TEM_COORIENTADOR') === 'Sim' ? canonicalPerson('COORIENTADOR', a) : null,
+    titulo: formatTccTitle(s('TITULO')),
+    banca: [2, 3].map(n => ({ ...canonicalPerson(`EXAMINADOR_${n}`, a), funcao: `EXAMINER_${n}` })),
+    defesa: { startAt: localDateTimeToIso(s('DEFESA_DATA_HORA'), timezone), local: s('DEFESA_LOCAL'), alternateLocation: s('LOCAL_ALTERNATIVO') },
+    registrationAnswers: a
+  };
 }
 
 export function formatVariable(value: unknown, presentation: VariablePresentation, timezone = 'America/Sao_Paulo'): string {
