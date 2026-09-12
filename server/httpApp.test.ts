@@ -30,3 +30,33 @@ test('API retorna JSON após rejeição assíncrona, omite o segredo e continua 
     assert.deepEqual(await (await fetch(base + '/health')).json(), { ok: true });
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
 });
+
+test('mutações de navegador exigem origem confiável', async () => {
+  const app = createPortalHttpApp();
+  app.use(express.json());
+  app.post('/mutate', (_req, res) => res.json({ ok: true }));
+  const server = app.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+  const base = `http://127.0.0.1:${address.port}`;
+  try {
+    const blocked = await fetch(base + '/mutate', {
+      method: 'POST',
+      headers: { origin: 'https://attacker.invalid', 'sec-fetch-site': 'cross-site', 'content-type': 'application/json' },
+      body: '{}'
+    });
+    assert.equal(blocked.status, 403);
+    assert.equal((await blocked.json()).code, 'ORIGIN_VALIDATION_FAILED');
+
+    const sameOrigin = await fetch(base + '/mutate', {
+      method: 'POST',
+      headers: { origin: base, 'sec-fetch-site': 'same-origin', 'content-type': 'application/json' },
+      body: '{}'
+    });
+    assert.equal(sameOrigin.status, 200);
+
+    const serverToServer = await fetch(base + '/mutate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+    assert.equal(serverToServer.status, 200);
+  } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
+});
