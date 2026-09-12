@@ -28,7 +28,7 @@ const roleContent: Record<Role, { title: string; description: string; steps: str
       'Cadastre título, autoria, orientador, coorientador quando houver, banca e data/horário pretendidos.',
       'Consulte o Departamento de Enfermagem e volte ao processo para confirmar o local realmente reservado.',
       'Depois da defesa e da Ata do orientador, envie TCC final, cinco palavras-chave, resumo sintético e, se desejar, resumo expandido.',
-      'Defina separadamente o que pode ser publicado e confira o Termo antes de enviá-lo para assinatura.'
+      'Defina separadamente a publicação do TCC completo e do resumo expandido e confira o Termo antes de enviá-lo para assinatura.'
     ]
   },
   orientador: {
@@ -36,7 +36,7 @@ const roleContent: Record<Role, { title: string; description: string; steps: str
     description: 'Confere os dados, registra o resultado da defesa e assina a Ata.',
     steps: [
       'Entre com o e-mail que foi cadastrado no processo pelo aluno.',
-      'Abra o TCC e confira cuidadosamente nomes, documentos, título, banca, data e local.',
+      'Abra o TCC e confira cuidadosamente nomes, matrícula dos alunos, SIAPE quando aplicável, título, banca, data e local.',
       'Corrija dados permitidos antes de concluir a avaliação, caso encontre erro.',
       'Marque Aprovado, Aprovado com ressalva ou Reprovado e informe o parecer final, ou utilize o texto padrão disponível.',
       'Confira a prévia da Ata. Somente depois da confirmação o documento é encaminhado à Asten para sua assinatura.'
@@ -55,12 +55,12 @@ const roleContent: Record<Role, { title: string; description: string; steps: str
   },
   visitante: {
     title: 'Visitante',
-    description: 'Consulta as informações acadêmicas públicas sem acessar dados pessoais protegidos.',
+    description: 'Consulta as informações acadêmicas públicas sem acessar e-mails, SIAPE, credenciais ou dados administrativos.',
     steps: [
-      'Consulte calendário, título, autoria, banca, data e local das defesas.',
-      'Depois da entrega final, consulte palavras-chave e resumo sintético publicados no processo.',
-      'Baixe somente arquivos cuja política permita acesso público.',
-      'Matrícula, CPF, e-mail, credenciais e informações administrativas nunca são exibidos na área pública.'
+      'Consulte o número do TCC, título, nomes completos, matrícula dos alunos, banca, data e local das defesas.',
+      'Consulte o resumo de dois parágrafos e as cinco palavras-chave quando preenchidos.',
+      'Acesse os documentos públicos do processo: convite, ata, autorização e declaração.',
+      'O TCC completo e o resumo expandido só ficam públicos quando houver autorização correspondente do aluno.'
     ]
   }
 };
@@ -99,7 +99,7 @@ const phases = [
     title: 'Entrega final',
     actor: 'Aluno',
     icon: BookOpenCheck,
-    text: 'O aluno envia o trabalho final, cinco palavras-chave, resumo sintético e opcionalmente o resumo expandido, escolhendo o que pode ficar público.'
+    text: 'O aluno envia o trabalho final, cinco palavras-chave, resumo sintético e opcionalmente o resumo expandido, escolhendo se TCC completo e resumo expandido poderão ser públicos.'
   },
   {
     n: 6,
@@ -120,7 +120,7 @@ const phases = [
     title: 'Conclusão',
     actor: 'Portal',
     icon: CheckCircle2,
-    text: 'Somente após as etapas e assinaturas aplicáveis o processo é concluído e o conteúdo autorizado é disponibilizado publicamente.'
+    text: 'Somente após as etapas e assinaturas aplicáveis o processo é concluído. Os documentos institucionais permanecem públicos e o TCC completo/resumo expandido seguem a autorização registrada.'
   }
 ];
 
@@ -189,11 +189,11 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-2"><LockKeyhole className="h-5 w-5 text-slate-700"/><h2 className="font-black text-slate-950">Dados protegidos</h2></div>
-          <p className="mt-2 text-sm leading-6 text-slate-600">Matrícula, CPF, e-mail, códigos de acesso, credenciais e dados administrativos ficam restritos aos usuários autorizados e às rotinas internas que realmente necessitam deles.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">E-mail, SIAPE, códigos de acesso, credenciais, registros administrativos e demais dados internos ficam restritos aos usuários autorizados e às rotinas que realmente necessitam deles.</p>
         </div>
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
           <div className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5 text-emerald-800"/><h2 className="font-black text-emerald-950">Informação acadêmica pública</h2></div>
-          <p className="mt-2 text-sm leading-6 text-emerald-900">Nome dos participantes, título, data e local da defesa podem compor a consulta pública. Após a entrega final, o resumo sintético e as cinco palavras-chave também integram a ficha pública. Trabalho final e resumo expandido dependem da autorização registrada pelo aluno.</p>
+          <p className="mt-2 text-sm leading-6 text-emerald-900">Número do TCC, nome do trabalho, nomes completos, matrícula dos alunos, resumo de dois parágrafos, cinco palavras-chave, convite, ata, autorização e declaração integram a ficha pública do processo. TCC completo e resumo expandido só são expostos quando houver autorização correspondente.</p>
         </div>
       </section>
     </div>
