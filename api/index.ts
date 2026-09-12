@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
-import { createPortalApp } from '../server';
 
-type StartupFailure = { code: string; message: string; missingGroups?: string[] };
-type StartupState = { app: ((req: Request, res: Response) => unknown) | null; error: unknown };
+type StartupFailure = { code: string; message: string; missingGroups?: string[]; runtimeSignal?: string };
+type StartupStage = 'IMPORT_SERVER' | 'CREATE_APP';
+type StartupState = { app: ((req: Request, res: Response) => unknown) | null; error: unknown; stage?: StartupStage };
 
 function configured(name: string, minLength = 1): boolean {
   return String(process.env[name] || '').trim().length >= minLength;
@@ -45,8 +45,22 @@ function productionPreflight(): StartupFailure | null {
   } : null;
 }
 
-function classifyStartupFailure(error: unknown): StartupFailure {
+function runtimeSignal(error: unknown): string {
+  const candidate = typeof error === 'object' && error ? String((error as { code?: unknown }).code || '') : '';
+  if (/^[A-Z0-9_]{2,64}$/.test(candidate)) return candidate;
+  if (error instanceof Error && /^[A-Za-z]{2,40}Error$/.test(error.name)) return error.name.toUpperCase();
+  return 'UNKNOWN';
+}
+
+function classifyStartupFailure(error: unknown, stage?: StartupStage): StartupFailure {
   const detail = error instanceof Error ? error.message : String(error || '');
+  const signal = runtimeSignal(error);
+  if (stage === 'IMPORT_SERVER') {
+    if (['ERR_MODULE_NOT_FOUND','MODULE_NOT_FOUND'].includes(signal) || /cannot find (module|package)/i.test(detail)) return { code: 'SERVER_MODULE_NOT_FOUND_ERROR', message: 'Uma dependência do servidor não foi empacotada corretamente para o runtime da Vercel.', runtimeSignal: signal };
+    if (['EROFS','EACCES','EPERM'].includes(signal)) return { code: 'SERVER_FILESYSTEM_ERROR', message: 'O servidor tentou acessar uma área do sistema de arquivos indisponível no runtime da Vercel.', runtimeSignal: signal };
+    if (/require is not defined|must use import|esm/i.test(detail)) return { code: 'SERVER_MODULE_FORMAT_ERROR', message: 'Há incompatibilidade de formato de módulo no pacote executado pela Vercel.', runtimeSignal: signal };
+    return { code: 'SERVER_IMPORT_ERROR', message: 'O módulo principal do Portal não conseguiu ser carregado no runtime de produção.', runtimeSignal: signal };
+  }
   if (detail.includes('PORTAL_BOOTSTRAP_MASTER_EMAIL')) return { code: 'MASTER_EMAIL_REQUIRED', message: 'A identidade inicial de administração ainda não foi configurada.' };
   if (detail.includes('persistência durável do Supabase')) return { code: 'SUPABASE_CONFIGURATION_REQUIRED', message: 'A persistência durável ainda não está configurada.' };
   if (
@@ -65,20 +79,27 @@ function classifyStartupFailure(error: unknown): StartupFailure {
   if (detail.includes('GOOGLE_') || detail.toLowerCase().includes('oauth')) return { code: 'GOOGLE_OAUTH_SECURITY_REQUIRED', message: 'A integração Google ainda não passou na verificação de segurança.' };
   if (detail.includes('PORTAL_SESSION_SECRET') || detail.toLowerCase().includes('sessão')) return { code: 'SESSION_SECRET_REQUIRED', message: 'A proteção de sessão ainda não está configurada.' };
   if (detail.includes('migrações do Supabase') || detail.includes('outbox transacional')) return { code: 'SUPABASE_SCHEMA_REQUIRED', message: 'O esquema transacional do banco ainda não foi validado.' };
-  return { code: 'PORTAL_APP_INITIALIZATION_ERROR', message: 'A aplicação foi carregada, mas uma validação interna ainda impede a inicialização segura.' };
+  return { code: 'PORTAL_APP_INITIALIZATION_ERROR', message: 'A aplicação foi carregada, mas uma validação interna ainda impede a inicialização segura.', runtimeSignal: signal };
 }
 
 let startupPromise: Promise<StartupState> | null = null;
 
 function startup(): Promise<StartupState> {
   if (!startupPromise) {
-    startupPromise = createPortalApp().then(
-      (app) => ({ app: app as StartupState['app'], error: null }),
-      (error) => {
-        console.error('[Startup] Falha ao criar a aplicação do Portal TCC:', error);
-        return { app: null, error };
-      }
-    );
+    startupPromise = import('../server')
+      .then(async ({ createPortalApp }) => {
+        try {
+          const app = await createPortalApp();
+          return { app: app as StartupState['app'], error: null };
+        } catch (error) {
+          console.error('[Startup] Falha ao criar a aplicação do Portal TCC:', error);
+          return { app: null, error, stage: 'CREATE_APP' as const };
+        }
+      })
+      .catch((error) => {
+        console.error('[Startup] Falha ao importar o módulo principal do Portal TCC:', error);
+        return { app: null, error, stage: 'IMPORT_SERVER' as const };
+      });
   }
   return startupPromise;
 }
@@ -91,7 +112,8 @@ function unavailable(res: Response, diagnostic: StartupFailure) {
     code: diagnostic.code,
     message: diagnostic.message,
     commit: deployedCommit(),
-    ...(diagnostic.missingGroups?.length ? { missingGroups: diagnostic.missingGroups } : {})
+    ...(diagnostic.missingGroups?.length ? { missingGroups: diagnostic.missingGroups } : {}),
+    ...(diagnostic.runtimeSignal ? { runtimeSignal: diagnostic.runtimeSignal } : {})
   });
 }
 
@@ -100,7 +122,7 @@ export default async function handler(req: Request, res: Response) {
   if (preflight) return unavailable(res, preflight);
 
   const state = await startup();
-  if (!state.app) return unavailable(res, classifyStartupFailure(state.error));
+  if (!state.app) return unavailable(res, classifyStartupFailure(state.error, state.stage));
 
   const requestPath = String(req.url || '').split('?')[0];
   if (requestPath === '/api/health' || requestPath === '/health') {
