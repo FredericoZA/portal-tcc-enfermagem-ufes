@@ -2,11 +2,23 @@ import type { IntegrationStudioSettings } from '../../src/types/integrationStudi
 import type { RegistrationAnswers } from '../../src/types/operationalConfig';
 import { operationalConfig, registrationPayload, registrationQuestions } from '../../src/utils/operationalConfig';
 import { evaluateStudioCondition, validateStudioAnswer } from '../../src/utils/courseStudioValidator';
+import { formatNameTitleCase, formatTccTitle, normalizeEmail } from '../../src/utils/formatters';
+
+function normalizeRegistrationValue(fieldKey: string, fieldType: string, raw: unknown): unknown {
+  if (typeof raw !== 'string') return raw;
+  let value = raw.normalize('NFC').trim();
+  if (fieldType === 'email') return normalizeEmail(value);
+  if (/_NOME$/.test(fieldKey)) return formatNameTitleCase(value.replace(/\s+/g, ' '));
+  if (/MATRICULA$/.test(fieldKey)) return value.replace(/[.\s-]+/g, '');
+  if (/_SIAPE$/.test(fieldKey)) return value.replace(/[.\s-]+/g, '');
+  if (fieldKey === 'TITULO') return formatTccTitle(value.replace(/\s+/g, ' '));
+  return value.replace(/\s+/g, ' ');
+}
 
 export function acceptRegistration(input: any, studio?: Partial<IntegrationStudioSettings>) {
   const timezone = studio?.operationsPolicy?.timezone || 'America/Sao_Paulo';
   let answers: RegistrationAnswers = {};
-  if (input?.registrationAnswers && typeof input.registrationAnswers === 'object' && !Array.isArray(input.registrationAnswers)) answers = input.registrationAnswers;
+  if (input?.registrationAnswers && typeof input.registrationAnswers === 'object' && !Array.isArray(input.registrationAnswers)) answers = { ...input.registrationAnswers };
   else {
     const mapPerson = (prefix: string, person: any) => { for (const [key, value] of Object.entries(person || {})) answers[`${prefix}_${key.toUpperCase()}`] = String(value ?? ''); };
     mapPerson('ALUNO_1', input?.aluno1); mapPerson('ALUNO_2', input?.aluno2); mapPerson('ORIENTADOR', input?.orientador); mapPerson('COORIENTADOR', input?.coorientador);
@@ -18,8 +30,9 @@ export function acceptRegistration(input: any, studio?: Partial<IntegrationStudi
   }
   const accepted: RegistrationAnswers = {};
   for (const question of registrationQuestions(studio)) {
-    if (!evaluateStudioCondition(question.visibleWhen, answers)) continue;
-    const value = answers[question.fieldKey];
+    if (!evaluateStudioCondition(question.visibleWhen, { ...answers, ...accepted })) continue;
+    const rawValue = answers[question.fieldKey];
+    const value = normalizeRegistrationValue(question.fieldKey, question.fieldType, rawValue);
     if (value !== undefined && !['string', 'number', 'boolean'].includes(typeof value)) throw new Error(`${question.label}: valor inválido.`);
     if (question.required && (!String(value ?? '').trim() || question.fieldType === 'checkbox' && value !== true)) throw new Error(`${question.label}: campo obrigatório.`);
     if (value && question.options?.length && !question.options.includes(String(value))) throw new Error(`${question.label}: escolha uma opção publicada pelo Master.`);
@@ -28,7 +41,7 @@ export function acceptRegistration(input: any, studio?: Partial<IntegrationStudi
     const issue = value !== undefined && value !== '' ? validateStudioAnswer(value, question.validation) : null;
     if (issue) throw new Error(`${question.label}: ${issue}`);
     if (String(value ?? '').length > 10000) throw new Error(`${question.label}: texto muito longo.`);
-    if (value !== undefined) accepted[question.fieldKey] = value;
+    if (value !== undefined) accepted[question.fieldKey] = value as string | number | boolean;
   }
   if (accepted.LOCAL_ALTERNATIVO && accepted.LOCAL_ALTERNATIVO === accepted.DEFESA_LOCAL) throw new Error('O local alternativo deve ser diferente do preferido.');
   return registrationPayload(accepted, timezone);
