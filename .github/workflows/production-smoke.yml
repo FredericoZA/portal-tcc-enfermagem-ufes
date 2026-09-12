@@ -27,7 +27,11 @@ jobs:
           body="$(mktemp)"
           root_body="$(mktemp)"
           root_headers="$(mktemp)"
-          trap 'rm -f "$body" "$root_body" "$root_headers"' EXIT
+          setup_body="$(mktemp)"
+          profile_body="$(mktemp)"
+          auth_body="$(mktemp)"
+          verification_body="$(mktemp)"
+          trap 'rm -f "$body" "$root_body" "$root_headers" "$setup_body" "$profile_body" "$auth_body" "$verification_body"' EXIT
 
           for attempt in $(seq 1 24); do
             code="$(curl --silent --show-error --location \
@@ -57,7 +61,38 @@ jobs:
               grep -Eqi '^content-security-policy:' "$root_headers" || { echo 'Content-Security-Policy ausente.' >&2; exit 1; }
               grep -Eqi '<!doctype html|<html' "$root_body" || { echo 'Frontend não retornou um documento HTML válido.' >&2; exit 1; }
 
+              setup_code="$(curl --silent --show-error --location \
+                --connect-timeout 10 --max-time 20 \
+                --output "$setup_body" --write-out '%{http_code}' "$origin/api/setup/status" || true)"
+              [ "$setup_code" = "200" ] || { echo "Status de setup respondeu HTTP ${setup_code:-000}." >&2; cat "$setup_body" >&2; exit 1; }
+              grep -Eq '"otp"[[:space:]]*:[[:space:]]*\{[[:space:]]*"configured"[[:space:]]*:[[:space:]]*true' "$setup_body" || { echo 'OTP de produção não está configurado.' >&2; cat "$setup_body" >&2; exit 1; }
+              grep -Eq '"oauthConfigured"[[:space:]]*:[[:space:]]*true' "$setup_body" || { echo 'Cliente OAuth Google de produção não está configurado.' >&2; cat "$setup_body" >&2; exit 1; }
+              grep -Eq '"bootstrapMasterConfigured"[[:space:]]*:[[:space:]]*true' "$setup_body" || { echo 'Master de bootstrap não está configurado.' >&2; cat "$setup_body" >&2; exit 1; }
+
+              profile_code="$(curl --silent --show-error --location \
+                --connect-timeout 10 --max-time 20 \
+                --output "$profile_body" --write-out '%{http_code}' "$origin/api/public/installation-profile" || true)"
+              [ "$profile_code" = "200" ] || { echo "Perfil institucional respondeu HTTP ${profile_code:-000}." >&2; cat "$profile_body" >&2; exit 1; }
+              grep -Eq '"installationId"[[:space:]]*:[[:space:]]*"ufes-enfermagem"' "$profile_body" || { echo 'Perfil institucional ainda não é o da Enfermagem UFES.' >&2; cat "$profile_body" >&2; exit 1; }
+              grep -Eq '"institutionAcronym"[[:space:]]*:[[:space:]]*"UFES"' "$profile_body" || { echo 'Sigla institucional UFES ausente no perfil público.' >&2; cat "$profile_body" >&2; exit 1; }
+              grep -Eq '"courseAcronym"[[:space:]]*:[[:space:]]*"ENF"' "$profile_body" || { echo 'Sigla do curso ENF ausente no perfil público.' >&2; cat "$profile_body" >&2; exit 1; }
+
+              auth_code="$(curl --silent --show-error --location \
+                --connect-timeout 10 --max-time 20 \
+                --header 'x-demo-user-email: tccenfermagemufes@gmail.com' \
+                --output "$auth_body" --write-out '%{http_code}' "$origin/api/integrations/status" || true)"
+              [ "$auth_code" = "401" ] || { echo "Autenticação demo indevida em produção: HTTP ${auth_code:-000}." >&2; cat "$auth_body" >&2; exit 1; }
+              grep -Eq '"code"[[:space:]]*:[[:space:]]*"AUTHENTICATION_REQUIRED"' "$auth_body" || { echo 'Endpoint protegido não devolveu o contrato de autenticação esperado.' >&2; cat "$auth_body" >&2; exit 1; }
+
+              verification_code="$(curl --silent --show-error --location \
+                --connect-timeout 10 --max-time 20 \
+                --output "$verification_body" --write-out '%{http_code}' "$origin/api/public/verification/smoke-code-inexistente" || true)"
+              [ "$verification_code" = "404" ] || { echo "Consulta pública inválida respondeu HTTP ${verification_code:-000}." >&2; cat "$verification_body" >&2; exit 1; }
+              grep -Eq '"valid"[[:space:]]*:[[:space:]]*false' "$verification_body" || { echo 'Consulta pública inválida não retornou valid=false.' >&2; cat "$verification_body" >&2; exit 1; }
+              grep -Eq '"status"[[:space:]]*:[[:space:]]*"NOT_FOUND"' "$verification_body" || { echo 'Consulta pública inválida não retornou NOT_FOUND.' >&2; cat "$verification_body" >&2; exit 1; }
+
               echo "Produção saudável na revisão esperada: $url"
+              echo "Setup, perfil UFES, proteção contra auth demo e consulta pública inválida aprovados."
               cat "$body"
               exit 0
             fi
