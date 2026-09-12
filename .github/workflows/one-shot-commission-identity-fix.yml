@@ -1,0 +1,274 @@
+name: One-shot commission and identity fix
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-commission-identity-fix.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Apply commission, footer and PNG identity fixes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def rw(path, fn):
+              p = Path(path)
+              source = p.read_text(encoding='utf-8')
+              updated = fn(source)
+              if updated == source:
+                  raise SystemExit(f'anchor missing or unchanged: {path}')
+              p.write_text(updated, encoding='utf-8')
+
+          # 1) Tipagem persistente para membros da Comissão.
+          def types_patch(s):
+              anchor = "export interface GlobalSettings {\n"
+              insert = "export interface CommissionMemberInfo {\n  id: string;\n  name: string;\n  email?: string;\n  startDate?: string;\n  endDate?: string;\n  active: boolean;\n}\n\n"
+              if 'export interface CommissionMemberInfo' not in s:
+                  s = s.replace(anchor, insert + anchor, 1)
+              prop_anchor = "  commissionPresidentEmail?: string;\n"
+              if 'commissionMembers?: CommissionMemberInfo[];' not in s:
+                  s = s.replace(prop_anchor, prop_anchor + "  commissionMembers?: CommissionMemberInfo[];\n", 1)
+              return s
+          rw('src/types/index.ts', types_patch)
+
+          # 2) Novo painel de Gestão da Comissão + Identidade Visual fixa em PNG transparente.
+          Path('src/components/CommissionIdentityPanel.tsx').write_text(r'''import React, { useEffect, useMemo, useState } from 'react';
+import { Image as ImageIcon, Plus, Save, Trash2, Users } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { apiClient } from '../services/apiClient';
+import type { CommissionMemberInfo } from '../types';
+
+interface Props {
+  isMaster: boolean;
+}
+
+const inputClass = 'w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-900 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100';
+
+function makeId(): string {
+  return `commission-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function legacyMembers(settings: any): CommissionMemberInfo[] {
+  const names = [
+    settings?.commissionMember2Name,
+    settings?.commissionMember3Name,
+    settings?.commissionMember4Name,
+    settings?.commissionMember5Name,
+  ].map((value) => String(value || '').trim()).filter(Boolean);
+  return names.map((name, index) => ({ id: `legacy-${index + 2}`, name, email: '', startDate: '', endDate: '', active: true }));
+}
+
+function normalizeMembers(members: CommissionMemberInfo[]): CommissionMemberInfo[] {
+  return members
+    .map((member) => ({
+      id: String(member.id || makeId()),
+      name: String(member.name || '').trim(),
+      email: String(member.email || '').trim().toLowerCase(),
+      startDate: String(member.startDate || ''),
+      endDate: String(member.endDate || ''),
+      active: member.active !== false,
+    }))
+    .filter((member) => member.name);
+}
+
+export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
+  const { settings, refreshAuth } = useAuth();
+  const initialMembers = useMemo(() => {
+    const current = Array.isArray(settings?.commissionMembers) ? settings.commissionMembers : [];
+    return current.length ? normalizeMembers(current) : legacyMembers(settings);
+  }, [settings]);
+  const [members, setMembers] = useState<CommissionMemberInfo[]>(initialMembers);
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => setMembers(initialMembers), [initialMembers]);
+
+  if (!isMaster) return null;
+
+  const updateMember = (id: string, updates: Partial<CommissionMemberInfo>) => {
+    setMembers((previous) => previous.map((member) => member.id === id ? { ...member, ...updates } : member));
+  };
+
+  const addMember = () => {
+    setMembers((previous) => [...previous, { id: makeId(), name: '', email: '', startDate: '', endDate: '', active: true }]);
+    setFeedback(null);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    setFeedback(null);
+    try {
+      const normalized = normalizeMembers(members);
+      const invalidEmail = normalized.find((member) => member.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email));
+      if (invalidEmail) throw new Error(`E-mail inválido para ${invalidEmail.name}.`);
+      const invalidPeriod = normalized.find((member) => member.startDate && member.endDate && member.endDate < member.startDate);
+      if (invalidPeriod) throw new Error(`A data final de ${invalidPeriod.name} não pode ser anterior à data inicial.`);
+      await apiClient.updateSettings({ commissionMembers: normalized });
+      setMembers(normalized);
+      await refreshAuth();
+      setFeedback({ ok: true, text: 'Comissão salva. Os membros ativos já aparecem na barra inferior do Portal.' });
+    } catch (error) {
+      setFeedback({ ok: false, text: error instanceof Error ? error.message : 'Não foi possível salvar a Comissão.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-labelledby="commission-management-title">
+        <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-emerald-700" />
+              <h3 id="commission-management-title" className="text-xs font-black uppercase tracking-wide text-slate-950">Gestão da Comissão de TCC</h3>
+            </div>
+            <p className="mt-1 text-[11px] leading-4 text-slate-600">Cadastre quantos membros forem necessários. Nome, e-mail, vigência e situação ficam salvos no Portal.</p>
+          </div>
+          <button type="button" onClick={addMember} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-black uppercase text-emerald-900 hover:bg-emerald-100">
+            <Plus className="h-3.5 w-3.5" />Adicionar membro
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] border-collapse text-left">
+            <thead className="bg-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-700">
+              <tr>
+                <th className="px-3 py-2">Nome</th>
+                <th className="px-3 py-2">E-mail</th>
+                <th className="px-3 py-2">Início</th>
+                <th className="px-3 py-2">Fim</th>
+                <th className="px-3 py-2 text-center">Ativo</th>
+                <th className="w-12 px-3 py-2" aria-label="Ações" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {members.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-xs text-slate-500">Nenhum membro adicional cadastrado. Use “Adicionar membro”.</td></tr>
+              )}
+              {members.map((member) => (
+                <tr key={member.id} className="align-middle hover:bg-slate-50/70">
+                  <td className="px-3 py-2"><input aria-label="Nome do membro" value={member.name} onChange={(event) => updateMember(member.id, { name: event.target.value })} className={inputClass} placeholder="Nome completo" /></td>
+                  <td className="px-3 py-2"><input aria-label="E-mail do membro" type="email" value={member.email || ''} onChange={(event) => updateMember(member.id, { email: event.target.value })} className={inputClass} placeholder="nome@ufes.br" /></td>
+                  <td className="px-3 py-2"><input aria-label="Início do mandato" type="date" value={member.startDate || ''} onChange={(event) => updateMember(member.id, { startDate: event.target.value })} className={inputClass} /></td>
+                  <td className="px-3 py-2"><input aria-label="Fim do mandato" type="date" value={member.endDate || ''} onChange={(event) => updateMember(member.id, { endDate: event.target.value })} className={inputClass} /></td>
+                  <td className="px-3 py-2 text-center"><input aria-label={`Membro ${member.name || 'sem nome'} ativo`} type="checkbox" checked={member.active !== false} onChange={(event) => updateMember(member.id, { active: event.target.checked })} className="h-4 w-4 accent-emerald-700" /></td>
+                  <td className="px-3 py-2 text-center"><button type="button" onClick={() => setMembers((previous) => previous.filter((item) => item.id !== member.id))} className="rounded-lg p-2 text-rose-600 hover:bg-rose-50 hover:text-rose-800" aria-label={`Excluir ${member.name || 'membro'}`}><Trash2 className="h-4 w-4" /></button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-h-5 text-[11px] font-semibold" role="status">
+            {feedback && <span className={feedback.ok ? 'text-emerald-700' : 'text-rose-700'}>{feedback.text}</span>}
+          </div>
+          <button type="button" onClick={() => void save()} disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#005830] px-4 py-2.5 text-[10px] font-black uppercase tracking-wide text-white shadow-sm hover:bg-[#004724] disabled:cursor-not-allowed disabled:opacity-50">
+            <Save className="h-3.5 w-3.5" />{saving ? 'Salvando…' : 'Salvar Comissão'}
+          </button>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" aria-labelledby="visual-identity-title">
+        <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+          <ImageIcon className="h-4 w-4 text-emerald-700" />
+          <div>
+            <h3 id="visual-identity-title" className="text-xs font-black uppercase tracking-wide text-slate-950">Identidade Visual</h3>
+            <p className="mt-0.5 text-[11px] text-slate-600">Identidade institucional fixa desta instalação.</p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-[220px_1fr] md:items-center">
+          <div className="flex min-h-40 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <img src="/colenf-logo.png" alt="Logomarca do Curso de Enfermagem da UFES" className="h-auto max-h-32 w-auto max-w-full object-contain" />
+          </div>
+          <div className="space-y-3">
+            <div><span className="block text-[9px] font-black uppercase tracking-wider text-slate-500">Instituição</span><strong className="text-sm text-slate-950">Universidade Federal do Espírito Santo</strong></div>
+            <div><span className="block text-[9px] font-black uppercase tracking-wider text-slate-500">Curso</span><strong className="text-sm text-slate-950">Curso de Graduação em Enfermagem e Obstetrícia</strong></div>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] leading-5 text-emerald-950"><strong>PNG transparente ativo.</strong> O Portal usa o arquivo <code>/colenf-logo.png</code> com proporção preservada por <code>object-fit: contain</code>; a imagem não é esticada nem recortada.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
+''', encoding='utf-8')
+
+          # 3) Exibe os dois blocos dentro da área administrativa já existente.
+          def integrations_patch(s):
+              import_anchor = "import { apiClient } from '../services/apiClient';\n"
+              if "CommissionIdentityPanel" not in s:
+                  s = s.replace(import_anchor, import_anchor + "import { CommissionIdentityPanel } from './CommissionIdentityPanel';\n", 1)
+              return_anchor = "  return <div className=\"space-y-4\">\n"
+              if '<CommissionIdentityPanel isMaster={isMaster} />' not in s:
+                  s = s.replace(return_anchor, return_anchor + "    <CommissionIdentityPanel isMaster={isMaster} />\n", 1)
+              return s
+          rw('src/components/InfrastructureIntegrationsPanel.tsx', integrations_patch)
+
+          # 4) Rodapé passa a refletir dados reais da Comissão, com e-mail e vigência.
+          def footer_patch(s):
+              old = """  const presidentName = layoutConfig.footerPresidentName || settings?.commissionPresidentName || 'Não configurado';\n  const presidentLabel = layoutConfig.footerPresidentLabel || 'Presidente da Comissão';\n  const membersLabel = layoutConfig.footerMembersLabel || 'Membros da Comissão';\n  const membersList = layoutConfig.footerMembersList?.length > 0\n    ? layoutConfig.footerMembersList\n    : [settings?.substituteCoordinatorName || 'Não configurado'];\n"""
+              new = """  const presidentName = settings?.commissionPresidentName || layoutConfig.footerPresidentName || 'Não configurado';\n  const presidentEmail = settings?.commissionPresidentEmail || '';\n  const presidentLabel = layoutConfig.footerPresidentLabel || 'Presidente da Comissão';\n  const membersLabel = layoutConfig.footerMembersLabel || 'Membros da Comissão';\n  const configuredCommissionMembers = Array.isArray(settings?.commissionMembers)\n    ? settings.commissionMembers.filter((member) => member && member.active !== false && String(member.name || '').trim())\n    : [];\n  const legacyCommissionMembers = [\n    settings?.commissionMember2Name,\n    settings?.commissionMember3Name,\n    settings?.commissionMember4Name,\n    settings?.commissionMember5Name,\n  ].filter(Boolean).map((name, index) => ({ id: `legacy-${index}`, name: String(name), email: '', startDate: '', endDate: '', active: true }));\n  const layoutCommissionMembers = (layoutConfig.footerMembersList || []).filter(Boolean).map((name, index) => ({ id: `layout-${index}`, name, email: '', startDate: '', endDate: '', active: true }));\n  const membersList = configuredCommissionMembers.length\n    ? configuredCommissionMembers\n    : legacyCommissionMembers.length\n      ? legacyCommissionMembers\n      : layoutCommissionMembers;\n"""
+              if old not in s:
+                  raise SystemExit('footer settings anchor missing')
+              s = s.replace(old, new, 1)
+              old_president = """              <p \n                className=\"font-bold text-[11.5px] mt-0.5\"\n                style={{ color: footerText }}\n              >\n                {presidentName}\n              </p>\n"""
+              new_president = """              <p \n                className=\"font-bold text-[11.5px] mt-0.5\"\n                style={{ color: footerText }}\n              >\n                {presidentName}\n              </p>\n              {presidentEmail && <a href={`mailto:${presidentEmail}`} className=\"mt-0.5 block font-mono text-[9.5px] hover:underline\" style={{ color: footerMuted }}>{presidentEmail}</a>}\n"""
+              if old_president not in s:
+                  raise SystemExit('footer president anchor missing')
+              s = s.replace(old_president, new_president, 1)
+              old_members = """                {membersList.map((memberName, idx) => (\n                  <p key={idx}>{memberName}</p>\n                ))}\n"""
+              new_members = """                {membersList.length ? membersList.map((member) => (\n                  <div key={member.id || member.name} className=\"py-0.5\">\n                    <p className=\"font-semibold\">{member.name}</p>\n                    {member.email && <a href={`mailto:${member.email}`} className=\"block font-mono text-[9px] hover:underline\" style={{ color: footerMuted }}>{member.email}</a>}\n                    {(member.startDate || member.endDate) && <p className=\"text-[9px]\" style={{ color: footerMuted }}>\n                      {member.startDate ? `Início: ${new Date(`${member.startDate}T12:00:00`).toLocaleDateString('pt-BR')}` : ''}\n                      {member.startDate && member.endDate ? ' · ' : ''}\n                      {member.endDate ? `Fim: ${new Date(`${member.endDate}T12:00:00`).toLocaleDateString('pt-BR')}` : ''}\n                    </p>}\n                  </div>\n                )) : <p>Não configurado</p>}\n"""
+              if old_members not in s:
+                  raise SystemExit('footer members anchor missing')
+              return s.replace(old_members, new_members, 1)
+          rw('src/components/Footer.tsx', footer_patch)
+
+          # 5) PNG transparente oficial como fonte única dos logotipos desta instalação.
+          def layout_patch(s):
+              s = s.replace("headerCustomLogoUrl: '/colenf-logo.svg'", "headerCustomLogoUrl: '/colenf-logo.png'")
+              s = s.replace("sidebarLogoType: 'emblem'", "sidebarLogoType: 'custom'")
+              s = s.replace("sidebarCustomLogoUrl: '/colenf-logo.svg'", "sidebarCustomLogoUrl: '/colenf-logo.png'")
+              # Evita configurações locais antigas voltarem a SVG/JPG ou a um modo que deforme a marca.
+              old = """      sidebarIconMode: parsed.sidebarIconMode === 'lucide' ? 'lucide' : 'emoji',\n      sidebarNavOrder: canonicalSidebarOrder(parsed.sidebarNavOrder),\n"""
+              new = """      headerCustomLogoUrl: '/colenf-logo.png',\n      sidebarLogoType: 'custom',\n      sidebarCustomLogoUrl: '/colenf-logo.png',\n      sidebarIconMode: parsed.sidebarIconMode === 'lucide' ? 'lucide' : 'emoji',\n      sidebarNavOrder: canonicalSidebarOrder(parsed.sidebarNavOrder),\n"""
+              if old not in s:
+                  raise SystemExit('site layout load anchor missing')
+              s = s.replace(old, new, 1)
+              return s
+          rw('src/utils/siteLayoutConfig.ts', layout_patch)
+
+          rw('src/components/NursingEmblemLogo.tsx', lambda s: s.replace("const logoSrc = customSrc || '/colenf-logo.svg';", "const logoSrc = customSrc || '/colenf-logo.png';", 1))
+
+          # 6) Registro breve de continuidade.
+          changelog = Path('CHANGELOG.md')
+          entry = """\n## 2026-09-12 — Comissão, rodapé e identidade visual\n- Gestão da Comissão restaurada com quantidade dinâmica de membros, e-mail, vigência e status ativo.\n- Salvamento passou a exibir a mensagem real do backend em caso de falha e atualiza os dados globais após sucesso.\n- Rodapé agora consome os membros persistidos da Comissão, incluindo e-mail e período quando informados.\n- Identidade Visual restaurada usando `public/colenf-logo.png` com fundo transparente e proporção preservada (`object-fit: contain`).\n\n"""
+          current = changelog.read_text(encoding='utf-8')
+          if '## 2026-09-12 — Comissão, rodapé e identidade visual' not in current:
+              changelog.write_text(entry + current, encoding='utf-8')
+
+      - name: Install dependencies
+        run: npm ci --include=dev
+      - name: Validate application
+        run: npm run test:ci
+      - name: Validate secure flow
+        run: npm run test:secure-flow
+      - name: Validate institutional contract
+        run: node scripts/test-institutional-template-contract.mjs
+      - name: Commit finished fix
+        run: |
+          rm -f .github/workflows/one-shot-commission-identity-fix.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: restaura comissão, rodapé e identidade PNG'
+          git push
