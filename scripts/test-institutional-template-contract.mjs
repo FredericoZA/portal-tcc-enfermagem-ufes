@@ -32,17 +32,32 @@ if (missing.length) {
 }
 
 if (!envUfes.includes('GOOGLE_ALLOW_EXISTING_MODEL_LINKS="true"')) {
-  console.error('O perfil UFES precisa permitir cadastro dos Google Docs institucionais existentes.');
+  console.error('O exemplo institucional precisa documentar o cadastro de Google Docs existentes.');
+  process.exit(1);
+}
+
+// O arquivo .env.ufes.example é deliberadamente publicável e não deve repetir
+// os identificadores reais da implantação. A configuração concreta da UFES é
+// validada no vercel.json enquanto ainda for necessária para o deployment.
+for (const forbiddenProductionIdentifier of [
+  '1zkG3fBm2tJESZjZP0_7jStUuPNXCwRPS',
+  'vvgdmycmotazqjvpywmk',
+  'tccenfermagemufes@gmail.com',
+  'portal-tcc-enfermagem-ufes.vercel.app'
+]) {
+  if (envUfes.includes(forbiddenProductionIdentifier)) {
+    console.error('O exemplo público contém identificador real da implantação UFES.');
+    process.exit(1);
+  }
+}
+
+if (!envUfes.includes('PORTAL_DRIVE_ROOT_FOLDER_ID="ID_DA_PASTA_RAIZ_DO_DRIVE"')) {
+  console.error('O exemplo público deve manter placeholder explícito para a raiz do Drive.');
   process.exit(1);
 }
 
 const driveRootId = '1zkG3fBm2tJESZjZP0_7jStUuPNXCwRPS';
 const productionUrl = 'https://portal-tcc-enfermagem-ufes.vercel.app';
-if (!envUfes.includes(`PORTAL_DRIVE_ROOT_FOLDER_ID="${driveRootId}"`)) {
-  console.error('A pasta raiz institucional do Drive não está fixada no perfil UFES.');
-  process.exit(1);
-}
-
 const expectedPublicVercelEnv = {
   APP_URL: productionUrl,
   PORTAL_PUBLIC_URL: productionUrl,
@@ -88,4 +103,4 @@ for (const forbiddenSecret of [
   }
 }
 
-console.log(`Contrato institucional validado: ${institutionalMarkers.length} marcadores, Drive institucional, Vercel gru1 e configuração pública sem segredos.`);
+console.log(`Contrato institucional validado: ${institutionalMarkers.length} marcadores, exemplo público higienizado, Vercel gru1 e configuração de produção sem segredos.`);
