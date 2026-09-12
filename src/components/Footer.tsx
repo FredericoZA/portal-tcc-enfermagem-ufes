@@ -17,8 +17,18 @@ interface FooterProps {
   showLocationDirections?: boolean;
 }
 
+interface FooterCommissionMember {
+  id?: string;
+  name: string;
+  email?: string;
+  startDate?: string;
+  endDate?: string;
+  active?: boolean;
+}
+
 export const Footer: React.FC<FooterProps> = ({ showLocationDirections = false }) => {
   const { settings } = useAuth();
+  const typedSettings = settings as any;
   const installationProfile=resolveInstallationProfile(settings);
   const [showDirections, setShowDirections] = useState(false);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
@@ -39,12 +49,25 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections = false }
     };
   }, []);
 
-  const presidentName = layoutConfig.footerPresidentName || settings?.commissionPresidentName || 'Não configurado';
+  const presidentName = settings?.commissionPresidentName || layoutConfig.footerPresidentName || 'Não configurado';
+  const presidentEmail = settings?.commissionPresidentEmail || '';
   const presidentLabel = layoutConfig.footerPresidentLabel || 'Presidente da Comissão';
   const membersLabel = layoutConfig.footerMembersLabel || 'Membros da Comissão';
-  const membersList = layoutConfig.footerMembersList?.length > 0
-    ? layoutConfig.footerMembersList
-    : [settings?.substituteCoordinatorName || 'Não configurado'];
+  const configuredCommissionMembers: FooterCommissionMember[] = Array.isArray(typedSettings?.commissionMembers)
+    ? typedSettings.commissionMembers.filter((member: FooterCommissionMember) => member && member.active !== false && String(member.name || '').trim())
+    : [];
+  const legacyCommissionMembers: FooterCommissionMember[] = [
+    settings?.commissionMember2Name,
+    settings?.commissionMember3Name,
+    settings?.commissionMember4Name,
+    settings?.commissionMember5Name,
+  ].filter(Boolean).map((name, index) => ({ id: `legacy-${index}`, name: String(name), email: '', startDate: '', endDate: '', active: true }));
+  const layoutCommissionMembers: FooterCommissionMember[] = (layoutConfig.footerMembersList || []).filter(Boolean).map((name, index) => ({ id: `layout-${index}`, name, email: '', startDate: '', endDate: '', active: true }));
+  const membersList = configuredCommissionMembers.length
+    ? configuredCommissionMembers
+    : legacyCommissionMembers.length
+      ? legacyCommissionMembers
+      : layoutCommissionMembers;
   const devTitle = layoutConfig.footerDevTitle || 'Desenvolvimento da Plataforma e Suporte';
   const devName = layoutConfig.footerDevName || settings?.portalMaintainerName || 'Equipe responsável pela instalação';
   const whatsappLabel = layoutConfig.footerWhatsappLabel || 'WhatsApp Secretária';
@@ -64,6 +87,12 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections = false }
   const qrBg = layoutConfig.footerQrBgColor || '#ffffff';
   const qrText = layoutConfig.footerQrTextColor || '#0f172a';
   const qrBorder = layoutConfig.footerQrBorderColor || '#e2e8f0';
+
+  const formatTermDate = (value?: string) => {
+    if (!value) return '';
+    const date = new Date(`${value}T12:00:00`);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('pt-BR');
+  };
 
   return (
     <footer id="home-page-footer-notes" className="space-y-2.5 pt-2 pb-4 border-t border-slate-200 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 relative">
@@ -148,6 +177,11 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections = false }
               >
                 {presidentName}
               </p>
+              {presidentEmail && (
+                <a href={`mailto:${presidentEmail}`} className="mt-0.5 block font-mono text-[9.5px] hover:underline" style={{ color: footerMuted }}>
+                  {presidentEmail}
+                </a>
+              )}
             </div>
             <div 
               className="pt-2 border-t w-full"
@@ -163,9 +197,23 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections = false }
                 className="font-medium text-[10.5px] mt-0.5 space-y-0.5 text-center"
                 style={{ color: footerText }}
               >
-                {membersList.map((memberName, idx) => (
-                  <p key={idx}>{memberName}</p>
-                ))}
+                {membersList.length ? membersList.map((member) => (
+                  <div key={member.id || member.name} className="py-0.5">
+                    <p className="font-semibold">{member.name}</p>
+                    {member.email && (
+                      <a href={`mailto:${member.email}`} className="block font-mono text-[9px] hover:underline" style={{ color: footerMuted }}>
+                        {member.email}
+                      </a>
+                    )}
+                    {(member.startDate || member.endDate) && (
+                      <p className="text-[9px]" style={{ color: footerMuted }}>
+                        {member.startDate ? `Início: ${formatTermDate(member.startDate)}` : ''}
+                        {member.startDate && member.endDate ? ' · ' : ''}
+                        {member.endDate ? `Fim: ${formatTermDate(member.endDate)}` : ''}
+                      </p>
+                    )}
+                  </div>
+                )) : <p>Não configurado</p>}
               </div>
             </div>
           </div>
