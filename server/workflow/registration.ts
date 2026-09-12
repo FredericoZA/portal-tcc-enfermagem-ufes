@@ -1,8 +1,15 @@
 import type { IntegrationStudioSettings } from '../../src/types/integrationStudio';
 import type { RegistrationAnswers } from '../../src/types/operationalConfig';
-import { operationalConfig, registrationPayload, registrationQuestions } from '../../src/utils/operationalConfig';
+import { registrationPayload, registrationQuestions } from '../../src/utils/operationalConfig';
 import { evaluateStudioCondition, validateStudioAnswer } from '../../src/utils/courseStudioValidator';
 import { formatNameTitleCase, formatTccTitle, normalizeEmail } from '../../src/utils/formatters';
+
+const LEGACY_LOCATION_ALIASES = new Map<string, string>([
+  ['auditório do departamento de enfermagem', 'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES'],
+  ['auditorio do departamento de enfermagem', 'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES'],
+  ['auditório do prédio do departamento de enfermagem', 'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES'],
+  ['auditorio do predio do departamento de enfermagem', 'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES']
+]);
 
 function normalizeRegistrationValue(fieldKey: string, fieldType: string, raw: unknown): unknown {
   if (typeof raw !== 'string') return raw;
@@ -12,7 +19,11 @@ function normalizeRegistrationValue(fieldKey: string, fieldType: string, raw: un
   if (/MATRICULA$/.test(fieldKey)) return value.replace(/[.\s-]+/g, '');
   if (/_SIAPE$/.test(fieldKey)) return value.replace(/[.\s-]+/g, '');
   if (fieldKey === 'TITULO') return formatTccTitle(value.replace(/\s+/g, ' '));
-  return value.replace(/\s+/g, ' ');
+  value = value.replace(/\s+/g, ' ');
+  if (fieldKey === 'DEFESA_LOCAL' || fieldKey === 'LOCAL_ALTERNATIVO') {
+    return LEGACY_LOCATION_ALIASES.get(value.toLocaleLowerCase('pt-BR')) || value;
+  }
+  return value;
 }
 
 export function acceptRegistration(input: any, studio?: Partial<IntegrationStudioSettings>) {
