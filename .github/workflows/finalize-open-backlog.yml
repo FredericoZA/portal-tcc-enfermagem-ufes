@@ -26,20 +26,7 @@ jobs:
       - name: Instalar dependências
         run: npm ci
       - name: Aplicar correções pendentes
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/finalize-open-backlog.mjs
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('server.ts')
-          text = path.read_text()
-          old = "const next={...process.acervo,publicationState:'PENDING_SYNC' as const};"
-          new = "const next:NonNullable<ProcessData['acervo']>={...process.acervo,publicationState:'PENDING_SYNC'};"
-          if old not in text:
-              raise SystemExit('Trecho de tipagem de publicação não encontrado')
-          path.write_text(text.replace(old, new, 1))
-          PY
+        run: node scripts/finalize-open-backlog.mjs
       - name: Validar CI local
         run: npm run test:ci
       - name: Validar fluxo seguro
@@ -50,11 +37,10 @@ jobs:
           set -euo pipefail
           git config user.name "Portal TCC automation"
           git config user.email "actions@users.noreply.github.com"
-          git restore .github/workflows/production-smoke.yml
           git add server.ts server src
           if git diff --cached --quiet; then
             echo "Nenhuma alteração adicional."
             exit 0
           fi
-          git commit -m "fix: conclui pendências críticas de fluxo e go-live"
+          git commit -m "fix: conclui confiabilidade operacional do go-live"
           git push origin HEAD:main
