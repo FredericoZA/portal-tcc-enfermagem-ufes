@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Image as ImageIcon, Plus, Save, Trash2, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
+import { NursingEmblemLogo } from './NursingEmblemLogo';
 
 interface Props {
   isMaster: boolean;
@@ -53,10 +54,20 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
     return current.length ? normalizeMembers(current) : legacyMembers(typedSettings);
   }, [typedSettings]);
   const [members, setMembers] = useState<CommissionMemberInfo[]>(initialMembers);
+  const [presidentName, setPresidentName] = useState(String(typedSettings?.commissionPresidentName || ''));
+  const [maintainerName, setMaintainerName] = useState(String(typedSettings?.portalMaintainerName || ''));
+  const [contactEmail, setContactEmail] = useState(String(typedSettings?.contactEmail || ''));
+  const [whatsappUrl, setWhatsappUrl] = useState(String(typedSettings?.whatsappUrl || ''));
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => setMembers(initialMembers), [initialMembers]);
+  useEffect(() => {
+    setPresidentName(String(typedSettings?.commissionPresidentName || ''));
+    setMaintainerName(String(typedSettings?.portalMaintainerName || ''));
+    setContactEmail(String(typedSettings?.contactEmail || ''));
+    setWhatsappUrl(String(typedSettings?.whatsappUrl || ''));
+  }, [typedSettings?.commissionPresidentName, typedSettings?.portalMaintainerName, typedSettings?.contactEmail, typedSettings?.whatsappUrl]);
 
   if (!isMaster) return null;
 
@@ -78,12 +89,26 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
       if (invalidEmail) throw new Error(`E-mail inválido para ${invalidEmail.name}.`);
       const invalidPeriod = normalized.find((member) => member.startDate && member.endDate && member.endDate < member.startDate);
       if (invalidPeriod) throw new Error(`A data final de ${invalidPeriod.name} não pode ser anterior à data inicial.`);
-      await apiClient.updateSettings({ commissionMembers: normalized } as any);
+      const normalizedContactEmail = contactEmail.trim().toLowerCase();
+      if (normalizedContactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedContactEmail)) throw new Error('O e-mail público de contato é inválido.');
+      const normalizedWhatsapp = whatsappUrl.trim();
+      if (normalizedWhatsapp) {
+        let parsed: URL;
+        try { parsed = new URL(normalizedWhatsapp); } catch { throw new Error('Informe uma URL completa de WhatsApp, começando com https://.'); }
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') throw new Error('A URL de WhatsApp precisa usar http ou https.');
+      }
+      await apiClient.updateSettings({
+        commissionPresidentName: presidentName.trim(),
+        commissionMembers: normalized,
+        portalMaintainerName: maintainerName.trim(),
+        contactEmail: normalizedContactEmail,
+        whatsappUrl: normalizedWhatsapp,
+      } as any);
       setMembers(normalized);
       await refreshAuth();
-      setFeedback({ ok: true, text: 'Comissão salva. Os membros ativos já aparecem na barra inferior do Portal.' });
+      setFeedback({ ok: true, text: 'Dados salvos. Presidente, membros ativos e suporte já alimentam automaticamente o rodapé público.' });
     } catch (error) {
-      setFeedback({ ok: false, text: error instanceof Error ? error.message : 'Não foi possível salvar a Comissão.' });
+      setFeedback({ ok: false, text: error instanceof Error ? error.message : 'Não foi possível salvar os dados da Comissão.' });
     } finally {
       setSaving(false);
     }
@@ -98,11 +123,33 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
               <Users className="h-4 w-4 text-emerald-700" />
               <h3 id="commission-management-title" className="text-xs font-black uppercase tracking-wide text-slate-950">Gestão da Comissão de TCC</h3>
             </div>
-            <p className="mt-1 text-[11px] leading-4 text-slate-600">Cadastre quantos membros forem necessários. Nome, e-mail, vigência e situação ficam salvos no Portal.</p>
+            <p className="mt-1 text-[11px] leading-4 text-slate-600">Os dados desta área alimentam diretamente a identificação da Comissão no rodapé público.</p>
           </div>
           <button type="button" onClick={addMember} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-black uppercase text-emerald-900 hover:bg-emerald-100">
             <Plus className="h-3.5 w-3.5" />Adicionar membro
           </button>
+        </div>
+
+        <div className="grid gap-4 border-b border-slate-200 px-4 py-4 lg:grid-cols-2">
+          <label className="space-y-1.5">
+            <span className="block text-[10px] font-black uppercase tracking-wide text-slate-600">Presidente da Comissão</span>
+            <input value={presidentName} onChange={(event) => setPresidentName(event.target.value)} className={inputClass} placeholder="Nome completo do presidente" />
+            <span className="block text-[10px] leading-4 text-slate-500">O e-mail que concede o papel de Presidente continua protegido pelo fluxo de transferência administrativa.</span>
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1.5 sm:col-span-2">
+              <span className="block text-[10px] font-black uppercase tracking-wide text-slate-600">Desenvolvimento e suporte</span>
+              <input value={maintainerName} onChange={(event) => setMaintainerName(event.target.value)} className={inputClass} placeholder="Responsável ou equipe" />
+            </label>
+            <label className="space-y-1.5">
+              <span className="block text-[10px] font-black uppercase tracking-wide text-slate-600">E-mail público de contato</span>
+              <input type="email" value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} className={inputClass} placeholder="contato@ufes.br" />
+            </label>
+            <label className="space-y-1.5">
+              <span className="block text-[10px] font-black uppercase tracking-wide text-slate-600">Link do WhatsApp</span>
+              <input value={whatsappUrl} onChange={(event) => setWhatsappUrl(event.target.value)} className={inputClass} placeholder="https://wa.me/..." />
+            </label>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -140,7 +187,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
             {feedback && <span className={feedback.ok ? 'text-emerald-700' : 'text-rose-700'}>{feedback.text}</span>}
           </div>
           <button type="button" onClick={() => void save()} disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#005830] px-4 py-2.5 text-[10px] font-black uppercase tracking-wide text-white shadow-sm hover:bg-[#004724] disabled:cursor-not-allowed disabled:opacity-50">
-            <Save className="h-3.5 w-3.5" />{saving ? 'Salvando…' : 'Salvar Comissão'}
+            <Save className="h-3.5 w-3.5" />{saving ? 'Salvando…' : 'Salvar Comissão e Rodapé'}
           </button>
         </div>
       </section>
@@ -155,12 +202,12 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-[220px_1fr] md:items-center">
           <div className="flex min-h-40 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <img src="/colenf-logo.png" alt="Logomarca do Curso de Enfermagem da UFES" className="h-auto max-h-32 w-auto max-w-full object-contain" />
+            <NursingEmblemLogo size={128} className="max-w-full" customSrc="/colenf-logo.png" />
           </div>
           <div className="space-y-3">
             <div><span className="block text-[9px] font-black uppercase tracking-wider text-slate-500">Instituição</span><strong className="text-sm text-slate-950">Universidade Federal do Espírito Santo</strong></div>
             <div><span className="block text-[9px] font-black uppercase tracking-wider text-slate-500">Curso</span><strong className="text-sm text-slate-950">Curso de Graduação em Enfermagem e Obstetrícia</strong></div>
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] leading-5 text-emerald-950"><strong>PNG transparente ativo.</strong> O Portal usa o arquivo <code>/colenf-logo.png</code> com proporção preservada por <code>object-fit: contain</code>; a imagem não é esticada nem recortada.</div>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] leading-5 text-emerald-950"><strong>Marca institucional protegida.</strong> O Portal preserva a proporção do PNG transparente e possui fallback visual caso o arquivo estático não possa ser carregado.</div>
           </div>
         </div>
       </section>
