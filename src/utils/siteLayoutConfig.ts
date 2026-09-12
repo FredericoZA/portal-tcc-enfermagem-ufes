@@ -63,7 +63,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   headerCourseTitle: 'Curso de Graduação em Enfermagem e Obstetrícia',
   headerShowRoleBadges: true,
   headerShowEmblem: true,
-  headerCustomLogoUrl: '/colenf-logo.svg',
+  headerCustomLogoUrl: '/colenf-logo.png',
   headerBgColor: '#ffffff',
   headerTextColor: '#047857',
   headerTitleColor: '#0f172a',
@@ -71,8 +71,8 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
 
   sidebarTitle: 'PORTAL DE TCC',
   sidebarSubtitle: 'Curso de Graduação em Enfermagem e Obstetrícia • UFES',
-  sidebarLogoType: 'emblem',
-  sidebarCustomLogoUrl: '/colenf-logo.svg',
+  sidebarLogoType: 'custom',
+  sidebarCustomLogoUrl: '/colenf-logo.png',
   sidebarNavLabels: {
     home: 'Calendário',
     biblioteca: 'Repositório',
@@ -163,6 +163,11 @@ export function loadSiteLayoutConfig(): SiteLayoutConfig {
     return {
       ...DEFAULT_SITE_LAYOUT_CONFIG,
       ...parsed,
+      // A identidade desta instalação é fixa. Sobrescrevemos configurações locais antigas
+      // para impedir SVG/JPG legado, recorte ou deformação da marca.
+      headerCustomLogoUrl: '/colenf-logo.png',
+      sidebarLogoType: 'custom',
+      sidebarCustomLogoUrl: '/colenf-logo.png',
       sidebarIconMode: parsed.sidebarIconMode === 'lucide' ? 'lucide' : 'emoji',
       sidebarNavOrder: canonicalSidebarOrder(parsed.sidebarNavOrder),
       sidebarNavLabels: {
@@ -192,6 +197,10 @@ export function saveSiteLayoutConfig(config: Partial<SiteLayoutConfig>) {
     const updated: SiteLayoutConfig = {
       ...current,
       ...config,
+      // Logo institucional não é editável nesta instalação.
+      headerCustomLogoUrl: '/colenf-logo.png',
+      sidebarLogoType: 'custom',
+      sidebarCustomLogoUrl: '/colenf-logo.png',
       sidebarNavOrder: canonicalSidebarOrder(config.sidebarNavOrder || current.sidebarNavOrder),
       sidebarNavLabels: {
         ...current.sidebarNavLabels,
