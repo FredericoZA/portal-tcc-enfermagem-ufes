@@ -2,16 +2,16 @@ import { PortalDialogs } from './components/PortalDialogs';
 import { PortalErrorBoundary } from './components/PortalErrorBoundary';
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
-import { apiClient } from './services/apiClient';
 import { UserSimulatorBar } from './components/UserSimulatorBar';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
-import { NursingEmblemLogo } from './components/NursingEmblemLogo';
 import { EmergencyRecoveryModal } from './components/EmergencyRecoveryModal';
 import { PendingAdministrationTransferBanner } from './components/PendingAdministrationTransferBanner';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })));
+const PortalTutorialPage = lazy(() => import('./pages/PortalTutorialPage').then((module) => ({ default: module.PortalTutorialPage })));
+const PortalReplicationPage = lazy(() => import('./pages/PortalReplicationPage').then((module) => ({ default: module.PortalReplicationPage })));
 const MeusProcessosPage = lazy(() => import('./pages/MeusProcessosPage').then((module) => ({ default: module.MeusProcessosPage })));
 const ProcessoDetailPage = lazy(() => import('./pages/ProcessoDetailPage').then((module) => ({ default: module.ProcessoDetailPage })));
 const WizardCadastroPage = lazy(() => import('./pages/WizardCadastroPage').then((module) => ({ default: module.WizardCadastroPage })));
@@ -68,15 +68,12 @@ export default function App() {
 
   useEffect(() => {
     if (currentTab !== 'acessar-portal') return;
-    const timer = window.setTimeout(() => {
-      document.getElementById('open-login-modal-btn')?.click();
-    }, 120);
+    const timer = window.setTimeout(() => document.getElementById('open-login-modal-btn')?.click(), 120);
     return () => window.clearTimeout(timer);
   }, [currentTab]);
 
   useEffect(() => {
     if (!selectedProcessId) return;
-
     processDialogRef.current?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') handleCloseProcess();
@@ -93,25 +90,15 @@ export default function App() {
       case 'biblioteca':
         return <HomePage initialPublicTab="biblioteca" onNavigate={handleNavigate} />;
       case 'tutorial':
-        return <HomePage initialPublicTab="tutorial" onNavigate={handleNavigate} />;
+        return <PortalTutorialPage onNavigate={handleNavigate} />;
+      case 'replicar':
+        return <PortalReplicationPage />;
       case 'acessar-portal':
         return <HomePage onNavigate={handleNavigate} />;
       case 'meus-processos':
-        return (
-          <MeusProcessosPage
-            onSelectProcess={(id) => handleSelectProcess(id, false)}
-            onNavigateToWizard={() => handleNavigate('novo-processo')}
-          />
-        );
+        return <MeusProcessosPage onSelectProcess={(id) => handleSelectProcess(id, false)} onNavigateToWizard={() => handleNavigate('novo-processo')} />;
       case 'novo-processo':
-        return (
-          <WizardCadastroPage
-            onSuccess={(newId) => {
-              handleSelectProcess(newId, false);
-            }}
-            onCancel={() => handleNavigate('meus-processos')}
-          />
-        );
+        return <WizardCadastroPage onSuccess={(newId) => handleSelectProcess(newId, false)} onCancel={() => handleNavigate('meus-processos')} />;
       case 'agenda':
         return <AgendaPage onSelectProcess={(id) => handleSelectProcess(id, true)} />;
       case 'avaliacoes':
@@ -137,13 +124,10 @@ export default function App() {
     <AuthProvider>
       <PortalDialogs />
       <div id="portal-app-root" className="min-h-screen bg-slate-100 flex flex-col font-sans antialiased text-slate-900">
-        
-        {/* User Simulator / Profile Test Switcher Bar */}
         {(import.meta as any).env?.DEV && <UserSimulatorBar />}
         <PendingAdministrationTransferBanner />
 
         <div className="flex-1 flex overflow-hidden">
-          {/* Left Navigation Sidebar */}
           <Sidebar
             currentTab={currentTab}
             setCurrentTab={(tab) => {
@@ -154,7 +138,6 @@ export default function App() {
             setIsOpenMobile={setIsOpenMobileSidebar}
           />
 
-          {/* Main Area */}
           <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
             <Header
               onOpenMobileSidebar={() => setIsOpenMobileSidebar(true)}
@@ -163,48 +146,33 @@ export default function App() {
                 setCurrentTab('home');
               }}
               title={
-                selectedProcessId
-                  ? 'Detalhes do Trabalho de TCC'
-                  : currentTab === 'home'
-                  ? 'Página Inicial Pública'
-                  : currentTab === 'acessar-portal'
-                  ? 'Acesso ao Portal'
-                  : currentTab === 'meus-processos'
-                  ? 'Meus Trabalhos de TCC'
-                  : currentTab === 'novo-processo'
-                  ? 'Cadastrar Trabalho de TCC'
-                  : currentTab === 'agenda'
-                  ? 'Agenda de Defesas'
-                  : currentTab === 'avaliacoes'
-                  ? 'Avaliações de TCC'
-                  : currentTab === 'documentos'
-                  ? 'Documentos'
-                  : currentTab === 'coordenador'
-                  ? 'Área do Presidente'
-                  : currentTab === 'assinaturas'
-                  ? 'Central de Assinaturas'
-                  : currentTab === 'configuracoes'
-                  ? 'Configurações & Modelos de Arquivos'
+                selectedProcessId ? 'Detalhes do Trabalho de TCC'
+                  : currentTab === 'home' ? 'Página Inicial Pública'
+                  : currentTab === 'tutorial' ? 'Como usar o Portal'
+                  : currentTab === 'replicar' ? 'Como replicar o Portal'
+                  : currentTab === 'acessar-portal' ? 'Acesso ao Portal'
+                  : currentTab === 'meus-processos' ? 'Meus Trabalhos de TCC'
+                  : currentTab === 'novo-processo' ? 'Cadastrar Trabalho de TCC'
+                  : currentTab === 'agenda' ? 'Agenda de Defesas'
+                  : currentTab === 'avaliacoes' ? 'Avaliações de TCC'
+                  : currentTab === 'documentos' ? 'Documentos'
+                  : currentTab === 'coordenador' ? 'Área do Presidente'
+                  : currentTab === 'assinaturas' ? 'Central de Assinaturas'
+                  : currentTab === 'configuracoes' ? 'Configurações & Modelos de Arquivos'
                   : 'Local das Defesas'
               }
             />
 
             <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto min-h-[500px]">
-              <PortalErrorBoundary key={currentTab}><Suspense fallback={<PageLoadingFallback />}>
-                {renderMainTab()}
-              </Suspense></PortalErrorBoundary>
+              <PortalErrorBoundary key={currentTab}><Suspense fallback={<PageLoadingFallback />}>{renderMainTab()}</Suspense></PortalErrorBoundary>
             </main>
 
             <Footer showLocationDirections={currentTab === 'home'} />
           </div>
         </div>
 
-        {/* Floating Modal for selectedProcessId */}
         {selectedProcessId && (
-          <div
-            className="fixed inset-0 bg-slate-900/80 z-50 overflow-y-auto p-2 sm:p-4 md:p-6 backdrop-blur-xs animate-fadeIn flex justify-center items-start"
-            onClick={handleCloseProcess}
-          >
+          <div className="fixed inset-0 bg-slate-900/80 z-50 overflow-y-auto p-2 sm:p-4 md:p-6 backdrop-blur-xs animate-fadeIn flex justify-center items-start" onClick={handleCloseProcess}>
             <div
               ref={processDialogRef}
               role="dialog"
@@ -216,25 +184,14 @@ export default function App() {
             >
               <div className="p-3 sm:p-5 bg-slate-100 max-h-[90vh] overflow-y-auto custom-scrollbar">
                 <PortalErrorBoundary key={selectedProcessId}><Suspense fallback={<PageLoadingFallback />}>
-                  <ProcessoDetailPage
-                    processId={selectedProcessId}
-                    readOnly={selectedProcessReadOnly}
-                    onBack={handleCloseProcess}
-                    isModal={true}
-                  />
+                  <ProcessoDetailPage processId={selectedProcessId} readOnly={selectedProcessReadOnly} onBack={handleCloseProcess} isModal={true} />
                 </Suspense></PortalErrorBoundary>
               </div>
             </div>
           </div>
         )}
 
-        {/* Emergency Master Recovery Modal */}
-        <EmergencyRecoveryModal
-          isOpen={isEmergencyModalOpen}
-          onClose={() => setIsEmergencyModalOpen(false)}
-          defaultSecretKey={emergencySecretKeyParam}
-        />
-
+        <EmergencyRecoveryModal isOpen={isEmergencyModalOpen} onClose={() => setIsEmergencyModalOpen(false)} defaultSecretKey={emergencySecretKeyParam} />
       </div>
     </AuthProvider>
   );
