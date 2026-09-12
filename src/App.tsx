@@ -67,6 +67,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (currentTab !== 'acessar-portal') return;
+    const timer = window.setTimeout(() => {
+      document.getElementById('open-login-modal-btn')?.click();
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [currentTab]);
+
+  useEffect(() => {
     if (!selectedProcessId) return;
 
     processDialogRef.current?.focus();
@@ -86,6 +94,8 @@ export default function App() {
         return <HomePage initialPublicTab="biblioteca" onNavigate={handleNavigate} />;
       case 'tutorial':
         return <HomePage initialPublicTab="tutorial" onNavigate={handleNavigate} />;
+      case 'acessar-portal':
+        return <HomePage onNavigate={handleNavigate} />;
       case 'meus-processos':
         return (
           <MeusProcessosPage
@@ -157,6 +167,8 @@ export default function App() {
                   ? 'Detalhes do Trabalho de TCC'
                   : currentTab === 'home'
                   ? 'Página Inicial Pública'
+                  : currentTab === 'acessar-portal'
+                  ? 'Acesso ao Portal'
                   : currentTab === 'meus-processos'
                   ? 'Meus Trabalhos de TCC'
                   : currentTab === 'novo-processo'
