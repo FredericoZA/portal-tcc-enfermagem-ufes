@@ -62,8 +62,8 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   headerInstitutionText: 'Universidade Federal do Espírito Santo',
   headerCourseTitle: 'Curso de Graduação em Enfermagem e Obstetrícia',
   headerShowRoleBadges: true,
-  headerShowEmblem: true,
-  headerCustomLogoUrl: '/colenf-logo.png',
+  headerShowEmblem: false,
+  headerCustomLogoUrl: '',
   headerBgColor: '#ffffff',
   headerTextColor: '#047857',
   headerTitleColor: '#0f172a',
@@ -77,10 +77,8 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
     home: 'Calendário',
     biblioteca: 'Repositório',
     tutorial: 'Como usar',
-    replicar: 'Como replicar',
     'meus-processos': 'Meus TCCs',
     coordenador: 'Área do Presidente',
-    assinaturas: 'Assinaturas',
     configuracoes: 'Configurações',
     indicadores: 'Indicadores'
   },
@@ -88,10 +86,8 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
     home: '📅',
     biblioteca: '📚',
     tutorial: '❓',
-    replicar: '🧩',
     'meus-processos': '📋',
     coordenador: '🏛️',
-    assinaturas: '🔐',
     configuracoes: '⚙️',
     indicadores: '📊'
   },
@@ -109,7 +105,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   sidebarDividerColor: '#174c3b',
   sidebarDividerStyle: 'solid',
   sidebarShowDividers: true,
-  sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'assinaturas', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial', 'replicar'],
+  sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial'],
 
   footerLocationText: 'Departamento de Enfermagem • CCS/UFES • Campus de Maruípe • Vitória/ES',
   footerPresidentLabel: 'Presidente da Comissão',
@@ -139,18 +135,13 @@ export const SITE_LAYOUT_EVENT = 'site_layout_config_changed';
 const STORAGE_KEY = 'site_layout_custom_config_v1';
 
 function canonicalSidebarOrder(rawOrder: unknown): string[] {
-  const allowed = new Set(['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'assinaturas', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial', 'replicar']);
+  const allowed = new Set(['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial']);
   const stored = Array.isArray(rawOrder) ? rawOrder.filter((item): item is string => typeof item === 'string' && allowed.has(item)) : [];
   const order = stored.length ? [...stored] : [...(DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavOrder || [])];
   if (!order.includes('indicadores')) {
     const settingsIndex = order.indexOf('configuracoes');
     order.splice(settingsIndex >= 0 ? settingsIndex + 1 : order.length, 0, 'indicadores');
   }
-  if (!order.includes('assinaturas')) {
-    const settingsIndex = order.indexOf('configuracoes');
-    order.splice(settingsIndex >= 0 ? settingsIndex : order.length, 0, 'assinaturas');
-  }
-  if (!order.includes('replicar')) order.push('replicar');
   return Array.from(new Set(order));
 }
 
@@ -163,9 +154,9 @@ export function loadSiteLayoutConfig(): SiteLayoutConfig {
     return {
       ...DEFAULT_SITE_LAYOUT_CONFIG,
       ...parsed,
-      // A identidade desta instalação é fixa. Sobrescrevemos configurações locais antigas
-      // para impedir SVG/JPG legado, recorte ou deformação da marca.
-      headerCustomLogoUrl: '/colenf-logo.png',
+      // Nesta instalação o cabeçalho usa o emoticon acadêmico fixo; a marca do curso fica na lateral.
+      headerShowEmblem: false,
+      headerCustomLogoUrl: '',
       sidebarLogoType: 'custom',
       sidebarCustomLogoUrl: '/colenf-logo.png',
       sidebarIconMode: parsed.sidebarIconMode === 'lucide' ? 'lucide' : 'emoji',
@@ -197,8 +188,9 @@ export function saveSiteLayoutConfig(config: Partial<SiteLayoutConfig>) {
     const updated: SiteLayoutConfig = {
       ...current,
       ...config,
-      // Logo institucional não é editável nesta instalação.
-      headerCustomLogoUrl: '/colenf-logo.png',
+      // A identidade institucional não é editável nesta instalação.
+      headerShowEmblem: false,
+      headerCustomLogoUrl: '',
       sidebarLogoType: 'custom',
       sidebarCustomLogoUrl: '/colenf-logo.png',
       sidebarNavOrder: canonicalSidebarOrder(config.sidebarNavOrder || current.sidebarNavOrder),
