@@ -48,6 +48,13 @@ function classifyStartupFailure(error: unknown): StartupFailure {
   const detail = error instanceof Error ? error.message : String(error || '');
   if (detail.includes('PORTAL_BOOTSTRAP_MASTER_EMAIL')) return { code: 'MASTER_EMAIL_REQUIRED', message: 'A identidade inicial de administração ainda não foi configurada.' };
   if (detail.includes('persistência durável do Supabase')) return { code: 'SUPABASE_CONFIGURATION_REQUIRED', message: 'A persistência durável ainda não está configurada.' };
+  if (
+    detail.includes('Persistência Supabase configurada, mas indisponível') ||
+    detail.includes('Falha ao carregar o estado do Supabase') ||
+    detail.includes('Falha no commit transacional do Supabase') ||
+    detail.includes('O Supabase não confirmou a revisão transacional esperada') ||
+    detail.includes('Conflito de concorrência')
+  ) return { code: 'SUPABASE_RUNTIME_STATE_ERROR', message: 'O estado operacional do Portal no Supabase ainda não conseguiu ser carregado ou inicializado com segurança.' };
   if (detail.includes('PORTAL_OTP_PEPPER')) return { code: 'OTP_CONFIGURATION_REQUIRED', message: 'A proteção de códigos de acesso ainda não está configurada.' };
   if (detail.includes('PORTAL_SECRET_ENCRYPTION_KEY')) return { code: 'SECRET_STORE_REQUIRED', message: 'O cofre de integrações ainda não está configurado.' };
   if (detail.includes('PORTAL_UPLOAD_BINDING_SECRET')) return { code: 'FILE_TRANSPORT_SECURITY_REQUIRED', message: 'A proteção do transporte privado de arquivos ainda não está configurada.' };
