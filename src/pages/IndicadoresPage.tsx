@@ -85,11 +85,11 @@ export const IndicadoresPage: React.FC = () => {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-100">
-              <BarChart3 className="h-4 w-4" /> Estatísticas do Portal
+              <BarChart3 className="h-4 w-4" /> Análise do Portal
             </div>
-            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Indicadores</h1>
+            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Análise</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-emerald-50">
-              Visão administrativa agregada do uso do Portal TCC. Esta página não exibe nomes, e-mails, matrículas ou títulos dos trabalhos.
+              Indicadores, estatísticas e qualidade operacional do Portal TCC reunidos em um único local. Esta área não exibe nomes, e-mails, matrículas ou títulos dos trabalhos.
             </p>
           </div>
           <button

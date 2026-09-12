@@ -20,9 +20,9 @@ export const INITIAL_SETTINGS: GlobalSettings = {
   optionalTimeLockEnabled: false,
   optionalEditLockHoursBeforeDefense: 48,
   evaluationOutcomeOptions: [
-    { code: 'APROVADO', label: 'Aprovado (x ≥ 7,00)' },
-    { code: 'APROVADO_COM_RESTRICAO', label: 'Aprovado com Restrição (5,00 ≤ x < 7,00)' },
-    { code: 'NAO_APROVADO', label: 'Não Aprovado (x < 5,00)' },
+    { code: 'APROVADO', label: 'Aprovado' },
+    { code: 'APROVADO_COM_RESSALVA', label: 'Aprovado com ressalva' },
+    { code: 'REPROVADO', label: 'Reprovado' },
   ],
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
@@ -156,9 +156,8 @@ export const DEMO_PROCESSES: ProcessData[] = [
     avaliacao: {
       status: 'CONCLUIDO',
       resultadoCode: 'APROVADO',
-      resultadoLabel: 'Aprovado (x ≥ 7,00)',
-      notaFinal: 9.5,
-      parecer: 'O candidato apresentou o trabalho com relevante domínio teórico-prático e excelente clareza metodológica. A banca examinadora aprova o trabalho com nota final 9,50.',
+      resultadoLabel: 'Aprovado',
+      parecer: 'O candidato apresentou o trabalho com relevante domínio teórico-prático e excelente clareza metodológica. A banca examinadora aprova o trabalho, conforme parecer registrado.',
       submittedBy: 'carlos.rocha@ufes.br',
       submittedAt: '2026-07-10T16:45:00.000Z',
       updatedAt: '2026-07-10T16:45:00.000Z'

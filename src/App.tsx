@@ -7,10 +7,10 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { EmergencyRecoveryModal } from './components/EmergencyRecoveryModal';
+import { IndicadoresPage } from './pages/IndicadoresPage';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })));
 const PortalTutorialPage = lazy(() => import('./pages/PortalTutorialPage').then((module) => ({ default: module.PortalTutorialPage })));
-const PortalReplicationPage = lazy(() => import('./pages/PortalReplicationPage').then((module) => ({ default: module.PortalReplicationPage })));
 const MeusProcessosPage = lazy(() => import('./pages/MeusProcessosPage').then((module) => ({ default: module.MeusProcessosPage })));
 const ProcessoDetailPage = lazy(() => import('./pages/ProcessoDetailPage').then((module) => ({ default: module.ProcessoDetailPage })));
 const WizardCadastroPage = lazy(() => import('./pages/WizardCadastroPage').then((module) => ({ default: module.WizardCadastroPage })));
@@ -19,7 +19,6 @@ const AvaliacoesPage = lazy(() => import('./pages/AvaliacoesPage').then((module)
 const DocumentosPage = lazy(() => import('./pages/DocumentosPage').then((module) => ({ default: module.DocumentosPage })));
 const CoordenadorPage = lazy(() => import('./pages/CoordenadorPage').then((module) => ({ default: module.CoordenadorPage })));
 const ConfiguracoesPage = lazy(() => import('./pages/ConfiguracoesPage').then((module) => ({ default: module.ConfiguracoesPage })));
-const IndicadoresPage = lazy(() => import('./pages/IndicadoresPage').then((module) => ({ default: module.IndicadoresPage })));
 const ComoChegarPage = lazy(() => import('./pages/ComoChegarPage').then((module) => ({ default: module.ComoChegarPage })));
 const VerificationPage = lazy(() => import('./pages/VerificationPage').then((module) => ({ default: module.VerificationPage })));
 
@@ -90,8 +89,6 @@ export default function App() {
         return <HomePage initialPublicTab="biblioteca" onNavigate={handleNavigate} />;
       case 'tutorial':
         return <PortalTutorialPage onNavigate={handleNavigate} />;
-      case 'replicar':
-        return <PortalReplicationPage />;
       case 'acessar-portal':
         return <HomePage onNavigate={handleNavigate} />;
       case 'meus-processos':
@@ -109,6 +106,7 @@ export default function App() {
         return <CoordenadorPage onSelectProcess={(id) => handleSelectProcess(id, false)} />;
       case 'configuracoes':
         return <ConfiguracoesPage />;
+      case 'analise':
       case 'indicadores':
         return <IndicadoresPage />;
       case 'como-chegar':
@@ -148,7 +146,6 @@ export default function App() {
                 selectedProcessId ? 'Detalhes do Trabalho de TCC'
                   : currentTab === 'home' ? 'Página Inicial Pública'
                   : currentTab === 'tutorial' ? 'Como usar o Portal'
-                  : currentTab === 'replicar' ? 'Como replicar o Portal'
                   : currentTab === 'acessar-portal' ? 'Acesso ao Portal'
                   : currentTab === 'meus-processos' ? 'Meus Trabalhos de TCC'
                   : currentTab === 'novo-processo' ? 'Cadastrar Trabalho de TCC'
@@ -157,7 +154,7 @@ export default function App() {
                   : currentTab === 'documentos' ? 'Documentos'
                   : (currentTab === 'coordenador' || currentTab === 'assinaturas') ? 'Área do Presidente'
                   : currentTab === 'configuracoes' ? 'Configurações & Modelos de Arquivos'
-                  : currentTab === 'indicadores' ? 'Indicadores do Portal'
+                  : (currentTab === 'analise' || currentTab === 'indicadores') ? 'Análise'
                   : 'Local das Defesas'
               }
             />

@@ -210,9 +210,10 @@ export function buildProcessVariables(context: WorkflowRuntimeContext): Record<s
     DEFESA_DATA_HORA: process.defesa.startAt,
     DEFESA_LOCAL: process.defesa.local,
     RESULTADO: process.avaliacao.resultadoLabel || '',
-    NOTA_FINAL: process.avaliacao.notaFinal === undefined ? '' : String(process.avaliacao.notaFinal),
-    NOTA: process.avaliacao.notaFinal === undefined ? '' : String(process.avaliacao.notaFinal),
-    AVALIACAO_NOTA: process.avaliacao.notaFinal === undefined ? '' : String(process.avaliacao.notaFinal),
+    // Compatibilidade com modelos históricos: esta instalação não registra nota numérica.
+    NOTA_FINAL: '',
+    NOTA: '',
+    AVALIACAO_NOTA: '',
     PARECER: process.avaliacao.parecer || '',
     PUBLICAR_TRABALHO: process.acervo?.publishFullWork || process.acervo?.publishExpandedAbstract ? 'true' : 'false',
     PUBLICAR_TRABALHO_COMPLETO: process.acervo?.publishFullWork ? 'SIM' : 'NÃO',
@@ -235,7 +236,7 @@ export function buildProcessVariables(context: WorkflowRuntimeContext): Record<s
     CAMPO_07: process.defesa.local,
     CAMPO_07_LOCAL: process.defesa.local,
     CAMPO_09: process.avaliacao.resultadoLabel || '',
-    CAMPO_10: process.avaliacao.notaFinal === undefined ? '' : String(process.avaliacao.notaFinal),
+    CAMPO_10: '',
     CAMPO_11: process.avaliacao.parecer || '',
     CAMPO_12: process.protocolo,
     CAMPO_13: process.driveFolderUrl || ''

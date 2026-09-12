@@ -715,20 +715,6 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               {validationReport.issues.length > 0 && <details className="mt-3 rounded-xl border border-slate-200 bg-white p-3"><summary className="cursor-pointer text-[10px] font-black uppercase text-slate-700">Ver pendências encontradas ({validationReport.issues.length})</summary><div className="mt-2 space-y-2">{validationReport.issues.slice(0, 30).map((issue, index) => <div key={`${issue.code}-${issue.path}-${index}`} className={`rounded-lg border p-2 text-[10px] ${issue.severity === 'ERROR' ? 'border-rose-200 bg-rose-50 text-rose-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}><strong>{issue.area} · {issue.code}</strong><p className="mt-0.5">{issue.message}</p><code className="mt-1 block text-[9px] opacity-70">{issue.path}</code></div>)}</div></details>}
             </section>
 
-            <section className={`${panelClass} p-4`} aria-labelledby="replication-guide-title">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div><div className="flex items-center gap-2"><BookOpenCheck className="h-4 w-4 text-slate-700"/><h4 id="replication-guide-title" className="text-xs font-black uppercase">Guia público de replicação</h4></div><p className="mt-1 max-w-3xl text-[11px] leading-5 text-slate-600">Este conteúdo aparece somente no Tutorial e ensina outra secretaria a criar uma instalação independente. Ele não transforma este portal de Enfermagem em um sistema multicurso.</p></div>
-                <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-[10px] font-bold"><input type="checkbox" checked={replicationGuide.enabled} onChange={(event) => { setReplicationGuide(current => ({ ...current, enabled: event.target.checked })); setIsDirty(true); }}/>Exibir no Tutorial</label>
-              </div>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label><span className={labelClass}>Repositório GitHub</span><input value={replicationGuide.githubRepositoryUrl} onChange={(event) => { setReplicationGuide(current => ({ ...current, githubRepositoryUrl: event.target.value })); setIsDirty(true); }} className={inputClass} placeholder="https://github.com/organizacao/portal-tcc"/></label>
-                <label><span className={labelClass}>Guia detalhado de instalação (opcional)</span><input value={replicationGuide.installationGuideUrl} onChange={(event) => { setReplicationGuide(current => ({ ...current, installationGuideUrl: event.target.value })); setIsDirty(true); }} className={inputClass} placeholder="https://github.com/.../INSTALL.md"/></label>
-                <label><span className={labelClass}>Título público</span><input value={replicationGuide.title} onChange={(event) => { setReplicationGuide(current => ({ ...current, title: event.target.value })); setIsDirty(true); }} className={inputClass}/></label>
-                <label><span className={labelClass}>Descrição</span><input value={replicationGuide.description} onChange={(event) => { setReplicationGuide(current => ({ ...current, description: event.target.value })); setIsDirty(true); }} className={inputClass}/></label>
-              </div>
-              <label className="mt-3 block"><span className={labelClass}>Passo a passo (uma etapa por linha)</span><textarea rows={6} value={replicationGuide.steps.join('\n')} onChange={(event) => { setReplicationGuide(current => ({ ...current, steps: event.target.value.split('\n').map(value => value.trim()).filter(Boolean) })); setIsDirty(true); }} className={inputClass}/></label>
-            </section>
-
             <section className={`${panelClass} p-4`} aria-labelledby="course-policy-title">
               <div className="flex items-center gap-2"><Settings2 className="h-4 w-4 text-slate-700"/><h4 id="course-policy-title" className="text-xs font-black uppercase">Políticas comuns da instalação</h4></div>
               <p className="mt-1 text-[11px] text-slate-600">Configurações institucionais compartilhadas por todas as telas e rotinas deste curso.</p>
@@ -778,17 +764,14 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
             <div className={`${panelClass} space-y-4 p-4`}>
               <div className="flex items-center gap-2"><Palette className="h-4 w-4 text-emerald-700" /><h4 className="text-xs font-black uppercase">Identidade visual institucional</h4></div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div><label className={labelClass}>Nome da instituição</label><input value={brandKit.institutionName} onChange={(e) => updateBrand('institutionName', e.target.value)} className={inputClass} /></div>
-                <div><label className={labelClass}>Nome do colegiado/curso</label><input value={brandKit.courseName} onChange={(e) => updateBrand('courseName', e.target.value)} className={inputClass} /></div>
+                <div className="sm:col-span-2 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-950"><strong>Identidade fixa:</strong> Universidade Federal do Espírito Santo · Curso de Graduação em Enfermagem e Obstetrícia. Esta instalação atende exclusivamente à Enfermagem/UFES.</div>
                 <div><label className={labelClass}>Logo institucional — URL pública</label><input value={brandKit.universityLogoUrl} onChange={(e) => updateBrand('universityLogoUrl', e.target.value)} className={inputClass} placeholder="https://.../logo-institucional.png" /></div>
                 <div><label className={labelClass}>Logo do colegiado — URL ou arquivo</label><input value={brandKit.courseLogoUrl} onChange={(e) => updateBrand('courseLogoUrl', e.target.value)} className={inputClass} /></div>
               </div>
               <div className="grid gap-2 sm:grid-cols-3">
                 {([['universityLogoUrl', 'Enviar logo institucional'], ['courseLogoUrl', 'Enviar logo do curso'], ['emailBannerUrl', 'Enviar banner']] as const).map(([field, label]) => <label key={field} className={`${actionClass} cursor-pointer border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}><Image className="h-3.5 w-3.5" />{label}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={(e) => void handleImageFile(e.target.files?.[0], field)} /></label>)}
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {([['primaryColor', 'Cor principal'], ['secondaryColor', 'Cor secundária'], ['accentColor', 'Destaque'], ['textColor', 'Texto']] as const).map(([field, label]) => <label key={field} className="rounded-xl border border-slate-200 bg-slate-50 p-2"><span className={labelClass}>{label}</span><div className="flex items-center gap-2"><input type="color" value={brandKit[field]} onChange={(e) => updateBrand(field, e.target.value)} className="h-8 w-10 cursor-pointer rounded border-0 bg-transparent" /><code className="text-[10px] font-bold">{brandKit[field]}</code></div></label>)}
-              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700"><strong>Cores do site:</strong> use a Personalização do Portal. Este editor não mantém uma paleta paralela.</div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div><label className={labelClass}>Fonte institucional</label><select value={brandKit.fontFamily} onChange={(e) => updateBrand('fontFamily', e.target.value as IntegrationBrandKit['fontFamily'])} className={inputClass}>{['Arial', 'Calibri', 'Georgia', 'Times New Roman'].map((font) => <option key={font}>{font}</option>)}</select></div>
                 <div><label className={labelClass}>Banner de e-mail/formulário — URL</label><input value={brandKit.emailBannerUrl} onChange={(e) => updateBrand('emailBannerUrl', e.target.value)} className={inputClass} placeholder="https://.../banner.jpg" /></div>

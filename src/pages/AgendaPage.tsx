@@ -3,7 +3,7 @@ import { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
 import { formatDatePt, formatTimeExtenso } from '../utils/formatters';
 import { StudentNames } from '../components/StudentNames';
-import { Clock, MapPin } from 'lucide-react';
+import { Clock, Download, MapPin } from 'lucide-react';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
 import { getTableStyles, loadGlobalTableConfig, GLOBAL_TABLE_EVENT, TableTextFormat } from '../utils/tableFormatters';
 import { useAuth } from '../context/AuthContext';
@@ -54,6 +54,11 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ onSelectProcess }) => {
         <p className="text-[10px] sm:text-[11px] font-medium leading-normal mt-0.5 opacity-90">
           Apresentações públicas registradas pela comissão de TCC. Consulte data, horário e local de cada defesa.
         </p>
+        <div className="pt-2">
+          <a href="/api/public/calendar.ics" className="inline-flex items-center gap-2 rounded-xl border border-current/20 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-wide hover:bg-white/20" title="Baixar agenda para Google Calendar, Outlook ou Apple Calendar">
+            <Download className="h-3.5 w-3.5" /> Baixar agenda (.ics)
+          </a>
+        </div>
       </div>
 
       {isLoading ? (

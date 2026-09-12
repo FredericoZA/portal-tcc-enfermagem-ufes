@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEMO_PROCESSES, DEMO_MEMBERSHIPS, INITIAL_SETTINGS } from '../src/services/demoSeed';
 
-test('HTTP: orientador confere e lança nota; aluno é recusado; estado e aparência ficam gravados', { timeout: 45000 }, async () => {
+test('HTTP: orientador confere e registra avaliação; aluno é recusado; estado e aparência ficam gravados', { timeout: 45000 }, async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'portal-evaluation-'));
   const p = structuredClone(DEMO_PROCESSES[0]);
   p.defesa = { ...p.defesa, localStatus: 'CONFIRMADO', startAt: new Date(Date.now() - 3600000).toISOString(), invitationSentAt: new Date().toISOString() };
@@ -81,14 +81,13 @@ test('HTTP: orientador confere e lança nota; aluno é recusado; estado e aparê
     const schema = await request(route + '/schema');
     assert.equal(schema.status, 200);
     assert.equal(schema.body.studio.docTemplates, undefined);
-    const body = { dataConfirmed: true, expectedDataRevision: p.dataRevision, expectedSchemaRevision: schema.body.studio.revision, resultadoCode: 'APROVADO', notaFinal: '8,75', parecer: 'Avaliação realizada e dados conferidos.' };
+    const body = { dataConfirmed: true, expectedDataRevision: p.dataRevision, expectedSchemaRevision: schema.body.studio.revision, resultadoCode: 'APROVADO', parecer: 'Avaliação realizada e dados conferidos.' };
     assert.equal((await request(route, p.aluno1.email, body)).status, 403);
     assert.equal((await request(route, p.orientador.email, { ...body, dataConfirmed: false })).body.code, 'DATA_REVIEW_REQUIRED');
-    assert.equal((await request(route, p.orientador.email, { ...body, notaFinal: '' })).body.code, 'INVALID_EVALUATION');
     assert.equal((await request(route, p.orientador.email, { ...body, expectedDataRevision: 0 })).status, 409);
     const saved = await request(route, p.orientador.email, body);
     assert.equal(saved.status, 202); // Saved locally; Google archive intentionally unavailable.
-    assert.equal(saved.body.avaliacao.notaFinal, 8.75);
+    assert.equal(saved.body.avaliacao.notaFinal, undefined);
     assert.equal(saved.body.avaliacao.dataReview.confirmedBy, p.orientador.email);
     assert.equal(saved.body.workflowPending, true);
     assert.equal((await request(route, p.orientador.email, body)).status, 409);
@@ -101,7 +100,7 @@ test('HTTP: orientador confere e lança nota; aluno é recusado; estado e aparê
     assert.equal(disk.studioFormSubmissions.length, 1);
     assert.equal(disk.studioFormSubmissions[0].formSnapshot.questions[0].label, 'Escolha');
     assert.equal(disk.settings.portalAppearance.schemaVersion, 4);
-    assert.equal(disk.processes[0].avaliacao.notaFinal, 8.75);
+    assert.equal(disk.processes[0].avaliacao.notaFinal, undefined);
   } finally {
     if (child.exitCode === null) {
       child.kill('SIGTERM');

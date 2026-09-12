@@ -8,7 +8,6 @@ import {
   Calendar,
   ChevronLeft,
   FileText,
-  GraduationCap,
   HelpCircle,
   LogIn,
   Settings,
@@ -167,23 +166,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
               home: { id: 'home', label: getNavLabel('home', 'Calendário'), icon: Calendar, emoji: '📅', visible: true },
               biblioteca: { id: 'biblioteca', label: getNavLabel('biblioteca', 'Repositório'), icon: BookOpen, emoji: '📚', visible: true },
               tutorial: { id: 'tutorial', label: getNavLabel('tutorial', 'Como usar'), icon: HelpCircle, emoji: '❓', visible: true },
-              replicar: { id: 'replicar', label: getNavLabel('replicar', 'Como replicar'), icon: GraduationCap, emoji: '🧩', visible: true },
               'meus-processos': { id: 'meus-processos', label: getNavLabel('meus-processos', 'Meus TCCs'), icon: FileText, emoji: '📋', visible: !isVisitor },
               coordenador: { id: 'coordenador', label: getNavLabel('coordenador', 'Área do Presidente'), icon: Award, emoji: '🏛️', visible: isMasterAdmin && !isVisitor },
               configuracoes: { id: 'configuracoes', label: getNavLabel('configuracoes', 'Configurações'), icon: Settings, emoji: '⚙️', visible: isMasterAdmin && !isVisitor },
-              indicadores: { id: 'indicadores', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: '📊', visible: isMasterAdmin && !isVisitor }
+              analise: { id: 'analise', label: getNavLabel('analise', 'Análise'), icon: BarChart3, emoji: '📊', visible: isMasterAdmin && !isVisitor }
             };
 
             const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0
-              ? layoutConfig.sidebarNavOrder.filter((key) => key !== 'acessar-portal')
-              : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial', 'replicar'];
+              ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'replicar'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key)
+              : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'analise', 'DIVIDER_2', 'tutorial'];
 
             const order = [...configuredOrder];
-            if (!order.includes('indicadores')) {
+            if (!order.includes('analise')) {
               const settingsIndex = order.indexOf('configuracoes');
-              order.splice(settingsIndex >= 0 ? settingsIndex + 1 : order.length, 0, 'indicadores');
+              order.splice(settingsIndex >= 0 ? settingsIndex + 1 : order.length, 0, 'analise');
             }
-            if (!order.includes('replicar')) order.push('replicar');
 
             return order.map((itemKey, idx) => {
               if (itemKey.startsWith('DIVIDER')) {

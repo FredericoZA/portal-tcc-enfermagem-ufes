@@ -134,7 +134,7 @@ export const apiClient = {
     method: 'DELETE'
   }),
   getEvaluationSchema: (id: string) => fetchApi<{ studio: Partial<IntegrationStudioSettings>; outcomes: GlobalSettings['evaluationOutcomeOptions'] }>(`/api/processes/${id}/evaluation/schema`),
-  submitEvaluation: (id: string, data: { resultadoCode: string; parecer: string; notaFinal: number; answers?: Record<string, string | number | boolean>; dataConfirmed: true; expectedDataRevision: number; expectedSchemaRevision: number }) => fetchApi<ProcessData & { workflowPending?: boolean; workflowError?: string }>(`/api/processes/${id}/evaluation`, {
+  submitEvaluation: (id: string, data: { resultadoCode: string; parecer: string; answers?: Record<string, string | number | boolean>; dataConfirmed: true; expectedDataRevision: number; expectedSchemaRevision: number }) => fetchApi<ProcessData & { workflowPending?: boolean; workflowError?: string }>(`/api/processes/${id}/evaluation`, {
     method: 'POST',
     body: JSON.stringify(data)
   }),

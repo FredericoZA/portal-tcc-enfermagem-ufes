@@ -11,7 +11,6 @@ import { InfrastructureIntegrationsPanel } from '../components/InfrastructureInt
 import { AuthorizedStudentsPanel } from '../components/AuthorizedStudentsPanel';
 import { MasterDocumentModelsPanel } from '../components/MasterDocumentModelsPanel';
 import { OperationsMonitorPanel } from '../components/OperationsMonitorPanel';
-import { CourseOperationsPanel } from '../components/CourseOperationsPanel';
 import { updateRuntimeDocumentTemplates, BASE_DOCUMENT_TEMPLATES } from '../utils/documentTemplateEngine';
 import { loadGlobalTableConfig, saveGlobalTableConfig, GLOBAL_TABLE_EVENT, getTableStyles, PORTAL_TABLE_PRESETS, PortalTablePreset } from '../utils/tableFormatters';
 import { loadSiteLayoutConfig, saveSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig, DEFAULT_SITE_LAYOUT_CONFIG } from '../utils/siteLayoutConfig';
@@ -125,7 +124,6 @@ export const DEFAULT_MATRIX_COLUMNS: MatrixColumn[] = [
   { id: 'CAMPO_06', name: 'BANCA_NOMES', label: 'Membros da banca', dataType: 'text', aliases: ['BANCA_MEMBRO_1', 'BANCA_MEMBRO_2'] },
   { id: 'CAMPO_07_LOCAL', name: 'DEFESA_LOCAL', label: 'Local da defesa', dataType: 'text', aliases: ['LOCAL_DEFESA'] },
   { id: 'CAMPO_09', name: 'AVALIACAO_RESULTADO', label: 'Resultado da avaliação', dataType: 'text' },
-  { id: 'CAMPO_10', name: 'AVALIACAO_NOTA', label: 'Nota final', dataType: 'number' },
   { id: 'CAMPO_11', name: 'AVALIACAO_PARECER', label: 'Parecer da banca', dataType: 'text' },
   { id: 'CAMPO_12', name: 'PROTOCOLO', label: 'Nº do processo', dataType: 'text' },
   { id: 'CAMPO_13', name: 'DRIVE_PASTA_URL', label: 'Pasta do processo no Drive', dataType: 'url' },
@@ -274,7 +272,6 @@ export const ConfiguracoesPage: React.FC = () => {
     security: false,
     sync: false,
     master_system: false,
-    course_operations: false,
   });
 
   const expandAllSections = () => {
@@ -288,7 +285,6 @@ export const ConfiguracoesPage: React.FC = () => {
       security: true,
       sync: true,
       master_system: true,
-      course_operations: true,
     });
   };
 
@@ -303,7 +299,6 @@ export const ConfiguracoesPage: React.FC = () => {
       security: false,
       sync: false,
       master_system: false,
-      course_operations: false,
     });
   };
 
@@ -1954,7 +1949,6 @@ export const ConfiguracoesPage: React.FC = () => {
         ? 'Sala de defesas da unidade acadêmica'
         : 'Sessão híbrida: sala de defesas e transmissão on-line',
       '-CAMPO_09-': 'APROVADO COM DISTINÇÃO',
-      '-CAMPO_10-': '10,0 (Dez)',
       '-CAMPO_11-': 'Trabalho de excelente qualidade acadêmica, aprovado sem ressalvas e recomendado para publicação em periódico qualificado.',
       '-CAMPO_12-': '23068.019842/2026-11',
       '-CAMPO_13-': 'https://repositorio.ufes.br/handle/123456789/49102'
@@ -2259,18 +2253,6 @@ export const ConfiguracoesPage: React.FC = () => {
           </div>
         </section>
       )}
-
-      
-
-      {isMasterAdmin && (
-        <section id="section-operacao-curso" className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
-          <button type="button" onClick={() => toggleSection('course_operations')} className={`flex w-full items-center justify-between gap-3 bg-slate-100/90 p-3.5 text-left text-slate-900 hover:bg-slate-200/80 sm:p-4 ${openSections.course_operations ? 'border-b border-slate-200 rounded-t-2xl' : 'rounded-2xl'}`}>
-            <div><h2 className="text-xs font-black uppercase tracking-wide sm:text-sm">Operação, continuidade e conformidade</h2><p className="mt-1 text-[11px] text-slate-600">Notificações, versões, backup, agenda, acessibilidade, retenção, LGPD e saúde</p></div>{openSections.course_operations ? <ChevronUp className="h-5 w-5"/> : <ChevronDown className="h-5 w-5"/>}
-          </button>
-          {openSections.course_operations && <div className="border-t border-slate-200 p-3 sm:p-4"><CourseOperationsPanel /></div>}
-        </section>
-      )}
-
       {/* 1. SINCRONIZAÇÃO */}
       <section id="google-workspace-sync-section" className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden transition-all">
         <button

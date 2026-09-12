@@ -13,19 +13,19 @@ import { DEFAULT_COURSE_OPERATIONS_POLICY } from '../utils/courseStudioValidator
 export const STUDIO_STORAGE_KEY = 'portal_integration_studio_v2';
 
 export const DEFAULT_BRAND_KIT: IntegrationBrandKit = {
-  institutionName: 'Instituição não configurada',
-  courseName: 'Curso não configurado',
+  institutionName: 'Universidade Federal do Espírito Santo',
+  courseName: 'Curso de Graduação em Enfermagem e Obstetrícia',
   universityLogoUrl: '',
   courseLogoUrl: '',
   emailBannerUrl: '',
   primaryColor: '#005a3c',
-  secondaryColor: '#17324d',
-  accentColor: '#d4a017',
+  secondaryColor: '#005830',
+  accentColor: '#005830',
   textColor: '#172033',
   fontFamily: 'Arial',
-  documentHeaderText: 'INSTITUIÇÃO\nCURSO',
-  documentFooterText: 'Unidade acadêmica • Campus • Cidade/UF',
-  emailFooterText: 'Comissão de TCC • Curso • Instituição'
+  documentHeaderText: 'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO\nCURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA',
+  documentFooterText: 'Departamento de Enfermagem • Centro de Ciências da Saúde • Vitória/ES',
+  emailFooterText: 'Colegiado do Curso de Graduação em Enfermagem e Obstetrícia • UFES'
 };
 
 export const DEFAULT_REPLICATION_GUIDE: PortalReplicationGuide = {

@@ -150,7 +150,9 @@ export interface EvaluationInfo {
   status: 'PENDENTE' | 'CONCLUIDO';
   resultadoCode?: string;
   resultadoLabel?: string;
+  /** @deprecated legado somente para leitura de registros antigos; novas avaliações não possuem nota numérica. */
   nota?: number;
+  /** @deprecated legado somente para leitura de registros antigos; novas avaliações não possuem nota numérica. */
   notaFinal?: number;
   parecer?: string;
   submittedBy?: string;
