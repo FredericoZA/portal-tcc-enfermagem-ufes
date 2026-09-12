@@ -5,7 +5,7 @@ export class EvaluationError extends Error {
   constructor(message: string, public status: number, public code: string) { super(message); }
 }
 export function acceptEvaluation(process: ProcessData, input: any, settings: GlobalSettings, actorEmail: string, now = new Date()) {
-  if (input?.dataConfirmed !== true) throw new EvaluationError('Confira os dados do aluno e marque a confirmação antes de lançar a nota.', 400, 'DATA_REVIEW_REQUIRED');
+  if (input?.dataConfirmed !== true) throw new EvaluationError('Confira os dados do aluno e marque a confirmação antes de registrar a avaliação.', 400, 'DATA_REVIEW_REQUIRED');
   if (!Number.isInteger(input.expectedDataRevision) || input.expectedDataRevision !== process.dataRevision) throw new EvaluationError('Os dados do TCC foram atualizados. Recarregue e confira a versão atual.', 409, 'STALE_DATA_REVIEW');
   if (input.expectedSchemaRevision !== (settings.integrationStudio?.revision || 0)) throw new EvaluationError('O formulário foi atualizado pelo Master. Recarregue e confira os campos atuais.', 409, 'STALE_EVALUATION_FORM');
   const defenseAt = Date.parse(process.defesa.startAt);
