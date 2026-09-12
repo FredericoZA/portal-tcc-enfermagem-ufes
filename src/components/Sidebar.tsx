@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { NursingEmblemLogo } from './NursingEmblemLogo';
 import {
-  Calendar,
-  FileText,
   Award,
-  Settings,
-  ChevronLeft,
   BookOpen,
-  HelpCircle,
+  Calendar,
+  ChevronLeft,
+  FileText,
   GraduationCap,
-  LogIn
+  HelpCircle,
+  LogIn,
+  Settings,
+  ShieldCheck
 } from 'lucide-react';
-import { ShieldCheck } from 'lucide-react';
 import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 
@@ -23,25 +23,20 @@ interface SidebarProps {
   setIsOpenMobile: (open: boolean) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
-  currentTab,
-  setCurrentTab,
-  isOpenMobile,
-  setIsOpenMobile
-}) => {
+export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isOpenMobile, setIsOpenMobile }) => {
   const { isMasterAdmin, isAuthenticated, settings, userEmail } = useAuth();
   const installationProfile = resolveInstallationProfile(settings);
   const configuredLogo = settings?.integrationStudio?.brandKit?.courseLogoUrl || settings?.integrationStudio?.brandKit?.universityLogoUrl || '';
   const isVisitor = !isAuthenticated;
 
   const isCollapsed = false;
-  const [isHovered, setIsHovered] = React.useState<boolean>(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
   const accessLocation = layoutConfig.sidebarLocationText || installationProfile.city;
 
   useEffect(() => {
-    const handleLayoutChange = (e: Event) => {
-      const customEvent = e as CustomEvent<SiteLayoutConfig>;
+    const handleLayoutChange = (event: Event) => {
+      const customEvent = event as CustomEvent<SiteLayoutConfig>;
       setLayoutConfig(customEvent.detail || loadSiteLayoutConfig());
     };
     window.addEventListener(SITE_LAYOUT_EVENT, handleLayoutChange);
@@ -49,26 +44,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, []);
 
   const handleNav = (tab: string) => {
-    if (tab === 'meus-processos' && isVisitor) {
-      setCurrentTab('acessar-portal');
-      setIsOpenMobile(false);
-      return;
-    }
     setCurrentTab(tab);
     setIsOpenMobile(false);
   };
 
   const isColorLight = (hex?: string) => {
     if (!hex) return false;
-    if (hex === '#ffffff' || hex === '#f8fafc' || hex === '#f1f5f9' || hex === '#e2e8f0' || hex === '#f0fdf4' || hex === '#e0f2fe' || hex === '#fefce8' || hex === '#fff1f2') return true;
+    if (['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#f0fdf4', '#e0f2fe', '#fefce8', '#fff1f2'].includes(hex)) return true;
     const clean = hex.replace('#', '');
-    if (clean.length === 6) {
-      const r = parseInt(clean.substring(0, 2), 16);
-      const g = parseInt(clean.substring(2, 4), 16);
-      const b = parseInt(clean.substring(4, 6), 16);
-      return (r * 299 + g * 587 + b * 114) / 1000 > 140;
-    }
-    return false;
+    if (clean.length !== 6) return false;
+    const r = parseInt(clean.substring(0, 2), 16);
+    const g = parseInt(clean.substring(2, 4), 16);
+    const b = parseInt(clean.substring(4, 6), 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 > 140;
   };
 
   const isHeaderLight = isColorLight(layoutConfig.sidebarHeaderBgColor || '#011812');
@@ -82,8 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const renderNavIcon = (id: string, Icon: React.ComponentType<{ className?: string }>, defaultEmoji: string, isActive: boolean) => {
     const rawEmoji = getNavEmoji(id, defaultEmoji);
     const emoji = Array.from(rawEmoji || '')[0] || defaultEmoji;
-    const mode = layoutConfig.sidebarIconMode || 'emoji';
-    if (mode === 'lucide') {
+    if ((layoutConfig.sidebarIconMode || 'emoji') === 'lucide') {
       return <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#b9ead0]' : 'text-slate-200'}`} />;
     }
     return <span className="text-base shrink-0 leading-none">{emoji}</span>;
@@ -110,10 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      <div
-        id="sidebar-layout-spacer"
-        className={`hidden lg:block transition-all duration-300 ease-in-out shrink-0 overflow-hidden ${isCollapsed ? 'w-0' : 'w-64'}`}
-      />
+      <div id="sidebar-layout-spacer" className={`hidden lg:block transition-all duration-300 ease-in-out shrink-0 overflow-hidden ${isCollapsed ? 'w-0' : 'w-64'}`} />
 
       <aside
         id="portal-sidebar"
@@ -133,29 +117,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
             backgroundColor: layoutConfig.sidebarHeaderBgColor || '#011812',
             borderColor: layoutConfig.sidebarDividerColor || '#033628'
           }}
-          className="px-4 py-4 border-b flex items-center justify-between relative group"
+          className="px-3 py-4 border-b flex items-center justify-between relative group"
         >
           <button
             type="button"
             onClick={() => handleNav('home')}
-            className="flex items-center gap-3 text-left hover:opacity-95 transition-opacity focus:outline-none cursor-pointer flex-1 min-w-0"
+            className="flex items-center gap-2.5 hover:opacity-95 transition-opacity focus:outline-none cursor-pointer flex-1 min-w-0"
             title="Ir para o Calendário Público Inicial"
           >
             {layoutConfig.sidebarLogoType === 'custom' && layoutConfig.sidebarCustomLogoUrl ? (
-              <img src={layoutConfig.sidebarCustomLogoUrl} alt="Logo do Curso de Enfermagem" className="w-14 h-14 object-contain shrink-0 rounded-md bg-white/95 p-1" />
+              <img
+                src={layoutConfig.sidebarCustomLogoUrl}
+                alt="Logo do Curso de Enfermagem"
+                className="w-14 h-14 object-contain shrink-0 bg-transparent p-0"
+              />
             ) : (
-              <NursingEmblemLogo size={60} className="shrink-0" customSrc={configuredLogo} />
+              <NursingEmblemLogo size={58} className="shrink-0" customSrc={configuredLogo} />
             )}
 
-            <div className="flex flex-col flex-1 min-w-0 pr-1">
+            <div className="flex flex-col flex-1 min-w-0 items-center justify-center text-center pr-1">
               <h1
-                className="font-black text-[15px] sm:text-base tracking-tight uppercase leading-tight text-left whitespace-normal"
+                className="font-black text-[15px] sm:text-base tracking-tight uppercase leading-tight text-center whitespace-normal w-full"
                 style={{ color: sidebarHeaderTitleColor }}
               >
                 {layoutConfig.sidebarTitle || 'Portal de TCC'}
               </h1>
               <p
-                className="text-[9.5px] sm:text-[10px] font-bold tracking-[0.08em] uppercase mt-1 text-left leading-4 whitespace-normal"
+                className="text-[9.5px] sm:text-[10px] font-bold tracking-[0.08em] uppercase mt-1 text-center leading-4 whitespace-normal w-full"
                 style={{ color: layoutConfig.sidebarSubtitleColor || (isHeaderLight ? '#047857' : '#9dd9b3') }}
               >
                 {layoutConfig.sidebarSubtitle || `${installationProfile.courseName} • ${installationProfile.institutionAcronym || installationProfile.institutionName}`}
@@ -180,7 +168,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               biblioteca: { id: 'biblioteca', label: getNavLabel('biblioteca', 'Repositório'), icon: BookOpen, emoji: '📚', visible: true },
               tutorial: { id: 'tutorial', label: getNavLabel('tutorial', 'Como usar'), icon: HelpCircle, emoji: '❓', visible: true },
               replicar: { id: 'replicar', label: getNavLabel('replicar', 'Como replicar'), icon: GraduationCap, emoji: '🧩', visible: true },
-              'acessar-portal': { id: 'acessar-portal', label: getNavLabel('acessar-portal', 'Acessar Portal'), icon: LogIn, emoji: '🔑', visible: isVisitor },
               'meus-processos': { id: 'meus-processos', label: getNavLabel('meus-processos', 'Meus TCCs'), icon: FileText, emoji: '📋', visible: !isVisitor },
               coordenador: { id: 'coordenador', label: getNavLabel('coordenador', 'Área do Presidente'), icon: Award, emoji: '🏛️', visible: isMasterAdmin && !isVisitor },
               assinaturas: { id: 'assinaturas', label: getNavLabel('assinaturas', 'Assinaturas'), icon: ShieldCheck, emoji: '🔐', visible: isMasterAdmin && !isVisitor },
@@ -188,14 +175,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             };
 
             const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0
-              ? layoutConfig.sidebarNavOrder
-              : ['home', 'biblioteca', 'DIVIDER_1', 'acessar-portal', 'meus-processos', 'coordenador', 'assinaturas', 'configuracoes', 'DIVIDER_2', 'tutorial', 'replicar'];
+              ? layoutConfig.sidebarNavOrder.filter((key) => key !== 'acessar-portal')
+              : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'assinaturas', 'configuracoes', 'DIVIDER_2', 'tutorial', 'replicar'];
 
-            let order = [...configuredOrder];
-            if (!order.includes('acessar-portal')) {
-              const dividerIndex = order.indexOf('DIVIDER_1');
-              order.splice(dividerIndex >= 0 ? dividerIndex + 1 : 2, 0, 'acessar-portal');
-            }
+            const order = [...configuredOrder];
             if (!order.includes('assinaturas')) {
               const settingsIndex = order.indexOf('configuracoes');
               order.splice(settingsIndex >= 0 ? settingsIndex : order.length, 0, 'assinaturas');
@@ -218,7 +201,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               if (!item || !item.visible) return null;
               const Icon = item.icon;
               const isActive = currentTab === item.id || (item.id === 'home' && currentTab === 'calendario');
-              const isAccess = item.id === 'acessar-portal';
 
               return (
                 <button
@@ -227,11 +209,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => handleNav(item.id)}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-left cursor-pointer ${
                     isActive ? 'font-extrabold shadow-sm' : 'hover:bg-white/10'
-                  } ${isAccess ? 'ring-1 ring-emerald-200/40' : ''}`}
-                  style={isActive || isAccess
+                  }`}
+                  style={isActive
                     ? {
-                        backgroundColor: isAccess && !isActive ? '#e7f3eb' : (layoutConfig.sidebarActiveBgColor || '#033d2e'),
-                        color: isAccess && !isActive ? '#123d2a' : (layoutConfig.sidebarActiveTextColor || '#d5f4e2'),
+                        backgroundColor: layoutConfig.sidebarActiveBgColor || '#033d2e',
+                        color: layoutConfig.sidebarActiveTextColor || '#d5f4e2',
                         borderLeft: `3px solid ${layoutConfig.sidebarActiveBorderColor || '#7bc394'}`,
                         paddingLeft: '0.75rem'
                       }
