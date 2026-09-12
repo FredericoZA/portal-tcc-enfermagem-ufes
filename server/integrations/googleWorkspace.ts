@@ -476,6 +476,29 @@ export async function upsertLivingIntelligenceFile(input: {
   };
 }
 
+export async function storePrivatePortalBackup(input:{accessToken:string;rootFolderId:string;fileName:string;content:Buffer;sha256:string}){
+  if(!/^PORTAL_TCC_BACKUP_[0-9TZ-]+\.ptb$/.test(input.fileName))throw new Error('Nome de backup inválido.');
+  if(!/^[a-f0-9]{64}$/.test(input.sha256))throw new Error('Hash do backup inválido.');
+  if(!input.content.length||input.content.length>32*1024*1024)throw new Error('Backup fora do limite seguro de 32 MB.');
+  await verifyPrivateDriveFolder(input.accessToken,input.rootFolderId);
+  const systemFolder=await ensureFolder(input.accessToken,DRIVE_FOLDER_NAMES.system,input.rootFolderId);
+  const backupFolder=await ensureFolder(input.accessToken,'02_BACKUPS_CIFRADOS',systemFolder.file.id);
+  await verifyPrivateDriveFolder(input.accessToken,backupFolder.file.id);
+  const created=await uploadBinary(input.accessToken,{name:input.fileName,parentId:backupFolder.file.id,mimeType:'application/octet-stream',content:input.content,appProperties:{schema:'9',lifecycle:'encrypted-backup',sha256:input.sha256,createdAt:new Date().toISOString()}});
+  return{id:created.id,name:created.name,webViewLink:created.webViewLink||`https://drive.google.com/file/d/${created.id}/view`,folderId:backupFolder.file.id};
+}
+
+export async function readPrivatePortalBackup(accessToken:string,fileId:string):Promise<Buffer>{
+  if(!/^[a-zA-Z0-9_-]{10,}$/.test(fileId))throw new Error('ID do backup inválido.');
+  const permissions=await driveJson<{permissions?:Array<{type:string;role:string}>}>(accessToken,`${DRIVE_API}/files/${encodeURIComponent(fileId)}/permissions?fields=permissions(type,role)&supportsAllDrives=true`);
+  if((permissions.permissions||[]).some(permission=>permission.type==='anyone'||permission.type==='domain'||permission.type==='group'))throw new Error('O backup não está restrito a usuários nominais.');
+  const response=await fetch(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,{headers:{Authorization:`Bearer ${accessToken}`},signal:AbortSignal.timeout(30_000)});
+  if(!response.ok)throw new Error(`Não foi possível reler o backup cifrado no Drive (${response.status}).`);
+  const bytes=Buffer.from(await response.arrayBuffer());
+  if(!bytes.length||bytes.length>32*1024*1024)throw new Error('Backup relido fora do limite seguro.');
+  return bytes;
+}
+
 export async function bootstrapGoogleDriveStructure(accessToken?: string, options?:{rootFolderName?:string;rootFolderId?:string}): Promise<GoogleDriveManifest> {
   const token = accessToken || await getGoogleWorkspaceAccessToken();
   const folders: Record<string, string> = {};

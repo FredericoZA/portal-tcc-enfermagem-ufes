@@ -93,6 +93,23 @@ function decrypt(row: StoredSecretRow): string {
   ]).toString('utf8');
 }
 
+export function encryptPortalBackupPayload(value:string):Buffer{
+  const iv=randomBytes(12);
+  const cipher=createCipheriv('aes-256-gcm',encryptionKey(),iv);
+  cipher.setAAD(Buffer.from('portal-tcc:backup:v1'));
+  const encrypted=Buffer.concat([cipher.update(value,'utf8'),cipher.final()]);
+  return Buffer.from(JSON.stringify({schema:'portal-tcc-backup-v1',alg:'A256GCM',iv:iv.toString('base64'),tag:cipher.getAuthTag().toString('base64'),ciphertext:encrypted.toString('base64')}),'utf8');
+}
+
+export function decryptPortalBackupPayload(payload:Buffer):string{
+  const parsed=JSON.parse(payload.toString('utf8')) as {schema?:string;alg?:string;iv?:string;tag?:string;ciphertext?:string};
+  if(parsed.schema!=='portal-tcc-backup-v1'||parsed.alg!=='A256GCM'||!parsed.iv||!parsed.tag||!parsed.ciphertext)throw new Error('Backup cifrado em formato inválido.');
+  const decipher=createDecipheriv('aes-256-gcm',encryptionKey(),Buffer.from(parsed.iv,'base64'));
+  decipher.setAAD(Buffer.from('portal-tcc:backup:v1'));
+  decipher.setAuthTag(Buffer.from(parsed.tag,'base64'));
+  return Buffer.concat([decipher.update(Buffer.from(parsed.ciphertext,'base64')),decipher.final()]).toString('utf8');
+}
+
 export function getSecretStoreStatus() {
   const encrypted = (() => {
     try { encryptionKey(); return true; } catch { return false; }

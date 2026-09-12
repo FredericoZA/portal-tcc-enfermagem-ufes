@@ -181,6 +181,7 @@ export const apiClient = {
   createPrivacyRequest:(data:any)=>fetchApi<any>('/api/privacy/requests',{method:'POST',body:JSON.stringify(data)}),
   updatePrivacyRequest:(id:string,data:any)=>fetchApi<any>(`/api/admin/privacy/requests/${id}`,{method:'PATCH',body:JSON.stringify(data)}),
   getOperationalHealth:()=>fetchApi<any>('/api/admin/health'),
+  runDriveIntegrityCheck:()=>fetchApi<any>('/api/admin/integrity/drive',{method:'POST'}),
   getFormArchives:()=>fetchApi<any[]>('/api/admin/form-archives'),
   retryFormArchive:(id:string)=>fetchApi<any>(`/api/admin/form-archives/${encodeURIComponent(id)}/retry`,{method:'POST'}),
   connectAsten:(token:string)=>fetchApi<AstenIntegrationStatus>('/api/integrations/asten/connect',{method:'POST',body:JSON.stringify({token})}),

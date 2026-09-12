@@ -197,6 +197,29 @@ export async function withdrawDriveFilePublicAccess(accessToken:string,fileId:st
   return {removed:publicPermissions.length};
 }
 
+export async function inspectPortalDriveArtifact(input:{accessToken:string;fileId:string;expectedSha256?:string;expectedVersion?:number;expectPublic:boolean;expectedSourceFileId?:string}){
+  if(!/^[a-zA-Z0-9_-]{10,}$/.test(input.fileId))return{ok:false,issues:['ID de arquivo inválido.']};
+  const issues:string[]=[];
+  try{
+    const metadataResponse=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,name,mimeType,trashed,appProperties&supportsAllDrives=true`,input.accessToken);
+    const metadata=await metadataResponse.json();
+    if(metadata.trashed)issues.push('Arquivo está na lixeira.');
+    if(metadata.mimeType!=='application/pdf')issues.push('Arquivo não é PDF.');
+    const properties=metadata.appProperties||{};
+    if(input.expectedSha256&&properties.sha256&&properties.sha256!==input.expectedSha256)issues.push('Hash SHA-256 divergente.');
+    if(input.expectedVersion&&properties.artifactVersion&&Number(properties.artifactVersion)!==Number(input.expectedVersion))issues.push('Versão divergente.');
+    if(input.expectedSourceFileId&&properties.publicationSourceFileId!==input.expectedSourceFileId)issues.push('Cópia pública aponta para origem divergente.');
+    const permissionsResponse=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}/permissions?fields=permissions(id,type,role,domain)&supportsAllDrives=true`,input.accessToken);
+    const permissions=(await permissionsResponse.json()).permissions||[];
+    const broad=permissions.filter((permission:any)=>permission.type==='anyone'||permission.type==='domain'||permission.type==='group');
+    const hasPublicReader=permissions.some((permission:any)=>permission.type==='anyone'&&permission.role==='reader');
+    if(input.expectPublic&&!hasPublicReader)issues.push('Cópia autorizada não possui leitura pública.');
+    if(!input.expectPublic&&broad.length)issues.push('Arquivo privado possui compartilhamento amplo.');
+    if(input.expectPublic&&broad.some((permission:any)=>permission.type!=='anyone'||permission.role!=='reader'))issues.push('Cópia pública possui permissão ampla além de anyone:reader.');
+    return{ok:issues.length===0,issues,name:String(metadata.name||'')};
+  }catch(error){return{ok:false,issues:[error instanceof Error?error.message:'Falha ao inspecionar arquivo no Drive.']};}
+}
+
 export async function downloadDrivePdf(accessToken:string,fileId:string,expected?:{processId?:string;artifactType?:string;signatureJobId?:string}):Promise<{pdf:Buffer;fileName:string}>{
   if(!/^[a-zA-Z0-9_-]{10,}$/.test(fileId))throw new Error('Identificador de arquivo inválido.');
   await assertPrivateContainer(accessToken,fileId);
