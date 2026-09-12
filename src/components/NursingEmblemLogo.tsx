@@ -7,7 +7,7 @@ interface NursingEmblemLogoProps {
 }
 
 export const NursingEmblemLogo: React.FC<NursingEmblemLogoProps> = ({ className = '', size = 56, customSrc }) => {
-  const logoSrc = customSrc || '/colenf-logo.svg';
+  const logoSrc = customSrc || '/colenf-logo.png';
   const [imgError, setImgError] = useState<boolean>(false);
 
   useEffect(() => setImgError(false), [logoSrc]);
