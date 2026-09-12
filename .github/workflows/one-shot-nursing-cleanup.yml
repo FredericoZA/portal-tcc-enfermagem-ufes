@@ -1,0 +1,158 @@
+name: One-shot nursing cleanup
+on:
+  push:
+    paths:
+      - '.github/workflows/one-shot-nursing-cleanup.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Canonicalize Nursing portal
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          def rw(path, fn):
+              p=Path(path); s=p.read_text(encoding='utf-8'); n=fn(s)
+              if n==s: print(f'unchanged: {path}')
+              p.write_text(n,encoding='utf-8')
+          def rep(s,a,b,label):
+              if a not in s: raise SystemExit(f'anchor missing: {label}')
+              return s.replace(a,b,1)
+
+          # Backend/documents: grade fields are legacy-only blanks.
+          def runtime(s):
+              s=s.replace("    NOTA_FINAL: process.avaliacao.notaFinal === undefined ? '' : String(process.avaliacao.notaFinal),\n    NOTA: process.avaliacao.notaFinal === undefined ? '' : String(process.avaliacao.notaFinal),\n    AVALIACAO_NOTA: process.avaliacao.notaFinal === undefined ? '' : String(process.avaliacao.notaFinal),","    // Compatibilidade com modelos antigos: o Portal não registra nota numérica.\n    NOTA_FINAL: '',\n    NOTA: '',\n    AVALIACAO_NOTA: '',")
+              s=s.replace("    CAMPO_10: process.avaliacao.notaFinal === undefined ? '' : String(process.avaliacao.notaFinal),","    CAMPO_10: '',")
+              return s
+          rw('server/workflow/runtime.ts',runtime)
+          def server(s):
+              s=s.replace("const result=p.avaliacao?.resultadoLabel||p.avaliacao?.resultadoCode||'';const grade=p.avaliacao?.notaFinal??p.avaliacao?.nota;const replacements:Record<string,string>={","const result=p.avaliacao?.resultadoLabel||p.avaliacao?.resultadoCode||'';const replacements:Record<string,string>={")
+              s=s.replace("CAMPO_09:result,CAMPO_10:grade===undefined?'':String(grade),CAMPO_11:","CAMPO_09:result,CAMPO_10:'',CAMPO_11:")
+              s=s.replace("AVALIACAO_RESULTADO:result,AVALIACAO_NOTA:grade===undefined?'':String(grade),AVALIACAO_PARECER:","AVALIACAO_RESULTADO:result,AVALIACAO_NOTA:'',AVALIACAO_PARECER:")
+              s=re.sub(r"\n\s*`Nota: \$\{process\.avaliacao\.notaFinal \?\? process\.avaliacao\.nota \?\? ''\}`,",'',s)
+              return s
+          rw('server.ts',server)
+          rw('server/workflow/modelPreview.ts',lambda s:re.sub(r",notaFinal:Number\(supplied\.NOTA_FINAL\|\|supplied\.CAMPO_10\|\|8\)",'',s))
+
+          # Config/template catalog no longer offers numeric grade.
+          def config(s):
+              s=re.sub(r"\n\s*\{ id: 'CAMPO_10', name: 'AVALIACAO_NOTA', label: 'Nota final', dataType: 'number' \},",'',s)
+              s=re.sub(r"\n\s*'-CAMPO_10-': '10,0 \(Dez\)',",'',s)
+              return s
+          rw('src/pages/ConfiguracoesPage.tsx',config)
+          def validator(s):
+              s=s.replace("'DEFESA_DATA_HORA', 'DEFESA_LOCAL', 'RESULTADO', 'PARECER', 'NOTA_FINAL', 'NOTA', 'AVALIACAO_NOTA',","'DEFESA_DATA_HORA', 'DEFESA_LOCAL', 'RESULTADO', 'PARECER',")
+              s=s.replace("'CAMPO_07_LOCAL', 'CAMPO_09', 'CAMPO_10', 'CAMPO_11', 'CAMPO_12', 'CAMPO_13'","'CAMPO_07_LOCAL', 'CAMPO_09', 'CAMPO_11', 'CAMPO_12', 'CAMPO_13'")
+              return s
+          rw('src/utils/courseStudioValidator.ts',validator)
+
+          # Canonical outcomes and demo data.
+          def seed(s):
+              s=re.sub(r"evaluationOutcomeOptions: \[\s*\{ code: 'APROVADO'.*?\],","evaluationOutcomeOptions: [\n    { code: 'APROVADO', label: 'Aprovado' },\n    { code: 'APROVADO_COM_RESSALVA', label: 'Aprovado com ressalva' },\n    { code: 'REPROVADO', label: 'Reprovado' },\n  ],",s,count=1,flags=re.S)
+              s=re.sub(r"\n\s*notaFinal:\s*\d+(?:\.\d+)?,",'',s)
+              s=s.replace("resultadoLabel: 'Aprovado (x ≥ 7,00)'","resultadoLabel: 'Aprovado'")
+              s=s.replace('A banca examinadora aprova o trabalho com nota final 9,50.','A banca examinadora aprova o trabalho, conforme parecer registrado.')
+              return s
+          rw('src/services/demoSeed.ts',seed)
+
+          # Navigation: fixed nursing installation, no replication page, one Analysis entry after Settings.
+          def app(s):
+              s=s.replace("const PortalReplicationPage = lazy(() => import('./pages/PortalReplicationPage').then((module) => ({ default: module.PortalReplicationPage })));\n",'')
+              s=s.replace("      case 'replicar':\n        return <PortalReplicationPage />;\n",'')
+              s=s.replace("      case 'indicadores':\n        return <IndicadoresPage />;","      case 'analise':\n      case 'indicadores':\n        return <IndicadoresPage />;")
+              s=s.replace("                  : currentTab === 'replicar' ? 'Como replicar o Portal'\n",'')
+              s=s.replace("                  : currentTab === 'indicadores' ? 'Indicadores do Portal'","                  : (currentTab === 'analise' || currentTab === 'indicadores') ? 'Análise'")
+              return s
+          rw('src/App.tsx',app)
+          def sidebar(s):
+              s=s.replace('  GraduationCap,\n','')
+              s=re.sub(r"\n\s*replicar: \{ id: 'replicar'.*?\},",'',s,count=1)
+              s=s.replace("              indicadores: { id: 'indicadores', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: '📊', visible: isMasterAdmin && !isVisitor }","              analise: { id: 'analise', label: getNavLabel('analise', 'Análise'), icon: BarChart3, emoji: '📊', visible: isMasterAdmin && !isVisitor }")
+              s=s.replace("              ? layoutConfig.sidebarNavOrder.filter((key) => key !== 'acessar-portal')\n              : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial', 'replicar'];","              ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'replicar'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key)\n              : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'analise', 'DIVIDER_2', 'tutorial'];")
+              s=s.replace("            if (!order.includes('indicadores')) {\n              const settingsIndex = order.indexOf('configuracoes');\n              order.splice(settingsIndex >= 0 ? settingsIndex + 1 : order.length, 0, 'indicadores');\n            }\n            if (!order.includes('replicar')) order.push('replicar');","            if (!order.includes('analise')) {\n              const settingsIndex = order.indexOf('configuracoes');\n              order.splice(settingsIndex >= 0 ? settingsIndex + 1 : order.length, 0, 'analise');\n            }")
+              return s
+          rw('src/components/Sidebar.tsx',sidebar)
+
+          # Statistical content is consolidated in Analysis.
+          def analytics(s):
+              s=s.replace("import { apiClient } from '../services/apiClient';","import { apiClient } from '../services/apiClient';\nimport { AdvancedAnalyticsPanel } from '../components/AdvancedAnalyticsPanel';")
+              s=s.replace('Estatísticas do Portal','Análise do Portal')
+              s=s.replace('>Indicadores</h1>','>Análise</h1>')
+              s=s.replace('Visão administrativa agregada do uso do Portal TCC. Esta página não exibe nomes, e-mails, matrículas ou títulos dos trabalhos.','Indicadores, estatísticas acadêmicas e análise operacional do Portal TCC reunidos em um único local. Esta área não exibe nomes, e-mails, matrículas ou títulos dos trabalhos.')
+              s=rep(s,"      ) : null}\n    </div>\n  );","      ) : null}\n\n      <AdvancedAnalyticsPanel refreshKey={metrics?.generatedAt} />\n    </div>\n  );",'analysis placement')
+              return s
+          rw('src/pages/IndicadoresPage.tsx',analytics)
+
+          # Fixed identity defaults and no duplicate identity/course inputs or parallel color editor.
+          def brand_defaults(s):
+              s=s.replace("  institutionName: 'Instituição não configurada',\n  courseName: 'Curso não configurado',","  institutionName: 'Universidade Federal do Espírito Santo',\n  courseName: 'Curso de Graduação em Enfermagem e Obstetrícia',")
+              s=s.replace("  secondaryColor: '#17324d',\n  accentColor: '#d4a017',","  secondaryColor: '#005830',\n  accentColor: '#005830',")
+              s=s.replace("  documentHeaderText: 'INSTITUIÇÃO\\nCURSO',\n  documentFooterText: 'Unidade acadêmica • Campus • Cidade/UF',\n  emailFooterText: 'Comissão de TCC • Curso • Instituição'","  documentHeaderText: 'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO\\nCURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA',\n  documentFooterText: 'Departamento de Enfermagem • Centro de Ciências da Saúde • Vitória/ES',\n  emailFooterText: 'Colegiado do Curso de Graduação em Enfermagem e Obstetrícia • UFES'")
+              return s
+          rw('src/services/integrationStudioService.ts',brand_defaults)
+          def studio(s):
+              s=s.replace("                <div><label className={labelClass}>Nome da instituição</label><input value={brandKit.institutionName} onChange={(e) => updateBrand('institutionName', e.target.value)} className={inputClass} /></div>\n                <div><label className={labelClass}>Nome do colegiado/curso</label><input value={brandKit.courseName} onChange={(e) => updateBrand('courseName', e.target.value)} className={inputClass} /></div>","                <div className=\"sm:col-span-2 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-950\"><strong>Identidade fixa:</strong> Universidade Federal do Espírito Santo · Curso de Graduação em Enfermagem e Obstetrícia. Esta instalação atende exclusivamente à Enfermagem/UFES.</div>")
+              s=re.sub(r"\n\s*<div className=\"grid grid-cols-2 gap-3 sm:grid-cols-4\">\s*\{\(\[\['primaryColor'.*?</div>\n","\n              <div className=\"rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700\"><strong>Cores do site:</strong> use a Personalização do Portal. Este editor não mantém uma paleta paralela.</div>\n",s,count=1,flags=re.S)
+              s=re.sub(r"\n\s*<section className=\{`\$\{panelClass\} p-4`\} aria-labelledby=\"replication-guide-title\">.*?</section>\n","\n",s,count=1,flags=re.S)
+              return s
+          rw('src/components/IntegrationStudioPanel.tsx',studio)
+
+          # Remove only clearly multicourse/public-replication artifacts. Git history remains recoverable.
+          for obsolete in ['src/pages/PortalReplicationPage.tsx','docs/CONFIGURACAO_POR_CURSO.md']:
+              p=Path(obsolete)
+              if p.exists(): p.unlink()
+
+          # HTTP tests: submission without grade and schema cannot expose grade.
+          def http_test(s):
+              s=s.replace('HTTP: orientador confere e lança nota; aluno é recusado; estado e aparência ficam gravados','HTTP: orientador confere e registra avaliação; aluno é recusado; estado e aparência ficam gravados')
+              s=s.replace(", notaFinal: '8,75'",'')
+              s=s.replace("    assert.equal((await request(route, p.orientador.email, { ...body, notaFinal: '' })).body.code, 'INVALID_EVALUATION');\n",'')
+              s=s.replace("    assert.equal(saved.body.avaliacao.notaFinal, 8.75);\n","    assert.equal(saved.body.avaliacao.notaFinal, undefined);\n")
+              s=s.replace("    assert.equal(disk.processes[0].avaliacao.notaFinal, 8.75);","    assert.equal(disk.processes[0].avaliacao.notaFinal, undefined);")
+              s=rep(s,"    assert.equal(schema.body.studio.docTemplates, undefined);\n","    assert.equal(schema.body.studio.docTemplates, undefined);\n    assert.equal(schema.body.questions.some((q: any) => ['NOTA', 'NOTA_FINAL', 'CAMPO_10', 'AVALIACAO_NOTA'].includes(q.fieldKey)), false);\n",'http schema')
+              return s
+          rw('server/evaluationHttp.test.ts',http_test)
+
+          # Keep legacy TS fields only for reading historical payloads, explicitly deprecated.
+          def types(s):
+              s=s.replace("  nota?: number;\n  notaFinal?: number;","  /** @deprecated legado somente para leitura de registros antigos; novas avaliações não possuem nota numérica. */\n  nota?: number;\n  /** @deprecated legado somente para leitura de registros antigos; novas avaliações não possuem nota numérica. */\n  notaFinal?: number;")
+              return s
+          rw('src/types/index.ts',types)
+
+          # Current unit tests are rewritten by a compact no-grade contract.
+          t=Path('server/evaluation.test.ts').read_text(encoding='utf-8')
+          t=t.replace("import { evaluationQuestions, parseEvaluationGrade } from '../src/utils/evaluationForm';","import { evaluationQuestions } from '../src/utils/evaluationForm';")
+          t=t.replace("const valid = { resultadoCode: 'APROVADO', notaFinal: '9,25', parecer:","const valid = { resultadoCode: 'APROVADO', parecer:")
+          t=re.sub(r"test\('avaliação aceita nota decimal.*?\n\}\);",'''test('avaliação aceita resultado e parecer sem nota numérica e preserva a conferência', () => {\n  const result = accept({ notaFinal: '9,25', answers: { NOTA_FINAL: 9.25, OBSERVACAO: 'Texto adicional' } });\n  assert.equal(result.resultadoLabel, 'Aprovado');\n  assert.equal((result as any).notaFinal, undefined);\n  assert.equal(result.answers.NOTA_FINAL, undefined);\n  assert.equal(result.answers.OBSERVACAO, 'Texto adicional');\n  assert.equal(result.dataReview.confirmedBy, process.orientador.email);\n  assert.equal(result.dataReview.sourceDataRevision, process.dataRevision);\n});''',t,count=1,flags=re.S)
+          t=re.sub(r"test\('avaliação recusa ausência de nota.*?\n\}\);",'''test('avaliação recusa ausência de conferência, resultado inválido e parecer incorreto', () => {\n  for (const patch of [{ dataConfirmed: false }, { parecer: '' }, { parecer: 123 }, { resultadoCode: 'INVENTADO' }]) assert.throws(() => accept(patch), EvaluationError, JSON.stringify(patch));\n});''',t,count=1,flags=re.S)
+          t=re.sub(r"test\('campos obrigatórios da avaliação.*?\n\}\);",'''test('configuração antiga não consegue reintroduzir nota na avaliação', () => {\n  const fields = evaluationQuestions({ formTemplates: [{ id: 'form-parecer-banca', questions: [{ fieldKey: 'NOTA', label: 'Minha nota', fieldType: 'number', required: true }, { fieldKey: 'CAMPO_10', label: 'Nota antiga', fieldType: 'number', required: true }] }] as any });\n  assert.equal(fields.some(q => ['NOTA', 'NOTA_FINAL', 'CAMPO_10', 'AVALIACAO_NOTA'].includes(q.fieldKey)), false);\n  assert.deepEqual(fields.map(q => q.fieldKey), ['RESULTADO', 'PARECER']);\n});''',t,count=1,flags=re.S)
+          t=re.sub(r"test\('respostas do orientador alimentam DOCX.*?\n\}\);",'''test('respostas do orientador alimentam DOCX sem nota ou substituição de identidade', () => {\n  const p = { ...process, avaliacao: { ...process.avaliacao, ...accept(), answers: { OBSERVACAO: 'Texto adicional', NOTA_FINAL: 2, ORIENTADOR_EMAIL: 'intruso@example.invalid' } } };\n  const vars = buildProcessVariables({ process: p, actorEmail: process.orientador.email, actorRoles: ['ADVISOR'], eventCode: 'EVALUATION_SUBMITTED' });\n  assert.equal(vars.NOTA_FINAL, ''); assert.equal(vars.CAMPO_10, ''); assert.equal(vars.AVALIACAO_NOTA, '');\n  assert.equal(vars.ORIENTADOR_EMAIL, process.orientador.email); assert.equal(vars.OBSERVACAO, 'Texto adicional');\n});''',t,count=1,flags=re.S)
+          Path('server/evaluation.test.ts').write_text(t,encoding='utf-8')
+
+          # Self-clean one-shot workflow after validation/commit.
+          print('canonicalization applied')
+      - name: Install dependencies
+        run: npm ci --include=dev
+      - name: Validate application
+        run: npm run test:ci
+      - name: Validate secure flow
+        run: npm run test:secure-flow
+      - name: Validate institutional contract
+        run: node scripts/test-institutional-template-contract.mjs
+      - name: Commit canonical Nursing portal
+        run: |
+          rm -f .github/workflows/one-shot-nursing-cleanup.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m 'refactor: fixa Portal para Enfermagem e consolida análise'
+          git push
