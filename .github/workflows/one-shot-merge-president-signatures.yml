@@ -14,6 +14,17 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Correct patch boundary
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('.github/scripts/merge-president-signatures.py')
+          text = path.read_text(encoding='utf-8')
+          old = "page = page[:block_start] + new_filters + page[block_end:]"
+          new = "page = page[:block_start] + new_filters + page[block_end + len('              </div>\\n'):]"
+          if old not in text:
+              raise SystemExit('Patch boundary anchor not found.')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
       - name: Apply President/Asten integration patch
         run: python .github/scripts/merge-president-signatures.py
       - name: Install dependencies
