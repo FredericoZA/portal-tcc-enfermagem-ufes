@@ -2826,18 +2826,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn">
             <div className={`bg-white ${loginPopupConfig.borderRadius || 'rounded-2xl'} border border-slate-200/90 shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150`}>
               {/* Header with Institutional Identity */}
-              <div className={`${currentTheme.headerBg} border-b px-5 py-4 flex items-center justify-between`} style={loginPopupConfig.cardBgColor ? { backgroundColor: loginPopupConfig.cardBgColor, color: loginPopupConfig.cardTextColor || '#0f172a' } : undefined}>
+              <div className={`${currentTheme.headerBg} border-b px-5 py-3.5 flex items-center justify-between`} style={loginPopupConfig.cardBgColor ? { backgroundColor: loginPopupConfig.cardBgColor, color: loginPopupConfig.cardTextColor || '#0f172a' } : undefined}>
                 <div className="flex items-center gap-3">
                   {loginPopupConfig.showLogo && (
-                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center shadow-2xs shrink-0">
-                      <NursingEmblemLogo size={28} customSrc={settings?.integrationStudio?.brandKit?.courseLogoUrl||settings?.integrationStudio?.brandKit?.universityLogoUrl||''} />
+                    <div className="w-12 h-12 flex items-center justify-center shrink-0">
+                      <NursingEmblemLogo size={44} customSrc={settings?.integrationStudio?.brandKit?.courseLogoUrl||settings?.integrationStudio?.brandKit?.universityLogoUrl||''} />
                     </div>
                   )}
                   <div>
-                    <h3 className="font-bold text-sm leading-tight" style={{ color: loginPopupConfig.cardTextColor || '#0f172a' }}>
+                    <h3 className="font-black text-lg sm:text-xl leading-tight" style={{ color: loginPopupConfig.cardTextColor || '#0f172a' }}>
                       {loginPopupConfig.title || 'Acesso ao Portal do TCC'}
                     </h3>
-                    <p className={`text-[11px] ${currentTheme.accentText} font-medium`}>
+                    <p className={`mt-0.5 text-xs ${currentTheme.accentText} font-semibold`}>
                       {loginPopupConfig.subtitle || `${installationProfile.courseName} • ${installationProfile.institutionAcronym}`}
                     </p>
                   </div>

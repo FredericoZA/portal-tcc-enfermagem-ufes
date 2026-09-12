@@ -11,7 +11,6 @@ import { InfrastructureIntegrationsPanel } from '../components/InfrastructureInt
 import { AuthorizedStudentsPanel } from '../components/AuthorizedStudentsPanel';
 import { MasterDocumentModelsPanel } from '../components/MasterDocumentModelsPanel';
 import { OperationsMonitorPanel } from '../components/OperationsMonitorPanel';
-import { PortalGovernancePanel } from '../components/PortalGovernancePanel';
 import { CourseOperationsPanel } from '../components/CourseOperationsPanel';
 import { updateRuntimeDocumentTemplates, BASE_DOCUMENT_TEMPLATES } from '../utils/documentTemplateEngine';
 import { loadGlobalTableConfig, saveGlobalTableConfig, GLOBAL_TABLE_EVENT, getTableStyles, PORTAL_TABLE_PRESETS, PortalTablePreset } from '../utils/tableFormatters';
@@ -275,7 +274,6 @@ export const ConfiguracoesPage: React.FC = () => {
     security: false,
     sync: false,
     master_system: false,
-    governance: false,
     course_operations: false,
   });
 
@@ -290,7 +288,6 @@ export const ConfiguracoesPage: React.FC = () => {
       security: true,
       sync: true,
       master_system: true,
-      governance: true,
       course_operations: true,
     });
   };
@@ -306,7 +303,6 @@ export const ConfiguracoesPage: React.FC = () => {
       security: false,
       sync: false,
       master_system: false,
-      governance: false,
       course_operations: false,
     });
   };
@@ -2264,14 +2260,7 @@ export const ConfiguracoesPage: React.FC = () => {
         </section>
       )}
 
-      {isMasterAdmin && (
-        <section id="section-governanca-instalacao" className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
-          <button type="button" onClick={() => toggleSection('governance')} className={`flex w-full items-center justify-between gap-3 bg-slate-100/90 p-3.5 text-left text-slate-900 hover:bg-slate-200/80 sm:p-4 ${openSections.governance ? 'border-b border-slate-200 rounded-t-2xl' : 'rounded-2xl'}`}>
-            <div><h2 className="text-xs font-black uppercase tracking-wide sm:text-sm">Instalação, períodos e governança</h2><p className="mt-1 text-[11px] text-slate-600">Identidade desta instalação de Enfermagem, calendário, recursos, transferências e indicadores</p></div>{openSections.governance ? <ChevronUp className="h-5 w-5"/> : <ChevronDown className="h-5 w-5"/>}
-          </button>
-          {openSections.governance && <div className="border-t border-slate-200 p-3 sm:p-4"><PortalGovernancePanel /></div>}
-        </section>
-      )}
+      
 
       {isMasterAdmin && (
         <section id="section-operacao-curso" className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">

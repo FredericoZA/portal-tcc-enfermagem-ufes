@@ -645,6 +645,10 @@ export async function registerMasterDocumentModelFromDrive(input:{type:'CONVITE'
 }
 
 function sanitizeHeader(value: string): string { return value.replace(/[\r\n]+/g, ' ').trim(); }
+function encodeMimeHeader(value: string): string {
+  const safe = sanitizeHeader(value);
+  return /^[\x20-\x7E]*$/.test(safe) ? safe : `=?UTF-8?B?${Buffer.from(safe, 'utf8').toString('base64')}?=`;
+}
 
 export interface GmailMessageInput { to: string; subject: string; text: string; html?: string; attachments?: Array<{ fileName: string; mimeType: string; content: Buffer }> }
 
@@ -683,7 +687,7 @@ export function buildGmailRawMessage(input: GmailMessageInput, boundarySeed = Da
   ].join('\r\n'):body;
   return [
     `To: ${sanitizeHeader(input.to)}`,
-    `Subject: ${sanitizeHeader(input.subject)}`,
+    `Subject: ${encodeMimeHeader(input.subject)}`,
     'MIME-Version: 1.0',
     content
   ].join('\r\n');

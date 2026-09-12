@@ -24,12 +24,12 @@ export interface LoginPopupConfig {
 
 export const DEFAULT_LOGIN_POPUP_CONFIG: LoginPopupConfig = {
   title: 'Acesso ao Portal do TCC',
-  subtitle: 'Curso • Instituição',
-  description: 'Informe o seu e-mail institucional ou cadastrado. Enviaremos um código de seis dígitos para sua caixa de entrada. Os TCCs em que você participa aparecerão automaticamente.',
-  discenteTip: 'utilize o e-mail previamente autorizado pela administração.',
+  subtitle: 'Enfermagem e Obstetrícia • UFES',
+  description: 'Informe o e-mail cadastrado para receber um código de acesso de seis dígitos. Após a validação, os TCCs vinculados ao seu e-mail aparecerão automaticamente.',
+  discenteTip: 'utilize sempre seu e-mail institucional @edu.ufes.br cadastrado no processo.',
   docenteTip: 'utilize exatamente o e-mail informado no cadastro do TCC.',
-  emailLabel: 'E-mail Institucional ou Cadastrado',
-  emailPlaceholder: 'nome@instituicao.br',
+  emailLabel: 'E-mail cadastrado',
+  emailPlaceholder: 'nome@edu.ufes.br',
   buttonText: 'Enviar código de acesso',
   securityText: 'Ambiente Acadêmico Seguro',
   locationText: 'Ambiente institucional',
@@ -52,7 +52,20 @@ export function loadLoginPopupConfig(): LoginPopupConfig {
   try {
     const raw = localStorage.getItem(LOGIN_POPUP_STORAGE_KEY);
     const local = raw
-      ? { ...DEFAULT_LOGIN_POPUP_CONFIG, ...JSON.parse(raw) }
+      ? {
+          ...DEFAULT_LOGIN_POPUP_CONFIG,
+          ...JSON.parse(raw),
+          title: DEFAULT_LOGIN_POPUP_CONFIG.title,
+          subtitle: DEFAULT_LOGIN_POPUP_CONFIG.subtitle,
+          description: DEFAULT_LOGIN_POPUP_CONFIG.description,
+          discenteTip: DEFAULT_LOGIN_POPUP_CONFIG.discenteTip,
+          docenteTip: DEFAULT_LOGIN_POPUP_CONFIG.docenteTip,
+          emailLabel: DEFAULT_LOGIN_POPUP_CONFIG.emailLabel,
+          emailPlaceholder: DEFAULT_LOGIN_POPUP_CONFIG.emailPlaceholder,
+          buttonText: DEFAULT_LOGIN_POPUP_CONFIG.buttonText,
+          securityText: DEFAULT_LOGIN_POPUP_CONFIG.securityText,
+          locationText: DEFAULT_LOGIN_POPUP_CONFIG.locationText
+        }
       : { ...DEFAULT_LOGIN_POPUP_CONFIG };
     if (!isPortalAppearanceLinked('popup_login')) return local;
     const global = loadGlobalPopupStyle();

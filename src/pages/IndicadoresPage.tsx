@@ -75,7 +75,7 @@ export const IndicadoresPage: React.FC = () => {
 
   const inProgress = Math.max(0, (metrics?.processes.total || 0) - (metrics?.processes.completed || 0));
   const statuses = useMemo(
-    () => Object.entries(metrics?.processes.byStatus || {}).sort((a, b) => b[1] - a[1]),
+    () => (Object.entries(metrics?.processes.byStatus || {}) as Array<[string, number]>).sort((a, b) => b[1] - a[1]),
     [metrics]
   );
 
