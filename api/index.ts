@@ -1,5 +1,4 @@
 import type { Request, Response } from 'express';
-import { loadPortalServerRuntime } from './_serverRuntimeLoader';
 
 type StartupFailure = { code: string; message: string; missingGroups?: string[]; runtimeSignal?: string };
 type StartupStage = 'IMPORT_SERVER' | 'CREATE_APP';
@@ -87,9 +86,10 @@ let startupPromise: Promise<StartupState> | null = null;
 
 function startup(): Promise<StartupState> {
   if (!startupPromise) {
-    startupPromise = loadPortalServerRuntime()
+    startupPromise = import('../dist/server/server.cjs')
       .then(async ({ createPortalApp }) => {
         try {
+          if (typeof createPortalApp !== 'function') throw Object.assign(new Error('Bundle sem createPortalApp.'), { code: 'PORTAL_SERVER_EXPORT_MISSING' });
           const app = await createPortalApp();
           return { app: app as StartupState['app'], error: null };
         } catch (error) {
@@ -98,7 +98,7 @@ function startup(): Promise<StartupState> {
         }
       })
       .catch((error) => {
-        console.error('[Startup] Falha ao carregar o bundle principal do Portal TCC:', error);
+        console.error('[Startup] Falha ao carregar o bundle compilado do Portal TCC:', error);
         return { app: null, error, stage: 'IMPORT_SERVER' as const };
       });
   }
