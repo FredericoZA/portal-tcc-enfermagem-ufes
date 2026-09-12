@@ -7,7 +7,6 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { EmergencyRecoveryModal } from './components/EmergencyRecoveryModal';
-import { PendingAdministrationTransferBanner } from './components/PendingAdministrationTransferBanner';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })));
 const PortalTutorialPage = lazy(() => import('./pages/PortalTutorialPage').then((module) => ({ default: module.PortalTutorialPage })));
@@ -20,6 +19,7 @@ const AvaliacoesPage = lazy(() => import('./pages/AvaliacoesPage').then((module)
 const DocumentosPage = lazy(() => import('./pages/DocumentosPage').then((module) => ({ default: module.DocumentosPage })));
 const CoordenadorPage = lazy(() => import('./pages/CoordenadorPage').then((module) => ({ default: module.CoordenadorPage })));
 const ConfiguracoesPage = lazy(() => import('./pages/ConfiguracoesPage').then((module) => ({ default: module.ConfiguracoesPage })));
+const IndicadoresPage = lazy(() => import('./pages/IndicadoresPage').then((module) => ({ default: module.IndicadoresPage })));
 const ComoChegarPage = lazy(() => import('./pages/ComoChegarPage').then((module) => ({ default: module.ComoChegarPage })));
 const SignatureQueuePage = lazy(() => import('./pages/SignatureQueuePage').then((module) => ({ default: module.SignatureQueuePage })));
 const VerificationPage = lazy(() => import('./pages/VerificationPage').then((module) => ({ default: module.VerificationPage })));
@@ -111,6 +111,8 @@ export default function App() {
         return <SignatureQueuePage />;
       case 'configuracoes':
         return <ConfiguracoesPage />;
+      case 'indicadores':
+        return <IndicadoresPage />;
       case 'como-chegar':
         return <ComoChegarPage />;
       default:
@@ -125,7 +127,6 @@ export default function App() {
       <PortalDialogs />
       <div id="portal-app-root" className="min-h-screen bg-slate-100 flex flex-col font-sans antialiased text-slate-900">
         {(import.meta as any).env?.DEV && <UserSimulatorBar />}
-        <PendingAdministrationTransferBanner />
 
         <div className="flex-1 flex overflow-hidden">
           <Sidebar
@@ -159,6 +160,7 @@ export default function App() {
                   : currentTab === 'coordenador' ? 'Área do Presidente'
                   : currentTab === 'assinaturas' ? 'Central de Assinaturas'
                   : currentTab === 'configuracoes' ? 'Configurações & Modelos de Arquivos'
+                  : currentTab === 'indicadores' ? 'Indicadores do Portal'
                   : 'Local das Defesas'
               }
             />
