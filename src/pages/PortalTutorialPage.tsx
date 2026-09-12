@@ -1,0 +1,201 @@
+import React, { useMemo, useState } from 'react';
+import {
+  ArrowRight,
+  BookOpenCheck,
+  CalendarCheck,
+  CheckCircle2,
+  FileSignature,
+  GraduationCap,
+  LockKeyhole,
+  SearchCheck,
+  ShieldCheck,
+  UserCheck,
+  Users
+} from 'lucide-react';
+
+interface PortalTutorialPageProps {
+  onNavigate: (tab: string) => void;
+}
+
+type Role = 'aluno' | 'orientador' | 'presidente' | 'visitante';
+
+const roleContent: Record<Role, { title: string; description: string; steps: string[] }> = {
+  aluno: {
+    title: 'Aluno',
+    description: 'Inicia o TCC, confirma o local, acompanha a defesa e conclui a entrega final.',
+    steps: [
+      'Entre com o e-mail previamente autorizado e o código enviado pelo Portal.',
+      'Cadastre título, autoria, orientador, coorientador quando houver, banca e data/horário pretendidos.',
+      'Consulte o Departamento de Enfermagem e volte ao processo para confirmar o local realmente reservado.',
+      'Depois da defesa e da Ata do orientador, envie TCC final, cinco palavras-chave, resumo sintético e, se desejar, resumo expandido.',
+      'Defina separadamente o que pode ser publicado e confira o Termo antes de enviá-lo para assinatura.'
+    ]
+  },
+  orientador: {
+    title: 'Orientador',
+    description: 'Confere os dados, registra o resultado da defesa e assina a Ata.',
+    steps: [
+      'Entre com o e-mail que foi cadastrado no processo pelo aluno.',
+      'Abra o TCC e confira cuidadosamente nomes, documentos, título, banca, data e local.',
+      'Corrija dados permitidos antes de concluir a avaliação, caso encontre erro.',
+      'Marque Aprovado, Aprovado com ressalva ou Reprovado e informe o parecer final, ou utilize o texto padrão disponível.',
+      'Confira a prévia da Ata. Somente depois da confirmação o documento é encaminhado à Asten para sua assinatura.'
+    ]
+  },
+  presidente: {
+    title: 'Presidente da Comissão',
+    description: 'Atua no encerramento e assina a declaração de participação da banca.',
+    steps: [
+      'Acompanhe os processos e suas pendências administrativas.',
+      'O processo só chega à etapa final depois da entrega do aluno e das assinaturas anteriores aplicáveis.',
+      'Confira a declaração/certificado da banca com título, participantes, data e local.',
+      'Revise o documento e confirme o envio à Asten.',
+      'Após a assinatura e o arquivamento, o processo pode ser marcado como concluído.'
+    ]
+  },
+  visitante: {
+    title: 'Visitante',
+    description: 'Consulta as informações acadêmicas públicas sem acessar dados pessoais protegidos.',
+    steps: [
+      'Consulte calendário, título, autoria, banca, data e local das defesas.',
+      'Depois da entrega final, consulte palavras-chave e resumo sintético publicados no processo.',
+      'Baixe somente arquivos cuja política permita acesso público.',
+      'Matrícula, CPF, e-mail, credenciais e informações administrativas nunca são exibidos na área pública.'
+    ]
+  }
+};
+
+const phases = [
+  {
+    n: 1,
+    title: 'Cadastro inicial',
+    actor: 'Aluno',
+    icon: GraduationCap,
+    text: 'Cadastro do TCC individual ou em dupla, participantes, título e data/horário pretendidos. O processo nasce com o local ainda pendente.'
+  },
+  {
+    n: 2,
+    title: 'Confirmação do local',
+    actor: 'Aluno + Departamento',
+    icon: CalendarCheck,
+    text: 'O aluno verifica a reserva diretamente com o Departamento de Enfermagem. O fluxo permanece bloqueado até ele confirmar no Portal o local efetivamente reservado.'
+  },
+  {
+    n: 3,
+    title: 'Convite e calendário',
+    actor: 'Portal',
+    icon: Users,
+    text: 'Após a confirmação do local, o Portal registra o evento no calendário, gera o convite e prepara o envio institucional aos participantes configurados.'
+  },
+  {
+    n: 4,
+    title: 'Defesa e Ata',
+    actor: 'Orientador',
+    icon: SearchCheck,
+    text: 'O orientador revisa os dados, registra o resultado e o parecer, confere a prévia da Ata e confirma o envio para assinatura.'
+  },
+  {
+    n: 5,
+    title: 'Entrega final',
+    actor: 'Aluno',
+    icon: BookOpenCheck,
+    text: 'O aluno envia o trabalho final, cinco palavras-chave, resumo sintético e opcionalmente o resumo expandido, escolhendo o que pode ficar público.'
+  },
+  {
+    n: 6,
+    title: 'Termo de autorização',
+    actor: 'Aluno(s) + Orientador',
+    icon: FileSignature,
+    text: 'Quando existir conteúdo autorizado para publicação, o Termo é gerado, conferido e encaminhado para assinatura dos autores e do orientador.'
+  },
+  {
+    n: 7,
+    title: 'Declaração da banca',
+    actor: 'Presidente',
+    icon: UserCheck,
+    text: 'É a última emissão documental. O Presidente confere a declaração de participação da banca e a encaminha para assinatura.'
+  },
+  {
+    n: 8,
+    title: 'Conclusão',
+    actor: 'Portal',
+    icon: CheckCircle2,
+    text: 'Somente após as etapas e assinaturas aplicáveis o processo é concluído e o conteúdo autorizado é disponibilizado publicamente.'
+  }
+];
+
+export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNavigate }) => {
+  const [role, setRole] = useState<Role>('aluno');
+  const active = useMemo(() => roleContent[role], [role]);
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-3xl border border-emerald-900/10 bg-gradient-to-br from-[#005830] to-[#013d2b] p-5 sm:p-7 text-white shadow-lg">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-2 text-emerald-100 text-xs font-black uppercase tracking-[0.18em]"><ShieldCheck className="h-4 w-4"/>Guia operacional</div>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-black tracking-tight">Como usar o Portal de TCC</h1>
+            <p className="mt-2 text-sm sm:text-base leading-7 text-emerald-50">Veja exatamente o que fazer em cada etapa. O Portal libera a próxima ação somente quando as dependências acadêmicas e documentais anteriores estiverem concluídas.</p>
+          </div>
+          <button type="button" onClick={() => onNavigate('acessar-portal')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-black text-[#005830] shadow-sm hover:bg-emerald-50">
+            Acessar o Portal <ArrowRight className="h-4 w-4"/>
+          </button>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
+        <h2 className="text-sm font-black uppercase tracking-wider text-slate-900">O que você precisa fazer?</h2>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(Object.keys(roleContent) as Role[]).map(key => (
+            <button key={key} type="button" onClick={() => setRole(key)} className={`rounded-full border px-4 py-2 text-xs font-black transition-colors ${role === key ? 'border-[#005830] bg-[#005830] text-white' : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-500 hover:text-emerald-900'}`}>
+              {roleContent[key].title}
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+          <h3 className="font-black text-emerald-950">{active.title}</h3>
+          <p className="mt-1 text-sm text-emerald-900">{active.description}</p>
+          <ol className="mt-4 grid gap-2 md:grid-cols-2">
+            {active.steps.map((step, index) => (
+              <li key={step} className="flex gap-3 rounded-xl border border-emerald-100 bg-white p-3 text-sm leading-6 text-slate-700">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#005830] text-xs font-black text-white">{index + 1}</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-3">
+          <h2 className="text-lg font-black text-slate-950">Fluxo completo do TCC</h2>
+          <p className="text-sm text-slate-600">A ordem abaixo é a ordem operacional do processo.</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {phases.map(({ n, title, actor, icon: Icon, text }) => (
+            <article key={n} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-[#005830]"><Icon className="h-5 w-5"/></div>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase text-slate-600">Etapa {n}</span>
+              </div>
+              <h3 className="mt-3 font-black text-slate-950">{title}</h3>
+              <p className="mt-1 text-[11px] font-black uppercase tracking-wide text-emerald-800">{actor}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-2"><LockKeyhole className="h-5 w-5 text-slate-700"/><h2 className="font-black text-slate-950">Dados protegidos</h2></div>
+          <p className="mt-2 text-sm leading-6 text-slate-600">Matrícula, CPF, e-mail, códigos de acesso, credenciais e dados administrativos ficam restritos aos usuários autorizados e às rotinas internas que realmente necessitam deles.</p>
+        </div>
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+          <div className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5 text-emerald-800"/><h2 className="font-black text-emerald-950">Informação acadêmica pública</h2></div>
+          <p className="mt-2 text-sm leading-6 text-emerald-900">Nome dos participantes, título, data e local da defesa podem compor a consulta pública. Após a entrega final, o resumo sintético e as cinco palavras-chave também integram a ficha pública. Trabalho final e resumo expandido dependem da autorização registrada pelo aluno.</p>
+        </div>
+      </section>
+    </div>
+  );
+};
