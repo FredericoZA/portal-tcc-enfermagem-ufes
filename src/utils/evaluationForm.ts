@@ -5,31 +5,33 @@ import { canonicalKey, registrationQuestions } from './operationalConfig';
 import { evaluateStudioCondition, validateStudioAnswer } from './courseStudioValidator';
 
 export const EVALUATION_FORM_ID = 'form-parecer-banca';
-const aliases: Record<string, string> = { CAMPO_09: 'RESULTADO', CAMPO_10: 'NOTA_FINAL', NOTA: 'NOTA_FINAL', AVALIACAO_NOTA: 'NOTA_FINAL', CAMPO_11: 'PARECER' };
+const aliases: Record<string, string> = { CAMPO_09: 'RESULTADO', CAMPO_11: 'PARECER' };
+const LEGACY_GRADE_KEYS = new Set(['CAMPO_10', 'NOTA', 'NOTA_FINAL', 'AVALIACAO_NOTA', 'AVALIACAO_GRADE', 'EVALUATION_GRADE']);
+
 export const EVALUATION_QUESTIONS: RegistrationQuestion[] = [
   { id: 'evaluation-result', fieldKey: 'RESULTADO', label: 'Resultado da defesa', fieldType: 'select', required: true },
-  { id: 'evaluation-grade', fieldKey: 'NOTA_FINAL', label: 'Nota final', fieldType: 'number', required: true, validation: { min: 0, max: 10 }, helpText: 'Informe uma nota de 0 a 10. Use vírgula ou ponto para os decimais.' },
   { id: 'evaluation-report', fieldKey: 'PARECER', label: 'Parecer da banca', fieldType: 'textarea', required: true, validation: { maxLength: 10000 } },
 ];
+
 export function evaluationQuestions(studio?: Partial<IntegrationStudioSettings>): RegistrationQuestion[] {
   const configured = studio?.formTemplates?.find(f => f.id === EVALUATION_FORM_ID)?.questions;
   const fields = new Map<string, RegistrationQuestion>();
   for (const custom of (Array.isArray(configured) ? configured : []) as RegistrationQuestion[]) {
-    const fieldKey = aliases[canonicalKey(custom.fieldKey)] || canonicalKey(custom.fieldKey);
-    if (!fieldKey || fieldKey === 'DADOS_CONFERIDOS') continue;
+    const rawKey = canonicalKey(custom.fieldKey);
+    if (LEGACY_GRADE_KEYS.has(rawKey)) continue;
+    const fieldKey = aliases[rawKey] || rawKey;
+    if (!fieldKey || fieldKey === 'DADOS_CONFERIDOS' || LEGACY_GRADE_KEYS.has(fieldKey)) continue;
     const core = EVALUATION_QUESTIONS.find(q => q.fieldKey === fieldKey);
-    fields.set(fieldKey, core ? { ...custom, ...core, label: custom.label || core.label, helpText: custom.helpText || core.helpText || '', visibleWhen: undefined } : { ...custom, fieldKey });
+    fields.set(fieldKey, core
+      ? { ...custom, ...core, label: custom.label || core.label, helpText: custom.helpText || core.helpText || '', visibleWhen: undefined }
+      : { ...custom, fieldKey });
   }
-  for (const core of EVALUATION_QUESTIONS) if (!fields.has(core.fieldKey)) fields.set(core.fieldKey, { ...core, helpText: core.helpText || '', visibleWhen: undefined });
+  for (const core of EVALUATION_QUESTIONS) {
+    if (!fields.has(core.fieldKey)) fields.set(core.fieldKey, { ...core, helpText: core.helpText || '', visibleWhen: undefined });
+  }
   return [...fields.values()];
 }
-export function parseEvaluationGrade(value: unknown): number | undefined {
-  if (typeof value !== 'number' && typeof value !== 'string') return undefined;
-  const raw = String(value).trim();
-  if (!/^\d+(?:[.,]\d{1,2})?$/.test(raw)) return undefined;
-  const grade = Number(raw.replace(',', '.'));
-  return Number.isFinite(grade) && grade >= 0 && grade <= 10 ? grade : undefined;
-}
+
 export function evaluationReviewRows(process: ProcessData, studio?: Partial<IntegrationStudioSettings>): Array<[string, string]> {
   const person = (p: { nome: string; email: string; matricula?: string; siape?: string; instituicao?: string }) => [p.nome, p.matricula && `Matrícula ${p.matricula}`, p.siape && `SIAPE ${p.siape}`, p.email, p.instituicao].filter(Boolean).join(' · ');
   const timezone = studio?.operationsPolicy?.timezone || 'America/Sao_Paulo';
@@ -51,16 +53,20 @@ export function evaluationReviewRows(process: ProcessData, studio?: Partial<Inte
   return rows;
 }
 
-export function acceptEvaluationAnswers(input: { resultadoCode?: unknown; notaFinal?: unknown; parecer?: unknown; answers?: unknown }, outcomes: EvaluationOutcomeOption[], studio?: Partial<IntegrationStudioSettings>): { resultadoCode: string; resultadoLabel: string; notaFinal: number; parecer: string; answers: RegistrationAnswers } {
+export function acceptEvaluationAnswers(
+  input: { resultadoCode?: unknown; parecer?: unknown; answers?: unknown },
+  outcomes: EvaluationOutcomeOption[],
+  studio?: Partial<IntegrationStudioSettings>
+): { resultadoCode: string; resultadoLabel: string; parecer: string; answers: RegistrationAnswers } {
   const outcome = outcomes.find(o => o.code === input.resultadoCode);
-  if (!outcome) throw new Error('Selecione um resultado publicado nas configurações do curso.');
-  const grade = parseEvaluationGrade(input.notaFinal);
-  if (grade === undefined) throw new Error('Informe uma nota final de 0 a 10, com até duas casas decimais.');
+  if (!outcome) throw new Error('Selecione um resultado válido.');
   if (typeof input.parecer !== 'string' || !input.parecer.trim() || input.parecer.length > 10000) throw new Error('Preencha o parecer da banca com até 10.000 caracteres.');
-  const extra = input.answers && typeof input.answers === 'object' && !Array.isArray(input.answers) ? input.answers : {};
-  const variables: Record<string, unknown> = { ...extra, RESULTADO: outcome.code, NOTA_FINAL: grade, PARECER: input.parecer.trim() };
+  const extra = input.answers && typeof input.answers === 'object' && !Array.isArray(input.answers) ? input.answers as Record<string, unknown> : {};
+  const variables: Record<string, unknown> = { ...extra, RESULTADO: outcome.code, PARECER: input.parecer.trim() };
+  for (const key of LEGACY_GRADE_KEYS) delete variables[key];
   const accepted: RegistrationAnswers = {};
   for (const q of evaluationQuestions(studio)) {
+    if (LEGACY_GRADE_KEYS.has(canonicalKey(q.fieldKey))) continue;
     if (!evaluateStudioCondition(q.visibleWhen, variables)) continue;
     const value = variables[q.fieldKey];
     if (value !== undefined && !['string', 'number', 'boolean'].includes(typeof value)) throw new Error(`${q.label}: valor inválido.`);
@@ -75,5 +81,5 @@ export function acceptEvaluationAnswers(input: { resultadoCode?: unknown; notaFi
     if (String(value).length > 10000) throw new Error(`${q.label}: texto muito longo.`);
     accepted[q.fieldKey] = value as string | number | boolean;
   }
-  return { resultadoCode: outcome.code, resultadoLabel: outcome.label, notaFinal: grade, parecer: input.parecer.trim(), answers: accepted };
+  return { resultadoCode: outcome.code, resultadoLabel: outcome.label, parecer: input.parecer.trim(), answers: accepted };
 }
