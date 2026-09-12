@@ -75,6 +75,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
     return <span className="text-base shrink-0 leading-none">{emoji}</span>;
   };
 
+  const sidebarLogoSrc = layoutConfig.sidebarLogoType === 'custom' && layoutConfig.sidebarCustomLogoUrl
+    ? layoutConfig.sidebarCustomLogoUrl
+    : configuredLogo;
+
   return (
     <>
       {isOpenMobile && (
@@ -124,15 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             className="flex items-center gap-2.5 hover:opacity-95 transition-opacity focus:outline-none cursor-pointer flex-1 min-w-0"
             title="Ir para o Calendário Público Inicial"
           >
-            {layoutConfig.sidebarLogoType === 'custom' && layoutConfig.sidebarCustomLogoUrl ? (
-              <img
-                src={layoutConfig.sidebarCustomLogoUrl}
-                alt="Logo do Curso de Enfermagem"
-                className="w-14 h-14 object-contain shrink-0 bg-transparent p-0"
-              />
-            ) : (
-              <NursingEmblemLogo size={58} className="shrink-0" customSrc={configuredLogo} />
-            )}
+            <NursingEmblemLogo size={58} className="shrink-0" customSrc={sidebarLogoSrc || '/colenf-logo.png'} />
 
             <div className="flex flex-col flex-1 min-w-0 items-center justify-center text-center pr-1">
               <h1
@@ -169,11 +165,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
               'meus-processos': { id: 'meus-processos', label: getNavLabel('meus-processos', 'Meus TCCs'), icon: FileText, emoji: '📋', visible: !isVisitor },
               coordenador: { id: 'coordenador', label: getNavLabel('coordenador', 'Área do Presidente'), icon: Award, emoji: '🏛️', visible: isMasterAdmin && !isVisitor },
               configuracoes: { id: 'configuracoes', label: getNavLabel('configuracoes', 'Configurações'), icon: Settings, emoji: '⚙️', visible: isMasterAdmin && !isVisitor },
-              analise: { id: 'analise', label: getNavLabel('analise', 'Análise'), icon: BarChart3, emoji: '📊', visible: isMasterAdmin && !isVisitor }
+              analise: { id: 'analise', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: getNavEmoji('indicadores', '📊'), visible: isMasterAdmin && !isVisitor }
             };
 
             const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0
-              ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'replicar'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key)
+              ? layoutConfig.sidebarNavOrder
+                  .filter((key) => !['acessar-portal', 'replicar', 'assinaturas'].includes(key))
+                  .map((key) => key === 'indicadores' ? 'analise' : key)
               : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'analise', 'DIVIDER_2', 'tutorial'];
 
             const order = [...configuredOrder];
