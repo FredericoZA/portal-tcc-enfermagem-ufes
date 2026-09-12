@@ -272,8 +272,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           timestamp: pData.avaliacao.submittedAt ? new Date(pData.avaliacao.submittedAt).toLocaleString('pt-BR') : 'Avaliante',
           user: pData.avaliacao.submittedBy || pData.orientador.email,
           role: 'Docente Orientador',
-          action: 'LANÇAMENTO_NOTA_ATA',
-          details: `Lançamento do Parecer Final e Nota: ${pData.avaliacao.notaFinal?.toFixed(2)} (${pData.avaliacao.resultadoLabel})`
+          action: 'REGISTRO_RESULTADO_PARECER',
+          details: `Registro do resultado final e parecer da avaliação`
         });
       }
 

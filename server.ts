@@ -68,7 +68,7 @@ import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connec
 import { appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, getSupabaseRuntimeStatus, loadPortalRuntimeState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
-import { buildProcessArchiveFileName, downloadDrivePdf, ensurePortalProcessDriveFolder, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadProcessSourcePdf, uploadSignedPdfToDrive, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
+import { buildProcessArchiveFileName, downloadDrivePdf, ensurePortalProcessDriveFolder, publishPrivatePdfCopy, withdrawDriveFilePublicAccess, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadProcessSourcePdf, uploadSignedPdfToDrive, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
 import { renderGoogleDriveTemplateToPdf } from './server/integrations/googleDocsRenderer';
 import { dispatchTrackedEmail } from './server/integrations/trackedGmail';
 import { buildProcessVariables, compileWorkflow, executeWorkflowEvent, mergeWorkflowHtmlVariables, mergeWorkflowVariables, normalizeWorkflowEventCode, parseRecipients } from './server/workflow/runtime';
@@ -608,16 +608,17 @@ function preserveCurrentDriveBindings(snapshot:any,current?:ProcessData):Process
 }
 function publicationRequested(p:ProcessData):boolean{return Boolean(p.acervo?.publishFullWork||p.acervo?.publishExpandedAbstract);}
 function publicProcessView(p:ProcessData):any{
-  // DTO por lista branca: nenhum campo interno é propagado por spread a uma rota anônima.
+  // DTO por lista branca: nenhuma matrícula, e-mail, SIAPE, ID interno de pessoa ou vínculo do Drive sai em rota anônima.
+  const repositoryState=p.status!=='CONCLUIDO'?'NOT_PRESENTED':p.acervo?.publicationState==='PUBLIC'?'PUBLIC':'PRIVATE';
   return {
-    id:p.id,protocolo:p.protocolo,titulo:p.titulo,etapaAtual:p.etapaAtual,status:p.status,
-    aluno1:{nome:p.aluno1.nome,email:'',matricula:p.aluno1.matricula},aluno2:p.aluno2?{nome:p.aluno2.nome,email:'',matricula:p.aluno2.matricula}:null,
-    orientador:{nome:p.orientador.nome,email:''},coorientador:p.coorientador?{nome:p.coorientador.nome,email:'',instituicao:p.coorientador.instituicao||''}:null,
-    banca:p.banca.map(member=>({id:member.id,nome:member.nome,email:'',funcao:member.funcao,membroTipo:member.membroTipo,instituicao:member.instituicao,profissao:member.profissao,titulacao:member.titulacao})),
+    id:p.protocolo,protocolo:p.protocolo,titulo:p.titulo,etapaAtual:p.etapaAtual,status:p.status,
+    aluno1:{nome:p.aluno1.nome},aluno2:p.aluno2?{nome:p.aluno2.nome}:null,
+    orientador:{nome:p.orientador.nome},coorientador:p.coorientador?{nome:p.coorientador.nome,instituicao:p.coorientador.instituicao||''}:null,
+    banca:p.banca.map(member=>({nome:member.nome,funcao:member.funcao,membroTipo:member.membroTipo,instituicao:member.instituicao,profissao:member.profissao,titulacao:member.titulacao})),
     defesa:{startAt:p.defesa.startAt,endAt:p.defesa.endAt,local:p.defesa.local,localStatus:p.defesa.localStatus},
     avaliacao:{status:p.avaliacao.status,resultadoCode:p.avaliacao.resultadoCode,resultadoLabel:p.avaliacao.resultadoLabel},
-    acervo:p.acervo?{palavrasChave:[...(p.acervo.palavrasChave||[])],resumoSintese:p.acervo.resumoSintese,publishFullWork:Boolean(p.acervo.publishFullWork),publishExpandedAbstract:Boolean(p.acervo.publishExpandedAbstract),trabalhoCompletoFileUrl:p.acervo.publishFullWork?`/api/public/processes/${p.id}/files/trabalho-completo/download`:undefined,resumoExpandidoFileUrl:p.acervo.publishExpandedAbstract?`/api/public/processes/${p.id}/files/resumo-expandido/download`:undefined,submittedAt:p.acervo.submittedAt}:undefined,
-    dataRevision:p.dataRevision,createdAt:p.createdAt,updatedAt:p.updatedAt
+    acervo:p.acervo?{palavrasChave:[...(p.acervo.palavrasChave||[])],resumoSintese:p.acervo.resumoSintese,publishFullWork:repositoryState==='PUBLIC'&&Boolean(p.acervo.publishFullWork&&p.acervo.publicFullWorkFileUrl),publishExpandedAbstract:repositoryState==='PUBLIC'&&Boolean(p.acervo.publishExpandedAbstract&&p.acervo.publicExpandedAbstractFileUrl),trabalhoCompletoFileUrl:repositoryState==='PUBLIC'&&p.acervo.publishFullWork?p.acervo.publicFullWorkFileUrl:undefined,resumoExpandidoFileUrl:repositoryState==='PUBLIC'&&p.acervo.publishExpandedAbstract?p.acervo.publicExpandedAbstractFileUrl:undefined,submittedAt:p.acervo.submittedAt,publicationState:repositoryState,publicationLabel:repositoryState==='PUBLIC'?'Publicado':repositoryState==='PRIVATE'?'Não publicado pelo autor':'Não apresentado'}:undefined,
+    createdAt:p.createdAt,updatedAt:p.updatedAt
   };
 }
 function canAccessProcess(email:string,id:string):boolean{const r=getUserRolesForEmail(email);if(r.globalRoles.length>0)return true;const authorized=authorizedStudentsStore.some(entry=>entry.active&&normalizeEmail(entry.email)===normalizeEmail(email));return authorized&&r.memberships.some(m=>m.processId===id&&m.active);}
@@ -697,7 +698,8 @@ function findDefenseConflicts(input:{startAt:string;endAt:string;local:string;em
   });
 }
 function coauthorIsPending(process:ProcessData):boolean{return Boolean(process.aluno2&&process.coauthorAcceptance?.status==='PENDING');}
-function rejectPendingCoauthor(process:ProcessData,res:express.Response):boolean{if(coauthorIsPending(process)){res.status(409).json({error:'O segundo autor precisa aceitar o vínculo antes de o fluxo continuar.',code:'COAUTHOR_ACCEPTANCE_REQUIRED'});return true;}return false;}
+function coauthorBlocksWorkflow(process:ProcessData):boolean{return Boolean(process.aluno2&&process.coauthorAcceptance?.status!=='ACCEPTED');}
+function rejectPendingCoauthor(process:ProcessData,res:express.Response):boolean{if(!coauthorBlocksWorkflow(process))return false;const rejected=process.coauthorAcceptance?.status==='REJECTED';res.status(409).json({error:rejected?'O segundo autor recusou o vínculo. Corrija a autoria antes de continuar.':'O segundo autor precisa aceitar o vínculo antes de o fluxo continuar.',code:rejected?'COAUTHOR_ACCEPTANCE_REJECTED':'COAUTHOR_ACCEPTANCE_REQUIRED'});return true;}
 function missingDocumentModels(types:Array<'CONVITE'|'ATA'|'TERMO'|'DECLARACAO'>):string[]{return types.filter(type=>!currentSettings.documentModels?.[type]?.driveFileId);}
 function publicSignatureJob(job:SignatureJob):SignatureJob{const{artifactBase64:_artifact,...safe}=job;return safe as SignatureJob;}
 function escapeHtml(v:string){return v.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]||c));}
@@ -744,6 +746,23 @@ function buildFormSnapshotBody(process:ProcessData,formType:ProcessFormArchiveTy
 async function archiveProcessFormSnapshot(process:ProcessData,formType:ProcessFormArchiveType):Promise<FormArchiveJob>{
   const pdf=createProfessionalPdf({title:`FORMULÁRIO — ${formType.replaceAll('_',' ')}`,protocol:process.protocolo,body:buildFormSnapshotBody(process,formType),institution:currentSettings.integrationStudio?.brandKit?.institutionName,course:currentSettings.integrationStudio?.brandKit?.courseName,footer:'Cópia imutável arquivada pelo Portal de TCC'});const sha256=createHash('sha256').update(pdf).digest('hex');const id=createHash('sha256').update(`${process.id}|${formType}|${process.dataRevision}|${sha256}`).digest('hex').slice(0,28);let job=formArchiveJobsStore.find(item=>item.id===`form_${id}`);if(!job){const now=new Date().toISOString();job={id:`form_${id}`,processId:process.id,formType,version:process.dataRevision,sha256,artifactBase64:pdf.toString('base64'),status:'PENDING',createdAt:now,updatedAt:now};formArchiveJobsStore.push(job);}try{const accessToken=await getGoogleWorkspaceAccessToken();if(!currentSettings.driveRootFolderId)throw new Error('Pasta raiz do Drive não configurada.');if(!process.driveFolderId){const folder=await ensurePortalProcessDriveFolder({accessToken,rootFolderId:currentSettings.driveRootFolderId,protocol:process.protocolo,processId:process.id});process.driveFolderId=folder.id;process.driveFolderUrl=folder.webViewLink;process.driveSyncedAt=new Date().toISOString();}const uploaded=await uploadProcessFormPdf({accessToken,processFolderId:process.driveFolderId,processId:process.id,protocol:process.protocolo,studentNames:[process.aluno1.nome,process.aluno2?.nome].filter(Boolean) as string[],formType,version:process.dataRevision,pdf,sha256});job.status='ARCHIVED';job.driveFileId=String(uploaded.id);job.fileName=String(uploaded.name||'');job.artifactBase64='';job.lastError=undefined;job.updatedAt=new Date().toISOString();}catch(error){job.status='FAILED';job.lastError=error instanceof Error?error.message:'Falha ao arquivar o formulário.';job.updatedAt=new Date().toISOString();}await persistPortalStateDurably();return job;
 }
+async function retryExistingFormArchiveJob(job:FormArchiveJob,process:ProcessData):Promise<FormArchiveJob>{
+  if(job.status==='ARCHIVED')return job;
+  if(!job.artifactBase64)throw new Error('A cópia imutável do formulário não está disponível para nova tentativa.');
+  const pdf=Buffer.from(job.artifactBase64,'base64');
+  if(!pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('A cópia imutável do formulário não é um PDF válido.');
+  const actualSha=createHash('sha256').update(pdf).digest('hex');
+  if(actualSha!==job.sha256)throw new Error('A cópia imutável do formulário falhou na verificação de integridade.');
+  try{
+    const accessToken=await getGoogleWorkspaceAccessToken();
+    if(!currentSettings.driveRootFolderId)throw new Error('Pasta raiz do Drive não configurada.');
+    if(!process.driveFolderId){const folder=await ensurePortalProcessDriveFolder({accessToken,rootFolderId:currentSettings.driveRootFolderId,protocol:process.protocolo,processId:process.id});process.driveFolderId=folder.id;process.driveFolderUrl=folder.webViewLink;process.driveSyncedAt=new Date().toISOString();}
+    const uploaded=await uploadProcessFormPdf({accessToken,processFolderId:process.driveFolderId,processId:process.id,protocol:process.protocolo,studentNames:[process.aluno1.nome,process.aluno2?.nome].filter(Boolean) as string[],formType:job.formType,version:job.version,pdf,sha256:job.sha256});
+    job.status='ARCHIVED';job.driveFileId=String(uploaded.id);job.fileName=String(uploaded.name||'');job.artifactBase64='';job.lastError=undefined;job.updatedAt=new Date().toISOString();
+  }catch(error){job.status='FAILED';job.lastError=error instanceof Error?error.message:'Falha ao arquivar o formulário.';job.updatedAt=new Date().toISOString();}
+  await persistPortalStateDurably();return job;
+}
+
 async function resumeWorkflowAfterNativeFormArchive(process:ProcessData,formType:ProcessFormArchiveType,actorEmail:string,resumeRun?:WorkflowRun):Promise<void>{
   if(formType==='CADASTRO_INICIAL'){await executeConfiguredWorkflowEvent(process,'TCC_CREATED',actorEmail,undefined,resumeRun);return;}
   if(formType==='CONFIRMACAO_LOCAL'){
@@ -1046,6 +1065,19 @@ function updateProcessCompletion(processId:string):void{
     process.etapaAtual='CONCLUIDO';process.status='CONCLUIDO';process.completedAt=process.completedAt||new Date().toISOString();process.updatedAt=process.completedAt;
   }
 }
+async function syncAuthorizedPublication(process:ProcessData,actorEmail:string):Promise<void>{
+  if(!publicationRequested(process)){process.acervo={...process.acervo,publicationState:process.acervo?.publicationWithdrawnAt?'WITHDRAWN':'NOT_REQUESTED'};return;}
+  if(!process.acervo?.authorizationConfirmedAt)throw new Error('A publicação foi solicitada, mas a autorização expressa não foi confirmada.');
+  if(!process.driveFolderId)throw new Error('A pasta privada do processo ainda não está sincronizada com o Drive.');
+  const accessToken=await getGoogleWorkspaceAccessToken();
+  const next:NonNullable<ProcessData['acervo']>={...process.acervo,publicationState:'PENDING_SYNC'};
+  if(process.acervo.publishFullWork){if(!process.acervo.trabalhoCompletoFileId)throw new Error('O PDF completo autorizado não está arquivado no Drive.');const published=await publishPrivatePdfCopy({accessToken,processFolderId:process.driveFolderId,sourceFileId:process.acervo.trabalhoCompletoFileId,processId:process.id,artifactType:'TRABALHO_COMPLETO',sha256:process.acervo.trabalhoCompletoSha256,version:process.acervo.trabalhoCompletoVersion});next.publicFullWorkFileId=published.id;next.publicFullWorkFileUrl=published.webViewLink;}
+  if(process.acervo.publishExpandedAbstract){if(!process.acervo.resumoExpandidoFileId)throw new Error('O resumo expandido autorizado não está arquivado no Drive.');const published=await publishPrivatePdfCopy({accessToken,processFolderId:process.driveFolderId,sourceFileId:process.acervo.resumoExpandidoFileId,processId:process.id,artifactType:'RESUMO_EXPANDIDO',sha256:process.acervo.resumoExpandidoSha256,version:process.acervo.resumoExpandidoVersion});next.publicExpandedAbstractFileId=published.id;next.publicExpandedAbstractFileUrl=published.webViewLink;}
+  const now=new Date().toISOString();next.publicationState='PUBLIC';next.publicationSyncedAt=now;process.acervo=next;
+  const details={fullWork:next.publicFullWorkFileId?{fileId:next.publicFullWorkFileId,version:next.trabalhoCompletoVersion,sha256:next.trabalhoCompletoSha256}:null,expandedAbstract:next.publicExpandedAbstractFileId?{fileId:next.publicExpandedAbstractFileId,version:next.resumoExpandidoVersion,sha256:next.resumoExpandidoSha256}:null};
+  auditLogsStore.push({id:`log-${Date.now()}-publish`,processId:process.id,actorEmail,actorRoles:getUserRolesForEmail(actorEmail).globalRoles,action:'PUBLICACAO_DRIVE_SINCRONIZADA',entityType:'publication',entityId:process.id,after:details,timestamp:now});
+}
+
 function missingSignatureJobsForRevision(process:ProcessData,types:Array<'ATA'|'TERMO'|'DECLARACAO'>):string[]{
   return types.filter(type=>!signatureJobsStore.some(job=>job.processId===process.id&&job.documentType===type&&job.sourceDataRevision===process.dataRevision&&job.status!=='CANCELED'));
 }
@@ -1066,7 +1098,7 @@ async function archiveSignatureJobAutomatically(job:SignatureJob):Promise<Signat
     const fileName=buildPortalDriveFileName({protocol:process.protocolo,title:process.titulo,studentNames:[process.aluno1.nome,process.aluno2?.nome].filter(Boolean) as string[],documentType:job.documentType,version:job.documentVersion,lifecycle:'ASSINADO'});
     const signedSha256=createHash('sha256').update(pdf).digest('hex');
     const driveFile=await uploadSignedPdfToDrive({rootFolderId:currentSettings.driveRootFolderId,protocol:process.protocolo,accessToken:googleAccessToken,processFolderId:process.driveFolderId,processId:process.id,jobId:job.id,documentType:job.documentType,fileName,pdf,sha256:signedSha256});
-    const wasCompleted=process.status==='CONCLUIDO';job.driveSignedFileId=String(driveFile.id);job.driveSignedWebViewLink=String(driveFile.webViewLink||'');job.signedSha256=signedSha256;job.verificationCode=job.verificationCode||randomBytes(18).toString('base64url');job.status='ARCHIVED';job.completedAt=job.updatedAt=new Date().toISOString();job.lastError=undefined;if(job.documentType==='ATA'&&!process.acervo?.submittedAt){process.status='AGUARDANDO_DADOS_FINAIS';process.etapaAtual='REPOSITORIO';}if(declarationReady(process,signatureJobsStore))await executeConfiguredWorkflowEvent(process,'PUBLICATION_CLEARED','webhook@asten.local');updateProcessCompletion(process.id);await executeConfiguredWorkflowEvent(process,'SIGNATURE_COMPLETED','webhook@asten.local');if(!wasCompleted&&process.status==='CONCLUIDO')await executeConfiguredWorkflowEvent(process,'PROCESS_COMPLETED','webhook@asten.local');
+    const wasCompleted=process.status==='CONCLUIDO';job.driveSignedFileId=String(driveFile.id);job.driveSignedWebViewLink=String(driveFile.webViewLink||'');job.signedSha256=signedSha256;job.verificationCode=job.verificationCode||randomBytes(18).toString('base64url');job.status='ARCHIVED';job.completedAt=job.updatedAt=new Date().toISOString();job.lastError=undefined;if(job.documentType==='ATA'&&!process.acervo?.submittedAt){process.status='AGUARDANDO_DADOS_FINAIS';process.etapaAtual='REPOSITORIO';}if(declarationReady(process,signatureJobsStore)){await syncAuthorizedPublication(process,'webhook@asten.local');await executeConfiguredWorkflowEvent(process,'PUBLICATION_CLEARED','webhook@asten.local');}updateProcessCompletion(process.id);await executeConfiguredWorkflowEvent(process,'SIGNATURE_COMPLETED','webhook@asten.local');if(!wasCompleted&&process.status==='CONCLUIDO')await executeConfiguredWorkflowEvent(process,'PROCESS_COMPLETED','webhook@asten.local');
   }catch(error){job.status='DRIVE_SYNC_PENDING';job.lastError=error instanceof Error?error.message:'Falha ao arquivar PDF assinado.';job.updatedAt=new Date().toISOString();}
   persistPortalState();return job;
 }
@@ -1677,6 +1709,9 @@ export async function createPortalApp() {
   });
 
   // GET /api/processes
+  app.get('/api/public/calendar',(_req,res)=>res.json(processesStore.filter(p=>p.status!=='EM_RASCUNHO'&&p.status!=='CONCLUIDO').map(publicProcessView)));
+  app.get('/api/public/repository',(_req,res)=>res.json(processesStore.filter(p=>p.status==='CONCLUIDO').map(publicProcessView)));
+
   app.get('/api/processes', (req, res) => {
     const identity=getPortalIdentity(req);if(!identity)return res.json(processesStore.filter(p=>p.status!=='EM_RASCUNHO').map(publicProcessView));const email=identity.email;
     const { memberships } = getUserRolesForEmail(email);
@@ -2310,7 +2345,7 @@ export async function createPortalApp() {
     persistPortalState();const finalArchive=await archiveProcessFormSnapshot(updated,'DADOS_FINAIS');if(finalArchive.status!=='ARCHIVED')return res.status(202).json({...updated,workflowPending:true,workflowError:finalArchive.lastError});const repositoryRun=await executeConfiguredWorkflowEvent(updated,'REPOSITORY_SUBMITTED',identity.email);if(declarationReady(updated,signatureJobsStore))await executeConfiguredWorkflowEvent(updated,'PUBLICATION_CLEARED',identity.email);const requiredFinalDocuments:Array<'TERMO'|'DECLARACAO'>=wantsPublication?['TERMO']:['DECLARACAO'];const missingFinalDocuments=missingSignatureJobsForRevision(updated,requiredFinalDocuments);if(!repositoryRun||repositoryRun.status!=='COMPLETED'||missingFinalDocuments.length)return res.status(202).json({...updated,workflowPending:true,workflowError:repositoryRun?.actions.find(action=>action.status==='FAILED')?.error||`O fluxo de documentos finais não criou: ${missingFinalDocuments.join(', ')||'documento obrigatório'}.`});res.json(updated);
   });
 
-  app.post('/api/admin/processes/:id/publication/withdraw',requireAuthenticated,requireAdministrator,(req,res)=>{
+  app.post('/api/admin/processes/:id/publication/withdraw',requireAuthenticated,requireAdministrator,async(req,res)=>{
     const identity=getPortalIdentity(req)!;
     const index=processesStore.findIndex(process=>process.id===req.params.id);
     if(index<0)return res.status(404).json({error:'Processo não encontrado.'});
@@ -2319,8 +2354,9 @@ export async function createPortalApp() {
     const process=processesStore[index];
     if(!publicationRequested(process))return res.status(409).json({error:'Este TCC não possui publicação ativa.'});
     const now=new Date().toISOString();
-    const before={publishFullWork:process.acervo?.publishFullWork,publishExpandedAbstract:process.acervo?.publishExpandedAbstract};
-    const updated:ProcessData={...process,acervo:{...process.acervo,publishFullWork:false,publishExpandedAbstract:false,isPublic:false,publicationWithdrawnAt:now,publicationWithdrawnBy:identity.email,publicationWithdrawalReason:reason},dataRevision:process.dataRevision+1,updatedAt:now};
+    const before={publishFullWork:process.acervo?.publishFullWork,publishExpandedAbstract:process.acervo?.publishExpandedAbstract,publicFullWorkFileId:process.acervo?.publicFullWorkFileId,publicExpandedAbstractFileId:process.acervo?.publicExpandedAbstractFileId};
+    try{const accessToken=await getGoogleWorkspaceAccessToken();if(process.acervo?.publicFullWorkFileId)await withdrawDriveFilePublicAccess(accessToken,process.acervo.publicFullWorkFileId);if(process.acervo?.publicExpandedAbstractFileId)await withdrawDriveFilePublicAccess(accessToken,process.acervo.publicExpandedAbstractFileId);}catch(error){return res.status(502).json({error:error instanceof Error?error.message:'Não foi possível remover o acesso público no Drive.'});}
+    const updated:ProcessData={...process,acervo:{...process.acervo,publishFullWork:false,publishExpandedAbstract:false,isPublic:false,publicationState:'WITHDRAWN',publicationWithdrawnAt:now,publicationWithdrawnBy:identity.email,publicationWithdrawalReason:reason},dataRevision:process.dataRevision+1,updatedAt:now};
     processesStore[index]=updated;
     auditLogsStore.push({id:`log-${Date.now()}`,processId:process.id,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'RETIRADA_PUBLICACAO_REPOSITORIO',entityType:'publication',entityId:process.id,before,after:{reason,withdrawnAt:now},timestamp:now});
     persistPortalState();res.json({processId:process.id,withdrawnAt:now,public:false});
@@ -2603,7 +2639,7 @@ export async function createPortalApp() {
   });
   app.get('/api/admin/workflow-runs',requireAuthenticated,requireAdministrator,(_req,res)=>res.json(workflowRunsStore.slice().reverse()));
   app.get('/api/admin/form-archives',requireAuthenticated,requireAdministrator,(_req,res)=>res.json(formArchiveJobsStore.slice().reverse().map(({artifactBase64:_artifact,...item})=>item)));
-  app.post('/api/admin/form-archives/:id/retry',requireAuthenticated,requireAdministrator,async(req,res)=>{const identity=getPortalIdentity(req)!;const job=formArchiveJobsStore.find(item=>item.id===req.params.id);if(!job)return res.status(404).json({error:'Arquivamento não encontrado.'});const process=processesStore.find(item=>item.id===job.processId);if(!process)return res.status(409).json({error:'O processo do formulário não está disponível.'});const updated=await archiveProcessFormSnapshot(process,job.formType);if(updated.status==='ARCHIVED')await resumeWorkflowAfterNativeFormArchive(process,updated.formType,identity.email);const{artifactBase64:_artifact,...safe}=updated;res.status(updated.status==='ARCHIVED'?200:409).json(safe);});
+  app.post('/api/admin/form-archives/:id/retry',requireAuthenticated,requireAdministrator,async(req,res)=>{const identity=getPortalIdentity(req)!;const job=formArchiveJobsStore.find(item=>item.id===req.params.id);if(!job)return res.status(404).json({error:'Arquivamento não encontrado.'});const process=processesStore.find(item=>item.id===job.processId);if(!process)return res.status(409).json({error:'O processo do formulário não está disponível.'});const updated=await retryExistingFormArchiveJob(job,process);if(updated.status==='ARCHIVED')await resumeWorkflowAfterNativeFormArchive(process,updated.formType,identity.email);const{artifactBase64:_artifact,...safe}=updated;res.status(updated.status==='ARCHIVED'?200:409).json(safe);});
   app.get('/api/admin/studio-form-submissions',requireAuthenticated,requireAdministrator,(_req,res)=>res.json(studioFormSubmissionsStore.slice().reverse()));
   app.post('/api/admin/studio-form-submissions/:id/retry', requireAuthenticated, requireAdministrator, async (req, res) => {
     const identity = getPortalIdentity(req)!;

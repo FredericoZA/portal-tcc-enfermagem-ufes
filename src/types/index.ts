@@ -180,6 +180,12 @@ export interface ProcessAcervoInfo {
   publicationWithdrawnAt?: string;
   publicationWithdrawnBy?: string;
   publicationWithdrawalReason?: string;
+  publicFullWorkFileId?: string;
+  publicFullWorkFileUrl?: string;
+  publicExpandedAbstractFileId?: string;
+  publicExpandedAbstractFileUrl?: string;
+  publicationSyncedAt?: string;
+  publicationState?: 'NOT_REQUESTED' | 'PENDING_SYNC' | 'PUBLIC' | 'WITHDRAWN';
   workType?: 'MONOGRAFIA' | 'ARTIGO' | 'OUTRO';
   authorizationConfirmedAt?: string;
   submittedAt?: string;
@@ -324,6 +330,15 @@ export interface AuditLog {
   timestamp: string;
 }
 
+export interface CommissionMemberInfo {
+  id: string;
+  name: string;
+  email?: string;
+  startDate?: string;
+  endDate?: string;
+  active: boolean;
+}
+
 export interface GlobalSettings {
   installationProfile?: InstallationProfile;
   academicCycles?: AcademicCycle[];
@@ -355,6 +370,7 @@ export interface GlobalSettings {
   ownerEmail?: string;
   commissionPresidentName?: string;
   commissionPresidentEmail?: string;
+  commissionMembers?: CommissionMemberInfo[];
   isSystemBlocked?: boolean;
   blockedAt?: string;
   blockedBy?: string;

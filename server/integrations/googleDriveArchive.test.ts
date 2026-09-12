@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildProcessArchiveFileName } from './googleDriveArchive';
+import { buildProcessArchiveFileName, isUnsafePrivateContainerPermission } from './googleDriveArchive';
 
 test('nome de formulário contém código, alunos, tipo e versão', () => {
   assert.equal(
@@ -23,4 +23,13 @@ test('nome de arquivo remove caracteres impróprios do Drive', () => {
     extension: '.p$d$f'
   });
   assert.match(fileName, /^TCC_2026_0001__ALUNO__CADASTRO_INICIAL__v001\.pdf$/);
+});
+
+
+test('pasta privada aceita usuários nominais e bloqueia compartilhamento amplo', () => {
+  assert.equal(isUnsafePrivateContainerPermission({type:'user',role:'writer',emailAddress:'secretaria@ufes.br'}), false);
+  assert.equal(isUnsafePrivateContainerPermission({type:'user',role:'reader',emailAddress:'docente@ufes.br'}), false);
+  assert.equal(isUnsafePrivateContainerPermission({type:'anyone',role:'reader'}), true);
+  assert.equal(isUnsafePrivateContainerPermission({type:'domain',role:'reader',domain:'ufes.br'}), true);
+  assert.equal(isUnsafePrivateContainerPermission({type:'group',role:'reader'}), true);
 });

@@ -40,7 +40,7 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
           </h1>
         </div>
         <p className="text-[10px] sm:text-[11px] text-emerald-100/95 font-medium leading-normal mt-0.5">
-          Confira os dados do aluno, registre a nota final, selecione o resultado e preencha o parecer da banca.
+          Confira os dados do aluno, selecione o resultado e registre o parecer e preencha o parecer da banca.
         </p>
       </div>
 

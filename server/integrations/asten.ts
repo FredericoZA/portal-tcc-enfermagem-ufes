@@ -240,7 +240,9 @@ export function assertAstenEnvelopeSigners(response: unknown, expected: Array<{e
       const flag=value.assinado??value.assinaturaRealizada??value.signed;
       const flagText=normalizedStatus(flag);
       const statusText=normalizedStatus(value.statusAssinatura??value.situacaoAssinatura??value.status??value.situacao);
-      const signed=Boolean(signedAt)||(typeof flag==='boolean'&&flag)||['s','sim','true','1'].includes(flagText)||/assinad|conclu|finaliz/.test(statusText);
+      const negativeStatus=/(^|\b)(nao[ _-]?assinado|pendente|aguardando|recusad|cancelad|expirad|nao[ _-]?conclu|nao[ _-]?finaliz)(\b|$)/.test(statusText);
+      const positiveStatus=/(^|\b)(assinado|concluido|concluida|finalizado|finalizada)(\b|$)/.test(statusText);
+      const signed=!negativeStatus&&(Boolean(signedAt)||(typeof flag==='boolean'&&flag)||['s','sim','true','1'].includes(flagText)||positiveStatus);
       evidence.push({email,order,signed});
       return;
     }

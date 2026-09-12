@@ -18,11 +18,18 @@ async function driveRequest(url: string, accessToken: string, init: RequestInit 
   return response;
 }
 
+export function isUnsafePrivateContainerPermission(permission:any):boolean{
+  const type=String(permission?.type||'').toLowerCase();
+  const role=String(permission?.role||'').toLowerCase();
+  if(type!=='user')return true;
+  return !['owner','organizer','fileorganizer','writer','commenter','reader'].includes(role);
+}
+
 async function assertPrivateContainer(accessToken:string,fileId:string){
   const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}/permissions?fields=permissions(id,type,role,domain,emailAddress)&supportsAllDrives=true`,accessToken);
   const permissions=(await response.json()).permissions||[];
-  const unauthorized=permissions.filter((permission:any)=>permission.type!=='user'||permission.role!=='owner');
-  if(unauthorized.length)throw new Error('O destino no Google Drive não é exclusivo da conta proprietária. Remova acessos por link, domínio, grupo ou usuário adicional antes de armazenar documentos sigilosos.');
+  const unauthorized=permissions.filter(isUnsafePrivateContainerPermission);
+  if(unauthorized.length)throw new Error('O destino no Google Drive possui compartilhamento público, por domínio, grupo ou permissão não reconhecida. Acesso nominal de usuários autorizados pode permanecer.');
 }
 
 async function ensureFolder(accessToken: string, parentId: string, name: string) {
@@ -151,6 +158,43 @@ export async function uploadProcessSourcePdf(input:{accessToken:string;processFo
     await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.previousFileId)}?fields=id&supportsAllDrives=true`,input.accessToken,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({appProperties:{lifecycle:'SUPERSEDED',supersededBy:String(created.id),supersededAt:new Date().toISOString()}})});
   }
   return created;
+}
+
+export async function publishPrivatePdfCopy(input:{accessToken:string;processFolderId:string;sourceFileId:string;processId:string;artifactType:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO';sha256?:string;version?:number}){
+  await assertPrivateContainer(input.accessToken,input.processFolderId);
+  await assertPrivateContainer(input.accessToken,input.sourceFileId);
+  const sourceResponse=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.sourceFileId)}?fields=id,name,mimeType,trashed,appProperties&supportsAllDrives=true`,input.accessToken);
+  const source=await sourceResponse.json();
+  if(source.trashed||source.mimeType!=='application/pdf')throw new Error('O arquivo de origem autorizado não é um PDF disponível.');
+  if(input.sha256&&source.appProperties?.sha256&&source.appProperties.sha256!==input.sha256)throw new Error('O hash do arquivo de origem diverge da versão autorizada.');
+  const publicationFolder=await ensureFolder(input.accessToken,input.processFolderId,'08_PUBLICACAO');
+  const query=`'${escapeQuery(publicationFolder.id)}' in parents and appProperties has { key='publicationSourceFileId' and value='${escapeQuery(input.sourceFileId)}' } and trashed = false`;
+  const existingResponse=await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink,appProperties)&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true`,input.accessToken);
+  const existing=(await existingResponse.json()).files||[];
+  if(existing.length>1)throw new Error('Há cópias públicas duplicadas para a mesma versão do arquivo.');
+  let file=existing[0];
+  if(!file){
+    const publicName=`PUBLICO__${String(source.name||input.artifactType).replace(/[^a-zA-Z0-9À-ÿ._ -]/g,"_").slice(0,150)}`;
+    const copied=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.sourceFileId)}/copy?fields=id,name,webViewLink,appProperties&supportsAllDrives=true`,input.accessToken,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:publicName,parents:[publicationFolder.id],appProperties:{portal:'portal-tcc',portalProcessId:input.processId,artifactType:input.artifactType,publicationSourceFileId:input.sourceFileId,sha256:input.sha256||source.appProperties?.sha256||'',artifactVersion:String(input.version||source.appProperties?.artifactVersion||1),lifecycle:'PUBLIC_COPY'}})});
+    file=await copied.json();
+  }
+  const permissionsResponse=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(file.id)}/permissions?fields=permissions(id,type,role)&supportsAllDrives=true`,input.accessToken);
+  const permissions=(await permissionsResponse.json()).permissions||[];
+  if(!permissions.some((permission:any)=>permission.type==='anyone'&&permission.role==='reader')){
+    await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(file.id)}/permissions?supportsAllDrives=true&sendNotificationEmail=false`,input.accessToken,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'anyone',role:'reader',allowFileDiscovery:false})});
+  }
+  return {id:String(file.id),webViewLink:String(file.webViewLink||`https://drive.google.com/file/d/${file.id}/view`),name:String(file.name||source.name||''),sha256:String(input.sha256||source.appProperties?.sha256||''),version:Number(input.version||source.appProperties?.artifactVersion||1)};
+}
+
+export async function withdrawDriveFilePublicAccess(accessToken:string,fileId:string):Promise<{removed:number}>{
+  if(!fileId)return {removed:0};
+  const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}/permissions?fields=permissions(id,type,role)&supportsAllDrives=true`,accessToken);
+  const permissions=(await response.json()).permissions||[];
+  const publicPermissions=permissions.filter((permission:any)=>permission.type==='anyone');
+  for(const permission of publicPermissions){
+    await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}/permissions/${encodeURIComponent(permission.id)}?supportsAllDrives=true`,accessToken,{method:'DELETE'});
+  }
+  return {removed:publicPermissions.length};
 }
 
 export async function downloadDrivePdf(accessToken:string,fileId:string,expected?:{processId?:string;artifactType?:string;signatureJobId?:string}):Promise<{pdf:Buffer;fileName:string}>{
