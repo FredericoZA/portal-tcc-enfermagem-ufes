@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Menu, Shield, User, Building2 } from 'lucide-react';
-import { NursingEmblemLogo } from './NursingEmblemLogo';
+import { Menu, Shield, User } from 'lucide-react';
 import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { NotificationBell } from './NotificationBell';
@@ -14,8 +13,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome, title }) => {
   const { userEmail, globalRoles, memberships, settings } = useAuth();
-  const installationProfile=resolveInstallationProfile(settings);
-  const configuredLogo=settings?.integrationStudio?.brandKit?.courseLogoUrl||settings?.integrationStudio?.brandKit?.universityLogoUrl||'';
+  const installationProfile = resolveInstallationProfile(settings);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
 
   useEffect(() => {
@@ -52,8 +50,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome, t
       style={headerStyle}
     >
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-1.5 sm:py-2 flex items-center justify-between gap-3">
-        
-        {/* Left: Mobile Menu Trigger & Title */}
         <div className="flex items-center gap-3">
           <button
             id="open-mobile-sidebar-btn"
@@ -65,15 +61,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome, t
           </button>
 
           <div className="flex items-center gap-2">
-            {layoutConfig.headerCustomLogoUrl ? (
-              <img
-                src={layoutConfig.headerCustomLogoUrl}
-                alt="Logo do Cabeçalho"
-                className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0 rounded-md"
-              />
-            ) : layoutConfig.headerShowEmblem ? (
-              <NursingEmblemLogo size={34} className="shrink-0" customSrc={configuredLogo} />
-            ) : null}
+            <span
+              aria-hidden="true"
+              className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-xl sm:text-[22px] leading-none"
+              title="Portal acadêmico de TCC"
+            >
+              🎓
+            </span>
 
             <button
               type="button"
@@ -91,17 +85,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome, t
                 className="text-[11px] sm:text-xs md:text-sm font-black tracking-tight uppercase leading-snug flex items-center gap-1.5"
                 style={{ color: layoutConfig.headerTitleColor || '#0f172a' }}
               >
-                {!layoutConfig.headerCustomLogoUrl && !layoutConfig.headerShowEmblem && (
-                  <Building2 className="w-4 h-4 text-emerald-700 shrink-0" />
-                )}
                 <span>{layoutConfig.headerCourseTitle || installationProfile.courseName}</span>
               </h1>
-              {title&&<div className="mt-0.5 truncate text-[10px] font-semibold text-slate-500" aria-current="page">{title}</div>}
+              {title && <div className="mt-0.5 truncate text-[10px] font-semibold text-slate-500" aria-current="page">{title}</div>}
             </button>
           </div>
         </div>
 
-        {/* Right: User Status Badges */}
         <div className="hidden md:flex items-center gap-2">
           {userEmail && <NotificationBell />}
           {layoutConfig.headerShowRoleBadges && (
@@ -112,7 +102,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome, t
               </span>
             ) : globalRoles.includes('COMMISSION_PRESIDENT') ? (
               <span id="role-badge-coord" className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
-                <NursingEmblemLogo size={14} customSrc={configuredLogo} />
+                <Shield className="w-3.5 h-3.5 text-emerald-700" />
                 Presidente da Comissão
               </span>
             ) : null
@@ -132,7 +122,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome, t
             </div>
           </div>
         </div>
-
       </div>
     </header>
   );
