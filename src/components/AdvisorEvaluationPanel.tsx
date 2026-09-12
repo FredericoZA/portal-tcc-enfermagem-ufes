@@ -44,7 +44,7 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
     setBusy(true);
     try {
       const data = acceptEvaluationAnswers({ resultadoCode: answers.RESULTADO, parecer: answers.PARECER, answers }, outcomeOptions, studio);
-      const response = await apiClient.submitEvaluation(process.id, { ...data, dataConfirmed: true, expectedDataRevision: process.dataRevision, expectedSchemaRevision: Number(studio.revision || 0) });
+      const response = await apiClient.submitEvaluation(process.id, { ...data, dataConfirmed: true, expectedDataRevision: process.dataRevision, expectedSchemaRevision: Number(studio.revision || 0) } as any);
       setNotice(response.workflowPending ? `Avaliação salva. A geração ou o encaminhamento da ata está pendente: ${response.workflowError || 'a secretaria deve acompanhar a etapa.'}` : 'Avaliação salva. Acompanhe a ata e sua assinatura na Asten na área de documentos.');
       await onUpdated();
     } catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível salvar a avaliação.'); }
