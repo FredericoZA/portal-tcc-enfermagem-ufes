@@ -1,23 +1,30 @@
 import type { InstallationProfile, PortalFeatureFlag } from '../types';
 
+/**
+ * Este repositório é a instalação oficial do Portal TCC da Enfermagem/UFES.
+ * Manter aqui um fallback institucional seguro evita que uma perda/indisponibilidade
+ * temporária da configuração persistida faça a interface voltar a textos genéricos.
+ */
 export const DEFAULT_INSTALLATION_PROFILE: InstallationProfile = {
-  installationId: 'portal-tcc-default',
-  portalName: 'Portal de Trabalhos de Conclusão de Curso',
-  institutionName: 'Instituição não configurada',
-  institutionAcronym: 'IES',
-  courseName: 'Curso não configurado',
-  courseAcronym: 'CURSO',
-  departmentName: 'Unidade acadêmica não configurada',
-  campusName: 'Campus não configurado',
-  city: 'Cidade/UF',
+  installationId: 'ufes-enfermagem',
+  portalName: 'Portal TCC Enfermagem UFES',
+  institutionName: 'Universidade Federal do Espírito Santo',
+  institutionAcronym: 'UFES',
+  courseName: 'Curso de Graduação em Enfermagem e Obstetrícia',
+  courseAcronym: 'ENF',
+  departmentName: 'Departamento de Enfermagem / Centro de Ciências da Saúde',
+  campusName: 'Campus de Maruípe',
+  city: 'Vitória/ES',
   countryCode: 'BR',
   locale: 'pt-BR',
-  studentEmailDomains: [],
-  internalEmailDomains: [],
+  // Há histórico institucional de endereços estudantis em ambos os domínios.
+  // A lista continua configurável pelo Master e serve apenas para validação de alunos.
+  studentEmailDomains: ['edu.ufes.br', 'aluno.ufes.br'],
+  internalEmailDomains: ['ufes.br'],
   protocolPrefix: 'TCC',
-  driveRootFolderName: 'PORTAL_TCC',
-  defaultInstitutionName: 'Instituição não configurada',
-  defaultDefenseLocation: 'Local a confirmar com a unidade acadêmica'
+  driveRootFolderName: 'Portal de TCC',
+  defaultInstitutionName: 'Universidade Federal do Espírito Santo',
+  defaultDefenseLocation: 'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES'
 };
 
 export const DEFAULT_FEATURE_FLAGS: PortalFeatureFlag[] = [
