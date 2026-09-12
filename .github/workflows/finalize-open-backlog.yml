@@ -26,7 +26,20 @@ jobs:
       - name: Instalar dependências
         run: npm ci
       - name: Aplicar correções pendentes
-        run: node scripts/finalize-open-backlog.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/finalize-open-backlog.mjs
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('server.ts')
+          text = path.read_text()
+          old = "const next={...process.acervo,publicationState:'PENDING_SYNC' as const};"
+          new = "const next:NonNullable<ProcessData['acervo']>={...process.acervo,publicationState:'PENDING_SYNC'};"
+          if old not in text:
+              raise SystemExit('Trecho de tipagem de publicação não encontrado')
+          path.write_text(text.replace(old, new, 1))
+          PY
       - name: Validar CI local
         run: npm run test:ci
       - name: Validar fluxo seguro
