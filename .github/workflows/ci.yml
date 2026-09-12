@@ -20,5 +20,10 @@ jobs:
       - run: npm ci
       - run: npm audit --omit=dev --audit-level=high
       - run: npm run test:ci
+      - name: Validar importação do servidor em runtime de produção
+        env:
+          NODE_ENV: production
+          VERCEL: '1'
+        run: node --import tsx --input-type=module -e "await import('./server.ts'); console.log('Importação do servidor em modo produção aprovada.')"
       - run: npm run test:secure-flow
       - run: node scripts/test-institutional-template-contract.mjs
