@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Cloud, Database, ExternalLink, KeyRound, Loader2, Server, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
+import { CommissionIdentityPanel } from './CommissionIdentityPanel';
 
 interface IntegrationState {
   asten: { enabled: boolean; configured: boolean; callbackConfigured: boolean; callbackUrl?:string; dispatchEnabled: boolean; mode: string; securityMessage: string };
@@ -75,6 +76,7 @@ export const InfrastructureIntegrationsPanel: React.FC<Props> = ({ isMaster }) =
   const readyCount=readiness.filter(item=>item.ok).length;
 
   return <div className="space-y-4">
+    <CommissionIdentityPanel isMaster={isMaster} />
     <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
       <div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 text-emerald-700"/><div><h3 className="font-black text-emerald-950">Central segura de integrações</h3><p className="mt-1 text-xs leading-5 text-emerald-900">Segredos nunca entram nas configurações públicas nem nos logs. Google e Asten são autorizados uma vez e suas credenciais ficam criptografadas no servidor.</p></div></div>
     </div>
