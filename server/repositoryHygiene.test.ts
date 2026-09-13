@@ -42,6 +42,23 @@ test('tutorial público não promete dados sensíveis nem documentos privados', 
   assert.ok(!tutorial.includes('Acesse os documentos públicos do processo: convite, ata, autorização e declaração'));
 });
 
+test('Home pública não expõe matrícula nem fallbacks fictícios', async () => {
+  const home = await source('src/pages/HomePage.tsx');
+  const forbidden = [
+    '2026101890',
+    '2026101891',
+    "'Matrícula', defensesTextFormat",
+    "'Matrícula', acervoTextFormat",
+    'proc.aluno1?.matricula',
+    'proc.aluno2?.matricula',
+    'proc.aluno1.matricula',
+    'proc.aluno2.matricula'
+  ];
+  for (const token of forbidden) {
+    assert.ok(!home.includes(token), `Home pública não pode conter ${token}`);
+  }
+});
+
 test('documentação operacional aponta para a homologação vigente', async () => {
   const [checklist, nextRound, current] = await Promise.all([
     source('CHECKLIST_IMPLANTACAO.md'),
