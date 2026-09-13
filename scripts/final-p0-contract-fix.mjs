@@ -40,6 +40,8 @@ const newEndpoints = `  app.get('/api/public/calendar',(_req,res)=>res.json(proc
     const identity=getPortalIdentity(req);if(!identity)return res.json(processesStore.filter(p=>p.status!=='EM_RASCUNHO').map(publicLegacyProcessView));const email=identity.email;`;
 replaceOnce(oldEndpoints, newEndpoints, 'rotas públicas separadas');
 
+replaceOnce(`return res.json(publicProcessView(proc));`, `return res.json(publicLegacyProcessView(proc));`, 'detalhe público por protocolo');
+
 const oldIntegrity = `  app.post('/api/admin/integrity/drive',requireAuthenticated,requireAdministrator,async(req,res)=>{const identity=getPortalIdentity(req)!;if(!currentSettings.driveRootFolderId)return res.status(409).json({error:'Pasta raiz do Drive não configurada.'});try{`;
 const newIntegrity = `  app.post('/api/admin/integrity/drive',requireAuthenticated,requireAdministrator,async(req,res)=>{const identity=getPortalIdentity(req)!;const persistence=getSupabaseRuntimeStatus();if(!persistence.durablePersistenceReady)return res.status(503).json({error:'A persistência Supabase não está pronta; a conferência Portal × Drive não pode ser considerada confiável.'});if(!currentSettings.driveRootFolderId)return res.status(409).json({error:'Pasta raiz do Drive não configurada.'});try{`;
 replaceOnce(oldIntegrity, newIntegrity, 'integridade Supabase x Drive');
