@@ -1,5 +1,6 @@
 name: Resolve open backlog
 
+# One-shot de resolução final; remover após CI e smoke de produção aprovados.
 on:
   push:
     branches: [main]
