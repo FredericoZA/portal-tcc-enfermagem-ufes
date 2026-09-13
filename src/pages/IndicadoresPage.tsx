@@ -47,7 +47,7 @@ const MetricCard: React.FC<{
         <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">{label}</p>
         <strong className="mt-2 block text-3xl font-black text-slate-950">{value}</strong>
       </div>
-      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-[#005830]">
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-[#5f6937]">
         <Icon className="h-5 w-5" />
       </div>
     </div>
@@ -82,22 +82,22 @@ export const IndicadoresPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-emerald-900/10 bg-gradient-to-br from-[#005830] to-[#013d2b] p-5 text-white shadow-lg sm:p-7">
+      <section className="rounded-3xl border border-[#343b20]/20 bg-gradient-to-br from-[#5f6937] to-[#343b20] p-5 text-white shadow-lg sm:p-7">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-100">
-              <BarChart3 className="h-4 w-4" /> Análise do Portal
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-[#e0e3cf]">
+              <BarChart3 className="h-4 w-4" /> Indicadores do Portal
             </div>
-            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Análise</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-emerald-50">
-              Indicadores, estatísticas e qualidade operacional do Portal TCC reunidos em um único local. Esta área não exibe nomes, e-mails, matrículas ou títulos dos trabalhos.
+            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Indicadores</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#f0f1e7]">
+              Estatísticas, qualidade e monitoramento operacional do Portal TCC em um único local. Esta área não exibe nomes, e-mails, matrículas ou títulos dos trabalhos.
             </p>
           </div>
           <button
             type="button"
             onClick={() => void load()}
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wide text-[#005830] shadow-sm hover:bg-emerald-50 disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wide text-[#4f582e] shadow-sm hover:bg-[#f0f1e7] disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Atualizar
           </button>
@@ -143,7 +143,7 @@ export const IndicadoresPage: React.FC = () => {
                         <strong className="text-slate-950">{count}</strong>
                       </div>
                       <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div className="h-full rounded-full bg-[#005830]" style={{ width: `${percent}%` }} />
+                        <div className="h-full rounded-full bg-[#5f6937]" style={{ width: `${percent}%` }} />
                       </div>
                     </div>
                   );
