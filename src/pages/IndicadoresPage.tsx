@@ -12,6 +12,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
+import { OperationsMonitorPanel } from '../components/OperationsMonitorPanel';
 
 type AdminMetrics = {
   generatedAt: string;
@@ -125,6 +126,8 @@ export const IndicadoresPage: React.FC = () => {
             <MetricCard label="Assinaturas concluídas" value={metrics.signatures.archived} help={`${metrics.signatures.total} solicitação(ões) de assinatura registradas.`} icon={Signature} />
             <MetricCard label="E-mails aceitos" value={metrics.emails.accepted} help={`${metrics.emails.total} envio(s) rastreados pelo Portal.`} icon={MailCheck} />
           </section>
+
+          <OperationsMonitorPanel />
 
           <section className="grid gap-4 xl:grid-cols-2">
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

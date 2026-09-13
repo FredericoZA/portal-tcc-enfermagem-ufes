@@ -1,26 +1,40 @@
 @import "tailwindcss";
 
+@theme {
+  --color-emerald-50: #f0f1e7;
+  --color-emerald-100: #e0e3cf;
+  --color-emerald-200: #c8ceb0;
+  --color-emerald-300: #aab388;
+  --color-emerald-400: #8c9862;
+  --color-emerald-500: #738044;
+  --color-emerald-600: #616d36;
+  --color-emerald-700: #5f6937;
+  --color-emerald-800: #4f582e;
+  --color-emerald-900: #343b20;
+  --color-emerald-950: #252a16;
+}
+
 :root {
   --portal-font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   --portal-popup-font: Inter, ui-sans-serif, system-ui, sans-serif;
   --portal-popup-size: 14px;
   --portal-popup-bg: #ffffff;
-  --portal-popup-header: #0f5132;
+  --portal-popup-header: #4f582e;
   --portal-popup-header-text: #ffffff;
-  --portal-popup-action: #0f5132;
+  --portal-popup-action: #4f582e;
   --portal-popup-action-text: #ffffff;
   --portal-popup-radius: 16px;
   --portal-popup-border: #cbd5e1;
   --portal-popup-shadow: 0 16px 40px rgba(15, 23, 42, .2);
   --portal-new-defense-bg: #ffffff;
-  --portal-new-defense-header: #005830;
+  --portal-new-defense-header: #5f6937;
   --portal-new-defense-header-text: #ffffff;
-  --portal-new-defense-action: #005830;
+  --portal-new-defense-action: #5f6937;
   --portal-new-defense-action-text: #ffffff;
   --portal-upload-bg: #ffffff;
-  --portal-upload-header: #005830;
+  --portal-upload-header: #5f6937;
   --portal-upload-header-text: #ffffff;
-  --portal-upload-action: #005830;
+  --portal-upload-action: #5f6937;
   --portal-upload-action-text: #ffffff;
   --portal-hipoar-bg: #f8fafc;
   --portal-hipoar-header: #0f172a;
@@ -31,10 +45,10 @@
   --portal-pdf-header-text: #ffffff;
   --portal-pdf-action: #2563eb;
   --portal-correction-bg: #ffffff;
-  --portal-correction-header: #005830;
+  --portal-correction-header: #5f6937;
   --portal-correction-header-text: #ffffff;
-  --portal-correction-action: #005830;
-  --portal-focus-color: #047857;
+  --portal-correction-action: #5f6937;
+  --portal-focus-color: #5f6937;
   --portal-focus-ring: #ffffff;
   --portal-target-size: 44px;
 }
@@ -90,7 +104,7 @@ canvas {
   height: 1.25rem;
   flex: none;
   border: 3px solid #cbd5e1;
-  border-top-color: #047857;
+  border-top-color: #5f6937;
   border-radius: 9999px;
   animation: portal-loading-spin 0.7s linear infinite;
 }

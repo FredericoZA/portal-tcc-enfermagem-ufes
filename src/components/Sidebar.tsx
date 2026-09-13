@@ -25,7 +25,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isOpenMobile, setIsOpenMobile }) => {
   const { isMasterAdmin, isAuthenticated, settings, userEmail } = useAuth();
   const installationProfile = resolveInstallationProfile(settings);
-  const configuredLogo = settings?.integrationStudio?.brandKit?.courseLogoUrl || settings?.integrationStudio?.brandKit?.universityLogoUrl || '';
+  const configuredLogo = (settings as any)?.courseLogoDataUrl || settings?.integrationStudio?.brandKit?.courseLogoUrl || settings?.integrationStudio?.brandKit?.universityLogoUrl || '';
   const isVisitor = !isAuthenticated;
 
   const isCollapsed = false;
