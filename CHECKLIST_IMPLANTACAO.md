@@ -58,7 +58,7 @@ Segredos ficam somente no ambiente seguro ou no painel específico de integraç�
 
 ## 4. Piloto real obrigatório
 
-Use pessoas e endereços de teste autorizados. Execute pelo menos um processo individual e um em dupla. O roteiro detalhado permanece em `docs/HOMOLOGACAO_RC10.md` até que uma versão posterior o substitua.
+Use pessoas e endereços de teste autorizados. Execute pelo menos um processo individual e um em dupla. O roteiro vigente está em `docs/HOMOLOGACAO_ATUAL.md`; arquivos `HOMOLOGACAO_RC*.md` são históricos.
 
 O piloto deve comprovar, ponta a ponta:
 
