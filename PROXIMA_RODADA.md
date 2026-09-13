@@ -1,7 +1,9 @@
-# Encerramento da implementação — RC10
+# Próxima atividade operacional — Portal TCC
 
-O escopo funcional está congelado para implantação. As sugestões de expansão da RC9 não são requisitos para iniciar o piloto e não devem prolongar esta entrega.
+A rodada de desenvolvimento e correções conhecidas está fechada para implantação. Novas expansões não devem entrar antes da homologação do fluxo real.
 
-Execute `CHECKLIST_IMPLANTACAO.md`. A próxima atividade é instalar, configurar as contas, cadastrar os DOCX oficiais e comprovar o fluxo real. Corrija somente falhas concretas encontradas nesse piloto antes da abertura aos alunos.
+Execute `CHECKLIST_IMPLANTACAO.md` no ambiente institucional. O trabalho pendente é operacional: confirmar as contas, conectar qualquer integração ainda pendente, conferir os DOCX oficiais e executar o piloto ponta a ponta com usuários de teste autorizados.
 
-Registre o resultado em `docs/HOMOLOGACAO_RC10.md`. Não trate compilação ou testes com provedores simulados como prova de integração real.
+O Portal só deve ser aberto aos alunos depois de CI e Production smoke aprovados no mesmo commit publicado e do piloto real comprovar Google Workspace, Drive, Gmail, Asten, documentos, assinaturas, publicação e retomada de falhas.
+
+Registre as evidências do piloto em `docs/HOMOLOGACAO_RC10.md` até que um documento de homologação posterior o substitua. Compilação, testes automatizados, simulações e a simples existência da URL de produção não contam como prova de integração real.

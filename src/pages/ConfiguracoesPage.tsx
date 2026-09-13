@@ -10,7 +10,6 @@ import { IntegrationStudioPanel } from '../components/IntegrationStudioPanel';
 import { InfrastructureIntegrationsPanel } from '../components/InfrastructureIntegrationsPanel';
 import { AuthorizedStudentsPanel } from '../components/AuthorizedStudentsPanel';
 import { MasterDocumentModelsPanel } from '../components/MasterDocumentModelsPanel';
-import { OperationsMonitorPanel } from '../components/OperationsMonitorPanel';
 import { updateRuntimeDocumentTemplates, BASE_DOCUMENT_TEMPLATES } from '../utils/documentTemplateEngine';
 import { loadGlobalTableConfig, saveGlobalTableConfig, GLOBAL_TABLE_EVENT, getTableStyles, PORTAL_TABLE_PRESETS, PortalTablePreset } from '../utils/tableFormatters';
 import { loadSiteLayoutConfig, saveSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig, DEFAULT_SITE_LAYOUT_CONFIG } from '../utils/siteLayoutConfig';
@@ -2295,11 +2294,8 @@ export const ConfiguracoesPage: React.FC = () => {
             )}
 
             <InfrastructureIntegrationsPanel isMaster={isMasterAdmin} />
-            {isMasterAdmin&&<OperationsMonitorPanel />}
-
             {isMasterAdmin && <AuthorizedStudentsPanel canManage />}
 
-            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-xs leading-5 text-blue-950"><strong>Drive gerenciado pelo servidor.</strong> A autorização acima cria uma única raiz institucional e mantém o refresh token cifrado. A estrutura não depende de token do navegador, URL manual ou nova sincronização a cada acesso.</div>
           </div>
         )}
       </section>

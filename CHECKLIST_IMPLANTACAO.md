@@ -1,15 +1,22 @@
-# Implantação e primeiro dia de uso — RC10
+# Implantação e primeiro dia de uso — Portal TCC
 
-O código está preparado para implantação. O uso real depende de conectar as contas e concluir o piloto abaixo. Consulte `docs/RELATORIO_VALIDACAO_RC10.md` para as evidências desta entrega. A RC10 não foi publicada nas contas institucionais.
+O Portal já possui projeto de produção e o código é validado por CI e smoke test de produção a cada rodada publicada. Isso não substitui a homologação operacional com as contas institucionais: a abertura para alunos depende de todas as integrações críticas estarem ativas e de um piloto real aprovado.
 
-Para o destino informado pelo responsável, consulte `IMPLANTACAO_UFES.md`. O perfil `.env.ufes.example` já contém `tccenfermagemufes@gmail.com` como primeiro Master.
+Para o destino institucional, consulte `IMPLANTACAO_UFES.md`. O bootstrap, a configuração e os segredos devem seguir os arquivos de ambiente de exemplo e nunca ser enviados por chat ou gravados no repositório.
 
-## 1. Abrir o sistema no computador
+## 1. Preparar uma cópia local quando necessário
 
-Instale Node.js 22.23.2 ou outra versão compatível da linha 22 e npm 11. Extraia o ZIP e abra um terminal na pasta que contém `package.json`.
+Use Node.js 22 e npm compatível com o `packageManager` definido em `package.json`.
 
 ```bash
 npm ci
+```
+
+Para desenvolvimento no macOS ou Linux:
+
+```bash
+cp .env.development.example .env.local
+npm run dev
 ```
 
 No Windows PowerShell:
@@ -19,52 +26,74 @@ Copy-Item .env.development.example .env.local
 npm run dev
 ```
 
-No macOS ou Linux:
+A demonstração local serve para conhecer telas e validar código. Ela não comprova envio institucional de e-mail, assinatura Asten, permissões reais do Drive nem persistência de produção.
 
-```bash
-cp .env.development.example .env.local
-npm run dev
-```
+## 2. Itens obrigatórios da instalação
 
-Abra `http://localhost:3000`. Este perfil permite conhecer as telas com dados fictícios. Para encerrar, pressione Ctrl+C no terminal. A demonstração não comprova envio de e-mail, assinatura ou arquivamento real.
-
-## 2. Reunir os itens da instalação
-
-| Item | Onde será usado |
+| Item | Uso |
 |---|---|
-| Projeto Vercel exclusivo e endereço do portal | Hospedagem, callbacks e primeiro acesso |
-| Projeto Supabase exclusivo | Estado, acesso, auditoria e transporte temporário privado |
-| E-mail do Master e do Presidente | Bootstrap e administração; assinatura das declarações |
-| E-mail do departamento e locais autorizados | Solicitação de reserva de sala |
-| OAuth Google do responsável | Drive, Docs, Gmail e Calendar |
-| Token, endpoint e callback da Asten | Assinaturas da ata, termo e declaração |
-| Quatro DOCX oficiais com `<<VARIAVEIS>>` | Convite, ata, termo de autorização e declaração/certificado |
+| Projeto Vercel exclusivo e URL oficial | Hospedagem, callbacks e acesso ao Portal |
+| Projeto Supabase exclusivo | Persistência, auditoria e transporte privado |
+| E-mail do Master e da Presidente | Administração e papel institucional da Presidência |
+| E-mails de recuperação do Master | Recuperação administrativa segura |
+| E-mail do departamento e locais autorizados | Fluxo de reserva/defesa |
+| OAuth Google institucional | Drive, Docs, Gmail e Calendar |
+| Token e callback Asten | Assinaturas da ata, termo e declaração |
+| Quatro DOCX oficiais com `<<VARIAVEIS>>` | Convite, ata, termo de autorização e declaração |
+| Símbolo oficial do curso | PNG transparente 1024 × 1024 px, até 1 MB |
 
-Os segredos são cadastrados no ambiente e no painel de integrações, conforme `.env.example`. Não envie senhas no chat e não coloque chaves em arquivos públicos. Os modelos oficiais e as credenciais não acompanham o ZIP.
+Segredos ficam somente no ambiente seguro ou no painel específico de integrações. Não coloque token Asten, senha, chave privada ou segredo OAuth em código, documento público, issue ou conversa.
 
-Foram consultadas as conexões disponíveis de Supabase e Vercel nesta revisão. Não foi identificado vínculo inequívoco de uma instalação existente com este pacote. Não reutilize um projeto de outro sistema somente porque ele já está conectado.
+## 3. Atualizar o ambiente definitivo
 
-## 3. Instalar no ambiente definitivo
+1. Siga `IMPLANTACAO_PRODUCAO.md`. Antes de mudança estrutural, preserve o rollback descrito em `docs/ATUALIZACAO_E_ROLLBACK.md`.
+2. Aplique **todas** as migrações existentes em `supabase/migrations`, em ordem cronológica pelo nome. Não use contagem fixa: novas migrações podem ser adicionadas. Na revisão atual, a sequência termina em `20260911190000_portal_publication_integrity_v9.sql`.
+3. Use Node.js 22 na Vercel e mantenha as variáveis compatíveis com `.env.example`.
+4. Complete o bootstrap do Master conforme `docs/PRIMEIRO_ACESSO.md`.
+5. Conecte Google Workspace e Asten pelo Portal. Confirme pasta raiz privada, callback da Asten e persistência Supabase.
+6. Cadastre os quatro DOCX oficiais, valide variáveis e prévias e publique somente configurações revisadas.
+7. Execute a homologação assistida do Portal e resolva todos os itens reprovados antes do piloto.
+8. A CI deve aprovar `npm audit`, `npm run test:ci`, importação do servidor, `npm run test:secure-flow` e o contrato institucional.
+9. Depois do merge em `main`, confirme o Production smoke no mesmo commit implantado.
 
-1. Siga `IMPLANTACAO_PRODUCAO.md`. Havendo instalação anterior, faça o backup previsto em `docs/ATUALIZACAO_E_ROLLBACK.md`.
-2. Aplique todas as seis migrações de `supabase/migrations`, na ordem dos nomes. A última é `202609060001_asten_transactional_outbox_v6.sql`. A RC10 não acrescenta migração SQL.
-3. Configure o projeto Vercel para Node.js 22 usando `vercel.json`. Preencha as variáveis de `.env.example`; não copie o perfil de demonstração.
-4. Complete o bootstrap do Master seguindo `docs/PRIMEIRO_ACESSO.md`. Conecte Google e Asten pelo painel do portal. Confirme o callback da Asten e o cron autenticado.
-5. Cadastre os endereços institucionais e os quatro DOCX. Valide os marcadores, publique os formulários e o fluxo, publique a aparência global.
-6. Execute `npm run test:ci` e `npm run test:secure-flow` no código implantado. Registre a versão, URL e resultados.
+## 4. Piloto real obrigatório
 
-## 4. Concluir o piloto antes de abrir aos alunos
+Use pessoas e endereços de teste autorizados. Execute pelo menos um processo individual e um em dupla. O roteiro detalhado permanece em `docs/HOMOLOGACAO_RC10.md` até que uma versão posterior o substitua.
 
-Use pessoas e endereços de teste autorizados. Execute um processo individual e outro em dupla. O roteiro detalhado está em `docs/HOMOLOGACAO_RC10.md`.
+O piloto deve comprovar, ponta a ponta:
 
-O piloto precisa comprovar: pedido de reserva recebido; declaração do aluno; convite correto; conferência e nota pelo orientador; ata assinada na Asten e arquivada no Drive; entrega final; termo com os signatários corretos quando houver publicação; declaração assinada pelo Presidente; publicação somente ao final. Teste também uma falha e sua retomada.
+- autorização e acesso do aluno;
+- cadastro e, quando aplicável, aceite da coautoria;
+- confirmação do local e continuidade correta do fluxo;
+- convite institucional e evento de calendário;
+- revisão dos dados pelo orientador;
+- registro de **resultado e parecer** da avaliação, sem nota numérica;
+- geração da Ata pelo DOCX oficial, assinatura Asten e arquivamento no Drive;
+- entrega final e tratamento correto de substituição de arquivos;
+- termo de autorização com signatários corretos quando houver publicação;
+- declaração da banca conferida e assinada pela Presidente;
+- publicação apenas dos arquivos autorizados, mantendo originais e pastas privados;
+- retirada de publicação sem perder o arquivo privado;
+- retomada segura após pelo menos uma falha simulada;
+- permanência dos registros após reinício/novo acesso.
 
-Confira computador e celular, teclado, foco dos pop-ups e fidelidade dos PDFs aos DOCX. Reinicie a aplicação e confirme que os registros permanecem no banco. A fila de pendências deve explicar qualquer etapa incompleta.
+Confira também computador e celular, navegação por teclado, foco dos diálogos, mensagens de erro, QR Code, rodapé público e fidelidade dos PDFs aos DOCX.
 
-## 5. Liberação e acompanhamento
+## 5. Critério para abertura aos alunos
 
-Libere os primeiros alunos depois de registrar evidências aprovadas do piloto. No primeiro dia, acompanhe as filas de e-mails, documentos e assinaturas. Se aparecer “salvo com pendência”, retome pela fila administrativa; não cadastre outro TCC nem crie outro envelope sem conferir o estado existente.
+O Portal só deve ser liberado quando simultaneamente:
 
-Entregue ao operador a URL, o e-mail do Master, a versão implantada e o local do backup. A homologação real continua **não confirmado** até que as evidências sejam produzidas. Recursos novos podem ser avaliados após a entrada em operação.
+- Supabase e runtime transacional estiverem saudáveis;
+- Google Workspace e a pasta raiz privada estiverem válidos;
+- Asten e callback estiverem conectados;
+- quatro modelos oficiais estiverem configurados;
+- CI e Production smoke do commit publicado estiverem aprovados;
+- piloto real tiver evidência registrada e nenhuma pendência crítica aberta.
 
-Para continuar com outra IA, anexe o ZIP completo e peça: “Execute PROMPT_PARA_IA.md e CHECKLIST_IMPLANTACAO.md sobre este código, preservando o fluxo e registrando as evidências de implantação.”
+A existência do site em produção **não** equivale à homologação do fluxo acadêmico. Enquanto o token Asten ou o piloto real não forem confirmados, a homologação ponta a ponta permanece **não confirmada**.
+
+## 6. Operação contínua
+
+Após a abertura, acompanhe `Indicadores`, inclusive o Monitor operacional, falhas de e-mail, formulários no Drive e eventos Asten. Utilize as rotinas de saúde, integridade e backup das Configurações para diagnóstico e recuperação.
+
+Se aparecer uma pendência, retome a operação existente antes de criar outro TCC, outro documento ou outro envelope. Auditoria e idempotência devem ser preservadas.

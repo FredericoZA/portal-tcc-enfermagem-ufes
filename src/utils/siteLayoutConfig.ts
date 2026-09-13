@@ -65,14 +65,14 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   headerShowEmblem: false,
   headerCustomLogoUrl: '',
   headerBgColor: '#ffffff',
-  headerTextColor: '#047857',
+  headerTextColor: '#5f6937',
   headerTitleColor: '#0f172a',
   headerBgImage: '',
 
   sidebarTitle: 'PORTAL DE TCC',
   sidebarSubtitle: 'Curso de Graduação em Enfermagem e Obstetrícia • UFES',
   sidebarLogoType: 'custom',
-  sidebarCustomLogoUrl: '/colenf-logo.png',
+  sidebarCustomLogoUrl: '',
   sidebarNavLabels: {
     home: 'Calendário',
     biblioteca: 'Repositório',
@@ -94,15 +94,15 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   sidebarIconMode: 'emoji',
   sidebarSessionLabel: 'Sessão ativa',
   sidebarLocationText: 'Campus de Maruípe • Vitória/ES',
-  sidebarBgColor: '#011f17',
-  sidebarHeaderBgColor: '#011812',
-  sidebarTextColor: '#e8f3ed',
+  sidebarBgColor: '#343b20',
+  sidebarHeaderBgColor: '#252a16',
+  sidebarTextColor: '#f0f1e7',
   sidebarTitleColor: '#ffffff',
-  sidebarSubtitleColor: '#9dd9b3',
-  sidebarActiveBgColor: '#033d2e',
-  sidebarActiveTextColor: '#d5f4e2',
-  sidebarActiveBorderColor: '#7bc394',
-  sidebarDividerColor: '#174c3b',
+  sidebarSubtitleColor: '#c8ceb0',
+  sidebarActiveBgColor: '#525c2e',
+  sidebarActiveTextColor: '#ffffff',
+  sidebarActiveBorderColor: '#aab388',
+  sidebarDividerColor: '#616d36',
   sidebarDividerStyle: 'solid',
   sidebarShowDividers: true,
   sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial'],
@@ -119,16 +119,16 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   footerContactEmail: '',
   footerQrCodeUrl: '',
   footerQrLabel: 'WhatsApp QR',
-  footerBgColor: '#011812',
+  footerBgColor: '#252a16',
   footerTextColor: '#ffffff',
-  footerMutedTextColor: '#b5c8bf',
-  footerBorderColor: '#174c3b',
-  footerDividerColor: '#174c3b',
-  footerWhatsappBtnBg: '#059669',
+  footerMutedTextColor: '#c8ceb0',
+  footerBorderColor: '#616d36',
+  footerDividerColor: '#616d36',
+  footerWhatsappBtnBg: '#5f6937',
   footerWhatsappBtnText: '#ffffff',
   footerQrBgColor: '#ffffff',
-  footerQrTextColor: '#0f172a',
-  footerQrBorderColor: '#e2e8f0'
+  footerQrTextColor: '#252a16',
+  footerQrBorderColor: '#c8ceb0'
 };
 
 export const SITE_LAYOUT_EVENT = 'site_layout_config_changed';
@@ -154,11 +154,11 @@ export function loadSiteLayoutConfig(): SiteLayoutConfig {
     return {
       ...DEFAULT_SITE_LAYOUT_CONFIG,
       ...parsed,
-      // Nesta instalação o cabeçalho usa o emoticon acadêmico fixo; a marca do curso fica na lateral.
+      // O cabeçalho usa o emoticon acadêmico fixo; a marca do curso fica na lateral.
       headerShowEmblem: false,
       headerCustomLogoUrl: '',
       sidebarLogoType: 'custom',
-      sidebarCustomLogoUrl: '/colenf-logo.png',
+      sidebarCustomLogoUrl: typeof parsed.sidebarCustomLogoUrl === 'string' ? parsed.sidebarCustomLogoUrl : '',
       sidebarIconMode: parsed.sidebarIconMode === 'lucide' ? 'lucide' : 'emoji',
       sidebarNavOrder: canonicalSidebarOrder(parsed.sidebarNavOrder),
       sidebarNavLabels: {
@@ -188,11 +188,9 @@ export function saveSiteLayoutConfig(config: Partial<SiteLayoutConfig>) {
     const updated: SiteLayoutConfig = {
       ...current,
       ...config,
-      // A identidade institucional não é editável nesta instalação.
       headerShowEmblem: false,
       headerCustomLogoUrl: '',
       sidebarLogoType: 'custom',
-      sidebarCustomLogoUrl: '/colenf-logo.png',
       sidebarNavOrder: canonicalSidebarOrder(config.sidebarNavOrder || current.sidebarNavOrder),
       sidebarNavLabels: {
         ...current.sidebarNavLabels,

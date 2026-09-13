@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 import { useAuth } from '../context/AuthContext';
 import {
   MapPin,
@@ -32,6 +33,7 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections = false }
   const installationProfile=resolveInstallationProfile(settings);
   const [showDirections, setShowDirections] = useState(false);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
+  const [generatedQrCode, setGeneratedQrCode] = useState('');
 
   useEffect(() => {
     const handleLayoutChange = (e: Event) => {
@@ -75,6 +77,16 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections = false }
   const contactEmail = layoutConfig.footerContactEmail || settings?.contactEmail || '';
   const locationText = layoutConfig.footerLocationText || installationProfile.defaultDefenseLocation || `Consulte ${installationProfile.departmentName || installationProfile.courseName} para confirmar o local da defesa.`;
   const qrLabel = layoutConfig.footerQrLabel || 'WhatsApp QR';
+  const qrCodeSource = layoutConfig.footerQrCodeUrl || generatedQrCode;
+
+  useEffect(() => {
+    let active = true;
+    if (!whatsappUrl) { setGeneratedQrCode(''); return () => { active = false; }; }
+    void QRCode.toDataURL(whatsappUrl, { width: 240, margin: 1, errorCorrectionLevel: 'M' })
+      .then((value) => { if (active) setGeneratedQrCode(value); })
+      .catch(() => { if (active) setGeneratedQrCode(''); });
+    return () => { active = false; };
+  }, [whatsappUrl]);
 
   // Dynamic style tokens
   const footerBg = layoutConfig.footerBgColor || '#011812';
@@ -267,7 +279,7 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections = false }
             </div>
 
             {/* QR Code alongside Secretary details */}
-            {layoutConfig.footerQrCodeUrl && <div 
+            {qrCodeSource && <div 
               className="flex flex-col items-center p-1.5 shrink-0 self-center w-24 h-24 sm:w-[112px] sm:h-auto sm:self-stretch sm:aspect-square justify-center sm:-my-4 border sm:border-t-0 sm:border-b-0 sm:border-x rounded-sm sm:rounded-none overflow-hidden"
               style={{
                 backgroundColor: qrBg,
@@ -275,7 +287,7 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections = false }
               }}
             >
               <img
-                src={layoutConfig.footerQrCodeUrl}
+                src={qrCodeSource}
                 alt="WhatsApp QR Code"
                 className="w-[90%] h-[90%] object-contain"
                 referrerPolicy="no-referrer"
