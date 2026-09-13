@@ -1,8 +1,8 @@
 # Fechamento técnico — 13/09/2026
 
-Esta rodada consolidou as pendências conhecidas de código, configuração e interface antes do piloto operacional.
+Esta rodada consolidou as pendências conhecidas de código, configuração, interface e higiene do repositório antes do piloto operacional.
 
-## Concluído no código
+## Concluído no código e na interface
 
 - botão redundante “Acessar o Portal” removido do guia;
 - transferência administrativa da Presidência desacoplada de feature opcional, preservando autenticação e reautenticação de segurança;
@@ -15,8 +15,27 @@ Esta rodada consolidou as pendências conhecidas de código, configuração e in
 - autorização de acesso reorganizada em tabela e blocos de ação;
 - observação redundante do Drive removida;
 - paleta verde principal migrada para verde militar/oliva fosco;
+- tutorial público unificado em uma única implementação canônica;
+- texto do tutorial alinhado ao contrato público: matrícula, e-mail, SIAPE, IDs internos e vínculos privados do Drive não são dados anônimos;
+- avaliação documentada de acordo com o fluxo atual: resultado e parecer, sem nota numérica;
 - documentação de implantação atualizada;
 - testes de regressão adicionados para os contratos desta rodada.
+
+## Higiene do repositório
+
+A segunda auditoria encontrou automações de correção pontual que haviam ficado disponíveis para execução manual mesmo depois de sua finalidade ter sido incorporada ao código. Foram removidos:
+
+- `.github/workflows/canonicalize-public-policy.yml`;
+- `.github/workflows/final-p0-contract-fix.yml`;
+- `scripts/canonicalize-public-policy.mjs`;
+- `scripts/final-p0-contract-fix.mjs`;
+- `scripts/finalize-canonical-cleanup.mjs`.
+
+Esses artefatos faziam alterações textuais e commits automáticos em `main` e não pertenciam à operação permanente. Permanecem somente os workflows persistentes de CI e Production smoke.
+
+## Homologação vigente
+
+Foi criado `docs/HOMOLOGACAO_ATUAL.md` como roteiro canônico de go-live. Os arquivos `HOMOLOGACAO_RC*.md` passam a ser tratados apenas como registros históricos das respectivas versões. `CHECKLIST_IMPLANTACAO.md` e `PROXIMA_RODADA.md` apontam para o roteiro vigente.
 
 ## Verificação da conta institucional
 
