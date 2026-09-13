@@ -733,13 +733,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           case 'titulo': return proc.titulo || '';
           case 'aluno1': {
             const name = proc.aluno1?.nome ? cleanPersonName(proc.aluno1.nome) : '';
-            const mat = proc.aluno1?.matricula ? ` (Matrícula: ${proc.aluno1.matricula})` : '';
-            return name ? name + mat : '';
+            return name ? name : '';
           }
           case 'aluno2': {
             const name = proc.aluno2?.nome ? cleanPersonName(proc.aluno2.nome) : '';
-            const mat = proc.aluno2?.matricula ? ` (Matrícula: ${proc.aluno2.matricula})` : '';
-            return name ? name + mat : '';
+            return name ? name : '';
           }
           case 'orientador': return proc.orientador?.nome ? `${formatProfessorName(proc.orientador.nome)} (${proc.orientador.instituicao || installationProfile.defaultInstitutionName})` : 'A definir';
           case 'membro1': return evalMembers[0] ? `${formatProfessorName(evalMembers[0].nome)} (${evalMembers[0].instituicao || installationProfile.defaultInstitutionName})` : 'A definir';
@@ -804,13 +802,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       if (visibleColumns.titulo) row.push(`"${(proc.titulo || '').replace(/"/g, '""')}"`);
       if (visibleColumns.aluno1) {
         const name = proc.aluno1?.nome ? cleanPersonName(proc.aluno1.nome) : '';
-        const mat = proc.aluno1?.matricula ? ` (Matrícula: ${proc.aluno1.matricula})` : '';
-        row.push(`"${(name + mat).replace(/"/g, '""')}"`);
+        row.push(`"${(name).replace(/"/g, '""')}"`);
       }
       if (visibleColumns.aluno2) {
         const name = proc.aluno2?.nome ? cleanPersonName(proc.aluno2.nome) : '';
-        const mat = proc.aluno2?.matricula ? ` (Matrícula: ${proc.aluno2.matricula})` : '';
-        row.push(`"${name ? (name + mat).replace(/"/g, '""') : ''}"`);
+        row.push(`"${name ? (name).replace(/"/g, '""') : ''}"`);
       }
       if (visibleColumns.orientador) {
         const orient = proc.orientador?.nome ? `${formatProfessorName(proc.orientador.nome)} (${proc.orientador.instituicao || installationProfile.defaultInstitutionName})` : 'A definir';
@@ -2086,10 +2082,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <div className={`${defStyles.cellFontSizeClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} leading-tight ${defStyles.cellWrapClass}`}>
                           {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), defensesTextFormat, '🎓')}
                         </div>
-                        <div className="text-[9px] text-slate-500 font-mono font-normal mt-1 uppercase tracking-tight">
-                          {formatCellText('aluno1', 'Matrícula', defensesTextFormat, '🪪')}
-                        </div>
-                        <div className="text-[9px] text-slate-500 font-mono font-normal leading-tight">{proc.aluno1?.matricula || '—'}</div>
                       </div>
                     </td>
                   );
@@ -2102,10 +2094,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                             <div className={`${defStyles.cellFontSizeClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} leading-tight ${defStyles.cellWrapClass}`}>
                               {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), defensesTextFormat, '🎓')}
                             </div>
-                            <div className="text-[9px] text-slate-500 font-mono font-normal mt-1 uppercase tracking-tight">
-                              {formatCellText('aluno2', 'Matrícula', defensesTextFormat, '🪪')}
-                            </div>
-                            <div className="text-[9px] text-slate-500 font-mono font-normal leading-tight">{proc.aluno2.matricula || '—'}</div>
                           </>
                         ) : (
                           <span className="text-slate-300 font-mono text-[11px]">—</span>
@@ -2529,10 +2517,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           <div className={`${acervoStyles.cellFontSizeClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} leading-tight ${acervoStyles.cellWrapClass}`}>
                             {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), acervoTextFormat, '🎓')}
                           </div>
-                          <div className="text-[9px] text-slate-500 font-mono font-normal mt-1 uppercase tracking-tight">
-                            {formatCellText('aluno1', 'Matrícula', acervoTextFormat, '🪪')}
-                          </div>
-                          <div className="text-[9px] text-slate-500 font-mono font-normal leading-tight">{proc.aluno1?.matricula || '2026101890'}</div>
                         </div>
                       </td>
                     );
@@ -2545,10 +2529,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                               <div className={`${acervoStyles.cellFontSizeClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} leading-tight ${acervoStyles.cellWrapClass}`}>
                                 {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), acervoTextFormat, '🎓')}
                               </div>
-                              <div className="text-[9px] text-slate-500 font-mono font-normal mt-1 uppercase tracking-tight">
-                                {formatCellText('aluno2', 'Matrícula', acervoTextFormat, '🪪')}
-                              </div>
-                              <div className="text-[9px] text-slate-500 font-mono font-normal leading-tight">{proc.aluno2.matricula || '2026101891'}</div>
                             </>
                           ) : (
                             <span className="text-slate-300 font-mono text-[11px]">—</span>
