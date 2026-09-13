@@ -20,7 +20,6 @@ const DocumentosPage = lazy(() => import('./pages/DocumentosPage').then((module)
 const CoordenadorPage = lazy(() => import('./pages/CoordenadorPage').then((module) => ({ default: module.CoordenadorPage })));
 const ConfiguracoesPage = lazy(() => import('./pages/ConfiguracoesPage').then((module) => ({ default: module.ConfiguracoesPage })));
 const ComoChegarPage = lazy(() => import('./pages/ComoChegarPage').then((module) => ({ default: module.ComoChegarPage })));
-const VerificationPage = lazy(() => import('./pages/VerificationPage').then((module) => ({ default: module.VerificationPage })));
 
 function PageLoadingFallback() {
   return (
@@ -32,7 +31,6 @@ function PageLoadingFallback() {
 }
 
 export default function App() {
-  const verificationCode = typeof window !== 'undefined' ? window.location.pathname.match(/^\/validar\/([^/]+)$/)?.[1] : undefined;
   const [currentTab, setCurrentTab] = useState('home');
   const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
   const [selectedProcessReadOnly, setSelectedProcessReadOnly] = useState<boolean>(false);
@@ -102,7 +100,6 @@ export default function App() {
       case 'documentos':
         return <DocumentosPage onSelectProcess={(id) => handleSelectProcess(id, false)} />;
       case 'coordenador':
-      case 'assinaturas':
         return <CoordenadorPage onSelectProcess={(id) => handleSelectProcess(id, false)} />;
       case 'configuracoes':
         return <ConfiguracoesPage />;
@@ -115,8 +112,6 @@ export default function App() {
         return <HomePage onNavigate={handleNavigate} />;
     }
   };
-
-  if (verificationCode) return <Suspense fallback={<PageLoadingFallback />}><VerificationPage code={decodeURIComponent(verificationCode)} /></Suspense>;
 
   return (
     <AuthProvider>
@@ -152,9 +147,9 @@ export default function App() {
                   : currentTab === 'agenda' ? 'Agenda de Defesas'
                   : currentTab === 'avaliacoes' ? 'Avaliações de TCC'
                   : currentTab === 'documentos' ? 'Documentos'
-                  : (currentTab === 'coordenador' || currentTab === 'assinaturas') ? 'Área do Presidente'
+                  : currentTab === 'coordenador' ? 'Área do Presidente'
                   : currentTab === 'configuracoes' ? 'Configurações & Modelos de Arquivos'
-                  : (currentTab === 'analise' || currentTab === 'indicadores') ? 'Análise'
+                  : (currentTab === 'analise' || currentTab === 'indicadores') ? 'Indicadores'
                   : 'Local das Defesas'
               }
             />

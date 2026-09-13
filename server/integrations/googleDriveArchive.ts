@@ -133,6 +133,18 @@ async function uploadArtifactPdf(input:{rootFolderId?:string;protocol?:string;ac
 export async function uploadGeneratedPdfToDrive(input:{rootFolderId?:string;protocol?:string;accessToken:string;processFolderId:string;processId:string;jobId:string;documentType:string;fileName:string;pdf:Buffer;sha256:string}){return uploadArtifactPdf({...input,lifecycle:'GERADO'});}
 export async function uploadSignedPdfToDrive(input:{rootFolderId?:string;protocol?:string;accessToken:string;processFolderId:string;processId:string;jobId:string;documentType:string;fileName:string;pdf:Buffer;sha256:string}){return uploadArtifactPdf({...input,lifecycle:'ASSINADO'});}
 
+export function buildSupersededAppProperties(existing:Record<string,string>|undefined,supersededBy:string,supersededAt:string){
+  return {...(existing||{}),lifecycle:'SUPERSEDED',supersededBy,supersededAt};
+}
+
+async function markDriveFileSuperseded(accessToken:string,fileId:string,supersededBy:string){
+  if(!fileId||fileId===supersededBy)return;
+  const currentResponse=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?fields=id,appProperties&supportsAllDrives=true`,accessToken);
+  const current=await currentResponse.json();
+  const appProperties=buildSupersededAppProperties(current.appProperties,String(supersededBy),new Date().toISOString());
+  await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?fields=id&supportsAllDrives=true`,accessToken,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({appProperties})});
+}
+
 export async function uploadProcessSourcePdf(input:{accessToken:string;processFolderId:string;processId:string;artifactType:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO'|'COMPROVANTE_LOCAL';fileName:string;version:number;previousFileId?:string;pdf:Buffer;sha256:string}){
   await assertPrivateContainer(input.accessToken,input.processFolderId);
   if(!input.pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('Envie um arquivo PDF válido.');
@@ -142,7 +154,10 @@ export async function uploadProcessSourcePdf(input:{accessToken:string;processFo
   const existingResponse=await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(duplicateQuery)}&fields=files(id,name,webViewLink,appProperties)&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true`,input.accessToken);
   const existing=(await existingResponse.json()).files||[];
   if(existing.length>1)throw new Error('Foram encontrados arquivos duplicados para este TCC.');
-  if(existing[0])return existing[0];
+  if(existing[0]){
+    if(input.previousFileId&&input.previousFileId!==String(existing[0].id))await markDriveFileSuperseded(input.accessToken,input.previousFileId,String(existing[0].id));
+    return existing[0];
+  }
   const safeName=String(input.fileName||`${input.artifactType}.pdf`).replace(/[^a-zA-Z0-9À-ÿ._ -]/g,'_').slice(0,150);
   const fileName=safeName.toLowerCase().endsWith('.pdf')?safeName:`${safeName}.pdf`;
   const boundary=`portal_source_${Date.now().toString(36)}`;
@@ -154,9 +169,7 @@ export async function uploadProcessSourcePdf(input:{accessToken:string;processFo
   ]);
   const upload=await driveRequest(`${DRIVE_UPLOAD_API}/files?uploadType=multipart&fields=id,name,webViewLink&supportsAllDrives=true`,input.accessToken,{method:'POST',headers:{'Content-Type':`multipart/related; boundary=${boundary}`},body});
   const created=await upload.json();
-  if(input.previousFileId&&input.previousFileId!==created.id){
-    await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.previousFileId)}?fields=id&supportsAllDrives=true`,input.accessToken,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({appProperties:{lifecycle:'SUPERSEDED',supersededBy:String(created.id),supersededAt:new Date().toISOString()}})});
-  }
+  if(input.previousFileId&&input.previousFileId!==created.id)await markDriveFileSuperseded(input.accessToken,input.previousFileId,String(created.id));
   return created;
 }
 

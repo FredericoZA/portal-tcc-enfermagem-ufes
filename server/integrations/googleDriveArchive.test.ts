@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildProcessArchiveFileName, isUnsafePrivateContainerPermission } from './googleDriveArchive';
+import { buildProcessArchiveFileName, buildSupersededAppProperties, isUnsafePrivateContainerPermission } from './googleDriveArchive';
 
 test('nome de formulário contém código, alunos, tipo e versão', () => {
   assert.equal(
@@ -32,4 +32,10 @@ test('pasta privada aceita usuários nominais e bloqueia compartilhamento amplo'
   assert.equal(isUnsafePrivateContainerPermission({type:'anyone',role:'reader'}), true);
   assert.equal(isUnsafePrivateContainerPermission({type:'domain',role:'reader',domain:'ufes.br'}), true);
   assert.equal(isUnsafePrivateContainerPermission({type:'group',role:'reader'}), true);
+});
+
+
+test('preserva metadados do arquivo substituído', () => {
+  const result=buildSupersededAppProperties({portal:'portal-tcc',sha256:'abc',artifactType:'TRABALHO_COMPLETO'},'novo-id','2026-09-12T20:00:00.000Z');
+  assert.deepEqual(result,{portal:'portal-tcc',sha256:'abc',artifactType:'TRABALHO_COMPLETO',lifecycle:'SUPERSEDED',supersededBy:'novo-id',supersededAt:'2026-09-12T20:00:00.000Z'});
 });
