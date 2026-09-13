@@ -18,7 +18,7 @@ test('rascunho pertence ao autor, for√ßa o e-mail autenticado e detecta concorr√
   const studio={revision:8,operationalConfig:{workflow:{...policy,draftExpiryDays:12}}} as Partial<IntegrationStudioSettings>;
   const first=saveRegistrationDraft(undefined,{expectedRevision:0,schemaRevision:8,section:1.9,answers:{ALUNO_1_NOME:'Ana Silva',ALUNO_1_EMAIL:'outra@example.com'}},'ana@aluno.ufes.br',studio,new Date('2026-09-01T00:00:00Z'));
   assert.equal(first.answers.ALUNO_1_EMAIL,'ana@aluno.ufes.br');assert.equal(first.section,1);assert.equal(first.expiresAt,'2026-09-13T00:00:00.000Z');
-  assert.throws(()=>saveRegistrationDraft(first,{expectedRevision:0,schemaRevision:8,answers:{}},'ana@aluno.ufes.br',studio),DraftConflict);
+  assert.throws(()=>saveRegistrationDraft(first,{expectedRevision:0,schemaRevision:8,answers:{}},'ana@aluno.ufes.br',studio,new Date('2026-09-02T00:00:00Z')),DraftConflict);
   assert.deepEqual(pruneDrafts({'ana@aluno.ufes.br':first},new Date('2026-09-14T00:00:00Z')),{});
 });
 
