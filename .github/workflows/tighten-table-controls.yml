@@ -1,0 +1,111 @@
+name: Tighten table controls rc12
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tighten-table-controls.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  compact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Aplicar compactação e versão rc.12
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          const cssPath = 'src/portal-overrides.css';
+          let css = fs.readFileSync(cssPath, 'utf8');
+          css = css
+            .replaceAll('2.45rem !important', '2rem !important')
+            .replaceAll('1.125rem !important', '1rem !important');
+
+          const compactBlock = `
+
+/* Padrão rc.12: controles mais compactos e próximos do conteúdo. */
+button[title="Selecionar Mês e Ano"] {
+  height: 1.9rem !important;
+  min-height: 1.9rem !important;
+  padding: 0.2rem 0.65rem !important;
+  gap: 0.3rem !important;
+}
+
+button[title="Mês Anterior"],
+button[title="Próximo Mês"] {
+  width: 1.9rem !important;
+  height: 1.9rem !important;
+  min-width: 1.9rem !important;
+  min-height: 1.9rem !important;
+  padding: 0 !important;
+}
+
+button[title="Ir para o mês atual"] {
+  height: 1.9rem !important;
+  min-height: 1.9rem !important;
+  padding: 0.2rem 0.65rem !important;
+}
+
+.portal-table-filter-chip {
+  padding: 0.3rem 0.65rem !important;
+  gap: 0.35rem !important;
+  line-height: 1 !important;
+}
+
+button[title^="Buscar"],
+button[title="Atualizar dados da tabela"],
+button[title="Exibição da planilha: linhas e período"] {
+  width: 2rem !important;
+  height: 2rem !important;
+  min-width: 2rem !important;
+  min-height: 2rem !important;
+  padding: 0.25rem !important;
+}
+`;
+          if (!css.includes('Padrão rc.12: controles mais compactos')) css += compactBlock;
+          fs.writeFileSync(cssPath, css);
+
+          const pkgPath = 'package.json';
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+          pkg.version = '1.0.0-rc.12';
+          fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+
+          const lockPath = 'package-lock.json';
+          const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+          lock.version = '1.0.0-rc.12';
+          if (lock.packages?.['']) lock.packages[''].version = '1.0.0-rc.12';
+          fs.writeFileSync(lockPath, JSON.stringify(lock, null, 2) + '\n');
+
+          const sidebarPath = 'src/components/Sidebar.tsx';
+          let sidebar = fs.readFileSync(sidebarPath, 'utf8').replaceAll('1.0.0-rc.11', '1.0.0-rc.12');
+          fs.writeFileSync(sidebarPath, sidebar);
+          NODE
+      - name: Instalar dependências
+        run: npm ci
+      - name: Validar CI
+        run: npm run test:ci
+      - name: Validar fluxo seguro
+        run: npm run test:secure-flow
+      - name: Publicar compactação
+        shell: bash
+        run: |
+          git config user.name 'Portal TCC automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add src/portal-overrides.css package.json package-lock.json src/components/Sidebar.tsx
+          if git diff --cached --quiet; then
+            echo 'Sem alterações.'
+            exit 0
+          fi
+          git commit -m 'fix: compacta controles das planilhas e atualiza rc.12'
+          git push origin HEAD:main
