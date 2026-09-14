@@ -15,7 +15,7 @@ export interface SignatureJob {
   documentTitle: string; documentVersion: number; sourceDataRevision: number; fileName: string; mimeType: string;
   contentSha256: string; idempotencyKey: string; status: SignatureJobStatus; signers: SignatureSignerSnapshot[];
   createdAt: string; createdBy: string; updatedAt: string; approvedAt?: string; approvedBy?: string;
-  approvalExpiresAt?: string; provider: 'ASTEN'; providerEnvelopeId?: string; providerEnvelopeHash?: string;
+  approvalExpiresAt?: string; provider: 'ASTEN' | 'GOV_BR'; providerEnvelopeId?: string; providerEnvelopeHash?: string;
   providerCreationState?: 'PENDING' | 'CREATING' | 'CONFIRMED' | 'UNCERTAIN';
   sentAt?: string; completedAt?: string; lastError?: string; driveUnsignedFileId?: string; driveSignedFileId?: string;
   driveSignedWebViewLink?: string; signedSha256?: string; verificationCode?: string; artifactBase64?: string;

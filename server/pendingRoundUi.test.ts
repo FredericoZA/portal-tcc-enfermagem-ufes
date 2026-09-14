@@ -11,15 +11,14 @@ test('guia não repete botão de acesso ao portal', async () => {
   assert.ok(!tutorial.includes('Acessar o Portal'));
 });
 
-test('comissão reúne ações, QR Code e símbolo sem deformação', async () => {
+test('comissão reúne ações e QR Code sem duplicar personalização do símbolo', async () => {
   const panel = await source('src/components/CommissionIdentityPanel.tsx');
   assert.ok(panel.includes('Adicionar membro'));
   assert.ok(panel.includes('Salvar Comissão'));
   assert.ok(panel.includes('QRCode.toDataURL'));
-  assert.ok(panel.includes('width !== 1024 || height !== 1024'));
-  assert.ok(panel.includes("file.type !== 'image/png'"));
-  assert.ok(panel.includes('object-contain'));
-  assert.ok(panel.includes('courseLogoDataUrl'));
+  assert.ok(panel.includes("margin: 0"));
+  assert.ok(!panel.includes('courseLogoDataUrl'));
+  assert.ok(!panel.includes('ADICIONAR / SUBSTITUIR SÍMBOLO'));
 });
 
 test('configurações não exibem blocos redundantes e monitor fica em Indicadores', async () => {
@@ -34,10 +33,12 @@ test('configurações não exibem blocos redundantes e monitor fica em Indicador
   assert.ok(indicators.includes('<OperationsMonitorPanel'));
 });
 
-test('paleta principal é verde militar fosco', async () => {
+test('paleta principal usa musgo, cinza e contraste claro sem oliva fluorescente', async () => {
   const css = await source('src/index.css');
-  for (const color of ['#5f6937', '#4f582e', '#343b20', '#252a16']) assert.ok(css.includes(color));
-  assert.ok(css.includes('--color-emerald-700: #5f6937'));
+  for (const forbidden of ['#5f6937', '#4f582e', '#738044', '#8c9862']) assert.ok(!css.includes(forbidden), `Cor legada ainda presente: ${forbidden}`);
+  assert.ok(css.includes('--color-emerald-800: #344125'));
+  assert.ok(css.includes('--portal-popup-header: #344125'));
+  assert.ok(css.includes('--portal-popup-action: #5b635e'));
 });
 
 test('transferência administrativa não depende de feature opcional', async () => {

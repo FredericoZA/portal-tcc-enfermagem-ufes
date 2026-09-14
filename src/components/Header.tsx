@@ -63,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome, t
           <div className="flex items-center gap-2">
             <span
               aria-hidden="true"
-              className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-xl sm:text-[22px] leading-none"
+              className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-xl sm:text-[22px] leading-none"
               title="Portal acadêmico de TCC"
             >
               🎓
@@ -77,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome, t
             >
               <div
                 className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest leading-none mb-1"
-                style={{ color: layoutConfig.headerTextColor || '#047857' }}
+                style={{ color: layoutConfig.headerTextColor || '#475569' }}
               >
                 {layoutConfig.headerInstitutionText || installationProfile.institutionName}
               </div>
@@ -101,8 +101,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome, t
                 Master Admin
               </span>
             ) : globalRoles.includes('COMMISSION_PRESIDENT') ? (
-              <span id="role-badge-coord" className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
-                <Shield className="w-3.5 h-3.5 text-emerald-700" />
+              <span id="role-badge-coord" className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 border border-slate-300 text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
+                <Shield className="w-3.5 h-3.5 text-slate-600" />
                 Presidente da Comissão
               </span>
             ) : null

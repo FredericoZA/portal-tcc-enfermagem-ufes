@@ -145,7 +145,9 @@ export const apiClient = {
   downloadProcessDocument: (id: string, documentId: string) =>
     downloadApiFile(`/api/processes/${id}/documents/${documentId}/download`),
   getProcessSignatureJobs:(id:string)=>fetchApi<SignatureJob[]>(`/api/processes/${id}/signatures`),
-  signProcessDocument:(id:string,type:string)=>fetchApi<{job:SignatureJob;message:string}>(`/api/processes/${id}/documents/${type}/sign`,{method:'POST'}),
+  signProcessDocument:(id:string,type:string,provider:'ASTEN'|'GOV_BR'='ASTEN')=>fetchApi<{job:SignatureJob;message:string}>(`/api/processes/${id}/documents/${type}/sign`,{method:'POST',body:JSON.stringify({provider})}),
+  downloadGovBrSigningPdf:(jobId:string)=>downloadApiFile(`/api/signatures/jobs/${encodeURIComponent(jobId)}/govbr/download`),
+  uploadGovBrSignedPdf:async(jobId:string,processId:string,file:File)=>{const staged=await stageFile(file,{purpose:'GOV_BR_SIGNED_PDF',processId});return fetchApi<SignatureJob>(`/api/signatures/jobs/${encodeURIComponent(jobId)}/govbr/complete`,{method:'POST',body:JSON.stringify({stagedUploadId:staged.uploadId})});},
   requestCorrection: (id: string, docId: string, data: { description: string }) => fetchApi<DocumentCorrectionRequest>(`/api/processes/${id}/documents/${docId}/correction-request`, {
     method: 'POST',
     body: JSON.stringify(data)
