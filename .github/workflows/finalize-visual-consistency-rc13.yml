@@ -1,0 +1,46 @@
+name: Finalize visual consistency rc13
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/finalize-visual-consistency-rc13.mjs
+      - .github/workflows/finalize-visual-consistency-rc13.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Aplicar padronização rc.13
+        run: node scripts/finalize-visual-consistency-rc13.mjs
+      - name: Validar CI
+        run: npm run test:ci
+      - name: Validar fluxo seguro
+        run: npm run test:secure-flow
+      - name: Publicar padronização
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Portal TCC automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/components/Footer.tsx src/pages/PortalReplicationPage.tsx src/pages/PortalTutorialPage.tsx src/utils/loginPopupConfig.ts src/pages/HomePage.tsx src/components/LoginPopupEditorModal.tsx src/index.css package.json package-lock.json src/components/Sidebar.tsx
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração adicional."
+            exit 0
+          fi
+          git commit -m "fix: padroniza popups e identidade visual rc.13"
+          git push origin HEAD:main
