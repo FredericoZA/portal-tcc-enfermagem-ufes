@@ -5,8 +5,8 @@ export const TABLE_LAYOUTS_EVENT = 'global_table_layouts_changed';
 export const GLOBAL_POPUP_STYLE_KEY = 'portal_global_popup_style_v1';
 export const GLOBAL_POPUP_STYLE_EVENT = 'portal_global_popup_style_changed';
 
-const POPUP_MOSS = '#337959';
-const LEGACY_POPUP_GREENS = new Set(['#005830', '#435649', '#344125', '#69786d']);
+const POPUP_MOSS = '#47866a';
+const LEGACY_POPUP_GREENS = new Set(['#005830', '#435649', '#344125', '#69786d', '#337959']);
 
 export interface GlobalPopupStyle {
   surfaceBgColor: string;
