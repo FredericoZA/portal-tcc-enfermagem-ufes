@@ -20,9 +20,9 @@ export interface GlobalPopupStyle {
 
 export const DEFAULT_GLOBAL_POPUP_STYLE: GlobalPopupStyle = {
   surfaceBgColor: '#ffffff',
-  headerBgColor: '#005830',
+  headerBgColor: '#69786d',
   headerTextColor: '#ffffff',
-  actionBgColor: '#005830',
+  actionBgColor: '#69786d',
   actionTextColor: '#ffffff',
   fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
   fontSize: '14px',
@@ -70,9 +70,7 @@ export function loadPortalAppearanceLinks(): Record<string, boolean> {
   if (typeof window === 'undefined') return { ...DEFAULT_PORTAL_APPEARANCE_LINKS };
   try {
     const raw = localStorage.getItem(PORTAL_APPEARANCE_LINKS_KEY);
-    return raw
-      ? unifiedAppearanceLinks(JSON.parse(raw))
-      : { ...DEFAULT_PORTAL_APPEARANCE_LINKS };
+    return raw ? unifiedAppearanceLinks(JSON.parse(raw)) : { ...DEFAULT_PORTAL_APPEARANCE_LINKS };
   } catch {
     return { ...DEFAULT_PORTAL_APPEARANCE_LINKS };
   }
@@ -86,9 +84,7 @@ export function loadGlobalPopupStyle(): GlobalPopupStyle {
   if (typeof window === 'undefined') return { ...DEFAULT_GLOBAL_POPUP_STYLE };
   try {
     const raw = localStorage.getItem(GLOBAL_POPUP_STYLE_KEY);
-    return raw
-      ? { ...DEFAULT_GLOBAL_POPUP_STYLE, ...JSON.parse(raw) }
-      : { ...DEFAULT_GLOBAL_POPUP_STYLE };
+    return raw ? { ...DEFAULT_GLOBAL_POPUP_STYLE, ...JSON.parse(raw) } : { ...DEFAULT_GLOBAL_POPUP_STYLE };
   } catch {
     return { ...DEFAULT_GLOBAL_POPUP_STYLE };
   }
@@ -108,9 +104,7 @@ export function saveGlobalPopupStyle(style: GlobalPopupStyle, emitEvent = true):
       for (const [key, value] of Object.entries({ bg: normalized.surfaceBgColor, header: normalized.headerBgColor, 'header-text': normalized.headerTextColor, action: normalized.actionBgColor, 'action-text': normalized.actionTextColor })) root.setProperty(`--portal-${prefix}-${key}`, value);
     }
   }
-  if (emitEvent) {
-    window.dispatchEvent(new CustomEvent(GLOBAL_POPUP_STYLE_EVENT, { detail: normalized }));
-  }
+  if (emitEvent) window.dispatchEvent(new CustomEvent(GLOBAL_POPUP_STYLE_EVENT, { detail: normalized }));
   return normalized;
 }
 
@@ -135,21 +129,13 @@ export function savePortalAppearanceLinks(
       const raw = localStorage.getItem(layoutKey);
       const layout = raw ? JSON.parse(raw) : {};
       if (normalized[itemKey] !== false) {
-        // Relinking means true inheritance: stale individual visual values are discarded.
         const { textFormat: _discarded, ...layoutOnly } = layout;
         localStorage.setItem(layoutKey, JSON.stringify({ ...layoutOnly, inheritGlobalAppearance: true }));
       } else {
-        localStorage.setItem(layoutKey, JSON.stringify({
-          ...layout,
-          inheritGlobalAppearance: false,
-          textFormat: layout.textFormat || { ...(globalTableFormat || {}) },
-        }));
+        localStorage.setItem(layoutKey, JSON.stringify({ ...layout, inheritGlobalAppearance: false, textFormat: layout.textFormat || { ...(globalTableFormat || {}) } }));
       }
     } catch {
-      localStorage.setItem(layoutKey, JSON.stringify({
-        inheritGlobalAppearance: normalized[itemKey] !== false,
-        ...(normalized[itemKey] === false ? { textFormat: { ...(globalTableFormat || {}) } } : {}),
-      }));
+      localStorage.setItem(layoutKey, JSON.stringify({ inheritGlobalAppearance: normalized[itemKey] !== false, ...(normalized[itemKey] === false ? { textFormat: { ...(globalTableFormat || {}) } } : {}) }));
     }
   }
 
