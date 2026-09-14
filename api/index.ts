@@ -27,8 +27,9 @@ function productionPreflight(): StartupFailure | null {
   if (!configured('PORTAL_VERIFICATION_SECRET', 32)) missing.push('DOCUMENT_VERIFICATION');
   if (!configured('GOOGLE_OAUTH_CLIENT_ID') || !configured('GOOGLE_OAUTH_CLIENT_SECRET')) missing.push('GOOGLE_OAUTH_CLIENT');
   if (!configured('GOOGLE_OAUTH_STATE_SECRET', 32)) missing.push('GOOGLE_OAUTH_STATE');
-  if (process.env.ASTEN_INTEGRATION_ENABLED === 'true' && (!configured('ASTEN_CALLBACK_URL') || !configured('ASTEN_WEBHOOK_SECRET', 32) || process.env.ASTEN_REQUIRE_CODE === 'false')) missing.push('ASTEN');
 
+  // A Asten é uma via de assinatura opcional/contingente. A falta de callback,
+  // token ou segredo bloqueia exclusivamente os envios Asten, nunca o Portal inteiro.
   const exclusives = [
     'PORTAL_SESSION_SECRET', 'PORTAL_OTP_PEPPER', 'GOOGLE_OAUTH_STATE_SECRET',
     'PORTAL_SECRET_ENCRYPTION_KEY', 'PORTAL_VERIFICATION_SECRET', 'PORTAL_UPLOAD_BINDING_SECRET',
@@ -75,10 +76,11 @@ function classifyStartupFailure(error: unknown, stage?: StartupStage): StartupFa
   if (detail.includes('PORTAL_UPLOAD_BINDING_SECRET')) return { code: 'FILE_TRANSPORT_SECURITY_REQUIRED', message: 'A proteção do transporte privado de arquivos ainda não está configurada.' };
   if (detail.includes('CRON_SECRET')) return { code: 'CRON_SECRET_REQUIRED', message: 'A autenticação da rotina agendada ainda não está configurada.' };
   if (detail.includes('PORTAL_VERIFICATION_SECRET')) return { code: 'VERIFICATION_SECRET_REQUIRED', message: 'A chave de verificação documental ainda não está configurada.' };
-  if (detail.includes('Asten') || detail.includes('ASTEN_')) return { code: 'ASTEN_SECURITY_REQUIRED', message: 'A integração de assinatura ainda não passou na verificação de segurança.' };
+  // Erros de schema/outbox pertencem ao Supabase mesmo quando citam a Asten.
+  if (detail.includes('migrações do Supabase') || detail.includes('outbox transacional')) return { code: 'SUPABASE_SCHEMA_REQUIRED', message: 'O esquema transacional do banco ainda não foi validado.' };
+  if (detail.includes('Asten') || detail.includes('ASTEN_')) return { code: 'ASTEN_SECURITY_REQUIRED', message: 'A integração de assinatura Asten ainda não passou na verificação de segurança.' };
   if (detail.includes('GOOGLE_') || detail.toLowerCase().includes('oauth')) return { code: 'GOOGLE_OAUTH_SECURITY_REQUIRED', message: 'A integração Google ainda não passou na verificação de segurança.' };
   if (detail.includes('PORTAL_SESSION_SECRET') || detail.toLowerCase().includes('sessão')) return { code: 'SESSION_SECRET_REQUIRED', message: 'A proteção de sessão ainda não está configurada.' };
-  if (detail.includes('migrações do Supabase') || detail.includes('outbox transacional')) return { code: 'SUPABASE_SCHEMA_REQUIRED', message: 'O esquema transacional do banco ainda não foi validado.' };
   return { code: 'PORTAL_APP_INITIALIZATION_ERROR', message: 'A aplicação foi carregada, mas uma validação interna ainda impede a inicialização segura.', runtimeSignal: signal };
 }
 
