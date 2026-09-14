@@ -42,9 +42,11 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-center gap-4 p-3 min-h-[135px]">
-          <div className="min-w-0 flex-1 flex flex-col justify-center items-center text-center gap-2"><div><div className="font-extrabold uppercase tracking-wider text-[9px] leading-tight" style={{color:footerMuted}}>Desenvolvimento da Plataforma<br/>e Suporte</div><p className="font-bold text-[12px] mt-1">{devName}</p></div>{whatsappUrl&&<a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-2 font-bold uppercase tracking-wider text-[10px] rounded-lg transition-all hover:brightness-110" style={{backgroundColor:whatsappBg,color:whatsappText}}><MessageCircle className="w-3.5 h-3.5"/>WhatsApp Secretaria</a>}{contactEmail&&<div className="flex items-center gap-1" style={{color:footerMuted}}><Mail className="w-3 h-3"/><span className="font-mono text-[9.5px] select-all">{contactEmail}</span></div>}</div>
-          {qrCodeSource&&<div className="w-[108px] h-[108px] sm:w-[130px] sm:h-[130px] bg-white shrink-0 overflow-hidden"><img src={qrCodeSource} alt="QR Code para contato pelo WhatsApp" className="block h-full w-full object-cover" referrerPolicy="no-referrer"/></div>}
+        <div className="flex items-center justify-center p-3 min-h-[135px]">
+          <div className="flex w-full max-w-[500px] items-center justify-center gap-3 sm:gap-4">
+            <div className="min-w-0 w-[280px] flex flex-col justify-center items-center text-center gap-2"><div><div className="font-extrabold uppercase tracking-wider text-[9px] leading-tight" style={{color:footerMuted}}>Desenvolvimento da Plataforma<br/>e Suporte</div><p className="font-bold text-[12px] mt-1">{devName}</p></div>{whatsappUrl&&<a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-2 font-bold uppercase tracking-wider text-[10px] rounded-lg transition-all hover:brightness-110" style={{backgroundColor:whatsappBg,color:whatsappText}}><MessageCircle className="w-3.5 h-3.5"/>WhatsApp Secretaria</a>}{contactEmail&&<div className="flex items-center gap-1" style={{color:footerMuted}}><Mail className="w-3 h-3"/><span className="font-mono text-[9.5px] select-all">{contactEmail}</span></div>}</div>
+            {qrCodeSource&&<div className="w-[108px] h-[108px] sm:w-[130px] sm:h-[130px] bg-white shrink-0 overflow-hidden"><img src={qrCodeSource} alt="QR Code para contato pelo WhatsApp" className="block h-full w-full object-cover" referrerPolicy="no-referrer"/></div>}
+          </div>
         </div>
       </div>
     </div>
