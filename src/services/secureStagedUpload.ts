@@ -2,6 +2,7 @@ export type StagedUploadPurpose =
   | 'DOCUMENT_MODEL'
   | 'PROCESS_FULL_WORK'
   | 'PROCESS_EXPANDED_ABSTRACT'
+  | 'SIGNED_DOCUMENT'
   | 'VERIFICATION_PDF';
 
 export interface StagedUploadDescriptor {
@@ -51,8 +52,6 @@ export async function uploadBinaryToSignedUrl(file: File, ticket: StagedUploadTi
     throw new Error('O destino de upload não utiliza uma conexão segura.');
   }
 
-  // O formato replica uploadToSignedUrl do Storage: o binário vai direto ao
-  // Supabase, nunca atravessa o body JSON da função Vercel.
   const body = new FormData();
   body.append('cacheControl', '0');
   body.append('', file, file.name);
