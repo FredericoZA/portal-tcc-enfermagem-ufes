@@ -57,7 +57,6 @@ export interface SiteLayoutConfig {
 }
 
 export const PORTAL_COLORS = {
-  // Verde canônico aprovado: é exatamente o verde da faixa DOM/SEG/TER... do calendário.
   moss: '#005830',
   mossDark: '#004626',
   deepGreen: '#06372d',
@@ -72,8 +71,8 @@ export const PORTAL_COLORS = {
   whatsappButton: '#1EA952',
   ice: '#f1f5f9',
   iceSelected: '#e2e8f0',
-  // 20% mais claro que #005830 por mistura com branco.
-  popupMoss: '#337959'
+  // Verde de destaque: 10% mais claro que o pop-up da atualização 18 (#337959).
+  popupMoss: '#47866A'
 } as const;
 
 export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
@@ -84,7 +83,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   headerCustomLogoUrl: '',
   headerBgColor: '#ffffff',
   headerTextColor: '#0f172a',
-  headerTitleColor: PORTAL_COLORS.moss,
+  headerTitleColor: PORTAL_COLORS.popupMoss,
   headerBgImage: '',
   sidebarTitle: 'PORTAL DE TCC',
   sidebarSubtitle: 'Enfermagem',
@@ -149,15 +148,13 @@ function normalizeVisualConfig(parsed: any): SiteLayoutConfig {
     headerInstitutionText: parsed?.headerInstitutionText || DEFAULT_SITE_LAYOUT_CONFIG.headerInstitutionText,
     headerCourseTitle: normalizeHeaderCourseTitle(parsed?.headerCourseTitle),
     headerTextColor: '#0f172a',
-    // A identidade do curso permanece verde-musgo independentemente do usuário logado.
-    headerTitleColor: PORTAL_COLORS.moss,
+    headerTitleColor: PORTAL_COLORS.popupMoss,
     sidebarLogoType:'custom', sidebarCustomLogoUrl:typeof parsed?.sidebarCustomLogoUrl==='string'?parsed.sidebarCustomLogoUrl:'', sidebarIconMode:parsed?.sidebarIconMode==='lucide'?'lucide':'emoji',
     sidebarTitle: parsed?.sidebarTitle || DEFAULT_SITE_LAYOUT_CONFIG.sidebarTitle,
     sidebarSubtitle: normalizeSidebarSubtitle(parsed?.sidebarSubtitle),
     sidebarBgColor:migrateColor(parsed?.sidebarBgColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarBgColor), sidebarHeaderBgColor:migrateColor(parsed?.sidebarHeaderBgColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarHeaderBgColor),
     sidebarTextColor:migrateColor(parsed?.sidebarTextColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarTextColor), sidebarTitleColor:migrateColor(parsed?.sidebarTitleColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarTitleColor),
     sidebarSubtitleColor: PORTAL_COLORS.whatsapp,
-    // Evita regressão por configurações antigas específicas de conta: item ativo volta ao verde aprovado.
     sidebarActiveBgColor:PORTAL_COLORS.sidebarActive,
     sidebarActiveTextColor:'#ffffff',
     sidebarActiveBorderColor:migrateColor(parsed?.sidebarActiveBorderColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarActiveBorderColor), sidebarDividerColor:migrateColor(parsed?.sidebarDividerColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarDividerColor),
