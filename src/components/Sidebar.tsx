@@ -50,7 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
 
   const isColorLight = (hex?: string) => {
     if (!hex) return false;
-    if (['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#f0f1e7', '#e0f2fe', '#fefce8', '#fff1f2'].includes(hex)) return true;
+    if (['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#f3f5f4', '#e0f2fe', '#fefce8', '#fff1f2'].includes(hex)) return true;
     const clean = hex.replace('#', '');
     if (clean.length !== 6) return false;
     const r = parseInt(clean.substring(0, 2), 16);
@@ -59,10 +59,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
     return (r * 299 + g * 587 + b * 114) / 1000 > 140;
   };
 
-  const isHeaderLight = isColorLight(layoutConfig.sidebarHeaderBgColor || '#252a16');
+  const isHeaderLight = isColorLight(layoutConfig.sidebarHeaderBgColor || '#082a22');
   const sidebarHeaderTitleColor = layoutConfig.sidebarTitleColor || (isHeaderLight ? '#0f172a' : '#ffffff');
   const sidebarFooterTextColor = isHeaderLight ? '#0f172a' : '#ffffff';
-  const sidebarFooterMutedColor = isHeaderLight ? '#64748b' : '#c8ceb0';
+  const sidebarFooterMutedColor = isHeaderLight ? '#64748b' : '#d9dfdc';
 
   const getNavLabel = (id: string, fallback: string) => layoutConfig.sidebarNavLabels?.[id] || fallback;
   const getNavEmoji = (id: string, fallback: string) => layoutConfig.sidebarNavEmojis?.[id] || fallback;
@@ -71,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
     const rawEmoji = getNavEmoji(id, defaultEmoji);
     const emoji = Array.from(rawEmoji || '')[0] || defaultEmoji;
     if ((layoutConfig.sidebarIconMode || 'emoji') === 'lucide') {
-      return <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#e0e3cf]' : 'text-slate-200'}`} />;
+      return <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-200'}`} />;
     }
     return <span className="text-base shrink-0 leading-none">{emoji}</span>;
   };
@@ -95,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
       {isCollapsed && (
         <div
           id="sidebar-hover-trigger"
-          className="hidden lg:flex fixed left-0 top-0 bottom-0 w-3 z-45 bg-slate-200/40 hover:bg-emerald-600/10 border-r border-slate-300/30 hover:border-emerald-500/50 items-center justify-center transition-all duration-150 cursor-pointer group"
+          className="hidden lg:flex fixed left-0 top-0 bottom-0 w-3 z-45 bg-slate-200/40 hover:bg-slate-500/10 border-r border-slate-300/30 hover:border-slate-400/50 items-center justify-center transition-all duration-150 cursor-pointer group"
           onMouseEnter={() => setIsHovered(true)}
           title="Passe o mouse aqui para abrir o menu lateral"
         >
@@ -110,9 +110,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         style={{
-          backgroundColor: layoutConfig.sidebarBgColor || '#343b20',
-          borderColor: layoutConfig.sidebarDividerColor || '#616d36',
-          color: layoutConfig.sidebarTextColor || '#f0f1e7'
+          backgroundColor: layoutConfig.sidebarBgColor || '#0c342a',
+          borderColor: layoutConfig.sidebarDividerColor || '#315247',
+          color: layoutConfig.sidebarTextColor || '#f6f7f6'
         }}
         className={`fixed top-0 bottom-0 left-0 z-50 w-64 text-slate-100 flex flex-col border-r transition-all duration-300 ease-in-out ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full'
@@ -120,8 +120,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
       >
         <div
           style={{
-            backgroundColor: layoutConfig.sidebarHeaderBgColor || '#252a16',
-            borderColor: layoutConfig.sidebarDividerColor || '#616d36'
+            backgroundColor: layoutConfig.sidebarHeaderBgColor || '#082a22',
+            borderColor: layoutConfig.sidebarDividerColor || '#315247'
           }}
           className="px-3 py-4 border-b flex items-center justify-between relative group"
         >
@@ -141,10 +141,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
                 {layoutConfig.sidebarTitle || 'Portal de TCC'}
               </h1>
               <p
-                className="text-[9.5px] sm:text-[10px] font-bold tracking-[0.08em] uppercase mt-1 text-center leading-4 whitespace-normal w-full"
-                style={{ color: layoutConfig.sidebarSubtitleColor || (isHeaderLight ? '#5f6937' : '#c8ceb0') }}
+                className="text-[11px] sm:text-xs font-semibold tracking-[0.035em] uppercase mt-1.5 text-center leading-[1.35] whitespace-normal w-full"
+                style={{ color: '#d9dfdc' }}
               >
-                {layoutConfig.sidebarSubtitle || `${installationProfile.courseName} • ${installationProfile.institutionAcronym || installationProfile.institutionName}`}
+                ENFERMAGEM E OBSTETRÍCIA · UFES
               </p>
             </div>
           </button>
@@ -190,7 +190,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
                   <div
                     key={`${itemKey}-${idx}`}
                     className="my-2.5 pt-0.5 border-t transition-colors"
-                    style={{ borderColor: layoutConfig.sidebarDividerColor || '#616d36', borderStyle: layoutConfig.sidebarDividerStyle || 'solid' }}
+                    style={{ borderColor: layoutConfig.sidebarDividerColor || '#315247', borderStyle: layoutConfig.sidebarDividerStyle || 'solid' }}
                   />
                 );
               }
@@ -210,12 +210,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
                   }`}
                   style={isActive
                     ? {
-                        backgroundColor: layoutConfig.sidebarActiveBgColor || '#525c2e',
-                        color: layoutConfig.sidebarActiveTextColor || '#ffffff',
-                        borderLeft: `3px solid ${layoutConfig.sidebarActiveBorderColor || '#aab388'}`,
+                        backgroundColor: layoutConfig.sidebarActiveBgColor || '#435649',
+                        color: '#ffffff',
+                        borderLeft: `3px solid ${layoutConfig.sidebarActiveBorderColor || '#d2d9d5'}`,
                         paddingLeft: '0.75rem'
                       }
-                    : { color: layoutConfig.sidebarTextColor || '#f0f1e7' }}
+                    : { color: layoutConfig.sidebarTextColor || '#f6f7f6' }}
                 >
                   <div className="flex items-center gap-3">
                     {renderNavIcon(item.id, Icon, item.emoji, isActive)}
@@ -230,8 +230,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
         <div
           id="sidebar-user-footer"
           style={{
-            backgroundColor: layoutConfig.sidebarHeaderBgColor || '#252a16',
-            borderColor: layoutConfig.sidebarDividerColor || '#616d36'
+            backgroundColor: layoutConfig.sidebarHeaderBgColor || '#082a22',
+            borderColor: layoutConfig.sidebarDividerColor || '#315247'
           }}
           className="p-4 border-t space-y-2"
         >
@@ -240,7 +240,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
               id="bottom-access-portal-btn"
               type="button"
               onClick={() => handleNav('acessar-portal')}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-[#aab388]/70 bg-[#e0e3cf] px-3 py-2.5 text-xs font-black uppercase tracking-wide text-[#343b20] shadow-sm hover:bg-white transition-colors"
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-xs font-black uppercase tracking-wide text-slate-800 shadow-sm hover:bg-white transition-colors"
             >
               <LogIn className="w-4 h-4" />
               Entrar no Portal
