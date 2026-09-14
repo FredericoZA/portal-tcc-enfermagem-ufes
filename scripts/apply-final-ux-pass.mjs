@@ -5,10 +5,10 @@ const write=(p,s)=>fs.writeFileSync(p,s);
 const rep=(s,a,b,label)=>{if(!s.includes(a))throw new Error(`Trecho não encontrado: ${label}`);return s.replace(a,b);};
 const rex=(s,re,b,label)=>{if(!re.test(s))throw new Error(`Padrão não encontrado: ${label}`);re.lastIndex=0;return s.replace(re,b);};
 
-// 1) Paleta global: cinzas esverdeados neutros, sem verde fluorescente/amarelado.
+// 1) Paleta global: cinzas esverdeados neutros, preservando o musgo canônico nos destaques.
 {
  const p='src/index.css'; let s=read(p);
- s=rep(s,`  --color-emerald-50: #f6f8f7;\n  --color-emerald-100: #e8ecea;\n  --color-emerald-200: #d6ddd9;\n  --color-emerald-300: #b6c2bc;\n  --color-emerald-400: #91a096;\n  --color-emerald-500: #6f8076;\n  --color-emerald-600: #52675d;\n  --color-emerald-700: #435649;\n  --color-emerald-800: #344125;\n  --color-emerald-900: #27382f;\n  --color-emerald-950: #18271f;`, `  --color-emerald-50: #f7f8f7;\n  --color-emerald-100: #edf0ee;\n  --color-emerald-200: #dbe0dd;\n  --color-emerald-300: #c4cbc7;\n  --color-emerald-400: #a5aea9;\n  --color-emerald-500: #87918b;\n  --color-emerald-600: #707a74;\n  --color-emerald-700: #5d6761;\n  --color-emerald-800: #4b5550;\n  --color-emerald-900: #3b4540;\n  --color-emerald-950: #28302c;`, 'paleta emerald');
+ s=rep(s,`  --color-emerald-50: #f6f8f7;\n  --color-emerald-100: #e8ecea;\n  --color-emerald-200: #d6ddd9;\n  --color-emerald-300: #b6c2bc;\n  --color-emerald-400: #91a096;\n  --color-emerald-500: #6f8076;\n  --color-emerald-600: #52675d;\n  --color-emerald-700: #435649;\n  --color-emerald-800: #344125;\n  --color-emerald-900: #27382f;\n  --color-emerald-950: #18271f;`, `  --color-emerald-50: #f7f8f7;\n  --color-emerald-100: #edf0ee;\n  --color-emerald-200: #dbe0dd;\n  --color-emerald-300: #c4cbc7;\n  --color-emerald-400: #a5aea9;\n  --color-emerald-500: #87918b;\n  --color-emerald-600: #707a74;\n  --color-emerald-700: #5d6761;\n  --color-emerald-800: #344125;\n  --color-emerald-900: #2f392a;\n  --color-emerald-950: #202820;`, 'paleta emerald');
  s=rep(s,`  --portal-focus-color: #435649;`, `  --portal-focus-color: #344125;`, 'focus moss');
  write(p,s);
 }
@@ -50,7 +50,7 @@ const rex=(s,re,b,label)=>{if(!re.test(s))throw new Error(`Padrão não encontra
 {
  const p='src/components/AuditAndSecuritySection.tsx'; let s=read(p);
  s=rep(s,`                E-mail do Presidente da Comissão:`, `                E-mail da Presidência e recuperação do Master:`, 'label presidente');
- s=rex(s,/\n\s*<div className="rounded-lg border border-slate-200 bg-slate-50\/70 p-3\.5">\s*<p className="text-\[10px\] font-bold uppercase text-slate-700">Recuperação do Master<\/p>[\s\S]*?<\/div>\n\n\s*<div className="pt-2 flex items-center justify-end border-t border-slate-200">/, `\n\n        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] leading-4 text-slate-600">A Presidente da Comissão é automaticamente o único contato de recuperação do Master e pode iniciar a troca segura do usuário Master.</div>\n\n        <div className="pt-2 flex items-center justify-end border-t border-slate-200">`, 'bloco recuperacao compacto');
+ s=rex(s,/\n\s*<div className="rounded-lg border border-slate-200 bg-slate-50\/70 p-3\.5">\s*<p className="text-\[10px\] font-bold uppercase text-slate-700">Recuperação do Master<\/p>[\s\S]*?<\/div>\n\n\s*<div className="pt-2 flex items-center justify-end border-t border-slate-200">/, `\n\n        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] leading-4 text-slate-600">A Presidente da Comissão é automaticamente o contato de recuperação do Master e é o único contato ativo para iniciar a troca segura do usuário Master.</div>\n\n        <div className="pt-2 flex items-center justify-end border-t border-slate-200">`, 'bloco recuperacao compacto');
  write(p,s);
 }
 
