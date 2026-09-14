@@ -11,7 +11,7 @@ interface HeaderProps {
   title?: string;
 }
 
-const COURSE_ACCENT = '#47866A';
+const COURSE_ACCENT = '#337959';
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome }) => {
   const { userEmail, globalRoles, memberships, settings } = useAuth();
@@ -29,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome })
   }, []);
 
   const headerStyle: React.CSSProperties = {
-    backgroundColor: layoutConfig.headerBgColor || '#ffffff',
+    backgroundColor: layoutConfig.headerBgColor || '#f2f2f2',
     ...(layoutConfig.headerBgImage ? { backgroundImage: `url(${layoutConfig.headerBgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
   };
   const headerLogo = String(layoutConfig.headerCustomLogoUrl || '');

@@ -5,8 +5,8 @@ export const TABLE_LAYOUTS_EVENT = 'global_table_layouts_changed';
 export const GLOBAL_POPUP_STYLE_KEY = 'portal_global_popup_style_v1';
 export const GLOBAL_POPUP_STYLE_EVENT = 'portal_global_popup_style_changed';
 
-const POPUP_MOSS = '#47866a';
-const LEGACY_POPUP_GREENS = new Set(['#005830', '#435649', '#344125', '#69786d', '#337959']);
+const POPUP_MOSS = '#337959';
+const LEGACY_POPUP_GREENS = new Set(['#005830', '#435649', '#344125', '#69786d', '#47866a']);
 
 export interface GlobalPopupStyle {
   surfaceBgColor: string;
@@ -22,7 +22,7 @@ export interface GlobalPopupStyle {
 }
 
 export const DEFAULT_GLOBAL_POPUP_STYLE: GlobalPopupStyle = {
-  surfaceBgColor: '#ffffff',
+  surfaceBgColor: '#f2f2f2',
   headerBgColor: POPUP_MOSS,
   headerTextColor: '#ffffff',
   actionBgColor: POPUP_MOSS,
@@ -30,7 +30,7 @@ export const DEFAULT_GLOBAL_POPUP_STYLE: GlobalPopupStyle = {
   fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
   fontSize: '14px',
   borderRadius: '16px',
-  borderColor: '#cbd5e1',
+  borderColor: '#c3c9cf',
   styleVariant: 'solid',
 };
 
@@ -69,6 +69,7 @@ function normalizePopupStyle(style: Partial<GlobalPopupStyle> = {}): GlobalPopup
   const normalized = { ...DEFAULT_GLOBAL_POPUP_STYLE, ...style };
   if (LEGACY_POPUP_GREENS.has(String(normalized.headerBgColor).toLowerCase())) normalized.headerBgColor = POPUP_MOSS;
   if (LEGACY_POPUP_GREENS.has(String(normalized.actionBgColor).toLowerCase())) normalized.actionBgColor = POPUP_MOSS;
+  if (String(normalized.surfaceBgColor).toLowerCase() === '#ffffff') normalized.surfaceBgColor = '#f2f2f2';
   normalized.fontFamily = portalFontFamily(normalized.fontFamily);
   return normalized;
 }

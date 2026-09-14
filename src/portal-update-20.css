@@ -1,0 +1,340 @@
+/*
+ * Atualização 20 — compactação, contraste e profundidade.
+ * Cabeçalhos de planilha: #005830 (mais escuro).
+ * Acento, pop-ups e ações vinculadas: #337959 (mais claro que a planilha).
+ * QR WhatsApp permanece #25D366.
+ */
+:root {
+  --portal-moss: #005830;
+  --portal-moss-hover: #004626;
+  --portal-popup-moss: #337959;
+  --portal-course-accent: #337959;
+  --portal-whatsapp-button: #337959;
+  --portal-ice: #e5e9ed;
+  --portal-ice-selected: #d6dce4;
+  --portal-ice-selected-strong: #c1c4c7;
+  --portal-surface: #f2f2f2;
+  --portal-control-border: #c3c9cf;
+
+  --portal-ui-popup-moss: #337959;
+  --portal-ui-white: #f2f2f2;
+  --portal-ui-gray-light: #e5e9ed;
+  --portal-ui-gray-selected: #d6dce4;
+  --portal-ui-gray-mid: #c3c9cf;
+  --portal-popup-bg: #f2f2f2 !important;
+  --portal-popup-header: #337959 !important;
+  --portal-popup-action: #337959 !important;
+}
+
+/* Superfícies cerca de 5% mais escuras, preservando QR e conteúdo que precisa de branco real. */
+html,
+body,
+#root {
+  background-color: #e5e9ed !important;
+}
+
+#portal-header,
+#root .bg-white,
+div.fixed[class*="bg-white"] {
+  background-color: #f2f2f2 !important;
+}
+
+#root .bg-slate-50,
+#root .bg-slate-50\/70,
+#root .bg-slate-50\/95,
+div.fixed .bg-slate-50 {
+  background-color: #e5e9ed !important;
+}
+
+#home-page-footer-notes div:has(> img[alt="QR Code para contato pelo WhatsApp"]),
+#home-page-footer-notes img[alt="QR Code para contato pelo WhatsApp"] {
+  background-color: #ffffff !important;
+}
+
+/* Cabeçalho institucional e subtítulo da lateral usam o acento restaurado. */
+#portal-header h1 {
+  color: #337959 !important;
+}
+
+#portal-sidebar h1 + div {
+  color: #337959 !important;
+  font-size: 12.5px !important;
+  line-height: 1.3 !important;
+}
+
+/* Cabeçalhos das planilhas continuam mais escuros e recebem a mesma linha de separação. */
+#formal-monthly-calendar-section > div > div:first-child,
+#public-calendar-cards-section > div > div:first-child,
+.table-sticky-container table thead,
+.table-sticky-container table thead th {
+  background-color: #005830 !important;
+  color: #ffffff !important;
+}
+
+#formal-monthly-calendar-section > div > div:first-child,
+#public-calendar-cards-section > div > div:first-child {
+  border-bottom: 1px solid rgba(255,255,255,.62) !important;
+}
+
+/* Filtros: hover não altera a cor; somente seleção recebe o mesmo cinza da engrenagem. */
+.portal-table-filter-chip,
+.portal-table-filter-chip:not([data-selected="true"]),
+.portal-table-filter-chip:not([data-selected="true"]):hover {
+  background-color: #e5e9ed !important;
+  color: #0f172a !important;
+  border-color: #c3c9cf !important;
+  opacity: 1 !important;
+  transform: none !important;
+  box-shadow: 0 1px 2px rgba(15,23,42,.09) !important;
+  filter: none !important;
+}
+
+.portal-table-filter-chip[data-selected="true"],
+.portal-table-filter-chip[data-selected="true"]:hover,
+div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-200"] {
+  background-color: #c1c4c7 !important;
+  color: #0f172a !important;
+  border-color: #92999f !important;
+  opacity: 1 !important;
+  transform: none !important;
+  box-shadow: 0 1px 2px rgba(15,23,42,.12) !important;
+  outline: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+}
+
+/* Toolbar neutra e estável no hover; active dá resposta curta sem mudar a linguagem visual. */
+button[title="Selecionar Mês e Ano"],
+button[title="Mês Anterior"],
+button[title="Ir para o mês atual"],
+button[title="Próximo Mês"],
+button[title^="Buscar registros"],
+button[title^="Sincronizar dados"],
+button[title^="Configurar exibição"],
+.portal-repository-download-toolbar {
+  background-color: #e5e9ed !important;
+  color: #0f172a !important;
+  border-color: #c3c9cf !important;
+  box-shadow: 0 1px 3px rgba(15,23,42,.13) !important;
+}
+
+button[title="Selecionar Mês e Ano"]:hover,
+button[title="Mês Anterior"]:hover,
+button[title="Ir para o mês atual"]:hover,
+button[title="Próximo Mês"]:hover,
+button[title^="Buscar registros"]:hover,
+button[title^="Sincronizar dados"]:hover,
+button[title^="Configurar exibição"]:hover,
+.portal-repository-download-toolbar:hover {
+  background-color: #e5e9ed !important;
+  color: #0f172a !important;
+  filter: none !important;
+}
+
+button[title^="Buscar registros"]:active,
+button[title^="Sincronizar dados"]:active,
+button[title^="Configurar exibição"]:active,
+.portal-repository-download-toolbar:active {
+  background-color: #d6dce4 !important;
+}
+
+/* O download deixa de ser botão externo e entra como quarto ícone da barra do Repositório. */
+[data-portal-download-source="true"] {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.portal-repository-download-toolbar {
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  min-width: 1.75rem !important;
+  min-height: 1.75rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  border: 1px solid #c3c9cf !important;
+  border-radius: .5rem !important;
+  cursor: pointer !important;
+}
+
+/* Acento restaurado em pop-ups, curso, ações vinculadas e componentes ainda com estilo inline da revisão 19. */
+.portal-modal-header,
+div.fixed.inset-0 > div[class*="bg-white"] > div:first-child[class*="border-b"],
+div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-b"],
+div.fixed.z-\[1000001\].bg-white > div:first-child[class*="border-b"],
+.portal-search-popover > div:first-child {
+  background-color: #337959 !important;
+  color: #ffffff !important;
+  border-color: #337959 !important;
+}
+
+.portal-action-primary,
+.portal-modal-primary,
+div.fixed.inset-0:has(input[type="email"]) button[type="submit"],
+div.fixed.z-\[1000001\].bg-white > div:last-child > button:last-child,
+.portal-search-popover button:last-child {
+  background-color: #337959 !important;
+  color: #ffffff !important;
+  border-color: #337959 !important;
+}
+
+[style*="background-color: rgb(71, 134, 106)"] {
+  background-color: #337959 !important;
+}
+[style*="border-color: rgb(71, 134, 106)"] {
+  border-color: #337959 !important;
+}
+[style*="color: rgb(71, 134, 106)"] {
+  color: #337959 !important;
+}
+[style*="#47866A" i] {
+  border-color: #337959 !important;
+}
+
+/* WhatsApp Secretaria acompanha o acento; miolo do QR permanece no verde oficial. */
+#home-page-footer-notes a[href*="wa.me"],
+#home-page-footer-notes a[href*="whatsapp"] {
+  background-color: #337959 !important;
+  border-color: #337959 !important;
+  box-shadow: 0 2px 5px rgba(15,23,42,.18) !important;
+}
+
+#home-page-footer-notes div:has(> img[alt="QR Code para contato pelo WhatsApp"]) > span {
+  background-color: #25d366 !important;
+}
+
+/* Local das apresentações: mesmo pequeno espaço acima e abaixo + profundidade. */
+#home-page-container {
+  gap: 0 !important;
+}
+
+#home-page-container #formal-monthly-calendar-section {
+  margin-bottom: .375rem !important;
+}
+
+#home-page-container #presentation-location-card {
+  margin-top: 0 !important;
+  margin-bottom: .375rem !important;
+  box-shadow: 0 3px 9px rgba(15,23,42,.15) !important;
+}
+
+#home-page-container #public-calendar-cards-section {
+  margin-top: 0 !important;
+}
+
+/* Profundidade padronizada para caixas e cartões, sem exagerar. */
+#root .shadow-2xs,
+#root .shadow-xs,
+#root .shadow-sm {
+  box-shadow: 0 2px 6px rgba(15,23,42,.12) !important;
+}
+
+#formal-monthly-calendar-section > div,
+#public-calendar-cards-section > div,
+#presentation-location-card,
+main section[class*="rounded"],
+main article[class*="rounded"] {
+  box-shadow: 0 3px 9px rgba(15,23,42,.12) !important;
+}
+
+/* Busca: conteúdo e OK enxutos. */
+.portal-search-popover > div:first-child {
+  min-height: 2rem !important;
+  padding: .25rem .65rem !important;
+}
+
+.portal-search-popover > div:nth-child(2) {
+  padding: .45rem .55rem !important;
+  gap: .35rem !important;
+}
+
+.portal-search-popover input {
+  height: 1.9rem !important;
+  padding-top: .2rem !important;
+  padding-bottom: .2rem !important;
+}
+
+.portal-search-popover > div:nth-child(2) > div:last-child button {
+  min-height: 1.45rem !important;
+  padding: .05rem .5rem !important;
+  line-height: 1.2rem !important;
+}
+
+/* Engrenagem: elimina almofada vertical e mantém opções selecionadas claramente visíveis. */
+div.fixed.z-\[1000001\].bg-white:not(.portal-search-popover) {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+div.fixed.z-\[1000001\].bg-white:not(.portal-search-popover) > div:first-child[class*="border-b"] {
+  min-height: 2rem !important;
+  margin: 0 !important;
+  padding: .25rem 2rem !important;
+}
+
+div.fixed.z-\[1000001\].bg-white:not(.portal-search-popover) > div:nth-child(2) {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: .45rem !important;
+  padding: .4rem .55rem !important;
+}
+
+div.fixed.z-\[1000001\].bg-white:not(.portal-search-popover) > div:nth-child(2) > * {
+  margin-block: 0 !important;
+}
+
+div.fixed.z-\[1000001\].bg-white:not(.portal-search-popover) > div:nth-child(2) button {
+  padding-top: .22rem !important;
+  padding-bottom: .22rem !important;
+  min-height: 1.65rem !important;
+}
+
+div.fixed.z-\[1000001\].bg-white:not(.portal-search-popover) > div:last-child {
+  margin: 0 !important;
+  padding: .3rem .55rem !important;
+}
+
+div.fixed.z-\[1000001\].bg-white:not(.portal-search-popover) > div:last-child > button:last-child {
+  padding: .18rem .65rem !important;
+  min-height: 1.55rem !important;
+}
+
+/* Login: botões e rodapé compactos, sem grandes espaços verticais. */
+div.fixed.inset-0:has(input[type="email"]) > div > div:first-child[class*="border-b"] {
+  min-height: 2.1rem !important;
+  padding-top: .28rem !important;
+  padding-bottom: .28rem !important;
+}
+
+div.fixed.inset-0:has(input[type="email"]) form {
+  gap: .45rem !important;
+}
+
+div.fixed.inset-0:has(input[type="email"]) form > div:last-child {
+  margin-top: .35rem !important;
+  padding-top: .35rem !important;
+  padding-bottom: .15rem !important;
+}
+
+div.fixed.inset-0:has(input[type="email"]) form > div:last-child button {
+  padding-top: .3rem !important;
+  padding-bottom: .3rem !important;
+  min-height: 1.8rem !important;
+}
+
+/* Rodapés genéricos de modal e ações comuns também seguem ritmo compacto. */
+.portal-modal-surface > div:last-child[class*="border-t"],
+div.fixed.inset-0 > div[class*="bg-white"] > div:last-child[class*="border-t"],
+div.fixed.inset-0 > div[class*="bg-slate-100"] > div:last-child[class*="border-t"] {
+  padding-top: .4rem !important;
+  padding-bottom: .4rem !important;
+}
+
+.portal-modal-surface button:not([aria-label*="Fechar"]),
+div.fixed.inset-0 > div[class*="bg-white"] button:not([aria-label*="Fechar"]),
+div.fixed.inset-0 > div[class*="bg-slate-100"] button:not([aria-label*="Fechar"]) {
+  padding-top: .3rem !important;
+  padding-bottom: .3rem !important;
+}
