@@ -20,7 +20,8 @@ import { TccDetailPopupEditorModal } from '../components/TccDetailPopupEditorMod
 import { loadTccDetailPopupFormat, saveTccDetailPopupFormat, TccDetailPopupFormat } from '../types/tccDetailFormat';
 import { LoginPopupEditorModal } from '../components/LoginPopupEditorModal';
 import { loadLoginPopupConfig, saveLoginPopupConfig, LoginPopupConfig } from '../utils/loginPopupConfig';
-import { AuditAndSecuritySection, MasterAndPresidentConfigForm, AuditLogsTable } from '../components/AuditAndSecuritySection';
+import { AuditAndSecuritySection, AuditLogsTable } from '../components/AuditAndSecuritySection';
+import { AdministrativeAccountsPanel } from '../components/AdministrativeAccountsPanel';
 import { 
   TableTextFormat, 
   DEFAULT_TABLE_TEXT_FORMAT, 
@@ -2281,9 +2282,9 @@ export const ConfiguracoesPage: React.FC = () => {
         </button>
 
         {openSections.sync && (
-          <div className="p-3 sm:p-4 border-t border-slate-200 space-y-4">
+          <div className="p-3 border-t border-slate-200 space-y-3">
             {isMasterAdmin && (
-              <MasterAndPresidentConfigForm
+              <AdministrativeAccountsPanel
                 settings={settings}
                 onSettingsUpdated={(newSet) => {
                   refreshAuth();

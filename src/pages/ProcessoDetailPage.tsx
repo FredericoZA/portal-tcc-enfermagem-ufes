@@ -1,4 +1,4 @@
-import { portalNotice, portalPrompt } from '../services/portalDialogs';
+import { portalNotice, portalPrompt, portalConfirm } from '../services/portalDialogs';
 import { AdvisorEvaluationPanel } from '../components/AdvisorEvaluationPanel';
 import React, { useState, useEffect } from 'react';
 import { ProcessData, ProcessDocument, ProcessRole, SignatureJob } from '../types';
@@ -339,13 +339,36 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const canEditData = canCoordinatorEdit;
 
-  const handleSignDocument=async(doc:ProcessDocument)=>{
-    setSignatureWorking(doc.type);setSignatureNotice(null);
+  const downloadBlob=(blob:Blob,fileName:string)=>{const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=fileName;link.click();URL.revokeObjectURL(url);};
+
+  const handleSignDocument=async(doc:ProcessDocument,provider:'ASTEN'|'GOVBR_EXTERNAL'='ASTEN')=>{
+    setSignatureWorking(`${doc.type}:${provider}`);setSignatureNotice(null);
     try{
-      const result=await apiClient.signProcessDocument(process.id,doc.type);
-      setSignatureNotice({ok:true,text:result.message});
+      const result=await apiClient.signProcessDocument(process.id,doc.type,provider);
+      if(provider==='GOVBR_EXTERNAL'){
+        const file=await apiClient.downloadGovBrUnsignedDocument(process.id,result.job.id);
+        downloadBlob(file.blob,file.fileName);
+        setSignatureNotice({ok:true,text:'PDF preparado para assinatura no Gov.br. Todos os signatários devem assinar o mesmo arquivo; depois envie a versão final assinada ao Portal.'});
+      }else setSignatureNotice({ok:true,text:result.message});
       await loadData();
-    }catch(error){setSignatureNotice({ok:false,text:error instanceof Error?error.message:'Não foi possível enviar o documento à Asten.'});}
+    }catch(error){setSignatureNotice({ok:false,text:error instanceof Error?error.message:'Não foi possível iniciar a assinatura.'});}
+    finally{setSignatureWorking('');}
+  };
+
+  const handleDownloadGovBr=async(job:SignatureJob)=>{
+    setSignatureWorking(`${job.documentType}:GOVBR_DOWNLOAD`);setSignatureNotice(null);
+    try{const file=await apiClient.downloadGovBrUnsignedDocument(process.id,job.id);downloadBlob(file.blob,file.fileName);}
+    catch(error){setSignatureNotice({ok:false,text:error instanceof Error?error.message:'Não foi possível baixar o PDF para o Gov.br.'});}
+    finally{setSignatureWorking('');}
+  };
+
+  const handleGovBrReturn=async(job:SignatureJob,file?:File)=>{
+    if(!file)return;
+    const confirmed=await portalConfirm('Confirma que todos os signatários exigidos assinaram este mesmo PDF no Gov.br? O Portal fará a validação estrutural e arquivará esta versão como documento assinado.');
+    if(!confirmed)return;
+    setSignatureWorking(`${job.documentType}:GOVBR_UPLOAD`);setSignatureNotice(null);
+    try{await apiClient.returnGovBrSignedDocument(process.id,job.id,file,true);setSignatureNotice({ok:true,text:'PDF assinado no Gov.br recebido, validado estruturalmente e arquivado.'});await loadData();}
+    catch(error){setSignatureNotice({ok:false,text:error instanceof Error?error.message:'Não foi possível receber o PDF assinado no Gov.br.'});}
     finally{setSignatureWorking('');}
   };
 
@@ -1733,7 +1756,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
               {documents.map((doc) => {
                 const isDownloadable = doc.status === 'DISPONIVEL' || doc.status === 'ASSINADO';
                 const latestJob=signatureJobs.filter(job=>job.documentType===doc.type&&job.status!=='CANCELED').sort((a,b)=>b.documentVersion-a.documentVersion)[0];
-                const alreadySent=Boolean(latestJob&&['SENDING','SENT','PARTIALLY_SIGNED','SIGNED','DRIVE_SYNC_PENDING','ARCHIVED'].includes(latestJob.status));
+                const alreadySent=Boolean(latestJob&&['SENDING','SENT','PARTIALLY_SIGNED','AWAITING_EXTERNAL_SIGNATURE','SIGNED','DRIVE_SYNC_PENDING','ARCHIVED'].includes(latestJob.status));
                 const canRequestSignature=doc.requiresSignature&&doc.status!=='NAO_DISPONIVEL'&&(isMasterAdmin||(doc.type==='ATA'&&isAdvisor)||(doc.type==='TERMO'&&(isStudent||isAdvisor)));
 
                 const getDocInfo = (type: string) => {
@@ -1827,7 +1850,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <span>Baixar PDF</span>
                       </button>
                     </div>
-                    {canRequestSignature&&<button type="button" onClick={()=>handleSignDocument(doc)} disabled={signatureWorking===doc.type||alreadySent} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-800 px-3 py-2 text-xs font-black text-white transition-colors hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"><ShieldCheck className="h-4 w-4"/>{alreadySent?'Enviado à Asten':signatureWorking===doc.type?'Enviando…':'Assinar documento'}</button>}
+                    {canRequestSignature&&(!latestJob||!alreadySent)&&<div className="grid grid-cols-2 gap-2"><button type="button" onClick={()=>handleSignDocument(doc,'ASTEN')} disabled={Boolean(signatureWorking)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#435649] px-3 py-2 text-xs font-black text-white hover:bg-[#394b40] disabled:bg-slate-300"><ShieldCheck className="h-4 w-4"/>Asten</button><button type="button" onClick={()=>handleSignDocument(doc,'GOVBR_EXTERNAL')} disabled={Boolean(signatureWorking)} className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-400 bg-slate-600 px-3 py-2 text-xs font-black text-white hover:bg-slate-700 disabled:bg-slate-300"><Download className="h-4 w-4"/>Gov.br</button></div>}
+                    {canRequestSignature&&latestJob?.provider==='GOVBR_EXTERNAL'&&latestJob.status==='AWAITING_EXTERNAL_SIGNATURE'&&<div className="grid grid-cols-2 gap-2"><button type="button" onClick={()=>handleDownloadGovBr(latestJob)} disabled={Boolean(signatureWorking)} className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-black text-slate-800 hover:bg-slate-200"><Download className="h-4 w-4"/>Baixar PDF</button><label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 py-2 text-xs font-black text-white hover:bg-slate-700"><Upload className="h-4 w-4"/>Enviar assinado<input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={event=>void handleGovBrReturn(latestJob,event.target.files?.[0])}/></label></div>}
+                    {canRequestSignature&&latestJob?.provider==='ASTEN'&&alreadySent&&<div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center text-xs font-bold text-slate-700">{latestJob.status==='ARCHIVED'?'Assinatura concluída':'Enviado à Asten'}</div>}
                   </div>
                 );
               })}

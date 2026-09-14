@@ -5,6 +5,7 @@ export type StagedUploadPurpose =
   | 'DOCUMENT_MODEL'
   | 'PROCESS_FULL_WORK'
   | 'PROCESS_EXPANDED_ABSTRACT'
+  | 'SIGNED_DOCUMENT'
   | 'VERIFICATION_PDF';
 
 export interface StagedUploadDescriptor {
@@ -52,12 +53,14 @@ const MAX_BYTES:Record<StagedUploadPurpose,number> = {
   DOCUMENT_MODEL: 12 * 1024 * 1024,
   PROCESS_FULL_WORK: 24 * 1024 * 1024,
   PROCESS_EXPANDED_ABSTRACT: 24 * 1024 * 1024,
+  SIGNED_DOCUMENT: 50 * 1024 * 1024,
   VERIFICATION_PDF: 50 * 1024 * 1024
 };
 const MIME_TYPES:Record<StagedUploadPurpose,string> = {
   DOCUMENT_MODEL: DOCX_MIME,
   PROCESS_FULL_WORK: PDF_MIME,
   PROCESS_EXPANDED_ABSTRACT: PDF_MIME,
+  SIGNED_DOCUMENT: PDF_MIME,
   VERIFICATION_PDF: PDF_MIME
 };
 const stagingBucket = () => String(
@@ -116,7 +119,7 @@ export function validateStagedUploadDescriptor(input:StagedUploadDescriptor):voi
   if(input.fileName.length<1||input.fileName.length>240||/[\u0000-\u001f]/.test(input.fileName))throw new Error('Nome de arquivo inválido.');
   const expectedExtension=input.purpose==='DOCUMENT_MODEL'?'.docx':'.pdf';
   if(!input.fileName.toLowerCase().endsWith(expectedExtension))throw new Error(`A extensão esperada é ${expectedExtension}.`);
-  if((input.purpose==='PROCESS_FULL_WORK'||input.purpose==='PROCESS_EXPANDED_ABSTRACT')&&!input.processId?.trim())throw new Error('O upload deve estar vinculado a um processo.');
+  if((input.purpose==='PROCESS_FULL_WORK'||input.purpose==='PROCESS_EXPANDED_ABSTRACT'||input.purpose==='SIGNED_DOCUMENT')&&!input.processId?.trim())throw new Error('O upload deve estar vinculado a um processo.');
   if(input.purpose==='VERIFICATION_PDF'&&!input.verificationCode?.trim())throw new Error('A verificação pública deve estar vinculada ao código consultado.');
   if((input.processId?.length||0)>200||(input.verificationCode?.length||0)>200)throw new Error('O vínculo do upload excede o limite permitido.');
 }

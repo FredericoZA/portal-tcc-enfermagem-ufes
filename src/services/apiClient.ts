@@ -145,7 +145,12 @@ export const apiClient = {
   downloadProcessDocument: (id: string, documentId: string) =>
     downloadApiFile(`/api/processes/${id}/documents/${documentId}/download`),
   getProcessSignatureJobs:(id:string)=>fetchApi<SignatureJob[]>(`/api/processes/${id}/signatures`),
-  signProcessDocument:(id:string,type:string)=>fetchApi<{job:SignatureJob;message:string}>(`/api/processes/${id}/documents/${type}/sign`,{method:'POST'}),
+  signProcessDocument:(id:string,type:string,provider:'ASTEN'|'GOVBR_EXTERNAL'='ASTEN')=>fetchApi<{job:SignatureJob;message:string}>(`/api/processes/${id}/documents/${type}/sign`,{method:'POST',body:JSON.stringify({provider})}),
+  downloadGovBrUnsignedDocument:(id:string,jobId:string)=>downloadApiFile(`/api/processes/${id}/signatures/${jobId}/unsigned`),
+  returnGovBrSignedDocument:(id:string,jobId:string,file:File,allSignersConfirmed=true)=>withDevelopmentFallback(file,async()=>{
+    const staged=await stageFile(file,{purpose:'SIGNED_DOCUMENT',processId:id});
+    return fetchApi<SignatureJob>(`/api/processes/${id}/signatures/${jobId}/govbr-return`,{method:'POST',body:JSON.stringify({stagedUploadId:staged.uploadId,sha256:staged.sha256,allSignersConfirmed})});
+  },async()=>fetchApi<SignatureJob>(`/api/processes/${id}/signatures/${jobId}/govbr-return`,{method:'POST',body:JSON.stringify({contentBase64:await fileToLegacyBase64(file),allSignersConfirmed})})),
   requestCorrection: (id: string, docId: string, data: { description: string }) => fetchApi<DocumentCorrectionRequest>(`/api/processes/${id}/documents/${docId}/correction-request`, {
     method: 'POST',
     body: JSON.stringify(data)

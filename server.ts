@@ -160,6 +160,7 @@ delete (currentSettings as any).recoverySecretKey;
 delete (currentSettings as any).courseCoordinatorEmail;
 delete (currentSettings as any).courseCoordinatorName;
 for(const model of Object.values(currentSettings.documentModels||{}))if(model)model.templateContentText='';
+if(currentSettings.commissionPresidentEmail){const recovery=normalizeEmail(currentSettings.commissionPresidentEmail);if(recovery)currentSettings.masterRecoveryEmails=[recovery];}
 if(!productionRuntime&&process.env.PORTAL_TEST_DOCUMENT_RENDERER==='true'){
   const now=new Date().toISOString();const labels={CONVITE:'Carta-convite',ATA:'Ata de defesa',TERMO:'Termo de autorização',DECLARACAO:'Declaração'} as const;
   currentSettings.documentModels=Object.fromEntries(Object.entries(labels).map(([type,label])=>[type,{id:`test-${type.toLowerCase()}`,type,label,fileName:`${type}.docx`,templateContentText:'',driveFileId:`test_drive_${type.toLowerCase()}_001`,driveFileUrl:'',variables:[],uploadedAt:now,uploadedBy:'test@local'}])) as GlobalSettings['documentModels'];
@@ -889,7 +890,7 @@ async function resolveWorkflowEmailAttachments(portalProcess:ProcessData,templat
     const job=signatureJobsStore.filter(item=>item.processId===portalProcess.id&&item.documentType===type).sort((a,b)=>b.documentVersion-a.documentVersion)[0];
     if(!job)throw new Error(`O e-mail exige ${type}, mas o documento ainda não foi gerado.`);
     if(job.status==='ARCHIVED'&&job.driveSignedFileId){const file=await download(job.driveSignedFileId);output.push({fileName:file.fileName,mimeType:'application/pdf',content:file.pdf});}
-    else throw new Error(`O e-mail exige ${type} assinado, mas o PDF ainda não foi arquivado pelo retorno da Asten.`);
+    else throw new Error(`O e-mail exige ${type} assinado, mas o PDF ainda não foi arquivado por nenhuma via de assinatura.`);
   }
   return output;
 }
@@ -969,7 +970,7 @@ function deriveSignatureSigners(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO'){
   const email=normalizeEmail(currentSettings.commissionPresidentEmail||''),name=currentSettings.commissionPresidentName||'Presidente da Comissão';if(!email)throw new Error('Configure o e-mail do Presidente da Comissão.');return[{id:`president:${email}`,role:'PRESIDENT' as const,name,email,signingOrder:1,status:'WAITING' as const}];
 }
 function repositoryDataComplete(p:ProcessData):boolean{return Boolean(p.acervo?.palavrasChave?.length===5&&p.acervo?.resumoSintese?.trim()&&p.acervo?.trabalhoCompletoFileUrl&&(!p.acervo?.publishExpandedAbstract||p.acervo?.resumoExpandidoFileId));}
-async function createSignatureJob(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',actor:string,renderVariables:Record<string,string>={}):Promise<SignatureJob>{
+async function createSignatureJob(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',actor:string,renderVariables:Record<string,string>={},provider:'ASTEN'|'GOVBR_EXTERNAL'='ASTEN'):Promise<SignatureJob>{
   if(p.avaliacao.status!=='CONCLUIDO')throw new Error(`${p.protocolo}: avaliação pendente.`);
   if((type==='TERMO'||type==='DECLARACAO')&&!repositoryDataComplete(p))throw new Error(`${p.protocolo}: dados finais do repositório ainda não foram concluídos.`);
   if(type==='DECLARACAO'&&!declarationReady(p,signatureJobsStore))throw new Error('A declaração aguarda a Ata e o Termo aplicável assinados e arquivados.');
@@ -982,11 +983,11 @@ async function createSignatureJob(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',
   const pdf=await renderOfficialTemplatePdf(p,type,verificationCode,renderVariables);
   const contentSha256=createHash('sha256').update(pdf).digest('hex');
   const signerHash=signers.map(s=>`${s.role}:${s.email}:${s.signingOrder}`).join('|');
-  const idempotencyKey=createHash('sha256').update(`${p.id}|${type}|${p.dataRevision}|${contentSha256}|${signerHash}`).digest('hex');
+  const idempotencyKey=createHash('sha256').update(`${p.id}|${type}|${p.dataRevision}|${contentSha256}|${signerHash}|${provider}`).digest('hex');
   const existing=signatureJobsStore.find(j=>j.idempotencyKey===idempotencyKey);if(existing)return existing;
   const documentVersion=1+Math.max(0,...signatureJobsStore.filter(j=>j.processId===p.id&&j.documentType===type).map(j=>j.documentVersion));
   const now=new Date().toISOString();const studentNames=[p.aluno1.nome,p.aluno2?.nome].filter(Boolean) as string[];
-  const job:SignatureJob={id:`sig_${idempotencyKey.slice(0,24)}`,processId:p.id,protocol:p.protocolo,documentType:type,documentTitle,documentVersion,sourceDataRevision:p.dataRevision,fileName:buildPortalDriveFileName({protocol:p.protocolo,title:p.titulo,studentNames,documentType:type,version:documentVersion,lifecycle:'GERADO'}),mimeType:'application/pdf',contentSha256,idempotencyKey,status:'QUEUED',signers,createdAt:now,createdBy:actor,updatedAt:now,provider:'ASTEN',providerCreationState:'PENDING',verificationCode,renderVariables:{...renderVariables}};
+  const job:SignatureJob={id:`sig_${idempotencyKey.slice(0,24)}`,processId:p.id,protocol:p.protocolo,documentType:type,documentTitle,documentVersion,sourceDataRevision:p.dataRevision,fileName:buildPortalDriveFileName({protocol:p.protocolo,title:p.titulo,studentNames,documentType:type,version:documentVersion,lifecycle:'GERADO'}),mimeType:'application/pdf',contentSha256,idempotencyKey,status:provider==='GOVBR_EXTERNAL'?'AWAITING_EXTERNAL_SIGNATURE':'QUEUED',signers,createdAt:now,createdBy:actor,updatedAt:now,provider,providerCreationState:provider==='ASTEN'?'PENDING':undefined,verificationCode,renderVariables:{...renderVariables}};
   const {accessToken,folderId}=await ensureWorkflowProcessFolder(p);
   const uploaded=await uploadGeneratedPdfToDrive({rootFolderId:currentSettings.driveRootFolderId,protocol:p.protocolo,accessToken,processFolderId:folderId,processId:p.id,jobId:job.id,documentType:type,fileName:job.fileName,pdf,sha256:contentSha256});
   job.driveUnsignedFileId=String(uploaded.id);
@@ -996,6 +997,7 @@ async function createSignatureJob(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',
 }
 const signatureDispatchLocks=new Set<string>();
 async function dispatchSignatureJobAutomatically(job:SignatureJob):Promise<SignatureJob>{
+  if(job.provider==='GOVBR_EXTERNAL'){if(job.status!=='ARCHIVED'){job.status='AWAITING_EXTERNAL_SIGNATURE';job.updatedAt=new Date().toISOString();}return job;}
   if(job.status==='DRIVE_SYNC_PENDING')return archiveSignatureJobAutomatically(job);
   if(['SENT','PARTIALLY_SIGNED','SIGNED','ARCHIVED'].includes(job.status)||signatureDispatchLocks.has(job.id))return job;
   if(job.providerCreationState==='UNCERTAIN'&&!job.providerEnvelopeId){job.status='PROVIDER_ERROR';job.lastError='A criação do envelope ficou com resultado incerto. Não repita automaticamente: confira a conta Asten e faça a reconciliação administrativa.';job.updatedAt=new Date().toISOString();return job;}
@@ -1105,7 +1107,6 @@ export async function createPortalApp() {
     const cronSecretReused=[process.env.PORTAL_SESSION_SECRET,process.env.PORTAL_OTP_PEPPER,process.env.PORTAL_UPLOAD_BINDING_SECRET,process.env.PORTAL_VERIFICATION_SECRET,process.env.ASTEN_WEBHOOK_SECRET].map(value=>String(value||'').trim()).filter(Boolean).includes(cronSecret);
     if(process.env.VERCEL&&(cronSecret.length<32||cronSecretReused))throw new Error('Implantação bloqueada: configure CRON_SECRET exclusivo com pelo menos 32 caracteres para a limpeza diária do transporte privado.');
     const verificationSecret=String(process.env.PORTAL_VERIFICATION_SECRET||'').trim();if(verificationSecret.length<32)throw new Error('Implantação bloqueada: configure PORTAL_VERIFICATION_SECRET com pelo menos 32 caracteres.');
-    if(process.env.ASTEN_INTEGRATION_ENABLED==='true'){const astenSecurity=getAstenSecurityPreflight();if(!astenSecurity.callbackConfigured)throw new Error(`Implantação bloqueada: ${astenSecurity.issues.join(' ')}`);}
     const databaseStatus=await testSupabaseRuntimeConnection();if(!databaseStatus.connected||!databaseStatus.transactionalRuntimeReady)throw new Error('Implantação bloqueada: aplique todas as migrações do Supabase, incluindo a outbox transacional Asten v6, antes de iniciar o portal em produção.');
   }
   if (getSupabaseRuntimeStatus().durablePersistenceReady) {
@@ -1399,11 +1400,11 @@ export async function createPortalApp() {
   app.get('/api/admin/administration-transfers',requireAuthenticated,requireAdministrator,(_req,res)=>res.json(administrationTransfersStore.slice().reverse()));
   app.get('/api/administration-transfers/pending',requireAuthenticated,(req,res)=>{const identity=getPortalIdentity(req)!;res.json(administrationTransfersStore.filter(item=>item.targetEmail===identity.email&&item.status==='PENDING_TARGET_ACCEPTANCE'&&Date.parse(item.expiresAt)>Date.now()));});
   app.post('/api/admin/administration-transfers',requireAuthenticated,requireAdministrator,async(req,res)=>{
-    const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Entre novamente antes de iniciar uma transferência.'});const role=String(req.body?.role||'') as AdministrationTransfer['role'],targetEmail=normalizeEmail(String(req.body?.targetEmail||''));if(!['MASTER_ADMIN','COMMISSION_PRESIDENT'].includes(role)||!isValidPortalEmail(targetEmail))return res.status(400).json({error:'Informe o papel e o novo e-mail válidos.'});const actorRoles=getUserRolesForEmail(identity.email).globalRoles;if(role==='MASTER_ADMIN'&&!actorRoles.includes('MASTER_ADMIN'))return res.status(403).json({error:'Somente o Master atual pode transferir a titularidade Master.'});if(administrationTransfersStore.some(item=>item.role===role&&item.status==='PENDING_TARGET_ACCEPTANCE'&&Date.parse(item.expiresAt)>Date.now()))return res.status(409).json({error:'Já existe uma transferência pendente para este papel.'});
+    const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Entre novamente antes de iniciar uma transferência.'});const role=String(req.body?.role||'') as AdministrationTransfer['role'],targetEmail=normalizeEmail(String(req.body?.targetEmail||''));if(!['MASTER_ADMIN','COMMISSION_PRESIDENT'].includes(role)||!isValidPortalEmail(targetEmail))return res.status(400).json({error:'Informe o papel e o novo e-mail válidos.'});const actorRoles=getUserRolesForEmail(identity.email).globalRoles;if(role==='MASTER_ADMIN'&&!actorRoles.includes('MASTER_ADMIN')&&!actorRoles.includes('COMMISSION_PRESIDENT'))return res.status(403).json({error:'Somente o Master atual ou a Presidente da Comissão pode iniciar a transferência da titularidade Master.'});if(administrationTransfersStore.some(item=>item.role===role&&item.status==='PENDING_TARGET_ACCEPTANCE'&&Date.parse(item.expiresAt)>Date.now()))return res.status(409).json({error:'Já existe uma transferência pendente para este papel.'});
     const now=new Date(),transfer:AdministrationTransfer={id:`transfer-${randomBytes(12).toString('hex')}`,role,targetEmail,requestedBy:identity.email,status:'PENDING_TARGET_ACCEPTANCE',requestedAt:now.toISOString(),expiresAt:new Date(now.getTime()+30*60_000).toISOString(),googleReconnectRequired:role==='MASTER_ADMIN'};administrationTransfersStore.push(transfer);await requestPortalOtp({email:targetEmail,ip:req.ip,portalName:resolveInstallationProfile(currentSettings).portalName});auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles,action:'INICIO_TRANSFERENCIA_ADMINISTRACAO',entityType:'administration_transfer',entityId:transfer.id,after:{role,targetEmailHash:createHash('sha256').update(targetEmail).digest('hex'),expiresAt:transfer.expiresAt},timestamp:transfer.requestedAt});await persistPortalStateDurably();res.status(201).json(transfer);
   });
   app.post('/api/admin/administration-transfers/:id/accept',requireAuthenticated,async(req,res)=>{
-    const identity=getPortalIdentity(req)!;const transfer=administrationTransfersStore.find(item=>item.id===req.params.id);if(!transfer||transfer.targetEmail!==identity.email)return res.status(404).json({error:'Transferência não encontrada.'});if(transfer.status!=='PENDING_TARGET_ACCEPTANCE'||Date.parse(transfer.expiresAt)<=Date.now()){if(transfer.status==='PENDING_TARGET_ACCEPTANCE')transfer.status='EXPIRED';return res.status(409).json({error:'A transferência expirou ou já foi concluída.'});}if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Valide novamente o código recebido por e-mail.'});const before={masterEmail:currentSettings.masterEmail,ownerEmail:currentSettings.ownerEmail,commissionPresidentEmail:currentSettings.commissionPresidentEmail};if(transfer.role==='MASTER_ADMIN')currentSettings={...currentSettings,masterEmail:identity.email,ownerEmail:identity.email};else currentSettings={...currentSettings,commissionPresidentEmail:identity.email};transfer.status='COMPLETED';transfer.completedAt=new Date().toISOString();currentSettings.updatedAt=transfer.completedAt;auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:[transfer.role],action:'CONCLUSAO_TRANSFERENCIA_ADMINISTRACAO',entityType:'administration_transfer',entityId:transfer.id,before,after:{role:transfer.role,targetEmailHash:createHash('sha256').update(identity.email).digest('hex'),googleReconnectRequired:transfer.googleReconnectRequired},timestamp:transfer.completedAt});await persistPortalStateDurably();res.json({transfer,googleReconnectRequired:transfer.googleReconnectRequired,message:transfer.googleReconnectRequired?'Titularidade transferida. O novo Master deve autorizar a própria conta Google antes de desativar o acesso anterior.':'Presidência transferida com sucesso.'});
+    const identity=getPortalIdentity(req)!;const transfer=administrationTransfersStore.find(item=>item.id===req.params.id);if(!transfer||transfer.targetEmail!==identity.email)return res.status(404).json({error:'Transferência não encontrada.'});if(transfer.status!=='PENDING_TARGET_ACCEPTANCE'||Date.parse(transfer.expiresAt)<=Date.now()){if(transfer.status==='PENDING_TARGET_ACCEPTANCE')transfer.status='EXPIRED';return res.status(409).json({error:'A transferência expirou ou já foi concluída.'});}if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Valide novamente o código recebido por e-mail.'});const before={masterEmail:currentSettings.masterEmail,ownerEmail:currentSettings.ownerEmail,commissionPresidentEmail:currentSettings.commissionPresidentEmail};if(transfer.role==='MASTER_ADMIN')currentSettings={...currentSettings,masterEmail:identity.email,ownerEmail:identity.email};else currentSettings={...currentSettings,commissionPresidentEmail:identity.email,masterRecoveryEmails:[identity.email]};transfer.status='COMPLETED';transfer.completedAt=new Date().toISOString();currentSettings.updatedAt=transfer.completedAt;auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:[transfer.role],action:'CONCLUSAO_TRANSFERENCIA_ADMINISTRACAO',entityType:'administration_transfer',entityId:transfer.id,before,after:{role:transfer.role,targetEmailHash:createHash('sha256').update(identity.email).digest('hex'),googleReconnectRequired:transfer.googleReconnectRequired},timestamp:transfer.completedAt});await persistPortalStateDurably();res.json({transfer,googleReconnectRequired:transfer.googleReconnectRequired,message:transfer.googleReconnectRequired?'Titularidade transferida. O novo Master deve autorizar a própria conta Google antes de desativar o acesso anterior.':'Presidência transferida com sucesso.'});
   });
   app.post('/api/admin/administration-transfers/:id/cancel',requireAuthenticated,requireAdministrator,async(req,res)=>{const identity=getPortalIdentity(req)!;const transfer=administrationTransfersStore.find(item=>item.id===req.params.id);if(!transfer)return res.status(404).json({error:'Transferência não encontrada.'});const actorRoles=getUserRolesForEmail(identity.email).globalRoles;if(transfer.role==='MASTER_ADMIN'&&!actorRoles.includes('MASTER_ADMIN'))return res.status(403).json({error:'Somente o Master atual pode cancelar a transferência Master.'});if(transfer.status!=='PENDING_TARGET_ACCEPTANCE')return res.status(409).json({error:'Somente transferências pendentes podem ser canceladas.'});transfer.status='CANCELED';transfer.canceledAt=new Date().toISOString();auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles,action:'CANCELAMENTO_TRANSFERENCIA_ADMINISTRACAO',entityType:'administration_transfer',entityId:transfer.id,timestamp:transfer.canceledAt});await persistPortalStateDurably();res.json(transfer);});
 
@@ -2440,6 +2441,43 @@ export async function createPortalApp() {
     try{const accessToken=await getGoogleWorkspaceAccessToken();const file=await downloadDrivePdf(accessToken,fileId,{processId:process.id,artifactType:document.type,...(signatureJob?{signatureJobId:signatureJob.id}:{})});await deliverPortalDownload({res,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Falha ao recuperar o documento.'});}
   });
 
+  app.get('/api/processes/:id/signatures/:jobId/unsigned',requireAuthenticated,async(req,res)=>{
+    const identity=getPortalIdentity(req)!;const process=processesStore.find(item=>item.id===req.params.id);const job=signatureJobsStore.find(item=>item.id===req.params.jobId&&item.processId===req.params.id);
+    if(!process||!job||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Documento de assinatura não encontrado.'});
+    const authorized=hasFullAdministration(identity.email)||job.signers.some(signer=>normalizeEmail(signer.email)===normalizeEmail(identity.email));
+    if(!authorized)return res.status(403).json({error:'Seu perfil não pode baixar este documento para assinatura.'});
+    if(!job.driveUnsignedFileId)return res.status(409).json({error:'O PDF original ainda não foi arquivado no Drive.'});
+    try{const accessToken=await getGoogleWorkspaceAccessToken();const file=await downloadDrivePdf(accessToken,job.driveUnsignedFileId,{processId:process.id,artifactType:job.documentType,signatureJobId:job.id});await deliverPortalDownload({res,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Não foi possível recuperar o PDF para assinatura.'});}
+  });
+
+  app.post('/api/processes/:id/signatures/:jobId/govbr-return',requireAuthenticated,async(req,res)=>{
+    const identity=getPortalIdentity(req)!;const process=processesStore.find(item=>item.id===req.params.id);const job=signatureJobsStore.find(item=>item.id===req.params.jobId&&item.processId===req.params.id);
+    if(!process||!job||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Trabalho de assinatura não encontrado.'});
+    if(job.provider!=='GOVBR_EXTERNAL')return res.status(409).json({error:'Este trabalho não pertence à via Gov.br.'});
+    if(job.status==='ARCHIVED')return res.json(publicSignatureJob(job));
+    if(job.status!=='AWAITING_EXTERNAL_SIGNATURE')return res.status(409).json({error:'Este trabalho não está aguardando retorno externo.'});
+    const authorized=hasFullAdministration(identity.email)||job.signers.some(signer=>normalizeEmail(signer.email)===normalizeEmail(identity.email));
+    if(!authorized)return res.status(403).json({error:'Seu perfil não pode devolver este documento.'});
+    if(req.body?.allSignersConfirmed!==true)return res.status(400).json({error:'Confirme que todos os signatários exigidos assinaram o mesmo PDF no Gov.br.'});
+    try{
+      const archive=async(file:{bytes:Buffer;fileName?:string})=>{
+        const pdf=file.bytes;if(!pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('Envie um PDF válido.');if(pdf.length>50*1024*1024)throw new Error('O PDF assinado não pode ultrapassar 50 MB.');
+        const raw=pdf.toString('latin1');const hasSignature=raw.includes('/ByteRange')&&raw.includes('/Contents');if(!hasSignature)throw new Error('O PDF não contém a estrutura de assinatura digital esperada. Assine o arquivo no Gov.br antes de enviá-lo.');
+        const accessToken=await getGoogleWorkspaceAccessToken();if(!process.driveFolderId)throw new Error('A pasta privada do processo não está disponível.');
+        const fileName=buildPortalDriveFileName({protocol:process.protocolo,title:process.titulo,studentNames:[process.aluno1.nome,process.aluno2?.nome].filter(Boolean) as string[],documentType:job.documentType,version:job.documentVersion,lifecycle:'ASSINADO'});
+        const signedSha256=createHash('sha256').update(pdf).digest('hex');const driveFile=await uploadSignedPdfToDrive({rootFolderId:currentSettings.driveRootFolderId,protocol:process.protocolo,accessToken,processFolderId:process.driveFolderId,processId:process.id,jobId:job.id,documentType:job.documentType,fileName,pdf,sha256:signedSha256});
+        const now=new Date().toISOString();const wasCompleted=process.status==='CONCLUIDO';job.signers=job.signers.map(signer=>({...signer,status:'SIGNED',signedAt:now}));job.driveSignedFileId=String(driveFile.id);job.driveSignedWebViewLink=String(driveFile.webViewLink||'');job.signedSha256=signedSha256;job.status='ARCHIVED';job.signedAt=job.completedAt=job.updatedAt=now;job.lastError=undefined;job.externalReturnedBy=identity.email;job.externalReturnedAt=now;job.externalSignatureEvidence='PDF_SIGNATURE_MARKER_PRESENT';
+        if(job.documentType==='ATA'&&!process.acervo?.submittedAt){process.status='AGUARDANDO_DADOS_FINAIS';process.etapaAtual='REPOSITORIO';}
+        if(declarationReady(process,signatureJobsStore)){await syncAuthorizedPublication(process,identity.email);await executeConfiguredWorkflowEvent(process,'PUBLICATION_CLEARED',identity.email);}
+        updateProcessCompletion(process.id);await executeConfiguredWorkflowEvent(process,'SIGNATURE_COMPLETED',identity.email);if(!wasCompleted&&process.status==='CONCLUIDO')await executeConfiguredWorkflowEvent(process,'PROCESS_COMPLETED',identity.email);
+        auditLogsStore.push({id:`log-${Date.now()}-govbr`,processId:process.id,actorEmail:identity.email,actorRoles:[...getUserRolesForEmail(identity.email).globalRoles,...getActiveProcessRoles(identity.email,process.id)],action:'RETORNO_ASSINATURA_GOVBR',entityType:'signature_job',entityId:job.id,after:{documentType:job.documentType,provider:job.provider,signedSha256,driveFileId:job.driveSignedFileId,evidence:job.externalSignatureEvidence},timestamp:now});await persistPortalStateDurably();return publicSignatureJob(job);
+      };
+      const uploadId=String(req.body?.stagedUploadId||'').trim();
+      const result=uploadId?await withSupabaseStagedUpload({uploadId,purpose:'SIGNED_DOCUMENT',requesterBinding:sessionUploadBinding(identity),processId:process.id},archive):await archive({bytes:readLegacyDevelopmentUpload({contentBase64:req.body?.contentBase64,fileName:'assinado-govbr.pdf',expected:'PDF'}),fileName:'assinado-govbr.pdf'});
+      res.json(result);
+    }catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível receber o PDF assinado.'});}
+  });
+
   app.get('/api/processes/:id/signatures',requireAuthenticated,(req,res)=>{
     const identity=getPortalIdentity(req)!;
     const process=processesStore.find(item=>item.id===req.params.id);
@@ -2469,16 +2507,19 @@ export async function createPortalApp() {
     if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
     if(rejectPendingCoauthor(process,res))return;
     const type=String(req.params.type).toUpperCase() as 'ATA'|'TERMO'|'DECLARACAO';
-    if(!['ATA','TERMO','DECLARACAO'].includes(type))return res.status(400).json({error:'Este documento não utiliza assinatura Asten.'});
+    const provider=String(req.body?.provider||'ASTEN').toUpperCase() as 'ASTEN'|'GOVBR_EXTERNAL';
+    if(!['ATA','TERMO','DECLARACAO'].includes(type))return res.status(400).json({error:'Este documento não utiliza assinatura.'});
+    if(!['ASTEN','GOVBR_EXTERNAL'].includes(provider))return res.status(400).json({error:'Via de assinatura inválida.'});
     if(type==='TERMO'&&!publicationRequested(process))return res.status(409).json({error:'O termo não é necessário porque o aluno não solicitou publicação.',code:'PUBLICATION_NOT_REQUESTED'});
     if(!canInitiateSignature(identity.email,process,type))return res.status(403).json({error:'Seu perfil não pode solicitar a assinatura deste documento.'});
     const missing=missingDocumentModels([type]);if(missing.length)return res.status(409).json({error:`O modelo de ${type} ainda não foi cadastrado pelo Master.`,code:'DOCUMENT_MODEL_REQUIRED',missingModels:missing});
     try{
-      const job=await createSignatureJob(process,type,identity.email);
-      await dispatchSignatureJobAutomatically(job);
+      const job=await createSignatureJob(process,type,identity.email,{},provider);
+      if(provider==='ASTEN')await dispatchSignatureJobAutomatically(job);
       await executeConfiguredWorkflowEvent(process,'SIGNATURE_REQUESTED',identity.email);
-      auditLogsStore.push({id:`log-${Date.now()}`,processId:process.id,actorEmail:identity.email,actorRoles:[...getUserRolesForEmail(identity.email).globalRoles,...getActiveProcessRoles(identity.email,process.id)],action:'SOLICITACAO_ASSINATURA_ASTEN',entityType:'signature_job',entityId:job.id,after:{documentType:type,status:job.status,contentSha256:job.contentSha256,providerEnvelopeId:job.providerEnvelopeId},timestamp:new Date().toISOString()});
-      persistPortalState();
+      auditLogsStore.push({id:`log-${Date.now()}`,processId:process.id,actorEmail:identity.email,actorRoles:[...getUserRolesForEmail(identity.email).globalRoles,...getActiveProcessRoles(identity.email,process.id)],action:provider==='ASTEN'?'SOLICITACAO_ASSINATURA_ASTEN':'SOLICITACAO_ASSINATURA_GOVBR',entityType:'signature_job',entityId:job.id,after:{documentType:type,status:job.status,contentSha256:job.contentSha256,provider},timestamp:new Date().toISOString()});
+      await persistPortalStateDurably();
+      if(provider==='GOVBR_EXTERNAL')return res.json({job:publicSignatureJob(job),message:'PDF preparado para assinatura externa no Gov.br.'});
       const status=job.status==='WAITING_INTEGRATION'||job.status==='PROVIDER_ERROR'?409:200;
       res.status(status).json({job:publicSignatureJob(job),message:job.status==='SENT'?'Documento enviado à Asten. Os signatários receberão o acesso diretamente pela plataforma.':job.lastError||'Solicitação registrada.'});
     }catch(error){res.status(409).json({error:error instanceof Error?error.message:'Não foi possível solicitar a assinatura.'});}

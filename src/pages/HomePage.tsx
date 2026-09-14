@@ -2258,8 +2258,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 <button
                   type="button"
                   onClick={() => setShowDownloadConfirm(true)}
-                  style={acervoActionStyles.actionPillStyle}
-                  className={acervoActionStyles.actionPillClass}
+                  style={undefined}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-500 bg-slate-600 px-4 py-2 text-xs font-black uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-slate-700"
                   title="Exportar todo o banco de dados de TCCs para Excel (.csv)"
                 >
                   <span>{acervoTextFormat.downloadDadosButtonEmoji || '📥'}</span>
@@ -2817,7 +2817,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     <h3 className="font-black text-lg sm:text-xl leading-tight" style={{ color: loginPopupConfig.cardTextColor || '#0f172a' }}>
                       {loginPopupConfig.title || 'Acesso ao Portal do TCC'}
                     </h3>
-                    <p className={`mt-0.5 text-xs ${currentTheme.accentText} font-semibold`}>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-100">
                       {loginPopupConfig.subtitle || `${installationProfile.courseName} • ${installationProfile.institutionAcronym}`}
                     </p>
                   </div>
