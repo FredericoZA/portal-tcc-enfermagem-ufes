@@ -1,0 +1,45 @@
+name: Finalize UI rc11
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/finalize-ui-rc11.mjs
+      - .github/workflows/finalize-ui-rc11.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Aplicar ajustes rc.11
+        run: node scripts/finalize-ui-rc11.mjs
+      - name: Validar CI
+        run: npm run test:ci
+      - name: Validar fluxo seguro
+        run: npm run test:secure-flow
+      - name: Publicar ajustes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Portal TCC automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/components/Footer.tsx src/pages/HomePage.tsx src/portal-overrides.css src/components/Sidebar.tsx package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração adicional."
+            exit 0
+          fi
+          git commit -m "fix: fecha ajustes visuais e versão rc.11"
+          git push origin HEAD:main
