@@ -6,6 +6,7 @@ on:
     paths:
       - scripts/finalize-ux-signature.mjs
       - scripts/repair-finalize-ux-signature.mjs
+      - scripts/repair-secure-flow-signature-contract.mjs
       - .github/workflows/finalize-ux-signature.yml
 
 permissions:
@@ -31,6 +32,7 @@ jobs:
         run: |
           node scripts/repair-finalize-ux-signature.mjs
           node scripts/finalize-ux-signature.mjs
+          node scripts/repair-secure-flow-signature-contract.mjs
           git restore scripts/finalize-ux-signature.mjs
       - name: Validar CI
         run: npm run test:ci
