@@ -33,6 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   const isCollapsed = false;
   const [isHovered, setIsHovered] = useState(false);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
+  const [runtimeBuild, setRuntimeBuild] = useState({ version: '1.0.0-rc.10', commit: '' });
   const accessLocation = layoutConfig.sidebarLocationText || installationProfile.city;
 
   useEffect(() => {
@@ -42,6 +43,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
     };
     window.addEventListener(SITE_LAYOUT_EVENT, handleLayoutChange);
     return () => window.removeEventListener(SITE_LAYOUT_EVENT, handleLayoutChange);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void fetch('/api/health', { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('health unavailable')))
+      .then((payload: any) => {
+        if (!active) return;
+        setRuntimeBuild({
+          version: String(payload?.version || '1.0.0-rc.10'),
+          commit: String(payload?.commit || '').slice(0, 7),
+        });
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
   }, []);
 
   const handleNav = (tab: string) => {
@@ -260,6 +276,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           )}
           <div className="text-[10px] whitespace-normal leading-4" style={{ color: sidebarFooterMutedColor }} title={accessLocation}>
             {accessLocation}
+          </div>
+          <div className="text-[9px] font-medium tracking-wide" style={{ color: sidebarFooterMutedColor }} title={runtimeBuild.commit ? `Commit ${runtimeBuild.commit}` : undefined}>
+            Versão do sistema: v{runtimeBuild.version}{runtimeBuild.commit ? ` · ${runtimeBuild.commit}` : ''}
           </div>
         </div>
       </aside>
