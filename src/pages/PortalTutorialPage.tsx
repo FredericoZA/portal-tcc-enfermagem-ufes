@@ -38,7 +38,7 @@ const roleContent: Record<Role, { title: string; description: string; steps: str
       'Abra o TCC e confira cuidadosamente nomes, matrícula dos alunos, SIAPE quando aplicável, título, banca, data e local.',
       'Corrija dados permitidos antes de concluir a avaliação, caso encontre erro.',
       'Marque Aprovado, Aprovado com ressalva ou Reprovado e informe o parecer final. O fluxo atual não utiliza nota numérica.',
-      'Confira a prévia da Ata. Somente depois da confirmação o documento é encaminhado à Asten para sua assinatura.'
+      'Confira a prévia da Ata e escolha a via de assinatura disponível: Asten ou Gov.br.'
     ]
   },
   presidente: {
@@ -48,7 +48,7 @@ const roleContent: Record<Role, { title: string; description: string; steps: str
       'Acompanhe os processos e suas pendências administrativas na Área do Presidente.',
       'O processo só chega à etapa final depois da entrega do aluno e das assinaturas anteriores aplicáveis.',
       'Confira a declaração da banca com título, participantes, data e local.',
-      'Selecione uma ou mais declarações aptas e confirme o envio à Asten.',
+      'Selecione uma ou mais declarações aptas e use a via de assinatura disponível: Asten ou Gov.br.',
       'Após assinatura, arquivamento e demais requisitos aplicáveis, o processo pode ser concluído.'
     ]
   },
@@ -68,9 +68,9 @@ const phases = [
   { n: 1, title: 'Cadastro inicial', actor: 'Aluno', icon: GraduationCap, text: 'Cadastro do TCC individual ou em dupla, participantes, título e data/horário pretendidos. O processo nasce com o local ainda pendente.' },
   { n: 2, title: 'Confirmação do local', actor: 'Aluno + Departamento', icon: CalendarCheck, text: 'O aluno verifica a reserva diretamente com o Departamento de Enfermagem. O fluxo permanece bloqueado até ele confirmar no Portal o local efetivamente reservado.' },
   { n: 3, title: 'Convite e calendário', actor: 'Portal', icon: Users, text: 'Após a confirmação do local, o Portal registra o evento no calendário, gera o convite e prepara o envio institucional aos participantes configurados.' },
-  { n: 4, title: 'Defesa e Ata', actor: 'Orientador', icon: SearchCheck, text: 'O orientador revisa os dados, registra resultado e parecer sem nota numérica, confere a prévia da Ata e confirma o envio para assinatura.' },
+  { n: 4, title: 'Defesa e Ata', actor: 'Orientador', icon: SearchCheck, text: 'O orientador revisa os dados, registra resultado e parecer sem nota numérica, confere a prévia da Ata e confirma a assinatura.' },
   { n: 5, title: 'Entrega final', actor: 'Aluno', icon: BookOpenCheck, text: 'O aluno envia o trabalho final, cinco palavras-chave, resumo sintético e opcionalmente o resumo expandido, escolhendo separadamente o que poderá ser publicado.' },
-  { n: 6, title: 'Termo de autorização', actor: 'Aluno(s) + Orientador', icon: FileSignature, text: 'Quando existir conteúdo autorizado para publicação, o Termo é gerado, conferido e encaminhado para assinatura dos autores e do orientador.' },
+  { n: 6, title: 'Termo de autorização', actor: 'Aluno(s) + Orientador', icon: FileSignature, text: 'Quando existir conteúdo autorizado para publicação, o Termo é gerado, conferido e encaminhado para assinatura pela via disponível.' },
   { n: 7, title: 'Declaração da banca', actor: 'Presidente', icon: UserCheck, text: 'É a última emissão documental do fluxo padrão. A Presidente confere a declaração de participação da banca e a encaminha para assinatura.' },
   { n: 8, title: 'Conclusão', actor: 'Portal', icon: CheckCircle2, text: 'Somente após as etapas e assinaturas aplicáveis o processo é concluído. Arquivos privados permanecem privados; TCC completo e resumo expandido só ficam públicos quando a autorização e a sincronização de publicação forem confirmadas.' }
 ];
@@ -80,31 +80,31 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
   const active = useMemo(() => roleContent[role], [role]);
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-[#343b20]/20 bg-gradient-to-br from-[#5f6937] to-[#343b20] p-5 text-white shadow-lg sm:p-7">
+    <div className="space-y-4">
+      <section className="rounded-3xl border border-[#435649] bg-[#435649] p-5 text-white shadow-lg sm:p-6">
         <div className="max-w-3xl">
-          <div className="flex items-center gap-2 text-[#e0e3cf] text-xs font-black uppercase tracking-[0.18em]"><ShieldCheck className="h-4 w-4"/>Guia operacional</div>
+          <div className="flex items-center gap-2 text-slate-200 text-xs font-black uppercase tracking-[0.18em]"><ShieldCheck className="h-4 w-4"/>Guia operacional</div>
           <h1 className="mt-2 text-2xl sm:text-3xl font-black tracking-tight">Como usar o Portal de TCC</h1>
-          <p className="mt-2 text-sm sm:text-base leading-7 text-[#f0f1e7]">Veja o que fazer em cada etapa. O Portal libera a próxima ação somente quando as dependências acadêmicas e documentais anteriores estiverem concluídas.</p>
+          <p className="mt-2 text-sm sm:text-base leading-7 text-white/90">Veja o que fazer em cada etapa. O Portal libera a próxima ação somente quando as dependências acadêmicas e documentais anteriores estiverem concluídas.</p>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-sm font-black uppercase tracking-wider text-slate-900">O que você precisa fazer?</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           {(Object.keys(roleContent) as Role[]).map(key => (
-            <button key={key} type="button" onClick={() => setRole(key)} className={`rounded-full border px-4 py-2 text-xs font-black transition-colors ${role === key ? 'border-[#4f582e] bg-[#5f6937] text-white' : 'border-slate-300 bg-white text-slate-700 hover:border-[#5f6937] hover:text-[#343b20]'}`}>
+            <button key={key} type="button" onClick={() => setRole(key)} className={`rounded-full border px-4 py-2 text-xs font-black transition-colors ${role === key ? 'border-slate-700 bg-slate-700 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'}`}>
               {roleContent[key].title}
             </button>
           ))}
         </div>
-        <div className="mt-4 rounded-2xl border border-[#5f6937]/25 bg-[#f5f6ef] p-4">
-          <h3 className="font-black text-[#343b20]">{active.title}</h3>
-          <p className="mt-1 text-sm text-[#4f582e]">{active.description}</p>
-          <ol className="mt-4 grid gap-2 md:grid-cols-2">
+        <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <h3 className="font-black text-slate-900">{active.title}</h3>
+          <p className="mt-1 text-sm text-slate-600">{active.description}</p>
+          <ol className="mt-3 grid gap-2 md:grid-cols-2">
             {active.steps.map((step, index) => (
-              <li key={step} className="flex gap-3 rounded-xl border border-[#5f6937]/20 bg-white p-3 text-sm leading-6 text-slate-700">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#5f6937] text-xs font-black text-white">{index + 1}</span>
+              <li key={step} className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#435649] text-xs font-black text-white">{index + 1}</span>
                 <span>{step}</span>
               </li>
             ))}
@@ -121,11 +121,11 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
           {phases.map(({ n, title, actor, icon: Icon, text }) => (
             <article key={n} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f0f1e7] text-[#5f6937]"><Icon className="h-5 w-5"/></div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-[#435649]"><Icon className="h-5 w-5"/></div>
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase text-slate-600">Etapa {n}</span>
               </div>
               <h3 className="mt-3 font-black text-slate-950">{title}</h3>
-              <p className="mt-1 text-[11px] font-black uppercase tracking-wide text-[#4f582e]">{actor}</p>
+              <p className="mt-1 text-[11px] font-black uppercase tracking-wide text-slate-600">{actor}</p>
               <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
             </article>
           ))}
@@ -137,9 +137,9 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
           <div className="flex items-center gap-2"><LockKeyhole className="h-5 w-5 text-slate-700"/><h2 className="font-black text-slate-950">Dados protegidos</h2></div>
           <p className="mt-2 text-sm leading-6 text-slate-600">Matrícula, e-mail, SIAPE, códigos de acesso, credenciais, identificadores internos, vínculos privados do Drive e registros administrativos ficam restritos aos usuários autorizados e às rotinas que realmente necessitam deles.</p>
         </div>
-        <div className="rounded-2xl border border-[#5f6937]/30 bg-[#f5f6ef] p-5 shadow-sm">
-          <div className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5 text-[#4f582e]"/><h2 className="font-black text-[#343b20]">Informação acadêmica pública</h2></div>
-          <p className="mt-2 text-sm leading-6 text-[#343b20]">O calendário e o repositório usam contratos públicos próprios, com o mínimo de dados necessário para consulta acadêmica. TCC completo e resumo expandido só recebem link público quando a autorização aplicável e a sincronização com o Drive forem concluídas; caso contrário, permanecem privados ou indicados como não apresentados.</p>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+          <div className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5 text-[#435649]"/><h2 className="font-black text-slate-900">Informação acadêmica pública</h2></div>
+          <p className="mt-2 text-sm leading-6 text-slate-700">O calendário e o repositório usam contratos públicos próprios, com o mínimo de dados necessário para consulta acadêmica. TCC completo e resumo expandido só recebem link público quando a autorização aplicável e a sincronização com o Drive forem concluídas; caso contrário, permanecem privados ou indicados como não apresentados.</p>
         </div>
       </section>
     </div>
