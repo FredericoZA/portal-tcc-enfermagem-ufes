@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   const isCollapsed = false;
   const [isHovered, setIsHovered] = useState(false);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
-  const [runtimeBuild, setRuntimeBuild] = useState({ version: '1.0.0-rc.13', commit: '' });
+  const [runtimeBuild, setRuntimeBuild] = useState({ version: '1.0.0-rc.14', commit: '' });
   const accessLocation = layoutConfig.sidebarLocationText || 'Campus de Maruípe · Vitória/ES';
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
     let active = true;
     void fetch('/api/health', { cache: 'no-store' }).then((response) => response.ok ? response.json() : Promise.reject(new Error('health unavailable'))).then((payload: any) => {
       if (!active) return;
-      setRuntimeBuild({ version: String(payload?.version || '1.0.0-rc.13'), commit: String(payload?.commit || '').slice(0, 7) });
+      setRuntimeBuild({ version: String(payload?.version || '1.0.0-rc.14'), commit: String(payload?.commit || '').slice(0, 7) });
     }).catch(() => undefined);
     return () => { active = false; };
   }, []);

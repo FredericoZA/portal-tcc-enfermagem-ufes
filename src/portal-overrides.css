@@ -25,16 +25,15 @@ button[title="Exibição da planilha: linhas e período"] > svg {
   height: 1rem !important;
 }
 
-/* Controles de planilha neutros; verde reservado aos cabeçalhos. */
+/* Ações internas dos cabeçalhos: brancas, como padrão visual do portal. */
 button[title="Selecionar Mês e Ano"],
 button[title="Mês Anterior"],
 button[title="Ir para o mês atual"],
 button[title="Próximo Mês"],
 button[title^="Buscar"],
 button[title="Atualizar dados da tabela"],
-button[title="Exibição da planilha: linhas e período"],
-button[title^="Exportar todo o banco de dados"] {
-  background: #f8fafc !important;
+button[title="Exibição da planilha: linhas e período"] {
+  background: #ffffff !important;
   color: #334155 !important;
   border-color: #cbd5e1 !important;
 }
@@ -45,17 +44,28 @@ button[title="Ir para o mês atual"]:hover,
 button[title="Próximo Mês"]:hover,
 button[title^="Buscar"]:hover,
 button[title="Atualizar dados da tabela"]:hover,
-button[title="Exibição da planilha: linhas e período"]:hover,
-button[title^="Exportar todo o banco de dados"]:hover {
-  background: #e2e8f0 !important;
+button[title="Exibição da planilha: linhas e período"]:hover {
+  background: #f1f5f9 !important;
   color: #1e293b !important;
 }
 
+/* Ações fora dos cabeçalhos precisam de mais contraste que o branco dos headers. */
+button[title^="Exportar todo o banco de dados"] {
+  background: #d7dde3 !important;
+  color: #263445 !important;
+  border-color: #a8b2bf !important;
+}
+
+button[title^="Exportar todo o banco de dados"]:hover {
+  background: #c5ced8 !important;
+  color: #172033 !important;
+}
+
 .portal-table-filter-chip {
-  background: #f8fafc !important;
+  background: #f1f5f9 !important;
   color: #334155 !important;
   border-color: #cbd5e1 !important;
-  padding: 0.3rem 0.65rem !important;
+  padding: 0.15rem 0.65rem !important;
   gap: 0.35rem !important;
   line-height: 1 !important;
 }
@@ -64,6 +74,12 @@ button[title^="Exportar todo o banco de dados"]:hover {
   background: #03271f !important;
   color: #ffffff !important;
   border-color: #365349 !important;
+}
+
+/* rc.14: faixa de filtros de defesas com metade do respiro vertical anterior. */
+div.pt-1\.5.border-t.flex.flex-wrap.items-center.gap-2.text-xs.min-w-0.w-full {
+  padding-top: 0.1875rem !important;
+  padding-bottom: 0.1875rem !important;
 }
 
 /* rc.12: navegação do calendário mais rente ao conteúdo. */
@@ -87,4 +103,63 @@ button[title="Ir para o mês atual"] {
   height: 1.9rem !important;
   min-height: 1.9rem !important;
   padding: 0.2rem 0.65rem !important;
+}
+
+/* rc.14: QR 30% menor e agrupado ao bloco de suporte, sem vazio excessivo. */
+#home-page-footer-notes div:has(> img[alt="QR Code para contato pelo WhatsApp"]) {
+  width: 105px !important;
+  height: 105px !important;
+}
+
+#home-page-footer-notes div.flex:has(> div + div > img[alt="QR Code para contato pelo WhatsApp"]) {
+  width: auto !important;
+  max-width: max-content !important;
+  gap: 0.5rem !important;
+}
+
+#home-page-footer-notes div:has(+ div > img[alt="QR Code para contato pelo WhatsApp"]) {
+  flex: 0 1 auto !important;
+  max-width: 285px !important;
+}
+
+@media (min-width: 640px) {
+  #home-page-footer-notes div:has(> img[alt="QR Code para contato pelo WhatsApp"]) {
+    width: 126px !important;
+    height: 126px !important;
+  }
+}
+
+/* rc.14: quando itens privados somem para o visitante, dois divisores não podem ficar lado a lado. */
+#sidebar-nav > div.border-t + div.border-t {
+  display: none !important;
+}
+
+/* Popups: base branca/cinza. */
+div.fixed.inset-0[class*="bg-slate-900"] > div.bg-white {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Login: cabeçalho cinza mais escuro e CTA cinza mais claro, como solicitado. */
+div.fixed.inset-0:has(input[placeholder="nome@edu.ufes.br"]) > div > div:first-child {
+  background: #475569 !important;
+  color: #ffffff !important;
+  border-color: #64748b !important;
+}
+
+div.fixed.inset-0:has(input[placeholder="nome@edu.ufes.br"]) > div > div:first-child h3,
+div.fixed.inset-0:has(input[placeholder="nome@edu.ufes.br"]) > div > div:first-child p,
+div.fixed.inset-0:has(input[placeholder="nome@edu.ufes.br"]) > div > div:first-child button,
+div.fixed.inset-0:has(input[placeholder="nome@edu.ufes.br"]) > div > div:first-child svg {
+  color: #ffffff !important;
+}
+
+div.fixed.inset-0:has(input[placeholder="nome@edu.ufes.br"]) button[type="submit"] {
+  background: #64748b !important;
+  color: #ffffff !important;
+  border: 1px solid #94a3b8 !important;
+}
+
+div.fixed.inset-0:has(input[placeholder="nome@edu.ufes.br"]) button[type="submit"]:hover {
+  background: #718096 !important;
 }
