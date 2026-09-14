@@ -2,7 +2,8 @@ import type { DocumentType } from './index';
 
 export type SignatureSignerRole = 'ADVISOR' | 'STUDENT' | 'PRESIDENT';
 export type SignatureSignerStatus = 'WAITING' | 'VIEWED' | 'SIGNED' | 'DECLINED';
-export type SignatureJobStatus = 'WAITING_INTEGRATION' | 'QUEUED' | 'READY_FOR_REVIEW' | 'APPROVED' | 'SENDING' | 'SENT' | 'PARTIALLY_SIGNED' | 'SIGNED' | 'DECLINED' | 'EXPIRED' | 'CANCELED' | 'PROVIDER_ERROR' | 'DRIVE_SYNC_PENDING' | 'ARCHIVED';
+export type SignatureProvider = 'ASTEN' | 'GOVBR_EXTERNAL';
+export type SignatureJobStatus = 'WAITING_INTEGRATION' | 'QUEUED' | 'READY_FOR_REVIEW' | 'APPROVED' | 'SENDING' | 'SENT' | 'PARTIALLY_SIGNED' | 'AWAITING_EXTERNAL_SIGNATURE' | 'SIGNED' | 'DECLINED' | 'EXPIRED' | 'CANCELED' | 'PROVIDER_ERROR' | 'DRIVE_SYNC_PENDING' | 'ARCHIVED';
 
 export interface SignatureSignerSnapshot {
   id: string; role: SignatureSignerRole; name: string; email: string; signingOrder: number;
@@ -15,12 +16,16 @@ export interface SignatureJob {
   documentTitle: string; documentVersion: number; sourceDataRevision: number; fileName: string; mimeType: string;
   contentSha256: string; idempotencyKey: string; status: SignatureJobStatus; signers: SignatureSignerSnapshot[];
   createdAt: string; createdBy: string; updatedAt: string; approvedAt?: string; approvedBy?: string;
-  approvalExpiresAt?: string; provider: 'ASTEN'; providerEnvelopeId?: string; providerEnvelopeHash?: string;
+  approvalExpiresAt?: string; provider: SignatureProvider; providerEnvelopeId?: string; providerEnvelopeHash?: string;
   providerCreationState?: 'PENDING' | 'CREATING' | 'CONFIRMED' | 'UNCERTAIN';
   sentAt?: string; completedAt?: string; lastError?: string; driveUnsignedFileId?: string; driveSignedFileId?: string;
   driveSignedWebViewLink?: string; signedSha256?: string; verificationCode?: string; artifactBase64?: string;
   /** Snapshot normalizado das variáveis usadas para renderizar esta versão. */
   renderVariables?: Record<string, string>;
+  /** Para a via Gov.br, registra quem devolveu o PDF e qual validação estrutural foi feita. */
+  externalReturnedBy?: string;
+  externalReturnedAt?: string;
+  externalSignatureEvidence?: 'PDF_SIGNATURE_MARKER_PRESENT' | 'MANUAL_EXTERNAL_SIGNATURE';
 }
 
 export interface AstenIntegrationStatus {
