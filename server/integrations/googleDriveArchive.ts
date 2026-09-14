@@ -131,7 +131,7 @@ async function uploadArtifactPdf(input:{rootFolderId?:string;protocol?:string;ac
 }
 
 export async function uploadGeneratedPdfToDrive(input:{rootFolderId?:string;protocol?:string;accessToken:string;processFolderId:string;processId:string;jobId:string;documentType:string;fileName:string;pdf:Buffer;sha256:string}){return uploadArtifactPdf({...input,lifecycle:'GERADO'});}
-export async function uploadSignedPdfToDrive(input:{rootFolderId?:string;protocol?:string;accessToken:string;processFolderId:string;processId:string;jobId:string;documentType:string;fileName:string;pdf:Buffer;sha256:string}){return uploadArtifactPdf({...input,lifecycle:'ASSINADO'});}
+export async function uploadSignedPdfToDrive(input:{rootFolderId?:string;protocol?:string;accessToken:string;processFolderId:string;processId:string;jobId:string;documentType:string;fileName:string;pdf:Buffer;sha256:string;previousFileId?:string}){const uploaded=await uploadArtifactPdf({...input,lifecycle:'ASSINADO'});if(input.previousFileId&&input.previousFileId!==String(uploaded.id))await markDriveFileSuperseded(input.accessToken,input.previousFileId,String(uploaded.id));return uploaded;}
 
 export function buildSupersededAppProperties(existing:Record<string,string>|undefined,supersededBy:string,supersededAt:string){
   return {...(existing||{}),lifecycle:'SUPERSEDED',supersededBy,supersededAt};

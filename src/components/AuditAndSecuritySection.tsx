@@ -28,7 +28,6 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
   const [presidentEmail, setPresidentEmail] = useState(
     settings.commissionPresidentEmail || ''
   );
-  const [recoveryEmails,setRecoveryEmails]=useState((settings.masterRecoveryEmails||[]).join('\n'));
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -36,7 +35,6 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
     setMasterEmail(settings.masterEmail || '');
     setPresidentName(settings.commissionPresidentName || 'Prof.ª Drª. Márcia Valéria de Souza Almeida');
     setPresidentEmail(settings.commissionPresidentEmail || '');
-    setRecoveryEmails((settings.masterRecoveryEmails||[]).join('\n'));
   }, [settings]);
 
   const handleSaveAccounts = async (e: React.FormEvent) => {
@@ -51,8 +49,6 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
         commissionPresidentName: presidentName.trim()
       };
       let res = await apiClient.updateSettings(updated);
-      const contacts:string[]=Array.from(new Set<string>(recoveryEmails.split(/[\n,;]+/).map(value=>value.trim().toLowerCase()).filter(Boolean)));
-      res=await apiClient.updateRecoveryEmails(contacts);
       const transfers:string[]=[];
       if(normMasterEmail&&normMasterEmail!==(settings.masterEmail||'').toLowerCase()){await apiClient.createAdministrationTransfer('MASTER_ADMIN',normMasterEmail);transfers.push('Master');}
       if(normPresidentEmail&&normPresidentEmail!==(settings.commissionPresidentEmail||'').toLowerCase()){await apiClient.createAdministrationTransfer('COMMISSION_PRESIDENT',normPresidentEmail);transfers.push('Presidência');}
@@ -151,9 +147,9 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
         </div>
 
         <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3.5">
-          <label className="mb-1 block text-[10px] font-bold uppercase text-slate-700">E-mails de recuperação do Master</label>
-          <textarea value={recoveryEmails} onChange={event=>setRecoveryEmails(event.target.value)} required rows={3} placeholder="Um e-mail por linha (máximo 5)" className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-400"/>
-          <p className="mt-1 text-[11px] text-slate-600">A Presidente da Comissão é o contato de recuperação do Master e pode iniciar a transferência segura do usuário Master. Toda troca exige confirmação do novo titular.</p>
+          <p className="text-[10px] font-bold uppercase text-slate-700">Recuperação do Master</p>
+          <p className="mt-1 text-[11px] leading-5 text-slate-600">A Presidente da Comissão é automaticamente o contato de recuperação do Master. A troca de Presidente usa transferência segura com confirmação do novo titular; após a aceitação, o e-mail da Presidência passa a ser o único contato de recuperação.</p>
+          <p className="mt-1 text-[11px] font-semibold text-slate-700">Contato atual: {settings.commissionPresidentEmail || 'Presidência ainda não configurada'}</p>
         </div>
 
         <div className="pt-2 flex items-center justify-end border-t border-slate-200">

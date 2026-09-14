@@ -111,7 +111,7 @@ async function staticChecks() {
 
   await check('Asten usa os signatários e a ordem definidos', () => {
     assert.match(server, /if\(type==='ATA'\)return\[\{[^\n]*role:'ADVISOR'/);
-    assert.match(server, /if\(type==='TERMO'\)[^\n]*role:'STUDENT'[^\n]*signingOrder:1[^\n]*role:'ADVISOR'[^\n]*signingOrder:1/);
+    assert.match(server, /if\(type==='TERMO'\)\{[\s\S]{0,1400}role:'STUDENT'[\s\S]{0,500}signingOrder:1[\s\S]{0,1200}role:'ADVISOR'[\s\S]{0,400}signingOrder:2/);
     assert.match(server, /role:'PRESIDENT'[^\n]*signingOrder:1/);
     assert.match(asten, /ordem:\s*s\.order/);
   });

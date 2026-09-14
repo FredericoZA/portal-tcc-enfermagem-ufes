@@ -78,7 +78,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
   return <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" aria-labelledby="commission-management-title">
     <div className="flex flex-col gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
       <div><div className="flex items-center gap-2"><Users className="h-5 w-5 text-slate-600"/><h3 id="commission-management-title" className="font-black uppercase tracking-wide text-slate-950">Gestão da Comissão de TCC</h3></div><p className="mt-0.5 text-xs text-slate-600">Presidência, integrantes e contatos públicos em um único cadastro.</p></div>
-      <div className="flex gap-2"><button type="button" onClick={addMember} className={actionClass}><Plus className="h-4 w-4"/>Adicionar membro</button><button type="button" onClick={() => void save()} disabled={saving} className={actionClass}><Save className="h-4 w-4"/>{saving ? 'Salvando…' : 'Salvar comissão'}</button></div>
+      <div className="flex gap-2"><button type="button" onClick={addMember} className={actionClass}><Plus className="h-4 w-4"/>Adicionar membro</button><button type="button" onClick={() => void save()} disabled={saving} className={actionClass}><Save className="h-4 w-4"/>{saving ? 'Salvando…' : 'Salvar Comissão'}</button></div>
     </div>
 
     <div className="grid gap-3 border-b border-slate-200 p-3 xl:grid-cols-[0.9fr_1.25fr_170px]">

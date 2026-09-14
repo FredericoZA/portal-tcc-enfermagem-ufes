@@ -18,6 +18,7 @@ import { buildAdvancedAnalytics, analyticsCsv, analyticsMarkdown } from './serve
 import { simulateWorkflow } from './server/workflow/simulator';
 import { acceptRegistration } from './server/workflow/registration';
 import { ataArchived, declarationReady } from './server/workflow/gates';
+import { nextPendingSignatureSigner } from './server/workflow/signatureOrder';
 import { operationalConfig, presentVariables } from './src/utils/operationalConfig';
 import express from 'express';
 import path from 'path';
@@ -968,8 +969,16 @@ async function runWorkflowMaintenance(){
 }
 function deriveSignatureSigners(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO'){
   if(type==='ATA')return[{id:`advisor:${normalizeEmail(p.orientador.email)}`,role:'ADVISOR' as const,name:p.orientador.nome,email:normalizeEmail(p.orientador.email),signingOrder:1,status:'WAITING' as const}];
-  if(type==='TERMO'){const students=[p.aluno1,p.aluno2].filter(Boolean) as Array<NonNullable<ProcessData['aluno2']>>;return[...students.map((s)=>({id:`student:${normalizeEmail(s.email)}`,role:'STUDENT' as const,name:s.nome,email:normalizeEmail(s.email),signingOrder:1,status:'WAITING' as const})),{id:`advisor:${normalizeEmail(p.orientador.email)}`,role:'ADVISOR' as const,name:p.orientador.nome,email:normalizeEmail(p.orientador.email),signingOrder:1,status:'WAITING' as const}];}
-  const email=normalizeEmail(currentSettings.commissionPresidentEmail||''),name=currentSettings.commissionPresidentName||'Presidente da Comissão';if(!email)throw new Error('Configure o e-mail do Presidente da Comissão.');return[{id:`president:${email}`,role:'PRESIDENT' as const,name,email,signingOrder:1,status:'WAITING' as const}];
+  if(type==='TERMO'){
+    const students=[p.aluno1,p.aluno2].filter(Boolean) as Array<NonNullable<ProcessData['aluno2']>>;
+    return[
+      ...students.map((student)=>({id:`student:${normalizeEmail(student.email)}`,role:'STUDENT' as const,name:student.nome,email:normalizeEmail(student.email),signingOrder:1,status:'WAITING' as const})),
+      {id:`advisor:${normalizeEmail(p.orientador.email)}`,role:'ADVISOR' as const,name:p.orientador.nome,email:normalizeEmail(p.orientador.email),signingOrder:2,status:'WAITING' as const}
+    ];
+  }
+  const email=normalizeEmail(currentSettings.commissionPresidentEmail||''),name=currentSettings.commissionPresidentName||'Presidente da Comissão';
+  if(!email)throw new Error('Configure o e-mail do Presidente da Comissão.');
+  return[{id:`president:${email}`,role:'PRESIDENT' as const,name,email,signingOrder:1,status:'WAITING' as const}];
 }
 function repositoryDataComplete(p:ProcessData):boolean{return Boolean(p.acervo?.palavrasChave?.length===5&&p.acervo?.resumoSintese?.trim()&&p.acervo?.trabalhoCompletoFileUrl&&(!p.acervo?.publishExpandedAbstract||p.acervo?.resumoExpandidoFileId));}
 async function createSignatureJob(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',actor:string,renderVariables:Record<string,string>={},provider:'ASTEN'|'GOV_BR'='ASTEN'):Promise<SignatureJob>{
@@ -1388,14 +1397,18 @@ export async function createPortalApp() {
   });
 
   app.patch('/api/admin/recovery-emails',requireAuthenticated,requireAdministrator,async(req,res)=>{
-    const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Entre novamente antes de alterar os contatos de recuperação.',code:'REAUTHENTICATION_REQUIRED'});
+    const identity=getPortalIdentity(req)!;
+    if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Entre novamente antes de alterar o contato de recuperação.',code:'REAUTHENTICATION_REQUIRED'});
+    const presidentEmail=normalizeEmail(currentSettings.commissionPresidentEmail||'');
+    if(!presidentEmail)return res.status(409).json({error:'Defina primeiro a Presidente da Comissão e conclua a transferência do e-mail institucional.',code:'COMMISSION_PRESIDENT_REQUIRED'});
     const input:unknown[]=Array.isArray(req.body?.emails)?req.body.emails:[];
-    const emails:string[]=Array.from(new Set<string>(input.map((value:unknown)=>normalizeEmail(String(value))).filter((value:string)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))));
-    if(!emails.length||emails.length>5)return res.status(400).json({error:'Cadastre de um a cinco e-mails válidos de recuperação.'});
+    const requested:string[]=Array.from(new Set<string>(input.map((value:unknown)=>normalizeEmail(String(value))).filter((value:string)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))));
+    if(requested.length!==1||requested[0]!==presidentEmail)return res.status(400).json({error:'A Presidente da Comissão é o único contato de recuperação permitido para o Master.',code:'PRESIDENT_RECOVERY_ONLY'});
     const before=(currentSettings.masterRecoveryEmails||[]).map(value=>createHash('sha256').update(normalizeEmail(value)).digest('hex'));
-    currentSettings={...currentSettings,masterRecoveryEmails:emails,updatedAt:new Date().toISOString()};
-    auditLogsStore.push({id:`log-${Date.now()}-recovery-contacts`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'ALTERACAO_CONTATOS_RECUPERACAO',entityType:'security',entityId:'master_recovery_emails',before:{emailHashes:before},after:{emailHashes:emails.map(value=>createHash('sha256').update(value).digest('hex')),count:emails.length},timestamp:currentSettings.updatedAt});
-    await persistPortalStateDurably();res.json(publicSettingsForRequest(true));
+    currentSettings={...currentSettings,masterRecoveryEmails:[presidentEmail],updatedAt:new Date().toISOString()};
+    auditLogsStore.push({id:`log-${Date.now()}-recovery-contact`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'ALTERACAO_CONTATO_RECUPERACAO',entityType:'security',entityId:'master_recovery_email',before:{emailHashes:before},after:{emailHashes:[createHash('sha256').update(presidentEmail).digest('hex')],count:1},timestamp:currentSettings.updatedAt});
+    await persistPortalStateDurably();
+    res.json(publicSettingsForRequest(true));
   });
 
   app.get('/api/admin/administration-transfers',requireAuthenticated,requireAdministrator,(_req,res)=>res.json(administrationTransfersStore.slice().reverse()));
@@ -2657,9 +2670,59 @@ export async function createPortalApp() {
     await persistPortalStateDurably();
     res.status(updated.workflowPending ? 202 : 200).json(updated);
   });
-  app.get('/api/signatures/jobs/:id/govbr/download',requireAuthenticated,async(req,res)=>{const identity=getPortalIdentity(req)!;const job=signatureJobsStore.find(item=>item.id===req.params.id&&item.provider==='GOV_BR');if(!job)return res.status(404).json({error:'Solicitação Gov.br não encontrada.'});const process=processesStore.find(item=>item.id===job.processId);if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});const signer=job.signers.find(item=>normalizeEmail(item.email)===identity.email&&item.status!=='SIGNED');if(!signer&&!hasFullAdministration(identity.email))return res.status(403).json({error:'Você não é signatário deste documento.'});try{const accessToken=await getGoogleWorkspaceAccessToken();const fileId=job.driveSignedFileId||job.driveUnsignedFileId;if(!fileId)throw new Error('PDF da assinatura não está disponível no Drive.');const file=await downloadDrivePdf(accessToken,fileId,{processId:job.processId,artifactType:job.documentType});await deliverPortalDownload({res,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Não foi possível baixar o PDF para assinatura Gov.br.'});}});
+  app.get('/api/signatures/jobs/:id/govbr/download',requireAuthenticated,async(req,res)=>{
+    const identity=getPortalIdentity(req)!;
+    const job=signatureJobsStore.find(item=>item.id===req.params.id&&item.provider==='GOV_BR');
+    if(!job)return res.status(404).json({error:'Solicitação Gov.br não encontrada.'});
+    const process=processesStore.find(item=>item.id===job.processId);
+    if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
+    const nextSigner=nextPendingSignatureSigner(job.signers);
+    const isNextSigner=Boolean(nextSigner&&normalizeEmail(nextSigner.email)===identity.email);
+    if(!isNextSigner&&!hasFullAdministration(identity.email))return res.status(403).json({error:'O documento está aguardando outro signatário.',code:'SIGNING_ORDER_REQUIRED'});
+    try{
+      const accessToken=await getGoogleWorkspaceAccessToken();
+      const fileId=job.driveSignedFileId||job.driveUnsignedFileId;
+      if(!fileId)throw new Error('PDF da assinatura não está disponível no Drive.');
+      const file=await downloadDrivePdf(accessToken,fileId,{processId:job.processId,artifactType:job.documentType});
+      await deliverPortalDownload({res,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});
+    }catch(error){res.status(502).json({error:error instanceof Error?error.message:'Não foi possível baixar o PDF para assinatura Gov.br.'});}
+  });
 
-  app.post('/api/signatures/jobs/:id/govbr/complete',requireAuthenticated,async(req,res)=>{const identity=getPortalIdentity(req)!;const job=signatureJobsStore.find(item=>item.id===req.params.id&&item.provider==='GOV_BR');if(!job)return res.status(404).json({error:'Solicitação Gov.br não encontrada.'});const process=processesStore.find(item=>item.id===job.processId);if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});const signer=job.signers.find(item=>normalizeEmail(item.email)===identity.email&&item.status!=='SIGNED');if(!signer)return res.status(403).json({error:'Somente o próximo signatário pode enviar sua versão assinada pelo Gov.br.'});try{const uploadId=String(req.body?.stagedUploadId||'').trim();if(!uploadId)throw new Error('Envie o PDF assinado pelo canal seguro do Portal.');const result=await withSupabaseStagedUpload({uploadId,purpose:'GOV_BR_SIGNED_PDF',requesterBinding:sessionUploadBinding(identity),processId:process.id},async(file)=>{if(!file.bytes.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('Envie um PDF válido.');const accessToken=await getGoogleWorkspaceAccessToken();const sha256=createHash('sha256').update(file.bytes).digest('hex');const uploaded=await uploadSignedPdfToDrive({rootFolderId:currentSettings.driveRootFolderId,protocol:process.protocolo,accessToken,processFolderId:process.driveFolderId||'',processId:process.id,jobId:`${job.id}-gov-${signer.signingOrder}`,documentType:job.documentType,fileName:job.fileName.replace(/\.pdf$/i,`__GOVBR_${signer.signingOrder}.pdf`),pdf:file.bytes,sha256});return{uploaded,sha256};});job.driveSignedFileId=String(result.uploaded.id);job.driveSignedWebViewLink=String(result.uploaded.webViewLink||'');job.signedSha256=result.sha256;signer.status='SIGNED';signer.signedAt=new Date().toISOString();job.updatedAt=signer.signedAt;const complete=job.signers.every(item=>item.status==='SIGNED');job.status=complete?'ARCHIVED':'PARTIALLY_SIGNED';if(complete){job.signedAt=job.updatedAt;job.completedAt=job.updatedAt;updateProcessCompletion(job.processId);}auditLogsStore.push({id:`log-${Date.now()}-govbr`,processId:job.processId,actorEmail:identity.email,actorRoles:[...getUserRolesForEmail(identity.email).globalRoles,...getActiveProcessRoles(identity.email,job.processId)],action:'ASSINATURA_GOVBR_RECEBIDA',entityType:'signature_job',entityId:job.id,after:{documentType:job.documentType,provider:'GOV_BR',signerRole:signer.role,status:job.status,sha256:result.sha256},timestamp:job.updatedAt});await persistPortalStateDurably();res.json(publicSignatureJob(job));}catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível arquivar o PDF assinado pelo Gov.br.'});}});
+  app.post('/api/signatures/jobs/:id/govbr/complete',requireAuthenticated,async(req,res)=>{
+    const identity=getPortalIdentity(req)!;
+    const job=signatureJobsStore.find(item=>item.id===req.params.id&&item.provider==='GOV_BR');
+    if(!job)return res.status(404).json({error:'Solicitação Gov.br não encontrada.'});
+    const process=processesStore.find(item=>item.id===job.processId);
+    if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
+    const signer=nextPendingSignatureSigner(job.signers);
+    if(!signer||normalizeEmail(signer.email)!==identity.email)return res.status(403).json({error:'Somente o próximo signatário pode enviar sua versão assinada pelo Gov.br.',code:'SIGNING_ORDER_REQUIRED'});
+    try{
+      const uploadId=String(req.body?.stagedUploadId||'').trim();
+      if(!uploadId)throw new Error('Envie o PDF assinado pelo canal seguro do Portal.');
+      const previousSignedFileId=job.driveSignedFileId;
+      const result=await withSupabaseStagedUpload({uploadId,purpose:'GOV_BR_SIGNED_PDF',requesterBinding:sessionUploadBinding(identity),processId:process.id},async(file)=>{
+        if(!file.bytes.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('Envie um PDF válido.');
+        const accessToken=await getGoogleWorkspaceAccessToken();
+        const {folderId}=await ensureWorkflowProcessFolder(process);
+        const sha256=createHash('sha256').update(file.bytes).digest('hex');
+        const signerArtifactSuffix=createHash('sha256').update(`${signer.role}|${signer.email}|${signer.signingOrder}`).digest('hex').slice(0,10);
+        const uploaded=await uploadSignedPdfToDrive({rootFolderId:currentSettings.driveRootFolderId,protocol:process.protocolo,accessToken,processFolderId:folderId,processId:process.id,jobId:`${job.id}-gov-${signer.signingOrder}-${signerArtifactSuffix}`,documentType:job.documentType,fileName:job.fileName.replace(/\.pdf$/i,`__GOVBR_${signer.signingOrder}_${signerArtifactSuffix}.pdf`),pdf:file.bytes,sha256,previousFileId:previousSignedFileId});
+        return{uploaded,sha256};
+      });
+      job.driveSignedFileId=String(result.uploaded.id);
+      job.driveSignedWebViewLink=String(result.uploaded.webViewLink||'');
+      job.signedSha256=result.sha256;
+      signer.status='SIGNED';
+      signer.signedAt=new Date().toISOString();
+      job.updatedAt=signer.signedAt;
+      const complete=job.signers.every(item=>item.status==='SIGNED');
+      job.status=complete?'ARCHIVED':'PARTIALLY_SIGNED';
+      if(complete){job.signedAt=job.updatedAt;job.completedAt=job.updatedAt;updateProcessCompletion(job.processId);}
+      auditLogsStore.push({id:`log-${Date.now()}-govbr`,processId:job.processId,actorEmail:identity.email,actorRoles:[...getUserRolesForEmail(identity.email).globalRoles,...getActiveProcessRoles(identity.email,job.processId)],action:'ASSINATURA_GOVBR_RECEBIDA',entityType:'signature_job',entityId:job.id,after:{documentType:job.documentType,provider:'GOV_BR',signerRole:signer.role,signingOrder:signer.signingOrder,status:job.status,sha256:result.sha256},timestamp:job.updatedAt});
+      await persistPortalStateDurably();
+      res.json(publicSignatureJob(job));
+    }catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível arquivar o PDF assinado pelo Gov.br.'});}
+  });
 
   app.post('/api/signatures/jobs/:id/retry',requireAuthenticated,requireAdministrator,async(req,res)=>{const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Entre novamente antes de repetir o envio.',code:'REAUTHENTICATION_REQUIRED'});const job=signatureJobsStore.find(item=>item.id===req.params.id);if(!job)return res.status(404).json({error:'Item não encontrado.'});await dispatchSignatureJobAutomatically(job);const failed=['PROVIDER_ERROR','WAITING_INTEGRATION','DRIVE_SYNC_PENDING'].includes(job.status);if(!failed){const process=processesStore.find(item=>item.id===job.processId);if(process){const eventCode:WorkflowEventCode=job.documentType==='ATA'?'EVALUATION_SUBMITTED':job.documentType==='DECLARACAO'?'PUBLICATION_CLEARED':'REPOSITORY_SUBMITTED';await executeConfiguredWorkflowEvent(process,eventCode,identity.email);}}res.status(failed?409:200).json(publicSignatureJob(job));});
   app.post('/api/signatures/jobs/generate',requireAuthenticated,requireAdministrator,(_req,res)=>res.status(410).json({error:'A geração em lote foi desativada. Use a ação do documento dentro do TCC.',code:'LEGACY_SIGNATURE_GENERATION_DISABLED'}));

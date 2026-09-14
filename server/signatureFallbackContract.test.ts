@@ -28,14 +28,18 @@ test('Portal oferece Asten e Gov.br como vias independentes de assinatura',async
 
 test('assinatura Gov.br preserva ordem dos signatários',async()=>{
   const server=await source('server.ts');
-  const orderExpression="filter(item=>item.status!=='SIGNED').sort((a,b)=>a.signingOrder-b.signingOrder)[0]";
-  assert.ok(server.split(orderExpression).length>=3);
+  assert.ok(server.includes("import { nextPendingSignatureSigner } from './server/workflow/signatureOrder'"));
+  assert.ok(server.split('nextPendingSignatureSigner(job.signers)').length>=3);
+  assert.ok(server.includes("role:'ADVISOR' as const,name:p.orientador.nome,email:normalizeEmail(p.orientador.email),signingOrder:2"));
+  assert.ok(server.includes("code:'SIGNING_ORDER_REQUIRED'"));
 });
 
 test('Presidência é o contato único de recuperação do Master',async()=>{
   const [server,accounts]=await Promise.all([source('server.ts'),source('src/components/AuditAndSecuritySection.tsx')]);
   assert.ok(server.includes('masterRecoveryEmails:[configuredPresidentEmail]'));
   assert.ok(server.includes("const presidentEmail=normalizeEmail(currentSettings.commissionPresidentEmail||'')"));
+  assert.ok(server.includes("requested.length!==1||requested[0]!==presidentEmail"));
+  assert.ok(server.includes("masterRecoveryEmails:[presidentEmail]"));
   assert.ok(accounts.includes('A Presidente da Comissão é automaticamente o contato de recuperação do Master'));
   assert.ok(!accounts.includes('setRecoveryEmails'));
 });
