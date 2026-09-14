@@ -83,7 +83,7 @@ export const PortalReplicationPage: React.FC = () => (
       </div>
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex items-center gap-2"><FileKey2 className="h-5 w-5 text-slate-700"/><h2 className="font-black text-slate-950">Nunca copie dados e segredos</h2></div>
-        <p className="mt-1 text-xs text-slate-500">Estes recursos devem ser criados novamente para cada instalação.</p>
+        <p className="mt-1 text-xs text-slate-500">Cada curso usa banco, Drive, OAuth, segredos e contas próprios. Estes recursos devem ser criados novamente para cada instalação.</p>
         <div className="mt-2 grid gap-1.5 text-xs text-slate-700 sm:grid-cols-2">
           {['Banco e dados', 'Pasta raiz do Drive', 'OAuth e tokens', 'Segredos de ambiente', 'Conta institucional', 'Administrador Master'].map(item => <div key={item} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">{item}</div>)}
         </div>
