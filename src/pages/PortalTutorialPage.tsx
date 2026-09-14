@@ -81,7 +81,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-[#344125]/25 bg-[#344125] p-5 text-white shadow-sm sm:p-6">
+      <section className="rounded-2xl border border-[#06372d]/25 bg-[#06372d] p-5 text-white shadow-sm sm:p-6">
         <div className="max-w-3xl">
           <div className="flex items-center gap-2 text-slate-200 text-xs font-black uppercase tracking-[0.18em]"><ShieldCheck className="h-4 w-4"/>Guia operacional</div>
           <h1 className="mt-2 text-2xl sm:text-3xl font-black tracking-tight">Como usar o Portal de TCC</h1>
@@ -103,8 +103,8 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
           <p className="mt-1 text-sm text-slate-600">{active.description}</p>
           <ol className="mt-4 grid gap-2 md:grid-cols-2">
             {active.steps.map((step, index) => (
-              <li key={step} className="flex gap-3 rounded-xl border border-[#5f6937]/20 bg-white p-3 text-sm leading-6 text-slate-700">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-600 text-xs font-black text-white">{index + 1}</span>
+              <li key={step} className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#06372d] text-xs font-black text-white">{index + 1}</span>
                 <span>{step}</span>
               </li>
             ))}
@@ -125,7 +125,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase text-slate-600">Etapa {n}</span>
               </div>
               <h3 className="mt-3 font-black text-slate-950">{title}</h3>
-              <p className="mt-1 text-[11px] font-black uppercase tracking-wide text-[#4f582e]">{actor}</p>
+              <p className="mt-1 text-[11px] font-black uppercase tracking-wide text-[#06372d]">{actor}</p>
               <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
             </article>
           ))}
@@ -138,8 +138,8 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
           <p className="mt-2 text-sm leading-6 text-slate-600">Matrícula, e-mail, SIAPE, códigos de acesso, credenciais, identificadores internos, vínculos privados do Drive e registros administrativos ficam restritos aos usuários autorizados e às rotinas que realmente necessitam deles.</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-          <div className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5 text-[#4f582e]"/><h2 className="font-black text-[#343b20]">Informação acadêmica pública</h2></div>
-          <p className="mt-2 text-sm leading-6 text-[#343b20]">O calendário e o repositório usam contratos públicos próprios, com o mínimo de dados necessário para consulta acadêmica. TCC completo e resumo expandido só recebem link público quando a autorização aplicável e a sincronização com o Drive forem concluídas; caso contrário, permanecem privados ou indicados como não apresentados.</p>
+          <div className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5 text-[#06372d]"/><h2 className="font-black text-[#06372d]">Informação acadêmica pública</h2></div>
+          <p className="mt-2 text-sm leading-6 text-slate-700">O calendário e o repositório usam contratos públicos próprios, com o mínimo de dados necessário para consulta acadêmica. TCC completo e resumo expandido só recebem link público quando a autorização aplicável e a sincronização com o Drive forem concluídas; caso contrário, permanecem privados ou indicados como não apresentados.</p>
         </div>
       </section>
     </div>
