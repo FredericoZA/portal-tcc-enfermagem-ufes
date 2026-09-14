@@ -1,5 +1,9 @@
 /* Ajustes visuais de coerência solicitados para a instalação UFES. */
 
+:root {
+  --portal-compact-control-height: 1.9rem;
+}
+
 /* Rodapé lateral: local e versão alinhados ao centro. */
 #sidebar-user-footer > div:nth-last-child(2),
 #sidebar-user-footer > div:last-child {
@@ -61,11 +65,14 @@ button[title^="Exportar todo o banco de dados"]:hover {
   color: #172033 !important;
 }
 
+/* Regra global de densidade: filtros compactos têm a mesma altura dos controles do calendário. */
 .portal-table-filter-chip {
+  height: var(--portal-compact-control-height) !important;
+  min-height: var(--portal-compact-control-height) !important;
   background: #f1f5f9 !important;
   color: #334155 !important;
   border-color: #cbd5e1 !important;
-  padding: 0.15rem 0.65rem !important;
+  padding: 0 0.65rem !important;
   gap: 0.35rem !important;
   line-height: 1 !important;
 }
@@ -76,32 +83,32 @@ button[title^="Exportar todo o banco de dados"]:hover {
   border-color: #365349 !important;
 }
 
-/* rc.14: faixa de filtros de defesas com metade do respiro vertical anterior. */
+/* Faixas de filtro não devem criar margem vertical além da própria altura do controle. */
 div.pt-1\.5.border-t.flex.flex-wrap.items-center.gap-2.text-xs.min-w-0.w-full {
-  padding-top: 0.1875rem !important;
-  padding-bottom: 0.1875rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
 }
 
-/* rc.12: navegação do calendário mais rente ao conteúdo. */
+/* Navegação do calendário segue o mesmo token de altura compacta. */
 button[title="Selecionar Mês e Ano"] {
-  height: 1.9rem !important;
-  min-height: 1.9rem !important;
+  height: var(--portal-compact-control-height) !important;
+  min-height: var(--portal-compact-control-height) !important;
   padding: 0.2rem 0.65rem !important;
   gap: 0.3rem !important;
 }
 
 button[title="Mês Anterior"],
 button[title="Próximo Mês"] {
-  width: 1.9rem !important;
-  height: 1.9rem !important;
-  min-width: 1.9rem !important;
-  min-height: 1.9rem !important;
+  width: var(--portal-compact-control-height) !important;
+  height: var(--portal-compact-control-height) !important;
+  min-width: var(--portal-compact-control-height) !important;
+  min-height: var(--portal-compact-control-height) !important;
   padding: 0 !important;
 }
 
 button[title="Ir para o mês atual"] {
-  height: 1.9rem !important;
-  min-height: 1.9rem !important;
+  height: var(--portal-compact-control-height) !important;
+  min-height: var(--portal-compact-control-height) !important;
   padding: 0.2rem 0.65rem !important;
 }
 
