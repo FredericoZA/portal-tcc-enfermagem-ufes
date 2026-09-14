@@ -1,0 +1,25 @@
+/* Ajustes visuais de coerência solicitados para a instalação UFES. */
+
+/* Rodapé lateral: local e versão alinhados ao centro. */
+#sidebar-user-footer > div:nth-last-child(2),
+#sidebar-user-footer > div:last-child {
+  width: 100%;
+  text-align: center;
+}
+
+/* Controles compactos de busca/atualização/exibição das tabelas: +30% de área clicável. */
+button[title^="Buscar"],
+button[title="Atualizar dados da tabela"],
+button[title="Exibição da planilha: linhas e período"] {
+  width: 2.45rem !important;
+  height: 2.45rem !important;
+  min-width: 2.45rem !important;
+  min-height: 2.45rem !important;
+}
+
+button[title^="Buscar"] > svg,
+button[title="Atualizar dados da tabela"] > svg,
+button[title="Exibição da planilha: linhas e período"] > svg {
+  width: 1.125rem !important;
+  height: 1.125rem !important;
+}
