@@ -1,29 +1,33 @@
 /*
- * Atualização 17 — padronização visual da tela pública e componentes compartilhados.
- * Fonte de verdade desta homologação:
- *   verde musgo: #435649
+ * Atualização 18 — correções de regressão visual após homologação.
+ * Fonte de verdade:
+ *   verde musgo dos cabeçalhos: #005830 (mesma faixa DOM/SEG/TER...)
  *   branco-gelo: #f1f5f9
  *   selecionado: #e2e8f0
- *   popup (musgo +20% de luminosidade): #69786d
- *   WhatsApp: #25d366
+ *   pop-up: #337959 (20% mais claro que #005830)
+ *   WhatsApp QR: #25d366
+ *   WhatsApp botão: #1ea952 (aprox. 20% mais escuro)
  */
 :root {
-  --portal-moss: #435649;
-  --portal-moss-hover: #344439;
+  --portal-moss: #005830;
+  --portal-moss-hover: #004626;
   --portal-ice: #f1f5f9;
   --portal-ice-selected: #e2e8f0;
-  --portal-popup-moss: #69786d;
+  --portal-popup-moss: #337959;
   --portal-whatsapp: #25d366;
+  --portal-whatsapp-button: #1ea952;
+  --portal-sidebar-active: #154d41;
   --portal-control-text: #0f172a;
   --portal-control-border: #cbd5e1;
 }
 
-/* 1) Cabeçalhos de planilhas/calendários: um único verde musgo em todo o portal. */
+/* 1) Cabeçalhos: todos no mesmo verde da faixa dos dias do calendário. */
 #formal-monthly-calendar-section > div > div:first-child,
 #public-calendar-cards-section > div > div:first-child,
 .table-sticky-container table thead,
 .table-sticky-container table thead th,
 main [class*="bg-[#435649]"],
+main [class*="bg-[#344125]"],
 main [class*="bg-[#005830]"] {
   background-color: var(--portal-moss) !important;
   color: #ffffff !important;
@@ -32,22 +36,20 @@ main [class*="bg-[#005830]"] {
 #formal-monthly-calendar-section > div > div:first-child,
 #public-calendar-cards-section > div > div:first-child,
 .table-sticky-container table thead th {
-  border-color: rgba(255,255,255,.24) !important;
+  border-color: rgba(255,255,255,.22) !important;
 }
 
-/* 2) Controles de cabeçalho: branco-gelo, texto/ícone escuro. */
+/* 2) Controles da barra de planilha: branco-gelo; selecionado: cinza-claro. */
 #formal-monthly-calendar-section > div > div:first-child button,
 #public-calendar-cards-section > div > div:first-child button,
 button[title*="Exibição da planilha"],
 button[title*="Buscar"],
 button[title*="Mês"],
-button[title="Hoje"],
-main button[class*="bg-[#344439]"],
-main button[class*="bg-[#2d3a31]"] {
+button[title="Hoje"] {
   background-color: var(--portal-ice) !important;
   color: var(--portal-control-text) !important;
   border-color: var(--portal-control-border) !important;
-  box-shadow: 0 1px 2px rgba(15,23,42,.08) !important;
+  box-shadow: 0 1px 2px rgba(15,23,42,.06) !important;
 }
 
 #formal-monthly-calendar-section > div > div:first-child button:hover,
@@ -57,20 +59,11 @@ button[title*="Buscar"]:hover,
 button[title*="Mês"]:hover,
 button[title="Hoje"]:hover {
   background-color: var(--portal-ice-selected) !important;
-  color: var(--portal-control-text) !important;
 }
 
-/* Filtros: inativo = gelo; selecionado = cinza-claro. Pontos/bolinhas internas mantêm suas cores. */
-main button[class*="bg-white/15"],
-main button[class*="bg-white/10"] {
-  background-color: var(--portal-ice) !important;
-  color: var(--portal-control-text) !important;
-  border-color: var(--portal-control-border) !important;
-}
-
+.portal-table-filter-chip[data-selected="true"],
 main button[class*="bg-[#2d3a31]"],
-main button[class*="bg-black/40"],
-main button[class*="bg-slate-800"][class*="font-black"] {
+main button[class*="bg-black/40"] {
   background-color: var(--portal-ice-selected) !important;
   color: var(--portal-control-text) !important;
   border-color: var(--portal-control-border) !important;
@@ -78,7 +71,7 @@ main button[class*="bg-slate-800"][class*="font-black"] {
   outline: none !important;
 }
 
-/* 3) Cabeçalho institucional: universidade escura; curso em musgo. */
+/* 3) Cabeçalho institucional: universidade escura; curso verde-musgo. */
 #portal-header button[title="Voltar ao Calendário Público Inicial"] > div:first-child {
   color: #0f172a !important;
 }
@@ -94,7 +87,7 @@ main button[class*="bg-slate-800"][class*="font-black"] {
   padding: 0 !important;
 }
 
-/* 4) Pop-ups: barra superior e ação principal = musgo clareado 20%. */
+/* 4) Pop-ups: cabeçalho e ação principal no verde musgo clareado. */
 .portal-modal-header,
 div.fixed.inset-0 > div[class*="bg-white"] > div:first-child[class*="border-b"],
 div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-b"],
@@ -105,41 +98,16 @@ div.fixed[class*="bg-white"][class*="shadow"] > div:first-child[class*="border-b
   border-color: var(--portal-popup-moss) !important;
 }
 
-.portal-modal-header :is(h1,h2,h3,p,span,svg,button),
-div.fixed.inset-0 > div[class*="bg-white"] > div:first-child[class*="border-b"] :is(h1,h2,h3,p,span,svg,button),
-div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-b"] :is(h1,h2,h3,p,span,svg,button),
-div.fixed.z-\[1000001\].bg-white > div:first-child[class*="border-b"] :is(span,svg,button) {
-  color: #ffffff !important;
-}
-
-/* Popovers antigos com padding: transforma o título em barra visual contínua. */
-div.fixed.z-\[1000001\].bg-white[class*="p-3.5"] > div:first-child[class*="border-b"],
-div.fixed.z-\[1000001\].bg-white[class*="p-4"] > div:first-child[class*="border-b"] {
-  margin-left: -0.875rem !important;
-  margin-right: -0.875rem !important;
-  margin-top: -0.875rem !important;
-  padding: 0.625rem 0.875rem !important;
-}
-
 .portal-action-primary,
 .portal-modal-primary,
 div.fixed.inset-0:has(input[type="email"]) button[type="submit"],
-div.fixed.z-\[1000001\].bg-white > div:last-child > button:last-child,
-button[title^="Exportar todo o banco de dados"] {
+div.fixed.z-\[1000001\].bg-white > div:last-child > button:last-child {
   background-color: var(--portal-popup-moss) !important;
   color: #ffffff !important;
   border-color: var(--portal-popup-moss) !important;
 }
 
-.portal-action-primary:hover,
-.portal-modal-primary:hover,
-div.fixed.inset-0:has(input[type="email"]) button[type="submit"]:hover,
-div.fixed.z-\[1000001\].bg-white > div:last-child > button:last-child:hover,
-button[title^="Exportar todo o banco de dados"]:hover {
-  filter: brightness(.94) !important;
-}
-
-/* 5) Seletor 25/50/100/Todos: sem anel/margem de seleção. */
+/* 5) 25/50/100/Todos: somente mudança de fundo, nunca margem/anel extra. */
 div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-200"] {
   background-color: var(--portal-ice-selected) !important;
   color: var(--portal-control-text) !important;
@@ -156,27 +124,51 @@ div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-50"] {
   border-color: #e2e8f0 !important;
 }
 
-/* 6) Sidebar: conteúdo de sessão integralmente centralizado. */
-#sidebar-user-footer,
+/* 6) Barra lateral: restaura o verde aprovado e elimina variação por usuário. */
+#sidebar-nav > button:focus,
+#sidebar-nav > button:active {
+  color: #ffffff !important;
+}
+
+#bottom-access-portal-btn,
+#bottom-logout-portal-btn {
+  background-color: var(--portal-sidebar-active) !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,.22) !important;
+  box-shadow: none !important;
+}
+
+#bottom-access-portal-btn:hover,
+#bottom-logout-portal-btn:hover {
+  background-color: #0f4439 !important;
+  color: #ffffff !important;
+}
+
+/* O botão Entrar/Sair fica acima da linha divisória; dados da sessão ficam abaixo. */
+#sidebar-user-footer {
+  border-top: 0 !important;
+  padding-top: 0.45rem !important;
+  padding-bottom: 0.45rem !important;
+  gap: 0.30rem !important;
+  text-align: center !important;
+}
+
+#sidebar-user-footer > :nth-child(2) {
+  border-top: 1px solid #365349 !important;
+  padding-top: 0.45rem !important;
+  margin-top: 0.10rem !important;
+}
+
 #sidebar-user-footer > div,
 #sidebar-user-footer > div > div {
   text-align: center !important;
 }
 
-/* O botão Entrar/Sair permanece neutro, conforme padrão aprovado da área de sessão. */
-#bottom-access-portal-btn,
-#bottom-logout-portal-btn {
-  background-color: #f1f5f9 !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
-}
-
-/* 7) Rodapé: QR próximo do desenvolvedor; selo do WhatsApp visível e preservado. */
-#home-page-footer-notes div.flex:has(> div > img[alt="QR Code para contato pelo WhatsApp"]) {
-  width: fit-content !important;
-  max-width: 100% !important;
-  gap: 0.625rem !important;
-  justify-content: center !important;
+/* 7) Rodapé: WhatsApp mais escuro só no botão. Miolo do QR permanece #25D366. */
+#home-page-footer-notes a[href*="wa.me"],
+#home-page-footer-notes a[href*="whatsapp"],
+#home-page-footer-notes a:has(svg) {
+  background-color: var(--portal-whatsapp-button) !important;
 }
 
 #home-page-footer-notes div:has(> img[alt="QR Code para contato pelo WhatsApp"]) > span {
@@ -184,7 +176,35 @@ div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-50"] {
   background-color: var(--portal-whatsapp) !important;
 }
 
-/* 8) Local das apresentações: título centralizado; cartões preservam leitura. */
+#home-page-footer-notes div.flex:has(> div > img[alt="QR Code para contato pelo WhatsApp"]) {
+  width: fit-content !important;
+  max-width: 100% !important;
+  gap: 0.55rem !important;
+  justify-content: center !important;
+}
+
+/* E-mail copiável: comportamento de botão sem aparência de botão alto. */
+#home-page-footer-notes button[aria-label^="Copiar e-mail"] {
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+#home-page-footer-notes button[aria-label^="Copiar e-mail"] span {
+  line-height: 1 !important;
+}
+
+/* Rodapé mais enxuto. */
+#home-page-footer-notes {
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.35rem !important;
+}
+
+/* 8) Local das apresentações: título centralizado. */
 #presentation-location-card > div:first-child {
   justify-content: center !important;
   text-align: center !important;
