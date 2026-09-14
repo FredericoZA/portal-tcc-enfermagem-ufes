@@ -7,25 +7,25 @@
   text-align: center;
 }
 
-/* Controles compactos de busca/atualização/exibição das tabelas: +30% de área clicável. */
+/* Controles compactos de busca/atualização/exibição das tabelas. */
 button[title^="Buscar"],
 button[title="Atualizar dados da tabela"],
 button[title="Exibição da planilha: linhas e período"] {
-  width: 2.45rem !important;
-  height: 2.45rem !important;
-  min-width: 2.45rem !important;
-  min-height: 2.45rem !important;
+  width: 2rem !important;
+  height: 2rem !important;
+  min-width: 2rem !important;
+  min-height: 2rem !important;
+  padding: 0.25rem !important;
 }
 
 button[title^="Buscar"] > svg,
 button[title="Atualizar dados da tabela"] > svg,
 button[title="Exibição da planilha: linhas e período"] > svg {
-  width: 1.125rem !important;
-  height: 1.125rem !important;
+  width: 1rem !important;
+  height: 1rem !important;
 }
 
-
-/* Padrão rc.11: controles de planilha neutros; verde reservado aos cabeçalhos. */
+/* Controles de planilha neutros; verde reservado aos cabeçalhos. */
 button[title="Selecionar Mês e Ano"],
 button[title="Mês Anterior"],
 button[title="Ir para o mês atual"],
@@ -55,9 +55,36 @@ button[title^="Exportar todo o banco de dados"]:hover {
   background: #f8fafc !important;
   color: #334155 !important;
   border-color: #cbd5e1 !important;
+  padding: 0.3rem 0.65rem !important;
+  gap: 0.35rem !important;
+  line-height: 1 !important;
 }
+
 .portal-table-filter-chip[data-selected="true"] {
   background: #03271f !important;
   color: #ffffff !important;
   border-color: #365349 !important;
+}
+
+/* rc.12: navegação do calendário mais rente ao conteúdo. */
+button[title="Selecionar Mês e Ano"] {
+  height: 1.9rem !important;
+  min-height: 1.9rem !important;
+  padding: 0.2rem 0.65rem !important;
+  gap: 0.3rem !important;
+}
+
+button[title="Mês Anterior"],
+button[title="Próximo Mês"] {
+  width: 1.9rem !important;
+  height: 1.9rem !important;
+  min-width: 1.9rem !important;
+  min-height: 1.9rem !important;
+  padding: 0 !important;
+}
+
+button[title="Ir para o mês atual"] {
+  height: 1.9rem !important;
+  min-height: 1.9rem !important;
+  padding: 0.2rem 0.65rem !important;
 }
