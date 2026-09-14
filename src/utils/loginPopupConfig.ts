@@ -38,9 +38,9 @@ export const DEFAULT_LOGIN_POPUP_CONFIG: LoginPopupConfig = {
   showTipsBox: true,
   showSecurityFooter: false,
   borderRadius: 'rounded-2xl',
-  cardBgColor: '#ffffff',
+  cardBgColor: '#f2f2f2',
   cardTextColor: '#0f172a',
-  primaryBtnBg: '#47866A',
+  primaryBtnBg: '#337959',
   primaryBtnTextColor: '#ffffff'
 };
 
