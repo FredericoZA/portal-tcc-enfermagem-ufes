@@ -57,19 +57,23 @@ export interface SiteLayoutConfig {
 }
 
 export const PORTAL_COLORS = {
-  moss: '#435649',
-  mossDark: '#344439',
+  // Verde canônico aprovado: é exatamente o verde da faixa DOM/SEG/TER... do calendário.
+  moss: '#005830',
+  mossDark: '#004626',
   deepGreen: '#06372d',
   deepGreenDark: '#03271f',
+  sidebarActive: '#154d41',
   neutralAction: '#5b635e',
   neutralActionHover: '#48504c',
   lightText: '#f8fafc',
   mutedLight: '#d6d9d7',
   divider: '#365349',
   whatsapp: '#25D366',
+  whatsappButton: '#1EA952',
   ice: '#f1f5f9',
   iceSelected: '#e2e8f0',
-  popupMoss: '#69786d'
+  // 20% mais claro que #005830 por mistura com branco.
+  popupMoss: '#337959'
 } as const;
 
 export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
@@ -98,14 +102,14 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   sidebarHeaderBgColor: PORTAL_COLORS.deepGreenDark,
   sidebarTextColor: PORTAL_COLORS.lightText,
   sidebarTitleColor: '#ffffff', sidebarSubtitleColor: PORTAL_COLORS.whatsapp,
-  sidebarActiveBgColor: '#154d41', sidebarActiveTextColor: '#ffffff', sidebarActiveBorderColor: '#cbd5d1',
+  sidebarActiveBgColor: PORTAL_COLORS.sidebarActive, sidebarActiveTextColor: '#ffffff', sidebarActiveBorderColor: '#cbd5d1',
   sidebarDividerColor: PORTAL_COLORS.divider, sidebarDividerStyle: 'solid', sidebarShowDividers: true,
   sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial', 'replicar'],
   footerLocationText: 'Departamento de Enfermagem · CCS/UFES · Campus de Maruípe · Vitória/ES',
   footerPresidentLabel: 'Presidente da Comissão', footerPresidentName: '', footerMembersLabel: 'Membros da Comissão', footerMembersList: [],
   footerDevTitle: 'Desenvolvimento da Plataforma e Suporte', footerDevName: '', footerWhatsappLabel: 'WhatsApp Secretaria', footerWhatsappUrl: '', footerContactEmail: '',
   footerQrCodeUrl: '', footerQrLabel: '', footerBgColor: PORTAL_COLORS.deepGreenDark, footerTextColor: '#ffffff', footerMutedTextColor: PORTAL_COLORS.mutedLight,
-  footerBorderColor: PORTAL_COLORS.divider, footerDividerColor: PORTAL_COLORS.divider, footerWhatsappBtnBg: PORTAL_COLORS.whatsapp, footerWhatsappBtnText: '#ffffff',
+  footerBorderColor: PORTAL_COLORS.divider, footerDividerColor: PORTAL_COLORS.divider, footerWhatsappBtnBg: PORTAL_COLORS.whatsappButton, footerWhatsappBtnText: '#ffffff',
   footerQrBgColor: '#ffffff', footerQrTextColor: '#0f172a', footerQrBorderColor: '#ffffff'
 };
 
@@ -113,8 +117,8 @@ export const SITE_LAYOUT_EVENT = 'site_layout_config_changed';
 const STORAGE_KEY = 'site_layout_custom_config_v1';
 const LEGACY_COLORS: Record<string, string> = {
   '#5f6937': PORTAL_COLORS.neutralAction, '#4f582e': PORTAL_COLORS.neutralActionHover, '#616d36': PORTAL_COLORS.divider,
-  '#aab388': '#cbd5d1', '#e0e3cf': '#e5e7eb', '#f0f1e7': '#f8fafc', '#c8ceb0': PORTAL_COLORS.mutedLight, '#525c2e': '#154d41', '#343b20': PORTAL_COLORS.deepGreen, '#252a16': PORTAL_COLORS.deepGreenDark,
-  '#344125': PORTAL_COLORS.moss
+  '#aab388': '#cbd5d1', '#e0e3cf': '#e5e7eb', '#f0f1e7': '#f8fafc', '#c8ceb0': PORTAL_COLORS.mutedLight, '#525c2e': PORTAL_COLORS.sidebarActive, '#343b20': PORTAL_COLORS.deepGreen, '#252a16': PORTAL_COLORS.deepGreenDark,
+  '#344125': PORTAL_COLORS.moss, '#435649': PORTAL_COLORS.moss, '#005830': PORTAL_COLORS.moss
 };
 function migrateColor(value: unknown, fallback?: string): string | undefined {
   if (typeof value !== 'string' || !value.trim()) return fallback;
@@ -144,22 +148,26 @@ function normalizeVisualConfig(parsed: any): SiteLayoutConfig {
     headerCustomLogoUrl: typeof parsed?.headerCustomLogoUrl === 'string' ? parsed.headerCustomLogoUrl : '',
     headerInstitutionText: parsed?.headerInstitutionText || DEFAULT_SITE_LAYOUT_CONFIG.headerInstitutionText,
     headerCourseTitle: normalizeHeaderCourseTitle(parsed?.headerCourseTitle),
-    headerTextColor: migrateColor(parsed?.headerTextColor, DEFAULT_SITE_LAYOUT_CONFIG.headerTextColor),
-    headerTitleColor: migrateColor(parsed?.headerTitleColor, DEFAULT_SITE_LAYOUT_CONFIG.headerTitleColor),
+    headerTextColor: '#0f172a',
+    // A identidade do curso permanece verde-musgo independentemente do usuário logado.
+    headerTitleColor: PORTAL_COLORS.moss,
     sidebarLogoType:'custom', sidebarCustomLogoUrl:typeof parsed?.sidebarCustomLogoUrl==='string'?parsed.sidebarCustomLogoUrl:'', sidebarIconMode:parsed?.sidebarIconMode==='lucide'?'lucide':'emoji',
     sidebarTitle: parsed?.sidebarTitle || DEFAULT_SITE_LAYOUT_CONFIG.sidebarTitle,
     sidebarSubtitle: normalizeSidebarSubtitle(parsed?.sidebarSubtitle),
     sidebarBgColor:migrateColor(parsed?.sidebarBgColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarBgColor), sidebarHeaderBgColor:migrateColor(parsed?.sidebarHeaderBgColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarHeaderBgColor),
     sidebarTextColor:migrateColor(parsed?.sidebarTextColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarTextColor), sidebarTitleColor:migrateColor(parsed?.sidebarTitleColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarTitleColor),
-    sidebarSubtitleColor: PORTAL_COLORS.whatsapp, sidebarActiveBgColor:migrateColor(parsed?.sidebarActiveBgColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarActiveBgColor),
-    sidebarActiveTextColor:migrateColor(parsed?.sidebarActiveTextColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarActiveTextColor), sidebarActiveBorderColor:migrateColor(parsed?.sidebarActiveBorderColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarActiveBorderColor), sidebarDividerColor:migrateColor(parsed?.sidebarDividerColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarDividerColor),
+    sidebarSubtitleColor: PORTAL_COLORS.whatsapp,
+    // Evita regressão por configurações antigas específicas de conta: item ativo volta ao verde aprovado.
+    sidebarActiveBgColor:PORTAL_COLORS.sidebarActive,
+    sidebarActiveTextColor:'#ffffff',
+    sidebarActiveBorderColor:migrateColor(parsed?.sidebarActiveBorderColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarActiveBorderColor), sidebarDividerColor:migrateColor(parsed?.sidebarDividerColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarDividerColor),
     sidebarNavOrder:canonicalSidebarOrder(parsed?.sidebarNavOrder),
     sidebarNavLabels:{...DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavLabels,...(parsed?.sidebarNavLabels||{}),indicadores:'Indicadores',replicar:'Replicar Portal'},
     sidebarNavEmojis:{...DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavEmojis,...(parsed?.sidebarNavEmojis||{}),indicadores:'📊',replicar:'🧩'},
     footerMembersList:Array.isArray(parsed?.footerMembersList)?parsed.footerMembersList:[], footerBgColor:migrateColor(parsed?.footerBgColor,DEFAULT_SITE_LAYOUT_CONFIG.footerBgColor),
     footerTextColor:migrateColor(parsed?.footerTextColor,DEFAULT_SITE_LAYOUT_CONFIG.footerTextColor), footerMutedTextColor:migrateColor(parsed?.footerMutedTextColor,DEFAULT_SITE_LAYOUT_CONFIG.footerMutedTextColor),
     footerBorderColor:migrateColor(parsed?.footerBorderColor,DEFAULT_SITE_LAYOUT_CONFIG.footerBorderColor), footerDividerColor:migrateColor(parsed?.footerDividerColor,DEFAULT_SITE_LAYOUT_CONFIG.footerDividerColor),
-    footerWhatsappBtnBg:PORTAL_COLORS.whatsapp, footerWhatsappBtnText:migrateColor(parsed?.footerWhatsappBtnText,DEFAULT_SITE_LAYOUT_CONFIG.footerWhatsappBtnText),
+    footerWhatsappBtnBg:PORTAL_COLORS.whatsappButton, footerWhatsappBtnText:migrateColor(parsed?.footerWhatsappBtnText,DEFAULT_SITE_LAYOUT_CONFIG.footerWhatsappBtnText),
     footerQrLabel:'', footerQrBorderColor:'#ffffff'
   };
 }
