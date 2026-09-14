@@ -6,6 +6,7 @@ on:
       - fix/padronizacao-visual-e-contingencia-assinaturas
     paths:
       - scripts/apply-final-ux-signature-fixes.mjs
+      - scripts/fix-generated-govbr.mjs
       - .github/workflows/apply-final-ux-signature-fixes.yml
   workflow_dispatch:
 
@@ -28,11 +29,9 @@ jobs:
       - name: Instalar dependências
         run: npm ci
       - name: Aplicar correções
-        run: node scripts/apply-final-ux-signature-fixes.mjs
-      - name: Diagnóstico de sintaxe
-        if: always()
         run: |
-          nl -ba server.ts | sed -n '2455,2478p'
+          node scripts/apply-final-ux-signature-fixes.mjs
+          node scripts/fix-generated-govbr.mjs
       - name: Validar CI
         run: npm run test:ci
       - name: Validar fluxo seguro
