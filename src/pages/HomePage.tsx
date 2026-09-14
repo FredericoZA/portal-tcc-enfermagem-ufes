@@ -1090,7 +1090,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             return (
               <div className={`bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${defStyles.fontFamilyClass}`} style={defStyles.rootStyle}>
                 {/* TOP HEADER BAR (Synchronized palette) */}
-                <div className={`${defStyles.calendarBannerClass} p-3.5 sm:p-4 border-b transition-colors`} style={defStyles.bannerHeaderStyle}>
+                <div className={`${defStyles.calendarBannerClass} px-3 sm:px-4 py-2 sm:py-2.5 border-b transition-colors`} style={defStyles.bannerHeaderStyle}>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -1755,7 +1755,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           {(() => {
             const defStyles = getTableStyles(defensesTextFormat);
             return (
-              <div className={`${defStyles.bannerHeaderClass} p-3.5 sm:p-4 space-y-3 border-b transition-colors`} style={defStyles.bannerHeaderStyle}>
+              <div className={`${defStyles.bannerHeaderClass} px-3 sm:px-4 py-2 sm:py-2.5 space-y-2 border-b transition-colors`} style={defStyles.bannerHeaderStyle}>
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
                   <div className="flex items-center gap-2">
                     <ColorfulHeaderIcon type="list" textFormat={defensesTextFormat} />
@@ -1823,7 +1823,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 </div>
 
                 {/* INTEGRATED TOOLBAR BAR FOR STATUS & FILTERS */}
-                <div className="pt-2 border-t flex flex-wrap items-center gap-2 text-xs min-w-0 w-full" style={defStyles.filterDividerStyle}>
+                <div className="pt-1.5 border-t flex flex-wrap items-center gap-2 text-xs min-w-0 w-full" style={defStyles.filterDividerStyle}>
                   <span className="text-[10px] opacity-80 font-black uppercase tracking-wider shrink-0">
                     {defensesTextFormat?.customFilterTitle || getEditableTableText(defensesCustomLabels, '__filterTitle', 'FILTRAR:')}
                   </span>
@@ -1839,8 +1839,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           key={statusKey}
                           type="button"
                           onClick={() => setDefenseStatusFilter(statusKey)}
+                          data-selected={isSelected ? 'true' : 'false'}
                           style={chip.buttonStyle}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide cursor-pointer transition-all border select-none ${
+                          className={`portal-table-filter-chip inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide cursor-pointer transition-all border select-none ${
                             isSelected ? 'shadow-xs scale-[1.02]' : 'opacity-85 hover:opacity-100'
                           }`}
                         >
@@ -1907,23 +1908,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   <p className="text-slate-500 max-w-md mx-auto">
                     Navegue pelos meses utilizando o calendário acima, altere as datas ou redefina os filtros selecionados.
                   </p>
-                  <div className="pt-2 flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDefensesSearch('');
-                        setDefensesStartDate('');
-                        setDefensesEndDate('');
-                        setDefenseStatusFilter('all');
-                        setSelectedFilterMonth(6);
-                        setSelectedFilterYear(2026);
-                        setCurrentCalendarDate(new Date(2026, 6, 1));
-                      }}
-                      className="px-3.5 py-1.5 bg-emerald-950 hover:bg-black text-white font-extrabold text-xs uppercase rounded-full border border-emerald-500 cursor-pointer transition-colors shadow-2xs inline-block"
-                    >
-                      Restaurar Visão Padrão (Julho de 2026)
-                    </button>
-                  </div>
                 </div>
               );
             }

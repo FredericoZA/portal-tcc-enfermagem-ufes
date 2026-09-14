@@ -23,3 +23,41 @@ button[title="Exibição da planilha: linhas e período"] > svg {
   width: 1.125rem !important;
   height: 1.125rem !important;
 }
+
+
+/* Padrão rc.11: controles de planilha neutros; verde reservado aos cabeçalhos. */
+button[title="Selecionar Mês e Ano"],
+button[title="Mês Anterior"],
+button[title="Ir para o mês atual"],
+button[title="Próximo Mês"],
+button[title^="Buscar"],
+button[title="Atualizar dados da tabela"],
+button[title="Exibição da planilha: linhas e período"],
+button[title^="Exportar todo o banco de dados"] {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+
+button[title="Selecionar Mês e Ano"]:hover,
+button[title="Mês Anterior"]:hover,
+button[title="Ir para o mês atual"]:hover,
+button[title="Próximo Mês"]:hover,
+button[title^="Buscar"]:hover,
+button[title="Atualizar dados da tabela"]:hover,
+button[title="Exibição da planilha: linhas e período"]:hover,
+button[title^="Exportar todo o banco de dados"]:hover {
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+.portal-table-filter-chip {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+.portal-table-filter-chip[data-selected="true"] {
+  background: #03271f !important;
+  color: #ffffff !important;
+  border-color: #365349 !important;
+}
