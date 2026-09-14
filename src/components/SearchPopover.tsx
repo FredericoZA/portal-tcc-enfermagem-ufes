@@ -11,7 +11,7 @@ export interface SearchPopoverProps {
   textFormat?: TableTextFormat;
 }
 
-const POPUP_MOSS = '#69786D';
+const POPUP_MOSS = '#47866A';
 
 export const SearchPopover: React.FC<SearchPopoverProps> = ({
   value,
@@ -33,9 +33,7 @@ export const SearchPopover: React.FC<SearchPopoverProps> = ({
         const rect = buttonRef.current.getBoundingClientRect();
         const popupWidth = 260;
         let left = rect.left;
-        if (left + popupWidth > window.innerWidth - 10) {
-          left = Math.max(10, window.innerWidth - popupWidth - 10);
-        }
+        if (left + popupWidth > window.innerWidth - 10) left = Math.max(10, window.innerWidth - popupWidth - 10);
         if (left < 10) left = 10;
         setPopoverPos({ top: rect.bottom + 6, left });
       }
