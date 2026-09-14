@@ -5,7 +5,6 @@ import {
   DEFAULT_LOGIN_POPUP_CONFIG,
   saveLoginPopupConfig
 } from '../utils/loginPopupConfig';
-import { NursingEmblemLogo } from './NursingEmblemLogo';
 import {
   X,
   Sparkles,
@@ -38,13 +37,7 @@ const THEME_OPTIONS: Array<{
   btnBg: string;
   accentText: string;
 }> = [
-  { id: 'emerald', name: 'Esmeralda Institucional', badgeBg: 'bg-emerald-600', headerBg: 'bg-emerald-50/80 border-emerald-200', btnBg: 'bg-[#005830] hover:bg-[#004827]', accentText: 'text-emerald-800' },
-  { id: 'slate', name: 'Grafite Executivo', badgeBg: 'bg-slate-800', headerBg: 'bg-slate-100 border-slate-300', btnBg: 'bg-slate-900 hover:bg-slate-800', accentText: 'text-slate-900' },
-  { id: 'blue', name: 'Azul Universidade', badgeBg: 'bg-blue-600', headerBg: 'bg-blue-50/80 border-blue-200', btnBg: 'bg-blue-700 hover:bg-blue-800', accentText: 'text-blue-800' },
-  { id: 'purple', name: 'Púrpura Acadêmico', badgeBg: 'bg-purple-600', headerBg: 'bg-purple-50/80 border-purple-200', btnBg: 'bg-purple-700 hover:bg-purple-800', accentText: 'text-purple-800' },
-  { id: 'indigo', name: 'Índigo Moderno', badgeBg: 'bg-indigo-600', headerBg: 'bg-indigo-50/80 border-indigo-200', btnBg: 'bg-indigo-700 hover:bg-indigo-800', accentText: 'text-indigo-800' },
-  { id: 'amber', name: 'Âmbar Dourado', badgeBg: 'bg-amber-600', headerBg: 'bg-amber-50/80 border-amber-200', btnBg: 'bg-amber-700 hover:bg-amber-800', accentText: 'text-amber-800' },
-  { id: 'rose', name: 'Rosa Coral', badgeBg: 'bg-rose-600', headerBg: 'bg-rose-50/80 border-rose-200', btnBg: 'bg-rose-700 hover:bg-rose-800', accentText: 'text-rose-800' }
+  { id: 'slate', name: 'Branco e cinza — padrão do Portal', badgeBg: 'bg-slate-500', headerBg: 'bg-white border-slate-200', btnBg: 'bg-slate-600 hover:bg-slate-700', accentText: 'text-slate-600' }
 ];
 
 export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
@@ -85,18 +78,18 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
         {/* TOP BAR */}
         <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-400/40 text-purple-300 flex items-center justify-center shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-slate-700 border border-slate-600 text-slate-100 flex items-center justify-center shadow-xs">
               <Lock className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
                 <span>Personalizar Popup de Login & Acesso</span>
-                <span className="text-[10px] bg-purple-500/20 text-purple-200 border border-purple-400/30 px-2 py-0.5 rounded font-mono">
+                <span className="text-[10px] bg-slate-700 text-slate-100 border border-slate-600 px-2 py-0.5 rounded font-mono">
                   Visual em Tempo Real
                 </span>
               </h2>
               <p className="text-xs text-slate-400 font-medium">
-                Configure textos, logotipo, dicas para discentes/docentes, paletas de cores e rodapé de segurança
+                Configure textos e o padrão branco/cinza do popup de acesso
               </p>
             </div>
           </div>
@@ -113,7 +106,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
             <button
               type="button"
               onClick={handleSave}
-              className="px-5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+              className="px-5 py-1.5 rounded-xl bg-slate-600 hover:bg-slate-700 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
             >
               {savedSuccess ? <Check className="w-4 h-4" /> : <Sparkles className="w-3.5 h-3.5" />}
               <span>{savedSuccess ? 'Salvo!' : 'Salvar Alterações'}</span>
@@ -141,7 +134,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                 onClick={() => setActiveTab('textos')}
                 className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   activeTab === 'textos'
-                    ? 'bg-white text-purple-900 shadow-xs border border-slate-200'
+                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -153,7 +146,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                 onClick={() => setActiveTab('estilo')}
                 className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   activeTab === 'estilo'
-                    ? 'bg-white text-purple-900 shadow-xs border border-slate-200'
+                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -165,7 +158,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                 onClick={() => setActiveTab('elementos')}
                 className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   activeTab === 'elementos'
-                    ? 'bg-white text-purple-900 shadow-xs border border-slate-200'
+                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -188,7 +181,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                       type="text"
                       value={config.title}
                       onChange={(e) => setConfig({ ...config, title: e.target.value })}
-                      className="w-full text-xs font-semibold px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                      className="w-full text-xs font-semibold px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none"
                     />
                   </div>
 
@@ -200,7 +193,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                       type="text"
                       value={config.subtitle}
                       onChange={(e) => setConfig({ ...config, subtitle: e.target.value })}
-                      className="w-full text-xs font-semibold px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                      className="w-full text-xs font-semibold px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none"
                     />
                   </div>
 
@@ -212,7 +205,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                       rows={3}
                       value={config.description}
                       onChange={(e) => setConfig({ ...config, description: e.target.value })}
-                      className="w-full text-xs font-normal px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none leading-relaxed"
+                      className="w-full text-xs font-normal px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none leading-relaxed"
                     />
                   </div>
 
@@ -228,7 +221,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                         type="text"
                         value={config.discenteTip}
                         onChange={(e) => setConfig({ ...config, discenteTip: e.target.value })}
-                        className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-400 outline-none"
                       />
                     </div>
                     <div>
@@ -239,7 +232,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                         type="text"
                         value={config.docenteTip}
                         onChange={(e) => setConfig({ ...config, docenteTip: e.target.value })}
-                        className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-400 outline-none"
                       />
                     </div>
                   </div>
@@ -252,7 +245,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                       type="text"
                       value={config.emailLabel}
                       onChange={(e) => setConfig({ ...config, emailLabel: e.target.value })}
-                      className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                      className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none"
                     />
                   </div>
 
@@ -264,7 +257,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                       type="text"
                       value={config.emailPlaceholder}
                       onChange={(e) => setConfig({ ...config, emailPlaceholder: e.target.value })}
-                      className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                      className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none"
                     />
                   </div>
 
@@ -276,7 +269,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                       type="text"
                       value={config.buttonText}
                       onChange={(e) => setConfig({ ...config, buttonText: e.target.value })}
-                      className="w-full text-xs font-bold px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                      className="w-full text-xs font-bold px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none"
                     />
                   </div>
                 </div>
@@ -297,7 +290,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                           onClick={() => setConfig({ ...config, headerTheme: theme.id })}
                           className={`p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                             config.headerTheme === theme.id
-                              ? 'border-purple-600 bg-purple-50 ring-2 ring-purple-200'
+                              ? 'border-slate-500 bg-slate-100 ring-2 ring-slate-200'
                               : 'border-slate-200 bg-white hover:border-slate-300'
                           }`}
                         >
@@ -306,7 +299,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                             <span className="text-xs font-bold text-slate-800">{theme.name}</span>
                           </div>
                           {config.headerTheme === theme.id && (
-                            <CheckCircle2 className="w-4 h-4 text-purple-600" />
+                            <CheckCircle2 className="w-4 h-4 text-slate-600" />
                           )}
                         </button>
                       ))}
@@ -325,7 +318,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                           onClick={() => setConfig({ ...config, borderRadius: r })}
                           className={`py-2 px-2 rounded-xl text-center text-xs font-bold transition-all border cursor-pointer ${
                             config.borderRadius === r
-                              ? 'border-purple-600 bg-purple-50 text-purple-900'
+                              ? 'border-purple-600 bg-purple-50 text-slate-900'
                               : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                           }`}
                         >
@@ -353,7 +346,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                         type="checkbox"
                         checked={config.showLogo}
                         onChange={(e) => setConfig({ ...config, showLogo: e.target.checked })}
-                        className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
+                        className="w-4 h-4 rounded text-slate-600 focus:ring-slate-400"
                       />
                     </label>
 
@@ -365,7 +358,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                         type="checkbox"
                         checked={config.showTipsBox}
                         onChange={(e) => setConfig({ ...config, showTipsBox: e.target.checked })}
-                        className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
+                        className="w-4 h-4 rounded text-slate-600 focus:ring-slate-400"
                       />
                     </label>
 
@@ -377,7 +370,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                         type="checkbox"
                         checked={config.showSecurityFooter}
                         onChange={(e) => setConfig({ ...config, showSecurityFooter: e.target.checked })}
-                        className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
+                        className="w-4 h-4 rounded text-slate-600 focus:ring-slate-400"
                       />
                     </label>
                   </div>
@@ -392,7 +385,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                           type="text"
                           value={config.securityText}
                           onChange={(e) => setConfig({ ...config, securityText: e.target.value })}
-                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none"
                         />
                       </div>
                       <div>
@@ -403,7 +396,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                           type="text"
                           value={config.locationText}
                           onChange={(e) => setConfig({ ...config, locationText: e.target.value })}
-                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-400 outline-none"
                         />
                       </div>
                     </div>
@@ -430,7 +423,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                   <div className="flex items-center gap-3">
                     {config.showLogo && (
                       <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center shadow-2xs shrink-0">
-                        <NursingEmblemLogo size={28} />
+                        <span className="text-2xl" aria-hidden="true">🎓</span>
                       </div>
                     )}
                     <div>

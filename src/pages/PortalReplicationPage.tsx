@@ -16,7 +16,7 @@ const steps = [
 
 export const PortalReplicationPage: React.FC = () => (
   <div className="space-y-4">
-    <section className="rounded-2xl border border-[#344125]/25 bg-[#344125] p-5 text-white shadow-sm sm:p-6">
+    <section className="rounded-2xl border border-[#06372d]/25 bg-[#06372d] p-5 text-white shadow-sm sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="max-w-3xl">
           <div className="flex items-center gap-2 text-slate-200 text-xs font-black uppercase tracking-[0.16em]"><Code2 className="h-4 w-4"/>Projeto replicável</div>
@@ -54,9 +54,9 @@ export const PortalReplicationPage: React.FC = () => (
     </section>
 
     <section className="grid gap-3 lg:grid-cols-2">
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-        <div className="flex items-center gap-2"><FileKey2 className="h-5 w-5 text-amber-800"/><h2 className="font-black text-amber-950">Nunca copie dados e segredos</h2></div>
-        <p className="mt-1.5 text-xs leading-5 text-amber-900">Chaves, tokens, cookies, e-mails, matrículas, PDFs reais, refresh tokens, banco e pasta de produção pertencem exclusivamente à instalação de origem.</p>
+      <div className="rounded-xl border border-slate-300 bg-slate-50 p-4">
+        <div className="flex items-center gap-2"><FileKey2 className="h-5 w-5 text-slate-700"/><h2 className="font-black text-slate-950">Nunca copie dados e segredos</h2></div>
+        <p className="mt-1.5 text-xs leading-5 text-slate-700">Chaves, tokens, cookies, e-mails, matrículas, PDFs reais, refresh tokens, banco e pasta de produção pertencem exclusivamente à instalação de origem.</p>
       </div>
       <div className="rounded-xl border border-slate-300 bg-slate-50 p-4">
         <div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-slate-700"/><h2 className="font-black text-slate-950">Isolamento obrigatório</h2></div>

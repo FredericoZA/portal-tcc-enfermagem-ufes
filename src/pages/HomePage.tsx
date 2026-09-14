@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
 import { formatDatePt, formatDateNumeric, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle } from '../utils/formatters';
-import { NursingEmblemLogo } from '../components/NursingEmblemLogo';
 import { OnlineSystemTutorial } from '../components/OnlineSystemTutorial';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { loadTableConfig, ColumnDef, TableTextFormat, DEFAULT_TABLE_TEXT_FORMAT } from '../components/TableColumnSelectorPanel';
@@ -2792,11 +2791,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               {/* Header with Institutional Identity */}
               <div className={`${currentTheme.headerBg} border-b px-5 py-3.5 flex items-center justify-between`} style={loginPopupConfig.cardBgColor ? { backgroundColor: loginPopupConfig.cardBgColor, color: loginPopupConfig.cardTextColor || '#0f172a' } : undefined}>
                 <div className="flex items-center gap-3">
-                  {loginPopupConfig.showLogo && (
-                    <div className="w-12 h-12 flex items-center justify-center shrink-0">
-                      <NursingEmblemLogo size={44} customSrc={settings?.integrationStudio?.brandKit?.courseLogoUrl||settings?.integrationStudio?.brandKit?.universityLogoUrl||''} />
-                    </div>
-                  )}
+                  <div className="w-10 h-10 rounded-xl border border-slate-200 bg-slate-100 flex items-center justify-center shrink-0 text-xl" aria-hidden="true">🎓</div>
                   <div>
                     <h3 className="font-black text-lg sm:text-xl leading-tight" style={{ color: loginPopupConfig.cardTextColor || '#0f172a' }}>
                       {loginPopupConfig.title || 'Acesso ao Portal do TCC'}
@@ -2836,9 +2831,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 )}
 
                 <form onSubmit={handleLoginSubmit} className="space-y-4 pt-1">
-                  {loginStep==='email'&&bootstrapStatus?.bootstrapMasterConfigured&&bootstrapStatus.google.oauthConfigured&&!bootstrapStatus.google.connected&&<div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-950"><strong>Primeira ativação do portal</strong><p className="mt-1 leading-5">Antes do primeiro código, o Master definido na implantação precisa autorizar a conta Google que enviará os e-mails.</p><button type="button" onClick={()=>{window.location.href='/api/integrations/google/oauth/start?returnTo=/?google=connected';}} className="mt-2 rounded-lg bg-blue-800 px-3 py-2 font-black text-white">Autorizar Google e continuar</button></div>}
+                  {loginStep==='email'&&bootstrapStatus?.bootstrapMasterConfigured&&bootstrapStatus.google.oauthConfigured&&!bootstrapStatus.google.connected&&<div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900"><strong>Primeira ativação do portal</strong><p className="mt-1 leading-5">Antes do primeiro código, o Master definido na implantação precisa autorizar a conta Google que enviará os e-mails.</p><button type="button" onClick={()=>{window.location.href='/api/integrations/google/oauth/start?returnTo=/?google=connected';}} className="mt-2 rounded-lg bg-slate-700 px-3 py-2 font-black text-white hover:bg-slate-800">Autorizar Google e continuar</button></div>}
                   <div className="rounded-xl border border-slate-200 bg-white p-3.5 flex items-start gap-3">
-                    <Shield className="w-5 h-5 text-emerald-700 shrink-0" />
+                    <Shield className="w-5 h-5 text-slate-600 shrink-0" />
                     <div><div className="text-xs font-black text-slate-900">Acesso sem senha</div><p className="mt-1 text-[11px] text-slate-600">Informe o e-mail cadastrado. Enviaremos um código de uso único pela conta institucional do portal.</p></div>
                   </div>
 
@@ -2869,17 +2864,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   </div>
                 </form>
               </div>
-
-              {/* Footer institutional security note */}
-              {loginPopupConfig.showSecurityFooter && (
-                <div className="bg-slate-50/70 border-t border-slate-200 px-5 py-2.5 flex items-center justify-between text-[10.5px] text-slate-500">
-                  <span className="flex items-center gap-1">
-                    <Shield className="w-3 h-3 text-slate-400" />
-                    {loginPopupConfig.securityText}
-                  </span>
-                  <span>{loginPopupConfig.locationText}</span>
-                </div>
-              )}
             </div>
           </div>
         );

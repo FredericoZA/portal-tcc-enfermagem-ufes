@@ -19,35 +19,35 @@
   --portal-popup-font: Inter, ui-sans-serif, system-ui, sans-serif;
   --portal-popup-size: 14px;
   --portal-popup-bg: #ffffff;
-  --portal-popup-header: #344125;
-  --portal-popup-header-text: #ffffff;
-  --portal-popup-action: #5b635e;
+  --portal-popup-header: #f1f5f9;
+  --portal-popup-header-text: #0f172a;
+  --portal-popup-action: #475569;
   --portal-popup-action-text: #ffffff;
   --portal-popup-radius: 16px;
   --portal-popup-border: #cbd5e1;
   --portal-popup-shadow: 0 16px 40px rgba(15, 23, 42, .2);
   --portal-new-defense-bg: #ffffff;
-  --portal-new-defense-header: #435649;
-  --portal-new-defense-header-text: #ffffff;
-  --portal-new-defense-action: #5b635e;
+  --portal-new-defense-header: #f1f5f9;
+  --portal-new-defense-header-text: #0f172a;
+  --portal-new-defense-action: #475569;
   --portal-new-defense-action-text: #ffffff;
   --portal-upload-bg: #ffffff;
-  --portal-upload-header: #435649;
-  --portal-upload-header-text: #ffffff;
-  --portal-upload-action: #5b635e;
+  --portal-upload-header: #f1f5f9;
+  --portal-upload-header-text: #0f172a;
+  --portal-upload-action: #475569;
   --portal-upload-action-text: #ffffff;
-  --portal-hipoar-bg: #f8fafc;
-  --portal-hipoar-header: #0f172a;
-  --portal-hipoar-header-text: #ffffff;
-  --portal-hipoar-action: #0284c7;
-  --portal-pdf-bg: #0f172a;
-  --portal-pdf-header: #1e293b;
-  --portal-pdf-header-text: #ffffff;
-  --portal-pdf-action: #2563eb;
+  --portal-hipoar-bg: #ffffff;
+  --portal-hipoar-header: #f1f5f9;
+  --portal-hipoar-header-text: #0f172a;
+  --portal-hipoar-action: #475569;
+  --portal-pdf-bg: #ffffff;
+  --portal-pdf-header: #f1f5f9;
+  --portal-pdf-header-text: #0f172a;
+  --portal-pdf-action: #475569;
   --portal-correction-bg: #ffffff;
-  --portal-correction-header: #435649;
-  --portal-correction-header-text: #ffffff;
-  --portal-correction-action: #5b635e;
+  --portal-correction-header: #f1f5f9;
+  --portal-correction-header-text: #0f172a;
+  --portal-correction-action: #475569;
   --portal-focus-color: #435649;
   --portal-focus-ring: #ffffff;
   --portal-target-size: 44px;
@@ -388,3 +388,16 @@ table tbody tr:nth-child(even) { background-color: var(--portal-table-zebra, tra
 .portal-error { border-color: #b91c1c; color: #991b1b; }
 .portal-confirmation { display: flex; align-items: flex-start; gap: .75rem; padding: 1rem; border: 1px solid var(--portal-popup-border); border-radius: 10px; }
 .portal-confirmation input { flex: none; width: 1.25rem; height: 1.25rem; margin-top: .2rem; accent-color: var(--portal-popup-action); }
+
+
+/* Padrão rc.13: todos os popups em branco e cinza. */
+.portal-modal-surface,
+:where(.fixed.inset-0.z-50, .fixed.inset-0.z-\[60\]) > :where(.bg-white, .bg-slate-100) {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+.portal-modal-header {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}

@@ -26,21 +26,21 @@ export const DEFAULT_LOGIN_POPUP_CONFIG: LoginPopupConfig = {
   title: 'Acesso ao Portal do TCC',
   subtitle: 'Enfermagem e Obstetrícia • UFES',
   description: 'Informe o e-mail cadastrado para receber um código de acesso de seis dígitos. Após a validação, os TCCs vinculados ao seu e-mail aparecerão automaticamente.',
-  discenteTip: 'utilize sempre seu e-mail institucional @edu.ufes.br cadastrado no processo.',
+  discenteTip: 'utilize sempre seu e-mail institucional @edu.ufes.br',
   docenteTip: 'utilize exatamente o e-mail informado no cadastro do TCC.',
   emailLabel: 'E-mail cadastrado',
   emailPlaceholder: 'nome@edu.ufes.br',
   buttonText: 'Enviar código de acesso',
   securityText: 'Ambiente Acadêmico Seguro',
   locationText: 'Ambiente institucional',
-  headerTheme: 'emerald',
-  showLogo: true,
+  headerTheme: 'slate',
+  showLogo: false,
   showTipsBox: true,
-  showSecurityFooter: true,
+  showSecurityFooter: false,
   borderRadius: 'rounded-2xl',
-  cardBgColor: '#ecfdf5',
+  cardBgColor: '#ffffff',
   cardTextColor: '#0f172a',
-  primaryBtnBg: '#005830',
+  primaryBtnBg: '#475569',
   primaryBtnTextColor: '#ffffff'
 };
 
@@ -64,17 +64,24 @@ export function loadLoginPopupConfig(): LoginPopupConfig {
           emailPlaceholder: DEFAULT_LOGIN_POPUP_CONFIG.emailPlaceholder,
           buttonText: DEFAULT_LOGIN_POPUP_CONFIG.buttonText,
           securityText: DEFAULT_LOGIN_POPUP_CONFIG.securityText,
-          locationText: DEFAULT_LOGIN_POPUP_CONFIG.locationText
+          locationText: DEFAULT_LOGIN_POPUP_CONFIG.locationText,
+          headerTheme: DEFAULT_LOGIN_POPUP_CONFIG.headerTheme,
+          showLogo: DEFAULT_LOGIN_POPUP_CONFIG.showLogo,
+          showSecurityFooter: DEFAULT_LOGIN_POPUP_CONFIG.showSecurityFooter,
+          cardBgColor: DEFAULT_LOGIN_POPUP_CONFIG.cardBgColor,
+          cardTextColor: DEFAULT_LOGIN_POPUP_CONFIG.cardTextColor,
+          primaryBtnBg: DEFAULT_LOGIN_POPUP_CONFIG.primaryBtnBg,
+          primaryBtnTextColor: DEFAULT_LOGIN_POPUP_CONFIG.primaryBtnTextColor
         }
       : { ...DEFAULT_LOGIN_POPUP_CONFIG };
     if (!isPortalAppearanceLinked('popup_login')) return local;
     const global = loadGlobalPopupStyle();
     return {
       ...local,
-      cardBgColor: global.headerBgColor,
-      cardTextColor: global.headerTextColor,
-      primaryBtnBg: global.actionBgColor,
-      primaryBtnTextColor: global.actionTextColor,
+      cardBgColor: DEFAULT_LOGIN_POPUP_CONFIG.cardBgColor,
+      cardTextColor: DEFAULT_LOGIN_POPUP_CONFIG.cardTextColor,
+      primaryBtnBg: DEFAULT_LOGIN_POPUP_CONFIG.primaryBtnBg,
+      primaryBtnTextColor: DEFAULT_LOGIN_POPUP_CONFIG.primaryBtnTextColor,
       borderRadius: global.borderRadius === '8px'
         ? 'rounded-lg'
         : global.borderRadius === '12px'

@@ -37,8 +37,9 @@ test('paleta principal usa musgo, cinza e contraste claro sem oliva fluorescente
   const css = await source('src/index.css');
   for (const forbidden of ['#5f6937', '#4f582e', '#738044', '#8c9862']) assert.ok(!css.includes(forbidden), `Cor legada ainda presente: ${forbidden}`);
   assert.ok(css.includes('--color-emerald-800: #344125'));
-  assert.ok(css.includes('--portal-popup-header: #344125'));
-  assert.ok(css.includes('--portal-popup-action: #5b635e'));
+  assert.ok(css.includes('--portal-popup-header: #f1f5f9'));
+  assert.ok(css.includes('--portal-popup-header-text: #0f172a'));
+  assert.ok(css.includes('--portal-popup-action: #475569'));
 });
 
 test('transferência administrativa não depende de feature opcional', async () => {
