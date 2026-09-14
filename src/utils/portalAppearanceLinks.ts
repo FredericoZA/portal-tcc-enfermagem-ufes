@@ -5,6 +5,9 @@ export const TABLE_LAYOUTS_EVENT = 'global_table_layouts_changed';
 export const GLOBAL_POPUP_STYLE_KEY = 'portal_global_popup_style_v1';
 export const GLOBAL_POPUP_STYLE_EVENT = 'portal_global_popup_style_changed';
 
+const POPUP_MOSS = '#69786d';
+const LEGACY_POPUP_GREENS = new Set(['#005830', '#435649', '#344125']);
+
 export interface GlobalPopupStyle {
   surfaceBgColor: string;
   headerBgColor: string;
@@ -20,9 +23,9 @@ export interface GlobalPopupStyle {
 
 export const DEFAULT_GLOBAL_POPUP_STYLE: GlobalPopupStyle = {
   surfaceBgColor: '#ffffff',
-  headerBgColor: '#69786d',
+  headerBgColor: POPUP_MOSS,
   headerTextColor: '#ffffff',
-  actionBgColor: '#69786d',
+  actionBgColor: POPUP_MOSS,
   actionTextColor: '#ffffff',
   fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
   fontSize: '14px',
@@ -62,6 +65,14 @@ export const TABLE_EDITOR_TAB_BY_STORAGE: Readonly<Record<string, string>> = Obj
   Object.entries(TABLE_STORAGE_BY_EDITOR_TAB).map(([tab, storage]) => [storage, tab]),
 );
 
+function normalizePopupStyle(style: Partial<GlobalPopupStyle> = {}): GlobalPopupStyle {
+  const normalized = { ...DEFAULT_GLOBAL_POPUP_STYLE, ...style };
+  if (LEGACY_POPUP_GREENS.has(String(normalized.headerBgColor).toLowerCase())) normalized.headerBgColor = POPUP_MOSS;
+  if (LEGACY_POPUP_GREENS.has(String(normalized.actionBgColor).toLowerCase())) normalized.actionBgColor = POPUP_MOSS;
+  normalized.fontFamily = portalFontFamily(normalized.fontFamily);
+  return normalized;
+}
+
 export function unifiedAppearanceLinks(links: Record<string, boolean> = {}): Record<string, boolean> {
   return Object.fromEntries(Object.keys({ ...DEFAULT_PORTAL_APPEARANCE_LINKS, ...links }).map(key => [key, true]));
 }
@@ -84,15 +95,14 @@ export function loadGlobalPopupStyle(): GlobalPopupStyle {
   if (typeof window === 'undefined') return { ...DEFAULT_GLOBAL_POPUP_STYLE };
   try {
     const raw = localStorage.getItem(GLOBAL_POPUP_STYLE_KEY);
-    return raw ? { ...DEFAULT_GLOBAL_POPUP_STYLE, ...JSON.parse(raw) } : { ...DEFAULT_GLOBAL_POPUP_STYLE };
+    return normalizePopupStyle(raw ? JSON.parse(raw) : {});
   } catch {
     return { ...DEFAULT_GLOBAL_POPUP_STYLE };
   }
 }
 
 export function saveGlobalPopupStyle(style: GlobalPopupStyle, emitEvent = true): GlobalPopupStyle {
-  const normalized = { ...DEFAULT_GLOBAL_POPUP_STYLE, ...style };
-  normalized.fontFamily = portalFontFamily(normalized.fontFamily);
+  const normalized = normalizePopupStyle(style);
   if (typeof window === 'undefined') return normalized;
   localStorage.setItem(GLOBAL_POPUP_STYLE_KEY, JSON.stringify(normalized));
   if (typeof document !== 'undefined') {
