@@ -1,0 +1,46 @@
+name: Apply final UX pass
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/apply-final-ux-pass.mjs
+      - .github/workflows/apply-final-ux-pass.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Aplicar melhorias
+        run: node scripts/apply-final-ux-pass.mjs
+      - name: Validar CI
+        run: npm run test:ci
+      - name: Validar fluxo seguro
+        run: npm run test:secure-flow
+      - name: Publicar melhorias
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Portal TCC automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/index.css src/utils/tableFormatters.ts src/components/Sidebar.tsx src/pages/PortalTutorialPage.tsx src/components/Footer.tsx src/components/AuditAndSecuritySection.tsx src/components/AuthorizedStudentsPanel.tsx src/components/InfrastructureIntegrationsPanel.tsx src/utils/loginPopupConfig.ts
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração adicional."
+            exit 0
+          fi
+          git commit -m "fix: padroniza paleta, contraste e densidade do portal"
+          git push origin HEAD:main
