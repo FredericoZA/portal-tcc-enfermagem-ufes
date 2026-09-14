@@ -1,23 +1,27 @@
 /*
  * Sistema visual autoritativo do Portal TCC.
  *
- * Regra: a interface usa apenas verde-musgo, branco e três cinzas neutros.
- * Amarelo/verde permanecem somente quando carregam significado de situação acadêmica.
- * Esta folha é importada por último e prevalece sobre personalizações visuais antigas.
+ * Regra: a interface usa o verde-musgo aprovado (#005830), branco e cinzas neutros.
+ * Amarelo/verde de status permanecem somente quando carregam significado acadêmico.
+ * A interface deve ser compacta: evitar padding/margens verticais desnecessários.
  */
 :root {
-  --portal-ui-moss: #435649;
+  --portal-ui-moss: #005830;
+  --portal-ui-moss-dark: #004626;
+  --portal-ui-popup-moss: #337959;
+  --portal-ui-sidebar-active: #154d41;
   --portal-ui-white: #ffffff;
   --portal-ui-gray-light: #f1f5f9;
+  --portal-ui-gray-selected: #e2e8f0;
   --portal-ui-gray-mid: #cbd5e1;
   --portal-ui-gray-dark: #526273;
-  --portal-ui-control-height: 1.9rem;
+  --portal-ui-control-height: 1.75rem;
 
   /* Compatibilidade com o sistema de aparência existente. */
   --portal-popup-bg: var(--portal-ui-white) !important;
-  --portal-popup-header: var(--portal-ui-moss) !important;
+  --portal-popup-header: var(--portal-ui-popup-moss) !important;
   --portal-popup-header-text: var(--portal-ui-white) !important;
-  --portal-popup-action: var(--portal-ui-gray-dark) !important;
+  --portal-popup-action: var(--portal-ui-popup-moss) !important;
   --portal-popup-action-text: var(--portal-ui-white) !important;
   --portal-popup-border: var(--portal-ui-gray-mid) !important;
   --portal-table-divider: var(--portal-ui-gray-mid) !important;
@@ -62,18 +66,18 @@
   border-color: var(--portal-ui-gray-mid) !important;
 }
 
-/* O filtro precisa respirar alguns pixels abaixo do divisor, sem voltar a ficar alto. */
+/* Filtro compacto, sem almofada vertical. */
 #public-calendar-cards-section div.pt-1\.5.border-t.flex.flex-wrap.items-center.gap-2.text-xs.min-w-0.w-full {
   border-top-color: var(--portal-ui-gray-mid) !important;
-  padding-top: 0.42rem !important;
-  padding-bottom: 0.20rem !important;
+  padding-top: 0.30rem !important;
+  padding-bottom: 0.12rem !important;
 }
 
 /* -------------------------------------------------------------------------- */
 /* 2. BOTÕES E FILTROS                                                         */
 /* -------------------------------------------------------------------------- */
 
-/* Controles internos: branco/cinza claro. */
+/* Controles internos: branco-gelo/cinza claro. */
 button[title="Selecionar Mês e Ano"],
 button[title="Mês Anterior"],
 button[title="Ir para o mês atual"],
@@ -83,7 +87,7 @@ button[title="Atualizar dados da tabela"],
 button[title="Exibição da planilha: linhas e período"],
 .portal-table-filter-chip:not([data-selected="true"]) {
   background: var(--portal-ui-gray-light) !important;
-  color: var(--portal-ui-gray-dark) !important;
+  color: #0f172a !important;
   border-color: var(--portal-ui-gray-mid) !important;
 }
 
@@ -95,8 +99,8 @@ button[title^="Buscar"]:hover,
 button[title="Atualizar dados da tabela"]:hover,
 button[title="Exibição da planilha: linhas e período"]:hover,
 .portal-table-filter-chip:not([data-selected="true"]):hover {
-  background: var(--portal-ui-white) !important;
-  color: var(--portal-ui-gray-dark) !important;
+  background: var(--portal-ui-gray-selected) !important;
+  color: #0f172a !important;
   border-color: var(--portal-ui-gray-mid) !important;
 }
 
@@ -109,16 +113,27 @@ button[title="Exibição da planilha: linhas e período"]:hover,
   transform: none !important;
 }
 
-/* Seleção não cria outra família de cor: cinza escuro + branco. */
+/* Selecionado: apenas um gelo mais escuro, sem anel e sem outra família de cor. */
 .portal-table-filter-chip[data-selected="true"] {
+  background: var(--portal-ui-gray-selected) !important;
+  color: #0f172a !important;
+  border-color: var(--portal-ui-gray-mid) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Ações de negócio externas neutras. */
+button[title^="Exportar todo o banco de dados"] {
   background: var(--portal-ui-gray-dark) !important;
   color: var(--portal-ui-white) !important;
   border-color: var(--portal-ui-gray-dark) !important;
 }
 
-/* Ações principais externas compartilham exatamente a mesma aparência. */
-#bottom-access-portal-btn,
-button[title^="Exportar todo o banco de dados"],
+button[title^="Exportar todo o banco de dados"]:hover {
+  filter: brightness(0.94) !important;
+}
+
+/* Ações principais de pop-up usam o mesmo verde clareado da barra do pop-up. */
 .portal-action-primary,
 .portal-modal-primary,
 div.fixed.inset-0 button.bg-slate-600,
@@ -128,13 +143,11 @@ div.fixed.inset-0 button.bg-slate-900,
 div.fixed.bg-white button.bg-slate-700,
 div.fixed.bg-white button.bg-slate-800,
 div.fixed.bg-white button.bg-slate-900 {
-  background: var(--portal-ui-gray-dark) !important;
+  background: var(--portal-ui-popup-moss) !important;
   color: var(--portal-ui-white) !important;
-  border-color: var(--portal-ui-gray-dark) !important;
+  border-color: var(--portal-ui-popup-moss) !important;
 }
 
-#bottom-access-portal-btn:hover,
-button[title^="Exportar todo o banco de dados"]:hover,
 .portal-action-primary:hover,
 .portal-modal-primary:hover,
 div.fixed.inset-0 button.bg-slate-600:hover,
@@ -147,22 +160,36 @@ div.fixed.bg-white button.bg-slate-900:hover {
   filter: brightness(0.94) !important;
 }
 
-/* Ações secundárias: cinza claro, texto cinza escuro. */
+/* Ações secundárias: cinza claro, texto escuro. */
 .portal-action:not(.portal-action-primary),
 div.fixed.inset-0 button.bg-slate-100,
 div.fixed.inset-0 button.bg-slate-200,
 div.fixed.bg-white button.bg-slate-100,
 div.fixed.bg-white button.bg-slate-200 {
   background: var(--portal-ui-gray-light) !important;
-  color: var(--portal-ui-gray-dark) !important;
+  color: #0f172a !important;
   border-color: var(--portal-ui-gray-mid) !important;
 }
 
-/* Login: ação principal segue o mesmo cinza do download e do botão Entrar. */
+/* Login é um pop-up e segue o verde clareado. */
 div.fixed.inset-0:has(input[type="email"]) button[type="submit"] {
-  background: var(--portal-ui-gray-dark) !important;
+  background: var(--portal-ui-popup-moss) !important;
   color: var(--portal-ui-white) !important;
-  border: 1px solid var(--portal-ui-gray-dark) !important;
+  border: 1px solid var(--portal-ui-popup-moss) !important;
+}
+
+/* Barra lateral: entrar/sair e seleção nunca herdam branco dos controles de planilha. */
+#bottom-access-portal-btn,
+#bottom-logout-portal-btn {
+  background: var(--portal-ui-sidebar-active) !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,.24) !important;
+}
+
+#bottom-access-portal-btn:hover,
+#bottom-logout-portal-btn:hover {
+  background: #0f4439 !important;
+  color: #ffffff !important;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -179,11 +206,11 @@ div.fixed.inset-0:has(input[type="email"]) button[type="submit"] {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  min-height: 2.65rem !important;
-  padding: 0.48rem 2.75rem !important;
-  background: var(--portal-ui-moss) !important;
+  min-height: 2.30rem !important;
+  padding: 0.34rem 2.50rem !important;
+  background: var(--portal-ui-popup-moss) !important;
   color: var(--portal-ui-white) !important;
-  border-color: var(--portal-ui-gray-mid) !important;
+  border-color: var(--portal-ui-popup-moss) !important;
   text-align: center !important;
 }
 
@@ -195,18 +222,18 @@ div.fixed.inset-0:has(input[type="email"]) button[type="submit"] {
 }
 
 .portal-modal-header svg {
-  color: var(--portal-ui-gray-mid) !important;
+  color: #ffffff !important;
 }
 
 /* Modais tradicionais montados sobre overlay. */
 div.fixed.inset-0 > div[class*="bg-white"] > div:first-child[class*="border-b"],
 div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-b"] {
   position: relative !important;
-  min-height: 2.65rem !important;
-  padding: 0.48rem 2.75rem !important;
-  background: var(--portal-ui-moss) !important;
+  min-height: 2.30rem !important;
+  padding: 0.34rem 2.50rem !important;
+  background: var(--portal-ui-popup-moss) !important;
   color: var(--portal-ui-white) !important;
-  border-color: var(--portal-ui-gray-mid) !important;
+  border-color: var(--portal-ui-popup-moss) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -227,7 +254,7 @@ div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-
 
 div.fixed.inset-0 > div[class*="bg-white"] > div:first-child[class*="border-b"] svg,
 div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-b"] svg {
-  color: var(--portal-ui-gray-mid) !important;
+  color: #ffffff !important;
 }
 
 /* Botão fechar fica na borda direita e não desloca o título do centro. */
@@ -236,7 +263,7 @@ div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-
 div.fixed.inset-0 > div[class*="bg-white"] > div:first-child[class*="border-b"] > div:last-child:has(> button),
 div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-b"] > div:last-child:has(> button) {
   position: absolute !important;
-  right: 0.55rem !important;
+  right: 0.45rem !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
 }
@@ -245,30 +272,30 @@ div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-
 div.fixed.inset-0 > div[class*="bg-white"] > div:first-child[class*="border-b"] button,
 div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-b"] button,
 .portal-modal-header button {
-  min-width: 2rem !important;
-  min-height: 2rem !important;
-  padding: 0.25rem !important;
+  min-width: 1.8rem !important;
+  min-height: 1.8rem !important;
+  padding: 0.18rem !important;
 }
 
 /* Login: reduz ícone, tipografia e respiro do cabeçalho sem perder identidade. */
 div.fixed.inset-0:has(input[type="email"]) > div > div:first-child[class*="border-b"] > div:first-child > div:first-child {
-  width: 2rem !important;
-  height: 2rem !important;
-  min-width: 2rem !important;
-  min-height: 2rem !important;
-  border-radius: 0.55rem !important;
-  font-size: 1rem !important;
+  width: 1.9rem !important;
+  height: 1.9rem !important;
+  min-width: 1.9rem !important;
+  min-height: 1.9rem !important;
+  border-radius: 0.50rem !important;
+  font-size: 0.95rem !important;
 }
 
 div.fixed.inset-0:has(input[type="email"]) > div > div:first-child[class*="border-b"] h3 {
-  font-size: 1rem !important;
-  line-height: 1.15 !important;
+  font-size: 0.95rem !important;
+  line-height: 1.10 !important;
 }
 
 div.fixed.inset-0:has(input[type="email"]) > div > div:first-child[class*="border-b"] p {
-  margin-top: 0.1rem !important;
-  font-size: 0.70rem !important;
-  color: var(--portal-ui-gray-mid) !important;
+  margin-top: 0.05rem !important;
+  font-size: 0.68rem !important;
+  color: rgba(255,255,255,.78) !important;
 }
 
 /* Popover da engrenagem da planilha: mesmo cabeçalho dos modais, sem almofada vazia. */
@@ -280,12 +307,12 @@ div.fixed.z-\[1000001\].bg-white {
 
 div.fixed.z-\[1000001\].bg-white > div:first-child[class*="border-b"] {
   position: relative !important;
-  min-height: 2.5rem !important;
+  min-height: 2.20rem !important;
   margin: 0 !important;
-  padding: 0.42rem 2.4rem !important;
-  background: var(--portal-ui-moss) !important;
+  padding: 0.30rem 2.25rem !important;
+  background: var(--portal-ui-popup-moss) !important;
   color: var(--portal-ui-white) !important;
-  border-color: var(--portal-ui-gray-mid) !important;
+  border-color: var(--portal-ui-popup-moss) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -299,28 +326,28 @@ div.fixed.z-\[1000001\].bg-white > div:first-child[class*="border-b"] :is(span, 
 
 div.fixed.z-\[1000001\].bg-white > div:first-child[class*="border-b"] > button:last-child {
   position: absolute !important;
-  right: 0.45rem !important;
+  right: 0.40rem !important;
   top: 50% !important;
-  min-width: 1.9rem !important;
-  min-height: 1.9rem !important;
+  min-width: 1.75rem !important;
+  min-height: 1.75rem !important;
   transform: translateY(-50%) !important;
 }
 
 div.fixed.z-\[1000001\].bg-white > div:nth-child(2) {
-  padding: 0.75rem 0.85rem !important;
+  padding: 0.55rem 0.70rem !important;
 }
 
 div.fixed.z-\[1000001\].bg-white > div:last-child {
   margin: 0 !important;
-  padding: 0.60rem 0.85rem !important;
+  padding: 0.45rem 0.70rem !important;
   border-color: var(--portal-ui-gray-mid) !important;
 }
 
-/* Outros popovers brancos fixos com cabeçalho divisório também recebem o musgo. */
+/* Outros popovers brancos fixos com cabeçalho divisório também recebem o verde de pop-up. */
 div.fixed[class*="bg-white"][class*="shadow"] > div:first-child[class*="border-b"] {
-  background: var(--portal-ui-moss) !important;
+  background: var(--portal-ui-popup-moss) !important;
   color: var(--portal-ui-white) !important;
-  border-color: var(--portal-ui-gray-mid) !important;
+  border-color: var(--portal-ui-popup-moss) !important;
 }
 
 div.fixed[class*="bg-white"][class*="shadow"] > div:first-child[class*="border-b"] :is(span, svg, button) {
@@ -330,8 +357,8 @@ div.fixed[class*="bg-white"][class*="shadow"] > div:first-child[class*="border-b
 /* Rodapés de modal não precisam de grandes espaços verticais. */
 .portal-modal-surface footer,
 div.fixed.inset-0 > div[class*="bg-white"] > div:last-child[class*="border-t"] {
-  padding-top: 0.65rem !important;
-  padding-bottom: 0.65rem !important;
+  padding-top: 0.45rem !important;
+  padding-bottom: 0.45rem !important;
   border-color: var(--portal-ui-gray-mid) !important;
 }
 
