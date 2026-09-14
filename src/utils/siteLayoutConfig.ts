@@ -65,12 +65,12 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   headerShowEmblem: false,
   headerCustomLogoUrl: '',
   headerBgColor: '#ffffff',
-  headerTextColor: '#5f6937',
+  headerTextColor: '#56615c',
   headerTitleColor: '#0f172a',
   headerBgImage: '',
 
   sidebarTitle: 'PORTAL DE TCC',
-  sidebarSubtitle: 'Curso de Graduação em Enfermagem e Obstetrícia • UFES',
+  sidebarSubtitle: 'ENFERMAGEM E OBSTETRÍCIA · UFES',
   sidebarLogoType: 'custom',
   sidebarCustomLogoUrl: '',
   sidebarNavLabels: {
@@ -94,15 +94,15 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   sidebarIconMode: 'emoji',
   sidebarSessionLabel: 'Sessão ativa',
   sidebarLocationText: 'Campus de Maruípe • Vitória/ES',
-  sidebarBgColor: '#343b20',
-  sidebarHeaderBgColor: '#252a16',
-  sidebarTextColor: '#f0f1e7',
+  sidebarBgColor: '#0c342a',
+  sidebarHeaderBgColor: '#082a22',
+  sidebarTextColor: '#f6f7f6',
   sidebarTitleColor: '#ffffff',
-  sidebarSubtitleColor: '#c8ceb0',
-  sidebarActiveBgColor: '#525c2e',
+  sidebarSubtitleColor: '#d9dfdc',
+  sidebarActiveBgColor: '#435649',
   sidebarActiveTextColor: '#ffffff',
-  sidebarActiveBorderColor: '#aab388',
-  sidebarDividerColor: '#616d36',
+  sidebarActiveBorderColor: '#d2d9d5',
+  sidebarDividerColor: '#315247',
   sidebarDividerStyle: 'solid',
   sidebarShowDividers: true,
   sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial'],
@@ -118,17 +118,17 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   footerWhatsappUrl: '',
   footerContactEmail: '',
   footerQrCodeUrl: '',
-  footerQrLabel: 'WhatsApp QR',
-  footerBgColor: '#252a16',
+  footerQrLabel: '',
+  footerBgColor: '#082a22',
   footerTextColor: '#ffffff',
-  footerMutedTextColor: '#c8ceb0',
-  footerBorderColor: '#616d36',
-  footerDividerColor: '#616d36',
-  footerWhatsappBtnBg: '#5f6937',
+  footerMutedTextColor: '#d9dfdc',
+  footerBorderColor: '#315247',
+  footerDividerColor: '#315247',
+  footerWhatsappBtnBg: '#616b66',
   footerWhatsappBtnText: '#ffffff',
   footerQrBgColor: '#ffffff',
-  footerQrTextColor: '#252a16',
-  footerQrBorderColor: '#c8ceb0'
+  footerQrTextColor: '#1f2937',
+  footerQrBorderColor: '#ffffff'
 };
 
 export const SITE_LAYOUT_EVENT = 'site_layout_config_changed';
@@ -157,6 +157,10 @@ export function loadSiteLayoutConfig(): SiteLayoutConfig {
       // O cabeçalho usa o emoticon acadêmico fixo; a marca do curso fica na lateral.
       headerShowEmblem: false,
       headerCustomLogoUrl: '',
+      // A identidade lateral da instalação UFES segue o padrão institucional atual,
+      // mesmo que um navegador tenha salvo a paleta antiga.
+      sidebarSubtitle: 'ENFERMAGEM E OBSTETRÍCIA · UFES',
+      sidebarSubtitleColor: '#d9dfdc',
       sidebarLogoType: 'custom',
       sidebarCustomLogoUrl: typeof parsed.sidebarCustomLogoUrl === 'string' ? parsed.sidebarCustomLogoUrl : '',
       sidebarIconMode: parsed.sidebarIconMode === 'lucide' ? 'lucide' : 'emoji',
@@ -171,6 +175,7 @@ export function loadSiteLayoutConfig(): SiteLayoutConfig {
         ...(parsed.sidebarNavEmojis || {}),
         indicadores: '📊'
       },
+      footerQrLabel: '',
       footerMembersList: Array.isArray(parsed.footerMembersList)
         ? parsed.footerMembersList
         : DEFAULT_SITE_LAYOUT_CONFIG.footerMembersList
@@ -190,6 +195,8 @@ export function saveSiteLayoutConfig(config: Partial<SiteLayoutConfig>) {
       ...config,
       headerShowEmblem: false,
       headerCustomLogoUrl: '',
+      sidebarSubtitle: 'ENFERMAGEM E OBSTETRÍCIA · UFES',
+      sidebarSubtitleColor: '#d9dfdc',
       sidebarLogoType: 'custom',
       sidebarNavOrder: canonicalSidebarOrder(config.sidebarNavOrder || current.sidebarNavOrder),
       sidebarNavLabels: {
@@ -201,7 +208,8 @@ export function saveSiteLayoutConfig(config: Partial<SiteLayoutConfig>) {
         ...current.sidebarNavEmojis,
         ...(config.sidebarNavEmojis || {}),
         indicadores: '📊'
-      }
+      },
+      footerQrLabel: ''
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     setTimeout(() => window.dispatchEvent(new CustomEvent(SITE_LAYOUT_EVENT, { detail: updated })), 0);
