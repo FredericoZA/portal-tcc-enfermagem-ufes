@@ -12,19 +12,20 @@ interface Props {
 
 const inputClass = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200';
 const labelClass = 'block text-[10px] font-black uppercase tracking-wide text-slate-600';
+const recoveryPresidentEmail = (settings: GlobalSettings): string => String(settings.commissionPresidentEmail || settings.masterRecoveryEmails?.[0] || '').trim().toLowerCase();
 
 export const AdministrativeAccountsPanel: React.FC<Props> = ({ settings, onSettingsUpdated, showNotification }) => {
   const [masterName, setMasterName] = useState(settings.ownerName || settings.portalMaintainerName || 'Administrador Master');
   const [masterEmail, setMasterEmail] = useState(settings.masterEmail || '');
   const [presidentName, setPresidentName] = useState(settings.commissionPresidentName || '');
-  const [presidentEmail, setPresidentEmail] = useState(settings.commissionPresidentEmail || '');
+  const [presidentEmail, setPresidentEmail] = useState(recoveryPresidentEmail(settings));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setMasterName(settings.ownerName || settings.portalMaintainerName || 'Administrador Master');
     setMasterEmail(settings.masterEmail || '');
     setPresidentName(settings.commissionPresidentName || '');
-    setPresidentEmail(settings.commissionPresidentEmail || '');
+    setPresidentEmail(recoveryPresidentEmail(settings));
   }, [settings]);
 
   const save = async (event: React.FormEvent) => {
@@ -36,13 +37,14 @@ export const AdministrativeAccountsPanel: React.FC<Props> = ({ settings, onSetti
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedMaster)) throw new Error('Informe um e-mail válido para o Master.');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedPresident)) throw new Error('Informe um e-mail válido para a Presidente.');
 
-      let updated = await apiClient.updateSettings({
+      const updated = await apiClient.updateSettings({
         ownerName: masterName.trim(),
         commissionPresidentName: presidentName.trim()
       });
 
       const transfers: string[] = [];
-      if (normalizedPresident !== String(settings.commissionPresidentEmail || '').toLowerCase()) {
+      const currentPresident = recoveryPresidentEmail(settings);
+      if (normalizedPresident !== currentPresident || !settings.commissionPresidentEmail) {
         await apiClient.createAdministrationTransfer('COMMISSION_PRESIDENT', normalizedPresident);
         transfers.push('Presidência');
       }
