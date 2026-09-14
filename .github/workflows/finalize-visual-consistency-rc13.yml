@@ -26,7 +26,19 @@ jobs:
       - name: Instalar dependências
         run: npm ci
       - name: Aplicar padronização rc.13
-        run: node scripts/finalize-visual-consistency-rc13.mjs
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'scripts/finalize-visual-consistency-rc13.mjs';
+          let s = fs.readFileSync(path, 'utf8');
+          s = s.replace(
+            `s = s.replace("headerTheme: 'emerald'", "headerTheme: 'slate'");`,
+            `s = s.replace("  headerTheme: 'emerald',\\n  showLogo:", "  headerTheme: 'slate',\\n  showLogo:");`
+          );
+          fs.writeFileSync(path, s);
+          NODE
+          node scripts/finalize-visual-consistency-rc13.mjs
       - name: Validar CI
         run: npm run test:ci
       - name: Validar fluxo seguro
