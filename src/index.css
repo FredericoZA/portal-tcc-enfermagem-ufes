@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 @theme {
-  --color-emerald-50: #f6f8f7;
-  --color-emerald-100: #e8ecea;
-  --color-emerald-200: #d6ddd9;
-  --color-emerald-300: #b6c2bc;
-  --color-emerald-400: #91a096;
-  --color-emerald-500: #6f8076;
-  --color-emerald-600: #52675d;
-  --color-emerald-700: #435649;
+  --color-emerald-50: #f7f8f7;
+  --color-emerald-100: #edf0ee;
+  --color-emerald-200: #dbe0dd;
+  --color-emerald-300: #c4cbc7;
+  --color-emerald-400: #a5aea9;
+  --color-emerald-500: #87918b;
+  --color-emerald-600: #707a74;
+  --color-emerald-700: #5d6761;
   --color-emerald-800: #344125;
-  --color-emerald-900: #27382f;
-  --color-emerald-950: #18271f;
+  --color-emerald-900: #2f392a;
+  --color-emerald-950: #202820;
 }
 
 :root {
@@ -48,7 +48,7 @@
   --portal-correction-header: #f1f5f9;
   --portal-correction-header-text: #0f172a;
   --portal-correction-action: #475569;
-  --portal-focus-color: #435649;
+  --portal-focus-color: #344125;
   --portal-focus-ring: #ffffff;
   --portal-target-size: 44px;
 }

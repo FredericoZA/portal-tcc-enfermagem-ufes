@@ -79,9 +79,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           <NursingEmblemLogo size={58} className="shrink-0" customSrc={sidebarLogoSrc || '/colenf-logo.png'} />
           <div className="flex flex-col flex-1 min-w-0 items-center justify-center text-center pr-1">
             <h1 className="font-black text-[15px] sm:text-base tracking-tight uppercase leading-tight text-center whitespace-normal w-full" style={{ color: sidebarHeaderTitleColor }}>{layoutConfig.sidebarTitle || 'Portal de TCC'}</h1>
-            <p className="mt-1.5 w-full text-center text-[12px] sm:text-[13px] font-semibold tracking-[0.02em] leading-[1.25]" style={{ color: layoutConfig.sidebarSubtitleColor || (isHeaderLight ? '#475569' : '#d6d9d7') }}>
-              <span className="block">Enfermagem e Obstetrícia</span>
-              <span className="block">CC/UFES</span>
+            <p className="mt-1.5 w-full text-center text-[13px] sm:text-[14px] font-bold tracking-[0.01em] leading-snug" style={{ color: isHeaderLight ? '#475569' : '#f1f5f9' }}>
+              Enfermagem e Obstetrícia · UFES
             </p>
           </div>
         </button>
@@ -105,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           return order.map((itemKey, idx) => {
             if (itemKey.startsWith('DIVIDER')) { if (layoutConfig.sidebarShowDividers === false || layoutConfig.sidebarDividerStyle === 'none') return null; return <div key={`${itemKey}-${idx}`} className="my-2.5 pt-0.5 border-t transition-colors" style={{ borderColor: layoutConfig.sidebarDividerColor || '#365349', borderStyle: layoutConfig.sidebarDividerStyle || 'solid' }} />; }
             const item = allNavMap[itemKey]; if (!item || !item.visible) return null; const Icon = item.icon; const isActive = currentTab === item.id || (item.id === 'home' && currentTab === 'calendario');
-            return <button key={item.id} id={`nav-item-${item.id}`} onClick={() => handleNav(item.id)} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-left cursor-pointer ${isActive ? 'font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || '#154d41',color: layoutConfig.sidebarActiveTextColor || '#ffffff',borderLeft: `3px solid ${layoutConfig.sidebarActiveBorderColor || '#cbd5d1'}`,paddingLeft: '0.75rem'} : { color: layoutConfig.sidebarTextColor || '#f8fafc' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
+            return <button key={item.id} id={`nav-item-${item.id}`} onClick={() => handleNav(item.id)} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-left cursor-pointer ${isActive ? 'font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || '#344125',color: layoutConfig.sidebarActiveTextColor || '#ffffff',borderLeft: `3px solid ${layoutConfig.sidebarActiveBorderColor || '#aeb7b2'}`,paddingLeft: '0.75rem'} : { color: layoutConfig.sidebarTextColor || '#f8fafc' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
           });
         })()}
       </nav>

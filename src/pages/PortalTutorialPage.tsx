@@ -93,7 +93,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
         <h2 className="text-sm font-black uppercase tracking-wider text-slate-900">O que você precisa fazer?</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           {(Object.keys(roleContent) as Role[]).map(key => (
-            <button key={key} type="button" onClick={() => setRole(key)} className={`rounded-full border px-4 py-2 text-xs font-black transition-colors ${role === key ? 'border-[#06372d] bg-[#06372d] text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:border-slate-400'}`}>
+            <button key={key} type="button" onClick={() => setRole(key)} className={`rounded-full border px-4 py-2 text-xs font-black transition-colors ${role === key ? 'border-slate-400 bg-slate-100 text-slate-950 ring-1 ring-slate-200' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:border-slate-400'}`}>
               {roleContent[key].title}
             </button>
           ))}

@@ -132,7 +132,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
 
             <div>
               <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
-                E-mail do Presidente da Comissão:
+                E-mail da Presidência e recuperação do Master:
               </label>
               <input
                 type="email"
@@ -146,11 +146,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3.5">
-          <p className="text-[10px] font-bold uppercase text-slate-700">Recuperação do Master</p>
-          <p className="mt-1 text-[11px] leading-5 text-slate-600">A Presidente da Comissão é automaticamente o contato de recuperação do Master. A troca de Presidente usa transferência segura com confirmação do novo titular; após a aceitação, o e-mail da Presidência passa a ser o único contato de recuperação.</p>
-          <p className="mt-1 text-[11px] font-semibold text-slate-700">Contato atual: {settings.commissionPresidentEmail || 'Presidência ainda não configurada'}</p>
-        </div>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] leading-4 text-slate-600">A Presidente da Comissão é automaticamente o contato de recuperação do Master e é o único contato ativo para iniciar a troca segura do usuário Master.</div>
 
         <div className="pt-2 flex items-center justify-end border-t border-slate-200">
           <button

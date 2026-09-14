@@ -178,15 +178,15 @@ export const THEME_PALETTES: Record<HeaderTheme, {
   isDark: boolean;
 }> = {
   militar: {
-    bg: '#435649',
-    secondary: '#3b4d41',
+    bg: '#344125',
+    secondary: '#28331d',
     text: '#ffffff',
-    divider: '#232d26',
-    filterDivider: 'rgba(255, 255, 255, 0.18)',
-    buttonBg: '#303f35',
+    divider: '#1f2817',
+    filterDivider: 'rgba(255, 255, 255, 0.20)',
+    buttonBg: '#5d6761',
     buttonText: '#ffffff',
-    theadBg: '#435649',
-    theadHover: 'hover:bg-[#344439]',
+    theadBg: '#344125',
+    theadHover: 'hover:bg-[#28331d]',
     isDark: true,
   },
   red: {
