@@ -17,10 +17,17 @@ function must(s,a,b,label){if(!s.includes(a))throw new Error(`Trecho não locali
   let s=read(p);
   s=s.replace("const file=await downloadDrivePdf(accessToken,fileId,{processId:job.processId,artifactType:job.documentType,signatureJobId:job.id});","const file=await downloadDrivePdf(accessToken,fileId,{processId:job.processId,artifactType:job.documentType});");
   s=s.replace("jobId:job.id,documentType:job.documentType,fileName:job.fileName.replace(/\\.pdf$/i,'__GOVBR.pdf')","jobId:`${job.id}-gov-${signer.signingOrder}`,documentType:job.documentType,fileName:job.fileName.replace(/\\.pdf$/i,`__GOVBR_${signer.signingOrder}.pdf`)");
-  // Garante que ADMIN_TRANSFER exista mesmo em estado legado sem a flag.
   const old="currentSettings.featureFlags=(currentSettings.featureFlags||[]).map(flag=>flag.key==='ADMIN_TRANSFER'?{...flag,enabled:true}:flag);";
   const replacement="{const flags=currentSettings.featureFlags||[];currentSettings.featureFlags=flags.some(flag=>flag.key==='ADMIN_TRANSFER')?flags.map(flag=>flag.key==='ADMIN_TRANSFER'?{...flag,enabled:true}:flag):[...flags,{key:'ADMIN_TRANSFER',enabled:true,audience:'ADMIN_ONLY',description:'Transferência segura de administração',updatedAt:new Date().toISOString(),updatedBy:'SYSTEM'}];}";
   s=must(s,old,replacement,'feature ADMIN_TRANSFER');
+  write(p,s);
+}
+
+// Mantém o rótulo canônico coberto pelo contrato de UI.
+{
+  const p='src/components/CommissionIdentityPanel.tsx';
+  let s=read(p);
+  s=s.replace("'Salvar comissão'","'Salvar Comissão'");
   write(p,s);
 }
 
