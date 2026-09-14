@@ -11,6 +11,7 @@ import {
   FileText,
   HelpCircle,
   LogIn,
+  LogOut,
   MapPin,
   Settings,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ interface SidebarProps {
 
 const USER_LOCATION_CACHE_KEY = 'portal_tcc_user_location_v1';
 const USER_LOCATION_CACHE_MS = 24 * 60 * 60 * 1000;
+const WHATSAPP_GREEN = '#25D366';
 
 function readCachedUserLocation(): string | null {
   try {
@@ -70,14 +72,15 @@ async function reverseGeocodeUserLocation(latitude: number, longitude: number): 
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isOpenMobile, setIsOpenMobile }) => {
-  const { isMasterAdmin, isAuthenticated, settings, userEmail } = useAuth();
+  const { isMasterAdmin, isAuthenticated, settings, userEmail, logout } = useAuth();
   const courseLogo = String((settings as any)?.courseLogoDataUrl || '');
   const configuredLogo = courseLogo || settings?.integrationStudio?.brandKit?.courseLogoUrl || settings?.integrationStudio?.brandKit?.universityLogoUrl || '';
   const isVisitor = !isAuthenticated;
   const isCollapsed = false;
   const [isHovered, setIsHovered] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
-  const appVersion = String((import.meta as any).env?.VITE_APP_VERSION || '1.0.15');
+  const appVersion = String((import.meta as any).env?.VITE_APP_VERSION || '1.0.17');
   const buildCommit = String((import.meta as any).env?.VITE_GIT_COMMIT || '').slice(0, 7);
   const [userLocation, setUserLocation] = useState('Obtendo localização do usuário…');
 
@@ -117,6 +120,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   }, []);
 
   const handleNav = (tab: string) => { setCurrentTab(tab); setIsOpenMobile(false); };
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      handleNav('home');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
   const isColorLight = (hex?: string) => {
     if (!hex) return false;
     if (['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#f0f1e7', '#e0f2fe', '#fefce8', '#fff1f2'].includes(hex)) return true;
@@ -128,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   const sidebarHeaderTitleColor = layoutConfig.sidebarTitleColor || (isHeaderLight ? '#0f172a' : '#ffffff');
   const sidebarFooterTextColor = isHeaderLight ? '#0f172a' : '#ffffff';
   const sidebarFooterMutedColor = isHeaderLight ? '#64748b' : '#d6d9d7';
-  const sidebarAccent = isHeaderLight ? '#475569' : '#9fdf8a';
+  const sidebarAccent = layoutConfig.sidebarSubtitleColor || WHATSAPP_GREEN;
   const getNavLabel = (id: string, fallback: string) => layoutConfig.sidebarNavLabels?.[id] || fallback;
   const getNavEmoji = (id: string, fallback: string) => layoutConfig.sidebarNavEmojis?.[id] || fallback;
   const renderNavIcon = (id: string, Icon: React.ComponentType<{ className?: string }>, defaultEmoji: string, isActive: boolean) => {
@@ -149,9 +162,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           <div className="flex flex-col flex-1 min-w-0 items-center justify-center text-center pr-1">
             <h1 className="font-black text-[16px] sm:text-[17px] tracking-tight uppercase leading-tight text-center whitespace-normal w-full" style={{ color: sidebarHeaderTitleColor }}>{layoutConfig.sidebarTitle || 'Portal de TCC'}</h1>
             <div className="mt-1.5 w-full text-center text-[10px] sm:text-[10.5px] font-extrabold tracking-[0.04em] leading-[1.35] uppercase" style={{ color: sidebarAccent }}>
-              <span className="block">Curso de Graduação</span>
-              <span className="block">Enfermagem e Obstetrícia</span>
-              <span className="block">CCS/UFES</span>
+              <span className="block">{layoutConfig.sidebarSubtitle || 'Enfermagem'}</span>
             </div>
           </div>
         </button>
@@ -180,8 +191,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
         })()}
       </nav>
 
-      <div id="sidebar-user-footer" style={{backgroundColor: layoutConfig.sidebarHeaderBgColor || '#03271f',borderColor: layoutConfig.sidebarDividerColor || '#365349'}} className="p-4 border-t space-y-2">
-        {isVisitor ? <button id="bottom-access-portal-btn" type="button" onClick={() => handleNav('acessar-portal')} className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-xs font-black uppercase tracking-wide text-slate-800 shadow-sm hover:bg-white transition-colors"><LogIn className="w-4 h-4" />Entrar no Portal</button> : <><div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: sidebarFooterMutedColor }}>{layoutConfig.sidebarSessionLabel || 'Sessão ativa'}</div><div className="text-xs font-semibold break-all" style={{ color: sidebarFooterTextColor }} title={userEmail}>{userEmail}</div></>}
+      <div id="sidebar-user-footer" style={{backgroundColor: layoutConfig.sidebarHeaderBgColor || '#03271f',borderColor: layoutConfig.sidebarDividerColor || '#365349'}} className="p-4 border-t space-y-2 text-center">
+        {isVisitor ? <button id="bottom-access-portal-btn" type="button" onClick={() => handleNav('acessar-portal')} className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-xs font-black uppercase tracking-wide text-slate-800 shadow-sm hover:bg-white transition-colors"><LogIn className="w-4 h-4" />Entrar no Portal</button> : <>
+          <button id="bottom-logout-portal-btn" type="button" onClick={() => void handleLogout()} disabled={isLoggingOut} className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-xs font-black uppercase tracking-wide text-slate-800 shadow-sm hover:bg-white disabled:opacity-60 transition-colors"><LogOut className="w-4 h-4" />{isLoggingOut ? 'Saindo…' : 'Sair do Portal'}</button>
+          <div className="pt-2 border-t w-full" style={{ borderColor: layoutConfig.sidebarDividerColor || '#365349' }}>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-center" style={{ color: sidebarFooterMutedColor }}>{layoutConfig.sidebarSessionLabel || 'Sessão ativa'}</div>
+            <div className="mt-1 text-xs font-semibold break-all text-center" style={{ color: sidebarFooterTextColor }} title={userEmail}>{userEmail}</div>
+          </div>
+        </>}
         <div className="flex items-center justify-center gap-1.5 text-[10px] whitespace-normal leading-4 text-center" style={{ color: sidebarFooterMutedColor }} title={userLocation}><MapPin className="h-3 w-3 shrink-0"/><span>{userLocation}</span></div>
         <div className="text-[9px] font-medium tracking-wide text-center" style={{ color: sidebarFooterMutedColor }} title={buildCommit ? `Fingerprint do build: ${buildCommit}` : undefined}>Versão do sistema: {appVersion}{buildCommit ? ` · ${buildCommit}` : ''}</div>
       </div>
