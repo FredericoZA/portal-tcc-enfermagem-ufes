@@ -1,0 +1,106 @@
+/*
+ * Atualização 21 — correções visuais pós-homologação da revisão 20.
+ * Mantém o acento #337959 e os cabeçalhos das planilhas em #005830.
+ */
+:root {
+  --portal-whatsapp-button: #337959;
+  --portal-whatsapp-qr-center: var(--portal-whatsapp-button);
+}
+
+/* 1) WhatsApp: o miolo do QR segue exatamente a mesma cor do botão. */
+#home-page-footer-notes a[href*="wa.me"],
+#home-page-footer-notes a[href*="whatsapp"] {
+  background-color: var(--portal-whatsapp-button) !important;
+  border-color: var(--portal-whatsapp-button) !important;
+}
+
+#home-page-footer-notes div:has(> img[alt="QR Code para contato pelo WhatsApp"]) > span {
+  background-color: var(--portal-whatsapp-qr-center) !important;
+}
+
+/* 2) Calendário: o dia atual usa o verde de destaque, nunca preto. */
+#formal-monthly-calendar-section span.bg-slate-800 {
+  background-color: #337959 !important;
+  color: #ffffff !important;
+  border-color: #337959 !important;
+}
+
+/* 3) Cabeçalho dos dias da semana: domingo a sábado com a mesma cor branca. */
+#formal-monthly-calendar-section .text-rose-400 {
+  color: #ffffff !important;
+}
+
+/* 4) Barra lateral: Enfermagem um pouco maior e com contorno verde-claro discreto. */
+#portal-sidebar h1 + div {
+  color: #337959 !important;
+  font-size: 13.5px !important;
+  line-height: 1.28 !important;
+  letter-spacing: .045em !important;
+}
+
+#portal-sidebar h1 + div > span {
+  -webkit-text-stroke: .32px #8fcfa6;
+  paint-order: stroke fill;
+  text-shadow:
+    0 0 2px rgba(143, 207, 166, .42),
+    0 1px 1px rgba(0, 0, 0, .18);
+}
+
+/* 5) Toolbars das planilhas: busca, sincronização, engrenagem e download têm a mesma caixa compacta. */
+button[title^="Buscar registros"],
+button[aria-label^="Buscar registros"],
+button[title^="Sincronizar dados"],
+button[aria-label^="Sincronizar dados"],
+button[title^="Configurar exibição"],
+button[aria-label^="Configurar exibição"],
+.portal-repository-download-toolbar {
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  min-width: 1.75rem !important;
+  min-height: 1.75rem !important;
+  max-width: 1.75rem !important;
+  max-height: 1.75rem !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+  flex: 0 0 1.75rem !important;
+}
+
+button[title^="Buscar registros"] svg,
+button[aria-label^="Buscar registros"] svg,
+button[title^="Sincronizar dados"] svg,
+button[aria-label^="Sincronizar dados"] svg,
+button[title^="Configurar exibição"] svg,
+button[aria-label^="Configurar exibição"] svg,
+.portal-repository-download-toolbar svg {
+  width: .875rem !important;
+  height: .875rem !important;
+  margin: 0 !important;
+}
+
+/* Remove respiro residual do agrupamento que envolve a engrenagem. */
+#formal-monthly-calendar-section div:has(> button[title^="Configurar exibição"]),
+#public-calendar-cards-section div:has(> button[title^="Configurar exibição"]),
+#home-page-container div:has(> button[title^="Configurar exibição"]),
+#home-page-container div:has(> button[title*="Exibição da planilha"]) {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  align-items: center !important;
+}
+
+/* 6) Local das Apresentações: margem lateral mínima e contorno perceptível como nas planilhas. */
+#home-page-container #presentation-location-card {
+  margin-left: .125rem !important;
+  margin-right: .125rem !important;
+  width: calc(100% - .25rem) !important;
+  border: 1px solid #c3c9cf !important;
+  outline: 1px solid rgba(15, 23, 42, .035) !important;
+  outline-offset: 0 !important;
+}
