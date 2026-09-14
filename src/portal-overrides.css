@@ -1,6 +1,15 @@
-/* Ajustes visuais de coerência solicitados para a instalação UFES. */
-
+/* Identidade visual canônica da instalação UFES. */
 :root {
+  --portal-moss: #435649;
+  --portal-moss-deep: #344125;
+  --portal-moss-selected: #36534c;
+  --portal-ice: #f8fafc;
+  --portal-gray-100: #f1f5f9;
+  --portal-gray-300: #cbd5e1;
+  --portal-gray-500: #64748b;
+  --portal-gray-700: #334155;
+  --portal-external-button: #adb7c1;
+  --portal-external-button-hover: #9ca7b2;
   --portal-compact-control-height: 1.9rem;
 }
 
@@ -9,6 +18,81 @@
 #sidebar-user-footer > div:last-child {
   width: 100%;
   text-align: center;
+}
+
+/* Tabelas do portal: cabeçalhos verde-musgo, texto branco e primeira coluna fixa. */
+.table-sticky-container table thead,
+.table-sticky-container table thead th {
+  background: var(--portal-moss) !important;
+  color: #ffffff !important;
+  border-color: var(--portal-moss-deep) !important;
+}
+
+.table-sticky-container table thead th:first-child,
+.table-sticky-container table tbody td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+}
+
+.table-sticky-container table thead th:first-child {
+  z-index: 20 !important;
+  background: var(--portal-moss) !important;
+  box-shadow: 2px 0 0 rgba(15, 23, 42, 0.12) !important;
+}
+
+.table-sticky-container table tbody td:first-child {
+  z-index: 12 !important;
+  background: #ffffff !important;
+  box-shadow: 2px 0 0 rgba(148, 163, 184, 0.22) !important;
+}
+
+/* Na primeira coluna, mostrar o identificador sequencial como ação principal. */
+.table-sticky-container table tbody td:first-child > div {
+  min-width: 4.8rem !important;
+  min-height: 2.25rem !important;
+  border-radius: 0.65rem !important;
+  justify-content: center !important;
+}
+
+.table-sticky-container table tbody td:first-child > div > div:first-child,
+.table-sticky-container table tbody td:first-child > div > span:last-child {
+  display: none !important;
+}
+
+.table-sticky-container table tbody td:first-child > div > div:nth-child(2) {
+  color: #1e293b !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* Lista de defesas: o Nº do TCC indica o estado — amarelo a defender, verde já defendida. */
+#public-calendar-cards-section .table-sticky-container tbody tr:not(.opacity-60) td:first-child > div {
+  background: #fef3c7 !important;
+  border-color: #eab308 !important;
+  color: #713f12 !important;
+}
+
+#public-calendar-cards-section .table-sticky-container tbody tr.opacity-60 {
+  opacity: 1 !important;
+}
+
+#public-calendar-cards-section .table-sticky-container tbody tr.opacity-60 td:not(:first-child) {
+  opacity: 0.60 !important;
+}
+
+#public-calendar-cards-section .table-sticky-container tbody tr.opacity-60 td:first-child > div {
+  background: #dcfce7 !important;
+  border-color: #16a34a !important;
+  color: #14532d !important;
+}
+
+/* Cabeçalhos principais da tela de calendário seguem o mesmo musgo da planilha. */
+#formal-monthly-calendar-section > div > div:first-child,
+#public-calendar-cards-section > div > div:first-child {
+  background: var(--portal-moss) !important;
+  color: #ffffff !important;
+  border-color: var(--portal-moss-deep) !important;
 }
 
 /* Controles compactos de busca/atualização/exibição das tabelas. */
@@ -29,7 +113,7 @@ button[title="Exibição da planilha: linhas e período"] > svg {
   height: 1rem !important;
 }
 
-/* Ações internas dos cabeçalhos: brancas, como padrão visual do portal. */
+/* Ações internas dos cabeçalhos: sempre branco-gelo, texto cinza escuro. */
 button[title="Selecionar Mês e Ano"],
 button[title="Mês Anterior"],
 button[title="Ir para o mês atual"],
@@ -37,9 +121,9 @@ button[title="Próximo Mês"],
 button[title^="Buscar"],
 button[title="Atualizar dados da tabela"],
 button[title="Exibição da planilha: linhas e período"] {
-  background: #ffffff !important;
-  color: #334155 !important;
-  border-color: #cbd5e1 !important;
+  background: var(--portal-ice) !important;
+  color: var(--portal-gray-700) !important;
+  border-color: var(--portal-gray-300) !important;
 }
 
 button[title="Selecionar Mês e Ano"]:hover,
@@ -49,44 +133,69 @@ button[title="Próximo Mês"]:hover,
 button[title^="Buscar"]:hover,
 button[title="Atualizar dados da tabela"]:hover,
 button[title="Exibição da planilha: linhas e período"]:hover {
-  background: #f1f5f9 !important;
+  background: var(--portal-gray-100) !important;
   color: #1e293b !important;
 }
 
-/* Ações fora dos cabeçalhos precisam de mais contraste que o branco dos headers. */
+/* Ações externas à planilha usam cinza mais forte para não desaparecer no fundo. */
 button[title^="Exportar todo o banco de dados"] {
-  background: #d7dde3 !important;
-  color: #263445 !important;
-  border-color: #a8b2bf !important;
+  background: var(--portal-external-button) !important;
+  color: #172033 !important;
+  border-color: #8e9aa7 !important;
 }
 
 button[title^="Exportar todo o banco de dados"]:hover {
-  background: #c5ced8 !important;
-  color: #172033 !important;
+  background: var(--portal-external-button-hover) !important;
+  color: #0f172a !important;
 }
 
-/* Regra global de densidade: filtros compactos têm a mesma altura dos controles do calendário. */
+/* Filtros: mesma altura dos controles do calendário e somente dois marcadores de estado. */
 .portal-table-filter-chip {
   height: var(--portal-compact-control-height) !important;
   min-height: var(--portal-compact-control-height) !important;
-  background: #f1f5f9 !important;
-  color: #334155 !important;
-  border-color: #cbd5e1 !important;
-  padding: 0 0.65rem !important;
-  gap: 0.35rem !important;
+  background: var(--portal-ice) !important;
+  color: var(--portal-gray-700) !important;
+  border-color: var(--portal-gray-300) !important;
+  padding: 0 0.7rem !important;
+  gap: 0.38rem !important;
   line-height: 1 !important;
+  opacity: 1 !important;
+  transform: none !important;
 }
 
 .portal-table-filter-chip[data-selected="true"] {
-  background: #03271f !important;
+  background: var(--portal-moss-selected) !important;
   color: #ffffff !important;
-  border-color: #365349 !important;
+  border-color: #71857b !important;
 }
 
-/* Faixas de filtro não devem criar margem vertical além da própria altura do controle. */
+/* A tela de defesas não usa ícone azul em TODAS. A DEFENDER = amarelo; JÁ DEFENDIDAS = verde. */
+#public-calendar-cards-section .portal-table-filter-chip > span:first-child:not(:last-child) {
+  display: none !important;
+}
+
+#public-calendar-cards-section .portal-table-filter-chip:nth-child(2)::before,
+#public-calendar-cards-section .portal-table-filter-chip:nth-child(3)::before {
+  content: '';
+  width: 0.58rem;
+  height: 0.58rem;
+  flex: 0 0 0.58rem;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.16);
+}
+
+#public-calendar-cards-section .portal-table-filter-chip:nth-child(2)::before {
+  background: #eab308;
+}
+
+#public-calendar-cards-section .portal-table-filter-chip:nth-child(3)::before {
+  background: #16a34a;
+}
+
+/* Faixas de filtro não criam margem vertical além da própria altura do controle. */
 div.pt-1\.5.border-t.flex.flex-wrap.items-center.gap-2.text-xs.min-w-0.w-full {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  padding-top: 0.2rem !important;
+  padding-bottom: 0.2rem !important;
 }
 
 /* Navegação do calendário segue o mesmo token de altura compacta. */
@@ -112,31 +221,28 @@ button[title="Ir para o mês atual"] {
   padding: 0.2rem 0.65rem !important;
 }
 
-/* rc.14: QR 30% menor e agrupado ao bloco de suporte, sem vazio excessivo. */
-#home-page-footer-notes div:has(> img[alt="QR Code para contato pelo WhatsApp"]) {
-  width: 105px !important;
-  height: 105px !important;
+/* Ordem da tela pública: calendário -> local das apresentações -> lista de defesas. */
+#home-page-container:has(> #formal-monthly-calendar-section) {
+  display: flex !important;
+  flex-direction: column !important;
 }
 
-#home-page-footer-notes div.flex:has(> div + div > img[alt="QR Code para contato pelo WhatsApp"]) {
-  width: auto !important;
-  max-width: max-content !important;
-  gap: 0.5rem !important;
+#home-page-container > #formal-monthly-calendar-section {
+  order: 10;
+  margin-top: 0 !important;
 }
 
-#home-page-footer-notes div:has(+ div > img[alt="QR Code para contato pelo WhatsApp"]) {
-  flex: 0 1 auto !important;
-  max-width: 285px !important;
+#home-page-container > #presentation-location-card {
+  order: 20;
+  margin-top: 1rem !important;
 }
 
-@media (min-width: 640px) {
-  #home-page-footer-notes div:has(> img[alt="QR Code para contato pelo WhatsApp"]) {
-    width: 126px !important;
-    height: 126px !important;
-  }
+#home-page-container > #public-calendar-cards-section {
+  order: 30;
+  margin-top: 1rem !important;
 }
 
-/* rc.14: quando itens privados somem para o visitante, dois divisores não podem ficar lado a lado. */
+/* Quando itens privados somem para o visitante, não repetir divisores lado a lado. */
 #sidebar-nav > div.border-t + div.border-t {
   display: none !important;
 }
@@ -144,10 +250,10 @@ button[title="Ir para o mês atual"] {
 /* Popups: base branca/cinza. */
 div.fixed.inset-0[class*="bg-slate-900"] > div.bg-white {
   background: #ffffff !important;
-  border-color: #cbd5e1 !important;
+  border-color: var(--portal-gray-300) !important;
 }
 
-/* Login: cabeçalho cinza mais escuro e CTA cinza mais claro, como solicitado. */
+/* Login: cabeçalho cinza escuro e ação primária um tom mais claro. */
 div.fixed.inset-0:has(input[placeholder="nome@edu.ufes.br"]) > div > div:first-child {
   background: #475569 !important;
   color: #ffffff !important;

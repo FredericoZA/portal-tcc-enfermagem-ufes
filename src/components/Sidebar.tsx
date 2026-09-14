@@ -7,11 +7,12 @@ import {
   BookOpen,
   Calendar,
   ChevronLeft,
+  Copy,
   FileText,
   HelpCircle,
   LogIn,
+  MapPin,
   Settings,
-  Copy,
 } from 'lucide-react';
 import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 
@@ -22,6 +23,52 @@ interface SidebarProps {
   setIsOpenMobile: (open: boolean) => void;
 }
 
+const USER_LOCATION_CACHE_KEY = 'portal_tcc_user_location_v1';
+const USER_LOCATION_CACHE_MS = 24 * 60 * 60 * 1000;
+
+function readCachedUserLocation(): string | null {
+  try {
+    const raw = localStorage.getItem(USER_LOCATION_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.label || !parsed?.savedAt || Date.now() - Number(parsed.savedAt) > USER_LOCATION_CACHE_MS) return null;
+    return String(parsed.label);
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedUserLocation(label: string) {
+  try { localStorage.setItem(USER_LOCATION_CACHE_KEY, JSON.stringify({ label, savedAt: Date.now() })); } catch { /* cache opcional */ }
+}
+
+async function reverseGeocodeUserLocation(latitude: number, longitude: number): Promise<string> {
+  try {
+    const params = new URLSearchParams({
+      format: 'jsonv2',
+      lat: String(latitude),
+      lon: String(longitude),
+      zoom: '18',
+      addressdetails: '1',
+      'accept-language': 'pt-BR',
+    });
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, { headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error('reverse geocoding unavailable');
+    const payload: any = await response.json();
+    const address = payload?.address || {};
+    const neighborhood = address.neighbourhood || address.suburb || address.quarter || address.city_district || '';
+    const city = address.city || address.town || address.municipality || address.village || address.county || '';
+    const iso = String(address['ISO3166-2-lvl4'] || address['ISO3166-2-lvl6'] || '');
+    const uf = iso.startsWith('BR-') ? iso.slice(3) : '';
+    if (neighborhood && city) return `${neighborhood} · ${city}${uf ? `/${uf}` : ''}`;
+    if (city) return `${city}${uf ? `/${uf}` : ''}`;
+    if (payload?.display_name) return String(payload.display_name).split(',').slice(0, 2).join(',').trim();
+  } catch {
+    // O fallback por coordenadas evita uma segunda chamada a qualquer serviço externo.
+  }
+  return `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`;
+}
+
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isOpenMobile, setIsOpenMobile }) => {
   const { isMasterAdmin, isAuthenticated, settings, userEmail } = useAuth();
   const courseLogo = String((settings as any)?.courseLogoDataUrl || '');
@@ -30,8 +77,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   const isCollapsed = false;
   const [isHovered, setIsHovered] = useState(false);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
-  const [runtimeBuild, setRuntimeBuild] = useState({ version: '1.0.0-rc.14', commit: '' });
-  const accessLocation = layoutConfig.sidebarLocationText || 'Campus de Maruípe · Vitória/ES';
+  const appVersion = String((import.meta as any).env?.VITE_APP_VERSION || '1.0.15');
+  const buildCommit = String((import.meta as any).env?.VITE_GIT_COMMIT || '').slice(0, 7);
+  const [userLocation, setUserLocation] = useState('Obtendo localização do usuário…');
 
   useEffect(() => {
     const handleLayoutChange = (event: Event) => setLayoutConfig((event as CustomEvent<SiteLayoutConfig>).detail || loadSiteLayoutConfig());
@@ -41,10 +89,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
 
   useEffect(() => {
     let active = true;
-    void fetch('/api/health', { cache: 'no-store' }).then((response) => response.ok ? response.json() : Promise.reject(new Error('health unavailable'))).then((payload: any) => {
-      if (!active) return;
-      setRuntimeBuild({ version: String(payload?.version || '1.0.0-rc.14'), commit: String(payload?.commit || '').slice(0, 7) });
-    }).catch(() => undefined);
+    const cached = readCachedUserLocation();
+    if (cached) {
+      setUserLocation(cached);
+      return () => { active = false; };
+    }
+    if (!navigator.geolocation) {
+      setUserLocation('Localização do usuário indisponível');
+      return () => { active = false; };
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        void reverseGeocodeUserLocation(latitude, longitude).then((label) => {
+          if (!active) return;
+          setUserLocation(label);
+          saveCachedUserLocation(label);
+        });
+      },
+      (error) => {
+        if (!active) return;
+        setUserLocation(error.code === error.PERMISSION_DENIED ? 'Localização não compartilhada' : 'Localização do usuário indisponível');
+      },
+      { enableHighAccuracy: false, timeout: 6000, maximumAge: 12 * 60 * 60 * 1000 }
+    );
     return () => { active = false; };
   }, []);
 
@@ -60,6 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   const sidebarHeaderTitleColor = layoutConfig.sidebarTitleColor || (isHeaderLight ? '#0f172a' : '#ffffff');
   const sidebarFooterTextColor = isHeaderLight ? '#0f172a' : '#ffffff';
   const sidebarFooterMutedColor = isHeaderLight ? '#64748b' : '#d6d9d7';
+  const sidebarAccent = isHeaderLight ? '#475569' : '#9fdf8a';
   const getNavLabel = (id: string, fallback: string) => layoutConfig.sidebarNavLabels?.[id] || fallback;
   const getNavEmoji = (id: string, fallback: string) => layoutConfig.sidebarNavEmojis?.[id] || fallback;
   const renderNavIcon = (id: string, Icon: React.ComponentType<{ className?: string }>, defaultEmoji: string, isActive: boolean) => {
@@ -74,14 +143,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
     {isCollapsed && <div id="sidebar-hover-trigger" className="hidden lg:flex fixed left-0 top-0 bottom-0 w-3 z-45 bg-slate-200/40 hover:bg-emerald-600/10 border-r border-slate-300/30 hover:border-emerald-500/50 items-center justify-center transition-all duration-150 cursor-pointer group" onMouseEnter={() => setIsHovered(true)} title="Passe o mouse aqui para abrir o menu lateral"><ChevronLeft className="w-3.5 h-3.5 text-slate-500 opacity-0 group-hover:opacity-100 rotate-180 transition-opacity duration-150" /></div>}
     <div id="sidebar-layout-spacer" className={`hidden lg:block transition-all duration-300 ease-in-out shrink-0 overflow-hidden ${isCollapsed ? 'w-0' : 'w-64'}`} />
     <aside id="portal-sidebar" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} style={{backgroundColor: layoutConfig.sidebarBgColor || '#06372d',borderColor: layoutConfig.sidebarDividerColor || '#365349',color: layoutConfig.sidebarTextColor || '#f8fafc'}} className={`fixed top-0 bottom-0 left-0 z-50 w-64 text-slate-100 flex flex-col border-r transition-all duration-300 ease-in-out ${isOpenMobile ? 'translate-x-0' : '-translate-x-full'} ${isCollapsed ? (isHovered ? 'lg:translate-x-0 lg:shadow-2xl' : 'lg:-translate-x-full') : 'lg:translate-x-0'}`}>
-      <div style={{backgroundColor: layoutConfig.sidebarHeaderBgColor || '#03271f',borderColor: layoutConfig.sidebarDividerColor || '#365349'}} className="px-3 py-4 border-b flex items-center justify-between relative group">
-        <button type="button" onClick={() => handleNav('home')} className="flex items-center gap-2.5 hover:opacity-95 transition-opacity focus:outline-none cursor-pointer flex-1 min-w-0" title="Ir para o Calendário Público Inicial">
-          <NursingEmblemLogo size={58} className="shrink-0" customSrc={sidebarLogoSrc || '/colenf-logo.png'} />
+      <div style={{backgroundColor: layoutConfig.sidebarHeaderBgColor || '#03271f',borderColor: layoutConfig.sidebarDividerColor || '#365349'}} className="px-2.5 py-3.5 border-b flex items-center justify-between relative group">
+        <button type="button" onClick={() => handleNav('home')} className="flex items-center gap-2 hover:opacity-95 transition-opacity focus:outline-none cursor-pointer flex-1 min-w-0" title="Ir para o Calendário Público Inicial">
+          <NursingEmblemLogo size={72} className="shrink-0" customSrc={sidebarLogoSrc || '/colenf-logo.png'} />
           <div className="flex flex-col flex-1 min-w-0 items-center justify-center text-center pr-1">
-            <h1 className="font-black text-[15px] sm:text-base tracking-tight uppercase leading-tight text-center whitespace-normal w-full" style={{ color: sidebarHeaderTitleColor }}>{layoutConfig.sidebarTitle || 'Portal de TCC'}</h1>
-            <p className="mt-1.5 w-full text-center text-[13px] sm:text-[14px] font-bold tracking-[0.01em] leading-snug" style={{ color: isHeaderLight ? '#475569' : '#f1f5f9' }}>
-              Enfermagem e Obstetrícia · UFES
-            </p>
+            <h1 className="font-black text-[16px] sm:text-[17px] tracking-tight uppercase leading-tight text-center whitespace-normal w-full" style={{ color: sidebarHeaderTitleColor }}>{layoutConfig.sidebarTitle || 'Portal de TCC'}</h1>
+            <div className="mt-1.5 w-full text-center text-[10px] sm:text-[10.5px] font-extrabold tracking-[0.04em] leading-[1.35] uppercase" style={{ color: sidebarAccent }}>
+              <span className="block">Curso de Graduação</span>
+              <span className="block">Enfermagem e Obstetrícia</span>
+              <span className="block">CCS/UFES</span>
+            </div>
           </div>
         </button>
         <button id="close-mobile-sidebar-btn" onClick={() => setIsOpenMobile(false)} className="lg:hidden text-slate-300 hover:text-white p-1" aria-label="Fechar menu"><ChevronLeft className="w-5 h-5" /></button>
@@ -111,8 +182,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
 
       <div id="sidebar-user-footer" style={{backgroundColor: layoutConfig.sidebarHeaderBgColor || '#03271f',borderColor: layoutConfig.sidebarDividerColor || '#365349'}} className="p-4 border-t space-y-2">
         {isVisitor ? <button id="bottom-access-portal-btn" type="button" onClick={() => handleNav('acessar-portal')} className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-xs font-black uppercase tracking-wide text-slate-800 shadow-sm hover:bg-white transition-colors"><LogIn className="w-4 h-4" />Entrar no Portal</button> : <><div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: sidebarFooterMutedColor }}>{layoutConfig.sidebarSessionLabel || 'Sessão ativa'}</div><div className="text-xs font-semibold break-all" style={{ color: sidebarFooterTextColor }} title={userEmail}>{userEmail}</div></>}
-        <div className="text-[10px] whitespace-normal leading-4 text-center" style={{ color: sidebarFooterMutedColor }} title={accessLocation}>{accessLocation}</div>
-        <div className="text-[9px] font-medium tracking-wide text-center" style={{ color: sidebarFooterMutedColor }} title={runtimeBuild.commit ? `Commit ${runtimeBuild.commit}` : undefined}>Versão do sistema: v{runtimeBuild.version}{runtimeBuild.commit ? ` · ${runtimeBuild.commit}` : ''}</div>
+        <div className="flex items-center justify-center gap-1.5 text-[10px] whitespace-normal leading-4 text-center" style={{ color: sidebarFooterMutedColor }} title={userLocation}><MapPin className="h-3 w-3 shrink-0"/><span>{userLocation}</span></div>
+        <div className="text-[9px] font-medium tracking-wide text-center" style={{ color: sidebarFooterMutedColor }} title={buildCommit ? `Fingerprint do build: ${buildCommit}` : undefined}>Versão do sistema: {appVersion}{buildCommit ? ` · ${buildCommit}` : ''}</div>
       </div>
     </aside>
   </>;

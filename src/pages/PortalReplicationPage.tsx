@@ -16,14 +16,14 @@ const steps = [
 
 export const PortalReplicationPage: React.FC = () => (
   <div className="space-y-4">
-    <section className="rounded-2xl border border-[#06372d]/25 bg-[#06372d] p-5 text-white shadow-sm sm:p-6">
+    <section className="rounded-2xl border border-[#435649]/35 bg-[#435649] p-5 text-white shadow-sm sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="max-w-3xl">
-          <div className="flex items-center gap-2 text-slate-200 text-xs font-black uppercase tracking-[0.16em]"><Code2 className="h-4 w-4"/>Projeto replicável</div>
+          <div className="flex items-center gap-2 text-slate-100 text-xs font-black uppercase tracking-[0.16em]"><Code2 className="h-4 w-4"/>Projeto replicável</div>
           <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Leve o Portal TCC para outra secretaria</h1>
           <p className="mt-2 text-sm leading-6 text-slate-100">A base pode ser reutilizada por outros cursos da UFES sem compartilhar banco, Drive, contas, credenciais ou dados desta instalação.</p>
         </div>
-        <a href={REPOSITORY_URL} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-600 px-4 py-2.5 text-sm font-black text-white shadow-sm hover:bg-slate-700">
+        <a href={REPOSITORY_URL} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-400 bg-slate-600 px-4 py-2.5 text-sm font-black text-white shadow-sm hover:bg-slate-700">
           <Github className="h-5 w-5"/>Abrir projeto <ExternalLink className="h-4 w-4"/>
         </a>
       </div>

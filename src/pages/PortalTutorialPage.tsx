@@ -81,9 +81,9 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-[#06372d]/25 bg-[#06372d] p-5 text-white shadow-sm sm:p-6">
+      <section className="rounded-2xl border border-[#435649]/35 bg-[#435649] p-5 text-white shadow-sm sm:p-6">
         <div className="max-w-3xl">
-          <div className="flex items-center gap-2 text-slate-200 text-xs font-black uppercase tracking-[0.18em]"><ShieldCheck className="h-4 w-4"/>Guia operacional</div>
+          <div className="flex items-center gap-2 text-slate-100 text-xs font-black uppercase tracking-[0.18em]"><ShieldCheck className="h-4 w-4"/>Guia operacional</div>
           <h1 className="mt-2 text-2xl sm:text-3xl font-black tracking-tight">Como usar o Portal de TCC</h1>
           <p className="mt-2 text-sm sm:text-base leading-7 text-slate-100">Veja o que fazer em cada etapa. O Portal libera a próxima ação somente quando as dependências acadêmicas e documentais anteriores estiverem concluídas.</p>
         </div>
@@ -93,7 +93,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
         <h2 className="text-sm font-black uppercase tracking-wider text-slate-900">O que você precisa fazer?</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           {(Object.keys(roleContent) as Role[]).map(key => (
-            <button key={key} type="button" onClick={() => setRole(key)} className={`rounded-full border px-4 py-2 text-xs font-black transition-colors ${role === key ? 'border-slate-400 bg-slate-100 text-slate-950 ring-1 ring-slate-200' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:border-slate-400'}`}>
+            <button key={key} type="button" onClick={() => setRole(key)} className={`rounded-full border px-4 py-2 text-xs font-black transition-colors ${role === key ? 'border-[#5f7568] bg-[#36534c] text-white ring-1 ring-[#70867a]' : 'border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:border-slate-400'}`}>
               {roleContent[key].title}
             </button>
           ))}
@@ -104,7 +104,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
           <ol className="mt-4 grid gap-2 md:grid-cols-2">
             {active.steps.map((step, index) => (
               <li key={step} className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#06372d] text-xs font-black text-white">{index + 1}</span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#435649] text-xs font-black text-white">{index + 1}</span>
                 <span>{step}</span>
               </li>
             ))}
@@ -125,7 +125,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase text-slate-600">Etapa {n}</span>
               </div>
               <h3 className="mt-3 font-black text-slate-950">{title}</h3>
-              <p className="mt-1 text-[11px] font-black uppercase tracking-wide text-[#06372d]">{actor}</p>
+              <p className="mt-1 text-[11px] font-black uppercase tracking-wide text-[#435649]">{actor}</p>
               <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
             </article>
           ))}
@@ -138,7 +138,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
           <p className="mt-2 text-sm leading-6 text-slate-600">Matrícula, e-mail, SIAPE, códigos de acesso, credenciais, identificadores internos, vínculos privados do Drive e registros administrativos ficam restritos aos usuários autorizados e às rotinas que realmente necessitam deles.</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-          <div className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5 text-[#06372d]"/><h2 className="font-black text-[#06372d]">Informação acadêmica pública</h2></div>
+          <div className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5 text-[#435649]"/><h2 className="font-black text-[#435649]">Informação acadêmica pública</h2></div>
           <p className="mt-2 text-sm leading-6 text-slate-700">O calendário e o repositório usam contratos públicos próprios, com o mínimo de dados necessário para consulta acadêmica. TCC completo e resumo expandido só recebem link público quando a autorização aplicável e a sincronização com o Drive forem concluídas; caso contrário, permanecem privados ou indicados como não apresentados.</p>
         </div>
       </section>
