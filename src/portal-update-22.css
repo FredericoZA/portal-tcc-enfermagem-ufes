@@ -1,0 +1,72 @@
+/*
+ * Atualização 22 — correções pontuais de homologação visual.
+ * 1) superfícies brancas de pop-ups ficam ~5% mais escuras (#f2f2f2);
+ * 2) filtros selecionados usam exatamente o mesmo cinza forte da engrenagem (#c1c4c7).
+ */
+:root {
+  --portal-popup-surface-5: #f2f2f2;
+  --portal-filter-idle: #e5e9ed;
+  --portal-filter-selected: #c1c4c7;
+  --portal-filter-selected-border: #92999f;
+}
+
+/* Pop-ups: o ajuste é no FUNDO branco, não no texto. */
+.portal-modal-surface,
+div.fixed.inset-0 > div[class*="bg-white"],
+div.fixed.inset-0 > div[class*="bg-slate-100"],
+div.fixed.z-\[1000001\][class*="bg-white"] {
+  background-color: var(--portal-popup-surface-5) !important;
+}
+
+/* Mantém cabeçalhos verdes e rodapés cinza; apenas a superfície branca é rebaixada em ~5%. */
+.portal-modal-header,
+div.fixed.inset-0 > div[class*="bg-white"] > div:first-child[class*="border-b"],
+div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-b"],
+div.fixed.z-\[1000001\][class*="bg-white"] > div:first-child[class*="border-b"] {
+  background-color: #337959 !important;
+  color: #ffffff !important;
+}
+
+/* Filtros da Lista de Defesas e equivalentes: hover não muda; clique/seleção escurece de verdade. */
+#public-calendar-cards-section .portal-table-filter-chip,
+#formal-monthly-calendar-section .portal-table-filter-chip,
+#home-page-container .portal-table-filter-chip,
+.portal-table-filter-chip {
+  background-color: var(--portal-filter-idle) !important;
+  color: #0f172a !important;
+  border-color: #c3c9cf !important;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  box-shadow: 0 1px 2px rgba(15,23,42,.09) !important;
+}
+
+#public-calendar-cards-section .portal-table-filter-chip:not([data-selected="true"]):hover,
+#formal-monthly-calendar-section .portal-table-filter-chip:not([data-selected="true"]):hover,
+#home-page-container .portal-table-filter-chip:not([data-selected="true"]):hover,
+.portal-table-filter-chip:not([data-selected="true"]):hover {
+  background-color: var(--portal-filter-idle) !important;
+  color: #0f172a !important;
+  border-color: #c3c9cf !important;
+  filter: none !important;
+}
+
+#public-calendar-cards-section .portal-table-filter-chip[data-selected="true"],
+#public-calendar-cards-section .portal-table-filter-chip[data-selected="true"]:hover,
+#formal-monthly-calendar-section .portal-table-filter-chip[data-selected="true"],
+#formal-monthly-calendar-section .portal-table-filter-chip[data-selected="true"]:hover,
+#home-page-container .portal-table-filter-chip[data-selected="true"],
+#home-page-container .portal-table-filter-chip[data-selected="true"]:hover,
+.portal-table-filter-chip[data-selected="true"],
+.portal-table-filter-chip[data-selected="true"]:hover {
+  background-color: var(--portal-filter-selected) !important;
+  color: #0f172a !important;
+  border-color: var(--portal-filter-selected-border) !important;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  box-shadow: 0 1px 2px rgba(15,23,42,.14) !important;
+  outline: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+}
