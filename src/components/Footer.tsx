@@ -29,13 +29,22 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
 
     <div className="overflow-hidden rounded-lg border text-[11px]" style={{backgroundColor:footerBg,color:footerText,borderColor:footerBorder}}>
       <div className="grid md:grid-cols-[1.1fr_1fr] items-stretch">
-        <div className="grid sm:grid-cols-2 gap-4 p-4 md:border-r" style={{borderColor:footerDivider}}>
-          <div><div className="font-extrabold uppercase tracking-wider text-[9px]" style={{color:footerMuted}}>{layoutConfig.footerPresidentLabel||'Presidente da Comissão'}</div><p className="font-bold text-[12px] mt-1">{presidentName}</p>{presidentEmail&&<a href={`mailto:${presidentEmail}`} className="mt-1 block font-mono text-[9.5px] hover:underline" style={{color:footerMuted}}>{presidentEmail}</a>}</div>
-          <div><div className="font-extrabold uppercase tracking-wider text-[9px]" style={{color:footerMuted}}>{layoutConfig.footerMembersLabel||'Membros da Comissão'}</div><div className="mt-1 space-y-1">{membersList.length?membersList.map((member)=><div key={member.id||member.name}><p className="font-semibold">{member.name}</p>{member.email&&<a href={`mailto:${member.email}`} className="font-mono text-[9px] hover:underline" style={{color:footerMuted}}>{member.email}</a>}{(member.startDate||member.endDate)&&<p className="text-[9px]" style={{color:footerMuted}}>{member.startDate?`Início: ${formatTermDate(member.startDate)}`:''}{member.startDate&&member.endDate?' · ':''}{member.endDate?`Fim: ${formatTermDate(member.endDate)}`:''}</p>}</div>):<p style={{color:footerMuted}}>Não configurado</p>}</div></div>
+        <div className="p-4 md:border-r space-y-3" style={{borderColor:footerDivider}}>
+          <div>
+            <div className="font-extrabold uppercase tracking-wider text-[9px]" style={{color:footerMuted}}>{layoutConfig.footerPresidentLabel||'Presidente da Comissão'}</div>
+            <p className="font-bold text-[12px] mt-1">{presidentName}</p>
+            {presidentEmail&&<a href={`mailto:${presidentEmail}`} className="mt-1 block font-mono text-[9.5px] hover:underline" style={{color:footerMuted}}>{presidentEmail}</a>}
+          </div>
+          <div className="pt-3 border-t" style={{borderColor:footerDivider}}>
+            <div className="font-extrabold uppercase tracking-wider text-[9px]" style={{color:footerMuted}}>{layoutConfig.footerMembersLabel||'Membros da Comissão'}</div>
+            <div className="mt-1.5 grid sm:grid-cols-2 gap-x-4 gap-y-1.5">
+              {membersList.length?membersList.map((member)=><div key={member.id||member.name}><p className="font-semibold">{member.name}</p>{member.email&&<a href={`mailto:${member.email}`} className="font-mono text-[9px] hover:underline" style={{color:footerMuted}}>{member.email}</a>}{(member.startDate||member.endDate)&&<p className="text-[9px]" style={{color:footerMuted}}>{member.startDate?`Início: ${formatTermDate(member.startDate)}`:''}{member.startDate&&member.endDate?' · ':''}{member.endDate?`Fim: ${formatTermDate(member.endDate)}`:''}</p>}</div>):<p style={{color:footerMuted}}>Não configurado</p>}
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-[minmax(0,1fr)_170px] sm:grid-cols-[minmax(0,1fr)_205px] items-stretch min-h-[170px]">
+        <div className="grid grid-cols-[minmax(0,1fr)_120px] sm:grid-cols-[minmax(0,1fr)_145px] items-center min-h-[145px]">
           <div className="flex flex-col justify-center items-center text-center gap-2 p-4"><div><div className="font-extrabold uppercase tracking-wider text-[9px] leading-tight" style={{color:footerMuted}}>Desenvolvimento da Plataforma<br/>e Suporte</div><p className="font-bold text-[12px] mt-1">{devName}</p></div>{whatsappUrl&&<a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-2 font-bold uppercase tracking-wider text-[10px] rounded-lg transition-all hover:brightness-110" style={{backgroundColor:whatsappBg,color:whatsappText}}><MessageCircle className="w-3.5 h-3.5"/>WhatsApp Secretaria</a>}{contactEmail&&<div className="flex items-center gap-1" style={{color:footerMuted}}><Mail className="w-3 h-3"/><span className="font-mono text-[9.5px] select-all">{contactEmail}</span></div>}</div>
-          {qrCodeSource&&<div className="h-full w-full bg-white"><img src={qrCodeSource} alt="QR Code para contato pelo WhatsApp" className="h-full w-full object-contain" referrerPolicy="no-referrer"/></div>}
+          {qrCodeSource&&<div className="w-[120px] h-[120px] sm:w-[145px] sm:h-[145px] bg-white self-center justify-self-end overflow-hidden"><img src={qrCodeSource} alt="QR Code para contato pelo WhatsApp" className="block h-full w-full object-cover" referrerPolicy="no-referrer"/></div>}
         </div>
       </div>
     </div>
