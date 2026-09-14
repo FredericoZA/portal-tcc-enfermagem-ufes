@@ -1,27 +1,31 @@
 /*
- * Atualização 18 — correções de regressão visual após homologação.
+ * Atualização 19 — refinamento visual e consistência de interação.
  * Fonte de verdade:
- *   verde musgo dos cabeçalhos: #005830 (mesma faixa DOM/SEG/TER...)
+ *   verde musgo dos cabeçalhos: #005830
+ *   verde de destaque/pop-ups: #47866a
  *   branco-gelo: #f1f5f9
- *   selecionado: #e2e8f0
- *   pop-up: #337959 (20% mais claro que #005830)
+ *   selecionado forte: #c1c4c7
  *   WhatsApp QR: #25d366
- *   WhatsApp botão: #1ea952 (aprox. 20% mais escuro)
+ *   WhatsApp botão: #1ea952
  */
 :root {
   --portal-moss: #005830;
   --portal-moss-hover: #004626;
   --portal-ice: #f1f5f9;
   --portal-ice-selected: #e2e8f0;
-  --portal-popup-moss: #337959;
+  --portal-ice-selected-strong: #c1c4c7;
+  --portal-popup-moss: #47866a;
+  --portal-course-accent: #47866a;
   --portal-whatsapp: #25d366;
   --portal-whatsapp-button: #1ea952;
   --portal-sidebar-active: #154d41;
   --portal-control-text: #0f172a;
   --portal-control-border: #cbd5e1;
+  /* sobrescreve tokens da folha de design importada antes desta */
+  --portal-ui-popup-moss: #47866a;
 }
 
-/* 1) Cabeçalhos: todos no mesmo verde da faixa dos dias do calendário. */
+/* 1) Cabeçalhos das planilhas continuam no verde institucional escuro. */
 #formal-monthly-calendar-section > div > div:first-child,
 #public-calendar-cards-section > div > div:first-child,
 .table-sticky-container table thead,
@@ -39,7 +43,7 @@ main [class*="bg-[#005830]"] {
   border-color: rgba(255,255,255,.22) !important;
 }
 
-/* 2) Controles da barra de planilha: branco-gelo; selecionado: cinza-claro. */
+/* 2) Controles da barra de planilha: neutros. Hover não interfere nos filtros. */
 #formal-monthly-calendar-section > div > div:first-child button,
 #public-calendar-cards-section > div > div:first-child button,
 button[title*="Exibição da planilha"],
@@ -61,23 +65,37 @@ button[title="Hoje"]:hover {
   background-color: var(--portal-ice-selected) !important;
 }
 
-.portal-table-filter-chip[data-selected="true"],
-main button[class*="bg-[#2d3a31]"],
-main button[class*="bg-black/40"] {
-  background-color: var(--portal-ice-selected) !important;
+.portal-table-filter-chip,
+.portal-table-filter-chip:not([data-selected="true"]),
+.portal-table-filter-chip:not([data-selected="true"]):hover {
+  background-color: var(--portal-ice) !important;
   color: var(--portal-control-text) !important;
   border-color: var(--portal-control-border) !important;
+  opacity: 1 !important;
+  transform: none !important;
   box-shadow: none !important;
-  outline: none !important;
 }
 
-/* 3) Cabeçalho institucional: universidade escura; curso verde-musgo. */
+.portal-table-filter-chip[data-selected="true"],
+.portal-table-filter-chip[data-selected="true"]:hover,
+main button[class*="bg-[#2d3a31]"],
+main button[class*="bg-black/40"] {
+  background-color: var(--portal-ice-selected-strong) !important;
+  color: var(--portal-control-text) !important;
+  border-color: #9aa1a6 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+/* 3) Cabeçalho institucional: universidade escura; curso usa o verde claro dos pop-ups. */
 #portal-header button[title="Voltar ao Calendário Público Inicial"] > div:first-child {
   color: #0f172a !important;
 }
 
 #portal-header h1 {
-  color: var(--portal-moss) !important;
+  color: var(--portal-course-accent) !important;
 }
 
 #portal-header img[alt="Emblema institucional"] {
@@ -87,7 +105,7 @@ main button[class*="bg-black/40"] {
   padding: 0 !important;
 }
 
-/* 4) Pop-ups: cabeçalho e ação principal no verde musgo clareado. */
+/* 4) Pop-ups: barra superior e ação principal compartilham exatamente a mesma cor. */
 .portal-modal-header,
 div.fixed.inset-0 > div[class*="bg-white"] > div:first-child[class*="border-b"],
 div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-b"],
@@ -101,30 +119,84 @@ div.fixed[class*="bg-white"][class*="shadow"] > div:first-child[class*="border-b
 .portal-action-primary,
 .portal-modal-primary,
 div.fixed.inset-0:has(input[type="email"]) button[type="submit"],
-div.fixed.z-\[1000001\].bg-white > div:last-child > button:last-child {
+div.fixed.z-\[1000001\].bg-white > div:last-child > button:last-child,
+button[title^="Exportar todo o banco de dados"] {
   background-color: var(--portal-popup-moss) !important;
   color: #ffffff !important;
   border-color: var(--portal-popup-moss) !important;
 }
 
-/* 5) 25/50/100/Todos: somente mudança de fundo, nunca margem/anel extra. */
+.portal-action-primary:hover,
+.portal-modal-primary:hover,
+div.fixed.inset-0:has(input[type="email"]) button[type="submit"]:hover,
+div.fixed.z-\[1000001\].bg-white > div:last-child > button:last-child:hover,
+button[title^="Exportar todo o banco de dados"]:hover {
+  filter: brightness(.94) !important;
+}
+
+/* 5) Engrenagem: opções ficam realmente mais escuras só quando selecionadas. */
 div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-200"] {
-  background-color: var(--portal-ice-selected) !important;
+  background-color: var(--portal-ice-selected-strong) !important;
   color: var(--portal-control-text) !important;
-  border-color: var(--portal-control-border) !important;
+  border-color: #9aa1a6 !important;
   box-shadow: none !important;
   outline: none !important;
   --tw-ring-shadow: 0 0 #0000 !important;
   --tw-ring-offset-shadow: 0 0 #0000 !important;
 }
 
-div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-50"] {
+div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-50"],
+div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-50"]:hover {
   background-color: var(--portal-ice) !important;
   color: var(--portal-control-text) !important;
   border-color: #e2e8f0 !important;
 }
 
-/* 6) Barra lateral: restaura o verde aprovado e elimina variação por usuário. */
+/* 6) Login: alinhado à esquerda, mesmo verde dos demais pop-ups e ícone monocromático branco. */
+div.fixed.inset-0:has(input[type="email"]) > div > div:first-child[class*="border-b"] {
+  justify-content: flex-start !important;
+  text-align: left !important;
+  background-color: var(--portal-popup-moss) !important;
+  border-color: var(--portal-popup-moss) !important;
+  padding-left: .85rem !important;
+}
+
+div.fixed.inset-0:has(input[type="email"]) > div > div:first-child[class*="border-b"] > div:first-child {
+  justify-content: flex-start !important;
+  text-align: left !important;
+}
+
+div.fixed.inset-0:has(input[type="email"]) > div > div:first-child[class*="border-b"] :is(h3,p) {
+  color: #ffffff !important;
+  text-align: left !important;
+}
+
+div.fixed.inset-0:has(input[type="email"]) > div > div:first-child[class*="border-b"] p {
+  color: rgba(255,255,255,.82) !important;
+}
+
+div.fixed.inset-0:has(input[type="email"]) > div > div:first-child[class*="border-b"] > div:first-child > div:first-child {
+  position: relative !important;
+  width: 1.9rem !important;
+  height: 1.9rem !important;
+  min-width: 1.9rem !important;
+  min-height: 1.9rem !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  padding: 0 !important;
+}
+
+div.fixed.inset-0:has(input[type="email"]) > div > div:first-child[class*="border-b"] > div:first-child > div:first-child::before {
+  content: "";
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4'/%3E%3Cpolyline points='10 17 15 12 10 7'/%3E%3Cline x1='15' x2='3' y1='12' y2='12'/%3E%3C/svg%3E");
+}
+
+/* 7) Barra lateral: preserva o verde aprovado e elimina variação por usuário. */
 #sidebar-nav > button:focus,
 #sidebar-nav > button:active {
   color: #ffffff !important;
@@ -144,7 +216,6 @@ div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-50"] {
   color: #ffffff !important;
 }
 
-/* O botão Entrar/Sair fica acima da linha divisória; dados da sessão ficam abaixo. */
 #sidebar-user-footer {
   border-top: 0 !important;
   padding-top: 0.45rem !important;
@@ -164,7 +235,7 @@ div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-50"] {
   text-align: center !important;
 }
 
-/* 7) Rodapé: WhatsApp mais escuro só no botão. Miolo do QR permanece #25D366. */
+/* 8) Rodapé: WhatsApp resolvido na atualização anterior — não alterar o miolo do QR. */
 #home-page-footer-notes a[href*="wa.me"],
 #home-page-footer-notes a[href*="whatsapp"],
 #home-page-footer-notes a:has(svg) {
@@ -183,7 +254,6 @@ div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-50"] {
   justify-content: center !important;
 }
 
-/* E-mail copiável: comportamento de botão sem aparência de botão alto. */
 #home-page-footer-notes button[aria-label^="Copiar e-mail"] {
   min-height: 0 !important;
   height: auto !important;
@@ -198,14 +268,32 @@ div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-50"] {
   line-height: 1 !important;
 }
 
-/* Rodapé mais enxuto. */
 #home-page-footer-notes {
   padding-top: 0.25rem !important;
   padding-bottom: 0.35rem !important;
 }
 
-/* 8) Local das apresentações: título centralizado. */
+/* 9) Local das apresentações: espaçamento simétrico e conteúdo dos três boxes centralizado. */
+#home-page-container #presentation-location-card {
+  margin-top: .625rem !important;
+  margin-bottom: 0 !important;
+}
+
+#home-page-container #public-calendar-cards-section {
+  margin-top: .625rem !important;
+}
+
 #presentation-location-card > div:first-child {
   justify-content: center !important;
+  text-align: center !important;
+}
+
+#presentation-location-card > div:nth-child(2) > div {
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+#presentation-location-card > div:nth-child(2) > div span {
   text-align: center !important;
 }
