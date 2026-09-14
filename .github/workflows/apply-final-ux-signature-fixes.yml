@@ -29,6 +29,10 @@ jobs:
         run: npm ci
       - name: Aplicar correções
         run: node scripts/apply-final-ux-signature-fixes.mjs
+      - name: Diagnóstico de sintaxe
+        if: always()
+        run: |
+          nl -ba server.ts | sed -n '2455,2478p'
       - name: Validar CI
         run: npm run test:ci
       - name: Validar fluxo seguro
