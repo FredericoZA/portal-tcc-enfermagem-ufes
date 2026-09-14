@@ -11,6 +11,7 @@ import { IndicadoresPage } from './pages/IndicadoresPage';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })));
 const PortalTutorialPage = lazy(() => import('./pages/PortalTutorialPage').then((module) => ({ default: module.PortalTutorialPage })));
+const PortalReplicationPage = lazy(() => import('./pages/PortalReplicationPage').then((module) => ({ default: module.PortalReplicationPage })));
 const MeusProcessosPage = lazy(() => import('./pages/MeusProcessosPage').then((module) => ({ default: module.MeusProcessosPage })));
 const ProcessoDetailPage = lazy(() => import('./pages/ProcessoDetailPage').then((module) => ({ default: module.ProcessoDetailPage })));
 const WizardCadastroPage = lazy(() => import('./pages/WizardCadastroPage').then((module) => ({ default: module.WizardCadastroPage })));
@@ -87,6 +88,8 @@ export default function App() {
         return <HomePage initialPublicTab="biblioteca" onNavigate={handleNavigate} />;
       case 'tutorial':
         return <PortalTutorialPage onNavigate={handleNavigate} />;
+      case 'replicar':
+        return <PortalReplicationPage />;
       case 'acessar-portal':
         return <HomePage onNavigate={handleNavigate} />;
       case 'meus-processos':
@@ -141,6 +144,7 @@ export default function App() {
                 selectedProcessId ? 'Detalhes do Trabalho de TCC'
                   : currentTab === 'home' ? 'Página Inicial Pública'
                   : currentTab === 'tutorial' ? 'Como usar o Portal'
+                  : currentTab === 'replicar' ? 'Replicar o Portal'
                   : currentTab === 'acessar-portal' ? 'Acesso ao Portal'
                   : currentTab === 'meus-processos' ? 'Meus Trabalhos de TCC'
                   : currentTab === 'novo-processo' ? 'Cadastrar Trabalho de TCC'

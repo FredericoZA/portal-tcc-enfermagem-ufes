@@ -339,15 +339,18 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const canEditData = canCoordinatorEdit;
 
-  const handleSignDocument=async(doc:ProcessDocument)=>{
-    setSignatureWorking(doc.type);setSignatureNotice(null);
+  const handleSignDocument=async(doc:ProcessDocument,provider:'ASTEN'|'GOV_BR')=>{
+    setSignatureWorking(`${doc.type}:${provider}`);setSignatureNotice(null);
     try{
-      const result=await apiClient.signProcessDocument(process.id,doc.type);
+      const result=await apiClient.signProcessDocument(process.id,doc.type,provider);
       setSignatureNotice({ok:true,text:result.message});
       await loadData();
     }catch(error){setSignatureNotice({ok:false,text:error instanceof Error?error.message:'Não foi possível enviar o documento à Asten.'});}
     finally{setSignatureWorking('');}
   };
+
+  const handleGovBrDownload=async(job:SignatureJob)=>{try{const {blob,fileName}=await apiClient.downloadGovBrSigningPdf(job.id);const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=fileName;a.click();URL.revokeObjectURL(url);setSignatureNotice({ok:true,text:'PDF baixado. Assine no Gov.br e envie o PDF resultante nesta mesma área.'});}catch(error){setSignatureNotice({ok:false,text:error instanceof Error?error.message:'Não foi possível baixar o PDF para o Gov.br.'});}};
+  const handleGovBrUpload=async(job:SignatureJob,file?:File)=>{if(!file)return;setSignatureWorking(`${job.documentType}:GOV_UPLOAD`);try{await apiClient.uploadGovBrSignedPdf(job.id,process.id,file);setSignatureNotice({ok:true,text:'PDF assinado no Gov.br recebido e arquivado. Se houver outro signatário, ele deve repetir o procedimento com esta versão.'});await loadData();}catch(error){setSignatureNotice({ok:false,text:error instanceof Error?error.message:'Não foi possível receber o PDF assinado.'});}finally{setSignatureWorking('');}};
 
   const handleDownloadDossier = async () => {
     setIsDownloadingDossier(true);
@@ -1827,7 +1830,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <span>Baixar PDF</span>
                       </button>
                     </div>
-                    {canRequestSignature&&<button type="button" onClick={()=>handleSignDocument(doc)} disabled={signatureWorking===doc.type||alreadySent} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-800 px-3 py-2 text-xs font-black text-white transition-colors hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"><ShieldCheck className="h-4 w-4"/>{alreadySent?'Enviado à Asten':signatureWorking===doc.type?'Enviando…':'Assinar documento'}</button>}
+                    {canRequestSignature&&<div className="grid grid-cols-2 gap-2"><button type="button" onClick={()=>handleSignDocument(doc,'ASTEN')} disabled={signatureWorking!==''||alreadySent} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#344125] px-3 py-2 text-xs font-black text-white hover:bg-[#28331d] disabled:bg-slate-300"><ShieldCheck className="h-4 w-4"/>Asten</button><button type="button" onClick={()=>handleSignDocument(doc,'GOV_BR')} disabled={signatureWorking!==''||alreadySent} className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-600 px-3 py-2 text-xs font-black text-white hover:bg-slate-700 disabled:bg-slate-300"><ShieldCheck className="h-4 w-4"/>Gov.br</button></div>}
+                    {signatureJobs.filter(job=>job.documentType===doc.type&&job.provider==='GOV_BR'&&job.status!=='ARCHIVED'&&job.status!=='CANCELED').sort((a,b)=>b.documentVersion-a.documentVersion).slice(0,1).map(job=><div key={job.id} className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2"><div className="text-[10px] font-black uppercase text-slate-600">Assinatura Gov.br · {job.status}</div><div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={()=>void handleGovBrDownload(job)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-[10px] font-black text-slate-800">1. Baixar PDF</button><label className="cursor-pointer rounded-lg bg-slate-600 px-3 py-2 text-[10px] font-black text-white">2. Enviar PDF assinado<input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={e=>void handleGovBrUpload(job,e.target.files?.[0])}/></label></div></div>)}
                   </div>
                 );
               })}

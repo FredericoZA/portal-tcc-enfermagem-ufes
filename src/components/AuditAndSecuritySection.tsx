@@ -153,7 +153,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
         <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3.5">
           <label className="mb-1 block text-[10px] font-bold uppercase text-slate-700">E-mails de recuperação do Master</label>
           <textarea value={recoveryEmails} onChange={event=>setRecoveryEmails(event.target.value)} required rows={3} placeholder="Um e-mail por linha (máximo 5)" className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-400"/>
-          <p className="mt-1 text-[11px] text-slate-600">A troca de Master ou Presidente nunca é imediata: o novo titular recebe um código e precisa aceitar o convite.</p>
+          <p className="mt-1 text-[11px] text-slate-600">A Presidente da Comissão é o contato de recuperação do Master e pode iniciar a transferência segura do usuário Master. Toda troca exige confirmação do novo titular.</p>
         </div>
 
         <div className="pt-2 flex items-center justify-end border-t border-slate-200">

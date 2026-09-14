@@ -39,7 +39,7 @@ export const DEFAULT_FEATURE_FLAGS: PortalFeatureFlag[] = [
   ['DEFENSE_CONFLICTS', 'Detecção de conflitos de defesa', true],
   ['INSTITUTIONAL_DOSSIER', 'Dossiê institucional verificável', false],
   ['PUBLIC_AUTHENTICITY', 'Consulta pública de autenticidade', false],
-  ['ADMIN_TRANSFER', 'Transferência segura de administração', false],
+  ['ADMIN_TRANSFER', 'Transferência segura de administração', true],
   ['OPERATIONS_KPIS', 'Indicadores operacionais sem dados pessoais', true]
 ].map(([key, description, enabled]) => ({
   key: key as PortalFeatureFlag['key'],
