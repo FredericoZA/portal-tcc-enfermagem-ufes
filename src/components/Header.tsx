@@ -8,6 +8,7 @@ import { NotificationBell } from './NotificationBell';
 interface HeaderProps {
   onOpenMobileSidebar: () => void;
   onGoHome?: () => void;
+  title?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome }) => {
