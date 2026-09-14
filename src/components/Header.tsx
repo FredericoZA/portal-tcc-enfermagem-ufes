@@ -11,7 +11,7 @@ interface HeaderProps {
   title?: string;
 }
 
-const COURSE_MOSS = '#005830';
+const COURSE_ACCENT = '#47866A';
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome }) => {
   const { userEmail, globalRoles, memberships, settings } = useAuth();
@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome })
             )}
             <button type="button" onClick={onGoHome} className="text-left hover:opacity-90 transition-opacity focus:outline-none cursor-pointer" title="Voltar ao Calendário Público Inicial">
               <div className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest leading-none mb-1" style={{ color: '#0f172a' }}>{layoutConfig.headerInstitutionText || installationProfile.institutionName}</div>
-              <h1 className="text-[11px] sm:text-xs md:text-sm font-black tracking-tight uppercase leading-snug flex items-center gap-1.5" style={{ color: COURSE_MOSS }}><span>{layoutConfig.headerCourseTitle || `${installationProfile.courseName} · CCS/UFES`}</span></h1>
+              <h1 className="text-[11px] sm:text-xs md:text-sm font-black tracking-tight uppercase leading-snug flex items-center gap-1.5" style={{ color: COURSE_ACCENT }}><span>{layoutConfig.headerCourseTitle || `${installationProfile.courseName} · CCS/UFES`}</span></h1>
             </button>
           </div>
         </div>
