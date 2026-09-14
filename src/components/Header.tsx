@@ -30,6 +30,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome })
     backgroundColor: layoutConfig.headerBgColor || '#ffffff',
     ...(layoutConfig.headerBgImage ? { backgroundImage: `url(${layoutConfig.headerBgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
   };
+  const headerLogo = String(layoutConfig.headerCustomLogoUrl || '');
 
   return (
     <header id="portal-header" className="border-b border-slate-200 shadow-2xs sticky top-0 z-30 transition-colors" style={headerStyle}>
@@ -37,10 +38,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome })
         <div className="flex items-center gap-3">
           <button id="open-mobile-sidebar-btn" onClick={onOpenMobileSidebar} className="lg:hidden p-2 rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none" aria-label="Abrir menu"><Menu className="w-6 h-6" /></button>
           <div className="flex items-center gap-2">
-            <span aria-hidden="true" className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-xl sm:text-[22px] leading-none" title="Portal acadêmico de TCC">🎓</span>
+            {headerLogo && (
+              <img
+                src={headerLogo}
+                alt="Emblema institucional"
+                className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 object-contain"
+                referrerPolicy="no-referrer"
+              />
+            )}
             <button type="button" onClick={onGoHome} className="text-left hover:opacity-90 transition-opacity focus:outline-none cursor-pointer" title="Voltar ao Calendário Público Inicial">
-              <div className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest leading-none mb-1" style={{ color: layoutConfig.headerTextColor || '#475569' }}>{layoutConfig.headerInstitutionText || installationProfile.institutionName}</div>
-              <h1 className="text-[11px] sm:text-xs md:text-sm font-black tracking-tight uppercase leading-snug flex items-center gap-1.5" style={{ color: layoutConfig.headerTitleColor || '#0f172a' }}><span>{layoutConfig.headerCourseTitle || installationProfile.courseName}</span></h1>
+              <div className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest leading-none mb-1" style={{ color: layoutConfig.headerTextColor || '#0f172a' }}>{layoutConfig.headerInstitutionText || installationProfile.institutionName}</div>
+              <h1 className="text-[11px] sm:text-xs md:text-sm font-black tracking-tight uppercase leading-snug flex items-center gap-1.5" style={{ color: layoutConfig.headerTitleColor || '#435649' }}><span>{layoutConfig.headerCourseTitle || `${installationProfile.courseName} · CCS/UFES`}</span></h1>
             </button>
           </div>
         </div>
