@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import './portal-overrides.css';
 import './portal-design-system.css';
+import './portal-final-fixes.css';
 
 import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
 
