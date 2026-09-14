@@ -4,7 +4,6 @@ const read=(p)=>fs.readFileSync(p,'utf8');
 const write=(p,s)=>fs.writeFileSync(p,s);
 function must(s,a,b,label){if(!s.includes(a))throw new Error(`Trecho não localizado: ${label}`);return s.replace(a,b);}
 
-// Corrige fechamento duplicado inserido pelo patch inicial e deixa o fluxo Gov.br sequencial.
 {
   const p='src/pages/ProcessoDetailPage.tsx';
   let s=read(p);
@@ -23,7 +22,6 @@ function must(s,a,b,label){if(!s.includes(a))throw new Error(`Trecho não locali
   write(p,s);
 }
 
-// Mantém o rótulo canônico coberto pelo contrato de UI.
 {
   const p='src/components/CommissionIdentityPanel.tsx';
   let s=read(p);
@@ -31,7 +29,6 @@ function must(s,a,b,label){if(!s.includes(a))throw new Error(`Trecho não locali
   write(p,s);
 }
 
-// Deixa a ativação e integrações mais compactas e trata Asten como opcional visualmente.
 {
   const p='src/components/InfrastructureIntegrationsPanel.tsx';
   let s=read(p);
@@ -43,7 +40,6 @@ function must(s,a,b,label){if(!s.includes(a))throw new Error(`Trecho não locali
   write(p,s);
 }
 
-// Contas administrativas: texto explícito sobre Presidente = recuperação do Master e ações neutras.
 {
   const p='src/components/AuditAndSecuritySection.tsx';
   let s=read(p);
@@ -53,13 +49,43 @@ function must(s,a,b,label){if(!s.includes(a))throw new Error(`Trecho não locali
   write(p,s);
 }
 
-// Política visual global: elimina os tons oliva antigos restantes em componentes JSX/TSX.
+// Tokens globais: musgo nos cabeçalhos, cinza nas ações e neutros claros nos fundos.
+{
+  const p='src/index.css';
+  let s=read(p);
+  const replacements=[
+    ['--color-emerald-50: #f0f1e7;','--color-emerald-50: #f7f8f7;'],
+    ['--color-emerald-100: #e0e3cf;','--color-emerald-100: #eef0ee;'],
+    ['--color-emerald-200: #c8ceb0;','--color-emerald-200: #dfe3df;'],
+    ['--color-emerald-300: #aab388;','--color-emerald-300: #c7cdc8;'],
+    ['--color-emerald-400: #8c9862;','--color-emerald-400: #9da69f;'],
+    ['--color-emerald-500: #738044;','--color-emerald-500: #7a847d;'],
+    ['--color-emerald-600: #616d36;','--color-emerald-600: #5f6962;'],
+    ['--color-emerald-700: #5f6937;','--color-emerald-700: #4d5751;'],
+    ['--color-emerald-800: #4f582e;','--color-emerald-800: #344125;'],
+    ['--color-emerald-900: #343b20;','--color-emerald-900: #28331d;'],
+    ['--color-emerald-950: #252a16;','--color-emerald-950: #20301f;'],
+    ['--portal-popup-header: #4f582e;','--portal-popup-header: #344125;'],
+    ['--portal-popup-action: #4f582e;','--portal-popup-action: #5b635e;'],
+    ['--portal-new-defense-header: #5f6937;','--portal-new-defense-header: #344125;'],
+    ['--portal-new-defense-action: #5f6937;','--portal-new-defense-action: #5b635e;'],
+    ['--portal-upload-header: #5f6937;','--portal-upload-header: #344125;'],
+    ['--portal-upload-action: #5f6937;','--portal-upload-action: #5b635e;'],
+    ['--portal-correction-header: #5f6937;','--portal-correction-header: #344125;'],
+    ['--portal-correction-action: #5f6937;','--portal-correction-action: #5b635e;'],
+    ['--portal-focus-color: #5f6937;','--portal-focus-color: #344125;'],
+    ['border-top-color: #5f6937;','border-top-color: #344125;']
+  ];
+  for(const [a,b] of replacements)s=must(s,a,b,`css ${a}`);
+  write(p,s);
+}
+
 for (const p of ['src/pages/HomePage.tsx','src/pages/IndicadoresPage.tsx','src/pages/ConfiguracoesPage.tsx']) {
   if(!fs.existsSync(p)) continue;
   let s=read(p);
   const swaps=[
     ['#5f6937','#5b635e'],['#4f582e','#48504c'],['#525c2e','#344125'],['#343b20','#344125'],['#252a16','#20301f'],
-    ['#aab388','#cbd5d1'],['#e0e3cf','#e5e7eb'],['#f0f1e7','#f8fafc'],['#c8ceb0','#d6d9d7'],['#616d36','#365349']
+    ['#aab388','#cbd5d1'],['#e0e3cf','#e5e7eb'],['#f0f1e7','#f8fafc'],['#c8ceb0','#d6d9d7'],['#616d36','#365349'],['#738044','#7a847d'],['#8c9862','#9da69f']
   ];
   for(const [a,b] of swaps)s=s.replaceAll(a,b);
   write(p,s);
