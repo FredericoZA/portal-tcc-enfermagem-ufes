@@ -40,7 +40,7 @@ export const DEFAULT_LOGIN_POPUP_CONFIG: LoginPopupConfig = {
   borderRadius: 'rounded-2xl',
   cardBgColor: '#ffffff',
   cardTextColor: '#0f172a',
-  primaryBtnBg: '#475569',
+  primaryBtnBg: '#47866A',
   primaryBtnTextColor: '#ffffff'
 };
 
