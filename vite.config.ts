@@ -1,10 +1,20 @@
+import { readFileSync } from 'node:fs';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+const packageVersion = (() => {
+  try {
+    const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version?: string };
+    return String(packageJson.version || '').trim();
+  } catch {
+    return '';
+  }
+})();
+
 export default defineConfig(() => {
-  const appVersion = process.env.npm_package_version || '1.0.15';
+  const appVersion = packageVersion || process.env.npm_package_version || '0.0.0';
   const gitCommit = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || '').slice(0, 7);
 
   return {
