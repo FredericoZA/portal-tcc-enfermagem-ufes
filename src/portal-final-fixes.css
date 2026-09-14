@@ -1,49 +1,124 @@
 /*
- * Correções finais de padronização visual — v1.0.17
- * Esta folha é importada por último e corrige apenas os desvios visuais
- * identificados na homologação da tela pública.
+ * Atualização 17 — padronização visual da tela pública e componentes compartilhados.
+ * Fonte de verdade desta homologação:
+ *   verde musgo: #435649
+ *   branco-gelo: #f1f5f9
+ *   selecionado: #e2e8f0
+ *   popup (musgo +20% de luminosidade): #69786d
+ *   WhatsApp: #25d366
  */
 :root {
-  --portal-brand-green: #005830;
+  --portal-moss: #435649;
+  --portal-moss-hover: #344439;
+  --portal-ice: #f1f5f9;
+  --portal-ice-selected: #e2e8f0;
+  --portal-popup-moss: #69786d;
+  --portal-whatsapp: #25d366;
+  --portal-control-text: #0f172a;
+  --portal-control-border: #cbd5e1;
 }
 
-/* 1) Cabeçalhos das planilhas e barras institucionais: mesmo verde do cabeçalho dos dias. */
+/* 1) Cabeçalhos de planilhas/calendários: um único verde musgo em todo o portal. */
 #formal-monthly-calendar-section > div > div:first-child,
 #public-calendar-cards-section > div > div:first-child,
 .table-sticky-container table thead,
 .table-sticky-container table thead th,
-[class*="bg-[#435649]"] {
-  background-color: var(--portal-brand-green) !important;
+main [class*="bg-[#435649]"],
+main [class*="bg-[#005830]"] {
+  background-color: var(--portal-moss) !important;
   color: #ffffff !important;
 }
 
 #formal-monthly-calendar-section > div > div:first-child,
 #public-calendar-cards-section > div > div:first-child,
 .table-sticky-container table thead th {
-  border-color: #cbd5e1 !important;
+  border-color: rgba(255,255,255,.24) !important;
 }
 
-/* 2) Cabeçalho superior: nome do curso sempre preto. */
-#portal-header h1 {
+/* 2) Controles de cabeçalho: branco-gelo, texto/ícone escuro. */
+#formal-monthly-calendar-section > div > div:first-child button,
+#public-calendar-cards-section > div > div:first-child button,
+button[title*="Exibição da planilha"],
+button[title*="Buscar"],
+button[title*="Mês"],
+button[title="Hoje"],
+main button[class*="bg-[#344439]"],
+main button[class*="bg-[#2d3a31]"] {
+  background-color: var(--portal-ice) !important;
+  color: var(--portal-control-text) !important;
+  border-color: var(--portal-control-border) !important;
+  box-shadow: 0 1px 2px rgba(15,23,42,.08) !important;
+}
+
+#formal-monthly-calendar-section > div > div:first-child button:hover,
+#public-calendar-cards-section > div > div:first-child button:hover,
+button[title*="Exibição da planilha"]:hover,
+button[title*="Buscar"]:hover,
+button[title*="Mês"]:hover,
+button[title="Hoje"]:hover {
+  background-color: var(--portal-ice-selected) !important;
+  color: var(--portal-control-text) !important;
+}
+
+/* Filtros: inativo = gelo; selecionado = cinza-claro. Pontos/bolinhas internas mantêm suas cores. */
+main button[class*="bg-white/15"],
+main button[class*="bg-white/10"] {
+  background-color: var(--portal-ice) !important;
+  color: var(--portal-control-text) !important;
+  border-color: var(--portal-control-border) !important;
+}
+
+main button[class*="bg-[#2d3a31]"],
+main button[class*="bg-black/40"],
+main button[class*="bg-slate-800"][class*="font-black"] {
+  background-color: var(--portal-ice-selected) !important;
+  color: var(--portal-control-text) !important;
+  border-color: var(--portal-control-border) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* 3) Cabeçalho institucional: universidade escura; curso em musgo. */
+#portal-header button[title="Voltar ao Calendário Público Inicial"] > div:first-child {
   color: #0f172a !important;
 }
 
-/* 3) Pop-ups: cabeçalho e ação principal no mesmo verde institucional. */
+#portal-header h1 {
+  color: var(--portal-moss) !important;
+}
+
+#portal-header img[alt="Emblema institucional"] {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* 4) Pop-ups: barra superior e ação principal = musgo clareado 20%. */
 .portal-modal-header,
 div.fixed.inset-0 > div[class*="bg-white"] > div:first-child[class*="border-b"],
 div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-b"],
 div.fixed.z-\[1000001\].bg-white > div:first-child[class*="border-b"],
 div.fixed[class*="bg-white"][class*="shadow"] > div:first-child[class*="border-b"] {
-  background-color: var(--portal-brand-green) !important;
+  background-color: var(--portal-popup-moss) !important;
   color: #ffffff !important;
-  border-color: #cbd5e1 !important;
+  border-color: var(--portal-popup-moss) !important;
 }
 
-.portal-modal-header :is(h1,h2,h3,p,span,svg),
+.portal-modal-header :is(h1,h2,h3,p,span,svg,button),
 div.fixed.inset-0 > div[class*="bg-white"] > div:first-child[class*="border-b"] :is(h1,h2,h3,p,span,svg,button),
 div.fixed.inset-0 > div[class*="bg-slate-100"] > div:first-child[class*="border-b"] :is(h1,h2,h3,p,span,svg,button),
 div.fixed.z-\[1000001\].bg-white > div:first-child[class*="border-b"] :is(span,svg,button) {
   color: #ffffff !important;
+}
+
+/* Popovers antigos com padding: transforma o título em barra visual contínua. */
+div.fixed.z-\[1000001\].bg-white[class*="p-3.5"] > div:first-child[class*="border-b"],
+div.fixed.z-\[1000001\].bg-white[class*="p-4"] > div:first-child[class*="border-b"] {
+  margin-left: -0.875rem !important;
+  margin-right: -0.875rem !important;
+  margin-top: -0.875rem !important;
+  padding: 0.625rem 0.875rem !important;
 }
 
 .portal-action-primary,
@@ -51,9 +126,9 @@ div.fixed.z-\[1000001\].bg-white > div:first-child[class*="border-b"] :is(span,s
 div.fixed.inset-0:has(input[type="email"]) button[type="submit"],
 div.fixed.z-\[1000001\].bg-white > div:last-child > button:last-child,
 button[title^="Exportar todo o banco de dados"] {
-  background-color: var(--portal-brand-green) !important;
+  background-color: var(--portal-popup-moss) !important;
   color: #ffffff !important;
-  border-color: var(--portal-brand-green) !important;
+  border-color: var(--portal-popup-moss) !important;
 }
 
 .portal-action-primary:hover,
@@ -61,62 +136,56 @@ button[title^="Exportar todo o banco de dados"] {
 div.fixed.inset-0:has(input[type="email"]) button[type="submit"]:hover,
 div.fixed.z-\[1000001\].bg-white > div:last-child > button:last-child:hover,
 button[title^="Exportar todo o banco de dados"]:hover {
-  background-color: #004a29 !important;
-  color: #ffffff !important;
+  filter: brightness(.94) !important;
 }
 
-/* O botão Entrar no Portal já foi aprovado: permanece cinza. */
-#bottom-access-portal-btn {
-  background-color: #526273 !important;
-  color: #ffffff !important;
-  border-color: #526273 !important;
+/* 5) Seletor 25/50/100/Todos: sem anel/margem de seleção. */
+div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-200"] {
+  background-color: var(--portal-ice-selected) !important;
+  color: var(--portal-control-text) !important;
+  border-color: var(--portal-control-border) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
 }
 
-/* 4) QR: mantém tamanho/moldura aprovados, remove o selo central e aproxima do texto. */
-#home-page-footer-notes div:has(> img[alt="QR Code para contato pelo WhatsApp"]) > span {
-  display: none !important;
+div.fixed.z-\[1000001\].bg-white button[class*="bg-slate-50"] {
+  background-color: var(--portal-ice) !important;
+  color: var(--portal-control-text) !important;
+  border-color: #e2e8f0 !important;
 }
 
-#home-page-footer-notes div.flex:has(> div > img[alt="QR Code para contato pelo WhatsApp"]) {
-  width: fit-content !important;
-  max-width: 100% !important;
-  gap: 0.75rem !important;
-  justify-content: center !important;
-}
-
-#home-page-footer-notes div.flex:has(> div > img[alt="QR Code para contato pelo WhatsApp"]) > div:first-child {
-  flex: 0 1 250px !important;
-  max-width: 250px !important;
-}
-
-/* 5) Sidebar: manter somente Portal de TCC / Enfermagem / CCS-UFES. */
-#portal-sidebar > div:first-of-type > button > div > div > span:first-child {
-  display: none !important;
-}
-
-#portal-sidebar > div:first-of-type > button > div > div > span:nth-child(2) {
-  font-size: 0 !important;
-  line-height: 1.25 !important;
-}
-
-#portal-sidebar > div:first-of-type > button > div > div > span:nth-child(2)::after {
-  content: 'Enfermagem';
-  font-size: 10.5px !important;
-  line-height: 1.25 !important;
-}
-
-#portal-sidebar > div:first-of-type > button > div > div {
-  margin-top: 0.35rem !important;
-}
-
-/* 6) Local das apresentações: título centralizado; cartões preservam leitura. */
-#presentation-location-card > div:first-child {
-  justify-content: center !important;
+/* 6) Sidebar: conteúdo de sessão integralmente centralizado. */
+#sidebar-user-footer,
+#sidebar-user-footer > div,
+#sidebar-user-footer > div > div {
   text-align: center !important;
 }
 
-/* 7) O verde antigo #435649 não deve reaparecer em heróis de páginas públicas. */
-main [class*="bg-[#435649]"] {
-  background-color: var(--portal-brand-green) !important;
+/* O botão Entrar/Sair permanece neutro, conforme padrão aprovado da área de sessão. */
+#bottom-access-portal-btn,
+#bottom-logout-portal-btn {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
   border-color: #cbd5e1 !important;
+}
+
+/* 7) Rodapé: QR próximo do desenvolvedor; selo do WhatsApp visível e preservado. */
+#home-page-footer-notes div.flex:has(> div > img[alt="QR Code para contato pelo WhatsApp"]) {
+  width: fit-content !important;
+  max-width: 100% !important;
+  gap: 0.625rem !important;
+  justify-content: center !important;
+}
+
+#home-page-footer-notes div:has(> img[alt="QR Code para contato pelo WhatsApp"]) > span {
+  display: flex !important;
+  background-color: var(--portal-whatsapp) !important;
+}
+
+/* 8) Local das apresentações: título centralizado; cartões preservam leitura. */
+#presentation-location-card > div:first-child {
+  justify-content: center !important;
+  text-align: center !important;
 }
