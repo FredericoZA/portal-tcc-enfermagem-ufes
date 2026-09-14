@@ -4,11 +4,21 @@ const SEARCH_HINT = 'Buscar registros — pesquisa o conteúdo desta planilha';
 const SYNC_HINT = 'Sincronizar dados — recarrega os registros desta planilha';
 const SETTINGS_HINT = 'Configurar exibição — ajusta linhas por página e período';
 const DOWNLOAD_HINT = 'Baixar dados — exporta o Repositório de TCCs em CSV';
+const ACCENT = '#337959';
+const LEGACY_ACCENTS = new Set(['#47866a', 'rgb(71, 134, 106)']);
 
 function setButtonHint(button: HTMLButtonElement | null, hint: string) {
   if (!button) return;
   button.title = hint;
   button.setAttribute('aria-label', hint);
+}
+
+function normalizeLegacyInlineAccents() {
+  document.querySelectorAll<HTMLElement>('[style]').forEach((node) => {
+    if (LEGACY_ACCENTS.has(node.style.backgroundColor.toLowerCase())) node.style.backgroundColor = ACCENT;
+    if (LEGACY_ACCENTS.has(node.style.borderColor.toLowerCase())) node.style.borderColor = ACCENT;
+    if (LEGACY_ACCENTS.has(node.style.color.toLowerCase())) node.style.color = ACCENT;
+  });
 }
 
 function findRepositoryToolbar(): HTMLElement | null {
@@ -18,25 +28,27 @@ function findRepositoryToolbar(): HTMLElement | null {
   if (!heading) return null;
 
   const header = heading.parentElement?.parentElement;
-  const gear = header?.querySelector<HTMLButtonElement>('button[title*="Exibição da planilha"]');
+  const gear = header?.querySelector<HTMLButtonElement>('button[title*="Exibição da planilha"], button[aria-label^="Configurar exibição"]');
   if (!gear) return null;
   return gear.parentElement?.parentElement || null;
 }
 
 function enhanceToolbarButtons() {
+  normalizeLegacyInlineAccents();
+
   document.querySelectorAll<HTMLButtonElement>('button[title^="Buscar"], button[aria-label^="Buscar registros"]').forEach((button) =>
     setButtonHint(button, SEARCH_HINT),
   );
 
-  document.querySelectorAll<HTMLButtonElement>('button[title="Atualizar dados da tabela"], button[title*="Sincronizar"]').forEach((button) =>
+  document.querySelectorAll<HTMLButtonElement>('button[title="Atualizar dados da tabela"], button[title*="Sincronizar"], button[aria-label^="Sincronizar dados"]').forEach((button) =>
     setButtonHint(button, SYNC_HINT),
   );
 
-  document.querySelectorAll<HTMLButtonElement>('button[title*="Exibição da planilha"]').forEach((button) =>
+  document.querySelectorAll<HTMLButtonElement>('button[title*="Exibição da planilha"], button[aria-label^="Configurar exibição"]').forEach((button) =>
     setButtonHint(button, SETTINGS_HINT),
   );
 
-  const source = document.querySelector<HTMLButtonElement>('button[title^="Exportar todo o banco de dados"]');
+  const source = document.querySelector<HTMLButtonElement>('button[title^="Exportar todo o banco de dados"], button[aria-label^="Baixar dados"]:not(.portal-repository-download-toolbar)');
   if (!source) return;
 
   source.parentElement?.setAttribute('data-portal-download-source', 'true');
