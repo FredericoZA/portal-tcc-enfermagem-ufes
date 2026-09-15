@@ -5,7 +5,7 @@ on:
     branches:
       - update-33-restricted-area
     paths:
-      - scripts/apply-update33.mjs
+      - scripts/apply-update33-fix.mjs
 
 permissions:
   contents: write
@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 22
       - name: Aplicar alterações da atualização 33
-        run: node scripts/apply-update33.mjs
+        run: node scripts/apply-update33-fix.mjs
       - name: Commitar alterações
         run: |
           git config user.name "github-actions[bot]"
