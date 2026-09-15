@@ -44,10 +44,16 @@ test('Presidência é o contato único de recuperação do Master',async()=>{
   assert.ok(!accounts.includes('setRecoveryEmails'));
 });
 
-test('replicação institucional voltou sem compartilhar dados e segredos',async()=>{
+test('replicação pública oferece código e apenas cópias seguras de modelos',async()=>{
   const [app,sidebar,page]=await Promise.all([source('src/App.tsx'),source('src/components/Sidebar.tsx'),source('src/pages/PortalReplicationPage.tsx')]);
   assert.ok(app.includes("case 'replicar'"));
   assert.ok(sidebar.includes("Replicar Portal"));
-  assert.ok(page.includes('Nunca copie dados e segredos'));
-  assert.ok(page.includes('Cada curso usa banco, Drive, OAuth, segredos e contas próprios'));
+  assert.ok(page.includes('Código do Portal'));
+  assert.ok(page.includes('Modelos do Google Drive'));
+  assert.ok(page.includes('safeGoogleCopyUrl'));
+  assert.ok(page.includes("/copy`"));
+  assert.ok(!page.includes('Nunca copie dados e segredos'));
+  assert.ok(!page.includes('Cada curso usa banco, Drive, OAuth, segredos e contas próprios'));
+  assert.ok(!page.includes('SUPABASE_SECRET_KEY'));
+  assert.ok(!page.includes('GOOGLE_OAUTH_CLIENT_SECRET'));
 });
