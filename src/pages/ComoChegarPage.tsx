@@ -20,10 +20,10 @@ const ExternalAction: React.FC<{
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#2d6c50] bg-[#337959] px-3 py-2 text-[10px] font-extrabold uppercase tracking-wide text-white shadow-sm transition hover:brightness-95"
+    className="flex w-full items-center gap-2 rounded-xl border border-[#2d6c50] bg-[#337959] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wide text-white shadow-sm transition hover:brightness-95"
   >
     <Icon className="h-4 w-4 shrink-0" />
-    <span>{label}</span>
+    <span className="min-w-0 flex-1 text-left leading-4">{label}</span>
     <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-80" />
   </a>
 );
@@ -43,7 +43,7 @@ export const ComoChegarPage: React.FC = () => {
         </div>
       </section>
 
-      <section className="grid gap-3 rounded-2xl border border-slate-300 bg-[#f0f0f0] p-3 shadow-sm lg:grid-cols-[minmax(0,1.2fr)_minmax(360px,.95fr)] lg:items-center sm:p-4">
+      <section className="grid gap-2.5 rounded-2xl border border-slate-300 bg-[#f0f0f0] p-3 shadow-sm sm:p-4 lg:grid-cols-[minmax(0,1fr)_170px] lg:items-stretch">
         <div className="flex min-w-0 items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-3">
           <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[#337959]" />
           <div className="min-w-0">
@@ -53,7 +53,7 @@ export const ComoChegarPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-3">
+        <div className="flex flex-col justify-center gap-1.5">
           <ExternalAction href={GOOGLE_MAPS_ROUTE} label="Google Maps" icon={MapPin} />
           <ExternalAction href={WAZE_ROUTE} label="Waze" icon={Navigation} />
           <ExternalAction href={UFES_MAP} label="Mapa da UFES" icon={MapIcon} />
