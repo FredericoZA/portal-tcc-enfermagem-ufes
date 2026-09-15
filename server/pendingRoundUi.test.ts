@@ -21,16 +21,19 @@ test('comissão reúne ações e QR Code sem duplicar personalização do símbo
   assert.ok(!panel.includes('ADICIONAR / SUBSTITUIR SÍMBOLO'));
 });
 
-test('configurações não exibem blocos redundantes e monitor fica em Indicadores', async () => {
-  const [config, infrastructure, indicators] = await Promise.all([
+test('configurações não exibem blocos redundantes e Indicadores usam somente dados públicos agregados', async () => {
+  const [config, infrastructure, indicators, publicApi] = await Promise.all([
     source('src/pages/ConfiguracoesPage.tsx'),
     source('src/components/InfrastructureIntegrationsPanel.tsx'),
-    source('src/pages/IndicadoresPage.tsx')
+    source('src/pages/IndicadoresPage.tsx'),
+    source('api/public-indicators.ts')
   ]);
   assert.ok(!config.includes('<OperationsMonitorPanel'));
   assert.ok(!config.includes('Drive gerenciado pelo servidor.'));
   assert.ok(!infrastructure.includes('Central segura de integrações'));
-  assert.ok(indicators.includes('<OperationsMonitorPanel'));
+  assert.ok(!indicators.includes('<OperationsMonitorPanel'));
+  assert.ok(indicators.includes('/api/public/indicators'));
+  assert.ok(publicApi.includes('containsPersonalData:false'));
 });
 
 test('paleta principal usa musgo, cinza e contraste claro sem oliva fluorescente', async () => {
