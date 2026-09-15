@@ -145,6 +145,7 @@ export default function App() {
                   : currentTab === 'home' ? 'Página Inicial Pública'
                   : currentTab === 'tutorial' ? 'Como usar o Portal'
                   : currentTab === 'replicar' ? 'Replicar o Portal'
+                  : currentTab === 'como-chegar' ? 'Como chegar'
                   : currentTab === 'acessar-portal' ? 'Acesso ao Portal'
                   : currentTab === 'meus-processos' ? 'Meus Trabalhos de TCC'
                   : currentTab === 'novo-processo' ? 'Cadastrar Trabalho de TCC'
@@ -154,7 +155,7 @@ export default function App() {
                   : currentTab === 'coordenador' ? 'Área do Presidente'
                   : currentTab === 'configuracoes' ? 'Configurações & Modelos de Arquivos'
                   : (currentTab === 'analise' || currentTab === 'indicadores') ? 'Indicadores'
-                  : 'Local das Defesas'
+                  : 'Portal de TCC'
               }
             />
 
@@ -162,7 +163,7 @@ export default function App() {
               <PortalErrorBoundary key={currentTab}><Suspense fallback={<PageLoadingFallback />}>{renderMainTab()}</Suspense></PortalErrorBoundary>
             </main>
 
-            <Footer showLocationDirections={currentTab === 'home'} />
+            <Footer />
           </div>
         </div>
 
