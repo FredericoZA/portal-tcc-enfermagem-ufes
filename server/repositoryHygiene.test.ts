@@ -33,10 +33,16 @@ test('tutorial legado é somente um adaptador para a página canônica', async (
   assert.ok(!legacy.includes('PROFILE_ROWS'));
 });
 
-test('tutorial público não promete dados sensíveis nem documentos privados', async () => {
+test('tutorial público segue o padrão compacto por perfil sem blocos institucionais redundantes', async () => {
   const tutorial = await source('src/pages/PortalTutorialPage.tsx');
-  assert.ok(tutorial.includes('não fazem parte do contrato público'));
-  assert.ok(tutorial.includes('sincronização bem-sucedida da publicação'));
+  assert.ok(tutorial.includes('Como usar o Portal de TCC'));
+  assert.ok(tutorial.includes('portal-table-filter-chip'));
+  assert.ok(tutorial.includes("title: 'Aluno'"));
+  assert.ok(tutorial.includes("title: 'Orientador'"));
+  assert.ok(tutorial.includes("title: 'Presidente da Comissão'"));
+  assert.ok(tutorial.includes("title: 'Visitante'"));
+  assert.ok(!tutorial.includes('Dados protegidos'));
+  assert.ok(!tutorial.includes('Informação acadêmica pública'));
   assert.ok(!tutorial.includes('Número do TCC, nome do trabalho, nomes completos, matrícula dos alunos'));
   assert.ok(!tutorial.includes('documentos institucionais permanecem públicos'));
   assert.ok(!tutorial.includes('Acesse os documentos públicos do processo: convite, ata, autorização e declaração'));
