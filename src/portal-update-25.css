@@ -1,0 +1,17 @@
+/*
+ * Atualização 25 — preserva alvos interativos mínimos após a compactação visual.
+ * WCAG 2.2 AA (Target Size Minimum): controles acionáveis devem manter ao menos 24x24 CSS px,
+ * salvo exceções específicas. Usamos 1.5rem (=24px com raiz padrão de 16px).
+ */
+.portal-search-popover > div:first-child button,
+.portal-search-popover > div:nth-child(2) > div:last-child button {
+  min-height: 1.5rem !important;
+  min-width: 1.5rem !important;
+}
+
+.portal-modal-surface button:not([aria-label*="Fechar"]),
+div.fixed.inset-0 > div[class*="bg-white"] button:not([aria-label*="Fechar"]),
+div.fixed.inset-0 > div[class*="bg-slate-100"] button:not([aria-label*="Fechar"]),
+div.fixed.z-\[1000001\][class*="bg-white"] button:not([aria-label*="Fechar"]) {
+  min-height: 1.5rem !important;
+}
