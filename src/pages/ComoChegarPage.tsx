@@ -7,6 +7,7 @@ import { loadSiteLayoutConfig } from '../utils/siteLayoutConfig';
 
 const GOOGLE_MAPS_ROUTE = 'https://www.google.com/maps/dir/?api=1&destination=-20.2997267,-40.3195203';
 const GOOGLE_MAPS_PLACE = 'https://www.google.com/maps/place/Departamento+de+Enfermagem/@-20.2997265,-40.3203702,18z/data=!4m6!3m5!1s0xb83d1ed6851f7f:0x3cd473ff2da6bb32!8m2!3d-20.2997267!4d-40.3195203!16s%2Fg%2F11g49sdt1t?entry=ttu';
+const GOOGLE_MAPS_EMBED = 'https://www.google.com/maps?q=-20.2997267,-40.3195203&z=18&t=k&output=embed';
 const WAZE_ROUTE = 'https://waze.com/ul?ll=-20.2997267%2C-40.3195203&navigate=yes';
 const UFES_MAP = 'https://mapa.ufes.br/?campus=maruipe';
 
@@ -66,23 +67,29 @@ export const ComoChegarPage: React.FC = () => {
       </section>
 
       <section className="grid gap-3 lg:grid-cols-[1.45fr_.85fr]">
-        <a
-          href={GOOGLE_MAPS_PLACE}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group overflow-hidden rounded-2xl border border-slate-300 bg-[#f0f0f0] shadow-sm"
-          title="Abrir o ponto do Departamento de Enfermagem no Google Maps"
-        >
-          <img
-            src="/como-chegar-campus.jpg"
-            alt="Mapa aéreo do Campus de Maruípe com o Departamento de Enfermagem marcado"
-            className="block aspect-video w-full object-cover"
+        <div className="overflow-hidden rounded-2xl border border-slate-300 bg-[#f0f0f0] shadow-sm">
+          <iframe
+            title="Mapa do Campus de Maruípe com o Departamento de Enfermagem"
+            src={GOOGLE_MAPS_EMBED}
+            className="block aspect-video w-full border-0 bg-slate-200"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
           />
           <div className="flex items-center justify-between gap-3 px-3 py-2 text-[10px] font-semibold text-slate-600">
-            <span>Vista do Campus de Maruípe com o Departamento de Enfermagem marcado.</span>
-            <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[#337959]" />
+            <span>Mapa interativo em modo satélite com o Departamento de Enfermagem marcado.</span>
+            <a
+              href={GOOGLE_MAPS_PLACE}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[#337959] hover:underline"
+              title="Abrir o ponto do Departamento de Enfermagem no Google Maps"
+            >
+              Abrir mapa
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+            </a>
           </div>
-        </a>
+        </div>
 
         <div className="space-y-2 rounded-2xl border border-slate-300 bg-[#f0f0f0] p-3 shadow-sm">
           <h2 className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
