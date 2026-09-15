@@ -91,11 +91,11 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   sidebarLogoType: 'custom',
   sidebarCustomLogoUrl: '',
   sidebarNavLabels: {
-    home: 'Calendário', biblioteca: 'Repositório', tutorial: 'Como usar', replicar: 'Replicar Portal',
+    home: 'Calendário', biblioteca: 'Repositório', 'como-chegar': 'Como chegar', tutorial: 'Como usar', replicar: 'Replicar Portal',
     'meus-processos': 'Meus TCCs', coordenador: 'Área do Presidente', configuracoes: 'Configurações', indicadores: 'Indicadores'
   },
   sidebarNavEmojis: {
-    home: '📅', biblioteca: '📚', tutorial: '❓', replicar: '🧩', 'meus-processos': '📋', coordenador: '🏛️', configuracoes: '⚙️', indicadores: '📊'
+    home: '📅', biblioteca: '📚', 'como-chegar': '📍', tutorial: '❓', replicar: '🧩', 'meus-processos': '📋', coordenador: '🏛️', configuracoes: '⚙️', indicadores: '📊'
   },
   sidebarIconMode: 'emoji', sidebarSessionLabel: 'Sessão ativa', sidebarLocationText: 'Campus de Maruípe · Vitória/ES',
   sidebarBgColor: PORTAL_COLORS.deepGreen,
@@ -104,7 +104,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   sidebarTitleColor: '#ffffff', sidebarSubtitleColor: PORTAL_COLORS.popupMoss,
   sidebarActiveBgColor: PORTAL_COLORS.sidebarActive, sidebarActiveTextColor: '#ffffff', sidebarActiveBorderColor: '#cbd5d1',
   sidebarDividerColor: PORTAL_COLORS.divider, sidebarDividerStyle: 'solid', sidebarShowDividers: true,
-  sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'indicadores', 'DIVIDER_2', 'tutorial', 'replicar'],
+  sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'indicadores', 'DIVIDER_2', 'como-chegar', 'tutorial', 'replicar'],
   footerLocationText: 'Departamento de Enfermagem · CCS/UFES · Campus de Maruípe · Vitória/ES',
   footerPresidentLabel: 'Presidente da Comissão', footerPresidentName: '', footerMembersLabel: 'Membros da Comissão', footerMembersList: [],
   footerDevTitle: 'Desenvolvimento da Plataforma e Suporte', footerDevName: '', footerWhatsappLabel: 'WhatsApp Secretaria', footerWhatsappUrl: '', footerContactEmail: '',
@@ -126,10 +126,11 @@ function migrateColor(value: unknown, fallback?: string): string | undefined {
   return LEGACY_COLORS[value.toLowerCase()] || value;
 }
 function canonicalSidebarOrder(rawOrder: unknown): string[] {
-  const allowed = new Set(['home','biblioteca','DIVIDER_1','meus-processos','coordenador','configuracoes','indicadores','DIVIDER_2','tutorial','replicar']);
+  const allowed = new Set(['home','biblioteca','DIVIDER_1','meus-processos','coordenador','configuracoes','indicadores','DIVIDER_2','como-chegar','tutorial','replicar']);
   const stored = Array.isArray(rawOrder) ? rawOrder.filter((item): item is string => typeof item === 'string' && allowed.has(item)) : [];
   const order = stored.length ? [...stored] : [...(DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavOrder || [])];
   if (!order.includes('indicadores')) { const i=order.indexOf('configuracoes'); order.splice(i>=0?i+1:order.length,0,'indicadores'); }
+  if (!order.includes('como-chegar')) { const i=order.indexOf('tutorial'); order.splice(i>=0?i:order.length,0,'como-chegar'); }
   if (!order.includes('replicar')) order.push('replicar');
   return Array.from(new Set(order));
 }
@@ -162,8 +163,8 @@ function normalizeVisualConfig(parsed: any): SiteLayoutConfig {
     sidebarActiveTextColor:'#ffffff',
     sidebarActiveBorderColor:migrateColor(parsed?.sidebarActiveBorderColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarActiveBorderColor), sidebarDividerColor:migrateColor(parsed?.sidebarDividerColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarDividerColor),
     sidebarNavOrder:canonicalSidebarOrder(parsed?.sidebarNavOrder),
-    sidebarNavLabels:{...DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavLabels,...(parsed?.sidebarNavLabels||{}),indicadores:'Indicadores',replicar:'Replicar Portal'},
-    sidebarNavEmojis:{...DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavEmojis,...(parsed?.sidebarNavEmojis||{}),indicadores:'📊',replicar:'🧩'},
+    sidebarNavLabels:{...DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavLabels,...(parsed?.sidebarNavLabels||{}),'como-chegar':'Como chegar',indicadores:'Indicadores',replicar:'Replicar Portal'},
+    sidebarNavEmojis:{...DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavEmojis,...(parsed?.sidebarNavEmojis||{}),'como-chegar':'📍',indicadores:'📊',replicar:'🧩'},
     footerMembersList:Array.isArray(parsed?.footerMembersList)?parsed.footerMembersList:[], footerBgColor:migrateColor(parsed?.footerBgColor,DEFAULT_SITE_LAYOUT_CONFIG.footerBgColor),
     footerTextColor:migrateColor(parsed?.footerTextColor,DEFAULT_SITE_LAYOUT_CONFIG.footerTextColor), footerMutedTextColor:migrateColor(parsed?.footerMutedTextColor,DEFAULT_SITE_LAYOUT_CONFIG.footerMutedTextColor),
     footerBorderColor:migrateColor(parsed?.footerBorderColor,DEFAULT_SITE_LAYOUT_CONFIG.footerBorderColor), footerDividerColor:migrateColor(parsed?.footerDividerColor,DEFAULT_SITE_LAYOUT_CONFIG.footerDividerColor),
