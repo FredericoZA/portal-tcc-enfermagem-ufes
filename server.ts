@@ -1740,6 +1740,20 @@ export async function createPortalApp() {
 
     try { req.body = { ...req.body, ...acceptRegistration(req.body, currentSettings.integrationStudio) }; }
     catch (error) { return res.status(400).json({ error: error instanceof Error ? error.message : 'Cadastro inválido.' }); }
+
+    const requestedStudentEmails = [req.body?.aluno1?.email, req.body?.aluno2?.email]
+      .map((value) => normalizeEmail(String(value || '')))
+      .filter(Boolean);
+    const duplicateStudentEmail = requestedStudentEmails.find((studentEmail) => processesStore.some((process) =>
+      normalizeEmail(process.aluno1?.email || '') === studentEmail
+      || normalizeEmail(process.aluno2?.email || '') === studentEmail
+    ));
+    if (duplicateStudentEmail) {
+      return res.status(409).json({
+        error: 'Cada aluno pode participar como autor de apenas um TCC. Já existe um TCC cadastrado para um dos alunos informados.',
+        code: 'STUDENT_TCC_ALREADY_EXISTS'
+      });
+    }
     const {
       aluno1,
       aluno2,

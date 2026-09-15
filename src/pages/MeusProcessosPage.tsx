@@ -359,6 +359,8 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     return counts;
   }, [processes, userEmail, memberships]);
 
+  const canCreateStudentTcc = roleCounts.ALUNO === 0;
+
   // Available categories depending on user privileges (4 for Master/Presidente, 3 for standard users)
   const availableCategories: ProcessRoleCategory[] = React.useMemo(() => {
     if (isMasterAdmin || (roleCounts.VISUALIZADOR > 0)) {
@@ -832,7 +834,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                   textFormat={meusProcessosTextFormat}
                 />
 
-                {processes.length > 0 && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false && (
+                {processes.length > 0 && canCreateStudentTcc && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false && (
                   <button
                     id="meus-processos-btn-novo"
                     type="button"
