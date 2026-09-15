@@ -1,0 +1,50 @@
+/*
+ * Atualização 27 — foco visual dos campos.
+ * Regra aprovada: ao clicar/digitar, os campos permanecem visualmente iguais ao estado normal.
+ * Remove outline/ring escuro e preserva a superfície branca e a borda clara dos inputs.
+ */
+:root {
+  --portal-input-border-27: #cbd5e1;
+}
+
+.portal-modal-surface input:not([type="checkbox"]):not([type="radio"]),
+.portal-modal-surface textarea,
+.portal-search-popover input,
+.portal-search-popover textarea,
+div.fixed.inset-0 input:not([type="checkbox"]):not([type="radio"]),
+div.fixed.inset-0 textarea,
+div.fixed.z-\[1000001\] input:not([type="checkbox"]):not([type="radio"]),
+div.fixed.z-\[1000001\] textarea {
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-offset-color: transparent !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+}
+
+.portal-modal-surface input:not([type="checkbox"]):not([type="radio"]):focus,
+.portal-modal-surface input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+.portal-modal-surface textarea:focus,
+.portal-modal-surface textarea:focus-visible,
+.portal-search-popover input:focus,
+.portal-search-popover input:focus-visible,
+.portal-search-popover textarea:focus,
+.portal-search-popover textarea:focus-visible,
+div.fixed.inset-0 input:not([type="checkbox"]):not([type="radio"]):focus,
+div.fixed.inset-0 input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+div.fixed.inset-0 textarea:focus,
+div.fixed.inset-0 textarea:focus-visible,
+div.fixed.z-\[1000001\] input:not([type="checkbox"]):not([type="radio"]):focus,
+div.fixed.z-\[1000001\] input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+div.fixed.z-\[1000001\] textarea:focus,
+div.fixed.z-\[1000001\] textarea:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: var(--portal-input-border-27) !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-offset-color: transparent !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  filter: none !important;
+}
