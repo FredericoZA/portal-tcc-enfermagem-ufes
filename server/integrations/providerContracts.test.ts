@@ -89,11 +89,15 @@ test('contrato Vercel encaminha API ao handler e SPA ao build estático', () => 
   const packageJson=JSON.parse(readFileSync(new URL('../../package.json',import.meta.url),'utf8'));
   const viteConfig=readFileSync(new URL('../../vite.config.ts',import.meta.url),'utf8');
   const serverSource=readFileSync(new URL('../../server.ts',import.meta.url),'utf8');
-  assert.equal(config.rewrites[0].source,'/api/(.*)');
-  assert.equal(config.rewrites[0].destination,'/api/index');
+  const genericApiRewrite=config.rewrites.find((rewrite:any)=>rewrite.source==='/api/(.*)');
+  const replicationRewrite=config.rewrites.find((rewrite:any)=>rewrite.source==='/api/public/replication-models/:slug/download');
+  assert.equal(genericApiRewrite?.destination,'/api/index');
+  assert.equal(replicationRewrite?.destination,'/api/replication-model?slug=:slug');
+  assert.ok(config.rewrites.indexOf(replicationRewrite)<config.rewrites.indexOf(genericApiRewrite));
   assert.equal(config.rewrites.at(-1).destination,'/index.html');
   assert.equal(config.outputDirectory,'dist/client');
   assert.equal(config.functions['api/index.ts'].maxDuration,300);
+  assert.equal(config.functions['api/replication-model.ts'].maxDuration,60);
   assert.deepEqual(config.crons,[{path:'/api/cron/storage-cleanup',schedule:'17 3 * * *'}]);
   assert.match(packageJson.scripts.build,/--outfile=dist\/server\/server\.cjs/);
   assert.doesNotMatch(packageJson.scripts.build,/--sourcemap/);
