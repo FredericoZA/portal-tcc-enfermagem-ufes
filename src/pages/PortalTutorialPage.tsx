@@ -81,30 +81,34 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
 
   return (
     <div id="portal-tutorial-page" className="mx-auto max-w-5xl space-y-3 py-2">
-      <section className="flex flex-col gap-3 rounded-2xl border border-emerald-900/80 bg-[#005830] px-3.5 py-3 text-white shadow-sm lg:flex-row lg:items-center lg:justify-between sm:px-4">
+      <section className="rounded-2xl border border-emerald-900/80 bg-[#005830] px-3 py-2 text-white shadow-sm sm:px-4 sm:py-2.5">
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white shadow-2xs" aria-hidden="true">
             <HelpCircle className="h-4 w-4 text-slate-700" />
           </span>
-          <h1 className="text-sm font-black uppercase tracking-tight text-white sm:text-base">Como usar o Portal de TCC</h1>
+          <h1 className="text-base font-black uppercase tracking-tight text-white sm:text-lg">Como usar o Portal de TCC</h1>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-50">Filtrar visão:</span>
-          {(Object.keys(roleContent) as Role[]).map((key) => {
-            const selected = role === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                data-selected={selected ? 'true' : 'false'}
-                onClick={() => setRole(key)}
-                className="portal-table-filter-chip min-h-8 rounded-full border border-slate-300 px-3 py-1.5 text-[11px] font-black text-slate-900 transition-none"
-              >
-                {roleContent[key].title}
-              </button>
-            );
-          })}
+        <div className="mt-2 pt-1.5 border-t border-white/25 flex flex-wrap items-center gap-2 text-xs min-w-0 w-full">
+          <span className="text-[10px] opacity-80 font-black uppercase tracking-wider shrink-0">Filtrar visão:</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {(Object.keys(roleContent) as Role[]).map((key) => {
+              const selected = role === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setRole(key)}
+                  data-selected={selected ? 'true' : 'false'}
+                  className={`portal-table-filter-chip inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide cursor-pointer transition-all border select-none ${
+                    selected ? 'shadow-xs scale-[1.02]' : 'opacity-85 hover:opacity-100'
+                  }`}
+                >
+                  <span>{roleContent[key].title}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 

@@ -117,7 +117,7 @@ export const FluxoTccPage: React.FC = () => (
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white shadow-2xs" aria-hidden="true">
           <GitBranch className="h-4 w-4 text-slate-700" />
         </span>
-        <h1 className="text-sm font-black uppercase tracking-tight text-white sm:text-base">Fluxo completo do TCC</h1>
+        <h1 className="text-sm font-black uppercase tracking-tight text-white sm:text-base">Fluxo do TCC</h1>
       </div>
     </section>
 
