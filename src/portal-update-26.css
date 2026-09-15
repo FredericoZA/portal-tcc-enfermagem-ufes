@@ -1,0 +1,82 @@
+/*
+ * Atualização 26 — hierarquia de superfícies e destaque da barra lateral.
+ * Regra aprovada:
+ * - fundo das planilhas permanece inalterado;
+ * - pop-ups usam a mesma base clara percebida nas planilhas (#f0f0f0);
+ * - campos de preenchimento ficam brancos (#ffffff), claramente acima da superfície;
+ * - “Enfermagem” usa um verde muito vivo para chamar atenção.
+ */
+:root {
+  --portal-sheet-surface-26: #f0f0f0;
+  --portal-popup-surface-26: #f0f0f0;
+  --portal-input-surface-26: #ffffff;
+  --portal-sidebar-vivid-26: #74ff96;
+}
+
+/* Barra lateral: subtítulo realmente vivo, sem alterar os demais verdes do Portal. */
+#portal-sidebar h1 + div,
+#portal-sidebar h1 + div > span {
+  color: var(--portal-sidebar-vivid-26) !important;
+}
+
+#portal-sidebar h1 + div > span {
+  -webkit-text-stroke: .18px rgba(210,255,220,.78) !important;
+  paint-order: stroke fill;
+  text-shadow:
+    0 0 3px rgba(116,255,150,.48),
+    0 1px 1px rgba(0,0,0,.20) !important;
+}
+
+/* Pop-ups: mesma superfície clara das planilhas. Cabeçalhos verdes continuam intocados. */
+.portal-modal-surface,
+.portal-search-popover,
+div.fixed.inset-0 > div[class*="bg-white"],
+div.fixed.inset-0 > div[class*="bg-slate-100"],
+div.fixed.z-\[1000001\][class*="bg-white"] {
+  background-color: var(--portal-popup-surface-26) !important;
+}
+
+/* Conteúdo principal dos pop-ups acompanha a mesma base, sem criar faixas brancas aleatórias. */
+.portal-search-popover > div:nth-child(2),
+.portal-modal-surface > div:not(.portal-modal-header),
+div.fixed.inset-0 > div[class*="bg-white"] > form,
+div.fixed.inset-0 > div[class*="bg-white"] > form > div,
+div.fixed.inset-0 > div[class*="bg-slate-100"] > form,
+div.fixed.z-\[1000001\][class*="bg-white"] > div:nth-child(2),
+div.fixed.z-\[1000001\][class*="bg-white"] > div:last-child {
+  background-color: var(--portal-popup-surface-26) !important;
+}
+
+/* Campos de preenchimento: branco real para criar a hierarquia vista na engrenagem. */
+.portal-modal-surface input:not([type="checkbox"]):not([type="radio"]),
+.portal-modal-surface textarea,
+.portal-search-popover input,
+.portal-search-popover textarea,
+div.fixed.inset-0 input:not([type="checkbox"]):not([type="radio"]),
+div.fixed.inset-0 textarea,
+div.fixed.z-\[1000001\] input:not([type="checkbox"]):not([type="radio"]),
+div.fixed.z-\[1000001\] textarea {
+  background-color: var(--portal-input-surface-26) !important;
+  background-image: none !important;
+}
+
+/* Datas e e-mail também permanecem explicitamente brancos, inclusive quando o navegador aplica aparência própria. */
+div.fixed input[type="email"],
+div.fixed input[type="text"],
+div.fixed input[type="search"],
+div.fixed input[type="date"],
+div.fixed input[type="number"],
+div.fixed input[type="password"],
+div.fixed input[type="tel"],
+div.fixed input[type="url"] {
+  background-color: var(--portal-input-surface-26) !important;
+}
+
+/* Preserva a compactação já aprovada: nenhuma margem vertical adicional em campos/labels. */
+.portal-modal-surface :is(input, textarea, label),
+.portal-search-popover :is(input, textarea, label),
+div.fixed.inset-0 :is(input, textarea, label),
+div.fixed.z-\[1000001\] :is(input, textarea, label) {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
