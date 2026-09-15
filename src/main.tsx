@@ -9,6 +9,7 @@ import './portal-final-fixes.css';
 import './portal-update-20.css';
 import './portal-update-21.css';
 import './portal-update-22.css';
+import './portal-update-23.css';
 
 import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
 
