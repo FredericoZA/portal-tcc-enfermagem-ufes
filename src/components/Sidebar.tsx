@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   Copy,
   FileText,
+  GitBranch,
   HelpCircle,
   LogIn,
   LogOut,
@@ -80,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   const [isHovered, setIsHovered] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
-  const appVersion = String((import.meta as any).env?.VITE_APP_VERSION || '1.0.17');
+  const appVersion = String((import.meta as any).env?.VITE_APP_VERSION || '0.0.0');
   const buildCommit = String((import.meta as any).env?.VITE_GIT_COMMIT || '').slice(0, 7);
   const [userLocation, setUserLocation] = useState('Obtendo localização do usuário…');
 
@@ -176,21 +177,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             biblioteca: { id: 'biblioteca', label: getNavLabel('biblioteca', 'Repositório'), icon: BookOpen, emoji: '📚', visible: true },
             'como-chegar': { id: 'como-chegar', label: getNavLabel('como-chegar', 'Como chegar'), icon: MapPin, emoji: getNavEmoji('como-chegar', '📍'), visible: true },
             tutorial: { id: 'tutorial', label: getNavLabel('tutorial', 'Como usar'), icon: HelpCircle, emoji: '❓', visible: true },
+            'fluxo-tcc': { id: 'fluxo-tcc', label: getNavLabel('fluxo-tcc', 'Fluxo do TCC'), icon: GitBranch, emoji: getNavEmoji('fluxo-tcc', '🔀'), visible: true },
             'meus-processos': { id: 'meus-processos', label: getNavLabel('meus-processos', 'Meus TCCs'), icon: FileText, emoji: '📋', visible: !isVisitor },
             coordenador: { id: 'coordenador', label: getNavLabel('coordenador', 'Área do Presidente'), icon: Award, emoji: '🏛️', visible: isMasterAdmin && !isVisitor },
             configuracoes: { id: 'configuracoes', label: getNavLabel('configuracoes', 'Configurações'), icon: Settings, emoji: '⚙️', visible: isMasterAdmin && !isVisitor },
             analise: { id: 'analise', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: getNavEmoji('indicadores', '📊'), visible: isMasterAdmin && !isVisitor },
             replicar: { id: 'replicar', label: getNavLabel('replicar', 'Replicar Portal'), icon: Copy, emoji: getNavEmoji('replicar', '🧩'), visible: true }
           };
-          const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0 ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'assinaturas'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key) : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'analise', 'DIVIDER_2', 'como-chegar', 'tutorial', 'replicar'];
+          const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0 ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'assinaturas'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key) : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'analise', 'DIVIDER_2', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'];
           const order = [...configuredOrder];
           if (!order.includes('analise')) { const settingsIndex = order.indexOf('configuracoes'); order.splice(settingsIndex >= 0 ? settingsIndex + 1 : order.length, 0, 'analise'); }
           if (!order.includes('como-chegar')) { const tutorialIndex = order.indexOf('tutorial'); order.splice(tutorialIndex >= 0 ? tutorialIndex : order.length, 0, 'como-chegar'); }
+          if (!order.includes('fluxo-tcc')) { const replicationIndex = order.indexOf('replicar'); order.splice(replicationIndex >= 0 ? replicationIndex : order.length, 0, 'fluxo-tcc'); }
           if (!order.includes('replicar')) order.push('replicar');
           return order.map((itemKey, idx) => {
             if (itemKey.startsWith('DIVIDER')) { if (layoutConfig.sidebarShowDividers === false || layoutConfig.sidebarDividerStyle === 'none') return null; return <div key={`${itemKey}-${idx}`} className="my-2.5 pt-0.5 border-t transition-colors" style={{ borderColor: layoutConfig.sidebarDividerColor || '#365349', borderStyle: layoutConfig.sidebarDividerStyle || 'solid' }} />; }
             const item = allNavMap[itemKey]; if (!item || !item.visible) return null; const Icon = item.icon; const isActive = currentTab === item.id || (item.id === 'home' && currentTab === 'calendario');
-            return <button key={item.id} id={`nav-item-${item.id}`} onClick={() => handleNav(item.id)} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-left cursor-pointer ${isActive ? 'font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || '#344125',color: layoutConfig.sidebarActiveTextColor || '#ffffff',borderLeft: `3px solid ${layoutConfig.sidebarActiveBorderColor || '#aeb7b2'}`,paddingLeft: '0.75rem'} : { color: layoutConfig.sidebarTextColor || '#f8fafc' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
+            return <button key={item.id} id={`nav-item-${item.id}`} onClick={() => handleNav(item.id)} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border-2 outline-none focus-visible:ring-2 focus-visible:ring-[#337959] focus-visible:ring-offset-1 focus-visible:ring-offset-[#06372d] font-bold text-xs uppercase tracking-wider transition-all text-left cursor-pointer ${isActive ? 'font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || '#154d41',color: layoutConfig.sidebarActiveTextColor || '#ffffff',borderColor: layoutConfig.sidebarActiveBorderColor || '#337959'} : { color: layoutConfig.sidebarTextColor || '#f8fafc', borderColor: 'transparent' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
           });
         })()}
       </nav>
