@@ -1,0 +1,32 @@
+/* Atualização 32 — correções da navegação lateral e do filtro do guia público. */
+
+/*
+ * A Atualização 31 transformou a borda ativa em um contorno completo.
+ * O padrão aprovado é a aba lateral: somente a borda esquerda, verde,
+ * acompanhada da sombra que cria a sensação de profundidade.
+ */
+#sidebar-nav > button {
+  border-width: 0 !important;
+}
+
+#sidebar-nav > button[style*="background-color"] {
+  border: 0 !important;
+  border-left: 3px solid #337959 !important;
+  padding-left: 0.75rem !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), -1px 0 2px rgba(51, 121, 89, 0.24) !important;
+}
+
+/* Mantém a indicação de foco sem substituir a aba lateral. */
+#sidebar-nav > button[style*="background-color"]:focus-visible {
+  border-left-color: #337959 !important;
+}
+
+/*
+ * Como usar: mesma leitura visual das barras das planilhas — título,
+ * linha divisória branca e, com um respiro curto, a faixa de filtros.
+ */
+#portal-tutorial-page > section:first-child > div:nth-child(2) {
+  border-top-color: #ffffff !important;
+  margin-top: 0.5rem !important;
+  padding-top: 0.5rem !important;
+}
