@@ -1,0 +1,23 @@
+/* Atualização 33 — áreas restritas e indicadores públicos. */
+
+.portal-restricted-toolbar-wide{min-width:126px!important;width:auto!important;padding-left:14px!important;padding-right:14px!important;gap:6px!important;}
+.portal-sign-bulk-btn{min-width:82px!important;width:auto!important;padding-left:10px!important;padding-right:10px!important;gap:5px!important;}
+.portal-sign-provider-btn{display:inline-flex;min-height:28px;align-items:center;justify-content:center;gap:4px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:4px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:#1f2937;box-shadow:0 1px 2px rgba(15,23,42,.08);}
+.portal-sign-provider-btn:hover:not(:disabled){background:#f0f0f0}.portal-sign-provider-btn:disabled{cursor:not-allowed;opacity:.45}
+
+/* Filtros das tabelas restritas seguem o mesmo vocabulário do calendário. */
+#meus-processos-page-container .portal-standard-filter-chip,
+#coordenador-page-root .portal-standard-filter-chip{background:#fff!important;border-color:#cbd5e1!important;color:#1f2937!important;box-shadow:none!important;transform:none!important;opacity:1!important;}
+#meus-processos-page-container .portal-standard-filter-chip[class*="scale"],
+#coordenador-page-root .portal-standard-filter-chip[class*="scale"]{background:#AEB0B3!important;border-color:#979a9d!important;color:#111827!important;}
+#meus-processos-page-container section>div>div:first-child,
+#coordenador-page-root section>div>div:first-child{border-bottom-width:2px!important;}
+#meus-processos-page-container section>div>div:first-child>div:last-child,
+#coordenador-page-root section>div>div:first-child>div:last-child{margin-top:0!important;margin-bottom:0!important;}
+
+/* Studio compacto: reduz deslocamento sem alterar os editores funcionais. */
+.portal-studio{margin-bottom:.5rem!important}.portal-studio>div:last-child{padding:.75rem!important}.portal-studio .space-y-4{gap:.5rem!important}.portal-studio article{scroll-margin-top:8px}.portal-studio [class*="rounded-2xl"]{box-shadow:0 1px 3px rgba(15,23,42,.08)}
+
+.portal-backup-action{height:32px!important;margin:0!important;}
+#indicadores-publicos-page table th{background:#005830!important;color:#fff!important;}
+#portal-personalization-hub table thead{background:#005830!important;}

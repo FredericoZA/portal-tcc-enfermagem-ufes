@@ -104,7 +104,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   sidebarTitleColor: '#ffffff', sidebarSubtitleColor: PORTAL_COLORS.popupMoss,
   sidebarActiveBgColor: PORTAL_COLORS.sidebarActive, sidebarActiveTextColor: '#ffffff', sidebarActiveBorderColor: PORTAL_COLORS.popupMoss,
   sidebarDividerColor: PORTAL_COLORS.divider, sidebarDividerStyle: 'solid', sidebarShowDividers: true,
-  sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'indicadores', 'DIVIDER_2', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'],
+  sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'DIVIDER_2', 'indicadores', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'],
   footerLocationText: 'Departamento de Enfermagem · CCS/UFES · Campus de Maruípe · Vitória/ES',
   footerPresidentLabel: 'Presidente da Comissão', footerPresidentName: '', footerMembersLabel: 'Membros da Comissão', footerMembersList: [],
   footerDevTitle: 'Desenvolvimento da Plataforma e Suporte', footerDevName: '', footerWhatsappLabel: 'WhatsApp Secretaria', footerWhatsappUrl: '', footerContactEmail: '',
@@ -130,7 +130,10 @@ function canonicalSidebarOrder(rawOrder: unknown): string[] {
   const allowed = new Set(['home','biblioteca','DIVIDER_1','meus-processos','coordenador','configuracoes','indicadores','DIVIDER_2','como-chegar','tutorial','fluxo-tcc','replicar']);
   const stored = Array.isArray(rawOrder) ? rawOrder.filter((item): item is string => typeof item === 'string' && allowed.has(item)) : [];
   const order = stored.length ? [...stored] : [...(DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavOrder || [])];
-  if (!order.includes('indicadores')) { const i=order.indexOf('configuracoes'); order.splice(i>=0?i+1:order.length,0,'indicadores'); }
+  const withoutIndicators=order.filter(item=>item!=='indicadores');
+  const indicatorAnchor=withoutIndicators.indexOf('como-chegar');
+  withoutIndicators.splice(indicatorAnchor>=0?indicatorAnchor:withoutIndicators.length,0,'indicadores');
+  order.splice(0,order.length,...withoutIndicators);
   if (!order.includes('como-chegar')) { const i=order.indexOf('tutorial'); order.splice(i>=0?i:order.length,0,'como-chegar'); }
   if (!order.includes('fluxo-tcc')) { const i=order.indexOf('replicar'); order.splice(i>=0?i:order.length,0,'fluxo-tcc'); }
   if (!order.includes('replicar')) order.push('replicar');

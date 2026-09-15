@@ -806,21 +806,6 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
 
   return (
     <div id="meus-processos-page-container" className="max-w-7xl mx-auto py-1 space-y-3">
-      
-      {/* Top Action Bar - Button Above Header */}
-      {meusProcessosTextFormat.showCadastrarTrabalhoButton !== false && (
-        <div className="flex items-center justify-start sm:justify-end mb-3">
-          <button
-            id="meus-processos-btn-novo"
-            onClick={onNavigateToWizard}
-            style={actionStyles.actionPillStyle}
-            className={actionStyles.actionPillClass}
-          >
-            <span>{meusProcessosTextFormat.cadastrarTrabalhoButtonEmoji || '🎓'}</span>
-            <span>{meusProcessosTextFormat.cadastrarTrabalhoButtonText || 'Cadastrar Trabalho'}</span>
-          </button>
-        </div>
-      )}
 
       {/* Section with Unified Gray Header & Table */}
       <section className="space-y-3">
@@ -846,6 +831,20 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                   placeholder="Buscar TCCs..."
                   textFormat={meusProcessosTextFormat}
                 />
+
+                {processes.length > 0 && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false && (
+                  <button
+                    id="meus-processos-btn-novo"
+                    type="button"
+                    onClick={onNavigateToWizard}
+                    className={`${styles.toolbarButtonClass} portal-restricted-toolbar-wide`}
+                    style={styles.toolbarButtonStyle}
+                    title="Cadastrar novo trabalho de TCC"
+                  >
+                    <GraduationCap className="h-3.5 w-3.5" />
+                    <span>Cadastrar</span>
+                  </button>
+                )}
 
                 {/* Refresh Data (Yin-Yang) */}
                 <button
@@ -907,7 +906,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       type="button"
                       onClick={() => toggleRoleCategory(catKey)}
                       style={chip.buttonStyle}
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-all h-7 shrink-0 border select-none ${
+                      className={`portal-standard-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-all h-7 shrink-0 border select-none ${
                         isSelected ? 'shadow-xs scale-[1.02]' : 'opacity-85 hover:opacity-100'
                       }`}
                       title={`Clique para ${isSelected ? 'isolar ou alternar' : 'exibir'} TCCs com papel de ${chip.label}`}

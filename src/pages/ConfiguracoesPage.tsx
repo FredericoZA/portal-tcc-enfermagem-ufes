@@ -20,7 +20,8 @@ import { TccDetailPopupEditorModal } from '../components/TccDetailPopupEditorMod
 import { loadTccDetailPopupFormat, saveTccDetailPopupFormat, TccDetailPopupFormat } from '../types/tccDetailFormat';
 import { LoginPopupEditorModal } from '../components/LoginPopupEditorModal';
 import { loadLoginPopupConfig, saveLoginPopupConfig, LoginPopupConfig } from '../utils/loginPopupConfig';
-import { AuditAndSecuritySection, MasterAndPresidentConfigForm, AuditLogsTable } from '../components/AuditAndSecuritySection';
+import { AuditAndSecuritySection, AuditLogsTable } from '../components/AuditAndSecuritySection';
+import { PortalPersonalizationHubModal } from '../components/PortalPersonalizationHubModal';
 import { 
   TableTextFormat, 
   DEFAULT_TABLE_TEXT_FORMAT, 
@@ -304,6 +305,7 @@ export const ConfiguracoesPage: React.FC = () => {
   // Site Layout Configuration State (Header, Sidebar, Footer)
   const [siteLayout, setSiteLayout] = useState<SiteLayoutConfig>(() => loadSiteLayoutConfig());
   const [unifiedEditorOpen, setUnifiedEditorOpen] = useState(false);
+  const [personalizationHubOpen, setPersonalizationHubOpen] = useState(false);
   const [unifiedEditorTab, setUnifiedEditorTab] = useState<UnifiedEditorTab>('site_header');
   const [unifiedEditorScope, setUnifiedEditorScope] = useState<UnifiedEditorScope>('site_header');
 
@@ -2222,7 +2224,7 @@ export const ConfiguracoesPage: React.FC = () => {
         <section id="section-personalizacao-portal" className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden transition-all">
           <button
             type="button"
-            onClick={() => openUnifiedEditor('site_header')}
+            onClick={() => setPersonalizationHubOpen(true)}
             className="w-full bg-slate-100/90 hover:bg-slate-200/80 active:bg-slate-300 text-slate-900 p-3.5 sm:p-4 flex items-center justify-between gap-3 text-left transition-all cursor-pointer rounded-2xl group"
           >
             <div className="flex items-center gap-2">
@@ -2233,23 +2235,6 @@ export const ConfiguracoesPage: React.FC = () => {
             </div>
             <Sliders className="w-4 h-4 text-slate-600 group-hover:text-slate-900 transition-colors shrink-0" />
           </button>
-          <div className="border-t border-slate-200 bg-white p-3 sm:p-4">
-            <p className="text-[11px] font-semibold leading-5 text-slate-600">
-              Edite ordem, visibilidade e quantidade de linhas usando as chaves reais de cada tabela. A aparência continua vinculada ao padrão global até você desvinculá-la.
-            </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-label="Editar colunas das tabelas">
-              {Object.values(PORTAL_TABLE_PRESETS).map((preset) => (
-                <button
-                  key={preset.storageKey}
-                  type="button"
-                  onClick={() => handleOpenTablePresetEditor(preset)}
-                  className="min-h-11 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-left text-[11px] font-black text-slate-800 transition-colors hover:border-emerald-500 hover:bg-emerald-50 focus-visible:border-emerald-700"
-                >
-                  {preset.name}
-                </button>
-              ))}
-            </div>
-          </div>
         </section>
       )}
       {/* 1. SINCRONIZAÇÃO */}
@@ -2282,16 +2267,6 @@ export const ConfiguracoesPage: React.FC = () => {
 
         {openSections.sync && (
           <div className="p-3 sm:p-4 border-t border-slate-200 space-y-4">
-            {isMasterAdmin && (
-              <MasterAndPresidentConfigForm
-                settings={settings}
-                onSettingsUpdated={(newSet) => {
-                  refreshAuth();
-                  showNotification('Configurações salvas com sucesso!');
-                }}
-                showNotification={showNotification}
-              />
-            )}
 
             <InfrastructureIntegrationsPanel isMaster={isMasterAdmin} />
             {isMasterAdmin && <AuthorizedStudentsPanel canManage />}
@@ -3834,6 +3809,17 @@ export const ConfiguracoesPage: React.FC = () => {
         )}
       </section>}
       </>
+      )}
+
+      {personalizationHubOpen && (
+        <PortalPersonalizationHubModal
+          isOpen={personalizationHubOpen}
+          onClose={() => setPersonalizationHubOpen(false)}
+          onOpenAppearance={() => openUnifiedEditor('site_header')}
+          settings={settings}
+          onSettingsUpdated={() => { void refreshAuth(); showNotification('Configurações de personalização atualizadas.'); }}
+          showNotification={showNotification}
+        />
       )}
 
       {/* Global Site Layout & Table Formatting Editor Modal */}

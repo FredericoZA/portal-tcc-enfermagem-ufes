@@ -340,13 +340,13 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
           <button
             type="button"
             onClick={handleDownloadFullBackup}
-            className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-[11px] font-bold shadow-2xs transition-all cursor-pointer flex items-center gap-1"
+            className="portal-backup-action inline-flex min-w-[172px] items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-[#f0f0f0] px-3 py-1.5 text-[11px] font-bold text-slate-800 shadow-sm transition-all hover:bg-slate-200"
           >
             <span>📥</span>
             <span>Baixar Backup JSON</span>
           </button>
 
-          <label className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-[11px] font-bold shadow-2xs transition-all cursor-pointer flex items-center gap-1">
+          <label className="portal-backup-action inline-flex min-w-[172px] items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-[#f0f0f0] px-3 py-1.5 text-[11px] font-bold text-slate-800 shadow-sm transition-all hover:bg-slate-200">
             <span>📤</span>
             <span>Restaurar Backup</span>
             <input
