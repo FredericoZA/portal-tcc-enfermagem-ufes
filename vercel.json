@@ -26,6 +26,9 @@
     "api/index.ts": {
       "maxDuration": 300,
       "includeFiles": "dist/server/**"
+    },
+    "api/replication-model.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [
@@ -48,6 +51,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/public/replication-models/:slug/download", "destination": "/api/replication-model?slug=:slug" },
     { "source": "/api/(.*)", "destination": "/api/index" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
