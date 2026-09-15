@@ -2,7 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { PortalUiEnhancer } from './components/PortalUiEnhancer';
-import { PublicGuideNavigationEnhancer } from './components/PublicGuideNavigationEnhancer';
+import { PublicGuideNavigationEnhancerV2 } from './components/PublicGuideNavigationEnhancerV2';
 import './index.css';
 import './portal-overrides.css';
 import './portal-design-system.css';
@@ -24,6 +24,6 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
     <PortalUiEnhancer />
-    <PublicGuideNavigationEnhancer />
+    <PublicGuideNavigationEnhancerV2 />
   </StrictMode>,
 );
