@@ -1,0 +1,71 @@
+/*
+ * Atualização 23 — homologação visual.
+ * 1) estados selecionados ficam ~10% mais escuros que #c1c4c7;
+ * 2) filtros não mudam no hover, apenas quando selecionados;
+ * 3) “Enfermagem” usa o verde vivo do destaque lateral.
+ */
+:root {
+  --portal-selected-strong-23: #aeb0b3;
+  --portal-selected-strong-border-23: #858b90;
+  --portal-sidebar-highlight-23: #8fcfa6;
+}
+
+/* Filtros: estado neutro é estável; hover não altera a cor. */
+.portal-table-filter-chip,
+.portal-table-filter-chip:not([data-selected="true"]),
+.portal-table-filter-chip:not([data-selected="true"]):hover,
+#home-page-container .portal-table-filter-chip:not([data-selected="true"]):hover,
+#formal-monthly-calendar-section .portal-table-filter-chip:not([data-selected="true"]):hover,
+#public-calendar-cards-section .portal-table-filter-chip:not([data-selected="true"]):hover {
+  background-color: #e5e9ed !important;
+  color: #0f172a !important;
+  border-color: #c3c9cf !important;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+/* Filtros selecionados: mesmo cinza da engrenagem, agora ~10% mais escuro. */
+.portal-table-filter-chip[data-selected="true"],
+.portal-table-filter-chip[data-selected="true"]:hover,
+#home-page-container .portal-table-filter-chip[data-selected="true"],
+#home-page-container .portal-table-filter-chip[data-selected="true"]:hover,
+#formal-monthly-calendar-section .portal-table-filter-chip[data-selected="true"],
+#formal-monthly-calendar-section .portal-table-filter-chip[data-selected="true"]:hover,
+#public-calendar-cards-section .portal-table-filter-chip[data-selected="true"],
+#public-calendar-cards-section .portal-table-filter-chip[data-selected="true"]:hover {
+  background-color: var(--portal-selected-strong-23) !important;
+  color: #0f172a !important;
+  border-color: var(--portal-selected-strong-border-23) !important;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .16) !important;
+  outline: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+}
+
+/* Engrenagem: 25/50/100/Todos selecionado usa exatamente o mesmo cinza dos filtros. */
+div.fixed.z-\[1000001\][class*="bg-white"] button[class*="bg-slate-200"],
+div.fixed.z-\[1000001\][class*="bg-white"] button[class*="bg-slate-200"]:hover {
+  background-color: var(--portal-selected-strong-23) !important;
+  color: #0f172a !important;
+  border-color: var(--portal-selected-strong-border-23) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .16) !important;
+  filter: none !important;
+}
+
+/* Barra lateral: “Enfermagem” passa do verde apagado para o verde vivo do destaque. */
+#portal-sidebar h1 + div,
+#portal-sidebar h1 + div > span {
+  color: var(--portal-sidebar-highlight-23) !important;
+}
+
+#portal-sidebar h1 + div > span {
+  -webkit-text-stroke: .26px #b8efc7;
+  paint-order: stroke fill;
+  text-shadow:
+    0 0 2px rgba(143, 207, 166, .48),
+    0 1px 1px rgba(0, 0, 0, .16);
+}
