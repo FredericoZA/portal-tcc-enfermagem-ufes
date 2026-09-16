@@ -21,3 +21,49 @@
 .portal-backup-action{height:32px!important;margin:0!important;}
 #indicadores-publicos-page table th{background:#005830!important;color:#fff!important;}
 #portal-personalization-hub table thead{background:#005830!important;}
+
+/* Cabeçalhos públicos: uma única identidade visual em verde musgo e texto branco. */
+#formal-monthly-calendar-section>div>div:first-child,
+#public-calendar-cards-section>div>div:first-child,
+#biblioteca-tccs-section>div>div:first-child{
+  background:#005830!important;
+  background-color:#005830!important;
+  color:#fff!important;
+  border-color:#005830!important;
+}
+#formal-monthly-calendar-section>div>div:first-child h1,
+#public-calendar-cards-section>div>div:first-child h2,
+#biblioteca-tccs-section>div>div:first-child h1{color:#fff!important;}
+
+/* Faixa DOM–SÁB volta a fazer parte do mesmo cabeçalho verde do calendário. */
+#formal-monthly-calendar-section>div>div:nth-child(2)>div>div>div:first-child{
+  background:#005830!important;
+  background-color:#005830!important;
+  color:#fff!important;
+  border-color:#005830!important;
+}
+#formal-monthly-calendar-section>div>div:nth-child(2)>div>div>div:first-child .grid>div{
+  color:#fff!important;
+  opacity:1!important;
+}
+
+/* Texto FILTRAR dos cabeçalhos públicos deve ter o mesmo branco do título. */
+#public-calendar-cards-section>div>div:first-child>div:last-child>span:first-child{
+  color:#fff!important;
+  opacity:1!important;
+}
+#public-calendar-cards-section>div>div:first-child>div:last-child{
+  border-top-color:#fff!important;
+}
+
+/* Como usar: divisória branca forte e respiro real entre título, linha e filtros. */
+#portal-tutorial-page>section:first-child>div:last-child{
+  margin-top:.65rem!important;
+  padding-top:.55rem!important;
+  border-top-width:2px!important;
+  border-top-color:#fff!important;
+}
+#portal-tutorial-page>section:first-child>div:last-child>span:first-child{
+  color:#fff!important;
+  opacity:1!important;
+}
