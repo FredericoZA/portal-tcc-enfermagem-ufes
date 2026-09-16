@@ -140,7 +140,7 @@ const FormQuestionEditor: React.FC<{
 }> = ({ question, index, variables, previousQuestions, onChange, onDelete }) => {
   const condition = question.visibleWhen || { fieldKey: '', operator: 'EQUALS' as const, value: '' };
   const validation = question.validation || {};
-  return <article className="rounded-xl border border-slate-200 bg-slate-50 p-3" aria-label={`Campo ${index + 1}: ${question.label}`}>
+  return <article className="portal-studio-compact-question rounded-xl border border-slate-200 bg-slate-50 p-2" aria-label={`Campo ${index + 1}: ${question.label}`}>
     <div className="grid gap-2 sm:grid-cols-[1fr_.8fr_.7fr_auto]">
       <input aria-label="Rótulo do campo" value={question.label} onChange={(event) => onChange({ label: event.target.value })} className={inputClass} placeholder="Pergunta" />
       <input aria-label="Variável vinculada" value={question.fieldKey} onChange={event=>onChange({fieldKey:event.target.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')})} className={inputClass} placeholder="CHAVE_DA_VARIAVEL" />
@@ -312,7 +312,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
   const persistSnapshot = async (withAudit = false) => {
     if (isSaving) return;
-    if (!validationReport.ready) {
+    if (withAudit && !validationReport.ready) {
       setActiveTab('overview');
       notify(`Publicação bloqueada: corrija ${validationReport.errors} erro(s) na configuração operacional do portal.`);
       return;
@@ -338,6 +338,12 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       setIsSaving(false);
     }
   };
+
+  useEffect(() => {
+    if (!hasHydratedRef.current || !isDirty || isSaving) return;
+    const timer = window.setTimeout(() => { void persistSnapshot(false); }, 850);
+    return () => window.clearTimeout(timer);
+  }, [isDirty, isSaving]);
 
   const updateBrand = <K extends keyof IntegrationBrandKit>(key: K, value: IntegrationBrandKit[K]) => {
     setBrandKit((previous) => ({ ...previous, [key]: value }));
@@ -662,7 +668,6 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
             return <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-[9.5px] font-black uppercase transition cursor-pointer ${activeTab === tab.id ? 'border-slate-800 bg-slate-800 text-white shadow-2xs' : 'border-transparent bg-transparent text-slate-600 hover:border-slate-300 hover:bg-white'}`}><Icon className="h-3.5 w-3.5" />{tab.label}</button>;
           })}
           </div>
-          <button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-slate-800 shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Salvando…' : 'Salvar'}</button>
         </div>
       </div>
 
@@ -771,11 +776,9 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                 <strong>Fonte oficial única.</strong> Envie ou importe o DOCX no painel “Modelos documentais do usuário Master”, acima deste Estúdio. O texto, as tabelas, as imagens, as margens e a paginação permanecem no arquivo do Master no Google Drive. Esta aba registra apenas nome, finalidade, variáveis e posição no fluxo.
                 {selectedDoc.driveFileUrl && <a href={selectedDoc.driveFileUrl} target="_blank" rel="noreferrer" className="mt-2 block font-black underline">Abrir modelo ativo no Google Drive</a>}
               </div>
-              <div><label className={labelClass}>Finalidade no fluxo</label><textarea rows={3} value={selectedDoc.description || ''} onChange={(e) => updateSelectedDoc({ description: e.target.value })} className={inputClass} placeholder="Explique quando o documento é gerado, quem recebe e quem assina." /></div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="text-[10px] font-black uppercase text-slate-600">Variáveis reconhecidas neste modelo</div><div className="mt-2 flex flex-wrap gap-1.5">{(selectedDoc.variables || []).map((variable) => <code key={variable} className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[9px] text-violet-700">{variable}</code>)}{!(selectedDoc.variables || []).length && <span className="text-[11px] text-slate-500">As variáveis aparecerão após o cadastro do DOCX oficial.</span>}</div></div>
-              <button type="button" onClick={registerDocUpdate} className={`${actionClass} border-slate-300 bg-white text-slate-700`}><Save className="h-3.5 w-3.5" />Salvar metadados do fluxo</button>
             </div>
-            <div className="rounded-2xl border border-slate-300 bg-slate-100 p-5 sm:p-8"><div className="mx-auto flex min-h-[420px] max-w-[720px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm"><FileText className="mb-4 h-10 w-10 text-emerald-700"/><strong className="text-base text-slate-900">A aparência vem integralmente do DOCX oficial</strong><p className="mt-3 max-w-lg text-xs leading-6 text-slate-600">Para evitar perda de cabeçalhos, tabelas, assinaturas, margens ou paginação, o portal não reestiliza o modelo. Ele cria uma cópia temporária no Google Docs, substitui somente marcadores explícitos, exporta o PDF e preserva o arquivo original.</p><div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] font-semibold text-amber-950">Visualize e altere a diagramação diretamente no arquivo do Google Drive. Use este Estúdio para controlar dados, destinatários, regras e sequência.</div></div></div>
+            <div className="portal-studio-compact-card rounded-2xl border border-slate-300 bg-slate-100 p-3"><div className="portal-studio-preview mx-auto flex min-h-[240px] max-w-[720px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm"><FileText className="mb-4 h-10 w-10 text-emerald-700"/><strong className="text-base text-slate-900">A aparência vem integralmente do DOCX oficial</strong><p className="mt-3 max-w-lg text-xs leading-6 text-slate-600">Para evitar perda de cabeçalhos, tabelas, assinaturas, margens ou paginação, o portal não reestiliza o modelo. Ele cria uma cópia temporária no Google Docs, substitui somente marcadores explícitos, exporta o PDF e preserva o arquivo original.</p><div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] font-semibold text-amber-950">Visualize e altere a diagramação diretamente no arquivo do Google Drive. Use este Estúdio para controlar dados, destinatários, regras e sequência.</div></div></div>
           </div>
         )}
 

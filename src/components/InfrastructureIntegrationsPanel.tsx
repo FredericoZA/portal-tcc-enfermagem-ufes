@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Cloud, Database, ExternalLink, KeyRound, Loader2, Server, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
-import { CommissionIdentityPanel } from './CommissionIdentityPanel';
 
 interface IntegrationState {
   asten: { enabled: boolean; configured: boolean; callbackConfigured: boolean; callbackUrl?:string; dispatchEnabled: boolean; mode: string; securityMessage: string };
@@ -77,13 +76,12 @@ export const InfrastructureIntegrationsPanel: React.FC<Props> = ({ isMaster }) =
     {label:'Supabase',ok:Boolean(status?.persistence.snapshotReady)},
     {label:'Google Workspace',ok:Boolean(status?.googleDrive.configured)},
     {label:'Drive privado',ok:Boolean(status?.googleDrive.rootFolderIdPresent)},
-    {label:'Runtime v6',ok:Boolean(status?.persistence.transactionalRuntimeReady)}
+    {label:'Persistência segura',ok:Boolean(status?.persistence.transactionalRuntimeReady)}
   ];
   const readyCount=readiness.filter(item=>item.ok).length;
   const astenOptionalReady=Boolean(status?.asten.configured&&status?.asten.callbackConfigured);
 
   return <div className="space-y-4">
-    <CommissionIdentityPanel isMaster={isMaster} />
     <section className={card} aria-label="Checklist de ativação do portal">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div><h3 className="font-black text-slate-950">Ativação inicial</h3><p className="mt-1 text-xs text-slate-600">Confirme somente os serviços essenciais antes do uso real.</p></div>
@@ -93,7 +91,6 @@ export const InfrastructureIntegrationsPanel: React.FC<Props> = ({ isMaster }) =
       {homologation.length>0&&<div className="mt-3 grid gap-2 sm:grid-cols-2">{homologation.map(check=><div key={check.id} className={`rounded-xl border p-3 text-xs ${check.status==='PASS'?'border-slate-200 bg-slate-50 text-emerald-950':check.status==='PENDING'?'border-amber-200 bg-amber-50 text-amber-950':'border-red-200 bg-red-50 text-red-950'}`}><strong>{check.label}: {check.status==='PASS'?'aprovado':check.status==='PENDING'?'pendente':'reprovado'}</strong><p className="mt-1 leading-5">{check.message}</p></div>)}</div>}
     </section>
     {message && <div className={`rounded-xl border p-3 text-sm font-semibold ${message.ok ? 'border-slate-200 bg-slate-50 text-slate-800' : 'border-red-200 bg-red-50 text-red-900'}`}>{message.text}</div>}
-    <section className={card} aria-label="Operação e confiabilidade"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-black text-slate-950">Operação e confiabilidade</h3><p className="mt-1 text-xs leading-5 text-slate-600">Diagnóstico das integrações, backup cifrado no Drive e conferência de integridade dos documentos.</p></div><div className="flex flex-wrap gap-2"><button type="button" onClick={loadOperational} disabled={Boolean(working)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-[10px] font-black uppercase text-slate-800 disabled:opacity-40">Saúde operacional</button><button type="button" onClick={runIntegrity} disabled={Boolean(working)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-[10px] font-black uppercase text-slate-800 disabled:opacity-40">Verificar integridade</button><button type="button" onClick={runBackup} disabled={Boolean(working)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-[10px] font-black uppercase text-slate-800 disabled:opacity-40">Backup + restauração</button></div></div>{operational&&<div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{(operational.checks||[]).map((check:any)=><div key={check.id} className={`rounded-xl border p-3 text-xs ${check.status==='PASS'?'border-slate-200 bg-slate-50 text-emerald-950':check.status==='FAIL'?'border-red-200 bg-red-50 text-red-950':'border-amber-200 bg-amber-50 text-amber-950'}`}><strong>{check.label} · {check.status}</strong><p className="mt-1 leading-5">{check.message}</p></div>)}</div>}{integrityReport&&<div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs"><strong>Integridade:</strong> {integrityReport.checked} arquivo(s) conferido(s), {integrityReport.failures} divergência(s).</div>}{backupReport&&<div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs"><strong>Backup cifrado:</strong> {backupReport.restorable?'restaurável':'com pendências'} · checksum {backupReport.checksumValid?'válido':'inválido'} · cópia privada gravada no Drive.</div>}</section>
     <div className="grid gap-3 lg:grid-cols-2">
       <section className={card}>
         <div className="flex items-center justify-between"><div className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-slate-600"/><h3 className="font-black">Asten Assinatura · opcional</h3></div><State ok={astenOptionalReady} label={astenOptionalReady ? 'Pronta' : 'Opcional'}/></div>

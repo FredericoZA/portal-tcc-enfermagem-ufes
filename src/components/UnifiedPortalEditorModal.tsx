@@ -1409,14 +1409,14 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
       <div className="portal-modal-surface relative w-full max-w-7xl bg-slate-100 rounded-2xl shadow-2xl border border-slate-300 flex flex-col max-h-[92vh] overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="portal-customization-title">
         
         {/* MODAL HEADER */}
-        <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shrink-0">
+        <div id="portal-customization-modal-header" className="bg-[#337959] border-b border-[#2d6c50] px-4 py-3 flex items-center justify-between shrink-0 text-white">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-slate-100 text-slate-700 rounded-xl border border-slate-200">
-              <Palette className="w-5 h-5 text-slate-700" />
+            <div className="portal-customization-icon">
+              <Palette className="w-5 h-5 text-white" />
             </div>
             <div>
               <h2 id="portal-customization-title" className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                <span>Personalização do Portal do TCC</span>
+                <span>Personalização do Portal TCC</span>
               </h2>
             </div>
           </div>
@@ -1425,7 +1425,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
             <button
               type="button"
               onClick={publishAppearance}
-              className="px-3 py-1.5 text-xs font-black text-white bg-emerald-700 hover:bg-emerald-800 border border-emerald-800 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="portal-customization-secondary-action px-3 py-1.5 text-xs font-black rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer border"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Publicar no portal</span>
@@ -1433,7 +1433,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
             <button
               type="button"
               onClick={handleRestoreDefaults}
-              className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="portal-customization-secondary-action px-3 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer border"
               title="Restaurar todos os padrões originais"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -1516,9 +1516,6 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                   'sheet_coordinator'
                 ], 'Planilhas e Tabelas')}
               </div>
-              {renderNavRow('global_table_buttons', 'Botões no Topo', Square)}
-              {renderNavRow('global_table_style', 'Estilo Base Planilhas', LayoutTemplate)}
-              {renderNavRow('table_columns', 'Colunas, ordem e linhas', Columns)}
               {renderNavRow('sheet_calendar', 'Calendário Público', Calendar)}
               {renderNavRow('sheet_repository', 'Repositório & Acervo', BookOpen)}
               {renderNavRow('sheet_my_tccs', 'Meus TCCs (Aluno/Banca)', FileText)}
@@ -1543,14 +1540,11 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                   'popup_correction'
                 ], 'Popups e Modais')}
               </div>
-              {renderNavRow('global_popup_style', 'Estilo Base Pop-ups', Sliders)}
               {renderNavRow('popup_tcc_detail', 'Detalhes TCC / Defesa', FileText)}
               {renderNavRow('popup_new_defense', 'Agendamento Defesa', Calendar)}
               {renderNavRow('popup_upload_ata', 'Upload de Ata', Upload)}
-              {renderNavRow('popup_hipoar', 'Análise Hipoar', Award)}
               {renderNavRow('popup_pdf_viewer', 'Visualizador PDF', FileCheck)}
               {renderNavRow('popup_login', 'Login & Autenticação', Lock)}
-              {renderNavRow('popup_correction', 'Solicitação de Correção', HelpCircle)}
             </div>
           </div>
 

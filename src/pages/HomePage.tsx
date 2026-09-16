@@ -1219,15 +1219,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <div className="overflow-x-auto">
                         <div className="min-w-[720px] md:min-w-0">
                           {/* Calendar Days Header with synchronized palette */}
-                          <div className={`${defStyles.calendarDaysHeaderClass} py-2.5 px-4 sm:px-6 select-none`} style={defStyles.bannerHeaderStyle}>
+                          <div className={`${defStyles.calendarDaysHeaderClass} portal-calendar-weekdays py-2.5 px-4 sm:px-6 select-none`} style={defStyles.bannerHeaderStyle}>
                             <div className="grid grid-cols-[0.5fr_1.1fr_1.1fr_1.1fr_1.1fr_1.1fr_0.5fr] text-center font-black text-[11px] uppercase tracking-wider">
-                              <div className="text-rose-400">DOM</div>
+                              <div>DOM</div>
                               <div>SEG</div>
                               <div>TER</div>
                               <div>QUA</div>
                               <div>QUI</div>
                               <div>SEX</div>
-                              <div className="opacity-70">SÁB</div>
+                              <div>SÁB</div>
                             </div>
                           </div>
 
@@ -1275,8 +1275,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           ? 'bg-slate-100/90 hover:bg-slate-200/80 border-slate-300 cursor-pointer h-16 sm:h-20 shadow-2xs text-slate-500 active:scale-[0.98]'
                           : 'bg-slate-100/80 hover:bg-slate-200/90 border-slate-300 cursor-pointer h-16 sm:h-20 shadow-2xs active:scale-[0.98]'
                         : isWeekend
-                          ? 'bg-slate-100/60 text-slate-400 h-16 sm:h-20 opacity-65'
-                          : 'bg-white hover:bg-slate-50 border-slate-200 cursor-default h-16 sm:h-20'
+                          ? 'portal-calendar-day-cell portal-calendar-weekend bg-slate-100 text-slate-400 h-16 sm:h-20'
+                          : 'portal-calendar-day-cell bg-slate-50 hover:bg-slate-100 border-slate-200 cursor-default h-16 sm:h-20'
                     }`}
                     title={hasEvents ? `Clique para abrir as ${totalEvents} defesas do dia ${dayNum}` : undefined}
                   >
