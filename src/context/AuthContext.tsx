@@ -4,7 +4,7 @@ import { saveGlobalPopupStyle } from '../utils/portalAppearanceLinks';
 import { GlobalRole, ProcessMembership, GlobalSettings } from '../types';
 import { apiClient, setActiveUserEmail, getActiveUserEmail } from '../services/apiClient';
 import { saveGlobalTableConfig } from '../utils/tableFormatters';
-import { saveSiteLayoutConfig } from '../utils/siteLayoutConfig';
+import { loadSiteLayoutConfig, saveSiteLayoutConfig, SITE_LAYOUT_EVENT } from '../utils/siteLayoutConfig';
 import { saveCalendarPopupConfig } from '../utils/calendarPopupConfig';
 import { saveTccDetailPopupFormat } from '../types/tccDetailFormat';
 import { saveLoginPopupConfig } from '../utils/loginPopupConfig';
@@ -32,6 +32,22 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function syncPortalFavicon(siteConfig: any) {
+  if (typeof document === 'undefined') return;
+  const href = String(siteConfig?.sidebarCustomLogoUrl || '/colenf-logo.png').trim() || '/colenf-logo.png';
+  const iconLinks = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="shortcut icon"]'));
+  if (!iconLinks.length) {
+    const icon = document.createElement('link');
+    icon.rel = 'icon';
+    icon.type = 'image/png';
+    document.head.appendChild(icon);
+    iconLinks.push(icon);
+  }
+  iconLinks.forEach((link) => { link.href = href; });
+  const appleLinks = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="apple-touch-icon"]'));
+  appleLinks.forEach((link) => { link.href = href; });
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [userEmail, setUserEmailState] = useState<string>(getActiveUserEmail());
@@ -81,7 +97,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           window.dispatchEvent(new CustomEvent(TABLE_LAYOUTS_EVENT, { detail: canonicalLayouts }));
         }
-        if (appearance.siteConfig) saveSiteLayoutConfig(appearance.siteConfig as any);
+        if (appearance.siteConfig) {
+          saveSiteLayoutConfig(appearance.siteConfig as any);
+          syncPortalFavicon(appearance.siteConfig);
+        } else {
+          syncPortalFavicon(loadSiteLayoutConfig());
+        }
         if (appearance.calendarPopup) saveCalendarPopupConfig(appearance.calendarPopup as any);
         if (appearance.tccDetailPopup) saveTccDetailPopupFormat(appearance.tccDetailPopup as any);
         if (appearance.loginPopup) saveLoginPopupConfig(appearance.loginPopup as any);
@@ -97,6 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error('Erro ao carregar dados do usuário:', err);
       setIsAuthenticated(false);
+      syncPortalFavicon(loadSiteLayoutConfig());
     } finally {
       setIsLoading(false);
     }
@@ -104,6 +126,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     refreshAuth();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const syncFromLayout = (event: Event) => syncPortalFavicon((event as CustomEvent).detail || loadSiteLayoutConfig());
+    syncPortalFavicon(loadSiteLayoutConfig());
+    window.addEventListener(SITE_LAYOUT_EVENT, syncFromLayout);
+    return () => window.removeEventListener(SITE_LAYOUT_EVENT, syncFromLayout);
   }, []);
 
   const switchUser = async (email: string) => {

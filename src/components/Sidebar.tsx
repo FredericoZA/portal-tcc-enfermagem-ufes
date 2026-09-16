@@ -75,7 +75,7 @@ async function reverseGeocodeUserLocation(latitude: number, longitude: number): 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isOpenMobile, setIsOpenMobile }) => {
   const { isMasterAdmin, isAuthenticated, settings, userEmail, logout } = useAuth();
   const courseLogo = String((settings as any)?.courseLogoDataUrl || '');
-  const configuredLogo = courseLogo || settings?.integrationStudio?.brandKit?.courseLogoUrl || settings?.integrationStudio?.brandKit?.universityLogoUrl || '';
+  const configuredLogo = settings?.integrationStudio?.brandKit?.courseLogoUrl || settings?.integrationStudio?.brandKit?.universityLogoUrl || '';
   const isVisitor = !isAuthenticated;
   const isCollapsed = false;
   const [isHovered, setIsHovered] = useState(false);
@@ -150,7 +150,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
     if ((layoutConfig.sidebarIconMode || 'emoji') === 'lucide') return <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-200'}`} />;
     return <span className="text-base shrink-0 leading-none">{emoji}</span>;
   };
-  const sidebarLogoSrc = courseLogo || (layoutConfig.sidebarLogoType === 'custom' && layoutConfig.sidebarCustomLogoUrl ? layoutConfig.sidebarCustomLogoUrl : configuredLogo);
+  // A identidade pública salva pelo Master é a fonte de verdade. Configurações privadas
+  // de integração ficam apenas como fallback de migração e nunca substituem a logo pública.
+  const sidebarLogoSrc = (layoutConfig.sidebarLogoType === 'custom' && layoutConfig.sidebarCustomLogoUrl ? layoutConfig.sidebarCustomLogoUrl : '') || courseLogo || configuredLogo || '/colenf-logo.png';
 
   return <>
     {isOpenMobile && <div id="sidebar-mobile-backdrop" className="fixed inset-0 bg-slate-900/60 z-40 lg:hidden backdrop-blur-xs" onClick={() => setIsOpenMobile(false)} />}
@@ -159,7 +161,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
     <aside id="portal-sidebar" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} style={{backgroundColor: layoutConfig.sidebarBgColor || '#06372d',borderColor: layoutConfig.sidebarDividerColor || '#365349',color: layoutConfig.sidebarTextColor || '#f8fafc'}} className={`fixed top-0 bottom-0 left-0 z-50 w-64 text-slate-100 flex flex-col border-r transition-all duration-300 ease-in-out ${isOpenMobile ? 'translate-x-0' : '-translate-x-full'} ${isCollapsed ? (isHovered ? 'lg:translate-x-0 lg:shadow-2xl' : 'lg:-translate-x-full') : 'lg:translate-x-0'}`}>
       <div style={{backgroundColor: layoutConfig.sidebarHeaderBgColor || '#03271f',borderColor: layoutConfig.sidebarDividerColor || '#365349'}} className="px-2.5 py-3.5 border-b flex items-center justify-between relative group">
         <button type="button" onClick={() => handleNav('home')} className="flex items-center gap-2 hover:opacity-95 transition-opacity focus:outline-none cursor-pointer flex-1 min-w-0" title="Ir para o Calendário Público Inicial">
-          <NursingEmblemLogo size={72} className="shrink-0" customSrc={sidebarLogoSrc || '/colenf-logo.png'} />
+          <NursingEmblemLogo size={72} className="shrink-0" customSrc={sidebarLogoSrc} />
           <div className="flex flex-col flex-1 min-w-0 items-center justify-center text-center pr-1">
             <h1 className="font-black text-[16px] sm:text-[17px] tracking-tight uppercase leading-tight text-center whitespace-normal w-full" style={{ color: sidebarHeaderTitleColor }}>{layoutConfig.sidebarTitle || 'Portal de TCC'}</h1>
             <div className="mt-1.5 w-full text-center text-[10px] sm:text-[10.5px] font-extrabold tracking-[0.04em] leading-[1.35] uppercase" style={{ color: sidebarAccent }}>
@@ -194,7 +196,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           return order.map((itemKey, idx) => {
             if (itemKey.startsWith('DIVIDER')) { if (layoutConfig.sidebarShowDividers === false || layoutConfig.sidebarDividerStyle === 'none') return null; return <div key={`${itemKey}-${idx}`} className="my-2.5 pt-0.5 border-t transition-colors" style={{ borderColor: layoutConfig.sidebarDividerColor || '#365349', borderStyle: layoutConfig.sidebarDividerStyle || 'solid' }} />; }
             const item = allNavMap[itemKey]; if (!item || !item.visible) return null; const Icon = item.icon; const isActive = currentTab === item.id || (item.id === 'home' && currentTab === 'calendario');
-            return <button key={item.id} id={`nav-item-${item.id}`} onClick={() => handleNav(item.id)} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border-2 outline-none focus-visible:ring-2 focus-visible:ring-[#337959] focus-visible:ring-offset-1 focus-visible:ring-offset-[#06372d] font-bold text-xs uppercase tracking-wider transition-all text-left cursor-pointer ${isActive ? 'font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || '#154d41',color: layoutConfig.sidebarActiveTextColor || '#ffffff',borderColor: layoutConfig.sidebarActiveBorderColor || '#337959'} : { color: layoutConfig.sidebarTextColor || '#f8fafc', borderColor: 'transparent' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
+            return <button key={item.id} id={`nav-item-${item.id}`} onClick={() => handleNav(item.id)} className={`portal-sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-transparent outline-none focus-visible:ring-2 focus-visible:ring-[#74FF96] focus-visible:ring-offset-1 focus-visible:ring-offset-[#06372d] font-bold text-xs uppercase tracking-wider transition-all text-left cursor-pointer ${isActive ? 'portal-sidebar-nav-active font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || '#154d41',color: layoutConfig.sidebarActiveTextColor || '#ffffff'} : { color: layoutConfig.sidebarTextColor || '#f8fafc' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
           });
         })()}
       </nav>
