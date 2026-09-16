@@ -38,7 +38,7 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
   const membersList=configured.length?configured:legacy.length?legacy:layout;
   const devName=settings?.ownerName||settings?.portalMaintainerName||layoutConfig.footerDevName||'Equipe responsável pela instalação';
   const whatsappUrl=layoutConfig.footerWhatsappUrl||settings?.whatsappUrl||'';
-  const contactEmail=layoutConfig.footerContactEmail||settings?.contactEmail||'';
+  const contactEmail=settings?.contactEmail||settings?.masterEmail||layoutConfig.footerContactEmail||'';
   const locationText=layoutConfig.footerLocationText||installationProfile.defaultDefenseLocation||`Consulte ${installationProfile.departmentName||installationProfile.courseName} para confirmar o local da defesa.`;
   const qrCodeSource=layoutConfig.footerQrCodeUrl||generatedQrCode;
 
