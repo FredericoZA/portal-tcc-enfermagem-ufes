@@ -16,6 +16,7 @@ import './portal-update-26.css';
 import './portal-update-27.css';
 import './portal-update-32.css';
 import './portal-update-33.css';
+import './portal-update-34.css';
 import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
 
 try { saveGlobalPopupStyle(loadGlobalPopupStyle()); } catch {}
