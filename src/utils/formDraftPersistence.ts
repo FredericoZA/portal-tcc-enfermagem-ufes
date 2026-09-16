@@ -1,8 +1,11 @@
 const PREFIX = 'portal_tcc_form_draft_v1:';
 const SENSITIVE = /(password|senha|token|secret|segredo|otp|code|codigo|código|api[-_ ]?key|authorization)/i;
 
-function fieldKey(el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement, index: number) {
-  return el.name || el.id || el.getAttribute('aria-label') || el.placeholder || `field-${index}`;
+type DraftField = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+const placeholderOf = (el: DraftField) => el instanceof HTMLSelectElement ? '' : el.placeholder;
+
+function fieldKey(el: DraftField, index: number) {
+  return el.name || el.id || el.getAttribute('aria-label') || placeholderOf(el) || `field-${index}`;
 }
 
 function formKey(form: HTMLFormElement) {
@@ -11,15 +14,15 @@ function formKey(form: HTMLFormElement) {
   return `${PREFIX}${location.pathname}:${explicit || action || Array.from(document.forms).indexOf(form)}`;
 }
 
-function eligible(el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement) {
+function eligible(el: DraftField) {
   if (el.disabled) return false;
   if (el instanceof HTMLInputElement && ['password', 'file', 'hidden', 'submit', 'button', 'reset'].includes(el.type)) return false;
-  const identity = `${el.name} ${el.id} ${el.getAttribute('aria-label') || ''} ${el.placeholder || ''}`;
+  const identity = `${el.name} ${el.id} ${el.getAttribute('aria-label') || ''} ${placeholderOf(el)}`;
   return !SENSITIVE.test(identity);
 }
 
 function snapshot(form: HTMLFormElement) {
-  const fields = Array.from(form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input,textarea,select'));
+  const fields = Array.from(form.querySelectorAll<DraftField>('input,textarea,select'));
   const data: Record<string, unknown> = {};
   fields.forEach((el, index) => {
     if (!eligible(el)) return;
@@ -46,7 +49,7 @@ function restore(form: HTMLFormElement) {
       localStorage.removeItem(formKey(form));
       return;
     }
-    const fields = Array.from(form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input,textarea,select'));
+    const fields = Array.from(form.querySelectorAll<DraftField>('input,textarea,select'));
     fields.forEach((el, index) => {
       if (!eligible(el)) return;
       const key = fieldKey(el, index);
