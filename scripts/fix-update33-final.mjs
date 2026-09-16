@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+// Reexecução idempotente após falha transitória do push do GitHub Actions.
 const file='src/components/UnifiedPortalEditorModal.tsx';
 let text=fs.readFileSync(file,'utf8');
 if(!text.includes('Solicitação Ouvinte')) throw new Error('Legado Solicitação Ouvinte não encontrado.');
