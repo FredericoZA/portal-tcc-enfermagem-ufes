@@ -106,7 +106,7 @@ export function createPortalIdentity(email: string, method: PortalIdentity['meth
   const normalized = normalizeEmail(email);
   const now = Math.floor(Date.now() / 1000);
   return {
-    sessionId: randomBytes(24).toString('base64url'), uid: `email:${normalized}`, email: normalized, emailVerified: true, authTime: now, issuedAt: now,
+    sessionId: randomBytes(24).toString('base64url'), uid: `email:${normalized}`, email: normalized, emailVerified: true, authTime: now,
     issuedAt: now, expiresAt: now + SESSION_TTL_SECONDS, isDemo: false, method
   };
 }
