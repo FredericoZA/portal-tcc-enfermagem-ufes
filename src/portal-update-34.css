@@ -1,0 +1,143 @@
+/* Atualização 34 — polimento visual e operacional. */
+
+:root{
+  --portal-header-green:#005830;
+  --portal-action-green:#337959;
+  --portal-selected-gray:#AEB0B3;
+  --portal-divider:#ffffff;
+  --portal-divider-width:2px;
+}
+
+/* Sidebar: aba fluorescente encostada no botão, mais espessa que a antiga e sem aro externo. */
+#sidebar-nav .portal-sidebar-nav-active{
+  transform:translateX(2px)!important;
+  box-shadow:0 5px 12px rgba(0,0,0,.18)!important;
+  border-color:transparent!important;
+}
+#sidebar-nav .portal-sidebar-nav-active::before{
+  left:-5px!important;
+  top:0!important;
+  bottom:0!important;
+  width:5px!important;
+  border-radius:6px 0 0 6px!important;
+  background:#74FF96!important;
+  box-shadow:-2px 0 7px rgba(116,255,150,.42),0 2px 4px rgba(0,0,0,.2)!important;
+}
+
+/* Uma única divisória branca para todos os cabeçalhos de planilha. */
+#formal-monthly-calendar-section .portal-header-divider,
+#public-calendar-cards-section .portal-header-divider,
+#biblioteca-tccs-section .portal-header-divider,
+#meus-processos-page-container .portal-header-divider,
+#coordenador-page-root .portal-header-divider,
+#portal-tutorial-page .portal-header-divider{
+  border-top:var(--portal-divider-width) solid var(--portal-divider)!important;
+  border-bottom:0!important;
+  margin-top:.45rem!important;
+  padding-top:.45rem!important;
+}
+
+/* Compatibilidade com cabeçalhos existentes: elimina linha fina duplicada e mantém só a branca. */
+#meus-processos-page-container section>div>div:first-child>div:first-child,
+#coordenador-page-root section>div>div:first-child>div:first-child{
+  border-bottom:0!important;
+  padding-bottom:0!important;
+  margin-bottom:0!important;
+}
+#meus-processos-page-container section>div>div:first-child>div:last-child,
+#coordenador-page-root section>div>div:first-child>div:last-child{
+  border-top:var(--portal-divider-width) solid #fff!important;
+  border-bottom:0!important;
+  margin-top:.45rem!important;
+  padding-top:.45rem!important;
+  padding-bottom:.2rem!important;
+}
+
+/* Filtros restritos: compactos, sem gordura vertical. */
+#meus-processos-page-container .portal-standard-filter-chip,
+#coordenador-page-root .portal-standard-filter-chip{
+  height:27px!important;
+  min-height:27px!important;
+  padding-top:2px!important;
+  padding-bottom:2px!important;
+  background:#fff!important;
+  border-color:#cbd5e1!important;
+  color:#1f2937!important;
+  opacity:1!important;
+}
+#meus-processos-page-container .portal-standard-filter-chip[class*="scale"],
+#coordenador-page-root .portal-standard-filter-chip[class*="scale"]{
+  background:#AEB0B3!important;
+  border-color:#979a9d!important;
+  color:#111827!important;
+}
+
+/* Ação Cadastrar aparece antes da lupa e com largura claramente maior. */
+#meus-processos-page-container #meus-processos-btn-novo{
+  order:-10!important;
+  min-width:132px!important;
+  height:30px!important;
+  min-height:30px!important;
+  padding:3px 14px!important;
+  background:#fff!important;
+  color:#1f2937!important;
+  border-color:#cbd5e1!important;
+}
+
+/* Área do Presidente: Asten/Gov à esquerda; demais controles depois de um respiro. */
+#coordenador-page-root .portal-sign-bulk-btn{
+  order:-10!important;
+  height:30px!important;
+  min-height:30px!important;
+  padding-top:3px!important;
+  padding-bottom:3px!important;
+  background:#fff!important;
+  color:#1f2937!important;
+  border-color:#cbd5e1!important;
+}
+#coordenador-page-root .portal-sign-bulk-btn:nth-of-type(2){margin-right:10px!important;}
+#coordenador-page-root button:not(.portal-standard-filter-chip){min-height:30px!important;}
+
+/* Calendário: uma única linha entre título e dias; dias do mês usam tons já existentes no Portal. */
+#formal-monthly-calendar-section .portal-calendar-weekdays{
+  border-top:var(--portal-divider-width) solid #fff!important;
+  background:#005830!important;
+  color:#fff!important;
+}
+#formal-monthly-calendar-section .portal-calendar-weekdays>*{
+  color:#fff!important;
+  opacity:1!important;
+}
+#formal-monthly-calendar-section .portal-calendar-day-cell{
+  background:#f8fafc!important;
+}
+#formal-monthly-calendar-section .portal-calendar-day-cell.portal-calendar-weekend{
+  background:#f1f5f9!important;
+}
+
+/* Cabeçalho de Como usar: divisória padronizada e texto de filtro branco puro. */
+#portal-tutorial-page>section:first-child>div:last-child{
+  border-top:var(--portal-divider-width) solid #fff!important;
+  margin-top:.45rem!important;
+  padding-top:.45rem!important;
+}
+#portal-tutorial-page>section:first-child>div:last-child>span:first-child{color:#fff!important;opacity:1!important;}
+
+/* Modal principal de personalização. */
+#portal-customization-modal-header{
+  background:#337959!important;
+  color:#fff!important;
+  border-bottom-color:#2d6c50!important;
+}
+#portal-customization-modal-header h2{color:#fff!important;}
+#portal-customization-modal-header .portal-customization-icon{color:#fff!important;background:transparent!important;border:0!important;padding:0!important;}
+#portal-customization-modal-header .portal-customization-secondary-action{
+  background:#AEB0B3!important;
+  border-color:#979a9d!important;
+  color:#111827!important;
+}
+
+/* Studio: editor mais denso e sem grandes áreas vazias. */
+.portal-studio .portal-studio-compact-card{padding:.65rem!important;}
+.portal-studio .portal-studio-compact-question{padding:.55rem!important;margin:0!important;}
+.portal-studio .portal-studio-preview{min-height:240px!important;padding:1rem!important;}
