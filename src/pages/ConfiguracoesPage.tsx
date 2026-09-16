@@ -20,7 +20,8 @@ import { TccDetailPopupEditorModal } from '../components/TccDetailPopupEditorMod
 import { loadTccDetailPopupFormat, saveTccDetailPopupFormat, TccDetailPopupFormat } from '../types/tccDetailFormat';
 import { LoginPopupEditorModal } from '../components/LoginPopupEditorModal';
 import { loadLoginPopupConfig, saveLoginPopupConfig, LoginPopupConfig } from '../utils/loginPopupConfig';
-import { AuditAndSecuritySection, AuditLogsTable } from '../components/AuditAndSecuritySection';
+import { AuditAndSecuritySection, AuditLogsTable, MasterAndPresidentConfigForm } from '../components/AuditAndSecuritySection';
+import { CommissionIdentityPanel } from '../components/CommissionIdentityPanel';
 import { PortalPersonalizationHubModal } from '../components/PortalPersonalizationHubModal';
 import { 
   TableTextFormat, 
@@ -2247,9 +2248,7 @@ export const ConfiguracoesPage: React.FC = () => {
           <div className="flex items-center">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xs sm:text-sm font-black uppercase tracking-wide text-slate-900">
-                  Sincronização
-                </h2>
+                <h2 className="text-xs sm:text-sm font-black uppercase tracking-wide text-slate-900">Sincronização e acessos</h2>
               </div>
             </div>
           </div>
@@ -2268,6 +2267,10 @@ export const ConfiguracoesPage: React.FC = () => {
         {openSections.sync && (
           <div className="p-3 sm:p-4 border-t border-slate-200 space-y-4">
 
+            {isMasterAdmin && settings && (
+              <MasterAndPresidentConfigForm settings={settings} onSettingsUpdated={() => { void refreshAuth(); showNotification('Contas administrativas atualizadas.'); }} showNotification={showNotification} />
+            )}
+            {isMasterAdmin && <CommissionIdentityPanel isMaster />}
             <InfrastructureIntegrationsPanel isMaster={isMasterAdmin} />
             {isMasterAdmin && <AuthorizedStudentsPanel canManage />}
 
@@ -3815,7 +3818,7 @@ export const ConfiguracoesPage: React.FC = () => {
         <PortalPersonalizationHubModal
           isOpen={personalizationHubOpen}
           onClose={() => setPersonalizationHubOpen(false)}
-          onOpenAppearance={() => openUnifiedEditor('site_header')}
+          onOpenAppearance={(target) => openUnifiedEditor(target as UnifiedEditorTab)}
           settings={settings}
           onSettingsUpdated={() => { void refreshAuth(); showNotification('Configurações de personalização atualizadas.'); }}
           showNotification={showNotification}

@@ -1683,33 +1683,52 @@ export async function createPortalApp() {
     const identity=getPortalIdentity(req)!;
     const email=normalizeEmail(String(req.body?.email||''));
     const nome=String(req.body?.nome||'').trim();
+    const role=String(req.body?.role||'STUDENT').toUpperCase() as ProcessRole;
+    const memberType=String(req.body?.memberType||'INTERNAL').toUpperCase()==='EXTERNAL'?'EXTERNAL':'INTERNAL';
+    const matricula=String(req.body?.matricula||'').trim()||undefined;
     if(!nome||!isValidPortalEmail(email))return res.status(400).json({error:'Nome e e-mail válido são obrigatórios.'});
-    if(authorizedStudentsStore.some(student=>normalizeEmail(student.email)===email))return res.status(409).json({error:'Este aluno já está na lista.'});
-    const now=new Date().toISOString();
-    const student=upsertAuthorizedAccess({nome,email,matricula:String(req.body?.matricula||'').trim()||undefined,role:'STUDENT',origin:'MASTER_LIST',actor:identity.email});
-    auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'AUTORIZACAO_ALUNO',entityType:'authorized_student',entityId:student.id,after:student,timestamp:now});
-    persistPortalState();res.status(201).json(student);
+    if(!['STUDENT','ADVISOR','CO_ADVISOR','EXAMINER'].includes(role))return res.status(400).json({error:'Selecione um papel de acesso válido.'});
+    if(role==='STUDENT'&&!matricula)return res.status(400).json({error:'Informe a matrícula para cadastrar um estudante.'});
+    const existed=authorizedStudentsStore.some(entry=>normalizeEmail(entry.email)===email);
+    const entry=upsertAuthorizedAccess({nome,email,matricula,role,origin:'MASTER_LIST',actor:identity.email,active:true});
+    entry.memberType=memberType;
+    entry.manualRevocation=false;entry.revokedAt=undefined;entry.revokedBy=undefined;entry.revocationReason=undefined;entry.updatedAt=new Date().toISOString();
+    auditLogsStore.push({id:`log-${Date.now()}-access`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:existed?'ATUALIZACAO_ACESSO_AUTORIZADO':'CRIACAO_ACESSO_AUTORIZADO',entityType:'authorized_access',entityId:entry.id,after:{emailHash:createHash('sha256').update(entry.email).digest('hex'),roles:entry.roles,memberType:entry.memberType,origin:entry.origin,active:entry.active},timestamp:entry.updatedAt});
+    persistPortalState();res.status(existed?200:201).json(entry);
   });
   app.patch(['/api/admin/access-list/:id','/api/admin/students/:id'],requireAuthenticated,requireAdministrator,(req,res)=>{
-    const identity=getPortalIdentity(req)!;const index=authorizedStudentsStore.findIndex(student=>student.id===req.params.id);
-    if(index<0)return res.status(404).json({error:'Aluno não encontrado.'});
-    const before={...authorizedStudentsStore[index]};
+    const identity=getPortalIdentity(req)!;const index=authorizedStudentsStore.findIndex(entry=>entry.id===req.params.id);
+    if(index<0)return res.status(404).json({error:'Acesso não encontrado.'});
+    const before={...authorizedStudentsStore[index],roles:[...(authorizedStudentsStore[index].roles||[])]};
     const active=req.body?.active!==undefined?Boolean(req.body.active):before.active;
     const updatedAt=new Date().toISOString();
-    const updated:AuthorizedStudent={...before,...(req.body?.nome!==undefined?{nome:String(req.body.nome).trim()}:{}),...(req.body?.matricula!==undefined?{matricula:String(req.body.matricula).trim()||undefined}:{}),active,manualRevocation:req.body?.active!==undefined?!active:before.manualRevocation,revokedAt:!active?updatedAt:undefined,revokedBy:!active?identity.email:undefined,revocationReason:!active?String(req.body?.reason||'Acesso revogado pelo administrador.').trim():undefined,updatedAt};
+    const requestedRole=req.body?.role?String(req.body.role).toUpperCase() as ProcessRole:undefined;
+    if(requestedRole&&!['STUDENT','ADVISOR','CO_ADVISOR','EXAMINER'].includes(requestedRole))return res.status(400).json({error:'Papel de acesso inválido.'});
+    const roles=requestedRole?Array.from(new Set([...(before.roles||[before.accessType||'STUDENT']),requestedRole])) as ProcessRole[]:(before.roles||[before.accessType||'STUDENT']);
+    const memberType=req.body?.memberType!==undefined?(String(req.body.memberType).toUpperCase()==='EXTERNAL'?'EXTERNAL':'INTERNAL'):before.memberType;
+    const updated:AuthorizedStudent={...before,...(req.body?.nome!==undefined?{nome:String(req.body.nome).trim()}:{}),...(req.body?.matricula!==undefined?{matricula:String(req.body.matricula).trim()||undefined}:{}),roles,accessType:(before.accessType||roles[0]),memberType,active,manualRevocation:req.body?.active!==undefined?!active:before.manualRevocation,revokedAt:!active?updatedAt:undefined,revokedBy:!active?identity.email:undefined,revocationReason:!active?String(req.body?.reason||'Acesso revogado pelo administrador.').trim():undefined,updatedAt};
     authorizedStudentsStore[index]=updated;
-    auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'ALTERACAO_ALUNO_AUTORIZADO',entityType:'authorized_student',entityId:updated.id,before,after:updated,timestamp:updated.updatedAt});
+    auditLogsStore.push({id:`log-${Date.now()}-access-update`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'ALTERACAO_ACESSO_AUTORIZADO',entityType:'authorized_access',entityId:updated.id,before:{active:before.active,roles:before.roles,memberType:before.memberType},after:{active:updated.active,roles:updated.roles,memberType:updated.memberType},timestamp:updated.updatedAt});
     persistPortalState();res.json(updated);
+  });
+  app.delete(['/api/admin/access-list/:id','/api/admin/students/:id'],requireAuthenticated,requireAdministrator,(req,res)=>{
+    const identity=getPortalIdentity(req)!;const index=authorizedStudentsStore.findIndex(entry=>entry.id===req.params.id);
+    if(index<0)return res.status(404).json({error:'Acesso não encontrado.'});
+    const current=authorizedStudentsStore[index];
+    if(current.origin==='TCC_FORM'||current.processIds.length>0)return res.status(409).json({error:'Este acesso está vinculado a um TCC. Desative o acesso em vez de excluir o vínculo acadêmico.',code:'ACCESS_LINKED_TO_PROCESS'});
+    authorizedStudentsStore.splice(index,1);const now=new Date().toISOString();
+    auditLogsStore.push({id:`log-${Date.now()}-access-delete`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'EXCLUSAO_ACESSO_MANUAL',entityType:'authorized_access',entityId:current.id,before:{emailHash:createHash('sha256').update(current.email).digest('hex'),roles:current.roles,memberType:current.memberType,origin:current.origin},timestamp:now});
+    persistPortalState();res.json({deleted:true});
   });
   app.post('/api/admin/access-list/import',requireAuthenticated,requireAdministrator,requireFeature('STUDENT_BULK_IMPORT'),async(req,res)=>{
     const identity=getPortalIdentity(req)!;const records=Array.isArray(req.body?.records)?req.body.records:[];
     if(!records.length||records.length>1000)return res.status(400).json({error:'Envie de 1 a 1.000 alunos por lote.'});
     const normalized=records.map((record:any,index:number)=>({row:index+2,nome:String(record?.nome||'').trim(),email:normalizeEmail(String(record?.email||'')),matricula:String(record?.matricula||'').trim()||undefined}));
     const duplicateEmails=new Set<string>(),seen=new Set<string>();for(const record of normalized){if(seen.has(record.email))duplicateEmails.add(record.email);seen.add(record.email);}
-    const profile=resolveInstallationProfile(currentSettings);const invalid=normalized.filter(record=>!record.nome||!isValidPortalEmail(record.email)||!emailMatchesDomains(record.email,profile.studentEmailDomains)||duplicateEmails.has(record.email));
-    if(invalid.length)return res.status(400).json({error:'O lote contém linhas inválidas ou duplicadas.',invalidRows:invalid.map(record=>({row:record.row,email:record.email,reason:duplicateEmails.has(record.email)?'E-mail duplicado no arquivo':'Nome, e-mail institucional ou domínio inválido'}))});
+    const profile=resolveInstallationProfile(currentSettings);const invalid=normalized.filter(record=>!record.nome||!record.matricula||!isValidPortalEmail(record.email)||!emailMatchesDomains(record.email,profile.studentEmailDomains)||duplicateEmails.has(record.email));
+    if(invalid.length)return res.status(400).json({error:'O lote contém linhas inválidas ou duplicadas.',invalidRows:invalid.map(record=>({row:record.row,email:record.email,reason:duplicateEmails.has(record.email)?'E-mail duplicado no arquivo':'Nome, matrícula, e-mail institucional ou domínio inválido'}))});
     const batchHash=createHash('sha256').update(JSON.stringify(normalized.map(({nome,email,matricula})=>({nome,email,matricula})))).digest('hex');const already=auditLogsStore.find(log=>log.action==='IMPORTACAO_ALUNOS'&&(log.after as any)?.batchHash===batchHash);if(already)return res.json({batchHash,created:0,updated:0,reused:true});
-    let created=0,updated=0,preservedRevocations=0;for(const record of normalized){const before=authorizedStudentsStore.find(entry=>normalizeEmail(entry.email)===record.email);if(before){before.nome=record.nome;before.matricula=record.matricula||before.matricula;before.updatedAt=new Date().toISOString();updated++;if(before.manualRevocation){before.active=false;preservedRevocations++;}}else{upsertAuthorizedAccess({nome:record.nome,email:record.email,matricula:record.matricula,role:'STUDENT',origin:'MASTER_LIST',actor:identity.email});created++;}}
+    let created=0,updated=0,preservedRevocations=0;for(const record of normalized){const before=authorizedStudentsStore.find(entry=>normalizeEmail(entry.email)===record.email);if(before){before.nome=record.nome;before.matricula=record.matricula||before.matricula;before.updatedAt=new Date().toISOString();before.memberType=before.memberType||'INTERNAL';updated++;if(before.manualRevocation){before.active=false;preservedRevocations++;}}else{const createdEntry=upsertAuthorizedAccess({nome:record.nome,email:record.email,matricula:record.matricula,role:'STUDENT',origin:'MASTER_LIST',actor:identity.email});createdEntry.memberType='INTERNAL';created++;}}
     const now=new Date().toISOString();auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'IMPORTACAO_ALUNOS',entityType:'authorized_student_batch',entityId:batchHash.slice(0,20),after:{batchHash,rows:normalized.length,created,updated,preservedRevocations},timestamp:now});await persistPortalStateDurably();res.status(201).json({batchHash,created,updated,preservedRevocations,reused:false});
   });
 

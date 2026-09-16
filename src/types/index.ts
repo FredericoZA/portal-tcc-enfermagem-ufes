@@ -205,6 +205,7 @@ export interface AuthorizedStudent {
   accessType?: 'STUDENT' | 'ADVISOR' | 'CO_ADVISOR' | 'EXAMINER';
   origin?: 'MASTER_LIST' | 'TCC_FORM';
   roles?: ProcessRole[];
+  memberType?: 'INTERNAL' | 'EXTERNAL';
   revokedAt?: string;
   revokedBy?: string;
   revocationReason?: string;
