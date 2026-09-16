@@ -8,9 +8,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 const root = fileURLToPath(new URL('..', import.meta.url));
-const output = path.resolve(process.env.PORTAL_VISUAL_OUTPUT || path.join(root, '..', 'portal-visual-rc8'));
+const output = path.resolve(process.env.PORTAL_VISUAL_OUTPUT || path.join(root, '..', 'portal-visual-update33'));
 await mkdir(output, { recursive: true });
-const report = { status: 'NAO_CONFIRMADO', generatedAt: new Date().toISOString(), screenshots: [], errors: [], scope: 'Dados fictícios locais; não valida provedores, zoom real ou leitor de tela.' };
+const report = { status: 'NAO_CONFIRMADO', generatedAt: new Date().toISOString(), screenshots: [], errors: [], scope: 'Dados fictícios locais do demoSeed; não valida provedores, zoom real ou leitor de tela.' };
 let browser, child, dataDir;
 try {
   let chromium;
@@ -45,6 +45,7 @@ try {
   const capture = async (name) => {
     await page.locator('main').waitFor({ state: 'visible' });
     await page.waitForFunction(() => document.body.innerText.trim().length > 100);
+    await page.waitForTimeout(250);
     if (await page.locator('vite-error-overlay').count()) throw new Error('Overlay de erro do Vite.');
     const file = `${name}.png`;
     await page.screenshot({ path: path.join(output, file), fullPage: true });
@@ -52,24 +53,35 @@ try {
     report.screenshots.push({ file, overflow });
     if (overflow) report.errors.push(`${name}: rolagem horizontal da página inteira.`);
   };
+  const surfaces = [
+    ['home', 'inicio'],
+    ['biblioteca', 'repositorio'],
+    ['indicadores', 'indicadores'],
+    ['meus-processos', 'meus-tccs'],
+    ['coordenador', 'presidente'],
+    ['configuracoes', 'configuracoes'],
+    ['fluxo-tcc', 'fluxo-tcc'],
+    ['como-chegar', 'como-chegar'],
+    ['tutorial', 'como-usar'],
+    ['replicar', 'replicar']
+  ];
   for (const width of [320, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 960 });
     await page.goto(base, { waitUntil: 'networkidle' });
-    await capture(`inicio-${width}`);
-    await page.evaluate(() => window.dispatchEvent(new CustomEvent('portal:navigate', { detail: 'configuracoes' })));
-    await page.locator('#master-flow-system-section').waitFor({ state: 'visible' });
-    if (!(await page.getByRole('button', { name: 'Oficina', exact: true }).isVisible())) await page.locator('#master-flow-system-section > button').click();
-    await page.getByRole('button', { name: 'Oficina', exact: true }).click();
-    await page.getByRole('heading', { name: 'Oficina da secretaria' }).waitFor();
-    await capture(`oficina-${width}`);
+    for (const [tab, name] of surfaces) {
+      await page.evaluate(target => window.dispatchEvent(new CustomEvent('portal:navigate', { detail: target })), tab);
+      await capture(`${name}-${width}`);
+    }
     await page.keyboard.press('Tab');
     const focus = await page.evaluate(() => document.activeElement !== document.body);
-    if (!focus) report.errors.push(`oficina-${width}: foco de teclado ausente.`);
+    if (!focus) report.errors.push(`largura-${width}: foco de teclado ausente.`);
   }
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('portal:navigate', { detail: 'meus-processos' })));
   await page.emulateMedia({ forcedColors: 'active' });
-  await capture('oficina-alto-contraste');
+  await capture('meus-tccs-alto-contraste');
   report.status = report.errors.length ? 'REPROVADO' : 'CAPTURAS_GERADAS';
-  await writeFile(path.join(output, 'index.html'), '<!doctype html><meta charset="utf-8"><title>Galeria RC8</title><style>body{font:16px system-ui;margin:24px;background:#f5f7fa}img{max-width:100%;border:1px solid #888}figure{margin:24px 0}</style><h1>Galeria RC8 · dados fictícios</h1><p>Compare as imagens com uma referência aprovada. Geração de capturas não equivale a aprovação visual ou WCAG.</p>' + report.screenshots.map(s => `<figure><figcaption>${s.file}</figcaption><img src="${s.file}" alt="${s.file}"></figure>`).join(''));
+  await writeFile(path.join(output, 'index.html'), '<!doctype html><meta charset="utf-8"><title>Galeria Update 33</title><style>body{font:16px system-ui;margin:24px;background:#f5f7fa}img{max-width:100%;border:1px solid #888}figure{margin:24px 0}</style><h1>Galeria Update 33 · dados fictícios</h1><p>Capturas das superfícies públicas e restritas em quatro larguras. Compare as imagens com uma referência aprovada. Geração de capturas não equivale a aprovação visual ou WCAG.</p>' + report.screenshots.map(s => `<figure><figcaption>${s.file}</figcaption><img src="${s.file}" alt="${s.file}"></figure>`).join(''));
   process.exitCode = report.errors.length ? 1 : 0;
 } catch (error) {
   report.errors.push(error.message);
