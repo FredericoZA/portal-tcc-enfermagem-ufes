@@ -18,6 +18,7 @@ import './portal-update-32.css';
 import './portal-update-33.css';
 import './portal-update-34.css';
 import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
+import { installFormDraftPersistence } from './utils/formDraftPersistence';
 
 try { saveGlobalPopupStyle(loadGlobalPopupStyle()); } catch {}
 
@@ -27,3 +28,5 @@ createRoot(document.getElementById('root')!).render(
     <PortalUiEnhancer />
   </StrictMode>,
 );
+
+installFormDraftPersistence();
