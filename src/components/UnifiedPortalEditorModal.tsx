@@ -1550,7 +1550,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
               {renderNavRow('popup_hipoar', 'Análise Hipoar', Award)}
               {renderNavRow('popup_pdf_viewer', 'Visualizador PDF', FileCheck)}
               {renderNavRow('popup_login', 'Login & Autenticação', Lock)}
-              {renderNavRow('popup_correction', 'Solicitação Ouvinte', HelpCircle)}
+              {renderNavRow('popup_correction', 'Solicitação de Correção', HelpCircle)}
             </div>
           </div>
 
