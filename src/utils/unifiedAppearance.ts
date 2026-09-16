@@ -28,7 +28,9 @@ export function normalizeUnifiedAppearance(settings: GlobalSettings): GlobalSett
     generalPopups: { ...general, fontFamily: popup.fontFamily, fontSize: popup.fontSize, borderRadius: popup.borderRadius, borderColor: popup.borderColor, styleVariant: popup.styleVariant,
       ...Object.fromEntries(['newDefense', 'uploadAta', 'hipoar', 'pdfViewer', 'correction'].flatMap(prefix => [
         [`${prefix}Bg`, popup.surfaceBgColor], [`${prefix}HeaderBg`, popup.headerBgColor], [`${prefix}HeaderTextColor`, popup.headerTextColor], [`${prefix}BtnBg`, popup.actionBgColor], [`${prefix}BtnText`, popup.actionTextColor],
-      ])), hipoarAccentColor: popup.actionBgColor },
+      ])), hipoarAccentColor: popup.actionBgColor,
+      correctionTitle: 'Solicitação de Correção',
+      correctionSubtitle: 'Descreva a correção necessária para o documento ou registro selecionado.' },
     linkedItems: unifiedAppearanceLinks(appearance.linkedItems), globalPopupStyle: popup,
     tccDetailPopup: { ...appearance.tccDetailPopup, modalBgColor: popup.surfaceBgColor, headerBgColor: popup.headerBgColor, headerTextColor: popup.headerTextColor, primaryActionColor: popup.actionBgColor, primaryActionTextColor: popup.actionTextColor },
     calendarPopup: { ...appearance.calendarPopup, headerThemeMode: 'custom', modalBgColor: popup.surfaceBgColor, cardBgColor: popup.surfaceBgColor, headerBgColor: popup.headerBgColor, headerTextColor: popup.headerTextColor, progressBarCustomColor: popup.actionBgColor },
