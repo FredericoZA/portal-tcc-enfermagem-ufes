@@ -53,8 +53,17 @@ test('transferência administrativa não depende de feature opcional', async () 
   assert.ok(server.includes('hasRecentAuthentication(identity)'));
 });
 
-test('símbolo configurado pelo Master tem prioridade na lateral', async () => {
-  const sidebar = await source('src/components/Sidebar.tsx');
-  assert.ok(sidebar.includes('const courseLogo ='));
-  assert.ok(sidebar.includes('const sidebarLogoSrc = courseLogo ||'));
+test('identidade visual publicada pelo Master vale para visitante e acompanha o favicon', async () => {
+  const [sidebar, auth, server] = await Promise.all([
+    source('src/components/Sidebar.tsx'),
+    source('src/context/AuthContext.tsx'),
+    source('server.ts'),
+  ]);
+  assert.ok(sidebar.includes('layoutConfig.sidebarCustomLogoUrl'));
+  assert.ok(sidebar.includes("|| '/colenf-logo.png'"));
+  assert.ok(auth.includes('syncPortalFavicon'));
+  assert.ok(auth.includes('sidebarCustomLogoUrl'));
+  assert.ok(auth.includes('SITE_LAYOUT_EVENT'));
+  assert.ok(server.includes('function publicSettingsForRequest'));
+  assert.ok(!server.match(/if\(!admin\)[\s\S]{0,500}delete safe\.portalAppearance/));
 });
