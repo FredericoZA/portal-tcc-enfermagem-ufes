@@ -172,7 +172,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
   const localStudio = useMemo(() => loadLocalStudio(), []);
   const initialMeta = normalizeStudioSettings(initialStudio || localStudio);
-  const [activeTab, setActiveTab] = useState<StudioTab>('overview');
+  const [activeTab, setActiveTab] = useState<StudioTab>('documents');
   const [brandKit, setBrandKit] = useState<IntegrationBrandKit>(initialMeta.brandKit || DEFAULT_BRAND_KIT);
   const [documentDesigns, setDocumentDesigns] = useState<Record<string, DocumentDesignConfig>>(initialMeta.documentDesigns || {});
   const [emailDesigns, setEmailDesigns] = useState<Record<string, EmailDesignConfig>>(initialMeta.emailDesigns || {});
@@ -621,15 +621,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   }, [selectedEmail, selectedEmailDesign, brandKit]);
 
   const tabs: Array<{ id: StudioTab; label: string; icon: React.ElementType }> = [
-    { id: 'operation', label: 'Oficina', icon: Workflow },
-    { id: 'overview', label: 'Integração', icon: Activity },
-    { id: 'brand', label: 'Identidade', icon: Palette },
     { id: 'documents', label: 'Documentos', icon: FileText },
     { id: 'emails', label: 'E-mails', icon: Mail },
     { id: 'forms', label: 'Formulários', icon: ClipboardList },
     { id: 'workflow', label: 'Fluxo', icon: Workflow },
-    { id: 'variables', label: 'Variáveis', icon: Variable },
-    { id: 'audit', label: 'Auditoria', icon: History }
+    { id: 'variables', label: 'Variáveis', icon: Variable }
   ];
 
   const variableUsage = selectedVariable
@@ -659,41 +655,18 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
   return (
     <div className={`portal-workspace portal-studio ${panelClass} mb-5 overflow-hidden`}>
-      <div className="border-b border-slate-200 bg-slate-100 px-4 py-3.5 text-slate-900 sm:px-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="rounded-xl border border-slate-300 bg-white p-2.5 shadow-2xs"><WandSparkles className="h-5 w-5 text-slate-700" /></div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-black uppercase tracking-wider text-slate-900">Estúdio de Integração do Portal</h3>
-                <span className="rounded-full border border-slate-300 bg-slate-200 px-2 py-0.5 text-[9px] font-black uppercase text-slate-700">Master • Fonte única</span>
-              </div>
-              <p className="mt-1 max-w-3xl text-[11px] leading-relaxed text-slate-600">
-                Desenhe documentos, e-mails e formulários com a mesma identidade; descubra, consolide e propague variáveis sem solicitar o mesmo dado duas vezes.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase ${isDirty ? 'border-slate-300 bg-slate-200 text-slate-800' : 'border-slate-300 bg-slate-50 text-slate-700'}`}>
-              {isSaving ? 'Salvando…' : isDirty ? 'Alterações pendentes' : 'Sincronizado'}
-            </span>
-            <button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-2 text-[10px] font-black uppercase tracking-wide text-white transition hover:bg-slate-900 shadow-2xs cursor-pointer">
-              {isSaving ? <RefreshCw className="h-3.5 w-3.5 animate-spin text-slate-300" /> : <Save className="h-3.5 w-3.5 text-slate-300" />} Salvar e publicar
-            </button>
-          </div>
-        </div>
-      </div>
-
       <div className="border-b border-slate-200 bg-slate-50 p-2">
-        <div className="grid grid-cols-2 gap-1 sm:grid-cols-4 xl:grid-cols-8">
+        <div className="flex items-center gap-2"><div className="grid flex-1 grid-cols-2 gap-1 sm:grid-cols-3 xl:grid-cols-5">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-[9.5px] font-black uppercase transition cursor-pointer ${activeTab === tab.id ? 'border-slate-800 bg-slate-800 text-white shadow-2xs' : 'border-transparent bg-transparent text-slate-600 hover:border-slate-300 hover:bg-white'}`}><Icon className="h-3.5 w-3.5" />{tab.label}</button>;
           })}
+          </div>
+          <button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-slate-800 shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Salvando…' : 'Salvar'}</button>
         </div>
       </div>
 
-      <div className="bg-slate-50/40 p-4 sm:p-5">
+      <div className="bg-slate-50/40 p-3 sm:p-4">
         {activeTab === 'operation' && <OperationalDesignerPanel studio={buildSnapshot()} config={operationalConfig} onChange={value=>{setOperationalConfig(value);setIsDirty(true);}} onInitialForm={questions=>{setFormTemplates(forms=>forms.map(f=>f.id==='form-reserva-aluno'?{...f,questions}:f));setIsDirty(true);notify('Cadastro sincronizado. Edite os campos na aba Formulários e publique.');}}/>}
         {activeTab === 'overview' && (
           <div className="space-y-4">

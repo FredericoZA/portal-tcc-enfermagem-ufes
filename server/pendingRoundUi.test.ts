@@ -21,16 +21,19 @@ test('comissão reúne ações e QR Code sem duplicar personalização do símbo
   assert.ok(!panel.includes('ADICIONAR / SUBSTITUIR SÍMBOLO'));
 });
 
-test('configurações não exibem blocos redundantes e monitor fica em Indicadores', async () => {
-  const [config, infrastructure, indicators] = await Promise.all([
+test('configurações não exibem blocos redundantes e Indicadores usam somente dados públicos agregados', async () => {
+  const [config, infrastructure, indicators, publicApi] = await Promise.all([
     source('src/pages/ConfiguracoesPage.tsx'),
     source('src/components/InfrastructureIntegrationsPanel.tsx'),
-    source('src/pages/IndicadoresPage.tsx')
+    source('src/pages/IndicadoresPage.tsx'),
+    source('api/public-indicators.ts')
   ]);
   assert.ok(!config.includes('<OperationsMonitorPanel'));
   assert.ok(!config.includes('Drive gerenciado pelo servidor.'));
   assert.ok(!infrastructure.includes('Central segura de integrações'));
-  assert.ok(indicators.includes('<OperationsMonitorPanel'));
+  assert.ok(!indicators.includes('<OperationsMonitorPanel'));
+  assert.ok(indicators.includes('/api/public/indicators'));
+  assert.ok(publicApi.includes('containsPersonalData:false'));
 });
 
 test('paleta principal usa musgo, cinza e contraste claro sem oliva fluorescente', async () => {
@@ -50,8 +53,17 @@ test('transferência administrativa não depende de feature opcional', async () 
   assert.ok(server.includes('hasRecentAuthentication(identity)'));
 });
 
-test('símbolo configurado pelo Master tem prioridade na lateral', async () => {
-  const sidebar = await source('src/components/Sidebar.tsx');
-  assert.ok(sidebar.includes('const courseLogo ='));
-  assert.ok(sidebar.includes('const sidebarLogoSrc = courseLogo ||'));
+test('identidade visual publicada pelo Master vale para visitante e acompanha o favicon', async () => {
+  const [sidebar, auth, server] = await Promise.all([
+    source('src/components/Sidebar.tsx'),
+    source('src/context/AuthContext.tsx'),
+    source('server.ts'),
+  ]);
+  assert.ok(sidebar.includes('layoutConfig.sidebarCustomLogoUrl'));
+  assert.ok(sidebar.includes("|| '/colenf-logo.png'"));
+  assert.ok(auth.includes('syncPortalFavicon'));
+  assert.ok(auth.includes('sidebarCustomLogoUrl'));
+  assert.ok(auth.includes('SITE_LAYOUT_EVENT'));
+  assert.ok(server.includes('function publicSettingsForRequest'));
+  assert.ok(!server.match(/if\(!admin\)[\s\S]{0,500}delete safe\.portalAppearance/));
 });

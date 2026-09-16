@@ -369,31 +369,30 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     );
   };
 
-  const renderAstenActionCell = (proc: ProcessData) => {
-    const job = getDeclarationJob(proc.id);
-    const working = signingIds.includes(proc.id);
-    const status = getDeclarationStatus(proc.id);
-    const actionable = isDeclarationActionable(proc.id);
-    return (
-      <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[150px] text-center align-middle`}>
-        {actionable ? (
-          <button
-            type="button"
-            onClick={() => handleSignOne(proc.id)}
-            disabled={working}
-            className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-emerald-800 bg-emerald-950 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow-2xs transition-all hover:bg-black disabled:cursor-wait disabled:opacity-60"
-            title={job ? 'Reprocessar esta declaração na Asten' : 'Enviar esta declaração para assinatura do Presidente pela Asten'}
-          >
-            <Shield className="h-3.5 w-3.5 shrink-0" />
-            <span>{working ? 'Enviando…' : job ? 'Reprocessar Asten' : 'Assinar com Asten'}</span>
-          </button>
-        ) : (
-          <span className={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-black uppercase ${status.tone}`} title={job?.lastError || status.label}>
-            {status.label}
-          </span>
-        )}
-      </td>
-    );
+  const downloadBrowserFile = (blob: Blob, fileName: string) => {
+    const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download=fileName; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+  };
+
+  const handleGovOne = async (processId: string) => {
+    if(signingIds.includes(processId))return;
+    const signerWindow=window.open('https://assinador.iti.br/','_blank','noopener,noreferrer');
+    setSigningMessage(''); setSigningIds(prev=>[...prev,processId]);
+    try{const result=await apiClient.signProcessDocument(processId,'DECLARACAO','GOV_BR');const file=await apiClient.downloadGovBrSigningPdf(result.job.id);downloadBrowserFile(file.blob,file.fileName);setSigningMessage('PDF preparado e baixado. O Assinador Gov.br foi aberto em outra aba; depois da assinatura, envie o PDF assinado na ficha do TCC.');await loadData();}
+    catch(error){signerWindow?.close();setSigningMessage(error instanceof Error?error.message:'Não foi possível preparar a assinatura Gov.br.');}
+    finally{setSigningIds(prev=>prev.filter(id=>id!==processId));}
+  };
+
+  const handleSignSelectedGov = async () => {
+    const pendingIds=new Set(pendingItems.map(item=>item.process.id));const ids=selectedIds.filter(id=>pendingIds.has(id)&&isDeclarationActionable(id));
+    if(ids.length<2){setSigningMessage('Selecione pelo menos dois trabalhos para usar a assinatura em bloco.');return;}
+    window.open('https://assinador.iti.br/','_blank','noopener,noreferrer');setSigningIds(prev=>Array.from(new Set([...prev,...ids])));let completed=0;const failures:string[]=[];
+    for(const id of ids){try{const result=await apiClient.signProcessDocument(id,'DECLARACAO','GOV_BR');const file=await apiClient.downloadGovBrSigningPdf(result.job.id);downloadBrowserFile(file.blob,file.fileName);completed++;}catch(error){const proc=pendingItems.find(item=>item.process.id===id)?.process;failures.push(`${proc?.protocolo||id}: ${error instanceof Error?error.message:'falha'}`);}}
+    setSigningIds(prev=>prev.filter(id=>!ids.includes(id)));setSelectedIds([]);await loadData();setSigningMessage(failures.length?`${completed} PDF(s) Gov.br preparados; ${failures.length} falha(s): ${failures.join(' | ')}`:`${completed} PDF(s) preparados. Assine-os no Gov.br e envie os arquivos assinados pelas fichas dos TCCs.`);
+  };
+
+  const renderSignatureActionCell = (proc: ProcessData) => {
+    const job=getDeclarationJob(proc.id);const working=signingIds.includes(proc.id);const status=getDeclarationStatus(proc.id);const actionable=isDeclarationActionable(proc.id);
+    return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[188px] text-center align-middle`}><div className="flex items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button></div>{!actionable&&<span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[8px] font-black uppercase ${status.tone}`} title={job?.lastError||status.label}>{status.label}</span>}</td>;
   };
 
   // Download only the authenticated declaration already signed by Asten and archived in Drive.
@@ -790,54 +789,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
   return (
     <div id="coordenador-page-root" className="space-y-3 max-w-7xl mx-auto py-1.5">
-      
-      {/* Botões no Topo (Acima do Cabeçalho) */}
-      <div className="flex flex-wrap items-center justify-end gap-2.5 mb-3">
-        {activeTab === 'pendentes' && (
-          <button
-            type="button"
-            disabled={selectedIds.length === 0 || !selectedIds.some(isDeclarationActionable) || signingIds.length > 0}
-            onClick={handleSignSelected}
-            style={{ ...actionStyles.actionPillStyle, opacity: selectedIds.length === 0 || !selectedIds.some(isDeclarationActionable) ? 0.5 : actionStyles.actionPillStyle.opacity }}
-            className={`${actionStyles.actionPillClass} ${selectedIds.length === 0 || !selectedIds.some(isDeclarationActionable) ? 'cursor-not-allowed' : ''}`}
-            title={selectedIds.length ? `Enviar ${selectedIds.length} declaração(ões) selecionada(s) para a Asten` : 'Selecione as declarações na tabela para assinar em bloco'}
-          >
-            <Shield className="w-4 h-4" />
-            <span>{selectedIds.length ? `Assinar selecionadas com Asten (${selectedIds.length})` : 'Assinar selecionadas com Asten'}</span>
-          </button>
-        )}
-
-        {activeTab === 'concluidos' && coordTextFormat.showBaixarSelecionadosButton !== false && (
-          <button
-            type="button"
-            disabled={selectedIds.length === 0}
-            onClick={() => {
-              if (selectedIds.length === 0) return;
-              const itemsToDownload = queue.filter(q => selectedIds.includes(q.process.id));
-              const completedToDownload = allProcesses.filter(p => selectedIds.includes(p.id));
-              const currentSelected = activeTab === 'pendentes' ? itemsToDownload : completedToDownload;
-              handleDownloadPdfs(currentSelected);
-            }}
-            style={{
-              ...actionStyles.actionPillStyle,
-              opacity: selectedIds.length === 0 ? 0.5 : actionStyles.actionPillStyle.opacity,
-            }}
-            className={`${actionStyles.actionPillClass} ${selectedIds.length === 0 ? 'cursor-not-allowed' : ''}`}
-            title={
-              selectedIds.length > 0
-                ? `Baixar ${selectedIds.length} declaração(ões) assinada(s) do Drive`
-                : 'Selecione as linhas da tabela para habilitar o download em bloco'
-            }
-          >
-            <span>{coordTextFormat.baixarSelecionadosButtonEmoji || '📦'}</span>
-            <span>
-              {selectedIds.length > 0
-                ? `Baixar assinadas (${selectedIds.length})`
-                : 'Baixar assinadas'}
-            </span>
-          </button>
-        )}
-      </div>
       {downloadError && (
         <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800">
           {downloadError}
@@ -878,6 +829,11 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   placeholder="Buscar declarações..."
                   textFormat={coordTextFormat}
                 />
+
+                {activeTab === 'pendentes' && (<>
+                  <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={handleSignSelected} className={`${styles.toolbarButtonClass} portal-sign-bulk-btn disabled:opacity-45`} style={styles.toolbarButtonStyle} title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
+                  <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className={`${styles.toolbarButtonClass} portal-sign-bulk-btn disabled:opacity-45`} style={styles.toolbarButtonStyle} title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
+                </>)}
 
                 {/* Refresh Fila (Yin-Yang) */}
                 <button
@@ -941,7 +897,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                         type="button"
                         onClick={() => { setActiveTab(filter.tab); setSelectedIds([]); }}
                         style={chip.buttonStyle}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-all h-7 shrink-0 border select-none ${isSelected ? 'shadow-xs scale-[1.02]' : 'opacity-85 hover:opacity-100'}`}
+                        className={`portal-standard-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-all h-7 shrink-0 border select-none ${isSelected ? 'shadow-xs scale-[1.02]' : 'opacity-85 hover:opacity-100'}`}
                         title={`Filtrar por declarações ${filter.label.toLowerCase()}`}
                       >
                         <span className="w-2 h-2 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: chip.dotColor }} />
@@ -1019,7 +975,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                                 </button>
                               </td>
                               {columnOrder.map((colKey) => renderCell(item, colKey))}
-                              {renderAstenActionCell(proc)}
+                              {renderSignatureActionCell(proc)}
                             </tr>
                           );
                         })}

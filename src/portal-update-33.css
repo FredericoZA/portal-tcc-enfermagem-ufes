@@ -1,0 +1,99 @@
+/* Atualização 33 — áreas restritas, indicadores públicos e padronização global. */
+
+.portal-restricted-toolbar-wide{min-width:126px!important;width:auto!important;padding-left:14px!important;padding-right:14px!important;gap:6px!important;}
+.portal-sign-bulk-btn{min-width:82px!important;width:auto!important;padding-left:10px!important;padding-right:10px!important;gap:5px!important;}
+.portal-sign-provider-btn{display:inline-flex;min-height:28px;align-items:center;justify-content:center;gap:4px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:4px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:#1f2937;box-shadow:0 1px 2px rgba(15,23,42,.08);}
+.portal-sign-provider-btn:hover:not(:disabled){background:#f0f0f0}.portal-sign-provider-btn:disabled{cursor:not-allowed;opacity:.45}
+
+/* Sidebar: um único estado ativo, sem aro bege. A aba fluorescente devolve a profundidade 3D. */
+#sidebar-nav .portal-sidebar-nav-item{position:relative;overflow:visible;border-color:transparent!important;box-shadow:none;}
+#sidebar-nav .portal-sidebar-nav-item:not(.portal-sidebar-nav-active){background-color:transparent;}
+#sidebar-nav .portal-sidebar-nav-active{background:#154D41!important;color:#fff!important;border-color:transparent!important;box-shadow:0 6px 14px rgba(0,0,0,.18)!important;transform:translateX(3px);}
+#sidebar-nav .portal-sidebar-nav-active::before{content:"";position:absolute;left:-10px;top:7px;bottom:7px;width:7px;border-radius:7px 0 0 7px;background:#74FF96;box-shadow:-3px 0 10px rgba(116,255,150,.45),0 2px 5px rgba(0,0,0,.25);}
+#sidebar-nav .portal-sidebar-nav-item:focus-visible{outline:none!important;box-shadow:0 0 0 2px rgba(116,255,150,.8)!important;}
+#sidebar-nav .portal-sidebar-nav-active:focus-visible{box-shadow:0 6px 14px rgba(0,0,0,.18),0 0 0 2px rgba(116,255,150,.8)!important;}
+
+/* Filtros das tabelas restritas seguem o mesmo vocabulário do calendário. */
+#meus-processos-page-container .portal-standard-filter-chip,
+#coordenador-page-root .portal-standard-filter-chip{background:#fff!important;border-color:#cbd5e1!important;color:#1f2937!important;box-shadow:none!important;transform:none!important;opacity:1!important;}
+#meus-processos-page-container .portal-standard-filter-chip[class*="scale"],
+#coordenador-page-root .portal-standard-filter-chip[class*="scale"]{background:#AEB0B3!important;border-color:#979a9d!important;color:#111827!important;}
+
+/* Cabeçalhos restritos usam exatamente o mesmo verde e a mesma separação branca do calendário. */
+#meus-processos-page-container section>div>div:first-child,
+#coordenador-page-root section>div>div:first-child{background:#005830!important;background-color:#005830!important;color:#fff!important;border-color:#005830!important;border-bottom-width:0!important;}
+#meus-processos-page-container section>div>div:first-child h1,
+#coordenador-page-root section>div>div:first-child h1{color:#fff!important;}
+#meus-processos-page-container section>div>div:first-child>div:first-child,
+#coordenador-page-root section>div>div:first-child>div:first-child{border-bottom:2px solid #fff!important;padding-bottom:.5rem!important;margin-bottom:.45rem!important;}
+#meus-processos-page-container section>div>div:first-child>div:last-child,
+#coordenador-page-root section>div>div:first-child>div:last-child{margin-top:0!important;margin-bottom:0!important;color:#fff!important;}
+#meus-processos-page-container section>div>div:first-child>div:last-child>span:first-child,
+#coordenador-page-root section>div>div:first-child>div:last-child>span:first-child{color:#fff!important;opacity:1!important;}
+
+/* Toolbar de tabelas: controles comuns brancos; seleção continua cinza escuro. */
+#meus-processos-page-container section>div>div:first-child button:not(.portal-standard-filter-chip),
+#coordenador-page-root section>div>div:first-child button:not(.portal-standard-filter-chip){background:#fff!important;color:#1f2937!important;border-color:#cbd5e1!important;box-shadow:0 1px 2px rgba(15,23,42,.08)!important;}
+#meus-processos-page-container section>div>div:first-child button:not(.portal-standard-filter-chip):hover:not(:disabled),
+#coordenador-page-root section>div>div:first-child button:not(.portal-standard-filter-chip):hover:not(:disabled){background:#f0f0f0!important;}
+#meus-processos-page-container section>div>div:first-child button:disabled,
+#coordenador-page-root section>div>div:first-child button:disabled{opacity:.45!important;}
+
+/* Studio compacto: reduz deslocamento sem alterar os editores funcionais. */
+.portal-studio{margin-bottom:.5rem!important}.portal-studio>div:last-child{padding:.75rem!important}.portal-studio .space-y-4{gap:.5rem!important}.portal-studio article{scroll-margin-top:8px}.portal-studio [class*="rounded-2xl"]{box-shadow:0 1px 3px rgba(15,23,42,.08)}
+
+/* Backup/restore são ações normais do portal: mesmo tamanho e verde de ação. */
+.portal-backup-action{height:32px!important;min-width:172px!important;margin:0!important;background:#337959!important;color:#fff!important;border-color:#2d6c50!important;box-shadow:0 1px 2px rgba(15,23,42,.12)!important;}
+.portal-backup-action:hover{filter:brightness(.96);background:#337959!important;}
+
+#indicadores-publicos-page table th{background:#005830!important;color:#fff!important;}
+#portal-personalization-hub table thead{background:#005830!important;}
+
+/* Cabeçalhos públicos: uma única identidade visual em verde musgo e texto branco. */
+#formal-monthly-calendar-section>div>div:first-child,
+#public-calendar-cards-section>div>div:first-child,
+#biblioteca-tccs-section>div>div:first-child{
+  background:#005830!important;
+  background-color:#005830!important;
+  color:#fff!important;
+  border-color:#005830!important;
+}
+#formal-monthly-calendar-section>div>div:first-child h1,
+#public-calendar-cards-section>div>div:first-child h2,
+#biblioteca-tccs-section>div>div:first-child h1{color:#fff!important;}
+
+/* Faixa DOM–SÁB volta a fazer parte do mesmo cabeçalho verde do calendário. */
+#formal-monthly-calendar-section>div>div:nth-child(2)>div>div>div:first-child{
+  background:#005830!important;
+  background-color:#005830!important;
+  color:#fff!important;
+  border-color:#005830!important;
+}
+#formal-monthly-calendar-section>div>div:nth-child(2)>div>div>div:first-child .grid>div{
+  color:#fff!important;
+  opacity:1!important;
+}
+
+/* Texto FILTRAR dos cabeçalhos públicos deve ter o mesmo branco do título. */
+#public-calendar-cards-section>div>div:first-child>div:last-child>span:first-child{
+  color:#fff!important;
+  opacity:1!important;
+}
+#public-calendar-cards-section>div>div:first-child>div:last-child{
+  border-top-color:#fff!important;
+}
+
+/* Como usar: divisória branca forte e respiro real entre título, linha e filtros. */
+#portal-tutorial-page>section:first-child>div:last-child{
+  margin-top:.65rem!important;
+  padding-top:.55rem!important;
+  border-top-width:2px!important;
+  border-top-color:#fff!important;
+}
+#portal-tutorial-page>section:first-child>div:last-child>span:first-child{
+  color:#fff!important;
+  opacity:1!important;
+}
+
+/* Hub de personalização usa o verde de ação/pop-up, não o verde escuro das planilhas. */
+#portal-personalization-hub>header{background:#337959!important;}

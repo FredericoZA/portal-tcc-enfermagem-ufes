@@ -241,8 +241,8 @@ const DEFAULT_GENERAL_POPUPS_CONFIG: GeneralPopupsConfig = {
   correctionHeaderBg: '#005830',
   correctionHeaderTextColor: '#ffffff',
   correctionBtnBg: '#005830',
-  correctionTitle: 'Solicitação de Declaração de Ouvinte ou Correção',
-  correctionSubtitle: 'Preencha seus dados para solicitar certidão de participação como ouvinte.'
+  correctionTitle: 'Solicitação de Correção',
+  correctionSubtitle: 'Descreva a correção necessária no documento para análise administrativa.'
 };
 
 const GENERAL_POPUPS_KEY = 'portal_general_popups_config_v1';
@@ -1550,7 +1550,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
               {renderNavRow('popup_hipoar', 'Análise Hipoar', Award)}
               {renderNavRow('popup_pdf_viewer', 'Visualizador PDF', FileCheck)}
               {renderNavRow('popup_login', 'Login & Autenticação', Lock)}
-              {renderNavRow('popup_correction', 'Solicitação Ouvinte', HelpCircle)}
+              {renderNavRow('popup_correction', 'Solicitação de Correção', HelpCircle)}
             </div>
           </div>
 

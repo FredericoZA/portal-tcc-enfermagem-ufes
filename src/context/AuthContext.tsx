@@ -4,7 +4,7 @@ import { saveGlobalPopupStyle } from '../utils/portalAppearanceLinks';
 import { GlobalRole, ProcessMembership, GlobalSettings } from '../types';
 import { apiClient, setActiveUserEmail, getActiveUserEmail } from '../services/apiClient';
 import { saveGlobalTableConfig } from '../utils/tableFormatters';
-import { saveSiteLayoutConfig } from '../utils/siteLayoutConfig';
+import { loadSiteLayoutConfig, saveSiteLayoutConfig, SITE_LAYOUT_EVENT } from '../utils/siteLayoutConfig';
 import { saveCalendarPopupConfig } from '../utils/calendarPopupConfig';
 import { saveTccDetailPopupFormat } from '../types/tccDetailFormat';
 import { saveLoginPopupConfig } from '../utils/loginPopupConfig';
@@ -33,6 +33,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function syncPortalFavicon(siteConfig: any) {
+  if (typeof document === 'undefined') return;
+  const href = String(siteConfig?.sidebarCustomLogoUrl || '/colenf-logo.png').trim() || '/colenf-logo.png';
+  const iconLinks = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="shortcut icon"]'));
+  if (!iconLinks.length) {
+    const icon = document.createElement('link');
+    icon.rel = 'icon';
+    icon.type = 'image/png';
+    document.head.appendChild(icon);
+    iconLinks.push(icon);
+  }
+  iconLinks.forEach((link) => { link.href = href; });
+  const appleLinks = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="apple-touch-icon"]'));
+  appleLinks.forEach((link) => { link.href = href; });
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [userEmail, setUserEmailState] = useState<string>(getActiveUserEmail());
   const [globalRoles, setGlobalRoles] = useState<GlobalRole[]>([]);
@@ -41,69 +57,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated,setIsAuthenticated]=useState(false);
 
-  const refreshAuth = async () => {
+  const applyPublicSettings = (rawSettings: GlobalSettings) => {
+    const settingsRes=normalizeUnifiedAppearance(rawSettings);setSettings(settingsRes);
+    if(settingsRes.portalAppearance&&typeof window!=='undefined'){
+      const appearance=settingsRes.portalAppearance;
+      if(appearance.globalPopupStyle)saveGlobalPopupStyle(appearance.globalPopupStyle);
+      const globalTableAppearance=settingsRes.tableAppearance||{};
+      if(appearance.linkedItems)savePortalAppearanceLinks(appearance.linkedItems,globalTableAppearance as Record<string,unknown>,false);
+      if(settingsRes.tableLayouts){const canonicalLayouts:Record<string,unknown>={};const legacyStorageKeys:Record<string,string>={defesas:'defenses',coordenador:'coordinator'};Object.entries(settingsRes.tableLayouts).forEach(([rawKey,rawLayout])=>{const key=legacyStorageKeys[rawKey]||rawKey;const layout=rawLayout&&typeof rawLayout==='object'?{...(rawLayout as Record<string,unknown>)}:{};if(tableInheritsGlobalAppearance(key))delete (layout as any).textFormat;(layout as any).inheritGlobalAppearance=tableInheritsGlobalAppearance(key);canonicalLayouts[key]=layout;});Object.values(TABLE_STORAGE_BY_EDITOR_TAB).forEach(key=>{const layout=canonicalLayouts[key];if(layout)localStorage.setItem(`default_table_config_${key}`,JSON.stringify(layout));});window.dispatchEvent(new CustomEvent(TABLE_LAYOUTS_EVENT,{detail:canonicalLayouts}));}
+      if(appearance.siteConfig){saveSiteLayoutConfig(appearance.siteConfig as any);syncPortalFavicon(appearance.siteConfig);}else syncPortalFavicon(loadSiteLayoutConfig());
+      if(appearance.calendarPopup)saveCalendarPopupConfig(appearance.calendarPopup as any);if(appearance.tccDetailPopup)saveTccDetailPopupFormat(appearance.tccDetailPopup as any);if(appearance.loginPopup)saveLoginPopupConfig(appearance.loginPopup as any);if(appearance.generalPopups)saveGeneralPopupsConfig(appearance.generalPopups as any);
+    }else syncPortalFavicon(loadSiteLayoutConfig());
+    if(settingsRes.tableAppearance)saveGlobalTableConfig(settingsRes.tableAppearance);
+    if(settingsRes.integrationStudio?.operationsPolicy&&typeof document!=='undefined'){const policy=settingsRes.integrationStudio.operationsPolicy;document.documentElement.lang=policy.defaultLocale||'pt-BR';document.documentElement.style.setProperty('--portal-target-size',`${policy.accessibility?.minimumTargetSize||44}px`);document.documentElement.dataset.portalMotion=policy.accessibility?.reducedMotionByDefault?'reduced':'system';}
+  };
+
+  const refreshAuth=async()=>{
     setIsLoading(true);
-    try {
-      const [meRes, rawSettings] = await Promise.all([
-        apiClient.getMe(),
-        apiClient.getSettings()
-      ]);
-      const settingsRes = normalizeUnifiedAppearance(rawSettings);
-      setUserEmailState(meRes.userEmail);
-      setIsAuthenticated(meRes.isAuthenticated);
-      setGlobalRoles(meRes.globalRoles);
-      setMemberships(meRes.memberships);
-      setSettings(settingsRes);
-      if (settingsRes.portalAppearance && typeof window !== 'undefined') {
-        const appearance = settingsRes.portalAppearance;
-        if (appearance.globalPopupStyle) saveGlobalPopupStyle(appearance.globalPopupStyle);
-        const globalTableAppearance = settingsRes.tableAppearance || {};
-        if (appearance.linkedItems) {
-          savePortalAppearanceLinks(
-            appearance.linkedItems,
-            globalTableAppearance as Record<string, unknown>,
-            false,
-          );
-        }
-        if (settingsRes.tableLayouts) {
-          const canonicalLayouts: Record<string, unknown> = {};
-          const legacyStorageKeys: Record<string, string> = { defesas: 'defenses', coordenador: 'coordinator' };
-          Object.entries(settingsRes.tableLayouts).forEach(([rawKey, rawLayout]) => {
-            const key = legacyStorageKeys[rawKey] || rawKey;
-            const layout = rawLayout && typeof rawLayout === 'object' ? { ...(rawLayout as Record<string, unknown>) } : {};
-            if (tableInheritsGlobalAppearance(key)) delete layout.textFormat;
-            layout.inheritGlobalAppearance = tableInheritsGlobalAppearance(key);
-            canonicalLayouts[key] = layout;
-          });
-          Object.values(TABLE_STORAGE_BY_EDITOR_TAB).forEach((key) => {
-            const layout = canonicalLayouts[key];
-            if (layout) localStorage.setItem(`default_table_config_${key}`, JSON.stringify(layout));
-          });
-          window.dispatchEvent(new CustomEvent(TABLE_LAYOUTS_EVENT, { detail: canonicalLayouts }));
-        }
-        if (appearance.siteConfig) saveSiteLayoutConfig(appearance.siteConfig as any);
-        if (appearance.calendarPopup) saveCalendarPopupConfig(appearance.calendarPopup as any);
-        if (appearance.tccDetailPopup) saveTccDetailPopupFormat(appearance.tccDetailPopup as any);
-        if (appearance.loginPopup) saveLoginPopupConfig(appearance.loginPopup as any);
-        if (appearance.generalPopups) saveGeneralPopupsConfig(appearance.generalPopups as any);
-      }
-      if (settingsRes.tableAppearance) saveGlobalTableConfig(settingsRes.tableAppearance);
-      if (settingsRes.integrationStudio?.operationsPolicy && typeof document !== 'undefined') {
-        const policy = settingsRes.integrationStudio.operationsPolicy;
-        document.documentElement.lang = policy.defaultLocale || 'pt-BR';
-        document.documentElement.style.setProperty('--portal-target-size', `${policy.accessibility?.minimumTargetSize || 44}px`);
-        document.documentElement.dataset.portalMotion = policy.accessibility?.reducedMotionByDefault ? 'reduced' : 'system';
-      }
-    } catch (err) {
-      console.error('Erro ao carregar dados do usuário:', err);
-      setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
-    }
+    const settingsTask=apiClient.getSettings().then(applyPublicSettings).catch(err=>{console.error('Erro ao carregar aparência pública do portal:',err);syncPortalFavicon(loadSiteLayoutConfig());});
+    const identityTask=apiClient.getMe().then(meRes=>{setUserEmailState(meRes.userEmail);setIsAuthenticated(meRes.isAuthenticated);setGlobalRoles(meRes.globalRoles);setMemberships(meRes.memberships);}).catch(err=>{console.warn('Sessão não confirmada; mantendo o Portal em modo público.',err);setUserEmailState('');setIsAuthenticated(false);setGlobalRoles([]);setMemberships([]);});
+    await Promise.allSettled([settingsTask,identityTask]);setIsLoading(false);
   };
 
   useEffect(() => {
     refreshAuth();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const syncFromLayout = (event: Event) => syncPortalFavicon((event as CustomEvent).detail || loadSiteLayoutConfig());
+    syncPortalFavicon(loadSiteLayoutConfig());
+    window.addEventListener(SITE_LAYOUT_EVENT, syncFromLayout);
+    return () => window.removeEventListener(SITE_LAYOUT_EVENT, syncFromLayout);
   }, []);
 
   const switchUser = async (email: string) => {
