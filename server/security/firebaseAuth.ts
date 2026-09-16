@@ -15,7 +15,9 @@ export interface PortalIdentity {
 }
 
 const LEGACY_COOKIE_NAME = 'portal_tcc_session';
-const SESSION_TTL_SECONDS = 2 * 60 * 60;
+// A sessão precisa sobreviver a F5 e a períodos longos de leitura/preenchimento.
+// O bloqueio administrativo sensível continua protegido por hasRecentAuthentication.
+const SESSION_TTL_SECONDS = 12 * 60 * 60;
 const secureRuntime = () => process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
 const cookieName = () => secureRuntime() ? '__Host-portal_tcc_session' : LEGACY_COOKIE_NAME;
 
@@ -96,7 +98,7 @@ function demoIdentity(req: Request): PortalIdentity | null {
   const now = Math.floor(Date.now() / 1000);
   return {
     sessionId: `demo_${randomBytes(18).toString('base64url')}`, uid: `demo:${email}`, email, emailVerified: true, authTime: now, issuedAt: now,
-    expiresAt: now + 3600, isDemo: true, method: 'DEVELOPMENT_DEMO'
+    expiresAt: now + SESSION_TTL_SECONDS, isDemo: true, method: 'DEVELOPMENT_DEMO'
   };
 }
 
@@ -104,7 +106,7 @@ export function createPortalIdentity(email: string, method: PortalIdentity['meth
   const normalized = normalizeEmail(email);
   const now = Math.floor(Date.now() / 1000);
   return {
-    sessionId: randomBytes(24).toString('base64url'), uid: `email:${normalized}`, email: normalized, emailVerified: true, authTime: now,
+    sessionId: randomBytes(24).toString('base64url'), uid: `email:${normalized}`, email: normalized, emailVerified: true, authTime: now, issuedAt: now,
     issuedAt: now, expiresAt: now + SESSION_TTL_SECONDS, isDemo: false, method
   };
 }
