@@ -23,7 +23,7 @@ const report = {
 };
 let browser, child, dataDir;
 
-const ignoreConsoleError = (text) => /ERR_FAILED|ERR_BLOCKED|Failed to load resource|Permissions policy violation: Geolocation/i.test(text);
+const ignoreConsoleError = (text) => /ERR_FAILED|ERR_BLOCKED|Failed to load resource|Permissions policy violation: Geolocation|Refused to frame ['"]https:\/\/www\.google\.com\/|Failed to read the ['"]localStorage['"] property from ['"]Window['"]: Access is denied for this document/i.test(text);
 
 try {
   let chromium;
