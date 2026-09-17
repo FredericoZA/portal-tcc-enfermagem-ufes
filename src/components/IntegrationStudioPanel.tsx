@@ -657,6 +657,72 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const updateWorkflowAction = (stageId:string,actionId:string,patch:Partial<WorkflowActionItem>) => {setWorkflowStages(previous=>previous.map(stage=>stage.id===stageId?{...stage,actions:stage.actions.map(action=>action.id===actionId?{...action,...patch}:action)}:stage));setIsDirty(true);};
   const removeWorkflowAction = (stageId:string,actionId:string) => {setWorkflowStages(previous=>previous.map(stage=>stage.id===stageId?{...stage,actions:stage.actions.filter(action=>action.id!==actionId)}:stage));setIsDirty(true);};
 
+  const moveWorkflowAction = (stageId:string, actionIndex:number, direction:-1|1) => {
+    setWorkflowStages(previous=>previous.map(stage=>{
+      if(stage.id!==stageId)return stage;
+      const target=actionIndex+direction;
+      if(target<0||target>=stage.actions.length)return stage;
+      const actions=[...stage.actions];
+      [actions[actionIndex],actions[target]]=[actions[target],actions[actionIndex]];
+      return {...stage,actions};
+    }));
+    setIsDirty(true);
+  };
+
+  const setWorkflowDragPayload = (event:React.DragEvent, payload:Record<string,unknown>) => {
+    event.dataTransfer.effectAllowed='move';
+    event.dataTransfer.setData('application/x-portal-workflow', JSON.stringify(payload));
+  };
+
+  const readWorkflowDragPayload = (event:React.DragEvent):Record<string,any>|null => {
+    try {
+      const raw=event.dataTransfer.getData('application/x-portal-workflow');
+      return raw?JSON.parse(raw):null;
+    } catch {
+      return null;
+    }
+  };
+
+  const handleWorkflowStageDrop = (event:React.DragEvent, targetStageId:string) => {
+    event.preventDefault();
+    const payload=readWorkflowDragPayload(event);
+    if(!payload)return;
+    if(payload.kind==='palette' && typeof payload.value==='string'){
+      addWorkflowAction(targetStageId,payload.value);
+      return;
+    }
+    if(payload.kind==='stage' && typeof payload.stageId==='string' && payload.stageId!==targetStageId){
+      setWorkflowStages(previous=>{
+        const from=previous.findIndex(stage=>stage.id===payload.stageId);
+        const to=previous.findIndex(stage=>stage.id===targetStageId);
+        if(from<0||to<0)return previous;
+        const next=[...previous];
+        const [moved]=next.splice(from,1);
+        next.splice(to,0,moved);
+        return next.map((stage,index)=>({...stage,stageNumber:index+1}));
+      });
+      setIsDirty(true);
+      return;
+    }
+    if(payload.kind==='action' && typeof payload.stageId==='string' && typeof payload.actionId==='string'){
+      setWorkflowStages(previous=>{
+        const sourceStage=previous.find(stage=>stage.id===payload.stageId);
+        const action=sourceStage?.actions.find(item=>item.id===payload.actionId);
+        if(!action)return previous;
+        return previous.map(stage=>{
+          if(stage.id===payload.stageId && stage.id===targetStageId){
+            const actions=stage.actions.filter(item=>item.id!==payload.actionId);
+            return {...stage,actions:[...actions,action]};
+          }
+          if(stage.id===payload.stageId)return {...stage,actions:stage.actions.filter(item=>item.id!==payload.actionId)};
+          if(stage.id===targetStageId)return {...stage,actions:[...stage.actions,action]};
+          return stage;
+        });
+      });
+      setIsDirty(true);
+    }
+  };
+
   const emailPreviewHtml = useMemo(() => {
     if (!selectedEmail) return '';
     const body = selectedEmail.htmlBody?.trim()
@@ -837,7 +903,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                 <label className={`${actionClass} cursor-pointer border-slate-300 bg-white text-slate-700`}><Image className="h-3.5 w-3.5" />Enviar imagem/banner<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const value = await readTemplateImage(e.target.files?.[0]); if (value) updateSelectedEmailDesign({ heroImageUrl: value }); }} /></label>
               </div>
               <div><label className={labelClass}>Rodapé</label><textarea rows={2} value={selectedEmailDesign.footerText} onChange={(e) => updateSelectedEmailDesign({ footerText: e.target.value })} className={inputClass} /></div>
-              <div><label className={labelClass}>Anexos gerados pelo Portal</label><select multiple value={selectedEmail.attachments||[]} onChange={(e)=>updateSelectedEmail({attachments:Array.from(e.target.selectedOptions).map(option=>option.value)})} className={`${inputClass} min-h-24`}>{docTemplates.map(doc=><option key={doc.id} value={doc.id}>{doc.label}</option>)}</select><p className="mt-1 text-[9px] text-slate-500">Use Ctrl/Cmd para selecionar mais de um documento. A etapa do fluxo define quando o e-mail será enviado.</p></div>
+              <div><label className={labelClass}>Anexos gerados pelo Portal</label><select multiple value={selectedEmail.attachments||[]} onChange={(e)=>updateSelectedEmail({attachments:Array.from(e.currentTarget.selectedOptions, (option: HTMLOptionElement) => option.value)})} className={`${inputClass} min-h-24`}>{docTemplates.map(doc=><option key={doc.id} value={doc.id}>{doc.label}</option>)}</select><p className="mt-1 text-[9px] text-slate-500">Use Ctrl/Cmd para selecionar mais de um documento. A etapa do fluxo define quando o e-mail será enviado.</p></div>
             </div>
             <div className={`${panelClass} overflow-hidden bg-slate-200`}><div className="border-b border-slate-300 bg-white px-4 py-3"><div className="text-[10px] font-black uppercase text-slate-500">Pré-visualização protegida</div><div className="mt-1 truncate text-xs font-bold text-slate-800">Assunto: {selectedEmail.subject}</div></div><iframe title="Pré-visualização do e-mail" sandbox="" srcDoc={emailPreviewHtml} className="h-[760px] w-full border-0 bg-slate-100" /></div>
           </div>
@@ -880,8 +946,18 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                 ['Convite', 'Sem assinatura'], ['Ata', 'Orientador'], ['Termo', 'Aluno(s) + orientador, prioridade 1'], ['Declaração', 'Presidente da Comissão']
               ].map(([document, rule]) => <div key={document} className="rounded-xl border border-emerald-200 bg-emerald-50 p-3"><strong className="block text-[10px] uppercase text-emerald-900">{document}</strong><span className="text-[10px] text-emerald-800">{rule}</span></div>)}</div>
             </section>
+            <section className={`${panelClass} p-4`} aria-label="Paleta de ações do fluxo">
+              <div className="text-[10px] font-black uppercase text-slate-500">Arraste para uma etapa</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {docTemplates.map(item=><button key={`palette-doc-${item.id}`} type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:`doc:${item.id}`})} className="portal-action cursor-grab"><FileText className="h-3.5 w-3.5"/>{item.label}</button>)}
+                {emailTemplates.map(item=><button key={`palette-email-${item.id}`} type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:`email:${item.id}`})} className="portal-action cursor-grab"><Mail className="h-3.5 w-3.5"/>{item.name}</button>)}
+                {formTemplates.map(item=><button key={`palette-form-${item.id}`} type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:`form:${item.id}`})} className="portal-action cursor-grab"><ClipboardList className="h-3.5 w-3.5"/>{item.title}</button>)}
+                <button type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:'action:internal'})} className="portal-action cursor-grab"><Settings2 className="h-3.5 w-3.5"/>Ação interna</button>
+              </div>
+              <p className="mt-2 text-[9px] text-slate-500">Também é possível usar os seletores e setas abaixo; o arrastar e soltar é um atalho, não a única forma de operar.</p>
+            </section>
             <div className="space-y-3">
-              {workflowStages.map((stage,index)=><div key={stage.id} className={`${panelClass} overflow-hidden`}>
+              {workflowStages.map((stage,index)=><div key={stage.id} draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'stage',stageId:stage.id})} onDragOver={event=>{event.preventDefault();event.dataTransfer.dropEffect='move';}} onDrop={event=>handleWorkflowStageDrop(event,stage.id)} className={`${panelClass} overflow-hidden`}>
                 <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 p-3">
                   <span className="rounded-full bg-slate-800 px-2.5 py-1 text-[9px] font-black text-white">ETAPA {index+1}</span>
                   <input aria-label="Título da etapa" value={stage.title} onChange={event=>updateWorkflowStage(stage.id,{title:event.target.value})} className={`${inputClass} min-w-[220px] flex-1 font-bold`}/>
@@ -891,7 +967,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                 </div>
                 <div className="space-y-3 p-4">
                   <div className="grid gap-3 md:grid-cols-[.8fr_1.2fr]"><div><label className={labelClass}>Evento disparador</label><input list={`workflow-event-catalog-${stage.id}`} value={stage.triggerEvent} onChange={event=>updateWorkflowStage(stage.id,{triggerEvent:event.target.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')})} className={inputClass} placeholder="Ex.: FORM_AVALIACAO_SUBMITTED"/><datalist id={`workflow-event-catalog-${stage.id}`}>{workflowEvents.map(([value,label])=><option key={value} value={value}>{label}</option>)}</datalist><p className="mt-1 text-[9px] text-slate-500">Para formulário personalizado, use FORM_ID_DO_FORMULARIO_SUBMITTED.</p></div><div><label className={labelClass}>Objetivo da etapa</label><input value={stage.description} onChange={event=>updateWorkflowStage(stage.id,{description:event.target.value})} className={inputClass}/></div></div>
-                  <div className="space-y-2"><div className="text-[10px] font-black uppercase text-slate-500">Ações em ordem</div>{stage.actions.map((action,actionIndex)=><div key={action.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="grid gap-2 md:grid-cols-[auto_.8fr_1fr_auto]"><span className="self-center rounded-full bg-white px-2 py-1 text-[9px] font-black text-slate-500">{actionIndex+1}</span><div className="flex gap-1"><button type="button" aria-label={`Mover ${action.title} para cima`} disabled={actionIndex===0} onClick={()=>setWorkflowStages(previous=>previous.map(s=>{if(s.id!==stage.id)return s;const actions=[...s.actions];[actions[actionIndex-1],actions[actionIndex]]=[actions[actionIndex],actions[actionIndex-1]];return {...s,actions};}))} className="portal-action">↑</button><button type="button" aria-label={`Mover ${action.title} para baixo`} disabled={actionIndex===stage.actions.length-1} onClick={()=>setWorkflowStages(previous=>previous.map(s=>{if(s.id!==stage.id)return s;const actions=[...s.actions];[actions[actionIndex+1],actions[actionIndex]]=[actions[actionIndex],actions[actionIndex+1]];return {...s,actions};}))} className="portal-action">↓</button></div><input value={action.title} onChange={event=>updateWorkflowAction(stage.id,action.id,{title:event.target.value})} className={inputClass}/><input value={action.recipientOrDetail||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder="Destinatário ou detalhe"/><button type="button" onClick={()=>removeWorkflowAction(stage.id,action.id)} className="rounded-lg border border-rose-200 bg-white p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5"/></button></div><details className="mt-2 rounded-lg border border-slate-200 bg-white p-2"><summary className="cursor-pointer text-[9px] font-black uppercase text-slate-600">Condição para executar</summary><div className="mt-2 grid gap-2 sm:grid-cols-3"><select value={action.condition?.fieldKey||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:event.target.value?{fieldKey:event.target.value,operator:action.condition?.operator||'EQUALS',value:action.condition?.value||''}:undefined})} className={inputClass}><option value="">Sempre executar</option>{matrixColumns.map(item=><option key={item.id} value={normalizeVariableKey(item.name)}>{item.label||item.name}</option>)}</select>{action.condition&&<><select value={action.condition.operator} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,operator:event.target.value as any}})} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">É verdadeiro</option></select>{!['NOT_EMPTY','IS_TRUE'].includes(action.condition.operator)&&<input value={action.condition.value||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,value:event.target.value}})} className={inputClass} placeholder="Valor esperado"/>}</>}</div></details></div>)}</div>
+                  <div className="space-y-2"><div className="text-[10px] font-black uppercase text-slate-500">Ações em ordem</div>{stage.actions.map((action,actionIndex)=><div key={action.id} draggable onDragStart={event=>{event.stopPropagation();setWorkflowDragPayload(event,{kind:'action',stageId:stage.id,actionId:action.id});}} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="grid gap-2 md:grid-cols-[auto_.8fr_1fr_auto]"><span className="self-center rounded-full bg-white px-2 py-1 text-[9px] font-black text-slate-500">{actionIndex+1}</span><div className="flex gap-1"><button type="button" aria-label={`Mover ${action.title} para cima`} disabled={actionIndex===0} onClick={()=>moveWorkflowAction(stage.id,actionIndex,-1)} className="portal-action">↑</button><button type="button" aria-label={`Mover ${action.title} para baixo`} disabled={actionIndex===stage.actions.length-1} onClick={()=>moveWorkflowAction(stage.id,actionIndex,1)} className="portal-action">↓</button></div><input value={action.title} onChange={event=>updateWorkflowAction(stage.id,action.id,{title:event.target.value})} className={inputClass}/><input value={action.recipientOrDetail||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder="Destinatário ou detalhe"/><button type="button" onClick={()=>removeWorkflowAction(stage.id,action.id)} className="rounded-lg border border-rose-200 bg-white p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5"/></button></div><details className="mt-2 rounded-lg border border-slate-200 bg-white p-2"><summary className="cursor-pointer text-[9px] font-black uppercase text-slate-600">Condição para executar</summary><div className="mt-2 grid gap-2 sm:grid-cols-3"><select value={action.condition?.fieldKey||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:event.target.value?{fieldKey:event.target.value,operator:action.condition?.operator||'EQUALS',value:action.condition?.value||''}:undefined})} className={inputClass}><option value="">Sempre executar</option>{matrixColumns.map(item=><option key={item.id} value={normalizeVariableKey(item.name)}>{item.label||item.name}</option>)}</select>{action.condition&&<><select value={action.condition.operator} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,operator:event.target.value as any}})} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">É verdadeiro</option></select>{!['NOT_EMPTY','IS_TRUE'].includes(action.condition.operator)&&<input value={action.condition.value||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,value:event.target.value}})} className={inputClass} placeholder="Valor esperado"/>}</>}</div></details></div>)}</div>
                   <div><label className={labelClass}>Adicionar ação vinculada</label><select value="" onChange={event=>{if(event.target.value)addWorkflowAction(stage.id,event.target.value);}} className={inputClass}><option value="">Selecione documento, e-mail ou formulário…</option><optgroup label="Documentos">{docTemplates.map(item=><option key={item.id} value={`doc:${item.id}`}>{item.label}</option>)}</optgroup><optgroup label="E-mails">{emailTemplates.map(item=><option key={item.id} value={`email:${item.id}`}>{item.name}</option>)}</optgroup><optgroup label="Formulários">{formTemplates.map(item=><option key={item.id} value={`form:${item.id}`}>{item.title}</option>)}</optgroup></select></div>
                 </div>
               </div>)}

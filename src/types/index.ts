@@ -399,9 +399,9 @@ export interface GlobalSettings {
   templateIds?: Record<string, string>;
   emailConfig?: Record<string, any>;
   integrationStudio?: IntegrationStudioSettings;
-  documentModels?: Partial<Record<DocumentType, {
+  documentModels?: Record<string, {
     id: string;
-    type: DocumentType;
+    type: string;
     label: string;
     fileName: string;
     templateContentText: string;
@@ -426,7 +426,7 @@ export interface GlobalSettings {
       driveRevisionId?: string;
       driveModifiedTime?: string;
     }>;
-  }>>;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
