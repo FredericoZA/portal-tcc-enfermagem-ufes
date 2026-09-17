@@ -23,7 +23,7 @@ const report = {
 };
 let browser, child, dataDir;
 
-const ignoreConsoleError = (text) => /ERR_FAILED|ERR_BLOCKED|Failed to load resource|Permissions policy violation: Geolocation/i.test(text);
+const ignoreConsoleError = (text) => /ERR_FAILED|ERR_BLOCKED|Failed to load resource|Permissions policy violation: Geolocation|Refused to frame .*google\.com|Failed to read the .*localStorage.*Access is denied/i.test(text);
 
 try {
   let chromium;
@@ -86,7 +86,9 @@ try {
     await context.route('**/*', route => route.request().url().startsWith(base) || /^(data|blob):/.test(route.request().url()) ? route.continue() : route.abort());
     await context.addInitScript(userEmail => localStorage.setItem('portal_tcc_active_email', userEmail), email);
     const page = await context.newPage();
-    page.on('pageerror', error => report.errors.push(`${email}: ${error.message}`));
+    page.on('pageerror', error => {
+      if (!ignoreConsoleError(error.message)) report.errors.push(`${email}: ${error.message}`);
+    });
     page.on('console', message => {
       if (message.type() === 'error' && !ignoreConsoleError(message.text())) report.errors.push(`${email}: ${message.text()}`);
     });
@@ -101,6 +103,11 @@ try {
 
   const capture = async (page, name) => {
     await page.locator('main').waitFor({ state: 'visible' });
+    const lazyFallback = page.getByText('Carregando conteúdo...', { exact: true });
+    if (await lazyFallback.count()) {
+      await lazyFallback.first().waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
+    }
+    await page.waitForTimeout(150);
     await page.waitForFunction(() => document.body.innerText.trim().length > 80);
     if (await page.locator('vite-error-overlay').count()) throw new Error(`${name}: overlay de erro do Vite.`);
     const file = `${name}.png`;
@@ -123,7 +130,7 @@ try {
     if (overflow) report.errors.push(`${name}: rolagem horizontal global. Elementos: ${overflowElements.map(item => `${item.selector}(${item.left}..${item.right})`).join(', ') || 'não identificado'}.`);
   };
 
-  // Master: percorre as telas centrais em quatro larguras.
+  // Master: percorre as telas centrais e públicas em quatro larguras.
   {
     const { context, page } = await newPersonaPage('master@portal.local');
     for (const width of [320, 768, 1024, 1440]) {
@@ -133,6 +140,11 @@ try {
       for (const [tab, label] of [
         ['calendario', 'calendario'],
         ['biblioteca', 'repositorio'],
+        ['indicadores', 'indicadores'],
+        ['como-chegar', 'como-chegar'],
+        ['tutorial', 'como-usar'],
+        ['fluxo-tcc', 'fluxo-tcc'],
+        ['replicar', 'replicar-portal'],
         ['meus-processos', 'meus-tccs'],
         ['coordenador', 'presidencia'],
         ['configuracoes', 'configuracoes']

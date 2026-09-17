@@ -2,7 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "work/finalizacao-portal-tcc": false
+      "work/finalizacao-portal-tcc": false,
+      "work/padronizacao-visual-setembro-2026": false
     }
   },
   "installCommand": "npm ci --include=dev",

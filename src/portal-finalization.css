@@ -9,6 +9,22 @@
   --portal-filter-selected: #AEB0B3;
   --portal-toolbar-height: 28px;
   --portal-sidebar-accent: #74FF96;
+  --portal-page-bg: #edf1f3;
+  --portal-surface-1: #e1e6e9;
+  --portal-surface-2: #d5dce0;
+  --portal-surface-3: #c9d2d7;
+  --portal-surface-border: #bcc8cf;
+  --portal-section-green: #005830;
+}
+
+/* Fundo geral: branco-gelo levemente mais escuro, com hierarquia progressiva
+ * nas superfícies internas. */
+#portal-app-root {
+  background-color: var(--portal-page-bg) !important;
+}
+
+#portal-app-root main {
+  background-color: transparent !important;
 }
 
 #sidebar-nav .portal-sidebar-nav-item {
@@ -28,17 +44,19 @@
   color: #fff !important;
   border: 0 !important;
   box-shadow: 0 6px 14px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.04) !important;
-  transform: translateX(2px);
+  transform: none !important;
 }
 
+/* A faixa fluorescente ocupa toda a altura do item ativo; antes ela ficava
+ * 1px recuada em cima/baixo e o botão ainda era deslocado 2px à direita. */
 #sidebar-nav .portal-sidebar-nav-active::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 1px;
-  bottom: 1px;
-  width: 5px;
-  border-radius: 10px 0 0 10px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  border-radius: 12px 0 0 12px;
   background: var(--portal-sidebar-accent);
   box-shadow: 2px 0 7px rgba(116,255,150,.32);
   pointer-events: none;
@@ -51,6 +69,31 @@
 
 #sidebar-nav .portal-sidebar-nav-active:focus-visible {
   box-shadow: 0 6px 14px rgba(0,0,0,.18), 0 0 0 2px rgba(116,255,150,.8) !important;
+}
+
+/* Ícones que estavam visualmente pequenos recebem o mesmo peso dos demais. */
+#nav-item-como-chegar > div > span:first-child,
+#nav-item-tutorial > div > span:first-child,
+#nav-item-configuracoes > div > span:first-child {
+  display: inline-flex !important;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px !important;
+  line-height: 1 !important;
+}
+
+/* A engrenagem monocromática destoava dos demais pictogramas da navegação. */
+#nav-item-configuracoes > div > span:first-child {
+  font-size: 0 !important;
+}
+
+#nav-item-configuracoes > div > span:first-child::before {
+  content: "🛠️";
+  font-size: 18px;
+  line-height: 1;
 }
 
 #meus-processos-page-container section > div > div:first-child > div:first-child,
@@ -135,4 +178,229 @@
 .portal-toolbar-compact,
 .portal-toolbar-compact button {
   min-height: var(--portal-toolbar-height);
+}
+
+/* --------------------------------------------------------------------------
+ * Páginas públicas: cabeçalho e conteúdo formam um único bloco contínuo.
+ * O calendário é a referência: verde institucional + divisor branco forte.
+ * ----------------------------------------------------------------------- */
+:is(
+  #indicadores-publicos-page,
+  #como-chegar-page-container,
+  #portal-tutorial-page,
+  #fluxo-tcc-page,
+  #portal-replication-page
+) {
+  background: var(--portal-surface-1) !important;
+  border: 1px solid var(--portal-surface-border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, .10);
+}
+
+:is(
+  #indicadores-publicos-page,
+  #como-chegar-page-container,
+  #portal-tutorial-page,
+  #fluxo-tcc-page,
+  #portal-replication-page
+) > section:first-child {
+  margin: 0 !important;
+  border: 0 !important;
+  border-bottom: var(--portal-divider-width) solid var(--portal-divider-color) !important;
+  border-radius: 0 !important;
+  background: var(--portal-section-green) !important;
+  box-shadow: none !important;
+}
+
+:is(
+  #indicadores-publicos-page,
+  #como-chegar-page-container,
+  #portal-tutorial-page,
+  #fluxo-tcc-page,
+  #portal-replication-page
+) > :not(:first-child) {
+  margin-block-start: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* COMO CHEGAR */
+#como-chegar-page-container > section:nth-child(2) {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--portal-surface-1) !important;
+  box-shadow: none !important;
+}
+
+#como-chegar-page-container > section:nth-child(2) > div:first-child,
+#como-chegar-page-container > section:nth-child(3) > div:first-child,
+#como-chegar-page-container > section:nth-child(3) > div:last-child > section {
+  background: var(--portal-surface-2) !important;
+  border-color: var(--portal-surface-border) !important;
+}
+
+#como-chegar-page-container > section:nth-child(3) {
+  margin: 0 !important;
+  padding: 0 12px 12px;
+  background: var(--portal-surface-1) !important;
+}
+
+#como-chegar-page-container > section:nth-child(3) p.bg-white,
+#como-chegar-page-container > section:nth-child(3) div.bg-white {
+  background: var(--portal-surface-3) !important;
+  border-color: #b7c3ca !important;
+}
+
+/* COMO USAR */
+#portal-tutorial-page > section:nth-child(2) {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--portal-surface-1) !important;
+  box-shadow: none !important;
+}
+
+#portal-tutorial-page > section:nth-child(2) > div > div:first-child,
+#portal-tutorial-page > section:nth-child(2) ol > li,
+#portal-tutorial-page > section:nth-child(2) > div > div:last-child > div {
+  background: var(--portal-surface-2) !important;
+  border-color: var(--portal-surface-border) !important;
+}
+
+/* FLUXO DO TCC */
+#fluxo-tcc-page > section:nth-child(2) {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--portal-surface-1) !important;
+  box-shadow: none !important;
+}
+
+#fluxo-tcc-page > section:nth-child(2) article > div:first-child > div {
+  background: var(--portal-surface-2) !important;
+  border-color: var(--portal-surface-border) !important;
+}
+
+#fluxo-tcc-page > section:nth-child(2) article > div:nth-child(2) {
+  border-color: var(--portal-surface-1) !important;
+}
+
+#fluxo-tcc-page > section:nth-child(2) article > div:last-child span {
+  background: var(--portal-surface-3) !important;
+  border-color: #b7c3ca !important;
+}
+
+/* REPLICAR PORTAL */
+#portal-replication-page > section:nth-child(2) {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--portal-surface-1) !important;
+  box-shadow: none !important;
+}
+
+#portal-replication-page > section:nth-child(2) article {
+  background: var(--portal-surface-2) !important;
+  border-color: var(--portal-surface-border) !important;
+}
+
+#portal-replication-page > section:nth-child(3) {
+  margin: 0 !important;
+  padding: 0 12px 12px;
+  background: var(--portal-surface-1) !important;
+}
+
+#portal-replication-page > section:nth-child(3) > article {
+  background: var(--portal-surface-2) !important;
+  border-color: var(--portal-surface-border) !important;
+}
+
+#portal-replication-page > section:nth-child(3) > article:last-child > div:last-child > div {
+  background: var(--portal-surface-3) !important;
+  border-color: #b7c3ca !important;
+}
+
+/* INDICADORES: o fundo-base agora une o cabeçalho ao painel inteiro; cards e
+ * elementos internos seguem a mesma progressão tonal. */
+#indicadores-publicos-page > section:not(:first-child) {
+  margin: 0 !important;
+  padding: 12px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#indicadores-publicos-page > div:not(:first-child) {
+  margin: 12px 12px 0 !important;
+}
+
+#indicadores-publicos-page > p {
+  margin: 0 !important;
+  padding: 12px !important;
+}
+
+#indicadores-publicos-page article {
+  background: var(--portal-surface-2) !important;
+  border-color: var(--portal-surface-border) !important;
+}
+
+#indicadores-publicos-page article div.bg-white,
+#indicadores-publicos-page article span.bg-white,
+#indicadores-publicos-page article table.bg-white,
+#indicadores-publicos-page article div[class~="bg-white"] {
+  background: var(--portal-surface-3) !important;
+  border-color: #b7c3ca !important;
+}
+
+/* --------------------------------------------------------------------------
+ * CONFIGURAÇÕES: cada faixa principal usa o mesmo cabeçalho verde do Portal.
+ * ----------------------------------------------------------------------- */
+#configuracoes-page-container > section {
+  background: var(--portal-surface-1) !important;
+  border-color: var(--portal-surface-border) !important;
+}
+
+#configuracoes-page-container > section > button:first-child {
+  background: var(--portal-section-green) !important;
+  color: #fff !important;
+  border-color: var(--portal-divider-color) !important;
+  border-bottom: var(--portal-divider-width) solid var(--portal-divider-color) !important;
+  box-shadow: none !important;
+}
+
+#configuracoes-page-container > section > button:first-child:hover,
+#configuracoes-page-container > section > button:first-child:active {
+  background: #006438 !important;
+}
+
+#configuracoes-page-container > section > button:first-child h2,
+#configuracoes-page-container > section > button:first-child span,
+#configuracoes-page-container > section > button:first-child svg {
+  color: #fff !important;
+}
+
+#configuracoes-page-container > section > button:first-child + div {
+  background: var(--portal-surface-1) !important;
+  border-top: 0 !important;
+}
+
+@media (max-width: 640px) {
+  :is(
+    #indicadores-publicos-page,
+    #como-chegar-page-container,
+    #portal-tutorial-page,
+    #fluxo-tcc-page,
+    #portal-replication-page
+  ) {
+    border-radius: 14px;
+  }
+
+  #como-chegar-page-container > section:nth-child(3),
+  #portal-replication-page > section:nth-child(3) {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-bottom: 10px;
+  }
 }
