@@ -834,7 +834,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                   textFormat={meusProcessosTextFormat}
                 />
 
-                {processes.length > 0 && canCreateStudentTcc && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false && (
+                {canCreateStudentTcc && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false && (
                   <button
                     id="meus-processos-btn-novo"
                     type="button"

@@ -24,3 +24,13 @@ test('Atualização 34 não introduz novas cores de superfície para o calendár
   assert.ok(css.includes('--portal-sheet-surface:#f0f0f0'));
   assert.ok(css.includes('background:#e5e9ed!important'));
 });
+
+
+test('bloco 1 integra ações e células reais às telas',async()=>{
+  const [mine,president,home]=await Promise.all([source('src/pages/MeusProcessosPage.tsx'),source('src/pages/CoordenadorPage.tsx'),source('src/pages/HomePage.tsx')]);
+  assert.ok(mine.includes("{canCreateStudentTcc && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false && ("));
+  assert.ok(home.includes('portal-calendar-day-cell'));
+  assert.ok(president.includes('renderSignatureActionCells'));
+  assert.ok(president.includes('<span>Asten</span>'));
+  assert.ok(president.includes('<span>Gov</span>'));
+});

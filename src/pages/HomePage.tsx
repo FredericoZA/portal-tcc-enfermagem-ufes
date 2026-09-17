@@ -1269,7 +1269,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         setSelectedDayGcalEvents(dayGcal.length > 0 ? dayGcal : null);
                       }
                     }}
-                    className={`border-r border-b border-slate-200 p-2 flex flex-col justify-between transition-all duration-150 relative group select-none ${
+                    className={`portal-calendar-day-cell ${hasEvents ? 'portal-calendar-day-has-events ' : ''}${isWeekend ? 'portal-calendar-day-weekend ' : ''}border-r border-b border-slate-200 p-2 flex flex-col justify-between transition-all duration-150 relative group select-none ${
                       hasEvents
                         ? isPastDay
                           ? 'bg-slate-100/90 hover:bg-slate-200/80 border-slate-300 cursor-pointer h-16 sm:h-20 shadow-2xs text-slate-500 active:scale-[0.98]'

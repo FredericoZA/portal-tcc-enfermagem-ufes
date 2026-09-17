@@ -390,9 +390,20 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     setSigningIds(prev=>prev.filter(id=>!ids.includes(id)));setSelectedIds([]);await loadData();setSigningMessage(failures.length?`${completed} PDF(s) Gov.br preparados; ${failures.length} falha(s): ${failures.join(' | ')}`:`${completed} PDF(s) preparados. Assine-os no Gov.br e envie os arquivos assinados pelas fichas dos TCCs.`);
   };
 
-  const renderSignatureActionCell = (proc: ProcessData) => {
-    const job=getDeclarationJob(proc.id);const working=signingIds.includes(proc.id);const status=getDeclarationStatus(proc.id);const actionable=isDeclarationActionable(proc.id);
-    return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[188px] text-center align-middle`}><div className="flex items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button></div>{!actionable&&<span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[8px] font-black uppercase ${status.tone}`} title={job?.lastError||status.label}>{status.label}</span>}</td>;
+  const renderSignatureActionCells = (proc: ProcessData) => {
+    const job=getDeclarationJob(proc.id);
+    const working=signingIds.includes(proc.id);
+    const status=getDeclarationStatus(proc.id);
+    const actionable=isDeclarationActionable(proc.id);
+    return (<>
+      <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[92px] text-center align-middle`}>
+        <button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
+        {!actionable&&<span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[8px] font-black uppercase ${status.tone}`} title={job?.lastError||status.label}>{status.label}</span>}
+      </td>
+      <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[92px] text-center align-middle`}>
+        <button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
+      </td>
+    </>);
   };
 
   // Download only the authenticated declaration already signed by Asten and archived in Drive.
@@ -946,8 +957,11 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                             </button>
                           </th>
                           {columnOrder.map((colKey) => renderHeaderCell(colKey))}
-                          <th className={`${styles.headerThClass} ${styles.cellPadClass} min-w-[150px] text-center align-middle ${styles.headerBorderClass}`}>
+                          <th className={`${styles.headerThClass} ${styles.cellPadClass} min-w-[92px] text-center align-middle ${styles.headerBorderClass}`}>
                             <span>Asten</span>
+                          </th>
+                          <th className={`${styles.headerThClass} ${styles.cellPadClass} min-w-[92px] text-center align-middle ${styles.headerBorderClass}`}>
+                            <span>Gov</span>
                           </th>
                         </tr>
                       </thead>
@@ -975,7 +989,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                                 </button>
                               </td>
                               {columnOrder.map((colKey) => renderCell(item, colKey))}
-                              {renderSignatureActionCell(proc)}
+                              {renderSignatureActionCells(proc)}
                             </tr>
                           );
                         })}
