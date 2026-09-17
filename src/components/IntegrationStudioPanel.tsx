@@ -633,7 +633,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     setMergeSourceId('');
     setMergeTargetId('');
     recordAudit(createAuditEntry('VARIABLE_MERGED', 'variable', targetVariable.id, `${sourceVariable.name} foi mesclada em ${targetVariable.name} após conferência explícita do impacto; todas as referências foram reescritas.`, actorEmail, {
-      before: sourceVariable, after: targetVariable, affectedArtifacts: merged.affectedArtifacts, impact
+      before: sourceVariable, after: { target: targetVariable, impact }, affectedArtifacts: merged.affectedArtifacts
     }));
     notify(`Mescla concluída em ${merged.affectedArtifacts.length} artefato(s).`);
   };
