@@ -1,0 +1,33 @@
+name: Update 34 studio patch
+
+on:
+  push:
+    branches:
+      - work/finalizacao-portal-tcc
+    paths:
+      - scripts/apply-update34-studio-patch.mjs
+      - .github/workflows/update34-studio-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-studio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: work/finalizacao-portal-tcc
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: node scripts/apply-update34-studio-patch.mjs
+      - name: Registrar patch do Estúdio
+        run: |
+          if git diff --quiet -- src/components/IntegrationStudioPanel.tsx; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/IntegrationStudioPanel.tsx
+          git commit -m "Atualização 34 — autosave e simplificação do Estúdio"
+          git push origin HEAD:work/finalizacao-portal-tcc
