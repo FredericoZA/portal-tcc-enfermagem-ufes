@@ -1688,9 +1688,10 @@ export async function createPortalApp() {
     const matricula=String(req.body?.matricula||'').trim()||undefined;
     if(!nome||!isValidPortalEmail(email))return res.status(400).json({error:'Nome e e-mail válido são obrigatórios.'});
     if(!['STUDENT','ADVISOR','CO_ADVISOR','EXAMINER'].includes(role))return res.status(400).json({error:'Selecione um papel de acesso válido.'});
-    if(role==='STUDENT'&&!matricula)return res.status(400).json({error:'Informe a matrícula para cadastrar um estudante.'});
+    // A matrícula ajuda na identificação acadêmica, mas não bloqueia o cadastro individual prévio.
     const existed=authorizedStudentsStore.some(entry=>normalizeEmail(entry.email)===email);
     const entry=upsertAuthorizedAccess({nome,email,matricula,role,origin:'MASTER_LIST',actor:identity.email,active:true});
+    entry.accessType=role; // qualidade administrativa única; os papéis por TCC permanecem nas memberships.
     entry.memberType=memberType;
     entry.manualRevocation=false;entry.revokedAt=undefined;entry.revokedBy=undefined;entry.revocationReason=undefined;entry.updatedAt=new Date().toISOString();
     auditLogsStore.push({id:`log-${Date.now()}-access`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:existed?'ATUALIZACAO_ACESSO_AUTORIZADO':'CRIACAO_ACESSO_AUTORIZADO',entityType:'authorized_access',entityId:entry.id,after:{emailHash:createHash('sha256').update(entry.email).digest('hex'),roles:entry.roles,memberType:entry.memberType,origin:entry.origin,active:entry.active},timestamp:entry.updatedAt});
@@ -1705,8 +1706,9 @@ export async function createPortalApp() {
     const requestedRole=req.body?.role?String(req.body.role).toUpperCase() as ProcessRole:undefined;
     if(requestedRole&&!['STUDENT','ADVISOR','CO_ADVISOR','EXAMINER'].includes(requestedRole))return res.status(400).json({error:'Papel de acesso inválido.'});
     const roles=requestedRole?Array.from(new Set([...(before.roles||[before.accessType||'STUDENT']),requestedRole])) as ProcessRole[]:(before.roles||[before.accessType||'STUDENT']);
+    const accessType=requestedRole&&req.body?.replaceRole===true?requestedRole:(before.accessType||roles[0]);
     const memberType=req.body?.memberType!==undefined?(String(req.body.memberType).toUpperCase()==='EXTERNAL'?'EXTERNAL':'INTERNAL'):before.memberType;
-    const updated:AuthorizedStudent={...before,...(req.body?.nome!==undefined?{nome:String(req.body.nome).trim()}:{}),...(req.body?.matricula!==undefined?{matricula:String(req.body.matricula).trim()||undefined}:{}),roles,accessType:(before.accessType||roles[0]),memberType,active,manualRevocation:req.body?.active!==undefined?!active:before.manualRevocation,revokedAt:!active?updatedAt:undefined,revokedBy:!active?identity.email:undefined,revocationReason:!active?String(req.body?.reason||'Acesso revogado pelo administrador.').trim():undefined,updatedAt};
+    const updated:AuthorizedStudent={...before,...(req.body?.nome!==undefined?{nome:String(req.body.nome).trim()}:{}),...(req.body?.matricula!==undefined?{matricula:String(req.body.matricula).trim()||undefined}:{}),roles,accessType,memberType,active,manualRevocation:req.body?.active!==undefined?!active:before.manualRevocation,revokedAt:!active?updatedAt:undefined,revokedBy:!active?identity.email:undefined,revocationReason:!active?String(req.body?.reason||'Acesso revogado pelo administrador.').trim():undefined,updatedAt};
     authorizedStudentsStore[index]=updated;
     auditLogsStore.push({id:`log-${Date.now()}-access-update`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'ALTERACAO_ACESSO_AUTORIZADO',entityType:'authorized_access',entityId:updated.id,before:{active:before.active,roles:before.roles,memberType:before.memberType},after:{active:updated.active,roles:updated.roles,memberType:updated.memberType},timestamp:updated.updatedAt});
     persistPortalState();res.json(updated);
@@ -3113,36 +3115,7 @@ export async function createPortalApp() {
       }
     }
 
-    // Public web scrape fallback if no access token or API returned 0 files
-    if (files.length === 0) {
-      try {
-        const publicUrl = `https://drive.google.com/drive/folders/${folderId}`;
-        const pageRes = await fetch(publicUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          }
-        });
-        if (pageRes.ok) {
-          const html = await pageRes.text();
-          // Match document or file IDs
-          const docMatches = html.match(/\/document\/d\/([a-zA-Z0-9_-]+)/g) || html.match(/\/file\/d\/([a-zA-Z0-9_-]+)/g);
-          if (docMatches) {
-            const uniqueIds = Array.from(new Set(docMatches.map(m => m.split('/d/')[1])));
-            uniqueIds.forEach(id => {
-              if (id && id !== folderId) {
-                files.push({
-                  id,
-                  name: `Modelo Google Drive (${id.substring(0, 6)})`,
-                  driveFileUrl: `https://docs.google.com/document/d/${id}/edit`
-                });
-              }
-            });
-          }
-        }
-      } catch (e) {
-        console.error('[ScanFolder] Public scrape exception:', e);
-      }
-    }
+    // Sem fallback público: a varredura usa exclusivamente a conta Google autorizada no servidor.
 
     res.json({ folderId, files });
   });
