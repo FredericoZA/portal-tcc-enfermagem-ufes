@@ -1,0 +1,108 @@
+/* Atualização 34 — padronização visual e compactação dos cabeçalhos. */
+
+:root{
+  --portal-toolbar-divider-color:#fff;
+  --portal-toolbar-divider-width:2px;
+  --portal-sheet-surface:#f0f0f0;
+}
+
+/* Sidebar: trilho fluorescente encosta nas bordas superior/inferior do item ativo,
+   sem virar uma faixa desproporcional. */
+#sidebar-nav .portal-sidebar-nav-active::before{
+  left:-8px!important;
+  top:0!important;
+  bottom:0!important;
+  width:7px!important;
+  border-radius:7px 0 0 7px!important;
+  background:#74FF96!important;
+  box-shadow:-2px 0 8px rgba(116,255,150,.42),0 2px 5px rgba(0,0,0,.22)!important;
+}
+
+/* Uma única divisória branca, com a mesma espessura em todas as barras tipo planilha. */
+#meus-processos-page-container section>div>div:first-child>div:first-child,
+#coordenador-page-root section>div>div:first-child>div:first-child{
+  border-bottom:var(--portal-toolbar-divider-width) solid var(--portal-toolbar-divider-color)!important;
+  padding-bottom:.45rem!important;
+  margin-bottom:0!important;
+}
+#meus-processos-page-container section>div>div:first-child>div:last-child,
+#coordenador-page-root section>div>div:first-child>div:last-child{
+  border-top:0!important;
+  padding-top:.45rem!important;
+  padding-bottom:0!important;
+  margin-top:0!important;
+  margin-bottom:0!important;
+}
+
+/* Calendário: a mesma divisória separa o título da faixa DOM–SÁB. */
+#formal-monthly-calendar-section>div>div:first-child{
+  border-bottom:var(--portal-toolbar-divider-width) solid var(--portal-toolbar-divider-color)!important;
+}
+#formal-monthly-calendar-section>div>div:nth-child(2)>div>div>div:first-child{
+  border-top:0!important;
+}
+
+/* Lista pública de defesas: mesma linha, mesma grossura. */
+#public-calendar-cards-section>div>div:first-child>div:last-child{
+  border-top:var(--portal-toolbar-divider-width) solid var(--portal-toolbar-divider-color)!important;
+  padding-top:.45rem!important;
+  margin-top:.35rem!important;
+}
+
+/* Como usar segue exatamente a mesma régua de divisória. */
+#portal-tutorial-page>section:first-child>div:last-child{
+  border-top:var(--portal-toolbar-divider-width) solid var(--portal-toolbar-divider-color)!important;
+  margin-top:.45rem!important;
+  padding-top:.45rem!important;
+}
+
+/* Filtros compactos: o respiro pertence à linha, não ao botão. */
+#meus-processos-page-container .portal-standard-filter-chip,
+#coordenador-page-root .portal-standard-filter-chip,
+#public-calendar-cards-section .portal-standard-filter-chip{
+  height:28px!important;
+  min-height:28px!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
+  margin-top:0!important;
+  margin-bottom:0!important;
+}
+
+/* Controles da toolbar restrita: todos na mesma altura e sem gordura vertical. */
+#meus-processos-page-container section>div>div:first-child button,
+#coordenador-page-root section>div>div:first-child button{
+  height:28px!important;
+  min-height:28px!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
+  align-items:center!important;
+}
+.portal-sign-bulk-btn{
+  height:28px!important;
+  min-height:28px!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
+}
+
+/* Meus TCCs: Cadastrar vem antes da lupa e mantém largura de ação textual. */
+#meus-processos-btn-novo{
+  order:-2!important;
+  min-width:126px!important;
+  padding-left:14px!important;
+  padding-right:14px!important;
+}
+
+/* Presidente: Asten/Gov ficam antes das ferramentas comuns, com um respiro depois do par. */
+#coordenador-page-root .portal-sign-bulk-btn{order:-2!important;}
+#coordenador-page-root .portal-sign-bulk-btn + .portal-sign-bulk-btn{margin-right:10px!important;}
+
+/* Dias do mês usam a superfície neutra já existente no portal, distinguindo-se do fundo da página. */
+#formal-monthly-calendar-section .portal-calendar-day-cell{
+  background:var(--portal-sheet-surface)!important;
+}
+#formal-monthly-calendar-section .portal-calendar-day-cell.portal-calendar-day-weekend{
+  background:#e5e9ed!important;
+}
+#formal-monthly-calendar-section .portal-calendar-day-cell.portal-calendar-day-has-events{
+  background:#e5e9ed!important;
+}
