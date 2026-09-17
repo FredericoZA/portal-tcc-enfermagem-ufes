@@ -6,7 +6,11 @@ const normalizeHeader=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u
 const decodeXml=(value:string)=>value.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&apos;/g,"'");
 
 function parseDelimited(text:string):string[][]{
-  const clean=text.replace(/^\uFEFF/,'');const firstLine=clean.split(/\r?\n/,1)[0]||'';const delimiter=(firstLine.match(/;/g)||[]).length>(firstLine.match(/,/g)||[]).length?';':',';const rows:string[][]=[];let row:string[]=[],cell='',quoted=false;
+  const clean=text.replace(/^\uFEFF/,'');
+  const firstLine=clean.split(/\r?\n/,1)[0]||'';
+  const separatorCounts={tab:(firstLine.match(/\t/g)||[]).length,semicolon:(firstLine.match(/;/g)||[]).length,comma:(firstLine.match(/,/g)||[]).length};
+  const delimiter=separatorCounts.tab>=separatorCounts.semicolon&&separatorCounts.tab>=separatorCounts.comma&&separatorCounts.tab>0?'\t':separatorCounts.semicolon>separatorCounts.comma?';':',';
+  const rows:string[][]=[];let row:string[]=[],cell='',quoted=false;
   for(let index=0;index<clean.length;index++){const char=clean[index];if(char==='"'){if(quoted&&clean[index+1]==='"'){cell+='"';index++;}else quoted=!quoted;}else if(char===delimiter&&!quoted){row.push(cell);cell='';}else if((char==='\n'||char==='\r')&&!quoted){if(char==='\r'&&clean[index+1]==='\n')index++;row.push(cell);if(row.some(value=>value.trim()))rows.push(row);row=[];cell='';}else cell+=char;}row.push(cell);if(row.some(value=>value.trim()))rows.push(row);return rows;
 }
 
@@ -17,8 +21,19 @@ async function parseXlsx(buffer:ArrayBuffer):Promise<string[][]>{
   for(const rowMatch of xml.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)){const cells:string[]=[];for(const cellMatch of rowMatch[1].matchAll(/<c([^>]*)>([\s\S]*?)<\/c>/g)){const attrs=cellMatch[1],body=cellMatch[2],reference=attrs.match(/r="([A-Z]+)\d+"/)?.[1]||'A';let column=0;for(const letter of reference)column=column*26+letter.charCodeAt(0)-64;const type=attrs.match(/t="([^"]+)"/)?.[1];const inline=body.match(/<t[^>]*>([\s\S]*?)<\/t>/)?.[1];const raw=body.match(/<v>([\s\S]*?)<\/v>/)?.[1]||inline||'';cells[column-1]=type==='s'?shared[Number(raw)]||'':decodeXml(raw);}rows.push(cells.map(value=>value||''));}return rows;
 }
 
+function tableToStudents(table:string[][]):StudentImportRow[]{
+  if(table.length<2)throw new Error('Os dados precisam ter cabeçalho e ao menos uma pessoa.');
+  const headers=table[0].map(normalizeHeader);const column=(aliases:string[])=>headers.findIndex(header=>aliases.includes(header));const nameIndex=column(['nome','nome_completo','aluno']),emailIndex=column(['email','e_mail','email_institucional']),registrationIndex=column(['matricula','numero_de_matricula','registro']);if(nameIndex<0||emailIndex<0)throw new Error('O cabeçalho precisa conter as colunas nome e email.');
+  return table.slice(1).map((row,index)=>({row:index+2,nome:String(row[nameIndex]||'').trim(),email:String(row[emailIndex]||'').trim().toLowerCase(),matricula:registrationIndex>=0?String(row[registrationIndex]||'').trim()||undefined:undefined})).filter(row=>row.nome||row.email||row.matricula);
+}
+
+export function parseStudentImportText(text:string):StudentImportRow[]{
+  if(!String(text||'').trim())return[];
+  return tableToStudents(parseDelimited(text));
+}
+
 export async function parseStudentImportFile(file:File):Promise<StudentImportRow[]>{
-  if(file.size>5*1024*1024)throw new Error('A planilha não pode ultrapassar 5 MB.');const extension=file.name.split('.').pop()?.toLowerCase();let table:string[][];if(extension==='csv'||extension==='txt')table=parseDelimited(await file.text());else if(extension==='xlsx')table=await parseXlsx(await file.arrayBuffer());else throw new Error('Use um arquivo CSV ou XLSX.');if(table.length<2)throw new Error('A planilha precisa ter cabeçalho e ao menos um aluno.');const headers=table[0].map(normalizeHeader);const column=(aliases:string[])=>headers.findIndex(header=>aliases.includes(header));const nameIndex=column(['nome','nome_completo','aluno']),emailIndex=column(['email','e_mail','email_institucional']),registrationIndex=column(['matricula','numero_de_matricula','registro']);if(nameIndex<0||emailIndex<0)throw new Error('O cabeçalho precisa conter as colunas nome e email.');return table.slice(1).map((row,index)=>({row:index+2,nome:String(row[nameIndex]||'').trim(),email:String(row[emailIndex]||'').trim().toLowerCase(),matricula:registrationIndex>=0?String(row[registrationIndex]||'').trim()||undefined:undefined})).filter(row=>row.nome||row.email||row.matricula);
+  if(file.size>5*1024*1024)throw new Error('A planilha não pode ultrapassar 5 MB.');const extension=file.name.split('.').pop()?.toLowerCase();let table:string[][];if(extension==='csv'||extension==='txt')table=parseDelimited(await file.text());else if(extension==='xlsx')table=await parseXlsx(await file.arrayBuffer());else throw new Error('Use um arquivo CSV ou XLSX.');return tableToStudents(table);
 }
 
 export function studentImportTemplateCsv():string{return '\uFEFFnome;email;matricula\nNome completo;aluno@instituicao.br;0000000000\n';}

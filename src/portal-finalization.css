@@ -1,0 +1,138 @@
+/* Fechamento do Portal TCC — camada canônica de identidade visual.
+ * Esta folha deve ser carregada por último. Ela não cria um novo tema:
+ * apenas fixa os invariantes visuais já aprovados no Portal.
+ */
+
+:root {
+  --portal-divider-color: #ffffff;
+  --portal-divider-width: 2px;
+  --portal-filter-selected: #AEB0B3;
+  --portal-toolbar-height: 28px;
+  --portal-sidebar-accent: #74FF96;
+}
+
+#sidebar-nav .portal-sidebar-nav-item {
+  position: relative;
+  overflow: hidden;
+  border: 0 !important;
+  box-shadow: none;
+}
+
+#sidebar-nav .portal-sidebar-nav-item:not(.portal-sidebar-nav-active) {
+  transform: none !important;
+  background-color: transparent;
+}
+
+#sidebar-nav .portal-sidebar-nav-active {
+  background: #154D41 !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: 0 6px 14px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.04) !important;
+  transform: translateX(2px);
+}
+
+#sidebar-nav .portal-sidebar-nav-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1px;
+  bottom: 1px;
+  width: 5px;
+  border-radius: 10px 0 0 10px;
+  background: var(--portal-sidebar-accent);
+  box-shadow: 2px 0 7px rgba(116,255,150,.32);
+  pointer-events: none;
+}
+
+#sidebar-nav .portal-sidebar-nav-item:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(116,255,150,.8) !important;
+}
+
+#sidebar-nav .portal-sidebar-nav-active:focus-visible {
+  box-shadow: 0 6px 14px rgba(0,0,0,.18), 0 0 0 2px rgba(116,255,150,.8) !important;
+}
+
+#meus-processos-page-container section > div > div:first-child > div:first-child,
+#coordenador-page-root section > div > div:first-child > div:first-child {
+  border-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+#meus-processos-page-container section > div > div:first-child > div:last-child,
+#coordenador-page-root section > div > div:first-child > div:last-child {
+  border-top: var(--portal-divider-width) solid var(--portal-divider-color) !important;
+  margin-top: 8px !important;
+  padding-top: 7px !important;
+  padding-bottom: 0 !important;
+}
+
+#meus-processos-page-container .portal-standard-filter-chip,
+#coordenador-page-root .portal-standard-filter-chip,
+.portal-standard-filter-chip {
+  min-height: 26px !important;
+  height: 26px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  background: #fff !important;
+  border-color: #cbd5e1 !important;
+  color: #1f2937 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+#meus-processos-page-container .portal-standard-filter-chip[class*="scale"],
+#coordenador-page-root .portal-standard-filter-chip[class*="scale"],
+.portal-standard-filter-chip[aria-pressed="true"] {
+  background: var(--portal-filter-selected) !important;
+  border-color: #979a9d !important;
+  color: #111827 !important;
+}
+
+#meus-processos-page-container section > div > div:first-child button:not(.portal-standard-filter-chip),
+#coordenador-page-root section > div > div:first-child button:not(.portal-standard-filter-chip),
+.portal-sign-bulk-btn,
+.portal-sign-provider-btn {
+  min-height: var(--portal-toolbar-height) !important;
+  height: var(--portal-toolbar-height) !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.portal-sign-provider-btn,
+.portal-sign-bulk-btn {
+  background: #fff !important;
+  color: #1f2937 !important;
+  border-color: #cbd5e1 !important;
+}
+
+#meus-processos-btn-novo {
+  order: -1;
+  min-width: 126px !important;
+  width: auto !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+}
+
+#formal-monthly-calendar-section > div > div:nth-child(2) {
+  border-top: var(--portal-divider-width) solid var(--portal-divider-color) !important;
+}
+
+#formal-monthly-calendar-section > div > div:nth-child(2) > div > div > div:first-child {
+  background: #005830 !important;
+  color: #fff !important;
+}
+
+#portal-tutorial-page > section:first-child > div:last-child {
+  border-top: var(--portal-divider-width) solid var(--portal-divider-color) !important;
+  margin-top: 8px !important;
+  padding-top: 7px !important;
+}
+
+.portal-toolbar-compact,
+.portal-toolbar-compact button {
+  min-height: var(--portal-toolbar-height);
+}
