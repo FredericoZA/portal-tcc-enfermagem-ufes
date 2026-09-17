@@ -13,6 +13,9 @@ const importUtil = read('src/utils/studentImport.ts');
 const integrations = read('src/components/InfrastructureIntegrationsPanel.tsx');
 const evaluation = read('src/components/AdvisorEvaluationPanel.tsx');
 const studio = read('src/components/IntegrationStudioPanel.tsx');
+const masterModels = read('src/components/MasterDocumentModelsPanel.tsx');
+const googleWorkspace = read('server/integrations/googleWorkspace.ts');
+const types = read('src/types/index.ts');
 const server = read('server.ts');
 const vercel = JSON.parse(read('vercel.json'));
 
@@ -46,6 +49,7 @@ assert.doesNotMatch(access, />Tipo</);
 assert.doesNotMatch(access, />TCCs</);
 assert.match(importUtil, /parseStudentImportText/);
 assert.match(importUtil, /extension==='xlsx'/);
+assert.doesNotMatch(server, /!record\.matricula\|\|!isValidPortalEmail/, 'Matrícula não pode bloquear a importação em lote.');
 
 assert.match(integrations, /Asten — assinatura eletrônica/);
 assert.match(integrations, /Google Drive/);
@@ -67,11 +71,25 @@ assert.match(studio, /Anexos gerados pelo Portal/);
 assert.match(studio, /createFormTemplate/);
 assert.match(studio, /deleteSelectedForm/);
 assert.match(studio, /moveSelectedFormQuestion/);
+assert.match(studio, /application\/x-portal-workflow/);
+assert.match(studio, /Arraste para uma etapa/);
+assert.match(studio, /handleWorkflowStageDrop/);
+assert.match(studio, /moveWorkflowAction/);
 assert.doesNotMatch(studio, />Salvar metadados do fluxo</);
 assert.doesNotMatch(studio, />Salvar modelo de e-mail</);
 assert.doesNotMatch(studio, />Salvar formulário</);
 assert.doesNotMatch(studio, /<strong>Fonte oficial única\.<\/strong>/);
 assert.doesNotMatch(studio, />Finalidade no fluxo</);
+
+assert.match(masterModels, /Cadastre quantos modelos DOCX forem necessários/);
+assert.match(masterModels, /Novo tipo de documento/);
+assert.match(masterModels, /addSlot/);
+assert.match(masterModels, /normalizeModelKey/);
+assert.match(types, /documentModels\?: Record<string/);
+assert.match(googleWorkspace, /ensureDocumentModelFolders/);
+assert.match(googleWorkspace, /publishMasterDocumentModel\(input:\{type:string/);
+assert.match(googleWorkspace, /registerMasterDocumentModelFromDrive\(input:\{type:string/);
+assert.match(googleWorkspace, /99_\$\{type\}/);
 
 assert.match(server, /STUDENT_TCC_ALREADY_EXISTS/);
 assert.match(server, /ACCESS_LINKED_TO_PROCESS/);
@@ -79,8 +97,9 @@ assert.match(server, /GOOGLE_ALLOW_EXISTING_MODEL_LINKS/);
 assert.doesNotMatch(server, /if\(role==='STUDENT'&&!matricula\)/, 'Matrícula não pode bloquear o cadastro individual prévio.');
 assert.match(server, /entry\.accessType=role/, 'O papel escolhido precisa se tornar a qualidade administrativa principal.');
 assert.match(server, /replaceRole===true\?requestedRole/, 'A troca de qualidade deve atualizar accessType no backend.');
+assert.match(server, /type\.length<2/);
 assert.doesNotMatch(server, /Public web scrape fallback/, 'A varredura de modelos não pode recorrer a scraping público do Drive.');
 
 assert.equal(vercel.git?.deploymentEnabled?.['work/finalizacao-portal-tcc'], false, 'A branch de trabalho não pode disparar deployment na Vercel.');
 
-console.log('Contrato da Atualização 34 aprovado.');
+console.log('Contrato da Atualização 35 aprovado.');
