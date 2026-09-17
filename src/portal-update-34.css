@@ -1,0 +1,98 @@
+/* Atualização 34 — consolidação visual e operacional.
+   Este arquivo deve permanecer por último na cascata. */
+
+:root{
+  --portal-header-green:#005830;
+  --portal-action-green:#337959;
+  --portal-selected-gray:#AEB0B3;
+  --portal-sidebar-active:#154D41;
+  --portal-sidebar-fluor:#74FF96;
+  --portal-surface:#F0F0F0;
+  --portal-divider-size:2px;
+  --portal-toolbar-h:28px;
+}
+
+/* Sidebar: aba 3D encostada à borda do item, sem moldura concorrente. */
+#sidebar-nav .portal-sidebar-nav-item{position:relative;overflow:visible!important;border-color:transparent!important;box-shadow:none!important;transform:none!important;}
+#sidebar-nav .portal-sidebar-nav-item:not(.portal-sidebar-nav-active){background:transparent!important;}
+#sidebar-nav .portal-sidebar-nav-active{background:var(--portal-sidebar-active)!important;color:#fff!important;box-shadow:0 5px 12px rgba(0,0,0,.18)!important;}
+#sidebar-nav .portal-sidebar-nav-active::before{
+  content:"";position:absolute;left:-6px;top:3px;bottom:3px;width:6px;
+  border-radius:6px 0 0 6px;background:var(--portal-sidebar-fluor);
+  box-shadow:-2px 0 8px rgba(116,255,150,.48),0 2px 4px rgba(0,0,0,.22);
+}
+#sidebar-nav .portal-sidebar-nav-item:focus-visible{outline:none!important;box-shadow:0 0 0 2px rgba(116,255,150,.72)!important;}
+#sidebar-nav .portal-sidebar-nav-active:focus-visible{box-shadow:0 5px 12px rgba(0,0,0,.18),0 0 0 2px rgba(116,255,150,.72)!important;}
+
+/* Um único padrão de divisória: branca, 2 px, com respiro antes do filtro. */
+#meus-processos-page-container section>div>div:first-child>div:first-child,
+#coordenador-page-root section>div>div:first-child>div:first-child,
+#public-calendar-cards-section>div>div:first-child>div:first-child,
+#portal-tutorial-page>section:first-child>div:first-child{
+  border-bottom:var(--portal-divider-size) solid #fff!important;
+  padding-bottom:7px!important;
+  margin-bottom:7px!important;
+}
+#meus-processos-page-container section>div>div:first-child>div:last-child,
+#coordenador-page-root section>div>div:first-child>div:last-child,
+#public-calendar-cards-section>div>div:first-child>div:last-child,
+#portal-tutorial-page>section:first-child>div:last-child{
+  border-top:0!important;
+  margin-top:0!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
+}
+#formal-monthly-calendar-section>div>div:first-child{border-bottom:var(--portal-divider-size) solid #fff!important;}
+
+/* Títulos e rótulos da faixa verde sempre brancos, sem opacidade. */
+#meus-processos-page-container section>div>div:first-child,
+#coordenador-page-root section>div>div:first-child,
+#formal-monthly-calendar-section>div>div:first-child,
+#public-calendar-cards-section>div>div:first-child,
+#biblioteca-tccs-section>div>div:first-child{
+  background:var(--portal-header-green)!important;color:#fff!important;border-color:var(--portal-header-green)!important;
+}
+#meus-processos-page-container section>div>div:first-child span,
+#coordenador-page-root section>div>div:first-child span,
+#public-calendar-cards-section>div>div:first-child span,
+#portal-tutorial-page>section:first-child>div:last-child>span:first-child{opacity:1!important;}
+
+/* Filtros: compactos; branco normal e cinza quando selecionados. */
+#meus-processos-page-container .portal-standard-filter-chip,
+#coordenador-page-root .portal-standard-filter-chip,
+#public-calendar-cards-section .portal-standard-filter-chip{
+  height:var(--portal-toolbar-h)!important;min-height:var(--portal-toolbar-h)!important;
+  padding-top:0!important;padding-bottom:0!important;background:#fff!important;
+  border-color:#cbd5e1!important;color:#1f2937!important;box-shadow:none!important;transform:none!important;opacity:1!important;
+}
+#meus-processos-page-container .portal-standard-filter-chip[class*="scale"],
+#coordenador-page-root .portal-standard-filter-chip[class*="scale"],
+#public-calendar-cards-section .portal-standard-filter-chip[class*="scale"]{
+  background:var(--portal-selected-gray)!important;border-color:#979a9d!important;color:#111827!important;
+}
+
+/* Toolbars: nenhum botão engorda verticalmente. */
+#meus-processos-page-container section>div>div:first-child button,
+#coordenador-page-root section>div>div:first-child button,
+#public-calendar-cards-section>div>div:first-child button{
+  min-height:var(--portal-toolbar-h)!important;height:var(--portal-toolbar-h)!important;
+  padding-top:0!important;padding-bottom:0!important;align-items:center!important;
+}
+.portal-restricted-toolbar-wide{min-width:112px!important;height:var(--portal-toolbar-h)!important;padding:0 12px!important;}
+.portal-sign-bulk-btn{min-width:72px!important;height:var(--portal-toolbar-h)!important;padding:0 9px!important;}
+
+/* Calendário: faixa dos dias e células usam apenas tons já existentes no portal. */
+#formal-monthly-calendar-section>div>div:nth-child(2)>div>div>div:first-child{
+  background:var(--portal-header-green)!important;color:#fff!important;border-color:var(--portal-header-green)!important;
+}
+#formal-monthly-calendar-section>div>div:nth-child(2)>div>div>div:first-child .grid>div{color:#fff!important;opacity:1!important;}
+#formal-monthly-calendar-section>div>div:nth-child(2)>div>div>div:nth-child(2)>div{
+  background:#fff!important;
+}
+#formal-monthly-calendar-section>div>div:nth-child(2){background:var(--portal-surface)!important;}
+
+/* Como usar: linha única e respiro igual ao restante do site. */
+#portal-tutorial-page>section:first-child>div:last-child{margin-top:0!important;padding-top:0!important;border-top:0!important;}
+
+/* Controles de ação desabilitados usam o mesmo cinza selecionado, não um verde translúcido. */
+.portal-sign-bulk-btn:disabled{background:var(--portal-selected-gray)!important;color:#334155!important;border-color:#979a9d!important;opacity:.7!important;}
