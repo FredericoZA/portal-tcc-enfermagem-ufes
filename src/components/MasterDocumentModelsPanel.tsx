@@ -1,6 +1,6 @@
 import { portalConfirm } from '../services/portalDialogs';
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, ExternalLink, FilePlus2, FileUp, Link2, Loader2, ShieldAlert } from 'lucide-react';
+import { CheckCircle2, ExternalLink, FilePlus2, FileUp, Link2, Loader2, ShieldAlert, Trash2 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 
 const BASE_SLOTS: Array<[string, string]> = [
@@ -136,12 +136,35 @@ export const MasterDocumentModelsPanel: React.FC = () => {
     }
   };
 
+  const removeModel = async (type: string, label: string) => {
+    const persisted = Boolean(models[type]);
+    if (!persisted) {
+      setPendingSlots(current => current.filter(([slot]) => slot !== type));
+      setLinks(current => { const next = { ...current }; delete next[type]; return next; });
+      setMessage('Espaço ainda não publicado removido.');
+      return;
+    }
+    if (!(await portalConfirm(`Excluir o modelo “${label}” do catálogo ativo? A exclusão será bloqueada se o fluxo publicado ainda depender dele.`))) return;
+    setWorking(`delete-${type}`);
+    setMessage('');
+    try {
+      await apiClient.deleteDocumentModel(type);
+      setLinks(current => { const next = { ...current }; delete next[type]; return next; });
+      setMessage('Modelo removido do catálogo ativo. O histórico operacional permanece preservado para auditoria.');
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Não foi possível excluir o modelo.');
+    } finally {
+      setWorking('');
+    }
+  };
+
   return <section className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
     <div className="flex gap-3">
       <FileUp className="mt-0.5 h-5 w-5 text-emerald-700" />
       <div>
         <h3 className="font-black text-emerald-950">Modelos documentais do usuário Master</h3>
-        <p className="mt-1 text-sm leading-6 text-emerald-900">Cadastre quantos modelos DOCX forem necessários. Os quatro modelos institucionais do fluxo principal permanecem disponíveis, mas o catálogo não fica limitado a eles. Cada publicação fixa revisão e SHA-256; edição direta do arquivo ativo no Drive bloqueia a geração até nova publicação consciente.</p>
+        <p className="mt-1 text-sm leading-6 text-emerald-900">Cadastre quantos modelos DOCX forem necessários. Os quatro modelos institucionais do fluxo principal permanecem disponíveis por padrão, mas o catálogo não fica limitado a eles. Cada publicação fixa revisão e SHA-256; edição direta do arquivo ativo no Drive bloqueia a geração até nova publicação consciente.</p>
       </div>
     </div>
 
@@ -160,16 +183,20 @@ export const MasterDocumentModelsPanel: React.FC = () => {
       const model = models[type];
       const hasFile = Boolean(model?.driveFileId);
       const integrityReady = Boolean(model?.configured && model?.contentSha256);
+      const deleting = working === `delete-${type}`;
       return <article key={type} className="rounded-xl border border-slate-200 bg-white p-3">
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <div className="min-w-0">
             <strong className="text-sm text-slate-900">{model?.label || label}</strong>
-            <p className="mt-1 text-xs text-slate-500">{hasFile ? `${model.fileName} · versão ${model.activeVersion || 1}` : 'Nenhum modelo cadastrado'}</p>
+            <p className="mt-1 truncate text-xs text-slate-500">{hasFile ? `${model.fileName} · versão ${model.activeVersion || 1}` : 'Nenhum modelo cadastrado'}</p>
             {!hasFile && !BASE_SLOTS.some(([baseType]) => baseType === type) && <p className="mt-1 font-mono text-[10px] text-slate-400">ID: {type}</p>}
             {hasFile && !integrityReady && <p className="mt-1 text-xs font-bold text-amber-700">Versão legada: publique novamente para fixar a integridade.</p>}
             {integrityReady && <p className="mt-1 break-all font-mono text-xs text-slate-500" title={model.contentSha256}>SHA-256 {String(model.contentSha256).slice(0, 12)}…</p>}
           </div>
-          {integrityReady ? <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" /> : <ShieldAlert className="h-5 w-5 shrink-0 text-amber-600" />}
+          <div className="flex shrink-0 items-center gap-1">
+            {integrityReady ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <ShieldAlert className="h-5 w-5 text-amber-600" />}
+            <button type="button" onClick={() => void removeModel(type, String(model?.label || label))} disabled={Boolean(working)} aria-label={`Excluir modelo ${model?.label || label}`} className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700 disabled:opacity-40">{deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}</button>
+          </div>
         </div>
         {model?.variables?.length > 0 && <p className="mt-2 text-xs text-slate-500">{model.variables.length} variável(is) identificada(s)</p>}
         {linkImportEnabled && <div className="mt-3 flex flex-col gap-2 sm:flex-row"><input aria-label={`Link do modelo ${label}`} value={links[type] || ''} onChange={event => setLinks(current => ({ ...current, [type]: event.target.value }))} placeholder="Link ou ID do Google Docs/Drive" className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm" /><button type="button" onClick={() => void importLink(type)} disabled={Boolean(working) || !(links[type] || '').trim()} className="inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black uppercase text-emerald-900 disabled:opacity-40"><Link2 className="h-4 w-4" />Importar</button></div>}
