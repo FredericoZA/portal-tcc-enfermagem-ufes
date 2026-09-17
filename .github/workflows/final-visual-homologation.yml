@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - work/finalizacao-portal-tcc
-      - work/padronizacao-visual-setembro-2026
 
 permissions:
   contents: read
