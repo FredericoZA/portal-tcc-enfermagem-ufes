@@ -194,6 +194,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [newVariableKey, setNewVariableKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(initialMeta.savedAt || '');
+  const [draftSavedAt, setDraftSavedAt] = useState('');
   const [isDirty, setIsDirty] = useState(false);
   const appliedSnapshotRef = useRef<string>('');
   const hasHydratedRef = useRef(false);
@@ -231,7 +232,12 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   }, [selectedVariableId, selectedVariable?.id]);
 
   useEffect(() => {
-    const source = upgradeStudioDraft(normalizeStudioSettings(initialStudio || (!hasHydratedRef.current ? localStudio : null)));
+    const remote = normalizeStudioSettings(initialStudio);
+    const local = normalizeStudioSettings(!hasHydratedRef.current ? localStudio : loadLocalStudio());
+    const remoteTime = Date.parse(String(remote.savedAt || '')) || 0;
+    const localTime = Date.parse(String(local.savedAt || '')) || 0;
+    const preferred = localTime > remoteTime ? local : (initialStudio || localStudio);
+    const source = upgradeStudioDraft(normalizeStudioSettings(preferred));
     const sourceKey = `${source.savedAt || ''}:${source.revision || 0}`;
     if (!source.savedAt || sourceKey === appliedSnapshotRef.current) return;
     appliedSnapshotRef.current = sourceKey;
@@ -310,6 +316,21 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     lastDriveSyncStatus
   });
 
+  const draftFingerprint = useMemo(() => JSON.stringify({ brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl }), [brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl]);
+
+  useEffect(() => {
+    if (!hasHydratedRef.current || !isDirty || isSaving) return;
+    const timer = window.setTimeout(() => {
+      const draft = buildSnapshot();
+      draft.revision = revision;
+      draft.savedAt = new Date().toISOString();
+      draft.publication = { status: 'DRAFT', publishedRevision: initialMeta.publication?.publishedRevision, publishedAt: initialMeta.publication?.publishedAt, validationScore: validationReport.score };
+      saveLocalStudio(draft);
+      setDraftSavedAt(draft.savedAt);
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [draftFingerprint, isDirty, isSaving, revision, validationReport.score]);
+
   const persistSnapshot = async (withAudit = false) => {
     if (isSaving) return;
     if (!validationReport.ready) {
@@ -328,6 +349,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       setAuditTrail(nextAudit);
       setRevision(snapshot.revision);
       setLastSavedAt(snapshot.savedAt);
+      setDraftSavedAt('');
       appliedSnapshotRef.current = `${snapshot.savedAt}:${snapshot.revision}`;
       setIsDirty(false);
       if (withAudit) notify('Estúdio integrado salvo e publicado para todo o portal.');
@@ -392,6 +414,17 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     notify('Modelo de e-mail atualizado e propagado.');
   };
 
+  const createEmailTemplate = () => {
+    const id=`email-${Date.now()}`;
+    const next: EmailTemplateItem={id,name:'Novo e-mail',triggerStage:'',subject:'',body:'',recipient:'',cc:'',bcc:'',attachments:[]};
+    setEmailTemplates(previous=>[...previous,next]);setSelectedEmailId(id);setIsDirty(true);
+  };
+  const deleteSelectedEmail = async () => {
+    if(!selectedEmail||emailTemplates.length<=1)return;
+    if(!(await portalConfirm(`Excluir o modelo de e-mail "${selectedEmail.name}"?`)))return;
+    const next=emailTemplates.filter(item=>item.id!==selectedEmail.id);setEmailTemplates(next);setSelectedEmailId(next[0]?.id||'');setIsDirty(true);
+  };
+
   const updateSelectedForm = (updates: Partial<FormTemplateItem>) => {
     if (!selectedForm) return;
     setFormTemplates((previous) => previous.map((item) => item.id === selectedForm.id ? { ...item, ...updates } : item));
@@ -402,6 +435,20 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     if (!selectedForm) return;
     setFormDesigns((previous) => ({ ...previous, [selectedForm.id]: { ...selectedFormDesign, ...updates, templateId: selectedForm.id } }));
     setIsDirty(true);
+  };
+  const createFormTemplate = () => {
+    const id=`form-${Date.now()}`;
+    const next: FormTemplateItem={id,title:'Novo formulário',stage:'',targetRole:'Aluno',description:'',questions:[],isActive:true};
+    setFormTemplates(previous=>[...previous,next]);setSelectedFormId(id);setIsDirty(true);
+  };
+  const deleteSelectedForm = async () => {
+    if(!selectedForm||formTemplates.length<=1)return;
+    if(!(await portalConfirm(`Excluir o formulário "${selectedForm.title}"?`)))return;
+    const next=formTemplates.filter(item=>item.id!==selectedForm.id);setFormTemplates(next);setSelectedFormId(next[0]?.id||'');setIsDirty(true);
+  };
+  const moveSelectedFormQuestion = (index:number,direction:-1|1) => {
+    if(!selectedForm)return;const target=index+direction;if(target<0||target>=selectedForm.questions.length)return;
+    const questions=[...selectedForm.questions];[questions[index],questions[target]]=[questions[target],questions[index]];updateSelectedForm({questions});
   };
 
   const handleDriveScan = async () => {
@@ -542,22 +589,51 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     recordAudit(createAuditEntry('VARIABLE_UPDATED', 'variable', selectedVariable.id, `Variável ${selectedVariable.name} atualizada e propagada.`, actorEmail, { before, after }));
   };
 
-  const handleMergeVariables = () => {
+  const buildVariableMergeImpact = (sourceVariable: MatrixColumn, targetVariable: MatrixColumn) => {
+    const artifacts = { matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates };
+    const sourceUsage = getVariableUsage([sourceVariable.id, sourceVariable.name, ...(sourceVariable.aliases || [])], artifacts);
+    const targetUsage = getVariableUsage([targetVariable.id, targetVariable.name, ...(targetVariable.aliases || [])], artifacts);
+    const affectedArtifacts = Array.from(new Set([...sourceUsage.documents, ...sourceUsage.emails, ...sourceUsage.forms]));
+    const sourceFormat = sourceVariable.format || {};
+    const targetFormat = targetVariable.format || {};
+    const formatChanges = JSON.stringify(sourceFormat) !== JSON.stringify(targetFormat);
+    return { sourceUsage, targetUsage, affectedArtifacts, formatChanges, sourceFormat, targetFormat };
+  };
+
+  const variableMergeImpact = useMemo(() => {
+    if (!mergeSourceId || !mergeTargetId || mergeSourceId === mergeTargetId) return null;
+    const sourceVariable = matrixColumns.find((column) => column.id === mergeSourceId);
+    const targetVariable = matrixColumns.find((column) => column.id === mergeTargetId);
+    return sourceVariable && targetVariable ? buildVariableMergeImpact(sourceVariable, targetVariable) : null;
+  }, [mergeSourceId, mergeTargetId, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates]);
+
+  const handleMergeVariables = async () => {
     if (!mergeSourceId || !mergeTargetId || mergeSourceId === mergeTargetId) return;
-    const source = matrixColumns.find((column) => column.id === mergeSourceId);
-    const target = matrixColumns.find((column) => column.id === mergeTargetId);
-    if (!source || !target) return;
-    const merged = mergeVariableAcrossArtifacts({ matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates }, source.id, target.id);
+    const sourceVariable = matrixColumns.find((column) => column.id === mergeSourceId);
+    const targetVariable = matrixColumns.find((column) => column.id === mergeTargetId);
+    if (!sourceVariable || !targetVariable) return;
+    const impact = buildVariableMergeImpact(sourceVariable, targetVariable);
+    const details = [
+      `${impact.sourceUsage.documents.length} documento(s)`,
+      `${impact.sourceUsage.emails.length} e-mail(s)`,
+      `${impact.sourceUsage.forms.length} formulário(s)`,
+      `${impact.affectedArtifacts.length} artefato(s) único(s)`
+    ].join(' · ');
+    const formattingNote = impact.formatChanges
+      ? ' A formatação das duas variáveis difere; após a mescla prevalece a formatação da variável principal.'
+      : '';
+    if (!(await portalConfirm(`Mesclar “${sourceVariable.label || sourceVariable.name}” em “${targetVariable.label || targetVariable.name}”? Impacto: ${details}.${formattingNote} A chave antiga será mantida como alias e as referências serão reescritas.`))) return;
+    const merged = mergeVariableAcrossArtifacts({ matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates }, sourceVariable.id, targetVariable.id);
     setMatrixColumns(merged.matrixColumns);
     setMatrixRows(merged.matrixRows);
     setDocTemplates(merged.docTemplates);
     setEmailTemplates(merged.emailTemplates);
     setFormTemplates(merged.formTemplates);
-    setSelectedVariableId(target.id);
+    setSelectedVariableId(targetVariable.id);
     setMergeSourceId('');
     setMergeTargetId('');
-    recordAudit(createAuditEntry('VARIABLE_MERGED', 'variable', target.id, `${source.name} foi mesclada em ${target.name} e todas as referências foram reescritas.`, actorEmail, {
-      before: source, after: target, affectedArtifacts: merged.affectedArtifacts
+    recordAudit(createAuditEntry('VARIABLE_MERGED', 'variable', targetVariable.id, `${sourceVariable.name} foi mesclada em ${targetVariable.name} após conferência explícita do impacto; todas as referências foram reescritas.`, actorEmail, {
+      before: sourceVariable, after: { target: targetVariable, impact }, affectedArtifacts: merged.affectedArtifacts
     }));
     notify(`Mescla concluída em ${merged.affectedArtifacts.length} artefato(s).`);
   };
@@ -610,6 +686,72 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const updateWorkflowAction = (stageId:string,actionId:string,patch:Partial<WorkflowActionItem>) => {setWorkflowStages(previous=>previous.map(stage=>stage.id===stageId?{...stage,actions:stage.actions.map(action=>action.id===actionId?{...action,...patch}:action)}:stage));setIsDirty(true);};
   const removeWorkflowAction = (stageId:string,actionId:string) => {setWorkflowStages(previous=>previous.map(stage=>stage.id===stageId?{...stage,actions:stage.actions.filter(action=>action.id!==actionId)}:stage));setIsDirty(true);};
 
+  const moveWorkflowAction = (stageId:string, actionIndex:number, direction:-1|1) => {
+    setWorkflowStages(previous=>previous.map(stage=>{
+      if(stage.id!==stageId)return stage;
+      const target=actionIndex+direction;
+      if(target<0||target>=stage.actions.length)return stage;
+      const actions=[...stage.actions];
+      [actions[actionIndex],actions[target]]=[actions[target],actions[actionIndex]];
+      return {...stage,actions};
+    }));
+    setIsDirty(true);
+  };
+
+  const setWorkflowDragPayload = (event:React.DragEvent, payload:Record<string,unknown>) => {
+    event.dataTransfer.effectAllowed='move';
+    event.dataTransfer.setData('application/x-portal-workflow', JSON.stringify(payload));
+  };
+
+  const readWorkflowDragPayload = (event:React.DragEvent):Record<string,any>|null => {
+    try {
+      const raw=event.dataTransfer.getData('application/x-portal-workflow');
+      return raw?JSON.parse(raw):null;
+    } catch {
+      return null;
+    }
+  };
+
+  const handleWorkflowStageDrop = (event:React.DragEvent, targetStageId:string) => {
+    event.preventDefault();
+    const payload=readWorkflowDragPayload(event);
+    if(!payload)return;
+    if(payload.kind==='palette' && typeof payload.value==='string'){
+      addWorkflowAction(targetStageId,payload.value);
+      return;
+    }
+    if(payload.kind==='stage' && typeof payload.stageId==='string' && payload.stageId!==targetStageId){
+      setWorkflowStages(previous=>{
+        const from=previous.findIndex(stage=>stage.id===payload.stageId);
+        const to=previous.findIndex(stage=>stage.id===targetStageId);
+        if(from<0||to<0)return previous;
+        const next=[...previous];
+        const [moved]=next.splice(from,1);
+        next.splice(to,0,moved);
+        return next.map((stage,index)=>({...stage,stageNumber:index+1}));
+      });
+      setIsDirty(true);
+      return;
+    }
+    if(payload.kind==='action' && typeof payload.stageId==='string' && typeof payload.actionId==='string'){
+      setWorkflowStages(previous=>{
+        const sourceStage=previous.find(stage=>stage.id===payload.stageId);
+        const action=sourceStage?.actions.find(item=>item.id===payload.actionId);
+        if(!action)return previous;
+        return previous.map(stage=>{
+          if(stage.id===payload.stageId && stage.id===targetStageId){
+            const actions=stage.actions.filter(item=>item.id!==payload.actionId);
+            return {...stage,actions:[...actions,action]};
+          }
+          if(stage.id===payload.stageId)return {...stage,actions:stage.actions.filter(item=>item.id!==payload.actionId)};
+          if(stage.id===targetStageId)return {...stage,actions:[...stage.actions,action]};
+          return stage;
+        });
+      });
+      setIsDirty(true);
+    }
+  };
+
   const emailPreviewHtml = useMemo(() => {
     if (!selectedEmail) return '';
     const body = selectedEmail.htmlBody?.trim()
@@ -631,6 +773,23 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const variableUsage = selectedVariable
     ? getVariableUsage([selectedVariable.id, selectedVariable.name, ...(selectedVariable.aliases || [])], { matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates })
     : { documents: [], emails: [], forms: [] };
+
+  const similarVariableSuggestions = useMemo(() => {
+    const canonical = (value:string) => normalizeVariableKey(value).split('_').filter(Boolean);
+    const pairs:Array<{source:MatrixColumn;target:MatrixColumn;score:number;reason:string}> = [];
+    for(let i=0;i<matrixColumns.length;i++)for(let j=i+1;j<matrixColumns.length;j++){
+      const a=matrixColumns[i],b=matrixColumns[j],aTokens=canonical(a.name),bTokens=canonical(b.name);
+      const shared=aTokens.filter(token=>bTokens.includes(token));
+      const union=new Set([...aTokens,...bTokens]);
+      const tokenScore=union.size?shared.length/union.size:0;
+      const aKey=normalizeVariableKey(a.name),bKey=normalizeVariableKey(b.name);
+      const prefixScore=aKey.startsWith(bKey)||bKey.startsWith(aKey)?0.82:0;
+      const aliasScore=[...(a.aliases||[]),a.name].some(alias=>[...(b.aliases||[]),b.name].map(normalizeVariableKey).includes(normalizeVariableKey(alias)))?1:0;
+      const score=Math.max(tokenScore,prefixScore,aliasScore);
+      if(score>=0.5)pairs.push({source:a,target:b,score,reason:aliasScore===1?'Alias/chave equivalente':prefixScore?'Chaves com prefixo equivalente':`Vocabulário compartilhado: ${shared.join(', ')}`});
+    }
+    return pairs.sort((a,b)=>b.score-a.score).slice(0,8);
+  }, [matrixColumns]);
 
   const describeWorkflowAction = (action: WorkflowActionItem): string => {
     if (action.type === 'form') {
@@ -662,7 +821,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
             return <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-[9.5px] font-black uppercase transition cursor-pointer ${activeTab === tab.id ? 'border-slate-800 bg-slate-800 text-white shadow-2xs' : 'border-transparent bg-transparent text-slate-600 hover:border-slate-300 hover:bg-white'}`}><Icon className="h-3.5 w-3.5" />{tab.label}</button>;
           })}
           </div>
-          <button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-slate-800 shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Salvando…' : 'Salvar'}</button>
+          <div className="hidden text-right text-[9px] font-semibold text-slate-500 md:block">{isDirty ? (draftSavedAt ? `Rascunho automático ${new Date(draftSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Salvando rascunho…') : (lastSavedAt ? `Publicado ${new Date(lastSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Ainda não publicado')}</div>
+          <button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-slate-800 shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Publicando…' : 'Publicar'}</button>
         </div>
       </div>
 
@@ -767,13 +927,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
             <div className={`${panelClass} space-y-3 p-4`}>
               <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><FileText className="h-4 w-4 text-orange-700" /><h4 className="text-xs font-black uppercase">Editor de documentos</h4></div><select value={selectedDoc.id} onChange={(e) => setSelectedDocId(e.target.value)} className="max-w-[55%] rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-[10px] font-bold">{docTemplates.map((doc) => <option key={doc.id} value={doc.id}>{doc.label}</option>)}</select></div>
               <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Título do modelo</label><input value={selectedDoc.label} onChange={(e) => updateSelectedDoc({ label: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>Nome do arquivo</label><input value={selectedDoc.fileName} onChange={(e) => updateSelectedDoc({ fileName: e.target.value })} className={inputClass} /></div></div>
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] leading-5 text-emerald-950">
-                <strong>Fonte oficial única.</strong> Envie ou importe o DOCX no painel “Modelos documentais do usuário Master”, acima deste Estúdio. O texto, as tabelas, as imagens, as margens e a paginação permanecem no arquivo do Master no Google Drive. Esta aba registra apenas nome, finalidade, variáveis e posição no fluxo.
-                {selectedDoc.driveFileUrl && <a href={selectedDoc.driveFileUrl} target="_blank" rel="noreferrer" className="mt-2 block font-black underline">Abrir modelo ativo no Google Drive</a>}
-              </div>
-              <div><label className={labelClass}>Finalidade no fluxo</label><textarea rows={3} value={selectedDoc.description || ''} onChange={(e) => updateSelectedDoc({ description: e.target.value })} className={inputClass} placeholder="Explique quando o documento é gerado, quem recebe e quem assina." /></div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] leading-5 text-slate-700">O arquivo visual permanece no Google Drive; o Portal substitui apenas as variáveis reconhecidas e preserva a formatação do modelo.{selectedDoc.driveFileUrl && <a href={selectedDoc.driveFileUrl} target="_blank" rel="noreferrer" className="mt-2 block font-black underline">Abrir e editar o modelo no Google Drive</a>}</div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="text-[10px] font-black uppercase text-slate-600">Variáveis reconhecidas neste modelo</div><div className="mt-2 flex flex-wrap gap-1.5">{(selectedDoc.variables || []).map((variable) => <code key={variable} className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[9px] text-violet-700">{variable}</code>)}{!(selectedDoc.variables || []).length && <span className="text-[11px] text-slate-500">As variáveis aparecerão após o cadastro do DOCX oficial.</span>}</div></div>
-              <button type="button" onClick={registerDocUpdate} className={`${actionClass} border-slate-300 bg-white text-slate-700`}><Save className="h-3.5 w-3.5" />Salvar metadados do fluxo</button>
             </div>
             <div className="rounded-2xl border border-slate-300 bg-slate-100 p-5 sm:p-8"><div className="mx-auto flex min-h-[420px] max-w-[720px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm"><FileText className="mb-4 h-10 w-10 text-emerald-700"/><strong className="text-base text-slate-900">A aparência vem integralmente do DOCX oficial</strong><p className="mt-3 max-w-lg text-xs leading-6 text-slate-600">Para evitar perda de cabeçalhos, tabelas, assinaturas, margens ou paginação, o portal não reestiliza o modelo. Ele cria uma cópia temporária no Google Docs, substitui somente marcadores explícitos, exporta o PDF e preserva o arquivo original.</p><div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] font-semibold text-amber-950">Visualize e altere a diagramação diretamente no arquivo do Google Drive. Use este Estúdio para controlar dados, destinatários, regras e sequência.</div></div></div>
           </div>
@@ -782,7 +937,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         {activeTab === 'emails' && selectedEmail && (
           <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
             <div className={`${panelClass} space-y-3 p-4`}>
-              <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Mail className="h-4 w-4 text-amber-700" /><h4 className="text-xs font-black uppercase">Editor profissional de e-mail</h4></div><select value={selectedEmail.id} onChange={(e) => setSelectedEmailId(e.target.value)} className="max-w-[55%] rounded-lg border border-slate-300 px-2 py-1.5 text-[10px] font-bold">{emailTemplates.map((email) => <option key={email.id} value={email.id}>{email.name}</option>)}</select></div>
+              <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><Mail className="h-4 w-4 text-amber-700" /><h4 className="text-xs font-black uppercase">Editor profissional de e-mail</h4></div><div className="flex items-center gap-1"><select value={selectedEmail.id} onChange={(e) => setSelectedEmailId(e.target.value)} className="max-w-[220px] rounded-lg border border-slate-300 px-2 py-1.5 text-[10px] font-bold">{emailTemplates.map((email) => <option key={email.id} value={email.id}>{email.name}</option>)}</select><button type="button" onClick={createEmailTemplate} className="portal-action" aria-label="Criar modelo de e-mail"><Plus className="h-3.5 w-3.5"/></button><button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="portal-action text-rose-700 disabled:opacity-30" aria-label="Excluir modelo de e-mail"><Trash2 className="h-3.5 w-3.5"/></button></div></div>
               <div><label className={labelClass}>Nome da rotina</label><input value={selectedEmail.name} onChange={(e) => updateSelectedEmail({ name: e.target.value })} className={inputClass} /></div>
               <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Destinatário</label><input value={selectedEmail.recipient || ''} onChange={(e) => updateSelectedEmail({ recipient: e.target.value })} className={inputClass} placeholder="{{ALUNO_EMAIL}}" /></div><div><label className={labelClass}>Responder para</label><input value={selectedEmail.replyTo || ''} onChange={(e) => updateSelectedEmail({ replyTo: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>CC</label><input value={selectedEmail.cc || ''} onChange={(e) => updateSelectedEmail({ cc: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>CCO</label><input value={selectedEmail.bcc || ''} onChange={(e) => updateSelectedEmail({ bcc: e.target.value })} className={inputClass} /></div></div>
               <div><label className={labelClass}>Assunto</label><input value={selectedEmail.subject} onChange={(e) => updateSelectedEmail({ subject: e.target.value })} className={inputClass} /></div>
@@ -794,7 +949,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                 <label className={`${actionClass} cursor-pointer border-slate-300 bg-white text-slate-700`}><Image className="h-3.5 w-3.5" />Enviar imagem/banner<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const value = await readTemplateImage(e.target.files?.[0]); if (value) updateSelectedEmailDesign({ heroImageUrl: value }); }} /></label>
               </div>
               <div><label className={labelClass}>Rodapé</label><textarea rows={2} value={selectedEmailDesign.footerText} onChange={(e) => updateSelectedEmailDesign({ footerText: e.target.value })} className={inputClass} /></div>
-              <button type="button" onClick={registerEmailUpdate} className={`${actionClass} border-amber-700 bg-amber-600 text-white hover:bg-amber-700`}><Save className="h-3.5 w-3.5" />Salvar modelo de e-mail</button>
+              <div><label className={labelClass}>Anexos gerados pelo Portal</label><select multiple value={selectedEmail.attachments||[]} onChange={(e)=>updateSelectedEmail({attachments:Array.from(e.currentTarget.selectedOptions, (option: HTMLOptionElement) => option.value)})} className={`${inputClass} min-h-24`}>{docTemplates.map(doc=><option key={doc.id} value={doc.id}>{doc.label}</option>)}</select><p className="mt-1 text-[9px] text-slate-500">Use Ctrl/Cmd para selecionar mais de um documento. A etapa do fluxo define quando o e-mail será enviado.</p></div>
             </div>
             <div className={`${panelClass} overflow-hidden bg-slate-200`}><div className="border-b border-slate-300 bg-white px-4 py-3"><div className="text-[10px] font-black uppercase text-slate-500">Pré-visualização protegida</div><div className="mt-1 truncate text-xs font-bold text-slate-800">Assunto: {selectedEmail.subject}</div></div><iframe title="Pré-visualização do e-mail" sandbox="" srcDoc={emailPreviewHtml} className="h-[760px] w-full border-0 bg-slate-100" /></div>
           </div>
@@ -803,7 +958,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         {activeTab === 'forms' && selectedForm && (
           <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
             <div className={`${panelClass} space-y-3 p-4`}>
-              <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-sky-700" /><h4 className="text-xs font-black uppercase">Construtor de formulário</h4></div><select value={selectedForm.id} onChange={(e) => setSelectedFormId(e.target.value)} className="max-w-[55%] rounded-lg border border-slate-300 px-2 py-1.5 text-[10px] font-bold">{formTemplates.map((form) => <option key={form.id} value={form.id}>{form.title}</option>)}</select></div>
+              <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-sky-700" /><h4 className="text-xs font-black uppercase">Construtor de formulário</h4></div><div className="flex items-center gap-1"><select value={selectedForm.id} onChange={(e) => setSelectedFormId(e.target.value)} className="max-w-[220px] rounded-lg border border-slate-300 px-2 py-1.5 text-[10px] font-bold">{formTemplates.map((form) => <option key={form.id} value={form.id}>{form.title}</option>)}</select><button type="button" onClick={createFormTemplate} className="portal-action" aria-label="Criar formulário"><Plus className="h-3.5 w-3.5"/></button><button type="button" onClick={()=>void deleteSelectedForm()} disabled={formTemplates.length<=1} className="portal-action text-rose-700 disabled:opacity-30" aria-label="Excluir formulário"><Trash2 className="h-3.5 w-3.5"/></button></div></div>
               <div><label className={labelClass}>Título</label><input value={selectedForm.title} onChange={(e) => updateSelectedForm({ title: e.target.value })} className={inputClass} /></div>
               <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Etapa</label><input value={selectedForm.stage} onChange={(e) => updateSelectedForm({ stage: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>Público</label><select value={selectedForm.targetRole} onChange={(e) => updateSelectedForm({ targetRole: e.target.value as FormTemplateItem['targetRole'] })} className={inputClass}>{['Aluno', 'Orientador', 'Banca', 'Presidente da Comissão'].map((role) => <option key={role}>{role}</option>)}</select></div></div>
               <div><label className={labelClass}>Descrição</label><textarea rows={3} value={selectedForm.description} onChange={(e) => updateSelectedForm({ description: e.target.value })} className={inputClass} /></div>
@@ -815,10 +970,9 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               <div><label className={labelClass}>Introdução</label><textarea rows={2} value={selectedFormDesign.introText} onChange={(e) => updateSelectedFormDesign({ introText: e.target.value })} className={inputClass} /></div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between"><span className={labelClass}>Campos, regras e variáveis</span><button type="button" onClick={() => updateSelectedForm({ questions: [...selectedForm.questions, { id: `question-${Date.now()}`, fieldKey: '', label: 'Novo campo', fieldType: 'text', expectedAnswer: '', required: false, validation: {} }] })} className={`${actionClass} border-sky-300 bg-sky-50 text-sky-800`}><Plus className="h-3 w-3" />Adicionar campo</button></div>
-                {selectedForm.questions.map((question, index) => <FormQuestionEditor key={question.id} question={question} index={index} variables={matrixColumns} previousQuestions={selectedForm.questions.slice(0, index)} onChange={(updates) => updateSelectedForm({ questions: selectedForm.questions.map((item) => item.id === question.id ? { ...item, ...updates } : item) })} onDelete={() => updateSelectedForm({ questions: selectedForm.questions.filter((item) => item.id !== question.id) })}/>) }
+                {selectedForm.questions.map((question, index) => <div key={question.id} className="space-y-1"><div className="flex justify-end gap-1"><button type="button" className="portal-action" disabled={index===0} onClick={()=>moveSelectedFormQuestion(index,-1)} aria-label={`Mover ${question.label} para cima`}>↑</button><button type="button" className="portal-action" disabled={index===selectedForm.questions.length-1} onClick={()=>moveSelectedFormQuestion(index,1)} aria-label={`Mover ${question.label} para baixo`}>↓</button></div><FormQuestionEditor question={question} index={index} variables={matrixColumns} previousQuestions={selectedForm.questions.slice(0, index)} onChange={(updates) => updateSelectedForm({ questions: selectedForm.questions.map((item) => item.id === question.id ? { ...item, ...updates } : item) })} onDelete={() => updateSelectedForm({ questions: selectedForm.questions.filter((item) => item.id !== question.id) })}/></div>) }
               </div>
               <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Texto do botão</label><input value={selectedFormDesign.submitLabel} onChange={(e) => updateSelectedFormDesign({ submitLabel: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>Mensagem após envio</label><input value={selectedFormDesign.confirmationMessage} onChange={(e) => updateSelectedFormDesign({ confirmationMessage: e.target.value })} className={inputClass} /></div></div>
-              <button type="button" onClick={() => { recordAudit(createAuditEntry('FORM_UPDATED', 'form', selectedForm.id, `Formulário "${selectedForm.title}" atualizado.`, actorEmail)); notify('Formulário atualizado e integrado às variáveis.'); }} className={`${actionClass} border-sky-700 bg-sky-700 text-white hover:bg-sky-800`}><Save className="h-3.5 w-3.5" />Salvar formulário</button>
             </div>
             <div className="rounded-2xl border border-slate-300 bg-slate-200/70 p-4"><div className="mx-auto max-w-xl overflow-hidden rounded-2xl bg-white shadow-lg" style={{ fontFamily: brandKit.fontFamily }}>{selectedFormDesign.bannerImageUrl && <img src={selectedFormDesign.bannerImageUrl} alt="Banner" className="h-36 w-full object-cover" />}<div className="p-6"><div className="mb-5 flex items-start gap-3">{selectedFormDesign.logoUrl && <img src={selectedFormDesign.logoUrl} alt="Logo" className="h-14 w-14 rounded-xl border border-slate-200 object-contain p-1" />}<div><div className="text-[9px] font-black uppercase tracking-wider" style={{ color: brandKit.primaryColor }}>{selectedForm.stage}</div><h3 className="mt-1 text-lg font-black text-slate-900">{selectedForm.title}</h3><p className="mt-1 text-xs text-slate-500">{selectedFormDesign.introText || selectedForm.description}</p></div></div>{selectedFormDesign.showProgress && <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full w-1/3 rounded-full" style={{ backgroundColor: brandKit.primaryColor }} /></div>}<div className="space-y-4">{selectedForm.questions.map((question, index) => <div key={question.id}><label className="mb-1.5 block text-xs font-bold text-slate-800">{index + 1}. {question.label}{question.required && <span className="ml-1 text-rose-600">*</span>}</label>{question.fieldType === 'textarea' ? <textarea disabled className={inputClass} rows={3} /> : question.fieldType === 'select' || question.fieldType === 'radio' ? <select disabled className={inputClass}><option>Selecione uma opção</option></select> : question.fieldType === 'checkbox' ? <label className="flex items-center gap-2 text-xs"><input type="checkbox" disabled />Confirmar</label> : <input disabled type={question.fieldType === 'date' ? 'date' : question.fieldType === 'number' ? 'number' : question.fieldType === 'email' ? 'email' : question.fieldType === 'file' ? 'file' : 'text'} className={inputClass} placeholder={`Variável: ${question.fieldKey || 'não vinculada'}`} />}</div>)}<button type="button" className="w-full rounded-xl px-4 py-3 text-xs font-black uppercase text-white" style={{ backgroundColor: brandKit.primaryColor }}>{selectedFormDesign.submitLabel}</button></div></div></div></div>
           </div>
@@ -838,8 +992,18 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                 ['Convite', 'Sem assinatura'], ['Ata', 'Orientador'], ['Termo', 'Aluno(s) + orientador, prioridade 1'], ['Declaração', 'Presidente da Comissão']
               ].map(([document, rule]) => <div key={document} className="rounded-xl border border-emerald-200 bg-emerald-50 p-3"><strong className="block text-[10px] uppercase text-emerald-900">{document}</strong><span className="text-[10px] text-emerald-800">{rule}</span></div>)}</div>
             </section>
+            <section className={`${panelClass} p-4`} aria-label="Paleta de ações do fluxo">
+              <div className="text-[10px] font-black uppercase text-slate-500">Arraste para uma etapa</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {docTemplates.map(item=><button key={`palette-doc-${item.id}`} type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:`doc:${item.id}`})} className="portal-action cursor-grab"><FileText className="h-3.5 w-3.5"/>{item.label}</button>)}
+                {emailTemplates.map(item=><button key={`palette-email-${item.id}`} type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:`email:${item.id}`})} className="portal-action cursor-grab"><Mail className="h-3.5 w-3.5"/>{item.name}</button>)}
+                {formTemplates.map(item=><button key={`palette-form-${item.id}`} type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:`form:${item.id}`})} className="portal-action cursor-grab"><ClipboardList className="h-3.5 w-3.5"/>{item.title}</button>)}
+                <button type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:'action:internal'})} className="portal-action cursor-grab"><Settings2 className="h-3.5 w-3.5"/>Ação interna</button>
+              </div>
+              <p className="mt-2 text-[9px] text-slate-500">Também é possível usar os seletores e setas abaixo; o arrastar e soltar é um atalho, não a única forma de operar.</p>
+            </section>
             <div className="space-y-3">
-              {workflowStages.map((stage,index)=><div key={stage.id} className={`${panelClass} overflow-hidden`}>
+              {workflowStages.map((stage,index)=><div key={stage.id} draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'stage',stageId:stage.id})} onDragOver={event=>{event.preventDefault();event.dataTransfer.dropEffect='move';}} onDrop={event=>handleWorkflowStageDrop(event,stage.id)} className={`${panelClass} overflow-hidden`}>
                 <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 p-3">
                   <span className="rounded-full bg-slate-800 px-2.5 py-1 text-[9px] font-black text-white">ETAPA {index+1}</span>
                   <input aria-label="Título da etapa" value={stage.title} onChange={event=>updateWorkflowStage(stage.id,{title:event.target.value})} className={`${inputClass} min-w-[220px] flex-1 font-bold`}/>
@@ -849,7 +1013,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                 </div>
                 <div className="space-y-3 p-4">
                   <div className="grid gap-3 md:grid-cols-[.8fr_1.2fr]"><div><label className={labelClass}>Evento disparador</label><input list={`workflow-event-catalog-${stage.id}`} value={stage.triggerEvent} onChange={event=>updateWorkflowStage(stage.id,{triggerEvent:event.target.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')})} className={inputClass} placeholder="Ex.: FORM_AVALIACAO_SUBMITTED"/><datalist id={`workflow-event-catalog-${stage.id}`}>{workflowEvents.map(([value,label])=><option key={value} value={value}>{label}</option>)}</datalist><p className="mt-1 text-[9px] text-slate-500">Para formulário personalizado, use FORM_ID_DO_FORMULARIO_SUBMITTED.</p></div><div><label className={labelClass}>Objetivo da etapa</label><input value={stage.description} onChange={event=>updateWorkflowStage(stage.id,{description:event.target.value})} className={inputClass}/></div></div>
-                  <div className="space-y-2"><div className="text-[10px] font-black uppercase text-slate-500">Ações em ordem</div>{stage.actions.map((action,actionIndex)=><div key={action.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="grid gap-2 md:grid-cols-[auto_.8fr_1fr_auto]"><span className="self-center rounded-full bg-white px-2 py-1 text-[9px] font-black text-slate-500">{actionIndex+1}</span><div className="flex gap-1"><button type="button" aria-label={`Mover ${action.title} para cima`} disabled={actionIndex===0} onClick={()=>setWorkflowStages(previous=>previous.map(s=>{if(s.id!==stage.id)return s;const actions=[...s.actions];[actions[actionIndex-1],actions[actionIndex]]=[actions[actionIndex],actions[actionIndex-1]];return {...s,actions};}))} className="portal-action">↑</button><button type="button" aria-label={`Mover ${action.title} para baixo`} disabled={actionIndex===stage.actions.length-1} onClick={()=>setWorkflowStages(previous=>previous.map(s=>{if(s.id!==stage.id)return s;const actions=[...s.actions];[actions[actionIndex+1],actions[actionIndex]]=[actions[actionIndex],actions[actionIndex+1]];return {...s,actions};}))} className="portal-action">↓</button></div><input value={action.title} onChange={event=>updateWorkflowAction(stage.id,action.id,{title:event.target.value})} className={inputClass}/><input value={action.recipientOrDetail||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder="Destinatário ou detalhe"/><button type="button" onClick={()=>removeWorkflowAction(stage.id,action.id)} className="rounded-lg border border-rose-200 bg-white p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5"/></button></div><details className="mt-2 rounded-lg border border-slate-200 bg-white p-2"><summary className="cursor-pointer text-[9px] font-black uppercase text-slate-600">Condição para executar</summary><div className="mt-2 grid gap-2 sm:grid-cols-3"><select value={action.condition?.fieldKey||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:event.target.value?{fieldKey:event.target.value,operator:action.condition?.operator||'EQUALS',value:action.condition?.value||''}:undefined})} className={inputClass}><option value="">Sempre executar</option>{matrixColumns.map(item=><option key={item.id} value={normalizeVariableKey(item.name)}>{item.label||item.name}</option>)}</select>{action.condition&&<><select value={action.condition.operator} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,operator:event.target.value as any}})} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">É verdadeiro</option></select>{!['NOT_EMPTY','IS_TRUE'].includes(action.condition.operator)&&<input value={action.condition.value||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,value:event.target.value}})} className={inputClass} placeholder="Valor esperado"/>}</>}</div></details></div>)}</div>
+                  <div className="space-y-2"><div className="text-[10px] font-black uppercase text-slate-500">Ações em ordem</div>{stage.actions.map((action,actionIndex)=><div key={action.id} draggable onDragStart={event=>{event.stopPropagation();setWorkflowDragPayload(event,{kind:'action',stageId:stage.id,actionId:action.id});}} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="grid gap-2 md:grid-cols-[auto_.8fr_1fr_auto]"><span className="self-center rounded-full bg-white px-2 py-1 text-[9px] font-black text-slate-500">{actionIndex+1}</span><div className="flex gap-1"><button type="button" aria-label={`Mover ${action.title} para cima`} disabled={actionIndex===0} onClick={()=>moveWorkflowAction(stage.id,actionIndex,-1)} className="portal-action">↑</button><button type="button" aria-label={`Mover ${action.title} para baixo`} disabled={actionIndex===stage.actions.length-1} onClick={()=>moveWorkflowAction(stage.id,actionIndex,1)} className="portal-action">↓</button></div><input value={action.title} onChange={event=>updateWorkflowAction(stage.id,action.id,{title:event.target.value})} className={inputClass}/><input value={action.recipientOrDetail||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder="Destinatário ou detalhe"/><button type="button" onClick={()=>removeWorkflowAction(stage.id,action.id)} className="rounded-lg border border-rose-200 bg-white p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5"/></button></div><details className="mt-2 rounded-lg border border-slate-200 bg-white p-2"><summary className="cursor-pointer text-[9px] font-black uppercase text-slate-600">Condição para executar</summary><div className="mt-2 grid gap-2 sm:grid-cols-3"><select value={action.condition?.fieldKey||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:event.target.value?{fieldKey:event.target.value,operator:action.condition?.operator||'EQUALS',value:action.condition?.value||''}:undefined})} className={inputClass}><option value="">Sempre executar</option>{matrixColumns.map(item=><option key={item.id} value={normalizeVariableKey(item.name)}>{item.label||item.name}</option>)}</select>{action.condition&&<><select value={action.condition.operator} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,operator:event.target.value as any}})} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">É verdadeiro</option></select>{!['NOT_EMPTY','IS_TRUE'].includes(action.condition.operator)&&<input value={action.condition.value||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,value:event.target.value}})} className={inputClass} placeholder="Valor esperado"/>}</>}</div></details></div>)}</div>
                   <div><label className={labelClass}>Adicionar ação vinculada</label><select value="" onChange={event=>{if(event.target.value)addWorkflowAction(stage.id,event.target.value);}} className={inputClass}><option value="">Selecione documento, e-mail ou formulário…</option><optgroup label="Documentos">{docTemplates.map(item=><option key={item.id} value={`doc:${item.id}`}>{item.label}</option>)}</optgroup><optgroup label="E-mails">{emailTemplates.map(item=><option key={item.id} value={`email:${item.id}`}>{item.name}</option>)}</optgroup><optgroup label="Formulários">{formTemplates.map(item=><option key={item.id} value={`form:${item.id}`}>{item.title}</option>)}</optgroup></select></div>
                 </div>
               </div>)}
@@ -861,8 +1025,9 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
           <div className="space-y-4">
             <div className="grid gap-4 xl:grid-cols-[.85fr_1.15fr]">
               <div className={`${panelClass} p-4`}><div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-700" /><h4 className="text-xs font-black uppercase">Descoberta e consolidação</h4></div><p className="mt-2 text-[11px] leading-relaxed text-slate-600">A varredura cruza modelos do Drive, documentos, assuntos/corpos de e-mail e perguntas dos formulários. Chaves equivalentes são reutilizadas em vez de solicitar a informação novamente.</p><div className="mt-3 flex gap-2"><input value={newVariableKey} onChange={(e) => setNewVariableKey(e.target.value)} className={inputClass} placeholder="Ex.: ALUNO_NOME_COMPLETO" /><button type="button" onClick={handleCreateVariable} className={`${actionClass} shrink-0 border-violet-700 bg-violet-700 text-white`}><Plus className="h-3.5 w-3.5" />Criar</button></div><button type="button" onClick={handleDiscoverVariables} className={`${actionClass} mt-2 w-full border-violet-300 bg-violet-50 text-violet-800`}><RefreshCw className="h-3.5 w-3.5" />Levantar variáveis automaticamente</button></div>
-              <div className={`${panelClass} p-4`}><div className="flex items-center gap-2"><Merge className="h-4 w-4 text-emerald-700" /><h4 className="text-xs font-black uppercase">Mesclar sem duplicar requisições</h4></div><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto]"><select value={mergeSourceId} onChange={(e) => setMergeSourceId(e.target.value)} className={inputClass}><option value="">Variável duplicada</option>{matrixColumns.map((column, cIdx) => <option key={`source-${column.id}-${cIdx}`} value={column.id}>{column.label || column.name}</option>)}</select><div className="self-center text-center text-xs font-black text-slate-400">→</div><select value={mergeTargetId} onChange={(e) => setMergeTargetId(e.target.value)} className={inputClass}><option value="">Variável principal</option>{matrixColumns.map((column, cIdx) => <option key={`target-${column.id}-${cIdx}`} value={column.id}>{column.label || column.name}</option>)}</select><button type="button" onClick={handleMergeVariables} disabled={!mergeSourceId || !mergeTargetId || mergeSourceId === mergeTargetId} className={`${actionClass} border-emerald-800 bg-emerald-800 text-white`}><Merge className="h-3.5 w-3.5" />Mesclar</button></div><div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[10px] leading-relaxed text-amber-900"><strong>Operação auditável:</strong> a chave descartada vira alias da principal e todas as referências em documentos, e-mails, formulários e matriz são reescritas.</div></div>
+              <div className={`${panelClass} p-4`}><div className="flex items-center gap-2"><Merge className="h-4 w-4 text-emerald-700" /><h4 className="text-xs font-black uppercase">Mesclar sem duplicar requisições</h4></div><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto]"><select value={mergeSourceId} onChange={(e) => setMergeSourceId(e.target.value)} className={inputClass}><option value="">Variável duplicada</option>{matrixColumns.map((column, cIdx) => <option key={`source-${column.id}-${cIdx}`} value={column.id}>{column.label || column.name}</option>)}</select><div className="self-center text-center text-xs font-black text-slate-400">→</div><select value={mergeTargetId} onChange={(e) => setMergeTargetId(e.target.value)} className={inputClass}><option value="">Variável principal</option>{matrixColumns.map((column, cIdx) => <option key={`target-${column.id}-${cIdx}`} value={column.id}>{column.label || column.name}</option>)}</select><button type="button" onClick={handleMergeVariables} disabled={!mergeSourceId || !mergeTargetId || mergeSourceId === mergeTargetId} className={`${actionClass} border-emerald-800 bg-emerald-800 text-white`}><Merge className="h-3.5 w-3.5" />Mesclar</button></div>{variableMergeImpact && <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3 text-[10px] leading-relaxed text-violet-950"><div className="flex items-center gap-1.5 font-black uppercase"><CircleAlert className="h-3.5 w-3.5"/>Impacto antes da mescla</div><p className="mt-1">A variável descartada aparece em <strong>{variableMergeImpact.affectedArtifacts.length}</strong> artefato(s): {variableMergeImpact.sourceUsage.documents.length} documento(s), {variableMergeImpact.sourceUsage.emails.length} e-mail(s) e {variableMergeImpact.sourceUsage.forms.length} formulário(s).</p>{variableMergeImpact.affectedArtifacts.length > 0 && <p className="mt-1 break-words text-violet-800">{variableMergeImpact.affectedArtifacts.slice(0, 8).join(' · ')}{variableMergeImpact.affectedArtifacts.length > 8 ? ' …' : ''}</p>}{variableMergeImpact.formatChanges && <p className="mt-1 font-bold text-amber-800">A formatação das duas variáveis difere. Após a mescla prevalece a formatação da variável principal.</p>}</div>}<div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[10px] leading-relaxed text-amber-900"><strong>Operação auditável:</strong> a chave descartada vira alias da principal e todas as referências em documentos, e-mails, formulários e matriz são reescritas somente após confirmação explícita.</div></div>
             </div>
+            {similarVariableSuggestions.length > 0 && <div className={`${panelClass} p-4`}><div className="flex items-center gap-2"><WandSparkles className="h-4 w-4 text-violet-700"/><h4 className="text-xs font-black uppercase">Sugestões inteligentes de normalização</h4></div><p className="mt-2 text-[11px] text-slate-600">O Portal destaca chaves potencialmente duplicadas e mostra a semelhança antes de qualquer mescla. Nada é alterado sem confirmação explícita.</p><div className="mt-3 grid gap-2 md:grid-cols-2">{similarVariableSuggestions.map(({source,target,score,reason})=><button key={`similar-${source.id}-${target.id}`} type="button" onClick={()=>{setMergeSourceId(source.id);setMergeTargetId(target.id);}} className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-left hover:border-violet-400"><div className="flex items-center justify-between gap-2"><strong className="text-[11px] text-violet-950">{source.label||source.name} → {target.label||target.name}</strong><span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-black text-violet-700">{Math.round(score*100)}%</span></div><p className="mt-1 text-[10px] text-violet-800">{reason}</p></button>)}</div></div>}
             <div className="grid gap-4 xl:grid-cols-[.75fr_1.25fr]">
               <div className={`${panelClass} max-h-[620px] overflow-y-auto p-2`}><div className="sticky top-0 z-10 bg-white p-2"><div className="text-[10px] font-black uppercase text-slate-500">{matrixColumns.length} variáveis registradas</div></div>{matrixColumns.map((column, cIdx) => { const usage = getVariableUsage([column.id, column.name, ...(column.aliases || [])], { matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates }); const count = usage.documents.length + usage.emails.length + usage.forms.length; return <button key={`varbtn-${column.id}-${cIdx}`} type="button" onClick={() => setSelectedVariableId(column.id)} className={`mb-1 w-full rounded-xl border p-3 text-left transition ${selectedVariable?.id === column.id ? 'border-violet-500 bg-violet-50 shadow-sm' : 'border-slate-200 bg-white hover:bg-slate-50'}`}><div className="flex items-center justify-between gap-2"><div className="truncate text-xs font-black text-slate-900">{column.label || column.name}</div><span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600">{count} usos</span></div><code className="mt-1 block truncate text-[9px] text-violet-700">&lt;&lt;{normalizeVariableKey(column.name)}&gt;&gt;</code></button>; })}</div>
               {selectedVariable && variableDraft && <div className={`${panelClass} space-y-4 p-4`}>

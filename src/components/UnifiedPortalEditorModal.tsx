@@ -1508,17 +1508,12 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                   <span>Planilhas e Tabelas</span>
                 </span>
                 {renderBlockLinkToggle([
-                  'global_table_buttons',
-                  'global_table_style',
                   'sheet_calendar',
                   'sheet_repository',
                   'sheet_my_tccs',
                   'sheet_coordinator'
                 ], 'Planilhas e Tabelas')}
               </div>
-              {renderNavRow('global_table_buttons', 'Botões no Topo', Square)}
-              {renderNavRow('global_table_style', 'Estilo Base Planilhas', LayoutTemplate)}
-              {renderNavRow('table_columns', 'Colunas, ordem e linhas', Columns)}
               {renderNavRow('sheet_calendar', 'Calendário Público', Calendar)}
               {renderNavRow('sheet_repository', 'Repositório & Acervo', BookOpen)}
               {renderNavRow('sheet_my_tccs', 'Meus TCCs (Aluno/Banca)', FileText)}
@@ -1533,24 +1528,18 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                   <span>Popups e Modais</span>
                 </span>
                 {renderBlockLinkToggle([
-                  'global_popup_style',
                   'popup_tcc_detail',
                   'popup_new_defense',
                   'popup_upload_ata',
-                  'popup_hipoar',
                   'popup_pdf_viewer',
                   'popup_login',
-                  'popup_correction'
                 ], 'Popups e Modais')}
               </div>
-              {renderNavRow('global_popup_style', 'Estilo Base Pop-ups', Sliders)}
               {renderNavRow('popup_tcc_detail', 'Detalhes TCC / Defesa', FileText)}
               {renderNavRow('popup_new_defense', 'Agendamento Defesa', Calendar)}
               {renderNavRow('popup_upload_ata', 'Upload de Ata', Upload)}
-              {renderNavRow('popup_hipoar', 'Análise Hipoar', Award)}
               {renderNavRow('popup_pdf_viewer', 'Visualizador PDF', FileCheck)}
               {renderNavRow('popup_login', 'Login & Autenticação', Lock)}
-              {renderNavRow('popup_correction', 'Solicitação de Correção', HelpCircle)}
             </div>
           </div>
 

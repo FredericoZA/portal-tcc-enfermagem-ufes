@@ -231,6 +231,7 @@ export const apiClient = {
   },async()=>fetchApi<any>(`/api/admin/models/${type}`,{method:'POST',body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})})),
   importDocumentModelFromDrive:(type:string,linkOrId:string)=>fetchApi<any>(`/api/admin/models/${type}/link`,{method:'POST',body:JSON.stringify({linkOrId})}),
   restoreDocumentModelVersion:(type:string,version:number)=>fetchApi<any>(`/api/admin/models/${type}/versions/${version}/restore`,{method:'POST'}),
+  deleteDocumentModel:(type:string)=>fetchApi<{deleted:boolean;type:string}>(`/api/admin/models/${encodeURIComponent(type)}`,{method:'DELETE'}),
   confirmDefenseLocation:(id:string,data:{local:string;confirmationReceived:boolean;localEvidenceUrl?:string})=>fetchApi<WorkflowProcessResponse>(`/api/processes/${id}/confirm-location`,{method:'POST',body:JSON.stringify(data)}),
   uploadLocationProof:async(id:string,file:File)=>{
     if(file.size>1024*1024)throw new Error('O comprovante deve ser um PDF de até 1 MB.');

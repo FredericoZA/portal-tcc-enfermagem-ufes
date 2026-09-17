@@ -1641,15 +1641,15 @@ export async function createPortalApp() {
     res.json({...models,__capabilities:{existingModelLinkImportEnabled:process.env.GOOGLE_ALLOW_EXISTING_MODEL_LINKS==='true'}});
   });
   app.post('/api/admin/models/:type',requireAuthenticated,requireAdministrator,async(req,res)=>{
-    const identity=getPortalIdentity(req)!;const type=String(req.params.type||'').toUpperCase() as 'CONVITE'|'ATA'|'TERMO'|'DECLARACAO';
+    const identity=getPortalIdentity(req)!;const type=String(req.params.type||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,48);
     if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Entre novamente antes de publicar um modelo documental.',code:'REAUTHENTICATION_REQUIRED'});
-    if(!['CONVITE','ATA','TERMO','DECLARACAO'].includes(type))return res.status(400).json({error:'Tipo de modelo inválido.'});
+    if(type.length<2)return res.status(400).json({error:'Tipo de modelo inválido.'});
     try{
       const publish=async(file:{bytes:Buffer;fileName:string})=>{
         if(!file.fileName.toLowerCase().endsWith('.docx'))throw new Error('Envie um arquivo DOCX.');
         const extracted=await extractDocxTemplateText(file.bytes);const drive=await publishMasterDocumentModel({type,fileName:file.fileName,content:file.bytes,rootFolderName:resolveInstallationProfile(currentSettings).driveRootFolderName});const now=new Date().toISOString();
-        const labels={CONVITE:'Carta-convite',ATA:'Ata de defesa',TERMO:'Termo de autorização para publicação',DECLARACAO:'Declaração de participação na banca'};
-        const before=currentSettings.documentModels?.[type];const previousVersions=before?.versions?.length?before.versions:(before?[{version:1,fileName:before.fileName,driveFileId:before.driveFileId,driveFileUrl:before.driveFileUrl,variables:before.variables,uploadedAt:before.uploadedAt,uploadedBy:before.uploadedBy,contentSha256:before.contentSha256,driveRevisionId:before.driveRevisionId,driveModifiedTime:before.driveModifiedTime}]:[]);const nextVersion=Math.max(0,...previousVersions.map(item=>item.version))+1;const version={version:nextVersion,fileName:drive.name,driveFileId:drive.id,driveFileUrl:drive.webViewLink,variables:extracted.variables,uploadedAt:now,uploadedBy:identity.email,contentSha256:drive.contentSha256,driveRevisionId:drive.driveRevisionId,driveModifiedTime:drive.driveModifiedTime};const model={id:`master-${type.toLowerCase()}`,type,label:labels[type],fileName:drive.name,templateContentText:'',driveFileId:drive.id,driveFileUrl:drive.webViewLink,variables:extracted.variables,uploadedAt:now,uploadedBy:identity.email,contentSha256:drive.contentSha256,driveRevisionId:drive.driveRevisionId,driveModifiedTime:drive.driveModifiedTime,activeVersion:nextVersion,versions:[...previousVersions,version].slice(-30)};
+        const labels:Record<string,string>={CONVITE:'Carta-convite',ATA:'Ata de defesa',TERMO:'Termo de autorização para publicação',DECLARACAO:'Declaração de participação na banca'};
+        const modelStore=(currentSettings.documentModels||{}) as Record<string,any>;const before=modelStore[type];const previousVersions=before?.versions?.length?before.versions:(before?[{version:1,fileName:before.fileName,driveFileId:before.driveFileId,driveFileUrl:before.driveFileUrl,variables:before.variables,uploadedAt:before.uploadedAt,uploadedBy:before.uploadedBy,contentSha256:before.contentSha256,driveRevisionId:before.driveRevisionId,driveModifiedTime:before.driveModifiedTime}]:[]);const nextVersion=Math.max(0,...previousVersions.map(item=>item.version))+1;const version={version:nextVersion,fileName:drive.name,driveFileId:drive.id,driveFileUrl:drive.webViewLink,variables:extracted.variables,uploadedAt:now,uploadedBy:identity.email,contentSha256:drive.contentSha256,driveRevisionId:drive.driveRevisionId,driveModifiedTime:drive.driveModifiedTime};const model={id:`master-${type.toLowerCase()}`,type,label:labels[type]||type.toLowerCase().split('_').filter(Boolean).map(part=>part.charAt(0).toUpperCase()+part.slice(1)).join(' '),fileName:drive.name,templateContentText:'',driveFileId:drive.id,driveFileUrl:drive.webViewLink,variables:extracted.variables,uploadedAt:now,uploadedBy:identity.email,contentSha256:drive.contentSha256,driveRevisionId:drive.driveRevisionId,driveModifiedTime:drive.driveModifiedTime,activeVersion:nextVersion,versions:[...previousVersions,version].slice(-30)};
         currentSettings={...currentSettings,driveRootFolderId:drive.rootFolderId,documentModels:{...(currentSettings.documentModels||{}),[type]:model},updatedAt:now};publishRuntimeTemplatesFromSettings();
         auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'MODELO_DOCUMENTAL_PUBLICADO',entityType:'document_model',entityId:type,before:before?{fileName:before.fileName,driveFileId:before.driveFileId}:undefined,after:{fileName:model.fileName,driveFileId:model.driveFileId,variables:model.variables},timestamp:now});await persistPortalStateDurably();
         return{type,fileName:model.fileName,driveFileId:model.driveFileId,driveFileUrl:model.driveFileUrl,variables:model.variables,uploadedAt:model.uploadedAt,uploadedBy:model.uploadedBy,contentSha256:model.contentSha256,driveRevisionId:model.driveRevisionId,driveModifiedTime:model.driveModifiedTime,configured:true};
@@ -1662,9 +1662,9 @@ export async function createPortalApp() {
     }catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível cadastrar o modelo.'});}
   });
   app.post('/api/admin/models/:type/link',requireAuthenticated,requireAdministrator,async(req,res)=>{
-    const identity=getPortalIdentity(req)!;const type=String(req.params.type||'').toUpperCase() as 'CONVITE'|'ATA'|'TERMO'|'DECLARACAO';
+    const identity=getPortalIdentity(req)!;const type=String(req.params.type||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,48);
     if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Entre novamente antes de importar um modelo documental.',code:'REAUTHENTICATION_REQUIRED'});
-    if(!['CONVITE','ATA','TERMO','DECLARACAO'].includes(type))return res.status(400).json({error:'Tipo de modelo inválido.'});
+    if(type.length<2)return res.status(400).json({error:'Tipo de modelo inválido.'});
     const linkOrId=String(req.body?.linkOrId||'').trim();if(!linkOrId)return res.status(400).json({error:'Informe o link ou ID do modelo no Google Drive.'});
     try{
       const drive=await registerMasterDocumentModelFromDrive({type,linkOrId,rootFolderName:resolveInstallationProfile(currentSettings).driveRootFolderName});const now=new Date().toISOString();
@@ -1676,7 +1676,16 @@ export async function createPortalApp() {
     }catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível importar o modelo do Drive.'});}
   });
 
-  app.post('/api/admin/models/:type/versions/:version/restore',requireAuthenticated,requireAdministrator,(req,res)=>{const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Reautentique-se para restaurar um modelo.'});const type=String(req.params.type||'').toUpperCase() as 'CONVITE'|'ATA'|'TERMO'|'DECLARACAO';const model=currentSettings.documentModels?.[type],selected=model?.versions?.find(item=>item.version===Number(req.params.version));if(!model||!selected)return res.status(404).json({error:'Versão do modelo não encontrada.'});if(!selected.contentSha256)return res.status(409).json({error:'Esta versão antiga não possui hash de integridade. Importe ou envie novamente o modelo para publicá-la com segurança.'});const before={activeVersion:model.activeVersion,driveFileId:model.driveFileId};currentSettings.documentModels={...(currentSettings.documentModels||{}),[type]:{...model,...selected,templateContentText:'',activeVersion:selected.version,versions:model.versions}};currentSettings.updatedAt=new Date().toISOString();auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'RESTAURACAO_VERSAO_MODELO',entityType:'document_model',entityId:type,before,after:{activeVersion:selected.version,driveFileId:selected.driveFileId,contentSha256:selected.contentSha256},timestamp:currentSettings.updatedAt});persistPortalState();res.json({type,activeVersion:selected.version,fileName:selected.fileName,driveFileId:selected.driveFileId,driveFileUrl:selected.driveFileUrl,variables:selected.variables,contentSha256:selected.contentSha256,configured:true});});
+  app.post('/api/admin/models/:type/versions/:version/restore',requireAuthenticated,requireAdministrator,(req,res)=>{const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Reautentique-se para restaurar um modelo.'});const type=String(req.params.type||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,48);const model=(currentSettings.documentModels as Record<string,any>|undefined)?.[type],selected=model?.versions?.find((item:any)=>item.version===Number(req.params.version));if(!model||!selected)return res.status(404).json({error:'Versão do modelo não encontrada.'});if(!selected.contentSha256)return res.status(409).json({error:'Esta versão antiga não possui hash de integridade. Importe ou envie novamente o modelo para publicá-la com segurança.'});const before={activeVersion:model.activeVersion,driveFileId:model.driveFileId};currentSettings.documentModels={...(currentSettings.documentModels||{}),[type]:{...model,...selected,templateContentText:'',activeVersion:selected.version,versions:model.versions}};currentSettings.updatedAt=new Date().toISOString();auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'RESTAURACAO_VERSAO_MODELO',entityType:'document_model',entityId:type,before,after:{activeVersion:selected.version,driveFileId:selected.driveFileId,contentSha256:selected.contentSha256},timestamp:currentSettings.updatedAt});persistPortalState();res.json({type,activeVersion:selected.version,fileName:selected.fileName,driveFileId:selected.driveFileId,driveFileUrl:selected.driveFileUrl,variables:selected.variables,contentSha256:selected.contentSha256,configured:true});});
+
+  app.delete('/api/admin/models/:type',requireAuthenticated,requireAdministrator,async(req,res)=>{
+    const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Reautentique-se para excluir um modelo.',code:'REAUTHENTICATION_REQUIRED'});
+    const type=String(req.params.type||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,48);if(type.length<2)return res.status(400).json({error:'Tipo de modelo inválido.'});
+    const models=(currentSettings.documentModels||{}) as Record<string,any>;const model=models[type];if(!model)return res.status(404).json({error:'Modelo não encontrado.'});
+    const studio=currentSettings.integrationStudio;const refs=[...(studio?.docTemplates||[]).flatMap((item:any)=>[item.id,item.type,item.templateId,item.documentType]),...(studio?.workflowStages||[]).flatMap((stage:any)=>(stage.actions||[]).filter((action:any)=>action.type==='doc').flatMap((action:any)=>[action.refId,action.documentType]))].map(value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,''));
+    if(refs.includes(type)||refs.includes(String(model.id||'').toUpperCase()))return res.status(409).json({error:'Este modelo ainda é referenciado pelo Estúdio/fluxo publicado. Remova ou substitua a referência antes da exclusão.',code:'DOCUMENT_MODEL_IN_USE'});
+    const next={...models};delete next[type];const now=new Date().toISOString();currentSettings={...currentSettings,documentModels:next,updatedAt:now};auditLogsStore.push({id:`log-${Date.now()}-model-delete`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'MODELO_DOCUMENTAL_REMOVIDO',entityType:'document_model',entityId:type,before:{fileName:model.fileName,driveFileId:model.driveFileId,activeVersion:model.activeVersion},after:{deleted:true,driveArtifactPreserved:true},timestamp:now});await persistPortalStateDurably();res.json({deleted:true,type});
+  });
 
   app.get(['/api/admin/access-list','/api/admin/students'],requireAuthenticated,requireAdministrator,(_req,res)=>res.json(authorizedStudentsStore));
   app.post(['/api/admin/access-list','/api/admin/students'],requireAuthenticated,requireAdministrator,(req,res)=>{
@@ -1688,9 +1697,10 @@ export async function createPortalApp() {
     const matricula=String(req.body?.matricula||'').trim()||undefined;
     if(!nome||!isValidPortalEmail(email))return res.status(400).json({error:'Nome e e-mail válido são obrigatórios.'});
     if(!['STUDENT','ADVISOR','CO_ADVISOR','EXAMINER'].includes(role))return res.status(400).json({error:'Selecione um papel de acesso válido.'});
-    if(role==='STUDENT'&&!matricula)return res.status(400).json({error:'Informe a matrícula para cadastrar um estudante.'});
+    // A matrícula ajuda na identificação acadêmica, mas não bloqueia o cadastro individual prévio.
     const existed=authorizedStudentsStore.some(entry=>normalizeEmail(entry.email)===email);
     const entry=upsertAuthorizedAccess({nome,email,matricula,role,origin:'MASTER_LIST',actor:identity.email,active:true});
+    entry.accessType=role; // qualidade administrativa única; os papéis por TCC permanecem nas memberships.
     entry.memberType=memberType;
     entry.manualRevocation=false;entry.revokedAt=undefined;entry.revokedBy=undefined;entry.revocationReason=undefined;entry.updatedAt=new Date().toISOString();
     auditLogsStore.push({id:`log-${Date.now()}-access`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:existed?'ATUALIZACAO_ACESSO_AUTORIZADO':'CRIACAO_ACESSO_AUTORIZADO',entityType:'authorized_access',entityId:entry.id,after:{emailHash:createHash('sha256').update(entry.email).digest('hex'),roles:entry.roles,memberType:entry.memberType,origin:entry.origin,active:entry.active},timestamp:entry.updatedAt});
@@ -1705,8 +1715,9 @@ export async function createPortalApp() {
     const requestedRole=req.body?.role?String(req.body.role).toUpperCase() as ProcessRole:undefined;
     if(requestedRole&&!['STUDENT','ADVISOR','CO_ADVISOR','EXAMINER'].includes(requestedRole))return res.status(400).json({error:'Papel de acesso inválido.'});
     const roles=requestedRole?Array.from(new Set([...(before.roles||[before.accessType||'STUDENT']),requestedRole])) as ProcessRole[]:(before.roles||[before.accessType||'STUDENT']);
+    const accessType=requestedRole&&req.body?.replaceRole===true?requestedRole:(before.accessType||roles[0]);
     const memberType=req.body?.memberType!==undefined?(String(req.body.memberType).toUpperCase()==='EXTERNAL'?'EXTERNAL':'INTERNAL'):before.memberType;
-    const updated:AuthorizedStudent={...before,...(req.body?.nome!==undefined?{nome:String(req.body.nome).trim()}:{}),...(req.body?.matricula!==undefined?{matricula:String(req.body.matricula).trim()||undefined}:{}),roles,accessType:(before.accessType||roles[0]),memberType,active,manualRevocation:req.body?.active!==undefined?!active:before.manualRevocation,revokedAt:!active?updatedAt:undefined,revokedBy:!active?identity.email:undefined,revocationReason:!active?String(req.body?.reason||'Acesso revogado pelo administrador.').trim():undefined,updatedAt};
+    const updated:AuthorizedStudent={...before,...(req.body?.nome!==undefined?{nome:String(req.body.nome).trim()}:{}),...(req.body?.matricula!==undefined?{matricula:String(req.body.matricula).trim()||undefined}:{}),roles,accessType,memberType,active,manualRevocation:req.body?.active!==undefined?!active:before.manualRevocation,revokedAt:!active?updatedAt:undefined,revokedBy:!active?identity.email:undefined,revocationReason:!active?String(req.body?.reason||'Acesso revogado pelo administrador.').trim():undefined,updatedAt};
     authorizedStudentsStore[index]=updated;
     auditLogsStore.push({id:`log-${Date.now()}-access-update`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'ALTERACAO_ACESSO_AUTORIZADO',entityType:'authorized_access',entityId:updated.id,before:{active:before.active,roles:before.roles,memberType:before.memberType},after:{active:updated.active,roles:updated.roles,memberType:updated.memberType},timestamp:updated.updatedAt});
     persistPortalState();res.json(updated);
@@ -1725,8 +1736,8 @@ export async function createPortalApp() {
     if(!records.length||records.length>1000)return res.status(400).json({error:'Envie de 1 a 1.000 alunos por lote.'});
     const normalized=records.map((record:any,index:number)=>({row:index+2,nome:String(record?.nome||'').trim(),email:normalizeEmail(String(record?.email||'')),matricula:String(record?.matricula||'').trim()||undefined}));
     const duplicateEmails=new Set<string>(),seen=new Set<string>();for(const record of normalized){if(seen.has(record.email))duplicateEmails.add(record.email);seen.add(record.email);}
-    const profile=resolveInstallationProfile(currentSettings);const invalid=normalized.filter(record=>!record.nome||!record.matricula||!isValidPortalEmail(record.email)||!emailMatchesDomains(record.email,profile.studentEmailDomains)||duplicateEmails.has(record.email));
-    if(invalid.length)return res.status(400).json({error:'O lote contém linhas inválidas ou duplicadas.',invalidRows:invalid.map(record=>({row:record.row,email:record.email,reason:duplicateEmails.has(record.email)?'E-mail duplicado no arquivo':'Nome, matrícula, e-mail institucional ou domínio inválido'}))});
+    const profile=resolveInstallationProfile(currentSettings);const invalid=normalized.filter(record=>!record.nome||!isValidPortalEmail(record.email)||!emailMatchesDomains(record.email,profile.studentEmailDomains)||duplicateEmails.has(record.email));
+    if(invalid.length)return res.status(400).json({error:'O lote contém linhas inválidas ou duplicadas.',invalidRows:invalid.map(record=>({row:record.row,email:record.email,reason:duplicateEmails.has(record.email)?'E-mail duplicado no arquivo':'Nome, e-mail institucional ou domínio inválido'}))});
     const batchHash=createHash('sha256').update(JSON.stringify(normalized.map(({nome,email,matricula})=>({nome,email,matricula})))).digest('hex');const already=auditLogsStore.find(log=>log.action==='IMPORTACAO_ALUNOS'&&(log.after as any)?.batchHash===batchHash);if(already)return res.json({batchHash,created:0,updated:0,reused:true});
     let created=0,updated=0,preservedRevocations=0;for(const record of normalized){const before=authorizedStudentsStore.find(entry=>normalizeEmail(entry.email)===record.email);if(before){before.nome=record.nome;before.matricula=record.matricula||before.matricula;before.updatedAt=new Date().toISOString();before.memberType=before.memberType||'INTERNAL';updated++;if(before.manualRevocation){before.active=false;preservedRevocations++;}}else{const createdEntry=upsertAuthorizedAccess({nome:record.nome,email:record.email,matricula:record.matricula,role:'STUDENT',origin:'MASTER_LIST',actor:identity.email});createdEntry.memberType='INTERNAL';created++;}}
     const now=new Date().toISOString();auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'IMPORTACAO_ALUNOS',entityType:'authorized_student_batch',entityId:batchHash.slice(0,20),after:{batchHash,rows:normalized.length,created,updated,preservedRevocations},timestamp:now});await persistPortalStateDurably();res.status(201).json({batchHash,created,updated,preservedRevocations,reused:false});
@@ -3113,36 +3124,7 @@ export async function createPortalApp() {
       }
     }
 
-    // Public web scrape fallback if no access token or API returned 0 files
-    if (files.length === 0) {
-      try {
-        const publicUrl = `https://drive.google.com/drive/folders/${folderId}`;
-        const pageRes = await fetch(publicUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          }
-        });
-        if (pageRes.ok) {
-          const html = await pageRes.text();
-          // Match document or file IDs
-          const docMatches = html.match(/\/document\/d\/([a-zA-Z0-9_-]+)/g) || html.match(/\/file\/d\/([a-zA-Z0-9_-]+)/g);
-          if (docMatches) {
-            const uniqueIds = Array.from(new Set(docMatches.map(m => m.split('/d/')[1])));
-            uniqueIds.forEach(id => {
-              if (id && id !== folderId) {
-                files.push({
-                  id,
-                  name: `Modelo Google Drive (${id.substring(0, 6)})`,
-                  driveFileUrl: `https://docs.google.com/document/d/${id}/edit`
-                });
-              }
-            });
-          }
-        }
-      } catch (e) {
-        console.error('[ScanFolder] Public scrape exception:', e);
-      }
-    }
+    // Sem fallback público: a varredura usa exclusivamente a conta Google autorizada no servidor.
 
     res.json({ folderId, files });
   });

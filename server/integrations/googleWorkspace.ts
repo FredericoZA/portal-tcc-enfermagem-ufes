@@ -558,6 +558,28 @@ export async function bootstrapGoogleDriveStructure(accessToken?: string, option
   };
 }
 
+function normalizeDocumentModelType(value:string):string{
+  const normalized=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,48);
+  if(normalized.length<2)throw new Error('Tipo de modelo documental inválido.');
+  return normalized;
+}
+
+async function ensureDocumentModelFolders(accessToken:string,manifest:GoogleDriveManifest,rawType:string):Promise<{type:string;activeFolderId:string;historyFolderId:string}>{
+  const type=normalizeDocumentModelType(rawType);
+  let typeFolderId=manifest.folders[`documents.${type}`];
+  if(!typeFolderId){
+    const known=(DRIVE_FOLDER_NAMES.modelTypes as Record<string,string>)[type];
+    const folderName=known||`99_${type}`;
+    typeFolderId=(await ensureFolder(accessToken,folderName,manifest.folders.models)).file.id;
+    manifest.folders[`documents.${type}`]=typeFolderId;
+  }
+  for(const lifecycle of DRIVE_FOLDER_NAMES.modelLifecycles){
+    const key=`documents.${type}.${lifecycle}`;
+    if(!manifest.folders[key])manifest.folders[key]=(await ensureFolder(accessToken,lifecycle,typeFolderId)).file.id;
+  }
+  return{type,activeFolderId:manifest.folders[`documents.${type}.00_MODELO_ATIVO`],historyFolderId:manifest.folders[`documents.${type}.01_HISTORICO_MODELOS`]};
+}
+
 async function listChildren(accessToken:string,parentId:string):Promise<DriveFile[]>{
   const params=new URLSearchParams({q:`'${escapeDriveQuery(parentId)}' in parents and trashed = false`,fields:'files(id,name,mimeType,webViewLink,parents)',pageSize:'100',spaces:'drive'});
   return (await driveJson<{files?:DriveFile[]}>(accessToken,`${DRIVE_API}/files?${params}`)).files||[];
@@ -605,24 +627,23 @@ export async function verifyMasterDocumentModelFingerprint(input:{accessToken:st
   return current;
 }
 
-export async function publishMasterDocumentModel(input:{type:'CONVITE'|'ATA'|'TERMO'|'DECLARACAO';fileName:string;content:Buffer;rootFolderName?:string}){
+export async function publishMasterDocumentModel(input:{type:string;fileName:string;content:Buffer;rootFolderName?:string}){
   if(!input.content.length||input.content.length>12*1024*1024)throw new Error('O modelo deve ter entre 1 byte e 12 MB.');
   if(input.content.subarray(0,2).toString('hex')!=='504b')throw new Error('O arquivo informado não é um DOCX válido.');
   const token=await getGoogleWorkspaceAccessToken();
   const manifest=await bootstrapGoogleDriveStructure(token,{rootFolderName:input.rootFolderName});
-  const activeFolderId=manifest.folders[`documents.${input.type}.00_MODELO_ATIVO`];
-  const historyFolderId=manifest.folders[`documents.${input.type}.01_HISTORICO_MODELOS`];
+  const {type,activeFolderId,historyFolderId}=await ensureDocumentModelFolders(token,manifest,input.type);
   for(const current of await listChildren(token,activeFolderId)){
     const stamp=new Date().toISOString().replace(/[:.]/g,'-');
-    await driveJson(token,`${DRIVE_API}/files/${current.id}?addParents=${encodeURIComponent(historyFolderId)}&removeParents=${encodeURIComponent(activeFolderId)}&fields=id`,{method:'PATCH',body:JSON.stringify({name:`HISTORICO_${input.type}_${stamp}_${current.name}`.slice(0,180),appProperties:{documentType:input.type,lifecycle:'historical-model',archivedAt:new Date().toISOString()}})});
+    await driveJson(token,`${DRIVE_API}/files/${current.id}?addParents=${encodeURIComponent(historyFolderId)}&removeParents=${encodeURIComponent(activeFolderId)}&fields=id`,{method:'PATCH',body:JSON.stringify({name:`HISTORICO_${type}_${stamp}_${current.name}`.slice(0,180),appProperties:{documentType:type,lifecycle:'historical-model',archivedAt:new Date().toISOString()}})});
   }
-  const fileName=`MODELO_ATIVO_${input.type}.docx`;
-  const uploaded=await uploadBinary(token,{name:fileName,parentId:activeFolderId,mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',content:input.content,appProperties:{documentType:input.type,lifecycle:'active-model',uploadedBy:'master'}});
+  const fileName=`MODELO_ATIVO_${type}.docx`;
+  const uploaded=await uploadBinary(token,{name:fileName,parentId:activeFolderId,mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',content:input.content,appProperties:{documentType:type,lifecycle:'active-model',uploadedBy:'master'}});
   const fingerprint=await readDriveModelFingerprint(token,uploaded.id);
   return {id:uploaded.id,name:uploaded.name,webViewLink:uploaded.webViewLink||`https://drive.google.com/file/d/${uploaded.id}/view`,rootFolderId:manifest.rootFolderId,...fingerprint};
 }
 
-export async function registerMasterDocumentModelFromDrive(input:{type:'CONVITE'|'ATA'|'TERMO'|'DECLARACAO';linkOrId:string;rootFolderName?:string}){
+export async function registerMasterDocumentModelFromDrive(input:{type:string;linkOrId:string;rootFolderName?:string}){
   if(!existingDriveModelLinkImportEnabled()){
     throw new Error('A importação por link está desativada nesta instalação. Envie o arquivo DOCX; para habilitar links, o administrador precisa autorizar explicitamente o escopo Google Drive somente leitura.');
   }
@@ -655,14 +676,13 @@ export async function registerMasterDocumentModelFromDrive(input:{type:'CONVITE'
   }
 
   const manifest=await bootstrapGoogleDriveStructure(token,{rootFolderName:input.rootFolderName});
-  const activeFolderId=manifest.folders[`documents.${input.type}.00_MODELO_ATIVO`];
-  const historyFolderId=manifest.folders[`documents.${input.type}.01_HISTORICO_MODELOS`];
+  const {type,activeFolderId,historyFolderId}=await ensureDocumentModelFolders(token,manifest,input.type);
   for(const current of await listChildren(token,activeFolderId)){
     const stamp=new Date().toISOString().replace(/[:.]/g,'-');
-    await driveJson(token,`${DRIVE_API}/files/${current.id}?addParents=${encodeURIComponent(historyFolderId)}&removeParents=${encodeURIComponent(activeFolderId)}&fields=id`,{method:'PATCH',body:JSON.stringify({name:`HISTORICO_${input.type}_${stamp}_${current.name}`.slice(0,180),appProperties:{documentType:input.type,lifecycle:'historical-model',archivedAt:new Date().toISOString()}})});
+    await driveJson(token,`${DRIVE_API}/files/${current.id}?addParents=${encodeURIComponent(historyFolderId)}&removeParents=${encodeURIComponent(activeFolderId)}&fields=id`,{method:'PATCH',body:JSON.stringify({name:`HISTORICO_${type}_${stamp}_${current.name}`.slice(0,180),appProperties:{documentType:type,lifecycle:'historical-model',archivedAt:new Date().toISOString()}})});
   }
-  const activeName=source.mimeType===GOOGLE_DOC_MIME?`MODELO_ATIVO_${input.type}`:`MODELO_ATIVO_${input.type}.docx`;
-  const copied=await driveJson<DriveFile>(token,`${DRIVE_API}/files/${encodeURIComponent(sourceId)}/copy?fields=id,name,mimeType,webViewLink,parents&supportsAllDrives=true`,{method:'POST',body:JSON.stringify({name:activeName,parents:[activeFolderId],appProperties:{portal:'portal-tcc',documentType:input.type,lifecycle:'active-model',sourceModelId:sourceId}})});
+  const activeName=source.mimeType===GOOGLE_DOC_MIME?`MODELO_ATIVO_${type}`:`MODELO_ATIVO_${type}.docx`;
+  const copied=await driveJson<DriveFile>(token,`${DRIVE_API}/files/${encodeURIComponent(sourceId)}/copy?fields=id,name,mimeType,webViewLink,parents&supportsAllDrives=true`,{method:'POST',body:JSON.stringify({name:activeName,parents:[activeFolderId],appProperties:{portal:'portal-tcc',documentType:type,lifecycle:'active-model',sourceModelId:sourceId}})});
   const fingerprint=await readDriveModelFingerprint(token,copied.id);
   return{id:copied.id,name:copied.name,mimeType:copied.mimeType,webViewLink:copied.webViewLink||`https://drive.google.com/file/d/${copied.id}/view`,rootFolderId:manifest.rootFolderId,variables,...fingerprint};
 }

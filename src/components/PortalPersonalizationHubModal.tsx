@@ -1,7 +1,26 @@
-import React from 'react';
-import { createPortal } from 'react-dom';
-import { Palette, X } from 'lucide-react';
+import React, { useEffect } from 'react';
 
-interface Props{isOpen:boolean;onClose:()=>void;onOpenAppearance:(target:string)=>void;}
-const screens=[['Barra superior','site_header'],['Barra lateral','site_sidebar'],['Rodapé','site_footer'],['Login e acesso','popup_login'],['Calendário','sheet_calendar'],['Repositório','sheet_repository'],['Meus TCCs','sheet_my_tccs'],['Área do Presidente','sheet_coordinator'],['Indicadores','global_table_style'],['Como chegar','global_table_buttons'],['Como usar','global_table_style'],['Fluxo do TCC','global_table_style'],['Replicar Portal','global_table_style'],['Configurações','global_table_style'],['Detalhe do TCC','popup_tcc_detail'],['Nova defesa','popup_new_defense'],['Upload de Ata','popup_upload_ata'],['Visualização PDF','popup_pdf_viewer'],['Correção de documento','popup_correction'],['Pop-ups e formulários','global_popup_style']] as const;
-export const PortalPersonalizationHubModal:React.FC<Props>=({isOpen,onClose,onOpenAppearance})=>{if(!isOpen)return null;return createPortal(<div className="fixed inset-0 z-[1000000] flex items-start justify-center overflow-y-auto bg-slate-950/70 p-3 backdrop-blur-sm"><div id="portal-personalization-hub" role="dialog" aria-modal="true" aria-label="Personalização do Portal TCC" className="my-4 w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-300 bg-[#f0f0f0] shadow-2xl"><header className="flex items-center justify-between bg-[#337959] px-4 py-3 text-white"><div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/70 bg-white"><Palette className="h-4 w-4 text-[#337959]"/></span><h2 className="text-left text-sm font-black uppercase tracking-wide">Personalização do Portal TCC</h2></div><button type="button" onClick={onClose} className="rounded-lg border border-white/70 bg-white p-1.5 text-slate-800" aria-label="Fechar"><X className="h-4 w-4"/></button></header><div className="p-3 sm:p-4"><p className="mb-3 text-[11px] leading-4 text-slate-600">Aparência global definida pelo Master e aplicada a visitantes e usuários autenticados. Colunas e ordem continuam na engrenagem de cada planilha.</p><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{screens.map(([label,target])=><button key={label} type="button" onClick={()=>{onClose();onOpenAppearance(target);}} className="min-h-16 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-left shadow-sm transition hover:bg-slate-50"><div className="text-[10px] font-black uppercase tracking-wide text-slate-900">{label}</div><div className="mt-1 text-[10px] leading-4 text-slate-500">Cores, fonte, títulos, espaçamento, bordas, botões e superfícies aplicáveis.</div></button>)}</div><div className="mt-3 flex justify-end border-t border-slate-300 pt-3"><button type="button" onClick={()=>{onClose();onOpenAppearance('quick_presets');}} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#2d6c50] bg-[#337959] px-4 py-2 text-xs font-black uppercase tracking-wide text-white shadow-sm"><Palette className="h-4 w-4"/>Ajustes globais</button></div></div></div></div>,document.body);};
+interface Props {
+  isOpen: boolean;
+  onClose: () => void;
+  onOpenAppearance: (target: string) => void;
+}
+
+/**
+ * Compatibilidade temporária para chamadas antigas.
+ * O hub intermediário foi removido: a ação Personalização abre diretamente
+ * o editor completo, que passa a ser a única superfície de configuração.
+ */
+export const PortalPersonalizationHubModal: React.FC<Props> = ({
+  isOpen,
+  onClose,
+  onOpenAppearance,
+}) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    onClose();
+    onOpenAppearance('quick_presets');
+  }, [isOpen, onClose, onOpenAppearance]);
+
+  return null;
+};

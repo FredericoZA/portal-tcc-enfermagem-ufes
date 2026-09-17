@@ -51,7 +51,7 @@ export const UserSimulatorBar: React.FC = () => {
   };
 
   return (
-    <div id="user-simulator-bar" className="bg-slate-950 text-slate-100 text-xs px-4 py-2 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 shadow-inner">
+    <div id="user-simulator-bar" className="bg-slate-950 text-slate-100 text-xs px-2 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 sm:gap-3 border-b border-slate-800 shadow-inner overflow-x-hidden">
       <div className="flex items-center gap-2">
         <span className="inline-flex items-center gap-1 font-bold text-emerald-300 bg-emerald-950 px-2.5 py-0.5 rounded-full border border-emerald-700/50 uppercase tracking-wider text-[10px]">
           <Shield className="w-3 h-3 text-emerald-400" /> SIMULAÇÃO DE PERFIL
@@ -61,15 +61,15 @@ export const UserSimulatorBar: React.FC = () => {
         </span>
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-1.5">
+      <div className="flex min-w-0 w-full sm:w-auto items-center gap-2 sm:gap-3 flex-wrap">
+        <div className="flex min-w-0 max-w-full items-center gap-1.5">
           <UserCheck className="w-3.5 h-3.5 text-slate-400" />
           <span className="text-slate-300 font-bold uppercase text-[10px] tracking-wider">Simular como:</span>
           <select
             id="preset-user-select"
             value={userEmail}
             onChange={handleSelect}
-            className="bg-slate-900 text-slate-100 border border-slate-700 rounded-full px-3 py-1 text-xs focus:ring-1 focus:ring-emerald-500 outline-none cursor-pointer"
+            className="min-w-0 max-w-[190px] sm:max-w-[300px] bg-slate-900 text-slate-100 border border-slate-700 rounded-full px-2 sm:px-3 py-1 text-xs focus:ring-1 focus:ring-emerald-500 outline-none cursor-pointer"
           >
             {PRESET_USERS.map((u) => (
               <option key={u.email} value={u.email}>
@@ -89,7 +89,7 @@ export const UserSimulatorBar: React.FC = () => {
             placeholder="Outro e-mail..."
             value={customEmail}
             onChange={(e) => setCustomEmail(e.target.value)}
-            className="bg-slate-900 text-slate-100 border border-slate-700 rounded-full px-3 py-1 w-36 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="min-w-0 bg-slate-900 text-slate-100 border border-slate-700 rounded-full px-3 py-1 w-28 sm:w-36 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
           <button
             id="switch-custom-email-btn"

@@ -1,0 +1,35 @@
+name: Final visual homologation
+
+on:
+  push:
+    branches:
+      - work/finalizacao-portal-tcc
+
+permissions:
+  contents: read
+
+jobs:
+  visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.9.0
+      - run: npm ci
+      - name: Instalar navegador de homologação
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Executar QA visual responsivo com dados fictícios
+        run: npm run test:visual
+      - name: Guardar evidências
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portal-tcc-homologacao-visual
+          path: artifacts/portal-visual-final/
+          if-no-files-found: warn

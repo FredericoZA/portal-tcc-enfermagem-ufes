@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { normalizeUnifiedAppearance } from '../utils/unifiedAppearance';
 import { saveGlobalPopupStyle } from '../utils/portalAppearanceLinks';
 import { GlobalRole, ProcessMembership, GlobalSettings } from '../types';
-import { apiClient, setActiveUserEmail, getActiveUserEmail } from '../services/apiClient';
+import { apiClient, ApiRequestError, setActiveUserEmail, getActiveUserEmail } from '../services/apiClient';
 import { saveGlobalTableConfig } from '../utils/tableFormatters';
 import { loadSiteLayoutConfig, saveSiteLayoutConfig, SITE_LAYOUT_EVENT } from '../utils/siteLayoutConfig';
 import { saveCalendarPopupConfig } from '../utils/calendarPopupConfig';
@@ -31,7 +31,49 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
+interface CachedPortalIdentity {
+  userEmail: string;
+  globalRoles: GlobalRole[];
+  memberships: ProcessMembership[];
+  isAuthenticated: boolean;
+  cachedAt: number;
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AUTH_CACHE_KEY = 'portal_tcc_identity_cache_v1';
+const AUTH_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+
+function readCachedIdentity(): CachedPortalIdentity | null {
+  if (typeof sessionStorage === 'undefined') return null;
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(AUTH_CACHE_KEY) || 'null') as CachedPortalIdentity | null;
+    if (!parsed?.isAuthenticated || !parsed.userEmail || Date.now() - Number(parsed.cachedAt || 0) > AUTH_CACHE_MAX_AGE_MS) return null;
+    return parsed;
+  } catch { return null; }
+}
+
+function saveCachedIdentity(identity: Omit<CachedPortalIdentity, 'cachedAt'>) {
+  if (typeof sessionStorage === 'undefined') return;
+  try { sessionStorage.setItem(AUTH_CACHE_KEY, JSON.stringify({ ...identity, cachedAt: Date.now() })); } catch { /* cache auxiliar */ }
+}
+
+function clearCachedIdentity() {
+  if (typeof sessionStorage === 'undefined') return;
+  try { sessionStorage.removeItem(AUTH_CACHE_KEY); } catch { /* noop */ }
+}
+
+async function getIdentityWithRetry() {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try { return await apiClient.getMe(); }
+    catch (error) {
+      lastError = error;
+      if (error instanceof ApiRequestError && error.status === 401) throw error;
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 250 : 750));
+    }
+  }
+  throw lastError;
+}
 
 function syncPortalFavicon(siteConfig: any) {
   if (typeof document === 'undefined') return;
@@ -72,10 +114,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if(settingsRes.integrationStudio?.operationsPolicy&&typeof document!=='undefined'){const policy=settingsRes.integrationStudio.operationsPolicy;document.documentElement.lang=policy.defaultLocale||'pt-BR';document.documentElement.style.setProperty('--portal-target-size',`${policy.accessibility?.minimumTargetSize||44}px`);document.documentElement.dataset.portalMotion=policy.accessibility?.reducedMotionByDefault?'reduced':'system';}
   };
 
+  const applyIdentity = (meRes: { userEmail: string; globalRoles: any[]; memberships: any[]; isAuthenticated: boolean }) => {
+    setUserEmailState(meRes.userEmail);
+    setIsAuthenticated(meRes.isAuthenticated);
+    setGlobalRoles(meRes.globalRoles);
+    setMemberships(meRes.memberships);
+    if (meRes.isAuthenticated) saveCachedIdentity({
+      userEmail: meRes.userEmail,
+      globalRoles: meRes.globalRoles,
+      memberships: meRes.memberships,
+      isAuthenticated: true
+    }); else clearCachedIdentity();
+  };
+
+  const clearIdentity = () => {
+    clearCachedIdentity();
+    setUserEmailState('');
+    setIsAuthenticated(false);
+    setGlobalRoles([]);
+    setMemberships([]);
+  };
+
   const refreshAuth=async()=>{
     setIsLoading(true);
     const settingsTask=apiClient.getSettings().then(applyPublicSettings).catch(err=>{console.error('Erro ao carregar aparência pública do portal:',err);syncPortalFavicon(loadSiteLayoutConfig());});
-    const identityTask=apiClient.getMe().then(meRes=>{setUserEmailState(meRes.userEmail);setIsAuthenticated(meRes.isAuthenticated);setGlobalRoles(meRes.globalRoles);setMemberships(meRes.memberships);}).catch(err=>{console.warn('Sessão não confirmada; mantendo o Portal em modo público.',err);setUserEmailState('');setIsAuthenticated(false);setGlobalRoles([]);setMemberships([]);});
+    const identityTask=getIdentityWithRetry().then(applyIdentity).catch(err=>{
+      const definitiveUnauthorized = err instanceof ApiRequestError && err.status === 401;
+      const cached = definitiveUnauthorized ? null : readCachedIdentity();
+      if (cached) {
+        console.warn('Falha transitória ao confirmar a sessão; mantendo a identidade em cache até a API responder.', err);
+        setUserEmailState(cached.userEmail);
+        setIsAuthenticated(true);
+        setGlobalRoles(cached.globalRoles);
+        setMemberships(cached.memberships);
+        return;
+      }
+      console.warn('Sessão não confirmada; mantendo o Portal em modo público.',err);
+      clearIdentity();
+    });
     await Promise.allSettled([settingsTask,identityTask]);setIsLoading(false);
   };
 
@@ -86,9 +162,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const syncFromLayout = (event: Event) => syncPortalFavicon((event as CustomEvent).detail || loadSiteLayoutConfig());
+    const recoverAfterReconnect = () => { void refreshAuth(); };
     syncPortalFavicon(loadSiteLayoutConfig());
     window.addEventListener(SITE_LAYOUT_EVENT, syncFromLayout);
-    return () => window.removeEventListener(SITE_LAYOUT_EVENT, syncFromLayout);
+    window.addEventListener('online', recoverAfterReconnect);
+    return () => {
+      window.removeEventListener(SITE_LAYOUT_EVENT, syncFromLayout);
+      window.removeEventListener('online', recoverAfterReconnect);
+    };
   }, []);
 
   const switchUser = async (email: string) => {
@@ -99,9 +180,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const hasAdvisorRole = memberships.some((m) => m.roles.includes('ADVISOR'));
   const isCommissionPresident = globalRoles.includes('COMMISSION_PRESIDENT');
-  // Master e Presidente da Comissão compartilham o nível máximo de administração.
   const isMasterAdmin = globalRoles.includes('MASTER_ADMIN') || isCommissionPresident;
-  const logout=async()=>{await apiClient.logout();setActiveUserEmail('');setUserEmailState('');setGlobalRoles([]);setMemberships([]);setIsAuthenticated(false);await refreshAuth();};
+  const logout=async()=>{await apiClient.logout();setActiveUserEmail('');clearIdentity();await refreshAuth();};
 
   return (
     <AuthContext.Provider

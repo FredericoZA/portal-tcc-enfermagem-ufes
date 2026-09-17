@@ -162,7 +162,8 @@ async function staticChecks() {
   await check('Estúdio não persiste conteúdo de modelos documentais',()=>{
     assert.ok(!studioPanel.includes('value={selectedDoc.templateContentText}'), 'o Estúdio ainda permite editar o conteúdo do documento no portal');
     assert.ok(studioPanel.includes("templateContentText: ''"), 'o snapshot do Estúdio não limpa o conteúdo documental');
-    assert.ok(studioPanel.includes('Fonte oficial única.'), 'a interface não explica a fonte externa única do modelo');
+    assert.ok(studioPanel.includes('O arquivo visual permanece no Google Drive'), 'a interface não orienta que o arquivo visual permanece no Drive');
+    assert.ok(!studioPanel.includes('Fonte oficial única.'), 'a caixa legada Fonte oficial única reapareceu');
     assert.ok(server.includes('DOCX_LAYOUT_IS_SOURCE_OF_TRUTH'), 'a API antiga ainda pode reestilizar o DOCX oficial');
   });
 
