@@ -32,4 +32,8 @@ A promoção só pode ocorrer quando estiverem aprovados, no mesmo candidato fin
 11. Revisão do diff contra `main` e confirmação de que não há automações/patches temporários.
 12. Smoke test pós-deploy em produção.
 
+## Regra de promoção
+
+Falha em qualquer trava reprova o candidato e impede promoção. Correções encontradas pela CI precisam ser incorporadas ao candidato e toda a bateria deve ser executada novamente sobre o novo SHA.
+
 O deployment de produção é deliberadamente único e só ocorre após essas travas.
