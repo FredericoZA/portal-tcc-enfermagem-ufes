@@ -123,7 +123,7 @@ try {
     if (overflow) report.errors.push(`${name}: rolagem horizontal global. Elementos: ${overflowElements.map(item => `${item.selector}(${item.left}..${item.right})`).join(', ') || 'não identificado'}.`);
   };
 
-  // Master: percorre as telas centrais em quatro larguras.
+  // Master: percorre as telas centrais e públicas em quatro larguras.
   {
     const { context, page } = await newPersonaPage('master@portal.local');
     for (const width of [320, 768, 1024, 1440]) {
@@ -133,6 +133,11 @@ try {
       for (const [tab, label] of [
         ['calendario', 'calendario'],
         ['biblioteca', 'repositorio'],
+        ['indicadores', 'indicadores'],
+        ['como-chegar', 'como-chegar'],
+        ['tutorial', 'como-usar'],
+        ['fluxo-tcc', 'fluxo-tcc'],
+        ['replicar', 'replicar-portal'],
         ['meus-processos', 'meus-tccs'],
         ['coordenador', 'presidencia'],
         ['configuracoes', 'configuracoes']
