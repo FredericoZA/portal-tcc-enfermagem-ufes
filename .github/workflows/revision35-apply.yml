@@ -33,6 +33,6 @@ jobs:
           fi
           git config user.name "portal-tcc-bot"
           git config user.email "portal-tcc-bot@users.noreply.github.com"
-          git add src/components/IntegrationStudioPanel.tsx
-          git commit -m "feat: concluir fluxo visual do Estúdio [rev35-bot]"
+          git add src/components/IntegrationStudioPanel.tsx server.ts src/types/index.ts
+          git commit -m "feat: concluir Estúdio, acesso e modelos extensíveis [rev35-bot]"
           git push origin HEAD:work/finalizacao-portal-tcc
