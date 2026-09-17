@@ -589,22 +589,51 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     recordAudit(createAuditEntry('VARIABLE_UPDATED', 'variable', selectedVariable.id, `Variável ${selectedVariable.name} atualizada e propagada.`, actorEmail, { before, after }));
   };
 
-  const handleMergeVariables = () => {
+  const buildVariableMergeImpact = (sourceVariable: MatrixColumn, targetVariable: MatrixColumn) => {
+    const artifacts = { matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates };
+    const sourceUsage = getVariableUsage([sourceVariable.id, sourceVariable.name, ...(sourceVariable.aliases || [])], artifacts);
+    const targetUsage = getVariableUsage([targetVariable.id, targetVariable.name, ...(targetVariable.aliases || [])], artifacts);
+    const affectedArtifacts = Array.from(new Set([...sourceUsage.documents, ...sourceUsage.emails, ...sourceUsage.forms]));
+    const sourceFormat = sourceVariable.format || {};
+    const targetFormat = targetVariable.format || {};
+    const formatChanges = JSON.stringify(sourceFormat) !== JSON.stringify(targetFormat);
+    return { sourceUsage, targetUsage, affectedArtifacts, formatChanges, sourceFormat, targetFormat };
+  };
+
+  const variableMergeImpact = useMemo(() => {
+    if (!mergeSourceId || !mergeTargetId || mergeSourceId === mergeTargetId) return null;
+    const sourceVariable = matrixColumns.find((column) => column.id === mergeSourceId);
+    const targetVariable = matrixColumns.find((column) => column.id === mergeTargetId);
+    return sourceVariable && targetVariable ? buildVariableMergeImpact(sourceVariable, targetVariable) : null;
+  }, [mergeSourceId, mergeTargetId, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates]);
+
+  const handleMergeVariables = async () => {
     if (!mergeSourceId || !mergeTargetId || mergeSourceId === mergeTargetId) return;
-    const source = matrixColumns.find((column) => column.id === mergeSourceId);
-    const target = matrixColumns.find((column) => column.id === mergeTargetId);
-    if (!source || !target) return;
-    const merged = mergeVariableAcrossArtifacts({ matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates }, source.id, target.id);
+    const sourceVariable = matrixColumns.find((column) => column.id === mergeSourceId);
+    const targetVariable = matrixColumns.find((column) => column.id === mergeTargetId);
+    if (!sourceVariable || !targetVariable) return;
+    const impact = buildVariableMergeImpact(sourceVariable, targetVariable);
+    const details = [
+      `${impact.sourceUsage.documents.length} documento(s)`,
+      `${impact.sourceUsage.emails.length} e-mail(s)`,
+      `${impact.sourceUsage.forms.length} formulário(s)`,
+      `${impact.affectedArtifacts.length} artefato(s) único(s)`
+    ].join(' · ');
+    const formattingNote = impact.formatChanges
+      ? ' A formatação das duas variáveis difere; após a mescla prevalece a formatação da variável principal.'
+      : '';
+    if (!(await portalConfirm(`Mesclar “${sourceVariable.label || sourceVariable.name}” em “${targetVariable.label || targetVariable.name}”? Impacto: ${details}.${formattingNote} A chave antiga será mantida como alias e as referências serão reescritas.`))) return;
+    const merged = mergeVariableAcrossArtifacts({ matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates }, sourceVariable.id, targetVariable.id);
     setMatrixColumns(merged.matrixColumns);
     setMatrixRows(merged.matrixRows);
     setDocTemplates(merged.docTemplates);
     setEmailTemplates(merged.emailTemplates);
     setFormTemplates(merged.formTemplates);
-    setSelectedVariableId(target.id);
+    setSelectedVariableId(targetVariable.id);
     setMergeSourceId('');
     setMergeTargetId('');
-    recordAudit(createAuditEntry('VARIABLE_MERGED', 'variable', target.id, `${source.name} foi mesclada em ${target.name} e todas as referências foram reescritas.`, actorEmail, {
-      before: source, after: target, affectedArtifacts: merged.affectedArtifacts
+    recordAudit(createAuditEntry('VARIABLE_MERGED', 'variable', targetVariable.id, `${sourceVariable.name} foi mesclada em ${targetVariable.name} após conferência explícita do impacto; todas as referências foram reescritas.`, actorEmail, {
+      before: sourceVariable, after: targetVariable, affectedArtifacts: merged.affectedArtifacts, impact
     }));
     notify(`Mescla concluída em ${merged.affectedArtifacts.length} artefato(s).`);
   };
@@ -996,7 +1025,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
           <div className="space-y-4">
             <div className="grid gap-4 xl:grid-cols-[.85fr_1.15fr]">
               <div className={`${panelClass} p-4`}><div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-700" /><h4 className="text-xs font-black uppercase">Descoberta e consolidação</h4></div><p className="mt-2 text-[11px] leading-relaxed text-slate-600">A varredura cruza modelos do Drive, documentos, assuntos/corpos de e-mail e perguntas dos formulários. Chaves equivalentes são reutilizadas em vez de solicitar a informação novamente.</p><div className="mt-3 flex gap-2"><input value={newVariableKey} onChange={(e) => setNewVariableKey(e.target.value)} className={inputClass} placeholder="Ex.: ALUNO_NOME_COMPLETO" /><button type="button" onClick={handleCreateVariable} className={`${actionClass} shrink-0 border-violet-700 bg-violet-700 text-white`}><Plus className="h-3.5 w-3.5" />Criar</button></div><button type="button" onClick={handleDiscoverVariables} className={`${actionClass} mt-2 w-full border-violet-300 bg-violet-50 text-violet-800`}><RefreshCw className="h-3.5 w-3.5" />Levantar variáveis automaticamente</button></div>
-              <div className={`${panelClass} p-4`}><div className="flex items-center gap-2"><Merge className="h-4 w-4 text-emerald-700" /><h4 className="text-xs font-black uppercase">Mesclar sem duplicar requisições</h4></div><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto]"><select value={mergeSourceId} onChange={(e) => setMergeSourceId(e.target.value)} className={inputClass}><option value="">Variável duplicada</option>{matrixColumns.map((column, cIdx) => <option key={`source-${column.id}-${cIdx}`} value={column.id}>{column.label || column.name}</option>)}</select><div className="self-center text-center text-xs font-black text-slate-400">→</div><select value={mergeTargetId} onChange={(e) => setMergeTargetId(e.target.value)} className={inputClass}><option value="">Variável principal</option>{matrixColumns.map((column, cIdx) => <option key={`target-${column.id}-${cIdx}`} value={column.id}>{column.label || column.name}</option>)}</select><button type="button" onClick={handleMergeVariables} disabled={!mergeSourceId || !mergeTargetId || mergeSourceId === mergeTargetId} className={`${actionClass} border-emerald-800 bg-emerald-800 text-white`}><Merge className="h-3.5 w-3.5" />Mesclar</button></div><div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[10px] leading-relaxed text-amber-900"><strong>Operação auditável:</strong> a chave descartada vira alias da principal e todas as referências em documentos, e-mails, formulários e matriz são reescritas.</div></div>
+              <div className={`${panelClass} p-4`}><div className="flex items-center gap-2"><Merge className="h-4 w-4 text-emerald-700" /><h4 className="text-xs font-black uppercase">Mesclar sem duplicar requisições</h4></div><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto]"><select value={mergeSourceId} onChange={(e) => setMergeSourceId(e.target.value)} className={inputClass}><option value="">Variável duplicada</option>{matrixColumns.map((column, cIdx) => <option key={`source-${column.id}-${cIdx}`} value={column.id}>{column.label || column.name}</option>)}</select><div className="self-center text-center text-xs font-black text-slate-400">→</div><select value={mergeTargetId} onChange={(e) => setMergeTargetId(e.target.value)} className={inputClass}><option value="">Variável principal</option>{matrixColumns.map((column, cIdx) => <option key={`target-${column.id}-${cIdx}`} value={column.id}>{column.label || column.name}</option>)}</select><button type="button" onClick={handleMergeVariables} disabled={!mergeSourceId || !mergeTargetId || mergeSourceId === mergeTargetId} className={`${actionClass} border-emerald-800 bg-emerald-800 text-white`}><Merge className="h-3.5 w-3.5" />Mesclar</button></div>{variableMergeImpact && <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3 text-[10px] leading-relaxed text-violet-950"><div className="flex items-center gap-1.5 font-black uppercase"><CircleAlert className="h-3.5 w-3.5"/>Impacto antes da mescla</div><p className="mt-1">A variável descartada aparece em <strong>{variableMergeImpact.affectedArtifacts.length}</strong> artefato(s): {variableMergeImpact.sourceUsage.documents.length} documento(s), {variableMergeImpact.sourceUsage.emails.length} e-mail(s) e {variableMergeImpact.sourceUsage.forms.length} formulário(s).</p>{variableMergeImpact.affectedArtifacts.length > 0 && <p className="mt-1 break-words text-violet-800">{variableMergeImpact.affectedArtifacts.slice(0, 8).join(' · ')}{variableMergeImpact.affectedArtifacts.length > 8 ? ' …' : ''}</p>}{variableMergeImpact.formatChanges && <p className="mt-1 font-bold text-amber-800">A formatação das duas variáveis difere. Após a mescla prevalece a formatação da variável principal.</p>}</div>}<div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[10px] leading-relaxed text-amber-900"><strong>Operação auditável:</strong> a chave descartada vira alias da principal e todas as referências em documentos, e-mails, formulários e matriz são reescritas somente após confirmação explícita.</div></div>
             </div>
             {similarVariableSuggestions.length > 0 && <div className={`${panelClass} p-4`}><div className="flex items-center gap-2"><WandSparkles className="h-4 w-4 text-violet-700"/><h4 className="text-xs font-black uppercase">Sugestões inteligentes de normalização</h4></div><p className="mt-2 text-[11px] text-slate-600">O Portal destaca chaves potencialmente duplicadas e mostra a semelhança antes de qualquer mescla. Nada é alterado sem confirmação explícita.</p><div className="mt-3 grid gap-2 md:grid-cols-2">{similarVariableSuggestions.map(({source,target,score,reason})=><button key={`similar-${source.id}-${target.id}`} type="button" onClick={()=>{setMergeSourceId(source.id);setMergeTargetId(target.id);}} className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-left hover:border-violet-400"><div className="flex items-center justify-between gap-2"><strong className="text-[11px] text-violet-950">{source.label||source.name} → {target.label||target.name}</strong><span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-black text-violet-700">{Math.round(score*100)}%</span></div><p className="mt-1 text-[10px] text-violet-800">{reason}</p></button>)}</div></div>}
             <div className="grid gap-4 xl:grid-cols-[.75fr_1.25fr]">

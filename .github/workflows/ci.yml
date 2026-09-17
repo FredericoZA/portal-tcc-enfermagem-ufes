@@ -5,30 +5,9 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch-variable-impact:
-    if: "${{ github.ref == 'refs/heads/work/finalizacao-portal-tcc' && !contains(github.event.head_commit.message, 'bot: apply variable merge impact') }}"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 2
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - name: Aplicar correção e restaurar CI
-        run: |
-          node scripts/patch-variable-merge-impact.mjs
-          rm -f scripts/patch-variable-merge-impact.mjs
-          git show HEAD^:.github/workflows/ci.yml > .github/workflows/ci.yml
-          git config user.name "Portal TCC Bot"
-          git config user.email "portal-tcc-bot@users.noreply.github.com"
-          git add -A
-          git commit -m "bot: apply variable merge impact"
-          git push origin HEAD:work/finalizacao-portal-tcc
-
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
