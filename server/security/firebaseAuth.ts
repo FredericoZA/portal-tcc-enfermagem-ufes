@@ -15,7 +15,7 @@ export interface PortalIdentity {
 }
 
 const LEGACY_COOKIE_NAME = 'portal_tcc_session';
-const SESSION_TTL_SECONDS = 2 * 60 * 60;
+const SESSION_TTL_SECONDS = 12 * 60 * 60;
 const secureRuntime = () => process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
 const cookieName = () => secureRuntime() ? '__Host-portal_tcc_session' : LEGACY_COOKIE_NAME;
 

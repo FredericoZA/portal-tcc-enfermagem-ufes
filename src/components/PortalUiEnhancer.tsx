@@ -6,6 +6,23 @@ const SETTINGS_HINT = 'Configurar exibição — ajusta linhas por página e per
 const DOWNLOAD_HINT = 'Baixar dados — exporta o Repositório de TCCs em CSV';
 const ACCENT = '#337959';
 const LEGACY_ACCENTS = new Set(['#47866a', 'rgb(71, 134, 106)']);
+const LEGACY_PERSONALIZATION_LABELS = new Set([
+  'botoes no topo',
+  'estilo base das planilhas',
+  'colunas ordem e linhas',
+  'estilo base pop ups',
+  'analise hipoar',
+  'solicitacao de correcao',
+]);
+
+function normalizeLabel(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
 
 function setButtonHint(button: HTMLButtonElement | null, hint: string) {
   if (!button) return;
@@ -18,6 +35,20 @@ function normalizeLegacyInlineAccents() {
     if (LEGACY_ACCENTS.has(node.style.backgroundColor.toLowerCase())) node.style.backgroundColor = ACCENT;
     if (LEGACY_ACCENTS.has(node.style.borderColor.toLowerCase())) node.style.borderColor = ACCENT;
     if (LEGACY_ACCENTS.has(node.style.color.toLowerCase())) node.style.color = ACCENT;
+  });
+}
+
+function pruneLegacyPersonalizationRows() {
+  const title = document.getElementById('portal-customization-title');
+  const dialog = title?.closest<HTMLElement>('[role="dialog"]');
+  if (!dialog) return;
+
+  dialog.querySelectorAll<HTMLButtonElement>('button').forEach((button) => {
+    const label = normalizeLabel(button.textContent || '');
+    if (!LEGACY_PERSONALIZATION_LABELS.has(label)) return;
+    const row = button.parentElement;
+    if (row) row.style.display = 'none';
+    else button.style.display = 'none';
   });
 }
 
@@ -35,6 +66,7 @@ function findRepositoryToolbar(): HTMLElement | null {
 
 function enhanceToolbarButtons() {
   normalizeLegacyInlineAccents();
+  pruneLegacyPersonalizationRows();
 
   document.querySelectorAll<HTMLButtonElement>('button[title^="Buscar"], button[aria-label^="Buscar registros"]').forEach((button) =>
     setButtonHint(button, SEARCH_HINT),
