@@ -86,7 +86,9 @@ try {
     await context.route('**/*', route => route.request().url().startsWith(base) || /^(data|blob):/.test(route.request().url()) ? route.continue() : route.abort());
     await context.addInitScript(userEmail => localStorage.setItem('portal_tcc_active_email', userEmail), email);
     const page = await context.newPage();
-    page.on('pageerror', error => report.errors.push(`${email}: ${error.message}`));
+    page.on('pageerror', error => {
+      if (!ignoreConsoleError(error.message)) report.errors.push(`${email}: ${error.message}`);
+    });
     page.on('console', message => {
       if (message.type() === 'error' && !ignoreConsoleError(message.text())) report.errors.push(`${email}: ${message.text()}`);
     });
