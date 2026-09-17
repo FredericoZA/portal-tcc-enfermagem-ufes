@@ -24,6 +24,15 @@ jobs:
           cache: npm
       - run: npm install --global npm@11.9.0
       - run: npm ci
+      - name: Corrigir literal JSX do patch temporário
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/revision36-complete.mjs')
+          source = path.read_text()
+          source = source.replace('${panelClass} p-4', r'\${panelClass} p-4')
+          path.write_text(source)
+          PY
       - name: Aplicar revisão 36
         run: node scripts/revision36-complete.mjs
       - name: Validar código e contratos
