@@ -101,6 +101,11 @@ try {
 
   const capture = async (page, name) => {
     await page.locator('main').waitFor({ state: 'visible' });
+    const lazyFallback = page.getByText('Carregando conteúdo...', { exact: true });
+    if (await lazyFallback.count()) {
+      await lazyFallback.first().waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
+    }
+    await page.waitForTimeout(150);
     await page.waitForFunction(() => document.body.innerText.trim().length > 80);
     if (await page.locator('vite-error-overlay').count()) throw new Error(`${name}: overlay de erro do Vite.`);
     const file = `${name}.png`;
