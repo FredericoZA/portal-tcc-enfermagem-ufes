@@ -12,6 +12,7 @@ const access = read('src/components/AuthorizedStudentsPanel.tsx');
 const importUtil = read('src/utils/studentImport.ts');
 const integrations = read('src/components/InfrastructureIntegrationsPanel.tsx');
 const evaluation = read('src/components/AdvisorEvaluationPanel.tsx');
+const studio = read('src/components/IntegrationStudioPanel.tsx');
 const server = read('server.ts');
 const vercel = JSON.parse(read('vercel.json'));
 
@@ -55,6 +56,22 @@ assert.doesNotMatch(integrations, /Operação e confiabilidade/);
 assert.match(evaluation, /portal_tcc_evaluation_draft_v1/);
 assert.match(evaluation, /Rascunho recuperado automaticamente/);
 assert.match(evaluation, /clearDraft\(process\.id\)/);
+
+assert.match(studio, /Rascunho automático/);
+assert.match(studio, /saveLocalStudio\(draft\)/);
+assert.match(studio, /localTime > remoteTime/);
+assert.match(studio, /'Publicando…' : 'Publicar'/);
+assert.match(studio, /createEmailTemplate/);
+assert.match(studio, /deleteSelectedEmail/);
+assert.match(studio, /Anexos gerados pelo Portal/);
+assert.match(studio, /createFormTemplate/);
+assert.match(studio, /deleteSelectedForm/);
+assert.match(studio, /moveSelectedFormQuestion/);
+assert.doesNotMatch(studio, />Salvar metadados do fluxo</);
+assert.doesNotMatch(studio, />Salvar modelo de e-mail</);
+assert.doesNotMatch(studio, />Salvar formulário</);
+assert.doesNotMatch(studio, /<strong>Fonte oficial única\.<\/strong>/);
+assert.doesNotMatch(studio, />Finalidade no fluxo</);
 
 assert.match(server, /STUDENT_TCC_ALREADY_EXISTS/);
 assert.match(server, /ACCESS_LINKED_TO_PROCESS/);
