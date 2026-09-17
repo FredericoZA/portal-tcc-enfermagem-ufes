@@ -85,6 +85,17 @@
   line-height: 1 !important;
 }
 
+/* A engrenagem monocromática destoava dos demais pictogramas da navegação. */
+#nav-item-configuracoes > div > span:first-child {
+  font-size: 0 !important;
+}
+
+#nav-item-configuracoes > div > span:first-child::before {
+  content: "🛠️";
+  font-size: 18px;
+  line-height: 1;
+}
+
 #meus-processos-page-container section > div > div:first-child > div:first-child,
 #coordenador-page-root section > div > div:first-child > div:first-child {
   border-bottom: 0 !important;
