@@ -59,6 +59,10 @@ assert.match(evaluation, /clearDraft\(process\.id\)/);
 assert.match(server, /STUDENT_TCC_ALREADY_EXISTS/);
 assert.match(server, /ACCESS_LINKED_TO_PROCESS/);
 assert.match(server, /GOOGLE_ALLOW_EXISTING_MODEL_LINKS/);
+assert.doesNotMatch(server, /if\(role==='STUDENT'&&!matricula\)/, 'Matrícula não pode bloquear o cadastro individual prévio.');
+assert.match(server, /entry\.accessType=role/, 'O papel escolhido precisa se tornar a qualidade administrativa principal.');
+assert.match(server, /replaceRole===true\?requestedRole/, 'A troca de qualidade deve atualizar accessType no backend.');
+assert.doesNotMatch(server, /Public web scrape fallback/, 'A varredura de modelos não pode recorrer a scraping público do Drive.');
 
 assert.equal(vercel.git?.deploymentEnabled?.['work/finalizacao-portal-tcc'], false, 'A branch de trabalho não pode disparar deployment na Vercel.');
 
