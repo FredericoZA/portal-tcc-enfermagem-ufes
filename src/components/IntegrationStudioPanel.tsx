@@ -194,6 +194,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [newVariableKey, setNewVariableKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(initialMeta.savedAt || '');
+  const [draftSavedAt, setDraftSavedAt] = useState('');
   const [isDirty, setIsDirty] = useState(false);
   const appliedSnapshotRef = useRef<string>('');
   const hasHydratedRef = useRef(false);
@@ -231,7 +232,12 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   }, [selectedVariableId, selectedVariable?.id]);
 
   useEffect(() => {
-    const source = upgradeStudioDraft(normalizeStudioSettings(initialStudio || (!hasHydratedRef.current ? localStudio : null)));
+    const remote = normalizeStudioSettings(initialStudio);
+    const local = normalizeStudioSettings(!hasHydratedRef.current ? localStudio : loadLocalStudio());
+    const remoteTime = Date.parse(String(remote.savedAt || '')) || 0;
+    const localTime = Date.parse(String(local.savedAt || '')) || 0;
+    const preferred = localTime > remoteTime ? local : (initialStudio || localStudio);
+    const source = upgradeStudioDraft(normalizeStudioSettings(preferred));
     const sourceKey = `${source.savedAt || ''}:${source.revision || 0}`;
     if (!source.savedAt || sourceKey === appliedSnapshotRef.current) return;
     appliedSnapshotRef.current = sourceKey;
@@ -310,6 +316,21 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     lastDriveSyncStatus
   });
 
+  const draftFingerprint = useMemo(() => JSON.stringify({ brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl }), [brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl]);
+
+  useEffect(() => {
+    if (!hasHydratedRef.current || !isDirty || isSaving) return;
+    const timer = window.setTimeout(() => {
+      const draft = buildSnapshot();
+      draft.revision = revision;
+      draft.savedAt = new Date().toISOString();
+      draft.publication = { status: 'DRAFT', publishedRevision: initialMeta.publication?.publishedRevision, publishedAt: initialMeta.publication?.publishedAt, validationScore: validationReport.score };
+      saveLocalStudio(draft);
+      setDraftSavedAt(draft.savedAt);
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [draftFingerprint, isDirty, isSaving, revision, validationReport.score]);
+
   const persistSnapshot = async (withAudit = false) => {
     if (isSaving) return;
     if (!validationReport.ready) {
@@ -328,6 +349,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       setAuditTrail(nextAudit);
       setRevision(snapshot.revision);
       setLastSavedAt(snapshot.savedAt);
+      setDraftSavedAt('');
       appliedSnapshotRef.current = `${snapshot.savedAt}:${snapshot.revision}`;
       setIsDirty(false);
       if (withAudit) notify('Estúdio integrado salvo e publicado para todo o portal.');
@@ -392,6 +414,17 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     notify('Modelo de e-mail atualizado e propagado.');
   };
 
+  const createEmailTemplate = () => {
+    const id=`email-${Date.now()}`;
+    const next: EmailTemplateItem={id,name:'Novo e-mail',triggerStage:'',subject:'',body:'',recipient:'',cc:'',bcc:'',attachments:[]};
+    setEmailTemplates(previous=>[...previous,next]);setSelectedEmailId(id);setIsDirty(true);
+  };
+  const deleteSelectedEmail = async () => {
+    if(!selectedEmail||emailTemplates.length<=1)return;
+    if(!(await portalConfirm(`Excluir o modelo de e-mail "${selectedEmail.name}"?`)))return;
+    const next=emailTemplates.filter(item=>item.id!==selectedEmail.id);setEmailTemplates(next);setSelectedEmailId(next[0]?.id||'');setIsDirty(true);
+  };
+
   const updateSelectedForm = (updates: Partial<FormTemplateItem>) => {
     if (!selectedForm) return;
     setFormTemplates((previous) => previous.map((item) => item.id === selectedForm.id ? { ...item, ...updates } : item));
@@ -402,6 +435,20 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     if (!selectedForm) return;
     setFormDesigns((previous) => ({ ...previous, [selectedForm.id]: { ...selectedFormDesign, ...updates, templateId: selectedForm.id } }));
     setIsDirty(true);
+  };
+  const createFormTemplate = () => {
+    const id=`form-${Date.now()}`;
+    const next: FormTemplateItem={id,title:'Novo formulário',stage:'',targetRole:'Aluno',description:'',questions:[],isActive:true};
+    setFormTemplates(previous=>[...previous,next]);setSelectedFormId(id);setIsDirty(true);
+  };
+  const deleteSelectedForm = async () => {
+    if(!selectedForm||formTemplates.length<=1)return;
+    if(!(await portalConfirm(`Excluir o formulário "${selectedForm.title}"?`)))return;
+    const next=formTemplates.filter(item=>item.id!==selectedForm.id);setFormTemplates(next);setSelectedFormId(next[0]?.id||'');setIsDirty(true);
+  };
+  const moveSelectedFormQuestion = (index:number,direction:-1|1) => {
+    if(!selectedForm)return;const target=index+direction;if(target<0||target>=selectedForm.questions.length)return;
+    const questions=[...selectedForm.questions];[questions[index],questions[target]]=[questions[target],questions[index]];updateSelectedForm({questions});
   };
 
   const handleDriveScan = async () => {
@@ -662,7 +709,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
             return <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-[9.5px] font-black uppercase transition cursor-pointer ${activeTab === tab.id ? 'border-slate-800 bg-slate-800 text-white shadow-2xs' : 'border-transparent bg-transparent text-slate-600 hover:border-slate-300 hover:bg-white'}`}><Icon className="h-3.5 w-3.5" />{tab.label}</button>;
           })}
           </div>
-          <button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-slate-800 shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Salvando…' : 'Salvar'}</button>
+          <div className="hidden text-right text-[9px] font-semibold text-slate-500 md:block">{isDirty ? (draftSavedAt ? `Rascunho automático ${new Date(draftSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Salvando rascunho…') : (lastSavedAt ? `Publicado ${new Date(lastSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Ainda não publicado')}</div>
+          <button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-slate-800 shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Publicando…' : 'Publicar'}</button>
         </div>
       </div>
 
@@ -767,13 +815,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
             <div className={`${panelClass} space-y-3 p-4`}>
               <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><FileText className="h-4 w-4 text-orange-700" /><h4 className="text-xs font-black uppercase">Editor de documentos</h4></div><select value={selectedDoc.id} onChange={(e) => setSelectedDocId(e.target.value)} className="max-w-[55%] rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-[10px] font-bold">{docTemplates.map((doc) => <option key={doc.id} value={doc.id}>{doc.label}</option>)}</select></div>
               <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Título do modelo</label><input value={selectedDoc.label} onChange={(e) => updateSelectedDoc({ label: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>Nome do arquivo</label><input value={selectedDoc.fileName} onChange={(e) => updateSelectedDoc({ fileName: e.target.value })} className={inputClass} /></div></div>
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] leading-5 text-emerald-950">
-                <strong>Fonte oficial única.</strong> Envie ou importe o DOCX no painel “Modelos documentais do usuário Master”, acima deste Estúdio. O texto, as tabelas, as imagens, as margens e a paginação permanecem no arquivo do Master no Google Drive. Esta aba registra apenas nome, finalidade, variáveis e posição no fluxo.
-                {selectedDoc.driveFileUrl && <a href={selectedDoc.driveFileUrl} target="_blank" rel="noreferrer" className="mt-2 block font-black underline">Abrir modelo ativo no Google Drive</a>}
-              </div>
-              <div><label className={labelClass}>Finalidade no fluxo</label><textarea rows={3} value={selectedDoc.description || ''} onChange={(e) => updateSelectedDoc({ description: e.target.value })} className={inputClass} placeholder="Explique quando o documento é gerado, quem recebe e quem assina." /></div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] leading-5 text-slate-700">O arquivo visual permanece no Google Drive; o Portal substitui apenas as variáveis reconhecidas e preserva a formatação do modelo.{selectedDoc.driveFileUrl && <a href={selectedDoc.driveFileUrl} target="_blank" rel="noreferrer" className="mt-2 block font-black underline">Abrir e editar o modelo no Google Drive</a>}</div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="text-[10px] font-black uppercase text-slate-600">Variáveis reconhecidas neste modelo</div><div className="mt-2 flex flex-wrap gap-1.5">{(selectedDoc.variables || []).map((variable) => <code key={variable} className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[9px] text-violet-700">{variable}</code>)}{!(selectedDoc.variables || []).length && <span className="text-[11px] text-slate-500">As variáveis aparecerão após o cadastro do DOCX oficial.</span>}</div></div>
-              <button type="button" onClick={registerDocUpdate} className={`${actionClass} border-slate-300 bg-white text-slate-700`}><Save className="h-3.5 w-3.5" />Salvar metadados do fluxo</button>
             </div>
             <div className="rounded-2xl border border-slate-300 bg-slate-100 p-5 sm:p-8"><div className="mx-auto flex min-h-[420px] max-w-[720px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm"><FileText className="mb-4 h-10 w-10 text-emerald-700"/><strong className="text-base text-slate-900">A aparência vem integralmente do DOCX oficial</strong><p className="mt-3 max-w-lg text-xs leading-6 text-slate-600">Para evitar perda de cabeçalhos, tabelas, assinaturas, margens ou paginação, o portal não reestiliza o modelo. Ele cria uma cópia temporária no Google Docs, substitui somente marcadores explícitos, exporta o PDF e preserva o arquivo original.</p><div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] font-semibold text-amber-950">Visualize e altere a diagramação diretamente no arquivo do Google Drive. Use este Estúdio para controlar dados, destinatários, regras e sequência.</div></div></div>
           </div>
@@ -782,7 +825,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         {activeTab === 'emails' && selectedEmail && (
           <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
             <div className={`${panelClass} space-y-3 p-4`}>
-              <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Mail className="h-4 w-4 text-amber-700" /><h4 className="text-xs font-black uppercase">Editor profissional de e-mail</h4></div><select value={selectedEmail.id} onChange={(e) => setSelectedEmailId(e.target.value)} className="max-w-[55%] rounded-lg border border-slate-300 px-2 py-1.5 text-[10px] font-bold">{emailTemplates.map((email) => <option key={email.id} value={email.id}>{email.name}</option>)}</select></div>
+              <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><Mail className="h-4 w-4 text-amber-700" /><h4 className="text-xs font-black uppercase">Editor profissional de e-mail</h4></div><div className="flex items-center gap-1"><select value={selectedEmail.id} onChange={(e) => setSelectedEmailId(e.target.value)} className="max-w-[220px] rounded-lg border border-slate-300 px-2 py-1.5 text-[10px] font-bold">{emailTemplates.map((email) => <option key={email.id} value={email.id}>{email.name}</option>)}</select><button type="button" onClick={createEmailTemplate} className="portal-action" aria-label="Criar modelo de e-mail"><Plus className="h-3.5 w-3.5"/></button><button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="portal-action text-rose-700 disabled:opacity-30" aria-label="Excluir modelo de e-mail"><Trash2 className="h-3.5 w-3.5"/></button></div></div>
               <div><label className={labelClass}>Nome da rotina</label><input value={selectedEmail.name} onChange={(e) => updateSelectedEmail({ name: e.target.value })} className={inputClass} /></div>
               <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Destinatário</label><input value={selectedEmail.recipient || ''} onChange={(e) => updateSelectedEmail({ recipient: e.target.value })} className={inputClass} placeholder="{{ALUNO_EMAIL}}" /></div><div><label className={labelClass}>Responder para</label><input value={selectedEmail.replyTo || ''} onChange={(e) => updateSelectedEmail({ replyTo: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>CC</label><input value={selectedEmail.cc || ''} onChange={(e) => updateSelectedEmail({ cc: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>CCO</label><input value={selectedEmail.bcc || ''} onChange={(e) => updateSelectedEmail({ bcc: e.target.value })} className={inputClass} /></div></div>
               <div><label className={labelClass}>Assunto</label><input value={selectedEmail.subject} onChange={(e) => updateSelectedEmail({ subject: e.target.value })} className={inputClass} /></div>
@@ -794,7 +837,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                 <label className={`${actionClass} cursor-pointer border-slate-300 bg-white text-slate-700`}><Image className="h-3.5 w-3.5" />Enviar imagem/banner<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const value = await readTemplateImage(e.target.files?.[0]); if (value) updateSelectedEmailDesign({ heroImageUrl: value }); }} /></label>
               </div>
               <div><label className={labelClass}>Rodapé</label><textarea rows={2} value={selectedEmailDesign.footerText} onChange={(e) => updateSelectedEmailDesign({ footerText: e.target.value })} className={inputClass} /></div>
-              <button type="button" onClick={registerEmailUpdate} className={`${actionClass} border-amber-700 bg-amber-600 text-white hover:bg-amber-700`}><Save className="h-3.5 w-3.5" />Salvar modelo de e-mail</button>
+              <div><label className={labelClass}>Anexos gerados pelo Portal</label><select multiple value={selectedEmail.attachments||[]} onChange={(e)=>updateSelectedEmail({attachments:Array.from(e.target.selectedOptions).map(option=>option.value)})} className={`${inputClass} min-h-24`}>{docTemplates.map(doc=><option key={doc.id} value={doc.id}>{doc.label}</option>)}</select><p className="mt-1 text-[9px] text-slate-500">Use Ctrl/Cmd para selecionar mais de um documento. A etapa do fluxo define quando o e-mail será enviado.</p></div>
             </div>
             <div className={`${panelClass} overflow-hidden bg-slate-200`}><div className="border-b border-slate-300 bg-white px-4 py-3"><div className="text-[10px] font-black uppercase text-slate-500">Pré-visualização protegida</div><div className="mt-1 truncate text-xs font-bold text-slate-800">Assunto: {selectedEmail.subject}</div></div><iframe title="Pré-visualização do e-mail" sandbox="" srcDoc={emailPreviewHtml} className="h-[760px] w-full border-0 bg-slate-100" /></div>
           </div>
@@ -803,7 +846,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         {activeTab === 'forms' && selectedForm && (
           <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
             <div className={`${panelClass} space-y-3 p-4`}>
-              <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-sky-700" /><h4 className="text-xs font-black uppercase">Construtor de formulário</h4></div><select value={selectedForm.id} onChange={(e) => setSelectedFormId(e.target.value)} className="max-w-[55%] rounded-lg border border-slate-300 px-2 py-1.5 text-[10px] font-bold">{formTemplates.map((form) => <option key={form.id} value={form.id}>{form.title}</option>)}</select></div>
+              <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-sky-700" /><h4 className="text-xs font-black uppercase">Construtor de formulário</h4></div><div className="flex items-center gap-1"><select value={selectedForm.id} onChange={(e) => setSelectedFormId(e.target.value)} className="max-w-[220px] rounded-lg border border-slate-300 px-2 py-1.5 text-[10px] font-bold">{formTemplates.map((form) => <option key={form.id} value={form.id}>{form.title}</option>)}</select><button type="button" onClick={createFormTemplate} className="portal-action" aria-label="Criar formulário"><Plus className="h-3.5 w-3.5"/></button><button type="button" onClick={()=>void deleteSelectedForm()} disabled={formTemplates.length<=1} className="portal-action text-rose-700 disabled:opacity-30" aria-label="Excluir formulário"><Trash2 className="h-3.5 w-3.5"/></button></div></div>
               <div><label className={labelClass}>Título</label><input value={selectedForm.title} onChange={(e) => updateSelectedForm({ title: e.target.value })} className={inputClass} /></div>
               <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Etapa</label><input value={selectedForm.stage} onChange={(e) => updateSelectedForm({ stage: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>Público</label><select value={selectedForm.targetRole} onChange={(e) => updateSelectedForm({ targetRole: e.target.value as FormTemplateItem['targetRole'] })} className={inputClass}>{['Aluno', 'Orientador', 'Banca', 'Presidente da Comissão'].map((role) => <option key={role}>{role}</option>)}</select></div></div>
               <div><label className={labelClass}>Descrição</label><textarea rows={3} value={selectedForm.description} onChange={(e) => updateSelectedForm({ description: e.target.value })} className={inputClass} /></div>
@@ -815,10 +858,9 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               <div><label className={labelClass}>Introdução</label><textarea rows={2} value={selectedFormDesign.introText} onChange={(e) => updateSelectedFormDesign({ introText: e.target.value })} className={inputClass} /></div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between"><span className={labelClass}>Campos, regras e variáveis</span><button type="button" onClick={() => updateSelectedForm({ questions: [...selectedForm.questions, { id: `question-${Date.now()}`, fieldKey: '', label: 'Novo campo', fieldType: 'text', expectedAnswer: '', required: false, validation: {} }] })} className={`${actionClass} border-sky-300 bg-sky-50 text-sky-800`}><Plus className="h-3 w-3" />Adicionar campo</button></div>
-                {selectedForm.questions.map((question, index) => <FormQuestionEditor key={question.id} question={question} index={index} variables={matrixColumns} previousQuestions={selectedForm.questions.slice(0, index)} onChange={(updates) => updateSelectedForm({ questions: selectedForm.questions.map((item) => item.id === question.id ? { ...item, ...updates } : item) })} onDelete={() => updateSelectedForm({ questions: selectedForm.questions.filter((item) => item.id !== question.id) })}/>) }
+                {selectedForm.questions.map((question, index) => <div key={question.id} className="space-y-1"><div className="flex justify-end gap-1"><button type="button" className="portal-action" disabled={index===0} onClick={()=>moveSelectedFormQuestion(index,-1)} aria-label={`Mover ${question.label} para cima`}>↑</button><button type="button" className="portal-action" disabled={index===selectedForm.questions.length-1} onClick={()=>moveSelectedFormQuestion(index,1)} aria-label={`Mover ${question.label} para baixo`}>↓</button></div><FormQuestionEditor question={question} index={index} variables={matrixColumns} previousQuestions={selectedForm.questions.slice(0, index)} onChange={(updates) => updateSelectedForm({ questions: selectedForm.questions.map((item) => item.id === question.id ? { ...item, ...updates } : item) })} onDelete={() => updateSelectedForm({ questions: selectedForm.questions.filter((item) => item.id !== question.id) })}/></div>) }
               </div>
               <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Texto do botão</label><input value={selectedFormDesign.submitLabel} onChange={(e) => updateSelectedFormDesign({ submitLabel: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>Mensagem após envio</label><input value={selectedFormDesign.confirmationMessage} onChange={(e) => updateSelectedFormDesign({ confirmationMessage: e.target.value })} className={inputClass} /></div></div>
-              <button type="button" onClick={() => { recordAudit(createAuditEntry('FORM_UPDATED', 'form', selectedForm.id, `Formulário "${selectedForm.title}" atualizado.`, actorEmail)); notify('Formulário atualizado e integrado às variáveis.'); }} className={`${actionClass} border-sky-700 bg-sky-700 text-white hover:bg-sky-800`}><Save className="h-3.5 w-3.5" />Salvar formulário</button>
             </div>
             <div className="rounded-2xl border border-slate-300 bg-slate-200/70 p-4"><div className="mx-auto max-w-xl overflow-hidden rounded-2xl bg-white shadow-lg" style={{ fontFamily: brandKit.fontFamily }}>{selectedFormDesign.bannerImageUrl && <img src={selectedFormDesign.bannerImageUrl} alt="Banner" className="h-36 w-full object-cover" />}<div className="p-6"><div className="mb-5 flex items-start gap-3">{selectedFormDesign.logoUrl && <img src={selectedFormDesign.logoUrl} alt="Logo" className="h-14 w-14 rounded-xl border border-slate-200 object-contain p-1" />}<div><div className="text-[9px] font-black uppercase tracking-wider" style={{ color: brandKit.primaryColor }}>{selectedForm.stage}</div><h3 className="mt-1 text-lg font-black text-slate-900">{selectedForm.title}</h3><p className="mt-1 text-xs text-slate-500">{selectedFormDesign.introText || selectedForm.description}</p></div></div>{selectedFormDesign.showProgress && <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full w-1/3 rounded-full" style={{ backgroundColor: brandKit.primaryColor }} /></div>}<div className="space-y-4">{selectedForm.questions.map((question, index) => <div key={question.id}><label className="mb-1.5 block text-xs font-bold text-slate-800">{index + 1}. {question.label}{question.required && <span className="ml-1 text-rose-600">*</span>}</label>{question.fieldType === 'textarea' ? <textarea disabled className={inputClass} rows={3} /> : question.fieldType === 'select' || question.fieldType === 'radio' ? <select disabled className={inputClass}><option>Selecione uma opção</option></select> : question.fieldType === 'checkbox' ? <label className="flex items-center gap-2 text-xs"><input type="checkbox" disabled />Confirmar</label> : <input disabled type={question.fieldType === 'date' ? 'date' : question.fieldType === 'number' ? 'number' : question.fieldType === 'email' ? 'email' : question.fieldType === 'file' ? 'file' : 'text'} className={inputClass} placeholder={`Variável: ${question.fieldKey || 'não vinculada'}`} />}</div>)}<button type="button" className="w-full rounded-xl px-4 py-3 text-xs font-black uppercase text-white" style={{ backgroundColor: brandKit.primaryColor }}>{selectedFormDesign.submitLabel}</button></div></div></div></div>
           </div>
