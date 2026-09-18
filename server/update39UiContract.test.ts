@@ -11,9 +11,10 @@ test('update 39 mantém espaço verde abaixo das duas barras de filtro', async (
   assert.match(css, /padding-bottom:\s*0\.95rem\s*!important/);
 });
 
-test('update 39 substitui cadastro administrativo duplicado por Presidência Secretaria e Comissão', async () => {
+test('rodapé administrativo reúne Presidência Secretaria e Comissão', async () => {
   const panel = await source('src/components/CommissionIdentityPanel.tsx');
-  assert.ok(panel.includes('Presidente da Comissão'));
+  assert.ok(panel.includes('Sincronização do rodapé'));
+  assert.ok(panel.includes('Presidência da Comissão'));
   assert.ok(panel.includes('Secretaria'));
   assert.ok(panel.includes('Membros da Comissão'));
   assert.ok(panel.includes('portal-president-master-transfer'));
@@ -22,20 +23,25 @@ test('update 39 substitui cadastro administrativo duplicado por Presidência Sec
   assert.ok(panel.includes("createAdministrationTransfer('COMMISSION_PRESIDENT'"));
 });
 
-test('update 39 abre cadastro individual e envio de lista em popups compactos', async () => {
+test('cadastro individual e envio de lista abrem em popups compactos com fechamento no canto direito', async () => {
   const panel = await source('src/components/AuthorizedStudentsPanel.tsx');
   assert.ok(panel.includes('Adicionar acesso'));
   assert.ok(panel.includes('Envio de lista'));
   assert.ok(panel.includes('CompactModal'));
   assert.ok(panel.includes("setModal('add')"));
   assert.ok(panel.includes("setModal('list')"));
+  assert.ok(panel.includes('absolute right-2 top-1/2'));
 });
 
-test('update 39 compacta integrações e preserva ações brancas', async () => {
+test('integrações mantêm Asten visível e concentram infraestrutura no painel de Conexões', async () => {
   const panel = await source('src/components/InfrastructureIntegrationsPanel.tsx');
   assert.ok(panel.includes('Integrações da plataforma'));
   assert.ok(panel.includes('Executar testes'));
-  assert.ok(panel.includes('xl:grid-cols-[1.6fr_.8fr_.8fr_.65fr]'));
+  assert.ok(panel.includes('Conexões'));
+  assert.ok(panel.includes('Token da API Asten'));
+  assert.ok(panel.includes('Google Drive'));
+  assert.ok(panel.includes('Supabase'));
+  assert.ok(panel.includes('Vercel'));
   assert.ok(panel.includes('bg-white'));
 });
 
