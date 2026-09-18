@@ -17,7 +17,7 @@ const baseProcess = (patch: Partial<ProcessData> = {}): ProcessData => ({
   banca: [],
   defesa: { startAt: '2026-09-10T12:00:00Z', endAt: '2026-09-10T13:30:00Z', local: 'Auditório', localStatus: 'CONFIRMADO' },
   avaliacao: { status: 'CONCLUIDO', resultadoCode: 'APROVADO', resultadoLabel: 'Aprovado', parecer: '' },
-  acervo: { publicationState: 'PUBLIC', palavrasChave: ['saúde'], workType: 'Artigo', isPublic: true },
+  acervo: { publicationState: 'PUBLIC', palavrasChave: ['saúde'], workType: 'ARTIGO', isPublic: true },
   dataRevision: 1,
   createdAt: '2026-08-01T12:00:00Z',
   updatedAt: '2026-09-10T14:00:00Z',
