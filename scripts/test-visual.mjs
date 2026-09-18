@@ -98,6 +98,10 @@ try {
   const navigate = async (page, tab) => {
     await page.evaluate(target => window.dispatchEvent(new CustomEvent('portal:navigate', { detail: target })), tab);
     await page.locator('main').waitFor({ state: 'visible' });
+    const lazyFallback = page.getByText('Carregando conteúdo...', { exact: true });
+    if (await lazyFallback.count()) {
+      await lazyFallback.first().waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
+    }
     await page.waitForTimeout(250);
   };
 
