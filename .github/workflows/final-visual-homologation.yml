@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - work/finalizacao-portal-tcc
+      - work/ajustes-interface-1.0.37
 
 permissions:
   contents: read
