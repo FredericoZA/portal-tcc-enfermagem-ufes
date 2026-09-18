@@ -11,10 +11,11 @@ test('guia não repete botão de acesso ao portal', async () => {
   assert.ok(!tutorial.includes('Acessar o Portal'));
 });
 
-test('comissão reúne Presidência, Secretaria e membros sem duplicar personalização do símbolo', async () => {
+test('sincronização do rodapé reúne Presidência, Secretaria e membros sem duplicar personalização do símbolo', async () => {
   const panel = await source('src/components/CommissionIdentityPanel.tsx');
+  assert.ok(panel.includes('Sincronização do rodapé'));
   assert.ok(panel.includes('Presidência, Secretaria e Comissão'));
-  assert.ok(panel.includes('Presidente da Comissão'));
+  assert.ok(panel.includes('Presidência da Comissão'));
   assert.ok(panel.includes('Secretaria'));
   assert.ok(panel.includes('Membros da Comissão'));
   assert.ok(panel.includes('Adicionar membro'));
