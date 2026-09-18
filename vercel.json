@@ -52,7 +52,7 @@
   "rewrites": [
     {"source": "/api/public/runtime-assets/:key","destination": "/api/runtime-asset?key=:key"},
     {"source": "/api/public/replication-models/:slug/download","destination": "/api/replication-model?slug=:slug"},
-    {"source": "/api/table-preferences","destination": "/api/table-preferences"},
+    {"source": "/api/preferences/table","destination": "/api/table-preferences"},
     {"source": "/api/(.*)","destination": "/api/index"},
     {"source": "/(.*)","destination": "/index.html"}
   ]
