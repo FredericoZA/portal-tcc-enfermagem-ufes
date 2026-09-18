@@ -90,7 +90,7 @@ export const MasterDocumentModelsPanel: React.FC = () => {
 
   return <section className="portal-master-document-models mb-3 overflow-hidden rounded-xl border shadow-sm">
     <div className="portal-models-heading flex flex-col gap-2 border-b-2 border-white px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-center gap-2"><FileUp className="h-4 w-4 shrink-0" /><div><h3 className="text-xs font-black uppercase tracking-wide">Modelos documentais</h3><p className="text-[9px] text-white/80">DOCX versionados no Drive; integridade validada por SHA-256.</p></div></div>
+      <div className="flex min-w-0 items-center gap-2"><FileUp className="h-4 w-4 shrink-0" /><div><h3 className="text-xs font-black uppercase tracking-wide">Modelos documentais</h3><p className="text-[9px] text-white/80">Cadastre quantos modelos DOCX forem necessários. Eles ficam versionados no Drive e validados por SHA-256.</p></div></div>
       <div className="flex min-w-0 flex-1 gap-1.5 sm:max-w-xl"><input id="new-master-model" value={newModelName} onChange={event => setNewModelName(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addSlot(); } }} placeholder="Novo tipo de documento" className={`${compactInput} flex-1`} /><button type="button" onClick={addSlot} disabled={!newModelName.trim()} className={secondaryAction}><FilePlus2 className="h-3.5 w-3.5" />Adicionar modelo</button></div>
     </div>
 
