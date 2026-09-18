@@ -127,6 +127,18 @@ function pruneDuplicatedAdministrationForm() {
   });
 }
 
+function normalizeSynchronizationHeadings() {
+  document.querySelectorAll<HTMLElement>('h2,h3,h4,p').forEach((node) => {
+    const label = normalizeLabel(node.textContent || '');
+    if (label === 'secretaria presidencia e comissao') node.textContent = 'Sincronização do rodapé';
+    if (label === 'e mail de acesso contato publico responsavel tecnico presidencia e integrantes adicionais em um unico cadastro visual') {
+      node.textContent = 'Contatos institucionais e integrantes da comissão que alimentam o rodapé público do Portal.';
+    }
+  });
+  const innerHeading = document.querySelector<HTMLElement>('.portal-commission-identity-panel #commission-management-title');
+  if (innerHeading) innerHeading.textContent = 'Presidência, Secretaria e Comissão';
+}
+
 function findRepositoryToolbar(): HTMLElement | null {
   const heading = Array.from(document.querySelectorAll<HTMLElement>('h1, h2')).find((node) =>
     /reposit[oó]rio.*acervo|acervo.*reposit[oó]rio/i.test(node.textContent || ''),
@@ -145,6 +157,7 @@ function enhanceToolbarButtons() {
   pruneLegacyPersonalizationRows();
   clarifyLoginIdentityGuidance();
   pruneDuplicatedAdministrationForm();
+  normalizeSynchronizationHeadings();
 
   document.querySelectorAll<HTMLButtonElement>('button[title^="Buscar"], button[aria-label^="Buscar registros"]').forEach((button) => setButtonHint(button, SEARCH_HINT));
   document.querySelectorAll<HTMLButtonElement>('button[title="Atualizar dados da tabela"], button[title*="Sincronizar"], button[aria-label^="Sincronizar dados"]').forEach((button) => setButtonHint(button, SYNC_HINT));
