@@ -1,60 +1,63 @@
-import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
-const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const source = (path: string) => readFile(path, 'utf8');
 
-describe('update 39 UI contract', () => {
-  it('keeps green breathing room below the two filter rows', () => {
-    const css = read('src/portal-update-39.css');
-    expect(css).toContain('.portal-meus-processos-filter-row');
-    expect(css).toContain('.portal-coordinator-filter-row');
-    expect(css).toMatch(/padding-bottom:\s*0\.95rem\s*!important/);
-  });
+test('update 39 mantém espaço verde abaixo das duas barras de filtro', async () => {
+  const css = await source('src/portal-update-39.css');
+  assert.ok(css.includes('.portal-meus-processos-filter-row'));
+  assert.ok(css.includes('.portal-coordinator-filter-row'));
+  assert.match(css, /padding-bottom:\s*0\.95rem\s*!important/);
+});
 
-  it('replaces duplicated administrative identity with president, secretary and commission fields', () => {
-    const panel = read('src/components/CommissionIdentityPanel.tsx');
-    expect(panel).toContain('Presidente da Comissão');
-    expect(panel).toContain('Secretaria');
-    expect(panel).toContain('Membros da Comissão');
-    expect(panel).toContain('portal-president-master-transfer');
-    expect(panel).not.toContain('Nome da Secretaria / Administrador Master');
-    expect(panel).toContain("createAdministrationTransfer('MASTER_ADMIN'");
-    expect(panel).toContain("createAdministrationTransfer('COMMISSION_PRESIDENT'");
-  });
+test('update 39 substitui cadastro administrativo duplicado por Presidência Secretaria e Comissão', async () => {
+  const panel = await source('src/components/CommissionIdentityPanel.tsx');
+  assert.ok(panel.includes('Presidente da Comissão'));
+  assert.ok(panel.includes('Secretaria'));
+  assert.ok(panel.includes('Membros da Comissão'));
+  assert.ok(panel.includes('portal-president-master-transfer'));
+  assert.ok(!panel.includes('Nome da Secretaria / Administrador Master'));
+  assert.ok(panel.includes("createAdministrationTransfer('MASTER_ADMIN'"));
+  assert.ok(panel.includes("createAdministrationTransfer('COMMISSION_PRESIDENT'"));
+});
 
-  it('opens access registration and list import in compact modal flows', () => {
-    const panel = read('src/components/AuthorizedStudentsPanel.tsx');
-    expect(panel).toContain('Adicionar acesso');
-    expect(panel).toContain('Envio de lista');
-    expect(panel).toContain('CompactModal');
-    expect(panel).toContain("setModal('add')");
-    expect(panel).toContain("setModal('list')");
-  });
+test('update 39 abre cadastro individual e envio de lista em popups compactos', async () => {
+  const panel = await source('src/components/AuthorizedStudentsPanel.tsx');
+  assert.ok(panel.includes('Adicionar acesso'));
+  assert.ok(panel.includes('Envio de lista'));
+  assert.ok(panel.includes('CompactModal'));
+  assert.ok(panel.includes("setModal('add')"));
+  assert.ok(panel.includes("setModal('list')"));
+});
 
-  it('keeps infrastructure integrations compact with white actions', () => {
-    const panel = read('src/components/InfrastructureIntegrationsPanel.tsx');
-    expect(panel).toContain('Integrações da plataforma');
-    expect(panel).toContain('Executar testes');
-    expect(panel).toContain('xl:grid-cols-[1.6fr_.8fr_.8fr_.65fr]');
-    expect(panel).toContain('bg-white');
-  });
+test('update 39 compacta integrações e preserva ações brancas', async () => {
+  const panel = await source('src/components/InfrastructureIntegrationsPanel.tsx');
+  assert.ok(panel.includes('Integrações da plataforma'));
+  assert.ok(panel.includes('Executar testes'));
+  assert.ok(panel.includes('xl:grid-cols-[1.6fr_.8fr_.8fr_.65fr]'));
+  assert.ok(panel.includes('bg-white'));
+});
 
-  it('opens personalization screen-by-screen and prunes legacy general controls', () => {
-    const hub = read('src/components/PortalPersonalizationHubModal.tsx');
-    const enhancer = read('src/components/PortalUiEnhancer.tsx');
-    expect(hub).toContain("onOpenAppearance('site_header')");
-    expect(hub).not.toContain("onOpenAppearance('quick_presets')");
-    expect(enhancer).toContain('temas prontos 1 clique');
-    expect(enhancer).toContain('configuracao global do portal site todo');
-    expect(enhancer).toContain('exemplo ao vivo do portal preview em tempo real');
-    expect(enhancer).toContain('portal-customization-top-action');
-  });
+test('update 39 abre personalização por tela e remove controles gerais legados', async () => {
+  const [hub, enhancer] = await Promise.all([
+    source('src/components/PortalPersonalizationHubModal.tsx'),
+    source('src/components/PortalUiEnhancer.tsx'),
+  ]);
+  assert.ok(hub.includes("onOpenAppearance('site_header')"));
+  assert.ok(!hub.includes("onOpenAppearance('quick_presets')"));
+  assert.ok(enhancer.includes('temas prontos 1 clique'));
+  assert.ok(enhancer.includes('configuracao global do portal site todo'));
+  assert.ok(enhancer.includes('exemplo ao vivo do portal preview em tempo real'));
+  assert.ok(enhancer.includes('portal-customization-top-action'));
+});
 
-  it('keeps the president settings surface limited to the secure master transfer UI', () => {
-    const css = read('src/portal-update-39.css');
-    const enhancer = read('src/components/PortalUiEnhancer.tsx');
-    expect(enhancer).toContain("portalSettingsRole = 'president-only'");
-    expect(css).toContain("html[data-portal-settings-role='president-only'] #configuracoes-page-container > section");
-    expect(css).toContain('.portal-president-master-transfer');
-  });
+test('update 39 limita a superfície da Presidência à troca segura do Master', async () => {
+  const [css, enhancer] = await Promise.all([
+    source('src/portal-update-39.css'),
+    source('src/components/PortalUiEnhancer.tsx'),
+  ]);
+  assert.ok(enhancer.includes("portalSettingsRole = 'president-only'"));
+  assert.ok(css.includes("html[data-portal-settings-role='president-only'] #configuracoes-page-container > section"));
+  assert.ok(css.includes('.portal-president-master-transfer'));
 });
