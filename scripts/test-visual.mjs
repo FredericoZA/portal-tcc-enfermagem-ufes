@@ -133,10 +133,24 @@ try {
   // Master: percorre as telas centrais e públicas em quatro larguras.
   {
     const { context, page } = await newPersonaPage('master@portal.local');
-    for (const width of [320, 768, 1024, 1440]) {
+    for (const width of [320, 768, 1024, 1440, 1920]) {
       await page.setViewportSize({ width, height: 960 });
       await page.goto(base, { waitUntil: 'networkidle' });
       await capture(page, `master-inicio-${width}`);
+      if (width >= 1440) {
+        const layout = await page.evaluate(() => {
+          const main = document.querySelector('#portal-app-root main');
+          const pageRoot = document.querySelector('#home-page-container');
+          return {
+            mainWidth: Math.round(main?.getBoundingClientRect().width || 0),
+            pageWidth: Math.round(pageRoot?.getBoundingClientRect().width || 0),
+            viewport: innerWidth
+          };
+        });
+        if (layout.mainWidth < width * 0.80 || layout.pageWidth < layout.mainWidth * 0.90) {
+          report.errors.push(`master-inicio-${width}: largura útil não acompanha o viewport (${JSON.stringify(layout)}).`);
+        }
+      }
       for (const [tab, label] of [
         ['calendario', 'calendario'],
         ['biblioteca', 'repositorio'],
@@ -150,6 +164,22 @@ try {
         ['configuracoes', 'configuracoes']
       ]) {
         await navigate(page, tab);
+        if (['indicadores', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'].includes(tab)) {
+          const headerGap = await page.evaluate((currentTab) => {
+            const ids = {
+              indicadores: '#indicadores-publicos-page',
+              'como-chegar': '#como-chegar-page-container',
+              tutorial: '#portal-tutorial-page',
+              'fluxo-tcc': '#fluxo-tcc-page',
+              replicar: '#portal-replication-page'
+            };
+            const root = document.querySelector(ids[currentTab]);
+            const first = root?.querySelector(':scope > section:first-child');
+            if (!root || !first) return 999;
+            return Math.round(first.getBoundingClientRect().top - root.getBoundingClientRect().top);
+          }, tab).catch(() => 999);
+          if (headerGap > 1) report.errors.push(`master-${label}-${width}: cabeçalho verde não encosta no topo (gap ${headerGap}px).`);
+        }
         await capture(page, `master-${label}-${width}`);
       }
     }
