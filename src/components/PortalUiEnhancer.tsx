@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 const SEARCH_HINT = 'Buscar registros — pesquisa o conteúdo desta planilha';
 const SYNC_HINT = 'Sincronizar dados — recarrega os registros desta planilha';
-const SETTINGS_HINT = 'Configurar exibição — ajusta linhas por página e período';
+const SETTINGS_HINT = 'Configurar exibição — ajusta linhas, período, colunas e ordem';
 const DOWNLOAD_HINT = 'Baixar dados — exporta o Repositório de TCCs em CSV';
 const ACCENT = '#337959';
 const LEGACY_ACCENTS = new Set(['#47866a', 'rgb(71, 134, 106)']);
@@ -91,6 +91,34 @@ function clarifyLoginIdentityGuidance() {
     if (label === 'docentes e banca') node.textContent = 'Demais usuários:';
     if (label === 'orientacao docentes banca') node.textContent = 'Orientação dos demais usuários:';
   });
+
+  const loginDialog = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"], div.fixed.inset-0')).find((node) =>
+    normalizeLabel(node.textContent || '').includes('acesso ao portal do tcc') && Boolean(node.querySelector('input[type="email"]')),
+  );
+  if (!loginDialog) return;
+
+  loginDialog.querySelectorAll<HTMLElement>('h1,h2,h3,p,span,div').forEach((node) => {
+    const label = normalizeLabel(node.textContent || '');
+    if (label === 'enfermagem e obstetricia ufes') node.dataset.portalLoginSubtitle = 'removed';
+  });
+
+  const email = loginDialog.querySelector<HTMLInputElement>('input[type="email"]');
+  if (email) email.placeholder = 'nome@exemplo.com';
+
+  const passwordlessTitle = Array.from(loginDialog.querySelectorAll<HTMLElement>('div,strong,h3')).find((node) => normalizeLabel(node.textContent || '') === 'acesso sem senha');
+  const redundantCard = passwordlessTitle?.closest<HTMLElement>('.rounded-xl');
+  if (redundantCard) redundantCard.dataset.portalLoginRedundant = 'true';
+
+  const tipsTitle = Array.from(loginDialog.querySelectorAll<HTMLElement>('span,strong,div')).find((node) => normalizeLabel(node.textContent || '') === 'orientacoes para identificacao');
+  const tipsBox = tipsTitle?.closest<HTMLElement>('.rounded-xl');
+  if (tipsBox && !tipsBox.querySelector('.portal-login-access-note')) {
+    const note = document.createElement('p');
+    note.className = 'portal-login-access-note';
+    note.innerHTML = '<strong>Como funciona o acesso:</strong> informe o e-mail cadastrado no Portal. Enviaremos um código de acesso de uso único para esse endereço.';
+    const list = tipsBox.querySelector('ul');
+    if (list) tipsBox.insertBefore(note, list);
+    else tipsBox.appendChild(note);
+  }
 }
 
 function pruneDuplicatedAdministrationForm() {
@@ -118,17 +146,9 @@ function enhanceToolbarButtons() {
   clarifyLoginIdentityGuidance();
   pruneDuplicatedAdministrationForm();
 
-  document.querySelectorAll<HTMLButtonElement>('button[title^="Buscar"], button[aria-label^="Buscar registros"]').forEach((button) =>
-    setButtonHint(button, SEARCH_HINT),
-  );
-
-  document.querySelectorAll<HTMLButtonElement>('button[title="Atualizar dados da tabela"], button[title*="Sincronizar"], button[aria-label^="Sincronizar dados"]').forEach((button) =>
-    setButtonHint(button, SYNC_HINT),
-  );
-
-  document.querySelectorAll<HTMLButtonElement>('button[title*="Exibição da planilha"], button[aria-label^="Configurar exibição"]').forEach((button) =>
-    setButtonHint(button, SETTINGS_HINT),
-  );
+  document.querySelectorAll<HTMLButtonElement>('button[title^="Buscar"], button[aria-label^="Buscar registros"]').forEach((button) => setButtonHint(button, SEARCH_HINT));
+  document.querySelectorAll<HTMLButtonElement>('button[title="Atualizar dados da tabela"], button[title*="Sincronizar"], button[aria-label^="Sincronizar dados"]').forEach((button) => setButtonHint(button, SYNC_HINT));
+  document.querySelectorAll<HTMLButtonElement>('button[title*="Exibição da planilha"], button[aria-label^="Configurar exibição"]').forEach((button) => setButtonHint(button, SETTINGS_HINT));
 
   const source = document.querySelector<HTMLButtonElement>('button[title^="Exportar todo o banco de dados"], button[aria-label^="Baixar dados"]:not(.portal-repository-download-toolbar)');
   if (!source) return;
@@ -144,12 +164,7 @@ function enhanceToolbarButtons() {
   downloadButton.className = 'portal-repository-download-toolbar';
   downloadButton.title = DOWNLOAD_HINT;
   downloadButton.setAttribute('aria-label', DOWNLOAD_HINT);
-  downloadButton.innerHTML = `
-    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-      <polyline points="7 10 12 15 17 10"></polyline>
-      <line x1="12" x2="12" y1="15" y2="3"></line>
-    </svg>`;
+  downloadButton.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>`;
   downloadButton.addEventListener('click', () => source.click());
   toolbar.appendChild(downloadButton);
 }
