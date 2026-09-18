@@ -814,9 +814,9 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
         {/* UNIFIED GRAY HEADER + SPREADSHEET CARD */}
         <div className={`bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${styles.fontFamilyClass}`} style={styles.rootStyle}>
           {/* Gray Header Banner */}
-          <div className={`${styles.bannerHeaderClass} p-3.5 sm:p-4 border-b space-y-3 transition-colors`} style={styles.bannerHeaderStyle}>
+          <div className={`${styles.bannerHeaderClass} border-b transition-colors`} style={styles.bannerHeaderStyle}>
             {/* Title */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
               <div className="flex items-center gap-2">
                 <ColorfulHeaderIcon type="graduation" textFormat={meusProcessosTextFormat} />
                 <h1 className="text-sm sm:text-base font-black uppercase tracking-wide leading-tight">
@@ -824,74 +824,72 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                 </h1>
               </div>
 
-              {/* Right Group: Lupa, Refresh and Engrenagem Controls */}
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                {/* Lupa (Search) */}
-                <SearchPopover
-                  value={searchTerm}
-                  onChange={setSearchTerm}
-                  placeholder="Buscar TCCs..."
-                  textFormat={meusProcessosTextFormat}
-                />
-
-                {processes.length > 0 && canCreateStudentTcc && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false && (
+              {/* Ação principal separada dos três controles padrão */}
+              <div className="flex items-center shrink-0">
+                {canCreateStudentTcc && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false && (
                   <button
                     id="meus-processos-btn-novo"
                     type="button"
                     onClick={onNavigateToWizard}
-                    className={`${styles.toolbarButtonClass} portal-restricted-toolbar-wide`}
+                    className={`${styles.toolbarButtonClass} portal-restricted-toolbar-wide portal-primary-register-btn`}
                     style={styles.toolbarButtonStyle}
                     title="Cadastrar novo trabalho de TCC"
                   >
                     <GraduationCap className="h-3.5 w-3.5" />
-                    <span>Cadastrar</span>
+                    <span>Cadastrar TCC</span>
                   </button>
                 )}
 
-                {/* Refresh Data (Yin-Yang) */}
-                <button
-                  type="button"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className={`${styles.toolbarButtonClass} disabled:opacity-70`}
-                  style={styles.toolbarButtonStyle}
-                  title="Atualizar dados da tabela"
-                >
-                  <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
-                </button>
-
-                {/* Engrenagem (Settings) */}
-                <HeaderSettingsPopover
-                  recordsLimit={recordsLimit}
-                  setRecordsLimit={setRecordsLimit}
-                  allowedLimits={[25, 50, 100, 'all']}
-                  allColumns={ALL_MEUS_PROCESSOS_COLUMNS}
-                  visibleColumns={visibleColumns}
-                  setVisibleColumns={setVisibleColumns}
-                  columnOrder={columnOrder}
-                  setColumnOrder={setColumnOrder}
-                  storageKey="meus_processos"
-                  customLabels={customLabels}
-                  setCustomLabels={setCustomLabels}
-                  defaultColumnOrder={DEFAULT_MEUS_PROCESSOS_ORDER}
-                  defaultVisibleColumns={DEFAULT_MEUS_PROCESSOS_VISIBLE}
-                  defaultRecordsLimit={25}
-                  columnWidths={columnWidths}
-                  setColumnWidths={setColumnWidths}
-                  textFormat={meusProcessosTextFormat}
-                  setTextFormat={setMeusProcessosTextFormat}
-                  startDate={startDate}
-                  setStartDate={setStartDate}
-                  endDate={endDate}
-                  setEndDate={setEndDate}
-                  defaultTableTitle="Meus Trabalhos de Conclusão de Curso"
-                  defaultFilterTitle="Filtrar por vínculo"
-                />
+                <div className={`flex items-center gap-1.5 sm:gap-2 ${canCreateStudentTcc && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false ? 'ml-3 border-l border-white/35 pl-3' : ''}`}>
+                  <SearchPopover
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    placeholder="Buscar TCCs..."
+                    textFormat={meusProcessosTextFormat}
+                  />
+                  <button
+                    id="meus-processos-refresh-btn"
+                    type="button"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className={`${styles.toolbarButtonClass} disabled:opacity-70`}
+                    style={styles.toolbarButtonStyle}
+                    title="Atualizar dados da tabela"
+                  >
+                    <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </button>
+                  <HeaderSettingsPopover
+                    recordsLimit={recordsLimit}
+                    setRecordsLimit={setRecordsLimit}
+                    allowedLimits={[25, 50, 100, 'all']}
+                    allColumns={ALL_MEUS_PROCESSOS_COLUMNS}
+                    visibleColumns={visibleColumns}
+                    setVisibleColumns={setVisibleColumns}
+                    columnOrder={columnOrder}
+                    setColumnOrder={setColumnOrder}
+                    storageKey="meus_processos"
+                    customLabels={customLabels}
+                    setCustomLabels={setCustomLabels}
+                    defaultColumnOrder={DEFAULT_MEUS_PROCESSOS_ORDER}
+                    defaultVisibleColumns={DEFAULT_MEUS_PROCESSOS_VISIBLE}
+                    defaultRecordsLimit={25}
+                    columnWidths={columnWidths}
+                    setColumnWidths={setColumnWidths}
+                    textFormat={meusProcessosTextFormat}
+                    setTextFormat={setMeusProcessosTextFormat}
+                    startDate={startDate}
+                    setStartDate={setStartDate}
+                    endDate={endDate}
+                    setEndDate={setEndDate}
+                    defaultTableTitle="Meus Trabalhos de Conclusão de Curso"
+                    defaultFilterTitle="Filtrar por vínculo"
+                  />
+                </div>
               </div>
             </div>
 
             {/* INTEGRATED TOOLBAR FOR FILTERS (Single clean dividing line) */}
-            <div className="pt-2.5 border-t flex flex-wrap items-center gap-2 text-xs py-0.5 min-w-0 w-full" style={styles.filterDividerStyle}>
+            <div className="portal-meus-processos-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 border-t-2 border-white px-3.5 py-2.5 text-xs sm:px-4">
               <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
                 {getEditableTableText(customLabels, '__filterTitle', 'FILTRAR:')}
               </span>
@@ -908,8 +906,8 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       type="button"
                       onClick={() => toggleRoleCategory(catKey)}
                       style={chip.buttonStyle}
-                      className={`portal-standard-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-all h-7 shrink-0 border select-none ${
-                        isSelected ? 'shadow-xs scale-[1.02]' : 'opacity-85 hover:opacity-100'
+                      className={`portal-standard-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none ${
+                        isSelected ? '' : 'opacity-85 hover:opacity-100'
                       }`}
                       title={`Clique para ${isSelected ? 'isolar ou alternar' : 'exibir'} TCCs com papel de ${chip.label}`}
                     >

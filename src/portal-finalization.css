@@ -451,7 +451,7 @@
 }
 
 #formal-monthly-calendar-section .portal-calendar-day-cell:hover {
-  background: #c9d2d7 !important;
+  background: var(--portal-layer-card) !important;
 }
 
 #formal-monthly-calendar-section > div > div:nth-child(2) > div > div > div:first-child .grid > div {
@@ -512,5 +512,87 @@
   #portal-app-root main {
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
+  }
+}
+
+
+/* ATUALIZAÇÃO 37 — densidade, barras de filtros e painéis administrativos. */
+.portal-standard-filter-chip {
+  margin: 0 !important;
+  transform: none !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+.portal-standard-filter-chip:focus,
+.portal-standard-filter-chip:focus-visible,
+.portal-standard-filter-chip:active {
+  margin: 0 !important;
+  transform: none !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+
+#coordenador-page-root .portal-coordinator-filter-row,
+#meus-processos-page-container .portal-meus-processos-filter-row {
+  width: 100% !important;
+  margin: 0 !important;
+  border-top: var(--portal-divider-width) solid var(--portal-divider-color) !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+#meus-processos-btn-novo.portal-primary-register-btn {
+  min-width: auto !important;
+  background: var(--portal-action-green) !important;
+  border-color: #2d6c50 !important;
+  color: #fff !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  box-shadow: none !important;
+}
+#meus-processos-btn-novo.portal-primary-register-btn:hover {
+  background: #2d6c50 !important;
+}
+
+/* A caixa final do Como usar segue a terceira camada, sem branco isolado. */
+#portal-tutorial-page .portal-layer-card {
+  background: var(--portal-layer-card) !important;
+}
+
+/* Administração: uma caixa por assunto, com superfícies internas compactas. */
+#administrative-identity-panel,
+#infrastructure-integrations-panel,
+#authorized-access-panel {
+  background: var(--portal-layer-panel) !important;
+  border-color: var(--portal-surface-border) !important;
+}
+#administrative-identity-panel .portal-admin-accounts-panel {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+#administrative-identity-panel .portal-commission-identity-panel {
+  background: var(--portal-layer-card) !important;
+}
+
+/* Painel de integrações: subblocos pertencem à mesma caixa principal. */
+#infrastructure-integrations-panel > section,
+#infrastructure-integrations-panel > div.grid > section {
+  box-shadow: none !important;
+}
+
+/* Autorização de acesso: reduz espaço morto sem perder separação funcional. */
+#authorized-access-panel form,
+#authorized-access-panel form + div {
+  box-shadow: none !important;
+}
+
+@media (max-width: 640px) {
+  #coordenador-page-root .portal-coordinator-filter-row,
+  #meus-processos-page-container .portal-meus-processos-filter-row {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
   }
 }

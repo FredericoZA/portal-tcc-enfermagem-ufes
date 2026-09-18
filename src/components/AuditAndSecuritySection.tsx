@@ -62,17 +62,12 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
-      <div className="border-b border-slate-200 pb-2">
-        <h3 className="text-xs font-black uppercase text-slate-900 tracking-wide">
-          Contas de Acesso Master & Presidente da Comissão
-        </h3>
-      </div>
+    <div className="portal-admin-accounts-panel space-y-2">
 
       <form onSubmit={handleSaveAccounts} className="space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {/* Usuário Master */}
-          <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/70 space-y-2.5">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+          {/* Secretaria / Usuário Master */}
+          <div className="rounded-lg border border-slate-300 bg-[#d5dce0] p-2.5 space-y-2">
             <div className="border-b border-slate-200 pb-1.5">
               <span className="text-xs font-black uppercase text-slate-800 tracking-wide">
                 Usuário Master
@@ -81,7 +76,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
 
             <div>
               <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
-                Nome do Administrador Master:
+                Nome da Secretaria / Administrador Master:
               </label>
               <input
                 type="text"
@@ -95,7 +90,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
 
             <div>
               <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
-                E-mail do Usuário Master:
+                E-mail de acesso do Usuário Master:
               </label>
               <input
                 type="email"
@@ -109,7 +104,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
           </div>
 
           {/* Presidente da Comissão */}
-          <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/70 space-y-2.5">
+          <div className="rounded-lg border border-slate-300 bg-[#d5dce0] p-2.5 space-y-2">
             <div className="border-b border-slate-200 pb-1.5">
               <span className="text-xs font-black uppercase text-slate-800 tracking-wide">
                 Presidente da Comissão
@@ -146,13 +141,13 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] leading-4 text-slate-600">A Presidente da Comissão é automaticamente o contato de recuperação do Master e é o único contato ativo para iniciar a troca segura do usuário Master.</div>
+        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] leading-4 text-slate-600">A Presidente da Comissão é automaticamente o contato de recuperação do Master e é o único contato ativo para iniciar a troca segura do usuário Master.</div>
 
-        <div className="pt-2 flex items-center justify-end border-t border-slate-200">
+        <div className="flex items-center justify-end pt-1">
           <button
             type="submit"
             disabled={isSaving}
-            className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs uppercase tracking-wider rounded-lg border border-slate-300 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+            className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs uppercase tracking-wider rounded-lg border border-slate-300 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
           >
             <span>{isSaving ? 'Salvando...' : 'Salvar Contas Administrativas'}</span>
           </button>

@@ -810,9 +810,9 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         {/* UNIFIED GRAY HEADER + TABLE CARD */}
         <div className={`bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${styles.fontFamilyClass}`} style={styles.rootStyle}>
           {/* Header Banner */}
-          <div className={`${styles.bannerHeaderClass} p-3.5 sm:p-4 border-b space-y-3.5 transition-colors`} style={styles.bannerHeaderStyle}>
+          <div className={`${styles.bannerHeaderClass} border-b transition-colors`} style={styles.bannerHeaderStyle}>
             {/* Main Title Row */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
               <div className="flex items-center gap-2">
                 <ColorfulHeaderIcon type="coordination" textFormat={coordTextFormat} />
                 <h1 className="text-base sm:text-lg font-black uppercase tracking-tight leading-snug">
@@ -820,65 +820,64 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                 </h1>
               </div>
 
-              {/* Right Group: Lupa, Refresh and Engrenagem Controls */}
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                {/* Lupa (Search) */}
-                <SearchPopover
-                  value={searchFilter}
-                  onChange={setSearchFilter}
-                  placeholder="Buscar declarações..."
-                  textFormat={coordTextFormat}
-                />
+              {/* Ações: provedores primeiro; depois controles padrão da tabela */}
+              <div className="flex items-center shrink-0">
+                {activeTab === 'pendentes' && (
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={handleSignSelected} className={`${styles.toolbarButtonClass} portal-sign-bulk-btn disabled:opacity-45`} style={styles.toolbarButtonStyle} title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
+                    <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className={`${styles.toolbarButtonClass} portal-sign-bulk-btn disabled:opacity-45`} style={styles.toolbarButtonStyle} title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
+                  </div>
+                )}
 
-                {activeTab === 'pendentes' && (<>
-                  <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={handleSignSelected} className={`${styles.toolbarButtonClass} portal-sign-bulk-btn disabled:opacity-45`} style={styles.toolbarButtonStyle} title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
-                  <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className={`${styles.toolbarButtonClass} portal-sign-bulk-btn disabled:opacity-45`} style={styles.toolbarButtonStyle} title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
-                </>)}
-
-                {/* Refresh Fila (Yin-Yang) */}
-                <button
-                  type="button"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className={`${styles.toolbarButtonClass} disabled:opacity-70`}
-                  style={styles.toolbarButtonStyle}
-                  title="Atualizar fila de declarações"
-                >
-                  <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
-                </button>
-
-                {/* Engrenagem (Settings) */}
-                <HeaderSettingsPopover
-                  recordsLimit={recordsLimit}
-                  setRecordsLimit={setRecordsLimit}
-                  allowedLimits={[25, 50, 100, 'all']}
-                  allColumns={ALL_COORDINATOR_COLUMNS}
-                  visibleColumns={visibleColumns}
-                  setVisibleColumns={setVisibleColumns}
-                  columnOrder={columnOrder}
-                  setColumnOrder={setColumnOrder}
-                  storageKey="coordinator"
-                  customLabels={customLabels}
-                  setCustomLabels={setCustomLabels}
-                  defaultColumnOrder={DEFAULT_COORDINATOR_ORDER}
-                  defaultVisibleColumns={DEFAULT_COORDINATOR_VISIBLE}
-                  defaultRecordsLimit={25}
-                  columnWidths={columnWidths}
-                  setColumnWidths={setColumnWidths}
-                  textFormat={coordTextFormat}
-                  setTextFormat={setCoordTextFormat}
-                  startDate={startDate}
-                  setStartDate={setStartDate}
-                  endDate={endDate}
-                  setEndDate={setEndDate}
-                  defaultTableTitle="Gestão e Assinatura de Declarações"
-                  defaultFilterTitle="Filtrar declarações"
-                />
+                <div className={`flex items-center gap-1.5 sm:gap-2 ${activeTab === 'pendentes' ? 'ml-3 border-l border-white/35 pl-3' : ''}`}>
+                  <SearchPopover
+                    value={searchFilter}
+                    onChange={setSearchFilter}
+                    placeholder="Buscar declarações..."
+                    textFormat={coordTextFormat}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className={`${styles.toolbarButtonClass} disabled:opacity-70`}
+                    style={styles.toolbarButtonStyle}
+                    title="Atualizar fila de declarações"
+                  >
+                    <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </button>
+                  <HeaderSettingsPopover
+                    recordsLimit={recordsLimit}
+                    setRecordsLimit={setRecordsLimit}
+                    allowedLimits={[25, 50, 100, 'all']}
+                    allColumns={ALL_COORDINATOR_COLUMNS}
+                    visibleColumns={visibleColumns}
+                    setVisibleColumns={setVisibleColumns}
+                    columnOrder={columnOrder}
+                    setColumnOrder={setColumnOrder}
+                    storageKey="coordinator"
+                    customLabels={customLabels}
+                    setCustomLabels={setCustomLabels}
+                    defaultColumnOrder={DEFAULT_COORDINATOR_ORDER}
+                    defaultVisibleColumns={DEFAULT_COORDINATOR_VISIBLE}
+                    defaultRecordsLimit={25}
+                    columnWidths={columnWidths}
+                    setColumnWidths={setColumnWidths}
+                    textFormat={coordTextFormat}
+                    setTextFormat={setCoordTextFormat}
+                    startDate={startDate}
+                    setStartDate={setStartDate}
+                    endDate={endDate}
+                    setEndDate={setEndDate}
+                    defaultTableTitle="Gestão e Assinatura de Declarações"
+                    defaultFilterTitle="Filtrar declarações"
+                  />
+                </div>
               </div>
             </div>
 
             {/* INTEGRATED TOOLBAR BAR (Single clean dividing line) */}
-            <div className="pt-2.5 border-t flex flex-wrap items-center justify-between gap-3 text-xs" style={styles.filterDividerStyle}>
+            <div className="portal-coordinator-filter-row flex flex-wrap items-center justify-between gap-3 border-t-2 border-white px-3.5 py-2.5 text-xs sm:px-4">
               {/* Filter Row Switcher with FILTRAR prefix following site standard */}
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
@@ -897,10 +896,10 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                         type="button"
                         onClick={() => { setActiveTab(filter.tab); setSelectedIds([]); }}
                         style={chip.buttonStyle}
-                        className={`portal-standard-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-all h-7 shrink-0 border select-none ${isSelected ? 'shadow-xs scale-[1.02]' : 'opacity-85 hover:opacity-100'}`}
+                        className={`portal-standard-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none ${isSelected ? '' : 'opacity-85 hover:opacity-100'}`}
                         title={`Filtrar por declarações ${filter.label.toLowerCase()}`}
                       >
-                        <span className="w-2 h-2 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: chip.dotColor }} />
+                        <span className="w-2 h-2 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: filter.key === 'assinadas' ? '#22a06b' : '#f4b400' }} />
                         <span className="whitespace-nowrap font-extrabold">{chip.label}</span>
                         <span className="text-[9px] px-1.5 py-0.2 rounded-full font-black shadow-2xs" style={chip.badgeStyle}>{filter.count}</span>
                       </button>

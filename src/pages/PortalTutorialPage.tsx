@@ -140,7 +140,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
               </div>
               <p className="mt-1.5 text-xs leading-5 text-slate-600">{active.attention}</p>
             </div>
-            <div className="portal-layer-inner rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-2xs">
+            <div id="portal-tutorial-finish-card" className="portal-layer-card rounded-xl border border-slate-300 bg-[#d5dce0] px-3.5 py-3 shadow-2xs">
               <div className="text-xs font-black uppercase tracking-wide text-slate-900">Quando esta visão termina</div>
               <p className="mt-1.5 text-xs leading-5 text-slate-700">{active.finish}</p>
             </div>

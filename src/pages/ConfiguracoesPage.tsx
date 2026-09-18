@@ -2268,9 +2268,17 @@ export const ConfiguracoesPage: React.FC = () => {
           <div className="p-3 sm:p-4 border-t border-slate-200 space-y-4">
 
             {isMasterAdmin && settings && (
-              <MasterAndPresidentConfigForm settings={settings} onSettingsUpdated={() => { void refreshAuth(); showNotification('Contas administrativas atualizadas.'); }} showNotification={showNotification} />
+              <section id="administrative-identity-panel" className="overflow-hidden rounded-xl border border-slate-300 bg-[#e1e6e9] shadow-sm">
+                <div className="border-b border-slate-300 px-3 py-2">
+                  <h3 className="text-xs font-black uppercase tracking-wide text-slate-900">Secretaria, Presidência e Comissão</h3>
+                  <p className="mt-0.5 text-[10px] leading-4 text-slate-600">E-mail de acesso, contato público, responsável técnico, Presidência e integrantes adicionais em um único cadastro visual.</p>
+                </div>
+                <div className="space-y-2 p-2.5">
+                  <MasterAndPresidentConfigForm settings={settings} onSettingsUpdated={() => { void refreshAuth(); showNotification('Contas administrativas atualizadas.'); }} showNotification={showNotification} />
+                  <CommissionIdentityPanel isMaster />
+                </div>
+              </section>
             )}
-            {isMasterAdmin && <CommissionIdentityPanel isMaster />}
             <InfrastructureIntegrationsPanel isMaster={isMasterAdmin} />
             {isMasterAdmin && <AuthorizedStudentsPanel canManage />}
 

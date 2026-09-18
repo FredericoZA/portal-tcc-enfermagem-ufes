@@ -74,14 +74,14 @@ export const PortalReplicationPage: React.FC = () => (
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {models.map(({ slug, label, description }) => (
-              <div key={slug} className="portal-layer-inner flex min-h-28 flex-col justify-between rounded-xl border border-slate-200 bg-white p-3 shadow-2xs">
+              <div key={slug} className="portal-layer-inner flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-2.5 shadow-2xs">
                 <div>
                   <div className="text-xs font-black text-slate-900">{label}</div>
                   <p className="mt-1 text-[11px] leading-4 text-slate-600">{description}</p>
                 </div>
                 <a
                   href={`/api/public/replication-models/${slug}/download`}
-                  className="portal-action-green mt-3 inline-flex w-fit items-center gap-1.5 rounded-lg border border-[#2d6c50] bg-[#337959] px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide text-white shadow-sm hover:brightness-95"
+                  className="portal-action-green mt-2 inline-flex w-fit items-center gap-1.5 rounded-md border border-[#2d6c50] bg-[#337959] px-2 py-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm hover:brightness-95"
                 >
                   <Download className="h-3.5 w-3.5" /> Baixar modelo
                 </a>
