@@ -7,6 +7,7 @@ const DOWNLOAD_HINT = 'Baixar dados — exporta o Repositório de TCCs em CSV';
 const ACCENT = '#337959';
 const LEGACY_ACCENTS = new Set(['#47866a', 'rgb(71, 134, 106)']);
 const LEGACY_PERSONALIZATION_LABELS = new Set([
+  'temas prontos 1 clique',
   'botoes no topo',
   'estilo base das planilhas',
   'colunas ordem e linhas',
@@ -38,17 +39,55 @@ function normalizeLegacyInlineAccents() {
   });
 }
 
+function markSettingsRole() {
+  try {
+    const raw = window.sessionStorage.getItem('portal_tcc_identity_cache_v1');
+    const parsed = raw ? JSON.parse(raw) : null;
+    const roles = Array.isArray(parsed?.globalRoles) ? parsed.globalRoles.map(String) : [];
+    const presidentOnly = roles.includes('COMMISSION_PRESIDENT') && !roles.includes('MASTER_ADMIN');
+    if (presidentOnly) document.documentElement.dataset.portalSettingsRole = 'president-only';
+    else delete document.documentElement.dataset.portalSettingsRole;
+  } catch {
+    delete document.documentElement.dataset.portalSettingsRole;
+  }
+}
+
+function hideClosestEditorCard(node: HTMLElement | null) {
+  if (!node) return;
+  const card = node.closest<HTMLElement>('.rounded-xl, .rounded-2xl') || node.parentElement?.parentElement;
+  if (card && !card.hasAttribute('role')) card.dataset.portalPersonalizationRemoved = 'true';
+}
+
 function pruneLegacyPersonalizationRows() {
   const title = document.getElementById('portal-customization-title');
   const dialog = title?.closest<HTMLElement>('[role="dialog"]');
   if (!dialog) return;
 
+  title.classList.add('portal-customization-title-left');
+
   dialog.querySelectorAll<HTMLButtonElement>('button').forEach((button) => {
     const label = normalizeLabel(button.textContent || '');
-    if (!LEGACY_PERSONALIZATION_LABELS.has(label)) return;
-    const row = button.parentElement;
-    if (row) row.style.display = 'none';
-    else button.style.display = 'none';
+    if (LEGACY_PERSONALIZATION_LABELS.has(label)) {
+      const row = button.parentElement;
+      if (row) row.dataset.portalPersonalizationRemoved = 'true';
+      else button.dataset.portalPersonalizationRemoved = 'true';
+      return;
+    }
+    if (label === 'publicar no portal' || label === 'restaurar padrao') {
+      button.classList.add('portal-customization-top-action');
+    }
+  });
+
+  dialog.querySelectorAll<HTMLElement>('h1,h2,h3,h4,span,p').forEach((node) => {
+    const label = normalizeLabel(node.textContent || '');
+    if (label === 'configuracao global do portal site todo') hideClosestEditorCard(node);
+    if (label === 'exemplo ao vivo do portal preview em tempo real') hideClosestEditorCard(node);
+  });
+}
+
+function pruneDuplicatedAdministrationForm() {
+  document.querySelectorAll<HTMLElement>('.portal-admin-accounts-panel').forEach((node) => {
+    node.dataset.portalLegacyAdministration = 'true';
   });
 }
 
@@ -66,7 +105,9 @@ function findRepositoryToolbar(): HTMLElement | null {
 
 function enhanceToolbarButtons() {
   normalizeLegacyInlineAccents();
+  markSettingsRole();
   pruneLegacyPersonalizationRows();
+  pruneDuplicatedAdministrationForm();
 
   document.querySelectorAll<HTMLButtonElement>('button[title^="Buscar"], button[aria-label^="Buscar registros"]').forEach((button) =>
     setButtonHint(button, SEARCH_HINT),
@@ -120,6 +161,7 @@ export function PortalUiEnhancer() {
       observer.disconnect();
       window.cancelAnimationFrame(frame);
       document.querySelectorAll('.portal-repository-download-toolbar').forEach((node) => node.remove());
+      delete document.documentElement.dataset.portalSettingsRole;
     };
   }, []);
 
