@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 export interface SupabaseRuntimeStatus {
   configured: boolean;
@@ -15,6 +15,8 @@ const supabaseUrl = () => String(process.env.SUPABASE_URL || '').trim().replace(
 const supabaseSecret = () => String(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const providerEnabled = () => process.env.PORTAL_PERSISTENCE_PROVIDER === 'supabase';
 const stateEndpoint = () => `${supabaseUrl()}/rest/v1/portal_runtime_state`;
+const runtimeAssetsEndpoint = () => `${supabaseUrl()}/rest/v1/portal_runtime_assets`;
+const LARGE_RUNTIME_IMAGE_THRESHOLD=32_768;
 let knownRevision:number|null=null;
 export const buildSupabaseAdminHeaders = () => {
   const secret = supabaseSecret();
@@ -23,6 +25,51 @@ export const buildSupabaseAdminHeaders = () => {
   return headers;
 };
 const adminHeaders = buildSupabaseAdminHeaders;
+
+function parseLargeRuntimeImage(value:string):{mimeType:string;base64:string}|null{
+  if(value.length<LARGE_RUNTIME_IMAGE_THRESHOLD)return null;
+  const match=/^data:(image\/[a-zA-Z0-9.+-]+);base64,([\s\S]+)$/.exec(value);
+  return match?{mimeType:match[1],base64:match[2]}:null;
+}
+
+function runtimeAssetReference(assetKey:string){return `/api/public/runtime-assets/${assetKey}`;}
+
+type RuntimeAsset={assetKey:string;mimeType:string;dataUrl:string;byteLength:number};
+
+function collectAndExternalizeRuntimeImages(value:unknown,assets:Map<string,RuntimeAsset>):unknown{
+  if(typeof value==='string'){
+    const image=parseLargeRuntimeImage(value);
+    if(!image)return value;
+    const assetKey=createHash('sha256').update(value).digest('hex');
+    if(!assets.has(assetKey))assets.set(assetKey,{assetKey,mimeType:image.mimeType,dataUrl:value,byteLength:Buffer.from(image.base64,'base64').length});
+    return runtimeAssetReference(assetKey);
+  }
+  if(Array.isArray(value))return value.map(item=>collectAndExternalizeRuntimeImages(item,assets));
+  if(value&&typeof value==='object'){
+    return Object.fromEntries(Object.entries(value as Record<string,unknown>).map(([key,item])=>[key,collectAndExternalizeRuntimeImages(item,assets)]));
+  }
+  return value;
+}
+
+async function upsertRuntimeAsset(asset:RuntimeAsset):Promise<void>{
+  const response=await fetch(`${runtimeAssetsEndpoint()}?on_conflict=asset_key`,{
+    method:'POST',
+    headers:{...adminHeaders(),Prefer:'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({asset_key:asset.assetKey,mime_type:asset.mimeType,data_url:asset.dataUrl,byte_length:asset.byteLength,updated_at:new Date().toISOString()}),
+    signal:AbortSignal.timeout(20_000)
+  });
+  if(!response.ok){
+    const detail=await response.text().catch(()=>'');
+    throw new Error(`Falha ao externalizar ativo visual do runtime (${response.status})${detail?`: ${detail.slice(0,160)}`:''}.`);
+  }
+}
+
+async function externalizeRuntimeImages(payload:object):Promise<object>{
+  const assets=new Map<string,RuntimeAsset>();
+  const sanitized=collectAndExternalizeRuntimeImages(payload,assets) as object;
+  for(const asset of assets.values())await upsertRuntimeAsset(asset);
+  return sanitized;
+}
 
 export async function appendSupabaseAuditEvent(input:{externalId:string;occurredAt:string;processCode?:string;eventType:string;entityType:string;entityId?:string;details?:Record<string,unknown>}):Promise<void>{
   if(!getSupabaseRuntimeStatus().durablePersistenceReady)return;
@@ -96,7 +143,7 @@ export function getSupabaseRuntimeStatus(): Omit<SupabaseRuntimeStatus, 'connect
 
 export async function loadPortalRuntimeState<T extends object>(): Promise<T | null> {
   if (!getSupabaseRuntimeStatus().durablePersistenceReady) return null;
-  const response = await fetch(`${stateEndpoint()}?id=eq.global&select=payload,revision&limit=1`, { headers: adminHeaders(), signal: AbortSignal.timeout(12_000) });
+  const response = await fetch(`${stateEndpoint()}?id=eq.global&select=payload,revision&limit=1`, { headers: adminHeaders(), signal: AbortSignal.timeout(20_000) });
   if (!response.ok) throw new Error(`Falha ao carregar o estado do Supabase (${response.status}).`);
   const rows = await response.json();
   knownRevision=rows?.[0]?Number(rows[0].revision||1):0;
@@ -107,11 +154,12 @@ export async function savePortalRuntimeState(payload: object): Promise<void> {
   if (!getSupabaseRuntimeStatus().durablePersistenceReady) return;
   if(knownRevision===null)await loadPortalRuntimeState();
   const expected=knownRevision||0;
+  const compactPayload=await externalizeRuntimeImages(payload);
   const response = await fetch(`${supabaseUrl()}/rest/v1/rpc/portal_commit_runtime_state`, {
     method: 'POST',
     headers: { ...adminHeaders(), Prefer: 'return=representation' },
-    body: JSON.stringify({ expected_revision: expected, next_payload: payload }),
-    signal: AbortSignal.timeout(15_000)
+    body: JSON.stringify({ expected_revision: expected, next_payload: compactPayload }),
+    signal: AbortSignal.timeout(20_000)
   });
   if (!response.ok) {
     const detail=await response.text().catch(()=>'');
