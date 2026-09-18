@@ -8,6 +8,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { EmergencyRecoveryModal } from './components/EmergencyRecoveryModal';
 import { IndicadoresPage } from './pages/IndicadoresPage';
+import { PortalFeedbackController } from './components/PortalFeedbackController';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })));
 const PortalTutorialPage = lazy(() => import('./pages/PortalTutorialPage').then((module) => ({ default: module.PortalTutorialPage })));
@@ -122,6 +123,7 @@ export default function App() {
   return (
     <AuthProvider>
       <PortalDialogs />
+      <PortalFeedbackController />
       <div id="portal-app-root" className="min-h-screen bg-slate-100 flex flex-col font-sans antialiased text-slate-900">
         {(import.meta as any).env?.DEV && <UserSimulatorBar />}
 
