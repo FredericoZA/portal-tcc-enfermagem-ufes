@@ -98,6 +98,10 @@ try {
   const navigate = async (page, tab) => {
     await page.evaluate(target => window.dispatchEvent(new CustomEvent('portal:navigate', { detail: target })), tab);
     await page.locator('main').waitFor({ state: 'visible' });
+    const lazyFallback = page.getByText('Carregando conteúdo...', { exact: true });
+    if (await lazyFallback.count()) {
+      await lazyFallback.first().waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
+    }
     await page.waitForTimeout(250);
   };
 
@@ -133,10 +137,24 @@ try {
   // Master: percorre as telas centrais e públicas em quatro larguras.
   {
     const { context, page } = await newPersonaPage('master@portal.local');
-    for (const width of [320, 768, 1024, 1440]) {
+    for (const width of [320, 768, 1024, 1440, 1920]) {
       await page.setViewportSize({ width, height: 960 });
       await page.goto(base, { waitUntil: 'networkidle' });
       await capture(page, `master-inicio-${width}`);
+      if (width >= 1440) {
+        const layout = await page.evaluate(() => {
+          const main = document.querySelector('#portal-app-root main');
+          const pageRoot = document.querySelector('#home-page-container');
+          return {
+            mainWidth: Math.round(main?.getBoundingClientRect().width || 0),
+            pageWidth: Math.round(pageRoot?.getBoundingClientRect().width || 0),
+            viewport: innerWidth
+          };
+        });
+        if (layout.mainWidth < width * 0.80 || layout.pageWidth < layout.mainWidth * 0.90) {
+          report.errors.push(`master-inicio-${width}: largura útil não acompanha o viewport (${JSON.stringify(layout)}).`);
+        }
+      }
       for (const [tab, label] of [
         ['calendario', 'calendario'],
         ['biblioteca', 'repositorio'],
@@ -150,6 +168,58 @@ try {
         ['configuracoes', 'configuracoes']
       ]) {
         await navigate(page, tab);
+        const routeSelectors = {
+          indicadores: '#indicadores-publicos-page',
+          'como-chegar': '#como-chegar-page-container',
+          tutorial: '#portal-tutorial-page',
+          'fluxo-tcc': '#fluxo-tcc-page',
+          replicar: '#portal-replication-page'
+        };
+        if (routeSelectors[tab]) {
+          await page.locator(routeSelectors[tab]).waitFor({ state: 'visible', timeout: 6000 });
+        }
+        if (tab === 'calendario') {
+          const calendarVisual = await page.evaluate(() => {
+            const cells = Array.from(document.querySelectorAll('.portal-calendar-day-cell'));
+            const colors = Array.from(new Set(cells.map((cell) => getComputedStyle(cell).backgroundColor)));
+            const filterRow = document.querySelector('#public-calendar-cards-section > div > div:first-child > div:last-child');
+            const filterStyle = filterRow ? getComputedStyle(filterRow) : null;
+            return {
+              cellCount: cells.length,
+              colors,
+              divider: filterStyle ? parseFloat(filterStyle.borderTopWidth || '0') : 0,
+              paddingTop: filterStyle ? parseFloat(filterStyle.paddingTop || '0') : 0
+            };
+          });
+          if (calendarVisual.cellCount < 28 || calendarVisual.colors.length !== 1) {
+            report.errors.push(`master-calendario-${width}: dias do mês não usam uma única cor base (${JSON.stringify(calendarVisual)}).`);
+          }
+          if (calendarVisual.divider < 2 || calendarVisual.paddingTop < 8) {
+            report.errors.push(`master-calendario-${width}: divisor/filtros fora do padrão forte (${JSON.stringify(calendarVisual)}).`);
+          }
+        }
+        if (tab === 'fluxo-tcc' && width >= 1440) {
+          const fluxoWidth = await page.evaluate(() => Math.round(document.querySelector('#fluxo-tcc-page')?.getBoundingClientRect().width || 0));
+          if (!fluxoWidth || fluxoWidth > 1100) {
+            report.errors.push(`master-fluxo-tcc-${width}: largura da tela de referência foi alterada (${fluxoWidth}px).`);
+          }
+        }
+        if (['indicadores', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'].includes(tab)) {
+          const headerGap = await page.evaluate((currentTab) => {
+            const ids = {
+              indicadores: '#indicadores-publicos-page',
+              'como-chegar': '#como-chegar-page-container',
+              tutorial: '#portal-tutorial-page',
+              'fluxo-tcc': '#fluxo-tcc-page',
+              replicar: '#portal-replication-page'
+            };
+            const root = document.querySelector(ids[currentTab]);
+            const first = root?.querySelector(':scope > section:first-child');
+            if (!root || !first) return 999;
+            return Math.round(first.getBoundingClientRect().top - root.getBoundingClientRect().top);
+          }, tab).catch(() => 999);
+          if (headerGap > 1) report.errors.push(`master-${label}-${width}: cabeçalho verde não encosta no topo (gap ${headerGap}px).`);
+        }
         await capture(page, `master-${label}-${width}`);
       }
     }

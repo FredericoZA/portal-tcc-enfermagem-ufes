@@ -3,7 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "work/finalizacao-portal-tcc": false,
-      "work/padronizacao-visual-setembro-2026": false
+      "work/padronizacao-visual-setembro-2026": false,
+      "work/ajustes-visuais-1.0.35": false
     }
   },
   "installCommand": "npm ci --include=dev",

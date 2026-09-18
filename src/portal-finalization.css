@@ -404,3 +404,157 @@
     padding-bottom: 10px;
   }
 }
+
+
+/* ATUALIZAÇÃO 35 — padrão visual validado a partir do Fluxo do TCC.
+ * Hierarquia: página branco-gelo -> superfície intermediária das planilhas/blocos
+ * -> conteúdo de planilha mais contrastado; cards informativos preservam branco.
+ */
+:root {
+  --portal-page-bg: #edf1f3;
+  --portal-surface-1: #e1e6e9;
+  --portal-surface-2: #d5dce0;
+  --portal-surface-3: #c9d2d7;
+}
+
+/* Barra superior e área útil acompanham a superfície intermediária e aproveitam
+ * monitores largos sem impor o antigo teto de 1280 px. */
+#portal-header {
+  background: var(--portal-surface-1) !important;
+  border-bottom-color: var(--portal-surface-border) !important;
+}
+
+#portal-header > div,
+#portal-app-root main {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+#portal-app-root main :is(
+  #home-page-container,
+  #agenda-page-container,
+  #indicadores-publicos-page,
+  #como-chegar-page-container,
+  #portal-tutorial-page,
+  #portal-replication-page,
+  #meus-processos-page-container,
+  #coordenador-page-root,
+  #configuracoes-page-container
+) {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+@media (min-width: 1280px) {
+  #portal-app-root main {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+}
+
+/* O verde deve começar exatamente no topo do retângulo, sem faixa clara acima. */
+:is(
+  #indicadores-publicos-page,
+  #como-chegar-page-container,
+  #portal-tutorial-page,
+  #fluxo-tcc-page,
+  #portal-replication-page
+) {
+  padding-top: 0 !important;
+}
+
+/* Modelo do Fluxo do TCC para páginas informativas: superfície intermediária
+ * sustentando cards claros e detalhes verdes, sem escurecer artificialmente
+ * os cards que no modelo de referência são brancos. */
+#como-chegar-page-container > section:nth-child(2) > div:first-child,
+#como-chegar-page-container > section:nth-child(3) > div:first-child,
+#como-chegar-page-container > section:nth-child(3) > div:last-child > section,
+#portal-tutorial-page > section:nth-child(2) > div > div:first-child,
+#portal-tutorial-page > section:nth-child(2) ol > li,
+#portal-tutorial-page > section:nth-child(2) > div > div:last-child > div,
+#portal-replication-page > section:nth-child(2) article,
+#portal-replication-page > section:nth-child(3) > article,
+#indicadores-publicos-page article {
+  background: #ffffff !important;
+  border-color: var(--portal-surface-border) !important;
+}
+
+#como-chegar-page-container > section:nth-child(3) p.bg-white,
+#como-chegar-page-container > section:nth-child(3) div.bg-white,
+#portal-replication-page > section:nth-child(3) > article:last-child > div:last-child > div,
+#indicadores-publicos-page article div.bg-white,
+#indicadores-publicos-page article span.bg-white,
+#indicadores-publicos-page article table.bg-white,
+#indicadores-publicos-page article div[class~="bg-white"] {
+  background: #ffffff !important;
+}
+
+/* Planilhas e calendários usam a segunda camada de contraste. */
+#formal-monthly-calendar-section > div,
+#public-calendar-cards-section > div,
+#biblioteca-tccs-section > div {
+  background: var(--portal-surface-1) !important;
+  border-color: var(--portal-surface-border) !important;
+}
+
+#formal-monthly-calendar-section > div > div:nth-child(2),
+#public-calendar-cards-section > div > :not(:first-child),
+#biblioteca-tccs-section > div > :not(:first-child),
+.table-sticky-container {
+  background: var(--portal-surface-2) !important;
+}
+
+#formal-monthly-calendar-section .portal-calendar-empty-cell,
+#formal-monthly-calendar-section .portal-calendar-day-cell {
+  background: var(--portal-surface-2) !important;
+  opacity: 1 !important;
+}
+
+#formal-monthly-calendar-section .portal-calendar-day-cell:hover {
+  background: var(--portal-surface-3) !important;
+}
+
+.table-sticky-container table tbody td,
+.table-sticky-container table tbody td:first-child {
+  background: var(--portal-surface-2) !important;
+}
+
+.table-sticky-container table tbody tr:hover td,
+.table-sticky-container table tbody tr:hover td:first-child {
+  background: var(--portal-surface-3) !important;
+}
+
+/* DOM a SÁB têm o mesmo tratamento visual. */
+#formal-monthly-calendar-section > div > div:nth-child(2) > div > div > div:first-child .grid > div {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+/* A divisória e o respiro dos filtros seguem o mesmo padrão forte do calendário. */
+:is(
+  #public-calendar-cards-section,
+  #biblioteca-tccs-section
+) > div > div:first-child > div:last-child,
+#meus-processos-page-container section > div > div:first-child > div:last-child,
+#coordenador-page-root section > div > div:first-child > div:last-child,
+#portal-tutorial-page > section:first-child > div:last-child {
+  border-top: var(--portal-divider-width) solid var(--portal-divider-color) !important;
+  margin-top: 10px !important;
+  padding-top: 10px !important;
+  padding-bottom: 2px !important;
+}
+
+/* A regra antiga compactava demais a faixa de filtros da lista pública. */
+#public-calendar-cards-section div.pt-1\.5.border-t.flex.flex-wrap.items-center.gap-2.text-xs.min-w-0.w-full,
+#biblioteca-tccs-section div.pt-1\.5.border-t.flex.flex-wrap.items-center.gap-2.text-xs.min-w-0.w-full {
+  padding-top: 10px !important;
+  padding-bottom: 2px !important;
+}
+
+/* Em telas pequenas, o comportamento continua fluido e sem largura mínima global. */
+@media (max-width: 640px) {
+  #portal-app-root main {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+}
