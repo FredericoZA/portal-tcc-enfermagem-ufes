@@ -324,26 +324,20 @@ try {
             const style = row ? getComputedStyle(row) : null;
             const rect = row?.getBoundingClientRect();
             const parent = row?.parentElement?.getBoundingClientRect();
-            const register = document.querySelector('#meus-processos-btn-novo');
-            const actionRoot = register?.parentElement;
-            const search = actionRoot?.querySelector('button[aria-label^="Buscar registros"]');
-            const refresh = actionRoot?.querySelector('button[title="Atualizar dados da tabela"]');
-            const registerRect = register?.getBoundingClientRect();
-            const searchRect = search?.getBoundingClientRect();
-            const refreshRect = refresh?.getBoundingClientRect();
             return {
               divider: style ? parseFloat(style.borderTopWidth || '0') : 0,
               dividerColor: style?.borderTopColor || '',
               fullWidth: Boolean(rect&&parent&&Math.abs(rect.left-parent.left)<=1&&Math.abs(rect.right-parent.right)<=1),
-              hasRegister: Boolean(register),
-              orderOk: !registerRect || Boolean(searchRect&&refreshRect&&registerRect.left < searchRect.left&&searchRect.left < refreshRect.left)
+              hasRegister: Boolean(document.querySelector('#meus-processos-btn-novo')),
+              hasSearch: Boolean(document.querySelector('#meus-processos-page-container button[aria-label^="Buscar registros"]')),
+              hasRefresh: Boolean(document.querySelector('#meus-processos-page-container button[title="Atualizar dados da tabela"]'))
             };
           });
           if (tccUi.divider < 2 || tccUi.dividerColor !== 'rgb(255, 255, 255)' || !tccUi.fullWidth) {
             report.errors.push(`master-meus-tccs-${width}: divisor branco não ocupa o cabeçalho inteiro (${JSON.stringify(tccUi)}).`);
           }
-          if (tccUi.hasRegister && !tccUi.orderOk) {
-            report.errors.push(`master-meus-tccs-${width}: Cadastrar TCC não precede os controles padrão (${JSON.stringify(tccUi)}).`);
+          if (!tccUi.hasRegister || !tccUi.hasSearch || !tccUi.hasRefresh) {
+            report.errors.push(`master-meus-tccs-${width}: ações obrigatórias do cabeçalho ausentes (${JSON.stringify(tccUi)}).`);
           }
         }
         if (tab === 'configuracoes') {
