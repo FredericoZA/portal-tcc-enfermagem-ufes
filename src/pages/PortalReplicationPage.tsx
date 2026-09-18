@@ -12,10 +12,10 @@ const tools = [
 ] as const;
 
 const models = [
-  { slug: 'convite', label: 'Convite de Defesa', description: 'Base utilizada para preparar o convite institucional da banca e da apresentação.' },
-  { slug: 'ata', label: 'Ata de Defesa', description: 'Modelo da Ata utilizada após a defesa para registrar o resultado e o parecer.' },
-  { slug: 'termo', label: 'Termo de Autorização', description: 'Modelo utilizado na etapa de autorização e publicação do trabalho acadêmico.' },
-  { slug: 'declaracao', label: 'Declaração da Banca', description: 'Modelo da declaração de participação dos membros da banca examinadora.' },
+  { slug: 'convite', label: 'Convite de Defesa' },
+  { slug: 'termo', label: 'Termo de Autorização' },
+  { slug: 'ata', label: 'Ata de Defesa' },
+  { slug: 'declaracao', label: 'Declaração da Banca' },
 ] as const;
 
 export const PortalReplicationPage: React.FC = () => (
@@ -70,22 +70,20 @@ export const PortalReplicationPage: React.FC = () => (
             <h2 className="text-sm font-black text-slate-950">Modelos do Google Drive</h2>
           </div>
           <p className="mt-1 text-xs leading-5 text-slate-600">
-            Os botões abaixo baixam cópias independentes em Word para adaptação em outra implantação. Os arquivos usados na operação atual do Portal permanecem separados dessas cópias.
+            Baixe cópias independentes em Word para adaptação em outra implantação. Os arquivos usados na operação atual do Portal permanecem separados dessas cópias.
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {models.map(({ slug, label, description }) => (
-              <div key={slug} className="portal-layer-inner flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-2.5 shadow-2xs">
-                <div>
-                  <div className="text-xs font-black text-slate-900">{label}</div>
-                  <p className="mt-1 text-[11px] leading-4 text-slate-600">{description}</p>
-                </div>
-                <a
-                  href={`/api/public/replication-models/${slug}/download`}
-                  className="portal-action-green mt-2 inline-flex w-fit items-center gap-1.5 rounded-md border border-[#2d6c50] bg-[#337959] px-2 py-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm hover:brightness-95"
-                >
+            {models.map(({ slug, label }) => (
+              <a
+                key={slug}
+                href={`/api/public/replication-models/${slug}/download`}
+                className="portal-action-green portal-replication-model-action inline-flex items-center gap-3 border border-[#2d6c50] bg-[#337959] text-xs font-black text-white shadow-sm"
+              >
+                <span className="truncate">{label}</span>
+                <span className="inline-flex shrink-0 items-center gap-1 text-[9px] font-black uppercase tracking-wide">
                   <Download className="h-3.5 w-3.5" /> Baixar modelo
-                </a>
-              </div>
+                </span>
+              </a>
             ))}
           </div>
         </article>
