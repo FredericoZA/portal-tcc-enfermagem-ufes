@@ -80,16 +80,16 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
   const active = useMemo(() => roleContent[role], [role]);
 
   return (
-    <div id="portal-tutorial-page" className="mx-auto max-w-5xl space-y-3 py-2">
-      <section className="rounded-2xl border border-emerald-900/80 bg-[#005830] px-3 py-2 text-white shadow-sm sm:px-4 sm:py-2.5">
-        <div className="flex items-center gap-2">
+    <div id="portal-tutorial-page" className="portal-public-shell mx-auto max-w-none overflow-hidden rounded-2xl border border-slate-300 bg-[#e1e6e9] shadow-sm">
+      <section className="portal-public-header border-b-2 border-white bg-[#005830] text-white">
+        <div className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white shadow-2xs" aria-hidden="true">
             <HelpCircle className="h-4 w-4 text-slate-700" />
           </span>
           <h1 className="text-base font-black uppercase tracking-tight text-white sm:text-lg">Como usar o Portal de TCC</h1>
         </div>
 
-        <div className="mt-2 pt-1.5 border-t border-white/25 flex flex-wrap items-center gap-2 text-xs min-w-0 w-full">
+        <div className="portal-tutorial-filter-row border-t-2 border-white px-3 py-2 sm:px-4 flex flex-wrap items-center gap-2 text-xs min-w-0 w-full">
           <span className="text-[10px] opacity-80 font-black uppercase tracking-wider shrink-0">Filtrar visão:</span>
           <div className="flex items-center gap-1.5 flex-wrap">
             {(Object.keys(roleContent) as Role[]).map((key) => {
@@ -112,9 +112,9 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-300 bg-[#f0f0f0] shadow-sm">
+      <section className="portal-layer-panel bg-[#e1e6e9]">
         <div className="p-3 sm:p-4">
-          <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs sm:p-4">
+          <div className="portal-layer-card flex items-start gap-3 rounded-2xl border border-slate-300 bg-[#d5dce0] p-3.5 shadow-2xs sm:p-4">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#337959] text-white shadow-sm"><UserCheck className="h-5 w-5" /></span>
             <div className="min-w-0">
               <div className="text-[9px] font-black uppercase tracking-[0.16em] text-[#337959]">Visão selecionada</div>
@@ -125,7 +125,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
 
           <ol className="mt-3 grid gap-2.5 md:grid-cols-2">
             {active.steps.map((step, index) => (
-              <li key={step} className="flex gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-5 text-slate-700 shadow-2xs">
+              <li key={step} className="portal-layer-card flex gap-3 rounded-xl border border-slate-300 bg-[#d5dce0] px-3.5 py-3 text-sm leading-5 text-slate-700 shadow-2xs">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#337959] text-[10px] font-black text-white">{index + 1}</span>
                 <span>{step}</span>
               </li>
@@ -133,14 +133,14 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
           </ol>
 
           <div className="mt-3 grid gap-2.5 md:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-2xs">
+            <div className="portal-layer-card rounded-xl border border-slate-300 bg-[#d5dce0] px-3.5 py-3 shadow-2xs">
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
                 <Info className="h-4 w-4 text-[#337959]" />
                 Antes de avançar
               </div>
               <p className="mt-1.5 text-xs leading-5 text-slate-600">{active.attention}</p>
             </div>
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-3.5 py-3 shadow-2xs">
+            <div className="portal-layer-inner rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-2xs">
               <div className="text-xs font-black uppercase tracking-wide text-slate-900">Quando esta visão termina</div>
               <p className="mt-1.5 text-xs leading-5 text-slate-700">{active.finish}</p>
             </div>
