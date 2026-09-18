@@ -93,7 +93,7 @@ function syncPortalFavicon(siteConfig: any) {
 
 function publishIdentity(identity: { userEmail: string; globalRoles: GlobalRole[]; memberships: ProcessMembership[]; isAuthenticated: boolean }) {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('portal:identity', { detail: identity }));
+  window.setTimeout(() => window.dispatchEvent(new CustomEvent('portal:identity', { detail: identity })), 0);
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -124,18 +124,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAuthenticated(meRes.isAuthenticated);
     setGlobalRoles(meRes.globalRoles);
     setMemberships(meRes.memberships);
-    if (meRes.isAuthenticated) saveCachedIdentity({
-      userEmail: meRes.userEmail,
-      globalRoles: meRes.globalRoles,
-      memberships: meRes.memberships,
-      isAuthenticated: true
-    }); else clearCachedIdentity();
-    publishIdentity({
-      userEmail: meRes.userEmail,
-      globalRoles: meRes.globalRoles as GlobalRole[],
-      memberships: meRes.memberships as ProcessMembership[],
-      isAuthenticated: meRes.isAuthenticated,
-    });
+    if (meRes.isAuthenticated) saveCachedIdentity({ userEmail: meRes.userEmail, globalRoles: meRes.globalRoles, memberships: meRes.memberships, isAuthenticated: true }); else clearCachedIdentity();
+    publishIdentity({ userEmail: meRes.userEmail, globalRoles: meRes.globalRoles as GlobalRole[], memberships: meRes.memberships as ProcessMembership[], isAuthenticated: meRes.isAuthenticated });
   };
 
   const clearIdentity = () => {
@@ -168,9 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await Promise.allSettled([settingsTask,identityTask]);setIsLoading(false);
   };
 
-  useEffect(() => {
-    refreshAuth();
-  }, []);
+  useEffect(() => { refreshAuth(); }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -179,49 +167,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     syncPortalFavicon(loadSiteLayoutConfig());
     window.addEventListener(SITE_LAYOUT_EVENT, syncFromLayout);
     window.addEventListener('online', recoverAfterReconnect);
-    return () => {
-      window.removeEventListener(SITE_LAYOUT_EVENT, syncFromLayout);
-      window.removeEventListener('online', recoverAfterReconnect);
-    };
+    return () => { window.removeEventListener(SITE_LAYOUT_EVENT, syncFromLayout); window.removeEventListener('online', recoverAfterReconnect); };
   }, []);
 
-  const switchUser = async (email: string) => {
-    setActiveUserEmail(email);
-    setUserEmailState(email);
-    await refreshAuth();
-  };
+  const switchUser = async (email: string) => { setActiveUserEmail(email); setUserEmailState(email); await refreshAuth(); };
 
   const hasAdvisorRole = memberships.some((m) => m.roles.includes('ADVISOR'));
   const isCommissionPresident = globalRoles.includes('COMMISSION_PRESIDENT');
   const isMasterAdmin = globalRoles.includes('MASTER_ADMIN') || isCommissionPresident;
   const logout=async()=>{await apiClient.logout();setActiveUserEmail('');clearIdentity();await refreshAuth();};
 
-  return (
-    <AuthContext.Provider
-      value={{
-        userEmail,
-        globalRoles,
-        memberships,
-        settings,
-        isLoading,
-        isAuthenticated,
-        switchUser,
-        refreshAuth,
-        hasAdvisorRole,
-        isMasterAdmin,
-        isCommissionPresident,
-        logout
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ userEmail, globalRoles, memberships, settings, isLoading, isAuthenticated, switchUser, refreshAuth, hasAdvisorRole, isMasterAdmin, isCommissionPresident, logout }}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth deve ser usado dentro de AuthProvider');
-  }
+  if (!context) throw new Error('useAuth deve ser usado dentro de AuthProvider');
   return context;
 };
