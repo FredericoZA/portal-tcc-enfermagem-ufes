@@ -47,6 +47,34 @@ function refineLoginModal() {
   }
 }
 
+function refineAuthorizedAccess() {
+  const panel = document.getElementById('authorized-access-panel');
+  if (!panel) return;
+  panel.dataset.portalFeedbackSection = 'sync-access';
+
+  const search = panel.querySelector<HTMLInputElement>('input[placeholder*="qualidade"]');
+  if (search) search.placeholder = 'Buscar por nome, e-mail ou matrícula';
+
+  const headers = Array.from(panel.querySelectorAll<HTMLTableCellElement>('thead th'));
+  const qualityIndex = headers.findIndex((cell) => normalize(cell.textContent || '') === 'qualidade');
+  if (qualityIndex >= 0) {
+    headers[qualityIndex].style.display = 'none';
+    panel.querySelectorAll<HTMLTableRowElement>('tbody tr').forEach((row) => {
+      const cell = row.children.item(qualityIndex) as HTMLElement | null;
+      if (cell) cell.style.display = 'none';
+    });
+  }
+
+  document.querySelectorAll<HTMLElement>('[role="dialog"]').forEach((dialog) => {
+    const title = dialog.querySelector<HTMLElement>('h1,h2,h3');
+    if (normalize(title?.textContent || '') !== 'adicionar acesso') return;
+    dialog.dataset.portalAccessDialog = 'true';
+    const labels = Array.from(dialog.querySelectorAll<HTMLElement>('label'));
+    const qualityLabel = labels.find((label) => normalize(label.textContent || '').startsWith('qualidade'));
+    if (qualityLabel) qualityLabel.style.display = 'none';
+  });
+}
+
 function markAdministrativeHierarchy() {
   markContainingPanel('SINCRONIZAÇÃO E ACESSOS', 'sync-root');
   markContainingPanel('SECRETARIA, PRESIDÊNCIA E COMISSÃO', 'sync-footer');
@@ -55,6 +83,10 @@ function markAdministrativeHierarchy() {
   markContainingPanel('MEMBROS DA COMISSÃO', 'sync-members');
   markContainingPanel('MODELOS E VARIÁVEIS', 'models-root');
   markContainingPanel('Modelos documentais do usuário Master', 'models-catalog');
+  markContainingPanel('Cadastrar meu TCC', 'registration-header');
+
+  const syncTitle = findByText('h1,h2,h3,h4,strong,span,div', 'SECRETARIA, PRESIDÊNCIA E COMISSÃO');
+  if (syncTitle) syncTitle.textContent = 'SINCRONIZAÇÃO DO RODAPÉ';
 
   const personalizationTitle = findByText('h1,h2,h3,div,span', 'PERSONALIZAÇÃO DO PORTAL DO TCC');
   const personalizationDialog = personalizationTitle?.closest<HTMLElement>('[role="dialog"]') || personalizationTitle?.closest<HTMLElement>('.fixed')?.querySelector<HTMLElement>('[class*="rounded"]');
@@ -88,14 +120,24 @@ export const PortalFeedbackController: React.FC = () => {
   }, [isAuthenticated, userEmail, globalRoles, isLoading]);
 
   useEffect(() => {
+    let scheduled = 0;
     const apply = () => {
+      scheduled = 0;
       refineLoginModal();
+      refineAuthorizedAccess();
       markAdministrativeHierarchy();
     };
+    const schedule = () => {
+      if (scheduled) return;
+      scheduled = window.requestAnimationFrame(apply);
+    };
     apply();
-    const observer = new MutationObserver(() => window.requestAnimationFrame(apply));
+    const observer = new MutationObserver(schedule);
     observer.observe(document.body, { subtree: true, childList: true });
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (scheduled) window.cancelAnimationFrame(scheduled);
+    };
   }, []);
 
   return null;
