@@ -21,8 +21,10 @@ import './portal-update-38.css';
 import './portal-update-39.css';
 import './portal-update-40.css';
 import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
+import { installAuthRequestResilience } from './utils/authRequestResilience';
 
 try { saveGlobalPopupStyle(loadGlobalPopupStyle()); } catch {}
+installAuthRequestResilience();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
