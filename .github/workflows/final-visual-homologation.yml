@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - work/finalizacao-portal-tcc
-      - work/configuracoes-compactas-e-acessos
 
 permissions:
   contents: read
