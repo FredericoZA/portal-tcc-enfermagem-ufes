@@ -85,6 +85,14 @@ function pruneLegacyPersonalizationRows() {
   });
 }
 
+function clarifyLoginIdentityGuidance() {
+  document.querySelectorAll<HTMLElement>('strong,label').forEach((node) => {
+    const label = normalizeLabel(node.textContent || '');
+    if (label === 'docentes e banca') node.textContent = 'Demais usuários:';
+    if (label === 'orientacao docentes banca') node.textContent = 'Orientação dos demais usuários:';
+  });
+}
+
 function pruneDuplicatedAdministrationForm() {
   document.querySelectorAll<HTMLElement>('.portal-admin-accounts-panel').forEach((node) => {
     node.dataset.portalLegacyAdministration = 'true';
@@ -107,6 +115,7 @@ function enhanceToolbarButtons() {
   normalizeLegacyInlineAccents();
   markSettingsRole();
   pruneLegacyPersonalizationRows();
+  clarifyLoginIdentityGuidance();
   pruneDuplicatedAdministrationForm();
 
   document.querySelectorAll<HTMLButtonElement>('button[title^="Buscar"], button[aria-label^="Buscar registros"]').forEach((button) =>
