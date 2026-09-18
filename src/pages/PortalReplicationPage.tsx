@@ -66,7 +66,9 @@ export const PortalReplicationPage: React.FC = () => (
 
         <article className="portal-layer-card rounded-2xl border border-slate-300 bg-[#d5dce0] p-3 shadow-sm sm:p-4">
           <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-[#337959]" />
+            <span className="portal-layer-inner flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white shadow-2xs" aria-hidden="true">
+              <FileText className="h-4 w-4 text-[#337959]" />
+            </span>
             <h2 className="text-sm font-black text-slate-950">Modelos do Google Drive</h2>
           </div>
           <p className="mt-1 text-xs leading-5 text-slate-600">
