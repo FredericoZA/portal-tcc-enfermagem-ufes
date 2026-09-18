@@ -5,7 +5,8 @@
       "work/finalizacao-portal-tcc": false,
       "work/padronizacao-visual-setembro-2026": false,
       "work/ajustes-visuais-1.0.35": false,
-      "work/correcao-visual-1.0.36": false
+      "work/correcao-visual-1.0.36": false,
+      "work/ajustes-interface-1.0.37": false
     }
   },
   "installCommand": "npm ci --include=dev",
