@@ -15,12 +15,12 @@ export interface HeaderSettingsPopoverProps {
 }
 
 async function loadPreference(storageKey:string){
-  const response=await fetch(`/api/table-preferences?table=${encodeURIComponent(storageKey)}`,{credentials:'include',headers:{Accept:'application/json'}});
+  const response=await fetch(`/api/preferences/table?table=${encodeURIComponent(storageKey)}`,{credentials:'include',headers:{Accept:'application/json'}});
   if(!response.ok)throw new Error('Preferências remotas indisponíveis.');
   return response.json();
 }
 async function patchPreference(storageKey:string,config:Record<string,unknown>){
-  const response=await fetch(`/api/table-preferences?table=${encodeURIComponent(storageKey)}`,{method:'PATCH',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({tableKey:storageKey,scope:'USER',config})});
+  const response=await fetch(`/api/preferences/table?table=${encodeURIComponent(storageKey)}`,{method:'PATCH',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({tableKey:storageKey,scope:'USER',config})});
   if(!response.ok)throw new Error('Não foi possível salvar a preferência.');
 }
 
