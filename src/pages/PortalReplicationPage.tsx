@@ -60,13 +60,13 @@ export const PortalReplicationPage: React.FC = () => (
           </article>
         ))}
 
-        <article className="portal-layer-card flex min-h-[150px] flex-col rounded-xl border border-slate-300 bg-[#d5dce0] p-3 shadow-2xs">
+        <article className="portal-layer-card flex min-h-[150px] self-start flex-col rounded-xl border border-slate-300 bg-[#d5dce0] p-3 shadow-2xs">
           <FileText className="h-5 w-5 text-[#337959]" />
           <h3 className="mt-1.5 text-sm font-black text-slate-950">Modelos do Google Drive</h3>
           <p className="mt-1 text-xs leading-5 text-slate-600">
             Baixe cópias independentes em Word para adaptar os documentos a outra implantação sem alterar os modelos usados na operação atual.
           </p>
-          <details className="mt-auto pt-3">
+          <details className="mt-3">
             <summary className="portal-action-green w-fit cursor-pointer list-none rounded-lg border border-[#2d6c50] bg-[#337959] px-2.5 py-1.5 text-[10px] font-black text-white shadow-sm hover:brightness-95">
               <span className="inline-flex items-center gap-1.5"><Download className="h-3.5 w-3.5" /> Baixar modelos</span>
             </summary>
