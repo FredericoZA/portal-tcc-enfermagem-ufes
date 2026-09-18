@@ -848,6 +848,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                     textFormat={meusProcessosTextFormat}
                   />
                   <button
+                    id="meus-processos-refresh-btn"
                     type="button"
                     onClick={handleRefresh}
                     disabled={isRefreshing}
