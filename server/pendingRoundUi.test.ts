@@ -11,12 +11,16 @@ test('guia não repete botão de acesso ao portal', async () => {
   assert.ok(!tutorial.includes('Acessar o Portal'));
 });
 
-test('comissão reúne ações e QR Code sem duplicar personalização do símbolo', async () => {
+test('comissão reúne Presidência, Secretaria e membros sem duplicar personalização do símbolo', async () => {
   const panel = await source('src/components/CommissionIdentityPanel.tsx');
+  assert.ok(panel.includes('Presidência, Secretaria e Comissão'));
+  assert.ok(panel.includes('Presidente da Comissão'));
+  assert.ok(panel.includes('Secretaria'));
+  assert.ok(panel.includes('Membros da Comissão'));
   assert.ok(panel.includes('Adicionar membro'));
-  assert.ok(panel.includes('Salvar Comissão'));
-  assert.ok(panel.includes('QRCode.toDataURL'));
-  assert.ok(panel.includes("margin: 0"));
+  assert.ok(panel.includes("createAdministrationTransfer('COMMISSION_PRESIDENT'"));
+  assert.ok(panel.includes("createAdministrationTransfer('MASTER_ADMIN'"));
+  assert.ok(!panel.includes('QRCode.toDataURL'));
   assert.ok(!panel.includes('courseLogoDataUrl'));
   assert.ok(!panel.includes('ADICIONAR / SUBSTITUIR SÍMBOLO'));
 });
