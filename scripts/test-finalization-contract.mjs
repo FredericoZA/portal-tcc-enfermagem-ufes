@@ -58,7 +58,8 @@ assert.match(importUtil, /parseStudentImportText/);
 assert.match(importUtil, /extension==='xlsx'/);
 assert.doesNotMatch(server, /!record\.matricula\|\|!isValidPortalEmail/, 'Matrícula não pode bloquear a importação em lote.');
 
-assert.match(integrations, /Asten — assinatura eletrônica/);
+assert.match(integrations, /<h4[^>]*>Asten<\/h4>/);
+assert.match(integrations, /Token da API Asten/);
 assert.match(integrations, /Google Drive/);
 assert.match(integrations, /Supabase/);
 assert.match(integrations, /Vercel/);
