@@ -40,6 +40,9 @@
     },
     "api/replication-model.ts": {
       "maxDuration": 60
+    },
+    "api/runtime-asset.ts": {
+      "maxDuration": 30
     }
   },
   "crons": [
@@ -80,6 +83,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/api/public/runtime-assets/:key",
+      "destination": "/api/runtime-asset?key=:key"
+    },
     {
       "source": "/api/public/replication-models/:slug/download",
       "destination": "/api/replication-model?slug=:slug"
