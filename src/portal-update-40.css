@@ -1,0 +1,19 @@
+/* Atualização 40 — refinamentos das páginas públicas e do destaque ativo da navegação. */
+
+/* A faixa fluorescente agora cobre todo o raio esquerdo do botão ativo. O recorte
+ * continua sendo feito pelo overflow do próprio botão, preservando a mesma cor e
+ * o mesmo raio externo sem deixar um canto escuro entre a faixa e a borda. */
+#sidebar-nav .portal-sidebar-nav-active::before {
+  left: -1px !important;
+  top: -1px !important;
+  bottom: -1px !important;
+  width: 12px !important;
+  border-radius: 0 !important;
+  background: var(--portal-sidebar-accent) !important;
+  box-shadow: 2px 0 8px rgba(116,255,150,.38) !important;
+}
+
+/* O seletor de modelos permanece compacto mesmo quando a lista é aberta. */
+#portal-replication-page details > summary::-webkit-details-marker {
+  display: none;
+}
