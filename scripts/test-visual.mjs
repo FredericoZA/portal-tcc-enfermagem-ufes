@@ -330,7 +330,7 @@ try {
               fullWidth: Boolean(rect&&parent&&Math.abs(rect.left-parent.left)<=1&&Math.abs(rect.right-parent.right)<=1),
               hasRegister: Boolean(document.querySelector('#meus-processos-btn-novo')),
               hasSearch: Boolean(document.querySelector('#meus-processos-page-container button[aria-label^="Buscar registros"]')),
-              hasRefresh: Boolean(document.querySelector('#meus-processos-page-container button[title="Atualizar dados da tabela"]'))
+              hasRefresh: Boolean(document.querySelector('#meus-processos-refresh-btn'))
             };
           });
           if (tccUi.divider < 2 || tccUi.dividerColor !== 'rgb(255, 255, 255)' || !tccUi.fullWidth) {
