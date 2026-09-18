@@ -30,13 +30,15 @@ test('Como chegar organiza os três atalhos em uma única linha de cartões', as
   assert.ok(!page.includes('sm:grid-cols-3 md:grid-cols-1'));
 });
 
-test('destaque ativo preenche todo o raio esquerdo fluorescente', async () => {
-  const [main, css] = await Promise.all([
+test('destaque ativo preserva o acabamento canônico de 6px da versão 1.0.36', async () => {
+  const [main, canonical, css40] = await Promise.all([
     source('src/main.tsx'),
+    source('src/portal-finalization.css'),
     source('src/portal-update-40.css'),
   ]);
   assert.ok(main.includes("import './portal-update-40.css'"));
-  assert.match(css, /#sidebar-nav \.portal-sidebar-nav-active::before/);
-  assert.match(css, /width:\s*12px\s*!important/);
-  assert.match(css, /border-radius:\s*0\s*!important/);
+  assert.match(canonical, /#sidebar-nav \.portal-sidebar-nav-active::before/);
+  assert.match(canonical, /width:\s*6px/);
+  assert.match(canonical, /border-radius:\s*12px 0 0 12px/);
+  assert.doesNotMatch(css40, /#sidebar-nav \.portal-sidebar-nav-active::before/);
 });
