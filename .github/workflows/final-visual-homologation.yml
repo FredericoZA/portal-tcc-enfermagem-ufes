@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - work/finalizacao-portal-tcc
-      - work/ajustes-visuais-1.0.35
 
 permissions:
   contents: read
