@@ -1311,7 +1311,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
               {/* Empty cells after last day to complete week grid */}
               {Array.from({ length: (7 - ((firstDayOfMonth + daysInMonth) % 7)) % 7 }).map((_, idx) => (
-                <div key={`empty-trail-${idx}`} className="border-r border-b border-slate-200 bg-slate-50/20 h-16 sm:h-20" />
+                <div key={`empty-trail-${idx}`} className="portal-calendar-empty-cell border-r border-b border-slate-200 bg-slate-50/20 h-16 sm:h-20" />
               ))}
             </div>
 
@@ -1748,8 +1748,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           {(() => {
             const defStyles = getTableStyles(defensesTextFormat);
             return (
-              <div className={`${defStyles.bannerHeaderClass} px-3 sm:px-4 py-2 sm:py-2.5 space-y-2 border-b transition-colors`} style={defStyles.bannerHeaderStyle}>
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+              <div className={`${defStyles.bannerHeaderClass} border-b transition-colors`} style={defStyles.bannerHeaderStyle}>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 py-2 text-center sm:flex-row sm:px-4 sm:py-2.5 sm:text-left">
                   <div className="flex items-center gap-2">
                     <ColorfulHeaderIcon type="list" textFormat={defensesTextFormat} />
                     <h2 className="text-base sm:text-lg font-black uppercase tracking-tight">
@@ -1816,7 +1816,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 </div>
 
                 {/* INTEGRATED TOOLBAR BAR FOR STATUS & FILTERS */}
-                <div className="pt-1.5 border-t flex flex-wrap items-center gap-2 text-xs min-w-0 w-full" style={defStyles.filterDividerStyle}>
+                <div className="portal-defense-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 border-t-2 border-white px-3 py-2.5 text-xs sm:px-4">
                   <span className="text-[10px] opacity-80 font-black uppercase tracking-wider shrink-0">
                     {defensesTextFormat?.customFilterTitle || getEditableTableText(defensesCustomLabels, '__filterTitle', 'FILTRAR:')}
                   </span>

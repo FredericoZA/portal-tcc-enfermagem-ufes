@@ -181,22 +181,79 @@ try {
         if (tab === 'calendario') {
           const calendarVisual = await page.evaluate(() => {
             const cells = Array.from(document.querySelectorAll('.portal-calendar-day-cell'));
-            const colors = Array.from(new Set(cells.map((cell) => getComputedStyle(cell).backgroundColor)));
-            const filterRow = document.querySelector('#public-calendar-cards-section > div > div:first-child > div:last-child');
+            const emptyCells = Array.from(document.querySelectorAll('.portal-calendar-empty-cell'));
+            const dayColors = Array.from(new Set(cells.map((cell) => getComputedStyle(cell).backgroundColor)));
+            const emptyColors = Array.from(new Set(emptyCells.map((cell) => getComputedStyle(cell).backgroundColor)));
+            const filterRow = document.querySelector('.portal-defense-filter-row');
+            const banner = filterRow?.parentElement;
             const filterStyle = filterRow ? getComputedStyle(filterRow) : null;
+            const filterRect = filterRow?.getBoundingClientRect();
+            const bannerRect = banner?.getBoundingClientRect();
             return {
               cellCount: cells.length,
-              colors,
+              emptyCount: emptyCells.length,
+              dayColors,
+              emptyColors,
               divider: filterStyle ? parseFloat(filterStyle.borderTopWidth || '0') : 0,
-              paddingTop: filterStyle ? parseFloat(filterStyle.paddingTop || '0') : 0
+              dividerColor: filterStyle?.borderTopColor || '',
+              paddingTop: filterStyle ? parseFloat(filterStyle.paddingTop || '0') : 0,
+              fullWidth: Boolean(filterRect && bannerRect && Math.abs(filterRect.left-bannerRect.left)<=1 && Math.abs(filterRect.right-bannerRect.right)<=1)
             };
           });
-          if (calendarVisual.cellCount < 28 || calendarVisual.colors.length !== 1) {
-            report.errors.push(`master-calendario-${width}: dias do mês não usam uma única cor base (${JSON.stringify(calendarVisual)}).`);
+          if (calendarVisual.cellCount < 28 || calendarVisual.dayColors.length !== 1 || calendarVisual.dayColors[0] !== 'rgb(213, 220, 224)') {
+            report.errors.push(`master-calendario-${width}: dias do mês não usam #D5DCE0 (${JSON.stringify(calendarVisual)}).`);
           }
-          if (calendarVisual.divider < 2 || calendarVisual.paddingTop < 8) {
-            report.errors.push(`master-calendario-${width}: divisor/filtros fora do padrão forte (${JSON.stringify(calendarVisual)}).`);
+          if (!calendarVisual.emptyCount || calendarVisual.emptyColors.length !== 1 || calendarVisual.emptyColors[0] !== 'rgb(225, 230, 233)') {
+            report.errors.push(`master-calendario-${width}: vazios do calendário não usam #E1E6E9 (${JSON.stringify(calendarVisual)}).`);
           }
+          if (calendarVisual.divider < 2 || calendarVisual.dividerColor !== 'rgb(255, 255, 255)' || calendarVisual.paddingTop < 8 || !calendarVisual.fullWidth) {
+            report.errors.push(`master-calendario-${width}: divisor branco/filtros fora do padrão (${JSON.stringify(calendarVisual)}).`);
+          }
+        }
+        if (['como-chegar', 'tutorial', 'replicar'].includes(tab)) {
+          const layerContract = await page.evaluate((currentTab) => {
+            const ids = {
+              'como-chegar': '#como-chegar-page-container',
+              tutorial: '#portal-tutorial-page',
+              replicar: '#portal-replication-page'
+            };
+            const root = document.querySelector(ids[currentTab]);
+            const panel = root?.querySelector('.portal-layer-panel');
+            const card = root?.querySelector('.portal-layer-card');
+            const inner = root?.querySelector('.portal-layer-inner');
+            return {
+              panel: panel ? getComputedStyle(panel).backgroundColor : '',
+              card: card ? getComputedStyle(card).backgroundColor : '',
+              inner: inner ? getComputedStyle(inner).backgroundColor : ''
+            };
+          }, tab);
+          if (layerContract.panel !== 'rgb(225, 230, 233)' || layerContract.card !== 'rgb(213, 220, 224)' || (tab !== 'tutorial' && layerContract.inner !== 'rgb(255, 255, 255)')) {
+            report.errors.push(`master-${label}-${width}: contrato das quatro camadas divergente (${JSON.stringify(layerContract)}).`);
+          }
+        }
+        if (tab === 'como-chegar' && width >= 1024) {
+          const geometry = await page.evaluate(() => {
+            const map = document.querySelector('#como-chegar-page-container iframe')?.getBoundingClientRect();
+            const department = document.querySelector('#como-chegar-page-container .grid > div:nth-child(2) > .portal-layer-card:first-child')?.getBoundingClientRect();
+            return map && department ? {mapLeft:map.left,mapWidth:map.width,departmentLeft:department.left,departmentWidth:department.width} : null;
+          });
+          if (!geometry || geometry.departmentLeft <= geometry.mapLeft || geometry.mapWidth <= geometry.departmentWidth) {
+            report.errors.push(`master-como-chegar-${width}: mapa e informações não estão distribuídos em esquerda/direita (${JSON.stringify(geometry)}).`);
+          }
+        }
+        if (tab === 'indicadores') {
+          const indicatorError = await page.getByText('Não foi possível carregar os indicadores.', { exact: true }).count();
+          const metricText = await page.locator('#indicadores-publicos-page').innerText().catch(() => '');
+          if (indicatorError || !/TCCs cadastrados/i.test(metricText)) {
+            report.errors.push(`master-indicadores-${width}: painel de indicadores não carregou dados públicos.`);
+          }
+        }
+        if (tab === 'biblioteca') {
+          const repoHeaderLine = await page.evaluate(() => {
+            const header = document.querySelector('#biblioteca-tccs-section > div > div:first-child > div:last-child');
+            return header ? parseFloat(getComputedStyle(header).borderTopWidth || '0') : 0;
+          });
+          if (repoHeaderLine > 0) report.errors.push(`master-repositorio-${width}: linha indevida permanece no cabeçalho (${repoHeaderLine}px).`);
         }
         if (tab === 'fluxo-tcc' && width >= 1440) {
           const fluxoWidth = await page.evaluate(() => Math.round(document.querySelector('#fluxo-tcc-page')?.getBoundingClientRect().width || 0));
