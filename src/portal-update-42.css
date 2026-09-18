@@ -1,0 +1,210 @@
+/* Atualização 42 — rodada visual/operacional de 18/09/2026. */
+:root {
+  --portal-danger: #b42318;
+  --portal-danger-hover: #8f1d14;
+  --portal-danger-bg: #fff4f2;
+  --portal-green-level-1: #005830;
+  --portal-green-level-2: #337959;
+  --portal-green-level-3: #5d9679;
+}
+
+/* Barra lateral: faixa mais fina, sempre ancorada na borda esquerda. */
+#sidebar-nav .portal-sidebar-nav-active::before {
+  left: 0 !important;
+  width: 4px !important;
+  border-radius: 12px 0 0 12px !important;
+}
+
+/* Replicar Portal: botão de modelos com exatamente uma linha visual. */
+#portal-replication-page details > summary {
+  display: inline-flex !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  align-items: center !important;
+  padding: 0 10px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+#portal-replication-page details > summary > span { display: inline-flex !important; align-items: center !important; gap: 6px !important; }
+
+/* Barras de filtros: mesmo respiro acima e abaixo dos chips. */
+.portal-meus-processos-filter-row,
+.portal-coordinator-filter-row {
+  padding-top: .70rem !important;
+  padding-bottom: .70rem !important;
+}
+
+/* Formulários do fluxo acadêmico usam a mesma hierarquia de superfícies do portal. */
+.portal-workspace > header.portal-card {
+  background: var(--portal-green-level-1) !important;
+  color: #fff !important;
+  border: 1px solid #004626 !important;
+  box-shadow: 0 3px 10px rgba(0,0,0,.10) !important;
+}
+.portal-workspace > header.portal-card :is(h1,h2,h3,p,span) { color: #fff !important; }
+.portal-workspace > header.portal-card progress { accent-color: #74ff96; }
+.portal-workspace > fieldset.portal-card,
+.portal-workspace > aside.portal-card,
+.portal-workspace > p.portal-card {
+  background: var(--portal-surface-1, #e1e6e9) !important;
+  border-color: var(--portal-surface-border, #bcc8cf) !important;
+}
+.portal-workspace > fieldset.portal-card > legend {
+  background: var(--portal-green-level-2) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+  padding: .35rem .65rem !important;
+}
+.portal-workspace .portal-input,
+.portal-workspace input:not([type="checkbox"]):not([type="radio"]),
+.portal-workspace textarea,
+.portal-workspace select {
+  background: #f7f9fa !important;
+  border-color: #b8c4ca !important;
+  color: #0f172a !important;
+}
+.portal-workspace .portal-input:focus,
+.portal-workspace input:focus,
+.portal-workspace textarea:focus,
+.portal-workspace select:focus {
+  border-color: var(--portal-green-level-2) !important;
+  box-shadow: 0 0 0 2px rgba(51,121,89,.16) !important;
+}
+
+/* Modal de Personalização: título à esquerda, ícone vazado e ações brancas. */
+.portal-modal-surface:has(#portal-customization-title) > div:first-child {
+  background: var(--portal-green-level-2) !important;
+  color: #fff !important;
+  border-color: var(--portal-green-level-2) !important;
+  text-align: left !important;
+}
+.portal-modal-surface:has(#portal-customization-title) #portal-customization-title,
+.portal-modal-surface:has(#portal-customization-title) #portal-customization-title span {
+  color: #fff !important;
+  text-align: left !important;
+}
+.portal-modal-surface:has(#portal-customization-title) > div:first-child > div:first-child > div:first-child {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: .2rem !important;
+}
+.portal-modal-surface:has(#portal-customization-title) > div:first-child > div:first-child > div:first-child svg { color: #fff !important; }
+.portal-modal-surface:has(#portal-customization-title) .portal-customization-top-action {
+  background: #fff !important;
+  color: #1f2937 !important;
+  border-color: #d1d5db !important;
+}
+.portal-modal-surface:has(#portal-customization-title) .portal-customization-top-action svg { color: #475569 !important; }
+.portal-modal-surface:has(#portal-customization-title) > div:first-child > div:last-child > button:last-child {
+  background: transparent !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+.portal-modal-surface:has(#portal-customization-title) > div:first-child > div:last-child > button:last-child svg { color: #fff !important; }
+
+/* Sidebar da personalização: pai claro, caixa interna mais escura e título ainda mais marcado. */
+.portal-modal-surface:has(#portal-customization-title) .md\:w-72 {
+  background: #e1e6e9 !important;
+}
+.portal-modal-surface:has(#portal-customization-title) .md\:w-72 > .bg-white {
+  background: #d5dce0 !important;
+  border-color: #bcc8cf !important;
+}
+.portal-modal-surface:has(#portal-customization-title) .md\:w-72 > .bg-white > div:first-child {
+  background: #c9d2d7 !important;
+  border-color: #b7c3ca !important;
+  border-radius: 8px !important;
+  padding: .4rem .5rem !important;
+}
+
+/* Hierarquia das caixas da Sincronização e Acessos. */
+.portal-commission-identity-panel,
+#infrastructure-integrations-panel,
+#authorized-access-panel {
+  background: var(--portal-surface-1, #e1e6e9) !important;
+  border-color: var(--portal-surface-border, #bcc8cf) !important;
+}
+.portal-commission-identity-panel > .portal-administration-details > div:first-child,
+#infrastructure-integrations-panel > div:first-child,
+#authorized-access-panel > div:first-child {
+  background: var(--portal-green-level-2) !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+.portal-commission-identity-panel > .portal-administration-details > div:first-child :is(h3,p,svg),
+#infrastructure-integrations-panel > div:first-child :is(h3,p,svg),
+#authorized-access-panel > div:first-child :is(h3,p,svg,span) { color: #fff !important; }
+.portal-commission-identity-panel table thead,
+#authorized-access-panel table thead {
+  background: var(--portal-green-level-3) !important;
+  color: #fff !important;
+}
+.portal-commission-identity-panel .bg-\[\#e1e6e9\],
+#infrastructure-integrations-panel .bg-\[\#d5dce0\] {
+  border-color: #bcc8cf !important;
+}
+
+/* Modelos e variáveis: remover cores alheias ao sistema e reforçar áreas de trabalho. */
+.portal-master-document-models {
+  background: var(--portal-surface-1, #e1e6e9) !important;
+  border-color: var(--portal-surface-border, #bcc8cf) !important;
+}
+.portal-master-document-models > .portal-models-heading {
+  background: var(--portal-green-level-2) !important;
+  color: #fff !important;
+}
+.portal-master-document-models .portal-model-card { background: #fff !important; border-color: #cbd5e1 !important; }
+.portal-master-document-models .portal-model-action-primary {
+  background: var(--portal-green-level-2) !important;
+  color: #fff !important;
+  border-color: #2d6c50 !important;
+}
+.portal-master-document-models .portal-model-action-secondary {
+  background: #fff !important;
+  color: #1f2937 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Variáveis e indicadores decorativos nunca usam roxo fluorescente. */
+#portal-app-root .text-purple-600,
+#portal-app-root .text-purple-700,
+#portal-app-root .text-violet-600,
+#portal-app-root .text-violet-700 { color: #337959 !important; }
+#portal-app-root .bg-purple-50,
+#portal-app-root .bg-violet-50 { background: #edf4f0 !important; }
+#portal-app-root .border-purple-200,
+#portal-app-root .border-violet-200 { border-color: #b9cec4 !important; }
+
+/* Lixeiras: vermelho sóbrio, igual à linguagem do ícone de ajuda. */
+button:has(svg.lucide-trash-2) {
+  color: var(--portal-danger) !important;
+  background: var(--portal-danger-bg) !important;
+  border-color: #f2b8b5 !important;
+}
+button:has(svg.lucide-trash-2):hover {
+  color: var(--portal-danger-hover) !important;
+  background: #ffe9e6 !important;
+  border-color: #dfa29d !important;
+}
+
+/* Login: elimina blocos redundantes e dá leitura correta à orientação consolidada. */
+[data-portal-login-subtitle="removed"],
+[data-portal-login-redundant="true"] { display: none !important; }
+.portal-login-access-note {
+  margin: .45rem 0 .45rem 0 !important;
+  padding: .45rem .55rem !important;
+  border-radius: 8px !important;
+  background: rgba(255,255,255,.55) !important;
+  color: #334155 !important;
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+}
+
+/* A caixa de configuração de colunas usa o mesmo padrão claro do Portal. */
+[aria-label^="Configurar colunas de"] { color: #0f172a !important; }
+
+/* Marcação usada pelo enhancer para itens antigos removidos da personalização. */
+[data-portal-personalization-removed="true"] { display: none !important; }
