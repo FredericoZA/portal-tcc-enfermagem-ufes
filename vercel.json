@@ -12,9 +12,7 @@
   "installCommand": "npm ci --include=dev",
   "buildCommand": "npm run build",
   "outputDirectory": "dist/client",
-  "regions": [
-    "gru1"
-  ],
+  "regions": ["gru1"],
   "env": {
     "APP_URL": "https://portal-tcc-enfermagem-ufes.vercel.app",
     "PORTAL_PUBLIC_URL": "https://portal-tcc-enfermagem-ufes.vercel.app",
@@ -34,70 +32,28 @@
     "ASTEN_CALLBACK_URL": "https://portal-tcc-enfermagem-ufes.vercel.app/api/integrations/asten/webhook"
   },
   "functions": {
-    "api/index.ts": {
-      "maxDuration": 300,
-      "includeFiles": "dist/server/**"
-    },
-    "api/replication-model.ts": {
-      "maxDuration": 60
-    },
-    "api/runtime-asset.ts": {
-      "maxDuration": 30
-    }
+    "api/index.ts": {"maxDuration": 300,"includeFiles": "dist/server/**"},
+    "api/replication-model.ts": {"maxDuration": 60},
+    "api/runtime-asset.ts": {"maxDuration": 30},
+    "api/table-preferences.ts": {"maxDuration": 30}
   },
-  "crons": [
-    {
-      "path": "/api/cron/storage-cleanup",
-      "schedule": "17 3 * * *"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=(self), payment=(), usb=()"
-        },
-        {
-          "key": "Strict-Transport-Security",
-          "value": "max-age=31536000; includeSubDomains"
-        },
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://nominatim.openstreetmap.org; frame-src 'self' https://www.google.com https://maps.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
-        }
-      ]
-    }
-  ],
+  "crons": [{"path": "/api/cron/storage-cleanup","schedule": "17 3 * * *"}],
+  "headers": [{
+    "source": "/(.*)",
+    "headers": [
+      {"key": "X-Content-Type-Options","value": "nosniff"},
+      {"key": "X-Frame-Options","value": "DENY"},
+      {"key": "Referrer-Policy","value": "strict-origin-when-cross-origin"},
+      {"key": "Permissions-Policy","value": "camera=(), microphone=(), geolocation=(self), payment=(), usb=()"},
+      {"key": "Strict-Transport-Security","value": "max-age=31536000; includeSubDomains"},
+      {"key": "Content-Security-Policy","value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://nominatim.openstreetmap.org; frame-src 'self' https://www.google.com https://maps.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"}
+    ]
+  }],
   "rewrites": [
-    {
-      "source": "/api/public/runtime-assets/:key",
-      "destination": "/api/runtime-asset?key=:key"
-    },
-    {
-      "source": "/api/public/replication-models/:slug/download",
-      "destination": "/api/replication-model?slug=:slug"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    {"source": "/api/public/runtime-assets/:key","destination": "/api/runtime-asset?key=:key"},
+    {"source": "/api/public/replication-models/:slug/download","destination": "/api/replication-model?slug=:slug"},
+    {"source": "/api/table-preferences","destination": "/api/table-preferences"},
+    {"source": "/api/(.*)","destination": "/api/index"},
+    {"source": "/(.*)","destination": "/index.html"}
   ]
 }
