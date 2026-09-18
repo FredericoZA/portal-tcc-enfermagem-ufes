@@ -33,7 +33,8 @@ jobs:
           profile_body="$(mktemp)"
           auth_body="$(mktemp)"
           verification_body="$(mktemp)"
-          trap 'rm -f "$body" "$root_body" "$root_headers" "$logo_body" "$logo_headers" "$setup_body" "$profile_body" "$auth_body" "$verification_body"' EXIT
+          indicators_body="$(mktemp)"
+          trap 'rm -f "$body" "$root_body" "$root_headers" "$logo_body" "$logo_headers" "$setup_body" "$profile_body" "$auth_body" "$verification_body" "$indicators_body"' EXIT
 
           for attempt in $(seq 1 24); do
             code="$(curl --silent --show-error --location \
@@ -87,6 +88,14 @@ jobs:
               grep -Eq '"institutionAcronym"[[:space:]]*:[[:space:]]*"UFES"' "$profile_body" || { echo 'Sigla institucional UFES ausente no perfil público.' >&2; cat "$profile_body" >&2; exit 1; }
               grep -Eq '"courseAcronym"[[:space:]]*:[[:space:]]*"ENF"' "$profile_body" || { echo 'Sigla do curso ENF ausente no perfil público.' >&2; cat "$profile_body" >&2; exit 1; }
 
+              indicators_code="$(curl --silent --show-error --location \
+                --connect-timeout 10 --max-time 20 \
+                --output "$indicators_body" --write-out '%{http_code}' "$origin/api/public/indicators" || true)"
+              [ "$indicators_code" = "200" ] || { echo "Indicadores públicos responderam HTTP ${indicators_code:-000}." >&2; cat "$indicators_body" >&2; exit 1; }
+              grep -Eq '"generatedAt"[[:space:]]*:' "$indicators_body" || { echo 'Indicadores públicos sem generatedAt.' >&2; cat "$indicators_body" >&2; exit 1; }
+              grep -Eq '"registered"[[:space:]]*:[[:space:]]*[0-9]+' "$indicators_body" || { echo 'Indicadores públicos sem total cadastrado.' >&2; cat "$indicators_body" >&2; exit 1; }
+              grep -Eq '"containsPersonalData"[[:space:]]*:[[:space:]]*false' "$indicators_body" || { echo 'Contrato de privacidade dos indicadores públicos inválido.' >&2; cat "$indicators_body" >&2; exit 1; }
+
               auth_code="$(curl --silent --show-error --location \
                 --connect-timeout 10 --max-time 20 \
                 --header 'x-demo-user-email: tccenfermagemufes@gmail.com' \
@@ -103,7 +112,7 @@ jobs:
               grep -Eq '"error"[[:space:]]*:[[:space:]]*"Recurso não habilitado nesta instalação\."' "$verification_body" || { echo 'Recurso de autenticidade pública não está no contrato desabilitado esperado.' >&2; cat "$verification_body" >&2; exit 1; }
 
               echo "Produção saudável na revisão esperada: $url"
-              echo "Frontend, PNG institucional, setup, perfil UFES, proteção contra auth demo e módulos fora do escopo desabilitados: aprovados."
+              echo "Frontend, PNG institucional, setup, perfil UFES, indicadores públicos, proteção contra auth demo e módulos fora do escopo desabilitados: aprovados."
               cat "$body"
               exit 0
             fi
