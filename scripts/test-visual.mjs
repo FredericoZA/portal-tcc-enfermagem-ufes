@@ -234,7 +234,7 @@ try {
         if (tab === 'como-chegar' && width >= 1024) {
           const geometry = await page.evaluate(() => {
             const map = document.querySelector('#como-chegar-page-container iframe')?.getBoundingClientRect();
-            const department = document.querySelector('#como-chegar-page-container .portal-layer-card:nth-child(1)')?.getBoundingClientRect();
+            const department = document.querySelector('#como-chegar-page-container .grid > div:nth-child(2) > .portal-layer-card:first-child')?.getBoundingClientRect();
             return map && department ? {mapLeft:map.left,mapWidth:map.width,departmentLeft:department.left,departmentWidth:department.width} : null;
           });
           if (!geometry || geometry.departmentLeft <= geometry.mapLeft || geometry.mapWidth <= geometry.departmentWidth) {
