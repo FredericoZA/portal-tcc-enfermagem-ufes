@@ -4,17 +4,20 @@ import { readFile } from 'node:fs/promises';
 
 const source = (path:string) => readFile(path,'utf8');
 
-test('popup de acesso diferencia discentes dos demais perfis', async () => {
+test('popup de acesso diferencia discentes dos demais usuários sem expor perfis administrativos', async () => {
   const [config, enhancer] = await Promise.all([
     source('src/utils/loginPopupConfig.ts'),
     source('src/components/PortalUiEnhancer.tsx'),
   ]);
   assert.ok(config.includes('se você é discente, utilize seu e-mail institucional @edu.ufes.br.'));
-  assert.ok(config.includes('Master, Presidência, docentes, banca e demais usuários'));
+  assert.ok(config.includes('docentes, integrantes de banca e demais usuários'));
+  assert.ok(!config.includes('Master, Presidência'));
   assert.ok(config.includes('Gmail, Outlook/Hotmail'));
-  assert.ok(config.includes("emailPlaceholder: 'seuemail@exemplo.com'"));
+  assert.ok(config.includes("emailPlaceholder: 'nome@exemplo.com'"));
+  assert.ok(config.includes("subtitle: ''"));
   assert.ok(enhancer.includes("node.textContent = 'Demais usuários:'"));
-  assert.ok(enhancer.includes("node.textContent = 'Orientação dos demais usuários:'"));
+  assert.ok(enhancer.includes('portal-login-access-note'));
+  assert.ok(enhancer.includes("redundantCard.dataset.portalLoginRedundant = 'true'"));
 });
 
 test('solicitação de código repete uma vez somente em falhas transitórias', async () => {
