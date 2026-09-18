@@ -20,11 +20,11 @@ const ExternalAction: React.FC<{
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    className="portal-action-green flex w-full items-center gap-2 rounded-xl border border-[#2d6c50] bg-[#337959] px-3 py-2 text-[10px] font-extrabold uppercase tracking-wide text-white shadow-sm transition hover:brightness-95"
+    className="portal-action-green relative flex min-h-[64px] w-full flex-col items-center justify-center gap-1 rounded-xl border border-[#2d6c50] bg-[#337959] px-2 py-2.5 text-center text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm transition hover:brightness-95"
   >
-    <Icon className="h-4 w-4 shrink-0" />
-    <span className="min-w-0 flex-1 text-left leading-4">{label}</span>
-    <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-80" />
+    <ExternalLink className="absolute right-2 top-2 h-3 w-3 shrink-0 opacity-75" />
+    <Icon className="h-5 w-5 shrink-0" />
+    <span className="leading-3.5">{label}</span>
   </a>
 );
 
@@ -79,7 +79,7 @@ export const ComoChegarPage: React.FC = () => {
                   <p className="mt-1 text-[10px] leading-4 text-slate-600">Os aplicativos de navegação usam a localização atual do dispositivo quando essa permissão estiver disponível.</p>
                 </div>
               </div>
-              <div className="mt-3 grid gap-1.5 sm:grid-cols-3 md:grid-cols-1">
+              <div className="mt-3 grid grid-cols-3 gap-1.5">
                 <ExternalAction href={GOOGLE_MAPS_ROUTE} label="Google Maps" icon={MapPin} />
                 <ExternalAction href={WAZE_ROUTE} label="Waze" icon={Navigation} />
                 <ExternalAction href={UFES_MAP} label="Mapa da UFES" icon={MapIcon} />

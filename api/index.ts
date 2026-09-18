@@ -110,6 +110,7 @@ function unavailable(res: Response, diagnostic: StartupFailure) {
   return res.status(503).json({
     status: 'unavailable',
     code: diagnostic.code,
+    error: diagnostic.message,
     message: diagnostic.message,
     commit: deployedCommit(),
     ...(diagnostic.missingGroups?.length ? { missingGroups: diagnostic.missingGroups } : {}),

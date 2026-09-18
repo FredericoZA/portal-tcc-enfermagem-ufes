@@ -44,7 +44,7 @@ test('Presidência é o contato único de recuperação do Master',async()=>{
   assert.ok(!accounts.includes('setRecoveryEmails'));
 });
 
-test('replicação pública oferece código e downloads de cópias independentes dos modelos',async()=>{
+test('replicação pública oferece repositório e downloads de cópias independentes dos modelos',async()=>{
   const [app,sidebar,page,downloadApi,vercel]=await Promise.all([
     source('src/App.tsx'),
     source('src/components/Sidebar.tsx'),
@@ -54,10 +54,10 @@ test('replicação pública oferece código e downloads de cópias independentes
   ]);
   assert.ok(app.includes("case 'replicar'"));
   assert.ok(sidebar.includes("Replicar Portal"));
-  assert.ok(page.includes('Código do Portal'));
+  assert.ok(page.includes('Abrir no GitHub'));
   assert.ok(page.includes('Modelos do Google Drive'));
   assert.ok(page.includes('/api/public/replication-models/'));
-  assert.ok(page.includes('Baixar modelo'));
+  assert.ok(page.includes('Baixar modelos'));
   assert.ok(downloadApi.includes('getGoogleWorkspaceAccessToken'));
   assert.ok(downloadApi.includes("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
   assert.ok(vercel.includes('/api/public/replication-models/:slug/download'));
