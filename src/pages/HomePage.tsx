@@ -1221,13 +1221,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           {/* Calendar Days Header with synchronized palette */}
                           <div className={`${defStyles.calendarDaysHeaderClass} py-2.5 px-4 sm:px-6 select-none`} style={defStyles.bannerHeaderStyle}>
                             <div className="grid grid-cols-[0.5fr_1.1fr_1.1fr_1.1fr_1.1fr_1.1fr_0.5fr] text-center font-black text-[11px] uppercase tracking-wider">
-                              <div className="text-rose-400">DOM</div>
+                              <div>DOM</div>
                               <div>SEG</div>
                               <div>TER</div>
                               <div>QUA</div>
                               <div>QUI</div>
                               <div>SEX</div>
-                              <div className="opacity-70">SÁB</div>
+                              <div>SÁB</div>
                             </div>
                           </div>
 
@@ -1236,7 +1236,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             <div className="grid grid-cols-[0.5fr_1.1fr_1.1fr_1.1fr_1.1fr_1.1fr_0.5fr] border-l border-t border-slate-200 min-h-[300px]">
               {/* Empty cells before first day */}
               {Array.from({ length: firstDayOfMonth }).map((_, idx) => (
-                <div key={`empty-lead-${idx}`} className="border-r border-b border-slate-200 bg-slate-50/20 h-16 sm:h-20" />
+                <div key={`empty-lead-${idx}`} className="portal-calendar-empty-cell border-r border-b border-slate-200 bg-slate-50/20 h-16 sm:h-20" />
               ))}
 
               {/* Days of current month */}
@@ -1246,8 +1246,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 const hasEvents = totalEvents > 0;
 
                 const dateObj = new Date(year, month, dayNum);
-                const dayOfWeek = dateObj.getDay();
-                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                 const cellIndex = firstDayOfMonth + idx;
                 const rowIndex = Math.floor(cellIndex / 7);
                 const colIndex = cellIndex % 7;
@@ -1269,14 +1267,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         setSelectedDayGcalEvents(dayGcal.length > 0 ? dayGcal : null);
                       }
                     }}
-                    className={`border-r border-b border-slate-200 p-2 flex flex-col justify-between transition-all duration-150 relative group select-none ${
+                    className={`portal-calendar-day-cell border-r border-b border-slate-200 p-2 flex flex-col justify-between transition-all duration-150 relative group select-none ${
                       hasEvents
                         ? isPastDay
                           ? 'bg-slate-100/90 hover:bg-slate-200/80 border-slate-300 cursor-pointer h-16 sm:h-20 shadow-2xs text-slate-500 active:scale-[0.98]'
                           : 'bg-slate-100/80 hover:bg-slate-200/90 border-slate-300 cursor-pointer h-16 sm:h-20 shadow-2xs active:scale-[0.98]'
-                        : isWeekend
-                          ? 'bg-slate-100/60 text-slate-400 h-16 sm:h-20 opacity-65'
-                          : 'bg-white hover:bg-slate-50 border-slate-200 cursor-default h-16 sm:h-20'
+                        : 'bg-white hover:bg-slate-50 border-slate-200 cursor-default h-16 sm:h-20'
                     }`}
                     title={hasEvents ? `Clique para abrir as ${totalEvents} defesas do dia ${dayNum}` : undefined}
                   >
@@ -1290,9 +1286,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                               ? isPastDay
                                 ? 'text-slate-500 bg-slate-200 font-extrabold'
                                 : 'text-slate-900 bg-slate-200/80 font-extrabold'
-                              : isWeekend
-                                ? 'text-slate-400'
-                                : 'text-slate-700 font-bold'
+                              : 'text-slate-700 font-bold'
                         }`}
                       >
                         {dayNum}
