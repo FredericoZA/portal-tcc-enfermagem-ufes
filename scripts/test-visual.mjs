@@ -168,6 +168,32 @@ try {
         ['configuracoes', 'configuracoes']
       ]) {
         await navigate(page, tab);
+        if (tab === 'calendario') {
+          const calendarVisual = await page.evaluate(() => {
+            const cells = Array.from(document.querySelectorAll('.portal-calendar-day-cell'));
+            const colors = Array.from(new Set(cells.map((cell) => getComputedStyle(cell).backgroundColor)));
+            const filterRow = document.querySelector('#public-calendar-cards-section > div > div:first-child > div:last-child');
+            const filterStyle = filterRow ? getComputedStyle(filterRow) : null;
+            return {
+              cellCount: cells.length,
+              colors,
+              divider: filterStyle ? parseFloat(filterStyle.borderTopWidth || '0') : 0,
+              paddingTop: filterStyle ? parseFloat(filterStyle.paddingTop || '0') : 0
+            };
+          });
+          if (calendarVisual.cellCount < 28 || calendarVisual.colors.length !== 1) {
+            report.errors.push(`master-calendario-${width}: dias do mês não usam uma única cor base (${JSON.stringify(calendarVisual)}).`);
+          }
+          if (calendarVisual.divider < 2 || calendarVisual.paddingTop < 8) {
+            report.errors.push(`master-calendario-${width}: divisor/filtros fora do padrão forte (${JSON.stringify(calendarVisual)}).`);
+          }
+        }
+        if (tab === 'fluxo-tcc' && width >= 1440) {
+          const fluxoWidth = await page.evaluate(() => Math.round(document.querySelector('#fluxo-tcc-page')?.getBoundingClientRect().width || 0));
+          if (!fluxoWidth || fluxoWidth > 1100) {
+            report.errors.push(`master-fluxo-tcc-${width}: largura da tela de referência foi alterada (${fluxoWidth}px).`);
+          }
+        }
         if (['indicadores', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'].includes(tab)) {
           const headerGap = await page.evaluate((currentTab) => {
             const ids = {
