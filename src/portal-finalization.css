@@ -451,7 +451,7 @@
 }
 
 #formal-monthly-calendar-section .portal-calendar-day-cell:hover {
-  background: #c9d2d7 !important;
+  background: var(--portal-layer-card) !important;
 }
 
 #formal-monthly-calendar-section > div > div:nth-child(2) > div > div > div:first-child .grid > div {
