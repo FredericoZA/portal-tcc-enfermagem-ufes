@@ -29,7 +29,7 @@ function normalizeLayout(allColumns: ColumnDef[], order: string[], visible: Reco
 }
 
 async function preferenceRequest(storageKey: string, init?: RequestInit) {
-  const response = await fetch(`/api/table-preferences?table=${encodeURIComponent(storageKey)}`, {
+  const response = await fetch(`/api/preferences/table?table=${encodeURIComponent(storageKey)}`, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
     ...init,
