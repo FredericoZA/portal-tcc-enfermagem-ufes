@@ -41,6 +41,7 @@ export default function App() {
   const [emergencySecretKeyParam] = useState('');
   const processDialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const lastRoutedIdentityRef = useRef('');
 
   const handleSelectProcess = (id: string, readOnly = false) => {
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -63,6 +64,26 @@ export default function App() {
     window.addEventListener('portal:navigate', navigate);
     return () => window.removeEventListener('portal:navigate', navigate);
   }, []);
+
+  useEffect(() => {
+    const routeAfterIdentity = (event: Event) => {
+      const detail = (event as CustomEvent<{ userEmail?: string; globalRoles?: string[]; isAuthenticated?: boolean }>).detail || {};
+      const email = String(detail.userEmail || '').trim().toLowerCase();
+      if (!detail.isAuthenticated || !email) {
+        lastRoutedIdentityRef.current = '';
+        return;
+      }
+      if (lastRoutedIdentityRef.current === email && currentTab !== 'acessar-portal') return;
+      lastRoutedIdentityRef.current = email;
+      const roles = Array.isArray(detail.globalRoles) ? detail.globalRoles : [];
+      setSelectedProcessId(null);
+      if (roles.includes('MASTER_ADMIN')) setCurrentTab('configuracoes');
+      else if (roles.includes('COMMISSION_PRESIDENT')) setCurrentTab('coordenador');
+      else setCurrentTab('meus-processos');
+    };
+    window.addEventListener('portal:identity', routeAfterIdentity);
+    return () => window.removeEventListener('portal:identity', routeAfterIdentity);
+  }, [currentTab]);
 
   useEffect(() => {
     if (currentTab !== 'acessar-portal') return;
