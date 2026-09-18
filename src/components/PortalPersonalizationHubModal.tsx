@@ -8,8 +8,8 @@ interface Props {
 
 /**
  * Compatibilidade temporária para chamadas antigas.
- * O hub intermediário foi removido: a ação Personalização abre diretamente
- * o editor completo, que passa a ser a única superfície de configuração.
+ * A personalização agora abre diretamente na primeira tela real do Portal,
+ * evitando a antiga configuração geral/tema pronto e mantendo o fluxo tela a tela.
  */
 export const PortalPersonalizationHubModal: React.FC<Props> = ({
   isOpen,
@@ -19,7 +19,7 @@ export const PortalPersonalizationHubModal: React.FC<Props> = ({
   useEffect(() => {
     if (!isOpen) return;
     onClose();
-    onOpenAppearance('quick_presets');
+    onOpenAppearance('site_header');
   }, [isOpen, onClose, onOpenAppearance]);
 
   return null;
