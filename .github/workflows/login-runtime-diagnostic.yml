@@ -1,0 +1,38 @@
+name: Login runtime diagnostic
+
+on:
+  push:
+    branches:
+      - work/ajustes-publicos-40
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Testar runtime e solicitação de código sem envio de e-mail
+        shell: bash
+        run: |
+          set -euo pipefail
+          origin="https://portal-tcc-enfermagem-ufes.vercel.app"
+          health="$(mktemp)"
+          login="$(mktemp)"
+          trap 'rm -f "$health" "$login"' EXIT
+
+          health_code="$(curl --silent --show-error --location --connect-timeout 10 --max-time 20 --output "$health" --write-out '%{http_code}' "$origin/api/health" || true)"
+          echo "health HTTP $health_code"
+          cat "$health"
+          [ "$health_code" = "200" ] || exit 1
+
+          login_code="$(curl --silent --show-error --location --connect-timeout 10 --max-time 20 \
+            --header 'content-type: application/json' \
+            --data '{"email":"smoke-login-probe@example.invalid"}' \
+            --output "$login" --write-out '%{http_code}' \
+            "$origin/api/auth/request-code" || true)"
+          echo "request-code HTTP $login_code"
+          cat "$login"
+          [ "$login_code" = "200" ] || exit 1
+          grep -Eq '"sent"[[:space:]]*:[[:space:]]*true' "$login"
