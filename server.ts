@@ -13,6 +13,7 @@ import { buildInstitutionalReport, institutionalReportTheme } from './server/ins
 import { saveRegistrationDraft, pruneDrafts, DraftConflict } from './server/workflow/drafts';
 import { workflowPolicy, registrationFindings } from './src/utils/workflowOperations';
 import { publicCalendarView, publicLegacyProcessView, publicRepositoryView } from './server/publicViews';
+import { buildPublicIndicators } from './server/publicIndicators';
 import type { RegistrationDraft, ReminderRecord } from './src/types/workflowOperations';
 import { buildAdvancedAnalytics, analyticsCsv, analyticsMarkdown } from './server/advancedAnalytics';
 import { simulateWorkflow } from './server/workflow/simulator';
@@ -1363,6 +1364,21 @@ export async function createPortalApp() {
   });
 
   app.get('/api/public/installation-profile',(_req,res)=>res.json(resolveInstallationProfile(currentSettings)));
+  app.get('/api/public/indicators',async(_req,res)=>{
+    res.setHeader('Cache-Control','public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+    try{
+      if(getSupabaseRuntimeStatus().durablePersistenceReady){
+        await remotePersistenceQueue;
+        const remote=await loadPortalRuntimeState<PersistedPortalState>();
+        if(remote)applyPersistedState(remote);
+      }
+      res.json(buildPublicIndicators(processesStore));
+    }catch(error){
+      console.error('[Indicadores públicos] Falha ao gerar estatísticas:',error);
+      res.status(503).json({error:'Os indicadores estão temporariamente indisponíveis.'});
+    }
+  });
+
   app.get('/api/admin/installation-profile',requireAuthenticated,requireAdministrator,(_req,res)=>res.json({profile:resolveInstallationProfile(currentSettings),updatedAt:currentSettings.updatedAt}));
   app.patch('/api/admin/installation-profile',requireAuthenticated,requireAdministrator,(req,res)=>{
     const identity=getPortalIdentity(req)!;if(req.body?.expectedUpdatedAt&&req.body.expectedUpdatedAt!==currentSettings.updatedAt)return res.status(409).json({error:'A configuração foi alterada em outra sessão. Recarregue antes de salvar.'});
