@@ -39,7 +39,8 @@ assert.match(auth, /ApiRequestError/);
 assert.match(auth, /window\.addEventListener\('online'/);
 assert.match(auth, /syncPortalFavicon/);
 
-assert.match(personalizationHub, /onOpenAppearance\('quick_presets'\)/);
+assert.match(personalizationHub, /onOpenAppearance\('site_header'\)/);
+assert.doesNotMatch(personalizationHub, /onOpenAppearance\('quick_presets'\)/);
 assert.doesNotMatch(personalizationHub, /role="dialog"/);
 for (const legacy of ['botoes no topo', 'estilo base das planilhas', 'colunas ordem e linhas', 'estilo base pop ups', 'analise hipoar', 'solicitacao de correcao']) {
   assert.ok(enhancer.includes(`'${legacy}'`), `A camada de compatibilidade precisa continuar removendo o item legado “${legacy}”.`);
@@ -50,7 +51,7 @@ for (const removedLabel of ['Botões no Topo', 'Estilo Base Planilhas', 'Colunas
 for (const canonicalSheet of ["sheet_calendar", "sheet_repository", "sheet_my_tccs", "sheet_coordinator"]) assert.ok(editor.includes(canonicalSheet));
 
 assert.match(access, /Matrícula — opcional/);
-assert.match(access, /Interpretar dados colados/);
+assert.match(access, /Cole dados do Excel/);
 assert.doesNotMatch(access, />Tipo</);
 assert.doesNotMatch(access, />TCCs</);
 assert.match(importUtil, /parseStudentImportText/);
