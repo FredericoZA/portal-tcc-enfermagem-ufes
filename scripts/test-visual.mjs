@@ -168,6 +168,16 @@ try {
         ['configuracoes', 'configuracoes']
       ]) {
         await navigate(page, tab);
+        const routeSelectors = {
+          indicadores: '#indicadores-publicos-page',
+          'como-chegar': '#como-chegar-page-container',
+          tutorial: '#portal-tutorial-page',
+          'fluxo-tcc': '#fluxo-tcc-page',
+          replicar: '#portal-replication-page'
+        };
+        if (routeSelectors[tab]) {
+          await page.locator(routeSelectors[tab]).waitFor({ state: 'visible', timeout: 6000 });
+        }
         if (tab === 'calendario') {
           const calendarVisual = await page.evaluate(() => {
             const cells = Array.from(document.querySelectorAll('.portal-calendar-day-cell'));
