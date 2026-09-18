@@ -1,0 +1,69 @@
+/* Update 39 — ajustes de densidade, filtros e governança da tela de Configurações. */
+
+/* Deixa uma faixa verde visível após os chips de filtro. */
+.portal-meus-processos-filter-row,
+.portal-coordinator-filter-row {
+  padding-bottom: 0.95rem !important;
+}
+
+/* A antiga ficha duplicada de Master/Presidência é substituída pelo painel único. */
+[data-portal-legacy-administration='true'],
+[data-portal-personalization-removed='true'] {
+  display: none !important;
+}
+
+/* Personalização passa a operar por tela, sem destaque centralizado artificial. */
+.portal-customization-title-left {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  text-align: left !important;
+}
+
+.portal-customization-top-action {
+  background: #fff !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+.portal-customization-top-action:hover:not(:disabled) {
+  background: #f8fafc !important;
+}
+
+/* Para a Presidência, Configurações expõe somente a transferência segura do Master. */
+html[data-portal-settings-role='president-only'] #configuracoes-page-container > section {
+  display: none !important;
+}
+
+html[data-portal-settings-role='president-only'] #configuracoes-page-container > #google-workspace-sync-section {
+  display: block !important;
+}
+
+html[data-portal-settings-role='president-only'] #google-workspace-sync-section .portal-administration-details,
+html[data-portal-settings-role='president-only'] #google-workspace-sync-section #infrastructure-integrations-panel,
+html[data-portal-settings-role='president-only'] #google-workspace-sync-section #authorized-access-panel,
+html[data-portal-settings-role='president-only'] #google-workspace-sync-section [data-portal-legacy-administration='true'] {
+  display: none !important;
+}
+
+html[data-portal-settings-role='president-only'] .portal-commission-identity-panel {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+html[data-portal-settings-role='president-only'] .portal-president-master-transfer {
+  display: block !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 0.75rem !important;
+  background: #e1e6e9 !important;
+}
+
+/* Mantém os novos painéis de administração mais densos em telas largas. */
+@media (min-width: 1024px) {
+  #infrastructure-integrations-panel,
+  #authorized-access-panel,
+  .portal-commission-identity-panel {
+    font-size: 0.95em;
+  }
+}
