@@ -91,6 +91,11 @@ function syncPortalFavicon(siteConfig: any) {
   appleLinks.forEach((link) => { link.href = href; });
 }
 
+function publishIdentity(identity: { userEmail: string; globalRoles: GlobalRole[]; memberships: ProcessMembership[]; isAuthenticated: boolean }) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('portal:identity', { detail: identity }));
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [userEmail, setUserEmailState] = useState<string>(getActiveUserEmail());
   const [globalRoles, setGlobalRoles] = useState<GlobalRole[]>([]);
@@ -125,6 +130,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       memberships: meRes.memberships,
       isAuthenticated: true
     }); else clearCachedIdentity();
+    publishIdentity({
+      userEmail: meRes.userEmail,
+      globalRoles: meRes.globalRoles as GlobalRole[],
+      memberships: meRes.memberships as ProcessMembership[],
+      isAuthenticated: meRes.isAuthenticated,
+    });
   };
 
   const clearIdentity = () => {
@@ -133,6 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAuthenticated(false);
     setGlobalRoles([]);
     setMemberships([]);
+    publishIdentity({ userEmail: '', globalRoles: [], memberships: [], isAuthenticated: false });
   };
 
   const refreshAuth=async()=>{
@@ -147,6 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthenticated(true);
         setGlobalRoles(cached.globalRoles);
         setMemberships(cached.memberships);
+        publishIdentity(cached);
         return;
       }
       console.warn('Sessão não confirmada; mantendo o Portal em modo público.',err);
