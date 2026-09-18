@@ -325,21 +325,25 @@ try {
             const rect = row?.getBoundingClientRect();
             const parent = row?.parentElement?.getBoundingClientRect();
             const register = document.querySelector('#meus-processos-btn-novo');
-            const search = document.querySelector('#meus-processos-page-container button[aria-label^="Buscar registros"]');
-            const refresh = document.querySelector('#meus-processos-page-container button[title="Atualizar dados da tabela"]');
-            const before = (a, b) => Boolean(a && b && (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING));
+            const actionRoot = register?.parentElement;
+            const search = actionRoot?.querySelector('button[aria-label^="Buscar registros"]');
+            const refresh = actionRoot?.querySelector('button[title="Atualizar dados da tabela"]');
+            const registerRect = register?.getBoundingClientRect();
+            const searchRect = search?.getBoundingClientRect();
+            const refreshRect = refresh?.getBoundingClientRect();
             return {
               divider: style ? parseFloat(style.borderTopWidth || '0') : 0,
               dividerColor: style?.borderTopColor || '',
               fullWidth: Boolean(rect&&parent&&Math.abs(rect.left-parent.left)<=1&&Math.abs(rect.right-parent.right)<=1),
-              orderOk: !register || (before(register,search) && before(search,refresh))
+              hasRegister: Boolean(register),
+              orderOk: !registerRect || Boolean(searchRect&&refreshRect&&registerRect.left < searchRect.left&&searchRect.left < refreshRect.left)
             };
           });
           if (tccUi.divider < 2 || tccUi.dividerColor !== 'rgb(255, 255, 255)' || !tccUi.fullWidth) {
             report.errors.push(`master-meus-tccs-${width}: divisor branco não ocupa o cabeçalho inteiro (${JSON.stringify(tccUi)}).`);
           }
-          if (!tccUi.orderOk) {
-            report.errors.push(`master-meus-tccs-${width}: Cadastrar TCC não precede os controles padrão.`);
+          if (tccUi.hasRegister && !tccUi.orderOk) {
+            report.errors.push(`master-meus-tccs-${width}: Cadastrar TCC não precede os controles padrão (${JSON.stringify(tccUi)}).`);
           }
         }
         if (tab === 'configuracoes') {
