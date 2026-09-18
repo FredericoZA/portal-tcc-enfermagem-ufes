@@ -146,6 +146,7 @@
 #infrastructure-integrations-panel .bg-\[\#d5dce0\] {
   border-color: #bcc8cf !important;
 }
+[data-portal-legacy-administration="true"] { display: none !important; }
 
 /* Modelos e variáveis: remover cores alheias ao sistema e reforçar áreas de trabalho. */
 .portal-master-document-models {
