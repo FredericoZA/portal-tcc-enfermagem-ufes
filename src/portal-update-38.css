@@ -1,16 +1,9 @@
 /* Atualização 38 — pequenos refinamentos visuais pós-homologação. */
 
-/* O destaque fluorescente do item ativo precisa preencher toda a borda esquerda
- * do botão. O próprio overflow do botão recorta a faixa no raio externo. */
-#sidebar-nav .portal-sidebar-nav-active::before {
-  left: -1px !important;
-  top: -1px !important;
-  bottom: -1px !important;
-  width: 8px !important;
-  border-radius: 0 !important;
-  background: var(--portal-sidebar-accent) !important;
-  box-shadow: 2px 0 8px rgba(116,255,150,.38) !important;
-}
+/* O destaque ativo da barra lateral permanece sob responsabilidade do estilo
+ * canônico de src/portal-finalization.css, que corresponde ao acabamento
+ * aprovado na versão 1.0.36. Atualizações posteriores não devem engrossar
+ * essa faixa sem uma nova decisão visual explícita. */
 
 /* Os quatro atalhos de modelos no Replicar Portal usam a mesma linguagem de
  * ação verde do botão Abrir no GitHub e não criam uma quinta camada visual. */
