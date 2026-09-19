@@ -17,12 +17,20 @@ jobs:
           ref: work/ajustes-planilhas-presidente-v1038
           fetch-depth: 0
       - name: Aplicar ajuste restrito a Meus TCCs
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
           p=Path('src/pages/MeusProcessosPage.tsx')
           s=p.read_text()
           old='''      case 'progresso':
+                return (
+                  <td key="progresso" className={`${styles.cellPadClass} ${widthClass} text-center align-middle ${styles.borderClass}`}>
+                    <ProgressIndicator percent={progress.percent} label={progress.label} textFormat={meusProcessosTextFormat} />
+                  </td>
+                );'''
+          if old not in s:
+              old='''      case 'progresso':
         return (
           <td key="progresso" className={`${styles.cellPadClass} ${widthClass} text-center align-middle ${styles.borderClass}`}>
             <ProgressIndicator percent={progress.percent} label={progress.label} textFormat={meusProcessosTextFormat} />
@@ -44,9 +52,18 @@ jobs:
 
           t=Path('server/update44FinalPolishContract.test.ts')
           q=t.read_text()
-          q=q.replace("  const indicator=read('src/components/ProgressIndicator.tsx');\n  assert.match(p,/key: 'progresso', label: 'Etapa'/);\n  assert.match(indicator,/portal-stage-number/);\n  assert.doesNotMatch(indicator,/>\\s*\\{value\\}%\\s*</);", "  assert.match(p,/key: 'progresso', label: 'Etapa'/);\n  assert.match(p,/portal-stage-number/);\n  assert.match(p,/stageNumber = getStepNumberLabel/);")
-          t.write_text(q)
+          old_test="""  const indicator=read('src/components/ProgressIndicator.tsx');
+          assert.match(p,/key: 'progresso', label: 'Etapa'/);
+          assert.match(indicator,/portal-stage-number/);
+          assert.doesNotMatch(indicator,/>\\s*\\{value\\}%\\s*</);"""
+          new_test="""  assert.match(p,/key: 'progresso', label: 'Etapa'/);
+          assert.match(p,/portal-stage-number/);
+          assert.match(p,/stageNumber = getStepNumberLabel/);"""
+          if old_test not in q:
+              raise SystemExit('Contrato de etapa não encontrado')
+          t.write_text(q.replace(old_test,new_test))
           Path('.github/workflows/scope-stage44.yml').unlink()
+          PY
       - name: Commitar ajuste
         run: |
           git config user.name "github-actions[bot]"
