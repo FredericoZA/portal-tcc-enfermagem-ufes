@@ -88,9 +88,10 @@
 .portal-table-settings-popover{background:#f8faf9!important;}
 .portal-table-settings-popover input[type="checkbox"]{accent-color:#337959;}
 
-/* Filtros menos fluorescentes. */
-.portal-standard-filter-chip{filter:saturate(.58) brightness(.99);}
-.portal-standard-filter-chip:hover{filter:saturate(.68) brightness(1);}
+/* Filtros de situação: preserva a semântica das cores, reduzindo a fluorescência. */
+.portal-table-filter-chip{filter:saturate(.56) brightness(.98)!important;box-shadow:none!important;}
+.portal-table-filter-chip:hover,
+.portal-table-filter-chip[data-selected="true"]{filter:saturate(.66) brightness(.99)!important;}
 
 /* Meus TCCs: pílula do processo acompanha o vínculo, sem tingir a linha inteira. */
 #meus-processos-table [data-portal-role-pill="student"]{background:#f3ead0!important;border-color:#b99a47!important;color:#5f4b13!important;}
