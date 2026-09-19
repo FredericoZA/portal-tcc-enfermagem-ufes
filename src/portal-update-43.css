@@ -222,8 +222,12 @@
 #audit-logs-page .portal-spreadsheet-table thead tr,
 #audit-logs-page .portal-spreadsheet-table thead th{background:#005830!important;color:#fff!important;}
 
-/* Linha branca contínua entre o cabeçalho e a primeira linha de dados. */
-.portal-spreadsheet-table tbody tr:first-child>td{border-top:3px solid #fff!important;}
+/* Linha branca contínua entre o cabeçalho e a primeira linha de dados.
+   O box-shadow interno garante a separação mesmo com border-collapse e bordas das células. */
+.portal-spreadsheet-table tbody tr:first-child>td{
+  border-top:3px solid #fff!important;
+  box-shadow:inset 0 3px 0 #fff!important;
+}
 
 /* O item Logs usa exatamente a mesma faixa fina dos demais itens ativos. */
 #sidebar-nav .portal-sidebar-logs-active::before{
