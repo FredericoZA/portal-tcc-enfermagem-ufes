@@ -53,7 +53,6 @@ function applyFilters(table:HTMLTableElement){
   const rows=Array.from(table.tBodies[0]?.rows || []);
   rows.forEach(row=>{
     const visible=Array.from(state.filters.entries()).every(([key,allowed])=>{
-      if(!allowed.size)return true;
       const index=headers.findIndex((th,i)=>keyForHeader(th as HTMLTableCellElement,i)===key);
       return index<0 || allowed.has(cellValue(row,index));
     });
@@ -61,7 +60,7 @@ function applyFilters(table:HTMLTableElement){
   });
   headers.forEach((th,i)=>{
     const key=keyForHeader(th as HTMLTableCellElement,i);
-    th.classList.toggle('portal-column-filter-active',Boolean(state.filters.get(key)?.size));
+    th.classList.toggle('portal-column-filter-active',state.filters.has(key));
   });
 }
 
@@ -99,9 +98,9 @@ function openFilterPopup(table:HTMLTableElement,th:HTMLTableCellElement,index:nu
     list.replaceChildren();
     values.filter(value=>value.toLocaleLowerCase('pt-BR').includes(term.toLocaleLowerCase('pt-BR'))).forEach(value=>{
       const label=document.createElement('label');label.className='portal-column-filter-value';
-      const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=!current||!current.size||current.has(value);
+      const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=!current||current.has(value);
       checkbox.addEventListener('change',()=>{
-        const allowed=state.filters.get(key)||new Set(values);
+        const allowed=state.filters.has(key)?new Set(state.filters.get(key)!):new Set(values);
         if(checkbox.checked)allowed.add(value);else allowed.delete(value);
         if(allowed.size===values.length)state.filters.delete(key);else state.filters.set(key,allowed);
         applyFilters(table);
@@ -196,7 +195,15 @@ async function enhanceCalendar(){
     cell.querySelector('.portal-calendar-preview-list')?.remove();if(!events.length)return;
     const oldCounter=Array.from(cell.children).find(child=>(child.textContent||'').toUpperCase().includes('DEFESA'));if(oldCounter)oldCounter.remove();
     const list=document.createElement('div');list.className='portal-calendar-preview-list';
-    events.slice(0,2).forEach(proc=>{const item=document.createElement('div');const defended=proc.status==='CONCLUIDO'||proc.status==='EM_AVALIACAO'||new Date(proc.defesa.startAt).getTime()<Date.now();item.className=`portal-calendar-preview ${defended?'is-defended':'is-upcoming'}`;const title=normalize(proc.titulo||'TCC');const local=normalize(proc.defesa?.local||'Local a confirmar');item.innerHTML=`<strong title="${title.replace(/"/g,'&quot;')}">${title}</strong><span>${timeLabel(proc.defesa.startAt)} · ${local}</span>`;list.appendChild(item);});
+    events.slice(0,2).forEach(proc=>{
+      const item=document.createElement('div');
+      const defended=proc.status==='CONCLUIDO'||proc.status==='COMPLETED'||proc.status==='EM_AVALIACAO'||proc.status==='AWAITING_EVALUATION'||new Date(proc.defesa.startAt).getTime()<Date.now();
+      item.className=`portal-calendar-preview ${defended?'is-defended':'is-upcoming'}`;
+      const title=normalize(proc.titulo||'TCC');const local=normalize(proc.defesa?.local||'Local a confirmar');
+      const strong=document.createElement('strong');strong.textContent=title;strong.title=title;
+      const meta=document.createElement('span');meta.textContent=`${timeLabel(proc.defesa.startAt)} · ${local}`;
+      item.append(strong,meta);list.appendChild(item);
+    });
     if(events.length>2){const more=document.createElement('span');more.className='portal-calendar-preview-more';more.textContent=`+${events.length-2} defesa(s)`;list.appendChild(more);}cell.appendChild(list);
   });
 }
