@@ -60,7 +60,7 @@ interface MeusProcessosPageProps {
 const ALL_MEUS_PROCESSOS_COLUMNS: ColumnDef[] = [
   { key: 'protocolo', label: 'Nº Processo', isFixed: true },
   { key: 'defesaDataHora', label: 'Data e Horário' },
-  { key: 'progresso', label: 'Progresso' },
+  { key: 'progresso', label: 'Etapa' },
   { key: 'titulo', label: 'Título do Trabalho' },
   { key: 'aluno1', label: 'Aluno 1' },
   { key: 'aluno2', label: 'Aluno 2' },
@@ -517,7 +517,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
           switch (k) {
             case 'protocolo': return `"${p.protocolo}"`;
             case 'defesaDataHora': return `"${p.defesa?.startAt ? `${formatDateNumeric(p.defesa.startAt)} ${formatTimeExtenso(p.defesa.startAt)}` : 'A definir'}"`;
-            case 'progresso': return `"${progress.percent}% - ${getStepNumberLabel(progress.label)}"`;
+            case 'progresso': return `"${getStepNumberLabel(progress.label).replace('Fase ', '')}"`;
             case 'titulo': return `"${(p.titulo || '').replace(/"/g, '""')}"`;
             case 'aluno1': return `"${cleanPersonName(p.aluno1?.nome || '').replace(/"/g, '""')}"`;
             case 'aluno2': return `"${cleanPersonName(p.aluno2?.nome || '').replace(/"/g, '""')}"`;
@@ -660,12 +660,16 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
             <div className="text-[9.5px] text-slate-500 font-mono font-medium">{formatTimeExtenso(proc.defesa?.startAt)}</div>
           </td>
         );
-      case 'progresso':
+      case 'progresso': {
+        const stageNumber = getStepNumberLabel(progress.label).replace('Fase ', '') || '—';
         return (
           <td key="progresso" className={`${styles.cellPadClass} ${widthClass} text-center align-middle ${styles.borderClass}`}>
-            <ProgressIndicator percent={progress.percent} label={progress.label} textFormat={meusProcessosTextFormat} />
+            <span className="portal-stage-number inline-flex min-w-[24px] items-center justify-center text-[11px] font-semibold tabular-nums text-slate-600" title={progress.label} aria-label={progress.label}>
+              {stageNumber}
+            </span>
           </td>
         );
+      }
       case 'titulo':
         return (
           <td key="titulo" className={`${styles.cellPadClass} ${widthClass} ${styles.cellWeightClass} ${styles.cellTextColorClass} ${alignClass} ${styles.borderClass} align-middle`}>

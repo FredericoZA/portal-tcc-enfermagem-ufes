@@ -241,7 +241,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   // Filter pending vs completed
   const pendingItems = queue.filter(item => {
     const term = searchFilter.toLowerCase();
-    const p = item.process;
+    const p = item?.process;
+    if (!p) return false;
     const defenseDate = p.defesa?.startAt?.slice(0, 10) || '';
     if (startDate && (!defenseDate || defenseDate < startDate)) return false;
     if (endDate && (!defenseDate || defenseDate > endDate)) return false;
@@ -699,10 +700,11 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     }
   };
 
-  const getSortedAndFilteredItems = (items: any[]) => {
+  const getSortedAndFilteredItems = (items: any[], wrappedQueueItem: boolean) => {
     return [...items].sort((itemA, itemB) => {
-      const pA = activeTab === 'pendentes' ? itemA.process : itemA;
-      const pB = activeTab === 'pendentes' ? itemB.process : itemB;
+      const pA = wrappedQueueItem ? itemA?.process : itemA;
+      const pB = wrappedQueueItem ? itemB?.process : itemB;
+      if (!pA || !pB) return 0;
 
       let valA: any = '';
       let valB: any = '';
@@ -713,8 +715,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
           valB = pB.protocolo || pB.id || '';
           break;
         case 'envioStatus':
-          valA = activeTab === 'pendentes' ? 'Aguardando Envio' : 'Enviado';
-          valB = activeTab === 'pendentes' ? 'Aguardando Envio' : 'Enviado';
+          valA = wrappedQueueItem ? 'Aguardando Envio' : 'Enviado';
+          valB = wrappedQueueItem ? 'Aguardando Envio' : 'Enviado';
           break;
         case 'defesaDataHora':
           valA = pA.defesa?.startAt || '';
@@ -779,8 +781,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     });
   };
 
-  const sortedPending = getSortedAndFilteredItems(pendingItems);
-  const sortedCompleted = getSortedAndFilteredItems(completedItems);
+  const sortedPending = getSortedAndFilteredItems(pendingItems, true);
+  const sortedCompleted = getSortedAndFilteredItems(completedItems, false);
 
   const limitedPending = recordsLimit === 'all' ? sortedPending : sortedPending.slice(0, recordsLimit);
   const limitedCompleted = recordsLimit === 'all' ? sortedCompleted : sortedCompleted.slice(0, recordsLimit);

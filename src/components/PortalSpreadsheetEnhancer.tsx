@@ -139,6 +139,12 @@ function enhanceMeusProcessos(table:HTMLTableElement){
     const pill=row.cells[0]?.querySelector<HTMLElement>(':scope > div');if(pill)pill.dataset.portalRolePill=category;
   });
   const headers=Array.from(table.tHead?.rows[0]?.cells||[]);
+  const progressHeader=headers.find(th=>normalize(th.textContent||'').toLowerCase()==='progresso') as HTMLTableCellElement|undefined;
+  if(progressHeader){
+    const label=Array.from(progressHeader.querySelectorAll<HTMLElement>('span')).find(node=>normalize(node.textContent||'').toLowerCase()==='progresso');
+    if(label)label.textContent='Etapa';
+    progressHeader.dataset.portalColumnLabel='Etapa';
+  }
   const dateIndex=headers.findIndex(th=>normalize(th.textContent||'').toLowerCase().includes('data e horário'));
   if(dateIndex>=0)Array.from(table.tBodies[0]?.rows||[]).forEach(row=>row.cells[dateIndex]?.classList.add('portal-date-cell-sober'));
 }
@@ -151,11 +157,16 @@ function enhanceTable(table:HTMLTableElement){
   cleanTableDecorations(table);enhanceMeusProcessos(table);
   Array.from(headerRow.cells).forEach((th,index)=>{
     const header=th as HTMLTableCellElement;const key=keyForHeader(header,index);
-    if(header.querySelector(':scope > .portal-column-controls'))return;
+    if(header.querySelector('.portal-column-controls'))return;
     const controls=document.createElement('span');controls.className='portal-column-controls';
-    const sort=document.createElement('button');sort.type='button';sort.className='portal-column-sort';sort.title='Ordenar esta coluna';sort.setAttribute('aria-label',`Ordenar ${header.dataset.portalColumnLabel||'coluna'}`);sort.innerHTML=SORT_ICON;sort.addEventListener('click',event=>{event.stopPropagation();sortTable(table,key,index);});
+    const labelHost=header.querySelector<HTMLElement>(':scope > div')||header;
+    labelHost.classList.add('portal-column-header-content');
+    const hasNativeSort=header.classList.contains('cursor-pointer')||header.dataset.portalNativeSort==='true'||Boolean(header.querySelector('[data-portal-sort],button[aria-label*="Ordenar"]'));
+    if(!hasNativeSort){
+      const sort=document.createElement('button');sort.type='button';sort.className='portal-column-sort';sort.title='Ordenar esta coluna';sort.setAttribute('aria-label',`Ordenar ${header.dataset.portalColumnLabel||'coluna'}`);sort.innerHTML=SORT_ICON;sort.addEventListener('click',event=>{event.stopPropagation();sortTable(table,key,index);});controls.appendChild(sort);
+    }
     const filter=document.createElement('button');filter.type='button';filter.className='portal-column-filter';filter.title='Filtrar valores desta coluna';filter.setAttribute('aria-label',`Filtrar ${header.dataset.portalColumnLabel||'coluna'}`);filter.innerHTML=FILTER_ICON;filter.addEventListener('click',event=>{event.stopPropagation();openFilterPopup(table,header,index,filter);});
-    controls.append(sort,filter);header.appendChild(controls);
+    controls.appendChild(filter);labelHost.appendChild(controls);
   });
   applyFilters(table);
 }

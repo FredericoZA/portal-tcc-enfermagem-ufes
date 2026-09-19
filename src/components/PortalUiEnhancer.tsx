@@ -123,6 +123,7 @@ function ensureLogsSidebarButton() {
   const active = Boolean(document.getElementById('audit-logs-page'));
   if (existing) {
     existing.classList.toggle('portal-sidebar-logs-active', active);
+    existing.classList.toggle('portal-sidebar-nav-active', active);
     existing.setAttribute('aria-current', active ? 'page' : 'false');
     return;
   }
@@ -130,7 +131,7 @@ function ensureLogsSidebarButton() {
   const button = document.createElement('button');
   button.type = 'button';
   button.id = 'nav-item-logs';
-  button.className = `${configButton.className} portal-sidebar-logs-item${active ? ' portal-sidebar-logs-active' : ''}`;
+  button.className = `${configButton.className} portal-sidebar-logs-item${active ? ' portal-sidebar-logs-active portal-sidebar-nav-active' : ''}`;
   button.innerHTML = '<div class="flex items-center gap-3"><span class="text-base shrink-0 leading-none" aria-hidden="true">🧾</span><span>Registro de logs</span></div>';
   button.title = 'Registro de logs e auditoria';
   button.setAttribute('aria-label', 'Registro de logs e auditoria');
