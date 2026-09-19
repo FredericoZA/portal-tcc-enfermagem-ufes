@@ -24,6 +24,14 @@
   font-weight:800!important;
   box-shadow:0 1px 3px rgba(15,23,42,.18)!important;
 }
+#sidebar-nav .portal-sidebar-logs-item.portal-sidebar-nav-active:not(.portal-sidebar-logs-active){
+  background:transparent!important;
+  color:#d1d5db!important;
+  font-weight:700!important;
+  box-shadow:none!important;
+}
+#sidebar-nav .portal-sidebar-logs-item.portal-sidebar-nav-active:not(.portal-sidebar-logs-active)::before{display:none!important;}
+#sidebar-nav .portal-sidebar-logs-item:not(.portal-sidebar-logs-active):hover{background:#2d6557!important;color:#fff!important;}
 
 /* Replicar Portal: mesma escala do botão “Abrir no GitHub”. */
 #portal-replication-page details>summary.portal-action-green,
