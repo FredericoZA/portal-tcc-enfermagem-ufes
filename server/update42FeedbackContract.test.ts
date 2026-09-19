@@ -27,9 +27,10 @@ test('engrenagem permite colunas para usuário comum e persiste por e-mail e pla
   assert.ok(settings.includes('portal_user_table_config_'));
   assert.ok(settings.includes("const isMaster=globalRoles.includes('MASTER_ADMIN')"));
   assert.ok(settings.includes('const canManageColumns=Boolean(storageKey'));
-  assert.ok(settings.includes('Minha visualização'));
+  assert.ok(settings.includes('Colunas e ordem'));
   assert.ok(settings.includes('localStorage.setItem(currentPreferenceKey'));
   assert.ok(settings.includes('localStorage.removeItem(currentPreferenceKey)'));
+  assert.ok(settings.includes('Definir padrão'));
 });
 
 test('acabamento visual aplica faixa lateral fina, filtros simétricos e botão de modelos compacto',async()=>{
