@@ -1,0 +1,149 @@
+/* Atualização 43 — planilhas maduras, calendário informativo e workspaces administrativos. */
+:root{
+  --portal-sheet-green:#17694a;
+  --portal-sheet-green-dark:#0f5d40;
+  --portal-muted-yellow:#d3b45d;
+  --portal-muted-yellow-bg:#f3ead0;
+  --portal-muted-green:#6f8f79;
+  --portal-muted-green-bg:#dce7df;
+  --portal-muted-red:#a95a4a;
+  --portal-muted-blue:#527f9a;
+  --portal-muted-violet:#77658d;
+}
+
+/* A tabela deve crescer de acordo com 25/50/100/Todos. */
+.table-sticky-container{max-height:none!important;overflow-y:visible!important;}
+
+/* Cabeçalho da planilha: verde sóbrio, texto branco e separação fina da toolbar. */
+.portal-spreadsheet-table{border-collapse:collapse!important;}
+.portal-spreadsheet-table thead{
+  background:var(--portal-sheet-green)!important;
+  color:#fff!important;
+  border-top:4px double rgba(255,255,255,.92)!important;
+}
+.portal-spreadsheet-table thead tr,
+.portal-spreadsheet-table thead th{
+  background:var(--portal-sheet-green)!important;
+  color:#fff!important;
+}
+.portal-spreadsheet-table thead th{
+  position:relative!important;
+  padding-right:2.6rem!important;
+  vertical-align:middle!important;
+}
+.portal-spreadsheet-table thead th *{color:inherit!important;}
+.portal-column-controls{
+  position:absolute;
+  right:.28rem;
+  top:50%;
+  display:inline-flex;
+  align-items:center;
+  gap:1px;
+  transform:translateY(-50%);
+}
+.portal-column-controls button{
+  display:inline-flex;
+  width:18px;
+  height:18px;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:5px;
+  background:rgba(255,255,255,.08);
+  color:#fff!important;
+  cursor:pointer;
+}
+.portal-column-controls button:hover,
+.portal-column-filter-active .portal-column-filter{background:rgba(255,255,255,.24);border-color:rgba(255,255,255,.6);}
+.portal-column-filter-hidden{display:none!important;}
+.portal-table-decorative-icon{display:none!important;}
+.portal-spreadsheet-table td{color:#334155;}
+
+/* Popup de filtro por coluna, inspirado em planilhas sem copiar o excesso visual. */
+.portal-column-filter-popup{
+  position:fixed;
+  z-index:1000005;
+  width:280px;
+  max-height:360px;
+  overflow:hidden;
+  border:1px solid #b8c4bd;
+  border-radius:12px;
+  background:#fff;
+  color:#263244;
+  box-shadow:0 16px 42px rgba(15,23,42,.22);
+  padding:10px;
+}
+.portal-column-filter-title{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;color:#1f3f31;}
+.portal-column-filter-search{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:6px 8px;font-size:11px;outline:none;margin-bottom:7px;}
+.portal-column-filter-search:focus{border-color:#6f8f79;box-shadow:0 0 0 2px rgba(111,143,121,.14);}
+.portal-column-filter-values{max-height:220px;overflow:auto;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:5px 0;}
+.portal-column-filter-value{display:flex;align-items:center;gap:7px;padding:4px 5px;font-size:10.5px;border-radius:6px;cursor:pointer;}
+.portal-column-filter-value:hover{background:#eef2ef;}
+.portal-column-filter-value span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.portal-column-filter-footer{display:flex;justify-content:space-between;gap:8px;padding-top:8px;}
+.portal-column-filter-footer button{border:1px solid #cbd5e1;background:#fff;border-radius:7px;padding:5px 8px;font-size:9.5px;font-weight:800;color:#334155;}
+.portal-column-filter-footer button:last-child{background:#17694a;border-color:#17694a;color:#fff;}
+
+/* Engrenagem: uma única superfície, sem um segundo popup de colunas. */
+.portal-table-settings-popover{background:#f8faf9!important;}
+.portal-table-settings-popover input[type="checkbox"]{accent-color:#337959;}
+
+/* Filtros menos fluorescentes. */
+.portal-standard-filter-chip{filter:saturate(.58) brightness(.99);}
+.portal-standard-filter-chip:hover{filter:saturate(.68) brightness(1);}
+
+/* Meus TCCs: pílula do processo acompanha o vínculo, sem tingir a linha inteira. */
+#meus-processos-table [data-portal-role-pill="student"]{background:#f3ead0!important;border-color:#b99a47!important;color:#5f4b13!important;}
+#meus-processos-table [data-portal-role-pill="committee"]{background:#ead8d3!important;border-color:var(--portal-muted-red)!important;color:#69342b!important;}
+#meus-processos-table [data-portal-role-pill="evaluator"]{background:#dce8ef!important;border-color:var(--portal-muted-blue)!important;color:#31566b!important;}
+#meus-processos-table [data-portal-role-pill="viewer"]{background:#e4dfea!important;border-color:var(--portal-muted-violet)!important;color:#514360!important;}
+#meus-processos-table .portal-date-cell-sober,
+#meus-processos-table .portal-date-cell-sober *{font-weight:500!important;}
+.portal-progress-number{font-size:11px!important;font-weight:600!important;color:#64748b!important;}
+
+/* Calendário: fins de semana estreitos, dias úteis largos e células com prévia. */
+.portal-calendar-grid,
+.portal-calendar-week-header>div{
+  grid-template-columns:.30fr 1.28fr 1.28fr 1.28fr 1.28fr 1.28fr .30fr!important;
+}
+.portal-calendar-day-cell,
+.portal-calendar-empty-cell{height:118px!important;min-height:118px!important;}
+.portal-calendar-day-cell{padding:7px!important;justify-content:flex-start!important;gap:5px!important;overflow:hidden;}
+.portal-calendar-preview-list{display:flex;flex:1;min-height:0;flex-direction:column;gap:4px;overflow:hidden;width:100%;}
+.portal-calendar-preview{display:flex;min-width:0;flex-direction:column;gap:1px;border:1px solid;border-radius:7px;padding:4px 5px;text-align:left;line-height:1.15;}
+.portal-calendar-preview strong{font-size:9px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.portal-calendar-preview span{font-size:8.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.portal-calendar-preview.is-upcoming{background:var(--portal-muted-yellow-bg);border-color:#c7ad64;color:#5d4d20;}
+.portal-calendar-preview.is-defended{background:var(--portal-muted-green-bg);border-color:#8ca596;color:#365846;}
+.portal-calendar-preview-more{font-size:8.5px;font-weight:800;color:#64748b;padding-left:3px;}
+
+/* Workspaces administrativos: maior contraste entre sidebar/conteúdo e sem sobreposição. */
+[data-portal-workspace-open="true"]{
+  grid-template-columns:minmax(180px,230px) minmax(0,1fr)!important;
+  background:#dce2e5!important;
+}
+[data-portal-workspace-open="true"]>.portal-settings-workspace-sidebar{background:#e7ece9!important;border-right:1px solid #b8c4bd!important;overflow-y:auto!important;}
+[data-portal-workspace-open="true"]>.portal-settings-workspace-sidebar .portal-settings-workspace-sidebar-title{color:#173d2d!important;}
+[data-portal-workspace-open="true"]>.portal-settings-workspace-sidebar button{background:#d7dfda!important;border-color:#bac7bf!important;color:#263b31!important;}
+[data-portal-workspace-open="true"]>.portal-settings-workspace-sidebar button[data-active="true"]{background:#17694a!important;color:#fff!important;border-color:#17694a!important;}
+[data-portal-workspace-open="true"]>.portal-settings-workspace-sidebar button>span:first-child{display:none!important;}
+[data-portal-workspace-open="true"]>div:not(.portal-settings-workspace-sidebar){min-width:0!important;overflow:auto!important;background:#eef1f3!important;}
+[data-portal-workspace-open="true"] button{max-width:100%;}
+[data-portal-workspace-open="true"] input,
+[data-portal-workspace-open="true"] select,
+[data-portal-workspace-open="true"] textarea{max-width:100%!important;}
+[data-portal-workspace-open="true"] .grid{min-width:0!important;}
+[data-portal-workspace-open="true"] .portal-studio-tab-strip{position:sticky;top:0;z-index:5;background:#d5dce0!important;padding:6px!important;border-bottom:1px solid #b8c4bd!important;}
+
+/* Logs: conteúdo fica colado à barra principal; a linha auxiliar foi eliminada. */
+#audit-logs-page>header+div[data-portal-audit-summary],
+#audit-logs-page .portal-audit-summary{display:none!important;}
+#audit-logs-page>header{border-bottom:2px solid #fff!important;}
+#audit-logs-page>.portal-audit-table-shell{padding:0!important;}
+#audit-logs-page .portal-audit-actions{margin-right:12px;padding-right:12px;border-right:1px solid rgba(255,255,255,.35);}
+
+@media(max-width:900px){
+  .portal-calendar-grid,.portal-calendar-week-header>div{grid-template-columns:.45fr repeat(5,1.18fr) .45fr!important;}
+  .portal-calendar-day-cell,.portal-calendar-empty-cell{height:105px!important;min-height:105px!important;}
+  [data-portal-workspace-open="true"]{grid-template-columns:1fr!important;}
+}
