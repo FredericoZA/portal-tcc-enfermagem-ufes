@@ -8,11 +8,24 @@ export const TableScrollWrapper: React.FC<TableScrollWrapperProps> = ({ children
   const containerRef = useRef<HTMLDivElement>(null);
   const [isMouseDown, setIsMouseDown] = useState(false);
   const [startX, setStartX] = useState(0);
+  const [startY, setStartY] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  const [scrollTop, setScrollTop] = useState(0);
+  const scrollParentRef = useRef<HTMLElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // A tabela cresce naturalmente na vertical. O arraste continua exclusivamente
-  // horizontal, evitando que “100/Todos” pareça não funcionar dentro de uma janela fixa.
+
+  const findVerticalScrollParent = (node: HTMLElement | null): HTMLElement | null => {
+    let current = node?.parentElement || null;
+    while (current) {
+      const overflowY = window.getComputedStyle(current).overflowY;
+      if ((overflowY === 'auto' || overflowY === 'scroll') && current.scrollHeight > current.clientHeight) return current;
+      current = current.parentElement;
+    }
+    return document.scrollingElement as HTMLElement | null;
+  };
+
+  // A tabela cresce naturalmente; o arraste acompanha horizontalmente a tabela e verticalmente a página.
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     if (
@@ -30,8 +43,11 @@ export const TableScrollWrapper: React.FC<TableScrollWrapperProps> = ({ children
 
     if (!containerRef.current || e.button !== 0) return;
     setIsMouseDown(true);
-    setStartX(e.pageX - containerRef.current.offsetLeft);
+    setStartX(e.clientX);
+    setStartY(e.clientY);
     setScrollLeft(containerRef.current.scrollLeft);
+    scrollParentRef.current = findVerticalScrollParent(containerRef.current);
+    setScrollTop(scrollParentRef.current?.scrollTop || 0);
   };
 
   const finishDrag = () => {
@@ -41,13 +57,14 @@ export const TableScrollWrapper: React.FC<TableScrollWrapperProps> = ({ children
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isMouseDown || !containerRef.current) return;
-    const x = e.pageX - containerRef.current.offsetLeft;
-    const walkX = (x - startX) * 1.5;
-    if (Math.abs(walkX) > 5) {
+    const walkX = (e.clientX - startX) * 1.5;
+    const walkY = (e.clientY - startY) * 1.15;
+    if (Math.max(Math.abs(walkX), Math.abs(walkY)) > 5) {
       e.preventDefault();
       setIsDragging(true);
+      containerRef.current.scrollLeft = scrollLeft - walkX;
+      if (scrollParentRef.current) scrollParentRef.current.scrollTop = scrollTop - walkY;
     }
-    containerRef.current.scrollLeft = scrollLeft - walkX;
   };
 
   return (

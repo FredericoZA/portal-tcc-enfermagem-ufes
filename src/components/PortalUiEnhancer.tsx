@@ -139,6 +139,28 @@ function ensureLogsSidebarButton() {
   configButton.insertAdjacentElement('afterend', button);
 }
 
+function ensureAstenLogsSidebarButton() {
+  const logsButton = document.getElementById('nav-item-logs') as HTMLButtonElement | null;
+  const configButton = document.getElementById('nav-item-configuracoes') as HTMLButtonElement | null;
+  const existing = document.getElementById('nav-item-asten-logs') as HTMLButtonElement | null;
+  const isMaster = readGlobalRoles().includes('MASTER_ADMIN');
+  if (!isMaster || !configButton) { existing?.remove(); return; }
+  const active = Boolean(document.getElementById('asten-logs-page'));
+  if (existing) {
+    existing.classList.toggle('portal-sidebar-asten-active', active);
+    existing.classList.toggle('portal-sidebar-nav-active', active);
+    existing.setAttribute('aria-current', active ? 'page' : 'false');
+    return;
+  }
+  const button = document.createElement('button');
+  button.type = 'button'; button.id = 'nav-item-asten-logs';
+  button.className = `${configButton.className} portal-sidebar-asten-item${active ? ' portal-sidebar-asten-active portal-sidebar-nav-active' : ''}`;
+  button.innerHTML = '<div class="flex items-center gap-3"><span class="text-base shrink-0 leading-none" aria-hidden="true">🛡️</span><span>Registros da Asten</span></div>';
+  button.title = 'Fila e histórico da Asten'; button.setAttribute('aria-label', 'Fila e histórico da Asten');
+  button.addEventListener('click', () => window.dispatchEvent(new CustomEvent('portal:navigate', { detail: 'asten-logs' })));
+  (logsButton || configButton).insertAdjacentElement('afterend', button);
+}
+
 function createWorkspaceSidebar(section: HTMLElement, kind: 'sync' | 'models') {
   let sidebar = section.querySelector<HTMLElement>(':scope > .portal-settings-workspace-sidebar');
   if (sidebar) return sidebar;
@@ -273,6 +295,7 @@ function enhanceToolbarButtons() {
   clarifyLoginIdentityGuidance();
   pruneDuplicatedAdministrationForm();
   ensureLogsSidebarButton();
+  ensureAstenLogsSidebarButton();
   enhanceSettingsWorkspaces();
 
   document.querySelectorAll<HTMLButtonElement>('button[title^="Buscar"], button[aria-label^="Buscar registros"]').forEach((button) =>
@@ -326,7 +349,7 @@ export function PortalUiEnhancer() {
     return () => {
       observer.disconnect();
       window.cancelAnimationFrame(frame);
-      document.querySelectorAll('.portal-repository-download-toolbar, .portal-settings-workspace-backdrop, #nav-item-logs').forEach((node) => node.remove());
+      document.querySelectorAll('.portal-repository-download-toolbar, .portal-settings-workspace-backdrop, #nav-item-logs, #nav-item-asten-logs').forEach((node) => node.remove());
       document.body.classList.remove('portal-settings-workspace-lock');
       delete document.documentElement.dataset.portalSettingsRole;
     };
