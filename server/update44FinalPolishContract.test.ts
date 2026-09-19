@@ -32,6 +32,7 @@ test('popup e logs seguem acabamento aprovado e versão foi incrementada',()=>{
   const pkg=JSON.parse(read('package.json'));
   assert.match(css,/section\[aria-label\^="Colunas e ordem"\]/);
   assert.match(css,/border-bottom:3px solid #fff/);
+  assert.match(css,/tbody tr:first-child>td\{[\s\S]*box-shadow:inset 0 3px 0 #fff!important/);
   assert.match(ui,/portal-sidebar-nav-active/);
   assert.equal(pkg.version,'1.0.38');
 });
