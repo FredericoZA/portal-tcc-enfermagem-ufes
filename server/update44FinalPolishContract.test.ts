@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read=(p:string)=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
+// Contratos de regressão dos ajustes visuais e funcionais consolidados na versão 1.0.38.
 test('Área do Presidente ordena fila e concluídos sem depender da aba ativa',()=>{
   const s=read('src/pages/CoordenadorPage.tsx');
   assert.match(s,/getSortedAndFilteredItems = \(items: any\[\], wrappedQueueItem: boolean\)/);
