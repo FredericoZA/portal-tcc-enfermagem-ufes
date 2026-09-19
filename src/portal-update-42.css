@@ -18,6 +18,12 @@
   width:4px!important;
   border-radius:12px 0 0 12px!important;
 }
+#sidebar-nav .portal-sidebar-logs-active{
+  background:#154d41!important;
+  color:#fff!important;
+  font-weight:800!important;
+  box-shadow:0 1px 3px rgba(15,23,42,.18)!important;
+}
 
 /* Replicar Portal: mesma escala do botão “Abrir no GitHub”. */
 #portal-replication-page details>summary.portal-action-green,
@@ -34,12 +40,12 @@
 }
 #portal-replication-page details>summary span{display:inline-flex!important;align-items:center!important;gap:6px!important;white-space:nowrap!important;}
 
-/* Barras de filtro restritas: respiro simétrico acima e abaixo. */
-#meus-processos-page-container section>div>div:first-child>div:last-child,
-#coordenador-page-root section>div>div:first-child>div:last-child{
+/* Barras de filtro restritas: o divisor branco desce e deixa margem verde real acima. */
+#meus-processos-page-container .portal-meus-processos-filter-row,
+#coordenador-page-root .portal-coordinator-filter-row{
   padding-top:.55rem!important;
   padding-bottom:.55rem!important;
-  margin-top:0!important;
+  margin-top:.6rem!important;
   margin-bottom:0!important;
 }
 
@@ -98,21 +104,24 @@
 /* Personalização: cabeçalho coerente com as demais barras e hierarquia lateral. */
 #portal-personalization-hub>header,
 [data-portal-feedback-personalization="true"]>header,
-[data-portal-feedback-personalization="true"] [data-portal-editor-header]{
-  background:var(--portal-green-3)!important;
+[data-portal-feedback-personalization="true"] [data-portal-editor-header],
+.portal-customization-header{
+  background:var(--portal-green-1)!important;
   color:#fff!important;
   text-align:left!important;
 }
 #portal-personalization-hub>header button,
-[data-portal-feedback-personalization="true"]>header button{
+[data-portal-feedback-personalization="true"]>header button,
+.portal-customization-header button{
   background:#fff!important;
-  color:#263244!important;
+  color:#111827!important;
   border-color:#d4dce1!important;
 }
 #portal-personalization-hub>header svg,
 [data-portal-feedback-personalization="true"]>header svg{color:#fff!important;stroke:#fff!important;}
 #portal-personalization-hub>header [class*="bg-white"]:has(svg),
-[data-portal-feedback-personalization="true"]>header [class*="bg-white"]:has(svg){background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
+[data-portal-feedback-personalization="true"]>header [class*="bg-white"]:has(svg),
+.portal-customization-icon-shell{background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
 #portal-personalization-hub aside,
 [data-portal-feedback-personalization="true"] aside{background:#edf1f3!important;}
 #portal-personalization-hub aside>[class*="rounded"],
@@ -155,6 +164,14 @@
 [data-portal-feedback-section="models-root"] h2,
 [data-portal-feedback-section="models-root"] h3{color:#172033;}
 
+/* Página de logs: gatilhos da lupa e engrenagem sempre brancos na barra verde. */
+#audit-logs-page .portal-audit-toolbar button{
+  background:#fff!important;
+  color:#111827!important;
+  border-color:#cbd5e1!important;
+}
+body.portal-settings-workspace-lock{overflow:hidden!important;}
+
 /* Vermelho destrutivo sóbrio, igual ao vocabulário do “Como usar”. */
 button[data-portal-destructive-action="true"],
 #portal-app-root button.text-rose-700,
@@ -173,6 +190,6 @@ button[data-portal-destructive-action="true"]:hover,
 }
 
 @media(max-width:640px){
-  #meus-processos-page-container section>div>div:first-child>div:last-child,
-  #coordenador-page-root section>div>div:first-child>div:last-child{padding-top:.45rem!important;padding-bottom:.45rem!important;}
+  #meus-processos-page-container .portal-meus-processos-filter-row,
+  #coordenador-page-root .portal-coordinator-filter-row{padding-top:.45rem!important;padding-bottom:.45rem!important;margin-top:.5rem!important;}
 }
