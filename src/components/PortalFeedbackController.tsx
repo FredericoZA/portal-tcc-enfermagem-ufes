@@ -37,8 +37,9 @@ function refineLoginModal() {
   const tipsBox = tipsTitle?.closest<HTMLElement>('.rounded-xl');
   if (tipsBox && dialog.contains(tipsBox)) {
     tipsBox.dataset.portalLoginTips = 'true';
-    const list = tipsBox.querySelector('ul');
-    if (list) {
+    const list = tipsBox.querySelector<HTMLUListElement>('ul');
+    if (list && list.dataset.portalLoginRefined !== 'true') {
+      list.dataset.portalLoginRefined = 'true';
       list.innerHTML = `
         <li><strong>Como funciona o acesso:</strong> informe o e-mail cadastrado no Portal. Enviaremos um código de acesso de uso único para esse endereço.</li>
         <li><strong>Discentes:</strong> utilize seu e-mail institucional @edu.ufes.br.</li>
