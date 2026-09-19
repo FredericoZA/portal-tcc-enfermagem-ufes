@@ -20,10 +20,9 @@ test('cabeçalhos preservam ordenação nativa e acrescentam filtro próximo ao 
 
 test('Meus TCCs usa Etapa em vez de progresso percentual',()=>{
   const p=read('src/pages/MeusProcessosPage.tsx');
-  const indicator=read('src/components/ProgressIndicator.tsx');
   assert.match(p,/key: 'progresso', label: 'Etapa'/);
-  assert.match(indicator,/portal-stage-number/);
-  assert.doesNotMatch(indicator,/>\s*\{value\}%\s*</);
+  assert.match(p,/portal-stage-number/);
+  assert.match(p,/stageNumber = getStepNumberLabel/);
 });
 
 test('popup e logs seguem acabamento aprovado e versão foi incrementada',()=>{

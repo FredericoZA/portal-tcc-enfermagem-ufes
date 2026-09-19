@@ -660,12 +660,16 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
             <div className="text-[9.5px] text-slate-500 font-mono font-medium">{formatTimeExtenso(proc.defesa?.startAt)}</div>
           </td>
         );
-      case 'progresso':
+      case 'progresso': {
+        const stageNumber = getStepNumberLabel(progress.label).replace('Fase ', '') || '—';
         return (
           <td key="progresso" className={`${styles.cellPadClass} ${widthClass} text-center align-middle ${styles.borderClass}`}>
-            <ProgressIndicator percent={progress.percent} label={progress.label} textFormat={meusProcessosTextFormat} />
+            <span className="portal-stage-number inline-flex min-w-[24px] items-center justify-center text-[11px] font-semibold tabular-nums text-slate-600" title={progress.label} aria-label={progress.label}>
+              {stageNumber}
+            </span>
           </td>
         );
+      }
       case 'titulo':
         return (
           <td key="titulo" className={`${styles.cellPadClass} ${widthClass} ${styles.cellWeightClass} ${styles.cellTextColorClass} ${alignClass} ${styles.borderClass} align-middle`}>
