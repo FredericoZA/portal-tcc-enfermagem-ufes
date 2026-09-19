@@ -19,6 +19,9 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+      - name: Corrigir escape do patch temporário
+        run: |
+          sed -i 's/${configButton.className}/\\${configButton.className}/g' scripts/apply-update44.mjs
       - name: Aplicar patch consolidado
         run: node scripts/apply-update44.mjs
       - name: Commitar resultado
