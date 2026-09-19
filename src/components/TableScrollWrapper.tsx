@@ -8,74 +8,56 @@ export const TableScrollWrapper: React.FC<TableScrollWrapperProps> = ({ children
   const containerRef = useRef<HTMLDivElement>(null);
   const [isMouseDown, setIsMouseDown] = useState(false);
   const [startX, setStartX] = useState(0);
-  const [startY, setStartY] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
-  const [scrollTop, setScrollTop] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Mouse drag-to-scroll implementation for intuitive spreadsheet navigation
+  // A tabela cresce naturalmente na vertical. O arraste continua exclusivamente
+  // horizontal, evitando que “100/Todos” pareça não funcionar dentro de uma janela fixa.
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only initiate drag if left clicking and not clicking on interactive elements
     const target = e.target as HTMLElement;
     if (
-      target.tagName === 'INPUT' || 
-      target.tagName === 'BUTTON' || 
-      target.tagName === 'A' || 
-      target.tagName === 'SELECT' || 
-      target.closest('button') || 
-      target.closest('input') || 
+      target.tagName === 'INPUT' ||
+      target.tagName === 'BUTTON' ||
+      target.tagName === 'A' ||
+      target.tagName === 'SELECT' ||
+      target.closest('button') ||
+      target.closest('input') ||
       target.closest('a') ||
       target.closest('select') ||
       target.closest('thead') ||
       target.closest('th')
-    ) {
-      return;
-    }
+    ) return;
 
-    if (!containerRef.current) return;
+    if (!containerRef.current || e.button !== 0) return;
     setIsMouseDown(true);
     setStartX(e.pageX - containerRef.current.offsetLeft);
-    setStartY(e.pageY - containerRef.current.offsetTop);
     setScrollLeft(containerRef.current.scrollLeft);
-    setScrollTop(containerRef.current.scrollTop);
   };
 
-  const handleMouseLeave = () => {
-    setIsMouseDown(false);
-    setIsDragging(false);
-  };
-
-  const handleMouseUp = () => {
+  const finishDrag = () => {
     setIsMouseDown(false);
     setIsDragging(false);
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isMouseDown || !containerRef.current) return;
-    e.preventDefault();
     const x = e.pageX - containerRef.current.offsetLeft;
-    const y = e.pageY - containerRef.current.offsetTop;
-    const walkX = (x - startX) * 1.5; // Scroll speed multiplier
-    const walkY = (y - startY) * 1.5;
-    
-    if (Math.abs(walkX) > 5 || Math.abs(walkY) > 5) {
+    const walkX = (x - startX) * 1.5;
+    if (Math.abs(walkX) > 5) {
+      e.preventDefault();
       setIsDragging(true);
     }
-
     containerRef.current.scrollLeft = scrollLeft - walkX;
-    containerRef.current.scrollTop = scrollTop - walkY;
   };
 
   return (
-    <div 
+    <div
       ref={containerRef}
       onMouseDown={handleMouseDown}
-      onMouseLeave={handleMouseLeave}
-      onMouseUp={handleMouseUp}
+      onMouseLeave={finishDrag}
+      onMouseUp={finishDrag}
       onMouseMove={handleMouseMove}
-      className={`w-full bg-white overflow-x-auto overflow-y-auto max-h-[620px] table-sticky-container ${
-        isDragging ? 'cursor-grabbing' : 'cursor-grab'
-      }`}
+      className={`w-full bg-white overflow-x-auto overflow-y-visible table-sticky-container ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
     >
       <div className="min-w-max">
         {children}
