@@ -80,7 +80,7 @@ export const MasterDocumentModelsPanel: React.FC = () => {
 
   return <section className="portal-master-models-catalog mb-2 overflow-hidden rounded-xl border border-slate-300 bg-[#d5dce0] shadow-sm">
     <div className="flex flex-col gap-2 border-b-2 border-white bg-[#17694a] px-3 py-2 text-white lg:flex-row lg:items-center lg:justify-between">
-      <div className="min-w-0"><h3 className="text-xs font-black uppercase tracking-wide">Modelos documentais do usuário Master</h3><p className="text-[9px] text-white/80">Catálogo DOCX versionado; o editor detalhado fica na área de trabalho abaixo.</p></div>
+      <div className="min-w-0"><h3 className="text-xs font-black uppercase tracking-wide">Modelos documentais do usuário Master</h3><p className="text-[9px] text-white/80">Cadastre quantos modelos DOCX forem necessários; o editor detalhado fica na área de trabalho abaixo.</p></div>
       <div className="flex min-w-0 flex-1 gap-1.5 lg:max-w-xl"><input id="new-master-model" value={newModelName} onChange={event=>setNewModelName(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();addSlot();}}} placeholder="Novo tipo de documento" className="min-w-0 flex-1 rounded-lg border border-white/35 bg-white px-2.5 py-1.5 text-[10px] text-slate-900 outline-none"/><button type="button" onClick={addSlot} disabled={!newModelName.trim()} className={action}><FilePlus2 className="h-3.5 w-3.5"/>Adicionar</button></div>
     </div>
 
