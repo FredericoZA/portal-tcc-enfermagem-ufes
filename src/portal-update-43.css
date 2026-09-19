@@ -222,8 +222,12 @@
 #audit-logs-page .portal-spreadsheet-table thead tr,
 #audit-logs-page .portal-spreadsheet-table thead th{background:#005830!important;color:#fff!important;}
 
-/* Linha branca contínua entre o cabeçalho e a primeira linha de dados. */
-.portal-spreadsheet-table tbody tr:first-child>td{border-top:3px solid #fff!important;}
+/* Linha branca contínua entre o cabeçalho e a primeira linha de dados.
+   O box-shadow interno garante a separação mesmo com border-collapse e bordas das células. */
+.portal-spreadsheet-table tbody tr:first-child>td{
+  border-top:3px solid #fff!important;
+  box-shadow:inset 0 3px 0 #fff!important;
+}
 
 /* O item Logs usa exatamente a mesma faixa fina dos demais itens ativos. */
 #sidebar-nav .portal-sidebar-logs-active::before{
@@ -237,3 +241,27 @@
   background:#74ff96!important;
 }
 #sidebar-nav .portal-sidebar-logs-item{position:relative!important;}
+
+
+/* Versão 1.0.39 — separadores, filtros e densidade operacional. */
+.portal-spreadsheet-table thead th{display:table-cell!important;}
+.portal-spreadsheet-table tbody tr:first-child>td{
+  border-top:4px solid #fff!important;
+  box-shadow:inset 0 4px 0 #fff!important;
+}
+.portal-standard-filter-chip[data-selected="true"],
+.portal-table-filter-chip[data-selected="true"]{
+  filter:saturate(.72) brightness(.78)!important;
+  box-shadow:inset 0 0 0 1px rgba(15,23,42,.24)!important;
+}
+#coordenador-page-root .portal-spreadsheet-table th,
+#coordenador-page-root .portal-spreadsheet-table td{padding-top:.36rem!important;padding-bottom:.36rem!important;}
+#coordenador-page-root th[data-portal-selection-column="true"],
+#coordenador-page-root td[data-portal-selection-column-cell="true"]{
+  width:38px!important;min-width:38px!important;max-width:38px!important;padding-left:4px!important;padding-right:4px!important;
+}
+#coordenador-page-root th[data-portal-selection-column="true"]{background:var(--portal-sheet-green)!important;color:#fff!important;}
+#sidebar-nav .portal-sidebar-asten-active::before{
+  content:""!important;position:absolute!important;left:0!important;top:0!important;bottom:0!important;width:4px!important;border-radius:12px 0 0 12px!important;background:#74ff96!important;
+}
+#sidebar-nav .portal-sidebar-asten-item{position:relative!important;}

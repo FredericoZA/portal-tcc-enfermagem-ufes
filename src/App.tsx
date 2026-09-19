@@ -23,6 +23,7 @@ const DocumentosPage = lazy(() => import('./pages/DocumentosPage').then((module)
 const CoordenadorPage = lazy(() => import('./pages/CoordenadorPage').then((module) => ({ default: module.CoordenadorPage })));
 const ConfiguracoesPage = lazy(() => import('./pages/ConfiguracoesPage').then((module) => ({ default: module.ConfiguracoesPage })));
 const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage').then((module) => ({ default: module.AuditLogsPage })));
+const AstenLogsPage = lazy(() => import('./pages/AstenLogsPage').then((module) => ({ default: module.AstenLogsPage })));
 const ComoChegarPage = lazy(() => import('./pages/ComoChegarPage').then((module) => ({ default: module.ComoChegarPage })));
 
 function PageLoadingFallback() {
@@ -113,6 +114,8 @@ export default function App() {
         return <ConfiguracoesPage />;
       case 'logs':
         return <AuditLogsPage />;
+      case 'asten-logs':
+        return <AstenLogsPage />;
       case 'analise':
       case 'indicadores':
         return <IndicadoresPage />;
@@ -164,6 +167,7 @@ export default function App() {
                   : currentTab === 'coordenador' ? 'Área do Presidente'
                   : currentTab === 'configuracoes' ? 'Configurações & Modelos de Arquivos'
                   : currentTab === 'logs' ? 'Registro de Logs'
+                  : currentTab === 'asten-logs' ? 'Registros da Asten'
                   : (currentTab === 'analise' || currentTab === 'indicadores') ? 'Indicadores'
                   : 'Portal de TCC'
               }

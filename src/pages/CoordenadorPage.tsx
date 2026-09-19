@@ -47,9 +47,9 @@ import {
 import { resolveInstallationProfile } from '../utils/installationProfile';
 
 const ALL_COORDINATOR_COLUMNS: ColumnDef[] = [
-  { key: 'protocolo', label: 'Nº Processo', isFixed: true },
+  { key: 'protocolo', label: 'Processo', isFixed: true },
   { key: 'envioStatus', label: 'Envio', isFixed: true },
-  { key: 'defesaDataHora', label: 'Data e Horário' },
+  { key: 'defesaDataHora', label: 'Data' },
   { key: 'titulo', label: 'Título do Trabalho' },
   { key: 'aluno1', label: 'Aluno 1' },
   { key: 'aluno2', label: 'Aluno 2' },
@@ -185,9 +185,9 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
   // Label Map for columns
   const labelMap: Record<string, string> = {
-    protocolo: '📓 Nº Processo',
+    protocolo: 'Processo',
     envioStatus: '📤 Envio',
-    defesaDataHora: '⏰ Data e Horário',
+    defesaDataHora: 'Data',
     titulo: '📖 Título do Trabalho',
     aluno1: '🎓 Aluno 1',
     aluno2: '🎓 Aluno 2',
@@ -285,7 +285,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
   const getDeclarationJob = (processId: string): SignatureJob | undefined =>
     signatureJobs
-      .filter((job) => job.processId === processId && job.documentType === 'DECLARACAO')
+      .filter((job) => job.processId === processId && job.documentType === 'DECLARACAO' && job.provider === 'ASTEN')
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
 
   const canRetryDeclarationJob = (job?: SignatureJob): boolean => Boolean(
@@ -391,9 +391,23 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     setSigningIds(prev=>prev.filter(id=>!ids.includes(id)));setSelectedIds([]);await loadData();setSigningMessage(failures.length?`${completed} PDF(s) Gov.br preparados; ${failures.length} falha(s): ${failures.join(' | ')}`:`${completed} PDF(s) preparados. Assine-os no Gov.br e envie os arquivos assinados pelas fichas dos TCCs.`);
   };
 
+  const getGovDeclarationJob = (processId: string): SignatureJob | undefined =>
+    signatureJobs.filter((job) => job.processId === processId && job.documentType === 'DECLARACAO' && job.provider === 'GOV_BR').sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+
+  const handleGovSignedUpload = async (processId: string, file: File) => {
+    const job = getGovDeclarationJob(processId);
+    if (!job) { setSigningMessage('Prepare primeiro o PDF para assinatura Gov.br.'); return; }
+    if (signingIds.includes(processId)) return;
+    setSigningIds((prev) => [...prev, processId]); setSigningMessage('');
+    try { await apiClient.uploadGovBrSignedPdf(job.id, processId, file); setSigningMessage('Arquivo assinado no Gov.br recebido e associado ao TCC.'); await loadData(); }
+    catch (error) { setSigningMessage(error instanceof Error ? error.message : 'Não foi possível enviar o arquivo assinado.'); }
+    finally { setSigningIds((prev) => prev.filter((id) => id !== processId)); }
+  };
+
   const renderSignatureActionCell = (proc: ProcessData) => {
-    const job=getDeclarationJob(proc.id);const working=signingIds.includes(proc.id);const status=getDeclarationStatus(proc.id);const actionable=isDeclarationActionable(proc.id);
-    return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[188px] text-center align-middle`}><div className="flex items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button></div>{!actionable&&<span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[8px] font-black uppercase ${status.tone}`} title={job?.lastError||status.label}>{status.label}</span>}</td>;
+    const job=getDeclarationJob(proc.id);const govJob=getGovDeclarationJob(proc.id);const working=signingIds.includes(proc.id);const status=getDeclarationStatus(proc.id);const actionable=isDeclarationActionable(proc.id);
+    const govUploadAvailable=Boolean(govJob && !['SIGNED','ARCHIVED','CANCELED'].includes(govJob.status));
+    return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}><div className="flex flex-wrap items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>{govUploadAvailable&&<label className="portal-sign-provider-btn cursor-pointer" title="Enviar o PDF já assinado no Gov.br"><input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event)=>{const file=event.currentTarget.files?.[0];event.currentTarget.value='';if(file)void handleGovSignedUpload(proc.id,file);}}/><Download className="h-3.5 w-3.5 rotate-180"/><span>Enviar assinado</span></label>}</div>{!actionable&&<span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[8px] font-black uppercase ${status.tone}`} title={job?.lastError||status.label}>{status.label}</span>}</td>;
   };
 
   // Download only the authenticated declaration already signed by Asten and archived in Drive.
@@ -897,8 +911,10 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                         key={filter.key}
                         type="button"
                         onClick={() => { setActiveTab(filter.tab); setSelectedIds([]); }}
+                        data-selected={isSelected ? 'true' : 'false'}
+                        aria-pressed={isSelected}
                         style={chip.buttonStyle}
-                        className={`portal-standard-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none ${isSelected ? '' : 'opacity-85 hover:opacity-100'}`}
+                        className={`portal-standard-filter-chip portal-table-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none ${isSelected ? '' : 'opacity-85 hover:opacity-100'}`}
                         title={`Filtrar por declarações ${filter.label.toLowerCase()}`}
                       >
                         <span className="w-2 h-2 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: filter.key === 'assinadas' ? '#22a06b' : '#f4b400' }} />
@@ -932,7 +948,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                       <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`} style={styles.theadStyle}>
                         <tr>
                           {/* Always show selection column for pending */}
-                          <th className={`${styles.headerThClass} ${styles.cellPadClass} w-10 text-center align-middle ${styles.headerBorderClass}`}>
+                          <th data-portal-selection-column="true" data-portal-column-label="Seleção" className={`${styles.headerThClass} ${styles.cellPadClass} w-10 text-center align-middle ${styles.headerBorderClass}`}>
                             <button
                               type="button"
                               onClick={toggleSelectAllPending}
@@ -962,7 +978,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                               className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-emerald-50/40' : ''}`}
                             >
                               {/* Selection Checkbox */}
-                              <td className={`${styles.cellPadClass} ${styles.borderClass} text-center align-middle`}>
+                              <td data-portal-selection-column-cell="true" data-portal-filter-value={isSelected ? 'Selecionado' : 'Não selecionado'} className={`${styles.cellPadClass} ${styles.borderClass} text-center align-middle`}>
                                 <button
                                   type="button"
                                   onClick={() => toggleSelectItem(proc.id)}
@@ -1000,7 +1016,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                       <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`}>
                         <tr>
                           {/* Always show selection column for completed to align perfectly */}
-                          <th className={`${styles.headerThClass} ${styles.cellPadClass} w-10 text-center align-middle ${styles.headerBorderClass}`}>
+                          <th data-portal-selection-column="true" data-portal-column-label="Seleção" className={`${styles.headerThClass} ${styles.cellPadClass} w-10 text-center align-middle ${styles.headerBorderClass}`}>
                             <button
                               type="button"
                               onClick={() => {
@@ -1032,7 +1048,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                               className={`hover:bg-slate-50 transition-colors text-slate-600 ${isSelected ? 'bg-emerald-50/40' : ''}`}
                             >
                               {/* Selection Checkbox */}
-                              <td className={`${styles.cellPadClass} ${styles.borderClass} text-center align-middle`}>
+                              <td data-portal-selection-column-cell="true" data-portal-filter-value={isSelected ? 'Selecionado' : 'Não selecionado'} className={`${styles.cellPadClass} ${styles.borderClass} text-center align-middle`}>
                                 <button
                                   type="button"
                                   onClick={() => toggleSelectItem(proc.id)}

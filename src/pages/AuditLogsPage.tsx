@@ -125,7 +125,7 @@ export const AuditLogsPage: React.FC = () => {
 
     <div className="portal-audit-table-shell">
       {loading ? <div className="m-3 rounded-xl border border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Carregando histórico…</div> : shown.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Nenhum registro encontrado com os filtros atuais.</div> : <div className="overflow-x-auto bg-white">
-        <table className="w-full min-w-[860px] border-collapse text-left text-xs">
+        <table className="portal-spreadsheet-table portal-audit-table w-full min-w-[860px] border-collapse text-left text-xs">
           <thead><tr>{activeColumns.map(key => <th key={key} className={`px-3 py-2.5 text-[10px] font-black uppercase tracking-wide ${key === 'options' ? 'text-right' : ''}`}>{LOG_COLUMNS.find(column => column.key === key)?.label || key}</th>)}</tr></thead>
           <tbody className="divide-y divide-slate-200">{shown.map(log => <tr key={log.id} className="hover:bg-slate-50">{activeColumns.map(key => <td key={key} className={`px-3 py-2.5 text-slate-700 ${key === 'options' ? 'text-right' : ''}`}>{renderCell(log, key)}</td>)}</tr>)}</tbody>
         </table>

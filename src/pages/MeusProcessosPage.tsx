@@ -58,8 +58,8 @@ interface MeusProcessosPageProps {
 }
 
 const ALL_MEUS_PROCESSOS_COLUMNS: ColumnDef[] = [
-  { key: 'protocolo', label: 'Nº Processo', isFixed: true },
-  { key: 'defesaDataHora', label: 'Data e Horário' },
+  { key: 'protocolo', label: 'Processo', isFixed: true },
+  { key: 'defesaDataHora', label: 'Data' },
   { key: 'progresso', label: 'Etapa' },
   { key: 'titulo', label: 'Título do Trabalho' },
   { key: 'aluno1', label: 'Aluno 1' },
@@ -909,8 +909,10 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       key={catKey}
                       type="button"
                       onClick={() => toggleRoleCategory(catKey)}
+                      data-selected={isSelected ? 'true' : 'false'}
+                      aria-pressed={isSelected}
                       style={chip.buttonStyle}
-                      className={`portal-standard-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none ${
+                      className={`portal-standard-filter-chip portal-table-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none ${
                         isSelected ? '' : 'opacity-85 hover:opacity-100'
                       }`}
                       title={`Clique para ${isSelected ? 'isolar ou alternar' : 'exibir'} TCCs com papel de ${chip.label}`}

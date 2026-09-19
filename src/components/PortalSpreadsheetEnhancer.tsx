@@ -26,6 +26,43 @@ function readIdentity():CachedIdentity {
 }
 
 function normalize(value:string){return stripEmojis(value || '').replace(/\s+/g,' ').trim();}
+
+function replaceHeaderText(header:HTMLTableCellElement,replacer:(value:string)=>string){
+  const walker=document.createTreeWalker(header,NodeFilter.SHOW_TEXT);const nodes:Text[]=[];let current:Node|null;
+  while((current=walker.nextNode()))nodes.push(current as Text);
+  nodes.forEach(node=>{if(!node.parentElement?.closest('button,.portal-column-controls'))node.data=replacer(node.data);});
+}
+function canonicalizeHeader(header:HTMLTableCellElement){
+  let dateColumn=false;
+  replaceHeaderText(header,value=>{
+    let next=value.replace(/N[º°o]\.?\s*(?:do\s+)?Processo/gi,'Processo');
+    const datePattern=/Data\s*(?:e|\/)\s*(?:Horário|Hora)/gi;
+    if(datePattern.test(next)){dateColumn=true;datePattern.lastIndex=0;next=next.replace(datePattern,'Data');}
+    return next;
+  });
+  const compact=normalize(header.textContent||'').replace(/[↕↑↓]/g,'').trim().toLocaleLowerCase('pt-BR');
+  if(dateColumn||compact==='data')header.dataset.portalDateColumn='true';
+}
+const PT_NUMBER_WORDS:Record<string,number>={zero:0,um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12,treze:13,quatorze:14,quinze:15,dezesseis:16,dezessete:17,dezoito:18,dezenove:19,vinte:20,trinta:30,quarenta:40,cinquenta:50};
+function ptNumber(value:string){
+  const words=value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').split(/\s+e\s+|\s+/).filter(Boolean);
+  let total=0;for(const word of words){if(PT_NUMBER_WORDS[word]===undefined)return NaN;total+=PT_NUMBER_WORDS[word];}return total;
+}
+function writtenTimeToNumeric(value:string){
+  const match=value.trim().match(/^(.+?)\s+horas?(?:\s+e\s+(.+?)\s+minutos?)?$/i);if(!match)return null;
+  const hours=ptNumber(match[1]);const minutes=match[2]?ptNumber(match[2]):0;
+  if(!Number.isFinite(hours)||!Number.isFinite(minutes)||hours<0||hours>23||minutes<0||minutes>59)return null;
+  return `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}`;
+}
+function normalizeDateCells(table:HTMLTableElement){
+  const headers=Array.from(table.tHead?.rows[0]?.cells||[]);
+  headers.forEach((th,index)=>{if((th as HTMLTableCellElement).dataset.portalDateColumn!=='true')return;
+    Array.from(table.tBodies[0]?.rows||[]).forEach(row=>{const cell=row.cells[index];if(!cell)return;
+      const walker=document.createTreeWalker(cell,NodeFilter.SHOW_TEXT);const nodes:Text[]=[];let current:Node|null;while((current=walker.nextNode()))nodes.push(current as Text);
+      nodes.forEach(node=>{const numeric=writtenTimeToNumeric(node.data);if(numeric)node.data=numeric;});
+    });
+  });
+}
 function keyForHeader(th:HTMLTableCellElement,index:number){
   if(!th.dataset.portalColumnKey){
     const label=normalize(th.textContent || '') || `coluna-${index+1}`;
@@ -34,7 +71,7 @@ function keyForHeader(th:HTMLTableCellElement,index:number){
   }
   return th.dataset.portalColumnKey;
 }
-function cellValue(row:HTMLTableRowElement,index:number){return normalize(row.cells[index]?.textContent || '—') || '—';}
+function cellValue(row:HTMLTableRowElement,index:number){const cell=row.cells[index];return normalize(cell?.dataset.portalFilterValue || cell?.textContent || '—') || '—';}
 
 function parseComparable(raw:string):string|number {
   const value=raw.trim();
@@ -156,18 +193,20 @@ function enhanceTable(table:HTMLTableElement){
   if(!tableState.has(table))tableState.set(table,{filters:new Map()});
   cleanTableDecorations(table);enhanceMeusProcessos(table);
   Array.from(headerRow.cells).forEach((th,index)=>{
-    const header=th as HTMLTableCellElement;const key=keyForHeader(header,index);
+    const header=th as HTMLTableCellElement;canonicalizeHeader(header);const key=keyForHeader(header,index);
     if(header.querySelector('.portal-column-controls'))return;
     const controls=document.createElement('span');controls.className='portal-column-controls';
-    const labelHost=header.querySelector<HTMLElement>(':scope > div')||header;
-    labelHost.classList.add('portal-column-header-content');
-    const hasNativeSort=header.classList.contains('cursor-pointer')||header.dataset.portalNativeSort==='true'||Boolean(header.querySelector('[data-portal-sort],button[aria-label*="Ordenar"]'));
+    let labelHost=header.querySelector<HTMLElement>(':scope > .portal-column-header-content, :scope > div');
+    if(!labelHost){const wrapper=document.createElement('span');wrapper.className='portal-column-header-content';while(header.firstChild)wrapper.appendChild(header.firstChild);header.appendChild(wrapper);labelHost=wrapper;}else labelHost.classList.add('portal-column-header-content');
+    const isSelectionColumn=header.dataset.portalSelectionColumn==='true';
+    const hasNativeSort=isSelectionColumn||header.classList.contains('cursor-pointer')||header.dataset.portalNativeSort==='true'||Boolean(header.querySelector('[data-portal-sort],button[aria-label*="Ordenar"]'));
     if(!hasNativeSort){
       const sort=document.createElement('button');sort.type='button';sort.className='portal-column-sort';sort.title='Ordenar esta coluna';sort.setAttribute('aria-label',`Ordenar ${header.dataset.portalColumnLabel||'coluna'}`);sort.innerHTML=SORT_ICON;sort.addEventListener('click',event=>{event.stopPropagation();sortTable(table,key,index);});controls.appendChild(sort);
     }
     const filter=document.createElement('button');filter.type='button';filter.className='portal-column-filter';filter.title='Filtrar valores desta coluna';filter.setAttribute('aria-label',`Filtrar ${header.dataset.portalColumnLabel||'coluna'}`);filter.innerHTML=FILTER_ICON;filter.addEventListener('click',event=>{event.stopPropagation();openFilterPopup(table,header,index,filter);});
     controls.appendChild(filter);labelHost.appendChild(controls);
   });
+  normalizeDateCells(table);
   applyFilters(table);
 }
 
