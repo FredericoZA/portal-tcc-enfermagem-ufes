@@ -60,7 +60,7 @@ interface MeusProcessosPageProps {
 const ALL_MEUS_PROCESSOS_COLUMNS: ColumnDef[] = [
   { key: 'protocolo', label: 'Nº Processo', isFixed: true },
   { key: 'defesaDataHora', label: 'Data e Horário' },
-  { key: 'progresso', label: 'Progresso' },
+  { key: 'progresso', label: 'Etapa' },
   { key: 'titulo', label: 'Título do Trabalho' },
   { key: 'aluno1', label: 'Aluno 1' },
   { key: 'aluno2', label: 'Aluno 2' },
@@ -517,7 +517,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
           switch (k) {
             case 'protocolo': return `"${p.protocolo}"`;
             case 'defesaDataHora': return `"${p.defesa?.startAt ? `${formatDateNumeric(p.defesa.startAt)} ${formatTimeExtenso(p.defesa.startAt)}` : 'A definir'}"`;
-            case 'progresso': return `"${progress.percent}% - ${getStepNumberLabel(progress.label)}"`;
+            case 'progresso': return `"${getStepNumberLabel(progress.label).replace('Fase ', '')}"`;
             case 'titulo': return `"${(p.titulo || '').replace(/"/g, '""')}"`;
             case 'aluno1': return `"${cleanPersonName(p.aluno1?.nome || '').replace(/"/g, '""')}"`;
             case 'aluno2': return `"${cleanPersonName(p.aluno2?.nome || '').replace(/"/g, '""')}"`;

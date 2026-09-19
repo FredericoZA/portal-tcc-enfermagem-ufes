@@ -148,3 +148,92 @@
   .portal-calendar-day-cell,.portal-calendar-empty-cell{height:105px!important;min-height:105px!important;}
   [data-portal-workspace-open="true"]{grid-template-columns:1fr!important;}
 }
+
+
+/* Atualização 44 — acabamento final de planilhas e logs. */
+.portal-spreadsheet-table thead{
+  border-top:3px solid #fff!important;
+  border-bottom:3px solid #fff!important;
+}
+.portal-spreadsheet-table thead th{
+  padding-right:inherit!important;
+}
+.portal-column-header-content{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:3px!important;
+  max-width:100%!important;
+}
+.portal-column-controls{
+  position:static!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:2px!important;
+  transform:none!important;
+  margin-left:2px!important;
+  flex:0 0 auto!important;
+}
+.portal-column-controls button{
+  display:inline-flex!important;
+  width:auto!important;
+  height:auto!important;
+  min-width:0!important;
+  min-height:0!important;
+  padding:1px!important;
+  border:0!important;
+  border-radius:3px!important;
+  background:transparent!important;
+  color:#fff!important;
+  box-shadow:none!important;
+}
+.portal-column-controls button:hover,
+.portal-column-filter-active .portal-column-filter{
+  background:rgba(255,255,255,.16)!important;
+  border:0!important;
+}
+.portal-column-controls svg{width:11px!important;height:11px!important;}
+
+/* Mais respiro entre os filtros e o cabeçalho das colunas. */
+#meus-processos-page-container .portal-meus-processos-filter-row,
+#coordenador-page-root .portal-coordinator-filter-row,
+.portal-defense-filter-row{
+  padding-bottom:.82rem!important;
+}
+
+/* Popup: título à esquerda e Colunas e ordem como terceiro bloco visual equivalente. */
+.portal-table-settings-popover>div:first-child{text-align:left!important;justify-content:space-between!important;}
+.portal-table-settings-popover>div:first-child>span{margin-right:auto!important;text-align:left!important;justify-content:flex-start!important;}
+.portal-table-settings-popover section[aria-label^="Colunas e ordem"]{
+  background:#e3e8eb!important;
+  border:1px solid #c6d0d6!important;
+  padding:14px!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)!important;
+}
+.portal-table-settings-popover section[aria-label^="Colunas e ordem"]>div:last-child>div{
+  background:#fff!important;
+}
+
+/* Logs: uma única divisória branca grossa e cabeçalho no mesmo verde da barra superior. */
+#audit-logs-page>header{border-bottom:3px solid #fff!important;}
+#audit-logs-page .portal-audit-table-shell{margin:0!important;padding:0!important;}
+#audit-logs-page .portal-audit-table-shell>div{margin:0!important;}
+#audit-logs-page .portal-spreadsheet-table thead{border-top:0!important;background:#005830!important;}
+#audit-logs-page .portal-spreadsheet-table thead tr,
+#audit-logs-page .portal-spreadsheet-table thead th{background:#005830!important;color:#fff!important;}
+
+/* Linha branca contínua entre o cabeçalho e a primeira linha de dados. */
+.portal-spreadsheet-table tbody tr:first-child>td{border-top:3px solid #fff!important;}
+
+/* O item Logs usa exatamente a mesma faixa fina dos demais itens ativos. */
+#sidebar-nav .portal-sidebar-logs-active::before{
+  content:""!important;
+  position:absolute!important;
+  left:0!important;
+  top:0!important;
+  bottom:0!important;
+  width:4px!important;
+  border-radius:12px 0 0 12px!important;
+  background:#74ff96!important;
+}
+#sidebar-nav .portal-sidebar-logs-item{position:relative!important;}
