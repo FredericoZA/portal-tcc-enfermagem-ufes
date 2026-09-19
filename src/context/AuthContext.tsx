@@ -180,7 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const hasAdvisorRole = memberships.some((m) => m.roles.includes('ADVISOR'));
   const isCommissionPresident = globalRoles.includes('COMMISSION_PRESIDENT');
-  const isMasterAdmin = globalRoles.includes('MASTER_ADMIN') || isCommissionPresident;
+  const isMasterAdmin = globalRoles.includes('MASTER_ADMIN');
   const logout=async()=>{await apiClient.logout();setActiveUserEmail('');clearIdentity();await refreshAuth();};
 
   return (

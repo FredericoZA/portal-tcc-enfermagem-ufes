@@ -1,0 +1,178 @@
+/* Atualização 42 — rodada consolidada de homologação de 18/09/2026.
+ * Mantém a identidade existente e corrige hierarquia, respiro e inconsistências
+ * sem introduzir um novo tema visual. */
+
+:root{
+  --portal-danger:#c62828;
+  --portal-green-1:#005830;
+  --portal-green-2:#17694a;
+  --portal-green-3:#337959;
+  --portal-surface-1:#e1e6e9;
+  --portal-surface-2:#d5dce0;
+  --portal-surface-3:#c9d2d7;
+}
+
+/* Barra lateral: a faixa continua ancorada à esquerda, apenas mais fina. */
+#sidebar-nav .portal-sidebar-nav-active::before{
+  left:0!important;
+  width:4px!important;
+  border-radius:12px 0 0 12px!important;
+}
+
+/* Replicar Portal: mesma escala do botão “Abrir no GitHub”. */
+#portal-replication-page details>summary.portal-action-green,
+#portal-replication-page details>summary{
+  display:inline-flex!important;
+  align-items:center!important;
+  width:auto!important;
+  min-width:0!important;
+  min-height:0!important;
+  height:auto!important;
+  padding:6px 10px!important;
+  line-height:1.1!important;
+  border-radius:8px!important;
+}
+#portal-replication-page details>summary span{display:inline-flex!important;align-items:center!important;gap:6px!important;white-space:nowrap!important;}
+
+/* Barras de filtro restritas: respiro simétrico acima e abaixo. */
+#meus-processos-page-container section>div>div:first-child>div:last-child,
+#coordenador-page-root section>div>div:first-child>div:last-child{
+  padding-top:.55rem!important;
+  padding-bottom:.55rem!important;
+  margin-top:0!important;
+  margin-bottom:0!important;
+}
+
+/* Preferências de planilha: só o Master real enxerga a ação de padrão global. */
+[data-portal-table-master="false"] button[title^="Salvar esta ordem"],
+[data-portal-table-master="false"] button[title*="padrão do sistema"]{display:none!important;}
+
+/* Formulários: hierarquia de superfícies equivalente ao restante do Portal. */
+#portal-app-root main form{
+  --form-level-1:var(--portal-surface-1);
+  --form-level-2:var(--portal-surface-2);
+  --form-level-3:var(--portal-surface-3);
+}
+#portal-app-root main form fieldset,
+#portal-app-root main form>.rounded-xl,
+#portal-app-root main form>.rounded-2xl{
+  background:var(--form-level-2)!important;
+  border-color:#bcc8cf!important;
+}
+#portal-app-root main form fieldset fieldset,
+#portal-app-root main form .rounded-xl .rounded-xl,
+#portal-app-root main form .rounded-2xl .rounded-xl{
+  background:var(--form-level-3)!important;
+}
+#portal-app-root main form input:not([type="checkbox"]):not([type="radio"]),
+#portal-app-root main form select,
+#portal-app-root main form textarea{
+  background:#f5f7f8!important;
+  border-color:#b8c4cb!important;
+  color:#172033!important;
+}
+#portal-app-root main form input:focus,
+#portal-app-root main form select:focus,
+#portal-app-root main form textarea:focus{
+  border-color:#337959!important;
+  box-shadow:0 0 0 2px rgba(51,121,89,.16)!important;
+  outline:none!important;
+}
+[data-portal-feedback-section="registration-header"]{
+  background:var(--portal-green-1)!important;
+  color:#fff!important;
+  border-color:var(--portal-green-1)!important;
+}
+[data-portal-feedback-section="registration-header"] h1,
+[data-portal-feedback-section="registration-header"] h2,
+[data-portal-feedback-section="registration-header"] p,
+[data-portal-feedback-section="registration-header"] span{color:#fff!important;}
+
+/* Login: caixa única de orientação, sem subtítulo institucional redundante. */
+[data-portal-feedback-login="true"] [data-portal-login-tips="true"]{
+  background:var(--portal-surface-1)!important;
+  border-color:#c6d0d6!important;
+}
+[data-portal-feedback-login="true"] [data-portal-login-tips="true"] ul{display:grid!important;gap:6px!important;}
+
+/* Personalização: cabeçalho coerente com as demais barras e hierarquia lateral. */
+#portal-personalization-hub>header,
+[data-portal-feedback-personalization="true"]>header,
+[data-portal-feedback-personalization="true"] [data-portal-editor-header]{
+  background:var(--portal-green-3)!important;
+  color:#fff!important;
+  text-align:left!important;
+}
+#portal-personalization-hub>header button,
+[data-portal-feedback-personalization="true"]>header button{
+  background:#fff!important;
+  color:#263244!important;
+  border-color:#d4dce1!important;
+}
+#portal-personalization-hub>header svg,
+[data-portal-feedback-personalization="true"]>header svg{color:#fff!important;stroke:#fff!important;}
+#portal-personalization-hub>header [class*="bg-white"]:has(svg),
+[data-portal-feedback-personalization="true"]>header [class*="bg-white"]:has(svg){background:transparent!important;border-color:transparent!important;box-shadow:none!important;}
+#portal-personalization-hub aside,
+[data-portal-feedback-personalization="true"] aside{background:#edf1f3!important;}
+#portal-personalization-hub aside>[class*="rounded"],
+[data-portal-feedback-personalization="true"] aside>[class*="rounded"]{background:#d5dce0!important;border-color:#bcc8cf!important;}
+#portal-personalization-hub aside>[class*="rounded"]>div:first-child,
+[data-portal-feedback-personalization="true"] aside>[class*="rounded"]>div:first-child{background:#c9d2d7!important;border-radius:8px 8px 0 0!important;}
+
+/* Sincronização: três níveis visuais explícitos de caixas dentro de caixas. */
+[data-portal-feedback-section="sync-root"]{background:var(--portal-surface-1)!important;}
+[data-portal-feedback-section="sync-root"]>div:first-child{background:var(--portal-green-1)!important;color:#fff!important;}
+[data-portal-feedback-section="sync-footer"],
+[data-portal-feedback-section="sync-integrations"],
+[data-portal-feedback-section="sync-access"]{background:var(--portal-surface-2)!important;border-color:#bcc8cf!important;}
+[data-portal-feedback-section="sync-footer"]>div:first-child,
+[data-portal-feedback-section="sync-integrations"]>div:first-child,
+[data-portal-feedback-section="sync-access"]>div:first-child{background:var(--portal-green-2)!important;color:#fff!important;}
+[data-portal-feedback-section="sync-members"] thead,
+[data-portal-feedback-section="sync-access"] thead{background:var(--portal-green-3)!important;color:#fff!important;}
+
+/* Modelos e variáveis: área de catálogo compacta; editor ganha prioridade espacial. */
+[data-portal-feedback-section="models-root"]{background:var(--portal-surface-1)!important;}
+[data-portal-feedback-section="models-root"]>div:first-child{background:var(--portal-green-1)!important;color:#fff!important;}
+[data-portal-feedback-section="models-catalog"]{
+  background:var(--portal-surface-2)!important;
+  padding:.65rem!important;
+  margin-bottom:.55rem!important;
+}
+[data-portal-feedback-section="models-catalog"] [class*="p-4"],
+[data-portal-feedback-section="models-catalog"] [class*="p-5"]{padding:.55rem!important;}
+[data-portal-feedback-section="models-root"] button[class*="bg-slate-900"],
+[data-portal-feedback-section="models-root"] button[class*="bg-black"]{
+  background:var(--portal-green-3)!important;
+  border-color:#2d6c50!important;
+  color:#fff!important;
+}
+[data-portal-feedback-section="models-root"] [class*="text-purple"],
+[data-portal-feedback-section="models-root"] [class*="text-violet"]{color:#337959!important;}
+[data-portal-feedback-section="models-root"] [class*="bg-purple"],
+[data-portal-feedback-section="models-root"] [class*="bg-violet"]{background:#e1e6e9!important;color:#244c3b!important;}
+[data-portal-feedback-section="models-root"] h2,
+[data-portal-feedback-section="models-root"] h3{color:#172033;}
+
+/* Vermelho destrutivo sóbrio, igual ao vocabulário do “Como usar”. */
+button[data-portal-destructive-action="true"],
+#portal-app-root button.text-rose-700,
+#portal-app-root button.text-red-500,
+#portal-app-root button.text-red-600{
+  color:var(--portal-danger)!important;
+  border-color:rgba(198,40,40,.28)!important;
+}
+button[data-portal-destructive-action="true"]:hover,
+#portal-app-root button.text-rose-700:hover{background:rgba(198,40,40,.08)!important;}
+
+/* Evita botões pretos nos estúdios administrativos. */
+#portal-app-root main [data-portal-feedback-section="models-root"] button,
+#portal-app-root main [data-portal-feedback-section^="sync-"] button{
+  box-shadow:0 1px 2px rgba(15,23,42,.08);
+}
+
+@media(max-width:640px){
+  #meus-processos-page-container section>div>div:first-child>div:last-child,
+  #coordenador-page-root section>div>div:first-child>div:last-child{padding-top:.45rem!important;padding-bottom:.45rem!important;}
+}

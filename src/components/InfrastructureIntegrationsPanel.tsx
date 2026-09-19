@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Cloud, Copy, Database, ExternalLink, KeyRound, Loader2, RefreshCw, Server, ShieldAlert, ShieldCheck } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { CheckCircle2, ChevronDown, Cloud, Copy, Database, ExternalLink, KeyRound, Loader2, RefreshCw, Server, ShieldAlert, ShieldCheck, X } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 
 interface IntegrationState {
@@ -24,12 +24,15 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
   const [working, setWorking] = useState('');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [homologation, setHomologation] = useState<Array<{ id: string; label: string; status: 'PASS' | 'FAIL' | 'PENDING'; message: string }>>([]);
+  const [connectionsOpen,setConnectionsOpen]=useState(false);
+  const connectionsRef=useRef<HTMLDivElement>(null);
 
   const load = async () => {
     try { setStatus(await apiClient.getInfrastructureStatus()); }
     catch (error) { setMessage({ ok: false, text: error instanceof Error ? error.message : 'Falha ao consultar integrações.' }); }
   };
   useEffect(() => { void load(); }, []);
+  useEffect(()=>{if(!connectionsOpen)return;const close=(event:MouseEvent)=>{if(connectionsRef.current&&!connectionsRef.current.contains(event.target as Node))setConnectionsOpen(false);};document.addEventListener('mousedown',close);return()=>document.removeEventListener('mousedown',close);},[connectionsOpen]);
 
   const connectAsten = async () => {
     setWorking('asten'); setMessage(null);
@@ -52,42 +55,37 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
 
   if (!isMaster) return <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs font-semibold text-amber-900">As credenciais de infraestrutura são exclusivas da administração.</div>;
 
-  const astenReady = Boolean(status?.asten.configured && status?.asten.callbackConfigured);
+  const astenReady = Boolean(status?.asten.configured && status?.asten.callbackConfigured && status?.asten.dispatchEnabled);
   const googleReady = Boolean(status?.googleDrive.configured && status?.googleDrive.rootFolderIdPresent);
   const supabaseReady = Boolean(status?.supabase.transactionalRuntimeReady);
   const vercelReady = Boolean(status?.vercel.detected && status?.vercel.projectIdPresent);
 
-  return <section id="infrastructure-integrations-panel" className="overflow-hidden rounded-xl border border-slate-300 bg-[#e1e6e9] shadow-sm">
-    <div className="flex flex-col gap-2 border-b-2 border-white bg-[#005830] px-3 py-2 text-white sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0"><h3 className="text-xs font-black uppercase tracking-wide">Integrações da plataforma</h3><p className="text-[9px] text-white/80">Conexões essenciais e teste final em um painel compacto.</p></div>
-      <button type="button" onClick={runHomologation} disabled={working === 'homologation'} className={action}>{working === 'homologation' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <RefreshCw className="h-3.5 w-3.5"/>}Executar testes</button>
+  return <section id="infrastructure-integrations-panel" className="overflow-visible rounded-xl border border-slate-300 bg-[#e1e6e9] shadow-sm">
+    <div className="relative flex flex-col gap-2 border-b-2 border-white bg-[#17694a] px-3 py-2 text-white sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0"><h3 className="text-xs font-black uppercase tracking-wide">Integrações da plataforma</h3><p className="text-[9px] text-white/80">Asten permanece visível; infraestrutura fica concentrada em conexões e testes.</p></div>
+      <div className="relative flex flex-wrap gap-2" ref={connectionsRef}>
+        <button type="button" onClick={()=>setConnectionsOpen(prev=>!prev)} className={action}><Database className="h-3.5 w-3.5"/>Conexões<ChevronDown className="h-3 w-3"/></button>
+        <button type="button" onClick={runHomologation} disabled={working === 'homologation'} className={action}>{working === 'homologation' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <RefreshCw className="h-3.5 w-3.5"/>}Executar testes</button>
+        {connectionsOpen&&<div className="absolute right-0 top-10 z-30 w-[min(520px,calc(100vw-3rem))] rounded-xl border border-slate-300 bg-[#e1e6e9] p-2.5 text-slate-900 shadow-2xl">
+          <div className="mb-2 flex items-center justify-between border-b border-slate-300 pb-2"><strong className="text-[10px] uppercase tracking-wide">Conexões de infraestrutura</strong><button type="button" onClick={()=>setConnectionsOpen(false)} className="rounded-md border border-slate-300 bg-white p-1 text-slate-700" aria-label="Fechar conexões"><X className="h-3.5 w-3.5"/></button></div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <section className={compactCard} aria-label="Google Drive"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black uppercase"><Cloud className="h-3.5 w-3.5 text-[#337959]"/>Google Drive</span><State ok={googleReady} label={googleReady?'OK':'Pendente'}/></div><button type="button" onClick={()=>{window.location.href='/api/integrations/google/oauth/start?returnTo=/?google=connected';}} className={`${action} mt-2 w-full`}><ExternalLink className="h-3.5 w-3.5"/>Conectar</button></section>
+            <section className={compactCard} aria-label="Supabase"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black uppercase"><Database className="h-3.5 w-3.5 text-[#337959]"/>Supabase</span><State ok={supabaseReady} label={supabaseReady?'OK':'Pendente'}/></div><button type="button" onClick={testSupabase} disabled={working==='supabase'||!status?.supabase.configured} className={`${action} mt-2 w-full`}>{working==='supabase'?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Database className="h-3.5 w-3.5"/>}Testar</button></section>
+            <section className={compactCard} aria-label="Vercel"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black uppercase"><Server className="h-3.5 w-3.5 text-[#337959]"/>Vercel</span><State ok={vercelReady} label={vercelReady?'OK':'Pendente'}/></div><p className="mt-2 text-[8.5px] leading-4 text-slate-600">{status?.vercel.message||'Aguardando status.'}</p></section>
+          </div>
+        </div>}
+      </div>
     </div>
 
     <div className="space-y-2 p-2.5">
       {message && <div role="status" className={`rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold ${message.ok ? 'border-slate-200 bg-white text-slate-800' : 'border-red-200 bg-red-50 text-red-900'}`}>{message.text}</div>}
 
-      <div className="grid gap-2 xl:grid-cols-[1.6fr_.8fr_.8fr_.65fr]">
-        <section className={compactCard} aria-labelledby="asten-integration-title">
-          <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-1.5"><KeyRound className="h-4 w-4 shrink-0 text-[#337959]"/><h4 id="asten-integration-title" className="truncate text-[10px] font-black uppercase text-slate-900">Asten</h4></div><State ok={astenReady} label={astenReady ? 'Pronta' : 'Pendente'}/></div>
-          <div className="mt-2 flex gap-1.5"><input aria-label="Token da API Asten" type="password" autoComplete="new-password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Token da API Asten" className={`${input} flex-1`}/><button type="button" onClick={connectAsten} disabled={working === 'asten' || !token.trim() || !status?.asten.enabled} className={action}>{working === 'asten' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ShieldCheck className="h-3.5 w-3.5"/>}Conectar</button></div>
-          <div className="mt-1.5 flex items-center gap-1.5 text-[8px] text-slate-500"><span className="min-w-0 flex-1 truncate">Callback: {status?.asten.callbackConfigured ? 'configurado' : 'pendente'} · envio {status?.asten.dispatchEnabled ? 'habilitado' : 'bloqueado'}</span>{status?.asten.callbackUrl && <button type="button" title="Copiar callback" onClick={() => void navigator.clipboard?.writeText(status.asten.callbackUrl || '')} className="rounded border border-slate-300 bg-white p-1 text-slate-700"><Copy className="h-3 w-3"/></button>}</div>
-        </section>
-
-        <section className={compactCard} aria-label="Google Drive">
-          <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-1.5"><Cloud className="h-4 w-4 text-[#337959]"/><h4 className="text-[10px] font-black uppercase text-slate-900">Google Drive</h4></div><State ok={googleReady} label={googleReady ? 'Conectado' : 'Pendente'}/></div>
-          <button type="button" onClick={() => { window.location.href = '/api/integrations/google/oauth/start?returnTo=/?google=connected'; }} className={`${action} mt-2 w-full`}><ExternalLink className="h-3.5 w-3.5"/>Conectar Google</button>
-        </section>
-
-        <section className={compactCard} aria-label="Supabase">
-          <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-1.5"><Database className="h-4 w-4 text-[#337959]"/><h4 className="text-[10px] font-black uppercase text-slate-900">Supabase</h4></div><State ok={supabaseReady} label={supabaseReady ? 'Pronto' : 'Pendente'}/></div>
-          <button type="button" onClick={testSupabase} disabled={working === 'supabase' || !status?.supabase.configured} className={`${action} mt-2 w-full`}>{working === 'supabase' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <Database className="h-3.5 w-3.5"/>}Testar conexão</button>
-        </section>
-
-        <section className={compactCard} aria-label="Vercel">
-          <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-1.5"><Server className="h-4 w-4 text-[#337959]"/><h4 className="text-[10px] font-black uppercase text-slate-900">Vercel</h4></div><State ok={vercelReady} label={vercelReady ? 'Detectado' : 'Pendente'}/></div>
-          <p className="mt-2 line-clamp-2 text-[9px] leading-4 text-slate-500">{status?.vercel.message || 'Aguardando status do ambiente.'}</p>
-        </section>
-      </div>
+      <section className="rounded-lg border border-slate-300 bg-[#d5dce0] p-2.5" aria-labelledby="asten-integration-title">
+        <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-1.5"><KeyRound className="h-4 w-4 shrink-0 text-[#337959]"/><h4 id="asten-integration-title" className="truncate text-[10px] font-black uppercase text-slate-900">Asten</h4></div><State ok={astenReady} label={astenReady ? 'Pronta para envio' : 'Pendente'}/></div>
+        <div className="mt-2 grid gap-2 lg:grid-cols-[1fr_auto]"><input aria-label="Token da API Asten" type="password" autoComplete="new-password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Token da API Asten" className={input}/><button type="button" onClick={connectAsten} disabled={working === 'asten' || !token.trim() || !status?.asten.enabled} className={action}>{working === 'asten' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ShieldCheck className="h-3.5 w-3.5"/>}Validar e conectar</button></div>
+        <div className="mt-1.5 flex items-center gap-1.5 text-[8.5px] text-slate-600"><span className="min-w-0 flex-1">Callback: <strong>{status?.asten.callbackConfigured?'configurado':'pendente'}</strong> · envio: <strong>{status?.asten.dispatchEnabled?'habilitado':'bloqueado'}</strong> · modo: <strong>{status?.asten.mode||'não informado'}</strong></span>{status?.asten.callbackUrl&&<button type="button" title="Copiar callback" onClick={()=>void navigator.clipboard?.writeText(status.asten.callbackUrl||'')} className="rounded border border-slate-300 bg-white p-1 text-slate-700"><Copy className="h-3 w-3"/></button>}</div>
+        {status?.asten.securityMessage&&<p className="mt-1 text-[8.5px] leading-4 text-slate-500">{status.asten.securityMessage}</p>}
+      </section>
 
       {homologation.length > 0 && <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">{homologation.map((check) => <div key={check.id} className={`rounded-lg border px-2 py-1.5 text-[9px] ${check.status === 'PASS' ? 'border-emerald-200 bg-white text-emerald-900' : check.status === 'PENDING' ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-red-200 bg-red-50 text-red-900'}`}><strong>{check.label}</strong><span className="ml-1">— {check.message}</span></div>)}</div>}
     </div>
