@@ -25,6 +25,16 @@ function normalizeLabel(value: string) {
     .toLowerCase();
 }
 
+function readGlobalRoles(): string[] {
+  try {
+    const raw = window.sessionStorage.getItem('portal_tcc_identity_cache_v1');
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed?.globalRoles) ? parsed.globalRoles.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
 function setButtonHint(button: HTMLButtonElement | null, hint: string) {
   if (!button) return;
   button.title = hint;
@@ -40,16 +50,10 @@ function normalizeLegacyInlineAccents() {
 }
 
 function markSettingsRole() {
-  try {
-    const raw = window.sessionStorage.getItem('portal_tcc_identity_cache_v1');
-    const parsed = raw ? JSON.parse(raw) : null;
-    const roles = Array.isArray(parsed?.globalRoles) ? parsed.globalRoles.map(String) : [];
-    const presidentOnly = roles.includes('COMMISSION_PRESIDENT') && !roles.includes('MASTER_ADMIN');
-    if (presidentOnly) document.documentElement.dataset.portalSettingsRole = 'president-only';
-    else delete document.documentElement.dataset.portalSettingsRole;
-  } catch {
-    delete document.documentElement.dataset.portalSettingsRole;
-  }
+  const roles = readGlobalRoles();
+  const presidentOnly = roles.includes('COMMISSION_PRESIDENT') && !roles.includes('MASTER_ADMIN');
+  if (presidentOnly) document.documentElement.dataset.portalSettingsRole = 'president-only';
+  else delete document.documentElement.dataset.portalSettingsRole;
 }
 
 function hideClosestEditorCard(node: HTMLElement | null) {
@@ -61,9 +65,17 @@ function hideClosestEditorCard(node: HTMLElement | null) {
 function pruneLegacyPersonalizationRows() {
   const title = document.getElementById('portal-customization-title');
   const dialog = title?.closest<HTMLElement>('[role="dialog"]');
-  if (!dialog) return;
+  if (!dialog || !title) return;
 
   title.classList.add('portal-customization-title-left');
+  const header = title.parentElement?.parentElement?.parentElement as HTMLElement | null;
+  if (header) {
+    header.classList.add('portal-customization-header');
+    const firstSvg = header.querySelector<SVGElement>('svg');
+    const iconShell = firstSvg?.parentElement;
+    if (iconShell && iconShell.tagName === 'DIV') iconShell.classList.add('portal-customization-icon-shell');
+    header.querySelectorAll<HTMLButtonElement>('button').forEach((button) => button.classList.add('portal-customization-top-action'));
+  }
 
   dialog.querySelectorAll<HTMLButtonElement>('button').forEach((button) => {
     const label = normalizeLabel(button.textContent || '');
@@ -99,6 +111,148 @@ function pruneDuplicatedAdministrationForm() {
   });
 }
 
+function ensureLogsSidebarButton() {
+  const configButton = document.getElementById('nav-item-configuracoes') as HTMLButtonElement | null;
+  const existing = document.getElementById('nav-item-logs') as HTMLButtonElement | null;
+  const isMaster = readGlobalRoles().includes('MASTER_ADMIN');
+  if (!isMaster || !configButton) {
+    existing?.remove();
+    return;
+  }
+
+  const active = Boolean(document.getElementById('audit-logs-page'));
+  if (existing) {
+    existing.classList.toggle('portal-sidebar-logs-active', active);
+    existing.setAttribute('aria-current', active ? 'page' : 'false');
+    return;
+  }
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.id = 'nav-item-logs';
+  button.className = `${configButton.className} portal-sidebar-logs-item${active ? ' portal-sidebar-logs-active' : ''}`;
+  button.innerHTML = '<div class="flex items-center gap-3"><span class="text-base shrink-0 leading-none" aria-hidden="true">🧾</span><span>Registro de logs</span></div>';
+  button.title = 'Registro de logs e auditoria';
+  button.setAttribute('aria-label', 'Registro de logs e auditoria');
+  button.addEventListener('click', () => window.dispatchEvent(new CustomEvent('portal:navigate', { detail: 'logs' })));
+  configButton.insertAdjacentElement('afterend', button);
+}
+
+function createWorkspaceSidebar(section: HTMLElement, kind: 'sync' | 'models') {
+  let sidebar = section.querySelector<HTMLElement>(':scope > .portal-settings-workspace-sidebar');
+  if (sidebar) return sidebar;
+
+  sidebar = document.createElement('aside');
+  sidebar.className = 'portal-settings-workspace-sidebar';
+  const title = document.createElement('strong');
+  title.className = 'portal-settings-workspace-sidebar-title';
+  title.textContent = kind === 'sync' ? 'Sincronização e acessos' : 'Modelos e variáveis';
+  sidebar.appendChild(title);
+
+  const nav = document.createElement('nav');
+  nav.className = 'portal-settings-workspace-nav';
+  nav.setAttribute('aria-label', title.textContent);
+  const items = kind === 'sync'
+    ? [
+        ['identity', '👥', 'Administração'],
+        ['integrations', '🔗', 'Integrações'],
+        ['access', '🔐', 'Acessos'],
+      ]
+    : [
+        ['catalog', '📄', 'Catálogo DOCX'],
+        ['documents', '📝', 'Documentos'],
+        ['emails', '✉️', 'E-mails'],
+        ['forms', '📋', 'Formulários'],
+        ['workflow', '🔀', 'Fluxo'],
+        ['variables', '🔣', 'Variáveis'],
+      ];
+
+  items.forEach(([id, emoji, label]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.workspaceTab = id;
+    button.innerHTML = `<span aria-hidden="true">${emoji}</span><span>${label}</span>`;
+    button.addEventListener('click', () => {
+      if (kind === 'sync') {
+        section.dataset.portalSyncTab = id;
+      } else {
+        section.dataset.portalModelTab = id;
+        if (id !== 'catalog') {
+          const studio = section.querySelector<HTMLElement>('.portal-studio');
+          const target = Array.from(studio?.querySelectorAll<HTMLButtonElement>('button') || []).find((candidate) => normalizeLabel(candidate.textContent || '') === normalizeLabel(label));
+          target?.click();
+        }
+      }
+      sidebar?.querySelectorAll<HTMLButtonElement>('button[data-workspace-tab]').forEach((candidate) => {
+        candidate.dataset.active = candidate.dataset.workspaceTab === id ? 'true' : 'false';
+      });
+    });
+    nav.appendChild(button);
+  });
+  sidebar.appendChild(nav);
+  section.appendChild(sidebar);
+  return sidebar;
+}
+
+function ensureWorkspaceClose(section: HTMLElement) {
+  let close = section.querySelector<HTMLButtonElement>(':scope > .portal-settings-workspace-close');
+  if (close) return;
+  close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'portal-settings-workspace-close';
+  close.innerHTML = '<span aria-hidden="true">✕</span><span>Fechar</span>';
+  close.addEventListener('click', () => (section.querySelector(':scope > button:first-child') as HTMLButtonElement | null)?.click());
+  section.appendChild(close);
+}
+
+function enhanceSettingsWorkspace(sectionId: string, kind: 'sync' | 'models') {
+  const section = document.getElementById(sectionId);
+  if (!section) return false;
+  const content = Array.from(section.children).find((child) => child.tagName === 'DIV' && !child.classList.contains('portal-settings-workspace-sidebar')) as HTMLElement | undefined;
+  if (!content) {
+    delete section.dataset.portalWorkspaceOpen;
+    section.querySelector(':scope > .portal-settings-workspace-sidebar')?.remove();
+    section.querySelector(':scope > .portal-settings-workspace-close')?.remove();
+    return false;
+  }
+
+  section.dataset.portalWorkspaceOpen = 'true';
+  if (kind === 'sync' && !section.dataset.portalSyncTab) section.dataset.portalSyncTab = 'identity';
+  if (kind === 'models' && !section.dataset.portalModelTab) section.dataset.portalModelTab = 'catalog';
+  const sidebar = createWorkspaceSidebar(section, kind);
+  ensureWorkspaceClose(section);
+
+  const active = kind === 'sync' ? section.dataset.portalSyncTab : section.dataset.portalModelTab;
+  sidebar.querySelectorAll<HTMLButtonElement>('button[data-workspace-tab]').forEach((button) => {
+    button.dataset.active = button.dataset.workspaceTab === active ? 'true' : 'false';
+  });
+
+  if (kind === 'models') {
+    const studio = section.querySelector<HTMLElement>('.portal-studio');
+    const strip = studio?.firstElementChild?.querySelector<HTMLElement>('.grid');
+    strip?.classList.add('portal-studio-tab-strip');
+  }
+  return true;
+}
+
+function enhanceSettingsWorkspaces() {
+  const syncOpen = enhanceSettingsWorkspace('google-workspace-sync-section', 'sync');
+  const modelsOpen = enhanceSettingsWorkspace('master-flow-system-section', 'models');
+  const anyOpen = syncOpen || modelsOpen;
+  let backdrop = document.querySelector<HTMLElement>('.portal-settings-workspace-backdrop');
+  if (anyOpen && !backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.className = 'portal-settings-workspace-backdrop';
+    backdrop.addEventListener('click', () => {
+      const openSection = document.querySelector<HTMLElement>('[data-portal-workspace-open="true"]');
+      (openSection?.querySelector(':scope > button:first-child') as HTMLButtonElement | null)?.click();
+    });
+    document.body.appendChild(backdrop);
+  }
+  if (!anyOpen) backdrop?.remove();
+  document.body.classList.toggle('portal-settings-workspace-lock', anyOpen);
+}
+
 function findRepositoryToolbar(): HTMLElement | null {
   const heading = Array.from(document.querySelectorAll<HTMLElement>('h1, h2')).find((node) =>
     /reposit[oó]rio.*acervo|acervo.*reposit[oó]rio/i.test(node.textContent || ''),
@@ -117,6 +271,8 @@ function enhanceToolbarButtons() {
   pruneLegacyPersonalizationRows();
   clarifyLoginIdentityGuidance();
   pruneDuplicatedAdministrationForm();
+  ensureLogsSidebarButton();
+  enhanceSettingsWorkspaces();
 
   document.querySelectorAll<HTMLButtonElement>('button[title^="Buscar"], button[aria-label^="Buscar registros"]').forEach((button) =>
     setButtonHint(button, SEARCH_HINT),
@@ -169,7 +325,8 @@ export function PortalUiEnhancer() {
     return () => {
       observer.disconnect();
       window.cancelAnimationFrame(frame);
-      document.querySelectorAll('.portal-repository-download-toolbar').forEach((node) => node.remove());
+      document.querySelectorAll('.portal-repository-download-toolbar, .portal-settings-workspace-backdrop, #nav-item-logs').forEach((node) => node.remove());
+      document.body.classList.remove('portal-settings-workspace-lock');
       delete document.documentElement.dataset.portalSettingsRole;
     };
   }, []);

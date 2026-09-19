@@ -22,6 +22,7 @@ const AvaliacoesPage = lazy(() => import('./pages/AvaliacoesPage').then((module)
 const DocumentosPage = lazy(() => import('./pages/DocumentosPage').then((module) => ({ default: module.DocumentosPage })));
 const CoordenadorPage = lazy(() => import('./pages/CoordenadorPage').then((module) => ({ default: module.CoordenadorPage })));
 const ConfiguracoesPage = lazy(() => import('./pages/ConfiguracoesPage').then((module) => ({ default: module.ConfiguracoesPage })));
+const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage').then((module) => ({ default: module.AuditLogsPage })));
 const ComoChegarPage = lazy(() => import('./pages/ComoChegarPage').then((module) => ({ default: module.ComoChegarPage })));
 
 function PageLoadingFallback() {
@@ -110,6 +111,8 @@ export default function App() {
         return <CoordenadorPage onSelectProcess={(id) => handleSelectProcess(id, false)} />;
       case 'configuracoes':
         return <ConfiguracoesPage />;
+      case 'logs':
+        return <AuditLogsPage />;
       case 'analise':
       case 'indicadores':
         return <IndicadoresPage />;
@@ -160,6 +163,7 @@ export default function App() {
                   : currentTab === 'documentos' ? 'Documentos'
                   : currentTab === 'coordenador' ? 'Área do Presidente'
                   : currentTab === 'configuracoes' ? 'Configurações & Modelos de Arquivos'
+                  : currentTab === 'logs' ? 'Registro de Logs'
                   : (currentTab === 'analise' || currentTab === 'indicadores') ? 'Indicadores'
                   : 'Portal de TCC'
               }

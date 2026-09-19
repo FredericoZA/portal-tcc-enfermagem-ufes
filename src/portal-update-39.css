@@ -1,8 +1,10 @@
-/* Update 39 — ajustes de densidade, filtros e governança da tela de Configurações. */
+/* Update 39/40 — densidade, filtros e governança da tela de Configurações. */
 
-/* Deixa uma faixa verde visível após os chips de filtro. */
+/* A linha branca pertence ao segundo nível do cabeçalho. O respiro verde acima dela
+   precisa existir tanto em Meus TCCs quanto na Área do Presidente. */
 .portal-meus-processos-filter-row,
 .portal-coordinator-filter-row {
+  margin-top: 0.6rem !important;
   padding-bottom: 0.95rem !important;
 }
 
@@ -12,22 +14,217 @@
   display: none !important;
 }
 
-/* Personalização passa a operar por tela, sem destaque centralizado artificial. */
+/* O Registro de Logs deixou Configurações e possui página própria no menu Master. */
+#system-audit-logs-section {
+  display: none !important;
+}
+
+/* Personalização opera por tela e reutiliza a mesma linguagem visual das planilhas. */
 .portal-customization-title-left {
   margin-left: 0 !important;
   margin-right: auto !important;
   text-align: left !important;
+  color: #fff !important;
+}
+
+.portal-customization-header {
+  background: #005830 !important;
+  color: #fff !important;
+  border-bottom: 2px solid #fff !important;
+}
+
+.portal-customization-icon-shell {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #fff !important;
+}
+
+.portal-customization-icon-shell svg {
+  color: #fff !important;
+  stroke: #fff !important;
 }
 
 .portal-customization-top-action {
   background: #fff !important;
-  color: #1e293b !important;
-  border: 1px solid #cbd5e1 !important;
+  color: #111827 !important;
+  border: 1px solid #d1d5db !important;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+.portal-customization-top-action svg {
+  color: currentColor !important;
 }
 
 .portal-customization-top-action:hover:not(:disabled) {
   background: #f8fafc !important;
+}
+
+/* Sincronização e Modelos usam os próprios accordions como modal grande. O enhancer
+   apenas muda a superfície e injeta a navegação lateral; os componentes React continuam
+   sendo a fonte de verdade para dados, salvamento e permissões. */
+.portal-settings-workspace-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999970;
+  background: rgba(15, 23, 42, 0.56);
+  backdrop-filter: blur(2px);
+}
+
+#google-workspace-sync-section[data-portal-workspace-open='true'],
+#master-flow-system-section[data-portal-workspace-open='true'] {
+  position: fixed !important;
+  z-index: 999980 !important;
+  inset: 4vh 3vw !important;
+  width: auto !important;
+  max-width: none !important;
+  max-height: 92vh !important;
+  margin: 0 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 1rem !important;
+  background: #f1f5f9 !important;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.35) !important;
+  overflow: hidden !important;
+  display: grid !important;
+  grid-template-columns: 15.5rem minmax(0, 1fr) !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+}
+
+#google-workspace-sync-section[data-portal-workspace-open='true'] > button:first-child,
+#master-flow-system-section[data-portal-workspace-open='true'] > button:first-child {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  min-height: 3.1rem !important;
+  padding: 0.7rem 3.5rem 0.7rem 1rem !important;
+  border: 0 !important;
+  border-bottom: 2px solid #fff !important;
+  border-radius: 0 !important;
+  background: #005830 !important;
+  color: #fff !important;
+  text-align: left !important;
+}
+
+#google-workspace-sync-section[data-portal-workspace-open='true'] > button:first-child svg,
+#master-flow-system-section[data-portal-workspace-open='true'] > button:first-child svg {
+  color: #fff !important;
+  stroke: #fff !important;
+}
+
+.portal-settings-workspace-sidebar {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 0.8rem;
+  border-right: 1px solid #cbd5e1;
+  background: #e5e9ed;
+}
+
+.portal-settings-workspace-sidebar-title {
+  display: block;
+  margin: 0 0 0.65rem;
+  padding: 0 0.25rem 0.55rem;
+  border-bottom: 1px solid #cbd5e1;
+  font-size: 0.64rem;
+  line-height: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.portal-settings-workspace-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.portal-settings-workspace-nav button {
+  width: 100%;
+  min-height: 2.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: #334155;
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.portal-settings-workspace-nav button:hover {
+  border-color: #cbd5e1;
+  background: #fff;
+}
+
+.portal-settings-workspace-nav button[data-active='true'] {
+  border-color: #b8c2cc;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.portal-settings-workspace-close {
+  position: absolute;
+  z-index: 3;
+  top: 0.6rem;
+  right: 0.75rem;
+  min-height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.55rem;
+  background: #fff;
+  color: #111827;
+  font-size: 0.65rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+#google-workspace-sync-section[data-portal-workspace-open='true'] > div:not(.portal-settings-workspace-sidebar),
+#master-flow-system-section[data-portal-workspace-open='true'] > div:not(.portal-settings-workspace-sidebar) {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 1rem !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  overflow: auto !important;
+  background: #f8fafc !important;
+}
+
+/* A navegação lateral do modal de Modelos assume os cinco seletores do Estúdio. */
+#master-flow-system-section[data-portal-workspace-open='true'] .portal-studio-tab-strip {
+  display: none !important;
+}
+
+#master-flow-system-section[data-portal-workspace-open='true'][data-portal-model-tab='catalog'] .portal-studio {
+  display: none !important;
+}
+
+#master-flow-system-section[data-portal-workspace-open='true']:not([data-portal-model-tab='catalog']) .portal-master-models-catalog {
+  display: none !important;
+}
+
+/* Sincronização: a barra lateral seleciona uma única responsabilidade de cada vez. */
+#google-workspace-sync-section[data-portal-workspace-open='true'][data-portal-sync-tab='identity'] #infrastructure-integrations-panel,
+#google-workspace-sync-section[data-portal-workspace-open='true'][data-portal-sync-tab='identity'] #authorized-access-panel,
+#google-workspace-sync-section[data-portal-workspace-open='true'][data-portal-sync-tab='integrations'] .portal-commission-identity-panel,
+#google-workspace-sync-section[data-portal-workspace-open='true'][data-portal-sync-tab='integrations'] #authorized-access-panel,
+#google-workspace-sync-section[data-portal-workspace-open='true'][data-portal-sync-tab='access'] .portal-commission-identity-panel,
+#google-workspace-sync-section[data-portal-workspace-open='true'][data-portal-sync-tab='access'] #infrastructure-integrations-panel {
+  display: none !important;
 }
 
 /* Para a Presidência, Configurações expõe somente a transferência segura do Master. */
@@ -65,5 +262,39 @@ html[data-portal-settings-role='president-only'] .portal-president-master-transf
   #authorized-access-panel,
   .portal-commission-identity-panel {
     font-size: 0.95em;
+  }
+}
+
+@media (max-width: 767px) {
+  #google-workspace-sync-section[data-portal-workspace-open='true'],
+  #master-flow-system-section[data-portal-workspace-open='true'] {
+    inset: 1.5vh 2vw !important;
+    max-height: 97vh !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto minmax(0, 1fr) !important;
+  }
+
+  .portal-settings-workspace-sidebar {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    border-right: 0;
+    border-bottom: 1px solid #cbd5e1;
+    padding: 0.55rem;
+  }
+
+  .portal-settings-workspace-nav {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .portal-settings-workspace-nav button {
+    width: auto;
+    min-width: max-content;
+  }
+
+  #google-workspace-sync-section[data-portal-workspace-open='true'] > div:not(.portal-settings-workspace-sidebar),
+  #master-flow-system-section[data-portal-workspace-open='true'] > div:not(.portal-settings-workspace-sidebar) {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
   }
 }
