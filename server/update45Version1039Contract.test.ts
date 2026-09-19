@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read=(p:string)=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
+// Contratos finais da 1.0.39: tabelas, Presidência e rastreabilidade Asten.
 test('1.0.39 mantém cabeçalhos estáveis e separador branco robusto',()=>{
   const enhancer=read('src/components/PortalSpreadsheetEnhancer.tsx');
   const css=read('src/portal-update-43.css');
