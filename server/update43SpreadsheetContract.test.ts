@@ -52,8 +52,8 @@ test('calendário usa fins de semana estreitos e preview seguro', () => {
 test('Meus TCCs colore apenas pílula de processo por vínculo e simplifica datas', () => {
   const enhancer = read('src/components/PortalSpreadsheetEnhancer.tsx');
   const css = read('src/portal-update-43.css');
-  assert.match(enhancer, /data\.portalRoleCategory=category/);
-  assert.match(enhancer, /dataset\.portalRolePill=category/);
+  assert.match(enhancer, /row\.dataset\.portalRoleCategory=category/);
+  assert.match(enhancer, /pill\.dataset\.portalRolePill=category/);
   assert.match(css, /data-portal-role-pill="student"/);
   assert.match(css, /data-portal-role-pill="committee"/);
   assert.match(css, /data-portal-role-pill="evaluator"/);
@@ -79,4 +79,9 @@ test('workspaces administrativos ganham hierarquia e prevenção de sobreposiç�
   assert.match(css, /grid-template-columns:minmax\(180px,230px\) minmax\(0,1fr\)/);
   assert.match(css, /min-width:0!important/);
   assert.match(css, /max-width:100%!important/);
+});
+
+test('rodapé prioriza a Secretaria configurada como responsável técnico', () => {
+  const footer = read('src/components/Footer.tsx');
+  assert.match(footer, /settings\?\.portalMaintainerName\|\|settings\?\.ownerName\|\|layoutConfig\.footerDevName/);
 });
