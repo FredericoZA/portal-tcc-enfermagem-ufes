@@ -31,11 +31,15 @@ test('update 39 abre cadastro individual e envio de lista em popups compactos', 
   assert.ok(panel.includes("setModal('list')"));
 });
 
-test('update 39 compacta integrações e preserva ações brancas', async () => {
+test('integrações mantêm Asten visível e concentram infraestrutura em painel compacto', async () => {
   const panel = await source('src/components/InfrastructureIntegrationsPanel.tsx');
   assert.ok(panel.includes('Integrações da plataforma'));
   assert.ok(panel.includes('Executar testes'));
-  assert.ok(panel.includes('xl:grid-cols-[1.6fr_.8fr_.8fr_.65fr]'));
+  assert.ok(panel.includes('Conexões'));
+  assert.ok(panel.includes('Asten'));
+  assert.ok(panel.includes('Google Drive'));
+  assert.ok(panel.includes('Supabase'));
+  assert.ok(panel.includes('Vercel'));
   assert.ok(panel.includes('bg-white'));
 });
 
