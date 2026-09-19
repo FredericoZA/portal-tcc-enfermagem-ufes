@@ -1,0 +1,217 @@
+/* Versão 1.0.40 — acabamento visual e operacional consolidado. */
+:root{
+  --portal1040-green:#005830;
+  --portal1040-green-soft:#17694a;
+  --portal1040-row:#d5dce0;
+  --portal1040-row-hover:#cbd5da;
+  --portal1040-text:#111827;
+  --portal1040-yellow:#c5a64f;
+  --portal1040-yellow-bg:#f2e8c9;
+  --portal1040-green-muted:#708a77;
+  --portal1040-green-muted-bg:#dce5df;
+}
+
+/* Tabelas: texto preto, linhas cinza e separador branco realmente visível. */
+#portal-app-root main .portal-spreadsheet-table tbody,
+#portal-app-root main .portal-spreadsheet-table tbody tr,
+#portal-app-root main .portal-spreadsheet-table tbody td{
+  background:var(--portal1040-row)!important;
+  color:var(--portal1040-text)!important;
+}
+#portal-app-root main .portal-spreadsheet-table tbody tr:hover,
+#portal-app-root main .portal-spreadsheet-table tbody tr:hover td{background:var(--portal1040-row-hover)!important;}
+#portal-app-root main .portal-spreadsheet-table tbody td *:not(button):not(svg):not(path){color:var(--portal1040-text)!important;}
+#portal-app-root main .portal-spreadsheet-table thead{
+  border-bottom:4px solid #fff!important;
+}
+#portal-app-root main .portal-spreadsheet-table tbody tr:first-child>td{
+  border-top:0!important;
+  box-shadow:none!important;
+}
+#meus-processos-table .portal-date-cell-sober,
+#meus-processos-table .portal-date-cell-sober *{font-weight:400!important;color:var(--portal1040-text)!important;}
+
+/* Três níveis verdes separados por linhas brancas: título / filtros / colunas. */
+.portal-meus-processos-filter-row,
+.portal-coordinator-filter-row,
+.portal-defense-filter-row,
+[data-portal1040-filter-band="true"]{
+  margin-top:0!important;
+  padding-top:.55rem!important;
+  padding-bottom:.55rem!important;
+  border-top:3px solid #fff!important;
+  border-bottom:3px solid #fff!important;
+}
+#meus-processos-page-container .portal-spreadsheet-table thead,
+#coordenador-page-root .portal-spreadsheet-table thead{
+  border-top:0!important;
+  border-bottom:4px solid #fff!important;
+}
+#audit-logs-page>header,
+[data-portal-signature-logs="true"]>header{border-bottom:3px solid #fff!important;}
+#audit-logs-page .portal-spreadsheet-table thead,
+[data-portal-signature-logs="true"] .portal-spreadsheet-table thead{border-top:0!important;border-bottom:4px solid #fff!important;}
+
+/* Cabeçalho tipo Excel: ordenação junto ao texto, filtro no canto superior direito. */
+.portal-spreadsheet-table thead th[data-portal1040-header="true"]{
+  position:relative!important;
+  padding-right:24px!important;
+}
+.portal-column-header-content{position:static!important;display:inline-flex!important;align-items:center!important;gap:3px!important;}
+.portal-column-controls{
+  position:absolute!important;
+  right:3px!important;
+  top:3px!important;
+  margin:0!important;
+  transform:none!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  z-index:3!important;
+}
+.portal-column-controls .portal-column-filter,
+.portal1040-corner-filter{
+  width:15px!important;
+  height:15px!important;
+  padding:1px!important;
+  border:0!important;
+  border-radius:3px!important;
+  background:transparent!important;
+  color:#fff!important;
+  box-shadow:none!important;
+}
+.portal-column-controls .portal-column-filter:hover{background:rgba(255,255,255,.10)!important;}
+.portal-column-filter-active .portal-column-filter{background:rgba(255,255,255,.24)!important;}
+.portal1040-inline-sort{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:14px!important;
+  height:14px!important;
+  min-width:0!important;
+  min-height:0!important;
+  margin-left:2px!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  color:#fff!important;
+  box-shadow:none!important;
+}
+.portal1040-inline-sort svg{width:11px!important;height:11px!important;}
+
+/* Filtros superiores: hover discreto; estado clicado é que recebe contraste forte. */
+.portal-standard-filter-chip,
+.portal-table-filter-chip{transform:none!important;transition:background .12s ease,border-color .12s ease,filter .12s ease!important;}
+.portal-standard-filter-chip:not([aria-pressed="true"]):not([data-selected="true"]):hover,
+.portal-table-filter-chip:not([aria-pressed="true"]):not([data-selected="true"]):hover{
+  background:#fff!important;
+  filter:saturate(.48) brightness(.99)!important;
+  box-shadow:none!important;
+}
+.portal-standard-filter-chip[aria-pressed="true"],
+.portal-standard-filter-chip[data-selected="true"],
+.portal-table-filter-chip[aria-pressed="true"],
+.portal-table-filter-chip[data-selected="true"]{
+  filter:saturate(.65) brightness(.78)!important;
+  box-shadow:inset 0 0 0 1px rgba(15,23,42,.24)!important;
+}
+
+/* Lista de defesas e calendário: cores foscas. */
+.portal-calendar-preview.is-upcoming{background:var(--portal1040-yellow-bg)!important;border-color:#bca14f!important;color:#4d411d!important;}
+.portal-calendar-preview.is-defended{background:var(--portal1040-green-muted-bg)!important;border-color:#839a89!important;color:#294b37!important;}
+.portal-calendar-preview{padding:5px 6px!important;gap:2px!important;}
+.portal-calendar-preview strong{font-size:9.5px!important;}
+.portal-calendar-preview span{font-size:8.7px!important;}
+.portal1040-calendar-extra{display:block!important;font-weight:700!important;opacity:.92!important;}
+
+/* Registro de Logs e Registros de Assinatura seguem a mesma superfície cinza. */
+#audit-logs-page .portal-spreadsheet-table tbody,
+#audit-logs-page .portal-spreadsheet-table tbody tr,
+#audit-logs-page .portal-spreadsheet-table tbody td,
+[data-portal-signature-logs="true"] .portal-spreadsheet-table tbody,
+[data-portal-signature-logs="true"] .portal-spreadsheet-table tbody tr,
+[data-portal-signature-logs="true"] .portal-spreadsheet-table tbody td{
+  background:var(--portal1040-row)!important;
+  color:var(--portal1040-text)!important;
+}
+
+/* Área do Presidente: seleção compacta, linhas na mesma densidade das demais planilhas. */
+#coordenador-page-root .portal-spreadsheet-table th,
+#coordenador-page-root .portal-spreadsheet-table td{padding-top:.32rem!important;padding-bottom:.32rem!important;}
+#coordenador-page-root th[data-portal-selection-column="true"]{background:var(--portal1040-green-soft)!important;}
+
+/* Workspace Sincronização e Acessos: menor, sem títulos redundantes e com cliques acima do backdrop. */
+.portal-settings-workspace-backdrop{z-index:999970!important;}
+#google-workspace-sync-section[data-portal-workspace-open="true"]{
+  z-index:999980!important;
+  inset:6vh 6vw!important;
+  max-height:88vh!important;
+  grid-template-columns:minmax(165px,205px) minmax(0,1fr)!important;
+}
+#google-workspace-sync-section[data-portal-workspace-open="true"]>.portal-settings-workspace-sidebar{
+  padding:.65rem!important;
+}
+#google-workspace-sync-section .portal-settings-workspace-sidebar-title{display:none!important;}
+#google-workspace-sync-section .portal-settings-workspace-nav{gap:.45rem!important;}
+#google-workspace-sync-section .portal-settings-workspace-nav button{min-height:2.2rem!important;font-size:.66rem!important;}
+#google-workspace-sync-section[data-portal-workspace-open="true"]>button:first-child{padding-right:7rem!important;}
+#google-workspace-sync-section .portal-settings-workspace-close{z-index:999985!important;right:.85rem!important;top:.55rem!important;}
+#google-workspace-sync-section[data-portal-workspace-open="true"]>div:not(.portal-settings-workspace-sidebar){padding:.7rem!important;}
+
+/* Rodapé: o item da lateral já dá o contexto; elimina faixas/títulos repetidos. */
+#google-workspace-sync-section #administrative-identity-panel>div:first-child{display:none!important;}
+#google-workspace-sync-section .portal-commission-identity-panel>.portal-administration-details>div:first-child>div:first-child{display:none!important;}
+#google-workspace-sync-section .portal-commission-identity-panel>.portal-administration-details>div:first-child{
+  justify-content:flex-end!important;
+  border-bottom:0!important;
+  padding:.45rem .65rem 0!important;
+}
+#google-workspace-sync-section button[data-portal1040-original-add-member="true"]{display:none!important;}
+.portal1040-add-member{
+  display:inline-flex!important;
+  min-height:28px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border:1px solid #cbd5e1!important;
+  border-radius:8px!important;
+  background:#fff!important;
+  padding:4px 9px!important;
+  color:#1f2937!important;
+  font-size:9px!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+  box-shadow:0 1px 2px rgba(15,23,42,.08)!important;
+}
+#google-workspace-sync-section .portal-commission-identity-panel thead,
+#google-workspace-sync-section .portal-commission-identity-panel thead tr,
+#google-workspace-sync-section .portal-commission-identity-panel thead th{
+  background:#7f9b8d!important;
+  color:#fff!important;
+}
+
+/* Integrações: conteúdo direto, sem botão de conexões e sem barra verde redundante. */
+#google-workspace-sync-section #infrastructure-integrations-panel{background:#e1e6e9!important;}
+
+/* Acesso: o item lateral já é o título; preserva ações e garante que os modais fiquem clicáveis. */
+#google-workspace-sync-section #authorized-access-panel>div:first-child>div:first-child{display:none!important;}
+#google-workspace-sync-section #authorized-access-panel>div:first-child{
+  background:#d5dce0!important;
+  color:#111827!important;
+  border-bottom:1px solid #bcc8cf!important;
+  justify-content:flex-end!important;
+}
+#google-workspace-sync-section #authorized-access-panel>div:first-child button{pointer-events:auto!important;position:relative!important;z-index:2!important;}
+body>.fixed[role="presentation"],body>div:has(>[role="dialog"]){pointer-events:auto!important;}
+
+/* Colunas e ordem permanece como bloco visual equivalente aos demais grupos. */
+.portal-table-settings-popover section[aria-label^="Colunas e ordem"]{
+  background:#e3e8eb!important;
+  border:1px solid #c6d0d6!important;
+  border-radius:14px!important;
+  padding:14px!important;
+}
+.portal-table-settings-popover>div:first-child{justify-content:flex-start!important;text-align:left!important;}
+.portal-table-settings-popover>div:first-child>span{margin-right:auto!important;text-align:left!important;}
+
+@media(max-width:900px){
+  #google-workspace-sync-section[data-portal-workspace-open="true"]{inset:2vh 2vw!important;max-height:96vh!important;grid-template-columns:1fr!important;}
+}
