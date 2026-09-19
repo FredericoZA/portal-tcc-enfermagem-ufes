@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { PortalUiEnhancer } from './components/PortalUiEnhancer';
 import { PortalSpreadsheetEnhancer } from './components/PortalSpreadsheetEnhancer';
+import { PortalVersion1040Enhancer } from './components/PortalVersion1040Enhancer';
 import './index.css';
 import './portal-overrides.css';
 import './portal-design-system.css';
@@ -23,6 +24,7 @@ import './portal-update-39.css';
 import './portal-update-40.css';
 import './portal-update-42.css';
 import './portal-update-43.css';
+import './portal-version-1040.css';
 import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
 import { installAuthRequestResilience } from './utils/authRequestResilience';
 
@@ -34,5 +36,6 @@ createRoot(document.getElementById('root')!).render(
     <App />
     <PortalUiEnhancer />
     <PortalSpreadsheetEnhancer />
+    <PortalVersion1040Enhancer />
   </StrictMode>,
 );
