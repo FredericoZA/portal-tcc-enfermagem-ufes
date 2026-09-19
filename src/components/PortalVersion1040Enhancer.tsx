@@ -20,7 +20,6 @@ function keepPortalDialogsAboveWorkspaces() {
 function configureSyncWorkspace() {
   const section = document.getElementById('google-workspace-sync-section');
   if (!section || section.dataset.portalWorkspaceOpen !== 'true') return;
-
   const sidebar = section.querySelector<HTMLElement>('.portal-settings-workspace-sidebar');
   sidebar?.querySelector<HTMLElement>('.portal-settings-workspace-sidebar-title')?.setAttribute('hidden', 'true');
   const labels: Record<string, string> = { identity: 'Rodapé', integrations: 'Integrações da Plataforma', access: 'Autorização de Acesso' };
@@ -29,15 +28,12 @@ function configureSyncWorkspace() {
     const text = button.querySelectorAll('span')[1];
     if (label && text && text.textContent !== label) text.textContent = label;
   });
-
   const toggle = section.querySelector<HTMLButtonElement>(':scope > button:first-child');
   toggle?.querySelectorAll<HTMLElement>('span,small,div').forEach((node) => {
     if (normalize(node.textContent || '') === 'recolher' && node.children.length === 0) node.style.display = 'none';
   });
-
   const adminPanel = section.querySelector<HTMLElement>('#administrative-identity-panel');
   if (adminPanel) adminPanel.dataset.portal1040AdminPanel = 'true';
-
   const commission = section.querySelector<HTMLElement>('.portal-commission-identity-panel');
   if (commission) {
     const originalAdd = Array.from(commission.querySelectorAll<HTMLButtonElement>('button')).find((button) => normalize(button.textContent || '') === 'adicionar membro');
@@ -53,7 +49,6 @@ function configureSyncWorkspace() {
       membersToolbar.appendChild(add);
     }
   }
-
   const access = section.querySelector<HTMLElement>('#authorized-access-panel');
   if (access) access.dataset.portal1040AccessPanel = 'true';
 }
@@ -95,6 +90,28 @@ function classifyGreenBands() {
   document.querySelectorAll<HTMLElement>('.portal-defense-filter-row,.portal-meus-processos-filter-row,.portal-coordinator-filter-row').forEach((row) => row.dataset.portal1040FilterBand = 'true');
 }
 
+function decorateDefenseList() {
+  document.querySelectorAll<HTMLElement>('.portal-defense-filter-row').forEach((filterRow) => {
+    const scope = filterRow.parentElement;
+    const table = scope?.querySelector<HTMLTableElement>('table');
+    if (!table?.tHead || !table.tBodies[0]) return;
+    table.dataset.portal1040DefenseTable = 'true';
+    const headers = Array.from(table.tHead.rows[0]?.cells || []);
+    const dateIndex = headers.findIndex((cell) => normalize(cell.textContent || '').startsWith('data'));
+    if (dateIndex < 0) return;
+    Array.from(table.tBodies[0].rows).forEach((row) => {
+      const match = (row.cells[dateIndex]?.textContent || '').match(/(\d{2})\/(\d{2})\/(\d{4})/);
+      if (!match) return;
+      const [, dd, mm, yyyy] = match;
+      const defense = new Date(Number(yyyy), Number(mm) - 1, Number(dd), 23, 59, 59, 999).getTime();
+      const pill = row.cells[0]?.querySelector<HTMLElement>('div');
+      if (!pill) return;
+      pill.classList.toggle('portal1040-defense-upcoming', defense >= Date.now());
+      pill.classList.toggle('portal1040-defense-defended', defense < Date.now());
+    });
+  });
+}
+
 let calendarCache: any[] | null = null;
 let calendarLoading = false;
 async function enrichCalendarPreview() {
@@ -128,6 +145,7 @@ function enhanceAll() {
   renameSignatureRegistry();
   placeSpreadsheetControls();
   classifyGreenBands();
+  decorateDefenseList();
   void enrichCalendarPreview();
 }
 
