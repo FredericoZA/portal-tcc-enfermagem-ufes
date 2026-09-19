@@ -23,11 +23,7 @@ function configureSyncWorkspace() {
 
   const sidebar = section.querySelector<HTMLElement>('.portal-settings-workspace-sidebar');
   sidebar?.querySelector<HTMLElement>('.portal-settings-workspace-sidebar-title')?.setAttribute('hidden', 'true');
-  const labels: Record<string, string> = {
-    identity: 'Rodapé',
-    integrations: 'Integrações da Plataforma',
-    access: 'Autorização de Acesso',
-  };
+  const labels: Record<string, string> = { identity: 'Rodapé', integrations: 'Integrações da Plataforma', access: 'Autorização de Acesso' };
   sidebar?.querySelectorAll<HTMLButtonElement>('button[data-workspace-tab]').forEach((button) => {
     const label = labels[button.dataset.workspaceTab || ''];
     const text = button.querySelectorAll('span')[1];
@@ -76,15 +72,26 @@ function renameSignatureRegistry() {
   });
 }
 
-function classifyGreenBands() {
-  const pages = [
-    document.getElementById('meus-processos-page-container'),
-    document.getElementById('coordenador-page-root'),
-    document.getElementById('audit-logs-page'),
-    document.querySelector<HTMLElement>('[data-portal-signature-logs="true"]'),
-  ].filter(Boolean) as HTMLElement[];
-  pages.forEach((page) => page.dataset.portal1040SheetBands = 'true');
+function placeSpreadsheetControls() {
+  document.querySelectorAll<HTMLTableElement>('.portal-spreadsheet-table').forEach((table) => {
+    table.querySelectorAll<HTMLTableCellElement>('thead th').forEach((th) => {
+      const controls = th.querySelector<HTMLElement>('.portal-column-controls');
+      if (!controls) return;
+      th.dataset.portal1040Header = 'true';
+      const sort = controls.querySelector<HTMLButtonElement>('.portal-column-sort');
+      if (sort && !sort.classList.contains('portal1040-inline-sort')) {
+        sort.classList.add('portal1040-inline-sort');
+        controls.insertAdjacentElement('beforebegin', sort);
+      }
+      const filter = controls.querySelector<HTMLButtonElement>('.portal-column-filter');
+      if (filter) filter.classList.add('portal1040-corner-filter');
+    });
+  });
+}
 
+function classifyGreenBands() {
+  const pages = [document.getElementById('meus-processos-page-container'), document.getElementById('coordenador-page-root'), document.getElementById('audit-logs-page'), document.querySelector<HTMLElement>('[data-portal-signature-logs="true"]')].filter(Boolean) as HTMLElement[];
+  pages.forEach((page) => page.dataset.portal1040SheetBands = 'true');
   document.querySelectorAll<HTMLElement>('.portal-defense-filter-row,.portal-meus-processos-filter-row,.portal-coordinator-filter-row').forEach((row) => row.dataset.portal1040FilterBand = 'true');
 }
 
@@ -97,10 +104,7 @@ async function enrichCalendarPreview() {
     calendarLoading = true;
     try {
       const response = await fetch('/api/processes', { credentials: 'include', headers: { Accept: 'application/json' } });
-      if (response.ok) {
-        const payload = await response.json();
-        calendarCache = Array.isArray(payload) ? payload : [];
-      }
+      if (response.ok) { const payload = await response.json(); calendarCache = Array.isArray(payload) ? payload : []; }
     } catch { calendarCache = []; }
     finally { calendarLoading = false; }
   }
@@ -122,6 +126,7 @@ function enhanceAll() {
   keepPortalDialogsAboveWorkspaces();
   configureSyncWorkspace();
   renameSignatureRegistry();
+  placeSpreadsheetControls();
   classifyGreenBands();
   void enrichCalendarPreview();
 }
@@ -129,10 +134,7 @@ function enhanceAll() {
 export function PortalVersion1040Enhancer() {
   useEffect(() => {
     let frame = 0;
-    const schedule = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(enhanceAll);
-    };
+    const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(enhanceAll); };
     enhanceAll();
     const observer = new MutationObserver(schedule);
     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-portal-workspace-open', 'data-portal-sync-tab'] });
