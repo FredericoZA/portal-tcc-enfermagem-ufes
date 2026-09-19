@@ -36,7 +36,9 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
   const legacy=[settings?.commissionMember2Name,settings?.commissionMember3Name,settings?.commissionMember4Name,settings?.commissionMember5Name].filter(Boolean).map((name,index)=>({id:`legacy-${index}`,name:String(name),active:true}));
   const layout=(layoutConfig.footerMembersList||[]).filter(Boolean).map((name,index)=>({id:`layout-${index}`,name,active:true}));
   const membersList=configured.length?configured:legacy.length?legacy:layout;
-  const devName=settings?.ownerName||settings?.portalMaintainerName||layoutConfig.footerDevName||'Equipe responsável pela instalação';
+  // A Secretaria é o responsável técnico/operacional exibido no rodapé. O campo
+  // ownerName é legado e pode conter apenas um rótulo genérico (ex.: “Administrador Master”).
+  const devName=settings?.portalMaintainerName||settings?.ownerName||layoutConfig.footerDevName||'Equipe responsável pela instalação';
   const whatsappUrl=layoutConfig.footerWhatsappUrl||settings?.whatsappUrl||'';
   const contactEmail=settings?.contactEmail||settings?.masterEmail||layoutConfig.footerContactEmail||'';
   const locationText=layoutConfig.footerLocationText||installationProfile.defaultDefenseLocation||`Consulte ${installationProfile.departmentName||installationProfile.courseName} para confirmar o local da defesa.`;
