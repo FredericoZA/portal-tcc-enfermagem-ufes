@@ -57,6 +57,13 @@ function isPlaceholder(rawValue) {
   return false;
 }
 
+function shouldScanAssignments(file) {
+  if (/(?:^|\/)(?:docs?|test-results|playwright-report)\//i.test(file)) return false;
+  if (/\.(?:test|spec)\.[cm]?[jt]sx?$/i.test(file)) return false;
+  if (/(?:^|\/)scripts\/test-/i.test(file)) return false;
+  return true;
+}
+
 const findings = [];
 
 for (const file of trackedFiles) {
@@ -76,6 +83,8 @@ for (const file of trackedFiles) {
   }
   if (content.includes('\u0000')) continue;
 
+  // Assinaturas conhecidas de provedores são procuradas em todo arquivo textual,
+  // inclusive documentação e fixtures.
   for (const [label, pattern] of secretSignatures) {
     pattern.lastIndex = 0;
     let match;
@@ -84,6 +93,10 @@ for (const file of trackedFiles) {
       findings.push({ file, line, reason: label });
     }
   }
+
+  // A busca por atribuições literais é mais conservadora para evitar falsos
+  // positivos em testes que usam segredos fictícios deliberadamente.
+  if (!shouldScanAssignments(file)) continue;
 
   const lines = content.split('\n');
   lines.forEach((lineText, index) => {
