@@ -5,6 +5,7 @@ import { PortalUiEnhancer } from './components/PortalUiEnhancer';
 import { PortalSpreadsheetEnhancer } from './components/PortalSpreadsheetEnhancer';
 import { PortalVersion1040Enhancer } from './components/PortalVersion1040Enhancer';
 import { PortalSpreadsheetRefinementEnhancer } from './components/PortalSpreadsheetRefinementEnhancer';
+import { PortalInteractionRefinementEnhancer } from './components/PortalInteractionRefinementEnhancer';
 import './index.css';
 import './portal-overrides.css';
 import './portal-design-system.css';
@@ -27,6 +28,7 @@ import './portal-update-42.css';
 import './portal-update-43.css';
 import './portal-version-1040.css';
 import './portal-spreadsheet-refinement.css';
+import './portal-interaction-refinement.css';
 import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
 import { installAuthRequestResilience } from './utils/authRequestResilience';
 
@@ -40,5 +42,6 @@ createRoot(document.getElementById('root')!).render(
     <PortalSpreadsheetEnhancer />
     <PortalVersion1040Enhancer />
     <PortalSpreadsheetRefinementEnhancer />
+    <PortalInteractionRefinementEnhancer />
   </StrictMode>,
 );

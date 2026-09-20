@@ -1,0 +1,185 @@
+/* Refinamento final desta etapa: hover neutro, cabeçalho limpo e calendário sem fins de semana. */
+
+/* A separação entre cabeçalho e dados deve ser visualmente inequívoca. */
+#portal-app-root main .portal1041-sheet thead,
+#portal-app-root main .portal-spreadsheet-table thead {
+  border-bottom: 16px solid #fff !important;
+}
+
+#portal-app-root main .portal1041-sheet thead th {
+  padding-top: .80rem !important;
+  padding-bottom: .80rem !important;
+}
+
+/* Texto de todas as linhas de dados permanece preto, inclusive registros já defendidos. */
+#portal-app-root main .portal-spreadsheet-table tbody,
+#portal-app-root main .portal-spreadsheet-table tbody tr,
+#portal-app-root main .portal-spreadsheet-table tbody td,
+#portal-app-root main .portal-spreadsheet-table tbody td *,
+#portal-app-root main .portal1041-sheet tbody,
+#portal-app-root main .portal1041-sheet tbody tr,
+#portal-app-root main .portal1041-sheet tbody td,
+#portal-app-root main .portal1041-sheet tbody td * {
+  color: #000 !important;
+  opacity: 1 !important;
+}
+
+/* Hover da planilha não altera fundo, texto, brilho ou contraste. */
+#portal-app-root main .portal-spreadsheet-table tbody tr:hover,
+#portal-app-root main .portal-spreadsheet-table tbody tr:hover td,
+#portal-app-root main .portal1041-sheet tbody tr:hover,
+#portal-app-root main .portal1041-sheet tbody tr:hover td {
+  background: var(--portal1040-row, #d5dce0) !important;
+  color: #000 !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+#portal-app-root main .portal-spreadsheet-table thead th:hover,
+#portal-app-root main .portal1041-sheet thead th:hover {
+  filter: none !important;
+}
+
+/* Remove visualmente todos os controles antigos de ordenação/filtro. */
+#portal-app-root main .portal1041-sheet .portal-column-controls,
+#portal-app-root main .portal1041-sheet .portal1040-inline-sort,
+#portal-app-root main .portal1041-sheet .portal-column-sort,
+#portal-app-root main .portal1041-sheet .portal-column-filter,
+#portal-app-root main .portal1041-sheet thead th > div svg,
+#portal-app-root main .portal1041-sheet thead th > span svg {
+  display: none !important;
+}
+
+/* Mantém somente uma seta simples para baixo, sem caixa ao redor. */
+#portal-app-root main .portal1041-sheet .portal1041-column-menu-button {
+  right: .42rem !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 3px !important;
+  background: transparent !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+#portal-app-root main .portal1041-sheet .portal1041-column-menu-button:hover {
+  background: transparent !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+#portal-app-root main .portal1041-sheet .portal1041-column-menu-button[aria-expanded="true"],
+#portal-app-root main .portal1041-sheet .portal1041-column-menu-button[data-filter-active="true"] {
+  background: rgba(255,255,255,.16) !important;
+}
+
+#portal-app-root main .portal1041-sheet .portal1041-column-menu-button svg {
+  display: block !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* Verde de registros já defendidos: acinzentado, discreto e sem fluorescência. */
+[data-portal1040-defense-table="true"] .portal1040-defense-defended,
+[data-portal1040-defense-table="true"] .portal1040-defense-defended:hover {
+  background: #aab5ad !important;
+  border-color: #748178 !important;
+  color: #000 !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+[data-portal1040-defense-table="true"] .portal1040-defense-defended *,
+[data-portal1040-defense-table="true"] .portal1040-defense-defended:hover * {
+  color: #000 !important;
+  opacity: 1 !important;
+}
+
+.portal-calendar-preview.is-defended,
+.portal-calendar-preview.is-defended:hover {
+  background: #b5beb8 !important;
+  border-color: #7e8b82 !important;
+  color: #000 !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+.portal-calendar-preview.is-defended *,
+.portal-calendar-preview.is-defended:hover * {
+  color: #000 !important;
+  opacity: 1 !important;
+}
+
+.portal1041-defense-filter-defended,
+.portal1041-defense-filter-defended:hover {
+  background: #b8c1bb !important;
+  color: #172019 !important;
+  border-color: #7c8980 !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+/* Fins de semana não recebem nem exibem defesa de TCC. */
+.portal1042-calendar-weekend,
+.portal1041-calendar-weekend {
+  background: #f8fafc !important;
+  color: #64748b !important;
+  cursor: default !important;
+  pointer-events: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.portal1042-calendar-weekend .portal-calendar-preview-list,
+.portal1042-calendar-weekend .portal-calendar-preview,
+.portal1042-calendar-weekend .portal-calendar-preview-more,
+.portal1042-calendar-weekend > .flex-1,
+.portal1041-calendar-weekend .portal-calendar-preview-list,
+.portal1041-calendar-weekend .portal-calendar-preview,
+.portal1041-calendar-weekend .portal-calendar-preview-more,
+.portal1041-calendar-weekend > .flex-1 {
+  display: none !important;
+}
+
+.portal1042-calendar-weekend > div:first-child span,
+.portal1041-calendar-weekend > div:first-child span {
+  background: transparent !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+}
+
+.portal1042-weekend-defense-row {
+  display: none !important;
+}
+
+/* Previews de dias úteis continuam clicáveis e não mudam de cor no hover. */
+.portal-calendar-preview[role="button"] {
+  cursor: pointer !important;
+}
+
+.portal-calendar-preview.is-upcoming:hover {
+  background: var(--portal1040-yellow-bg, #f2e8c9) !important;
+  border-color: #bca14f !important;
+  color: #4d411d !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+/* Controles customizados já existentes também ficam cromaticamente estáveis ao hover. */
+.portal-standard-filter-chip:hover,
+.portal-table-filter-chip:hover,
+.portal-defense-filter-row button:hover,
+.portal-meus-processos-filter-row button:hover,
+.portal-coordinator-filter-row button:hover,
+.portal1041-menu-action:hover,
+.portal1041-column-menu-footer button:hover,
+.portal1041-column-filter-value:hover {
+  filter: none !important;
+  transform: none !important;
+}
