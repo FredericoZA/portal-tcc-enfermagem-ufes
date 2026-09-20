@@ -42,23 +42,23 @@ test('Personalização usa cabeçalho verde, título à esquerda, ícone branco 
   assert.ok(css42.includes('.portal-customization-header'));
 });
 
-test('Registros administrativos permanecem roteáveis e passam a abrir dentro de Configurações', async () => {
-  const [app, logs, signatures, enhancer41, modals41] = await Promise.all([
+test('Registro de logs sai de Configurações e vira página Master com toolbar de planilha', async () => {
+  const [app, logs, enhancer, css] = await Promise.all([
     source('src/App.tsx'),
     source('src/pages/AuditLogsPage.tsx'),
-    source('src/pages/AstenLogsPage.tsx'),
-    source('src/components/PortalVersion1041Enhancer.tsx'),
-    source('src/components/PortalVersion1041AdminModals.tsx'),
+    source('src/components/PortalUiEnhancer.tsx'),
+    source('src/portal-update-39.css'),
   ]);
   assert.ok(app.includes("case 'logs'"));
   assert.ok(app.includes('<AuditLogsPage />'));
   assert.ok(logs.includes('id="audit-logs-page"'));
-  assert.ok(signatures.includes('Registros de Assinatura'));
-  assert.ok(enhancer41.includes("createRecordsBar('signatures'"));
-  assert.ok(enhancer41.includes("createRecordsBar('logs'"));
-  assert.ok(enhancer41.includes("document.getElementById('nav-item-logs')?.remove()"));
-  assert.ok(enhancer41.includes("document.getElementById('nav-item-asten-logs')?.remove()"));
-  assert.ok(modals41.includes("detail === 'signatures' || detail === 'logs'"));
+  assert.ok(logs.includes('<SearchPopover'));
+  assert.ok(logs.includes('<HeaderSettingsPopover'));
+  assert.ok(logs.includes('Backup'));
+  assert.ok(logs.includes('Restaurar'));
+  assert.ok(enhancer.includes("readGlobalRoles().includes('MASTER_ADMIN')"));
+  assert.ok(enhancer.includes("detail: 'logs'"));
+  assert.match(css, /#system-audit-logs-section\s*\{\s*display:\s*none\s*!important/);
 });
 
 test('Indicadores adicionam estatística descritiva, donuts e distribuições temporais', async () => {
