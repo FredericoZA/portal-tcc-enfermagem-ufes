@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import AuditLogsPage from '../pages/AuditLogsPage';
-import AstenLogsPage from '../pages/AstenLogsPage';
+import { AuditLogsPage } from '../pages/AuditLogsPage';
+import { AstenLogsPage } from '../pages/AstenLogsPage';
 
 type RecordModal = 'signatures' | 'logs' | null;
 
