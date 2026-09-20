@@ -154,6 +154,10 @@
   box-shadow: none !important;
 }
 
+.portal1042-weekend-defense-row {
+  display: none !important;
+}
+
 /* Previews de dias úteis continuam clicáveis e não mudam de cor no hover. */
 .portal-calendar-preview[role="button"] {
   cursor: pointer !important;
