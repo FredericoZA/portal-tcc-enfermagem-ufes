@@ -8,6 +8,18 @@ coverage/
 .env*
 !.env*.example
 
+# Credenciais, chaves e certificados locais
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+.npmrc
+credentials*.json
+client_secret*.json
+service-account*.json
+service_account*.json
+
 # Configuração local de provedores e relatórios de execução
 .vercel/
 .supabase/
