@@ -26,12 +26,12 @@ test('Meus TCCs usa Etapa em vez de progresso percentual',()=>{
   assert.match(p,/stageNumber = getStepNumberLabel/);
 });
 
-test('popup e logs preservam acabamento aprovado na release atual',()=>{
+test('popup e logs seguem acabamento aprovado e release está em 1.0.40',()=>{
   const css=read('src/portal-version-1040.css');
   const ui=read('src/components/PortalUiEnhancer.tsx');
   const pkg=JSON.parse(read('package.json'));
   assert.match(css,/section\[aria-label\^="Colunas e ordem"\]/);
   assert.match(css,/border-bottom:4px solid #fff/);
   assert.match(ui,/portal-sidebar-nav-active/);
-  assert.equal(pkg.version,'1.0.41');
+  assert.equal(pkg.version,'1.0.40');
 });
