@@ -1,0 +1,343 @@
+/* Refinamento incremental: calendário sem defesas em fins de semana e planilhas com interação explícita. */
+
+/* Fins de semana: colunas muito estreitas e visual de dia indisponível. */
+.portal-calendar-grid,
+.portal1041-calendar-grid,
+.portal-calendar-week-header > div,
+.portal1041-calendar-week-header > div {
+  grid-template-columns: .20fr 1.36fr 1.36fr 1.36fr 1.36fr 1.36fr .20fr !important;
+}
+
+.portal-calendar-empty-cell,
+.portal1041-calendar-weekend {
+  background: #f8fafc !important;
+}
+
+.portal1041-calendar-weekend {
+  color: #64748b !important;
+  cursor: default !important;
+  pointer-events: none !important;
+  box-shadow: none !important;
+}
+
+.portal1041-calendar-weekend > .flex-1,
+.portal1041-calendar-weekend .portal-calendar-preview-list,
+.portal1041-calendar-weekend .portal-calendar-preview,
+.portal1041-calendar-weekend .portal-calendar-preview-more {
+  display: none !important;
+}
+
+.portal1041-calendar-weekend > div:first-child span {
+  background: transparent !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+}
+
+/* Cabeçalho: mais altura e uma única separação branca, deliberadamente grossa. */
+#portal-app-root main .portal1041-sheet thead {
+  border-bottom: 8px solid #fff !important;
+}
+
+#portal-app-root main .portal1041-sheet thead th {
+  position: relative !important;
+  padding-top: .72rem !important;
+  padding-bottom: .72rem !important;
+  padding-right: 2.15rem !important;
+  vertical-align: middle !important;
+}
+
+#portal-app-root main .portal1041-sheet tbody tr:first-child > td {
+  border-top: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Texto dos dados sempre preto e sem realce cromático por passagem do mouse. */
+#portal-app-root main .portal1041-sheet tbody,
+#portal-app-root main .portal1041-sheet tbody tr,
+#portal-app-root main .portal1041-sheet tbody td,
+#portal-app-root main .portal1041-sheet tbody td * {
+  color: #111827 !important;
+}
+
+#portal-app-root main .portal1041-sheet tbody tr:hover,
+#portal-app-root main .portal1041-sheet tbody tr:hover td {
+  background: var(--portal1040-row, #d5dce0) !important;
+  color: #111827 !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+#portal-app-root main .portal1041-sheet thead th:hover,
+#portal-app-root main .portal1041-sheet thead tr:hover {
+  background: var(--portal-sheet-green, #17694a) !important;
+  filter: none !important;
+}
+
+/* A coluna deixou de representar percentual: mostra somente a etapa do fluxo. */
+.portal1041-stage-label {
+  min-width: 0 !important;
+  color: #111827 !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+
+/* Esconde os antigos controles separados de ordenar/filtrar. */
+#portal-app-root main .portal1041-sheet .portal-column-controls,
+#portal-app-root main .portal1041-sheet .portal1040-inline-sort,
+#portal-app-root main .portal1041-sheet thead th svg.lucide-arrow-up-down,
+#portal-app-root main .portal1041-sheet thead th svg.lucide-chevron-up,
+#portal-app-root main .portal1041-sheet thead th svg.lucide-chevron-down {
+  display: none !important;
+}
+
+/* Um único botão, como em planilhas tradicionais. */
+.portal1041-column-menu-button {
+  position: absolute !important;
+  right: .42rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255,255,255,.30) !important;
+  border-radius: 5px !important;
+  background: transparent !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  transition: none !important;
+  z-index: 4 !important;
+}
+
+.portal1041-column-menu-button:hover {
+  background: transparent !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.30) !important;
+  filter: none !important;
+  transform: translateY(-50%) !important;
+}
+
+.portal1041-column-menu-button[aria-expanded="true"],
+.portal1041-column-menu-button[data-filter-active="true"] {
+  background: rgba(255,255,255,.20) !important;
+  border-color: rgba(255,255,255,.58) !important;
+}
+
+.portal1041-column-menu-button svg {
+  display: block !important;
+  width: 13px !important;
+  height: 13px !important;
+}
+
+.portal1041-filter-hidden {
+  display: none !important;
+}
+
+/* Popup único de ordenação + filtro. */
+.portal1041-column-menu-popup {
+  position: fixed;
+  z-index: 1000015;
+  width: 300px;
+  max-height: 410px;
+  overflow: hidden;
+  border: 1px solid #b8c4bd;
+  border-radius: 12px;
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 16px 42px rgba(15,23,42,.22);
+  padding: 10px;
+}
+
+.portal1041-column-menu-title {
+  padding: 1px 2px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #173d2d;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.portal1041-column-menu-sort {
+  display: grid;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.portal1041-menu-action,
+.portal1041-column-menu-footer button {
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #1f2937;
+  box-shadow: none;
+  cursor: pointer;
+  transition: none;
+}
+
+.portal1041-menu-action {
+  width: 100%;
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 750;
+}
+
+.portal1041-menu-action:hover,
+.portal1041-column-menu-footer button:hover,
+.portal1041-column-filter-value:hover {
+  background: #fff;
+  color: #1f2937;
+  filter: none;
+  transform: none;
+}
+
+.portal1041-column-filter-title {
+  padding: 8px 2px 5px;
+  color: #334155;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.portal1041-column-filter-search {
+  width: 100%;
+  margin-bottom: 7px;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  color: #111827;
+  background: #fff;
+  font-size: 11px;
+}
+
+.portal1041-column-filter-search:focus {
+  border-color: #6f8f79;
+  box-shadow: 0 0 0 2px rgba(111,143,121,.14);
+}
+
+.portal1041-column-filter-values {
+  max-height: 190px;
+  overflow: auto;
+  padding: 5px 0;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.portal1041-column-filter-value {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 5px;
+  border-radius: 6px;
+  color: #111827;
+  cursor: pointer;
+  font-size: 10.5px;
+}
+
+.portal1041-column-filter-value input {
+  accent-color: #557762;
+}
+
+.portal1041-column-filter-value span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portal1041-column-menu-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.portal1041-column-menu-footer button {
+  padding: 5px 8px;
+  font-size: 9.5px;
+  font-weight: 800;
+}
+
+.portal1041-column-menu-footer button:last-child {
+  background: #17694a;
+  border-color: #17694a;
+  color: #fff;
+}
+
+.portal1041-column-menu-footer button:last-child:hover {
+  background: #17694a;
+  border-color: #17694a;
+  color: #fff;
+}
+
+/* A passagem do mouse não altera a pintura de filtros e botões das planilhas. */
+.portal1041-hover-lock,
+.portal1041-hover-lock:hover {
+  background-color: var(--portal1041-lock-bg) !important;
+  color: var(--portal1041-lock-color) !important;
+  border-color: var(--portal1041-lock-border) !important;
+  filter: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+  transition: none !important;
+}
+
+/* Filtros da lista de defesas: sem fluorescência e sem mudança ao hover. */
+.portal1041-defense-filter-all,
+.portal1041-defense-filter-all:hover {
+  background: #eef2f4 !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+  filter: none !important;
+}
+
+.portal1041-defense-filter-pending,
+.portal1041-defense-filter-pending:hover {
+  background: #f2e8c9 !important;
+  color: #4d411d !important;
+  border-color: #c5a64f !important;
+  filter: none !important;
+}
+
+.portal1041-defense-filter-defended,
+.portal1041-defense-filter-defended:hover {
+  background: #dce5df !important;
+  color: #2f4d39 !important;
+  border-color: #87998d !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+.portal1041-defense-filter-all[data-selected="true"],
+.portal1041-defense-filter-all[aria-pressed="true"],
+.portal1041-defense-filter-pending[data-selected="true"],
+.portal1041-defense-filter-pending[aria-pressed="true"],
+.portal1041-defense-filter-defended[data-selected="true"],
+.portal1041-defense-filter-defended[aria-pressed="true"] {
+  filter: brightness(.92) saturate(.78) !important;
+  box-shadow: inset 0 0 0 1px rgba(15,23,42,.18) !important;
+}
+
+@media (max-width: 900px) {
+  .portal-calendar-grid,
+  .portal1041-calendar-grid,
+  .portal-calendar-week-header > div,
+  .portal1041-calendar-week-header > div {
+    grid-template-columns: .28fr 1.30fr 1.30fr 1.30fr 1.30fr 1.30fr .28fr !important;
+  }
+
+  #portal-app-root main .portal1041-sheet thead th {
+    padding-top: .62rem !important;
+    padding-bottom: .62rem !important;
+  }
+}
