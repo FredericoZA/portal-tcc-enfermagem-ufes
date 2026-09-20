@@ -1,23 +1,73 @@
 # Política de segurança
 
+O código-fonte deste projeto pode ser público. Credenciais, tokens, chaves criptográficas, documentos privados e dados operacionais não fazem parte do código-fonte e devem permanecer fora do Git.
+
 ## Relato responsável
 
 Não abra uma issue pública com e-mails, documentos, tokens, URLs assinadas, dados pessoais ou passos exploráveis. Envie o relato ao mantenedor indicado pela implantação e informe: versão, rota afetada, impacto, reprodução mínima sem dados reais e sugestão de correção.
 
-## Segredos
+## Política obrigatória de segredos
 
-- Somente o backend lê chaves Supabase, OAuth Google, token Asten e segredos de sessão, OTP, verificação e webhook.
-- Nenhum segredo pode usar prefixo `VITE_`, entrar em `localStorage`, log, ZIP, commit ou captura de tela.
-- Use valores independentes, rotacione-os após suspeita e mantenha ambientes de homologação e produção separados.
-- O token Asten é inserido em Configurações e cifrado no servidor; nunca deve ser enviado por chat ou e-mail.
+É proibido versionar, colar ou publicar segredos reais em código, commits, branches, pull requests, issues, discussions, wiki, releases, artefatos públicos, logs ou capturas de tela.
+
+Incluem-se nessa proibição, entre outros:
+
+- `SUPABASE_SECRET_KEY` e `SUPABASE_SERVICE_ROLE_KEY`;
+- `GOOGLE_OAUTH_CLIENT_SECRET`, refresh tokens e access tokens Google;
+- token/API key da Asten e `ASTEN_WEBHOOK_SECRET`;
+- `PORTAL_SESSION_SECRET`, `PORTAL_OTP_PEPPER` e `GOOGLE_OAUTH_STATE_SECRET`;
+- `PORTAL_SECRET_ENCRYPTION_KEY`, `PORTAL_VERIFICATION_SECRET`, `PORTAL_UPLOAD_BINDING_SECRET` e `CRON_SECRET`;
+- chaves privadas, certificados privados, service accounts e arquivos de credenciais de provedores.
+
+Segredos de produção devem existir somente no local apropriado do provedor: variáveis de ambiente protegidas da Vercel para configuração exclusiva do servidor e armazenamento cifrado do Supabase para tokens persistidos pelo próprio Portal. Tokens de integração persistidos pelo sistema usam AES-256-GCM e não devem ser reproduzidos em documentação ou configuração pública.
+
+Nenhum segredo pode usar prefixo `VITE_`, ser enviado ao navegador, entrar em `localStorage` ou ser serializado em respostas públicas. IDs de projeto, URLs públicas, nomes de bucket e IDs de pastas não devem ser tratados como credenciais; a autorização real deve continuar baseada em chaves privadas, sessão e permissões do provedor.
+
+## GitHub Actions
+
+Os workflows deste projeto devem permanecer sem credenciais de produção sempre que possível. Não copie segredos de Vercel, Supabase, Google ou Asten para arquivos YAML ou comandos de workflow.
+
+Se no futuro uma automação realmente exigir segredo, ele deverá ser cadastrado exclusivamente no armazenamento criptografado de Secrets/Environments do GitHub, com privilégio mínimo, escopo restrito, rotação definida e sem impressão em logs. Tokens persistentes do Google Workspace, token Asten e chave administrativa do Supabase não devem ser usados em CI comum.
+
+## Barreiras preventivas
+
+- `.gitignore` bloqueia `.env`, arquivos de credenciais, chaves e certificados locais.
+- `npm run test:secrets` examina arquivos versionados e bloqueia padrões conhecidos ou valores literais em variáveis críticas.
+- `npm run test:ci` executa a verificação de segredos antes da suíte normal.
+- O repositório público deve manter GitHub Secret Scanning e Push Protection habilitados.
+- Um bloqueio de Push Protection não deve ser contornado para um segredo real. Remova o segredo e faça nova tentativa.
+
+Essas barreiras são complementares; nenhuma substitui a separação correta das credenciais do código.
+
+## Resposta a incidente
+
+Se uma credencial real entrar no Git, considere-a comprometida mesmo que o commit seja apagado logo depois. A sequência obrigatória é:
+
+1. revogar ou rotacionar a credencial no provedor de origem;
+2. confirmar que a aplicação usa a nova credencial;
+3. remover o valor do código e, quando necessário, higienizar o histórico;
+4. revisar logs e alertas de Secret Scanning para verificar uso indevido;
+5. documentar a correção sem reproduzir o segredo.
+
+Somente remover o texto do commit não torna novamente segura uma credencial já publicada.
 
 ## Controle de acesso
 
-Toda rota privada exige sessão autenticada e autorização por função ou vínculo no processo. O Google Drive permanece privado ao Master; o portal atua como mediador dos downloads. Revogação de participante impede novas consultas, detalhes e downloads, sem apagar o histórico de auditoria.
+Toda rota privada exige sessão autenticada e autorização por função ou vínculo no processo. O Google Drive permanece privado ao proprietário da instalação; o portal atua como mediador dos downloads. Revogação de participante impede novas consultas, detalhes e downloads, sem apagar o histórico de auditoria.
+
+A pasta raiz do Drive destinada ao Portal não pode possuir compartilhamento amplo por `anyone` ou domínio. O backend deve falhar fechado quando detectar essa condição.
 
 ## Homologação
 
-Antes de dados reais, execute `npm run test:ci`, `npm run test:secure-flow` e o roteiro de `docs/TESTES_HOMOLOGACAO.md`. Use PDF sem valor jurídico e destinatários controlados no primeiro teste Asten.
+Antes de dados reais, execute:
+
+```bash
+npm run test:secrets
+npm run test:ci
+npm run test:secure-flow
+```
+
+Depois siga `docs/TESTES_HOMOLOGACAO.md`. Use PDFs sem valor jurídico e destinatários controlados no primeiro teste Asten.
 
 ## Suporte de versões
 
