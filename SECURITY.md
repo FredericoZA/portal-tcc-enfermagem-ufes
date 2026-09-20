@@ -1,10 +1,14 @@
 # Política de segurança
 
-O código-fonte deste projeto pode ser público. Credenciais, tokens, chaves criptográficas, documentos privados e dados operacionais não fazem parte do código-fonte e devem permanecer fora do Git.
+O código-fonte deste projeto é público. Credenciais, tokens, chaves criptográficas, documentos privados e dados operacionais não fazem parte do código-fonte e devem permanecer fora do Git.
 
 ## Relato responsável
 
-Não abra uma issue pública com e-mails, documentos, tokens, URLs assinadas, dados pessoais ou passos exploráveis. Envie o relato ao mantenedor indicado pela implantação e informe: versão, rota afetada, impacto, reprodução mínima sem dados reais e sugestão de correção.
+Não abra uma issue pública com e-mails, documentos, tokens, URLs assinadas, dados pessoais ou passos exploráveis.
+
+Use preferencialmente o recurso **Private vulnerability reporting** do GitHub deste repositório. Se ele não estiver disponível, envie o relato ao mantenedor por um canal privado antes de divulgar detalhes técnicos.
+
+Informe, quando possível: versão, rota afetada, impacto, reprodução mínima sem dados reais e sugestão de correção. Remova ou masque qualquer dado real de aluno, servidor, processo, token ou documento.
 
 ## Política obrigatória de segredos
 
@@ -29,12 +33,16 @@ Os workflows deste projeto devem permanecer sem credenciais de produção sempre
 
 Se no futuro uma automação realmente exigir segredo, ele deverá ser cadastrado exclusivamente no armazenamento criptografado de Secrets/Environments do GitHub, com privilégio mínimo, escopo restrito, rotação definida e sem impressão em logs. Tokens persistentes do Google Workspace, token Asten e chave administrativa do Supabase não devem ser usados em CI comum.
 
+Actions usadas pelos workflows devem ser fixadas por SHA imutável. O checkout deve manter `persist-credentials: false` quando o job não precisar escrever no repositório.
+
 ## Barreiras preventivas
 
 - `.gitignore` bloqueia `.env`, arquivos de credenciais, chaves e certificados locais.
 - `npm run test:secrets` examina arquivos versionados e bloqueia padrões conhecidos ou valores literais em variáveis críticas.
 - `npm run test:ci` executa a verificação de segredos antes da suíte normal.
-- O repositório público deve manter GitHub Secret Scanning e Push Protection habilitados.
+- GitHub Secret Scanning e Push Protection devem permanecer habilitados.
+- Dependabot monitora dependências npm e GitHub Actions.
+- CodeQL executa análise estática de segurança de JavaScript/TypeScript.
 - Um bloqueio de Push Protection não deve ser contornado para um segredo real. Remova o segredo e faça nova tentativa.
 
 Essas barreiras são complementares; nenhuma substitui a separação correta das credenciais do código.
