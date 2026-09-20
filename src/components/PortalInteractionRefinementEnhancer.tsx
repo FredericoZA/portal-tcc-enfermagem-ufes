@@ -16,6 +16,15 @@ const MONTHS: Record<string, number> = {
   dezembro: 11,
 };
 
+function normalize(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLocaleLowerCase('pt-BR');
+}
+
 function removeHoverUtilityClasses(root: ParentNode = document) {
   root.querySelectorAll<HTMLElement>('#portal-app-root [class*="hover"]')
     .forEach((element) => {
@@ -92,9 +101,38 @@ function refineCalendar() {
   });
 }
 
+function suppressWeekendDefenseRows() {
+  document.querySelectorAll<HTMLElement>('.portal-defense-filter-row').forEach((filterRow) => {
+    const scope = filterRow.parentElement;
+    const table = scope?.querySelector<HTMLTableElement>('table');
+    const headerRow = table?.tHead?.rows[0];
+    const body = table?.tBodies[0];
+    if (!table || !headerRow || !body) return;
+
+    const headers = Array.from(headerRow.cells) as HTMLTableCellElement[];
+    const dateIndex = headers.findIndex((cell) => normalize(cell.textContent || '').startsWith('data'));
+    if (dateIndex < 0) return;
+
+    Array.from(body.rows).forEach((row) => {
+      const match = (row.cells[dateIndex]?.textContent || '').match(/(\d{2})\/(\d{2})\/(\d{4})/);
+      if (!match) return;
+
+      const day = Number(match[1]);
+      const month = Number(match[2]) - 1;
+      const year = Number(match[3]);
+      const weekday = new Date(year, month, day).getDay();
+      const isWeekend = weekday === 0 || weekday === 6;
+
+      row.classList.toggle('portal1042-weekend-defense-row', isWeekend);
+      row.setAttribute('aria-hidden', isWeekend ? 'true' : 'false');
+    });
+  });
+}
+
 function refineAll() {
   removeHoverUtilityClasses();
   refineCalendar();
+  suppressWeekendDefenseRows();
 }
 
 export function PortalInteractionRefinementEnhancer() {
