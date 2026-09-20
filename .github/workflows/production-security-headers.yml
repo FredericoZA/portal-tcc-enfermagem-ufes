@@ -1,0 +1,82 @@
+name: Production security headers
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-security-headers
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Aguardar revisão e validar headers
+        shell: bash
+        run: |
+          set -euo pipefail
+          origin="https://portal-tcc-enfermagem-ufes.vercel.app"
+          expected="$GITHUB_SHA"
+          health_body="$(mktemp)"
+          root_headers="$(mktemp)"
+          api_headers="$(mktemp)"
+          api_body="$(mktemp)"
+          trap 'rm -f "$health_body" "$root_headers" "$api_headers" "$api_body"' EXIT
+
+          for attempt in $(seq 1 24); do
+            health_code="$(curl --silent --show-error --location \
+              --connect-timeout 10 --max-time 20 \
+              --output "$health_body" --write-out '%{http_code}' \
+              "$origin/api/health" || true)"
+
+            if [ "$health_code" = "200" ] && grep -Eq "\"commit\"[[:space:]]*:[[:space:]]*\"${expected}\"" "$health_body"; then
+              break
+            fi
+
+            if [ "$attempt" = "24" ]; then
+              echo "A revisão ${expected:0:12} não chegou à produção dentro da janela." >&2
+              cat "$health_body" >&2 || true
+              exit 1
+            fi
+            sleep 10
+          done
+
+          root_code="$(curl --silent --show-error --location \
+            --connect-timeout 10 --max-time 20 \
+            --dump-header "$root_headers" --output /dev/null \
+            --write-out '%{http_code}' "$origin/" || true)"
+          [ "$root_code" = "200" ] || { echo "Frontend respondeu HTTP ${root_code:-000}." >&2; exit 1; }
+
+          grep -Eqi '^x-content-type-options:[[:space:]]*nosniff' "$root_headers" || { echo 'X-Content-Type-Options ausente.' >&2; exit 1; }
+          grep -Eqi '^x-frame-options:[[:space:]]*DENY' "$root_headers" || { echo 'X-Frame-Options ausente.' >&2; exit 1; }
+          grep -Eqi '^strict-transport-security:[[:space:]]*max-age=31536000;[[:space:]]*includeSubDomains' "$root_headers" || { echo 'HSTS divergente.' >&2; exit 1; }
+          grep -Eqi '^cross-origin-opener-policy:[[:space:]]*same-origin-allow-popups' "$root_headers" || { echo 'COOP ausente ou divergente.' >&2; exit 1; }
+          grep -Eqi '^cross-origin-resource-policy:[[:space:]]*same-origin' "$root_headers" || { echo 'CORP ausente ou divergente.' >&2; exit 1; }
+          grep -Eqi '^x-permitted-cross-domain-policies:[[:space:]]*none' "$root_headers" || { echo 'X-Permitted-Cross-Domain-Policies ausente.' >&2; exit 1; }
+          grep -Eqi '^origin-agent-cluster:[[:space:]]*\?1' "$root_headers" || { echo 'Origin-Agent-Cluster ausente.' >&2; exit 1; }
+          grep -Eqi '^referrer-policy:[[:space:]]*strict-origin-when-cross-origin' "$root_headers" || { echo 'Referrer-Policy divergente.' >&2; exit 1; }
+
+          csp="$(grep -Ei '^content-security-policy:' "$root_headers" | tr -d '\r' || true)"
+          [ -n "$csp" ] || { echo 'Content-Security-Policy ausente.' >&2; exit 1; }
+          printf '%s\n' "$csp" | grep -Fq "connect-src 'self' https://vvgdmycmotazqjvpywmk.supabase.co https://nominatim.openstreetmap.org" || { echo 'CSP não restringe connect-src ao Supabase esperado.' >&2; exit 1; }
+          if printf '%s\n' "$csp" | grep -Fq '*.supabase.co'; then
+            echo 'CSP voltou a permitir wildcard de Supabase.' >&2
+            exit 1
+          fi
+          printf '%s\n' "$csp" | grep -Fq "object-src 'none'" || { echo 'CSP sem object-src none.' >&2; exit 1; }
+          printf '%s\n' "$csp" | grep -Fq "frame-ancestors 'none'" || { echo 'CSP sem frame-ancestors none.' >&2; exit 1; }
+
+          api_code="$(curl --silent --show-error --location \
+            --connect-timeout 10 --max-time 20 \
+            --dump-header "$api_headers" --output "$api_body" \
+            --write-out '%{http_code}' "$origin/api/health" || true)"
+          [ "$api_code" = "200" ] || { echo "Health respondeu HTTP ${api_code:-000}." >&2; exit 1; }
+          grep -Eqi '^cache-control:.*no-store' "$api_headers" || { echo 'API sem Cache-Control no-store.' >&2; exit 1; }
+
+          echo "Headers de segurança confirmados na produção para ${expected:0:12}."
