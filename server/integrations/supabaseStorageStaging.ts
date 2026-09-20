@@ -1,5 +1,6 @@
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { buildSupabaseAdminHeaders, getSupabaseRuntimeStatus } from './supabase';
+import { assertSafeUploadedDocument, UnsafeUploadError } from '../security/fileSafety';
 
 export type StagedUploadPurpose =
   | 'DOCUMENT_MODEL'
@@ -271,10 +272,19 @@ export async function withSupabaseStagedUpload<T>(input:{
       await updateTicket(row.id,'REJECTED','INTEGRITY_MISMATCH');
       throw new Error('O arquivo recebido não corresponde ao tamanho, MIME ou checksum autorizado.');
     }
+    try {
+      await assertSafeUploadedDocument(bytes,row.mime_type===DOCX_MIME?'DOCX':'PDF');
+    } catch (error) {
+      if (error instanceof UnsafeUploadError) {
+        await removeObject(row.object_path).catch(()=>undefined);
+        await updateTicket(row.id,'REJECTED',error.code).catch(()=>undefined);
+      }
+      throw error;
+    }
     result=await consumer({bytes,fileName:row.original_file_name,mimeType:row.mime_type,sha256:actualSha256});
   }catch(error){
     const message=error instanceof Error?error.message:'';
-    if(!message.includes('não corresponde'))await updateTicket(row.id,'PENDING','CONSUMER_FAILED').catch(()=>undefined);
+    if(!(error instanceof UnsafeUploadError)&&!message.includes('não corresponde'))await updateTicket(row.id,'PENDING','CONSUMER_FAILED').catch(()=>undefined);
     throw error;
   }
   // Marque como consumido antes da limpeza. Se a exclusão falhar, o mesmo

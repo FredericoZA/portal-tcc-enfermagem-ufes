@@ -13,24 +13,34 @@ const secretSignatures = [
   ['segredo OAuth Google', /\bGOCSPX-[A-Za-z0-9_-]{20,}\b/g],
   ['chave de API Google', /\bAIza[0-9A-Za-z_-]{30,}\b/g],
   ['chave secreta Supabase', /\bsb_secret_[A-Za-z0-9._-]{16,}\b/g],
-  ['access key AWS', /\bAKIA[0-9A-Z]{16}\b/g]
+  ['access key AWS', /\bAKIA[0-9A-Z]{16}\b/g],
+  ['token npm', /\bnpm_[A-Za-z0-9]{30,}\b/g]
 ];
 
 const sensitiveEnvKeys = [
   'PORTAL_SESSION_SECRET',
   'PORTAL_OTP_PEPPER',
   'PORTAL_SECRET_ENCRYPTION_KEY',
+  'PORTAL_SECRET_ENCRYPTION_KEY_V2',
+  'PORTAL_SECRET_ENCRYPTION_KEY_PREVIOUS',
   'PORTAL_VERIFICATION_SECRET',
   'PORTAL_UPLOAD_BINDING_SECRET',
+  'PORTAL_SECURITY_WEBHOOK_SECRET',
   'CRON_SECRET',
   'SUPABASE_SECRET_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
   'GOOGLE_OAUTH_CLIENT_SECRET',
   'GOOGLE_OAUTH_STATE_SECRET',
+  'GOOGLE_REFRESH_TOKEN',
+  'GOOGLE_OAUTH_REFRESH_TOKEN',
+  'GOOGLE_ACCESS_TOKEN',
   'ASTEN_TOKEN',
   'ASTEN_API_TOKEN',
+  'ASTEN_CLIENT_SECRET',
   'ASTEN_WEBHOOK_SECRET',
-  'ASTEN_SESSION_ENCRYPTION_KEY'
+  'ASTEN_SESSION_ENCRYPTION_KEY',
+  'VERCEL_TOKEN',
+  'VERCEL_ACCESS_TOKEN'
 ];
 
 const assignmentPattern = new RegExp(
