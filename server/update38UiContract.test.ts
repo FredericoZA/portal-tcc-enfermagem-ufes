@@ -15,17 +15,18 @@ test('faixa fluorescente usa exatamente o acabamento canônico da versão 1.0.36
   assert.ok(!css40.includes('#sidebar-nav .portal-sidebar-nav-active::before'));
 });
 
-test('Replicar Portal preserva os quatro modelos e oferece aceite para download em lote',async()=>{
-  const page=await source('src/pages/PortalReplicationPage.tsx');
+test('Replicar Portal oferece um único download agregado dos quatro modelos',async()=>{
+  const [page,api]=await Promise.all([source('src/pages/PortalReplicationPage.tsx'),source('api/replication-model.ts')]);
   assert.ok(page.includes('Baixar modelos'));
-  assert.ok(page.includes('Li e aceito baixar todos os modelos'));
-  assert.ok(page.includes('downloadAllModels'));
-  assert.ok(page.includes('min-h-[150px] self-start'));
-  assert.ok(page.includes("{ slug: 'convite', label: 'Convite de Defesa' }"));
-  assert.ok(page.includes("{ slug: 'termo', label: 'Termo de Autorização' }"));
-  assert.ok(page.includes("{ slug: 'ata', label: 'Ata de Defesa' }"));
-  assert.ok(page.includes("{ slug: 'declaracao', label: 'Declaração da Banca' }"));
-  assert.ok(!page.includes('portal-replication-model-action'));
+  assert.ok(page.includes('/api/public/replication-models/all/download'));
+  assert.ok(page.includes('um único arquivo ZIP'));
+  assert.ok(!page.includes('Li e aceito baixar todos os modelos'));
+  assert.ok(!page.includes('downloadAllModels'));
+  assert.ok(api.includes("convite:"));
+  assert.ok(api.includes("termo:"));
+  assert.ok(api.includes("ata:"));
+  assert.ok(api.includes("declaracao:"));
+  assert.ok(api.includes("modelos-portal-tcc.zip"));
 });
 
 test('Indicadores têm estado vazio útil e painel continua automático',async()=>{
