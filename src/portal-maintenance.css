@@ -1,0 +1,297 @@
+/* Camada final de manutenção visual do Portal TCC. */
+
+/* Nenhum elemento deve animar ou transformar apenas por passagem do mouse. */
+#portal-app-root *,
+#portal-app-root *::before,
+#portal-app-root *::after {
+  transition-property: none !important;
+}
+
+#portal-app-root *:hover {
+  filter: none !important;
+  transform: none !important;
+}
+
+/* Planilhas: cabeçalho mais alto e separação branca inequívoca. */
+#portal-app-root main .portal1043-sheet thead {
+  border-bottom: 20px solid #fff !important;
+}
+
+#portal-app-root main .portal1043-sheet thead th {
+  position: relative !important;
+  padding-top: .95rem !important;
+  padding-bottom: .95rem !important;
+  padding-right: 2.25rem !important;
+  vertical-align: middle !important;
+}
+
+#portal-app-root main .portal1043-sheet tbody,
+#portal-app-root main .portal1043-sheet tbody tr,
+#portal-app-root main .portal1043-sheet tbody td,
+#portal-app-root main .portal1043-sheet tbody td * {
+  color: #000 !important;
+  opacity: 1 !important;
+}
+
+/* Etapa é informação simples: texto regular, sem negrito. */
+#portal-app-root main .portal1043-sheet .portal1043-stage-label,
+#portal-app-root main .portal1043-sheet .portal-progress-number.portal1043-stage-label {
+  min-width: 0 !important;
+  font-weight: 400 !important;
+  color: #000 !important;
+  white-space: nowrap !important;
+}
+
+/* Os controles antigos permanecem no DOM apenas para não disputar com observers legados. */
+#portal-app-root main .portal1043-sheet .portal-column-controls,
+#portal-app-root main .portal1043-sheet .portal1040-inline-sort,
+#portal-app-root main .portal1043-sheet .portal1041-column-menu-button,
+#portal-app-root main .portal1043-sheet .portal-column-sort,
+#portal-app-root main .portal1043-sheet .portal-column-filter {
+  display: none !important;
+}
+
+/* Oculta setas nativas antigas renderizadas ao lado do rótulo; só a seta final fica visível. */
+#portal-app-root main .portal1043-sheet thead th > div > svg,
+#portal-app-root main .portal1043-sheet thead th > span > svg {
+  display: none !important;
+}
+
+#portal-app-root main .portal1043-sheet thead th > .portal1043-column-menu-button svg {
+  display: block !important;
+}
+
+/* Único acionador de ordenação + filtro, no canto superior direito da célula. */
+.portal1043-column-menu-button {
+  position: absolute !important;
+  top: .34rem !important;
+  right: .34rem !important;
+  z-index: 8 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  min-height: 22px !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255,255,255,.42) !important;
+  border-radius: 999px !important;
+  background: rgba(255,255,255,.08) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+}
+
+.portal1043-column-menu-button svg {
+  width: 13px !important;
+  height: 13px !important;
+}
+
+.portal1043-column-menu-button[aria-expanded="true"],
+.portal1043-column-menu-button[data-filter-active="true"] {
+  background: rgba(255,255,255,.24) !important;
+  border-color: rgba(255,255,255,.72) !important;
+}
+
+.portal1043-filter-hidden {
+  display: none !important;
+}
+
+/* Menu único no padrão de planilha: ordenar e filtrar na mesma superfície. */
+.portal1043-column-menu-popup {
+  position: fixed;
+  z-index: 1000100;
+  width: 310px;
+  max-height: 420px;
+  overflow: hidden;
+  padding: 10px;
+  border: 1px solid #b9c4bd;
+  border-radius: 12px;
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 16px 42px rgba(15,23,42,.24);
+}
+
+.portal1043-menu-title {
+  padding: 1px 2px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #173d2d;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.portal1043-sort-actions {
+  display: grid;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.portal1043-menu-action {
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #1f2937;
+  box-shadow: none;
+  cursor: pointer;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.portal1043-sort-actions .portal1043-menu-action {
+  width: 100%;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.portal1043-filter-title {
+  padding: 8px 2px 5px;
+  color: #334155;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.portal1043-filter-search {
+  width: 100%;
+  margin-bottom: 7px;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  background: #fff;
+  color: #111827;
+  font-size: 11px;
+}
+
+.portal1043-filter-search:focus {
+  border-color: #6f8f79;
+  box-shadow: 0 0 0 2px rgba(111,143,121,.14);
+}
+
+.portal1043-filter-values {
+  max-height: 190px;
+  overflow: auto;
+  padding: 5px 0;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.portal1043-filter-value {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 5px;
+  border-radius: 6px;
+  color: #111827;
+  cursor: pointer;
+  font-size: 10.5px;
+}
+
+.portal1043-filter-value input {
+  accent-color: #557762;
+}
+
+.portal1043-filter-value span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portal1043-menu-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.portal1043-menu-footer .portal1043-menu-action {
+  padding: 5px 8px;
+  font-size: 9.5px;
+  font-weight: 800;
+}
+
+.portal1043-menu-footer .portal1043-done {
+  background: #17694a;
+  border-color: #17694a;
+  color: #fff;
+}
+
+/* Lista de Defesas: o botão da primeira coluna de defesa já realizada fica verde escuro e acinzentado. */
+[data-portal1040-defense-table="true"] tbody .portal1040-defense-defended,
+[data-portal1040-defense-table="true"] tbody .portal1040-defense-defended * {
+  background-color: #718077 !important;
+  border-color: #536159 !important;
+  color: #000 !important;
+  opacity: 1 !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+/* O conteúdo do botão pode possuir filhos com fundo próprio; eles herdam a mesma família cromática. */
+[data-portal1040-defense-table="true"] tbody .portal1040-defense-defended > * {
+  background-color: transparent !important;
+}
+
+/* Calendário: trabalhos já defendidos continuam verdes, mas com tom discreto e institucional. */
+.portal-calendar-preview.is-defended {
+  background: #b8d2c0 !important;
+  border-color: #72927c !important;
+  color: #173b26 !important;
+  box-shadow: none !important;
+}
+
+.portal-calendar-preview.is-defended * {
+  color: #173b26 !important;
+  opacity: 1 !important;
+}
+
+/* Os chips de situação ficam discretos; não confundem com o botão de processo. */
+.portal1041-defense-filter-defended,
+.portal-defense-filter-row button[aria-pressed="true"].portal1041-defense-filter-defended {
+  background: #c4cec7 !important;
+  border-color: #89978d !important;
+  color: #1f2e24 !important;
+}
+
+/* Fins de semana: estreitos, claros e sem eventos. */
+.portal-calendar-grid,
+.portal-calendar-week-header > div {
+  grid-template-columns: .20fr 1.36fr 1.36fr 1.36fr 1.36fr 1.36fr .20fr !important;
+}
+
+.portal1043-calendar-weekend {
+  background: #f8fafc !important;
+  color: #64748b !important;
+  cursor: default !important;
+  pointer-events: none !important;
+  box-shadow: none !important;
+}
+
+.portal1043-calendar-weekend .portal-calendar-preview-list,
+.portal1043-calendar-weekend .portal-calendar-preview,
+.portal1043-calendar-weekend .portal-calendar-preview-more {
+  display: none !important;
+}
+
+.portal1043-calendar-weekend > div:first-child span {
+  background: transparent !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 900px) {
+  .portal-calendar-grid,
+  .portal-calendar-week-header > div {
+    grid-template-columns: .28fr 1.30fr 1.30fr 1.30fr 1.30fr 1.30fr .28fr !important;
+  }
+
+  #portal-app-root main .portal1043-sheet thead th {
+    padding-top: .78rem !important;
+    padding-bottom: .78rem !important;
+  }
+}
