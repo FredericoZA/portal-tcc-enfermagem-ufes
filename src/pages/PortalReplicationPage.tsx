@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Cloud, Code2, Database, Download, ExternalLink, FileText, Github, Server, X } from 'lucide-react';
+import React from 'react';
+import { Cloud, Code2, Database, Download, ExternalLink, FileText, Github, Server } from 'lucide-react';
 
 const REPOSITORY_URL = 'https://github.com/Compilandog/portal-tcc-enfermagem-ufes';
 
@@ -15,33 +15,7 @@ const tools = [
   { icon: Cloud, title: 'Google Workspace', text: 'Integra Drive e Docs para modelos e documentos, Gmail para comunicações e Calendar para os eventos de defesa. A nova instalação conecta a conta Google que irá operar o curso.' },
 ] as const;
 
-const models = [
-  { slug: 'convite', label: 'Convite de Defesa' },
-  { slug: 'termo', label: 'Termo de Autorização' },
-  { slug: 'ata', label: 'Ata de Defesa' },
-  { slug: 'declaracao', label: 'Declaração da Banca' },
-] as const;
-
 export const PortalReplicationPage: React.FC = () => {
-  const [showAcceptance, setShowAcceptance] = useState(false);
-  const [accepted, setAccepted] = useState(false);
-
-  const downloadAllModels = () => {
-    models.forEach(({ slug }, index) => {
-      window.setTimeout(() => {
-        const link = document.createElement('a');
-        link.href = `/api/public/replication-models/${slug}/download`;
-        link.download = '';
-        link.rel = 'noreferrer';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      }, index * 180);
-    });
-    setShowAcceptance(false);
-    setAccepted(false);
-  };
-
   return (
     <div id="portal-replication-page" className="portal-public-shell mx-auto max-w-none overflow-hidden rounded-2xl border border-slate-300 bg-[#e1e6e9] shadow-sm">
       <section className="portal-public-header border-b-2 border-white bg-[#005830] px-3.5 py-3 text-white sm:px-4">
@@ -61,34 +35,27 @@ export const PortalReplicationPage: React.FC = () => {
               <Icon className="h-5 w-5 text-[#337959]" />
               <h3 className="mt-1.5 text-sm font-black text-slate-950">{title}</h3>
               <p className="mt-1 text-xs leading-5 text-slate-600">{text}</p>
-              {'href' in tool && tool.href ? <div className="mt-auto pt-3"><a href={tool.href} target="_blank" rel="noreferrer" className="portal-action-green inline-flex w-fit items-center gap-1.5 rounded-lg border border-[#2d6c50] bg-[#337959] px-2.5 py-1.5 text-[10px] font-black text-white shadow-sm hover:brightness-95">Abrir no GitHub <ExternalLink className="h-3.5 w-3.5" /></a></div> : null}
+              {'href' in tool && tool.href ? <div className="mt-auto pt-3"><a href={tool.href} target="_blank" rel="noreferrer" className="portal-action-green inline-flex w-fit items-center gap-1.5 rounded-lg border border-[#2d6c50] bg-[#337959] px-2.5 py-1.5 text-[10px] font-black text-white shadow-sm">Abrir no GitHub <ExternalLink className="h-3.5 w-3.5" /></a></div> : null}
             </article>
           ))}
 
           <article className="portal-layer-card flex min-h-[150px] self-start flex-col rounded-xl border border-slate-300 bg-[#d5dce0] p-3 shadow-2xs">
             <FileText className="h-5 w-5 text-[#337959]" />
             <h3 className="mt-1.5 text-sm font-black text-slate-950">Modelos do Google Drive</h3>
-            <p className="mt-1 text-xs leading-5 text-slate-600">Baixe cópias independentes em Word para adaptar os documentos a outra implantação sem alterar os modelos usados na operação atual.</p>
-            <div className="mt-3">
-              <button type="button" onClick={() => setShowAcceptance(true)} className="portal-action-green inline-flex w-fit items-center gap-1.5 rounded-lg border border-[#2d6c50] bg-[#337959] px-2.5 py-1.5 text-[10px] font-black text-white shadow-sm hover:brightness-95"><Download className="h-3.5 w-3.5" /> Baixar modelos</button>
-              <div className="mt-2 grid gap-1.5">
-                {models.map(({ slug, label }) => <a key={slug} href={`/api/public/replication-models/${slug}/download`} className="portal-layer-inner flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[10px] font-bold text-slate-800 hover:bg-slate-50"><span>{label}</span><Download className="h-3.5 w-3.5 shrink-0 text-[#337959]" /></a>)}
-              </div>
+            <p className="mt-1 text-xs leading-5 text-slate-600">Baixe em um único arquivo ZIP os quatro modelos em Word usados como referência para uma nova implantação.</p>
+            <div className="mt-auto pt-3">
+              <a
+                href="/api/public/replication-models/all/download"
+                download
+                className="portal-action-green inline-flex w-fit items-center gap-1.5 rounded-lg border border-[#2d6c50] bg-[#337959] px-2.5 py-1.5 text-[10px] font-black text-white shadow-sm"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Baixar modelos
+              </a>
             </div>
           </article>
         </div>
       </section>
-
-      {showAcceptance && <div className="fixed inset-0 z-[1000050] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-[1px]" onMouseDown={(event) => { if (event.currentTarget === event.target) setShowAcceptance(false); }}>
-        <div role="dialog" aria-modal="true" aria-labelledby="replication-models-accept-title" className="w-full max-w-xl overflow-hidden rounded-xl border border-slate-300 bg-[#e1e6e9] shadow-2xl">
-          <div className="flex items-center justify-between border-b-2 border-white bg-[#005830] px-4 py-3 text-white"><h2 id="replication-models-accept-title" className="text-sm font-black uppercase tracking-wide">Baixar modelos</h2><button type="button" onClick={() => setShowAcceptance(false)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-900" aria-label="Fechar"><X className="h-4 w-4" /></button></div>
-          <div className="space-y-3 p-4">
-            <p className="text-xs leading-5 text-slate-800">Os quatro arquivos serão baixados como cópias independentes. Ao utilizá-los em outra implantação, revise textos, dados institucionais e permissões antes da publicação.</p>
-            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-300 bg-white p-3 text-xs font-semibold text-slate-800"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} className="mt-0.5 h-4 w-4 accent-[#337959]" /><span>Li e aceito baixar todos os modelos para uso independente.</span></label>
-            <div className="flex justify-end gap-2"><button type="button" onClick={() => setShowAcceptance(false)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-[10px] font-black uppercase text-slate-800">Cancelar</button><button type="button" disabled={!accepted} onClick={downloadAllModels} className="portal-action-green inline-flex items-center gap-1.5 rounded-lg border border-[#2d6c50] bg-[#337959] px-3 py-2 text-[10px] font-black uppercase text-white disabled:cursor-not-allowed disabled:opacity-45"><Download className="h-3.5 w-3.5" />Baixar todos</button></div>
-          </div>
-        </div>
-      </div>}
     </div>
   );
 };
