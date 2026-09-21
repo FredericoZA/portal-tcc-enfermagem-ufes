@@ -44,13 +44,13 @@ async function exportModel(key: ModelKey, accessToken: string) {
   });
 
   if (!response.ok) {
-    console.error('[Replicação] Google Drive recusou a exportação do modelo:', key, response.status);
-    throw new Error(`Falha ao exportar o modelo ${key}.`);
+    console.error('[Replicação] Google Drive recusou a exportação de um modelo.', { status: response.status });
+    throw new Error('Falha ao exportar um dos modelos de replicação.');
   }
 
   const content = Buffer.from(await response.arrayBuffer());
   if (!content.length || content.length > 16 * 1024 * 1024) {
-    throw new Error(`O modelo ${key} retornado pelo Google Drive é inválido.`);
+    throw new Error('Um dos modelos retornados pelo Google Drive é inválido.');
   }
   return { ...model, content };
 }
@@ -97,7 +97,7 @@ export default async function handler(req: Request, res: Response) {
     res.setHeader('Content-Length', String(model.content.length));
     return res.status(200).send(model.content);
   } catch (error) {
-    console.error('[Replicação] Falha ao preparar modelo público:', error);
+    console.error('[Replicação] Falha ao preparar modelo público.', error instanceof Error ? { name: error.name } : undefined);
     return res.status(502).json({ error: 'Não foi possível preparar os modelos para download.' });
   }
 }
