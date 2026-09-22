@@ -1,0 +1,312 @@
+/* Portal TCC 1.0.41 — consolidação visual e operacional das tabelas. */
+
+/* Hover nunca deve alterar pintura, escala ou brilho. A camada JS remove as regras legadas. */
+#portal-app-root *,
+#portal-app-root *::before,
+#portal-app-root *::after {
+  transition: none !important;
+}
+
+#portal-app-root *:hover {
+  filter: none !important;
+  transform: none !important;
+}
+
+/* Todas as tabelas recebem texto preto e separação visual inequívoca. */
+#portal-app-root main .portal1041-sheet thead {
+  border-bottom: 16px solid #fff !important;
+}
+
+#portal-app-root main .portal1041-sheet thead tr:last-child > th {
+  position: relative !important;
+  border-bottom: 16px solid #fff !important;
+  padding-top: 1.05rem !important;
+  padding-bottom: 1.05rem !important;
+  padding-right: 2.55rem !important;
+  vertical-align: middle !important;
+}
+
+#portal-app-root main .portal1041-sheet tbody,
+#portal-app-root main .portal1041-sheet tbody tr,
+#portal-app-root main .portal1041-sheet tbody td,
+#portal-app-root main .portal1041-sheet tbody td * {
+  color: #000 !important;
+  opacity: 1 !important;
+}
+
+/* A etapa é informação regular, sem negrito. */
+#portal-app-root main .portal1041-sheet .portal1043-stage-label,
+#portal-app-root main .portal1041-sheet .portal-progress-number,
+#portal-app-root main .portal1041-sheet td[data-column-key="progresso"] * {
+  font-weight: 400 !important;
+}
+
+/* Faixa branca grossa entre filtros/barra e cabeçalho. */
+#portal-app-root main .portal1041-filter-band,
+#portal-app-root main .portal-defense-filter-row,
+#portal-app-root main .portal-meus-processos-filter-row,
+#portal-app-root main .portal-coordinator-filter-row,
+#portal-app-root main .portal-standard-filter-row,
+#portal-app-root main [data-portal1040-filter-band="true"] {
+  border-bottom: 12px solid #fff !important;
+  box-shadow: none !important;
+}
+
+/* Um único controle de coluna. Tudo que pertencia ao modelo antigo é ocultado. */
+#portal-app-root main .portal1041-sheet thead th .portal-column-controls,
+#portal-app-root main .portal1041-sheet thead th .portal1040-inline-sort,
+#portal-app-root main .portal1041-sheet thead th .portal1041-column-menu-button,
+#portal-app-root main .portal1041-sheet thead th .portal-column-sort,
+#portal-app-root main .portal1041-sheet thead th .portal-column-filter,
+#portal-app-root main .portal1041-sheet thead th button[aria-label^="Ordenar"]:not(.portal1043-column-menu-button),
+#portal-app-root main .portal1041-sheet thead th button[aria-label^="Filtrar"]:not(.portal1043-column-menu-button) {
+  display: none !important;
+}
+
+#portal-app-root main .portal1041-sheet thead th > svg,
+#portal-app-root main .portal1041-sheet thead th > div > svg,
+#portal-app-root main .portal1041-sheet thead th > span > svg {
+  display: none !important;
+}
+
+#portal-app-root main .portal1041-sheet thead th > .portal1043-column-menu-button,
+#portal-app-root main .portal1041-sheet thead th > .portal1043-column-menu-button svg {
+  display: inline-flex !important;
+}
+
+/* Botão único circular no canto superior direito, como no Repositório. */
+#portal-app-root main .portal1041-sheet .portal1043-column-menu-button {
+  top: .42rem !important;
+  right: .62rem !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255,255,255,.46) !important;
+  background: rgba(255,255,255,.10) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  z-index: 9 !important;
+}
+
+#portal-app-root main .portal1041-sheet .portal1043-column-menu-button:hover {
+  background: rgba(255,255,255,.10) !important;
+  border-color: rgba(255,255,255,.46) !important;
+  color: #fff !important;
+}
+
+#portal-app-root main .portal1041-sheet .portal1043-column-menu-button[aria-expanded="true"],
+#portal-app-root main .portal1041-sheet .portal1043-column-menu-button[data-filter-active="true"] {
+  background: rgba(255,255,255,.24) !important;
+  border-color: rgba(255,255,255,.74) !important;
+}
+
+/* Redimensionamento manual de colunas. */
+.portal1041-column-resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  z-index: 7;
+  width: 7px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  background: transparent;
+}
+
+.portal1041-column-resizer::after {
+  content: '';
+  position: absolute;
+  top: 18%;
+  bottom: 18%;
+  left: 3px;
+  width: 1px;
+  background: rgba(255,255,255,.22);
+}
+
+html.portal1041-resizing-column,
+html.portal1041-resizing-column * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+/* Preferência individual: quebrar texto ou manter uma linha. */
+#portal-app-root main .portal1041-sheet.portal1041-nowrap tbody td,
+#portal-app-root main .portal1041-sheet.portal1041-nowrap tbody td * {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
+.portal1041-wrap-setting {
+  margin-top: .75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: .75rem;
+  background: #f8fafc;
+  padding: .75rem;
+}
+
+.portal1041-wrap-setting-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+}
+
+.portal1041-wrap-setting-copy strong {
+  color: #334155;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.portal1041-wrap-setting-copy span {
+  color: #64748b;
+  font-size: 9.5px;
+}
+
+.portal1041-wrap-setting-actions {
+  display: flex;
+  gap: .35rem;
+  flex-shrink: 0;
+}
+
+.portal1041-wrap-setting-actions button {
+  border: 1px solid #cbd5e1;
+  border-radius: .5rem;
+  background: #fff;
+  color: #334155;
+  padding: .38rem .55rem;
+  font-size: 9.5px;
+  font-weight: 800;
+  box-shadow: none;
+}
+
+.portal1041-wrap-setting-actions button[data-active="true"] {
+  border-color: #718077;
+  background: #dce6df;
+  color: #20372a;
+}
+
+.portal1041-wrap-setting-actions button:hover {
+  background: #fff;
+  color: #334155;
+}
+
+.portal1041-wrap-setting-actions button[data-active="true"]:hover {
+  background: #dce6df;
+  color: #20372a;
+}
+
+/* Menu Excel-like: controles de seleção em massa. */
+.portal1043-column-menu-popup {
+  max-height: 470px !important;
+}
+
+.portal1041-filter-bulk {
+  display: flex;
+  gap: 6px;
+  padding: 0 0 7px;
+}
+
+.portal1041-filter-bulk button {
+  flex: 1;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #334155;
+  padding: 5px 7px;
+  font-size: 9.5px;
+  font-weight: 800;
+  box-shadow: none;
+}
+
+.portal1041-filter-bulk button:hover {
+  background: #fff !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Processos e calendário usam a mesma família cromática. */
+[data-portal1040-defense-table="true"] tbody .portal1040-defense-defended,
+[data-portal1040-defense-table="true"] tbody .portal1040-defense-defended * {
+  background-color: #b8d2c0 !important;
+  border-color: #72927c !important;
+  color: #000 !important;
+  opacity: 1 !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+[data-portal1040-defense-table="true"] tbody .portal1040-defense-upcoming,
+[data-portal1040-defense-table="true"] tbody .portal1040-defense-upcoming * {
+  background-color: #e4d6a8 !important;
+  border-color: #b6a164 !important;
+  color: #000 !important;
+  opacity: 1 !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+[data-portal1040-defense-table="true"] tbody .portal1040-defense-defended > *,
+[data-portal1040-defense-table="true"] tbody .portal1040-defense-upcoming > * {
+  background-color: transparent !important;
+}
+
+.portal-calendar-preview.is-defended {
+  background: #b8d2c0 !important;
+  border-color: #72927c !important;
+  color: #173b26 !important;
+  box-shadow: none !important;
+}
+
+.portal-calendar-preview:not(.is-defended) {
+  background: #e4d6a8 !important;
+  border-color: #b6a164 !important;
+  color: #3c3420 !important;
+  box-shadow: none !important;
+}
+
+.portal-calendar-preview:not(.is-defended) *,
+.portal-calendar-preview.is-defended * {
+  opacity: 1 !important;
+}
+
+/* O clique em qualquer ocorrência deve cair no dia e abrir o popup com todas as defesas. */
+.portal1041-calendar-preview-pass-through,
+.portal1041-calendar-preview-pass-through * {
+  pointer-events: none !important;
+}
+
+.portal1041-calendar-clickable {
+  cursor: pointer !important;
+}
+
+/* Botões de atualização/sincronização de tabela são desnecessários e ficam fora da interface. */
+#portal-app-root main button[title="Atualizar dados da tabela"],
+#portal-app-root main button[aria-label="Atualizar dados da tabela"],
+#portal-app-root main button[title^="Sincronizar dados"],
+#portal-app-root main button[aria-label^="Sincronizar dados"] {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  #portal-app-root main .portal1041-sheet thead tr:last-child > th {
+    padding-top: .9rem !important;
+    padding-bottom: .9rem !important;
+  }
+
+  .portal1041-wrap-setting {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
