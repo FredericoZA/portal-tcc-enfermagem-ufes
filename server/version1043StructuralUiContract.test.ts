@@ -4,10 +4,10 @@ import { readFileSync } from 'node:fs';
 
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
-test('release 1.0.43 substitui enhancers concorrentes por um runtime estrutural único',()=>{
+test('release 1.0.44 preserva o runtime estrutural único consolidado na 1.0.43',()=>{
   const pkg=JSON.parse(read('package.json'));
   const main=read('src/main.tsx');
-  assert.equal(pkg.version,'1.0.43');
+  assert.equal(pkg.version,'1.0.44');
   assert.match(main,/PortalStructuralRuntime/);
   assert.match(main,/portal-core-1043\.css/);
   assert.doesNotMatch(main,/PortalSpreadsheetEnhancer/);
