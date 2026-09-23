@@ -36,7 +36,7 @@ test('1.0.40 mantém workspaces administrativos e consolida download dos modelos
   assert.doesNotMatch(integrations,/>Conexões</);
 });
 
-test('release atual está marcado como 1.0.43',()=>{
+test('release atual está marcado como 1.0.44',()=>{
   const pkg=JSON.parse(read('package.json'));
-  assert.equal(pkg.version,'1.0.43');
+  assert.equal(pkg.version,'1.0.44');
 });
