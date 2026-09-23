@@ -32,9 +32,9 @@ test('Replicar Portal oferece um único download agregado dos quatro modelos',as
 test('Indicadores têm estado vazio útil e painel continua automático',async()=>{
   const page=await source('src/pages/IndicadoresPage.tsx');
   assert.ok(page.includes('Indicadores aguardando os primeiros dados'));
-  assert.ok(page.includes('O painel já está preparado para evoluir automaticamente'));
-  assert.ok(page.includes('const hasData=Boolean(data&&data.totals.registered>0)'));
+  assert.ok(page.includes('Os gráficos serão preenchidos automaticamente'));
+  assert.ok(page.includes('const hasData = Boolean(data && data.totals.registered > 0)'));
   assert.ok(page.includes('TCCs por ano'));
   assert.ok(page.includes('Temas mais recorrentes'));
-  assert.ok(page.includes('Resultados acadêmicos'));
+  assert.ok(page.includes('Resultados das bancas'));
 });
