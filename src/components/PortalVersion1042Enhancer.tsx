@@ -57,6 +57,39 @@ function identifyDefenseTable(table: HTMLTableElement) {
   return true;
 }
 
+function inferDefenseState(
+  row: HTMLTableRowElement,
+  headers: HTMLTableCellElement[],
+): 'defended' | 'upcoming' {
+  // O React antigo ainda informa com estas classes que a defesa já passou.
+  // Usamos isso apenas para inferir o estado; a aparência fosca é removida logo abaixo.
+  if (FADED_ROW_CLASSES.some((className) => row.classList.contains(className))) return 'defended';
+
+  const dateIndex = headers.findIndex((header) => {
+    const label = headerLabel(header);
+    return label === 'data' || label.startsWith('data ');
+  });
+  if (dateIndex >= 0) {
+    const text = row.cells[dateIndex]?.textContent || '';
+    const match = text.match(/\b(\d{2})\/(\d{2})\/(\d{4})(?:\D+(\d{2}):(\d{2}))?/);
+    if (match) {
+      const [, day, month, year, hour = '23', minute = '59'] = match;
+      const timestamp = new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        Number(hour),
+        Number(minute),
+        59,
+        999,
+      ).getTime();
+      if (Number.isFinite(timestamp)) return timestamp < Date.now() ? 'defended' : 'upcoming';
+    }
+  }
+
+  return row.dataset.portal1042DefenseState === 'defended' ? 'defended' : 'upcoming';
+}
+
 function normalizeDefenseRows(table: HTMLTableElement) {
   if (!identifyDefenseTable(table)) return;
 
@@ -64,8 +97,8 @@ function normalizeDefenseRows(table: HTMLTableElement) {
   const processIndex = headers.findIndex((header) => headerLabel(header) === 'processo');
 
   Array.from(table.tBodies[0]?.rows || []).forEach((row) => {
-    const wasFaded = FADED_ROW_CLASSES.some((className) => row.classList.contains(className));
-    row.dataset.portal1042DefenseState = wasFaded ? 'defended' : 'upcoming';
+    const state = inferDefenseState(row, headers);
+    row.dataset.portal1042DefenseState = state;
     row.classList.remove(...FADED_ROW_CLASSES);
     row.classList.add('portal1042-defense-row');
     row.style.opacity = '1';
@@ -74,7 +107,7 @@ function normalizeDefenseRows(table: HTMLTableElement) {
       const processCell = row.cells[processIndex] as HTMLTableCellElement | undefined;
       if (processCell) {
         processCell.dataset.portal1042ProcessCell = 'true';
-        processCell.dataset.portal1042DefenseState = row.dataset.portal1042DefenseState || 'upcoming';
+        processCell.dataset.portal1042DefenseState = state;
       }
     }
   });
