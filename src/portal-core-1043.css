@@ -1,0 +1,507 @@
+/* Portal TCC 1.0.43 — camada estrutural única para tabelas, calendário e títulos. */
+
+:root {
+  --portal-separator-section: 12px;
+  --portal-separator-table: 16px;
+  --portal-defended-bg: #c2d0c2;
+  --portal-defended-border: #7e907e;
+  --portal-defended-text: #263728;
+  --portal-upcoming-bg: #d8c58e;
+  --portal-upcoming-border: #a38a4b;
+  --portal-upcoming-text: #3f351c;
+}
+
+/* Títulos: uma única linguagem visual no portal público. */
+#formal-monthly-calendar-section > div > div:first-child,
+#indicadores-publicos-page > section:first-child,
+#como-chegar-page-container > section:first-child,
+#fluxo-tcc-page > section:first-child,
+#portal-replication-page > section:first-child {
+  border-bottom: var(--portal-separator-section) solid #fff !important;
+}
+
+/* Como Usar possui a barra de filtros dentro do mesmo cabeçalho. */
+#portal-tutorial-page .portal-tutorial-filter-row {
+  border-top: var(--portal-separator-section) solid #fff !important;
+}
+
+/* Bandas de filtros das planilhas. */
+#portal-app-root main .portal-defense-filter-row,
+#portal-app-root main .portal-meus-processos-filter-row,
+#portal-app-root main .portal-coordinator-filter-row,
+#portal-app-root main .portal-standard-filter-row,
+#portal-app-root main [data-portal1040-filter-band="true"] {
+  border-bottom: var(--portal-separator-section) solid #fff !important;
+  box-shadow: none !important;
+}
+
+/* Toda tabela segue o mesmo cabeçalho e separação dos dados. */
+#portal-app-root main .portal-core-table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+#portal-app-root main .portal-core-table thead tr:last-child > th {
+  position: relative !important;
+  padding-top: .9rem !important;
+  padding-bottom: .9rem !important;
+  padding-right: 2.5rem !important;
+  border-bottom: var(--portal-separator-table) solid #fff !important;
+  vertical-align: middle !important;
+}
+
+#portal-app-root main .portal-core-table tbody,
+#portal-app-root main .portal-core-table tbody tr,
+#portal-app-root main .portal-core-table tbody td,
+#portal-app-root main .portal-core-table tbody td * {
+  color: #000 !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+#portal-app-root main .portal-core-stage-label {
+  font-weight: 400 !important;
+  color: #000 !important;
+  white-space: nowrap !important;
+}
+
+/* Um único controle por coluna. */
+#portal-app-root main .portal-core-table thead th .portal-column-controls,
+#portal-app-root main .portal-core-table thead th .portal1040-inline-sort,
+#portal-app-root main .portal-core-table thead th .portal1041-column-menu-button,
+#portal-app-root main .portal-core-table thead th .portal1043-column-menu-button,
+#portal-app-root main .portal-core-table thead th .portal-column-sort,
+#portal-app-root main .portal-core-table thead th .portal-column-filter {
+  display: none !important;
+}
+
+.portal-core-column-menu {
+  position: absolute !important;
+  right: .5rem !important;
+  top: .42rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255,255,255,.48) !important;
+  border-radius: 999px !important;
+  background: rgba(255,255,255,.10) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  z-index: 8 !important;
+}
+
+.portal-core-column-menu svg {
+  display: block !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.portal-core-column-menu[aria-expanded="true"],
+.portal-core-column-menu[data-filter-active="true"] {
+  background: rgba(255,255,255,.23) !important;
+  border-color: rgba(255,255,255,.78) !important;
+}
+
+.portal-core-resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  z-index: 12;
+  width: 7px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.portal-core-resizer::after {
+  content: '';
+  position: absolute;
+  top: 18%;
+  bottom: 18%;
+  left: 3px;
+  width: 1px;
+  background: rgba(255,255,255,.24);
+}
+
+.portal-core-resizing,
+.portal-core-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+.portal-core-nowrap th,
+.portal-core-nowrap td,
+.portal-core-nowrap th *,
+.portal-core-nowrap td * {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.portal-core-filter-hidden {
+  display: none !important;
+}
+
+/* Menu Excel-like. */
+.portal-core-column-popup {
+  position: fixed;
+  z-index: 1000040;
+  width: 320px;
+  max-height: 460px;
+  overflow: hidden;
+  padding: 10px;
+  border: 1px solid #b7c2ba;
+  border-radius: 12px;
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 18px 46px rgba(15,23,42,.24);
+}
+
+.portal-core-popup-title {
+  padding: 2px 3px 9px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #244433;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.portal-core-sort-actions {
+  display: grid;
+  gap: 5px;
+  padding: 9px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.portal-core-menu-action,
+.portal-core-selection-action,
+.portal-core-clear-filter,
+.portal-core-done,
+.portal-core-wrap-actions button {
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #1f2937;
+  box-shadow: none;
+  transition: none !important;
+}
+
+.portal-core-menu-action {
+  width: 100%;
+  padding: 7px 9px;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 750;
+}
+
+.portal-core-filter-title {
+  padding: 9px 3px 5px;
+  color: #334155;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+}
+
+.portal-core-selection-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.portal-core-selection-action {
+  padding: 6px 8px;
+  font-size: 9.5px;
+  font-weight: 800;
+}
+
+.portal-core-filter-search {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  background: #fff;
+  color: #111827;
+  font-size: 11px;
+}
+
+.portal-core-filter-search:focus {
+  border-color: #6f8f79;
+  box-shadow: 0 0 0 2px rgba(111,143,121,.14);
+}
+
+.portal-core-filter-values {
+  max-height: 190px;
+  overflow: auto;
+  margin-top: 7px;
+  padding: 5px 0;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.portal-core-filter-value {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 5px;
+  border-radius: 6px;
+  color: #111827;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+.portal-core-filter-value input {
+  accent-color: #557762;
+}
+
+.portal-core-filter-value span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portal-core-popup-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.portal-core-clear-filter,
+.portal-core-done {
+  padding: 6px 9px;
+  font-size: 9.5px;
+  font-weight: 800;
+}
+
+.portal-core-done {
+  border-color: #17694a;
+  background: #17694a;
+  color: #fff;
+}
+
+/* Configuração de quebra de texto na engrenagem. */
+.portal-core-wrap-setting {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #d7dee3;
+}
+
+.portal-core-wrap-setting > div:first-child {
+  display: grid;
+  gap: 2px;
+  color: #1f2937;
+  font-size: 10px;
+}
+
+.portal-core-wrap-setting > div:first-child span {
+  color: #64748b;
+  font-size: 9px;
+}
+
+.portal-core-wrap-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.portal-core-wrap-actions button {
+  padding: 5px 7px;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.portal-core-wrap-actions button[data-active="true"] {
+  border-color: #557762;
+  background: #dce5df;
+  color: #234130;
+}
+
+/* Processo: mesma linguagem cromática do calendário. */
+#portal-app-root main td[data-portal-core-process-state="defended"] > div {
+  background: var(--portal-defended-bg) !important;
+  border-color: var(--portal-defended-border) !important;
+  color: var(--portal-defended-text) !important;
+  box-shadow: none !important;
+}
+
+#portal-app-root main td[data-portal-core-process-state="upcoming"] > div {
+  background: var(--portal-upcoming-bg) !important;
+  border-color: var(--portal-upcoming-border) !important;
+  color: var(--portal-upcoming-text) !important;
+  box-shadow: none !important;
+}
+
+#portal-app-root main td[data-portal-core-process-state] > div * {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+/* Calendário: fins de semana estreitos e indisponíveis. */
+.portal-core-calendar-grid,
+.portal-core-calendar-week-header > div {
+  grid-template-columns: .22fr 1.356fr 1.356fr 1.356fr 1.356fr 1.356fr .22fr !important;
+}
+
+.portal-core-calendar-weekend,
+.portal-calendar-empty-cell {
+  background: #f8fafc !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+}
+
+.portal-core-calendar-weekend {
+  cursor: default !important;
+}
+
+.portal-core-calendar-weekend > *:not(:first-child) {
+  display: none !important;
+}
+
+.portal-core-calendar-previews {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  margin-top: 3px;
+}
+
+.portal-core-calendar-card {
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid;
+  border-radius: 7px;
+  box-shadow: none;
+  color: #111827;
+  line-height: 1.15;
+}
+
+.portal-core-calendar-card.is-defended {
+  background: var(--portal-defended-bg);
+  border-color: var(--portal-defended-border);
+  color: var(--portal-defended-text);
+}
+
+.portal-core-calendar-card.is-upcoming {
+  background: var(--portal-upcoming-bg);
+  border-color: var(--portal-upcoming-border);
+  color: var(--portal-upcoming-text);
+}
+
+.portal-core-calendar-card strong,
+.portal-core-calendar-card span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portal-core-calendar-card strong {
+  font-size: 8.5px;
+  font-weight: 850;
+}
+
+.portal-core-calendar-card span,
+.portal-core-calendar-more {
+  margin-top: 2px;
+  font-size: 7.5px;
+  font-weight: 650;
+}
+
+/* Fluxo responsivo em caminho de leitura. */
+#fluxo-tcc-page {
+  max-width: none !important;
+}
+
+.portal-flow-snake {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.portal-flow-step {
+  position: relative;
+  min-width: 0;
+}
+
+.portal-flow-number {
+  position: absolute;
+  top: -9px;
+  left: -7px;
+  z-index: 3;
+}
+
+@media (min-width: 900px) {
+  .portal-flow-snake {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 36px 18px;
+  }
+  .portal-flow-step:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .portal-flow-step:nth-child(2) { grid-column: 2; grid-row: 1; }
+  .portal-flow-step:nth-child(3) { grid-column: 3; grid-row: 1; }
+  .portal-flow-step:nth-child(4) { grid-column: 4; grid-row: 1; }
+  .portal-flow-step:nth-child(5) { grid-column: 4; grid-row: 2; }
+  .portal-flow-step:nth-child(6) { grid-column: 3; grid-row: 2; }
+  .portal-flow-step:nth-child(7) { grid-column: 2; grid-row: 2; }
+  .portal-flow-step:nth-child(8) { grid-column: 1; grid-row: 2; }
+
+  .portal-flow-step:not(:nth-child(4)):not(:nth-child(5)):not(:nth-child(8))::after {
+    content: '→';
+    position: absolute;
+    top: 50%;
+    right: -17px;
+    transform: translateY(-50%);
+    color: #337959;
+    font-size: 19px;
+    font-weight: 900;
+  }
+  .portal-flow-step:nth-child(5)::after,
+  .portal-flow-step:nth-child(6)::after,
+  .portal-flow-step:nth-child(7)::after {
+    content: '←';
+    position: absolute;
+    top: 50%;
+    left: -17px;
+    transform: translateY(-50%);
+    color: #337959;
+    font-size: 19px;
+    font-weight: 900;
+  }
+  .portal-flow-step:nth-child(4)::before {
+    content: '↓';
+    position: absolute;
+    bottom: -31px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #337959;
+    font-size: 21px;
+    font-weight: 900;
+  }
+}
+
+/* O hover é neutro; estados ativos continuam definidos por aria/data-selected. */
+#portal-app-root *,
+#portal-app-root *::before,
+#portal-app-root *::after {
+  transition: none !important;
+}
+
+.portal-core-menu-action:hover,
+.portal-core-selection-action:hover,
+.portal-core-clear-filter:hover,
+.portal-core-done:hover,
+.portal-core-column-menu:hover,
+.portal-core-filter-value:hover,
+.portal-core-wrap-actions button:hover {
+  filter: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
