@@ -1,0 +1,92 @@
+/* Hotfix cirúrgico após a consolidação 1.0.43.
+ * Corrige somente três regressões visuais confirmadas em homologação:
+ * 1) separadores estruturais em 16 px;
+ * 2) remove o divisor legado adicional da primeira linha da tabela;
+ * 3) aplica a paleta fosca aprovada aos processos e cards de defesa.
+ *
+ * Não altera layout, filtros, resize, popup, calendário ou comportamento das tabelas.
+ */
+
+:root {
+  --portal-separator-section: 16px;
+  --portal-separator-table: 16px;
+  --portal-defended-bg: #c2d0c2;
+  --portal-defended-border: #7e907e;
+  --portal-defended-text: #263728;
+  --portal-upcoming-bg: #d4c69a;
+  --portal-upcoming-border: #9e8f63;
+  --portal-upcoming-text: #453d25;
+}
+
+/*
+ * A única faixa entre o cabeçalho verde e os dados é a faixa estrutural de 16 px
+ * definida nos THs pelo portal-core-1043.css. As versões anteriores ainda
+ * acrescentavam 3/4 px no THEAD e na primeira linha, produzindo ~20 px.
+ */
+#portal-app-root main .portal-core-table thead {
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+}
+
+#portal-app-root main .portal-core-table tbody tr:first-child > td {
+  border-top: 0 !important;
+  box-shadow: none !important;
+}
+
+/*
+ * Fallback semântico para a Lista de Defesas.
+ * O cabeçalho atual é “Nº do Processo”, enquanto a camada estrutural antiga
+ * procurava igualdade literal com “Processo”. O título da célula identifica
+ * com segurança a coluna mesmo quando o usuário a reordena.
+ */
+#formal-monthly-calendar-section .portal-core-table tbody tr.bg-slate-100\/40
+  td[title*="abrir os detalhes e documentos"] > div {
+  background: var(--portal-defended-bg) !important;
+  border-color: var(--portal-defended-border) !important;
+  color: var(--portal-defended-text) !important;
+  box-shadow: none !important;
+}
+
+#formal-monthly-calendar-section .portal-core-table tbody tr:not(.bg-slate-100\/40)
+  td[title*="abrir os detalhes e documentos"] > div {
+  background: var(--portal-upcoming-bg) !important;
+  border-color: var(--portal-upcoming-border) !important;
+  color: var(--portal-upcoming-text) !important;
+  box-shadow: none !important;
+}
+
+#formal-monthly-calendar-section .portal-core-table tbody
+  td[title*="abrir os detalhes e documentos"] > div * {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+/* Se a marcação semântica do runtime estiver disponível, ela continua soberana. */
+#portal-app-root main td[data-portal-core-process-state="defended"] > div {
+  background: var(--portal-defended-bg) !important;
+  border-color: var(--portal-defended-border) !important;
+  color: var(--portal-defended-text) !important;
+  box-shadow: none !important;
+}
+
+#portal-app-root main td[data-portal-core-process-state="upcoming"] > div {
+  background: var(--portal-upcoming-bg) !important;
+  border-color: var(--portal-upcoming-border) !important;
+  color: var(--portal-upcoming-text) !important;
+  box-shadow: none !important;
+}
+
+/* Cards do calendário usam exatamente a mesma família fosca dos processos. */
+.portal-core-calendar-card.is-defended,
+.portal-calendar-preview.is-defended {
+  background: var(--portal-defended-bg) !important;
+  border-color: var(--portal-defended-border) !important;
+  color: var(--portal-defended-text) !important;
+}
+
+.portal-core-calendar-card.is-upcoming,
+.portal-calendar-preview.is-upcoming {
+  background: var(--portal-upcoming-bg) !important;
+  border-color: var(--portal-upcoming-border) !important;
+  color: var(--portal-upcoming-text) !important;
+}
