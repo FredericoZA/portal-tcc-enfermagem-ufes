@@ -4,6 +4,7 @@ import App from './App.tsx';
 import { PortalUiEnhancer } from './components/PortalUiEnhancer';
 import { PortalVersion1040Enhancer } from './components/PortalVersion1040Enhancer';
 import { PortalStructuralRuntime } from './components/PortalStructuralRuntime';
+import { PortalTableTextPolicy } from './components/PortalTableTextPolicy';
 import './index.css';
 import './portal-overrides.css';
 import './portal-design-system.css';
@@ -27,6 +28,7 @@ import './portal-update-43.css';
 import './portal-version-1040.css';
 import './portal-core-1043.css';
 import './portal-hotfix-separators-palette.css';
+import './portal-public-ux-1044.css';
 import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
 import { installAuthRequestResilience } from './utils/authRequestResilience';
 
@@ -39,5 +41,6 @@ createRoot(document.getElementById('root')!).render(
     <PortalUiEnhancer />
     <PortalVersion1040Enhancer />
     <PortalStructuralRuntime />
+    <PortalTableTextPolicy />
   </StrictMode>,
 );

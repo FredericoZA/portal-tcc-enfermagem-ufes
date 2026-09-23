@@ -12,9 +12,10 @@ interface HeaderProps {
 }
 
 const COURSE_ACCENT = '#337959';
+const PUBLIC_VISITOR_SUFFIX = '@publico.local';
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome }) => {
-  const { userEmail, globalRoles, memberships, settings } = useAuth();
+  const { userEmail, globalRoles, settings } = useAuth();
   const installationProfile = resolveInstallationProfile(settings);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
 
@@ -33,33 +34,55 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome })
     ...(layoutConfig.headerBgImage ? { backgroundImage: `url(${layoutConfig.headerBgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
   };
   const headerLogo = String(layoutConfig.headerCustomLogoUrl || '');
+  const normalizedEmail = String(userEmail || '').trim().toLowerCase();
+  const isPublicVisitor = !normalizedEmail || normalizedEmail.endsWith(PUBLIC_VISITOR_SUFFIX);
+  const showAuthenticatedIdentity = !isPublicVisitor;
+  const isMaster = globalRoles.includes('MASTER_ADMIN');
+  const isCommissionPresident = globalRoles.includes('COMMISSION_PRESIDENT');
+  const accessLabel = isMaster
+    ? 'Usuário Master'
+    : isCommissionPresident
+      ? 'Presidente da Comissão'
+      : 'Acesso pelo e-mail';
 
   return (
     <header id="portal-header" className="border-b border-slate-200 shadow-2xs sticky top-0 z-30 transition-colors" style={headerStyle}>
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-1.5 sm:py-2 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <button id="open-mobile-sidebar-btn" onClick={onOpenMobileSidebar} className="lg:hidden p-2 rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none" aria-label="Abrir menu"><Menu className="w-6 h-6" /></button>
+          <button id="open-mobile-sidebar-btn" onClick={onOpenMobileSidebar} className="lg:hidden p-2 rounded-full text-slate-600 focus:outline-none" aria-label="Abrir menu"><Menu className="w-6 h-6" /></button>
           <div className="flex items-center gap-2">
             {headerLogo && (
               <img src={headerLogo} alt="Emblema institucional" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 object-contain" referrerPolicy="no-referrer" />
             )}
-            <button type="button" onClick={onGoHome} className="text-left hover:opacity-90 transition-opacity focus:outline-none cursor-pointer" title="Voltar ao Calendário Público Inicial">
+            <button type="button" onClick={onGoHome} className="text-left focus:outline-none cursor-pointer" title="Voltar ao Calendário Público Inicial">
               <div className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest leading-none mb-1" style={{ color: '#0f172a' }}>{layoutConfig.headerInstitutionText || installationProfile.institutionName}</div>
               <h1 className="text-[11px] sm:text-xs md:text-sm font-black tracking-tight uppercase leading-snug flex items-center gap-1.5" style={{ color: COURSE_ACCENT }}><span>{layoutConfig.headerCourseTitle || `${installationProfile.courseName} · CCS/UFES`}</span></h1>
             </button>
           </div>
         </div>
-        <div className="hidden md:flex items-center gap-2">
-          {userEmail && <NotificationBell />}
-          {layoutConfig.headerShowRoleBadges && (globalRoles.includes('MASTER_ADMIN') ? <span id="role-badge-master" className="inline-flex items-center gap-1 bg-amber-100 text-amber-950 border border-amber-300 text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider"><Shield className="w-3.5 h-3.5 text-amber-800" />Master Admin</span> : globalRoles.includes('COMMISSION_PRESIDENT') ? <span id="role-badge-coord" className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 border border-slate-300 text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider"><Shield className="w-3.5 h-3.5 text-slate-600" />Presidente da Comissão</span> : null)}
-          <div id="user-profile-summary" className="flex items-center gap-2 bg-slate-50 px-3.5 py-1.5 rounded-full border border-slate-200">
-            <User className="w-4 h-4 text-slate-500" />
-            <div className="text-xs">
-              <div className="font-bold text-slate-900 truncate max-w-[180px]" title={userEmail}>{userEmail}</div>
-              <div className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">{memberships.length > 0 ? `${memberships.length} trabalho(s) de TCC` : 'Acesso Institucional'}</div>
+
+        {showAuthenticatedIdentity && (
+          <div className="hidden md:flex items-center gap-2">
+            <NotificationBell />
+            {layoutConfig.headerShowRoleBadges && (isMaster ? (
+              <span id="role-badge-master" className="inline-flex items-center gap-1 bg-amber-100 text-amber-950 border border-amber-300 text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
+                <Shield className="w-3.5 h-3.5 text-amber-800" />Usuário Master
+              </span>
+            ) : isCommissionPresident ? (
+              <span id="role-badge-coord" className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 border border-slate-300 text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
+                <Shield className="w-3.5 h-3.5 text-slate-600" />Presidente da Comissão
+              </span>
+            ) : null)}
+
+            <div id="user-profile-summary" className="flex items-center gap-2 bg-slate-50 px-3.5 py-1.5 rounded-full border border-slate-200">
+              <User className="w-4 h-4 text-slate-500" />
+              <div className="text-xs">
+                <div className="font-bold text-slate-900 truncate max-w-[180px]" title={userEmail}>{userEmail}</div>
+                <div className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">{accessLabel}</div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </header>
   );

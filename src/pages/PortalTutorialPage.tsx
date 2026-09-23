@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { HelpCircle, Info, UserCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ClipboardCheck, HelpCircle, UserCheck } from 'lucide-react';
 
 interface PortalTutorialPageProps {
   onNavigate: (tab: string) => void;
@@ -7,70 +7,154 @@ interface PortalTutorialPageProps {
 
 type Role = 'aluno' | 'orientador' | 'presidente' | 'visitante';
 
+type GuideStep = {
+  title: string;
+  text: string;
+};
+
 type RoleGuide = {
   title: string;
   description: string;
-  steps: string[];
-  attention: string;
+  before: string[];
+  steps: GuideStep[];
+  checklist: string[];
+  mistakes: string[];
   finish: string;
 };
 
 const roleContent: Record<Role, RoleGuide> = {
   aluno: {
     title: 'Aluno',
-    description: 'O aluno inicia o processo, acompanha as confirmações e encerra sua participação com a entrega final e as autorizações de publicação aplicáveis.',
-    steps: [
-      'Entre com o e-mail previamente autorizado. O acesso ao processo é vinculado ao endereço cadastrado no Portal.',
-      'No cadastro inicial, informe título, autoria, orientador, coorientador quando houver, banca e a data/horário pretendidos para a defesa.',
-      'Depois de solicitar a reserva ao Departamento, volte ao processo e confirme somente o local que realmente foi reservado para a apresentação.',
-      'Acompanhe o calendário e o próprio processo. Quando o local estiver confirmado, o Portal passa a preparar o convite institucional da banca.',
-      'Após a defesa e o registro da Ata pelo orientador, envie a versão final do TCC, cinco palavras-chave, resumo sintético e o resumo expandido quando houver.',
-      'Escolha separadamente o que poderá ser publicado e, quando houver Termo de autorização, confira os dados antes de encaminhá-lo para assinatura.',
+    description: 'Use esta visão para acompanhar tudo o que depende do estudante, desde o cadastro do trabalho até a entrega final e as autorizações de publicação.',
+    before: [
+      'Acesse o Portal com o mesmo e-mail previamente autorizado para o curso.',
+      'Tenha o título do trabalho, os dados do orientador e do coorientador quando houver, a composição prevista da banca e uma proposta de data e horário.',
+      'Confirme os nomes completos antes de cadastrar: esses dados serão reutilizados nos documentos gerados pelo Portal.',
     ],
-    attention: 'Antes de avançar, confira nomes, título, banca, data e local. Esses dados alimentam os documentos gerados nas etapas seguintes.',
-    finish: 'Sua etapa termina quando a entrega final e as escolhas de publicação aplicáveis estão registradas no processo.',
+    steps: [
+      { title: '1. Entrar no processo correto', text: 'Acesse com seu e-mail e confira se o Portal reconheceu o trabalho ao qual você está vinculado. Não crie um segundo processo para corrigir um cadastro já existente.' },
+      { title: '2. Fazer o cadastro inicial', text: 'Informe autoria, título, orientador, coorientador quando houver, banca e data/horário pretendidos. Revise grafia, acentuação e ordem dos nomes antes de concluir.' },
+      { title: '3. Solicitar e confirmar o local', text: 'A reserva da sala ou auditório ocorre conforme a rotina do Departamento. Depois de receber a confirmação, volte ao processo e registre somente o local efetivamente reservado.' },
+      { title: '4. Conferir a divulgação da defesa', text: 'Depois da confirmação de data, horário e local, confira como a apresentação aparece no calendário público. Havendo divergência, solicite a correção antes da defesa.' },
+      { title: '5. Acompanhar a situação da banca', text: 'Verifique se orientador, coorientador e membros avaliadores estão corretamente identificados. Alterações de banca devem ser resolvidas antes da geração final dos documentos.' },
+      { title: '6. Aguardar o registro da defesa', text: 'Após a apresentação, o orientador registra o resultado e o parecer. O aluno não deve avançar para a entrega final usando informações provisórias ou antes da liberação da etapa seguinte.' },
+      { title: '7. Enviar a versão final', text: 'Anexe o arquivo final exigido e preencha os metadados do trabalho, incluindo palavras-chave, resumo sintético e resumo expandido quando aplicável.' },
+      { title: '8. Definir as autorizações de publicação', text: 'Escolha separadamente o que poderá ser disponibilizado. Quando houver Termo de autorização, confira o documento antes de encaminhá-lo para assinatura.' },
+      { title: '9. Conferir o encerramento', text: 'Antes de considerar sua participação concluída, verifique se a entrega final foi registrada, se não há pendências de assinatura e se as opções de publicação aparecem corretamente no processo.' },
+    ],
+    checklist: [
+      'Título e autoria conferidos.',
+      'Orientador, coorientador e banca corretos.',
+      'Data, horário e local confirmados.',
+      'Arquivo final e metadados enviados.',
+      'Autorizações de publicação registradas quando aplicáveis.',
+    ],
+    mistakes: [
+      'Criar outro processo para corrigir um dado do processo existente.',
+      'Registrar sala ou auditório antes da confirmação do Departamento.',
+      'Enviar versão preliminar como trabalho final.',
+      'Concluir a autorização de publicação sem conferir o documento gerado.',
+    ],
+    finish: 'A participação principal do aluno termina quando a entrega final, os metadados e as autorizações exigidas estão registrados e não há pendência atribuída ao estudante.',
   },
   orientador: {
     title: 'Orientador',
-    description: 'O orientador atua principalmente na conferência acadêmica da defesa, no registro do resultado e do parecer e na validação da Ata.',
-    steps: [
-      'Entre com o mesmo e-mail informado pelo aluno no cadastro do TCC; esse vínculo identifica os processos em que você atua como orientador.',
-      'Abra o processo e confira autoria, título, banca, data, horário e local antes de registrar qualquer informação da defesa.',
-      'Quando houver erro em dado que ainda possa ser corrigido, ajuste-o antes de concluir a avaliação para evitar divergência na documentação.',
-      'Registre o resultado da banca — Aprovado, Aprovado com ressalva ou Reprovado — e informe o parecer final. O fluxo atual não utiliza nota numérica.',
-      'Confira a prévia da Ata com atenção aos nomes, funções dos membros e dados da apresentação antes de iniciar a assinatura.',
-      'Escolha a via de assinatura disponível no Portal. Asten e Gov.br funcionam como alternativas independentes quando estiverem habilitadas.',
+    description: 'Use esta visão para conferir os dados acadêmicos da defesa, registrar o resultado e validar os documentos que dependem da orientação.',
+    before: [
+      'Entre com o mesmo e-mail informado no cadastro do TCC.',
+      'Confirme que o processo exibido corresponde ao trabalho e aos estudantes corretos.',
+      'Antes da avaliação, confira título, autoria, banca, data, horário e local da apresentação.',
     ],
-    attention: 'A avaliação concluída passa a compor o documento institucional. Evite finalizar enquanto ainda houver informação divergente na Ata.',
-    finish: 'A participação principal do orientador fica concluída quando a avaliação foi registrada e a Ata seguiu corretamente para assinatura.',
+    steps: [
+      { title: '1. Localizar o TCC', text: 'Abra o processo pelo vínculo associado ao seu e-mail. Caso o trabalho não apareça, verifique se o endereço cadastrado pelo aluno é exatamente o utilizado no acesso.' },
+      { title: '2. Conferir os dados acadêmicos', text: 'Revise título, nomes dos estudantes, composição da banca e demais informações que serão reutilizadas na Ata e nas declarações.' },
+      { title: '3. Corrigir divergências antes da avaliação', text: 'Se houver informação incorreta e a etapa ainda permitir ajuste, corrija antes de concluir a avaliação. Isso evita documentos inconsistentes e retrabalho posterior.' },
+      { title: '4. Registrar o resultado da banca', text: 'Após a defesa, selecione o resultado previsto no fluxo e registre o parecer final. O Portal não utiliza nota numérica quando essa informação não faz parte da regra do curso.' },
+      { title: '5. Revisar a prévia da Ata', text: 'Confira nomes, funções dos membros, data, horário, local e resultado antes de iniciar qualquer processo de assinatura.' },
+      { title: '6. Encaminhar a assinatura', text: 'Use a modalidade de assinatura disponível no Portal. Quando houver mais de um provedor habilitado, eles funcionam como alternativas independentes.' },
+      { title: '7. Acompanhar pendências', text: 'Se uma assinatura falhar ou ficar incompleta, retome o processo somente depois de identificar a pendência. Não gere versões duplicadas sem necessidade.' },
+      { title: '8. Conferir a etapa de entrega final', text: 'Depois da avaliação, acompanhe se o aluno conseguiu avançar para a entrega final e se o fluxo permanece coerente com o resultado registrado.' },
+      { title: '9. Encerrar sua participação', text: 'Considere sua etapa concluída apenas quando avaliação, parecer e documentação sob sua responsabilidade estiverem corretamente registrados.' },
+    ],
+    checklist: [
+      'Processo e estudantes corretos.',
+      'Banca, data e local conferidos.',
+      'Resultado e parecer registrados.',
+      'Ata revisada antes da assinatura.',
+      'Pendências de assinatura acompanhadas.',
+    ],
+    mistakes: [
+      'Finalizar a avaliação antes de corrigir divergências conhecidas.',
+      'Assinar documento sem conferir a prévia.',
+      'Criar documento duplicado para contornar falha de assinatura.',
+      'Usar outro e-mail e perder o vínculo com o processo correto.',
+    ],
+    finish: 'A participação principal do orientador termina quando o resultado foi registrado, a documentação correspondente foi conferida e as assinaturas sob sua responsabilidade foram encaminhadas ou concluídas.',
   },
   presidente: {
     title: 'Presidente da Comissão',
-    description: 'A Presidência acompanha as pendências administrativas do fluxo e atua nos documentos finais que dependem da Comissão de TCC.',
-    steps: [
-      'Use a Área do Presidente para acompanhar processos, pendências documentais e situações que ainda impedem o encerramento.',
-      'Verifique se a defesa já foi registrada, se a entrega final foi feita e se as assinaturas anteriores exigidas para aquele processo foram concluídas.',
-      'Quando a declaração da banca estiver disponível, confira título, participantes, data, local e composição da banca antes de encaminhá-la.',
-      'Selecione a via de assinatura disponível. A indisponibilidade de um provedor não deve impedir o uso do outro quando ambos estiverem configurados.',
-      'Acompanhe eventuais falhas de geração, assinatura ou arquivamento e retome a etapa somente depois de corrigida a causa da pendência.',
-      'Depois que os requisitos finais forem satisfeitos, confira se o processo está apto à conclusão e se a publicação autorizada foi sincronizada quando aplicável.',
+    description: 'Use esta visão para acompanhar pendências administrativas, conferir documentos finais e garantir que cada TCC percorra o fluxo previsto antes do encerramento.',
+    before: [
+      'Acesse com o e-mail vinculado à função de Presidente da Comissão.',
+      'Use a área administrativa para identificar processos parados e a etapa em que cada pendência se encontra.',
+      'Antes de intervir, verifique se a pendência pertence ao aluno, orientador, banca, assinatura, integração ou administração.',
     ],
-    attention: 'A Presidência não precisa refazer etapas acadêmicas já concluídas; o foco é identificar o que ainda está pendente e liberar o encerramento correto.',
-    finish: 'O processo fica pronto para conclusão quando documentos, assinaturas e entregas exigidos para aquele TCC estão resolvidos.',
+    steps: [
+      { title: '1. Acompanhar o painel de processos', text: 'Priorize processos com pendências reais e verifique qual requisito ainda impede a progressão. Evite refazer etapas que já foram concluídas corretamente.' },
+      { title: '2. Conferir o histórico do processo', text: 'Use os registros existentes para entender o que já foi enviado, confirmado, assinado ou corrigido antes de executar nova ação administrativa.' },
+      { title: '3. Validar documentos finais', text: 'Antes de encaminhar documentos da Comissão, confira título, autoria, banca, data, local e resultado da defesa.' },
+      { title: '4. Tratar pendências de assinatura', text: 'Identifique se a falha está na geração, no envio, no provedor de assinatura ou na ausência de um signatário. Corrija a causa antes de reenviar.' },
+      { title: '5. Conferir a declaração da banca', text: 'Quando disponível, revise a declaração de participação e confirme se os membros e suas funções correspondem ao processo.' },
+      { title: '6. Verificar entrega e publicação', text: 'Confirme se a versão final e os metadados foram enviados e se as autorizações de publicação foram registradas quando necessárias.' },
+      { title: '7. Acompanhar integrações', text: 'Quando houver sincronização com Drive, Docs, Gmail, Calendar ou outro serviço, diferencie falha de integração de pendência acadêmica para evitar ações incorretas.' },
+      { title: '8. Liberar o encerramento', text: 'O processo só deve ser considerado apto à conclusão quando as entregas, documentos e assinaturas exigidas para aquele TCC estiverem resolvidas.' },
+      { title: '9. Preservar rastreabilidade', text: 'Use o histórico e os registros do Portal como referência administrativa. Evite correções fora do fluxo quando houver uma ação própria do sistema para a mesma finalidade.' },
+    ],
+    checklist: [
+      'Etapa e responsável pela pendência identificados.',
+      'Documentos finais conferidos.',
+      'Assinaturas necessárias resolvidas.',
+      'Entrega final e publicação verificadas.',
+      'Processo apto ao encerramento sem pendências remanescentes.',
+    ],
+    mistakes: [
+      'Refazer uma etapa já concluída sem investigar a causa do problema.',
+      'Tratar falha de integração como se fosse pendência acadêmica.',
+      'Encerrar processo com assinatura ou documento obrigatório pendente.',
+      'Alterar dados históricos sem necessidade administrativa comprovada.',
+    ],
+    finish: 'A atuação administrativa sobre um TCC termina quando o processo está íntegro, sem pendências obrigatórias e apto à conclusão conforme as regras configuradas no Portal.',
   },
   visitante: {
     title: 'Visitante',
-    description: 'O visitante utiliza somente as áreas públicas do Portal para acompanhar apresentações e consultar produções que tenham sido liberadas.',
-    steps: [
-      'Consulte o calendário público para localizar as defesas divulgadas pelo curso, com data, horário, local e informações acadêmicas disponibilizadas.',
-      'Abra os detalhes de uma apresentação para conferir as informações públicas daquele TCC sem precisar entrar em uma área administrativa.',
-      'No repositório, pesquise trabalhos concluídos por título, autor, orientador, palavra-chave ou outros filtros disponíveis na própria página.',
-      'Quando houver arquivo autorizado para publicação, use o link apresentado no repositório para acessar o conteúdo disponibilizado pelo Portal.',
-      'Use a página Como chegar para abrir a rota até o Departamento de Enfermagem e conferir os locais atualmente utilizados para as apresentações.',
-      'Se uma informação não estiver publicada, ela continua restrita ao fluxo interno e não será exibida apenas por estar cadastrada no processo.',
+    description: 'Use esta visão para consultar informações públicas sem entrar na área restrita do Portal.',
+    before: [
+      'Nenhum login é necessário para consultar as páginas públicas.',
+      'As informações exibidas respeitam o que foi preparado para divulgação externa.',
+      'Dados e documentos internos do processo não ficam disponíveis apenas por existirem no sistema.',
     ],
-    attention: 'As páginas públicas mostram somente o que foi preparado para consulta externa; documentos internos do processo não fazem parte dessa navegação.',
-    finish: 'Para acompanhar uma defesa, normalmente basta usar o calendário, o repositório e a página Como chegar.',
+    steps: [
+      { title: '1. Consultar o calendário', text: 'Use o calendário para localizar as defesas divulgadas pelo curso por mês e por data.' },
+      { title: '2. Abrir as defesas do dia', text: 'Clique em um dia que contenha apresentações para visualizar, no próprio Portal, todas as defesas públicas registradas naquela data.' },
+      { title: '3. Conferir horário e local', text: 'Antes de se deslocar, confira o horário e o local apresentados no calendário. Alterações administrativas podem atualizar essas informações.' },
+      { title: '4. Consultar o repositório', text: 'Pesquise trabalhos concluídos usando os campos e filtros disponíveis no acervo público.' },
+      { title: '5. Abrir os detalhes do TCC', text: 'Quando a visualização pública estiver habilitada, use o número do processo para consultar os dados disponibilizados daquele trabalho.' },
+      { title: '6. Acessar arquivos autorizados', text: 'Somente documentos liberados para publicação devem aparecer no repositório. A ausência de arquivo não significa necessariamente ausência do documento no processo interno.' },
+      { title: '7. Usar a página Como chegar', text: 'Consulte as opções de mapa e rota para chegar ao Departamento ou aos locais indicados para as apresentações.' },
+      { title: '8. Diferenciar área pública e área restrita', text: 'Recursos administrativos, documentos internos e ações de participantes exigem acesso autenticado e não fazem parte da navegação do visitante.' },
+    ],
+    checklist: [
+      'Data da defesa conferida.',
+      'Horário e local conferidos.',
+      'Trabalho localizado no repositório quando publicado.',
+      'Arquivo acessado somente quando autorizado para divulgação.',
+    ],
+    mistakes: [
+      'Usar informação antiga de convite sem conferir o calendário atualizado.',
+      'Interpretar ausência de arquivo público como ausência de documento interno.',
+      'Tentar usar a área restrita sem possuir vínculo com o processo.',
+    ],
+    finish: 'Para o visitante, a consulta termina quando as informações públicas necessárias foram localizadas no calendário, no repositório ou na página Como chegar.',
   },
 };
 
@@ -81,7 +165,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
 
   return (
     <div id="portal-tutorial-page" className="portal-public-shell mx-auto max-w-none overflow-hidden rounded-2xl border border-slate-300 bg-[#e1e6e9] shadow-sm">
-      <section className="portal-public-header border-b-2 border-white bg-[#005830] text-white">
+      <section className="portal-public-header bg-[#005830] text-white">
         <div className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white shadow-2xs" aria-hidden="true">
             <HelpCircle className="h-4 w-4 text-slate-700" />
@@ -100,9 +184,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
                   type="button"
                   onClick={() => setRole(key)}
                   data-selected={selected ? 'true' : 'false'}
-                  className={`portal-table-filter-chip inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide cursor-pointer transition-all border select-none ${
-                    selected ? 'shadow-xs scale-[1.02]' : 'opacity-85 hover:opacity-100'
-                  }`}
+                  className={`portal-table-filter-chip inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide cursor-pointer border select-none ${selected ? 'shadow-xs scale-[1.02]' : 'opacity-85'}`}
                 >
                   <span>{roleContent[key].title}</span>
                 </button>
@@ -112,36 +194,62 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
         </div>
       </section>
 
-      <section className="portal-layer-panel bg-[#e1e6e9]">
-        <div className="p-3 sm:p-4">
-          <div className="portal-layer-card flex items-start gap-3 rounded-2xl border border-slate-300 bg-[#d5dce0] p-3.5 shadow-2xs sm:p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#337959] text-white shadow-sm"><UserCheck className="h-5 w-5" /></span>
-            <div className="min-w-0">
-              <div className="text-[9px] font-black uppercase tracking-[0.16em] text-[#337959]">Visão selecionada</div>
-              <h2 className="mt-0.5 text-lg font-black text-slate-950">{active.title}</h2>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{active.description}</p>
-            </div>
+      <section className="portal-layer-panel bg-[#e1e6e9] p-3 sm:p-4">
+        <div className="portal-layer-card flex items-start gap-3 rounded-2xl border border-slate-300 bg-[#d5dce0] p-3.5 shadow-2xs sm:p-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#337959] text-white shadow-sm"><UserCheck className="h-5 w-5" /></span>
+          <div className="min-w-0">
+            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-[#337959]">Visão selecionada</div>
+            <h2 className="mt-0.5 text-lg font-black text-slate-950">{active.title}</h2>
+            <p className="mt-1 max-w-4xl text-sm leading-6 text-slate-700">{active.description}</p>
           </div>
+        </div>
 
-          <ol className="mt-3 grid gap-2.5 md:grid-cols-2">
-            {active.steps.map((step, index) => (
-              <li key={step} className="portal-layer-card flex gap-3 rounded-xl border border-slate-300 bg-[#d5dce0] px-3.5 py-3 text-sm leading-5 text-slate-700 shadow-2xs">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#337959] text-[10px] font-black text-white">{index + 1}</span>
-                <span>{step}</span>
-              </li>
-            ))}
-          </ol>
-
-          <div className="mt-3 grid gap-2.5 md:grid-cols-2">
-            <div className="portal-layer-card rounded-xl border border-slate-300 bg-[#d5dce0] px-3.5 py-3 shadow-2xs">
+        <div className="mt-3 grid gap-3 xl:grid-cols-[0.9fr_2.1fr]">
+          <aside className="space-y-3">
+            <section className="portal-layer-card rounded-xl border border-slate-300 bg-[#d5dce0] p-3.5 shadow-2xs">
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
-                <Info className="h-4 w-4 text-[#337959]" />
-                Antes de avançar
+                <ClipboardCheck className="h-4 w-4 text-[#337959]" />Antes de começar
               </div>
-              <p className="mt-1.5 text-xs leading-5 text-slate-600">{active.attention}</p>
-            </div>
-            <div id="portal-tutorial-finish-card" className="portal-layer-card rounded-xl border border-slate-300 bg-[#d5dce0] px-3.5 py-3 shadow-2xs">
-              <div className="text-xs font-black uppercase tracking-wide text-slate-900">Quando esta visão termina</div>
+              <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-700">
+                {active.before.map((item) => <li key={item} className="flex gap-2"><span className="font-black text-[#337959]">•</span><span>{item}</span></li>)}
+              </ul>
+            </section>
+
+            <section className="portal-layer-card rounded-xl border border-slate-300 bg-[#d5dce0] p-3.5 shadow-2xs">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
+                <CheckCircle2 className="h-4 w-4 text-[#337959]" />Conferência antes de encerrar
+              </div>
+              <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-700">
+                {active.checklist.map((item) => <li key={item} className="flex gap-2"><span className="font-black text-[#337959]">✓</span><span>{item}</span></li>)}
+              </ul>
+            </section>
+
+            <section className="portal-layer-card rounded-xl border border-slate-300 bg-[#d5dce0] p-3.5 shadow-2xs">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
+                <AlertTriangle className="h-4 w-4 text-[#337959]" />Erros a evitar
+              </div>
+              <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-700">
+                {active.mistakes.map((item) => <li key={item} className="flex gap-2"><span className="font-black text-slate-500">—</span><span>{item}</span></li>)}
+              </ul>
+            </section>
+          </aside>
+
+          <div>
+            <h3 className="mb-2 text-xs font-black uppercase tracking-wide text-slate-900">Passo a passo</h3>
+            <ol className="grid gap-2.5 lg:grid-cols-2">
+              {active.steps.map((step, index) => (
+                <li key={step.title} className="portal-layer-card flex h-full gap-3 rounded-xl border border-slate-300 bg-[#d5dce0] px-3.5 py-3 text-sm leading-5 text-slate-700 shadow-2xs">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#337959] text-[10px] font-black text-white">{index + 1}</span>
+                  <div className="min-w-0">
+                    <div className="text-xs font-black text-slate-950">{step.title.replace(/^\d+\.\s*/, '')}</div>
+                    <p className="mt-1 text-xs leading-5 text-slate-700">{step.text}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            <div id="portal-tutorial-finish-card" className="portal-layer-card mt-3 rounded-xl border border-[#9fb8a8] bg-white/80 px-4 py-3 shadow-2xs">
+              <div className="text-xs font-black uppercase tracking-wide text-slate-900">Quando esta participação termina</div>
               <p className="mt-1.5 text-xs leading-5 text-slate-700">{active.finish}</p>
             </div>
           </div>
