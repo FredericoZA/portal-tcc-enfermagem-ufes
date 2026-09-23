@@ -1,0 +1,119 @@
+/* Portal TCC 1.0.42 — acabamento final das planilhas após homologação visual. */
+
+/* A faixa branca aprovada passa a ser regra de todas as planilhas. */
+#portal-app-root main .portal1042-sheet thead {
+  border-bottom: 16px solid #fff !important;
+}
+
+#portal-app-root main .portal1042-sheet thead tr:last-child > th {
+  position: relative !important;
+  border-bottom: 16px solid #fff !important;
+  padding-top: 1.05rem !important;
+  padding-bottom: 1.05rem !important;
+  padding-right: 2.55rem !important;
+  vertical-align: middle !important;
+}
+
+#portal-app-root main .portal1042-filter-band,
+#portal-app-root main .portal-defense-filter-row,
+#portal-app-root main .portal-meus-processos-filter-row,
+#portal-app-root main .portal-coordinator-filter-row,
+#portal-app-root main .portal-standard-filter-row,
+#portal-app-root main [data-portal1040-filter-band="true"] {
+  border-bottom: 12px solid #fff !important;
+  box-shadow: none !important;
+}
+
+/* Cabeçalho: nenhum sort/filter legado. Fica somente o menu combinado. */
+#portal-app-root main .portal1042-sheet thead th .portal-column-controls,
+#portal-app-root main .portal1042-sheet thead th .portal1040-inline-sort,
+#portal-app-root main .portal1042-sheet thead th .portal1041-column-menu-button,
+#portal-app-root main .portal1042-sheet thead th .portal-column-sort,
+#portal-app-root main .portal1042-sheet thead th .portal-column-filter {
+  display: none !important;
+}
+
+/* Oculta as setas nativas do React; o chevron do menu combinado é recolocado abaixo. */
+#portal-app-root main .portal1042-sheet thead th svg {
+  display: none !important;
+}
+
+#portal-app-root main .portal1042-sheet thead th .portal1043-column-menu-button,
+#portal-app-root main .portal1042-sheet thead th .portal1043-column-menu-button svg {
+  display: inline-flex !important;
+}
+
+#portal-app-root main .portal1042-sheet .portal1043-column-menu-button {
+  position: absolute !important;
+  top: .42rem !important;
+  right: .62rem !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255,255,255,.46) !important;
+  background: rgba(255,255,255,.10) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  z-index: 9 !important;
+}
+
+#portal-app-root main .portal1042-sheet .portal1043-column-menu-button:hover {
+  background: rgba(255,255,255,.10) !important;
+  border-color: rgba(255,255,255,.46) !important;
+  color: #fff !important;
+}
+
+#portal-app-root main .portal1042-sheet .portal1043-column-menu-button[aria-expanded="true"],
+#portal-app-root main .portal1042-sheet .portal1043-column-menu-button[data-filter-active="true"] {
+  background: rgba(255,255,255,.24) !important;
+  border-color: rgba(255,255,255,.74) !important;
+}
+
+/* A data passada não reduz mais opacidade nem clareia o texto da linha. */
+#portal-app-root main [data-portal1042-defense-table="true"] tbody tr,
+#portal-app-root main [data-portal1042-defense-table="true"] tbody td,
+#portal-app-root main [data-portal1042-defense-table="true"] tbody td * {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+#portal-app-root main [data-portal1042-defense-table="true"] tbody td,
+#portal-app-root main [data-portal1042-defense-table="true"] tbody td > div,
+#portal-app-root main [data-portal1042-defense-table="true"] tbody td > span {
+  color: #000 !important;
+}
+
+/* Botão do processo: mesma paleta sóbria do calendário, sem verde fluorescente. */
+#portal-app-root main [data-portal1042-process-cell="true"][data-portal1042-defense-state="defended"] > div {
+  background: #b8d2c0 !important;
+  border-color: #72927c !important;
+  color: #000 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+#portal-app-root main [data-portal1042-process-cell="true"][data-portal1042-defense-state="upcoming"] > div {
+  background: #e4d6a8 !important;
+  border-color: #b6a164 !important;
+  color: #000 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+#portal-app-root main [data-portal1042-process-cell="true"] > div > * {
+  background: transparent !important;
+  color: #000 !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+/* Mantém o texto das demais tabelas com contraste integral. */
+#portal-app-root main .portal1042-sheet tbody,
+#portal-app-root main .portal1042-sheet tbody tr,
+#portal-app-root main .portal1042-sheet tbody td {
+  opacity: 1 !important;
+}

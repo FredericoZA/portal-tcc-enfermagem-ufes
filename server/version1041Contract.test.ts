@@ -65,7 +65,7 @@ test('botões de atualização das planilhas são removidos da interface',()=>{
   assert.match(css,/button\[title="Atualizar dados da tabela"\]/);
 });
 
-test('package publica a versão 1.0.41',()=>{
+test('contrato da 1.0.41 permanece válido sob a release atual 1.0.42',()=>{
   const pkg=JSON.parse(read('package.json'));
-  assert.equal(pkg.version,'1.0.41');
+  assert.equal(pkg.version,'1.0.42');
 });
