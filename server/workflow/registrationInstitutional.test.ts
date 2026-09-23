@@ -59,3 +59,15 @@ test('banca externa continua permitida sem SIAPE quando e-mail e instituição s
   assert.equal(result.banca[1].email, 'beatriz@fiocruz.br');
   assert.equal(result.banca[1].siape, '');
 });
+
+test('cadastro rejeita defesa no sábado', () => {
+  const answers = validAnswers();
+  answers.DEFESA_DATA_HORA = '2026-09-26T09:00';
+  assert.throws(() => acceptRegistration({ registrationAnswers: answers }), /segunda a sexta-feira/i);
+});
+
+test('cadastro rejeita defesa no domingo', () => {
+  const answers = validAnswers();
+  answers.DEFESA_DATA_HORA = '2026-09-27T09:00';
+  assert.throws(() => acceptRegistration({ registrationAnswers: answers }), /segunda a sexta-feira/i);
+});
