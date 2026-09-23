@@ -111,8 +111,8 @@ const phases = [
 ] as const;
 
 export const FluxoTccPage: React.FC = () => (
-  <div id="fluxo-tcc-page" className="mx-auto max-w-5xl space-y-3 py-2">
-    <section className="rounded-2xl border border-emerald-900/80 bg-[#005830] px-3.5 py-3 text-white shadow-sm sm:px-4">
+  <div id="fluxo-tcc-page" className="mx-auto max-w-none space-y-0 py-2">
+    <section className="rounded-t-2xl border border-emerald-900/80 bg-[#005830] px-3.5 py-3 text-white shadow-sm sm:px-4">
       <div className="flex items-center gap-2">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white shadow-2xs" aria-hidden="true">
           <GitBranch className="h-4 w-4 text-slate-700" />
@@ -121,66 +121,49 @@ export const FluxoTccPage: React.FC = () => (
       </div>
     </section>
 
-    <section className="overflow-hidden rounded-2xl border border-slate-300 bg-[#f0f0f0] p-3 shadow-sm sm:p-5">
-      <div className="mx-auto max-w-3xl text-center">
+    <section className="rounded-b-2xl border border-t-0 border-slate-300 bg-[#f0f0f0] p-3 shadow-sm sm:p-5">
+      <div className="mx-auto max-w-5xl text-center">
         <p className="text-sm font-semibold leading-6 text-slate-700">
-          O Portal acompanha o TCC do primeiro cadastro ao encerramento. Cada etapa libera a seguinte somente quando as informações necessárias daquele momento já foram registradas e conferidas.
+          O Portal acompanha o TCC do primeiro cadastro ao encerramento. Siga o caminho numerado: cada etapa libera a seguinte somente quando as informações necessárias já foram registradas e conferidas.
         </p>
       </div>
 
-      <div className="relative mt-5">
-        <div className="absolute bottom-3 left-[23px] top-3 w-px bg-slate-300 lg:left-1/2 lg:-translate-x-1/2" aria-hidden="true" />
+      <div className="portal-flow-snake mt-6" aria-label="Fluxo sequencial do TCC">
+        {phases.map(({ n, title, actor, icon: Icon, summary, details, result }) => (
+          <article key={n} className="portal-flow-step rounded-2xl border border-slate-300 bg-[#d5dce0] p-4 shadow-sm">
+            <div className="portal-flow-number flex h-11 w-11 items-center justify-center rounded-full border-4 border-[#f0f0f0] bg-[#005830] text-sm font-black text-white shadow-md" aria-label={`Etapa ${n}`}>
+              {n}
+            </div>
 
-        <div className="space-y-3 sm:space-y-4">
-          {phases.map(({ n, title, actor, icon: Icon, summary, details, result }, index) => {
-            const leftSide = index % 2 === 0;
-            return (
-              <article key={n} className="relative grid grid-cols-[48px_minmax(0,1fr)] items-start gap-3 lg:grid-cols-[minmax(0,1fr)_72px_minmax(0,1fr)] lg:gap-4">
-                <div className={`col-start-2 lg:row-start-1 ${leftSide ? 'lg:col-start-1' : 'lg:col-start-3'}`}>
-                  <div className={`rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm sm:p-4 ${leftSide ? 'lg:text-right' : ''}`}>
-                    <div className={`flex flex-wrap items-center gap-2 ${leftSide ? 'lg:justify-end' : ''}`}>
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#337959] text-white shadow-sm">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <div className={leftSide ? 'lg:order-first' : ''}>
-                        <div className={`flex flex-wrap items-center gap-2 ${leftSide ? 'lg:justify-end' : ''}`}>
-                          <h2 className="text-base font-black text-slate-950">{title}</h2>
-                          <span className="rounded-full border border-slate-300 bg-[#e5e9ed] px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-slate-700">{actor}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="mt-3 text-sm leading-5 text-slate-700">{summary}</p>
-
-                    <div className="mt-3 space-y-1.5">
-                      {details.map((detail) => (
-                        <div key={detail} className={`flex gap-2 text-xs leading-5 text-slate-600 ${leftSide ? 'lg:flex-row-reverse' : ''}`}>
-                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#337959]" aria-hidden="true" />
-                          <span>{detail}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className={`mt-3 inline-flex max-w-full items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 px-3 py-2 text-[11px] font-bold leading-4 text-slate-700 ${leftSide ? 'lg:flex-row-reverse' : ''}`}>
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-[#337959]" />
-                      <span><strong className="text-slate-900">Resultado:</strong> {result}</span>
-                    </div>
-                  </div>
+            <div className="flex min-h-[48px] items-start gap-3 pl-7">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#337959] text-white shadow-sm" aria-hidden="true">
+                <Icon className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-sm font-black text-slate-950 sm:text-base">{title}</h2>
+                  <span className="rounded-full border border-slate-300 bg-[#eef1f3] px-2 py-1 text-[8.5px] font-black uppercase tracking-wide text-slate-700">{actor}</span>
                 </div>
+                <span className="mt-1 inline-block text-[8.5px] font-black uppercase tracking-[0.16em] text-[#337959]">Etapa {n}</span>
+              </div>
+            </div>
 
-                <div className="absolute left-0 top-3 flex h-12 w-12 items-center justify-center rounded-full border-4 border-[#f0f0f0] bg-[#005830] text-sm font-black text-white shadow-md lg:static lg:col-start-2 lg:row-start-1 lg:mx-auto lg:h-14 lg:w-14">
-                  {n}
+            <p className="mt-3 text-xs leading-5 text-slate-700">{summary}</p>
+            <div className="mt-3 space-y-1.5">
+              {details.map((detail) => (
+                <div key={detail} className="flex gap-2 text-[11px] leading-4.5 text-slate-600">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#337959]" aria-hidden="true" />
+                  <span>{detail}</span>
                 </div>
+              ))}
+            </div>
 
-                <div className={`hidden lg:block lg:row-start-1 ${leftSide ? 'lg:col-start-3' : 'lg:col-start-1'}`} aria-hidden="true">
-                  <div className={`mt-6 flex items-center ${leftSide ? 'justify-start' : 'justify-end'}`}>
-                    <span className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500 shadow-2xs">Etapa {n}</span>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+            <div className="mt-3 flex items-start gap-2 rounded-xl border border-[#b9cabe] bg-white/80 px-3 py-2 text-[10.5px] font-semibold leading-4 text-slate-700">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#337959]" />
+              <span><strong className="text-slate-900">Resultado:</strong> {result}</span>
+            </div>
+          </article>
+        ))}
       </div>
     </section>
   </div>
