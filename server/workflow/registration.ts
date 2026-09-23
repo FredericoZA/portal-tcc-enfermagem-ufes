@@ -25,6 +25,18 @@ function normalizeRegistrationValue(fieldKey: string, fieldType: string, raw: un
   return value;
 }
 
+function validateDefenseBusinessDay(value: unknown) {
+  const text = String(value ?? '').trim();
+  if (!text) return;
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:T|\s)/);
+  if (!match) return;
+  const [, year, month, day] = match;
+  const weekday = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).getUTCDay();
+  if (weekday === 0 || weekday === 6) {
+    throw new Error('Data e horário da defesa: defesas de TCC só podem ser agendadas de segunda a sexta-feira.');
+  }
+}
+
 export function acceptRegistration(input: any, studio?: Partial<IntegrationStudioSettings>) {
   const timezone = studio?.operationsPolicy?.timezone || 'America/Sao_Paulo';
   let answers: RegistrationAnswers = {};
@@ -71,6 +83,8 @@ export function acceptRegistration(input: any, studio?: Partial<IntegrationStudi
     if (String(value ?? '').length > 10000) throw new Error(`${question.label}: texto muito longo.`);
     if (value !== undefined) accepted[question.fieldKey] = value as string | number | boolean;
   }
+
+  validateDefenseBusinessDay(accepted.DEFESA_DATA_HORA);
 
   if (accepted.LOCAL_ALTERNATIVO && accepted.LOCAL_ALTERNATIVO === accepted.DEFESA_LOCAL) {
     throw new Error('O local alternativo deve ser diferente do preferido.');

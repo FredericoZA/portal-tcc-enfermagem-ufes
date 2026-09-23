@@ -2,45 +2,35 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
-test('1.0.42 é carregada depois da 1.0.41', () => {
-  const main = read('src/main.tsx');
-  assert.ok(main.indexOf("import './portal-version-1042.css';") > main.indexOf("import './portal-version-1041.css';"));
-  assert.ok(main.indexOf('<PortalVersion1042Enhancer />') > main.indexOf('<PortalVersion1041Enhancer />'));
+test('1.0.42 é sucedida por uma única camada estrutural',()=>{
+  const main=read('src/main.tsx');
+  assert.match(main,/PortalStructuralRuntime/);
+  assert.match(main,/portal-core-1043\.css/);
+  assert.doesNotMatch(main,/PortalVersion1042Enhancer/);
+  assert.doesNotMatch(main,/portal-version-1042\.css/);
 });
 
-test('planilhas removem controles legados e deixam um único menu combinado', () => {
-  const enhancer = read('src/components/PortalVersion1042Enhancer.tsx');
-  const css = read('src/portal-version-1042.css');
-  assert.match(enhancer, /removeObsoleteHeaderControls/);
-  assert.match(enhancer, /portal-column-controls/);
-  assert.match(enhancer, /portal-column-sort/);
-  assert.match(enhancer, /portal-column-filter/);
-  assert.match(css, /portal1043-column-menu-button/);
-  assert.match(css, /thead th svg/);
+test('defesas passadas mantêm contraste integral e processo usa paleta do calendário',()=>{
+  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+  const css=read('src/portal-core-1043.css');
+  assert.match(runtime,/row\.classList\.remove\('bg-slate-100\/40', 'text-slate-400', 'opacity-60'\)/);
+  assert.match(css,/#c2d0c2/);
+  assert.match(css,/#7e907e/);
+  assert.match(css,/#d8c58e/);
+  assert.match(css,/#a38a4b/);
 });
 
-test('defesas passadas não ficam foscas e o botão de processo usa paleta sóbria', () => {
-  const enhancer = read('src/components/PortalVersion1042Enhancer.tsx');
-  const css = read('src/portal-version-1042.css');
-  assert.match(enhancer, /FADED_ROW_CLASSES/);
-  assert.match(enhancer, /row\.classList\.remove\(\.\.\.FADED_ROW_CLASSES\)/);
-  assert.match(css, /#b8d2c0/);
-  assert.match(css, /#72927c/);
-  assert.match(css, /#e4d6a8/);
-  assert.match(css, /#b6a164/);
+test('todas as tabelas recebem separação branca pelo padrão estrutural',()=>{
+  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+  const css=read('src/portal-core-1043.css');
+  assert.match(runtime,/table\.classList\.add\('portal-core-table'\)/);
+  assert.match(css,/--portal-separator-table: 16px/);
+  assert.match(css,/--portal-separator-section: 12px/);
 });
 
-test('faixa branca aprovada é aplicada a todas as planilhas', () => {
-  const enhancer = read('src/components/PortalVersion1042Enhancer.tsx');
-  const css = read('src/portal-version-1042.css');
-  assert.match(enhancer, /table\.classList\.add\('portal1042-sheet'\)/);
-  assert.match(css, /border-bottom: 16px solid #fff !important/);
-  assert.match(css, /border-bottom: 12px solid #fff !important/);
-});
-
-test('package publica a versão 1.0.42', () => {
-  const pkg = JSON.parse(read('package.json'));
-  assert.equal(pkg.version, '1.0.42');
+test('package publica a versão 1.0.43',()=>{
+  const pkg=JSON.parse(read('package.json'));
+  assert.equal(pkg.version,'1.0.43');
 });

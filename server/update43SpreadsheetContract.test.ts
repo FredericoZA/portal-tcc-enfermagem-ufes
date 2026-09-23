@@ -4,14 +4,16 @@ import { readFileSync } from 'node:fs';
 
 const read = (path:string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('planilhas recebem filtro por coluna, ordenação e toolbar canônica', () => {
-  const enhancer = read('src/components/PortalSpreadsheetEnhancer.tsx');
+test('planilhas recebem menu único de filtro e ordenação no runtime estrutural', () => {
+  const runtime = read('src/components/PortalStructuralRuntime.tsx');
   const main = read('src/main.tsx');
-  assert.match(main, /PortalSpreadsheetEnhancer/);
-  assert.match(enhancer, /portal-column-filter/);
-  assert.match(enhancer, /Ordenar esta coluna/);
-  assert.match(enhancer, /Filtrar valores desta coluna/);
-  assert.match(enhancer, /\[search,refresh,gear\]/);
+  assert.match(main, /PortalStructuralRuntime/);
+  assert.doesNotMatch(main, /PortalSpreadsheetEnhancer/);
+  assert.match(runtime, /portal-core-column-menu/);
+  assert.match(runtime, /Ordenar A → Z \/ menor → maior/);
+  assert.match(runtime, /Ordenar Z → A \/ maior → menor/);
+  assert.match(runtime, /Selecionar tudo/);
+  assert.match(runtime, /Limpar tudo/);
 });
 
 test('engrenagem mostra colunas e ordem sem popup secundário', () => {
@@ -28,25 +30,24 @@ test('100 e Todos podem expandir verticalmente a tabela', () => {
   assert.match(scroll, /overflow-y-visible/);
 });
 
-test('progresso fica numérico e planilhas removem decoração infantil', () => {
+test('etapa permanece disponível e planilhas removem decoração infantil', () => {
   const progress = read('src/components/ProgressIndicator.tsx');
-  const enhancer = read('src/components/PortalSpreadsheetEnhancer.tsx');
+  const runtime = read('src/components/PortalStructuralRuntime.tsx');
   assert.match(progress, /portal-progress-number/);
   assert.doesNotMatch(progress, /<svg|circle/i);
-  assert.match(enhancer, /stripEmojis/);
-  assert.match(enhancer, /portal-table-decorative-icon/);
+  assert.match(runtime, /replace\(\/\\bProgresso\\b\/gi, 'Etapa'\)/);
+  assert.match(runtime, /portal-core-stage-label/);
 });
 
 test('calendário usa fins de semana estreitos e preview seguro', () => {
-  const enhancer = read('src/components/PortalSpreadsheetEnhancer.tsx');
-  const css = read('src/portal-update-43.css');
-  assert.match(css, /grid-template-columns:\.30fr 1\.28fr 1\.28fr 1\.28fr 1\.28fr 1\.28fr \.30fr/);
-  assert.match(enhancer, /portal-calendar-preview/);
-  assert.match(enhancer, /strong\.textContent=title/);
-  assert.match(enhancer, /meta\.textContent=/);
-  assert.doesNotMatch(enhancer, /item\.innerHTML/);
-  assert.match(css, /--portal-muted-yellow/);
-  assert.match(css, /--portal-muted-green/);
+  const runtime = read('src/components/PortalStructuralRuntime.tsx');
+  const css = read('src/portal-core-1043.css');
+  assert.match(css, /grid-template-columns: \.22fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr \.22fr/);
+  assert.match(runtime, /portal-core-calendar-card/);
+  assert.match(runtime, /title\.textContent = `HOMOLOGAÇÃO/);
+  assert.match(runtime, /meta\.textContent =/);
+  assert.match(css, /--portal-upcoming-bg/);
+  assert.match(css, /--portal-defended-bg/);
 });
 
 test('Meus TCCs colore apenas pílula de processo por vínculo e simplifica datas', () => {

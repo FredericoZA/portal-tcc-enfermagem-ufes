@@ -12,11 +12,13 @@ test('Área do Presidente ordena fila e concluídos sem depender da aba ativa',(
   assert.match(s,/if \(!pA \|\| !pB\) return 0/);
 });
 
-test('cabeçalhos preservam ordenação nativa e acrescentam filtro por coluna',()=>{
-  const s=read('src/components/PortalSpreadsheetEnhancer.tsx');
-  assert.match(s,/hasNativeSort/);
-  assert.match(s,/portal-column-header-content/);
-  assert.match(s,/Filtrar valores desta coluna/);
+test('cabeçalhos preservam contrato legado enquanto runtime estrutural assume menu único',()=>{
+  const legacy=read('src/components/PortalSpreadsheetEnhancer.tsx');
+  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+  assert.match(legacy,/hasNativeSort/);
+  assert.match(runtime,/portal-core-column-menu/);
+  assert.match(runtime,/Selecionar tudo/);
+  assert.match(runtime,/Limpar tudo/);
 });
 
 test('Meus TCCs usa Etapa em vez de progresso percentual',()=>{
@@ -26,12 +28,12 @@ test('Meus TCCs usa Etapa em vez de progresso percentual',()=>{
   assert.match(p,/stageNumber = getStepNumberLabel/);
 });
 
-test('popup e logs preservam acabamento aprovado e release atual está em 1.0.42',()=>{
+test('popup e logs preservam acabamento aprovado e release atual está em 1.0.43',()=>{
   const css=read('src/portal-version-1040.css');
   const ui=read('src/components/PortalUiEnhancer.tsx');
   const pkg=JSON.parse(read('package.json'));
   assert.match(css,/section\[aria-label\^="Colunas e ordem"\]/);
   assert.match(css,/border-bottom:4px solid #fff/);
   assert.match(ui,/portal-sidebar-nav-active/);
-  assert.equal(pkg.version,'1.0.42');
+  assert.equal(pkg.version,'1.0.43');
 });
