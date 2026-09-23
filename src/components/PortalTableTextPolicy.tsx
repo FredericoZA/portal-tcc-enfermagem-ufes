@@ -2,10 +2,11 @@ import { useEffect } from 'react';
 
 const TABLE_EMOJI_PATTERN = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}\u{2B50}\u{FE0F}]/gu;
 
-const stripTableEmoji = (value: string) => value
-  .replace(TABLE_EMOJI_PATTERN, '')
-  .replace(/[ \t]{2,}/g, ' ')
-  .trim();
+const stripTableEmoji = (value: string) => {
+  const withoutEmoji = value.replace(TABLE_EMOJI_PATTERN, '');
+  if (withoutEmoji === value) return value;
+  return withoutEmoji.replace(/[ \t]{2,}/g, ' ');
+};
 
 const sanitizeTable = (table: HTMLTableElement) => {
   const walker = document.createTreeWalker(table, NodeFilter.SHOW_TEXT);
