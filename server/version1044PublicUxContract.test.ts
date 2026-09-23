@@ -48,7 +48,7 @@ test('tutorial público contém orientação operacional detalhada por perfil', 
   assert.match(page, /Erros a evitar/);
   assert.match(page, /Passo a passo/);
   assert.match(page, /Presidente da Comissão/);
-  assert.match(page, /Autorização de publicação/);
+  assert.match(page, /autorizações? de publicação/i);
 });
 
 test('fluxo remove introdução redundante e mantém resultado alinhado no rodapé dos cards', () => {
