@@ -1,0 +1,99 @@
+/* Rodada pública 1.0.44 — regras visuais consolidadas após homologação. */
+
+:root {
+  --portal-separator-section: 16px;
+  --portal-separator-table: 0px;
+}
+
+/*
+ * Regra estrutural definitiva:
+ * - divisões internas do mesmo bloco podem usar linha fina;
+ * - o fim do bloco de título (ou título + filtros) usa 16 px de branco;
+ * - o cabeçalho das colunas encosta diretamente na primeira linha de dados.
+ */
+#portal-app-root main .portal-core-table thead,
+#portal-app-root main .portal-core-table thead tr,
+#portal-app-root main .portal-core-table thead tr:last-child > th {
+  border-bottom-width: 0 !important;
+  box-shadow: none !important;
+}
+
+#portal-app-root main .portal-core-table tbody tr:first-child > td {
+  border-top-width: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Lista de Defesas: título + filtros formam um único bloco; a faixa vem ao final. */
+#portal-app-root main .portal-defense-filter-row,
+#portal-app-root main .portal-meus-processos-filter-row,
+#portal-app-root main .portal-coordinator-filter-row,
+#portal-app-root main .portal-standard-filter-row,
+#portal-app-root main [data-portal1040-filter-band="true"] {
+  border-bottom: 16px solid #fff !important;
+}
+
+/* Repositório não possui linha de filtros: a faixa encerra o próprio título. */
+#biblioteca-tccs-section > div > div:first-child {
+  border-bottom: 16px solid #fff !important;
+}
+
+/* Como Usar: linha fina entre título e filtro; faixa grossa só ao final do bloco. */
+#portal-tutorial-page .portal-tutorial-filter-row {
+  border-top: 2px solid #fff !important;
+}
+
+#portal-tutorial-page .portal-public-header {
+  border-bottom: 16px solid #fff !important;
+}
+
+/* Cabeçalhos públicos sem filtros encerram com a mesma faixa estrutural. */
+#indicadores-publicos-page > section:first-child,
+#como-chegar-page-container > section:first-child,
+#fluxo-tcc-page > section:first-child,
+#portal-replication-page > section:first-child,
+#formal-monthly-calendar-section > div > div:first-child {
+  border-bottom: 16px solid #fff !important;
+}
+
+/*
+ * Defesa transcorrida não significa linha desabilitada.
+ * A situação é comunicada pelo botão do processo; o restante da planilha mantém
+ * contraste integral e texto escuro.
+ */
+#formal-monthly-calendar-section table tbody tr,
+#formal-monthly-calendar-section table tbody td,
+#formal-monthly-calendar-section table tbody td * {
+  opacity: 1 !important;
+  filter: none !important;
+  color: #000 !important;
+}
+
+#formal-monthly-calendar-section table tbody tr[class*="opacity-60"],
+#formal-monthly-calendar-section table tbody tr[class*="text-slate-400"] {
+  opacity: 1 !important;
+  color: #000 !important;
+}
+
+/* Mantém a paleta fosca aprovada para o estado do processo. */
+#formal-monthly-calendar-section td[data-portal-core-process-state="defended"] > div,
+#formal-monthly-calendar-section table tbody tr[class*="bg-slate-100"] td[title*="abrir os detalhes e documentos"] > div {
+  background: #c2d0c2 !important;
+  border-color: #7e907e !important;
+  color: #263728 !important;
+  box-shadow: none !important;
+}
+
+#formal-monthly-calendar-section td[data-portal-core-process-state="upcoming"] > div,
+#formal-monthly-calendar-section table tbody tr:not([class*="bg-slate-100"]) td[title*="abrir os detalhes e documentos"] > div {
+  background: #d4c69a !important;
+  border-color: #9e8f63 !important;
+  color: #453d25 !important;
+  box-shadow: none !important;
+}
+
+/* Cartões de conteúdo que pertencem à mesma grade devem esticar igualmente. */
+#portal-replication-page .portal-layer-panel > .grid > article,
+#indicadores-publicos-page .grid > article,
+#fluxo-tcc-page .portal-flow-step {
+  align-self: stretch;
+}
