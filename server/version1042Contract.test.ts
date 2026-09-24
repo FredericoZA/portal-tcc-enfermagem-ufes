@@ -32,5 +32,5 @@ test('todas as tabelas recebem separação branca pelo padrão estrutural',()=>{
 
 test('package publica a versão 1.0.44',()=>{
   const pkg=JSON.parse(read('package.json'));
-  assert.equal(pkg.version,'1.0.44');
+  assert.equal(pkg.version,'1.0.45');
 });

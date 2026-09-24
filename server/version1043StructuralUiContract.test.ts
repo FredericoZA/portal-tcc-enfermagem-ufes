@@ -4,10 +4,10 @@ import { readFileSync } from 'node:fs';
 
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
-test('release 1.0.44 preserva o runtime estrutural único consolidado na 1.0.43',()=>{
+test('release 1.0.45 preserva o runtime estrutural único consolidado',()=>{
   const pkg=JSON.parse(read('package.json'));
   const main=read('src/main.tsx');
-  assert.equal(pkg.version,'1.0.44');
+  assert.equal(pkg.version,'1.0.45');
   assert.match(main,/PortalStructuralRuntime/);
   assert.match(main,/portal-core-1043\.css/);
   assert.doesNotMatch(main,/PortalSpreadsheetEnhancer/);
@@ -30,12 +30,16 @@ test('tabelas têm um único menu Excel-like, resize e quebra de texto',()=>{
   assert.match(runtime,/Uma linha/);
 });
 
-test('padrão visual usa 12px para seções, 16px para cabeçalhos e texto preto',()=>{
-  const css=read('src/portal-core-1043.css');
-  assert.match(css,/--portal-separator-section: 12px/);
-  assert.match(css,/--portal-separator-table: 16px/);
-  assert.match(css,/border-bottom: var\(--portal-separator-table\) solid #fff !important/);
-  assert.match(css,/color: #000 !important/);
+test('separador grosso encerra o bloco superior e dados começam logo após o cabeçalho',()=>{
+  const core=read('src/portal-core-1043.css');
+  const publicCss=read('src/portal-public-ux-1044.css');
+  const divider=read('src/components/PortalSectionDivider.tsx');
+  assert.match(core,/--portal-separator-table: 16px/);
+  assert.match(core,/border-bottom: 0 !important/);
+  assert.match(publicCss,/portal-section-divider/);
+  assert.match(publicCss,/height:16px!important/);
+  assert.match(divider,/h-4/);
+  assert.match(core,/color: #000 !important/);
 });
 
 test('paleta de calendário e processo é compartilhada e não fluorescente',()=>{

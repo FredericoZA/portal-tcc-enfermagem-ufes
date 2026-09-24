@@ -29,12 +29,13 @@ test('Replicar Portal oferece um único download agregado dos quatro modelos',as
   assert.ok(api.includes("modelos-portal-tcc.zip"));
 });
 
-test('Indicadores têm estado vazio útil e painel continua automático',async()=>{
+test('Indicadores mantêm carregamento automático e painel analítico denso',async()=>{
   const page=await source('src/pages/IndicadoresPage.tsx');
-  assert.ok(page.includes('Indicadores aguardando os primeiros dados'));
-  assert.ok(page.includes('Os gráficos serão preenchidos automaticamente'));
-  assert.ok(page.includes('const hasData = Boolean(data && data.totals.registered > 0)'));
-  assert.ok(page.includes('TCCs por ano'));
-  assert.ok(page.includes('Temas mais recorrentes'));
+  assert.ok(page.includes("fetch('/api/public/indicators'"));
+  assert.ok(page.includes('const LineTrend'));
+  assert.ok(page.includes('const Funnel'));
+  assert.ok(page.includes('Evolução anual'));
+  assert.ok(page.includes('Temas recorrentes'));
   assert.ok(page.includes('Resultados das bancas'));
+  assert.ok(page.includes('Volatilidade mensal'));
 });

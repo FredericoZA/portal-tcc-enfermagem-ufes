@@ -46,7 +46,7 @@
   padding-top: .9rem !important;
   padding-bottom: .9rem !important;
   padding-right: 2.5rem !important;
-  border-bottom: var(--portal-separator-table) solid #fff !important;
+  border-bottom: 0 !important;
   vertical-align: middle !important;
 }
 

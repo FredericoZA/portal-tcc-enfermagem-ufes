@@ -61,9 +61,10 @@ test('Registro de logs sai de Configurações e vira página Master com toolbar 
   assert.match(css, /#system-audit-logs-section\s*\{\s*display:\s*none\s*!important/);
 });
 
-test('Indicadores adicionam estatística descritiva, donuts e distribuições temporais', async () => {
+test('Indicadores adicionam estatística descritiva, séries e distribuições temporais', async () => {
   const [page, api] = await Promise.all([source('src/pages/IndicadoresPage.tsx'), source('api/public-indicators.ts')]);
-  assert.ok(page.includes('const Donut'));
+  assert.ok(page.includes('const LineTrend'));
+  assert.ok(page.includes('const Funnel'));
   assert.ok(page.includes('monthlyStdDev'));
   assert.ok(page.includes('completionDaysMedian'));
   assert.ok(page.includes('data.weekdays'));

@@ -60,15 +60,18 @@ test('fluxo remove introdução redundante e mantém resultado alinhado no rodap
   assert.match(page, /Resultado:/);
 });
 
-test('indicadores oferecem painel analítico com séries, perfis e temas sem botão manual de atualizar', () => {
+test('indicadores oferecem painel analítico com séries, comparações e distribuições sem botão manual de atualizar', () => {
   const page = read('src/pages/IndicadoresPage.tsx');
   assert.doesNotMatch(page, /RefreshCw/);
   assert.doesNotMatch(page, /Panorama estatístico agregado dos TCCs/);
-  assert.match(page, /TCCs por ano/);
+  assert.match(page, /const LineTrend/);
+  assert.match(page, /const Funnel/);
+  assert.match(page, /Evolução anual/);
   assert.match(page, /Defesas por mês/);
+  assert.match(page, /Volatilidade mensal/);
   assert.match(page, /Dia da semana/);
   assert.match(page, /Faixa de horário/);
-  assert.match(page, /Temas mais recorrentes/);
+  assert.match(page, /Temas recorrentes/);
   assert.match(page, /Locais das defesas/);
   assert.match(page, /Resultados das bancas/);
 });

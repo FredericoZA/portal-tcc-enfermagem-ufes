@@ -614,6 +614,8 @@ async function enhanceCalendar() {
   const daysHeader = grid.parentElement?.previousElementSibling as HTMLElement | null;
   daysHeader?.classList.add('portal-core-calendar-week-header');
   const processes = await loadCalendarProcesses();
+  const latestPeriod = calendarPeriod();
+  if (!grid.isConnected || !latestPeriod || latestPeriod.month !== period.month || latestPeriod.year !== period.year) return;
   const byDay = new Map<number, any[]>();
   processes.forEach((proc) => {
     const start = proc?.defesa?.startAt;
@@ -645,8 +647,7 @@ async function enhanceCalendar() {
       }, true);
     }
     cell.querySelector('.portal-core-calendar-previews')?.remove();
-    const oldCounter = Array.from(cell.children).find((child) => (child.textContent || '').toLocaleUpperCase('pt-BR').includes('DEFESA'));
-    if (oldCounter) oldCounter.remove();
+    // Nunca remova filhos renderizados pelo React. A ocultação do contador nativo é apenas visual.
     if (weekend) return;
     const events = byDay.get(day) || [];
     if (!events.length) return;

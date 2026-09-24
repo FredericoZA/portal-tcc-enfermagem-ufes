@@ -45,6 +45,8 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { resolveInstallationProfile } from '../utils/installationProfile';
+import { PORTAL_SEMANTIC_COLORS } from '../utils/portalSemanticTokens';
+import { normalizeProcessNumber } from '../components/PortalProcessPill';
 
 const ALL_COORDINATOR_COLUMNS: ColumnDef[] = [
   { key: 'protocolo', label: 'Processo', isFixed: true },
@@ -475,40 +477,14 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
     switch (colKey) {
       case 'protocolo': {
-        const rawStr = (proc.protocolo || proc.id || '').trim();
-        const clean = rawStr.replace(/^TCC\s*[-/]?\s*/i, '').trim();
-        const parts = clean.split(/[-/]/);
-        let line1 = 'TCC';
-        let line2 = rawStr;
-        if (parts.length >= 2) {
-          line1 = `TCC - ${parts[0]}`;
-          line2 = parts.slice(1).join('-');
-        } else if (proc.anoLectivo) {
-          line1 = `TCC - ${proc.anoLectivo}`;
-          line2 = clean;
-        }
-        const tagLabel = formatCellText('protocolo', line1, coordTextFormat, '📓');
+        const status = getDeclarationStatus(proc.id);
+        const signed = status.label === 'Assinada';
+        const tone = signed ? PORTAL_SEMANTIC_COLORS.signature.signed : PORTAL_SEMANTIC_COLORS.signature.pending;
         return (
-          <td
-            key={colKey}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectProcess(proc.id);
-            }}
-            className={`${cellClass} cursor-pointer ${styles.firstColCellHoverClass} group/col0 transition-colors`}
-            title="Clique aqui para abrir os detalhes e documentos deste TCC"
-          >
-            <div className={styles.firstColBtnClass}>
-              <div className={styles.firstColTagClass}>
-                {tagLabel}
-              </div>
-              <div className={`${styles.cellFontSizeClass} ${styles.cellWeightClass} tracking-wide text-slate-900`}>
-                {line2}
-              </div>
-              <span className={styles.firstColSubtextClass}>
-                Detalhes ↗
-              </span>
-            </div>
+          <td key={colKey} onClick={(e) => { e.stopPropagation(); onSelectProcess(proc.id); }} className={`${cellClass} cursor-pointer`} title="Abrir TCC">
+            <span className="portal-process-pill" style={{ backgroundColor: tone.bg, borderColor: tone.border, color: tone.text }}>
+              {normalizeProcessNumber(proc.protocolo || proc.id)}
+            </span>
           </td>
         );
       }
@@ -543,12 +519,11 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       case 'defesaDataHora':
         return (
           <td key={colKey} className={`${cellClass} ${styles.cellWeightClass} ${styles.cellTextColorClass}`}>
-            <div className={`flex items-center justify-center gap-1 ${styles.cellFontSizeClass}`}>
-              <span>⏰</span>
-              <span className="text-emerald-900 font-bold">{proc.defesa?.startAt ? formatDateNumeric(proc.defesa.startAt) : 'N/A'}</span>
+            <div className={`flex items-center justify-center ${styles.cellFontSizeClass}`}>
+              <span className="font-normal text-black">{proc.defesa?.startAt ? formatDateNumeric(proc.defesa.startAt) : 'N/A'}</span>
             </div>
             {proc.defesa?.startAt && (
-              <div className="text-[9.5px] text-slate-500 font-mono font-medium">{formatTimeExtenso(proc.defesa.startAt)}</div>
+              <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa.startAt)}</div>
             )}
           </td>
         );
