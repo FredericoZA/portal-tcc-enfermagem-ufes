@@ -62,15 +62,16 @@ test('Meus TCCs colore apenas pílula de processo por vínculo e simplifica data
   assert.match(css, /portal-date-cell-sober/);
 });
 
-test('Registro de logs fica integrado ao cabeçalho sem barra auxiliar', () => {
+test('Registro de logs mantém ações essenciais no cabeçalho e não oferece atualização redundante', () => {
   const page = read('src/pages/AuditLogsPage.tsx');
   assert.doesNotMatch(page, /Auditoria, restauração e rastreabilidade do Portal/);
   assert.doesNotMatch(page, /Histórico completo/);
   assert.match(page, /portal-audit-actions/);
   const searchIndex = page.indexOf('<SearchPopover');
-  const refreshIndex = page.indexOf('title="Atualizar dados da tabela"');
   const gearIndex = page.indexOf('<HeaderSettingsPopover');
-  assert.ok(searchIndex >= 0 && refreshIndex > searchIndex && gearIndex > refreshIndex);
+  assert.ok(searchIndex >= 0 && gearIndex > searchIndex);
+  assert.doesNotMatch(page, /title="Atualizar dados da tabela"/);
+  assert.doesNotMatch(page, /RefreshCw/);
 });
 
 test('workspaces administrativos ganham hierarquia e prevenção de sobreposição', () => {
