@@ -24,7 +24,6 @@ jobs:
           from pathlib import Path
           p = Path('scripts/apply-v1045.mjs')
           s = p.read_text()
-          # Indicadores e registros de assinatura têm implementação própria e validável no branch.
           for start_marker, end_marker in [
               ('// 11) Indicadores:', '// 12) CSS canônico 1.0.45:'),
               ('// 8) Registros de assinatura:', '// 9) Sidebar:'),
@@ -43,8 +42,7 @@ jobs:
           npm run build
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm scripts/apply-v1045.mjs .github/workflows/apply-v1045.yml
+          git rm -f scripts/apply-v1045.mjs .github/workflows/apply-v1045.yml
           git add -A
           git commit -m "Portal TCC 1.0.45 — reforma estrutural de UX"
           git push origin HEAD:v1-0-45
-      # rerun após alinhamento dos contratos analíticos da 1.0.45
