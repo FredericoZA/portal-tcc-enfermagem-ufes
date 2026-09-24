@@ -47,4 +47,4 @@ jobs:
           git add -A
           git commit -m "Portal TCC 1.0.45 — reforma estrutural de UX"
           git push origin HEAD:v1-0-45
-      # rerun alinhado aos contratos estruturais atuais
+      # rerun após alinhamento dos contratos analíticos da 1.0.45
