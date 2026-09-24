@@ -294,8 +294,6 @@ function enhanceToolbarButtons() {
   pruneLegacyPersonalizationRows();
   clarifyLoginIdentityGuidance();
   pruneDuplicatedAdministrationForm();
-  ensureLogsSidebarButton();
-  ensureAstenLogsSidebarButton();
   enhanceSettingsWorkspaces();
 
   document.querySelectorAll<HTMLButtonElement>('button[title^="Buscar"], button[aria-label^="Buscar registros"]').forEach((button) =>

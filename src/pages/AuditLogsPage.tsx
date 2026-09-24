@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Download, FileCheck2, RefreshCw, Upload } from 'lucide-react';
+import { Download, FileCheck2, Upload } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { portalConfirm, portalNotice } from '../services/portalDialogs';
@@ -24,7 +24,6 @@ export const AuditLogsPage: React.FC = () => {
   const initialConfig = loadTableConfig('audit_logs', DEFAULT_ORDER, DEFAULT_VISIBLE, 25);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [recordsLimit, setRecordsLimit] = useState<number | 'all'>(initialConfig.recordsLimit || 25);
   const [startDate, setStartDate] = useState(initialConfig.startDate || '');
@@ -37,10 +36,10 @@ export const AuditLogsPage: React.FC = () => {
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
   const load = async (silent = false) => {
-    if (silent) setRefreshing(true); else setLoading(true);
+    if (!silent) setLoading(true);
     try { setLogs((await apiClient.getAuditLogs()) || []); }
     catch (error) { console.error('Erro ao carregar logs:', error); portalNotice('Não foi possível carregar o registro de logs.'); }
-    finally { if (silent) window.setTimeout(() => setRefreshing(false), 300); else setLoading(false); }
+    finally { if (!silent) setLoading(false); }
   };
   useEffect(() => { if (isMasterAdmin) void load(); }, [isMasterAdmin]);
 
@@ -101,13 +100,13 @@ export const AuditLogsPage: React.FC = () => {
     if (key === 'action') return <span className="inline-flex rounded-md border border-slate-300 bg-white px-2 py-1 text-[10px] font-black uppercase">{log.action || '—'}</span>;
     if (key === 'reference') return <span className="font-mono text-[11px]">{log.processId ? `TCC ${log.processId}` : `${log.entityType || 'Sistema'}${log.entityId ? ` · ${log.entityId}` : ''}`}</span>;
     return <div className="flex justify-end gap-1.5 whitespace-nowrap">
-      {(log.before || log.after) && <button type="button" onClick={() => setSelectedLog(log)} className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-bold hover:bg-slate-50">Detalhes</button>}
-      <button type="button" onClick={() => void rollback(log)} disabled={rollingBack === log.id} className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-bold hover:bg-slate-50 disabled:opacity-50">{rollingBack === log.id ? 'Restaurando…' : 'Restaurar'}</button>
+      {(log.before || log.after) && <button type="button" onClick={() => setSelectedLog(log)} className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-bold hover:bg-slate-50">Detalhes</button>}
+      <button type="button" onClick={() => void rollback(log)} disabled={rollingBack === log.id} className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-bold hover:bg-slate-50 disabled:opacity-50">{rollingBack === log.id ? 'Restaurando…' : 'Restaurar'}</button>
     </div>;
   };
 
   return <div id="audit-logs-page" className="space-y-0 overflow-hidden rounded-2xl border border-slate-300 bg-[#d5dce0] shadow-sm">
-    <header className="flex flex-wrap items-center justify-between gap-3 bg-[#005830] px-4 py-3 text-white">
+    <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white bg-[#005830] px-4 py-3 text-white">
       <div className="flex items-center gap-2"><FileCheck2 className="h-5 w-5 shrink-0"/><h1 className="text-sm font-black uppercase tracking-wide">Registro de logs</h1></div>
       <div className="portal-audit-toolbar flex flex-wrap items-center justify-end gap-1.5">
         <div className="portal-audit-actions flex items-center gap-1.5">
@@ -117,7 +116,6 @@ export const AuditLogsPage: React.FC = () => {
         </div>
         <div className="portal-audit-table-controls flex items-center gap-1.5">
           <SearchPopover value={search} onChange={setSearch} placeholder="Usuário, ação, processo ou entidade" textFormat={textFormat}/>
-          <button type="button" onClick={() => void load(true)} title="Atualizar dados da tabela" aria-label="Atualizar dados da tabela" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-900 shadow-sm hover:bg-slate-50"><RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`}/></button>
           <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} allColumns={LOG_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="audit_logs" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Registro de logs"/>
         </div>
       </div>
@@ -126,15 +124,15 @@ export const AuditLogsPage: React.FC = () => {
     <div className="portal-audit-table-shell">
       {loading ? <div className="m-3 rounded-xl border border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Carregando histórico…</div> : shown.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Nenhum registro encontrado com os filtros atuais.</div> : <div className="overflow-x-auto bg-white">
         <table className="portal-spreadsheet-table portal-audit-table w-full min-w-[860px] border-collapse text-left text-xs">
-          <thead><tr>{activeColumns.map(key => <th key={key} className={`px-3 py-2.5 text-[10px] font-black uppercase tracking-wide ${key === 'options' ? 'text-right' : ''}`}>{LOG_COLUMNS.find(column => column.key === key)?.label || key}</th>)}</tr></thead>
-          <tbody className="divide-y divide-slate-200">{shown.map(log => <tr key={log.id} className="hover:bg-slate-50">{activeColumns.map(key => <td key={key} className={`px-3 py-2.5 text-slate-700 ${key === 'options' ? 'text-right' : ''}`}>{renderCell(log, key)}</td>)}</tr>)}</tbody>
+          <thead><tr>{activeColumns.map(key => <th key={key} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wide ${key === 'options' ? 'text-right' : ''}`}>{LOG_COLUMNS.find(column => column.key === key)?.label || key}</th>)}</tr></thead>
+          <tbody className="divide-y divide-slate-200">{shown.map(log => <tr key={log.id} className="hover:bg-slate-50">{activeColumns.map(key => <td key={key} className={`px-3 py-1 text-slate-950 ${key === 'options' ? 'text-right' : ''}`}>{renderCell(log, key)}</td>)}</tr>)}</tbody>
         </table>
       </div>}
     </div>
 
     {selectedLog && <div className="fixed inset-0 z-[1000002] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm" onClick={() => setSelectedLog(null)}>
       <div role="dialog" aria-modal="true" aria-label="Detalhes do registro de log" className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-2xl" onClick={event => event.stopPropagation()}>
-        <div className="flex items-center justify-between border-b-2 border-white bg-[#005830] px-4 py-3 text-white"><div className="flex items-center gap-2"><FileCheck2 className="h-4 w-4"/><strong className="text-xs uppercase">Detalhes do registro</strong></div><button type="button" onClick={() => setSelectedLog(null)} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-black uppercase text-slate-900">Fechar</button></div>
+        <div className="flex items-center justify-between border-b-2 border-white bg-[#005830] px-4 py-3 text-white"><div className="flex items-center gap-2"><FileCheck2 className="h-4 w-4"/><strong className="text-xs uppercase">Detalhes do registro</strong></div><button type="button" onClick={() => setSelectedLog(null)} className="rounded-lg border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-black uppercase text-slate-900">Fechar</button></div>
         <div className="grid max-h-[75vh] gap-3 overflow-y-auto bg-slate-100 p-4 md:grid-cols-2">
           <section className="rounded-xl border border-slate-300 bg-white p-3"><strong className="text-[10px] uppercase text-slate-600">Estado anterior</strong><pre className="mt-2 max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[10px]">{selectedLog.before ? JSON.stringify(selectedLog.before, null, 2) : '(sem estado anterior)'}</pre></section>
           <section className="rounded-xl border border-slate-300 bg-white p-3"><strong className="text-[10px] uppercase text-slate-600">Estado posterior</strong><pre className="mt-2 max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[10px]">{selectedLog.after ? JSON.stringify(selectedLog.after, null, 2) : '(sem estado posterior)'}</pre></section>

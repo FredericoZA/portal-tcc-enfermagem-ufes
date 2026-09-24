@@ -35,5 +35,5 @@ test('popup e logs preservam acabamento aprovado e release atual está em 1.0.44
   assert.match(css,/section\[aria-label\^="Colunas e ordem"\]/);
   assert.match(css,/border-bottom:4px solid #fff/);
   assert.match(ui,/portal-sidebar-nav-active/);
-  assert.equal(pkg.version,'1.0.44');
+  assert.equal(pkg.version,'1.0.45');
 });

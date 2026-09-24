@@ -97,3 +97,26 @@
 #fluxo-tcc-page .portal-flow-step {
   align-self: stretch;
 }
+
+/* 1.0.45 — contratos visuais canônicos */
+:root {
+  --portal-role-student-bg:#d8c98f; --portal-role-student-border:#9b884b;
+  --portal-role-board-bg:#c9a39a; --portal-role-board-border:#8c5e55;
+  --portal-role-evaluator-bg:#9db8c0; --portal-role-evaluator-border:#587884;
+  --portal-role-viewer-bg:#b4a6be; --portal-role-viewer-border:#75647f;
+}
+.portal-section-divider{height:16px!important;min-height:16px!important;background:#fff!important;border:0!important;}
+#portal-tutorial-page .portal-public-header{border-bottom:0!important;}
+#portal-app-root main .portal-core-table tbody tr,#portal-app-root main .portal-core-table tbody td{opacity:1!important;filter:none!important;color:#000!important;}
+#portal-app-root main .portal-core-table tbody td:not(:has(.portal-process-pill))>*:not([class*="badge"]):not([class*="pill"]){color:#000!important;opacity:1!important;}
+.portal-process-pill{display:inline-flex;min-height:28px;min-width:86px;align-items:center;justify-content:center;border:1px solid;border-radius:9px;padding:3px 10px;font:700 11px/1.1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;box-shadow:none!important;white-space:nowrap;}
+.portal-tone-defended,.portal-tone-signed{background:#c2d0c2;border-color:#7e907e;color:#263728}.portal-tone-upcoming,.portal-tone-pending{background:#d4c69a;border-color:#9e8f63;color:#453d25}.portal-tone-student{background:#d8c98f;border-color:#9b884b;color:#3e361c}.portal-tone-board{background:#c9a39a;border-color:#8c5e55;color:#402824}.portal-tone-evaluator{background:#9db8c0;border-color:#587884;color:#20363e}.portal-tone-viewer{background:#b4a6be;border-color:#75647f;color:#342b39}.portal-tone-neutral{background:#eef1f2;border-color:#aeb7bc;color:#1f2937}
+.portal-calendar-day-cell:has(.portal-core-calendar-previews)>div.flex-1{display:none!important;}
+#audit-logs-page .portal-core-table th,#audit-logs-page .portal-core-table td,#asten-logs-page .portal-core-table th,#asten-logs-page .portal-core-table td{padding-top:4px!important;padding-bottom:4px!important;}
+#audit-logs-page tbody button{min-height:24px!important;padding-top:2px!important;padding-bottom:2px!important;}
+#portal-settings-hub .portal-settings-hub-card{transition:none!important;}
+#portal-models-workspace .portal-studio{min-height:68vh;}
+#portal-models-workspace .portal-studio-tab-strip{position:sticky;top:0;z-index:10;background:#d5dce0;padding-bottom:8px;}
+#portal-models-workspace iframe{min-height:62vh!important;}
+#portal-replication-page .portal-layer-panel>.grid>article{display:flex!important;height:100%!important;min-height:190px!important;flex-direction:column!important;}
+#portal-replication-page .portal-layer-panel>.grid>article>div.mt-auto{margin-top:auto!important;}

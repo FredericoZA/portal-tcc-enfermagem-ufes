@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ClipboardCheck, HelpCircle, UserCheck } from 'lucide-react';
+import { PortalSectionDivider } from '../components/PortalSectionDivider';
 
 interface PortalTutorialPageProps {
   onNavigate: (tab: string) => void;
@@ -193,6 +194,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
           </div>
         </div>
       </section>
+      <PortalSectionDivider />
 
       <section className="portal-layer-panel bg-[#e1e6e9] p-3 sm:p-4">
         <div className="portal-layer-card flex items-start gap-3 rounded-2xl border border-slate-300 bg-[#d5dce0] p-3.5 shadow-2xs sm:p-4">

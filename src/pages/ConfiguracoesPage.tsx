@@ -23,6 +23,8 @@ import { loadLoginPopupConfig, saveLoginPopupConfig, LoginPopupConfig } from '..
 import { AuditAndSecuritySection, AuditLogsTable, MasterAndPresidentConfigForm } from '../components/AuditAndSecuritySection';
 import { CommissionIdentityPanel } from '../components/CommissionIdentityPanel';
 import { PortalPersonalizationHubModal } from '../components/PortalPersonalizationHubModal';
+import { AuditLogsPage } from './AuditLogsPage';
+import { AstenLogsPage } from './AstenLogsPage';
 import { 
   TableTextFormat, 
   DEFAULT_TABLE_TEXT_FORMAT, 
@@ -307,6 +309,7 @@ export const ConfiguracoesPage: React.FC = () => {
   const [siteLayout, setSiteLayout] = useState<SiteLayoutConfig>(() => loadSiteLayoutConfig());
   const [unifiedEditorOpen, setUnifiedEditorOpen] = useState(false);
   const [personalizationHubOpen, setPersonalizationHubOpen] = useState(false);
+  const [activeSettingsPanel, setActiveSettingsPanel] = useState<'sync' | 'access' | 'models' | 'signatures' | 'logs' | null>(null);
   const [unifiedEditorTab, setUnifiedEditorTab] = useState<UnifiedEditorTab>('site_header');
   const [unifiedEditorScope, setUnifiedEditorScope] = useState<UnifiedEditorScope>('site_header');
 
@@ -2218,169 +2221,47 @@ export const ConfiguracoesPage: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* SEÇÃO PRINCIPAL: PERSONALIZAÇÃO DO PORTAL                                 */}
-      {/* ========================================================================= */}
+      {/* Hub estrutural 1.0.45: seis funções, uma linguagem visual e conteúdo em popups focados. */}
       {isMasterAdmin && (
-        <section id="section-personalizacao-portal" className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden transition-all">
-          <button
-            type="button"
-            onClick={() => setPersonalizationHubOpen(true)}
-            className="w-full bg-slate-100/90 hover:bg-slate-200/80 active:bg-slate-300 text-slate-900 p-3.5 sm:p-4 flex items-center justify-between gap-3 text-left transition-all cursor-pointer rounded-2xl group"
-          >
-            <div className="flex items-center gap-2">
-              <Palette className="w-4.5 h-4.5 text-slate-800 group-hover:scale-105 transition-transform" />
-              <h2 className="text-xs sm:text-sm font-black uppercase tracking-wide text-slate-900">
-                Personalização do Portal
-              </h2>
-            </div>
-            <Sliders className="w-4 h-4 text-slate-600 group-hover:text-slate-900 transition-colors shrink-0" />
-          </button>
-        </section>
-      )}
-      {/* 1. SINCRONIZAÇÃO */}
-      <section id="google-workspace-sync-section" className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden transition-all">
-        <button
-          type="button"
-          onClick={() => toggleSection('sync')}
-          className={`w-full bg-slate-100/90 hover:bg-slate-200/80 text-slate-900 p-3.5 sm:p-4 flex items-center justify-between gap-3 text-left transition-all cursor-pointer ${openSections.sync ? 'border-b border-slate-200 rounded-t-2xl' : 'rounded-2xl'}`}
-        >
-          <div className="flex items-center">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xs sm:text-sm font-black uppercase tracking-wide text-slate-900">Sincronização e acessos</h2>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[10px] font-extrabold text-slate-700 uppercase hidden sm:inline-block">
-              {openSections.sync ? 'Recolher' : 'Expandir'}
-            </span>
-            {openSections.sync ? (
-              <ChevronUp className="w-5 h-5 text-slate-700" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-slate-700" />
-            )}
-          </div>
-        </button>
+        <>
+          <section id="portal-settings-hub" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {[
+              { id: 'personalization', title: 'Personalização do Portal', text: 'Aparência, navegação, páginas, tabelas e pop-ups.', icon: Palette },
+              { id: 'sync', title: 'Sincronização', text: 'Rodapé operacional, Asten, Google, Supabase, Vercel e demais integrações.', icon: Sliders },
+              { id: 'access', title: 'Acesso', text: 'Autorize e administre as pessoas que podem acessar o Portal.', icon: Lock },
+              { id: 'models', title: 'Modelos e Variáveis', text: 'Documentos, e-mails, formulários, fluxos e variáveis.', icon: Layers },
+              { id: 'signatures', title: 'Registros de Assinatura', text: 'Acompanhe fila, método, situação e histórico de assinatura.', icon: FileCheck2 },
+              { id: 'logs', title: 'Registro de Logs', text: 'Auditoria, histórico técnico, detalhes e restauração segura.', icon: ClipboardList },
+            ].map(({ id, title, text, icon: Icon }) => (
+              <button key={id} type="button" onClick={() => id === 'personalization' ? setPersonalizationHubOpen(true) : setActiveSettingsPanel(id as any)} className="portal-settings-hub-card flex min-h-[132px] flex-col items-start rounded-2xl border border-slate-300 bg-[#d5dce0] p-4 text-left shadow-sm">
+                <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-[#337959]"><Icon className="h-5 w-5" /></span>
+                <strong className="text-sm font-black uppercase tracking-wide text-slate-950">{title}</strong>
+                <span className="mt-1 text-xs leading-5 text-slate-600">{text}</span>
+              </button>
+            ))}
+          </section>
 
-        {openSections.sync && (
-          <div className="p-3 sm:p-4 border-t border-slate-200 space-y-4">
-
-            {isMasterAdmin && settings && (
-              <section id="administrative-identity-panel" className="overflow-hidden rounded-xl border border-slate-300 bg-[#e1e6e9] shadow-sm">
-                <div className="border-b border-slate-300 px-3 py-2">
-                  <h3 className="text-xs font-black uppercase tracking-wide text-slate-900">Secretaria, Presidência e Comissão</h3>
-                  <p className="mt-0.5 text-[10px] leading-4 text-slate-600">E-mail de acesso, contato público, responsável técnico, Presidência e integrantes adicionais em um único cadastro visual.</p>
-                </div>
-                <div className="space-y-2 p-2.5">
-                  <MasterAndPresidentConfigForm settings={settings} onSettingsUpdated={() => { void refreshAuth(); showNotification('Contas administrativas atualizadas.'); }} showNotification={showNotification} />
-                  <CommissionIdentityPanel isMaster />
+          {activeSettingsPanel && (
+            <div className="fixed inset-0 z-[1000005] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm" onMouseDown={(event) => { if (event.currentTarget === event.target) setActiveSettingsPanel(null); }}>
+              <section role="dialog" aria-modal="true" className="flex max-h-[94vh] w-full max-w-[1600px] flex-col overflow-hidden rounded-2xl border border-slate-300 bg-[#e1e6e9] shadow-2xl">
+                <header className="flex items-center justify-between border-b-[16px] border-white bg-[#005830] px-4 py-3 text-white">
+                  <div className="flex items-center gap-2"><Sliders className="h-5 w-5" /><h2 className="text-sm font-black uppercase tracking-wide">{activeSettingsPanel === 'sync' ? 'Sincronização' : activeSettingsPanel === 'access' ? 'Acesso' : activeSettingsPanel === 'models' ? 'Modelos e Variáveis' : activeSettingsPanel === 'signatures' ? 'Registros de Assinatura' : 'Registro de Logs'}</h2></div>
+                  <button type="button" onClick={() => setActiveSettingsPanel(null)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-900" aria-label="Fechar"><X className="h-4 w-4" /></button>
+                </header>
+                <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
+                  {activeSettingsPanel === 'sync' && <div className="space-y-3">
+                    {settings && <section className="rounded-xl border border-slate-300 bg-[#d5dce0] p-3"><h3 className="mb-2 text-xs font-black uppercase text-slate-900">Identidade operacional e rodapé</h3><MasterAndPresidentConfigForm settings={settings} onSettingsUpdated={() => { void refreshAuth(); showNotification('Configurações atualizadas.'); }} showNotification={showNotification} /><CommissionIdentityPanel isMaster /></section>}
+                    <InfrastructureIntegrationsPanel isMaster />
+                  </div>}
+                  {activeSettingsPanel === 'access' && <AuthorizedStudentsPanel canManage />}
+                  {activeSettingsPanel === 'models' && <div id="portal-models-workspace" className="space-y-3"><MasterDocumentModelsPanel /><IntegrationStudioPanel actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div>}
+                  {activeSettingsPanel === 'signatures' && <AstenLogsPage />}
+                  {activeSettingsPanel === 'logs' && <AuditLogsPage />}
                 </div>
               </section>
-            )}
-            <InfrastructureIntegrationsPanel isMaster={isMasterAdmin} />
-            {isMasterAdmin && <AuthorizedStudentsPanel canManage />}
-
-          </div>
-        )}
-      </section>
-
-      {/* 2. SISTEMA INTEGRADO DE FLUXOS, MODELOS, E-MAILS E FORMULÁRIOS */}
-      {isMasterAdmin && <section id="master-flow-system-section" className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden transition-all">
-        <button
-          type="button"
-          onClick={() => toggleSection('master_system')}
-          className={`w-full bg-slate-100/90 hover:bg-slate-200/80 text-slate-900 p-3.5 sm:p-4 flex items-center justify-between gap-3 text-left transition-all cursor-pointer ${openSections.master_system ? 'border-b border-slate-200 rounded-t-2xl' : 'rounded-2xl'}`}
-        >
-          <div className="flex items-center">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xs sm:text-sm font-black uppercase tracking-wide text-slate-900">
-                  Modelos e Variáveis
-                </h2>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[10px] font-extrabold text-slate-700 uppercase hidden sm:inline-block">
-              {openSections.master_system ? 'Recolher' : 'Expandir'}
-            </span>
-            {openSections.master_system ? (
-              <ChevronUp className="w-5 h-5 text-slate-700" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-slate-700" />
-            )}
-          </div>
-        </button>
-
-        {openSections.master_system && (
-          <div className="p-3 sm:p-4 border-t border-slate-200">
-            <MasterDocumentModelsPanel />
-            <IntegrationStudioPanel
-              actorEmail={userEmail || ''}
-              initialStudio={settings?.integrationStudio}
-              matrixColumns={matrixColumns}
-              setMatrixColumns={setMatrixColumns}
-              matrixRows={matrixRows}
-              setMatrixRows={setMatrixRows}
-              emailTemplates={emailTemplates}
-              setEmailTemplates={setEmailTemplates}
-              formTemplates={formTemplates}
-              setFormTemplates={setFormTemplates}
-              docTemplates={docTemplates}
-              setDocTemplates={setDocTemplates}
-              workflowStages={workflowStages}
-              setWorkflowStages={setWorkflowStages}
-              driveModelosFolderUrl={driveModelosFolderUrl}
-              setDriveModelosFolderUrl={setDriveModelosFolderUrl}
-              onConnectDrive={handleConnectGoogleDrive}
-              onScanDrive={handleUpdateAllDocumentsAndFields}
-              isScanningDrive={isUpdatingAllDocs}
-              notify={showNotification}
-            />
-          </div>
-        )}
-      </section>}
-
-      {/* REGISTRO DE LOGS (ITEM ISOLADO NO FINAL DA PÁGINA) */}
-      {isMasterAdmin && (
-        <section id="system-audit-logs-section" className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden transition-all">
-          <button
-            type="button"
-            onClick={() => toggleSection('registro_logs')}
-            className={`w-full bg-slate-100/90 hover:bg-slate-200/80 text-slate-900 p-3.5 sm:p-4 flex items-center justify-between gap-3 text-left transition-all cursor-pointer ${openSections.registro_logs ? 'border-b border-slate-200 rounded-t-2xl' : 'rounded-2xl'}`}
-          >
-            <div className="flex items-center gap-2">
-              <h2 className="text-xs sm:text-sm font-black uppercase tracking-wide text-slate-900">
-                Registro de logs
-              </h2>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[10px] font-extrabold text-slate-700 uppercase hidden sm:inline-block">
-                {openSections.registro_logs ? 'Recolher' : 'Expandir'}
-              </span>
-              {openSections.registro_logs ? (
-                <ChevronUp className="w-5 h-5 text-slate-700" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-slate-700" />
-              )}
-            </div>
-          </button>
-
-          {openSections.registro_logs && (
-            <div className="p-3 sm:p-4 border-t border-slate-200 bg-slate-50/50">
-              <AuditLogsTable
-                settings={settings}
-                onSettingsUpdated={(newSet) => {
-                  refreshAuth();
-                  showNotification('Configurações salvas com sucesso!');
-                }}
-                showNotification={showNotification}
-              />
             </div>
           )}
-        </section>
+        </>
       )}
 
 

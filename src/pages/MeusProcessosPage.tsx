@@ -51,6 +51,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { resolveInstallationProfile } from '../utils/installationProfile';
+import { PORTAL_SEMANTIC_COLORS } from '../utils/portalSemanticTokens';
 
 interface MeusProcessosPageProps {
   onSelectProcess: (processId: string) => void;
@@ -99,46 +100,11 @@ export const getRoleCategoryForProcess = (roles: ProcessRole[]): ProcessRoleCate
   return 'VISUALIZADOR';
 };
 
-export const ROLE_CONFIGS: Record<ProcessRoleCategory, {
-  label: string;
-  badgeLabel: string;
-  bgColor: string;          // Background color for the full row <tr>
-  borderColor: string;      // Accent left border color
-  textHex: string;          // Badge text color
-  dotColor: string;         // Accent dot color for badges & pills
-}> = {
-  ALUNO: {
-    label: 'Aluno',
-    badgeLabel: 'Aluno',
-    bgColor: '#FEF9C3',       // Soft Matte Yellow 100
-    borderColor: '#EAB308',   // Amber / Yellow 500
-    textHex: '#713F12',       // Dark Gold / Yellow 900
-    dotColor: '#EAB308',       
-  },
-  BANCA: {
-    label: 'Banca',
-    badgeLabel: 'Banca (Orientador / Coorientador)',
-    bgColor: '#FFEDD5',       // Soft Matte Orange 100
-    borderColor: '#F97316',   // Orange 500
-    textHex: '#7C2D12',       // Dark Rust / Orange 900
-    dotColor: '#F97316',       
-  },
-  AVALIADOR: {
-    label: 'Avaliador',
-    badgeLabel: 'Avaliador (Membro da Banca)',
-    bgColor: '#E0F2FE',       // Soft Matte Sky Blue 100
-    borderColor: '#0EA5E9',   // Sky Blue 500
-    textHex: '#0C4A6E',       // Sky Blue 900
-    dotColor: '#0EA5E9',       
-  },
-  VISUALIZADOR: {
-    label: 'Visualizador',
-    badgeLabel: 'Visualizador / Acompanhamento',
-    bgColor: '#F1F5F9',       // Soft Matte Slate 100
-    borderColor: '#64748B',   // Slate 500
-    textHex: '#0F172A',       // Slate 900
-    dotColor: '#64748B',       
-  }
+export const ROLE_CONFIGS: Record<ProcessRoleCategory, { label: string; badgeLabel: string; bgColor: string; borderColor: string; textHex: string; dotColor: string }> = {
+  ALUNO: { label: 'Aluno', badgeLabel: 'Aluno', bgColor: PORTAL_SEMANTIC_COLORS.processRole.student.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.student.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.student.text, dotColor: PORTAL_SEMANTIC_COLORS.processRole.student.border },
+  BANCA: { label: 'Banca', badgeLabel: 'Banca (Orientador / Coorientador)', bgColor: PORTAL_SEMANTIC_COLORS.processRole.board.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.board.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.board.text, dotColor: PORTAL_SEMANTIC_COLORS.processRole.board.border },
+  AVALIADOR: { label: 'Avaliador', badgeLabel: 'Avaliador (Membro da Banca)', bgColor: PORTAL_SEMANTIC_COLORS.processRole.evaluator.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.evaluator.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.evaluator.text, dotColor: PORTAL_SEMANTIC_COLORS.processRole.evaluator.border },
+  VISUALIZADOR: { label: 'Visualizador', badgeLabel: 'Visualizador / Acompanhamento', bgColor: PORTAL_SEMANTIC_COLORS.processRole.viewer.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.viewer.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.viewer.text, dotColor: PORTAL_SEMANTIC_COLORS.processRole.viewer.border },
 };
 
 // Helper to get count of stages from master configuration
@@ -630,11 +596,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               return (
                 <div
                   className={styles.firstColBtnClass}
-                  style={meusProcessosTextFormat.firstColHighlight === 'contextual' ? {
-                    backgroundColor: roleConfig.bgColor,
-                    borderColor: roleConfig.borderColor,
-                    color: roleConfig.textHex,
-                  } : undefined}
+                  style={{ backgroundColor: roleConfig.bgColor, borderColor: roleConfig.borderColor, color: roleConfig.textHex }}
                 >
                   <div className={styles.firstColTagClass}>
                     {tagLabel}
@@ -655,9 +617,9 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
           <td key="defesaDataHora" className={`${styles.cellPadClass} ${widthClass} ${styles.cellWeightClass} ${styles.cellTextColorClass} ${alignClass} ${styles.borderClass} align-middle`}>
             <div className={`flex items-center justify-center gap-1 ${styles.cellFontSizeClass}`}>
               <span>⏰</span>
-              <span className={isPast ? 'text-slate-500' : 'text-emerald-900 font-bold'}>{formatDateNumeric(proc.defesa?.startAt)}</span>
+              <span className="font-normal text-black">{formatDateNumeric(proc.defesa?.startAt)}</span>
             </div>
-            <div className="text-[9.5px] text-slate-500 font-mono font-medium">{formatTimeExtenso(proc.defesa?.startAt)}</div>
+            <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa?.startAt)}</div>
           </td>
         );
       case 'progresso': {
