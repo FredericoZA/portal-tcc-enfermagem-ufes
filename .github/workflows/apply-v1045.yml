@@ -18,10 +18,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Remover bloco legado de indicadores do migrador
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/apply-v1045.mjs')
+          s = p.read_text()
+          start = s.index('// 11) Indicadores:')
+          end = s.index('// 12) CSS canônico 1.0.45:', start)
+          p.write_text(s[:start] + s[end:])
+          PY
       - name: Aplicar migração estrutural 1.0.45
         run: node scripts/apply-v1045.mjs
-      - name: Validar sintaxe e registrar alterações
+      - name: Validar e registrar alterações
         run: |
+          npm ci
+          npm run test:ci
+          npm run build
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm scripts/apply-v1045.mjs .github/workflows/apply-v1045.yml
