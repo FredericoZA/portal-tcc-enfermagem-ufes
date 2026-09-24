@@ -1,0 +1,30 @@
+name: Apply v1.0.45 structural migration
+on:
+  push:
+    branches: [v1-0-45]
+    paths:
+      - scripts/apply-v1045.mjs
+      - .github/workflows/apply-v1045.yml
+permissions:
+  contents: write
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v1-0-45
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Aplicar migração estrutural 1.0.45
+        run: node scripts/apply-v1045.mjs
+      - name: Validar sintaxe e registrar alterações
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm scripts/apply-v1045.mjs .github/workflows/apply-v1045.yml
+          git add -A
+          git commit -m "Portal TCC 1.0.45 — reforma estrutural de UX"
+          git push origin HEAD:v1-0-45
