@@ -1,0 +1,33 @@
+name: Apply v1.0.46 structural migration
+on:
+  push:
+    branches: [v1-0-46]
+    paths:
+      - scripts/apply-v1046.py
+      - .github/workflows/apply-v1046.yml
+permissions:
+  contents: write
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v1-0-46
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Aplicar migração estrutural 1.0.46
+        run: python scripts/apply-v1046.py
+      - name: Validar e registrar alterações
+        run: |
+          npm ci
+          npm run test:ci
+          npm run build
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f scripts/apply-v1046.py .github/workflows/apply-v1046.yml
+          git add -A
+          git commit -m "Portal TCC 1.0.46 — consolidação estrutural de UX"
+          git push origin HEAD:v1-0-46
