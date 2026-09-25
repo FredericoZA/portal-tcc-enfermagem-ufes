@@ -22,6 +22,7 @@ jobs:
         run: |
           node scripts/apply-semantic-calendar-refactor.mjs
           node scripts/expand-calendar-summaries.mjs
+          node scripts/strengthen-semantic-filter-resolver.mjs
 
       - name: Commit generated source changes
         shell: bash
