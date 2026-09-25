@@ -47,11 +47,12 @@ const stddev = (values: number[]) => {
   return Math.sqrt(mean(values.map((value) => (value - avg) ** 2)));
 };
 const countBuckets = (values: string[], limit?: number): PublicIndicatorBucket[] => {
-  const counts = values.reduce<Record<string, number>>((acc, value) => {
-    if (value) acc[value] = (acc[value] || 0) + 1;
-    return acc;
-  }, {});
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt-BR'));
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    if (!value) continue;
+    counts.set(value, (counts.get(value) || 0) + 1);
+  }
+  const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt-BR'));
   return (limit ? sorted.slice(0, limit) : sorted).map(([label, count]) => ({ label, count }));
 };
 const publicBuckets = (items: PublicIndicatorBucket[]) => items.filter((item) => item.count >= MIN_PUBLIC_BUCKET_SIZE);
@@ -79,11 +80,13 @@ export function buildPublicIndicators(processes: ProcessData[], now = Date.now()
   const defended = defendedItems.length;
   const coauthors = safe.filter((process) => Boolean(process.aluno2)).length;
 
-  const statusCounts = safe.reduce<Record<string, number>>((acc, process) => {
-    acc[process.status] = (acc[process.status] || 0) + 1;
-    return acc;
-  }, {});
-  const rawByStatus = Object.entries(statusCounts)
+  const statusCounts = new Map<string, number>();
+  for (const process of safe) {
+    const status = String(process.status || '');
+    if (!status) continue;
+    statusCounts.set(status, (statusCounts.get(status) || 0) + 1);
+  }
+  const rawByStatus = Array.from(statusCounts.entries())
     .map(([key, count]) => ({ key, label: STATUS_LABELS[key] || key, count }))
     .sort((a, b) => b.count - a.count);
 
