@@ -1,0 +1,40 @@
+name: Apply v1.0.47 calendar/status fix
+on:
+  push:
+    branches: [v1-0-47]
+    paths:
+      - scripts/apply-v1047.py
+      - .github/workflows/apply-v1047.yml
+permissions:
+  contents: write
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v1-0-47
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Alinhar npm ao packageManager
+        run: corepack enable && corepack prepare npm@11.9.0 --activate
+      - name: Aplicar correção estrutural
+        run: python scripts/apply-v1047.py
+      - name: Atualizar versão
+        run: npm version 1.0.47 --no-git-tag-version --allow-same-version
+      - name: Instalar dependências
+        run: npm ci
+      - name: Validar testes
+        run: npm run test:ci
+      - name: Validar build
+        run: npm run build
+      - name: Registrar alterações finais
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f scripts/apply-v1047.py .github/workflows/apply-v1047.yml
+          git add -A
+          git commit -m "Portal TCC 1.0.47 — calendário e status canônicos"
+          git push origin HEAD:v1-0-47
