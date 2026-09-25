@@ -19,7 +19,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply deterministic refactor
-        run: node scripts/apply-semantic-calendar-refactor.mjs
+        run: |
+          node scripts/apply-semantic-calendar-refactor.mjs
+          node scripts/expand-calendar-summaries.mjs
 
       - name: Commit generated source changes
         shell: bash
