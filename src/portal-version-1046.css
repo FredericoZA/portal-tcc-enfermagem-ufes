@@ -19,19 +19,7 @@
   filter: none !important;
 }
 
-/* Contrato semântico: React informa o tom e o CSS apenas o aplica. */
-.portal-semantic-tone {
-  background: var(--portal-tone-bg) !important;
-  border-color: var(--portal-tone-border) !important;
-  color: var(--portal-tone-text) !important;
-  box-shadow: none !important;
-}
-.portal-semantic-tone * {
-  color: var(--portal-tone-text) !important;
-  opacity: 1 !important;
-}
-
-/* Processo por vínculo: usa as mesmas variáveis semânticas do restante do portal. */
+/* Processo por vínculo — compatibilidade com telas anteriores à camada semântica. */
 .portal-role-process-button {
   background: var(--portal-role-bg) !important;
   border-color: var(--portal-role-border) !important;
@@ -41,83 +29,6 @@
 .portal-role-process-button * {
   color: var(--portal-role-text) !important;
   opacity: 1 !important;
-}
-
-/* Compatibilidade com componentes legados, sem duplicar valores de cor. */
-.portal-process-pill { box-shadow: none !important; }
-.portal-tone-defended {
-  background: var(--portal-defense-defended-bg) !important;
-  border-color: var(--portal-defense-defended-border) !important;
-  color: var(--portal-defense-defended-text) !important;
-}
-.portal-tone-upcoming {
-  background: var(--portal-defense-upcoming-bg) !important;
-  border-color: var(--portal-defense-upcoming-border) !important;
-  color: var(--portal-defense-upcoming-text) !important;
-}
-.portal-tone-pending {
-  background: var(--portal-signature-pending-bg) !important;
-  border-color: var(--portal-signature-pending-border) !important;
-  color: var(--portal-signature-pending-text) !important;
-}
-.portal-tone-signed {
-  background: var(--portal-signature-signed-bg) !important;
-  border-color: var(--portal-signature-signed-border) !important;
-  color: var(--portal-signature-signed-text) !important;
-}
-.portal-tone-student {
-  background: var(--portal-role-student-bg) !important;
-  border-color: var(--portal-role-student-border) !important;
-  color: var(--portal-role-student-text) !important;
-}
-.portal-tone-board {
-  background: var(--portal-role-board-bg) !important;
-  border-color: var(--portal-role-board-border) !important;
-  color: var(--portal-role-board-text) !important;
-}
-.portal-tone-evaluator {
-  background: var(--portal-role-evaluator-bg) !important;
-  border-color: var(--portal-role-evaluator-border) !important;
-  color: var(--portal-role-evaluator-text) !important;
-}
-.portal-tone-viewer {
-  background: var(--portal-role-viewer-bg) !important;
-  border-color: var(--portal-role-viewer-border) !important;
-  color: var(--portal-role-viewer-text) !important;
-}
-.portal-tone-neutral {
-  background: var(--portal-neutral-bg) !important;
-  border-color: var(--portal-neutral-border) !important;
-  color: var(--portal-neutral-text) !important;
-}
-
-/* O fim de semana usa exatamente a superfície geral do portal. */
-#formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend {
-  background: var(--portal-surface-page) !important;
-  color: #94a3b8 !important;
-  cursor: default !important;
-  box-shadow: none !important;
-}
-#formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend * {
-  color: #94a3b8 !important;
-}
-
-/* Resumo visível de cada defesa dentro do dia do calendário. */
-#formal-monthly-calendar-section .portal-calendar-defense-summary {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  border-width: 1px;
-  border-style: solid;
-  border-radius: 5px;
-  padding: 2px 4px;
-  font-size: 9px;
-  line-height: 1.15;
-  font-weight: 700;
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Configurações: barras compactas em vez de cartões grandes. */
