@@ -1,0 +1,100 @@
+/*
+ * Contrato visual semântico do Portal TCC.
+ *
+ * As cores não são definidas aqui: elas vêm de portalSemanticTokens.ts e são
+ * expostas como CSS custom properties no elemento #portal-app-root. Isso evita
+ * que calendário, filtros, pílulas e tabelas mantenham paletas paralelas.
+ */
+
+.portal-semantic-tone {
+  background: var(--portal-tone-bg) !important;
+  border-color: var(--portal-tone-border) !important;
+  color: var(--portal-tone-text) !important;
+  box-shadow: none !important;
+}
+
+.portal-semantic-tone * {
+  color: var(--portal-tone-text) !important;
+  opacity: 1 !important;
+}
+
+/* Compatibilidade transitória para componentes que ainda usam classes legadas. */
+.portal-process-pill { box-shadow: none !important; }
+.portal-tone-defended {
+  background: var(--portal-defense-defended-bg) !important;
+  border-color: var(--portal-defense-defended-border) !important;
+  color: var(--portal-defense-defended-text) !important;
+}
+.portal-tone-upcoming {
+  background: var(--portal-defense-upcoming-bg) !important;
+  border-color: var(--portal-defense-upcoming-border) !important;
+  color: var(--portal-defense-upcoming-text) !important;
+}
+.portal-tone-pending {
+  background: var(--portal-signature-pending-bg) !important;
+  border-color: var(--portal-signature-pending-border) !important;
+  color: var(--portal-signature-pending-text) !important;
+}
+.portal-tone-signed {
+  background: var(--portal-signature-signed-bg) !important;
+  border-color: var(--portal-signature-signed-border) !important;
+  color: var(--portal-signature-signed-text) !important;
+}
+.portal-tone-student {
+  background: var(--portal-role-student-bg) !important;
+  border-color: var(--portal-role-student-border) !important;
+  color: var(--portal-role-student-text) !important;
+}
+.portal-tone-board {
+  background: var(--portal-role-board-bg) !important;
+  border-color: var(--portal-role-board-border) !important;
+  color: var(--portal-role-board-text) !important;
+}
+.portal-tone-evaluator {
+  background: var(--portal-role-evaluator-bg) !important;
+  border-color: var(--portal-role-evaluator-border) !important;
+  color: var(--portal-role-evaluator-text) !important;
+}
+.portal-tone-viewer {
+  background: var(--portal-role-viewer-bg) !important;
+  border-color: var(--portal-role-viewer-border) !important;
+  color: var(--portal-role-viewer-text) !important;
+}
+.portal-tone-neutral {
+  background: var(--portal-neutral-bg) !important;
+  border-color: var(--portal-neutral-border) !important;
+  color: var(--portal-neutral-text) !important;
+}
+
+/*
+ * O calendário não possui uma "cor de fim de semana". Sábado, domingo e
+ * células externas ao mês usam a mesma superfície da página, por definição.
+ */
+#formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend,
+#formal-monthly-calendar-section .portal-calendar-empty-cell {
+  background: var(--portal-surface-page) !important;
+  cursor: default !important;
+  box-shadow: none !important;
+}
+
+#formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend > div:first-child > span {
+  color: #94a3b8 !important;
+}
+
+/* Resumo compacto de cada TCC diretamente na célula do dia. */
+#formal-monthly-calendar-section .portal-calendar-defense-summary {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 5px;
+  padding: 2px 4px;
+  font-size: 9px;
+  line-height: 1.15;
+  font-weight: 700;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
