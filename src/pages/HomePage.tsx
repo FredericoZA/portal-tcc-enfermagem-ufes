@@ -1299,8 +1299,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                     {/* Resumos das defesas: estado, filtro e cor vêm da mesma fonte semântica. */}
                     {hasEvents && (
-                      <div className="mt-1 flex-1 min-h-0 space-y-1 overflow-hidden w-full">
-                        {dayDefenses.slice(0, 2).map((proc) => {
+                      <div className="mt-1 flex-1 min-h-0 space-y-1 w-full">
+                        {dayDefenses.map((proc) => {
                           const defenseState = getDefenseState(proc);
                           return (
                             <span
@@ -1314,7 +1314,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                             </span>
                           );
                         })}
-                        {dayDefenses.length < 2 && dayGcal.slice(0, 2 - dayDefenses.length).map((ev) => {
+                        {dayGcal.map((ev) => {
                           const defenseState = getDefenseStateFromTimes(ev.start, ev.end);
                           const parsed = parseGcalEvent(ev);
                           const startLabel = ev.start
@@ -1333,11 +1333,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                             </span>
                           );
                         })}
-                        {totalEvents > 2 && (
-                          <span className="block text-[9px] font-bold text-slate-600 px-1">
-                            +{totalEvents - 2} {totalEvents - 2 === 1 ? 'defesa' : 'defesas'}
-                          </span>
-                        )}
                       </div>
                     )}
                   </div>
