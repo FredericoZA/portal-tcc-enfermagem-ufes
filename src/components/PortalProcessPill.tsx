@@ -10,12 +10,21 @@ export const normalizeProcessNumber = (value?: string) => {
   return raw || '—';
 };
 
-export const PortalProcessPill: React.FC<{ value?: string; tone?: PortalPillTone; className?: string }> = ({ value, tone = 'neutral', className = '' }) => (
-  <span
-    className={`portal-process-pill portal-semantic-tone ${className}`}
-    data-portal-pill-tone={tone}
-    style={getPortalToneCssVars(tone)}
-  >
-    {normalizeProcessNumber(value)}
-  </span>
-);
+interface PortalProcessPillProps {
+  value?: string;
+  tone?: PortalPillTone;
+  className?: string;
+}
+
+export const PortalProcessPill: React.FC<PortalProcessPillProps> = (props) => {
+  const tone: PortalPillTone = props.tone ?? 'neutral';
+  return (
+    <span
+      className={`portal-process-pill portal-semantic-tone ${props.className ?? ''}`}
+      data-portal-pill-tone={tone}
+      style={getPortalToneCssVars(tone)}
+    >
+      {normalizeProcessNumber(props.value)}
+    </span>
+  );
+};
