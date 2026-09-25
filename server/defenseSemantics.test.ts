@@ -38,7 +38,7 @@ test('etapas pós-defesa são realizadas mesmo quando a agenda está ausente ou 
 });
 
 test('filtro usa exatamente o mesmo estado semântico usado pela cor do processo', () => {
-  const upcoming = processAt('DEFESA_AGENDADA', '2026-09-26T12:00:00.000Z', '2026-09-26T13:30:00.000Z');
+  const upcoming = processAt('AGUARDANDO_DEFESA', '2026-09-26T12:00:00.000Z', '2026-09-26T13:30:00.000Z');
   const defended = processAt('CONCLUIDO', '2026-09-20T12:00:00.000Z', '2026-09-20T13:30:00.000Z');
 
   assert.equal(getDefenseState(upcoming, NOW), 'upcoming');
@@ -53,7 +53,7 @@ test('filtro usa exatamente o mesmo estado semântico usado pela cor do processo
 
 test('resumo do calendário contém horário e título compacto do TCC', () => {
   const process = processAt(
-    'DEFESA_AGENDADA',
+    'AGUARDANDO_DEFESA',
     '2026-09-26T15:00:00.000Z',
     '2026-09-26T16:30:00.000Z',
     '  Um   título muito longo para testar a compactação visual do calendário mensal  ',
