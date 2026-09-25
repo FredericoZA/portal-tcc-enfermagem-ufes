@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import { portalFontFamily } from './portalFonts';
 import { TableTextFormat, HeaderTheme, DEFAULT_TABLE_TEXT_FORMAT } from '../components/TableColumnSelectorPanel';
 import { tableInheritsGlobalAppearance } from './portalAppearanceLinks';
+import { getPortalToneStyle, resolvePortalFilterTone } from './portalSemanticTokens';
 export type { TableTextFormat, HeaderTheme };
 export { DEFAULT_TABLE_TEXT_FORMAT };
 
@@ -953,6 +954,27 @@ export function getFilterChipProps(
   const label = itemConfig.label || fallbackLabel || key.toUpperCase();
   const emoji = itemConfig.emoji || fallbackEmoji || '';
   const dotColor = itemConfig.dotColor || '#eab308';
+  const semanticTone = resolvePortalFilterTone(key);
+
+  if (semanticTone) {
+    const semanticStyle = getPortalToneStyle(semanticTone);
+    return {
+      label,
+      emoji: '',
+      dotColor: String(semanticStyle.borderColor || dotColor),
+      buttonStyle: {
+        ...semanticStyle,
+        opacity: isSelected ? 1 : 0.7,
+        boxShadow: 'none',
+      } as CSSProperties,
+      badgeStyle: {
+        backgroundColor: semanticStyle.borderColor,
+        color: semanticStyle.color,
+      } as CSSProperties,
+      mode: 'full',
+      itemConfig,
+    };
+  }
 
   let buttonStyle: CSSProperties = {};
   let badgeStyle: CSSProperties = {};

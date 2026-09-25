@@ -67,6 +67,8 @@ import {
   LOGIN_POPUP_CONFIG_EVENT
 } from '../utils/loginPopupConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
+import { DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter } from '../utils/defenseSemantics';
+import { getPortalToneCssVars } from '../utils/portalSemanticTokens';
 
 interface HomePageProps {
   onNavigate: (tab: string) => void;
@@ -603,7 +605,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [defensesSearch, setDefensesSearch] = useState('');
   const [defensesStartDate, setDefensesStartDate] = useState('');
   const [defensesEndDate, setDefensesEndDate] = useState('');
-  const [defenseStatusFilter, setDefenseStatusFilter] = useState<'all' | 'pending' | 'concluded'>('all');
+  const [defenseStatusFilter, setDefenseStatusFilter] = useState<DefenseFilter>('all');
   const [defensesSortColumn, setDefensesSortColumn] = useState<string | null>('date');
   const [defensesSortDirection, setDefensesSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -1236,7 +1238,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             <div className="grid grid-cols-[0.5fr_1.1fr_1.1fr_1.1fr_1.1fr_1.1fr_0.5fr] border-l border-t border-slate-200 min-h-[300px]">
               {/* Empty cells before first day */}
               {Array.from({ length: firstDayOfMonth }).map((_, idx) => (
-                <div key={`empty-lead-${idx}`} className="portal-calendar-empty-cell border-r border-b border-slate-200 bg-slate-50/20 h-16 sm:h-20" />
+                <div key={`empty-lead-${idx}`} className="portal-calendar-empty-cell border-r border-b border-slate-200 min-h-[118px]" />
               ))}
 
               {/* Days of current month */}
@@ -1271,10 +1273,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     aria-disabled={isWeekend ? true : undefined}
                     className={`portal-calendar-day-cell border-r border-b border-slate-200 p-2 flex flex-col justify-between transition-all duration-150 relative group select-none ${
                       isWeekend
-                        ? 'portal-core-calendar-weekend bg-slate-100/75 border-slate-200 cursor-default h-16 sm:h-20 text-slate-400'
+                        ? 'portal-core-calendar-weekend border-slate-200 cursor-default min-h-[118px] text-slate-400'
                         : hasEvents
-                          ? 'bg-slate-100/80 border-slate-300 cursor-pointer h-16 sm:h-20 shadow-2xs active:scale-[0.98]'
-                          : 'bg-white border-slate-200 cursor-default h-16 sm:h-20'
+                          ? 'bg-white border-slate-300 cursor-pointer min-h-[118px] shadow-2xs active:scale-[0.98]'
+                          : 'bg-white border-slate-200 cursor-default min-h-[118px]'
                     }`}
                     title={isWeekend ? 'Fim de semana — indisponível para defesas' : hasEvents ? `Clique para abrir as ${totalEvents} defesas do dia ${dayNum}` : undefined}
                   >
@@ -1295,16 +1297,47 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       </span>
                     </div>
 
-                    {/* Small Count Indicator centered in the cell */}
+                    {/* Resumos das defesas: estado, filtro e cor vêm da mesma fonte semântica. */}
                     {hasEvents && (
-                      <div className="flex-1 flex items-center justify-center w-full">
-                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-xs text-center shadow-xs border ${
-                          isPastDay
-                            ? 'text-slate-500 bg-slate-200/80 border-slate-300'
-                            : 'text-slate-900 bg-slate-200 border-slate-300'
-                        }`}>
-                          {totalEvents} {totalEvents === 1 ? 'DEFESA' : 'DEFESAS'}
-                        </span>
+                      <div className="mt-1 flex-1 min-h-0 space-y-1 overflow-hidden w-full">
+                        {dayDefenses.slice(0, 2).map((proc) => {
+                          const defenseState = getDefenseState(proc);
+                          return (
+                            <span
+                              key={proc.id}
+                              className="portal-calendar-defense-summary portal-semantic-tone"
+                              style={getPortalToneCssVars(defenseState)}
+                              data-defense-state={defenseState}
+                              title={formatDefenseCalendarSummary(proc, 160)}
+                            >
+                              {formatDefenseCalendarSummary(proc)}
+                            </span>
+                          );
+                        })}
+                        {dayDefenses.length < 2 && dayGcal.slice(0, 2 - dayDefenses.length).map((ev) => {
+                          const defenseState = getDefenseStateFromTimes(ev.start, ev.end);
+                          const parsed = parseGcalEvent(ev);
+                          const startLabel = ev.start
+                            ? new Date(ev.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                            : 'Horário a definir';
+                          const summary = startLabel + ' · ' + parsed.trabalho;
+                          return (
+                            <span
+                              key={ev.id}
+                              className="portal-calendar-defense-summary portal-semantic-tone"
+                              style={getPortalToneCssVars(defenseState)}
+                              data-defense-state={defenseState}
+                              title={summary}
+                            >
+                              {summary}
+                            </span>
+                          );
+                        })}
+                        {totalEvents > 2 && (
+                          <span className="block text-[9px] font-bold text-slate-600 px-1">
+                            +{totalEvents - 2} {totalEvents - 2 === 1 ? 'defesa' : 'defesas'}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1313,7 +1346,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
               {/* Empty cells after last day to complete week grid */}
               {Array.from({ length: (7 - ((firstDayOfMonth + daysInMonth) % 7)) % 7 }).map((_, idx) => (
-                <div key={`empty-trail-${idx}`} className="portal-calendar-empty-cell border-r border-b border-slate-200 bg-slate-50/20 h-16 sm:h-20" />
+                <div key={`empty-trail-${idx}`} className="portal-calendar-empty-cell border-r border-b border-slate-200 min-h-[118px]" />
               ))}
             </div>
 
@@ -1823,11 +1856,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     {defensesTextFormat?.customFilterTitle || getEditableTableText(defensesCustomLabels, '__filterTitle', 'FILTRAR:')}
                   </span>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {(['all', 'pending', 'concluded'] as const).map((statusKey) => {
+                    {(['all', 'upcoming', 'defended'] as const).map((statusKey) => {
                       const isSelected = defenseStatusFilter === statusKey;
-                      const fallbackLabel = statusKey === 'all' ? 'TODAS' : statusKey === 'pending' ? 'A DEFENDER' : 'JÁ DEFENDIDAS';
-                      const fallbackEmoji = statusKey === 'all' ? '📋' : statusKey === 'pending' ? '⏳' : '✅';
-                      const chip = getFilterChipProps(statusKey, isSelected, defensesTextFormat, fallbackLabel, fallbackEmoji);
+                      const fallbackLabel = statusKey === 'all' ? 'TODAS' : statusKey === 'upcoming' ? 'A DEFENDER' : 'JÁ DEFENDIDAS';
+                      const chip = getFilterChipProps(statusKey, isSelected, defensesTextFormat, fallbackLabel, '');
 
                       return (
                         <button
@@ -1885,10 +1917,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 if (new Date(proc.defesa.startAt) > new Date(defensesEndDate + 'T23:59:59')) return false;
               }
 
-              // Defense Status Filter
-              const isPast = new Date(proc.defesa.startAt).getTime() < Date.now();
-              if (defenseStatusFilter === 'pending' && isPast) return false;
-              if (defenseStatusFilter === 'concluded' && !isPast) return false;
+              // O mesmo estado semântico controla filtro e apresentação.
+              if (!matchesDefenseFilter(proc, defenseStatusFilter)) return false;
 
               return true;
             });
@@ -1984,7 +2014,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               );
             };
 
-            const renderDefensesBodyCell = (colKey: string, proc: any, progress: any, isPast: boolean, ev1: any, ev2: any, cleanInst: (s?: string) => string) => {
+            const renderDefensesBodyCell = (colKey: string, proc: any, progress: any, defenseState: DefenseState, ev1: any, ev2: any, cleanInst: (s?: string) => string) => {
               if (!defensesVisibleColumns[colKey]) return null;
               const widthClass = `${getColWidthClass(colKey, defensesColumnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, defensesTextFormat)}`;
               const alignClass = defStyles.cellAlignClass;
@@ -2016,7 +2046,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         }
                         const tagLabel = formatCellText('protocolo', line1, defensesTextFormat, '📓');
                         return (
-                          <div className={defStyles.firstColBtnClass}>
+                          <div className={`${defStyles.firstColBtnClass} portal-semantic-tone`} style={getPortalToneCssVars(defenseState)} data-defense-state={defenseState}>
                             <div className={defStyles.firstColTagClass}>
                               {tagLabel}
                             </div>
@@ -2192,7 +2222,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     <tbody className="divide-y divide-slate-200">
                     {limitedProcesses.map((proc) => {
                       const progress = getProcessProgress(proc);
-                      const isPast = proc.defesa?.startAt ? new Date(proc.defesa.startAt).getTime() < Date.now() : false;
+                      const defenseState = getDefenseState(proc);
                       const evalMembers = (proc.banca || []).filter(b => b.funcao !== 'ORIENTADOR');
                       const ev1 = evalMembers[0];
                       const ev2 = evalMembers[1];
@@ -2207,7 +2237,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           key={proc.id}
                           className={`transition-all duration-200 ${defStyles.rowZebraClass} ${defStyles.cellTextColorClass}`}
                         >
-                          {defensesColumnOrder.map((colKey) => renderDefensesBodyCell(colKey, proc, progress, isPast, ev1, ev2, cleanInst))}
+                          {defensesColumnOrder.map((colKey) => renderDefensesBodyCell(colKey, proc, progress, defenseState, ev1, ev2, cleanInst))}
                         </tr>
                       );
                     })}
