@@ -37,7 +37,7 @@ test('lista de defesas usa uma única regra para filtrar e colorir o processo', 
   assert.ok(!home.includes("defenseStatusFilter === 'concluded' && !isPast"));
 });
 
-test('calendário mantém superfície do portal e mostra resumo textual dos TCCs', async () => {
+test('calendário mantém superfície do portal e mostra resumo textual de todos os TCCs do dia', async () => {
   const [home, semanticCss] = await Promise.all([
     source('src/pages/HomePage.tsx'),
     source('src/portal-semantic-ui.css'),
@@ -47,6 +47,10 @@ test('calendário mantém superfície do portal e mostra resumo textual dos TCCs
   assert.ok(home.includes('portal-calendar-defense-summary'));
   assert.ok(home.includes('formatDefenseCalendarSummary(proc)'));
   assert.ok(home.includes('getDefenseStateFromTimes(ev.start, ev.end)'));
+  assert.ok(home.includes('{dayDefenses.map((proc) => {'));
+  assert.ok(home.includes('{dayGcal.map((ev) => {'));
+  assert.ok(!home.includes('dayDefenses.slice(0, 2)'));
+  assert.ok(!home.includes('dayGcal.slice(0, 2 - dayDefenses.length)'));
   assert.ok(semanticCss.includes('.portal-calendar-day-cell.portal-core-calendar-weekend'));
   assert.ok(semanticCss.includes('.portal-calendar-empty-cell'));
   assert.ok(semanticCss.includes('background: var(--portal-surface-page) !important;'));
@@ -60,9 +64,12 @@ test('runtime legado não infere mais estado de defesa pelo DOM nem duplica a bu
   assert.ok(!enhancer.includes("fetch('/api/processes'"));
 });
 
-test('filtros semânticos de todas as tabelas passam pelo resolvedor global', async () => {
+test('filtros semânticos de todas as tabelas passam pelo resolvedor global por chave ou rótulo', async () => {
   const formatter = await source('src/utils/tableFormatters.ts');
   assert.ok(formatter.includes('resolvePortalFilterTone(key)'));
+  assert.ok(formatter.includes("resolvePortalFilterTone(itemConfig.key || '')"));
+  assert.ok(formatter.includes('resolvePortalFilterTone(label)'));
+  assert.ok(formatter.includes("resolvePortalFilterTone(fallbackLabel || '')"));
   assert.ok(formatter.includes('getPortalToneStyle(semanticTone)'));
   assert.ok(formatter.includes("emoji: ''"));
 });
