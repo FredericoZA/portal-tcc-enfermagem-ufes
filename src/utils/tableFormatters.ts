@@ -954,7 +954,11 @@ export function getFilterChipProps(
   const label = itemConfig.label || fallbackLabel || key.toUpperCase();
   const emoji = itemConfig.emoji || fallbackEmoji || '';
   const dotColor = itemConfig.dotColor || '#eab308';
-  const semanticTone = resolvePortalFilterTone(key);
+  const semanticTone =
+    resolvePortalFilterTone(key) ||
+    resolvePortalFilterTone(itemConfig.key || '') ||
+    resolvePortalFilterTone(label) ||
+    resolvePortalFilterTone(fallbackLabel || '');
 
   if (semanticTone) {
     const semanticStyle = getPortalToneStyle(semanticTone);
