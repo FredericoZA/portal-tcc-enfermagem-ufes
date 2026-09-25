@@ -103,6 +103,9 @@ export function getPortalSemanticRootVars(): CSSProperties {
 }
 
 const FILTER_TONE_ALIASES: Record<string, PortalSemanticTone> = {
+  all: 'neutral',
+  todas: 'neutral',
+  todos: 'neutral',
   upcoming: 'upcoming',
   scheduled: 'upcoming',
   pending_defense: 'upcoming',
