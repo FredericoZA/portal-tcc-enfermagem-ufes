@@ -29,6 +29,7 @@ import './portal-version-1040.css';
 import './portal-core-1043.css';
 import './portal-hotfix-separators-palette.css';
 import './portal-public-ux-1044.css';
+import './portal-version-1046.css';
 import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
 import { installAuthRequestResilience } from './utils/authRequestResilience';
 

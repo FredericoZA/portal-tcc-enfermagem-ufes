@@ -15,8 +15,6 @@ const MAX_WIDTH = 720;
 let activePopup: HTMLElement | null = null;
 let activeButton: HTMLButtonElement | null = null;
 let activeSettingsTable: HTMLTableElement | null = null;
-let calendarProcesses: any[] | null = null;
-let calendarFetch: Promise<any[]> | null = null;
 
 const MONTHS: Record<string, number> = {
   janeiro: 0,
@@ -439,6 +437,9 @@ function normalizeStage(table: HTMLTableElement) {
 }
 
 function normalizeDefenseRows(table: HTMLTableElement) {
+  // Data da defesa só determina cor na planilha pública. Em telas restritas, a cor
+  // do processo representa vínculo ou assinatura e não pode ser sobrescrita aqui.
+  if (!table.closest('#formal-monthly-calendar-section')) return;
   const headers = Array.from(table.tHead?.rows[0]?.cells || []) as HTMLTableCellElement[];
   const processIndex = headers.findIndex((header) => normalize(headerLabel(header)) === 'processo');
   const dateIndex = headers.findIndex((header) => normalize(headerLabel(header)).startsWith('data'));
@@ -575,37 +576,7 @@ function calendarPeriod() {
   return month === undefined || !year ? null : { month, year };
 }
 
-function dateKey(value: string) {
-  try {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(value));
-  } catch {
-    return '';
-  }
-}
-
-function timeLabel(value: string) {
-  try {
-    return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
-  } catch {
-    return '';
-  }
-}
-
-async function loadCalendarProcesses() {
-  if (calendarProcesses) return calendarProcesses;
-  if (calendarFetch) return calendarFetch;
-  calendarFetch = fetch('/api/processes', { credentials: 'include', headers: { Accept: 'application/json' } })
-    .then(async (response) => response.ok ? response.json() : [])
-    .then((data) => {
-      calendarProcesses = Array.isArray(data) ? data : [];
-      return calendarProcesses;
-    })
-    .catch(() => [])
-    .finally(() => { calendarFetch = null; });
-  return calendarFetch;
-}
-
-async function enhanceCalendar() {
+function enhanceCalendar() {
   const period = calendarPeriod();
   const firstCell = document.querySelector<HTMLElement>('.portal-calendar-day-cell');
   const grid = firstCell?.parentElement;
@@ -613,23 +584,7 @@ async function enhanceCalendar() {
   grid.classList.add('portal-core-calendar-grid');
   const daysHeader = grid.parentElement?.previousElementSibling as HTMLElement | null;
   daysHeader?.classList.add('portal-core-calendar-week-header');
-  const processes = await loadCalendarProcesses();
-  const latestPeriod = calendarPeriod();
-  if (!grid.isConnected || !latestPeriod || latestPeriod.month !== period.month || latestPeriod.year !== period.year) return;
-  const byDay = new Map<number, any[]>();
-  processes.forEach((proc) => {
-    const start = proc?.defesa?.startAt;
-    if (!start) return;
-    const key = dateKey(start);
-    const expected = `${period.year}-${String(period.month + 1).padStart(2, '0')}-`;
-    if (!key.startsWith(expected)) return;
-    const day = Number(key.slice(-2));
-    const weekday = new Date(period.year, period.month, day).getDay();
-    if (weekday === 0 || weekday === 6) return;
-    const list = byDay.get(day) || [];
-    list.push(proc);
-    byDay.set(day, list);
-  });
+  if (!grid.isConnected) return;
 
   grid.querySelectorAll<HTMLElement>('.portal-calendar-day-cell').forEach((cell) => {
     const day = Number(cell.querySelector(':scope > div:first-child span')?.textContent?.trim() || cell.querySelector('span')?.textContent?.trim());
@@ -646,32 +601,8 @@ async function enhanceCalendar() {
         event.stopPropagation();
       }, true);
     }
+    // Limpa somente artefatos de versões antigas do enhancer. Não toca nos filhos React.
     cell.querySelector('.portal-core-calendar-previews')?.remove();
-    // Nunca remova filhos renderizados pelo React. A ocultação do contador nativo é apenas visual.
-    if (weekend) return;
-    const events = byDay.get(day) || [];
-    if (!events.length) return;
-    const previews = document.createElement('div');
-    previews.className = 'portal-core-calendar-previews';
-    events.slice(0, 3).forEach((proc) => {
-      const start = String(proc.defesa?.startAt || '');
-      const defended = start ? new Date(start).getTime() < Date.now() : false;
-      const card = document.createElement('div');
-      card.className = `portal-core-calendar-card ${defended ? 'is-defended' : 'is-upcoming'}`;
-      const title = document.createElement('strong');
-      title.textContent = `HOMOLOGAÇÃO — ${String(proc.titulo || 'Trabalho de Conclusão de Curso')}`;
-      const meta = document.createElement('span');
-      meta.textContent = `${timeLabel(start)} · ${String(proc.defesa?.local || 'Local a confirmar')}`;
-      card.append(title, meta);
-      previews.appendChild(card);
-    });
-    if (events.length > 3) {
-      const more = document.createElement('span');
-      more.className = 'portal-core-calendar-more';
-      more.textContent = `+${events.length - 3} defesa(s)`;
-      previews.appendChild(more);
-    }
-    cell.appendChild(previews);
   });
 }
 
@@ -681,7 +612,7 @@ function enhanceAll() {
   bindSettingsButtons();
   injectWrapSetting();
   removeRefreshControls();
-  void enhanceCalendar();
+  enhanceCalendar();
 }
 
 export function PortalStructuralRuntime() {

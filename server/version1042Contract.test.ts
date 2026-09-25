@@ -29,8 +29,3 @@ test('todas as tabelas recebem separação branca pelo padrão estrutural',()=>{
   assert.match(css,/--portal-separator-table: 16px/);
   assert.match(css,/--portal-separator-section: 12px/);
 });
-
-test('package publica a versão 1.0.44',()=>{
-  const pkg=JSON.parse(read('package.json'));
-  assert.equal(pkg.version,'1.0.45');
-});

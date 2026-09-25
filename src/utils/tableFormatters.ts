@@ -690,17 +690,8 @@ export function getTableStyles(format: TableTextFormat = {}) {
         ? 'rounded-xl'
         : 'rounded-2xl';
 
-  // Cell Text Color
-  let cellTextColorClass = 'text-slate-900';
-  if (format.cellTextColor === 'high-contrast') {
-    cellTextColorClass = 'text-slate-950 font-medium';
-  } else if (format.cellTextColor === 'neutral') {
-    cellTextColorClass = 'text-slate-700';
-  } else if (format.cellTextColor === 'colored') {
-    cellTextColorClass = 'text-emerald-950';
-  } else if (format.cellTextColor === 'custom') {
-    cellTextColorClass = 'text-[var(--table-cell-text)]';
-  }
+  // Cell Text Color — contrato global: conteúdo comum das células é preto.
+  const cellTextColorClass = 'text-black';
 
   // Column Borders & Zebra Striping
   const isDarkHeader = ['militar', 'emerald', 'steel', 'teal', 'red', 'orange', 'purple', 'dark', 'colored'].includes(theme);

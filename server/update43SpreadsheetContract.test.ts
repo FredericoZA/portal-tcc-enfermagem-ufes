@@ -43,9 +43,9 @@ test('calendário usa fins de semana estreitos e preview seguro', () => {
   const runtime = read('src/components/PortalStructuralRuntime.tsx');
   const css = read('src/portal-core-1043.css');
   assert.match(css, /grid-template-columns: \.22fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr \.22fr/);
-  assert.match(runtime, /portal-core-calendar-card/);
-  assert.match(runtime, /title\.textContent = `HOMOLOGAÇÃO/);
-  assert.match(runtime, /meta\.textContent =/);
+  assert.match(runtime, /portal-core-calendar-weekend/);
+  assert.match(runtime, /cell\.querySelector\('\.portal-core-calendar-previews'\)\?\.remove\(\)/);
+  assert.doesNotMatch(runtime, /fetch\('\/api\/processes'/);
   assert.match(css, /--portal-upcoming-bg/);
   assert.match(css, /--portal-defended-bg/);
 });
