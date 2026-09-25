@@ -595,8 +595,8 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               const tagLabel = formatCellText('protocolo', line1, meusProcessosTextFormat, '📓');
               return (
                 <div
-                  className={styles.firstColBtnClass}
-                  style={{ backgroundColor: roleConfig.bgColor, borderColor: roleConfig.borderColor, color: roleConfig.textHex }}
+                  className={`${styles.firstColBtnClass} portal-role-process-button`}
+                  style={{ '--portal-role-bg': roleConfig.bgColor, '--portal-role-border': roleConfig.borderColor, '--portal-role-text': roleConfig.textHex } as React.CSSProperties}
                 >
                   <div className={styles.firstColTagClass}>
                     {tagLabel}
@@ -864,8 +864,6 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                   const cfg = ROLE_CONFIGS[catKey];
                   const isSelected = selectedRoleCategories.includes(catKey);
                   const count = roleCounts[catKey] || 0;
-                  const chip = getFilterChipProps(catKey.toLowerCase(), isSelected, meusProcessosTextFormat, cfg.label);
-
                   return (
                     <button
                       key={catKey}
@@ -873,20 +871,20 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       onClick={() => toggleRoleCategory(catKey)}
                       data-selected={isSelected ? 'true' : 'false'}
                       aria-pressed={isSelected}
-                      style={chip.buttonStyle}
+                      style={{ backgroundColor: cfg.bgColor, color: cfg.textHex, borderColor: cfg.borderColor, opacity: isSelected ? 1 : 0.62, boxShadow: isSelected ? `inset 0 0 0 1px ${cfg.borderColor}` : 'none' }}
                       className={`portal-standard-filter-chip portal-table-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none ${
                         isSelected ? '' : 'opacity-85 hover:opacity-100'
                       }`}
-                      title={`Clique para ${isSelected ? 'isolar ou alternar' : 'exibir'} TCCs com papel de ${chip.label}`}
+                      title={`Clique para ${isSelected ? 'isolar ou alternar' : 'exibir'} TCCs com papel de ${cfg.label}`}
                     >
                       <span
                         className="w-2 h-2 rounded-full shrink-0 shadow-2xs"
-                        style={{ backgroundColor: chip.dotColor }}
+                        style={{ backgroundColor: cfg.borderColor }}
                       />
-                      <span className="whitespace-nowrap font-extrabold">{chip.label}</span>
+                      <span className="whitespace-nowrap font-extrabold">{cfg.label}</span>
                       <span
                         className="text-[9px] px-1.5 py-0.2 rounded-full font-black shadow-2xs"
-                        style={chip.badgeStyle}
+                        style={{ backgroundColor: cfg.borderColor, color: '#ffffff' }}
                       >
                         {count}
                       </span>

@@ -1249,6 +1249,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 const cellIndex = firstDayOfMonth + idx;
                 const rowIndex = Math.floor(cellIndex / 7);
                 const colIndex = cellIndex % 7;
+                const isWeekend = colIndex === 0 || colIndex === 6;
                 const isTopHalf = rowIndex <= 2;
 
                 const today = new Date();
@@ -1262,19 +1263,20 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   <div
                     key={`day-${dayNum}`}
                     onClick={() => {
-                      if (hasEvents) {
+                      if (hasEvents && !isWeekend) {
                         setSelectedDayDefenses(dayDefenses.length > 0 ? dayDefenses : null);
                         setSelectedDayGcalEvents(dayGcal.length > 0 ? dayGcal : null);
                       }
                     }}
+                    aria-disabled={isWeekend ? true : undefined}
                     className={`portal-calendar-day-cell border-r border-b border-slate-200 p-2 flex flex-col justify-between transition-all duration-150 relative group select-none ${
-                      hasEvents
-                        ? isPastDay
-                          ? 'bg-slate-100/90 hover:bg-slate-200/80 border-slate-300 cursor-pointer h-16 sm:h-20 shadow-2xs text-slate-500 active:scale-[0.98]'
-                          : 'bg-slate-100/80 hover:bg-slate-200/90 border-slate-300 cursor-pointer h-16 sm:h-20 shadow-2xs active:scale-[0.98]'
-                        : 'bg-white hover:bg-slate-50 border-slate-200 cursor-default h-16 sm:h-20'
+                      isWeekend
+                        ? 'portal-core-calendar-weekend bg-slate-100/75 border-slate-200 cursor-default h-16 sm:h-20 text-slate-400'
+                        : hasEvents
+                          ? 'bg-slate-100/80 border-slate-300 cursor-pointer h-16 sm:h-20 shadow-2xs active:scale-[0.98]'
+                          : 'bg-white border-slate-200 cursor-default h-16 sm:h-20'
                     }`}
-                    title={hasEvents ? `Clique para abrir as ${totalEvents} defesas do dia ${dayNum}` : undefined}
+                    title={isWeekend ? 'Fim de semana — indisponível para defesas' : hasEvents ? `Clique para abrir as ${totalEvents} defesas do dia ${dayNum}` : undefined}
                   >
                     {/* Day Number and State */}
                     <div className="flex items-center justify-between">
@@ -2203,11 +2205,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       return (
                         <tr
                           key={proc.id}
-                          className={`transition-all duration-200 ${
-                            isPast
-                              ? 'bg-slate-100/40 text-slate-400 opacity-60'
-                              : `${defStyles.rowZebraClass} hover:bg-slate-100/60 ${defStyles.cellTextColorClass}`
-                          }`}
+                          className={`transition-all duration-200 ${defStyles.rowZebraClass} ${defStyles.cellTextColorClass}`}
                         >
                           {defensesColumnOrder.map((colKey) => renderDefensesBodyCell(colKey, proc, progress, isPast, ev1, ev2, cleanInst))}
                         </tr>

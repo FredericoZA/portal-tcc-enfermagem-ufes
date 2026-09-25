@@ -477,8 +477,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
     switch (colKey) {
       case 'protocolo': {
-        const status = getDeclarationStatus(proc.id);
-        const signed = status.label === 'Assinada';
+        const job = getDeclarationJob(proc.id);
+        const signed = proc.status === 'CONCLUIDO' || Boolean(job && ['SIGNED', 'DRIVE_SYNC_PENDING', 'ARCHIVED'].includes(job.status));
         const tone = signed ? PORTAL_SEMANTIC_COLORS.signature.signed : PORTAL_SEMANTIC_COLORS.signature.pending;
         return (
           <td key={colKey} onClick={(e) => { e.stopPropagation(); onSelectProcess(proc.id); }} className={`${cellClass} cursor-pointer`} title="Abrir TCC">
@@ -881,6 +881,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   ]).map((filter) => {
                     const isSelected = activeTab === filter.tab;
                     const chip = getFilterChipProps(filter.key, isSelected, coordTextFormat, filter.label);
+                    const semanticTone = filter.key === 'assinadas' ? PORTAL_SEMANTIC_COLORS.signature.signed : PORTAL_SEMANTIC_COLORS.signature.pending;
                     return (
                       <button
                         key={filter.key}
@@ -888,13 +889,13 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                         onClick={() => { setActiveTab(filter.tab); setSelectedIds([]); }}
                         data-selected={isSelected ? 'true' : 'false'}
                         aria-pressed={isSelected}
-                        style={chip.buttonStyle}
+                        style={{ backgroundColor: semanticTone.bg, color: semanticTone.text, borderColor: semanticTone.border, opacity: isSelected ? 1 : 0.62, boxShadow: isSelected ? `inset 0 0 0 1px ${semanticTone.border}` : 'none' }}
                         className={`portal-standard-filter-chip portal-table-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none ${isSelected ? '' : 'opacity-85 hover:opacity-100'}`}
                         title={`Filtrar por declarações ${filter.label.toLowerCase()}`}
                       >
-                        <span className="w-2 h-2 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: filter.key === 'assinadas' ? '#22a06b' : '#f4b400' }} />
+                        <span className="w-2 h-2 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: semanticTone.border }} />
                         <span className="whitespace-nowrap font-extrabold">{chip.label}</span>
-                        <span className="text-[9px] px-1.5 py-0.2 rounded-full font-black shadow-2xs" style={chip.badgeStyle}>{filter.count}</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded-full font-black shadow-2xs" style={{ backgroundColor: semanticTone.border, color: '#ffffff' }}>{filter.count}</span>
                       </button>
                     );
                   })}
@@ -1020,7 +1021,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                           return (
                             <tr
                               key={proc.id}
-                              className={`hover:bg-slate-50 transition-colors text-slate-600 ${isSelected ? 'bg-emerald-50/40' : ''}`}
+                              className={`transition-colors text-black ${isSelected ? 'bg-emerald-50/40' : ''}`}
                             >
                               {/* Selection Checkbox */}
                               <td data-portal-selection-column-cell="true" data-portal-filter-value={isSelected ? 'Selecionado' : 'Não selecionado'} className={`${styles.cellPadClass} ${styles.borderClass} text-center align-middle`}>

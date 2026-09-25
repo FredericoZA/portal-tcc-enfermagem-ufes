@@ -30,7 +30,7 @@ const monthLabel = (value?: string | null) => {
   return new Intl.DateTimeFormat('pt-BR', { month: 'short', year: 'numeric' }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1)).replace('.', '');
 };
 
-const BarList: React.FC<{ items: Bucket[]; percentage?: boolean; empty?: string }> = ({ items, percentage = false, empty = 'Sem volume suficiente.' }) => {
+const BarList: React.FC<{ items?: Bucket[]; percentage?: boolean; empty?: string }> = ({ items = [], percentage = false, empty = 'Sem volume suficiente.' }) => {
   if (!items.length) return <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-500">{empty}</div>;
   const max = Math.max(1, ...items.map((item) => item.count));
   const total = items.reduce((sum, item) => sum + item.count, 0);
@@ -43,7 +43,7 @@ const BarList: React.FC<{ items: Bucket[]; percentage?: boolean; empty?: string 
   </div>;
 };
 
-const LineTrend: React.FC<{ items: Bucket[] }> = ({ items }) => {
+const LineTrend: React.FC<{ items?: Bucket[] }> = ({ items = [] }) => {
   if (items.length < 2) return <BarList items={items} />;
   const width = 760;
   const height = 210;
@@ -98,7 +98,13 @@ export const IndicadoresPage: React.FC = () => {
         if (!response.ok) throw new Error('Não foi possível carregar os indicadores.');
         return response.json();
       })
-      .then((payload) => { if (active) setData(payload); })
+      .then((payload) => {
+        if (!active) return;
+        const arrays = ['byStatus', 'years', 'months', 'themes', 'workTypes', 'locations', 'outcomes', 'formats', 'weekdays', 'dayparts'];
+        const normalized = { ...payload, totals: { registered: 0, completed: 0, published: 0, defended: 0, inProgress: 0, completionRate: 0, publicationRate: 0, coauthorRate: 0, ...(payload?.totals || {}) } } as any;
+        arrays.forEach((key) => { if (!Array.isArray(normalized[key])) normalized[key] = []; });
+        setData(normalized as PublicIndicators);
+      })
       .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : 'Indicadores indisponíveis.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };

@@ -5,9 +5,7 @@ import { readFileSync } from 'node:fs';
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 test('release 1.0.45 preserva o runtime estrutural único consolidado',()=>{
-  const pkg=JSON.parse(read('package.json'));
   const main=read('src/main.tsx');
-  assert.equal(pkg.version,'1.0.45');
   assert.match(main,/PortalStructuralRuntime/);
   assert.match(main,/portal-core-1043\.css/);
   assert.doesNotMatch(main,/PortalSpreadsheetEnhancer/);

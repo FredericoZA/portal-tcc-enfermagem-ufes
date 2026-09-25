@@ -25,6 +25,7 @@ import { CommissionIdentityPanel } from '../components/CommissionIdentityPanel';
 import { PortalPersonalizationHubModal } from '../components/PortalPersonalizationHubModal';
 import { AuditLogsPage } from './AuditLogsPage';
 import { AstenLogsPage } from './AstenLogsPage';
+import { SettingsWorkspaceModal } from '../components/SettingsWorkspaceModal';
 import { 
   TableTextFormat, 
   DEFAULT_TABLE_TEXT_FORMAT, 
@@ -2224,42 +2225,44 @@ export const ConfiguracoesPage: React.FC = () => {
       {/* Hub estrutural 1.0.45: seis funções, uma linguagem visual e conteúdo em popups focados. */}
       {isMasterAdmin && (
         <>
-          <section id="portal-settings-hub" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <section id="portal-settings-hub" className="portal-settings-list space-y-2">
             {[
               { id: 'personalization', title: 'Personalização do Portal', text: 'Aparência, navegação, páginas, tabelas e pop-ups.', icon: Palette },
-              { id: 'sync', title: 'Sincronização', text: 'Rodapé operacional, Asten, Google, Supabase, Vercel e demais integrações.', icon: Sliders },
-              { id: 'access', title: 'Acesso', text: 'Autorize e administre as pessoas que podem acessar o Portal.', icon: Lock },
+              { id: 'sync', title: 'Sincronização', text: 'Rodapé, Asten, Google, Supabase, Vercel e demais integrações.', icon: Sliders },
+              { id: 'access', title: 'Acesso', text: 'Autorizações e pessoas com acesso ao Portal.', icon: Lock },
               { id: 'models', title: 'Modelos e Variáveis', text: 'Documentos, e-mails, formulários, fluxos e variáveis.', icon: Layers },
-              { id: 'signatures', title: 'Registros de Assinatura', text: 'Acompanhe fila, método, situação e histórico de assinatura.', icon: FileCheck2 },
-              { id: 'logs', title: 'Registro de Logs', text: 'Auditoria, histórico técnico, detalhes e restauração segura.', icon: ClipboardList },
+              { id: 'signatures', title: 'Registros de Assinatura', text: 'Fila, método, situação e histórico de assinatura.', icon: FileCheck2 },
+              { id: 'logs', title: 'Registro de Logs', text: 'Auditoria, histórico técnico e rastreabilidade.', icon: ClipboardList },
             ].map(({ id, title, text, icon: Icon }) => (
-              <button key={id} type="button" onClick={() => id === 'personalization' ? setPersonalizationHubOpen(true) : setActiveSettingsPanel(id as any)} className="portal-settings-hub-card flex min-h-[132px] flex-col items-start rounded-2xl border border-slate-300 bg-[#d5dce0] p-4 text-left shadow-sm">
-                <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-[#337959]"><Icon className="h-5 w-5" /></span>
-                <strong className="text-sm font-black uppercase tracking-wide text-slate-950">{title}</strong>
-                <span className="mt-1 text-xs leading-5 text-slate-600">{text}</span>
+              <button key={id} type="button" onClick={() => id === 'personalization' ? setPersonalizationHubOpen(true) : setActiveSettingsPanel(id as any)} className="portal-settings-title-bar flex w-full items-center gap-3 rounded-xl border border-slate-300 bg-[#d5dce0] px-3.5 py-3 text-left shadow-sm">
+                <Icon className="h-5 w-5 shrink-0 text-[#337959]" />
+                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[10px] text-slate-600">{text}</span></span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
               </button>
             ))}
           </section>
 
           {activeSettingsPanel && (
-            <div className="fixed inset-0 z-[1000005] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm" onMouseDown={(event) => { if (event.currentTarget === event.target) setActiveSettingsPanel(null); }}>
-              <section role="dialog" aria-modal="true" className="flex max-h-[94vh] w-full max-w-[1600px] flex-col overflow-hidden rounded-2xl border border-slate-300 bg-[#e1e6e9] shadow-2xl">
-                <header className="flex items-center justify-between border-b-[16px] border-white bg-[#005830] px-4 py-3 text-white">
-                  <div className="flex items-center gap-2"><Sliders className="h-5 w-5" /><h2 className="text-sm font-black uppercase tracking-wide">{activeSettingsPanel === 'sync' ? 'Sincronização' : activeSettingsPanel === 'access' ? 'Acesso' : activeSettingsPanel === 'models' ? 'Modelos e Variáveis' : activeSettingsPanel === 'signatures' ? 'Registros de Assinatura' : 'Registro de Logs'}</h2></div>
-                  <button type="button" onClick={() => setActiveSettingsPanel(null)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-900" aria-label="Fechar"><X className="h-4 w-4" /></button>
-                </header>
-                <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
-                  {activeSettingsPanel === 'sync' && <div className="space-y-3">
-                    {settings && <section className="rounded-xl border border-slate-300 bg-[#d5dce0] p-3"><h3 className="mb-2 text-xs font-black uppercase text-slate-900">Identidade operacional e rodapé</h3><MasterAndPresidentConfigForm settings={settings} onSettingsUpdated={() => { void refreshAuth(); showNotification('Configurações atualizadas.'); }} showNotification={showNotification} /><CommissionIdentityPanel isMaster /></section>}
-                    <InfrastructureIntegrationsPanel isMaster />
-                  </div>}
-                  {activeSettingsPanel === 'access' && <AuthorizedStudentsPanel canManage />}
-                  {activeSettingsPanel === 'models' && <div id="portal-models-workspace" className="space-y-3"><MasterDocumentModelsPanel /><IntegrationStudioPanel actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div>}
-                  {activeSettingsPanel === 'signatures' && <AstenLogsPage />}
-                  {activeSettingsPanel === 'logs' && <AuditLogsPage />}
-                </div>
-              </section>
-            </div>
+            <SettingsWorkspaceModal
+              open
+              title={activeSettingsPanel === 'sync' ? 'Sincronização' : activeSettingsPanel === 'access' ? 'Acesso' : activeSettingsPanel === 'models' ? 'Modelos e Variáveis' : activeSettingsPanel === 'signatures' ? 'Registros de Assinatura' : 'Registro de Logs'}
+              icon={activeSettingsPanel === 'sync' ? Sliders : activeSettingsPanel === 'access' ? Lock : activeSettingsPanel === 'models' ? Layers : activeSettingsPanel === 'signatures' ? FileCheck2 : ClipboardList}
+              onClose={() => setActiveSettingsPanel(null)}
+              sections={
+                activeSettingsPanel === 'sync' ? [
+                  { id: 'identity', label: 'Rodapé e identidade', description: 'Responsáveis, contatos e identidade operacional.', icon: Building2, content: settings ? <section className="rounded-xl border border-slate-300 bg-[#d5dce0] p-3"><MasterAndPresidentConfigForm settings={settings} onSettingsUpdated={() => { void refreshAuth(); showNotification('Configurações atualizadas.'); }} showNotification={showNotification} /><CommissionIdentityPanel isMaster /></section> : null },
+                  { id: 'integrations', label: 'Integrações e plataformas', description: 'Asten, Google, Supabase, Vercel e serviços externos.', icon: Globe, content: <InfrastructureIntegrationsPanel isMaster /> },
+                ] : activeSettingsPanel === 'access' ? [
+                  { id: 'authorizations', label: 'Autorizações de acesso', description: 'Gerencie discentes e demais perfis autorizados.', icon: Lock, content: <AuthorizedStudentsPanel canManage /> },
+                ] : activeSettingsPanel === 'models' ? [
+                  { id: 'studio', label: 'Estúdio de modelos e variáveis', description: 'Documentos, e-mails, formulários, fluxos e variáveis em um único ambiente.', icon: Layers, content: <div id="portal-models-workspace" className="space-y-3"><MasterDocumentModelsPanel /><IntegrationStudioPanel actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
+                ] : activeSettingsPanel === 'signatures' ? [
+                  { id: 'signature-ledger', label: 'Registros de assinatura', description: 'Documentos enviados, método e situação.', icon: FileCheck2, content: <AstenLogsPage /> },
+                ] : [
+                  { id: 'audit-ledger', label: 'Registro de logs', description: 'Auditoria e histórico técnico do Portal.', icon: ClipboardList, content: <AuditLogsPage /> },
+                ]
+              }
+            />
           )}
         </>
       )}

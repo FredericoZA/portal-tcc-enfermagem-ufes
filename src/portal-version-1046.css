@@ -1,0 +1,88 @@
+/* Portal TCC 1.0.46 — consolidação estrutural de UX. */
+:root {
+  --portal-v46-green-dark: #005830;
+  --portal-v46-green: #337959;
+  --portal-v46-gray: #d5dce0;
+}
+
+/* Conteúdo comum das planilhas: preto, normal e sem envelhecimento visual. */
+#portal-app-root main .portal-core-table tbody tr,
+#portal-app-root main .portal-core-table tbody td {
+  opacity: 1 !important;
+  filter: none !important;
+  color: #000 !important;
+}
+#portal-app-root main .portal-core-table tbody td [class*="text-slate-"],
+#portal-app-root main .portal-core-table tbody td [class*="opacity-"] {
+  color: #000 !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+/* Processo por vínculo: uma única fonte semântica de cor. */
+.portal-role-process-button {
+  background: var(--portal-role-bg) !important;
+  border-color: var(--portal-role-border) !important;
+  color: var(--portal-role-text) !important;
+  box-shadow: none !important;
+}
+.portal-role-process-button * {
+  color: var(--portal-role-text) !important;
+  opacity: 1 !important;
+}
+
+/* Estados foscos e institucionais, sem verde/amarelo fluorescente. */
+.portal-process-pill { box-shadow: none !important; }
+.portal-tone-defended,
+.portal-tone-signed { background: #c2d0c2 !important; border-color: #7e907e !important; color: #263728 !important; }
+.portal-tone-upcoming,
+.portal-tone-pending { background: #d4c69a !important; border-color: #9e8f63 !important; color: #453d25 !important; }
+.portal-tone-student { background: #d8c98f !important; border-color: #9b884b !important; color: #3e361c !important; }
+.portal-tone-board { background: #c9a39a !important; border-color: #8c5e55 !important; color: #402824 !important; }
+.portal-tone-evaluator { background: #9db8c0 !important; border-color: #587884 !important; color: #20363e !important; }
+.portal-tone-viewer { background: #b4a6be !important; border-color: #75647f !important; color: #342b39 !important; }
+
+/* Fim de semana claro e indisponível desde o primeiro render. */
+#formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend {
+  background: #eef1f2 !important;
+  color: #94a3b8 !important;
+  cursor: default !important;
+  box-shadow: none !important;
+}
+#formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend * {
+  color: #94a3b8 !important;
+}
+#formal-monthly-calendar-section .portal-core-calendar-previews { display: none !important; }
+
+/* Configurações: barras compactas em vez de cartões grandes. */
+#portal-settings-hub.portal-settings-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+#portal-settings-hub .portal-settings-title-bar {
+  min-height: 58px !important;
+  transition: background-color .12s ease, border-color .12s ease !important;
+}
+#portal-settings-hub .portal-settings-title-bar:hover {
+  background: #cbd4d8 !important;
+  border-color: #9ca9af !important;
+}
+.portal-settings-workspace-content .portal-workspace,
+.portal-settings-workspace-content #audit-logs-page,
+.portal-settings-workspace-content #asten-logs-page { margin-top: 0 !important; }
+#portal-models-workspace .portal-studio { min-height: 68vh !important; }
+
+/* O editor de Personalização adota o mesmo cabeçalho dos demais workspaces. */
+.portal-modal-surface > div:first-child {
+  background: var(--portal-v46-green-dark) !important;
+  color: #fff !important;
+  border-bottom: 16px solid #fff !important;
+}
+.portal-modal-surface > div:first-child #portal-customization-title { color: #fff !important; }
+.portal-modal-surface > div:first-child button {
+  background: #fff !important;
+  color: #000 !important;
+  border-color: #fff !important;
+}
+.portal-modal-surface > div:first-child button * { color: #000 !important; }
