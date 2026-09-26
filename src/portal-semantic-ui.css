@@ -18,6 +18,18 @@
   opacity: 1 !important;
 }
 
+/* O atributo de estado é a última autoridade para calendário e Lista de Defesas. */
+.portal-semantic-tone[data-defense-state="defended"] {
+  --portal-tone-bg: var(--portal-defense-defended-bg) !important;
+  --portal-tone-border: var(--portal-defense-defended-border) !important;
+  --portal-tone-text: var(--portal-defense-defended-text) !important;
+}
+.portal-semantic-tone[data-defense-state="upcoming"] {
+  --portal-tone-bg: var(--portal-defense-upcoming-bg) !important;
+  --portal-tone-border: var(--portal-defense-upcoming-border) !important;
+  --portal-tone-text: var(--portal-defense-upcoming-text) !important;
+}
+
 /* Compatibilidade transitória para componentes que ainda usam classes legadas. */
 .portal-process-pill { box-shadow: none !important; }
 .portal-tone-defended {
@@ -67,12 +79,12 @@
 }
 
 /*
- * O calendário não possui uma "cor de fim de semana". Sábado, domingo e
- * células externas ao mês usam a mesma superfície da página, por definição.
+ * Fins de semana e células externas ao mês se fundem ao fundo do calendário,
+ * não ao branco das células úteis de segunda a sexta.
  */
 #formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend,
 #formal-monthly-calendar-section .portal-calendar-empty-cell {
-  background: var(--portal-surface-page) !important;
+  background: var(--portal-surface-layer-1) !important;
   cursor: default !important;
   box-shadow: none !important;
 }
@@ -81,20 +93,65 @@
   color: #94a3b8 !important;
 }
 
-/* Resumo compacto de cada TCC diretamente na célula do dia. */
+/* Resumo informativo de cada TCC diretamente na célula do dia. */
 #formal-monthly-calendar-section .portal-calendar-defense-summary {
-  display: block;
+  display: -webkit-box;
   width: 100%;
   min-width: 0;
+  min-height: 27px;
   border-width: 1px;
   border-style: solid;
-  border-radius: 5px;
-  padding: 2px 4px;
+  border-radius: 6px;
+  padding: 3px 5px;
   font-size: 9px;
-  line-height: 1.15;
+  line-height: 1.2;
   font-weight: 700;
   text-align: left;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/*
+ * Configurações reutiliza a mesma hierarquia visual da tela Como Chegar:
+ * gelo -> cinza claro -> cinza mais escuro -> branco; ações em verde musgo.
+ */
+#portal-settings-hub .portal-settings-title-bar {
+  background: var(--portal-green-action) !important;
+  border-color: var(--portal-green-action-border) !important;
+  color: #fff !important;
+}
+#portal-settings-hub .portal-settings-title-bar:hover {
+  filter: brightness(.96);
+}
+#portal-settings-hub .portal-settings-title-bar svg,
+#portal-settings-hub .portal-settings-title-bar strong,
+#portal-settings-hub .portal-settings-title-bar span {
+  color: #fff !important;
+}
+
+.portal-settings-workspace-content {
+  background: var(--portal-surface-layer-2) !important;
+}
+.portal-settings-workspace-content > #asten-logs-page,
+.portal-settings-workspace-content > #audit-logs-page,
+.portal-settings-workspace-content > #portal-models-workspace,
+.portal-settings-workspace-content > section {
+  background: var(--portal-surface-layer-2);
+}
+
+#asten-logs-page .portal-signature-table-shell,
+#audit-logs-page .portal-audit-table-shell {
+  background: var(--portal-surface-layer-2);
+}
+
+#asten-logs-page .portal-spreadsheet-table tbody,
+#audit-logs-page .portal-spreadsheet-table tbody {
+  background: var(--portal-surface-inner) !important;
+}
+#asten-logs-page .portal-spreadsheet-table tbody tr,
+#audit-logs-page .portal-spreadsheet-table tbody tr {
+  background: var(--portal-surface-inner) !important;
 }
