@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('release atual é 1.0.46', () => {
+test('release atual permanece 1.0.46 até a publicação da próxima versão', () => {
   assert.equal(JSON.parse(read('package.json')).version, '1.0.46');
 });
 
@@ -30,20 +30,23 @@ test('indicadores têm contrato completo e frontend defensivo', () => {
   assert.match(page, /const normalized =/);
 });
 
-test('configurações usam seis barras e workspace modal com navegação lateral', () => {
+test('configurações usam seis barras e workspace modal responsivo ao número de seções', () => {
   const config = read('src/pages/ConfiguracoesPage.tsx');
   const modal = read('src/components/SettingsWorkspaceModal.tsx');
   assert.match(config, /portal-settings-title-bar/);
   assert.doesNotMatch(config, /portal-settings-hub-card/);
-  assert.match(modal, /bg-\[#005830\]/);
+  assert.match(modal, /var\(--portal-green-header\)/);
+  assert.match(modal, /const hasNavigation = sections\.length > 1/);
+  assert.match(modal, /\{hasNavigation && <aside/);
   assert.match(modal, /Navegação/);
 });
 
-test('estúdio de modelos usa navegação lateral e cabeçalho interno verde', () => {
+test('estúdio de modelos usa uma única navegação principal e superfícies semânticas', () => {
   const studio = read('src/components/IntegrationStudioPanel.tsx');
-  assert.match(studio, /md:w-56/);
-  assert.match(studio, /Editor de modelos e variáveis/);
-  assert.match(studio, /bg-\[#337959\]/);
+  assert.match(studio, /portal-studio-tabs/);
+  assert.match(studio, /md:grid-cols-\[220px_minmax\(0,1fr\)\]/);
+  assert.match(studio, /var\(--portal-surface-layer-2\)/);
+  assert.match(studio, /var\(--portal-green-action\)/);
 });
 
 test('tipografia tabular preta e CSS v46 carregado por último', () => {
