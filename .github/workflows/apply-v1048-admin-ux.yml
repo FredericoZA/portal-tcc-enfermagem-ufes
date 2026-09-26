@@ -20,8 +20,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install dependencies
+        run: npm ci
       - name: Apply deterministic changes
         run: node scripts/apply-v1048-admin-ux.mjs
+      - name: Validate full project
+        run: npm run test:ci
       - name: Commit source changes
         run: |
           if git diff --quiet; then
