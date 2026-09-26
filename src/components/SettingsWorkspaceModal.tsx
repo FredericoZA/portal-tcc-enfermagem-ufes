@@ -17,15 +17,29 @@ interface SettingsWorkspaceModalProps {
   onClose: () => void;
 }
 
+/**
+ * Shell canônico dos workspaces administrativos.
+ *
+ * Regra estrutural:
+ * - duas ou mais seções reais => uma única navegação lateral;
+ * - uma única seção => abre direto o conteúdo, sem sidebar e sem repetir subtítulo.
+ *
+ * Isso evita que planilhas como Acesso, Logs e Assinaturas percam largura com
+ * uma navegação que não oferece escolha alguma.
+ */
 export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ open, title, icon: TitleIcon, sections, onClose }) => {
   const firstId = sections[0]?.id || '';
   const [activeId, setActiveId] = useState(firstId);
+
   useEffect(() => {
     if (open && (!activeId || !sections.some((section) => section.id === activeId))) setActiveId(firstId);
   }, [open, activeId, firstId, sections]);
+
   const current = useMemo(() => sections.find((section) => section.id === activeId) || sections[0], [sections, activeId]);
   if (!open || !current) return null;
+
   const CurrentIcon = current.icon;
+  const hasNavigation = sections.length > 1;
 
   return <div className="fixed inset-0 z-[1000005] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
     <section
@@ -39,8 +53,9 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
         <div className="flex min-w-0 items-center gap-2">{TitleIcon && <TitleIcon className="h-5 w-5 shrink-0"/>}<h2 className="truncate text-sm font-black uppercase tracking-wide">{title}</h2></div>
         <button type="button" onClick={onClose} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white bg-white text-black shadow-sm" aria-label="Fechar"><X className="h-4 w-4"/></button>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
-        <aside className="max-h-52 w-full shrink-0 overflow-y-auto border-b border-slate-300 p-3 md:max-h-none md:w-64 md:border-b-0 md:border-r" style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>
+
+      <div className={`flex min-h-0 flex-1 overflow-hidden ${hasNavigation ? 'flex-col md:flex-row' : 'flex-col'}`} style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
+        {hasNavigation && <aside className="max-h-52 w-full shrink-0 overflow-y-auto border-b border-slate-300 p-3 md:max-h-none md:w-64 md:border-b-0 md:border-r" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
           <div className="rounded-xl border border-slate-300 p-2 shadow-sm" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>
             <div className="mb-2 border-b border-slate-200 px-2 pb-2 text-[10px] font-black uppercase tracking-wider text-slate-600">Navegação</div>
             <div className="space-y-1">{sections.map((section) => {
@@ -56,14 +71,15 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
                   : { backgroundColor: 'var(--portal-surface-inner)' }}
               >
                 {Icon && <Icon className="mt-0.5 h-4 w-4 shrink-0"/>}
-                <span className="min-w-0"><strong className="block text-[11px] font-black uppercase">{section.label}</strong>{section.description && <span className={`mt-0.5 block text-[9px] leading-4 ${selected ? 'text-white/80' : 'text-slate-500'}`}>{section.description}</span>}</span>
+                <span className="min-w-0"><strong className="block text-[11px] font-black uppercase">{section.label}</strong>{section.description && <span className={`mt-0.5 block text-[9px] leading-4 ${selected ? 'text-white/85' : 'text-slate-500'}`}>{section.description}</span>}</span>
               </button>;
             })}</div>
           </div>
-        </aside>
-        <main className="min-w-0 flex-1 overflow-y-auto p-3 sm:p-4" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
-          <div className="mb-3 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-white shadow-sm" style={{ backgroundColor: 'var(--portal-green-action)', borderColor: 'var(--portal-green-action-border)' }}>{CurrentIcon && <CurrentIcon className="h-4 w-4"/>}<div><h3 className="text-xs font-black uppercase tracking-wide">{current.label}</h3>{current.description && <p className="mt-0.5 text-[10px] text-white/80">{current.description}</p>}</div></div>
-          <div className="portal-settings-workspace-content min-w-0 rounded-xl" style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>{current.content}</div>
+        </aside>}
+
+        <main className={`min-w-0 flex-1 overflow-y-auto ${hasNavigation ? 'p-3 sm:p-4' : 'p-0'}`} style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
+          {hasNavigation && <div className="mb-3 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-white shadow-sm" style={{ backgroundColor: 'var(--portal-green-action)', borderColor: 'var(--portal-green-action-border)' }}>{CurrentIcon && <CurrentIcon className="h-4 w-4"/>}<div><h3 className="text-xs font-black uppercase tracking-wide">{current.label}</h3>{current.description && <p className="mt-0.5 text-[10px] text-white/85">{current.description}</p>}</div></div>}
+          <div className={`portal-settings-workspace-content min-w-0 ${hasNavigation ? 'rounded-xl' : ''}`} style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>{current.content}</div>
         </main>
       </div>
     </section>
