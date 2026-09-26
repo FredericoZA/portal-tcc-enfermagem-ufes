@@ -37,7 +37,10 @@ export function matchesDefenseFilter(
   return filter === 'all' || getDefenseState(process, now) === filter;
 }
 
-export function formatDefenseCalendarSummary(process: Pick<ProcessData, 'titulo' | 'defesa'>, maxTitleLength = 46): string {
+export function formatDefenseCalendarSummary(
+  process: Pick<ProcessData, 'titulo' | 'defesa'> & Partial<Pick<ProcessData, 'aluno1'>>,
+  maxTitleLength = 46,
+): string {
   const timestamp = validTimestamp(process.defesa?.startAt);
   const time = timestamp === null
     ? 'Horário a definir'
@@ -48,5 +51,7 @@ export function formatDefenseCalendarSummary(process: Pick<ProcessData, 'titulo'
     ? `${normalizedTitle.slice(0, Math.max(1, maxTitleLength - 1)).trimEnd()}…`
     : normalizedTitle;
 
-  return `${time} · ${title}`;
+  const student = String(process.aluno1?.nome || '').replace(/\s+/g, ' ').trim();
+  const location = String(process.defesa?.local || '').replace(/\s+/g, ' ').trim();
+  return [time, title, student, location].filter(Boolean).join(' · ');
 }
