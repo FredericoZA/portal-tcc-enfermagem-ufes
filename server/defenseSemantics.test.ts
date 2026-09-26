@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   formatDefenseCalendarSummary,
+  getDefenseCalendarSummaryParts,
   getDefenseState,
   getDefenseStateFromTimes,
   matchesDefenseFilter,
@@ -51,16 +52,21 @@ test('filtro usa exatamente o mesmo estado semântico usado pela cor do processo
   assert.equal(matchesDefenseFilter(defended, 'all', NOW), true);
 });
 
-test('resumo do calendário contém horário e título compacto do TCC', () => {
-  const process = processAt(
-    'AGUARDANDO_DEFESA',
-    '2026-09-26T15:00:00.000Z',
-    '2026-09-26T16:30:00.000Z',
-    '  Um   título muito longo para testar a compactação visual do calendário mensal  ',
-  );
+test('resumo do calendário preserva horário e título e separa os alunos na segunda linha', () => {
+  const process = {
+    status: 'AGUARDANDO_DEFESA',
+    titulo: '  Um   título muito longo para testar a leitura completa do calendário mensal  ',
+    aluno1: { nome: 'Ana Maria' },
+    aluno2: { nome: 'Bruno Souza' },
+    defesa: { startAt: '2026-09-26T15:00:00.000Z', endAt: '2026-09-26T16:30:00.000Z' },
+  } as Pick<ProcessData, 'status' | 'titulo' | 'aluno1' | 'aluno2' | 'defesa'>;
+
+  const parts = getDefenseCalendarSummaryParts(process);
   const summary = formatDefenseCalendarSummary(process, 30);
-  assert.match(summary, /^\d{2}:\d{2} · /);
-  assert.ok(summary.includes('Um título muito longo'));
-  assert.ok(summary.endsWith('…'));
+  assert.match(parts.primary, /^\d{2}:\d{2} · /);
+  assert.ok(parts.primary.includes('Um título muito longo para testar a leitura completa do calendário mensal'));
+  assert.equal(parts.secondary, 'Ana Maria · Bruno Souza');
+  assert.ok(summary.includes('\nAna Maria · Bruno Souza'));
   assert.ok(!summary.includes('  '));
+  assert.ok(!summary.endsWith('…'));
 });
