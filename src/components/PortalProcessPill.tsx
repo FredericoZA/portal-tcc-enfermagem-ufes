@@ -1,18 +1,7 @@
 import React from 'react';
+import { getPortalToneCssVars, type PortalSemanticTone } from '../utils/portalSemanticTokens';
 
-export type PortalPillTone = 'defended' | 'upcoming' | 'student' | 'board' | 'evaluator' | 'viewer' | 'pending' | 'signed' | 'neutral';
-
-const toneClass: Record<PortalPillTone, string> = {
-  defended: 'portal-tone-defended',
-  upcoming: 'portal-tone-upcoming',
-  student: 'portal-tone-student',
-  board: 'portal-tone-board',
-  evaluator: 'portal-tone-evaluator',
-  viewer: 'portal-tone-viewer',
-  pending: 'portal-tone-pending',
-  signed: 'portal-tone-signed',
-  neutral: 'portal-tone-neutral',
-};
+export type PortalPillTone = PortalSemanticTone;
 
 export const normalizeProcessNumber = (value?: string) => {
   const raw = String(value || '').trim().replace(/^TCC\s*[-/]?\s*/i, '').trim();
@@ -21,8 +10,21 @@ export const normalizeProcessNumber = (value?: string) => {
   return raw || '—';
 };
 
-export const PortalProcessPill: React.FC<{ value?: string; tone?: PortalPillTone; className?: string }> = ({ value, tone = 'neutral', className = '' }) => (
-  <span className={`portal-process-pill ${toneClass[tone]} ${className}`} data-portal-pill-tone={tone}>
-    {normalizeProcessNumber(value)}
-  </span>
-);
+interface PortalProcessPillProps {
+  value?: string;
+  tone?: PortalPillTone;
+  className?: string;
+}
+
+export const PortalProcessPill: React.FC<PortalProcessPillProps> = (props) => {
+  const tone: PortalPillTone = props.tone ?? 'neutral';
+  return (
+    <span
+      className={`portal-process-pill portal-semantic-tone ${props.className ?? ''}`}
+      data-portal-pill-tone={tone}
+      style={getPortalToneCssVars(tone)}
+    >
+      {normalizeProcessNumber(props.value)}
+    </span>
+  );
+};

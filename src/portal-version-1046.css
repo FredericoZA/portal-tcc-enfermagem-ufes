@@ -19,7 +19,7 @@
   filter: none !important;
 }
 
-/* Processo por vínculo: uma única fonte semântica de cor. */
+/* Processo por vínculo — compatibilidade com telas anteriores à camada semântica. */
 .portal-role-process-button {
   background: var(--portal-role-bg) !important;
   border-color: var(--portal-role-border) !important;
@@ -30,29 +30,6 @@
   color: var(--portal-role-text) !important;
   opacity: 1 !important;
 }
-
-/* Estados foscos e institucionais, sem verde/amarelo fluorescente. */
-.portal-process-pill { box-shadow: none !important; }
-.portal-tone-defended,
-.portal-tone-signed { background: #c2d0c2 !important; border-color: #7e907e !important; color: #263728 !important; }
-.portal-tone-upcoming,
-.portal-tone-pending { background: #d4c69a !important; border-color: #9e8f63 !important; color: #453d25 !important; }
-.portal-tone-student { background: #d8c98f !important; border-color: #9b884b !important; color: #3e361c !important; }
-.portal-tone-board { background: #c9a39a !important; border-color: #8c5e55 !important; color: #402824 !important; }
-.portal-tone-evaluator { background: #9db8c0 !important; border-color: #587884 !important; color: #20363e !important; }
-.portal-tone-viewer { background: #b4a6be !important; border-color: #75647f !important; color: #342b39 !important; }
-
-/* Fim de semana claro e indisponível desde o primeiro render. */
-#formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend {
-  background: #eef1f2 !important;
-  color: #94a3b8 !important;
-  cursor: default !important;
-  box-shadow: none !important;
-}
-#formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend * {
-  color: #94a3b8 !important;
-}
-#formal-monthly-calendar-section .portal-core-calendar-previews { display: none !important; }
 
 /* Configurações: barras compactas em vez de cartões grandes. */
 #portal-settings-hub.portal-settings-list {

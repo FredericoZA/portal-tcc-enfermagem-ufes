@@ -90,63 +90,12 @@ function classifyGreenBands() {
   document.querySelectorAll<HTMLElement>('.portal-defense-filter-row,.portal-meus-processos-filter-row,.portal-coordinator-filter-row').forEach((row) => row.dataset.portal1040FilterBand = 'true');
 }
 
-function decorateDefenseList() {
-  document.querySelectorAll<HTMLElement>('.portal-defense-filter-row').forEach((filterRow) => {
-    const scope = filterRow.parentElement;
-    const table = scope?.querySelector<HTMLTableElement>('table');
-    if (!table?.tHead || !table.tBodies[0]) return;
-    table.dataset.portal1040DefenseTable = 'true';
-    const headers = Array.from(table.tHead.rows[0]?.cells || []);
-    const dateIndex = headers.findIndex((cell) => normalize(cell.textContent || '').startsWith('data'));
-    if (dateIndex < 0) return;
-    Array.from(table.tBodies[0].rows).forEach((row) => {
-      const match = (row.cells[dateIndex]?.textContent || '').match(/(\d{2})\/(\d{2})\/(\d{4})/);
-      if (!match) return;
-      const [, dd, mm, yyyy] = match;
-      const defense = new Date(Number(yyyy), Number(mm) - 1, Number(dd), 23, 59, 59, 999).getTime();
-      const pill = row.cells[0]?.querySelector<HTMLElement>('div');
-      if (!pill) return;
-      pill.classList.toggle('portal1040-defense-upcoming', defense >= Date.now());
-      pill.classList.toggle('portal1040-defense-defended', defense < Date.now());
-    });
-  });
-}
-
-let calendarCache: any[] | null = null;
-let calendarLoading = false;
-async function enrichCalendarPreview() {
-  const previews = Array.from(document.querySelectorAll<HTMLElement>('.portal-calendar-preview'));
-  if (!previews.length) return;
-  if (!calendarCache && !calendarLoading) {
-    calendarLoading = true;
-    try {
-      const response = await fetch('/api/processes', { credentials: 'include', headers: { Accept: 'application/json' } });
-      if (response.ok) { const payload = await response.json(); calendarCache = Array.isArray(payload) ? payload : []; }
-    } catch { calendarCache = []; }
-    finally { calendarLoading = false; }
-  }
-  if (!calendarCache) return;
-  previews.forEach((preview) => {
-    if (preview.querySelector('.portal1040-calendar-extra')) return;
-    const title = normalize(preview.querySelector('strong')?.textContent || '');
-    const process = calendarCache?.find((item) => normalize(String(item?.titulo || '')) === title);
-    const student = String(process?.aluno1?.nome || '').trim();
-    if (!student) return;
-    const extra = document.createElement('span');
-    extra.className = 'portal1040-calendar-extra';
-    extra.textContent = `Aluno: ${student}`;
-    preview.appendChild(extra);
-  });
-}
-
 function enhanceAll() {
   keepPortalDialogsAboveWorkspaces();
   configureSyncWorkspace();
   renameSignatureRegistry();
   placeSpreadsheetControls();
   classifyGreenBands();
-  decorateDefenseList();
-  void enrichCalendarPreview();
 }
 
 export function PortalVersion1040Enhancer() {
