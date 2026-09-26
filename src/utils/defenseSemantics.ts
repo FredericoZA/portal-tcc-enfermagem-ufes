@@ -39,6 +39,8 @@ export function matchesDefenseFilter(
 
 const normalizeSummaryText = (value?: string): string => String(value || '').replace(/\s+/g, ' ').trim();
 
+type DefenseCalendarSummaryProcess = Pick<ProcessData, 'titulo' | 'defesa'> & Partial<Pick<ProcessData, 'aluno1' | 'aluno2'>>;
+
 /**
  * Conteúdo canônico de um evento na grade mensal.
  *
@@ -47,7 +49,7 @@ const normalizeSummaryText = (value?: string): string => String(value || '').rep
  * truncada. A data não é repetida porque já pertence à célula do calendário.
  */
 export function getDefenseCalendarSummaryParts(
-  process: Pick<ProcessData, 'titulo' | 'defesa' | 'aluno1' | 'aluno2'>,
+  process: DefenseCalendarSummaryProcess,
 ): { primary: string; secondary: string; fullText: string } {
   const timestamp = validTimestamp(process.defesa?.startAt);
   const time = timestamp === null
@@ -56,14 +58,15 @@ export function getDefenseCalendarSummaryParts(
   const title = normalizeSummaryText(process.titulo) || 'Trabalho de Conclusão de Curso';
   const students = [normalizeSummaryText(process.aluno1?.nome), normalizeSummaryText(process.aluno2?.nome)]
     .filter(Boolean)
-    .join(' · ') || 'Discente não identificado';
+    .join(' · ');
   const primary = `${time} · ${title}`;
-  return { primary, secondary: students, fullText: `${primary}\n${students}` };
+  const secondary = students;
+  return { primary, secondary, fullText: [primary, secondary].filter(Boolean).join('\n') };
 }
 
-/** Compatibilidade com tooltips e consumidores textuais. */
+/** Compatibilidade com tooltips, testes históricos e consumidores textuais. */
 export function formatDefenseCalendarSummary(
-  process: Pick<ProcessData, 'titulo' | 'defesa' | 'aluno1' | 'aluno2'>,
+  process: DefenseCalendarSummaryProcess,
   _maxTitleLength = 46,
 ): string {
   return getDefenseCalendarSummaryParts(process).fullText;
