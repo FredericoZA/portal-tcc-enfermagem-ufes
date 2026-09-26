@@ -2,6 +2,15 @@ import type { CSSProperties } from 'react';
 
 export const PORTAL_SURFACE_COLORS = {
   page: '#f1f5f9',
+  layer1: '#e1e6e9',
+  layer2: '#d5dce0',
+  inner: '#ffffff',
+} as const;
+
+export const PORTAL_BRAND_COLORS = {
+  header: '#005830',
+  action: '#337959',
+  actionBorder: '#286a4d',
 } as const;
 
 export const PORTAL_SEMANTIC_COLORS = {
@@ -72,6 +81,12 @@ export function getPortalToneCssVars(tone: PortalSemanticTone): CSSProperties {
 export function getPortalSemanticRootVars(): CSSProperties {
   return {
     '--portal-surface-page': PORTAL_SURFACE_COLORS.page,
+    '--portal-surface-layer-1': PORTAL_SURFACE_COLORS.layer1,
+    '--portal-surface-layer-2': PORTAL_SURFACE_COLORS.layer2,
+    '--portal-surface-inner': PORTAL_SURFACE_COLORS.inner,
+    '--portal-green-header': PORTAL_BRAND_COLORS.header,
+    '--portal-green-action': PORTAL_BRAND_COLORS.action,
+    '--portal-green-action-border': PORTAL_BRAND_COLORS.actionBorder,
     '--portal-defense-defended-bg': PORTAL_SEMANTIC_COLORS.defense.defended.bg,
     '--portal-defense-defended-border': PORTAL_SEMANTIC_COLORS.defense.defended.border,
     '--portal-defense-defended-text': PORTAL_SEMANTIC_COLORS.defense.defended.text,
