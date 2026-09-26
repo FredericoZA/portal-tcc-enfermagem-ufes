@@ -1,0 +1,35 @@
+name: Apply v1048 admin UX
+
+on:
+  push:
+    branches:
+      - fix/config-calendar-admin-ux-v1048
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/config-calendar-admin-ux-v1048
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply deterministic changes
+        run: node scripts/apply-v1048-admin-ux.mjs
+      - name: Commit source changes
+        run: |
+          if git diff --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/services/apiClient.ts src/components/IntegrationStudioPanel.tsx src/pages/HomePage.tsx
+          git commit -m "refactor: consolida UX de configurações e calendário"
+          git push origin HEAD:fix/config-calendar-admin-ux-v1048
