@@ -37,21 +37,34 @@ export function matchesDefenseFilter(
   return filter === 'all' || getDefenseState(process, now) === filter;
 }
 
-export function formatDefenseCalendarSummary(
-  process: Pick<ProcessData, 'titulo' | 'defesa'> & Partial<Pick<ProcessData, 'aluno1'>>,
-  maxTitleLength = 46,
-): string {
+const normalizeSummaryText = (value?: string): string => String(value || '').replace(/\s+/g, ' ').trim();
+
+/**
+ * Conteúdo canônico de um evento na grade mensal.
+ *
+ * A UI recebe duas linhas semanticamente separadas para impedir que título e
+ * discentes sejam novamente reduzidos a “(defesa)” ou a uma única string
+ * truncada. A data não é repetida porque já pertence à célula do calendário.
+ */
+export function getDefenseCalendarSummaryParts(
+  process: Pick<ProcessData, 'titulo' | 'defesa' | 'aluno1' | 'aluno2'>,
+): { primary: string; secondary: string; fullText: string } {
   const timestamp = validTimestamp(process.defesa?.startAt);
   const time = timestamp === null
     ? 'Horário a definir'
     : new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const title = normalizeSummaryText(process.titulo) || 'Trabalho de Conclusão de Curso';
+  const students = [normalizeSummaryText(process.aluno1?.nome), normalizeSummaryText(process.aluno2?.nome)]
+    .filter(Boolean)
+    .join(' · ') || 'Discente não identificado';
+  const primary = `${time} · ${title}`;
+  return { primary, secondary: students, fullText: `${primary}\n${students}` };
+}
 
-  const normalizedTitle = String(process.titulo || 'Trabalho de Conclusão de Curso').replace(/\s+/g, ' ').trim();
-  const title = normalizedTitle.length > maxTitleLength
-    ? `${normalizedTitle.slice(0, Math.max(1, maxTitleLength - 1)).trimEnd()}…`
-    : normalizedTitle;
-
-  const student = String(process.aluno1?.nome || '').replace(/\s+/g, ' ').trim();
-  const location = String(process.defesa?.local || '').replace(/\s+/g, ' ').trim();
-  return [time, title, student, location].filter(Boolean).join(' · ');
+/** Compatibilidade com tooltips e consumidores textuais. */
+export function formatDefenseCalendarSummary(
+  process: Pick<ProcessData, 'titulo' | 'defesa' | 'aluno1' | 'aluno2'>,
+  _maxTitleLength = 46,
+): string {
+  return getDefenseCalendarSummaryParts(process).fullText;
 }
