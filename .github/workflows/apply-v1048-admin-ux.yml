@@ -28,6 +28,8 @@ jobs:
         run: npm run test:secrets
       - name: TypeScript check
         run: npm run lint
+      - name: v1048 UX contract
+        run: node --import tsx --test server/version1048AdminUxContract.test.ts
       - name: Unit tests
         run: npm run test:unit
       - name: Contract tests
