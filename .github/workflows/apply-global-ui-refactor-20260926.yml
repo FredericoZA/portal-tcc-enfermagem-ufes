@@ -23,7 +23,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Apply structural refactor
-        run: node scripts/apply-global-ui-refactor-20260926.mjs
+        run: |
+          node scripts/apply-global-ui-refactor-20260926.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/IntegrationStudioPanel.tsx')
+          s = p.read_text()
+          needle = '  Link,\n  Mail,'
+          if '  Layers,\n' not in s:
+              if needle not in s:
+                  raise SystemExit('Não foi possível localizar o bloco de ícones para incluir Layers')
+              s = s.replace(needle, '  Layers,\n  Link,\n  Mail,', 1)
+              p.write_text(s)
+          PY
       - name: Secrets check
         run: npm run test:secrets
       - name: TypeScript check
