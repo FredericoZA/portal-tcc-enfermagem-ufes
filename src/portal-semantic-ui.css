@@ -155,3 +155,35 @@
 #audit-logs-page .portal-spreadsheet-table tbody tr {
   background: var(--portal-surface-inner) !important;
 }
+
+
+/* Reforma estrutural 2026-09-26 */
+.portal-filter-color-dot {
+  display: inline-block;
+  width: 10.5px;
+  height: 10.5px;
+  flex: 0 0 10.5px;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 1px rgba(15,23,42,.18);
+}
+.portal-core-calendar-weekend,
+.portal-calendar-empty-cell {
+  background: var(--portal-surface-layer-1) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.portal-core-calendar-weekend:hover { background: var(--portal-surface-layer-1) !important; }
+.portal-calendar-defense-summary {
+  display: block !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  line-height: 1.18;
+}
+.portal-calendar-defense-primary,
+.portal-calendar-defense-secondary { display: block; overflow-wrap: anywhere; }
+.portal-calendar-defense-primary { font-weight: 700; color: var(--portal-tone-text); }
+.portal-calendar-defense-secondary { margin-top: 2px; font-weight: 500; color: var(--portal-tone-text); opacity: .9; }
+.portal-settings-title-bar { color: #fff !important; }
+.portal-settings-title-bar * { color: inherit !important; }
+.portal-settings-workspace-content { color: #0f172a; }

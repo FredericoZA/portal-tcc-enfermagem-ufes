@@ -9,7 +9,6 @@ import { bootstrapPortalDriveStructure, ensureProcessDriveStructure, extractGoog
 import { IntegrationStudioPanel } from '../components/IntegrationStudioPanel';
 import { InfrastructureIntegrationsPanel } from '../components/InfrastructureIntegrationsPanel';
 import { AuthorizedStudentsPanel } from '../components/AuthorizedStudentsPanel';
-import { MasterDocumentModelsPanel } from '../components/MasterDocumentModelsPanel';
 import { updateRuntimeDocumentTemplates, BASE_DOCUMENT_TEMPLATES } from '../utils/documentTemplateEngine';
 import { loadGlobalTableConfig, saveGlobalTableConfig, GLOBAL_TABLE_EVENT, getTableStyles, PORTAL_TABLE_PRESETS, PortalTablePreset } from '../utils/tableFormatters';
 import { loadSiteLayoutConfig, saveSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig, DEFAULT_SITE_LAYOUT_CONFIG } from '../utils/siteLayoutConfig';
@@ -2234,10 +2233,10 @@ export const ConfiguracoesPage: React.FC = () => {
               { id: 'signatures', title: 'Registros de Assinatura', text: 'Fila, método, situação e histórico de assinatura.', icon: FileCheck2 },
               { id: 'logs', title: 'Registro de Logs', text: 'Auditoria, histórico técnico e rastreabilidade.', icon: ClipboardList },
             ].map(({ id, title, text, icon: Icon }) => (
-              <button key={id} type="button" onClick={() => id === 'personalization' ? setPersonalizationHubOpen(true) : setActiveSettingsPanel(id as any)} className="portal-settings-title-bar flex w-full items-center gap-3 rounded-xl border border-slate-300 bg-[#d5dce0] px-3.5 py-3 text-left shadow-sm">
-                <Icon className="h-5 w-5 shrink-0 text-[#337959]" />
-                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[10px] text-slate-600">{text}</span></span>
-                <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
+              <button key={id} type="button" onClick={() => id === 'personalization' ? setPersonalizationHubOpen(true) : setActiveSettingsPanel(id as any)} className="portal-settings-title-bar flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left text-white shadow-sm" style={{ backgroundColor: 'var(--portal-green-action)', borderColor: 'var(--portal-green-action-border)' }}>
+                <Icon className="h-5 w-5 shrink-0 text-white" />
+                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-white">{title}</strong><span className="mt-0.5 block text-[10px] text-white/85">{text}</span></span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-white/80" />
               </button>
             ))}
           </section>
@@ -2255,7 +2254,7 @@ export const ConfiguracoesPage: React.FC = () => {
                 ] : activeSettingsPanel === 'access' ? [
                   { id: 'authorizations', label: 'Autorizações de acesso', description: 'Gerencie discentes e demais perfis autorizados.', icon: Lock, content: <AuthorizedStudentsPanel canManage /> },
                 ] : activeSettingsPanel === 'models' ? [
-                  { id: 'studio', label: 'Estúdio de modelos e variáveis', description: 'Documentos, e-mails, formulários, fluxos e variáveis em um único ambiente.', icon: Layers, content: <div id="portal-models-workspace" className="space-y-3"><MasterDocumentModelsPanel /><IntegrationStudioPanel actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
+                  { id: 'studio', label: 'Estúdio de modelos e variáveis', description: 'Documentos, e-mails, formulários, fluxos e variáveis em um único ambiente.', icon: Layers, content: <div id="portal-models-workspace"><IntegrationStudioPanel actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'signatures' ? [
                   { id: 'signature-ledger', label: 'Registros de assinatura', description: 'Documentos enviados, método e situação.', icon: FileCheck2, content: <AstenLogsPage /> },
                 ] : [

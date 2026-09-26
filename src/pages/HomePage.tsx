@@ -67,7 +67,7 @@ import {
   LOGIN_POPUP_CONFIG_EVENT
 } from '../utils/loginPopupConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
-import { DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter } from '../utils/defenseSemantics';
+import { DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseCalendarSummaryParts, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter } from '../utils/defenseSemantics';
 import { getPortalToneCssVars } from '../utils/portalSemanticTokens';
 
 interface HomePageProps {
@@ -1306,15 +1306,17 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <div className="mt-1 flex-1 min-h-0 space-y-1 w-full">
                         {dayDefenses.map((proc) => {
                           const defenseState = getDefenseState(proc);
+                          const summary = getDefenseCalendarSummaryParts(proc);
                           return (
                             <span
                               key={proc.id}
                               className="portal-calendar-defense-summary portal-semantic-tone"
                               style={getPortalToneCssVars(defenseState)}
                               data-defense-state={defenseState}
-                              title={formatDefenseCalendarSummary(proc, 160)}
+                              title={summary.fullText}
                             >
-                              {formatDefenseCalendarSummary(proc)}
+                              <span className="portal-calendar-defense-primary">{summary.primary}</span>
+                              <span className="portal-calendar-defense-secondary">{summary.secondary}</span>
                             </span>
                           );
                         })}
@@ -1324,7 +1326,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           const startLabel = ev.start
                             ? new Date(ev.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
                             : 'Horário a definir';
-                          const summary = [startLabel, parsed.trabalho, parsed.aluno, parsed.local].filter(Boolean).join(' · ');
+                          const primary = [startLabel, parsed.trabalho].filter(Boolean).join(' · ');
+                          const secondary = parsed.aluno || 'Discente não identificado';
+                          const summary = [primary, secondary].filter(Boolean).join('\n');
                           return (
                             <span
                               key={ev.id}
@@ -1333,7 +1337,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                               data-defense-state={defenseState}
                               title={summary}
                             >
-                              {summary}
+                              <span className="portal-calendar-defense-primary">{primary}</span>
+                              <span className="portal-calendar-defense-secondary">{secondary}</span>
                             </span>
                           );
                         })}
@@ -1872,6 +1877,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           }`}
                         >
                           {chip.emoji && <span>{chip.emoji}</span>}
+                          {chip.dotColor && <span className="portal-filter-color-dot" aria-hidden="true" style={{ backgroundColor: chip.dotColor }} />}
                           <span>{chip.label}</span>
                         </button>
                       );
