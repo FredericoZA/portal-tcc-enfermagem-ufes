@@ -63,3 +63,151 @@
   border-color: #fff !important;
 }
 .portal-modal-surface > div:first-child button * { color: #000 !important; }
+
+/* --------------------------------------------------------------------------
+ * Homologação 27/09/2026 — correções visuais validadas pelo usuário.
+ * Esta seção é a autoridade final somente para os sete pontos abaixo.
+ * ----------------------------------------------------------------------- */
+
+/* 1/3 — Filtros semânticos: a cor pertence ao significado do filtro, não ao
+ * estado selecionado. Seleção é indicada por contorno, sem trocar a paleta. */
+#formal-monthly-calendar-section button.portal-table-filter-chip {
+  opacity: 1 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+#formal-monthly-calendar-section button.portal-table-filter-chip:nth-child(1) {
+  background: var(--portal-neutral-bg) !important;
+  border-color: var(--portal-neutral-border) !important;
+  color: var(--portal-neutral-text) !important;
+}
+#formal-monthly-calendar-section button.portal-table-filter-chip:nth-child(2) {
+  background: var(--portal-defense-upcoming-bg) !important;
+  border-color: var(--portal-defense-upcoming-border) !important;
+  color: var(--portal-defense-upcoming-text) !important;
+}
+#formal-monthly-calendar-section button.portal-table-filter-chip:nth-child(3) {
+  background: var(--portal-defense-defended-bg) !important;
+  border-color: var(--portal-defense-defended-border) !important;
+  color: var(--portal-defense-defended-text) !important;
+}
+#formal-monthly-calendar-section button.portal-table-filter-chip[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 1px currentColor !important;
+}
+#formal-monthly-calendar-section button.portal-table-filter-chip::before {
+  content: "";
+  width: .65rem;
+  height: .65rem;
+  min-width: .65rem;
+  min-height: .65rem;
+  flex: 0 0 .65rem;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: .58;
+}
+
+/* Meus TCCs: cores por vínculo permanecem visíveis mesmo quando o filtro não
+ * está selecionado. O título já contém o rótulo semântico de cada botão. */
+#meus-processos-page-container .portal-standard-filter-chip {
+  opacity: 1 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+#meus-processos-page-container .portal-standard-filter-chip[title*="Aluno"] {
+  background: var(--portal-role-student-bg) !important;
+  border-color: var(--portal-role-student-border) !important;
+  color: var(--portal-role-student-text) !important;
+}
+#meus-processos-page-container .portal-standard-filter-chip[title*="Banca"] {
+  background: var(--portal-role-board-bg) !important;
+  border-color: var(--portal-role-board-border) !important;
+  color: var(--portal-role-board-text) !important;
+}
+#meus-processos-page-container .portal-standard-filter-chip[title*="Avaliador"] {
+  background: var(--portal-role-evaluator-bg) !important;
+  border-color: var(--portal-role-evaluator-border) !important;
+  color: var(--portal-role-evaluator-text) !important;
+}
+#meus-processos-page-container .portal-standard-filter-chip[title*="Visualizador"] {
+  background: var(--portal-role-viewer-bg) !important;
+  border-color: var(--portal-role-viewer-border) !important;
+  color: var(--portal-role-viewer-text) !important;
+}
+#meus-processos-page-container .portal-standard-filter-chip[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 1px currentColor !important;
+}
+
+/* 4 — Presidência: filtro e status usam literalmente a mesma paleta. */
+#coordenador-page-root .portal-coordinator-filter-row .portal-standard-filter-chip {
+  opacity: 1 !important;
+  transform: none !important;
+}
+#coordenador-page-root .portal-coordinator-filter-row .portal-standard-filter-chip:nth-child(1) {
+  background: var(--portal-signature-pending-bg) !important;
+  border-color: var(--portal-signature-pending-border) !important;
+  color: var(--portal-signature-pending-text) !important;
+}
+#coordenador-page-root .portal-coordinator-filter-row .portal-standard-filter-chip:nth-child(2) {
+  background: var(--portal-signature-signed-bg) !important;
+  border-color: var(--portal-signature-signed-border) !important;
+  color: var(--portal-signature-signed-text) !important;
+}
+#coordenador-page-root .portal-coordinator-filter-row .portal-standard-filter-chip[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 1px currentColor !important;
+}
+
+/* Bolinha cromática: 30% maior que o antigo 0,5rem. */
+.portal-filter-dot {
+  width: .65rem !important;
+  height: .65rem !important;
+  min-width: .65rem !important;
+  min-height: .65rem !important;
+  flex-basis: .65rem !important;
+}
+
+/* 2 — Indicadores: mantém o separador superior do cabeçalho e remove somente
+ * a segunda faixa interna redundante. */
+#indicadores-publicos-page > .portal-section-divider {
+  display: none !important;
+}
+
+/* 5 — Workspaces de uma única planilha: o título já existe no cabeçalho do
+ * modal. A faixa interna vira apenas uma toolbar de ações e deixa a planilha
+ * começar imediatamente abaixo do cabeçalho externo. */
+.portal-settings-single-pane #audit-logs-page > header,
+.portal-settings-single-pane #asten-logs-page > header,
+.portal-settings-single-pane #authorized-access-panel > div:first-child {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 0 .5rem !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #111827 !important;
+  box-shadow: none !important;
+}
+.portal-settings-single-pane #audit-logs-page > header > div:first-child,
+.portal-settings-single-pane #asten-logs-page > header > div:first-child,
+.portal-settings-single-pane #authorized-access-panel > div:first-child > div:first-child {
+  display: none !important;
+}
+.portal-settings-single-pane #audit-logs-page,
+.portal-settings-single-pane #asten-logs-page,
+.portal-settings-single-pane #authorized-access-panel {
+  border-top: 0 !important;
+  border-radius: 0 0 .75rem .75rem !important;
+  box-shadow: none !important;
+}
+
+/* 7 — A tela principal de Configurações usa uma única cor: o mesmo verde dos
+ * títulos/cabeçalhos institucionais. */
+#portal-settings-hub .portal-settings-title-bar,
+#portal-settings-hub .portal-settings-title-bar:hover,
+#portal-settings-hub .portal-settings-title-bar:active {
+  background: var(--portal-v46-green-dark) !important;
+  border-color: var(--portal-v46-green-dark) !important;
+  color: #fff !important;
+  filter: none !important;
+}
+#portal-settings-hub .portal-settings-title-bar * {
+  color: #fff !important;
+}
