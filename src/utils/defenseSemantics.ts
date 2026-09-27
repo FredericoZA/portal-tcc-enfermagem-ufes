@@ -57,7 +57,19 @@ export function getDefenseCalendarSummaryParts(
 
 export function formatDefenseCalendarSummary(
   process: Pick<ProcessData, 'titulo' | 'defesa' | 'aluno1' | 'aluno2'>,
+  maxTitleLength = 46,
 ): string {
-  const { primary, secondary } = getDefenseCalendarSummaryParts(process);
-  return [primary, secondary].filter(Boolean).join(' · ');
+  const timestamp = validTimestamp(process.defesa?.startAt);
+  const time = timestamp === null
+    ? 'Horário a definir'
+    : new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const normalizedTitle = String(process.titulo || 'Trabalho de Conclusão de Curso').replace(/\s+/g, ' ').trim();
+  const title = normalizedTitle.length > maxTitleLength
+    ? `${normalizedTitle.slice(0, Math.max(1, maxTitleLength - 1)).trimEnd()}…`
+    : normalizedTitle;
+  const students = [process.aluno1?.nome, process.aluno2?.nome]
+    .map((name) => String(name || '').replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .join(' · ');
+  return [time, title, students].filter(Boolean).join(' · ');
 }
