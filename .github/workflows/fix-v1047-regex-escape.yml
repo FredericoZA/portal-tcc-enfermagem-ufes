@@ -1,0 +1,35 @@
+name: Fix v1047 regex escape
+
+on:
+  push:
+    branches:
+      - refactor/global-ui-configuration-2026-09-26
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/global-ui-configuration-2026-09-26
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/fix-v1047-regex-escape.mjs
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:unit
+      - run: npm run build
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/IntegrationStudioPanel.tsx
+          if ! git diff --cached --quiet; then
+            git commit -m "fix: completa escape de regex da prévia de e-mail"
+            git push origin HEAD:refactor/global-ui-configuration-2026-09-26
+          fi
