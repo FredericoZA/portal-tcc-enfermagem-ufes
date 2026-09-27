@@ -155,6 +155,16 @@
 #coordenador-page-root .portal-coordinator-filter-row .portal-standard-filter-chip[aria-pressed="true"] {
   box-shadow: inset 0 0 0 1px currentColor !important;
 }
+#coordenador-page-root tbody span.bg-amber-50 {
+  background: var(--portal-signature-pending-bg) !important;
+  border-color: var(--portal-signature-pending-border) !important;
+  color: var(--portal-signature-pending-text) !important;
+}
+#coordenador-page-root tbody span.bg-emerald-100 {
+  background: var(--portal-signature-signed-bg) !important;
+  border-color: var(--portal-signature-signed-border) !important;
+  color: var(--portal-signature-signed-text) !important;
+}
 
 /* Bolinha cromática: 30% maior que o antigo 0,5rem. */
 .portal-filter-dot {
