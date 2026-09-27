@@ -69,8 +69,7 @@
  * Esta seção é a autoridade final somente para os sete pontos abaixo.
  * ----------------------------------------------------------------------- */
 
-/* 1/3 — Filtros semânticos: a cor pertence ao significado do filtro, não ao
- * estado selecionado. Seleção é indicada por contorno, sem trocar a paleta. */
+/* 1/3 — Lista de Defesas: cada estado mantém a própria cor semântica. */
 #formal-monthly-calendar-section button.portal-table-filter-chip {
   opacity: 1 !important;
   box-shadow: none !important;
@@ -106,35 +105,25 @@
   opacity: .58;
 }
 
-/* Meus TCCs: cores por vínculo permanecem visíveis mesmo quando o filtro não
- * está selecionado. O título já contém o rótulo semântico de cada botão. */
+/* Meus TCCs: a identidade por vínculo aparece SOMENTE na bolinha. O botão
+ * permanece neutro; seleção usa o cinza institucional aprovado. */
 #meus-processos-page-container .portal-standard-filter-chip {
   opacity: 1 !important;
   box-shadow: none !important;
   transform: none !important;
-}
-#meus-processos-page-container .portal-standard-filter-chip[title*="Aluno"] {
-  background: var(--portal-role-student-bg) !important;
-  border-color: var(--portal-role-student-border) !important;
-  color: var(--portal-role-student-text) !important;
-}
-#meus-processos-page-container .portal-standard-filter-chip[title*="Banca"] {
-  background: var(--portal-role-board-bg) !important;
-  border-color: var(--portal-role-board-border) !important;
-  color: var(--portal-role-board-text) !important;
-}
-#meus-processos-page-container .portal-standard-filter-chip[title*="Avaliador"] {
-  background: var(--portal-role-evaluator-bg) !important;
-  border-color: var(--portal-role-evaluator-border) !important;
-  color: var(--portal-role-evaluator-text) !important;
-}
-#meus-processos-page-container .portal-standard-filter-chip[title*="Visualizador"] {
-  background: var(--portal-role-viewer-bg) !important;
-  border-color: var(--portal-role-viewer-border) !important;
-  color: var(--portal-role-viewer-text) !important;
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #1f2937 !important;
 }
 #meus-processos-page-container .portal-standard-filter-chip[aria-pressed="true"] {
-  box-shadow: inset 0 0 0 1px currentColor !important;
+  background: #AEB0B3 !important;
+  border-color: #979a9d !important;
+  color: #111827 !important;
+  box-shadow: none !important;
+}
+#meus-processos-page-container .portal-standard-filter-chip > span:last-child {
+  background: #6b7280 !important;
+  color: #ffffff !important;
 }
 
 /* 4 — Presidência: filtro e status usam literalmente a mesma paleta. */
