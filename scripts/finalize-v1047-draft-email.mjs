@@ -5,7 +5,30 @@ const once=(a,b,label)=>{if(s.includes(b))return;if(!s.includes(a))throw new Err
 if(!s.includes('const PREVIEW_VARIABLES')){
  const anchor="function formatAuditAction(action: string): string {";
  const i=s.indexOf(anchor); if(i<0)throw new Error('preview helper anchor');
- const helper=`const PREVIEW_VARIABLES: Record<string,string> = {\n  TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TCC_TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TITULO_TRABALHO:'Segurança do paciente e qualidade da assistência de enfermagem', CAMPO_02:'Segurança do paciente e qualidade da assistência de enfermagem',\n  ALUNOS_NOMES:'Ana Carolina Souza e Bruno Martins Lima', ALUNO_NOME:'Ana Carolina Souza', NOME_ALUNO:'Ana Carolina Souza', CAMPO_01:'Ana Carolina Souza e Bruno Martins Lima',\n  ORIENTADOR_NOME:'Profa. Dra. Maria Silva', CAMPO_03:'Profa. Dra. Maria Silva', DEFESA_DATA_HORA:'15 de outubro de 2026 às 14h', DEFESA_DATA_HORA_EXTENSO:'15 de outubro de 2026 às 14h', CAMPO_04:'15 de outubro de 2026 às 14h',\n  DEFESA_LOCAL:'Auditório do CCS — UFES', LOCAL_DEFESA:'Auditório do CCS — UFES', CAMPO_07_LOCAL:'Auditório do CCS — UFES', PROTOCOLO:'2026-999', CAMPO_12:'2026-999'\n};\nfunction applyPreviewVariables(value:string):string{\n let out=String(value||'');\n for(const[key,replacement]of Object.entries(PREVIEW_VARIABLES)){\n  const escaped=key.replace(/[.*+?^\\${}()|[\\]\\\\]/g,'\\\\$&');\n  for(const pattern of [new RegExp('\\\\{\\\\{\\\\s*'+escaped+'\\\\s*\\\\}\\\\}','gi'),new RegExp('<<\\\\s*'+escaped+'\\\\s*>>','gi'),new RegExp('\\\\[\\\\[\\\\s*'+escaped+'\\\\s*\\\\]\\\\]','gi'),new RegExp('«\\\\s*'+escaped+'\\\\s*»','gi'),new RegExp('-'+escaped+'-','gi')]) out=out.replace(pattern,replacement);\n }\n return out;\n}\n\n`;
+ const helper=[
+  "const PREVIEW_VARIABLES: Record<string,string> = {",
+  "  TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TCC_TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TITULO_TRABALHO:'Segurança do paciente e qualidade da assistência de enfermagem', CAMPO_02:'Segurança do paciente e qualidade da assistência de enfermagem',",
+  "  ALUNOS_NOMES:'Ana Carolina Souza e Bruno Martins Lima', ALUNO_NOME:'Ana Carolina Souza', NOME_ALUNO:'Ana Carolina Souza', CAMPO_01:'Ana Carolina Souza e Bruno Martins Lima',",
+  "  ORIENTADOR_NOME:'Profa. Dra. Maria Silva', CAMPO_03:'Profa. Dra. Maria Silva', DEFESA_DATA_HORA:'15 de outubro de 2026 às 14h', DEFESA_DATA_HORA_EXTENSO:'15 de outubro de 2026 às 14h', CAMPO_04:'15 de outubro de 2026 às 14h',",
+  "  DEFESA_LOCAL:'Auditório do CCS — UFES', LOCAL_DEFESA:'Auditório do CCS — UFES', CAMPO_07_LOCAL:'Auditório do CCS — UFES', PROTOCOLO:'2026-999', CAMPO_12:'2026-999'",
+  "};",
+  "function applyPreviewVariables(value:string):string{",
+  " let out=String(value||'');",
+  " for(const[key,replacement]of Object.entries(PREVIEW_VARIABLES)){",
+  "  const escaped=key.replace(/[.*+?^$()|[\\]{}]/g,'\\\\$&');",
+  "  const patterns=[",
+  "   new RegExp('\\\\{\\\\{\\\\s*'+escaped+'\\\\s*\\\\}\\\\}','gi'),",
+  "   new RegExp('<<\\\\s*'+escaped+'\\\\s*>>','gi'),",
+  "   new RegExp('\\\\[\\\\[\\\\s*'+escaped+'\\\\s*\\\\]\\\\]','gi'),",
+  "   new RegExp('«\\\\s*'+escaped+'\\\\s*»','gi'),",
+  "   new RegExp('-'+escaped+'-','gi')",
+  "  ];",
+  "  for(const pattern of patterns) out=out.replace(pattern,replacement);",
+  " }",
+  " return out;",
+  "}",
+  ""
+ ].join('\n');
  s=s.slice(0,i)+helper+s.slice(i);
 }
 if(!s.includes('const flushDraftRef = useRef')){
