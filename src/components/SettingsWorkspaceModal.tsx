@@ -25,7 +25,6 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
   }, [open, activeId, firstId, sections]);
   const current = useMemo(() => sections.find((section) => section.id === activeId) || sections[0], [sections, activeId]);
   if (!open || !current) return null;
-  const CurrentIcon = current.icon;
   const singlePane = sections.length === 1;
 
   return <div className="fixed inset-0 z-[1000005] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
@@ -69,7 +68,6 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
             </div>
           </aside>
           <main className="min-w-0 flex-1 overflow-y-auto p-3 sm:p-4" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
-            <div className="mb-3 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-white shadow-sm" style={{ backgroundColor: 'var(--portal-green-action)', borderColor: 'var(--portal-green-action-border)' }}>{CurrentIcon && <CurrentIcon className="h-4 w-4"/>}<div><h3 className="text-xs font-black uppercase tracking-wide">{current.label}</h3>{current.description && <p className="mt-0.5 text-[10px] text-white/80">{current.description}</p>}</div></div>
             <div className="portal-settings-workspace-content min-w-0 rounded-xl" style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>{current.content}</div>
           </main>
         </div>
