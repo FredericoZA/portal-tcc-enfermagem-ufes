@@ -235,3 +235,6 @@
   border: 1px solid #cbd5e1;
   border-radius: .75rem;
 }
+
+/* Variáveis: manutenção compacta e orientada à ação. */
+.portal-studio-variable-maintenance > div{padding:.625rem!important;box-shadow:none!important}.portal-studio-variable-maintenance>div>p{display:none!important}.portal-studio-variable-maintenance .mt-3{margin-top:.5rem!important}.portal-studio-variable-maintenance :is(input,select,button){min-height:2rem}

@@ -4,6 +4,10 @@ import { OperationalDesignerPanel } from './OperationalDesignerPanel';
 import { operationalConfig as resolveOperationalConfig } from '../utils/operationalConfig';
 import type { OperationalConfig } from '../types/operationalConfig';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 import {
   Activity,
   AtSign,
@@ -122,6 +126,37 @@ function safeHtmlText(value: string): string {
     .replace(/'/g, '&#039;');
 }
 
+const PREVIEW_VARIABLES: Record<string,string> = {
+  TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TCC_TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TITULO_TRABALHO:'Segurança do paciente e qualidade da assistência de enfermagem', CAMPO_02:'Segurança do paciente e qualidade da assistência de enfermagem',
+  ALUNOS_NOMES:'Ana Carolina Souza e Bruno Martins Lima', ALUNO_NOME:'Ana Carolina Souza', NOME_ALUNO:'Ana Carolina Souza', CAMPO_01:'Ana Carolina Souza e Bruno Martins Lima',
+  ORIENTADOR_NOME:'Profa. Dra. Maria Silva', CAMPO_03:'Profa. Dra. Maria Silva', DEFESA_DATA_HORA:'15 de outubro de 2026 às 14h', DEFESA_DATA_HORA_EXTENSO:'15 de outubro de 2026 às 14h', CAMPO_04:'15 de outubro de 2026 às 14h',
+  DEFESA_LOCAL:'Auditório do CCS — UFES', LOCAL_DEFESA:'Auditório do CCS — UFES', CAMPO_07_LOCAL:'Auditório do CCS — UFES', PROTOCOLO:'2026-999', CAMPO_12:'2026-999'
+};
+function applyPreviewVariables(value:string):string{
+ let out=String(value||'');
+ for(const[key,replacement]of Object.entries(PREVIEW_VARIABLES)){
+  const escaped=key.replace(/[.*+?^$()|[\]{}]/g,'\\$&');
+  const patterns=[
+   new RegExp('\\{\\{\\s*'+escaped+'\\s*\\}\\}','gi'),
+   new RegExp('<<\\s*'+escaped+'\\s*>>','gi'),
+   new RegExp('\\[\\[\\s*'+escaped+'\\s*\\]\\]','gi'),
+   new RegExp('«\\s*'+escaped+'\\s*»','gi'),
+   new RegExp('-'+escaped+'-','gi')
+  ];
+  for(const pattern of patterns) out=out.replace(pattern,replacement);
+ }
+ return out;
+}
+const PdfCanvasPreview: React.FC<{base64?:string;remoteUrl?:string;label:string}> = ({base64,remoteUrl,label}) => {
+ const hostRef=useRef<HTMLDivElement|null>(null); const [error,setError]=useState('');
+ useEffect(()=>{ let cancelled=false; const host=hostRef.current; if(!host)return; host.replaceChildren(); setError(''); if(!base64&&!remoteUrl)return;
+  void (async()=>{try{ let bytes:Uint8Array; if(base64){const bin=atob(base64);bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);}else{const response=await fetch(String(remoteUrl));if(!response.ok)throw new Error('Falha ao carregar o PDF de prévia.');bytes=new Uint8Array(await response.arrayBuffer());}
+   const pdf=await getDocument({data:bytes}).promise;if(cancelled)return;for(let pageNumber=1;pageNumber<=pdf.numPages;pageNumber++){const page=await pdf.getPage(pageNumber);if(cancelled)return;const viewport=page.getViewport({scale:1.2});const canvas=document.createElement('canvas');canvas.width=Math.floor(viewport.width);canvas.height=Math.floor(viewport.height);canvas.className='mx-auto mb-4 h-auto max-w-full bg-white shadow-sm';canvas.setAttribute('aria-label',label+' — página '+pageNumber);host.appendChild(canvas);const context=canvas.getContext('2d');if(!context)throw new Error('Canvas indisponível.');await page.render({canvasContext:context,viewport,canvas}).promise;}
+  }catch(err){if(!cancelled)setError(err instanceof Error?err.message:'Não foi possível renderizar a prévia.');}})(); return()=>{cancelled=true;host.replaceChildren();};
+ },[base64,remoteUrl,label]);
+ return <div className="min-h-[420px]">{error?<div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800">{error}</div>:null}<div ref={hostRef} className="max-h-[72vh] overflow-auto rounded-xl bg-slate-200 p-4"/></div>;
+};
+
 function formatAuditAction(action: string): string {
   const labels: Record<string, string> = {
     STUDIO_SAVED: 'Estúdio salvo', DRIVE_SCAN: 'Drive sincronizado', DRIVE_TEMPLATE_UPDATED: 'Google Docs atualizado',
@@ -191,6 +226,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [selectedFormId, setSelectedFormId] = useState(formTemplates[0]?.id || '');
   const [selectedVariableId, setSelectedVariableId] = useState(matrixColumns[0]?.id || '');
   const [selectedFormQuestionId, setSelectedFormQuestionId] = useState(formTemplates[0]?.questions?.[0]?.id || '');
+  const [selectedWorkflowStageId, setSelectedWorkflowStageId] = useState(workflowStages[0]?.id || '');
+  const [documentPreview, setDocumentPreview] = useState<{docId:string;base64?:string;remoteUrl?:string;analysis?:unknown}|null>(null);
+  const [documentPreviewLoading, setDocumentPreviewLoading] = useState(false);
+  const [documentPreviewError, setDocumentPreviewError] = useState('');
+  const documentPreviewRequestRef = useRef(0);
   const [variableDraft, setVariableDraft] = useState<MatrixColumn | null>(matrixColumns[0] || null);
   const [mergeSourceId, setMergeSourceId] = useState('');
   const [mergeTargetId, setMergeTargetId] = useState('');
@@ -205,6 +245,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   useEffect(() => { if (initialTab) setActiveTab(initialTab); }, [initialTab]);
 
   const selectedDoc = docTemplates.find((item) => item.id === selectedDocId) || docTemplates[0];
+  useEffect(()=>{documentPreviewRequestRef.current+=1;setDocumentPreview(null);setDocumentPreviewError('');setDocumentPreviewLoading(false);},[selectedDocId]);
   const selectedEmail = emailTemplates.find((item) => item.id === selectedEmailId) || emailTemplates[0];
   const selectedForm = formTemplates.find((item) => item.id === selectedFormId) || formTemplates[0];
   useEffect(() => {
@@ -328,6 +369,9 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   });
 
   const draftFingerprint = useMemo(() => JSON.stringify({ brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl }), [brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl]);
+  const flushDraftRef = useRef<() => void>(()=>{});
+  flushDraftRef.current = () => { if(!hasHydratedRef.current||!isDirty||isSaving)return; const draft=buildSnapshot(); draft.revision=revision; draft.savedAt=new Date().toISOString(); draft.publication={status:'DRAFT',publishedRevision:initialMeta.publication?.publishedRevision,publishedAt:initialMeta.publication?.publishedAt,validationScore:validationReport.score}; saveLocalStudio(draft); };
+  useEffect(()=>()=>flushDraftRef.current(),[]);
 
   useEffect(() => {
     if (!hasHydratedRef.current || !isDirty || isSaving) return;
@@ -405,6 +449,15 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     if (!selectedDoc) return;
     recordAudit(createAuditEntry('DOCUMENT_UPDATED', 'document', selectedDoc.id, `Modelo "${selectedDoc.label}" atualizado no estúdio.`, actorEmail));
     notify('Modelo atualizado e colocado na fila de persistência.');
+  };
+
+  const generateFaithfulDocumentPreview = async () => {
+    if(!selectedDoc)return; const raw=String(selectedDoc.type||selectedDoc.id||'').toUpperCase(); const type=(['CONVITE','ATA','TERMO','DECLARACAO'] as const).find(item=>raw.includes(item));
+    if(!type){setDocumentPreviewError('Associe este modelo a um tipo oficial antes de gerar a prévia.');return;}
+    const requestId=++documentPreviewRequestRef.current; const requestedDocId=selectedDoc.id; setDocumentPreviewLoading(true);setDocumentPreviewError('');
+    try{const response=await apiClient.previewDocumentModel(type,buildSnapshot());if(requestId!==documentPreviewRequestRef.current||requestedDocId!==selectedDocId)return;setDocumentPreview({docId:requestedDocId,base64:response.contentBase64,remoteUrl:response.downloadUrl,analysis:response.analysis});}
+    catch(error:any){if(requestId===documentPreviewRequestRef.current)setDocumentPreviewError(error?.message||'Não foi possível gerar a prévia fiel.');}
+    finally{if(requestId===documentPreviewRequestRef.current)setDocumentPreviewLoading(false);}
   };
 
   const updateSelectedEmail = (updates: Partial<EmailTemplateItem>) => {
@@ -676,7 +729,9 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   ] as const;
   const addWorkflowStage = () => {
     const stageNumber=workflowStages.length+1;
-    setWorkflowStages(previous=>[...previous,{id:`stage-${Date.now()}`,stageNumber,title:`Nova etapa ${stageNumber}`,triggerEvent:'TCC_CREATED',description:'Descreva a condição e o resultado esperado desta etapa.',actions:[]}]);
+    const id=`stage-${Date.now()}`;
+    setWorkflowStages(previous=>[...previous,{id,stageNumber,title:`Nova etapa ${stageNumber}`,triggerEvent:'TCC_CREATED',description:'Descreva a condição e o resultado esperado desta etapa.',actions:[]}]);
+    setSelectedWorkflowStageId(id);
     setIsDirty(true);
   };
   const updateWorkflowStage = (id:string,patch:Partial<WorkflowStageItem>) => {setWorkflowStages(previous=>previous.map(stage=>stage.id===id?{...stage,...patch}:stage));setIsDirty(true);};
@@ -765,12 +820,12 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
   const emailPreviewHtml = useMemo(() => {
     if (!selectedEmail) return '';
-    const body = selectedEmail.htmlBody?.trim()
-      ? selectedEmail.htmlBody
-      : `<div style="white-space:pre-wrap">${safeHtmlText(selectedEmail.body || '')}</div>`;
+    const previewSubject=applyPreviewVariables(selectedEmail.subject);
+    const bodySource=applyPreviewVariables(selectedEmail.htmlBody?.trim()?selectedEmail.htmlBody:selectedEmail.body||'');
+    const body = selectedEmail.htmlBody?.trim()?bodySource:`<div style="white-space:pre-wrap">${safeHtmlText(bodySource)}</div>`;
     const logo = selectedEmailDesign.logoUrl || brandKit.courseLogoUrl;
     const hero = selectedEmailDesign.heroImageUrl || brandKit.emailBannerUrl;
-    return `<!doctype html><html><body style="margin:0;background:#eef2f6;font-family:${brandKit.fontFamily},Arial,sans-serif;color:${brandKit.textColor}"><div style="max-width:${selectedEmailDesign.contentWidth}px;margin:24px auto;background:#fff;border-radius:${selectedEmailDesign.borderRadius}px;overflow:hidden;border:1px solid #dbe3ea"><div style="padding:20px 24px;background:${brandKit.primaryColor};color:#fff">${logo ? `<img src="${logo}" alt="Logo" style="height:54px;max-width:160px;object-fit:contain;background:#fff;border-radius:8px;padding:4px">` : ''}<div style="font-size:12px;margin-top:10px;letter-spacing:.08em;text-transform:uppercase">${safeHtmlText(brandKit.courseName)}</div></div>${hero ? `<img src="${hero}" alt="Banner" style="width:100%;max-height:220px;object-fit:cover">` : ''}<div style="padding:26px"><h2 style="margin:0 0 18px;color:${brandKit.secondaryColor};font-size:20px">${safeHtmlText(selectedEmail.subject)}</h2><div style="font-size:14px;line-height:1.65">${body}</div>${selectedEmailDesign.buttonLabel ? `<p style="margin:24px 0 0"><a href="#" style="display:inline-block;background:${brandKit.primaryColor};color:white;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700">${safeHtmlText(selectedEmailDesign.buttonLabel)}</a></p>` : ''}</div><div style="padding:16px 24px;background:#f5f7f9;border-top:1px solid #e3e8ee;font-size:11px;color:#5b6573">${safeHtmlText(selectedEmailDesign.footerText)}</div></div></body></html>`;
+    return `<!doctype html><html><body style="margin:0;background:#eef2f6;font-family:${brandKit.fontFamily},Arial,sans-serif;color:${brandKit.textColor}"><div style="max-width:${selectedEmailDesign.contentWidth}px;margin:24px auto;background:#fff;border-radius:${selectedEmailDesign.borderRadius}px;overflow:hidden;border:1px solid #dbe3ea"><div style="padding:20px 24px;background:${brandKit.primaryColor};color:#fff">${logo ? `<img src="${logo}" alt="Logo" style="height:54px;max-width:160px;object-fit:contain;background:#fff;border-radius:8px;padding:4px">` : ''}<div style="font-size:12px;margin-top:10px;letter-spacing:.08em;text-transform:uppercase">${safeHtmlText(brandKit.courseName)}</div></div>${hero ? `<img src="${hero}" alt="Banner" style="width:100%;max-height:220px;object-fit:cover">` : ''}<div style="padding:26px"><h2 style="margin:0 0 18px;color:${brandKit.secondaryColor};font-size:20px">${safeHtmlText(previewSubject)}</h2><div style="font-size:14px;line-height:1.65">${body}</div>${selectedEmailDesign.buttonLabel ? `<p style="margin:24px 0 0"><a href="#" style="display:inline-block;background:${brandKit.primaryColor};color:white;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700">${safeHtmlText(selectedEmailDesign.buttonLabel)}</a></p>` : ''}</div><div style="padding:16px 24px;background:#f5f7f9;border-top:1px solid #e3e8ee;font-size:11px;color:#5b6573">${safeHtmlText(applyPreviewVariables(selectedEmailDesign.footerText))}</div></div></body></html>`;
   }, [selectedEmail, selectedEmailDesign, brandKit]);
 
   const tabs: Array<{ id: StudioTab; label: string; icon: React.ElementType }> = [
@@ -947,7 +1002,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] leading-5 text-slate-700">O arquivo visual permanece no Google Drive; o Portal substitui apenas as variáveis reconhecidas e preserva a formatação do modelo.{selectedDoc.driveFileUrl && <a href={selectedDoc.driveFileUrl} target="_blank" rel="noreferrer" className="mt-2 block font-black underline">Abrir e editar o modelo no Google Drive</a>}</div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="text-[10px] font-black uppercase text-slate-600">Variáveis reconhecidas neste modelo</div><div className="mt-2 flex flex-wrap gap-1.5">{(selectedDoc.variables || []).map((variable) => <code key={variable} className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[9px] text-violet-700">{variable}</code>)}{!(selectedDoc.variables || []).length && <span className="text-[11px] text-slate-500">As variáveis aparecerão após o cadastro do DOCX oficial.</span>}</div></div>
             </div>
-            <div className="rounded-2xl border border-slate-300 bg-slate-100 p-5 sm:p-8"><div className="mx-auto flex min-h-[420px] max-w-[720px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm"><FileText className="mb-4 h-10 w-10 text-emerald-700"/><strong className="text-base text-slate-900">A aparência vem integralmente do DOCX oficial</strong><p className="mt-3 max-w-lg text-xs leading-6 text-slate-600">Para evitar perda de cabeçalhos, tabelas, assinaturas, margens ou paginação, o portal não reestiliza o modelo. Ele cria uma cópia temporária no Google Docs, substitui somente marcadores explícitos, exporta o PDF e preserva o arquivo original.</p><div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] font-semibold text-amber-950">Visualize e altere a diagramação diretamente no arquivo do Google Drive. Use este Estúdio para controlar dados, destinatários, regras e sequência.</div></div></div>
+            <div className="rounded-2xl border border-slate-300 bg-slate-100 p-4 sm:p-5"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><strong className="text-xs uppercase text-slate-900">Prévia fiel do PDF final</strong><p className="mt-1 text-[10px] text-slate-600">Mesmo pipeline oficial do Google Drive, com dados fictícios estáveis; o modelo original não é alterado.</p></div><button type="button" onClick={()=>void generateFaithfulDocumentPreview()} disabled={documentPreviewLoading} className="portal-action border-emerald-700 bg-emerald-700 text-white disabled:opacity-50"><FileText className="h-3.5 w-3.5"/>{documentPreviewLoading?'Gerando…':'Gerar prévia fiel'}</button></div>{documentPreviewError?<div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-800">{documentPreviewError}</div>:null}{documentPreview?.docId===selectedDoc.id?<PdfCanvasPreview base64={documentPreview.base64} remoteUrl={documentPreview.remoteUrl} label={selectedDoc.label}/>:<div className="flex min-h-[420px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-600">Gere a amostra para conferir margens, cores, paginação, tabelas e substituição das variáveis.</div>}</div>
           </div>
         )}
 
@@ -1026,9 +1081,9 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                   <input aria-label="Título da etapa" value={stage.title} onChange={event=>updateWorkflowStage(stage.id,{title:event.target.value})} className={`${inputClass} min-w-[220px] flex-1 font-bold`}/>
                   <button type="button" onClick={()=>moveWorkflowStage(index,-1)} disabled={index===0} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-bold disabled:opacity-30">↑</button>
                   <button type="button" onClick={()=>moveWorkflowStage(index,1)} disabled={index===workflowStages.length-1} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-bold disabled:opacity-30">↓</button>
-                  <button type="button" onClick={()=>removeWorkflowStage(stage.id)} className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5"/></button>
+                  <button type="button" onClick={()=>setSelectedWorkflowStageId(selectedWorkflowStageId===stage.id?'':stage.id)} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[9px] font-black uppercase text-slate-700">{selectedWorkflowStageId===stage.id?'Ocultar':'Editar'}</button><button type="button" onClick={()=>removeWorkflowStage(stage.id)} className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5"/></button>
                 </div>
-                <div className="space-y-3 p-4">
+                <div className={selectedWorkflowStageId===stage.id?'space-y-3 p-4':'hidden'}>
                   <div className="grid gap-3 md:grid-cols-[.8fr_1.2fr]"><div><label className={labelClass}>Evento disparador</label><input list={`workflow-event-catalog-${stage.id}`} value={stage.triggerEvent} onChange={event=>updateWorkflowStage(stage.id,{triggerEvent:event.target.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')})} className={inputClass} placeholder="Ex.: FORM_AVALIACAO_SUBMITTED"/><datalist id={`workflow-event-catalog-${stage.id}`}>{workflowEvents.map(([value,label])=><option key={value} value={value}>{label}</option>)}</datalist><p className="mt-1 text-[9px] text-slate-500">Para formulário personalizado, use FORM_ID_DO_FORMULARIO_SUBMITTED.</p></div><div><label className={labelClass}>Objetivo da etapa</label><input value={stage.description} onChange={event=>updateWorkflowStage(stage.id,{description:event.target.value})} className={inputClass}/></div></div>
                   <div className="space-y-2"><div className="text-[10px] font-black uppercase text-slate-500">Ações em ordem</div>{stage.actions.map((action,actionIndex)=><div key={action.id} draggable onDragStart={event=>{event.stopPropagation();setWorkflowDragPayload(event,{kind:'action',stageId:stage.id,actionId:action.id});}} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="grid gap-2 md:grid-cols-[auto_.8fr_1fr_auto]"><span className="self-center rounded-full bg-white px-2 py-1 text-[9px] font-black text-slate-500">{actionIndex+1}</span><div className="flex gap-1"><button type="button" aria-label={`Mover ${action.title} para cima`} disabled={actionIndex===0} onClick={()=>moveWorkflowAction(stage.id,actionIndex,-1)} className="portal-action">↑</button><button type="button" aria-label={`Mover ${action.title} para baixo`} disabled={actionIndex===stage.actions.length-1} onClick={()=>moveWorkflowAction(stage.id,actionIndex,1)} className="portal-action">↓</button></div><input value={action.title} onChange={event=>updateWorkflowAction(stage.id,action.id,{title:event.target.value})} className={inputClass}/><input value={action.recipientOrDetail||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder="Destinatário ou detalhe"/><button type="button" onClick={()=>removeWorkflowAction(stage.id,action.id)} className="rounded-lg border border-rose-200 bg-white p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5"/></button></div><details className="mt-2 rounded-lg border border-slate-200 bg-white p-2"><summary className="cursor-pointer text-[9px] font-black uppercase text-slate-600">Condição para executar</summary><div className="mt-2 grid gap-2 sm:grid-cols-3"><select value={action.condition?.fieldKey||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:event.target.value?{fieldKey:event.target.value,operator:action.condition?.operator||'EQUALS',value:action.condition?.value||''}:undefined})} className={inputClass}><option value="">Sempre executar</option>{matrixColumns.map(item=><option key={item.id} value={normalizeVariableKey(item.name)}>{item.label||item.name}</option>)}</select>{action.condition&&<><select value={action.condition.operator} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,operator:event.target.value as any}})} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">É verdadeiro</option></select>{!['NOT_EMPTY','IS_TRUE'].includes(action.condition.operator)&&<input value={action.condition.value||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,value:event.target.value}})} className={inputClass} placeholder="Valor esperado"/>}</>}</div></details></div>)}</div>
                   <div><label className={labelClass}>Adicionar ação vinculada</label><select value="" onChange={event=>{if(event.target.value)addWorkflowAction(stage.id,event.target.value);}} className={inputClass}><option value="">Selecione documento, e-mail ou formulário…</option><optgroup label="Documentos">{docTemplates.map(item=><option key={item.id} value={`doc:${item.id}`}>{item.label}</option>)}</optgroup><optgroup label="E-mails">{emailTemplates.map(item=><option key={item.id} value={`email:${item.id}`}>{item.name}</option>)}</optgroup><optgroup label="Formulários">{formTemplates.map(item=><option key={item.id} value={`form:${item.id}`}>{item.title}</option>)}</optgroup></select></div>
@@ -1040,7 +1095,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
         {activeTab === 'variables' && (
           <div className="space-y-4">
-            <div className="grid gap-4 xl:grid-cols-[.85fr_1.15fr]">
+            <div className="portal-studio-variable-maintenance grid gap-2 lg:grid-cols-2">
               <div className={`${panelClass} p-4`}><div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-700" /><h4 className="text-xs font-black uppercase">Descoberta e consolidação</h4></div><p className="mt-2 text-[11px] leading-relaxed text-slate-600">A varredura cruza modelos do Drive, documentos, assuntos/corpos de e-mail e perguntas dos formulários. Chaves equivalentes são reutilizadas em vez de solicitar a informação novamente.</p><div className="mt-3 flex gap-2"><input value={newVariableKey} onChange={(e) => setNewVariableKey(e.target.value)} className={inputClass} placeholder="Ex.: ALUNO_NOME_COMPLETO" /><button type="button" onClick={handleCreateVariable} className={`${actionClass} shrink-0 border-violet-700 bg-violet-700 text-white`}><Plus className="h-3.5 w-3.5" />Criar</button></div><button type="button" onClick={handleDiscoverVariables} className={`${actionClass} mt-2 w-full border-violet-300 bg-violet-50 text-violet-800`}><RefreshCw className="h-3.5 w-3.5" />Levantar variáveis automaticamente</button></div>
               <div className={`${panelClass} p-4`}><div className="flex items-center gap-2"><Merge className="h-4 w-4 text-emerald-700" /><h4 className="text-xs font-black uppercase">Mesclar sem duplicar requisições</h4></div><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto]"><select value={mergeSourceId} onChange={(e) => setMergeSourceId(e.target.value)} className={inputClass}><option value="">Variável duplicada</option>{matrixColumns.map((column, cIdx) => <option key={`source-${column.id}-${cIdx}`} value={column.id}>{column.label || column.name}</option>)}</select><div className="self-center text-center text-xs font-black text-slate-400">→</div><select value={mergeTargetId} onChange={(e) => setMergeTargetId(e.target.value)} className={inputClass}><option value="">Variável principal</option>{matrixColumns.map((column, cIdx) => <option key={`target-${column.id}-${cIdx}`} value={column.id}>{column.label || column.name}</option>)}</select><button type="button" onClick={handleMergeVariables} disabled={!mergeSourceId || !mergeTargetId || mergeSourceId === mergeTargetId} className={`${actionClass} border-emerald-800 bg-emerald-800 text-white`}><Merge className="h-3.5 w-3.5" />Mesclar</button></div>{variableMergeImpact && <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3 text-[10px] leading-relaxed text-violet-950"><div className="flex items-center gap-1.5 font-black uppercase"><CircleAlert className="h-3.5 w-3.5"/>Impacto antes da mescla</div><p className="mt-1">A variável descartada aparece em <strong>{variableMergeImpact.affectedArtifacts.length}</strong> artefato(s): {variableMergeImpact.sourceUsage.documents.length} documento(s), {variableMergeImpact.sourceUsage.emails.length} e-mail(s) e {variableMergeImpact.sourceUsage.forms.length} formulário(s).</p>{variableMergeImpact.affectedArtifacts.length > 0 && <p className="mt-1 break-words text-violet-800">{variableMergeImpact.affectedArtifacts.slice(0, 8).join(' · ')}{variableMergeImpact.affectedArtifacts.length > 8 ? ' …' : ''}</p>}{variableMergeImpact.formatChanges && <p className="mt-1 font-bold text-amber-800">A formatação das duas variáveis difere. Após a mescla prevalece a formatação da variável principal.</p>}</div>}<div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[10px] leading-relaxed text-amber-900"><strong>Operação auditável:</strong> a chave descartada vira alias da principal e todas as referências em documentos, e-mails, formulários e matriz são reescritas somente após confirmação explícita.</div></div>
             </div>

@@ -124,7 +124,7 @@ export const AstenLogsPage: React.FC = () => {
   const renderActions = (job: SignatureJob) => {
     const busy = workingId === job.id;
     const demo = job.id === DEMO_JOB.id;
-    const canRetry = !demo && RETRYABLE_STATUSES.has(job.status);
+    const canRetry = !demo && RETRYABLE_STATUSES.has(job.status) && (job as SignatureJob & { providerCreationState?: string }).providerCreationState !== 'UNCERTAIN';
     const canReconcile = !demo && Boolean(job.providerEnvelopeId) && !FINAL_STATUSES.has(job.status);
     return <div className="flex items-center justify-end gap-1 whitespace-nowrap">
       <button type="button" onClick={() => setSelectedJob(job)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50"><Eye className="h-3 w-3"/>Detalhes</button>
