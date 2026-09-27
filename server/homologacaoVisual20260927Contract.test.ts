@@ -4,15 +4,21 @@ import { readFile } from 'node:fs/promises';
 
 const source = (path: string) => readFile(path, 'utf8');
 
-test('homologação visual preserva cores semânticas dos filtros e amplia os indicadores', async () => {
+test('homologação visual preserva cores semânticas da Lista de Defesas e amplia os indicadores', async () => {
   const css = await source('src/portal-version-1046.css');
   assert.match(css, /#formal-monthly-calendar-section button\.portal-table-filter-chip:nth-child\(2\)[\s\S]*--portal-defense-upcoming-bg/);
   assert.match(css, /#formal-monthly-calendar-section button\.portal-table-filter-chip:nth-child\(3\)[\s\S]*--portal-defense-defended-bg/);
-  assert.match(css, /#meus-processos-page-container \.portal-standard-filter-chip\[title\*="Aluno"\][\s\S]*--portal-role-student-bg/);
-  assert.match(css, /#meus-processos-page-container \.portal-standard-filter-chip\[title\*="Banca"\][\s\S]*--portal-role-board-bg/);
-  assert.match(css, /#meus-processos-page-container \.portal-standard-filter-chip\[title\*="Avaliador"\][\s\S]*--portal-role-evaluator-bg/);
-  assert.match(css, /#meus-processos-page-container \.portal-standard-filter-chip\[title\*="Visualizador"\][\s\S]*--portal-role-viewer-bg/);
   assert.match(css, /\.portal-filter-dot\s*\{[\s\S]*width:\s*\.65rem\s*!important/);
+});
+
+test('Meus TCCs usa cor do vínculo somente na bolinha do filtro', async () => {
+  const css = await source('src/portal-version-1046.css');
+  const page = await source('src/pages/MeusProcessosPage.tsx');
+  assert.match(css, /#meus-processos-page-container \.portal-standard-filter-chip\s*\{[\s\S]*background:\s*#ffffff\s*!important/);
+  assert.match(css, /#meus-processos-page-container \.portal-standard-filter-chip\[aria-pressed="true"\][\s\S]*background:\s*#AEB0B3\s*!important/);
+  assert.match(css, /#meus-processos-page-container \.portal-standard-filter-chip > span:last-child\s*\{[\s\S]*background:\s*#6b7280\s*!important/);
+  assert.match(page, /className="portal-filter-dot[^"]*"[\s\S]*style=\{\{ backgroundColor: cfg\.borderColor \}\}/);
+  assert.doesNotMatch(css, /#meus-processos-page-container \.portal-standard-filter-chip\[title\*="Aluno"\][\s\S]*--portal-role-student-bg/);
 });
 
 test('Presidência usa a mesma paleta nos filtros e nos status correspondentes', async () => {
