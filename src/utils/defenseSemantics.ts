@@ -3,6 +3,8 @@ import type { ProcessData, ProcessStatus } from '../types';
 export type DefenseState = 'upcoming' | 'defended';
 export type DefenseFilter = 'all' | DefenseState;
 
+type DefenseSummaryProcess = Pick<ProcessData, 'titulo' | 'defesa'> & Partial<Pick<ProcessData, 'aluno1' | 'aluno2'>>;
+
 const POST_DEFENSE_STATUSES = new Set<ProcessStatus>([
   'EM_AVALIACAO',
   'AGUARDANDO_DADOS_FINAIS',
@@ -37,9 +39,7 @@ export function matchesDefenseFilter(
   return filter === 'all' || getDefenseState(process, now) === filter;
 }
 
-export function getDefenseCalendarSummaryParts(
-  process: Pick<ProcessData, 'titulo' | 'defesa' | 'aluno1' | 'aluno2'>,
-): { primary: string; secondary: string } {
+export function getDefenseCalendarSummaryParts(process: DefenseSummaryProcess): { primary: string; secondary: string } {
   const timestamp = validTimestamp(process.defesa?.startAt);
   const time = timestamp === null
     ? 'Horário a definir'
@@ -49,16 +49,10 @@ export function getDefenseCalendarSummaryParts(
     .map((name) => String(name || '').replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .join(' · ');
-  return {
-    primary: [time, title].filter(Boolean).join(' · '),
-    secondary: students,
-  };
+  return { primary: [time, title].filter(Boolean).join(' · '), secondary: students };
 }
 
-export function formatDefenseCalendarSummary(
-  process: Pick<ProcessData, 'titulo' | 'defesa' | 'aluno1' | 'aluno2'>,
-  maxTitleLength = 46,
-): string {
+export function formatDefenseCalendarSummary(process: DefenseSummaryProcess, maxTitleLength = 46): string {
   const timestamp = validTimestamp(process.defesa?.startAt);
   const time = timestamp === null
     ? 'Horário a definir'
