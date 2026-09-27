@@ -37,23 +37,28 @@ test('lista de defesas usa uma única regra para filtrar e colorir o processo', 
   assert.ok(!home.includes("defenseStatusFilter === 'concluded' && !isPast"));
 });
 
-test('calendário mantém superfície do portal e mostra resumo textual de todos os TCCs do dia', async () => {
-  const [home, semanticCss] = await Promise.all([
+test('calendário mantém superfície do portal e mostra horário, título e alunos dos TCCs do dia', async () => {
+  const [home, semantics, semanticCss] = await Promise.all([
     source('src/pages/HomePage.tsx'),
+    source('src/utils/defenseSemantics.ts'),
     source('src/portal-semantic-ui.css'),
   ]);
 
   assert.ok(home.includes('portal-core-calendar-weekend'));
   assert.ok(home.includes('portal-calendar-defense-summary'));
-  assert.ok(home.includes('formatDefenseCalendarSummary(proc)'));
+  assert.ok(home.includes('getDefenseCalendarSummaryParts(proc)'));
+  assert.ok(home.includes('portal-calendar-defense-primary'));
+  assert.ok(home.includes('portal-calendar-defense-secondary'));
   assert.ok(home.includes('getDefenseStateFromTimes(ev.start, ev.end)'));
   assert.ok(home.includes('{dayDefenses.map((proc) => {'));
   assert.ok(home.includes('{dayGcal.map((ev) => {'));
   assert.ok(!home.includes('dayDefenses.slice(0, 2)'));
   assert.ok(!home.includes('dayGcal.slice(0, 2 - dayDefenses.length)'));
+  assert.ok(semantics.includes('process.aluno1?.nome'));
+  assert.ok(semantics.includes('process.aluno2?.nome'));
   assert.ok(semanticCss.includes('.portal-calendar-day-cell.portal-core-calendar-weekend'));
   assert.ok(semanticCss.includes('.portal-calendar-empty-cell'));
-  assert.ok(semanticCss.includes('background: var(--portal-surface-page) !important;'));
+  assert.ok(semanticCss.includes('background: var(--portal-surface-layer-1) !important;'));
   assert.ok(!semanticCss.includes('.portal-core-calendar-weekend *'));
 });
 
