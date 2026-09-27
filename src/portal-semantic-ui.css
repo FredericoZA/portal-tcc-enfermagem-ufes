@@ -1,9 +1,9 @@
 /*
  * Contrato visual semântico do Portal TCC.
  *
- * As cores não são definidas aqui: elas vêm de portalSemanticTokens.ts e são
- * expostas como CSS custom properties no elemento #portal-app-root. Isso evita
- * que calendário, filtros, pílulas e tabelas mantenham paletas paralelas.
+ * As cores de status, vínculo e superfície são definidas exclusivamente em
+ * portalSemanticTokens.ts e expostas como custom properties no #portal-app-root.
+ * Calendário, filtros, pílulas e tabelas não mantêm paletas paralelas.
  */
 
 .portal-semantic-tone {
@@ -18,7 +18,7 @@
   opacity: 1 !important;
 }
 
-/* Compatibilidade transitória para componentes que ainda usam classes legadas. */
+/* Compatibilidade para componentes legados: todos consomem os mesmos tokens. */
 .portal-process-pill { box-shadow: none !important; }
 .portal-tone-defended {
   background: var(--portal-defense-defended-bg) !important;
@@ -67,34 +67,86 @@
 }
 
 /*
- * O calendário não possui uma "cor de fim de semana". Sábado, domingo e
- * células externas ao mês usam a mesma superfície da página, por definição.
+ * Sábado, domingo e células externas ao mês são a MESMA superfície inativa.
+ * O componente aplica portal-calendar-inactive-cell aos três casos; não existe
+ * mais uma cor específica de fim de semana.
  */
+#formal-monthly-calendar-section .portal-calendar-inactive-cell,
 #formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend,
 #formal-monthly-calendar-section .portal-calendar-empty-cell {
-  background: var(--portal-surface-page) !important;
+  background: var(--portal-calendar-inactive-bg) !important;
   cursor: default !important;
   box-shadow: none !important;
 }
 
-#formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend > div:first-child > span {
-  color: #94a3b8 !important;
+#formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend {
+  border-color: var(--portal-calendar-inactive-bg) !important;
 }
 
-/* Resumo compacto de cada TCC diretamente na célula do dia. */
+#formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend > div:first-child > span {
+  color: #64748b !important;
+  background: transparent !important;
+  font-weight: 500 !important;
+}
+
+#formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend > *:not(:first-child) {
+  display: none !important;
+}
+
+/*
+ * Resumo útil diretamente no dia: horário + título e, abaixo, aluno(s).
+ * O texto deixa de ser uma etiqueta de uma linha truncada.
+ */
 #formal-monthly-calendar-section .portal-calendar-defense-summary {
-  display: block;
+  display: flex;
   width: 100%;
   min-width: 0;
+  flex-direction: column;
+  gap: 2px;
   border-width: 1px;
   border-style: solid;
-  border-radius: 5px;
-  padding: 2px 4px;
+  border-radius: 6px;
+  padding: 4px 5px;
   font-size: 9px;
-  line-height: 1.15;
-  font-weight: 700;
+  line-height: 1.18;
   text-align: left;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+#formal-monthly-calendar-section .portal-calendar-defense-primary {
+  display: block;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+#formal-monthly-calendar-section .portal-calendar-defense-students {
+  display: block;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+  font-size: 8px;
+  line-height: 1.15;
+  opacity: .92 !important;
+}
+
+/* Marcador cromático de filtros: aproximadamente 30% maior, sem tocar no chip. */
+.portal-filter-dot,
+[data-portal-filter-dot="true"] {
+  width: var(--portal-filter-dot-size) !important;
+  height: var(--portal-filter-dot-size) !important;
+  min-width: var(--portal-filter-dot-size) !important;
+  min-height: var(--portal-filter-dot-size) !important;
+  flex: 0 0 var(--portal-filter-dot-size) !important;
+  border-radius: 999px !important;
+}
+
+/* Conteúdo tabular comum não herda estado temporal. */
+#portal-app-root main .portal-core-table tbody td,
+#portal-app-root main .portal-core-table tbody td > :not(.portal-semantic-tone) {
+  opacity: 1;
+  filter: none;
 }
