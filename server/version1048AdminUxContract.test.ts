@@ -22,15 +22,21 @@ test('superfícies administrativas usam a paleta canônica do Portal', async () 
   assert.ok(css.includes('background: var(--portal-green-action) !important;'));
 });
 
-test('Modelos e Variáveis possui uma única sidebar e navegação interna horizontal', async () => {
-  const studio = await source('src/components/IntegrationStudioPanel.tsx');
+test('Modelos e Variáveis possui uma única sidebar e navegação externa por área', async () => {
+  const [studio, config] = await Promise.all([
+    source('src/components/IntegrationStudioPanel.tsx'),
+    source('src/pages/ConfiguracoesPage.tsx'),
+  ]);
   assert.ok(studio.includes('portal-studio-tabs'));
-  assert.ok(studio.includes('Selecione uma área acima'));
+  assert.ok(studio.includes('hideTabs'));
   const studioReturn = studio.slice(studio.indexOf('portal-workspace portal-studio'));
   assert.equal((studioReturn.match(/<aside/g) || []).length, 0);
+  for (const label of ['Modelos', 'Documentos', 'E-mails', 'Formulários', 'Fluxo', 'Variáveis']) {
+    assert.ok(config.includes(`label: '${label}'`));
+  }
 });
 
-test('calendário e Lista de Defesas compartilham estado e tons semânticos', async () => {
+test('calendário e Lista de Defesas compartilham estado, tons e resumo solicitado', async () => {
   const [home, semantics, css] = await Promise.all([
     source('src/pages/HomePage.tsx'),
     source('src/utils/defenseSemantics.ts'),
@@ -40,9 +46,11 @@ test('calendário e Lista de Defesas compartilham estado e tons semânticos', as
   assert.ok(css.includes('.portal-semantic-tone[data-defense-state="defended"]'));
   assert.ok(css.includes('.portal-semantic-tone[data-defense-state="upcoming"]'));
   assert.ok(css.includes('background: var(--portal-surface-layer-1) !important;'));
+  assert.ok(semantics.includes('getDefenseCalendarSummaryParts'));
   assert.ok(semantics.includes('process.aluno1?.nome'));
-  assert.ok(semantics.includes('process.defesa?.local'));
-  assert.ok(css.includes('-webkit-line-clamp: 2'));
+  assert.ok(semantics.includes('process.aluno2?.nome'));
+  assert.ok(css.includes('.portal-calendar-defense-primary'));
+  assert.ok(css.includes('.portal-calendar-defense-secondary'));
 });
 
 test('Registros de Assinatura mostra a linha completa e somente ações suportadas', async () => {
