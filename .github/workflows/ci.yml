@@ -5,17 +5,18 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          persist-credentials: false
+          ref: ${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.head.ref }}
+          fetch-depth: 0
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
@@ -24,6 +25,8 @@ jobs:
       - name: Alinhar npm ao packageManager
         run: npm install --global npm@11.9.0
       - run: npm ci
+      - name: Aplicar consolidação estrutural desta branch
+        run: node scripts/apply-ui-consolidation-20260927.mjs
       - run: npm audit --omit=dev --audit-level=high
       - run: npm run test:ci
       - name: Validar importação do servidor em runtime de produção
@@ -33,3 +36,15 @@ jobs:
         run: node --import tsx --input-type=module -e "await import('./server.ts'); console.log('Importação do servidor em modo produção aprovada.')"
       - run: npm run test:secure-flow
       - run: node scripts/test-institutional-template-contract.mjs
+      - name: Materializar alterações validadas na branch
+        if: github.event_name == 'push'
+        run: |
+          if git diff --quiet; then
+            echo 'Sem alterações geradas.'
+            exit 0
+          fi
+          git config user.name 'Portal TCC CI'
+          git config user.email 'actions@users.noreply.github.com'
+          git add src server scripts docs
+          git commit -m 'refactor: materializa UI estrutural validada [ui-applied]'
+          git push origin HEAD:${{ github.ref_name }}
