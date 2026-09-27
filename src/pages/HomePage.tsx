@@ -67,7 +67,7 @@ import {
   LOGIN_POPUP_CONFIG_EVENT
 } from '../utils/loginPopupConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
-import { DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter } from '../utils/defenseSemantics';
+import { DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseCalendarSummaryParts, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter } from '../utils/defenseSemantics';
 import { getPortalToneCssVars } from '../utils/portalSemanticTokens';
 
 interface HomePageProps {
@@ -122,7 +122,11 @@ const parseGcalEvent = (ev: any) => {
     banca = bancaMatch[1].trim();
   }
   
-  return { aluno, trabalho, time, orientador, coorientador, banca };
+  let local = "";
+  const localMatch = desc.match(/Local:\s*([^\n]+)/i);
+  if (localMatch && localMatch[1]) local = localMatch[1].trim();
+
+  return { aluno, trabalho, time, orientador, coorientador, banca, local };
 };
 
 // Helper to get formatted start and end time (1:30 duration)
@@ -1310,7 +1314,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                               data-defense-state={defenseState}
                               title={formatDefenseCalendarSummary(proc, 160)}
                             >
-                              {formatDefenseCalendarSummary(proc)}
+                              {(() => { const summary = getDefenseCalendarSummaryParts(proc); return <><span className="portal-calendar-defense-primary">{summary.primary}</span>{summary.secondary && <span className="portal-calendar-defense-secondary">{summary.secondary}</span>}</>; })()}
                             </span>
                           );
                         })}
@@ -1320,7 +1324,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           const startLabel = ev.start
                             ? new Date(ev.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
                             : 'Horário a definir';
-                          const summary = startLabel + ' · ' + parsed.trabalho;
+                          const primary = [startLabel, parsed.trabalho].filter(Boolean).join(' · ');
+                          const secondary = parsed.aluno || '';
+                          const summary = [primary, secondary, parsed.local].filter(Boolean).join('\n');
                           return (
                             <span
                               key={ev.id}
@@ -1329,7 +1335,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                               data-defense-state={defenseState}
                               title={summary}
                             >
-                              {summary}
+                              <span className="portal-calendar-defense-primary">{primary}</span>
+                              {secondary && <span className="portal-calendar-defense-secondary">{secondary}</span>}
                             </span>
                           );
                         })}

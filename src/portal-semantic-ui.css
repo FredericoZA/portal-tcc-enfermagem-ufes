@@ -1,9 +1,8 @@
 /*
  * Contrato visual semântico do Portal TCC.
  *
- * As cores não são definidas aqui: elas vêm de portalSemanticTokens.ts e são
- * expostas como CSS custom properties no elemento #portal-app-root. Isso evita
- * que calendário, filtros, pílulas e tabelas mantenham paletas paralelas.
+ * Regra arquitetural: cores e superfícies vêm de portalSemanticTokens.ts.
+ * Nenhuma tela operacional deve manter uma paleta paralela para o mesmo estado.
  */
 
 .portal-semantic-tone {
@@ -18,7 +17,19 @@
   opacity: 1 !important;
 }
 
-/* Compatibilidade transitória para componentes que ainda usam classes legadas. */
+/* O atributo de estado é a autoridade final para calendário e Lista de Defesas. */
+.portal-semantic-tone[data-defense-state="defended"] {
+  --portal-tone-bg: var(--portal-defense-defended-bg) !important;
+  --portal-tone-border: var(--portal-defense-defended-border) !important;
+  --portal-tone-text: var(--portal-defense-defended-text) !important;
+}
+.portal-semantic-tone[data-defense-state="upcoming"] {
+  --portal-tone-bg: var(--portal-defense-upcoming-bg) !important;
+  --portal-tone-border: var(--portal-defense-upcoming-border) !important;
+  --portal-tone-text: var(--portal-defense-upcoming-text) !important;
+}
+
+/* Compatibilidade para componentes ainda migrando para portal-semantic-tone. */
 .portal-process-pill { box-shadow: none !important; }
 .portal-tone-defended {
   background: var(--portal-defense-defended-bg) !important;
@@ -67,34 +78,163 @@
 }
 
 /*
- * O calendário não possui uma "cor de fim de semana". Sábado, domingo e
- * células externas ao mês usam a mesma superfície da página, por definição.
+ * Calendário: sábado, domingo e células externas ao mês se fundem visualmente
+ * ao fundo da caixa. O número continua visível, mas não há "quadrado útil".
  */
 #formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend,
 #formal-monthly-calendar-section .portal-calendar-empty-cell {
-  background: var(--portal-surface-page) !important;
+  background: var(--portal-surface-layer-1) !important;
+  border-color: transparent !important;
   cursor: default !important;
   box-shadow: none !important;
 }
 
 #formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend > div:first-child > span {
-  color: #94a3b8 !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #64748b !important;
+  font-weight: 600 !important;
 }
 
-/* Resumo compacto de cada TCC diretamente na célula do dia. */
+/* Evento mensal: 1ª linha horário + título; 2ª linha discente(s). */
 #formal-monthly-calendar-section .portal-calendar-defense-summary {
   display: block;
   width: 100%;
   min-width: 0;
+  min-height: 34px;
   border-width: 1px;
   border-style: solid;
-  border-radius: 5px;
-  padding: 2px 4px;
+  border-radius: 6px;
+  padding: 4px 6px;
   font-size: 9px;
-  line-height: 1.15;
+  line-height: 1.2;
   font-weight: 700;
   text-align: left;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
+
+#formal-monthly-calendar-section .portal-calendar-defense-primary,
+#formal-monthly-calendar-section .portal-calendar-defense-secondary {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+}
+
+#formal-monthly-calendar-section .portal-calendar-defense-primary {
+  -webkit-line-clamp: 2;
+  font-weight: 750;
+}
+
+#formal-monthly-calendar-section .portal-calendar-defense-secondary {
+  -webkit-line-clamp: 1;
+  margin-top: 2px;
+  font-weight: 600;
+  opacity: .94 !important;
+}
+
+/* Conteúdo de planilhas nunca perde contraste por status/tempo. */
+.portal-spreadsheet-table tbody td,
+.portal-data-table tbody td,
+.table-sticky-container tbody td {
+  color: #000 !important;
+  opacity: 1 !important;
+}
+
+/* Indicador cromático do filtro: aproximadamente 30% maior, sem alterar o botão. */
+.portal-filter-dot {
+  width: .52rem !important;
+  height: .52rem !important;
+  min-width: .52rem !important;
+  min-height: .52rem !important;
+  flex: 0 0 .52rem !important;
+}
+
+/*
+ * Configurações usa a hierarquia visual oficial do Portal:
+ * gelo -> cinza claro -> cinza mais escuro -> branco; verde só em títulos e ações.
+ */
+#portal-settings-hub .portal-settings-title-bar {
+  background: var(--portal-green-action) !important;
+  border-color: var(--portal-green-action-border) !important;
+  color: #fff !important;
+}
+#portal-settings-hub .portal-settings-title-bar:hover { filter: brightness(.96); }
+#portal-settings-hub .portal-settings-title-bar,
+#portal-settings-hub .portal-settings-title-bar * {
+  color: #fff !important;
+}
+
+.portal-settings-workspace { background: var(--portal-surface-page) !important; }
+.portal-settings-workspace > .portal-settings-workspace-header { background: var(--portal-green-header) !important; }
+.portal-settings-workspace aside { background: var(--portal-surface-layer-1) !important; }
+.portal-settings-workspace main { background: var(--portal-surface-page) !important; }
+.portal-settings-workspace-content { background: var(--portal-surface-layer-2) !important; }
+.portal-settings-single-pane .portal-settings-workspace-content { width: 100%; }
+
+.portal-settings-workspace-content > #asten-logs-page,
+.portal-settings-workspace-content > #audit-logs-page,
+.portal-settings-workspace-content > #portal-models-workspace,
+.portal-settings-workspace-content > section {
+  background: var(--portal-surface-layer-2) !important;
+}
+
+/* Tabelas simples de Configurações usam a largura inteira; sem segundo navegador. */
+.portal-settings-single-pane #asten-logs-page,
+.portal-settings-single-pane #audit-logs-page,
+.portal-settings-single-pane [data-settings-sheet="true"] {
+  width: 100%;
+  max-width: none;
+}
+
+#asten-logs-page .portal-signature-table-shell,
+#audit-logs-page .portal-audit-table-shell {
+  background: var(--portal-surface-layer-2) !important;
+}
+
+#asten-logs-page .portal-spreadsheet-table tbody,
+#audit-logs-page .portal-spreadsheet-table tbody,
+#asten-logs-page .portal-spreadsheet-table tbody tr,
+#audit-logs-page .portal-spreadsheet-table tbody tr {
+  background: var(--portal-surface-inner) !important;
+}
+
+/* Cards administrativos não devem usar azul/roxo como superfície estrutural. */
+.portal-settings-workspace :is(.bg-blue-50,.bg-blue-100,.bg-sky-50,.bg-sky-100,.bg-violet-50,.bg-violet-100,.bg-purple-50,.bg-purple-100) {
+  background-color: var(--portal-surface-inner) !important;
+}
+
+.portal-settings-workspace :is(.border-blue-200,.border-blue-300,.border-sky-200,.border-sky-300,.border-violet-200,.border-violet-300,.border-purple-200,.border-purple-300) {
+  border-color: #cbd5e1 !important;
+}
+
+/* Títulos de blocos e ações da configuração permanecem verdes. */
+.portal-settings-section-title,
+.portal-settings-workspace .portal-admin-title {
+  background: var(--portal-green-action) !important;
+  border-color: var(--portal-green-action-border) !important;
+  color: #fff !important;
+}
+
+/* Estúdio: compactação estrutural de formulários, fluxos e variáveis. */
+.portal-studio-form-field-list > article,
+.portal-studio-workflow-stage,
+.portal-studio-variable-maintenance {
+  margin-bottom: .5rem !important;
+}
+
+.portal-studio-compact-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-items: center;
+  padding: .625rem;
+  background: var(--portal-surface-layer-2);
+  border: 1px solid #cbd5e1;
+  border-radius: .75rem;
+}
+
+/* Variáveis: manutenção compacta e orientada à ação. */
+.portal-studio-variable-maintenance > div{padding:.625rem!important;box-shadow:none!important}.portal-studio-variable-maintenance>div>p{display:none!important}.portal-studio-variable-maintenance .mt-3{margin-top:.5rem!important}.portal-studio-variable-maintenance :is(input,select,button){min-height:2rem}

@@ -878,7 +878,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       title={`Clique para ${isSelected ? 'isolar ou alternar' : 'exibir'} TCCs com papel de ${cfg.label}`}
                     >
                       <span
-                        className="w-2 h-2 rounded-full shrink-0 shadow-2xs"
+                        className="portal-filter-dot w-2 h-2 rounded-full shrink-0 shadow-2xs"
                         style={{ backgroundColor: cfg.borderColor }}
                       />
                       <span className="whitespace-nowrap font-extrabold">{cfg.label}</span>

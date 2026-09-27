@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('release atual é 1.0.46', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.46');
+test('release atual é 1.0.47', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.47');
 });
 
 test('estado de defesa não sobrescreve cores de vínculo e assinatura', () => {
@@ -30,20 +30,28 @@ test('indicadores têm contrato completo e frontend defensivo', () => {
   assert.match(page, /const normalized =/);
 });
 
-test('configurações usam seis barras e workspace modal com navegação lateral', () => {
+test('configurações usam seis barras e workspace modal canônico', () => {
   const config = read('src/pages/ConfiguracoesPage.tsx');
   const modal = read('src/components/SettingsWorkspaceModal.tsx');
   assert.match(config, /portal-settings-title-bar/);
   assert.doesNotMatch(config, /portal-settings-hub-card/);
-  assert.match(modal, /bg-\[#005830\]/);
+  assert.match(modal, /var\(--portal-green-header\)/);
+  assert.match(modal, /singlePane = sections\.length === 1/);
   assert.match(modal, /Navegação/);
 });
 
-test('estúdio de modelos usa navegação lateral e cabeçalho interno verde', () => {
+test('estúdio de modelos delega navegação ao workspace externo e preserva cabeçalho', () => {
   const studio = read('src/components/IntegrationStudioPanel.tsx');
-  assert.match(studio, /md:w-56/);
+  const config = read('src/pages/ConfiguracoesPage.tsx');
+  assert.match(studio, /portal-studio-tabs/);
   assert.match(studio, /Editor de modelos e variáveis/);
-  assert.match(studio, /bg-\[#337959\]/);
+  assert.match(studio, /var\(--portal-green-action\)/);
+  assert.match(config, /label: 'Modelos'/);
+  assert.match(config, /label: 'Documentos'/);
+  assert.match(config, /label: 'E-mails'/);
+  assert.match(config, /label: 'Formulários'/);
+  assert.match(config, /label: 'Fluxo'/);
+  assert.match(config, /label: 'Variáveis'/);
 });
 
 test('tipografia tabular preta e CSS v46 carregado por último', () => {
