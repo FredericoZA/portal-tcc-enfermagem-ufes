@@ -1,0 +1,71 @@
+name: Apply v1.0.47 structural UI
+
+on:
+  push:
+    branches:
+      - refactor/global-ui-configuration-2026-09-27
+    paths:
+      - scripts/apply-v1047-structural-ui.mjs
+      - .github/workflows/apply-v1047-structural-ui.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/global-ui-configuration-2026-09-27
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply structural migration
+        run: node scripts/apply-v1047-structural-ui.mjs
+
+      - name: Secrets check
+        run: npm run test:secrets
+
+      - name: TypeScript check
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Contract tests
+        run: npm run test:contracts
+
+      - name: Accessibility static tests
+        run: npm run test:a11y
+
+      - name: Finalization contract
+        run: npm run test:finalization
+
+      - name: Production build
+        run: npm run build
+
+      - name: HTTP build test
+        run: npm run test:http
+
+      - name: Commit validated migration
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src docs package.json package-lock.json
+          git commit -m "refactor: aplica arquitetura estrutural de UI 1.0.47"
+          git push origin HEAD:refactor/global-ui-configuration-2026-09-27
