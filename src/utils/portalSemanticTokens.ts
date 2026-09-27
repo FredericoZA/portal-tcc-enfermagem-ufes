@@ -1,7 +1,29 @@
 import type { CSSProperties } from 'react';
 
+/**
+ * Paleta estrutural única do Portal.
+ *
+ * Níveis administrativos definidos na homologação:
+ * 1. branco gelo
+ * 2. gelo/cinza ligeiramente mais fechado
+ * 3. cinza claro
+ * 4. branco para a superfície final de leitura/edição
+ *
+ * Nenhum componente deve inventar uma quinta paleta de superfície.
+ */
 export const PORTAL_SURFACE_COLORS = {
   page: '#f1f5f9',
+  ice: '#f8fafc',
+  soft: '#eef2f4',
+  muted: '#dde3e7',
+  white: '#ffffff',
+  border: '#cbd5e1',
+} as const;
+
+export const PORTAL_BRAND_COLORS = {
+  moss: '#005830',
+  mossDark: '#004626',
+  mossSoft: '#337959',
 } as const;
 
 export const PORTAL_SEMANTIC_COLORS = {
@@ -72,6 +94,16 @@ export function getPortalToneCssVars(tone: PortalSemanticTone): CSSProperties {
 export function getPortalSemanticRootVars(): CSSProperties {
   return {
     '--portal-surface-page': PORTAL_SURFACE_COLORS.page,
+    '--portal-surface-ice': PORTAL_SURFACE_COLORS.ice,
+    '--portal-surface-soft': PORTAL_SURFACE_COLORS.soft,
+    '--portal-surface-muted': PORTAL_SURFACE_COLORS.muted,
+    '--portal-surface-white': PORTAL_SURFACE_COLORS.white,
+    '--portal-surface-border': PORTAL_SURFACE_COLORS.border,
+    '--portal-calendar-inactive-bg': PORTAL_SURFACE_COLORS.page,
+    '--portal-brand-moss': PORTAL_BRAND_COLORS.moss,
+    '--portal-brand-moss-dark': PORTAL_BRAND_COLORS.mossDark,
+    '--portal-brand-moss-soft': PORTAL_BRAND_COLORS.mossSoft,
+    '--portal-filter-dot-size': '0.50rem',
     '--portal-defense-defended-bg': PORTAL_SEMANTIC_COLORS.defense.defended.bg,
     '--portal-defense-defended-border': PORTAL_SEMANTIC_COLORS.defense.defended.border,
     '--portal-defense-defended-text': PORTAL_SEMANTIC_COLORS.defense.defended.text,
