@@ -27,14 +27,22 @@ assert.match(css, /--portal-filter-selected:\s*#AEB0B3/i);
 assert.match(css, /--portal-sidebar-accent:\s*#74FF96/i);
 assert.match(css, /#meus-processos-btn-novo[\s\S]*order:\s*-1/);
 
-assert.match(session, /SESSION_TTL_SECONDS\s*=\s*12\s*\*\s*60\s*\*\s*60/);
+assert.match(session, /SESSION_IDLE_TTL_SECONDS\s*=\s*3\s*\*\s*60\s*\*\s*60/);
+assert.match(session, /expiresAt:\s*now\s*\+\s*SESSION_IDLE_TTL_SECONDS/);
+assert.match(session, /requestPath\s*===\s*['"]\/api\/me['"]/);
 assert.match(session, /HttpOnly/);
 assert.match(session, /SameSite=Lax/);
 assert.match(session, /Priority=High/);
+assert.doesNotMatch(session, /SESSION_TTL_SECONDS\s*=\s*12\s*\*\s*60\s*\*\s*60/);
 assert.doesNotMatch(session, /SESSION_REFRESH_AFTER_SECONDS/);
 
 assert.match(auth, /getIdentityWithRetry/);
 assert.match(auth, /AUTH_CACHE_KEY/);
+assert.match(auth, /AUTH_CACHE_MAX_AGE_MS\s*=\s*3\s*\*\s*60\s*\*\s*60\s*\*\s*1000/);
+assert.match(auth, /SESSION_ACTIVITY_TOUCH_INTERVAL_MS\s*=\s*60\s*\*\s*1000/);
+assert.match(auth, /pointerdown/);
+assert.match(auth, /keydown/);
+assert.match(auth, /touchstart/);
 assert.match(auth, /ApiRequestError/);
 assert.match(auth, /window\.addEventListener\('online'/);
 assert.match(auth, /syncPortalFavicon/);

@@ -15,7 +15,7 @@ export interface PortalIdentity {
 }
 
 const LEGACY_COOKIE_NAME = 'portal_tcc_session';
-const SESSION_TTL_SECONDS = 12 * 60 * 60;
+export const SESSION_IDLE_TTL_SECONDS = 3 * 60 * 60;
 const secureRuntime = () => process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
 const cookieName = () => secureRuntime() ? '__Host-portal_tcc_session' : LEGACY_COOKIE_NAME;
 
@@ -100,23 +100,38 @@ function demoIdentity(req: Request): PortalIdentity | null {
   };
 }
 
+function writePortalSessionCookie(res: Response, identity: PortalIdentity): void {
+  const token = encodeSession(identity);
+  const secure = secureRuntime();
+  res.setHeader('Set-Cookie', [
+    `${cookieName()}=${encodeURIComponent(token)}`, 'Path=/', 'HttpOnly', 'SameSite=Lax',
+    secure ? 'Secure' : '', 'Priority=High', `Max-Age=${SESSION_IDLE_TTL_SECONDS}`
+  ].filter(Boolean).join('; '));
+}
+
+function refreshPortalIdentity(identity: PortalIdentity): PortalIdentity {
+  const now = Math.floor(Date.now() / 1000);
+  return { ...identity, expiresAt: now + SESSION_IDLE_TTL_SECONDS };
+}
+
+function shouldRefreshForUserActivity(req: Request): boolean {
+  if (req.method.toUpperCase() !== 'GET') return false;
+  const requestPath = String(req.originalUrl || req.url || '').split('?')[0];
+  return requestPath === '/api/me' || req.path === '/me';
+}
+
 export function createPortalIdentity(email: string, method: PortalIdentity['method'] = 'EMAIL_OTP'): PortalIdentity {
   const normalized = normalizeEmail(email);
   const now = Math.floor(Date.now() / 1000);
   return {
     sessionId: randomBytes(24).toString('base64url'), uid: `email:${normalized}`, email: normalized, emailVerified: true, authTime: now,
-    issuedAt: now, expiresAt: now + SESSION_TTL_SECONDS, isDemo: false, method
+    issuedAt: now, expiresAt: now + SESSION_IDLE_TTL_SECONDS, isDemo: false, method
   };
 }
 
 export function setPortalSessionCookie(res: Response, email: string, method: PortalIdentity['method'] = 'EMAIL_OTP'): PortalIdentity {
   const identity = createPortalIdentity(email, method);
-  const token = encodeSession(identity);
-  const secure = secureRuntime();
-  res.setHeader('Set-Cookie', [
-    `${cookieName()}=${encodeURIComponent(token)}`, 'Path=/', 'HttpOnly', 'SameSite=Lax',
-    secure ? 'Secure' : '', 'Priority=High', `Max-Age=${SESSION_TTL_SECONDS}`
-  ].filter(Boolean).join('; '));
+  writePortalSessionCookie(res, identity);
   return identity;
 }
 
@@ -128,11 +143,16 @@ export function clearPortalSessionCookie(res: Response): void {
   res.setHeader('Set-Cookie', Array.from(new Set([cookieName(), LEGACY_COOKIE_NAME])).map(expired));
 }
 
-export async function attachPortalIdentity(req: Request, _res: Response, next: NextFunction) {
+export async function attachPortalIdentity(req: Request, res: Response, next: NextFunction) {
   try {
     const cookies = parseCookies(req);
     const token = cookies[cookieName()];
-    (req as any).portalIdentity = token ? decodeSession(token) : demoIdentity(req);
+    let identity = token ? decodeSession(token) : demoIdentity(req);
+    if (token && identity && !identity.isDemo && shouldRefreshForUserActivity(req)) {
+      identity = refreshPortalIdentity(identity);
+      writePortalSessionCookie(res, identity);
+    }
+    (req as any).portalIdentity = identity;
   } catch (error) {
     (req as any).portalIdentity = null;
     (req as any).portalAuthError = error instanceof Error ? error.message : 'Sessão inválida.';
