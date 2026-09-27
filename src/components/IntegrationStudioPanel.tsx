@@ -135,7 +135,7 @@ const PREVIEW_VARIABLES: Record<string,string> = {
 function applyPreviewVariables(value:string):string{
  let out=String(value||'');
  for(const[key,replacement]of Object.entries(PREVIEW_VARIABLES)){
-  const escaped=key.replace(/[.*+?^$()|[\]{}]/g,'\\$&');
+  const escaped=key.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const patterns=[
    new RegExp('\\{\\{\\s*'+escaped+'\\s*\\}\\}','gi'),
    new RegExp('<<\\s*'+escaped+'\\s*>>','gi'),
