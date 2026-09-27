@@ -37,21 +37,27 @@ export function matchesDefenseFilter(
   return filter === 'all' || getDefenseState(process, now) === filter;
 }
 
-export function formatDefenseCalendarSummary(
-  process: Pick<ProcessData, 'titulo' | 'defesa'> & Partial<Pick<ProcessData, 'aluno1'>>,
-  maxTitleLength = 46,
-): string {
+export function getDefenseCalendarSummaryParts(
+  process: Pick<ProcessData, 'titulo' | 'defesa' | 'aluno1' | 'aluno2'>,
+): { primary: string; secondary: string } {
   const timestamp = validTimestamp(process.defesa?.startAt);
   const time = timestamp === null
     ? 'Horário a definir'
     : new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const title = String(process.titulo || 'Trabalho de Conclusão de Curso').replace(/\s+/g, ' ').trim();
+  const students = [process.aluno1?.nome, process.aluno2?.nome]
+    .map((name) => String(name || '').replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .join(' · ');
+  return {
+    primary: [time, title].filter(Boolean).join(' · '),
+    secondary: students,
+  };
+}
 
-  const normalizedTitle = String(process.titulo || 'Trabalho de Conclusão de Curso').replace(/\s+/g, ' ').trim();
-  const title = normalizedTitle.length > maxTitleLength
-    ? `${normalizedTitle.slice(0, Math.max(1, maxTitleLength - 1)).trimEnd()}…`
-    : normalizedTitle;
-
-  const student = String(process.aluno1?.nome || '').replace(/\s+/g, ' ').trim();
-  const location = String(process.defesa?.local || '').replace(/\s+/g, ' ').trim();
-  return [time, title, student, location].filter(Boolean).join(' · ');
+export function formatDefenseCalendarSummary(
+  process: Pick<ProcessData, 'titulo' | 'defesa' | 'aluno1' | 'aluno2'>,
+): string {
+  const { primary, secondary } = getDefenseCalendarSummaryParts(process);
+  return [primary, secondary].filter(Boolean).join(' · ');
 }
