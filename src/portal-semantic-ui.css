@@ -1,9 +1,9 @@
 /*
  * Contrato visual semântico do Portal TCC.
  *
- * As cores não são definidas aqui: elas vêm de portalSemanticTokens.ts e são
- * expostas como CSS custom properties no elemento #portal-app-root. Isso evita
- * que calendário, filtros, pílulas e tabelas mantenham paletas paralelas.
+ * Cores vêm de portalSemanticTokens.ts e são expostas como CSS custom
+ * properties no #portal-app-root. Calendário, filtros, pílulas e tabelas não
+ * devem manter paletas paralelas.
  */
 
 .portal-semantic-tone {
@@ -12,13 +12,8 @@
   color: var(--portal-tone-text) !important;
   box-shadow: none !important;
 }
+.portal-semantic-tone * { color: var(--portal-tone-text) !important; opacity: 1 !important; }
 
-.portal-semantic-tone * {
-  color: var(--portal-tone-text) !important;
-  opacity: 1 !important;
-}
-
-/* O atributo de estado é a última autoridade para calendário e Lista de Defesas. */
 .portal-semantic-tone[data-defense-state="defended"] {
   --portal-tone-bg: var(--portal-defense-defended-bg) !important;
   --portal-tone-border: var(--portal-defense-defended-border) !important;
@@ -30,128 +25,123 @@
   --portal-tone-text: var(--portal-defense-upcoming-text) !important;
 }
 
-/* Compatibilidade transitória para componentes que ainda usam classes legadas. */
 .portal-process-pill { box-shadow: none !important; }
-.portal-tone-defended {
-  background: var(--portal-defense-defended-bg) !important;
-  border-color: var(--portal-defense-defended-border) !important;
-  color: var(--portal-defense-defended-text) !important;
+.portal-tone-defended { background: var(--portal-defense-defended-bg) !important; border-color: var(--portal-defense-defended-border) !important; color: var(--portal-defense-defended-text) !important; }
+.portal-tone-upcoming { background: var(--portal-defense-upcoming-bg) !important; border-color: var(--portal-defense-upcoming-border) !important; color: var(--portal-defense-upcoming-text) !important; }
+.portal-tone-pending { background: var(--portal-signature-pending-bg) !important; border-color: var(--portal-signature-pending-border) !important; color: var(--portal-signature-pending-text) !important; }
+.portal-tone-signed { background: var(--portal-signature-signed-bg) !important; border-color: var(--portal-signature-signed-border) !important; color: var(--portal-signature-signed-text) !important; }
+.portal-tone-student { background: var(--portal-role-student-bg) !important; border-color: var(--portal-role-student-border) !important; color: var(--portal-role-student-text) !important; }
+.portal-tone-board { background: var(--portal-role-board-bg) !important; border-color: var(--portal-role-board-border) !important; color: var(--portal-role-board-text) !important; }
+.portal-tone-evaluator { background: var(--portal-role-evaluator-bg) !important; border-color: var(--portal-role-evaluator-border) !important; color: var(--portal-role-evaluator-text) !important; }
+.portal-tone-viewer { background: var(--portal-role-viewer-bg) !important; border-color: var(--portal-role-viewer-border) !important; color: var(--portal-role-viewer-text) !important; }
+.portal-tone-neutral { background: var(--portal-neutral-bg) !important; border-color: var(--portal-neutral-border) !important; color: var(--portal-neutral-text) !important; }
+
+/* Meus TCCs: a mesma definição de papel é a autoridade final do filtro e do processo. */
+.portal-role-process-button {
+  background: var(--portal-role-bg) !important;
+  border-color: var(--portal-role-border) !important;
+  color: var(--portal-role-text) !important;
+  box-shadow: none !important;
 }
-.portal-tone-upcoming {
-  background: var(--portal-defense-upcoming-bg) !important;
-  border-color: var(--portal-defense-upcoming-border) !important;
-  color: var(--portal-defense-upcoming-text) !important;
-}
-.portal-tone-pending {
-  background: var(--portal-signature-pending-bg) !important;
-  border-color: var(--portal-signature-pending-border) !important;
-  color: var(--portal-signature-pending-text) !important;
-}
-.portal-tone-signed {
-  background: var(--portal-signature-signed-bg) !important;
-  border-color: var(--portal-signature-signed-border) !important;
-  color: var(--portal-signature-signed-text) !important;
-}
-.portal-tone-student {
-  background: var(--portal-role-student-bg) !important;
-  border-color: var(--portal-role-student-border) !important;
-  color: var(--portal-role-student-text) !important;
-}
-.portal-tone-board {
-  background: var(--portal-role-board-bg) !important;
-  border-color: var(--portal-role-board-border) !important;
-  color: var(--portal-role-board-text) !important;
-}
-.portal-tone-evaluator {
-  background: var(--portal-role-evaluator-bg) !important;
-  border-color: var(--portal-role-evaluator-border) !important;
-  color: var(--portal-role-evaluator-text) !important;
-}
-.portal-tone-viewer {
-  background: var(--portal-role-viewer-bg) !important;
-  border-color: var(--portal-role-viewer-border) !important;
-  color: var(--portal-role-viewer-text) !important;
-}
-.portal-tone-neutral {
-  background: var(--portal-neutral-bg) !important;
-  border-color: var(--portal-neutral-border) !important;
-  color: var(--portal-neutral-text) !important;
+.portal-role-process-button * { color: var(--portal-role-text) !important; opacity: 1 !important; }
+
+/* Indicador de cor: ~30% maior, sem alterar a caixa do filtro. */
+.portal-filter-color-dot {
+  width: 0.65rem !important;
+  height: 0.65rem !important;
+  min-width: 0.65rem !important;
+  flex: 0 0 0.65rem !important;
 }
 
 /*
- * Fins de semana e células externas ao mês se fundem ao fundo do calendário,
- * não ao branco das células úteis de segunda a sexta.
+ * Fins de semana deixam de ser visualmente células do calendário. O número do
+ * dia permanece, mas fundo e bordas se fundem à área vazia da caixa.
  */
 #formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend,
 #formal-monthly-calendar-section .portal-calendar-empty-cell {
   background: var(--portal-surface-layer-1) !important;
   cursor: default !important;
   box-shadow: none !important;
+  border-color: transparent !important;
 }
-
 #formal-monthly-calendar-section .portal-calendar-day-cell.portal-core-calendar-weekend > div:first-child > span {
-  color: #94a3b8 !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
 }
 
-/* Resumo informativo de cada TCC diretamente na célula do dia. */
+/* Duas linhas semânticas: horário+título e, abaixo, aluno(s). */
 #formal-monthly-calendar-section .portal-calendar-defense-summary {
-  display: -webkit-box;
+  display: block;
   width: 100%;
   min-width: 0;
-  min-height: 27px;
+  min-height: 34px;
   border-width: 1px;
   border-style: solid;
   border-radius: 6px;
-  padding: 3px 5px;
+  padding: 4px 5px;
   font-size: 9px;
   line-height: 1.2;
-  font-weight: 700;
   text-align: left;
   overflow: hidden;
   white-space: normal;
-  overflow-wrap: anywhere;
+}
+#formal-monthly-calendar-section .portal-calendar-defense-headline {
+  display: -webkit-box;
+  overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  font-weight: 700;
+}
+#formal-monthly-calendar-section .portal-calendar-defense-students {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
 }
 
-/*
- * Configurações reutiliza a mesma hierarquia visual da tela Como Chegar:
- * gelo -> cinza claro -> cinza mais escuro -> branco; ações em verde musgo.
- */
+/* Configurações: todas as seis barras usam a mesma linguagem institucional. */
 #portal-settings-hub .portal-settings-title-bar {
   background: var(--portal-green-action) !important;
   border-color: var(--portal-green-action-border) !important;
   color: #fff !important;
 }
-#portal-settings-hub .portal-settings-title-bar:hover {
-  filter: brightness(.96);
-}
+#portal-settings-hub .portal-settings-title-bar:hover { filter: brightness(.96); }
 #portal-settings-hub .portal-settings-title-bar svg,
 #portal-settings-hub .portal-settings-title-bar strong,
-#portal-settings-hub .portal-settings-title-bar span {
-  color: #fff !important;
-}
+#portal-settings-hub .portal-settings-title-bar span { color: #fff !important; }
+#portal-settings-hub .portal-settings-title-bar .portal-settings-description { color: rgba(255,255,255,.86) !important; }
 
-.portal-settings-workspace-content {
-  background: var(--portal-surface-layer-2) !important;
-}
+/* Escala oficial: gelo -> camada 1 -> camada 2 -> branco. */
+.portal-settings-workspace-content { background: var(--portal-surface-layer-2) !important; }
 .portal-settings-workspace-content > #asten-logs-page,
 .portal-settings-workspace-content > #audit-logs-page,
 .portal-settings-workspace-content > #portal-models-workspace,
-.portal-settings-workspace-content > section {
-  background: var(--portal-surface-layer-2);
-}
-
+.portal-settings-workspace-content > section { background: var(--portal-surface-layer-2); }
 #asten-logs-page .portal-signature-table-shell,
-#audit-logs-page .portal-audit-table-shell {
-  background: var(--portal-surface-layer-2);
+#audit-logs-page .portal-audit-table-shell { background: var(--portal-surface-layer-2); }
+#asten-logs-page .portal-spreadsheet-table tbody,
+#audit-logs-page .portal-spreadsheet-table tbody,
+#asten-logs-page .portal-spreadsheet-table tbody tr,
+#audit-logs-page .portal-spreadsheet-table tbody tr { background: var(--portal-surface-inner) !important; }
+
+/* Conteúdo tabular nunca perde legibilidade por status/data. */
+.portal-spreadsheet-table tbody td,
+.portal-data-table tbody td {
+  color: #0f172a !important;
+  opacity: 1 !important;
+  font-weight: 400;
 }
 
-#asten-logs-page .portal-spreadsheet-table tbody,
-#audit-logs-page .portal-spreadsheet-table tbody {
-  background: var(--portal-surface-inner) !important;
+/* Estúdio administrativo: nenhum azul/roxo é necessário como superfície. */
+.portal-studio-maintenance-bar,
+.portal-form-field-list,
+.portal-workflow-summary {
+  background: var(--portal-surface-layer-2) !important;
+  border-color: #cbd5e1 !important;
 }
-#asten-logs-page .portal-spreadsheet-table tbody tr,
-#audit-logs-page .portal-spreadsheet-table tbody tr {
-  background: var(--portal-surface-inner) !important;
+.portal-studio .portal-selected-editor-item {
+  background: var(--portal-surface-page) !important;
+  border-color: var(--portal-green-action-border) !important;
 }
