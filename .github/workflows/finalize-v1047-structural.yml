@@ -1,0 +1,57 @@
+name: Finalize v1047 structural
+
+on:
+  push:
+    branches:
+      - refactor/global-ui-configuration-2026-09-26
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/global-ui-configuration-2026-09-26
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci
+      - name: Apply structural finalization
+        run: |
+          node scripts/finalize-v1047-flow-vars.mjs
+          node scripts/finalize-v1047-draft-email.mjs
+          node scripts/finalize-v1047-document-preview.mjs
+          node scripts/finalize-v1047-admin.mjs
+      - name: Secrets check
+        run: npm run test:secrets
+      - name: TypeScript check
+        run: npm run lint
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Contract tests
+        run: npm run test:contracts
+      - name: Accessibility tests
+        run: npm run test:a11y
+      - name: Finalization contract
+        run: npm run test:finalization
+      - name: Production build
+        run: npm run build
+      - name: HTTP build test
+        run: npm run test:http
+      - name: Commit final source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No structural changes"
+          else
+            git commit -m "refactor: conclui arquitetura estrutural da v1.0.47"
+            git push origin HEAD:refactor/global-ui-configuration-2026-09-26
+          fi
