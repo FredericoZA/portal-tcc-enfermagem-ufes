@@ -41,7 +41,8 @@ interface CachedPortalIdentity {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const AUTH_CACHE_KEY = 'portal_tcc_identity_cache_v1';
-const AUTH_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+const AUTH_CACHE_MAX_AGE_MS = 3 * 60 * 60 * 1000;
+const SESSION_ACTIVITY_TOUCH_INTERVAL_MS = 60 * 1000;
 
 function readCachedIdentity(): CachedPortalIdentity | null {
   if (typeof sessionStorage === 'undefined') return null;
@@ -171,6 +172,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       window.removeEventListener('online', recoverAfterReconnect);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === 'undefined') return;
+    let lastTouchAt = 0;
+    let touchInFlight = false;
+
+    const touchSession = () => {
+      const now = Date.now();
+      if (touchInFlight || now - lastTouchAt < SESSION_ACTIVITY_TOUCH_INTERVAL_MS) return;
+      lastTouchAt = now;
+      touchInFlight = true;
+      void fetch('/api/me', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json' } })
+        .then(async response => {
+          if (!response.ok) return;
+          const meRes = await response.json();
+          applyIdentity(meRes);
+        })
+        .catch(() => undefined)
+        .finally(() => { touchInFlight = false; });
+    };
+
+    const activityEvents: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'touchstart', 'wheel', 'focus'];
+    activityEvents.forEach(eventName => window.addEventListener(eventName, touchSession, { passive: true }));
+    return () => activityEvents.forEach(eventName => window.removeEventListener(eventName, touchSession));
+  }, [isAuthenticated]);
 
   const switchUser = async (email: string) => {
     setActiveUserEmail(email);
