@@ -7,68 +7,62 @@ interface EtapaProgressBarProps {
 }
 
 const ETAPAS_CONFIG: { code: ProcessEtapa; label: string; description: string }[] = [
-  { code: 'CADASTRO', label: 'Cadastro', description: 'Dados cadastrados' },
-  { code: 'AGENDAMENTO', label: 'Agendamento', description: 'Slot confirmado' },
-  { code: 'CONVITE', label: 'Convite e Banca', description: 'Banca notificada' },
-  { code: 'DEFESA', label: 'Defesa', description: 'Apresentação' },
-  { code: 'AVALIACAO', label: 'Avaliação', description: 'Parecer do Orientador' },
-  { code: 'ASSINATURA', label: 'Assinaturas', description: 'Assinaturas pela Asten' },
-  { code: 'DOCUMENTOS', label: 'Documentos', description: 'PDFs gerados' },
-  { code: 'CONCLUIDO', label: 'Concluído', description: 'Finalizado' },
+  { code: 'CADASTRO', label: 'Cadastro', description: 'Dados do trabalho cadastrados no Portal.' },
+  { code: 'AGENDAMENTO', label: 'Agendamento', description: 'Data, horário e local da defesa em confirmação.' },
+  { code: 'CONVITE', label: 'Convite e Banca', description: 'Banca definida e convite encaminhado aos participantes.' },
+  { code: 'DEFESA', label: 'Defesa', description: 'Apresentação do Trabalho de Conclusão de Curso.' },
+  { code: 'AVALIACAO', label: 'Avaliação', description: 'Parecer e registros da avaliação da defesa.' },
+  { code: 'ASSINATURA', label: 'Assinaturas', description: 'Documentos encaminhados para assinatura eletrônica.' },
+  { code: 'DOCUMENTOS', label: 'Documentos', description: 'Documentos finais gerados, assinados e arquivados.' },
+  { code: 'CONCLUIDO', label: 'Concluído', description: 'Fluxo acadêmico e documental finalizado.' },
 ];
 
 export const EtapaProgressBar: React.FC<EtapaProgressBarProps> = ({ currentEtapa }) => {
   const currentIndex = ETAPAS_CONFIG.findIndex((e) => e.code === currentEtapa);
+  const safeIndex = Math.max(0, currentIndex);
 
   return (
-    <div id="process-etapa-progress-bar" className="w-full bg-white px-4 py-3 rounded-xl border border-slate-200/80 shadow-2xs">
-      <div className="flex items-center justify-between text-xs mb-2">
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-          Fluxo do Processo
-        </span>
-        <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+    <div
+      id="process-etapa-progress-bar"
+      className="w-full rounded-xl border border-slate-300 px-4 py-3 shadow-2xs"
+      style={{ backgroundColor: 'var(--portal-surface-inner)' }}
+    >
+      <div className="mb-2 flex items-center justify-between text-xs">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Fluxo do Processo</span>
+        <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
           Etapa: {ETAPAS_CONFIG[currentIndex]?.label || currentEtapa}
         </span>
       </div>
 
-      {/* Desktop Step Bar */}
-      <div className="hidden md:flex items-center justify-between relative">
-        {/* Connecting line */}
-        <div className="absolute left-3 right-3 top-3 -translate-y-1/2 h-0.5 bg-slate-200 -z-0" />
+      <div className="relative hidden items-center justify-between md:flex">
+        <div className="absolute left-3 right-3 top-3 -z-0 h-0.5 -translate-y-1/2 bg-slate-200" />
         <div
-          className="absolute left-3 top-3 -translate-y-1/2 h-0.5 bg-emerald-700 -z-0 transition-all duration-300"
-          style={{
-            width: `${(Math.max(0, currentIndex) / (ETAPAS_CONFIG.length - 1)) * 100}%`,
-          }}
+          className="absolute left-3 top-3 -z-0 h-0.5 -translate-y-1/2 bg-emerald-700 transition-all duration-300"
+          style={{ width: `${(safeIndex / (ETAPAS_CONFIG.length - 1)) * 100}%` }}
         />
 
         {ETAPAS_CONFIG.map((step, idx) => {
           const isDone = idx < currentIndex;
           const isCurrent = idx === currentIndex;
-
           return (
-            <div key={step.code} className="flex flex-col items-center relative z-10">
+            <div
+              key={step.code}
+              className="relative z-10 flex flex-col items-center"
+              title={`${step.label}: ${step.description}`}
+              aria-label={`${step.label}. ${step.description}${isCurrent ? ' Etapa atual.' : isDone ? ' Etapa concluída.' : ''}`}
+            >
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold transition-all ${
                   isDone
                     ? 'bg-emerald-700 text-white'
                     : isCurrent
-                    ? 'bg-slate-900 text-white ring-2 ring-emerald-600 ring-offset-1 font-extrabold'
-                    : 'bg-white text-slate-400 border border-slate-300'
+                      ? 'bg-slate-900 text-white ring-2 ring-emerald-600 ring-offset-1 font-extrabold'
+                      : 'border border-slate-300 bg-white text-slate-400'
                 }`}
               >
-                {isDone ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : idx + 1}
+                {isDone ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : idx + 1}
               </div>
-
-              <span
-                className={`text-[10px] tracking-tight mt-1 whitespace-nowrap ${
-                  isCurrent
-                    ? 'font-bold text-slate-900'
-                    : isDone
-                    ? 'font-medium text-slate-700'
-                    : 'font-normal text-slate-400'
-                }`}
-              >
+              <span className={`mt-1 whitespace-nowrap text-[10px] tracking-tight ${isCurrent ? 'font-bold text-slate-900' : isDone ? 'font-medium text-slate-700' : 'font-normal text-slate-400'}`}>
                 {step.label}
               </span>
             </div>
@@ -76,17 +70,13 @@ export const EtapaProgressBar: React.FC<EtapaProgressBarProps> = ({ currentEtapa
         })}
       </div>
 
-      {/* Mobile Step Compact Bar */}
-      <div className="md:hidden space-y-1.5 pt-1">
-        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
-          <div
-            className="bg-emerald-700 h-2 transition-all duration-300"
-            style={{ width: `${((currentIndex + 1) / ETAPAS_CONFIG.length) * 100}%` }}
-          />
+      <div className="space-y-1.5 pt-1 md:hidden" title={ETAPAS_CONFIG[currentIndex]?.description}>
+        <div className="h-2 w-full overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+          <div className="h-2 bg-emerald-700 transition-all duration-300" style={{ width: `${((safeIndex + 1) / ETAPAS_CONFIG.length) * 100}%` }} />
         </div>
         <div className="flex justify-between text-[10px] text-slate-500">
-          <span>Passo {currentIndex + 1} de {ETAPAS_CONFIG.length}</span>
-          <span className="font-semibold text-slate-800">{ETAPAS_CONFIG[currentIndex]?.label}</span>
+          <span>Passo {safeIndex + 1} de {ETAPAS_CONFIG.length}</span>
+          <span className="font-semibold text-slate-800">{ETAPAS_CONFIG[currentIndex]?.label || currentEtapa}</span>
         </div>
       </div>
     </div>
