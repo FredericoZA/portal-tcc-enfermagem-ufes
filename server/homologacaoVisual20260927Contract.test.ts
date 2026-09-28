@@ -4,10 +4,15 @@ import { readFile } from 'node:fs/promises';
 
 const source = (path: string) => readFile(path, 'utf8');
 
-test('homologação visual preserva cores semânticas da Lista de Defesas e amplia os indicadores', async () => {
+test('Lista de Defesas recebe cor semântica pelo componente, sem regra CSS por posição', async () => {
   const css = await source('src/portal-version-1046.css');
-  assert.match(css, /#formal-monthly-calendar-section button\.portal-table-filter-chip:nth-child\(2\)[\s\S]*--portal-defense-upcoming-bg/);
-  assert.match(css, /#formal-monthly-calendar-section button\.portal-table-filter-chip:nth-child\(3\)[\s\S]*--portal-defense-defended-bg/);
+  const tableFormatter = await source('src/utils/tableFormatters.ts');
+  const home = await source('src/pages/HomePage.tsx');
+  assert.match(tableFormatter, /resolvePortalFilterTone\(key\)/);
+  assert.match(tableFormatter, /getPortalToneStyle\(semanticTone\)/);
+  assert.match(home, /getFilterChipProps\(statusKey, isSelected, defensesTextFormat/);
+  assert.doesNotMatch(css, /portal-table-filter-chip:nth-child\(2\)[\s\S]*--portal-defense-upcoming-bg/);
+  assert.doesNotMatch(css, /portal-table-filter-chip:nth-child\(3\)[\s\S]*--portal-defense-defended-bg/);
   assert.match(css, /\.portal-filter-dot\s*\{[\s\S]*width:\s*\.65rem\s*!important/);
 });
 
@@ -34,13 +39,18 @@ test('Indicadores remove somente o divisor interno redundante', async () => {
   assert.match(css, /#indicadores-publicos-page > \.portal-section-divider\s*\{\s*display:\s*none\s*!important/);
 });
 
-test('workspaces administrativos não repetem títulos já presentes no modal', async () => {
+test('workspaces administrativos usam modo embedded em vez de esconder títulos via CSS', async () => {
   const modal = await source('src/components/SettingsWorkspaceModal.tsx');
+  const audit = await source('src/pages/AuditLogsPage.tsx');
+  const signatures = await source('src/pages/AstenLogsPage.tsx');
+  const access = await source('src/components/AuthorizedStudentsPanel.tsx');
   const css = await source('src/portal-version-1046.css');
-  assert.doesNotMatch(modal, /<h3 className="text-xs font-black uppercase tracking-wide">\{current\.label\}<\/h3>/);
-  assert.match(css, /portal-settings-single-pane #audit-logs-page > header > div:first-child[\s\S]*display:\s*none\s*!important/);
-  assert.match(css, /portal-settings-single-pane #asten-logs-page > header > div:first-child[\s\S]*display:\s*none\s*!important/);
-  assert.match(css, /portal-settings-single-pane #authorized-access-panel > div:first-child > div:first-child[\s\S]*display:\s*none\s*!important/);
+  assert.match(modal, /React\.cloneElement[\s\S]*embedded:\s*true/);
+  assert.match(audit, /embedded\?: boolean/);
+  assert.match(signatures, /embedded\?: boolean/);
+  assert.match(access, /embedded\?: boolean/);
+  assert.doesNotMatch(css, /#audit-logs-page > header > div:first-child[\s\S]*display:\s*none/);
+  assert.doesNotMatch(css, /#asten-logs-page > header > div:first-child[\s\S]*display:\s*none/);
 });
 
 test('cards de Configurações usam a mesma cor dos títulos', async () => {
