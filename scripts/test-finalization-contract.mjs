@@ -59,7 +59,10 @@ for (const removedLabel of ['Botões no Topo', 'Estilo Base Planilhas', 'Colunas
 for (const canonicalSheet of ["sheet_calendar", "sheet_repository", "sheet_my_tccs", "sheet_coordinator"]) assert.ok(editor.includes(canonicalSheet));
 
 assert.match(access, /Matrícula — opcional/);
-assert.match(access, /Cole dados do Excel/);
+assert.match(access, /planilha Excel normal/);
+assert.match(access, /Modelo Excel/);
+assert.match(access, /Modelo Google Planilhas/);
+assert.match(access, /Selecionar planilha/);
 assert.doesNotMatch(access, />Tipo</);
 assert.doesNotMatch(access, />TCCs</);
 assert.match(importUtil, /parseStudentImportText/);
@@ -101,8 +104,8 @@ assert.doesNotMatch(studio, />Salvar formulário</);
 assert.doesNotMatch(studio, /<strong>Fonte oficial única\.<\/strong>/);
 assert.doesNotMatch(studio, />Finalidade no fluxo</);
 
-assert.match(masterModels, /Cadastre quantos modelos DOCX forem necessários/);
-assert.match(masterModels, /Novo tipo de documento/);
+assert.match(masterModels, /Nome do novo documento/);
+assert.match(masterModels, /Adicionar documento/);
 assert.match(masterModels, /addSlot/);
 assert.match(masterModels, /removeModel/);
 assert.match(masterModels, /deleteDocumentModel/);

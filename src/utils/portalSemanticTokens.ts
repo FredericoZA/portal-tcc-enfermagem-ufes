@@ -18,11 +18,13 @@ export const PORTAL_SEMANTIC_COLORS = {
     defended: { bg: '#c2d0c2', border: '#7e907e', text: '#263728' },
     upcoming: { bg: '#d4c69a', border: '#9e8f63', text: '#453d25' },
   },
+  // Papéis usam quatro famílias cromáticas realmente distintas, mantendo o
+  // aspecto fosco do Portal: âmbar, coral, azul e violeta.
   processRole: {
-    student: { bg: '#d8c98f', border: '#9b884b', text: '#3e361c' },
-    board: { bg: '#c9a39a', border: '#8c5e55', text: '#402824' },
-    evaluator: { bg: '#9db8c0', border: '#587884', text: '#20363e' },
-    viewer: { bg: '#b4a6be', border: '#75647f', text: '#342b39' },
+    student: { bg: '#eadc9b', border: '#9a7a12', text: '#44380d' },
+    board: { bg: '#e2b3ad', border: '#9a5149', text: '#472621' },
+    evaluator: { bg: '#b8d4df', border: '#4f8092', text: '#1f3d48' },
+    viewer: { bg: '#cdb9df', border: '#765493', text: '#372945' },
   },
   signature: {
     pending: { bg: '#d8c98f', border: '#9b884b', text: '#3e361c' },

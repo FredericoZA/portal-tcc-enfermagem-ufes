@@ -60,7 +60,7 @@ test('Registros de Assinatura mostra a linha completa e somente ações suportad
     source('server.ts'),
   ]);
   assert.ok(page.includes("{ key: 'actions', label: 'Ações', isFixed: true }"));
-  assert.ok(page.includes('min-w-[1560px]'));
+  assert.ok(page.includes('min-w-[1900px]'));
   assert.ok(page.includes('sticky right-0'));
   assert.ok(page.includes('Reenviar'));
   assert.ok(page.includes('Reconciliar'));

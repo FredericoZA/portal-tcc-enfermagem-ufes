@@ -18,8 +18,9 @@ test('comissão reúne Presidência, Secretaria e membros sem duplicar personali
   assert.ok(panel.includes('Secretaria'));
   assert.ok(panel.includes('Membros da Comissão'));
   assert.ok(panel.includes('Adicionar membro'));
-  assert.ok(panel.includes("createAdministrationTransfer('COMMISSION_PRESIDENT'"));
-  assert.ok(panel.includes("createAdministrationTransfer('MASTER_ADMIN'"));
+  assert.ok(panel.includes("startTransfer('COMMISSION_PRESIDENT'"));
+  assert.ok(panel.includes("startTransfer('MASTER_ADMIN'"));
+  assert.ok(panel.includes('apiClient.createAdministrationTransfer(role, normalized)'));
   assert.ok(!panel.includes('QRCode.toDataURL'));
   assert.ok(!panel.includes('courseLogoDataUrl'));
   assert.ok(!panel.includes('ADICIONAR / SUBSTITUIR SÍMBOLO'));

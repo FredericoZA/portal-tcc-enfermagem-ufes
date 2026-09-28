@@ -2,15 +2,73 @@ import { formatTimeExtenso, formatDateExtensoTotal, formatNameTitleCase, formatT
 import type { IntegrationStudioSettings, StudioValidationRule } from '../types/integrationStudio';
 import type { CatalogEntry, OperationalConfig, RegistrationAnswers, RegistrationQuestion, VariablePresentation } from '../types/operationalConfig';
 
+const defaultCatalog = (kind: CatalogEntry['kind'], values: string[]): CatalogEntry[] => values.map((label, index) => ({
+  id: `default-${kind.toLowerCase()}-${index + 1}`,
+  kind,
+  label,
+  aliases: [],
+  active: true,
+}));
+
+export const DEFAULT_CLASSIFICATION_CATALOGS: CatalogEntry[] = [
+  ...defaultCatalog('AREA_TEMATICA', [
+    'Saúde coletiva e atenção primária',
+    'Saúde da mulher',
+    'Saúde da criança e do adolescente',
+    'Saúde do adulto e do idoso',
+    'Saúde mental',
+    'Enfermagem hospitalar e urgência/emergência',
+    'Gestão, educação e formação em enfermagem',
+    'Segurança do paciente e qualidade do cuidado',
+    'Tecnologia e inovação em saúde',
+    'Outra área temática',
+  ]),
+  ...defaultCatalog('TEMA_PRINCIPAL', [
+    'Assistência e cuidado de enfermagem',
+    'Promoção da saúde e prevenção de agravos',
+    'Educação em saúde',
+    'Gestão do cuidado e dos serviços',
+    'Qualidade e segurança do paciente',
+    'Formação e trabalho em enfermagem',
+    'Tecnologias aplicadas à saúde',
+    'Epidemiologia e vigilância em saúde',
+    'Outro tema principal',
+  ]),
+  ...defaultCatalog('TIPO_DE_ESTUDO', [
+    'Estudo qualitativo',
+    'Estudo quantitativo',
+    'Estudo de métodos mistos',
+    'Estudo transversal',
+    'Estudo de caso',
+    'Pesquisa documental',
+    'Revisão integrativa da literatura',
+    'Revisão sistemática da literatura',
+    'Relato de experiência',
+    'Outro tipo de estudo',
+  ]),
+  ...defaultCatalog('FINALIDADE_DO_TRABALHO', [
+    'Analisar ou descrever uma situação de saúde',
+    'Avaliar práticas, serviços ou intervenções',
+    'Identificar fatores associados ou necessidades',
+    'Sistematizar evidências da literatura',
+    'Propor ou avaliar tecnologia, instrumento ou protocolo',
+    'Relatar e refletir sobre experiência de cuidado, ensino ou gestão',
+    'Outra finalidade',
+  ]),
+];
+
 export const DEFAULT_OPERATIONAL_CONFIG: OperationalConfig = {
   reservation: {
     departmentEmail: 'dptenfccs@gmail.com',
+    recipientName: 'Departamento de Enfermagem',
+    emailSubject: 'Solicitação de reserva de local para defesa de TCC — {{TITULO}}',
+    emailBody: 'Prezados(as),\n\nSolicitamos a reserva de local para a defesa do TCC “{{TITULO}}”, prevista para {{DEFESA_DATA_HORA}}.\n\nLocal preferencial: {{DEFESA_LOCAL}}.\nLocal alternativo: {{LOCAL_ALTERNATIVO}}.\n\nAlunos(as): {{ALUNOS_NOMES}}.\nOrientador(a): {{ORIENTADOR_NOME}}.\n\nAtenciosamente,\nSecretaria do Curso de Graduação em Enfermagem e Obstetrícia.',
     locations: [
       'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES',
       'Sala de reuniões do Departamento de Enfermagem - CCS/UFES'
     ]
   },
-  catalogs: [],
+  catalogs: DEFAULT_CLASSIFICATION_CATALOGS,
   diagnostics: { staleDays: 30, minimumCoverage: 70, priority: 'P2' },
   presentations: {}
 };
@@ -24,12 +82,18 @@ export const canonicalKey = (value: unknown) => String(value ?? '')
 
 export function operationalConfig(studio?: Partial<IntegrationStudioSettings>): OperationalConfig {
   const config = studio?.operationalConfig;
+  const configuredCatalogs = Array.isArray(config?.catalogs) ? config.catalogs : [];
+  const configuredKinds = new Set(configuredCatalogs.map((entry) => entry.kind));
+  const catalogs = [
+    ...configuredCatalogs,
+    ...DEFAULT_CLASSIFICATION_CATALOGS.filter((entry) => !configuredKinds.has(entry.kind)),
+  ];
   return {
     ...DEFAULT_OPERATIONAL_CONFIG,
     ...config,
     reservation: { ...DEFAULT_OPERATIONAL_CONFIG.reservation, ...config?.reservation },
     diagnostics: { ...DEFAULT_OPERATIONAL_CONFIG.diagnostics, ...config?.diagnostics },
-    catalogs: config?.catalogs || [],
+    catalogs,
     presentations: config?.presentations || {}
   };
 }
@@ -78,12 +142,12 @@ const when = (fieldKey: string) => ({ fieldKey, operator: 'EQUALS' as const, val
 export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   q('ALUNO_1_NOME', 'Nome completo', 'Aluno', 'text', undefined, FULL_NAME_VALIDATION),
   q('ALUNO_1_MATRICULA', 'Matrícula do curso', 'Aluno', 'text', undefined, STUDENT_ID_VALIDATION),
-  q('ALUNO_1_EMAIL', 'E-mail institucional do aluno', 'Aluno', 'email'),
+  q('ALUNO_1_EMAIL', 'E-mail do aluno', 'Aluno', 'email'),
 
   { ...q('TEM_ALUNO_2', 'O trabalho tem segundo autor?', 'Segundo autor', 'select'), options: ['Não', 'Sim'] },
   q('ALUNO_2_NOME', 'Nome completo do segundo autor', 'Segundo autor', 'text', when('TEM_ALUNO_2'), FULL_NAME_VALIDATION),
   q('ALUNO_2_MATRICULA', 'Matrícula do segundo autor', 'Segundo autor', 'text', when('TEM_ALUNO_2'), STUDENT_ID_VALIDATION),
-  q('ALUNO_2_EMAIL', 'E-mail institucional do segundo autor', 'Segundo autor', 'email', when('TEM_ALUNO_2')),
+  q('ALUNO_2_EMAIL', 'E-mail do segundo autor', 'Segundo autor', 'email', when('TEM_ALUNO_2')),
 
   q('ORIENTADOR_NOME', 'Nome completo do orientador', 'Orientação', 'text', undefined, FULL_NAME_VALIDATION),
   q('ORIENTADOR_EMAIL', 'E-mail do orientador', 'Orientação', 'email'),
@@ -103,8 +167,10 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   ]),
 
   q('TITULO', 'Título completo do TCC', 'Trabalho'),
-  ...(['AREA_TEMATICA', 'TEMA_PRINCIPAL', 'TIPO_DE_ESTUDO', 'FINALIDADE_DO_TRABALHO'] as const)
-    .map((key, i) => ({ ...q(key, ['Área temática', 'Tema principal', 'Tipo de estudo', 'Finalidade do trabalho'][i], 'Trabalho'), required: false })),
+  { ...q('AREA_TEMATICA', 'Área temática', 'Trabalho', 'select'), required: false, helpText: 'Escolha a área que melhor representa o trabalho. Ex.: saúde da mulher, saúde mental, segurança do paciente.' },
+  { ...q('TEMA_PRINCIPAL', 'Tema principal', 'Trabalho', 'select'), required: false, helpText: 'Escolha o foco principal. Ex.: assistência de enfermagem, educação em saúde, gestão do cuidado.' },
+  { ...q('TIPO_DE_ESTUDO', 'Tipo de estudo', 'Trabalho', 'select'), required: false, helpText: 'Ex.: estudo qualitativo, revisão integrativa, estudo transversal ou relato de experiência.' },
+  { ...q('FINALIDADE_DO_TRABALHO', 'Finalidade do trabalho', 'Trabalho', 'select'), required: false, helpText: 'Escolha o objetivo geral mais próximo do estudo. Ex.: analisar uma situação, avaliar uma intervenção ou sistematizar evidências.' },
 
   q('DEFESA_DATA_HORA', 'Data e hora pretendidas para a defesa', 'Reserva do local', 'datetime-local'),
   q('DEFESA_LOCAL', 'Local que pretende reservar', 'Reserva do local', 'select'),
@@ -149,7 +215,7 @@ export function registrationQuestions(studio?: Partial<IntegrationStudioSettings
     seen.add(fieldKey);
     const core = REGISTRATION_QUESTIONS.find(f => f.fieldKey === fieldKey);
     result.push(core
-      ? { ...core, ...custom, fieldKey, fieldType: core.fieldType, required: core.required || custom.required, visibleWhen: core.visibleWhen, validation: core.validation || custom.validation }
+      ? { ...core, ...custom, fieldKey, fieldType: core.fieldType, required: core.required || custom.required, visibleWhen: core.visibleWhen, validation: core.validation || custom.validation, helpText: custom.helpText || core.helpText }
       : { ...custom, fieldKey, section: custom.section || 'Trabalho' });
   }
 
@@ -168,7 +234,7 @@ export function registrationQuestions(studio?: Partial<IntegrationStudioSettings
   result.forEach(visit);
 
   return ordered.map(field => {
-    if (['DEFESA_LOCAL', 'LOCAL_ALTERNATIVO'].includes(field.fieldKey)) return { ...field, options: config.reservation.locations };
+    if (['DEFESA_LOCAL', 'LOCAL_ALTERNATIVO'].includes(field.fieldKey)) return { ...field, fieldType: 'select', options: config.reservation.locations.filter(Boolean) };
     const options = config.catalogs.filter(e => e.kind === field.fieldKey && catalogIsValid(e)).map(e => e.label);
     return options.length ? { ...field, fieldType: 'select', options } : field;
   });

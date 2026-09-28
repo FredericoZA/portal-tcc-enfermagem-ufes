@@ -1,0 +1,135 @@
+/*
+ * Detalhes do TCC — componente visual canônico.
+ *
+ * Esta folha é deliberadamente limitada a #process-detail-container. Ela não
+ * cria um tema paralelo: usa apenas os tokens globais do Portal e transforma a
+ * ficha do TCC em uma superfície coerente com as demais áreas.
+ */
+
+.portal-process-dialog,
+.portal-process-dialog-body,
+#process-detail-container.portal-tcc-detail {
+  background: var(--portal-surface-layer-1) !important;
+}
+
+#process-detail-container.portal-tcc-detail {
+  color: #0f172a !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+/* Nenhuma entrada do Portal deve voltar a exibir o cabeçalho genérico legado
+ * (brasão + "Painel de Gestão"). O título real do TCC é o único cabeçalho. */
+#process-detail-container.portal-tcc-detail > header:first-child {
+  display: none !important;
+}
+
+/* O cartão que já contém título, protocolo, engrenagem e fechar é o único
+ * cabeçalho do TCC. O cabeçalho genérico com brasão deixa de ser renderizado
+ * pelo App e esta superfície assume a identidade institucional. */
+#process-detail-container > div:has(#tcc-gear-settings-btn) {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 14px 14px 0 0 !important;
+  background: var(--portal-green-header) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+#process-detail-container > div:has(#tcc-gear-settings-btn) h1,
+#process-detail-container > div:has(#tcc-gear-settings-btn) [class*="text-slate-"],
+#process-detail-container > div:has(#tcc-gear-settings-btn) svg {
+  color: #fff !important;
+}
+
+#process-detail-container > div:has(#tcc-gear-settings-btn) > div:last-child {
+  border-top-color: rgba(255, 255, 255, .28) !important;
+}
+
+#process-detail-container > div:has(#tcc-gear-settings-btn) #tcc-gear-settings-btn,
+#process-detail-container > div:has(#tcc-gear-settings-btn) button[title="Voltar / Fechar Detalhes"] {
+  background: #fff !important;
+  border-color: #fff !important;
+  color: #111827 !important;
+}
+
+#process-detail-container > div:has(#tcc-gear-settings-btn) #tcc-gear-settings-btn svg,
+#process-detail-container > div:has(#tcc-gear-settings-btn) button[title="Voltar / Fechar Detalhes"] svg,
+#process-detail-container > div:has(#tcc-gear-settings-btn) button[title="Voltar / Fechar Detalhes"] span {
+  color: #111827 !important;
+}
+
+/* O cabeçalho é verde, mas menus/popovers abertos a partir dele continuam uma
+ * superfície branca legível. Isso impede texto branco sobre fundo branco. */
+#process-detail-container > div:has(#tcc-gear-settings-btn) [role="menu"],
+#process-detail-container > div:has(#tcc-gear-settings-btn) [role="menu"] *,
+#process-detail-container > div:has(#tcc-gear-settings-btn) [data-portal-popover],
+#process-detail-container > div:has(#tcc-gear-settings-btn) [data-portal-popover] * {
+  color: #111827 !important;
+}
+#process-detail-container > div:has(#tcc-gear-settings-btn) [role="menu"],
+#process-detail-container > div:has(#tcc-gear-settings-btn) [data-portal-popover] {
+  background: #fff !important;
+}
+
+/* Fluxo: única representação permanente do andamento do processo. */
+#process-detail-container #process-etapa-progress-bar {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border-width: 0 0 2px !important;
+  border-color: #fff !important;
+  background: var(--portal-surface-layer-2) !important;
+  box-shadow: none !important;
+}
+
+/* Abas: camada cinza para navegação; a aba ativa assume o verde institucional. */
+#process-detail-container > div[class*="overflow-x-auto"][class*="custom-scrollbar"] {
+  margin: 0 !important;
+  padding: 8px !important;
+  border: 0 !important;
+  border-bottom: 2px solid #fff !important;
+  border-radius: 0 !important;
+  background: var(--portal-surface-layer-2) !important;
+  box-shadow: none !important;
+}
+
+#process-detail-container > div[class*="overflow-x-auto"][class*="custom-scrollbar"] > button {
+  min-height: 32px;
+  background: #fff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  box-shadow: none !important;
+}
+
+#process-detail-container > div[class*="overflow-x-auto"][class*="custom-scrollbar"] > button.bg-white {
+  background: var(--portal-green-action) !important;
+  border-color: var(--portal-green-action-border) !important;
+  color: #fff !important;
+}
+
+#process-detail-container > div[class*="overflow-x-auto"][class*="custom-scrollbar"] > button.bg-white svg,
+#process-detail-container > div[class*="overflow-x-auto"][class*="custom-scrollbar"] > button.bg-white span {
+  color: #fff !important;
+}
+
+/* O conteúdo útil volta à camada branca, sobre a moldura branco-gelo/cinza. */
+#process-detail-container > div:not(:has(#tcc-gear-settings-btn)):not([class*="overflow-x-auto"]),
+#process-detail-container > section:not(#process-operational-actions) {
+  margin-top: 10px;
+}
+
+#process-detail-container #process-operational-actions {
+  margin: 10px 0 0 !important;
+  background: var(--portal-surface-inner) !important;
+}
+
+@media (max-width: 640px) {
+  .portal-process-dialog,
+  #process-detail-container > div:has(#tcc-gear-settings-btn) {
+    border-radius: 12px !important;
+  }
+
+  #process-detail-container > div:has(#tcc-gear-settings-btn) {
+    border-radius: 12px 12px 0 0 !important;
+  }
+}

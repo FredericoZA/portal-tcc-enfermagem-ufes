@@ -1,16 +1,9 @@
-import type { ProcessData, ProcessStatus } from '../types';
+import type { ProcessData } from '../types';
 
 export type DefenseState = 'upcoming' | 'defended';
 export type DefenseFilter = 'all' | DefenseState;
 
 type DefenseSummaryProcess = Pick<ProcessData, 'titulo' | 'defesa'> & Partial<Pick<ProcessData, 'aluno1' | 'aluno2'>>;
-
-const POST_DEFENSE_STATUSES = new Set<ProcessStatus>([
-  'EM_AVALIACAO',
-  'AGUARDANDO_DADOS_FINAIS',
-  'AGUARDANDO_ASSINATURA',
-  'CONCLUIDO',
-]);
 
 const validTimestamp = (value?: string) => {
   if (!value) return null;
@@ -18,16 +11,27 @@ const validTimestamp = (value?: string) => {
   return Number.isFinite(timestamp) ? timestamp : null;
 };
 
-export function getDefenseStateFromTimes(startAt?: string, endAt?: string, now = Date.now()): DefenseState {
-  const end = validTimestamp(endAt);
-  if (end !== null) return end < now ? 'defended' : 'upcoming';
-
+/**
+ * Fonte canônica do estado temporal de uma defesa.
+ *
+ * Regra institucional de interface:
+ * - início anterior ao instante atual => já defendido;
+ * - início no instante atual ou futuro => a defender.
+ *
+ * O horário de término é mantido apenas por compatibilidade de assinatura da
+ * função. Ele não participa da classificação, para que calendário, filtro e
+ * botão do processo nunca discordem entre si durante ou após o horário marcado.
+ */
+export function getDefenseStateFromTimes(startAt?: string, _endAt?: string, now = Date.now()): DefenseState {
   const start = validTimestamp(startAt);
   return start !== null && start < now ? 'defended' : 'upcoming';
 }
 
+/**
+ * O status administrativo do processo não altera a cor da defesa. A cor é
+ * exclusivamente temporal e deriva de defesa.startAt.
+ */
 export function getDefenseState(process: Pick<ProcessData, 'status' | 'defesa'>, now = Date.now()): DefenseState {
-  if (POST_DEFENSE_STATUSES.has(process.status)) return 'defended';
   return getDefenseStateFromTimes(process.defesa?.startAt, process.defesa?.endAt, now);
 }
 

@@ -6,6 +6,7 @@ import { portalConfirm, portalNotice } from '../services/portalDialogs';
 import type { AuditLog } from '../types';
 import { SearchPopover } from '../components/SearchPopover';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
+import { SettingsWorkspaceHeaderPortal } from '../components/SettingsWorkspaceModal';
 import { loadTableConfig, type ColumnDef } from '../components/TableColumnSelectorPanel';
 import { loadGlobalTableConfig, type TableTextFormat } from '../utils/tableFormatters';
 
@@ -18,8 +19,9 @@ const LOG_COLUMNS: ColumnDef[] = [
 ];
 const DEFAULT_ORDER = LOG_COLUMNS.map(column => column.key);
 const DEFAULT_VISIBLE = Object.fromEntries(LOG_COLUMNS.map(column => [column.key, true]));
+const whiteButton = 'inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-white bg-white px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-900 shadow-sm hover:bg-slate-50';
 
-export const AuditLogsPage: React.FC = () => {
+export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const { isMasterAdmin } = useAuth();
   const initialConfig = loadTableConfig('audit_logs', DEFAULT_ORDER, DEFAULT_VISIBLE, 25);
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -105,35 +107,30 @@ export const AuditLogsPage: React.FC = () => {
     </div>;
   };
 
-  return <div id="audit-logs-page" className="space-y-0 overflow-hidden rounded-2xl border border-slate-300 bg-[#d5dce0] shadow-sm">
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white bg-[#005830] px-4 py-3 text-white">
-      <div className="flex items-center gap-2"><FileCheck2 className="h-5 w-5 shrink-0"/><h1 className="text-sm font-black uppercase tracking-wide">Registro de logs</h1></div>
-      <div className="portal-audit-toolbar flex flex-wrap items-center justify-end gap-1.5">
-        <div className="portal-audit-actions flex items-center gap-1.5">
-          <button type="button" onClick={() => void downloadBackup()} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-900 shadow-sm"><Download className="h-3.5 w-3.5"/>Backup</button>
-          <button type="button" onClick={() => restoreInputRef.current?.click()} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-900 shadow-sm"><Upload className="h-3.5 w-3.5"/>Restaurar</button>
-          <input ref={restoreInputRef} type="file" accept=".json,application/json" className="hidden" onChange={event => restoreBackup(event.target.files?.[0])}/>
-        </div>
-        <div className="portal-audit-table-controls flex items-center gap-1.5">
-          <SearchPopover value={search} onChange={setSearch} placeholder="Usuário, ação, processo ou entidade" textFormat={textFormat}/>
-          <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} allColumns={LOG_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="audit_logs" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Registro de logs"/>
-        </div>
-      </div>
-    </header>
+  const toolbar = <div className="portal-audit-toolbar flex flex-wrap items-center justify-end gap-1.5">
+    <button type="button" onClick={() => void downloadBackup()} className={whiteButton}><Download className="h-3.5 w-3.5"/>Backup</button>
+    <button type="button" onClick={() => restoreInputRef.current?.click()} className={whiteButton}><Upload className="h-3.5 w-3.5"/>Restaurar</button>
+    <input ref={restoreInputRef} type="file" accept=".json,application/json" className="hidden" onChange={event => restoreBackup(event.target.files?.[0])}/>
+    <SearchPopover value={search} onChange={setSearch} placeholder="Usuário, ação, processo ou entidade" textFormat={textFormat}/>
+    <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} allColumns={LOG_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="audit_logs" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Registro de logs"/>
+  </div>;
+
+  return <div id="audit-logs-page" data-settings-sheet="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'min-h-full' : 'space-y-0 overflow-hidden rounded-2xl border border-slate-300 shadow-sm'} style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>
+    {embedded ? <SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal> : <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-green-header)' }}><div className="flex items-center gap-2"><FileCheck2 className="h-5 w-5 shrink-0"/><h1 className="text-sm font-black uppercase tracking-wide">Registro de logs</h1></div>{toolbar}</header>}
 
     <div className="portal-audit-table-shell">
       {loading ? <div className="m-3 rounded-xl border border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Carregando histórico…</div> : shown.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Nenhum registro encontrado com os filtros atuais.</div> : <div className="overflow-x-auto bg-white">
         <table className="portal-spreadsheet-table portal-audit-table w-full min-w-[860px] border-collapse text-left text-xs">
-          <thead><tr>{activeColumns.map(key => <th key={key} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wide ${key === 'options' ? 'text-right' : ''}`}>{LOG_COLUMNS.find(column => column.key === key)?.label || key}</th>)}</tr></thead>
-          <tbody className="divide-y divide-slate-200">{shown.map(log => <tr key={log.id} className="hover:bg-slate-50">{activeColumns.map(key => <td key={key} className={`px-3 py-1 text-slate-950 ${key === 'options' ? 'text-right' : ''}`}>{renderCell(log, key)}</td>)}</tr>)}</tbody>
+          <thead><tr>{activeColumns.map(key => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wide ${key === 'options' ? 'text-right' : ''}`}>{LOG_COLUMNS.find(column => column.key === key)?.label || key}</th>)}</tr></thead>
+          <tbody className="divide-y divide-slate-200">{shown.map(log => <tr key={log.id}>{activeColumns.map(key => <td key={key} className={`px-3 py-1 text-slate-950 ${key === 'options' ? 'text-right' : ''}`}>{renderCell(log, key)}</td>)}</tr>)}</tbody>
         </table>
       </div>}
     </div>
 
-    {selectedLog && <div className="fixed inset-0 z-[1000002] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm" onClick={() => setSelectedLog(null)}>
+    {selectedLog && <div className="fixed inset-0 z-[1000008] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm" onClick={() => setSelectedLog(null)}>
       <div role="dialog" aria-modal="true" aria-label="Detalhes do registro de log" className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-2xl" onClick={event => event.stopPropagation()}>
-        <div className="flex items-center justify-between border-b-2 border-white bg-[#005830] px-4 py-3 text-white"><div className="flex items-center gap-2"><FileCheck2 className="h-4 w-4"/><strong className="text-xs uppercase">Detalhes do registro</strong></div><button type="button" onClick={() => setSelectedLog(null)} className="rounded-lg border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-black uppercase text-slate-900">Fechar</button></div>
-        <div className="grid max-h-[75vh] gap-3 overflow-y-auto bg-slate-100 p-4 md:grid-cols-2">
+        <div className="flex items-center justify-between border-b-[16px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-green-header)' }}><div className="flex items-center gap-2"><FileCheck2 className="h-4 w-4"/><strong className="text-xs uppercase">Detalhes do registro</strong></div><button type="button" onClick={() => setSelectedLog(null)} className="rounded-lg border border-white bg-white px-2 py-0.5 text-[9px] font-black uppercase text-slate-900">Fechar</button></div>
+        <div className="grid max-h-[75vh] gap-3 overflow-y-auto p-4 md:grid-cols-2" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
           <section className="rounded-xl border border-slate-300 bg-white p-3"><strong className="text-[10px] uppercase text-slate-600">Estado anterior</strong><pre className="mt-2 max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[10px]">{selectedLog.before ? JSON.stringify(selectedLog.before, null, 2) : '(sem estado anterior)'}</pre></section>
           <section className="rounded-xl border border-slate-300 bg-white p-3"><strong className="text-[10px] uppercase text-slate-600">Estado posterior</strong><pre className="mt-2 max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[10px]">{selectedLog.after ? JSON.stringify(selectedLog.after, null, 2) : '(sem estado posterior)'}</pre></section>
         </div>

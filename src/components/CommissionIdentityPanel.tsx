@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Mail, Plus, Save, Trash2, UserRoundCog, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
@@ -49,100 +49,119 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
     return current.length ? normalizeMembers(current) : legacyMembers(typedSettings);
   }, [typedSettings]);
 
+  const remotePresidentContact = String(typedSettings?.commissionPresidentContactEmail || typedSettings?.commissionPresidentEmail || '');
   const [presidentName, setPresidentName] = useState(String(typedSettings?.commissionPresidentName || ''));
-  const [presidentEmail, setPresidentEmail] = useState(String(typedSettings?.commissionPresidentEmail || ''));
+  const [presidentEmail, setPresidentEmail] = useState(remotePresidentContact);
   const [secretaryName, setSecretaryName] = useState(String(typedSettings?.portalMaintainerName || ''));
   const [secretaryEmail, setSecretaryEmail] = useState(String(typedSettings?.contactEmail || ''));
   const [whatsappUrl, setWhatsappUrl] = useState(String(typedSettings?.whatsappUrl || ''));
   const [members, setMembers] = useState<CommissionMemberInfo[]>(initialMembers);
+  const [presidentTransferEmail, setPresidentTransferEmail] = useState('');
   const [masterTransferEmail, setMasterTransferEmail] = useState('');
   const [saving, setSaving] = useState(false);
-  const [transferringMaster, setTransferringMaster] = useState(false);
-  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+  const [transferring, setTransferring] = useState('');
+  const [errorText, setErrorText] = useState('');
+  const hydratedRef = useRef(false);
+  const saveTimerRef = useRef<number | null>(null);
+  const lastSavedFingerprintRef = useRef('');
 
-  useEffect(() => setMembers(initialMembers), [initialMembers]);
+  const currentFingerprint = useMemo(() => JSON.stringify({
+    commissionPresidentName: presidentName.trim(),
+    commissionPresidentContactEmail: presidentEmail.trim().toLowerCase(),
+    commissionMembers: normalizeMembers(members),
+    portalMaintainerName: secretaryName.trim(),
+    contactEmail: secretaryEmail.trim().toLowerCase(),
+    whatsappUrl: whatsappUrl.trim(),
+  }), [presidentName, presidentEmail, members, secretaryName, secretaryEmail, whatsappUrl]);
+
   useEffect(() => {
-    setPresidentName(String(typedSettings?.commissionPresidentName || ''));
-    setPresidentEmail(String(typedSettings?.commissionPresidentEmail || ''));
-    setSecretaryName(String(typedSettings?.portalMaintainerName || ''));
-    setSecretaryEmail(String(typedSettings?.contactEmail || ''));
-    setWhatsappUrl(String(typedSettings?.whatsappUrl || ''));
-  }, [typedSettings?.commissionPresidentName, typedSettings?.commissionPresidentEmail, typedSettings?.portalMaintainerName, typedSettings?.contactEmail, typedSettings?.whatsappUrl]);
+    const snapshot = {
+      commissionPresidentName: String(typedSettings?.commissionPresidentName || '').trim(),
+      commissionPresidentContactEmail: String(typedSettings?.commissionPresidentContactEmail || typedSettings?.commissionPresidentEmail || '').trim().toLowerCase(),
+      commissionMembers: initialMembers,
+      portalMaintainerName: String(typedSettings?.portalMaintainerName || '').trim(),
+      contactEmail: String(typedSettings?.contactEmail || '').trim().toLowerCase(),
+      whatsappUrl: String(typedSettings?.whatsappUrl || '').trim(),
+    };
+    setPresidentName(snapshot.commissionPresidentName);
+    setPresidentEmail(snapshot.commissionPresidentContactEmail);
+    setMembers(snapshot.commissionMembers);
+    setSecretaryName(snapshot.portalMaintainerName);
+    setSecretaryEmail(snapshot.contactEmail);
+    setWhatsappUrl(snapshot.whatsappUrl);
+    lastSavedFingerprintRef.current = JSON.stringify(snapshot);
+    hydratedRef.current = true;
+  }, [typedSettings?.commissionPresidentName, typedSettings?.commissionPresidentContactEmail, typedSettings?.commissionPresidentEmail, typedSettings?.commissionMembers, typedSettings?.portalMaintainerName, typedSettings?.contactEmail, typedSettings?.whatsappUrl, initialMembers]);
+
+  const validateAndBuildPatch = (showError: boolean) => {
+    const normalizedPresidentName = presidentName.trim();
+    const normalizedPresidentEmail = presidentEmail.trim().toLowerCase();
+    const normalizedSecretaryEmail = secretaryEmail.trim().toLowerCase();
+    const normalizedMembers = normalizeMembers(members);
+    const normalizedWhatsapp = whatsappUrl.trim();
+    const fail = (text: string) => { if (showError) setErrorText(text); return null; };
+
+    if (!normalizedPresidentName) return fail('Informe o nome da Presidência da Comissão.');
+    if (normalizedPresidentEmail && !validEmail(normalizedPresidentEmail)) return fail('Informe um e-mail válido para a Presidência da Comissão.');
+    if (normalizedSecretaryEmail && !validEmail(normalizedSecretaryEmail)) return fail('O e-mail da Secretaria é inválido.');
+    const invalidMember = normalizedMembers.find((member) => member.email && !validEmail(member.email));
+    if (invalidMember) return fail(`E-mail inválido para ${invalidMember.name}.`);
+    if (normalizedWhatsapp) {
+      try { const parsed = new URL(normalizedWhatsapp); if (!['https:', 'http:'].includes(parsed.protocol)) return fail('O WhatsApp precisa usar uma URL http ou https.'); }
+      catch { return fail('Informe um link válido para o WhatsApp.'); }
+    }
+    return {
+      commissionPresidentName: normalizedPresidentName,
+      commissionPresidentContactEmail: normalizedPresidentEmail,
+      commissionMembers: normalizedMembers,
+      portalMaintainerName: secretaryName.trim(),
+      contactEmail: normalizedSecretaryEmail,
+      whatsappUrl: normalizedWhatsapp,
+    };
+  };
+
+  const persistIdentity = async (manual: boolean) => {
+    const patch = validateAndBuildPatch(manual);
+    if (!patch) return false;
+    const fingerprint = JSON.stringify(patch);
+    if (fingerprint === lastSavedFingerprintRef.current) return true;
+    if (manual) setSaving(true);
+    setErrorText('');
+    try {
+      await durableRetry(() => apiClient.updateSettings(patch as any));
+      lastSavedFingerprintRef.current = fingerprint;
+      if (manual) await refreshAuth();
+      return true;
+    } catch (error: any) {
+      setErrorText(error instanceof Error ? error.message : 'Não foi possível salvar os dados da Sincronização.');
+      return false;
+    } finally { if (manual) setSaving(false); }
+  };
+
+  useEffect(() => {
+    if (!hydratedRef.current || currentFingerprint === lastSavedFingerprintRef.current) return;
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => { void persistIdentity(false); }, 1200);
+    return () => { if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current); };
+  }, [currentFingerprint]);
 
   if (!isMaster) return null;
 
   const updateMember = (id: string, updates: Partial<CommissionMemberInfo>) => setMembers((prev) => prev.map((member) => member.id === id ? { ...member, ...updates } : member));
-  const addMember = () => { setMembers((prev) => [...prev, { id: makeId(), name: '', email: '', startDate: '', endDate: '', active: true }]); setFeedback(null); };
+  const addMember = () => { setMembers((prev) => [...prev, { id: makeId(), name: '', email: '', startDate: '', endDate: '', active: true }]); setErrorText(''); };
 
-  const saveAdministrativeIdentity = async () => {
-    setSaving(true);
-    setFeedback(null);
+  const startTransfer = async (role: 'MASTER_ADMIN' | 'COMMISSION_PRESIDENT', targetEmail: string) => {
+    const normalized = targetEmail.trim().toLowerCase();
+    if (!validEmail(normalized)) { setErrorText('Informe um e-mail válido antes de iniciar a troca de acesso.'); return; }
+    const roleLabel = role === 'MASTER_ADMIN' ? 'Usuário Master' : 'Presidência';
+    if (!(await portalConfirm(`Iniciar a troca segura de ${roleLabel} para ${normalized}? O novo titular deverá confirmar o acesso.`))) return;
+    setTransferring(role); setErrorText('');
     try {
-      const normalizedPresidentName = presidentName.trim();
-      const normalizedPresidentEmail = presidentEmail.trim().toLowerCase();
-      const normalizedSecretaryEmail = secretaryEmail.trim().toLowerCase();
-      const normalizedMembers = normalizeMembers(members);
-
-      if (!normalizedPresidentName) throw new Error('Informe o nome da Presidência da Comissão.');
-      if (!normalizedPresidentEmail || !validEmail(normalizedPresidentEmail)) throw new Error('Informe um e-mail válido para a Presidência da Comissão.');
-      if (normalizedSecretaryEmail && !validEmail(normalizedSecretaryEmail)) throw new Error('O e-mail da Secretaria é inválido.');
-      const invalidMember = normalizedMembers.find((member) => member.email && !validEmail(member.email));
-      if (invalidMember) throw new Error(`E-mail inválido para ${invalidMember.name}.`);
-      const normalizedWhatsapp = whatsappUrl.trim();
-      if (normalizedWhatsapp) {
-        const parsed = new URL(normalizedWhatsapp);
-        if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('O WhatsApp precisa usar uma URL http ou https.');
-      }
-
-      await durableRetry(() => apiClient.updateSettings({
-        commissionPresidentName: normalizedPresidentName,
-        commissionMembers: normalizedMembers,
-        portalMaintainerName: secretaryName.trim(),
-        contactEmail: normalizedSecretaryEmail,
-        whatsappUrl: normalizedWhatsapp,
-      } as any));
-
-      const currentPresidentEmail = String(typedSettings?.commissionPresidentEmail || '').trim().toLowerCase();
-      let transferStarted = false;
-      if (normalizedPresidentEmail !== currentPresidentEmail) {
-        await apiClient.createAdministrationTransfer('COMMISSION_PRESIDENT', normalizedPresidentEmail);
-        transferStarted = true;
-      }
-
-      setMembers(normalizedMembers);
-      await refreshAuth();
-      setFeedback({
-        ok: true,
-        text: transferStarted
-          ? 'Dados salvos. A troca do e-mail da Presidência foi iniciada com confirmação segura no novo endereço.'
-          : 'Presidência, Secretaria e Comissão salvas no banco durável.',
-      });
+      await apiClient.createAdministrationTransfer(role, normalized);
+      if (role === 'MASTER_ADMIN') setMasterTransferEmail(''); else setPresidentTransferEmail('');
     } catch (error: any) {
-      const needsReauth = error?.status === 428;
-      setFeedback({
-        ok: false,
-        text: needsReauth
-          ? 'Os dados cadastrais foram preservados. Para trocar um e-mail administrativo, entre novamente no Portal e repita a alteração para confirmar sua identidade.'
-          : error instanceof Error ? error.message : 'Não foi possível salvar Presidência, Secretaria e Comissão.',
-      });
-    } finally { setSaving(false); }
-  };
-
-  const startMasterTransfer = async () => {
-    if (!isCommissionPresident) return;
-    const targetEmail = masterTransferEmail.trim().toLowerCase();
-    if (!validEmail(targetEmail)) { setFeedback({ ok: false, text: 'Informe um novo e-mail válido para o Usuário Master.' }); return; }
-    if (targetEmail === String(typedSettings?.masterEmail || '').trim().toLowerCase()) { setFeedback({ ok: false, text: 'Esse e-mail já é o Usuário Master atual.' }); return; }
-    if (!(await portalConfirm(`Iniciar a troca segura do Usuário Master para ${targetEmail}? O novo titular deverá confirmar o acesso.`))) return;
-    setTransferringMaster(true);
-    setFeedback(null);
-    try {
-      await apiClient.createAdministrationTransfer('MASTER_ADMIN', targetEmail);
-      setMasterTransferEmail('');
-      setFeedback({ ok: true, text: 'Troca do Usuário Master iniciada. O novo e-mail precisa concluir a confirmação segura antes da alteração efetiva.' });
-    } catch (error: any) {
-      setFeedback({ ok: false, text: error?.status === 428 ? 'Por segurança, entre novamente no Portal antes de trocar o Usuário Master.' : (error instanceof Error ? error.message : 'Não foi possível iniciar a troca do Usuário Master.') });
-    } finally { setTransferringMaster(false); }
+      setErrorText(error?.status === 428 ? 'Entre novamente no Portal antes de trocar um acesso administrativo.' : (error instanceof Error ? error.message : 'Não foi possível iniciar a troca segura.'));
+    } finally { setTransferring(''); }
   };
 
   return (
@@ -153,12 +172,12 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
             <Users className="h-4 w-4 text-[#337959]" />
             <div>
               <h3 id="commission-management-title" className="text-xs font-black uppercase tracking-wide text-slate-950">Presidência, Secretaria e Comissão</h3>
-              <p className="text-[10px] text-slate-600">Um único cadastro para os contatos institucionais usados pelo Portal.</p>
+              <p className="text-[10px] text-slate-600">Contatos e composição exibidos pelo Portal. As alterações também são preservadas automaticamente, sem mensagens a cada edição.</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={addMember} className={actionClass}><Plus className="h-3.5 w-3.5" />Adicionar membro</button>
-            <button type="button" onClick={() => void saveAdministrativeIdentity()} disabled={saving} className={actionClass}><Save className="h-3.5 w-3.5" />{saving ? 'Salvando…' : 'Salvar'}</button>
+            <button type="button" onClick={() => void persistIdentity(true)} disabled={saving} className={actionClass} aria-busy={saving}><Save className="h-3.5 w-3.5" />Salvar</button>
           </div>
         </div>
 
@@ -167,9 +186,8 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
             <div className="mb-2 flex items-center gap-1.5"><UserRoundCog className="h-4 w-4 text-[#337959]"/><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Presidente da Comissão</h4></div>
             <div className="grid gap-2 sm:grid-cols-2">
               <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">Nome</span><input value={presidentName} onChange={(event) => setPresidentName(event.target.value)} className={inputClass} /></label>
-              <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">E-mail</span><input type="email" value={presidentEmail} onChange={(event) => setPresidentEmail(event.target.value)} className={inputClass} /></label>
+              <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">E-mail de contato</span><input type="email" value={presidentEmail} onChange={(event) => setPresidentEmail(event.target.value)} className={inputClass} placeholder="presidencia@instituicao.br" /></label>
             </div>
-            <p className="mt-1.5 text-[9px] leading-4 text-slate-500">Ao trocar o e-mail, o Portal exige confirmação segura antes de transferir a Presidência.</p>
           </div>
 
           <div className="rounded-lg border border-slate-300 bg-[#e1e6e9] p-2.5">
@@ -183,7 +201,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
         </div>
 
         <div className="border-t border-slate-300 px-2.5 pb-2.5 pt-2">
-          <div className="mb-1.5 flex items-center justify-between gap-2"><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Membros da Comissão</h4><span className="text-[9px] font-bold text-slate-500">{members.length} cadastrado(s)</span></div>
+          <div className="mb-1.5 flex items-center justify-between gap-2"><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Membros da Comissão</h4><span className="text-[9px] font-bold text-slate-500">{members.filter(member=>member.name.trim()).length} cadastrado(s)</span></div>
           <div className="overflow-x-auto rounded-lg border border-slate-300 bg-white">
             <table className="w-full min-w-[520px] border-collapse text-left">
               <thead className="bg-[#005830] text-[9px] font-black uppercase tracking-wider text-white"><tr><th className="px-2.5 py-2">Nome</th><th className="px-2.5 py-2">E-mail</th><th className="w-12 px-2.5 py-2 text-center">Excluir</th></tr></thead>
@@ -196,17 +214,15 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
         </div>
       </div>
 
-      {isCommissionPresident && (
-        <div className="portal-president-master-transfer border-t border-slate-300 bg-[#e1e6e9] p-2.5">
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-end">
-            <div className="min-w-0 flex-1"><span className="block text-[10px] font-black uppercase text-slate-700">Usuário Master</span><p className="mt-0.5 text-[10px] text-slate-500">Somente a Presidência pode iniciar a troca do e-mail Master. Atual: <strong>{typedSettings?.masterEmail || 'não informado'}</strong>.</p></div>
-            <label className="w-full lg:max-w-sm"><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">Novo e-mail do Usuário Master</span><input type="email" value={masterTransferEmail} onChange={(event) => setMasterTransferEmail(event.target.value)} className={inputClass} placeholder="novo-master@instituicao.br" /></label>
-            <button type="button" onClick={() => void startMasterTransfer()} disabled={transferringMaster || !masterTransferEmail.trim()} className={actionClass}>{transferringMaster ? 'Enviando…' : 'Iniciar troca segura'}</button>
-          </div>
+      <details className="portal-president-master-transfer border-t border-slate-300 bg-[#e1e6e9] p-2.5">
+        <summary className="cursor-pointer text-[10px] font-black uppercase tracking-wide text-slate-700">Acessos administrativos — troca segura</summary>
+        <div className="mt-2 grid gap-2 lg:grid-cols-2">
+          <div className="rounded-lg border border-slate-300 bg-white p-2"><div className="text-[9px] font-black uppercase text-slate-600">Usuário com permissão de Presidência</div><p className="mt-1 text-[9px] text-slate-500">Atual: <strong>{typedSettings?.commissionPresidentEmail || 'não informado'}</strong></p><div className="mt-2 flex gap-1.5"><input type="email" value={presidentTransferEmail} onChange={(event)=>setPresidentTransferEmail(event.target.value)} className={inputClass} placeholder="novo-presidente@instituicao.br"/><button type="button" onClick={()=>void startTransfer('COMMISSION_PRESIDENT',presidentTransferEmail)} disabled={transferring==='COMMISSION_PRESIDENT'||!presidentTransferEmail.trim()} className={actionClass}>Trocar</button></div></div>
+          {isCommissionPresident && <div className="rounded-lg border border-slate-300 bg-white p-2"><div className="text-[9px] font-black uppercase text-slate-600">Usuário Master</div><p className="mt-1 text-[9px] text-slate-500">Atual: <strong>{typedSettings?.masterEmail || 'não informado'}</strong></p><div className="mt-2 flex gap-1.5"><input type="email" value={masterTransferEmail} onChange={(event)=>setMasterTransferEmail(event.target.value)} className={inputClass} placeholder="novo-master@instituicao.br"/><button type="button" onClick={()=>void startTransfer('MASTER_ADMIN',masterTransferEmail)} disabled={transferring==='MASTER_ADMIN'||!masterTransferEmail.trim()} className={actionClass}>Trocar</button></div></div>}
         </div>
-      )}
+      </details>
 
-      {feedback && <div className="border-t border-slate-300 bg-white px-3 py-2 text-[10px] font-semibold" role="status"><span className={feedback.ok ? 'text-slate-700' : 'text-rose-700'}>{feedback.text}</span></div>}
+      {errorText && <div className="border-t border-slate-300 bg-rose-50 px-3 py-2 text-[10px] font-semibold text-rose-800" role="alert">{errorText}</div>}
     </section>
   );
 };

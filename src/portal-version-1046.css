@@ -41,10 +41,6 @@
   min-height: 58px !important;
   transition: background-color .12s ease, border-color .12s ease !important;
 }
-#portal-settings-hub .portal-settings-title-bar:hover {
-  background: #cbd4d8 !important;
-  border-color: #9ca9af !important;
-}
 .portal-settings-workspace-content .portal-workspace,
 .portal-settings-workspace-content #audit-logs-page,
 .portal-settings-workspace-content #asten-logs-page { margin-top: 0 !important; }
@@ -65,44 +61,18 @@
 .portal-modal-surface > div:first-child button * { color: #000 !important; }
 
 /* --------------------------------------------------------------------------
- * Homologação 27/09/2026 — correções visuais validadas pelo usuário.
- * Esta seção é a autoridade final somente para os sete pontos abaixo.
+ * Filtros: a semântica vem dos componentes/utilitários, não de posição CSS.
  * ----------------------------------------------------------------------- */
 
-/* 1/3 — Lista de Defesas: cada estado mantém a própria cor semântica. */
-#formal-monthly-calendar-section button.portal-table-filter-chip {
+/* Lista de Defesas: getFilterChipProps é a fonte única da paleta. O CSS só
+ * controla geometria/seleção, evitando que nth-child ou !important desalinhe
+ * filtro, card do calendário e botão do processo. */
+#public-calendar-cards-section button.portal-table-filter-chip {
   opacity: 1 !important;
-  box-shadow: none !important;
   transform: none !important;
 }
-#formal-monthly-calendar-section button.portal-table-filter-chip:nth-child(1) {
-  background: var(--portal-neutral-bg) !important;
-  border-color: var(--portal-neutral-border) !important;
-  color: var(--portal-neutral-text) !important;
-}
-#formal-monthly-calendar-section button.portal-table-filter-chip:nth-child(2) {
-  background: var(--portal-defense-upcoming-bg) !important;
-  border-color: var(--portal-defense-upcoming-border) !important;
-  color: var(--portal-defense-upcoming-text) !important;
-}
-#formal-monthly-calendar-section button.portal-table-filter-chip:nth-child(3) {
-  background: var(--portal-defense-defended-bg) !important;
-  border-color: var(--portal-defense-defended-border) !important;
-  color: var(--portal-defense-defended-text) !important;
-}
-#formal-monthly-calendar-section button.portal-table-filter-chip[aria-pressed="true"] {
+#public-calendar-cards-section button.portal-table-filter-chip[data-selected="true"] {
   box-shadow: inset 0 0 0 1px currentColor !important;
-}
-#formal-monthly-calendar-section button.portal-table-filter-chip::before {
-  content: "";
-  width: .65rem;
-  height: .65rem;
-  min-width: .65rem;
-  min-height: .65rem;
-  flex: 0 0 .65rem;
-  border-radius: 9999px;
-  background: currentColor;
-  opacity: .58;
 }
 
 /* Meus TCCs: a identidade por vínculo aparece SOMENTE na bolinha. O botão
@@ -126,7 +96,7 @@
   color: #ffffff !important;
 }
 
-/* 4 — Presidência: filtro e status usam literalmente a mesma paleta. */
+/* Presidência: filtro e status compartilham literalmente a mesma paleta. */
 #coordenador-page-root .portal-coordinator-filter-row .portal-standard-filter-chip {
   opacity: 1 !important;
   transform: none !important;
@@ -155,7 +125,18 @@
   color: var(--portal-signature-signed-text) !important;
 }
 
-/* Bolinha cromática: 30% maior que o antigo 0,5rem. */
+/* A coluna de seleção faz parte do mesmo cabeçalho verde da planilha. */
+#coordenador-page-root th[data-portal-selection-column="true"] {
+  background: var(--portal-green-header) !important;
+  border-color: rgba(255,255,255,.24) !important;
+  color: #fff !important;
+}
+#coordenador-page-root th[data-portal-selection-column="true"] button,
+#coordenador-page-root th[data-portal-selection-column="true"] svg {
+  color: #fff !important;
+}
+
+/* Bolinha cromática dos filtros por papel: 30% maior que o antigo 0,5rem. */
 .portal-filter-dot {
   width: .65rem !important;
   height: .65rem !important;
@@ -164,40 +145,22 @@
   flex-basis: .65rem !important;
 }
 
-/* 2 — Indicadores: mantém o separador superior do cabeçalho e remove somente
- * a segunda faixa interna redundante. */
+/* Indicadores: mantém o separador superior do cabeçalho e remove somente a
+ * segunda faixa interna redundante. */
 #indicadores-publicos-page > .portal-section-divider {
   display: none !important;
 }
 
-/* 5 — Workspaces de uma única planilha: o título já existe no cabeçalho do
- * modal. A faixa interna vira apenas uma toolbar de ações e deixa a planilha
- * começar imediatamente abaixo do cabeçalho externo. */
-.portal-settings-single-pane #audit-logs-page > header,
-.portal-settings-single-pane #asten-logs-page > header,
-.portal-settings-single-pane #authorized-access-panel > div:first-child {
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: 0 0 .5rem !important;
+/* Workspaces simples agora são estruturalmente embutidos pelo React. Não há
+ * regras CSS escondendo títulos ou achatando um cartão aninhado. */
+.portal-settings-single-pane > [data-embedded="true"] {
+  min-height: 100%;
   border: 0 !important;
-  background: transparent !important;
-  color: #111827 !important;
-  box-shadow: none !important;
-}
-.portal-settings-single-pane #audit-logs-page > header > div:first-child,
-.portal-settings-single-pane #asten-logs-page > header > div:first-child,
-.portal-settings-single-pane #authorized-access-panel > div:first-child > div:first-child {
-  display: none !important;
-}
-.portal-settings-single-pane #audit-logs-page,
-.portal-settings-single-pane #asten-logs-page,
-.portal-settings-single-pane #authorized-access-panel {
-  border-top: 0 !important;
-  border-radius: 0 0 .75rem .75rem !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
 }
 
-/* 7 — A tela principal de Configurações usa uma única cor: o mesmo verde dos
+/* A tela principal de Configurações usa uma única cor: o mesmo verde dos
  * títulos/cabeçalhos institucionais. */
 #portal-settings-hub .portal-settings-title-bar,
 #portal-settings-hub .portal-settings-title-bar:hover,
@@ -209,4 +172,11 @@
 }
 #portal-settings-hub .portal-settings-title-bar * {
   color: #fff !important;
+}
+
+/* Popovers renderizados em document.body precisam ficar acima dos workspaces
+ * administrativos (backdrop ~1000005), inclusive busca e engrenagem. */
+.portal-search-popover,
+.portal-table-settings-popover {
+  z-index: 1000010 !important;
 }

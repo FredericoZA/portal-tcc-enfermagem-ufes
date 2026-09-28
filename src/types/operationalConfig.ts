@@ -8,7 +8,13 @@ export interface VariablePresentation {
 }
 export interface OperationalConfig {
   workflow?: import('./workflowOperations').WorkflowOperationsPolicy;
-  reservation: { departmentEmail: string; locations: string[] };
+  reservation: {
+    departmentEmail: string;
+    recipientName?: string;
+    emailSubject?: string;
+    emailBody?: string;
+    locations: string[];
+  };
   catalogs: CatalogEntry[];
   diagnostics: { staleDays: number; minimumCoverage: number; priority: 'P1' | 'P2' | 'P3' };
   presentations: Record<string, VariablePresentation[]>;

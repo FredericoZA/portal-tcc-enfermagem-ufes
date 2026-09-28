@@ -118,8 +118,8 @@ export interface ExaminerInfo {
 export interface DefesaInfo {
   locationProof?: import('./workflowOperations').LocationProof;
   alternateLocation?: string;
-  startAt: string; // ISO string
-  endAt: string;   // ISO string (+90 min)
+  startAt: string;
+  endAt: string;
   local: string;
   formato?: string;
   banca?: Array<{ nome: string; filiacao?: string; papel?: string }>;
@@ -150,9 +150,7 @@ export interface EvaluationInfo {
   status: 'PENDENTE' | 'CONCLUIDO';
   resultadoCode?: string;
   resultadoLabel?: string;
-  /** @deprecated legado somente para leitura de registros antigos; novas avaliações não possuem nota numérica. */
   nota?: number;
-  /** @deprecated legado somente para leitura de registros antigos; novas avaliações não possuem nota numérica. */
   notaFinal?: number;
   parecer?: string;
   submittedBy?: string;
@@ -217,7 +215,7 @@ export interface ProcessData {
   registrationRevision?: number;
   completedAt?: string;
   id: string;
-  protocolo: string; // TCC-2026-XXXX
+  protocolo: string;
   titulo: string;
   etapaAtual: ProcessEtapa;
   status: ProcessStatus;
@@ -371,13 +369,13 @@ export interface GlobalSettings {
   ownerEmail?: string;
   commissionPresidentName?: string;
   commissionPresidentEmail?: string;
+  commissionPresidentContactEmail?: string;
   commissionMembers?: CommissionMemberInfo[];
   isSystemBlocked?: boolean;
   blockedAt?: string;
   blockedBy?: string;
   masterEmail: string;
   masterRecoveryEmails?: string[];
-  /** Sessões emitidas antes deste instante Unix (segundos) são revogadas. */
   sessionValidAfter?: number;
   substituteCoordinatorName?: string;
   commissionMember2Name?: string;
@@ -435,6 +433,7 @@ export interface AuthState {
   userEmail: string | null;
   globalRoles: GlobalRole[];
   memberships: ProcessMembership[];
+  settings: GlobalSettings | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
