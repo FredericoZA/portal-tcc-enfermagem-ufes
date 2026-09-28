@@ -53,6 +53,19 @@
   color: #111827 !important;
 }
 
+/* O cabeçalho é verde, mas menus/popovers abertos a partir dele continuam uma
+ * superfície branca legível. Isso impede texto branco sobre fundo branco. */
+#process-detail-container > div:has(#tcc-gear-settings-btn) [role="menu"],
+#process-detail-container > div:has(#tcc-gear-settings-btn) [role="menu"] *,
+#process-detail-container > div:has(#tcc-gear-settings-btn) [data-portal-popover],
+#process-detail-container > div:has(#tcc-gear-settings-btn) [data-portal-popover] * {
+  color: #111827 !important;
+}
+#process-detail-container > div:has(#tcc-gear-settings-btn) [role="menu"],
+#process-detail-container > div:has(#tcc-gear-settings-btn) [data-portal-popover] {
+  background: #fff !important;
+}
+
 /* Fluxo: única representação permanente do andamento do processo. */
 #process-detail-container #process-etapa-progress-bar {
   margin: 0 !important;
