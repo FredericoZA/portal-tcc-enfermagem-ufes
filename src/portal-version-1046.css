@@ -173,3 +173,10 @@
 #portal-settings-hub .portal-settings-title-bar * {
   color: #fff !important;
 }
+
+/* Popovers renderizados em document.body precisam ficar acima dos workspaces
+ * administrativos (backdrop ~1000005), inclusive busca e engrenagem. */
+.portal-search-popover,
+.portal-table-settings-popover {
+  z-index: 1000010 !important;
+}
