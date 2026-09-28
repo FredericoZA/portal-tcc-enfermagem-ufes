@@ -17,6 +17,8 @@ interface SettingsWorkspaceModalProps {
   onClose: () => void;
 }
 
+type EmbeddedCapableProps = { embedded?: boolean };
+
 export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ open, title, icon: TitleIcon, sections, onClose }) => {
   const firstId = sections[0]?.id || '';
   const [activeId, setActiveId] = useState(firstId);
@@ -26,6 +28,9 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
   const current = useMemo(() => sections.find((section) => section.id === activeId) || sections[0], [sections, activeId]);
   if (!open || !current) return null;
   const singlePane = sections.length === 1;
+  const singlePaneContent = singlePane && React.isValidElement(current.content)
+    ? React.cloneElement(current.content as React.ReactElement<EmbeddedCapableProps>, { embedded: true })
+    : current.content;
 
   return <div className="fixed inset-0 z-[1000005] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
     <section
@@ -41,8 +46,8 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       </header>
 
       {singlePane ? (
-        <main className="portal-settings-single-pane min-w-0 flex-1 overflow-y-auto p-3 sm:p-4" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
-          <div className="portal-settings-workspace-content min-w-0 rounded-xl" style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>{current.content}</div>
+        <main className="portal-settings-single-pane min-w-0 flex-1 overflow-y-auto" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
+          {singlePaneContent}
         </main>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
