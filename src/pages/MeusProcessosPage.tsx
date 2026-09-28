@@ -871,7 +871,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       onClick={() => toggleRoleCategory(catKey)}
                       data-selected={isSelected ? 'true' : 'false'}
                       aria-pressed={isSelected}
-                      style={{ backgroundColor: cfg.bgColor, color: cfg.textHex, borderColor: cfg.borderColor, opacity: isSelected ? 1 : 0.62, boxShadow: isSelected ? `inset 0 0 0 1px ${cfg.borderColor}` : 'none' }}
+                      style={{ backgroundColor: isSelected ? '#AEB0B3' : '#ffffff', color: isSelected ? '#111827' : '#1f2937', borderColor: isSelected ? '#979a9d' : '#cbd5e1', opacity: 1, boxShadow: 'none' }}
                       className={`portal-standard-filter-chip portal-table-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none ${
                         isSelected ? '' : 'opacity-85 hover:opacity-100'
                       }`}
@@ -884,7 +884,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       <span className="whitespace-nowrap font-extrabold">{cfg.label}</span>
                       <span
                         className="text-[9px] px-1.5 py-0.2 rounded-full font-black shadow-2xs"
-                        style={{ backgroundColor: cfg.borderColor, color: '#ffffff' }}
+                        style={{ backgroundColor: '#6b7280', color: '#ffffff' }}
                       >
                         {count}
                       </span>

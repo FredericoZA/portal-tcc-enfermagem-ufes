@@ -1752,8 +1752,8 @@ export async function createPortalApp() {
     if(!records.length||records.length>1000)return res.status(400).json({error:'Envie de 1 a 1.000 alunos por lote.'});
     const normalized=records.map((record:any,index:number)=>({row:index+2,nome:String(record?.nome||'').trim(),email:normalizeEmail(String(record?.email||'')),matricula:String(record?.matricula||'').trim()||undefined}));
     const duplicateEmails=new Set<string>(),seen=new Set<string>();for(const record of normalized){if(seen.has(record.email))duplicateEmails.add(record.email);seen.add(record.email);}
-    const profile=resolveInstallationProfile(currentSettings);const invalid=normalized.filter(record=>!record.nome||!isValidPortalEmail(record.email)||!emailMatchesDomains(record.email,profile.studentEmailDomains)||duplicateEmails.has(record.email));
-    if(invalid.length)return res.status(400).json({error:'O lote contém linhas inválidas ou duplicadas.',invalidRows:invalid.map(record=>({row:record.row,email:record.email,reason:duplicateEmails.has(record.email)?'E-mail duplicado no arquivo':'Nome, e-mail institucional ou domínio inválido'}))});
+    const invalid=normalized.filter(record=>!record.nome||!isValidPortalEmail(record.email)||duplicateEmails.has(record.email));
+    if(invalid.length)return res.status(400).json({error:'O lote contém linhas inválidas ou duplicadas.',invalidRows:invalid.map(record=>({row:record.row,email:record.email,reason:duplicateEmails.has(record.email)?'E-mail duplicado no arquivo':'Nome ou e-mail inválido'}))});
     const batchHash=createHash('sha256').update(JSON.stringify(normalized.map(({nome,email,matricula})=>({nome,email,matricula})))).digest('hex');const already=auditLogsStore.find(log=>log.action==='IMPORTACAO_ALUNOS'&&(log.after as any)?.batchHash===batchHash);if(already)return res.json({batchHash,created:0,updated:0,reused:true});
     let created=0,updated=0,preservedRevocations=0;for(const record of normalized){const before=authorizedStudentsStore.find(entry=>normalizeEmail(entry.email)===record.email);if(before){before.nome=record.nome;before.matricula=record.matricula||before.matricula;before.updatedAt=new Date().toISOString();before.memberType=before.memberType||'INTERNAL';updated++;if(before.manualRevocation){before.active=false;preservedRevocations++;}}else{const createdEntry=upsertAuthorizedAccess({nome:record.nome,email:record.email,matricula:record.matricula,role:'STUDENT',origin:'MASTER_LIST',actor:identity.email});createdEntry.memberType='INTERNAL';created++;}}
     const now=new Date().toISOString();auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'IMPORTACAO_ALUNOS',entityType:'authorized_student_batch',entityId:batchHash.slice(0,20),after:{batchHash,rows:normalized.length,created,updated,preservedRevocations},timestamp:now});await persistPortalStateDurably();res.status(201).json({batchHash,created,updated,preservedRevocations,reused:false});
@@ -1787,19 +1787,6 @@ export async function createPortalApp() {
     try { req.body = { ...req.body, ...acceptRegistration(req.body, currentSettings.integrationStudio) }; }
     catch (error) { return res.status(400).json({ error: error instanceof Error ? error.message : 'Cadastro inválido.' }); }
 
-    const requestedStudentEmails = [req.body?.aluno1?.email, req.body?.aluno2?.email]
-      .map((value) => normalizeEmail(String(value || '')))
-      .filter(Boolean);
-    const duplicateStudentEmail = requestedStudentEmails.find((studentEmail) => processesStore.some((process) =>
-      normalizeEmail(process.aluno1?.email || '') === studentEmail
-      || normalizeEmail(process.aluno2?.email || '') === studentEmail
-    ));
-    if (duplicateStudentEmail) {
-      return res.status(409).json({
-        error: 'Cada aluno pode participar como autor de apenas um TCC. Já existe um TCC cadastrado para um dos alunos informados.',
-        code: 'STUDENT_TCC_ALREADY_EXISTS'
-      });
-    }
     const {
       aluno1,
       aluno2,
@@ -1823,14 +1810,9 @@ export async function createPortalApp() {
     if (!isAdministrative && !authorizedStudentsStore.some(student=>student.active&&normalizeEmail(student.email)===actorEmail)) {
       return res.status(403).json({error:'Seu e-mail ainda não foi incluído na lista de alunos autorizados.'});
     }
-    const studentEmails=[aluno1Email,aluno2?.email?normalizeEmail(aluno2.email):''].filter(Boolean);const installationProfile=resolveInstallationProfile(currentSettings);
-    if(studentEmails.some(email=>!emailMatchesDomains(email,installationProfile.studentEmailDomains)))return res.status(400).json({error:`Os alunos autores devem usar um dos domínios institucionais configurados: ${installationProfile.studentEmailDomains.join(', ')}.`});
-    const existingTcc=processesStore.find(process=>studentEmails.some(email=>[process.aluno1.email,process.aluno2?.email].filter(Boolean).map(normalizeEmail).includes(email)));
-    if (existingTcc) {
-      return res.status(409).json({
-        error: `Cada aluno pode autuar apenas um TCC. Já existe o processo ${existingTcc.protocolo}.`
-      });
-    }
+    const studentEmails=[aluno1Email,aluno2?.email?normalizeEmail(aluno2.email):''].filter(Boolean);
+    if(studentEmails.some(email=>!isValidPortalEmail(email)))return res.status(400).json({error:'Informe e-mails válidos para os alunos autores.'});
+    const installationProfile=resolveInstallationProfile(currentSettings);
 
     if (!orientador || !orientador.nome || !orientador.email) {
       return res.status(400).json({ error: 'Dados do Orientador são obrigatórios.' });

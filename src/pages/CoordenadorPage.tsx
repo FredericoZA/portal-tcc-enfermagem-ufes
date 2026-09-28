@@ -497,19 +497,12 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               {activeTab === 'pendentes' ? (() => {
                 const signatureStatus = getDeclarationStatus(proc.id);
                 return (
-                  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[9px] font-black uppercase ${signatureStatus.tone}`}>
+                  <span className="text-[10px] font-semibold text-slate-700">
                     {signatureStatus.label}
                   </span>
                 );
               })() : (
-                <>
-                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-950 border border-emerald-300 rounded-full select-none leading-none">
-                    🟢 Enviada
-                  </span>
-                  <span className="text-[9.5px] text-emerald-800 font-bold flex items-center gap-0.5 select-none leading-none">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Publicada
-                  </span>
-                </>
+                <span className="text-[10px] font-semibold text-slate-700">Assinada</span>
               )}
             </div>
           </td>
@@ -889,11 +882,11 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                         onClick={() => { setActiveTab(filter.tab); setSelectedIds([]); }}
                         data-selected={isSelected ? 'true' : 'false'}
                         aria-pressed={isSelected}
-                        style={{ backgroundColor: semanticTone.bg, color: semanticTone.text, borderColor: semanticTone.border, opacity: isSelected ? 1 : 0.62, boxShadow: isSelected ? `inset 0 0 0 1px ${semanticTone.border}` : 'none' }}
+                        style={chip.buttonStyle}
                         className={`portal-standard-filter-chip portal-table-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none ${isSelected ? '' : 'opacity-85 hover:opacity-100'}`}
                         title={`Filtrar por declarações ${filter.label.toLowerCase()}`}
                       >
-                        <span className="portal-filter-dot w-2 h-2 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: semanticTone.border }} />
+                        <span className="portal-filter-dot w-2 h-2 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: chip.dotColor || semanticTone.border }} />
                         <span className="whitespace-nowrap font-extrabold">{chip.label}</span>
                         <span className="text-[9px] px-1.5 py-0.2 rounded-full font-black shadow-2xs" style={{ backgroundColor: semanticTone.border, color: '#ffffff' }}>{filter.count}</span>
                       </button>

@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Mail, Plus, Save, Trash2, UserRoundCog, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
-import { portalConfirm } from '../services/portalDialogs';
 
 interface Props { isMaster: boolean; }
 interface CommissionMemberInfo { id: string; name: string; email?: string; startDate?: string; endDate?: string; active: boolean; }
@@ -42,7 +41,7 @@ async function durableRetry<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
-  const { settings, refreshAuth, isCommissionPresident } = useAuth();
+  const { settings, refreshAuth } = useAuth();
   const typedSettings = settings as any;
   const initialMembers = useMemo(() => {
     const current = Array.isArray(typedSettings?.commissionMembers) ? typedSettings.commissionMembers : [];
@@ -56,10 +55,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
   const [secretaryEmail, setSecretaryEmail] = useState(String(typedSettings?.contactEmail || ''));
   const [whatsappUrl, setWhatsappUrl] = useState(String(typedSettings?.whatsappUrl || ''));
   const [members, setMembers] = useState<CommissionMemberInfo[]>(initialMembers);
-  const [presidentTransferEmail, setPresidentTransferEmail] = useState('');
-  const [masterTransferEmail, setMasterTransferEmail] = useState('');
   const [saving, setSaving] = useState(false);
-  const [transferring, setTransferring] = useState('');
   const [errorText, setErrorText] = useState('');
   const hydratedRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
@@ -150,19 +146,6 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
   const updateMember = (id: string, updates: Partial<CommissionMemberInfo>) => setMembers((prev) => prev.map((member) => member.id === id ? { ...member, ...updates } : member));
   const addMember = () => { setMembers((prev) => [...prev, { id: makeId(), name: '', email: '', startDate: '', endDate: '', active: true }]); setErrorText(''); };
 
-  const startTransfer = async (role: 'MASTER_ADMIN' | 'COMMISSION_PRESIDENT', targetEmail: string) => {
-    const normalized = targetEmail.trim().toLowerCase();
-    if (!validEmail(normalized)) { setErrorText('Informe um e-mail válido antes de iniciar a troca de acesso.'); return; }
-    const roleLabel = role === 'MASTER_ADMIN' ? 'Usuário Master' : 'Presidência';
-    if (!(await portalConfirm(`Iniciar a troca segura de ${roleLabel} para ${normalized}? O novo titular deverá confirmar o acesso.`))) return;
-    setTransferring(role); setErrorText('');
-    try {
-      await apiClient.createAdministrationTransfer(role, normalized);
-      if (role === 'MASTER_ADMIN') setMasterTransferEmail(''); else setPresidentTransferEmail('');
-    } catch (error: any) {
-      setErrorText(error?.status === 428 ? 'Entre novamente no Portal antes de trocar um acesso administrativo.' : (error instanceof Error ? error.message : 'Não foi possível iniciar a troca segura.'));
-    } finally { setTransferring(''); }
-  };
 
   return (
     <section className="portal-commission-identity-panel rounded-lg border border-slate-300 bg-[#d5dce0]" aria-labelledby="commission-management-title">
@@ -214,13 +197,6 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
         </div>
       </div>
 
-      <details className="portal-president-master-transfer border-t border-slate-300 bg-[#e1e6e9] p-2.5">
-        <summary className="cursor-pointer text-[10px] font-black uppercase tracking-wide text-slate-700">Acessos administrativos — troca segura</summary>
-        <div className="mt-2 grid gap-2 lg:grid-cols-2">
-          <div className="rounded-lg border border-slate-300 bg-white p-2"><div className="text-[9px] font-black uppercase text-slate-600">Usuário com permissão de Presidência</div><p className="mt-1 text-[9px] text-slate-500">Atual: <strong>{typedSettings?.commissionPresidentEmail || 'não informado'}</strong></p><div className="mt-2 flex gap-1.5"><input type="email" value={presidentTransferEmail} onChange={(event)=>setPresidentTransferEmail(event.target.value)} className={inputClass} placeholder="novo-presidente@instituicao.br"/><button type="button" onClick={()=>void startTransfer('COMMISSION_PRESIDENT',presidentTransferEmail)} disabled={transferring==='COMMISSION_PRESIDENT'||!presidentTransferEmail.trim()} className={actionClass}>Trocar</button></div></div>
-          {isCommissionPresident && <div className="rounded-lg border border-slate-300 bg-white p-2"><div className="text-[9px] font-black uppercase text-slate-600">Usuário Master</div><p className="mt-1 text-[9px] text-slate-500">Atual: <strong>{typedSettings?.masterEmail || 'não informado'}</strong></p><div className="mt-2 flex gap-1.5"><input type="email" value={masterTransferEmail} onChange={(event)=>setMasterTransferEmail(event.target.value)} className={inputClass} placeholder="novo-master@instituicao.br"/><button type="button" onClick={()=>void startTransfer('MASTER_ADMIN',masterTransferEmail)} disabled={transferring==='MASTER_ADMIN'||!masterTransferEmail.trim()} className={actionClass}>Trocar</button></div></div>}
-        </div>
-      </details>
 
       {errorText && <div className="border-t border-slate-300 bg-rose-50 px-3 py-2 text-[10px] font-semibold text-rose-800" role="alert">{errorText}</div>}
     </section>

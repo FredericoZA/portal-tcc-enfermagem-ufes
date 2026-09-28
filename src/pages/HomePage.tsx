@@ -1874,7 +1874,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                             isSelected ? 'shadow-xs scale-[1.02]' : 'opacity-85 hover:opacity-100'
                           }`}
                         >
-                          {chip.emoji && <span>{chip.emoji}</span>}
+                          <span className="portal-filter-dot h-[.65rem] w-[.65rem] shrink-0 rounded-full" style={{ backgroundColor: chip.dotColor }} aria-hidden="true" />
                           <span>{chip.label}</span>
                         </button>
                       );

@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
 
 export interface SettingsWorkspaceSection {
   id: string;
@@ -93,7 +92,6 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
         <div className="flex min-w-0 items-center gap-2">{TitleIcon && <TitleIcon className="h-5 w-5 shrink-0"/>}<h2 className="truncate text-sm font-black uppercase tracking-wide">{title}</h2></div>
         <div className="flex min-w-0 items-center justify-end gap-1.5">
           <div ref={setHeaderHost} className="flex min-w-0 flex-wrap items-center justify-end gap-1.5" data-settings-workspace-header-actions="true" />
-          <button type="button" onClick={onClose} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white bg-white text-black shadow-sm" aria-label="Fechar"><X className="h-4 w-4"/></button>
         </div>
       </header>
 

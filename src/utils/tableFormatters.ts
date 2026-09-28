@@ -967,87 +967,33 @@ export function getFilterChipProps(
       emoji: '',
       dotColor: String(semanticStyle.borderColor || dotColor),
       buttonStyle: {
-        ...semanticStyle,
-        opacity: isSelected ? 1 : 0.7,
+        backgroundColor: isSelected ? '#AEB0B3' : '#ffffff',
+        color: isSelected ? '#111827' : '#1f2937',
+        borderColor: isSelected ? '#979a9d' : '#cbd5e1',
+        opacity: 1,
         boxShadow: 'none',
+        transform: 'none',
       } as CSSProperties,
-      badgeStyle: {
-        backgroundColor: semanticStyle.borderColor,
-        color: semanticStyle.color,
-      } as CSSProperties,
-      mode: 'full',
+      badgeStyle: { backgroundColor: '#6b7280', color: '#ffffff' } as CSSProperties,
+      mode: 'dot',
       itemConfig,
-    };
-  }
-
-  let buttonStyle: CSSProperties = {};
-  let badgeStyle: CSSProperties = {};
-
-  if (scheme === 'vibrant' || scheme === 'custom') {
-    if (mode === 'full') {
-      // Coloração no botão todo (pílula com cor de fundo, borda e texto contrastante)
-      if (isSelected) {
-        buttonStyle = {
-          backgroundColor: itemConfig.bgColor || '#fef9c3',
-          color: itemConfig.textColor || '#713f12',
-          borderColor: itemConfig.borderColor || itemConfig.dotColor || '#eab308',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
-        };
-        badgeStyle = {
-          backgroundColor: itemConfig.badgeBgColor || itemConfig.dotColor || '#eab308',
-          color: itemConfig.badgeTextColor || '#ffffff',
-        };
-      } else {
-        buttonStyle = {
-          backgroundColor: 'rgba(255, 255, 255, 0.15)',
-          color: 'inherit',
-          borderColor: 'rgba(255, 255, 255, 0.3)',
-          opacity: 0.85,
-        };
-        badgeStyle = {
-          backgroundColor: 'rgba(0, 0, 0, 0.25)',
-          color: '#ffffff',
-        };
-      }
-    } else {
-      // Coloração SÓ no número / badge
-      if (isSelected) {
-        buttonStyle = {
-          backgroundColor: '#ffffff',
-          color: '#0f172a',
-          borderColor: itemConfig.borderColor || '#cbd5e1',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        };
-      } else {
-        buttonStyle = {
-          backgroundColor: 'rgba(255, 255, 255, 0.15)',
-          color: 'inherit',
-          borderColor: 'rgba(255, 255, 255, 0.25)',
-        };
-      }
-      // O badge do número SEMPRE recebe a cor personalizada
-      badgeStyle = {
-        backgroundColor: itemConfig.badgeBgColor || itemConfig.dotColor || '#eab308',
-        color: itemConfig.badgeTextColor || '#ffffff',
-      };
-    }
-  } else {
-    // Theme scheme
-    const tStyles = getTableStyles(format);
-    buttonStyle = isSelected ? tStyles.filterActiveChipStyle : tStyles.filterInactiveChipStyle;
-    badgeStyle = {
-      backgroundColor: isSelected ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.15)',
-      color: '#ffffff',
     };
   }
 
   return {
     label,
-    emoji,
+    emoji: '',
     dotColor,
-    buttonStyle,
-    badgeStyle,
-    mode,
+    buttonStyle: {
+      backgroundColor: isSelected ? '#AEB0B3' : '#ffffff',
+      color: isSelected ? '#111827' : '#1f2937',
+      borderColor: isSelected ? '#979a9d' : '#cbd5e1',
+      opacity: 1,
+      boxShadow: 'none',
+      transform: 'none',
+    } as CSSProperties,
+    badgeStyle: { backgroundColor: '#6b7280', color: '#ffffff' } as CSSProperties,
+    mode: 'dot',
     itemConfig,
   };
 }
@@ -1069,7 +1015,7 @@ export const PORTAL_TABLE_PRESETS: Record<string, PortalTablePreset> = {
     description: 'Tabela principal de agendamento de defesas públicas com calendário',
     defaultTitle: 'Planilha Geral de Defesas de TCC',
     columns: [
-      { key: 'protocolo', label: '📄 Nº Processo', defaultVisible: true },
+      { key: 'protocolo', label: 'Processo', defaultVisible: true },
       { key: 'defesaDataHora', label: '📅 Data e Hora', defaultVisible: true },
       { key: 'progresso', label: '📊 Progresso', defaultVisible: true },
       { key: 'titulo', label: '📖 Título do Trabalho', defaultVisible: true },
@@ -1091,7 +1037,7 @@ export const PORTAL_TABLE_PRESETS: Record<string, PortalTablePreset> = {
     description: 'Tabela de trabalhos de conclusão de curso finalizados e aprovados',
     defaultTitle: 'Repositório de TCCs Concluídos',
     columns: [
-      { key: 'protocolo', label: '📄 Nº Processo', defaultVisible: true },
+      { key: 'protocolo', label: 'Processo', defaultVisible: true },
       { key: 'progresso', label: '📊 Progresso', defaultVisible: true },
       { key: 'titulo', label: '📖 Título do Trabalho', defaultVisible: true },
       { key: 'aluno1', label: '🎓 Aluno 1', defaultVisible: true },
@@ -1113,7 +1059,7 @@ export const PORTAL_TABLE_PRESETS: Record<string, PortalTablePreset> = {
     description: 'Painel discente e docente para acompanhamento de orientações e defesas',
     defaultTitle: 'Meus Processos de TCC',
     columns: [
-      { key: 'protocolo', label: '📄 Nº Processo', defaultVisible: true },
+      { key: 'protocolo', label: 'Processo', defaultVisible: true },
       { key: 'defesaDataHora', label: '📅 Data e Hora', defaultVisible: true },
       { key: 'progresso', label: '📊 Progresso', defaultVisible: true },
       { key: 'titulo', label: '📖 Título do Trabalho', defaultVisible: true },
@@ -1135,7 +1081,7 @@ export const PORTAL_TABLE_PRESETS: Record<string, PortalTablePreset> = {
     description: 'Gestão administrativa da comissão, atas e aprovações de banca',
     defaultTitle: 'Gestão da Comissão de TCC',
     columns: [
-      { key: 'protocolo', label: '📄 Nº Processo', defaultVisible: true },
+      { key: 'protocolo', label: 'Processo', defaultVisible: true },
       { key: 'envioStatus', label: '📤 Envio', defaultVisible: true },
       { key: 'defesaDataHora', label: '📅 Data e Hora', defaultVisible: true },
       { key: 'titulo', label: '📖 Título do Trabalho', defaultVisible: true },
