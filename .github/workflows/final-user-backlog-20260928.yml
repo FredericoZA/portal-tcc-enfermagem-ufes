@@ -20,15 +20,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Apply migration when source still needs it
+      - name: Apply migration
         run: |
-          if git diff --quiet HEAD^ -- scripts/final-user-backlog-20260928.mjs 2>/dev/null || git log -1 --pretty=%B | grep -q '^Apply final backlog 1.0.48$'; then
-            if grep -q 'Final user backlog migration applied successfully' scripts/final-user-backlog-20260928.mjs; then
-              node scripts/final-user-backlog-20260928.mjs || true
-            fi
-          else
-            node scripts/final-user-backlog-20260928.mjs
-          fi
+          node scripts/final-user-backlog-20260928.mjs
+          node scripts/post-migrate-fixes-20260928.mjs
       - name: Validate
         run: |
           npm run test:ci
