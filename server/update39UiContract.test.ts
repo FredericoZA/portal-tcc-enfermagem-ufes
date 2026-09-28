@@ -18,8 +18,9 @@ test('update 39 substitui cadastro administrativo duplicado por Presidência Sec
   assert.ok(panel.includes('Membros da Comissão'));
   assert.ok(panel.includes('portal-president-master-transfer'));
   assert.ok(!panel.includes('Nome da Secretaria / Administrador Master'));
-  assert.ok(panel.includes("createAdministrationTransfer('MASTER_ADMIN'"));
-  assert.ok(panel.includes("createAdministrationTransfer('COMMISSION_PRESIDENT'"));
+  assert.ok(panel.includes("startTransfer('MASTER_ADMIN'"));
+  assert.ok(panel.includes("startTransfer('COMMISSION_PRESIDENT'"));
+  assert.ok(panel.includes('apiClient.createAdministrationTransfer(role, normalized)'));
 });
 
 test('update 39 abre cadastro individual e envio de lista em popups compactos', async () => {
