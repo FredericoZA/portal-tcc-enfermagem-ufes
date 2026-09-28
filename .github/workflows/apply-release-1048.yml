@@ -27,15 +27,105 @@ jobs:
       - run: npm install --global npm@11.9.0
       - name: Aplicar migração estrutural 1.0.48
         run: node scripts/apply-release-1.0.48.mjs
-      - name: Normalizar escapes do painel gerado
+      - name: Normalizar artefatos gerados
         run: |
           node <<'NODE'
           const fs = require('node:fs');
-          const p = 'src/components/ReservationEmailConfigPanel.tsx';
-          let s = fs.readFileSync(p, 'utf8');
-          s = s.replaceAll("join('\n')", "join('\\n')");
-          s = s.replaceAll("split(/\r?\n/)", "split(/\\r?\\n/)");
-          fs.writeFileSync(p, s);
+          const read = p => fs.readFileSync(p, 'utf8');
+          const write = (p, s) => fs.writeFileSync(p, s);
+
+          // Corrige escapes de strings/regex do painel de reserva e mantém as variáveis como texto literal no JSX.
+          {
+            const p = 'src/components/ReservationEmailConfigPanel.tsx';
+            let s = read(p);
+            s = s.replaceAll("join('\n')", "join('\\n')");
+            s = s.replaceAll("split(/\r?\n/)", "split(/\\r?\\n/)");
+            s = s.replace(
+              '<p className="md:col-span-2 text-[9px] text-slate-600">Variáveis: {{TITULO}}, {{ALUNOS_NOMES}}, {{ORIENTADOR_NOME}}, {{DEFESA_DATA_HORA}}, {{DEFESA_LOCAL}} e {{LOCAL_ALTERNATIVO}}.</p>',
+              '<p className="md:col-span-2 text-[9px] text-slate-600">{\'Variáveis: {{TITULO}}, {{ALUNOS_NOMES}}, {{ORIENTADOR_NOME}}, {{DEFESA_DATA_HORA}}, {{DEFESA_LOCAL}} e {{LOCAL_ALTERNATIVO}}.\'}</p>'
+            );
+            write(p, s);
+          }
+
+          // O migrador remove somente as validações antigas, mas preserva as variáveis usadas no restante do cadastro.
+          {
+            const p = 'server.ts';
+            let s = read(p);
+            const anchor = "    if (!isAdministrative && !authorizedStudentsStore.some(student=>student.active&&normalizeEmail(student.email)===actorEmail)) {\n      return res.status(403).json({error:'Seu e-mail ainda não foi incluído na lista de alunos autorizados.'});\n    }\n";
+            if (!s.includes('const studentEmails=[aluno1Email') && s.includes(anchor)) {
+              s = s.replace(anchor, anchor + "    const studentEmails=[aluno1Email,aluno2?.email?normalizeEmail(aluno2.email):''].filter(Boolean);\n    const installationProfile=resolveInstallationProfile(currentSettings);\n");
+            }
+            write(p, s);
+          }
+
+          // Remove apenas o bloco de transferência administrativa duplicado, preservando estado de salvamento e o ícone da Presidência.
+          {
+            const p = 'src/components/CommissionIdentityPanel.tsx';
+            let s = read(p);
+            s = s.replace(
+              "import { Mail, Plus, Save, Trash2, Users } from 'lucide-react';",
+              "import { Mail, Plus, Save, Trash2, UserRoundCog, Users } from 'lucide-react';"
+            );
+            s = s.replace("import { portalConfirm } from '../services/portalDialogs';\n", '');
+            if (!s.includes('const [saving, setSaving] = useState(false);')) {
+              s = s.replace(
+                "  const [members, setMembers] = useState<CommissionMemberInfo[]>(initialMembers);\n",
+                "  const [members, setMembers] = useState<CommissionMemberInfo[]>(initialMembers);\n  const [saving, setSaving] = useState(false);\n"
+              );
+            }
+            write(p, s);
+          }
+
+          // Contrato da release: evita regex frágeis e protege os comportamentos aprovados.
+          write('server/release1048CompletionContract.test.ts', `import test from 'node:test';
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const read=(p:string)=>readFileSync(p,'utf8');
+
+          test('1.0.48 usa estado temporal único e filtro apenas na bolinha',()=>{
+            const semantics=read('src/utils/defenseSemantics.ts');
+            const formatters=read('src/utils/tableFormatters.ts');
+            assert.ok(semantics.includes("start < now ? 'defended' : 'upcoming'"));
+            assert.ok(formatters.includes("mode: 'dot'"));
+            assert.ok(formatters.includes("backgroundColor: isSelected ? '#AEB0B3' : '#ffffff'"));
+          });
+
+          test('1.0.48 remove domínio institucional e limite unitário de TCC',()=>{
+            const server=read('server.ts');
+            const start=server.indexOf("app.post('/api/admin/access-list/import'");
+            const importRoute=server.slice(start,start+6000);
+            assert.ok(!importRoute.includes('emailMatchesDomains'));
+            assert.ok(!server.includes('Cada aluno pode autuar apenas um TCC'));
+            assert.ok(!server.includes('Cada aluno pode participar como autor de apenas um TCC'));
+            assert.ok(!server.includes('STUDENT_TCC_ALREADY_EXISTS'));
+          });
+
+          test('1.0.48 Configurações usa acessos diretos e modal sem navegação lateral',()=>{
+            const page=read('src/pages/ConfiguracoesPage.tsx');
+            const modal=read('src/components/SettingsWorkspaceModal.tsx');
+            for(const title of ['Modelos','Documentos','E-mails','Formulários','Fluxos','Variáveis','Rodapé e identidade','Integrações e plataformas','Acesso','Registros de Assinatura','Registro de Logs']) assert.ok(page.includes("title: '"+title+"'"), title);
+            assert.ok(!modal.includes('Navegação'));
+            assert.ok(!modal.includes('<X '));
+          });
+
+          test('1.0.48 e-mail de reserva é configurável e consumido no runtime',()=>{
+            const server=read('server.ts');
+            const panel=read('src/components/ReservationEmailConfigPanel.tsx');
+            assert.ok(panel.includes('E-mail de solicitação de espaço físico'));
+            assert.ok(server.includes('resolvedSubject'));
+            assert.ok(server.includes('reservation.emailBody'));
+          });
+
+          test('1.0.48 não falsifica horário de assinatura',()=>{
+            const logs=read('src/pages/AstenLogsPage.tsx');
+            assert.ok(logs.includes("if (key === 'signedAt') return dateTime(job.signedAt);"));
+            assert.ok(!logs.includes('job.signedAt || job.completedAt'));
+          });
+
+          test('versão da release é 1.0.48',()=>{
+            assert.equal(JSON.parse(read('package.json')).version,'1.0.48');
+          });
+          `);
           NODE
       - name: Instalar dependências
         run: npm ci
