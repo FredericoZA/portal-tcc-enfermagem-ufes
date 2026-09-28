@@ -21,20 +21,22 @@ const processAt = (
 
 const NOW = new Date('2026-09-25T12:00:00.000Z').getTime();
 
-test('estado da defesa considera o término da sessão antes de marcá-la como realizada', () => {
+test('estado da defesa muda para realizada assim que a data e hora de início ficam no passado', () => {
   assert.equal(
     getDefenseStateFromTimes('2026-09-25T11:30:00.000Z', '2026-09-25T13:00:00.000Z', NOW),
-    'upcoming',
+    'defended',
   );
   assert.equal(
-    getDefenseStateFromTimes('2026-09-25T10:00:00.000Z', '2026-09-25T11:30:00.000Z', NOW),
-    'defended',
+    getDefenseStateFromTimes('2026-09-25T12:30:00.000Z', '2026-09-25T14:00:00.000Z', NOW),
+    'upcoming',
   );
 });
 
-test('etapas pós-defesa são realizadas mesmo quando a agenda está ausente ou inconsistente', () => {
-  const process = processAt('AGUARDANDO_ASSINATURA', '2026-10-25T10:00:00.000Z');
-  assert.equal(getDefenseState(process, NOW), 'defended');
+test('status administrativo não força uma defesa futura para o estado realizado', () => {
+  const futureProcess = processAt('AGUARDANDO_ASSINATURA', '2026-10-25T10:00:00.000Z');
+  const pastProcess = processAt('AGUARDANDO_DEFESA', '2026-09-20T10:00:00.000Z');
+  assert.equal(getDefenseState(futureProcess, NOW), 'upcoming');
+  assert.equal(getDefenseState(pastProcess, NOW), 'defended');
 });
 
 test('filtro usa exatamente o mesmo estado semântico usado pela cor do processo', () => {
