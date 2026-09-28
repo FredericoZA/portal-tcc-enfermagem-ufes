@@ -183,19 +183,23 @@ export default function App() {
         </div>
 
         {selectedProcessId && (
-          <div className="fixed inset-0 bg-slate-900/80 z-50 overflow-y-auto p-2 sm:p-4 md:p-6 backdrop-blur-xs animate-fadeIn flex justify-center items-start" onClick={handleCloseProcess}>
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/80 p-2 backdrop-blur-xs animate-fadeIn sm:p-4 md:p-6" onClick={handleCloseProcess}>
             <div
               ref={processDialogRef}
               role="dialog"
               aria-modal="true"
               aria-label="Detalhes do Trabalho de TCC"
               tabIndex={-1}
-              className="max-w-6xl w-full bg-slate-100 rounded-2xl shadow-2xl border border-slate-300 overflow-hidden relative my-2 sm:my-4 animate-in zoom-in-95 duration-150"
-              onClick={(e) => e.stopPropagation()}
+              className="portal-process-dialog relative my-2 w-full max-w-6xl overflow-hidden rounded-2xl border border-slate-300 shadow-2xl animate-in zoom-in-95 duration-150 sm:my-4"
+              style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}
+              onClick={(event) => event.stopPropagation()}
             >
-              <div className="p-3 sm:p-5 bg-slate-100 max-h-[90vh] overflow-y-auto custom-scrollbar">
+              <div
+                className="portal-process-dialog-body max-h-[90vh] overflow-y-auto p-2 custom-scrollbar sm:p-3"
+                style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}
+              >
                 <PortalErrorBoundary key={selectedProcessId}><Suspense fallback={<PageLoadingFallback />}>
-                  <ProcessoDetailPage processId={selectedProcessId} readOnly={selectedProcessReadOnly} onBack={handleCloseProcess} isModal={true} />
+                  <ProcessoDetailPage processId={selectedProcessId} readOnly={selectedProcessReadOnly} onBack={handleCloseProcess} isModal={false} />
                 </Suspense></PortalErrorBoundary>
               </div>
             </div>
