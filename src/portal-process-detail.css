@@ -18,6 +18,12 @@
   gap: 0 !important;
 }
 
+/* Nenhuma entrada do Portal deve voltar a exibir o cabeçalho genérico legado
+ * (brasão + "Painel de Gestão"). O título real do TCC é o único cabeçalho. */
+#process-detail-container.portal-tcc-detail > header:first-child {
+  display: none !important;
+}
+
 /* O cartão que já contém título, protocolo, engrenagem e fechar é o único
  * cabeçalho do TCC. O cabeçalho genérico com brasão deixa de ser renderizado
  * pelo App e esta superfície assume a identidade institucional. */
