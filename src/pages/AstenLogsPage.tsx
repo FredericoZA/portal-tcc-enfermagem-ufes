@@ -60,7 +60,7 @@ const statusToneClass = (status: SignatureJobStatus) => {
   return 'portal-tone-neutral';
 };
 
-export const AstenLogsPage: React.FC = () => {
+export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const { isMasterAdmin } = useAuth();
   const initialConfig = loadTableConfig('signature_logs', DEFAULT_ORDER, DEFAULT_VISIBLE, 25);
   const [jobs, setJobs] = useState<SignatureJob[]>([]);
@@ -149,14 +149,21 @@ export const AstenLogsPage: React.FC = () => {
     return '—';
   };
 
-  return <div id="asten-logs-page" data-portal-signature-logs="true" className="overflow-hidden rounded-2xl border border-slate-300 shadow-sm" style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-green-header)' }}>
-      <div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 shrink-0"/><h1 className="text-sm font-black uppercase tracking-wide">Registros de Assinatura</h1></div>
-      <div className="flex items-center gap-1.5">
-        <SearchPopover value={search} onChange={setSearch} placeholder="Pessoa, processo, documento, método, status ou erro" textFormat={textFormat}/>
-        <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} allColumns={SIGNATURE_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="signature_logs" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Registros de Assinatura"/>
-      </div>
-    </header>
+  const toolbar = <div className="flex items-center gap-1.5">
+    <SearchPopover value={search} onChange={setSearch} placeholder="Pessoa, processo, documento, método, status ou erro" textFormat={textFormat}/>
+    <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} allColumns={SIGNATURE_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="signature_logs" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Registros de Assinatura"/>
+  </div>;
+
+  return <div id="asten-logs-page" data-portal-signature-logs="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'min-h-full' : 'overflow-hidden rounded-2xl border border-slate-300 shadow-sm'} style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>
+    {embedded ? (
+      <div className="flex min-h-12 items-center justify-end border-b-2 border-white px-3 py-2">{toolbar}</div>
+    ) : (
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-green-header)' }}>
+        <div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 shrink-0"/><h1 className="text-sm font-black uppercase tracking-wide">Registros de Assinatura</h1></div>
+        {toolbar}
+      </header>
+    )}
+
     <div className="portal-signature-table-shell p-0">
       {loading ? <div className="m-3 rounded-xl border border-slate-300 p-8 text-center text-xs font-semibold text-slate-700" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>Carregando registros de assinatura…</div> : renderedJobs.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-400 p-8 text-center text-xs font-semibold text-slate-700" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>Nenhum registro de assinatura encontrado com os filtros atuais.</div> : <>
         {showDemo && <div className="border-b border-amber-300 bg-amber-50 px-3 py-1.5 text-[9px] font-semibold text-amber-900">Demonstração visual: este registro existe apenas na interface, não é salvo e não entra em estatísticas.</div>}
