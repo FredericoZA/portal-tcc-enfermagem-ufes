@@ -50,7 +50,7 @@ function CompactModal({ title, onClose, children }: { title: string; onClose: ()
   );
 }
 
-export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean }> = ({ canManage }) => {
+export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: boolean }> = ({ canManage, embedded = false }) => {
   const [entries, setEntries] = useState<AuthorizedStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -114,13 +114,21 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean }> = ({ canM
 
   const visible = useMemo(() => entries.filter((entry) => `${entry.nome} ${entry.email} ${entry.matricula || ''} ${roleLabels[administrativeRole(entry)] || ''}`.toLowerCase().includes(search.toLowerCase())), [entries, search]);
   const activeCount = entries.filter((entry) => entry.active).length;
+  const actionButtons = canManage && <div className="flex flex-wrap gap-2"><button type="button" onClick={() => setModal('add')} className={whiteButton}><Plus className="h-3.5 w-3.5" />Adicionar acesso</button><button type="button" onClick={() => setModal('list')} className={whiteButton}><FileSpreadsheet className="h-3.5 w-3.5" />Envio de lista</button></div>;
 
   return (
-    <section id="authorized-access-panel" className="overflow-hidden rounded-xl border border-slate-300 bg-[#e1e6e9] shadow-sm">
-      <div className="flex flex-col gap-2 border-b-2 border-white bg-[#005830] px-3 py-2 text-white sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0 flex items-center gap-2"><UserCheck className="h-4 w-4" /><h3 className="text-xs font-black uppercase tracking-wide">Autorização de acesso</h3><span className="rounded-full border border-white/50 bg-white/15 px-2 py-0.5 text-[9px] font-black">{entries.length} cadastrados · {activeCount} ativos</span></div>
-        {canManage && <div className="flex flex-wrap gap-2"><button type="button" onClick={() => setModal('add')} className={whiteButton}><Plus className="h-3.5 w-3.5" />Adicionar acesso</button><button type="button" onClick={() => setModal('list')} className={whiteButton}><FileSpreadsheet className="h-3.5 w-3.5" />Envio de lista</button></div>}
-      </div>
+    <section id="authorized-access-panel" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'min-h-full bg-[#e1e6e9]' : 'overflow-hidden rounded-xl border border-slate-300 bg-[#e1e6e9] shadow-sm'}>
+      {embedded ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-white px-3 py-2" style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>
+          <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-black text-slate-700">{entries.length} cadastrados · {activeCount} ativos</span>
+          {actionButtons}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 border-b-2 border-white bg-[#005830] px-3 py-2 text-white sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex items-center gap-2"><UserCheck className="h-4 w-4" /><h3 className="text-xs font-black uppercase tracking-wide">Autorização de acesso</h3><span className="rounded-full border border-white/50 bg-white/15 px-2 py-0.5 text-[9px] font-black">{entries.length} cadastrados · {activeCount} ativos</span></div>
+          {actionButtons}
+        </div>
+      )}
 
       <div className="p-2.5">
         {message && <p role="status" className="mb-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-slate-700">{message}</p>}
