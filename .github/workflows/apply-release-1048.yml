@@ -27,6 +27,16 @@ jobs:
       - run: npm install --global npm@11.9.0
       - name: Aplicar migração estrutural 1.0.48
         run: node scripts/apply-release-1.0.48.mjs
+      - name: Normalizar escapes do painel gerado
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const p = 'src/components/ReservationEmailConfigPanel.tsx';
+          let s = fs.readFileSync(p, 'utf8');
+          s = s.replaceAll("join('\n')", "join('\\n')");
+          s = s.replaceAll("split(/\r?\n/)", "split(/\\r?\\n/)");
+          fs.writeFileSync(p, s);
+          NODE
       - name: Instalar dependências
         run: npm ci
       - name: Audit de dependências
