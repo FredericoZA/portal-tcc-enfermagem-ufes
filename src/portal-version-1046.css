@@ -125,6 +125,17 @@
   color: var(--portal-signature-signed-text) !important;
 }
 
+/* A coluna de seleção faz parte do mesmo cabeçalho verde da planilha. */
+#coordenador-page-root th[data-portal-selection-column="true"] {
+  background: var(--portal-green-header) !important;
+  border-color: rgba(255,255,255,.24) !important;
+  color: #fff !important;
+}
+#coordenador-page-root th[data-portal-selection-column="true"] button,
+#coordenador-page-root th[data-portal-selection-column="true"] svg {
+  color: #fff !important;
+}
+
 /* Bolinha cromática dos filtros por papel: 30% maior que o antigo 0,5rem. */
 .portal-filter-dot {
   width: .65rem !important;
