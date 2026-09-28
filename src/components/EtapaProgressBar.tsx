@@ -13,13 +13,26 @@ const ETAPAS_CONFIG: { code: ProcessEtapa; label: string; description: string }[
   { code: 'DEFESA', label: 'Defesa', description: 'Apresentação do Trabalho de Conclusão de Curso.' },
   { code: 'AVALIACAO', label: 'Avaliação', description: 'Parecer e registros da avaliação da defesa.' },
   { code: 'ASSINATURA', label: 'Assinaturas', description: 'Documentos encaminhados para assinatura eletrônica.' },
-  { code: 'DOCUMENTOS', label: 'Documentos', description: 'Documentos finais gerados, assinados e arquivados.' },
+  { code: 'DOCUMENTOS', label: 'Documentos', description: 'Documentos finais gerados, assinados, enviados ao repositório e arquivados.' },
   { code: 'CONCLUIDO', label: 'Concluído', description: 'Fluxo acadêmico e documental finalizado.' },
 ];
 
+const ETAPA_PROGRESS_ALIAS: Partial<Record<ProcessEtapa, ProcessEtapa>> = {
+  CONFIRMACAO_LOCAL: 'AGENDAMENTO',
+  REPOSITORIO: 'DOCUMENTOS',
+};
+
+const ETAPA_CURRENT_LABEL: Partial<Record<ProcessEtapa, string>> = {
+  CONFIRMACAO_LOCAL: 'Confirmação do local',
+  REPOSITORIO: 'Repositório',
+};
+
 export const EtapaProgressBar: React.FC<EtapaProgressBarProps> = ({ currentEtapa }) => {
-  const currentIndex = ETAPAS_CONFIG.findIndex((e) => e.code === currentEtapa);
-  const safeIndex = Math.max(0, currentIndex);
+  const progressCode = ETAPA_PROGRESS_ALIAS[currentEtapa] || currentEtapa;
+  const currentIndex = ETAPAS_CONFIG.findIndex((e) => e.code === progressCode);
+  const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+  const currentLabel = ETAPA_CURRENT_LABEL[currentEtapa] || ETAPAS_CONFIG[currentIndex]?.label || currentEtapa;
+  const currentDescription = ETAPAS_CONFIG[currentIndex]?.description || 'Etapa atual do fluxo do TCC.';
 
   return (
     <div
@@ -30,7 +43,7 @@ export const EtapaProgressBar: React.FC<EtapaProgressBarProps> = ({ currentEtapa
       <div className="mb-2 flex items-center justify-between text-xs">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Fluxo do Processo</span>
         <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
-          Etapa: {ETAPAS_CONFIG[currentIndex]?.label || currentEtapa}
+          Etapa: {currentLabel}
         </span>
       </div>
 
@@ -42,8 +55,8 @@ export const EtapaProgressBar: React.FC<EtapaProgressBarProps> = ({ currentEtapa
         />
 
         {ETAPAS_CONFIG.map((step, idx) => {
-          const isDone = idx < currentIndex;
-          const isCurrent = idx === currentIndex;
+          const isDone = idx < safeIndex;
+          const isCurrent = idx === safeIndex;
           return (
             <div
               key={step.code}
@@ -70,13 +83,13 @@ export const EtapaProgressBar: React.FC<EtapaProgressBarProps> = ({ currentEtapa
         })}
       </div>
 
-      <div className="space-y-1.5 pt-1 md:hidden" title={ETAPAS_CONFIG[currentIndex]?.description}>
+      <div className="space-y-1.5 pt-1 md:hidden" title={currentDescription}>
         <div className="h-2 w-full overflow-hidden rounded-full border border-slate-200 bg-slate-100">
           <div className="h-2 bg-emerald-700 transition-all duration-300" style={{ width: `${((safeIndex + 1) / ETAPAS_CONFIG.length) * 100}%` }} />
         </div>
         <div className="flex justify-between text-[10px] text-slate-500">
           <span>Passo {safeIndex + 1} de {ETAPAS_CONFIG.length}</span>
-          <span className="font-semibold text-slate-800">{ETAPAS_CONFIG[currentIndex]?.label || currentEtapa}</span>
+          <span className="font-semibold text-slate-800">{currentLabel}</span>
         </div>
       </div>
     </div>
