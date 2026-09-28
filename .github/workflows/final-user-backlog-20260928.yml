@@ -27,15 +27,16 @@ jobs:
             node scripts/final-user-backlog-20260928.mjs
             node scripts/post-migrate-fixes-20260928.mjs
           else
-            echo "Migration 1.0.48 already applied; validating current sources."
+            echo "Migration 1.0.48 already applied."
           fi
+          node scripts/final-user-backlog-followup-20260928.mjs
       - name: Commit migrated sources
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if ! git diff --quiet; then
             git add -A
-            git commit -m "Apply final backlog 1.0.48"
+            git commit -m "Apply final backlog 1.0.48 follow-up"
             git push
           fi
       - name: Validate
