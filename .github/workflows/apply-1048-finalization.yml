@@ -22,7 +22,9 @@ jobs:
           node-version: 22
           cache: npm
       - name: Apply structural finalization
-        run: node scripts/apply-1048-finalization.mjs
+        run: |
+          node scripts/apply-1048-finalization.mjs
+          node scripts/fix-1048-generated-config.mjs
       - name: Install
         run: npm ci
       - name: Validate
