@@ -1,0 +1,36 @@
+name: Apply 1.0.48 finalization
+
+on:
+  push:
+    branches:
+      - refactor/1.0.48-finalizacao-integral
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[1048-finalized]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply structural finalization
+        run: node scripts/apply-1048-finalization.mjs
+      - name: Install
+        run: npm ci
+      - name: Validate
+        run: npm run test:ci
+      - name: Commit finalized code
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Portal TCC 1.0.48: finalização integral [1048-finalized]"
+          git push
