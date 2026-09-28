@@ -59,7 +59,10 @@ for (const removedLabel of ['Botões no Topo', 'Estilo Base Planilhas', 'Colunas
 for (const canonicalSheet of ["sheet_calendar", "sheet_repository", "sheet_my_tccs", "sheet_coordinator"]) assert.ok(editor.includes(canonicalSheet));
 
 assert.match(access, /Matrícula — opcional/);
-assert.match(access, /Cole dados do Excel/);
+assert.match(access, /planilha Excel normal/);
+assert.match(access, /Modelo Excel/);
+assert.match(access, /Modelo Google Planilhas/);
+assert.match(access, /Selecionar planilha/);
 assert.doesNotMatch(access, />Tipo</);
 assert.doesNotMatch(access, />TCCs</);
 assert.match(importUtil, /parseStudentImportText/);
