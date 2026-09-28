@@ -4,10 +4,7 @@ import { CheckCircle2, ExternalLink, FilePlus2, FileUp, Link2, Loader2, ShieldAl
 import { apiClient } from '../services/apiClient';
 
 const BASE_SLOTS: Array<[string, string]> = [
-  ['CONVITE', 'Carta-convite'],
-  ['ATA', 'Ata de defesa'],
-  ['TERMO', 'Termo de autorização para publicação'],
-  ['DECLARACAO', 'Declaração de participação na banca']
+  ['CONVITE', 'Carta-convite'], ['ATA', 'Ata de defesa'], ['TERMO', 'Termo de autorização para publicação'], ['DECLARACAO', 'Declaração de participação na banca']
 ];
 
 const normalizeModelKey = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 48);
@@ -27,8 +24,7 @@ export const MasterDocumentModelsPanel: React.FC = () => {
 
   const slots = useMemo(() => {
     const persisted: Array<[string, string]> = Object.entries(models).filter(([key, value]) => key !== '__capabilities' && value && typeof value === 'object').map(([key, value]) => [key, String((value as any).label || humanizeModelKey(key))]);
-    const merged = [...BASE_SLOTS, ...persisted, ...pendingSlots];
-    const seen = new Set<string>();
+    const merged = [...BASE_SLOTS, ...persisted, ...pendingSlots]; const seen = new Set<string>();
     return merged.filter(([type]) => { if (seen.has(type)) return false; seen.add(type); return true; });
   }, [models, pendingSlots]);
 
@@ -78,17 +74,17 @@ export const MasterDocumentModelsPanel: React.FC = () => {
     finally { setWorking(''); }
   };
 
-  return <section className="portal-master-models-catalog mb-2 overflow-hidden rounded-xl border border-slate-300 bg-[#d5dce0] shadow-sm">
-    <div className="flex flex-col gap-2 border-b-2 border-white bg-[#17694a] px-3 py-2 text-white lg:flex-row lg:items-center lg:justify-between">
-      <div className="min-w-0"><h3 className="text-xs font-black uppercase tracking-wide">Modelos documentais do usuário Master</h3><p className="text-[9px] text-white/80">Cadastre quantos modelos DOCX forem necessários; o editor detalhado fica na área de trabalho abaixo.</p></div>
-      <div className="flex min-w-0 flex-1 gap-1.5 lg:max-w-xl"><input id="new-master-model" value={newModelName} onChange={event=>setNewModelName(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();addSlot();}}} placeholder="Novo tipo de documento" className="min-w-0 flex-1 rounded-lg border border-white/35 bg-white px-2.5 py-1.5 text-[10px] text-slate-900 outline-none"/><button type="button" onClick={addSlot} disabled={!newModelName.trim()} className={action}><FilePlus2 className="h-3.5 w-3.5"/>Adicionar</button></div>
+  return <section className="portal-master-models-catalog overflow-hidden rounded-xl border border-slate-300 shadow-sm" style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>
+    <div className="flex flex-wrap items-center justify-end gap-1.5 border-b border-slate-300 p-2.5" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>
+      <input id="new-master-model" value={newModelName} onChange={event=>setNewModelName(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();addSlot();}}} placeholder="Nome do novo documento" className="min-h-8 min-w-[220px] flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px] text-slate-900 outline-none sm:max-w-md"/>
+      <button type="button" onClick={addSlot} disabled={!newModelName.trim()} className={action}><FilePlus2 className="h-3.5 w-3.5"/>Adicionar documento</button>
     </div>
 
     {message&&<p role="status" className="m-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-slate-700">{message}</p>}
 
     <div className="grid gap-1.5 p-2 md:grid-cols-2">{slots.map(([type,label])=>{
       const model=models[type]; const hasFile=Boolean(model?.driveFileId); const integrityReady=Boolean(model?.configured&&model?.contentSha256); const deleting=working===`delete-${type}`;
-      return <article key={type} className="rounded-lg border border-slate-300 bg-[#e1e6e9] p-2">
+      return <article key={type} className="rounded-lg border border-slate-300 p-2" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>
         <div className="flex items-center justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-[10px] text-slate-900">{model?.label||label}</strong><span className="block truncate text-[8.5px] text-slate-500">{hasFile?`${model.fileName} · v${model.activeVersion||1}`:'Aguardando DOCX'}{model?.variables?.length?` · ${model.variables.length} variáveis`:''}</span></div><div className="flex shrink-0 items-center gap-1">{integrityReady?<CheckCircle2 className="h-4 w-4 text-[#337959]"/>:<ShieldAlert className="h-4 w-4 text-amber-700"/>}<button type="button" onClick={()=>void removeModel(type,String(model?.label||label))} disabled={Boolean(working)} aria-label={`Excluir modelo ${model?.label||label}`} title={`Excluir modelo ${model?.label||label}`} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-[#c62828] disabled:opacity-40">{deleting?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Trash2 className="h-3.5 w-3.5"/>}</button></div></div>
         {linkImportEnabled&&<div className="mt-1.5 flex gap-1"><input aria-label={`Link do modelo ${label}`} value={links[type]||''} onChange={event=>setLinks(current=>({...current,[type]:event.target.value}))} placeholder="Link ou ID do Drive" className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px]"/><button type="button" onClick={()=>void importLink(type)} disabled={Boolean(working)||!(links[type]||'').trim()} className={action}><Link2 className="h-3 w-3"/>Importar</button></div>}
         <div className="mt-1.5 flex flex-wrap gap-1.5"><label className={`${greenAction} cursor-pointer`}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}{hasFile?'Substituir DOCX':'Enviar DOCX'}<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/></label>{model?.driveFileUrl&&<a href={model.driveFileUrl} target="_blank" rel="noreferrer" className={action}><ExternalLink className="h-3.5 w-3.5"/>Abrir no Drive</a>}</div>
