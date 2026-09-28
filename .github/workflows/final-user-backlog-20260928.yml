@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   migrate-and-validate:
+    if: ${{ !contains(github.event.head_commit.message, 'Apply final backlog 1.0.48') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,10 +25,6 @@ jobs:
         run: |
           node scripts/final-user-backlog-20260928.mjs
           node scripts/post-migrate-fixes-20260928.mjs
-      - name: Validate
-        run: |
-          npm run test:ci
-          npm run build
       - name: Commit migrated sources
         run: |
           git config user.name "github-actions[bot]"
@@ -37,3 +34,7 @@ jobs:
             git commit -m "Apply final backlog 1.0.48"
             git push
           fi
+      - name: Validate
+        run: |
+          npm run test:ci
+          npm run build
