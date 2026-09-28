@@ -19,7 +19,7 @@ const LOG_COLUMNS: ColumnDef[] = [
 const DEFAULT_ORDER = LOG_COLUMNS.map(column => column.key);
 const DEFAULT_VISIBLE = Object.fromEntries(LOG_COLUMNS.map(column => [column.key, true]));
 
-export const AuditLogsPage: React.FC = () => {
+export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const { isMasterAdmin } = useAuth();
   const initialConfig = loadTableConfig('audit_logs', DEFAULT_ORDER, DEFAULT_VISIBLE, 25);
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -105,21 +105,27 @@ export const AuditLogsPage: React.FC = () => {
     </div>;
   };
 
-  return <div id="audit-logs-page" className="space-y-0 overflow-hidden rounded-2xl border border-slate-300 bg-[#d5dce0] shadow-sm">
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white bg-[#005830] px-4 py-3 text-white">
-      <div className="flex items-center gap-2"><FileCheck2 className="h-5 w-5 shrink-0"/><h1 className="text-sm font-black uppercase tracking-wide">Registro de logs</h1></div>
-      <div className="portal-audit-toolbar flex flex-wrap items-center justify-end gap-1.5">
-        <div className="portal-audit-actions flex items-center gap-1.5">
-          <button type="button" onClick={() => void downloadBackup()} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-900 shadow-sm"><Download className="h-3.5 w-3.5"/>Backup</button>
-          <button type="button" onClick={() => restoreInputRef.current?.click()} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-900 shadow-sm"><Upload className="h-3.5 w-3.5"/>Restaurar</button>
-          <input ref={restoreInputRef} type="file" accept=".json,application/json" className="hidden" onChange={event => restoreBackup(event.target.files?.[0])}/>
-        </div>
-        <div className="portal-audit-table-controls flex items-center gap-1.5">
-          <SearchPopover value={search} onChange={setSearch} placeholder="Usuário, ação, processo ou entidade" textFormat={textFormat}/>
-          <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} allColumns={LOG_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="audit_logs" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Registro de logs"/>
-        </div>
-      </div>
-    </header>
+  const toolbar = <div className="portal-audit-toolbar flex flex-wrap items-center justify-end gap-1.5">
+    <div className="portal-audit-actions flex items-center gap-1.5">
+      <button type="button" onClick={() => void downloadBackup()} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-900 shadow-sm"><Download className="h-3.5 w-3.5"/>Backup</button>
+      <button type="button" onClick={() => restoreInputRef.current?.click()} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-900 shadow-sm"><Upload className="h-3.5 w-3.5"/>Restaurar</button>
+      <input ref={restoreInputRef} type="file" accept=".json,application/json" className="hidden" onChange={event => restoreBackup(event.target.files?.[0])}/>
+    </div>
+    <div className="portal-audit-table-controls flex items-center gap-1.5">
+      <SearchPopover value={search} onChange={setSearch} placeholder="Usuário, ação, processo ou entidade" textFormat={textFormat}/>
+      <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} allColumns={LOG_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="audit_logs" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Registro de logs"/>
+    </div>
+  </div>;
+
+  return <div id="audit-logs-page" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'min-h-full bg-[#d5dce0]' : 'space-y-0 overflow-hidden rounded-2xl border border-slate-300 bg-[#d5dce0] shadow-sm'}>
+    {embedded ? (
+      <div className="flex min-h-12 items-center justify-end border-b-2 border-white px-3 py-2" style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>{toolbar}</div>
+    ) : (
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white bg-[#005830] px-4 py-3 text-white">
+        <div className="flex items-center gap-2"><FileCheck2 className="h-5 w-5 shrink-0"/><h1 className="text-sm font-black uppercase tracking-wide">Registro de logs</h1></div>
+        {toolbar}
+      </header>
+    )}
 
     <div className="portal-audit-table-shell">
       {loading ? <div className="m-3 rounded-xl border border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Carregando histórico…</div> : shown.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Nenhum registro encontrado com os filtros atuais.</div> : <div className="overflow-x-auto bg-white">
