@@ -23,10 +23,16 @@ export function ProcessFlowPanel({
     setLocal(process.defesa.local || '');
     setReceived(false);
     setFile(null);
-    setMessage('');
   }, [process.id, process.defesa.local]);
 
+  useEffect(() => {
+    setMessage('');
+  }, [process.id]);
+
   const needsLocationConfirmation = process.defesa.localStatus !== 'CONFIRMADO';
+  const canShowConfirmationForm = needsLocationConfirmation && canConfirm;
+  const hasLocationProof = Boolean(process.defesa.locationProof);
+  const hasConfirmedLocation = !needsLocationConfirmation && Boolean(process.defesa.localConfirmedAt);
 
   const download = async () => {
     setBusy(true);
@@ -72,8 +78,9 @@ export function ProcessFlowPanel({
   };
 
   // O progresso visual pertence exclusivamente ao EtapaProgressBar. Este
-  // componente só aparece quando há uma ação operacional ou comprovante útil.
-  if (!needsLocationConfirmation && !process.defesa.locationProof && !process.defesa.localConfirmedAt && !message) {
+  // componente só aparece quando há ação disponível, confirmação, comprovante
+  // ou mensagem operacional efetivamente útil para o usuário.
+  if (!canShowConfirmationForm && !hasLocationProof && !hasConfirmedLocation && !message) {
     return null;
   }
 
@@ -84,7 +91,7 @@ export function ProcessFlowPanel({
       style={{ backgroundColor: 'var(--portal-surface-inner)' }}
       aria-label="Ações operacionais da defesa"
     >
-      {needsLocationConfirmation && canConfirm && (
+      {canShowConfirmationForm && (
         <form onSubmit={confirm} className="space-y-3">
           <div>
             <h2 className="text-xs font-black uppercase tracking-wide text-slate-900">Confirmação do local da defesa</h2>
@@ -145,22 +152,15 @@ export function ProcessFlowPanel({
         </form>
       )}
 
-      {!needsLocationConfirmation && process.defesa.localConfirmedAt && (
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-700">
-          <span>
-            Local confirmado: <strong>{process.defesa.local}</strong> · {new Date(process.defesa.localConfirmedAt).toLocaleString('pt-BR')}
-          </span>
-          {process.defesa.locationProof && (
-            <button type="button" className="portal-action" disabled={busy} onClick={() => void download()}>
-              Abrir comprovante da reserva
-            </button>
-          )}
+      {hasConfirmedLocation && (
+        <div className="text-[11px] text-slate-700">
+          Local confirmado: <strong>{process.defesa.local}</strong> · {new Date(process.defesa.localConfirmedAt!).toLocaleString('pt-BR')}
         </div>
       )}
 
-      {needsLocationConfirmation && process.defesa.locationProof && (
+      {hasLocationProof && (
         <button type="button" className="portal-action mt-3" disabled={busy} onClick={() => void download()}>
-          Abrir comprovante enviado
+          {needsLocationConfirmation ? 'Abrir comprovante enviado' : 'Abrir comprovante da reserva'}
         </button>
       )}
 
