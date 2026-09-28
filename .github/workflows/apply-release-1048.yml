@@ -1,0 +1,44 @@
+name: Apply Portal TCC 1.0.48
+
+on:
+  push:
+    branches:
+      - release/1.0.48-complete-finalization
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    if: ${{ !contains(github.event.head_commit.message, '[1.0.48-applied]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: release/1.0.48-complete-finalization
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.9.0
+      - name: Aplicar migração estrutural 1.0.48
+        run: node scripts/apply-release-1.0.48.mjs
+      - name: Instalar dependências
+        run: npm ci
+      - name: Audit de dependências
+        run: npm audit --audit-level=high
+      - name: Testes completos
+        run: npm run test:ci
+      - name: Fluxo seguro
+        run: npm run test:secure-flow
+      - name: Commit validado
+        run: |
+          git config user.name "portal-tcc-release-bot"
+          git config user.email "portal-tcc-release-bot@users.noreply.github.com"
+          git add -A
+          git commit -m "Portal TCC 1.0.48: finalizar pendências estruturais [1.0.48-applied]"
+          git push origin HEAD:release/1.0.48-complete-finalization
