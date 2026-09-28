@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   migrate-and-validate:
-    if: ${{ !contains(github.event.head_commit.message, 'Apply final backlog 1.0.48') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,10 +20,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Apply migration
+      - name: Apply migration when needed
         run: |
-          node scripts/final-user-backlog-20260928.mjs
-          node scripts/post-migrate-fixes-20260928.mjs
+          VERSION="$(node -p "require('./package.json').version")"
+          if [ "$VERSION" != "1.0.48" ]; then
+            node scripts/final-user-backlog-20260928.mjs
+            node scripts/post-migrate-fixes-20260928.mjs
+          else
+            echo "Migration 1.0.48 already applied; validating current sources."
+          fi
       - name: Commit migrated sources
         run: |
           git config user.name "github-actions[bot]"
