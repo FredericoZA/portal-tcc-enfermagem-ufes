@@ -104,8 +104,8 @@ assert.doesNotMatch(studio, />Salvar formulário</);
 assert.doesNotMatch(studio, /<strong>Fonte oficial única\.<\/strong>/);
 assert.doesNotMatch(studio, />Finalidade no fluxo</);
 
-assert.match(masterModels, /Cadastre quantos modelos DOCX forem necessários/);
-assert.match(masterModels, /Novo tipo de documento/);
+assert.match(masterModels, /Nome do novo documento/);
+assert.match(masterModels, /Adicionar documento/);
 assert.match(masterModels, /addSlot/);
 assert.match(masterModels, /removeModel/);
 assert.match(masterModels, /deleteDocumentModel/);
