@@ -66,7 +66,7 @@ test('Registro de logs mantém ações essenciais no cabeçalho e não oferece a
   const page = read('src/pages/AuditLogsPage.tsx');
   assert.doesNotMatch(page, /Auditoria, restauração e rastreabilidade do Portal/);
   assert.doesNotMatch(page, /Histórico completo/);
-  assert.match(page, /portal-audit-actions/);
+  assert.match(page, /portal-audit-toolbar/);
   const searchIndex = page.indexOf('<SearchPopover');
   const gearIndex = page.indexOf('<HeaderSettingsPopover');
   assert.ok(searchIndex >= 0 && gearIndex > searchIndex);
