@@ -1,0 +1,44 @@
+name: Final backlog 1.0.48
+
+on:
+  push:
+    branches:
+      - fix/final-user-backlog-20260928
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply migration when source still needs it
+        run: |
+          if git diff --quiet HEAD^ -- scripts/final-user-backlog-20260928.mjs 2>/dev/null || git log -1 --pretty=%B | grep -q '^Apply final backlog 1.0.48$'; then
+            if grep -q 'Final user backlog migration applied successfully' scripts/final-user-backlog-20260928.mjs; then
+              node scripts/final-user-backlog-20260928.mjs || true
+            fi
+          else
+            node scripts/final-user-backlog-20260928.mjs
+          fi
+      - name: Validate
+        run: |
+          npm run test:ci
+          npm run build
+      - name: Commit migrated sources
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add -A
+            git commit -m "Apply final backlog 1.0.48"
+            git push
+          fi
