@@ -10,7 +10,6 @@ import {
   Upload,
   UserCheck,
   UserX,
-  X,
 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import type { AuthorizedStudent, ProcessRole } from '../types';
@@ -54,13 +53,17 @@ const DEFAULT_ORDER = ACCESS_COLUMNS.map((column) => column.key);
 const DEFAULT_VISIBLE = Object.fromEntries(ACCESS_COLUMNS.map((column) => [column.key, true]));
 
 function CompactModal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
   if (typeof document === 'undefined') return null;
   return createPortal(
     <div className="fixed inset-0 z-[1000012] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-[1px]" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-3xl overflow-hidden rounded-xl border border-slate-300 shadow-2xl" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
-        <div className="flex items-center justify-between border-b-[16px] border-white px-3 py-2 text-white" style={{ backgroundColor: 'var(--portal-green-header)' }}>
+        <div className="border-b-[16px] border-white px-3 py-2 text-white" style={{ backgroundColor: 'var(--portal-green-header)' }}>
           <h3 className="text-xs font-black uppercase tracking-wide">{title}</h3>
-          <button type="button" onClick={onClose} className="rounded-md border border-white bg-white p-1 text-slate-900 hover:bg-slate-100" aria-label="Fechar"><X className="h-4 w-4" /></button>
         </div>
         <div className="max-h-[78vh] overflow-y-auto p-3">{children}</div>
       </div>

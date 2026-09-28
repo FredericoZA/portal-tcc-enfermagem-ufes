@@ -1353,7 +1353,6 @@ export async function createPortalApp() {
   });
   app.put('/api/registration/draft',requireAuthenticated,async(req,res)=>{
     const email=getPortalIdentity(req)!.email;
-    if(processesStore.some(p=>[p.aluno1.email,p.aluno2?.email].includes(email)))return res.status(409).json({error:'Você já tem um TCC. Continue pelo processo existente.'});
     try{const draft=saveRegistrationDraft(registrationDraftsStore[email],req.body,email,currentSettings.integrationStudio);registrationDraftsStore[email]=draft;await persistPortalStateDurably();res.setHeader('Cache-Control','private, no-store');res.json(draft);}
     catch(error){res.status(error instanceof DraftConflict?409:400).json({error:error instanceof Error?error.message:'Rascunho inválido.'});}
   });
