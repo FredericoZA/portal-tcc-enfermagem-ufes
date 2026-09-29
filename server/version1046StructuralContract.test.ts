@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('release atual é 1.0.50', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.50');
+test('release atual é 1.0.51', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.51');
 });
 
 test('estado de defesa não sobrescreve cores de vínculo e assinatura', () => {
@@ -54,10 +54,17 @@ test('estúdio de modelos delega navegação ao workspace externo e preserva cab
   assert.match(config, /label: 'Variáveis'/);
 });
 
-test('tipografia tabular preta e CSS v50 carregado por último', () => {
+test('tipografia tabular preta e CSS v51 carregado por último', () => {
   const formatter = read('src/utils/tableFormatters.ts');
   const main = read('src/main.tsx');
+  const css = read('src/portal-version-1051.css');
   assert.match(formatter, /cellTextColorClass = 'text-black'/);
-  assert.ok(main.indexOf('portal-version-1050.css') > main.indexOf('portal-version-1049.css'));
-  assert.ok(main.indexOf('portal-version-1050.css') > main.indexOf('portal-process-detail.css'));
+  assert.ok(main.indexOf('portal-version-1051.css') > main.indexOf('portal-version-1050.css'));
+  assert.ok(main.indexOf('portal-version-1051.css') > main.indexOf('portal-process-detail.css'));
+  assert.match(css, /#portal-app-root #public-calendar-cards-section/);
+  assert.match(css, /data-defense-state="defended"/);
+  assert.match(css, /#bed8c3/);
+  assert.match(css, /data-defense-state="upcoming"/);
+  assert.match(css, /#e8dda7/);
+  assert.doesNotMatch(css, /\.portal-core-table/);
 });

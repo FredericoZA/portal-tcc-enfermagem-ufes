@@ -1,0 +1,32 @@
+/* Portal TCC 1.0.51 — autoridade final da cor do botão na Lista de Defesas.
+ *
+ * A regra é aplicada diretamente ao botão real da primeira coluna, sem depender
+ * de classes que o runtime adiciona depois da renderização. Isso impede qualquer
+ * camada legada da planilha de manter uma defesa passada em amarelo.
+ */
+
+#portal-app-root #public-calendar-cards-section
+  td[title*="abrir os detalhes e documentos"] > div.portal-semantic-tone[data-defense-state="defended"] {
+  background: var(--portal-defense-defended-bg, #bed8c3) !important;
+  background-color: var(--portal-defense-defended-bg, #bed8c3) !important;
+  border-color: var(--portal-defense-defended-border, #719a79) !important;
+  color: var(--portal-defense-defended-text, #23472b) !important;
+  box-shadow: none !important;
+}
+
+#portal-app-root #public-calendar-cards-section
+  td[title*="abrir os detalhes e documentos"] > div.portal-semantic-tone[data-defense-state="upcoming"] {
+  background: var(--portal-defense-upcoming-bg, #e8dda7) !important;
+  background-color: var(--portal-defense-upcoming-bg, #e8dda7) !important;
+  border-color: var(--portal-defense-upcoming-border, #b49d4f) !important;
+  color: var(--portal-defense-upcoming-text, #4a4020) !important;
+  box-shadow: none !important;
+}
+
+#portal-app-root #public-calendar-cards-section
+  td[title*="abrir os detalhes e documentos"] > div.portal-semantic-tone[data-defense-state] > * {
+  background: transparent !important;
+  color: inherit !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
