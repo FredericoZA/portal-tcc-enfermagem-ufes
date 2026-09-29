@@ -38,6 +38,8 @@ test('as duas planilhas exibem Processo e possuem arraste real horizontal e vert
 test('Repositório e Meus TCCs têm paginação única depois da planilha', () => {
   const runtime = read('src/components/PortalVersion1054Enhancer.tsx');
   const css = read('src/portal-version-1054.css');
+  assert.match(runtime, /PAGE_SIZE_PREFIX = 'portal_table_page_size_'/);
+  assert.match(runtime, /CURRENT_PAGE_PREFIX = 'portal_table_current_page_'/);
   assert.match(runtime, /className = 'portal-v54-pager'/);
   assert.match(runtime, /host\.insertAdjacentElement\('afterend', pager\)/);
   assert.match(runtime, /makeButton\('Anterior'/);
