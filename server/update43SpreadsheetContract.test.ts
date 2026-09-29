@@ -26,13 +26,17 @@ test('engrenagem mostra colunas e ordem sem popup secundário', () => {
 
 test('planilhas permitem rolagem vertical e horizontal no próprio contêiner', () => {
   const scroll = read('src/components/TableScrollWrapper.tsx');
+  const v53 = read('src/components/PortalVersion1053Enhancer.tsx');
   assert.doesNotMatch(scroll, /max-h-\[620px\]/);
   assert.doesNotMatch(scroll, /overflow-y-visible/);
   assert.match(scroll, /overflow-auto/);
-  assert.match(scroll, /onWheel=\{handleWheel\}/);
-  assert.match(scroll, /scrollTop/);
-  assert.match(scroll, /scrollLeft/);
+  assert.match(scroll, /data-portal-scroll-host/);
   assert.match(scroll, /maxHeight: 'min\(68vh, 720px\)'/);
+  assert.match(v53, /addEventListener\('wheel'/);
+  assert.match(v53, /addEventListener\('pointerdown'/);
+  assert.match(v53, /addEventListener\('pointermove'/);
+  assert.match(v53, /scrollTop/);
+  assert.match(v53, /scrollLeft/);
 });
 
 test('etapa permanece disponível e planilhas removem decoração infantil', () => {
