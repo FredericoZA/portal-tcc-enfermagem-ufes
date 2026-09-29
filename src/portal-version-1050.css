@@ -1,0 +1,29 @@
+/* Portal TCC 1.0.50 — correção de escopo da Lista de Defesas.
+ *
+ * A Lista de Defesas é uma seção irmã do calendário, em
+ * #public-calendar-cards-section. A versão 1.0.49 limitava a precedência final
+ * ao #formal-monthly-calendar-section, portanto não alcançava os botões da
+ * tabela. Aqui o próprio data-defense-state renderizado pelo React volta a ser
+ * a autoridade cromática final no contexto correto.
+ */
+
+#public-calendar-cards-section .portal-core-table tbody td > .portal-semantic-tone[data-defense-state="defended"] {
+  background-color: var(--portal-defense-defended-bg, #bed8c3) !important;
+  border-color: var(--portal-defense-defended-border, #719a79) !important;
+  color: var(--portal-defense-defended-text, #23472b) !important;
+  box-shadow: none !important;
+}
+
+#public-calendar-cards-section .portal-core-table tbody td > .portal-semantic-tone[data-defense-state="upcoming"] {
+  background-color: var(--portal-defense-upcoming-bg, #e8dda7) !important;
+  border-color: var(--portal-defense-upcoming-border, #b49d4f) !important;
+  color: var(--portal-defense-upcoming-text, #4a4020) !important;
+  box-shadow: none !important;
+}
+
+#public-calendar-cards-section .portal-core-table tbody td > .portal-semantic-tone[data-defense-state] * {
+  background: transparent !important;
+  color: inherit !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
