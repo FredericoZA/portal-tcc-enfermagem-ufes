@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   apply-and-validate:
+    if: ${{ !contains(github.event.head_commit.message, '[diagnostic]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -23,10 +24,30 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Aplicar correções estruturais
+      - name: Aplicar correções estruturais ou registrar diagnóstico
+        shell: bash
         run: |
-          node scripts/apply-final-green-round.mjs
-          node scripts/apply-final-green-round-2.mjs
+          set +e
+          node scripts/apply-final-green-round.mjs >/tmp/green-round.log 2>&1
+          first=$?
+          if [ "$first" -eq 0 ]; then
+            node scripts/apply-final-green-round-2.mjs >>/tmp/green-round.log 2>&1
+            second=$?
+          else
+            second=0
+          fi
+          if [ "$first" -ne 0 ] || [ "$second" -ne 0 ]; then
+            cp /tmp/green-round.log /tmp/green-round-copy.log
+            git reset --hard HEAD
+            cp /tmp/green-round-copy.log MIGRATION_FAILURE.txt
+            git config user.name "Portal TCC Automation"
+            git config user.email "actions@users.noreply.github.com"
+            git add -f MIGRATION_FAILURE.txt
+            git commit -m "[diagnostic] registra falha exata da rodada 1.0.48"
+            git push origin HEAD:fix/final-green-round-20260928
+            cat MIGRATION_FAILURE.txt
+            exit 1
+          fi
       - name: Alinhar npm
         run: npm install --global npm@11.9.0
       - name: Instalar dependências
@@ -45,6 +66,7 @@ jobs:
         run: |
           git config user.name "Portal TCC Automation"
           git config user.email "actions@users.noreply.github.com"
+          git rm -f MIGRATION_FAILURE.txt 2>/dev/null || true
           git add -A
           git commit -m "Portal TCC 1.0.48 — fecha rodada de interface e acesso"
           git push origin HEAD:fix/final-green-round-20260928
