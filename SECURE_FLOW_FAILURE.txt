@@ -1,0 +1,49 @@
+
+> portal-tcc-institucional@1.0.48 test:secure-flow
+> node scripts/test-secure-flow.mjs
+
+Portal TCC — auditoria de fluxo seguro
+
+PASS  papéis globais limitados a Master e Presidente
+PASS  lista de acesso usa o guardião de administração máxima
+FAIL  limite de autoria não bloqueia outras participações: não encontrou "Cada aluno pode autuar apenas um TCC"
+PASS  participantes do primeiro formulário entram na autorização
+PASS  OTP é enumerativamente neutro, expirável e de uso único
+PASS  downloads privados exigem sessão e vínculo ao processo
+PASS  download público tem rota separada e política por artefato
+PASS  Asten usa os signatários e a ordem definidos
+PASS  webhook Asten é autenticado e idempotente
+PASS  auditoria aceita busca no servidor
+PASS  segredos não são expostos em configuração ou VITE_
+PASS  PDFs não são persistidos no snapshot como Base64
+PASS  declaração não possui modelo textual embutido no portal
+PASS  prévia de login representa o acesso por e-mail e código
+PASS  convite usa o modelo de e-mail publicado pelo Master
+PASS  Estúdio não persiste conteúdo de modelos documentais
+PASS  Supabase usa commit transacional com revisão otimista e projeções normalizadas
+PASS  runtime: servidor isolado iniciou
+PASS  runtime: só Master e Presidente administram a lista
+PASS  runtime: um TCC por autor e participação ilimitada em outro
+PASS  runtime: OTP autorizado é de uso único
+PASS  runtime: download privado não revela existência
+PASS  runtime: rota pública é anônima e separada
+PASS  runtime: DTO público não expõe e-mails nem metadados internos
+PASS  runtime: aluno não altera participantes pelo PATCH genérico
+PASS  runtime: respostas aplicam cabeçalhos de endurecimento
+PASS  runtime: TERMO só existe quando há publicação
+PASS  runtime: formulário futuro permanece bloqueado sem arquivamento da etapa anterior
+PASS  runtime: assinatura falha fechada sem Google Drive autorizado
+PASS  runtime: webhook rejeita segredo errado e deduplica
+PASS  runtime: logs são pesquisáveis por pessoa ou código
+PASS  runtime: esquema inicial autenticado expõe somente o formulário do aluno
+PASS  runtime: rascunho é privado, versionado e não aceita conflito silencioso
+PASS  runtime: confirmação do local exige declaração explícita e comprovante válido
+PASS  runtime: central de fluxo é administrativa e a prévia real falha fechada sem Google
+PASS  runtime: panorama estatístico e exportações são administrativos
+PASS  runtime: simulador administrativo não grava efeitos no processo
+PASS  runtime: configuração recusa segredo aninhado
+
+Resultado: 37 aprovados; 1 falharam.
+
+Falhas:
+- limite de autoria não bloqueia outras participações: não encontrou "Cada aluno pode autuar apenas um TCC"
