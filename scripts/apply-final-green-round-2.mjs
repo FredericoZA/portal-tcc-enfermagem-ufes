@@ -52,9 +52,12 @@ function replaceOnce(content, from, to, label) {
     'cores computadas da Presidência',
   );
 
-  const tccReturn = `            return {\n              divider: style ? parseFloat(style.borderTopWidth || '0') : 0,\n              dividerColor: style?.borderTopColor || '',\n              fullWidth: Boolean(rect&&parent&&Math.abs(rect.left-parent.left)<=1&&Math.abs(rect.right-parent.right)<=1),\n              hasRegister: Boolean(document.querySelector('#meus-processos-btn-novo')),\n              hasSearch: Boolean(document.querySelector('#meus-processos-page-container button[aria-label^=\\"Buscar registros\\"]')),\n              hasRefresh: Boolean(document.querySelector('#meus-processos-refresh-btn'))\n            };`;
-  const tccReturnNew = `            const chips = Array.from(document.querySelectorAll('#meus-processos-page-container .portal-standard-filter-chip')).map((chip) => ({\n              background: getComputedStyle(chip).backgroundColor,\n              selected: chip.getAttribute('aria-pressed') === 'true',\n              dot: chip.querySelector('.portal-filter-dot') ? getComputedStyle(chip.querySelector('.portal-filter-dot')).backgroundColor : ''\n            }));\n            return {\n              divider: style ? parseFloat(style.borderTopWidth || '0') : 0,\n              dividerColor: style?.borderTopColor || '',\n              fullWidth: Boolean(rect&&parent&&Math.abs(rect.left-parent.left)<=1&&Math.abs(rect.right-parent.right)<=1),\n              hasRegister: Boolean(document.querySelector('#meus-processos-btn-novo')),\n              hasSearch: Boolean(document.querySelector('#meus-processos-page-container button[aria-label^=\\"Buscar registros\\"]')),\n              hasRefresh: Boolean(document.querySelector('#meus-processos-refresh-btn')),\n              chips\n            };`;
-  s = replaceOnce(s, tccReturn, tccReturnNew, 'estado computado de Meus TCCs');
+  s = replaceOnce(
+    s,
+    `              hasRefresh: Boolean(document.querySelector('#meus-processos-refresh-btn'))\n            };`,
+    `              hasRefresh: Boolean(document.querySelector('#meus-processos-refresh-btn')),\n              chips: Array.from(document.querySelectorAll('#meus-processos-page-container .portal-standard-filter-chip')).map((chip) => ({\n                background: getComputedStyle(chip).backgroundColor,\n                selected: chip.getAttribute('aria-pressed') === 'true',\n                dot: chip.querySelector('.portal-filter-dot') ? getComputedStyle(chip.querySelector('.portal-filter-dot')).backgroundColor : ''\n              }))\n            };`,
+    'estado computado de Meus TCCs',
+  );
   s = replaceOnce(
     s,
     `          if (!tccUi.hasRegister || !tccUi.hasSearch || !tccUi.hasRefresh) {\n            report.errors.push(\`master-meus-tccs-\${width}: ações obrigatórias do cabeçalho ausentes (\${JSON.stringify(tccUi)}).\`);\n          }`,
