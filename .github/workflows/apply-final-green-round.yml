@@ -35,7 +35,8 @@ jobs:
           if [ "$first" -eq 0 ] && [ "$second" -eq 0 ] && [ "$third" -eq 0 ]; then node scripts/apply-final-green-round-4.mjs >>/tmp/green-round.log 2>&1; fourth=$?; else fourth=0; fi
           if [ "$first" -eq 0 ] && [ "$second" -eq 0 ] && [ "$third" -eq 0 ] && [ "$fourth" -eq 0 ]; then node scripts/apply-final-green-round-5.mjs >>/tmp/green-round.log 2>&1; fifth=$?; else fifth=0; fi
           if [ "$first" -eq 0 ] && [ "$second" -eq 0 ] && [ "$third" -eq 0 ] && [ "$fourth" -eq 0 ] && [ "$fifth" -eq 0 ]; then node scripts/apply-final-green-round-6.mjs >>/tmp/green-round.log 2>&1; sixth=$?; else sixth=0; fi
-          if [ "$first" -ne 0 ] || [ "$second" -ne 0 ] || [ "$third" -ne 0 ] || [ "$fourth" -ne 0 ] || [ "$fifth" -ne 0 ] || [ "$sixth" -ne 0 ]; then
+          if [ "$first" -eq 0 ] && [ "$second" -eq 0 ] && [ "$third" -eq 0 ] && [ "$fourth" -eq 0 ] && [ "$fifth" -eq 0 ] && [ "$sixth" -eq 0 ]; then node scripts/apply-final-green-round-7.mjs >>/tmp/green-round.log 2>&1; seventh=$?; else seventh=0; fi
+          if [ "$first" -ne 0 ] || [ "$second" -ne 0 ] || [ "$third" -ne 0 ] || [ "$fourth" -ne 0 ] || [ "$fifth" -ne 0 ] || [ "$sixth" -ne 0 ] || [ "$seventh" -ne 0 ]; then
             cp /tmp/green-round.log /tmp/diagnostic.log
             git reset --hard HEAD
             cp /tmp/diagnostic.log MIGRATION_FAILURE.txt
