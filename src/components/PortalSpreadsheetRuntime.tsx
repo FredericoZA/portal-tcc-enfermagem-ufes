@@ -5,6 +5,16 @@ const TABLE_KEYS = ['defenses', 'acervo', 'meus_processos', 'coordinator', 'auth
 type TableKey = typeof TABLE_KEYS[number];
 type PageSize = 25 | 50 | 100 | 'all';
 
+const TABLE_SELECTORS = [
+  '#public-calendar-cards-section table',
+  '#biblioteca-tccs-section table',
+  '#meus-processos-page-container table',
+  '#coordenador-page-root table',
+  '#authorized-access-panel table',
+  '#asten-logs-page table',
+  '#audit-logs-page table',
+].join(', ');
+
 const DEFAULT_PAGE_SIZE: Record<TableKey, PageSize> = {
   defenses: 25,
   acervo: 25,
@@ -45,7 +55,9 @@ function migrateRowLimits() {
       const raw = localStorage.getItem(masterKey);
       const config = raw ? JSON.parse(raw) : {};
       const legacy = parsePageSize(config.recordsLimit);
-      if (!localStorage.getItem(pageSizeKey(key))) localStorage.setItem(pageSizeKey(key), String(legacy || DEFAULT_PAGE_SIZE[key]));
+      if (!localStorage.getItem(pageSizeKey(key))) {
+        localStorage.setItem(pageSizeKey(key), String(legacy || DEFAULT_PAGE_SIZE[key]));
+      }
       config.recordsLimit = 'all';
       localStorage.setItem(masterKey, JSON.stringify(config));
     }
@@ -61,9 +73,9 @@ function migrateRowLimits() {
         if (!localStorage.getItem(pageSizeKey(key)) && legacy) localStorage.setItem(pageSizeKey(key), String(legacy));
         config.recordsLimit = 'all';
         localStorage.setItem(storageKey, JSON.stringify(config));
-      } catch { /* preferência individual inválida não bloqueia o portal */ }
+      } catch { /* preferência inválida não bloqueia o portal */ }
     }
-  } catch { /* localStorage indisponível */ }
+  } catch { /* localStorage pode estar indisponível */ }
 }
 
 migrateRowLimits();
@@ -91,7 +103,7 @@ function savePageSize(key: TableKey, size: PageSize) {
   } catch { /* noop */ }
 }
 
-function readCurrentPage(key: TableKey): number {
+function readCurrentPage(key: TableKey) {
   try { return Math.max(1, Number(localStorage.getItem(currentPageKey(key))) || 1); }
   catch { return 1; }
 }
@@ -126,31 +138,61 @@ function renameProcessHeader(header: HTMLTableCellElement) {
   const nodes: Text[] = [];
   let current: Node | null;
   while ((current = walker.nextNode())) nodes.push(current as Text);
-  let replaced = false;
   nodes.forEach((node) => {
     if (node.parentElement?.closest('.portal-core-column-menu,.portal-core-resizer')) return;
-    const next = node.data
+    node.data = node.data
       .replace(/n[º°o]?\.?\s*do\s*processo/gi, 'Processo')
       .replace(/n[uú]mero\s+do\s+processo/gi, 'Processo')
       .replace(/^\s*protocolo\s*$/gi, 'Processo');
-    if (next !== node.data) {
-      node.data = next;
-      replaced = true;
-    }
   });
-  if (!replaced && ['processo', 'protocolo'].includes(headerLabel(header))) {
-    const textNode = nodes.find((node) => !node.parentElement?.closest('button'));
-    if (textNode) textNode.data = textNode.data.replace(/protocolo/gi, 'Processo');
-  }
 }
 
-function rowBackground(row: HTMLTableRowElement) {
-  const rowColor = getComputedStyle(row).backgroundColor;
-  if (rowColor && rowColor !== 'rgba(0, 0, 0, 0)' && rowColor !== 'transparent') return rowColor;
-  const firstCell = row.cells[0] as HTMLTableCellElement | undefined;
-  const cellColor = firstCell ? getComputedStyle(firstCell).backgroundColor : '';
-  if (cellColor && cellColor !== 'rgba(0, 0, 0, 0)' && cellColor !== 'transparent') return cellColor;
+function visibleRowBackground(row: HTMLTableRowElement) {
+  const candidates = [row, ...(Array.from(row.cells) as HTMLElement[])];
+  for (const element of candidates) {
+    const color = getComputedStyle(element).backgroundColor;
+    if (color && color !== 'rgba(0, 0, 0, 0)' && color !== 'transparent') return color;
+  }
   return '#ffffff';
+}
+
+function detectSelectionIndex(table: HTMLTableElement, headers: HTMLTableCellElement[]) {
+  const explicit = headers.findIndex((header) =>
+    header.dataset.portalSelectionColumn === 'true'
+    || normalize(header.dataset.portalColumnLabel || '') === 'selecao'
+    || headerLabel(header) === 'selecao');
+  if (explicit >= 0) return explicit;
+
+  const firstHeader = headers[0];
+  const firstCell = table.tBodies[0]?.rows[0]?.cells[0] as HTMLTableCellElement | undefined;
+  if (firstHeader && !headerLabel(firstHeader) && firstCell?.querySelector('input[type="checkbox"],button[aria-pressed],.portal-sheet-checkbox')) return 0;
+  return -1;
+}
+
+function ensureSelectionButton(header: HTMLTableCellElement) {
+  let button = header.querySelector<HTMLButtonElement>('.portal-sheet-checkbox,button');
+  if (!button) {
+    header.replaceChildren();
+    button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'portal-sheet-checkbox';
+    button.setAttribute('aria-label', 'Selecionar todos');
+    button.setAttribute('aria-pressed', 'false');
+    button.appendChild(document.createElement('span'));
+    header.appendChild(button);
+  }
+  button.classList.add('portal-sheet-checkbox');
+  button.setAttribute('aria-label', button.getAttribute('title') || 'Selecionar todos');
+  return button;
+}
+
+function flattenInformationalCell(cell: HTMLTableCellElement) {
+  cell.dataset.portalPlainText = 'true';
+  cell.querySelectorAll<HTMLButtonElement>('button').forEach((button) => {
+    const replacement = document.createElement('span');
+    replacement.textContent = (button.textContent || '').replace(/\s+/g, ' ').trim();
+    button.replaceWith(replacement);
+  });
 }
 
 function markSpreadsheet(table: HTMLTableElement) {
@@ -163,20 +205,12 @@ function markSpreadsheet(table: HTMLTableElement) {
   const headers = Array.from(headerRow.cells) as HTMLTableCellElement[];
   headers.forEach((header) => { header.dataset.portalStickyHeader = 'true'; });
 
-  const selectionIndex = headers.findIndex((header) =>
-    header.dataset.portalSelectionColumn === 'true'
-    || normalize(header.dataset.portalColumnLabel || '') === 'selecao'
-    || headerLabel(header) === 'selecao');
+  const selectionIndex = detectSelectionIndex(table, headers);
   const processIndex = headers.findIndex(isProcessHeader);
 
   if (selectionIndex >= 0) {
-    const header = headers[selectionIndex];
-    header.dataset.portalStickySelection = 'true';
-    const headerButton = header.querySelector<HTMLButtonElement>('button');
-    if (headerButton) {
-      headerButton.classList.add('portal-sheet-checkbox');
-      headerButton.setAttribute('aria-label', headerButton.getAttribute('title') || 'Selecionar todos');
-    }
+    headers[selectionIndex].dataset.portalStickySelection = 'true';
+    ensureSelectionButton(headers[selectionIndex]);
   }
 
   if (processIndex >= 0) {
@@ -186,17 +220,13 @@ function markSpreadsheet(table: HTMLTableElement) {
   }
 
   Array.from(table.tBodies).forEach((tbody) => Array.from(tbody.rows).forEach((row) => {
-    row.style.setProperty('--portal-sticky-row-bg', rowBackground(row));
+    row.style.setProperty('--portal-sticky-row-bg', visibleRowBackground(row));
     if (selectionIndex >= 0) {
       const cell = row.cells[selectionIndex] as HTMLTableCellElement | undefined;
       if (cell) {
         cell.dataset.portalStickySelection = 'true';
-        const button = cell.querySelector<HTMLButtonElement>('button');
-        if (button) {
-          button.classList.add('portal-sheet-checkbox');
-          const selected = normalize(cell.dataset.portalFilterValue || '').startsWith('selecionado') || row.dataset.portalSelected === 'true';
-          button.setAttribute('aria-pressed', selected ? 'true' : 'false');
-        }
+        const button = cell.querySelector<HTMLButtonElement>('button,input[type="checkbox"]');
+        if (button instanceof HTMLButtonElement) button.classList.add('portal-sheet-checkbox');
       }
     }
     if (processIndex >= 0) {
@@ -208,41 +238,28 @@ function markSpreadsheet(table: HTMLTableElement) {
     }
   }));
 
-  if (selectionIndex >= 0) {
-    const rows = Array.from(table.tBodies).flatMap((tbody) => Array.from(tbody.rows));
-    const headerButton = headers[selectionIndex].querySelector<HTMLButtonElement>('button');
-    if (headerButton) {
-      const allSelected = rows.length > 0 && rows.every((row) => {
-        const cell = row.cells[selectionIndex] as HTMLTableCellElement | undefined;
-        return normalize(cell?.dataset.portalFilterValue || '').startsWith('selecionado') || row.dataset.portalSelected === 'true';
-      });
-      headerButton.setAttribute('aria-pressed', allSelected ? 'true' : 'false');
-    }
-  }
-
   if (key === 'coordinator') {
     const envioIndex = headers.findIndex((header) => normalize(header.dataset.portalColumnKey || '') === 'enviostatus' || headerLabel(header) === 'envio');
     if (envioIndex >= 0) Array.from(table.tBodies).forEach((tbody) => Array.from(tbody.rows).forEach((row) => {
       const cell = row.cells[envioIndex] as HTMLTableCellElement | undefined;
-      if (cell) cell.dataset.portalPlainText = 'true';
+      if (cell) flattenInformationalCell(cell);
     }));
   }
 
   if (key === 'audit_logs') {
-    const actionIndex = headers.findIndex((header) => normalize(header.dataset.portalColumnKey || '') === 'action' || headerLabel(header) === 'acao / atividade');
-    if (actionIndex >= 0) Array.from(table.tBodies).forEach((tbody) => Array.from(tbody.rows).forEach((row) => {
-      const cell = row.cells[actionIndex] as HTMLTableCellElement | undefined;
-      if (cell) cell.dataset.portalPlainText = 'true';
+    const activityIndex = headers.findIndex((header) => normalize(header.dataset.portalColumnKey || '') === 'action' || headerLabel(header) === 'acao / atividade');
+    if (activityIndex >= 0) Array.from(table.tBodies).forEach((tbody) => Array.from(tbody.rows).forEach((row) => {
+      const cell = row.cells[activityIndex] as HTMLTableCellElement | undefined;
+      if (cell) flattenInformationalCell(cell);
     }));
   }
 }
 
 function findScrollHost(table: HTMLTableElement) {
-  const direct = table.closest<HTMLElement>('.table-sticky-container,[data-portal-scroll-host="true"],.overflow-x-auto');
-  return direct || table.parentElement;
+  return table.closest<HTMLElement>('.table-sticky-container,[data-portal-scroll-host="true"],.overflow-x-auto') || table.parentElement;
 }
 
-function ensurePager(table: HTMLTableElement, host: HTMLElement, key: TableKey) {
+function ensurePager(host: HTMLElement, key: TableKey) {
   let pager = host.nextElementSibling as HTMLElement | null;
   if (!pager?.classList.contains('portal-spreadsheet-pager') || pager.dataset.portalTableKey !== key) {
     pager = document.createElement('nav');
@@ -255,10 +272,7 @@ function ensurePager(table: HTMLTableElement, host: HTMLElement, key: TableKey) 
 }
 
 function rowIsExternallyHidden(row: HTMLTableRowElement) {
-  if (row.classList.contains('portal-core-filter-hidden')) return true;
-  if (row.dataset.portalFilterHidden === 'true') return true;
-  if (row.hidden) return true;
-  return false;
+  return row.classList.contains('portal-core-filter-hidden') || row.dataset.portalFilterHidden === 'true' || row.hidden;
 }
 
 function pageList(totalPages: number, current: number) {
@@ -269,15 +283,16 @@ function pageList(totalPages: number, current: number) {
 
 function applyPagination(table: HTMLTableElement) {
   const key = tableKey(table);
-  if (!key) return;
   const host = findScrollHost(table);
-  if (!host) return;
+  if (!key || !host) return;
+
   const allRows = Array.from(table.tBodies).flatMap((tbody) => Array.from(tbody.rows));
   const visibleRows = allRows.filter((row) => !rowIsExternallyHidden(row));
   const pageSize = readPageSize(key);
   const totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(visibleRows.length / pageSize));
   const current = Math.min(totalPages, readCurrentPage(key));
   saveCurrentPage(key, current);
+
   const start = pageSize === 'all' ? 0 : (current - 1) * pageSize;
   const end = pageSize === 'all' ? visibleRows.length : start + pageSize;
   const visibleIndex = new Map<HTMLTableRowElement, number>();
@@ -289,7 +304,7 @@ function applyPagination(table: HTMLTableElement) {
     row.classList.toggle('portal-runtime-page-hidden', hiddenByPage);
   });
 
-  const pager = ensurePager(table, host, key);
+  const pager = ensurePager(host, key);
   const signature = `${pageSize}|${current}|${visibleRows.length}|${totalPages}`;
   if (pager.dataset.portalSignature === signature) return;
   pager.dataset.portalSignature = signature;
@@ -317,8 +332,8 @@ function applyPagination(table: HTMLTableElement) {
     select.appendChild(option);
   });
   select.addEventListener('change', () => {
-    const next = parsePageSize(select.value) || 25;
-    savePageSize(key, next);
+    savePageSize(key, parsePageSize(select.value) || 25);
+    pager.dataset.portalSignature = '';
     applyPagination(table);
     host.scrollTop = 0;
   });
@@ -365,16 +380,14 @@ function syncPageSizePopover(activeTable: HTMLTableElement | null) {
   const key = tableKey(activeTable);
   if (!key) return;
   const pageSize = readPageSize(key);
-  const sections = Array.from(popup.querySelectorAll<HTMLElement>('section'));
-  const section = sections.find((node) => normalize(node.textContent || '').includes('linhas por pagina'));
+  const section = Array.from(popup.querySelectorAll<HTMLElement>('section')).find((node) => normalize(node.textContent || '').includes('linhas por pagina'));
   if (!section) return;
   const status = Array.from(section.querySelectorAll<HTMLElement>('span')).find((node) => normalize(node.textContent || '').startsWith('atual:'));
   if (status) status.textContent = `Atual: ${pageSize === 'all' ? 'Todos' : pageSize}`;
   section.querySelectorAll<HTMLButtonElement>('button').forEach((button) => {
     const label = normalize(button.textContent || '');
     const value = label === 'todos' ? 'all' : parsePageSize(label);
-    if (!value) return;
-    button.dataset.portalPageSizeSelected = value === pageSize ? 'true' : 'false';
+    if (value) button.dataset.portalPageSizeSelected = value === pageSize ? 'true' : 'false';
   });
 }
 
@@ -511,7 +524,7 @@ async function renderPresidentAllView(filterRow: HTMLElement) {
     wrapper.className = 'table-sticky-container portal-spreadsheet-scroll-host portal-runtime-president-all-scroll';
     wrapper.dataset.portalScrollHost = 'true';
     const table = document.createElement('table');
-    table.className = 'portal-spreadsheet-table portal-runtime-president-all-table w-full min-w-[1100px] border-collapse text-xs';
+    table.className = 'portal-spreadsheet-table portal-runtime-president-all-table w-full min-w-[1100px] text-xs';
     const thead = table.createTHead();
     const header = thead.insertRow();
     const columns = ['Seleção', 'Processo', 'Envio', 'Data', 'Título do Trabalho', 'Aluno 1', 'Aluno 2', 'Orientador(a)'];
@@ -527,8 +540,7 @@ async function renderPresidentAllView(filterRow: HTMLElement) {
         button.className = 'portal-sheet-checkbox';
         button.title = 'Selecionar/Deselecionar todos';
         button.setAttribute('aria-pressed', 'false');
-        const mark = document.createElement('span');
-        button.appendChild(mark);
+        button.appendChild(document.createElement('span'));
         button.addEventListener('click', () => {
           const ids = records.map(({ process }) => String(process.id));
           const allSelected = ids.length > 0 && ids.every((id) => presidentSelection.has(id));
@@ -602,9 +614,7 @@ function enhancePresidentFilters() {
   }
   all.setAttribute('aria-pressed', presidentAllActive ? 'true' : 'false');
   all.dataset.selected = presidentAllActive ? 'true' : 'false';
-  nativeButtons.forEach((button) => {
-    button.dataset.portalNativePresidentFilter = 'true';
-  });
+  nativeButtons.forEach((button) => { button.dataset.portalNativePresidentFilter = 'true'; });
 }
 
 export function PortalSpreadsheetRuntime() {
@@ -625,6 +635,7 @@ export function PortalSpreadsheetRuntime() {
       let startY = 0;
       let startLeft = 0;
       let startTop = 0;
+      let startWindowY = 0;
       let suppressClickUntil = 0;
 
       const stopDrag = () => {
@@ -643,9 +654,25 @@ export function PortalSpreadsheetRuntime() {
         if (!dragging && Math.max(Math.abs(dx), Math.abs(dy)) < 3) return;
         dragging = true;
         host.classList.add('portal-sheet-dragging');
-        event.preventDefault();
-        if (host.scrollWidth > host.clientWidth + 1) host.scrollLeft = startLeft - dx;
-        if (host.scrollHeight > host.clientHeight + 1) host.scrollTop = startTop - dy;
+
+        const canX = host.scrollWidth > host.clientWidth + 1;
+        const canY = host.scrollHeight > host.clientHeight + 1;
+        let moved = false;
+        if (canX) {
+          const before = host.scrollLeft;
+          host.scrollLeft = startLeft - dx;
+          moved = moved || before !== host.scrollLeft;
+        }
+        if (canY) {
+          const before = host.scrollTop;
+          host.scrollTop = startTop - dy;
+          moved = moved || before !== host.scrollTop;
+        } else if (document.documentElement.scrollHeight > window.innerHeight + 1) {
+          const before = window.scrollY;
+          window.scrollTo({ top: Math.max(0, startWindowY - dy), behavior: 'auto' });
+          moved = moved || before !== window.scrollY;
+        }
+        if (moved) event.preventDefault();
       };
 
       const onMouseDown = (event: MouseEvent) => {
@@ -654,12 +681,14 @@ export function PortalSpreadsheetRuntime() {
         if (target.closest(INTERACTIVE_SELECTOR) || target.closest('thead')) return;
         const canX = host.scrollWidth > host.clientWidth + 1;
         const canY = host.scrollHeight > host.clientHeight + 1;
-        if (!canX && !canY) return;
+        const canPageY = document.documentElement.scrollHeight > window.innerHeight + 1;
+        if (!canX && !canY && !canPageY) return;
         started = true;
         startX = event.clientX;
         startY = event.clientY;
         startLeft = host.scrollLeft;
         startTop = host.scrollTop;
+        startWindowY = window.scrollY;
         host.classList.add('portal-sheet-pointer-down');
         window.addEventListener('mousemove', onMouseMove, { passive: false });
         window.addEventListener('mouseup', stopDrag, { once: true });
@@ -670,25 +699,20 @@ export function PortalSpreadsheetRuntime() {
         if (target.closest('select,input,textarea')) return;
         const canX = host.scrollWidth > host.clientWidth + 1;
         const canY = host.scrollHeight > host.clientHeight + 1;
-        if (!canX && !canY) return;
         const horizontalIntent = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
-        if (horizontalIntent && canX) {
+
+        if (horizontalIntent) {
+          if (!canX) return;
           const before = host.scrollLeft;
           host.scrollLeft += Math.abs(event.deltaX) > 0 ? event.deltaX : event.deltaY;
           if (host.scrollLeft !== before) event.preventDefault();
           return;
         }
-        if (canY) {
-          const before = host.scrollTop;
-          host.scrollTop += event.deltaY;
-          if (host.scrollTop !== before) event.preventDefault();
-          return;
-        }
-        if (canX) {
-          const before = host.scrollLeft;
-          host.scrollLeft += event.deltaY;
-          if (host.scrollLeft !== before) event.preventDefault();
-        }
+
+        if (!canY) return;
+        const before = host.scrollTop;
+        host.scrollTop += event.deltaY;
+        if (host.scrollTop !== before) event.preventDefault();
       };
 
       const onClick = (event: MouseEvent) => {
@@ -712,8 +736,7 @@ export function PortalSpreadsheetRuntime() {
     };
 
     const enhanceTable = (table: HTMLTableElement) => {
-      const key = tableKey(table);
-      if (!key) return;
+      if (!tableKey(table)) return;
       markSpreadsheet(table);
       const host = findScrollHost(table);
       if (!host) return;
@@ -724,9 +747,7 @@ export function PortalSpreadsheetRuntime() {
     const enhanceAll = () => {
       enhanceMyTccFilters();
       enhancePresidentFilters();
-      document.querySelectorAll<HTMLTableElement>(
-        '#public-calendar-cards-section table, #biblioteca-tccs-section table, #meus-processos-page-container table, #coordenador-page-root table, #authorized-access-panel table, #asten-logs-page table, #audit-logs-page table',
-      ).forEach(enhanceTable);
+      document.querySelectorAll<HTMLTableElement>(TABLE_SELECTORS).forEach(enhanceTable);
       syncPageSizePopover(activeSettingsTable);
     };
 
@@ -821,6 +842,7 @@ export function PortalSpreadsheetRuntime() {
 
     document.addEventListener('click', onDocumentClickCapture, true);
     enhanceAll();
+
     const observer = new MutationObserver((mutations) => {
       const onlyRuntimeMutations = mutations.every((mutation) => {
         const target = mutation.target as HTMLElement;
@@ -835,6 +857,7 @@ export function PortalSpreadsheetRuntime() {
       attributes: true,
       attributeFilter: ['class', 'aria-pressed', 'data-selected', 'data-portal-filter-value'],
     });
+
     window.addEventListener('portal:table-layout-changed', schedule as EventListener);
     window.addEventListener('global_table_layouts_changed', schedule as EventListener);
 
