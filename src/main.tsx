@@ -5,9 +5,8 @@ import { PortalUiEnhancer } from './components/PortalUiEnhancer';
 import { PortalVersion1040Enhancer } from './components/PortalVersion1040Enhancer';
 import { PortalStructuralRuntime } from './components/PortalStructuralRuntime';
 import { PortalTableTextPolicy } from './components/PortalTableTextPolicy';
-import { PortalVersion1052Enhancer } from './components/PortalVersion1052Enhancer';
-import { PortalVersion1053PagerGuard } from './components/PortalVersion1053PagerGuard';
-import { PortalVersion1053Enhancer } from './components/PortalVersion1053Enhancer';
+import { PortalSpreadsheetRuntime } from './components/PortalSpreadsheetRuntime';
+import { PortalSettingsRuntime } from './components/PortalSettingsRuntime';
 import './index.css';
 import './portal-overrides.css';
 import './portal-design-system.css';
@@ -38,8 +37,7 @@ import './portal-process-detail.css';
 import './portal-version-1049.css';
 import './portal-version-1050.css';
 import './portal-version-1051.css';
-import './portal-version-1052.css';
-import './portal-version-1053.css';
+import './portal-spreadsheet-runtime.css';
 import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
 import { installAuthRequestResilience } from './utils/authRequestResilience';
 
@@ -53,8 +51,7 @@ createRoot(document.getElementById('root')!).render(
     <PortalVersion1040Enhancer />
     <PortalStructuralRuntime />
     <PortalTableTextPolicy />
-    <PortalVersion1052Enhancer />
-    <PortalVersion1053PagerGuard />
-    <PortalVersion1053Enhancer />
+    <PortalSpreadsheetRuntime />
+    <PortalSettingsRuntime />
   </StrictMode>,
 );
