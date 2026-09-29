@@ -24,10 +24,15 @@ test('engrenagem mostra colunas e ordem sem popup secundário', () => {
   assert.match(settings, /Definir padrão/);
 });
 
-test('100 e Todos podem expandir verticalmente a tabela', () => {
+test('planilhas permitem rolagem vertical e horizontal no próprio contêiner', () => {
   const scroll = read('src/components/TableScrollWrapper.tsx');
   assert.doesNotMatch(scroll, /max-h-\[620px\]/);
-  assert.match(scroll, /overflow-y-visible/);
+  assert.doesNotMatch(scroll, /overflow-y-visible/);
+  assert.match(scroll, /overflow-auto/);
+  assert.match(scroll, /onWheel=\{handleWheel\}/);
+  assert.match(scroll, /scrollTop/);
+  assert.match(scroll, /scrollLeft/);
+  assert.match(scroll, /maxHeight: 'min\(68vh, 720px\)'/);
 });
 
 test('etapa permanece disponível e planilhas removem decoração infantil', () => {
