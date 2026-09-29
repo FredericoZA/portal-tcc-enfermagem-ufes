@@ -19,12 +19,12 @@ export const PORTAL_SEMANTIC_COLORS = {
     upcoming: { bg: '#e8dda7', border: '#b49d4f', text: '#4a4020' },
   },
   // Quatro famílias cromáticas foscas e deliberadamente afastadas entre si:
-  // amarelo, coral, azul e violeta. A mesma cor alimenta bolinha e processo.
+  // amarelo, coral, azul e violeta. A mesma família alimenta bolinha e processo.
   processRole: {
-    student: { bg: '#e9d46f', border: '#a78300', text: '#3f3300' },
-    board: { bg: '#dea09b', border: '#a34c44', text: '#4b231f' },
-    evaluator: { bg: '#9ecde2', border: '#337d9d', text: '#173f50' },
-    viewer: { bg: '#c6afe3', border: '#71519c', text: '#352247' },
+    student: { bg: '#f3e3a1', border: '#9a7600', text: '#3b2f00' },
+    board: { bg: '#e8b0aa', border: '#a04444', text: '#4a2020' },
+    evaluator: { bg: '#b9d9ef', border: '#2e718d', text: '#143b4c' },
+    viewer: { bg: '#d0bce8', border: '#6e4a94', text: '#332143' },
   },
   signature: {
     pending: { bg: '#d8c98f', border: '#9b884b', text: '#3e361c' },

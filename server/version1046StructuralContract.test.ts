@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('release atual é 1.0.53', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.53');
+test('release atual é 1.0.54', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.54');
 });
 
 test('estado de defesa não sobrescreve cores de vínculo e assinatura', () => {
@@ -30,17 +30,17 @@ test('indicadores têm contrato completo e frontend defensivo', () => {
   assert.match(page, /const normalized =/);
 });
 
-test('configurações usam barras e workspace modal canônico', () => {
+test('configurações usam barras e runtime canônico de workspace', () => {
   const config = read('src/pages/ConfiguracoesPage.tsx');
   const modal = read('src/components/SettingsWorkspaceModal.tsx');
-  const v52 = read('src/components/PortalVersion1052Enhancer.tsx');
+  const runtime = read('src/components/PortalSettingsRuntime.tsx');
   assert.match(config, /portal-settings-title-bar/);
   assert.doesNotMatch(config, /portal-settings-hub-card/);
   assert.match(modal, /var\(--portal-green-header\)/);
   assert.match(modal, /singlePane = sections\.length === 1/);
-  assert.match(v52, /Rodapé e Identidade/);
-  assert.match(v52, /Integrações e Plataforma/);
-  assert.match(v52, /data-portal-v52-settings-integrations/);
+  assert.match(runtime, /Rodapé e Identidade/);
+  assert.match(runtime, /Integrações e Plataforma/);
+  assert.match(runtime, /data-portal-settings-integrations/);
 });
 
 test('estúdio de modelos delega navegação ao workspace externo e preserva cabeçalho', () => {
@@ -57,51 +57,58 @@ test('estúdio de modelos delega navegação ao workspace externo e preserva cab
   assert.match(config, /label: 'Variáveis'/);
 });
 
-test('tipografia tabular preta e CSS v53 carregado por último', () => {
+test('runtime tabular canônico substitui as camadas 1.0.52 e 1.0.53', () => {
   const formatter = read('src/utils/tableFormatters.ts');
   const main = read('src/main.tsx');
-  const css = read('src/portal-version-1053.css');
+  const css = read('src/portal-spreadsheet-runtime.css');
   assert.match(formatter, /cellTextColorClass = 'text-black'/);
-  assert.ok(main.indexOf('portal-version-1053.css') > main.indexOf('portal-version-1052.css'));
-  assert.ok(main.indexOf('PortalVersion1053Enhancer') > -1);
-  assert.match(css, /data-portal-v53-sticky-process/);
-  assert.match(css, /data-portal-v53-direct-sheet/);
-  assert.match(css, /data-portal-v53-orphan/);
+  assert.match(main, /PortalSpreadsheetRuntime/);
+  assert.match(main, /PortalSettingsRuntime/);
+  assert.match(main, /portal-spreadsheet-runtime\.css/);
+  assert.doesNotMatch(main, /PortalVersion1052Enhancer/);
+  assert.doesNotMatch(main, /PortalVersion1053Enhancer/);
+  assert.doesNotMatch(main, /PortalVersion1053PagerGuard/);
+  assert.doesNotMatch(main, /portal-version-1052\.css/);
+  assert.doesNotMatch(main, /portal-version-1053\.css/);
+  assert.match(css, /data-portal-sticky-process/);
+  assert.match(css, /data-portal-sheet-mode/);
 });
 
 test('paginação preserva todas as linhas React e cria páginas reais', () => {
-  const v52 = read('src/components/PortalVersion1052Enhancer.tsx');
-  assert.match(v52, /config\.recordsLimit = 'all'/);
-  assert.match(v52, /portal-pagination-hidden/);
-  assert.match(v52, /Math\.ceil\(visibleRows\.length \/ pageSize\)/);
-  assert.match(v52, /Anterior/);
-  assert.match(v52, /Próxima/);
-  assert.match(v52, /portal_table_page_size_/);
+  const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
+  assert.match(runtime, /config\.recordsLimit = 'all'/);
+  assert.match(runtime, /portal-runtime-page-hidden/);
+  assert.match(runtime, /Math\.ceil\(visibleRows\.length \/ pageSize\)/);
+  assert.match(runtime, /Anterior/);
+  assert.match(runtime, /Próxima/);
+  assert.match(runtime, /Linhas por página/);
+  assert.match(runtime, /portal_table_page_size_/);
 });
 
-test('planilhas têm Todos, processo fixo e seleção do Presidente', () => {
-  const v52 = read('src/components/PortalVersion1052Enhancer.tsx');
-  const v53 = read('src/components/PortalVersion1053Enhancer.tsx');
-  assert.match(v52, /enhanceMyTccFilters/);
-  assert.match(v52, /enhancePresidentFilters/);
-  assert.match(v53, /portalV53StickyProcess/);
-  assert.match(v53, /portalV53StickySelection/);
-  assert.match(v53, /portalV53AllActive/);
-  assert.match(v53, /portalV53Orphan/);
+test('planilhas têm Todos, Processo fixo e seleção do Presidente', () => {
+  const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
+  assert.match(runtime, /enhanceMyTccFilters/);
+  assert.match(runtime, /enhancePresidentFilters/);
+  assert.match(runtime, /portalStickyProcess/);
+  assert.match(runtime, /portalStickySelection/);
+  assert.match(runtime, /portalAllActive/);
+  assert.match(runtime, /portal-sheet-checkbox/);
 });
 
-test('rolagem 1.0.53 usa ponteiro e wheel no mesmo host', () => {
+test('rolagem canônica usa mouse no documento e wheel no mesmo host', () => {
   const wrapper = read('src/components/TableScrollWrapper.tsx');
-  const v53 = read('src/components/PortalVersion1053Enhancer.tsx');
+  const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   assert.match(wrapper, /data-portal-scroll-host/);
-  assert.match(v53, /pointerdown/);
-  assert.match(v53, /pointermove/);
-  assert.match(v53, /wheel/);
-  assert.match(v53, /scrollTop/);
-  assert.match(v53, /scrollLeft/);
+  assert.match(wrapper, /portal-spreadsheet-scroll-host/);
+  assert.match(runtime, /mousedown/);
+  assert.match(runtime, /window\.addEventListener\('mousemove'/);
+  assert.match(runtime, /wheel/);
+  assert.match(runtime, /scrollTop/);
+  assert.match(runtime, /scrollLeft/);
 });
 
-test('quatro papéis usam famílias cromáticas distintas', () => {
+test('quatro papéis usam famílias cromáticas claramente distintas', () => {
   const tokens = read('src/utils/portalSemanticTokens.ts');
-  for (const color of ['#e9d46f', '#dea09b', '#9ecde2', '#c6afe3']) assert.match(tokens, new RegExp(color));
+  for (const color of ['#f3e3a1', '#e8b0aa', '#b9d9ef', '#d0bce8']) assert.match(tokens, new RegExp(color));
+  for (const border of ['#9a7600', '#a04444', '#2e718d', '#6e4a94']) assert.match(tokens, new RegExp(border));
 });

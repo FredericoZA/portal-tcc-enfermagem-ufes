@@ -26,17 +26,19 @@ test('engrenagem mostra colunas e ordem sem popup secundário', () => {
 
 test('planilhas permitem rolagem vertical e horizontal no próprio contêiner', () => {
   const scroll = read('src/components/TableScrollWrapper.tsx');
-  const v53 = read('src/components/PortalVersion1053Enhancer.tsx');
-  assert.doesNotMatch(scroll, /max-h-\[620px\]/);
+  const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
+  const css = read('src/portal-spreadsheet-runtime.css');
   assert.doesNotMatch(scroll, /overflow-y-visible/);
+  assert.match(scroll, /portal-spreadsheet-scroll-host/);
   assert.match(scroll, /overflow-auto/);
-  assert.match(scroll, /data-portal-scroll-host/);
   assert.match(scroll, /maxHeight: 'min\(68vh, 720px\)'/);
-  assert.match(v53, /addEventListener\('wheel'/);
-  assert.match(v53, /addEventListener\('pointerdown'/);
-  assert.match(v53, /addEventListener\('pointermove'/);
-  assert.match(v53, /scrollTop/);
-  assert.match(v53, /scrollLeft/);
+  assert.match(runtime, /addEventListener\('mousedown'/);
+  assert.match(runtime, /window\.addEventListener\('mousemove'/);
+  assert.match(runtime, /addEventListener\('wheel'/);
+  assert.match(runtime, /host\.scrollTop/);
+  assert.match(runtime, /host\.scrollLeft/);
+  assert.match(css, /overflow: auto !important/);
+  assert.match(css, /cursor: grab !important/);
 });
 
 test('etapa permanece disponível e planilhas removem decoração infantil', () => {
@@ -60,15 +62,12 @@ test('calendário usa fins de semana estreitos e preview seguro', () => {
 });
 
 test('Meus TCCs colore apenas pílula de processo por vínculo e simplifica datas', () => {
-  const enhancer = read('src/components/PortalSpreadsheetEnhancer.tsx');
-  const css = read('src/portal-update-43.css');
-  assert.match(enhancer, /row\.dataset\.portalRoleCategory=category/);
-  assert.match(enhancer, /pill\.dataset\.portalRolePill=category/);
-  assert.match(css, /data-portal-role-pill="student"/);
-  assert.match(css, /data-portal-role-pill="committee"/);
-  assert.match(css, /data-portal-role-pill="evaluator"/);
-  assert.match(css, /data-portal-role-pill="viewer"/);
-  assert.match(css, /portal-date-cell-sober/);
+  const page = read('src/pages/MeusProcessosPage.tsx');
+  const css = read('src/portal-spreadsheet-runtime.css');
+  assert.match(page, /portal-role-process-button/);
+  assert.match(css, /\.portal-role-process-button/);
+  assert.match(css, /--portal-role-bg/);
+  assert.match(page, /defesaDataHora/);
 });
 
 test('Registro de logs mantém ações essenciais no cabeçalho e não oferece atualização redundante', () => {
