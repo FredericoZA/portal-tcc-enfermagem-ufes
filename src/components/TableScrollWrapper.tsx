@@ -11,21 +11,8 @@ export const TableScrollWrapper: React.FC<TableScrollWrapperProps> = ({ children
   const [startY, setStartY] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
-  const scrollParentRef = useRef<HTMLElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-
-  const findVerticalScrollParent = (node: HTMLElement | null): HTMLElement | null => {
-    let current = node?.parentElement || null;
-    while (current) {
-      const overflowY = window.getComputedStyle(current).overflowY;
-      if ((overflowY === 'auto' || overflowY === 'scroll') && current.scrollHeight > current.clientHeight) return current;
-      current = current.parentElement;
-    }
-    return document.scrollingElement as HTMLElement | null;
-  };
-
-  // A tabela cresce naturalmente; o arraste acompanha horizontalmente a tabela e verticalmente a página.
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     if (
@@ -46,8 +33,7 @@ export const TableScrollWrapper: React.FC<TableScrollWrapperProps> = ({ children
     setStartX(e.clientX);
     setStartY(e.clientY);
     setScrollLeft(containerRef.current.scrollLeft);
-    scrollParentRef.current = findVerticalScrollParent(containerRef.current);
-    setScrollTop(scrollParentRef.current?.scrollTop || 0);
+    setScrollTop(containerRef.current.scrollTop);
   };
 
   const finishDrag = () => {
@@ -57,13 +43,33 @@ export const TableScrollWrapper: React.FC<TableScrollWrapperProps> = ({ children
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isMouseDown || !containerRef.current) return;
-    const walkX = (e.clientX - startX) * 1.5;
+    const walkX = (e.clientX - startX) * 1.35;
     const walkY = (e.clientY - startY) * 1.15;
     if (Math.max(Math.abs(walkX), Math.abs(walkY)) > 5) {
       e.preventDefault();
       setIsDragging(true);
       containerRef.current.scrollLeft = scrollLeft - walkX;
-      if (scrollParentRef.current) scrollParentRef.current.scrollTop = scrollTop - walkY;
+      containerRef.current.scrollTop = scrollTop - walkY;
+    }
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const horizontalIntent = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
+    if (horizontalIntent && container.scrollWidth > container.clientWidth) {
+      const delta = Math.abs(e.deltaX) > 0 ? e.deltaX : e.deltaY;
+      const before = container.scrollLeft;
+      container.scrollLeft += delta;
+      if (container.scrollLeft !== before) e.preventDefault();
+      return;
+    }
+
+    if (container.scrollHeight > container.clientHeight) {
+      const before = container.scrollTop;
+      container.scrollTop += e.deltaY;
+      if (container.scrollTop !== before) e.preventDefault();
     }
   };
 
@@ -74,7 +80,14 @@ export const TableScrollWrapper: React.FC<TableScrollWrapperProps> = ({ children
       onMouseLeave={finishDrag}
       onMouseUp={finishDrag}
       onMouseMove={handleMouseMove}
-      className={`w-full bg-white overflow-x-auto overflow-y-visible table-sticky-container ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+      onWheel={handleWheel}
+      className={`w-full bg-white overflow-auto table-sticky-container ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+      style={{
+        maxHeight: 'min(68vh, 720px)',
+        overscrollBehavior: 'contain',
+        scrollbarGutter: 'stable both-edges',
+        WebkitOverflowScrolling: 'touch',
+      }}
     >
       <div className="min-w-max">
         {children}
