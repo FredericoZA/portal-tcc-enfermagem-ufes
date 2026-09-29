@@ -33,6 +33,14 @@ function parsePageSize(value: unknown): PageSize | null {
   return [25, 50, 100].includes(numeric) ? numeric : null;
 }
 
+function setAttributeIfChanged(element: Element | null | undefined, name: string, value: string) {
+  if (element && element.getAttribute(name) !== value) element.setAttribute(name, value);
+}
+
+function setTextIfChanged(element: HTMLElement | null | undefined, value: string) {
+  if (element && element.textContent !== value) element.textContent = value;
+}
+
 function pageSizeKey(key: TableKey) { return `${PAGE_SIZE_PREFIX}${key}`; }
 function currentPageKey(key: TableKey) { return `${CURRENT_PAGE_PREFIX}${key}`; }
 
@@ -112,7 +120,8 @@ function renameProcessHeader(header: HTMLTableCellElement) {
     const next = node.data
       .replace(/n[º°o]?\.?\s*do\s*processo/gi, 'Processo')
       .replace(/n[º°o]?\.?\s*processo/gi, 'Processo')
-      .replace(/n[uú]mero\s+do\s+processo/gi, 'Processo');
+      .replace(/n[uú]mero\s+do\s+processo/gi, 'Processo')
+      .replace(/n[uú]mero\s+processo/gi, 'Processo');
     if (next !== node.data) {
       node.data = next;
       replaced = true;
@@ -120,8 +129,18 @@ function renameProcessHeader(header: HTMLTableCellElement) {
   });
   if (!replaced && ['processo', 'protocolo'].includes(headerLabel(header))) {
     const preferred = header.querySelector<HTMLElement>('div > span:first-child, :scope > span:first-child');
-    if (preferred && !preferred.closest('button')) preferred.textContent = 'Processo';
+    if (preferred && !preferred.closest('button')) setTextIfChanged(preferred, 'Processo');
   }
+}
+
+function isProcessHeader(header: HTMLTableCellElement) {
+  const label = headerLabel(header);
+  const keyName = normalize(header.dataset.portalColumnKey || header.dataset.portalCoreColumnKey || '');
+  return keyName === 'protocolo'
+    || keyName.endsWith('protocolo')
+    || label === 'processo'
+    || label === 'protocolo'
+    || (/processo/.test(label) && /(nº|n°|numero|n\b)/.test(label));
 }
 
 function markSpreadsheetStructure(table: HTMLTableElement) {
@@ -134,11 +153,7 @@ function markSpreadsheetStructure(table: HTMLTableElement) {
   headers.forEach((header) => { header.dataset.portalV52StickyHeader = 'true'; });
 
   const selectionIndex = headers.findIndex((header) => header.dataset.portalSelectionColumn === 'true' || headerLabel(header) === 'selecao');
-  const processIndex = headers.findIndex((header) => {
-    const label = headerLabel(header);
-    const keyName = header.dataset.portalColumnKey || '';
-    return keyName === 'protocolo' || label === 'processo' || label.includes('numero do processo') || label.includes('nº do processo');
-  });
+  const processIndex = headers.findIndex(isProcessHeader);
 
   if (processIndex >= 0) {
     const header = headers[processIndex];
@@ -174,7 +189,7 @@ function markSpreadsheetStructure(table: HTMLTableElement) {
         const cell = row.cells[selectionIndex] as HTMLTableCellElement | undefined;
         return normalize(cell?.dataset.portalFilterValue || '') === 'selecionado';
       });
-      glyph.textContent = allSelected ? '☑' : '☐';
+      setTextIfChanged(glyph, allSelected ? '☑' : '☐');
     }
   }
 
@@ -216,6 +231,11 @@ function pagerElement(wrapper: HTMLElement, key: TableKey) {
   return pager;
 }
 
+function setPaginationHidden(row: HTMLTableRowElement, hidden: boolean) {
+  const hasClass = row.classList.contains('portal-pagination-hidden');
+  if (hasClass !== hidden) row.classList.toggle('portal-pagination-hidden', hidden);
+}
+
 function applyPagination(table: HTMLTableElement) {
   const key = tableKey(table);
   if (!key || !table.tBodies[0]) return;
@@ -223,13 +243,13 @@ function applyPagination(table: HTMLTableElement) {
   if (!wrapper) return;
 
   const allRows = Array.from(table.tBodies[0].rows);
-  allRows.forEach((row) => row.classList.remove('portal-pagination-hidden'));
   const visibleRows = allRows.filter((row) => !row.classList.contains('portal-core-filter-hidden'));
   const pageSize = readPageSize(key);
   const pager = pagerElement(wrapper, key);
 
   if (pageSize === 'all') {
     saveCurrentPage(key, 1);
+    allRows.forEach((row) => setPaginationHidden(row, false));
     pager.replaceChildren();
     const info = document.createElement('span');
     info.className = 'portal-v52-pager-info';
@@ -243,7 +263,12 @@ function applyPagination(table: HTMLTableElement) {
   saveCurrentPage(key, current);
   const start = (current - 1) * pageSize;
   const end = start + pageSize;
-  visibleRows.forEach((row, index) => row.classList.toggle('portal-pagination-hidden', index < start || index >= end));
+  const visibleIndex = new Map<HTMLTableRowElement, number>();
+  visibleRows.forEach((row, index) => visibleIndex.set(row, index));
+  allRows.forEach((row) => {
+    const index = visibleIndex.get(row);
+    setPaginationHidden(row, index !== undefined && (index < start || index >= end));
+  });
 
   pager.replaceChildren();
   const summary = document.createElement('span');
@@ -264,7 +289,7 @@ function applyPagination(table: HTMLTableElement) {
     button.addEventListener('click', () => {
       saveCurrentPage(key, page);
       applyPagination(table);
-      wrapper.scrollTop = 0;
+      if ('scrollTop' in wrapper) wrapper.scrollTop = 0;
     });
     return button;
   };
@@ -295,13 +320,13 @@ function syncSettingsPopoverVisual() {
   const rowSection = sections.find((section) => normalize(section.textContent || '').includes('linhas por pagina'));
   if (!rowSection) return;
   const status = Array.from(rowSection.querySelectorAll<HTMLElement>('span')).find((node) => normalize(node.textContent || '').startsWith('atual:'));
-  if (status) status.textContent = `Atual: ${pageSize === 'all' ? 'Todos' : pageSize}`;
+  if (status) setTextIfChanged(status, `Atual: ${pageSize === 'all' ? 'Todos' : pageSize}`);
   rowSection.querySelectorAll<HTMLButtonElement>('button').forEach((button) => {
     const label = normalize(button.textContent || '');
     const value: PageSize | null = label === 'todos' ? 'all' : parsePageSize(label);
     if (!value) return;
     const selected = value === pageSize;
-    button.dataset.portalV52Selected = selected ? 'true' : 'false';
+    setAttributeIfChanged(button, 'data-portal-v52-selected', selected ? 'true' : 'false');
   });
 }
 
@@ -361,14 +386,14 @@ function enhanceMyTccFilters() {
     group.insertBefore(all, group.firstChild);
   }
   const selected = roleButtons.every((button) => button.getAttribute('aria-pressed') === 'true');
-  all.setAttribute('aria-pressed', selected ? 'true' : 'false');
-  all.dataset.selected = selected ? 'true' : 'false';
+  setAttributeIfChanged(all, 'aria-pressed', selected ? 'true' : 'false');
+  setAttributeIfChanged(all, 'data-selected', selected ? 'true' : 'false');
   const count = roleButtons.reduce((sum, button) => {
     const value = Number(button.querySelector('span:last-child')?.textContent || 0);
     return sum + (Number.isFinite(value) ? value : 0);
   }, 0);
   const countNode = all.querySelector<HTMLElement>('.portal-v52-all-count');
-  if (countNode) countNode.textContent = String(count);
+  if (countNode) setTextIfChanged(countNode, String(count));
 }
 
 let presidentAllActive = false;
@@ -390,7 +415,8 @@ function deactivatePresidentAll() {
   if (nativeContent) nativeContent.style.display = '';
   document.getElementById('portal-president-all-view')?.remove();
   const all = row?.querySelector<HTMLButtonElement>('.portal-v52-president-all');
-  if (all) { all.dataset.selected = 'false'; all.setAttribute('aria-pressed', 'false'); }
+  setAttributeIfChanged(all, 'data-selected', 'false');
+  setAttributeIfChanged(all, 'aria-pressed', 'false');
 }
 
 function updatePresidentSelection(table: HTMLTableElement) {
@@ -400,12 +426,14 @@ function updatePresidentSelection(table: HTMLTableElement) {
     const selected = presidentSelection.has(id);
     row.dataset.portalSelected = selected ? 'true' : 'false';
     const button = row.cells[0]?.querySelector<HTMLButtonElement>('button');
-    if (button) button.textContent = selected ? '☑' : '☐';
+    if (button) setTextIfChanged(button, selected ? '☑' : '☐');
     const cell = row.cells[0] as HTMLTableCellElement | undefined;
-    if (cell) cell.dataset.portalFilterValue = selected ? 'Selecionado' : 'Não selecionado';
+    if (cell && cell.dataset.portalFilterValue !== (selected ? 'Selecionado' : 'Não selecionado')) {
+      cell.dataset.portalFilterValue = selected ? 'Selecionado' : 'Não selecionado';
+    }
   });
   const headerButton = table.tHead?.rows[0]?.cells[0]?.querySelector<HTMLButtonElement>('button');
-  if (headerButton) headerButton.textContent = rows.length > 0 && rows.every((row) => presidentSelection.has(row.dataset.processId || '')) ? '☑' : '☐';
+  if (headerButton) setTextIfChanged(headerButton, rows.length > 0 && rows.every((row) => presidentSelection.has(row.dataset.processId || '')) ? '☑' : '☐');
 }
 
 async function renderPresidentAllView(filterRow: HTMLElement) {
@@ -511,9 +539,12 @@ function enhancePresidentFilters() {
     all.classList.add('portal-v52-president-all');
     all.addEventListener('click', () => {
       presidentAllActive = true;
-      all!.dataset.selected = 'true';
-      all!.setAttribute('aria-pressed', 'true');
-      existingButtons.forEach((button) => { button.dataset.selected = 'false'; button.setAttribute('aria-pressed', 'false'); });
+      setAttributeIfChanged(all, 'data-selected', 'true');
+      setAttributeIfChanged(all, 'aria-pressed', 'true');
+      existingButtons.forEach((button) => {
+        setAttributeIfChanged(button, 'data-selected', 'false');
+        setAttributeIfChanged(button, 'aria-pressed', 'false');
+      });
       void renderPresidentAllView(row);
     });
     group.insertBefore(all, group.firstChild);
@@ -523,20 +554,25 @@ function enhancePresidentFilters() {
     button.dataset.portalV52NativeBound = 'true';
     button.addEventListener('click', deactivatePresidentAll, true);
   });
-  all.dataset.selected = presidentAllActive ? 'true' : 'false';
-  all.setAttribute('aria-pressed', presidentAllActive ? 'true' : 'false');
+  setAttributeIfChanged(all, 'data-selected', presidentAllActive ? 'true' : 'false');
+  setAttributeIfChanged(all, 'aria-pressed', presidentAllActive ? 'true' : 'false');
   const countNode = all.querySelector<HTMLElement>('.portal-v52-all-count');
-  if (countNode) countNode.textContent = presidentAllCount ? String(presidentAllCount) : '';
+  if (countNode) setTextIfChanged(countNode, presidentAllCount ? String(presidentAllCount) : '');
 }
 
 let desiredSyncPane: 'identity' | 'integrations' = 'identity';
+let openingIntegrationsAlias = false;
 
 function replaceText(node: HTMLElement, from: RegExp, to: string) {
   const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
   const texts: Text[] = [];
   let current: Node | null;
   while ((current = walker.nextNode())) texts.push(current as Text);
-  texts.forEach((text) => { if (from.test(text.data)) text.data = text.data.replace(from, to); });
+  texts.forEach((text) => {
+    from.lastIndex = 0;
+    const next = text.data.replace(from, to);
+    if (next !== text.data) text.data = next;
+  });
 }
 
 function enhanceSettingsHub() {
@@ -547,7 +583,9 @@ function enhanceSettingsHub() {
     identity = Array.from(hub.querySelectorAll<HTMLButtonElement>('button.portal-settings-title-bar')).find((button) => normalize(button.textContent || '').includes('sincronizacao')) || null;
     if (identity) {
       identity.dataset.portalV52SettingsIdentity = 'true';
-      identity.addEventListener('click', () => { desiredSyncPane = 'identity'; });
+      identity.addEventListener('click', () => {
+        if (!openingIntegrationsAlias) desiredSyncPane = 'identity';
+      });
     }
   }
   if (!identity) return;
@@ -565,8 +603,12 @@ function enhanceSettingsHub() {
     integrations.addEventListener('click', (event) => {
       event.preventDefault(); event.stopPropagation();
       desiredSyncPane = 'integrations';
+      openingIntegrationsAlias = true;
       identity!.click();
+      openingIntegrationsAlias = false;
+      desiredSyncPane = 'integrations';
       window.setTimeout(configureSettingsWorkspace, 0);
+      window.setTimeout(configureSettingsWorkspace, 80);
     });
     identity.insertAdjacentElement('afterend', integrations);
   }
@@ -580,12 +622,16 @@ function configureSettingsWorkspace() {
   workspace.removeAttribute('data-portal-v52-settings-kind');
 
   const navButtons = Array.from(workspace.querySelectorAll<HTMLButtonElement>('aside button'));
-  const syncWorkspace = title.includes('sincronizacao') || navButtons.some((button) => normalize(button.textContent || '').includes('rodape e identidade'));
+  const syncWorkspace = title.includes('sincronizacao')
+    || title.includes('rodape e identidade')
+    || title.includes('integracoes e plataforma')
+    || navButtons.some((button) => normalize(button.textContent || '').includes('rodape e identidade'));
   if (syncWorkspace) {
     workspace.dataset.portalV52SettingsKind = desiredSyncPane === 'identity' ? 'identity' : 'integrations';
-    const wanted = navButtons.find((button) => normalize(button.textContent || '').includes(desiredSyncPane === 'identity' ? 'rodape e identidade' : 'integracoes e plataformas'));
+    const wantedLabel = desiredSyncPane === 'identity' ? 'rodape e identidade' : 'integracoes e plataformas';
+    const wanted = navButtons.find((button) => normalize(button.textContent || '').includes(wantedLabel));
     if (wanted && !wanted.classList.contains('text-white')) wanted.click();
-    if (heading) heading.textContent = desiredSyncPane === 'identity' ? 'Rodapé e Identidade' : 'Integrações e Plataforma';
+    if (heading) setTextIfChanged(heading, desiredSyncPane === 'identity' ? 'Rodapé e Identidade' : 'Integrações e Plataforma');
     return;
   }
   if (title.includes('acesso')) workspace.dataset.portalV52SettingsKind = 'access';
