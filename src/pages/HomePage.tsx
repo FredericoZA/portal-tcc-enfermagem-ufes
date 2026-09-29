@@ -446,7 +446,7 @@ const DayDatePickerPopover: React.FC<DayDatePickerPopoverProps> = ({
 };
 
 const ALL_DEFENSES_COLUMNS: ColumnDef[] = [
-  { key: 'protocolo', label: 'Nº do Processo' },
+  { key: 'protocolo', label: 'Processo' },
   { key: 'defesaDataHora', label: 'Data e Hora' },
   { key: 'progresso', label: 'Progresso' },
   { key: 'titulo', label: 'Título do Trabalho' },
@@ -494,7 +494,7 @@ const DEFAULT_DEFENSES_VISIBLE: Record<string, boolean> = {
 };
 
 const ALL_ACERVO_COLUMNS: ColumnDef[] = [
-  { key: 'protocolo', label: 'Nº do Processo' },
+  { key: 'protocolo', label: 'Processo' },
   { key: 'defesaDataHora', label: 'Data e Hora' },
   { key: 'progresso', label: 'Progresso' },
   { key: 'titulo', label: 'Título do Trabalho' },
@@ -710,7 +710,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const handleExportDefensesExcel = (dataToExport: ProcessData[]) => {
     const activeCols = defensesColumnOrder.filter((k) => defensesVisibleColumns[k]);
     const labelMap: Record<string, string> = {
-      protocolo: 'Nº do Processo',
+      protocolo: 'Processo',
       defesaDataHora: 'Data e Hora',
       progresso: 'Progresso',
       titulo: 'Título do Trabalho',
@@ -783,7 +783,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
   const handleExportExcel = (dataToExport: ProcessData[]) => {
     const colHeaders: string[] = [];
-    if (visibleColumns.protocolo) colHeaders.push('Nº do Processo');
+    if (visibleColumns.protocolo) colHeaders.push('Processo');
     if (visibleColumns.progresso) colHeaders.push('Progresso');
     if (visibleColumns.titulo) colHeaders.push('Título do Trabalho');
     if (visibleColumns.aluno1) colHeaders.push('Aluno 1');
@@ -2471,7 +2471,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           setSelectedProcessDetails(proc);
                         }}
                         className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.borderClass} align-middle ${alignClass} cursor-pointer ${acervoStyles.firstColCellHoverClass} group/col0 transition-colors`}
-                        title="Clique aqui no Nº do Processo para abrir o TCC"
+                        title="Clique aqui no Processo para abrir o TCC"
                       >
                         {(() => {
                           const rawStr = (proc.protocolo || proc.id || '').trim();

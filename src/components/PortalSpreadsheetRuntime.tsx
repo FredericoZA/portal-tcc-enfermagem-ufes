@@ -752,8 +752,11 @@ export function PortalSpreadsheetRuntime() {
     };
 
     const schedule = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(enhanceAll);
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        enhanceAll();
+      });
     };
 
     const onDocumentClickCapture = (event: MouseEvent) => {
