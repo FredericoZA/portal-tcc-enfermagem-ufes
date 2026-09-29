@@ -12,7 +12,7 @@ jobs:
   apply-and-validate:
     if: ${{ !contains(github.event.head_commit.message, '[diagnostic]') }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -37,13 +37,13 @@ jobs:
             second=0
           fi
           if [ "$first" -ne 0 ] || [ "$second" -ne 0 ]; then
-            cp /tmp/green-round.log /tmp/green-round-copy.log
+            cp /tmp/green-round.log /tmp/diagnostic.log
             git reset --hard HEAD
-            cp /tmp/green-round-copy.log MIGRATION_FAILURE.txt
+            cp /tmp/diagnostic.log MIGRATION_FAILURE.txt
             git config user.name "Portal TCC Automation"
             git config user.email "actions@users.noreply.github.com"
             git add -f MIGRATION_FAILURE.txt
-            git commit -m "[diagnostic] registra falha exata da rodada 1.0.48"
+            git commit -m "[diagnostic] registra falha de migração da 1.0.48"
             git push origin HEAD:fix/final-green-round-20260928
             cat MIGRATION_FAILURE.txt
             exit 1
@@ -52,21 +52,69 @@ jobs:
         run: npm install --global npm@11.9.0
       - name: Instalar dependências
         run: npm ci
-      - name: Validar CI completo
-        run: npm run test:ci
-      - name: Validar fluxo seguro
-        run: npm run test:secure-flow
+      - name: Validar CI completo ou registrar diagnóstico
+        shell: bash
+        run: |
+          set +e
+          npm run test:ci >/tmp/validation.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            cp /tmp/validation.log /tmp/diagnostic.log
+            git reset --hard HEAD
+            cp /tmp/diagnostic.log VALIDATION_FAILURE.txt
+            git config user.name "Portal TCC Automation"
+            git config user.email "actions@users.noreply.github.com"
+            git add -f VALIDATION_FAILURE.txt
+            git commit -m "[diagnostic] registra falha de CI da 1.0.48"
+            git push origin HEAD:fix/final-green-round-20260928
+            cat VALIDATION_FAILURE.txt
+            exit 1
+          fi
+      - name: Validar fluxo seguro ou registrar diagnóstico
+        shell: bash
+        run: |
+          set +e
+          npm run test:secure-flow >/tmp/secure-flow.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            cp /tmp/secure-flow.log /tmp/diagnostic.log
+            git reset --hard HEAD
+            cp /tmp/diagnostic.log SECURE_FLOW_FAILURE.txt
+            git config user.name "Portal TCC Automation"
+            git config user.email "actions@users.noreply.github.com"
+            git add -f SECURE_FLOW_FAILURE.txt
+            git commit -m "[diagnostic] registra falha do fluxo seguro da 1.0.48"
+            git push origin HEAD:fix/final-green-round-20260928
+            cat SECURE_FLOW_FAILURE.txt
+            exit 1
+          fi
       - name: Instalar Chromium para homologação visual
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
-      - name: Homologar interface em navegador real
-        run: npm run test:visual
+      - name: Homologar interface em navegador real ou registrar diagnóstico
+        shell: bash
+        run: |
+          set +e
+          npm run test:visual >/tmp/visual.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            cp /tmp/visual.log /tmp/diagnostic.log
+            git reset --hard HEAD
+            cp /tmp/diagnostic.log VISUAL_FAILURE.txt
+            git config user.name "Portal TCC Automation"
+            git config user.email "actions@users.noreply.github.com"
+            git add -f VISUAL_FAILURE.txt
+            git commit -m "[diagnostic] registra falha visual da 1.0.48"
+            git push origin HEAD:fix/final-green-round-20260928
+            cat VISUAL_FAILURE.txt
+            exit 1
+          fi
       - name: Commitar somente após tudo verde
         run: |
           git config user.name "Portal TCC Automation"
           git config user.email "actions@users.noreply.github.com"
-          git rm -f MIGRATION_FAILURE.txt 2>/dev/null || true
+          git rm -f MIGRATION_FAILURE.txt VALIDATION_FAILURE.txt SECURE_FLOW_FAILURE.txt VISUAL_FAILURE.txt 2>/dev/null || true
           git add -A
           git commit -m "Portal TCC 1.0.48 — fecha rodada de interface e acesso"
           git push origin HEAD:fix/final-green-round-20260928
