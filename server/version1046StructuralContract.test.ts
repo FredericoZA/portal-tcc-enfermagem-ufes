@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('release atual é 1.0.52', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.52');
+test('release atual é 1.0.53', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.53');
 });
 
 test('estado de defesa não sobrescreve cores de vínculo e assinatura', () => {
@@ -57,16 +57,16 @@ test('estúdio de modelos delega navegação ao workspace externo e preserva cab
   assert.match(config, /label: 'Variáveis'/);
 });
 
-test('tipografia tabular preta e CSS v52 carregado por último', () => {
+test('tipografia tabular preta e CSS v53 carregado por último', () => {
   const formatter = read('src/utils/tableFormatters.ts');
   const main = read('src/main.tsx');
-  const css = read('src/portal-version-1052.css');
+  const css = read('src/portal-version-1053.css');
   assert.match(formatter, /cellTextColorClass = 'text-black'/);
-  assert.ok(main.indexOf('portal-version-1052.css') > main.indexOf('portal-version-1051.css'));
-  assert.ok(main.indexOf('PortalVersion1052Enhancer') > -1);
-  assert.match(css, /data-portal-v52-sticky-process/);
-  assert.match(css, /portal-v52-pager/);
-  assert.match(css, /data-portal-v52-neutral-status/);
+  assert.ok(main.indexOf('portal-version-1053.css') > main.indexOf('portal-version-1052.css'));
+  assert.ok(main.indexOf('PortalVersion1053Enhancer') > -1);
+  assert.match(css, /data-portal-v53-sticky-process/);
+  assert.match(css, /data-portal-v53-direct-sheet/);
+  assert.match(css, /data-portal-v53-orphan/);
 });
 
 test('paginação preserva todas as linhas React e cria páginas reais', () => {
@@ -81,11 +81,24 @@ test('paginação preserva todas as linhas React e cria páginas reais', () => {
 
 test('planilhas têm Todos, processo fixo e seleção do Presidente', () => {
   const v52 = read('src/components/PortalVersion1052Enhancer.tsx');
+  const v53 = read('src/components/PortalVersion1053Enhancer.tsx');
   assert.match(v52, /enhanceMyTccFilters/);
   assert.match(v52, /enhancePresidentFilters/);
-  assert.match(v52, /dataset\.portalV52StickyProcess/);
-  assert.match(v52, /portalSelectionColumn/);
-  assert.match(v52, /getCoordinatorQueue/);
+  assert.match(v53, /portalV53StickyProcess/);
+  assert.match(v53, /portalV53StickySelection/);
+  assert.match(v53, /portalV53AllActive/);
+  assert.match(v53, /portalV53Orphan/);
+});
+
+test('rolagem 1.0.53 usa ponteiro e wheel no mesmo host', () => {
+  const wrapper = read('src/components/TableScrollWrapper.tsx');
+  const v53 = read('src/components/PortalVersion1053Enhancer.tsx');
+  assert.match(wrapper, /data-portal-scroll-host/);
+  assert.match(v53, /pointerdown/);
+  assert.match(v53, /pointermove/);
+  assert.match(v53, /wheel/);
+  assert.match(v53, /scrollTop/);
+  assert.match(v53, /scrollLeft/);
 });
 
 test('quatro papéis usam famílias cromáticas distintas', () => {
