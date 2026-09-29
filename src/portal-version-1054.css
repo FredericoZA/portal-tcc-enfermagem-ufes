@@ -1,0 +1,168 @@
+/* Portal TCC 1.0.54 — correções focadas em Repositório e Meus TCCs. */
+
+/* As duas planilhas precisam ser superfícies de rolagem reais. Uma regra antiga
+   ainda forçava max-height:none/overflow-y:visible e anulava a mão vertical. */
+#biblioteca-tccs-section .table-sticky-container,
+#meus-processos-page-container .table-sticky-container {
+  max-height: min(68vh, 720px) !important;
+  overflow: auto !important;
+  overscroll-behavior: contain !important;
+  scrollbar-gutter: stable both-edges !important;
+  cursor: grab !important;
+}
+#biblioteca-tccs-section .table-sticky-container.portal-v54-pointer-down,
+#biblioteca-tccs-section .table-sticky-container.portal-v54-dragging,
+#meus-processos-page-container .table-sticky-container.portal-v54-pointer-down,
+#meus-processos-page-container .table-sticky-container.portal-v54-dragging {
+  cursor: grabbing !important;
+}
+#biblioteca-tccs-section .table-sticky-container.portal-v54-dragging,
+#biblioteca-tccs-section .table-sticky-container.portal-v54-dragging *,
+#meus-processos-page-container .table-sticky-container.portal-v54-dragging,
+#meus-processos-page-container .table-sticky-container.portal-v54-dragging * {
+  user-select: none !important;
+}
+
+/* O nome institucional desta coluna é Processo. */
+#biblioteca-tccs-section th[data-portal-v54-process-header="true"],
+#meus-processos-page-container th[data-portal-v54-process-header="true"] {
+  white-space: nowrap !important;
+}
+
+/* A paginação antiga dessas duas telas fica desativada visualmente. A 1.0.54
+   cria um paginador único, sempre depois da planilha. */
+#biblioteca-tccs-section .portal-v52-pager,
+#meus-processos-page-container .portal-v52-pager {
+  display: none !important;
+}
+#biblioteca-tccs-section tr.portal-pagination-hidden:not(.portal-v54-page-hidden):not(.portal-column-filter-hidden):not(.portal-core-filter-hidden),
+#meus-processos-page-container tr.portal-pagination-hidden:not(.portal-v54-page-hidden):not(.portal-column-filter-hidden):not(.portal-core-filter-hidden) {
+  display: table-row !important;
+}
+#biblioteca-tccs-section tr.portal-v54-page-hidden,
+#meus-processos-page-container tr.portal-v54-page-hidden {
+  display: none !important;
+}
+.portal-v54-pager {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  min-height: 48px !important;
+  padding: 8px 12px !important;
+  border-top: 1px solid #cbd5e1 !important;
+  background: #f8fafc !important;
+  color: #334155 !important;
+}
+.portal-v54-pager-info {
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  color: #475569 !important;
+}
+.portal-v54-pager-controls {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 5px !important;
+}
+.portal-v54-pager-controls button {
+  min-width: 30px !important;
+  min-height: 30px !important;
+  padding: 0 9px !important;
+  border: 1px solid #d5dde2 !important;
+  border-radius: 7px !important;
+  background: #fff !important;
+  color: #334155 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  box-shadow: none !important;
+}
+.portal-v54-pager-controls button[data-active="true"] {
+  border-color: var(--portal-green-action, #337959) !important;
+  background: var(--portal-green-action, #337959) !important;
+  color: #fff !important;
+}
+.portal-v54-pager-controls button:disabled {
+  opacity: .42 !important;
+  cursor: default !important;
+}
+
+/* Meus TCCs — filtro branco por padrão e cinza apenas no filtro ativo. */
+#meus-processos-page-container [data-portal-v54-role-filters="true"] button.portal-standard-filter-chip {
+  filter: none !important;
+  background: #fff !important;
+  border-color: #cbd5e1 !important;
+  color: #1f2937 !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+#meus-processos-page-container [data-portal-v54-role-filters="true"][data-portal-v54-all-active="true"] .portal-v52-all-filter,
+#meus-processos-page-container [data-portal-v54-role-filters="true"][data-portal-v54-all-active="false"] button.portal-standard-filter-chip:not(.portal-v52-all-filter)[aria-pressed="true"] {
+  background: #aeb0b3 !important;
+  border-color: #96999d !important;
+  color: #111827 !important;
+}
+
+/* Todos não usa bolinha semântica. */
+#meus-processos-page-container .portal-v52-all-filter .portal-filter-dot,
+#meus-processos-page-container [data-portal-v54-hidden-dot="true"] {
+  display: none !important;
+}
+
+/* Contadores sempre neutros: a única cor semântica do filtro é a bolinha. */
+#meus-processos-page-container .portal-v54-filter-count,
+#meus-processos-page-container .portal-v52-all-count {
+  background: #66717c !important;
+  color: #fff !important;
+  border: 0 !important;
+  opacity: 1 !important;
+}
+#meus-processos-page-container .portal-v52-all-count:empty { display: none !important; }
+
+/* Quatro famílias mais distintas, sem saturação fluorescente. */
+#meus-processos-page-container button[data-portal-v54-role="student"] .portal-filter-dot {
+  background: #9a7600 !important;
+}
+#meus-processos-page-container button[data-portal-v54-role="committee"] .portal-filter-dot {
+  background: #a04444 !important;
+}
+#meus-processos-page-container button[data-portal-v54-role="evaluator"] .portal-filter-dot {
+  background: #2e718d !important;
+}
+#meus-processos-page-container button[data-portal-v54-role="viewer"] .portal-filter-dot {
+  background: #6e4a94 !important;
+}
+
+/* A pílula Processo acompanha exatamente a família cromática do filtro. */
+#meus-processos-table .portal-role-process-button[data-portal-v54-role="student"] {
+  background: #f1e2a8 !important;
+  border-color: #9a7600 !important;
+  color: #4b3900 !important;
+}
+#meus-processos-table .portal-role-process-button[data-portal-v54-role="committee"] {
+  background: #e7c1bd !important;
+  border-color: #a04444 !important;
+  color: #5e2927 !important;
+}
+#meus-processos-table .portal-role-process-button[data-portal-v54-role="evaluator"] {
+  background: #bfd9e3 !important;
+  border-color: #2e718d !important;
+  color: #214c5d !important;
+}
+#meus-processos-table .portal-role-process-button[data-portal-v54-role="viewer"] {
+  background: #d6c5e7 !important;
+  border-color: #6e4a94 !important;
+  color: #493163 !important;
+}
+
+@media (max-width: 900px) {
+  .portal-v54-pager {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+  .portal-v54-pager-controls {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    overflow-x: auto !important;
+  }
+}
