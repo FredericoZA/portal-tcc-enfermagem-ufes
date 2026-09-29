@@ -1,0 +1,74 @@
+
+> portal-tcc-institucional@1.0.48 test:visual
+> node scripts/test-visual.mjs
+
+{
+  "status": "REPROVADO",
+  "generatedAt": "2026-09-29T01:21:15.975Z",
+  "fixtureProcesses": 13,
+  "fixtureStatuses": [
+    "AGUARDANDO_DEFESA",
+    "EM_AVALIACAO",
+    "AGUARDANDO_ASSINATURA",
+    "EM_RASCUNHO"
+  ],
+  "screenshots": [
+    {
+      "file": "master-inicio-320.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-calendario-320.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-repositorio-320.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-indicadores-320.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-como-chegar-320.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-como-usar-320.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-fluxo-tcc-320.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-replicar-portal-320.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-meus-tccs-320.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-presidencia-320.png",
+      "overflow": false,
+      "overflowElements": []
+    }
+  ],
+  "errors": [
+    "master-calendario-320: dias do mês não usam #D5DCE0 ({\"cellCount\":30,\"emptyCount\":5,\"dayColors\":[\"rgb(213, 220, 224)\",\"rgb(225, 230, 233)\"],\"emptyColors\":[\"rgb(225, 230, 233)\"],\"divider\":2,\"dividerColor\":\"rgb(255, 255, 255)\",\"paddingTop\":10,\"fullWidth\":true}).",
+    "master-replicar-portal-320: contrato das quatro camadas divergente ({\"panel\":\"rgb(225, 230, 233)\",\"card\":\"rgb(213, 220, 224)\",\"inner\":\"\"}).",
+    "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('#google-workspace-sync-section > button').first()\n"
+  ],
+  "warnings": [],
+  "scope": "Dados fictícios locais; valida responsividade, overflow, navegação e perfis. Não valida provedores externos, zoom manual ou leitor de tela."
+}
