@@ -6,9 +6,1757 @@
 > portal-tcc-institucional@1.0.48 test:secrets
 > node scripts/check-no-secrets.mjs
 
-Verificação de segredos: 389 arquivo(s) versionado(s) sem credencial literal detectada.
+Verificação de segredos: 391 arquivo(s) versionado(s) sem credencial literal detectada.
 
 > portal-tcc-institucional@1.0.48 lint
 > tsc --noEmit
 
-server.ts(1880,74): error TS2304: Cannot find name 'installationProfile'.
+
+> portal-tcc-institucional@1.0.48 test:unit
+> node --import tsx --test "server/**/*.test.ts"
+
+TAP version 13
+# Subtest: panorama calcula totais e protege categorias temáticas pequenas
+ok 1 - panorama calcula totais e protege categorias temáticas pequenas
+  ---
+  duration_ms: 18.985015
+  type: 'test'
+  ...
+# Subtest: relatórios não copiam dados pessoais nem inferem tema pelo título
+ok 2 - relatórios não copiam dados pessoais nem inferem tema pelo título
+  ---
+  duration_ms: 0.983253
+  type: 'test'
+  ...
+# Subtest: decisão do Master e histórico permanecem quando a evidência muda
+ok 3 - decisão do Master e histórico permanecem quando a evidência muda
+  ---
+  duration_ms: 0.698316
+  type: 'test'
+  ...
+# Subtest: pacote completo do curso fica apto para publicação
+ok 4 - pacote completo do curso fica apto para publicação
+  ---
+  duration_ms: 3.467673
+  type: 'test'
+  ...
+# Subtest: modelo embutido e condição que aponta para campo futuro bloqueiam publicação
+ok 5 - modelo embutido e condição que aponta para campo futuro bloqueiam publicação
+  ---
+  duration_ms: 0.671546
+  type: 'test'
+  ...
+# Subtest: condições e validações são determinísticas
+ok 6 - condições e validações são determinísticas
+  ---
+  duration_ms: 0.293189
+  type: 'test'
+  ...
+# Subtest: bloqueia ação sem executor e envio prematuro de documento assinável
+ok 7 - bloqueia ação sem executor e envio prematuro de documento assinável
+  ---
+  duration_ms: 0.52729
+  type: 'test'
+  ...
+# Subtest: restringe cada documento ao evento seguro do fluxo institucional
+ok 8 - restringe cada documento ao evento seguro do fluxo institucional
+  ---
+  duration_ms: 1.860326
+  type: 'test'
+  ...
+# Subtest: mantém obrigatória a condição de publicação do Termo no evento correto
+ok 9 - mantém obrigatória a condição de publicação do Termo no evento correto
+  ---
+  duration_ms: 0.485457
+  type: 'test'
+  ...
+# Subtest: documentos obrigatórios não podem desaparecer por condição opcional
+ok 10 - documentos obrigatórios não podem desaparecer por condição opcional
+  ---
+  duration_ms: 0.796693
+  type: 'test'
+  ...
+# Subtest: bloqueia convite anexado antes da confirmação do local
+ok 11 - bloqueia convite anexado antes da confirmação do local
+  ---
+  duration_ms: 0.675872
+  type: 'test'
+  ...
+# Subtest: bloqueia variável inexistente em destinatário, assunto ou corpo de e-mail
+ok 12 - bloqueia variável inexistente em destinatário, assunto ou corpo de e-mail
+  ---
+  duration_ms: 0.555251
+  type: 'test'
+  ...
+# Subtest: bloqueia resposta de formulário como destinatário de e-mail
+ok 13 - bloqueia resposta de formulário como destinatário de e-mail
+  ---
+  duration_ms: 1.131435
+  type: 'test'
+  ...
+# Subtest: preserva evento publicado por um formulário personalizado ao recarregar o Estúdio
+ok 14 - preserva evento publicado por um formulário personalizado ao recarregar o Estúdio
+  ---
+  duration_ms: 0.23337
+  type: 'test'
+  ...
+# Subtest: estado da defesa muda para realizada assim que a data e hora de início ficam no passado
+ok 15 - estado da defesa muda para realizada assim que a data e hora de início ficam no passado
+  ---
+  duration_ms: 0.817905
+  type: 'test'
+  ...
+# Subtest: status administrativo não força uma defesa futura para o estado realizado
+ok 16 - status administrativo não força uma defesa futura para o estado realizado
+  ---
+  duration_ms: 0.205728
+  type: 'test'
+  ...
+# Subtest: filtro usa exatamente o mesmo estado semântico usado pela cor do processo
+ok 17 - filtro usa exatamente o mesmo estado semântico usado pela cor do processo
+  ---
+  duration_ms: 0.162814
+  type: 'test'
+  ...
+# Subtest: resumo do calendário contém horário e título compacto do TCC
+ok 18 - resumo do calendário contém horário e título compacto do TCC
+  ---
+  duration_ms: 20.127405
+  type: 'test'
+  ...
+# Subtest: defesa anterior ao instante atual é defendida
+ok 19 - defesa anterior ao instante atual é defendida
+  ---
+  duration_ms: 0.771065
+  type: 'test'
+  ...
+# Subtest: defesa posterior ao instante atual é a defender
+ok 20 - defesa posterior ao instante atual é a defender
+  ---
+  duration_ms: 0.1338
+  type: 'test'
+  ...
+# Subtest: horário de término não altera a classificação baseada no início
+ok 21 - horário de término não altera a classificação baseada no início
+  ---
+  duration_ms: 0.098117
+  type: 'test'
+  ...
+# Subtest: status administrativo não substitui a data/hora da defesa
+ok 22 - status administrativo não substitui a data/hora da defesa
+  ---
+  duration_ms: 0.135863
+  type: 'test'
+  ...
+# Subtest: avaliação aceita resultado e parecer sem nota numérica e preserva a conferência
+ok 23 - avaliação aceita resultado e parecer sem nota numérica e preserva a conferência
+  ---
+  duration_ms: 22.984715
+  type: 'test'
+  ...
+# Subtest: avaliação recusa ausência de conferência, resultado inválido e parecer incorreto
+ok 24 - avaliação recusa ausência de conferência, resultado inválido e parecer incorreto
+  ---
+  duration_ms: 0.455332
+  type: 'test'
+  ...
+# Subtest: avaliação recusa revisões desatualizadas e apresentação ainda não iniciada
+ok 25 - avaliação recusa revisões desatualizadas e apresentação ainda não iniciada
+  ---
+  duration_ms: 0.161922
+  type: 'test'
+  ...
+# Subtest: configuração antiga não consegue reintroduzir nota na avaliação
+ok 26 - configuração antiga não consegue reintroduzir nota na avaliação
+  ---
+  duration_ms: 0.680469
+  type: 'test'
+  ...
+# Subtest: variáveis legadas de nota ficam vazias e identidade canônica não é sobrescrita
+ok 27 - variáveis legadas de nota ficam vazias e identidade canônica não é sobrescrita
+  ---
+  duration_ms: 1.120869
+  type: 'test'
+  ...
+# Subtest: aparência publicada elimina exceções antigas e mantém estrutura de colunas e conteúdo
+ok 28 - aparência publicada elimina exceções antigas e mantém estrutura de colunas e conteúdo
+  ---
+  duration_ms: 0.813539
+  type: 'test'
+  ...
+# Subtest: a fonte e as cores publicadas são iguais nas tabelas e nos pop-ups
+ok 29 - a fonte e as cores publicadas são iguais nas tabelas e nos pop-ups
+  ---
+  duration_ms: 0.644054
+  type: 'test'
+  ...
+# Subtest: HTTP: orientador confere e registra avaliação; aluno é recusado; estado e aparência ficam gravados
+ok 30 - HTTP: orientador confere e registra avaliação; aluno é recusado; estado e aparência ficam gravados
+  ---
+  duration_ms: 4721.096061
+  type: 'test'
+  ...
+# Subtest: filtros semânticos são neutros e a cor fica somente na bolinha
+ok 31 - filtros semânticos são neutros e a cor fica somente na bolinha
+  ---
+  duration_ms: 29.506569
+  type: 'test'
+  ...
+# Subtest: lista de acesso autoriza identidade sem qualidade global ou domínio institucional
+ok 32 - lista de acesso autoriza identidade sem qualidade global ou domínio institucional
+  ---
+  duration_ms: 9.996562
+  type: 'test'
+  ...
+# Subtest: um aluno pode participar de vários TCCs sem bloqueio global
+ok 33 - um aluno pode participar de vários TCCs sem bloqueio global
+  ---
+  duration_ms: 5.507929
+  type: 'test'
+  ...
+# Subtest: editores administrativos usam o shell verde e as superfícies do Portal
+ok 34 - editores administrativos usam o shell verde e as superfícies do Portal
+  ---
+  duration_ms: 2.58401
+  type: 'test'
+  ...
+# Subtest: Configurações respeita a ordem administrativa e a release foi atualizada
+ok 35 - Configurações respeita a ordem administrativa e a release foi atualizada
+  ---
+  duration_ms: 5.718374
+  type: 'test'
+  ...
+# Subtest: formatadores preservam valores civis informados no horário institucional
+ok 36 - formatadores preservam valores civis informados no horário institucional
+  ---
+  duration_ms: 0.883713
+  type: 'test'
+  ...
+# Subtest: timestamps absolutos são convertidos para America/Sao_Paulo antes de gerar documento
+ok 37 - timestamps absolutos são convertidos para America/Sao_Paulo antes de gerar documento
+  ---
+  duration_ms: 13.622924
+  type: 'test'
+  ...
+# Subtest: data por extenso não fica limitada aos anos originalmente codificados
+ok 38 - data por extenso não fica limitada aos anos originalmente codificados
+  ---
+  duration_ms: 0.19349
+  type: 'test'
+  ...
+# Subtest: valores inválidos permanecem visíveis em vez de serem silenciosamente alterados
+ok 39 - valores inválidos permanecem visíveis em vez de serem silenciosamente alterados
+  ---
+  duration_ms: 0.198558
+  type: 'test'
+  ...
+# Subtest: Lista de Defesas recebe cor semântica pelo componente, sem regra CSS por posição
+ok 40 - Lista de Defesas recebe cor semântica pelo componente, sem regra CSS por posição
+  ---
+  duration_ms: 16.282252
+  type: 'test'
+  ...
+# Subtest: Meus TCCs usa cor do vínculo somente na bolinha do filtro
+ok 41 - Meus TCCs usa cor do vínculo somente na bolinha do filtro
+  ---
+  duration_ms: 7.483168
+  type: 'test'
+  ...
+# Subtest: Presidência usa filtros neutros com bolinha semântica e mantém a paleta nos status
+ok 42 - Presidência usa filtros neutros com bolinha semântica e mantém a paleta nos status
+  ---
+  duration_ms: 1.851073
+  type: 'test'
+  ...
+# Subtest: Indicadores remove somente o divisor interno redundante
+ok 43 - Indicadores remove somente o divisor interno redundante
+  ---
+  duration_ms: 3.51893
+  type: 'test'
+  ...
+# Subtest: workspaces administrativos usam modo embedded em vez de esconder títulos via CSS
+ok 44 - workspaces administrativos usam modo embedded em vez de esconder títulos via CSS
+  ---
+  duration_ms: 5.032117
+  type: 'test'
+  ...
+# Subtest: cards de Configurações usam a mesma cor dos títulos
+ok 45 - cards de Configurações usam a mesma cor dos títulos
+  ---
+  duration_ms: 1.660346
+  type: 'test'
+  ...
+# Subtest: hotfix visual é carregado depois da camada estrutural
+ok 46 - hotfix visual é carregado depois da camada estrutural
+  ---
+  duration_ms: 0.744935
+  type: 'test'
+  ...
+# Subtest: separadores efetivos ficam em 16px sem somar bordas legadas à primeira linha
+ok 47 - separadores efetivos ficam em 16px sem somar bordas legadas à primeira linha
+  ---
+  duration_ms: 0.316394
+  type: 'test'
+  ...
+# Subtest: processos e calendário compartilham verde e amarelo foscos
+ok 48 - processos e calendário compartilham verde e amarelo foscos
+  ---
+  duration_ms: 0.236144
+  type: 'test'
+  ...
+# [Portal HTTP] {"requestId":"0cb08ecb-5aca-43f2-aad0-9066b3ed62d3","method":"GET","status":500,"kind":"Error"}
+# [Portal HTTP] {"requestId":"e50a0801-41e0-4014-8392-c55f45f68398","method":"POST","status":400,"kind":"SyntaxError"}
+# [Portal HTTP] {"requestId":"2225dee6-7cf5-43c6-9508-468e38f18516","method":"POST","status":413,"kind":"PayloadTooLargeError"}
+# Subtest: API retorna JSON após rejeição assíncrona, omite o segredo e continua atendendo
+ok 49 - API retorna JSON após rejeição assíncrona, omite o segredo e continua atendendo
+  ---
+  duration_ms: 122.280707
+  type: 'test'
+  ...
+# Subtest: mutações de navegador exigem origem confiável
+ok 50 - mutações de navegador exigem origem confiável
+  ---
+  duration_ms: 31.024206
+  type: 'test'
+  ...
+# Subtest: relatório institucional produz gráficos vetoriais, metodologia e nenhum dado pessoal
+ok 51 - relatório institucional produz gráficos vetoriais, metodologia e nenhum dado pessoal
+  ---
+  duration_ms: 1644.342147
+  type: 'test'
+  ...
+# Subtest: termo usa aluno(s) e orientador na mesma ordem 1
+ok 52 - termo usa aluno(s) e orientador na mesma ordem 1
+  ---
+  duration_ms: 1.311003
+  type: 'test'
+  ...
+# Subtest: termo não é requerido quando não existe escolha de publicação
+ok 53 - termo não é requerido quando não existe escolha de publicação
+  ---
+  duration_ms: 0.156103
+  type: 'test'
+  ...
+# Subtest: webhook remove segredos, detecta duplicata e consolida painel
+ok 54 - webhook remove segredos, detecta duplicata e consolida painel
+  ---
+  duration_ms: 16.680458
+  type: 'test'
+  ...
+# Subtest: assinatura concluída permite retomar arquivamento pendente no Drive
+ok 55 - assinatura concluída permite retomar arquivamento pendente no Drive
+  ---
+  duration_ms: 0.268131
+  type: 'test'
+  ...
+# Subtest: Asten não trata status negativo como assinatura concluída
+ok 56 - Asten não trata status negativo como assinatura concluída
+  ---
+  duration_ms: 1.998062
+  type: 'test'
+  ...
+# Subtest: extrai IDs de links Google Docs, Drive e ID puro
+ok 57 - extrai IDs de links Google Docs, Drive e ID puro
+  ---
+  duration_ms: 4.055339
+  type: 'test'
+  ...
+# Subtest: gera substituições somente para marcadores explícitos e inclui todas as abas
+ok 58 - gera substituições somente para marcadores explícitos e inclui todas as abas
+  ---
+  duration_ms: 4.267502
+  type: 'test'
+  ...
+# Subtest: detecta marcadores restantes sem confundir títulos comuns
+ok 59 - detecta marcadores restantes sem confundir títulos comuns
+  ---
+  duration_ms: 0.487524
+  type: 'test'
+  ...
+# Subtest: copia Google Doc nativo, mescla, exporta PDF e remove temporário
+ok 60 - copia Google Doc nativo, mescla, exporta PDF e remove temporário
+  ---
+  duration_ms: 48.479859
+  type: 'test'
+  ...
+# Subtest: converte DOCX em Google Doc temporário antes da exportação
+ok 61 - converte DOCX em Google Doc temporário antes da exportação
+  ---
+  duration_ms: 2.652413
+  type: 'test'
+  ...
+# Subtest: nome de formulário contém código, alunos, tipo e versão
+ok 62 - nome de formulário contém código, alunos, tipo e versão
+  ---
+  duration_ms: 0.984361
+  type: 'test'
+  ...
+# Subtest: nome de arquivo remove caracteres impróprios do Drive
+ok 63 - nome de arquivo remove caracteres impróprios do Drive
+  ---
+  duration_ms: 0.260278
+  type: 'test'
+  ...
+# Subtest: pasta privada aceita usuários nominais e bloqueia compartilhamento amplo
+ok 64 - pasta privada aceita usuários nominais e bloqueia compartilhamento amplo
+  ---
+  duration_ms: 0.124905
+  type: 'test'
+  ...
+# Subtest: preserva metadados do arquivo substituído
+ok 65 - preserva metadados do arquivo substituído
+  ---
+  duration_ms: 0.552385
+  type: 'test'
+  ...
+# Subtest: gera mensagem MIME com corpo alternativo e PDF anexado
+ok 66 - gera mensagem MIME com corpo alternativo e PDF anexado
+  ---
+  duration_ms: 0.950338
+  type: 'test'
+  ...
+# Subtest: bloqueia anexos acima do limite seguro
+ok 67 - bloqueia anexos acima do limite seguro
+  ---
+  duration_ms: 0.383891
+  type: 'test'
+  ...
+# Subtest: arquivo vivo existente é atualizado no mesmo ID para preservar revisões
+ok 68 - arquivo vivo existente é atualizado no mesmo ID para preservar revisões
+  ---
+  duration_ms: 19.556989
+  type: 'test'
+  ...
+# Subtest: modelo ativo exige o mesmo conteúdo, revisão e horário publicados
+ok 69 - modelo ativo exige o mesmo conteúdo, revisão e horário publicados
+  ---
+  duration_ms: 64.834202
+  type: 'test'
+  ...
+# Subtest: raiz existente é reutilizada e todas as novas pastas ficam dentro dela
+ok 70 - raiz existente é reutilizada e todas as novas pastas ficam dentro dela
+  ---
+  duration_ms: 61.113104
+  type: 'test'
+  ...
+# Subtest: raiz indisponível interrompe o bootstrap sem criar pasta substituta
+ok 71 - raiz indisponível interrompe o bootstrap sem criar pasta substituta
+  ---
+  duration_ms: 0.944645
+  type: 'test'
+  ...
+# Subtest: raiz sem escrita ou publicamente compartilhada não recebe subpastas
+ok 72 - raiz sem escrita ou publicamente compartilhada não recebe subpastas
+  ---
+  duration_ms: 0.789994
+  type: 'test'
+  ...
+# Subtest: ID de raiz definido no servidor tem precedência sobre o nome da pasta
+ok 73 - ID de raiz definido no servidor tem precedência sobre o nome da pasta
+  ---
+  duration_ms: 6.32277
+  type: 'test'
+  ...
+# Subtest: backup v1 do portal é cifrado e restaura sem perda
+ok 74 - backup v1 do portal é cifrado e restaura sem perda
+  ---
+  duration_ms: 1.383382
+  type: 'test'
+  ...
+# Subtest: ativar v2 cifra novos backups sem perder leitura de backup v1
+ok 75 - ativar v2 cifra novos backups sem perder leitura de backup v1
+  ---
+  duration_ms: 0.501872
+  type: 'test'
+  ...
+# Subtest: contrato Asten mantém PDF confidencial, envio explícito e prioridade paralela
+ok 76 - contrato Asten mantém PDF confidencial, envio explícito e prioridade paralela
+  ---
+  duration_ms: 1.540246
+  type: 'test'
+  ...
+# Subtest: PDF Asten só é aceito com signatários e ordens exatamente confirmados
+ok 77 - PDF Asten só é aceito com signatários e ordens exatamente confirmados
+  ---
+  duration_ms: 1.033758
+  type: 'test'
+  ...
+# Subtest: estado OAuth Google rejeita adulteração e limita o retorno ao portal
+ok 78 - estado OAuth Google rejeita adulteração e limita o retorno ao portal
+  ---
+  duration_ms: 0.911636
+  type: 'test'
+  ...
+# Subtest: acesso a modelos preexistentes do Drive exige opção administrativa explícita
+ok 79 - acesso a modelos preexistentes do Drive exige opção administrativa explícita
+  ---
+  duration_ms: 0.092769
+  type: 'test'
+  ...
+# Subtest: chave moderna do Supabase nunca é enviada como Bearer
+ok 80 - chave moderna do Supabase nunca é enviada como Bearer
+  ---
+  duration_ms: 0.106549
+  type: 'test'
+  ...
+# Subtest: instalação por curso controla protocolo e domínios sem alterar o código
+ok 81 - instalação por curso controla protocolo e domínios sem alterar o código
+  ---
+  duration_ms: 0.16013
+  type: 'test'
+  ...
+# Subtest: importação CSV aceita ponto e vírgula, acentos e matrícula
+ok 82 - importação CSV aceita ponto e vírgula, acentos e matrícula
+  ---
+  duration_ms: 0.912016
+  type: 'test'
+  ...
+# Subtest: contrato Vercel encaminha API ao handler e SPA ao build estático
+ok 83 - contrato Vercel encaminha API ao handler e SPA ao build estático
+  ---
+  duration_ms: 1.312946
+  type: 'test'
+  ...
+# Subtest: outbox Asten bloqueia recriação após resultado ambíguo
+ok 84 - outbox Asten bloqueia recriação após resultado ambíguo
+  ---
+  duration_ms: 0.335773
+  type: 'test'
+  ...
+# Subtest: valida finalidade, MIME, extensão, tamanho e vínculo do staging
+ok 85 - valida finalidade, MIME, extensão, tamanho e vínculo do staging
+  ---
+  duration_ms: 3.51134
+  type: 'test'
+  ...
+# Subtest: objeto temporário não expõe e-mail, processo ou nome original
+ok 86 - objeto temporário não expõe e-mail, processo ou nome original
+  ---
+  duration_ms: 0.637154
+  type: 'test'
+  ...
+# Subtest: URL assinada permanece na origem e no caminho de Storage do Supabase
+ok 87 - URL assinada permanece na origem e no caminho de Storage do Supabase
+  ---
+  duration_ms: 0.644355
+  type: 'test'
+  ...
+# Subtest: não duplica envio já aceito pelo Gmail
+ok 88 - não duplica envio já aceito pelo Gmail
+  ---
+  duration_ms: 1.22813
+  type: 'test'
+  ...
+# Subtest: agenda retentativa exponencial e encerra no limite
+ok 89 - agenda retentativa exponencial e encerra no limite
+  ---
+  duration_ms: 0.437805
+  type: 'test'
+  ...
+# Subtest: conteúdo diferente do anexo produz uma nova chave idempotente
+ok 90 - conteúdo diferente do anexo produz uma nova chave idempotente
+  ---
+  duration_ms: 0.292668
+  type: 'test'
+  ...
+# Subtest: registra evento e variáveis necessárias para reconstruir uma falha
+ok 91 - registra evento e variáveis necessárias para reconstruir uma falha
+  ---
+  duration_ms: 0.90131
+  type: 'test'
+  ...
+# Subtest: runtime estrutural neutraliza hover e usa um único menu por coluna
+ok 92 - runtime estrutural neutraliza hover e usa um único menu por coluna
+  ---
+  duration_ms: 1.115761
+  type: 'test'
+  ...
+# Subtest: cores do processo e calendário compartilham a mesma paleta
+ok 93 - cores do processo e calendário compartilham a mesma paleta
+  ---
+  duration_ms: 0.250566
+  type: 'test'
+  ...
+# Subtest: replicação expõe somente download agregado em zip
+ok 94 - replicação expõe somente download agregado em zip
+  ---
+  duration_ms: 0.243174
+  type: 'test'
+  ...
+# Subtest: detalhe público resolve protocolo antes da rota legada
+ok 95 - detalhe público resolve protocolo antes da rota legada
+  ---
+  duration_ms: 0.172999
+  type: 'test'
+  ...
+# Subtest: main monta apenas a camada estrutural atual para planilhas
+ok 96 - main monta apenas a camada estrutural atual para planilhas
+  ---
+  duration_ms: 0.162564
+  type: 'test'
+  ...
+# Subtest: horário do formulário respeita o fuso institucional e rejeita data inexistente
+ok 97 - horário do formulário respeita o fuso institucional e rejeita data inexistente
+  ---
+  duration_ms: 24.760286
+  type: 'test'
+  ...
+# Subtest: cadastro publicado mantém SIAPE, opções do Master e bloqueia campo obrigatório ausente
+ok 98 - cadastro publicado mantém SIAPE, opções do Master e bloqueia campo obrigatório ausente
+  ---
+  duration_ms: 3.156848
+  type: 'test'
+  ...
+# Subtest: a mesma data tem apresentação numérica e por extenso sem mudar sua origem
+ok 99 - a mesma data tem apresentação numérica e por extenso sem mudar sua origem
+  ---
+  duration_ms: 1.271725
+  type: 'test'
+  ...
+# Subtest: negrito localiza marcador dividido entre runs sem formatar o restante do texto
+ok 100 - negrito localiza marcador dividido entre runs sem formatar o restante do texto
+  ---
+  duration_ms: 0.722883
+  type: 'test'
+  ...
+# Subtest: resposta livre não altera autorização de publicação ou destinatários canônicos
+ok 101 - resposta livre não altera autorização de publicação ou destinatários canônicos
+  ---
+  duration_ms: 0.636894
+  type: 'test'
+  ...
+# Subtest: a declaração espera o Termo vigente e a Ata arquivados
+ok 102 - a declaração espera o Termo vigente e a Ata arquivados
+  ---
+  duration_ms: 0.25361
+  type: 'test'
+  ...
+# Subtest: simulação percorre papéis sem efeitos externos e espera confirmação de local
+ok 103 - simulação percorre papéis sem efeitos externos e espera confirmação de local
+  ---
+  duration_ms: 14.217084
+  type: 'test'
+  ...
+# Subtest: catálogo resolve sinônimos e respeita datas de vigência
+ok 104 - catálogo resolve sinônimos e respeita datas de vigência
+  ---
+  duration_ms: 0.243645
+  type: 'test'
+  ...
+# Subtest: comparação não divulga taxas de grupos pequenos e CSV neutraliza fórmulas
+ok 105 - comparação não divulga taxas de grupos pequenos e CSV neutraliza fórmulas
+  ---
+  duration_ms: 1.926545
+  type: 'test'
+  ...
+# Subtest: diagnóstico não mantém falha de fluxo já recuperada e usa prazo publicado
+ok 106 - diagnóstico não mantém falha de fluxo já recuperada e usa prazo publicado
+  ---
+  duration_ms: 1.211765
+  type: 'test'
+  ...
+# Subtest: rascunho antigo migra a declaração preservando os modelos e sem duplicar ações
+ok 107 - rascunho antigo migra a declaração preservando os modelos e sem duplicar ações
+  ---
+  duration_ms: 5.448991
+  type: 'test'
+  ...
+# Subtest: guia não repete botão de acesso ao portal
+ok 108 - guia não repete botão de acesso ao portal
+  ---
+  duration_ms: 7.214265
+  type: 'test'
+  ...
+# Subtest: comissão reúne Presidência, Secretaria e membros sem duplicar personalização do símbolo
+ok 109 - comissão reúne Presidência, Secretaria e membros sem duplicar personalização do símbolo
+  ---
+  duration_ms: 3.413753
+  type: 'test'
+  ...
+# Subtest: configurações não exibem blocos redundantes e Indicadores usam somente dados públicos agregados
+ok 110 - configurações não exibem blocos redundantes e Indicadores usam somente dados públicos agregados
+  ---
+  duration_ms: 4.348353
+  type: 'test'
+  ...
+# Subtest: paleta principal usa musgo, cinza e contraste claro sem oliva fluorescente
+ok 111 - paleta principal usa musgo, cinza e contraste claro sem oliva fluorescente
+  ---
+  duration_ms: 1.071545
+  type: 'test'
+  ...
+# Subtest: transferência administrativa não depende de feature opcional
+ok 112 - transferência administrativa não depende de feature opcional
+  ---
+  duration_ms: 4.127712
+  type: 'test'
+  ...
+# Subtest: identidade visual publicada pelo Master vale para visitante e acompanha o favicon
+ok 113 - identidade visual publicada pelo Master vale para visitante e acompanha o favicon
+  ---
+  duration_ms: 4.231317
+  type: 'test'
+  ...
+# Subtest: modal de TCC não renderiza o cabeçalho genérico com brasão
+ok 114 - modal de TCC não renderiza o cabeçalho genérico com brasão
+  ---
+  duration_ms: 7.348366
+  type: 'test'
+  ...
+# Subtest: título real do TCC é o cabeçalho verde do detalhe
+ok 115 - título real do TCC é o cabeçalho verde do detalhe
+  ---
+  duration_ms: 2.548197
+  type: 'test'
+  ...
+# Subtest: andamento duplicado deixa de existir sem remover confirmação operacional
+ok 116 - andamento duplicado deixa de existir sem remover confirmação operacional
+  ---
+  duration_ms: 2.821395
+  type: 'test'
+  ...
+# Subtest: fluxo principal oferece contexto por hover nas etapas
+ok 117 - fluxo principal oferece contexto por hover nas etapas
+  ---
+  duration_ms: 4.588082
+  type: 'test'
+  ...
+# Subtest: indicadores públicos agregam sem expor dados pessoais
+ok 118 - indicadores públicos agregam sem expor dados pessoais
+  ---
+  duration_ms: 42.308388
+  type: 'test'
+  ...
+# Subtest: indicadores suprimem detalhamento em grupo pequeno
+ok 119 - indicadores suprimem detalhamento em grupo pequeno
+  ---
+  duration_ms: 7.697719
+  type: 'test'
+  ...
+# Subtest: calendário público não serializa acervo, avaliação ou dados pessoais sensíveis
+ok 120 - calendário público não serializa acervo, avaliação ou dados pessoais sensíveis
+  ---
+  duration_ms: 0.718506
+  type: 'test'
+  ...
+# Subtest: repositório distingue arquivo privado, público e resumo não apresentado
+ok 121 - repositório distingue arquivo privado, público e resumo não apresentado
+  ---
+  duration_ms: 0.335732
+  type: 'test'
+  ...
+# Subtest: workflows e scripts temporários de auto-correção foram removidos
+ok 122 - workflows e scripts temporários de auto-correção foram removidos
+  ---
+  duration_ms: 7.026784
+  type: 'test'
+  ...
+# Subtest: tutorial legado é somente um adaptador para a página canônica
+ok 123 - tutorial legado é somente um adaptador para a página canônica
+  ---
+  duration_ms: 2.853494
+  type: 'test'
+  ...
+# Subtest: tutorial público segue o padrão compacto por perfil sem blocos institucionais redundantes
+ok 124 - tutorial público segue o padrão compacto por perfil sem blocos institucionais redundantes
+  ---
+  duration_ms: 0.876152
+  type: 'test'
+  ...
+# Subtest: Home pública não expõe matrícula nem fallbacks fictícios
+ok 125 - Home pública não expõe matrícula nem fallbacks fictícios
+  ---
+  duration_ms: 1.566185
+  type: 'test'
+  ...
+# Subtest: documentação operacional aponta para a homologação vigente
+ok 126 - documentação operacional aponta para a homologação vigente
+  ---
+  duration_ms: 0.811976
+  type: 'test'
+  ...
+# Subtest: aceita PDF estruturalmente simples sem conteúdo ativo
+ok 127 - aceita PDF estruturalmente simples sem conteúdo ativo
+  ---
+  duration_ms: 1.033338
+  type: 'test'
+  ...
+# Subtest: bloqueia JavaScript e arquivos incorporados em PDF
+ok 128 - bloqueia JavaScript e arquivos incorporados em PDF
+  ---
+  duration_ms: 0.971675
+  type: 'test'
+  ...
+# Subtest: bloqueia PDF truncado sem marcador EOF
+ok 129 - bloqueia PDF truncado sem marcador EOF
+  ---
+  duration_ms: 2.348547
+  type: 'test'
+  ...
+# Subtest: aceita DOCX mínimo e hyperlink HTTPS externo
+ok 130 - aceita DOCX mínimo e hyperlink HTTPS externo
+  ---
+  duration_ms: 31.971406
+  type: 'test'
+  ...
+# Subtest: bloqueia macro e relacionamento externo ativo em DOCX
+ok 131 - bloqueia macro e relacionamento externo ativo em DOCX
+  ---
+  duration_ms: 17.962238
+  type: 'test'
+  ...
+# Subtest: bloqueia assinatura EICAR antes do consumo
+ok 132 - bloqueia assinatura EICAR antes do consumo
+  ---
+  duration_ms: 0.352648
+  type: 'test'
+  ...
+# Subtest: CSP usa origem exata do Supabase e bloqueia vetores estruturais
+ok 133 - CSP usa origem exata do Supabase e bloqueia vetores estruturais
+  ---
+  duration_ms: 0.8209
+  type: 'test'
+  ...
+# Subtest: headers de isolamento e política de cache permanecem ativos
+ok 134 - headers de isolamento e política de cache permanecem ativos
+  ---
+  duration_ms: 0.170135
+  type: 'test'
+  ...
+# Subtest: produção mantém fallbacks inseguros desligados e Asten fail-closed
+ok 135 - produção mantém fallbacks inseguros desligados e Asten fail-closed
+  ---
+  duration_ms: 0.142694
+  type: 'test'
+  ...
+# Subtest: Asten bloqueia despacho e criação de envelope sem callback HTTPS autenticado
+ok 136 - Asten bloqueia despacho e criação de envelope sem callback HTTPS autenticado
+  ---
+  duration_ms: 1.229702
+  type: 'test'
+  ...
+# Subtest: Asten aceita somente callback HTTPS e segredo de webhook forte
+ok 137 - Asten aceita somente callback HTTPS e segredo de webhook forte
+  ---
+  duration_ms: 0.38744
+  type: 'test'
+  ...
+# Subtest: OTP não reutiliza PORTAL_SESSION_SECRET como pepper
+ok 138 - OTP não reutiliza PORTAL_SESSION_SECRET como pepper
+  ---
+  duration_ms: 0.274962
+  type: 'test'
+  ...
+# Subtest: produção exige segredos distintos para sessão, OTP e estado OAuth
+ok 139 - produção exige segredos distintos para sessão, OTP e estado OAuth
+  ---
+  duration_ms: 0.464555
+  type: 'test'
+  ...
+# Subtest: paleta semântica possui uma única fonte TypeScript e uma camada CSS permanente
+ok 140 - paleta semântica possui uma única fonte TypeScript e uma camada CSS permanente
+  ---
+  duration_ms: 9.877288
+  type: 'test'
+  ...
+# Subtest: lista de defesas usa uma única regra para filtrar e colorir o processo
+ok 141 - lista de defesas usa uma única regra para filtrar e colorir o processo
+  ---
+  duration_ms: 3.117629
+  type: 'test'
+  ...
+# Subtest: calendário mantém superfície do portal e mostra horário, título e alunos dos TCCs do dia
+ok 142 - calendário mantém superfície do portal e mostra horário, título e alunos dos TCCs do dia
+  ---
+  duration_ms: 2.068909
+  type: 'test'
+  ...
+# Subtest: runtime legado não infere mais estado de defesa pelo DOM nem duplica a busca de processos
+ok 143 - runtime legado não infere mais estado de defesa pelo DOM nem duplica a busca de processos
+  ---
+  duration_ms: 6.200477
+  type: 'test'
+  ...
+# Subtest: filtros semânticos de todas as tabelas passam pelo resolvedor global por chave ou rótulo
+ok 144 - filtros semânticos de todas as tabelas passam pelo resolvedor global por chave ou rótulo
+  ---
+  duration_ms: 1.074379
+  type: 'test'
+  ...
+# Subtest: agenda pública reutiliza o mesmo estado semântico da lista e do calendário
+ok 145 - agenda pública reutiliza o mesmo estado semântico da lista e do calendário
+  ---
+  duration_ms: 2.166725
+  type: 'test'
+  ...
+# Subtest: sessão usa janela móvel de três horas e preserva a emissão original
+ok 146 - sessão usa janela móvel de três horas e preserva a emissão original
+  ---
+  duration_ms: 8.331544
+  type: 'test'
+  ...
+# Subtest: atividade real renova a sessão sem timer agressivo e F5 reconfirma identidade
+ok 147 - atividade real renova a sessão sem timer agressivo e F5 reconfirma identidade
+  ---
+  duration_ms: 2.542187
+  type: 'test'
+  ...
+# Subtest: Asten não bloqueia a inicialização global e mantém barreira própria de despacho
+ok 148 - Asten não bloqueia a inicialização global e mantém barreira própria de despacho
+  ---
+  duration_ms: 12.586681
+  type: 'test'
+  ...
+# Subtest: Portal oferece Asten e Gov.br como vias independentes de assinatura
+ok 149 - Portal oferece Asten e Gov.br como vias independentes de assinatura
+  ---
+  duration_ms: 8.678178
+  type: 'test'
+  ...
+# Subtest: assinatura Gov.br preserva ordem dos signatários
+ok 150 - assinatura Gov.br preserva ordem dos signatários
+  ---
+  duration_ms: 3.394464
+  type: 'test'
+  ...
+# Subtest: Presidência é o contato único de recuperação do Master
+ok 151 - Presidência é o contato único de recuperação do Master
+  ---
+  duration_ms: 4.120031
+  type: 'test'
+  ...
+# Subtest: replicação pública oferece repositório e downloads de cópias independentes dos modelos
+ok 152 - replicação pública oferece repositório e downloads de cópias independentes dos modelos
+  ---
+  duration_ms: 1.63581
+  type: 'test'
+  ...
+# Subtest: planilhas usam um único menu por coluna para ordenar e filtrar
+ok 153 - planilhas usam um único menu por coluna para ordenar e filtrar
+  ---
+  duration_ms: 0.989192
+  type: 'test'
+  ...
+# Subtest: progresso é apresentado como etapa regular
+ok 154 - progresso é apresentado como etapa regular
+  ---
+  duration_ms: 0.341011
+  type: 'test'
+  ...
+# Subtest: calendário reserva fins de semana estreitos e indisponíveis para defesas
+ok 155 - calendário reserva fins de semana estreitos e indisponíveis para defesas
+  ---
+  duration_ms: 0.285728
+  type: 'test'
+  ...
+# Subtest: planilhas têm separadores, texto preto e hover neutro
+ok 156 - planilhas têm separadores, texto preto e hover neutro
+  ---
+  duration_ms: 0.271927
+  type: 'test'
+  ...
+# Subtest: camadas incrementais conflitantes não são montadas
+ok 157 - camadas incrementais conflitantes não são montadas
+  ---
+  duration_ms: 0.158848
+  type: 'test'
+  ...
+# Subtest: formulários rejeitam opções inventadas, falso em confirmação, datas e números inválidos
+ok 158 - formulários rejeitam opções inventadas, falso em confirmação, datas e números inválidos
+  ---
+  duration_ms: 1.263152
+  type: 'test'
+  ...
+# Subtest: validação preserva zero, descarta campos ocultos e não permite que eles ativem outros campos
+ok 159 - validação preserva zero, descarta campos ocultos e não permite que eles ativem outros campos
+  ---
+  duration_ms: 0.590694
+  type: 'test'
+  ...
+# Subtest: navegação pública mantém apenas o Fluxo do TCC canônico
+ok 160 - navegação pública mantém apenas o Fluxo do TCC canônico
+  ---
+  duration_ms: 9.507886
+  type: 'test'
+  ...
+# Subtest: hotfix visual restaura aba lateral verde e divisor branco do Como usar
+ok 161 - hotfix visual restaura aba lateral verde e divisor branco do Como usar
+  ---
+  duration_ms: 3.81899
+  type: 'test'
+  ...
+# Subtest: acessos administrativos suportam ativação, exclusão e planilha amigável sem qualidade global
+ok 162 - acessos administrativos suportam ativação, exclusão e planilha amigável sem qualidade global
+  ---
+  duration_ms: 13.676955
+  type: 'test'
+  ...
+# Subtest: sincronização reúne governança, integrações e autorização
+ok 163 - sincronização reúne governança, integrações e autorização
+  ---
+  duration_ms: 2.205073
+  type: 'test'
+  ...
+# Subtest: aparência pública não depende da confirmação da sessão
+ok 164 - aparência pública não depende da confirmação da sessão
+  ---
+  duration_ms: 1.112997
+  type: 'test'
+  ...
+# Subtest: declaração de ouvinte não existe na personalização
+ok 165 - declaração de ouvinte não existe na personalização
+  ---
+  duration_ms: 1.356232
+  type: 'test'
+  ...
+# Subtest: rodapé deriva responsável técnico da Secretaria configurada, com fallback legado do Master
+ok 166 - rodapé deriva responsável técnico da Secretaria configurada, com fallback legado do Master
+  ---
+  duration_ms: 0.717404
+  type: 'test'
+  ...
+# Subtest: personalização abre diretamente o editor por tela sem hub intermediário
+ok 167 - personalização abre diretamente o editor por tela sem hub intermediário
+  ---
+  duration_ms: 0.743002
+  type: 'test'
+  ...
+# Subtest: contato público do rodapé deriva do Master sem expor a chave administrativa
+ok 168 - contato público do rodapé deriva do Master sem expor a chave administrativa
+  ---
+  duration_ms: 1.841288
+  type: 'test'
+  ...
+# Subtest: release atual mantém encerradas as automações temporárias da revisão anterior
+ok 169 - release atual mantém encerradas as automações temporárias da revisão anterior
+  ---
+  duration_ms: 3.689906
+  type: 'test'
+  ...
+# Subtest: Indicadores são públicos e ficam acima de Como chegar
+ok 170 - Indicadores são públicos e ficam acima de Como chegar
+  ---
+  duration_ms: 7.339593
+  type: 'test'
+  ...
+# Subtest: Engrenagem oferece colunas e ordem a cada usuário e mantém padrão global exclusivo do Master
+ok 171 - Engrenagem oferece colunas e ordem a cada usuário e mantém padrão global exclusivo do Master
+  ---
+  duration_ms: 3.362997
+  type: 'test'
+  ...
+# Subtest: Meus TCCs e Presidência usam ações dentro da barra
+ok 172 - Meus TCCs e Presidência usam ações dentro da barra
+  ---
+  duration_ms: 1.743472
+  type: 'test'
+  ...
+# Subtest: Configuração separa personalização, sincronização e Studio simplificado
+ok 173 - Configuração separa personalização, sincronização e Studio simplificado
+  ---
+  duration_ms: 2.526123
+  type: 'test'
+  ...
+# Subtest: regra acadêmica impede segundo TCC para o mesmo aluno
+not ok 174 - regra acadêmica impede segundo TCC para o mesmo aluno
+  ---
+  duration_ms: 7.57783
+  type: 'test'
+  location: '/home/runner/work/portal-tcc-enfermagem-ufes/portal-tcc-enfermagem-ufes/server/update33RestrictedAreaContract.test.ts:1:2955'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(server.includes('STUDENT_TCC_ALREADY_EXISTS'))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/home/runner/work/portal-tcc-enfermagem-ufes/portal-tcc-enfermagem-ufes/server/update33RestrictedAreaContract.test.ts:16:182)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: faixa fluorescente usa exatamente o acabamento canônico da versão 1.0.36
+ok 175 - faixa fluorescente usa exatamente o acabamento canônico da versão 1.0.36
+  ---
+  duration_ms: 8.114814
+  type: 'test'
+  ...
+# Subtest: Replicar Portal oferece um único download agregado dos quatro modelos
+ok 176 - Replicar Portal oferece um único download agregado dos quatro modelos
+  ---
+  duration_ms: 3.716506
+  type: 'test'
+  ...
+# Subtest: Indicadores mantêm carregamento automático e painel analítico denso
+ok 177 - Indicadores mantêm carregamento automático e painel analítico denso
+  ---
+  duration_ms: 1.437102
+  type: 'test'
+  ...
+# Subtest: update 39 mantém espaço verde abaixo das duas barras de filtro
+ok 178 - update 39 mantém espaço verde abaixo das duas barras de filtro
+  ---
+  duration_ms: 9.38424
+  type: 'test'
+  ...
+# Subtest: update 39 substitui cadastro administrativo duplicado por Presidência Secretaria e Comissão
+ok 179 - update 39 substitui cadastro administrativo duplicado por Presidência Secretaria e Comissão
+  ---
+  duration_ms: 5.981869
+  type: 'test'
+  ...
+# Subtest: update 39 abre cadastro individual e envio de lista em popups compactos
+ok 180 - update 39 abre cadastro individual e envio de lista em popups compactos
+  ---
+  duration_ms: 2.07294
+  type: 'test'
+  ...
+# Subtest: integrações mantêm Asten visível e exibem infraestrutura diretamente
+ok 181 - integrações mantêm Asten visível e exibem infraestrutura diretamente
+  ---
+  duration_ms: 0.872437
+  type: 'test'
+  ...
+# Subtest: update 39 abre personalização por tela e remove controles gerais legados
+ok 182 - update 39 abre personalização por tela e remove controles gerais legados
+  ---
+  duration_ms: 1.109061
+  type: 'test'
+  ...
+# Subtest: update 39 limita a superfície da Presidência à troca segura do Master
+ok 183 - update 39 limita a superfície da Presidência à troca segura do Master
+  ---
+  duration_ms: 1.0953
+  type: 'test'
+  ...
+# Subtest: divisor de Meus TCCs e Presidência mantém margem verde acima da linha branca
+ok 184 - divisor de Meus TCCs e Presidência mantém margem verde acima da linha branca
+  ---
+  duration_ms: 11.097261
+  type: 'test'
+  ...
+# Subtest: Configurações abre Sincronização e Modelos como workspaces modais com navegação lateral
+ok 185 - Configurações abre Sincronização e Modelos como workspaces modais com navegação lateral
+  ---
+  duration_ms: 9.235482
+  type: 'test'
+  ...
+# Subtest: Personalização usa cabeçalho verde, título à esquerda, ícone branco sem caixa e ações brancas
+ok 186 - Personalização usa cabeçalho verde, título à esquerda, ícone branco sem caixa e ações brancas
+  ---
+  duration_ms: 1.710091
+  type: 'test'
+  ...
+# Subtest: Registro de logs sai de Configurações e vira página Master com toolbar de planilha
+ok 187 - Registro de logs sai de Configurações e vira página Master com toolbar de planilha
+  ---
+  duration_ms: 1.894537
+  type: 'test'
+  ...
+# Subtest: Indicadores adicionam estatística descritiva, séries e distribuições temporais
+ok 188 - Indicadores adicionam estatística descritiva, séries e distribuições temporais
+  ---
+  duration_ms: 1.061249
+  type: 'test'
+  ...
+# Subtest: migrações corrigem ambiguidades SQL reveladas pela primeira carga de processos
+ok 189 - migrações corrigem ambiguidades SQL reveladas pela primeira carga de processos
+  ---
+  duration_ms: 0.824425
+  type: 'test'
+  ...
+# Subtest: Replicar Portal consolida ferramentas e reduz ações permanentes
+ok 190 - Replicar Portal consolida ferramentas e reduz ações permanentes
+  ---
+  duration_ms: 10.88581
+  type: 'test'
+  ...
+# Subtest: Como chegar organiza os três atalhos em uma única linha de cartões
+ok 191 - Como chegar organiza os três atalhos em uma única linha de cartões
+  ---
+  duration_ms: 6.673866
+  type: 'test'
+  ...
+# Subtest: destaque ativo preserva o acabamento canônico de 6px da versão 1.0.36
+ok 192 - destaque ativo preserva o acabamento canônico de 6px da versão 1.0.36
+  ---
+  duration_ms: 1.424313
+  type: 'test'
+  ...
+# Subtest: popup de acesso diferencia discentes dos demais perfis
+ok 193 - popup de acesso diferencia discentes dos demais perfis
+  ---
+  duration_ms: 10.19495
+  type: 'test'
+  ...
+# Subtest: solicitação de código repete uma vez somente em falhas transitórias
+ok 194 - solicitação de código repete uma vez somente em falhas transitórias
+  ---
+  duration_ms: 5.283594
+  type: 'test'
+  ...
+# Subtest: 503 estruturado expõe mensagem útil e smoke monitora request-code
+ok 195 - 503 estruturado expõe mensagem útil e smoke monitora request-code
+  ---
+  duration_ms: 2.448257
+  type: 'test'
+  ...
+# Subtest: login público usa orientação única e exemplo de e-mail neutro
+ok 196 - login público usa orientação única e exemplo de e-mail neutro
+  ---
+  duration_ms: 8.841172
+  type: 'test'
+  ...
+# Subtest: redirecionamento pós-login diferencia Master, Presidente e usuário comum
+ok 197 - redirecionamento pós-login diferencia Master, Presidente e usuário comum
+  ---
+  duration_ms: 3.101996
+  type: 'test'
+  ...
+# Subtest: engrenagem permite colunas para usuário comum e persiste por e-mail e planilha
+ok 198 - engrenagem permite colunas para usuário comum e persiste por e-mail e planilha
+  ---
+  duration_ms: 0.833688
+  type: 'test'
+  ...
+# Subtest: acabamento visual aplica faixa lateral fina, filtros simétricos e botão de modelos compacto
+ok 199 - acabamento visual aplica faixa lateral fina, filtros simétricos e botão de modelos compacto
+  ---
+  duration_ms: 0.991024
+  type: 'test'
+  ...
+# Subtest: planilhas recebem menu único de filtro e ordenação no runtime estrutural
+ok 200 - planilhas recebem menu único de filtro e ordenação no runtime estrutural
+  ---
+  duration_ms: 1.138214
+  type: 'test'
+  ...
+# Subtest: engrenagem mostra colunas e ordem sem popup secundário
+ok 201 - engrenagem mostra colunas e ordem sem popup secundário
+  ---
+  duration_ms: 0.253179
+  type: 'test'
+  ...
+# Subtest: 100 e Todos podem expandir verticalmente a tabela
+ok 202 - 100 e Todos podem expandir verticalmente a tabela
+  ---
+  duration_ms: 0.149113
+  type: 'test'
+  ...
+# Subtest: etapa permanece disponível e planilhas removem decoração infantil
+ok 203 - etapa permanece disponível e planilhas removem decoração infantil
+  ---
+  duration_ms: 0.251937
+  type: 'test'
+  ...
+# Subtest: calendário usa fins de semana estreitos e preview seguro
+ok 204 - calendário usa fins de semana estreitos e preview seguro
+  ---
+  duration_ms: 0.253499
+  type: 'test'
+  ...
+# Subtest: Meus TCCs colore apenas pílula de processo por vínculo e simplifica datas
+ok 205 - Meus TCCs colore apenas pílula de processo por vínculo e simplifica datas
+  ---
+  duration_ms: 0.164937
+  type: 'test'
+  ...
+# Subtest: Registro de logs mantém ações essenciais no cabeçalho e não oferece atualização redundante
+ok 206 - Registro de logs mantém ações essenciais no cabeçalho e não oferece atualização redundante
+  ---
+  duration_ms: 0.207961
+  type: 'test'
+  ...
+# Subtest: workspaces administrativos ganham hierarquia e prevenção de sobreposição
+ok 207 - workspaces administrativos ganham hierarquia e prevenção de sobreposição
+  ---
+  duration_ms: 0.179108
+  type: 'test'
+  ...
+# Subtest: rodapé prioriza a Secretaria configurada como responsável técnico
+ok 208 - rodapé prioriza a Secretaria configurada como responsável técnico
+  ---
+  duration_ms: 0.219969
+  type: 'test'
+  ...
+# Subtest: Área do Presidente ordena fila e concluídos sem depender da aba ativa
+ok 209 - Área do Presidente ordena fila e concluídos sem depender da aba ativa
+  ---
+  duration_ms: 2.453685
+  type: 'test'
+  ...
+# Subtest: cabeçalhos preservam contrato legado enquanto runtime estrutural assume menu único
+ok 210 - cabeçalhos preservam contrato legado enquanto runtime estrutural assume menu único
+  ---
+  duration_ms: 0.419759
+  type: 'test'
+  ...
+# Subtest: Meus TCCs usa Etapa em vez de progresso percentual
+ok 211 - Meus TCCs usa Etapa em vez de progresso percentual
+  ---
+  duration_ms: 0.306319
+  type: 'test'
+  ...
+# Subtest: popup e logs preservam acabamento aprovado e release atual está em 1.0.44
+ok 212 - popup e logs preservam acabamento aprovado e release atual está em 1.0.44
+  ---
+  duration_ms: 1.294589
+  type: 'test'
+  ...
+# Subtest: 1.0.40 mantém cabeçalhos estáveis e separadores brancos em camadas
+ok 213 - 1.0.40 mantém cabeçalhos estáveis e separadores brancos em camadas
+  ---
+  duration_ms: 0.89447
+  type: 'test'
+  ...
+# Subtest: 1.0.40 mantém seleção em lote e registro de assinaturas independente do provedor
+ok 214 - 1.0.40 mantém seleção em lote e registro de assinaturas independente do provedor
+  ---
+  duration_ms: 0.499589
+  type: 'test'
+  ...
+# Subtest: 1.0.40 mantém workspaces administrativos e consolida download dos modelos em um zip
+ok 215 - 1.0.40 mantém workspaces administrativos e consolida download dos modelos em um zip
+  ---
+  duration_ms: 0.286038
+  type: 'test'
+  ...
+# Subtest: recursos introduzidos na 1.0.41 permanecem na camada estrutural atual
+ok 216 - recursos introduzidos na 1.0.41 permanecem na camada estrutural atual
+  ---
+  duration_ms: 1.018366
+  type: 'test'
+  ...
+# Subtest: seleção em massa e menu único foram incorporados ao runtime estrutural
+ok 217 - seleção em massa e menu único foram incorporados ao runtime estrutural
+  ---
+  duration_ms: 0.28706
+  type: 'test'
+  ...
+# Subtest: separadores e texto preto permanecem como contrato visual
+ok 218 - separadores e texto preto permanecem como contrato visual
+  ---
+  duration_ms: 0.202904
+  type: 'test'
+  ...
+# Subtest: 1.0.41 foi absorvida e não permanece ativa como enhancer concorrente
+ok 219 - 1.0.41 foi absorvida e não permanece ativa como enhancer concorrente
+  ---
+  duration_ms: 0.163656
+  type: 'test'
+  ...
+# Subtest: 1.0.42 é sucedida por uma única camada estrutural
+ok 220 - 1.0.42 é sucedida por uma única camada estrutural
+  ---
+  duration_ms: 0.740239
+  type: 'test'
+  ...
+# Subtest: defesas passadas mantêm contraste integral e processo usa paleta do calendário
+ok 221 - defesas passadas mantêm contraste integral e processo usa paleta do calendário
+  ---
+  duration_ms: 0.34661
+  type: 'test'
+  ...
+# Subtest: todas as tabelas recebem separação branca pelo padrão estrutural
+ok 222 - todas as tabelas recebem separação branca pelo padrão estrutural
+  ---
+  duration_ms: 0.234451
+  type: 'test'
+  ...
+# Subtest: release 1.0.45 preserva o runtime estrutural único consolidado
+ok 223 - release 1.0.45 preserva o runtime estrutural único consolidado
+  ---
+  duration_ms: 0.973578
+  type: 'test'
+  ...
+# Subtest: tabelas têm um único menu Excel-like, resize e quebra de texto
+ok 224 - tabelas têm um único menu Excel-like, resize e quebra de texto
+  ---
+  duration_ms: 0.313249
+  type: 'test'
+  ...
+# Subtest: separador grosso encerra o bloco superior e dados começam logo após o cabeçalho
+ok 225 - separador grosso encerra o bloco superior e dados começam logo após o cabeçalho
+  ---
+  duration_ms: 0.271477
+  type: 'test'
+  ...
+# Subtest: paleta de calendário e processo é compartilhada e não fluorescente
+ok 226 - paleta de calendário e processo é compartilhada e não fluorescente
+  ---
+  duration_ms: 0.193319
+  type: 'test'
+  ...
+# Subtest: calendário bloqueia fins de semana e preserva popup nativo por clique do dia
+ok 227 - calendário bloqueia fins de semana e preserva popup nativo por clique do dia
+  ---
+  duration_ms: 1.098666
+  type: 'test'
+  ...
+# Subtest: fluxo do TCC usa caminho responsivo em minhoca
+ok 228 - fluxo do TCC usa caminho responsivo em minhoca
+  ---
+  duration_ms: 1.132386
+  type: 'test'
+  ...
+# Subtest: replicar portal mantém somente download agregado dos modelos
+ok 229 - replicar portal mantém somente download agregado dos modelos
+  ---
+  duration_ms: 0.23364
+  type: 'test'
+  ...
+# Subtest: cabeçalho não apresenta acesso institucional nem identidade para visitante público
+ok 230 - cabeçalho não apresenta acesso institucional nem identidade para visitante público
+  ---
+  duration_ms: 0.880669
+  type: 'test'
+  ...
+# Subtest: planilhas aplicam política única sem emojis e defesas passadas não ficam foscas
+ok 231 - planilhas aplicam política única sem emojis e defesas passadas não ficam foscas
+  ---
+  duration_ms: 0.257996
+  type: 'test'
+  ...
+# Subtest: separador grosso encerra o bloco superior e não separa cabeçalho de dados
+ok 232 - separador grosso encerra o bloco superior e não separa cabeçalho de dados
+  ---
+  duration_ms: 0.28726
+  type: 'test'
+  ...
+# Subtest: replicar portal mantém cartões com a mesma altura
+ok 233 - replicar portal mantém cartões com a mesma altura
+  ---
+  duration_ms: 0.164577
+  type: 'test'
+  ...
+# Subtest: tutorial público contém orientação operacional detalhada por perfil
+ok 234 - tutorial público contém orientação operacional detalhada por perfil
+  ---
+  duration_ms: 0.264556
+  type: 'test'
+  ...
+# Subtest: fluxo remove introdução redundante e mantém resultado alinhado no rodapé dos cards
+ok 235 - fluxo remove introdução redundante e mantém resultado alinhado no rodapé dos cards
+  ---
+  duration_ms: 0.215092
+  type: 'test'
+  ...
+# Subtest: indicadores oferecem painel analítico com séries, comparações e distribuições sem botão manual de atualizar
+ok 236 - indicadores oferecem painel analítico com séries, comparações e distribuições sem botão manual de atualizar
+  ---
+  duration_ms: 0.261862
+  type: 'test'
+  ...
+# Subtest: 1.0.45 publica seis funções de configuração e remove logs laterais
+ok 237 - 1.0.45 publica seis funções de configuração e remove logs laterais
+  ---
+  duration_ms: 1.952004
+  type: 'test'
+  ...
+# Subtest: calendário não remove nós React e protege navegação rápida
+ok 238 - calendário não remove nós React e protege navegação rápida
+  ---
+  duration_ms: 0.378697
+  type: 'test'
+  ...
+# Subtest: tabelas usam tipografia temporal neutra e separador físico
+ok 239 - tabelas usam tipografia temporal neutra e separador físico
+  ---
+  duration_ms: 0.350726
+  type: 'test'
+  ...
+# Subtest: release atual é 1.0.47
+not ok 240 - release atual é 1.0.47
+  ---
+  duration_ms: 2.376339
+  type: 'test'
+  location: '/home/runner/work/portal-tcc-enfermagem-ufes/portal-tcc-enfermagem-ufes/server/version1046StructuralContract.test.ts:1:305'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    '1.0.48' !== '1.0.47'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '1.0.47'
+  actual: '1.0.48'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/home/runner/work/portal-tcc-enfermagem-ufes/portal-tcc-enfermagem-ufes/server/version1046StructuralContract.test.ts:7:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: estado de defesa não sobrescreve cores de vínculo e assinatura
+ok 241 - estado de defesa não sobrescreve cores de vínculo e assinatura
+  ---
+  duration_ms: 0.363555
+  type: 'test'
+  ...
+# Subtest: calendário classifica fim de semana no React e abre agenda sem busca paralela
+ok 242 - calendário classifica fim de semana no React e abre agenda sem busca paralela
+  ---
+  duration_ms: 0.904175
+  type: 'test'
+  ...
+# Subtest: indicadores têm contrato completo e frontend defensivo
+ok 243 - indicadores têm contrato completo e frontend defensivo
+  ---
+  duration_ms: 0.285317
+  type: 'test'
+  ...
+# Subtest: configurações usam seis barras e workspace modal canônico
+ok 244 - configurações usam seis barras e workspace modal canônico
+  ---
+  duration_ms: 1.044504
+  type: 'test'
+  ...
+# Subtest: estúdio de modelos delega navegação ao workspace externo e preserva cabeçalho
+ok 245 - estúdio de modelos delega navegação ao workspace externo e preserva cabeçalho
+  ---
+  duration_ms: 1.473377
+  type: 'test'
+  ...
+# Subtest: tipografia tabular preta e CSS v46 carregado por último
+ok 246 - tipografia tabular preta e CSS v46 carregado por último
+  ---
+  duration_ms: 0.358788
+  type: 'test'
+  ...
+# Subtest: superfícies administrativas usam a paleta canônica do Portal
+ok 247 - superfícies administrativas usam a paleta canônica do Portal
+  ---
+  duration_ms: 20.436995
+  type: 'test'
+  ...
+# Subtest: Modelos e Variáveis possui uma única sidebar e navegação externa por área
+ok 248 - Modelos e Variáveis possui uma única sidebar e navegação externa por área
+  ---
+  duration_ms: 9.211172
+  type: 'test'
+  ...
+# Subtest: calendário e Lista de Defesas compartilham estado, tons e resumo solicitado
+ok 249 - calendário e Lista de Defesas compartilham estado, tons e resumo solicitado
+  ---
+  duration_ms: 2.118423
+  type: 'test'
+  ...
+# Subtest: Registros de Assinatura mostra a linha completa e somente ações suportadas
+ok 250 - Registros de Assinatura mostra a linha completa e somente ações suportadas
+  ---
+  duration_ms: 4.579058
+  type: 'test'
+  ...
+# Subtest: Registro de Logs mantém tabela compacta e camada final branca
+ok 251 - Registro de Logs mantém tabela compacta e camada final branca
+  ---
+  duration_ms: 1.311074
+  type: 'test'
+  ...
+# Subtest: comparação visual calcula diferenças sem aprovar automaticamente a referência
+ok 252 - comparação visual calcula diferenças sem aprovar automaticamente a referência
+  ---
+  duration_ms: 12.016538
+  type: 'test'
+  ...
+# Subtest: rascunho pertence ao autor, força o e-mail autenticado e detecta concorrência
+ok 253 - rascunho pertence ao autor, força o e-mail autenticado e detecta concorrência
+  ---
+  duration_ms: 1.778665
+  type: 'test'
+  ...
+# Subtest: alertas de identidade são consultivos e não alteram as respostas
+ok 254 - alertas de identidade são consultivos e não alteram as respostas
+  ---
+  duration_ms: 0.433018
+  type: 'test'
+  ...
+# Subtest: dias úteis excluem fim de semana e feriados e limitam lembretes
+ok 255 - dias úteis excluem fim de semana e feriados e limitam lembretes
+  ---
+  duration_ms: 10.948408
+  type: 'test'
+  ...
+# Subtest: ordem de espera exige Ata arquivada no Drive antes da entrega final
+ok 256 - ordem de espera exige Ata arquivada no Drive antes da entrega final
+  ---
+  duration_ms: 0.275573
+  type: 'test'
+  ...
+# Subtest: análise do PDF aponta marcador, página vazia e marca a amostra
+ok 257 - análise do PDF aponta marcador, página vazia e marca a amostra
+  ---
+  duration_ms: 738.910716
+  type: 'test'
+  ...
+# Subtest: central de recuperação mostra somente a versão documental mais recente
+ok 258 - central de recuperação mostra somente a versão documental mais recente
+  ---
+  duration_ms: 0.749883
+  type: 'test'
+  ...
+# Subtest: lembrete usa destinatário canônico e escapa HTML dinâmico
+ok 259 - lembrete usa destinatário canônico e escapa HTML dinâmico
+  ---
+  duration_ms: 1.324404
+  type: 'test'
+  ...
+# Subtest: retomada preserva ação já concluída e executa somente a pendente
+ok 260 - retomada preserva ação já concluída e executa somente a pendente
+  ---
+  duration_ms: 1.645674
+  type: 'test'
+  ...
+# Subtest: cadastro institucional normaliza nome, e-mail, matrícula, SIAPE e título
+ok 261 - cadastro institucional normaliza nome, e-mail, matrícula, SIAPE e título
+  ---
+  duration_ms: 18.779818
+  type: 'test'
+  ...
+# Subtest: cadastro rejeita nome incompleto ou com número
+ok 262 - cadastro rejeita nome incompleto ou com número
+  ---
+  duration_ms: 0.78134
+  type: 'test'
+  ...
+# Subtest: cadastro rejeita matrícula com texto
+ok 263 - cadastro rejeita matrícula com texto
+  ---
+  duration_ms: 0.417416
+  type: 'test'
+  ...
+# Subtest: cadastro rejeita SIAPE com quantidade incorreta de algarismos
+ok 264 - cadastro rejeita SIAPE com quantidade incorreta de algarismos
+  ---
+  duration_ms: 0.777559
+  type: 'test'
+  ...
+# Subtest: banca externa continua permitida sem SIAPE quando e-mail e instituição são válidos
+ok 265 - banca externa continua permitida sem SIAPE quando e-mail e instituição são válidos
+  ---
+  duration_ms: 0.758536
+  type: 'test'
+  ...
+# Subtest: cadastro rejeita defesa no sábado
+ok 266 - cadastro rejeita defesa no sábado
+  ---
+  duration_ms: 0.418907
+  type: 'test'
+  ...
+# Subtest: cadastro rejeita defesa no domingo
+ok 267 - cadastro rejeita defesa no domingo
+  ---
+  duration_ms: 0.384626
+  type: 'test'
+  ...
+# Subtest: compila o fluxo e planeja apenas o evento exato
+ok 268 - compila o fluxo e planeja apenas o evento exato
+  ---
+  duration_ms: 13.676975
+  type: 'test'
+  ...
+# Subtest: expõe o endereço público configurado para os modelos de e-mail
+ok 269 - expõe o endereço público configurado para os modelos de e-mail
+  ---
+  duration_ms: 0.833629
+  type: 'test'
+  ...
+# Subtest: mescla variáveis sem transformar texto comum com hífen em campo
+ok 270 - mescla variáveis sem transformar texto comum com hífen em campo
+  ---
+  duration_ms: 0.353339
+  type: 'test'
+  ...
+# Subtest: escapa valores dinâmicos sem remover a formatação HTML publicada
+ok 271 - escapa valores dinâmicos sem remover a formatação HTML publicada
+  ---
+  duration_ms: 0.22703
+  type: 'test'
+  ...
+# Subtest: executa documento, formulário e e-mail configurados
+ok 272 - executa documento, formulário e e-mail configurados
+  ---
+  duration_ms: 3.276738
+  type: 'test'
+  ...
+# Subtest: condição configurada controla a ação sem alterar o código do curso
+ok 273 - condição configurada controla a ação sem alterar o código do curso
+  ---
+  duration_ms: 2.023406
+  type: 'test'
+  ...
+# Subtest: respostas aceitas do formulário prevalecem nas variáveis do evento seguinte
+ok 274 - respostas aceitas do formulário prevalecem nas variáveis do evento seguinte
+  ---
+  duration_ms: 0.34036
+  type: 'test'
+  ...
+# Subtest: respostas diferentes geram chaves distintas para permitir correção do formulário
+ok 275 - respostas diferentes geram chaves distintas para permitir correção do formulário
+  ---
+  duration_ms: 0.645507
+  type: 'test'
+  ...
+# Subtest: interrompe ações posteriores quando uma dependência falha
+ok 276 - interrompe ações posteriores quando uma dependência falha
+  ---
+  duration_ms: 0.735692
+  type: 'test'
+  ...
+# Subtest: formulário não pode sobrescrever identidade nem redirecionar destinatários
+ok 277 - formulário não pode sobrescrever identidade nem redirecionar destinatários
+  ---
+  duration_ms: 0.676042
+  type: 'test'
+  ...
+# Subtest: ação interna sem porta explícita falha fechada
+ok 278 - ação interna sem porta explícita falha fechada
+  ---
+  duration_ms: 0.511265
+  type: 'test'
+  ...
+# Subtest: preserva o identificador de uma entrega parcial para permitir retentativa
+ok 279 - preserva o identificador de uma entrega parcial para permitir retentativa
+  ---
+  duration_ms: 0.519449
+  type: 'test'
+  ...
+# Subtest: marcadores legíveis são mesclados uma vez e seus valores HTML são escapados
+ok 280 - marcadores legíveis são mesclados uma vez e seus valores HTML são escapados
+  ---
+  duration_ms: 0.115042
+  type: 'test'
+  ...
+# Subtest: nenhum formato de marcador permite encaminhar anexos por resposta livre
+ok 281 - nenhum formato de marcador permite encaminhar anexos por resposta livre
+  ---
+  duration_ms: 1.487869
+  type: 'test'
+  ...
+# Subtest: escolhe o próximo signatário pela ordem e ignora quem já assinou
+ok 282 - escolhe o próximo signatário pela ordem e ignora quem já assinou
+  ---
+  duration_ms: 0.690344
+  type: 'test'
+  ...
+# Subtest: retorna vazio quando todos já assinaram
+ok 283 - retorna vazio quando todos já assinaram
+  ---
+  duration_ms: 0.11992
+  type: 'test'
+  ...
+1..283
+# tests 283
+# suites 0
+# pass 281
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8201.226704
