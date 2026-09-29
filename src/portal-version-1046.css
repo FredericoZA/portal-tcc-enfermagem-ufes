@@ -199,6 +199,24 @@
   color: #fff !important;
 }
 
+/* Rodapé: os nomes dos Membros da Comissão formam uma lista centralizada. */
+#home-page-footer-notes > div > div.grid > div:first-child > div.pt-2.border-t > div.mt-1 {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+#home-page-footer-notes > div > div.grid > div:first-child > div.pt-2.border-t > div.mt-1 > div {
+  width: 100% !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+#home-page-footer-notes > div > div.grid > div:first-child > div.pt-2.border-t > div.mt-1 :is(button, span, p) {
+  justify-content: center !important;
+  text-align: center !important;
+}
+
 /* Popovers renderizados em document.body precisam ficar acima dos workspaces
  * administrativos (backdrop ~1000005), inclusive busca e engrenagem. */
 .portal-search-popover,
