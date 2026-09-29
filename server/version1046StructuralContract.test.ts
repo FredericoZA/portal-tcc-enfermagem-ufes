@@ -83,7 +83,7 @@ test('planilhas têm Todos, processo fixo e seleção do Presidente', () => {
   const v52 = read('src/components/PortalVersion1052Enhancer.tsx');
   assert.match(v52, /enhanceMyTccFilters/);
   assert.match(v52, /enhancePresidentFilters/);
-  assert.match(v52, /data\.portalV52StickyProcess/);
+  assert.match(v52, /dataset\.portalV52StickyProcess/);
   assert.match(v52, /portalSelectionColumn/);
   assert.match(v52, /getCoordinatorQueue/);
 });
