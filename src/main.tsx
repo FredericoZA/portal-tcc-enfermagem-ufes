@@ -6,6 +6,7 @@ import { PortalVersion1040Enhancer } from './components/PortalVersion1040Enhance
 import { PortalStructuralRuntime } from './components/PortalStructuralRuntime';
 import { PortalTableTextPolicy } from './components/PortalTableTextPolicy';
 import { PortalVersion1052Enhancer } from './components/PortalVersion1052Enhancer';
+import { PortalVersion1053PagerGuard } from './components/PortalVersion1053PagerGuard';
 import { PortalVersion1053Enhancer } from './components/PortalVersion1053Enhancer';
 import './index.css';
 import './portal-overrides.css';
@@ -53,6 +54,7 @@ createRoot(document.getElementById('root')!).render(
     <PortalStructuralRuntime />
     <PortalTableTextPolicy />
     <PortalVersion1052Enhancer />
+    <PortalVersion1053PagerGuard />
     <PortalVersion1053Enhancer />
   </StrictMode>,
 );
