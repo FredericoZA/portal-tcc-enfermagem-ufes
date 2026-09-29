@@ -4,7 +4,7 @@
 
 {
   "status": "REPROVADO",
-  "generatedAt": "2026-09-29T01:27:37.419Z",
+  "generatedAt": "2026-09-29T01:32:14.259Z",
   "fixtureProcesses": 13,
   "fixtureStatuses": [
     "AGUARDANDO_DEFESA",
@@ -62,12 +62,276 @@
       "file": "master-presidencia-320.png",
       "overflow": false,
       "overflowElements": []
+    },
+    {
+      "file": "master-configuracoes-320.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-inicio-768.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-calendario-768.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-repositorio-768.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-indicadores-768.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-como-chegar-768.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-como-usar-768.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-fluxo-tcc-768.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-replicar-portal-768.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-meus-tccs-768.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-presidencia-768.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-configuracoes-768.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-inicio-1024.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-calendario-1024.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-repositorio-1024.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-indicadores-1024.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-como-chegar-1024.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-como-usar-1024.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-fluxo-tcc-1024.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-replicar-portal-1024.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-meus-tccs-1024.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-presidencia-1024.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-configuracoes-1024.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-inicio-1440.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-calendario-1440.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-repositorio-1440.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-indicadores-1440.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-como-chegar-1440.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-como-usar-1440.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-fluxo-tcc-1440.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-replicar-portal-1440.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-meus-tccs-1440.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-presidencia-1440.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-configuracoes-1440.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-inicio-1920.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-calendario-1920.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-repositorio-1920.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-indicadores-1920.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-como-chegar-1920.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-como-usar-1920.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-fluxo-tcc-1920.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-replicar-portal-1920.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-meus-tccs-1920.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-presidencia-1920.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-configuracoes-1920.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "master-meus-tccs-alto-contraste.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "aluno-meus-tccs.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "orientador-meus-tccs.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "orientador-avaliacoes.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "coorientador-meus-tccs.png",
+      "overflow": false,
+      "overflowElements": []
+    },
+    {
+      "file": "presidente-assinaturas.png",
+      "overflow": false,
+      "overflowElements": []
     }
   ],
   "errors": [
-    "master-calendario-320: dias úteis não usam #D5DCE0 ({\"cellCount\":30,\"weekdayCount\":30,\"weekendCount\":0,\"emptyCount\":5,\"weekdayColors\":[\"rgb(213, 220, 224)\",\"rgb(225, 230, 233)\"],\"weekendColors\":[],\"emptyColors\":[\"rgb(225, 230, 233)\"],\"divider\":2,\"dividerColor\":\"rgb(255, 255, 255)\",\"paddingTop\":10,\"fullWidth\":true}).",
-    "master-calendario-320: fins de semana não se fundem ao fundo indisponível #E1E6E9 ({\"cellCount\":30,\"weekdayCount\":30,\"weekendCount\":0,\"emptyCount\":5,\"weekdayColors\":[\"rgb(213, 220, 224)\",\"rgb(225, 230, 233)\"],\"weekendColors\":[],\"emptyColors\":[\"rgb(225, 230, 233)\"],\"divider\":2,\"dividerColor\":\"rgb(255, 255, 255)\",\"paddingTop\":10,\"fullWidth\":true}).",
-    "locator.click: Error: strict mode violation: getByRole('button', { name: 'Fechar' }) resolved to 2 elements:\n    1) <button aria-label=\"Fechar menu\" id=\"close-mobile-sidebar-btn\" class=\"lg:hidden text-slate-300 p-1\">…</button> aka getByRole('button', { name: 'Fechar menu' })\n    2) <button type=\"button\" aria-label=\"Fechar\" class=\"inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white bg-white text-black shadow-sm\">…</button> aka getByRole('button', { name: 'Fechar', exact: true })\n\nCall log:\n  - waiting for getByRole('button', { name: 'Fechar' })\n"
+    "master-meus-tccs-768: ações obrigatórias do cabeçalho ausentes ({\"divider\":2,\"dividerColor\":\"rgb(255, 255, 255)\",\"fullWidth\":true,\"hasRegister\":true,\"hasSearch\":true,\"hasRefresh\":false,\"chips\":[{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(154, 122, 18)\"},{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(154, 81, 73)\"},{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(79, 128, 146)\"},{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(118, 84, 147)\"}]}).",
+    "master-presidencia-768: ordem Asten/Gov/lupa/atualização divergente.",
+    "master-meus-tccs-1024: ações obrigatórias do cabeçalho ausentes ({\"divider\":2,\"dividerColor\":\"rgb(255, 255, 255)\",\"fullWidth\":true,\"hasRegister\":true,\"hasSearch\":true,\"hasRefresh\":false,\"chips\":[{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(154, 122, 18)\"},{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(154, 81, 73)\"},{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(79, 128, 146)\"},{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(118, 84, 147)\"}]}).",
+    "master-presidencia-1024: ordem Asten/Gov/lupa/atualização divergente.",
+    "master-inicio-1440: largura útil não acompanha o viewport ({\"mainWidth\":1184,\"pageWidth\":0,\"viewport\":1440}).",
+    "master-fluxo-tcc-1440: largura da tela de referência foi alterada (1136px).",
+    "master-meus-tccs-1440: ações obrigatórias do cabeçalho ausentes ({\"divider\":2,\"dividerColor\":\"rgb(255, 255, 255)\",\"fullWidth\":true,\"hasRegister\":true,\"hasSearch\":true,\"hasRefresh\":false,\"chips\":[{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(154, 122, 18)\"},{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(154, 81, 73)\"},{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(79, 128, 146)\"},{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(118, 84, 147)\"}]}).",
+    "master-presidencia-1440: ordem Asten/Gov/lupa/atualização divergente.",
+    "master-inicio-1920: largura útil não acompanha o viewport ({\"mainWidth\":1664,\"pageWidth\":0,\"viewport\":1920}).",
+    "master-fluxo-tcc-1920: largura da tela de referência foi alterada (1616px).",
+    "master-meus-tccs-1920: ações obrigatórias do cabeçalho ausentes ({\"divider\":2,\"dividerColor\":\"rgb(255, 255, 255)\",\"fullWidth\":true,\"hasRegister\":true,\"hasSearch\":true,\"hasRefresh\":false,\"chips\":[{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(154, 122, 18)\"},{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(154, 81, 73)\"},{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(79, 128, 146)\"},{\"background\":\"rgb(174, 176, 179)\",\"selected\":true,\"dot\":\"rgb(118, 84, 147)\"}]}).",
+    "master-presidencia-1920: ordem Asten/Gov/lupa/atualização divergente."
   ],
   "warnings": [],
   "scope": "Dados fictícios locais; valida responsividade, overflow, navegação e perfis. Não valida provedores externos, zoom manual ou leitor de tela."
