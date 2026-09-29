@@ -1,8 +1,8 @@
 /* Padrão canônico de planilhas do Portal TCC.
- * Esta folha substitui as correções incrementais 1.0.52/1.0.53 na montagem ativa. */
+ * Esta é a única camada final para scroll, sticky, paginação e geometria tabular. */
 
 /* --------------------------------------------------------------------------
- * Rolagem real: roda do mouse + arraste horizontal/vertical
+ * Host de rolagem: vertical permanece vertical; horizontal exige intenção X
  * ----------------------------------------------------------------------- */
 .portal-spreadsheet-scroll-host,
 [data-portal-scroll-host="true"] {
@@ -10,9 +10,12 @@
   width: 100% !important;
   max-width: 100% !important;
   max-height: min(68vh, 720px) !important;
+  margin-block: 0 !important;
+  padding-block: 0 !important;
   overflow: auto !important;
-  overscroll-behavior: contain !important;
-  scrollbar-gutter: stable both-edges !important;
+  overscroll-behavior-x: contain !important;
+  overscroll-behavior-y: auto !important;
+  scrollbar-gutter: stable !important;
   -webkit-overflow-scrolling: touch !important;
   cursor: grab !important;
 }
@@ -24,25 +27,53 @@
 .portal-spreadsheet-scroll-host::-webkit-scrollbar-track { background: #eef2f4; }
 .portal-spreadsheet-scroll-host::-webkit-scrollbar-thumb { background: #8d9aa2; border: 3px solid #eef2f4; border-radius: 999px; }
 .portal-spreadsheet-scroll-host::-webkit-scrollbar-thumb:hover { background: #687780; }
-
 .portal-runtime-page-hidden { display: none !important; }
 .portal-v52-pager { display: none !important; }
 
+/* Remove folgas herdadas entre faixa de filtro/título e a primeira linha da tabela. */
+#biblioteca-tccs-section .portal-spreadsheet-scroll-host,
+#meus-processos-page-container .portal-spreadsheet-scroll-host,
+#coordenador-page-root .portal-spreadsheet-scroll-host,
+#authorized-access-panel .portal-spreadsheet-scroll-host,
+#asten-logs-page .portal-spreadsheet-scroll-host,
+#audit-logs-page .portal-spreadsheet-scroll-host {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
 /* --------------------------------------------------------------------------
- * Cabeçalho e colunas fixas
+ * Cabeçalho compacto e sticky
  * ----------------------------------------------------------------------- */
 table[data-portal-spreadsheet] {
+  margin: 0 !important;
   border-collapse: separate !important;
   border-spacing: 0 !important;
 }
+table[data-portal-spreadsheet] thead,
+table[data-portal-spreadsheet] thead tr { margin: 0 !important; padding: 0 !important; }
 table[data-portal-spreadsheet] th[data-portal-sticky-header="true"] {
   position: sticky !important;
   top: 0 !important;
   z-index: 24 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
+  line-height: 1.15 !important;
   background: var(--table-header, var(--portal-green-header, #005830)) !important;
   color: var(--table-header-text, #fff) !important;
   background-clip: padding-box !important;
 }
+table[data-portal-spreadsheet] th[data-portal-sticky-header="true"] > div {
+  min-height: 26px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  align-items: center !important;
+}
+
+/* --------------------------------------------------------------------------
+ * Coluna Processo fixa; na Presidência Seleção + Processo ficam fixas
+ * ----------------------------------------------------------------------- */
 table[data-portal-spreadsheet] td[data-portal-sticky-process="true"] {
   position: sticky !important;
   left: 0 !important;
@@ -83,11 +114,9 @@ table[data-portal-spreadsheet] th[data-portal-sticky-selection="true"] {
   background: var(--table-header, var(--portal-green-header, #005830)) !important;
   color: var(--table-header-text, #fff) !important;
 }
-table[data-portal-spreadsheet] [data-portal-sticky-process="true"][data-portal-after-selection="true"] {
-  left: 44px !important;
-}
+table[data-portal-spreadsheet] [data-portal-sticky-process="true"][data-portal-after-selection="true"] { left: 44px !important; }
 
-/* seleção: branco quando vazio; preenchido quando marcado */
+/* seleção: vazia branca; marcada preenchida */
 .portal-sheet-checkbox {
   display: inline-flex !important;
   width: 21px !important;
@@ -109,11 +138,10 @@ table[data-portal-spreadsheet] [data-portal-sticky-process="true"][data-portal-a
   background: var(--portal-green-action, #337959) !important;
   color: #fff !important;
 }
-.portal-sheet-checkbox svg { width: 15px !important; height: 15px !important; color: currentColor !important; stroke: currentColor !important; }
 .portal-sheet-checkbox span { font-size: 14px !important; font-weight: 900 !important; color: currentColor !important; }
 
 /* --------------------------------------------------------------------------
- * Paginação única no rodapé da planilha
+ * Paginação única e sempre depois da planilha
  * ----------------------------------------------------------------------- */
 .portal-spreadsheet-pager {
   display: flex !important;
@@ -122,6 +150,7 @@ table[data-portal-spreadsheet] [data-portal-sticky-process="true"][data-portal-a
   justify-content: space-between !important;
   gap: 10px !important;
   flex-wrap: wrap !important;
+  margin: 0 !important;
   padding: 7px 10px 10px !important;
   border-top: 1px solid #cbd5e1 !important;
   background: #f8fafc !important;
@@ -160,21 +189,21 @@ table[data-portal-spreadsheet] [data-portal-sticky-process="true"][data-portal-a
 }
 .portal-spreadsheet-pager-controls button:disabled { opacity: .35 !important; cursor: default !important; }
 .portal-spreadsheet-pager-ellipsis { padding: 0 2px !important; color: #64748b !important; }
-
-.portal-table-settings-popover button[data-portal-page-size-selected="true"] {
-  background: #d7ded9 !important;
-  border-color: #9aac9f !important;
-  color: #1f2937 !important;
-}
-.portal-table-settings-popover button[data-portal-page-size-selected="false"] {
-  background: #fff !important;
-  border-color: #cbd5e1 !important;
-  color: #334155 !important;
-}
+.portal-table-settings-popover button[data-portal-page-size-selected="true"] { background: #d7ded9 !important; border-color: #9aac9f !important; color: #1f2937 !important; }
+.portal-table-settings-popover button[data-portal-page-size-selected="false"] { background: #fff !important; border-color: #cbd5e1 !important; color: #334155 !important; }
 
 /* --------------------------------------------------------------------------
- * Meus TCCs: somente o filtro escolhido escurece; Todos não tem bolinha
+ * Faixas de filtro: respiro à direita e seleção neutra
  * ----------------------------------------------------------------------- */
+#meus-processos-page-container .portal-meus-processos-filter-row,
+#coordenador-page-root .portal-coordinator-filter-row,
+#coordenador-page-root .portal-signature-filter-row {
+  padding-right: 28px !important;
+}
+#meus-processos-page-container [data-portal-role-filter-group="true"],
+#coordenador-page-root [data-portal-president-filter-group="true"] {
+  padding-right: 10px !important;
+}
 #meus-processos-page-container [data-portal-role-filter-group="true"] button.portal-standard-filter-chip,
 #coordenador-page-root [data-portal-president-filter-group="true"] button.portal-standard-filter-chip {
   background: #fff !important;
@@ -191,10 +220,12 @@ table[data-portal-spreadsheet] [data-portal-sticky-process="true"][data-portal-a
   border-color: #979a9d !important;
   color: #111827 !important;
 }
+/* Quando Todos está ativo, os quatro vínculos continuam brancos visualmente. */
 #meus-processos-page-container [data-portal-role-filter-group="true"][data-portal-all-active="true"] button.portal-standard-filter-chip:not(.portal-runtime-all-filter) {
   background: #fff !important;
   border-color: #cbd5e1 !important;
   color: #1f2937 !important;
+  box-shadow: none !important;
 }
 .portal-runtime-all-filter,
 .portal-runtime-president-all {
@@ -225,26 +256,22 @@ table[data-portal-spreadsheet] [data-portal-sticky-process="true"][data-portal-a
   font-size: 9px !important;
   font-weight: 850 !important;
 }
+/* quatro famílias deliberadamente distintas */
 #meus-processos-page-container button[data-portal-role-tone="student"] .portal-filter-dot { background: #9a7600 !important; }
 #meus-processos-page-container button[data-portal-role-tone="board"] .portal-filter-dot { background: #a04444 !important; }
 #meus-processos-page-container button[data-portal-role-tone="evaluator"] .portal-filter-dot { background: #2e718d !important; }
 #meus-processos-page-container button[data-portal-role-tone="viewer"] .portal-filter-dot { background: #6e4a94 !important; }
 #meus-processos-page-container .portal-filter-dot { width: 10px !important; height: 10px !important; flex: 0 0 10px !important; }
-
-/* processo em Meus TCCs mantém a mesma família cromática da bolinha */
-#meus-processos-page-container .portal-role-process-button {
-  background: var(--portal-role-bg) !important;
-  border-color: var(--portal-role-border) !important;
-  color: var(--portal-role-text) !important;
-}
+#meus-processos-page-container .portal-role-process-button { background: var(--portal-role-bg) !important; border-color: var(--portal-role-border) !important; color: var(--portal-role-text) !important; }
 
 /* --------------------------------------------------------------------------
  * Área do Presidente
  * ----------------------------------------------------------------------- */
-#coordenador-page-root table[data-portal-spreadsheet="coordinator"] thead th { padding-top: 5px !important; padding-bottom: 5px !important; min-height: 34px !important; line-height: 1.15 !important; }
+#coordenador-page-root table[data-portal-spreadsheet="coordinator"] tbody td:nth-child(-n+3) {
+  background-color: var(--portal-sticky-row-bg, #fff) !important;
+}
 #coordenador-page-root td[data-portal-plain-text="true"],
-#coordenador-page-root td[data-portal-plain-text="true"] > div,
-#coordenador-page-root td[data-portal-plain-text="true"] :is(span,div) {
+#coordenador-page-root td[data-portal-plain-text="true"] * {
   background: transparent !important;
   border: 0 !important;
   border-radius: 0 !important;
@@ -290,7 +317,7 @@ table[data-portal-spreadsheet] [data-portal-sticky-process="true"][data-portal-a
   flex: 1 1 0% !important;
   flex-direction: column !important;
   overflow: hidden !important;
-  padding: 0 0 10px !important;
+  padding: 0 0 12px !important;
   background: #fff !important;
 }
 .portal-settings-workspace[data-portal-sheet-mode] :is(#authorized-access-panel,#asten-logs-page,#audit-logs-page) {
@@ -322,7 +349,7 @@ table[data-portal-spreadsheet] [data-portal-sticky-process="true"][data-portal-a
   border-radius: 0 !important;
   background: #fff !important;
 }
-/* barra da planilha mais clara que a barra superior do popup */
+/* cabeçalho da planilha deliberadamente mais claro que a barra superior do workspace */
 .portal-settings-workspace[data-portal-sheet-mode] table thead th {
   background: var(--portal-green-action, #337959) !important;
   color: #fff !important;
@@ -361,7 +388,7 @@ table[data-portal-spreadsheet] [data-portal-sticky-process="true"][data-portal-a
 }
 .portal-settings-workspace[data-portal-sheet-mode] .portal-spreadsheet-pager { flex: 0 0 auto !important; margin: 0 !important; }
 
-/* Modelos e Variáveis ganha área útil ampla sem mudar a linguagem visual */
+/* Modelos e Variáveis: área útil ampla */
 .portal-settings-workspace[data-portal-settings-models="true"] {
   width: min(98vw, 1850px) !important;
   max-width: 1850px !important;
