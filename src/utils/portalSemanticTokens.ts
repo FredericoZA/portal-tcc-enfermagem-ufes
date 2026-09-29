@@ -15,8 +15,8 @@ export const PORTAL_BRAND_COLORS = {
 
 export const PORTAL_SEMANTIC_COLORS = {
   defense: {
-    defended: { bg: '#c2d0c2', border: '#7e907e', text: '#263728' },
-    upcoming: { bg: '#d4c69a', border: '#9e8f63', text: '#453d25' },
+    defended: { bg: '#bed8c3', border: '#719a79', text: '#23472b' },
+    upcoming: { bg: '#e8dda7', border: '#b49d4f', text: '#4a4020' },
   },
   // Papéis usam quatro famílias cromáticas realmente distintas, mantendo o
   // aspecto fosco do Portal: âmbar, coral, azul e violeta.

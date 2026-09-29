@@ -75,6 +75,31 @@
   box-shadow: inset 0 0 0 1px currentColor !important;
 }
 
+/*
+ * Lista de Defesas: a data da defesa é a autoridade final da cor do processo.
+ * Regras legadas de zebra/linha não podem transformar uma defesa passada em
+ * amarelo. O mesmo token é usado pelos eventos do calendário e pelos filtros.
+ */
+#formal-monthly-calendar-section .portal-core-table tbody
+  td[title*="abrir os detalhes e documentos"] > div.portal-semantic-tone[data-defense-state="defended"] {
+  background: var(--portal-defense-defended-bg) !important;
+  border-color: var(--portal-defense-defended-border) !important;
+  color: var(--portal-defense-defended-text) !important;
+  box-shadow: none !important;
+}
+#formal-monthly-calendar-section .portal-core-table tbody
+  td[title*="abrir os detalhes e documentos"] > div.portal-semantic-tone[data-defense-state="upcoming"] {
+  background: var(--portal-defense-upcoming-bg) !important;
+  border-color: var(--portal-defense-upcoming-border) !important;
+  color: var(--portal-defense-upcoming-text) !important;
+  box-shadow: none !important;
+}
+#formal-monthly-calendar-section .portal-core-table tbody
+  td[title*="abrir os detalhes e documentos"] > div.portal-semantic-tone[data-defense-state] * {
+  background: transparent !important;
+  color: inherit !important;
+}
+
 /* Meus TCCs: a identidade por vínculo aparece SOMENTE na bolinha. O botão
  * permanece neutro; seleção usa o cinza institucional aprovado. */
 #meus-processos-page-container .portal-standard-filter-chip {
@@ -172,6 +197,24 @@
 }
 #portal-settings-hub .portal-settings-title-bar * {
   color: #fff !important;
+}
+
+/* Rodapé: os nomes dos Membros da Comissão formam uma lista centralizada. */
+#home-page-footer-notes > div > div.grid > div:first-child > div.pt-2.border-t > div.mt-1 {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+#home-page-footer-notes > div > div.grid > div:first-child > div.pt-2.border-t > div.mt-1 > div {
+  width: 100% !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+#home-page-footer-notes > div > div.grid > div:first-child > div.pt-2.border-t > div.mt-1 :is(button, span, p) {
+  justify-content: center !important;
+  text-align: center !important;
 }
 
 /* Popovers renderizados em document.body precisam ficar acima dos workspaces
