@@ -1,0 +1,10 @@
+Rodada aplicada. Arquivos alterados: src/utils/tableFormatters.ts, src/pages/HomePage.tsx, src/pages/MeusProcessosPage.tsx, src/pages/CoordenadorPage.tsx, src/portal-version-1046.css, src/components/AuthorizedStudentsPanel.tsx, server.ts, src/pages/ConfiguracoesPage.tsx, src/components/LoginPopupEditorModal.tsx, src/components/CalendarPopupEditorModal.tsx, src/components/TccDetailPopupEditorModal.tsx, src/portal-semantic-ui.css, package.json, package-lock.json, server/homologacaoVisual20260927Contract.test.ts, server/finalGreenRoundContract.test.ts, CHANGELOG.md
+file:///home/runner/work/portal-tcc-enfermagem-ufes/portal-tcc-enfermagem-ufes/scripts/apply-final-green-round-2.mjs:7
+  if (!content.includes(from)) throw new Error(`Padrão não encontrado: ${label}`);
+                                     ^
+
+Error: Padrão não encontrado: estado computado de Meus TCCs
+    at replaceOnce (file:///home/runner/work/portal-tcc-enfermagem-ufes/portal-tcc-enfermagem-ufes/scripts/apply-final-green-round-2.mjs:7:38)
+    at file:///home/runner/work/portal-tcc-enfermagem-ufes/portal-tcc-enfermagem-ufes/scripts/apply-final-green-round-2.mjs:57:7
+
+Node.js v22.23.2
