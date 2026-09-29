@@ -32,7 +32,8 @@ jobs:
           first=$?
           if [ "$first" -eq 0 ]; then node scripts/apply-final-green-round-2.mjs >>/tmp/green-round.log 2>&1; second=$?; else second=0; fi
           if [ "$first" -eq 0 ] && [ "$second" -eq 0 ]; then node scripts/apply-final-green-round-3.mjs >>/tmp/green-round.log 2>&1; third=$?; else third=0; fi
-          if [ "$first" -ne 0 ] || [ "$second" -ne 0 ] || [ "$third" -ne 0 ]; then
+          if [ "$first" -eq 0 ] && [ "$second" -eq 0 ] && [ "$third" -eq 0 ]; then node scripts/apply-final-green-round-4.mjs >>/tmp/green-round.log 2>&1; fourth=$?; else fourth=0; fi
+          if [ "$first" -ne 0 ] || [ "$second" -ne 0 ] || [ "$third" -ne 0 ] || [ "$fourth" -ne 0 ]; then
             cp /tmp/green-round.log /tmp/diagnostic.log
             git reset --hard HEAD
             cp /tmp/diagnostic.log MIGRATION_FAILURE.txt
