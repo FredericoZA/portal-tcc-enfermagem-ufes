@@ -37,8 +37,8 @@ try {
       NODE_ENV: 'development', VERCEL: '', PORT: String(port), PORTAL_DATA_DIR: dataDir,
       PORTAL_PERSISTENCE_PROVIDER: 'local_file', PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'true',
       PORTAL_ALLOW_LOCAL_OTP_STORE: 'true', PORTAL_OTP_DELIVERY_MODE: 'log', ASTEN_INTEGRATION_ENABLED: 'false',
-      PORTAL_SESSION_SECRET: 'spreadsheet-test-session-0123456789abcdef',
-      PORTAL_OTP_PEPPER: 'spreadsheet-test-otp-0123456789abcdef'
+      PORTAL_SESSION_SECRET: 'visual-test-session-0123456789abcdef',
+      PORTAL_OTP_PEPPER: 'visual-test-otp-0123456789abcdef'
     }, stdio: 'ignore'
   });
 
