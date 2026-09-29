@@ -4,7 +4,7 @@
 
 {
   "status": "REPROVADO",
-  "generatedAt": "2026-09-29T01:21:15.975Z",
+  "generatedAt": "2026-09-29T01:27:37.419Z",
   "fixtureProcesses": 13,
   "fixtureStatuses": [
     "AGUARDANDO_DEFESA",
@@ -65,9 +65,9 @@
     }
   ],
   "errors": [
-    "master-calendario-320: dias do mês não usam #D5DCE0 ({\"cellCount\":30,\"emptyCount\":5,\"dayColors\":[\"rgb(213, 220, 224)\",\"rgb(225, 230, 233)\"],\"emptyColors\":[\"rgb(225, 230, 233)\"],\"divider\":2,\"dividerColor\":\"rgb(255, 255, 255)\",\"paddingTop\":10,\"fullWidth\":true}).",
-    "master-replicar-portal-320: contrato das quatro camadas divergente ({\"panel\":\"rgb(225, 230, 233)\",\"card\":\"rgb(213, 220, 224)\",\"inner\":\"\"}).",
-    "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('#google-workspace-sync-section > button').first()\n"
+    "master-calendario-320: dias úteis não usam #D5DCE0 ({\"cellCount\":30,\"weekdayCount\":30,\"weekendCount\":0,\"emptyCount\":5,\"weekdayColors\":[\"rgb(213, 220, 224)\",\"rgb(225, 230, 233)\"],\"weekendColors\":[],\"emptyColors\":[\"rgb(225, 230, 233)\"],\"divider\":2,\"dividerColor\":\"rgb(255, 255, 255)\",\"paddingTop\":10,\"fullWidth\":true}).",
+    "master-calendario-320: fins de semana não se fundem ao fundo indisponível #E1E6E9 ({\"cellCount\":30,\"weekdayCount\":30,\"weekendCount\":0,\"emptyCount\":5,\"weekdayColors\":[\"rgb(213, 220, 224)\",\"rgb(225, 230, 233)\"],\"weekendColors\":[],\"emptyColors\":[\"rgb(225, 230, 233)\"],\"divider\":2,\"dividerColor\":\"rgb(255, 255, 255)\",\"paddingTop\":10,\"fullWidth\":true}).",
+    "locator.click: Error: strict mode violation: getByRole('button', { name: 'Fechar' }) resolved to 2 elements:\n    1) <button aria-label=\"Fechar menu\" id=\"close-mobile-sidebar-btn\" class=\"lg:hidden text-slate-300 p-1\">…</button> aka getByRole('button', { name: 'Fechar menu' })\n    2) <button type=\"button\" aria-label=\"Fechar\" class=\"inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white bg-white text-black shadow-sm\">…</button> aka getByRole('button', { name: 'Fechar', exact: true })\n\nCall log:\n  - waiting for getByRole('button', { name: 'Fechar' })\n"
   ],
   "warnings": [],
   "scope": "Dados fictícios locais; valida responsividade, overflow, navegação e perfis. Não valida provedores externos, zoom manual ou leitor de tela."
