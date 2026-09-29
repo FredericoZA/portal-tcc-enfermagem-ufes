@@ -13,7 +13,7 @@ test('uma única camada canônica controla as planilhas', () => {
   assert.doesNotMatch(main, /portal-version-105[23]\.css/);
 });
 
-test('runtime reconhece todas as sete planilhas e padroniza Processo', () => {
+test('runtime reconhece as sete planilhas e padroniza Processo', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   for (const key of ['defenses', 'acervo', 'meus_processos', 'coordinator', 'authorized_access', 'signature_logs', 'audit_logs']) assert.match(runtime, new RegExp(key));
   assert.match(runtime, /replace\(\/n\[º°o\]/);
@@ -22,7 +22,7 @@ test('runtime reconhece todas as sete planilhas e padroniza Processo', () => {
   assert.match(runtime, /portalStickySelection/);
 });
 
-test('mão e roda movimentam o host nos dois eixos sem pointer capture', () => {
+test('mão move a tabela e empurra a página quando não existe overflow vertical interno', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const wrapper = read('src/components/TableScrollWrapper.tsx');
   const css = read('src/portal-spreadsheet-runtime.css');
@@ -30,12 +30,22 @@ test('mão e roda movimentam o host nos dois eixos sem pointer capture', () => {
   assert.match(runtime, /addEventListener\('mousedown'/);
   assert.match(runtime, /window\.addEventListener\('mousemove'/);
   assert.match(runtime, /window\.addEventListener\('mouseup'/);
-  assert.match(runtime, /addEventListener\('wheel'/);
-  assert.doesNotMatch(runtime, /setPointerCapture|releasePointerCapture/);
   assert.match(runtime, /host\.scrollLeft = startLeft - dx/);
   assert.match(runtime, /host\.scrollTop = startTop - dy/);
+  assert.match(runtime, /startWindowY/);
+  assert.match(runtime, /window\.scrollTo\(\{ top: Math\.max\(0, startWindowY - dy\)/);
   assert.match(css, /cursor: grab !important/);
   assert.match(css, /overflow: auto !important/);
+});
+
+test('wheel vertical nunca é convertido em deslocamento horizontal', () => {
+  const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
+  const css = read('src/portal-spreadsheet-runtime.css');
+  assert.match(runtime, /const horizontalIntent = event\.shiftKey \|\| Math\.abs\(event\.deltaX\) > Math\.abs\(event\.deltaY\)/);
+  assert.match(runtime, /if \(!canY\) return;/);
+  assert.match(runtime, /host\.scrollTop \+= event\.deltaY/);
+  assert.doesNotMatch(runtime, /if \(canX\) \{\s*const before = host\.scrollLeft;\s*host\.scrollLeft \+= event\.deltaY/);
+  assert.match(css, /overscroll-behavior-y: auto !important/);
 });
 
 test('paginação fica depois da planilha com seletor e páginas reais', () => {
@@ -48,6 +58,13 @@ test('paginação fica depois da planilha com seletor e páginas reais', () => {
   assert.match(runtime, /pageList\(totalPages, current\)/);
 });
 
+test('cabeçalho é compacto e faixas de filtro mantêm respiro à direita', () => {
+  const css = read('src/portal-spreadsheet-runtime.css');
+  assert.match(css, /th\[data-portal-sticky-header="true"\][\s\S]*padding-top: 5px !important;[\s\S]*padding-bottom: 5px !important;/);
+  assert.match(css, /portal-meus-processos-filter-row[\s\S]*padding-right: 28px !important;/);
+  assert.match(css, /portal-coordinator-filter-row/);
+});
+
 test('Meus TCCs usa Todos sem bolinha e quatro tons distintos', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const css = read('src/portal-spreadsheet-runtime.css');
@@ -55,20 +72,21 @@ test('Meus TCCs usa Todos sem bolinha e quatro tons distintos', () => {
   assert.match(runtime, /makeAllFilterButton\('portal-runtime-all-filter', 'Todos'\)/);
   assert.doesNotMatch(runtime, /portal-runtime-all-filter[^\n]*portal-filter-dot/);
   assert.match(css, /data-portal-all-active="true"/);
+  assert.match(css, /Quando Todos está ativo/);
   for (const border of ['#9a7600', '#a04444', '#2e718d', '#6e4a94']) {
     assert.match(css, new RegExp(border));
     assert.match(tokens, new RegExp(border));
   }
 });
 
-test('Presidente tem seleção fixa e Envio textual sem pílula', () => {
+test('Presidente mantém seleção, cores iniciais e Envio textual', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const css = read('src/portal-spreadsheet-runtime.css');
   assert.match(runtime, /portal-sheet-checkbox/);
   assert.match(runtime, /Selecionar\/Deselecionar todos/);
+  assert.match(runtime, /flattenInformationalCell/);
   assert.match(runtime, /envio\.dataset\.portalPlainText = 'true'/);
-  assert.match(runtime, /envio\.textContent = signed \? 'Assinada' : 'Pendente'/);
-  assert.match(css, /data-portal-plain-text="true"/);
+  assert.match(css, /tbody td:nth-child\(-n\+3\)/);
   assert.match(css, /--portal-sticky-row-bg/);
 });
 
