@@ -33,6 +33,7 @@ import './portal-public-ux-1044.css';
 import './portal-version-1046.css';
 import './portal-process-detail.css';
 import './portal-version-1049.css';
+import './portal-version-1050.css';
 import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
 import { installAuthRequestResilience } from './utils/authRequestResilience';
 
