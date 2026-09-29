@@ -22,11 +22,12 @@ test('separadores efetivos ficam em 16px sem somar bordas legadas à primeira li
 
 test('processos e calendário compartilham verde e amarelo foscos', () => {
   const css = read('src/portal-hotfix-separators-palette.css');
-  assert.match(css, /--portal-defended-bg: #c2d0c2/);
-  assert.match(css, /--portal-defended-border: #7e907e/);
-  assert.match(css, /--portal-upcoming-bg: #d4c69a/);
-  assert.match(css, /--portal-upcoming-border: #9e8f63/);
-  assert.match(css, /td\[title\*="abrir os detalhes e documentos"\]/);
+  assert.match(css, /--portal-defended-bg: #bed8c3/);
+  assert.match(css, /--portal-defended-border: #719a79/);
+  assert.match(css, /--portal-upcoming-bg: #e8dda7/);
+  assert.match(css, /--portal-upcoming-border: #b49d4f/);
+  assert.match(css, /data-defense-state="defended"/);
+  assert.match(css, /data-defense-state="upcoming"/);
   assert.match(css, /portal-core-calendar-card\.is-defended/);
   assert.match(css, /portal-core-calendar-card\.is-upcoming/);
 });
