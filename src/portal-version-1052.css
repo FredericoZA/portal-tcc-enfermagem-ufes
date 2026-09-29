@@ -1,0 +1,337 @@
+/* Portal TCC 1.0.52 — planilhas navegáveis, paginação real e Configurações diretas. */
+
+/* --------------------------------------------------------------------------
+ * Rolagem e estrutura tabular
+ * ----------------------------------------------------------------------- */
+.table-sticky-container {
+  position: relative !important;
+  overflow: auto !important;
+  overscroll-behavior: contain !important;
+  scrollbar-gutter: stable both-edges !important;
+  max-width: 100% !important;
+}
+
+.table-sticky-container::-webkit-scrollbar { width: 12px; height: 12px; }
+.table-sticky-container::-webkit-scrollbar-track { background: #eef2f4; }
+.table-sticky-container::-webkit-scrollbar-thumb { background: #9ba8af; border: 3px solid #eef2f4; border-radius: 999px; }
+.table-sticky-container::-webkit-scrollbar-thumb:hover { background: #77858d; }
+
+.portal-pagination-hidden { display: none !important; }
+
+/* Cabeçalho acompanha a rolagem vertical. A especificidade vence o legado 1.0.43. */
+#portal-app-root main table.portal-core-table thead tr:last-child > th[data-portal-v52-sticky-header="true"],
+.portal-settings-workspace table thead th[data-portal-v52-sticky-header="true"] {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 25 !important;
+  background: var(--table-header, var(--portal-green-header)) !important;
+  color: var(--table-header-text, #fff) !important;
+}
+
+/* Primeira coluna de processo fixa durante a rolagem horizontal. */
+#portal-app-root main table.portal-core-table tbody td[data-portal-v52-sticky-process="true"],
+.portal-settings-workspace table td[data-portal-v52-sticky-process="true"] {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 18 !important;
+  background: #fff !important;
+  box-shadow: 1px 0 0 #cbd5e1 !important;
+}
+
+#portal-app-root main table.portal-core-table thead tr:last-child > th[data-portal-v52-sticky-header="true"][data-portal-v52-sticky-process="true"],
+.portal-settings-workspace table th[data-portal-v52-sticky-process="true"] {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 34 !important;
+  background: var(--table-header, var(--portal-green-header)) !important;
+  color: var(--table-header-text, #fff) !important;
+  box-shadow: 1px 0 0 rgba(255,255,255,.24) !important;
+}
+
+/* Área do Presidente: seleção fixa antes de Processo. */
+#portal-app-root main #coordenador-page-root table.portal-core-table tbody td[data-portal-v52-sticky-selection="true"],
+#coordenador-page-root .portal-v52-president-all-table td[data-portal-v52-sticky-selection="true"] {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 36 !important;
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  background: #fff !important;
+  box-shadow: 1px 0 0 #cbd5e1 !important;
+}
+#portal-app-root main #coordenador-page-root table.portal-core-table thead tr:last-child > th[data-portal-v52-sticky-selection="true"],
+#coordenador-page-root .portal-v52-president-all-table th[data-portal-v52-sticky-selection="true"] {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 38 !important;
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  background: var(--portal-green-header) !important;
+  color: #fff !important;
+}
+#portal-app-root main #coordenador-page-root table.portal-core-table [data-portal-v52-sticky-process="true"][data-portal-v52-after-selection="true"],
+#coordenador-page-root .portal-v52-president-all-table [data-portal-v52-sticky-process="true"][data-portal-v52-after-selection="true"] {
+  left: 42px !important;
+}
+.portal-v52-selection-glyph {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 18px !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+  color: currentColor !important;
+}
+
+/* Cabeçalho do Presidente volta a ser compacto, vencendo o padding global legado. */
+#portal-app-root main #coordenador-page-root table.portal-core-table thead tr:last-child > th,
+#portal-app-root main #coordenador-page-root .portal-spreadsheet-table thead tr:last-child > th,
+#portal-app-root main #coordenador-page-root .portal-v52-president-all-table thead tr:last-child > th {
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
+  min-height: 34px !important;
+  line-height: 1.15 !important;
+}
+
+/* Envio é informação comum, não uma segunda família cromática. */
+#coordenador-page-root td[data-portal-v52-neutral-status="true"],
+#coordenador-page-root td[data-portal-v52-neutral-status="true"] > div {
+  background: #fff !important;
+  color: #111827 !important;
+}
+#coordenador-page-root td[data-portal-v52-neutral-status="true"] :is(span,div) {
+  background: #fff !important;
+  border-color: #cbd5e1 !important;
+  color: #111827 !important;
+  box-shadow: none !important;
+}
+
+/* --------------------------------------------------------------------------
+ * Paginação
+ * ----------------------------------------------------------------------- */
+.portal-v52-pager {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+  min-height: 42px !important;
+  padding: 7px 10px !important;
+  border-top: 1px solid #cbd5e1 !important;
+  background: #f8fafc !important;
+  color: #334155 !important;
+}
+.portal-v52-pager-info { font-size: 10px !important; font-weight: 800 !important; }
+.portal-v52-pager-controls { display: flex !important; flex-wrap: wrap !important; gap: 4px !important; align-items: center !important; }
+.portal-v52-pager-controls button {
+  min-width: 28px !important;
+  height: 28px !important;
+  padding: 0 8px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 7px !important;
+  background: #fff !important;
+  color: #334155 !important;
+  font-size: 9px !important;
+  font-weight: 850 !important;
+  box-shadow: none !important;
+}
+.portal-v52-pager-controls button[data-active="true"] {
+  background: var(--portal-green-action) !important;
+  border-color: var(--portal-green-action-border) !important;
+  color: #fff !important;
+}
+.portal-v52-pager-controls button:disabled { opacity: .35 !important; cursor: default !important; }
+
+.portal-table-settings-popover button[data-portal-v52-selected="true"] {
+  background: #d7ded9 !important;
+  border-color: #9aac9f !important;
+  color: #1f2937 !important;
+}
+.portal-table-settings-popover button[data-portal-v52-selected="false"] {
+  background: #fff !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+/* --------------------------------------------------------------------------
+ * Filtros: botão neutro, cor somente na bolinha. Todos sempre neutro.
+ * ----------------------------------------------------------------------- */
+#meus-processos-page-container .portal-standard-filter-chip,
+#coordenador-page-root .portal-standard-filter-chip {
+  background: #fff !important;
+  border-color: #cbd5e1 !important;
+  color: #1f2937 !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+}
+#meus-processos-page-container .portal-standard-filter-chip[aria-pressed="true"],
+#coordenador-page-root .portal-standard-filter-chip[aria-pressed="true"],
+#meus-processos-page-container .portal-standard-filter-chip[data-selected="true"],
+#coordenador-page-root .portal-standard-filter-chip[data-selected="true"] {
+  background: #aeb0b3 !important;
+  border-color: #979a9d !important;
+  color: #111827 !important;
+}
+.portal-v52-all-filter .portal-filter-dot {
+  background: #64748b !important;
+  border: 1px solid #475569 !important;
+}
+.portal-v52-all-count,
+#meus-processos-page-container .portal-standard-filter-chip > span:last-child,
+#coordenador-page-root .portal-standard-filter-chip > span:last-child {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 20px !important;
+  min-height: 17px !important;
+  padding: 0 5px !important;
+  border-radius: 999px !important;
+  background: #6b7280 !important;
+  color: #fff !important;
+  font-size: 9px !important;
+  font-weight: 850 !important;
+}
+
+/* --------------------------------------------------------------------------
+ * Visão Todos — Área do Presidente
+ * ----------------------------------------------------------------------- */
+#portal-president-all-view { background: #fff !important; }
+.portal-v52-president-all-scroll {
+  max-height: min(68vh, 720px) !important;
+  overflow: auto !important;
+  background: #fff !important;
+}
+.portal-v52-president-all-table th {
+  padding: 5px 8px !important;
+  border-right: 1px solid rgba(255,255,255,.22) !important;
+  background: var(--portal-green-header) !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  text-align: center !important;
+}
+.portal-v52-president-all-table td {
+  padding: 5px 8px !important;
+  border-right: 1px solid #e2e8f0 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  background: #fff !important;
+  color: #111827 !important;
+  text-align: center !important;
+}
+.portal-v52-president-all-table tr[data-portal-selected="true"] td { background: #eef5f0 !important; }
+.portal-v52-president-all-table td[data-portal-v52-neutral-status="true"] span {
+  display: inline-flex !important;
+  padding: 3px 8px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 7px !important;
+  background: #fff !important;
+  color: #111827 !important;
+  font-weight: 750 !important;
+}
+.portal-v52-president-all-table button { border: 0 !important; background: transparent !important; color: inherit !important; }
+.portal-v52-loading { padding: 28px !important; text-align: center !important; font-size: 11px !important; font-weight: 700 !important; color: #475569 !important; }
+
+/* --------------------------------------------------------------------------
+ * Configurações: cada botão abre o conteúdo real, sem caixa dentro de caixa.
+ * ----------------------------------------------------------------------- */
+.portal-settings-workspace[data-portal-v52-settings-kind="identity"],
+.portal-settings-workspace[data-portal-v52-settings-kind="integrations"],
+.portal-settings-workspace[data-portal-v52-settings-kind="models"] {
+  width: min(98vw, 1800px) !important;
+  max-width: 1800px !important;
+  max-height: 96vh !important;
+}
+.portal-settings-workspace[data-portal-v52-settings-kind="identity"] aside,
+.portal-settings-workspace[data-portal-v52-settings-kind="integrations"] aside {
+  display: none !important;
+}
+.portal-settings-workspace[data-portal-v52-settings-kind="identity"] main,
+.portal-settings-workspace[data-portal-v52-settings-kind="integrations"] main {
+  padding: 0 !important;
+  background: var(--portal-surface-layer-1) !important;
+}
+.portal-settings-workspace[data-portal-v52-settings-kind="identity"] .portal-settings-workspace-content,
+.portal-settings-workspace[data-portal-v52-settings-kind="integrations"] .portal-settings-workspace-content {
+  border-radius: 0 !important;
+  background: var(--portal-surface-layer-1) !important;
+}
+.portal-settings-workspace[data-portal-v52-settings-kind="identity"] .portal-settings-workspace-content > section,
+.portal-settings-workspace[data-portal-v52-settings-kind="integrations"] .portal-settings-workspace-content > section {
+  margin: 0 !important;
+  padding: 12px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--portal-surface-layer-1) !important;
+  box-shadow: none !important;
+}
+
+/* Acesso, Assinaturas e Logs viram planilhas diretas do popup. */
+.portal-settings-workspace[data-portal-v52-settings-kind="access"] .portal-settings-single-pane,
+.portal-settings-workspace[data-portal-v52-settings-kind="signatures"] .portal-settings-single-pane,
+.portal-settings-workspace[data-portal-v52-settings-kind="logs"] .portal-settings-single-pane {
+  overflow: hidden !important;
+  background: #fff !important;
+}
+.portal-settings-workspace[data-portal-v52-settings-kind="access"] #authorized-access-panel,
+.portal-settings-workspace[data-portal-v52-settings-kind="signatures"] #asten-logs-page,
+.portal-settings-workspace[data-portal-v52-settings-kind="logs"] #audit-logs-page {
+  min-height: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.portal-settings-workspace :is(#authorized-access-panel,#asten-logs-page,#audit-logs-page) .portal-spreadsheet-table thead th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 22 !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  background: var(--portal-green-header) !important;
+  color: #fff !important;
+  border-right: 1px solid rgba(255,255,255,.22) !important;
+}
+.portal-settings-workspace :is(#authorized-access-panel,#asten-logs-page,#audit-logs-page) .portal-spreadsheet-table tbody td {
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
+  background: #fff !important;
+  color: #111827 !important;
+  border-right: 1px solid #e2e8f0 !important;
+}
+.portal-settings-workspace :is(#authorized-access-panel,#asten-logs-page,#audit-logs-page) .table-sticky-container,
+.portal-settings-workspace #audit-logs-page .overflow-x-auto {
+  max-height: calc(94vh - 116px) !important;
+  overflow: auto !important;
+  background: #fff !important;
+}
+
+/* Ação / Atividade em Logs é texto comum; somente os controles de Ações são botões. */
+#audit-logs-page td[data-portal-v52-audit-action="true"] > span {
+  display: inline !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #111827 !important;
+  font: inherit !important;
+  text-transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Modelos e Variáveis ganha espaço de edição sem sair do padrão do Portal. */
+.portal-settings-workspace[data-portal-v52-settings-kind="models"] > div,
+.portal-settings-workspace[data-portal-v52-settings-kind="models"] main {
+  min-height: 0 !important;
+}
+.portal-settings-workspace[data-portal-v52-settings-kind="models"] .portal-settings-workspace-content {
+  min-height: 78vh !important;
+}
+.portal-settings-workspace[data-portal-v52-settings-kind="models"] #portal-models-workspace,
+.portal-settings-workspace[data-portal-v52-settings-kind="models"] .portal-studio {
+  min-height: 76vh !important;
+}
