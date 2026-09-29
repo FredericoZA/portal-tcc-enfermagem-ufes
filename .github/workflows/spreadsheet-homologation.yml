@@ -1,0 +1,49 @@
+name: Spreadsheet Homologation
+
+on:
+  push:
+    branches:
+      - work/finalizacao-portal-tcc
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  spreadsheets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Alinhar npm
+        run: npm install --global npm@11.9.0
+      - name: Instalar dependências
+        run: npm ci
+      - name: Instalar Chromium de homologação
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Validar código
+        run: npm run test:ci
+      - name: Homologar planilhas no Chromium
+        run: node scripts/test-spreadsheets-runtime.mjs
+      - name: Guardar evidências e fontes
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: portal-spreadsheet-homologation
+          path: |
+            artifacts/spreadsheet-homologation/
+            src/components/PortalSpreadsheetRuntime.tsx
+            src/portal-spreadsheet-runtime.css
+            src/pages/HomePage.tsx
+            src/pages/MeusProcessosPage.tsx
+            src/pages/CoordenadorPage.tsx
+            scripts/test-spreadsheets-runtime.mjs
+          if-no-files-found: error
