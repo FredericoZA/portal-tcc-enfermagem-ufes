@@ -59,18 +59,29 @@ test('paginação fica depois da planilha com seletor e páginas reais', () => {
 });
 
 test('cabeçalho é compacto e faixas de filtro mantêm respiro à direita', () => {
+  const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const css = read('src/portal-spreadsheet-runtime.css');
   assert.match(css, /th\[data-portal-sticky-header="true"\][\s\S]*padding-top: 5px !important;[\s\S]*padding-bottom: 5px !important;/);
+  assert.match(runtime, /style\.setProperty\('padding-top', '5px', 'important'\)/);
+  assert.match(runtime, /style\.setProperty\('padding-bottom', '5px', 'important'\)/);
   assert.match(css, /portal-meus-processos-filter-row[\s\S]*padding-right: 28px !important;/);
   assert.match(css, /portal-coordinator-filter-row/);
 });
 
-test('Meus TCCs usa Todos sem bolinha e quatro tons distintos', () => {
+test('Meus TCCs mantém Todos e estados de filtro na fonte React, sem clique sintético do runtime', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
+  const page = read('src/pages/MeusProcessosPage.tsx');
   const css = read('src/portal-spreadsheet-runtime.css');
   const tokens = read('src/utils/portalSemanticTokens.ts');
-  assert.match(runtime, /makeAllFilterButton\('portal-runtime-all-filter', 'Todos'\)/);
-  assert.doesNotMatch(runtime, /portal-runtime-all-filter[^\n]*portal-filter-dot/);
+
+  assert.match(page, /portal-runtime-all-filter/);
+  assert.match(page, /setSelectedRoleCategories\(\[\.\.\.availableCategories\]\)/);
+  assert.match(page, /data-portal-all-active=\{allRoleCategoriesSelected \? 'true' : 'false'\}/);
+  assert.match(page, /data-portal-role-tone=/);
+  assert.match(page, />Todos<\/span>/);
+  assert.doesNotMatch(runtime, /makeAllFilterButton\('portal-runtime-all-filter', 'Todos'\)/);
+  assert.doesNotMatch(runtime, /const allMyTcc = target\.closest/);
+  assert.doesNotMatch(runtime, /const roleButton = target\.closest/);
   assert.match(css, /data-portal-all-active="true"/);
   assert.match(css, /Quando Todos está ativo/);
   for (const border of ['#9a7600', '#a04444', '#2e718d', '#6e4a94']) {
