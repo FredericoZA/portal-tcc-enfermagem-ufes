@@ -1,0 +1,67 @@
+name: Diagnose CI steps (temporary)
+
+on:
+  push:
+    branches:
+      - fix/backlog-audit-20260930
+    paths:
+      - .github/workflows/diagnose-ci-temporary.yml
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fix/backlog-audit-20260930
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Diagnose test:ci phases
+        shell: bash
+        run: |
+          set +e
+          : > diagnostics-ci.txt
+          run_phase() {
+            name="$1"
+            shift
+            echo "=== $name ===" >> diagnostics-ci.txt
+            "$@" > "diag-$name.log" 2>&1
+            code=$?
+            echo "exit=$code" >> diagnostics-ci.txt
+            if [ "$code" -ne 0 ]; then
+              echo "--- tail ---" >> diagnostics-ci.txt
+              tail -n 80 "diag-$name.log" >> diagnostics-ci.txt
+              echo "--- end tail ---" >> diagnostics-ci.txt
+            fi
+          }
+          run_phase secrets npm run test:secrets
+          run_phase lint npm run lint
+          run_phase unit npm run test:unit
+          run_phase contracts npm run test:contracts
+          run_phase a11y npm run test:a11y
+          run_phase finalization npm run test:finalization
+          run_phase build npm run build
+          run_phase http npm run test:http
+          cat diagnostics-ci.txt
+
+      - name: Commit diagnostic summary
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add diagnostics-ci.txt
+          git commit -m "chore: registra diagnóstico temporário do CI"
+          git push origin HEAD:fix/backlog-audit-20260930
