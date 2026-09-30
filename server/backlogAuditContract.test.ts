@@ -55,6 +55,27 @@ test('ação de novo TCC permanece disponível com múltiplos vínculos e sem tr
   assert.doesNotMatch(server, /Cada aluno pode participar como autor de apenas um TCC/);
 });
 
+test('lista de defesas usa Processo, exibe TCC - número e congela a primeira coluna', () => {
+  const runtime = read('src/components/PortalBacklogAuditRuntime.tsx');
+  const css = read('src/portal-backlog-audit-1055.css');
+  assert.match(runtime, /#public-calendar-cards-section/);
+  assert.match(runtime, /return `TCC - \$\{clean\}`/);
+  assert.match(runtime, /header\.dataset\.portalStickyProcess = 'true'/);
+  assert.match(runtime, /cell\.dataset\.portalStickyProcess = 'true'/);
+  assert.match(runtime, /header\.dataset\.portalStickyHeader = 'true'/);
+  assert.match(css, /data-portal-defense-spreadsheet="true"[\s\S]*data-portal-sticky-process="true"/);
+  assert.match(css, /left:\s*0 !important/);
+  assert.match(css, /overflow-y:\s*auto !important/);
+});
+
+test('roda do mouse mantém eixos independentes na lista de defesas', () => {
+  const runtime = read('src/components/PortalBacklogAuditRuntime.tsx');
+  assert.match(runtime, /horizontalIntent = event\.shiftKey \|\| Math\.abs\(event\.deltaX\) > Math\.abs\(event\.deltaY\)/);
+  assert.match(runtime, /host\.scrollLeft \+=/);
+  assert.match(runtime, /host\.scrollTop \+= event\.deltaY/);
+  assert.match(runtime, /passive:\s*false/);
+});
+
 test('sugestões de normalização e autosave de variáveis permanecem habilitados', () => {
   const studio = read('src/components/IntegrationStudioPanel.tsx');
   assert.match(studio, /similarVariableSuggestions\.length > 0/);
