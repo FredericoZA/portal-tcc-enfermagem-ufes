@@ -15,10 +15,13 @@ test('camada final da auditoria é carregada depois do runtime de planilhas', ()
 
 test('separadores deixam de usar a faixa histórica de 16px', () => {
   const css = read('src/portal-backlog-audit-1055.css');
+  const access = read('src/components/AuthorizedStudentsPanel.tsx');
   assert.match(css, /--portal-separator-section:\s*4px/);
   assert.match(css, /--portal-separator-table:\s*4px/);
   assert.match(css, /tbody tr:first-child > td[\s\S]*border-top:\s*0 !important/);
   assert.doesNotMatch(css, /--portal-separator-(?:section|table):\s*16px/);
+  assert.doesNotMatch(access, /border-b-\[16px\]/);
+  assert.match(access, /border-b-4/);
 });
 
 test('sidebar tem somente a faixa ativa colada à borda esquerda', () => {
@@ -39,11 +42,32 @@ test('filtros seguem branco em repouso e cinza no selecionado', () => {
 
 test('ação de novo TCC permanece disponível com múltiplos vínculos', () => {
   const runtime = read('src/components/PortalBacklogAuditRuntime.tsx');
+  const meusTccs = read('src/pages/MeusProcessosPage.tsx');
   assert.match(runtime, /#meus-processos-btn-novo/);
   assert.match(runtime, /portal:navigate/);
   assert.match(runtime, /novo-processo/);
   assert.match(runtime, /múltiplos TCCs/);
   assert.doesNotMatch(runtime, /roleCounts\.ALUNO\s*===\s*0/);
+  assert.doesNotMatch(meusTccs, /canCreateStudentTcc\s*=\s*roleCounts\.ALUNO\s*===\s*0/);
+  assert.match(meusTccs, /const canCreateStudentTcc = true/);
+});
+
+test('sugestões de normalização de variáveis permanecem habilitadas', () => {
+  const studio = read('src/components/IntegrationStudioPanel.tsx');
+  assert.match(studio, /similarVariableSuggestions\.length > 0/);
+  assert.doesNotMatch(studio, /false\s*&&\s*similarVariableSuggestions\.length > 0/);
+  assert.match(studio, /Sugestões inteligentes de normalização/);
+  assert.match(studio, /Impacto antes da mescla/);
+});
+
+test('Presidência mantém Asten e Gov.br em colunas individuais', () => {
+  const coordinator = read('src/pages/CoordenadorPage.tsx');
+  assert.match(coordinator, /renderSignatureActionCells/);
+  assert.doesNotMatch(coordinator, /renderSignatureActionCell\s*=\s*\(/);
+  assert.match(coordinator, /<span>Asten<\/span>/);
+  assert.match(coordinator, /<span>Gov\.br<\/span>/);
+  assert.match(coordinator, /handleSignOne\(proc\.id\)/);
+  assert.match(coordinator, /handleGovOne\(proc\.id\)/);
 });
 
 test('legado Fluxo completo do TCC é removido do runtime ativo', () => {
