@@ -1,0 +1,180 @@
+=== secrets ===
+exit=0
+=== lint ===
+exit=0
+=== unit ===
+exit=1
+--- tail ---
+ok 295 - executa documento, formulário e e-mail configurados
+  ---
+  duration_ms: 4.13539
+  type: 'test'
+  ...
+# Subtest: condição configurada controla a ação sem alterar o código do curso
+ok 296 - condição configurada controla a ação sem alterar o código do curso
+  ---
+  duration_ms: 2.566373
+  type: 'test'
+  ...
+# Subtest: respostas aceitas do formulário prevalecem nas variáveis do evento seguinte
+ok 297 - respostas aceitas do formulário prevalecem nas variáveis do evento seguinte
+  ---
+  duration_ms: 0.477102
+  type: 'test'
+  ...
+# Subtest: respostas diferentes geram chaves distintas para permitir correção do formulário
+ok 298 - respostas diferentes geram chaves distintas para permitir correção do formulário
+  ---
+  duration_ms: 0.976717
+  type: 'test'
+  ...
+# Subtest: interrompe ações posteriores quando uma dependência falha
+ok 299 - interrompe ações posteriores quando uma dependência falha
+  ---
+  duration_ms: 1.019377
+  type: 'test'
+  ...
+# Subtest: formulário não pode sobrescrever identidade nem redirecionar destinatários
+ok 300 - formulário não pode sobrescrever identidade nem redirecionar destinatários
+  ---
+  duration_ms: 0.99505
+  type: 'test'
+  ...
+# Subtest: ação interna sem porta explícita falha fechada
+ok 301 - ação interna sem porta explícita falha fechada
+  ---
+  duration_ms: 0.713937
+  type: 'test'
+  ...
+# Subtest: preserva o identificador de uma entrega parcial para permitir retentativa
+ok 302 - preserva o identificador de uma entrega parcial para permitir retentativa
+  ---
+  duration_ms: 0.65443
+  type: 'test'
+  ...
+# Subtest: marcadores legíveis são mesclados uma vez e seus valores HTML são escapados
+ok 303 - marcadores legíveis são mesclados uma vez e seus valores HTML são escapados
+  ---
+  duration_ms: 0.145301
+  type: 'test'
+  ...
+# Subtest: nenhum formato de marcador permite encaminhar anexos por resposta livre
+ok 304 - nenhum formato de marcador permite encaminhar anexos por resposta livre
+  ---
+  duration_ms: 2.246219
+  type: 'test'
+  ...
+# Subtest: escolhe o próximo signatário pela ordem e ignora quem já assinou
+ok 305 - escolhe o próximo signatário pela ordem e ignora quem já assinou
+  ---
+  duration_ms: 0.732957
+  type: 'test'
+  ...
+# Subtest: retorna vazio quando todos já assinaram
+ok 306 - retorna vazio quando todos já assinaram
+  ---
+  duration_ms: 0.104505
+  type: 'test'
+  ...
+1..306
+# tests 306
+# suites 0
+# pass 304
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10396.319296
+--- end tail ---
+=== contracts ===
+exit=0
+=== a11y ===
+exit=0
+=== finalization ===
+exit=1
+--- tail ---
+    '// primeiro o arquivo recomendado pelo guia e depois o .env convencional, sem\n' +
+    '// sobrescrever valores fornecidos pelo sistema operacional.\n' +
+    "dotenv.config({path:'.env.local',override:false,quiet:true});\n" +
+    "dotenv.config({path:'.env',override:false,quiet:true});\n" +
+    '\n' +
+    'interface PersistedPortalState {\n' +
+    '  registrationDrafts?: Record<string,RegistrationDraft>;\n' +
+    '  reminders?: ReminderRecord[];\n' +
+    '  settings?: GlobalSettings;\n' +
+    '  auditLogs?: AuditLog[];\n' +
+    '  processes?: ProcessData[];\n' +
+    '  memberships?: ProcessMembership[];\n' +
+    '  correctionRequests?: DocumentCorrectionRequest[];\n' +
+    '  signatureJobs?: SignatureJob[];\n' +
+    '  astenCallbackFingerprints?: string[];\n' +
+    '  revokedSessionIds?: string[];\n' +
+    '  authorizedStudents?: AuthorizedStudent[];\n' +
+    '  formArchiveJobs?: FormArchiveJob[];\n' +
+    '  emailDeliveries?: EmailDeliveryRecord[];\n' +
+    '  workflowRuns?: WorkflowRun[];\n' +
+    '  astenWebhookEvents?: AstenWebhookEvent[];\n' +
+    '  administrationTransfers?: AdministrationTransfer[];\n' +
+    '  notificationPreferences?: Record<string, NotificationPreferences>;\n' +
+    '  dataSubjectRequests?: DataSubjectRequest[];\n' +
+    '  legalHolds?: LegalHold[];\n' +
+    '  studioVersions?: StudioVersionRecord[];\n' +
+    '  studioFormSubmissions?: StudioFormSubmission[];\n' +
+    '  continuousIntelligence?: ContinuousIntelligenceState;\n' +
+    '}\n' +
+    '\n' +
+    'interface AdministrationTransfer {\n' +
+    '  id: string;\n' +
+    "  role: 'MASTER_ADMIN' | 'COMMISSION_PRESIDENT';\n" +
+    '  targetEmail: string;\n' +
+    '  requestedBy: string;\n' +
+    "  status: 'PENDING_TARGET_ACCEPTANCE' | 'COMPLETED' | 'CANCELED' | 'EXPIRED';\n" +
+    '  requestedAt: string;\n' +
+    '  expiresAt: string;\n' +
+    '  completedAt?: string;\n' +
+    '  canceledAt?: string;\n' +
+    '  googleReconnectRequired?: boolean;\n' +
+    '}\n' +
+    '\n' +
+    'interface FormArchiveJob {\n' +
+    '  id:string;processId:string;formType:ProcessFormArchiveType;version:number;sha256:string;artifactBase64:string;\n' +
+    "  status:'PENDING'|'ARCHIVED'|'FAILED';driveFileId?:string;fileName?:string;lastError?:string;createdAt:string;updatedAt:string;\n" +
+    '}\n' +
+    '\n' +
+    "const portalDataDirectory = process.env.PORTAL_DATA_DIR || path.join(process.cwd(), '.portal-data');\n" +
+    "const portalStateFile = path.join(portalDataDirectory, 'portal-state.json');\n" +
+    '\n' +
+    'function loadPersistedPortalState(): PersistedPortalState {\n' +
+    '  try {\n' +
+    '    if (!existsSync(portalStateFile)) return {};\n' +
+    "    const parsed = JSON.parse(readFileSync(portalStateFile, 'utf8'));\n" +
+    "    return parsed && typeof parsed === 'object' ? parsed : {};\n" +
+    '  } catch (error) {\n' +
+    "    console.warn('[Persistence] Não foi possível carregar o estado persistido:', error);\n" +
+    '    return {};\n' +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    'const persistedPortalState = loadPersistedPortalState();\n' +
+    'let registrationDraftsStore=pruneDrafts(persistedPortalState.registrationDrafts||{});\n' +
+    'let reminderRecordsStore:ReminderRecord[]=persistedPortalState.reminders||[];\n' +
+    "const productionRuntime=process.env.NODE_ENV==='production'||Boolean(process.env.VERCEL);\n" +
+    "const bootstrapMasterEmail=normalizeEmail(String(process.env.PORTAL_BOOTSTRAP_MASTER_EMAIL||''));\n" +
+    '\n' +
+    '// The integrated configuration and its audit history survive server restarts.\n' +
+    'let currentSettings: GlobalSettings = productionRuntime\n' +
+    "  ? {...INITIAL_SETTINGS,masterEmail:bootstrapMasterEmail,ownerEmail:bootstrapMasterEmail,commissionPresidentEmail:'',masterRecoveryEmails:[],...(persistedPortalState.settings||{})}\n" +
+    '  : { ...INITIAL_SETTINGS, ...(persistedPortalState.settings || {}) };\n' +
+    'delete (currentSettings as any).recoverySecretKey;\n' +
+    'delete (currentSettings as any).courseCoordinat'... 334237 more characters,
+  expected: /STUDENT_TCC_ALREADY_EXISTS/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v22.23.3
+--- end tail ---
+=== build ===
+exit=0
+=== http ===
+exit=0
