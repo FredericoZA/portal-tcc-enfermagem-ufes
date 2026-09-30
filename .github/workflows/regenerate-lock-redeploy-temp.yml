@@ -1,0 +1,39 @@
+name: Regenerate lockfile for redeploy
+
+on:
+  push:
+    branches:
+      - chore/redeploy-1.0.54-20260930
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate-lock:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Align npm
+        run: npm install --global npm@11.9.0
+      - name: Regenerate lockfile only
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify security audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Commit lockfile if changed
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo 'package-lock.json already current'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json
+          git commit -m 'security: regenerate lockfile for brace-expansion 2.1.7'
+          git push origin HEAD:chore/redeploy-1.0.54-20260930
