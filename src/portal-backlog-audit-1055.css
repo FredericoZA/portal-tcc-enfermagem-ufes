@@ -78,6 +78,17 @@
   border-top: 0 !important;
 }
 
+/* Configurações ainda continham border-b-[16px] no markup legado. */
+#authorized-access-panel > header,
+#portal-app-root main [data-settings-sheet="true"] > header,
+#portal-app-root main .portal-settings-workspace-header {
+  border-bottom-width: var(--portal-separator-section) !important;
+}
+
+#portal-app-root main [role="dialog"] > :first-child:is(.bg-\[\#005830\], [style*="--portal-green-header"]) {
+  border-bottom-width: var(--portal-separator-section) !important;
+}
+
 /* --------------------------------------------------------------------------
  * Toolbars e filtros: compactos, brancos em repouso e cinza quando escolhidos.
  * ----------------------------------------------------------------------- */
