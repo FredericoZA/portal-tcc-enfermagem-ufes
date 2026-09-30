@@ -325,7 +325,8 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     return counts;
   }, [processes, userEmail, memberships]);
 
-  const canCreateStudentTcc = roleCounts.ALUNO === 0;
+  // Um aluno pode participar de múltiplos TCCs; o cadastro não depende da quantidade de vínculos existentes.
+  const canCreateStudentTcc = true;
 
   // Available categories depending on user privileges (4 for Master/Presidente, 3 for standard users)
   const availableCategories: ProcessRoleCategory[] = React.useMemo(() => {
