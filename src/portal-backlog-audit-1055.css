@@ -133,7 +133,7 @@
 }
 
 /* --------------------------------------------------------------------------
- * Calendário: separação clara sem inventar uma nova família de cores.
+ * Calendário e lista de defesas.
  * ----------------------------------------------------------------------- */
 #formal-monthly-calendar-section :is(.portal-calendar-weekdays,[data-calendar-weekdays="true"]) {
   border-top: var(--portal-separator-section) solid #fff !important;
@@ -143,6 +143,52 @@
 
 #formal-monthly-calendar-section :is(.portal-calendar-day,[data-calendar-day="true"]) {
   background: var(--portal-surface-layer-1, #f8fafc) !important;
+}
+
+/* A lista de defesas precisa se comportar como planilha de verdade: a roda
+ * vertical move as linhas, o gesto horizontal move as demais colunas e a
+ * coluna Processo permanece congelada em ambos os sentidos. */
+#public-calendar-cards-section .portal-spreadsheet-scroll-host,
+#public-calendar-cards-section [data-portal-scroll-host="true"],
+#public-calendar-cards-section .table-sticky-container {
+  max-height: min(68vh, 720px) !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  touch-action: pan-x pan-y !important;
+  scrollbar-gutter: stable both-edges !important;
+}
+
+#public-calendar-cards-section table[data-portal-defense-spreadsheet="true"] {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+#public-calendar-cards-section table[data-portal-defense-spreadsheet="true"] th[data-portal-sticky-header="true"] {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 35 !important;
+  background: var(--table-header, var(--portal-green-header, #005830)) !important;
+  background-clip: padding-box !important;
+}
+
+#public-calendar-cards-section table[data-portal-defense-spreadsheet="true"] :is(th,td)[data-portal-sticky-process="true"] {
+  position: sticky !important;
+  left: 0 !important;
+  background-clip: padding-box !important;
+  box-shadow: 2px 0 0 #cbd5e1 !important;
+}
+
+#public-calendar-cards-section table[data-portal-defense-spreadsheet="true"] th[data-portal-sticky-process="true"] {
+  top: 0 !important;
+  z-index: 60 !important;
+  background: var(--table-header, var(--portal-green-header, #005830)) !important;
+  color: var(--table-header-text, #fff) !important;
+}
+
+#public-calendar-cards-section table[data-portal-defense-spreadsheet="true"] td[data-portal-sticky-process="true"] {
+  z-index: 30 !important;
+  background: var(--portal-sticky-row-bg, #dfe6e9) !important;
 }
 
 /* Acessibilidade: o relevo visual não substitui o foco de teclado. */
