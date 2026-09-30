@@ -7,6 +7,7 @@ import { PortalStructuralRuntime } from './components/PortalStructuralRuntime';
 import { PortalTableTextPolicy } from './components/PortalTableTextPolicy';
 import { PortalSpreadsheetRuntime } from './components/PortalSpreadsheetRuntime';
 import { PortalSettingsRuntime } from './components/PortalSettingsRuntime';
+import { PortalBacklogAuditRuntime } from './components/PortalBacklogAuditRuntime';
 import './index.css';
 import './portal-overrides.css';
 import './portal-design-system.css';
@@ -38,6 +39,7 @@ import './portal-version-1049.css';
 import './portal-version-1050.css';
 import './portal-version-1051.css';
 import './portal-spreadsheet-runtime.css';
+import './portal-backlog-audit-1055.css';
 import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
 import { installAuthRequestResilience } from './utils/authRequestResilience';
 
@@ -53,5 +55,6 @@ createRoot(document.getElementById('root')!).render(
     <PortalTableTextPolicy />
     <PortalSpreadsheetRuntime />
     <PortalSettingsRuntime />
+    <PortalBacklogAuditRuntime />
   </StrictMode>,
 );
