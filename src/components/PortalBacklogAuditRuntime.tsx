@@ -14,7 +14,7 @@ function ensureNewTccAction() {
 
   /*
    * A regra atual do produto permite que um aluno participe de múltiplos TCCs.
-   * Versões anteriores condicionavam a ação principal a roleCounts.ALUNO === 0.
+   * Versões anteriores escondiam a ação quando já existia um vínculo estudantil.
    * Enquanto a tela antiga ainda estiver montada, este runtime canônico garante
    * que a ação de cadastro permaneça disponível independentemente da quantidade
    * de vínculos existentes, sem duplicar o botão nativo quando ele já existe.
