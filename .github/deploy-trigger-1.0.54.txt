@@ -1,1 +1,2 @@
 Redeploy técnico do Portal TCC 1.0.54 após expiração do build-rate-limit do Vercel. Sem alteração de runtime.
+Regeneração segura do lockfile acionada em 2026-09-30.
