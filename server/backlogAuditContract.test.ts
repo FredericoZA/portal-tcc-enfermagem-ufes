@@ -40,9 +40,10 @@ test('filtros seguem branco em repouso e cinza no selecionado', () => {
   assert.match(css, /aria-pressed="true"/);
 });
 
-test('ação de novo TCC permanece disponível com múltiplos vínculos', () => {
+test('ação de novo TCC permanece disponível com múltiplos vínculos e sem trava no servidor', () => {
   const runtime = read('src/components/PortalBacklogAuditRuntime.tsx');
   const meusTccs = read('src/pages/MeusProcessosPage.tsx');
+  const server = read('server.ts');
   assert.match(runtime, /#meus-processos-btn-novo/);
   assert.match(runtime, /portal:navigate/);
   assert.match(runtime, /novo-processo/);
@@ -50,14 +51,19 @@ test('ação de novo TCC permanece disponível com múltiplos vínculos', () => 
   assert.doesNotMatch(runtime, /roleCounts\.ALUNO\s*===\s*0/);
   assert.doesNotMatch(meusTccs, /canCreateStudentTcc\s*=\s*roleCounts\.ALUNO\s*===\s*0/);
   assert.match(meusTccs, /const canCreateStudentTcc = true/);
+  assert.doesNotMatch(server, /STUDENT_TCC_ALREADY_EXISTS/);
+  assert.doesNotMatch(server, /Cada aluno pode participar como autor de apenas um TCC/);
 });
 
-test('sugestões de normalização de variáveis permanecem habilitadas', () => {
+test('sugestões de normalização e autosave de variáveis permanecem habilitados', () => {
   const studio = read('src/components/IntegrationStudioPanel.tsx');
   assert.match(studio, /similarVariableSuggestions\.length > 0/);
   assert.doesNotMatch(studio, /false\s*&&\s*similarVariableSuggestions\.length > 0/);
   assert.match(studio, /Sugestões inteligentes de normalização/);
   assert.match(studio, /Impacto antes da mescla/);
+  assert.doesNotMatch(studio, /Salvar e propagar variável/);
+  assert.match(studio, /Alterações propagadas automaticamente/);
+  assert.match(studio, /window\.setTimeout\(\(\) => updateVariableAndPropagate\(\{ \.\.\.variableDraft, name: nextName \}\), 800\)/);
 });
 
 test('Presidência mantém Asten e Gov.br em colunas individuais', () => {
