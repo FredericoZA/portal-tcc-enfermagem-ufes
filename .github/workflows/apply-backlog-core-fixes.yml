@@ -1,0 +1,34 @@
+name: Apply backlog core fixes (temporary)
+
+on:
+  push:
+    branches:
+      - fix/backlog-audit-20260930
+    paths:
+      - .github/workflows/apply-backlog-core-fixes.yml
+      - scripts/apply-backlog-core-fixes.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fix/backlog-audit-20260930
+          persist-credentials: true
+
+      - name: Apply exact reviewed source patches
+        run: python scripts/apply-backlog-core-fixes.py
+
+      - name: Commit patches
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server.ts src/components/IntegrationStudioPanel.tsx
+          git commit -m "fix: remove trava de TCC único e ativa autosave de variáveis"
+          git push origin HEAD:fix/backlog-audit-20260930
