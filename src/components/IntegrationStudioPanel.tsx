@@ -653,6 +653,23 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     recordAudit(createAuditEntry('VARIABLE_UPDATED', 'variable', selectedVariable.id, `Variável ${selectedVariable.name} atualizada e propagada.`, actorEmail, { before, after }));
   };
 
+  useEffect(() => {
+    if (!selectedVariable || !variableDraft || selectedVariable.id !== variableDraft.id) return;
+    const nextName = normalizeVariableKey(variableDraft.name || '');
+    if (!nextName) return;
+    const comparable = (value: Partial<MatrixColumn>) => JSON.stringify({
+      name: normalizeVariableKey(String(value.name || '')),
+      label: String(value.label || ''),
+      dataType: value.dataType || 'text',
+      description: String(value.description || ''),
+      aliases: [...(value.aliases || [])].map(String).sort(),
+      format: value.format || {}
+    });
+    if (comparable(selectedVariable) === comparable({ ...variableDraft, name: nextName })) return;
+    const timer = window.setTimeout(() => updateVariableAndPropagate({ ...variableDraft, name: nextName }), 800);
+    return () => window.clearTimeout(timer);
+  }, [variableDraft, selectedVariable]);
+
   const buildVariableMergeImpact = (sourceVariable: MatrixColumn, targetVariable: MatrixColumn) => {
     const artifacts = { matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates };
     const sourceUsage = getVariableUsage([sourceVariable.id, sourceVariable.name, ...(sourceVariable.aliases || [])], artifacts);
@@ -1116,7 +1133,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                   <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-[10px] font-bold"><input type="checkbox" checked={!!variableDraft.format?.italic} onChange={(e) => setVariableDraft({ ...variableDraft, format: { ...variableDraft.format, italic: e.target.checked } })} />Itálico</label>
                   <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 text-[10px] font-bold"><input type="color" value={variableDraft.format?.color || brandKit.primaryColor} onChange={(e) => setVariableDraft({ ...variableDraft, format: { ...variableDraft.format, color: e.target.value } })} className="h-8 w-10" />Cor no modelo</label>
                 </div>
-                <button type="button" onClick={() => updateVariableAndPropagate(variableDraft)} className={`${actionClass} border-violet-700 bg-violet-700 text-white hover:bg-violet-800`}><Save className="h-3.5 w-3.5" />Salvar e propagar variável</button>
+                <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-emerald-800"><Check className="h-3.5 w-3.5" />Alterações propagadas automaticamente</div>
                 <div className="grid gap-3 sm:grid-cols-3">{([['Documentos', variableUsage.documents], ['E-mails', variableUsage.emails], ['Formulários', variableUsage.forms]] as const).map(([label, items]) => <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="text-[9px] font-black uppercase text-slate-500">{label} • {items.length}</div><div className="mt-2 space-y-1">{items.length ? items.map((item) => <div key={item} className="truncate text-[10px] font-bold text-slate-700">• {item}</div>) : <div className="text-[10px] text-slate-400">Nenhum uso</div>}</div></div>)}</div>
               </div>}
             </div>
