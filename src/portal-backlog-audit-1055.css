@@ -1,0 +1,141 @@
+/* Portal TCC 1.0.55 — contrato final da rodada de auditoria do backlog.
+ * Esta folha é carregada por último e neutraliza somente conflitos visuais
+ * confirmados entre as camadas históricas do Portal.
+ */
+
+:root {
+  /* 16px era uma faixa visual, não uma linha divisória. */
+  --portal-separator-section: 4px;
+  --portal-separator-table: 4px;
+  --portal-toolbar-gap: 8px;
+  --portal-filter-active: #aeb0b3;
+}
+
+/* --------------------------------------------------------------------------
+ * Navegação lateral: um único item ativo, relevo discreto e faixa na borda.
+ * ----------------------------------------------------------------------- */
+#portal-sidebar .portal-sidebar-nav-item {
+  position: relative !important;
+  overflow: hidden !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+#portal-sidebar .portal-sidebar-nav-item:not(.portal-sidebar-nav-active) {
+  box-shadow: none !important;
+}
+
+#portal-sidebar .portal-sidebar-nav-item:not(.portal-sidebar-nav-active)::before {
+  content: none !important;
+}
+
+#portal-sidebar .portal-sidebar-nav-item.portal-sidebar-nav-active {
+  transform: translateY(-1px) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.12),
+    0 2px 4px rgba(0,0,0,.22) !important;
+}
+
+#portal-sidebar .portal-sidebar-nav-item.portal-sidebar-nav-active::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 auto 0 0 !important;
+  width: 4px !important;
+  border-radius: 0 2px 2px 0 !important;
+  background: #74ff96 !important;
+  box-shadow: 0 0 7px rgba(116,255,150,.42) !important;
+  pointer-events: none !important;
+}
+
+/* --------------------------------------------------------------------------
+ * Separadores: uma linha única, sem empilhar faixa + border legado.
+ * ----------------------------------------------------------------------- */
+#portal-app-root main .portal-defense-filter-row,
+#portal-app-root main .portal-meus-processos-filter-row,
+#portal-app-root main .portal-coordinator-filter-row,
+#portal-app-root main .portal-standard-filter-row,
+#portal-app-root main [data-portal1040-filter-band="true"] {
+  border-top-width: var(--portal-separator-section) !important;
+  border-bottom-width: 0 !important;
+  box-shadow: none !important;
+  padding-top: 7px !important;
+  padding-bottom: 7px !important;
+}
+
+#portal-app-root main .portal-core-table thead,
+#portal-app-root main .portal-core-table tbody tr:first-child > td {
+  box-shadow: none !important;
+}
+
+#portal-app-root main .portal-core-table thead tr:last-child > th {
+  border-bottom-width: var(--portal-separator-table) !important;
+  border-bottom-style: solid !important;
+  border-bottom-color: #fff !important;
+}
+
+/* Não somar uma segunda linha no primeiro registro. */
+#portal-app-root main .portal-core-table tbody tr:first-child > td {
+  border-top: 0 !important;
+}
+
+/* --------------------------------------------------------------------------
+ * Toolbars e filtros: compactos, brancos em repouso e cinza quando escolhidos.
+ * ----------------------------------------------------------------------- */
+#portal-app-root main :is(
+  .portal-meus-processos-filter-row,
+  .portal-coordinator-filter-row,
+  .portal-defense-filter-row,
+  .portal-standard-filter-row
+) {
+  gap: var(--portal-toolbar-gap) !important;
+}
+
+#portal-app-root main button.portal-standard-filter-chip {
+  min-height: 28px !important;
+  height: 28px !important;
+  padding-top: 3px !important;
+  padding-bottom: 3px !important;
+  background: #fff !important;
+  border-color: #cbd5e1 !important;
+  color: #1f2937 !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+}
+
+#portal-app-root main button.portal-standard-filter-chip:is([aria-pressed="true"],[data-selected="true"]),
+#portal-app-root main .portal-runtime-all-filter[aria-pressed="true"],
+#portal-app-root main .portal-runtime-president-all[aria-pressed="true"] {
+  background: var(--portal-filter-active) !important;
+  border-color: #979a9d !important;
+  color: #111827 !important;
+  opacity: 1 !important;
+}
+
+/* Botão largo da ação principal fica no mesmo ritmo vertical dos controles. */
+#meus-processos-btn-novo,
+.portal-backlog-new-tcc-button {
+  min-width: 132px !important;
+  height: 32px !important;
+  padding: 0 12px !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+}
+
+/* --------------------------------------------------------------------------
+ * Calendário: separação clara sem inventar uma nova família de cores.
+ * ----------------------------------------------------------------------- */
+#formal-monthly-calendar-section :is(.portal-calendar-weekdays,[data-calendar-weekdays="true"]) {
+  border-top: var(--portal-separator-section) solid #fff !important;
+  background: #005830 !important;
+  color: #fff !important;
+}
+
+#formal-monthly-calendar-section :is(.portal-calendar-day,[data-calendar-day="true"]) {
+  background: var(--portal-surface-layer-1, #f8fafc) !important;
+}
+
+/* Acessibilidade: o relevo visual não substitui o foco de teclado. */
+#portal-sidebar .portal-sidebar-nav-item:focus-visible {
+  outline: 2px solid #74ff96 !important;
+  outline-offset: 2px !important;
+}
