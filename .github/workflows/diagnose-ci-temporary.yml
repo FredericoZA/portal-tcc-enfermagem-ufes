@@ -1,5 +1,6 @@
 name: Diagnose CI steps (temporary)
 
+# Arquivo temporário: remover após identificar a etapa que falha.
 on:
   push:
     branches:
