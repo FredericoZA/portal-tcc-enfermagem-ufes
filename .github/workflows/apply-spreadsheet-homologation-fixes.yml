@@ -1,0 +1,116 @@
+name: Apply Spreadsheet Homologation Fixes
+
+on:
+  push:
+    branches:
+      - work/finalizacao-portal-tcc
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fix/planilhas-1054-homologacao
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Aplicar correções estruturais aprovadas pelo diagnóstico
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          runtime_path = Path('src/components/PortalSpreadsheetRuntime.tsx')
+          runtime = runtime_path.read_text()
+
+          old = """  const headerRow = table.tHead.rows[table.tHead.rows.length - 1];\n  const headers = Array.from(headerRow.cells) as HTMLTableCellElement[];\n  headers.forEach((header) => { header.dataset.portalStickyHeader = 'true'; });"""
+          new = """  const headerRow = table.tHead.rows[table.tHead.rows.length - 1];\n  const headers = Array.from(headerRow.cells) as HTMLTableCellElement[];\n  headers.forEach((header) => {\n    header.dataset.portalStickyHeader = 'true';\n    header.style.setProperty('position', 'sticky', 'important');\n    header.style.setProperty('top', '0', 'important');\n    header.style.setProperty('padding-top', '5px', 'important');\n    header.style.setProperty('padding-bottom', '5px', 'important');\n    header.style.setProperty('line-height', '1.15', 'important');\n  });"""
+          if old not in runtime:
+              raise SystemExit('Cabeçalho canônico não encontrado para patch seguro.')
+          runtime = runtime.replace(old, new)
+
+          old = """  if (selectionIndex >= 0) {\n    headers[selectionIndex].dataset.portalStickySelection = 'true';\n    ensureSelectionButton(headers[selectionIndex]);\n  }\n\n  if (processIndex >= 0) {\n    renameProcessHeader(headers[processIndex]);\n    headers[processIndex].dataset.portalStickyProcess = 'true';\n    if (selectionIndex >= 0 && selectionIndex < processIndex) headers[processIndex].dataset.portalAfterSelection = 'true';\n  }"""
+          new = """  if (selectionIndex >= 0) {\n    const selectionHeader = headers[selectionIndex];\n    selectionHeader.dataset.portalStickySelection = 'true';\n    selectionHeader.style.setProperty('position', 'sticky', 'important');\n    selectionHeader.style.setProperty('left', '0', 'important');\n    selectionHeader.style.setProperty('top', '0', 'important');\n    selectionHeader.style.setProperty('z-index', '46', 'important');\n    selectionHeader.style.setProperty('width', '44px', 'important');\n    selectionHeader.style.setProperty('min-width', '44px', 'important');\n    selectionHeader.style.setProperty('max-width', '44px', 'important');\n    ensureSelectionButton(selectionHeader);\n  }\n\n  if (processIndex >= 0) {\n    const processHeader = headers[processIndex];\n    renameProcessHeader(processHeader);\n    processHeader.dataset.portalStickyProcess = 'true';\n    processHeader.style.setProperty('position', 'sticky', 'important');\n    processHeader.style.setProperty('top', '0', 'important');\n    processHeader.style.setProperty('left', selectionIndex >= 0 && selectionIndex < processIndex ? '44px' : '0', 'important');\n    processHeader.style.setProperty('z-index', selectionIndex >= 0 && selectionIndex < processIndex ? '45' : '40', 'important');\n    if (selectionIndex >= 0 && selectionIndex < processIndex) processHeader.dataset.portalAfterSelection = 'true';\n  }"""
+          if old not in runtime:
+              raise SystemExit('Bloco sticky de cabeçalho não encontrado.')
+          runtime = runtime.replace(old, new)
+
+          old = """      if (cell) {\n        cell.dataset.portalStickySelection = 'true';\n        const button = cell.querySelector<HTMLButtonElement>('button,input[type=\"checkbox\"]');\n        if (button instanceof HTMLButtonElement) button.classList.add('portal-sheet-checkbox');\n      }"""
+          new = """      if (cell) {\n        cell.dataset.portalStickySelection = 'true';\n        cell.style.setProperty('position', 'sticky', 'important');\n        cell.style.setProperty('left', '0', 'important');\n        cell.style.setProperty('z-index', '31', 'important');\n        cell.style.setProperty('width', '44px', 'important');\n        cell.style.setProperty('min-width', '44px', 'important');\n        cell.style.setProperty('max-width', '44px', 'important');\n        cell.style.setProperty('background-color', 'var(--portal-sticky-row-bg, #fff)', 'important');\n        const button = cell.querySelector<HTMLButtonElement>('button,input[type=\"checkbox\"]');\n        if (button instanceof HTMLButtonElement) button.classList.add('portal-sheet-checkbox');\n      }"""
+          if old not in runtime:
+              raise SystemExit('Bloco sticky de seleção no corpo não encontrado.')
+          runtime = runtime.replace(old, new)
+
+          old = """      if (cell) {\n        cell.dataset.portalStickyProcess = 'true';\n        if (selectionIndex >= 0 && selectionIndex < processIndex) cell.dataset.portalAfterSelection = 'true';\n      }"""
+          new = """      if (cell) {\n        cell.dataset.portalStickyProcess = 'true';\n        cell.style.setProperty('position', 'sticky', 'important');\n        cell.style.setProperty('left', selectionIndex >= 0 && selectionIndex < processIndex ? '44px' : '0', 'important');\n        cell.style.setProperty('z-index', selectionIndex >= 0 && selectionIndex < processIndex ? '30' : '18', 'important');\n        cell.style.setProperty('background-color', 'var(--portal-sticky-row-bg, #fff)', 'important');\n        if (selectionIndex >= 0 && selectionIndex < processIndex) cell.dataset.portalAfterSelection = 'true';\n      }"""
+          if old not in runtime:
+              raise SystemExit('Bloco sticky de Processo no corpo não encontrado.')
+          runtime = runtime.replace(old, new)
+
+          runtime, count = re.subn(
+              r"function enhanceMyTccFilters\(\) \{.*?\n\}\n\nlet presidentAllActive",
+              "function enhanceMyTccFilters() { /* filtros de Meus TCCs são controlados pelo React */ }\n\nlet presidentAllActive",
+              runtime,
+              count=1,
+              flags=re.S,
+          )
+          if count != 1:
+              raise SystemExit('Não foi possível remover o filtro DOM legado de Meus TCCs.')
+
+          runtime, count = re.subn(
+              r"\n      const allMyTcc = target\.closest<HTMLButtonElement>\('#meus-processos-page-container \.portal-runtime-all-filter'\);.*?\n      const presidentAll = target\.closest<HTMLButtonElement>",
+              "\n      const presidentAll = target.closest<HTMLButtonElement>",
+              runtime,
+              count=1,
+              flags=re.S,
+          )
+          if count != 1:
+              raise SystemExit('Não foi possível remover a interceptação legada dos filtros.')
+
+          runtime_path.write_text(runtime)
+
+          page_path = Path('src/pages/MeusProcessosPage.tsx')
+          page = page_path.read_text()
+
+          marker = """  }, [isMasterAdmin, roleCounts]);\n\n  // Toggle role category filter in legend"""
+          replacement = """  }, [isMasterAdmin, roleCounts]);\n\n  const allRoleCategoriesSelected = availableCategories.every((category) => selectedRoleCategories.includes(category));\n  const allRoleCount = availableCategories.reduce((total, category) => total + (roleCounts[category] || 0), 0);\n\n  // Toggle role category filter in legend"""
+          if marker not in page:
+              raise SystemExit('Ponto de inserção do estado Todos não encontrado.')
+          page = page.replace(marker, replacement)
+
+          page = page.replace("{ key: 'protocolo', label: 'Nº Processo' },", "{ key: 'protocolo', label: 'Processo' },")
+
+          old = """              <div className=\"flex flex-wrap items-center gap-1.5\">\n                {availableCategories.map((catKey) => {"""
+          new = """              <div\n                className=\"flex flex-wrap items-center gap-1.5\"\n                data-portal-role-filter-group=\"true\"\n                data-portal-all-active={allRoleCategoriesSelected ? 'true' : 'false'}\n              >\n                <button\n                  type=\"button\"\n                  onClick={() => setSelectedRoleCategories([...availableCategories])}\n                  data-selected={allRoleCategoriesSelected ? 'true' : 'false'}\n                  aria-pressed={allRoleCategoriesSelected}\n                  className=\"portal-runtime-all-filter portal-standard-filter-chip portal-table-filter-chip flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider select-none\"\n                  title=\"Exibir todos os vínculos\"\n                >\n                  <span className=\"whitespace-nowrap font-extrabold\">Todos</span>\n                  <span className=\"portal-runtime-all-count\">{allRoleCount}</span>\n                </button>\n                {availableCategories.map((catKey) => {"""
+          if old not in page:
+              raise SystemExit('Grupo de filtros não encontrado para inserir Todos.')
+          page = page.replace(old, new)
+
+          old = """                      data-selected={isSelected ? 'true' : 'false'}\n                      aria-pressed={isSelected}\n                      style={{ backgroundColor: cfg.bgColor, color: cfg.textHex, borderColor: cfg.borderColor, opacity: isSelected ? 1 : 0.62, boxShadow: isSelected ? `inset 0 0 0 1px ${cfg.borderColor}` : 'none' }}\n                      className={`portal-standard-filter-chip"""
+          new = """                      data-selected={isSelected ? 'true' : 'false'}\n                      data-portal-role-tone={catKey === 'ALUNO' ? 'student' : catKey === 'BANCA' ? 'board' : catKey === 'AVALIADOR' ? 'evaluator' : 'viewer'}\n                      aria-pressed={isSelected}\n                      className={`portal-standard-filter-chip"""
+          if old not in page:
+              raise SystemExit('Estilo inline antigo dos filtros não encontrado.')
+          page = page.replace(old, new)
+
+          page_path.write_text(page)
+          PY
+
+      - name: Validar alterações
+        run: |
+          git diff --check
+          npm ci
+          npm run test:ci
+
+      - name: Commitar no branch de homologação
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/components/PortalSpreadsheetRuntime.tsx src/pages/MeusProcessosPage.tsx
+          git commit -m 'fix: aplicar resultados da homologação tabular'
+          git push origin HEAD:fix/planilhas-1054-homologacao
