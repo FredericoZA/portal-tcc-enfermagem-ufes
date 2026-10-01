@@ -107,6 +107,13 @@ export const ROLE_CONFIGS: Record<ProcessRoleCategory, { label: string; badgeLab
   VISUALIZADOR: { label: 'Visualizador', badgeLabel: 'Visualizador / Acompanhamento', bgColor: PORTAL_SEMANTIC_COLORS.processRole.viewer.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.viewer.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.viewer.text, dotColor: PORTAL_SEMANTIC_COLORS.processRole.viewer.border },
 };
 
+const ROLE_TONES: Record<ProcessRoleCategory, string> = {
+  ALUNO: 'student',
+  BANCA: 'board',
+  AVALIADOR: 'evaluator',
+  VISUALIZADOR: 'viewer',
+};
+
 // Helper to get count of stages from master configuration
 const getWorkflowStagesCount = (): number => {
   if (typeof window === 'undefined') return 5;
@@ -179,12 +186,8 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
   const [processes, setProcesses] = useState<ProcessData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRoleCategories, setSelectedRoleCategories] = useState<ProcessRoleCategory[]>([
-    'ALUNO',
-    'BANCA',
-    'AVALIADOR',
-    'VISUALIZADOR'
-  ]);
+  const [showAllRoles, setShowAllRoles] = useState(true);
+  const [selectedRoleCategories, setSelectedRoleCategories] = useState<ProcessRoleCategory[]>([]);
 
   // Column selection & order persistence
   const initialMeusProcessosConfig = loadTableConfig('meus_processos', DEFAULT_MEUS_PROCESSOS_ORDER, DEFAULT_MEUS_PROCESSOS_VISIBLE, 25);
@@ -335,25 +338,11 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     return ['ALUNO', 'BANCA', 'AVALIADOR'];
   }, [isMasterAdmin, roleCounts]);
 
-  // Toggle role category filter in legend
+  // Cada botão é um toggle independente. "Todos" também pode coexistir visualmente com outros filtros.
   const toggleRoleCategory = (cat: ProcessRoleCategory) => {
-    setSelectedRoleCategories((prev) => {
-      // If all available are selected, clicking one isolates it
-      const allSelected = availableCategories.every((c) => prev.includes(c));
-      if (allSelected) {
-        return [cat];
-      }
-      // If this was the only one selected, clicking it resets to all available
-      if (prev.length === 1 && prev.includes(cat)) {
-        return [...availableCategories];
-      }
-      // Toggle
-      if (prev.includes(cat)) {
-        const next = prev.filter((c) => c !== cat);
-        return next.length > 0 ? next : [...availableCategories];
-      }
-      return [...prev, cat];
-    });
+    setSelectedRoleCategories((prev) =>
+      prev.includes(cat) ? prev.filter((current) => current !== cat) : [...prev, cat]
+    );
   };
 
   // Contextual action button recommendation for row
@@ -379,7 +368,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     }
   };
 
-  // Filter processes by search, dropdown role, and selected role categories legend
+  // Filter processes by search, date range and the native role toggles.
   const getFilteredAndSortedProcesses = () => {
     let result = processes.filter((proc) => {
       const roles = getUserRolesForProcess(proc.id);
@@ -400,7 +389,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
       if (startDate && (!defenseDate || defenseDate < startDate)) return false;
       if (endDate && (!defenseDate || defenseDate > endDate)) return false;
 
-      // Legend multi-select filter
+      if (showAllRoles) return true;
       if (selectedRoleCategories.length === 0) return false;
       return selectedRoleCategories.includes(roleCat);
     });
@@ -458,11 +447,8 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
   };
 
   const allFilteredProcesses = getFilteredAndSortedProcesses();
-  
-  // Apply limit
-  const displayedProcesses = recordsLimit === 'all' 
-    ? allFilteredProcesses 
-    : allFilteredProcesses.slice(0, recordsLimit);
+  // O runtime canônico precisa receber todas as linhas para criar páginas reais.
+  const displayedProcesses = allFilteredProcesses;
 
   const handleExportExcel = (dataToExport: ProcessData[]) => {
     const activeCols = columnOrder.filter((k) => visibleColumns[k]);
@@ -512,7 +498,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
   };
 
   const columnsList = [
-    { key: 'protocolo', label: 'Nº Processo' },
+    { key: 'protocolo', label: 'Processo' },
     { key: 'defesaDataHora', label: 'Data e Horário' },
     { key: 'progresso', label: 'Progresso' },
     { key: 'titulo', label: 'Título do Trabalho' },
@@ -859,7 +845,20 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
                 {getEditableTableText(customLabels, '__filterTitle', 'FILTRAR:')}
               </span>
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5" data-portal-role-filter-group="true">
+                <button
+                  type="button"
+                  onClick={() => setShowAllRoles((current) => !current)}
+                  data-selected={showAllRoles ? 'true' : 'false'}
+                  aria-pressed={showAllRoles}
+                  className="portal-standard-filter-chip portal-table-filter-chip portal-native-all-filter flex h-7 shrink-0 cursor-pointer select-none items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-colors"
+                  style={showAllRoles
+                    ? { backgroundColor: '#d7ded9', color: '#1f2937', borderColor: '#9aac9f', boxShadow: 'inset 0 0 0 1px #9aac9f' }
+                    : { backgroundColor: '#ffffff', color: '#334155', borderColor: '#cbd5e1', boxShadow: 'none' }}
+                  title="Exibir ou ocultar todos os vínculos"
+                >
+                  <span className="whitespace-nowrap font-extrabold">Todos</span>
+                </button>
                 {availableCategories.map((catKey) => {
                   const cfg = ROLE_CONFIGS[catKey];
                   const isSelected = selectedRoleCategories.includes(catKey);
@@ -869,16 +868,17 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       key={catKey}
                       type="button"
                       onClick={() => toggleRoleCategory(catKey)}
+                      data-portal-role-tone={ROLE_TONES[catKey]}
                       data-selected={isSelected ? 'true' : 'false'}
                       aria-pressed={isSelected}
-                      style={{ backgroundColor: cfg.bgColor, color: cfg.textHex, borderColor: cfg.borderColor, opacity: isSelected ? 1 : 0.62, boxShadow: isSelected ? `inset 0 0 0 1px ${cfg.borderColor}` : 'none' }}
-                      className={`portal-standard-filter-chip portal-table-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none ${
-                        isSelected ? '' : 'opacity-85 hover:opacity-100'
-                      }`}
-                      title={`Clique para ${isSelected ? 'isolar ou alternar' : 'exibir'} TCCs com papel de ${cfg.label}`}
+                      style={isSelected
+                        ? { backgroundColor: cfg.bgColor, color: cfg.textHex, borderColor: cfg.borderColor, boxShadow: `inset 0 0 0 1px ${cfg.borderColor}` }
+                        : { backgroundColor: '#ffffff', color: '#334155', borderColor: '#cbd5e1', boxShadow: 'none' }}
+                      className="portal-standard-filter-chip portal-table-filter-chip flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-colors"
+                      title={`Alternar TCCs com papel de ${cfg.label}`}
                     >
                       <span
-                        className="portal-filter-dot w-2 h-2 rounded-full shrink-0 shadow-2xs"
+                        className="portal-filter-dot h-2 w-2 shrink-0 rounded-full shadow-2xs"
                         style={{ backgroundColor: cfg.borderColor }}
                       />
                       <span className="whitespace-nowrap font-extrabold">{cfg.label}</span>
