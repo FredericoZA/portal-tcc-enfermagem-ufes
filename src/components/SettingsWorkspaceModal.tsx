@@ -49,7 +49,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
 
   const singlePane = sections.length === 1;
   const sheetWorkspace = singlePane && SHEET_SECTION_IDS.has(current.id);
-  const fullBleed = current.fullBleed ?? current.id === 'integrations' || sheetWorkspace;
+  const fullBleed = current.fullBleed ?? (current.id === 'integrations' || sheetWorkspace);
   const singlePaneContent = singlePane && React.isValidElement(current.content)
     ? React.cloneElement(current.content as React.ReactElement<EmbeddedCapableProps>, { embedded: true })
     : current.content;
