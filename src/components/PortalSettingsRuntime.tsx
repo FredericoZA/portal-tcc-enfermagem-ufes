@@ -21,6 +21,24 @@ function replaceText(node: HTMLElement, from: RegExp, to: string) {
   });
 }
 
+function makeWorkspaceDirect(workspace: HTMLElement) {
+  const aside = workspace.querySelector<HTMLElement>('aside');
+  if (aside) aside.style.setProperty('display', 'none', 'important');
+  const main = workspace.querySelector<HTMLElement>('.portal-settings-workspace-main');
+  if (main) {
+    main.style.setProperty('padding', '0', 'important');
+    main.style.setProperty('width', '100%', 'important');
+    main.style.setProperty('max-width', '100%', 'important');
+  }
+  const content = workspace.querySelector<HTMLElement>('.portal-settings-workspace-content');
+  if (content) {
+    content.style.setProperty('width', '100%', 'important');
+    content.style.setProperty('height', '100%', 'important');
+    content.style.setProperty('min-height', '100%', 'important');
+    content.style.setProperty('border-radius', '0', 'important');
+  }
+}
+
 export function PortalSettingsRuntime() {
   useEffect(() => {
     let frame = 0;
@@ -53,7 +71,7 @@ export function PortalSettingsRuntime() {
         integrations.dataset.portalSettingsIdentity = 'false';
         integrations.dataset.portalSettingsIntegrations = 'true';
         replaceText(integrations, /Rodapé e Identidade/gi, 'Integrações e Plataforma');
-        replaceText(integrations, /Responsáveis, contatos, rodapé e identidade operacional\./gi, 'Asten, Google, Supabase, Vercel e demais integrações da plataforma.');
+        replaceText(integrations, /Responsáveis, contatos, rodapé e identidade operacional\./gi, 'Asten, Google, Supabase, Vercel e serviços operacionais do Portal.');
         integrations.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -63,7 +81,8 @@ export function PortalSettingsRuntime() {
           openingAlias = false;
           desiredSyncPane = 'integrations';
           window.setTimeout(configureWorkspace, 0);
-          window.setTimeout(configureWorkspace, 60);
+          window.setTimeout(configureWorkspace, 40);
+          window.setTimeout(configureWorkspace, 120);
         });
         identity.insertAdjacentElement('afterend', integrations);
       }
@@ -80,14 +99,20 @@ export function PortalSettingsRuntime() {
 
       if (title.includes('acesso')) {
         workspace.dataset.portalSheetMode = 'access';
+        workspace.dataset.portalFullBleed = 'true';
+        makeWorkspaceDirect(workspace);
         return;
       }
       if (title.includes('registros de assinatura')) {
         workspace.dataset.portalSheetMode = 'signatures';
+        workspace.dataset.portalFullBleed = 'true';
+        makeWorkspaceDirect(workspace);
         return;
       }
       if (title.includes('registro de logs')) {
         workspace.dataset.portalSheetMode = 'logs';
+        workspace.dataset.portalFullBleed = 'true';
+        makeWorkspaceDirect(workspace);
         return;
       }
       if (title.includes('modelos e variaveis')) {
@@ -103,6 +128,7 @@ export function PortalSettingsRuntime() {
       if (!syncWorkspace) return;
 
       workspace.dataset.portalSettingsPane = desiredSyncPane;
+      workspace.dataset.portalFullBleed = desiredSyncPane === 'integrations' ? 'true' : 'false';
       const wanted = navButtons.find((button) => {
         const label = normalize(button.textContent || '');
         return desiredSyncPane === 'identity'
@@ -113,6 +139,7 @@ export function PortalSettingsRuntime() {
         const selected = wanted.classList.contains('text-white') || wanted.getAttribute('aria-selected') === 'true';
         if (!selected) wanted.click();
       }
+      makeWorkspaceDirect(workspace);
       if (heading) heading.textContent = desiredSyncPane === 'identity' ? 'Rodapé e Identidade' : 'Integrações e Plataforma';
     };
 
