@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 
 const TABLE_KEYS = [
   'defenses',
@@ -21,6 +21,16 @@ const DEFAULT_PAGE_SIZE: Record<TableKey, PageSize> = {
   authorized_access: 25,
   signature_logs: 25,
   audit_logs: 25,
+};
+
+const TABLE_CONTAINER_SELECTORS: Record<TableKey, string[]> = {
+  defenses: ['#public-calendar-cards-section'],
+  acervo: ['#biblioteca-tccs-section'],
+  meus_processos: ['#meus-processos-page-container'],
+  coordinator: ['#coordenador-page-root'],
+  authorized_access: ['#authorized-access-panel'],
+  signature_logs: ['#asten-logs-page'],
+  audit_logs: ['#audit-logs-page'],
 };
 
 const PAGE_SIZE_PREFIX = 'portal_table_page_size_';
@@ -50,66 +60,87 @@ function currentPageKey(key: TableKey) {
   return `${CURRENT_PAGE_PREFIX}${key}`;
 }
 
-function migrateLegacyLimits() {
-  if (typeof window === 'undefined') return;
+function storageKeysForTable(key: TableKey) {
+  const keys = [`default_table_config_${key}`];
   try {
-    for (const key of TABLE_KEYS) {
-      const masterKey = `default_table_config_${key}`;
-      const raw = localStorage.getItem(masterKey);
-      const config = raw ? JSON.parse(raw) : {};
-      const legacy = parsePageSize(config.recordsLimit);
-      if (!localStorage.getItem(pageSizeKey(key))) {
-        localStorage.setItem(pageSizeKey(key), String(legacy || DEFAULT_PAGE_SIZE[key]));
-      }
-      if (config.recordsLimit !== 'all') {
-        config.recordsLimit = 'all';
-        localStorage.setItem(masterKey, JSON.stringify(config));
-      }
-    }
-
-    const localKeys = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean) as string[];
-    for (const storageKey of localKeys) {
-      if (!storageKey.startsWith('portal_user_table_config_')) continue;
-      const key = TABLE_KEYS.find((candidate) => storageKey.endsWith(`_${candidate}`));
-      if (!key) continue;
-      try {
-        const config = JSON.parse(localStorage.getItem(storageKey) || '{}');
-        const legacy = parsePageSize(config.recordsLimit);
-        if (!localStorage.getItem(pageSizeKey(key)) && legacy) {
-          localStorage.setItem(pageSizeKey(key), String(legacy));
-        }
-        if (config.recordsLimit !== 'all') {
-          config.recordsLimit = 'all';
-          localStorage.setItem(storageKey, JSON.stringify(config));
-        }
-      } catch {
-        // Preferência individual inválida não pode bloquear a planilha.
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const candidate = localStorage.key(index);
+      if (candidate?.startsWith('portal_user_table_config_') && candidate.endsWith(`_${key}`)) {
+        keys.push(candidate);
       }
     }
   } catch {
     // localStorage pode estar indisponível em alguns ambientes.
+  }
+  return keys;
+}
+
+function migrateLegacyLimits() {
+  if (typeof window === 'undefined') return;
+  for (const key of TABLE_KEYS) {
+    let preferred: PageSize | null = null;
+    for (const storageKey of storageKeysForTable(key)) {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) continue;
+        const config = JSON.parse(raw);
+        const configured = parsePageSize(config.pageSize ?? config.recordsLimit);
+        if (configured) preferred = configured;
+        if (config.recordsLimit !== 'all') {
+          config.recordsLimit = 'all';
+          if (configured) config.pageSize = configured;
+          localStorage.setItem(storageKey, JSON.stringify(config));
+        }
+      } catch {
+        // Preferência inválida não pode bloquear a planilha.
+      }
+    }
+
+    try {
+      if (!localStorage.getItem(pageSizeKey(key))) {
+        localStorage.setItem(pageSizeKey(key), String(preferred || DEFAULT_PAGE_SIZE[key]));
+      }
+    } catch {
+      // noop
+    }
   }
 }
 
 migrateLegacyLimits();
 
 function tableKey(table: HTMLTableElement): TableKey | null {
-  if (table.closest('#public-calendar-cards-section')) return 'defenses';
-  if (table.closest('#biblioteca-tccs-section')) return 'acervo';
-  if (table.closest('#meus-processos-page-container')) return 'meus_processos';
-  if (table.closest('#coordenador-page-root')) return 'coordinator';
-  if (table.closest('#authorized-access-panel')) return 'authorized_access';
-  if (table.closest('#asten-logs-page')) return 'signature_logs';
-  if (table.closest('#audit-logs-page')) return 'audit_logs';
+  const explicit = table.dataset.portalTableKey as TableKey | undefined;
+  if (explicit && TABLE_KEYS.includes(explicit)) return explicit;
+
+  for (const key of TABLE_KEYS) {
+    if (TABLE_CONTAINER_SELECTORS[key].some((selector) => table.closest(selector))) return key;
+  }
   return null;
 }
 
 function readPageSize(key: TableKey): PageSize {
   try {
-    return parsePageSize(localStorage.getItem(pageSizeKey(key))) || DEFAULT_PAGE_SIZE[key];
+    const direct = parsePageSize(localStorage.getItem(pageSizeKey(key)));
+    if (direct) return direct;
+
+    for (const storageKey of storageKeysForTable(key)) {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) continue;
+      try {
+        const config = JSON.parse(raw);
+        const configured = parsePageSize(config.pageSize ?? config.recordsLimit);
+        if (configured) {
+          localStorage.setItem(pageSizeKey(key), String(configured));
+          return configured;
+        }
+      } catch {
+        // continua buscando outra preferência válida
+      }
+    }
   } catch {
-    return DEFAULT_PAGE_SIZE[key];
+    // noop
   }
+  return DEFAULT_PAGE_SIZE[key];
 }
 
 function readCurrentPage(key: TableKey) {
@@ -154,30 +185,58 @@ function renameProcessHeader(header: HTMLTableCellElement) {
   let current: Node | null;
   while ((current = walker.nextNode())) nodes.push(current as Text);
 
-  nodes.forEach((node) => {
-    if (node.parentElement?.closest('.portal-core-column-menu,.portal-core-resizer')) return;
-    node.data = node.data
-      .replace(/n[º°o]?\.?\s*do\s*processo/gi, 'Processo')
-      .replace(/n[uú]mero\s+do\s*processo/gi, 'Processo')
-      .replace(/^\s*protocolo\s*$/gi, 'Processo');
-  });
+  for (const node of nodes) {
+    if (node.parentElement?.closest('.portal-core-column-menu,.portal-core-resizer')) continue;
+    const value = normalize(node.data);
+    if (!value) continue;
+    if (value.includes('processo') || value === 'protocolo') {
+      if (node.data !== 'Processo') node.data = 'Processo';
+      return;
+    }
+  }
+}
+
+function opaqueColor(value: string) {
+  if (!value || value === 'transparent' || value === 'rgba(0, 0, 0, 0)') return '';
+  const match = value.match(/^rgba?\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)(?:\s*,\s*(\d*(?:\.\d+)?))?\s*\)$/i);
+  if (!match) return value;
+  const red = Number(match[1]);
+  const green = Number(match[2]);
+  const blue = Number(match[3]);
+  const alpha = match[4] === undefined || match[4] === '' ? 1 : Number(match[4]);
+  if (alpha >= 1) return `rgb(${Math.round(red)}, ${Math.round(green)}, ${Math.round(blue)})`;
+  const blend = (channel: number) => Math.round((channel * alpha) + (255 * (1 - alpha)));
+  return `rgb(${blend(red)}, ${blend(green)}, ${blend(blue)})`;
 }
 
 function rowBackground(row: HTMLTableRowElement) {
-  const rowColor = getComputedStyle(row).backgroundColor;
-  if (rowColor && rowColor !== 'rgba(0, 0, 0, 0)' && rowColor !== 'transparent') return rowColor;
+  const rowColor = opaqueColor(getComputedStyle(row).backgroundColor);
+  if (rowColor) return rowColor;
   const firstCell = row.cells[0] as HTMLTableCellElement | undefined;
-  const cellColor = firstCell ? getComputedStyle(firstCell).backgroundColor : '';
-  if (cellColor && cellColor !== 'rgba(0, 0, 0, 0)' && cellColor !== 'transparent') return cellColor;
+  const cellColor = firstCell ? opaqueColor(getComputedStyle(firstCell).backgroundColor) : '';
+  if (cellColor) return cellColor;
+  if (row.className.includes('bg-emerald-50')) return '#f0fdf4';
   return '#ffffff';
+}
+
+function findScrollHost(table: HTMLTableElement) {
+  return table.closest<HTMLElement>('[data-portal-scroll-host="true"],.portal-spreadsheet-scroll-host,.table-sticky-container,.overflow-auto,.overflow-x-auto') || table.parentElement;
 }
 
 function markSpreadsheet(table: HTMLTableElement) {
   const key = tableKey(table);
   if (!key || !table.tHead?.rows.length || !table.tBodies.length) return;
 
+  table.dataset.portalTableKey = key;
   table.dataset.portalSpreadsheet = key;
   table.classList.add('portal-runtime-spreadsheet');
+  table.tHead.dataset.portalStickyThead = 'true';
+
+  const host = findScrollHost(table);
+  if (host) {
+    host.dataset.portalScrollHost = 'true';
+    host.classList.add('portal-spreadsheet-scroll-host');
+  }
 
   const headerRow = table.tHead.rows[table.tHead.rows.length - 1];
   const headers = Array.from(headerRow.cells) as HTMLTableCellElement[];
@@ -190,7 +249,10 @@ function markSpreadsheet(table: HTMLTableElement) {
     || normalize(header.dataset.portalColumnLabel || '') === 'selecao'
     || headerLabel(header) === 'selecao');
 
-  const processIndex = headers.findIndex(isProcessHeader);
+  let processIndex = headers.findIndex(isProcessHeader);
+  if (processIndex < 0 && (key === 'defenses' || key === 'acervo' || key === 'meus_processos')) {
+    processIndex = 0;
+  }
 
   if (selectionIndex >= 0) {
     const selectionHeader = headers[selectionIndex];
@@ -207,6 +269,8 @@ function markSpreadsheet(table: HTMLTableElement) {
     processHeader.dataset.portalStickyProcess = 'true';
     if (selectionIndex >= 0 && selectionIndex < processIndex) {
       processHeader.dataset.portalAfterSelection = 'true';
+    } else {
+      delete processHeader.dataset.portalAfterSelection;
     }
   }
 
@@ -220,6 +284,7 @@ function markSpreadsheet(table: HTMLTableElement) {
           selectionCell.dataset.portalStickySelection = 'true';
           selectionCell.querySelectorAll<HTMLButtonElement>('button').forEach((button) => {
             button.classList.add('portal-sheet-checkbox');
+            if (!button.getAttribute('aria-label')) button.setAttribute('aria-label', 'Selecionar item');
           });
         }
       }
@@ -230,15 +295,13 @@ function markSpreadsheet(table: HTMLTableElement) {
           processCell.dataset.portalStickyProcess = 'true';
           if (selectionIndex >= 0 && selectionIndex < processIndex) {
             processCell.dataset.portalAfterSelection = 'true';
+          } else {
+            delete processCell.dataset.portalAfterSelection;
           }
         }
       }
     });
   });
-}
-
-function findScrollHost(table: HTMLTableElement) {
-  return table.closest<HTMLElement>('.table-sticky-container,[data-portal-scroll-host="true"],.overflow-x-auto') || table.parentElement;
 }
 
 function rowIsExternallyHidden(row: HTMLTableRowElement) {
@@ -260,20 +323,19 @@ function ensureSinglePager(host: HTMLElement, key: TableKey) {
   const parent = host.parentElement;
   if (!parent) return null;
 
-  const existing = Array.from(parent.children).filter((node): node is HTMLElement =>
-    node instanceof HTMLElement
-    && node.classList.contains('portal-spreadsheet-pager')
-    && node.dataset.portalTableKey === key);
-
-  const pager = existing.shift() || document.createElement('nav');
-  existing.forEach((duplicate) => duplicate.remove());
+  const selector = `.portal-spreadsheet-pager[data-portal-table-key="${key}"]`;
+  const allExisting = Array.from(document.querySelectorAll<HTMLElement>(selector));
+  const pager = allExisting.shift() || document.createElement('nav');
+  allExisting.forEach((duplicate) => duplicate.remove());
 
   pager.className = 'portal-spreadsheet-pager';
   pager.dataset.portalTableKey = key;
+  pager.dataset.portalGenerated = 'true';
   pager.setAttribute('aria-label', 'Paginação da planilha');
 
-  if (!pager.parentElement) host.insertAdjacentElement('afterend', pager);
-  else if (pager.previousElementSibling !== host) host.insertAdjacentElement('afterend', pager);
+  if (pager.parentElement !== parent || pager.previousElementSibling !== host) {
+    host.insertAdjacentElement('afterend', pager);
+  }
 
   return pager;
 }
@@ -306,8 +368,9 @@ function applyPagination(table: HTMLTableElement) {
   if (!pager) return;
 
   const signature = `${pageSize}|${current}|${visibleRows.length}|${totalPages}`;
-  if (pager.dataset.portalSignature === signature) return;
+  if (pager.dataset.portalSignature === signature && pager.childElementCount > 0) return;
   pager.dataset.portalSignature = signature;
+  pager.dataset.portalTotalPages = String(totalPages);
   pager.replaceChildren();
 
   const controls = document.createElement('div');
@@ -319,6 +382,7 @@ function applyPagination(table: HTMLTableElement) {
     button.textContent = label;
     button.disabled = disabled;
     button.dataset.active = active ? 'true' : 'false';
+    button.setAttribute('aria-current', active ? 'page' : 'false');
     button.addEventListener('click', () => {
       saveCurrentPage(key, page);
       pager.dataset.portalSignature = '';
@@ -345,47 +409,20 @@ function applyPagination(table: HTMLTableElement) {
 }
 
 function removeOrphanPagers() {
-  document.querySelectorAll<HTMLElement>('.portal-spreadsheet-pager').forEach((pager) => {
-    const key = pager.dataset.portalTableKey;
-    if (!key) return;
-    const hasOwner = Array.from(document.querySelectorAll<HTMLTableElement>('table[data-portal-spreadsheet]'))
-      .some((table) => table.dataset.portalSpreadsheet === key && findScrollHost(table)?.nextElementSibling === pager);
-    if (!hasOwner) pager.remove();
-  });
-}
-
-function syncPageSizeFromSettings() {
-  document.querySelectorAll<HTMLTableElement>('table').forEach((table) => {
-    const key = tableKey(table);
-    if (!key) return;
-    const configKeys = [
-      `default_table_config_${key}`,
-      ...Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index) || '')
-        .filter((storageKey) => storageKey.startsWith('portal_user_table_config_') && storageKey.endsWith(`_${key}`)),
-    ];
-
-    for (const storageKey of configKeys) {
-      try {
-        const raw = localStorage.getItem(storageKey);
-        if (!raw) continue;
-        const config = JSON.parse(raw);
-        const size = parsePageSize(config.recordsLimit);
-        if (size) {
-          localStorage.setItem(pageSizeKey(key), String(size));
-          config.recordsLimit = 'all';
-          localStorage.setItem(storageKey, JSON.stringify(config));
-          saveCurrentPage(key, 1);
-          break;
-        }
-      } catch {
-        // noop
-      }
+  document.querySelectorAll<HTMLElement>('.portal-spreadsheet-pager[data-portal-generated="true"]').forEach((pager) => {
+    const key = pager.dataset.portalTableKey as TableKey | undefined;
+    if (!key) {
+      pager.remove();
+      return;
     }
+    const ownerExists = Array.from(document.querySelectorAll<HTMLTableElement>('table'))
+      .some((table) => table.isConnected && tableKey(table) === key);
+    if (!ownerExists) pager.remove();
   });
 }
 
 export const PortalSpreadsheetRuntime = () => {
-  useEffect(() => {
+  useLayoutEffect(() => {
     const unbinders = new Map<HTMLElement, () => void>();
     let frame = 0;
 
@@ -400,15 +437,6 @@ export const PortalSpreadsheetRuntime = () => {
       let startTop = 0;
       let suppressClickUntil = 0;
 
-      const stop = () => {
-        if (dragging) suppressClickUntil = performance.now() + 260;
-        dragging = false;
-        armed = false;
-        host.classList.remove('portal-sheet-pointer-down', 'portal-sheet-dragging');
-        window.removeEventListener('mousemove', move);
-        window.removeEventListener('mouseup', stop);
-      };
-
       const move = (event: MouseEvent) => {
         if (!armed) return;
         const dx = event.clientX - startX;
@@ -419,6 +447,15 @@ export const PortalSpreadsheetRuntime = () => {
         event.preventDefault();
         if (host.scrollWidth > host.clientWidth + 1) host.scrollLeft = startLeft - dx;
         if (host.scrollHeight > host.clientHeight + 1) host.scrollTop = startTop - dy;
+      };
+
+      const stop = () => {
+        if (dragging) suppressClickUntil = performance.now() + 260;
+        dragging = false;
+        armed = false;
+        host.classList.remove('portal-sheet-pointer-down', 'portal-sheet-dragging');
+        window.removeEventListener('mousemove', move);
+        window.removeEventListener('mouseup', stop);
       };
 
       const down = (event: MouseEvent) => {
@@ -487,7 +524,6 @@ export const PortalSpreadsheetRuntime = () => {
     const refresh = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        syncPageSizeFromSettings();
         document.querySelectorAll<HTMLTableElement>('table').forEach((table) => {
           if (!tableKey(table)) return;
           markSpreadsheet(table);
@@ -500,9 +536,12 @@ export const PortalSpreadsheetRuntime = () => {
     };
 
     const observer = new MutationObserver(refresh);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
     window.addEventListener('storage', refresh);
     window.addEventListener('portal-table-layouts-updated', refresh as EventListener);
+    window.addEventListener('global_table_layouts_changed', refresh as EventListener);
+    window.addEventListener('resize', refresh);
+    window.addEventListener('focus', refresh);
 
     refresh();
 
@@ -511,6 +550,9 @@ export const PortalSpreadsheetRuntime = () => {
       observer.disconnect();
       window.removeEventListener('storage', refresh);
       window.removeEventListener('portal-table-layouts-updated', refresh as EventListener);
+      window.removeEventListener('global_table_layouts_changed', refresh as EventListener);
+      window.removeEventListener('resize', refresh);
+      window.removeEventListener('focus', refresh);
       unbinders.forEach((unbind) => unbind());
       unbinders.clear();
     };
