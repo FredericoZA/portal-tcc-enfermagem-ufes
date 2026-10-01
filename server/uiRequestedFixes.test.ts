@@ -11,8 +11,8 @@ const workspace = read('src/components/SettingsWorkspaceModal.tsx');
 const integrations = read('src/components/InfrastructureIntegrationsPanel.tsx');
 
 test('planilhas congelam cabeçalho e coluna Processo e mantêm rolagem vertical/horizontal', () => {
-  assert.match(runtime, /data\.portalStickyHeader = 'true'/);
-  assert.match(runtime, /data\.portalStickyProcess = 'true'/);
+  assert.match(runtime, /dataset\.portalStickyHeader = 'true'/);
+  assert.match(runtime, /dataset\.portalStickyProcess = 'true'/);
   assert.match(runtime, /host\.scrollTop \+= event\.deltaY/);
   assert.match(runtime, /host\.scrollLeft \+=/);
   assert.match(css, /th\[data-portal-sticky-process="true"\][\s\S]*left: 0/);
