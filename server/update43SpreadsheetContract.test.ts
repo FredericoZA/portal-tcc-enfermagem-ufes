@@ -61,12 +61,12 @@ test('calendário usa fins de semana estreitos e preview seguro', () => {
   assert.match(css, /--portal-defended-bg/);
 });
 
-test('Meus TCCs colore apenas pílula de processo por vínculo e simplifica datas', () => {
+test('Meus TCCs colore a pílula de processo por vínculo e simplifica datas', () => {
   const page = read('src/pages/MeusProcessosPage.tsx');
-  const css = read('src/portal-spreadsheet-runtime.css');
   assert.match(page, /portal-role-process-button/);
-  assert.match(css, /\.portal-role-process-button/);
-  assert.match(css, /--portal-role-bg/);
+  assert.match(page, /--portal-role-bg/);
+  assert.match(page, /--portal-role-border/);
+  assert.match(page, /--portal-role-text/);
   assert.match(page, /defesaDataHora/);
 });
 
