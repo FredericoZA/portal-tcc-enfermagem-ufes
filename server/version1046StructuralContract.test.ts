@@ -81,20 +81,23 @@ test('paginação preserva todas as linhas React e cria páginas reais pela cama
   assert.match(runtime, /Math\.ceil\(visibleRows\.length \/ pageSize\)/);
   assert.match(runtime, /Anterior/);
   assert.match(runtime, /Próxima/);
-  assert.match(runtime, /linhas por pagina/);
-  assert.match(runtime, /savePageSize\(key, size\)/);
+  assert.match(runtime, /syncPageSizeFromSettings/);
+  assert.match(runtime, /localStorage\.setItem\(pageSizeKey\(key\), String\(size\)\)/);
   assert.match(runtime, /portal_table_page_size_/);
 });
 
-test('planilhas têm Todos combinável, Processo fixo e seleção do Presidente', () => {
+test('planilhas mantêm Processo fixo e filtros/seleção sob responsabilidade das páginas', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
-  assert.match(runtime, /enhanceMyTccFilters/);
-  assert.match(runtime, /enhancePresidentFilters/);
+  const meusTccs = read('src/pages/MeusProcessosPage.tsx');
+  const coordinator = read('src/pages/CoordenadorPage.tsx');
   assert.match(runtime, /portalStickyProcess/);
   assert.match(runtime, /portalStickySelection/);
-  assert.match(runtime, /portal-runtime-all-filter/);
-  assert.match(runtime, /selectedMyTccRoles\.clear\(\)/);
   assert.match(runtime, /portal-sheet-checkbox/);
+  assert.doesNotMatch(runtime, /enhanceMyTccFilters|enhancePresidentFilters|portal-president-all-view/);
+  assert.match(meusTccs, /selectedRoleCategories/);
+  assert.match(meusTccs, /toggleRoleCategory/);
+  assert.match(coordinator, /selectedIds/);
+  assert.match(coordinator, /data-portal-selection-column="true"/);
 });
 
 test('rolagem canônica usa mouse no documento e wheel no mesmo host', () => {
