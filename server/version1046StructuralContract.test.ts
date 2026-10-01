@@ -71,27 +71,29 @@ test('runtime tabular canônico substitui as camadas 1.0.52 e 1.0.53', () => {
   assert.doesNotMatch(main, /portal-version-1052\.css/);
   assert.doesNotMatch(main, /portal-version-1053\.css/);
   assert.match(css, /data-portal-sticky-process/);
-  assert.match(css, /data-portal-sheet-mode/);
+  assert.match(css, /data-portal-full-bleed/);
 });
 
-test('paginação preserva todas as linhas React e cria páginas reais', () => {
+test('paginação preserva todas as linhas React e cria páginas reais pela camada canônica', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   assert.match(runtime, /config\.recordsLimit = 'all'/);
   assert.match(runtime, /portal-runtime-page-hidden/);
   assert.match(runtime, /Math\.ceil\(visibleRows\.length \/ pageSize\)/);
   assert.match(runtime, /Anterior/);
   assert.match(runtime, /Próxima/);
-  assert.match(runtime, /Linhas por página/);
+  assert.match(runtime, /linhas por pagina/);
+  assert.match(runtime, /savePageSize\(key, size\)/);
   assert.match(runtime, /portal_table_page_size_/);
 });
 
-test('planilhas têm Todos, Processo fixo e seleção do Presidente', () => {
+test('planilhas têm Todos combinável, Processo fixo e seleção do Presidente', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   assert.match(runtime, /enhanceMyTccFilters/);
   assert.match(runtime, /enhancePresidentFilters/);
   assert.match(runtime, /portalStickyProcess/);
   assert.match(runtime, /portalStickySelection/);
-  assert.match(runtime, /portalAllActive/);
+  assert.match(runtime, /portal-runtime-all-filter/);
+  assert.match(runtime, /selectedMyTccRoles\.clear\(\)/);
   assert.match(runtime, /portal-sheet-checkbox/);
 });
 
