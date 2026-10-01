@@ -3,7 +3,6 @@ import { GraduationCap } from 'lucide-react';
 import { createRoot, Root } from 'react-dom/client';
 
 const injectedRoots = new WeakMap<Element, Root>();
-const defenseScrollHosts = new WeakSet<HTMLElement>();
 
 function normalize(value: string) {
   return value
@@ -96,56 +95,33 @@ function replaceHeaderLabel(header: HTMLTableCellElement) {
   }
 }
 
-function canonicalProcessLabel(raw: string) {
-  const clean = raw
-    .replace(/^TCC\s*[-–—/]?\s*/i, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (!clean) return '';
-  return `TCC - ${clean}`;
-}
-
 function replaceProcessCellLabel(cell: HTMLTableCellElement) {
-  const current = (cell.textContent || '').replace(/\s+/g, ' ').trim();
-  if (!current || current === '—') return;
-  const desired = canonicalProcessLabel(current);
-  if (!desired || current === desired) return;
-
   const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
   const nodes: Text[] = [];
   let node: Node | null;
   while ((node = walker.nextNode())) nodes.push(node as Text);
 
-  const target = nodes.find((text) => /\d/.test(text.data) || /TCC/i.test(text.data));
-  if (target) target.data = desired;
-}
+  const processNodes = nodes.filter((text) => {
+    const value = text.data.replace(/\s+/g, ' ').trim();
+    return value && !/abrir\s+tcc/i.test(value);
+  });
+  if (processNodes.length === 0) return;
 
-function bindDefenseWheel(host: HTMLElement) {
-  if (defenseScrollHosts.has(host)) return;
-  defenseScrollHosts.add(host);
+  const combined = processNodes.map((text) => text.data).join(' ');
+  const numericTokens = combined.match(/\d+/g) || [];
+  const rawCode = numericTokens[numericTokens.length - 1] || '';
+  if (!rawCode) return;
 
-  host.addEventListener('wheel', (event) => {
-    const target = event.target as HTMLElement;
-    if (target.closest('select,input,textarea')) return;
+  const code = /^\d{1,4}$/.test(rawCode) ? rawCode.padStart(4, '0') : rawCode;
+  const desired = `TCC - ${code}`;
+  const target = processNodes.find((text) => /TCC/i.test(text.data)) || processNodes.find((text) => /\d/.test(text.data));
+  if (!target) return;
 
-    const canX = host.scrollWidth > host.clientWidth + 1;
-    const canY = host.scrollHeight > host.clientHeight + 1;
-    if (!canX && !canY) return;
-
-    const horizontalIntent = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
-    if (horizontalIntent && canX) {
-      const before = host.scrollLeft;
-      host.scrollLeft += Math.abs(event.deltaX) > 0 ? event.deltaX : event.deltaY;
-      if (host.scrollLeft !== before) event.preventDefault();
-      return;
-    }
-
-    if (canY && event.deltaY !== 0) {
-      const before = host.scrollTop;
-      host.scrollTop += event.deltaY;
-      if (host.scrollTop !== before) event.preventDefault();
-    }
-  }, { passive: false });
+  target.data = desired;
+  processNodes.forEach((text) => {
+    if (text === target) return;
+    if (/TCC/i.test(text.data) || /\d/.test(text.data)) text.data = '';
+  });
 }
 
 function reconcileDefenseSpreadsheet() {
@@ -173,9 +149,6 @@ function reconcileDefenseSpreadsheet() {
         replaceProcessCellLabel(cell);
       });
     });
-
-    const host = table.closest<HTMLElement>('.portal-spreadsheet-scroll-host,[data-portal-scroll-host="true"],.table-sticky-container');
-    if (host) bindDefenseWheel(host);
   });
 }
 
