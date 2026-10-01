@@ -1599,7 +1599,7 @@ export async function createPortalApp() {
       const emailConfigPatch={...settingsPatch.emailConfig};
       if(Object.prototype.hasOwnProperty.call(emailConfigPatch,'roomReservationDepartmentEmail')){
         const departmentEmail=normalizeEmail(String(emailConfigPatch.roomReservationDepartmentEmail||''));
-        if(departmentEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(departmentEmail))return res.status(400).json({error:'Informe um e-mail válido para o Departamento de Enfermagem.'});
+        if(departmentEmail&&!isValidPortalEmail(departmentEmail))return res.status(400).json({error:'Informe um e-mail válido para o Departamento de Enfermagem.'});
         emailConfigPatch.roomReservationDepartmentEmail=departmentEmail;
       }
       settingsPatch.emailConfig={...(currentSettings.emailConfig||{}),...emailConfigPatch};
