@@ -158,7 +158,7 @@ function renameProcessHeader(header: HTMLTableCellElement) {
     if (node.parentElement?.closest('.portal-core-column-menu,.portal-core-resizer')) return;
     node.data = node.data
       .replace(/n[º°o]?\.?\s*do\s*processo/gi, 'Processo')
-      .replace(/n[uú]mero\s+do\s+processo/gi, 'Processo')
+      .replace(/n[uú]mero\s+do\s*processo/gi, 'Processo')
       .replace(/^\s*protocolo\s*$/gi, 'Processo');
   });
 }
@@ -212,7 +212,7 @@ function markSpreadsheet(table: HTMLTableElement) {
 
   Array.from(table.tBodies).forEach((tbody) => {
     Array.from(tbody.rows).forEach((row) => {
-      row.style.setProperty('--portal-sticky-row-bg', rowBackground(row));
+      (row as HTMLElement).style.setProperty('--portal-sticky-row-bg', rowBackground(row));
 
       if (selectionIndex >= 0) {
         const selectionCell = row.cells[selectionIndex] as HTMLTableCellElement | undefined;
@@ -245,7 +245,7 @@ function rowIsExternallyHidden(row: HTMLTableRowElement) {
   return row.classList.contains('portal-core-filter-hidden')
     || row.dataset.portalFilterHidden === 'true'
     || row.hidden
-    || row.style.display === 'none';
+    || (row as HTMLElement).style.display === 'none';
 }
 
 function pageList(totalPages: number, current: number) {
