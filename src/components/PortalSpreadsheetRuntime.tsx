@@ -202,7 +202,8 @@ function opaqueColor(value: string) {
  * uma célula de conteúdo opaca e só então usamos o fundo da própria linha.
  */
 function rowBackground(row: HTMLTableRowElement, selectionIndex: number, processIndex: number) {
-  const preferredIndexes = Array.from(row.cells.keys()).filter((index) => index !== selectionIndex && index !== processIndex);
+  const preferredIndexes = Array.from({ length: row.cells.length }, (_, index) => index)
+    .filter((index) => index !== selectionIndex && index !== processIndex);
   for (const index of preferredIndexes) {
     const color = opaqueColor(getComputedStyle(row.cells[index]).backgroundColor);
     if (color) return color;
