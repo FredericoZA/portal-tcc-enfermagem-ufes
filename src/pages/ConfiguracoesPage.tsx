@@ -310,7 +310,7 @@ export const ConfiguracoesPage: React.FC = () => {
   const [siteLayout, setSiteLayout] = useState<SiteLayoutConfig>(() => loadSiteLayoutConfig());
   const [unifiedEditorOpen, setUnifiedEditorOpen] = useState(false);
   const [personalizationHubOpen, setPersonalizationHubOpen] = useState(false);
-  const [activeSettingsPanel, setActiveSettingsPanel] = useState<'sync' | 'access' | 'models' | 'signatures' | 'logs' | null>(null);
+  const [activeSettingsPanel, setActiveSettingsPanel] = useState<'identity' | 'integrations' | 'access' | 'models' | 'signatures' | 'logs' | null>(null);
   const [unifiedEditorTab, setUnifiedEditorTab] = useState<UnifiedEditorTab>('site_header');
   const [unifiedEditorScope, setUnifiedEditorScope] = useState<UnifiedEditorScope>('site_header');
 
@@ -2228,7 +2228,8 @@ export const ConfiguracoesPage: React.FC = () => {
           <section id="portal-settings-hub" className="portal-settings-list space-y-2">
             {[
               { id: 'personalization', title: 'Personalização do Portal', text: 'Aparência, navegação, páginas, tabelas e pop-ups.', icon: Palette },
-              { id: 'sync', title: 'Sincronização', text: 'Rodapé, Asten, Google, Supabase, Vercel e demais integrações.', icon: Sliders },
+              { id: 'identity', title: 'Rodapé e Identidade', text: 'Responsáveis, contatos, rodapé e identidade operacional.', icon: Building2 },
+              { id: 'integrations', title: 'Integrações e Plataforma', text: 'Asten, Google, Supabase, Vercel e serviços operacionais do Portal.', icon: Globe },
               { id: 'access', title: 'Acesso', text: 'Autorizações e pessoas com acesso ao Portal.', icon: Lock },
               { id: 'models', title: 'Modelos e Variáveis', text: 'Documentos, e-mails, formulários, fluxos e variáveis.', icon: Layers },
               { id: 'signatures', title: 'Registros de Assinatura', text: 'Fila, método, situação e histórico de assinatura.', icon: FileCheck2 },
@@ -2245,13 +2246,14 @@ export const ConfiguracoesPage: React.FC = () => {
           {activeSettingsPanel && (
             <SettingsWorkspaceModal
               open
-              title={activeSettingsPanel === 'sync' ? 'Sincronização' : activeSettingsPanel === 'access' ? 'Acesso' : activeSettingsPanel === 'models' ? 'Modelos e Variáveis' : activeSettingsPanel === 'signatures' ? 'Registros de Assinatura' : 'Registro de Logs'}
-              icon={activeSettingsPanel === 'sync' ? Sliders : activeSettingsPanel === 'access' ? Lock : activeSettingsPanel === 'models' ? Layers : activeSettingsPanel === 'signatures' ? FileCheck2 : ClipboardList}
+              title={activeSettingsPanel === 'identity' ? 'Rodapé e Identidade' : activeSettingsPanel === 'integrations' ? 'Integrações e Plataforma' : activeSettingsPanel === 'access' ? 'Acesso' : activeSettingsPanel === 'models' ? 'Modelos e Variáveis' : activeSettingsPanel === 'signatures' ? 'Registros de Assinatura' : 'Registro de Logs'}
+              icon={activeSettingsPanel === 'identity' ? Building2 : activeSettingsPanel === 'integrations' ? Globe : activeSettingsPanel === 'access' ? Lock : activeSettingsPanel === 'models' ? Layers : activeSettingsPanel === 'signatures' ? FileCheck2 : ClipboardList}
               onClose={() => setActiveSettingsPanel(null)}
               sections={
-                activeSettingsPanel === 'sync' ? [
+                activeSettingsPanel === 'identity' ? [
                   { id: 'identity', label: 'Rodapé e identidade', description: 'Responsáveis, contatos e identidade operacional.', icon: Building2, content: settings ? <section className="rounded-xl border border-slate-300 bg-[#d5dce0] p-3"><MasterAndPresidentConfigForm settings={settings} onSettingsUpdated={() => { void refreshAuth(); showNotification('Configurações atualizadas.'); }} showNotification={showNotification} /><CommissionIdentityPanel isMaster /></section> : null },
-                  { id: 'integrations', label: 'Integrações e plataformas', description: 'Asten, Google, Supabase, Vercel e serviços externos.', icon: Globe, content: <InfrastructureIntegrationsPanel isMaster /> },
+                ] : activeSettingsPanel === 'integrations' ? [
+                  { id: 'integrations', label: 'Integrações e plataformas', description: 'Asten, Google, Supabase, Vercel e serviços externos.', icon: Globe, fullBleed: true, content: <InfrastructureIntegrationsPanel isMaster /> },
                 ] : activeSettingsPanel === 'access' ? [
                   { id: 'authorizations', label: 'Autorizações de acesso', description: 'Gerencie discentes e demais perfis autorizados.', icon: Lock, content: <AuthorizedStudentsPanel canManage /> },
                 ] : activeSettingsPanel === 'models' ? [
