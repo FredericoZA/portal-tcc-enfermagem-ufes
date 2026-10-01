@@ -11,16 +11,16 @@ test('update 39 mantém espaço verde abaixo das duas barras de filtro', async (
   assert.match(css, /padding-bottom:\s*0\.95rem\s*!important/);
 });
 
-test('update 39 substitui cadastro administrativo duplicado por Presidência Secretaria e Comissão', async () => {
+test('identidade centraliza Presidência Secretaria e Comissão sem duplicar troca administrativa', async () => {
   const panel = await source('src/components/CommissionIdentityPanel.tsx');
   assert.ok(panel.includes('Presidente da Comissão'));
   assert.ok(panel.includes('Secretaria'));
   assert.ok(panel.includes('Membros da Comissão'));
-  assert.ok(panel.includes('portal-president-master-transfer'));
+  assert.ok(panel.includes('if (!isMaster) return null'));
+  assert.ok(panel.includes('apiClient.updateSettings'));
   assert.ok(!panel.includes('Nome da Secretaria / Administrador Master'));
-  assert.ok(panel.includes("startTransfer('MASTER_ADMIN'"));
-  assert.ok(panel.includes("startTransfer('COMMISSION_PRESIDENT'"));
-  assert.ok(panel.includes('apiClient.createAdministrationTransfer(role, normalized)'));
+  assert.ok(!panel.includes('portal-president-master-transfer'));
+  assert.ok(!panel.includes('createAdministrationTransfer'));
 });
 
 test('update 39 abre cadastro individual e envio de lista em popups compactos', async () => {
