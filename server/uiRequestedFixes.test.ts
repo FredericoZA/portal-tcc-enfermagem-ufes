@@ -38,8 +38,10 @@ test('Meus TCCs permite combinação livre de filtros e mantém cores semântica
 });
 
 test('Lista de Defesas usa Processo e normaliza botão para TCC - número', () => {
-  assert.match(runtime, /replace\(\/n\[º°o\]\?/);
+  assert.match(runtime, /function normalizeDefenseProcessCell/);
+  assert.match(runtime, /const number = \(parts\[1\]\.textContent \|\| ''\)\.trim\(\)/);
   assert.match(runtime, /parts\[0\]\.textContent = `TCC - \$\{number\}`/);
+  assert.match(runtime, /parts\[1\]\.style\.display = 'none'/);
   assert.match(runtime, /if \(key === 'defenses'\) normalizeDefenseProcessCell\(cell\)/);
 });
 
