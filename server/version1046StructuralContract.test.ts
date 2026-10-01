@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('release atual é 1.0.57', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.57');
+test('release atual é 1.0.58', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.58');
 });
 
 test('estado de defesa não sobrescreve cores de vínculo e assinatura', () => {
@@ -38,9 +38,11 @@ test('configurações usam barras e runtime canônico de workspace', () => {
   assert.doesNotMatch(config, /portal-settings-hub-card/);
   assert.match(modal, /var\(--portal-green-header\)/);
   assert.match(modal, /singlePane = sections\.length === 1/);
-  assert.match(runtime, /Rodapé e Identidade/);
-  assert.match(runtime, /Integrações e Plataforma/);
-  assert.match(runtime, /data-portal-settings-integrations/);
+  assert.match(config, /Rodapé e Identidade/);
+  assert.match(config, /Integrações e Plataforma/);
+  assert.match(config, /activeSettingsPanel === 'identity'/);
+  assert.match(config, /activeSettingsPanel === 'integrations'/);
+  assert.doesNotMatch(runtime, /cloneNode/);
 });
 
 test('estúdio de modelos delega navegação ao workspace externo e preserva cabeçalho', () => {

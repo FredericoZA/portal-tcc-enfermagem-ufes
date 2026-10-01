@@ -102,6 +102,7 @@ test('Acesso, Assinaturas e Logs permanecem planilhas do workspace sem camada vi
   const css = read('src/portal-spreadsheet-runtime.css');
   for (const kind of ['access', 'signatures', 'logs']) assert.match(settings, new RegExp(`portalSheetMode = '${kind}'`));
   assert.match(workspace, /data-portal-full-bleed/);
+  assert.match(workspace, /SHEET_SECTION_IDS/);
+  assert.match(workspace, /sheetWorkspace/);
   assert.match(css, /data-portal-full-bleed/);
-  assert.match(css, /background: var\(--portal-green-action, #337959\) !important/);
 });

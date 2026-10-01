@@ -912,7 +912,7 @@ async function executeConfiguredWorkflowEvent(process:ProcessData,eventCode:Work
     const latest=studioFormSubmissionsStore.filter(item=>item.processId===process.id&&item.formId===customFormEvent[1]).sort((a,b)=>b.submittedAt.localeCompare(a.submittedAt))[0];
     if(!latest||latest.archiveStatus!=='ARCHIVED')return;
   }
-  const effectiveVariables={...(process.registrationAnswers||{}),...historicalStudioAnswers(process.id),...(extraVariables||{}),DEPARTAMENTO_EMAIL:operationalConfig(studio).reservation.departmentEmail,LOCAL_ALTERNATIVO:process.defesa.alternateLocation||''};
+  const effectiveVariables={...(process.registrationAnswers||{}),...historicalStudioAnswers(process.id),...(extraVariables||{}),DEPARTAMENTO_EMAIL:normalizeEmail(String(currentSettings.emailConfig?.roomReservationDepartmentEmail||operationalConfig(studio).reservation.departmentEmail||'')),LOCAL_ALTERNATIVO:process.defesa.alternateLocation||''};
   const run=await executeWorkflowEvent(studio,{process,eventCode,actorEmail,actorRoles:getActiveProcessRoles(actorEmail,process.id),extraVariables:effectiveVariables,completedActions:resumeRun?.actions},{
     createDocument:async({template,idempotencyKey,variables})=>executeConfiguredDocumentAction(process,template,actorEmail,idempotencyKey,variables,eventCode),
     createFormTask:async({form,idempotencyKey})=>({externalId:`form_task_${String(form.id||idempotencyKey)}`}),
@@ -1595,6 +1595,15 @@ export async function createPortalApp() {
     }
     const before = { ...currentSettings };
     const settingsPatch={...(req.body||{})};for(const protectedKey of ['courseCoordinatorEmail','courseCoordinatorName','documentModels','masterEmail','ownerEmail','commissionPresidentEmail','masterRecoveryEmails','sessionValidAfter','driveRootFolderId','calendarId','installationProfile','academicCycles','featureFlags'])delete settingsPatch[protectedKey];
+    if(settingsPatch.emailConfig&&typeof settingsPatch.emailConfig==='object'&&!Array.isArray(settingsPatch.emailConfig)){
+      const emailConfigPatch={...settingsPatch.emailConfig};
+      if(Object.prototype.hasOwnProperty.call(emailConfigPatch,'roomReservationDepartmentEmail')){
+        const departmentEmail=normalizeEmail(String(emailConfigPatch.roomReservationDepartmentEmail||''));
+        if(departmentEmail&&!isValidPortalEmail(departmentEmail))return res.status(400).json({error:'Informe um e-mail válido para o Departamento de Enfermagem.'});
+        emailConfigPatch.roomReservationDepartmentEmail=departmentEmail;
+      }
+      settingsPatch.emailConfig={...(currentSettings.emailConfig||{}),...emailConfigPatch};
+    }
     currentSettings = {
       ...currentSettings,
       ...settingsPatch,
