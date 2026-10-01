@@ -82,6 +82,13 @@ const DEFAULT_COORDINATOR_VISIBLE: Record<string, boolean> = {
   defesaLocal: false,
 };
 
+type CoordinatorFilter = 'todos' | 'pendentes' | 'concluidos';
+type CoordinatorRow = {
+  process: ProcessData;
+  kind: 'pendentes' | 'concluidos';
+  queueItem?: any;
+};
+
 interface CoordenadorPageProps {
   onSelectProcess: (processId: string) => void;
 }
@@ -92,7 +99,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const [queue, setQueue] = useState<any[]>([]);
   const [allProcesses, setAllProcesses] = useState<ProcessData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pendentes' | 'concluidos'>('pendentes');
+  const [activeTab, setActiveTab] = useState<CoordinatorFilter>('todos');
   const [searchFilter, setSearchFilter] = useState('');
   const [downloadError, setDownloadError] = useState('');
   const [signatureJobs, setSignatureJobs] = useState<SignatureJob[]>([]);
@@ -185,23 +192,21 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       : <span className={`${isDark ? 'text-white' : 'text-slate-900'} font-extrabold ml-0.5`}>↓</span>;
   };
 
-  // Label Map for columns
   const labelMap: Record<string, string> = {
     protocolo: 'Processo',
-    envioStatus: '📤 Envio',
+    envioStatus: 'Envio',
     defesaDataHora: 'Data',
-    titulo: '📖 Título do Trabalho',
-    aluno1: '🎓 Aluno 1',
-    aluno2: '🎓 Aluno 2',
-    orientador: '👨‍🏫 Orientador(a)',
-    membro1: '👥 1º Membro',
-    membro2: '👥 2º Membro',
-    coorientador: '👥 Coorientador(a)',
-    resumo: '📝 Resumo',
-    palavrasChave: '🔑 Palavras-Chave',
-    defesaLocal: '📍 Local'
+    titulo: 'Título do Trabalho',
+    aluno1: 'Aluno 1',
+    aluno2: 'Aluno 2',
+    orientador: 'Orientador(a)',
+    membro1: '1º Membro',
+    membro2: '2º Membro',
+    coorientador: 'Coorientador(a)',
+    resumo: 'Resumo',
+    palavrasChave: 'Palavras-Chave',
+    defesaLocal: 'Local'
   };
-
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -240,7 +245,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     loadData();
   }, []);
 
-  // Filter pending vs completed
   const pendingItems = queue.filter(item => {
     const term = searchFilter.toLowerCase();
     const p = item?.process;
@@ -270,14 +274,16 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     );
   });
 
-  // Batch Selection Helpers
-  const toggleSelectAllPending = () => {
-    if (selectedIds.length === pendingItems.length && pendingItems.length > 0) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(pendingItems.map(item => item.process.id));
-    }
-  };
+  const pendingRows: CoordinatorRow[] = pendingItems
+    .filter((item) => item?.process)
+    .map((item) => ({ process: item.process as ProcessData, kind: 'pendentes', queueItem: item }));
+  const completedRows: CoordinatorRow[] = completedItems.map((process) => ({ process, kind: 'concluidos' }));
+  const allRows = React.useMemo(() => {
+    const byId = new Map<string, CoordinatorRow>();
+    pendingRows.forEach((row) => byId.set(row.process.id, row));
+    completedRows.forEach((row) => { if (!byId.has(row.process.id)) byId.set(row.process.id, row); });
+    return Array.from(byId.values());
+  }, [pendingItems, completedItems]);
 
   const toggleSelectItem = (id: string) => {
     setSelectedIds(prev =>
@@ -412,7 +418,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}><div className="flex flex-wrap items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>{govUploadAvailable&&<label className="portal-sign-provider-btn cursor-pointer" title="Enviar o PDF já assinado no Gov.br"><input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event)=>{const file=event.currentTarget.files?.[0];event.currentTarget.value='';if(file)void handleGovSignedUpload(proc.id,file);}}/><Download className="h-3.5 w-3.5 rotate-180"/><span>Enviar assinado</span></label>}</div>{!actionable&&<span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[8px] font-black uppercase ${status.tone}`} title={job?.lastError||status.label}>{status.label}</span>}</td>;
   };
 
-  // Download only the authenticated declaration already signed by Asten and archived in Drive.
   const handleDownloadPdfs = async (procList: any[]) => {
     if (procList.length === 0) return;
     const rawProcs: ProcessData[] = procList.map((item) => item.process || item);
@@ -437,7 +442,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       }
     }
   };
-
 
   const renderHeaderCell = (colKey: string) => {
     if (!visibleColumns[colKey]) return null;
@@ -464,10 +468,11 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     );
   };
 
-  const renderCell = (item: any, colKey: string) => {
+  const renderCell = (row: CoordinatorRow, colKey: string) => {
     if (!visibleColumns[colKey]) return null;
 
-    const proc = activeTab === 'pendentes' ? item.process : item;
+    const proc = row.process;
+    const isPending = row.kind === 'pendentes';
     const cellClass = `${styles.cellPadClass} ${getColWidthClass(colKey, columnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, coordTextFormat)} ${styles.borderClass} align-middle ${styles.cellAlignClass}`;
 
     const cleanInst = (str?: string) => {
@@ -477,9 +482,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
     switch (colKey) {
       case 'protocolo': {
-        const job = getDeclarationJob(proc.id);
-        const signed = proc.status === 'CONCLUIDO' || Boolean(job && ['SIGNED', 'DRIVE_SYNC_PENDING', 'ARCHIVED'].includes(job.status));
-        const tone = signed ? PORTAL_SEMANTIC_COLORS.signature.signed : PORTAL_SEMANTIC_COLORS.signature.pending;
+        const tone = isPending ? PORTAL_SEMANTIC_COLORS.signature.pending : PORTAL_SEMANTIC_COLORS.signature.signed;
         return (
           <td key={colKey} onClick={(e) => { e.stopPropagation(); onSelectProcess(proc.id); }} className={`${cellClass} cursor-pointer`} title="Abrir TCC">
             <span className="portal-process-pill" style={{ backgroundColor: tone.bg, borderColor: tone.border, color: tone.text }}>
@@ -490,28 +493,14 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       }
 
       case 'envioStatus': {
-        const isSent = activeTab === 'concluidos';
+        const status = isPending ? getDeclarationStatus(proc.id).label : 'Assinada';
+        const dotColor = isPending ? PORTAL_SEMANTIC_COLORS.signature.pending.border : PORTAL_SEMANTIC_COLORS.signature.signed.border;
         return (
-          <td key={colKey} className={cellClass}>
-            <div className="flex flex-col items-center gap-1 mx-auto">
-              {activeTab === 'pendentes' ? (() => {
-                const signatureStatus = getDeclarationStatus(proc.id);
-                return (
-                  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[9px] font-black uppercase ${signatureStatus.tone}`}>
-                    {signatureStatus.label}
-                  </span>
-                );
-              })() : (
-                <>
-                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-950 border border-emerald-300 rounded-full select-none leading-none">
-                    🟢 Enviada
-                  </span>
-                  <span className="text-[9.5px] text-emerald-800 font-bold flex items-center gap-0.5 select-none leading-none">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Publicada
-                  </span>
-                </>
-              )}
-            </div>
+          <td key={colKey} className={cellClass} data-portal-plain-text="true">
+            <span className="inline-flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-700">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: dotColor }} />
+              <span>{status}</span>
+            </span>
           </td>
         );
       }
@@ -689,94 +678,95 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     }
   };
 
-  const getSortedAndFilteredItems = (items: any[], wrappedQueueItem: boolean) => {
-    return [...items].sort((itemA, itemB) => {
-      const pA = wrappedQueueItem ? itemA?.process : itemA;
-      const pB = wrappedQueueItem ? itemB?.process : itemB;
-      if (!pA || !pB) return 0;
+  const sortRows = (rows: CoordinatorRow[]) => [...rows].sort((rowA, rowB) => {
+    const pA = rowA.process;
+    const pB = rowB.process;
+    let valA: any = '';
+    let valB: any = '';
 
-      let valA: any = '';
-      let valB: any = '';
-
-      switch (sortField) {
-        case 'protocolo':
-          valA = pA.protocolo || pA.id || '';
-          valB = pB.protocolo || pB.id || '';
-          break;
-        case 'envioStatus':
-          valA = wrappedQueueItem ? 'Aguardando Envio' : 'Enviado';
-          valB = wrappedQueueItem ? 'Aguardando Envio' : 'Enviado';
-          break;
-        case 'defesaDataHora':
-          valA = pA.defesa?.startAt || '';
-          valB = pB.defesa?.startAt || '';
-          break;
-        case 'titulo':
-          valA = pA.titulo || '';
-          valB = pB.titulo || '';
-          break;
-        case 'aluno1':
-          valA = pA.aluno1?.nome || '';
-          valB = pB.aluno1?.nome || '';
-          break;
-        case 'aluno2':
-          valA = pA.aluno2?.nome || '';
-          valB = pB.aluno2?.nome || '';
-          break;
-        case 'orientador':
-          valA = pA.orientador?.nome || '';
-          valB = pB.orientador?.nome || '';
-          break;
-        case 'membro1': {
-          const membersA = (pA.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
-          const membersB = (pB.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
-          valA = membersA[0]?.nome || '';
-          valB = membersB[0]?.nome || '';
-          break;
-        }
-        case 'membro2': {
-          const membersA = (pA.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
-          const membersB = (pB.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
-          valA = membersA[1]?.nome || '';
-          valB = membersB[1]?.nome || '';
-          break;
-        }
-        case 'coorientador':
-          valA = pA.coorientador?.nome || '';
-          valB = pB.coorientador?.nome || '';
-          break;
-        case 'resumo':
-          valA = pA.acervo?.resumoSintese || '';
-          valB = pB.acervo?.resumoSintese || '';
-          break;
-        case 'palavrasChave':
-          valA = (pA.acervo?.palavrasChave || []).join(' ');
-          valB = (pB.acervo?.palavrasChave || []).join(' ');
-          break;
-        case 'defesaLocal':
-          valA = pA.defesa?.local || '';
-          valB = pB.defesa?.local || '';
-          break;
-        default:
-          break;
+    switch (sortField) {
+      case 'protocolo':
+        valA = pA.protocolo || pA.id || '';
+        valB = pB.protocolo || pB.id || '';
+        break;
+      case 'envioStatus':
+        valA = rowA.kind === 'pendentes' ? 'Pendente' : 'Assinada';
+        valB = rowB.kind === 'pendentes' ? 'Pendente' : 'Assinada';
+        break;
+      case 'defesaDataHora':
+        valA = pA.defesa?.startAt || '';
+        valB = pB.defesa?.startAt || '';
+        break;
+      case 'titulo':
+        valA = pA.titulo || '';
+        valB = pB.titulo || '';
+        break;
+      case 'aluno1':
+        valA = pA.aluno1?.nome || '';
+        valB = pB.aluno1?.nome || '';
+        break;
+      case 'aluno2':
+        valA = pA.aluno2?.nome || '';
+        valB = pB.aluno2?.nome || '';
+        break;
+      case 'orientador':
+        valA = pA.orientador?.nome || '';
+        valB = pB.orientador?.nome || '';
+        break;
+      case 'membro1': {
+        const membersA = (pA.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
+        const membersB = (pB.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
+        valA = membersA[0]?.nome || '';
+        valB = membersB[0]?.nome || '';
+        break;
       }
+      case 'membro2': {
+        const membersA = (pA.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
+        const membersB = (pB.banca || []).filter((b: any) => b.funcao !== 'ORIENTADOR');
+        valA = membersA[1]?.nome || '';
+        valB = membersB[1]?.nome || '';
+        break;
+      }
+      case 'coorientador':
+        valA = pA.coorientador?.nome || '';
+        valB = pB.coorientador?.nome || '';
+        break;
+      case 'resumo':
+        valA = pA.acervo?.resumoSintese || '';
+        valB = pB.acervo?.resumoSintese || '';
+        break;
+      case 'palavrasChave':
+        valA = (pA.acervo?.palavrasChave || []).join(' ');
+        valB = (pB.acervo?.palavrasChave || []).join(' ');
+        break;
+      case 'defesaLocal':
+        valA = pA.defesa?.local || '';
+        valB = pB.defesa?.local || '';
+        break;
+      default:
+        break;
+    }
 
-      if (typeof valA === 'string') valA = valA.toLowerCase();
-      if (typeof valB === 'string') valB = valB.toLowerCase();
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
+    if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+    if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
 
-      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
+  const visibleRows = sortRows(activeTab === 'pendentes' ? pendingRows : activeTab === 'concluidos' ? completedRows : allRows);
+  const visibleIds = visibleRows.map((row) => row.process.id);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const toggleSelectAllVisible = () => {
+    if (allVisibleSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
   };
 
-  const sortedPending = getSortedAndFilteredItems(pendingItems, true);
-  const sortedCompleted = getSortedAndFilteredItems(completedItems, false);
-
-  const limitedPending = recordsLimit === 'all' ? sortedPending : sortedPending.slice(0, recordsLimit);
-  const limitedCompleted = recordsLimit === 'all' ? sortedCompleted : sortedCompleted.slice(0, recordsLimit);
-
   const actionStyles = getActionPillStyles(coordTextFormat);
+  const showProviderActions = activeTab !== 'concluidos';
 
   return (
     <div id="coordenador-page-root" className="space-y-3 max-w-7xl mx-auto py-1.5">
@@ -790,19 +780,15 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
           {signingMessage}
         </div>
       )}
-      {activeTab === 'pendentes' && astenStatus && !astenStatus.dispatchEnabled && (
+      {activeTab !== 'concluidos' && astenStatus && !astenStatus.dispatchEnabled && (
         <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
           Asten ainda requer configuração para despacho. As declarações continuam visíveis nesta fila até a integração estar pronta.
         </div>
       )}
 
-      {/* CABEÇALHO UNIFICADO DA COORDENAÇÃO */}
       <section className="space-y-3">
-        {/* UNIFIED GRAY HEADER + TABLE CARD */}
         <div className={`bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${styles.fontFamilyClass}`} style={styles.rootStyle}>
-          {/* Header Banner */}
           <div className={`${styles.bannerHeaderClass} border-b transition-colors`} style={styles.bannerHeaderStyle}>
-            {/* Main Title Row */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
               <div className="flex items-center gap-2">
                 <ColorfulHeaderIcon type="coordination" textFormat={coordTextFormat} />
@@ -811,16 +797,15 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                 </h1>
               </div>
 
-              {/* Ações: provedores primeiro; depois controles padrão da tabela */}
               <div className="flex items-center shrink-0">
-                {activeTab === 'pendentes' && (
+                {showProviderActions && (
                   <div className="flex items-center gap-1.5 sm:gap-2">
                     <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={handleSignSelected} className={`${styles.toolbarButtonClass} portal-sign-bulk-btn disabled:opacity-45`} style={styles.toolbarButtonStyle} title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
                     <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className={`${styles.toolbarButtonClass} portal-sign-bulk-btn disabled:opacity-45`} style={styles.toolbarButtonStyle} title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
                   </div>
                 )}
 
-                <div className={`flex items-center gap-1.5 sm:gap-2 ${activeTab === 'pendentes' ? 'ml-3 border-l border-white/35 pl-3' : ''}`}>
+                <div className={`flex items-center gap-1.5 sm:gap-2 ${showProviderActions ? 'ml-3 border-l border-white/35 pl-3' : ''}`}>
                   <SearchPopover
                     value={searchFilter}
                     onChange={setSearchFilter}
@@ -867,21 +852,18 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               </div>
             </div>
 
-            {/* INTEGRATED TOOLBAR BAR (Single clean dividing line) */}
             <div className="portal-coordinator-filter-row flex flex-wrap items-center justify-between gap-3 border-t-2 border-white px-3.5 py-2.5 text-xs sm:px-4">
-              {/* Filter Row Switcher with FILTRAR prefix following site standard */}
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
                   {getEditableTableText(customLabels, '__filterTitle', 'FILTRAR:')}
                 </span>
-                <div className="flex flex-wrap items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5" data-portal-president-filter-group="true">
                   {([
-                    { key: 'pendentes', label: getEditableTableText(customLabels, '__tabPendentes', 'Pendentes'), count: queue.length, tab: 'pendentes' as const },
-                    { key: 'assinadas', label: getEditableTableText(customLabels, '__tabConcluidos', 'Assinadas'), count: completedItems.length, tab: 'concluidos' as const }
+                    { key: 'todos', label: 'Todos', count: allRows.length, tab: 'todos' as const, dot: '#64748b' },
+                    { key: 'pendentes', label: getEditableTableText(customLabels, '__tabPendentes', 'Pendentes'), count: pendingRows.length, tab: 'pendentes' as const, dot: PORTAL_SEMANTIC_COLORS.signature.pending.border },
+                    { key: 'assinadas', label: getEditableTableText(customLabels, '__tabConcluidos', 'Assinadas'), count: completedRows.length, tab: 'concluidos' as const, dot: PORTAL_SEMANTIC_COLORS.signature.signed.border }
                   ]).map((filter) => {
                     const isSelected = activeTab === filter.tab;
-                    const chip = getFilterChipProps(filter.key, isSelected, coordTextFormat, filter.label);
-                    const semanticTone = filter.key === 'assinadas' ? PORTAL_SEMANTIC_COLORS.signature.signed : PORTAL_SEMANTIC_COLORS.signature.pending;
                     return (
                       <button
                         key={filter.key}
@@ -889,13 +871,13 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                         onClick={() => { setActiveTab(filter.tab); setSelectedIds([]); }}
                         data-selected={isSelected ? 'true' : 'false'}
                         aria-pressed={isSelected}
-                        style={{ backgroundColor: semanticTone.bg, color: semanticTone.text, borderColor: semanticTone.border, opacity: isSelected ? 1 : 0.62, boxShadow: isSelected ? `inset 0 0 0 1px ${semanticTone.border}` : 'none' }}
-                        className={`portal-standard-filter-chip portal-table-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none ${isSelected ? '' : 'opacity-85 hover:opacity-100'}`}
-                        title={`Filtrar por declarações ${filter.label.toLowerCase()}`}
+                        style={{ backgroundColor: '#ffffff', color: '#334155', borderColor: '#cbd5e1', boxShadow: 'none' }}
+                        className="portal-standard-filter-chip portal-table-filter-chip flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-colors"
+                        title={`Filtrar por ${filter.label.toLowerCase()}`}
                       >
-                        <span className="portal-filter-dot w-2 h-2 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: semanticTone.border }} />
-                        <span className="whitespace-nowrap font-extrabold">{chip.label}</span>
-                        <span className="text-[9px] px-1.5 py-0.2 rounded-full font-black shadow-2xs" style={{ backgroundColor: semanticTone.border, color: '#ffffff' }}>{filter.count}</span>
+                        <span className="portal-filter-dot h-2.5 w-2.5 shrink-0 rounded-full shadow-2xs" style={{ backgroundColor: isSelected ? filter.dot : '#cbd5e1' }} />
+                        <span className="whitespace-nowrap font-extrabold">{filter.label}</span>
+                        <span className="text-[9px] font-black text-slate-500">{filter.count}</span>
                       </button>
                     );
                   })}
@@ -904,153 +886,70 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
             </div>
           </div>
 
-          {/* CONTEÚDO PRINCIPAL: TABELA E LISTA DE DECLARAÇÕES */}
           <div className="w-full">
-            {activeTab === 'pendentes' && (
-              <>
-                {isLoading ? (
-                  <div className="p-12 text-center text-xs font-semibold text-slate-500">
-                    Carregando declarações pendentes...
-                  </div>
-                ) : pendingItems.length === 0 ? (
-                  <div className="p-12 text-center bg-slate-50 text-slate-600 text-xs font-medium space-y-1">
-                    <CheckCircle2 className="w-8 h-8 text-emerald-700 mx-auto mb-2" />
-                    <p className="font-bold text-slate-900 uppercase">Sua fila de declarações está 100% assinada e limpa!</p>
-                    <p className="text-slate-500">Não há declarações pendentes de assinatura do Presidente neste momento.</p>
-                  </div>
-                ) : (
-                  <TableScrollWrapper>
-                    <table className="w-full text-center border-collapse text-xs">
-                      <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`} style={styles.theadStyle}>
-                        <tr>
-                          {/* Always show selection column for pending */}
-                          <th data-portal-selection-column="true" data-portal-column-label="Seleção" className={`${styles.headerThClass} ${styles.cellPadClass} w-10 text-center align-middle ${styles.headerBorderClass}`}>
+            {isLoading ? (
+              <div className="p-12 text-center text-xs font-semibold text-slate-500">Carregando declarações...</div>
+            ) : visibleRows.length === 0 ? (
+              <div className="p-12 text-center bg-slate-50 text-slate-600 text-xs font-medium space-y-1">
+                <CheckCircle2 className="w-8 h-8 text-emerald-700 mx-auto mb-2" />
+                <p className="font-bold text-slate-900 uppercase">Nenhuma declaração encontrada neste filtro.</p>
+                <p className="text-slate-500">Altere o filtro ou a busca para visualizar outros registros.</p>
+              </div>
+            ) : (
+              <TableScrollWrapper>
+                <table className="w-full text-center border-collapse text-xs">
+                  <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`} style={styles.theadStyle}>
+                    <tr>
+                      <th data-portal-selection-column="true" data-portal-column-label="Seleção" className={`${styles.headerThClass} ${styles.cellPadClass} w-12 text-center align-middle ${styles.headerBorderClass}`}>
+                        <button
+                          type="button"
+                          onClick={toggleSelectAllVisible}
+                          className="portal-sheet-checkbox cursor-pointer flex justify-center mx-auto"
+                          aria-pressed={allVisibleSelected}
+                          title="Selecionar/Deselecionar todos os registros visíveis"
+                        >
+                          {allVisibleSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                        </button>
+                      </th>
+                      {columnOrder.map((colKey) => renderHeaderCell(colKey))}
+                      {showProviderActions && (
+                        <th className={`${styles.headerThClass} ${styles.cellPadClass} min-w-[150px] text-center align-middle ${styles.headerBorderClass}`}>
+                          <span>Asten</span>
+                        </th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-white">
+                    {visibleRows.map((row) => {
+                      const proc = row.process;
+                      const isSelected = selectedIds.includes(proc.id);
+                      return (
+                        <tr key={`${row.kind}-${proc.id}`} className={`transition-colors text-black ${isSelected ? 'bg-emerald-50/40' : 'bg-white hover:bg-slate-50'}`}>
+                          <td data-portal-selection-column-cell="true" data-portal-filter-value={isSelected ? 'Selecionado' : 'Não selecionado'} className={`${styles.cellPadClass} ${styles.borderClass} text-center align-middle`}>
                             <button
                               type="button"
-                              onClick={toggleSelectAllPending}
-                              className={`cursor-pointer ${isDarkTheme ? 'text-white/80 hover:text-white' : 'text-slate-600 hover:text-emerald-800'} flex justify-center mx-auto`}
-                              title="Selecionar/Deselecionar todos"
+                              onClick={() => toggleSelectItem(proc.id)}
+                              className="portal-sheet-checkbox cursor-pointer flex justify-center mx-auto"
+                              aria-pressed={isSelected}
+                              title={isSelected ? 'Desmarcar registro' : 'Selecionar registro'}
                             >
-                              {selectedIds.length === pendingItems.length ? (
-                                <CheckSquare className={`w-4 h-4 ${isDarkTheme ? 'text-emerald-300' : 'text-emerald-700'}`} />
-                              ) : (
-                                <Square className={`w-4 h-4 ${isDarkTheme ? 'text-white/60' : 'text-slate-500'}`} />
-                              )}
+                              {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
                             </button>
-                          </th>
-                          {columnOrder.map((colKey) => renderHeaderCell(colKey))}
-                          <th className={`${styles.headerThClass} ${styles.cellPadClass} min-w-[150px] text-center align-middle ${styles.headerBorderClass}`}>
-                            <span>Asten</span>
-                          </th>
+                          </td>
+                          {columnOrder.map((colKey) => renderCell(row, colKey))}
+                          {showProviderActions && (row.kind === 'pendentes'
+                            ? renderSignatureActionCell(proc)
+                            : <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle text-[10px] text-slate-400`}>—</td>)}
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 bg-white">
-                        {limitedPending.map((item) => {
-                          const proc = item.process;
-                          const isSelected = selectedIds.includes(proc.id);
-                          return (
-                            <tr
-                              key={proc.id}
-                              className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-emerald-50/40' : ''}`}
-                            >
-                              {/* Selection Checkbox */}
-                              <td data-portal-selection-column-cell="true" data-portal-filter-value={isSelected ? 'Selecionado' : 'Não selecionado'} className={`${styles.cellPadClass} ${styles.borderClass} text-center align-middle`}>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleSelectItem(proc.id)}
-                                  className="cursor-pointer text-slate-400 hover:text-emerald-700 flex justify-center mx-auto"
-                                >
-                                  {isSelected ? (
-                                    <CheckSquare className="w-4.5 h-4.5 text-emerald-700" />
-                                  ) : (
-                                    <Square className="w-4.5 h-4.5 text-slate-300" />
-                                  )}
-                                </button>
-                              </td>
-                              {columnOrder.map((colKey) => renderCell(item, colKey))}
-                              {renderSignatureActionCell(proc)}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </TableScrollWrapper>
-                )}
-              </>
-            )}
-
-            {/* TAB 2: DECLARAÇÕES ASSINADAS (HISTÓRICO) */}
-            {activeTab === 'concluidos' && (
-              <>
-                {completedItems.length === 0 ? (
-                  <div className="p-12 text-center bg-slate-50 text-slate-600 text-xs font-medium">
-                    Nenhum processo assinado encontrado com os termos pesquisados.
-                  </div>
-                ) : (
-                  <TableScrollWrapper>
-                    <table className="w-full text-center border-collapse text-xs">
-                      <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`}>
-                        <tr>
-                          {/* Always show selection column for completed to align perfectly */}
-                          <th data-portal-selection-column="true" data-portal-column-label="Seleção" className={`${styles.headerThClass} ${styles.cellPadClass} w-10 text-center align-middle ${styles.headerBorderClass}`}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (selectedIds.length === completedItems.length && completedItems.length > 0) {
-                                  setSelectedIds([]);
-                                } else {
-                                  setSelectedIds(completedItems.map(p => p.id));
-                                }
-                              }}
-                              className={`cursor-pointer ${isDarkTheme ? 'text-white/80 hover:text-white' : 'text-slate-600 hover:text-emerald-800'} flex justify-center mx-auto`}
-                              title="Selecionar/Deselecionar todos"
-                            >
-                              {selectedIds.length === completedItems.length && completedItems.length > 0 ? (
-                                <CheckSquare className={`w-4 h-4 ${isDarkTheme ? 'text-emerald-300' : 'text-emerald-700'}`} />
-                              ) : (
-                                <Square className={`w-4 h-4 ${isDarkTheme ? 'text-white/60' : 'text-slate-500'}`} />
-                              )}
-                            </button>
-                          </th>
-                          {columnOrder.map((colKey) => renderHeaderCell(colKey))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 bg-white">
-                        {limitedCompleted.map((proc) => {
-                          const isSelected = selectedIds.includes(proc.id);
-                          return (
-                            <tr
-                              key={proc.id}
-                              className={`transition-colors text-black ${isSelected ? 'bg-emerald-50/40' : ''}`}
-                            >
-                              {/* Selection Checkbox */}
-                              <td data-portal-selection-column-cell="true" data-portal-filter-value={isSelected ? 'Selecionado' : 'Não selecionado'} className={`${styles.cellPadClass} ${styles.borderClass} text-center align-middle`}>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleSelectItem(proc.id)}
-                                  className="cursor-pointer text-slate-400 hover:text-emerald-700 flex justify-center mx-auto"
-                                >
-                                  {isSelected ? (
-                                    <CheckSquare className="w-4.5 h-4.5 text-emerald-700" />
-                                  ) : (
-                                    <Square className="w-4.5 h-4.5 text-slate-300" />
-                                  )}
-                                </button>
-                              </td>
-                              {columnOrder.map((colKey) => renderCell(proc, colKey))}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </TableScrollWrapper>
-                )}
-              </>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </TableScrollWrapper>
             )}
           </div>
         </div>
       </section>
-
     </div>
   );
 };
