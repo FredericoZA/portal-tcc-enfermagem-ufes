@@ -4,6 +4,7 @@ import { apiClient } from '../services/apiClient';
 const TABLE_KEYS = ['defenses', 'acervo', 'meus_processos', 'coordinator', 'authorized_access', 'signature_logs', 'audit_logs'] as const;
 type TableKey = typeof TABLE_KEYS[number];
 type PageSize = 25 | 50 | 100 | 'all';
+type RoleTone = 'student' | 'board' | 'evaluator' | 'viewer';
 
 const DEFAULT_PAGE_SIZE: Record<TableKey, PageSize> = {
   defenses: 25,
@@ -18,6 +19,17 @@ const DEFAULT_PAGE_SIZE: Record<TableKey, PageSize> = {
 const PAGE_SIZE_PREFIX = 'portal_table_page_size_';
 const CURRENT_PAGE_PREFIX = 'portal_table_current_page_';
 const INTERACTIVE_SELECTOR = 'button,input,select,textarea,a,[role="button"],[contenteditable="true"]';
+const ROLE_TONES: RoleTone[] = ['student', 'board', 'evaluator', 'viewer'];
+const ROLE_BORDER_TO_TONE: Record<string, RoleTone> = {
+  '#9a7600': 'student',
+  'rgb(154, 118, 0)': 'student',
+  '#a04444': 'board',
+  'rgb(160, 68, 68)': 'board',
+  '#2e718d': 'evaluator',
+  'rgb(46, 113, 141)': 'evaluator',
+  '#6e4a94': 'viewer',
+  'rgb(110, 74, 148)': 'viewer',
+};
 
 function normalize(value: string) {
   return value
@@ -72,7 +84,7 @@ function tableKey(table: HTMLTableElement): TableKey | null {
   if (table.closest('#public-calendar-cards-section')) return 'defenses';
   if (table.closest('#biblioteca-tccs-section')) return 'acervo';
   if (table.closest('#meus-processos-page-container')) return 'meus_processos';
-  if (table.closest('#coordenador-page-root')) return 'coordinator';
+  if (table.closest('#coordenador-page-root') || table.closest('#portal-president-all-view')) return 'coordinator';
   if (table.closest('#authorized-access-panel')) return 'authorized_access';
   if (table.closest('#asten-logs-page')) return 'signature_logs';
   if (table.closest('#audit-logs-page')) return 'audit_logs';
@@ -126,22 +138,13 @@ function renameProcessHeader(header: HTMLTableCellElement) {
   const nodes: Text[] = [];
   let current: Node | null;
   while ((current = walker.nextNode())) nodes.push(current as Text);
-  let replaced = false;
   nodes.forEach((node) => {
     if (node.parentElement?.closest('.portal-core-column-menu,.portal-core-resizer')) return;
-    const next = node.data
+    node.data = node.data
       .replace(/n[º°o]?\.?\s*do\s*processo/gi, 'Processo')
       .replace(/n[uú]mero\s+do\s+processo/gi, 'Processo')
       .replace(/^\s*protocolo\s*$/gi, 'Processo');
-    if (next !== node.data) {
-      node.data = next;
-      replaced = true;
-    }
   });
-  if (!replaced && ['processo', 'protocolo'].includes(headerLabel(header))) {
-    const textNode = nodes.find((node) => !node.parentElement?.closest('button'));
-    if (textNode) textNode.data = textNode.data.replace(/protocolo/gi, 'Processo');
-  }
 }
 
 function rowBackground(row: HTMLTableRowElement) {
@@ -151,6 +154,17 @@ function rowBackground(row: HTMLTableRowElement) {
   const cellColor = firstCell ? getComputedStyle(firstCell).backgroundColor : '';
   if (cellColor && cellColor !== 'rgba(0, 0, 0, 0)' && cellColor !== 'transparent') return cellColor;
   return '#ffffff';
+}
+
+function normalizeDefenseProcessCell(cell: HTMLTableCellElement) {
+  const button = cell.querySelector<HTMLElement>('.portal-semantic-tone');
+  if (!button) return;
+  const parts = Array.from(button.children) as HTMLElement[];
+  if (parts.length < 2) return;
+  const number = (parts[1].textContent || '').trim();
+  if (!number || number === '—') return;
+  parts[0].textContent = `TCC - ${number}`;
+  parts[1].style.display = 'none';
 }
 
 function markSpreadsheet(table: HTMLTableElement) {
@@ -192,11 +206,7 @@ function markSpreadsheet(table: HTMLTableElement) {
       if (cell) {
         cell.dataset.portalStickySelection = 'true';
         const button = cell.querySelector<HTMLButtonElement>('button');
-        if (button) {
-          button.classList.add('portal-sheet-checkbox');
-          const selected = normalize(cell.dataset.portalFilterValue || '').startsWith('selecionado') || row.dataset.portalSelected === 'true';
-          button.setAttribute('aria-pressed', selected ? 'true' : 'false');
-        }
+        if (button) button.classList.add('portal-sheet-checkbox');
       }
     }
     if (processIndex >= 0) {
@@ -204,21 +214,10 @@ function markSpreadsheet(table: HTMLTableElement) {
       if (cell) {
         cell.dataset.portalStickyProcess = 'true';
         if (selectionIndex >= 0 && selectionIndex < processIndex) cell.dataset.portalAfterSelection = 'true';
+        if (key === 'defenses') normalizeDefenseProcessCell(cell);
       }
     }
   }));
-
-  if (selectionIndex >= 0) {
-    const rows = Array.from(table.tBodies).flatMap((tbody) => Array.from(tbody.rows));
-    const headerButton = headers[selectionIndex].querySelector<HTMLButtonElement>('button');
-    if (headerButton) {
-      const allSelected = rows.length > 0 && rows.every((row) => {
-        const cell = row.cells[selectionIndex] as HTMLTableCellElement | undefined;
-        return normalize(cell?.dataset.portalFilterValue || '').startsWith('selecionado') || row.dataset.portalSelected === 'true';
-      });
-      headerButton.setAttribute('aria-pressed', allSelected ? 'true' : 'false');
-    }
-  }
 
   if (key === 'coordinator') {
     const envioIndex = headers.findIndex((header) => normalize(header.dataset.portalColumnKey || '') === 'enviostatus' || headerLabel(header) === 'envio');
@@ -227,22 +226,13 @@ function markSpreadsheet(table: HTMLTableElement) {
       if (cell) cell.dataset.portalPlainText = 'true';
     }));
   }
-
-  if (key === 'audit_logs') {
-    const actionIndex = headers.findIndex((header) => normalize(header.dataset.portalColumnKey || '') === 'action' || headerLabel(header) === 'acao / atividade');
-    if (actionIndex >= 0) Array.from(table.tBodies).forEach((tbody) => Array.from(tbody.rows).forEach((row) => {
-      const cell = row.cells[actionIndex] as HTMLTableCellElement | undefined;
-      if (cell) cell.dataset.portalPlainText = 'true';
-    }));
-  }
 }
 
 function findScrollHost(table: HTMLTableElement) {
-  const direct = table.closest<HTMLElement>('.table-sticky-container,[data-portal-scroll-host="true"],.overflow-x-auto');
-  return direct || table.parentElement;
+  return table.closest<HTMLElement>('.table-sticky-container,[data-portal-scroll-host="true"],.overflow-x-auto') || table.parentElement;
 }
 
-function ensurePager(table: HTMLTableElement, host: HTMLElement, key: TableKey) {
+function ensurePager(host: HTMLElement, key: TableKey) {
   let pager = host.nextElementSibling as HTMLElement | null;
   if (!pager?.classList.contains('portal-spreadsheet-pager') || pager.dataset.portalTableKey !== key) {
     pager = document.createElement('nav');
@@ -255,10 +245,9 @@ function ensurePager(table: HTMLTableElement, host: HTMLElement, key: TableKey) 
 }
 
 function rowIsExternallyHidden(row: HTMLTableRowElement) {
-  if (row.classList.contains('portal-core-filter-hidden')) return true;
-  if (row.dataset.portalFilterHidden === 'true') return true;
-  if (row.hidden) return true;
-  return false;
+  return row.classList.contains('portal-core-filter-hidden')
+    || row.dataset.portalFilterHidden === 'true'
+    || row.hidden;
 }
 
 function pageList(totalPages: number, current: number) {
@@ -272,6 +261,7 @@ function applyPagination(table: HTMLTableElement) {
   if (!key) return;
   const host = findScrollHost(table);
   if (!host) return;
+
   const allRows = Array.from(table.tBodies).flatMap((tbody) => Array.from(tbody.rows));
   const visibleRows = allRows.filter((row) => !rowIsExternallyHidden(row));
   const pageSize = readPageSize(key);
@@ -289,42 +279,11 @@ function applyPagination(table: HTMLTableElement) {
     row.classList.toggle('portal-runtime-page-hidden', hiddenByPage);
   });
 
-  const pager = ensurePager(table, host, key);
+  const pager = ensurePager(host, key);
   const signature = `${pageSize}|${current}|${visibleRows.length}|${totalPages}`;
   if (pager.dataset.portalSignature === signature) return;
   pager.dataset.portalSignature = signature;
   pager.replaceChildren();
-
-  const left = document.createElement('div');
-  left.className = 'portal-spreadsheet-pager-left';
-  const summary = document.createElement('span');
-  summary.className = 'portal-spreadsheet-pager-info';
-  const first = visibleRows.length ? start + 1 : 0;
-  const last = Math.min(end, visibleRows.length);
-  summary.textContent = pageSize === 'all' ? `${visibleRows.length} registros` : `${first}–${last} de ${visibleRows.length} registros`;
-  left.appendChild(summary);
-
-  const sizeLabel = document.createElement('label');
-  sizeLabel.className = 'portal-spreadsheet-page-size';
-  sizeLabel.append('Linhas: ');
-  const select = document.createElement('select');
-  select.setAttribute('aria-label', 'Linhas por página');
-  ([25, 50, 100, 'all'] as PageSize[]).forEach((value) => {
-    const option = document.createElement('option');
-    option.value = String(value);
-    option.textContent = value === 'all' ? 'Todos' : String(value);
-    option.selected = value === pageSize;
-    select.appendChild(option);
-  });
-  select.addEventListener('change', () => {
-    const next = parsePageSize(select.value) || 25;
-    savePageSize(key, next);
-    applyPagination(table);
-    host.scrollTop = 0;
-  });
-  sizeLabel.appendChild(select);
-  left.appendChild(sizeLabel);
-  pager.appendChild(left);
 
   const controls = document.createElement('div');
   controls.className = 'portal-spreadsheet-pager-controls';
@@ -379,65 +338,92 @@ function syncPageSizePopover(activeTable: HTMLTableElement | null) {
 }
 
 function findTableForControl(control: HTMLElement) {
-  const workspace = control.closest<HTMLElement>('.portal-settings-workspace');
-  if (workspace) return Array.from(workspace.querySelectorAll<HTMLTableElement>('table')).find((table) => Boolean(tableKey(table))) || null;
   let current: HTMLElement | null = control;
-  for (let depth = 0; current && depth < 10; depth += 1, current = current.parentElement) {
+  for (let depth = 0; current && depth < 12; depth += 1, current = current.parentElement) {
     const tables = Array.from(current.querySelectorAll<HTMLTableElement>('table')).filter((table) => Boolean(tableKey(table)));
     if (tables.length === 1) return tables[0];
   }
   return Array.from(document.querySelectorAll<HTMLTableElement>('table')).find((table) => table.offsetParent !== null && Boolean(tableKey(table))) || null;
 }
 
-function makeAllFilterButton(className: string, label: string) {
+function roleToneFromLabel(label: string): RoleTone | null {
+  const normalized = normalize(label);
+  if (normalized.includes('aluno')) return 'student';
+  if (normalized.includes('banca')) return 'board';
+  if (normalized.includes('avaliador')) return 'evaluator';
+  if (normalized.includes('visualizador')) return 'viewer';
+  return null;
+}
+
+function roleToneFromRow(row: HTMLTableRowElement): RoleTone | null {
+  const processButton = row.querySelector<HTMLElement>('.portal-role-process-button');
+  if (!processButton) return null;
+  const inline = processButton.style.getPropertyValue('--portal-role-border').trim().toLowerCase();
+  if (ROLE_BORDER_TO_TONE[inline]) return ROLE_BORDER_TO_TONE[inline];
+  const computed = getComputedStyle(processButton).getPropertyValue('--portal-role-border').trim().toLowerCase();
+  return ROLE_BORDER_TO_TONE[computed] || null;
+}
+
+function makeAllFilterButton() {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = `portal-standard-filter-chip portal-table-filter-chip ${className}`;
-  button.innerHTML = '<span class="portal-runtime-all-label"></span><span class="portal-runtime-all-count"></span>';
-  const labelNode = button.querySelector<HTMLElement>('.portal-runtime-all-label');
-  if (labelNode) labelNode.textContent = label;
+  button.className = 'portal-standard-filter-chip portal-table-filter-chip portal-runtime-all-filter';
+  button.innerHTML = '<span class="portal-runtime-all-label">Todos</span><span class="portal-runtime-all-count">0</span>';
   return button;
 }
 
-function myTccRole(button: HTMLButtonElement) {
-  const label = normalize(button.textContent || '');
-  if (label.includes('aluno')) return 'student';
-  if (label.includes('banca')) return 'board';
-  if (label.includes('avaliador')) return 'evaluator';
-  if (label.includes('visualizador')) return 'viewer';
-  return 'neutral';
-}
+const selectedMyTccRoles = new Set<RoleTone>(ROLE_TONES);
 
 function enhanceMyTccFilters() {
   const row = document.querySelector<HTMLElement>('#meus-processos-page-container .portal-meus-processos-filter-row');
   if (!row) return;
-  const roleButtons = Array.from(row.querySelectorAll<HTMLButtonElement>('button.portal-standard-filter-chip:not(.portal-runtime-all-filter)'));
-  if (!roleButtons.length) return;
-  const group = roleButtons[0].parentElement;
+  const nativeButtons = Array.from(row.querySelectorAll<HTMLButtonElement>('button.portal-standard-filter-chip:not(.portal-runtime-all-filter)'));
+  if (!nativeButtons.length) return;
+  const group = nativeButtons[0].parentElement;
   if (!group) return;
   group.dataset.portalRoleFilterGroup = 'true';
-  roleButtons.forEach((button) => { button.dataset.portalRoleTone = myTccRole(button); });
+
+  nativeButtons.forEach((button) => {
+    const tone = roleToneFromLabel(button.textContent || '');
+    if (tone) button.dataset.portalRoleTone = tone;
+  });
 
   let all = group.querySelector<HTMLButtonElement>('.portal-runtime-all-filter');
   if (!all) {
-    all = makeAllFilterButton('portal-runtime-all-filter', 'Todos');
+    all = makeAllFilterButton();
     group.insertBefore(all, group.firstChild);
   }
 
-  if (!group.dataset.portalAllInitialized) {
-    group.dataset.portalAllInitialized = 'true';
-    group.dataset.portalAllActive = roleButtons.every((button) => button.getAttribute('aria-pressed') === 'true') ? 'true' : 'false';
+  const available = nativeButtons.map((button) => button.dataset.portalRoleTone as RoleTone).filter(Boolean);
+  for (const tone of Array.from(selectedMyTccRoles)) if (!available.includes(tone)) selectedMyTccRoles.delete(tone);
+  if (!group.dataset.portalFilterInitialized) {
+    available.forEach((tone) => selectedMyTccRoles.add(tone));
+    group.dataset.portalFilterInitialized = 'true';
   }
 
-  const allActive = group.dataset.portalAllActive === 'true';
-  all.setAttribute('aria-pressed', allActive ? 'true' : 'false');
-  all.dataset.selected = allActive ? 'true' : 'false';
-  const count = roleButtons.reduce((sum, button) => {
+  nativeButtons.forEach((button) => {
+    const tone = button.dataset.portalRoleTone as RoleTone | undefined;
+    const selected = Boolean(tone && selectedMyTccRoles.has(tone));
+    button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    button.dataset.selected = selected ? 'true' : 'false';
+  });
+
+  const allSelected = available.length > 0 && available.every((tone) => selectedMyTccRoles.has(tone));
+  all.setAttribute('aria-pressed', allSelected ? 'true' : 'false');
+  all.dataset.selected = allSelected ? 'true' : 'false';
+  const count = nativeButtons.reduce((sum, button) => {
     const value = Number(button.querySelector('span:last-child')?.textContent || 0);
     return sum + (Number.isFinite(value) ? value : 0);
   }, 0);
   const countNode = all.querySelector<HTMLElement>('.portal-runtime-all-count');
   if (countNode) countNode.textContent = String(count);
+
+  document.querySelectorAll<HTMLTableRowElement>('#meus-processos-page-container table tbody tr').forEach((tableRow) => {
+    const tone = roleToneFromRow(tableRow);
+    const hidden = Boolean(tone && !selectedMyTccRoles.has(tone));
+    tableRow.dataset.portalFilterHidden = hidden ? 'true' : 'false';
+    tableRow.style.display = hidden ? 'none' : '';
+  });
 }
 
 let presidentAllActive = false;
@@ -463,13 +449,6 @@ function updatePresidentSelection(table: HTMLTableElement) {
       if (mark) mark.textContent = selected ? '✓' : '';
     }
   });
-  const headerButton = table.tHead?.rows[0]?.cells[0]?.querySelector<HTMLButtonElement>('button');
-  if (headerButton) {
-    const allSelected = rows.length > 0 && rows.every((row) => presidentSelection.has(row.dataset.processId || ''));
-    headerButton.setAttribute('aria-pressed', allSelected ? 'true' : 'false');
-    const mark = headerButton.querySelector<HTMLElement>('span');
-    if (mark) mark.textContent = allSelected ? '✓' : '';
-  }
 }
 
 function deactivatePresidentAll() {
@@ -511,7 +490,7 @@ async function renderPresidentAllView(filterRow: HTMLElement) {
     wrapper.className = 'table-sticky-container portal-spreadsheet-scroll-host portal-runtime-president-all-scroll';
     wrapper.dataset.portalScrollHost = 'true';
     const table = document.createElement('table');
-    table.className = 'portal-spreadsheet-table portal-runtime-president-all-table w-full min-w-[1100px] border-collapse text-xs';
+    table.className = 'portal-runtime-president-all-table w-full min-w-[1100px] border-collapse text-xs';
     const thead = table.createTHead();
     const header = thead.insertRow();
     const columns = ['Seleção', 'Processo', 'Envio', 'Data', 'Título do Trabalho', 'Aluno 1', 'Aluno 2', 'Orientador(a)'];
@@ -567,21 +546,18 @@ async function renderPresidentAllView(filterRow: HTMLElement) {
       pill.className = `portal-process-pill ${signed ? 'portal-tone-signed' : 'portal-tone-pending'}`;
       pill.textContent = String(process.protocolo || process.id || '—').replace(/^TCC\s*[-/]?\s*/i, '');
       processCell.appendChild(pill);
-
-      const envio = row.insertCell();
-      envio.dataset.portalPlainText = 'true';
-      envio.textContent = signed ? 'Assinada' : 'Pendente';
+      row.insertCell().textContent = signed ? 'Assinada' : 'Pendente';
       row.insertCell().textContent = dateTime(process.defesa?.startAt);
       row.insertCell().textContent = String(process.titulo || '—');
       row.insertCell().textContent = String(process.aluno1?.nome || '—');
       row.insertCell().textContent = String(process.aluno2?.nome || '—');
       row.insertCell().textContent = String(process.orientador?.nome || '—');
     });
+
     wrapper.appendChild(table);
     host.appendChild(wrapper);
-    updatePresidentSelection(table);
   } catch (error) {
-    host.innerHTML = `<div class="portal-runtime-loading">Não foi possível carregar a visão “Todos”. ${error instanceof Error ? error.message : ''}</div>`;
+    host.innerHTML = `<div class="portal-runtime-loading">${error instanceof Error ? error.message : 'Não foi possível carregar todos os registros.'}</div>`;
   } finally {
     presidentLoading = false;
   }
@@ -591,34 +567,31 @@ function enhancePresidentFilters() {
   const row = document.querySelector<HTMLElement>('#coordenador-page-root .portal-coordinator-filter-row');
   if (!row) return;
   const nativeButtons = Array.from(row.querySelectorAll<HTMLButtonElement>('button.portal-standard-filter-chip:not(.portal-runtime-president-all)'));
-  if (!nativeButtons.length) return;
+  if (nativeButtons.length < 2) return;
   const group = nativeButtons[0].parentElement;
   if (!group) return;
   group.dataset.portalPresidentFilterGroup = 'true';
+  nativeButtons.forEach((button) => { button.dataset.portalNativePresidentFilter = 'true'; });
   let all = group.querySelector<HTMLButtonElement>('.portal-runtime-president-all');
   if (!all) {
-    all = makeAllFilterButton('portal-runtime-president-all', 'Todos');
+    all = document.createElement('button');
+    all.type = 'button';
+    all.className = 'portal-standard-filter-chip portal-table-filter-chip portal-runtime-president-all';
+    all.textContent = 'Todos';
     group.insertBefore(all, group.firstChild);
   }
   all.setAttribute('aria-pressed', presidentAllActive ? 'true' : 'false');
   all.dataset.selected = presidentAllActive ? 'true' : 'false';
-  nativeButtons.forEach((button) => {
-    button.dataset.portalNativePresidentFilter = 'true';
-  });
 }
 
-export function PortalSpreadsheetRuntime() {
+export const PortalSpreadsheetRuntime = () => {
   useEffect(() => {
     const unbinders = new Map<HTMLElement, () => void>();
-    let activeSettingsTable: HTMLTableElement | null = null;
     let frame = 0;
-    let mutatingRoleFilters = false;
+    let activeSettingsTable: HTMLTableElement | null = null;
 
     const bindScrollHost = (host: HTMLElement) => {
       if (unbinders.has(host)) return;
-      host.classList.add('portal-spreadsheet-scroll-host');
-      host.dataset.portalScrollHost = 'true';
-
       let dragging = false;
       let started = false;
       let startX = 0;
@@ -635,7 +608,6 @@ export function PortalSpreadsheetRuntime() {
         window.removeEventListener('mousemove', onMouseMove);
         window.removeEventListener('mouseup', stopDrag);
       };
-
       const onMouseMove = (event: MouseEvent) => {
         if (!started) return;
         const dx = event.clientX - startX;
@@ -647,7 +619,6 @@ export function PortalSpreadsheetRuntime() {
         if (host.scrollWidth > host.clientWidth + 1) host.scrollLeft = startLeft - dx;
         if (host.scrollHeight > host.clientHeight + 1) host.scrollTop = startTop - dy;
       };
-
       const onMouseDown = (event: MouseEvent) => {
         if (event.button !== 0) return;
         const target = event.target as HTMLElement;
@@ -664,7 +635,6 @@ export function PortalSpreadsheetRuntime() {
         window.addEventListener('mousemove', onMouseMove, { passive: false });
         window.addEventListener('mouseup', stopDrag, { once: true });
       };
-
       const onWheel = (event: WheelEvent) => {
         const target = event.target as HTMLElement;
         if (target.closest('select,input,textarea')) return;
@@ -690,7 +660,6 @@ export function PortalSpreadsheetRuntime() {
           if (host.scrollLeft !== before) event.preventDefault();
         }
       };
-
       const onClick = (event: MouseEvent) => {
         if (performance.now() < suppressClickUntil) {
           event.preventDefault();
@@ -698,7 +667,6 @@ export function PortalSpreadsheetRuntime() {
           event.stopImmediatePropagation();
         }
       };
-
       host.addEventListener('mousedown', onMouseDown);
       host.addEventListener('wheel', onWheel, { passive: false });
       host.addEventListener('click', onClick, true);
@@ -707,7 +675,6 @@ export function PortalSpreadsheetRuntime() {
         host.removeEventListener('mousedown', onMouseDown);
         host.removeEventListener('wheel', onWheel);
         host.removeEventListener('click', onClick, true);
-        host.classList.remove('portal-sheet-pointer-down', 'portal-sheet-dragging');
       });
     };
 
@@ -725,7 +692,7 @@ export function PortalSpreadsheetRuntime() {
       enhanceMyTccFilters();
       enhancePresidentFilters();
       document.querySelectorAll<HTMLTableElement>(
-        '#public-calendar-cards-section table, #biblioteca-tccs-section table, #meus-processos-page-container table, #coordenador-page-root table, #authorized-access-panel table, #asten-logs-page table, #audit-logs-page table',
+        '#public-calendar-cards-section table, #biblioteca-tccs-section table, #meus-processos-page-container table, #coordenador-page-root table, #portal-president-all-view table, #authorized-access-panel table, #asten-logs-page table, #audit-logs-page table',
       ).forEach(enhanceTable);
       syncPageSizePopover(activeSettingsTable);
     };
@@ -759,6 +726,7 @@ export function PortalSpreadsheetRuntime() {
               event.stopPropagation();
               event.stopImmediatePropagation();
               savePageSize(key, size);
+              saveCurrentPage(key, 1);
               applyPagination(activeSettingsTable);
               syncPageSizePopover(activeSettingsTable);
               return;
@@ -772,34 +740,25 @@ export function PortalSpreadsheetRuntime() {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        const group = allMyTcc.parentElement;
-        if (!group) return;
-        const roleButtons = Array.from(group.querySelectorAll<HTMLButtonElement>('button.portal-standard-filter-chip:not(.portal-runtime-all-filter)'));
-        mutatingRoleFilters = true;
-        roleButtons.filter((button) => button.getAttribute('aria-pressed') !== 'true').forEach((button) => button.click());
-        mutatingRoleFilters = false;
-        group.dataset.portalAllActive = 'true';
-        window.setTimeout(schedule, 0);
+        const nativeButtons = Array.from(allMyTcc.parentElement?.querySelectorAll<HTMLButtonElement>('button[data-portal-role-tone]') || []);
+        const available = nativeButtons.map((button) => button.dataset.portalRoleTone as RoleTone).filter(Boolean);
+        const allSelected = available.length > 0 && available.every((tone) => selectedMyTccRoles.has(tone));
+        selectedMyTccRoles.clear();
+        if (!allSelected) available.forEach((tone) => selectedMyTccRoles.add(tone));
+        saveCurrentPage('meus_processos', 1);
+        schedule();
         return;
       }
 
-      const roleButton = target.closest<HTMLButtonElement>('#meus-processos-page-container button.portal-standard-filter-chip:not(.portal-runtime-all-filter)');
-      if (roleButton && !mutatingRoleFilters) {
+      const roleButton = target.closest<HTMLButtonElement>('#meus-processos-page-container button[data-portal-role-tone]');
+      if (roleButton) {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        const group = roleButton.parentElement;
-        if (!group) return;
-        const roleButtons = Array.from(group.querySelectorAll<HTMLButtonElement>('button.portal-standard-filter-chip:not(.portal-runtime-all-filter)'));
-        mutatingRoleFilters = true;
-        roleButtons.forEach((button) => {
-          const shouldSelect = button === roleButton;
-          const selected = button.getAttribute('aria-pressed') === 'true';
-          if (selected !== shouldSelect) button.click();
-        });
-        mutatingRoleFilters = false;
-        group.dataset.portalAllActive = 'false';
-        window.setTimeout(schedule, 0);
+        const tone = roleButton.dataset.portalRoleTone as RoleTone;
+        if (selectedMyTccRoles.has(tone)) selectedMyTccRoles.delete(tone); else selectedMyTccRoles.add(tone);
+        saveCurrentPage('meus_processos', 1);
+        schedule();
         return;
       }
 
@@ -833,7 +792,7 @@ export function PortalSpreadsheetRuntime() {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['class', 'aria-pressed', 'data-selected', 'data-portal-filter-value'],
+      attributeFilter: ['class', 'aria-pressed', 'data-selected', 'data-portal-filter-value', 'style'],
     });
     window.addEventListener('portal:table-layout-changed', schedule as EventListener);
     window.addEventListener('global_table_layouts_changed', schedule as EventListener);
@@ -851,4 +810,4 @@ export function PortalSpreadsheetRuntime() {
   }, []);
 
   return null;
-}
+};

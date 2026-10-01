@@ -38,23 +38,27 @@ test('mão e roda movimentam o host nos dois eixos sem pointer capture', () => {
   assert.match(css, /overflow: auto !important/);
 });
 
-test('paginação fica depois da planilha com seletor e páginas reais', () => {
+test('paginação fica depois da planilha e quantidade de linhas é controlada pela engrenagem', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   assert.match(runtime, /host\.insertAdjacentElement\('afterend', pager\)/);
-  assert.match(runtime, /Linhas por página/);
-  assert.match(runtime, /\[25, 50, 100, 'all'\]/);
+  assert.match(runtime, /linhas por pagina/);
+  assert.match(runtime, /savePageSize\(key, size\)/);
+  assert.match(runtime, /syncPageSizePopover\(activeSettingsTable\)/);
   assert.match(runtime, /makeButton\('Anterior'/);
   assert.match(runtime, /makeButton\('Próxima'/);
   assert.match(runtime, /pageList\(totalPages, current\)/);
+  assert.doesNotMatch(runtime, /portal-spreadsheet-page-size/);
 });
 
-test('Meus TCCs usa Todos sem bolinha e quatro tons distintos', () => {
+test('Meus TCCs usa Todos sem bolinha e quatro tons combináveis', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const css = read('src/portal-spreadsheet-runtime.css');
   const tokens = read('src/utils/portalSemanticTokens.ts');
-  assert.match(runtime, /makeAllFilterButton\('portal-runtime-all-filter', 'Todos'\)/);
+  assert.match(runtime, /portal-runtime-all-filter/);
+  assert.match(runtime, /selectedMyTccRoles\.has\(tone\)/);
+  assert.match(runtime, /selectedMyTccRoles\.clear\(\)/);
   assert.doesNotMatch(runtime, /portal-runtime-all-filter[^\n]*portal-filter-dot/);
-  assert.match(css, /data-portal-all-active="true"/);
+  for (const tone of ['student', 'board', 'evaluator', 'viewer']) assert.match(css, new RegExp(`data-portal-role-tone="${tone}"`));
   for (const border of ['#9a7600', '#a04444', '#2e718d', '#6e4a94']) {
     assert.match(css, new RegExp(border));
     assert.match(tokens, new RegExp(border));
@@ -65,19 +69,18 @@ test('Presidente tem seleção fixa e Envio textual sem pílula', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const css = read('src/portal-spreadsheet-runtime.css');
   assert.match(runtime, /portal-sheet-checkbox/);
-  assert.match(runtime, /Selecionar\/Deselecionar todos/);
-  assert.match(runtime, /envio\.dataset\.portalPlainText = 'true'/);
-  assert.match(runtime, /envio\.textContent = signed \? 'Assinada' : 'Pendente'/);
+  assert.match(runtime, /portalStickySelection/);
+  assert.match(runtime, /cell\.dataset\.portalPlainText = 'true'/);
   assert.match(css, /data-portal-plain-text="true"/);
   assert.match(css, /--portal-sticky-row-bg/);
 });
 
-test('Acesso, Assinaturas e Logs são planilhas diretas no workspace', () => {
+test('Acesso, Assinaturas e Logs permanecem planilhas do workspace sem camada visual paralela', () => {
   const settings = read('src/components/PortalSettingsRuntime.tsx');
+  const workspace = read('src/components/SettingsWorkspaceModal.tsx');
   const css = read('src/portal-spreadsheet-runtime.css');
   for (const kind of ['access', 'signatures', 'logs']) assert.match(settings, new RegExp(`portalSheetMode = '${kind}'`));
-  assert.match(css, /portal-settings-workspace\[data-portal-sheet-mode\]/);
-  assert.match(css, /#authorized-access-panel,#asten-logs-page,#audit-logs-page/);
+  assert.match(workspace, /data-portal-full-bleed/);
+  assert.match(css, /data-portal-full-bleed/);
   assert.match(css, /background: var\(--portal-green-action, #337959\) !important/);
-  assert.match(css, /#audit-logs-page td\[data-portal-plain-text="true"\]/);
 });

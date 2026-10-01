@@ -8,6 +8,12 @@ export interface SettingsWorkspaceSection {
   description?: string;
   icon?: React.ComponentType<{ className?: string }>;
   content: React.ReactNode;
+  /**
+   * Full-bleed sections use the entire workspace content area, without the
+   * generic inner padding/card. This is appropriate for self-contained
+   * operational panels such as the infrastructure integrations dashboard.
+   */
+  fullBleed?: boolean;
 }
 
 interface SettingsWorkspaceModalProps {
@@ -44,6 +50,9 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
   if (!open || !current) return null;
 
   const singlePane = sections.length === 1;
+  // `integrations` predates the explicit fullBleed contract. Keeping it as a
+  // compatibility default avoids coupling visual correctness to old callers.
+  const fullBleed = current.fullBleed ?? current.id === 'integrations';
   const singlePaneContent = singlePane && React.isValidElement(current.content)
     ? React.cloneElement(current.content as React.ReactElement<EmbeddedCapableProps>, { embedded: true })
     : current.content;
@@ -75,8 +84,18 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
           })}</div>
         </div>
       </aside>
-      <main className="min-w-0 flex-1 overflow-y-auto p-3 sm:p-4" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
-        <div className="portal-settings-workspace-content min-w-0 rounded-xl" style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>{current.content}</div>
+      <main
+        className={`portal-settings-workspace-main min-w-0 flex-1 overflow-y-auto ${fullBleed ? 'p-0' : 'p-3 sm:p-4'}`}
+        data-portal-full-bleed={fullBleed ? 'true' : 'false'}
+        style={{ backgroundColor: fullBleed ? 'var(--portal-surface-layer-2)' : 'var(--portal-surface-layer-1)' }}
+      >
+        <div
+          className={`portal-settings-workspace-content min-w-0 ${fullBleed ? 'min-h-full h-full rounded-none' : 'rounded-xl'}`}
+          data-portal-full-bleed={fullBleed ? 'true' : 'false'}
+          style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}
+        >
+          {current.content}
+        </div>
       </main>
     </div>
   );
