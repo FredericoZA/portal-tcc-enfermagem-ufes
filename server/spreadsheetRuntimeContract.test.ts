@@ -34,45 +34,46 @@ test('mão e roda movimentam o host nos dois eixos sem pointer capture', () => {
   assert.doesNotMatch(runtime, /setPointerCapture|releasePointerCapture/);
   assert.match(runtime, /host\.scrollLeft = startLeft - dx/);
   assert.match(runtime, /host\.scrollTop = startTop - dy/);
+  assert.match(runtime, /host\.scrollTop \+= event\.deltaY/);
+  assert.match(runtime, /host\.scrollLeft \+=/);
   assert.match(css, /cursor: grab !important/);
   assert.match(css, /overflow: auto !important/);
 });
 
-test('paginação fica depois da planilha e quantidade de linhas é controlada pela engrenagem', () => {
+test('paginação fica depois da planilha e quantidade vem da configuração canônica', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
+  assert.match(runtime, /ensureSinglePager/);
   assert.match(runtime, /host\.insertAdjacentElement\('afterend', pager\)/);
-  assert.match(runtime, /linhas por pagina/);
-  assert.match(runtime, /savePageSize\(key, size\)/);
-  assert.match(runtime, /syncPageSizePopover\(activeSettingsTable\)/);
+  assert.match(runtime, /syncPageSizeFromSettings/);
+  assert.match(runtime, /localStorage\.setItem\(pageSizeKey\(key\), String\(size\)\)/);
+  assert.match(runtime, /config\.recordsLimit = 'all'/);
   assert.match(runtime, /makeButton\('Anterior'/);
   assert.match(runtime, /makeButton\('Próxima'/);
   assert.match(runtime, /pageList\(totalPages, current\)/);
   assert.doesNotMatch(runtime, /portal-spreadsheet-page-size/);
 });
 
-test('Meus TCCs usa Todos sem bolinha e quatro tons combináveis', () => {
+test('Meus TCCs mantém filtros de vínculo no estado React da própria página', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
-  const css = read('src/portal-spreadsheet-runtime.css');
+  const page = read('src/pages/MeusProcessosPage.tsx');
   const tokens = read('src/utils/portalSemanticTokens.ts');
-  assert.match(runtime, /portal-runtime-all-filter/);
-  assert.match(runtime, /selectedMyTccRoles\.has\(tone\)/);
-  assert.match(runtime, /selectedMyTccRoles\.clear\(\)/);
-  assert.doesNotMatch(runtime, /portal-runtime-all-filter[^\n]*portal-filter-dot/);
-  for (const tone of ['student', 'board', 'evaluator', 'viewer']) assert.match(css, new RegExp(`data-portal-role-tone="${tone}"`));
-  for (const border of ['#9a7600', '#a04444', '#2e718d', '#6e4a94']) {
-    assert.match(css, new RegExp(border));
-    assert.match(tokens, new RegExp(border));
-  }
+  assert.match(page, /selectedRoleCategories/);
+  assert.match(page, /toggleRoleCategory/);
+  assert.match(page, /selectedRoleCategories\.includes\(roleCat\)/);
+  assert.match(page, /ROLE_CONFIGS/);
+  assert.doesNotMatch(runtime, /enhanceMyTccFilters|selectedMyTccRoles|portal-runtime-all-filter/);
+  for (const border of ['#9a7600', '#a04444', '#2e718d', '#6e4a94']) assert.match(tokens, new RegExp(border));
 });
 
-test('Presidente tem seleção fixa e Envio textual sem pílula', () => {
+test('Presidente mantém seleção no React sem tabela paralela criada pelo runtime', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
-  const css = read('src/portal-spreadsheet-runtime.css');
+  const page = read('src/pages/CoordenadorPage.tsx');
+  assert.match(page, /selectedIds/);
+  assert.match(page, /toggleSelectAllPending/);
+  assert.match(page, /data-portal-selection-column="true"/);
   assert.match(runtime, /portal-sheet-checkbox/);
   assert.match(runtime, /portalStickySelection/);
-  assert.match(runtime, /cell\.dataset\.portalPlainText = 'true'/);
-  assert.match(css, /data-portal-plain-text="true"/);
-  assert.match(css, /--portal-sticky-row-bg/);
+  assert.doesNotMatch(runtime, /portal-president-all-view|renderPresidentAllView|apiClient/);
 });
 
 test('Acesso, Assinaturas e Logs permanecem planilhas do workspace sem camada visual paralela', () => {
