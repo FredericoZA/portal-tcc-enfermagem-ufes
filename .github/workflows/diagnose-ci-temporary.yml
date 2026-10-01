@@ -1,0 +1,211 @@
+name: Apply defenses spreadsheet fixes (temporary)
+
+on:
+  push:
+    branches:
+      - fix/backlog-audit-20260930
+    paths:
+      - .github/workflows/diagnose-ci-temporary.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fix/backlog-audit-20260930
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply exact source fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: esperado 1 ocorrência, encontrado {count}')
+              return text.replace(old, new, 1)
+
+          home_path = Path('src/pages/HomePage.tsx')
+          home = home_path.read_text()
+          home = replace_once(
+              home,
+              "  { key: 'protocolo', label: 'Nº do Processo' },\n  { key: 'defesaDataHora', label: 'Data e Hora' },",
+              "  { key: 'protocolo', label: 'Processo' },\n  { key: 'defesaDataHora', label: 'Data e Hora' },",
+              'cabeçalho Processo'
+          )
+          home = replace_once(
+              home,
+              "      protocolo: 'Nº do Processo',\n      defesaDataHora: 'Data e Hora',",
+              "      protocolo: 'Processo',\n      defesaDataHora: 'Data e Hora',",
+              'exportação Processo'
+          )
+          home = replace_once(
+              home,
+              "                  key={colKey}\n                  onClick={() => handleDefensesSort(isSortCol)}",
+              "                  key={colKey}\n                  data-portal-column-key={colKey}\n                  data-portal-sticky-process={colKey === 'protocolo' ? 'true' : undefined}\n                  onClick={() => handleDefensesSort(isSortCol)}",
+              'metadados sticky do cabeçalho'
+          )
+          home = replace_once(
+              home,
+              "                      key=\"protocolo\"\n                      onClick={(e) => {",
+              "                      key=\"protocolo\"\n                      data-portal-sticky-process=\"true\"\n                      onClick={(e) => {",
+              'metadado sticky da célula Processo'
+          )
+          old_process = """                        const rawStr = (proc.protocolo || proc.id || '').trim();
+                        const clean = rawStr.replace(/^TCC\\s*[-/]?\\s*/i, '').trim();
+                        const parts = clean.split(/[-/]/);
+                        let line1 = 'TCC';
+                        let line2 = rawStr;
+                        if (parts.length >= 2) {
+                          line1 = `TCC - ${parts[0]}`;
+                          line2 = parts.slice(1).join('-');
+                        } else if (proc.anoLectivo) {
+                          line1 = `TCC - ${proc.anoLectivo}`;
+                          line2 = clean;
+                        }
+                        const tagLabel = formatCellText('protocolo', line1, defensesTextFormat, '📓');
+                        return (
+                          <div className={`${defStyles.firstColBtnClass} portal-semantic-tone`} style={getPortalToneCssVars(defenseState)} data-defense-state={defenseState}>
+                            <div className={defStyles.firstColTagClass}>
+                              {tagLabel}
+                            </div>
+                            <div className={`${defStyles.cellTextColorClass} group-hover/col0:text-emerald-950 text-xs tracking-wide ${defStyles.cellWeightClass}`}>
+                              {line2}
+                            </div>
+                            <span className={defStyles.firstColSubtextClass}>
+                              Abrir TCC ↗
+                            </span>
+                          </div>
+                        );"""
+          new_process = """                        const rawStr = String(proc.protocolo || proc.id || '').trim();
+                        const clean = rawStr.replace(/^TCC\\s*[-/]?\\s*/i, '').trim();
+                        const processCode = clean ? `TCC - ${clean}` : 'TCC';
+                        const processLabel = formatCellText('protocolo', processCode, defensesTextFormat, '📓');
+                        return (
+                          <div className={`${defStyles.firstColBtnClass} portal-semantic-tone`} style={getPortalToneCssVars(defenseState)} data-defense-state={defenseState}>
+                            <div className={`${defStyles.cellTextColorClass} group-hover/col0:text-emerald-950 text-xs tracking-wide ${defStyles.cellWeightClass}`}>
+                              {processLabel}
+                            </div>
+                          </div>
+                        );"""
+          home = replace_once(home, old_process, new_process, 'formatação TCC - número')
+          home_path.write_text(home)
+
+          runtime_path = Path('src/components/PortalSpreadsheetRuntime.tsx')
+          runtime = runtime_path.read_text()
+          old_wheel = """      const onWheel = (event: WheelEvent) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('select,input,textarea')) return;
+        const canX = host.scrollWidth > host.clientWidth + 1;
+        const canY = host.scrollHeight > host.clientHeight + 1;
+        if (!canX && !canY) return;
+        const horizontalIntent = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
+        if (horizontalIntent && canX) {
+          const before = host.scrollLeft;
+          host.scrollLeft += Math.abs(event.deltaX) > 0 ? event.deltaX : event.deltaY;
+          if (host.scrollLeft !== before) event.preventDefault();
+          return;
+        }
+        if (canY) {
+          const before = host.scrollTop;
+          host.scrollTop += event.deltaY;
+          if (host.scrollTop !== before) event.preventDefault();
+          return;
+        }
+        if (canX) {
+          const before = host.scrollLeft;
+          host.scrollLeft += event.deltaY;
+          if (host.scrollLeft !== before) event.preventDefault();
+        }
+      };"""
+          new_wheel = """      const onWheel = (event: WheelEvent) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('select,input,textarea')) return;
+        const canX = host.scrollWidth > host.clientWidth + 1;
+        const canY = host.scrollHeight > host.clientHeight + 1;
+        if (!canX && !canY) return;
+
+        // Trackpad horizontal ou Shift+roda navega apenas no eixo X.
+        // Roda vertical nunca é convertida implicitamente em movimento lateral:
+        // se não houver rolagem Y disponível, o evento segue para a página.
+        const horizontalIntent = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
+        if (horizontalIntent) {
+          if (!canX) return;
+          const before = host.scrollLeft;
+          const delta = Math.abs(event.deltaX) > 0 ? event.deltaX : event.deltaY;
+          host.scrollLeft += delta;
+          if (host.scrollLeft !== before) event.preventDefault();
+          return;
+        }
+
+        if (!canY) return;
+        const before = host.scrollTop;
+        host.scrollTop += event.deltaY;
+        if (host.scrollTop !== before) event.preventDefault();
+      };"""
+          runtime = replace_once(runtime, old_wheel, new_wheel, 'scroll vertical da planilha')
+          runtime_path.write_text(runtime)
+
+          css_path = Path('src/portal-backlog-audit-1055.css')
+          css = css_path.read_text()
+          marker = '/* Defesa: primeira coluna congelada em cabeçalho e corpo. */'
+          if marker not in css:
+              css += """
+
+/* Defesa: primeira coluna congelada em cabeçalho e corpo. */
+#public-calendar-cards-section table[data-portal-spreadsheet="defenses"] th[data-portal-sticky-process="true"] {
+  position: sticky !important;
+  left: 0 !important;
+  top: 0 !important;
+  z-index: 60 !important;
+  background: var(--table-header, var(--portal-green-header, #005830)) !important;
+  background-clip: padding-box !important;
+  box-shadow: 1px 0 0 rgba(255,255,255,.34) !important;
+}
+
+#public-calendar-cards-section table[data-portal-spreadsheet="defenses"] td[data-portal-sticky-process="true"] {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 30 !important;
+  background: var(--portal-sticky-row-bg, #fff) !important;
+  background-clip: padding-box !important;
+  box-shadow: 1px 0 0 #cbd5e1 !important;
+}
+"""
+          css_path.write_text(css)
+
+          Path('diagnostics-ci.txt').unlink(missing_ok=True)
+          PY
+
+      - name: Install
+        run: npm ci
+
+      - name: Validate edited sources
+        run: |
+          npm run lint
+          npm run build
+
+      - name: Remove temporary workflow and commit fixes
+        shell: bash
+        run: |
+          rm -f .github/workflows/diagnose-ci-temporary.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: corrige Processo e rolagem da lista de defesas"
+          git pull --rebase origin fix/backlog-audit-20260930
+          git push origin HEAD:fix/backlog-audit-20260930

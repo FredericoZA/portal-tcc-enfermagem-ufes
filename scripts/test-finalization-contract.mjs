@@ -117,7 +117,10 @@ assert.match(googleWorkspace, /registerMasterDocumentModelFromDrive\(input:\{typ
 assert.match(googleWorkspace, /99_\$\{type\}/);
 assert.match(googleWorkspace, /drive\.readonly/);
 
-assert.match(server, /STUDENT_TCC_ALREADY_EXISTS/);
+// Regra vigente: um aluno pode participar de múltiplos TCCs. O backend não
+// pode reintroduzir a trava histórica de um único trabalho por aluno.
+assert.doesNotMatch(server, /STUDENT_TCC_ALREADY_EXISTS/);
+assert.doesNotMatch(server, /Cada aluno pode participar como autor de apenas um TCC/);
 assert.match(server, /ACCESS_LINKED_TO_PROCESS/);
 assert.match(server, /GOOGLE_ALLOW_EXISTING_MODEL_LINKS/);
 assert.doesNotMatch(server, /if\(role==='STUDENT'&&!matricula\)/, 'Matrícula não pode bloquear o cadastro individual prévio.');

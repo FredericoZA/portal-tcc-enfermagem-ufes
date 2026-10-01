@@ -58,7 +58,7 @@ function CompactModal({ title, onClose, children }: { title: string; onClose: ()
   return createPortal(
     <div className="fixed inset-0 z-[1000012] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-[1px]" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-3xl overflow-hidden rounded-xl border border-slate-300 shadow-2xl" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
-        <div className="flex items-center justify-between border-b-[16px] border-white px-3 py-2 text-white" style={{ backgroundColor: 'var(--portal-green-header)' }}>
+        <div className="flex items-center justify-between border-b-4 border-white px-3 py-2 text-white" style={{ backgroundColor: 'var(--portal-green-header)' }}>
           <h3 className="text-xs font-black uppercase tracking-wide">{title}</h3>
           <button type="button" onClick={onClose} className="rounded-md border border-white bg-white p-1 text-slate-900 hover:bg-slate-100" aria-label="Fechar"><X className="h-4 w-4" /></button>
         </div>
@@ -200,7 +200,7 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
   </div>;
 
   return <section id="authorized-access-panel" data-settings-sheet="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'min-h-full' : 'overflow-hidden rounded-xl border border-slate-300 shadow-sm'} style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>
-    {embedded ? <SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal> : <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-3 py-2 text-white" style={{ backgroundColor: 'var(--portal-green-header)' }}><div className="flex items-center gap-2"><UserCheck className="h-4 w-4"/><h3 className="text-xs font-black uppercase tracking-wide">Acesso</h3></div>{toolbar}</header>}
+    {embedded ? <SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal> : <header className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-white px-3 py-2 text-white" style={{ backgroundColor: 'var(--portal-green-header)' }}><div className="flex items-center gap-2"><UserCheck className="h-4 w-4"/><h3 className="text-xs font-black uppercase tracking-wide">Acesso</h3></div>{toolbar}</header>}
 
     <div className="p-0">
       {loading ? <div className="m-3 rounded-xl border border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Carregando acessos…</div> : shown.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Nenhum acesso encontrado.</div> : <TableScrollWrapper>
