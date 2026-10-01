@@ -23,13 +23,32 @@ jobs:
           cache: npm
       - name: Alinhar npm ao packageManager
         run: npm install --global npm@11.9.0
-      - run: npm ci
-      - run: npm audit --omit=dev --audit-level=high
-      - run: npm run test:ci
+      - name: Instalar dependências
+        run: npm ci
+      - name: Auditar dependências de produção
+        run: npm audit --omit=dev --audit-level=high
+      - name: Verificar ausência de segredos versionados
+        run: npm run test:secrets
+      - name: Validar TypeScript
+        run: npm run lint
+      - name: Executar testes unitários
+        run: npm run test:unit
+      - name: Executar contratos de provedores
+        run: npm run test:contracts
+      - name: Validar acessibilidade estática
+        run: npm run test:a11y
+      - name: Validar contrato de finalização
+        run: npm run test:finalization
+      - name: Gerar build de produção
+        run: npm run build
+      - name: Testar build HTTP
+        run: npm run test:http
       - name: Validar importação do servidor em runtime de produção
         env:
           NODE_ENV: production
           VERCEL: '1'
         run: node --import tsx --input-type=module -e "await import('./server.ts'); console.log('Importação do servidor em modo produção aprovada.')"
-      - run: npm run test:secure-flow
-      - run: node scripts/test-institutional-template-contract.mjs
+      - name: Validar fluxo seguro
+        run: npm run test:secure-flow
+      - name: Validar contrato do modelo institucional
+        run: node scripts/test-institutional-template-contract.mjs
