@@ -38,9 +38,11 @@ test('configurações usam barras e runtime canônico de workspace', () => {
   assert.doesNotMatch(config, /portal-settings-hub-card/);
   assert.match(modal, /var\(--portal-green-header\)/);
   assert.match(modal, /singlePane = sections\.length === 1/);
-  assert.match(runtime, /Rodapé e Identidade/);
-  assert.match(runtime, /Integrações e Plataforma/);
-  assert.match(runtime, /data-portal-settings-integrations/);
+  assert.match(config, /Rodapé e Identidade/);
+  assert.match(config, /Integrações e Plataforma/);
+  assert.match(config, /activeSettingsPanel === 'identity'/);
+  assert.match(config, /activeSettingsPanel === 'integrations'/);
+  assert.doesNotMatch(runtime, /cloneNode/);
 });
 
 test('estúdio de modelos delega navegação ao workspace externo e preserva cabeçalho', () => {
