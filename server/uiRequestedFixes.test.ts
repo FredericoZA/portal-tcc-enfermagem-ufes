@@ -12,24 +12,27 @@ const integrations = read('src/components/InfrastructureIntegrationsPanel.tsx');
 
 test('planilhas congelam cabeçalho e coluna Processo e mantêm rolagem vertical/horizontal', () => {
   assert.match(runtime, /dataset\.portalStickyHeader = 'true'/);
+  assert.match(runtime, /dataset\.portalStickyThead = 'true'/);
   assert.match(runtime, /dataset\.portalStickyProcess = 'true'/);
   assert.match(runtime, /host\.scrollTop \+= event\.deltaY/);
   assert.match(runtime, /host\.scrollLeft \+=/);
+  assert.match(css, /thead\[data-portal-sticky-thead="true"\][\s\S]*position: sticky/);
   assert.match(css, /th\[data-portal-sticky-process="true"\][\s\S]*left: 0/);
   assert.match(css, /td\[data-portal-sticky-process="true"\][\s\S]*left: 0/);
 });
 
-test('paginação fica somente no canto inferior direito e quantidade é sincronizada pela configuração', () => {
+test('paginação fica no canto inferior direito e se recompõe após rerender', () => {
   assert.doesNotMatch(runtime, /portal-spreadsheet-pager-info/);
   assert.doesNotMatch(runtime, /portal-spreadsheet-page-size/);
-  assert.match(runtime, /syncPageSizeFromSettings/);
-  assert.match(runtime, /localStorage\.setItem\(pageSizeKey\(key\), String\(size\)\)/);
-  assert.match(runtime, /config\.recordsLimit = 'all'/);
+  assert.match(runtime, /readPageSize\(key\)/);
+  assert.match(runtime, /pager\.dataset\.portalGenerated = 'true'/);
+  assert.match(runtime, /host\.insertAdjacentElement\('afterend', pager\)/);
+  assert.match(runtime, /characterData: true/);
   assert.match(css, /\.portal-spreadsheet-pager[\s\S]*justify-content: flex-end/);
   assert.match(css, /\.portal-spreadsheet-pager-left,[\s\S]*display: none/);
 });
 
-test('Meus TCCs mantém combinação de filtros e cores semânticas na página', () => {
+test('Meus TCCs mantém combinação de filtros com quatro cores bem separadas e Todos neutro', () => {
   const page = read('src/pages/MeusProcessosPage.tsx');
   const tokens = read('src/utils/portalSemanticTokens.ts');
   assert.match(page, /selectedRoleCategories/);
@@ -39,17 +42,23 @@ test('Meus TCCs mantém combinação de filtros e cores semânticas na página',
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.board/);
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.evaluator/);
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.viewer/);
-  for (const border of ['#9a7600', '#a04444', '#2e718d', '#6e4a94']) assert.match(tokens, new RegExp(border));
+  for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(tokens, new RegExp(border));
+  assert.match(css, /portal-native-all-filter\[data-selected="true"\][\s\S]*background: #fff !important[\s\S]*color: #111827 !important/);
 });
 
-test('Lista de Defesas usa cabeçalho Processo pela camada canônica e botão nativo de TCC', () => {
+test('Lista de Defesas e Repositório padronizam o cabeçalho como Processo pela camada canônica', () => {
   const home = read('src/pages/HomePage.tsx');
+  assert.match(runtime, /#public-calendar-cards-section/);
+  assert.match(runtime, /#biblioteca-tccs-section/);
   assert.match(runtime, /function renameProcessHeader/);
-  assert.match(runtime, /replace\(\/n\[º°o\]/);
-  assert.match(runtime, /'Processo'/);
+  assert.match(runtime, /node\.data = 'Processo'/);
   assert.match(home, /const clean = rawStr\.replace\(\/\^TCC/);
   assert.match(home, /line1 = `TCC - \$\{parts\[0\]\}`/);
   assert.match(home, /portal-semantic-tone/);
+});
+
+test('Meus TCCs e Presidente preservam pequena faixa verde após os filtros', () => {
+  assert.match(css, /\.portal-meus-processos-filter-row,[\s\S]*\.portal-coordinator-filter-row[\s\S]*border-bottom: 2px solid var\(--portal-green-header, #005830\)/);
 });
 
 test('tutorial remove a caixa redundante de visão selecionada', () => {

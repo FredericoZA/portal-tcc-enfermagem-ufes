@@ -81,9 +81,11 @@ test('paginação preserva todas as linhas React e cria páginas reais pela cama
   assert.match(runtime, /Math\.ceil\(visibleRows\.length \/ pageSize\)/);
   assert.match(runtime, /Anterior/);
   assert.match(runtime, /Próxima/);
-  assert.match(runtime, /syncPageSizeFromSettings/);
-  assert.match(runtime, /localStorage\.setItem\(pageSizeKey\(key\), String\(size\)\)/);
+  assert.match(runtime, /readPageSize\(key\)/);
+  assert.match(runtime, /localStorage\.setItem\(pageSizeKey\(key\), String\(preferred \|\| DEFAULT_PAGE_SIZE\[key\]\)\)/);
   assert.match(runtime, /portal_table_page_size_/);
+  assert.match(runtime, /host\.insertAdjacentElement\('afterend', pager\)/);
+  assert.match(runtime, /characterData: true/);
 });
 
 test('planilhas mantêm Processo fixo e filtros/seleção sob responsabilidade das páginas', () => {
@@ -112,8 +114,8 @@ test('rolagem canônica usa mouse no documento e wheel no mesmo host', () => {
   assert.match(runtime, /scrollLeft/);
 });
 
-test('quatro papéis usam famílias cromáticas claramente distintas', () => {
+test('quatro papéis usam famílias cromáticas amarelo, laranja, verde e azul', () => {
   const tokens = read('src/utils/portalSemanticTokens.ts');
-  for (const color of ['#f3e3a1', '#e8b0aa', '#b9d9ef', '#d0bce8']) assert.match(tokens, new RegExp(color));
-  for (const border of ['#9a7600', '#a04444', '#2e718d', '#6e4a94']) assert.match(tokens, new RegExp(border));
+  for (const color of ['#fde68a', '#fdba74', '#bbf7d0', '#bfdbfe']) assert.match(tokens, new RegExp(color));
+  for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(tokens, new RegExp(border));
 });

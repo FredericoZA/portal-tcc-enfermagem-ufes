@@ -13,6 +13,7 @@
   -webkit-overflow-scrolling: touch !important;
   cursor: grab !important;
   background: #fff !important;
+  isolation: isolate !important;
 }
 
 .portal-spreadsheet-scroll-host.portal-sheet-pointer-down,
@@ -59,12 +60,20 @@
 table[data-portal-spreadsheet] {
   border-collapse: separate !important;
   border-spacing: 0 !important;
+  isolation: isolate !important;
+}
+
+table[data-portal-spreadsheet] thead[data-portal-sticky-thead="true"] {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 40 !important;
+  background: var(--table-header, var(--portal-green-header, #005830)) !important;
 }
 
 table[data-portal-spreadsheet] th[data-portal-sticky-header="true"] {
   position: sticky !important;
   top: 0 !important;
-  z-index: 30 !important;
+  z-index: 42 !important;
   background: var(--table-header, var(--portal-green-header, #005830)) !important;
   color: var(--table-header-text, #fff) !important;
   background-clip: padding-box !important;
@@ -74,76 +83,80 @@ table[data-portal-spreadsheet] th[data-portal-sticky-header="true"] {
 table[data-portal-spreadsheet] td[data-portal-sticky-process="true"] {
   position: sticky !important;
   left: 0 !important;
-  z-index: 22 !important;
+  z-index: 26 !important;
   background: var(--portal-sticky-row-bg, #fff) !important;
   background-clip: padding-box !important;
   box-shadow: 1px 0 0 #cbd5e1 !important;
+  isolation: isolate !important;
 }
 
 table[data-portal-spreadsheet] th[data-portal-sticky-process="true"] {
   position: sticky !important;
   left: 0 !important;
   top: 0 !important;
-  z-index: 48 !important;
+  z-index: 52 !important;
   background: var(--table-header, var(--portal-green-header, #005830)) !important;
   color: var(--table-header-text, #fff) !important;
   background-clip: padding-box !important;
   box-shadow: 1px 0 0 rgba(255, 255, 255, .34) !important;
+  isolation: isolate !important;
 }
 
-/* Coluna de seleção quando existir */
+/* Coluna de seleção quando existir. 54 px dá espaço real ao controle sem invadir Processo. */
 table[data-portal-spreadsheet] td[data-portal-sticky-selection="true"] {
   position: sticky !important;
   left: 0 !important;
-  z-index: 36 !important;
-  width: 46px !important;
-  min-width: 46px !important;
-  max-width: 46px !important;
-  padding-left: 6px !important;
-  padding-right: 6px !important;
+  z-index: 38 !important;
+  width: 54px !important;
+  min-width: 54px !important;
+  max-width: 54px !important;
+  padding-left: 7px !important;
+  padding-right: 7px !important;
   text-align: center !important;
   vertical-align: middle !important;
   background: var(--portal-sticky-row-bg, #fff) !important;
   background-clip: padding-box !important;
   box-shadow: 1px 0 0 #cbd5e1 !important;
+  isolation: isolate !important;
 }
 
 table[data-portal-spreadsheet] th[data-portal-sticky-selection="true"] {
   position: sticky !important;
   left: 0 !important;
   top: 0 !important;
-  z-index: 54 !important;
-  width: 46px !important;
-  min-width: 46px !important;
-  max-width: 46px !important;
-  padding-left: 6px !important;
-  padding-right: 6px !important;
+  z-index: 58 !important;
+  width: 54px !important;
+  min-width: 54px !important;
+  max-width: 54px !important;
+  padding-left: 7px !important;
+  padding-right: 7px !important;
   text-align: center !important;
   vertical-align: middle !important;
   background: var(--table-header, var(--portal-green-header, #005830)) !important;
   color: var(--table-header-text, #fff) !important;
+  isolation: isolate !important;
 }
 
 table[data-portal-spreadsheet]
   [data-portal-sticky-process="true"][data-portal-after-selection="true"] {
-  left: 46px !important;
+  left: 54px !important;
 }
 
-/* Checkbox único e com área clicável suficiente */
+/* Checkbox único, legível e com área clicável adequada. */
 .portal-sheet-checkbox {
   display: inline-flex !important;
-  width: 22px !important;
-  height: 22px !important;
-  min-width: 22px !important;
-  min-height: 22px !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
   align-items: center !important;
   justify-content: center !important;
   margin: 0 auto !important;
   padding: 0 !important;
-  border: 1.5px solid #94a3b8 !important;
-  border-radius: 5px !important;
+  border: 1.5px solid #7c8a95 !important;
+  border-radius: 6px !important;
   background: #fff !important;
-  color: #475569 !important;
+  color: #334155 !important;
   box-shadow: none !important;
   line-height: 1 !important;
 }
@@ -155,32 +168,38 @@ table[data-portal-spreadsheet]
 }
 
 .portal-sheet-checkbox svg {
-  width: 15px !important;
-  height: 15px !important;
+  width: 18px !important;
+  height: 18px !important;
   color: currentColor !important;
   stroke: currentColor !important;
 }
 
 .portal-sheet-checkbox span {
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 900 !important;
   color: currentColor !important;
 }
 
-/* Uma única paginação, fina e alinhada à direita */
+/* Uma única paginação, sempre visível no rodapé e alinhada à direita. */
 .portal-spreadsheet-pager {
+  position: relative !important;
+  z-index: 8 !important;
   display: flex !important;
-  min-height: 26px !important;
-  height: 26px !important;
+  width: 100% !important;
+  min-height: 30px !important;
+  height: 30px !important;
+  flex: 0 0 30px !important;
   align-items: center !important;
   justify-content: flex-end !important;
   gap: 3px !important;
   margin: 0 !important;
-  padding: 1px 5px !important;
+  padding: 2px 6px !important;
   border-top: 1px solid #d6dde2 !important;
   background: #f8fafc !important;
   color: #334155 !important;
   box-sizing: border-box !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .portal-spreadsheet-pager-left,
@@ -199,14 +218,14 @@ table[data-portal-spreadsheet]
 }
 
 .portal-spreadsheet-pager-controls button {
-  min-width: 22px !important;
-  height: 20px !important;
-  padding: 0 5px !important;
+  min-width: 24px !important;
+  height: 22px !important;
+  padding: 0 6px !important;
   border: 1px solid #cbd5e1 !important;
   border-radius: 5px !important;
   background: #fff !important;
-  color: #334155 !important;
-  font-size: 8.5px !important;
+  color: #1f2937 !important;
+  font-size: 9.5px !important;
   font-weight: 850 !important;
   line-height: 1 !important;
   box-shadow: none !important;
@@ -219,7 +238,7 @@ table[data-portal-spreadsheet]
 }
 
 .portal-spreadsheet-pager-controls button:disabled {
-  opacity: .35 !important;
+  opacity: .38 !important;
   cursor: default !important;
 }
 
@@ -241,10 +260,63 @@ table[data-portal-spreadsheet]
   color: #334155 !important;
 }
 
-/* Separação consistente entre barra de filtros e planilha. */
+/* Faixa verde mínima entre filtros e a área branca da planilha, igual ao calendário. */
 .portal-meus-processos-filter-row,
 .portal-coordinator-filter-row {
-  border-bottom: 10px solid #f1f5f9 !important;
+  border-bottom: 2px solid var(--portal-green-header, #005830) !important;
+}
+
+/* "Todos" é neutro: fundo branco e texto preto, inclusive quando selecionado. */
+.portal-meus-processos-filter-row .portal-native-all-filter,
+.portal-meus-processos-filter-row .portal-native-all-filter[data-selected="true"] {
+  background: #fff !important;
+  color: #111827 !important;
+  border-color: #9ca3af !important;
+  box-shadow: none !important;
+}
+
+/* Cores de vínculo deliberadamente distantes: amarelo, laranja, verde e azul. */
+.portal-meus-processos-filter-row [data-portal-role-tone="student"] {
+  --portal-filter-role-bg: #fde68a;
+  --portal-filter-role-border: #d4a300;
+  --portal-filter-role-text: #3f3000;
+}
+
+.portal-meus-processos-filter-row [data-portal-role-tone="board"] {
+  --portal-filter-role-bg: #fdba74;
+  --portal-filter-role-border: #ea580c;
+  --portal-filter-role-text: #431407;
+}
+
+.portal-meus-processos-filter-row [data-portal-role-tone="evaluator"] {
+  --portal-filter-role-bg: #bbf7d0;
+  --portal-filter-role-border: #16a34a;
+  --portal-filter-role-text: #14532d;
+}
+
+.portal-meus-processos-filter-row [data-portal-role-tone="viewer"] {
+  --portal-filter-role-bg: #bfdbfe;
+  --portal-filter-role-border: #2563eb;
+  --portal-filter-role-text: #1e3a8a;
+}
+
+.portal-meus-processos-filter-row [data-portal-role-tone][data-selected="true"] {
+  background: var(--portal-filter-role-bg) !important;
+  border-color: var(--portal-filter-role-border) !important;
+  color: var(--portal-filter-role-text) !important;
+  box-shadow: inset 0 0 0 1px var(--portal-filter-role-border) !important;
+}
+
+.portal-meus-processos-filter-row [data-portal-role-tone][data-selected="false"] {
+  background: #fff !important;
+  border-color: var(--portal-filter-role-border) !important;
+  color: #1f2937 !important;
+  box-shadow: none !important;
+}
+
+.portal-meus-processos-filter-row [data-portal-role-tone] .portal-filter-dot,
+.portal-meus-processos-filter-row [data-portal-role-tone] .text-\[9px\] {
+  background: var(--portal-filter-role-border) !important;
 }
 
 /* Ajustes de outras superfícies que já eram mantidos nesta folha. */
