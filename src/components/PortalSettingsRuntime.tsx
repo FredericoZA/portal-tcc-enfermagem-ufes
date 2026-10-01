@@ -21,11 +21,19 @@ function replaceText(node: HTMLElement, from: RegExp, to: string) {
   });
 }
 
+function requestPane(pane: 'identity' | 'integrations') {
+  document.documentElement.dataset.portalSettingsRequestedPane = pane;
+  const dispatch = () => window.dispatchEvent(new CustomEvent('portal-settings-open-pane', { detail: { pane } }));
+  dispatch();
+  window.setTimeout(dispatch, 0);
+  window.setTimeout(dispatch, 80);
+  window.setTimeout(dispatch, 180);
+}
+
 export function PortalSettingsRuntime() {
   useEffect(() => {
     let frame = 0;
-    let desiredSyncPane: 'identity' | 'integrations' = 'identity';
-    let openingAlias = false;
+    let openingIntegrationAlias = false;
 
     const enhanceHub = () => {
       const hub = document.getElementById('portal-settings-hub');
@@ -37,7 +45,7 @@ export function PortalSettingsRuntime() {
         if (identity) {
           identity.dataset.portalSettingsIdentity = 'true';
           identity.addEventListener('click', () => {
-            if (!openingAlias) desiredSyncPane = 'identity';
+            if (!openingIntegrationAlias) requestPane('identity');
           });
         }
       }
@@ -57,68 +65,27 @@ export function PortalSettingsRuntime() {
         integrations.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-          desiredSyncPane = 'integrations';
-          openingAlias = true;
+          requestPane('integrations');
+          openingIntegrationAlias = true;
           identity!.click();
-          openingAlias = false;
-          desiredSyncPane = 'integrations';
-          window.setTimeout(configureWorkspace, 0);
-          window.setTimeout(configureWorkspace, 60);
+          openingIntegrationAlias = false;
+          requestPane('integrations');
         });
         identity.insertAdjacentElement('afterend', integrations);
       }
     };
 
-    const configureWorkspace = () => {
+    const applyRequestedPane = () => {
+      const requested = document.documentElement.dataset.portalSettingsRequestedPane;
+      if (requested !== 'identity' && requested !== 'integrations') return;
       const workspace = document.querySelector<HTMLElement>('.portal-settings-workspace');
       if (!workspace) return;
-      const heading = workspace.querySelector<HTMLElement>('.portal-settings-workspace-header h2');
-      const title = normalize(heading?.textContent || '');
-      workspace.removeAttribute('data-portal-sheet-mode');
-      workspace.removeAttribute('data-portal-settings-pane');
-      workspace.removeAttribute('data-portal-settings-models');
-
-      if (title.includes('acesso')) {
-        workspace.dataset.portalSheetMode = 'access';
-        return;
-      }
-      if (title.includes('registros de assinatura')) {
-        workspace.dataset.portalSheetMode = 'signatures';
-        return;
-      }
-      if (title.includes('registro de logs')) {
-        workspace.dataset.portalSheetMode = 'logs';
-        return;
-      }
-      if (title.includes('modelos e variaveis')) {
-        workspace.dataset.portalSettingsModels = 'true';
-        return;
-      }
-
-      const navButtons = Array.from(workspace.querySelectorAll<HTMLButtonElement>('aside button'));
-      const syncWorkspace = title.includes('sincronizacao')
-        || title.includes('rodape e identidade')
-        || title.includes('integracoes e plataforma')
-        || navButtons.some((button) => normalize(button.textContent || '').includes('rodape e identidade'));
-      if (!syncWorkspace) return;
-
-      workspace.dataset.portalSettingsPane = desiredSyncPane;
-      const wanted = navButtons.find((button) => {
-        const label = normalize(button.textContent || '');
-        return desiredSyncPane === 'identity'
-          ? label.includes('rodape e identidade')
-          : label.includes('integracoes e plataformas');
-      });
-      if (wanted) {
-        const selected = wanted.classList.contains('text-white') || wanted.getAttribute('aria-selected') === 'true';
-        if (!selected) wanted.click();
-      }
-      if (heading) heading.textContent = desiredSyncPane === 'identity' ? 'Rodapé e Identidade' : 'Integrações e Plataforma';
+      requestPane(requested);
     };
 
     const enhanceAll = () => {
       enhanceHub();
-      configureWorkspace();
+      applyRequestedPane();
     };
 
     const schedule = () => {
@@ -128,7 +95,7 @@ export function PortalSettingsRuntime() {
 
     enhanceAll();
     const observer = new MutationObserver(schedule);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
       observer.disconnect();

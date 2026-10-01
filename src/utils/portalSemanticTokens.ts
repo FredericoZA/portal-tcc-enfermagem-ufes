@@ -26,9 +26,11 @@ export const PORTAL_SEMANTIC_COLORS = {
     evaluator: { bg: '#bbf7d0', border: '#16a34a', text: '#14532d' },
     viewer: { bg: '#bfdbfe', border: '#2563eb', text: '#1e3a8a' },
   },
+  // Assinaturas usam exatamente a mesma semântica visual do calendário:
+  // pendente = amarelo/a defender; assinada = verde/já defendida.
   signature: {
-    pending: { bg: '#d8c98f', border: '#9b884b', text: '#3e361c' },
-    signed: { bg: '#c2d0c2', border: '#7e907e', text: '#263728' },
+    pending: { bg: '#e8dda7', border: '#b49d4f', text: '#4a4020' },
+    signed: { bg: '#bed8c3', border: '#719a79', text: '#23472b' },
   },
   neutral: { bg: '#e2e8f0', border: '#94a3b8', text: '#334155' },
 } as const;

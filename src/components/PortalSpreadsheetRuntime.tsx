@@ -65,9 +65,7 @@ function storageKeysForTable(key: TableKey) {
   try {
     for (let index = 0; index < localStorage.length; index += 1) {
       const candidate = localStorage.key(index);
-      if (candidate?.startsWith('portal_user_table_config_') && candidate.endsWith(`_${key}`)) {
-        keys.push(candidate);
-      }
+      if (candidate?.startsWith('portal_user_table_config_') && candidate.endsWith(`_${key}`)) keys.push(candidate);
     }
   } catch {
     // localStorage pode estar indisponível em alguns ambientes.
@@ -95,11 +93,8 @@ function migrateLegacyLimits() {
         // Preferência inválida não pode bloquear a planilha.
       }
     }
-
     try {
-      if (!localStorage.getItem(pageSizeKey(key))) {
-        localStorage.setItem(pageSizeKey(key), String(preferred || DEFAULT_PAGE_SIZE[key]));
-      }
+      if (!localStorage.getItem(pageSizeKey(key))) localStorage.setItem(pageSizeKey(key), String(preferred || DEFAULT_PAGE_SIZE[key]));
     } catch {
       // noop
     }
@@ -111,7 +106,6 @@ migrateLegacyLimits();
 function tableKey(table: HTMLTableElement): TableKey | null {
   const explicit = table.dataset.portalTableKey as TableKey | undefined;
   if (explicit && TABLE_KEYS.includes(explicit)) return explicit;
-
   for (const key of TABLE_KEYS) {
     if (TABLE_CONTAINER_SELECTORS[key].some((selector) => table.closest(selector))) return key;
   }
@@ -122,7 +116,6 @@ function readPageSize(key: TableKey): PageSize {
   try {
     const direct = parsePageSize(localStorage.getItem(pageSizeKey(key)));
     if (direct) return direct;
-
     for (const storageKey of storageKeysForTable(key)) {
       const raw = localStorage.getItem(storageKey);
       if (!raw) continue;
@@ -144,19 +137,13 @@ function readPageSize(key: TableKey): PageSize {
 }
 
 function readCurrentPage(key: TableKey) {
-  try {
-    return Math.max(1, Number(localStorage.getItem(currentPageKey(key))) || 1);
-  } catch {
-    return 1;
-  }
+  try { return Math.max(1, Number(localStorage.getItem(currentPageKey(key))) || 1); }
+  catch { return 1; }
 }
 
 function saveCurrentPage(key: TableKey, page: number) {
-  try {
-    localStorage.setItem(currentPageKey(key), String(Math.max(1, page)));
-  } catch {
-    // noop
-  }
+  try { localStorage.setItem(currentPageKey(key), String(Math.max(1, page))); }
+  catch { /* noop */ }
 }
 
 function headerLabel(header: HTMLTableCellElement) {
@@ -184,7 +171,6 @@ function renameProcessHeader(header: HTMLTableCellElement) {
   const nodes: Text[] = [];
   let current: Node | null;
   while ((current = walker.nextNode())) nodes.push(current as Text);
-
   for (const node of nodes) {
     if (node.parentElement?.closest('.portal-core-column-menu,.portal-core-resizer')) continue;
     const value = normalize(node.data);
@@ -205,16 +191,28 @@ function opaqueColor(value: string) {
   const blue = Number(match[3]);
   const alpha = match[4] === undefined || match[4] === '' ? 1 : Number(match[4]);
   if (alpha >= 1) return `rgb(${Math.round(red)}, ${Math.round(green)}, ${Math.round(blue)})`;
+  if (alpha <= 0) return '';
   const blend = (channel: number) => Math.round((channel * alpha) + (255 * (1 - alpha)));
   return `rgb(${blend(red)}, ${blend(green)}, ${blend(blue)})`;
 }
 
-function rowBackground(row: HTMLTableRowElement) {
+/*
+ * O fundo sticky deve reproduzir a superfície visual da linha, não assumir o
+ * primeiro td (que no Presidente é a coluna de seleção). Procuramos primeiro
+ * uma célula de conteúdo opaca e só então usamos o fundo da própria linha.
+ */
+function rowBackground(row: HTMLTableRowElement, selectionIndex: number, processIndex: number) {
+  const preferredIndexes = Array.from({ length: row.cells.length }, (_, index) => index)
+    .filter((index) => index !== selectionIndex && index !== processIndex);
+  for (const index of preferredIndexes) {
+    const color = opaqueColor(getComputedStyle(row.cells[index]).backgroundColor);
+    if (color) return color;
+  }
+  const processCell = processIndex >= 0 ? row.cells[processIndex] : undefined;
+  const processColor = processCell ? opaqueColor(getComputedStyle(processCell).backgroundColor) : '';
+  if (processColor) return processColor;
   const rowColor = opaqueColor(getComputedStyle(row).backgroundColor);
   if (rowColor) return rowColor;
-  const firstCell = row.cells[0] as HTMLTableCellElement | undefined;
-  const cellColor = firstCell ? opaqueColor(getComputedStyle(firstCell).backgroundColor) : '';
-  if (cellColor) return cellColor;
   if (row.className.includes('bg-emerald-50')) return '#f0fdf4';
   return '#ffffff';
 }
@@ -240,9 +238,7 @@ function markSpreadsheet(table: HTMLTableElement) {
 
   const headerRow = table.tHead.rows[table.tHead.rows.length - 1];
   const headers = Array.from(headerRow.cells) as HTMLTableCellElement[];
-  headers.forEach((header) => {
-    header.dataset.portalStickyHeader = 'true';
-  });
+  headers.forEach((header) => { header.dataset.portalStickyHeader = 'true'; });
 
   const selectionIndex = headers.findIndex((header) =>
     header.dataset.portalSelectionColumn === 'true'
@@ -250,9 +246,7 @@ function markSpreadsheet(table: HTMLTableElement) {
     || headerLabel(header) === 'selecao');
 
   let processIndex = headers.findIndex(isProcessHeader);
-  if (processIndex < 0 && (key === 'defenses' || key === 'acervo' || key === 'meus_processos')) {
-    processIndex = 0;
-  }
+  if (processIndex < 0 && (key === 'defenses' || key === 'acervo' || key === 'meus_processos')) processIndex = 0;
 
   if (selectionIndex >= 0) {
     const selectionHeader = headers[selectionIndex];
@@ -267,21 +261,22 @@ function markSpreadsheet(table: HTMLTableElement) {
     const processHeader = headers[processIndex];
     renameProcessHeader(processHeader);
     processHeader.dataset.portalStickyProcess = 'true';
-    if (selectionIndex >= 0 && selectionIndex < processIndex) {
-      processHeader.dataset.portalAfterSelection = 'true';
-    } else {
-      delete processHeader.dataset.portalAfterSelection;
-    }
+    if (selectionIndex >= 0 && selectionIndex < processIndex) processHeader.dataset.portalAfterSelection = 'true';
+    else delete processHeader.dataset.portalAfterSelection;
   }
 
   Array.from(table.tBodies).forEach((tbody) => {
-    Array.from(tbody.rows).forEach((row) => {
-      (row as HTMLElement).style.setProperty('--portal-sticky-row-bg', rowBackground(row));
+    Array.from(tbody.rows).forEach((row, rowIndex) => {
+      const stickyBackground = rowBackground(row, selectionIndex, processIndex);
+      row.dataset.portalSpreadsheetRow = 'true';
+      row.dataset.portalFirstSpreadsheetRow = rowIndex === 0 ? 'true' : 'false';
+      row.style.setProperty('--portal-sticky-row-bg', stickyBackground);
 
       if (selectionIndex >= 0) {
         const selectionCell = row.cells[selectionIndex] as HTMLTableCellElement | undefined;
         if (selectionCell) {
           selectionCell.dataset.portalStickySelection = 'true';
+          selectionCell.style.setProperty('--portal-sticky-row-bg', stickyBackground);
           selectionCell.querySelectorAll<HTMLButtonElement>('button').forEach((button) => {
             button.classList.add('portal-sheet-checkbox');
             if (!button.getAttribute('aria-label')) button.setAttribute('aria-label', 'Selecionar item');
@@ -293,11 +288,9 @@ function markSpreadsheet(table: HTMLTableElement) {
         const processCell = row.cells[processIndex] as HTMLTableCellElement | undefined;
         if (processCell) {
           processCell.dataset.portalStickyProcess = 'true';
-          if (selectionIndex >= 0 && selectionIndex < processIndex) {
-            processCell.dataset.portalAfterSelection = 'true';
-          } else {
-            delete processCell.dataset.portalAfterSelection;
-          }
+          processCell.style.setProperty('--portal-sticky-row-bg', stickyBackground);
+          if (selectionIndex >= 0 && selectionIndex < processIndex) processCell.dataset.portalAfterSelection = 'true';
+          else delete processCell.dataset.portalAfterSelection;
         }
       }
     });
@@ -308,35 +301,27 @@ function rowIsExternallyHidden(row: HTMLTableRowElement) {
   return row.classList.contains('portal-core-filter-hidden')
     || row.dataset.portalFilterHidden === 'true'
     || row.hidden
-    || (row as HTMLElement).style.display === 'none';
+    || row.style.display === 'none';
 }
 
 function pageList(totalPages: number, current: number) {
   if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
   const pages = new Set<number>([1, totalPages, current - 1, current, current + 1]);
-  return Array.from(pages)
-    .filter((page) => page >= 1 && page <= totalPages)
-    .sort((a, b) => a - b);
+  return Array.from(pages).filter((page) => page >= 1 && page <= totalPages).sort((a, b) => a - b);
 }
 
 function ensureSinglePager(host: HTMLElement, key: TableKey) {
   const parent = host.parentElement;
   if (!parent) return null;
-
   const selector = `.portal-spreadsheet-pager[data-portal-table-key="${key}"]`;
   const allExisting = Array.from(document.querySelectorAll<HTMLElement>(selector));
   const pager = allExisting.shift() || document.createElement('nav');
   allExisting.forEach((duplicate) => duplicate.remove());
-
   pager.className = 'portal-spreadsheet-pager';
   pager.dataset.portalTableKey = key;
   pager.dataset.portalGenerated = 'true';
   pager.setAttribute('aria-label', 'Paginação da planilha');
-
-  if (pager.parentElement !== parent || pager.previousElementSibling !== host) {
-    host.insertAdjacentElement('afterend', pager);
-  }
-
+  if (pager.parentElement !== parent || pager.previousElementSibling !== host) host.insertAdjacentElement('afterend', pager);
   return pager;
 }
 
@@ -366,7 +351,6 @@ function applyPagination(table: HTMLTableElement) {
 
   const pager = ensureSinglePager(host, key);
   if (!pager) return;
-
   const signature = `${pageSize}|${current}|${visibleRows.length}|${totalPages}`;
   if (pager.dataset.portalSignature === signature && pager.childElementCount > 0) return;
   pager.dataset.portalSignature = signature;
@@ -411,12 +395,8 @@ function applyPagination(table: HTMLTableElement) {
 function removeOrphanPagers() {
   document.querySelectorAll<HTMLElement>('.portal-spreadsheet-pager[data-portal-generated="true"]').forEach((pager) => {
     const key = pager.dataset.portalTableKey as TableKey | undefined;
-    if (!key) {
-      pager.remove();
-      return;
-    }
-    const ownerExists = Array.from(document.querySelectorAll<HTMLTableElement>('table'))
-      .some((table) => table.isConnected && tableKey(table) === key);
+    if (!key) { pager.remove(); return; }
+    const ownerExists = Array.from(document.querySelectorAll<HTMLTableElement>('table')).some((table) => table.isConnected && tableKey(table) === key);
     if (!ownerExists) pager.remove();
   });
 }
@@ -428,7 +408,6 @@ export const PortalSpreadsheetRuntime = () => {
 
     const bindScrollHost = (host: HTMLElement) => {
       if (unbinders.has(host)) return;
-
       let dragging = false;
       let armed = false;
       let startX = 0;
@@ -479,7 +458,6 @@ export const PortalSpreadsheetRuntime = () => {
         const canX = host.scrollWidth > host.clientWidth + 1;
         const canY = host.scrollHeight > host.clientHeight + 1;
         if (!canX && !canY) return;
-
         const horizontalIntent = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
         if (horizontalIntent && canX) {
           const before = host.scrollLeft;
@@ -487,14 +465,12 @@ export const PortalSpreadsheetRuntime = () => {
           if (host.scrollLeft !== before) event.preventDefault();
           return;
         }
-
         if (canY) {
           const before = host.scrollTop;
           host.scrollTop += event.deltaY;
           if (host.scrollTop !== before) event.preventDefault();
           return;
         }
-
         if (canX) {
           const before = host.scrollLeft;
           host.scrollLeft += event.deltaY;
@@ -536,13 +512,12 @@ export const PortalSpreadsheetRuntime = () => {
     };
 
     const observer = new MutationObserver(refresh);
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
     window.addEventListener('storage', refresh);
     window.addEventListener('portal-table-layouts-updated', refresh as EventListener);
     window.addEventListener('global_table_layouts_changed', refresh as EventListener);
     window.addEventListener('resize', refresh);
     window.addEventListener('focus', refresh);
-
     refresh();
 
     return () => {
