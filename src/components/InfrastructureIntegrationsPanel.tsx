@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Cloud, Copy, Database, ExternalLink, KeyRound, Loader2, RefreshCw, Server, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Cloud, Copy, Database, ExternalLink, KeyRound, Loader2, Mail, RefreshCw, Save, Server, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 
 interface IntegrationState {
@@ -25,10 +25,19 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [homologation, setHomologation] = useState<Array<{ id: string; label: string; status: 'PASS' | 'FAIL' | 'PENDING'; message: string }>>([]);
   const [hasRunTests, setHasRunTests] = useState(false);
+  const [emailConfig, setEmailConfig] = useState<Record<string, any>>({});
+  const [departmentReservationEmail, setDepartmentReservationEmail] = useState('');
 
   const load = async () => {
-    try { setStatus(await apiClient.getInfrastructureStatus()); }
-    catch (error) { setMessage({ ok: false, text: error instanceof Error ? error.message : 'Falha ao consultar integrações.' }); }
+    try {
+      const [nextStatus, settings] = await Promise.all([apiClient.getInfrastructureStatus(), apiClient.getSettings()]);
+      setStatus(nextStatus);
+      const nextEmailConfig = settings.emailConfig || {};
+      setEmailConfig(nextEmailConfig);
+      setDepartmentReservationEmail(String(nextEmailConfig.departmentReservationEmail || ''));
+    } catch (error) {
+      setMessage({ ok: false, text: error instanceof Error ? error.message : 'Falha ao consultar integrações.' });
+    }
   };
   useEffect(() => { void load(); }, []);
 
@@ -43,6 +52,23 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
     try { const result = await apiClient.testSupabaseConnection(); setMessage({ ok: result.connected, text: result.message }); await load(); }
     catch (error) { setMessage({ ok: false, text: error instanceof Error ? error.message : 'Falha no teste do Supabase.' }); }
     finally { setWorking(''); }
+  };
+  const saveDepartmentEmail = async () => {
+    const normalized = departmentReservationEmail.trim().toLocaleLowerCase('pt-BR');
+    if (normalized && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      setMessage({ ok: false, text: 'Informe um e-mail institucional válido para a reserva de local.' });
+      return;
+    }
+    setWorking('department-email'); setMessage(null);
+    try {
+      const nextEmailConfig = { ...emailConfig, departmentReservationEmail: normalized };
+      await apiClient.updateSettings({ emailConfig: nextEmailConfig });
+      setEmailConfig(nextEmailConfig);
+      setDepartmentReservationEmail(normalized);
+      setMessage({ ok: true, text: normalized ? 'E-mail do Departamento de Enfermagem salvo para solicitações de reserva de local.' : 'E-mail de reserva de local removido.' });
+    } catch (error) {
+      setMessage({ ok: false, text: error instanceof Error ? error.message : 'Não foi possível salvar o e-mail do Departamento de Enfermagem.' });
+    } finally { setWorking(''); }
   };
   const runHomologation = async () => {
     setWorking('homologation'); setMessage(null); setHasRunTests(true);
@@ -63,18 +89,19 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
   const googleReady = Boolean(status?.googleDrive.configured && status?.googleDrive.rootFolderIdPresent);
   const supabaseReady = Boolean(status?.supabase.transactionalRuntimeReady);
   const vercelReady = Boolean(status?.vercel.detected && status?.vercel.projectIdPresent);
+  const departmentEmailReady = Boolean(departmentReservationEmail.trim());
 
   return <div id="infrastructure-integrations-panel" className="flex min-h-full h-full flex-col bg-slate-100">
     <section className="flex min-h-full flex-1 flex-col overflow-hidden bg-slate-100">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 bg-slate-200 px-3 py-2.5">
         <div>
           <h3 className="text-[11px] font-black uppercase tracking-wide text-slate-950">Integrações e plataformas</h3>
-          <p className="mt-0.5 text-[9px] text-slate-600">Conexões usadas pelo Portal para assinatura, arquivos, banco de dados e publicação.</p>
+          <p className="mt-0.5 text-[9px] text-slate-600">Conexões e destinos institucionais usados pelo Portal para assinatura, arquivos, banco de dados, publicação e reserva de local.</p>
         </div>
         <button type="button" onClick={runHomologation} disabled={working === 'homologation'} className={action}>{working === 'homologation' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <RefreshCw className="h-3.5 w-3.5"/>}Executar testes</button>
       </div>
 
-      <div className="grid flex-1 content-start gap-2 bg-slate-100 p-2.5 xl:grid-cols-4">
+      <div className="grid flex-1 content-start gap-2 bg-slate-100 p-2.5 md:grid-cols-2 xl:grid-cols-5">
         <section className={compactCard} aria-labelledby="asten-integration-title">
           <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-1.5"><KeyRound className="h-4 w-4 shrink-0 text-[#337959]"/><h4 id="asten-integration-title" className="truncate text-[10px] font-black uppercase text-slate-900">Asten</h4></div><State ok={astenReady} label={astenReady ? 'Pronta' : 'Pendente'}/></div>
           <div className="mt-2 grid gap-2"><input aria-label="Token da API Asten" type="password" autoComplete="new-password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Token da API Asten" className={input}/><button type="button" onClick={connectAsten} disabled={working === 'asten' || !token.trim() || !status?.asten.enabled} className={action}>{working === 'asten' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ShieldCheck className="h-3.5 w-3.5"/>}Validar e conectar</button></div>
@@ -86,6 +113,15 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
         <section className={compactCard} aria-label="Supabase"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black uppercase"><Database className="h-3.5 w-3.5 text-[#337959]"/>Supabase</span><State ok={supabaseReady} label={supabaseReady?'Pronto':'Pendente'}/></div><button type="button" onClick={testSupabase} disabled={working==='supabase'||!status?.supabase.configured} className={`${action} mt-3 w-full`}>{working==='supabase'?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Database className="h-3.5 w-3.5"/>}Testar conexão</button><p className="mt-2 text-[8.5px] leading-4 text-slate-700">{status?.supabase.message || 'Aguardando status.'}</p></section>
 
         <section className={compactCard} aria-label="Vercel"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black uppercase"><Server className="h-3.5 w-3.5 text-[#337959]"/>Vercel</span><State ok={vercelReady} label={vercelReady?'Detectado':'Pendente'}/></div><p className="mt-3 text-[8.5px] leading-4 text-slate-700">{status?.vercel.message||'Aguardando status.'}</p></section>
+
+        <section className={compactCard} aria-labelledby="department-reservation-email-title">
+          <div className="flex items-center justify-between gap-1"><span className="flex min-w-0 items-center gap-1 text-[9px] font-black uppercase"><Mail className="h-3.5 w-3.5 shrink-0 text-[#337959]"/><span id="department-reservation-email-title" className="truncate">E-mail do Departamento</span></span><State ok={departmentEmailReady} label={departmentEmailReady?'Definido':'Pendente'}/></div>
+          <p className="mt-2 text-[8.5px] leading-4 text-slate-600">Destino institucional para os e-mails de solicitação de reserva do local da defesa.</p>
+          <div className="mt-2 grid gap-1.5">
+            <input aria-label="E-mail do Departamento de Enfermagem para reserva de local" type="email" autoComplete="email" value={departmentReservationEmail} onChange={(event)=>setDepartmentReservationEmail(event.target.value)} placeholder="departamento@instituicao.br" className={input}/>
+            <button type="button" onClick={saveDepartmentEmail} disabled={working==='department-email'} className={action}>{working==='department-email'?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Save className="h-3.5 w-3.5"/>}Salvar destino</button>
+          </div>
+        </section>
       </div>
     </section>
 
