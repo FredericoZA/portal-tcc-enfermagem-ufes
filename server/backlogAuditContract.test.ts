@@ -59,7 +59,8 @@ test('lista de defesas usa Processo, exibe TCC - número e congela a primeira co
   const runtime = read('src/components/PortalBacklogAuditRuntime.tsx');
   const css = read('src/portal-backlog-audit-1055.css');
   assert.match(runtime, /#public-calendar-cards-section/);
-  assert.match(runtime, /return `TCC - \$\{clean\}`/);
+  assert.match(runtime, /const desired = `TCC - \$\{code\}`/);
+  assert.match(runtime, /rawCode\.padStart\(4, '0'\)/);
   assert.match(runtime, /header\.dataset\.portalStickyProcess = 'true'/);
   assert.match(runtime, /cell\.dataset\.portalStickyProcess = 'true'/);
   assert.match(runtime, /header\.dataset\.portalStickyHeader = 'true'/);
@@ -68,12 +69,14 @@ test('lista de defesas usa Processo, exibe TCC - número e congela a primeira co
   assert.match(css, /overflow-y:\s*auto !important/);
 });
 
-test('roda do mouse mantém eixos independentes na lista de defesas', () => {
-  const runtime = read('src/components/PortalBacklogAuditRuntime.tsx');
-  assert.match(runtime, /horizontalIntent = event\.shiftKey \|\| Math\.abs\(event\.deltaX\) > Math\.abs\(event\.deltaY\)/);
-  assert.match(runtime, /host\.scrollLeft \+=/);
-  assert.match(runtime, /host\.scrollTop \+= event\.deltaY/);
-  assert.match(runtime, /passive:\s*false/);
+test('roda do mouse é tratada uma única vez pelo runtime canônico de planilhas', () => {
+  const canonical = read('src/components/PortalSpreadsheetRuntime.tsx');
+  const audit = read('src/components/PortalBacklogAuditRuntime.tsx');
+  assert.match(canonical, /horizontalIntent = event\.shiftKey \|\| Math\.abs\(event\.deltaX\) > Math\.abs\(event\.deltaY\)/);
+  assert.match(canonical, /host\.scrollLeft \+=/);
+  assert.match(canonical, /host\.scrollTop \+= event\.deltaY/);
+  assert.match(canonical, /host\.addEventListener\('wheel', onWheel, \{ passive: false \}\)/);
+  assert.doesNotMatch(audit, /addEventListener\('wheel'/);
 });
 
 test('sugestões de normalização e autosave de variáveis permanecem habilitados', () => {
