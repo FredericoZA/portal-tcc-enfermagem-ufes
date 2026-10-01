@@ -398,8 +398,10 @@ export const PortalSpreadsheetRuntime = () => {
       let startY = 0;
       let startLeft = 0;
       let startTop = 0;
+      let suppressClickUntil = 0;
 
       const stop = () => {
+        if (dragging) suppressClickUntil = performance.now() + 260;
         dragging = false;
         armed = false;
         host.classList.remove('portal-sheet-pointer-down', 'portal-sheet-dragging');
@@ -434,9 +436,50 @@ export const PortalSpreadsheetRuntime = () => {
         window.addEventListener('mouseup', stop, { once: true });
       };
 
+      const wheel = (event: WheelEvent) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('select,input,textarea')) return;
+        const canX = host.scrollWidth > host.clientWidth + 1;
+        const canY = host.scrollHeight > host.clientHeight + 1;
+        if (!canX && !canY) return;
+
+        const horizontalIntent = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
+        if (horizontalIntent && canX) {
+          const before = host.scrollLeft;
+          host.scrollLeft += Math.abs(event.deltaX) > 0 ? event.deltaX : event.deltaY;
+          if (host.scrollLeft !== before) event.preventDefault();
+          return;
+        }
+
+        if (canY) {
+          const before = host.scrollTop;
+          host.scrollTop += event.deltaY;
+          if (host.scrollTop !== before) event.preventDefault();
+          return;
+        }
+
+        if (canX) {
+          const before = host.scrollLeft;
+          host.scrollLeft += event.deltaY;
+          if (host.scrollLeft !== before) event.preventDefault();
+        }
+      };
+
+      const click = (event: MouseEvent) => {
+        if (performance.now() < suppressClickUntil) {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+        }
+      };
+
       host.addEventListener('mousedown', down);
+      host.addEventListener('wheel', wheel, { passive: false });
+      host.addEventListener('click', click, true);
       unbinders.set(host, () => {
         host.removeEventListener('mousedown', down);
+        host.removeEventListener('wheel', wheel);
+        host.removeEventListener('click', click, true);
         stop();
       });
     };
