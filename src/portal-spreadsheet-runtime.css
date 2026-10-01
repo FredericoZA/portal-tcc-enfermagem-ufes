@@ -17,46 +17,16 @@
 }
 
 .portal-spreadsheet-scroll-host.portal-sheet-pointer-down,
-.portal-spreadsheet-scroll-host.portal-sheet-dragging {
-  cursor: grabbing !important;
-}
-
+.portal-spreadsheet-scroll-host.portal-sheet-dragging { cursor: grabbing !important; }
 .portal-spreadsheet-scroll-host.portal-sheet-dragging,
-.portal-spreadsheet-scroll-host.portal-sheet-dragging * {
-  user-select: none !important;
-}
+.portal-spreadsheet-scroll-host.portal-sheet-dragging * { user-select: none !important; }
+.portal-spreadsheet-scroll-host::-webkit-scrollbar { width: 10px; height: 10px; }
+.portal-spreadsheet-scroll-host::-webkit-scrollbar-track { background: #eef2f4; }
+.portal-spreadsheet-scroll-host::-webkit-scrollbar-thumb { background: #8d9aa2; border: 2px solid #eef2f4; border-radius: 999px; }
+.portal-spreadsheet-scroll-host::-webkit-scrollbar-thumb:hover { background: #687780; }
+.portal-runtime-page-hidden { display: none !important; }
+.portal-v52-pager,.portal-v53-pager,.portal-version-pager { display: none !important; }
 
-.portal-spreadsheet-scroll-host::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-.portal-spreadsheet-scroll-host::-webkit-scrollbar-track {
-  background: #eef2f4;
-}
-
-.portal-spreadsheet-scroll-host::-webkit-scrollbar-thumb {
-  background: #8d9aa2;
-  border: 2px solid #eef2f4;
-  border-radius: 999px;
-}
-
-.portal-spreadsheet-scroll-host::-webkit-scrollbar-thumb:hover {
-  background: #687780;
-}
-
-.portal-runtime-page-hidden {
-  display: none !important;
-}
-
-/* Paginações legadas ficam desativadas: só a paginação canônica pode aparecer. */
-.portal-v52-pager,
-.portal-v53-pager,
-.portal-version-pager {
-  display: none !important;
-}
-
-/* Estrutura base */
 table[data-portal-spreadsheet] {
   border-collapse: separate !important;
   border-spacing: 0 !important;
@@ -79,7 +49,7 @@ table[data-portal-spreadsheet] th[data-portal-sticky-header="true"] {
   background-clip: padding-box !important;
 }
 
-/* Primeira coluna Processo */
+/* Sticky canônico: Processo fica travado em todas as linhas, inclusive a primeira. */
 table[data-portal-spreadsheet] td[data-portal-sticky-process="true"] {
   position: sticky !important;
   left: 0 !important;
@@ -98,11 +68,29 @@ table[data-portal-spreadsheet] th[data-portal-sticky-process="true"] {
   background: var(--table-header, var(--portal-green-header, #005830)) !important;
   color: var(--table-header-text, #fff) !important;
   background-clip: padding-box !important;
-  box-shadow: 1px 0 0 rgba(255, 255, 255, .34) !important;
+  box-shadow: 1px 0 0 rgba(255,255,255,.34) !important;
   isolation: isolate !important;
 }
 
-/* Coluna de seleção quando existir. 54 px dá espaço real ao controle sem invadir Processo. */
+/* Fallback estrutural: evita que a primeira linha escape durante uma rerenderização React. */
+table[data-portal-spreadsheet]:not(:has([data-portal-sticky-selection="true"])) tbody > tr > td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 26 !important;
+  background: var(--portal-sticky-row-bg, #fff) !important;
+  background-clip: padding-box !important;
+  box-shadow: 1px 0 0 #cbd5e1 !important;
+}
+
+table[data-portal-spreadsheet]:not(:has([data-portal-sticky-selection="true"])) thead > tr:last-child > th:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  top: 0 !important;
+  z-index: 52 !important;
+  background: var(--table-header, var(--portal-green-header, #005830)) !important;
+}
+
+/* Coluna de seleção + Processo na área do Presidente. */
 table[data-portal-spreadsheet] td[data-portal-sticky-selection="true"] {
   position: sticky !important;
   left: 0 !important;
@@ -137,12 +125,28 @@ table[data-portal-spreadsheet] th[data-portal-sticky-selection="true"] {
   isolation: isolate !important;
 }
 
-table[data-portal-spreadsheet]
-  [data-portal-sticky-process="true"][data-portal-after-selection="true"] {
-  left: 54px !important;
+table[data-portal-spreadsheet] [data-portal-sticky-process="true"][data-portal-after-selection="true"] { left: 54px !important; }
+
+table[data-portal-spreadsheet]:has([data-portal-sticky-selection="true"]) tbody > tr > td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 38 !important;
+  width: 54px !important;
+  min-width: 54px !important;
+  max-width: 54px !important;
+  background: var(--portal-sticky-row-bg, #fff) !important;
+  background-clip: padding-box !important;
 }
 
-/* Checkbox único, legível e com área clicável adequada. */
+table[data-portal-spreadsheet]:has([data-portal-sticky-selection="true"]) tbody > tr > td:nth-child(2) {
+  position: sticky !important;
+  left: 54px !important;
+  z-index: 27 !important;
+  background: var(--portal-sticky-row-bg, #fff) !important;
+  background-clip: padding-box !important;
+  box-shadow: 1px 0 0 #cbd5e1 !important;
+}
+
 .portal-sheet-checkbox {
   display: inline-flex !important;
   width: 28px !important;
@@ -160,193 +164,104 @@ table[data-portal-spreadsheet]
   box-shadow: none !important;
   line-height: 1 !important;
 }
+.portal-sheet-checkbox[aria-pressed="true"] { border-color: var(--portal-green-action-border,#286a4d) !important; background: var(--portal-green-action,#337959) !important; color:#fff !important; }
+.portal-sheet-checkbox svg { width:18px !important; height:18px !important; color:currentColor !important; stroke:currentColor !important; }
+.portal-sheet-checkbox span { font-size:14px !important; font-weight:900 !important; color:currentColor !important; }
 
-.portal-sheet-checkbox[aria-pressed="true"] {
-  border-color: var(--portal-green-action-border, #286a4d) !important;
-  background: var(--portal-green-action, #337959) !important;
-  color: #fff !important;
-}
-
-.portal-sheet-checkbox svg {
-  width: 18px !important;
-  height: 18px !important;
-  color: currentColor !important;
-  stroke: currentColor !important;
-}
-
-.portal-sheet-checkbox span {
-  font-size: 14px !important;
-  font-weight: 900 !important;
-  color: currentColor !important;
-}
-
-/* Uma única paginação, sempre visível no rodapé e alinhada à direita. */
+/* Paginação canônica: branca, fina e sem folga vertical. */
 .portal-spreadsheet-pager {
   position: relative !important;
   z-index: 8 !important;
   display: flex !important;
   width: 100% !important;
-  min-height: 30px !important;
-  height: 30px !important;
-  flex: 0 0 30px !important;
+  min-height: 24px !important;
+  height: 24px !important;
+  flex: 0 0 24px !important;
   align-items: center !important;
   justify-content: flex-end !important;
-  gap: 3px !important;
+  gap: 2px !important;
   margin: 0 !important;
-  padding: 2px 6px !important;
+  padding: 0 5px !important;
   border-top: 1px solid #d6dde2 !important;
-  background: #f8fafc !important;
+  background: #fff !important;
   color: #334155 !important;
   box-sizing: border-box !important;
+  overflow: hidden !important;
   visibility: visible !important;
   opacity: 1 !important;
 }
-
-.portal-spreadsheet-pager-left,
-.portal-spreadsheet-pager-info,
-.portal-spreadsheet-page-size {
-  display: none !important;
-}
-
+.portal-spreadsheet-pager-left,.portal-spreadsheet-pager-info,.portal-spreadsheet-page-size { display:none !important; }
 .portal-spreadsheet-pager-controls {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-end !important;
-  gap: 3px !important;
-  flex-wrap: nowrap !important;
-  height: 100% !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-end !important;
+  gap:2px !important;
+  flex-wrap:nowrap !important;
+  height:20px !important;
+  min-height:20px !important;
+  margin:0 !important;
+  padding:0 !important;
 }
-
 .portal-spreadsheet-pager-controls button {
-  min-width: 24px !important;
-  height: 22px !important;
-  padding: 0 6px !important;
-  border: 1px solid #cbd5e1 !important;
-  border-radius: 5px !important;
-  background: #fff !important;
-  color: #1f2937 !important;
-  font-size: 9.5px !important;
-  font-weight: 850 !important;
-  line-height: 1 !important;
-  box-shadow: none !important;
+  min-width:22px !important;
+  min-height:18px !important;
+  height:18px !important;
+  margin:0 !important;
+  padding:0 5px !important;
+  border:1px solid #cbd5e1 !important;
+  border-radius:4px !important;
+  background:#fff !important;
+  color:#1f2937 !important;
+  font-size:9px !important;
+  font-weight:850 !important;
+  line-height:16px !important;
+  box-shadow:none !important;
+  box-sizing:border-box !important;
 }
+.portal-spreadsheet-pager-controls button[data-active="true"] { border-color:var(--portal-green-action-border,#286a4d) !important; background:var(--portal-green-action,#337959) !important; color:#fff !important; }
+.portal-spreadsheet-pager-controls button:disabled { opacity:.38 !important; cursor:default !important; }
+.portal-spreadsheet-pager-ellipsis { margin:0 !important; padding:0 1px !important; line-height:18px !important; color:#64748b !important; }
 
-.portal-spreadsheet-pager-controls button[data-active="true"] {
-  border-color: var(--portal-green-action-border, #286a4d) !important;
-  background: var(--portal-green-action, #337959) !important;
-  color: #fff !important;
-}
+.portal-table-settings-popover button[data-portal-page-size-selected="true"] { background:#d7ded9 !important; border-color:#9aac9f !important; color:#1f2937 !important; }
+.portal-table-settings-popover button[data-portal-page-size-selected="false"] { background:#fff !important; border-color:#cbd5e1 !important; color:#334155 !important; }
 
-.portal-spreadsheet-pager-controls button:disabled {
-  opacity: .38 !important;
-  cursor: default !important;
-}
-
-.portal-spreadsheet-pager-ellipsis {
-  padding: 0 1px !important;
-  color: #64748b !important;
-}
-
-/* Configuração de quantidade por página */
-.portal-table-settings-popover button[data-portal-page-size-selected="true"] {
-  background: #d7ded9 !important;
-  border-color: #9aac9f !important;
-  color: #1f2937 !important;
-}
-
-.portal-table-settings-popover button[data-portal-page-size-selected="false"] {
-  background: #fff !important;
-  border-color: #cbd5e1 !important;
-  color: #334155 !important;
-}
-
-/* Faixa verde mínima entre filtros e a área branca da planilha, igual ao calendário. */
+/* 2 px verdes reais entre filtros e o início branco da planilha. */
 .portal-meus-processos-filter-row,
 .portal-coordinator-filter-row {
-  border-bottom: 2px solid var(--portal-green-header, #005830) !important;
+  position: relative !important;
+  border-bottom: 0 !important;
+  box-shadow: inset 0 -2px 0 var(--portal-green-header,#005830) !important;
+  padding-bottom: calc(.625rem + 2px) !important;
 }
 
-/* "Todos" é neutro: fundo branco e texto preto, inclusive quando selecionado. */
+/* Todos é neutro e sempre preto, inclusive descendentes que herdavam branco do banner. */
 .portal-meus-processos-filter-row .portal-native-all-filter,
-.portal-meus-processos-filter-row .portal-native-all-filter[data-selected="true"] {
-  background: #fff !important;
-  color: #111827 !important;
-  border-color: #9ca3af !important;
-  box-shadow: none !important;
-}
+.portal-meus-processos-filter-row .portal-native-all-filter[data-selected="true"] { background:#fff !important; color:#111827 !important; border-color:#9ca3af !important; box-shadow:none !important; }
+.portal-meus-processos-filter-row .portal-native-all-filter * { color:#111827 !important; }
 
 /* Cores de vínculo deliberadamente distantes: amarelo, laranja, verde e azul. */
-.portal-meus-processos-filter-row [data-portal-role-tone="student"] {
-  --portal-filter-role-bg: #fde68a;
-  --portal-filter-role-border: #d4a300;
-  --portal-filter-role-text: #3f3000;
-}
-
-.portal-meus-processos-filter-row [data-portal-role-tone="board"] {
-  --portal-filter-role-bg: #fdba74;
-  --portal-filter-role-border: #ea580c;
-  --portal-filter-role-text: #431407;
-}
-
-.portal-meus-processos-filter-row [data-portal-role-tone="evaluator"] {
-  --portal-filter-role-bg: #bbf7d0;
-  --portal-filter-role-border: #16a34a;
-  --portal-filter-role-text: #14532d;
-}
-
-.portal-meus-processos-filter-row [data-portal-role-tone="viewer"] {
-  --portal-filter-role-bg: #bfdbfe;
-  --portal-filter-role-border: #2563eb;
-  --portal-filter-role-text: #1e3a8a;
-}
-
-.portal-meus-processos-filter-row [data-portal-role-tone][data-selected="true"] {
-  background: var(--portal-filter-role-bg) !important;
-  border-color: var(--portal-filter-role-border) !important;
-  color: var(--portal-filter-role-text) !important;
-  box-shadow: inset 0 0 0 1px var(--portal-filter-role-border) !important;
-}
-
-.portal-meus-processos-filter-row [data-portal-role-tone][data-selected="false"] {
-  background: #fff !important;
-  border-color: var(--portal-filter-role-border) !important;
-  color: #1f2937 !important;
-  box-shadow: none !important;
-}
-
+.portal-meus-processos-filter-row [data-portal-role-tone="student"] { --portal-filter-role-bg:#fde68a; --portal-filter-role-border:#d4a300; --portal-filter-role-text:#3f3000; }
+.portal-meus-processos-filter-row [data-portal-role-tone="board"] { --portal-filter-role-bg:#fdba74; --portal-filter-role-border:#ea580c; --portal-filter-role-text:#431407; }
+.portal-meus-processos-filter-row [data-portal-role-tone="evaluator"] { --portal-filter-role-bg:#bbf7d0; --portal-filter-role-border:#16a34a; --portal-filter-role-text:#14532d; }
+.portal-meus-processos-filter-row [data-portal-role-tone="viewer"] { --portal-filter-role-bg:#bfdbfe; --portal-filter-role-border:#2563eb; --portal-filter-role-text:#1e3a8a; }
+.portal-meus-processos-filter-row [data-portal-role-tone][data-selected="true"] { background:var(--portal-filter-role-bg) !important; border-color:var(--portal-filter-role-border) !important; color:var(--portal-filter-role-text) !important; box-shadow:inset 0 0 0 1px var(--portal-filter-role-border) !important; }
+.portal-meus-processos-filter-row [data-portal-role-tone][data-selected="false"] { background:#fff !important; border-color:var(--portal-filter-role-border) !important; color:#1f2937 !important; box-shadow:none !important; }
 .portal-meus-processos-filter-row [data-portal-role-tone] .portal-filter-dot,
-.portal-meus-processos-filter-row [data-portal-role-tone] .text-\[9px\] {
-  background: var(--portal-filter-role-border) !important;
+.portal-meus-processos-filter-row [data-portal-role-tone] .text-\[9px\] { background:var(--portal-filter-role-border) !important; }
+
+/* Presidente: as duas primeiras colunas precisam permanecer opacas e alinhadas. */
+#coordenador-page-root table[data-portal-spreadsheet] tbody > tr > td:first-child,
+#coordenador-page-root table[data-portal-spreadsheet] tbody > tr > td:nth-child(2) {
+  border-right-color:#cbd5e1 !important;
+  isolation:isolate !important;
 }
 
-/* Ajustes de outras superfícies que já eram mantidos nesta folha. */
-#portal-tutorial-page .portal-layer-panel > .portal-layer-card:first-child {
-  display: none !important;
-}
-
-#portal-tutorial-page .portal-layer-panel {
-  padding-top: 8px !important;
-}
-
-.portal-commission-identity-panel table thead {
-  background: #d5dce0 !important;
-  color: #334155 !important;
-  border-bottom: 1px solid #b7c0c7 !important;
-}
-
-.portal-commission-identity-panel table thead th {
-  color: #334155 !important;
-}
-
+/* Ajustes de outras superfícies já mantidos nesta folha. */
+#portal-tutorial-page .portal-layer-panel > .portal-layer-card:first-child { display:none !important; }
+#portal-tutorial-page .portal-layer-panel { padding-top:8px !important; }
+.portal-commission-identity-panel table thead { background:#d5dce0 !important; color:#334155 !important; border-bottom:1px solid #b7c0c7 !important; }
+.portal-commission-identity-panel table thead th { color:#334155 !important; }
 .portal-commission-identity-panel details.portal-administration-access,
-.portal-commission-identity-panel .portal-administration-transfer {
-  display: none !important;
-}
-
+.portal-commission-identity-panel .portal-administration-transfer { display:none !important; }
 .portal-settings-workspace[data-portal-full-bleed="true"] .portal-settings-single-pane,
-.portal-settings-workspace[data-portal-full-bleed="true"] #infrastructure-integrations-panel {
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-}
+.portal-settings-workspace[data-portal-full-bleed="true"] #infrastructure-integrations-panel { width:100% !important; height:100% !important; min-height:0 !important; margin:0 !important; }
