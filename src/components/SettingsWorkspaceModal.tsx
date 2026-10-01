@@ -8,11 +8,7 @@ export interface SettingsWorkspaceSection {
   description?: string;
   icon?: React.ComponentType<{ className?: string }>;
   content: React.ReactNode;
-  /**
-   * Full-bleed sections use the entire workspace content area, without the
-   * generic inner padding/card. This is appropriate for self-contained
-   * operational panels such as the infrastructure integrations dashboard.
-   */
+  /** Superfícies operacionais podem ocupar integralmente o workspace. */
   fullBleed?: boolean;
 }
 
@@ -33,6 +29,8 @@ export const SettingsWorkspaceHeaderPortal: React.FC<{ children: React.ReactNode
   return host ? createPortal(children, host) : null;
 };
 
+const SHEET_SECTION_IDS = new Set(['authorizations', 'signature-ledger', 'audit-ledger']);
+
 export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ open, title, icon: TitleIcon, sections, onClose }) => {
   const firstId = sections[0]?.id || '';
   const [activeId, setActiveId] = useState(firstId);
@@ -50,16 +48,22 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
   if (!open || !current) return null;
 
   const singlePane = sections.length === 1;
-  // `integrations` predates the explicit fullBleed contract. Keeping it as a
-  // compatibility default avoids coupling visual correctness to old callers.
-  const fullBleed = current.fullBleed ?? current.id === 'integrations';
+  const sheetWorkspace = singlePane && SHEET_SECTION_IDS.has(current.id);
+  const fullBleed = current.fullBleed ?? current.id === 'integrations' || sheetWorkspace;
   const singlePaneContent = singlePane && React.isValidElement(current.content)
     ? React.cloneElement(current.content as React.ReactElement<EmbeddedCapableProps>, { embedded: true })
     : current.content;
 
   const workspaceContent = singlePane ? (
-    <main className="portal-settings-single-pane min-w-0 flex-1 overflow-y-auto" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
-      {singlePaneContent}
+    <main
+      className={`portal-settings-single-pane min-w-0 flex-1 overflow-auto ${fullBleed ? 'p-0' : 'p-3 sm:p-4'}`}
+      data-portal-full-bleed={fullBleed ? 'true' : 'false'}
+      data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
+      style={{ backgroundColor: fullBleed ? 'var(--portal-surface-layer-2)' : 'var(--portal-surface-layer-1)' }}
+    >
+      <div className={fullBleed ? 'min-h-full w-full' : 'min-h-full rounded-xl'} style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>
+        {singlePaneContent}
+      </div>
     </main>
   ) : (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
@@ -105,6 +109,8 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       role="dialog"
       aria-modal="true"
       aria-label={title}
+      data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
+      data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       className="portal-settings-workspace flex max-h-[94vh] w-full max-w-[1600px] flex-col overflow-hidden rounded-2xl border border-slate-300 shadow-2xl"
       style={{ backgroundColor: 'var(--portal-surface-page)' }}
     >
