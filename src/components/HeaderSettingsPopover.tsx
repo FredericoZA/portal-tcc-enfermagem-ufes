@@ -13,10 +13,13 @@ export interface HeaderSettingsPopoverProps {
   defaultColumnOrder?:string[]; defaultVisibleColumns?:Record<string,boolean>; defaultRecordsLimit?:number|'all'; startDate?:string; setStartDate?:(val:string)=>void; endDate?:string; setEndDate?:(val:string)=>void; defaultTableTitle?:string; defaultFilterTitle?:string;
 }
 
+type PageSize = number | 'all';
+
 type UserTablePreference = {
   columnOrder?: string[];
   visibleColumns?: Record<string, boolean>;
-  recordsLimit?: number|'all';
+  recordsLimit?: PageSize; // legado: páginas React antigas truncavam o DOM
+  pageSize?: PageSize;
   startDate?: string;
   endDate?: string;
   updatedAt?: string;
@@ -24,6 +27,14 @@ type UserTablePreference = {
 
 const normalizeEmailKey=(value:string)=>value.trim().toLowerCase().replace(/[^a-z0-9@._+-]/g,'_');
 const preferenceKey=(email:string,storageKey:string)=>`portal_user_table_config_${normalizeEmailKey(email)}_${storageKey}`;
+const pageSizeKey=(storageKey:string)=>`portal_table_page_size_${storageKey}`;
+const currentPageKey=(storageKey:string)=>`portal_table_current_page_${storageKey}`;
+
+const parsePageSize=(value:unknown,allowedLimits:PageSize[],fallback:PageSize):PageSize=>{
+  if(value==='all'&&allowedLimits.includes('all'))return'all';
+  const numeric=Number(value);
+  return allowedLimits.includes(numeric)?numeric:fallback;
+};
 
 export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props) => {
   const {
@@ -42,8 +53,23 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
   const [popoverPos,setPopoverPos]=useState({top:0,left:0});
   const hydratedPreferenceRef=useRef('');
   const inheritMasterDefaultRef=useRef(false);
-  const hasActiveFilters=Boolean((startDate&&startDate.trim())||(endDate&&endDate.trim())||(defaultRecordsLimit&&recordsLimit!==defaultRecordsLimit));
   const currentPreferenceKey=storageKey&&userEmail?preferenceKey(userEmail,storageKey):'';
+
+  const readStoredPageSize=():PageSize=>{
+    const fallback=parsePageSize(defaultRecordsLimit,allowedLimits,25);
+    if(typeof window==='undefined'||!storageKey)return fallback;
+    try{return parsePageSize(localStorage.getItem(pageSizeKey(storageKey)),allowedLimits,fallback);}catch{return fallback;}
+  };
+  const [pageSize,setPageSize]=useState<PageSize>(()=>readStoredPageSize());
+
+  useEffect(()=>{
+    const next=readStoredPageSize();
+    setPageSize(next);
+    // A paginação canônica precisa receber todas as linhas; páginas React não podem truncar o DOM.
+    if(recordsLimit!=='all')setRecordsLimit('all');
+  },[storageKey]);
+
+  const hasActiveFilters=Boolean((startDate&&startDate.trim())||(endDate&&endDate.trim())||pageSize!==defaultRecordsLimit);
 
   const fixedColumnKey=useMemo(()=>allColumns.find(column=>column.isFixed)?.key||(allColumns.some(column=>column.key==='protocolo')?'protocolo':undefined),[allColumns]);
   const normalizedOrder=useMemo(()=>{
@@ -55,6 +81,18 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
   },[allColumns,columnOrder,fixedColumnKey]);
   const columnMap=useMemo(()=>new Map(allColumns.map(column=>[column.key,column])),[allColumns]);
 
+  const persistPageSize=(next:PageSize)=>{
+    setPageSize(next);
+    setRecordsLimit('all');
+    if(storageKey){
+      try{
+        localStorage.setItem(pageSizeKey(storageKey),String(next));
+        localStorage.setItem(currentPageKey(storageKey),'1');
+      }catch{/* localStorage indisponível não bloqueia a tabela */}
+    }
+    window.dispatchEvent(new CustomEvent('portal-table-layouts-updated'));
+  };
+
   useEffect(()=>{
     if(!isAuthenticated||!currentPreferenceKey||!canManageColumns)return;
     if(hydratedPreferenceRef.current===currentPreferenceKey)return;
@@ -62,14 +100,18 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
     inheritMasterDefaultRef.current=false;
     try{
       const raw=localStorage.getItem(currentPreferenceKey);
-      if(!raw)return;
+      if(!raw){setRecordsLimit('all');return;}
       const saved=JSON.parse(raw) as UserTablePreference;
       if(Array.isArray(saved.columnOrder)&&saved.columnOrder.length)setColumnOrder?.(saved.columnOrder);
       if(saved.visibleColumns&&typeof saved.visibleColumns==='object')setVisibleColumns?.(saved.visibleColumns);
-      if(saved.recordsLimit!==undefined)setRecordsLimit(saved.recordsLimit);
+      const legacyOrPageSize=saved.pageSize??saved.recordsLimit;
+      if(legacyOrPageSize!==undefined){
+        const next=parsePageSize(legacyOrPageSize,allowedLimits,readStoredPageSize());
+        persistPageSize(next);
+      }else setRecordsLimit('all');
       if(saved.startDate!==undefined)setStartDate?.(saved.startDate);
       if(saved.endDate!==undefined)setEndDate?.(saved.endDate);
-    }catch(error){console.warn('Não foi possível restaurar a preferência individual da planilha.',error);}
+    }catch(error){console.warn('Não foi possível restaurar a preferência individual da planilha.',error);setRecordsLimit('all');}
   },[isAuthenticated,currentPreferenceKey,canManageColumns,setColumnOrder,setVisibleColumns,setRecordsLimit,setStartDate,setEndDate]);
 
   useEffect(()=>{
@@ -78,12 +120,12 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
       try{
         const normalizedVisible={...visibleColumns};
         if(fixedColumnKey)normalizedVisible[fixedColumnKey]=true;
-        const payload:UserTablePreference={columnOrder:normalizedOrder,visibleColumns:normalizedVisible,recordsLimit,startDate:startDate||'',endDate:endDate||'',updatedAt:new Date().toISOString()};
+        const payload:UserTablePreference={columnOrder:normalizedOrder,visibleColumns:normalizedVisible,recordsLimit:'all',pageSize,startDate:startDate||'',endDate:endDate||'',updatedAt:new Date().toISOString()};
         localStorage.setItem(currentPreferenceKey,JSON.stringify(payload));
       }catch(error){console.warn('Não foi possível salvar a preferência individual da planilha.',error);}
     },180);
     return()=>window.clearTimeout(timer);
-  },[isAuthenticated,currentPreferenceKey,canManageColumns,normalizedOrder,visibleColumns,recordsLimit,startDate,endDate,fixedColumnKey]);
+  },[isAuthenticated,currentPreferenceKey,canManageColumns,normalizedOrder,visibleColumns,pageSize,startDate,endDate,fixedColumnKey]);
 
   const handleToggle=()=>{
     if(isOpen){setIsOpen(false);return;}
@@ -131,7 +173,13 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
     const loaded=loadTableConfig(storageKey,defaultColumnOrder||allColumns.map(c=>c.key),defaultVisibleColumns||Object.fromEntries(allColumns.map(c=>[c.key,true])),defaultRecordsLimit);
     setColumnOrder?.(loaded.columnOrder);
     setVisibleColumns?.(loaded.visibleColumns);
-    setRecordsLimit(loaded.recordsLimit);
+    setRecordsLimit('all');
+    let restoredPageSize=parsePageSize(defaultRecordsLimit,allowedLimits,25);
+    try{
+      const raw=localStorage.getItem(`default_table_config_${storageKey}`);
+      if(raw){const parsed=JSON.parse(raw);restoredPageSize=parsePageSize(parsed.pageSize??parsed.recordsLimit,allowedLimits,restoredPageSize);}
+    }catch{/* noop */}
+    persistPageSize(restoredPageSize);
     setStartDate?.(loaded.startDate||'');setEndDate?.(loaded.endDate||'');
     setSaveMessage('Visualização restaurada para o padrão desta planilha.');
   };
@@ -141,7 +189,7 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
     try{
       const existingRaw=localStorage.getItem(`default_table_config_${storageKey}`);
       const existing=existingRaw?JSON.parse(existingRaw):{};
-      localStorage.setItem(`default_table_config_${storageKey}`,JSON.stringify({...existing,columnOrder:normalizedOrder,visibleColumns:{...visibleColumns,...(fixedColumnKey?{[fixedColumnKey]:true}:{})},recordsLimit,startDate:startDate||'',endDate:endDate||'',updatedAt:new Date().toISOString(),updatedBy:userEmail}));
+      localStorage.setItem(`default_table_config_${storageKey}`,JSON.stringify({...existing,columnOrder:normalizedOrder,visibleColumns:{...visibleColumns,...(fixedColumnKey?{[fixedColumnKey]:true}:{})},recordsLimit:'all',pageSize,startDate:startDate||'',endDate:endDate||'',updatedAt:new Date().toISOString(),updatedBy:userEmail}));
       setSaveMessage('Padrão desta planilha atualizado pelo Master. Publique a Personalização para distribuir o padrão.');
     }catch{setSaveMessage('Não foi possível salvar o padrão desta planilha.');}
   };
@@ -159,8 +207,8 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
 
         <div className="grid gap-3 sm:grid-cols-2">
           <section className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="mb-1.5 flex items-center justify-between"><span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-700"><ListFilter className="h-3 w-3"/>Linhas por página</span><span className="text-[9px] font-bold text-slate-400">Atual: {recordsLimit==='all'?'Todos':recordsLimit}</span></div>
-            <div className="grid grid-cols-4 gap-1">{allowedLimits.map(limit=><button key={String(limit)} type="button" onClick={()=>{markPersonal();setRecordsLimit(limit);}} className="rounded-lg border px-2 py-1.5 text-center text-[10px] font-black" style={recordsLimit===limit?{background:'#d7ded9',borderColor:'#9aac9f',color:'#1f2937'}:{background:'#fff',borderColor:'#cbd5e1',color:'#334155'}}>{limit==='all'?'Todos':limit}</button>)}</div>
+            <div className="mb-1.5 flex items-center justify-between"><span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-700"><ListFilter className="h-3 w-3"/>Linhas por página</span><span className="text-[9px] font-bold text-slate-400">Atual: {pageSize==='all'?'Todos':pageSize}</span></div>
+            <div className="grid grid-cols-4 gap-1">{allowedLimits.map(limit=><button key={String(limit)} type="button" onClick={()=>{markPersonal();persistPageSize(limit);}} data-portal-page-size-selected={pageSize===limit?'true':'false'} className="rounded-lg border px-2 py-1.5 text-center text-[10px] font-black" style={pageSize===limit?{background:'#d7ded9',borderColor:'#9aac9f',color:'#1f2937'}:{background:'#fff',borderColor:'#cbd5e1',color:'#334155'}}>{limit==='all'?'Todos':limit}</button>)}</div>
           </section>
 
           <section className="rounded-xl border border-slate-200 bg-slate-50 p-3">
