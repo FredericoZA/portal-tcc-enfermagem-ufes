@@ -190,7 +190,11 @@ table[data-portal-spreadsheet]:has([data-portal-sticky-selection="true"]) tbody 
   visibility: visible !important;
   opacity: 1 !important;
 }
-.portal-spreadsheet-pager-left,.portal-spreadsheet-pager-info,.portal-spreadsheet-page-size { display:none !important; }
+.portal-spreadsheet-pager-left,
+.portal-spreadsheet-pager-info,
+.portal-spreadsheet-page-size {
+  display: none !important;
+}
 .portal-spreadsheet-pager-controls {
   display:flex !important;
   align-items:center !important;
@@ -229,14 +233,18 @@ table[data-portal-spreadsheet]:has([data-portal-sticky-selection="true"]) tbody 
 .portal-meus-processos-filter-row,
 .portal-coordinator-filter-row {
   position: relative !important;
-  border-bottom: 0 !important;
-  box-shadow: inset 0 -2px 0 var(--portal-green-header,#005830) !important;
-  padding-bottom: calc(.625rem + 2px) !important;
+  border-bottom: 2px solid var(--portal-green-header, #005830) !important;
+  box-shadow: none !important;
 }
 
 /* Todos é neutro e sempre preto, inclusive descendentes que herdavam branco do banner. */
 .portal-meus-processos-filter-row .portal-native-all-filter,
-.portal-meus-processos-filter-row .portal-native-all-filter[data-selected="true"] { background:#fff !important; color:#111827 !important; border-color:#9ca3af !important; box-shadow:none !important; }
+.portal-meus-processos-filter-row .portal-native-all-filter[data-selected="true"] {
+  background: #fff !important;
+  color: #111827 !important;
+  border-color: #9ca3af !important;
+  box-shadow: none !important;
+}
 .portal-meus-processos-filter-row .portal-native-all-filter * { color:#111827 !important; }
 
 /* Cores de vínculo deliberadamente distantes: amarelo, laranja, verde e azul. */
@@ -257,7 +265,9 @@ table[data-portal-spreadsheet]:has([data-portal-sticky-selection="true"]) tbody 
 }
 
 /* Ajustes de outras superfícies já mantidos nesta folha. */
-#portal-tutorial-page .portal-layer-panel > .portal-layer-card:first-child { display:none !important; }
+#portal-tutorial-page .portal-layer-panel > .portal-layer-card:first-child {
+  display: none !important;
+}
 #portal-tutorial-page .portal-layer-panel { padding-top:8px !important; }
 .portal-commission-identity-panel table thead { background:#d5dce0 !important; color:#334155 !important; border-bottom:1px solid #b7c0c7 !important; }
 .portal-commission-identity-panel table thead th { color:#334155 !important; }
