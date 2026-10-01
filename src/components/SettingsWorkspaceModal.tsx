@@ -21,7 +21,6 @@ interface SettingsWorkspaceModalProps {
 }
 
 type EmbeddedCapableProps = { embedded?: boolean };
-
 type SettingsPaneEventDetail = { pane?: string };
 
 const SettingsWorkspaceHeaderHostContext = createContext<HTMLDivElement | null>(null);
@@ -40,8 +39,14 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
   const isIdentityIntegrationWorkspace = sections.some((section) => section.id === 'identity') && sections.some((section) => section.id === 'integrations');
 
   useEffect(() => {
-    if (open && (!activeId || !sections.some((section) => section.id === activeId))) setActiveId(firstId);
-  }, [open, activeId, firstId, sections]);
+    if (!open) return;
+    const requested = document.documentElement.dataset.portalSettingsRequestedPane;
+    if (isIdentityIntegrationWorkspace && requested && sections.some((section) => section.id === requested)) {
+      setActiveId(requested);
+      return;
+    }
+    if (!activeId || !sections.some((section) => section.id === activeId)) setActiveId(firstId);
+  }, [open, activeId, firstId, sections, isIdentityIntegrationWorkspace]);
 
   useEffect(() => {
     if (!open) setHeaderHost(null);
@@ -69,7 +74,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
   const singlePane = sections.length === 1;
   const sheetSurface = singlePane && SHEET_SECTION_IDS.has(current.id);
   const directPane = singlePane || isIdentityIntegrationWorkspace;
-  const fullBleed = current.fullBleed ?? current.id === 'integrations' || sheetSurface;
+  const fullBleed = (current.fullBleed ?? (current.id === 'integrations')) || sheetSurface;
 
   const contentWithMode = React.isValidElement(current.content)
     ? React.cloneElement(current.content as React.ReactElement<EmbeddedCapableProps>, { embedded: sheetSurface ? false : singlePane })
