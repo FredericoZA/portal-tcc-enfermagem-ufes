@@ -86,12 +86,12 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       </aside>
       <main
         className={`portal-settings-workspace-main min-w-0 flex-1 overflow-y-auto ${fullBleed ? 'p-0' : 'p-3 sm:p-4'}`}
-        data-full-bleed={fullBleed ? 'true' : 'false'}
+        data-portal-full-bleed={fullBleed ? 'true' : 'false'}
         style={{ backgroundColor: fullBleed ? 'var(--portal-surface-layer-2)' : 'var(--portal-surface-layer-1)' }}
       >
         <div
           className={`portal-settings-workspace-content min-w-0 ${fullBleed ? 'min-h-full h-full rounded-none' : 'rounded-xl'}`}
-          data-full-bleed={fullBleed ? 'true' : 'false'}
+          data-portal-full-bleed={fullBleed ? 'true' : 'false'}
           style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}
         >
           {current.content}
