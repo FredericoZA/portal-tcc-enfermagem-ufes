@@ -9,6 +9,9 @@ const css = read('src/portal-spreadsheet-runtime.css');
 const identity = read('src/components/CommissionIdentityPanel.tsx');
 const workspace = read('src/components/SettingsWorkspaceModal.tsx');
 const integrations = read('src/components/InfrastructureIntegrationsPanel.tsx');
+const configPage = read('src/pages/ConfiguracoesPage.tsx');
+const settingsRuntime = read('src/components/PortalSettingsRuntime.tsx');
+const server = read('server.ts');
 
 test('planilhas congelam cabeçalho e coluna Processo e mantêm rolagem vertical/horizontal', () => {
   assert.match(runtime, /dataset\.portalStickyHeader = 'true'/);
@@ -75,7 +78,19 @@ test('Rodapé e Identidade é exclusivo do Master, persiste e atualiza o rodapé
   assert.doesNotMatch(identity, /createAdministrationTransfer/);
 });
 
-test('Integrações e Plataforma usa modo full-bleed no workspace', () => {
+test('Rodapé e Integrações são entradas independentes e workspaces diretos', () => {
+  assert.match(configPage, /id: 'identity', title: 'Rodapé e Identidade'/);
+  assert.match(configPage, /id: 'integrations', title: 'Integrações e Plataforma'/);
+  assert.match(configPage, /activeSettingsPanel === 'identity'/);
+  assert.match(configPage, /activeSettingsPanel === 'integrations'/);
+  assert.doesNotMatch(settingsRuntime, /cloneNode|insertAdjacentElement\('afterend'/);
   assert.match(workspace, /data-portal-full-bleed/);
   assert.match(integrations, /flex min-h-full h-full flex-col/);
+});
+
+test('e-mail do Departamento persiste e alimenta a variável de reserva', () => {
+  assert.match(integrations, /roomReservationDepartmentEmail/);
+  assert.match(integrations, /E-mail do Departamento de Enfermagem/);
+  assert.match(server, /emailConfigPatch\.roomReservationDepartmentEmail=departmentEmail/);
+  assert.match(server, /currentSettings\.emailConfig\?\.roomReservationDepartmentEmail\|\|operationalConfig\(studio\)\.reservation\.departmentEmail/);
 });
