@@ -260,6 +260,13 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
   emails.forEach((email, index) => {
     if (!text(email.name) || !text(email.subject) || !text(email.body)) add({ code: 'INCOMPLETE_EMAIL', path: `emailTemplates.${index}`, message: 'Cada e-mail precisa de nome, assunto e corpo em texto.', severity: 'ERROR', area: 'EMAIL' });
     if (!text(email.recipient)) add({ code: 'MISSING_RECIPIENT', path: `emailTemplates.${index}.recipient`, message: `Defina o destinatário de “${text(email.name) || text(email.id)}”.`, severity: 'ERROR', area: 'EMAIL' });
+    if (text(email.id) === 'email-reserva' && text(email.recipient).replace(/\\s+/g, '') !== '{{DEPARTAMENTO_EMAIL}}') add({
+      code: 'RESERVATION_EMAIL_RECIPIENT_MUST_BE_CONFIGURED',
+      path: `emailTemplates.${index}.recipient`,
+      message: 'O pedido de reserva deve usar exclusivamente {{DEPARTAMENTO_EMAIL}}, definido em Integrações e Plataforma.',
+      severity: 'ERROR',
+      area: 'EMAIL'
+    });
     const unsafeRecipientVariables = templateVariableKeys(email.recipient).filter((variable) => !SAFE_EMAIL_RECIPIENT_VARIABLES.has(variable));
     if (unsafeRecipientVariables.length) add({
       code: 'UNSAFE_EMAIL_RECIPIENT_VARIABLE',

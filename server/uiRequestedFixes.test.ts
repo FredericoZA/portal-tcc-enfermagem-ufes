@@ -12,6 +12,8 @@ const integrations = read('src/components/InfrastructureIntegrationsPanel.tsx');
 const configPage = read('src/pages/ConfiguracoesPage.tsx');
 const settingsRuntime = read('src/components/PortalSettingsRuntime.tsx');
 const server = read('server.ts');
+const operational = read('src/utils/operationalConfig.ts');
+const courseStudioValidator = read('src/utils/courseStudioValidator.ts');
 
 test('planilhas congelam cabeçalho e coluna Processo e mantêm rolagem vertical/horizontal', () => {
   assert.match(runtime, /dataset\.portalStickyHeader = 'true'/);
@@ -88,9 +90,15 @@ test('Rodapé e Integrações são entradas independentes e workspaces diretos',
   assert.match(integrations, /flex min-h-full h-full flex-col/);
 });
 
-test('e-mail do Departamento persiste e alimenta a variável de reserva', () => {
+test('e-mail do Departamento persiste, é fail-closed e nunca cai em destinatário fixo', () => {
   assert.match(integrations, /roomReservationDepartmentEmail/);
   assert.match(integrations, /E-mail do Departamento de Enfermagem/);
   assert.match(server, /emailConfigPatch\.roomReservationDepartmentEmail=departmentEmail/);
-  assert.match(server, /currentSettings\.emailConfig\?\.roomReservationDepartmentEmail\|\|operationalConfig\(studio\)\.reservation\.departmentEmail/);
+  assert.match(server, /configuredRoomReservationDepartmentEmail/);
+  assert.match(server, /templateId==='email-reserva'/);
+  assert.match(server, /destinatário publicado diverge do e-mail cadastrado em Integrações/);
+  assert.match(server, /normalizedEvent==='TCC_CREATED'\?reservationWorkflowStudio\(currentSettings\.integrationStudio\):currentSettings\.integrationStudio/);
+  assert.doesNotMatch(server, /roomReservationDepartmentEmail\|\|operationalConfig\(studio\)\.reservation\.departmentEmail/);
+  assert.doesNotMatch(operational, /dptenfccs@gmail\.com/);
+  assert.match(courseStudioValidator, /RESERVATION_EMAIL_RECIPIENT_MUST_BE_CONFIGURED/);
 });
