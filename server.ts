@@ -905,18 +905,56 @@ function historicalStudioAnswers(processId:string):Record<string,string|number|b
   }
   return answers;
 }
+function configuredRoomReservationDepartmentEmail():string{
+  const value=normalizeEmail(String(currentSettings.emailConfig?.roomReservationDepartmentEmail||''));
+  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value)?value:'';
+}
+function nativeReservationWorkflowStudio(){
+  return {
+    schemaVersion:3,
+    revision:0,
+    emailTemplates:[{
+      id:'email-reserva',
+      name:'Solicitação de reserva ao departamento',
+      recipient:'{{DEPARTAMENTO_EMAIL}}',
+      subject:'[TCC {{PROTOCOLO}}] Solicitação de reserva',
+      body:'Prezados,\\n\\nSolicitamos reserva para a defesa de {{CAMPO_01}}.\\nTítulo: {{TITULO}}\\nData e hora: {{DEFESA_DATA_HORA}}\\nLocal preferido: {{DEFESA_LOCAL}}\\nCaso indisponível, solicitamos o local alternativo: {{LOCAL_ALTERNATIVO}}.\\n\\nPor favor, confirmem o agendamento ao aluno: {{ALUNO_1_EMAIL}}.\\nOrientador: {{ORIENTADOR_NOME}}.\\n\\nAtenciosamente, Secretaria do curso',
+      attachments:[]
+    }],
+    docTemplates:[],
+    formTemplates:[],
+    workflowStages:[{
+      id:'stage-registration-reservation-fallback',
+      stageNumber:1,
+      title:'Cadastro e pedido de reserva',
+      triggerEvent:'TCC_CREATED',
+      actions:[{id:'action-reservation-request-fallback',type:'email',refId:'email-reserva',title:'Solicitar reserva ao departamento'}]
+    }],
+    matrixColumns:[],
+    matrixRows:[],
+    brandKit:{},
+    documentDesigns:{},
+    emailDesigns:{},
+    formDesigns:{},
+    auditTrail:[]
+  } as any;
+}
 async function executeConfiguredWorkflowEvent(process:ProcessData,eventCode:WorkflowEventCode,actorEmail:string,extraVariables?:Record<string,unknown>,resumeRun?:WorkflowRun):Promise<WorkflowRun|undefined>{
-  const studio=currentSettings.integrationStudio;if(!studio)return;
+  const normalizedEvent=normalizeWorkflowEventCode(eventCode);
+  const departmentEmail=configuredRoomReservationDepartmentEmail();
+  const studio=currentSettings.integrationStudio||(normalizedEvent==='TCC_CREATED'?nativeReservationWorkflowStudio():undefined);
+  if(!studio)return;
+  if(normalizedEvent==='TCC_CREATED'&&!departmentEmail)throw new Error('Configure o E-mail do Departamento de Enfermagem em Configurações → Integrações e Plataforma antes de cadastrar TCCs.');
   const customFormEvent=String(eventCode).match(/^FORM_(.+)_SUBMITTED$/i);
   if(customFormEvent){
     const latest=studioFormSubmissionsStore.filter(item=>item.processId===process.id&&item.formId===customFormEvent[1]).sort((a,b)=>b.submittedAt.localeCompare(a.submittedAt))[0];
     if(!latest||latest.archiveStatus!=='ARCHIVED')return;
   }
-  const effectiveVariables={...(process.registrationAnswers||{}),...historicalStudioAnswers(process.id),...(extraVariables||{}),DEPARTAMENTO_EMAIL:normalizeEmail(String(currentSettings.emailConfig?.roomReservationDepartmentEmail||operationalConfig(studio).reservation.departmentEmail||'')),LOCAL_ALTERNATIVO:process.defesa.alternateLocation||''};
+  const effectiveVariables={...(process.registrationAnswers||{}),...historicalStudioAnswers(process.id),...(extraVariables||{}),DEPARTAMENTO_EMAIL:departmentEmail,LOCAL_ALTERNATIVO:process.defesa.alternateLocation||''};
   const run=await executeWorkflowEvent(studio,{process,eventCode,actorEmail,actorRoles:getActiveProcessRoles(actorEmail,process.id),extraVariables:effectiveVariables,completedActions:resumeRun?.actions},{
     createDocument:async({template,idempotencyKey,variables})=>executeConfiguredDocumentAction(process,template,actorEmail,idempotencyKey,variables,eventCode),
     createFormTask:async({form,idempotencyKey})=>({externalId:`form_task_${String(form.id||idempotencyKey)}`}),
-    sendEmail:async({template,to,subject,text,html,eventVariables,idempotencyKey})=>{const templateId=String(template.id||'');const attachments=await resolveWorkflowEmailAttachments(process,template);const records=[];for(const recipient of to){const accepted=emailDeliveriesStore.find(record=>record.processId===process.id&&record.templateId===templateId&&record.recipient===normalizeEmail(recipient)&&record.status==='ACCEPTED_BY_GMAIL');if(eventCode==='LOCATION_CONFIRMED'&&process.defesa.invitationSentAt&&accepted){records.push(accepted);continue;}records.push(await sendTrackedPortalEmail({process,recipient,subject,text,html,templateId,workflowEventCode:eventCode,workflowEventVariables:eventVariables,idempotencyKey:`${idempotencyKey}:${recipient}`,attachments}));}if(records.some(record=>record.status!=='ACCEPTED_BY_GMAIL')){const error=new Error('Um ou mais e-mails do fluxo aguardam nova tentativa.') as Error&{externalId:string};error.externalId=records.map(record=>record.id).join(',');throw error;}return{externalId:records.map(record=>record.id).join(',')};},
+    sendEmail:async({template,to,subject,text,html,eventVariables,idempotencyKey})=>{const templateId=String(template.id||'');if(templateId==='email-reserva'){const configured=configuredRoomReservationDepartmentEmail();const recipients=Array.from(new Set(to.map(recipient=>normalizeEmail(recipient)).filter(Boolean)));if(!configured)throw new Error('O e-mail do Departamento de Enfermagem não está configurado.');if(recipients.length!==1||recipients[0]!==configured)throw new Error('Envio de reserva bloqueado: o destinatário publicado diverge do e-mail cadastrado em Integrações.');}const attachments=await resolveWorkflowEmailAttachments(process,template);const records=[];for(const recipient of to){const accepted=emailDeliveriesStore.find(record=>record.processId===process.id&&record.templateId===templateId&&record.recipient===normalizeEmail(recipient)&&record.status==='ACCEPTED_BY_GMAIL');if(eventCode==='LOCATION_CONFIRMED'&&process.defesa.invitationSentAt&&accepted){records.push(accepted);continue;}records.push(await sendTrackedPortalEmail({process,recipient,subject,text,html,templateId,workflowEventCode:eventCode,workflowEventVariables:eventVariables,idempotencyKey:`${idempotencyKey}:${recipient}`,attachments}));}if(records.some(record=>record.status!=='ACCEPTED_BY_GMAIL')){const error=new Error('Um ou mais e-mails do fluxo aguardam nova tentativa.') as Error&{externalId:string};error.externalId=records.map(record=>record.id).join(',');throw error;}return{externalId:records.map(record=>record.id).join(',')};},
     executeSystemAction:async({action})=>{throw new Error(`A ação interna “${action.title}” não possui executor publicado. Use uma ação de formulário, documento ou e-mail.`);}
   });
   const existing=workflowRunsStore.findIndex(item=>item.id===run.id);if(existing>=0)workflowRunsStore[existing]=run;else workflowRunsStore.push(run);
