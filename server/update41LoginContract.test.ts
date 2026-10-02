@@ -9,10 +9,10 @@ test('popup de acesso diferencia discentes dos demais perfis', async () => {
     source('src/utils/loginPopupConfig.ts'),
     source('src/components/PortalUiEnhancer.tsx'),
   ]);
-  assert.ok(config.includes('se você é discente, utilize seu e-mail institucional @edu.ufes.br.'));
-  assert.ok(config.includes('Master, Presidência, docentes, banca e demais usuários'));
-  assert.ok(config.includes('Gmail, Outlook/Hotmail'));
-  assert.ok(config.includes("emailPlaceholder: 'seuemail@exemplo.com'"));
+  assert.ok(config.includes('utilize sempre seu e-mail institucional @edu.ufes.br'));
+  assert.ok(config.includes('utilize exatamente o e-mail informado no cadastro do TCC.'));
+  assert.ok(config.includes("emailPlaceholder: 'nome@edu.ufes.br'"));
+  assert.ok(config.includes("cardBgColor: '#154d41'"));
   assert.ok(enhancer.includes("node.textContent = 'Demais usuários:'"));
   assert.ok(enhancer.includes("node.textContent = 'Orientação dos demais usuários:'"));
 });
