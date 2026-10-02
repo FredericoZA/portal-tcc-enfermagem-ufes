@@ -64,3 +64,51 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 #public-calendar-cards-section .portal-defense-filter-row,
 #meus-processos-page-container .portal-meus-processos-filter-row,
 #coordenador-page-root .portal-coordinator-filter-row{padding-top:.35rem!important;padding-bottom:.35rem!important}
+
+
+/* -------------------------------------------------------------------------- */
+/* Contrato canônico de planilhas                                             */
+/* -------------------------------------------------------------------------- */
+
+/* Texto padrão da planilha: preto. Cores semânticas continuam permitidas
+ * apenas em indicadores de status, chips e marcadores explicitamente próprios. */
+#public-calendar-cards-section table,
+#biblioteca-tccs-section table,
+#meus-processos-table,
+#coordenador-page-root table {
+  color: #000 !important;
+}
+
+#public-calendar-cards-section table :is(th,td,p,span,strong),
+#biblioteca-tccs-section table :is(th,td,p,span,strong),
+#meus-processos-table :is(th,td,p,span,strong),
+#coordenador-page-root table :is(th,td,p,span,strong) {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* A tabela não cria respiro vertical externo próprio. O espaçamento pertence
+ * à estrutura da página, não à planilha. */
+#public-calendar-cards-section table,
+#biblioteca-tccs-section table,
+#meus-processos-table,
+#coordenador-page-root table {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Controles ordinários da planilha são sempre brancos. */
+#public-calendar-cards-section :is(button,.portal-table-filter-chip),
+#biblioteca-tccs-section :is(button,.portal-table-filter-chip),
+#meus-processos-page-container :is(button,.portal-table-filter-chip),
+#coordenador-page-root :is(button,.portal-table-filter-chip) {
+  --portal-sheet-button-bg: #fff;
+}
+
+/* Cabeçalho, toolbar e filtro devem permanecer compactos e sem folgas verticais
+ * extras introduzidas por componentes locais. */
+#public-calendar-cards-section .portal-defense-filter-row,
+#meus-processos-page-container .portal-meus-processos-filter-row,
+#coordenador-page-root .portal-coordinator-filter-row {
+  margin-bottom: 0 !important;
+}
