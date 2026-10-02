@@ -242,7 +242,7 @@ const DEFAULT_GENERAL_POPUPS_CONFIG: GeneralPopupsConfig = {
   correctionHeaderTextColor: '#ffffff',
   correctionBtnBg: '#154d41',
   correctionTitle: 'Solicitação de Correção',
-  correctionSubtitle: 'Descreva a correção necessária no documento para análise administrativa.'
+  correctionSubtitle: 'Descreva a correção necessária para o documento ou registro selecionado.'
 };
 
 const GENERAL_POPUPS_KEY = 'portal_general_popups_config_v1';
