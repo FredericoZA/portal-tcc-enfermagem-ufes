@@ -65,13 +65,13 @@ export interface CalendarPopupFormat {
 }
 
 export const DEFAULT_CALENDAR_POPUP_FORMAT: CalendarPopupFormat = {
-  headerThemeMode: 'inherit',
-  headerBgColor: '#435649',
+  headerThemeMode: 'custom',
+  headerBgColor: '#154d41',
   headerTextColor: '#ffffff',
   headerCustomTitle: 'AGENDA DE DEFESAS DE TCC',
   headerEmoji: '📅',
-  modalBgColor: '#f1f5f9',
-  cardBgColor: '#ffffff',
+  modalBgColor: '#f2f2f2',
+  cardBgColor: '#f2f2f2',
   cardInnerBgColor: '#f8fafc',
   cardBorderColor: '#cbd5e1',
   cardBorderWidth: 'thin',
@@ -85,7 +85,7 @@ export const DEFAULT_CALENDAR_POPUP_FORMAT: CalendarPopupFormat = {
   showProgressPercent: true,
   progressBarLabelFormat: 'stage_and_percent',
   progressBarColorMode: 'dynamic',
-  progressBarCustomColor: '#10b981',
+  progressBarCustomColor: '#154d41',
   progressBarSecondaryColor: '#059669',
   progressBarTrackColor: '#e2e8f0',
   progressBarHeight: 'normal',
@@ -255,29 +255,11 @@ export const CALENDAR_POPUP_CONFIG_EVENT = 'calendar_popup_config_changed';
  * Loads the Calendar Popup format from localStorage.
  */
 export function loadCalendarPopupConfig(): CalendarPopupFormat {
-  if (typeof window === 'undefined') return { ...DEFAULT_CALENDAR_POPUP_FORMAT };
-  try {
-    const raw = localStorage.getItem(CALENDAR_POPUP_CONFIG_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return { ...DEFAULT_CALENDAR_POPUP_FORMAT, ...parsed };
-    }
-  } catch (e) {
-    console.error('Error loading calendar popup config:', e);
-  }
   return { ...DEFAULT_CALENDAR_POPUP_FORMAT };
 }
 
-/**
- * Saves the Calendar Popup format to localStorage and emits an event for instant UI update.
- */
-export function saveCalendarPopupConfig(format: CalendarPopupFormat): void {
-  try {
-    localStorage.setItem(CALENDAR_POPUP_CONFIG_KEY, JSON.stringify(format));
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent(CALENDAR_POPUP_CONFIG_EVENT, { detail: format }));
-    }
-  } catch (e) {
-    console.error('Error saving calendar popup config:', e);
+export function saveCalendarPopupConfig(_format: CalendarPopupFormat): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(CALENDAR_POPUP_CONFIG_EVENT, { detail: loadCalendarPopupConfig() }));
   }
 }
