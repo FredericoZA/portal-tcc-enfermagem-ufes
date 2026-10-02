@@ -3,7 +3,6 @@ import { acceptEvaluation, EvaluationError } from './server/workflow/evaluation'
 import { EVALUATION_FORM_ID } from './src/utils/evaluationForm';
 import { NATIVE_PROCESS_FORM_IDS, validateFormAnswers } from './src/utils/studioFormAnswers';
 import { createPortalHttpApp, portalHttpError } from './server/httpApp';
-import { normalizeUnifiedAppearance } from './src/utils/unifiedAppearance';
 import { previewProcess } from './server/workflow/modelPreview';
 import { compareStudioVersions } from './src/utils/studioDiff';
 import { plannedDeadlines, claimableReminder } from './server/workflow/deadlines';
@@ -331,7 +330,7 @@ async function persistPortalStateDurably():Promise<void>{
 function applyPersistedState(state: PersistedPortalState) {
   registrationDraftsStore=pruneDrafts(state.registrationDrafts||{});
   reminderRecordsStore=state.reminders||[];
-  if (state.settings) { currentSettings = normalizeUnifiedAppearance({ ...INITIAL_SETTINGS, ...state.settings }); delete (currentSettings as any).recoverySecretKey;delete (currentSettings as any).courseCoordinatorEmail;delete (currentSettings as any).courseCoordinatorName;for(const model of Object.values(currentSettings.documentModels||{}))if(model)model.templateContentText=''; }
+  if (state.settings) { currentSettings = { ...INITIAL_SETTINGS, ...state.settings }; delete (currentSettings as any).recoverySecretKey;delete (currentSettings as any).courseCoordinatorEmail;delete (currentSettings as any).courseCoordinatorName;for(const model of Object.values(currentSettings.documentModels||{}))if(model)model.templateContentText=''; }
   if (state.processes) processesStore = state.processes;
   if (state.memberships) membershipsStore = state.memberships;
   if (state.auditLogs) auditLogsStore = state.auditLogs;
@@ -603,7 +602,7 @@ function generateDefaultDocuments(process: ProcessData): ProcessDocument[] {
 
 function redactSensitiveValues<T>(input:T):T{if(Array.isArray(input))return input.map(redactSensitiveValues) as T;if(!input||typeof input!=='object')return input;const output:Record<string,unknown>={};for(const[key,value]of Object.entries(input as Record<string,unknown>)){if(/(secret|token|password|credential|api[_-]?key)/i.test(key))continue;output[key]=redactSensitiveValues(value);}return output as T;}
 function containsSensitiveConfigurationKey(input: unknown): boolean { if (!input || typeof input !== 'object') return false; if (Array.isArray(input)) return input.some(containsSensitiveConfigurationKey); return Object.entries(input as Record<string, unknown>).some(([key, value]) => /(secret|token|password|credential|api[_-]?key|service[_-]?role|private[_-]?key)/i.test(key) || containsSensitiveConfigurationKey(value)); }
-function publicSettingsForRequest(admin:boolean):GlobalSettings{const safe=normalizeUnifiedAppearance(redactSensitiveValues(JSON.parse(JSON.stringify(currentSettings))) as GlobalSettings);delete (safe as any).courseCoordinatorEmail;delete (safe as any).courseCoordinatorName;if(!safe.contactEmail&&safe.masterEmail)safe.contactEmail=safe.masterEmail;if(!safe.portalMaintainerName&&safe.ownerName)safe.portalMaintainerName=safe.ownerName;if(!admin){delete safe.masterRecoveryEmails;delete safe.documentModels;delete safe.templateIds;delete safe.emailConfig;delete safe.integrationStudio;delete safe.masterEmail;delete safe.ownerEmail;delete safe.commissionPresidentEmail;delete safe.driveRootFolderId;}return safe;}
+function publicSettingsForRequest(admin:boolean):GlobalSettings{const safe=redactSensitiveValues(JSON.parse(JSON.stringify(currentSettings))) as GlobalSettings;delete (safe as any).courseCoordinatorEmail;delete (safe as any).courseCoordinatorName;if(!safe.contactEmail&&safe.masterEmail)safe.contactEmail=safe.masterEmail;if(!safe.portalMaintainerName&&safe.ownerName)safe.portalMaintainerName=safe.ownerName;if(!admin){delete safe.masterRecoveryEmails;delete safe.documentModels;delete safe.templateIds;delete safe.emailConfig;delete safe.integrationStudio;delete safe.masterEmail;delete safe.ownerEmail;delete safe.commissionPresidentEmail;delete safe.driveRootFolderId;}return safe;}
 function preserveCurrentDriveBindings(snapshot:any,current?:ProcessData):ProcessData{
   const restored=JSON.parse(JSON.stringify(snapshot||{}));
   restored.driveFolderId=current?.driveFolderId;restored.driveFolderUrl=current?.driveFolderUrl;restored.driveSyncedAt=current?.driveSyncedAt;
@@ -1649,10 +1648,10 @@ export async function createPortalApp() {
       const workflowValidation=compileWorkflow(req.body.integrationStudio);
       const packageValidation=validateCourseStudio(req.body.integrationStudio);
       const errors=[...workflowValidation.issues.filter(issue=>issue.severity==='ERROR'),...packageValidation.issues.filter(issue=>issue.severity==='ERROR')];
-      if(errors.length)return res.status(400).json({error:'O pacote do curso ainda contém pendências. Corrija aparência, modelos, formulários, e-mails e etapas antes de publicar.',code:'COURSE_PACKAGE_VALIDATION_FAILED',score:packageValidation.score,issues:errors.slice(0,40)});
+      if(errors.length)return res.status(400).json({error:'O pacote do curso ainda contém pendências. Corrija modelos, formulários, e-mails e etapas antes de publicar.',code:'COURSE_PACKAGE_VALIDATION_FAILED',score:packageValidation.score,issues:errors.slice(0,40)});
     }
     const before = { ...currentSettings };
-    const settingsPatch={...(req.body||{})};for(const protectedKey of ['courseCoordinatorEmail','courseCoordinatorName','documentModels','masterEmail','ownerEmail','commissionPresidentEmail','masterRecoveryEmails','sessionValidAfter','driveRootFolderId','calendarId','installationProfile','academicCycles','featureFlags'])delete settingsPatch[protectedKey];
+    const settingsPatch={...(req.body||{})};for(const protectedKey of ['courseCoordinatorEmail','courseCoordinatorName','documentModels','masterEmail','ownerEmail','commissionPresidentEmail','masterRecoveryEmails','sessionValidAfter','driveRootFolderId','calendarId','installationProfile','academicCycles','featureFlags','portalAppearance','tableAppearance','tableLayouts'])delete settingsPatch[protectedKey];
     if(settingsPatch.emailConfig&&typeof settingsPatch.emailConfig==='object'&&!Array.isArray(settingsPatch.emailConfig)){
       const emailConfigPatch={...settingsPatch.emailConfig};
       if(Object.prototype.hasOwnProperty.call(emailConfigPatch,'roomReservationDepartmentEmail')){
@@ -1667,7 +1666,6 @@ export async function createPortalApp() {
       ...settingsPatch,
       updatedAt: new Date().toISOString()
     };
-    currentSettings = normalizeUnifiedAppearance(currentSettings);
     if (req.body?.integrationStudio) publishRuntimeTemplatesFromSettings();
 
     if(req.body?.integrationStudio){
