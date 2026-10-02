@@ -109,7 +109,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   footerPresidentLabel: 'Presidente da Comissão', footerPresidentName: '', footerMembersLabel: 'Membros da Comissão', footerMembersList: [],
   footerDevTitle: 'Desenvolvimento da Plataforma e Suporte', footerDevName: '', footerWhatsappLabel: 'WhatsApp Secretaria', footerWhatsappUrl: '', footerContactEmail: '',
   footerQrCodeUrl: '', footerQrLabel: '', footerBgColor: '#011812', footerTextColor: '#ffffff', footerMutedTextColor: '#b5c8bf',
-  footerBorderColor: '#174c3b', footerDividerColor: '#174c3b', footerWhatsappBtnBg: '#154d41', footerWhatsappBtnText: '#ffffff',
+  footerBorderColor: '#174c3b', footerDividerColor: '#174c3b', footerWhatsappBtnBg: '#337959', footerWhatsappBtnText: '#ffffff',
   footerQrBgColor: '#ffffff', footerQrTextColor: '#0f172a', footerQrBorderColor: '#ffffff'
 };
 
