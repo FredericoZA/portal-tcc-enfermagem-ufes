@@ -939,10 +939,30 @@ function nativeReservationWorkflowStudio(){
     auditTrail:[]
   } as any;
 }
+function reservationWorkflowStudio(source:typeof currentSettings.integrationStudio){
+  const studio:any=source?structuredClone(source):nativeReservationWorkflowStudio();
+  studio.emailTemplates=Array.isArray(studio.emailTemplates)?studio.emailTemplates:[];
+  const departmentTemplateIds=new Set(studio.emailTemplates.filter((template:any)=>String(template?.recipient||'').includes('DEPARTAMENTO_EMAIL')).map((template:any)=>String(template?.id||'')).filter(Boolean));
+  const nativeTemplate=nativeReservationWorkflowStudio().emailTemplates[0];
+  const reservationIndex=studio.emailTemplates.findIndex((template:any)=>String(template?.id||'')==='email-reserva');
+  if(reservationIndex>=0)studio.emailTemplates[reservationIndex]={...studio.emailTemplates[reservationIndex],recipient:'{{DEPARTAMENTO_EMAIL}}'};
+  else studio.emailTemplates.push(nativeTemplate);
+  studio.workflowStages=Array.isArray(studio.workflowStages)?studio.workflowStages:[];
+  let initial=studio.workflowStages.find((stage:any)=>normalizeWorkflowEventCode(stage?.triggerEvent||stage?.eventCode)==='TCC_CREATED');
+  if(!initial){initial={id:'stage-registration-reservation',stageNumber:1,title:'Cadastro e pedido de reserva',triggerEvent:'TCC_CREATED',actions:[]};studio.workflowStages.unshift(initial);}
+  const actions=Array.isArray(initial.actions)?initial.actions:[];
+  const previousReservation=actions.find((action:any)=>String(action?.refId||action?.referenceId||'')==='email-reserva');
+  initial.actions=[
+    {...(previousReservation||{}),id:String(previousReservation?.id||'action-reservation-request'),type:'email',refId:'email-reserva',title:String(previousReservation?.title||'Solicitar reserva ao departamento')},
+    ...actions.filter((action:any)=>{const refId=String(action?.refId||action?.referenceId||'');return refId!=='email-reserva'&&!departmentTemplateIds.has(refId);})
+  ];
+  initial.stageNumber=Number(initial.stageNumber||1);
+  return studio;
+}
 async function executeConfiguredWorkflowEvent(process:ProcessData,eventCode:WorkflowEventCode,actorEmail:string,extraVariables?:Record<string,unknown>,resumeRun?:WorkflowRun):Promise<WorkflowRun|undefined>{
   const normalizedEvent=normalizeWorkflowEventCode(eventCode);
   const departmentEmail=configuredRoomReservationDepartmentEmail();
-  const studio=currentSettings.integrationStudio||(normalizedEvent==='TCC_CREATED'?nativeReservationWorkflowStudio():undefined);
+  const studio=normalizedEvent==='TCC_CREATED'?reservationWorkflowStudio(currentSettings.integrationStudio):currentSettings.integrationStudio;
   if(!studio)return;
   if(normalizedEvent==='TCC_CREATED'&&!departmentEmail)throw new Error('Configure o E-mail do Departamento de Enfermagem em Configurações → Integrações e Plataforma antes de cadastrar TCCs.');
   const customFormEvent=String(eventCode).match(/^FORM_(.+)_SUBMITTED$/i);
