@@ -23,14 +23,14 @@ export interface GlobalPopupStyle {
 
 export const DEFAULT_GLOBAL_POPUP_STYLE: GlobalPopupStyle = {
   surfaceBgColor: '#f2f2f2',
-  headerBgColor: POPUP_MOSS,
+  headerBgColor: '#154d41',
   headerTextColor: '#ffffff',
-  actionBgColor: POPUP_MOSS,
+  actionBgColor: '#154d41',
   actionTextColor: '#ffffff',
   fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
   fontSize: '14px',
   borderRadius: '16px',
-  borderColor: '#c3c9cf',
+  borderColor: '#cbd5e1',
   styleVariant: 'solid',
 };
 
@@ -79,13 +79,7 @@ export function unifiedAppearanceLinks(links: Record<string, boolean> = {}): Rec
 }
 
 export function loadPortalAppearanceLinks(): Record<string, boolean> {
-  if (typeof window === 'undefined') return { ...DEFAULT_PORTAL_APPEARANCE_LINKS };
-  try {
-    const raw = localStorage.getItem(PORTAL_APPEARANCE_LINKS_KEY);
-    return raw ? unifiedAppearanceLinks(JSON.parse(raw)) : { ...DEFAULT_PORTAL_APPEARANCE_LINKS };
-  } catch {
-    return { ...DEFAULT_PORTAL_APPEARANCE_LINKS };
-  }
+  return { ...DEFAULT_PORTAL_APPEARANCE_LINKS };
 }
 
 export function isPortalAppearanceLinked(itemKey: string): boolean {
@@ -93,24 +87,17 @@ export function isPortalAppearanceLinked(itemKey: string): boolean {
 }
 
 export function loadGlobalPopupStyle(): GlobalPopupStyle {
-  if (typeof window === 'undefined') return { ...DEFAULT_GLOBAL_POPUP_STYLE };
-  try {
-    const raw = localStorage.getItem(GLOBAL_POPUP_STYLE_KEY);
-    return normalizePopupStyle(raw ? JSON.parse(raw) : {});
-  } catch {
-    return { ...DEFAULT_GLOBAL_POPUP_STYLE };
-  }
+  return normalizePopupStyle(DEFAULT_GLOBAL_POPUP_STYLE);
 }
 
-export function saveGlobalPopupStyle(style: GlobalPopupStyle, emitEvent = true): GlobalPopupStyle {
-  const normalized = normalizePopupStyle(style);
+export function saveGlobalPopupStyle(_style: GlobalPopupStyle, emitEvent = true): GlobalPopupStyle {
+  const normalized = loadGlobalPopupStyle();
   if (typeof window === 'undefined') return normalized;
-  localStorage.setItem(GLOBAL_POPUP_STYLE_KEY, JSON.stringify(normalized));
   if (typeof document !== 'undefined') {
     const root = document.documentElement.style;
     const shape = { font: normalized.fontFamily, size: normalized.fontSize, radius: normalized.borderRadius, border: normalized.borderColor };
     for (const [key, value] of Object.entries(shape)) root.setProperty(`--portal-popup-${key}`, value);
-    root.setProperty('--portal-popup-shadow', normalized.styleVariant === 'minimal' ? '0 1px 2px rgba(15,23,42,.08)' : normalized.styleVariant === 'elevated' ? '0 24px 60px rgba(15,23,42,.28)' : '0 16px 40px rgba(15,23,42,.2)');
+    root.setProperty('--portal-popup-shadow', '0 16px 40px rgba(15,23,42,.2)');
     for (const prefix of ['popup', 'new-defense', 'upload', 'hipoar', 'pdf', 'correction']) {
       for (const [key, value] of Object.entries({ bg: normalized.surfaceBgColor, header: normalized.headerBgColor, 'header-text': normalized.headerTextColor, action: normalized.actionBgColor, 'action-text': normalized.actionTextColor })) root.setProperty(`--portal-${prefix}-${key}`, value);
     }
@@ -125,32 +112,12 @@ export function tableInheritsGlobalAppearance(storageKey: string): boolean {
 }
 
 export function savePortalAppearanceLinks(
-  links: Record<string, boolean>,
-  globalTableFormat?: Record<string, unknown>,
+  _links: Record<string, boolean>,
+  _globalTableFormat?: Record<string, unknown>,
   emitEvents = true,
 ): Record<string, boolean> {
-  const normalized = unifiedAppearanceLinks(links);
-  if (typeof window === 'undefined') return normalized;
-
-  localStorage.setItem(PORTAL_APPEARANCE_LINKS_KEY, JSON.stringify(normalized));
-
-  for (const [itemKey, storageKey] of Object.entries(TABLE_STORAGE_BY_EDITOR_TAB)) {
-    const layoutKey = `default_table_config_${storageKey}`;
-    try {
-      const raw = localStorage.getItem(layoutKey);
-      const layout = raw ? JSON.parse(raw) : {};
-      if (normalized[itemKey] !== false) {
-        const { textFormat: _discarded, ...layoutOnly } = layout;
-        localStorage.setItem(layoutKey, JSON.stringify({ ...layoutOnly, inheritGlobalAppearance: true }));
-      } else {
-        localStorage.setItem(layoutKey, JSON.stringify({ ...layout, inheritGlobalAppearance: false, textFormat: layout.textFormat || { ...(globalTableFormat || {}) } }));
-      }
-    } catch {
-      localStorage.setItem(layoutKey, JSON.stringify({ inheritGlobalAppearance: normalized[itemKey] !== false, ...(normalized[itemKey] === false ? { textFormat: { ...(globalTableFormat || {}) } } : {}) }));
-    }
-  }
-
-  if (emitEvents) {
+  const normalized = { ...DEFAULT_PORTAL_APPEARANCE_LINKS };
+  if (typeof window !== 'undefined' && emitEvents) {
     window.dispatchEvent(new CustomEvent(PORTAL_APPEARANCE_LINKS_EVENT, { detail: normalized }));
     window.dispatchEvent(new CustomEvent(TABLE_LAYOUTS_EVENT));
   }
