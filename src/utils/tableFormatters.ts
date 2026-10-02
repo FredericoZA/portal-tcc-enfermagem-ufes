@@ -10,31 +10,38 @@ export { DEFAULT_TABLE_TEXT_FORMAT };
 export const GLOBAL_TABLE_CONFIG_KEY = 'master_global_table_config';
 export const GLOBAL_TABLE_EVENT = 'global_table_format_changed';
 
+export const STATIC_PORTAL_TABLE_FORMAT: TableTextFormat = {
+  ...DEFAULT_TABLE_TEXT_FORMAT,
+  headerTheme: 'colored',
+  headerTextColor: 'custom',
+  customHeaderColor: '#154d41',
+  customHeaderSecondaryColor: '#013d2b',
+  customHeaderTextColor: '#ffffff',
+  filterStyle: 'custom',
+  toolbarButtonColor: '#154d41',
+  toolbarButtonTextColor: '#b8d8c3',
+  toolbarButtonBorderColor: 'transparent',
+  toolbarButtonBorderWidth: 'none',
+  toolbarButtonOpacity: 1,
+  fontFamily: 'inter',
+};
+
 /**
  * Loads the system-wide Master Global Table Format from localStorage,
  * falling back to DEFAULT_TABLE_TEXT_FORMAT.
  */
 export function loadGlobalTableConfig(): TableTextFormat {
-  if (typeof window === 'undefined') return { ...DEFAULT_TABLE_TEXT_FORMAT };
-  try {
-    const raw = localStorage.getItem(GLOBAL_TABLE_CONFIG_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return { ...DEFAULT_TABLE_TEXT_FORMAT, ...parsed };
-    }
-  } catch (e) {
-    console.error('Error loading global table config:', e);
-  }
-  return { ...DEFAULT_TABLE_TEXT_FORMAT };
+  // Todas as planilhas compartilham a mesma aparência versionada no código.
+  return { ...STATIC_PORTAL_TABLE_FORMAT, filterItemsConfig: { ...(STATIC_PORTAL_TABLE_FORMAT.filterItemsConfig || {}) }, columnEmojis: {}, columnBold: {}, columnWidths: {} };
 }
 
 /**
  * Saves the Master Global Table Format to localStorage and dispatches
  * a cross-component event to sync all tables in real-time.
  */
-export function saveGlobalTableConfig(format: TableTextFormat): void {
+export function saveGlobalTableConfig(_format: TableTextFormat): void {
   try {
-    localStorage.setItem(GLOBAL_TABLE_CONFIG_KEY, JSON.stringify(format));
+    const format = loadGlobalTableConfig();
     if (typeof document !== 'undefined') {
       document.documentElement.style.setProperty('--portal-font-family', portalFontFamily(format.fontFamily));
       const palette = THEME_PALETTES[format.headerTheme || 'militar'] || THEME_PALETTES.militar;
@@ -58,13 +65,9 @@ export function saveGlobalTableConfig(format: TableTextFormat): void {
       };
       for (const [name, value] of Object.entries(tokens)) document.documentElement.style.setProperty(name, value);
     }
-    if (typeof window !== 'undefined') {
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent(GLOBAL_TABLE_EVENT, { detail: format }));
-      }, 0);
-    }
+    if (typeof window !== 'undefined') setTimeout(() => window.dispatchEvent(new CustomEvent(GLOBAL_TABLE_EVENT, { detail: format })), 0);
   } catch (e) {
-    console.error('Error saving global table config:', e);
+    console.error('Error applying static global table config:', e);
   }
 }
 
