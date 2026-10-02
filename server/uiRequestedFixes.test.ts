@@ -14,6 +14,10 @@ const settingsRuntime = read('src/components/PortalSettingsRuntime.tsx');
 const server = read('server.ts');
 const operational = read('src/utils/operationalConfig.ts');
 const courseStudioValidator = read('src/utils/courseStudioValidator.ts');
+const authContext = read('src/context/AuthContext.tsx');
+const documentModels = read('src/components/MasterDocumentModelsPanel.tsx');
+const siteLayout = read('src/utils/siteLayoutConfig.ts');
+const tableFormatters = read('src/utils/tableFormatters.ts');
 
 test('planilhas congelam cabeçalho e coluna Processo e mantêm rolagem vertical/horizontal', () => {
   assert.match(runtime, /dataset\.portalStickyHeader = 'true'/);
@@ -101,4 +105,40 @@ test('e-mail do Departamento persiste, é fail-closed e nunca cai em destinatár
   assert.doesNotMatch(server, /roomReservationDepartmentEmail\|\|operationalConfig\(studio\)\.reservation\.departmentEmail/);
   assert.doesNotMatch(operational, /dptenfccs@gmail\.com/);
   assert.match(courseStudioValidator, /RESERVATION_EMAIL_RECIPIENT_MUST_BE_CONFIGURED/);
+});
+
+test('configurações removem personalização global e usam três grupos operacionais', () => {
+  assert.doesNotMatch(configPage, /Personalização do Portal/);
+  assert.match(configPage, /Institucional e Plataforma/);
+  assert.match(configPage, /Modelos e Variáveis/);
+  assert.match(configPage, /Acesso e Registros/);
+  assert.match(configPage, /id: 'models-documents', title: 'Modelos e Documentos'/);
+  assert.match(configPage, /id: 'emails', title: 'E-mails'/);
+  assert.match(configPage, /id: 'forms', title: 'Formulários'/);
+  assert.match(configPage, /id: 'workflow', title: 'Fluxos'/);
+  assert.match(configPage, /id: 'variables', title: 'Variáveis'/);
+});
+
+test('modelos e documentos compartilham arquivo, variáveis e visualização', () => {
+  assert.match(documentModels, /Variáveis deste modelo/);
+  assert.match(documentModels, /Visualizar modelo/);
+  assert.match(documentModels, /const previewUrl = \(driveFileId\?: string\)/);
+  assert.match(documentModels, /<iframe title=/);
+  assert.doesNotMatch(configPage, /initialTab="documents"/);
+});
+
+test('aparência antiga fica inerte e planilhas usam padrão estático do código', () => {
+  assert.doesNotMatch(authContext, /normalizeUnifiedAppearance|saveGlobalPopupStyle|saveGlobalTableConfig|saveSiteLayoutConfig/);
+  assert.match(siteLayout, /A aparência estrutural é canônica e versionada no código/);
+  assert.doesNotMatch(siteLayout, /localStorage\.getItem\(STORAGE_KEY\)/);
+  assert.match(tableFormatters, /STATIC_PORTAL_TABLE_FORMAT/);
+  assert.match(tableFormatters, /customHeaderColor: '#154d41'/);
+  assert.doesNotMatch(tableFormatters, /localStorage\.getItem\(GLOBAL_TABLE_CONFIG_KEY\)/);
+  assert.match(server, /'portalAppearance','tableAppearance','tableLayouts'/);
+  assert.doesNotMatch(server, /normalizeUnifiedAppearance/);
+});
+
+test('não existe endereço histórico fixo do Departamento no código operacional', () => {
+  assert.doesNotMatch(server, /dptenfccs@gmail\.com|DPTNCCS/i);
+  assert.doesNotMatch(operational, /dptenfccs@gmail\.com|DPTNCCS/i);
 });

@@ -59,17 +59,19 @@ test('transferência administrativa não depende de feature opcional', async () 
   assert.ok(server.includes('hasRecentAuthentication(identity)'));
 });
 
-test('identidade visual publicada pelo Master vale para visitante e acompanha o favicon', async () => {
-  const [sidebar, auth, server] = await Promise.all([
+test('identidade visual é canônica no código e acompanha o favicon', async () => {
+  const [sidebar, auth, server, layout] = await Promise.all([
     source('src/components/Sidebar.tsx'),
     source('src/context/AuthContext.tsx'),
     source('server.ts'),
+    source('src/utils/siteLayoutConfig.ts'),
   ]);
   assert.ok(sidebar.includes('layoutConfig.sidebarCustomLogoUrl'));
   assert.ok(sidebar.includes("|| '/colenf-logo.png'"));
   assert.ok(auth.includes('syncPortalFavicon'));
   assert.ok(auth.includes('sidebarCustomLogoUrl'));
-  assert.ok(auth.includes('SITE_LAYOUT_EVENT'));
-  assert.ok(server.includes('function publicSettingsForRequest'));
-  assert.ok(!server.match(/if\(!admin\)[\s\S]{0,500}delete safe\.portalAppearance/));
+  assert.ok(!auth.includes('SITE_LAYOUT_EVENT'));
+  assert.ok(layout.includes('A aparência estrutural é canônica e versionada no código'));
+  assert.ok(server.includes("'portalAppearance','tableAppearance','tableLayouts'"));
+  assert.ok(!server.includes('normalizeUnifiedAppearance'));
 });

@@ -208,41 +208,41 @@ const DEFAULT_GENERAL_POPUPS_CONFIG: GeneralPopupsConfig = {
   styleVariant: 'solid',
   borderRadius: '16px',
   borderColor: '#cbd5e1',
-  newDefenseBg: '#ffffff',
-  newDefenseHeaderBg: '#005830',
+  newDefenseBg: '#f2f2f2',
+  newDefenseHeaderBg: '#154d41',
   newDefenseHeaderTextColor: '#ffffff',
-  newDefenseBtnBg: '#005830',
+  newDefenseBtnBg: '#154d41',
   newDefenseBtnText: '#ffffff',
   newDefenseTitle: 'Agendar Defesa de TCC',
   newDefenseSubtitle: 'Cadastro formal da banca examinadora',
-  uploadAtaBg: '#ffffff',
-  uploadAtaHeaderBg: '#005830',
+  uploadAtaBg: '#f2f2f2',
+  uploadAtaHeaderBg: '#154d41',
   uploadAtaHeaderTextColor: '#ffffff',
-  uploadAtaBtnBg: '#005830',
+  uploadAtaBtnBg: '#154d41',
   uploadAtaBtnText: '#ffffff',
   uploadAtaTitle: 'Upload da Ata Assinada e Documentos',
   uploadAtaSubtitle: 'Envie o arquivo em formato PDF devidamente assinado pela banca examinadora.',
 
-  hipoarBg: '#f8fafc',
-  hipoarHeaderBg: '#0f172a',
+  hipoarBg: '#f2f2f2',
+  hipoarHeaderBg: '#154d41',
   hipoarHeaderTextColor: '#ffffff',
   hipoarCardBg: '#ffffff',
-  hipoarAccentColor: '#0284c7',
+  hipoarAccentColor: '#154d41',
   hipoarTitle: 'Análise Hipoar e Ficha de Avaliação da Banca',
   hipoarSubtitle: 'Pontuação detalhada por critérios metodológicos e de apresentação.',
 
-  pdfViewerBg: '#0f172a',
-  pdfViewerHeaderBg: '#1e293b',
+  pdfViewerBg: '#f2f2f2',
+  pdfViewerHeaderBg: '#154d41',
   pdfViewerHeaderTextColor: '#ffffff',
-  pdfViewerBtnBg: '#2563eb',
+  pdfViewerBtnBg: '#154d41',
   pdfViewerTitle: 'Visualização Completa do Documento PDF',
 
-  correctionBg: '#ffffff',
-  correctionHeaderBg: '#005830',
+  correctionBg: '#f2f2f2',
+  correctionHeaderBg: '#154d41',
   correctionHeaderTextColor: '#ffffff',
-  correctionBtnBg: '#005830',
+  correctionBtnBg: '#154d41',
   correctionTitle: 'Solicitação de Correção',
-  correctionSubtitle: 'Descreva a correção necessária no documento para análise administrativa.'
+  correctionSubtitle: 'Descreva a correção necessária para o documento ou registro selecionado.'
 };
 
 const GENERAL_POPUPS_KEY = 'portal_general_popups_config_v1';
@@ -336,26 +336,15 @@ function contrastRatio(foreground:string,background:string):number{
 }
 
 export function loadGeneralPopupsConfig(): GeneralPopupsConfig {
-  if (typeof window === 'undefined') return DEFAULT_GENERAL_POPUPS_CONFIG;
-  try {
-    const raw = localStorage.getItem(GENERAL_POPUPS_KEY);
-    const config=raw?{ ...DEFAULT_GENERAL_POPUPS_CONFIG, ...JSON.parse(raw) }:DEFAULT_GENERAL_POPUPS_CONFIG;
-    applyGeneralPopupCssVariables(config);
-    return config;
-  } catch (e) {
-    return DEFAULT_GENERAL_POPUPS_CONFIG;
-  }
+  const config = { ...DEFAULT_GENERAL_POPUPS_CONFIG };
+  applyGeneralPopupCssVariables(config);
+  return config;
 }
 
-export function saveGeneralPopupsConfig(config: GeneralPopupsConfig) {
+export function saveGeneralPopupsConfig(_config: GeneralPopupsConfig) {
   if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(GENERAL_POPUPS_KEY, JSON.stringify(config));
-    applyGeneralPopupCssVariables(config);
-    window.dispatchEvent(new CustomEvent(GENERAL_POPUPS_EVENT, { detail: config }));
-  } catch (e) {
-    console.error('Erro ao salvar popups gerais:', e);
-  }
+  const config = loadGeneralPopupsConfig();
+  window.dispatchEvent(new CustomEvent(GENERAL_POPUPS_EVENT, { detail: config }));
 }
 
 // Preset Themes Mapping (Ordem do Arco-Íris / Espectro Cromático)

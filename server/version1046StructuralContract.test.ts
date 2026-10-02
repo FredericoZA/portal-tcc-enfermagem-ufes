@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('release atual é 1.0.59', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.59');
+test('release atual é 1.0.60', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.60');
 });
 
 test('estado de defesa não sobrescreve cores de vínculo e assinatura', () => {
@@ -45,18 +45,21 @@ test('configurações usam barras e runtime canônico de workspace', () => {
   assert.doesNotMatch(runtime, /cloneNode/);
 });
 
-test('estúdio de modelos delega navegação ao workspace externo e preserva cabeçalho', () => {
+test('configurações separam artefatos e unem modelos com documentos', () => {
   const studio = read('src/components/IntegrationStudioPanel.tsx');
   const config = read('src/pages/ConfiguracoesPage.tsx');
+  const models = read('src/components/MasterDocumentModelsPanel.tsx');
   assert.match(studio, /portal-studio-tabs/);
   assert.match(studio, /Editor de modelos e variáveis/);
   assert.match(studio, /var\(--portal-green-action\)/);
-  assert.match(config, /label: 'Modelos'/);
-  assert.match(config, /label: 'Documentos'/);
-  assert.match(config, /label: 'E-mails'/);
-  assert.match(config, /label: 'Formulários'/);
-  assert.match(config, /label: 'Fluxo'/);
-  assert.match(config, /label: 'Variáveis'/);
+  assert.match(config, /Modelos e Documentos/);
+  assert.match(config, /title: 'E-mails'/);
+  assert.match(config, /title: 'Formulários'/);
+  assert.match(config, /title: 'Fluxos'/);
+  assert.match(config, /title: 'Variáveis'/);
+  assert.doesNotMatch(config, /initialTab="documents"/);
+  assert.match(models, /Variáveis deste modelo/);
+  assert.match(models, /Visualizar modelo/);
 });
 
 test('runtime tabular canônico substitui as camadas 1.0.52 e 1.0.53', () => {

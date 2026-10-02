@@ -22,18 +22,23 @@ test('superfícies administrativas usam a paleta canônica do Portal', async () 
   assert.ok(css.includes('background: var(--portal-green-action) !important;'));
 });
 
-test('Modelos e Variáveis possui uma única sidebar e navegação externa por área', async () => {
-  const [studio, config] = await Promise.all([
+test('Modelos e Variáveis usa popups específicos e une modelos com documentos', async () => {
+  const [studio, config, models] = await Promise.all([
     source('src/components/IntegrationStudioPanel.tsx'),
     source('src/pages/ConfiguracoesPage.tsx'),
+    source('src/components/MasterDocumentModelsPanel.tsx'),
   ]);
   assert.ok(studio.includes('portal-studio-tabs'));
   assert.ok(studio.includes('hideTabs'));
   const studioReturn = studio.slice(studio.indexOf('portal-workspace portal-studio'));
   assert.equal((studioReturn.match(/<aside/g) || []).length, 0);
-  for (const label of ['Modelos', 'Documentos', 'E-mails', 'Formulários', 'Fluxo', 'Variáveis']) {
-    assert.ok(config.includes(`label: '${label}'`));
+  for (const title of ['Modelos e Documentos', 'E-mails', 'Formulários', 'Fluxos', 'Variáveis']) {
+    assert.ok(config.includes(`title: '${title}'`));
   }
+  assert.ok(config.includes("activeSettingsPanel === 'models-documents'"));
+  assert.ok(!config.includes('initialTab="documents"'));
+  assert.ok(models.includes('Variáveis deste modelo'));
+  assert.ok(models.includes('Visualizar modelo'));
 });
 
 test('calendário e Lista de Defesas compartilham estado, tons e resumo solicitado', async () => {

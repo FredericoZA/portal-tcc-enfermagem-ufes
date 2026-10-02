@@ -1,20 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { normalizeUnifiedAppearance } from '../utils/unifiedAppearance';
-import { saveGlobalPopupStyle } from '../utils/portalAppearanceLinks';
 import { GlobalRole, ProcessMembership, GlobalSettings } from '../types';
 import { apiClient, ApiRequestError, setActiveUserEmail, getActiveUserEmail } from '../services/apiClient';
-import { saveGlobalTableConfig } from '../utils/tableFormatters';
-import { loadSiteLayoutConfig, saveSiteLayoutConfig, SITE_LAYOUT_EVENT } from '../utils/siteLayoutConfig';
-import { saveCalendarPopupConfig } from '../utils/calendarPopupConfig';
-import { saveTccDetailPopupFormat } from '../types/tccDetailFormat';
-import { saveLoginPopupConfig } from '../utils/loginPopupConfig';
-import { saveGeneralPopupsConfig } from '../components/UnifiedPortalEditorModal';
-import {
-  TABLE_LAYOUTS_EVENT,
-  TABLE_STORAGE_BY_EDITOR_TAB,
-  savePortalAppearanceLinks,
-  tableInheritsGlobalAppearance,
-} from '../utils/portalAppearanceLinks';
+import { loadSiteLayoutConfig } from '../utils/siteLayoutConfig';
 
 interface AuthContextType {
   userEmail: string;
@@ -101,18 +88,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAuthenticated,setIsAuthenticated]=useState(false);
 
   const applyPublicSettings = (rawSettings: GlobalSettings) => {
-    const settingsRes=normalizeUnifiedAppearance(rawSettings);setSettings(settingsRes);
-    if(settingsRes.portalAppearance&&typeof window!=='undefined'){
-      const appearance=settingsRes.portalAppearance;
-      if(appearance.globalPopupStyle)saveGlobalPopupStyle(appearance.globalPopupStyle);
-      const globalTableAppearance=settingsRes.tableAppearance||{};
-      if(appearance.linkedItems)savePortalAppearanceLinks(appearance.linkedItems,globalTableAppearance as Record<string,unknown>,false);
-      if(settingsRes.tableLayouts){const canonicalLayouts:Record<string,unknown>={};const legacyStorageKeys:Record<string,string>={defesas:'defenses',coordenador:'coordinator'};Object.entries(settingsRes.tableLayouts).forEach(([rawKey,rawLayout])=>{const key=legacyStorageKeys[rawKey]||rawKey;const layout=rawLayout&&typeof rawLayout==='object'?{...(rawLayout as Record<string,unknown>)}:{};if(tableInheritsGlobalAppearance(key))delete (layout as any).textFormat;(layout as any).inheritGlobalAppearance=tableInheritsGlobalAppearance(key);canonicalLayouts[key]=layout;});Object.values(TABLE_STORAGE_BY_EDITOR_TAB).forEach(key=>{const layout=canonicalLayouts[key];if(layout)localStorage.setItem(`default_table_config_${key}`,JSON.stringify(layout));});window.dispatchEvent(new CustomEvent(TABLE_LAYOUTS_EVENT,{detail:canonicalLayouts}));}
-      if(appearance.siteConfig){saveSiteLayoutConfig(appearance.siteConfig as any);syncPortalFavicon(appearance.siteConfig);}else syncPortalFavicon(loadSiteLayoutConfig());
-      if(appearance.calendarPopup)saveCalendarPopupConfig(appearance.calendarPopup as any);if(appearance.tccDetailPopup)saveTccDetailPopupFormat(appearance.tccDetailPopup as any);if(appearance.loginPopup)saveLoginPopupConfig(appearance.loginPopup as any);if(appearance.generalPopups)saveGeneralPopupsConfig(appearance.generalPopups as any);
-    }else syncPortalFavicon(loadSiteLayoutConfig());
-    if(settingsRes.tableAppearance)saveGlobalTableConfig(settingsRes.tableAppearance);
-    if(settingsRes.integrationStudio?.operationsPolicy&&typeof document!=='undefined'){const policy=settingsRes.integrationStudio.operationsPolicy;document.documentElement.lang=policy.defaultLocale||'pt-BR';document.documentElement.style.setProperty('--portal-target-size',`${policy.accessibility?.minimumTargetSize||44}px`);document.documentElement.dataset.portalMotion=policy.accessibility?.reducedMotionByDefault?'reduced':'system';}
+    // A aparência do Portal é definida pelo código. Configurações visuais antigas
+    // permanecem apenas como histórico persistido e não são reaplicadas ao navegador.
+    setSettings(rawSettings);
+    syncPortalFavicon(loadSiteLayoutConfig());
+    if(rawSettings.integrationStudio?.operationsPolicy&&typeof document!=='undefined'){const policy=rawSettings.integrationStudio.operationsPolicy;document.documentElement.lang=policy.defaultLocale||'pt-BR';document.documentElement.style.setProperty('--portal-target-size',`${policy.accessibility?.minimumTargetSize||44}px`);document.documentElement.dataset.portalMotion=policy.accessibility?.reducedMotionByDefault?'reduced':'system';}
   };
 
   const applyIdentity = (meRes: { userEmail: string; globalRoles: any[]; memberships: any[]; isAuthenticated: boolean }) => {
@@ -138,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshAuth=async()=>{
     setIsLoading(true);
-    const settingsTask=apiClient.getSettings().then(applyPublicSettings).catch(err=>{console.error('Erro ao carregar aparência pública do portal:',err);syncPortalFavicon(loadSiteLayoutConfig());});
+    const settingsTask=apiClient.getSettings().then(applyPublicSettings).catch(err=>{console.error('Erro ao carregar configurações públicas do portal:',err);syncPortalFavicon(loadSiteLayoutConfig());});
     const identityTask=getIdentityWithRetry().then(applyIdentity).catch(err=>{
       const definitiveUnauthorized = err instanceof ApiRequestError && err.status === 401;
       const cached = definitiveUnauthorized ? null : readCachedIdentity();
@@ -162,15 +142,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const syncFromLayout = (event: Event) => syncPortalFavicon((event as CustomEvent).detail || loadSiteLayoutConfig());
     const recoverAfterReconnect = () => { void refreshAuth(); };
     syncPortalFavicon(loadSiteLayoutConfig());
-    window.addEventListener(SITE_LAYOUT_EVENT, syncFromLayout);
     window.addEventListener('online', recoverAfterReconnect);
-    return () => {
-      window.removeEventListener(SITE_LAYOUT_EVENT, syncFromLayout);
-      window.removeEventListener('online', recoverAfterReconnect);
-    };
+    return () => window.removeEventListener('online', recoverAfterReconnect);
   }, []);
 
   useEffect(() => {

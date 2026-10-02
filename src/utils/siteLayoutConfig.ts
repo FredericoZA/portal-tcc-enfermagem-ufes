@@ -81,7 +81,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   headerCourseTitle: 'Curso de Graduação em Enfermagem e Obstetrícia · CCS/UFES',
   headerShowRoleBadges: true,
   headerShowEmblem: true,
-  headerCustomLogoUrl: '',
+  headerCustomLogoUrl: '/api/public/runtime-assets/2466f8db8eb7c79073c197bea09fa53946ca0ca1392a192792fa0d4f0f2e420f',
   headerBgColor: PORTAL_COLORS.surface,
   headerTextColor: '#0f172a',
   headerTitleColor: PORTAL_COLORS.popupMoss,
@@ -89,7 +89,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   sidebarTitle: 'PORTAL DE TCC',
   sidebarSubtitle: 'Enfermagem',
   sidebarLogoType: 'custom',
-  sidebarCustomLogoUrl: '',
+  sidebarCustomLogoUrl: '/api/public/runtime-assets/0d8980ef61e92bca98fabe43a9ce190da409935f5ebfccc2c5f991066c7c77d7',
   sidebarNavLabels: {
     home: 'Calendário', biblioteca: 'Repositório', 'como-chegar': 'Como chegar', tutorial: 'Como usar', 'fluxo-tcc': 'Fluxo do TCC', replicar: 'Replicar Portal',
     'meus-processos': 'Meus TCCs', coordenador: 'Área do Presidente', configuracoes: 'Configurações', indicadores: 'Indicadores'
@@ -98,18 +98,18 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
     home: '📅', biblioteca: '📚', 'como-chegar': '📍', tutorial: '❓', 'fluxo-tcc': '🔀', replicar: '🧩', 'meus-processos': '📋', coordenador: '🏛️', configuracoes: '⚙️', indicadores: '📊'
   },
   sidebarIconMode: 'emoji', sidebarSessionLabel: 'Sessão ativa', sidebarLocationText: 'Campus de Maruípe · Vitória/ES',
-  sidebarBgColor: PORTAL_COLORS.deepGreen,
-  sidebarHeaderBgColor: PORTAL_COLORS.deepGreenDark,
-  sidebarTextColor: PORTAL_COLORS.lightText,
+  sidebarBgColor: '#011f17',
+  sidebarHeaderBgColor: '#011812',
+  sidebarTextColor: '#e8f3ed',
   sidebarTitleColor: '#ffffff', sidebarSubtitleColor: PORTAL_COLORS.popupMoss,
-  sidebarActiveBgColor: PORTAL_COLORS.sidebarActive, sidebarActiveTextColor: '#ffffff', sidebarActiveBorderColor: PORTAL_COLORS.popupMoss,
-  sidebarDividerColor: PORTAL_COLORS.divider, sidebarDividerStyle: 'solid', sidebarShowDividers: true,
+  sidebarActiveBgColor: '#154d41', sidebarActiveTextColor: '#ffffff', sidebarActiveBorderColor: PORTAL_COLORS.popupMoss,
+  sidebarDividerColor: '#174c3b', sidebarDividerStyle: 'solid', sidebarShowDividers: true,
   sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'DIVIDER_2', 'indicadores', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'],
-  footerLocationText: 'Departamento de Enfermagem · CCS/UFES · Campus de Maruípe · Vitória/ES',
+  footerLocationText: 'Departamento de Enfermagem • CCS/UFES • Campus de Maruípe • Vitória/ES',
   footerPresidentLabel: 'Presidente da Comissão', footerPresidentName: '', footerMembersLabel: 'Membros da Comissão', footerMembersList: [],
   footerDevTitle: 'Desenvolvimento da Plataforma e Suporte', footerDevName: '', footerWhatsappLabel: 'WhatsApp Secretaria', footerWhatsappUrl: '', footerContactEmail: '',
-  footerQrCodeUrl: '', footerQrLabel: '', footerBgColor: PORTAL_COLORS.deepGreenDark, footerTextColor: '#ffffff', footerMutedTextColor: PORTAL_COLORS.mutedLight,
-  footerBorderColor: PORTAL_COLORS.divider, footerDividerColor: PORTAL_COLORS.divider, footerWhatsappBtnBg: PORTAL_COLORS.popupMoss, footerWhatsappBtnText: '#ffffff',
+  footerQrCodeUrl: '', footerQrLabel: '', footerBgColor: '#011812', footerTextColor: '#ffffff', footerMutedTextColor: '#b5c8bf',
+  footerBorderColor: '#174c3b', footerDividerColor: '#174c3b', footerWhatsappBtnBg: '#337959', footerWhatsappBtnText: '#ffffff',
   footerQrBgColor: '#ffffff', footerQrTextColor: '#0f172a', footerQrBorderColor: '#ffffff'
 };
 
@@ -178,13 +178,25 @@ function normalizeVisualConfig(parsed: any): SiteLayoutConfig {
   };
 }
 export function loadSiteLayoutConfig(): SiteLayoutConfig {
-  if(typeof window==='undefined') return DEFAULT_SITE_LAYOUT_CONFIG;
-  try { const raw=localStorage.getItem(STORAGE_KEY); return normalizeVisualConfig(raw?JSON.parse(raw):{}); }
-  catch(err){ console.error('Erro ao carregar layout do site:',err); return DEFAULT_SITE_LAYOUT_CONFIG; }
+  // A aparência estrutural é canônica e versionada no código.
+  return {
+    ...DEFAULT_SITE_LAYOUT_CONFIG,
+    sidebarNavLabels: { ...DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavLabels },
+    sidebarNavEmojis: { ...DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavEmojis },
+    sidebarNavOrder: [...(DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavOrder || [])],
+    footerMembersList: [...DEFAULT_SITE_LAYOUT_CONFIG.footerMembersList],
+  };
 }
-export function saveSiteLayoutConfig(config: Partial<SiteLayoutConfig>) {
+
+export function saveSiteLayoutConfig(_config: Partial<SiteLayoutConfig>) {
+  // Compatibilidade temporária para consumidores antigos: não persiste estilo.
   if(typeof window==='undefined')return;
-  try { const updated=normalizeVisualConfig({...loadSiteLayoutConfig(),...config}); localStorage.setItem(STORAGE_KEY,JSON.stringify(updated)); setTimeout(()=>window.dispatchEvent(new CustomEvent(SITE_LAYOUT_EVENT,{detail:updated})),0); }
-  catch(err){console.error('Erro ao salvar layout do site:',err);}
+  const fixed=loadSiteLayoutConfig();
+  setTimeout(()=>window.dispatchEvent(new CustomEvent(SITE_LAYOUT_EVENT,{detail:fixed})),0);
 }
-export function resetSiteLayoutConfig(){if(typeof window==='undefined')return;try{localStorage.removeItem(STORAGE_KEY);setTimeout(()=>window.dispatchEvent(new CustomEvent(SITE_LAYOUT_EVENT,{detail:DEFAULT_SITE_LAYOUT_CONFIG})),0);}catch(err){console.error('Erro ao resetar layout:',err);}}
+
+export function resetSiteLayoutConfig(){
+  if(typeof window==='undefined')return;
+  const fixed=loadSiteLayoutConfig();
+  setTimeout(()=>window.dispatchEvent(new CustomEvent(SITE_LAYOUT_EVENT,{detail:fixed})),0);
+}
