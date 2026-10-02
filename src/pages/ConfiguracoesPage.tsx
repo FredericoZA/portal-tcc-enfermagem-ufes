@@ -216,6 +216,7 @@ export interface EmailTemplateItem {
   replyTo?: string;
   htmlBody?: string;
   attachments?: string[];
+  attachmentModes?: Record<string, 'AVAILABLE' | 'SIGNED'>;
 }
 
 const cleanFileNameForDrive = (name: string): string => {
@@ -2026,7 +2027,7 @@ export const ConfiguracoesPage: React.FC = () => {
           <section id="portal-settings-hub" className="portal-settings-list space-y-2">
             <div className="flex items-center gap-2 py-1" aria-label="Grupo institucional e plataforma">
               <span className="h-px flex-1 bg-[#337959]" />
-              <span className="text-[9px] font-black uppercase tracking-[0.16em] text-[#337959]">Institucional e Plataforma</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#337959]">Institucional e Plataforma</span>
               <span className="h-px flex-1 bg-[#337959]" />
             </div>
             {[
@@ -2035,14 +2036,14 @@ export const ConfiguracoesPage: React.FC = () => {
             ].map(({ id, title, text, icon: Icon }) => (
               <button key={id} type="button" onClick={() => setActiveSettingsPanel(id as any)} className="portal-settings-title-bar flex w-full items-center gap-3 rounded-xl border border-slate-300 bg-[#d5dce0] px-3.5 py-3 text-left shadow-sm">
                 <Icon className="h-5 w-5 shrink-0 text-[#337959]" />
-                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[10px] text-slate-600">{text}</span></span>
+                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[11px] leading-4 text-slate-600">{text}</span></span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
               </button>
             ))}
 
             <div className="flex items-center gap-2 py-1 pt-3" aria-label="Grupo modelos e variáveis">
               <span className="h-px flex-1 bg-[#337959]" />
-              <span className="text-[9px] font-black uppercase tracking-[0.16em] text-[#337959]">Modelos e Variáveis</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#337959]">Modelos e Variáveis</span>
               <span className="h-px flex-1 bg-[#337959]" />
             </div>
             {[
@@ -2054,14 +2055,14 @@ export const ConfiguracoesPage: React.FC = () => {
             ].map(({ id, title, text, icon: Icon }) => (
               <button key={id} type="button" onClick={() => setActiveSettingsPanel(id as any)} className="portal-settings-title-bar flex w-full items-center gap-3 rounded-xl border border-slate-300 bg-[#d5dce0] px-3.5 py-3 text-left shadow-sm">
                 <Icon className="h-5 w-5 shrink-0 text-[#337959]" />
-                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[10px] text-slate-600">{text}</span></span>
+                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[11px] leading-4 text-slate-600">{text}</span></span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
               </button>
             ))}
 
             <div className="flex items-center gap-2 py-1 pt-3" aria-label="Grupo acesso e registros">
               <span className="h-px flex-1 bg-[#337959]" />
-              <span className="text-[9px] font-black uppercase tracking-[0.16em] text-[#337959]">Acesso e Registros</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#337959]">Acesso e Registros</span>
               <span className="h-px flex-1 bg-[#337959]" />
             </div>
             {[
@@ -2071,7 +2072,7 @@ export const ConfiguracoesPage: React.FC = () => {
             ].map(({ id, title, text, icon: Icon }) => (
               <button key={id} type="button" onClick={() => setActiveSettingsPanel(id as any)} className="portal-settings-title-bar flex w-full items-center gap-3 rounded-xl border border-slate-300 bg-[#d5dce0] px-3.5 py-3 text-left shadow-sm">
                 <Icon className="h-5 w-5 shrink-0 text-[#337959]" />
-                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[10px] text-slate-600">{text}</span></span>
+                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[11px] leading-4 text-slate-600">{text}</span></span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
               </button>
             ))}

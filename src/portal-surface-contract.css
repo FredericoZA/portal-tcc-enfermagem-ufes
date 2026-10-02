@@ -1,0 +1,114 @@
+:root{
+--portal-surface-page:#f1f5f9;
+--portal-surface-layer-1:#e1e6e9;
+--portal-surface-layer-2:#d5dce0;
+--portal-surface-inner:#fff;
+--portal-surface-border:#bcc8cf;
+--portal-separator-size:16px;
+}
+#portal-app-root,#portal-app-root main{background:var(--portal-surface-page)!important}
+#portal-header{background:var(--portal-surface-layer-1)!important;border-color:var(--portal-surface-border)!important}
+#formal-monthly-calendar-section>div,
+#public-calendar-cards-section>div,
+#biblioteca-tccs-section>div,
+#meus-processos-page-container section>div,
+#coordenador-page-root section>div,
+.portal-settings-workspace,
+.portal-master-models-catalog{background:var(--portal-surface-layer-1)!important;border-color:var(--portal-surface-border)!important}
+#public-calendar-cards-section table,
+#biblioteca-tccs-section table,
+#meus-processos-table,
+#coordenador-page-root table,
+#public-calendar-cards-section tbody,
+#biblioteca-tccs-section tbody,
+#meus-processos-table tbody,
+#coordenador-page-root tbody{background:var(--portal-surface-layer-1)!important}
+#public-calendar-cards-section tbody tr,
+#biblioteca-tccs-section tbody tr,
+#meus-processos-table tbody tr,
+#coordenador-page-root tbody tr,
+#public-calendar-cards-section tbody td,
+#biblioteca-tccs-section tbody td,
+#meus-processos-table tbody td,
+#coordenador-page-root tbody td{background-color:transparent!important}
+#biblioteca-tccs-section tbody td:first-child,
+#biblioteca-tccs-section tbody td:nth-child(2),
+#meus-processos-table tbody td:first-child,
+#meus-processos-table tbody td:nth-child(2),
+#coordenador-page-root tbody td:first-child,
+#coordenador-page-root tbody td:nth-child(2){background:var(--portal-surface-layer-1)!important}
+.portal-settings-title-bar,
+.portal-studio-variable-maintenance>div{background:var(--portal-surface-layer-2)!important;border-color:var(--portal-surface-border)!important}
+.portal-master-models-catalog article,
+.portal-settings-workspace input,
+.portal-settings-workspace textarea,
+.portal-settings-workspace select{background:var(--portal-surface-inner)!important}
+#formal-monthly-calendar-section .portal-calendar-empty-cell,
+#formal-monthly-calendar-section [data-calendar-day],
+#formal-monthly-calendar-section .portal-calendar-day-cell{background:var(--portal-surface-layer-2)!important}
+#formal-monthly-calendar-section>div>div:nth-child(2),
+#public-calendar-cards-section .portal-defense-filter-row,
+#meus-processos-page-container .portal-meus-processos-filter-row,
+#coordenador-page-root .portal-coordinator-filter-row{border-top:var(--portal-separator-size) solid #fff!important;margin-top:0!important;box-shadow:none!important}
+#formal-monthly-calendar-section button:not([data-selected="true"]):not(.portal-status-action),
+#public-calendar-cards-section button:not([data-selected="true"]):not(.portal-status-action),
+#biblioteca-tccs-section button:not([data-selected="true"]):not(.portal-status-action),
+#meus-processos-page-container button:not([data-selected="true"]):not(.portal-status-action),
+#coordenador-page-root button:not([data-selected="true"]):not(.portal-status-action),
+.portal-settings-workspace .portal-action:not(.portal-action-primary){background:#fff!important;color:#1f2937!important;border-color:#cbd5e1!important}
+.portal-modal-surface,.portal-process-dialog,.portal-process-dialog-body,
+div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!important;border-color:var(--portal-surface-border)!important}
+#public-calendar-cards-section>div>div:first-child>div:first-child,
+#meus-processos-page-container section>div>div:first-child>div:first-child,
+#coordenador-page-root section>div>div:first-child>div:first-child{padding-top:.45rem!important;padding-bottom:.45rem!important}
+#public-calendar-cards-section .portal-defense-filter-row,
+#meus-processos-page-container .portal-meus-processos-filter-row,
+#coordenador-page-root .portal-coordinator-filter-row{padding-top:.35rem!important;padding-bottom:.35rem!important}
+
+
+/* -------------------------------------------------------------------------- */
+/* Contrato canônico de planilhas                                             */
+/* -------------------------------------------------------------------------- */
+
+/* Texto padrão da planilha: preto. Cores semânticas continuam permitidas
+ * apenas em indicadores de status, chips e marcadores explicitamente próprios. */
+#public-calendar-cards-section table,
+#biblioteca-tccs-section table,
+#meus-processos-table,
+#coordenador-page-root table {
+  color: #000 !important;
+}
+
+#public-calendar-cards-section table :is(th,td,p,span,strong),
+#biblioteca-tccs-section table :is(th,td,p,span,strong),
+#meus-processos-table :is(th,td,p,span,strong),
+#coordenador-page-root table :is(th,td,p,span,strong) {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* A tabela não cria respiro vertical externo próprio. O espaçamento pertence
+ * à estrutura da página, não à planilha. */
+#public-calendar-cards-section table,
+#biblioteca-tccs-section table,
+#meus-processos-table,
+#coordenador-page-root table {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Controles ordinários da planilha são sempre brancos. */
+#public-calendar-cards-section :is(button,.portal-table-filter-chip),
+#biblioteca-tccs-section :is(button,.portal-table-filter-chip),
+#meus-processos-page-container :is(button,.portal-table-filter-chip),
+#coordenador-page-root :is(button,.portal-table-filter-chip) {
+  --portal-sheet-button-bg: #fff;
+}
+
+/* Cabeçalho, toolbar e filtro devem permanecer compactos e sem folgas verticais
+ * extras introduzidas por componentes locais. */
+#public-calendar-cards-section .portal-defense-filter-row,
+#meus-processos-page-container .portal-meus-processos-filter-row,
+#coordenador-page-root .portal-coordinator-filter-row {
+  margin-bottom: 0 !important;
+}
