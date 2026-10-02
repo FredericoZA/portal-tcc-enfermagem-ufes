@@ -260,6 +260,13 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
   emails.forEach((email, index) => {
     if (!text(email.name) || !text(email.subject) || !text(email.body)) add({ code: 'INCOMPLETE_EMAIL', path: `emailTemplates.${index}`, message: 'Cada e-mail precisa de nome, assunto e corpo em texto.', severity: 'ERROR', area: 'EMAIL' });
     if (!text(email.recipient)) add({ code: 'MISSING_RECIPIENT', path: `emailTemplates.${index}.recipient`, message: `Defina o destinatário de “${text(email.name) || text(email.id)}”.`, severity: 'ERROR', area: 'EMAIL' });
+    if (text(email.id) === 'email-reserva' && text(email.recipient).replace(/\\s+/g, '') !== '{{DEPARTAMENTO_EMAIL}}') add({
+      code: 'RESERVATION_EMAIL_RECIPIENT_MUST_BE_CONFIGURED',
+      path: `emailTemplates.${index}.recipient`,
+      message: 'O pedido de reserva deve usar exclusivamente {{DEPARTAMENTO_EMAIL}}, definido em Integrações e Plataforma.',
+      severity: 'ERROR',
+      area: 'EMAIL'
+    });
     const unsafeRecipientVariables = templateVariableKeys(email.recipient).filter((variable) => !SAFE_EMAIL_RECIPIENT_VARIABLES.has(variable));
     if (unsafeRecipientVariables.length) add({
       code: 'UNSAFE_EMAIL_RECIPIENT_VARIABLE',
@@ -277,6 +284,23 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
       severity: 'ERROR',
       area: 'EMAIL'
     });
+  });
+
+  const reservationEmailIndex = emails.findIndex((email) => text(email.id) === 'email-reserva');
+  if (reservationEmailIndex < 0) add({
+    code: 'MISSING_RESERVATION_EMAIL',
+    path: 'emailTemplates',
+    message: 'Mantenha o modelo canônico email-reserva para solicitar o local ao Departamento de Enfermagem.',
+    severity: 'ERROR',
+    area: 'EMAIL'
+  });
+  const registrationStageIndex = stages.findIndex((stage) => key(stage.triggerEvent) === 'TCC_CREATED');
+  if (registrationStageIndex < 0 || !rows(stages[registrationStageIndex]?.actions).some((action) => key(action.type) === 'EMAIL' && text(action.refId || action.referenceId) === 'email-reserva')) add({
+    code: 'MISSING_RESERVATION_EMAIL_ACTION',
+    path: registrationStageIndex < 0 ? 'workflowStages' : `workflowStages.${registrationStageIndex}.actions`,
+    message: 'A etapa TCC_CREATED deve disparar o modelo email-reserva.',
+    severity: 'ERROR',
+    area: 'WORKFLOW'
   });
 
   const stageIds = new Set<string>();
