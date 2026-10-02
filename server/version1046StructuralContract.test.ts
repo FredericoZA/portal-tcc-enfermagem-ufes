@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
 test('release atual é 1.0.63', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.62');
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.63');
 });
 
 test('estado de defesa não sobrescreve cores de vínculo e assinatura', () => {
