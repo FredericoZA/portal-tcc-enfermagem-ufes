@@ -122,7 +122,8 @@ test('configurações removem personalização global e usam três grupos operac
 test('modelos e documentos compartilham arquivo, variáveis e visualização', () => {
   assert.match(documentModels, /Variáveis deste modelo/);
   assert.match(documentModels, /Visualizar modelo/);
-  assert.ok(documentModels.includes('https://drive.google.com/file/d/'));
+  assert.match(documentModels, /const previewUrl = \(driveFileId\?: string\)/);
+  assert.match(documentModels, /<iframe title=/);
   assert.doesNotMatch(configPage, /initialTab="documents"/);
 });
 
