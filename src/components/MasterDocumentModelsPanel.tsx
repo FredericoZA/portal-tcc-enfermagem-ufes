@@ -1,6 +1,6 @@
 import { portalConfirm } from '../services/portalDialogs';
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, ExternalLink, FilePlus2, FileUp, Link2, Loader2, ShieldAlert, Trash2 } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Eye, FilePlus2, FileUp, Link2, Loader2, ShieldAlert, Trash2 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 
 const BASE_SLOTS: Array<[string, string]> = [
@@ -20,6 +20,7 @@ export const MasterDocumentModelsPanel: React.FC = () => {
   const [links, setLinks] = useState<Record<string, string>>({});
   const [newModelName, setNewModelName] = useState('');
   const [pendingSlots, setPendingSlots] = useState<Array<[string, string]>>([]);
+  const [previewType, setPreviewType] = useState('');
   const linkImportEnabled = Boolean(models.__capabilities?.existingModelLinkImportEnabled);
 
   const slots = useMemo(() => {
@@ -29,6 +30,7 @@ export const MasterDocumentModelsPanel: React.FC = () => {
   }, [models, pendingSlots]);
 
   const load = async () => { setLoading(true); try { setModels(await apiClient.getDocumentModels()); } catch (error) { setMessage(error instanceof Error ? error.message : 'Falha ao carregar os modelos.'); } finally { setLoading(false); } };
+  const previewUrl = (driveFileId?: string) => driveFileId ? `https://drive.google.com/file/d/${encodeURIComponent(driveFileId)}/preview` : '';
   useEffect(() => { void load(); }, []);
 
   const addSlot = () => {
@@ -87,7 +89,18 @@ export const MasterDocumentModelsPanel: React.FC = () => {
       return <article key={type} className="rounded-lg border border-slate-300 p-2" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>
         <div className="flex items-center justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-[10px] text-slate-900">{model?.label||label}</strong><span className="block truncate text-[8.5px] text-slate-500">{hasFile?`${model.fileName} · v${model.activeVersion||1}`:'Aguardando DOCX'}{model?.variables?.length?` · ${model.variables.length} variáveis`:''}</span></div><div className="flex shrink-0 items-center gap-1">{integrityReady?<CheckCircle2 className="h-4 w-4 text-[#337959]"/>:<ShieldAlert className="h-4 w-4 text-amber-700"/>}<button type="button" onClick={()=>void removeModel(type,String(model?.label||label))} disabled={Boolean(working)} aria-label={`Excluir modelo ${model?.label||label}`} title={`Excluir modelo ${model?.label||label}`} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-[#c62828] disabled:opacity-40">{deleting?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Trash2 className="h-3.5 w-3.5"/>}</button></div></div>
         {linkImportEnabled&&<div className="mt-1.5 flex gap-1"><input aria-label={`Link do modelo ${label}`} value={links[type]||''} onChange={event=>setLinks(current=>({...current,[type]:event.target.value}))} placeholder="Link ou ID do Drive" className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px]"/><button type="button" onClick={()=>void importLink(type)} disabled={Boolean(working)||!(links[type]||'').trim()} className={action}><Link2 className="h-3 w-3"/>Importar</button></div>}
-        <div className="mt-1.5 flex flex-wrap gap-1.5"><label className={`${greenAction} cursor-pointer`}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}{hasFile?'Substituir DOCX':'Enviar DOCX'}<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/></label>{model?.driveFileUrl&&<a href={model.driveFileUrl} target="_blank" rel="noreferrer" className={action}><ExternalLink className="h-3.5 w-3.5"/>Abrir no Drive</a>}</div>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <label className={`${greenAction} cursor-pointer`}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}{hasFile?'Substituir DOCX':'Enviar DOCX'}<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/></label>
+          {hasFile&&<button type="button" onClick={()=>setPreviewType(current=>current===type?'':type)} className={action}><Eye className="h-3.5 w-3.5"/>{previewType===type?'Fechar visualização':'Visualizar modelo'}</button>}
+          {model?.driveFileUrl&&<a href={model.driveFileUrl} target="_blank" rel="noreferrer" className={action}><ExternalLink className="h-3.5 w-3.5"/>Abrir no Drive</a>}
+        </div>
+        <div className="mt-2 rounded-md border border-slate-300 bg-white p-2">
+          <div className="mb-1 text-[8.5px] font-black uppercase tracking-wide text-slate-600">Variáveis deste modelo</div>
+          {model?.variables?.length
+            ? <div className="flex flex-wrap gap-1">{model.variables.map((variable:string)=><code key={variable} className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8.5px] font-bold text-slate-700">{variable}</code>)}</div>
+            : <p className="text-[9px] text-slate-500">{hasFile?'Nenhuma variável foi detectada neste arquivo.':'As variáveis aparecerão aqui depois do envio do DOCX.'}</p>}
+        </div>
+        {previewType===type&&hasFile&&<div className="mt-2 overflow-hidden rounded-lg border border-slate-300 bg-white"><iframe title={`Visualização de ${model?.label||label}`} src={previewUrl(model.driveFileId)} className="h-[420px] w-full bg-white" loading="lazy"/></div>}
         {model?.versions?.length>1&&<details className="mt-1.5 rounded-md border border-slate-300 bg-white px-2 py-1"><summary className="cursor-pointer text-[8.5px] font-black uppercase text-slate-600">Histórico ({model.versions.length})</summary><div className="mt-1 space-y-1">{[...model.versions].reverse().map((version:any)=><div key={version.version} className="flex items-center justify-between gap-2 text-[8.5px]"><span className="truncate"><strong>v{version.version}</strong> · {version.fileName}</span>{version.version!==model.activeVersion&&version.contentSha256&&<button type="button" onClick={()=>void restore(type,version.version)} className={action}>Restaurar</button>}</div>)}</div></details>}
       </article>;
     })}</div>
