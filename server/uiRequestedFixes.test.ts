@@ -109,6 +109,7 @@ test('e-mail do Departamento persiste, é fail-closed e nunca cai em destinatár
 
 test('configurações removem personalização global e usam três grupos operacionais', () => {
   assert.doesNotMatch(configPage, /Personalização do Portal/);
+  assert.doesNotMatch(configPage, /personalizacao_portal|UnifiedPortalEditorModal|CalendarPopupEditorModal|TccDetailPopupEditorModal|LoginPopupEditorModal|openSections|globalTableConfig|loadGlobalTableConfig|loadSiteLayoutConfig|\{false && \(/);
   assert.match(configPage, /Institucional e Plataforma/);
   assert.match(configPage, /Modelos e Variáveis/);
   assert.match(configPage, /Acesso e Registros/);
