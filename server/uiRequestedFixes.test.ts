@@ -143,3 +143,23 @@ test('não existe endereço histórico fixo do Departamento no código operacion
   assert.doesNotMatch(server, /dptenfccs@gmail\.com|DPTNCCS/i);
   assert.doesNotMatch(operational, /dptenfccs@gmail\.com|DPTNCCS/i);
 });
+
+
+describe('contrato visual global do Portal', () => {
+  it('carrega por último a folha autoritativa de superfícies', () => {
+    const main = read('src/main.tsx');
+    expect(main).toContain("import './portal-surface-contract.css';");
+    expect(main.lastIndexOf("portal-surface-contract.css")).toBeGreaterThan(main.lastIndexOf("portal-spreadsheet-runtime.css"));
+  });
+
+  it('mantém quatro camadas e separador branco de 16 px', () => {
+    const css = read('src/portal-surface-contract.css');
+    expect(css).toContain('--portal-surface-page:#f1f5f9');
+    expect(css).toContain('--portal-surface-layer-1:#e1e6e9');
+    expect(css).toContain('--portal-surface-layer-2:#d5dce0');
+    expect(css).toContain('--portal-surface-inner:#fff');
+    expect(css).toContain('--portal-separator-size:16px');
+    expect(css).toContain('#meus-processos-table tbody td:first-child');
+    expect(css).toContain('#coordenador-page-root tbody td:nth-child(2)');
+  });
+});
