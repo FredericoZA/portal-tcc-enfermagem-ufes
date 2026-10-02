@@ -473,9 +473,6 @@ export const ConfiguracoesPage: React.FC = () => {
                 fields: rowFields
               }]);
             }
-
-            setIsImportModalOpen(false);
-            setImportTextContent('');
             showNotification(`Documento do Drive importado e analisado com sucesso! ${addedCount} novos campos vinculados sem duplicações.`);
             return;
           }
@@ -515,8 +512,6 @@ export const ConfiguracoesPage: React.FC = () => {
       });
 
       setMatrixColumns(newCols);
-      setIsImportModalOpen(false);
-      setImportTextContent('');
       showNotification(`Varredura concluída! ${addedCount} novos campos de formulário/modelo integrados à planilha de padronização.`);
     } catch (err: any) {
       console.error(err);
