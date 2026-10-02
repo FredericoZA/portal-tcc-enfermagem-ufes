@@ -874,11 +874,13 @@ async function executeConfiguredDocumentAction(portalProcess:ProcessData,templat
 async function resolveWorkflowEmailAttachments(portalProcess:ProcessData,template:Record<string,unknown>):Promise<Array<{fileName:string;mimeType:string;content:Buffer}>>{
   const refs=Array.isArray(template.attachments)?template.attachments.map(String):[];
   if(!refs.length)return[];
+  const attachmentModes=(template.attachmentModes&&typeof template.attachmentModes==='object'?template.attachmentModes:{}) as Record<string,'AVAILABLE'|'SIGNED'>;
   let accessToken='';
   const output:Array<{fileName:string;mimeType:string;content:Buffer}>=[];
   const download=async(fileId:string)=>{accessToken=accessToken||await getGoogleWorkspaceAccessToken();return downloadDrivePdf(accessToken,fileId,{processId:portalProcess.id});};
   for(const ref of refs){
     const normalized=ref.toUpperCase();
+    const requestedMode=attachmentModes[ref]==='AVAILABLE'?'AVAILABLE':'SIGNED';
     if(normalized==='TCC-PDF'||normalized==='TCC_PDF'){
       if(portalProcess.acervo?.trabalhoCompletoFileId){const file=await download(portalProcess.acervo.trabalhoCompletoFileId);output.push({fileName:file.fileName,mimeType:'application/pdf',content:file.pdf});}
       continue;
@@ -892,6 +894,11 @@ async function resolveWorkflowEmailAttachments(portalProcess:ProcessData,templat
     }
     const job=signatureJobsStore.filter(item=>item.processId===portalProcess.id&&item.documentType===type).sort((a,b)=>b.documentVersion-a.documentVersion)[0];
     if(!job)throw new Error(`O e-mail exige ${type}, mas o documento ainda não foi gerado.`);
+    if(requestedMode==='AVAILABLE'){
+      const fileId=job.driveSignedFileId||job.driveUnsignedFileId;
+      if(!fileId)throw new Error(`O e-mail exige ${type}, mas a versão gerada ainda não está disponível no Drive.`);
+      const file=await download(fileId);output.push({fileName:file.fileName,mimeType:'application/pdf',content:file.pdf});continue;
+    }
     if(job.status==='ARCHIVED'&&job.driveSignedFileId){const file=await download(job.driveSignedFileId);output.push({fileName:file.fileName,mimeType:'application/pdf',content:file.pdf});}
     else throw new Error(`O e-mail exige ${type} assinado, mas o PDF ainda não foi arquivado pelo retorno da Asten.`);
   }
