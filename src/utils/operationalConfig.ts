@@ -59,7 +59,7 @@ export const DEFAULT_CLASSIFICATION_CATALOGS: CatalogEntry[] = [
 
 export const DEFAULT_OPERATIONAL_CONFIG: OperationalConfig = {
   reservation: {
-    departmentEmail: 'dptenfccs@gmail.com',
+    departmentEmail: '',
     recipientName: 'Departamento de Enfermagem',
     emailSubject: 'Solicitação de reserva de local para defesa de TCC — {{TITULO}}',
     emailBody: 'Prezados(as),\n\nSolicitamos a reserva de local para a defesa do TCC “{{TITULO}}”, prevista para {{DEFESA_DATA_HORA}}.\n\nLocal preferencial: {{DEFESA_LOCAL}}.\nLocal alternativo: {{LOCAL_ALTERNATIVO}}.\n\nAlunos(as): {{ALUNOS_NOMES}}.\nOrientador(a): {{ORIENTADOR_NOME}}.\n\nAtenciosamente,\nSecretaria do Curso de Graduação em Enfermagem e Obstetrícia.',
