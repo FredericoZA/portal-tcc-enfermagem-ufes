@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('release atual é 1.0.63', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.63');
+test('release atual é 1.0.64', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.64');
 });
 
 test('estado de defesa não sobrescreve cores de vínculo e assinatura', () => {

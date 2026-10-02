@@ -1,7 +1,8 @@
 // Shared Table Formatting and Styling Utilities
 import type { CSSProperties } from 'react';
 import { portalFontFamily } from './portalFonts';
-import { TableTextFormat, HeaderTheme, DEFAULT_TABLE_TEXT_FORMAT } from '../components/TableColumnSelectorPanel';
+import type { TableTextFormat, HeaderTheme } from '../components/TableColumnSelectorPanel';
+import { DEFAULT_TABLE_TEXT_FORMAT } from '../components/TableColumnSelectorPanel';
 import { tableInheritsGlobalAppearance } from './portalAppearanceLinks';
 import { getPortalToneStyle, resolvePortalFilterTone } from './portalSemanticTokens';
 export type { TableTextFormat, HeaderTheme };
@@ -11,7 +12,8 @@ export const GLOBAL_TABLE_CONFIG_KEY = 'master_global_table_config';
 export const GLOBAL_TABLE_EVENT = 'global_table_format_changed';
 
 export const STATIC_PORTAL_TABLE_FORMAT: TableTextFormat = {
-  ...DEFAULT_TABLE_TEXT_FORMAT,
+  // Não acessar DEFAULT_TABLE_TEXT_FORMAT na inicialização do módulo:
+  // TableColumnSelectorPanel importa este arquivo e isso criaria ciclo em TDZ.
   headerTheme: 'colored',
   headerTextColor: 'custom',
   customHeaderColor: '#154d41',
@@ -32,7 +34,14 @@ export const STATIC_PORTAL_TABLE_FORMAT: TableTextFormat = {
  */
 export function loadGlobalTableConfig(): TableTextFormat {
   // Todas as planilhas compartilham a mesma aparência versionada no código.
-  return { ...STATIC_PORTAL_TABLE_FORMAT, filterItemsConfig: { ...(STATIC_PORTAL_TABLE_FORMAT.filterItemsConfig || {}) }, columnEmojis: {}, columnBold: {}, columnWidths: {} };
+  return {
+    ...DEFAULT_TABLE_TEXT_FORMAT,
+    ...STATIC_PORTAL_TABLE_FORMAT,
+    filterItemsConfig: { ...(DEFAULT_TABLE_TEXT_FORMAT.filterItemsConfig || {}), ...(STATIC_PORTAL_TABLE_FORMAT.filterItemsConfig || {}) },
+    columnEmojis: {},
+    columnBold: {},
+    columnWidths: {}
+  };
 }
 
 /**
