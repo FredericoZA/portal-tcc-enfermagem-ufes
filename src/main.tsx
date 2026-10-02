@@ -38,6 +38,7 @@ import './portal-version-1049.css';
 import './portal-version-1050.css';
 import './portal-version-1051.css';
 import './portal-spreadsheet-runtime.css';
+import './portal-surface-contract.css';
 import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
 import { installAuthRequestResilience } from './utils/authRequestResilience';
 
