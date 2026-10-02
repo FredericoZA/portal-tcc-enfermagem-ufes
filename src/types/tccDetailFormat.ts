@@ -1,4 +1,3 @@
-import { isPortalAppearanceLinked, loadGlobalPopupStyle } from '../utils/portalAppearanceLinks';
 
 export interface TccDetailPopupFormat {
   // Theme & Presets (Esquema de Cores de Destaque)
@@ -76,12 +75,12 @@ export const DEFAULT_TCC_DETAIL_POPUP_FORMAT: TccDetailPopupFormat = {
   presetTheme: 'militar',
   viewMode: 'tabs',
   activeTabDefault: 'todos',
-  modalBgColor: '#f8fafc',
+  modalBgColor: '#f2f2f2',
   modalBorderRadius: 'rounded-2xl',
   modalShadow: 'prominent',
   modalMaxWidth: '6xl',
 
-  headerBgColor: '#005830',
+  headerBgColor: '#154d41',
   headerTextColor: '#ffffff',
   headerTitleText: 'Painel de Gestão e Detalhes do TCC',
   headerSubtitleText: 'Curso • Instituição',
@@ -126,7 +125,7 @@ export const DEFAULT_TCC_DETAIL_POPUP_FORMAT: TccDetailPopupFormat = {
   showProtocolPillInCard: true,
   showDefesaMapBadge: true,
 
-  primaryActionColor: '#005830',
+  primaryActionColor: '#154d41',
   primaryActionTextColor: '#ffffff',
   badgeBgColor: '#ecfdf5',
   badgeTextColor: '#005830',
@@ -138,42 +137,11 @@ export const TCC_DETAIL_POPUP_CONFIG_KEY = 'tcc_detail_popup_format_v1';
 export const TCC_DETAIL_POPUP_CONFIG_EVENT = 'tcc_detail_popup_format_changed';
 
 export function loadTccDetailPopupFormat(): TccDetailPopupFormat {
-  if (typeof window === 'undefined') return { ...DEFAULT_TCC_DETAIL_POPUP_FORMAT };
-  try {
-    const raw = localStorage.getItem(TCC_DETAIL_POPUP_CONFIG_KEY);
-    const local = raw
-      ? { ...DEFAULT_TCC_DETAIL_POPUP_FORMAT, ...JSON.parse(raw) }
-      : { ...DEFAULT_TCC_DETAIL_POPUP_FORMAT };
-    if (!isPortalAppearanceLinked('popup_tcc_detail')) return local;
-    const global = loadGlobalPopupStyle();
-    return {
-      ...local,
-      modalBgColor: global.surfaceBgColor,
-      headerBgColor: global.headerBgColor,
-      headerTextColor: global.headerTextColor,
-      primaryActionColor: global.actionBgColor,
-      primaryActionTextColor: global.actionTextColor,
-      modalBorderRadius: global.borderRadius === '0px'
-        ? 'none'
-        : global.borderRadius === '8px'
-          ? 'rounded-lg'
-          : global.borderRadius === '12px'
-            ? 'rounded-xl'
-            : 'rounded-2xl',
-    };
-  } catch (e) {
-    console.warn('Error loading tcc detail format:', e);
-  }
   return { ...DEFAULT_TCC_DETAIL_POPUP_FORMAT };
 }
 
-export function saveTccDetailPopupFormat(format: TccDetailPopupFormat): void {
-  try {
-    localStorage.setItem(TCC_DETAIL_POPUP_CONFIG_KEY, JSON.stringify(format));
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent(TCC_DETAIL_POPUP_CONFIG_EVENT, { detail: format }));
-    }
-  } catch (e) {
-    console.error('Error saving tcc detail format:', e);
+export function saveTccDetailPopupFormat(_format: TccDetailPopupFormat): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(TCC_DETAIL_POPUP_CONFIG_EVENT, { detail: loadTccDetailPopupFormat() }));
   }
 }
