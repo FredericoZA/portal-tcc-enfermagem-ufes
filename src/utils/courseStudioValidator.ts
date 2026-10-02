@@ -286,23 +286,6 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
     });
   });
 
-  const reservationEmailIndex = emails.findIndex((email) => text(email.id) === 'email-reserva');
-  if (reservationEmailIndex < 0) add({
-    code: 'MISSING_RESERVATION_EMAIL',
-    path: 'emailTemplates',
-    message: 'Mantenha o modelo canônico email-reserva para solicitar o local ao Departamento de Enfermagem.',
-    severity: 'ERROR',
-    area: 'EMAIL'
-  });
-  const registrationStageIndex = stages.findIndex((stage) => key(stage.triggerEvent) === 'TCC_CREATED');
-  if (registrationStageIndex < 0 || !rows(stages[registrationStageIndex]?.actions).some((action) => key(action.type) === 'EMAIL' && text(action.refId || action.referenceId) === 'email-reserva')) add({
-    code: 'MISSING_RESERVATION_EMAIL_ACTION',
-    path: registrationStageIndex < 0 ? 'workflowStages' : `workflowStages.${registrationStageIndex}.actions`,
-    message: 'A etapa TCC_CREATED deve disparar o modelo email-reserva.',
-    severity: 'ERROR',
-    area: 'WORKFLOW'
-  });
-
   const stageIds = new Set<string>();
   stages.forEach((stage, stageIndex) => {
     const stageId = text(stage.id);
