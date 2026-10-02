@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEMO_PROCESSES, DEMO_MEMBERSHIPS, INITIAL_SETTINGS } from '../src/services/demoSeed';
 
-test('HTTP: orientador confere e registra avaliação; aluno é recusado; estado e aparência ficam gravados', { timeout: 45000 }, async () => {
+test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparência dinâmica é ignorada', { timeout: 45000 }, async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'portal-evaluation-'));
   const p = structuredClone(DEMO_PROCESSES[0]);
   p.defesa = { ...p.defesa, localStatus: 'CONFIRMADO', startAt: new Date(Date.now() - 3600000).toISOString(), invitationSentAt: new Date().toISOString() };
@@ -95,11 +95,11 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; estado
     const response = await fetch(base + '/api/admin/settings', { method: 'PATCH', headers: { 'content-type': 'application/json', 'x-demo-user-email': 'master@portal.local' }, body: JSON.stringify({ portalAppearance: appearance }) });
     assert.equal(response.status, 200);
     const publicSettings = await request('/api/settings', '');
-    assert.equal(publicSettings.body.portalAppearance.linkedItems.popup_login, true);
+    assert.equal(publicSettings.body.portalAppearance, undefined);
     const disk = JSON.parse(await readFile(path.join(directory, 'portal-state.json'), 'utf8'));
     assert.equal(disk.studioFormSubmissions.length, 1);
     assert.equal(disk.studioFormSubmissions[0].formSnapshot.questions[0].label, 'Escolha');
-    assert.equal(disk.settings.portalAppearance.schemaVersion, 4);
+    assert.equal(disk.settings.portalAppearance, undefined);
     assert.equal(disk.processes[0].avaliacao.notaFinal, undefined);
   } finally {
     if (child.exitCode === null) {
