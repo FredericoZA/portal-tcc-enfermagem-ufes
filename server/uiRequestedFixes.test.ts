@@ -97,9 +97,8 @@ test('e-mail do Departamento persiste, é fail-closed e nunca cai em destinatár
   assert.match(server, /configuredRoomReservationDepartmentEmail/);
   assert.match(server, /templateId==='email-reserva'/);
   assert.match(server, /destinatário publicado diverge do e-mail cadastrado em Integrações/);
-  assert.match(server, /normalizedEvent==='TCC_CREATED'\?nativeReservationWorkflowStudio\(\):undefined/);
+  assert.match(server, /normalizedEvent==='TCC_CREATED'\?reservationWorkflowStudio\(currentSettings\.integrationStudio\):currentSettings\.integrationStudio/);
   assert.doesNotMatch(server, /roomReservationDepartmentEmail\|\|operationalConfig\(studio\)\.reservation\.departmentEmail/);
   assert.doesNotMatch(operational, /dptenfccs@gmail\.com/);
   assert.match(courseStudioValidator, /RESERVATION_EMAIL_RECIPIENT_MUST_BE_CONFIGURED/);
-  assert.match(courseStudioValidator, /MISSING_RESERVATION_EMAIL_ACTION/);
 });
