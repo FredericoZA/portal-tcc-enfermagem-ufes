@@ -216,6 +216,7 @@ export interface EmailTemplateItem {
   replyTo?: string;
   htmlBody?: string;
   attachments?: string[];
+  attachmentModes?: Record<string, 'AVAILABLE' | 'SIGNED'>;
 }
 
 const cleanFileNameForDrive = (name: string): string => {
