@@ -1095,7 +1095,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             return (
               <div className={`bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${defStyles.fontFamilyClass}`} style={defStyles.rootStyle}>
                 {/* TOP HEADER BAR (Synchronized palette) */}
-                <div className={`${defStyles.calendarBannerClass} px-3 sm:px-4 py-2 sm:py-2.5 border-b transition-colors`} style={defStyles.bannerHeaderStyle}>
+                <div className={`portal-sheet-title-bar portal-sheet-no-filter-title ${defStyles.calendarBannerClass} px-3 sm:px-4 transition-colors`} style={defStyles.bannerHeaderStyle}>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -1225,7 +1225,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <div className="overflow-x-auto">
                         <div className="min-w-[720px] md:min-w-0">
                           {/* Calendar Days Header with synchronized palette */}
-                          <div className={`${defStyles.calendarDaysHeaderClass} py-2.5 px-4 sm:px-6 select-none`} style={defStyles.bannerHeaderStyle}>
+                          <div className={`portal-sheet-column-header ${defStyles.calendarDaysHeaderClass} px-4 sm:px-6 select-none`} style={defStyles.bannerHeaderStyle}>
                             <div className="grid grid-cols-[0.5fr_1.1fr_1.1fr_1.1fr_1.1fr_1.1fr_0.5fr] text-center font-black text-[11px] uppercase tracking-wider">
                               <div>DOM</div>
                               <div>SEG</div>
@@ -1786,7 +1786,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             const defStyles = getTableStyles(defensesTextFormat);
             return (
               <div className={`${defStyles.bannerHeaderClass} border-b transition-colors`} style={defStyles.bannerHeaderStyle}>
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 py-2 text-center sm:flex-row sm:px-4 sm:py-2.5 sm:text-left">
+                <div className="portal-sheet-title-row flex flex-col sm:flex-row items-center justify-between gap-3 px-3 text-center sm:flex-row sm:px-4 sm:text-left">
                   <div className="flex items-center gap-2">
                     <ColorfulHeaderIcon type="list" textFormat={defensesTextFormat} />
                     <h2 className="text-base sm:text-lg font-black uppercase tracking-tight">
@@ -1794,17 +1794,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     </h2>
                   </div>
 
-                    {/* Right Group: Lupa, Refresh, Editar Popup and Engrenagem Controls */}
+                    {/* Right Group: ações extras | Lupa | Engrenagem */}
                   <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                    {/* Lupa (Search) */}
-                    <SearchPopover
-                      value={defensesSearch}
-                      onChange={setDefensesSearch}
-                      placeholder={defensesTextFormat?.searchButtonText || "Buscar defesas..."}
-                      textFormat={defensesTextFormat}
-                    />
-
-                    {/* Refresh Button (Customizable Emoji / YinYang) */}
+                    {/* Ações adicionais vêm antes dos dois controles finais. */}
                     <button
                       type="button"
                       onClick={refreshData}
@@ -1821,6 +1813,16 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshingData ? 'animate-spin' : ''}`} />
                       )}
                     </button>
+
+                    <span className="mx-0.5 h-5 w-px bg-white/55" aria-hidden="true" />
+
+                    {/* Os dois últimos controles são sempre Lupa e Engrenagem. */}
+                    <SearchPopover
+                      value={defensesSearch}
+                      onChange={setDefensesSearch}
+                      placeholder={defensesTextFormat?.searchButtonText || "Buscar defesas..."}
+                      textFormat={defensesTextFormat}
+                    />
 
                     {/* Engrenagem (Settings) */}
                     <HeaderSettingsPopover
@@ -1853,7 +1855,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 </div>
 
                 {/* INTEGRATED TOOLBAR BAR FOR STATUS & FILTERS */}
-                <div className="portal-defense-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 border-t-2 border-white px-3 py-2.5 text-xs sm:px-4">
+                <div className="portal-sheet-filter-row portal-defense-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 px-3 text-xs sm:px-4">
                   <span className="text-[10px] opacity-80 font-black uppercase tracking-wider shrink-0">
                     {defensesTextFormat?.customFilterTitle || getEditableTableText(defensesCustomLabels, '__filterTitle', 'FILTRAR:')}
                   </span>
@@ -2282,7 +2284,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               {(() => {
                 const acervoBannerStyles = getTableStyles(acervoTextFormat);
                 return (
-                  <div className={`${acervoBannerStyles.bannerHeaderClass} p-3.5 sm:p-4 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-colors`} style={acervoBannerStyles.bannerHeaderStyle}>
+                  <div className={`portal-sheet-title-bar portal-sheet-no-filter-title ${acervoBannerStyles.bannerHeaderClass} px-3 sm:px-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-colors`} style={acervoBannerStyles.bannerHeaderStyle}>
                     <div className="flex items-center gap-2">
                       <ColorfulHeaderIcon type="repository" textFormat={acervoTextFormat} />
                       <h1 className="text-base sm:text-lg font-black uppercase tracking-tight">
@@ -2290,17 +2292,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       </h1>
                     </div>
 
-                    {/* Right Group: Lupa and Engrenagem Controls */}
+                    {/* Right Group: ações extras | Lupa | Engrenagem */}
                     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                      {/* Lupa (Search) */}
-                      <SearchPopover
-                        value={libSearch}
-                        onChange={setLibSearch}
-                        placeholder="Buscar no acervo..."
-                        textFormat={acervoTextFormat}
-                      />
-
-                      {/* Refresh Button (Yin-Yang) */}
                       <button
                         type="button"
                         onClick={refreshData}
@@ -2311,6 +2304,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       >
                         <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshingData ? 'animate-spin' : ''}`} />
                       </button>
+
+                      <span className="mx-0.5 h-5 w-px bg-white/55" aria-hidden="true" />
+
+                      <SearchPopover
+                        value={libSearch}
+                        onChange={setLibSearch}
+                        placeholder="Buscar no acervo..."
+                        textFormat={acervoTextFormat}
+                      />
 
                       {/* Engrenagem (Settings) */}
                       <HeaderSettingsPopover
