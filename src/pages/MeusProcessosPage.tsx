@@ -765,7 +765,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
           {/* Gray Header Banner */}
           <div className={`${styles.bannerHeaderClass} border-b transition-colors`} style={styles.bannerHeaderStyle}>
             {/* Title */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
+            <div className="portal-sheet-title-row flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3.5 sm:px-4">
               <div className="flex items-center gap-2">
                 <ColorfulHeaderIcon type="graduation" textFormat={meusProcessosTextFormat} />
                 <h1 className="text-sm sm:text-base font-black uppercase tracking-wide leading-tight">
@@ -773,8 +773,8 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                 </h1>
               </div>
 
-              {/* Ação principal separada dos três controles padrão */}
-              <div className="flex items-center shrink-0">
+              {/* Ações adicionais primeiro; os dois últimos controles são Lupa e Engrenagem. */}
+              <div className="flex items-center shrink-0 gap-1.5 sm:gap-2">
                 {canCreateStudentTcc && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false && (
                   <button
                     id="meus-processos-btn-novo"
@@ -788,26 +788,27 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                     <span>Cadastrar TCC</span>
                   </button>
                 )}
+                <button
+                  id="meus-processos-refresh-btn"
+                  type="button"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className={`${styles.toolbarButtonClass} disabled:opacity-70`}
+                  style={styles.toolbarButtonStyle}
+                  title="Atualizar dados da tabela"
+                >
+                  <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
+                </button>
 
-                <div className={`flex items-center gap-1.5 sm:gap-2 ${canCreateStudentTcc && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false ? 'ml-3 border-l border-white/35 pl-3' : ''}`}>
-                  <SearchPopover
-                    value={searchTerm}
-                    onChange={setSearchTerm}
-                    placeholder="Buscar TCCs..."
-                    textFormat={meusProcessosTextFormat}
-                  />
-                  <button
-                    id="meus-processos-refresh-btn"
-                    type="button"
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className={`${styles.toolbarButtonClass} disabled:opacity-70`}
-                    style={styles.toolbarButtonStyle}
-                    title="Atualizar dados da tabela"
-                  >
-                    <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
-                  </button>
-                  <HeaderSettingsPopover
+                <span className="mx-0.5 h-5 w-px bg-white/55" aria-hidden="true" />
+
+                <SearchPopover
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  placeholder="Buscar TCCs..."
+                  textFormat={meusProcessosTextFormat}
+                />
+                <HeaderSettingsPopover
                     recordsLimit={recordsLimit}
                     setRecordsLimit={setRecordsLimit}
                     allowedLimits={[25, 50, 100, 'all']}
@@ -838,7 +839,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
             </div>
 
             {/* INTEGRATED TOOLBAR FOR FILTERS (Single clean dividing line) */}
-            <div className="portal-meus-processos-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 border-t-2 border-white px-3.5 py-2.5 text-xs sm:px-4">
+            <div className="portal-sheet-filter-row portal-meus-processos-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 px-3.5 text-xs sm:px-4">
               <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
                 {getEditableTableText(customLabels, '__filterTitle', 'FILTRAR:')}
               </span>
