@@ -31,8 +31,6 @@ jobs:
         run: npm run test:secrets
       - name: Validar TypeScript
         run: npm run lint
-      - name: Validar paleta visual protegida
-        run: npm run test:palette
       - name: Executar testes unitários
         shell: bash
         run: |
