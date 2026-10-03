@@ -161,7 +161,7 @@ test('contrato visual global mantém a paleta anterior e a nova geometria aprova
   assert.match(surfaceContract, /--portal-separator-size:15px/);
   assert.match(surfaceContract, /--portal-sheet-title-height:45px/);
   assert.match(surfaceContract, /--portal-sheet-title-divider:5px/);
-  assert.match(surfaceContract, /--portal-sheet-filter-height:40px/);
+  assert.match(surfaceContract, /--portal-sheet-filter-height:45px/);
   assert.match(surfaceContract, /--portal-sheet-content-divider:15px/);
   assert.match(surfaceContract, /--portal-sheet-column-header-height:35px/);
   assert.match(surfaceContract, /--portal-sheet-row-min-height:30px/);
@@ -180,7 +180,11 @@ test('todas as planilhas obedecem ao mesmo contrato visual', () => {
   assert.match(css, /position:sticky!important/);
   assert.match(css, /--portal-sheet-pagination:#fff/);
   assert.match(css, /width:var\(--portal-sheet-column-control-size\)!important/);
-  assert.match(css, /border-top-width:var\(--portal-sheet-title-divider\)!important/);
+  assert.match(css, /border-top:var\(--portal-sheet-title-divider\) solid #fff!important/);
+  assert.match(css, /#public-calendar-cards-section>div>:nth-child\(2\)/);
+  assert.match(css, /border-top:var\(--portal-sheet-content-divider\) solid #fff!important/);
+  assert.match(css, /#biblioteca-tccs-section tbody td:nth-child\(2\)[\s\S]*background:transparent!important/);
+  assert.match(css, /#configuracoes-page-container>section[\s\S]*background:transparent!important/);
 });
 
 test('popups de planilha usam a própria planilha como caixa principal', () => {
