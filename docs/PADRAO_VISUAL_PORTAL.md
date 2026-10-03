@@ -99,3 +99,18 @@ Para editores:
 `popup → seções funcionais → campos/controles`
 
 Pop-ups com planilha não devem ter uma moldura lateral adicional em volta da tabela. O cabeçalho da planilha é parte direta da estrutura do popup.
+
+
+## 11. Geometria canônica do topo das planilhas
+
+A sequência visual é fixa e vale para todas as planilhas:
+
+1. **Barra de título:** 45 px, fundo `#005830`.
+2. **Linha branca:** 5 px.
+3. **Barra de filtro:** 40 px verdes, fundo `#005830`.
+4. **Separador branco:** 15 px.
+5. **Cabeçalho das colunas:** 35 px, fundo `#005830`.
+
+Altura total do bloco superior: **140 px**.
+
+Nenhum componente local pode somar padding, margin ou border que altere essas medidas visuais.
