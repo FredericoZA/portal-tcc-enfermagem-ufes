@@ -140,7 +140,9 @@ test('aparência antiga fica inerte e planilhas usam padrão estático do códig
   assert.match(siteLayout, /A aparência estrutural é canônica e versionada no código/);
   assert.doesNotMatch(siteLayout, /localStorage\.getItem\(STORAGE_KEY\)/);
   assert.match(tableFormatters, /STATIC_PORTAL_TABLE_FORMAT/);
-  assert.match(tableFormatters, /customHeaderColor: '#154d41'/);
+  assert.match(tableFormatters, /customHeaderColor: PORTAL_BRAND_COLORS\.header/);
+  assert.match(tableFormatters, /toolbarButtonColor: PORTAL_SURFACE_COLORS\.inner/);
+  assert.match(tableFormatters, /toolbarButtonBorderColor: PORTAL_SURFACE_COLORS\.border/);
   assert.doesNotMatch(tableFormatters, /localStorage\.getItem\(GLOBAL_TABLE_CONFIG_KEY\)/);
   assert.match(server, /'portalAppearance','tableAppearance','tableLayouts'/);
   assert.doesNotMatch(server, /normalizeUnifiedAppearance/);
@@ -228,4 +230,10 @@ test('planilhas administrativas congelam a primeira coluna', () => {
   assert.match(surface, /\[data-settings-sheet="true"\] table td:first-child/);
   assert.match(surface, /position:sticky!important/);
   assert.match(surface, /background:var\(--portal-color-layer\)!important/);
+});
+
+
+test('divisores estruturais usam 15 px como fonte única de verdade', () => {
+  const tokens = read('src/utils/portalSemanticTokens.ts');
+  assert.match(tokens, /PORTAL_SECTION_DIVIDER_PX = 15/);
 });
