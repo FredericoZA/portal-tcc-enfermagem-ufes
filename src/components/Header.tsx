@@ -11,7 +11,7 @@ interface HeaderProps {
   title?: string;
 }
 
-const COURSE_ACCENT = '#006000';
+const COURSE_ACCENT = '#337959';
 const PUBLIC_VISITOR_SUFFIX = '@publico.local';
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome }) => {
@@ -30,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome })
   }, []);
 
   const headerStyle: React.CSSProperties = {
-    backgroundColor: layoutConfig.headerBgColor || '#b7b7b7',
+    backgroundColor: layoutConfig.headerBgColor || '#f2f2f2',
     ...(layoutConfig.headerBgImage ? { backgroundImage: `url(${layoutConfig.headerBgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
   };
   const headerLogo = String(layoutConfig.headerCustomLogoUrl || '');
@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome })
               <img src={headerLogo} alt="Emblema institucional" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 object-contain" referrerPolicy="no-referrer" />
             )}
             <button type="button" onClick={onGoHome} className="text-left focus:outline-none cursor-pointer" title="Voltar ao Calendário Público Inicial">
-              <div className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest leading-none mb-1" style={{ color: '#000000' }}>{layoutConfig.headerInstitutionText || installationProfile.institutionName}</div>
+              <div className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest leading-none mb-1" style={{ color: '#0f172a' }}>{layoutConfig.headerInstitutionText || installationProfile.institutionName}</div>
               <h1 className="text-[11px] sm:text-xs md:text-sm font-black tracking-tight uppercase leading-snug flex items-center gap-1.5" style={{ color: COURSE_ACCENT }}><span>{layoutConfig.headerCourseTitle || `${installationProfile.courseName} · CCS/UFES`}</span></h1>
             </button>
           </div>

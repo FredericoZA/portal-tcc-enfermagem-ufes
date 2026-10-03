@@ -169,7 +169,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
   const saveOnBlur = () => { if (currentFingerprint !== lastSavedFingerprintRef.current) void persistIdentity(false); };
 
   return (
-    <section className="portal-commission-identity-panel rounded-lg border border-slate-300 bg-[#b7b7b7]" aria-labelledby="commission-management-title">
+    <section className="portal-commission-identity-panel rounded-lg border border-slate-300 bg-[#d5dce0]" aria-labelledby="commission-management-title">
       <div className="flex flex-col gap-2 border-b border-slate-300 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-[#337959]" />
@@ -208,7 +208,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
         <div className="mb-1.5 flex items-center justify-between gap-2"><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Membros da Comissão</h4><span className="text-[9px] font-bold text-slate-500">{members.filter(member => member.name.trim()).length} cadastrado(s)</span></div>
         <div className="overflow-x-auto rounded-lg border border-slate-300 bg-white">
           <table className="w-full min-w-[520px] border-collapse text-left">
-            <thead className="border-b border-slate-300 bg-[#b7b7b7] text-[9px] font-black uppercase tracking-wider text-slate-700"><tr><th className="px-2.5 py-2">Nome</th><th className="px-2.5 py-2">E-mail</th><th className="w-12 px-2.5 py-2 text-center">Excluir</th></tr></thead>
+            <thead className="border-b border-slate-300 bg-[#d5dce0] text-[9px] font-black uppercase tracking-wider text-slate-700"><tr><th className="px-2.5 py-2">Nome</th><th className="px-2.5 py-2">E-mail</th><th className="w-12 px-2.5 py-2 text-center">Excluir</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
               {members.length === 0 && <tr><td colSpan={3} className="px-3 py-3 text-center text-[10px] text-slate-500">Nenhum membro adicional cadastrado.</td></tr>}
               {members.map((member) => <tr key={member.id}>
