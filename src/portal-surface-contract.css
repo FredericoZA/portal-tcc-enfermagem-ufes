@@ -118,10 +118,16 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
    CONTRATO GLOBAL DE PLANILHAS — nenhuma tela cria variante própria
    ========================================================================== */
 :root{
-  --portal-sheet-header:var(--portal-green-header,#00633f);
+  --portal-sheet-green:#005830;
+  --portal-sheet-title-height:45px;
+  --portal-sheet-title-separator:5px;
+  --portal-sheet-filter-height:40px;
+  --portal-sheet-filter-separator:15px;
+  --portal-sheet-column-header-height:35px;
+  --portal-sheet-header:var(--portal-sheet-green);
   --portal-sheet-header-text:#fff;
   --portal-sheet-pagination:#fff;
-  --portal-sheet-control-bg:#eef2f3;
+  --portal-sheet-control-bg:#fff;
   --portal-sheet-control-border:#cbd5e1;
 }
 
@@ -191,14 +197,44 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
   background:var(--portal-sheet-pagination)!important;
 }
 
-/* Separador único: exatamente 16px. Nada de faixas acumuladas. */
-#formal-monthly-calendar-section>div>div:nth-child(2),
+/* Geometria canônica do topo: 45 verde + 5 branco + 40 verde + 15 branco + 35 verde. */
+#public-calendar-cards-section>div>div:first-child>div:first-child,
+#biblioteca-tccs-section>div>div:first-child,
+#meus-processos-page-container section>div>div:first-child>div:first-child,
+#coordenador-page-root section>div>div:first-child>div:first-child{
+  min-height:var(--portal-sheet-title-height)!important;
+  height:var(--portal-sheet-title-height)!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
+  background:var(--portal-sheet-green)!important;
+  color:#fff!important;
+  box-sizing:border-box!important;
+}
+
+/* A barra de filtro ocupa 40 px verdes. As faixas brancas pertencem ao próprio
+ * contrato e não podem ser somadas com padding/margens locais. */
 #public-calendar-cards-section .portal-defense-filter-row,
 #meus-processos-page-container .portal-meus-processos-filter-row,
 #coordenador-page-root .portal-coordinator-filter-row{
-  border-top:16px solid #fff!important;
-  border-bottom-width:0!important;
+  min-height:calc(var(--portal-sheet-title-separator) + var(--portal-sheet-filter-height) + var(--portal-sheet-filter-separator))!important;
+  height:calc(var(--portal-sheet-title-separator) + var(--portal-sheet-filter-height) + var(--portal-sheet-filter-separator))!important;
+  border-top:var(--portal-sheet-title-separator) solid #fff!important;
+  border-bottom:var(--portal-sheet-filter-separator) solid #fff!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
   margin-top:0!important;
+  margin-bottom:0!important;
+  background:var(--portal-sheet-green)!important;
+  color:#fff!important;
+  box-sizing:border-box!important;
+  align-content:center!important;
+}
+
+/* Repositório ainda não possui filtros próprios: preserva o mesmo intervalo
+ * branco de 15 px entre a barra de título e o cabeçalho sem inventar controles. */
+#biblioteca-tccs-section>div>div:first-child{
+  border-bottom:var(--portal-sheet-filter-separator) solid #fff!important;
+  box-sizing:content-box!important;
 }
 
 /* Pop-up de planilha = a própria planilha; elimina moldura interna inútil. */
@@ -282,4 +318,55 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 }
 #portal-settings-hub .portal-settings-title-bar span span{
   color:rgba(255,255,255,.78)!important;
+}
+
+
+/* Dimensões exatas do cabeçalho de colunas. */
+.portal-spreadsheet-table thead tr,
+#public-calendar-cards-section table thead tr,
+#biblioteca-tccs-section table thead tr,
+#meus-processos-table thead tr,
+#coordenador-page-root table thead tr{
+  height:var(--portal-sheet-column-header-height)!important;
+  min-height:var(--portal-sheet-column-header-height)!important;
+}
+.portal-spreadsheet-table thead th,
+#public-calendar-cards-section table thead th,
+#biblioteca-tccs-section table thead th,
+#meus-processos-table thead th,
+#coordenador-page-root table thead th{
+  height:var(--portal-sheet-column-header-height)!important;
+  min-height:var(--portal-sheet-column-header-height)!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
+  vertical-align:middle!important;
+  box-sizing:border-box!important;
+}
+
+/* As três superfícies verdes usam exatamente #005830. */
+#public-calendar-cards-section>div>div:first-child,
+#biblioteca-tccs-section>div>div:first-child,
+#meus-processos-page-container section>div>div:first-child,
+#coordenador-page-root section>div>div:first-child,
+#public-calendar-cards-section .portal-defense-filter-row,
+#meus-processos-page-container .portal-meus-processos-filter-row,
+#coordenador-page-root .portal-coordinator-filter-row,
+.portal-spreadsheet-table thead th,
+#public-calendar-cards-section table thead th,
+#biblioteca-tccs-section table thead th,
+#meus-processos-table thead th,
+#coordenador-page-root table thead th{
+  background-color:var(--portal-sheet-green)!important;
+}
+
+/* Texto da barra de título, filtro e cabeçalho sempre branco. */
+#public-calendar-cards-section>div>div:first-child,
+#biblioteca-tccs-section>div>div:first-child,
+#meus-processos-page-container section>div>div:first-child,
+#coordenador-page-root section>div>div:first-child,
+#public-calendar-cards-section .portal-defense-filter-row,
+#meus-processos-page-container .portal-meus-processos-filter-row,
+#coordenador-page-root .portal-coordinator-filter-row,
+.portal-spreadsheet-table thead th{
+  color:#fff!important;
 }
