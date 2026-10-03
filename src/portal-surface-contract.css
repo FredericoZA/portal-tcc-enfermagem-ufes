@@ -566,3 +566,70 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
   margin-top:0!important;
   margin-bottom:0!important;
 }
+
+
+/* Classes semânticas do contrato de planilha: reutilizar em toda tela nova. */
+.portal-sheet-title-bar,
+.portal-sheet-title-row{
+  height:var(--portal-sheet-title-height,45px)!important;
+  min-height:var(--portal-sheet-title-height,45px)!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
+  margin-top:0!important;
+  margin-bottom:0!important;
+  background:var(--portal-color-green)!important;
+  color:#fff!important;
+  box-sizing:border-box!important;
+  align-items:center!important;
+}
+.portal-sheet-no-filter-title{
+  border-bottom:var(--portal-sheet-filter-separator,15px) solid var(--portal-color-white)!important;
+  box-sizing:content-box!important;
+}
+.portal-sheet-filter-row{
+  height:calc(var(--portal-sheet-title-separator,5px) + var(--portal-sheet-filter-height,40px) + var(--portal-sheet-filter-separator,15px))!important;
+  min-height:calc(var(--portal-sheet-title-separator,5px) + var(--portal-sheet-filter-height,40px) + var(--portal-sheet-filter-separator,15px))!important;
+  border-top:var(--portal-sheet-title-separator,5px) solid var(--portal-color-white)!important;
+  border-bottom:var(--portal-sheet-filter-separator,15px) solid var(--portal-color-white)!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
+  margin-top:0!important;
+  margin-bottom:0!important;
+  background:var(--portal-color-green)!important;
+  color:#fff!important;
+  box-sizing:border-box!important;
+  align-content:center!important;
+}
+.portal-sheet-column-header{
+  height:var(--portal-sheet-column-header-height,35px)!important;
+  min-height:var(--portal-sheet-column-header-height,35px)!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
+  margin-top:0!important;
+  margin-bottom:0!important;
+  background:var(--portal-color-green)!important;
+  color:#fff!important;
+  box-sizing:border-box!important;
+  align-items:center!important;
+}
+
+/* O Calendário formal não possui filtro: 45 verde + 15 branco + 35 verde. */
+#formal-monthly-calendar-section .portal-sheet-title-bar{
+  border-bottom:var(--portal-sheet-filter-separator,15px) solid var(--portal-color-white)!important;
+}
+#formal-monthly-calendar-section>div>div:nth-child(2){
+  border-top:0!important;
+}
+#formal-monthly-calendar-section .portal-sheet-column-header{
+  background:var(--portal-color-green)!important;
+  color:#fff!important;
+}
+
+/* Títulos e filtros canônicos não recebem padding vertical legado. */
+.portal-sheet-title-bar > *,
+.portal-sheet-title-row > *,
+.portal-sheet-filter-row > *,
+.portal-sheet-column-header > *{
+  margin-top:0!important;
+  margin-bottom:0!important;
+}
