@@ -4,7 +4,7 @@
 --portal-surface-layer-2:#d5dce0;
 --portal-surface-inner:#fff;
 --portal-surface-border:#bcc8cf;
---portal-separator-size:16px;
+--portal-separator-size:15px;
 }
 #portal-app-root,#portal-app-root main{background:var(--portal-surface-page)!important}
 #portal-header{background:var(--portal-surface-layer-1)!important;border-color:var(--portal-surface-border)!important}
