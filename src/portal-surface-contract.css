@@ -112,3 +112,136 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 #coordenador-page-root .portal-coordinator-filter-row {
   margin-bottom: 0 !important;
 }
+
+
+/* ==========================================================================
+   CONTRATO GLOBAL DE PLANILHAS — nenhuma tela cria variante própria
+   ========================================================================== */
+:root{
+  --portal-sheet-header:var(--portal-green-header,#00633f);
+  --portal-sheet-header-text:#fff;
+  --portal-sheet-pagination:#fff;
+  --portal-sheet-control-bg:#eef2f3;
+  --portal-sheet-control-border:#cbd5e1;
+}
+
+/* Mesmo cabeçalho verde da barra de título em TODAS as planilhas. */
+.portal-spreadsheet-table thead th,
+#public-calendar-cards-section table thead th,
+#biblioteca-tccs-section table thead th,
+#meus-processos-table thead th,
+#coordenador-page-root table thead th{
+  background:var(--portal-sheet-header)!important;
+  color:var(--portal-sheet-header-text)!important;
+}
+
+/* Primeira coluna fixa: cabeçalho + corpo, sem transparência. */
+.portal-spreadsheet-scroll-host .portal-spreadsheet-table th:first-child,
+.portal-spreadsheet-scroll-host .portal-spreadsheet-table td:first-child,
+#public-calendar-cards-section table th:first-child,
+#public-calendar-cards-section table td:first-child,
+#biblioteca-tccs-section table th:first-child,
+#biblioteca-tccs-section table td:first-child,
+#meus-processos-table th:first-child,
+#meus-processos-table td:first-child,
+#coordenador-page-root table th:first-child,
+#coordenador-page-root table td:first-child{
+  position:sticky!important;
+  left:0!important;
+}
+.portal-spreadsheet-scroll-host .portal-spreadsheet-table th:first-child,
+#public-calendar-cards-section table th:first-child,
+#biblioteca-tccs-section table th:first-child,
+#meus-processos-table th:first-child,
+#coordenador-page-root table th:first-child{
+  z-index:24!important;
+  background:var(--portal-sheet-header)!important;
+}
+.portal-spreadsheet-scroll-host .portal-spreadsheet-table td:first-child,
+#public-calendar-cards-section table td:first-child,
+#biblioteca-tccs-section table td:first-child,
+#meus-processos-table td:first-child,
+#coordenador-page-root table td:first-child{
+  z-index:12!important;
+  background:var(--portal-surface-layer-1)!important;
+}
+
+/* Botão circular de configuração/filtro do cabeçalho: menor e menos branco. */
+.portal-spreadsheet-table thead th button,
+#public-calendar-cards-section thead th button,
+#biblioteca-tccs-section thead th button,
+#meus-processos-table thead th button,
+#coordenador-page-root thead th button{
+  width:1.45rem!important;
+  height:1.45rem!important;
+  min-width:1.45rem!important;
+  min-height:1.45rem!important;
+  padding:0!important;
+  background:var(--portal-sheet-control-bg)!important;
+  border-color:var(--portal-sheet-control-border)!important;
+  color:#273444!important;
+  box-shadow:none!important;
+}
+
+/* Paginação sempre branca. */
+[data-settings-sheet="true"] [class*="pagination"],
+.portal-spreadsheet-table + [class*="pagination"],
+.portal-table-pagination,
+[data-portal-pagination="true"]{
+  background:var(--portal-sheet-pagination)!important;
+}
+
+/* Separador único: exatamente 16px. Nada de faixas acumuladas. */
+#formal-monthly-calendar-section>div>div:nth-child(2),
+#public-calendar-cards-section .portal-defense-filter-row,
+#meus-processos-page-container .portal-meus-processos-filter-row,
+#coordenador-page-root .portal-coordinator-filter-row{
+  border-top:16px solid #fff!important;
+  border-bottom-width:0!important;
+  margin-top:0!important;
+}
+
+/* Pop-up de planilha = a própria planilha; elimina moldura interna inútil. */
+.portal-settings-single-pane[data-portal-sheet-workspace="true"]{
+  padding:0!important;
+  background:#fff!important;
+}
+[data-settings-sheet="true"]{
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+}
+[data-settings-sheet="true"] .portal-spreadsheet-scroll-host,
+[data-settings-sheet="true"] .portal-audit-table-shell{
+  border-left:0!important;
+  border-right:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+
+/* Configurações: popup é o container principal, não uma caixa dentro de outra. */
+.portal-settings-single-pane{
+  background:var(--portal-surface-page)!important;
+}
+.portal-settings-single-pane > #portal-models-workspace,
+.portal-settings-single-pane > .portal-workspace,
+.portal-settings-single-pane > .portal-master-models-catalog{
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+}
+#portal-settings-hub{
+  background:transparent!important;
+}
+
+/* Texto de tabela sem margens verticais implícitas. */
+.portal-spreadsheet-table :is(th,td,p,span,strong),
+#public-calendar-cards-section table :is(th,td,p,span,strong),
+#biblioteca-tccs-section table :is(th,td,p,span,strong),
+#meus-processos-table :is(th,td,p,span,strong),
+#coordenador-page-root table :is(th,td,p,span,strong){
+  margin-top:0!important;
+  margin-bottom:0!important;
+}
