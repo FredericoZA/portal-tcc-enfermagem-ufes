@@ -152,13 +152,21 @@ test('contrato visual global carrega por último a folha autoritativa de superf�
   assert.ok(main.lastIndexOf('portal-surface-contract.css') > main.lastIndexOf('portal-spreadsheet-runtime.css'));
 });
 
-test('contrato visual global mantém quatro camadas e separador branco de 16 px', () => {
+test('contrato visual global mantém a paleta anterior e a nova geometria aprovada', () => {
   const surfaceContract = read('src/portal-surface-contract.css');
   assert.match(surfaceContract, /--portal-surface-page:#f1f5f9/);
   assert.match(surfaceContract, /--portal-surface-layer-1:#e1e6e9/);
   assert.match(surfaceContract, /--portal-surface-layer-2:#d5dce0/);
   assert.match(surfaceContract, /--portal-surface-inner:#fff/);
-  assert.match(surfaceContract, /--portal-separator-size:16px/);
+  assert.match(surfaceContract, /--portal-separator-size:15px/);
+  assert.match(surfaceContract, /--portal-sheet-title-height:45px/);
+  assert.match(surfaceContract, /--portal-sheet-title-divider:5px/);
+  assert.match(surfaceContract, /--portal-sheet-filter-height:40px/);
+  assert.match(surfaceContract, /--portal-sheet-content-divider:15px/);
+  assert.match(surfaceContract, /--portal-sheet-column-header-height:35px/);
+  assert.match(surfaceContract, /--portal-sheet-row-min-height:30px/);
+  assert.match(surfaceContract, /--portal-sheet-pagination-height:24px/);
+  assert.match(surfaceContract, /--portal-sheet-column-control-size:15px/);
   assert.match(surfaceContract, /#meus-processos-table tbody td:first-child/);
   assert.match(surfaceContract, /#coordenador-page-root tbody td:nth-child\(2\)/);
 });
@@ -171,8 +179,8 @@ test('todas as planilhas obedecem ao mesmo contrato visual', () => {
   assert.match(css, /#biblioteca-tccs-section table th:first-child/);
   assert.match(css, /position:sticky!important/);
   assert.match(css, /--portal-sheet-pagination:#fff/);
-  assert.match(css, /width:1\.45rem!important/);
-  assert.match(css, /border-top:16px solid #fff!important/);
+  assert.match(css, /width:var\(--portal-sheet-column-control-size\)!important/);
+  assert.match(css, /border-top-width:var\(--portal-sheet-title-divider\)!important/);
 });
 
 test('popups de planilha usam a própria planilha como caixa principal', () => {
