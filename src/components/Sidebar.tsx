@@ -16,7 +16,7 @@ import {
   MapPin,
   Settings,
 } from 'lucide-react';
-import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
+import { loadSiteLayoutConfig, PORTAL_COLORS, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 
 interface SidebarProps {
   currentTab: string;
@@ -138,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
     const r = parseInt(clean.substring(0, 2), 16), g = parseInt(clean.substring(2, 4), 16), b = parseInt(clean.substring(4, 6), 16);
     return (r * 299 + g * 587 + b * 114) / 1000 > 140;
   };
-  const isHeaderLight = isColorLight(layoutConfig.sidebarHeaderBgColor || '#03271f');
+  const isHeaderLight = isColorLight(layoutConfig.sidebarHeaderBgColor || PORTAL_COLORS.deepGreenDark);
   const sidebarHeaderTitleColor = layoutConfig.sidebarTitleColor || (isHeaderLight ? '#0f172a' : '#ffffff');
   const sidebarFooterTextColor = isHeaderLight ? '#0f172a' : '#ffffff';
   const sidebarFooterMutedColor = isHeaderLight ? '#64748b' : '#d6d9d7';
@@ -158,7 +158,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
     {isOpenMobile && <div id="sidebar-mobile-backdrop" className="fixed inset-0 bg-slate-900/60 z-40 lg:hidden backdrop-blur-xs" onClick={() => setIsOpenMobile(false)} />}
     {isCollapsed && <div id="sidebar-hover-trigger" className="hidden lg:flex fixed left-0 top-0 bottom-0 w-3 z-45 bg-slate-200/40 hover:bg-emerald-600/10 border-r border-slate-300/30 hover:border-emerald-500/50 items-center justify-center transition-all duration-150 cursor-pointer group" onMouseEnter={() => setIsHovered(true)} title="Passe o mouse aqui para abrir o menu lateral"><ChevronLeft className="w-3.5 h-3.5 text-slate-500 opacity-0 group-hover:opacity-100 rotate-180 transition-opacity duration-150" /></div>}
     <div id="sidebar-layout-spacer" className={`hidden lg:block transition-all duration-300 ease-in-out shrink-0 overflow-hidden ${isCollapsed ? 'w-0' : 'w-64'}`} />
-    <aside id="portal-sidebar" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} style={{backgroundColor: layoutConfig.sidebarBgColor || '#06372d',borderColor: layoutConfig.sidebarDividerColor || '#365349',color: layoutConfig.sidebarTextColor || '#f8fafc'}} className={`fixed top-0 bottom-0 left-0 z-50 w-64 text-slate-100 flex flex-col border-r transition-all duration-300 ease-in-out ${isOpenMobile ? 'translate-x-0' : '-translate-x-full'} ${isCollapsed ? (isHovered ? 'lg:translate-x-0 lg:shadow-2xl' : 'lg:-translate-x-full') : 'lg:translate-x-0'}`}>
+    <aside id="portal-sidebar" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} style={{backgroundColor: layoutConfig.sidebarBgColor || PORTAL_COLORS.deepGreen,borderColor: layoutConfig.sidebarDividerColor || '#365349',color: layoutConfig.sidebarTextColor || '#f8fafc'}} className={`fixed top-0 bottom-0 left-0 z-50 w-64 text-slate-100 flex flex-col border-r transition-all duration-300 ease-in-out ${isOpenMobile ? 'translate-x-0' : '-translate-x-full'} ${isCollapsed ? (isHovered ? 'lg:translate-x-0 lg:shadow-2xl' : 'lg:-translate-x-full') : 'lg:translate-x-0'}`}>
       <div style={{backgroundColor: layoutConfig.sidebarHeaderBgColor || '#03271f',borderColor: layoutConfig.sidebarDividerColor || '#365349'}} className="px-2.5 py-3.5 border-b flex items-center justify-between relative group">
         <button type="button" onClick={() => handleNav('home')} className="flex items-center gap-2 hover:opacity-95 transition-opacity focus:outline-none cursor-pointer flex-1 min-w-0" title="Ir para o Calendário Público Inicial">
           <NursingEmblemLogo size={72} className="shrink-0" customSrc={sidebarLogoSrc} />
