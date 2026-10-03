@@ -245,3 +245,28 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
   margin-top:0!important;
   margin-bottom:0!important;
 }
+
+
+/* Configurações: menos caixas. O popup já é a moldura principal. */
+.portal-commission-identity-panel{
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+}
+.portal-commission-identity-panel table thead th{
+  background:var(--portal-sheet-header)!important;
+  color:#fff!important;
+}
+.portal-commission-identity-panel table{
+  border-left:0!important;
+  border-right:0!important;
+}
+.portal-settings-single-pane .portal-master-models-catalog,
+.portal-settings-single-pane .portal-studio{
+  margin:0!important;
+}
+#configuracoes-page-container,
+#portal-settings-hub{
+  background:transparent!important;
+}
