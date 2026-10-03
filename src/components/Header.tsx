@@ -4,7 +4,7 @@ import { Menu, Shield, User } from 'lucide-react';
 import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { NotificationBell } from './NotificationBell';
-import { PORTAL_BRAND_COLORS } from '../utils/portalSemanticTokens';
+import { PORTAL_BRAND_COLORS, PORTAL_SURFACE_COLORS } from '../utils/portalSemanticTokens';
 
 interface HeaderProps {
   onOpenMobileSidebar: () => void;
@@ -31,7 +31,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome })
   }, []);
 
   const headerStyle: React.CSSProperties = {
-    backgroundColor: layoutConfig.headerBgColor || '#f2f2f2',
+    backgroundColor: layoutConfig.headerBgColor || PORTAL_SURFACE_COLORS.layer2,
     ...(layoutConfig.headerBgImage ? { backgroundImage: `url(${layoutConfig.headerBgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
   };
   const headerLogo = String(layoutConfig.headerCustomLogoUrl || '');
