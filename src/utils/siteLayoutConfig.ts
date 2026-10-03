@@ -115,18 +115,6 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
 };
 
 export const SITE_LAYOUT_EVENT = 'site_layout_config_changed';
-const STORAGE_KEY = 'site_layout_custom_config_v1';
-const LEGACY_COLORS: Record<string, string> = {
-  '#5f6937': PORTAL_COLORS.neutralAction, '#4f582e': PORTAL_COLORS.neutralActionHover, '#616d36': PORTAL_COLORS.divider,
-  '#aab388': PORTAL_COLORS.popupMoss, '#e0e3cf': '#e5e7eb', '#f0f1e7': '#f8fafc', '#c8ceb0': PORTAL_COLORS.mutedLight, '#525c2e': PORTAL_COLORS.sidebarActive, '#343b20': PORTAL_COLORS.deepGreen, '#252a16': PORTAL_COLORS.deepGreenDark,
-  '#cbd5d1': PORTAL_COLORS.popupMoss,
-  '#344125': PORTAL_COLORS.moss, '#435649': PORTAL_COLORS.moss, '#005830': PORTAL_COLORS.moss,
-  '#47866a': PORTAL_COLORS.popupMoss, '#1ea952': PORTAL_COLORS.popupMoss
-};
-function migrateColor(value: unknown, fallback?: string): string | undefined {
-  if (typeof value !== 'string' || !value.trim()) return fallback;
-  return LEGACY_COLORS[value.toLowerCase()] || value;
-}
 function canonicalSidebarOrder(rawOrder: unknown): string[] {
   const allowed = new Set(['home','biblioteca','DIVIDER_1','meus-processos','coordenador','configuracoes','indicadores','DIVIDER_2','como-chegar','tutorial','fluxo-tcc','replicar']);
   const stored = Array.isArray(rawOrder) ? rawOrder.filter((item): item is string => typeof item === 'string' && allowed.has(item)) : [];
