@@ -270,3 +270,16 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 #portal-settings-hub{
   background:transparent!important;
 }
+
+
+/* Hub de Configurações: barras operacionais seguem a identidade verde, sem painel cinza. */
+#portal-settings-hub .portal-settings-title-bar{
+  background:var(--portal-green-header)!important;
+  border-color:var(--portal-green-action-border,#286a4d)!important;
+}
+#portal-settings-hub .portal-settings-title-bar :is(strong,span,svg){
+  color:#fff!important;
+}
+#portal-settings-hub .portal-settings-title-bar span span{
+  color:rgba(255,255,255,.78)!important;
+}
