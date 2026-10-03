@@ -4,7 +4,7 @@ import { portalFontFamily } from './portalFonts';
 import type { TableTextFormat, HeaderTheme } from '../components/TableColumnSelectorPanel';
 import { DEFAULT_TABLE_TEXT_FORMAT } from '../components/TableColumnSelectorPanel';
 import { tableInheritsGlobalAppearance } from './portalAppearanceLinks';
-import { getPortalToneStyle, resolvePortalFilterTone, PORTAL_FILTER_PALETTE, PORTAL_PROTECTED_COLORS } from './portalSemanticTokens';
+import { getPortalToneStyle, resolvePortalFilterTone } from './portalSemanticTokens';
 export type { TableTextFormat, HeaderTheme };
 export { DEFAULT_TABLE_TEXT_FORMAT };
 
@@ -16,12 +16,12 @@ export const STATIC_PORTAL_TABLE_FORMAT: TableTextFormat = {
   // TableColumnSelectorPanel importa este arquivo e isso criaria ciclo em TDZ.
   headerTheme: 'colored',
   headerTextColor: 'custom',
-  customHeaderColor: PORTAL_PROTECTED_COLORS.structuralGreen,
-  customHeaderSecondaryColor: PORTAL_PROTECTED_COLORS.structuralGreen,
-  customHeaderTextColor: PORTAL_PROTECTED_COLORS.white,
+  customHeaderColor: '#154d41',
+  customHeaderSecondaryColor: '#013d2b',
+  customHeaderTextColor: '#ffffff',
   filterStyle: 'custom',
-  toolbarButtonColor: PORTAL_PROTECTED_COLORS.white,
-  toolbarButtonTextColor: PORTAL_PROTECTED_COLORS.black,
+  toolbarButtonColor: '#154d41',
+  toolbarButtonTextColor: '#b8d8c3',
   toolbarButtonBorderColor: 'transparent',
   toolbarButtonBorderWidth: 'none',
   toolbarButtonOpacity: 1,
@@ -954,18 +954,18 @@ export function getFilterChipProps(
   const itemConfig = customConfigs[key] || defaultConfigs[key] || {
     key,
     label: fallbackLabel || key.toUpperCase(),
-    emoji: fallbackEmoji || '',
-    dotColor: PORTAL_FILTER_PALETTE.F04,
-    bgColor: PORTAL_FILTER_PALETTE.F04,
-    textColor: PORTAL_PROTECTED_COLORS.black,
-    borderColor: PORTAL_FILTER_PALETTE.F04,
-    badgeBgColor: PORTAL_FILTER_PALETTE.F04,
-    badgeTextColor: PORTAL_PROTECTED_COLORS.black,
+    emoji: fallbackEmoji || '🟡',
+    dotColor: '#eab308',
+    bgColor: '#fef9c3',
+    textColor: '#713f12',
+    borderColor: '#eab308',
+    badgeBgColor: '#eab308',
+    badgeTextColor: '#ffffff',
   };
 
   const label = itemConfig.label || fallbackLabel || key.toUpperCase();
   const emoji = itemConfig.emoji || fallbackEmoji || '';
-  const dotColor = itemConfig.dotColor || PORTAL_FILTER_PALETTE.F04;
+  const dotColor = itemConfig.dotColor || '#eab308';
   const semanticTone =
     resolvePortalFilterTone(key) ||
     resolvePortalFilterTone(itemConfig.key || '') ||
@@ -978,19 +978,11 @@ export function getFilterChipProps(
       label,
       emoji: '',
       dotColor: String(semanticStyle.borderColor || dotColor),
-      buttonStyle: isSelected
-        ? {
-            ...semanticStyle,
-            opacity: 1,
-            boxShadow: 'none',
-          } as CSSProperties
-        : {
-            backgroundColor: PORTAL_PROTECTED_COLORS.white,
-            color: PORTAL_PROTECTED_COLORS.black,
-            borderColor: semanticStyle.borderColor,
-            opacity: 1,
-            boxShadow: 'none',
-          } as CSSProperties,
+      buttonStyle: {
+        ...semanticStyle,
+        opacity: isSelected ? 1 : 0.7,
+        boxShadow: 'none',
+      } as CSSProperties,
       badgeStyle: {
         backgroundColor: semanticStyle.borderColor,
         color: semanticStyle.color,
