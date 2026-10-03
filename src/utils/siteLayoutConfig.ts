@@ -57,23 +57,35 @@ export interface SiteLayoutConfig {
 }
 
 export const PORTAL_COLORS = {
-  moss: '#005830',
-  mossDark: '#004626',
-  deepGreen: '#06372d',
-  deepGreenDark: '#03271f',
+  // Paleta estrutural canônica.
+  page: '#f5f5f5',
+  surface: '#f0f0f0',
+  layer: '#e5e5e5',
+  white: '#ffffff',
+  selected: '#909090',
+  border: '#d0d0d0',
+  moss: '#006030',
+  mossDark: '#004820',
+
+  // Identidade lateral já aprovada; não alterar sem ordem explícita.
+  deepGreen: '#011f17',
+  deepGreenDark: '#011812',
   sidebarActive: '#154d41',
-  neutralAction: '#5b635e',
-  neutralActionHover: '#48504c',
+  sidebarAccent: '#337959',
+  divider: '#174c3b',
   lightText: '#f8fafc',
   mutedLight: '#d6d9d7',
-  divider: '#365349',
+
+  // Exceção de marca externa.
   whatsapp: '#25D366',
-  // Ações e pop-ups usam um verde mais claro que o cabeçalho das planilhas.
   whatsappButton: '#337959',
-  surface: '#f2f2f2',
-  ice: '#e5e9ed',
-  iceSelected: '#d6dce4',
-  popupMoss: '#337959'
+
+  // Compatibilidade para consumidores antigos.
+  neutralAction: '#5b635e',
+  neutralActionHover: '#48504c',
+  ice: '#e5e5e5',
+  iceSelected: '#909090',
+  popupMoss: '#006030'
 } as const;
 
 export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
@@ -82,7 +94,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   headerShowRoleBadges: true,
   headerShowEmblem: true,
   headerCustomLogoUrl: '/api/public/runtime-assets/2466f8db8eb7c79073c197bea09fa53946ca0ca1392a192792fa0d4f0f2e420f',
-  headerBgColor: PORTAL_COLORS.surface,
+  headerBgColor: PORTAL_COLORS.layer,
   headerTextColor: '#0f172a',
   headerTitleColor: PORTAL_COLORS.popupMoss,
   headerBgImage: '',
@@ -98,17 +110,17 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
     home: '📅', biblioteca: '📚', 'como-chegar': '📍', tutorial: '❓', 'fluxo-tcc': '🔀', replicar: '🧩', 'meus-processos': '📋', coordenador: '🏛️', configuracoes: '⚙️', indicadores: '📊'
   },
   sidebarIconMode: 'emoji', sidebarSessionLabel: 'Sessão ativa', sidebarLocationText: 'Campus de Maruípe · Vitória/ES',
-  sidebarBgColor: '#011f17',
-  sidebarHeaderBgColor: '#011812',
+  sidebarBgColor: PORTAL_COLORS.deepGreen,
+  sidebarHeaderBgColor: PORTAL_COLORS.deepGreenDark,
   sidebarTextColor: '#e8f3ed',
-  sidebarTitleColor: '#ffffff', sidebarSubtitleColor: PORTAL_COLORS.popupMoss,
-  sidebarActiveBgColor: '#154d41', sidebarActiveTextColor: '#ffffff', sidebarActiveBorderColor: PORTAL_COLORS.popupMoss,
+  sidebarTitleColor: '#ffffff', sidebarSubtitleColor: PORTAL_COLORS.sidebarAccent,
+  sidebarActiveBgColor: '#154d41', sidebarActiveTextColor: '#ffffff', sidebarActiveBorderColor: PORTAL_COLORS.sidebarAccent,
   sidebarDividerColor: '#174c3b', sidebarDividerStyle: 'solid', sidebarShowDividers: true,
   sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'DIVIDER_2', 'indicadores', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'],
   footerLocationText: 'Departamento de Enfermagem • CCS/UFES • Campus de Maruípe • Vitória/ES',
   footerPresidentLabel: 'Presidente da Comissão', footerPresidentName: '', footerMembersLabel: 'Membros da Comissão', footerMembersList: [],
   footerDevTitle: 'Desenvolvimento da Plataforma e Suporte', footerDevName: '', footerWhatsappLabel: 'WhatsApp Secretaria', footerWhatsappUrl: '', footerContactEmail: '',
-  footerQrCodeUrl: '', footerQrLabel: '', footerBgColor: '#011812', footerTextColor: '#ffffff', footerMutedTextColor: '#b5c8bf',
+  footerQrCodeUrl: '', footerQrLabel: '', footerBgColor: PORTAL_COLORS.deepGreen, footerTextColor: '#ffffff', footerMutedTextColor: '#b5c8bf',
   footerBorderColor: '#174c3b', footerDividerColor: '#174c3b', footerWhatsappBtnBg: '#337959', footerWhatsappBtnText: '#ffffff',
   footerQrBgColor: '#ffffff', footerQrTextColor: '#0f172a', footerQrBorderColor: '#ffffff'
 };
@@ -155,7 +167,7 @@ function normalizeVisualConfig(parsed: any): SiteLayoutConfig {
     headerCustomLogoUrl: typeof parsed?.headerCustomLogoUrl === 'string' ? parsed.headerCustomLogoUrl : '',
     headerInstitutionText: parsed?.headerInstitutionText || DEFAULT_SITE_LAYOUT_CONFIG.headerInstitutionText,
     headerCourseTitle: normalizeHeaderCourseTitle(parsed?.headerCourseTitle),
-    headerBgColor: PORTAL_COLORS.surface,
+    headerBgColor: PORTAL_COLORS.layer,
     headerTextColor: '#0f172a',
     headerTitleColor: PORTAL_COLORS.popupMoss,
     sidebarLogoType:'custom', sidebarCustomLogoUrl:typeof parsed?.sidebarCustomLogoUrl==='string'?parsed.sidebarCustomLogoUrl:'', sidebarIconMode:parsed?.sidebarIconMode==='lucide'?'lucide':'emoji',
@@ -163,14 +175,14 @@ function normalizeVisualConfig(parsed: any): SiteLayoutConfig {
     sidebarSubtitle: normalizeSidebarSubtitle(parsed?.sidebarSubtitle),
     sidebarBgColor:migrateColor(parsed?.sidebarBgColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarBgColor), sidebarHeaderBgColor:migrateColor(parsed?.sidebarHeaderBgColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarHeaderBgColor),
     sidebarTextColor:migrateColor(parsed?.sidebarTextColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarTextColor), sidebarTitleColor:migrateColor(parsed?.sidebarTitleColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarTitleColor),
-    sidebarSubtitleColor: PORTAL_COLORS.popupMoss,
+    sidebarSubtitleColor: PORTAL_COLORS.sidebarAccent,
     sidebarActiveBgColor:PORTAL_COLORS.sidebarActive,
     sidebarActiveTextColor:'#ffffff',
-    sidebarActiveBorderColor:PORTAL_COLORS.popupMoss, sidebarDividerColor:migrateColor(parsed?.sidebarDividerColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarDividerColor),
+    sidebarActiveBorderColor:PORTAL_COLORS.sidebarAccent, sidebarDividerColor:migrateColor(parsed?.sidebarDividerColor,DEFAULT_SITE_LAYOUT_CONFIG.sidebarDividerColor),
     sidebarNavOrder:canonicalSidebarOrder(parsed?.sidebarNavOrder),
     sidebarNavLabels:{...DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavLabels,...(parsed?.sidebarNavLabels||{}),'como-chegar':'Como chegar',indicadores:'Indicadores','fluxo-tcc':'Fluxo do TCC',replicar:'Replicar Portal'},
     sidebarNavEmojis:{...DEFAULT_SITE_LAYOUT_CONFIG.sidebarNavEmojis,...(parsed?.sidebarNavEmojis||{}),'como-chegar':'📍',indicadores:'📊','fluxo-tcc':'🔀',replicar:'🧩'},
-    footerMembersList:Array.isArray(parsed?.footerMembersList)?parsed.footerMembersList:[], footerBgColor:migrateColor(parsed?.footerBgColor,DEFAULT_SITE_LAYOUT_CONFIG.footerBgColor),
+    footerMembersList:Array.isArray(parsed?.footerMembersList)?parsed.footerMembersList:[], footerBgColor:PORTAL_COLORS.deepGreen,
     footerTextColor:migrateColor(parsed?.footerTextColor,DEFAULT_SITE_LAYOUT_CONFIG.footerTextColor), footerMutedTextColor:migrateColor(parsed?.footerMutedTextColor,DEFAULT_SITE_LAYOUT_CONFIG.footerMutedTextColor),
     footerBorderColor:migrateColor(parsed?.footerBorderColor,DEFAULT_SITE_LAYOUT_CONFIG.footerBorderColor), footerDividerColor:migrateColor(parsed?.footerDividerColor,DEFAULT_SITE_LAYOUT_CONFIG.footerDividerColor),
     footerWhatsappBtnBg:PORTAL_COLORS.popupMoss, footerWhatsappBtnText:migrateColor(parsed?.footerWhatsappBtnText,DEFAULT_SITE_LAYOUT_CONFIG.footerWhatsappBtnText),
