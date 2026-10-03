@@ -59,11 +59,9 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       className={`portal-settings-single-pane min-w-0 flex-1 overflow-auto ${fullBleed ? 'p-0' : 'p-3 sm:p-4'}`}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
-      style={{ backgroundColor: fullBleed ? 'var(--portal-surface-layer-2)' : 'var(--portal-surface-layer-1)' }}
+      style={{ backgroundColor: 'var(--portal-surface-page)' }}
     >
-      <div className={fullBleed ? 'min-h-full w-full' : 'min-h-full rounded-xl'} style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>
-        {singlePaneContent}
-      </div>
+      {singlePaneContent}
     </main>
   ) : (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
