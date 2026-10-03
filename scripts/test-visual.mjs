@@ -203,11 +203,11 @@ try {
               fullWidth: Boolean(filterRect && bannerRect && Math.abs(filterRect.left-bannerRect.left)<=1 && Math.abs(filterRect.right-bannerRect.right)<=1)
             };
           });
-          if (calendarVisual.cellCount < 28 || calendarVisual.dayColors.length !== 1 || calendarVisual.dayColors[0] !== 'rgb(183, 183, 183)') {
-            report.errors.push(`master-calendario-${width}: dias do mês não usam #B7B7B7 (${JSON.stringify(calendarVisual)}).`);
+          if (calendarVisual.cellCount < 28 || calendarVisual.dayColors.length !== 1 || calendarVisual.dayColors[0] !== 'rgb(213, 220, 224)') {
+            report.errors.push(`master-calendario-${width}: dias do mês não usam #D5DCE0 (${JSON.stringify(calendarVisual)}).`);
           }
-          if (!calendarVisual.emptyCount || calendarVisual.emptyColors.length !== 1 || calendarVisual.emptyColors[0] !== 'rgb(217, 217, 217)') {
-            report.errors.push(`master-calendario-${width}: vazios do calendário não usam #D9D9D9 (${JSON.stringify(calendarVisual)}).`);
+          if (!calendarVisual.emptyCount || calendarVisual.emptyColors.length !== 1 || calendarVisual.emptyColors[0] !== 'rgb(225, 230, 233)') {
+            report.errors.push(`master-calendario-${width}: vazios do calendário não usam #E1E6E9 (${JSON.stringify(calendarVisual)}).`);
           }
           if (calendarVisual.divider < 2 || calendarVisual.dividerColor !== 'rgb(255, 255, 255)' || calendarVisual.paddingTop < 8 || !calendarVisual.fullWidth) {
             report.errors.push(`master-calendario-${width}: divisor branco/filtros fora do padrão (${JSON.stringify(calendarVisual)}).`);
@@ -230,7 +230,7 @@ try {
               inner: inner ? getComputedStyle(inner).backgroundColor : ''
             };
           }, tab);
-          if (layerContract.panel !== 'rgb(217, 217, 217)' || layerContract.card !== 'rgb(183, 183, 183)' || (tab !== 'tutorial' && layerContract.inner !== 'rgb(255, 255, 255)')) {
+          if (layerContract.panel !== 'rgb(225, 230, 233)' || layerContract.card !== 'rgb(213, 220, 224)' || (tab !== 'tutorial' && layerContract.inner !== 'rgb(255, 255, 255)')) {
             report.errors.push(`master-${label}-${width}: contrato das quatro camadas divergente (${JSON.stringify(layerContract)}).`);
           }
         }
@@ -263,7 +263,7 @@ try {
             const box = document.querySelector('#portal-tutorial-finish-card');
             return box ? getComputedStyle(box).backgroundColor : '';
           });
-          if (tutorialColor !== 'rgb(183, 183, 183)') {
+          if (tutorialColor !== 'rgb(213, 220, 224)') {
             report.errors.push(`master-como-usar-${width}: caixa final fora da camada cinza (${tutorialColor}).`);
           }
         }
@@ -311,8 +311,8 @@ try {
           if (coordinatorUi.chipState.some((item) => item.transform !== 'none' || item.margin !== '0px')) {
             report.errors.push(`master-presidencia-${width}: filtro altera margem/transformação ao selecionar (${JSON.stringify(coordinatorUi.chipState)}).`);
           }
-          if (!coordinatorUi.dots.includes('rgb(99, 79, 162)') || !coordinatorUi.dots.includes('rgb(84, 128, 140)')) {
-            report.errors.push(`master-presidencia-${width}: filtros não exibem roxo e azul-petróleo da paleta protegida (${JSON.stringify(coordinatorUi.dots)}).`);
+          if (!coordinatorUi.dots.includes('rgb(34, 160, 107)') || !coordinatorUi.dots.includes('rgb(244, 180, 0)')) {
+            report.errors.push(`master-presidencia-${width}: filtros não exibem um verde e um amarelo (${JSON.stringify(coordinatorUi.dots)}).`);
           }
           if (!coordinatorUi.orderOk) {
             report.errors.push(`master-presidencia-${width}: ordem Asten/Gov/lupa/atualização divergente.`);
