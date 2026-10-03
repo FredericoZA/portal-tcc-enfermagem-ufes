@@ -538,3 +538,31 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
   margin-top:0!important;
   margin-bottom:0!important;
 }
+
+
+/* Primeira coluna congelada também nas planilhas administrativas do popup. */
+[data-settings-sheet="true"] table th:first-child,
+[data-settings-sheet="true"] table td:first-child{
+  position:sticky!important;
+  left:0!important;
+}
+[data-settings-sheet="true"] table th:first-child{
+  z-index:30!important;
+  background:var(--portal-color-green)!important;
+}
+[data-settings-sheet="true"] table td:first-child{
+  z-index:20!important;
+  background:var(--portal-color-layer)!important;
+}
+
+/* Barra de filtros: controles compactos, sem margem vertical e com altura de 25 px. */
+.portal-defense-filter-row .portal-table-filter-chip,
+.portal-meus-processos-filter-row .portal-table-filter-chip,
+.portal-coordinator-filter-row .portal-table-filter-chip{
+  height:25px!important;
+  min-height:25px!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
+  margin-top:0!important;
+  margin-bottom:0!important;
+}
