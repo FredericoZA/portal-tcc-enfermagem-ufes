@@ -1,36 +1,112 @@
 import type { CSSProperties } from 'react';
 
+/**
+ * Paleta canônica protegida do Portal TCC.
+ *
+ * Regra de governança: estes valores são fonte de verdade. Componentes podem
+ * consumir os tokens, mas não criar tons estruturais ou semânticos paralelos.
+ */
+export const PORTAL_PROTECTED_COLORS = {
+  surfaceLevel1: '#f2f2f2',
+  surfaceLevel2: '#d9d9d9',
+  surfaceLevel3: '#b7b7b7',
+  white: '#ffffff',
+  structuralGreen: '#006000',
+  neutralSelected: '#909090',
+  black: '#000000',
+  sidebar: '#011f17',
+  footer: '#011f17',
+  navigationActive: '#154c41',
+} as const;
+
+/**
+ * Paleta oficial de filtros/status fornecida para a instalação UFES.
+ * F01..F10 preservam a ordem da referência visual aprovada.
+ */
+export const PORTAL_FILTER_PALETTE = {
+  F01: '#982b15', // marrom / terracota
+  F02: '#bb271a', // vermelho
+  F03: '#da954b', // laranja
+  F04: '#eac451', // amarelo
+  F05: '#78a65a', // verde
+  F06: '#54808c', // azul-petróleo
+  F07: '#4b77d1', // azul
+  F08: '#5083c1', // azul médio
+  F09: '#634fa2', // roxo
+  F10: '#9b5277', // vinho
+} as const;
+
 export const PORTAL_SURFACE_COLORS = {
-  page: '#f1f5f9',
-  layer1: '#e1e6e9',
-  layer2: '#d5dce0',
-  inner: '#ffffff',
+  page: PORTAL_PROTECTED_COLORS.surfaceLevel1,
+  layer1: PORTAL_PROTECTED_COLORS.surfaceLevel2,
+  layer2: PORTAL_PROTECTED_COLORS.surfaceLevel3,
+  inner: PORTAL_PROTECTED_COLORS.white,
 } as const;
 
 export const PORTAL_BRAND_COLORS = {
-  header: '#005830',
-  action: '#337959',
-  actionBorder: '#286a4d',
+  header: PORTAL_PROTECTED_COLORS.structuralGreen,
+  action: PORTAL_PROTECTED_COLORS.structuralGreen,
+  actionBorder: PORTAL_PROTECTED_COLORS.structuralGreen,
 } as const;
 
+/**
+ * Distribuição semântica deliberadamente distante.
+ *
+ * Vínculos: amarelo, laranja, azul e marrom, nesta ordem, para evitar que
+ * categorias adjacentes dependam de tons próximos.
+ */
 export const PORTAL_SEMANTIC_COLORS = {
   defense: {
-    defended: { bg: '#bed8c3', border: '#719a79', text: '#23472b' },
-    upcoming: { bg: '#e8dda7', border: '#b49d4f', text: '#4a4020' },
+    defended: {
+      bg: PORTAL_FILTER_PALETTE.F05,
+      border: PORTAL_FILTER_PALETTE.F05,
+      text: PORTAL_PROTECTED_COLORS.black,
+    },
+    upcoming: {
+      bg: PORTAL_FILTER_PALETTE.F04,
+      border: PORTAL_FILTER_PALETTE.F04,
+      text: PORTAL_PROTECTED_COLORS.black,
+    },
   },
-  // Quatro famílias cromáticas fáceis de distinguir na leitura rápida:
-  // amarelo, laranja, verde e azul. A mesma família alimenta bolinha e processo.
   processRole: {
-    student: { bg: '#fde68a', border: '#d4a300', text: '#3f3000' },
-    board: { bg: '#fdba74', border: '#ea580c', text: '#431407' },
-    evaluator: { bg: '#bbf7d0', border: '#16a34a', text: '#14532d' },
-    viewer: { bg: '#bfdbfe', border: '#2563eb', text: '#1e3a8a' },
+    student: {
+      bg: PORTAL_FILTER_PALETTE.F04,
+      border: PORTAL_FILTER_PALETTE.F04,
+      text: PORTAL_PROTECTED_COLORS.black,
+    },
+    board: {
+      bg: PORTAL_FILTER_PALETTE.F03,
+      border: PORTAL_FILTER_PALETTE.F03,
+      text: PORTAL_PROTECTED_COLORS.black,
+    },
+    evaluator: {
+      bg: PORTAL_FILTER_PALETTE.F07,
+      border: PORTAL_FILTER_PALETTE.F07,
+      text: PORTAL_PROTECTED_COLORS.black,
+    },
+    viewer: {
+      bg: PORTAL_FILTER_PALETTE.F01,
+      border: PORTAL_FILTER_PALETTE.F01,
+      text: PORTAL_PROTECTED_COLORS.white,
+    },
   },
   signature: {
-    pending: { bg: '#d8c98f', border: '#9b884b', text: '#3e361c' },
-    signed: { bg: '#c2d0c2', border: '#7e907e', text: '#263728' },
+    pending: {
+      bg: PORTAL_FILTER_PALETTE.F09,
+      border: PORTAL_FILTER_PALETTE.F09,
+      text: PORTAL_PROTECTED_COLORS.white,
+    },
+    signed: {
+      bg: PORTAL_FILTER_PALETTE.F06,
+      border: PORTAL_FILTER_PALETTE.F06,
+      text: PORTAL_PROTECTED_COLORS.black,
+    },
   },
-  neutral: { bg: '#e2e8f0', border: '#94a3b8', text: '#334155' },
+  neutral: {
+    bg: PORTAL_PROTECTED_COLORS.neutralSelected,
+    border: PORTAL_PROTECTED_COLORS.neutralSelected,
+    text: PORTAL_PROTECTED_COLORS.black,
+  },
 } as const;
 
 export type PortalSemanticTone =
@@ -82,6 +158,10 @@ export function getPortalToneCssVars(tone: PortalSemanticTone): CSSProperties {
 
 export function getPortalSemanticRootVars(): CSSProperties {
   return {
+    '--portal-surface-level-1': PORTAL_PROTECTED_COLORS.surfaceLevel1,
+    '--portal-surface-level-2': PORTAL_PROTECTED_COLORS.surfaceLevel2,
+    '--portal-surface-level-3': PORTAL_PROTECTED_COLORS.surfaceLevel3,
+    '--portal-surface-level-4': PORTAL_PROTECTED_COLORS.white,
     '--portal-surface-page': PORTAL_SURFACE_COLORS.page,
     '--portal-surface-layer-1': PORTAL_SURFACE_COLORS.layer1,
     '--portal-surface-layer-2': PORTAL_SURFACE_COLORS.layer2,
@@ -89,6 +169,19 @@ export function getPortalSemanticRootVars(): CSSProperties {
     '--portal-green-header': PORTAL_BRAND_COLORS.header,
     '--portal-green-action': PORTAL_BRAND_COLORS.action,
     '--portal-green-action-border': PORTAL_BRAND_COLORS.actionBorder,
+    '--portal-selection-neutral': PORTAL_PROTECTED_COLORS.neutralSelected,
+    '--portal-sidebar-footer': PORTAL_PROTECTED_COLORS.sidebar,
+    '--portal-navigation-active': PORTAL_PROTECTED_COLORS.navigationActive,
+    '--portal-filter-f01': PORTAL_FILTER_PALETTE.F01,
+    '--portal-filter-f02': PORTAL_FILTER_PALETTE.F02,
+    '--portal-filter-f03': PORTAL_FILTER_PALETTE.F03,
+    '--portal-filter-f04': PORTAL_FILTER_PALETTE.F04,
+    '--portal-filter-f05': PORTAL_FILTER_PALETTE.F05,
+    '--portal-filter-f06': PORTAL_FILTER_PALETTE.F06,
+    '--portal-filter-f07': PORTAL_FILTER_PALETTE.F07,
+    '--portal-filter-f08': PORTAL_FILTER_PALETTE.F08,
+    '--portal-filter-f09': PORTAL_FILTER_PALETTE.F09,
+    '--portal-filter-f10': PORTAL_FILTER_PALETTE.F10,
     '--portal-defense-defended-bg': PORTAL_SEMANTIC_COLORS.defense.defended.bg,
     '--portal-defense-defended-border': PORTAL_SEMANTIC_COLORS.defense.defended.border,
     '--portal-defense-defended-text': PORTAL_SEMANTIC_COLORS.defense.defended.text,
@@ -161,4 +254,5 @@ export function resolvePortalFilterTone(key: string): PortalSemanticTone | null 
   return FILTER_TONE_ALIASES[normalizeSemanticKey(key)] || null;
 }
 
-export const PORTAL_SECTION_DIVIDER_PX = 16;
+/** Separador branco canônico entre filtro e cabeçalho de colunas. */
+export const PORTAL_SECTION_DIVIDER_PX = 15;
