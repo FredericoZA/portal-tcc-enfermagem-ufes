@@ -72,3 +72,30 @@ Cores e estilos fora deste padrão só são permitidos quando representam inform
 - elementos de identidade institucional.
 
 Essas exceções não alteram a hierarquia-base de superfícies.
+
+
+## 9. Contrato único de planilhas
+
+Todas as planilhas do Portal usam o mesmo componente visual. O conteúdo e as colunas podem variar, mas a estrutura não.
+
+- barra de título e cabeçalho das colunas usam o mesmo verde institucional;
+- separador branco único de 16 px;
+- primeira coluna fixa, incluindo cabeçalho e corpo;
+- texto padrão preto;
+- botões comuns brancos;
+- controles de configuração do cabeçalho são menores e em cinza muito claro;
+- paginação é branca;
+- mesmas regras de densidade, bordas internas, rolagem e sticky;
+- não criar variante visual específica para uma tela.
+
+## 10. Containers e pop-ups
+
+O próprio popup é a moldura principal. Uma caixa que apenas envolve outra caixa, sem função própria, deve ser removida.
+
+Para listagens:
+`popup → planilha`
+
+Para editores:
+`popup → seções funcionais → campos/controles`
+
+Pop-ups com planilha não devem ter uma moldura lateral adicional em volta da tabela. O cabeçalho da planilha é parte direta da estrutura do popup.
