@@ -27,9 +27,11 @@ A hierarquia deve ser visível. Nunca usar a mesma cor para fundo geral, planilh
 - Sidebar: escura.
 - Rodapé: escuro.
 - Barra superior: mesma família da superfície principal da planilha.
-- Separador branco entre cabeçalho/filtros/conteúdo: **16 px**.
-- O separador deve ter a mesma espessura em todas as telas.
-- Evitar empilhar bordas adicionais sobre o separador de 16 px.
+- Barra de título da planilha: **45 px**.
+- Quando houver filtros: separador de **5 px**, barra de filtros de **40 px** e separador de **15 px** antes do cabeçalho.
+- Quando não houver filtros: usar apenas o separador de **15 px** entre título e cabeçalho.
+- Cabeçalho útil das colunas: **35 px**.
+- Não empilhar bordas adicionais sobre esses separadores.
 
 ## 4. Botões
 
@@ -53,9 +55,14 @@ A hierarquia deve ser visível. Nunca usar a mesma cor para fundo geral, planilh
 
 - O Portal deve ser compacto.
 - Evitar margens superiores e inferiores sem função.
-- Evitar cabeçalhos altos.
+- Barra de título: **45 px**.
+- Barra de filtros: **40 px**.
+- Cabeçalho das colunas: **35 px**.
+- Linha de dados: mínimo de **30 px**.
+- Paginação integrada: **24 px**.
+- Controle circular do cabeçalho: **15 × 15 px**.
 - Evitar cartões com padding vertical excessivo.
-- Inputs e botões devem manter altura consistente.
+- Inputs e botões fora das planilhas mantêm suas dimensões anteriores.
 - Espaçamento deve separar grupos funcionais, não criar áreas vazias.
 
 ## 7. Regra de implementação
@@ -79,7 +86,11 @@ Essas exceções não alteram a hierarquia-base de superfícies.
 Todas as planilhas do Portal usam o mesmo componente visual. O conteúdo e as colunas podem variar, mas a estrutura não.
 
 - barra de título e cabeçalho das colunas usam o mesmo verde institucional;
-- separador branco único de 16 px;
+- planilha com filtro: **45 / 5 / 40 / 15 / 35 px**;
+- planilha sem filtro: **45 / 15 / 35 px**;
+- linha de dados com mínimo de **30 px**;
+- paginação de **24 px**;
+- controle do cabeçalho de **15 × 15 px**;
 - primeira coluna fixa, incluindo cabeçalho e corpo;
 - texto padrão preto;
 - botões comuns brancos;
