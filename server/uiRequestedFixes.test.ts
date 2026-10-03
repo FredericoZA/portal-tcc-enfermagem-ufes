@@ -183,7 +183,7 @@ test('todas as planilhas obedecem ao mesmo contrato visual', () => {
   assert.match(css, /#biblioteca-tccs-section table th:first-child/);
   assert.match(css, /position:sticky!important/);
   assert.match(css, /--portal-sheet-pagination:#fff/);
-  assert.match(css, /width:15px!important/);
+  assert.match(css, /width:var\(--portal-sheet-column-control-size,15px\)!important/);
   assert.match(css, /--portal-sheet-title-height:45px/);
   assert.match(css, /--portal-sheet-title-separator:5px/);
   assert.match(css, /--portal-sheet-filter-height:40px/);
@@ -217,10 +217,13 @@ test('rodapé usa exatamente o fundo principal da barra lateral', () => {
 
 test('densidade canônica remove folga vertical das planilhas', () => {
   const surface = read('src/portal-surface-contract.css');
-  assert.match(surface, /padding-top:5px!important/);
-  assert.match(surface, /padding-bottom:5px!important/);
-  assert.match(surface, /min-height:15px!important;[\s\S]*height:15px!important/);
-  assert.match(surface, /width:15px!important;[\s\S]*height:15px!important/);
+  const tokens = read('src/utils/portalSemanticTokens.ts');
+  assert.match(tokens, /cellPaddingY: 5/);
+  assert.match(tokens, /columnControl: 15/);
+  assert.match(tokens, /pagination: 15/);
+  assert.match(surface, /padding-top:var\(--portal-sheet-cell-padding-y,5px\)!important/);
+  assert.match(surface, /min-height:var\(--portal-sheet-pagination-height,15px\)!important/);
+  assert.match(surface, /width:var\(--portal-sheet-column-control-size,15px\)!important/);
 });
 
 
@@ -236,4 +239,18 @@ test('planilhas administrativas congelam a primeira coluna', () => {
 test('divisores estruturais usam 15 px como fonte única de verdade', () => {
   const tokens = read('src/utils/portalSemanticTokens.ts');
   assert.match(tokens, /PORTAL_SECTION_DIVIDER_PX = 15/);
+});
+
+
+test('dimensões canônicas ficam centralizadas em um único token', () => {
+  const tokens = read('src/utils/portalSemanticTokens.ts');
+  assert.match(tokens, /PORTAL_SHEET_DIMENSIONS/);
+  assert.match(tokens, /titleBar: 45/);
+  assert.match(tokens, /titleSeparator: 5/);
+  assert.match(tokens, /filterBar: 40/);
+  assert.match(tokens, /filterSeparator: 15/);
+  assert.match(tokens, /columnHeader: 35/);
+  assert.match(tokens, /columnControl: 15/);
+  assert.match(tokens, /pagination: 15/);
+  assert.match(tokens, /cellPaddingY: 5/);
 });
