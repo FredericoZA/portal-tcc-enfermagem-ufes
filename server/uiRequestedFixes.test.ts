@@ -52,7 +52,9 @@ test('Meus TCCs mantém combinação de filtros com quatro cores bem separadas e
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.evaluator/);
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.viewer/);
   for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(tokens, new RegExp(border));
-  assert.match(css, /portal-native-all-filter\[data-selected="true"\][\s\S]*background: #fff !important[\s\S]*color: #111827 !important/);
+  const surface = read('src/portal-surface-contract.css');
+  assert.match(surface, /\.portal-native-all-filter\[data-selected="true"\][\s\S]*background:var\(--portal-color-selected\)!important/);
+  assert.match(surface, /--portal-color-selected:#909090/);
 });
 
 test('Lista de Defesas e Repositório padronizam o cabeçalho como Processo pela camada canônica', () => {
@@ -152,13 +154,16 @@ test('contrato visual global carrega por último a folha autoritativa de superf�
   assert.ok(main.lastIndexOf('portal-surface-contract.css') > main.lastIndexOf('portal-spreadsheet-runtime.css'));
 });
 
-test('contrato visual global mantém quatro camadas e separador branco de 16 px', () => {
+test('contrato visual global mantém a escala estrutural canônica', () => {
   const surfaceContract = read('src/portal-surface-contract.css');
-  assert.match(surfaceContract, /--portal-surface-page:#f1f5f9/);
-  assert.match(surfaceContract, /--portal-surface-layer-1:#e1e6e9/);
-  assert.match(surfaceContract, /--portal-surface-layer-2:#d5dce0/);
+  const tokens = read('src/utils/portalSemanticTokens.ts');
+  assert.match(surfaceContract, /--portal-surface-page:#f5f5f5/);
+  assert.match(surfaceContract, /--portal-surface-layer-1:#f0f0f0/);
+  assert.match(surfaceContract, /--portal-surface-layer-2:#e5e5e5/);
   assert.match(surfaceContract, /--portal-surface-inner:#fff/);
-  assert.match(surfaceContract, /--portal-separator-size:16px/);
+  assert.match(surfaceContract, /--portal-separator-size:15px/);
+  assert.match(surfaceContract, /--portal-color-selected:#909090/);
+  assert.match(tokens, /sidebar: '#011f17'/);
   assert.match(surfaceContract, /#meus-processos-table tbody td:first-child/);
   assert.match(surfaceContract, /#coordenador-page-root tbody td:nth-child\(2\)/);
 });
@@ -171,13 +176,13 @@ test('todas as planilhas obedecem ao mesmo contrato visual', () => {
   assert.match(css, /#biblioteca-tccs-section table th:first-child/);
   assert.match(css, /position:sticky!important/);
   assert.match(css, /--portal-sheet-pagination:#fff/);
-  assert.match(css, /width:1\.45rem!important/);
+  assert.match(css, /width:15px!important/);
   assert.match(css, /--portal-sheet-title-height:45px/);
   assert.match(css, /--portal-sheet-title-separator:5px/);
   assert.match(css, /--portal-sheet-filter-height:40px/);
   assert.match(css, /--portal-sheet-filter-separator:15px/);
   assert.match(css, /--portal-sheet-column-header-height:35px/);
-  assert.match(css, /--portal-sheet-green:#005830/);
+  assert.match(css, /--portal-sheet-green:#006030/);
 });
 
 test('popups de planilha usam a própria planilha como caixa principal', () => {
@@ -193,4 +198,20 @@ test('estúdio embutido não cria uma caixa principal dentro do popup', () => {
   const studio = read('src/components/IntegrationStudioPanel.tsx');
   assert.match(studio, /hideTabs \? 'mb-0 overflow-visible border-0 bg-transparent shadow-none'/);
   assert.match(studio, /hideTabs \? 'hidden' : 'portal-studio-heading/);
+});
+
+
+test('rodapé usa exatamente o fundo principal da barra lateral', () => {
+  const layout = read('src/utils/siteLayoutConfig.ts');
+  assert.match(layout, /sidebarBgColor: PORTAL_COLORS\.deepGreen/);
+  assert.match(layout, /footerBgColor: PORTAL_COLORS\.deepGreen/);
+  assert.match(layout, /deepGreen: '#011f17'/);
+});
+
+test('densidade canônica remove folga vertical das planilhas', () => {
+  const surface = read('src/portal-surface-contract.css');
+  assert.match(surface, /padding-top:5px!important/);
+  assert.match(surface, /padding-bottom:5px!important/);
+  assert.match(surface, /min-height:15px!important;[\s\S]*height:15px!important/);
+  assert.match(surface, /width:15px!important;[\s\S]*height:15px!important/);
 });
