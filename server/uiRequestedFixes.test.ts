@@ -41,12 +41,15 @@ test('paginação fica no canto inferior direito e se recompõe após rerender',
   assert.match(css, /\.portal-spreadsheet-pager-left,[\s\S]*display: none/);
 });
 
-test('Meus TCCs mantém combinação de filtros com quatro cores bem separadas e Todos neutro', () => {
+test('Meus TCCs usa seleção única de filtro e preserva quatro cores semânticas', () => {
   const page = read('src/pages/MeusProcessosPage.tsx');
   const tokens = read('src/utils/portalSemanticTokens.ts');
-  assert.match(page, /selectedRoleCategories/);
-  assert.match(page, /toggleRoleCategory/);
-  assert.match(page, /selectedRoleCategories\.includes\(roleCat\)/);
+  assert.match(page, /selectedRoleCategory/);
+  assert.match(page, /selectRoleCategory/);
+  assert.match(page, /return selectedRoleCategory === roleCat/);
+  assert.doesNotMatch(page, /selectedRoleCategories/);
+  assert.doesNotMatch(page, /toggleRoleCategory/);
+  assert.match(page, /setSelectedRoleCategory\(null\)/);
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.student/);
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.board/);
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.evaluator/);
@@ -68,8 +71,10 @@ test('Lista de Defesas e Repositório padronizam o cabeçalho como Processo pela
   assert.match(home, /portal-semantic-tone/);
 });
 
-test('Meus TCCs e Presidente preservam pequena faixa verde após os filtros', () => {
-  assert.match(css, /\.portal-meus-processos-filter-row,[\s\S]*\.portal-coordinator-filter-row[\s\S]*border-bottom: 2px solid var\(--portal-green-header, #005830\)/);
+test('Meus TCCs e Presidente usam separador branco de 15 px após os filtros', () => {
+  const surface = read('src/portal-surface-contract.css');
+  assert.match(surface, /--portal-sheet-filter-separator:15px/);
+  assert.match(surface, /border-bottom:var\(--portal-sheet-filter-separator\) solid #fff!important/);
 });
 
 test('tutorial remove a caixa redundante de visão selecionada', () => {
@@ -214,4 +219,13 @@ test('densidade canônica remove folga vertical das planilhas', () => {
   assert.match(surface, /padding-bottom:5px!important/);
   assert.match(surface, /min-height:15px!important;[\s\S]*height:15px!important/);
   assert.match(surface, /width:15px!important;[\s\S]*height:15px!important/);
+});
+
+
+test('planilhas administrativas congelam a primeira coluna', () => {
+  const surface = read('src/portal-surface-contract.css');
+  assert.match(surface, /\[data-settings-sheet="true"\] table th:first-child/);
+  assert.match(surface, /\[data-settings-sheet="true"\] table td:first-child/);
+  assert.match(surface, /position:sticky!important/);
+  assert.match(surface, /background:var\(--portal-color-layer\)!important/);
 });
