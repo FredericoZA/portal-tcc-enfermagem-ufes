@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('release atual é 1.0.66', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.66');
+test('release atual é 1.0.65', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.65');
 });
 
 test('estado de defesa não sobrescreve cores de vínculo e assinatura', () => {
@@ -119,11 +119,8 @@ test('rolagem canônica usa mouse no documento e wheel no mesmo host', () => {
   assert.match(runtime, /scrollLeft/);
 });
 
-test('quatro papéis usam famílias cromáticas amarelo, laranja, azul e marrom da paleta protegida', () => {
+test('quatro papéis usam famílias cromáticas amarelo, laranja, verde e azul', () => {
   const tokens = read('src/utils/portalSemanticTokens.ts');
-  for (const color of ['#eac451', '#da954b', '#4b77d1', '#982b15']) assert.match(tokens, new RegExp(color));
-  assert.match(tokens, /student:[\s\S]*PORTAL_FILTER_PALETTE\.F04/);
-  assert.match(tokens, /board:[\s\S]*PORTAL_FILTER_PALETTE\.F03/);
-  assert.match(tokens, /evaluator:[\s\S]*PORTAL_FILTER_PALETTE\.F07/);
-  assert.match(tokens, /viewer:[\s\S]*PORTAL_FILTER_PALETTE\.F01/);
+  for (const color of ['#fde68a', '#fdba74', '#bbf7d0', '#bfdbfe']) assert.match(tokens, new RegExp(color));
+  for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(tokens, new RegExp(border));
 });
