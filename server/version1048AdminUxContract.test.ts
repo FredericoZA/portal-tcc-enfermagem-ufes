@@ -10,11 +10,11 @@ test('superfícies administrativas usam a paleta canônica do Portal', async () 
     source('src/components/SettingsWorkspaceModal.tsx'),
     source('src/portal-semantic-ui.css'),
   ]);
-  assert.ok(tokens.includes("surfaceLevel1: '#f2f2f2'"));
-  assert.ok(tokens.includes("surfaceLevel2: '#d9d9d9'"));
-  assert.ok(tokens.includes("surfaceLevel3: '#b7b7b7'"));
-  assert.ok(tokens.includes("white: '#ffffff'"));
-  assert.ok(tokens.includes("structuralGreen: '#006000'"));
+  assert.ok(tokens.includes("layer1: '#e1e6e9'"));
+  assert.ok(tokens.includes("layer2: '#d5dce0'"));
+  assert.ok(tokens.includes("inner: '#ffffff'"));
+  assert.ok(tokens.includes("action: '#337959'"));
+  assert.ok(tokens.includes("header: '#005830'"));
   assert.ok(modal.includes("var(--portal-surface-layer-1)"));
   assert.ok(modal.includes("var(--portal-surface-layer-2)"));
   assert.ok(modal.includes("var(--portal-surface-inner)"));
