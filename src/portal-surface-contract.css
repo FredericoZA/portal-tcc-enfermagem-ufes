@@ -1,10 +1,10 @@
 :root{
---portal-surface-page:#f1f5f9;
---portal-surface-layer-1:#e1e6e9;
---portal-surface-layer-2:#d5dce0;
+--portal-surface-page:#f5f5f5;
+--portal-surface-layer-1:#f0f0f0;
+--portal-surface-layer-2:#e5e5e5;
 --portal-surface-inner:#fff;
---portal-surface-border:#bcc8cf;
---portal-separator-size:16px;
+--portal-surface-border:#d0d0d0;
+--portal-separator-size:15px;
 }
 #portal-app-root,#portal-app-root main{background:var(--portal-surface-page)!important}
 #portal-header{background:var(--portal-surface-layer-1)!important;border-color:var(--portal-surface-border)!important}
@@ -118,7 +118,7 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
    CONTRATO GLOBAL DE PLANILHAS — nenhuma tela cria variante própria
    ========================================================================== */
 :root{
-  --portal-sheet-green:#005830;
+  --portal-sheet-green:#006030;
   --portal-sheet-title-height:45px;
   --portal-sheet-title-separator:5px;
   --portal-sheet-filter-height:40px;
@@ -128,7 +128,7 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
   --portal-sheet-header-text:#fff;
   --portal-sheet-pagination:#fff;
   --portal-sheet-control-bg:#fff;
-  --portal-sheet-control-border:#cbd5e1;
+  --portal-sheet-control-border:#d0d0d0;
 }
 
 /* Mesmo cabeçalho verde da barra de título em TODAS as planilhas. */
@@ -169,7 +169,7 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 #meus-processos-table td:first-child,
 #coordenador-page-root table td:first-child{
   z-index:12!important;
-  background:var(--portal-surface-layer-1)!important;
+  background:var(--portal-surface-layer-2)!important;
 }
 
 /* Botão circular de configuração/filtro do cabeçalho: menor e menos branco. */
@@ -178,10 +178,10 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 #biblioteca-tccs-section thead th button,
 #meus-processos-table thead th button,
 #coordenador-page-root thead th button{
-  width:1.45rem!important;
-  height:1.45rem!important;
-  min-width:1.45rem!important;
-  min-height:1.45rem!important;
+  width:15px!important;
+  height:15px!important;
+  min-width:15px!important;
+  min-height:15px!important;
   padding:0!important;
   background:var(--portal-sheet-control-bg)!important;
   border-color:var(--portal-sheet-control-border)!important;
@@ -343,7 +343,7 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
   box-sizing:border-box!important;
 }
 
-/* As três superfícies verdes usam exatamente #005830. */
+/* As três superfícies verdes usam exatamente #006030. */
 #public-calendar-cards-section>div>div:first-child,
 #biblioteca-tccs-section>div>div:first-child,
 #meus-processos-page-container section>div>div:first-child,
@@ -369,4 +369,172 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 #coordenador-page-root .portal-coordinator-filter-row,
 .portal-spreadsheet-table thead th{
   color:#fff!important;
+}
+
+
+/* ==========================================================================
+   PALETA E DENSIDADE CANÔNICAS — versão 1.0.66
+   ========================================================================== */
+:root{
+  --portal-color-page:#f5f5f5;
+  --portal-color-sheet:#f0f0f0;
+  --portal-color-layer:#e5e5e5;
+  --portal-color-white:#ffffff;
+  --portal-color-selected:#909090;
+  --portal-color-border:#d0d0d0;
+  --portal-color-green:#006030;
+  --portal-color-sidebar:#011f17;
+  --portal-color-text:#000000;
+}
+
+/* Barra superior geral = mesmo cinza estrutural da primeira coluna. */
+#portal-header{
+  background:var(--portal-color-layer)!important;
+  border-color:var(--portal-color-border)!important;
+}
+
+/* Corpo normal de toda planilha. */
+.portal-spreadsheet-table tbody td,
+#public-calendar-cards-section table tbody td,
+#biblioteca-tccs-section table tbody td,
+#meus-processos-table tbody td,
+#coordenador-page-root table tbody td,
+[data-settings-sheet="true"] table tbody td{
+  background:var(--portal-color-sheet)!important;
+  color:var(--portal-color-text)!important;
+  padding-top:5px!important;
+  padding-bottom:5px!important;
+}
+
+/* Somente a primeira coluna recebe o cinza mais escuro. */
+.portal-spreadsheet-table tbody td:first-child,
+#public-calendar-cards-section table tbody td:first-child,
+#biblioteca-tccs-section table tbody td:first-child,
+#meus-processos-table tbody td:first-child,
+#coordenador-page-root table tbody td:first-child,
+[data-settings-sheet="true"] table tbody td:first-child{
+  background:var(--portal-color-layer)!important;
+}
+
+/* Garante que a segunda coluna não herde o tom da coluna congelada. */
+#biblioteca-tccs-section tbody td:nth-child(2),
+#meus-processos-table tbody td:nth-child(2),
+#coordenador-page-root tbody td:nth-child(2),
+[data-settings-sheet="true"] table tbody td:nth-child(2){
+  background:var(--portal-color-sheet)!important;
+}
+
+/* Filtros: branco em repouso, cinza único quando selecionado. */
+.portal-table-filter-chip,
+.portal-table-filter-chip[data-selected="false"],
+.portal-native-all-filter{
+  background:var(--portal-color-white)!important;
+  color:var(--portal-color-text)!important;
+  border-color:var(--portal-color-border)!important;
+}
+.portal-table-filter-chip[data-selected="true"],
+.portal-native-all-filter[data-selected="true"]{
+  background:var(--portal-color-selected)!important;
+  color:var(--portal-color-text)!important;
+  border-color:var(--portal-color-selected)!important;
+  box-shadow:none!important;
+}
+
+/* Cabeçalho de coluna: 35 px e botão secundário 15x15. */
+.portal-spreadsheet-table thead th,
+#public-calendar-cards-section table thead th,
+#biblioteca-tccs-section table thead th,
+#meus-processos-table thead th,
+#coordenador-page-root table thead th,
+[data-settings-sheet="true"] table thead th{
+  height:35px!important;
+  min-height:35px!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
+  background:var(--portal-color-green)!important;
+  color:#fff!important;
+}
+.portal-spreadsheet-table thead th button,
+#public-calendar-cards-section thead th button,
+#biblioteca-tccs-section thead th button,
+#meus-processos-table thead th button,
+#coordenador-page-root thead th button,
+[data-settings-sheet="true"] table thead th button{
+  width:15px!important;
+  height:15px!important;
+  min-width:15px!important;
+  min-height:15px!important;
+  padding:0!important;
+}
+
+/* Planilhas administrativas sem filtros: título 45 + branco 15 + cabeçalho 35. */
+[data-settings-sheet="true"] > header{
+  height:60px!important;
+  min-height:60px!important;
+  padding-top:0!important;
+  padding-bottom:15px!important;
+  border-bottom:0!important;
+  background:
+    linear-gradient(to bottom,
+      var(--portal-color-green) 0,
+      var(--portal-color-green) 45px,
+      var(--portal-color-white) 45px,
+      var(--portal-color-white) 60px)!important;
+  color:#fff!important;
+  box-sizing:border-box!important;
+}
+
+/* Em pop-up de planilha, o cabeçalho do próprio modal é a barra de título. */
+.portal-settings-workspace[data-portal-sheet-workspace="true"] > .portal-settings-workspace-header{
+  height:60px!important;
+  min-height:60px!important;
+  padding-top:0!important;
+  padding-bottom:15px!important;
+  border-bottom:0!important;
+  background:
+    linear-gradient(to bottom,
+      var(--portal-color-green) 0,
+      var(--portal-color-green) 45px,
+      var(--portal-color-white) 45px,
+      var(--portal-color-white) 60px)!important;
+  box-sizing:border-box!important;
+}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] > .portal-settings-workspace-header > *{
+  align-self:flex-start;
+  height:45px;
+  display:flex;
+  align-items:center;
+}
+
+/* O conteúdo do popup de planilha não cria uma segunda caixa. */
+.portal-settings-workspace[data-portal-sheet-workspace="true"],
+.portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-settings-single-pane,
+[data-settings-sheet="true"]{
+  background:var(--portal-color-sheet)!important;
+}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-settings-single-pane{
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+
+/* Paginação = faixa branca integrada de 15 px. */
+.portal-spreadsheet-pager,
+.portal-table-pagination,
+[data-portal-pagination="true"]{
+  min-height:15px!important;
+  height:15px!important;
+  padding-top:0!important;
+  padding-bottom:0!important;
+  margin-top:0!important;
+  margin-bottom:0!important;
+  background:var(--portal-color-white)!important;
+  border-top:0!important;
+}
+
+/* Densidade: texto e controles não adicionam respiro vertical invisível. */
+.portal-spreadsheet-table :is(th,td,p,span,strong,button),
+[data-settings-sheet="true"] table :is(th,td,p,span,strong,button){
+  margin-top:0!important;
+  margin-bottom:0!important;
 }
