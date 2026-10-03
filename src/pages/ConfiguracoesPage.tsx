@@ -2024,8 +2024,8 @@ export const ConfiguracoesPage: React.FC = () => {
       {/* Configurações operacionais: aparência global removida; o visual do Portal é mantido pelo código. */}
       {isMasterAdmin && (
         <>
-          <section id="portal-settings-hub" className="portal-settings-list space-y-2">
-            <div className="flex items-center gap-2 py-1" aria-label="Grupo institucional e plataforma">
+          <section id="portal-settings-hub" className="portal-settings-list space-y-2 bg-transparent">
+            <div className="flex items-center gap-2 py-1 pt-3" aria-label="Grupo institucional e plataforma">
               <span className="h-px flex-1 bg-[#337959]" />
               <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#337959]">Institucional e Plataforma</span>
               <span className="h-px flex-1 bg-[#337959]" />
@@ -2108,7 +2108,7 @@ export const ConfiguracoesPage: React.FC = () => {
               onClose={() => setActiveSettingsPanel(null)}
               sections={
                 activeSettingsPanel === 'identity' ? [
-                  { id: 'identity', label: 'Rodapé e identidade', description: 'Responsáveis, contatos e identidade operacional.', icon: Building2, content: settings ? <section className="rounded-xl border border-slate-300 bg-[#d5dce0] p-3"><MasterAndPresidentConfigForm settings={settings} onSettingsUpdated={() => { void refreshAuth(); showNotification('Configurações atualizadas.'); }} showNotification={showNotification} /><CommissionIdentityPanel isMaster /></section> : null },
+                  { id: 'identity', label: 'Rodapé e identidade', description: 'Responsáveis, contatos e identidade operacional.', icon: Building2, content: settings ? <div className="space-y-3"><MasterAndPresidentConfigForm settings={settings} onSettingsUpdated={() => { void refreshAuth(); showNotification('Configurações atualizadas.'); }} showNotification={showNotification} /><CommissionIdentityPanel isMaster /></div> : null },
                 ] : activeSettingsPanel === 'integrations' ? [
                   { id: 'integrations', label: 'Integrações e plataformas', description: 'Asten, Google, Supabase, Vercel e serviços externos.', icon: Globe, fullBleed: true, content: <InfrastructureIntegrationsPanel isMaster /> },
                 ] : activeSettingsPanel === 'models-documents' ? [

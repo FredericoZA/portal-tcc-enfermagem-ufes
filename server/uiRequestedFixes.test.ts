@@ -162,3 +162,30 @@ test('contrato visual global mantém quatro camadas e separador branco de 16 px'
   assert.match(surfaceContract, /#meus-processos-table tbody td:first-child/);
   assert.match(surfaceContract, /#coordenador-page-root tbody td:nth-child\(2\)/);
 });
+
+
+test('todas as planilhas obedecem ao mesmo contrato visual', () => {
+  const css = read('src/portal-surface-contract.css');
+  assert.match(css, /--portal-sheet-header:var\(--portal-green-header/);
+  assert.match(css, /\.portal-spreadsheet-table thead th/);
+  assert.match(css, /#biblioteca-tccs-section table th:first-child/);
+  assert.match(css, /position:sticky!important/);
+  assert.match(css, /--portal-sheet-pagination:#fff/);
+  assert.match(css, /width:1\.45rem!important/);
+  assert.match(css, /border-top:16px solid #fff!important/);
+});
+
+test('popups de planilha usam a própria planilha como caixa principal', () => {
+  const css = read('src/portal-surface-contract.css');
+  const workspace = read('src/components/SettingsWorkspaceModal.tsx');
+  assert.match(css, /\[data-settings-sheet="true"\]\{/);
+  assert.match(css, /border:0!important/);
+  assert.match(css, /portal-settings-single-pane\[data-portal-sheet-workspace="true"\]/);
+  assert.doesNotMatch(workspace, /<div className=\{fullBleed \? 'min-h-full w-full'/);
+});
+
+test('estúdio embutido não cria uma caixa principal dentro do popup', () => {
+  const studio = read('src/components/IntegrationStudioPanel.tsx');
+  assert.match(studio, /hideTabs \? 'mb-0 overflow-visible border-0 bg-transparent shadow-none'/);
+  assert.match(studio, /hideTabs \? 'hidden' : 'portal-studio-heading/);
+});
