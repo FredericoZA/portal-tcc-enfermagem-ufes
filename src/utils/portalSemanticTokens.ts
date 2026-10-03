@@ -170,4 +170,4 @@ export function resolvePortalFilterTone(key: string): PortalSemanticTone | null 
   return FILTER_TONE_ALIASES[normalizeSemanticKey(key)] || null;
 }
 
-export const PORTAL_SECTION_DIVIDER_PX = 16;
+export const PORTAL_SECTION_DIVIDER_PX = 15;
