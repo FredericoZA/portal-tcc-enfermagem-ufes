@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
 import { useAuth } from '../context/AuthContext';
 import { MapPin, Lightbulb, Info, Car, Check } from 'lucide-react';
-import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
+import { loadSiteLayoutConfig, PORTAL_COLORS, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 
 interface FooterProps { showLocationDirections?: boolean; }
@@ -44,7 +44,7 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
 
   useEffect(()=>{let active=true;if(!whatsappUrl){setGeneratedQrCode('');return()=>{active=false;};}void QRCode.toDataURL(whatsappUrl,{width:420,margin:0,errorCorrectionLevel:'H'}).then(v=>{if(active)setGeneratedQrCode(v);}).catch(()=>{if(active)setGeneratedQrCode('');});return()=>{active=false;};},[whatsappUrl]);
 
-  const footerBg=layoutConfig.footerBgColor||'#03271f', footerText=layoutConfig.footerTextColor||'#fff', footerMuted=layoutConfig.footerMutedTextColor||'#eef1ef', footerBorder=layoutConfig.footerBorderColor||'#365349', footerDivider=layoutConfig.footerDividerColor||'#365349';
+  const footerBg=layoutConfig.footerBgColor||PORTAL_COLORS.deepGreen, footerText=layoutConfig.footerTextColor||'#fff', footerMuted=layoutConfig.footerMutedTextColor||'#eef1ef', footerBorder=layoutConfig.footerBorderColor||'#365349', footerDivider=layoutConfig.footerDividerColor||'#365349';
   const whatsappText=layoutConfig.footerWhatsappBtnText||'#fff';
   const formatTermDate=(value?:string)=>{if(!value)return'';const date=new Date(`${value}T12:00:00`);return Number.isNaN(date.getTime())?value:date.toLocaleDateString('pt-BR');};
 
