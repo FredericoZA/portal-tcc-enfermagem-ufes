@@ -178,10 +178,10 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 #biblioteca-tccs-section thead th button,
 #meus-processos-table thead th button,
 #coordenador-page-root thead th button{
-  width:15px!important;
-  height:15px!important;
-  min-width:15px!important;
-  min-height:15px!important;
+  width:var(--portal-sheet-column-control-size,15px)!important;
+  height:var(--portal-sheet-column-control-size,15px)!important;
+  min-width:var(--portal-sheet-column-control-size,15px)!important;
+  min-height:var(--portal-sheet-column-control-size,15px)!important;
   padding:0!important;
   background:var(--portal-sheet-control-bg)!important;
   border-color:var(--portal-sheet-control-border)!important;
@@ -402,8 +402,8 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 [data-settings-sheet="true"] table tbody td{
   background:var(--portal-color-sheet)!important;
   color:var(--portal-color-text)!important;
-  padding-top:5px!important;
-  padding-bottom:5px!important;
+  padding-top:var(--portal-sheet-cell-padding-y,5px)!important;
+  padding-bottom:var(--portal-sheet-cell-padding-y,5px)!important;
 }
 
 /* Somente a primeira coluna recebe o cinza mais escuro. */
@@ -460,10 +460,10 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 #meus-processos-table thead th button,
 #coordenador-page-root thead th button,
 [data-settings-sheet="true"] table thead th button{
-  width:15px!important;
-  height:15px!important;
-  min-width:15px!important;
-  min-height:15px!important;
+  width:var(--portal-sheet-column-control-size,15px)!important;
+  height:var(--portal-sheet-column-control-size,15px)!important;
+  min-width:var(--portal-sheet-column-control-size,15px)!important;
+  min-height:var(--portal-sheet-column-control-size,15px)!important;
   padding:0!important;
 }
 
@@ -522,8 +522,8 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 .portal-spreadsheet-pager,
 .portal-table-pagination,
 [data-portal-pagination="true"]{
-  min-height:15px!important;
-  height:15px!important;
+  min-height:var(--portal-sheet-pagination-height,15px)!important;
+  height:var(--portal-sheet-pagination-height,15px)!important;
   padding-top:0!important;
   padding-bottom:0!important;
   margin-top:0!important;
