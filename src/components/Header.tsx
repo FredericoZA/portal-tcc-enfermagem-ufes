@@ -4,6 +4,7 @@ import { Menu, Shield, User } from 'lucide-react';
 import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { NotificationBell } from './NotificationBell';
+import { PORTAL_BRAND_COLORS } from '../utils/portalSemanticTokens';
 
 interface HeaderProps {
   onOpenMobileSidebar: () => void;
@@ -11,7 +12,7 @@ interface HeaderProps {
   title?: string;
 }
 
-const COURSE_ACCENT = '#337959';
+const COURSE_ACCENT = PORTAL_BRAND_COLORS.header;
 const PUBLIC_VISITOR_SUFFIX = '@publico.local';
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome }) => {
