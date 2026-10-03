@@ -186,8 +186,8 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
   const [processes, setProcesses] = useState<ProcessData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAllRoles, setShowAllRoles] = useState(true);
-  const [selectedRoleCategories, setSelectedRoleCategories] = useState<ProcessRoleCategory[]>([]);
+  const [selectedRoleCategory, setSelectedRoleCategory] = useState<ProcessRoleCategory | null>(null);
+  const showAllRoles = selectedRoleCategory === null;
 
   // Column selection & order persistence
   const initialMeusProcessosConfig = loadTableConfig('meus_processos', DEFAULT_MEUS_PROCESSOS_ORDER, DEFAULT_MEUS_PROCESSOS_VISIBLE, 25);
@@ -338,11 +338,9 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     return ['ALUNO', 'BANCA', 'AVALIADOR'];
   }, [isMasterAdmin, roleCounts]);
 
-  // Cada botão é um toggle independente. "Todos" também pode coexistir visualmente com outros filtros.
-  const toggleRoleCategory = (cat: ProcessRoleCategory) => {
-    setSelectedRoleCategories((prev) =>
-      prev.includes(cat) ? prev.filter((current) => current !== cat) : [...prev, cat]
-    );
+  // Contrato visual: exatamente um filtro ativo por vez, ou "Todos".
+  const selectRoleCategory = (cat: ProcessRoleCategory) => {
+    setSelectedRoleCategory(cat);
   };
 
   // Contextual action button recommendation for row
@@ -390,8 +388,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
       if (endDate && (!defenseDate || defenseDate > endDate)) return false;
 
       if (showAllRoles) return true;
-      if (selectedRoleCategories.length === 0) return false;
-      return selectedRoleCategories.includes(roleCat);
+      return selectedRoleCategory === roleCat;
     });
 
     // Apply sorting
@@ -848,33 +845,33 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               <div className="flex flex-wrap items-center gap-1.5" data-portal-role-filter-group="true">
                 <button
                   type="button"
-                  onClick={() => setShowAllRoles((current) => !current)}
+                  onClick={() => setSelectedRoleCategory(null)}
                   data-selected={showAllRoles ? 'true' : 'false'}
                   aria-pressed={showAllRoles}
-                  className="portal-standard-filter-chip portal-table-filter-chip portal-native-all-filter flex h-7 shrink-0 cursor-pointer select-none items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-colors"
+                  className="portal-standard-filter-chip portal-table-filter-chip portal-native-all-filter flex h-[25px] shrink-0 cursor-pointer select-none items-center rounded-full border px-3 py-0 text-[10px] font-black uppercase tracking-wider transition-colors"
                   style={showAllRoles
-                    ? { backgroundColor: '#d7ded9', color: '#1f2937', borderColor: '#9aac9f', boxShadow: 'inset 0 0 0 1px #9aac9f' }
-                    : { backgroundColor: '#ffffff', color: '#334155', borderColor: '#cbd5e1', boxShadow: 'none' }}
-                  title="Exibir ou ocultar todos os vínculos"
+                    ? { backgroundColor: '#909090', color: '#000000', borderColor: '#909090', boxShadow: 'none' }
+                    : { backgroundColor: '#ffffff', color: '#000000', borderColor: '#d0d0d0', boxShadow: 'none' }}
+                  title="Exibir todos os vínculos"
                 >
                   <span className="whitespace-nowrap font-extrabold">Todos</span>
                 </button>
                 {availableCategories.map((catKey) => {
                   const cfg = ROLE_CONFIGS[catKey];
-                  const isSelected = selectedRoleCategories.includes(catKey);
+                  const isSelected = selectedRoleCategory === catKey;
                   const count = roleCounts[catKey] || 0;
                   return (
                     <button
                       key={catKey}
                       type="button"
-                      onClick={() => toggleRoleCategory(catKey)}
+                      onClick={() => selectRoleCategory(catKey)}
                       data-portal-role-tone={ROLE_TONES[catKey]}
                       data-selected={isSelected ? 'true' : 'false'}
                       aria-pressed={isSelected}
                       style={isSelected
-                        ? { backgroundColor: cfg.bgColor, color: cfg.textHex, borderColor: cfg.borderColor, boxShadow: `inset 0 0 0 1px ${cfg.borderColor}` }
-                        : { backgroundColor: '#ffffff', color: '#334155', borderColor: '#cbd5e1', boxShadow: 'none' }}
-                      className="portal-standard-filter-chip portal-table-filter-chip flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-colors"
+                        ? { backgroundColor: '#909090', color: '#000000', borderColor: '#909090', boxShadow: 'none' }
+                        : { backgroundColor: '#ffffff', color: '#000000', borderColor: '#d0d0d0', boxShadow: 'none' }}
+                      className="portal-standard-filter-chip portal-table-filter-chip flex h-[25px] shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-full border px-3 py-0 text-[10px] font-black uppercase tracking-wider transition-colors"
                       title={`Alternar TCCs com papel de ${cfg.label}`}
                     >
                       <span
@@ -884,7 +881,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       <span className="whitespace-nowrap font-extrabold">{cfg.label}</span>
                       <span
                         className="text-[9px] px-1.5 py-0.2 rounded-full font-black shadow-2xs"
-                        style={{ backgroundColor: cfg.borderColor, color: '#ffffff' }}
+                        style={{ backgroundColor: '#909090', color: '#ffffff' }}
                       >
                         {count}
                       </span>
