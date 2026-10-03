@@ -15,7 +15,10 @@ test('paleta semântica possui uma única fonte TypeScript e uma camada CSS perm
 
   assert.ok(main.includes("import './portal-semantic-ui.css';"));
   assert.ok(app.includes('getPortalSemanticRootVars()'));
-  assert.ok(tokens.includes("page: '#f1f5f9'"));
+  assert.ok(tokens.includes("surfaceLevel1: '#f2f2f2'"));
+  assert.ok(tokens.includes("surfaceLevel2: '#d9d9d9'"));
+  assert.ok(tokens.includes("surfaceLevel3: '#b7b7b7'"));
+  assert.ok(tokens.includes("structuralGreen: '#006000'"));
   assert.ok(tokens.includes('getPortalSemanticRootVars'));
   assert.ok(tokens.includes('resolvePortalFilterTone'));
   assert.ok(semanticCss.includes('background: var(--portal-tone-bg) !important;'));

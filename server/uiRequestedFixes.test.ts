@@ -51,8 +51,9 @@ test('Meus TCCs mantém combinação de filtros com quatro cores bem separadas e
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.board/);
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.evaluator/);
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.viewer/);
-  for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(tokens, new RegExp(border));
-  assert.match(css, /portal-native-all-filter\[data-selected="true"\][\s\S]*background: #fff !important[\s\S]*color: #111827 !important/);
+  for (const color of ['#eac451', '#da954b', '#4b77d1', '#982b15']) assert.match(tokens, new RegExp(color));
+  const surfaceContract = read('src/portal-surface-contract.css');
+  assert.match(surfaceContract, /portal-native-all-filter\[data-selected="true"\][\s\S]*background: var\(--portal-selection-neutral\)/);
 });
 
 test('Lista de Defesas e Repositório padronizam o cabeçalho como Processo pela camada canônica', () => {
@@ -66,8 +67,11 @@ test('Lista de Defesas e Repositório padronizam o cabeçalho como Processo pela
   assert.match(home, /portal-semantic-tone/);
 });
 
-test('Meus TCCs e Presidente preservam pequena faixa verde após os filtros', () => {
-  assert.match(css, /\.portal-meus-processos-filter-row,[\s\S]*\.portal-coordinator-filter-row[\s\S]*border-bottom: 2px solid var\(--portal-green-header, #005830\)/);
+test('Meus TCCs e Presidente usam separador branco canônico de 15 px antes do cabeçalho', () => {
+  const surfaceContract = read('src/portal-surface-contract.css');
+  assert.match(surfaceContract, /--portal-sheet-content-divider: 15px/);
+  assert.match(surfaceContract, /portal-meus-processos-filter-row[\s\S]*border-top: var\(--portal-sheet-title-divider\) solid #ffffff/);
+  assert.match(surfaceContract, /linear-gradient\([\s\S]*#ffffff var\(--portal-sheet-content-divider\)[\s\S]*var\(--portal-structural-green\)/);
 });
 
 test('tutorial remove a caixa redundante de visão selecionada', () => {
@@ -79,7 +83,7 @@ test('Rodapé e Identidade é exclusivo do Master, persiste e atualiza o rodapé
   assert.match(identity, /apiClient\.updateSettings/);
   assert.match(identity, /await refreshAuth\(\)/);
   assert.match(identity, /commissionPresidentContactEmail/);
-  assert.match(identity, /bg-\[#d5dce0\]/);
+  assert.match(identity, /bg-\[#b7b7b7\]/);
   assert.doesNotMatch(identity, /Acessos administrativos/i);
   assert.doesNotMatch(identity, /createAdministrationTransfer/);
 });
@@ -133,7 +137,7 @@ test('aparência antiga fica inerte e planilhas usam padrão estático do códig
   assert.match(siteLayout, /A aparência estrutural é canônica e versionada no código/);
   assert.doesNotMatch(siteLayout, /localStorage\.getItem\(STORAGE_KEY\)/);
   assert.match(tableFormatters, /STATIC_PORTAL_TABLE_FORMAT/);
-  assert.match(tableFormatters, /customHeaderColor: '#154d41'/);
+  assert.match(tableFormatters, /customHeaderColor: PORTAL_PROTECTED_COLORS\.structuralGreen/);
   assert.doesNotMatch(tableFormatters, /localStorage\.getItem\(GLOBAL_TABLE_CONFIG_KEY\)/);
   assert.match(server, /'portalAppearance','tableAppearance','tableLayouts'/);
   assert.doesNotMatch(server, /normalizeUnifiedAppearance/);
@@ -152,34 +156,36 @@ test('contrato visual global carrega por último a folha autoritativa de superf�
   assert.ok(main.lastIndexOf('portal-surface-contract.css') > main.lastIndexOf('portal-spreadsheet-runtime.css'));
 });
 
-test('contrato visual global mantém quatro camadas e separador branco de 16 px', () => {
+test('contrato visual global mantém quatro camadas protegidas e separador branco de 15 px', () => {
   const surfaceContract = read('src/portal-surface-contract.css');
-  assert.match(surfaceContract, /--portal-surface-page:#f1f5f9/);
-  assert.match(surfaceContract, /--portal-surface-layer-1:#e1e6e9/);
-  assert.match(surfaceContract, /--portal-surface-layer-2:#d5dce0/);
-  assert.match(surfaceContract, /--portal-surface-inner:#fff/);
-  assert.match(surfaceContract, /--portal-separator-size:16px/);
-  assert.match(surfaceContract, /#meus-processos-table tbody td:first-child/);
-  assert.match(surfaceContract, /#coordenador-page-root tbody td:nth-child\(2\)/);
+  assert.match(surfaceContract, /--portal-surface-level-1: #f2f2f2/);
+  assert.match(surfaceContract, /--portal-surface-level-2: #d9d9d9/);
+  assert.match(surfaceContract, /--portal-surface-level-3: #b7b7b7/);
+  assert.match(surfaceContract, /--portal-surface-level-4: #ffffff/);
+  assert.match(surfaceContract, /--portal-sheet-content-divider: 15px/);
+  assert.match(surfaceContract, /#meus-processos-table td:first-child/);
+  assert.match(surfaceContract, /#coordenador-page-root table\[data-portal-spreadsheet\] tbody > tr > td:nth-child\(2\)/);
 });
 
 
 test('todas as planilhas obedecem ao mesmo contrato visual', () => {
   const css = read('src/portal-surface-contract.css');
-  assert.match(css, /--portal-sheet-header:var\(--portal-green-header/);
+  assert.match(css, /--portal-sheet-header: var\(--portal-structural-green\)/);
   assert.match(css, /\.portal-spreadsheet-table thead th/);
   assert.match(css, /#biblioteca-tccs-section table th:first-child/);
-  assert.match(css, /position:sticky!important/);
-  assert.match(css, /--portal-sheet-pagination:#fff/);
-  assert.match(css, /width:1\.45rem!important/);
-  assert.match(css, /border-top:16px solid #fff!important/);
+  assert.match(css, /position: sticky !important/);
+  assert.match(css, /--portal-sheet-pagination: #ffffff/);
+  assert.match(css, /--portal-sheet-column-control-size: 15px/);
+  assert.match(css, /--portal-sheet-title-height: 45px/);
+  assert.match(css, /--portal-sheet-filter-height: 40px/);
+  assert.match(css, /--portal-sheet-column-header-height: 35px/);
 });
 
 test('popups de planilha usam a própria planilha como caixa principal', () => {
   const css = read('src/portal-surface-contract.css');
   const workspace = read('src/components/SettingsWorkspaceModal.tsx');
-  assert.match(css, /\[data-settings-sheet="true"\]\{/);
-  assert.match(css, /border:0!important/);
+  assert.match(css, /\[data-settings-sheet="true"\] \{/);
+  assert.match(css, /border: 0 !important/);
   assert.match(css, /portal-settings-single-pane\[data-portal-sheet-workspace="true"\]/);
   assert.doesNotMatch(workspace, /<div className=\{fullBleed \? 'min-h-full w-full'/);
 });
