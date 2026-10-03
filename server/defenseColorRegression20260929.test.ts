@@ -12,10 +12,12 @@ test('estado cromático da defesa depende somente do início comparado ao agora'
   assert.equal(getDefenseStateFromTimes('2026-09-30T09:00:00-03:00', undefined, now), 'upcoming');
 });
 
-test('paleta de defesa usa verde e amarelo foscos canônicos', async () => {
+test('paleta de defesa usa amarelo e verde da paleta protegida', async () => {
   const tokens = await source('src/utils/portalSemanticTokens.ts');
-  assert.match(tokens, /defended:\s*\{\s*bg:\s*'#bed8c3',\s*border:\s*'#719a79',\s*text:\s*'#23472b'\s*\}/);
-  assert.match(tokens, /upcoming:\s*\{\s*bg:\s*'#e8dda7',\s*border:\s*'#b49d4f',\s*text:\s*'#4a4020'\s*\}/);
+  assert.match(tokens, /F04:\s*'#eac451'/);
+  assert.match(tokens, /F05:\s*'#78a65a'/);
+  assert.match(tokens, /defended:[\s\S]*PORTAL_FILTER_PALETTE\.F05/);
+  assert.match(tokens, /upcoming:[\s\S]*PORTAL_FILTER_PALETTE\.F04/);
 });
 
 test('lista de defesas não deduz mais cor pela zebra da linha', async () => {
