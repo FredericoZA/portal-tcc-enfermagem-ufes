@@ -19,6 +19,17 @@ export const PORTAL_BRAND_COLORS = {
   sidebar: '#011f17',
 } as const;
 
+export const PORTAL_SHEET_DIMENSIONS = {
+  titleBar: 45,
+  titleSeparator: 5,
+  filterBar: 40,
+  filterSeparator: 15,
+  columnHeader: 35,
+  columnControl: 15,
+  pagination: 15,
+  cellPaddingY: 5,
+} as const;
+
 export const PORTAL_SEMANTIC_COLORS = {
   defense: {
     defended: { bg: '#bed8c3', border: '#719a79', text: '#23472b' },
@@ -98,6 +109,14 @@ export function getPortalSemanticRootVars(): CSSProperties {
     '--portal-green-header': PORTAL_BRAND_COLORS.header,
     '--portal-green-action': PORTAL_BRAND_COLORS.action,
     '--portal-green-action-border': PORTAL_BRAND_COLORS.actionBorder,
+    '--portal-sheet-title-height': `${PORTAL_SHEET_DIMENSIONS.titleBar}px`,
+    '--portal-sheet-title-separator': `${PORTAL_SHEET_DIMENSIONS.titleSeparator}px`,
+    '--portal-sheet-filter-height': `${PORTAL_SHEET_DIMENSIONS.filterBar}px`,
+    '--portal-sheet-filter-separator': `${PORTAL_SHEET_DIMENSIONS.filterSeparator}px`,
+    '--portal-sheet-column-header-height': `${PORTAL_SHEET_DIMENSIONS.columnHeader}px`,
+    '--portal-sheet-column-control-size': `${PORTAL_SHEET_DIMENSIONS.columnControl}px`,
+    '--portal-sheet-pagination-height': `${PORTAL_SHEET_DIMENSIONS.pagination}px`,
+    '--portal-sheet-cell-padding-y': `${PORTAL_SHEET_DIMENSIONS.cellPaddingY}px`,
     '--portal-defense-defended-bg': PORTAL_SEMANTIC_COLORS.defense.defended.bg,
     '--portal-defense-defended-border': PORTAL_SEMANTIC_COLORS.defense.defended.border,
     '--portal-defense-defended-text': PORTAL_SEMANTIC_COLORS.defense.defended.text,
