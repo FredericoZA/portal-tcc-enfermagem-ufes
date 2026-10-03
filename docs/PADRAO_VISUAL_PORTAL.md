@@ -4,8 +4,8 @@ Este documento registra os invariantes visuais do Portal. Eles devem ser reutili
 
 ## 1. Hierarquia de superfícies
 
-1. **Fundo geral da página:** branco-gelo `#f1f5f9`.
-2. **Superfície principal de tela/planilha:** `#e1e6e9`.
+1. **Fundo geral da página:** branco-gelo `#f5f5f5`.
+2. **Superfície principal de tela/planilha:** `#e5e5e5`.
 3. **Blocos/células internas:** `#d5dce0`.
 4. **Conteúdo de contraste, inputs e cartões internos:** branco `#ffffff`.
 
@@ -42,7 +42,7 @@ A hierarquia deve ser visível. Nunca usar a mesma cor para fundo geral, planilh
 
 ## 5. Pop-ups e modais
 
-- Fundo principal do pop-up: `#e1e6e9`.
+- Fundo principal do pop-up: `#e5e5e5`.
 - Campos e cartões internos podem usar branco.
 - Cabeçalho deve seguir a identidade institucional.
 - Evitar padding vertical excessivo.
@@ -105,12 +105,52 @@ Pop-ups com planilha não devem ter uma moldura lateral adicional em volta da ta
 
 A sequência visual é fixa e vale para todas as planilhas:
 
-1. **Barra de título:** 45 px, fundo `#005830`.
+1. **Barra de título:** 45 px, fundo `#006030`.
 2. **Linha branca:** 5 px.
-3. **Barra de filtro:** 40 px verdes, fundo `#005830`.
+3. **Barra de filtro:** 40 px verdes, fundo `#006030`.
 4. **Separador branco:** 15 px.
-5. **Cabeçalho das colunas:** 35 px, fundo `#005830`.
+5. **Cabeçalho das colunas:** 35 px, fundo `#006030`.
 
 Altura total do bloco superior: **140 px**.
 
 Nenhum componente local pode somar padding, margin ou border que altere essas medidas visuais.
+
+
+## 12. Paleta estrutural canônica
+
+A interface usa uma escala estrutural curta e memorável. Hexadecimais próximos foram normalizados para reduzir variações acidentais entre componentes.
+
+| Token | Cor | Uso |
+|---|---|---|
+| `--portal-color-page` | `#F5F5F5` | fundo geral do Portal |
+| `--portal-color-sheet` | `#F0F0F0` | corpo normal das planilhas e superfície operacional |
+| `--portal-color-layer` | `#E5E5E5` | barra superior geral, primeira coluna congelada e camada estrutural mais forte |
+| `--portal-color-white` | `#FFFFFF` | botões neutros, separadores, paginação e campos internos |
+| `--portal-color-selected` | `#909090` | estado selecionado de filtros neutros |
+| `--portal-color-border` | `#D0D0D0` | linhas e divisores neutros |
+| `--portal-color-green` | `#006030` | barra de título, barra de filtro e cabeçalho das planilhas |
+| `--portal-color-sidebar` | `#011F17` | barra lateral e rodapé |
+| `--portal-color-text` | `#000000` | texto estrutural principal |
+
+A barra lateral mantém desenho e comportamento aprovados. O rodapé adota o mesmo fundo principal `#011F17`, reduzindo uma cor estrutural do sistema.
+
+### Hierarquia de superfícies
+
+A ordem preferencial para caixas e camadas é:
+
+1. página: `#F5F5F5`;
+2. superfície funcional: `#F0F0F0`;
+3. camada estrutural/primeira coluna: `#E5E5E5`;
+4. superfície interna/controle: `#FFFFFF`.
+
+Não criar um quinto nível de cinza. Se uma interface exigir mais níveis, a estrutura deve ser simplificada antes de introduzir outra cor.
+
+## 13. Densidade
+
+- textos internos: margem superior e inferior `0`;
+- células de planilha: referência de `5 px` de padding vertical por lado;
+- barras usam altura fixa, nunca margem/padding acumulado;
+- botão de configuração de coluna: `15 × 15 px`;
+- paginação integrada: `15 px`;
+- evitar `py-2.5`, `py-3` ou maiores em tabelas, barras e filtros;
+- preferir dimensões múltiplas de 5 sempre que possível.
