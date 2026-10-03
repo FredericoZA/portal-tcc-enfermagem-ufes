@@ -4,7 +4,7 @@ import { portalFontFamily } from './portalFonts';
 import type { TableTextFormat, HeaderTheme } from '../components/TableColumnSelectorPanel';
 import { DEFAULT_TABLE_TEXT_FORMAT } from '../components/TableColumnSelectorPanel';
 import { tableInheritsGlobalAppearance } from './portalAppearanceLinks';
-import { getPortalToneStyle, resolvePortalFilterTone } from './portalSemanticTokens';
+import { PORTAL_BRAND_COLORS, PORTAL_SURFACE_COLORS, getPortalToneStyle, resolvePortalFilterTone } from './portalSemanticTokens';
 export type { TableTextFormat, HeaderTheme };
 export { DEFAULT_TABLE_TEXT_FORMAT };
 
@@ -16,13 +16,13 @@ export const STATIC_PORTAL_TABLE_FORMAT: TableTextFormat = {
   // TableColumnSelectorPanel importa este arquivo e isso criaria ciclo em TDZ.
   headerTheme: 'colored',
   headerTextColor: 'custom',
-  customHeaderColor: '#006030',
-  customHeaderSecondaryColor: '#006030',
-  customHeaderTextColor: '#ffffff',
+  customHeaderColor: PORTAL_BRAND_COLORS.header,
+  customHeaderSecondaryColor: PORTAL_BRAND_COLORS.header,
+  customHeaderTextColor: PORTAL_SURFACE_COLORS.inner,
   filterStyle: 'custom',
-  toolbarButtonColor: '#ffffff',
+  toolbarButtonColor: PORTAL_SURFACE_COLORS.inner,
   toolbarButtonTextColor: '#000000',
-  toolbarButtonBorderColor: '#d0d0d0',
+  toolbarButtonBorderColor: PORTAL_SURFACE_COLORS.border,
   toolbarButtonBorderWidth: 'none',
   toolbarButtonOpacity: 1,
   fontFamily: 'inter',
