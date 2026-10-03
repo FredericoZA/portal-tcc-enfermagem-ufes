@@ -28,7 +28,7 @@ A hierarquia deve ser visível. Nunca usar a mesma cor para fundo geral, planilh
 - Rodapé: escuro.
 - Barra superior: mesma família da superfície principal da planilha.
 - Barra de título da planilha: **45 px**.
-- Quando houver filtros: separador de **5 px**, barra de filtros de **40 px** e separador de **15 px** antes do cabeçalho.
+- Quando houver filtros: separador de **5 px**, barra de filtros de **45 px** e separador de **15 px** antes do cabeçalho.
 - Quando não houver filtros: usar apenas o separador de **15 px** entre título e cabeçalho.
 - Cabeçalho útil das colunas: **35 px**.
 - Não empilhar bordas adicionais sobre esses separadores.
@@ -56,7 +56,7 @@ A hierarquia deve ser visível. Nunca usar a mesma cor para fundo geral, planilh
 - O Portal deve ser compacto.
 - Evitar margens superiores e inferiores sem função.
 - Barra de título: **45 px**.
-- Barra de filtros: **40 px**.
+- Barra de filtros: **45 px**.
 - Cabeçalho das colunas: **35 px**.
 - Linha de dados: mínimo de **30 px**.
 - Paginação integrada: **24 px**.
@@ -86,7 +86,7 @@ Essas exceções não alteram a hierarquia-base de superfícies.
 Todas as planilhas do Portal usam o mesmo componente visual. O conteúdo e as colunas podem variar, mas a estrutura não.
 
 - barra de título e cabeçalho das colunas usam o mesmo verde institucional;
-- planilha com filtro: **45 / 5 / 40 / 15 / 35 px**;
+- planilha com filtro: **45 / 5 / 45 / 15 / 35 px**;
 - planilha sem filtro: **45 / 15 / 35 px**;
 - linha de dados com mínimo de **30 px**;
 - paginação de **24 px**;
