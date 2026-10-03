@@ -83,7 +83,7 @@ test('Rodapé e Identidade é exclusivo do Master, persiste e atualiza o rodapé
   assert.match(identity, /apiClient\.updateSettings/);
   assert.match(identity, /await refreshAuth\(\)/);
   assert.match(identity, /commissionPresidentContactEmail/);
-  assert.match(identity, /bg-\[#d5dce0\]/);
+  assert.match(identity, /bg-\[#b7b7b7\]/);
   assert.doesNotMatch(identity, /Acessos administrativos/i);
   assert.doesNotMatch(identity, /createAdministrationTransfer/);
 });
