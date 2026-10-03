@@ -1,20 +1,22 @@
 /*
  * Sistema visual autoritativo do Portal TCC.
  *
- * Regra: a interface usa o verde-musgo aprovado (#005830), branco e cinzas neutros.
+ * Regra: a interface usa o verde estrutural canônico (#006030), branco e uma escala neutra controlada.
  * Amarelo/verde de status permanecem somente quando carregam significado acadêmico.
  * A interface deve ser compacta: evitar padding/margens verticais desnecessários.
  */
 :root {
-  --portal-ui-moss: #005830;
-  --portal-ui-moss-dark: #004626;
-  --portal-ui-popup-moss: #337959;
+  --portal-ui-moss: #006030;
+  --portal-ui-moss-dark: #004820;
+  --portal-ui-popup-moss: #006030;
   --portal-ui-sidebar-active: #154d41;
   --portal-ui-white: #ffffff;
-  --portal-ui-gray-light: #f1f5f9;
-  --portal-ui-gray-selected: #e2e8f0;
-  --portal-ui-gray-mid: #cbd5e1;
-  --portal-ui-gray-dark: #526273;
+  --portal-ui-gray-page: #f5f5f5;
+  --portal-ui-gray-light: #f0f0f0;
+  --portal-ui-gray-layer: #e5e5e5;
+  --portal-ui-gray-selected: #909090;
+  --portal-ui-gray-mid: #d0d0d0;
+  --portal-ui-gray-dark: #000000;
   --portal-ui-control-height: 1.75rem;
 
   /* Compatibilidade com o sistema de aparência existente. */
