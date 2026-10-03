@@ -64,7 +64,7 @@ test('paginação canônica é recriada após renderizações React e permanece 
   assert.doesNotMatch(runtime, /portal-spreadsheet-page-size/);
 });
 
-test('Meus TCCs mantém filtros React com paleta amarelo, laranja, verde e azul', () => {
+test('Meus TCCs mantém filtros React com paleta amarelo, laranja, azul e marrom', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const page = read('src/pages/MeusProcessosPage.tsx');
   const tokens = read('src/utils/portalSemanticTokens.ts');
@@ -74,9 +74,10 @@ test('Meus TCCs mantém filtros React com paleta amarelo, laranja, verde e azul'
   assert.match(page, /selectedRoleCategories\.includes\(roleCat\)/);
   assert.match(page, /ROLE_CONFIGS/);
   assert.doesNotMatch(runtime, /enhanceMyTccFilters|selectedMyTccRoles|portal-runtime-all-filter/);
-  for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(tokens, new RegExp(border));
-  assert.match(css, /portal-native-all-filter\[data-selected="true"\][\s\S]*color: #111827 !important/);
-  assert.match(css, /portal-meus-processos-filter-row[\s\S]*border-bottom: 2px solid/);
+  for (const color of ['#eac451', '#da954b', '#4b77d1', '#982b15']) assert.match(tokens, new RegExp(color));
+  const contract = read('src/portal-surface-contract.css');
+  assert.match(contract, /portal-native-all-filter\[data-selected="true"\][\s\S]*background: var\(--portal-selection-neutral\)/);
+  assert.match(contract, /portal-meus-processos-filter-row[\s\S]*border-top: var\(--portal-sheet-title-divider\) solid #ffffff/);
 });
 
 test('Presidente mantém seleção React com duas colunas fixas opacas e controle maior', () => {
@@ -92,7 +93,8 @@ test('Presidente mantém seleção React com duas colunas fixas opacas e control
   assert.match(css, /width: 54px !important/);
   assert.match(css, /left: 54px !important/);
   assert.match(css, /width: 28px !important/);
-  assert.match(css, /portal-coordinator-filter-row[\s\S]*border-bottom: 2px solid/);
+  const contract = read('src/portal-surface-contract.css');
+  assert.match(contract, /portal-coordinator-filter-row[\s\S]*border-top: var\(--portal-sheet-title-divider\) solid #ffffff/);
   assert.doesNotMatch(runtime, /portal-president-all-view|renderPresidentAllView|apiClient/);
 });
 
