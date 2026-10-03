@@ -172,7 +172,12 @@ test('todas as planilhas obedecem ao mesmo contrato visual', () => {
   assert.match(css, /position:sticky!important/);
   assert.match(css, /--portal-sheet-pagination:#fff/);
   assert.match(css, /width:1\.45rem!important/);
-  assert.match(css, /border-top:16px solid #fff!important/);
+  assert.match(css, /--portal-sheet-title-height:45px/);
+  assert.match(css, /--portal-sheet-title-separator:5px/);
+  assert.match(css, /--portal-sheet-filter-height:40px/);
+  assert.match(css, /--portal-sheet-filter-separator:15px/);
+  assert.match(css, /--portal-sheet-column-header-height:35px/);
+  assert.match(css, /--portal-sheet-green:#005830/);
 });
 
 test('popups de planilha usam a própria planilha como caixa principal', () => {
