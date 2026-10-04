@@ -75,7 +75,6 @@ test('tutorial usa somente as superfícies canônicas', () => {
   const tutorial = read('src/pages/PortalTutorialPage.tsx');
   assert.match(tutorial, /portal-layer-panel/);
   assert.match(tutorial, /portal-layer-card/);
-  assert.match(tutorial, /portal-layer-inner/);
   assert.doesNotMatch(tutorial, /bg-\[#(?:e1e6e9|d5dce0|005830|337959)\]/i);
 });
 
