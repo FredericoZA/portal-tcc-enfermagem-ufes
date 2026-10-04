@@ -27,7 +27,7 @@ const tools = [
   },
 ] as const;
 
-const CARD_CLASS = 'portal-layer-card flex h-full min-h-[172px] flex-col rounded-xl border border-slate-300 p-3 shadow-2xs';
+const CARD_CLASS = 'portal-layer-card flex h-full min-h-[112px] flex-col rounded-xl border border-slate-300 p-3 shadow-2xs';
 
 export const PortalReplicationPage: React.FC = () => {
   return (
