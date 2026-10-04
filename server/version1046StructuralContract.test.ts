@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('release atual é 1.0.69', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.69');
+test('release de refactor visual é 1.0.70', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.70');
 });
 
 test('estado de defesa não sobrescreve cores de vínculo e assinatura', () => {
@@ -30,19 +30,17 @@ test('indicadores têm contrato completo e frontend defensivo', () => {
   assert.match(page, /const normalized =/);
 });
 
-test('configurações usam barras e runtime canônico de workspace', () => {
+test('configurações usam workspace React sem runtime de pós-processamento', () => {
   const config = read('src/pages/ConfiguracoesPage.tsx');
   const modal = read('src/components/SettingsWorkspaceModal.tsx');
-  const runtime = read('src/components/PortalSettingsRuntime.tsx');
-  assert.match(config, /portal-settings-title-bar/);
-  assert.doesNotMatch(config, /portal-settings-hub-card/);
-  assert.match(modal, /var\(--portal-green-header\)/);
+  const main = read('src/main.tsx');
+  assert.match(config, /portal-settings-launcher/);
   assert.match(modal, /singlePane = sections\.length === 1/);
   assert.match(config, /Rodapé e Identidade/);
   assert.match(config, /Integrações e Plataforma/);
   assert.match(config, /activeSettingsPanel === 'identity'/);
   assert.match(config, /activeSettingsPanel === 'integrations'/);
-  assert.doesNotMatch(runtime, /cloneNode/);
+  assert.doesNotMatch(main, /PortalSettingsRuntime/);
 });
 
 test('configurações separam artefatos e unem modelos com documentos', () => {
@@ -65,18 +63,18 @@ test('configurações separam artefatos e unem modelos com documentos', () => {
 test('runtime tabular canônico substitui as camadas 1.0.52 e 1.0.53', () => {
   const formatter = read('src/utils/tableFormatters.ts');
   const main = read('src/main.tsx');
-  const css = read('src/portal-spreadsheet-runtime.css');
+  const css = read('src/index.css');
   assert.match(formatter, /cellTextColorClass = 'text-black'/);
   assert.match(main, /PortalSpreadsheetRuntime/);
-  assert.match(main, /PortalSettingsRuntime/);
-  assert.match(main, /portal-spreadsheet-runtime\.css/);
+  assert.doesNotMatch(main, /PortalSettingsRuntime/);
+  assert.match(main, /import '\.\/index\.css'/);
   assert.doesNotMatch(main, /PortalVersion1052Enhancer/);
   assert.doesNotMatch(main, /PortalVersion1053Enhancer/);
   assert.doesNotMatch(main, /PortalVersion1053PagerGuard/);
   assert.doesNotMatch(main, /portal-version-1052\.css/);
   assert.doesNotMatch(main, /portal-version-1053\.css/);
-  assert.match(css, /data-portal-sticky-process/);
-  assert.match(css, /data-portal-full-bleed/);
+  assert.match(css, /data-portal-sheet="president"[\s\S]*data-portal-sticky-process/);
+  assert.match(read('src/components/SettingsWorkspaceModal.tsx'), /data-portal-full-bleed/);
 });
 
 test('paginação preserva todas as linhas React e cria páginas reais pela camada canônica', () => {
@@ -120,7 +118,7 @@ test('rolagem canônica usa mouse no documento e wheel no mesmo host', () => {
 });
 
 test('quatro papéis usam famílias cromáticas amarelo, laranja, verde e azul', () => {
-  const tokens = read('src/utils/portalSemanticTokens.ts');
-  for (const color of ['#fde68a', '#fdba74', '#bbf7d0', '#bfdbfe']) assert.match(tokens, new RegExp(color));
-  for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(tokens, new RegExp(border));
+  const css = read('src/index.css');
+  for (const color of ['#fde68a', '#fdba74', '#bbf7d0', '#bfdbfe']) assert.match(css, new RegExp(color));
+  for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(css, new RegExp(border));
 });
