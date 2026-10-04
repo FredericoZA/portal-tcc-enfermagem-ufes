@@ -7,7 +7,7 @@ const root = path.resolve(process.cwd());
 const source = (file: string) => readFile(path.join(root, file), 'utf8');
 
 test('divisor de Meus TCCs e Presidência mantém margem verde acima da linha branca', async () => {
-  const [css39, css42] = await Promise.all([source('src/portal-update-39.css'), source('src/portal-update-42.css')]);
+  const [css39, css42] = await Promise.all([source('src/index.css'), source('src/index.css')]);
   assert.ok(css39.includes('.portal-meus-processos-filter-row'));
   assert.ok(css39.includes('.portal-coordinator-filter-row'));
   assert.match(css39, /margin-top:\s*0\.6rem\s*!important/);
@@ -17,7 +17,7 @@ test('divisor de Meus TCCs e Presidência mantém margem verde acima da linha br
 });
 
 test('Configurações abre Sincronização e Modelos como workspaces modais com navegação lateral', async () => {
-  const [enhancer, css] = await Promise.all([source('src/components/PortalUiEnhancer.tsx'), source('src/portal-update-39.css')]);
+  const [enhancer, css] = await Promise.all([source('src/components/PortalUiEnhancer.tsx'), source('src/index.css')]);
   assert.ok(enhancer.includes("enhanceSettingsWorkspace('google-workspace-sync-section', 'sync')"));
   assert.ok(enhancer.includes("enhanceSettingsWorkspace('master-flow-system-section', 'models')"));
   assert.ok(enhancer.includes('portal-settings-workspace-sidebar'));
@@ -30,8 +30,8 @@ test('Configurações abre Sincronização e Modelos como workspaces modais com 
 test('Personalização usa cabeçalho verde, título à esquerda, ícone branco sem caixa e ações brancas', async () => {
   const [enhancer, css39, css42] = await Promise.all([
     source('src/components/PortalUiEnhancer.tsx'),
-    source('src/portal-update-39.css'),
-    source('src/portal-update-42.css'),
+    source('src/index.css'),
+    source('src/index.css'),
   ]);
   assert.ok(enhancer.includes('portal-customization-header'));
   assert.ok(enhancer.includes('portal-customization-icon-shell'));
@@ -47,7 +47,7 @@ test('Registro de logs sai de Configurações e vira página Master com toolbar 
     source('src/App.tsx'),
     source('src/pages/AuditLogsPage.tsx'),
     source('src/components/PortalUiEnhancer.tsx'),
-    source('src/portal-update-39.css'),
+    source('src/index.css'),
   ]);
   assert.ok(app.includes("case 'logs'"));
   assert.ok(app.includes('<AuditLogsPage />'));
