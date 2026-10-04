@@ -80,7 +80,7 @@ test('Meus TCCs mantém filtros React com paleta amarelo, laranja, verde e azul'
   assert.match(contract, /data-portal-has-filter="true"[\s\S]*border-bottom:\s*var\(--portal-sheet-content-divider\) solid var\(--portal-surface-inner\)/);
 });
 
-test('Presidente mantém seleção React com duas colunas fixas opacas e controle maior', () => {
+test('Presidente mantém seleção React com duas colunas fixas opacas e controle canônico', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const page = read('src/pages/CoordenadorPage.tsx');
   const css = read('src/index.css');
@@ -95,7 +95,7 @@ test('Presidente mantém seleção React com duas colunas fixas opacas e control
   assert.match(css, /left:\s*54px/);
   assert.match(css, /--portal-sheet-column-control-size:\s*15px/);
   assert.match(contract, /data-portal-sheet="president"[\s\S]*data-portal-sticky-selection/);
-  assert.match(contract, /data-portal-has-filter="true"[\s\S]*border-bottom:var\(--portal-sheet-content-divider\) solid #fff!important/);
+  assert.match(contract, /data-portal-has-filter="true"[\s\S]*border-bottom:\s*var\(--portal-sheet-content-divider\) solid var\(--portal-surface-inner\)/);
   assert.doesNotMatch(runtime, /portal-president-all-view|renderPresidentAllView|apiClient/);
 });
 
