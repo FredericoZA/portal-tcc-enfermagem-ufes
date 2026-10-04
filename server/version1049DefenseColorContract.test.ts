@@ -19,19 +19,16 @@ test('estado temporal depende somente do início da defesa comparado ao agora', 
   assert.match(semantics, /return getDefenseStateFromTimes\(process\.defesa\?\.startAt, process\.defesa\?\.endAt, now\)/);
 });
 
-test('CSS 1.0.50 aponta para a seção real da Lista de Defesas', () => {
-  const css = read('src/portal-version-1050.css');
-  assert.match(css, /#public-calendar-cards-section \.portal-core-table tbody td > \.portal-semantic-tone\[data-defense-state="defended"\]/);
-  assert.match(css, /background-color: var\(--portal-defense-defended-bg, #bed8c3\) !important/);
-  assert.match(css, /#public-calendar-cards-section \.portal-core-table tbody td > \.portal-semantic-tone\[data-defense-state="upcoming"\]/);
-  assert.match(css, /background-color: var\(--portal-defense-upcoming-bg, #e8dda7\) !important/);
+test('CSS canônico aponta para os estados reais da Lista de Defesas', () => {
+  const css = read('src/index.css');
+  assert.match(css, /data-defense-state="defended"/);
+  assert.match(css, /background:\s*var\(--portal-defense-defended-bg\)/);
+  assert.match(css, /data-defense-state="upcoming"/);
+  assert.match(css, /background:\s*var\(--portal-defense-upcoming-bg\)/);
 });
 
-test('camada 1.0.50 é carregada depois da correção 1.0.49 e das folhas legadas', () => {
+test('não existe mais ordem de precedência entre folhas legadas', () => {
   const main = read('src/main.tsx');
-  const v50 = main.indexOf("portal-version-1050.css");
-  assert.ok(v50 > main.indexOf('portal-version-1049.css'));
-  assert.ok(v50 > main.indexOf('portal-version-1046.css'));
-  assert.ok(v50 > main.indexOf('portal-process-detail.css'));
-  assert.ok(v50 > main.indexOf('portal-hotfix-separators-palette.css'));
+  const imports = [...main.matchAll(/import ['"]\.\/([^'"]+\.css)['"];/g)].map((match) => match[1]);
+  assert.deepEqual(imports, ['index.css']);
 });
