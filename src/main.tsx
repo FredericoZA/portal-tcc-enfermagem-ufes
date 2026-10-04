@@ -6,10 +6,8 @@ import { PortalStructuralRuntime } from './components/PortalStructuralRuntime';
 import { PortalTableTextPolicy } from './components/PortalTableTextPolicy';
 import { PortalSpreadsheetRuntime } from './components/PortalSpreadsheetRuntime';
 import './index.css';
-import { loadGlobalPopupStyle, saveGlobalPopupStyle } from './utils/portalAppearanceLinks';
 import { installAuthRequestResilience } from './utils/authRequestResilience';
 
-try { saveGlobalPopupStyle(loadGlobalPopupStyle()); } catch {}
 installAuthRequestResilience();
 
 createRoot(document.getElementById('root')!).render(
