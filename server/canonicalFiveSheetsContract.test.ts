@@ -44,11 +44,11 @@ test('geometria é única e não depende de seletores nth-child por tela', () =>
 
 test('sticky é canônico e preserva exceção estrutural do Presidente', () => {
   const css = read('src/index.css');
-  const runtime = read('src/index.css');
+  const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
 
   assert.match(css, /Cabeçalho sticky/);
-  assert.match(css, /data-portal-sheet="repository"[\s\S]*table th:first-child/);
-  assert.match(css, /data-portal-sheet="my-tccs"[\s\S]*table td:first-child/);
+  assert.match(css, /data-portal-sheet="repository"[\s\S]*:is\(th, td\):first-child/);
+  assert.match(css, /data-portal-sheet="my-tccs"[\s\S]*:is\(th, td\):first-child/);
   assert.match(css, /data-portal-sheet="president"[\s\S]*data-portal-sticky-selection/);
   assert.match(css, /left:\s*54px/);
   assert.match(runtime, /data-portal-sticky-process/);
