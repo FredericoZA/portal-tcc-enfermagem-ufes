@@ -21,7 +21,8 @@ test('Configurações abre workspaces por componentes React dedicados', async ()
   ]);
   assert.ok(config.includes('SettingsWorkspaceModal'));
   assert.ok(config.includes("activeSettingsPanel"));
-  assert.ok(modal.includes('portal-settings-workspace-sidebar'));
+  assert.ok(modal.includes('portal-settings-workspace'));
+  assert.ok(modal.includes('portal-settings-workspace-main'));
   assert.ok(modal.includes('data-portal-full-bleed'));
 });
 
