@@ -59,7 +59,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       className={`portal-settings-single-pane min-w-0 flex-1 overflow-auto ${fullBleed ? 'p-0' : 'p-3 sm:p-4'}`}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
-      style={{ backgroundColor: 'var(--portal-surface-page)' }}
+      style={{ backgroundColor: 'var(--portal-surface-panel)' }}
     >
       {singlePaneContent}
     </main>
@@ -110,13 +110,13 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       className="portal-settings-workspace flex max-h-[94vh] w-full max-w-[1600px] flex-col overflow-hidden rounded-2xl border border-slate-300 shadow-2xl"
-      style={{ backgroundColor: 'var(--portal-surface-page)' }}
+      style={{ backgroundColor: 'var(--portal-surface-panel)' }}
     >
-      <header className="portal-settings-workspace-header flex min-h-[58px] items-center justify-between gap-3 border-b-[16px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-green-header)' }}>
+      <header className="portal-settings-workspace-header flex items-center justify-between gap-3 border-b-[15px] border-white px-4 text-white" style={{ backgroundColor: 'var(--portal-green-header)' }}>
         <div className="flex min-w-0 items-center gap-2">{TitleIcon && <TitleIcon className="h-5 w-5 shrink-0"/>}<h2 className="truncate text-sm font-black uppercase tracking-wide">{title}</h2></div>
         <div className="flex min-w-0 items-center justify-end gap-1.5">
           <div ref={setHeaderHost} className="flex min-w-0 flex-wrap items-center justify-end gap-1.5" data-settings-workspace-header-actions="true" />
-          <button type="button" onClick={onClose} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white bg-white text-black shadow-sm" aria-label="Fechar"><X className="h-4 w-4"/></button>
+          <button type="button" onClick={onClose} className="portal-toolbar-icon-button shrink-0 border-white bg-white text-black" aria-label="Fechar"><X className="h-4 w-4"/></button>
         </div>
       </header>
 
