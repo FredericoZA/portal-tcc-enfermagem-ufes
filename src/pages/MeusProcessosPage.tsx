@@ -776,40 +776,39 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                 </h1>
               </div>
 
-              {/* Ação principal separada dos três controles padrão */}
-              <div className="flex items-center shrink-0">
-                {canCreateStudentTcc && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false && (
+              <div className="portal-sheet-toolbar shrink-0">
+                <div className="portal-sheet-toolbar-actions">
+                  {canCreateStudentTcc && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false && (
+                    <button
+                      id="meus-processos-btn-novo"
+                      type="button"
+                      onClick={onNavigateToWizard}
+                      className="portal-primary-register-btn"
+                      title="Cadastrar novo trabalho de TCC"
+                    >
+                      <GraduationCap className="h-3.5 w-3.5" />
+                      <span>Cadastrar TCC</span>
+                    </button>
+                  )}
                   <button
-                    id="meus-processos-btn-novo"
+                    id="meus-processos-refresh-btn"
                     type="button"
-                    onClick={onNavigateToWizard}
-                    className={`${styles.toolbarButtonClass} portal-restricted-toolbar-wide portal-primary-register-btn`}
-                    style={styles.toolbarButtonStyle}
-                    title="Cadastrar novo trabalho de TCC"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="portal-toolbar-icon-button disabled:opacity-70"
+                    title="Atualizar dados da tabela"
+                    aria-label="Atualizar dados da tabela"
                   >
-                    <GraduationCap className="h-3.5 w-3.5" />
-                    <span>Cadastrar TCC</span>
+                    <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
                   </button>
-                )}
-
-                <div className={`flex items-center gap-1.5 sm:gap-2 ${canCreateStudentTcc && meusProcessosTextFormat.showCadastrarTrabalhoButton !== false ? 'ml-3 border-l border-white/35 pl-3' : ''}`}>
+                </div>
+                <div className="portal-sheet-toolbar-terminal">
                   <SearchPopover
                     value={searchTerm}
                     onChange={setSearchTerm}
                     placeholder="Buscar TCCs..."
                     textFormat={meusProcessosTextFormat}
                   />
-                  <button
-                    id="meus-processos-refresh-btn"
-                    type="button"
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className={`${styles.toolbarButtonClass} disabled:opacity-70`}
-                    style={styles.toolbarButtonStyle}
-                    title="Atualizar dados da tabela"
-                  >
-                    <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
-                  </button>
                   <HeaderSettingsPopover
                     recordsLimit={recordsLimit}
                     setRecordsLimit={setRecordsLimit}
