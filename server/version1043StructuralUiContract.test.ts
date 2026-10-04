@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+import { readPortalCss } from './testUtils/portalCss';
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 test('release 1.0.45 preserva o runtime estrutural único consolidado',()=>{
@@ -29,7 +30,7 @@ test('tabelas têm um único menu Excel-like, resize e quebra de texto',()=>{
 });
 
 test('separadores usam apenas 5px e 15px do contrato canônico',()=>{
-  const css=read('src/index.css');
+  const css=readPortalCss();
   assert.match(css,/--portal-sheet-title-divider:\s*5px/);
   assert.match(css,/--portal-sheet-content-divider:\s*15px/);
   assert.match(css,/border-top:\s*var\(--portal-sheet-title-divider\)/);
@@ -37,7 +38,7 @@ test('separadores usam apenas 5px e 15px do contrato canônico',()=>{
 });
 
 test('paleta de calendário e processo é compartilhada e não fluorescente',()=>{
-  const css=read('src/index.css');
+  const css=readPortalCss();
   assert.match(css,/--portal-defense-defended-bg:\s*#bed8c3/);
   assert.match(css,/--portal-defense-defended-border:\s*#719a79/);
   assert.match(css,/--portal-defense-upcoming-bg:\s*#e8dda7/);
@@ -49,7 +50,7 @@ test('paleta de calendário e processo é compartilhada e não fluorescente',()=
 test('calendário bloqueia fins de semana e preserva popup nativo por clique do dia',()=>{
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
   const home=read('src/pages/HomePage.tsx');
-  const css=read('src/index.css');
+  const css=readPortalCss();
   assert.match(runtime,/weekday === 0 \|\| weekday === 6/);
   assert.match(runtime,/portal-core-calendar-weekend/);
   assert.match(css,/grid-template-columns:\s*\.22fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr \.22fr/);
@@ -60,7 +61,7 @@ test('calendário bloqueia fins de semana e preserva popup nativo por clique do 
 
 test('fluxo do TCC usa caminho responsivo em minhoca',()=>{
   const flow=read('src/pages/FluxoTccPage.tsx');
-  const css=read('src/index.css');
+  const css=readPortalCss();
   assert.match(flow,/max-w-none/);
   assert.match(flow,/portal-flow-snake/);
   assert.match(flow,/portal-flow-step/);
