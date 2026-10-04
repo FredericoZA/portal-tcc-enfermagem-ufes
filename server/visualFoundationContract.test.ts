@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const tokens = readFileSync(new URL('../src/portal-tokens.css', import.meta.url), 'utf8').toLowerCase();
+const tokens = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8').toLowerCase();
 const docs = readFileSync(new URL('../docs/ARQUITETURA_VISUAL_CANONICA.md', import.meta.url), 'utf8').toLowerCase();
 
 const required = [
