@@ -301,6 +301,27 @@ body,
   color: inherit;
 }
 
+/* Barras de ação: ações específicas à esquerda; busca + engrenagem formam o par final. */
+.portal-sheet-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--portal-toolbar-action-gap);
+}
+
+.portal-sheet-toolbar-actions,
+.portal-sheet-toolbar-terminal {
+  display: inline-flex;
+  align-items: center;
+}
+
+.portal-sheet-toolbar-actions {
+  gap: var(--portal-toolbar-pair-gap);
+}
+
+.portal-sheet-toolbar-terminal {
+  gap: var(--portal-toolbar-pair-gap);
+}
+
 /* Botões de ícone da barra — todos circulares. */
 .portal-header-action,
 .portal-toolbar-icon-button,
