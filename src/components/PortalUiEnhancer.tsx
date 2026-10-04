@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 const SEARCH_HINT = 'Buscar registros — pesquisa o conteúdo desta planilha';
 const SYNC_HINT = 'Sincronizar dados — recarrega os registros desta planilha';
 const SETTINGS_HINT = 'Configurar exibição — ajusta linhas por página e período';
-const ACCENT = '#337959';
+const ACCENT = 'var(--portal-brand-action)';
 const LEGACY_ACCENTS = new Set(['#47866a', 'rgb(71, 134, 106)']);
 const LEGACY_PERSONALIZATION_LABELS = new Set([
   'temas prontos 1 clique',
