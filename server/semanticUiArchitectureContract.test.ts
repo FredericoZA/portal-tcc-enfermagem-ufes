@@ -2,13 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
+import { readPortalCss } from './testUtils/portalCss';
 const source = (path: string) => readFile(path, 'utf8');
 
 test('paleta semântica possui uma única fonte de valores no CSS canônico', async () => {
   const [main, tokens, css] = await Promise.all([
     source('src/main.tsx'),
     source('src/utils/portalSemanticTokens.ts'),
-    source('src/index.css'),
+    readPortalCss(),
   ]);
 
   assert.ok(main.includes("import './index.css';"));
@@ -37,7 +38,7 @@ test('calendário mantém superfície do portal e mostra horário, título e alu
   const [home, semantics, semanticCss] = await Promise.all([
     source('src/pages/HomePage.tsx'),
     source('src/utils/defenseSemantics.ts'),
-    source('src/index.css'),
+    readPortalCss(),
   ]);
 
   assert.ok(home.includes('portal-core-calendar-weekend'));
