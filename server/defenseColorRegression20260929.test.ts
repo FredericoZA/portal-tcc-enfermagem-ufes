@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { getDefenseStateFromTimes } from '../src/utils/defenseSemantics';
 
+import { readPortalCss } from './testUtils/portalCss';
 const source = (path: string) => readFile(path, 'utf8');
 
 test('estado cromático da defesa depende somente do início comparado ao agora', () => {
@@ -13,7 +14,7 @@ test('estado cromático da defesa depende somente do início comparado ao agora'
 });
 
 test('paleta de defesa usa verde e amarelo foscos canônicos', async () => {
-  const css = await source('src/index.css');
+  const css = await readPortalCss();
   assert.match(css, /--portal-defense-defended-bg:\s*#bed8c3/);
   assert.match(css, /--portal-defense-defended-border:\s*#719a79/);
   assert.match(css, /--portal-defense-upcoming-bg:\s*#e8dda7/);
@@ -21,7 +22,7 @@ test('paleta de defesa usa verde e amarelo foscos canônicos', async () => {
 });
 
 test('lista de defesas não deduz mais cor pela zebra da linha', async () => {
-  const css = await source('src/index.css');
+  const css = await readPortalCss();
   const home = await source('src/pages/HomePage.tsx');
   assert.match(home, /data-defense-state=\{defenseState\}/);
   assert.match(css, /data-defense-state="defended"/);
