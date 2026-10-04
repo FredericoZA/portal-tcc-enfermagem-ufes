@@ -19,16 +19,16 @@ test('fundação visual contém a paleta e a geometria aprovadas', () => {
 });
 
 test('tokens mantêm exatamente quatro superfícies estruturais', () => {
-  const matches = tokens.match(/--ptcc-surface-(page|panel|card|inner):/g) || [];
+  const matches = tokens.match(/--portal-surface-(page|panel|card|inner):/g) || [];
   assert.equal(matches.length, 4);
 });
 
 test('sidebar e rodapé compartilham um único token', () => {
-  assert.match(tokens, /--ptcc-sidebar-footer:\s*#011f17/);
+  assert.match(tokens, /--portal-sidebar-footer:\s*#011f17/);
 });
 
 test('sticky possui três níveis explícitos', () => {
-  assert.match(tokens, /--ptcc-z-sticky-column:\s*30/);
-  assert.match(tokens, /--ptcc-z-sticky-header:\s*40/);
-  assert.match(tokens, /--ptcc-z-sticky-intersection:\s*60/);
+  assert.match(tokens, /--portal-z-sticky-column:\s*30/);
+  assert.match(tokens, /--portal-z-sticky-header:\s*40/);
+  assert.match(tokens, /--portal-z-sticky-corner:\s*60/);
 });
