@@ -764,11 +764,11 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
       {/* Section with Unified Gray Header & Table */}
       <section className="space-y-3">
         {/* UNIFIED GRAY HEADER + SPREADSHEET CARD */}
-        <div className={`bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${styles.fontFamilyClass}`} style={styles.rootStyle}>
+        <div data-portal-sheet="my-tccs" data-portal-has-filter="true" className={`portal-sheet-frame bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${styles.fontFamilyClass}`} style={styles.rootStyle}>
           {/* Gray Header Banner */}
           <div className={`${styles.bannerHeaderClass} border-b transition-colors`} style={styles.bannerHeaderStyle}>
             {/* Title */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
+            <div data-portal-sheet-title="true" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
               <div className="flex items-center gap-2">
                 <ColorfulHeaderIcon type="graduation" textFormat={meusProcessosTextFormat} />
                 <h1 className="text-sm sm:text-base font-black uppercase tracking-wide leading-tight">
@@ -841,7 +841,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
             </div>
 
             {/* INTEGRATED TOOLBAR FOR FILTERS (Single clean dividing line) */}
-            <div className="portal-meus-processos-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 border-t-2 border-white px-3.5 py-2.5 text-xs sm:px-4">
+            <div data-portal-sheet-filter="true" className="portal-meus-processos-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 border-t-2 border-white px-3.5 py-2.5 text-xs sm:px-4">
               <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
                 {getEditableTableText(customLabels, '__filterTitle', 'FILTRAR:')}
               </span>
