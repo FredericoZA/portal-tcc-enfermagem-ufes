@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
+import { readPortalCss } from './testUtils/portalCss';
 const source=(path:string)=>readFile(path,'utf8');
 
 test('login público usa orientação única e exemplo de e-mail neutro',async()=>{
@@ -34,7 +35,7 @@ test('engrenagem permite colunas para usuário comum e persiste por e-mail e pla
 });
 
 test('acabamento visual aplica faixa lateral fina, filtros simétricos e botão de modelos compacto',async()=>{
-  const css=await source('src/index.css');
+  const css=await readPortalCss();
   assert.match(css,/#sidebar-nav \.portal-sidebar-nav-active::before[\s\S]*width:4px!important/);
   assert.match(css,/#portal-replication-page details>summary[\s\S]*padding:6px 10px!important/);
   assert.ok(css.includes('padding-bottom:.55rem!important'));
