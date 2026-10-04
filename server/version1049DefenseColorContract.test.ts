@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+import { readPortalCss } from './testUtils/portalCss';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
 test('Lista de Defesas recebe o estado temporal canônico no próprio botão do processo', () => {
@@ -20,7 +21,7 @@ test('estado temporal depende somente do início da defesa comparado ao agora', 
 });
 
 test('CSS canônico aponta para os estados reais da Lista de Defesas', () => {
-  const css = read('src/index.css');
+  const css = readPortalCss();
   assert.match(css, /data-defense-state="defended"/);
   assert.match(css, /background:\s*var\(--portal-defense-defended-bg\)/);
   assert.match(css, /data-defense-state="upcoming"/);
