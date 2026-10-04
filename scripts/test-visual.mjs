@@ -197,9 +197,11 @@ try {
               emptyCount: emptyCells.length,
               dayColors,
               emptyColors,
-              divider: filterStyle ? parseFloat(filterStyle.borderTopWidth || '0') : 0,
-              dividerColor: filterStyle?.borderTopColor || '',
-              paddingTop: filterStyle ? parseFloat(filterStyle.paddingTop || '0') : 0,
+              dividerTop: filterStyle ? parseFloat(filterStyle.borderTopWidth || '0') : 0,
+              dividerTopColor: filterStyle?.borderTopColor || '',
+              dividerBottom: filterStyle ? parseFloat(filterStyle.borderBottomWidth || '0') : 0,
+              dividerBottomColor: filterStyle?.borderBottomColor || '',
+              filterHeight: filterRect ? Math.round(filterRect.height) : 0,
               fullWidth: Boolean(filterRect && bannerRect && Math.abs(filterRect.left-bannerRect.left)<=1 && Math.abs(filterRect.right-bannerRect.right)<=1)
             };
           });
@@ -209,8 +211,15 @@ try {
           if (!calendarVisual.emptyCount || calendarVisual.emptyColors.length !== 1 || calendarVisual.emptyColors[0] !== 'rgb(225, 230, 233)') {
             report.errors.push(`master-calendario-${width}: vazios do calendário não usam #E1E6E9 (${JSON.stringify(calendarVisual)}).`);
           }
-          if (calendarVisual.divider < 2 || calendarVisual.dividerColor !== 'rgb(255, 255, 255)' || calendarVisual.paddingTop < 8 || !calendarVisual.fullWidth) {
-            report.errors.push(`master-calendario-${width}: divisor branco/filtros fora do padrão (${JSON.stringify(calendarVisual)}).`);
+          if (
+            Math.abs(calendarVisual.dividerTop - 5) > 0.5
+            || calendarVisual.dividerTopColor !== 'rgb(255, 255, 255)'
+            || Math.abs(calendarVisual.dividerBottom - 15) > 0.5
+            || calendarVisual.dividerBottomColor !== 'rgb(255, 255, 255)'
+            || calendarVisual.filterHeight !== 65
+            || !calendarVisual.fullWidth
+          ) {
+            report.errors.push(`master-calendario-${width}: geometria canônica da barra de filtro divergente (${JSON.stringify(calendarVisual)}).`);
           }
         }
         if (['como-chegar', 'tutorial', 'replicar'].includes(tab)) {
@@ -230,8 +239,12 @@ try {
               inner: inner ? getComputedStyle(inner).backgroundColor : ''
             };
           }, tab);
-          if (layerContract.panel !== 'rgb(225, 230, 233)' || layerContract.card !== 'rgb(213, 220, 224)' || (tab !== 'tutorial' && layerContract.inner !== 'rgb(255, 255, 255)')) {
-            report.errors.push(`master-${label}-${width}: contrato das quatro camadas divergente (${JSON.stringify(layerContract)}).`);
+          if (
+            layerContract.panel !== 'rgb(225, 230, 233)'
+            || layerContract.card !== 'rgb(213, 220, 224)'
+            || (layerContract.inner && layerContract.inner !== 'rgb(255, 255, 255)')
+          ) {
+            report.errors.push(`master-${label}-${width}: contrato das superfícies divergente (${JSON.stringify(layerContract)}).`);
           }
         }
         if (tab === 'como-chegar' && width >= 1024) {
@@ -341,26 +354,40 @@ try {
           }
         }
         if (tab === 'configuracoes') {
-          const syncButton = page.locator('#google-workspace-sync-section > button').first();
-          if (!(await page.locator('#administrative-identity-panel').count())) {
-            await syncButton.click();
-            await page.locator('#administrative-identity-panel').waitFor({ state: 'visible', timeout: 6000 });
-          }
-          const panels = await page.evaluate(() => ({
-            admin: document.querySelectorAll('#administrative-identity-panel').length,
-            commission: document.querySelectorAll('#administrative-identity-panel .portal-commission-identity-panel').length,
-            infra: document.querySelectorAll('#infrastructure-integrations-panel').length,
-            access: document.querySelectorAll('#authorized-access-panel').length,
-            nestedCommissionInInfra: document.querySelectorAll('#infrastructure-integrations-panel .portal-commission-identity-panel').length
-          }));
-          if (panels.admin !== 1 || panels.commission !== 1 || panels.infra !== 1 || panels.access !== 1 || panels.nestedCommissionInInfra !== 0) {
-            report.errors.push(`master-configuracoes-${width}: painéis administrativos não estão agrupados corretamente (${JSON.stringify(panels)}).`);
+          const settingsUi = await page.evaluate(() => {
+            const root = document.querySelector('#configuracoes-page-container');
+            const hub = document.querySelector('#portal-settings-hub');
+            const launchers = Array.from(document.querySelectorAll('#portal-settings-hub .portal-settings-launcher'));
+            const hubStyle = hub ? getComputedStyle(hub) : null;
+            return {
+              root: Boolean(root),
+              hub: Boolean(hub),
+              launcherCount: launchers.length,
+              hubBackground: hubStyle?.backgroundColor || '',
+              hubBorderTop: hubStyle?.borderTopWidth || '',
+              hasLegacySyncSection: Boolean(document.querySelector('#google-workspace-sync-section')),
+              hasLegacyModelsSection: Boolean(document.querySelector('#master-flow-system-section'))
+            };
+          });
+          if (
+            !settingsUi.root
+            || !settingsUi.hub
+            || settingsUi.launcherCount < 9
+            || !['rgba(0, 0, 0, 0)', 'transparent'].includes(settingsUi.hubBackground)
+            || settingsUi.hasLegacySyncSection
+            || settingsUi.hasLegacyModelsSection
+          ) {
+            report.errors.push(`master-configuracoes-${width}: hub de Configurações fora da arquitetura nativa (${JSON.stringify(settingsUi)}).`);
           }
         }
         if (tab === 'fluxo-tcc' && width >= 1440) {
-          const fluxoWidth = await page.evaluate(() => Math.round(document.querySelector('#fluxo-tcc-page')?.getBoundingClientRect().width || 0));
-          if (!fluxoWidth || fluxoWidth > 1100) {
-            report.errors.push(`master-fluxo-tcc-${width}: largura da tela de referência foi alterada (${fluxoWidth}px).`);
+          const fluxoGeometry = await page.evaluate(() => {
+            const root = document.querySelector('#fluxo-tcc-page')?.getBoundingClientRect();
+            const main = document.querySelector('#portal-app-root main')?.getBoundingClientRect();
+            return root && main ? { rootWidth: Math.round(root.width), mainWidth: Math.round(main.width) } : null;
+          });
+          if (!fluxoGeometry || fluxoGeometry.rootWidth < fluxoGeometry.mainWidth * 0.90) {
+            report.errors.push(`master-fluxo-tcc-${width}: Fluxo não acompanha a largura útil (${JSON.stringify(fluxoGeometry)}).`);
           }
         }
         if (['indicadores', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'].includes(tab)) {
