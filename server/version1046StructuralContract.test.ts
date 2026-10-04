@@ -65,7 +65,8 @@ test('runtime tabular canônico substitui as camadas 1.0.52 e 1.0.53', () => {
   const formatter = read('src/utils/tableFormatters.ts');
   const main = read('src/main.tsx');
   const css = readPortalCss();
-  assert.match(formatter, /cellTextColorClass = 'text-black'/);
+  assert.match(formatter, /STATIC_PORTAL_TABLE_FORMAT/);
+  assert.match(css, /color:\s*var\(--portal-text-dark\)/);
   assert.match(main, /PortalSpreadsheetRuntime/);
   assert.doesNotMatch(main, /PortalSettingsRuntime/);
   assert.match(main, /import '\.\/index\.css'/);
