@@ -539,6 +539,97 @@ button[aria-label^="Configurar exibição"],
    5. PLANILHAS E CALENDÁRIO
    ========================================================================== */
 
+/* Adaptadores canônicos usados pelo TypeScript.
+   Nenhuma cor real é definida fora dos tokens de :root. */
+.portal-font {
+  font-family: var(--portal-font-family);
+}
+
+.portal-table-banner,
+.portal-table-head,
+.portal-table-header-cell,
+.portal-table-filter-bar {
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
+}
+
+.portal-table-banner {
+  border-color: var(--portal-brand-header);
+}
+
+.portal-table-header-cell {
+  vertical-align: middle;
+}
+
+.portal-table-header-border {
+  border-right: 1px solid rgba(255, 255, 255, .28);
+}
+
+.portal-table-header-padding,
+.portal-table-cell-padding {
+  padding: var(--portal-cell-padding-y) var(--portal-cell-padding-x);
+}
+
+.portal-table-cell-text {
+  color: var(--portal-text-dark);
+}
+
+.portal-table-cell-border {
+  border-right: 1px solid var(--portal-border);
+  border-bottom: 1px solid var(--portal-border);
+}
+
+.portal-table-row {
+  background: var(--portal-surface-panel);
+}
+
+.portal-table-row:hover > td {
+  filter: brightness(.985);
+}
+
+.portal-sticky-cell {
+  background: var(--portal-surface-card);
+}
+
+.portal-column-control {
+  width: var(--portal-sheet-column-control-size);
+  min-width: var(--portal-sheet-column-control-size);
+  height: var(--portal-sheet-column-control-size);
+  min-height: var(--portal-sheet-column-control-size);
+  padding: 0;
+  border-radius: 50%;
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+}
+
+.portal-process-pill-tag {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.portal-process-pill-subtext {
+  margin-top: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.portal-progress-percent {
+  color: var(--portal-text-dark);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.portal-progress-label {
+  color: var(--portal-brand-action);
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+
 /* Moldura única. */
 [data-portal-sheet].portal-sheet-frame {
   position: relative;
