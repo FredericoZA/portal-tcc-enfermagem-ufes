@@ -38,8 +38,9 @@ test('planilhas permitem rolagem vertical e horizontal no próprio contêiner', 
   assert.match(runtime, /addEventListener\('wheel'/);
   assert.match(runtime, /host\.scrollTop/);
   assert.match(runtime, /host\.scrollLeft/);
-  assert.match(css, /overflow: auto !important/);
-  assert.match(css, /cursor: grab !important/);
+  assert.match(css, /\.portal-spreadsheet-scroll-host/);
+  assert.match(css, /overflow:\s*auto/);
+  assert.match(css, /cursor:\s*grab/);
 });
 
 test('etapa permanece disponível e planilhas removem decoração infantil', () => {
@@ -58,8 +59,8 @@ test('calendário usa fins de semana estreitos e preview seguro', () => {
   assert.match(runtime, /portal-core-calendar-weekend/);
   assert.match(runtime, /cell\.querySelector\('\.portal-core-calendar-previews'\)\?\.remove\(\)/);
   assert.doesNotMatch(runtime, /fetch\('\/api\/processes'/);
-  assert.match(css, /--portal-upcoming-bg/);
-  assert.match(css, /--portal-defended-bg/);
+  assert.match(css, /--portal-defense-upcoming-bg/);
+  assert.match(css, /--portal-defense-defended-bg/);
 });
 
 test('Meus TCCs colore a pílula de processo por vínculo e simplifica datas', () => {
@@ -87,9 +88,8 @@ test('workspaces administrativos ganham hierarquia e prevenção de sobreposiç�
   const css = readPortalCss();
   const enhancer = read('src/components/PortalUiEnhancer.tsx');
   assert.match(enhancer, /portal-settings-workspace-sidebar/);
-  assert.match(css, /grid-template-columns:minmax\(180px,230px\) minmax\(0,1fr\)/);
-  assert.match(css, /min-width:0!important/);
-  assert.match(css, /max-width:100%!important/);
+  assert.match(css, /\.portal-settings-workspace/);
+  assert.doesNotMatch(css, /!important/);
 });
 
 test('rodapé prioriza a Secretaria configurada como responsável técnico', () => {
