@@ -195,11 +195,11 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
   };
 
   return <div className="inline-flex items-center gap-1.5 shrink-0">
-    <button ref={gearButtonRef} type="button" onClick={handleToggle} className={`${styles.toolbarButtonClass} relative`} style={styles.toolbarButtonStyle} title={canManageColumns?'Exibição da planilha: linhas, período, colunas e ordem':'Exibição da planilha: linhas e período'} aria-label="Configurar exibição da planilha">
+    <button ref={gearButtonRef} type="button" onClick={handleToggle} className="portal-toolbar-icon-button relative" title={canManageColumns?'Exibição da planilha: linhas, período, colunas e ordem':'Exibição da planilha: linhas e período'} aria-label="Configurar exibição da planilha">
       <Settings className="h-3.5 w-3.5 text-current"/>{hasActiveFilters&&<span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#6f8f79] ring-2 ring-white"/>}
     </button>
     {isOpen&&createPortal(
-      <div ref={popupRef} data-portal-table-master={isMaster?'true':'false'} className="portal-table-settings-popover fixed z-[1000001] max-h-[calc(100vh-1.5rem)] w-[min(560px,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-slate-300 bg-white p-3.5 text-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150" style={{top:popoverPos.top,left:popoverPos.left}}>
+      <div ref={popupRef} data-portal-table-master={isMaster?'true':'false'} className="portal-table-settings-popover portal-modal-surface fixed z-[1000001] max-h-[calc(100vh-1.5rem)] w-[min(560px,calc(100vw-2rem))] overflow-y-auto rounded-xl border p-3.5 text-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150" style={{top:popoverPos.top,left:popoverPos.left}}>
         <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">
           <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-900"><Settings className="h-3.5 w-3.5 text-slate-600"/>Exibição da planilha</span>
           <button type="button" onClick={()=>setIsOpen(false)} className="rounded-md p-1 text-xs font-bold text-slate-400 hover:text-slate-700" aria-label="Fechar">✕</button>
