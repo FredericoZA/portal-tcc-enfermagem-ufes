@@ -656,6 +656,8 @@ button[aria-label^="Configurar exibição"],
   max-width: 100%;
   overflow: auto;
   overscroll-behavior: contain;
+  isolation: isolate;
+  cursor: grab;
   background: var(--portal-surface-panel);
   scrollbar-width: thin;
   scrollbar-color: var(--portal-border-strong) transparent;
