@@ -6,20 +6,20 @@ const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8
 
 test('runtime estrutural neutraliza hover e usa um único menu por coluna',()=>{
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
-  const css=read('src/portal-core-1043.css');
+  const css=read('src/index.css');
   assert.match(runtime,/stripHoverRules/);
   assert.match(runtime,/portal-core-column-menu/);
   assert.match(runtime,/Selecionar tudo/);
   assert.match(runtime,/Limpar tudo/);
-  assert.match(css,/--portal-separator-section: 12px/);
-  assert.match(css,/--portal-separator-table: 16px/);
+  assert.match(css,/--portal-sheet-title-divider:\s*5px/);
+  assert.match(css,/--portal-sheet-content-divider:\s*15px/);
 });
 
 test('cores do processo e calendário compartilham a mesma paleta',()=>{
   const css=read('src/portal-core-1043.css');
-  assert.match(css,/--portal-defended-bg: #c2d0c2/);
-  assert.match(css,/--portal-defended-border: #7e907e/);
-  assert.match(css,/--portal-upcoming-bg: #d8c58e/);
+  assert.match(css,/--portal-defense-defended-bg:\s*#bed8c3/);
+  assert.match(css,/--portal-defense-defended-border:\s*#719a79/);
+  assert.match(css,/--portal-defense-upcoming-bg:\s*#e8dda7/);
   assert.match(css,/portal-core-calendar-card\.is-defended/);
   assert.match(css,/portal-core-calendar-card\.is-upcoming/);
 });
@@ -42,12 +42,11 @@ test('detalhe público resolve protocolo antes da rota legada',()=>{
   assert.match(resilience,/item\?\.protocolo/);
 });
 
-test('main monta apenas a camada estrutural atual para planilhas',()=>{
+test('main monta uma única camada CSS e apenas runtimes funcionais remanescentes',()=>{
   const main=read('src/main.tsx');
   assert.match(main,/PortalStructuralRuntime/);
-  assert.match(main,/portal-core-1043\.css/);
-  assert.doesNotMatch(main,/PortalSpreadsheetEnhancer/);
-  assert.doesNotMatch(main,/PortalMaintenanceEnhancer/);
-  assert.doesNotMatch(main,/PortalVersion1041Enhancer/);
-  assert.doesNotMatch(main,/PortalVersion1042Enhancer/);
+  assert.match(main,/PortalSpreadsheetRuntime/);
+  assert.match(main,/import '\.\/index\.css'/);
+  assert.doesNotMatch(main,/portal-core-1043\.css|portal-update-|portal-version-|hotfix/);
+  assert.doesNotMatch(main,/PortalVersion1040Enhancer|PortalSettingsRuntime/);
 });
