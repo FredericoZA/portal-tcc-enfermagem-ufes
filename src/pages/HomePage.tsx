@@ -1093,9 +1093,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           {(() => {
             const defStyles = getTableStyles(defensesTextFormat);
             return (
-              <div className={`bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${defStyles.fontFamilyClass}`} style={defStyles.rootStyle}>
+              <div data-portal-sheet="calendar" data-portal-has-filter="false" className={`portal-sheet-frame bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${defStyles.fontFamilyClass}`} style={defStyles.rootStyle}>
                 {/* TOP HEADER BAR (Synchronized palette) */}
-                <div className={`${defStyles.calendarBannerClass} px-3 sm:px-4 py-2 sm:py-2.5 border-b transition-colors`} style={defStyles.bannerHeaderStyle}>
+                <div data-portal-sheet-title="true" className={`${defStyles.calendarBannerClass} px-3 sm:px-4 py-2 sm:py-2.5 border-b transition-colors`} style={defStyles.bannerHeaderStyle}>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -1225,7 +1225,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <div className="overflow-x-auto">
                         <div className="min-w-[720px] md:min-w-0">
                           {/* Calendar Days Header with synchronized palette */}
-                          <div className={`${defStyles.calendarDaysHeaderClass} py-2.5 px-4 sm:px-6 select-none`} style={defStyles.bannerHeaderStyle}>
+                          <div data-portal-sheet-column-header="true" className={`${defStyles.calendarDaysHeaderClass} py-2.5 px-4 sm:px-6 select-none`} style={defStyles.bannerHeaderStyle}>
                             <div className="grid grid-cols-[0.5fr_1.1fr_1.1fr_1.1fr_1.1fr_1.1fr_0.5fr] text-center font-black text-[11px] uppercase tracking-wider">
                               <div>DOM</div>
                               <div>SEG</div>
@@ -1781,12 +1781,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       {/* LIST OF DEFENSES TABLE (Always visible right below calendar) */}
       <section id="public-calendar-cards-section" className="space-y-3 mt-6">
         {/* UNIFIED GRAY HEADER + SPREADSHEET CARD */}
-        <div className={`bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${getTableStyles(defensesTextFormat).fontFamilyClass}`} style={getTableStyles(defensesTextFormat).rootStyle}>
+        <div data-portal-sheet="defenses" data-portal-has-filter="true" className={`portal-sheet-frame bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${getTableStyles(defensesTextFormat).fontFamilyClass}`} style={getTableStyles(defensesTextFormat).rootStyle}>
           {(() => {
             const defStyles = getTableStyles(defensesTextFormat);
             return (
               <div className={`${defStyles.bannerHeaderClass} border-b transition-colors`} style={defStyles.bannerHeaderStyle}>
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 py-2 text-center sm:flex-row sm:px-4 sm:py-2.5 sm:text-left">
+                <div data-portal-sheet-title="true" className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 py-2 text-center sm:flex-row sm:px-4 sm:py-2.5 sm:text-left">
                   <div className="flex items-center gap-2">
                     <ColorfulHeaderIcon type="list" textFormat={defensesTextFormat} />
                     <h2 className="text-base sm:text-lg font-black uppercase tracking-tight">
@@ -1853,7 +1853,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 </div>
 
                 {/* INTEGRATED TOOLBAR BAR FOR STATUS & FILTERS */}
-                <div className="portal-defense-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 border-t-2 border-white px-3 py-2.5 text-xs sm:px-4">
+                <div data-portal-sheet-filter="true" className="portal-defense-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 border-t-2 border-white px-3 py-2.5 text-xs sm:px-4">
                   <span className="text-[10px] opacity-80 font-black uppercase tracking-wider shrink-0">
                     {defensesTextFormat?.customFilterTitle || getEditableTableText(defensesCustomLabels, '__filterTitle', 'FILTRAR:')}
                   </span>
@@ -2278,11 +2278,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
           <section id="biblioteca-tccs-section" className="space-y-3">
             {/* UNIFIED GRAY HEADER BANNER & SPREADSHEET CARD */}
-            <div className={`bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${getTableStyles(acervoTextFormat).fontFamilyClass}`} style={getTableStyles(acervoTextFormat).rootStyle}>
+            <div data-portal-sheet="repository" data-portal-has-filter="false" className={`portal-sheet-frame bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${getTableStyles(acervoTextFormat).fontFamilyClass}`} style={getTableStyles(acervoTextFormat).rootStyle}>
               {(() => {
                 const acervoBannerStyles = getTableStyles(acervoTextFormat);
                 return (
-                  <div className={`${acervoBannerStyles.bannerHeaderClass} p-3.5 sm:p-4 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-colors`} style={acervoBannerStyles.bannerHeaderStyle}>
+                  <div data-portal-sheet-title="true" className={`${acervoBannerStyles.bannerHeaderClass} p-3.5 sm:p-4 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-colors`} style={acervoBannerStyles.bannerHeaderStyle}>
                     <div className="flex items-center gap-2">
                       <ColorfulHeaderIcon type="repository" textFormat={acervoTextFormat} />
                       <h1 className="text-base sm:text-lg font-black uppercase tracking-tight">

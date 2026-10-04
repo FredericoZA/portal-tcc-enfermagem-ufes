@@ -229,14 +229,6 @@ table[data-portal-spreadsheet]:has([data-portal-sticky-selection="true"]) tbody 
 .portal-table-settings-popover button[data-portal-page-size-selected="true"] { background:#d7ded9 !important; border-color:#9aac9f !important; color:#1f2937 !important; }
 .portal-table-settings-popover button[data-portal-page-size-selected="false"] { background:#fff !important; border-color:#cbd5e1 !important; color:#334155 !important; }
 
-/* 2 px verdes reais entre filtros e o início branco da planilha. */
-.portal-meus-processos-filter-row,
-.portal-coordinator-filter-row {
-  position: relative !important;
-  border-bottom: 2px solid var(--portal-green-header, #005830) !important;
-  box-shadow: none !important;
-}
-
 /* Todos é neutro e sempre preto, inclusive descendentes que herdavam branco do banner. */
 .portal-meus-processos-filter-row .portal-native-all-filter,
 .portal-meus-processos-filter-row .portal-native-all-filter[data-selected="true"] {

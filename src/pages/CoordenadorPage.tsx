@@ -799,11 +799,11 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       {/* CABEÇALHO UNIFICADO DA COORDENAÇÃO */}
       <section className="space-y-3">
         {/* UNIFIED GRAY HEADER + TABLE CARD */}
-        <div className={`bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${styles.fontFamilyClass}`} style={styles.rootStyle}>
+        <div data-portal-sheet="president" data-portal-has-filter="true" className={`portal-sheet-frame bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${styles.fontFamilyClass}`} style={styles.rootStyle}>
           {/* Header Banner */}
           <div className={`${styles.bannerHeaderClass} border-b transition-colors`} style={styles.bannerHeaderStyle}>
             {/* Main Title Row */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
+            <div data-portal-sheet-title="true" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
               <div className="flex items-center gap-2">
                 <ColorfulHeaderIcon type="coordination" textFormat={coordTextFormat} />
                 <h1 className="text-base sm:text-lg font-black uppercase tracking-tight leading-snug">
@@ -868,7 +868,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
             </div>
 
             {/* INTEGRATED TOOLBAR BAR (Single clean dividing line) */}
-            <div className="portal-coordinator-filter-row flex flex-wrap items-center justify-between gap-3 border-t-2 border-white px-3.5 py-2.5 text-xs sm:px-4">
+            <div data-portal-sheet-filter="true" className="portal-coordinator-filter-row flex flex-wrap items-center justify-between gap-3 border-t-2 border-white px-3.5 py-2.5 text-xs sm:px-4">
               {/* Filter Row Switcher with FILTRAR prefix following site standard */}
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
