@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
+import { readPortalCss } from './testUtils/portalCss';
 const source = (path: string) => readFile(path, 'utf8');
 
 test('update 39 mantém espaço verde abaixo das duas barras de filtro', async () => {
-  const css = await source('src/index.css');
+  const css = await readPortalCss();
   assert.ok(css.includes('.portal-meus-processos-filter-row'));
   assert.ok(css.includes('.portal-coordinator-filter-row'));
   assert.match(css, /padding-bottom:\s*0\.95rem\s*!important/);
@@ -59,7 +60,7 @@ test('update 39 abre personalização por tela e remove controles gerais legados
 
 test('update 39 limita a superfície da Presidência à troca segura do Master', async () => {
   const [css, enhancer] = await Promise.all([
-    source('src/index.css'),
+    readPortalCss(),
     source('src/components/PortalUiEnhancer.tsx'),
   ]);
   assert.ok(enhancer.includes("portalSettingsRole = 'president-only'"));
