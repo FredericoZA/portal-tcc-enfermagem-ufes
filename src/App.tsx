@@ -168,7 +168,7 @@ export default function App() {
                   : currentTab === 'coordenador' ? 'Área do Presidente'
                   : currentTab === 'configuracoes' ? 'Configurações & Modelos de Arquivos'
                   : currentTab === 'logs' ? 'Registro de Logs'
-                  : currentTab === 'asten-logs' ? 'Registros da Asten'
+                  : currentTab === 'asten-logs' ? 'Registros de Assinatura'
                   : (currentTab === 'analise' || currentTab === 'indicadores') ? 'Indicadores'
                   : 'Portal de TCC'
               }
