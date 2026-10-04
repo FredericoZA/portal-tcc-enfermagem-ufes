@@ -5,12 +5,11 @@ import test from 'node:test';
 const read = (path: string) => readFileSync(path, 'utf8');
 
 const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
-const css = read('src/portal-spreadsheet-runtime.css');
+const css = read('src/index.css');
 const identity = read('src/components/CommissionIdentityPanel.tsx');
 const workspace = read('src/components/SettingsWorkspaceModal.tsx');
 const integrations = read('src/components/InfrastructureIntegrationsPanel.tsx');
 const configPage = read('src/pages/ConfiguracoesPage.tsx');
-const settingsRuntime = read('src/components/PortalSettingsRuntime.tsx');
 const server = read('server.ts');
 const operational = read('src/utils/operationalConfig.ts');
 const courseStudioValidator = read('src/utils/courseStudioValidator.ts');
@@ -25,9 +24,9 @@ test('planilhas congelam cabeçalho e coluna Processo e mantêm rolagem vertical
   assert.match(runtime, /dataset\.portalStickyProcess = 'true'/);
   assert.match(runtime, /host\.scrollTop \+= event\.deltaY/);
   assert.match(runtime, /host\.scrollLeft \+=/);
-  assert.match(css, /thead\[data-portal-sticky-thead="true"\][\s\S]*position: sticky/);
-  assert.match(css, /th\[data-portal-sticky-process="true"\][\s\S]*left: 0/);
-  assert.match(css, /td\[data-portal-sticky-process="true"\][\s\S]*left: 0/);
+  assert.match(css, /portal-spreadsheet-scroll-host thead[\s\S]*position:\s*sticky/);
+  assert.match(css, /data-portal-sheet="repository"[\s\S]*:is\(th, td\):first-child[\s\S]*position:\s*sticky/);
+  assert.match(css, /data-portal-sheet="president"[\s\S]*data-portal-sticky-process/);
 });
 
 test('paginação fica no canto inferior direito e se recompõe após rerender', () => {
@@ -38,12 +37,12 @@ test('paginação fica no canto inferior direito e se recompõe após rerender',
   assert.match(runtime, /host\.insertAdjacentElement\('afterend', pager\)/);
   assert.match(runtime, /characterData: true/);
   assert.match(css, /\.portal-spreadsheet-pager[\s\S]*justify-content: flex-end/);
-  assert.match(css, /\.portal-spreadsheet-pager-left,[\s\S]*display: none/);
+  assert.match(css, /\.portal-spreadsheet-pager-controls[\s\S]*gap:\s*0/);
 });
 
 test('Meus TCCs mantém combinação de filtros com quatro cores bem separadas e Todos neutro', () => {
   const page = read('src/pages/MeusProcessosPage.tsx');
-  const tokens = read('src/utils/portalSemanticTokens.ts');
+  const tokens = read('src/index.css');
   assert.match(page, /selectedRoleCategories/);
   assert.match(page, /toggleRoleCategory/);
   assert.match(page, /selectedRoleCategories\.includes\(roleCat\)/);
@@ -52,7 +51,7 @@ test('Meus TCCs mantém combinação de filtros com quatro cores bem separadas e
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.evaluator/);
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.viewer/);
   for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(tokens, new RegExp(border));
-  assert.match(css, /portal-native-all-filter\[data-selected="true"\][\s\S]*background: #fff !important[\s\S]*color: #111827 !important/);
+  assert.match(css, /portal-native-all-filter\[data-selected="true"\][\s\S]*background:\s*var\(--portal-neutral-bg\)/);
 });
 
 test('Lista de Defesas e Repositório padronizam o cabeçalho como Processo pela camada canônica', () => {
@@ -67,13 +66,16 @@ test('Lista de Defesas e Repositório padronizam o cabeçalho como Processo pela
 });
 
 test('Meus TCCs e Presidente usam o mesmo separador branco canônico após os filtros', () => {
-  const contract = read('src/portal-surface-contract.css');
-  assert.match(contract, /data-portal-has-filter="true"[\s\S]*border-bottom:var\(--portal-sheet-content-divider\) solid #fff!important/);
-  assert.doesNotMatch(css, /portal-coordinator-filter-row[\s\S]*border-bottom: 2px solid/);
+  assert.match(css, /data-portal-has-filter="true"[\s\S]*border-bottom:\s*var\(--portal-sheet-content-divider\) solid var\(--portal-surface-inner\)/);
+  assert.doesNotMatch(css, /portal-coordinator-filter-row[\s\S]*border-bottom:\s*2px/);
 });
 
-test('tutorial remove a caixa redundante de visão selecionada', () => {
-  assert.match(css, /#portal-tutorial-page \.portal-layer-panel > \.portal-layer-card:first-child\s*\{\s*display: none !important/);
+test('tutorial usa somente as superfícies canônicas', () => {
+  const tutorial = read('src/pages/PortalTutorialPage.tsx');
+  assert.match(tutorial, /portal-layer-panel/);
+  assert.match(tutorial, /portal-layer-card/);
+  assert.match(tutorial, /portal-layer-inner/);
+  assert.doesNotMatch(tutorial, /bg-\[#(?:e1e6e9|d5dce0|005830|337959)\]/i);
 });
 
 test('Rodapé e Identidade é exclusivo do Master, persiste e atualiza o rodapé', () => {
@@ -81,7 +83,7 @@ test('Rodapé e Identidade é exclusivo do Master, persiste e atualiza o rodapé
   assert.match(identity, /apiClient\.updateSettings/);
   assert.match(identity, /await refreshAuth\(\)/);
   assert.match(identity, /commissionPresidentContactEmail/);
-  assert.match(identity, /bg-\[#d5dce0\]/);
+  assert.match(identity, /portal-layer-card/);
   assert.doesNotMatch(identity, /Acessos administrativos/i);
   assert.doesNotMatch(identity, /createAdministrationTransfer/);
 });
@@ -91,7 +93,8 @@ test('Rodapé e Integrações são entradas independentes e workspaces diretos',
   assert.match(configPage, /id: 'integrations', title: 'Integrações e Plataforma'/);
   assert.match(configPage, /activeSettingsPanel === 'identity'/);
   assert.match(configPage, /activeSettingsPanel === 'integrations'/);
-  assert.doesNotMatch(settingsRuntime, /cloneNode|insertAdjacentElement\('afterend'/);
+  const main = read('src/main.tsx');
+  assert.doesNotMatch(main, /PortalSettingsRuntime/);
   assert.match(workspace, /data-portal-full-bleed/);
   assert.match(integrations, /flex min-h-full h-full flex-col/);
 });
@@ -135,7 +138,7 @@ test('aparência antiga fica inerte e planilhas usam padrão estático do códig
   assert.match(siteLayout, /A aparência estrutural é canônica e versionada no código/);
   assert.doesNotMatch(siteLayout, /localStorage\.getItem\(STORAGE_KEY\)/);
   assert.match(tableFormatters, /STATIC_PORTAL_TABLE_FORMAT/);
-  assert.match(tableFormatters, /customHeaderColor: '#154d41'/);
+  assert.match(tableFormatters, /customHeaderColor: 'var\(--portal-brand-header\)'/);
   assert.doesNotMatch(tableFormatters, /localStorage\.getItem\(GLOBAL_TABLE_CONFIG_KEY\)/);
   assert.match(server, /'portalAppearance','tableAppearance','tableLayouts'/);
   assert.doesNotMatch(server, /normalizeUnifiedAppearance/);
@@ -148,55 +151,45 @@ test('não existe endereço histórico fixo do Departamento no código operacion
 
 
 
-test('contrato visual global carrega por último a folha autoritativa de superfícies', () => {
+test('contrato visual global usa um único stylesheet autoritativo', () => {
   const main = read('src/main.tsx');
-  assert.match(main, /import '\.\/portal-surface-contract\.css';/);
-  assert.ok(main.lastIndexOf('portal-surface-contract.css') > main.lastIndexOf('portal-spreadsheet-runtime.css'));
+  const imports = [...main.matchAll(/import ['"]\.\/([^'"]+\.css)['"];/g)].map((match) => match[1]);
+  assert.deepEqual(imports, ['index.css']);
 });
 
-test('contrato visual global mantém a paleta anterior e a nova geometria aprovada', () => {
-  const surfaceContract = read('src/portal-surface-contract.css');
-  assert.match(surfaceContract, /--portal-surface-page:#f1f5f9/);
-  assert.match(surfaceContract, /--portal-surface-layer-1:#e1e6e9/);
-  assert.match(surfaceContract, /--portal-surface-layer-2:#d5dce0/);
-  assert.match(surfaceContract, /--portal-surface-inner:#fff/);
-  assert.match(surfaceContract, /--portal-separator-size:15px/);
-  assert.match(surfaceContract, /--portal-sheet-title-height:45px/);
-  assert.match(surfaceContract, /--portal-sheet-title-divider:5px/);
-  assert.match(surfaceContract, /--portal-sheet-filter-height:45px/);
-  assert.match(surfaceContract, /--portal-sheet-content-divider:15px/);
-  assert.match(surfaceContract, /--portal-sheet-column-header-height:35px/);
-  assert.match(surfaceContract, /--portal-sheet-row-min-height:30px/);
-  assert.match(surfaceContract, /--portal-sheet-pagination-height:24px/);
-  assert.match(surfaceContract, /--portal-sheet-column-control-size:15px/);
-  assert.match(surfaceContract, /#meus-processos-table tbody td:first-child/);
-  assert.match(surfaceContract, /#coordenador-page-root tbody td:nth-child\(2\)/);
+test('contrato visual global mantém quatro superfícies e geometria aprovada', () => {
+  assert.match(css, /--portal-surface-page:\s*#f1f5f9/);
+  assert.match(css, /--portal-surface-panel:\s*#e1e6e9/);
+  assert.match(css, /--portal-surface-card:\s*#d5dce0/);
+  assert.match(css, /--portal-surface-inner:\s*#ffffff/);
+  assert.match(css, /--portal-sheet-title-height:\s*45px/);
+  assert.match(css, /--portal-sheet-title-divider:\s*5px/);
+  assert.match(css, /--portal-sheet-filter-height:\s*45px/);
+  assert.match(css, /--portal-sheet-content-divider:\s*15px/);
+  assert.match(css, /--portal-sheet-column-header-height:\s*35px/);
+  assert.match(css, /--portal-sheet-row-min-height:\s*30px/);
+  assert.match(css, /--portal-sheet-pagination-height:\s*24px/);
+  assert.match(css, /--portal-sheet-column-control-size:\s*15px/);
 });
 
 
 test('todas as planilhas obedecem ao mesmo contrato visual', () => {
-  const css = read('src/portal-surface-contract.css');
-  assert.match(css, /--portal-sheet-header:var\(--portal-green-header/);
-  assert.match(css, /TCC8 — CONTRATO CANÔNICO DAS CINCO PLANILHAS/);
   assert.match(css, /\[data-portal-sheet\] \[data-portal-sheet-title="true"\]/);
   assert.match(css, /\[data-portal-sheet\]\[data-portal-has-filter="true"\] \[data-portal-sheet-filter="true"\]/);
-  assert.match(css, /\[data-portal-sheet="repository"\] table th:first-child/);
-  assert.match(css, /position:sticky!important/);
-  assert.match(css, /--portal-sheet-pagination:#fff/);
-  assert.match(css, /width:var\(--portal-sheet-column-control-size\)!important/);
-  assert.match(css, /border-top:var\(--portal-sheet-title-divider\) solid #fff!important/);
-  assert.match(css, /border-bottom:var\(--portal-sheet-content-divider\) solid #fff!important/);
-  assert.match(css, /data-portal-sheet="repository"[\s\S]*tbody td:nth-child\(2\)[\s\S]*background-color:transparent!important/);
-  assert.match(css, /#configuracoes-page-container[\s\S]*background:transparent!important/);
+  assert.match(css, /\[data-portal-sheet="repository"\] :is\(th, td\):first-child/);
+  assert.match(css, /position:\s*sticky/);
+  assert.match(css, /width:\s*var\(--portal-sheet-column-control-size\)/);
+  assert.match(css, /border-top:\s*var\(--portal-sheet-title-divider\) solid var\(--portal-surface-inner\)/);
+  assert.match(css, /border-bottom:\s*var\(--portal-sheet-content-divider\) solid var\(--portal-surface-inner\)/);
+  assert.match(css, /#configuracoes-page-container[\s\S]*background:\s*transparent/);
 });
 
-test('popups de planilha usam a própria planilha como caixa principal', () => {
-  const css = read('src/portal-surface-contract.css');
+test('popups de planilha usam workspace React sem container visual paralelo', () => {
   const workspace = read('src/components/SettingsWorkspaceModal.tsx');
-  assert.match(css, /\[data-settings-sheet="true"\]\{/);
-  assert.match(css, /border:0!important/);
-  assert.match(css, /portal-settings-single-pane\[data-portal-sheet-workspace="true"\]/);
-  assert.doesNotMatch(workspace, /<div className=\{fullBleed \? 'min-h-full w-full'/);
+  assert.match(workspace, /SHEET_SECTION_IDS/);
+  assert.match(workspace, /data-portal-sheet-workspace/);
+  assert.match(workspace, /data-portal-full-bleed/);
+  assert.doesNotMatch(read('src/main.tsx'), /PortalSettingsRuntime/);
 });
 
 test('estúdio embutido não cria uma caixa principal dentro do popup', () => {
