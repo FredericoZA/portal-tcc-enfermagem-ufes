@@ -16,7 +16,7 @@ test('cabeçalho não apresenta acesso institucional nem identidade para visitan
 test('planilhas aplicam política única sem emojis e defesas passadas não ficam foscas', () => {
   const main = read('src/main.tsx');
   const policy = read('src/components/PortalTableTextPolicy.tsx');
-  const css = read('src/portal-public-ux-1044.css');
+  const css = read('src/index.css');
   assert.match(main, /PortalTableTextPolicy/);
   assert.match(policy, /querySelectorAll<HTMLTableElement>\('#portal-app-root table'\)/);
   assert.match(policy, /TABLE_EMOJI_PATTERN/);
@@ -25,7 +25,7 @@ test('planilhas aplicam política única sem emojis e defesas passadas não fica
 });
 
 test('separador grosso encerra o bloco superior e não separa cabeçalho de dados', () => {
-  const css = read('src/portal-public-ux-1044.css');
+  const css = read('src/index.css');
   assert.match(css, /--portal-separator-section: 16px/);
   assert.match(css, /--portal-separator-table: 0px/);
   assert.match(css, /portal-tutorial-filter-row[\s\S]*border-top: 2px solid #fff/);
