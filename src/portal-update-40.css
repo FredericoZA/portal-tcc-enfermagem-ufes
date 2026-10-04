@@ -1,9 +1,0 @@
-/* Atualização 40 — refinamentos das páginas públicas. */
-
-/* O destaque da barra lateral permanece no acabamento canônico aprovado
- * na versão 1.0.36, definido em portal-finalization.css. */
-
-/* O seletor de modelos permanece compacto mesmo quando a lista é aberta. */
-#portal-replication-page details > summary::-webkit-details-marker {
-  display: none;
-}
