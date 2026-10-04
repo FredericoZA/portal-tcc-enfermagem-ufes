@@ -1794,61 +1794,60 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     </h2>
                   </div>
 
-                    {/* Right Group: Lupa, Refresh, Editar Popup and Engrenagem Controls */}
-                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                    {/* Lupa (Search) */}
-                    <SearchPopover
-                      value={defensesSearch}
-                      onChange={setDefensesSearch}
-                      placeholder={defensesTextFormat?.searchButtonText || "Buscar defesas..."}
-                      textFormat={defensesTextFormat}
-                    />
-
-                    {/* Refresh Button (Customizable Emoji / YinYang) */}
-                    <button
-                      type="button"
-                      onClick={refreshData}
-                      disabled={isRefreshingData}
-                      className={`${defStyles.toolbarButtonClass} disabled:opacity-70`}
-                      style={defStyles.toolbarButtonStyle}
-                      title="Atualizar dados da tabela"
-                    >
-                      {defensesTextFormat?.refreshButtonEmoji && defensesTextFormat.refreshButtonEmoji !== '🔄' && defensesTextFormat.refreshButtonEmoji !== '☯️' ? (
-                        <span className={`text-xs ${isRefreshingData ? 'animate-spin' : ''}`}>
-                          {defensesTextFormat.refreshButtonEmoji}
-                        </span>
-                      ) : (
-                        <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshingData ? 'animate-spin' : ''}`} />
-                      )}
-                    </button>
-
-                    {/* Engrenagem (Settings) */}
-                    <HeaderSettingsPopover
-                      recordsLimit={defensesRecordsLimit}
-                      setRecordsLimit={setDefensesRecordsLimit}
-                      allowedLimits={[25, 50, 100, 'all']}
-                      allColumns={ALL_DEFENSES_COLUMNS}
-                      visibleColumns={defensesVisibleColumns}
-                      setVisibleColumns={setDefensesVisibleColumns}
-                      columnOrder={defensesColumnOrder}
-                      setColumnOrder={setDefensesColumnOrder}
-                      storageKey="defenses"
-                      customLabels={defensesCustomLabels}
-                      setCustomLabels={setDefensesCustomLabels}
-                      columnWidths={defensesColumnWidths}
-                      setColumnWidths={setDefensesColumnWidths}
-                      textFormat={defensesTextFormat}
-                      setTextFormat={setDefensesTextFormat}
-                      defaultColumnOrder={DEFAULT_DEFENSES_ORDER}
-                      defaultVisibleColumns={DEFAULT_DEFENSES_VISIBLE}
-                      defaultRecordsLimit="all"
-                      startDate={defensesStartDate}
-                      setStartDate={setDefensesStartDate}
-                      endDate={defensesEndDate}
-                      setEndDate={setDefensesEndDate}
-                      defaultTableTitle="Lista de Defesas"
-                      defaultFilterTitle="Filtrar por situação"
-                    />
+                  <div className="portal-sheet-toolbar shrink-0">
+                    <div className="portal-sheet-toolbar-actions">
+                      <button
+                        id="defenses-refresh-btn"
+                        type="button"
+                        onClick={refreshData}
+                        disabled={isRefreshingData}
+                        className="portal-toolbar-icon-button disabled:opacity-70"
+                        title="Atualizar dados da tabela"
+                        aria-label="Atualizar dados da tabela"
+                      >
+                        {defensesTextFormat?.refreshButtonEmoji && defensesTextFormat.refreshButtonEmoji !== '🔄' && defensesTextFormat.refreshButtonEmoji !== '☯️' ? (
+                          <span className={`text-xs ${isRefreshingData ? 'animate-spin' : ''}`}>
+                            {defensesTextFormat.refreshButtonEmoji}
+                          </span>
+                        ) : (
+                          <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshingData ? 'animate-spin' : ''}`} />
+                        )}
+                      </button>
+                    </div>
+                    <div className="portal-sheet-toolbar-terminal">
+                      <SearchPopover
+                        value={defensesSearch}
+                        onChange={setDefensesSearch}
+                        placeholder={defensesTextFormat?.searchButtonText || "Buscar defesas..."}
+                        textFormat={defensesTextFormat}
+                      />
+                      <HeaderSettingsPopover
+                        recordsLimit={defensesRecordsLimit}
+                        setRecordsLimit={setDefensesRecordsLimit}
+                        allowedLimits={[25, 50, 100, 'all']}
+                        allColumns={ALL_DEFENSES_COLUMNS}
+                        visibleColumns={defensesVisibleColumns}
+                        setVisibleColumns={setDefensesVisibleColumns}
+                        columnOrder={defensesColumnOrder}
+                        setColumnOrder={setDefensesColumnOrder}
+                        storageKey="defenses"
+                        customLabels={defensesCustomLabels}
+                        setCustomLabels={setDefensesCustomLabels}
+                        columnWidths={defensesColumnWidths}
+                        setColumnWidths={setDefensesColumnWidths}
+                        textFormat={defensesTextFormat}
+                        setTextFormat={setDefensesTextFormat}
+                        defaultColumnOrder={DEFAULT_DEFENSES_ORDER}
+                        defaultVisibleColumns={DEFAULT_DEFENSES_VISIBLE}
+                        defaultRecordsLimit="all"
+                        startDate={defensesStartDate}
+                        setStartDate={setDefensesStartDate}
+                        endDate={defensesEndDate}
+                        setEndDate={setDefensesEndDate}
+                        defaultTableTitle="Lista de Defesas"
+                        defaultFilterTitle="Filtrar por situação"
+                      />
+                    </div>
                   </div>
                 </div>
 
