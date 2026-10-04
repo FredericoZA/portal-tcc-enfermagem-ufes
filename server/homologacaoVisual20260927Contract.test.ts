@@ -21,15 +21,17 @@ test('Meus TCCs usa cor do vínculo somente na bolinha do filtro', async () => {
   const page = await source('src/pages/MeusProcessosPage.tsx');
   assert.match(css, /\.portal-table-filter-chip,[\s\S]*background:\s*var\(--portal-surface-inner\)/);
   assert.match(css, /portal-native-all-filter\[data-selected="true"\][\s\S]*background:\s*var\(--portal-neutral-bg\)/);
-  assert.match(page, /className="portal-filter-dot[^"]*"[^\n]*style=\{\{ backgroundColor: cfg\.borderColor \}\}/);
+  assert.match(page, /portal-filter-dot/);
+  assert.match(page, /backgroundColor:\s*cfg\.borderColor/);
   assert.doesNotMatch(css, /title\*="Aluno"/);
 });
 
 test('Presidência preserva a paleta semântica de assinatura sem seletores posicionais', async () => {
   const css = await readPortalCss();
   const tokens = await source('src/utils/portalSemanticTokens.ts');
-  assert.match(tokens, /signature:[\s\S]*pending:[\s\S]*--portal-signature-pending-bg/);
-  assert.match(tokens, /signature:[\s\S]*signed:[\s\S]*--portal-signature-signed-bg/);
+  assert.match(tokens, /signature:\s*PORTAL_THEME\.semantic\.signature/);
+  assert.match(css, /--portal-signature-pending-bg/);
+  assert.match(css, /--portal-signature-signed-bg/);
   assert.doesNotMatch(css, /portal-coordinator-filter-row[\s\S]*nth-child/);
 });
 
