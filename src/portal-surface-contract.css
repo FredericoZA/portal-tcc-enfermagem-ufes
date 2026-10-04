@@ -179,15 +179,6 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
   background:var(--portal-sheet-pagination)!important;
 }
 
-/* Separador único: exatamente 16px. Nada de faixas acumuladas. */
-#formal-monthly-calendar-section>div>div:nth-child(2),
-#public-calendar-cards-section .portal-defense-filter-row,
-#meus-processos-page-container .portal-meus-processos-filter-row,
-#coordenador-page-root .portal-coordinator-filter-row{
-  border-top:16px solid #fff!important;
-  border-bottom-width:0!important;
-  margin-top:0!important;
-}
 
 /* Pop-up de planilha = a própria planilha; elimina moldura interna inútil. */
 .portal-settings-single-pane[data-portal-sheet-workspace="true"]{
