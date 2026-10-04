@@ -553,18 +553,12 @@ function injectWrapSetting() {
   sync();
 }
 
-function removeRefreshControls() {
-  document.querySelectorAll<HTMLButtonElement>(
-    'button[title*="Atualizar"],button[aria-label*="Atualizar"],button[title*="Sincronizar dados"],button[aria-label*="Sincronizar dados"]',
-  ).forEach((button) => {
-    if (button.closest('#portal-app-root main')) button.remove();
-  });
+function pruneLegacyIndicatorSubtitle() {
   const indicators = document.getElementById('indicadores-publicos-page');
-  if (indicators) {
-    Array.from(indicators.querySelectorAll('p')).forEach((paragraph) => {
-      if (normalize(paragraph.textContent || '') === 'panorama estatistico agregado dos tccs') paragraph.remove();
-    });
-  }
+  if (!indicators) return;
+  Array.from(indicators.querySelectorAll('p')).forEach((paragraph) => {
+    if (normalize(paragraph.textContent || '') === 'panorama estatistico agregado dos tccs') paragraph.remove();
+  });
 }
 
 function calendarPeriod() {
@@ -611,7 +605,7 @@ function enhanceAll() {
   document.querySelectorAll<HTMLTableElement>('#portal-app-root main table').forEach(enhanceTable);
   bindSettingsButtons();
   injectWrapSetting();
-  removeRefreshControls();
+  pruneLegacyIndicatorSubtitle();
   enhanceCalendar();
 }
 
