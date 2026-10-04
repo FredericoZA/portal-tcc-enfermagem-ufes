@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { readPortalCss } from './testUtils/portalCss';
 const read=(p:string)=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 // Contratos de regressão dos ajustes visuais e funcionais consolidados.
@@ -29,7 +30,7 @@ test('Meus TCCs usa Etapa em vez de progresso percentual',()=>{
 });
 
 test('popup e logs preservam acabamento aprovado e release atual está em 1.0.44',()=>{
-  const css=read('src/index.css');
+  const css=readPortalCss();
   const ui=read('src/components/PortalUiEnhancer.tsx');
   assert.match(css,/section\[aria-label\^="Colunas e ordem"\]/);
   assert.match(css,/border-bottom:4px solid #fff/);
