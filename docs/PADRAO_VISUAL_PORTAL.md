@@ -81,9 +81,9 @@ Cores e estilos fora deste padrão só são permitidos quando representam inform
 Essas exceções não alteram a hierarquia-base de superfícies.
 
 
-## 9. Contrato único de planilhas
+## 9. Contrato único das cinco superfícies tabulares
 
-Todas as planilhas do Portal usam o mesmo componente visual. O conteúdo e as colunas podem variar, mas a estrutura não.
+O contrato canônico é aplicado a **Calendário, Lista de Defesas, Meus TCCs, Área do Presidente e Repositório**. O conteúdo e as colunas podem variar, mas a anatomia visual não. A implementação usa os atributos `data-portal-sheet`, `data-portal-sheet-title`, `data-portal-sheet-filter` e `data-portal-sheet-column-header`, evitando seletores frágeis baseados na posição do elemento.
 
 - barra de título e cabeçalho das colunas usam o mesmo verde institucional;
 - planilha com filtro: **45 / 5 / 45 / 15 / 35 px**;
@@ -91,7 +91,9 @@ Todas as planilhas do Portal usam o mesmo componente visual. O conteúdo e as co
 - linha de dados com mínimo de **30 px**;
 - paginação de **24 px**;
 - controle do cabeçalho de **15 × 15 px**;
+- primeira linha fixa nas tabelas;
 - primeira coluna fixa, incluindo cabeçalho e corpo;
+- exceção estrutural da Área do Presidente: Seleção + Processo ficam fixos e contíguos;
 - texto padrão preto;
 - botões comuns brancos;
 - controles de configuração do cabeçalho são menores e em cinza muito claro;
