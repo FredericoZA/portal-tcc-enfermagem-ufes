@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
+import { readPortalCss } from './testUtils/portalCss';
 const source = (path:string) => readFile(path,'utf8');
 
 test('sidebar ativa usa apenas o estado canônico, sem faixa fluorescente histórica',async()=>{
-  const [main,css]=await Promise.all([source('src/main.tsx'),source('src/index.css')]);
+  const [main,css]=await Promise.all([source('src/main.tsx'),readPortalCss()]);
   assert.ok(main.includes("import './index.css';"));
   assert.ok(css.includes('--portal-sidebar-active: #154d41'));
   assert.ok(!css.includes('#74FF96'));
