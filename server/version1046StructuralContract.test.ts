@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { readPortalCss } from './testUtils/portalCss';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
 test('release de refactor visual é 1.0.70', () => {
@@ -63,7 +64,7 @@ test('configurações separam artefatos e unem modelos com documentos', () => {
 test('runtime tabular canônico substitui as camadas 1.0.52 e 1.0.53', () => {
   const formatter = read('src/utils/tableFormatters.ts');
   const main = read('src/main.tsx');
-  const css = read('src/index.css');
+  const css = readPortalCss();
   assert.match(formatter, /cellTextColorClass = 'text-black'/);
   assert.match(main, /PortalSpreadsheetRuntime/);
   assert.doesNotMatch(main, /PortalSettingsRuntime/);
@@ -118,7 +119,7 @@ test('rolagem canônica usa mouse no documento e wheel no mesmo host', () => {
 });
 
 test('quatro papéis usam famílias cromáticas amarelo, laranja, verde e azul', () => {
-  const css = read('src/index.css');
+  const css = readPortalCss();
   for (const color of ['#fde68a', '#fdba74', '#bbf7d0', '#bfdbfe']) assert.match(css, new RegExp(color));
   for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(css, new RegExp(border));
 });
