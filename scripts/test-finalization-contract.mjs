@@ -3,7 +3,16 @@ import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(path, 'utf8');
 const main = read('src/main.tsx');
-const css = read('src/portal-finalization.css');
+const indexCss = read('src/index.css');
+const tokens = read('src/styles/portal-tokens.css');
+const visualCss = [
+  tokens,
+  read('src/styles/portal-layout.css'),
+  read('src/styles/portal-components.css'),
+  read('src/styles/portal-sheet.css'),
+  read('src/styles/portal-pages.css'),
+  read('src/styles/portal-responsive.css'),
+].join('\n');
 const auth = read('src/context/AuthContext.tsx');
 const session = read('server/security/firebaseAuth.ts');
 const personalizationHub = read('src/components/PortalPersonalizationHubModal.tsx');
@@ -21,11 +30,45 @@ const types = read('src/types/index.ts');
 const server = read('server.ts');
 const vercel = JSON.parse(read('vercel.json'));
 
-assert.ok(main.indexOf("./portal-finalization.css") > main.indexOf("./portal-update-33.css"), 'A camada final precisa ser carregada depois da Atualização 33.');
+assert.match(main, /import ['"]\.\/index\.css['"]/);
+assert.doesNotMatch(main, /portal-(?:finalization|update-|version-).*\.css/);
+for (const canonicalImport of [
+  './styles/portal-tokens.css',
+  './styles/portal-layout.css',
+  './styles/portal-components.css',
+  './styles/portal-sheet.css',
+  './styles/portal-pages.css',
+  './styles/portal-responsive.css',
+]) assert.ok(indexCss.includes(canonicalImport), `Folha canônica ausente do entrypoint: ${canonicalImport}`);
+
+for (const [token, value] of [
+  ['--portal-surface-page', '#f1f5f9'],
+  ['--portal-surface-panel', '#e1e6e9'],
+  ['--portal-surface-card', '#d5dce0'],
+  ['--portal-surface-inner', '#ffffff'],
+  ['--portal-brand-header', '#005830'],
+  ['--portal-brand-action', '#337959'],
+  ['--portal-sidebar-footer', '#011f17'],
+  ['--portal-sidebar-active', '#154d41'],
+  ['--portal-sheet-title-height', '45px'],
+  ['--portal-sheet-title-divider', '5px'],
+  ['--portal-sheet-filter-height', '45px'],
+  ['--portal-sheet-content-divider', '15px'],
+  ['--portal-sheet-column-header-height', '35px'],
+  ['--portal-sheet-row-min-height', '30px'],
+  ['--portal-sheet-pagination-height', '24px'],
+  ['--portal-sheet-column-control-size', '15px'],
+]) assert.match(tokens, new RegExp(`${token.replace(/[.*+?^$()|[\\]{}]/g, '\\assert.ok(main.indexOf("./portal-finalization.css") > main.indexOf("./portal-update-33.css"), 'A camada final precisa ser carregada depois da Atualização 33.');
 assert.match(css, /--portal-divider-width:\s*2px/);
 assert.match(css, /--portal-filter-selected:\s*#AEB0B3/i);
 assert.match(css, /--portal-sidebar-accent:\s*#74FF96/i);
-assert.match(css, /#meus-processos-btn-novo[\s\S]*order:\s*-1/);
+assert.match(css, /#meus-processos-btn-novo[\s\S]*order:\s*-1/);')}:\\s*${value.replace(/[.*+?^$()|[\\]{}]/g, '\\assert.ok(main.indexOf("./portal-finalization.css") > main.indexOf("./portal-update-33.css"), 'A camada final precisa ser carregada depois da Atualização 33.');
+assert.match(css, /--portal-divider-width:\s*2px/);
+assert.match(css, /--portal-filter-selected:\s*#AEB0B3/i);
+assert.match(css, /--portal-sidebar-accent:\s*#74FF96/i);
+assert.match(css, /#meus-processos-btn-novo[\s\S]*order:\s*-1/);')}`, 'i'));
+
+assert.doesNotMatch(visualCss, /!important/);
 
 assert.match(session, /SESSION_IDLE_TTL_SECONDS\s*=\s*3\s*\*\s*60\s*\*\s*60/);
 assert.match(session, /expiresAt:\s*now\s*\+\s*SESSION_IDLE_TTL_SECONDS/);
