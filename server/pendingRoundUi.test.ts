@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { readPortalCss } from './testUtils/portalCss';
 const root = path.resolve(process.cwd());
 const source = (file: string) => readFile(path.join(root, file), 'utf8');
 
@@ -43,7 +44,7 @@ test('configurações não exibem blocos redundantes e Indicadores usam somente 
 });
 
 test('paleta principal usa quatro superfícies e identidade canônica sem oliva legado', async () => {
-  const css = await source('src/index.css');
+  const css = await readPortalCss();
   for (const forbidden of ['#5f6937', '#4f582e', '#738044', '#8c9862']) assert.ok(!css.includes(forbidden), `Cor legada ainda presente: ${forbidden}`);
   assert.ok(css.includes('--portal-surface-page: #f1f5f9'));
   assert.ok(css.includes('--portal-surface-panel: #e1e6e9'));
