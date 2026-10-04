@@ -16,7 +16,7 @@ test('runtime estrutural neutraliza hover e usa um único menu por coluna',()=>{
 });
 
 test('cores do processo e calendário compartilham a mesma paleta',()=>{
-  const css=read('src/portal-core-1043.css');
+  const css=read('src/index.css');
   assert.match(css,/--portal-defense-defended-bg:\s*#bed8c3/);
   assert.match(css,/--portal-defense-defended-border:\s*#719a79/);
   assert.match(css,/--portal-defense-upcoming-bg:\s*#e8dda7/);
