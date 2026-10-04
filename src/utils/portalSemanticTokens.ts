@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { PORTAL_THEME, getPortalThemeCssVars } from '../theme/portalTheme';
+import { PORTAL_THEME } from '../theme/portalTheme';
 
 export const PORTAL_SURFACE_COLORS = {
   page: PORTAL_THEME.surface.page,
@@ -69,36 +69,9 @@ export function getPortalToneCssVars(tone: PortalSemanticTone): CSSProperties {
 }
 
 export function getPortalSemanticRootVars(): CSSProperties {
-  return {
-    ...getPortalThemeCssVars(),
-    '--portal-defense-defended-bg': PORTAL_SEMANTIC_COLORS.defense.defended.bg,
-    '--portal-defense-defended-border': PORTAL_SEMANTIC_COLORS.defense.defended.border,
-    '--portal-defense-defended-text': PORTAL_SEMANTIC_COLORS.defense.defended.text,
-    '--portal-defense-upcoming-bg': PORTAL_SEMANTIC_COLORS.defense.upcoming.bg,
-    '--portal-defense-upcoming-border': PORTAL_SEMANTIC_COLORS.defense.upcoming.border,
-    '--portal-defense-upcoming-text': PORTAL_SEMANTIC_COLORS.defense.upcoming.text,
-    '--portal-role-student-bg': PORTAL_SEMANTIC_COLORS.processRole.student.bg,
-    '--portal-role-student-border': PORTAL_SEMANTIC_COLORS.processRole.student.border,
-    '--portal-role-student-text': PORTAL_SEMANTIC_COLORS.processRole.student.text,
-    '--portal-role-board-bg': PORTAL_SEMANTIC_COLORS.processRole.board.bg,
-    '--portal-role-board-border': PORTAL_SEMANTIC_COLORS.processRole.board.border,
-    '--portal-role-board-text': PORTAL_SEMANTIC_COLORS.processRole.board.text,
-    '--portal-role-evaluator-bg': PORTAL_SEMANTIC_COLORS.processRole.evaluator.bg,
-    '--portal-role-evaluator-border': PORTAL_SEMANTIC_COLORS.processRole.evaluator.border,
-    '--portal-role-evaluator-text': PORTAL_SEMANTIC_COLORS.processRole.evaluator.text,
-    '--portal-role-viewer-bg': PORTAL_SEMANTIC_COLORS.processRole.viewer.bg,
-    '--portal-role-viewer-border': PORTAL_SEMANTIC_COLORS.processRole.viewer.border,
-    '--portal-role-viewer-text': PORTAL_SEMANTIC_COLORS.processRole.viewer.text,
-    '--portal-signature-pending-bg': PORTAL_SEMANTIC_COLORS.signature.pending.bg,
-    '--portal-signature-pending-border': PORTAL_SEMANTIC_COLORS.signature.pending.border,
-    '--portal-signature-pending-text': PORTAL_SEMANTIC_COLORS.signature.pending.text,
-    '--portal-signature-signed-bg': PORTAL_SEMANTIC_COLORS.signature.signed.bg,
-    '--portal-signature-signed-border': PORTAL_SEMANTIC_COLORS.signature.signed.border,
-    '--portal-signature-signed-text': PORTAL_SEMANTIC_COLORS.signature.signed.text,
-    '--portal-neutral-bg': PORTAL_SEMANTIC_COLORS.neutral.bg,
-    '--portal-neutral-border': PORTAL_SEMANTIC_COLORS.neutral.border,
-    '--portal-neutral-text': PORTAL_SEMANTIC_COLORS.neutral.text,
-  } as CSSProperties;
+  // Os valores reais vivem em :root no index.css.
+  // Mantemos a função por compatibilidade com consumidores existentes.
+  return {};
 }
 
 const FILTER_TONE_ALIASES: Record<string, PortalSemanticTone> = {
@@ -143,4 +116,4 @@ export function resolvePortalFilterTone(key: string): PortalSemanticTone | null 
   return FILTER_TONE_ALIASES[normalizeSemanticKey(key)] || null;
 }
 
-export const PORTAL_SECTION_DIVIDER_PX = PORTAL_THEME.geometry.contentDivider;
+export const PORTAL_SECTION_DIVIDER_PX = 15;
