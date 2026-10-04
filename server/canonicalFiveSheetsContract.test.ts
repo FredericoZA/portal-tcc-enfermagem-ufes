@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+import { readPortalCss } from './testUtils/portalCss';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
 test('cinco superfícies usam o mesmo contrato canônico', () => {
@@ -25,7 +26,7 @@ test('cinco superfícies usam o mesmo contrato canônico', () => {
 });
 
 test('geometria é única e não depende de seletores nth-child por tela', () => {
-  const css = read('src/index.css');
+  const css = readPortalCss();
 
   assert.match(css, /PORTAL TCC — SISTEMA VISUAL CANÔNICO/);
   assert.match(css, /--portal-sheet-title-height:\s*45px/);
@@ -43,7 +44,7 @@ test('geometria é única e não depende de seletores nth-child por tela', () =>
 });
 
 test('sticky é canônico e preserva exceção estrutural do Presidente', () => {
-  const css = read('src/index.css');
+  const css = readPortalCss();
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
 
   assert.match(css, /Cabeçalho sticky/);
@@ -56,21 +57,21 @@ test('sticky é canônico e preserva exceção estrutural do Presidente', () => 
 });
 
 test('Repositório e Meus TCCs congelam apenas a primeira coluna', () => {
-  const css = read('src/index.css');
+  const css = readPortalCss();
   assert.match(css, /data-portal-sheet="repository"[\s\S]*:is\(th, td\):first-child/);
   assert.match(css, /data-portal-sheet="my-tccs"[\s\S]*:is\(th, td\):first-child/);
   assert.doesNotMatch(css, /data-portal-sheet="repository"[\s\S]*td:nth-child\(2\)[\s\S]*position:\s*sticky/);
 });
 
 test('controle de coluna é 15x15 sem afetar o checkbox do Presidente', () => {
-  const css = read('src/index.css');
+  const css = readPortalCss();
   assert.match(css, /--portal-sheet-column-control-size:\s*15px/);
   assert.match(css, /\.portal-core-column-menu,[\s\S]*\.portal-column-filter/);
   assert.doesNotMatch(css, /portal-sheet-checkbox[\s\S]*portal-sheet-column-control-size/);
 });
 
 test('Configurações não cria painel externo ao redor do hub', () => {
-  const css = read('src/index.css');
+  const css = readPortalCss();
   assert.match(css, /#configuracoes-page-container,[\s\S]*#portal-settings-hub,[\s\S]*\.portal-settings-list[\s\S]*background:\s*transparent/);
 });
 
