@@ -42,13 +42,16 @@ test('configurações não exibem blocos redundantes e Indicadores usam somente 
   assert.ok(publicApi.includes('containsPersonalData:false'));
 });
 
-test('paleta principal usa musgo, cinza e contraste claro sem oliva fluorescente', async () => {
+test('paleta principal usa quatro superfícies e identidade canônica sem oliva legado', async () => {
   const css = await source('src/index.css');
   for (const forbidden of ['#5f6937', '#4f582e', '#738044', '#8c9862']) assert.ok(!css.includes(forbidden), `Cor legada ainda presente: ${forbidden}`);
-  assert.ok(css.includes('--color-emerald-800: #344125'));
-  assert.ok(css.includes('--portal-popup-header: #f1f5f9'));
-  assert.ok(css.includes('--portal-popup-header-text: #0f172a'));
-  assert.ok(css.includes('--portal-popup-action: #475569'));
+  assert.ok(css.includes('--portal-surface-page: #f1f5f9'));
+  assert.ok(css.includes('--portal-surface-panel: #e1e6e9'));
+  assert.ok(css.includes('--portal-surface-card: #d5dce0'));
+  assert.ok(css.includes('--portal-surface-inner: #ffffff'));
+  assert.ok(css.includes('--portal-brand-header: #005830'));
+  assert.ok(css.includes('--portal-sidebar-footer: #011f17'));
+  assert.ok(css.includes('--portal-header-institution: #d5dce0'));
 });
 
 test('transferência administrativa não depende de feature opcional', async () => {
