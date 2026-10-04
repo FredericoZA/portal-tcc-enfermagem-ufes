@@ -2,8 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const tokens = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8').toLowerCase();
-const docs = readFileSync(new URL('../docs/ARQUITETURA_VISUAL_CANONICA.md', import.meta.url), 'utf8').toLowerCase();
+const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8').toLowerCase();
+
+const entrypoint = read('../src/index.css');
+const tokens = read('../src/styles/portal-tokens.css');
+const layout = read('../src/styles/portal-layout.css');
+const components = read('../src/styles/portal-components.css');
+const sheets = read('../src/styles/portal-sheet.css');
+const pages = read('../src/styles/portal-pages.css');
+const responsive = read('../src/styles/portal-responsive.css');
+const themeBridge = read('../src/constants/theme.ts');
+const docs = read('../docs/ARQUITETURA_VISUAL_CANONICA.md');
 
 const required = [
   '#f1f5f9', '#e1e6e9', '#d5dce0', '#ffffff',
@@ -31,4 +40,31 @@ test('sticky possui três níveis explícitos', () => {
   assert.match(tokens, /--portal-z-sticky-column:\s*30/);
   assert.match(tokens, /--portal-z-sticky-header:\s*40/);
   assert.match(tokens, /--portal-z-sticky-corner:\s*60/);
+});
+
+test('entrypoint visual só compõe as folhas canônicas', () => {
+  const expected = [
+    './styles/portal-tokens.css',
+    './styles/portal-layout.css',
+    './styles/portal-components.css',
+    './styles/portal-sheet.css',
+    './styles/portal-pages.css',
+    './styles/portal-responsive.css',
+  ];
+  for (const path of expected) assert.ok(entrypoint.includes(path), `import canônico ausente: ${path}`);
+  assert.equal((entrypoint.match(/@import/g) || []).length, 7);
+});
+
+test('paleta estrutural concreta existe apenas nos tokens', () => {
+  const implementation = [layout, components, sheets, pages, responsive, themeBridge].join('\n');
+  for (const hex of ['#f1f5f9', '#e1e6e9', '#d5dce0', '#005830', '#337959', '#011f17', '#154d41']) {
+    assert.ok(!implementation.includes(hex), `cor estrutural hardcoded fora dos tokens: ${hex}`);
+  }
+});
+
+test('bridge TypeScript de tema não define valores visuais', () => {
+  assert.doesNotMatch(themeBridge, /#[0-9a-f]{3,8}\b/);
+  assert.doesNotMatch(themeBridge, /\bbg-(?:slate|emerald|green|white|gray)-/);
+  assert.doesNotMatch(themeBridge, /\btext-(?:slate|emerald|green|white|gray)-/);
+  assert.match(themeBridge, /portal-theme-btn-primary/);
 });
