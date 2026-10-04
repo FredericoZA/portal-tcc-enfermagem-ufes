@@ -58,15 +58,9 @@ for (const [token, value] of [
   ['--portal-sheet-row-min-height', '30px'],
   ['--portal-sheet-pagination-height', '24px'],
   ['--portal-sheet-column-control-size', '15px'],
-]) assert.match(tokens, new RegExp(`${token.replace(/[.*+?^$()|[\\]{}]/g, '\\assert.ok(main.indexOf("./portal-finalization.css") > main.indexOf("./portal-update-33.css"), 'A camada final precisa ser carregada depois da Atualização 33.');
-assert.match(css, /--portal-divider-width:\s*2px/);
-assert.match(css, /--portal-filter-selected:\s*#AEB0B3/i);
-assert.match(css, /--portal-sidebar-accent:\s*#74FF96/i);
-assert.match(css, /#meus-processos-btn-novo[\s\S]*order:\s*-1/);')}:\\s*${value.replace(/[.*+?^$()|[\\]{}]/g, '\\assert.ok(main.indexOf("./portal-finalization.css") > main.indexOf("./portal-update-33.css"), 'A camada final precisa ser carregada depois da Atualização 33.');
-assert.match(css, /--portal-divider-width:\s*2px/);
-assert.match(css, /--portal-filter-selected:\s*#AEB0B3/i);
-assert.match(css, /--portal-sidebar-accent:\s*#74FF96/i);
-assert.match(css, /#meus-processos-btn-novo[\s\S]*order:\s*-1/);')}`, 'i'));
+]) {
+  assert.ok(tokens.toLowerCase().includes(`${token}: ${value}`.toLowerCase()), `Token canônico divergente: ${token}`);
+}
 
 assert.doesNotMatch(visualCss, /!important/);
 
