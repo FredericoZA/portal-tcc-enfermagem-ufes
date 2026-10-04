@@ -16,13 +16,13 @@ export const STATIC_PORTAL_TABLE_FORMAT: TableTextFormat = {
   // TableColumnSelectorPanel importa este arquivo e isso criaria ciclo em TDZ.
   headerTheme: 'colored',
   headerTextColor: 'custom',
-  customHeaderColor: '#154d41',
-  customHeaderSecondaryColor: '#013d2b',
-  customHeaderTextColor: '#ffffff',
+  customHeaderColor: 'var(--portal-brand-header)',
+  customHeaderSecondaryColor: 'var(--portal-brand-header)',
+  customHeaderTextColor: 'var(--portal-text-light)',
   filterStyle: 'custom',
-  toolbarButtonColor: '#154d41',
-  toolbarButtonTextColor: '#b8d8c3',
-  toolbarButtonBorderColor: 'transparent',
+  toolbarButtonColor: 'var(--portal-surface-inner)',
+  toolbarButtonTextColor: 'var(--portal-text-dark)',
+  toolbarButtonBorderColor: 'var(--portal-border)',
   toolbarButtonBorderWidth: 'none',
   toolbarButtonOpacity: 1,
   fontFamily: 'inter',
@@ -50,46 +50,10 @@ export function loadGlobalTableConfig(): TableTextFormat {
  */
 export function saveGlobalTableConfig(_format: TableTextFormat): void {
   try {
-    const format = loadGlobalTableConfig();
-    if (typeof document !== 'undefined') {
-      document.documentElement.style.setProperty('--portal-font-family', portalFontFamily(format.fontFamily));
-      const palette = THEME_PALETTES[format.headerTheme || 'militar'] || THEME_PALETTES.militar;
-      const sizes = { xs: '11px', sm: '12px', base: '14px', lg: '16px' };
-      const density = format.cellPadding || format.density || 'normal';
-      const colors = { white: '#ffffff', dark: '#0f172a', muted: '#475569', colored: '#022c22' };
-      const tokens: Record<string, string> = {
-        '--portal-table-font-size': sizes[format.fontSize || 'base'] || '14px',
-        '--portal-table-header-size': sizes[format.headerFontSize || 'base'] || '14px',
-        '--portal-table-header-bg': format.customHeaderColor || palette.theadBg,
-        '--portal-table-header-text': format.headerTextColor === 'custom' ? format.customHeaderTextColor || palette.text : colors[format.headerTextColor || ''] || format.customHeaderTextColor || palette.text,
-        '--portal-table-text': format.cellTextColor === 'custom' ? format.customCellTextColor || '#0f172a' : format.cellTextColor === 'colored' ? '#022c22' : format.cellTextColor === 'neutral' ? '#334155' : '#0f172a',
-        '--portal-table-divider': format.customDividerColor || palette.divider,
-        '--portal-table-padding': density === 'ultra_compact' ? '.125rem .25rem' : density === 'compact' ? '.25rem .375rem' : density === 'spacious' ? '.75rem 1rem' : density === 'comfortable' ? '.625rem .75rem' : '.375rem .5rem',
-        '--portal-table-header-align': format.headerAlignment === 'left' ? 'left' : 'center',
-        '--portal-table-cell-align': format.cellAlignment === 'left' ? 'left' : 'center',
-        '--portal-table-cell-weight': format.boldCells ? '700' : '400',
-        '--portal-table-cell-style': format.italicCells ? 'italic' : 'normal',
-        '--portal-table-header-case': format.headerUppercase || format.headerCasing === 'uppercase' ? 'uppercase' : format.headerCasing === 'capitalize' ? 'capitalize' : 'none',
-        '--portal-table-zebra': format.zebraStriping ? '#f3f7f4' : 'transparent',
-      };
-      for (const [name, value] of Object.entries(tokens)) document.documentElement.style.setProperty(name, value);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(GLOBAL_TABLE_EVENT, { detail: loadGlobalTableConfig() }));
     }
-    if (typeof window !== 'undefined') setTimeout(() => window.dispatchEvent(new CustomEvent(GLOBAL_TABLE_EVENT, { detail: format })), 0);
-  } catch (e) {
-    console.error('Error applying static global table config:', e);
-  }
-}
-
-export function inheritsGlobalTableAppearance(storageKey: string): boolean {
-  return tableInheritsGlobalAppearance(storageKey);
-}
-
-// Regex to strip any unicode emojis
-export const EMOJI_REGEX = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{2300}-\u{23FF}\u{2B50}\u{200D}\u{FE0F}]/gu;
-
-export function stripEmojis(str: string): string {
-  if (!str) return '';
-  return str.replace(EMOJI_REGEX, '').replace(/\s+/g, ' ').trim();
+  } catch {}
 }
 
 /**
