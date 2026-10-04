@@ -37,7 +37,7 @@ function readGlobalRoles(): string[] {
 function setButtonHint(button: HTMLButtonElement | null, hint: string) {
   if (!button) return;
   button.title = hint;
-  button.setAttribute('aria-label', hint);
+  if (!button.getAttribute('aria-label')) button.setAttribute('aria-label', hint);
 }
 
 function normalizeLegacyInlineAccents() {
