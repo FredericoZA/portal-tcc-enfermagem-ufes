@@ -25,17 +25,17 @@ test('cinco superfícies usam o mesmo contrato canônico', () => {
 });
 
 test('geometria é única e não depende de seletores nth-child por tela', () => {
-  const css = read('src/portal-surface-contract.css');
+  const css = read('src/index.css');
 
-  assert.match(css, /TCC8 — CONTRATO CANÔNICO DAS CINCO PLANILHAS/);
-  assert.match(css, /--portal-sheet-title-height:45px/);
-  assert.match(css, /--portal-sheet-title-divider:5px/);
-  assert.match(css, /--portal-sheet-filter-height:45px/);
-  assert.match(css, /--portal-sheet-content-divider:15px/);
-  assert.match(css, /--portal-sheet-column-header-height:35px/);
-  assert.match(css, /--portal-sheet-row-min-height:30px/);
-  assert.match(css, /--portal-sheet-pagination-height:24px/);
-  assert.match(css, /--portal-sheet-column-control-size:15px/);
+  assert.match(css, /PORTAL TCC — SISTEMA VISUAL CANÔNICO/);
+  assert.match(css, /--portal-sheet-title-height:\s*45px/);
+  assert.match(css, /--portal-sheet-title-divider:\s*5px/);
+  assert.match(css, /--portal-sheet-filter-height:\s*45px/);
+  assert.match(css, /--portal-sheet-content-divider:\s*15px/);
+  assert.match(css, /--portal-sheet-column-header-height:\s*35px/);
+  assert.match(css, /--portal-sheet-row-min-height:\s*30px/);
+  assert.match(css, /--portal-sheet-pagination-height:\s*24px/);
+  assert.match(css, /--portal-sheet-column-control-size:\s*15px/);
 
   assert.match(css, /\[data-portal-sheet\]\[data-portal-has-filter="true"\] \[data-portal-sheet-filter="true"\]/);
   assert.match(css, /\[data-portal-sheet\]\[data-portal-has-filter="false"\] \[data-portal-sheet-title="true"\]/);
@@ -43,35 +43,39 @@ test('geometria é única e não depende de seletores nth-child por tela', () =>
 });
 
 test('sticky é canônico e preserva exceção estrutural do Presidente', () => {
-  const css = read('src/portal-surface-contract.css');
-  const runtime = read('src/portal-spreadsheet-runtime.css');
+  const css = read('src/index.css');
+  const runtime = read('src/index.css');
 
-  assert.match(css, /Primeira linha congelada/);
+  assert.match(css, /Cabeçalho sticky/);
   assert.match(css, /data-portal-sheet="repository"[\s\S]*table th:first-child/);
   assert.match(css, /data-portal-sheet="my-tccs"[\s\S]*table td:first-child/);
   assert.match(css, /data-portal-sheet="president"[\s\S]*data-portal-sticky-selection/);
-  assert.match(css, /left:54px!important/);
+  assert.match(css, /left:\s*54px/);
   assert.match(runtime, /data-portal-sticky-process/);
   assert.match(runtime, /data-portal-sticky-thead/);
 });
 
-test('Repositório e Meus TCCs não pintam a segunda coluna como sticky', () => {
-  const css = read('src/portal-surface-contract.css');
-  assert.doesNotMatch(css, /#biblioteca-tccs-section tbody td:nth-child\(2\),\s*#meus-processos-table tbody td:first-child/);
-  assert.match(css, /data-portal-sheet="repository"[\s\S]*tbody td:nth-child\(2\)[\s\S]*background-color:transparent!important/);
+test('Repositório e Meus TCCs congelam apenas a primeira coluna', () => {
+  const css = read('src/index.css');
+  assert.match(css, /data-portal-sheet="repository"[\s\S]*:is\(th, td\):first-child/);
+  assert.match(css, /data-portal-sheet="my-tccs"[\s\S]*:is\(th, td\):first-child/);
+  assert.doesNotMatch(css, /data-portal-sheet="repository"[\s\S]*td:nth-child\(2\)[\s\S]*position:\s*sticky/);
 });
 
-test('checkbox do Presidente não herda tamanho do botão circular de coluna', () => {
-  const css = read('src/portal-surface-contract.css');
-  assert.match(css, /thead th button:not\(\.portal-sheet-checkbox\)/);
+test('controle de coluna é 15x15 sem afetar o checkbox do Presidente', () => {
+  const css = read('src/index.css');
+  assert.match(css, /--portal-sheet-column-control-size:\s*15px/);
+  assert.match(css, /\.portal-core-column-menu,[\s\S]*\.portal-column-filter/);
+  assert.doesNotMatch(css, /portal-sheet-checkbox[\s\S]*portal-sheet-column-control-size/);
 });
 
 test('Configurações não cria painel externo ao redor do hub', () => {
-  const css = read('src/portal-surface-contract.css');
-  assert.match(css, /#configuracoes-page-container,[\s\S]*#portal-settings-hub,[\s\S]*\.portal-settings-list[\s\S]*background:transparent!important/);
+  const css = read('src/index.css');
+  assert.match(css, /#configuracoes-page-container,[\s\S]*#portal-settings-hub,[\s\S]*\.portal-settings-list[\s\S]*background:\s*transparent/);
 });
 
-test('folha autoritativa continua carregada por último', () => {
+test('aplicação carrega um único stylesheet autoritativo', () => {
   const main = read('src/main.tsx');
-  assert.ok(main.lastIndexOf('portal-surface-contract.css') > main.lastIndexOf('portal-spreadsheet-runtime.css'));
+  const imports = [...main.matchAll(/import ['"]\.\/([^'"]+\.css)['"];/g)].map((match) => match[1]);
+  assert.deepEqual(imports, ['index.css']);
 });
