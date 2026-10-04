@@ -811,32 +811,33 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                 </h1>
               </div>
 
-              {/* Ações: provedores primeiro; depois controles padrão da tabela */}
-              <div className="flex items-center shrink-0">
-                {activeTab === 'pendentes' && (
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={handleSignSelected} className={`${styles.toolbarButtonClass} portal-sign-bulk-btn disabled:opacity-45`} style={styles.toolbarButtonStyle} title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
-                    <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className={`${styles.toolbarButtonClass} portal-sign-bulk-btn disabled:opacity-45`} style={styles.toolbarButtonStyle} title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
-                  </div>
-                )}
-
-                <div className={`flex items-center gap-1.5 sm:gap-2 ${activeTab === 'pendentes' ? 'ml-3 border-l border-white/35 pl-3' : ''}`}>
+              <div className="portal-sheet-toolbar shrink-0">
+                <div className="portal-sheet-toolbar-actions">
+                  {activeTab === 'pendentes' && (
+                    <>
+                      <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={handleSignSelected} className="portal-sign-bulk-btn disabled:opacity-45" title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
+                      <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className="portal-sign-bulk-btn disabled:opacity-45" title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
+                    </>
+                  )}
+                  <button
+                    id="coordenador-refresh-btn"
+                    type="button"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="portal-toolbar-icon-button disabled:opacity-70"
+                    title="Atualizar fila de declarações"
+                    aria-label="Atualizar fila de declarações"
+                  >
+                    <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
+                <div className="portal-sheet-toolbar-terminal">
                   <SearchPopover
                     value={searchFilter}
                     onChange={setSearchFilter}
                     placeholder="Buscar declarações..."
                     textFormat={coordTextFormat}
                   />
-                  <button
-                    type="button"
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className={`${styles.toolbarButtonClass} disabled:opacity-70`}
-                    style={styles.toolbarButtonStyle}
-                    title="Atualizar fila de declarações"
-                  >
-                    <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
-                  </button>
                   <HeaderSettingsPopover
                     recordsLimit={recordsLimit}
                     setRecordsLimit={setRecordsLimit}
