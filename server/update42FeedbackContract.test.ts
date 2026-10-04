@@ -37,6 +37,6 @@ test('engrenagem permite colunas para usuário comum e persiste por e-mail e pla
 test('acabamento visual usa identidade canônica sem overrides globais',async()=>{
   const css=await readPortalCss();
   assert.match(css,/--portal-sidebar-active:\s*#154d41/);
-  assert.match(css,/--portal-danger:\s*#c62828/);
+  assert.match(css,/--portal-danger:\s*#991b1b/);
   assert.doesNotMatch(css,/!important/);
 });
