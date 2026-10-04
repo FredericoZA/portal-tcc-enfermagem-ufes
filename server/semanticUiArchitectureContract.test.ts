@@ -4,24 +4,20 @@ import { readFile } from 'node:fs/promises';
 
 const source = (path: string) => readFile(path, 'utf8');
 
-test('paleta semântica possui uma única fonte TypeScript e uma camada CSS permanente', async () => {
-  const [main, app, tokens, semanticCss, versionCss] = await Promise.all([
+test('paleta semântica possui uma única fonte de valores no CSS canônico', async () => {
+  const [main, tokens, css] = await Promise.all([
     source('src/main.tsx'),
-    source('src/App.tsx'),
     source('src/utils/portalSemanticTokens.ts'),
-    source('src/portal-semantic-ui.css'),
-    source('src/portal-version-1046.css'),
+    source('src/index.css'),
   ]);
 
-  assert.ok(main.includes("import './portal-semantic-ui.css';"));
-  assert.ok(app.includes('getPortalSemanticRootVars()'));
-  assert.ok(tokens.includes("page: '#f1f5f9'"));
-  assert.ok(tokens.includes('getPortalSemanticRootVars'));
+  assert.ok(main.includes("import './index.css';"));
+  assert.ok(tokens.includes("PORTAL_THEME.semantic.defense"));
   assert.ok(tokens.includes('resolvePortalFilterTone'));
-  assert.ok(semanticCss.includes('background: var(--portal-tone-bg) !important;'));
-  assert.ok(semanticCss.includes('background: var(--portal-surface-page) !important;'));
-  assert.ok(!versionCss.includes('#c2d0c2'));
-  assert.ok(!versionCss.includes('#d4c69a'));
+  assert.ok(css.includes('--portal-surface-page: #f1f5f9'));
+  assert.ok(css.includes('--portal-defense-defended-bg: #bed8c3'));
+  assert.ok(css.includes('--portal-defense-upcoming-bg: #e8dda7'));
+  assert.ok(css.includes('background: var(--portal-tone-bg)'));
 });
 
 test('lista de defesas usa uma única regra para filtrar e colorir o processo', async () => {
@@ -41,7 +37,7 @@ test('calendário mantém superfície do portal e mostra horário, título e alu
   const [home, semantics, semanticCss] = await Promise.all([
     source('src/pages/HomePage.tsx'),
     source('src/utils/defenseSemantics.ts'),
-    source('src/portal-semantic-ui.css'),
+    source('src/index.css'),
   ]);
 
   assert.ok(home.includes('portal-core-calendar-weekend'));
@@ -56,17 +52,16 @@ test('calendário mantém superfície do portal e mostra horário, título e alu
   assert.ok(!home.includes('dayGcal.slice(0, 2 - dayDefenses.length)'));
   assert.ok(semantics.includes('process.aluno1?.nome'));
   assert.ok(semantics.includes('process.aluno2?.nome'));
-  assert.ok(semanticCss.includes('.portal-calendar-day-cell.portal-core-calendar-weekend'));
+  assert.ok(semanticCss.includes('.portal-calendar-day-cell'));
   assert.ok(semanticCss.includes('.portal-calendar-empty-cell'));
-  assert.ok(semanticCss.includes('background: var(--portal-surface-layer-1) !important;'));
+  assert.ok(semanticCss.includes('background: var(--portal-surface-panel)'));
   assert.ok(!semanticCss.includes('.portal-core-calendar-weekend *'));
 });
 
-test('runtime legado não infere mais estado de defesa pelo DOM nem duplica a busca de processos', async () => {
-  const enhancer = await source('src/components/PortalVersion1040Enhancer.tsx');
-  assert.ok(!enhancer.includes('decorateDefenseList'));
-  assert.ok(!enhancer.includes('enrichCalendarPreview'));
-  assert.ok(!enhancer.includes("fetch('/api/processes'"));
+test('runtime visual legado não participa mais do bootstrap', async () => {
+  const main = await source('src/main.tsx');
+  assert.ok(!main.includes('PortalVersion1040Enhancer'));
+  assert.ok(!main.includes('PortalSettingsRuntime'));
 });
 
 test('filtros semânticos de todas as tabelas passam pelo resolvedor global por chave ou rótulo', async () => {
