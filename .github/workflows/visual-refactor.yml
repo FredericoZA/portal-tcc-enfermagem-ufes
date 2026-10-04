@@ -1,0 +1,48 @@
+name: Visual Refactor QA
+
+on:
+  push:
+    branches:
+      - refactor/visual-foundation-1.0.70
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Instalar Playwright para QA visual
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Gerar galeria visual
+        id: visual
+        continue-on-error: true
+        env:
+          PORTAL_VISUAL_OUTPUT: artifacts/visual-refactor
+        run: npm run test:visual
+      - name: Publicar capturas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-refactor-${{ github.sha }}
+          path: artifacts/visual-refactor
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Falhar se contrato visual falhou
+        if: steps.visual.outcome == 'failure'
+        run: exit 1
