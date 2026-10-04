@@ -2257,25 +2257,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       {/* PUBLIC TAB 2: REPOSITÓRIO DE TCCS & ACERVO DIGITAL */}
       {publicTab === 'biblioteca' && (
         <>
-          {/* Botão no Topo (Acima do Cabeçalho) */}
-          {acervoTextFormat.showDownloadDadosButton !== false && (() => {
-            const acervoActionStyles = getActionPillStyles(acervoTextFormat);
-            return (
-              <div className="flex justify-end mb-3">
-                <button
-                  type="button"
-                  onClick={() => setShowDownloadConfirm(true)}
-                  style={acervoActionStyles.actionPillStyle}
-                  className={acervoActionStyles.actionPillClass}
-                  title="Exportar todo o banco de dados de TCCs para Excel (.csv)"
-                >
-                  <span>{acervoTextFormat.downloadDadosButtonEmoji || '📥'}</span>
-                  <span>{acervoTextFormat.downloadDadosButtonText || 'Download dos dados'}</span>
-                </button>
-              </div>
-            );
-          })()}
-
           <section id="biblioteca-tccs-section" className="space-y-3">
             {/* UNIFIED GRAY HEADER BANNER & SPREADSHEET CARD */}
             <div data-portal-sheet="repository" data-portal-has-filter="false" className={`portal-sheet-frame bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${getTableStyles(acervoTextFormat).fontFamilyClass}`} style={getTableStyles(acervoTextFormat).rootStyle}>
@@ -2290,55 +2271,65 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       </h1>
                     </div>
 
-                    {/* Right Group: Lupa and Engrenagem Controls */}
-                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                      {/* Lupa (Search) */}
-                      <SearchPopover
-                        value={libSearch}
-                        onChange={setLibSearch}
-                        placeholder="Buscar no acervo..."
-                        textFormat={acervoTextFormat}
-                      />
+                    <div className="portal-sheet-toolbar shrink-0">
+                      <div className="portal-sheet-toolbar-actions">
+                        {acervoTextFormat.showDownloadDadosButton !== false && (
+                          <button
+                            type="button"
+                            onClick={() => setShowDownloadConfirm(true)}
+                            className="portal-toolbar-icon-button"
+                            title="Baixar dados — exporta o Repositório de TCCs em CSV"
+                            aria-label="Baixar dados — exporta o Repositório de TCCs em CSV"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={refreshData}
+                          disabled={isRefreshingData}
+                          className="portal-toolbar-icon-button disabled:opacity-70"
+                          title="Sincronizar dados — recarrega os registros desta planilha"
+                          aria-label="Sincronizar dados — recarrega os registros desta planilha"
+                        >
+                          <YinYangIcon className={`h-3.5 w-3.5 ${isRefreshingData ? 'animate-spin' : ''}`} />
+                        </button>
+                      </div>
 
-                      {/* Refresh Button (Yin-Yang) */}
-                      <button
-                        type="button"
-                        onClick={refreshData}
-                        disabled={isRefreshingData}
-                        className={`${acervoBannerStyles.toolbarButtonClass} disabled:opacity-70`}
-                        style={acervoBannerStyles.toolbarButtonStyle}
-                        title="Atualizar dados da tabela"
-                      >
-                        <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshingData ? 'animate-spin' : ''}`} />
-                      </button>
-
-                      {/* Engrenagem (Settings) */}
-                      <HeaderSettingsPopover
-                        recordsLimit={libRecordsLimit}
-                        setRecordsLimit={setLibRecordsLimit}
-                        allowedLimits={[25, 50, 100, 'all']}
-                        allColumns={ALL_ACERVO_COLUMNS}
-                        visibleColumns={visibleColumns}
-                        setVisibleColumns={setVisibleColumns}
-                        columnOrder={acervoColumnOrder}
-                        setColumnOrder={setAcervoColumnOrder}
-                        storageKey="acervo"
-                        customLabels={acervoCustomLabels}
-                        setCustomLabels={setAcervoCustomLabels}
-                        columnWidths={acervoColumnWidths}
-                        setColumnWidths={setAcervoColumnWidths}
-                        textFormat={acervoTextFormat}
-                        setTextFormat={setAcervoTextFormat}
-                        defaultColumnOrder={DEFAULT_ACERVO_ORDER}
-                        defaultVisibleColumns={DEFAULT_ACERVO_VISIBLE}
-                        defaultRecordsLimit={25}
-                        startDate={libStartDate}
-                        setStartDate={setLibStartDate}
-                        endDate={libEndDate}
-                        setEndDate={setLibEndDate}
-                        defaultTableTitle="Repositório & Acervo Digital"
-                        defaultFilterTitle="Filtrar acervo"
-                      />
+                      <div className="portal-sheet-toolbar-terminal">
+                        <SearchPopover
+                          value={libSearch}
+                          onChange={setLibSearch}
+                          placeholder="Buscar no acervo..."
+                          textFormat={acervoTextFormat}
+                        />
+                        <HeaderSettingsPopover
+                          recordsLimit={libRecordsLimit}
+                          setRecordsLimit={setLibRecordsLimit}
+                          allowedLimits={[25, 50, 100, 'all']}
+                          allColumns={ALL_ACERVO_COLUMNS}
+                          visibleColumns={visibleColumns}
+                          setVisibleColumns={setVisibleColumns}
+                          columnOrder={acervoColumnOrder}
+                          setColumnOrder={setAcervoColumnOrder}
+                          storageKey="acervo"
+                          customLabels={acervoCustomLabels}
+                          setCustomLabels={setAcervoCustomLabels}
+                          columnWidths={acervoColumnWidths}
+                          setColumnWidths={setAcervoColumnWidths}
+                          textFormat={acervoTextFormat}
+                          setTextFormat={setAcervoTextFormat}
+                          defaultColumnOrder={DEFAULT_ACERVO_ORDER}
+                          defaultVisibleColumns={DEFAULT_ACERVO_VISIBLE}
+                          defaultRecordsLimit={25}
+                          startDate={libStartDate}
+                          setStartDate={setLibStartDate}
+                          endDate={libEndDate}
+                          setEndDate={setLibEndDate}
+                          defaultTableTitle="Repositório & Acervo Digital"
+                          defaultFilterTitle="Filtrar acervo"
+                        />
+                      </div>
                     </div>
                   </div>
                 );
