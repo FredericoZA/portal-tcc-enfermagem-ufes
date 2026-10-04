@@ -36,7 +36,7 @@ test('separadores seguem a geometria única aprovada', () => {
 test('replicar portal mantém cartões com a mesma altura', () => {
   const page = read('src/pages/PortalReplicationPage.tsx');
   assert.match(page, /auto-rows-fr/);
-  assert.match(page, /flex h-full min-h-\\[112px\\] flex-col/);
+  assert.match(page, /flex h-full min-h-\[112px\] flex-col/);
   assert.doesNotMatch(page, /self-start/);
   assert.match(page, /mt-auto pt-2/);
 });
