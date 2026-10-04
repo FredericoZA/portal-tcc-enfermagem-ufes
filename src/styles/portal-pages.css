@@ -1,0 +1,185 @@
+/* ==========================================================================
+   6. PÁGINAS, CONFIGURAÇÕES E RESPONSIVIDADE
+   ========================================================================== */
+
+/* Páginas públicas seguem 1 → 2 → 3 → 4. */
+:is(
+  #home-page-container,
+  #agenda-page-container,
+  #indicadores-publicos-page,
+  #como-chegar-page-container,
+  #portal-tutorial-page,
+  #fluxo-tcc-page,
+  #portal-replication-page,
+  #meus-processos-page-container,
+  #coordenador-page-root,
+  #configuracoes-page-container
+) {
+  width: 100%;
+  max-width: none;
+}
+
+:is(
+  #indicadores-publicos-page,
+  #como-chegar-page-container,
+  #portal-tutorial-page,
+  #fluxo-tcc-page,
+  #portal-replication-page
+) {
+  overflow: hidden;
+  border: 1px solid var(--portal-border);
+  border-radius: var(--portal-panel-radius);
+  background: var(--portal-surface-panel);
+  box-shadow: 0 2px 7px rgba(15, 23, 42, .08);
+}
+
+/* Fluxo do TCC — geometria em minhoca preservada sem CSS histórico. */
+.portal-flow-snake {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.portal-flow-step {
+  position: relative;
+  min-width: 0;
+}
+
+.portal-flow-number {
+  position: absolute;
+  top: -9px;
+  left: -7px;
+  z-index: 3;
+}
+
+
+
+/* Calendário — fins de semana estreitos e não interativos. */
+.portal-core-calendar-grid,
+.portal-core-calendar-week-header > div {
+  grid-template-columns: .22fr 1.356fr 1.356fr 1.356fr 1.356fr 1.356fr .22fr;
+}
+
+.portal-core-calendar-weekend {
+  cursor: default;
+}
+
+.portal-core-calendar-weekend > *:not(:first-child) {
+  display: none;
+}
+
+.portal-core-calendar-previews {
+  width: 100%;
+  margin-top: 3px;
+  display: grid;
+  gap: 3px;
+}
+
+/* Configurações: lançadores claros + divisórias, sem painel artificial externo. */
+.portal-settings-group-line {
+  background: var(--portal-brand-action);
+}
+
+.portal-settings-group-label,
+.portal-settings-launcher-icon {
+  color: var(--portal-brand-action);
+}
+
+.portal-settings-launcher {
+  background: var(--portal-surface-card);
+  border-color: var(--portal-border);
+  color: var(--portal-text-dark);
+}
+
+.portal-settings-launcher:hover {
+  filter: brightness(.985);
+}
+
+.portal-settings-workspace-header {
+  box-sizing: border-box;
+  min-height: calc(var(--portal-sheet-title-height) + var(--portal-sheet-content-divider));
+  height: calc(var(--portal-sheet-title-height) + var(--portal-sheet-content-divider));
+  padding: 0 var(--portal-bar-padding-x);
+  border-bottom: var(--portal-sheet-content-divider) solid var(--portal-surface-inner);
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
+}
+
+/* Configurações não ganham painel artificial externo. */
+#configuracoes-page-container,
+#configuracoes-page-container > section,
+#portal-settings-hub,
+.portal-settings-list {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.portal-settings-workspace {
+  background: var(--portal-surface-panel);
+}
+
+.portal-settings-workspace-main,
+.portal-settings-workspace-content {
+  min-width: 0;
+  background: var(--portal-surface-panel);
+}
+
+[data-portal-full-bleed="true"] .portal-settings-workspace-main,
+[data-portal-full-bleed="true"] .portal-settings-workspace-content {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
+/* Fluxo do TCC: referência de hierarquia. */
+#fluxo-tcc-page .portal-flow-step,
+#fluxo-tcc-page article {
+  background: var(--portal-surface-card);
+  border-color: var(--portal-border);
+}
+
+#fluxo-tcc-page .portal-layer-inner {
+  background: var(--portal-surface-inner);
+}
+
+/* Como usar: nenhum card final inventa uma quinta camada. */
+#portal-tutorial-page .portal-layer-card {
+  background: var(--portal-surface-card);
+}
+
+/* Feedback/dialogs. */
+.portal-feedback-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(36rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: 0;
+  border: 1px solid var(--portal-border);
+  border-radius: var(--portal-panel-radius);
+  background: var(--portal-surface-panel);
+  color: var(--portal-text-dark);
+}
+
+.portal-feedback-dialog::backdrop {
+  background: rgba(15, 23, 42, .55);
+}
+
+.portal-notice,
+.portal-error,
+.portal-confirmation {
+  padding: 10px 12px;
+  border: 1px solid var(--portal-border);
+  border-radius: 8px;
+  background: var(--portal-surface-inner);
+}
+
+.portal-error {
+  border-color: var(--portal-danger);
+  color: var(--portal-danger);
+}
+
+/* Mobile. */
