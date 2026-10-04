@@ -347,6 +347,12 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 [data-portal-sheet="calendar"] [data-portal-sheet-column-header="true"]>div{
   width:100%!important;
 }
+/* Neutraliza o separador legado de 16 px do calendário: o separador canônico
+   já pertence ao rodapé branco de 15 px da barra de título. */
+[data-portal-sheet="calendar"]>div:nth-child(2){
+  border-top:0!important;
+  margin-top:0!important;
+}
 
 /* Cabeçalhos tabulares = 35 px. */
 [data-portal-sheet]:not([data-portal-sheet="calendar"]) table thead tr:last-child>th{
@@ -419,7 +425,7 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 }
 
 /* Controle circular do cabeçalho. */
-[data-portal-sheet]:not([data-portal-sheet="calendar"]) thead th button,
+[data-portal-sheet]:not([data-portal-sheet="calendar"]) thead th button:not(.portal-sheet-checkbox),
 .portal-core-column-menu,
 .portal1041-column-menu-button{
   box-sizing:border-box!important;
