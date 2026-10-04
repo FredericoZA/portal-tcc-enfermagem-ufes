@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 const source = (path: string) => readFile(path, 'utf8');
 
 test('Lista de Defesas recebe cor semântica pelo componente, sem regra CSS por posição', async () => {
-  const css = await source('src/portal-version-1046.css');
+  const css = await source('src/index.css');
   const tableFormatter = await source('src/utils/tableFormatters.ts');
   const home = await source('src/pages/HomePage.tsx');
   assert.match(tableFormatter, /resolvePortalFilterTone\(key\)/);
@@ -17,7 +17,7 @@ test('Lista de Defesas recebe cor semântica pelo componente, sem regra CSS por 
 });
 
 test('Meus TCCs usa cor do vínculo somente na bolinha do filtro', async () => {
-  const css = await source('src/portal-version-1046.css');
+  const css = await source('src/index.css');
   const page = await source('src/pages/MeusProcessosPage.tsx');
   assert.match(css, /#meus-processos-page-container \.portal-standard-filter-chip\s*\{[\s\S]*background:\s*#ffffff\s*!important/);
   assert.match(css, /#meus-processos-page-container \.portal-standard-filter-chip\[aria-pressed="true"\][\s\S]*background:\s*#AEB0B3\s*!important/);
@@ -27,7 +27,7 @@ test('Meus TCCs usa cor do vínculo somente na bolinha do filtro', async () => {
 });
 
 test('Presidência usa a mesma paleta nos filtros e nos status correspondentes', async () => {
-  const css = await source('src/portal-version-1046.css');
+  const css = await source('src/index.css');
   assert.match(css, /portal-coordinator-filter-row[\s\S]*nth-child\(1\)[\s\S]*--portal-signature-pending-bg/);
   assert.match(css, /portal-coordinator-filter-row[\s\S]*nth-child\(2\)[\s\S]*--portal-signature-signed-bg/);
   assert.match(css, /tbody span\.bg-amber-50[\s\S]*--portal-signature-pending-bg/);
@@ -35,7 +35,7 @@ test('Presidência usa a mesma paleta nos filtros e nos status correspondentes',
 });
 
 test('Indicadores remove somente o divisor interno redundante', async () => {
-  const css = await source('src/portal-version-1046.css');
+  const css = await source('src/index.css');
   assert.match(css, /#indicadores-publicos-page > \.portal-section-divider\s*\{\s*display:\s*none\s*!important/);
 });
 
@@ -44,7 +44,7 @@ test('workspaces administrativos usam modo embedded em vez de esconder títulos 
   const audit = await source('src/pages/AuditLogsPage.tsx');
   const signatures = await source('src/pages/AstenLogsPage.tsx');
   const access = await source('src/components/AuthorizedStudentsPanel.tsx');
-  const css = await source('src/portal-version-1046.css');
+  const css = await source('src/index.css');
   assert.match(modal, /React\.cloneElement[\s\S]*embedded:\s*true/);
   assert.match(audit, /embedded\?: boolean/);
   assert.match(signatures, /embedded\?: boolean/);
@@ -54,6 +54,6 @@ test('workspaces administrativos usam modo embedded em vez de esconder títulos 
 });
 
 test('cards de Configurações usam a mesma cor dos títulos', async () => {
-  const css = await source('src/portal-version-1046.css');
+  const css = await source('src/index.css');
   assert.match(css, /#portal-settings-hub \.portal-settings-title-bar[\s\S]*background:\s*var\(--portal-v46-green-dark\)\s*!important/);
 });
