@@ -6,7 +6,7 @@ const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8
 
 test('recursos introduzidos na 1.0.41 permanecem na camada estrutural atual',()=>{
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
-  const css=read('src/portal-core-1043.css');
+  const css=read('src/index.css');
   assert.match(runtime,/portal-core-resizer/);
   assert.match(runtime,/pointermove/);
   assert.match(runtime,/Quebra de texto/);
@@ -25,7 +25,7 @@ test('seleção em massa e menu único foram incorporados ao runtime estrutural'
 });
 
 test('separadores e texto preto permanecem como contrato visual',()=>{
-  const css=read('src/portal-core-1043.css');
+  const css=read('src/index.css');
   assert.match(css,/--portal-separator-section: 12px/);
   assert.match(css,/--portal-separator-table: 16px/);
   assert.match(css,/color: #000 !important/);
