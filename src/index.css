@@ -346,6 +346,30 @@ button[aria-label^="Configurar exibição"],
   box-shadow: none;
 }
 
+/* Tons semânticos aplicados por variável, sem duplicar HEX nos componentes. */
+.portal-semantic-tone {
+  background: var(--portal-tone-bg);
+  border-color: var(--portal-tone-border);
+  color: var(--portal-tone-text);
+}
+
+.portal-role-process-button {
+  background: var(--portal-role-bg);
+  border-color: var(--portal-role-border);
+  color: var(--portal-role-text);
+}
+
+.portal-process-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
 /* Filtros/chips. */
 .portal-table-filter-chip,
 .portal-standard-filter-chip,
