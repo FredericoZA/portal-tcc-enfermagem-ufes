@@ -16,7 +16,7 @@ test('planilhas usam um único menu por coluna para ordenar e filtrar',()=>{
 
 test('progresso é apresentado como etapa regular',()=>{
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
-  const css=read('src/portal-core-1043.css');
+  const css=read('src/index.css');
   assert.match(runtime,/replace\(\/\\bProgresso\\b\/gi, 'Etapa'\)/);
   assert.match(runtime,/marker\.textContent = `Etapa \$\{match\[1\]/);
   assert.match(css,/portal-core-stage-label/);
@@ -25,7 +25,7 @@ test('progresso é apresentado como etapa regular',()=>{
 
 test('calendário reserva fins de semana estreitos e indisponíveis para defesas',()=>{
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
-  const css=read('src/portal-core-1043.css');
+  const css=read('src/index.css');
   assert.match(runtime,/weekday === 0 \|\| weekday === 6/);
   assert.match(css,/grid-template-columns: \.22fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr \.22fr/);
   assert.match(css,/portal-core-calendar-weekend/);
@@ -34,7 +34,7 @@ test('calendário reserva fins de semana estreitos e indisponíveis para defesas
 
 test('planilhas têm separadores, texto preto e hover neutro',()=>{
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
-  const css=read('src/portal-core-1043.css');
+  const css=read('src/index.css');
   assert.match(css,/--portal-separator-table: 16px/);
   assert.match(css,/--portal-separator-section: 12px/);
   assert.match(css,/color: #000 !important/);
