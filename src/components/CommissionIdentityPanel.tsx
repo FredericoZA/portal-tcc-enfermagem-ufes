@@ -169,10 +169,10 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
   const saveOnBlur = () => { if (currentFingerprint !== lastSavedFingerprintRef.current) void persistIdentity(false); };
 
   return (
-    <section className="portal-commission-identity-panel rounded-lg border border-slate-300 bg-[#d5dce0]" aria-labelledby="commission-management-title">
+    <section className="portal-commission-identity-panel portal-layer-card rounded-lg border border-slate-300" aria-labelledby="commission-management-title">
       <div className="flex flex-col gap-2 border-b border-slate-300 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-[#337959]" />
+          <Users className="h-4 w-4 text-[var(--portal-brand-action)]" />
           <div>
             <h3 id="commission-management-title" className="text-xs font-black uppercase tracking-wide text-slate-950">Presidência, Secretaria e Comissão</h3>
             <p className="text-[10px] text-slate-600">Somente o usuário Master pode editar. As alterações são salvas automaticamente e refletidas no rodapé.</p>
@@ -186,16 +186,16 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
       </div>
 
       <div className="grid gap-2 p-2.5 lg:grid-cols-2">
-        <div className="rounded-lg border border-slate-300 bg-[#e1e6e9] p-2.5">
-          <div className="mb-2 flex items-center gap-1.5"><UserRoundCog className="h-4 w-4 text-[#337959]"/><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Presidente da Comissão</h4></div>
+        <div className="portal-layer-panel rounded-lg border border-slate-300 p-2.5">
+          <div className="mb-2 flex items-center gap-1.5"><UserRoundCog className="h-4 w-4 text-[var(--portal-brand-action)]"/><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Presidente da Comissão</h4></div>
           <div className="grid gap-2 sm:grid-cols-2">
             <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">Nome</span><input value={presidentName} onChange={(event) => setPresidentName(event.target.value)} onBlur={saveOnBlur} className={inputClass} /></label>
             <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">E-mail de contato</span><input type="email" value={presidentEmail} onChange={(event) => setPresidentEmail(event.target.value)} onBlur={saveOnBlur} className={inputClass} placeholder="presidencia@instituicao.br" /></label>
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-300 bg-[#e1e6e9] p-2.5">
-          <div className="mb-2 flex items-center gap-1.5"><Mail className="h-4 w-4 text-[#337959]"/><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Secretaria</h4></div>
+        <div className="portal-layer-panel rounded-lg border border-slate-300 p-2.5">
+          <div className="mb-2 flex items-center gap-1.5"><Mail className="h-4 w-4 text-[var(--portal-brand-action)]"/><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Secretaria</h4></div>
           <div className="grid gap-2 sm:grid-cols-3">
             <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">Nome</span><input value={secretaryName} onChange={(event) => setSecretaryName(event.target.value)} onBlur={saveOnBlur} className={inputClass} /></label>
             <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">E-mail</span><input type="email" value={secretaryEmail} onChange={(event) => setSecretaryEmail(event.target.value)} onBlur={saveOnBlur} className={inputClass} /></label>
@@ -208,7 +208,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
         <div className="mb-1.5 flex items-center justify-between gap-2"><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Membros da Comissão</h4><span className="text-[9px] font-bold text-slate-500">{members.filter(member => member.name.trim()).length} cadastrado(s)</span></div>
         <div className="overflow-x-auto rounded-lg border border-slate-300 bg-white">
           <table className="w-full min-w-[520px] border-collapse text-left">
-            <thead className="border-b border-slate-300 bg-[#d5dce0] text-[9px] font-black uppercase tracking-wider text-slate-700"><tr><th className="px-2.5 py-2">Nome</th><th className="px-2.5 py-2">E-mail</th><th className="w-12 px-2.5 py-2 text-center">Excluir</th></tr></thead>
+            <thead className="portal-layer-card border-b border-slate-300 text-[9px] font-black uppercase tracking-wider text-slate-700"><tr><th className="px-2.5 py-2">Nome</th><th className="px-2.5 py-2">E-mail</th><th className="w-12 px-2.5 py-2 text-center">Excluir</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
               {members.length === 0 && <tr><td colSpan={3} className="px-3 py-3 text-center text-[10px] text-slate-500">Nenhum membro adicional cadastrado.</td></tr>}
               {members.map((member) => <tr key={member.id}>
