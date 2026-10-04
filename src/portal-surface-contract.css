@@ -302,6 +302,22 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
   width:100%!important;
 }
 
+/* Tipografia da barra principal também é única. */
+[data-portal-sheet] [data-portal-sheet-title="true"] :is(h1,h2){
+  margin:0!important;
+  font-size:16px!important;
+  line-height:20px!important;
+  font-weight:900!important;
+}
+
+/* Chips de filtro mantêm a mesma altura nas três planilhas filtráveis. */
+[data-portal-sheet][data-portal-has-filter="true"] .portal-table-filter-chip,
+[data-portal-sheet][data-portal-has-filter="true"] .portal-standard-filter-chip{
+  box-sizing:border-box!important;
+  min-height:28px!important;
+  height:28px!important;
+}
+
 [data-portal-sheet][data-portal-has-filter="false"] [data-portal-sheet-title="true"]{
   min-height:calc(var(--portal-sheet-title-height) + var(--portal-sheet-content-divider))!important;
   height:calc(var(--portal-sheet-title-height) + var(--portal-sheet-content-divider))!important;
