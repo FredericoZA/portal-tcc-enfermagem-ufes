@@ -911,6 +911,36 @@ td[data-portal-core-process-state="upcoming"] > div,
   box-shadow: 0 2px 7px rgba(15, 23, 42, .08);
 }
 
+/* Configurações: lançadores claros + divisórias, sem painel artificial externo. */
+.portal-settings-group-line {
+  background: var(--portal-brand-action);
+}
+
+.portal-settings-group-label,
+.portal-settings-launcher-icon {
+  color: var(--portal-brand-action);
+}
+
+.portal-settings-launcher {
+  background: var(--portal-surface-card);
+  border-color: var(--portal-border);
+  color: var(--portal-text-dark);
+}
+
+.portal-settings-launcher:hover {
+  filter: brightness(.985);
+}
+
+.portal-settings-workspace-header {
+  box-sizing: border-box;
+  min-height: calc(var(--portal-sheet-title-height) + var(--portal-sheet-content-divider));
+  height: calc(var(--portal-sheet-title-height) + var(--portal-sheet-content-divider));
+  padding: 0 var(--portal-bar-padding-x);
+  border-bottom: var(--portal-sheet-content-divider) solid var(--portal-surface-inner);
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
+}
+
 /* Configurações não ganham painel artificial externo. */
 #configuracoes-page-container,
 #configuracoes-page-container > section,
