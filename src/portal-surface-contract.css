@@ -298,6 +298,10 @@ div.fixed.inset-0>div[role="dialog"]{background:var(--portal-surface-layer-1)!im
 }
 
 /* Sem filtro: 45 px verdes + 15 px de separador branco. */
+[data-portal-sheet="calendar"] [data-portal-sheet-title="true"]>div{
+  width:100%!important;
+}
+
 [data-portal-sheet][data-portal-has-filter="false"] [data-portal-sheet-title="true"]{
   min-height:calc(var(--portal-sheet-title-height) + var(--portal-sheet-content-divider))!important;
   height:calc(var(--portal-sheet-title-height) + var(--portal-sheet-content-divider))!important;
