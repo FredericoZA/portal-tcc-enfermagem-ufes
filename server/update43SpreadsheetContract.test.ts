@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+import { readPortalCss } from './testUtils/portalCss';
 const read = (path:string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('planilhas recebem menu único de filtro e ordenação no runtime estrutural', () => {
@@ -27,7 +28,7 @@ test('engrenagem mostra colunas e ordem sem popup secundário', () => {
 test('planilhas permitem rolagem vertical e horizontal no próprio contêiner', () => {
   const scroll = read('src/components/TableScrollWrapper.tsx');
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
-  const css = read('src/index.css');
+  const css = readPortalCss();
   assert.doesNotMatch(scroll, /overflow-y-visible/);
   assert.match(scroll, /portal-spreadsheet-scroll-host/);
   assert.match(scroll, /overflow-auto/);
@@ -52,7 +53,7 @@ test('etapa permanece disponível e planilhas removem decoração infantil', () 
 
 test('calendário usa fins de semana estreitos e preview seguro', () => {
   const runtime = read('src/components/PortalStructuralRuntime.tsx');
-  const css = read('src/index.css');
+  const css = readPortalCss();
   assert.match(css, /grid-template-columns: \.22fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr \.22fr/);
   assert.match(runtime, /portal-core-calendar-weekend/);
   assert.match(runtime, /cell\.querySelector\('\.portal-core-calendar-previews'\)\?\.remove\(\)/);
@@ -83,7 +84,7 @@ test('Registro de logs mantém ações essenciais no cabeçalho e não oferece a
 });
 
 test('workspaces administrativos ganham hierarquia e prevenção de sobreposição', () => {
-  const css = read('src/index.css');
+  const css = readPortalCss();
   const enhancer = read('src/components/PortalUiEnhancer.tsx');
   assert.match(enhancer, /portal-settings-workspace-sidebar/);
   assert.match(css, /grid-template-columns:minmax\(180px,230px\) minmax\(0,1fr\)/);
