@@ -19,7 +19,7 @@ test('progresso é apresentado como etapa regular sem depender de CSS versionado
   const css=readPortalCss();
   assert.match(runtime,/replace\(\/\\bProgresso\\b\/gi, 'Etapa'\)/);
   assert.match(runtime,/marker\.textContent = `Etapa \$\{match\[1\]/);
-  assert.match(css,/portal-core-stage-label/);
+  assert.match(runtime,/portal-core-stage-label/);
 });
 
 test('calendário usa a mesma família de superfícies do contrato global',()=>{
