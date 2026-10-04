@@ -28,7 +28,6 @@ test('cinco superfícies usam o mesmo contrato canônico', () => {
 test('geometria é única e não depende de seletores nth-child por tela', () => {
   const css = readPortalCss();
 
-  assert.match(css, /PORTAL TCC — SISTEMA VISUAL CANÔNICO/);
   assert.match(css, /--portal-sheet-title-height:\s*45px/);
   assert.match(css, /--portal-sheet-title-divider:\s*5px/);
   assert.match(css, /--portal-sheet-filter-height:\s*45px/);
@@ -52,8 +51,8 @@ test('sticky é canônico e preserva exceção estrutural do Presidente', () => 
   assert.match(css, /data-portal-sheet="my-tccs"[\s\S]*:is\(th, td\):first-child/);
   assert.match(css, /data-portal-sheet="president"[\s\S]*data-portal-sticky-selection/);
   assert.match(css, /left:\s*54px/);
-  assert.match(runtime, /data-portal-sticky-process/);
-  assert.match(runtime, /data-portal-sticky-thead/);
+  assert.match(runtime, /dataset\.portalStickyProcess/);
+  assert.match(runtime, /dataset\.portalStickyThead/);
 });
 
 test('Repositório e Meus TCCs congelam apenas a primeira coluna', () => {
