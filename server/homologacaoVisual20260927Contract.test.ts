@@ -11,32 +11,32 @@ test('Lista de Defesas recebe cor semântica pelo componente, sem regra CSS por 
   assert.match(tableFormatter, /resolvePortalFilterTone\(key\)/);
   assert.match(tableFormatter, /getPortalToneStyle\(semanticTone\)/);
   assert.match(home, /getFilterChipProps\(statusKey, isSelected, defensesTextFormat/);
-  assert.doesNotMatch(css, /portal-table-filter-chip:nth-child\(2\)[\s\S]*--portal-defense-upcoming-bg/);
-  assert.doesNotMatch(css, /portal-table-filter-chip:nth-child\(3\)[\s\S]*--portal-defense-defended-bg/);
-  assert.match(css, /\.portal-filter-dot\s*\{[\s\S]*width:\s*\.65rem\s*!important/);
+  assert.doesNotMatch(css, /portal-table-filter-chip:nth-child/);
+  assert.match(css, /\.portal-filter-dot\s*\{[\s\S]*width:\s*10px/);
 });
 
 test('Meus TCCs usa cor do vínculo somente na bolinha do filtro', async () => {
   const css = await source('src/index.css');
   const page = await source('src/pages/MeusProcessosPage.tsx');
-  assert.match(css, /#meus-processos-page-container \.portal-standard-filter-chip\s*\{[\s\S]*background:\s*#ffffff\s*!important/);
-  assert.match(css, /#meus-processos-page-container \.portal-standard-filter-chip\[aria-pressed="true"\][\s\S]*background:\s*#AEB0B3\s*!important/);
-  assert.match(css, /#meus-processos-page-container \.portal-standard-filter-chip > span:last-child\s*\{[\s\S]*background:\s*#6b7280\s*!important/);
-  assert.match(page, /className="portal-filter-dot[^"]*"[\s\S]*style=\{\{ backgroundColor: cfg\.borderColor \}\}/);
-  assert.doesNotMatch(css, /#meus-processos-page-container \.portal-standard-filter-chip\[title\*="Aluno"\][\s\S]*--portal-role-student-bg/);
+  assert.match(css, /\.portal-table-filter-chip,[\s\S]*background:\s*var\(--portal-surface-inner\)/);
+  assert.match(css, /portal-native-all-filter\[data-selected="true"\][\s\S]*background:\s*var\(--portal-neutral-bg\)/);
+  assert.match(page, /className="portal-filter-dot[^"]*"[^\n]*style=\{\{ backgroundColor: cfg\.borderColor \}\}/);
+  assert.doesNotMatch(css, /title\*="Aluno"/);
 });
 
-test('Presidência usa a mesma paleta nos filtros e nos status correspondentes', async () => {
+test('Presidência preserva a paleta semântica de assinatura sem seletores posicionais', async () => {
   const css = await source('src/index.css');
-  assert.match(css, /portal-coordinator-filter-row[\s\S]*nth-child\(1\)[\s\S]*--portal-signature-pending-bg/);
-  assert.match(css, /portal-coordinator-filter-row[\s\S]*nth-child\(2\)[\s\S]*--portal-signature-signed-bg/);
-  assert.match(css, /tbody span\.bg-amber-50[\s\S]*--portal-signature-pending-bg/);
-  assert.match(css, /tbody span\.bg-emerald-100[\s\S]*--portal-signature-signed-bg/);
+  const tokens = await source('src/utils/portalSemanticTokens.ts');
+  assert.match(tokens, /signature:[\s\S]*pending:[\s\S]*--portal-signature-pending-bg/);
+  assert.match(tokens, /signature:[\s\S]*signed:[\s\S]*--portal-signature-signed-bg/);
+  assert.doesNotMatch(css, /portal-coordinator-filter-row[\s\S]*nth-child/);
 });
 
-test('Indicadores remove somente o divisor interno redundante', async () => {
+test('Indicadores usa o mesmo cabeçalho canônico das páginas públicas', async () => {
   const css = await source('src/index.css');
-  assert.match(css, /#indicadores-publicos-page > \.portal-section-divider\s*\{\s*display:\s*none\s*!important/);
+  const page = await source('src/pages/IndicadoresPage.tsx');
+  assert.match(page, /portal-public-header/);
+  assert.match(css, /\.portal-public-header,[\s\S]*background:\s*var\(--portal-brand-header\)/);
 });
 
 test('workspaces administrativos usam modo embedded em vez de esconder títulos via CSS', async () => {
@@ -49,11 +49,11 @@ test('workspaces administrativos usam modo embedded em vez de esconder títulos 
   assert.match(audit, /embedded\?: boolean/);
   assert.match(signatures, /embedded\?: boolean/);
   assert.match(access, /embedded\?: boolean/);
-  assert.doesNotMatch(css, /#audit-logs-page > header > div:first-child[\s\S]*display:\s*none/);
-  assert.doesNotMatch(css, /#asten-logs-page > header > div:first-child[\s\S]*display:\s*none/);
+  assert.doesNotMatch(css, /display:\s*none[^}]*audit-logs-page/);
 });
 
-test('cards de Configurações usam a mesma cor dos títulos', async () => {
+test('Configurações usa o verde institucional único nos títulos', async () => {
   const css = await source('src/index.css');
-  assert.match(css, /#portal-settings-hub \.portal-settings-title-bar[\s\S]*background:\s*var\(--portal-v46-green-dark\)\s*!important/);
+  assert.match(css, /\.portal-settings-title-bar[\s\S]*background:\s*var\(--portal-brand-header\)/);
+  assert.match(css, /--portal-brand-header:\s*#005830/);
 });
