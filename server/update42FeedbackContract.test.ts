@@ -34,10 +34,9 @@ test('engrenagem permite colunas para usuário comum e persiste por e-mail e pla
   assert.ok(settings.includes('Definir padrão'));
 });
 
-test('acabamento visual aplica faixa lateral fina, filtros simétricos e botão de modelos compacto',async()=>{
+test('acabamento visual usa identidade canônica sem overrides globais',async()=>{
   const css=await readPortalCss();
-  assert.match(css,/#sidebar-nav \.portal-sidebar-nav-active::before[\s\S]*width:4px!important/);
-  assert.match(css,/#portal-replication-page details>summary[\s\S]*padding:6px 10px!important/);
-  assert.ok(css.includes('padding-bottom:.55rem!important'));
-  assert.ok(css.includes('--portal-danger:#c62828'));
+  assert.match(css,/--portal-sidebar-active:\s*#154d41/);
+  assert.match(css,/--portal-danger:\s*#c62828/);
+  assert.doesNotMatch(css,/!important/);
 });
