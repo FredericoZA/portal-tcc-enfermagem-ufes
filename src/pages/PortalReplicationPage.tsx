@@ -27,7 +27,7 @@ const tools = [
   },
 ] as const;
 
-const CARD_CLASS = 'portal-layer-card flex h-full min-h-[112px] flex-col rounded-xl border border-slate-300 p-3 shadow-2xs';
+const CARD_CLASS = 'portal-layer-card flex h-full min-h-[112px] flex-col rounded-xl border border-slate-300 p-2.5 shadow-2xs';
 
 export const PortalReplicationPage: React.FC = () => {
   return (
@@ -67,6 +67,7 @@ export const PortalReplicationPage: React.FC = () => {
               <a
                 href="/api/public/replication-models/all/download"
                 download
+                title="Baixar os quatro modelos em um único arquivo ZIP"
                 className="portal-action-green inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] font-black text-white shadow-sm"
               >
                 <Download className="h-3.5 w-3.5" />
