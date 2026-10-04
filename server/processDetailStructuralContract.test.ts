@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
+import { readPortalCss } from './testUtils/portalCss';
 const source = (path: string) => readFile(path, 'utf8');
 
 test('modal de TCC não renderiza o cabeçalho genérico com brasão', async () => {
@@ -11,7 +12,7 @@ test('modal de TCC não renderiza o cabeçalho genérico com brasão', async () 
 });
 
 test('título real do TCC usa o contrato verde canônico do detalhe', async () => {
-  const css = await source('src/index.css');
+  const css = await readPortalCss();
   const detail = await source('src/pages/ProcessoDetailPage.tsx');
   assert.match(css, /--portal-brand-header:\s*#005830/);
   assert.match(css, /\.portal-section-header,[\s\S]*background:\s*var\(--portal-brand-header\)/);
