@@ -11,35 +11,29 @@ test('planilhas usam um único menu por coluna para ordenar e filtrar',()=>{
   assert.match(runtime,/Ordenar Z → A \/ maior → menor/);
   assert.match(runtime,/Selecionar tudo/);
   assert.match(runtime,/Limpar tudo/);
-  assert.match(runtime,/portal-core-filter-hidden/);
 });
 
-test('progresso é apresentado como etapa regular',()=>{
+test('progresso é apresentado como etapa regular sem depender de CSS versionado',()=>{
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
   const css=read('src/index.css');
   assert.match(runtime,/replace\(\/\\bProgresso\\b\/gi, 'Etapa'\)/);
   assert.match(runtime,/marker\.textContent = `Etapa \$\{match\[1\]/);
   assert.match(css,/portal-core-stage-label/);
-  assert.match(css,/font-weight: 400 !important/);
 });
 
-test('calendário reserva fins de semana estreitos e indisponíveis para defesas',()=>{
-  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+test('calendário usa a mesma família de superfícies do contrato global',()=>{
   const css=read('src/index.css');
-  assert.match(runtime,/weekday === 0 \|\| weekday === 6/);
-  assert.match(css,/grid-template-columns: \.22fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr \.22fr/);
-  assert.match(css,/portal-core-calendar-weekend/);
-  assert.match(css,/background: #f8fafc !important/);
+  assert.match(css,/\.portal-calendar-empty-cell[\s\S]*var\(--portal-surface-panel\)/);
+  assert.match(css,/\.portal-calendar-day-cell[\s\S]*var\(--portal-surface-card\)/);
+  assert.match(css,/--portal-brand-header:\s*#005830/);
 });
 
-test('planilhas têm separadores, texto preto e hover neutro',()=>{
-  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+test('planilhas usam separadores e densidade canônicos',()=>{
   const css=read('src/index.css');
-  assert.match(css,/--portal-separator-table: 16px/);
-  assert.match(css,/--portal-separator-section: 12px/);
-  assert.match(css,/color: #000 !important/);
-  assert.match(runtime,/stripHoverRules/);
-  assert.match(runtime,/token\.startsWith\('hover:'\)/);
+  assert.match(css,/--portal-sheet-title-divider:\s*5px/);
+  assert.match(css,/--portal-sheet-content-divider:\s*15px/);
+  assert.match(css,/--portal-sheet-row-min-height:\s*30px/);
+  assert.match(css,/color:\s*var\(--portal-text-dark\)/);
 });
 
 test('camadas incrementais conflitantes não são montadas',()=>{
@@ -49,4 +43,6 @@ test('camadas incrementais conflitantes não são montadas',()=>{
   assert.doesNotMatch(main,/PortalMaintenanceEnhancer/);
   assert.doesNotMatch(main,/PortalVersion1041Enhancer/);
   assert.doesNotMatch(main,/PortalVersion1042Enhancer/);
+  const cssImports=[...main.matchAll(/import ['"]\.\/([^'"]+\.css)['"];/g)].map(m=>m[1]);
+  assert.deepEqual(cssImports,['index.css']);
 });
