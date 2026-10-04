@@ -14,32 +14,31 @@ test('cabeçalho não apresenta acesso institucional nem identidade para visitan
   assert.match(header, /showAuthenticatedIdentity/);
 });
 
-test('planilhas aplicam política única sem emojis e defesas passadas não ficam foscas', () => {
+test('planilhas aplicam política única sem emojis e usam cores semânticas canônicas', () => {
   const main = read('src/main.tsx');
   const policy = read('src/components/PortalTableTextPolicy.tsx');
   const css = readPortalCss();
   assert.match(main, /PortalTableTextPolicy/);
-  assert.match(policy, /querySelectorAll<HTMLTableElement>\('#portal-app-root table'\)/);
   assert.match(policy, /TABLE_EMOJI_PATTERN/);
-  assert.match(css, /opacity: 1 !important/);
-  assert.match(css, /color: #000 !important/);
+  assert.match(css, /--portal-defense-defended-bg/);
+  assert.match(css, /color:\s*var\(--portal-text-dark\)/);
+  assert.doesNotMatch(css, /!important/);
 });
 
-test('separador grosso encerra o bloco superior e não separa cabeçalho de dados', () => {
+test('separadores seguem a geometria única aprovada', () => {
   const css = readPortalCss();
-  assert.match(css, /--portal-separator-section: 16px/);
-  assert.match(css, /--portal-separator-table: 0px/);
-  assert.match(css, /portal-tutorial-filter-row[\s\S]*border-top: 2px solid #fff/);
-  assert.match(css, /portal-public-header[\s\S]*border-bottom: 16px solid #fff/);
-  assert.match(css, /portal-core-table thead tr:last-child > th[\s\S]*border-bottom-width: 0/);
+  assert.match(css, /--portal-sheet-title-divider:\s*5px/);
+  assert.match(css, /--portal-sheet-content-divider:\s*15px/);
+  assert.match(css, /--portal-sheet-column-header-height:\s*35px/);
+  assert.match(css, /--portal-sheet-row-min-height:\s*30px/);
 });
 
 test('replicar portal mantém cartões com a mesma altura', () => {
   const page = read('src/pages/PortalReplicationPage.tsx');
   assert.match(page, /auto-rows-fr/);
-  assert.match(page, /flex h-full min-h-\[172px\] flex-col/);
+  assert.match(page, /flex h-full min-h-\\[112px\\] flex-col/);
   assert.doesNotMatch(page, /self-start/);
-  assert.match(page, /mt-auto pt-3/);
+  assert.match(page, /mt-auto pt-2/);
 });
 
 test('tutorial público contém orientação operacional detalhada por perfil', () => {
@@ -55,7 +54,7 @@ test('tutorial público contém orientação operacional detalhada por perfil', 
 test('fluxo remove introdução redundante e mantém resultado alinhado no rodapé dos cards', () => {
   const page = read('src/pages/FluxoTccPage.tsx');
   assert.doesNotMatch(page, /O Portal acompanha o TCC do primeiro cadastro ao encerramento/);
-  assert.match(page, /portal-flow-step flex h-full flex-col/);
+  assert.match(page, /portal-flow-step portal-layer-card flex h-full flex-col/);
   assert.match(page, /flex-1 space-y-1\.5/);
   assert.match(page, /Para avançar:/);
   assert.match(page, /Resultado:/);
