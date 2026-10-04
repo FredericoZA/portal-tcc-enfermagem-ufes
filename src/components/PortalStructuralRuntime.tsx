@@ -553,14 +553,6 @@ function injectWrapSetting() {
   sync();
 }
 
-function pruneLegacyIndicatorSubtitle() {
-  const indicators = document.getElementById('indicadores-publicos-page');
-  if (!indicators) return;
-  Array.from(indicators.querySelectorAll('p')).forEach((paragraph) => {
-    if (normalize(paragraph.textContent || '') === 'panorama estatistico agregado dos tccs') paragraph.remove();
-  });
-}
-
 function calendarPeriod() {
   const heading = Array.from(document.querySelectorAll<HTMLElement>('h1,h2,h3')).find((node) => /CALENDÁRIO DE DEFESAS\s*[—-]/i.test(node.textContent || ''));
   const match = heading?.textContent?.match(/CALENDÁRIO DE DEFESAS\s*[—-]\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ]+)\s+DE\s+(\d{4})/i);
@@ -605,7 +597,6 @@ function enhanceAll() {
   document.querySelectorAll<HTMLTableElement>('#portal-app-root main table').forEach(enhanceTable);
   bindSettingsButtons();
   injectWrapSetting();
-  pruneLegacyIndicatorSubtitle();
   enhanceCalendar();
 }
 
