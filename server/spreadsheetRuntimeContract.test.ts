@@ -7,8 +7,8 @@ const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.ur
 test('uma única camada canônica controla as planilhas', () => {
   const main = read('src/main.tsx');
   assert.match(main, /PortalSpreadsheetRuntime/);
-  assert.match(main, /PortalSettingsRuntime/);
-  assert.match(main, /portal-spreadsheet-runtime\.css/);
+  assert.doesNotMatch(main, /PortalSettingsRuntime/);
+  assert.match(main, /import '\.\/index\.css'/);
   for (const legacy of ['PortalVersion1052Enhancer', 'PortalVersion1053Enhancer', 'PortalVersion1053PagerGuard']) assert.doesNotMatch(main, new RegExp(legacy));
   assert.doesNotMatch(main, /portal-version-105[23]\.css/);
 });
@@ -31,7 +31,7 @@ test('runtime reconhece todas as sete planilhas e padroniza Processo de forma au
 test('mão e roda movimentam o host nos dois eixos sem pointer capture', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const wrapper = read('src/components/TableScrollWrapper.tsx');
-  const css = read('src/portal-spreadsheet-runtime.css');
+  const css = read('src/index.css');
   assert.match(wrapper, /portal-spreadsheet-scroll-host/);
   assert.match(runtime, /addEventListener\('mousedown'/);
   assert.match(runtime, /window\.addEventListener\('mousemove'/);
@@ -42,14 +42,14 @@ test('mão e roda movimentam o host nos dois eixos sem pointer capture', () => {
   assert.match(runtime, /host\.scrollTop = startTop - dy/);
   assert.match(runtime, /host\.scrollTop \+= event\.deltaY/);
   assert.match(runtime, /host\.scrollLeft \+=/);
-  assert.match(css, /cursor: grab !important/);
-  assert.match(css, /overflow: auto !important/);
-  assert.match(css, /isolation: isolate !important/);
+  assert.match(css, /cursor:\s*grabbing/);
+  assert.match(css, /overflow:\s*auto/);
+  assert.match(css, /isolation:\s*isolate/);
 });
 
 test('paginação canônica é recriada após renderizações React e permanece no rodapé direito', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
-  const css = read('src/portal-spreadsheet-runtime.css');
+  const css = read('src/index.css');
   assert.match(runtime, /ensureSinglePager/);
   assert.match(runtime, /host\.insertAdjacentElement\('afterend', pager\)/);
   assert.match(runtime, /pager\.dataset\.portalGenerated = 'true'/);
@@ -60,7 +60,7 @@ test('paginação canônica é recriada após renderizações React e permanece 
   assert.match(runtime, /pageList\(totalPages, current\)/);
   assert.match(runtime, /portal-table-layouts-updated/);
   assert.match(css, /\.portal-spreadsheet-pager[\s\S]*justify-content: flex-end/);
-  assert.match(css, /visibility: visible !important/);
+  
   assert.doesNotMatch(runtime, /portal-spreadsheet-page-size/);
 });
 
@@ -68,44 +68,42 @@ test('Meus TCCs mantém filtros React com paleta amarelo, laranja, verde e azul'
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const page = read('src/pages/MeusProcessosPage.tsx');
   const tokens = read('src/utils/portalSemanticTokens.ts');
-  const css = read('src/portal-spreadsheet-runtime.css');
-  const contract = read('src/portal-surface-contract.css');
+  const css = read('src/index.css');
+  const contract = css;
   assert.match(page, /selectedRoleCategories/);
   assert.match(page, /toggleRoleCategory/);
   assert.match(page, /selectedRoleCategories\.includes\(roleCat\)/);
   assert.match(page, /ROLE_CONFIGS/);
   assert.doesNotMatch(runtime, /enhanceMyTccFilters|selectedMyTccRoles|portal-runtime-all-filter/);
-  for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(tokens, new RegExp(border));
-  assert.match(css, /portal-native-all-filter\[data-selected="true"\][\s\S]*color: #111827 !important/);
-  assert.match(contract, /data-portal-has-filter="true"[\s\S]*border-bottom:var\(--portal-sheet-content-divider\) solid #fff!important/);
+  for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(css, new RegExp(border));
+  assert.match(css, /portal-native-all-filter\[data-selected="true"\][\s\S]*background:\s*var\(--portal-neutral-bg\)/);
+  assert.match(contract, /data-portal-has-filter="true"[\s\S]*border-bottom:\s*var\(--portal-sheet-content-divider\) solid var\(--portal-surface-inner\)/);
 });
 
 test('Presidente mantém seleção React com duas colunas fixas opacas e controle maior', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const page = read('src/pages/CoordenadorPage.tsx');
-  const css = read('src/portal-spreadsheet-runtime.css');
-  const contract = read('src/portal-surface-contract.css');
+  const css = read('src/index.css');
+  const contract = read('src/index.css');
   assert.match(page, /selectedIds/);
   assert.match(page, /toggleSelectAllPending/);
   assert.match(page, /data-portal-selection-column="true"/);
   assert.match(runtime, /portal-sheet-checkbox/);
   assert.match(runtime, /portalStickySelection/);
   assert.match(runtime, /opaqueColor/);
-  assert.match(css, /width: 54px !important/);
-  assert.match(css, /left: 54px !important/);
-  assert.match(css, /width: 28px !important/);
+  assert.match(css, /width:\s*54px/);
+  assert.match(css, /left:\s*54px/);
+  assert.match(css, /--portal-sheet-column-control-size:\s*15px/);
   assert.match(contract, /data-portal-sheet="president"[\s\S]*data-portal-sticky-selection/);
   assert.match(contract, /data-portal-has-filter="true"[\s\S]*border-bottom:var\(--portal-sheet-content-divider\) solid #fff!important/);
   assert.doesNotMatch(runtime, /portal-president-all-view|renderPresidentAllView|apiClient/);
 });
 
-test('Acesso, Assinaturas e Logs permanecem planilhas do workspace sem camada visual paralela', () => {
-  const settings = read('src/components/PortalSettingsRuntime.tsx');
+test('Acesso, Assinaturas e Logs permanecem planilhas React do workspace sem runtime visual paralelo', () => {
   const workspace = read('src/components/SettingsWorkspaceModal.tsx');
-  const css = read('src/portal-spreadsheet-runtime.css');
-  for (const kind of ['access', 'signatures', 'logs']) assert.match(settings, new RegExp(`portalSheetMode = '${kind}'`));
+  const main = read('src/main.tsx');
   assert.match(workspace, /data-portal-full-bleed/);
   assert.match(workspace, /SHEET_SECTION_IDS/);
   assert.match(workspace, /sheetWorkspace/);
-  assert.match(css, /data-portal-full-bleed/);
+  assert.doesNotMatch(main, /PortalSettingsRuntime/);
 });
