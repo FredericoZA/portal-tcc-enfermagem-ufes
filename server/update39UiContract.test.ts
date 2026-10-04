@@ -5,11 +5,11 @@ import { readFile } from 'node:fs/promises';
 import { readPortalCss } from './testUtils/portalCss';
 const source = (path: string) => readFile(path, 'utf8');
 
-test('update 39 mantém espaço verde abaixo das duas barras de filtro', async () => {
+test('filtros de Meus TCCs e Presidência usam a geometria canônica', async () => {
   const css = await readPortalCss();
-  assert.ok(css.includes('.portal-meus-processos-filter-row'));
-  assert.ok(css.includes('.portal-coordinator-filter-row'));
-  assert.match(css, /padding-bottom:\s*0\.95rem\s*!important/);
+  assert.match(css, /data-portal-sheet-filter="true"/);
+  assert.match(css, /--portal-sheet-filter-height:\s*45px/);
+  assert.match(css, /--portal-sheet-content-divider:\s*15px/);
 });
 
 test('identidade centraliza Presidência Secretaria e Comissão sem duplicar troca administrativa', async () => {
@@ -58,12 +58,12 @@ test('update 39 abre personalização por tela e remove controles gerais legados
   assert.ok(enhancer.includes('portal-customization-top-action'));
 });
 
-test('update 39 limita a superfície da Presidência à troca segura do Master', async () => {
-  const [css, enhancer] = await Promise.all([
-    readPortalCss(),
+test('administração institucional permanece restrita ao Master no componente responsável', async () => {
+  const [enhancer, identity] = await Promise.all([
     source('src/components/PortalUiEnhancer.tsx'),
+    source('src/components/CommissionIdentityPanel.tsx'),
   ]);
   assert.ok(enhancer.includes("portalSettingsRole = 'president-only'"));
-  assert.ok(css.includes("html[data-portal-settings-role='president-only'] #configuracoes-page-container > section"));
-  assert.ok(css.includes('.portal-president-master-transfer'));
+  assert.ok(identity.includes('if (!isMaster) return null'));
+  assert.ok(!identity.includes('createAdministrationTransfer'));
 });
