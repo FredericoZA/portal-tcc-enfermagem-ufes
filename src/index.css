@@ -455,6 +455,30 @@ button[aria-label^="Configurar exibição"],
   color: var(--portal-text-light);
 }
 
+.portal-primary-register-btn,
+.portal-sign-bulk-btn,
+.portal-sign-provider-btn {
+  min-height: var(--portal-toolbar-button-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--portal-border);
+  border-radius: var(--portal-control-radius);
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.portal-primary-register-btn {
+  background: var(--portal-brand-action);
+  border-color: var(--portal-brand-action-border);
+  color: var(--portal-text-light);
+}
+
 /* Modais. */
 .portal-modal-surface,
 [role="dialog"] > .portal-modal-surface {
@@ -490,9 +514,17 @@ button[aria-label^="Configurar exibição"],
   padding: 10px;
   border: 1px solid var(--portal-border);
   border-radius: 12px;
-  background: var(--portal-surface-inner);
   color: var(--portal-text-dark);
   box-shadow: 0 12px 32px rgba(15, 23, 42, .18);
+}
+
+.portal-core-column-popup {
+  background: var(--portal-surface-inner);
+}
+
+.portal-search-popover,
+.portal-table-settings-popover {
+  background: var(--portal-surface-panel);
 }
 
 .portal-core-popup-title,
@@ -1244,17 +1276,20 @@ td[data-portal-core-process-state="upcoming"] > div,
   }
 
   [data-portal-sheet] [data-portal-sheet-title="true"] {
-    height: auto;
+    height: var(--portal-sheet-title-height);
     min-height: var(--portal-sheet-title-height);
-    padding-top: 6px;
-    padding-bottom: 6px;
+    padding-top: 0;
+    padding-bottom: 0;
   }
 
   [data-portal-sheet][data-portal-has-filter="true"] [data-portal-sheet-filter="true"] {
-    height: auto;
+    height: calc(var(--portal-sheet-title-divider) + var(--portal-sheet-filter-height) + var(--portal-sheet-content-divider));
     min-height: calc(var(--portal-sheet-title-divider) + var(--portal-sheet-filter-height) + var(--portal-sheet-content-divider));
-    padding-top: 5px;
-    padding-bottom: 5px;
+    padding-top: 0;
+    padding-bottom: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 }
 
