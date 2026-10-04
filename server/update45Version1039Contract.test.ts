@@ -5,7 +5,7 @@ const read=(p:string)=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('1.0.40 mantém cabeçalhos estáveis e separadores brancos em camadas',()=>{
   const enhancer=read('src/components/PortalSpreadsheetEnhancer.tsx');
-  const css=read('src/portal-version-1040.css');
+  const css=read('src/index.css');
   assert.match(enhancer,/canonicalizeHeader/);
   assert.match(enhancer,/wrapper\.className='portal-column-header-content'/);
   assert.match(css,/border-bottom:4px solid #fff/);
