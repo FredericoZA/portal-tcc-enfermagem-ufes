@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { readPortalCss } from './testUtils/portalCss';
 const read=(p:string)=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('1.0.40 mantém cabeçalhos estáveis e separadores brancos em camadas',()=>{
   const enhancer=read('src/components/PortalSpreadsheetEnhancer.tsx');
-  const css=read('src/index.css');
+  const css=readPortalCss();
   assert.match(enhancer,/canonicalizeHeader/);
   assert.match(enhancer,/wrapper\.className='portal-column-header-content'/);
   assert.match(css,/border-bottom:4px solid #fff/);
