@@ -67,7 +67,7 @@ test('fluxo do TCC usa caminho responsivo em minhoca',()=>{
   assert.match(flow,/portal-flow-step/);
   assert.match(css,/grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
   assert.match(css,/nth-child\(4\)::before/);
-  assert.match(css,/content: '↓'/);
+  assert.match(css,/content:\s*["']↓["']/);
 });
 
 test('replicar portal mantém somente download agregado dos modelos',()=>{
