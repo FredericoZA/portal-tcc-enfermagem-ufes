@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { readPortalCss } from './testUtils/portalCss';
 const root = path.resolve(process.cwd());
 const source = (file: string) => readFile(path.join(root, file), 'utf8');
 
@@ -25,7 +26,7 @@ test('navegação pública mantém apenas o Fluxo do TCC canônico', async () =>
 test('navegação usa shell canônico sem hotfix visual', async () => {
   const [main, css] = await Promise.all([
     source('src/main.tsx'),
-    source('src/index.css'),
+    readPortalCss(),
   ]);
   assert.ok(main.includes("import './index.css'"));
   assert.ok(!main.includes('portal-update-'));
