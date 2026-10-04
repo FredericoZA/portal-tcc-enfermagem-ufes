@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import { readPortalCss } from './testUtils/portalCss';
 const read = (path: string) => readFileSync(path, 'utf8');
 
 const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
-const css = read('src/index.css');
+const css = readPortalCss();
 const identity = read('src/components/CommissionIdentityPanel.tsx');
 const workspace = read('src/components/SettingsWorkspaceModal.tsx');
 const integrations = read('src/components/InfrastructureIntegrationsPanel.tsx');
@@ -42,7 +43,7 @@ test('paginação fica no canto inferior direito e se recompõe após rerender',
 
 test('Meus TCCs mantém combinação de filtros com quatro cores bem separadas e Todos neutro', () => {
   const page = read('src/pages/MeusProcessosPage.tsx');
-  const tokens = read('src/index.css');
+  const tokens = readPortalCss();
   assert.match(page, /selectedRoleCategories/);
   assert.match(page, /toggleRoleCategory/);
   assert.match(page, /selectedRoleCategories\.includes\(roleCat\)/);
