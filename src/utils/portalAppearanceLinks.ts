@@ -5,9 +5,6 @@ export const TABLE_LAYOUTS_EVENT = 'global_table_layouts_changed';
 export const GLOBAL_POPUP_STYLE_KEY = 'portal_global_popup_style_v1';
 export const GLOBAL_POPUP_STYLE_EVENT = 'portal_global_popup_style_changed';
 
-const POPUP_MOSS = '#337959';
-const LEGACY_POPUP_GREENS = new Set(['#005830', '#435649', '#344125', '#69786d', '#47866a']);
-
 export interface GlobalPopupStyle {
   surfaceBgColor: string;
   headerBgColor: string;
@@ -22,15 +19,15 @@ export interface GlobalPopupStyle {
 }
 
 export const DEFAULT_GLOBAL_POPUP_STYLE: GlobalPopupStyle = {
-  surfaceBgColor: '#f2f2f2',
-  headerBgColor: '#154d41',
-  headerTextColor: '#ffffff',
-  actionBgColor: '#154d41',
-  actionTextColor: '#ffffff',
+  surfaceBgColor: 'var(--portal-surface-panel)',
+  headerBgColor: 'var(--portal-brand-header)',
+  headerTextColor: 'var(--portal-text-light)',
+  actionBgColor: 'var(--portal-brand-action)',
+  actionTextColor: 'var(--portal-text-light)',
   fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
   fontSize: '14px',
   borderRadius: '16px',
-  borderColor: '#cbd5e1',
+  borderColor: 'var(--portal-border)',
   styleVariant: 'solid',
 };
 
@@ -65,13 +62,8 @@ export const TABLE_EDITOR_TAB_BY_STORAGE: Readonly<Record<string, string>> = Obj
   Object.entries(TABLE_STORAGE_BY_EDITOR_TAB).map(([tab, storage]) => [storage, tab]),
 );
 
-function normalizePopupStyle(style: Partial<GlobalPopupStyle> = {}): GlobalPopupStyle {
-  const normalized = { ...DEFAULT_GLOBAL_POPUP_STYLE, ...style };
-  if (LEGACY_POPUP_GREENS.has(String(normalized.headerBgColor).toLowerCase())) normalized.headerBgColor = POPUP_MOSS;
-  if (LEGACY_POPUP_GREENS.has(String(normalized.actionBgColor).toLowerCase())) normalized.actionBgColor = POPUP_MOSS;
-  if (String(normalized.surfaceBgColor).toLowerCase() === '#ffffff') normalized.surfaceBgColor = '#f2f2f2';
-  normalized.fontFamily = portalFontFamily(normalized.fontFamily);
-  return normalized;
+function normalizePopupStyle(_style: Partial<GlobalPopupStyle> = {}): GlobalPopupStyle {
+  return { ...DEFAULT_GLOBAL_POPUP_STYLE, fontFamily: portalFontFamily(DEFAULT_GLOBAL_POPUP_STYLE.fontFamily) };
 }
 
 export function unifiedAppearanceLinks(links: Record<string, boolean> = {}): Record<string, boolean> {
@@ -92,17 +84,9 @@ export function loadGlobalPopupStyle(): GlobalPopupStyle {
 
 export function saveGlobalPopupStyle(_style: GlobalPopupStyle, emitEvent = true): GlobalPopupStyle {
   const normalized = loadGlobalPopupStyle();
-  if (typeof window === 'undefined') return normalized;
-  if (typeof document !== 'undefined') {
-    const root = document.documentElement.style;
-    const shape = { font: normalized.fontFamily, size: normalized.fontSize, radius: normalized.borderRadius, border: normalized.borderColor };
-    for (const [key, value] of Object.entries(shape)) root.setProperty(`--portal-popup-${key}`, value);
-    root.setProperty('--portal-popup-shadow', '0 16px 40px rgba(15,23,42,.2)');
-    for (const prefix of ['popup', 'new-defense', 'upload', 'hipoar', 'pdf', 'correction']) {
-      for (const [key, value] of Object.entries({ bg: normalized.surfaceBgColor, header: normalized.headerBgColor, 'header-text': normalized.headerTextColor, action: normalized.actionBgColor, 'action-text': normalized.actionTextColor })) root.setProperty(`--portal-${prefix}-${key}`, value);
-    }
+  if (typeof window !== 'undefined' && emitEvent) {
+    window.dispatchEvent(new CustomEvent(GLOBAL_POPUP_STYLE_EVENT, { detail: normalized }));
   }
-  if (emitEvent) window.dispatchEvent(new CustomEvent(GLOBAL_POPUP_STYLE_EVENT, { detail: normalized }));
   return normalized;
 }
 
