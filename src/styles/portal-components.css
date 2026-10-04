@@ -301,3 +301,81 @@ button[aria-label^="Configurar exibição"],
   min-height: 28px;
   font-size: 12px;
 }
+
+/* Classes de compatibilidade semântica consumidas por src/constants/theme.ts. */
+.portal-theme-btn-primary,
+.portal-theme-btn-pill-primary {
+  background: var(--portal-brand-action);
+  border: 1px solid var(--portal-brand-action-border);
+  color: var(--portal-text-light);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.portal-theme-btn-primary:hover,
+.portal-theme-btn-pill-primary:hover {
+  filter: brightness(.96);
+}
+
+.portal-theme-btn-primary:active,
+.portal-theme-btn-pill-primary:active {
+  filter: brightness(.92);
+}
+
+.portal-theme-btn-secondary,
+.portal-theme-btn-outline,
+.portal-theme-header-icon-button {
+  background: var(--portal-surface-inner);
+  border: 1px solid var(--portal-border);
+  color: var(--portal-text-dark);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.portal-theme-btn-secondary:hover,
+.portal-theme-btn-outline:hover,
+.portal-theme-header-icon-button:hover {
+  background: var(--portal-neutral-bg);
+}
+
+.portal-theme-btn-pill-primary,
+.portal-theme-header-icon-button {
+  border-radius: var(--portal-control-radius);
+}
+
+.portal-theme-btn-pill-primary {
+  padding: 8px 16px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .025em;
+}
+
+.portal-theme-header-icon-button {
+  width: var(--portal-toolbar-button-size);
+  min-width: var(--portal-toolbar-button-size);
+  height: var(--portal-toolbar-button-size);
+  min-height: var(--portal-toolbar-button-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portal-theme-header-icon-button-active,
+.portal-theme-filter-active {
+  background: var(--portal-neutral-bg);
+  border-color: var(--portal-neutral-border);
+  color: var(--portal-text-dark);
+}
+
+.portal-theme-filter-active,
+.portal-theme-filter-inactive {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .025em;
+}
+
+.portal-theme-filter-inactive {
+  background: var(--portal-surface-inner);
+  border-color: var(--portal-border);
+  color: var(--portal-text-dark);
+}
