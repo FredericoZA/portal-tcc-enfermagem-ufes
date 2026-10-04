@@ -7,48 +7,40 @@ import { readPortalCss } from './testUtils/portalCss';
 const root = path.resolve(process.cwd());
 const source = (file: string) => readFile(path.join(root, file), 'utf8');
 
-test('divisor de Meus TCCs e Presidência mantém margem verde acima da linha branca', async () => {
-  const [css39, css42] = await Promise.all([readPortalCss(), readPortalCss()]);
-  assert.ok(css39.includes('.portal-meus-processos-filter-row'));
-  assert.ok(css39.includes('.portal-coordinator-filter-row'));
-  assert.match(css39, /margin-top:\s*0\.6rem\s*!important/);
-  assert.ok(css42.includes('#meus-processos-page-container .portal-meus-processos-filter-row'));
-  assert.ok(css42.includes('#coordenador-page-root .portal-coordinator-filter-row'));
-  assert.match(css42, /margin-top:\s*\.6rem\s*!important/);
+test('divisor de Meus TCCs e Presidência segue o contrato único de planilha', async () => {
+  const css = await readPortalCss();
+  assert.match(css, /--portal-sheet-title-divider:\s*5px/);
+  assert.match(css, /--portal-sheet-content-divider:\s*15px/);
+  assert.match(css, /data-portal-has-filter="true"/);
 });
 
-test('Configurações abre Sincronização e Modelos como workspaces modais com navegação lateral', async () => {
-  const [enhancer, css] = await Promise.all([source('src/components/PortalUiEnhancer.tsx'), readPortalCss()]);
-  assert.ok(enhancer.includes("enhanceSettingsWorkspace('google-workspace-sync-section', 'sync')"));
-  assert.ok(enhancer.includes("enhanceSettingsWorkspace('master-flow-system-section', 'models')"));
-  assert.ok(enhancer.includes('portal-settings-workspace-sidebar'));
-  assert.ok(enhancer.includes("['identity', '👥', 'Administração']"));
-  assert.ok(enhancer.includes("['catalog', '📄', 'Catálogo DOCX']"));
-  assert.ok(css.includes("[data-portal-workspace-open='true']"));
-  assert.ok(css.includes('.portal-studio-tab-strip'));
+test('Configurações abre workspaces por componentes React dedicados', async () => {
+  const [config, modal] = await Promise.all([
+    source('src/pages/ConfiguracoesPage.tsx'),
+    source('src/components/SettingsWorkspaceModal.tsx'),
+  ]);
+  assert.ok(config.includes('SettingsWorkspaceModal'));
+  assert.ok(config.includes("activeSettingsPanel"));
+  assert.ok(modal.includes('portal-settings-workspace-sidebar'));
+  assert.ok(modal.includes('data-portal-full-bleed'));
 });
 
-test('Personalização usa cabeçalho verde, título à esquerda, ícone branco sem caixa e ações brancas', async () => {
-  const [enhancer, css39, css42] = await Promise.all([
+test('Personalização usa classes semânticas e o verde institucional canônico', async () => {
+  const [enhancer, css] = await Promise.all([
     source('src/components/PortalUiEnhancer.tsx'),
-    readPortalCss(),
     readPortalCss(),
   ]);
   assert.ok(enhancer.includes('portal-customization-header'));
   assert.ok(enhancer.includes('portal-customization-icon-shell'));
   assert.ok(enhancer.includes('portal-customization-top-action'));
-  assert.ok(css39.includes('text-align: left !important'));
-  assert.ok(css39.includes('background: #005830 !important'));
-  assert.ok(css39.includes('background: #fff !important'));
-  assert.ok(css42.includes('.portal-customization-header'));
+  assert.match(css, /--portal-brand-header:\s*#005830/);
+  assert.doesNotMatch(css, /!important/);
 });
 
-test('Registro de logs sai de Configurações e vira página Master com toolbar de planilha', async () => {
-  const [app, logs, enhancer, css] = await Promise.all([
+test('Registro de logs é página própria com toolbar de planilha', async () => {
+  const [app, logs] = await Promise.all([
     source('src/App.tsx'),
     source('src/pages/AuditLogsPage.tsx'),
-    source('src/components/PortalUiEnhancer.tsx'),
-    readPortalCss(),
   ]);
   assert.ok(app.includes("case 'logs'"));
   assert.ok(app.includes('<AuditLogsPage />'));
@@ -57,9 +49,6 @@ test('Registro de logs sai de Configurações e vira página Master com toolbar 
   assert.ok(logs.includes('<HeaderSettingsPopover'));
   assert.ok(logs.includes('Backup'));
   assert.ok(logs.includes('Restaurar'));
-  assert.ok(enhancer.includes("readGlobalRoles().includes('MASTER_ADMIN')"));
-  assert.ok(enhancer.includes("detail: 'logs'"));
-  assert.match(css, /#system-audit-logs-section\s*\{\s*display:\s*none\s*!important/);
 });
 
 test('Indicadores adicionam estatística descritiva, séries e distribuições temporais', async () => {
