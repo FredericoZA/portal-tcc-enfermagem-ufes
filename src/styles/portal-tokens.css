@@ -1,0 +1,108 @@
+/* ==========================================================================
+   1. TOKENS
+   ========================================================================== */
+:root {
+  /* Superfícies — quatro níveis, sem quinto cinza estrutural. */
+  --portal-surface-page: #f1f5f9;
+  --portal-surface-panel: #e1e6e9;
+  --portal-surface-card: #d5dce0;
+  --portal-surface-inner: #ffffff;
+
+  /* Identidade. */
+  --portal-brand-header: #005830;
+  --portal-brand-action: #337959;
+  --portal-brand-action-border: #286a4d;
+  --portal-header-institution: #d5dce0;
+  --portal-sidebar-footer: #011f17;
+  --portal-sidebar-active: #154d41;
+  --portal-sidebar-divider: #174c3b;
+
+  /* Texto. */
+  --portal-text-dark: #0f172a;
+  --portal-text-muted: #526273;
+  --portal-text-light: #ffffff;
+  --portal-text-muted-light: #b5c8bf;
+
+  /* Bordas e foco. */
+  --portal-border: #c4ced4;
+  --portal-border-strong: #94a3b8;
+  --portal-focus: #337959;
+  --portal-danger: #991b1b;
+
+  /* Semântica — filtros/status atuais preservados. */
+  --portal-defense-defended-bg: #bed8c3;
+  --portal-defense-defended-border: #719a79;
+  --portal-defense-defended-text: #23472b;
+  --portal-defense-upcoming-bg: #e8dda7;
+  --portal-defense-upcoming-border: #b49d4f;
+  --portal-defense-upcoming-text: #4a4020;
+
+  --portal-role-student-bg: #fde68a;
+  --portal-role-student-border: #d4a300;
+  --portal-role-student-text: #3f3000;
+  --portal-role-board-bg: #fdba74;
+  --portal-role-board-border: #ea580c;
+  --portal-role-board-text: #431407;
+  --portal-role-evaluator-bg: #bbf7d0;
+  --portal-role-evaluator-border: #16a34a;
+  --portal-role-evaluator-text: #14532d;
+  --portal-role-viewer-bg: #bfdbfe;
+  --portal-role-viewer-border: #2563eb;
+  --portal-role-viewer-text: #1e3a8a;
+
+  --portal-signature-pending-bg: #d8c98f;
+  --portal-signature-pending-border: #9b884b;
+  --portal-signature-pending-text: #3e361c;
+  --portal-signature-signed-bg: #c2d0c2;
+  --portal-signature-signed-border: #7e907e;
+  --portal-signature-signed-text: #263728;
+  --portal-neutral-bg: #e2e8f0;
+  --portal-neutral-border: #94a3b8;
+  --portal-neutral-text: #334155;
+
+  /* Geometria. */
+  --portal-sheet-title-height: 45px;
+  --portal-sheet-title-divider: 5px;
+  --portal-sheet-filter-height: 45px;
+  --portal-sheet-content-divider: 15px;
+  --portal-sheet-column-header-height: 35px;
+  --portal-sheet-row-min-height: 30px;
+  --portal-sheet-pagination-height: 24px;
+  --portal-sheet-column-control-size: 15px;
+  --portal-toolbar-button-size: 30px;
+  --portal-toolbar-action-gap: 10px;
+  --portal-toolbar-pair-gap: 4px;
+  --portal-cell-padding-y: 4px;
+  --portal-cell-padding-x: 8px;
+  --portal-bar-padding-x: 16px;
+  --portal-panel-radius: 16px;
+  --portal-control-radius: 9999px;
+
+  /* Sticky. */
+  --portal-z-sticky-column: 30;
+  --portal-z-sticky-header: 40;
+  --portal-z-sticky-corner: 60;
+
+  /* Tipografia. */
+  --portal-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --portal-font-size: 14px;
+  --portal-font-size-small: 12px;
+
+  /* Compatibilidade temporária com componentes ainda não migrados. */
+  --portal-surface-layer-1: var(--portal-surface-panel);
+  --portal-surface-layer-2: var(--portal-surface-card);
+  --portal-green-header: var(--portal-brand-header);
+  --portal-green-action: var(--portal-brand-action);
+  --portal-green-action-border: var(--portal-brand-action-border);
+  --portal-popup-bg: var(--portal-surface-panel);
+  --portal-popup-header: var(--portal-brand-header);
+  --portal-popup-header-text: var(--portal-text-light);
+  --portal-popup-action: var(--portal-brand-action);
+  --portal-popup-action-text: var(--portal-text-light);
+  --portal-popup-border: var(--portal-border);
+  --portal-popup-radius: var(--portal-panel-radius);
+  --portal-table-header-bg: var(--portal-brand-header);
+  --portal-table-header-text: var(--portal-text-light);
+  --portal-table-divider: var(--portal-border);
+  --portal-table-text: var(--portal-text-dark);
+}
