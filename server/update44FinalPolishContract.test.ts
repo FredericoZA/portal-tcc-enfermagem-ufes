@@ -29,7 +29,7 @@ test('Meus TCCs usa Etapa em vez de progresso percentual',()=>{
 });
 
 test('popup e logs preservam acabamento aprovado e release atual está em 1.0.44',()=>{
-  const css=read('src/portal-version-1040.css');
+  const css=read('src/index.css');
   const ui=read('src/components/PortalUiEnhancer.tsx');
   assert.match(css,/section\[aria-label\^="Colunas e ordem"\]/);
   assert.match(css,/border-bottom:4px solid #fff/);
