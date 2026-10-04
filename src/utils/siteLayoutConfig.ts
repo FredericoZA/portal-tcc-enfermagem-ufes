@@ -90,6 +90,8 @@ const DEFAULT_NAV_LABELS = {
   'meus-processos': 'Meus TCCs',
   coordenador: 'Área do Presidente',
   configuracoes: 'Configurações',
+  logs: 'Registro de logs',
+  'asten-logs': 'Registros de Assinatura',
   indicadores: 'Indicadores',
 } as const;
 
@@ -103,6 +105,8 @@ const DEFAULT_NAV_EMOJIS = {
   'meus-processos': '📋',
   coordenador: '🏛️',
   configuracoes: '⚙️',
+  logs: '🧾',
+  'asten-logs': '🛡️',
   indicadores: '📊',
 } as const;
 
@@ -136,7 +140,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   sidebarDividerColor: PORTAL_THEME.chrome.divider,
   sidebarDividerStyle: 'solid',
   sidebarShowDividers: true,
-  sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'DIVIDER_2', 'indicadores', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'],
+  sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'logs', 'asten-logs', 'DIVIDER_2', 'indicadores', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'],
   footerLocationText: 'Departamento de Enfermagem • CCS/UFES • Campus de Maruípe • Vitória/ES',
   footerPresidentLabel: 'Presidente da Comissão',
   footerPresidentName: '',
