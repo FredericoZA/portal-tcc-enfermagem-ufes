@@ -66,8 +66,10 @@ test('Lista de Defesas e Repositório padronizam o cabeçalho como Processo pela
   assert.match(home, /portal-semantic-tone/);
 });
 
-test('Meus TCCs e Presidente preservam pequena faixa verde após os filtros', () => {
-  assert.match(css, /\.portal-meus-processos-filter-row,[\s\S]*\.portal-coordinator-filter-row[\s\S]*border-bottom: 2px solid var\(--portal-green-header, #005830\)/);
+test('Meus TCCs e Presidente usam o mesmo separador branco canônico após os filtros', () => {
+  const contract = read('src/portal-surface-contract.css');
+  assert.match(contract, /data-portal-has-filter="true"[\s\S]*border-bottom:var\(--portal-sheet-content-divider\) solid #fff!important/);
+  assert.doesNotMatch(css, /portal-coordinator-filter-row[\s\S]*border-bottom: 2px solid/);
 });
 
 test('tutorial remove a caixa redundante de visão selecionada', () => {
