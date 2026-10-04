@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+import { readPortalCss } from './testUtils/portalCss';
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('uma única camada canônica controla as planilhas', () => {
@@ -31,7 +32,7 @@ test('runtime reconhece todas as sete planilhas e padroniza Processo de forma au
 test('mão e roda movimentam o host nos dois eixos sem pointer capture', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const wrapper = read('src/components/TableScrollWrapper.tsx');
-  const css = read('src/index.css');
+  const css = readPortalCss();
   assert.match(wrapper, /portal-spreadsheet-scroll-host/);
   assert.match(runtime, /addEventListener\('mousedown'/);
   assert.match(runtime, /window\.addEventListener\('mousemove'/);
@@ -49,7 +50,7 @@ test('mão e roda movimentam o host nos dois eixos sem pointer capture', () => {
 
 test('paginação canônica é recriada após renderizações React e permanece no rodapé direito', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
-  const css = read('src/index.css');
+  const css = readPortalCss();
   assert.match(runtime, /ensureSinglePager/);
   assert.match(runtime, /host\.insertAdjacentElement\('afterend', pager\)/);
   assert.match(runtime, /pager\.dataset\.portalGenerated = 'true'/);
@@ -68,7 +69,7 @@ test('Meus TCCs mantém filtros React com paleta amarelo, laranja, verde e azul'
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const page = read('src/pages/MeusProcessosPage.tsx');
   const tokens = read('src/utils/portalSemanticTokens.ts');
-  const css = read('src/index.css');
+  const css = readPortalCss();
   const contract = css;
   assert.match(page, /selectedRoleCategories/);
   assert.match(page, /toggleRoleCategory/);
@@ -83,8 +84,8 @@ test('Meus TCCs mantém filtros React com paleta amarelo, laranja, verde e azul'
 test('Presidente mantém seleção React com duas colunas fixas opacas e controle canônico', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
   const page = read('src/pages/CoordenadorPage.tsx');
-  const css = read('src/index.css');
-  const contract = read('src/index.css');
+  const css = readPortalCss();
+  const contract = readPortalCss();
   assert.match(page, /selectedIds/);
   assert.match(page, /toggleSelectAllPending/);
   assert.match(page, /data-portal-selection-column="true"/);
