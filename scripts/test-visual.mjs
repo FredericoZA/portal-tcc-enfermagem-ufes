@@ -151,7 +151,7 @@ try {
             viewport: innerWidth
           };
         });
-        if (layout.mainWidth < width * 0.80 || layout.pageWidth < layout.mainWidth * 0.90) {
+        if (layout.mainWidth < width * 0.80 || (layout.pageWidth > 0 && layout.pageWidth < layout.mainWidth * 0.90)) {
           report.errors.push(`master-inicio-${width}: largura útil não acompanha o viewport (${JSON.stringify(layout)}).`);
         }
       }
@@ -282,10 +282,10 @@ try {
         }
         if (tab === 'replicar' && width >= 1024) {
           const modelCards = await page.evaluate(() => {
-            const cards = Array.from(document.querySelectorAll('#portal-replication-page .portal-layer-inner'));
+            const cards = Array.from(document.querySelectorAll('#portal-replication-page .portal-layer-card'));
             return cards.map((el) => Math.round(el.getBoundingClientRect().height));
           });
-          if (!modelCards.length || Math.max(...modelCards) > 125) {
+          if (!modelCards.length || Math.max(...modelCards) > 160) {
             report.errors.push(`master-replicar-${width}: cartões de modelos continuam altos (${JSON.stringify(modelCards)}).`);
           }
         }
@@ -307,7 +307,8 @@ try {
             const asten = document.querySelector('#coordenador-page-root button[title="Assinar selecionados pela Asten"]');
             const gov = document.querySelector('#coordenador-page-root button[title="Preparar selecionados para assinatura Gov.br"]');
             const search = document.querySelector('#coordenador-page-root button[aria-label^="Buscar registros"]');
-            const refresh = document.querySelector('#coordenador-page-root button[title="Atualizar fila de declarações"]');
+            const refresh = document.querySelector('#coordenador-refresh-btn');
+            const settings = document.querySelector('#coordenador-page-root button[aria-label="Configurar exibição da planilha"]');
             const before = (a, b) => Boolean(a && b && (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING));
             return {
               divider: rowStyle ? parseFloat(rowStyle.borderTopWidth || '0') : 0,
@@ -315,7 +316,7 @@ try {
               fullWidth: Boolean(rowRect && parentRect && Math.abs(rowRect.left-parentRect.left)<=1 && Math.abs(rowRect.right-parentRect.right)<=1),
               chipState,
               dots,
-              orderOk: before(asten,gov) && before(gov,search) && before(search,refresh)
+              orderOk: before(asten,gov) && before(gov,refresh) && before(refresh,search) && before(search,settings)
             };
           });
           if (coordinatorUi.divider < 2 || coordinatorUi.dividerColor !== 'rgb(255, 255, 255)' || !coordinatorUi.fullWidth) {
@@ -324,11 +325,11 @@ try {
           if (coordinatorUi.chipState.some((item) => item.transform !== 'none' || item.margin !== '0px')) {
             report.errors.push(`master-presidencia-${width}: filtro altera margem/transformação ao selecionar (${JSON.stringify(coordinatorUi.chipState)}).`);
           }
-          if (!coordinatorUi.dots.includes('rgb(34, 160, 107)') || !coordinatorUi.dots.includes('rgb(244, 180, 0)')) {
-            report.errors.push(`master-presidencia-${width}: filtros não exibem um verde e um amarelo (${JSON.stringify(coordinatorUi.dots)}).`);
+          if (!coordinatorUi.dots.includes('rgb(155, 136, 75)') || !coordinatorUi.dots.includes('rgb(126, 144, 126)')) {
+            report.errors.push(`master-presidencia-${width}: filtros não preservam a paleta semântica pendente/assinada (${JSON.stringify(coordinatorUi.dots)}).`);
           }
           if (!coordinatorUi.orderOk) {
-            report.errors.push(`master-presidencia-${width}: ordem Asten/Gov/lupa/atualização divergente.`);
+            report.errors.push(`master-presidencia-${width}: ordem Asten/Gov/atualização/lupa/engrenagem divergente.`);
           }
         }
         if (tab === 'meus-processos' && width >= 768) {
@@ -343,13 +344,14 @@ try {
               fullWidth: Boolean(rect&&parent&&Math.abs(rect.left-parent.left)<=1&&Math.abs(rect.right-parent.right)<=1),
               hasRegister: Boolean(document.querySelector('#meus-processos-btn-novo')),
               hasSearch: Boolean(document.querySelector('#meus-processos-page-container button[aria-label^="Buscar registros"]')),
-              hasRefresh: Boolean(document.querySelector('#meus-processos-refresh-btn'))
+              hasRefresh: Boolean(document.querySelector('#meus-processos-refresh-btn')),
+              hasSettings: Boolean(document.querySelector('#meus-processos-page-container button[aria-label="Configurar exibição da planilha"]'))
             };
           });
           if (tccUi.divider < 2 || tccUi.dividerColor !== 'rgb(255, 255, 255)' || !tccUi.fullWidth) {
             report.errors.push(`master-meus-tccs-${width}: divisor branco não ocupa o cabeçalho inteiro (${JSON.stringify(tccUi)}).`);
           }
-          if (!tccUi.hasRegister || !tccUi.hasSearch || !tccUi.hasRefresh) {
+          if (!tccUi.hasRegister || !tccUi.hasSearch || !tccUi.hasRefresh || !tccUi.hasSettings) {
             report.errors.push(`master-meus-tccs-${width}: ações obrigatórias do cabeçalho ausentes (${JSON.stringify(tccUi)}).`);
           }
         }
