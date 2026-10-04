@@ -29,10 +29,12 @@ test('Meus TCCs usa Etapa em vez de progresso percentual',()=>{
   assert.match(p,/stageNumber = getStepNumberLabel/);
 });
 
-test('popup e logs preservam acabamento aprovado e release atual está em 1.0.44',()=>{
+test('popup e logs usam o contrato canônico da release atual',()=>{
   const css=readPortalCss();
-  const ui=read('src/components/PortalUiEnhancer.tsx');
-  assert.match(css,/section\[aria-label\^="Colunas e ordem"\]/);
-  assert.match(css,/border-bottom:4px solid #fff/);
-  assert.match(ui,/portal-sidebar-nav-active/);
+  const settings=read('src/components/HeaderSettingsPopover.tsx');
+  const pkg=JSON.parse(read('package.json'));
+  assert.match(settings,/aria-label="Configurar exibição da planilha"/);
+  assert.match(css,/--portal-sheet-title-divider:\s*5px/);
+  assert.match(css,/--portal-sheet-content-divider:\s*15px/);
+  assert.equal(pkg.version,'1.0.70');
 });
