@@ -175,16 +175,17 @@ test('contrato visual global mantém a paleta anterior e a nova geometria aprova
 test('todas as planilhas obedecem ao mesmo contrato visual', () => {
   const css = read('src/portal-surface-contract.css');
   assert.match(css, /--portal-sheet-header:var\(--portal-green-header/);
-  assert.match(css, /\.portal-spreadsheet-table thead th/);
-  assert.match(css, /#biblioteca-tccs-section table th:first-child/);
+  assert.match(css, /TCC8 — CONTRATO CANÔNICO DAS CINCO PLANILHAS/);
+  assert.match(css, /\[data-portal-sheet\] \[data-portal-sheet-title="true"\]/);
+  assert.match(css, /\[data-portal-sheet\]\[data-portal-has-filter="true"\] \[data-portal-sheet-filter="true"\]/);
+  assert.match(css, /\[data-portal-sheet="repository"\] table th:first-child/);
   assert.match(css, /position:sticky!important/);
   assert.match(css, /--portal-sheet-pagination:#fff/);
   assert.match(css, /width:var\(--portal-sheet-column-control-size\)!important/);
   assert.match(css, /border-top:var\(--portal-sheet-title-divider\) solid #fff!important/);
-  assert.match(css, /#public-calendar-cards-section>div>:nth-child\(2\)/);
-  assert.match(css, /border-top:var\(--portal-sheet-content-divider\) solid #fff!important/);
-  assert.match(css, /#biblioteca-tccs-section tbody td:nth-child\(2\)[\s\S]*background:transparent!important/);
-  assert.match(css, /#configuracoes-page-container>section[\s\S]*background:transparent!important/);
+  assert.match(css, /border-bottom:var\(--portal-sheet-content-divider\) solid #fff!important/);
+  assert.match(css, /data-portal-sheet="repository"[\s\S]*tbody td:nth-child\(2\)[\s\S]*background-color:transparent!important/);
+  assert.match(css, /#configuracoes-page-container[\s\S]*background:transparent!important/);
 });
 
 test('popups de planilha usam a própria planilha como caixa principal', () => {
