@@ -2,11 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+import { readPortalCss } from './testUtils/portalCss';
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 test('runtime estrutural neutraliza hover e usa um único menu por coluna',()=>{
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
-  const css=read('src/index.css');
+  const css=readPortalCss();
   assert.match(runtime,/stripHoverRules/);
   assert.match(runtime,/portal-core-column-menu/);
   assert.match(runtime,/Selecionar tudo/);
@@ -16,7 +17,7 @@ test('runtime estrutural neutraliza hover e usa um único menu por coluna',()=>{
 });
 
 test('cores do processo e calendário compartilham a mesma paleta',()=>{
-  const css=read('src/index.css');
+  const css=readPortalCss();
   assert.match(css,/--portal-defense-defended-bg:\s*#bed8c3/);
   assert.match(css,/--portal-defense-defended-border:\s*#719a79/);
   assert.match(css,/--portal-defense-upcoming-bg:\s*#e8dda7/);
