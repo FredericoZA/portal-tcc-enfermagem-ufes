@@ -13,7 +13,7 @@ test('recursos introduzidos na 1.0.41 permanecem na camada estrutural atual',()=
   assert.match(runtime,/Quebra de texto/);
   assert.match(runtime,/Quebrar texto/);
   assert.match(runtime,/Uma linha/);
-  assert.match(css,/portal-core-nowrap/);
+  assert.match(runtime,/portal-core-nowrap/);
 });
 
 test('seleção em massa e menu único foram incorporados ao runtime estrutural',()=>{
@@ -25,12 +25,12 @@ test('seleção em massa e menu único foram incorporados ao runtime estrutural'
   assert.match(runtime,/Ordenar Z → A \/ maior → menor/);
 });
 
-test('separadores e texto preto permanecem como contrato visual',()=>{
+test('separadores e texto usam tokens do contrato visual',()=>{
   const css=readPortalCss();
-  assert.match(css,/--portal-separator-section: 12px/);
-  assert.match(css,/--portal-separator-table: 16px/);
-  assert.match(css,/color: #000 !important/);
-  assert.match(css,/font-weight: 400 !important/);
+  assert.match(css,/--portal-sheet-title-divider:\s*5px/);
+  assert.match(css,/--portal-sheet-content-divider:\s*15px/);
+  assert.match(css,/color:\s*var\(--portal-text-dark\)/);
+  assert.doesNotMatch(css,/!important/);
 });
 
 test('1.0.41 foi absorvida e não permanece ativa como enhancer concorrente',()=>{
