@@ -11,7 +11,7 @@ test('modal de TCC não renderiza o cabeçalho genérico com brasão', async () 
 });
 
 test('título real do TCC é o cabeçalho verde do detalhe', async () => {
-  const css = await source('src/portal-process-detail.css');
+  const css = await source('src/index.css');
   assert.match(css, /div:has\(#tcc-gear-settings-btn\)[\s\S]*background:\s*var\(--portal-green-header\)\s*!important/);
   assert.match(css, /button\.bg-white[\s\S]*background:\s*var\(--portal-green-action\)\s*!important/);
 });
