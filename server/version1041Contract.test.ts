@@ -7,13 +7,14 @@ const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8
 
 test('recursos introduzidos na 1.0.41 permanecem na camada estrutural atual',()=>{
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
-  const css=readPortalCss();
+  const settings=read('src/components/HeaderSettingsPopover.tsx');
   assert.match(runtime,/portal-core-resizer/);
   assert.match(runtime,/pointermove/);
-  assert.match(runtime,/Quebra de texto/);
-  assert.match(runtime,/Quebrar texto/);
-  assert.match(runtime,/Uma linha/);
+  assert.match(settings,/Quebra de texto/);
+  assert.match(settings,/Quebrar texto/);
+  assert.match(settings,/Uma linha/);
   assert.match(runtime,/portal-core-nowrap/);
+  assert.doesNotMatch(runtime,/createElement\('section'\)|portal-core-wrap-setting/);
 });
 
 test('seleção em massa e menu único foram incorporados ao runtime estrutural',()=>{
