@@ -17,6 +17,7 @@ test('release 1.0.45 preserva o runtime estrutural único consolidado',()=>{
 
 test('tabelas têm um único menu Excel-like, resize e quebra de texto',()=>{
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
+  const settings=read('src/components/HeaderSettingsPopover.tsx');
   assert.match(runtime,/portal-core-column-menu/);
   assert.match(runtime,/Ordenar A → Z \/ menor → maior/);
   assert.match(runtime,/Ordenar Z → A \/ maior → menor/);
@@ -24,9 +25,9 @@ test('tabelas têm um único menu Excel-like, resize e quebra de texto',()=>{
   assert.match(runtime,/Limpar tudo/);
   assert.match(runtime,/Limpar filtro/);
   assert.match(runtime,/portal-core-resizer/);
-  assert.match(runtime,/Quebra de texto/);
-  assert.match(runtime,/Quebrar texto/);
-  assert.match(runtime,/Uma linha/);
+  assert.match(settings,/Quebra de texto/);
+  assert.match(settings,/Quebrar texto/);
+  assert.match(settings,/Uma linha/);
 });
 
 test('separadores usam apenas 5px e 15px do contrato canônico',()=>{
@@ -51,8 +52,9 @@ test('calendário bloqueia fins de semana e preserva popup nativo por clique do 
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
   const home=read('src/pages/HomePage.tsx');
   const css=readPortalCss();
-  assert.match(runtime,/weekday === 0 \|\| weekday === 6/);
-  assert.match(runtime,/portal-core-calendar-weekend/);
+  assert.match(home,/isWeekend = colIndex === 0 \|\| colIndex === 6/);
+  assert.match(home,/portal-core-calendar-weekend/);
+  assert.doesNotMatch(runtime,/enhanceCalendar|weekday === 0/);
   assert.match(css,/grid-template-columns:\s*\.22fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr \.22fr/);
   assert.match(home,/setSelectedDayDefenses\(dayDefenses\.length > 0 \? dayDefenses : null\)/);
   assert.match(home,/id="day-defenses-modal"/);
