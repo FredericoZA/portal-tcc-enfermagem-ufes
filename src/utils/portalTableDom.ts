@@ -122,26 +122,29 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, i
   const popup = document.createElement('div');
   popup.className = 'portal-core-column-popup';
   popup.setAttribute('role', 'dialog');
-  popup.setAttribute('aria-label', `Ordenar e filtrar ${label}`);
+  const hasNativeSort = table.dataset.portalNativeSort === 'true';
+  popup.setAttribute('aria-label', hasNativeSort ? `Filtrar ${label}` : `Ordenar e filtrar ${label}`);
 
   const title = document.createElement('div');
   title.className = 'portal-core-popup-title';
   title.textContent = label;
   popup.appendChild(title);
 
-  const sortActions = document.createElement('div');
-  sortActions.className = 'portal-core-sort-actions';
-  sortActions.append(
-    menuButton('Ordenar A → Z / menor → maior', 'portal-core-menu-action', () => {
-      sortRows(table, key, index, 'asc');
-      closePortalTablePopup();
-    }),
-    menuButton('Ordenar Z → A / maior → menor', 'portal-core-menu-action', () => {
-      sortRows(table, key, index, 'desc');
-      closePortalTablePopup();
-    }),
-  );
-  popup.appendChild(sortActions);
+  if (!hasNativeSort) {
+    const sortActions = document.createElement('div');
+    sortActions.className = 'portal-core-sort-actions';
+    sortActions.append(
+      menuButton('Ordenar A → Z / menor → maior', 'portal-core-menu-action', () => {
+        sortRows(table, key, index, 'asc');
+        closePortalTablePopup();
+      }),
+      menuButton('Ordenar Z → A / maior → menor', 'portal-core-menu-action', () => {
+        sortRows(table, key, index, 'desc');
+        closePortalTablePopup();
+      }),
+    );
+    popup.appendChild(sortActions);
+  }
 
   const filterTitle = document.createElement('div');
   filterTitle.className = 'portal-core-filter-title';
@@ -337,24 +340,6 @@ function restoreWidths(table: HTMLTableElement) {
   });
 }
 
-function stripLegacyHeaderControls(header: HTMLTableCellElement) {
-  header.querySelectorAll<HTMLElement>(
-    '.portal-column-controls,.portal1040-inline-sort,.portal1041-column-menu-button,.portal1043-column-menu-button,.portal-column-sort,.portal-column-filter,button[aria-label*="Ordenar"],button[aria-label*="Filtrar"]',
-  ).forEach((node) => {
-    if (!node.classList.contains('portal-core-column-menu')) node.remove();
-  });
-  header.querySelectorAll('svg').forEach((svg) => {
-    if (!svg.closest('.portal-core-column-menu')) svg.remove();
-  });
-  const walker = document.createTreeWalker(header, NodeFilter.SHOW_TEXT);
-  const nodes: Text[] = [];
-  let current: Node | null;
-  while ((current = walker.nextNode())) nodes.push(current as Text);
-  nodes.forEach((node) => {
-    if (!node.parentElement?.closest('button') && /[↕↑↓]/.test(node.data)) node.data = node.data.replace(/[↕↑↓]/g, '');
-  });
-}
-
 export function enhancePortalTable(table: HTMLTableElement) {
   if (table.closest('[role="dialog"]') || table.closest('.portal-core-column-popup') || table.closest('[data-portal-workspace-open="true"]')) return;
   const headerRow = table.tHead?.rows[0];
@@ -363,7 +348,6 @@ export function enhancePortalTable(table: HTMLTableElement) {
   if (!tableState.has(table)) tableState.set(table, { filters: new Map() });
   Array.from(headerRow.cells).forEach((cell, index) => {
     const header = cell as HTMLTableCellElement;
-    stripLegacyHeaderControls(header);
     header.classList.add('portal-core-header-cell');
     keyForHeader(header, index);
     if (!header.dataset.portalCoreClickGuard) {
@@ -378,8 +362,12 @@ export function enhancePortalTable(table: HTMLTableElement) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'portal-core-column-menu';
-      button.title = `Ordenar ou filtrar ${readPortalHeaderLabel(header)}`;
-      button.setAttribute('aria-label', `Ordenar ou filtrar ${readPortalHeaderLabel(header)}`);
+      const nativeSort = table.dataset.portalNativeSort === 'true';
+      const actionLabel = nativeSort
+        ? `Filtrar ${readPortalHeaderLabel(header)}`
+        : `Ordenar ou filtrar ${readPortalHeaderLabel(header)}`;
+      button.title = actionLabel;
+      button.setAttribute('aria-label', actionLabel);
       button.setAttribute('aria-haspopup', 'dialog');
       button.setAttribute('aria-expanded', 'false');
       button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>';
