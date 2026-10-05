@@ -316,10 +316,11 @@ try {
               fullWidth: Boolean(rowRect && parentRect && Math.abs(rowRect.left-parentRect.left)<=1 && Math.abs(rowRect.right-parentRect.right)<=1),
               chipState,
               dots,
-              orderOk: before(asten,gov) && before(gov,refresh) && before(refresh,search) && before(search,settings)
+              hasRefresh: Boolean(refresh),
+              orderOk: before(asten,gov) && before(gov,search) && before(search,settings)
             };
           });
-          if (coordinatorUi.divider < 2 || coordinatorUi.dividerColor !== 'rgb(255, 255, 255)' || !coordinatorUi.fullWidth) {
+          if (coordinatorUi.divider !== 5 || coordinatorUi.dividerColor !== 'rgb(255, 255, 255)' || !coordinatorUi.fullWidth) {
             report.errors.push(`master-presidencia-${width}: divisor branco não ocupa o cabeçalho inteiro (${JSON.stringify(coordinatorUi)}).`);
           }
           if (coordinatorUi.chipState.some((item) => item.transform !== 'none' || item.margin !== '0px')) {
@@ -328,8 +329,8 @@ try {
           if (!coordinatorUi.dots.includes('rgb(155, 136, 75)') || !coordinatorUi.dots.includes('rgb(126, 144, 126)')) {
             report.errors.push(`master-presidencia-${width}: filtros não preservam a paleta semântica pendente/assinada (${JSON.stringify(coordinatorUi.dots)}).`);
           }
-          if (!coordinatorUi.orderOk) {
-            report.errors.push(`master-presidencia-${width}: ordem Asten/Gov/atualização/lupa/engrenagem divergente.`);
+          if (coordinatorUi.hasRefresh || !coordinatorUi.orderOk) {
+            report.errors.push(`master-presidencia-${width}: barra deve manter Asten/Gov/lupa/engrenagem sem atualização manual.`);
           }
         }
         if (tab === 'meus-processos' && width >= 768) {
@@ -348,11 +349,11 @@ try {
               hasSettings: Boolean(document.querySelector('#meus-processos-page-container button[aria-label="Configurar exibição da planilha"]'))
             };
           });
-          if (tccUi.divider < 2 || tccUi.dividerColor !== 'rgb(255, 255, 255)' || !tccUi.fullWidth) {
+          if (tccUi.divider !== 5 || tccUi.dividerColor !== 'rgb(255, 255, 255)' || !tccUi.fullWidth) {
             report.errors.push(`master-meus-tccs-${width}: divisor branco não ocupa o cabeçalho inteiro (${JSON.stringify(tccUi)}).`);
           }
-          if (!tccUi.hasRegister || !tccUi.hasSearch || !tccUi.hasRefresh || !tccUi.hasSettings) {
-            report.errors.push(`master-meus-tccs-${width}: ações obrigatórias do cabeçalho ausentes (${JSON.stringify(tccUi)}).`);
+          if (!tccUi.hasRegister || !tccUi.hasSearch || tccUi.hasRefresh || !tccUi.hasSettings) {
+            report.errors.push(`master-meus-tccs-${width}: barra deve manter cadastro/lupa/engrenagem sem atualização manual (${JSON.stringify(tccUi)}).`);
           }
         }
         if (tab === 'configuracoes') {
