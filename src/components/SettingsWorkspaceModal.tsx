@@ -64,8 +64,8 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       {singlePaneContent}
     </main>
   ) : (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row" style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}>
-      <aside className="max-h-52 w-full shrink-0 overflow-y-auto border-b border-slate-300 p-3 md:max-h-none md:w-64 md:border-b-0 md:border-r" style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
+      <aside className="max-h-52 w-full shrink-0 overflow-y-auto border-b border-slate-300 p-3 md:max-h-none md:w-64 md:border-b-0 md:border-r" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
         <div className="rounded-xl border border-slate-300 p-2 shadow-sm" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>
           <div className="mb-2 border-b border-slate-200 px-2 pb-2 text-[10px] font-black uppercase tracking-wider text-slate-600">Navegação</div>
           <div className="space-y-1">{sections.map((section) => {
@@ -77,7 +77,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
               onClick={() => setActiveId(section.id)}
               className={`flex w-full items-start gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors ${selected ? 'text-white' : 'border-transparent text-slate-800 hover:border-slate-300'}`}
               style={selected
-                ? { backgroundColor: 'var(--portal-green-action)', borderColor: 'var(--portal-green-action-border)' }
+                ? { backgroundColor: 'var(--portal-brand-action)', borderColor: 'var(--portal-brand-action-border)' }
                 : { backgroundColor: 'var(--portal-surface-inner)' }}
             >
               {Icon && <Icon className="mt-0.5 h-4 w-4 shrink-0"/>}
@@ -89,12 +89,12 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       <main
         className={`portal-settings-workspace-main min-w-0 flex-1 overflow-y-auto ${fullBleed ? 'p-0' : 'p-3 sm:p-4'}`}
         data-portal-full-bleed={fullBleed ? 'true' : 'false'}
-        style={{ backgroundColor: fullBleed ? 'var(--portal-surface-layer-2)' : 'var(--portal-surface-layer-1)' }}
+        style={{ backgroundColor: fullBleed ? 'var(--portal-surface-card)' : 'var(--portal-surface-panel)' }}
       >
         <div
           className={`portal-settings-workspace-content min-w-0 ${fullBleed ? 'min-h-full h-full rounded-none' : 'rounded-xl'}`}
           data-portal-full-bleed={fullBleed ? 'true' : 'false'}
-          style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}
+          style={{ backgroundColor: 'var(--portal-surface-card)' }}
         >
           {current.content}
         </div>
@@ -112,7 +112,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       className="portal-settings-workspace flex max-h-[94vh] w-full max-w-[1600px] flex-col overflow-hidden rounded-2xl border border-slate-300 shadow-2xl"
       style={{ backgroundColor: 'var(--portal-surface-panel)' }}
     >
-      <header className="portal-settings-workspace-header flex items-center justify-between gap-3 border-b-[15px] border-white px-4 text-white" style={{ backgroundColor: 'var(--portal-green-header)' }}>
+      <header className="portal-settings-workspace-header flex items-center justify-between gap-3 border-b-[15px] border-white px-4 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}>
         <div className="flex min-w-0 items-center gap-2">{TitleIcon && <TitleIcon className="h-5 w-5 shrink-0"/>}<h2 className="truncate text-sm font-black uppercase tracking-wide">{title}</h2></div>
         <div className="flex min-w-0 items-center justify-end gap-1.5">
           <div ref={setHeaderHost} className="flex min-w-0 flex-wrap items-center justify-end gap-1.5" data-settings-workspace-header-actions="true" />
