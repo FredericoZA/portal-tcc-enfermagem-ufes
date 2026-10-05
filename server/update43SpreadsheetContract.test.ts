@@ -6,9 +6,10 @@ import { readPortalCss } from './testUtils/portalCss';
 const read = (path:string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('planilhas recebem menu único de filtro e ordenação no runtime estrutural', () => {
-  const runtime = read('src/components/PortalStructuralRuntime.tsx');
+  const runtime = read('src/utils/portalTableDom.ts');
   const main = read('src/main.tsx');
-  assert.match(main, /PortalStructuralRuntime/);
+  assert.match(main, /PortalSpreadsheetRuntime/);
+  assert.doesNotMatch(main, /PortalStructuralRuntime/);
   assert.doesNotMatch(main, /PortalSpreadsheetEnhancer/);
   assert.match(runtime, /portal-core-column-menu/);
   assert.match(runtime, /Ordenar A → Z \/ menor → maior/);
@@ -45,7 +46,7 @@ test('planilhas permitem rolagem vertical e horizontal no próprio contêiner', 
 
 test('etapa permanece disponível e planilhas removem decoração infantil', () => {
   const progress = read('src/components/ProgressIndicator.tsx');
-  const runtime = read('src/components/PortalStructuralRuntime.tsx');
+  const runtime = read('src/utils/portalTableDom.ts');
   assert.match(progress, /portal-progress-number/);
   assert.match(progress, /function stageLabel/);
   assert.doesNotMatch(progress, /<svg|circle/i);
@@ -53,7 +54,7 @@ test('etapa permanece disponível e planilhas removem decoração infantil', () 
 });
 
 test('calendário usa fins de semana estreitos e preview seguro', () => {
-  const runtime = read('src/components/PortalStructuralRuntime.tsx');
+  const runtime = read('src/utils/portalTableDom.ts');
   const home = read('src/pages/HomePage.tsx');
   const css = readPortalCss();
   assert.match(css, /grid-template-columns: \.22fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr \.22fr/);
