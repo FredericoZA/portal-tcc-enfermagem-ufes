@@ -6,7 +6,7 @@ import { readPortalCss } from './testUtils/portalCss';
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 test('recursos introduzidos na 1.0.41 permanecem na camada estrutural atual',()=>{
-  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+  const runtime=read('src/utils/portalTableDom.ts');
   const settings=read('src/components/HeaderSettingsPopover.tsx');
   assert.match(runtime,/portal-core-resizer/);
   assert.match(runtime,/pointermove/);
@@ -18,7 +18,7 @@ test('recursos introduzidos na 1.0.41 permanecem na camada estrutural atual',()=
 });
 
 test('seleção em massa e menu único foram incorporados ao runtime estrutural',()=>{
-  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+  const runtime=read('src/utils/portalTableDom.ts');
   assert.match(runtime,/Selecionar tudo/);
   assert.match(runtime,/Limpar tudo/);
   assert.match(runtime,/portal-core-column-menu/);
@@ -38,5 +38,6 @@ test('1.0.41 foi absorvida e não permanece ativa como enhancer concorrente',()=
   const main=read('src/main.tsx');
   assert.doesNotMatch(main,/PortalVersion1041Enhancer/);
   assert.doesNotMatch(main,/portal-version-1041\.css/);
-  assert.match(main,/PortalStructuralRuntime/);
+  assert.match(main,/PortalSpreadsheetRuntime/);
+  assert.doesNotMatch(main,/PortalStructuralRuntime/);
 });
