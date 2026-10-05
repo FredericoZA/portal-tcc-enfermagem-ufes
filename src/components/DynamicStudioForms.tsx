@@ -9,7 +9,7 @@ import { getPortalMessages } from '../utils/i18n';
 
 type RuntimeForm = FormTemplateItem & { revision?: number };
 
-export const DynamicStudioForms: React.FC<{ processId: string; locale?: string; accentColor?: string }> = ({ processId, locale, accentColor = '#005830' }) => {
+export const DynamicStudioForms: React.FC<{ processId: string; locale?: string; accentColor?: string }> = ({ processId, locale, accentColor = 'var(--portal-brand-header)' }) => {
   const copy = getPortalMessages(locale);
   const [forms, setForms] = useState<RuntimeForm[]>([]);
   const [submissions, setSubmissions] = useState<StudioFormSubmission[]>([]);
