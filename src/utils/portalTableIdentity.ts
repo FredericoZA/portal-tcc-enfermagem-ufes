@@ -35,7 +35,7 @@ export const slugPortalTableText = (value: string) => normalizePortalTableText(v
 export function readPortalHeaderLabel(header: HTMLTableCellElement) {
   const clone = header.cloneNode(true) as HTMLTableCellElement;
   clone
-    .querySelectorAll('button,.portal-column-controls,.portal-core-column-menu,.portal-core-resizer,svg')
+    .querySelectorAll('button,.portal-core-column-menu,.portal-core-resizer,svg')
     .forEach((node) => node.remove());
   const text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
   return normalizePortalTableText(text) === 'progresso' ? 'Etapa' : text || 'Coluna';
