@@ -503,7 +503,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         return (
           <td key={colKey} className={`${cellClass} ${styles.cellWeightClass} ${styles.cellTextColorClass}`}>
             <div className={`${styles.cellWrapClass} ${styles.cellFontSizeClass} max-w-sm mx-auto`} title={formatTccTitle(proc.titulo)}>
-              {formatCellText('titulo', formatTccTitle(proc.titulo), coordTextFormat, '📖')}
+              {formatCellText('titulo', formatTccTitle(proc.titulo), coordTextFormat)}
             </div>
           </td>
         );
@@ -513,7 +513,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
           <td key={colKey} className={cellClass}>
             <div className="w-full mx-auto">
               <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
-                {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), coordTextFormat, '🎓')}
+                {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), coordTextFormat)}
               </div>
               {proc.aluno1?.matricula && (
                 <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5">Matrícula: {proc.aluno1.matricula}</div>
@@ -529,7 +529,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               {proc.aluno2?.nome ? (
                 <>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
-                    {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), coordTextFormat, '🎓')}
+                    {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), coordTextFormat)}
                   </div>
                   {proc.aluno2?.matricula && (
                     <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5">Matrícula: {proc.aluno2.matricula}</div>
@@ -547,7 +547,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
           <td key={colKey} className={cellClass}>
             <div className="w-full mx-auto">
               <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
-                {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), coordTextFormat, '👨‍🏫')}
+                {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), coordTextFormat)}
               </div>
               <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                 {cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName)}
@@ -565,7 +565,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               {memb?.nome ? (
                 <>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
-                    {formatCellText('membro1', formatProfessorName(memb.nome), coordTextFormat, '👥')}
+                    {formatCellText('membro1', formatProfessorName(memb.nome), coordTextFormat)}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                     {cleanInst(memb.instituicao || installationProfile.defaultInstitutionName)}
@@ -588,7 +588,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               {memb?.nome ? (
                 <>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
-                    {formatCellText('membro2', formatProfessorName(memb.nome), coordTextFormat, '👥')}
+                    {formatCellText('membro2', formatProfessorName(memb.nome), coordTextFormat)}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                     {cleanInst(memb.instituicao || installationProfile.defaultInstitutionName)}
@@ -609,7 +609,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               {proc.coorientador?.nome ? (
                 <>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
-                    {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), coordTextFormat, '👥')}
+                    {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), coordTextFormat)}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                     {cleanInst(proc.coorientador.instituicao || installationProfile.defaultInstitutionName)}
@@ -627,7 +627,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         return (
           <td key={colKey} className={`${cellClass} text-slate-500`}>
             <div className={`${styles.cellWrapClass} ${styles.cellFontSizeClass} line-clamp-2 max-w-[200px] mx-auto`} title={text}>
-              {formatCellText('resumo', text, coordTextFormat, '📝')}
+              {formatCellText('resumo', text, coordTextFormat)}
             </div>
           </td>
         );
@@ -638,7 +638,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         return (
           <td key={colKey} className={`${cellClass} text-slate-500`}>
             <div className={`${styles.cellWrapClass} ${styles.cellFontSizeClass} line-clamp-2 max-w-[150px] mx-auto`} title={keywords}>
-              {formatCellText('palavrasChave', keywords, coordTextFormat, '🔑')}
+              {formatCellText('palavrasChave', keywords, coordTextFormat)}
             </div>
           </td>
         );
@@ -649,7 +649,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         return (
           <td key={colKey} className={`${cellClass} text-slate-500`}>
             <div className={`${styles.cellWrapClass} ${styles.cellFontSizeClass} line-clamp-2 max-w-[150px] mx-auto`}>
-              {formatCellText('defesaLocal', loc, coordTextFormat, '📍')}
+              {formatCellText('defesaLocal', loc, coordTextFormat)}
             </div>
           </td>
         );
