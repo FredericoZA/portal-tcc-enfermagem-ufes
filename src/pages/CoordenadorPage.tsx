@@ -926,7 +926,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               </TableScrollWrapper>
             )}
           </div>
-          </div>
         </div>
       </section>
 
