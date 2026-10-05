@@ -48,7 +48,6 @@ import {
   FileSpreadsheet,
   Award,
   Check,
-  Shield,
   FileCheck,
   RotateCcw,
   Pencil,
