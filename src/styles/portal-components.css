@@ -46,6 +46,12 @@
   padding: 0 var(--portal-bar-padding-x);
 }
 
+.portal-public-title-row :is(h1, h2, h3) {
+  font-size: var(--portal-sheet-title-font-size);
+  line-height: 1.15;
+  font-weight: 900;
+}
+
 .portal-public-filter-row {
   box-sizing: border-box;
   width: 100%;
@@ -151,19 +157,19 @@ button[aria-label^="Configurar exibição"],
 .portal-table-filter-chip,
 .portal-standard-filter-chip,
 .portal-native-all-filter {
-  min-height: 28px;
-  height: 28px;
+  min-height: var(--portal-filter-chip-height);
+  height: var(--portal-filter-chip-height);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 12px;
+  gap: 5px;
+  padding: 0 10px;
   margin: 0;
   border: 1px solid var(--portal-border);
   border-radius: var(--portal-control-radius);
   background: var(--portal-surface-inner);
   color: var(--portal-text-dark);
-  font-size: 11px;
-  font-weight: 800;
+  font-size: var(--portal-sheet-filter-chip-font-size);
+  font-weight: 850;
   line-height: 1;
   text-transform: uppercase;
   box-shadow: none;
@@ -183,10 +189,18 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-filter-dot {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   flex: none;
   border-radius: 50%;
+}
+
+.portal-filter-label {
+  font-size: var(--portal-sheet-filter-label-font-size);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .065em;
+  text-transform: uppercase;
 }
 
 /* Cartões e inputs. */
@@ -461,16 +475,29 @@ button[aria-label^="Configurar exibição"],
   border-radius: var(--portal-control-radius);
   background: var(--portal-surface-inner);
   color: var(--portal-text-dark);
-  box-shadow: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .12);
   white-space: nowrap;
+  font-weight: 850;
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.portal-calendar-nav-button:hover {
+  background: var(--portal-surface-card);
+  border-color: var(--portal-brand-action-border);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, .14);
+}
+
+.portal-calendar-nav-button:active {
+  transform: translateY(1px);
+  box-shadow: none;
 }
 
 .portal-calendar-period-button {
   width: max-content;
-  min-width: 176px;
+  min-width: 194px;
   max-width: none;
-  padding: 0 12px;
-  gap: 6px;
+  padding: 0 14px;
+  gap: 7px;
   flex: 0 0 auto;
 }
 
@@ -500,4 +527,58 @@ button[aria-label^="Configurar exibição"],
     justify-content: flex-start;
     flex-wrap: wrap;
   }
+}
+
+
+/* Eventos do calendário: densidade alta para caber mais informação sem dominar a célula. */
+.portal-calendar-defense-summary {
+  display: block;
+  width: 100%;
+  padding: 2px 3px;
+  border-radius: 4px;
+  font-size: var(--portal-calendar-event-font-size);
+  line-height: 1.15;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.portal-calendar-defense-primary,
+.portal-calendar-defense-secondary {
+  display: block;
+}
+
+.portal-calendar-defense-primary {
+  font-size: var(--portal-calendar-event-font-size);
+}
+
+.portal-calendar-defense-secondary {
+  margin-top: 1px;
+  font-size: var(--portal-calendar-event-secondary-font-size);
+  font-weight: 600;
+  opacity: .88;
+}
+
+/* Navegação lateral: texto corrido, menor e mais encorpado. */
+.portal-sidebar-nav-item {
+  font-size: var(--portal-sidebar-nav-font-size);
+  font-weight: 800;
+  letter-spacing: .01em;
+  text-transform: none;
+}
+
+#bottom-access-portal-btn,
+#bottom-logout-portal-btn {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: var(--portal-sidebar-session-action-font-size);
+  font-weight: 900;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+#bottom-access-portal-btn svg,
+#bottom-logout-portal-btn svg {
+  width: 14px;
+  height: 14px;
 }
