@@ -4,10 +4,22 @@ import { getPortalToneCssVars, type PortalSemanticTone } from '../utils/portalSe
 export type PortalPillTone = PortalSemanticTone;
 
 export const normalizeProcessNumber = (value?: string) => {
-  const raw = String(value || '').trim().replace(/^TCC\s*[-/]?\s*/i, '').trim();
-  const match = raw.match(/(20\d{2})[-/]?(\d{3,})/);
+  const raw = String(value || '').trim();
+  const withoutTcc = raw.replace(/^TCC\s*[-/:]?\s*/i, '').trim();
+  const withoutTest = withoutTcc.replace(/^TESTE\s*[-/:]?\s*/i, '').trim();
+  const normalized = withoutTest
+    .replace(/[\s/]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  const match = normalized.match(/(20\d{2})-?(\d{1,})/);
   if (match) return `${match[1]}-${match[2]}`;
-  return raw || '—';
+  return normalized || '—';
+};
+
+export const formatProcessLabel = (value?: string) => {
+  const normalized = normalizeProcessNumber(value);
+  return normalized === '—' ? 'TCC' : `TCC - ${normalized}`;
 };
 
 interface PortalProcessPillProps {
@@ -24,7 +36,7 @@ export const PortalProcessPill: React.FC<PortalProcessPillProps> = (props) => {
       data-portal-pill-tone={tone}
       style={getPortalToneCssVars(tone)}
     >
-      {normalizeProcessNumber(props.value)}
+      {formatProcessLabel(props.value)}
     </span>
   );
 };
