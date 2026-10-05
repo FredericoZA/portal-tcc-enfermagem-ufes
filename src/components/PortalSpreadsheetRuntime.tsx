@@ -511,7 +511,8 @@ export const PortalSpreadsheetRuntime = () => {
     };
 
     const observer = new MutationObserver(refresh);
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    const root = document.getElementById('portal-app-root');
+    if (root) observer.observe(root, { childList: true, subtree: true, characterData: true });
     window.addEventListener('storage', refresh);
     window.addEventListener('portal-table-layouts-updated', refresh as EventListener);
     window.addEventListener('global_table_layouts_changed', refresh as EventListener);
