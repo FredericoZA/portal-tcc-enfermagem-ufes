@@ -17,21 +17,7 @@ let activePopup: HTMLElement | null = null;
 let activeButton: HTMLButtonElement | null = null;
 let activeSettingsTable: HTMLTableElement | null = null;
 
-const MONTHS: Record<string, number> = {
-  janeiro: 0,
-  fevereiro: 1,
-  marco: 2,
-  'março': 2,
-  abril: 3,
-  maio: 4,
-  junho: 5,
-  julho: 6,
-  agosto: 7,
-  setembro: 8,
-  outubro: 9,
-  novembro: 10,
-  dezembro: 11,
-};
+
 
 function normalize(value: string) {
   return value
@@ -345,47 +331,6 @@ function stripLegacyHeaderControls(header: HTMLTableCellElement) {
   while ((current = walker.nextNode())) nodes.push(current as Text);
   nodes.forEach((node) => {
     if (!node.parentElement?.closest('button') && /[↕↑↓]/.test(node.data)) node.data = node.data.replace(/[↕↑↓]/g, '');
-    if (!node.parentElement?.closest('button') && /\bProgresso\b/i.test(node.data)) node.data = node.data.replace(/\bProgresso\b/gi, 'Etapa');
-  });
-}
-
-function normalizeStage(table: HTMLTableElement) {
-  const headers = Array.from(table.tHead?.rows[0]?.cells || []) as HTMLTableCellElement[];
-  headers.forEach((header, index) => {
-    if (normalize(headerLabel(header)) !== 'etapa') return;
-    Array.from(table.tBodies[0]?.rows || []).forEach((row) => {
-      const cell = row.cells[index];
-      if (!cell) return;
-      const marker = cell.querySelector<HTMLElement>('.portal-progress-number,[title*="Etapa"],[aria-label*="Etapa"]');
-      const descriptor = `${marker?.getAttribute('title') || ''} ${marker?.getAttribute('aria-label') || ''}`;
-      const match = descriptor.match(/Etapa\s+(\d+(?:[.,]\d+)?)/i);
-      if (marker && match) {
-        marker.textContent = `Etapa ${match[1].replace('.', ',')}`;
-        marker.classList.add('portal-core-stage-label');
-      }
-    });
-  });
-}
-
-function normalizeDefenseRows(table: HTMLTableElement) {
-  // Data da defesa só determina cor na planilha pública. Em telas restritas, a cor
-  // do processo representa vínculo ou assinatura e não pode ser sobrescrita aqui.
-  if (!table.closest('#formal-monthly-calendar-section')) return;
-  const headers = Array.from(table.tHead?.rows[0]?.cells || []) as HTMLTableCellElement[];
-  const processIndex = headers.findIndex((header) => normalize(headerLabel(header)) === 'processo');
-  const dateIndex = headers.findIndex((header) => normalize(headerLabel(header)).startsWith('data'));
-  if (processIndex < 0 || dateIndex < 0) return;
-  Array.from(table.tBodies[0]?.rows || []).forEach((row) => {
-    row.classList.remove('bg-slate-100/40', 'text-slate-400', 'opacity-60');
-    row.style.opacity = '1';
-    const match = (row.cells[dateIndex]?.textContent || '').match(/\b(\d{2})\/(\d{2})\/(\d{4})(?:\D+(\d{2}):(\d{2}))?/);
-    let defended = false;
-    if (match) {
-      const [, dd, mm, yyyy, hh = '23', min = '59'] = match;
-      defended = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hh), Number(min), 59, 999).getTime() < Date.now();
-    }
-    const cell = row.cells[processIndex] as HTMLTableCellElement;
-    cell.dataset.portalCoreProcessState = defended ? 'defended' : 'upcoming';
   });
 }
 
@@ -430,8 +375,6 @@ function enhanceTable(table: HTMLTableElement) {
   restoreWidths(table);
   const wrap = localStorage.getItem(wrapStorageKey(table));
   table.classList.toggle('portal-core-nowrap', wrap === 'nowrap');
-  normalizeStage(table);
-  normalizeDefenseRows(table);
   applyFilters(table);
 }
 
@@ -484,50 +427,10 @@ function injectWrapSetting() {
   sync();
 }
 
-function calendarPeriod() {
-  const heading = Array.from(document.querySelectorAll<HTMLElement>('h1,h2,h3')).find((node) => /CALENDÁRIO DE DEFESAS\s*[—-]/i.test(node.textContent || ''));
-  const match = heading?.textContent?.match(/CALENDÁRIO DE DEFESAS\s*[—-]\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ]+)\s+DE\s+(\d{4})/i);
-  if (!match) return null;
-  const month = MONTHS[match[1].toLocaleLowerCase('pt-BR')];
-  const year = Number(match[2]);
-  return month === undefined || !year ? null : { month, year };
-}
-
-function enhanceCalendar() {
-  const period = calendarPeriod();
-  const firstCell = document.querySelector<HTMLElement>('.portal-calendar-day-cell');
-  const grid = firstCell?.parentElement;
-  if (!period || !grid) return;
-  grid.classList.add('portal-core-calendar-grid');
-  const daysHeader = grid.parentElement?.previousElementSibling as HTMLElement | null;
-  daysHeader?.classList.add('portal-core-calendar-week-header');
-  if (!grid.isConnected) return;
-
-  grid.querySelectorAll<HTMLElement>('.portal-calendar-day-cell').forEach((cell) => {
-    const day = Number(cell.querySelector(':scope > div:first-child span')?.textContent?.trim() || cell.querySelector('span')?.textContent?.trim());
-    if (!day) return;
-    const weekday = new Date(period.year, period.month, day).getDay();
-    const weekend = weekday === 0 || weekday === 6;
-    cell.classList.toggle('portal-core-calendar-weekend', weekend);
-    cell.setAttribute('aria-disabled', weekend ? 'true' : 'false');
-    if (!cell.dataset.portalCoreWeekendGuard) {
-      cell.dataset.portalCoreWeekendGuard = 'true';
-      cell.addEventListener('click', (event) => {
-        if (!cell.classList.contains('portal-core-calendar-weekend')) return;
-        event.preventDefault();
-        event.stopPropagation();
-      }, true);
-    }
-    // Limpa somente artefatos de versões antigas do enhancer. Não toca nos filhos React.
-    cell.querySelector('.portal-core-calendar-previews')?.remove();
-  });
-}
-
 function enhanceAll() {
   document.querySelectorAll<HTMLTableElement>('#portal-app-root main table').forEach(enhanceTable);
   bindSettingsButtons();
   injectWrapSetting();
-  enhanceCalendar();
 }
 
 export function PortalStructuralRuntime() {
@@ -538,7 +441,8 @@ export function PortalStructuralRuntime() {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(enhanceAll);
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    const root = document.getElementById('portal-app-root');
+    if (root) observer.observe(root, { childList: true, subtree: true });
     const onMouseDown = (event: MouseEvent) => {
       if (!activePopup) return;
       const target = event.target as Node;
