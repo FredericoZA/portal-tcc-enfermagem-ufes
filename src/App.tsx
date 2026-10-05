@@ -191,12 +191,12 @@ export default function App() {
               aria-label="Detalhes do Trabalho de TCC"
               tabIndex={-1}
               className="portal-process-dialog relative my-2 w-full max-w-6xl overflow-hidden rounded-2xl border border-slate-300 shadow-2xl animate-in zoom-in-95 duration-150 sm:my-4"
-              style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}
+              style={{ backgroundColor: 'var(--portal-surface-panel)' }}
               onClick={(event) => event.stopPropagation()}
             >
               <div
                 className="portal-process-dialog-body max-h-[90vh] overflow-y-auto p-2 custom-scrollbar sm:p-3"
-                style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}
+                style={{ backgroundColor: 'var(--portal-surface-panel)' }}
               >
                 <PortalErrorBoundary key={selectedProcessId}><Suspense fallback={<PageLoadingFallback />}>
                   <ProcessoDetailPage processId={selectedProcessId} readOnly={selectedProcessReadOnly} onBack={handleCloseProcess} isModal={false} />
