@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ClipboardCheck, HelpCircle, UserCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ClipboardCheck, UserCheck } from 'lucide-react';
 import { PortalSectionDivider } from '../components/PortalSectionDivider';
+import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
 
 interface PortalTutorialPageProps {
   onNavigate: (tab: string) => void;
@@ -167,14 +168,12 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
   return (
     <div id="portal-tutorial-page" className="portal-public-shell portal-layer-panel mx-auto max-w-none overflow-hidden rounded-2xl border border-slate-300 shadow-sm">
       <section className="portal-public-header text-white">
-        <div className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white shadow-2xs" aria-hidden="true">
-            <HelpCircle className="h-4 w-4 text-slate-700" />
-          </span>
+        <div className="portal-public-title-row gap-2">
+          <ColorfulHeaderIcon type="tutorial" />
           <h1 className="text-base font-black uppercase tracking-tight text-white sm:text-lg">Como usar o Portal de TCC</h1>
         </div>
 
-        <div className="portal-tutorial-filter-row border-t-2 border-white px-3 py-2 sm:px-4 flex flex-wrap items-center gap-2 text-xs min-w-0 w-full">
+        <div className="portal-public-filter-row portal-tutorial-filter-row flex-wrap gap-2 text-xs min-w-0">
           <span className="text-[10px] opacity-80 font-black uppercase tracking-wider shrink-0">Filtrar visão:</span>
           <div className="flex items-center gap-1.5 flex-wrap">
             {(Object.keys(roleContent) as Role[]).map((key) => {

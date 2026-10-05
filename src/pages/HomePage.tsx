@@ -10,7 +10,6 @@ import { getTableStyles, getActionPillStyles, formatColumnLabel, formatCellText,
 import { TABLE_LAYOUTS_EVENT } from '../utils/portalAppearanceLinks';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
-import { YinYangIcon } from '../components/YinYangIcon';
 import { ProgressIndicator } from '../components/ProgressIndicator';
 import { ProcessoDetailPage } from './ProcessoDetailPage';
 import { StudentNames, GcalStudentNames } from '../components/StudentNames';
@@ -32,8 +31,6 @@ import {
   AlertCircle,
   MessageCircle,
   ChevronDown,
-  ChevronUp,
-  ArrowUpDown,
   Navigation,
   Building2,
   User,
@@ -68,6 +65,7 @@ import {
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseCalendarSummaryParts, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter } from '../utils/defenseSemantics';
 import { getPortalToneCssVars } from '../utils/portalSemanticTokens';
+import { formatProcessLabel } from '../components/PortalProcessPill';
 
 interface HomePageProps {
   onNavigate: (tab: string) => void;
@@ -589,8 +587,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [selectedProcessDetails, setSelectedProcessDetails] = useState<ProcessData | null>(null);
   const [selectedProcessDocs, setSelectedProcessDocs] = useState<any[]>([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
-  const [libSortColumn, setLibSortColumn] = useState<string | null>(null);
-  const [libSortDirection, setLibSortDirection] = useState<'asc' | 'desc'>('asc');
+  const libSortColumn: string | null = null;
+  const libSortDirection: 'asc' | 'desc' = 'asc';
   const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
 
   // Column selection state for Biblioteca (Acervo)
@@ -609,8 +607,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [defensesStartDate, setDefensesStartDate] = useState('');
   const [defensesEndDate, setDefensesEndDate] = useState('');
   const [defenseStatusFilter, setDefenseStatusFilter] = useState<DefenseFilter>('all');
-  const [defensesSortColumn, setDefensesSortColumn] = useState<string | null>('date');
-  const [defensesSortDirection, setDefensesSortDirection] = useState<'asc' | 'desc'>('asc');
+  const defensesSortColumn: string | null = 'date';
+  const defensesSortDirection: 'asc' | 'desc' = 'asc';
 
   const initialDefensesConfig = loadTableConfig('defenses', DEFAULT_DEFENSES_ORDER, DEFAULT_DEFENSES_VISIBLE, 'all');
   const [defensesColumnOrder, setDefensesColumnOrder] = useState<string[]>(initialDefensesConfig.columnOrder);
@@ -671,40 +669,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       window.removeEventListener(TABLE_LAYOUTS_EVENT, handlePublishedLayouts);
     };
   }, []);
-
-  const handleDefensesSort = (column: string) => {
-    if (defensesSortColumn === column) {
-      setDefensesSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setDefensesSortColumn(column);
-      setDefensesSortDirection('asc');
-    }
-  };
-
-  const renderDefensesSortArrow = (column: string, isDarkHeader: boolean = true) => {
-    // Treat 'date' the same as 'defesaDataHora' if needed, though they are mapped consistently
-    const isSorted = defensesSortColumn === column || (column === 'defesaDataHora' && defensesSortColumn === 'date');
-    if (isSorted) {
-      return defensesSortDirection === 'asc' ? (
-        <ChevronUp className={`w-4 h-4 ${isDarkHeader ? 'text-white' : 'text-slate-900'} font-extrabold flex-shrink-0`} style={{ strokeWidth: 3 }} />
-      ) : (
-        <ChevronDown className={`w-4 h-4 ${isDarkHeader ? 'text-white' : 'text-slate-900'} font-extrabold flex-shrink-0`} style={{ strokeWidth: 3 }} />
-      );
-    }
-    return <ArrowUpDown className={`w-3.5 h-3.5 ${isDarkHeader ? 'text-white/60 group-hover:text-white' : 'text-slate-500 group-hover:text-slate-900'} opacity-70 group-hover:opacity-100 flex-shrink-0`} />;
-  };
-
-  const renderLibSortArrow = (column: string, isDarkHeader: boolean = true) => {
-    const isSorted = libSortColumn === column;
-    if (isSorted) {
-      return libSortDirection === 'asc' ? (
-        <ChevronUp className={`w-4 h-4 ${isDarkHeader ? 'text-white' : 'text-slate-900'} font-extrabold flex-shrink-0`} style={{ strokeWidth: 3 }} />
-      ) : (
-        <ChevronDown className={`w-4 h-4 ${isDarkHeader ? 'text-white' : 'text-slate-900'} font-extrabold flex-shrink-0`} style={{ strokeWidth: 3 }} />
-      );
-    }
-    return <ArrowUpDown className={`w-3.5 h-3.5 ${isDarkHeader ? 'text-white/60 group-hover:text-white' : 'text-slate-500 group-hover:text-slate-900'} opacity-70 group-hover:opacity-100 flex-shrink-0`} />;
-  };
 
   const handleExportDefensesExcel = (dataToExport: ProcessData[]) => {
     const activeCols = defensesColumnOrder.filter((k) => defensesVisibleColumns[k]);
@@ -770,15 +734,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   };
 
 
-
-  const handleLibSort = (column: string) => {
-    if (libSortColumn === column) {
-      setLibSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setLibSortColumn(column);
-      setLibSortDirection('asc');
-    }
-  };
 
   const handleExportExcel = (dataToExport: ProcessData[]) => {
     const colHeaders: string[] = [];
@@ -891,10 +846,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
   const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
-  const [isRefreshingData, setIsRefreshingData] = useState(false);
-
   const refreshData = async () => {
-    setIsRefreshingData(true);
     try {
       const [procData, gcalData] = await Promise.all([
         apiClient.getProcesses(),
@@ -904,10 +856,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       setGoogleEvents(gcalData || []);
     } catch (err) {
       console.error('Erro ao atualizar dados:', err);
-    } finally {
-      setTimeout(() => {
-        setIsRefreshingData(false);
-      }, 500);
     }
   };
 
@@ -1115,7 +1063,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                               setPickerYear(year);
                               setShowMonthPickerPopup(!showMonthPickerPopup);
                             }}
-                            className={`flex items-center gap-1.5 px-3 py-1 ${defStyles.calendarNavBtnClass} text-[10px] sm:text-[11px] font-extrabold uppercase rounded-full outline-none cursor-pointer h-7.5 shadow-2xs transition-all shrink-0`}
+                            className={`flex items-center gap-1.5 px-3 py-1 ${defStyles.calendarNavBtnClass} text-[10px] sm:text-[11px] font-extrabold uppercase whitespace-nowrap rounded-full outline-none cursor-pointer h-7.5 shadow-2xs transition-all shrink-0`}
                             title="Selecionar Mês e Ano"
                           >
                             <CalendarIcon className="w-3.5 h-3.5 opacity-80 shrink-0" />
@@ -1794,25 +1742,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   </div>
 
                   <div className="portal-sheet-toolbar shrink-0">
-                    <div className="portal-sheet-toolbar-actions">
-                      <button
-                        id="defenses-refresh-btn"
-                        type="button"
-                        onClick={refreshData}
-                        disabled={isRefreshingData}
-                        className="portal-toolbar-icon-button disabled:opacity-70"
-                        title="Atualizar dados da tabela"
-                        aria-label="Atualizar dados da tabela"
-                      >
-                        {defensesTextFormat?.refreshButtonEmoji && defensesTextFormat.refreshButtonEmoji !== '🔄' && defensesTextFormat.refreshButtonEmoji !== '☯️' ? (
-                          <span className={`text-xs ${isRefreshingData ? 'animate-spin' : ''}`}>
-                            {defensesTextFormat.refreshButtonEmoji}
-                          </span>
-                        ) : (
-                          <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshingData ? 'animate-spin' : ''}`} />
-                        )}
-                      </button>
-                    </div>
                     <div className="portal-sheet-toolbar-terminal">
                       <SearchPopover
                         value={defensesSearch}
@@ -1851,7 +1780,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 </div>
 
                 {/* INTEGRATED TOOLBAR BAR FOR STATUS & FILTERS */}
-                <div data-portal-sheet-filter="true" className="portal-defense-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 border-t-2 border-white px-3 py-2.5 text-xs sm:px-4">
+                <div data-portal-sheet-filter="true" className="portal-defense-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 text-xs">
                   <span className="text-[10px] opacity-80 font-black uppercase tracking-wider shrink-0">
                     {defensesTextFormat?.customFilterTitle || getEditableTableText(defensesCustomLabels, '__filterTitle', 'FILTRAR:')}
                   </span>
@@ -1987,27 +1916,21 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             // A paginação é aplicada uma única vez pelo runtime canônico da planilha.
             const defStyles = getTableStyles(defensesTextFormat);
 
-            const isDefDark = (defensesTextFormat.headerTheme || 'militar') !== 'clean' && (defensesTextFormat.headerTheme || 'militar') !== 'slate' && (defensesTextFormat.headerTheme || 'militar') !== 'light';
-
             const renderDefensesHeaderCell = (colKey: string) => {
               if (!defensesVisibleColumns[colKey]) return null;
               const colDef = ALL_DEFENSES_COLUMNS.find(c => c.key === colKey);
               const rawLabel = colDef?.label || colKey;
               const formattedLabel = formatColumnLabel(colKey, rawLabel, defensesTextFormat, defensesCustomLabels);
               const widthClass = `${getColWidthClass(colKey, defensesColumnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, defensesTextFormat)}`;
-              const isSortCol = colKey === 'titulo' ? 'title' : colKey;
-
               return (
-                <th 
+                <th
                   key={colKey}
                   data-portal-column-key={colKey}
-                  onClick={() => handleDefensesSort(isSortCol)}
-                  className={`${defStyles.headerThClass} ${defStyles.cellPadClass} ${widthClass} ${defStyles.headerWeightClass} ${defStyles.headerTextColorClass} ${defStyles.headerFontSizeClass} ${defStyles.headerCasingClass} ${defStyles.headerBorderClass} ${defStyles.headerAlignClass} align-middle cursor-pointer ${defStyles.headerThHoverClass} select-none transition-colors group`}
+                  className={`${defStyles.headerThClass} ${defStyles.cellPadClass} ${widthClass} ${defStyles.headerWeightClass} ${defStyles.headerTextColorClass} ${defStyles.headerFontSizeClass} ${defStyles.headerCasingClass} ${defStyles.headerBorderClass} ${defStyles.headerAlignClass} align-middle select-none transition-colors group`}
                   style={defStyles.theadStyle}
                 >
-                  <div className={`flex items-center justify-center gap-1 ${defStyles.headerWrapClass}`}>
+                  <div className={`flex items-center justify-center ${defStyles.headerWrapClass}`}>
                     <span>{formattedLabel}</span>
-                    {renderDefensesSortArrow(isSortCol, isDefDark)}
                   </div>
                 </th>
               );
@@ -2030,34 +1953,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.borderClass} align-middle ${alignClass} cursor-pointer ${defStyles.firstColCellHoverClass} group/col0 transition-colors`}
                       title="Clique aqui para abrir os detalhes e documentos deste TCC"
                     >
-                      {(() => {
-                        const rawStr = (proc.protocolo || proc.id || '').trim();
-                        const clean = rawStr.replace(/^TCC\s*[-/]?\s*/i, '').trim();
-                        const parts = clean.split(/[-/]/);
-                        let line1 = 'TCC';
-                        let line2 = rawStr;
-                        if (parts.length >= 2) {
-                          line1 = `TCC - ${parts[0]}`;
-                          line2 = parts.slice(1).join('-');
-                        } else if (proc.anoLectivo) {
-                          line1 = `TCC - ${proc.anoLectivo}`;
-                          line2 = clean;
-                        }
-                        const tagLabel = formatCellText('protocolo', line1, defensesTextFormat, '📓');
-                        return (
-                          <div className={`${defStyles.firstColBtnClass} portal-semantic-tone`} style={getPortalToneCssVars(defenseState)} data-defense-state={defenseState}>
-                            <div className={defStyles.firstColTagClass}>
-                              {tagLabel}
-                            </div>
-                            <div className={`${defStyles.cellTextColorClass} group-hover/col0:text-emerald-950 text-xs tracking-wide ${defStyles.cellWeightClass}`}>
-                              {line2}
-                            </div>
-                            <span className={defStyles.firstColSubtextClass}>
-                              Abrir TCC ↗
-                            </span>
-                          </div>
-                        );
-                      })()}
+                      <div
+                        className={`${defStyles.firstColBtnClass} portal-semantic-tone whitespace-nowrap`}
+                        style={getPortalToneCssVars(defenseState)}
+                        data-defense-state={defenseState}
+                      >
+                        {formatProcessLabel(proc.protocolo || proc.id)}
+                      </div>
                     </td>
                   );
                 case 'defesaDataHora':
@@ -2212,7 +2114,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             return (
               <div className="w-full">
                 <TableScrollWrapper>
-                  <table data-portal-native-sort="true" className={`w-full ${defStyles.cellAlignClass} border-collapse text-xs`}>
+                  <table className={`w-full ${defStyles.cellAlignClass} border-collapse text-xs`}>
                     <thead className={`${defStyles.headerTheadClass} ${defStyles.headerWeightClass} ${defStyles.headerFontSizeClass} tracking-normal`} style={defStyles.theadStyle}>
                       <tr>
                         {defensesColumnOrder.map((colKey) => renderDefensesHeaderCell(colKey))}
@@ -2281,16 +2183,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                             <Download className="h-3.5 w-3.5" />
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={refreshData}
-                          disabled={isRefreshingData}
-                          className="portal-toolbar-icon-button disabled:opacity-70"
-                          title="Sincronizar dados — recarrega os registros desta planilha"
-                          aria-label="Sincronizar dados — recarrega os registros desta planilha"
-                        >
-                          <YinYangIcon className={`h-3.5 w-3.5 ${isRefreshingData ? 'animate-spin' : ''}`} />
-                        </button>
                       </div>
 
                       <div className="portal-sheet-toolbar-terminal">
@@ -2421,8 +2313,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               }
 
               const acervoStyles = getTableStyles(acervoTextFormat);
-              const isAcervoDark = (acervoTextFormat.headerTheme || 'militar') !== 'clean' && (acervoTextFormat.headerTheme || 'militar') !== 'slate' && (acervoTextFormat.headerTheme || 'militar') !== 'light';
-
               const renderAcervoHeaderCell = (colKey: string) => {
                 if (!visibleColumns[colKey]) return null;
                 const colDef = ALL_ACERVO_COLUMNS.find(c => c.key === colKey);
@@ -2431,15 +2321,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 const widthClass = `${getColWidthClass(colKey, acervoColumnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, acervoTextFormat)}`;
 
                 return (
-                  <th 
+                  <th
                     key={colKey}
                     data-portal-column-key={colKey}
-                    onClick={() => handleLibSort(colKey)}
-                    className={`${acervoStyles.headerThClass} ${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.headerWeightClass} ${acervoStyles.headerTextColorClass} ${acervoStyles.headerFontSizeClass} ${acervoStyles.headerCasingClass} ${acervoStyles.headerBorderClass} ${acervoStyles.headerAlignClass} align-middle cursor-pointer ${acervoStyles.headerThHoverClass} select-none transition-colors group`}
+                    className={`${acervoStyles.headerThClass} ${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.headerWeightClass} ${acervoStyles.headerTextColorClass} ${acervoStyles.headerFontSizeClass} ${acervoStyles.headerCasingClass} ${acervoStyles.headerBorderClass} ${acervoStyles.headerAlignClass} align-middle select-none transition-colors group`}
                   >
-                    <div className={`flex items-center justify-center gap-1 ${acervoStyles.headerWrapClass}`}>
+                    <div className={`flex items-center justify-center ${acervoStyles.headerWrapClass}`}>
                       <span>{formattedLabel}</span>
-                      {renderLibSortArrow(colKey, isAcervoDark)}
                     </div>
                   </th>
                 );
@@ -2462,34 +2350,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.borderClass} align-middle ${alignClass} cursor-pointer ${acervoStyles.firstColCellHoverClass} group/col0 transition-colors`}
                         title="Clique aqui no Nº do Processo para abrir o TCC"
                       >
-                        {(() => {
-                          const rawStr = (proc.protocolo || proc.id || '').trim();
-                          const clean = rawStr.replace(/^TCC\s*[-/]?\s*/i, '').trim();
-                          const parts = clean.split(/[-/]/);
-                          let line1 = 'TCC';
-                          let line2 = rawStr;
-                          if (parts.length >= 2) {
-                            line1 = `TCC - ${parts[0]}`;
-                            line2 = parts.slice(1).join('-');
-                          } else if (proc.anoLectivo) {
-                            line1 = `TCC - ${proc.anoLectivo}`;
-                            line2 = clean;
-                          }
-                          const tagLabel = formatCellText('protocolo', line1, acervoTextFormat, '📓');
-                          return (
-                            <div className={acervoStyles.firstColBtnClass}>
-                              <div className={acervoStyles.firstColTagClass}>
-                                {tagLabel}
-                              </div>
-                              <div className={`${acervoStyles.cellTextColorClass} group-hover/col0:text-emerald-950 text-xs tracking-wide ${acervoStyles.cellWeightClass}`}>
-                                {line2}
-                              </div>
-                              <span className={acervoStyles.firstColSubtextClass}>
-                                Abrir TCC ↗
-                              </span>
-                            </div>
-                          );
-                        })()}
+                        <div
+                          className={`${acervoStyles.firstColBtnClass} portal-semantic-tone whitespace-nowrap`}
+                          style={getPortalToneCssVars('neutral')}
+                        >
+                          {formatProcessLabel(proc.protocolo || proc.id)}
+                        </div>
                       </td>
                     );
                   case 'progresso':
@@ -2645,7 +2511,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
               return (
                 <TableScrollWrapper>
-                  <table data-portal-native-sort="true" className={`w-full ${acervoStyles.cellAlignClass} border-collapse text-xs`}>
+                  <table className={`w-full ${acervoStyles.cellAlignClass} border-collapse text-xs`}>
                     <thead className={`${acervoStyles.headerTheadClass} ${acervoStyles.headerWeightClass} ${acervoStyles.headerFontSizeClass} tracking-normal`} style={acervoStyles.theadStyle}>
                       <tr>
                         {acervoColumnOrder.map((colKey) => renderAcervoHeaderCell(colKey))}

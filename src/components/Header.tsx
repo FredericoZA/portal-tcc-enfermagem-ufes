@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome })
 
   return (
     <header id="portal-header" className="border-b border-slate-200 shadow-2xs sticky top-0 z-30 transition-colors" style={headerStyle}>
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-1.5 sm:py-2 flex items-center justify-between gap-3">
+      <div className="w-full px-6 py-1.5 sm:py-2 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button id="open-mobile-sidebar-btn" onClick={onOpenMobileSidebar} className="lg:hidden p-2 rounded-full text-slate-600 focus:outline-none" aria-label="Abrir menu"><Menu className="w-6 h-6" /></button>
           <div className="flex items-center gap-2">

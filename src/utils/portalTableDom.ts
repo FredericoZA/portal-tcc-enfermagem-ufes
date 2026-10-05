@@ -122,29 +122,26 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, i
   const popup = document.createElement('div');
   popup.className = 'portal-core-column-popup';
   popup.setAttribute('role', 'dialog');
-  const hasNativeSort = table.dataset.portalNativeSort === 'true';
-  popup.setAttribute('aria-label', hasNativeSort ? `Filtrar ${label}` : `Ordenar e filtrar ${label}`);
+  popup.setAttribute('aria-label', `Ordenar e filtrar ${label}`);
 
   const title = document.createElement('div');
   title.className = 'portal-core-popup-title';
   title.textContent = label;
   popup.appendChild(title);
 
-  if (!hasNativeSort) {
-    const sortActions = document.createElement('div');
-    sortActions.className = 'portal-core-sort-actions';
-    sortActions.append(
-      menuButton('Ordenar A → Z / menor → maior', 'portal-core-menu-action', () => {
-        sortRows(table, key, index, 'asc');
-        closePortalTablePopup();
-      }),
-      menuButton('Ordenar Z → A / maior → menor', 'portal-core-menu-action', () => {
-        sortRows(table, key, index, 'desc');
-        closePortalTablePopup();
-      }),
-    );
-    popup.appendChild(sortActions);
-  }
+  const sortActions = document.createElement('div');
+  sortActions.className = 'portal-core-sort-actions';
+  sortActions.append(
+    menuButton('Ordenar A → Z / menor → maior', 'portal-core-menu-action', () => {
+      sortRows(table, key, index, 'asc');
+      closePortalTablePopup();
+    }),
+    menuButton('Ordenar Z → A / maior → menor', 'portal-core-menu-action', () => {
+      sortRows(table, key, index, 'desc');
+      closePortalTablePopup();
+    }),
+  );
+  popup.appendChild(sortActions);
 
   const filterTitle = document.createElement('div');
   filterTitle.className = 'portal-core-filter-title';
@@ -362,10 +359,7 @@ export function enhancePortalTable(table: HTMLTableElement) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'portal-core-column-menu';
-      const nativeSort = table.dataset.portalNativeSort === 'true';
-      const actionLabel = nativeSort
-        ? `Filtrar ${readPortalHeaderLabel(header)}`
-        : `Ordenar ou filtrar ${readPortalHeaderLabel(header)}`;
+      const actionLabel = `Ordenar ou filtrar ${readPortalHeaderLabel(header)}`;
       button.title = actionLabel;
       button.setAttribute('aria-label', actionLabel);
       button.setAttribute('aria-haspopup', 'dialog');

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Building2, ExternalLink, Map as MapIcon, MapPin, Navigation } from 'lucide-react';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
+import { PortalSectionDivider } from '../components/PortalSectionDivider';
 import { useAuth } from '../context/AuthContext';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { loadSiteLayoutConfig } from '../utils/siteLayoutConfig';
@@ -36,12 +37,13 @@ export const ComoChegarPage: React.FC = () => {
 
   return (
     <div id="como-chegar-page-container" className="portal-public-shell portal-layer-panel mx-auto max-w-none overflow-hidden rounded-2xl border border-slate-300 shadow-sm">
-      <section className="portal-public-header border-b-2 border-white px-3.5 text-white sm:px-4">
-        <div className="flex items-center gap-2">
+      <section className="portal-public-header">
+        <div className="portal-public-title-row gap-2">
           <ColorfulHeaderIcon type="location" />
           <h1 className="text-sm font-black uppercase tracking-tight text-white sm:text-base">Como chegar</h1>
         </div>
       </section>
+      <PortalSectionDivider />
 
       <section className="portal-layer-panel p-3 sm:p-4">
         <div className="grid items-start gap-3 md:grid-cols-[minmax(0,1.45fr)_minmax(280px,.8fr)] xl:grid-cols-[minmax(0,1.65fr)_minmax(330px,.72fr)]">

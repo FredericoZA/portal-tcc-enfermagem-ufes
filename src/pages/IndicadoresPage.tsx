@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BarChart3, BookOpen, CalendarDays, CheckCircle2, Clock3, FileText, Gauge, MapPin, ShieldCheck, Tags, TrendingUp, Users2 } from 'lucide-react';
 import { PortalSectionDivider } from '../components/PortalSectionDivider';
+import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
 
 type Bucket = { label: string; count: number; key?: string };
 type PublicIndicators = {
@@ -137,8 +138,11 @@ export const IndicadoresPage: React.FC = () => {
   }, [data]);
 
   return <div id="indicadores-publicos-page" className="mx-auto max-w-none">
-    <section className="portal-public-header rounded-t-2xl border px-4 text-white shadow-sm">
-      <div className="flex items-center gap-2"><BarChart3 className="h-5 w-5"/><h1 className="text-base font-black uppercase tracking-tight">Indicadores</h1></div>
+    <section className="portal-public-header">
+      <div className="portal-public-title-row gap-2">
+        <ColorfulHeaderIcon type="indicators" />
+        <h1 className="text-base font-black uppercase tracking-tight">Indicadores</h1>
+      </div>
     </section>
     <PortalSectionDivider />
 
