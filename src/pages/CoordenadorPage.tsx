@@ -453,6 +453,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     return (
       <th
         key={colKey}
+        data-portal-column-key={colKey}
         onClick={isSortable ? () => handleSort(colKey) : undefined}
         className={`${styles.headerThClass} ${styles.cellPadClass} ${widthClass} ${styles.headerWeightClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerCasingClass} ${styles.headerBorderClass} ${styles.headerAlignClass} align-middle ${isSortable ? `cursor-pointer ${styles.headerThHoverClass}` : ''} select-none transition-colors group`}
       >
@@ -921,7 +922,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   </div>
                 ) : (
                   <TableScrollWrapper>
-                    <table className="w-full text-center border-collapse text-xs">
+                    <table data-portal-native-sort="true" className="w-full text-center border-collapse text-xs">
                       <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`} style={styles.theadStyle}>
                         <tr>
                           {/* Always show selection column for pending */}
@@ -989,7 +990,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   </div>
                 ) : (
                   <TableScrollWrapper>
-                    <table className="w-full text-center border-collapse text-xs">
+                    <table data-portal-native-sort="true" className="w-full text-center border-collapse text-xs">
                       <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`}>
                         <tr>
                           {/* Always show selection column for completed to align perfectly */}
