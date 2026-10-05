@@ -298,13 +298,13 @@ function applyGeneralPopupCssVariables(
 
   root.setProperty('--portal-popup-font', globalStyle.fontFamily);
   root.setProperty('--portal-popup-size', globalStyle.fontSize);
-  root.setProperty('--portal-popup-bg', globalStyle.surfaceBgColor);
-  root.setProperty('--portal-popup-header', globalStyle.headerBgColor);
-  root.setProperty('--portal-popup-header-text', globalStyle.headerTextColor);
-  root.setProperty('--portal-popup-action', globalStyle.actionBgColor);
-  root.setProperty('--portal-popup-action-text', globalStyle.actionTextColor);
-  root.setProperty('--portal-popup-radius', globalStyle.borderRadius);
-  root.setProperty('--portal-popup-border', globalStyle.borderColor);
+  root.setProperty('--portal-surface-panel', globalStyle.surfaceBgColor);
+  root.setProperty('--portal-brand-header', globalStyle.headerBgColor);
+  root.setProperty('--portal-text-light', globalStyle.headerTextColor);
+  root.setProperty('--portal-brand-action', globalStyle.actionBgColor);
+  root.setProperty('--portal-text-light', globalStyle.actionTextColor);
+  root.setProperty('--portal-panel-radius', globalStyle.borderRadius);
+  root.setProperty('--portal-border', globalStyle.borderColor);
   root.setProperty('--portal-popup-shadow', shadow);
   root.setProperty('--portal-new-defense-bg', newDefense.bg);
   root.setProperty('--portal-new-defense-header', newDefense.header);
