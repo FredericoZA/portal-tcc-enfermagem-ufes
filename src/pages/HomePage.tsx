@@ -448,7 +448,7 @@ const DayDatePickerPopover: React.FC<DayDatePickerPopoverProps> = ({
 const ALL_DEFENSES_COLUMNS: ColumnDef[] = [
   { key: 'protocolo', label: 'Nº do Processo' },
   { key: 'defesaDataHora', label: 'Data e Hora' },
-  { key: 'progresso', label: 'Progresso' },
+  { key: 'progresso', label: 'Etapa' },
   { key: 'titulo', label: 'Título do Trabalho' },
   { key: 'aluno1', label: 'Aluno 1' },
   { key: 'aluno2', label: 'Aluno 2' },
@@ -496,7 +496,7 @@ const DEFAULT_DEFENSES_VISIBLE: Record<string, boolean> = {
 const ALL_ACERVO_COLUMNS: ColumnDef[] = [
   { key: 'protocolo', label: 'Nº do Processo' },
   { key: 'defesaDataHora', label: 'Data e Hora' },
-  { key: 'progresso', label: 'Progresso' },
+  { key: 'progresso', label: 'Etapa' },
   { key: 'titulo', label: 'Título do Trabalho' },
   { key: 'aluno1', label: 'Aluno 1' },
   { key: 'aluno2', label: 'Aluno 2' },
@@ -712,7 +712,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     const labelMap: Record<string, string> = {
       protocolo: 'Nº do Processo',
       defesaDataHora: 'Data e Hora',
-      progresso: 'Progresso',
+      progresso: 'Etapa',
       titulo: 'Título do Trabalho',
       aluno1: 'Aluno 1',
       aluno2: 'Aluno 2',
@@ -784,7 +784,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const handleExportExcel = (dataToExport: ProcessData[]) => {
     const colHeaders: string[] = [];
     if (visibleColumns.protocolo) colHeaders.push('Nº do Processo');
-    if (visibleColumns.progresso) colHeaders.push('Progresso');
+    if (visibleColumns.progresso) colHeaders.push('Etapa');
     if (visibleColumns.titulo) colHeaders.push('Título do Trabalho');
     if (visibleColumns.aluno1) colHeaders.push('Aluno 1');
     if (visibleColumns.aluno2) colHeaders.push('Aluno 2');
