@@ -531,6 +531,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     return (
       <th 
         key={colKey}
+        data-portal-column-key={colKey}
         onClick={isSortable ? () => handleSort(colKey) : undefined}
         className={`${styles.headerThClass} ${styles.cellPadClass} ${widthClass} ${styles.headerWeightClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerCasingClass} ${styles.headerBorderClass} ${styles.headerAlignClass} align-middle ${isSortable ? `cursor-pointer ${styles.headerThHoverClass}` : ''} select-none transition-colors group`}
       >
@@ -920,7 +921,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               {/* Desktop Table View */}
               <div className="hidden lg:block">
                 <TableScrollWrapper>
-                  <table id="meus-processos-table" className="w-full text-center border-collapse text-xs">
+                  <table id="meus-processos-table" data-portal-native-sort="true" className="w-full text-center border-collapse text-xs">
                     <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`} style={styles.theadStyle}>
                       <tr>
                         {activeColumns.map((colKey) => renderHeaderCell(colKey))}
