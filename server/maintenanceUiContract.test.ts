@@ -6,7 +6,7 @@ import { readPortalCss } from './testUtils/portalCss';
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 test('runtime estrutural neutraliza hover e usa um único menu por coluna',()=>{
-  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+  const runtime=read('src/utils/portalTableDom.ts');
   const css=readPortalCss();
   assert.doesNotMatch(runtime,/stripHoverRules|neutralizeHover|document\.styleSheets/);
   assert.match(runtime,/portal-core-column-menu/);
@@ -45,7 +45,8 @@ test('detalhe público resolve protocolo antes da rota legada',()=>{
 
 test('main monta uma única camada CSS e apenas runtimes funcionais remanescentes',()=>{
   const main=read('src/main.tsx');
-  assert.match(main,/PortalStructuralRuntime/);
+  assert.match(main,/PortalSpreadsheetRuntime/);
+  assert.doesNotMatch(main,/PortalStructuralRuntime/);
   assert.match(main,/PortalSpreadsheetRuntime/);
   assert.match(main,/import '\.\/index\.css'/);
   assert.doesNotMatch(main,/portal-core-1043\.css|portal-update-|portal-version-|hotfix/);
