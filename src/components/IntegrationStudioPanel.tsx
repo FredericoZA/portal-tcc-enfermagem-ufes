@@ -884,8 +884,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         <div><h3 className="text-xs font-black uppercase tracking-wide">Editor de modelos e variáveis</h3><p className="mt-0.5 text-[9px] text-white/80">Selecione uma área acima e trabalhe com seleção, edição e visualização no mesmo contexto.</p></div>
         <div className="flex items-center gap-2"><div className="hidden text-right text-[9px] font-semibold text-white/80 md:block">{isDirty ? (draftSavedAt ? `Rascunho automático ${new Date(draftSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Salvando rascunho…') : (lastSavedAt ? `Publicado ${new Date(lastSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Ainda não publicado')}</div><button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-white bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-black shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Publicando…' : 'Publicar'}</button></div>
       </div>
-      <div className={hideTabs ? 'min-h-[68vh]' : 'min-h-[68vh]'} style={{ backgroundColor: hideTabs ? 'transparent' : 'var(--portal-surface-layer-1)' }}>
-        <nav className={`${hideTabs ? 'hidden' : 'portal-studio-tabs flex flex-wrap items-center gap-1.5 border-b border-slate-300 p-2.5'}`} style={{ backgroundColor: 'var(--portal-surface-layer-2)' }} aria-label="Áreas de modelos e variáveis">
+      <div className={hideTabs ? 'min-h-[68vh]' : 'min-h-[68vh]'} style={{ backgroundColor: hideTabs ? 'transparent' : 'var(--portal-surface-panel)' }}>
+        <nav className={`${hideTabs ? 'hidden' : 'portal-studio-tabs flex flex-wrap items-center gap-1.5 border-b border-slate-300 p-2.5'}`} style={{ backgroundColor: 'var(--portal-surface-card)' }} aria-label="Áreas de modelos e variáveis">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const selected = activeTab === tab.id;
@@ -894,11 +894,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[10px] font-black uppercase transition-colors ${selected ? 'text-white' : 'border-slate-300 bg-white text-slate-700 hover:border-[#337959]'}`}
-              style={selected ? { backgroundColor: 'var(--portal-green-action)', borderColor: 'var(--portal-green-action-border)' } : undefined}
+              style={selected ? { backgroundColor: 'var(--portal-brand-action)', borderColor: 'var(--portal-brand-action-border)' } : undefined}
             ><Icon className="h-3.5 w-3.5 shrink-0"/>{tab.label}</button>;
           })}
         </nav>
-        <div className={`min-w-0 ${hideTabs ? 'p-0' : 'p-3 sm:p-4'}`} style={{ backgroundColor: hideTabs ? 'transparent' : 'var(--portal-surface-layer-1)' }}>
+        <div className={`min-w-0 ${hideTabs ? 'p-0' : 'p-3 sm:p-4'}`} style={{ backgroundColor: hideTabs ? 'transparent' : 'var(--portal-surface-panel)' }}>
         {activeTab === 'operation' && <OperationalDesignerPanel studio={buildSnapshot()} config={operationalConfig} onChange={value=>{setOperationalConfig(value);setIsDirty(true);}} onInitialForm={questions=>{setFormTemplates(forms=>forms.map(f=>f.id==='form-reserva-aluno'?{...f,questions}:f));setIsDirty(true);notify('Cadastro sincronizado. Edite os campos na aba Formulários e publique.');}}/>}
         {activeTab === 'overview' && (
           <div className="space-y-4">
