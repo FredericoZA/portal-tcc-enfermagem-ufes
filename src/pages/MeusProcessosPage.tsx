@@ -759,7 +759,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
 
             {/* INTEGRATED TOOLBAR FOR FILTERS (Single clean dividing line) */}
             <div data-portal-sheet-filter="true" className="portal-meus-processos-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 text-xs">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
+              <span className="portal-filter-label shrink-0 mr-1 opacity-80">
                 FILTRAR:
               </span>
               <div className="flex flex-wrap items-center gap-1.5" data-portal-role-filter-group="true">
