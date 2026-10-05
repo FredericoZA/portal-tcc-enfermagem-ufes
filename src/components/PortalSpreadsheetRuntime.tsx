@@ -1,4 +1,4 @@
-import { type RefObject, useLayoutEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import { PORTAL_TABLE_KEYS, inferManagedTableKey, isPortalProcessHeader, normalizePortalTableText, readPortalHeaderLabel, type PortalTableKey } from '../utils/portalTableIdentity';
 import { closePortalTablePopup, enhancePortalTable } from '../utils/portalTableDom';
 
@@ -368,10 +368,10 @@ function removeOrphanPagers(root: HTMLElement) {
   });
 }
 
-export const PortalSpreadsheetRuntime = ({ rootRef }: { rootRef: RefObject<HTMLElement | null> }) => {
+export const PortalSpreadsheetRuntime = () => {
   useLayoutEffect(() => {
     migrateLegacyLimits();
-    const root = rootRef.current;
+    const root = document.getElementById('portal-app-root');
     if (!root) return;
 
     const unbinders = new Map<HTMLElement, () => void>();
@@ -488,7 +488,7 @@ export const PortalSpreadsheetRuntime = ({ rootRef }: { rootRef: RefObject<HTMLE
     };
 
     const observer = new MutationObserver(refresh);
-    observer.observe(root, { childList: true, subtree: true });
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
     window.addEventListener('storage', refresh);
     window.addEventListener('portal-table-layouts-updated', refresh as EventListener);
     window.addEventListener('global_table_layouts_changed', refresh as EventListener);
@@ -507,7 +507,7 @@ export const PortalSpreadsheetRuntime = ({ rootRef }: { rootRef: RefObject<HTMLE
       unbinders.clear();
       closePortalTablePopup();
     };
-  }, [rootRef]);
+  }, []);
 
   return null;
 };
