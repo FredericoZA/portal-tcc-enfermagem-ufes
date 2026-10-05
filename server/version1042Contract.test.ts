@@ -13,9 +13,12 @@ test('camadas históricas são sucedidas por uma única folha visual',()=>{
 });
 
 test('defesas passadas mantêm contraste integral e processo usa paleta do calendário',()=>{
+  const home=read('src/pages/HomePage.tsx');
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
   const css=readPortalCss();
-  assert.match(runtime,/row\.classList\.remove\('bg-slate-100\/40', 'text-slate-400', 'opacity-60'\)/);
+  assert.match(home,/portal-semantic-tone/);
+  assert.match(home,/getDefenseState\(proc\)/);
+  assert.doesNotMatch(runtime,/normalizeDefenseRows|row\.style\.opacity/);
   assert.match(css,/--portal-defense-defended-bg:\s*#bed8c3/);
   assert.match(css,/--portal-defense-defended-border:\s*#719a79/);
   assert.match(css,/--portal-defense-upcoming-bg:\s*#e8dda7/);
