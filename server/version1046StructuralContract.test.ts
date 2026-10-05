@@ -9,7 +9,7 @@ test('release de refactor visual é 1.0.70', () => {
 });
 
 test('estado de defesa é calculado na página pública sem pós-processamento global', () => {
-  const runtime = read('src/components/PortalStructuralRuntime.tsx');
+  const runtime = read('src/utils/portalTableDom.ts');
   const home = read('src/pages/HomePage.tsx');
   assert.match(home, /getDefenseState\(proc\)/);
   assert.match(home, /portal-semantic-tone/);
@@ -18,7 +18,7 @@ test('estado de defesa é calculado na página pública sem pós-processamento g
 
 test('calendário classifica fim de semana no React e abre agenda sem busca paralela', () => {
   const home = read('src/pages/HomePage.tsx');
-  const runtime = read('src/components/PortalStructuralRuntime.tsx');
+  const runtime = read('src/utils/portalTableDom.ts');
   assert.match(home, /isWeekend = colIndex === 0 \|\| colIndex === 6/);
   assert.match(home, /hasEvents && !isWeekend/);
   assert.doesNotMatch(runtime, /enhanceCalendar/);
@@ -51,7 +51,7 @@ test('configurações separam artefatos e unem modelos com documentos', () => {
   const models = read('src/components/MasterDocumentModelsPanel.tsx');
   assert.match(studio, /portal-studio-tabs/);
   assert.match(studio, /Editor de modelos e variáveis/);
-  assert.match(studio, /var\(--portal-green-action\)/);
+  assert.match(studio, /var\(--portal-brand-action\)/);
   assert.match(config, /Modelos e Documentos/);
   assert.match(config, /title: 'E-mails'/);
   assert.match(config, /title: 'Formulários'/);
