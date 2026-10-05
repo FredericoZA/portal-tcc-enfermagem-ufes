@@ -338,8 +338,17 @@
   max-width: 54px;
 }
 
-/* Controle por coluna: exatamente 15 × 15. */
+/* Controle por coluna: exatamente 15 × 15, sempre no canto superior direito. */
+.portal-core-header-cell {
+  position: relative;
+  padding-right: calc(var(--portal-cell-padding-x) + var(--portal-sheet-column-control-size) + 4px);
+}
+
 .portal-core-column-menu {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 4;
   width: var(--portal-sheet-column-control-size);
   min-width: var(--portal-sheet-column-control-size);
   height: var(--portal-sheet-column-control-size);
