@@ -67,7 +67,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
       <form onSubmit={handleSaveAccounts} className="space-y-3">
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
           {/* Secretaria / Usuário Master */}
-          <div className="rounded-lg border border-slate-300 bg-[#d5dce0] p-2.5 space-y-2">
+          <div className="rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-2.5 space-y-2">
             <div className="border-b border-slate-200 pb-1.5">
               <span className="text-xs font-black uppercase text-slate-800 tracking-wide">
                 Usuário Master
@@ -104,7 +104,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
           </div>
 
           {/* Presidente da Comissão */}
-          <div className="rounded-lg border border-slate-300 bg-[#d5dce0] p-2.5 space-y-2">
+          <div className="rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-2.5 space-y-2">
             <div className="border-b border-slate-200 pb-1.5">
               <span className="text-xs font-black uppercase text-slate-800 tracking-wide">
                 Presidente da Comissão
