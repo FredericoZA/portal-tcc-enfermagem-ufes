@@ -1,5 +1,6 @@
 import { useLayoutEffect } from 'react';
 import { PORTAL_TABLE_KEYS, inferManagedTableKey, type PortalTableKey } from '../utils/portalTableIdentity';
+import { closePortalTablePopup, enhancePortalTable } from '../utils/portalTableDom';
 
 type TableKey = PortalTableKey;
 type PageSize = 25 | 50 | 100 | 'all';
@@ -501,6 +502,7 @@ export const PortalSpreadsheetRuntime = () => {
       frame = requestAnimationFrame(() => {
         document.querySelectorAll<HTMLTableElement>('table').forEach((table) => {
           if (!tableKey(table)) return;
+          enhancePortalTable(table);
           markSpreadsheet(table);
           const host = findScrollHost(table);
           if (host) bindScrollHost(host);
@@ -531,6 +533,7 @@ export const PortalSpreadsheetRuntime = () => {
       window.removeEventListener('focus', refresh);
       unbinders.forEach((unbind) => unbind());
       unbinders.clear();
+      closePortalTablePopup();
     };
   }, []);
 
