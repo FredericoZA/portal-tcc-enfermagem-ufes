@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { stableTableIdentity } from '../utils/portalTableIdentity';
 
 type TableState = {
   filters: Map<string, Set<string>>;
@@ -260,10 +261,9 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, i
 }
 
 function tableKey(table: HTMLTableElement) {
-  if (table.dataset.portalCoreTableKey) return table.dataset.portalCoreTableKey;
-  const title = table.closest('section,main,div')?.querySelector<HTMLElement>('h1,h2,h3')?.textContent || '';
-  const headers = Array.from(table.tHead?.rows[0]?.cells || []).slice(0, 5).map((cell) => headerLabel(cell as HTMLTableCellElement)).join('|');
-  table.dataset.portalCoreTableKey = slug(`${title}-${headers}`) || `table-${Math.random().toString(36).slice(2)}`;
+  if (!table.dataset.portalCoreTableKey) {
+    table.dataset.portalCoreTableKey = stableTableIdentity(table);
+  }
   return table.dataset.portalCoreTableKey;
 }
 
