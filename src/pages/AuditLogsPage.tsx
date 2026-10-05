@@ -56,7 +56,7 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
       return [log.actorEmail, log.action, log.processId, log.entityType, log.entityId].filter(Boolean).join(' ').toLowerCase().includes(term);
     });
   }, [logs, search, startDate, endDate]);
-  const shown = recordsLimit === 'all' ? filtered : filtered.slice(0, recordsLimit);
+  const shown = filtered;
   const activeColumns = columnOrder.filter(key => visibleColumns[key] !== false);
 
   const downloadBackup = async () => {
