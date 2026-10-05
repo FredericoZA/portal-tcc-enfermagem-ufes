@@ -1,16 +1,7 @@
 import { useLayoutEffect } from 'react';
+import { PORTAL_TABLE_KEYS, inferManagedTableKey, type PortalTableKey } from '../utils/portalTableIdentity';
 
-const TABLE_KEYS = [
-  'defenses',
-  'acervo',
-  'meus_processos',
-  'coordinator',
-  'authorized_access',
-  'signature_logs',
-  'audit_logs',
-] as const;
-
-type TableKey = (typeof TABLE_KEYS)[number];
+type TableKey = PortalTableKey;
 type PageSize = 25 | 50 | 100 | 'all';
 
 const DEFAULT_PAGE_SIZE: Record<TableKey, PageSize> = {
@@ -21,16 +12,6 @@ const DEFAULT_PAGE_SIZE: Record<TableKey, PageSize> = {
   authorized_access: 25,
   signature_logs: 25,
   audit_logs: 25,
-};
-
-const TABLE_CONTAINER_SELECTORS: Record<TableKey, string[]> = {
-  defenses: ['#public-calendar-cards-section'],
-  acervo: ['#biblioteca-tccs-section'],
-  meus_processos: ['#meus-processos-page-container'],
-  coordinator: ['#coordenador-page-root'],
-  authorized_access: ['#authorized-access-panel'],
-  signature_logs: ['#asten-logs-page'],
-  audit_logs: ['#audit-logs-page'],
 };
 
 const PAGE_SIZE_PREFIX = 'portal_table_page_size_';
@@ -77,7 +58,7 @@ function storageKeysForTable(key: TableKey) {
 
 function migrateLegacyLimits() {
   if (typeof window === 'undefined') return;
-  for (const key of TABLE_KEYS) {
+  for (const key of PORTAL_TABLE_KEYS) {
     let preferred: PageSize | null = null;
     for (const storageKey of storageKeysForTable(key)) {
       try {
@@ -109,13 +90,7 @@ function migrateLegacyLimits() {
 migrateLegacyLimits();
 
 function tableKey(table: HTMLTableElement): TableKey | null {
-  const explicit = table.dataset.portalTableKey as TableKey | undefined;
-  if (explicit && TABLE_KEYS.includes(explicit)) return explicit;
-
-  for (const key of TABLE_KEYS) {
-    if (TABLE_CONTAINER_SELECTORS[key].some((selector) => table.closest(selector))) return key;
-  }
-  return null;
+  return inferManagedTableKey(table);
 }
 
 function readPageSize(key: TableKey): PageSize {
