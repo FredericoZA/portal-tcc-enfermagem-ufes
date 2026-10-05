@@ -66,7 +66,7 @@ test('Lista de Defesas e Repositório padronizam o cabeçalho como Processo pela
   assert.match(home, /formatProcessLabel\(proc\.protocolo \|\| proc\.id\)/);
   assert.doesNotMatch(home, /Abrir TCC ↗/);
   assert.match(processPill, /replace\(\/\^TESTE/);
-  assert.match(processPill, /return `TCC - \$\{normalized\}`/);
+  assert.match(processPill, /return normalized === '—' \? 'TCC' : `TCC - \$\{normalized\}`/);
   assert.match(home, /portal-semantic-tone/);
 });
 
