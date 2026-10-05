@@ -1,5 +1,5 @@
 import { useLayoutEffect } from 'react';
-import { PORTAL_TABLE_KEYS, inferManagedTableKey, type PortalTableKey } from '../utils/portalTableIdentity';
+import { PORTAL_TABLE_KEYS, inferManagedTableKey, isPortalProcessHeader, normalizePortalTableText, readPortalHeaderLabel, type PortalTableKey } from '../utils/portalTableIdentity';
 import { closePortalTablePopup, enhancePortalTable } from '../utils/portalTableDom';
 
 type TableKey = PortalTableKey;
@@ -18,15 +18,6 @@ const DEFAULT_PAGE_SIZE: Record<TableKey, PageSize> = {
 const PAGE_SIZE_PREFIX = 'portal_table_page_size_';
 const CURRENT_PAGE_PREFIX = 'portal_table_current_page_';
 const INTERACTIVE_SELECTOR = 'button,input,select,textarea,a,[role="button"],[contenteditable="true"]';
-
-function normalize(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLocaleLowerCase('pt-BR');
-}
 
 function parsePageSize(value: unknown): PageSize | null {
   if (value === 'all') return 'all';
@@ -136,26 +127,6 @@ function saveCurrentPage(key: TableKey, page: number) {
   }
 }
 
-function headerLabel(header: HTMLTableCellElement) {
-  const clone = header.cloneNode(true) as HTMLTableCellElement;
-  clone.querySelectorAll('button,.portal-core-resizer,.portal-core-column-menu,svg').forEach((node) => node.remove());
-  return normalize(clone.textContent || '');
-}
-
-function isProcessHeader(header: HTMLTableCellElement) {
-  const key = normalize(header.dataset.portalColumnKey || header.dataset.portalCoreColumnKey || '');
-  const label = headerLabel(header);
-  return key === 'protocolo'
-    || key === 'processo'
-    || key.endsWith('protocolo')
-    || label === 'processo'
-    || label === 'protocolo'
-    || label.includes('numero do processo')
-    || label.includes('nº do processo')
-    || label.includes('n° do processo')
-    || label.includes('no do processo');
-}
-
 function renameProcessHeader(header: HTMLTableCellElement) {
   const walker = document.createTreeWalker(header, NodeFilter.SHOW_TEXT);
   const nodes: Text[] = [];
@@ -164,7 +135,7 @@ function renameProcessHeader(header: HTMLTableCellElement) {
 
   for (const node of nodes) {
     if (node.parentElement?.closest('.portal-core-column-menu,.portal-core-resizer')) continue;
-    const value = normalize(node.data);
+    const value = normalizePortalTableText(node.data);
     if (!value) continue;
     if (value.includes('processo') || value === 'protocolo') {
       if (node.data !== 'Processo') node.data = 'Processo';
@@ -223,10 +194,10 @@ function markSpreadsheet(table: HTMLTableElement) {
 
   const selectionIndex = headers.findIndex((header) =>
     header.dataset.portalSelectionColumn === 'true'
-    || normalize(header.dataset.portalColumnLabel || '') === 'selecao'
-    || headerLabel(header) === 'selecao');
+    || normalizePortalTableText(header.dataset.portalColumnLabel || '') === 'selecao'
+    || readPortalHeaderLabel(header) === 'selecao');
 
-  let processIndex = headers.findIndex(isProcessHeader);
+  let processIndex = headers.findIndex(isPortalProcessHeader);
   if (processIndex < 0 && (key === 'defenses' || key === 'acervo' || key === 'meus_processos')) {
     processIndex = 0;
   }
