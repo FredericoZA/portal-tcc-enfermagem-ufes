@@ -264,9 +264,9 @@ button[aria-label^="Configurar exibição"],
   justify-content: center;
   gap: 6px;
   padding: 4px 10px;
-  border: 1px solid var(--portal-popup-action);
+  border: 1px solid var(--portal-brand-header);
   border-radius: 8px;
-  background: var(--portal-popup-action);
+  background: var(--portal-brand-header);
   color: var(--portal-text-light);
   font-size: 10px;
   font-weight: 800;
@@ -539,8 +539,8 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-core-done {
-  border: 1px solid var(--portal-popup-action);
-  background: var(--portal-popup-action);
+  border: 1px solid var(--portal-brand-header);
+  background: var(--portal-brand-header);
   color: var(--portal-text-light);
 }
 

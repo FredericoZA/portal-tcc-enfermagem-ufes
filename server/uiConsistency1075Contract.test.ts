@@ -34,15 +34,13 @@ test('menu de coluna é compacto e possui ação concluir verde', () => {
   const css = read('src/styles/portal-components.css');
   assert.match(css, /\.portal-core-column-popup \{[\s\S]*300px/);
   assert.match(css, /\.portal-core-menu-action \{[\s\S]*font-size: 10px/);
-  assert.match(css, /\.portal-core-done \{[\s\S]*background: var\(--portal-popup-action\)/);
+  assert.match(css, /\.portal-core-done \{[\s\S]*background: var\(--portal-brand-header\)/);
 });
 
 test('ações internas de configuração usam verde institucional e não caixa alta', () => {
-  const tokens = read('src/styles/portal-tokens.css');
   const css = read('src/styles/portal-components.css');
   const commission = read('src/components/CommissionIdentityPanel.tsx');
   const audit = read('src/components/AuditAndSecuritySection.tsx');
-  assert.match(tokens, /--portal-popup-action: var\(--portal-brand-header\)/);
   assert.match(css, /\.portal-popup-action \{[\s\S]*text-transform: none/);
   assert.match(commission, /const actionClass = 'portal-popup-action/);
   assert.match(audit, /className="portal-popup-action/);
