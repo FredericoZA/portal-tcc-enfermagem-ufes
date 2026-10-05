@@ -229,7 +229,6 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
 
   // A tabela nasce ordenada por data; novas ordenações são tratadas pelo menu canônico de cada coluna.
   const sortColumn: string = 'defesaDataHora';
-  const sortDirection: 'asc' | 'desc' = 'desc';
 
   const loadProcesses = async () => {
     setIsLoading(true);
@@ -397,8 +396,8 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
         valB = b.defesa?.local || '';
       }
 
-      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      if (valA < valB) return 1;
+      if (valA > valB) return -1;
       return 0;
     });
 
