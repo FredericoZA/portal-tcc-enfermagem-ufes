@@ -1056,7 +1056,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       {/* Month Navigation: Popup Calendar / Seta Esquerda / Hoje / Seta Direita */}
                       <div className="portal-calendar-toolbar shrink-0">
                         {/* Month & Year Popup Selector Button */}
-                        <div className="relative">
+                        <div className="portal-calendar-period-control relative">
                           <button
                             type="button"
                             onClick={() => {
