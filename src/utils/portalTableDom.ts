@@ -28,12 +28,16 @@ export function closePortalTablePopup() {
 }
 
 function keyForHeader(header: HTMLTableCellElement, index: number) {
-  if (!header.dataset.portalCoreColumnKey) {
-    const explicit = header.dataset.portalColumnKey?.trim();
-    const identity = explicit
-      ? `key:${slugPortalTableText(explicit)}`
-      : `fallback:${index}:${slugPortalTableText(readPortalHeaderLabel(header)) || `coluna-${index + 1}`}`;
-    header.dataset.portalCoreColumnKey = identity;
+  const explicit = header.dataset.portalColumnKey?.trim();
+  if (explicit) {
+    const identity = `key:${slugPortalTableText(explicit)}`;
+    if (header.dataset.portalCoreColumnKey !== identity) header.dataset.portalCoreColumnKey = identity;
+    return identity;
+  }
+
+  if (!header.dataset.portalCoreColumnKey || header.dataset.portalCoreColumnKey.startsWith('key:')) {
+    header.dataset.portalCoreColumnKey =
+      `fallback:${index}:${slugPortalTableText(readPortalHeaderLabel(header)) || `coluna-${index + 1}`}`;
   }
   return header.dataset.portalCoreColumnKey;
 }
