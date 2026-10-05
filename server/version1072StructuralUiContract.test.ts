@@ -71,6 +71,6 @@ test('sidebar não duplica logs e assinaturas de Configurações', () => {
   assert.doesNotMatch(sidebar, /label: getNavLabel\('asten-logs'/);
 });
 
-test('release é 1.0.75', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.75');
+test('release é 1.0.76', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.76');
 });
