@@ -7,7 +7,6 @@ import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumeric
 import { loadTableConfig, ColumnDef } from '../components/TableColumnSelectorPanel';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
-import { YinYangIcon } from '../components/YinYangIcon';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
 import { 
   TableTextFormat, 
@@ -46,7 +45,7 @@ import {
 } from 'lucide-react';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { PORTAL_SEMANTIC_COLORS } from '../utils/portalSemanticTokens';
-import { normalizeProcessNumber } from '../components/PortalProcessPill';
+import { formatProcessLabel } from '../components/PortalProcessPill';
 
 const ALL_COORDINATOR_COLUMNS: ColumnDef[] = [
   { key: 'protocolo', label: 'Processo', isFixed: true },
@@ -163,27 +162,9 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const styles = getTableStyles(coordTextFormat);
   const isDarkTheme = (coordTextFormat.headerTheme || 'militar') !== 'clean' && (coordTextFormat.headerTheme || 'militar') !== 'slate' && (coordTextFormat.headerTheme || 'militar') !== 'light';
 
-  // Sorting state
-  const [sortField, setSortField] = useState<string>('protocolo');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-  const renderSortArrow = (field: string, isDark: boolean = isDarkTheme) => {
-    if (sortField !== field) {
-      return <span className={`${isDark ? 'text-white/60 group-hover:text-white' : 'text-slate-400 group-hover:text-slate-900'} opacity-70 group-hover:opacity-100 transition-opacity ml-0.5`}>↕</span>;
-    }
-    return sortDirection === 'asc' 
-      ? <span className={`${isDark ? 'text-white' : 'text-slate-900'} font-extrabold ml-0.5`}>↑</span> 
-      : <span className={`${isDark ? 'text-white' : 'text-slate-900'} font-extrabold ml-0.5`}>↓</span>;
-  };
+  // A fila nasce em uma ordem estável; interação de ordenação/filtro pertence ao menu canônico da coluna.
+  const sortField: string = 'protocolo';
+  const sortDirection: 'asc' | 'desc' = 'desc';
 
   // Label Map for columns
   const labelMap: Record<string, string> = {
@@ -203,8 +184,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   };
 
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -222,17 +201,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       console.error('Erro ao carregar dados do Presidente:', err);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await loadData();
-    } finally {
-      setTimeout(() => {
-        setIsRefreshing(false);
-      }, 500);
     }
   };
 
@@ -447,19 +415,14 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     const formattedLabel = formatColumnLabel(colKey, rawLabel, coordTextFormat, customLabels);
     const widthClass = `${getColWidthClass(colKey, columnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, coordTextFormat)}`;
 
-    const sortableKeys = ['protocolo', 'envioStatus', 'defesaDataHora', 'titulo', 'aluno1', 'aluno2', 'orientador', 'defesaLocal', 'resumo', 'palavrasChave'];
-    const isSortable = sortableKeys.includes(colKey);
-
     return (
       <th
         key={colKey}
         data-portal-column-key={colKey}
-        onClick={isSortable ? () => handleSort(colKey) : undefined}
-        className={`${styles.headerThClass} ${styles.cellPadClass} ${widthClass} ${styles.headerWeightClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerCasingClass} ${styles.headerBorderClass} ${styles.headerAlignClass} align-middle ${isSortable ? `cursor-pointer ${styles.headerThHoverClass}` : ''} select-none transition-colors group`}
+        className={`${styles.headerThClass} ${styles.cellPadClass} ${widthClass} ${styles.headerWeightClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerCasingClass} ${styles.headerBorderClass} ${styles.headerAlignClass} align-middle select-none transition-colors group`}
       >
-        <div className={`flex items-center justify-center gap-1 ${styles.headerWrapClass}`}>
+        <div className={`flex items-center justify-center ${styles.headerWrapClass}`}>
           <span>{formattedLabel}</span>
-          {isSortable && renderSortArrow(colKey, isDarkTheme)}
         </div>
       </th>
     );
@@ -484,7 +447,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         return (
           <td key={colKey} onClick={(e) => { e.stopPropagation(); onSelectProcess(proc.id); }} className={`${cellClass} cursor-pointer`} title="Abrir TCC">
             <span className="portal-process-pill" style={{ backgroundColor: tone.bg, borderColor: tone.border, color: tone.text }}>
-              {normalizeProcessNumber(proc.protocolo || proc.id)}
+              {formatProcessLabel(proc.protocolo || proc.id)}
             </span>
           </td>
         );
@@ -820,17 +783,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                       <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className="portal-sign-bulk-btn disabled:opacity-45" title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
                     </>
                   )}
-                  <button
-                    id="coordenador-refresh-btn"
-                    type="button"
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className="portal-toolbar-icon-button disabled:opacity-70"
-                    title="Atualizar fila de declarações"
-                    aria-label="Atualizar fila de declarações"
-                  >
-                    <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
-                  </button>
                 </div>
                 <div className="portal-sheet-toolbar-terminal">
                   <SearchPopover
@@ -870,7 +822,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
             </div>
 
             {/* INTEGRATED TOOLBAR BAR (Single clean dividing line) */}
-            <div data-portal-sheet-filter="true" className="portal-coordinator-filter-row flex flex-wrap items-center justify-between gap-3 border-t-2 border-white px-3.5 py-2.5 text-xs sm:px-4">
+            <div data-portal-sheet-filter="true" className="portal-coordinator-filter-row flex flex-wrap items-center justify-between gap-3 text-xs">
               {/* Filter Row Switcher with FILTRAR prefix following site standard */}
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
@@ -922,7 +874,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   </div>
                 ) : (
                   <TableScrollWrapper>
-                    <table data-portal-native-sort="true" className="w-full text-center border-collapse text-xs">
+                    <table className="w-full text-center border-collapse text-xs">
                       <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`} style={styles.theadStyle}>
                         <tr>
                           {/* Always show selection column for pending */}
@@ -990,7 +942,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   </div>
                 ) : (
                   <TableScrollWrapper>
-                    <table data-portal-native-sort="true" className="w-full text-center border-collapse text-xs">
+                    <table className="w-full text-center border-collapse text-xs">
                       <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`}>
                         <tr>
                           {/* Always show selection column for completed to align perfectly */}
