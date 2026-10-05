@@ -164,7 +164,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
   // A fila nasce em uma ordem estável; interação de ordenação/filtro pertence ao menu canônico da coluna.
   const sortField: string = 'protocolo';
-  const sortDirection: 'asc' | 'desc' = 'desc';
 
   // Label Map for columns
   const labelMap: Record<string, string> = {
@@ -728,8 +727,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
 
-      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      if (valA < valB) return 1;
+      if (valA > valB) return -1;
       return 0;
     });
   };
