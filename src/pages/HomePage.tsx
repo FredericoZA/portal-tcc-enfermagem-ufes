@@ -1504,7 +1504,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     {/* Modal Body with vertical scroll */}
                     <div 
                       className="p-4 sm:p-5 overflow-y-auto custom-scrollbar space-y-4 flex-1 max-h-[calc(88vh-80px)] transition-colors"
-                      style={{ backgroundColor: calendarPopupFormat.modalBgColor || '#f1f5f9' }}
+                      style={{ backgroundColor: calendarPopupFormat.modalBgColor || 'var(--portal-surface-page)' }}
                     >
                       {selectedDayDefenses && selectedDayDefenses.length > 0 && (
                         <div className="space-y-3">
@@ -1551,7 +1551,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           <span 
                                             className="font-mono font-bold px-2 py-0.5 rounded-md border border-slate-250 text-[10px]"
                                             style={{
-                                              backgroundColor: calendarPopupFormat.protocolBadgeBg || '#f1f5f9',
+                                              backgroundColor: calendarPopupFormat.protocolBadgeBg || 'var(--portal-surface-page)',
                                               color: calendarPopupFormat.protocolBadgeText || '#1e293b'
                                             }}
                                           >
@@ -2789,7 +2789,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       {/* LOGIN MODAL FOR STUDENTS AND PROFESSORS */}
       {showLoginModal && (() => {
         const themeMap: Record<string, { headerBg: string; accentText: string; btnBg: string }> = {
-          emerald: { headerBg: 'bg-emerald-50/90 border-emerald-200', accentText: 'text-emerald-800', btnBg: 'bg-[#005830] hover:bg-[#004827]' },
+          emerald: { headerBg: 'bg-emerald-50/90 border-emerald-200', accentText: 'text-emerald-800', btnBg: 'bg-[var(--portal-brand-header)] hover:brightness-90' },
           slate: { headerBg: 'bg-slate-100 border-slate-300', accentText: 'text-slate-900', btnBg: 'bg-slate-900 hover:bg-slate-800' },
           blue: { headerBg: 'bg-blue-50/90 border-blue-200', accentText: 'text-blue-800', btnBg: 'bg-blue-700 hover:bg-blue-800' },
           purple: { headerBg: 'bg-purple-50/90 border-purple-200', accentText: 'text-purple-800', btnBg: 'bg-purple-700 hover:bg-purple-800' },
@@ -2810,9 +2810,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     <h3 className="font-black text-lg sm:text-xl leading-tight" style={{ color: loginPopupConfig.cardTextColor || '#0f172a' }}>
                       {loginPopupConfig.title || 'Acesso ao Portal do TCC'}
                     </h3>
-                    <p className={`mt-0.5 text-xs ${currentTheme.accentText} font-semibold`}>
-                      {loginPopupConfig.subtitle || `${installationProfile.courseName} • ${installationProfile.institutionAcronym}`}
-                    </p>
                   </div>
                 </div>
                 <button
@@ -2837,22 +2834,19 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <Info className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                       <span>Orientações para identificação:</span>
                     </div>
-                    <ul className="space-y-1 pl-5 list-disc text-slate-600 text-[11px]">
-                      <li><strong>Discentes:</strong> {loginPopupConfig.discenteTip}</li>
-                      <li><strong>Docentes e Banca:</strong> {loginPopupConfig.docenteTip}</li>
-                    </ul>
+                        <ul className="space-y-1 pl-5 list-disc text-slate-600 text-[11px]">
+                          <li><strong>Como funciona o acesso:</strong> informe o e-mail cadastrado no Portal. Enviaremos um código de acesso de uso único para esse endereço.</li>
+                          <li><strong>Discentes:</strong> utilize seu e-mail institucional @edu.ufes.br.</li>
+                          <li><strong>Demais usuários:</strong> docentes, integrantes de banca e demais usuários devem utilizar exatamente o e-mail cadastrado no Portal, que pode ser institucional ou pessoal.</li>
+                        </ul>
                   </div>
                 )}
 
                 <form onSubmit={handleLoginSubmit} className="space-y-4 pt-1">
                   {loginStep==='email'&&bootstrapStatus?.bootstrapMasterConfigured&&bootstrapStatus.google.oauthConfigured&&!bootstrapStatus.google.connected&&<div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900"><strong>Primeira ativação do portal</strong><p className="mt-1 leading-5">Antes do primeiro código, o Master definido na implantação precisa autorizar a conta Google que enviará os e-mails.</p><button type="button" onClick={()=>{window.location.href='/api/integrations/google/oauth/start?returnTo=/?google=connected';}} className="mt-2 rounded-lg bg-slate-700 px-3 py-2 font-black text-white hover:bg-slate-800">Autorizar Google e continuar</button></div>}
-                  <div className="rounded-xl border border-slate-200 bg-white p-3.5 flex items-start gap-3">
-                    <Shield className="w-5 h-5 text-slate-600 shrink-0" />
-                    <div><div className="text-xs font-black text-slate-900">Acesso sem senha</div><p className="mt-1 text-[11px] text-slate-600">Informe o e-mail cadastrado. Enviaremos um código de uso único pela conta institucional do portal.</p></div>
-                  </div>
 
                   <label className="block text-xs font-bold text-slate-800">E-mail
-                    <input type="email" required disabled={loginStep==='code'} value={loginEmailInput} onChange={event=>setLoginEmailInput(event.target.value)} autoComplete="email" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm disabled:bg-slate-100" placeholder="nome@edu.ufes.br"/>
+                    <input type="email" required disabled={loginStep==='code'} value={loginEmailInput} onChange={event=>setLoginEmailInput(event.target.value)} autoComplete="email" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm disabled:bg-slate-100" placeholder="nome@exemplo.com"/>
                   </label>
                   {loginStep==='code'&&<label className="block text-xs font-bold text-slate-800">Código de confirmação
                     <input type="text" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={loginCodeInput} onChange={event=>setLoginCodeInput(event.target.value.replace(/\D/g,'').slice(0,6))} autoComplete="one-time-code" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-3 text-center text-xl font-black tracking-[0.35em]" placeholder="000000"/>
