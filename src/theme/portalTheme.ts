@@ -1,7 +1,7 @@
 /**
  * Referências semânticas do tema.
  *
- * Os valores reais (HEX, pixels, z-index) vivem exclusivamente em src/index.css.
+ * Os valores reais (HEX, pixels, z-index) vivem exclusivamente em src/styles/portal-tokens.css.
  * O TypeScript consome CSS Custom Properties para não duplicar a fonte de verdade.
  */
 export const PORTAL_THEME = {
