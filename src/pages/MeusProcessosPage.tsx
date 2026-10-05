@@ -721,6 +721,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       <span>Cadastrar TCC</span>
                     </button>
                   )}
+                </div>
                 <div className="portal-sheet-toolbar-terminal">
                   <SearchPopover
                     value={searchTerm}
