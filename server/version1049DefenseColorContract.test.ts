@@ -9,7 +9,7 @@ test('Lista de Defesas recebe o estado temporal canônico no próprio botão do 
   const home = read('src/pages/HomePage.tsx');
   assert.match(home, /<section id="public-calendar-cards-section"/);
   assert.match(home, /const defenseState = getDefenseState\(proc\)/);
-  assert.match(home, /className=\{`\$\{defStyles\.firstColBtnClass\} portal-semantic-tone`\}/);
+  assert.match(home, /className=\{`\$\{defStyles\.firstColBtnClass\} portal-semantic-tone whitespace-nowrap`\}/);
   assert.match(home, /style=\{getPortalToneCssVars\(defenseState\)\}/);
   assert.match(home, /data-defense-state=\{defenseState\}/);
 });
