@@ -4,12 +4,13 @@ import {
   CalendarCheck,
   CheckCircle2,
   FileSignature,
-  GitBranch,
   GraduationCap,
   SearchCheck,
   UserCheck,
   Users,
 } from 'lucide-react';
+import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
+import { PortalSectionDivider } from '../components/PortalSectionDivider';
 
 const phases = [
   {
@@ -136,16 +137,15 @@ const phases = [
 
 export const FluxoTccPage: React.FC = () => (
   <div id="fluxo-tcc-page" className="mx-auto max-w-none space-y-0">
-    <section className="portal-public-header rounded-t-2xl border px-3.5 text-white shadow-sm sm:px-4">
-      <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white shadow-2xs" aria-hidden="true">
-          <GitBranch className="h-4 w-4 text-slate-700" />
-        </span>
+    <section className="portal-public-header">
+      <div className="portal-public-title-row gap-2">
+        <ColorfulHeaderIcon type="flow" />
         <h1 className="text-sm font-black uppercase tracking-tight text-white sm:text-base">Fluxo do TCC</h1>
       </div>
     </section>
+    <PortalSectionDivider />
 
-    <section className="portal-layer-panel rounded-b-2xl border border-t-0 border-slate-300 p-3 shadow-sm sm:p-5">
+    <section className="portal-layer-panel p-3 sm:p-5">
       <div className="portal-flow-snake" aria-label="Fluxo sequencial do TCC">
         {phases.map(({ n, title, actor, icon: Icon, summary, details, gate, result }) => (
           <article key={n} className="portal-flow-step portal-layer-card flex h-full flex-col rounded-2xl border border-slate-300 p-4 shadow-sm">
