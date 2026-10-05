@@ -361,6 +361,16 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download=fileName; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
   };
 
+  const handleDownloadSignedDeclaration = async (proc: ProcessData) => {
+    setSigningMessage('');
+    try {
+      const { blob, fileName } = await apiClient.downloadProcessDocument(proc.id, 'doc-declaracao');
+      downloadBrowserFile(blob, fileName);
+    } catch (error) {
+      setSigningMessage(error instanceof Error ? error.message : 'Não foi possível baixar a declaração assinada.');
+    }
+  };
+
   const handleGovOne = async (processId: string) => {
     if(signingIds.includes(processId))return;
     const signerWindow=window.open('https://assinador.iti.br/','_blank','noopener,noreferrer');
@@ -395,6 +405,28 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     const job=getDeclarationJob(proc.id);const govJob=getGovDeclarationJob(proc.id);const working=signingIds.includes(proc.id);const status=getDeclarationStatus(proc.id);const actionable=isDeclarationActionable(proc.id);
     const govUploadAvailable=Boolean(govJob && !['SIGNED','ARCHIVED','CANCELED'].includes(govJob.status));
     return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}><div className="flex flex-wrap items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>{govUploadAvailable&&<label className="portal-sign-provider-btn cursor-pointer" title="Enviar o PDF já assinado no Gov.br"><input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event)=>{const file=event.currentTarget.files?.[0];event.currentTarget.value='';if(file)void handleGovSignedUpload(proc.id,file);}}/><Download className="h-3.5 w-3.5 rotate-180"/><span>Enviar assinado</span></label>}</div>{!actionable&&<span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[8px] font-black uppercase ${status.tone}`} title={job?.lastError||status.label}>{status.label}</span>}</td>;
+  };
+
+  const renderCompletedActionCell = (proc: ProcessData) => {
+    const job = getLatestDeclarationJob(proc.id);
+    const archived = job?.status === 'ARCHIVED';
+    return (
+      <td className={`${styles.cellPadClass} ${styles.borderClass} w-[220px] min-w-[220px] text-center align-middle`}>
+        {archived ? (
+          <button
+            type="button"
+            onClick={() => void handleDownloadSignedDeclaration(proc)}
+            className="portal-sign-provider-btn"
+            title="Baixar declaração assinada"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Baixar declaração</span>
+          </button>
+        ) : (
+          <span className="text-slate-400">—</span>
+        )}
+      </td>
+    );
   };
 
   const renderHeaderCell = (colKey: string) => {
@@ -911,13 +943,9 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                             </button>
                           </td>
                           {columnOrder.map((colKey) => renderCell(row, colKey))}
-                          {row.pending ? (
-                            renderSignatureActionCell(proc)
-                          ) : (
-                            <td className={`${styles.cellPadClass} ${styles.borderClass} w-[220px] min-w-[220px] text-center align-middle text-slate-400`}>
-                              —
-                            </td>
-                          )}
+                          {row.pending
+                            ? renderSignatureActionCell(proc)
+                            : renderCompletedActionCell(proc)}
                         </tr>
                       );
                     })}
