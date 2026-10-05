@@ -809,7 +809,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
             <div data-portal-sheet-filter="true" className="portal-coordinator-filter-row flex flex-wrap items-center justify-between gap-3 text-xs">
               {/* Filter Row Switcher with FILTRAR prefix following site standard */}
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
+                <span className="portal-filter-label shrink-0 mr-1 opacity-80">
                   FILTRAR:
                 </span>
                 <div className="flex flex-wrap items-center gap-1.5">
