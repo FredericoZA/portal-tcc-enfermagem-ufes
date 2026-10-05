@@ -96,7 +96,7 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
     });
   }, [jobs, search, startDate, endDate]);
 
-  const shown = recordsLimit === 'all' ? filtered : filtered.slice(0, recordsLimit);
+  const shown = filtered;
   const showDemo = jobs.length === 0 && !search.trim() && !startDate && !endDate;
   const renderedJobs = showDemo ? [DEMO_JOB] : shown;
   const activeColumns = columnOrder.filter((key) => visibleColumns[key] !== false || key === 'actions');
