@@ -1,4 +1,4 @@
-import { normalizePortalTableText, readPortalHeaderLabel, stableTableIdentity } from './portalTableIdentity';
+import { normalizePortalTableText, readPortalHeaderLabel, slugPortalTableText, stableTableIdentity } from './portalTableIdentity';
 
 type TableState = {
   filters: Map<string, Set<string>>;
@@ -27,20 +27,9 @@ export function closePortalTablePopup() {
   activeButton = null;
 }
 
-function readPortalHeaderLabel(header: HTMLTableCellElement) {
-  const clone = header.cloneNode(true) as HTMLTableCellElement;
-  clone
-    .querySelectorAll(
-      'button,.portal-column-controls,.portal1040-inline-sort,.portal1041-column-menu-button,.portal1043-column-menu-button,.portal-core-column-menu,.portal1041-column-resizer',
-    )
-    .forEach((node) => node.remove());
-  const text = (clone.textContent || '').replace(/[↕↑↓⌄]/g, '').replace(/\s+/g, ' ').trim();
-  return normalizePortalTableText(text) === 'progresso' ? 'Etapa' : text || 'Coluna';
-}
-
 function keyForHeader(header: HTMLTableCellElement, index: number) {
   if (!header.dataset.portalCoreColumnKey) {
-    header.dataset.portalCoreColumnKey = `${index}:${slug(readPortalHeaderLabel(header)) || `coluna-${index + 1}`}`;
+    header.dataset.portalCoreColumnKey = `${index}:${slugPortalTableText(readPortalHeaderLabel(header)) || `coluna-${index + 1}`}`;
   }
   return header.dataset.portalCoreColumnKey;
 }
