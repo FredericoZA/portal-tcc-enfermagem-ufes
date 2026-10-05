@@ -8,7 +8,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { EmergencyRecoveryModal } from './components/EmergencyRecoveryModal';
 import { IndicadoresPage } from './pages/IndicadoresPage';
-import { PortalFeedbackController } from './components/PortalFeedbackController';
+import { PortalAccessRedirect } from './components/PortalAccessRedirect';
 import { getPortalSemanticRootVars } from './utils/portalSemanticTokens';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })));
@@ -130,7 +130,7 @@ export default function App() {
   return (
     <AuthProvider>
       <PortalDialogs />
-      <PortalFeedbackController />
+      <PortalAccessRedirect />
       <div id="portal-app-root" className="min-h-screen flex flex-col font-sans antialiased text-slate-900" style={{ ...getPortalSemanticRootVars(), backgroundColor: 'var(--portal-surface-page)' }}>
         {(import.meta as any).env?.DEV && <UserSimulatorBar />}
 
