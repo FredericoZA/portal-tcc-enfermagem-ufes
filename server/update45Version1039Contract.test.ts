@@ -23,13 +23,13 @@ test('1.0.40 mantém seleção em lote e registro de assinaturas independente do
   assert.doesNotMatch(signatures,/getAstenStatus/);
 });
 
-test('1.0.40 mantém workspaces administrativos e consolida download dos modelos em um zip',()=>{
-  const enhancer=read('src/components/PortalVersion1040Enhancer.tsx');
+test('workspaces administrativos e replicação usam componentes atuais',()=>{
+  const workspace=read('src/components/SettingsWorkspaceModal.tsx');
   const replication=read('src/pages/PortalReplicationPage.tsx');
   const replicationApi=read('api/replication-model.ts');
   const integrations=read('src/components/InfrastructureIntegrationsPanel.tsx');
-  assert.match(enhancer,/identity: 'Rodapé'/);
-  assert.match(enhancer,/keepPortalDialogsAboveWorkspaces/);
+  assert.match(workspace,/portal-settings-workspace/);
+  assert.match(workspace,/data-portal-full-bleed/);
   assert.match(replication,/replication-models\/all\/download/);
   assert.doesNotMatch(replication,/downloadAllModels/);
   assert.match(replicationApi,/modelos-portal-tcc\.zip/);
