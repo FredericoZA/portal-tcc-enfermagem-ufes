@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
+import { portalConfirm } from '../services/portalDialogs';
 import { formatDatePt, formatDateNumeric, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle } from '../utils/formatters';
 import { OnlineSystemTutorial } from '../components/OnlineSystemTutorial';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
@@ -42,7 +42,6 @@ import {
   GraduationCap,
   Download,
   ExternalLink,
-  FileSpreadsheet,
   Award,
   Check,
   FileCheck,
@@ -589,7 +588,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const libSortColumn: string | null = null;
   const libSortDirection: 'asc' | 'desc' = 'asc';
-  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
 
   // Column selection state for Biblioteca (Acervo)
   const initialAcervoConfig = loadTableConfig('acervo', DEFAULT_ACERVO_ORDER, DEFAULT_ACERVO_VISIBLE, 25);
@@ -809,6 +807,14 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleRepositoryDownloadRequest = async () => {
+    const confirmed = await portalConfirm(
+      'Deseja baixar todos os dados do Repositório de TCCs? O arquivo será gerado em CSV compatível com Excel.',
+      { title: 'Baixar dados', confirmLabel: 'Baixar CSV' },
+    );
+    if (confirmed) handleExportExcel(processes);
   };
 
   const [expandedItemIds, setExpandedItemIds] = useState<Record<string, boolean>>({});
@@ -2175,7 +2181,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         {acervoTextFormat.showDownloadDadosButton !== false && (
                           <button
                             type="button"
-                            onClick={() => setShowDownloadConfirm(true)}
+                            onClick={() => void handleRepositoryDownloadRequest()}
                             className="portal-toolbar-icon-button"
                             title="Baixar dados — exporta o Repositório de TCCs em CSV"
                             aria-label="Baixar dados — exporta o Repositório de TCCs em CSV"
@@ -2741,56 +2747,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           </div>
         );
       })()}
-
-      {/* CONFIRMAÇÃO DE DOWNLOAD DO ACERVO */}
-      {showDownloadConfirm && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-slate-300 rounded-xl max-w-md w-full shadow-2xl overflow-hidden space-y-0 text-left animate-in zoom-in-95 duration-200">
-            <div className="bg-slate-800 text-white p-4 flex items-center justify-between border-b border-slate-700">
-              <div className="flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4 text-slate-300 shrink-0" />
-                <h3 className="text-xs font-black uppercase tracking-wider text-white">
-                  Confirmar Download dos Dados
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowDownloadConfirm(false)}
-                className="text-slate-400 hover:text-white font-bold text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-5 space-y-3">
-              <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                Deseja baixar a planilha com todos os dados do Repositório de TCCs? O arquivo será exportado em formato Excel (.csv).
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-2 p-4 bg-slate-50 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={() => setShowDownloadConfirm(false)}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold uppercase rounded-lg border border-slate-300 transition-colors cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handleExportExcel(processes);
-                  setShowDownloadConfirm(false);
-                }}
-                className="px-5 py-2 bg-slate-600 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg flex items-center gap-1.5 cursor-pointer shadow-sm border border-slate-500 transition-colors"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-slate-200" />
-                <span>Confirmar Download</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );
