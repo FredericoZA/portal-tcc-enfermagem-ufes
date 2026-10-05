@@ -47,18 +47,19 @@ test('etapa permanece disponível e planilhas removem decoração infantil', () 
   const progress = read('src/components/ProgressIndicator.tsx');
   const runtime = read('src/components/PortalStructuralRuntime.tsx');
   assert.match(progress, /portal-progress-number/);
+  assert.match(progress, /function stageLabel/);
   assert.doesNotMatch(progress, /<svg|circle/i);
-  assert.match(runtime, /replace\(\/\\bProgresso\\b\/gi, 'Etapa'\)/);
-  assert.match(runtime, /portal-core-stage-label/);
+  assert.doesNotMatch(runtime, /Progresso|portal-core-stage-label/);
 });
 
 test('calendário usa fins de semana estreitos e preview seguro', () => {
   const runtime = read('src/components/PortalStructuralRuntime.tsx');
+  const home = read('src/pages/HomePage.tsx');
   const css = readPortalCss();
   assert.match(css, /grid-template-columns: \.22fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr \.22fr/);
-  assert.match(runtime, /portal-core-calendar-weekend/);
-  assert.match(runtime, /cell\.querySelector\('\.portal-core-calendar-previews'\)\?\.remove\(\)/);
-  assert.doesNotMatch(runtime, /fetch\('\/api\/processes'/);
+  assert.match(home, /isWeekend = colIndex === 0 \|\| colIndex === 6/);
+  assert.match(home, /portal-core-calendar-weekend/);
+  assert.doesNotMatch(runtime, /enhanceCalendar|portal-core-calendar-previews|fetch\('\/api\/processes'/);
   assert.match(css, /--portal-defense-upcoming-bg/);
   assert.match(css, /--portal-defense-defended-bg/);
 });
