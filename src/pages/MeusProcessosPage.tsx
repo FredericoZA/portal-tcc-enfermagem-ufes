@@ -15,10 +15,10 @@ import {
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { StudentNames } from '../components/StudentNames';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
+import { formatProcessLabel } from '../components/PortalProcessPill';
 import { loadTableConfig, ColumnDef } from '../components/TableColumnSelectorPanel';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
-import { YinYangIcon } from '../components/YinYangIcon';
 import { ProgressIndicator } from '../components/ProgressIndicator';
 import { 
   TableTextFormat, 
@@ -41,9 +41,6 @@ import {
   PlusCircle,
   Eye,
   Calendar,
-  ArrowUpDown,
-  ChevronUp,
-  ChevronDown,
   AlertCircle,
   List,
   FileSpreadsheet,
@@ -229,25 +226,10 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
   }, []);
 
   const styles = getTableStyles(meusProcessosTextFormat);
-  const isDarkTheme = (meusProcessosTextFormat.headerTheme || 'militar') !== 'clean' && (meusProcessosTextFormat.headerTheme || 'militar') !== 'slate' && (meusProcessosTextFormat.headerTheme || 'militar') !== 'light';
 
-  // Sorting state
-  const [sortColumn, setSortColumn] = useState<string>('defesaDataHora');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-
-  const renderSortArrow = (column: string, isDark: boolean = isDarkTheme) => {
-    const isSorted = sortColumn === column;
-    if (isSorted) {
-      return sortDirection === 'asc' ? (
-        <ChevronUp className={`w-4 h-4 ${isDark ? 'text-white' : 'text-slate-900'} font-extrabold flex-shrink-0`} style={{ strokeWidth: 3 }} />
-      ) : (
-        <ChevronDown className={`w-4 h-4 ${isDark ? 'text-white' : 'text-slate-900'} font-extrabold flex-shrink-0`} style={{ strokeWidth: 3 }} />
-      );
-    }
-    return <ArrowUpDown className={`w-3.5 h-3.5 ${isDark ? 'text-white/60 group-hover:text-white' : 'text-slate-500 group-hover:text-slate-900'} opacity-70 group-hover:opacity-100 flex-shrink-0`} />;
-  };
-
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  // A tabela nasce ordenada por data; novas ordenações são tratadas pelo menu canônico de cada coluna.
+  const sortColumn: string = 'defesaDataHora';
+  const sortDirection: 'asc' | 'desc' = 'desc';
 
   const loadProcesses = async () => {
     setIsLoading(true);
@@ -258,20 +240,6 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
       console.error('Erro ao buscar processos:', err);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      const data = await apiClient.getProcesses();
-      setProcesses(data);
-    } catch (err) {
-      console.error('Erro ao atualizar processos:', err);
-    } finally {
-      setTimeout(() => {
-        setIsRefreshing(false);
-      }, 500);
     }
   };
 
@@ -526,18 +494,14 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     const rawLabel = colDef?.label || colKey;
     const formattedLabel = formatColumnLabel(colKey, rawLabel, meusProcessosTextFormat, customLabels);
     const widthClass = `${getColWidthClass(colKey, columnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, meusProcessosTextFormat)}`;
-    const isSortable = colKey !== 'resumo' && colKey !== 'palavrasChave';
-
     return (
-      <th 
+      <th
         key={colKey}
         data-portal-column-key={colKey}
-        onClick={isSortable ? () => handleSort(colKey) : undefined}
-        className={`${styles.headerThClass} ${styles.cellPadClass} ${widthClass} ${styles.headerWeightClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerCasingClass} ${styles.headerBorderClass} ${styles.headerAlignClass} align-middle ${isSortable ? `cursor-pointer ${styles.headerThHoverClass}` : ''} select-none transition-colors group`}
+        className={`${styles.headerThClass} ${styles.cellPadClass} ${widthClass} ${styles.headerWeightClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerCasingClass} ${styles.headerBorderClass} ${styles.headerAlignClass} align-middle select-none transition-colors group`}
       >
-        <div className={`flex items-center justify-center gap-1 ${styles.headerWrapClass}`}>
+        <div className={`flex items-center justify-center ${styles.headerWrapClass}`}>
           <span>{formattedLabel}</span>
-          {isSortable && renderSortArrow(colKey, isDarkTheme)}
         </div>
       </th>
     );
@@ -566,37 +530,12 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
             className={`${styles.cellPadClass} ${widthClass} ${styles.borderClass} align-middle ${alignClass} cursor-pointer ${styles.firstColCellHoverClass} group/col0 transition-colors`}
             title="Clique aqui para abrir os detalhes e documentos deste TCC"
           >
-            {(() => {
-              const rawStr = (proc.protocolo || proc.id || '').trim();
-              const clean = rawStr.replace(/^TCC\s*[-/]?\s*/i, '').trim();
-              const parts = clean.split(/[-/]/);
-              let line1 = 'TCC';
-              let line2 = rawStr;
-              if (parts.length >= 2) {
-                line1 = `TCC - ${parts[0]}`;
-                line2 = parts.slice(1).join('-');
-              } else if ((proc as any).anoLectivo) {
-                line1 = `TCC - ${(proc as any).anoLectivo}`;
-                line2 = clean;
-              }
-              const tagLabel = formatCellText('protocolo', line1, meusProcessosTextFormat, '📓');
-              return (
-                <div
-                  className={`${styles.firstColBtnClass} portal-role-process-button`}
-                  style={{ '--portal-role-bg': roleConfig.bgColor, '--portal-role-border': roleConfig.borderColor, '--portal-role-text': roleConfig.textHex } as React.CSSProperties}
-                >
-                  <div className={styles.firstColTagClass}>
-                    {tagLabel}
-                  </div>
-                  <div className={`${styles.cellFontSizeClass} ${styles.cellWeightClass} tracking-wide text-slate-900`}>
-                    {line2}
-                  </div>
-                  <span className={styles.firstColSubtextClass}>
-                    Abrir TCC ↗
-                  </span>
-                </div>
-              );
-            })()}
+            <div
+              className={`${styles.firstColBtnClass} portal-role-process-button whitespace-nowrap`}
+              style={{ '--portal-role-bg': roleConfig.bgColor, '--portal-role-border': roleConfig.borderColor, '--portal-role-text': roleConfig.textHex } as React.CSSProperties}
+            >
+              {formatProcessLabel(proc.protocolo || proc.id)}
+            </div>
           </td>
         );
       case 'defesaDataHora':
@@ -791,18 +730,6 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       <span>Cadastrar TCC</span>
                     </button>
                   )}
-                  <button
-                    id="meus-processos-refresh-btn"
-                    type="button"
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className="portal-toolbar-icon-button disabled:opacity-70"
-                    title="Atualizar dados da tabela"
-                    aria-label="Atualizar dados da tabela"
-                  >
-                    <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
-                  </button>
-                </div>
                 <div className="portal-sheet-toolbar-terminal">
                   <SearchPopover
                     value={searchTerm}
@@ -921,7 +848,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               {/* Desktop Table View */}
               <div className="hidden lg:block">
                 <TableScrollWrapper>
-                  <table id="meus-processos-table" data-portal-native-sort="true" className="w-full text-center border-collapse text-xs">
+                  <table id="meus-processos-table" className="w-full text-center border-collapse text-xs">
                     <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`} style={styles.theadStyle}>
                       <tr>
                         {activeColumns.map((colKey) => renderHeaderCell(colKey))}
