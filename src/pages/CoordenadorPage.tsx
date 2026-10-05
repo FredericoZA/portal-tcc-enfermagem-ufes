@@ -865,7 +865,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                         data-selected={isSelected ? 'true' : 'false'}
                         aria-pressed={isSelected}
                         style={{ backgroundColor: semanticTone.bg, color: semanticTone.text, borderColor: semanticTone.border, opacity: isSelected ? 1 : 0.82 }}
-                        className="portal-standard-filter-chip portal-table-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none"
+                        className="portal-standard-filter-chip portal-table-filter-chip cursor-pointer transition-colors shrink-0 select-none"
                         title={`Filtrar por declarações ${filter.label.toLowerCase()}`}
                       >
                         <span className="portal-filter-dot w-2 h-2 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: semanticTone.border }} />

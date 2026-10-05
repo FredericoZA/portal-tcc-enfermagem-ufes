@@ -768,7 +768,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                   onClick={() => setShowAllRoles((current) => !current)}
                   data-selected={showAllRoles ? 'true' : 'false'}
                   aria-pressed={showAllRoles}
-                  className="portal-standard-filter-chip portal-table-filter-chip portal-native-all-filter flex h-7 shrink-0 cursor-pointer select-none items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-colors"
+                  className="portal-standard-filter-chip portal-table-filter-chip portal-native-all-filter shrink-0 cursor-pointer select-none transition-colors"
                   style={showAllRoles
                     ? { backgroundColor: '#d7ded9', color: '#1f2937', borderColor: '#9aac9f', boxShadow: 'inset 0 0 0 1px #9aac9f' }
                     : { backgroundColor: '#ffffff', color: '#334155', borderColor: '#cbd5e1', boxShadow: 'none' }}
@@ -791,7 +791,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       style={isSelected
                         ? { backgroundColor: cfg.bgColor, color: cfg.textHex, borderColor: cfg.borderColor, boxShadow: `inset 0 0 0 1px ${cfg.borderColor}` }
                         : { backgroundColor: '#ffffff', color: '#334155', borderColor: '#cbd5e1', boxShadow: 'none' }}
-                      className="portal-standard-filter-chip portal-table-filter-chip flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-colors"
+                      className="portal-standard-filter-chip portal-table-filter-chip shrink-0 cursor-pointer select-none transition-colors"
                       title={`Alternar TCCs com papel de ${cfg.label}`}
                     >
                       <span

@@ -184,7 +184,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
                   type="button"
                   onClick={() => setRole(key)}
                   data-selected={selected ? 'true' : 'false'}
-                  className="portal-standard-filter-chip portal-table-filter-chip inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide cursor-pointer border select-none"
+                  className="portal-standard-filter-chip portal-table-filter-chip cursor-pointer select-none"
                 >
                   <span>{roleContent[key].title}</span>
                 </button>

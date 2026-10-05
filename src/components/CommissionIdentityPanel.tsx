@@ -7,7 +7,7 @@ interface Props { isMaster: boolean; }
 interface CommissionMemberInfo { id: string; name: string; email?: string; startDate?: string; endDate?: string; active: boolean; }
 
 const inputClass = 'w-full min-h-8 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200';
-const actionClass = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-slate-800 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50';
+const actionClass = 'portal-popup-action min-h-8 px-2.5 text-[10px]';
 
 function makeId(): string { return `commission-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`; }
 function legacyMembers(settings: any): CommissionMemberInfo[] {
@@ -206,10 +206,10 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
 
       <div className="border-t border-slate-300 px-2.5 pb-2.5 pt-2">
         <div className="mb-1.5 flex items-center justify-between gap-2"><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Membros da Comissão</h4><span className="text-[9px] font-bold text-slate-500">{members.filter(member => member.name.trim()).length} cadastrado(s)</span></div>
-        <div className="overflow-x-auto rounded-lg border border-slate-300 bg-white">
+        <div className="overflow-x-auto rounded-lg border border-slate-300 bg-[var(--portal-surface-panel)]">
           <table className="w-full min-w-[520px] border-collapse text-left">
             <thead className="portal-layer-card border-b border-slate-300 text-[9px] font-black uppercase tracking-wider text-slate-700"><tr><th className="px-2.5 py-2">Nome</th><th className="px-2.5 py-2">E-mail</th><th className="w-12 px-2.5 py-2 text-center">Excluir</th></tr></thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-200">
               {members.length === 0 && <tr><td colSpan={3} className="px-3 py-3 text-center text-[10px] text-slate-500">Nenhum membro adicional cadastrado.</td></tr>}
               {members.map((member) => <tr key={member.id}>
                 <td className="p-1.5"><input value={member.name} onChange={(event) => updateMember(member.id, { name: event.target.value })} onBlur={saveOnBlur} className={inputClass} placeholder="Nome completo" /></td>

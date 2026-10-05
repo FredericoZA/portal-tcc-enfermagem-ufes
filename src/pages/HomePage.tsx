@@ -1803,9 +1803,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           onClick={() => setDefenseStatusFilter(statusKey)}
                           data-selected={isSelected ? 'true' : 'false'}
                           style={chip.buttonStyle}
-                          className={`portal-table-filter-chip inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide cursor-pointer transition-all border select-none ${
-                            isSelected ? 'shadow-xs scale-[1.02]' : 'opacity-85 hover:opacity-100'
-                          }`}
+                          className="portal-table-filter-chip cursor-pointer transition-colors select-none"
                         >
                           {chip.emoji && <span>{chip.emoji}</span>}
                           <span>{chip.label}</span>
@@ -2659,26 +2657,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
       {/* LOGIN MODAL FOR STUDENTS AND PROFESSORS */}
       {showLoginModal && (() => {
-        const themeMap: Record<string, { headerBg: string; accentText: string; btnBg: string }> = {
-          emerald: { headerBg: 'bg-emerald-50/90 border-emerald-200', accentText: 'text-emerald-800', btnBg: 'bg-[var(--portal-brand-header)] hover:brightness-90' },
-          slate: { headerBg: 'bg-slate-100 border-slate-300', accentText: 'text-slate-900', btnBg: 'bg-slate-900 hover:bg-slate-800' },
-          blue: { headerBg: 'bg-blue-50/90 border-blue-200', accentText: 'text-blue-800', btnBg: 'bg-blue-700 hover:bg-blue-800' },
-          purple: { headerBg: 'bg-purple-50/90 border-purple-200', accentText: 'text-purple-800', btnBg: 'bg-purple-700 hover:bg-purple-800' },
-          indigo: { headerBg: 'bg-indigo-50/90 border-indigo-200', accentText: 'text-indigo-800', btnBg: 'bg-indigo-700 hover:bg-indigo-800' },
-          amber: { headerBg: 'bg-amber-50/90 border-amber-200', accentText: 'text-amber-800', btnBg: 'bg-amber-700 hover:bg-amber-800' },
-          rose: { headerBg: 'bg-rose-50/90 border-rose-200', accentText: 'text-rose-800', btnBg: 'bg-rose-700 hover:bg-rose-800' }
-        };
-        const currentTheme = themeMap[loginPopupConfig.headerTheme] || themeMap.emerald;
-
         return (
           <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn">
             <div className={`bg-white ${loginPopupConfig.borderRadius || 'rounded-2xl'} border border-slate-200/90 shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150`}>
               {/* Header with Institutional Identity */}
-              <div className={`${currentTheme.headerBg} border-b px-5 py-3.5 flex items-center justify-between`} style={loginPopupConfig.cardBgColor ? { backgroundColor: loginPopupConfig.cardBgColor, color: loginPopupConfig.cardTextColor || '#0f172a' } : undefined}>
+              <div className="portal-modal-header border-b px-5 py-3.5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl border border-slate-200 bg-slate-100 flex items-center justify-center shrink-0 text-xl" aria-hidden="true">🎓</div>
+                  <GraduationCap className="h-5 w-5 shrink-0 text-white" aria-hidden="true" />
                   <div>
-                    <h3 className="font-black text-lg sm:text-xl leading-tight" style={{ color: loginPopupConfig.cardTextColor || '#0f172a' }}>
+                    <h3 className="font-black text-lg sm:text-xl leading-tight text-white">
                       {loginPopupConfig.title || 'Acesso ao Portal do TCC'}
                     </h3>
                   </div>
@@ -2686,7 +2673,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 <button
                   type="button"
                   onClick={() => setShowLoginModal(false)}
-                  className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 flex items-center justify-center transition-colors cursor-pointer"
+                  className="portal-modal-header-close"
                   aria-label="Fechar acesso ao portal"
                 >
                   <X className="w-4 h-4" />
@@ -2734,8 +2721,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     </button>
                     <button
                       type="submit"
-                      className={`px-5 py-2 ${currentTheme.btnBg} text-xs font-bold uppercase tracking-wide rounded-xl flex items-center gap-2 cursor-pointer shadow-2xs transition-colors`}
-                      style={{ backgroundColor: loginPopupConfig.primaryBtnBg || undefined, color: loginPopupConfig.primaryBtnTextColor || '#ffffff' }}
+                      className="portal-popup-action min-h-9 px-5 text-[11px]"
                     >
                       <span>{loginWorking?'Aguarde…':loginStep==='email'?'Enviar código':'Entrar'}</span>
                       <ArrowRight className="w-3.5 h-3.5" />

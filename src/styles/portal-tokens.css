@@ -12,6 +12,7 @@
   --portal-brand-header: #005830;
   --portal-brand-action: #337959;
   --portal-brand-action-border: #286a4d;
+  --portal-popup-action: var(--portal-brand-header);
   --portal-header-institution: #d5dce0;
   --portal-sidebar-footer: #011f17;
   --portal-sidebar-active: #154d41;
