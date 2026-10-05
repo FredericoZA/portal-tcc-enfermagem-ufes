@@ -17,7 +17,6 @@ const auth = read('src/context/AuthContext.tsx');
 const session = read('server/security/firebaseAuth.ts');
 const personalizationHub = read('src/components/PortalPersonalizationHubModal.tsx');
 const editor = read('src/components/UnifiedPortalEditorModal.tsx');
-const enhancer = read('src/components/PortalUiEnhancer.tsx');
 const access = read('src/components/AuthorizedStudentsPanel.tsx');
 const importUtil = read('src/utils/studentImport.ts');
 const integrations = read('src/components/InfrastructureIntegrationsPanel.tsx');
@@ -87,9 +86,7 @@ assert.match(auth, /syncPortalFavicon/);
 assert.match(personalizationHub, /onOpenAppearance\('site_header'\)/);
 assert.doesNotMatch(personalizationHub, /onOpenAppearance\('quick_presets'\)/);
 assert.doesNotMatch(personalizationHub, /role="dialog"/);
-for (const legacy of ['botoes no topo', 'estilo base das planilhas', 'colunas ordem e linhas', 'estilo base pop ups', 'analise hipoar', 'solicitacao de correcao']) {
-  assert.ok(enhancer.includes(`'${legacy}'`), `A camada de compatibilidade precisa continuar removendo o item legado “${legacy}”.`);
-}
+assert.doesNotMatch(main, /PortalUiEnhancer|PortalTableTextPolicy/);
 for (const removedLabel of ['Botões no Topo', 'Estilo Base Planilhas', 'Colunas, ordem e linhas', 'Estilo Base Pop-ups', 'Análise Hipoar', 'Solicitação de Correção']) {
   assert.ok(!editor.includes(`renderNavRow('${removedLabel}`) && !editor.includes(`, '${removedLabel}',`), `O editor não pode voltar a expor “${removedLabel}”.`);
 }
