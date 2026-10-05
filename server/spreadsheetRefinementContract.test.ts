@@ -6,7 +6,7 @@ import { readPortalCss } from './testUtils/portalCss';
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 test('planilhas usam um único menu por coluna para ordenar e filtrar',()=>{
-  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+  const runtime=read('src/utils/portalTableDom.ts');
   assert.match(runtime,/portal-core-column-menu/);
   assert.match(runtime,/Ordenar A → Z \/ menor → maior/);
   assert.match(runtime,/Ordenar Z → A \/ maior → menor/);
@@ -16,7 +16,7 @@ test('planilhas usam um único menu por coluna para ordenar e filtrar',()=>{
 
 test('progresso é apresentado como etapa diretamente pelo componente React',()=>{
   const progress=read('src/components/ProgressIndicator.tsx');
-  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+  const runtime=read('src/utils/portalTableDom.ts');
   assert.match(progress,/function stageLabel/);
   assert.match(progress,/`Etapa \$\{match\[1\]/);
   assert.match(progress,/portal-progress-number/);
@@ -40,7 +40,8 @@ test('planilhas usam separadores e densidade canônicos',()=>{
 
 test('camadas incrementais conflitantes não são montadas',()=>{
   const main=read('src/main.tsx');
-  assert.match(main,/PortalStructuralRuntime/);
+  assert.match(main,/PortalSpreadsheetRuntime/);
+  assert.doesNotMatch(main,/PortalStructuralRuntime/);
   assert.doesNotMatch(main,/PortalSpreadsheetEnhancer/);
   assert.doesNotMatch(main,/PortalMaintenanceEnhancer/);
   assert.doesNotMatch(main,/PortalVersion1041Enhancer/);
