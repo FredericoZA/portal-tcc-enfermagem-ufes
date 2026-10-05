@@ -15,7 +15,7 @@ test('Área do Presidente ordena fila e concluídos sem depender da aba ativa',(
 
 test('cabeçalhos usam somente o runtime estrutural canônico',()=>{
   const main=read('src/main.tsx');
-  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+  const runtime=read('src/utils/portalTableDom.ts');
   assert.doesNotMatch(main,/PortalSpreadsheetEnhancer/);
   assert.match(runtime,/portal-core-column-menu/);
   assert.match(runtime,/Selecionar tudo/);
