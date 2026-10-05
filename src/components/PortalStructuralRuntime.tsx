@@ -46,75 +46,6 @@ function slug(value: string) {
   return normalize(value).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
-function splitSelectorList(selectorText: string) {
-  const out: string[] = [];
-  let current = '';
-  let round = 0;
-  let square = 0;
-  let quote = '';
-  for (let i = 0; i < selectorText.length; i += 1) {
-    const char = selectorText[i];
-    const previous = selectorText[i - 1];
-    if (quote) {
-      current += char;
-      if (char === quote && previous !== '\\') quote = '';
-      continue;
-    }
-    if (char === '"' || char === "'") {
-      quote = char;
-      current += char;
-      continue;
-    }
-    if (char === '(') round += 1;
-    if (char === ')') round = Math.max(0, round - 1);
-    if (char === '[') square += 1;
-    if (char === ']') square = Math.max(0, square - 1);
-    if (char === ',' && round === 0 && square === 0) {
-      if (current.trim()) out.push(current.trim());
-      current = '';
-      continue;
-    }
-    current += char;
-  }
-  if (current.trim()) out.push(current.trim());
-  return out;
-}
-
-function stripHoverRules(container: CSSStyleSheet | CSSRule) {
-  let rules: CSSRuleList | undefined;
-  try {
-    rules = (container as CSSStyleSheet).cssRules || (container as CSSRule & { cssRules?: CSSRuleList }).cssRules;
-  } catch {
-    return;
-  }
-  if (!rules) return;
-  for (let index = rules.length - 1; index >= 0; index -= 1) {
-    const rule = rules[index] as CSSRule & { selectorText?: string; cssRules?: CSSRuleList };
-    if (typeof rule.selectorText === 'string' && rule.selectorText.includes(':hover')) {
-      const keep = splitSelectorList(rule.selectorText).filter((selector) => !selector.includes(':hover'));
-      try {
-        if (keep.length === 0 && 'deleteRule' in container) {
-          (container as CSSStyleSheet & { deleteRule: (index: number) => void }).deleteRule(index);
-          continue;
-        }
-        if (keep.length > 0) rule.selectorText = keep.join(', ');
-      } catch {
-        // CSS de terceiros pode ser somente leitura; as classes utilitárias ainda são removidas abaixo.
-      }
-    }
-    if (rule.cssRules?.length) stripHoverRules(rule);
-  }
-}
-
-function neutralizeHover(root: ParentNode = document) {
-  root.querySelectorAll<HTMLElement>('[class*="hover:"]').forEach((element) => {
-    const removable = Array.from(element.classList).filter((token) =>
-      token.startsWith('hover:') || token.startsWith('group-hover:') || token.startsWith('peer-hover:'),
-    );
-    if (removable.length) element.classList.remove(...removable);
-  });
-}
-
 function closePopup() {
   activePopup?.remove();
   activePopup = null;
@@ -593,7 +524,6 @@ function enhanceCalendar() {
 }
 
 function enhanceAll() {
-  neutralizeHover();
   document.querySelectorAll<HTMLTableElement>('#portal-app-root main table').forEach(enhanceTable);
   bindSettingsButtons();
   injectWrapSetting();
@@ -602,13 +532,9 @@ function enhanceAll() {
 
 export function PortalStructuralRuntime() {
   useEffect(() => {
-    Array.from(document.styleSheets).forEach((sheet) => stripHoverRules(sheet));
     enhanceAll();
     let frame = 0;
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
-        if (node instanceof HTMLElement) neutralizeHover(node);
-      }));
+    const observer = new MutationObserver(() => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(enhanceAll);
     });
