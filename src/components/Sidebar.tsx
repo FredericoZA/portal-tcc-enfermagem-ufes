@@ -30,8 +30,6 @@ interface SidebarProps {
 
 const USER_LOCATION_CACHE_KEY = 'portal_tcc_user_location_v1';
 const USER_LOCATION_CACHE_MS = 24 * 60 * 60 * 1000;
-const WHATSAPP_GREEN = '#25D366';
-
 function readCachedUserLocation(): string | null {
   try {
     const raw = localStorage.getItem(USER_LOCATION_CACHE_KEY);
@@ -145,7 +143,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   const sidebarHeaderTitleColor = layoutConfig.sidebarTitleColor || (isHeaderLight ? PORTAL_THEME.text.dark : PORTAL_THEME.text.light);
   const sidebarFooterTextColor = isHeaderLight ? '#0f172a' : '#ffffff';
   const sidebarFooterMutedColor = isHeaderLight ? '#64748b' : '#d6d9d7';
-  const sidebarAccent = layoutConfig.sidebarSubtitleColor || WHATSAPP_GREEN;
+  const sidebarAccent = layoutConfig.sidebarSubtitleColor || 'var(--portal-sidebar-active-accent)';
   const getNavLabel = (id: string, fallback: string) => layoutConfig.sidebarNavLabels?.[id] || fallback;
   const getNavEmoji = (id: string, fallback: string) => layoutConfig.sidebarNavEmojis?.[id] || fallback;
   const renderNavIcon = (id: string, Icon: React.ComponentType<{ className?: string }>, defaultEmoji: string, isActive: boolean) => {
@@ -167,7 +165,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           <NursingEmblemLogo size={72} className="shrink-0" customSrc={sidebarLogoSrc} />
           <div className="flex flex-col flex-1 min-w-0 items-center justify-center text-center pr-1">
             <h1 className="font-black text-[16px] sm:text-[17px] tracking-tight uppercase leading-tight text-center whitespace-normal w-full" style={{ color: sidebarHeaderTitleColor }}>{layoutConfig.sidebarTitle || 'Portal de TCC'}</h1>
-            <div className="mt-1.5 w-full text-center text-[10px] sm:text-[10.5px] font-extrabold tracking-[0.04em] leading-[1.35] uppercase" style={{ color: sidebarAccent }}>
+            <div className="mt-1.5 w-full text-center text-[12px] sm:text-[13px] font-black tracking-[0.055em] leading-[1.25] uppercase" style={{ color: sidebarAccent }}>
               <span className="block">{layoutConfig.sidebarSubtitle || 'Enfermagem'}</span>
             </div>
           </div>
