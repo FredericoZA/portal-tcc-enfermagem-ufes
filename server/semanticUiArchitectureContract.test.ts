@@ -41,7 +41,9 @@ test('calendário mantém superfície do portal e mostra horário, título e alu
     readPortalCss(),
   ]);
 
-  assert.ok(home.includes('portal-core-calendar-weekend'));
+  assert.ok(home.includes('const businessDays = Array.from'));
+  assert.ok(home.includes('dayOfWeek >= 1 && dayOfWeek <= 5'));
+  assert.ok(!home.includes('portal-core-calendar-weekend'));
   assert.ok(home.includes('portal-calendar-defense-summary'));
   assert.ok(home.includes('getDefenseCalendarSummaryParts(proc)'));
   assert.ok(home.includes('portal-calendar-defense-primary'));
