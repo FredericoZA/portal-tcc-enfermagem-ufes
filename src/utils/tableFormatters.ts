@@ -217,7 +217,7 @@ export function getTableStyles(format: TableTextFormat = {}) {
 
     calendarBannerClass: 'portal-table-banner',
     calendarDaysHeaderClass: 'portal-table-head',
-    calendarNavBtnClass: 'portal-toolbar-icon-button',
+    calendarNavBtnClass: 'portal-calendar-nav-button',
 
     cellWeightClass,
     cellWrapClass,
