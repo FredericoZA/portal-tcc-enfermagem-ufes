@@ -14,13 +14,15 @@ test('uma única camada canônica controla as planilhas', () => {
   assert.doesNotMatch(main, /portal-version-105[23]\.css/);
 });
 
-test('runtime reconhece todas as sete planilhas e padroniza Processo de forma autorreparável', () => {
+test('identidade compartilhada reconhece as sete planilhas e o runtime padroniza Processo', () => {
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
-  for (const key of ['defenses', 'acervo', 'meus_processos', 'coordinator', 'authorized_access', 'signature_logs', 'audit_logs']) assert.match(runtime, new RegExp(key));
-  assert.match(runtime, /#public-calendar-cards-section/);
-  assert.match(runtime, /#biblioteca-tccs-section/);
-  assert.match(runtime, /#meus-processos-page-container/);
-  assert.match(runtime, /#coordenador-page-root/);
+  const identity = read('src/utils/portalTableIdentity.ts');
+  for (const key of ['defenses', 'acervo', 'meus_processos', 'coordinator', 'authorized_access', 'signature_logs', 'audit_logs']) assert.match(identity, new RegExp(key));
+  assert.match(identity, /#public-calendar-cards-section/);
+  assert.match(identity, /#biblioteca-tccs-section/);
+  assert.match(identity, /#meus-processos-page-container/);
+  assert.match(identity, /#coordenador-page-root/);
+  assert.match(runtime, /inferManagedTableKey/);
   assert.match(runtime, /function renameProcessHeader/);
   assert.match(runtime, /node\.data = 'Processo'/);
   assert.match(runtime, /portalStickyProcess/);
