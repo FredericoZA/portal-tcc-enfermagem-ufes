@@ -7,7 +7,8 @@ const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8
 
 test('release 1.0.45 preserva o runtime estrutural único consolidado',()=>{
   const main=read('src/main.tsx');
-  assert.match(main,/PortalStructuralRuntime/);
+  assert.match(main,/PortalSpreadsheetRuntime/);
+  assert.doesNotMatch(main,/PortalStructuralRuntime/);
   assert.match(main,/import '\.\/index\.css'/);
   assert.doesNotMatch(main,/PortalSpreadsheetEnhancer/);
   assert.doesNotMatch(main,/PortalMaintenanceEnhancer/);
@@ -16,7 +17,7 @@ test('release 1.0.45 preserva o runtime estrutural único consolidado',()=>{
 });
 
 test('tabelas têm um único menu Excel-like, resize e quebra de texto',()=>{
-  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+  const runtime=read('src/utils/portalTableDom.ts');
   const settings=read('src/components/HeaderSettingsPopover.tsx');
   assert.match(runtime,/portal-core-column-menu/);
   assert.match(runtime,/Ordenar A → Z \/ menor → maior/);
@@ -49,7 +50,7 @@ test('paleta de calendário e processo é compartilhada e não fluorescente',()=
 });
 
 test('calendário bloqueia fins de semana e preserva popup nativo por clique do dia',()=>{
-  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+  const runtime=read('src/utils/portalTableDom.ts');
   const home=read('src/pages/HomePage.tsx');
   const css=readPortalCss();
   assert.match(home,/isWeekend = colIndex === 0 \|\| colIndex === 6/);
