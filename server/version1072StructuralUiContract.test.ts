@@ -33,14 +33,17 @@ test('filtro selecionado usa reforço global e rótulo FILTRAR', () => {
   assert.doesNotMatch(read('src/pages/PortalTutorialPage.tsx'), /Filtrar visão:/i);
 });
 
-test('calendário usa controles coincidentes com período em formato pílula', () => {
+test('calendário usa controles autossuficientes com período em formato pílula', () => {
   const home = read('src/pages/HomePage.tsx');
   const css = read('src/styles/portal-components.css');
   assert.match(home, /portal-calendar-toolbar/);
+  assert.match(home, /portal-calendar-period-control/);
   assert.match(home, /portal-calendar-period-button/);
   assert.match(home, /portal-calendar-today-button/);
   assert.equal((home.match(/portal-calendar-step-button/g) || []).length, 2);
-  assert.match(css, /grid-template-columns: minmax\(156px, auto\)/);
+  assert.match(css, /\.portal-calendar-toolbar \{[\s\S]*display: flex/);
+  assert.match(css, /\.portal-calendar-period-control \{[\s\S]*width: max-content/);
+  assert.match(css, /\.portal-calendar-period-button \{[\s\S]*min-width: 194px/);
 });
 
 test('planilhas não inserem emojis no texto de células/cabeçalhos', () => {
@@ -52,13 +55,14 @@ test('planilhas não inserem emojis no texto de células/cabeçalhos', () => {
   assert.doesNotMatch(coord, /📤|📖|🎓|👨‍🏫|👥|📝|🔑|📍|🟢/);
 });
 
-test('Presidência tem Todos e seleção em grupo robusta', () => {
+test('Presidência tem Todos e seleção em grupo baseada na visão exibida', () => {
   const coord = read('src/pages/CoordenadorPage.tsx');
   assert.match(coord, /'todos' \| 'pendentes' \| 'concluidos'/);
   assert.match(coord, /key: 'todos', label: 'Todos'/);
   assert.match(coord, /toggleSelectionGroup/);
-  assert.match(coord, /allPendingSelected/);
-  assert.match(coord, /toggleSelectAllCompleted/);
+  assert.match(coord, /visibleRowIds/);
+  assert.match(coord, /allVisibleSelected/);
+  assert.match(coord, /toggleSelectAllVisible/);
 });
 
 test('sidebar não duplica logs e assinaturas de Configurações', () => {
@@ -67,6 +71,6 @@ test('sidebar não duplica logs e assinaturas de Configurações', () => {
   assert.doesNotMatch(sidebar, /label: getNavLabel\('asten-logs'/);
 });
 
-test('release é 1.0.72', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.72');
+test('release é 1.0.73', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.73');
 });

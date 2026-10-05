@@ -174,7 +174,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
         </div>
 
         <div className="portal-public-filter-row portal-tutorial-filter-row flex-wrap gap-2 text-xs min-w-0">
-          <span className="text-[10px] opacity-80 font-black uppercase tracking-wider shrink-0">FILTRAR:</span>
+          <span className="portal-filter-label opacity-80 shrink-0">FILTRAR:</span>
           <div className="flex items-center gap-1.5 flex-wrap">
             {(Object.keys(roleContent) as Role[]).map((key) => {
               const selected = role === key;

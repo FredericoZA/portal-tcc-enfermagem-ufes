@@ -151,10 +151,10 @@ export const THEME_PALETTES = Object.fromEntries(
 ) as Record<HeaderTheme, CanonicalPalette>;
 
 function fontSizeClass(size: TableTextFormat['fontSize'] | TableTextFormat['headerFontSize']) {
-  if (size === 'xs') return 'text-[11px]';
-  if (size === 'base') return 'text-[14px]';
-  if (size === 'lg') return 'text-[16px]';
-  return 'text-[12px]';
+  if (size === 'xs') return 'text-[10px]';
+  if (size === 'base') return 'text-[13px]';
+  if (size === 'lg') return 'text-[14px]';
+  return 'text-[11px]';
 }
 
 export function getTableStyles(format: TableTextFormat = {}) {
@@ -217,7 +217,7 @@ export function getTableStyles(format: TableTextFormat = {}) {
 
     calendarBannerClass: 'portal-table-banner',
     calendarDaysHeaderClass: 'portal-table-head',
-    calendarNavBtnClass: 'portal-toolbar-icon-button',
+    calendarNavBtnClass: 'portal-calendar-nav-button',
 
     cellWeightClass,
     cellWrapClass,

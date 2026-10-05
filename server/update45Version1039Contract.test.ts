@@ -13,10 +13,11 @@ test('cabeçalhos e separadores foram absorvidos pelo contrato canônico',()=>{
   assert.doesNotMatch(css,/!important/);
 });
 
-test('1.0.40 mantém seleção em lote e registro de assinaturas independente do provedor',()=>{
+test('seleção em lote segue a visão ativa e registro de assinaturas continua independente do provedor',()=>{
   const coordinator=read('src/pages/CoordenadorPage.tsx');
   const signatures=read('src/pages/AstenLogsPage.tsx');
-  assert.match(coordinator,/toggleSelectAllPending/);
+  assert.match(coordinator,/toggleSelectAllVisible/);
+  assert.match(coordinator,/visibleRowIds/);
   assert.match(coordinator,/handleSignSelected/);
   assert.match(signatures,/Registros de Assinatura/);
   assert.match(signatures,/providerLabel/);

@@ -89,7 +89,9 @@ test('Presidente mantém seleção React com duas colunas fixas opacas e control
   const css = readPortalCss();
   const contract = readPortalCss();
   assert.match(page, /selectedIds/);
-  assert.match(page, /toggleSelectAllPending/);
+  assert.match(page, /toggleSelectAllVisible/);
+  assert.match(page, /allVisibleSelected/);
+  assert.match(page, /visibleRowIds/);
   assert.match(page, /data-portal-selection-column="true"/);
   assert.match(runtime, /portal-sheet-checkbox/);
   assert.match(runtime, /portalStickySelection/);

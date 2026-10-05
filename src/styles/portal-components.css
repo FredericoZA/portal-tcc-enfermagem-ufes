@@ -46,6 +46,12 @@
   padding: 0 var(--portal-bar-padding-x);
 }
 
+.portal-public-title-row :is(h1, h2, h3) {
+  font-size: var(--portal-sheet-title-font-size);
+  line-height: 1.15;
+  font-weight: 900;
+}
+
 .portal-public-filter-row {
   box-sizing: border-box;
   width: 100%;
@@ -151,19 +157,19 @@ button[aria-label^="Configurar exibição"],
 .portal-table-filter-chip,
 .portal-standard-filter-chip,
 .portal-native-all-filter {
-  min-height: 28px;
-  height: 28px;
+  min-height: var(--portal-filter-chip-height);
+  height: var(--portal-filter-chip-height);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 12px;
+  gap: 5px;
+  padding: 0 10px;
   margin: 0;
   border: 1px solid var(--portal-border);
   border-radius: var(--portal-control-radius);
   background: var(--portal-surface-inner);
   color: var(--portal-text-dark);
-  font-size: 11px;
-  font-weight: 800;
+  font-size: var(--portal-sheet-filter-chip-font-size);
+  font-weight: 850;
   line-height: 1;
   text-transform: uppercase;
   box-shadow: none;
@@ -187,6 +193,14 @@ button[aria-label^="Configurar exibição"],
   height: 10px;
   flex: none;
   border-radius: 50%;
+}
+
+.portal-filter-label {
+  font-size: var(--portal-sheet-filter-label-font-size);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .065em;
+  text-transform: uppercase;
 }
 
 /* Cartões e inputs. */
@@ -434,50 +448,137 @@ button[aria-label^="Configurar exibição"],
 }
 
 
-/* Navegação mensal: quatro controles coincidentes, sem sobreposição. */
+/* Navegação mensal: cada controle mede o próprio conteúdo; nenhum texto extrapola o botão. */
 .portal-calendar-toolbar {
-  display: grid;
-  grid-template-columns: minmax(156px, auto) var(--portal-toolbar-button-size) minmax(52px, auto) var(--portal-toolbar-button-size);
+  display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+  flex-wrap: nowrap;
   white-space: nowrap;
 }
 
-.portal-calendar-period-button,
-.portal-calendar-step-button,
-.portal-calendar-today-button {
+.portal-calendar-period-control {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: max-content;
+}
+
+.portal-calendar-nav-button {
+  box-sizing: border-box;
   height: var(--portal-toolbar-button-size);
   min-height: var(--portal-toolbar-button-size);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid var(--portal-border);
   border-radius: var(--portal-control-radius);
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .12);
   white-space: nowrap;
+  font-weight: 850;
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.portal-calendar-nav-button:hover {
+  background: var(--portal-surface-card);
+  border-color: var(--portal-brand-action-border);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, .14);
+}
+
+.portal-calendar-nav-button:active {
+  transform: translateY(1px);
+  box-shadow: none;
 }
 
 .portal-calendar-period-button {
-  min-width: 156px;
-  padding: 0 12px;
-  gap: 6px;
+  width: max-content;
+  min-width: 194px;
+  max-width: none;
+  padding: 0 14px;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+
+.portal-calendar-period-button > span {
+  display: block;
+  white-space: nowrap;
 }
 
 .portal-calendar-step-button {
   width: var(--portal-toolbar-button-size);
   min-width: var(--portal-toolbar-button-size);
+  max-width: var(--portal-toolbar-button-size);
   padding: 0;
+  flex: 0 0 var(--portal-toolbar-button-size);
 }
 
 .portal-calendar-today-button {
-  min-width: 52px;
+  width: max-content;
+  min-width: 56px;
   padding: 0 12px;
+  flex: 0 0 auto;
 }
 
 @media (max-width: 639px) {
   .portal-calendar-toolbar {
     width: 100%;
-    grid-template-columns: minmax(0, 1fr) var(--portal-toolbar-button-size) minmax(52px, auto) var(--portal-toolbar-button-size);
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
-  .portal-calendar-period-button {
-    min-width: 0;
-  }
+}
+
+
+/* Eventos do calendário: densidade alta para caber mais informação sem dominar a célula. */
+.portal-calendar-defense-summary {
+  display: block;
+  width: 100%;
+  padding: 2px 3px;
+  border-radius: 4px;
+  font-size: var(--portal-calendar-event-font-size);
+  line-height: 1.15;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.portal-calendar-defense-primary,
+.portal-calendar-defense-secondary {
+  display: block;
+}
+
+.portal-calendar-defense-primary {
+  font-size: var(--portal-calendar-event-font-size);
+}
+
+.portal-calendar-defense-secondary {
+  margin-top: 1px;
+  font-size: var(--portal-calendar-event-secondary-font-size);
+  font-weight: 600;
+  opacity: .88;
+}
+
+/* Navegação lateral: texto corrido, menor e mais encorpado. */
+.portal-sidebar-nav-item {
+  font-size: var(--portal-sidebar-nav-font-size);
+  font-weight: 800;
+  letter-spacing: .01em;
+  text-transform: none;
+}
+
+#bottom-access-portal-btn,
+#bottom-logout-portal-btn {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: var(--portal-sidebar-session-action-font-size);
+  font-weight: 900;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+#bottom-access-portal-btn svg,
+#bottom-logout-portal-btn svg {
+  width: 14px;
+  height: 14px;
 }
