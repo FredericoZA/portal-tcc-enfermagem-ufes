@@ -87,8 +87,8 @@ test('Registro de logs mantém ações essenciais no cabeçalho e não oferece a
 
 test('workspaces administrativos ganham hierarquia e prevenção de sobreposição', () => {
   const css = readPortalCss();
-  const enhancer = read('src/components/PortalUiEnhancer.tsx');
-  assert.match(enhancer, /portal-settings-workspace-sidebar/);
+  const modal = read('src/components/SettingsWorkspaceModal.tsx');
+  assert.match(modal, /portal-settings-workspace/);
   assert.match(css, /\.portal-settings-workspace/);
   assert.doesNotMatch(css, /!important/);
 });
