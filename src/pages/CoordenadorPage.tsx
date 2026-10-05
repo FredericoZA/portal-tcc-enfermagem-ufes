@@ -14,7 +14,6 @@ import {
   GLOBAL_TABLE_EVENT, 
   loadGlobalTableConfig,
   getTableStyles, 
-  getActionPillStyles,
   getFilterChipProps,
   formatColumnLabel, 
   formatCellText, 
@@ -115,7 +114,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'todos' | 'pendentes' | 'concluidos'>('pendentes');
   const [searchFilter, setSearchFilter] = useState('');
-  const [downloadError, setDownloadError] = useState('');
   const [signatureJobs, setSignatureJobs] = useState<SignatureJob[]>([]);
   const [astenStatus, setAstenStatus] = useState<AstenIntegrationStatus | null>(null);
   const [signingIds, setSigningIds] = useState<string[]>([]);
@@ -123,24 +121,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   
   // Selection state for batch operations
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-  // Download & Upload (Missing vs Sent) status tracking
-  const [downloadedIds, setDownloadedIds] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('coordinator_downloaded_ids');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('coordinator_downloaded_ids', JSON.stringify(downloadedIds));
-    } catch (err) {
-      console.error('Erro ao salvar downloadedIds:', err);
-    }
-  }, [downloadedIds]);
 
   // Column visibility state using TableColumnSelectorPanel helper
   const initialCoordinatorConfig = loadTableConfig('coordinator', DEFAULT_COORDINATOR_ORDER, DEFAULT_COORDINATOR_VISIBLE, 25);
@@ -259,21 +239,13 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     );
   });
 
-  // Batch Selection Helpers
-  const pendingIds = pendingItems.map((item) => item.process.id);
-  const completedIds = completedItems.map((item) => item.id);
-  const allPendingSelected = pendingIds.length > 0 && pendingIds.every((id) => selectedIds.includes(id));
-  const allCompletedSelected = completedIds.length > 0 && completedIds.every((id) => selectedIds.includes(id));
-
+  // Seleção em lote é aplicada sobre a visão atualmente exibida.
   const toggleSelectionGroup = (ids: string[]) => {
     const allSelected = ids.length > 0 && ids.every((id) => selectedIds.includes(id));
     setSelectedIds((current) => allSelected
       ? current.filter((id) => !ids.includes(id))
       : Array.from(new Set([...current, ...ids])));
   };
-
-  const toggleSelectAllPending = () => toggleSelectionGroup(pendingIds);
-  const toggleSelectAllCompleted = () => toggleSelectionGroup(completedIds);
 
   const toggleSelectItem = (id: string) => {
     setSelectedIds(prev =>
@@ -424,33 +396,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     const govUploadAvailable=Boolean(govJob && !['SIGNED','ARCHIVED','CANCELED'].includes(govJob.status));
     return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}><div className="flex flex-wrap items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>{govUploadAvailable&&<label className="portal-sign-provider-btn cursor-pointer" title="Enviar o PDF já assinado no Gov.br"><input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event)=>{const file=event.currentTarget.files?.[0];event.currentTarget.value='';if(file)void handleGovSignedUpload(proc.id,file);}}/><Download className="h-3.5 w-3.5 rotate-180"/><span>Enviar assinado</span></label>}</div>{!actionable&&<span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[8px] font-black uppercase ${status.tone}`} title={job?.lastError||status.label}>{status.label}</span>}</td>;
   };
-
-  // Download only the authenticated declaration already signed by Asten and archived in Drive.
-  const handleDownloadPdfs = async (procList: any[]) => {
-    if (procList.length === 0) return;
-    const rawProcs: ProcessData[] = procList.map((item) => item.process || item);
-    setDownloadError('');
-
-    for (const proc of rawProcs) {
-      try {
-        const { blob, fileName } = await apiClient.downloadProcessDocument(proc.id, 'doc-declaracao');
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        setDownloadedIds((prev) => prev.includes(proc.id) ? prev : [...prev, proc.id]);
-        await new Promise((resolve) => setTimeout(resolve, 250));
-      } catch (error) {
-        setDownloadError(error instanceof Error ? error.message : 'Não foi possível baixar a declaração assinada.');
-        break;
-      }
-    }
-  };
-
 
   const renderHeaderCell = (colKey: string) => {
     if (!visibleColumns[colKey]) return null;
@@ -786,15 +731,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   // A paginação é responsabilidade exclusiva do PortalSpreadsheetRuntime.
   // Renderizar a coleção completa evita dupla limitação e páginas incompletas.
 
-  const actionStyles = getActionPillStyles(coordTextFormat);
-
   return (
     <div id="coordenador-page-root" className="space-y-3 max-w-7xl mx-auto py-1.5">
-      {downloadError && (
-        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800">
-          {downloadError}
-        </div>
-      )}
       {signingMessage && (
         <div role="status" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800">
           {signingMessage}
