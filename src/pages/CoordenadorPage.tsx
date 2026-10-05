@@ -773,8 +773,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const sortedPending = getSortedAndFilteredItems(pendingItems, true);
   const sortedCompleted = getSortedAndFilteredItems(completedItems, false);
 
-  const limitedPending = recordsLimit === 'all' ? sortedPending : sortedPending.slice(0, recordsLimit);
-  const limitedCompleted = recordsLimit === 'all' ? sortedCompleted : sortedCompleted.slice(0, recordsLimit);
+  // A paginação é responsabilidade exclusiva do PortalSpreadsheetRuntime.
+  // Renderizar a coleção completa evita dupla limitação e páginas incompletas.
 
   const actionStyles = getActionPillStyles(coordTextFormat);
 
@@ -946,7 +946,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 bg-white">
-                        {limitedPending.map((item) => {
+                        {sortedPending.map((item) => {
                           const proc = item.process;
                           const isSelected = selectedIds.includes(proc.id);
                           return (
@@ -1017,7 +1017,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 bg-white">
-                        {limitedCompleted.map((proc) => {
+                        {sortedCompleted.map((proc) => {
                           const isSelected = selectedIds.includes(proc.id);
                           return (
                             <tr
