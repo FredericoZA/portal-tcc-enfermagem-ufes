@@ -57,8 +57,9 @@ test('Meus TCCs mantém combinação de filtros com quatro cores bem separadas e
 
 test('Lista de Defesas e Repositório padronizam o cabeçalho como Processo pela camada canônica', () => {
   const home = read('src/pages/HomePage.tsx');
-  assert.match(runtime, /#public-calendar-cards-section/);
-  assert.match(runtime, /#biblioteca-tccs-section/);
+  const identity = read('src/utils/portalTableIdentity.ts');
+  assert.match(identity, /#public-calendar-cards-section/);
+  assert.match(identity, /#biblioteca-tccs-section/);
   assert.match(runtime, /function renameProcessHeader/);
   assert.match(runtime, /node\.data = 'Processo'/);
   assert.match(home, /const clean = rawStr\.replace\(\/\^TCC/);
