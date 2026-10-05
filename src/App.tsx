@@ -9,6 +9,7 @@ import { Footer } from './components/Footer';
 import { EmergencyRecoveryModal } from './components/EmergencyRecoveryModal';
 import { IndicadoresPage } from './pages/IndicadoresPage';
 import { PortalFeedbackController } from './components/PortalFeedbackController';
+import { PortalSpreadsheetRuntime } from './components/PortalSpreadsheetRuntime';
 import { getPortalSemanticRootVars } from './utils/portalSemanticTokens';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })));
@@ -43,6 +44,7 @@ export default function App() {
   const [isOpenMobileSidebar, setIsOpenMobileSidebar] = useState(false);
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
   const [emergencySecretKeyParam] = useState('');
+  const portalRootRef = useRef<HTMLDivElement>(null);
   const processDialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -131,7 +133,8 @@ export default function App() {
     <AuthProvider>
       <PortalDialogs />
       <PortalFeedbackController />
-      <div id="portal-app-root" className="min-h-screen flex flex-col font-sans antialiased text-slate-900" style={{ ...getPortalSemanticRootVars(), backgroundColor: 'var(--portal-surface-page)' }}>
+      <PortalSpreadsheetRuntime rootRef={portalRootRef} />
+      <div ref={portalRootRef} id="portal-app-root" className="min-h-screen flex flex-col font-sans antialiased text-slate-900" style={{ ...getPortalSemanticRootVars(), backgroundColor: 'var(--portal-surface-page)' }}>
         {(import.meta as any).env?.DEV && <UserSimulatorBar />}
 
         <div className="flex-1 flex overflow-hidden">
