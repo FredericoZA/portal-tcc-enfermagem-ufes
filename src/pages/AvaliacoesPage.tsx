@@ -29,7 +29,7 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
 
   return (
     <div id="avaliacoes-page-container" className="space-y-3 max-w-7xl mx-auto py-1.5">
-      <div className="bg-[#005830] text-white p-3.5 sm:p-4 rounded-2xl border border-emerald-900/80 shadow-sm space-y-1">
+      <div className="bg-[var(--portal-brand-header)] text-white p-3.5 sm:p-4 rounded-2xl border border-emerald-900/80 shadow-sm space-y-1">
         <div className="text-emerald-200 text-[10px] font-extrabold uppercase tracking-widest leading-none">
           {profile.institutionAcronym} • {profile.departmentName || profile.institutionName}
         </div>
