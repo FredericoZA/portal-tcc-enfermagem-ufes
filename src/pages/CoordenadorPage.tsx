@@ -91,7 +91,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const [queue, setQueue] = useState<any[]>([]);
   const [allProcesses, setAllProcesses] = useState<ProcessData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pendentes' | 'concluidos'>('pendentes');
+  const [activeTab, setActiveTab] = useState<'todos' | 'pendentes' | 'concluidos'>('pendentes');
   const [searchFilter, setSearchFilter] = useState('');
   const [downloadError, setDownloadError] = useState('');
   const [signatureJobs, setSignatureJobs] = useState<SignatureJob[]>([]);
@@ -168,18 +168,18 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   // Label Map for columns
   const labelMap: Record<string, string> = {
     protocolo: 'Processo',
-    envioStatus: '📤 Envio',
+    envioStatus: 'Envio',
     defesaDataHora: 'Data',
-    titulo: '📖 Título do Trabalho',
-    aluno1: '🎓 Aluno 1',
-    aluno2: '🎓 Aluno 2',
-    orientador: '👨‍🏫 Orientador(a)',
-    membro1: '👥 1º Membro',
-    membro2: '👥 2º Membro',
-    coorientador: '👥 Coorientador(a)',
-    resumo: '📝 Resumo',
-    palavrasChave: '🔑 Palavras-Chave',
-    defesaLocal: '📍 Local'
+    titulo: 'Título do Trabalho',
+    aluno1: 'Aluno 1',
+    aluno2: 'Aluno 2',
+    orientador: 'Orientador(a)',
+    membro1: '1º Membro',
+    membro2: '2º Membro',
+    coorientador: 'Coorientador(a)',
+    resumo: 'Resumo',
+    palavrasChave: 'Palavras-Chave',
+    defesaLocal: 'Local'
   };
 
 
@@ -238,13 +238,20 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   });
 
   // Batch Selection Helpers
-  const toggleSelectAllPending = () => {
-    if (selectedIds.length === pendingItems.length && pendingItems.length > 0) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(pendingItems.map(item => item.process.id));
-    }
+  const pendingIds = pendingItems.map((item) => item.process.id);
+  const completedIds = completedItems.map((item) => item.id);
+  const allPendingSelected = pendingIds.length > 0 && pendingIds.every((id) => selectedIds.includes(id));
+  const allCompletedSelected = completedIds.length > 0 && completedIds.every((id) => selectedIds.includes(id));
+
+  const toggleSelectionGroup = (ids: string[]) => {
+    const allSelected = ids.length > 0 && ids.every((id) => selectedIds.includes(id));
+    setSelectedIds((current) => allSelected
+      ? current.filter((id) => !ids.includes(id))
+      : Array.from(new Set([...current, ...ids])));
   };
+
+  const toggleSelectAllPending = () => toggleSelectionGroup(pendingIds);
+  const toggleSelectAllCompleted = () => toggleSelectionGroup(completedIds);
 
   const toggleSelectItem = (id: string) => {
     setSelectedIds(prev =>
@@ -430,7 +437,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const renderCell = (item: any, colKey: string) => {
     if (!visibleColumns[colKey]) return null;
 
-    const proc = activeTab === 'pendentes' ? item.process : item;
+    const isPendingItem = Boolean(item?.process);
+    const proc = isPendingItem ? item.process : item;
     const cellClass = `${styles.cellPadClass} ${getColWidthClass(colKey, columnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, coordTextFormat)} ${styles.borderClass} align-middle ${styles.cellAlignClass}`;
 
     const cleanInst = (str?: string) => {
@@ -453,11 +461,11 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       }
 
       case 'envioStatus': {
-        const isSent = activeTab === 'concluidos';
+        const isSent = !isPendingItem;
         return (
           <td key={colKey} className={cellClass}>
             <div className="flex flex-col items-center gap-1 mx-auto">
-              {activeTab === 'pendentes' ? (() => {
+              {isPendingItem ? (() => {
                 const signatureStatus = getDeclarationStatus(proc.id);
                 return (
                   <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[9px] font-black uppercase ${signatureStatus.tone}`}>
@@ -467,10 +475,10 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               })() : (
                 <>
                   <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-950 border border-emerald-300 rounded-full select-none leading-none">
-                    🟢 Enviada
+                    Enviada
                   </span>
                   <span className="text-[9.5px] text-emerald-800 font-bold flex items-center gap-0.5 select-none leading-none">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" /> Publicada
+                    Publicada
                   </span>
                 </>
               )}
@@ -542,7 +550,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                 {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), coordTextFormat, '👨‍🏫')}
               </div>
               <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
-                📍 {cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName)}
+                {cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName)}
               </div>
             </div>
           </td>
@@ -560,7 +568,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                     {formatCellText('membro1', formatProfessorName(memb.nome), coordTextFormat, '👥')}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
-                    📍 {cleanInst(memb.instituicao || installationProfile.defaultInstitutionName)}
+                    {cleanInst(memb.instituicao || installationProfile.defaultInstitutionName)}
                   </div>
                 </>
               ) : (
@@ -583,7 +591,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                     {formatCellText('membro2', formatProfessorName(memb.nome), coordTextFormat, '👥')}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
-                    📍 {cleanInst(memb.instituicao || installationProfile.defaultInstitutionName)}
+                    {cleanInst(memb.instituicao || installationProfile.defaultInstitutionName)}
                   </div>
                 </>
               ) : (
@@ -604,7 +612,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                     {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), coordTextFormat, '👥')}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
-                    📍 {cleanInst(proc.coorientador.instituicao || installationProfile.defaultInstitutionName)}
+                    {cleanInst(proc.coorientador.instituicao || installationProfile.defaultInstitutionName)}
                   </div>
                 </>
               ) : (
@@ -825,16 +833,21 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               {/* Filter Row Switcher with FILTRAR prefix following site standard */}
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
-                  {getEditableTableText(customLabels, '__filterTitle', 'FILTRAR:')}
+                  FILTRAR:
                 </span>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {([
+                    { key: 'todos', label: 'Todos', count: pendingItems.length + completedItems.length, tab: 'todos' as const },
                     { key: 'pendentes', label: getEditableTableText(customLabels, '__tabPendentes', 'Pendentes'), count: queue.length, tab: 'pendentes' as const },
                     { key: 'assinadas', label: getEditableTableText(customLabels, '__tabConcluidos', 'Assinadas'), count: completedItems.length, tab: 'concluidos' as const }
                   ]).map((filter) => {
                     const isSelected = activeTab === filter.tab;
                     const chip = getFilterChipProps(filter.key, isSelected, coordTextFormat, filter.label);
-                    const semanticTone = filter.key === 'assinadas' ? PORTAL_SEMANTIC_COLORS.signature.signed : PORTAL_SEMANTIC_COLORS.signature.pending;
+                    const semanticTone = filter.key === 'todos'
+                      ? PORTAL_SEMANTIC_COLORS.neutral
+                      : filter.key === 'assinadas'
+                        ? PORTAL_SEMANTIC_COLORS.signature.signed
+                        : PORTAL_SEMANTIC_COLORS.signature.pending;
                     return (
                       <button
                         key={filter.key}
@@ -842,8 +855,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                         onClick={() => { setActiveTab(filter.tab); setSelectedIds([]); }}
                         data-selected={isSelected ? 'true' : 'false'}
                         aria-pressed={isSelected}
-                        style={{ backgroundColor: semanticTone.bg, color: semanticTone.text, borderColor: semanticTone.border, opacity: isSelected ? 1 : 0.62, boxShadow: isSelected ? `inset 0 0 0 1px ${semanticTone.border}` : 'none' }}
-                        className={`portal-standard-filter-chip portal-table-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none ${isSelected ? '' : 'opacity-85 hover:opacity-100'}`}
+                        style={{ backgroundColor: semanticTone.bg, color: semanticTone.text, borderColor: semanticTone.border, opacity: isSelected ? 1 : 0.82 }}
+                        className="portal-standard-filter-chip portal-table-filter-chip flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider cursor-pointer transition-colors h-7 shrink-0 border select-none"
                         title={`Filtrar por declarações ${filter.label.toLowerCase()}`}
                       >
                         <span className="portal-filter-dot w-2 h-2 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: semanticTone.border }} />
@@ -859,7 +872,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
           {/* CONTEÚDO PRINCIPAL: TABELA E LISTA DE DECLARAÇÕES */}
           <div className="w-full">
-            {activeTab === 'pendentes' && (
+            {(activeTab === 'pendentes' || activeTab === 'todos') && (
               <>
                 {isLoading ? (
                   <div className="p-12 text-center text-xs font-semibold text-slate-500">
@@ -884,7 +897,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                               className={`cursor-pointer ${isDarkTheme ? 'text-white/80 hover:text-white' : 'text-slate-600 hover:text-emerald-800'} flex justify-center mx-auto`}
                               title="Selecionar/Deselecionar todos"
                             >
-                              {selectedIds.length === pendingItems.length ? (
+                              {allPendingSelected ? (
                                 <CheckSquare className={`w-4 h-4 ${isDarkTheme ? 'text-emerald-300' : 'text-emerald-700'}`} />
                               ) : (
                                 <Square className={`w-4 h-4 ${isDarkTheme ? 'text-white/60' : 'text-slate-500'}`} />
@@ -933,7 +946,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
             )}
 
             {/* TAB 2: DECLARAÇÕES ASSINADAS (HISTÓRICO) */}
-            {activeTab === 'concluidos' && (
+            {(activeTab === 'concluidos' || activeTab === 'todos') && (
               <>
                 {completedItems.length === 0 ? (
                   <div className="p-12 text-center bg-slate-50 text-slate-600 text-xs font-medium">
@@ -948,17 +961,11 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                           <th data-portal-selection-column="true" data-portal-column-label="Seleção" className={`${styles.headerThClass} ${styles.cellPadClass} w-10 text-center align-middle ${styles.headerBorderClass}`}>
                             <button
                               type="button"
-                              onClick={() => {
-                                if (selectedIds.length === completedItems.length && completedItems.length > 0) {
-                                  setSelectedIds([]);
-                                } else {
-                                  setSelectedIds(completedItems.map(p => p.id));
-                                }
-                              }}
+                              onClick={toggleSelectAllCompleted}
                               className={`cursor-pointer ${isDarkTheme ? 'text-white/80 hover:text-white' : 'text-slate-600 hover:text-emerald-800'} flex justify-center mx-auto`}
                               title="Selecionar/Deselecionar todos"
                             >
-                              {selectedIds.length === completedItems.length && completedItems.length > 0 ? (
+                              {allCompletedSelected ? (
                                 <CheckSquare className={`w-4 h-4 ${isDarkTheme ? 'text-emerald-300' : 'text-emerald-700'}`} />
                               ) : (
                                 <Square className={`w-4 h-4 ${isDarkTheme ? 'text-white/60' : 'text-slate-500'}`} />

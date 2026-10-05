@@ -16,11 +16,14 @@ const MAX_WIDTH = 720;
 
 let activePopup: HTMLElement | null = null;
 let activeButton: HTMLButtonElement | null = null;
+let activePopupCleanup: (() => void) | null = null;
 
 
 
 
 export function closePortalTablePopup() {
+  activePopupCleanup?.();
+  activePopupCleanup = null;
   activePopup?.remove();
   activePopup = null;
   activeButton?.setAttribute('aria-expanded', 'false');
@@ -220,6 +223,22 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, i
   activePopup = popup;
   activeButton = anchor;
   anchor.setAttribute('aria-expanded', 'true');
+
+  const handleOutsidePointerDown = (event: PointerEvent) => {
+    const target = event.target as Node | null;
+    if (!target || popup.contains(target) || anchor.contains(target)) return;
+    closePortalTablePopup();
+  };
+  const handleEscape = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') closePortalTablePopup();
+  };
+  document.addEventListener('pointerdown', handleOutsidePointerDown, true);
+  document.addEventListener('keydown', handleEscape, true);
+  activePopupCleanup = () => {
+    document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
+    document.removeEventListener('keydown', handleEscape, true);
+  };
+
   const rect = anchor.getBoundingClientRect();
   const width = 320;
   const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
@@ -347,11 +366,11 @@ export function enhancePortalTable(table: HTMLTableElement) {
     const header = cell as HTMLTableCellElement;
     header.classList.add('portal-core-header-cell');
     keyForHeader(header, index);
-    if (!header.dataset.portalCoreClickGuard) {
+    if (!header.dataset.portalCoreClickGuard && header.dataset.portalSelectionColumn !== 'true') {
       header.dataset.portalCoreClickGuard = 'true';
       header.addEventListener('click', (event) => {
         const target = event.target as HTMLElement;
-        if (target.closest('.portal-core-column-menu,.portal-core-resizer,input[type="checkbox"]')) return;
+        if (target.closest('.portal-core-column-menu,.portal-core-resizer,.portal-sheet-checkbox,input[type="checkbox"]')) return;
         event.stopPropagation();
       }, true);
     }

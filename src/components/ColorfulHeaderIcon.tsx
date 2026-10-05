@@ -48,27 +48,7 @@ export const ColorfulHeaderIcon: React.FC<ColorfulHeaderIconProps> = ({
   type,
   size = 'md',
   className = '',
-  customEmoji,
-  textFormat,
 }) => {
-  if (textFormat?.headerShowEmojis === false || textFormat?.headerIconStyle === 'hidden') {
-    return null;
-  }
-
-  const effectiveEmoji = customEmoji || textFormat?.customHeaderEmoji;
-  if (effectiveEmoji) {
-    return (
-      <span
-        className={`inline-flex shrink-0 items-center justify-center leading-none select-none ${
-          size === 'lg' ? 'text-xl' : size === 'sm' ? 'text-sm' : 'text-base sm:text-lg'
-        } ${className}`}
-        aria-hidden="true"
-      >
-        {effectiveEmoji}
-      </span>
-    );
-  }
-
   const Icon = {
     calendar: Calendar,
     list: ListTodo,
@@ -94,10 +74,7 @@ export const ColorfulHeaderIcon: React.FC<ColorfulHeaderIconProps> = ({
       : 'h-4 w-4 sm:h-[18px] sm:w-[18px]';
 
   return (
-    <span
-      className={`inline-flex shrink-0 items-center justify-center text-white ${className}`}
-      aria-hidden="true"
-    >
+    <span className={`inline-flex shrink-0 items-center justify-center text-white ${className}`} aria-hidden="true">
       <Icon className={`${iconSize} stroke-[2.15]`} />
     </span>
   );

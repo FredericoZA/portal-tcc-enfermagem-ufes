@@ -15,8 +15,6 @@ import {
   LogOut,
   MapPin,
   Settings,
-  ScrollText,
-  ShieldCheck,
 } from 'lucide-react';
 import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 import { PORTAL_THEME } from '../theme/portalTheme';
@@ -184,19 +182,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             'meus-processos': { id: 'meus-processos', label: getNavLabel('meus-processos', 'Meus TCCs'), icon: FileText, emoji: '📋', visible: !isVisitor },
             coordenador: { id: 'coordenador', label: getNavLabel('coordenador', 'Área do Presidente'), icon: Award, emoji: '🏛️', visible: isMasterAdmin && !isVisitor },
             configuracoes: { id: 'configuracoes', label: getNavLabel('configuracoes', 'Configurações'), icon: Settings, emoji: '⚙️', visible: isMasterAdmin && !isVisitor },
-            logs: { id: 'logs', label: getNavLabel('logs', 'Registro de logs'), icon: ScrollText, emoji: '🧾', visible: isMasterAdmin && !isVisitor },
-            'asten-logs': { id: 'asten-logs', label: getNavLabel('asten-logs', 'Registros de Assinatura'), icon: ShieldCheck, emoji: '🛡️', visible: isMasterAdmin && !isVisitor },
             analise: { id: 'analise', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: getNavEmoji('indicadores', '📊'), visible: true },
             replicar: { id: 'replicar', label: getNavLabel('replicar', 'Replicar Portal'), icon: Copy, emoji: getNavEmoji('replicar', '🧩'), visible: true }
           };
-          const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0 ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'assinaturas'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key) : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'logs', 'asten-logs', 'DIVIDER_2', 'analise', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'];
+          const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0 ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'assinaturas'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key) : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'DIVIDER_2', 'analise', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'];
           const order = [...configuredOrder].filter((key) => key !== 'analise');
           const indicatorsAnchor = order.indexOf('como-chegar');
           order.splice(indicatorsAnchor >= 0 ? indicatorsAnchor : order.length, 0, 'analise');
-          const configIndex = order.indexOf('configuracoes');
-          if (!order.includes('logs')) order.splice(configIndex >= 0 ? configIndex + 1 : order.length, 0, 'logs');
-          const logsIndex = order.indexOf('logs');
-          if (!order.includes('asten-logs')) order.splice(logsIndex >= 0 ? logsIndex + 1 : order.length, 0, 'asten-logs');
+          const sanitizedOrder = order.filter((key) => !['logs', 'asten-logs'].includes(key));
+          order.splice(0, order.length, ...sanitizedOrder);
           if (!order.includes('como-chegar')) { const tutorialIndex = order.indexOf('tutorial'); order.splice(tutorialIndex >= 0 ? tutorialIndex : order.length, 0, 'como-chegar'); }
           if (!order.includes('fluxo-tcc')) { const replicationIndex = order.indexOf('replicar'); order.splice(replicationIndex >= 0 ? replicationIndex : order.length, 0, 'fluxo-tcc'); }
           if (!order.includes('replicar')) order.push('replicar');

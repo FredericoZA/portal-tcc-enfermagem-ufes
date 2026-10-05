@@ -90,6 +90,15 @@
   gap: var(--portal-toolbar-pair-gap);
 }
 
+.portal-sheet-toolbar-actions:not(:empty)::after {
+  content: '';
+  width: 1px;
+  height: 18px;
+  margin-left: 4px;
+  background: color-mix(in srgb, var(--portal-surface-inner) 58%, transparent);
+  flex: none;
+}
+
 /* Botões de ícone da barra — todos circulares. */
 .portal-header-action,
 .portal-toolbar-icon-button,
@@ -165,10 +174,11 @@ button[aria-label^="Configurar exibição"],
 .portal-standard-filter-chip[aria-pressed="true"],
 .portal-native-all-filter[data-selected="true"] {
   background: var(--portal-neutral-bg);
-  border-color: var(--portal-neutral-border);
   color: var(--portal-text-dark);
-  filter: brightness(.90);
-  box-shadow: inset 0 0 0 1px currentColor;
+  filter: brightness(.81);
+  outline: 1px solid var(--portal-text-dark);
+  outline-offset: -1px;
+  box-shadow: inset 0 0 0 1px var(--portal-text-dark);
   font-weight: 900;
 }
 
@@ -245,9 +255,9 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-primary-register-btn {
-  background: var(--portal-brand-action);
-  border-color: var(--portal-brand-action-border);
-  color: var(--portal-text-light);
+  background: var(--portal-surface-inner);
+  border-color: var(--portal-border);
+  color: var(--portal-text-dark);
 }
 
 /* Modais. */
@@ -421,4 +431,53 @@ button[aria-label^="Configurar exibição"],
   background: var(--portal-surface-inner);
   border-color: var(--portal-border);
   color: var(--portal-text-dark);
+}
+
+
+/* Navegação mensal: quatro controles coincidentes, sem sobreposição. */
+.portal-calendar-toolbar {
+  display: grid;
+  grid-template-columns: minmax(156px, auto) var(--portal-toolbar-button-size) minmax(52px, auto) var(--portal-toolbar-button-size);
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.portal-calendar-period-button,
+.portal-calendar-step-button,
+.portal-calendar-today-button {
+  height: var(--portal-toolbar-button-size);
+  min-height: var(--portal-toolbar-button-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--portal-control-radius);
+  white-space: nowrap;
+}
+
+.portal-calendar-period-button {
+  min-width: 156px;
+  padding: 0 12px;
+  gap: 6px;
+}
+
+.portal-calendar-step-button {
+  width: var(--portal-toolbar-button-size);
+  min-width: var(--portal-toolbar-button-size);
+  padding: 0;
+}
+
+.portal-calendar-today-button {
+  min-width: 52px;
+  padding: 0 12px;
+}
+
+@media (max-width: 639px) {
+  .portal-calendar-toolbar {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) var(--portal-toolbar-button-size) minmax(52px, auto) var(--portal-toolbar-button-size);
+  }
+  .portal-calendar-period-button {
+    min-width: 0;
+  }
 }
