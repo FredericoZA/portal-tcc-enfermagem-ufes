@@ -64,7 +64,7 @@
   /* Geometria. */
   --portal-sheet-title-height: 45px;
   --portal-sheet-title-divider: 5px;
-  --portal-sheet-filter-height: 45px;
+  --portal-sheet-filter-height: 41px;
   --portal-sheet-content-divider: 15px;
   --portal-sheet-column-header-height: 35px;
   --portal-sheet-row-min-height: 30px;
@@ -73,6 +73,7 @@
   --portal-toolbar-button-size: 30px;
   --portal-toolbar-action-gap: 14px;
   --portal-toolbar-pair-gap: 4px;
+  --portal-filter-chip-height: 25px;
   --portal-cell-padding-y: 4px;
   --portal-cell-padding-x: 8px;
   --portal-bar-padding-x: 16px;
@@ -88,4 +89,15 @@
   --portal-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --portal-font-size: 14px;
   --portal-font-size-small: 12px;
+
+  /* Escala tipográfica canônica de navegação e planilhas. */
+  --portal-sidebar-nav-font-size: 11px;
+  --portal-sidebar-session-action-font-size: 10px;
+  --portal-sheet-title-font-size: 18px;
+  --portal-sheet-filter-label-font-size: 9px;
+  --portal-sheet-filter-chip-font-size: 10px;
+  --portal-sheet-column-font-size: 11px;
+  --portal-sheet-body-font-size: 11px;
+  --portal-calendar-event-font-size: 8.5px;
+  --portal-calendar-event-secondary-font-size: 7.5px;
 }
