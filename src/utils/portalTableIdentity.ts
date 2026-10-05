@@ -20,12 +20,40 @@ export const PORTAL_TABLE_CONTAINER_SELECTORS: Record<PortalTableKey, string[]> 
   audit_logs: ['#audit-logs-page'],
 };
 
-const slug = (value: string) => value
+export const normalizePortalTableText = (value: string) => value
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
-  .toLocaleLowerCase('pt-BR')
+  .replace(/[↕↑↓⌄]/g, '')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .toLocaleLowerCase('pt-BR');
+
+const slug = (value: string) => normalizePortalTableText(value)
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-+|-+$/g, '');
+
+export function readPortalHeaderLabel(header: HTMLTableCellElement) {
+  const clone = header.cloneNode(true) as HTMLTableCellElement;
+  clone
+    .querySelectorAll('button,.portal-column-controls,.portal-core-column-menu,.portal-core-resizer,svg')
+    .forEach((node) => node.remove());
+  const text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+  return normalizePortalTableText(text) === 'progresso' ? 'Etapa' : text || 'Coluna';
+}
+
+export function isPortalProcessHeader(header: HTMLTableCellElement) {
+  const key = normalizePortalTableText(header.dataset.portalColumnKey || header.dataset.portalCoreColumnKey || '');
+  const label = normalizePortalTableText(readPortalHeaderLabel(header));
+  return key === 'protocolo'
+    || key === 'processo'
+    || key.endsWith('protocolo')
+    || label === 'processo'
+    || label === 'protocolo'
+    || label.includes('numero do processo')
+    || label.includes('nº do processo')
+    || label.includes('n° do processo')
+    || label.includes('no do processo');
+}
 
 export function inferManagedTableKey(table: HTMLTableElement): PortalTableKey | null {
   const explicit = table.dataset.portalTableKey as PortalTableKey | undefined;
