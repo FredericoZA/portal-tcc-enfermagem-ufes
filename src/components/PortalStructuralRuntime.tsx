@@ -15,7 +15,6 @@ const MAX_WIDTH = 720;
 
 let activePopup: HTMLElement | null = null;
 let activeButton: HTMLButtonElement | null = null;
-let activeSettingsTable: HTMLTableElement | null = null;
 
 
 
@@ -378,59 +377,8 @@ function enhanceTable(table: HTMLTableElement) {
   applyFilters(table);
 }
 
-function findTableForControl(control: HTMLElement) {
-  let current: HTMLElement | null = control.parentElement;
-  for (let depth = 0; current && depth < 9; depth += 1, current = current.parentElement) {
-    const tables = Array.from(current.querySelectorAll<HTMLTableElement>('table')).filter((table) => !table.closest('[role="dialog"]'));
-    if (tables.length === 1) return tables[0];
-    const visible = tables.find((table) => table.offsetParent !== null);
-    if (visible) return visible;
-  }
-  return null;
-}
-
-function bindSettingsButtons() {
-  document.querySelectorAll<HTMLButtonElement>('button[title*="Exibição da planilha"],button[aria-label^="Configurar exibição da planilha"]').forEach((button) => {
-    if (button.dataset.portalCoreSettingsBound === 'true') return;
-    button.dataset.portalCoreSettingsBound = 'true';
-    button.addEventListener('click', () => {
-      activeSettingsTable = findTableForControl(button);
-      if (activeSettingsTable) enhanceTable(activeSettingsTable);
-    }, true);
-  });
-}
-
-function injectWrapSetting() {
-  const popup = document.querySelector<HTMLElement>('.portal-table-settings-popover');
-  if (!popup || popup.querySelector('.portal-core-wrap-setting') || !activeSettingsTable) return;
-  const table = activeSettingsTable;
-  const section = document.createElement('section');
-  section.className = 'portal-core-wrap-setting';
-  section.innerHTML = '<div><strong>Quebra de texto</strong><span>Escolha como o conteúdo ocupa as células.</span></div><div class="portal-core-wrap-actions"><button type="button" data-wrap="wrap">Quebrar texto</button><button type="button" data-wrap="nowrap">Uma linha</button></div>';
-  const sync = () => {
-    const nowrap = table.classList.contains('portal-core-nowrap');
-    section.querySelectorAll<HTMLButtonElement>('button[data-wrap]').forEach((button) => {
-      const active = button.dataset.wrap === (nowrap ? 'nowrap' : 'wrap');
-      button.dataset.active = active ? 'true' : 'false';
-      button.setAttribute('aria-pressed', active ? 'true' : 'false');
-    });
-  };
-  section.querySelectorAll<HTMLButtonElement>('button[data-wrap]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const nowrap = button.dataset.wrap === 'nowrap';
-      table.classList.toggle('portal-core-nowrap', nowrap);
-      try { localStorage.setItem(wrapStorageKey(table), nowrap ? 'nowrap' : 'wrap'); } catch {}
-      sync();
-    });
-  });
-  popup.appendChild(section);
-  sync();
-}
-
 function enhanceAll() {
   document.querySelectorAll<HTMLTableElement>('#portal-app-root main table').forEach(enhanceTable);
-  bindSettingsButtons();
-  injectWrapSetting();
 }
 
 export function PortalStructuralRuntime() {
@@ -452,11 +400,13 @@ export function PortalStructuralRuntime() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closePopup();
     };
+    window.addEventListener('portal-table-layouts-updated', enhanceAll as EventListener);
     document.addEventListener('mousedown', onMouseDown);
     document.addEventListener('keydown', onKeyDown);
     return () => {
       observer.disconnect();
       cancelAnimationFrame(frame);
+      window.removeEventListener('portal-table-layouts-updated', enhanceAll as EventListener);
       document.removeEventListener('mousedown', onMouseDown);
       document.removeEventListener('keydown', onKeyDown);
       closePopup();
