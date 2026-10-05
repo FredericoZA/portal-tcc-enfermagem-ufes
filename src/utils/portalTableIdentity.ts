@@ -28,7 +28,7 @@ export const normalizePortalTableText = (value: string) => value
   .trim()
   .toLocaleLowerCase('pt-BR');
 
-const slug = (value: string) => normalizePortalTableText(value)
+export const slugPortalTableText = (value: string) => normalizePortalTableText(value)
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-+|-+$/g, '');
 
@@ -73,13 +73,13 @@ export function stableTableIdentity(table: HTMLTableElement): string {
   if (explicit) return explicit;
 
   const sheet = table.closest<HTMLElement>('[data-portal-sheet]')?.dataset.portalSheet;
-  if (sheet) return `sheet-${slug(sheet)}`;
+  if (sheet) return `sheet-${slugPortalTableText(sheet)}`;
 
   const owner = table.closest<HTMLElement>('[id]');
-  if (owner?.id) return `owner-${slug(owner.id)}`;
+  if (owner?.id) return `owner-${slugPortalTableText(owner.id)}`;
 
   const headers = Array.from(table.tHead?.rows[0]?.cells || [])
-    .map((cell) => slug(cell.textContent || ''))
+    .map((cell) => slugPortalTableText(cell.textContent || ''))
     .filter(Boolean)
     .join('-');
 
