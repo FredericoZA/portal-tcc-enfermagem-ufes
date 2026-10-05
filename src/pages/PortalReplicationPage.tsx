@@ -1,5 +1,7 @@
 import React from 'react';
-import { Cloud, Code2, Database, Download, ExternalLink, FileText, Github, Server } from 'lucide-react';
+import { Cloud, Database, Download, ExternalLink, FileText, Github, Server } from 'lucide-react';
+import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
+import { PortalSectionDivider } from '../components/PortalSectionDivider';
 
 const REPOSITORY_URL = 'https://github.com/FredericoZA/portal-tcc-enfermagem-ufes';
 
@@ -32,12 +34,13 @@ const CARD_CLASS = 'portal-layer-card flex h-full min-h-[112px] flex-col rounded
 export const PortalReplicationPage: React.FC = () => {
   return (
     <div id="portal-replication-page" className="portal-public-shell portal-layer-panel mx-auto max-w-none overflow-hidden rounded-2xl border border-slate-300 shadow-sm">
-      <section className="portal-public-header px-3.5 text-white sm:px-4">
-        <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white shadow-2xs" aria-hidden="true"><Code2 className="h-4 w-4 text-slate-700" /></span>
+      <section className="portal-public-header">
+        <div className="portal-public-title-row gap-2">
+          <ColorfulHeaderIcon type="replication" />
           <h1 className="text-sm font-black uppercase tracking-tight text-white sm:text-base">Replicar Portal</h1>
         </div>
       </section>
+      <PortalSectionDivider />
 
       <section className="portal-layer-panel p-3 sm:p-4">
         <h2 className="text-xs font-black uppercase tracking-wide text-slate-900">Ferramentas utilizadas</h2>
