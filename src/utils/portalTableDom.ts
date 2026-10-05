@@ -1,4 +1,4 @@
-import { stableTableIdentity } from '../utils/portalTableIdentity';
+import { normalizePortalTableText, readPortalHeaderLabel, stableTableIdentity } from './portalTableIdentity';
 
 type TableState = {
   filters: Map<string, Set<string>>;
@@ -19,19 +19,6 @@ let activeButton: HTMLButtonElement | null = null;
 
 
 
-function normalize(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[↕↑↓⌄]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLocaleLowerCase('pt-BR');
-}
-
-function slug(value: string) {
-  return normalize(value).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-}
 
 export function closePortalTablePopup() {
   activePopup?.remove();
@@ -40,7 +27,7 @@ export function closePortalTablePopup() {
   activeButton = null;
 }
 
-function headerLabel(header: HTMLTableCellElement) {
+function readPortalHeaderLabel(header: HTMLTableCellElement) {
   const clone = header.cloneNode(true) as HTMLTableCellElement;
   clone
     .querySelectorAll(
@@ -48,12 +35,12 @@ function headerLabel(header: HTMLTableCellElement) {
     )
     .forEach((node) => node.remove());
   const text = (clone.textContent || '').replace(/[↕↑↓⌄]/g, '').replace(/\s+/g, ' ').trim();
-  return normalize(text) === 'progresso' ? 'Etapa' : text || 'Coluna';
+  return normalizePortalTableText(text) === 'progresso' ? 'Etapa' : text || 'Coluna';
 }
 
 function keyForHeader(header: HTMLTableCellElement, index: number) {
   if (!header.dataset.portalCoreColumnKey) {
-    header.dataset.portalCoreColumnKey = `${index}:${slug(headerLabel(header)) || `coluna-${index + 1}`}`;
+    header.dataset.portalCoreColumnKey = `${index}:${slug(readPortalHeaderLabel(header)) || `coluna-${index + 1}`}`;
   }
   return header.dataset.portalCoreColumnKey;
 }
@@ -131,7 +118,7 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, i
   const state = tableState.get(table) || { filters: new Map<string, Set<string>>() };
   tableState.set(table, state);
   const key = keyForHeader(header, index);
-  const label = headerLabel(header);
+  const label = readPortalHeaderLabel(header);
   const values = Array.from(new Set(Array.from(table.tBodies[0]?.rows || []).map((row) => cellValue(row, index))))
     .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
 
@@ -192,9 +179,9 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, i
   const renderValues = (term = '') => {
     list.replaceChildren();
     const allowed = state.filters.get(key);
-    const normalizedTerm = normalize(term);
+    const normalizedTerm = normalizePortalTableText(term);
     values
-      .filter((value) => normalize(value).includes(normalizedTerm))
+      .filter((value) => normalizePortalTableText(value).includes(normalizedTerm))
       .forEach((value) => {
         const labelNode = document.createElement('label');
         labelNode.className = 'portal-core-filter-value';
@@ -394,8 +381,8 @@ export function enhancePortalTable(table: HTMLTableElement) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'portal-core-column-menu';
-      button.title = `Ordenar ou filtrar ${headerLabel(header)}`;
-      button.setAttribute('aria-label', `Ordenar ou filtrar ${headerLabel(header)}`);
+      button.title = `Ordenar ou filtrar ${readPortalHeaderLabel(header)}`;
+      button.setAttribute('aria-label', `Ordenar ou filtrar ${readPortalHeaderLabel(header)}`);
       button.setAttribute('aria-haspopup', 'dialog');
       button.setAttribute('aria-expanded', 'false');
       button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>';
