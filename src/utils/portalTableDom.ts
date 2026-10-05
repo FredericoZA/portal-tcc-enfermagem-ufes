@@ -226,7 +226,7 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, i
       applyFilters(table);
       renderValues(search.value);
     }),
-    menuButton('Concluir', 'portal-core-done', closePopup),
+    menuButton('Concluir', 'portal-core-done', closePortalTablePopup),
   );
   popup.appendChild(footer);
   document.body.appendChild(popup);
