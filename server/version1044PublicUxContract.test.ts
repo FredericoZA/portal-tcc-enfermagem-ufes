@@ -16,10 +16,12 @@ test('cabeçalho não apresenta acesso institucional nem identidade para visitan
 
 test('planilhas aplicam política única sem emojis e usam cores semânticas canônicas', () => {
   const main = read('src/main.tsx');
-  const policy = read('src/components/PortalTableTextPolicy.tsx');
+  const formatter = read('src/utils/tableFormatters.ts');
   const css = readPortalCss();
-  assert.match(main, /PortalTableTextPolicy/);
-  assert.match(policy, /TABLE_EMOJI_PATTERN/);
+  assert.doesNotMatch(main, /PortalTableTextPolicy/);
+  assert.match(formatter, /EMOJI_REGEX/);
+  assert.match(formatter, /export function stripEmojis/);
+  assert.match(formatter, /formatCellText/);
   assert.match(css, /--portal-defense-defended-bg/);
   assert.match(css, /color:\s*var\(--portal-text-dark\)/);
   assert.doesNotMatch(css, /!important/);
