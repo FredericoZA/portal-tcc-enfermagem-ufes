@@ -962,3 +962,19 @@ button[aria-label^="Configurar exibição"],
   width: 14px;
   height: 14px;
 }
+
+
+/* Cadastro: o título da etapa pertence ao conteúdo do cartão, não à borda do fieldset. */
+.portal-registration-section-title {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: var(--portal-text-dark);
+}
+
+.portal-calendar-day-number {
+  font-size: 12px;
+  line-height: 1;
+}
