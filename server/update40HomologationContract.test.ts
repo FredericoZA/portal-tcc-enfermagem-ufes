@@ -26,14 +26,12 @@ test('Configurações abre workspaces por componentes React dedicados', async ()
   assert.ok(modal.includes('data-portal-full-bleed'));
 });
 
-test('Personalização usa classes semânticas e o verde institucional canônico', async () => {
-  const [enhancer, css] = await Promise.all([
-    source('src/components/PortalUiEnhancer.tsx'),
+test('Personalização usa o verde institucional canônico sem enhancer global', async () => {
+  const [main, css] = await Promise.all([
+    source('src/main.tsx'),
     readPortalCss(),
   ]);
-  assert.ok(enhancer.includes('portal-customization-header'));
-  assert.ok(enhancer.includes('portal-customization-icon-shell'));
-  assert.ok(enhancer.includes('portal-customization-top-action'));
+  assert.doesNotMatch(main, /PortalUiEnhancer/);
   assert.match(css, /--portal-brand-header:\s*#005830/);
   assert.doesNotMatch(css, /!important/);
 });
