@@ -168,7 +168,7 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
       .filter((entry) => !term || `${entry.nome} ${entry.email} ${entry.matricula || ''} ${roleLabels[administrativeRole(entry)] || ''} ${entry.origin || ''}`.toLocaleLowerCase('pt-BR').includes(term))
       .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR', { sensitivity: 'base' }));
   }, [entries, search]);
-  const shown = recordsLimit === 'all' ? filtered : filtered.slice(0, recordsLimit);
+  const shown = filtered;
   const activeColumns = columnOrder.filter((key) => visibleColumns[key] !== false || key === 'nome');
 
   const renderCell = (entry: AuthorizedStudent, key: string) => {
