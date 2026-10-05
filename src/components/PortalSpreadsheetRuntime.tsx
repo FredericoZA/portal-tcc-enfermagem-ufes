@@ -57,8 +57,11 @@ function storageKeysForTable(key: TableKey) {
   return keys;
 }
 
+let legacyLimitsMigrated = false;
+
 function migrateLegacyLimits() {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || legacyLimitsMigrated) return;
+  legacyLimitsMigrated = true;
   for (const key of PORTAL_TABLE_KEYS) {
     let preferred: PageSize | null = null;
     for (const storageKey of storageKeysForTable(key)) {
@@ -87,8 +90,6 @@ function migrateLegacyLimits() {
     }
   }
 }
-
-migrateLegacyLimits();
 
 function tableKey(table: HTMLTableElement): TableKey | null {
   return inferManagedTableKey(table);
@@ -399,6 +400,10 @@ function removeOrphanPagers() {
 
 export const PortalSpreadsheetRuntime = () => {
   useLayoutEffect(() => {
+    migrateLegacyLimits();
+    const root = document.getElementById('portal-app-root');
+    if (!root) return;
+
     const unbinders = new Map<HTMLElement, () => void>();
     let frame = 0;
 
@@ -500,7 +505,7 @@ export const PortalSpreadsheetRuntime = () => {
     const refresh = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        document.querySelectorAll<HTMLTableElement>('table').forEach((table) => {
+        root.querySelectorAll<HTMLTableElement>('main table').forEach((table) => {
           if (!tableKey(table)) return;
           enhancePortalTable(table);
           markSpreadsheet(table);
@@ -513,8 +518,7 @@ export const PortalSpreadsheetRuntime = () => {
     };
 
     const observer = new MutationObserver(refresh);
-    const root = document.getElementById('portal-app-root');
-    if (root) observer.observe(root, { childList: true, subtree: true, characterData: true });
+    observer.observe(root, { childList: true, subtree: true });
     window.addEventListener('storage', refresh);
     window.addEventListener('portal-table-layouts-updated', refresh as EventListener);
     window.addEventListener('global_table_layouts_changed', refresh as EventListener);
