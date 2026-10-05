@@ -96,7 +96,7 @@ export const MasterDocumentModelsPanel: React.FC = () => {
     finally { setWorking(''); }
   };
 
-  return <section className="portal-master-models-catalog overflow-hidden rounded-lg border border-slate-300 shadow-sm" style={{ backgroundColor: 'var(--portal-surface-layer-2)' }}>
+  return <section className="portal-master-models-catalog overflow-hidden rounded-lg border border-slate-300 shadow-sm" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
     <div className="flex flex-wrap items-center justify-end gap-1.5 border-b border-slate-300 p-2" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>
       <input id="new-master-model" value={newModelName} onChange={event=>setNewModelName(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();addSlot();}}} placeholder="Nome do novo documento" className="min-h-8 min-w-[220px] flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px] text-slate-900 outline-none sm:max-w-md"/>
       <button type="button" onClick={addSlot} disabled={!newModelName.trim()} className={action}><FilePlus2 className="h-3.5 w-3.5"/>Adicionar documento</button>
