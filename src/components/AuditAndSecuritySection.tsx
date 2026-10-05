@@ -141,13 +141,13 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] leading-4 text-slate-600">A Presidente da Comissão é automaticamente o contato de recuperação do Master e é o único contato ativo para iniciar a troca segura do usuário Master.</div>
+        <div className="rounded-lg border border-slate-200 bg-[var(--portal-surface-panel)] px-3 py-2 text-[10px] leading-4 text-slate-600">A Presidente da Comissão é automaticamente o contato de recuperação do Master e é o único contato ativo para iniciar a troca segura do usuário Master.</div>
 
         <div className="flex items-center justify-end pt-1">
           <button
             type="submit"
             disabled={isSaving}
-            className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs uppercase tracking-wider rounded-lg border border-slate-300 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+            className="portal-popup-action min-h-8 px-3 text-[10px]"
           >
             <span>{isSaving ? 'Salvando...' : 'Salvar Contas Administrativas'}</span>
           </button>

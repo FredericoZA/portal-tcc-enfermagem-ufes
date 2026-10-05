@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowUp, Columns3, ListFilter, Lock, RotateCcw, Settings, Star } from 'lucide-react';
+import { ArrowDown, ArrowUp, Columns3, ListFilter, Lock, RotateCcw, Settings, Star, X } from 'lucide-react';
 import { DEFAULT_TABLE_TEXT_FORMAT, TableTextFormat, loadTableConfig } from './TableColumnSelectorPanel';
 import { getTableStyles } from '../utils/tableFormatters';
 import { useAuth } from '../context/AuthContext';
@@ -147,7 +147,7 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
     if(isOpen){setIsOpen(false);return;}
     if(gearButtonRef.current){
       const rect=gearButtonRef.current.getBoundingClientRect();
-      const popupWidth=Math.min(canManageColumns?560:340,window.innerWidth-32);
+      const popupWidth=Math.min(canManageColumns?620:360,window.innerWidth-32);
       let left=Math.min(rect.right-popupWidth,window.innerWidth-popupWidth-16);
       left=Math.max(16,left);
       let top=rect.bottom+8;
@@ -212,51 +212,49 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
 
   return <div className="inline-flex items-center gap-1.5 shrink-0">
     <button ref={gearButtonRef} type="button" onClick={handleToggle} className="portal-toolbar-icon-button relative" title={canManageColumns?'Exibição da planilha: linhas, período, colunas e ordem':'Exibição da planilha: linhas e período'} aria-label="Configurar exibição da planilha">
-      <Settings className="h-3.5 w-3.5 text-current"/>{hasActiveFilters&&<span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#6f8f79] ring-2 ring-white"/>}
+      <Settings className="h-3.5 w-3.5 text-current"/>{hasActiveFilters&&<span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--portal-brand-action)] ring-2 ring-white"/>}
     </button>
     {isOpen&&createPortal(
-      <div ref={popupRef} data-portal-table-master={isMaster?'true':'false'} className="portal-table-settings-popover portal-modal-surface fixed z-[1000001] max-h-[calc(100vh-1.5rem)] w-[min(560px,calc(100vw-2rem))] overflow-y-auto rounded-xl border p-3.5 text-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150" style={{top:popoverPos.top,left:popoverPos.left}}>
-        <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">
-          <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-900"><Settings className="h-3.5 w-3.5 text-slate-600"/>Exibição da planilha</span>
-          <button type="button" onClick={()=>setIsOpen(false)} className="rounded-md p-1 text-xs font-bold text-slate-400 hover:text-slate-700" aria-label="Fechar">✕</button>
+      <div ref={popupRef} data-portal-table-master={isMaster?'true':'false'} className="portal-table-settings-popover portal-modal-surface fixed z-[1000001] max-h-[calc(100vh-1.5rem)] overflow-y-auto text-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150" style={{top:popoverPos.top,left:popoverPos.left}}>
+        <div className="portal-settings-popover-header">
+          <span className="flex items-center gap-1.5 text-[10.5px] font-black uppercase tracking-wider text-slate-900"><Settings className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/>Exibição da planilha</span>
+          <button type="button" onClick={()=>setIsOpen(false)} className="portal-settings-close-button" aria-label="Fechar"><X className="h-4 w-4"/></button>
         </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <section className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="mb-1.5 flex items-center justify-between"><span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-700"><ListFilter className="h-3 w-3"/>Linhas por página</span><span className="text-[9px] font-bold text-slate-400">Atual: {pageSize==='all'?'Todos':pageSize}</span></div>
-            <div className="grid grid-cols-4 gap-1">{allowedLimits.map(limit=><button key={String(limit)} type="button" onClick={()=>{markPersonal();persistPageSize(limit);}} data-portal-page-size-selected={pageSize===limit?'true':'false'} className="rounded-lg border px-2 py-1.5 text-center text-[10px] font-black" style={pageSize===limit?{background:'#d7ded9',borderColor:'#9aac9f',color:'#1f2937'}:{background:'#fff',borderColor:'#cbd5e1',color:'#334155'}}>{limit==='all'?'Todos':limit}</button>)}</div>
+        <div className="portal-settings-top-grid">
+          <section className="portal-settings-control-card">
+            <div className="flex items-center justify-between gap-2"><span className="portal-settings-control-title flex items-center gap-1"><ListFilter className="h-3 w-3"/>Linhas por página</span><span className="text-[8.5px] font-bold text-slate-500">Atual: {pageSize==='all'?'Todos':pageSize}</span></div>
+            <div className="portal-settings-page-size-options">{allowedLimits.map(limit=><button key={String(limit)} type="button" onClick={()=>{markPersonal();persistPageSize(limit);}} data-selected={pageSize===limit?'true':'false'} className="portal-settings-page-size-button">{limit==='all'?'Todos':limit}</button>)}</div>
           </section>
-
-          <section className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">Filtro de período</span>
-            <div className="mt-1.5 grid grid-cols-2 gap-2"><label><span className="text-[9px] font-bold text-slate-500">Data inicial</span><input type="date" value={startDate||''} onChange={e=>{markPersonal();setStartDate?.(e.target.value);}} className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-800 outline-none"/></label><label><span className="text-[9px] font-bold text-slate-500">Data final</span><input type="date" value={endDate||''} onChange={e=>{markPersonal();setEndDate?.(e.target.value);}} className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-800 outline-none"/></label></div>
-            {(startDate||endDate)&&<button type="button" onClick={()=>{markPersonal();setStartDate?.('');setEndDate?.('');}} className="mt-1 text-[9.5px] font-extrabold text-[#9f3131]">Limpar datas</button>}
+          <section className="portal-settings-control-card">
+            <span className="portal-settings-control-title">Filtro de período</span>
+            <div className="portal-settings-date-grid">
+              <label className="portal-settings-date-field"><span>Data inicial</span><input type="date" value={startDate||''} onChange={e=>{markPersonal();setStartDate?.(e.target.value);}} /></label>
+              <label className="portal-settings-date-field"><span>Data final</span><input type="date" value={endDate||''} onChange={e=>{markPersonal();setEndDate?.(e.target.value);}} /></label>
+            </div>
+            {(startDate||endDate)&&<button type="button" onClick={()=>{markPersonal();setStartDate?.('');setEndDate?.('');}} className="mt-1.5 text-[8.5px] font-bold text-[var(--portal-danger)]">Limpar datas</button>}
           </section>
         </div>
-
-        {storageKey&&<section className="portal-core-wrap-setting mt-3">
+        {storageKey&&<section className="portal-core-wrap-setting">
           <div><strong>Quebra de texto</strong><span>Escolha como o conteúdo ocupa as células.</span></div>
           <div className="portal-core-wrap-actions">
             <button type="button" data-wrap="wrap" data-active={wrapMode==='wrap'?'true':'false'} aria-pressed={wrapMode==='wrap'} onClick={()=>{markPersonal();persistWrapMode('wrap');}}>Quebrar texto</button>
             <button type="button" data-wrap="nowrap" data-active={wrapMode==='nowrap'?'true':'false'} aria-pressed={wrapMode==='nowrap'} onClick={()=>{markPersonal();persistWrapMode('nowrap');}}>Uma linha</button>
           </div>
         </section>}
-
-        {canManageColumns&&<section className="mt-3 rounded-xl border border-slate-200 bg-[#eef1ef] p-3" aria-label={`Colunas e ordem de ${defaultTableTitle||'planilha'}`}>
+        {canManageColumns&&<section className="portal-settings-columns-card" aria-label={`Colunas e ordem de ${defaultTableTitle||'planilha'}`}>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <div><span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-800"><Columns3 className="h-3.5 w-3.5"/>Colunas e ordem</span><p className="mt-0.5 text-[9.5px] text-slate-500">Marque para exibir. Use as setas para alterar a ordem.</p></div>
-            {isMaster&&<button type="button" onClick={saveMasterDefault} className="inline-flex items-center gap-1 rounded-lg border border-[#9aac9f] bg-white px-2.5 py-1.5 text-[9px] font-black uppercase text-[#315b43]"><Star className="h-3 w-3"/>Definir padrão</button>}
+            <div><span className="flex items-center gap-1.5 text-[9.5px] font-black uppercase tracking-wider text-slate-800"><Columns3 className="h-3.5 w-3.5"/>Colunas e ordem</span><p className="mt-0.5 text-[8.5px] text-slate-500">Marque para exibir. Use as setas para alterar a ordem.</p></div>
+            {isMaster&&<button type="button" onClick={saveMasterDefault} className="portal-popup-action"><Star className="h-3 w-3"/>Definir padrão</button>}
           </div>
-          <div className="grid max-h-72 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-2">
-            {normalizedOrder.map((key,index)=>{const column=columnMap.get(key)||{key,label:key};const fixed=key===fixedColumnKey;const shown=fixed||visibleColumns[key]!==false;return <div key={key} className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${shown?'border-slate-300 bg-white':'border-slate-200 bg-slate-100 text-slate-400'}`}>
-              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-[10.5px] font-semibold"><input type="checkbox" checked={shown} disabled={fixed} onChange={e=>toggleColumn(key,e.target.checked)} className="h-3.5 w-3.5"/><span className="truncate">{column.label}</span></label>
-              {fixed?<span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-1 text-[8px] font-black uppercase text-slate-500"><Lock className="h-2.5 w-2.5"/>Fixa</span>:<div className="flex items-center"><button type="button" disabled={index<=(fixedColumnKey?1:0)} onClick={()=>moveColumn(index,-1)} className="rounded p-1 text-slate-600 hover:bg-slate-100 disabled:opacity-20" aria-label={`Mover ${column.label} para cima`}><ArrowUp className="h-3.5 w-3.5"/></button><button type="button" disabled={index>=normalizedOrder.length-1} onClick={()=>moveColumn(index,1)} className="rounded p-1 text-slate-600 hover:bg-slate-100 disabled:opacity-20" aria-label={`Mover ${column.label} para baixo`}><ArrowDown className="h-3.5 w-3.5"/></button></div>}
+          <div className="portal-settings-column-grid">
+            {normalizedOrder.map((key,index)=>{const column=columnMap.get(key)||{key,label:key};const fixed=key===fixedColumnKey;const shown=fixed||visibleColumns[key]!==false;return <div key={key} className="portal-settings-column-item" data-visible={shown?'true':'false'}>
+              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-[9.5px] font-semibold"><input type="checkbox" checked={shown} disabled={fixed} onChange={e=>toggleColumn(key,e.target.checked)} className="h-3.5 w-3.5"/><span className="truncate">{column.label}</span></label>
+              {fixed?<span className="inline-flex items-center gap-1 rounded-md bg-[var(--portal-surface-card)] px-1.5 py-1 text-[8px] font-black uppercase text-slate-500"><Lock className="h-2.5 w-2.5"/>Fixa</span>:<div className="flex items-center"><button type="button" disabled={index<=(fixedColumnKey?1:0)} onClick={()=>moveColumn(index,-1)} className="rounded p-1 text-slate-600 hover:bg-[var(--portal-surface-card)] disabled:opacity-20" aria-label={`Mover ${column.label} para cima`}><ArrowUp className="h-3.5 w-3.5"/></button><button type="button" disabled={index>=normalizedOrder.length-1} onClick={()=>moveColumn(index,1)} className="rounded p-1 text-slate-600 hover:bg-[var(--portal-surface-card)] disabled:opacity-20" aria-label={`Mover ${column.label} para baixo`}><ArrowDown className="h-3.5 w-3.5"/></button></div>}
             </div>;})}
           </div>
         </section>}
-
-        {saveMessage&&<div role="status" className="mt-2 rounded-lg border border-[#b8c7bc] bg-[#edf3ef] px-3 py-2 text-[10px] font-semibold text-[#315b43]">{saveMessage}</div>}
-        <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-2"><button type="button" onClick={restoreDefault} className="inline-flex items-center gap-1 text-[9.5px] font-bold text-slate-600 hover:text-slate-900"><RotateCcw className="h-3 w-3"/>Restaurar padrão</button><button type="button" onClick={()=>setIsOpen(false)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-extrabold uppercase text-slate-800">Concluir</button></div>
+        {saveMessage&&<div role="status" className="mt-2 rounded-lg border border-[var(--portal-border)] bg-[var(--portal-surface-card)] px-3 py-2 text-[9px] font-semibold text-[var(--portal-brand-action)]">{saveMessage}</div>}
+        <div className="portal-settings-footer"><button type="button" onClick={restoreDefault} className="portal-popup-secondary-action"><RotateCcw className="h-3 w-3"/>Restaurar padrão</button><button type="button" onClick={()=>setIsOpen(false)} className="portal-popup-action">Concluir</button></div>
       </div>,document.body)}
   </div>;
 };
