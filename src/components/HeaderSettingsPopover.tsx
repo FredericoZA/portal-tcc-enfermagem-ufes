@@ -14,6 +14,7 @@ export interface HeaderSettingsPopoverProps {
 }
 
 type PageSize = number | 'all';
+type WrapMode = 'wrap' | 'nowrap';
 
 type UserTablePreference = {
   columnOrder?: string[];
@@ -29,6 +30,7 @@ const normalizeEmailKey=(value:string)=>value.trim().toLowerCase().replace(/[^a-
 const preferenceKey=(email:string,storageKey:string)=>`portal_user_table_config_${normalizeEmailKey(email)}_${storageKey}`;
 const pageSizeKey=(storageKey:string)=>`portal_table_page_size_${storageKey}`;
 const currentPageKey=(storageKey:string)=>`portal_table_current_page_${storageKey}`;
+const wrapModeKey=(storageKey:string)=>`portal_tcc_v1043_wrap_${storageKey}`;
 
 const parsePageSize=(value:unknown,allowedLimits:PageSize[],fallback:PageSize):PageSize=>{
   if(value==='all'&&allowedLimits.includes('all'))return'all';
@@ -61,15 +63,21 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
     try{return parsePageSize(localStorage.getItem(pageSizeKey(storageKey)),allowedLimits,fallback);}catch{return fallback;}
   };
   const [pageSize,setPageSize]=useState<PageSize>(()=>readStoredPageSize());
+  const readStoredWrapMode=():WrapMode=>{
+    if(typeof window==='undefined'||!storageKey)return'wrap';
+    try{return localStorage.getItem(wrapModeKey(storageKey))==='nowrap'?'nowrap':'wrap';}catch{return'wrap';}
+  };
+  const [wrapMode,setWrapMode]=useState<WrapMode>(()=>readStoredWrapMode());
 
   useEffect(()=>{
     const next=readStoredPageSize();
     setPageSize(next);
+    setWrapMode(readStoredWrapMode());
     // A paginação canônica precisa receber todas as linhas; páginas React não podem truncar o DOM.
     if(recordsLimit!=='all')setRecordsLimit('all');
   },[storageKey]);
 
-  const hasActiveFilters=Boolean((startDate&&startDate.trim())||(endDate&&endDate.trim())||pageSize!==defaultRecordsLimit);
+  const hasActiveFilters=Boolean((startDate&&startDate.trim())||(endDate&&endDate.trim())||pageSize!==defaultRecordsLimit||wrapMode==='nowrap');
 
   const fixedColumnKey=useMemo(()=>allColumns.find(column=>column.isFixed)?.key||(allColumns.some(column=>column.key==='protocolo')?'protocolo':undefined),[allColumns]);
   const normalizedOrder=useMemo(()=>{
@@ -89,6 +97,14 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
         localStorage.setItem(pageSizeKey(storageKey),String(next));
         localStorage.setItem(currentPageKey(storageKey),'1');
       }catch{/* localStorage indisponível não bloqueia a tabela */}
+    }
+    window.dispatchEvent(new CustomEvent('portal-table-layouts-updated'));
+  };
+
+  const persistWrapMode=(next:WrapMode)=>{
+    setWrapMode(next);
+    if(storageKey){
+      try{localStorage.setItem(wrapModeKey(storageKey),next);}catch{/* preferência visual não bloqueia a tabela */}
     }
     window.dispatchEvent(new CustomEvent('portal-table-layouts-updated'));
   };
@@ -217,6 +233,14 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
             {(startDate||endDate)&&<button type="button" onClick={()=>{markPersonal();setStartDate?.('');setEndDate?.('');}} className="mt-1 text-[9.5px] font-extrabold text-[#9f3131]">Limpar datas</button>}
           </section>
         </div>
+
+        {storageKey&&<section className="portal-core-wrap-setting mt-3">
+          <div><strong>Quebra de texto</strong><span>Escolha como o conteúdo ocupa as células.</span></div>
+          <div className="portal-core-wrap-actions">
+            <button type="button" data-wrap="wrap" data-active={wrapMode==='wrap'?'true':'false'} aria-pressed={wrapMode==='wrap'} onClick={()=>{markPersonal();persistWrapMode('wrap');}}>Quebrar texto</button>
+            <button type="button" data-wrap="nowrap" data-active={wrapMode==='nowrap'?'true':'false'} aria-pressed={wrapMode==='nowrap'} onClick={()=>{markPersonal();persistWrapMode('nowrap');}}>Uma linha</button>
+          </div>
+        </section>}
 
         {canManageColumns&&<section className="mt-3 rounded-xl border border-slate-200 bg-[#eef1ef] p-3" aria-label={`Colunas e ordem de ${defaultTableTitle||'planilha'}`}>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
