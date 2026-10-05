@@ -69,10 +69,7 @@ export function formatColumnLabel(
   format?: TableTextFormat,
   customLabels?: Record<string, string>,
 ): string {
-  let label = customLabels?.[colKey]?.trim() || rawLabel;
-  if (format?.headerShowEmojis !== true || format?.columnEmojis?.[colKey] === false) {
-    label = stripEmojis(label);
-  }
+  let label = stripEmojis(customLabels?.[colKey]?.trim() || rawLabel);
   if (format?.headerUppercase) label = label.toUpperCase();
   return label;
 }
@@ -83,16 +80,11 @@ export function formatCellText(
   format?: TableTextFormat,
   defaultPrefixEmoji?: string,
 ): string {
+  void colKey;
+  void format;
+  void defaultPrefixEmoji;
   if (!text) return '';
-  if (format?.cellShowEmojis !== true || format?.columnEmojis?.[colKey] === false) {
-    return stripEmojis(text);
-  }
-  const leadingText = text.slice(0, 4);
-  const hasLeadingEmoji = stripEmojis(leadingText) !== leadingText;
-  if (defaultPrefixEmoji && !text.includes(defaultPrefixEmoji) && !hasLeadingEmoji) {
-    return `${defaultPrefixEmoji} ${text}`;
-  }
-  return text;
+  return stripEmojis(text);
 }
 
 export function getColWidthClass(

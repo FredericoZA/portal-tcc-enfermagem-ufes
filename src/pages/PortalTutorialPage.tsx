@@ -174,7 +174,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
         </div>
 
         <div className="portal-public-filter-row portal-tutorial-filter-row flex-wrap gap-2 text-xs min-w-0">
-          <span className="text-[10px] opacity-80 font-black uppercase tracking-wider shrink-0">Filtrar visão:</span>
+          <span className="text-[10px] opacity-80 font-black uppercase tracking-wider shrink-0">FILTRAR:</span>
           <div className="flex items-center gap-1.5 flex-wrap">
             {(Object.keys(roleContent) as Role[]).map((key) => {
               const selected = role === key;
@@ -184,7 +184,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
                   type="button"
                   onClick={() => setRole(key)}
                   data-selected={selected ? 'true' : 'false'}
-                  className={`portal-table-filter-chip inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide cursor-pointer border select-none ${selected ? 'shadow-xs scale-[1.02]' : 'opacity-85'}`}
+                  className="portal-standard-filter-chip portal-table-filter-chip inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide cursor-pointer border select-none"
                 >
                   <span>{roleContent[key].title}</span>
                 </button>

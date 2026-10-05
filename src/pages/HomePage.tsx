@@ -1054,7 +1054,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       </div>
 
                       {/* Month Navigation: Popup Calendar / Seta Esquerda / Hoje / Seta Direita */}
-                      <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                      <div className="portal-calendar-toolbar shrink-0">
                         {/* Month & Year Popup Selector Button */}
                         <div className="relative">
                           <button
@@ -1063,7 +1063,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                               setPickerYear(year);
                               setShowMonthPickerPopup(!showMonthPickerPopup);
                             }}
-                            className={`flex items-center gap-1.5 px-3 py-1 ${defStyles.calendarNavBtnClass} text-[10px] sm:text-[11px] font-extrabold uppercase whitespace-nowrap rounded-full outline-none cursor-pointer h-7.5 shadow-2xs transition-all shrink-0`}
+                            className={`portal-calendar-period-button ${defStyles.calendarNavBtnClass} text-[10px] sm:text-[11px] font-extrabold uppercase outline-none cursor-pointer shadow-2xs transition-all shrink-0`}
                             title="Selecionar Mês e Ano"
                           >
                             <CalendarIcon className="w-3.5 h-3.5 opacity-80 shrink-0" />
@@ -1138,7 +1138,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <button
                           type="button"
                           onClick={handlePrevMonth}
-                          className={`flex items-center justify-center ${defStyles.calendarNavBtnClass} rounded-full cursor-pointer transition-all shadow-2xs h-7.5 w-7.5 shrink-0`}
+                          className={`portal-calendar-step-button ${defStyles.calendarNavBtnClass} cursor-pointer transition-all shadow-2xs shrink-0`}
                           title="Mês Anterior"
                         >
                           <ChevronLeft className="w-4 h-4 opacity-80" />
@@ -1148,7 +1148,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <button
                           type="button"
                           onClick={handleGoToToday}
-                          className={`px-3 ${defStyles.calendarNavBtnClass} text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider rounded-full cursor-pointer transition-all h-7.5 shadow-2xs shrink-0`}
+                          className={`portal-calendar-today-button ${defStyles.calendarNavBtnClass} text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider cursor-pointer transition-all shadow-2xs shrink-0`}
                           title="Ir para o mês atual"
                         >
                           Hoje
@@ -1158,7 +1158,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <button
                           type="button"
                           onClick={handleNextMonth}
-                          className={`flex items-center justify-center ${defStyles.calendarNavBtnClass} rounded-full cursor-pointer transition-all shadow-2xs h-7.5 w-7.5 shrink-0`}
+                          className={`portal-calendar-step-button ${defStyles.calendarNavBtnClass} cursor-pointer transition-all shadow-2xs shrink-0`}
                           title="Próximo Mês"
                         >
                           <ChevronRight className="w-4 h-4 opacity-80" />
@@ -1491,7 +1491,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                       <div className="flex items-center gap-2">
                                         {calendarPopupFormat.showLocation !== false && proc.defesa?.local && (
                                           <span className="text-[10.5px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-[140px]" title={proc.defesa.local}>
-                                            📍 {proc.defesa.local}
+                                            {proc.defesa.local}
                                           </span>
                                         )}
                                         {calendarPopupFormat.showProtocol !== false && (
@@ -1649,7 +1649,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                       <div className="flex items-center gap-2">
                                         {calendarPopupFormat.showLocation !== false && (ev.location || ev.local) && (
                                           <span className="text-[10.5px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-[140px]" title={ev.location || ev.local}>
-                                            📍 {ev.location || ev.local}
+                                            {ev.location || ev.local}
                                           </span>
                                         )}
                                         {calendarPopupFormat.showProtocol !== false && (
@@ -1782,7 +1782,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 {/* INTEGRATED TOOLBAR BAR FOR STATUS & FILTERS */}
                 <div data-portal-sheet-filter="true" className="portal-defense-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 text-xs">
                   <span className="text-[10px] opacity-80 font-black uppercase tracking-wider shrink-0">
-                    {defensesTextFormat?.customFilterTitle || getEditableTableText(defensesCustomLabels, '__filterTitle', 'FILTRAR:')}
+                    FILTRAR:
                   </span>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {(['all', 'upcoming', 'defended'] as const).map((statusKey) => {

@@ -531,8 +531,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
       case 'defesaDataHora':
         return (
           <td key="defesaDataHora" className={`${styles.cellPadClass} ${widthClass} ${styles.cellWeightClass} ${styles.cellTextColorClass} ${alignClass} ${styles.borderClass} align-middle`}>
-            <div className={`flex items-center justify-center gap-1 ${styles.cellFontSizeClass}`}>
-              <span>⏰</span>
+            <div className={`flex items-center justify-center ${styles.cellFontSizeClass}`}>
               <span className="font-normal text-black">{formatDateNumeric(proc.defesa?.startAt)}</span>
             </div>
             <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa?.startAt)}</div>
@@ -563,7 +562,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
                 {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), meusProcessosTextFormat, '🎓')}
               </div>
-              <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 uppercase tracking-tight">🪪 Matrícula</div>
+              <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 uppercase tracking-tight">Matrícula</div>
               <div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno1?.matricula || '2026101890'}</div>
             </div>
           </td>
@@ -577,7 +576,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
                     {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), meusProcessosTextFormat, '🎓')}
                   </div>
-                  <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 uppercase tracking-tight">🪪 Matrícula</div>
+                  <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 uppercase tracking-tight">Matrícula</div>
                   <div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno2.matricula || '2026101891'}</div>
                 </>
               ) : (
@@ -594,7 +593,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                 {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), meusProcessosTextFormat, '👨‍🏫')}
               </div>
               <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
-                📍 {cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName)}
+                {cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName)}
               </div>
             </div>
           </td>
@@ -609,7 +608,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                     {formatCellText('membro1', formatProfessorName(ev1.nome), meusProcessosTextFormat, '👥')}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono mt-0.5 leading-tight break-words">
-                    📍 {cleanInst(ev1.instituicao || installationProfile.defaultInstitutionName)}
+                    {cleanInst(ev1.instituicao || installationProfile.defaultInstitutionName)}
                   </div>
                 </div>
               ) : (
@@ -628,7 +627,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                     {formatCellText('membro2', formatProfessorName(ev2.nome), meusProcessosTextFormat, '👥')}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono mt-0.5 leading-tight break-words">
-                    📍 {cleanInst(ev2.instituicao || 'Instituição Externa')}
+                    {cleanInst(ev2.instituicao || 'Instituição Externa')}
                   </div>
                 </div>
               ) : (
@@ -647,7 +646,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                     {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), meusProcessosTextFormat, '👨‍🏫')}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
-                    📍 {cleanInst(proc.coorientador.instituicao || 'Instituição Externa')}
+                    {cleanInst(proc.coorientador.instituicao || 'Instituição Externa')}
                   </div>
                 </div>
               ) : (
@@ -678,7 +677,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
       case 'defesaLocal':
         return (
           <td key="defesaLocal" className={`${styles.cellPadClass} ${widthClass} ${styles.cellTextColorClass} ${alignClass} ${styles.borderClass} align-middle leading-tight whitespace-normal break-words ${styles.cellFontSizeClass}`}>
-            <span>📍 {proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar'}</span>
+            <span>{proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar'}</span>
           </td>
         );
       default:
@@ -761,7 +760,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
             {/* INTEGRATED TOOLBAR FOR FILTERS (Single clean dividing line) */}
             <div data-portal-sheet-filter="true" className="portal-meus-processos-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 text-xs">
               <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
-                {getEditableTableText(customLabels, '__filterTitle', 'FILTRAR:')}
+                FILTRAR:
               </span>
               <div className="flex flex-wrap items-center gap-1.5" data-portal-role-filter-group="true">
                 <button
@@ -831,7 +830,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                 onClick={onNavigateToWizard}
                 className="mt-2 inline-flex items-center gap-1.5 bg-emerald-950 hover:bg-black text-white px-3.5 py-1.5 border border-emerald-500 rounded-full text-xs font-extrabold uppercase tracking-wider cursor-pointer transition-all shadow-2xs h-8"
               >
-                <span>🎓 Cadastrar Novo Trabalho de TCC</span>
+                <span>Cadastrar Novo Trabalho de TCC</span>
               </button>
             </div>
           ) : (
