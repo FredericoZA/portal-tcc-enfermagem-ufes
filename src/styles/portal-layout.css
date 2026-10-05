@@ -118,9 +118,11 @@ body,
 }
 
 #sidebar-nav [aria-current="page"],
-.portal-sidebar-nav-active {
+#sidebar-nav .portal-sidebar-nav-active {
   background: var(--portal-sidebar-active);
   color: var(--portal-text-light);
+  border-left: 4px solid var(--portal-sidebar-active-accent);
+  padding-left: 10px;
 }
 
 #portal-app-root main {
@@ -132,9 +134,9 @@ body,
 }
 
 #home-page-footer-notes {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 4px 24px 6px;
+  width: calc(100% - 48px);
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 4px 0 6px;
   background: var(--portal-surface-page);
 }
