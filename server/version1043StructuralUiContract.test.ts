@@ -49,14 +49,14 @@ test('paleta de calendário e processo é compartilhada e não fluorescente',()=
   assert.match(css,/portal-core-calendar-card\.is-defended/);
 });
 
-test('calendário bloqueia fins de semana e preserva popup nativo por clique do dia',()=>{
+test('calendário remove fins de semana da grade e preserva popup nativo por clique do dia',()=>{
   const runtime=read('src/utils/portalTableDom.ts');
   const home=read('src/pages/HomePage.tsx');
-  const css=readPortalCss();
-  assert.match(home,/isWeekend = colIndex === 0 \|\| colIndex === 6/);
-  assert.match(home,/portal-core-calendar-weekend/);
+  assert.match(home,/const businessDays = Array\.from/);
+  assert.match(home,/dayOfWeek >= 1 && dayOfWeek <= 5/);
+  assert.match(home,/businessDays\.map/);
+  assert.doesNotMatch(home,/portal-core-calendar-weekend|<div>DOM<\/div>|<div>SÁB<\/div>/);
   assert.doesNotMatch(runtime,/enhanceCalendar|weekday === 0/);
-  assert.match(css,/grid-template-columns:\s*\.22fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr \.22fr/);
   assert.match(home,/setSelectedDayDefenses\(dayDefenses\.length > 0 \? dayDefenses : null\)/);
   assert.match(home,/id="day-defenses-modal"/);
   assert.match(home,/selectedDayDefenses\.map/);
