@@ -7,8 +7,10 @@ type TableState = {
 };
 
 const tableState = new WeakMap<HTMLTableElement, TableState>();
-const WIDTH_PREFIX = 'portal_tcc_v1043_widths_';
-const WRAP_PREFIX = 'portal_tcc_v1043_wrap_';
+const WIDTH_PREFIX = 'portal_table_widths_';
+const WRAP_PREFIX = 'portal_table_wrap_';
+const LEGACY_WIDTH_PREFIX = 'portal_tcc_v1043_widths_';
+const LEGACY_WRAP_PREFIX = 'portal_tcc_v1043_wrap_';
 const MIN_WIDTH = 72;
 const MAX_WIDTH = 720;
 
@@ -255,15 +257,52 @@ function widthStorageKey(table: HTMLTableElement) {
   return `${WIDTH_PREFIX}${tableKey(table)}`;
 }
 
+function legacyWidthStorageKey(table: HTMLTableElement) {
+  return `${LEGACY_WIDTH_PREFIX}${tableKey(table)}`;
+}
+
 function wrapStorageKey(table: HTMLTableElement) {
   return `${WRAP_PREFIX}${tableKey(table)}`;
 }
 
+function legacyWrapStorageKey(table: HTMLTableElement) {
+  return `${LEGACY_WRAP_PREFIX}${tableKey(table)}`;
+}
+
 function readWidths(table: HTMLTableElement): Record<string, number> {
   try {
-    return JSON.parse(localStorage.getItem(widthStorageKey(table)) || '{}');
+    const currentKey = widthStorageKey(table);
+    const current = localStorage.getItem(currentKey);
+    if (current) return JSON.parse(current);
+
+    const legacyKey = legacyWidthStorageKey(table);
+    const legacy = localStorage.getItem(legacyKey);
+    if (!legacy) return {};
+
+    const parsed = JSON.parse(legacy);
+    localStorage.setItem(currentKey, JSON.stringify(parsed));
+    localStorage.removeItem(legacyKey);
+    return parsed;
   } catch {
     return {};
+  }
+}
+
+function readWrapMode(table: HTMLTableElement) {
+  try {
+    const currentKey = wrapStorageKey(table);
+    const current = localStorage.getItem(currentKey);
+    if (current) return current;
+
+    const legacyKey = legacyWrapStorageKey(table);
+    const legacy = localStorage.getItem(legacyKey);
+    if (!legacy) return null;
+
+    localStorage.setItem(currentKey, legacy);
+    localStorage.removeItem(legacyKey);
+    return legacy;
+  } catch {
+    return null;
   }
 }
 
@@ -371,7 +410,7 @@ export function enhancePortalTable(table: HTMLTableElement) {
     installResizer(table, header, index);
   });
   restoreWidths(table);
-  const wrap = localStorage.getItem(wrapStorageKey(table));
+  const wrap = readWrapMode(table);
   table.classList.toggle('portal-core-nowrap', wrap === 'nowrap');
   applyFilters(table);
 }
