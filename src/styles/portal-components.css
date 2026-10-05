@@ -434,50 +434,70 @@ button[aria-label^="Configurar exibição"],
 }
 
 
-/* Navegação mensal: quatro controles coincidentes, sem sobreposição. */
+/* Navegação mensal: cada controle mede o próprio conteúdo; nenhum texto extrapola o botão. */
 .portal-calendar-toolbar {
-  display: grid;
-  grid-template-columns: minmax(156px, auto) var(--portal-toolbar-button-size) minmax(52px, auto) var(--portal-toolbar-button-size);
+  display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+  flex-wrap: nowrap;
   white-space: nowrap;
 }
 
-.portal-calendar-period-button,
-.portal-calendar-step-button,
-.portal-calendar-today-button {
+.portal-calendar-period-control {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: max-content;
+}
+
+.portal-calendar-nav-button {
+  box-sizing: border-box;
   height: var(--portal-toolbar-button-size);
   min-height: var(--portal-toolbar-button-size);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid var(--portal-border);
   border-radius: var(--portal-control-radius);
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+  box-shadow: none;
   white-space: nowrap;
 }
 
 .portal-calendar-period-button {
-  min-width: 156px;
+  width: max-content;
+  min-width: 176px;
+  max-width: none;
   padding: 0 12px;
   gap: 6px;
+  flex: 0 0 auto;
+}
+
+.portal-calendar-period-button > span {
+  display: block;
+  white-space: nowrap;
 }
 
 .portal-calendar-step-button {
   width: var(--portal-toolbar-button-size);
   min-width: var(--portal-toolbar-button-size);
+  max-width: var(--portal-toolbar-button-size);
   padding: 0;
+  flex: 0 0 var(--portal-toolbar-button-size);
 }
 
 .portal-calendar-today-button {
-  min-width: 52px;
+  width: max-content;
+  min-width: 56px;
   padding: 0 12px;
+  flex: 0 0 auto;
 }
 
 @media (max-width: 639px) {
   .portal-calendar-toolbar {
     width: 100%;
-    grid-template-columns: minmax(0, 1fr) var(--portal-toolbar-button-size) minmax(52px, auto) var(--portal-toolbar-button-size);
-  }
-  .portal-calendar-period-button {
-    min-width: 0;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }
