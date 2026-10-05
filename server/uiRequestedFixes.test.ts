@@ -62,8 +62,11 @@ test('Lista de Defesas e Repositório padronizam o cabeçalho como Processo pela
   assert.match(identity, /#biblioteca-tccs-section/);
   assert.match(runtime, /function renameProcessHeader/);
   assert.match(runtime, /node\.data = 'Processo'/);
-  assert.match(home, /const clean = rawStr\.replace\(\/\^TCC/);
-  assert.match(home, /line1 = `TCC - \$\{parts\[0\]\}`/);
+  const processPill = read('src/components/PortalProcessPill.tsx');
+  assert.match(home, /formatProcessLabel\(proc\.protocolo \|\| proc\.id\)/);
+  assert.doesNotMatch(home, /Abrir TCC ↗/);
+  assert.match(processPill, /replace\(\/\^TESTE/);
+  assert.match(processPill, /return `TCC - \$\{normalized\}`/);
   assert.match(home, /portal-semantic-tone/);
 });
 
