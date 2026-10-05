@@ -8,10 +8,12 @@ test('release de refactor visual é 1.0.70', () => {
   assert.equal(JSON.parse(read('package.json')).version, '1.0.70');
 });
 
-test('estado de defesa não sobrescreve cores de vínculo e assinatura', () => {
+test('estado de defesa é calculado na página pública sem pós-processamento global', () => {
   const runtime = read('src/components/PortalStructuralRuntime.tsx');
-  assert.match(runtime, /if \(!table\.closest\('#formal-monthly-calendar-section'\)\) return/);
-  assert.doesNotMatch(runtime, /fetch\('\/api\/processes'/);
+  const home = read('src/pages/HomePage.tsx');
+  assert.match(home, /getDefenseState\(proc\)/);
+  assert.match(home, /portal-semantic-tone/);
+  assert.doesNotMatch(runtime, /normalizeDefenseRows|formal-monthly-calendar-section|fetch\('\/api\/processes'/);
 });
 
 test('calendário classifica fim de semana no React e abre agenda sem busca paralela', () => {
@@ -19,8 +21,7 @@ test('calendário classifica fim de semana no React e abre agenda sem busca para
   const runtime = read('src/components/PortalStructuralRuntime.tsx');
   assert.match(home, /isWeekend = colIndex === 0 \|\| colIndex === 6/);
   assert.match(home, /hasEvents && !isWeekend/);
-  assert.match(runtime, /function enhanceCalendar\(\)/);
-  assert.doesNotMatch(runtime, /async function enhanceCalendar/);
+  assert.doesNotMatch(runtime, /enhanceCalendar/);
 });
 
 test('indicadores têm contrato completo e frontend defensivo', () => {
