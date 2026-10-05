@@ -1,15 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { readPortalCss } from './testUtils/portalCss';
 const read=(p:string)=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('1.0.40 mantém cabeçalhos estáveis e separadores brancos em camadas',()=>{
-  const enhancer=read('src/components/PortalSpreadsheetEnhancer.tsx');
-  const css=read('src/portal-version-1040.css');
-  assert.match(enhancer,/canonicalizeHeader/);
-  assert.match(enhancer,/wrapper\.className='portal-column-header-content'/);
-  assert.match(css,/border-bottom:4px solid #fff/);
-  assert.match(css,/portal-defense-filter-row/);
+test('cabeçalhos e separadores foram absorvidos pelo contrato canônico',()=>{
+  const runtime=read('src/utils/portalTableDom.ts');
+  const css=readPortalCss();
+  assert.match(runtime,/portal-core-column-menu/);
+  assert.match(css,/--portal-sheet-title-divider:\s*5px/);
+  assert.match(css,/--portal-sheet-content-divider:\s*15px/);
+  assert.doesNotMatch(css,/!important/);
 });
 
 test('1.0.40 mantém seleção em lote e registro de assinaturas independente do provedor',()=>{
@@ -22,13 +23,13 @@ test('1.0.40 mantém seleção em lote e registro de assinaturas independente do
   assert.doesNotMatch(signatures,/getAstenStatus/);
 });
 
-test('1.0.40 mantém workspaces administrativos e consolida download dos modelos em um zip',()=>{
-  const enhancer=read('src/components/PortalVersion1040Enhancer.tsx');
+test('workspaces administrativos e replicação usam componentes atuais',()=>{
+  const workspace=read('src/components/SettingsWorkspaceModal.tsx');
   const replication=read('src/pages/PortalReplicationPage.tsx');
   const replicationApi=read('api/replication-model.ts');
   const integrations=read('src/components/InfrastructureIntegrationsPanel.tsx');
-  assert.match(enhancer,/identity: 'Rodapé'/);
-  assert.match(enhancer,/keepPortalDialogsAboveWorkspaces/);
+  assert.match(workspace,/portal-settings-workspace/);
+  assert.match(workspace,/data-portal-full-bleed/);
   assert.match(replication,/replication-models\/all\/download/);
   assert.doesNotMatch(replication,/downloadAllModels/);
   assert.match(replicationApi,/modelos-portal-tcc\.zip/);

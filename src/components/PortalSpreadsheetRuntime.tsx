@@ -1,16 +1,8 @@
 import { useLayoutEffect } from 'react';
+import { PORTAL_TABLE_KEYS, inferManagedTableKey, isPortalProcessHeader, normalizePortalTableText, readPortalHeaderLabel, type PortalTableKey } from '../utils/portalTableIdentity';
+import { closePortalTablePopup, enhancePortalTable } from '../utils/portalTableDom';
 
-const TABLE_KEYS = [
-  'defenses',
-  'acervo',
-  'meus_processos',
-  'coordinator',
-  'authorized_access',
-  'signature_logs',
-  'audit_logs',
-] as const;
-
-type TableKey = (typeof TABLE_KEYS)[number];
+type TableKey = PortalTableKey;
 type PageSize = 25 | 50 | 100 | 'all';
 
 const DEFAULT_PAGE_SIZE: Record<TableKey, PageSize> = {
@@ -23,28 +15,9 @@ const DEFAULT_PAGE_SIZE: Record<TableKey, PageSize> = {
   audit_logs: 25,
 };
 
-const TABLE_CONTAINER_SELECTORS: Record<TableKey, string[]> = {
-  defenses: ['#public-calendar-cards-section'],
-  acervo: ['#biblioteca-tccs-section'],
-  meus_processos: ['#meus-processos-page-container'],
-  coordinator: ['#coordenador-page-root'],
-  authorized_access: ['#authorized-access-panel'],
-  signature_logs: ['#asten-logs-page'],
-  audit_logs: ['#audit-logs-page'],
-};
-
 const PAGE_SIZE_PREFIX = 'portal_table_page_size_';
 const CURRENT_PAGE_PREFIX = 'portal_table_current_page_';
 const INTERACTIVE_SELECTOR = 'button,input,select,textarea,a,[role="button"],[contenteditable="true"]';
-
-function normalize(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLocaleLowerCase('pt-BR');
-}
 
 function parsePageSize(value: unknown): PageSize | null {
   if (value === 'all') return 'all';
@@ -75,9 +48,12 @@ function storageKeysForTable(key: TableKey) {
   return keys;
 }
 
+let legacyLimitsMigrated = false;
+
 function migrateLegacyLimits() {
-  if (typeof window === 'undefined') return;
-  for (const key of TABLE_KEYS) {
+  if (typeof window === 'undefined' || legacyLimitsMigrated) return;
+  legacyLimitsMigrated = true;
+  for (const key of PORTAL_TABLE_KEYS) {
     let preferred: PageSize | null = null;
     for (const storageKey of storageKeysForTable(key)) {
       try {
@@ -106,16 +82,8 @@ function migrateLegacyLimits() {
   }
 }
 
-migrateLegacyLimits();
-
 function tableKey(table: HTMLTableElement): TableKey | null {
-  const explicit = table.dataset.portalTableKey as TableKey | undefined;
-  if (explicit && TABLE_KEYS.includes(explicit)) return explicit;
-
-  for (const key of TABLE_KEYS) {
-    if (TABLE_CONTAINER_SELECTORS[key].some((selector) => table.closest(selector))) return key;
-  }
-  return null;
+  return inferManagedTableKey(table);
 }
 
 function readPageSize(key: TableKey): PageSize {
@@ -159,26 +127,6 @@ function saveCurrentPage(key: TableKey, page: number) {
   }
 }
 
-function headerLabel(header: HTMLTableCellElement) {
-  const clone = header.cloneNode(true) as HTMLTableCellElement;
-  clone.querySelectorAll('button,.portal-core-resizer,.portal-core-column-menu,svg').forEach((node) => node.remove());
-  return normalize(clone.textContent || '');
-}
-
-function isProcessHeader(header: HTMLTableCellElement) {
-  const key = normalize(header.dataset.portalColumnKey || header.dataset.portalCoreColumnKey || '');
-  const label = headerLabel(header);
-  return key === 'protocolo'
-    || key === 'processo'
-    || key.endsWith('protocolo')
-    || label === 'processo'
-    || label === 'protocolo'
-    || label.includes('numero do processo')
-    || label.includes('nº do processo')
-    || label.includes('n° do processo')
-    || label.includes('no do processo');
-}
-
 function renameProcessHeader(header: HTMLTableCellElement) {
   const walker = document.createTreeWalker(header, NodeFilter.SHOW_TEXT);
   const nodes: Text[] = [];
@@ -187,7 +135,7 @@ function renameProcessHeader(header: HTMLTableCellElement) {
 
   for (const node of nodes) {
     if (node.parentElement?.closest('.portal-core-column-menu,.portal-core-resizer')) continue;
-    const value = normalize(node.data);
+    const value = normalizePortalTableText(node.data);
     if (!value) continue;
     if (value.includes('processo') || value === 'protocolo') {
       if (node.data !== 'Processo') node.data = 'Processo';
@@ -246,10 +194,10 @@ function markSpreadsheet(table: HTMLTableElement) {
 
   const selectionIndex = headers.findIndex((header) =>
     header.dataset.portalSelectionColumn === 'true'
-    || normalize(header.dataset.portalColumnLabel || '') === 'selecao'
-    || headerLabel(header) === 'selecao');
+    || normalizePortalTableText(header.dataset.portalColumnLabel || '') === 'selecao'
+    || readPortalHeaderLabel(header) === 'selecao');
 
-  let processIndex = headers.findIndex(isProcessHeader);
+  let processIndex = headers.findIndex(isPortalProcessHeader);
   if (processIndex < 0 && (key === 'defenses' || key === 'acervo' || key === 'meus_processos')) {
     processIndex = 0;
   }
@@ -324,7 +272,7 @@ function ensureSinglePager(host: HTMLElement, key: TableKey) {
   if (!parent) return null;
 
   const selector = `.portal-spreadsheet-pager[data-portal-table-key="${key}"]`;
-  const allExisting = Array.from(document.querySelectorAll<HTMLElement>(selector));
+  const allExisting = Array.from(parent.querySelectorAll<HTMLElement>(`:scope > ${selector}`));
   const pager = allExisting.shift() || document.createElement('nav');
   allExisting.forEach((duplicate) => duplicate.remove());
 
@@ -408,21 +356,24 @@ function applyPagination(table: HTMLTableElement) {
   pager.appendChild(controls);
 }
 
-function removeOrphanPagers() {
-  document.querySelectorAll<HTMLElement>('.portal-spreadsheet-pager[data-portal-generated="true"]').forEach((pager) => {
+function removeOrphanPagers(root: HTMLElement) {
+  const parent = root.parentElement;
+  if (!parent) return;
+  parent.querySelectorAll<HTMLElement>(':scope > .portal-spreadsheet-pager[data-portal-generated="true"]').forEach((pager) => {
     const key = pager.dataset.portalTableKey as TableKey | undefined;
-    if (!key) {
-      pager.remove();
-      return;
-    }
-    const ownerExists = Array.from(document.querySelectorAll<HTMLTableElement>('table'))
-      .some((table) => table.isConnected && tableKey(table) === key);
+    const ownerExists = key
+      ? Array.from(root.querySelectorAll<HTMLTableElement>('table')).some((table) => table.isConnected && tableKey(table) === key)
+      : false;
     if (!ownerExists) pager.remove();
   });
 }
 
 export const PortalSpreadsheetRuntime = () => {
   useLayoutEffect(() => {
+    migrateLegacyLimits();
+    const root = document.getElementById('portal-app-root');
+    if (!root) return;
+
     const unbinders = new Map<HTMLElement, () => void>();
     let frame = 0;
 
@@ -524,24 +475,24 @@ export const PortalSpreadsheetRuntime = () => {
     const refresh = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        document.querySelectorAll<HTMLTableElement>('table').forEach((table) => {
+        root.querySelectorAll<HTMLTableElement>('table').forEach((table) => {
           if (!tableKey(table)) return;
+          enhancePortalTable(table);
           markSpreadsheet(table);
           const host = findScrollHost(table);
           if (host) bindScrollHost(host);
           applyPagination(table);
         });
-        removeOrphanPagers();
+        removeOrphanPagers(root);
       });
     };
 
     const observer = new MutationObserver(refresh);
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
     window.addEventListener('storage', refresh);
     window.addEventListener('portal-table-layouts-updated', refresh as EventListener);
     window.addEventListener('global_table_layouts_changed', refresh as EventListener);
     window.addEventListener('resize', refresh);
-    window.addEventListener('focus', refresh);
 
     refresh();
 
@@ -552,9 +503,9 @@ export const PortalSpreadsheetRuntime = () => {
       window.removeEventListener('portal-table-layouts-updated', refresh as EventListener);
       window.removeEventListener('global_table_layouts_changed', refresh as EventListener);
       window.removeEventListener('resize', refresh);
-      window.removeEventListener('focus', refresh);
       unbinders.forEach((unbind) => unbind());
       unbinders.clear();
+      closePortalTablePopup();
     };
   }, []);
 

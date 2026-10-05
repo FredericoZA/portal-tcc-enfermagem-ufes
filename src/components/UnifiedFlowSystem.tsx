@@ -958,7 +958,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                     left: 0,
                     top: 0,
                     zIndex: 50,
-                    backgroundColor: '#f1f5f9',
+                    backgroundColor: 'var(--portal-surface-page)',
                   }}
                   className="sticky left-0 top-0 z-50 bg-slate-100 text-slate-800 px-3 py-2.5 min-w-[280px] w-[280px] max-w-[280px] border-b-2 border-r-2 border-slate-300 shadow-[4px_0_10px_rgba(0,0,0,0.08)] select-none cursor-pointer group transition-colors hover:bg-slate-200"
                   title="Clique para ordenar elementos por nome"
@@ -984,7 +984,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                       position: 'sticky',
                       top: 0,
                       zIndex: 20,
-                      backgroundColor: '#f1f5f9',
+                      backgroundColor: 'var(--portal-surface-page)',
                     }}
                     className={`px-3 py-2.5 w-[140px] min-w-[140px] max-w-[140px] ${getColWidthClass(col.id, variableWidths)} border-b-2 border-r border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200 sticky top-0 z-20 select-none cursor-pointer group transition-colors`}
                     title={`Clique para ver configurações funcionais da variável ${col.name}`}

@@ -453,6 +453,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     return (
       <th
         key={colKey}
+        data-portal-column-key={colKey}
         onClick={isSortable ? () => handleSort(colKey) : undefined}
         className={`${styles.headerThClass} ${styles.cellPadClass} ${widthClass} ${styles.headerWeightClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerCasingClass} ${styles.headerBorderClass} ${styles.headerAlignClass} align-middle ${isSortable ? `cursor-pointer ${styles.headerThHoverClass}` : ''} select-none transition-colors group`}
       >
@@ -773,8 +774,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const sortedPending = getSortedAndFilteredItems(pendingItems, true);
   const sortedCompleted = getSortedAndFilteredItems(completedItems, false);
 
-  const limitedPending = recordsLimit === 'all' ? sortedPending : sortedPending.slice(0, recordsLimit);
-  const limitedCompleted = recordsLimit === 'all' ? sortedCompleted : sortedCompleted.slice(0, recordsLimit);
+  // A paginação é responsabilidade exclusiva do PortalSpreadsheetRuntime.
+  // Renderizar a coleção completa evita dupla limitação e páginas incompletas.
 
   const actionStyles = getActionPillStyles(coordTextFormat);
 
@@ -811,32 +812,33 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                 </h1>
               </div>
 
-              {/* Ações: provedores primeiro; depois controles padrão da tabela */}
-              <div className="flex items-center shrink-0">
-                {activeTab === 'pendentes' && (
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={handleSignSelected} className={`${styles.toolbarButtonClass} portal-sign-bulk-btn disabled:opacity-45`} style={styles.toolbarButtonStyle} title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
-                    <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className={`${styles.toolbarButtonClass} portal-sign-bulk-btn disabled:opacity-45`} style={styles.toolbarButtonStyle} title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
-                  </div>
-                )}
-
-                <div className={`flex items-center gap-1.5 sm:gap-2 ${activeTab === 'pendentes' ? 'ml-3 border-l border-white/35 pl-3' : ''}`}>
+              <div className="portal-sheet-toolbar shrink-0">
+                <div className="portal-sheet-toolbar-actions">
+                  {activeTab === 'pendentes' && (
+                    <>
+                      <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={handleSignSelected} className="portal-sign-bulk-btn disabled:opacity-45" title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
+                      <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className="portal-sign-bulk-btn disabled:opacity-45" title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
+                    </>
+                  )}
+                  <button
+                    id="coordenador-refresh-btn"
+                    type="button"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="portal-toolbar-icon-button disabled:opacity-70"
+                    title="Atualizar fila de declarações"
+                    aria-label="Atualizar fila de declarações"
+                  >
+                    <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
+                <div className="portal-sheet-toolbar-terminal">
                   <SearchPopover
                     value={searchFilter}
                     onChange={setSearchFilter}
                     placeholder="Buscar declarações..."
                     textFormat={coordTextFormat}
                   />
-                  <button
-                    type="button"
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className={`${styles.toolbarButtonClass} disabled:opacity-70`}
-                    style={styles.toolbarButtonStyle}
-                    title="Atualizar fila de declarações"
-                  >
-                    <YinYangIcon className={`w-3.5 h-3.5 text-current ${isRefreshing ? 'animate-spin' : ''}`} />
-                  </button>
                   <HeaderSettingsPopover
                     recordsLimit={recordsLimit}
                     setRecordsLimit={setRecordsLimit}
@@ -920,7 +922,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   </div>
                 ) : (
                   <TableScrollWrapper>
-                    <table className="w-full text-center border-collapse text-xs">
+                    <table data-portal-native-sort="true" className="w-full text-center border-collapse text-xs">
                       <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`} style={styles.theadStyle}>
                         <tr>
                           {/* Always show selection column for pending */}
@@ -945,7 +947,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 bg-white">
-                        {limitedPending.map((item) => {
+                        {sortedPending.map((item) => {
                           const proc = item.process;
                           const isSelected = selectedIds.includes(proc.id);
                           return (
@@ -988,7 +990,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   </div>
                 ) : (
                   <TableScrollWrapper>
-                    <table className="w-full text-center border-collapse text-xs">
+                    <table data-portal-native-sort="true" className="w-full text-center border-collapse text-xs">
                       <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`}>
                         <tr>
                           {/* Always show selection column for completed to align perfectly */}
@@ -1016,7 +1018,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 bg-white">
-                        {limitedCompleted.map((proc) => {
+                        {sortedCompleted.map((proc) => {
                           const isSelected = selectedIds.includes(proc.id);
                           return (
                             <tr

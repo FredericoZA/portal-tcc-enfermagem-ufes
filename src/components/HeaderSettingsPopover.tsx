@@ -14,6 +14,7 @@ export interface HeaderSettingsPopoverProps {
 }
 
 type PageSize = number | 'all';
+type WrapMode = 'wrap' | 'nowrap';
 
 type UserTablePreference = {
   columnOrder?: string[];
@@ -29,6 +30,7 @@ const normalizeEmailKey=(value:string)=>value.trim().toLowerCase().replace(/[^a-
 const preferenceKey=(email:string,storageKey:string)=>`portal_user_table_config_${normalizeEmailKey(email)}_${storageKey}`;
 const pageSizeKey=(storageKey:string)=>`portal_table_page_size_${storageKey}`;
 const currentPageKey=(storageKey:string)=>`portal_table_current_page_${storageKey}`;
+const wrapModeKey=(storageKey:string)=>`portal_tcc_v1043_wrap_${storageKey}`;
 
 const parsePageSize=(value:unknown,allowedLimits:PageSize[],fallback:PageSize):PageSize=>{
   if(value==='all'&&allowedLimits.includes('all'))return'all';
@@ -61,15 +63,21 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
     try{return parsePageSize(localStorage.getItem(pageSizeKey(storageKey)),allowedLimits,fallback);}catch{return fallback;}
   };
   const [pageSize,setPageSize]=useState<PageSize>(()=>readStoredPageSize());
+  const readStoredWrapMode=():WrapMode=>{
+    if(typeof window==='undefined'||!storageKey)return'wrap';
+    try{return localStorage.getItem(wrapModeKey(storageKey))==='nowrap'?'nowrap':'wrap';}catch{return'wrap';}
+  };
+  const [wrapMode,setWrapMode]=useState<WrapMode>(()=>readStoredWrapMode());
 
   useEffect(()=>{
     const next=readStoredPageSize();
     setPageSize(next);
+    setWrapMode(readStoredWrapMode());
     // A paginação canônica precisa receber todas as linhas; páginas React não podem truncar o DOM.
     if(recordsLimit!=='all')setRecordsLimit('all');
   },[storageKey]);
 
-  const hasActiveFilters=Boolean((startDate&&startDate.trim())||(endDate&&endDate.trim())||pageSize!==defaultRecordsLimit);
+  const hasActiveFilters=Boolean((startDate&&startDate.trim())||(endDate&&endDate.trim())||pageSize!==defaultRecordsLimit||wrapMode==='nowrap');
 
   const fixedColumnKey=useMemo(()=>allColumns.find(column=>column.isFixed)?.key||(allColumns.some(column=>column.key==='protocolo')?'protocolo':undefined),[allColumns]);
   const normalizedOrder=useMemo(()=>{
@@ -89,6 +97,14 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
         localStorage.setItem(pageSizeKey(storageKey),String(next));
         localStorage.setItem(currentPageKey(storageKey),'1');
       }catch{/* localStorage indisponível não bloqueia a tabela */}
+    }
+    window.dispatchEvent(new CustomEvent('portal-table-layouts-updated'));
+  };
+
+  const persistWrapMode=(next:WrapMode)=>{
+    setWrapMode(next);
+    if(storageKey){
+      try{localStorage.setItem(wrapModeKey(storageKey),next);}catch{/* preferência visual não bloqueia a tabela */}
     }
     window.dispatchEvent(new CustomEvent('portal-table-layouts-updated'));
   };
@@ -195,11 +211,11 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
   };
 
   return <div className="inline-flex items-center gap-1.5 shrink-0">
-    <button ref={gearButtonRef} type="button" onClick={handleToggle} className={`${styles.toolbarButtonClass} relative`} style={styles.toolbarButtonStyle} title={canManageColumns?'Exibição da planilha: linhas, período, colunas e ordem':'Exibição da planilha: linhas e período'} aria-label="Configurar exibição da planilha">
+    <button ref={gearButtonRef} type="button" onClick={handleToggle} className="portal-toolbar-icon-button relative" title={canManageColumns?'Exibição da planilha: linhas, período, colunas e ordem':'Exibição da planilha: linhas e período'} aria-label="Configurar exibição da planilha">
       <Settings className="h-3.5 w-3.5 text-current"/>{hasActiveFilters&&<span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#6f8f79] ring-2 ring-white"/>}
     </button>
     {isOpen&&createPortal(
-      <div ref={popupRef} data-portal-table-master={isMaster?'true':'false'} className="portal-table-settings-popover fixed z-[1000001] max-h-[calc(100vh-1.5rem)] w-[min(560px,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-slate-300 bg-white p-3.5 text-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150" style={{top:popoverPos.top,left:popoverPos.left}}>
+      <div ref={popupRef} data-portal-table-master={isMaster?'true':'false'} className="portal-table-settings-popover portal-modal-surface fixed z-[1000001] max-h-[calc(100vh-1.5rem)] w-[min(560px,calc(100vw-2rem))] overflow-y-auto rounded-xl border p-3.5 text-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150" style={{top:popoverPos.top,left:popoverPos.left}}>
         <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">
           <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-900"><Settings className="h-3.5 w-3.5 text-slate-600"/>Exibição da planilha</span>
           <button type="button" onClick={()=>setIsOpen(false)} className="rounded-md p-1 text-xs font-bold text-slate-400 hover:text-slate-700" aria-label="Fechar">✕</button>
@@ -217,6 +233,14 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
             {(startDate||endDate)&&<button type="button" onClick={()=>{markPersonal();setStartDate?.('');setEndDate?.('');}} className="mt-1 text-[9.5px] font-extrabold text-[#9f3131]">Limpar datas</button>}
           </section>
         </div>
+
+        {storageKey&&<section className="portal-core-wrap-setting mt-3">
+          <div><strong>Quebra de texto</strong><span>Escolha como o conteúdo ocupa as células.</span></div>
+          <div className="portal-core-wrap-actions">
+            <button type="button" data-wrap="wrap" data-active={wrapMode==='wrap'?'true':'false'} aria-pressed={wrapMode==='wrap'} onClick={()=>{markPersonal();persistWrapMode('wrap');}}>Quebrar texto</button>
+            <button type="button" data-wrap="nowrap" data-active={wrapMode==='nowrap'?'true':'false'} aria-pressed={wrapMode==='nowrap'} onClick={()=>{markPersonal();persistWrapMode('nowrap');}}>Uma linha</button>
+          </div>
+        </section>}
 
         {canManageColumns&&<section className="mt-3 rounded-xl border border-slate-200 bg-[#eef1ef] p-3" aria-label={`Colunas e ordem de ${defaultTableTitle||'planilha'}`}>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

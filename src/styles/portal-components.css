@@ -1,0 +1,381 @@
+/* ==========================================================================
+   4. COMPONENTES
+   ========================================================================== */
+
+/* Quatro níveis de superfície. */
+.portal-layer-panel,
+.portal-surface-panel {
+  background: var(--portal-surface-panel);
+}
+
+.portal-layer-card,
+.portal-surface-card {
+  background: var(--portal-surface-card);
+}
+
+.portal-layer-inner,
+.portal-surface-inner {
+  background: var(--portal-surface-inner);
+}
+
+/* Cabeçalhos de página/painel/pop-up. */
+.portal-section-header,
+.portal-public-header,
+.portal-modal-header,
+.portal-settings-title-bar {
+  min-height: var(--portal-sheet-title-height);
+  display: flex;
+  align-items: center;
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
+  border-color: var(--portal-brand-header);
+}
+
+:is(.portal-section-header, .portal-public-header, .portal-modal-header, .portal-settings-title-bar)
+:is(h1, h2, h3, h4, p, span, svg) {
+  color: inherit;
+}
+
+/* Barras de ação: ações específicas à esquerda; busca + engrenagem formam o par final. */
+.portal-sheet-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--portal-toolbar-action-gap);
+}
+
+.portal-sheet-toolbar-actions,
+.portal-sheet-toolbar-terminal {
+  display: inline-flex;
+  align-items: center;
+}
+
+.portal-sheet-toolbar-actions {
+  gap: var(--portal-toolbar-pair-gap);
+}
+
+.portal-sheet-toolbar-terminal {
+  gap: var(--portal-toolbar-pair-gap);
+}
+
+/* Botões de ícone da barra — todos circulares. */
+.portal-header-action,
+.portal-toolbar-icon-button,
+.portal-customization-top-action,
+button[aria-label^="Buscar registros"],
+button[title^="Buscar"],
+button[title*="Exibição da planilha"],
+button[aria-label^="Configurar exibição"],
+.portal-repository-download-toolbar {
+  width: var(--portal-toolbar-button-size);
+  min-width: var(--portal-toolbar-button-size);
+  height: var(--portal-toolbar-button-size);
+  min-height: var(--portal-toolbar-button-size);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--portal-border);
+  border-radius: var(--portal-control-radius);
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+  box-shadow: none;
+}
+
+/* Tons semânticos aplicados por variável, sem duplicar HEX nos componentes. */
+.portal-semantic-tone {
+  background: var(--portal-tone-bg);
+  border-color: var(--portal-tone-border);
+  color: var(--portal-tone-text);
+}
+
+.portal-role-process-button {
+  background: var(--portal-role-bg);
+  border-color: var(--portal-role-border);
+  color: var(--portal-role-text);
+}
+
+.portal-process-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+/* Filtros/chips. */
+.portal-table-filter-chip,
+.portal-standard-filter-chip,
+.portal-native-all-filter {
+  min-height: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  margin: 0;
+  border: 1px solid var(--portal-border);
+  border-radius: var(--portal-control-radius);
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+  box-shadow: none;
+  transform: none;
+}
+
+.portal-table-filter-chip[data-selected="true"],
+.portal-standard-filter-chip[aria-pressed="true"],
+.portal-native-all-filter[data-selected="true"] {
+  background: var(--portal-neutral-bg);
+  border-color: var(--portal-neutral-border);
+  color: var(--portal-text-dark);
+}
+
+.portal-filter-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+}
+
+/* Cartões e inputs. */
+.portal-card,
+.portal-workspace,
+.portal-modal-surface {
+  color: var(--portal-text-dark);
+  font-family: var(--portal-font-family);
+}
+
+.portal-card {
+  background: var(--portal-surface-card);
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+}
+
+.portal-input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--portal-border);
+  border-radius: 8px;
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+}
+
+.portal-action {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--portal-border);
+  border-radius: 9999px;
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.portal-action-primary,
+.portal-modal-primary,
+.portal-action-green {
+  background: var(--portal-brand-action);
+  border-color: var(--portal-brand-action-border);
+  color: var(--portal-text-light);
+}
+
+.portal-primary-register-btn,
+.portal-sign-bulk-btn,
+.portal-sign-provider-btn {
+  min-height: var(--portal-toolbar-button-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--portal-border);
+  border-radius: var(--portal-control-radius);
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.portal-primary-register-btn {
+  background: var(--portal-brand-action);
+  border-color: var(--portal-brand-action-border);
+  color: var(--portal-text-light);
+}
+
+/* Modais. */
+.portal-modal-surface,
+[role="dialog"] > .portal-modal-surface {
+  background: var(--portal-surface-panel);
+  border: 1px solid var(--portal-border);
+  border-radius: var(--portal-panel-radius);
+  overflow: hidden;
+}
+
+.portal-modal-header {
+  padding: 0 16px;
+}
+
+.portal-modal-body,
+.portal-process-dialog,
+.portal-process-dialog-body {
+  background: var(--portal-surface-panel);
+}
+
+.portal-modal-body .portal-layer-card,
+.portal-process-dialog-body .portal-layer-card {
+  background: var(--portal-surface-card);
+}
+
+/* Popovers gerados pelo runtime tabular. */
+.portal-core-column-popup,
+.portal-search-popover,
+.portal-table-settings-popover {
+  position: fixed;
+  z-index: 1000200;
+  min-width: 240px;
+  max-width: min(360px, calc(100vw - 24px));
+  padding: 10px;
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+  color: var(--portal-text-dark);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, .18);
+}
+
+.portal-core-column-popup {
+  background: var(--portal-surface-inner);
+}
+
+.portal-search-popover,
+.portal-table-settings-popover {
+  background: var(--portal-surface-panel);
+}
+
+.portal-core-popup-title,
+.portal-core-filter-title {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.portal-core-sort-actions,
+.portal-core-selection-actions,
+.portal-core-popup-footer {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.portal-core-filter-search {
+  width: 100%;
+  min-height: 32px;
+  margin: 6px 0;
+  padding: 4px 8px;
+  border: 1px solid var(--portal-border);
+  border-radius: 8px;
+  background: var(--portal-surface-inner);
+}
+
+.portal-core-filter-values {
+  max-height: 260px;
+  overflow: auto;
+  display: grid;
+  gap: 3px;
+}
+
+.portal-core-filter-value {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  font-size: 12px;
+}
+
+/* Classes de compatibilidade semântica consumidas por src/constants/theme.ts. */
+.portal-theme-btn-primary,
+.portal-theme-btn-pill-primary {
+  background: var(--portal-brand-action);
+  border: 1px solid var(--portal-brand-action-border);
+  color: var(--portal-text-light);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.portal-theme-btn-primary:hover,
+.portal-theme-btn-pill-primary:hover {
+  filter: brightness(.96);
+}
+
+.portal-theme-btn-primary:active,
+.portal-theme-btn-pill-primary:active {
+  filter: brightness(.92);
+}
+
+.portal-theme-btn-secondary,
+.portal-theme-btn-outline,
+.portal-theme-header-icon-button {
+  background: var(--portal-surface-inner);
+  border: 1px solid var(--portal-border);
+  color: var(--portal-text-dark);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.portal-theme-btn-secondary:hover,
+.portal-theme-btn-outline:hover,
+.portal-theme-header-icon-button:hover {
+  background: var(--portal-neutral-bg);
+}
+
+.portal-theme-btn-pill-primary,
+.portal-theme-header-icon-button {
+  border-radius: var(--portal-control-radius);
+}
+
+.portal-theme-btn-pill-primary {
+  padding: 8px 16px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .025em;
+}
+
+.portal-theme-header-icon-button {
+  width: var(--portal-toolbar-button-size);
+  min-width: var(--portal-toolbar-button-size);
+  height: var(--portal-toolbar-button-size);
+  min-height: var(--portal-toolbar-button-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portal-theme-header-icon-button-active,
+.portal-theme-filter-active {
+  background: var(--portal-neutral-bg);
+  border-color: var(--portal-neutral-border);
+  color: var(--portal-text-dark);
+}
+
+.portal-theme-filter-active,
+.portal-theme-filter-inactive {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .025em;
+}
+
+.portal-theme-filter-inactive {
+  background: var(--portal-surface-inner);
+  border-color: var(--portal-border);
+  color: var(--portal-text-dark);
+}

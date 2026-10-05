@@ -135,8 +135,8 @@ const phases = [
 ] as const;
 
 export const FluxoTccPage: React.FC = () => (
-  <div id="fluxo-tcc-page" className="mx-auto max-w-none space-y-0 py-2">
-    <section className="portal-public-header rounded-t-2xl border border-emerald-900/80 bg-[#005830] px-3.5 py-3 text-white shadow-sm sm:px-4">
+  <div id="fluxo-tcc-page" className="mx-auto max-w-none space-y-0">
+    <section className="portal-public-header rounded-t-2xl border px-3.5 text-white shadow-sm sm:px-4">
       <div className="flex items-center gap-2">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white shadow-2xs" aria-hidden="true">
           <GitBranch className="h-4 w-4 text-slate-700" />
@@ -145,16 +145,16 @@ export const FluxoTccPage: React.FC = () => (
       </div>
     </section>
 
-    <section className="rounded-b-2xl border border-t-0 border-slate-300 bg-[#f0f0f0] p-3 shadow-sm sm:p-5">
+    <section className="portal-layer-panel rounded-b-2xl border border-t-0 border-slate-300 p-3 shadow-sm sm:p-5">
       <div className="portal-flow-snake" aria-label="Fluxo sequencial do TCC">
         {phases.map(({ n, title, actor, icon: Icon, summary, details, gate, result }) => (
-          <article key={n} className="portal-flow-step flex h-full flex-col rounded-2xl border border-slate-300 bg-[#d5dce0] p-4 shadow-sm">
-            <div className="portal-flow-number flex h-11 w-11 items-center justify-center rounded-full border-4 border-[#f0f0f0] bg-[#005830] text-sm font-black text-white shadow-md" aria-label={`Etapa ${n}`}>
+          <article key={n} className="portal-flow-step portal-layer-card flex h-full flex-col rounded-2xl border border-slate-300 p-4 shadow-sm">
+            <div className="portal-flow-number flex h-11 w-11 items-center justify-center rounded-full border-4 border-[var(--portal-surface-panel)] bg-[var(--portal-brand-header)] text-sm font-black text-white shadow-md" aria-label={`Etapa ${n}`}>
               {n}
             </div>
 
             <div className="flex min-h-[48px] items-start gap-3 pl-7">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#337959] text-white shadow-sm" aria-hidden="true">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--portal-brand-action)] text-white shadow-sm" aria-hidden="true">
                 <Icon className="h-5 w-5" />
               </span>
               <div className="min-w-0">
@@ -162,7 +162,7 @@ export const FluxoTccPage: React.FC = () => (
                   <h2 className="text-sm font-black text-slate-950 sm:text-base">{title}</h2>
                   <span className="rounded-full border border-slate-300 bg-[#eef1f3] px-2 py-1 text-[8.5px] font-black uppercase tracking-wide text-slate-700">{actor}</span>
                 </div>
-                <span className="mt-1 inline-block text-[8.5px] font-black uppercase tracking-[0.16em] text-[#337959]">Etapa {n}</span>
+                <span className="mt-1 inline-block text-[8.5px] font-black uppercase tracking-[0.16em] text-[var(--portal-brand-action)]">Etapa {n}</span>
               </div>
             </div>
 
@@ -171,18 +171,18 @@ export const FluxoTccPage: React.FC = () => (
             <div className="mt-3 flex-1 space-y-1.5">
               {details.map((detail) => (
                 <div key={detail} className="flex gap-2 text-[11px] leading-4.5 text-slate-700">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#337959]" aria-hidden="true" />
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--portal-brand-action)]" aria-hidden="true" />
                   <span>{detail}</span>
                 </div>
               ))}
             </div>
 
-            <div className="mt-4 rounded-xl border border-[#b9cabe] bg-[#edf1ef] px-3 py-2 text-[10.5px] leading-4 text-slate-700">
+            <div className="mt-4 rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] px-3 py-2 text-[10.5px] leading-4 text-slate-700">
               <strong className="text-slate-900">Para avançar:</strong> {gate}
             </div>
 
-            <div className="mt-2 flex min-h-[58px] items-start gap-2 rounded-xl border border-[#b9cabe] bg-white px-3 py-2 text-[10.5px] font-semibold leading-4 text-slate-700">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#337959]" />
+            <div className="mt-2 flex min-h-[58px] items-start gap-2 rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-inner)] px-3 py-2 text-[10.5px] font-semibold leading-4 text-slate-700">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--portal-brand-action)]" />
               <span><strong className="text-slate-900">Resultado:</strong> {result}</span>
             </div>
           </article>

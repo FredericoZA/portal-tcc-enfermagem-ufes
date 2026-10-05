@@ -695,7 +695,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       ? 'font-semibold'
       : 'font-bold';
 
-  const primaryAccentColor = localFormat.primaryActionColor || '#005830';
+  const primaryAccentColor = localFormat.primaryActionColor || 'var(--portal-brand-header)';
   const modalWidthClass = localFormat.modalMaxWidth === '5xl'
     ? 'max-w-5xl'
     : localFormat.modalMaxWidth === '7xl'
@@ -730,9 +730,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         <header
           className={`${modalRadiusClass} flex flex-wrap items-center justify-between gap-3 border p-4`}
           style={{
-            backgroundColor: localFormat.headerBgColor || '#005830',
+            backgroundColor: localFormat.headerBgColor || 'var(--portal-brand-header)',
             color: localFormat.headerTextColor || '#ffffff',
-            borderColor: localFormat.headerBgColor || '#005830',
+            borderColor: localFormat.headerBgColor || 'var(--portal-brand-header)',
           }}
         >
           <div className="flex min-w-0 items-center gap-3">
@@ -1821,7 +1821,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         disabled={!isDownloadable}
                         className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-2xs ${
                           isDownloadable
-                            ? 'text-white bg-[#005830] hover:bg-[#004827] cursor-pointer'
+                            ? 'text-white bg-[var(--portal-brand-header)] hover:bg-[#004827] cursor-pointer'
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                         }`}
                         title="Baixar PDF do documento"
@@ -1900,7 +1900,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         type="button"
                         disabled={!process.acervo?.resumoExpandidoFileId}
                         onClick={() => window.open(`/api/processes/${process.id}/files/resumo-expandido/download`,'_blank','noopener,noreferrer')}
-                        className="text-white font-bold text-xs px-3 py-1.5 rounded-lg bg-[#005830] hover:bg-[#004827] flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs transition-colors"
+                        className="text-white font-bold text-xs px-3 py-1.5 rounded-lg bg-[var(--portal-brand-header)] hover:bg-[#004827] flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs transition-colors"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>Baixar</span>
@@ -1916,7 +1916,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         type="button"
                         disabled={!process.acervo?.trabalhoCompletoFileId}
                         onClick={() => window.open(`/api/processes/${process.id}/files/trabalho-completo/download`,'_blank','noopener,noreferrer')}
-                        className="text-white font-bold text-xs px-3 py-1.5 rounded-lg bg-[#005830] hover:bg-[#004827] flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs transition-colors"
+                        className="text-white font-bold text-xs px-3 py-1.5 rounded-lg bg-[var(--portal-brand-header)] hover:bg-[#004827] flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs transition-colors"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>Baixar</span>
@@ -2100,7 +2100,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   <button
                     type="submit"
                     disabled={isSubmittingAcervo}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 text-white font-bold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl bg-[#005830] hover:bg-[#004827] transition-all cursor-pointer shadow-md shrink-0"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 text-white font-bold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl bg-[var(--portal-brand-header)] hover:bg-[#004827] transition-all cursor-pointer shadow-md shrink-0"
                   >
                     <Save className="w-4 h-4" />
                     <span>{isSubmittingAcervo ? 'Salvando...' : 'Salvar no Acervo'}</span>

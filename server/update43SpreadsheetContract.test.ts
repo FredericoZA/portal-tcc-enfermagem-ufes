@@ -2,12 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+import { readPortalCss } from './testUtils/portalCss';
 const read = (path:string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('planilhas recebem menu único de filtro e ordenação no runtime estrutural', () => {
-  const runtime = read('src/components/PortalStructuralRuntime.tsx');
+  const runtime = read('src/utils/portalTableDom.ts');
   const main = read('src/main.tsx');
-  assert.match(main, /PortalStructuralRuntime/);
+  assert.match(main, /PortalSpreadsheetRuntime/);
+  assert.doesNotMatch(main, /PortalStructuralRuntime/);
   assert.doesNotMatch(main, /PortalSpreadsheetEnhancer/);
   assert.match(runtime, /portal-core-column-menu/);
   assert.match(runtime, /Ordenar A → Z \/ menor → maior/);
@@ -27,7 +29,7 @@ test('engrenagem mostra colunas e ordem sem popup secundário', () => {
 test('planilhas permitem rolagem vertical e horizontal no próprio contêiner', () => {
   const scroll = read('src/components/TableScrollWrapper.tsx');
   const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
-  const css = read('src/portal-spreadsheet-runtime.css');
+  const css = readPortalCss();
   assert.doesNotMatch(scroll, /overflow-y-visible/);
   assert.match(scroll, /portal-spreadsheet-scroll-host/);
   assert.match(scroll, /overflow-auto/);
@@ -37,28 +39,30 @@ test('planilhas permitem rolagem vertical e horizontal no próprio contêiner', 
   assert.match(runtime, /addEventListener\('wheel'/);
   assert.match(runtime, /host\.scrollTop/);
   assert.match(runtime, /host\.scrollLeft/);
-  assert.match(css, /overflow: auto !important/);
-  assert.match(css, /cursor: grab !important/);
+  assert.match(css, /\.portal-spreadsheet-scroll-host/);
+  assert.match(css, /overflow:\s*auto/);
+  assert.match(css, /cursor:\s*grab/);
 });
 
 test('etapa permanece disponível e planilhas removem decoração infantil', () => {
   const progress = read('src/components/ProgressIndicator.tsx');
-  const runtime = read('src/components/PortalStructuralRuntime.tsx');
+  const runtime = read('src/utils/portalTableDom.ts');
   assert.match(progress, /portal-progress-number/);
+  assert.match(progress, /function stageLabel/);
   assert.doesNotMatch(progress, /<svg|circle/i);
-  assert.match(runtime, /replace\(\/\\bProgresso\\b\/gi, 'Etapa'\)/);
-  assert.match(runtime, /portal-core-stage-label/);
+  assert.doesNotMatch(runtime, /Progresso|portal-core-stage-label/);
 });
 
 test('calendário usa fins de semana estreitos e preview seguro', () => {
-  const runtime = read('src/components/PortalStructuralRuntime.tsx');
-  const css = read('src/portal-core-1043.css');
+  const runtime = read('src/utils/portalTableDom.ts');
+  const home = read('src/pages/HomePage.tsx');
+  const css = readPortalCss();
   assert.match(css, /grid-template-columns: \.22fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr \.22fr/);
-  assert.match(runtime, /portal-core-calendar-weekend/);
-  assert.match(runtime, /cell\.querySelector\('\.portal-core-calendar-previews'\)\?\.remove\(\)/);
-  assert.doesNotMatch(runtime, /fetch\('\/api\/processes'/);
-  assert.match(css, /--portal-upcoming-bg/);
-  assert.match(css, /--portal-defended-bg/);
+  assert.match(home, /isWeekend = colIndex === 0 \|\| colIndex === 6/);
+  assert.match(home, /portal-core-calendar-weekend/);
+  assert.doesNotMatch(runtime, /enhanceCalendar|portal-core-calendar-previews|fetch\('\/api\/processes'/);
+  assert.match(css, /--portal-defense-upcoming-bg/);
+  assert.match(css, /--portal-defense-defended-bg/);
 });
 
 test('Meus TCCs colore a pílula de processo por vínculo e simplifica datas', () => {
@@ -83,12 +87,11 @@ test('Registro de logs mantém ações essenciais no cabeçalho e não oferece a
 });
 
 test('workspaces administrativos ganham hierarquia e prevenção de sobreposição', () => {
-  const css = read('src/portal-update-43.css');
-  const enhancer = read('src/components/PortalUiEnhancer.tsx');
-  assert.match(enhancer, /portal-settings-workspace-sidebar/);
-  assert.match(css, /grid-template-columns:minmax\(180px,230px\) minmax\(0,1fr\)/);
-  assert.match(css, /min-width:0!important/);
-  assert.match(css, /max-width:100%!important/);
+  const css = readPortalCss();
+  const modal = read('src/components/SettingsWorkspaceModal.tsx');
+  assert.match(modal, /portal-settings-workspace/);
+  assert.match(css, /\.portal-settings-workspace/);
+  assert.doesNotMatch(css, /!important/);
 });
 
 test('rodapé prioriza a Secretaria configurada como responsável técnico', () => {

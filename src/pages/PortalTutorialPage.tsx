@@ -165,8 +165,8 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
   const active = useMemo(() => roleContent[role], [role]);
 
   return (
-    <div id="portal-tutorial-page" className="portal-public-shell mx-auto max-w-none overflow-hidden rounded-2xl border border-slate-300 bg-[#e1e6e9] shadow-sm">
-      <section className="portal-public-header bg-[#005830] text-white">
+    <div id="portal-tutorial-page" className="portal-public-shell portal-layer-panel mx-auto max-w-none overflow-hidden rounded-2xl border border-slate-300 shadow-sm">
+      <section className="portal-public-header text-white">
         <div className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white shadow-2xs" aria-hidden="true">
             <HelpCircle className="h-4 w-4 text-slate-700" />
@@ -196,11 +196,11 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
       </section>
       <PortalSectionDivider />
 
-      <section className="portal-layer-panel bg-[#e1e6e9] p-3 sm:p-4">
-        <div className="portal-layer-card flex items-start gap-3 rounded-2xl border border-slate-300 bg-[#d5dce0] p-3.5 shadow-2xs sm:p-4">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#337959] text-white shadow-sm"><UserCheck className="h-5 w-5" /></span>
+      <section className="portal-layer-panel p-3 sm:p-4">
+        <div className="portal-layer-card flex items-start gap-3 rounded-2xl border border-slate-300 p-3.5 shadow-2xs sm:p-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--portal-brand-action)] text-white shadow-sm"><UserCheck className="h-5 w-5" /></span>
           <div className="min-w-0">
-            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-[#337959]">Visão selecionada</div>
+            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-[var(--portal-brand-action)]">Visão selecionada</div>
             <h2 className="mt-0.5 text-lg font-black text-slate-950">{active.title}</h2>
             <p className="mt-1 max-w-4xl text-sm leading-6 text-slate-700">{active.description}</p>
           </div>
@@ -208,27 +208,27 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
 
         <div className="mt-3 grid gap-3 xl:grid-cols-[0.9fr_2.1fr]">
           <aside className="space-y-3">
-            <section className="portal-layer-card rounded-xl border border-slate-300 bg-[#d5dce0] p-3.5 shadow-2xs">
+            <section className="portal-layer-card rounded-xl border border-slate-300 p-3.5 shadow-2xs">
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
-                <ClipboardCheck className="h-4 w-4 text-[#337959]" />Antes de começar
+                <ClipboardCheck className="h-4 w-4 text-[var(--portal-brand-action)]" />Antes de começar
               </div>
               <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-700">
-                {active.before.map((item) => <li key={item} className="flex gap-2"><span className="font-black text-[#337959]">•</span><span>{item}</span></li>)}
+                {active.before.map((item) => <li key={item} className="flex gap-2"><span className="font-black text-[var(--portal-brand-action)]">•</span><span>{item}</span></li>)}
               </ul>
             </section>
 
-            <section className="portal-layer-card rounded-xl border border-slate-300 bg-[#d5dce0] p-3.5 shadow-2xs">
+            <section className="portal-layer-card rounded-xl border border-slate-300 p-3.5 shadow-2xs">
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
-                <CheckCircle2 className="h-4 w-4 text-[#337959]" />Conferência antes de encerrar
+                <CheckCircle2 className="h-4 w-4 text-[var(--portal-brand-action)]" />Conferência antes de encerrar
               </div>
               <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-700">
-                {active.checklist.map((item) => <li key={item} className="flex gap-2"><span className="font-black text-[#337959]">✓</span><span>{item}</span></li>)}
+                {active.checklist.map((item) => <li key={item} className="flex gap-2"><span className="font-black text-[var(--portal-brand-action)]">✓</span><span>{item}</span></li>)}
               </ul>
             </section>
 
-            <section className="portal-layer-card rounded-xl border border-slate-300 bg-[#d5dce0] p-3.5 shadow-2xs">
+            <section className="portal-layer-card rounded-xl border border-slate-300 p-3.5 shadow-2xs">
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
-                <AlertTriangle className="h-4 w-4 text-[#337959]" />Erros a evitar
+                <AlertTriangle className="h-4 w-4 text-[var(--portal-brand-action)]" />Erros a evitar
               </div>
               <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-700">
                 {active.mistakes.map((item) => <li key={item} className="flex gap-2"><span className="font-black text-slate-500">—</span><span>{item}</span></li>)}
@@ -240,8 +240,8 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
             <h3 className="mb-2 text-xs font-black uppercase tracking-wide text-slate-900">Passo a passo</h3>
             <ol className="grid gap-2.5 lg:grid-cols-2">
               {active.steps.map((step, index) => (
-                <li key={step.title} className="portal-layer-card flex h-full gap-3 rounded-xl border border-slate-300 bg-[#d5dce0] px-3.5 py-3 text-sm leading-5 text-slate-700 shadow-2xs">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#337959] text-[10px] font-black text-white">{index + 1}</span>
+                <li key={step.title} className="portal-layer-card flex h-full gap-3 rounded-xl border border-slate-300 px-3.5 py-3 text-sm leading-5 text-slate-700 shadow-2xs">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--portal-brand-action)] text-[10px] font-black text-white">{index + 1}</span>
                   <div className="min-w-0">
                     <div className="text-xs font-black text-slate-950">{step.title.replace(/^\d+\.\s*/, '')}</div>
                     <p className="mt-1 text-xs leading-5 text-slate-700">{step.text}</p>
@@ -250,7 +250,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
               ))}
             </ol>
 
-            <div id="portal-tutorial-finish-card" className="portal-layer-card mt-3 rounded-xl border border-[#9fb8a8] bg-white/80 px-4 py-3 shadow-2xs">
+            <div id="portal-tutorial-finish-card" className="portal-layer-card mt-3 rounded-xl border px-4 py-3 shadow-2xs">
               <div className="text-xs font-black uppercase tracking-wide text-slate-900">Quando esta participação termina</div>
               <p className="mt-1.5 text-xs leading-5 text-slate-700">{active.finish}</p>
             </div>

@@ -20,7 +20,7 @@ type PublicIndicators = {
   dayparts: Bucket[];
 };
 
-const panel = 'h-full rounded-2xl border border-slate-300 bg-[#d5dce0] p-4 shadow-sm';
+const panel = 'portal-layer-card h-full rounded-2xl border border-slate-300 p-4 shadow-sm';
 const pct = (n: number, d: number) => d > 0 ? Math.round((n / d) * 100) : 0;
 const num = (value: number, digits = 1) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: digits }).format(value || 0);
 const monthLabel = (value?: string | null) => {
@@ -37,7 +37,7 @@ const BarList: React.FC<{ items?: Bucket[]; percentage?: boolean; empty?: string
   return <div className="space-y-2">
     {items.map((item) => <div key={`${item.key || item.label}-${item.label}`} className="grid grid-cols-[minmax(96px,170px)_1fr_58px] items-center gap-2 text-[11px]">
       <span className="truncate font-bold text-slate-800" title={item.label}>{item.label}</span>
-      <div className="h-5 overflow-hidden rounded-md border border-slate-300 bg-white"><div className="h-full rounded-md bg-[#337959]" style={{ width: `${Math.max(3, (item.count / max) * 100)}%` }} /></div>
+      <div className="h-5 overflow-hidden rounded-md border border-slate-300 bg-white"><div className="h-full rounded-md bg-[var(--portal-brand-action)]" style={{ width: `${Math.max(3, (item.count / max) * 100)}%` }} /></div>
       <strong className="text-right text-slate-950">{percentage && total ? `${pct(item.count, total)}%` : item.count}</strong>
     </div>)}
   </div>;
@@ -58,11 +58,11 @@ const LineTrend: React.FC<{ items?: Bucket[] }> = ({ items = [] }) => {
   const path = points.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ');
   return <div className="overflow-x-auto">
     <svg viewBox={`0 0 ${width} ${height}`} className="h-[230px] min-w-[620px] w-full" role="img" aria-label="Tendência mensal de defesas">
-      {[0.25, 0.5, 0.75, 1].map((ratio) => <line key={ratio} x1={padX} x2={width - padX} y1={height - padY - ratio * (height - padY * 2)} y2={height - padY - ratio * (height - padY * 2)} stroke="#bfc8cd" strokeWidth="1" />)}
-      <path d={path} fill="none" stroke="#337959" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      {[0.25, 0.5, 0.75, 1].map((ratio) => <line key={ratio} x1={padX} x2={width - padX} y1={height - padY - ratio * (height - padY * 2)} y2={height - padY - ratio * (height - padY * 2)} stroke="var(--portal-border)" strokeWidth="1" />)}
+      <path d={path} fill="none" stroke="var(--portal-brand-action)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
       {points.map(({ x, y, item }) => <g key={`${item.key || item.label}-${item.label}`}>
-        <circle cx={x} cy={y} r="5" fill="#fff" stroke="#337959" strokeWidth="3" />
-        <text x={x} y={Math.max(13, y - 10)} textAnchor="middle" fontSize="10" fontWeight="800" fill="#17212b">{item.count}</text>
+        <circle cx={x} cy={y} r="5" fill="var(--portal-surface-inner)" stroke="var(--portal-brand-action)" strokeWidth="3" />
+        <text x={x} y={Math.max(13, y - 10)} textAnchor="middle" fontSize="10" fontWeight="800" fill="var(--portal-text-dark)">{item.count}</text>
       </g>)}
     </svg>
     <div className="grid min-w-[620px] gap-1 text-[9px] text-slate-600" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
@@ -81,7 +81,7 @@ const Funnel: React.FC<{ data: PublicIndicators }> = ({ data }) => {
   const base = Math.max(1, data.totals.registered);
   return <div className="space-y-2.5">{rows.map((row, index) => <div key={row.label} className="grid grid-cols-[100px_1fr_70px] items-center gap-2 text-[11px]">
     <strong className="text-slate-800">{row.label}</strong>
-    <div className="h-8 overflow-hidden rounded-lg border border-slate-300 bg-white"><div className="flex h-full items-center justify-end rounded-lg bg-[#337959] pr-2 text-[10px] font-black text-white" style={{ width: `${Math.max(8, (row.count / base) * 100)}%` }}>{row.count}</div></div>
+    <div className="h-8 overflow-hidden rounded-lg border border-slate-300 bg-white"><div className="flex h-full items-center justify-end rounded-lg bg-[var(--portal-brand-action)] pr-2 text-[10px] font-black text-white" style={{ width: `${Math.max(8, (row.count / base) * 100)}%` }}>{row.count}</div></div>
     <span className="text-right font-black text-slate-950">{index === 0 ? '100%' : `${pct(row.count, base)}%`}</span>
   </div>)}</div>;
 };
@@ -137,7 +137,7 @@ export const IndicadoresPage: React.FC = () => {
   }, [data]);
 
   return <div id="indicadores-publicos-page" className="mx-auto max-w-none">
-    <section className="portal-public-header rounded-t-2xl border border-emerald-900/80 bg-[#005830] px-4 py-3 text-white shadow-sm">
+    <section className="portal-public-header rounded-t-2xl border px-4 text-white shadow-sm">
       <div className="flex items-center gap-2"><BarChart3 className="h-5 w-5"/><h1 className="text-base font-black uppercase tracking-tight">Indicadores</h1></div>
     </section>
     <PortalSectionDivider />
@@ -154,7 +154,7 @@ export const IndicadoresPage: React.FC = () => {
           [CheckCircle2, 'Defesas realizadas', data.totals.defended, `${analytics.defenseRate}% dos cadastrados`],
           [TrendingUp, 'TCCs concluídos', data.totals.completed, `${data.totals.completionRate}% dos cadastrados`],
           [BookOpen, 'Publicações', data.totals.published, `${data.totals.publicationRate}% dos cadastrados`],
-        ].map(([Icon, label, value, detail]: any) => <article key={label} className={panel}><div className="flex items-start justify-between"><div><div className="text-3xl font-black text-[#337959]">{value}</div><h2 className="mt-1 text-xs font-black uppercase text-slate-950">{label}</h2></div><Icon className="h-5 w-5 text-[#337959]"/></div><p className="mt-2 text-[11px] text-slate-600">{detail}</p></article>)}
+        ].map(([Icon, label, value, detail]: any) => <article key={label} className={panel}><div className="flex items-start justify-between"><div><div className="text-3xl font-black text-[var(--portal-brand-action)]">{value}</div><h2 className="mt-1 text-xs font-black uppercase text-slate-950">{label}</h2></div><Icon className="h-5 w-5 text-[var(--portal-brand-action)]"/></div><p className="mt-2 text-[11px] text-slate-600">{detail}</p></article>)}
       </section>
 
       <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
@@ -167,7 +167,7 @@ export const IndicadoresPage: React.FC = () => {
           [CalendarDays, 'Concentração no pico', `${analytics.peakShare}%`, monthLabel(data.descriptive?.peakMonth)],
           [Users2, 'Coautoria', `${data.totals.coauthorRate}%`, 'do acervo'],
           [TrendingUp, 'Último mês', analytics.monthOverMonth === null ? '—' : `${analytics.monthOverMonth >= 0 ? '+' : ''}${analytics.monthOverMonth}%`, analytics.latestMonth],
-        ].map(([Icon, label, value, detail]: any) => <article key={label} className="rounded-xl border border-slate-300 bg-white p-3 shadow-sm"><Icon className="h-4 w-4 text-[#337959]"/><strong className="mt-2 block text-xl text-slate-950">{value}</strong><h3 className="text-[9px] font-black uppercase text-slate-800">{label}</h3><p className="mt-1 text-[9px] text-slate-500">{detail}</p></article>)}
+        ].map(([Icon, label, value, detail]: any) => <article key={label} className="portal-layer-inner rounded-xl border border-slate-300 p-3 shadow-sm"><Icon className="h-4 w-4 text-[var(--portal-brand-action)]"/><strong className="mt-2 block text-xl text-slate-950">{value}</strong><h3 className="text-[9px] font-black uppercase text-slate-800">{label}</h3><p className="mt-1 text-[9px] text-slate-500">{detail}</p></article>)}
       </section>
 
       <section className="grid gap-3 xl:grid-cols-[1.7fr_1fr]">
@@ -188,7 +188,7 @@ export const IndicadoresPage: React.FC = () => {
           ['Mês de pico', `${monthLabel(data.descriptive.peakMonth)} · ${data.descriptive.peakMonthCount}`],
           ['Tempo médio', `${num(data.descriptive.completionDaysMean)} d`],
           ['Tempo mediano', `${num(data.descriptive.completionDaysMedian)} d`],
-        ].map(([label, value]) => <article key={label} className="rounded-xl border border-slate-300 bg-[#d5dce0] p-3"><strong className="text-lg text-slate-950">{value}</strong><div className="mt-1 text-[9px] font-black uppercase text-slate-700">{label}</div></article>)}
+        ].map(([label, value]) => <article key={label} className="portal-layer-card rounded-xl border border-slate-300 p-3"><strong className="text-lg text-slate-950">{value}</strong><div className="mt-1 text-[9px] font-black uppercase text-slate-700">{label}</div></article>)}
       </section>}
 
       <section className="grid gap-3 lg:grid-cols-3">
@@ -198,8 +198,8 @@ export const IndicadoresPage: React.FC = () => {
       </section>
 
       <section className="grid gap-3 xl:grid-cols-2">
-        <article className={panel}><div className="flex items-center gap-2"><Tags className="h-4 w-4 text-[#337959]"/><h2 className="text-xs font-black uppercase">Temas recorrentes</h2></div><div className="mt-3"><BarList items={data.themes}/></div></article>
-        <article className={panel}><div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[#337959]"/><h2 className="text-xs font-black uppercase">Locais das defesas</h2></div><div className="mt-3"><BarList items={data.locations}/></div></article>
+        <article className={panel}><div className="flex items-center gap-2"><Tags className="h-4 w-4 text-[var(--portal-brand-action)]"/><h2 className="text-xs font-black uppercase">Temas recorrentes</h2></div><div className="mt-3"><BarList items={data.themes}/></div></article>
+        <article className={panel}><div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[var(--portal-brand-action)]"/><h2 className="text-xs font-black uppercase">Locais das defesas</h2></div><div className="mt-3"><BarList items={data.locations}/></div></article>
       </section>
 
       <section className="grid gap-3 xl:grid-cols-2">

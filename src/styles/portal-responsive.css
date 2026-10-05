@@ -1,0 +1,132 @@
+/* ==========================================================================
+   RESPONSIVIDADE — regras @media isoladas da implementação base
+   ========================================================================== */
+
+@media (min-width: 900px) {
+  .portal-flow-snake {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 36px 18px;
+  }
+
+  .portal-flow-step:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .portal-flow-step:nth-child(2) { grid-column: 2; grid-row: 1; }
+  .portal-flow-step:nth-child(3) { grid-column: 3; grid-row: 1; }
+  .portal-flow-step:nth-child(4) { grid-column: 4; grid-row: 1; }
+  .portal-flow-step:nth-child(5) { grid-column: 4; grid-row: 2; }
+  .portal-flow-step:nth-child(6) { grid-column: 3; grid-row: 2; }
+  .portal-flow-step:nth-child(7) { grid-column: 2; grid-row: 2; }
+  .portal-flow-step:nth-child(8) { grid-column: 1; grid-row: 2; }
+
+  .portal-flow-step:nth-child(1)::after,
+  .portal-flow-step:nth-child(2)::after,
+  .portal-flow-step:nth-child(3)::after {
+    content: "→";
+    position: absolute;
+    top: 50%;
+    right: -17px;
+    transform: translateY(-50%);
+    color: var(--portal-brand-action);
+    font-size: 19px;
+    font-weight: 900;
+  }
+
+  .portal-flow-step:nth-child(5)::after,
+  .portal-flow-step:nth-child(6)::after,
+  .portal-flow-step:nth-child(7)::after {
+    content: "←";
+    position: absolute;
+    top: 50%;
+    left: -17px;
+    transform: translateY(-50%);
+    color: var(--portal-brand-action);
+    font-size: 19px;
+    font-weight: 900;
+  }
+
+  .portal-flow-step:nth-child(4)::before {
+    content: "↓";
+    position: absolute;
+    bottom: -31px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--portal-brand-action);
+    font-size: 21px;
+    font-weight: 900;
+  }
+}
+
+@media (max-width: 640px) {
+  #portal-app-root main {
+    padding: 12px;
+  }
+
+  #home-page-footer-notes {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  :where(input, select, textarea) {
+    font-size: 16px;
+  }
+
+  [data-portal-sheet] [data-portal-sheet-title="true"] {
+    height: var(--portal-sheet-title-height);
+    min-height: var(--portal-sheet-title-height);
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  [data-portal-sheet][data-portal-has-filter="true"] [data-portal-sheet-filter="true"] {
+    height: calc(var(--portal-sheet-title-divider) + var(--portal-sheet-filter-height) + var(--portal-sheet-content-divider));
+    min-height: calc(var(--portal-sheet-title-divider) + var(--portal-sheet-filter-height) + var(--portal-sheet-content-divider));
+    padding-top: 0;
+    padding-bottom: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+}
+
+@media (pointer: coarse) {
+  :where(button, [role="button"], input[type="checkbox"], input[type="radio"]) {
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .portal-core-column-menu,
+  .portal1041-column-menu-button,
+  .portal-column-sort,
+  .portal-column-filter {
+    min-width: var(--portal-sheet-column-control-size);
+    min-height: var(--portal-sheet-column-control-size);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms;
+    animation-iteration-count: 1;
+    scroll-behavior: auto;
+    transition-duration: .01ms;
+  }
+}
+
+@media (forced-colors: active) {
+  :where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
+    outline: 2px solid CanvasText;
+  }
+}
+
+@media print {
+  .portal-action,
+  .portal-header-action,
+  .portal-toolbar-icon-button {
+    display: none;
+  }
+
+  .portal-card {
+    break-inside: avoid;
+  }
+}

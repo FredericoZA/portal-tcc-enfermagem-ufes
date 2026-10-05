@@ -1,0 +1,451 @@
+/* ==========================================================================
+   5. PLANILHAS E CALENDÁRIO
+   ========================================================================== */
+
+/* Adaptadores canônicos usados pelo TypeScript.
+   Nenhuma cor real é definida fora dos tokens de :root. */
+.portal-font {
+  font-family: var(--portal-font-family);
+}
+
+.portal-table-banner,
+.portal-table-head,
+.portal-table-header-cell,
+.portal-table-filter-bar {
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
+}
+
+.portal-table-banner {
+  border-color: var(--portal-brand-header);
+}
+
+.portal-table-header-cell {
+  vertical-align: middle;
+}
+
+.portal-table-header-border {
+  border-right: 1px solid rgba(255, 255, 255, .28);
+}
+
+.portal-table-header-padding,
+.portal-table-cell-padding {
+  padding: var(--portal-cell-padding-y) var(--portal-cell-padding-x);
+}
+
+.portal-table-cell-text {
+  color: var(--portal-text-dark);
+}
+
+.portal-table-cell-border {
+  border-right: 1px solid var(--portal-border);
+  border-bottom: 1px solid var(--portal-border);
+}
+
+.portal-table-row {
+  background: var(--portal-surface-panel);
+}
+
+.portal-table-row:hover > td {
+  filter: brightness(.985);
+}
+
+.portal-sticky-cell {
+  background: var(--portal-surface-card);
+}
+
+.portal-column-control {
+  width: var(--portal-sheet-column-control-size);
+  min-width: var(--portal-sheet-column-control-size);
+  height: var(--portal-sheet-column-control-size);
+  min-height: var(--portal-sheet-column-control-size);
+  padding: 0;
+  border-radius: 50%;
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+}
+
+.portal-process-pill-tag {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.portal-process-pill-subtext {
+  margin-top: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.portal-progress-percent {
+  color: var(--portal-text-dark);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.portal-progress-label {
+  color: var(--portal-brand-action);
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+
+/* Moldura única. */
+[data-portal-sheet].portal-sheet-frame {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--portal-border);
+  border-radius: var(--portal-panel-radius);
+  background: var(--portal-surface-panel);
+  box-shadow: 0 2px 7px rgba(15, 23, 42, .08);
+}
+
+/* Barra de título. */
+[data-portal-sheet] [data-portal-sheet-title="true"] {
+  box-sizing: border-box;
+  height: var(--portal-sheet-title-height);
+  min-height: var(--portal-sheet-title-height);
+  margin: 0;
+  padding: 0 var(--portal-bar-padding-x);
+  display: flex;
+  align-items: center;
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
+  border: 0;
+}
+
+[data-portal-sheet] [data-portal-sheet-title="true"] :is(h1, h2, h3, p, span, svg) {
+  color: inherit;
+}
+
+[data-portal-sheet] [data-portal-sheet-title="true"] :is(h1, h2, h3) {
+  margin: 0;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 900;
+}
+
+/* Sem filtro: 15px brancos entre título e cabeçalho. */
+[data-portal-sheet][data-portal-has-filter="false"] [data-portal-sheet-title="true"] {
+  border-bottom: var(--portal-sheet-content-divider) solid var(--portal-surface-inner);
+  height: calc(var(--portal-sheet-title-height) + var(--portal-sheet-content-divider));
+  min-height: calc(var(--portal-sheet-title-height) + var(--portal-sheet-content-divider));
+}
+
+/* Com filtro: 5px branco + 45px verde + 15px branco. */
+[data-portal-sheet][data-portal-has-filter="true"] [data-portal-sheet-filter="true"] {
+  box-sizing: border-box;
+  height: calc(var(--portal-sheet-title-divider) + var(--portal-sheet-filter-height) + var(--portal-sheet-content-divider));
+  min-height: calc(var(--portal-sheet-title-divider) + var(--portal-sheet-filter-height) + var(--portal-sheet-content-divider));
+  margin: 0;
+  padding: 0 var(--portal-bar-padding-x);
+  display: flex;
+  align-items: center;
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
+  border-top: var(--portal-sheet-title-divider) solid var(--portal-surface-inner);
+  border-bottom: var(--portal-sheet-content-divider) solid var(--portal-surface-inner);
+}
+
+[data-portal-sheet][data-portal-has-filter="true"] [data-portal-sheet-filter="true"] > * {
+  flex-shrink: 0;
+}
+
+/* Calendário. */
+[data-portal-sheet="calendar"] [data-portal-sheet-title="true"] > div,
+[data-portal-sheet="calendar"] [data-portal-sheet-column-header="true"] > div {
+  width: 100%;
+}
+
+[data-portal-sheet="calendar"] [data-portal-sheet-column-header="true"] {
+  height: var(--portal-sheet-column-header-height);
+  min-height: var(--portal-sheet-column-header-height);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
+}
+
+.portal-calendar-empty-cell {
+  background: var(--portal-surface-panel);
+}
+
+.portal-calendar-day-cell {
+  background: var(--portal-surface-card);
+}
+
+.portal-calendar-day-cell:hover {
+  background: var(--portal-surface-card);
+}
+
+.portal-core-calendar-card,
+.portal-calendar-preview {
+  border: 1px solid currentColor;
+  border-radius: 8px;
+}
+
+.portal-core-calendar-card.is-defended,
+.portal-calendar-preview.is-defended {
+  background: var(--portal-defense-defended-bg);
+  border-color: var(--portal-defense-defended-border);
+  color: var(--portal-defense-defended-text);
+}
+
+.portal-core-calendar-card.is-upcoming,
+.portal-calendar-preview.is-upcoming {
+  background: var(--portal-defense-upcoming-bg);
+  border-color: var(--portal-defense-upcoming-border);
+  color: var(--portal-defense-upcoming-text);
+}
+
+/* Scroll host. */
+.portal-spreadsheet-scroll-host,
+.table-sticky-container {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  isolation: isolate;
+  cursor: grab;
+  background: var(--portal-surface-panel);
+  scrollbar-width: thin;
+  scrollbar-color: var(--portal-border-strong) transparent;
+}
+
+.portal-sheet-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* Tabela base. */
+[data-portal-sheet] table,
+.portal-runtime-spreadsheet,
+.portal-core-table,
+.portal-spreadsheet-table,
+.portal-data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--portal-font-family);
+  font-size: 12px;
+  color: var(--portal-text-dark);
+  background: var(--portal-surface-panel);
+}
+
+[data-portal-sheet] thead th,
+.portal-runtime-spreadsheet thead th,
+.portal-core-table thead th,
+.portal-spreadsheet-table thead th {
+  box-sizing: border-box;
+  height: var(--portal-sheet-column-header-height);
+  min-height: var(--portal-sheet-column-header-height);
+  padding: 0 var(--portal-cell-padding-x);
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
+  border-right: 1px solid rgba(255,255,255,.28);
+  border-bottom: 0;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+[data-portal-sheet] tbody td,
+.portal-runtime-spreadsheet tbody td,
+.portal-core-table tbody td,
+.portal-spreadsheet-table tbody td {
+  min-height: var(--portal-sheet-row-min-height);
+  padding: var(--portal-cell-padding-y) var(--portal-cell-padding-x);
+  background: var(--portal-surface-panel);
+  color: var(--portal-text-dark);
+  border-right: 1px solid var(--portal-border);
+  border-bottom: 1px solid var(--portal-border);
+  vertical-align: middle;
+}
+
+[data-portal-sheet] tbody tr:hover td {
+  filter: brightness(.985);
+}
+
+/* Cabeçalho sticky. */
+.portal-spreadsheet-scroll-host thead,
+.portal-spreadsheet-scroll-host thead[data-portal-sticky-thead="true"] {
+  position: sticky;
+  top: 0;
+  z-index: var(--portal-z-sticky-header);
+}
+
+.portal-spreadsheet-scroll-host thead th {
+  position: sticky;
+  top: 0;
+  z-index: var(--portal-z-sticky-header);
+}
+
+/* Primeira coluna sticky nas planilhas de processo. */
+[data-portal-sheet="defenses"] :is(th, td):first-child,
+[data-portal-sheet="repository"] :is(th, td):first-child,
+[data-portal-sheet="my-tccs"] :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+}
+
+[data-portal-sheet="defenses"] tbody td:first-child,
+[data-portal-sheet="repository"] tbody td:first-child,
+[data-portal-sheet="my-tccs"] tbody td:first-child {
+  z-index: var(--portal-z-sticky-column);
+  background: var(--portal-surface-card);
+}
+
+[data-portal-sheet="defenses"] thead th:first-child,
+[data-portal-sheet="repository"] thead th:first-child,
+[data-portal-sheet="my-tccs"] thead th:first-child {
+  z-index: var(--portal-z-sticky-corner);
+  background: var(--portal-brand-header);
+}
+
+/* Presidente: Seleção + Processo. */
+[data-portal-sheet="president"] [data-portal-sticky-selection="true"] {
+  position: sticky;
+  left: 0;
+}
+
+[data-portal-sheet="president"] [data-portal-sticky-process="true"][data-portal-after-selection="true"] {
+  position: sticky;
+  left: 54px;
+}
+
+[data-portal-sheet="president"] tbody [data-portal-sticky-selection="true"],
+[data-portal-sheet="president"] tbody [data-portal-sticky-process="true"] {
+  z-index: var(--portal-z-sticky-column);
+  background: var(--portal-surface-card);
+}
+
+[data-portal-sheet="president"] thead [data-portal-sticky-selection="true"],
+[data-portal-sheet="president"] thead [data-portal-sticky-process="true"] {
+  z-index: var(--portal-z-sticky-corner);
+  background: var(--portal-brand-header);
+}
+
+[data-portal-selection-column="true"] {
+  width: 54px;
+  min-width: 54px;
+  max-width: 54px;
+}
+
+/* Controle por coluna: exatamente 15 × 15. */
+.portal-core-column-menu {
+  width: var(--portal-sheet-column-control-size);
+  min-width: var(--portal-sheet-column-control-size);
+  height: var(--portal-sheet-column-control-size);
+  min-height: var(--portal-sheet-column-control-size);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+  line-height: 1;
+}
+
+.portal-core-column-menu svg {
+  width: 9px;
+  height: 9px;
+}
+
+.portal-core-resizer {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 3;
+}
+
+/* Estados semânticos de processo. */
+td[data-portal-core-process-state="defended"] > div,
+[data-defense-state="defended"] {
+  background: var(--portal-defense-defended-bg);
+  border-color: var(--portal-defense-defended-border);
+  color: var(--portal-defense-defended-text);
+}
+
+td[data-portal-core-process-state="upcoming"] > div,
+[data-defense-state="upcoming"] {
+  background: var(--portal-defense-upcoming-bg);
+  border-color: var(--portal-defense-upcoming-border);
+  color: var(--portal-defense-upcoming-text);
+}
+
+/* Paginação — branca, 24px e compacta. */
+.portal-spreadsheet-pager {
+  box-sizing: border-box;
+  min-height: var(--portal-sheet-pagination-height);
+  height: var(--portal-sheet-pagination-height);
+  margin: 0;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  background: var(--portal-surface-inner);
+  border-top: 0;
+}
+
+.portal-spreadsheet-pager-controls {
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.portal-spreadsheet-pager button {
+  min-width: 22px;
+  height: 20px;
+  margin: 0;
+  padding: 0 5px;
+  border: 1px solid var(--portal-border);
+  border-right-width: 0;
+  border-radius: 0;
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.portal-spreadsheet-pager button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.portal-spreadsheet-pager button:last-child {
+  border-right-width: 1px;
+  border-radius: 0 6px 6px 0;
+}
+
+.portal-spreadsheet-pager button[aria-current="page"] {
+  font-weight: 900;
+  background: var(--portal-neutral-bg);
+}
+
+.portal-spreadsheet-pager button:disabled {
+  opacity: .45;
+}
+
+.portal-spreadsheet-pager-ellipsis {
+  height: 20px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  border-top: 1px solid var(--portal-border);
+  border-bottom: 1px solid var(--portal-border);
+  background: var(--portal-surface-inner);
+  font-size: 10px;
+}

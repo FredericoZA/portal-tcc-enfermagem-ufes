@@ -2,17 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
+import { readPortalCss } from './testUtils/portalCss';
 const source = (path:string) => readFile(path,'utf8');
 
-test('faixa fluorescente usa exatamente o acabamento canônico da versão 1.0.36',async()=>{
-  const [main,canonical,css38,css40]=await Promise.all([source('src/main.tsx'),source('src/portal-finalization.css'),source('src/portal-update-38.css'),source('src/portal-update-40.css')]);
-  assert.ok(main.includes("import './portal-update-38.css';"));
-  assert.ok(main.indexOf("./portal-update-40.css")>main.indexOf("./portal-update-38.css"));
-  assert.ok(canonical.includes('#sidebar-nav .portal-sidebar-nav-active::before'));
-  assert.ok(canonical.includes('width: 6px;'));
-  assert.ok(canonical.includes('border-radius: 12px 0 0 12px;'));
-  assert.ok(!css38.includes('#sidebar-nav .portal-sidebar-nav-active::before'));
-  assert.ok(!css40.includes('#sidebar-nav .portal-sidebar-nav-active::before'));
+test('sidebar ativa usa apenas o estado canônico, sem faixa fluorescente histórica',async()=>{
+  const [main,css]=await Promise.all([source('src/main.tsx'),readPortalCss()]);
+  assert.ok(main.includes("import './index.css';"));
+  assert.ok(css.includes('--portal-sidebar-active: #154d41'));
+  assert.ok(!css.includes('#74FF96'));
 });
 
 test('Replicar Portal oferece um único download agregado dos quatro modelos',async()=>{

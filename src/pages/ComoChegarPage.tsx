@@ -20,7 +20,7 @@ const ExternalAction: React.FC<{
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    className="portal-action-green relative flex min-h-[64px] w-full flex-col items-center justify-center gap-1 rounded-xl border border-[#2d6c50] bg-[#337959] px-2 py-2.5 text-center text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm transition hover:brightness-95"
+    className="portal-action-green relative flex min-h-[64px] w-full flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2.5 text-center text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm transition hover:brightness-95"
   >
     <ExternalLink className="absolute right-2 top-2 h-3 w-3 shrink-0 opacity-75" />
     <Icon className="h-5 w-5 shrink-0" />
@@ -35,17 +35,17 @@ export const ComoChegarPage: React.FC = () => {
   const location = layout.footerLocationText || profile.defaultDefenseLocation || 'Departamento de Enfermagem · CCS/UFES · Campus de Maruípe · Vitória/ES';
 
   return (
-    <div id="como-chegar-page-container" className="portal-public-shell mx-auto max-w-none overflow-hidden rounded-2xl border border-slate-300 bg-[#e1e6e9] shadow-sm">
-      <section className="portal-public-header border-b-2 border-white bg-[#005830] px-3.5 py-3 text-white sm:px-4">
+    <div id="como-chegar-page-container" className="portal-public-shell portal-layer-panel mx-auto max-w-none overflow-hidden rounded-2xl border border-slate-300 shadow-sm">
+      <section className="portal-public-header border-b-2 border-white px-3.5 text-white sm:px-4">
         <div className="flex items-center gap-2">
           <ColorfulHeaderIcon type="location" />
           <h1 className="text-sm font-black uppercase tracking-tight text-white sm:text-base">Como chegar</h1>
         </div>
       </section>
 
-      <section className="portal-layer-panel bg-[#e1e6e9] p-3 sm:p-4">
+      <section className="portal-layer-panel p-3 sm:p-4">
         <div className="grid items-start gap-3 md:grid-cols-[minmax(0,1.45fr)_minmax(280px,.8fr)] xl:grid-cols-[minmax(0,1.65fr)_minmax(330px,.72fr)]">
-          <div className="portal-layer-card overflow-hidden rounded-2xl border border-slate-300 bg-[#d5dce0] shadow-sm">
+          <div className="portal-layer-card overflow-hidden rounded-2xl border border-slate-300 shadow-sm">
             <iframe
               title="Mapa do Campus de Maruípe com o Departamento de Enfermagem"
               src={GOOGLE_MAPS_EMBED}
@@ -60,7 +60,7 @@ export const ComoChegarPage: React.FC = () => {
                 href={GOOGLE_MAPS_PLACE}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex shrink-0 items-center gap-1 font-bold text-[#337959] hover:underline"
+                className="inline-flex shrink-0 items-center gap-1 font-bold text-[var(--portal-brand-action)] hover:underline"
                 title="Abrir o ponto do Departamento de Enfermagem no Google Maps"
               >
                 Abrir mapa
@@ -70,9 +70,9 @@ export const ComoChegarPage: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            <section className="portal-layer-card rounded-2xl border border-slate-300 bg-[#d5dce0] p-3 shadow-sm">
+            <section className="portal-layer-card rounded-2xl border border-slate-300 p-3 shadow-sm">
               <div className="flex items-start gap-2.5">
-                <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[#337959]" />
+                <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[var(--portal-brand-action)]" />
                 <div className="min-w-0">
                   <h2 className="text-xs font-black uppercase tracking-wide text-slate-900">Departamento de Enfermagem — CCS/UFES</h2>
                   <p className="mt-0.5 text-[11px] leading-4 text-slate-700">{location}</p>
@@ -86,9 +86,9 @@ export const ComoChegarPage: React.FC = () => {
               </div>
             </section>
 
-            <section className="portal-layer-card rounded-2xl border border-slate-300 bg-[#d5dce0] p-3 shadow-sm">
+            <section className="portal-layer-card rounded-2xl border border-slate-300 p-3 shadow-sm">
               <h2 className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
-                <Navigation className="h-4 w-4 text-[#337959]" />
+                <Navigation className="h-4 w-4 text-[var(--portal-brand-action)]" />
                 Referências de chegada
               </h2>
               <div className="mt-2 space-y-1.5 text-[11px] leading-4 text-slate-700">
@@ -98,9 +98,9 @@ export const ComoChegarPage: React.FC = () => {
               </div>
             </section>
 
-            <section className="portal-layer-card rounded-2xl border border-slate-300 bg-[#d5dce0] p-3 shadow-sm">
+            <section className="portal-layer-card rounded-2xl border border-slate-300 p-3 shadow-sm">
               <h2 className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
-                <Building2 className="h-4 w-4 text-[#337959]" />
+                <Building2 className="h-4 w-4 text-[var(--portal-brand-action)]" />
                 Locais atuais de apresentação
               </h2>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">

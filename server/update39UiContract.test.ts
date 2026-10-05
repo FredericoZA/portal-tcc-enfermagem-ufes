@@ -2,13 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
+import { readPortalCss } from './testUtils/portalCss';
 const source = (path: string) => readFile(path, 'utf8');
 
-test('update 39 mantém espaço verde abaixo das duas barras de filtro', async () => {
-  const css = await source('src/portal-update-39.css');
-  assert.ok(css.includes('.portal-meus-processos-filter-row'));
-  assert.ok(css.includes('.portal-coordinator-filter-row'));
-  assert.match(css, /padding-bottom:\s*0\.95rem\s*!important/);
+test('filtros de Meus TCCs e Presidência usam a geometria canônica', async () => {
+  const css = await readPortalCss();
+  assert.match(css, /data-portal-sheet-filter="true"/);
+  assert.match(css, /--portal-sheet-filter-height:\s*45px/);
+  assert.match(css, /--portal-sheet-content-divider:\s*15px/);
 });
 
 test('identidade centraliza Presidência Secretaria e Comissão sem duplicar troca administrativa', async () => {
@@ -44,25 +45,18 @@ test('integrações mantêm Asten visível e exibem infraestrutura diretamente',
   assert.ok(!panel.includes('>Conexões<'));
 });
 
-test('update 39 abre personalização por tela e remove controles gerais legados', async () => {
-  const [hub, enhancer] = await Promise.all([
+test('personalização expõe apenas superfícies atuais sem camada corretiva global', async () => {
+  const [hub, main] = await Promise.all([
     source('src/components/PortalPersonalizationHubModal.tsx'),
-    source('src/components/PortalUiEnhancer.tsx'),
+    source('src/main.tsx'),
   ]);
   assert.ok(hub.includes("onOpenAppearance('site_header')"));
   assert.ok(!hub.includes("onOpenAppearance('quick_presets')"));
-  assert.ok(enhancer.includes('temas prontos 1 clique'));
-  assert.ok(enhancer.includes('configuracao global do portal site todo'));
-  assert.ok(enhancer.includes('exemplo ao vivo do portal preview em tempo real'));
-  assert.ok(enhancer.includes('portal-customization-top-action'));
+  assert.ok(!main.includes('PortalUiEnhancer'));
 });
 
-test('update 39 limita a superfície da Presidência à troca segura do Master', async () => {
-  const [css, enhancer] = await Promise.all([
-    source('src/portal-update-39.css'),
-    source('src/components/PortalUiEnhancer.tsx'),
-  ]);
-  assert.ok(enhancer.includes("portalSettingsRole = 'president-only'"));
-  assert.ok(css.includes("html[data-portal-settings-role='president-only'] #configuracoes-page-container > section"));
-  assert.ok(css.includes('.portal-president-master-transfer'));
+test('administração institucional permanece restrita ao Master no componente responsável', async () => {
+  const identity = await source('src/components/CommissionIdentityPanel.tsx');
+  assert.ok(identity.includes('if (!isMaster) return null'));
+  assert.ok(!identity.includes('createAdministrationTransfer'));
 });

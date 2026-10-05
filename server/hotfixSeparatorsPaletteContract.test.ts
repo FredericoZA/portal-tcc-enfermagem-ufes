@@ -2,32 +2,28 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+import { readPortalCss } from './testUtils/portalCss';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('hotfix visual é carregado depois da camada estrutural', () => {
+test('não existe hotfix visual carregado em runtime', () => {
   const main = read('src/main.tsx');
-  const coreIndex = main.indexOf("import './portal-core-1043.css'");
-  const hotfixIndex = main.indexOf("import './portal-hotfix-separators-palette.css'");
-  assert.ok(coreIndex >= 0);
-  assert.ok(hotfixIndex > coreIndex);
+  const imports = [...main.matchAll(/import ['"]\.\/([^'"]+\.css)['"];/g)].map((match) => match[1]);
+  assert.deepEqual(imports, ['index.css']);
+  assert.doesNotMatch(main, /hotfix|portal-update-|portal-version-|portal-core-/);
 });
 
-test('separadores efetivos ficam em 16px sem somar bordas legadas à primeira linha', () => {
-  const css = read('src/portal-hotfix-separators-palette.css');
-  assert.match(css, /--portal-separator-section: 16px/);
-  assert.match(css, /--portal-separator-table: 16px/);
-  assert.match(css, /\.portal-core-table thead \{[\s\S]*?border-top: 0 !important;[\s\S]*?border-bottom: 0 !important;/);
-  assert.match(css, /tbody tr:first-child > td \{[\s\S]*?border-top: 0 !important;[\s\S]*?box-shadow: none !important;/);
+test('separadores são definidos uma única vez no CSS canônico', () => {
+  const css = readPortalCss();
+  assert.match(css, /--portal-sheet-title-divider:\s*5px/);
+  assert.match(css, /--portal-sheet-content-divider:\s*15px/);
+  assert.match(css, /border-top:\s*var\(--portal-sheet-title-divider\)/);
+  assert.match(css, /border-bottom:\s*var\(--portal-sheet-content-divider\)/);
 });
 
-test('processos e calendário compartilham verde e amarelo foscos', () => {
-  const css = read('src/portal-hotfix-separators-palette.css');
-  assert.match(css, /--portal-defended-bg: #bed8c3/);
-  assert.match(css, /--portal-defended-border: #719a79/);
-  assert.match(css, /--portal-upcoming-bg: #e8dda7/);
-  assert.match(css, /--portal-upcoming-border: #b49d4f/);
-  assert.match(css, /data-defense-state="defended"/);
-  assert.match(css, /data-defense-state="upcoming"/);
+test('processos e calendário compartilham a mesma paleta semântica', () => {
+  const css = readPortalCss();
+  assert.match(css, /--portal-defense-defended-bg:\s*#bed8c3/);
+  assert.match(css, /--portal-defense-upcoming-bg:\s*#e8dda7/);
   assert.match(css, /portal-core-calendar-card\.is-defended/);
-  assert.match(css, /portal-core-calendar-card\.is-upcoming/);
+  assert.match(css, /data-defense-state="defended"/);
 });

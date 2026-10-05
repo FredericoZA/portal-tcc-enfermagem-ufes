@@ -151,7 +151,7 @@ try {
             viewport: innerWidth
           };
         });
-        if (layout.mainWidth < width * 0.80 || layout.pageWidth < layout.mainWidth * 0.90) {
+        if (layout.mainWidth < width * 0.80 || (layout.pageWidth > 0 && layout.pageWidth < layout.mainWidth * 0.90)) {
           report.errors.push(`master-inicio-${width}: largura útil não acompanha o viewport (${JSON.stringify(layout)}).`);
         }
       }
@@ -197,9 +197,11 @@ try {
               emptyCount: emptyCells.length,
               dayColors,
               emptyColors,
-              divider: filterStyle ? parseFloat(filterStyle.borderTopWidth || '0') : 0,
-              dividerColor: filterStyle?.borderTopColor || '',
-              paddingTop: filterStyle ? parseFloat(filterStyle.paddingTop || '0') : 0,
+              dividerTop: filterStyle ? parseFloat(filterStyle.borderTopWidth || '0') : 0,
+              dividerTopColor: filterStyle?.borderTopColor || '',
+              dividerBottom: filterStyle ? parseFloat(filterStyle.borderBottomWidth || '0') : 0,
+              dividerBottomColor: filterStyle?.borderBottomColor || '',
+              filterHeight: filterRect ? Math.round(filterRect.height) : 0,
               fullWidth: Boolean(filterRect && bannerRect && Math.abs(filterRect.left-bannerRect.left)<=1 && Math.abs(filterRect.right-bannerRect.right)<=1)
             };
           });
@@ -209,8 +211,15 @@ try {
           if (!calendarVisual.emptyCount || calendarVisual.emptyColors.length !== 1 || calendarVisual.emptyColors[0] !== 'rgb(225, 230, 233)') {
             report.errors.push(`master-calendario-${width}: vazios do calendário não usam #E1E6E9 (${JSON.stringify(calendarVisual)}).`);
           }
-          if (calendarVisual.divider < 2 || calendarVisual.dividerColor !== 'rgb(255, 255, 255)' || calendarVisual.paddingTop < 8 || !calendarVisual.fullWidth) {
-            report.errors.push(`master-calendario-${width}: divisor branco/filtros fora do padrão (${JSON.stringify(calendarVisual)}).`);
+          if (
+            Math.abs(calendarVisual.dividerTop - 5) > 0.5
+            || calendarVisual.dividerTopColor !== 'rgb(255, 255, 255)'
+            || Math.abs(calendarVisual.dividerBottom - 15) > 0.5
+            || calendarVisual.dividerBottomColor !== 'rgb(255, 255, 255)'
+            || calendarVisual.filterHeight !== 65
+            || !calendarVisual.fullWidth
+          ) {
+            report.errors.push(`master-calendario-${width}: geometria canônica da barra de filtro divergente (${JSON.stringify(calendarVisual)}).`);
           }
         }
         if (['como-chegar', 'tutorial', 'replicar'].includes(tab)) {
@@ -230,8 +239,12 @@ try {
               inner: inner ? getComputedStyle(inner).backgroundColor : ''
             };
           }, tab);
-          if (layerContract.panel !== 'rgb(225, 230, 233)' || layerContract.card !== 'rgb(213, 220, 224)' || (tab !== 'tutorial' && layerContract.inner !== 'rgb(255, 255, 255)')) {
-            report.errors.push(`master-${label}-${width}: contrato das quatro camadas divergente (${JSON.stringify(layerContract)}).`);
+          if (
+            layerContract.panel !== 'rgb(225, 230, 233)'
+            || layerContract.card !== 'rgb(213, 220, 224)'
+            || (layerContract.inner && layerContract.inner !== 'rgb(255, 255, 255)')
+          ) {
+            report.errors.push(`master-${label}-${width}: contrato das superfícies divergente (${JSON.stringify(layerContract)}).`);
           }
         }
         if (tab === 'como-chegar' && width >= 1024) {
@@ -269,10 +282,10 @@ try {
         }
         if (tab === 'replicar' && width >= 1024) {
           const modelCards = await page.evaluate(() => {
-            const cards = Array.from(document.querySelectorAll('#portal-replication-page .portal-layer-inner'));
+            const cards = Array.from(document.querySelectorAll('#portal-replication-page .portal-layer-card'));
             return cards.map((el) => Math.round(el.getBoundingClientRect().height));
           });
-          if (!modelCards.length || Math.max(...modelCards) > 125) {
+          if (!modelCards.length || Math.max(...modelCards) > 160) {
             report.errors.push(`master-replicar-${width}: cartões de modelos continuam altos (${JSON.stringify(modelCards)}).`);
           }
         }
@@ -294,7 +307,8 @@ try {
             const asten = document.querySelector('#coordenador-page-root button[title="Assinar selecionados pela Asten"]');
             const gov = document.querySelector('#coordenador-page-root button[title="Preparar selecionados para assinatura Gov.br"]');
             const search = document.querySelector('#coordenador-page-root button[aria-label^="Buscar registros"]');
-            const refresh = document.querySelector('#coordenador-page-root button[title="Atualizar fila de declarações"]');
+            const refresh = document.querySelector('#coordenador-refresh-btn');
+            const settings = document.querySelector('#coordenador-page-root button[aria-label="Configurar exibição da planilha"]');
             const before = (a, b) => Boolean(a && b && (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING));
             return {
               divider: rowStyle ? parseFloat(rowStyle.borderTopWidth || '0') : 0,
@@ -302,7 +316,7 @@ try {
               fullWidth: Boolean(rowRect && parentRect && Math.abs(rowRect.left-parentRect.left)<=1 && Math.abs(rowRect.right-parentRect.right)<=1),
               chipState,
               dots,
-              orderOk: before(asten,gov) && before(gov,search) && before(search,refresh)
+              orderOk: before(asten,gov) && before(gov,refresh) && before(refresh,search) && before(search,settings)
             };
           });
           if (coordinatorUi.divider < 2 || coordinatorUi.dividerColor !== 'rgb(255, 255, 255)' || !coordinatorUi.fullWidth) {
@@ -311,11 +325,11 @@ try {
           if (coordinatorUi.chipState.some((item) => item.transform !== 'none' || item.margin !== '0px')) {
             report.errors.push(`master-presidencia-${width}: filtro altera margem/transformação ao selecionar (${JSON.stringify(coordinatorUi.chipState)}).`);
           }
-          if (!coordinatorUi.dots.includes('rgb(34, 160, 107)') || !coordinatorUi.dots.includes('rgb(244, 180, 0)')) {
-            report.errors.push(`master-presidencia-${width}: filtros não exibem um verde e um amarelo (${JSON.stringify(coordinatorUi.dots)}).`);
+          if (!coordinatorUi.dots.includes('rgb(155, 136, 75)') || !coordinatorUi.dots.includes('rgb(126, 144, 126)')) {
+            report.errors.push(`master-presidencia-${width}: filtros não preservam a paleta semântica pendente/assinada (${JSON.stringify(coordinatorUi.dots)}).`);
           }
           if (!coordinatorUi.orderOk) {
-            report.errors.push(`master-presidencia-${width}: ordem Asten/Gov/lupa/atualização divergente.`);
+            report.errors.push(`master-presidencia-${width}: ordem Asten/Gov/atualização/lupa/engrenagem divergente.`);
           }
         }
         if (tab === 'meus-processos' && width >= 768) {
@@ -330,37 +344,52 @@ try {
               fullWidth: Boolean(rect&&parent&&Math.abs(rect.left-parent.left)<=1&&Math.abs(rect.right-parent.right)<=1),
               hasRegister: Boolean(document.querySelector('#meus-processos-btn-novo')),
               hasSearch: Boolean(document.querySelector('#meus-processos-page-container button[aria-label^="Buscar registros"]')),
-              hasRefresh: Boolean(document.querySelector('#meus-processos-refresh-btn'))
+              hasRefresh: Boolean(document.querySelector('#meus-processos-refresh-btn')),
+              hasSettings: Boolean(document.querySelector('#meus-processos-page-container button[aria-label="Configurar exibição da planilha"]'))
             };
           });
           if (tccUi.divider < 2 || tccUi.dividerColor !== 'rgb(255, 255, 255)' || !tccUi.fullWidth) {
             report.errors.push(`master-meus-tccs-${width}: divisor branco não ocupa o cabeçalho inteiro (${JSON.stringify(tccUi)}).`);
           }
-          if (!tccUi.hasRegister || !tccUi.hasSearch || !tccUi.hasRefresh) {
+          if (!tccUi.hasRegister || !tccUi.hasSearch || !tccUi.hasRefresh || !tccUi.hasSettings) {
             report.errors.push(`master-meus-tccs-${width}: ações obrigatórias do cabeçalho ausentes (${JSON.stringify(tccUi)}).`);
           }
         }
         if (tab === 'configuracoes') {
-          const syncButton = page.locator('#google-workspace-sync-section > button').first();
-          if (!(await page.locator('#administrative-identity-panel').count())) {
-            await syncButton.click();
-            await page.locator('#administrative-identity-panel').waitFor({ state: 'visible', timeout: 6000 });
-          }
-          const panels = await page.evaluate(() => ({
-            admin: document.querySelectorAll('#administrative-identity-panel').length,
-            commission: document.querySelectorAll('#administrative-identity-panel .portal-commission-identity-panel').length,
-            infra: document.querySelectorAll('#infrastructure-integrations-panel').length,
-            access: document.querySelectorAll('#authorized-access-panel').length,
-            nestedCommissionInInfra: document.querySelectorAll('#infrastructure-integrations-panel .portal-commission-identity-panel').length
-          }));
-          if (panels.admin !== 1 || panels.commission !== 1 || panels.infra !== 1 || panels.access !== 1 || panels.nestedCommissionInInfra !== 0) {
-            report.errors.push(`master-configuracoes-${width}: painéis administrativos não estão agrupados corretamente (${JSON.stringify(panels)}).`);
+          const settingsUi = await page.evaluate(() => {
+            const root = document.querySelector('#configuracoes-page-container');
+            const hub = document.querySelector('#portal-settings-hub');
+            const launchers = Array.from(document.querySelectorAll('#portal-settings-hub .portal-settings-launcher'));
+            const hubStyle = hub ? getComputedStyle(hub) : null;
+            return {
+              root: Boolean(root),
+              hub: Boolean(hub),
+              launcherCount: launchers.length,
+              hubBackground: hubStyle?.backgroundColor || '',
+              hubBorderTop: hubStyle?.borderTopWidth || '',
+              hasLegacySyncSection: Boolean(document.querySelector('#google-workspace-sync-section')),
+              hasLegacyModelsSection: Boolean(document.querySelector('#master-flow-system-section'))
+            };
+          });
+          if (
+            !settingsUi.root
+            || !settingsUi.hub
+            || settingsUi.launcherCount < 9
+            || !['rgba(0, 0, 0, 0)', 'transparent'].includes(settingsUi.hubBackground)
+            || settingsUi.hasLegacySyncSection
+            || settingsUi.hasLegacyModelsSection
+          ) {
+            report.errors.push(`master-configuracoes-${width}: hub de Configurações fora da arquitetura nativa (${JSON.stringify(settingsUi)}).`);
           }
         }
         if (tab === 'fluxo-tcc' && width >= 1440) {
-          const fluxoWidth = await page.evaluate(() => Math.round(document.querySelector('#fluxo-tcc-page')?.getBoundingClientRect().width || 0));
-          if (!fluxoWidth || fluxoWidth > 1100) {
-            report.errors.push(`master-fluxo-tcc-${width}: largura da tela de referência foi alterada (${fluxoWidth}px).`);
+          const fluxoGeometry = await page.evaluate(() => {
+            const root = document.querySelector('#fluxo-tcc-page')?.getBoundingClientRect();
+            const main = document.querySelector('#portal-app-root main')?.getBoundingClientRect();
+            return root && main ? { rootWidth: Math.round(root.width), mainWidth: Math.round(main.width) } : null;
+          });
+          if (!fluxoGeometry || fluxoGeometry.rootWidth < fluxoGeometry.mainWidth * 0.90) {
+            report.errors.push(`master-fluxo-tcc-${width}: Fluxo não acompanha a largura útil (${JSON.stringify(fluxoGeometry)}).`);
           }
         }
         if (['indicadores', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'].includes(tab)) {

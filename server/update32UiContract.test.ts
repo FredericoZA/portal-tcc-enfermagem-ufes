@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { readPortalCss } from './testUtils/portalCss';
 const root = path.resolve(process.cwd());
 const source = (file: string) => readFile(path.join(root, file), 'utf8');
 
@@ -19,19 +20,17 @@ test('navegação pública mantém apenas o Fluxo do TCC canônico', async () =>
   assert.ok(sidebar.includes("'Fluxo do TCC'"));
   assert.ok(!sidebar.includes('Fluxo completo do TCC'));
   assert.ok(app.includes("case 'fluxo-tcc'"));
-  assert.ok(layout.includes("'fluxo-tcc':'Fluxo do TCC'"));
+  assert.ok(layout.includes("'fluxo-tcc': 'Fluxo do TCC'"));
 });
 
-test('hotfix visual restaura aba lateral verde e divisor branco do Como usar', async () => {
+test('navegação usa shell canônico sem hotfix visual', async () => {
   const [main, css] = await Promise.all([
     source('src/main.tsx'),
-    source('src/portal-update-32.css'),
+    readPortalCss(),
   ]);
-
-  assert.ok(main.includes("import './portal-update-32.css'"));
-  assert.ok(!main.includes("import './portal-update-29.css'"));
-  assert.ok(css.includes('border-left: 3px solid #337959'));
-  assert.ok(css.includes('box-shadow:'));
-  assert.ok(css.includes('border-top-color: #ffffff'));
-  assert.ok(css.includes('padding-top: 0.5rem'));
+  assert.ok(main.includes("import './index.css'"));
+  assert.ok(!main.includes('portal-update-'));
+  assert.ok(css.includes('--portal-sidebar-footer: #011f17'));
+  assert.ok(css.includes('--portal-sidebar-active: #154d41'));
+  assert.ok(css.includes('--portal-surface-inner: #ffffff'));
 });

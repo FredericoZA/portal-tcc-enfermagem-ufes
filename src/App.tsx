@@ -8,7 +8,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { EmergencyRecoveryModal } from './components/EmergencyRecoveryModal';
 import { IndicadoresPage } from './pages/IndicadoresPage';
-import { PortalFeedbackController } from './components/PortalFeedbackController';
+import { PortalAccessRedirect } from './components/PortalAccessRedirect';
 import { getPortalSemanticRootVars } from './utils/portalSemanticTokens';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })));
@@ -130,7 +130,7 @@ export default function App() {
   return (
     <AuthProvider>
       <PortalDialogs />
-      <PortalFeedbackController />
+      <PortalAccessRedirect />
       <div id="portal-app-root" className="min-h-screen flex flex-col font-sans antialiased text-slate-900" style={{ ...getPortalSemanticRootVars(), backgroundColor: 'var(--portal-surface-page)' }}>
         {(import.meta as any).env?.DEV && <UserSimulatorBar />}
 
@@ -168,7 +168,7 @@ export default function App() {
                   : currentTab === 'coordenador' ? 'Área do Presidente'
                   : currentTab === 'configuracoes' ? 'Configurações & Modelos de Arquivos'
                   : currentTab === 'logs' ? 'Registro de Logs'
-                  : currentTab === 'asten-logs' ? 'Registros da Asten'
+                  : currentTab === 'asten-logs' ? 'Registros de Assinatura'
                   : (currentTab === 'analise' || currentTab === 'indicadores') ? 'Indicadores'
                   : 'Portal de TCC'
               }
@@ -191,12 +191,12 @@ export default function App() {
               aria-label="Detalhes do Trabalho de TCC"
               tabIndex={-1}
               className="portal-process-dialog relative my-2 w-full max-w-6xl overflow-hidden rounded-2xl border border-slate-300 shadow-2xl animate-in zoom-in-95 duration-150 sm:my-4"
-              style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}
+              style={{ backgroundColor: 'var(--portal-surface-panel)' }}
               onClick={(event) => event.stopPropagation()}
             >
               <div
                 className="portal-process-dialog-body max-h-[90vh] overflow-y-auto p-2 custom-scrollbar sm:p-3"
-                style={{ backgroundColor: 'var(--portal-surface-layer-1)' }}
+                style={{ backgroundColor: 'var(--portal-surface-panel)' }}
               >
                 <PortalErrorBoundary key={selectedProcessId}><Suspense fallback={<PageLoadingFallback />}>
                   <ProcessoDetailPage processId={selectedProcessId} readOnly={selectedProcessReadOnly} onBack={handleCloseProcess} isModal={false} />
