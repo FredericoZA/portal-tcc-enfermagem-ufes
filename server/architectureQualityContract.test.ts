@@ -69,6 +69,20 @@ test('implementação não consome aliases visuais temporários', () => {
   assert.deepEqual(offenders, []);
 });
 
+
+test('cores estruturais concretas existem somente no arquivo de tokens', () => {
+  const tokenFile = join(SRC, 'styles', 'portal-tokens.css');
+  const structuralHex = ['#f1f5f9', '#e1e6e9', '#d5dce0', '#005830', '#337959', '#011f17', '#154d41'];
+  const offenders: string[] = [];
+  for (const path of sourceFiles) {
+    if (path === tokenFile) continue;
+    const content = read(path).toLowerCase();
+    const found = structuralHex.filter((hex) => content.includes(hex));
+    if (found.length) offenders.push(`${rel(path)}: ${found.join(', ')}`);
+  }
+  assert.deepEqual(offenders, []);
+});
+
 test('mutação global de planilhas fica concentrada no runtime canônico', () => {
   const allowed = new Set([
     'src/components/PortalSpreadsheetRuntime.tsx',
