@@ -5,7 +5,7 @@ import { readPortalCss } from './testUtils/portalCss';
 const read=(p:string)=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('cabeçalhos e separadores foram absorvidos pelo contrato canônico',()=>{
-  const runtime=read('src/components/PortalStructuralRuntime.tsx');
+  const runtime=read('src/utils/portalTableDom.ts');
   const css=readPortalCss();
   assert.match(runtime,/portal-core-column-menu/);
   assert.match(css,/--portal-sheet-title-divider:\s*5px/);
