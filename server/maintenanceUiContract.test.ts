@@ -8,7 +8,7 @@ const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8
 test('runtime estrutural neutraliza hover e usa um único menu por coluna',()=>{
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
   const css=readPortalCss();
-  assert.match(runtime,/stripHoverRules/);
+  assert.doesNotMatch(runtime,/stripHoverRules|neutralizeHover|document\.styleSheets/);
   assert.match(runtime,/portal-core-column-menu/);
   assert.match(runtime,/Selecionar tudo/);
   assert.match(runtime,/Limpar tudo/);
@@ -49,5 +49,5 @@ test('main monta uma única camada CSS e apenas runtimes funcionais remanescente
   assert.match(main,/PortalSpreadsheetRuntime/);
   assert.match(main,/import '\.\/index\.css'/);
   assert.doesNotMatch(main,/portal-core-1043\.css|portal-update-|portal-version-|hotfix/);
-  assert.doesNotMatch(main,/PortalVersion1040Enhancer|PortalSettingsRuntime/);
+  assert.doesNotMatch(main,/PortalVersion1040Enhancer|PortalSettingsRuntime|PortalUiEnhancer|PortalTableTextPolicy/);
 });
