@@ -339,10 +339,7 @@
 }
 
 /* Controle por coluna: exatamente 15 × 15. */
-.portal-core-column-menu,
-.portal1041-column-menu-button,
-.portal-column-sort,
-.portal-column-filter {
+.portal-core-column-menu {
   width: var(--portal-sheet-column-control-size);
   min-width: var(--portal-sheet-column-control-size);
   height: var(--portal-sheet-column-control-size);
@@ -358,10 +355,7 @@
   line-height: 1;
 }
 
-.portal-core-column-menu svg,
-.portal1041-column-menu-button svg,
-.portal-column-sort svg,
-.portal-column-filter svg {
+.portal-core-column-menu svg {
   width: 9px;
   height: 9px;
 }
