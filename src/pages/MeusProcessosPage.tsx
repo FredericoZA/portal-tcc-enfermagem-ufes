@@ -500,7 +500,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
   const columnsList = [
     { key: 'protocolo', label: 'Processo' },
     { key: 'defesaDataHora', label: 'Data e Horário' },
-    { key: 'progresso', label: 'Progresso' },
+    { key: 'progresso', label: 'Etapa' },
     { key: 'titulo', label: 'Título do Trabalho' },
     { key: 'aluno1', label: 'Aluno 1' },
     { key: 'aluno2', label: 'Aluno 2' },
