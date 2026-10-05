@@ -1240,7 +1240,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     {/* Day Number and State */}
                     <div className="flex items-center justify-between">
                       <span
-                        className={`text-xs font-black px-2 py-0.5 rounded-2xs ${
+                        className={`portal-calendar-day-number font-black px-2 py-0.5 rounded-2xs ${
                           isToday
                             ? 'bg-slate-800 text-white shadow-2xs'
                             : hasEvents
