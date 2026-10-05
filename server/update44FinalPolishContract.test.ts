@@ -13,10 +13,10 @@ test('Área do Presidente ordena fila e concluídos sem depender da aba ativa',(
   assert.match(s,/if \(!pA \|\| !pB\) return 0/);
 });
 
-test('cabeçalhos preservam contrato legado enquanto runtime estrutural assume menu único',()=>{
-  const legacy=read('src/components/PortalSpreadsheetEnhancer.tsx');
+test('cabeçalhos usam somente o runtime estrutural canônico',()=>{
+  const main=read('src/main.tsx');
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
-  assert.match(legacy,/hasNativeSort/);
+  assert.doesNotMatch(main,/PortalSpreadsheetEnhancer/);
   assert.match(runtime,/portal-core-column-menu/);
   assert.match(runtime,/Selecionar tudo/);
   assert.match(runtime,/Limpar tudo/);
