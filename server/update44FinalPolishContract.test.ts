@@ -5,12 +5,14 @@ import { readPortalCss } from './testUtils/portalCss';
 const read=(p:string)=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 // Contratos de regressão dos ajustes visuais e funcionais consolidados.
-test('Área do Presidente ordena fila e concluídos sem depender da aba ativa',()=>{
+test('Área do Presidente ordena uma coleção única conforme a visão ativa',()=>{
   const s=read('src/pages/CoordenadorPage.tsx');
-  assert.match(s,/getSortedAndFilteredItems = \(items: any\[\], wrappedQueueItem: boolean\)/);
-  assert.match(s,/getSortedAndFilteredItems\(pendingItems, true\)/);
-  assert.match(s,/getSortedAndFilteredItems\(completedItems, false\)/);
-  assert.match(s,/if \(!pA \|\| !pB\) return 0/);
+  assert.match(s,/type CoordinatorRow/);
+  assert.match(s,/const pendingRows: CoordinatorRow\[\]/);
+  assert.match(s,/const completedRows: CoordinatorRow\[\]/);
+  assert.match(s,/getSortedAndFilteredItems = \(items: CoordinatorRow\[\]\)/);
+  assert.match(s,/const visibleRows = activeTab === 'pendentes'/);
+  assert.match(s,/const sortedRows = getSortedAndFilteredItems\(visibleRows\)/);
 });
 
 test('cabeçalhos usam somente o runtime estrutural canônico',()=>{
