@@ -942,8 +942,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const year = currentCalendarDate.getFullYear();
   const month = currentCalendarDate.getMonth();
 
-  const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 = Sunday
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const businessDays = Array.from({ length: daysInMonth }, (_, index) => index + 1)
+    .filter((dayNum) => {
+      const dayOfWeek = new Date(year, month, dayNum).getDay();
+      return dayOfWeek >= 1 && dayOfWeek <= 5;
+    });
+  const firstBusinessDayOffset = businessDays.length > 0
+    ? new Date(year, month, businessDays[0]).getDay() - 1
+    : 0;
+  const trailingBusinessDayCells = businessDays.length > 0
+    ? 5 - new Date(year, month, businessDays[businessDays.length - 1]).getDay()
+    : 0;
 
   const monthNamesPt = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -1176,39 +1186,32 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   {isCalendarExpanded && (
                     <div>
                       <div className="overflow-x-auto">
-                        <div className="min-w-[720px] md:min-w-0">
-                          {/* Calendar Days Header with synchronized palette */}
+                        <div className="min-w-[620px] md:min-w-0">
+                          {/* Dias úteis: o calendário público exibe somente segunda a sexta. */}
                           <div data-portal-sheet-column-header="true" className={`${defStyles.calendarDaysHeaderClass} py-2.5 px-4 sm:px-6 select-none`} style={defStyles.bannerHeaderStyle}>
-                            <div className="grid grid-cols-[0.5fr_1.1fr_1.1fr_1.1fr_1.1fr_1.1fr_0.5fr] text-center font-black text-[11px] uppercase tracking-wider">
-                              <div>DOM</div>
+                            <div className="grid grid-cols-5 text-center font-black text-[11px] uppercase tracking-wider">
                               <div>SEG</div>
                               <div>TER</div>
                               <div>QUA</div>
                               <div>QUI</div>
                               <div>SEX</div>
-                              <div>SÁB</div>
                             </div>
                           </div>
 
                           <div className="px-4 pb-4 pt-2.5 sm:px-6 sm:pb-6 sm:pt-3.5 space-y-6">
-            {/* Calendar Days Cells Grid */}
-            <div className="grid grid-cols-[0.5fr_1.1fr_1.1fr_1.1fr_1.1fr_1.1fr_0.5fr] border-l border-t border-slate-200 min-h-[300px]">
-              {/* Empty cells before first day */}
-              {Array.from({ length: firstDayOfMonth }).map((_, idx) => (
+            {/* Grade mensal restrita aos dias úteis. */}
+            <div className="grid grid-cols-5 border-l border-t border-slate-200 min-h-[300px]">
+              {Array.from({ length: firstBusinessDayOffset }).map((_, idx) => (
                 <div key={`empty-lead-${idx}`} className="portal-calendar-empty-cell border-r border-b border-slate-200 min-h-[118px]" />
               ))}
 
-              {/* Days of current month */}
-              {Array.from({ length: daysInMonth }).map((_, idx) => {
-                const dayNum = idx + 1;
+              {businessDays.map((dayNum, idx) => {
                 const { defenses: dayDefenses, gcal: dayGcal, total: totalEvents } = getEventsForDate(dayNum);
                 const hasEvents = totalEvents > 0;
 
                 const dateObj = new Date(year, month, dayNum);
-                const cellIndex = firstDayOfMonth + idx;
-                const rowIndex = Math.floor(cellIndex / 7);
-                const colIndex = cellIndex % 7;
-                const isWeekend = colIndex === 0 || colIndex === 6;
+                const cellIndex = firstBusinessDayOffset + idx;
+                const rowIndex = Math.floor(cellIndex / 5);
                 const isTopHalf = rowIndex <= 2;
 
                 const today = new Date();
@@ -1222,25 +1225,22 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   <div
                     key={`day-${dayNum}`}
                     onClick={() => {
-                      if (hasEvents && !isWeekend) {
+                      if (hasEvents) {
                         setSelectedDayDefenses(dayDefenses.length > 0 ? dayDefenses : null);
                         setSelectedDayGcalEvents(dayGcal.length > 0 ? dayGcal : null);
                       }
                     }}
-                    aria-disabled={isWeekend ? true : undefined}
                     className={`portal-calendar-day-cell border-r border-b border-slate-200 p-2 flex flex-col justify-between transition-all duration-150 relative group select-none ${
-                      isWeekend
-                        ? 'portal-core-calendar-weekend border-slate-200 cursor-default min-h-[118px] text-slate-400'
-                        : hasEvents
-                          ? 'bg-white border-slate-300 cursor-pointer min-h-[118px] shadow-2xs active:scale-[0.98]'
-                          : 'bg-white border-slate-200 cursor-default min-h-[118px]'
+                      hasEvents
+                        ? 'bg-white border-slate-300 cursor-pointer min-h-[118px] shadow-2xs active:scale-[0.98]'
+                        : 'bg-white border-slate-200 cursor-default min-h-[118px]'
                     }`}
-                    title={isWeekend ? 'Fim de semana — indisponível para defesas' : hasEvents ? `Clique para abrir as ${totalEvents} defesas do dia ${dayNum}` : undefined}
+                    title={hasEvents ? `Clique para abrir as ${totalEvents} defesas do dia ${dayNum}` : undefined}
                   >
                     {/* Day Number and State */}
                     <div className="flex items-center justify-between">
                       <span
-                        className={`text-xs font-black px-2 py-0.5 rounded-2xs ${
+                        className={`portal-calendar-day-number font-black px-2 py-0.5 rounded-2xs ${
                           isToday
                             ? 'bg-slate-800 text-white shadow-2xs'
                             : hasEvents
@@ -1299,8 +1299,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 );
               })}
 
-              {/* Empty cells after last day to complete week grid */}
-              {Array.from({ length: (7 - ((firstDayOfMonth + daysInMonth) % 7)) % 7 }).map((_, idx) => (
+              {Array.from({ length: trailingBusinessDayCells }).map((_, idx) => (
                 <div key={`empty-trail-${idx}`} className="portal-calendar-empty-cell border-r border-b border-slate-200 min-h-[118px]" />
               ))}
             </div>

@@ -205,10 +205,18 @@ try {
               fullWidth: Boolean(filterRect && bannerRect && Math.abs(filterRect.left-bannerRect.left)<=1 && Math.abs(filterRect.right-bannerRect.right)<=1)
             };
           });
-          if (calendarVisual.cellCount < 28 || calendarVisual.dayColors.length !== 1 || calendarVisual.dayColors[0] !== 'rgb(213, 220, 224)') {
-            report.errors.push(`master-calendario-${width}: dias do mês não usam #D5DCE0 (${JSON.stringify(calendarVisual)}).`);
+          if (
+            calendarVisual.cellCount < 20
+            || calendarVisual.cellCount > 23
+            || calendarVisual.dayColors.length !== 1
+            || calendarVisual.dayColors[0] !== 'rgb(213, 220, 224)'
+          ) {
+            report.errors.push(`master-calendario-${width}: grade útil ou cor dos dias divergente (${JSON.stringify(calendarVisual)}).`);
           }
-          if (!calendarVisual.emptyCount || calendarVisual.emptyColors.length !== 1 || calendarVisual.emptyColors[0] !== 'rgb(225, 230, 233)') {
+          if (
+            calendarVisual.emptyCount > 0
+            && (calendarVisual.emptyColors.length !== 1 || calendarVisual.emptyColors[0] !== 'rgb(225, 230, 233)')
+          ) {
             report.errors.push(`master-calendario-${width}: vazios do calendário não usam #E1E6E9 (${JSON.stringify(calendarVisual)}).`);
           }
           if (

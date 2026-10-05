@@ -53,13 +53,14 @@ test('etapa permanece disponível e planilhas removem decoração infantil', () 
   assert.doesNotMatch(runtime, /Progresso|portal-core-stage-label/);
 });
 
-test('calendário usa fins de semana estreitos e preview seguro', () => {
+test('calendário usa cinco dias úteis e preview seguro', () => {
   const runtime = read('src/utils/portalTableDom.ts');
   const home = read('src/pages/HomePage.tsx');
   const css = readPortalCss();
-  assert.match(css, /grid-template-columns: \.22fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr 1\.356fr \.22fr/);
-  assert.match(home, /isWeekend = colIndex === 0 \|\| colIndex === 6/);
-  assert.match(home, /portal-core-calendar-weekend/);
+  assert.match(home, /const businessDays = Array\.from/);
+  assert.match(home, /dayOfWeek >= 1 && dayOfWeek <= 5/);
+  assert.match(home, /grid grid-cols-5 text-center/);
+  assert.doesNotMatch(home, /portal-core-calendar-weekend|<div>DOM<\/div>|<div>SÁB<\/div>/);
   assert.doesNotMatch(runtime, /enhanceCalendar|portal-core-calendar-previews|fetch\('\/api\/processes'/);
   assert.match(css, /--portal-defense-upcoming-bg/);
   assert.match(css, /--portal-defense-defended-bg/);

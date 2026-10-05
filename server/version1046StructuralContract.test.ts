@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs';
 import { readPortalCss } from './testUtils/portalCss';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('release estrutural atual é 1.0.75', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.75');
+test('release estrutural atual é 1.0.76', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.76');
 });
 
 test('estado de defesa é calculado na página pública sem pós-processamento global', () => {
@@ -16,11 +16,13 @@ test('estado de defesa é calculado na página pública sem pós-processamento g
   assert.doesNotMatch(runtime, /normalizeDefenseRows|formal-monthly-calendar-section|fetch\('\/api\/processes'/);
 });
 
-test('calendário classifica fim de semana no React e abre agenda sem busca paralela', () => {
+test('calendário filtra dias úteis no React e abre agenda sem busca paralela', () => {
   const home = read('src/pages/HomePage.tsx');
   const runtime = read('src/utils/portalTableDom.ts');
-  assert.match(home, /isWeekend = colIndex === 0 \|\| colIndex === 6/);
-  assert.match(home, /hasEvents && !isWeekend/);
+  assert.match(home, /const businessDays = Array\.from/);
+  assert.match(home, /dayOfWeek >= 1 && dayOfWeek <= 5/);
+  assert.match(home, /if \(hasEvents\)/);
+  assert.doesNotMatch(home, /isWeekend|portal-core-calendar-weekend/);
   assert.doesNotMatch(runtime, /enhanceCalendar/);
 });
 
