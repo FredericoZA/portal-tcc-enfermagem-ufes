@@ -29,7 +29,11 @@ export function closePortalTablePopup() {
 
 function keyForHeader(header: HTMLTableCellElement, index: number) {
   if (!header.dataset.portalCoreColumnKey) {
-    header.dataset.portalCoreColumnKey = `${index}:${slugPortalTableText(readPortalHeaderLabel(header)) || `coluna-${index + 1}`}`;
+    const explicit = header.dataset.portalColumnKey?.trim();
+    const identity = explicit
+      ? `key:${slugPortalTableText(explicit)}`
+      : `fallback:${index}:${slugPortalTableText(readPortalHeaderLabel(header)) || `coluna-${index + 1}`}`;
+    header.dataset.portalCoreColumnKey = identity;
   }
   return header.dataset.portalCoreColumnKey;
 }
