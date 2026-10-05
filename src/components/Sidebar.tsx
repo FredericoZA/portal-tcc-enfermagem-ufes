@@ -136,7 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   };
   const isColorLight = (hex?: string) => {
     if (!hex) return false;
-    if (['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#f0f1e7', '#e0f2fe', '#fefce8', '#fff1f2'].includes(hex)) return true;
+    if (['#ffffff', '#f8fafc', 'var(--portal-surface-page)', '#e2e8f0', '#f0f1e7', '#e0f2fe', '#fefce8', '#fff1f2'].includes(hex)) return true;
     const clean = hex.replace('#', ''); if (clean.length !== 6) return false;
     const r = parseInt(clean.substring(0, 2), 16), g = parseInt(clean.substring(2, 4), 16), b = parseInt(clean.substring(4, 6), 16);
     return (r * 299 + g * 587 + b * 114) / 1000 > 140;
@@ -205,7 +205,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           return order.map((itemKey, idx) => {
             if (itemKey.startsWith('DIVIDER')) { if (layoutConfig.sidebarShowDividers === false || layoutConfig.sidebarDividerStyle === 'none') return null; return <div key={`${itemKey}-${idx}`} className="my-2.5 pt-0.5 border-t transition-colors" style={{ borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider, borderStyle: layoutConfig.sidebarDividerStyle || 'solid' }} />; }
             const item = allNavMap[itemKey]; if (!item || !item.visible) return null; const Icon = item.icon; const isActive = currentTab === item.id || (item.id === 'home' && currentTab === 'calendario');
-            return <button key={item.id} id={`nav-item-${item.id}`} onClick={() => handleNav(item.id)} className={`portal-sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-transparent outline-none focus-visible:ring-2 focus-visible:ring-[#74FF96] focus-visible:ring-offset-1 focus-visible:ring-offset-[#06372d] font-bold text-xs uppercase tracking-wider transition-all text-left cursor-pointer ${isActive ? 'portal-sidebar-nav-active font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || '#154d41',color: layoutConfig.sidebarActiveTextColor || '#ffffff'} : { color: layoutConfig.sidebarTextColor || '#f8fafc' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
+            return <button key={item.id} id={`nav-item-${item.id}`} onClick={() => handleNav(item.id)} className={`portal-sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-transparent outline-none focus-visible:ring-2 focus-visible:ring-[#74FF96] focus-visible:ring-offset-1 focus-visible:ring-offset-[#06372d] font-bold text-xs uppercase tracking-wider transition-all text-left cursor-pointer ${isActive ? 'portal-sidebar-nav-active font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || 'var(--portal-sidebar-active)',color: layoutConfig.sidebarActiveTextColor || '#ffffff'} : { color: layoutConfig.sidebarTextColor || '#f8fafc' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
           });
         })()}
       </nav>
