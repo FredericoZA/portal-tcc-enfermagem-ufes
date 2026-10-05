@@ -70,7 +70,7 @@ export function formatColumnLabel(
   customLabels?: Record<string, string>,
 ): string {
   let label = customLabels?.[colKey]?.trim() || rawLabel;
-  if (format?.headerShowEmojis === false || format?.columnEmojis?.[colKey] === false) {
+  if (format?.headerShowEmojis !== true || format?.columnEmojis?.[colKey] === false) {
     label = stripEmojis(label);
   }
   if (format?.headerUppercase) label = label.toUpperCase();
@@ -84,10 +84,12 @@ export function formatCellText(
   defaultPrefixEmoji?: string,
 ): string {
   if (!text) return '';
-  if (format?.cellShowEmojis === false || format?.columnEmojis?.[colKey] === false) {
+  if (format?.cellShowEmojis !== true || format?.columnEmojis?.[colKey] === false) {
     return stripEmojis(text);
   }
-  if (defaultPrefixEmoji && !text.includes(defaultPrefixEmoji) && !EMOJI_REGEX.test(text.slice(0, 4))) {
+  const leadingText = text.slice(0, 4);
+  const hasLeadingEmoji = stripEmojis(leadingText) !== leadingText;
+  if (defaultPrefixEmoji && !text.includes(defaultPrefixEmoji) && !hasLeadingEmoji) {
     return `${defaultPrefixEmoji} ${text}`;
   }
   return text;
