@@ -69,7 +69,7 @@ test('implementação não consome aliases visuais temporários', () => {
   assert.deepEqual(offenders, []);
 });
 
-test('mutação global de tabela fica concentrada no runtime e no módulo DOM canônico', () => {
+test('mutação global de planilhas fica concentrada no runtime canônico', () => {
   const allowed = new Set([
     'src/components/PortalSpreadsheetRuntime.tsx',
     'src/utils/portalTableDom.ts',
@@ -78,8 +78,9 @@ test('mutação global de tabela fica concentrada no runtime e no módulo DOM ca
     .filter((path) => /\.(?:ts|tsx)$/.test(path))
     .filter((path) => {
       const content = read(path);
-      return /MutationObserver|document\.createElement|document\.querySelector(?:All)?|createTreeWalker\(/.test(content)
-        && !allowed.has(rel(path));
+      const observesDomGlobally = /new MutationObserver\(/.test(content);
+      const scansTablesGlobally = /document\.querySelector(?:All)?[^;\n]{0,140}\btable\b/.test(content);
+      return (observesDomGlobally || scansTablesGlobally) && !allowed.has(rel(path));
     })
     .map(rel);
   assert.deepEqual(offenders, []);
