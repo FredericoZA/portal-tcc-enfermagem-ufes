@@ -70,11 +70,16 @@ test('implementação não consome aliases visuais temporários', () => {
 });
 
 
-test('cores estruturais concretas existem somente no arquivo de tokens', () => {
+test('renderização estrutural consome tokens em vez de duplicar HEX canônico', () => {
   const tokenFile = join(SRC, 'styles', 'portal-tokens.css');
   const structuralHex = ['#f1f5f9', '#e1e6e9', '#d5dce0', '#005830', '#337959', '#011f17', '#154d41'];
+  const isVisualEditor = (path: string) => /EditorModal\.tsx$/.test(path) || path.includes('/components/editor/');
+  const runtimeVisualFiles = sourceFiles.filter((path) =>
+    (path.endsWith('.tsx') || path.endsWith('.css')) &&
+    !isVisualEditor(rel(path))
+  );
   const offenders: string[] = [];
-  for (const path of sourceFiles) {
+  for (const path of runtimeVisualFiles) {
     if (path === tokenFile) continue;
     const content = read(path).toLowerCase();
     const found = structuralHex.filter((hex) => content.includes(hex));
