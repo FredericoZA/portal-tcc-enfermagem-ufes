@@ -1781,7 +1781,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                 {/* INTEGRATED TOOLBAR BAR FOR STATUS & FILTERS */}
                 <div data-portal-sheet-filter="true" className="portal-defense-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 text-xs">
-                  <span className="text-[10px] opacity-80 font-black uppercase tracking-wider shrink-0">
+                  <span className="portal-filter-label opacity-80 shrink-0">
                     FILTRAR:
                   </span>
                   <div className="flex items-center gap-1.5 flex-wrap">
