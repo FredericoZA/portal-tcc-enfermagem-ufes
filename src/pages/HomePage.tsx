@@ -1985,9 +1985,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               });
             }
 
-            // Slice according to records limit
-            const limitedProcesses = defensesRecordsLimit === 'all' ? sortedProcesses : sortedProcesses.slice(0, defensesRecordsLimit);
-
+            // A paginação é aplicada uma única vez pelo runtime canônico da planilha.
             const defStyles = getTableStyles(defensesTextFormat);
 
             const isDefDark = (defensesTextFormat.headerTheme || 'militar') !== 'clean' && (defensesTextFormat.headerTheme || 'militar') !== 'slate' && (defensesTextFormat.headerTheme || 'militar') !== 'light';
@@ -2221,7 +2219,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                    {limitedProcesses.map((proc) => {
+                    {sortedProcesses.map((proc) => {
                       const progress = getProcessProgress(proc);
                       const defenseState = getDefenseState(proc);
                       const evalMembers = (proc.banca || []).filter(b => b.funcao !== 'ORIENTADOR');
