@@ -327,15 +327,6 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     return 'Visualizar Detalhes';
   };
 
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortColumn(column);
-      setSortDirection('asc');
-    }
-  };
-
   // Filter processes by search, date range and the native role toggles.
   const getFilteredAndSortedProcesses = () => {
     let result = processes.filter((proc) => {
@@ -768,7 +759,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
             </div>
 
             {/* INTEGRATED TOOLBAR FOR FILTERS (Single clean dividing line) */}
-            <div data-portal-sheet-filter="true" className="portal-meus-processos-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 border-t-2 border-white px-3.5 py-2.5 text-xs sm:px-4">
+            <div data-portal-sheet-filter="true" className="portal-meus-processos-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 text-xs">
               <span className="text-[10px] font-extrabold uppercase tracking-wider shrink-0 mr-1 opacity-80">
                 {getEditableTableText(customLabels, '__filterTitle', 'FILTRAR:')}
               </span>
@@ -896,7 +887,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-extrabold text-slate-900 text-xs">
-                          {proc.protocolo}
+                          {formatProcessLabel(proc.protocolo || proc.id)}
                         </span>
                         <span
                           className="text-[10px] font-black px-2 py-0.5 rounded uppercase border"
