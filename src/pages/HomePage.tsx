@@ -2001,6 +2001,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               return (
                 <th 
                   key={colKey}
+                  data-portal-column-key={colKey}
                   onClick={() => handleDefensesSort(isSortCol)}
                   className={`${defStyles.headerThClass} ${defStyles.cellPadClass} ${widthClass} ${defStyles.headerWeightClass} ${defStyles.headerTextColorClass} ${defStyles.headerFontSizeClass} ${defStyles.headerCasingClass} ${defStyles.headerBorderClass} ${defStyles.headerAlignClass} align-middle cursor-pointer ${defStyles.headerThHoverClass} select-none transition-colors group`}
                   style={defStyles.theadStyle}
@@ -2212,7 +2213,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             return (
               <div className="w-full">
                 <TableScrollWrapper>
-                  <table className={`w-full ${defStyles.cellAlignClass} border-collapse text-xs`}>
+                  <table data-portal-native-sort="true" className={`w-full ${defStyles.cellAlignClass} border-collapse text-xs`}>
                     <thead className={`${defStyles.headerTheadClass} ${defStyles.headerWeightClass} ${defStyles.headerFontSizeClass} tracking-normal`} style={defStyles.theadStyle}>
                       <tr>
                         {defensesColumnOrder.map((colKey) => renderDefensesHeaderCell(colKey))}
@@ -2433,6 +2434,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 return (
                   <th 
                     key={colKey}
+                    data-portal-column-key={colKey}
                     onClick={() => handleLibSort(colKey)}
                     className={`${acervoStyles.headerThClass} ${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.headerWeightClass} ${acervoStyles.headerTextColorClass} ${acervoStyles.headerFontSizeClass} ${acervoStyles.headerCasingClass} ${acervoStyles.headerBorderClass} ${acervoStyles.headerAlignClass} align-middle cursor-pointer ${acervoStyles.headerThHoverClass} select-none transition-colors group`}
                   >
@@ -2644,7 +2646,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
               return (
                 <TableScrollWrapper>
-                  <table className={`w-full ${acervoStyles.cellAlignClass} border-collapse text-xs`}>
+                  <table data-portal-native-sort="true" className={`w-full ${acervoStyles.cellAlignClass} border-collapse text-xs`}>
                     <thead className={`${acervoStyles.headerTheadClass} ${acervoStyles.headerWeightClass} ${acervoStyles.headerFontSizeClass} tracking-normal`} style={acervoStyles.theadStyle}>
                       <tr>
                         {acervoColumnOrder.map((colKey) => renderAcervoHeaderCell(colKey))}
