@@ -14,12 +14,13 @@ test('planilhas usam um único menu por coluna para ordenar e filtrar',()=>{
   assert.match(runtime,/Limpar tudo/);
 });
 
-test('progresso é apresentado como etapa regular sem depender de CSS versionado',()=>{
+test('progresso é apresentado como etapa diretamente pelo componente React',()=>{
+  const progress=read('src/components/ProgressIndicator.tsx');
   const runtime=read('src/components/PortalStructuralRuntime.tsx');
-  const css=readPortalCss();
-  assert.match(runtime,/replace\(\/\\bProgresso\\b\/gi, 'Etapa'\)/);
-  assert.match(runtime,/marker\.textContent = `Etapa \$\{match\[1\]/);
-  assert.match(runtime,/portal-core-stage-label/);
+  assert.match(progress,/function stageLabel/);
+  assert.match(progress,/`Etapa \$\{match\[1\]/);
+  assert.match(progress,/portal-progress-number/);
+  assert.doesNotMatch(runtime,/Progresso|marker\.textContent/);
 });
 
 test('calendário usa a mesma família de superfícies do contrato global',()=>{
