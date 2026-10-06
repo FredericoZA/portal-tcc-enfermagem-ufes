@@ -126,6 +126,12 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   // Modals & Popovers state
   const [showGearMenu, setShowGearMenu] = useState(false);
   const [showAuditLogModal, setShowAuditLogModal] = useState(false);
+  useEffect(() => {
+    if (!showAuditLogModal) return;
+    const closeHistoryOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setShowAuditLogModal(false); };
+    window.addEventListener('keydown', closeHistoryOnEscape);
+    return () => window.removeEventListener('keydown', closeHistoryOnEscape);
+  }, [showAuditLogModal]);
   const [selectedPreviewDoc, setSelectedPreviewDoc] = useState<ProcessDocument | null>(null);
   const [correctionDoc, setCorrectionDoc] = useState<ProcessDocument | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -723,8 +729,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   return (
     <div
       id="process-detail-container"
-      className={`portal-tcc-detail space-y-4 ${modalWidthClass} ${modalRadiusClass} ${modalShadowClass} mx-auto p-2 sm:p-3`}
-      style={{ backgroundColor: localFormat.modalBgColor || '#f8fafc', color: '#0f172a' }}
+      className={`portal-tcc-detail space-y-3 ${modalWidthClass} ${modalRadiusClass} ${modalShadowClass} mx-auto overflow-hidden`}
+      style={{ backgroundColor: 'var(--portal-surface-page)', color: '#0f172a' }}
     >
       {isModal ? (
         <header
@@ -751,7 +757,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* ========================================================================= */}
       {/* 1. TITLE & PROTOCOL SUMMARY CARD (TOP BAR WITH BADGE, GEAR, AND CLOSE)    */}
       {/* ========================================================================= */}
-      <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs space-y-3">
+      <div className="space-y-3 border-b border-slate-300 p-4 sm:p-5" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
         <div className="space-y-1.5">
           {/* Top Line: Identification, Stage, Grade ON LEFT + Master User Badge, Gear, Close ON RIGHT */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -809,86 +815,25 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   ) : null}
                 </div>
               )}
-
-              {/* Gear Dropdown Options */}
-              <div className="relative">
-                <button
-                  id="tcc-gear-settings-btn"
-                  type="button"
-                  onClick={() => setShowGearMenu(!showGearMenu)}
-                  className="p-1.5 text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 shadow-2xs transition-colors cursor-pointer flex items-center justify-center"
-                  title="Opções do Processo e Histórico"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
-
-                {showGearMenu && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-slate-200 z-50 p-1.5 space-y-1 animate-fadeIn text-slate-800">
-                    <div className="px-3 py-1.5 border-b border-slate-100">
-                      <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">
-                        Opções do Processo
-                      </span>
-                      <span className="text-xs font-bold text-slate-700 font-mono">
-                        {process.protocolo}
-                      </span>
-                    </div>
-
-                    {/* Option: Histórico de Auditoria */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowGearMenu(false);
-                        setShowAuditLogModal(true);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors cursor-pointer"
-                    >
-                      <History className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Histórico de Auditoria ({auditLogs.length})</span>
-                    </button>
-
-                    {/* Option: Reabrir Avaliação */}
-                    {isEvaluationSubmitted && isMasterAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowGearMenu(false);
-                          handleReopenEvaluation();
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-amber-900 hover:bg-amber-50 flex items-center gap-2 transition-colors cursor-pointer border-t border-slate-100"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Reabrir Avaliação (Master)</span>
-                      </button>
-                    )}
-
-                    {/* Option: Excluir Trabalho */}
-                    {isMasterAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowGearMenu(false);
-                          setShowDeleteModal(true);
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-rose-700 hover:bg-rose-50 flex items-center gap-2 transition-colors cursor-pointer border-t border-slate-100"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Excluir Trabalho (Master)</span>
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Close Button */}
               <button
                 type="button"
-                onClick={onBack}
-                className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs transition-colors cursor-pointer"
-                title="Voltar / Fechar Detalhes"
+                onClick={() => setShowAuditLogModal(true)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-[var(--portal-brand-action)] shadow-sm hover:bg-slate-50"
+                title="Histórico de Auditoria"
+                aria-label="Abrir histórico de auditoria"
               >
-                <X className="w-3.5 h-3.5" />
-                <span>Fechar</span>
+                <History className="h-4 w-4" />
               </button>
+              {isEvaluationSubmitted && isMasterAdmin && (
+                <button type="button" onClick={() => void handleReopenEvaluation()} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-amber-300 bg-white text-amber-700" title="Reabrir avaliação" aria-label="Reabrir avaliação">
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              )}
+              {isMasterAdmin && (
+                <button type="button" onClick={() => setShowDeleteModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-300 bg-white text-rose-700" title="Excluir trabalho" aria-label="Excluir trabalho">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -2119,70 +2064,43 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
       {/* Audit Log Modal (Full dialog view via gear) */}
       {showAuditLogModal && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-3xl w-full p-6 space-y-4 animate-fadeIn max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <div className="flex items-center gap-2">
-                <History className="w-5 h-5 text-emerald-700" />
-                <div>
-                  <h2 className="text-base font-black uppercase text-slate-900">
-                    Histórico & Log de Alterações do Processo
-                  </h2>
-                  <p className="text-xs text-slate-500 font-mono">
-                    Protocolo: {process.protocolo}
-                  </p>
-                </div>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 p-4 backdrop-blur-xs"
+          onMouseDown={(event) => { if (event.target === event.currentTarget) setShowAuditLogModal(false); }}
+        >
+          <div role="dialog" aria-modal="true" aria-labelledby="process-audit-title" className="portal-modal-surface max-h-[85vh] w-full max-w-3xl overflow-hidden shadow-2xl">
+            <header className="portal-modal-header justify-start px-4 py-3">
+              <History className="h-5 w-5 shrink-0 text-white" aria-hidden="true" />
+              <div className="min-w-0">
+                <h2 id="process-audit-title" className="truncate text-sm font-black uppercase text-white">Histórico & Log de Alterações do Processo</h2>
+                <p className="mt-0.5 text-[10px] font-mono text-white/80">Protocolo: {process.protocolo}</p>
               </div>
-              <button
-                onClick={() => setShowAuditLogModal(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <TableScrollWrapper>
-              <table className="w-full text-xs text-left border-collapse border border-slate-200 rounded-xl overflow-hidden bg-white">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-900 border-b-2 border-slate-300 font-extrabold uppercase tracking-wider text-[11px]">
-                    <th className="p-3">Data e Hora</th>
-                    <th className="p-3">Usuário / Papel</th>
-                    <th className="p-3">Ação Realizada</th>
-                    <th className="p-3">Detalhamento</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {auditLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-3 font-mono font-bold text-slate-700 whitespace-nowrap">
-                        {log.timestamp}
-                      </td>
-                      <td className="p-3">
-                        <div className="font-bold text-slate-900">{log.user}</div>
-                        <span className="text-[10px] text-emerald-800 font-mono">{log.role}</span>
-                      </td>
-                      <td className="p-3">
-                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-slate-100 text-slate-800 uppercase border border-slate-300">
-                          {log.action}
-                        </span>
-                      </td>
-                      <td className="p-3 text-slate-700 leading-snug">
-                        {log.details}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableScrollWrapper>
-
-            <div className="flex justify-end pt-2 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={() => setShowAuditLogModal(false)}
-                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
-              >
-                Fechar Histórico
-              </button>
+            </header>
+            <div className="max-h-[calc(85vh-58px)] overflow-y-auto p-3" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
+              <div className="overflow-hidden rounded-lg border border-slate-300" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
+                <TableScrollWrapper>
+                  <table className="w-full border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-300 text-[10px] font-extrabold uppercase tracking-wider text-slate-900" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
+                        <th className="p-3">Data e Hora</th>
+                        <th className="p-3">Usuário / Papel</th>
+                        <th className="p-3">Ação Realizada</th>
+                        <th className="p-3">Detalhamento</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-300">
+                      {auditLogs.map((log) => (
+                        <tr key={log.id} className="bg-white/70 hover:bg-white">
+                          <td className="p-3 font-mono font-bold text-slate-700 whitespace-nowrap">{log.timestamp}</td>
+                          <td className="p-3"><div className="font-bold text-slate-900">{log.user}</div><span className="text-[10px] font-mono text-[var(--portal-brand-action)]">{log.role}</span></td>
+                          <td className="p-3"><span className="text-[10px] font-bold text-slate-800">{log.action}</span></td>
+                          <td className="p-3 leading-snug text-slate-700">{log.details}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </TableScrollWrapper>
+              </div>
             </div>
           </div>
         </div>
