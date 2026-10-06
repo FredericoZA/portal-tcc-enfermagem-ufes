@@ -35,6 +35,6 @@ test('título da seção de cadastro fica dentro do cartão', () => {
   assert.match(css, /\.portal-registration-section-title \{[\s\S]*grid-column: 1 \/ -1/);
 });
 
-test('release consolidada é 1.0.76', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.76');
+test('release consolidada foi avançada sem regredir o contrato 1.0.76', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.77');
 });
