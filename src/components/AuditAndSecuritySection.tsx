@@ -1,6 +1,6 @@
-import { portalNotice, portalConfirm } from '../services/portalDialogs';
+import { portalNotice, portalConfirm, portalPrompt } from '../services/portalDialogs';
 import React, { useState, useEffect } from 'react';
-import { apiClient } from '../services/apiClient';
+import { apiClient, ApiRequestError } from '../services/apiClient';
 import { GlobalSettings, AuditLog } from '../types';
 import { FileCheck2, Save } from 'lucide-react';
 
@@ -37,6 +37,24 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
     setPresidentEmail(settings.commissionPresidentEmail || '');
   }, [settings]);
 
+  const createTransferWithInlineReauthentication = async (role:'MASTER_ADMIN'|'COMMISSION_PRESIDENT', targetEmail:string) => {
+    try {
+      return await apiClient.createAdministrationTransfer(role, targetEmail);
+    } catch (error) {
+      if (!(error instanceof ApiRequestError) || (error.code !== 'REAUTHENTICATION_REQUIRED' && error.status !== 428)) throw error;
+      const me = await apiClient.getMe();
+      await apiClient.requestLoginCode(me.userEmail);
+      const code = await portalPrompt(
+        'Para confirmar a alteração segura dos e-mails administrativos, informe o código enviado ao seu e-mail. Você não precisa sair do Portal.',
+        '',
+        { title: 'Confirmar identidade', confirmLabel: 'Validar e salvar', cancelLabel: 'Cancelar' }
+      );
+      if (!code?.trim()) throw new Error('A alteração de e-mail foi cancelada antes da confirmação de identidade.');
+      await apiClient.verifyLoginCode(me.userEmail, code.trim());
+      return apiClient.createAdministrationTransfer(role, targetEmail);
+    }
+  };
+
   const handleSaveAccounts = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -50,8 +68,8 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
       };
       let res = await apiClient.updateSettings(updated);
       const transfers:string[]=[];
-      if(normMasterEmail&&normMasterEmail!==(settings.masterEmail||'').toLowerCase()){await apiClient.createAdministrationTransfer('MASTER_ADMIN',normMasterEmail);transfers.push('Master');}
-      if(normPresidentEmail&&normPresidentEmail!==(settings.commissionPresidentEmail||'').toLowerCase()){await apiClient.createAdministrationTransfer('COMMISSION_PRESIDENT',normPresidentEmail);transfers.push('Presidência');}
+      if(normMasterEmail&&normMasterEmail!==(settings.masterEmail||'').toLowerCase()){await createTransferWithInlineReauthentication('MASTER_ADMIN',normMasterEmail);transfers.push('Master');}
+      if(normPresidentEmail&&normPresidentEmail!==(settings.commissionPresidentEmail||'').toLowerCase()){await createTransferWithInlineReauthentication('COMMISSION_PRESIDENT',normPresidentEmail);transfers.push('Presidência');}
       onSettingsUpdated(res);
       showNotification(transfers.length?`Dados salvos. Convite de transferência enviado para: ${transfers.join(' e ')}.`:'Dados administrativos e contatos de recuperação atualizados.');
     } catch (err: any) {
