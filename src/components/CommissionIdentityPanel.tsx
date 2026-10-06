@@ -181,7 +181,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
         <div className="flex flex-wrap items-center gap-2">
           {savedText && <span className="text-[9px] font-bold text-emerald-800" role="status">{savedText}</span>}
           <button type="button" onClick={addMember} className={actionClass}><Plus className="h-3.5 w-3.5" />Adicionar membro</button>
-          <button type="button" onClick={() => void persistIdentity(true)} disabled={saving} className={actionClass} aria-busy={saving}><Save className="h-3.5 w-3.5" />{saving ? 'Salvando…' : 'Salvar'}</button>
+          <button type="button" onClick={() => void persistIdentity(true)} disabled={saving} className={actionClass} aria-busy={saving}><Save className="h-3.5 w-3.5" />{saving ? 'Salvando…' : 'Salvar membros'}</button>
         </div>
       </div>
 
