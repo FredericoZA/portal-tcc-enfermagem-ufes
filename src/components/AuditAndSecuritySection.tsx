@@ -1,8 +1,8 @@
-import { portalNotice, portalConfirm } from '../services/portalDialogs';
+import { portalNotice, portalConfirm, portalPrompt } from '../services/portalDialogs';
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../services/apiClient';
 import { GlobalSettings, AuditLog } from '../types';
-import { FileCheck2, Save } from 'lucide-react';
+import { FileCheck2, KeyRound, Save } from 'lucide-react';
 
 interface AuditAndSecuritySectionProps {
   settings: GlobalSettings;
@@ -23,6 +23,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
     settings.commissionPresidentName || 'Prof.ª Drª. Márcia Valéria de Souza Almeida'
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [transferringRole, setTransferringRole] = useState<'MASTER_ADMIN' | 'COMMISSION_PRESIDENT' | null>(null);
   const masterEmail = settings.masterEmail || '';
   const presidentEmail = settings.commissionPresidentEmail || '';
 
@@ -45,6 +46,47 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
       portalNotice('Erro ao salvar contas do sistema: ' + err.message);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleStartTransfer = async (
+    role: 'MASTER_ADMIN' | 'COMMISSION_PRESIDENT',
+    currentEmail: string,
+    roleLabel: string
+  ) => {
+    const target = await portalPrompt(
+      `Informe o novo e-mail institucional para transferir a função de ${roleLabel}.`,
+      '',
+      { title: `Transferir ${roleLabel}`, confirmLabel: 'Continuar', cancelLabel: 'Cancelar' }
+    );
+    if (target === null) return;
+    const targetEmail = target.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+      portalNotice('Informe um e-mail válido para iniciar a transferência.');
+      return;
+    }
+    if (targetEmail === currentEmail.trim().toLowerCase()) {
+      portalNotice('O novo e-mail deve ser diferente do e-mail atualmente responsável pela função.');
+      return;
+    }
+    const confirmed = await portalConfirm(
+      `A função de ${roleLabel} será transferida para ${targetEmail}. A troca só será concluída após a aceitação segura pelo novo responsável. Deseja continuar?`,
+      { title: 'Confirmar transferência de função', confirmLabel: 'Iniciar transferência', cancelLabel: 'Cancelar' }
+    );
+    if (!confirmed) return;
+    setTransferringRole(role);
+    try {
+      await apiClient.createAdministrationTransfer(role, targetEmail);
+      showNotification(`Transferência de ${roleLabel} iniciada para ${targetEmail}.`);
+    } catch (err: any) {
+      const message = String(err?.message || 'Falha ao iniciar transferência.');
+      if (/entre novamente|autentica/i.test(message)) {
+        portalNotice('Por segurança, a transferência de função exige autenticação recente. Entre novamente no portal e repita apenas esta ação de transferência.');
+      } else {
+        portalNotice('Erro ao iniciar transferência de função: ' + message);
+      }
+    } finally {
+      setTransferringRole(null);
     }
   };
 
@@ -75,6 +117,15 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
                 value={masterEmail}
                 className="w-full cursor-default rounded-lg border border-slate-300 bg-white p-2 text-xs font-bold text-slate-700 outline-none"
               />
+              <button
+                type="button"
+                onClick={() => void handleStartTransfer('MASTER_ADMIN', masterEmail, 'Usuário Master')}
+                disabled={Boolean(transferringRole)}
+                className="portal-popup-secondary-action mt-1.5 min-h-7 px-2.5 text-[9.5px]"
+              >
+                <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>{transferringRole === 'MASTER_ADMIN' ? 'Iniciando transferência...' : 'Transferir acesso do Master'}</span>
+              </button>
             </div>
           </div>
 
@@ -101,6 +152,15 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
                 value={presidentEmail}
                 className="w-full cursor-default rounded-lg border border-slate-300 bg-white p-2 text-xs font-bold text-slate-700 outline-none"
               />
+              <button
+                type="button"
+                onClick={() => void handleStartTransfer('COMMISSION_PRESIDENT', presidentEmail, 'Presidente da Comissão')}
+                disabled={Boolean(transferringRole)}
+                className="portal-popup-secondary-action mt-1.5 min-h-7 px-2.5 text-[9.5px]"
+              >
+                <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>{transferringRole === 'COMMISSION_PRESIDENT' ? 'Iniciando transferência...' : 'Transferir acesso da Presidência'}</span>
+              </button>
             </div>
           </div>
         </div>
