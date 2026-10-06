@@ -1,31 +1,31 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Mail, Plus, Save, Trash2, UserRoundCog, Users } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { apiClient } from '../services/apiClient';
+import { apiClient, ApiRequestError } from '../services/apiClient';
+import { portalPrompt } from '../services/portalDialogs';
 
 interface Props { isMaster: boolean; }
-interface CommissionMemberInfo { id: string; name: string; email?: string; startDate?: string; endDate?: string; active: boolean; }
+interface CommissionMemberInfo { id: string; name: string; email?: string; active: boolean; }
 
 const inputClass = 'w-full min-h-8 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200';
-const actionClass = 'portal-popup-action min-h-8 px-2.5 text-[10px]';
+const fieldClass = 'rounded-lg border border-slate-300 p-2.5';
+const labelClass = 'mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-600';
 
 function makeId(): string { return `commission-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`; }
-function legacyMembers(settings: any): CommissionMemberInfo[] {
-  return [settings?.commissionMember2Name, settings?.commissionMember3Name, settings?.commissionMember4Name, settings?.commissionMember5Name]
-    .map((value) => String(value || '').trim()).filter(Boolean)
-    .map((name, index) => ({ id: `legacy-${index + 2}`, name, email: '', startDate: '', endDate: '', active: true }));
-}
+function validEmail(value: string): boolean { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value); }
 function normalizeMembers(members: CommissionMemberInfo[]): CommissionMemberInfo[] {
-  return members.map((member) => ({
+  return members.map(member => ({
     id: String(member.id || makeId()),
     name: String(member.name || '').trim(),
     email: String(member.email || '').trim().toLowerCase(),
-    startDate: String(member.startDate || ''),
-    endDate: String(member.endDate || ''),
     active: member.active !== false,
-  })).filter((member) => member.name);
+  })).filter(member => member.name);
 }
-function validEmail(value: string): boolean { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value); }
+function legacyMembers(settings: any): CommissionMemberInfo[] {
+  return [settings?.commissionMember2Name, settings?.commissionMember3Name, settings?.commissionMember4Name, settings?.commissionMember5Name]
+    .map((value) => String(value || '').trim()).filter(Boolean)
+    .map((name, index) => ({ id: `legacy-${index + 2}`, name, email: '', active: true }));
+}
 async function durableRetry<T>(operation: () => Promise<T>): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -34,194 +34,193 @@ async function durableRetry<T>(operation: () => Promise<T>): Promise<T> {
       lastError = error;
       const transient = error?.status === 503 || /banco durável|persistência|temporariamente/i.test(String(error?.message || ''));
       if (!transient || attempt === 2) throw error;
-      await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
+      await new Promise(resolve => window.setTimeout(resolve, 450 * (attempt + 1)));
     }
   }
   throw lastError;
 }
 
 export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
-  const { settings, refreshAuth } = useAuth();
-  const typedSettings = settings as any;
-  const initialMembers = useMemo(() => {
-    const current = Array.isArray(typedSettings?.commissionMembers) ? typedSettings.commissionMembers : [];
-    return current.length ? normalizeMembers(current) : legacyMembers(typedSettings);
-  }, [typedSettings]);
+  const { settings } = useAuth();
+  const s = settings as any;
+  const currentMembers = useMemo(() => {
+    const configured = Array.isArray(s?.commissionMembers) ? s.commissionMembers : [];
+    return configured.length ? normalizeMembers(configured) : legacyMembers(s);
+  }, [s?.commissionMembers, s?.commissionMember2Name, s?.commissionMember3Name, s?.commissionMember4Name, s?.commissionMember5Name]);
 
-  const remotePresidentContact = String(typedSettings?.commissionPresidentContactEmail || typedSettings?.commissionPresidentEmail || '');
-  const [presidentName, setPresidentName] = useState(String(typedSettings?.commissionPresidentName || ''));
-  const [presidentEmail, setPresidentEmail] = useState(remotePresidentContact);
-  const [secretaryName, setSecretaryName] = useState(String(typedSettings?.portalMaintainerName || ''));
-  const [secretaryEmail, setSecretaryEmail] = useState(String(typedSettings?.contactEmail || ''));
-  const [whatsappUrl, setWhatsappUrl] = useState(String(typedSettings?.whatsappUrl || ''));
-  const [members, setMembers] = useState<CommissionMemberInfo[]>(initialMembers);
+  const [masterName, setMasterName] = useState(String(s?.ownerName || s?.portalMaintainerName || ''));
+  const [masterEmail, setMasterEmail] = useState(String(s?.masterEmail || ''));
+  const [presidentName, setPresidentName] = useState(String(s?.commissionPresidentName || ''));
+  const [presidentEmail, setPresidentEmail] = useState(String(s?.commissionPresidentEmail || s?.commissionPresidentContactEmail || ''));
+  const [secretaryEmail, setSecretaryEmail] = useState(String(s?.contactEmail || ''));
+  const [whatsappUrl, setWhatsappUrl] = useState(String(s?.whatsappUrl || ''));
+  const [members, setMembers] = useState<CommissionMemberInfo[]>(currentMembers);
   const [saving, setSaving] = useState(false);
+  const [statusText, setStatusText] = useState('');
   const [errorText, setErrorText] = useState('');
-  const [savedText, setSavedText] = useState('');
+  const timerRef = useRef<number | null>(null);
   const hydratedRef = useRef(false);
-  const saveTimerRef = useRef<number | null>(null);
-  const lastSavedFingerprintRef = useRef('');
-  const saveInFlightRef = useRef<Promise<boolean> | null>(null);
+  const lastSavedRef = useRef('');
+  const masterEmailRef = useRef(String(s?.masterEmail || '').trim().toLowerCase());
+  const presidentEmailRef = useRef(String(s?.commissionPresidentEmail || '').trim().toLowerCase());
 
-  const currentFingerprint = useMemo(() => JSON.stringify({
+  const buildPatch = () => ({
+    ownerName: masterName.trim(),
+    portalMaintainerName: masterName.trim(),
     commissionPresidentName: presidentName.trim(),
     commissionPresidentContactEmail: presidentEmail.trim().toLowerCase(),
-    commissionMembers: normalizeMembers(members),
-    portalMaintainerName: secretaryName.trim(),
     contactEmail: secretaryEmail.trim().toLowerCase(),
     whatsappUrl: whatsappUrl.trim(),
-  }), [presidentName, presidentEmail, members, secretaryName, secretaryEmail, whatsappUrl]);
+    commissionMembers: normalizeMembers(members),
+  });
+  const fingerprint = useMemo(() => JSON.stringify(buildPatch()), [masterName, presidentName, presidentEmail, secretaryEmail, whatsappUrl, members]);
 
   useEffect(() => {
-    const snapshot = {
-      commissionPresidentName: String(typedSettings?.commissionPresidentName || '').trim(),
-      commissionPresidentContactEmail: String(typedSettings?.commissionPresidentContactEmail || typedSettings?.commissionPresidentEmail || '').trim().toLowerCase(),
-      commissionMembers: initialMembers,
-      portalMaintainerName: String(typedSettings?.portalMaintainerName || '').trim(),
-      contactEmail: String(typedSettings?.contactEmail || '').trim().toLowerCase(),
-      whatsappUrl: String(typedSettings?.whatsappUrl || '').trim(),
+    const nextMasterEmail = String(s?.masterEmail || '').trim().toLowerCase();
+    const nextPresidentEmail = String(s?.commissionPresidentEmail || s?.commissionPresidentContactEmail || '').trim().toLowerCase();
+    const patch = {
+      ownerName: String(s?.ownerName || s?.portalMaintainerName || '').trim(),
+      portalMaintainerName: String(s?.ownerName || s?.portalMaintainerName || '').trim(),
+      commissionPresidentName: String(s?.commissionPresidentName || '').trim(),
+      commissionPresidentContactEmail: String(s?.commissionPresidentContactEmail || nextPresidentEmail).trim().toLowerCase(),
+      contactEmail: String(s?.contactEmail || '').trim().toLowerCase(),
+      whatsappUrl: String(s?.whatsappUrl || '').trim(),
+      commissionMembers: currentMembers,
     };
-    setPresidentName(snapshot.commissionPresidentName);
-    setPresidentEmail(snapshot.commissionPresidentContactEmail);
-    setMembers(snapshot.commissionMembers);
-    setSecretaryName(snapshot.portalMaintainerName);
-    setSecretaryEmail(snapshot.contactEmail);
-    setWhatsappUrl(snapshot.whatsappUrl);
-    lastSavedFingerprintRef.current = JSON.stringify(snapshot);
+    setMasterName(patch.ownerName);
+    setMasterEmail(nextMasterEmail);
+    setPresidentName(patch.commissionPresidentName);
+    setPresidentEmail(nextPresidentEmail);
+    setSecretaryEmail(patch.contactEmail);
+    setWhatsappUrl(patch.whatsappUrl);
+    setMembers(currentMembers);
+    masterEmailRef.current = nextMasterEmail;
+    presidentEmailRef.current = String(s?.commissionPresidentEmail || '').trim().toLowerCase();
+    lastSavedRef.current = JSON.stringify(patch);
     hydratedRef.current = true;
-  }, [typedSettings?.commissionPresidentName, typedSettings?.commissionPresidentContactEmail, typedSettings?.commissionPresidentEmail, typedSettings?.commissionMembers, typedSettings?.portalMaintainerName, typedSettings?.contactEmail, typedSettings?.whatsappUrl, initialMembers]);
+  }, [s?.masterEmail, s?.ownerName, s?.portalMaintainerName, s?.commissionPresidentName, s?.commissionPresidentEmail, s?.commissionPresidentContactEmail, s?.contactEmail, s?.whatsappUrl, currentMembers]);
 
-  const validateAndBuildPatch = (showError: boolean) => {
-    const normalizedPresidentName = presidentName.trim();
-    const normalizedPresidentEmail = presidentEmail.trim().toLowerCase();
-    const normalizedSecretaryEmail = secretaryEmail.trim().toLowerCase();
-    const normalizedMembers = normalizeMembers(members);
-    const normalizedWhatsapp = whatsappUrl.trim();
-    const fail = (text: string) => { if (showError) setErrorText(text); return null; };
-
-    if (!normalizedPresidentName) return fail('Informe o nome da Presidência da Comissão.');
-    if (normalizedPresidentEmail && !validEmail(normalizedPresidentEmail)) return fail('Informe um e-mail válido para a Presidência da Comissão.');
-    if (normalizedSecretaryEmail && !validEmail(normalizedSecretaryEmail)) return fail('O e-mail da Secretaria é inválido.');
-    const invalidMember = normalizedMembers.find((member) => member.email && !validEmail(member.email));
-    if (invalidMember) return fail(`E-mail inválido para ${invalidMember.name}.`);
-    if (normalizedWhatsapp) {
-      try {
-        const parsed = new URL(normalizedWhatsapp);
-        if (!['https:', 'http:'].includes(parsed.protocol)) return fail('O WhatsApp precisa usar uma URL http ou https.');
-      } catch { return fail('Informe um link válido para o WhatsApp.'); }
+  const validate = () => {
+    if (!masterName.trim()) return 'Informe o nome da Secretaria / Administrador Master.';
+    if (masterEmail.trim() && !validEmail(masterEmail.trim())) return 'O e-mail de acesso do Usuário Master é inválido.';
+    if (!presidentName.trim()) return 'Informe o nome da Presidência da Comissão.';
+    if (presidentEmail.trim() && !validEmail(presidentEmail.trim())) return 'O e-mail da Presidência é inválido.';
+    if (secretaryEmail.trim() && !validEmail(secretaryEmail.trim())) return 'O e-mail de contato da Secretaria é inválido.';
+    const invalidMember = normalizeMembers(members).find(member => member.email && !validEmail(member.email));
+    if (invalidMember) return `E-mail inválido para ${invalidMember.name}.`;
+    if (whatsappUrl.trim()) {
+      try { const parsed = new URL(whatsappUrl.trim()); if (!['http:', 'https:'].includes(parsed.protocol)) return 'O WhatsApp precisa usar uma URL http ou https.'; }
+      catch { return 'Informe um link válido para o WhatsApp.'; }
     }
-
-    return {
-      commissionPresidentName: normalizedPresidentName,
-      commissionPresidentContactEmail: normalizedPresidentEmail,
-      commissionMembers: normalizedMembers,
-      portalMaintainerName: secretaryName.trim(),
-      contactEmail: normalizedSecretaryEmail,
-      whatsappUrl: normalizedWhatsapp,
-    };
+    return '';
   };
 
-  const persistIdentity = async (manual: boolean) => {
-    if (!isMaster) return false;
-    const patch = validateAndBuildPatch(manual);
-    if (!patch) return false;
-    const fingerprint = JSON.stringify(patch);
-    if (fingerprint === lastSavedFingerprintRef.current) {
-      if (manual) setSavedText('Dados já estão salvos.');
-      return true;
+  const reauthenticateAndTransfer = async (role: 'MASTER_ADMIN' | 'COMMISSION_PRESIDENT', targetEmail: string) => {
+    const run = () => apiClient.createAdministrationTransfer(role, targetEmail);
+    try { return await run(); }
+    catch (error) {
+      if (!(error instanceof ApiRequestError) || (error.code !== 'REAUTHENTICATION_REQUIRED' && error.status !== 428)) throw error;
+      const me = await apiClient.getMe();
+      await apiClient.requestLoginCode(me.userEmail);
+      const code = await portalPrompt(
+        'Confirme sua identidade com o código enviado ao seu e-mail. Você permanece no Portal.',
+        '',
+        { title: 'Confirmar identidade', confirmLabel: 'Validar', cancelLabel: 'Cancelar' }
+      );
+      if (!code?.trim()) throw new Error('Alteração de e-mail cancelada.');
+      await apiClient.verifyLoginCode(me.userEmail, code.trim());
+      return run();
     }
-    if (saveInFlightRef.current) await saveInFlightRef.current;
+  };
 
-    const operation = (async () => {
-      setSaving(true);
-      setErrorText('');
-      setSavedText('');
-      try {
-        await durableRetry(() => apiClient.updateSettings(patch as any));
-        lastSavedFingerprintRef.current = fingerprint;
-        await refreshAuth();
-        setSavedText('Alterações salvas e atualizadas no rodapé.');
-        window.setTimeout(() => setSavedText(''), 2200);
-        return true;
-      } catch (error: any) {
-        setErrorText(error instanceof Error ? error.message : 'Não foi possível salvar os dados do rodapé.');
-        return false;
-      } finally {
-        setSaving(false);
-        saveInFlightRef.current = null;
+  const persistRegularFields = async () => {
+    if (!isMaster || !hydratedRef.current) return;
+    const error = validate();
+    if (error) { setErrorText(error); return; }
+    const patch = buildPatch();
+    const next = JSON.stringify(patch);
+    if (next === lastSavedRef.current) return;
+    setSaving(true); setErrorText('');
+    try {
+      await durableRetry(() => apiClient.updateSettings(patch as any));
+      lastSavedRef.current = next;
+      setStatusText('Salvo automaticamente');
+      window.setTimeout(() => setStatusText(''), 1800);
+    } catch (error: any) {
+      setErrorText(error instanceof Error ? error.message : 'Não foi possível salvar os dados do rodapé.');
+    } finally { setSaving(false); }
+  };
+
+  const persistSensitiveEmails = async () => {
+    if (!isMaster) return;
+    const error = validate();
+    if (error) { setErrorText(error); return; }
+    await persistRegularFields();
+    const nextMaster = masterEmail.trim().toLowerCase();
+    const nextPresident = presidentEmail.trim().toLowerCase();
+    try {
+      if (nextMaster && nextMaster !== masterEmailRef.current) {
+        await reauthenticateAndTransfer('MASTER_ADMIN', nextMaster);
+        masterEmailRef.current = nextMaster;
+        setStatusText('Transferência segura do Master iniciada.');
       }
-    })();
-    saveInFlightRef.current = operation;
-    return operation;
+      if (nextPresident && nextPresident !== presidentEmailRef.current) {
+        await reauthenticateAndTransfer('COMMISSION_PRESIDENT', nextPresident);
+        presidentEmailRef.current = nextPresident;
+        setStatusText('Transferência segura da Presidência iniciada.');
+      }
+    } catch (error: any) {
+      setErrorText(error instanceof Error ? error.message : 'Não foi possível confirmar a alteração administrativa.');
+    }
   };
 
   useEffect(() => {
-    if (!isMaster || !hydratedRef.current || currentFingerprint === lastSavedFingerprintRef.current) return;
-    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = window.setTimeout(() => { void persistIdentity(false); }, 700);
-    return () => { if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current); };
-  }, [currentFingerprint, isMaster]);
+    if (!isMaster || !hydratedRef.current || fingerprint === lastSavedRef.current) return;
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+    timerRef.current = window.setTimeout(() => { void persistRegularFields(); }, 700);
+    return () => { if (timerRef.current) window.clearTimeout(timerRef.current); };
+  }, [fingerprint, isMaster]);
 
   if (!isMaster) return null;
-
-  const updateMember = (id: string, updates: Partial<CommissionMemberInfo>) => setMembers((prev) => prev.map((member) => member.id === id ? { ...member, ...updates } : member));
-  const addMember = () => { setMembers((prev) => [...prev, { id: makeId(), name: '', email: '', startDate: '', endDate: '', active: true }]); setErrorText(''); };
-  const saveOnBlur = () => { if (currentFingerprint !== lastSavedFingerprintRef.current) void persistIdentity(false); };
+  const updateMember = (id: string, updates: Partial<CommissionMemberInfo>) => setMembers(prev => prev.map(member => member.id === id ? { ...member, ...updates } : member));
 
   return (
-    <section className="portal-commission-identity-panel portal-layer-panel rounded-lg border border-slate-300" aria-labelledby="commission-management-title">
-      <div className="flex flex-col gap-2 border-b border-slate-300 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-[var(--portal-brand-action)]" />
-          <div>
-            <h3 id="commission-management-title" className="text-xs font-black uppercase tracking-wide text-slate-950">Presidência, Secretaria e Comissão</h3>
-            <p className="text-[10px] text-slate-600">Somente o usuário Master pode editar. As alterações são salvas automaticamente e refletidas no rodapé.</p>
-          </div>
+    <section className="space-y-3 p-3 sm:p-4" style={{ backgroundColor: 'var(--portal-surface-page)' }} aria-labelledby="identity-footer-title">
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-300 px-3 py-2" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
+        <div>
+          <h3 id="identity-footer-title" className="text-xs font-black uppercase tracking-wide text-slate-950">Identidade e dados do rodapé</h3>
+          <p className="mt-0.5 text-[10px] text-slate-600">As alterações são salvas automaticamente.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {savedText && <span className="text-[9px] font-bold text-emerald-800" role="status">{savedText}</span>}
-          <button type="button" onClick={addMember} className={actionClass}><Plus className="h-3.5 w-3.5" />Adicionar membro</button>
-          <button type="button" onClick={() => void persistIdentity(true)} disabled={saving} className={actionClass} aria-busy={saving}><Save className="h-3.5 w-3.5" />{saving ? 'Salvando…' : 'Salvar membros'}</button>
-        </div>
+        <div className="text-right text-[9px] font-bold">{saving ? <span className="text-slate-500">Salvando…</span> : statusText ? <span className="text-emerald-800">{statusText}</span> : null}</div>
       </div>
 
-      <div className="grid gap-2 p-2.5 lg:grid-cols-2">
-        <div className="portal-layer-card rounded-lg border border-slate-300 p-2.5">
-          <div className="mb-2 flex items-center gap-1.5"><UserRoundCog className="h-4 w-4 text-[var(--portal-brand-action)]"/><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Presidente da Comissão</h4></div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">Nome</span><input value={presidentName} onChange={(event) => setPresidentName(event.target.value)} onBlur={saveOnBlur} className={inputClass} /></label>
-            <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">E-mail de contato</span><input type="email" value={presidentEmail} onChange={(event) => setPresidentEmail(event.target.value)} onBlur={saveOnBlur} className={inputClass} placeholder="presidencia@instituicao.br" /></label>
-          </div>
-        </div>
-
-        <div className="portal-layer-card rounded-lg border border-slate-300 p-2.5">
-          <div className="mb-2 flex items-center gap-1.5"><Mail className="h-4 w-4 text-[var(--portal-brand-action)]"/><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Secretaria</h4></div>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">Nome</span><input value={secretaryName} onChange={(event) => setSecretaryName(event.target.value)} onBlur={saveOnBlur} className={inputClass} /></label>
-            <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">E-mail</span><input type="email" value={secretaryEmail} onChange={(event) => setSecretaryEmail(event.target.value)} onBlur={saveOnBlur} className={inputClass} /></label>
-            <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">WhatsApp</span><input value={whatsappUrl} onChange={(event) => setWhatsappUrl(event.target.value)} onBlur={saveOnBlur} className={inputClass} placeholder="https://wa.me/..." /></label>
-          </div>
-        </div>
+      <div className="grid gap-2 md:grid-cols-2">
+        <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>Nome da Secretaria / Administrador Master</span><input value={masterName} onChange={event => setMasterName(event.target.value)} onBlur={() => void persistRegularFields()} className={inputClass}/></label>
+        <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>E-mail de acesso do Usuário Master</span><input type="email" value={masterEmail} onChange={event => setMasterEmail(event.target.value)} onBlur={() => void persistSensitiveEmails()} className={inputClass}/></label>
+        <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>Nome da Presidente da Comissão</span><input value={presidentName} onChange={event => setPresidentName(event.target.value)} onBlur={() => void persistRegularFields()} className={inputClass}/></label>
+        <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>E-mail da Presidência / recuperação do Master</span><input type="email" value={presidentEmail} onChange={event => setPresidentEmail(event.target.value)} onBlur={() => void persistSensitiveEmails()} className={inputClass}/></label>
+        <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>E-mail de contato da Secretaria</span><input type="email" value={secretaryEmail} onChange={event => setSecretaryEmail(event.target.value)} onBlur={() => void persistRegularFields()} className={inputClass}/></label>
+        <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>WhatsApp da Secretaria</span><input value={whatsappUrl} onChange={event => setWhatsappUrl(event.target.value)} onBlur={() => void persistRegularFields()} className={inputClass} placeholder="https://wa.me/..."/></label>
       </div>
 
-      <div className="border-t border-slate-300 px-2.5 pb-2.5 pt-2">
-        <div className="mb-1.5 flex items-center justify-between gap-2"><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Membros da Comissão</h4><span className="text-[9px] font-bold text-slate-500">{members.filter(member => member.name.trim()).length} cadastrado(s)</span></div>
-        <div className="overflow-x-auto rounded-lg border border-slate-300 bg-[var(--portal-surface-panel)]">
-          <table className="w-full min-w-[520px] border-collapse text-left">
-            <thead className="portal-layer-card border-b border-slate-300 text-[9px] font-black uppercase tracking-wider text-slate-700"><tr><th className="px-2.5 py-2">Nome</th><th className="px-2.5 py-2">E-mail</th><th className="w-12 px-2.5 py-2 text-center">Excluir</th></tr></thead>
-            <tbody className="divide-y divide-slate-200">
-              {members.length === 0 && <tr><td colSpan={3} className="px-3 py-3 text-center text-[10px] text-slate-500">Nenhum membro adicional cadastrado.</td></tr>}
-              {members.map((member) => <tr key={member.id}>
-                <td className="p-1.5"><input value={member.name} onChange={(event) => updateMember(member.id, { name: event.target.value })} onBlur={saveOnBlur} className={inputClass} placeholder="Nome completo" /></td>
-                <td className="p-1.5"><input type="email" value={member.email || ''} onChange={(event) => updateMember(member.id, { email: event.target.value })} onBlur={saveOnBlur} className={inputClass} placeholder="email@instituicao.br" /></td>
-                <td className="p-1.5 text-center"><button type="button" onClick={() => setMembers((prev) => prev.filter((item) => item.id !== member.id))} className="rounded-lg border border-slate-200 bg-white p-1.5 text-rose-700 hover:bg-rose-50" aria-label={`Excluir ${member.name || 'membro'}`}><Trash2 className="h-3.5 w-3.5" /></button></td>
-              </tr>)}
-            </tbody>
-          </table>
+      <div className="overflow-hidden rounded-lg border border-slate-300" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
+        <div className="flex items-center justify-between gap-2 border-b border-slate-300 px-3 py-2" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
+          <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-800">Membros da Comissão</h4>
+          <span className="text-[9px] font-bold text-slate-500">{normalizeMembers(members).length} cadastrado(s)</span>
         </div>
+        <div className="divide-y divide-slate-300">
+          {members.map(member => (
+            <div key={member.id} className="grid gap-2 p-2 sm:grid-cols-[1fr_1fr_34px]">
+              <input value={member.name} onChange={event => updateMember(member.id, { name: event.target.value })} onBlur={() => void persistRegularFields()} className={inputClass} placeholder="Nome completo"/>
+              <input type="email" value={member.email || ''} onChange={event => updateMember(member.id, { email: event.target.value })} onBlur={() => void persistRegularFields()} className={inputClass} placeholder="email@instituicao.br"/>
+              <button type="button" onClick={() => setMembers(prev => prev.filter(item => item.id !== member.id))} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-rose-700" aria-label={`Excluir ${member.name || 'membro'}`}><Trash2 className="h-3.5 w-3.5"/></button>
+            </div>
+          ))}
+          {members.length === 0 && <p className="px-3 py-3 text-[10px] text-slate-500">Nenhum membro adicional cadastrado.</p>}
+        </div>
+        <button type="button" onClick={() => setMembers(prev => [...prev, { id: makeId(), name: '', email: '', active: true }])} className="flex w-full items-center gap-2 border-t border-slate-300 px-3 py-2 text-left text-[10px] font-black text-[var(--portal-brand-action)] hover:bg-white/60"><Plus className="h-3.5 w-3.5"/>Adicionar membro</button>
       </div>
-
-      {errorText && <div className="border-t border-slate-300 bg-rose-50 px-3 py-2 text-[10px] font-semibold text-rose-800" role="alert">{errorText}</div>}
+      {errorText && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-semibold text-rose-800" role="alert">{errorText}</div>}
     </section>
   );
 };
