@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { apiClient } from '../services/apiClient';
+import { apiClient, ApiRequestError } from '../services/apiClient';
 import { ProcessData, SignatureJob, AstenIntegrationStatus } from '../types';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumeric, formatTimeExtenso } from '../utils/formatters';
@@ -304,8 +304,17 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const dispatchDeclarationToAsten = async (processId: string) => {
     const job = getDeclarationJob(processId);
     if (job && canRetryDeclarationJob(job)) {
-      await apiClient.retrySignatureJob(job.id);
-      return;
+      try {
+        await apiClient.retrySignatureJob(job.id);
+        return;
+      } catch (error) {
+        const staleRevision = error instanceof ApiRequestError
+          && error.code === 'SIGNATURE_FLOW_GATE'
+          && /dados mudaram desde a geração/i.test(error.message);
+        if (!staleRevision) throw error;
+        await apiClient.signProcessDocument(processId, 'DECLARACAO');
+        return;
+      }
     }
     if (!job) {
       await apiClient.signProcessDocument(processId, 'DECLARACAO');
