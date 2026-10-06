@@ -885,11 +885,12 @@ button[aria-label^="Configurar exibição"],
 
 .portal-calendar-period-button {
   width: max-content;
-  min-width: 194px;
+  min-width: 168px;
   max-width: none;
-  padding: 0 14px;
-  gap: 7px;
+  padding: 0 10px;
+  gap: 6px;
   flex: 0 0 auto;
+  font-size: var(--portal-sheet-filter-label-font-size);
 }
 
 .portal-calendar-period-button > span {
@@ -898,18 +899,20 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-calendar-step-button {
-  width: var(--portal-toolbar-button-size);
-  min-width: var(--portal-toolbar-button-size);
-  max-width: var(--portal-toolbar-button-size);
+  width: calc(var(--portal-toolbar-button-size) * .9);
+  min-width: calc(var(--portal-toolbar-button-size) * .9);
+  max-width: calc(var(--portal-toolbar-button-size) * .9);
+  height: calc(var(--portal-toolbar-button-size) * .9);
   padding: 0;
-  flex: 0 0 var(--portal-toolbar-button-size);
+  flex: 0 0 calc(var(--portal-toolbar-button-size) * .9);
 }
 
 .portal-calendar-today-button {
   width: max-content;
-  min-width: 56px;
-  padding: 0 12px;
+  min-width: 48px;
+  padding: 0 9px;
   flex: 0 0 auto;
+  font-size: var(--portal-sheet-filter-label-font-size);
 }
 
 @media (max-width: 639px) {
@@ -979,7 +982,7 @@ button[aria-label^="Configurar exibição"],
 .portal-registration-section-title {
   grid-column: 1 / -1;
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.2;
   font-weight: 800;
   color: var(--portal-text-dark);
