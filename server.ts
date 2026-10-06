@@ -1054,7 +1054,6 @@ function assertSignatureEligibility(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO
   if(type==='TERMO'&&!p.acervo?.authorizationConfirmedAt)throw new Error(`${p.protocolo}: a autorização de publicação ainda não foi confirmada.`);
 }
 function assertSignatureJobDispatchEligibility(p:ProcessData,job:SignatureJob):void{
-  if(job.sourceDataRevision!==p.dataRevision)throw new Error(`${p.protocolo}: os dados do processo mudaram após a geração do documento. Gere uma nova versão antes de assinar.`);
   assertSignatureEligibility(p,job.documentType);
 }
 async function createSignatureJob(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',actor:string,renderVariables:Record<string,string>={},provider:'ASTEN'|'GOV_BR'='ASTEN'):Promise<SignatureJob>{
@@ -1085,6 +1084,23 @@ async function dispatchSignatureJobAutomatically(job:SignatureJob):Promise<Signa
   if(job.providerCreationState==='UNCERTAIN'&&!job.providerEnvelopeId){job.status='PROVIDER_ERROR';job.lastError='A criação do envelope ficou com resultado incerto. Não repita automaticamente: confira a conta Asten e faça a reconciliação administrativa.';job.updatedAt=new Date().toISOString();return job;}
   const process=processesStore.find(item=>item.id===job.processId);
   if(!process){job.status='PROVIDER_ERROR';job.lastError='Processo do documento não encontrado.';job.updatedAt=new Date().toISOString();await persistPortalStateDurably();return job;}
+  if(job.sourceDataRevision!==process.dataRevision){
+    try{
+      assertSignatureEligibility(process,job.documentType);
+      const replacement=await createSignatureJob(process,job.documentType,job.createdBy||'system',job.renderVariables||{},job.provider||'ASTEN');
+      job.status='CANCELED';
+      job.lastError=`Substituído automaticamente pela versão ${replacement.documentVersion}, gerada após atualização dos dados do processo.`;
+      job.updatedAt=new Date().toISOString();
+      await persistPortalStateDurably();
+      return replacement.provider==='ASTEN'?dispatchSignatureJobAutomatically(replacement):replacement;
+    }catch(error){
+      job.status='PROVIDER_ERROR';
+      job.lastError=error instanceof Error?error.message:'Não foi possível gerar a nova versão do documento.';
+      job.updatedAt=new Date().toISOString();
+      await persistPortalStateDurably();
+      return job;
+    }
+  }
   try{assertSignatureJobDispatchEligibility(process,job);}
   catch(error){job.status='PROVIDER_ERROR';job.lastError=error instanceof Error?error.message:'O processo ainda não está apto para assinatura.';job.updatedAt=new Date().toISOString();await persistPortalStateDurably();return job;}
   const connection=await getPersistentAstenConnection();
