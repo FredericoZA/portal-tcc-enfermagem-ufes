@@ -129,7 +129,9 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, i
 
   const title = document.createElement('div');
   title.className = 'portal-core-popup-title';
-  title.textContent = label;
+  title.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"></path><path d="M7 12h10"></path><path d="M10 18h4"></path></svg><span></span>';
+  const titleText = title.querySelector('span');
+  if (titleText) titleText.textContent = label;
   popup.appendChild(title);
 
   const sortActions = document.createElement('div');
