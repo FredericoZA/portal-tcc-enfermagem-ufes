@@ -12,7 +12,7 @@ interface IntegrationState {
 }
 
 const compactCard = 'rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-2.5';
-const action = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-40';
+const action = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-[var(--portal-brand-action-border)] bg-[var(--portal-brand-action)] px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm hover:brightness-95 disabled:opacity-40';
 const input = 'min-h-8 min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[10px] text-slate-800 outline-none focus:border-slate-400';
 
 function State({ ok, label }: { ok: boolean; label: string }) {
@@ -87,7 +87,7 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
     } finally { setWorking(''); }
   };
 
-  if (!isMaster) return <div className="h-full bg-[var(--portal-surface-page)] p-3 text-xs font-semibold text-amber-900"><div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5">As credenciais de infraestrutura são exclusivas da administração.</div></div>;
+  if (!isMaster) return <div className="h-full bg-[var(--portal-surface-panel)] p-3 text-xs font-semibold text-amber-900"><div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5">As credenciais de infraestrutura são exclusivas da administração.</div></div>;
 
   const astenReady = Boolean(status?.asten.configured && status?.asten.callbackConfigured && status?.asten.dispatchEnabled);
   const googleReady = Boolean(status?.googleDrive.configured && status?.googleDrive.rootFolderIdPresent);
@@ -95,8 +95,8 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
   const vercelReady = Boolean(status?.vercel.detected && status?.vercel.projectIdPresent);
   const departmentReady = Boolean(departmentEmail.trim());
 
-  return <div id="infrastructure-integrations-panel" className="flex min-h-full h-full flex-col bg-[var(--portal-surface-page)]">
-    <section className="flex min-h-full flex-1 flex-col overflow-hidden bg-[var(--portal-surface-page)]">
+  return <div id="infrastructure-integrations-panel" className="flex min-h-full h-full flex-col bg-[var(--portal-surface-panel)]">
+    <section className="flex min-h-full flex-1 flex-col overflow-hidden bg-[var(--portal-surface-panel)]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 bg-[var(--portal-surface-panel)] px-3 py-2.5">
         <div>
           <h3 className="text-[11px] font-black uppercase tracking-wide text-slate-950">Integrações e plataformas</h3>
@@ -126,9 +126,9 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
       </div>
     </section>
 
-    {hasRunTests && <section className="border-t border-slate-300 bg-[var(--portal-surface-page)]" aria-live="polite">
+    {hasRunTests && <section className="border-t border-slate-300 bg-[var(--portal-surface-panel)]" aria-live="polite">
       <div className="border-b border-slate-300 bg-slate-200 px-3 py-2"><h3 className="text-[10px] font-black uppercase tracking-wide text-slate-950">Resultado dos testes</h3></div>
-      <div className="bg-[var(--portal-surface-page)] p-2.5">
+      <div className="bg-[var(--portal-surface-panel)] p-2.5">
         {message && <div role="status" className={`mb-2 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold ${message.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>{message.text}</div>}
         {working === 'homologation' && <div className="rounded-lg border border-slate-300 bg-white px-3 py-3 text-[10px] font-semibold text-slate-600">Executando testes das integrações…</div>}
         {working !== 'homologation' && homologation.length > 0 && <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">{homologation.map((check) => <div key={check.id} className={`rounded-lg border px-2 py-1.5 text-[9px] ${check.status === 'PASS' ? 'border-emerald-200 bg-white text-emerald-900' : check.status === 'PENDING' ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-red-200 bg-red-50 text-red-900'}`}><strong>{check.label}</strong><span className="ml-1">— {check.message}</span></div>)}</div>}
