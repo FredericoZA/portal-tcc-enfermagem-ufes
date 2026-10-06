@@ -73,9 +73,10 @@ test('eventos do calendário usam tipografia 30 por cento mais densa', () => {
   assert.match(components, /\.portal-calendar-defense-summary \{[\s\S]*font-size: var\(--portal-calendar-event-font-size\)/);
 });
 
-test('navegação mensal mantém botão de período largo e acabamento canônico', () => {
+test('navegação mensal mantém controles compactos e acabamento canônico', () => {
   const components = read('src/styles/portal-components.css');
-  assert.match(components, /\.portal-calendar-period-button \{[\s\S]*min-width: 194px/);
+  assert.match(components, /\.portal-calendar-period-button \{[\s\S]*min-width: 174px[\s\S]*font-size: var\(--portal-sheet-filter-chip-font-size\)/);
+  assert.match(components, /\.portal-calendar-today-button \{[\s\S]*height: 27px[\s\S]*text-transform: none/);
   assert.match(components, /\.portal-calendar-nav-button \{[\s\S]*border-radius: var\(--portal-control-radius\)/);
   assert.match(components, /\.portal-calendar-nav-button:hover/);
 });
