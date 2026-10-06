@@ -33,7 +33,7 @@ test('filtro selecionado usa reforço global e rótulo FILTRAR', () => {
   assert.doesNotMatch(read('src/pages/PortalTutorialPage.tsx'), /Filtrar visão:/i);
 });
 
-test('calendário usa controles autossuficientes com período em formato pílula', () => {
+test('calendário usa controles autossuficientes e compactos no tamanho do filtro', () => {
   const home = read('src/pages/HomePage.tsx');
   const css = read('src/styles/portal-components.css');
   assert.match(home, /portal-calendar-toolbar/);
@@ -43,7 +43,8 @@ test('calendário usa controles autossuficientes com período em formato pílula
   assert.equal((home.match(/portal-calendar-step-button/g) || []).length, 2);
   assert.match(css, /\.portal-calendar-toolbar \{[\s\S]*display: flex/);
   assert.match(css, /\.portal-calendar-period-control \{[\s\S]*width: max-content/);
-  assert.match(css, /\.portal-calendar-period-button \{[\s\S]*min-width: 194px/);
+  assert.match(css, /\.portal-calendar-period-button \{[\s\S]*min-width: 174px[\s\S]*font-size: var\(--portal-sheet-filter-chip-font-size\)[\s\S]*text-transform: none/);
+  assert.match(css, /\.portal-calendar-today-button \{[\s\S]*height: 27px[\s\S]*font-size: var\(--portal-sheet-filter-chip-font-size\)[\s\S]*text-transform: none/);
 });
 
 test('planilhas não inserem emojis no texto de células/cabeçalhos', () => {
