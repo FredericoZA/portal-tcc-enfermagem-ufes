@@ -1046,12 +1046,19 @@ function deriveSignatureSigners(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO'){
   return[{id:`president:${email}`,role:'PRESIDENT' as const,name,email,signingOrder:1,status:'WAITING' as const}];
 }
 function repositoryDataComplete(p:ProcessData):boolean{return Boolean(p.acervo?.palavrasChave?.length===5&&p.acervo?.resumoSintese?.trim()&&p.acervo?.trabalhoCompletoFileUrl&&(!p.acervo?.publishExpandedAbstract||p.acervo?.resumoExpandidoFileId));}
-async function createSignatureJob(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',actor:string,renderVariables:Record<string,string>={},provider:'ASTEN'|'GOV_BR'='ASTEN'):Promise<SignatureJob>{
+function assertSignatureEligibility(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO'):void{
   if(p.avaliacao.status!=='CONCLUIDO')throw new Error(`${p.protocolo}: avaliação pendente.`);
   if((type==='TERMO'||type==='DECLARACAO')&&!repositoryDataComplete(p))throw new Error(`${p.protocolo}: dados finais do repositório ainda não foram concluídos.`);
-  if(type==='DECLARACAO'&&!declarationReady(p,signatureJobsStore))throw new Error('A declaração aguarda a Ata e o Termo aplicável assinados e arquivados.');
+  if(type==='DECLARACAO'&&!declarationReady(p,signatureJobsStore))throw new Error(`${p.protocolo}: a declaração aguarda a Ata e o Termo aplicável assinados e arquivados.`);
   if(type==='TERMO'&&!publicationRequested(p))throw new Error(`${p.protocolo}: o termo só é aplicável quando o aluno solicita publicação.`);
   if(type==='TERMO'&&!p.acervo?.authorizationConfirmedAt)throw new Error(`${p.protocolo}: a autorização de publicação ainda não foi confirmada.`);
+}
+function assertSignatureJobDispatchEligibility(p:ProcessData,job:SignatureJob):void{
+  if(job.sourceDataRevision!==p.dataRevision)throw new Error(`${p.protocolo}: os dados do processo mudaram após a geração do documento. Gere uma nova versão antes de assinar.`);
+  assertSignatureEligibility(p,job.documentType);
+}
+async function createSignatureJob(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',actor:string,renderVariables:Record<string,string>={},provider:'ASTEN'|'GOV_BR'='ASTEN'):Promise<SignatureJob>{
+  assertSignatureEligibility(p,type);
   const signers=deriveSignatureSigners(p,type);
   if(signers.some(s=>!isValidPortalEmail(s.email)))throw new Error(`${p.protocolo}: signatário sem e-mail válido.`);
   const verificationCode=buildDocumentVerificationCode(p,type);
@@ -1076,12 +1083,15 @@ async function dispatchSignatureJobAutomatically(job:SignatureJob):Promise<Signa
   if(job.status==='DRIVE_SYNC_PENDING')return archiveSignatureJobAutomatically(job);
   if(['SENT','PARTIALLY_SIGNED','SIGNED','ARCHIVED'].includes(job.status)||signatureDispatchLocks.has(job.id))return job;
   if(job.providerCreationState==='UNCERTAIN'&&!job.providerEnvelopeId){job.status='PROVIDER_ERROR';job.lastError='A criação do envelope ficou com resultado incerto. Não repita automaticamente: confira a conta Asten e faça a reconciliação administrativa.';job.updatedAt=new Date().toISOString();return job;}
+  const process=processesStore.find(item=>item.id===job.processId);
+  if(!process){job.status='PROVIDER_ERROR';job.lastError='Processo do documento não encontrado.';job.updatedAt=new Date().toISOString();await persistPortalStateDurably();return job;}
+  try{assertSignatureJobDispatchEligibility(process,job);}
+  catch(error){job.status='PROVIDER_ERROR';job.lastError=error instanceof Error?error.message:'O processo ainda não está apto para assinatura.';job.updatedAt=new Date().toISOString();await persistPortalStateDurably();return job;}
   const connection=await getPersistentAstenConnection();
   if(!connection){job.status='WAITING_INTEGRATION';job.lastError='Conecte a conta Asten em Configurações para concluir o envio.';job.updatedAt=new Date().toISOString();return job;}
   signatureDispatchLocks.add(job.id);
   try{
     job.status='SENDING';job.lastError=undefined;job.updatedAt=new Date().toISOString();await persistPortalStateDurably();
-    const process=processesStore.find(item=>item.id===job.processId);if(!process)throw new Error('Processo do documento não encontrado.');
     const googleAccessToken=await getGoogleWorkspaceAccessToken();
     if(!currentSettings.driveRootFolderId)throw new Error('Pasta raiz do Google Drive não configurada.');
     if(!process.driveFolderId){const folder=await ensurePortalProcessDriveFolder({accessToken:googleAccessToken,rootFolderId:currentSettings.driveRootFolderId,protocol:process.protocolo,processId:process.id});process.driveFolderId=folder.id;process.driveFolderUrl=folder.webViewLink;process.driveSyncedAt=new Date().toISOString();}
