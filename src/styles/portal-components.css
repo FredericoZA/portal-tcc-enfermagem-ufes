@@ -893,8 +893,8 @@ button[aria-label^="Configurar exibição"],
   width: max-content;
   min-width: 168px;
   max-width: none;
-  min-height: calc(var(--portal-toolbar-button-size) * .9);
-  height: calc(var(--portal-toolbar-button-size) * .9);
+  min-height: calc(var(--portal-toolbar-button-size) - 3px);
+  height: calc(var(--portal-toolbar-button-size) - 3px);
   padding: 0 10px;
   gap: 6px;
   flex: 0 0 auto;
@@ -907,19 +907,19 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-calendar-step-button {
-  width: calc(var(--portal-toolbar-button-size) * .9);
-  min-width: calc(var(--portal-toolbar-button-size) * .9);
-  max-width: calc(var(--portal-toolbar-button-size) * .9);
-  height: calc(var(--portal-toolbar-button-size) * .9);
+  width: calc(var(--portal-toolbar-button-size) - 3px);
+  min-width: calc(var(--portal-toolbar-button-size) - 3px);
+  max-width: calc(var(--portal-toolbar-button-size) - 3px);
+  height: calc(var(--portal-toolbar-button-size) - 3px);
   padding: 0;
-  flex: 0 0 calc(var(--portal-toolbar-button-size) * .9);
+  flex: 0 0 calc(var(--portal-toolbar-button-size) - 3px);
 }
 
 .portal-calendar-today-button {
   width: max-content;
   min-width: 48px;
-  min-height: calc(var(--portal-toolbar-button-size) * .9);
-  height: calc(var(--portal-toolbar-button-size) * .9);
+  min-height: calc(var(--portal-toolbar-button-size) - 3px);
+  height: calc(var(--portal-toolbar-button-size) - 3px);
   padding: 0 9px;
   flex: 0 0 auto;
   font-size: var(--portal-sheet-filter-label-font-size);
