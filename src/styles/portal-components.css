@@ -1023,7 +1023,7 @@ button[aria-label^="Configurar exibição"],
 
 /* Portal TCC 1.0.78 — contrato visual único para pop-ups. */
 .portal-settings-workspace {
-  background: var(--portal-surface-page) !important;
+  background: var(--portal-surface-page);
 }
 .portal-settings-workspace-header {
   min-height: 48px;
