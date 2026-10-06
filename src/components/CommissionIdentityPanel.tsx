@@ -41,7 +41,7 @@ async function durableRetry<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
-  const { settings } = useAuth();
+  const { settings, refreshAuth } = useAuth();
   const s = settings as any;
   const currentMembers = useMemo(() => {
     const configured = Array.isArray(s?.commissionMembers) ? s.commissionMembers : [];
@@ -143,6 +143,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
     setSaving(true); setErrorText('');
     try {
       await durableRetry(() => apiClient.updateSettings(patch as any));
+      await refreshAuth();
       lastSavedRef.current = next;
       setStatusText('Salvo automaticamente');
       window.setTimeout(() => setStatusText(''), 1800);
