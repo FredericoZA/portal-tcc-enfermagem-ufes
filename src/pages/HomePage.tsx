@@ -1043,6 +1043,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     }
   };
 
+  useEffect(() => {
+    const defenseModalOpen = Boolean(selectedDayDefenses || selectedDayGcalEvents);
+    if (!defenseModalOpen) return;
+    const handleDefenseModalKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setSelectedDayDefenses(null);
+      setSelectedDayGcalEvents(null);
+    };
+    document.addEventListener('keydown', handleDefenseModalKeyDown);
+    return () => document.removeEventListener('keydown', handleDefenseModalKeyDown);
+  }, [selectedDayDefenses, selectedDayGcalEvents]);
+
   return (
     <div id="home-page-container" className="space-y-4 max-w-7xl mx-auto py-1 sm:py-2">
       
