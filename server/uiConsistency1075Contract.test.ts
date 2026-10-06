@@ -26,7 +26,7 @@ test('engrenagem usa layout compacto e mantém Definir padrão restrito ao Maste
   assert.match(component, /portal-settings-date-grid/);
   assert.match(component, /isMaster&&<button[^>]*portal-popup-action[^>]*>[\s\S]*Definir padrão/);
   assert.match(component, /portal-settings-close-button/);
-  assert.match(css, /\.portal-table-settings-popover \{[\s\S]*620px/);
+  assert.match(css, /\.portal-table-settings-popover \{[\s\S]*520px/);
   assert.match(css, /\.portal-settings-page-size-options \{[\s\S]*flex-wrap: nowrap/);
 });
 
@@ -53,6 +53,6 @@ test('lista da Comissão usa superfície do popup e mantém branco nos campos e 
   assert.match(commission, /bg-white p-1\.5 text-rose-700/);
 });
 
-test('release é 1.0.76', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.76');
+test('release atual é 1.0.77', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.77');
 });
