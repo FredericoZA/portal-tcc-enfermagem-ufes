@@ -11,7 +11,7 @@ import { InfrastructureIntegrationsPanel } from '../components/InfrastructureInt
 import { AuthorizedStudentsPanel } from '../components/AuthorizedStudentsPanel';
 import { MasterDocumentModelsPanel } from '../components/MasterDocumentModelsPanel';
 import { updateRuntimeDocumentTemplates, BASE_DOCUMENT_TEMPLATES } from '../utils/documentTemplateEngine';
-import { AuditAndSecuritySection, AuditLogsTable, MasterAndPresidentConfigForm } from '../components/AuditAndSecuritySection';
+import { AuditAndSecuritySection, AuditLogsTable } from '../components/AuditAndSecuritySection';
 import { CommissionIdentityPanel } from '../components/CommissionIdentityPanel';
 import { AuditLogsPage } from './AuditLogsPage';
 import { AstenLogsPage } from './AstenLogsPage';
@@ -2108,7 +2108,7 @@ export const ConfiguracoesPage: React.FC = () => {
               onClose={() => setActiveSettingsPanel(null)}
               sections={
                 activeSettingsPanel === 'identity' ? [
-                  { id: 'identity', label: 'Rodapé e identidade', description: 'Responsáveis, contatos e identidade operacional.', icon: Building2, content: settings ? <div className="space-y-3"><MasterAndPresidentConfigForm settings={settings} onSettingsUpdated={() => { void refreshAuth(); showNotification('Configurações atualizadas.'); }} showNotification={showNotification} /><CommissionIdentityPanel isMaster /></div> : null },
+                  { id: 'identity', label: 'Rodapé e identidade', description: 'Responsáveis, contatos e identidade operacional.', icon: Building2, fullBleed: true, content: settings ? <CommissionIdentityPanel isMaster /> : null },
                 ] : activeSettingsPanel === 'integrations' ? [
                   { id: 'integrations', label: 'Integrações e plataformas', description: 'Asten, Google, Supabase, Vercel e serviços externos.', icon: Globe, fullBleed: true, content: <InfrastructureIntegrationsPanel isMaster /> },
                 ] : activeSettingsPanel === 'models-documents' ? [
