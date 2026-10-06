@@ -62,17 +62,17 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
 
   const singlePane = sections.length === 1;
   const sheetWorkspace = singlePane && SHEET_SECTION_IDS.has(current.id);
-  const fullBleed = current.fullBleed ?? (current.id === 'integrations' || sheetWorkspace);
+  const fullBleed = current.fullBleed ?? (current.id === 'integrations' || current.id === 'models-documents' || sheetWorkspace);
   const singlePaneContent = singlePane && React.isValidElement(current.content)
     ? React.cloneElement(current.content as React.ReactElement<EmbeddedCapableProps>, { embedded: true })
     : current.content;
 
   const workspaceContent = singlePane ? (
     <main
-      className={`portal-settings-single-pane min-w-0 flex-1 overflow-auto ${fullBleed ? 'p-0' : 'p-3 sm:p-4'}`}
+      className="portal-settings-single-pane min-w-0 flex-1 overflow-auto p-0"
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
-      style={{ backgroundColor: 'var(--portal-surface-panel)' }}
+      style={{ backgroundColor: 'var(--portal-surface-page)' }}
     >
       {singlePaneContent}
     </main>
