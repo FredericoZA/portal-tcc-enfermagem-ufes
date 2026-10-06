@@ -34,6 +34,12 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(initialConfig.visibleColumns || DEFAULT_VISIBLE);
   const [textFormat] = useState<TableTextFormat>(() => ({ ...loadGlobalTableConfig(), ...(initialConfig.textFormat || {}) }));
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  useEffect(() => {
+    if (!selectedLog) return;
+    const closeSelectedAuditOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setSelectedLog(null); };
+    window.addEventListener('keydown', closeSelectedAuditOnEscape);
+    return () => window.removeEventListener('keydown', closeSelectedAuditOnEscape);
+  }, [selectedLog]);
   const [rollingBack, setRollingBack] = useState('');
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
@@ -128,11 +134,11 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
     </div>
 
     {selectedLog && <div className="fixed inset-0 z-[1000008] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm" onClick={() => setSelectedLog(null)}>
-      <div role="dialog" aria-modal="true" aria-label="Detalhes do registro de log" className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-2xl" onClick={event => event.stopPropagation()}>
-        <div className="flex items-center justify-between border-b-[16px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><div className="flex items-center gap-2"><FileCheck2 className="h-4 w-4"/><strong className="text-xs uppercase">Detalhes do registro</strong></div><button type="button" onClick={() => setSelectedLog(null)} className="rounded-lg border border-white bg-white px-2 py-0.5 text-[9px] font-black uppercase text-slate-900">Fechar</button></div>
-        <div className="grid max-h-[75vh] gap-3 overflow-y-auto p-4 md:grid-cols-2" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
-          <section className="rounded-xl border border-slate-300 bg-white p-3"><strong className="text-[10px] uppercase text-slate-600">Estado anterior</strong><pre className="mt-2 max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[10px]">{selectedLog.before ? JSON.stringify(selectedLog.before, null, 2) : '(sem estado anterior)'}</pre></section>
-          <section className="rounded-xl border border-slate-300 bg-white p-3"><strong className="text-[10px] uppercase text-slate-600">Estado posterior</strong><pre className="mt-2 max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[10px]">{selectedLog.after ? JSON.stringify(selectedLog.after, null, 2) : '(sem estado posterior)'}</pre></section>
+      <div role="dialog" aria-modal="true" aria-label="Detalhes do registro de log" className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-300 shadow-2xl" style={{ backgroundColor: 'var(--portal-surface-page)' }} onClick={event => event.stopPropagation()}>
+        <div className="flex items-center gap-2 border-b-[5px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><FileCheck2 className="h-4 w-4"/><strong className="text-xs uppercase">Detalhes do registro</strong></div>
+        <div className="grid max-h-[75vh] gap-3 overflow-y-auto p-3 md:grid-cols-2" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
+          <section className="rounded-xl border border-slate-300 p-3" style={{ backgroundColor: 'var(--portal-surface-panel)' }}><strong className="text-[10px] uppercase text-slate-600">Estado anterior</strong><pre className="mt-2 max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[10px]">{selectedLog.before ? JSON.stringify(selectedLog.before, null, 2) : '(sem estado anterior)'}</pre></section>
+          <section className="rounded-xl border border-slate-300 p-3" style={{ backgroundColor: 'var(--portal-surface-panel)' }}><strong className="text-[10px] uppercase text-slate-600">Estado posterior</strong><pre className="mt-2 max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[10px]">{selectedLog.after ? JSON.stringify(selectedLog.after, null, 2) : '(sem estado posterior)'}</pre></section>
         </div>
       </div>
     </div>}
