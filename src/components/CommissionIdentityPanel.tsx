@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { apiClient, ApiRequestError } from '../services/apiClient';
-import { portalPrompt } from '../services/portalDialogs';
+import { apiClient } from '../services/apiClient';
+import { retryAfterPortalReauthentication } from '../services/reauthentication';
 
 interface Props { isMaster: boolean; }
 interface CommissionMemberInfo { id: string; name: string; email?: string; active: boolean; }
@@ -115,23 +115,11 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
     return '';
   };
 
-  const reauthenticateAndTransfer = async (role: 'MASTER_ADMIN' | 'COMMISSION_PRESIDENT', targetEmail: string) => {
-    const run = () => apiClient.createAdministrationTransfer(role, targetEmail);
-    try { return await run(); }
-    catch (error) {
-      if (!(error instanceof ApiRequestError) || (error.code !== 'REAUTHENTICATION_REQUIRED' && error.status !== 428)) throw error;
-      const me = await apiClient.getMe();
-      await apiClient.requestLoginCode(me.userEmail);
-      const code = await portalPrompt(
-        'Confirme sua identidade com o código enviado ao seu e-mail. Você permanece no Portal.',
-        '',
-        { title: 'Confirmar identidade', confirmLabel: 'Validar', cancelLabel: 'Cancelar' }
-      );
-      if (!code?.trim()) throw new Error('Alteração de e-mail cancelada.');
-      await apiClient.verifyLoginCode(me.userEmail, code.trim());
-      return run();
-    }
-  };
+  const reauthenticateAndTransfer = (role: 'MASTER_ADMIN' | 'COMMISSION_PRESIDENT', targetEmail: string) =>
+    retryAfterPortalReauthentication(
+      () => apiClient.createAdministrationTransfer(role, targetEmail),
+      'Confirme sua identidade para alterar os e-mails administrativos. Você permanece no Portal.'
+    );
 
   const persistRegularFields = async () => {
     if (!isMaster || !hydratedRef.current) return;
