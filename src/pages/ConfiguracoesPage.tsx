@@ -1005,6 +1005,44 @@ export const ConfiguracoesPage: React.FC = () => {
     ];
   });
 
+  const syncMasterModelCatalog = (catalog: Record<string, any>) => {
+    const entries = Object.entries(catalog || {}).filter(([key, value]) => key !== '__capabilities' && value && typeof value === 'object') as Array<[string, any]>;
+    if (!entries.length) return;
+    setDocTemplates(previous => {
+      const next = [...previous];
+      for (const [type, model] of entries) {
+        const index = next.findIndex(item => String(item.type || '').toUpperCase() === type.toUpperCase());
+        const current = index >= 0 ? next[index] : undefined;
+        const mapped: DocTemplateItem = {
+          id: current?.id || `master-${type.toLowerCase()}`,
+          type,
+          label: String(model.label || current?.label || type),
+          fileName: String(model.fileName || current?.fileName || `${type}.docx`),
+          description: current?.description || 'Modelo documental publicado e versionado no Drive institucional.',
+          variables: Array.isArray(model.variables) ? model.variables : (current?.variables || []),
+          fields: current?.fields || [],
+          templateContentText: current?.templateContentText || '',
+          lastUpdated: String(model.uploadedAt || current?.lastUpdated || ''),
+          driveFileUrl: String(model.driveFileUrl || current?.driveFileUrl || ''),
+          driveFileId: String(model.driveFileId || current?.driveFileId || ''),
+        };
+        if (index >= 0) next[index] = mapped; else next.push(mapped);
+      }
+      return next;
+    });
+    setMatrixColumns(previous => {
+      const next = [...previous];
+      const known = new Set(next.flatMap(column => [column.id, column.name, ...(column.aliases || [])].map(value => String(value || '').toUpperCase())));
+      for (const [, model] of entries) for (const raw of Array.isArray(model.variables) ? model.variables : []) {
+        const name = String(raw || '').replace(/^<<|>>$/g, '').replace(/^\{\{|\}\}$/g, '').replace(/^\[\[|\]\]$/g, '').replace(/^«|»$/g, '').replace(/^-|-$/g, '').trim().replace(/[^a-zA-Z0-9À-ÿ]+/g, '_').replace(/^_+|_+$/g, '').toUpperCase();
+        if (!name || known.has(name)) continue;
+        next.push({ id: name, name, label: name.replace(/_/g, ' '), dataType: /EMAIL/.test(name) ? 'email' : /DATA|HORA/.test(name) ? 'date' : 'text', aliases: [String(raw)] });
+        known.add(name);
+      }
+      return next;
+    });
+  };
+
   // Keep runtime document template engine synchronized with docTemplates state & localStorage
   useEffect(() => {
     localStorage.setItem('portal_doc_templates', JSON.stringify(docTemplates));
@@ -2112,7 +2150,7 @@ export const ConfiguracoesPage: React.FC = () => {
                 ] : activeSettingsPanel === 'integrations' ? [
                   { id: 'integrations', label: 'Integrações e plataformas', description: 'Asten, Google, Supabase, Vercel e serviços externos.', icon: Globe, fullBleed: true, content: <InfrastructureIntegrationsPanel isMaster /> },
                 ] : activeSettingsPanel === 'models-documents' ? [
-                  { id: 'models-documents', label: 'Modelos e documentos', description: 'Arquivo ativo, variáveis detectadas, visualização e histórico em um único lugar.', icon: FileText, fullBleed: true, content: <MasterDocumentModelsPanel /> },
+                  { id: 'models-documents', label: 'Modelos e documentos', description: 'Arquivo ativo, variáveis detectadas, visualização e histórico em um único lugar.', icon: FileText, fullBleed: true, content: <MasterDocumentModelsPanel onCatalogChanged={syncMasterModelCatalog} /> },
                 ] : activeSettingsPanel === 'emails' ? [
                   { id: 'emails', label: 'E-mails', description: 'Modelos, variáveis, anexos e pré-visualização.', icon: Mail, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-emails" initialTab="emails" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'forms' ? [
