@@ -5,9 +5,9 @@ import { readFile } from 'node:fs/promises';
 import { readPortalCss } from './testUtils/portalCss';
 const source = (path: string) => readFile(path, 'utf8');
 
-test('modal de TCC não renderiza o cabeçalho genérico com brasão', async () => {
+test('modal de TCC renderiza o cabeçalho institucional do próprio detalhe', async () => {
   const app = await source('src/App.tsx');
-  assert.match(app, /ProcessoDetailPage[\s\S]*isModal=\{false\}/);
+  assert.match(app, /ProcessoDetailPage[\s\S]*isModal=\{true\}/);
   assert.match(app, /portal-process-dialog/);
 });
 
@@ -16,7 +16,8 @@ test('título real do TCC usa o contrato verde canônico do detalhe', async () =
   const detail = await source('src/pages/ProcessoDetailPage.tsx');
   assert.match(css, /--portal-brand-header:\s*#005830/);
   assert.match(css, /\.portal-section-header,[\s\S]*background:\s*var\(--portal-brand-header\)/);
-  assert.match(detail, /tcc-gear-settings-btn/);
+  assert.match(detail, /Histórico de Auditoria/);
+  assert.match(detail, /<History className="h-4 w-4"/);
 });
 
 test('andamento duplicado deixa de existir sem remover confirmação operacional', async () => {
