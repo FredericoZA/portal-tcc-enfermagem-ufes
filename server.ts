@@ -1514,7 +1514,7 @@ export async function createPortalApp() {
     res.setHeader('Cache-Control','private, no-store');res.json({baseRevision:before.revision,changes,activeProcesses:processesStore.filter(p=>p.status!=='CONCLUIDO').length,notice:'Processos em andamento usam a revisão publicada nos próximos eventos. Documentos já expedidos permanecem preservados.'});
   });
   app.post('/api/admin/models/:type/preview',requireAuthenticated,requireAdministrator,async(req,res)=>{
-    const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Entre novamente antes de gerar uma amostra com os modelos do Drive.'});
+    const identity=getPortalIdentity(req)!;
     const type=String(req.params.type).toUpperCase() as 'CONVITE'|'ATA'|'TERMO'|'DECLARACAO';if(!['CONVITE','ATA','TERMO','DECLARACAO'].includes(type))return res.status(404).json({error:'Modelo inválido.'});
     try{
       const studio=req.body?.studio||currentSettings.integrationStudio;if(!studio)throw new Error('Configure o Estúdio primeiro.');
@@ -1767,6 +1767,28 @@ export async function createPortalApp() {
       auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'MODELO_DOCUMENTAL_IMPORTADO_DO_DRIVE',entityType:'document_model',entityId:type,before:before?{fileName:before.fileName,driveFileId:before.driveFileId}:undefined,after:{fileName:model.fileName,driveFileId:model.driveFileId,variables:model.variables,source:'GOOGLE_DRIVE'},timestamp:now});await persistPortalStateDurably();
       res.status(201).json({type,fileName:model.fileName,driveFileId:model.driveFileId,driveFileUrl:model.driveFileUrl,variables:model.variables,uploadedAt:model.uploadedAt,uploadedBy:model.uploadedBy,contentSha256:model.contentSha256,driveRevisionId:model.driveRevisionId,driveModifiedTime:model.driveModifiedTime,configured:true});
     }catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível importar o modelo do Drive.'});}
+  });
+
+  app.post('/api/admin/models/:type/detect-variables',requireAuthenticated,requireAdministrator,async(req,res)=>{
+    const identity=getPortalIdentity(req)!;
+    const type=String(req.params.type||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,48);
+    const model=(currentSettings.documentModels as Record<string,any>|undefined)?.[type];
+    if(!model?.driveFileId)return res.status(404).json({error:'Modelo documental não encontrado no Drive.'});
+    try{
+      const accessToken=await getGoogleWorkspaceAccessToken();
+      const mediaRes=await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(model.driveFileId)}?alt=media`,{headers:{Authorization:`Bearer ${accessToken}`}});
+      if(!mediaRes.ok)throw new Error(`Google Drive retornou ${mediaRes.status} ao ler o modelo.`);
+      const bytes=Buffer.from(await mediaRes.arrayBuffer());
+      const extracted=await extractDocxTemplateText(bytes);
+      const variables=Array.from(new Set(extracted.variables));
+      const now=new Date().toISOString();
+      const versions=(model.versions||[]).map((version:any)=>version.version===model.activeVersion?{...version,variables}:version);
+      currentSettings.documentModels={...(currentSettings.documentModels||{}),[type]:{...model,variables,versions}};
+      currentSettings.updatedAt=now;
+      auditLogsStore.push({id:`log-${Date.now()}-model-vars`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'DETECCAO_VARIAVEIS_MODELO',entityType:'document_model',entityId:type,before:{variables:model.variables||[]},after:{variables},timestamp:now});
+      await persistPortalStateDurably();
+      res.json({type,variables,detectedAt:now});
+    }catch(error){res.status(422).json({error:error instanceof Error?error.message:'Não foi possível detectar as variáveis do modelo.'});}
   });
 
   app.post('/api/admin/models/:type/versions/:version/restore',requireAuthenticated,requireAdministrator,(req,res)=>{const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Reautentique-se para restaurar um modelo.'});const type=String(req.params.type||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,48);const model=(currentSettings.documentModels as Record<string,any>|undefined)?.[type],selected=model?.versions?.find((item:any)=>item.version===Number(req.params.version));if(!model||!selected)return res.status(404).json({error:'Versão do modelo não encontrada.'});if(!selected.contentSha256)return res.status(409).json({error:'Esta versão antiga não possui hash de integridade. Importe ou envie novamente o modelo para publicá-la com segurança.'});const before={activeVersion:model.activeVersion,driveFileId:model.driveFileId};currentSettings.documentModels={...(currentSettings.documentModels||{}),[type]:{...model,...selected,templateContentText:'',activeVersion:selected.version,versions:model.versions}};currentSettings.updatedAt=new Date().toISOString();auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'RESTAURACAO_VERSAO_MODELO',entityType:'document_model',entityId:type,before,after:{activeVersion:selected.version,driveFileId:selected.driveFileId,contentSha256:selected.contentSha256},timestamp:currentSettings.updatedAt});persistPortalState();res.json({type,activeVersion:selected.version,fileName:selected.fileName,driveFileId:selected.driveFileId,driveFileUrl:selected.driveFileUrl,variables:selected.variables,contentSha256:selected.contentSha256,configured:true});});
