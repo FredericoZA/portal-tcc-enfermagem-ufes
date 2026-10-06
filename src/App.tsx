@@ -199,7 +199,7 @@ export default function App() {
                 style={{ backgroundColor: 'var(--portal-surface-page)' }}
               >
                 <PortalErrorBoundary key={selectedProcessId}><Suspense fallback={<PageLoadingFallback />}>
-                  <ProcessoDetailPage processId={selectedProcessId} readOnly={selectedProcessReadOnly} onBack={handleCloseProcess} isModal={false} />
+                  <ProcessoDetailPage processId={selectedProcessId} readOnly={selectedProcessReadOnly} onBack={handleCloseProcess} isModal={true} />
                 </Suspense></PortalErrorBoundary>
               </div>
             </div>
