@@ -47,7 +47,10 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      const nestedLayerOpen = Boolean(document.querySelector('.portal-search-popover, .portal-table-settings-popover, .portal-core-column-popup, dialog[open]'));
+      const nestedLayerOpen = document.getElementsByClassName('portal-search-popover').length > 0
+        || document.getElementsByClassName('portal-table-settings-popover').length > 0
+        || document.getElementsByClassName('portal-core-column-popup').length > 0
+        || Boolean(document.querySelector('dialog[open]'));
       if (!nestedLayerOpen) onClose();
     };
     window.addEventListener('keydown', onKeyDown);
