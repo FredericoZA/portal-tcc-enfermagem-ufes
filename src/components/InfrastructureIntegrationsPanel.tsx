@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Cloud, Copy, Database, ExternalLink, KeyRound, Loader2, Mail, RefreshCw, Save, Server, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { SettingsWorkspaceHeaderPortal } from './SettingsWorkspaceModal';
+import { CheckCircle2, Cloud, Copy, Database, ExternalLink, KeyRound, Loader2, Mail, RefreshCw, Server, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
-import type { GlobalSettings } from '../types';
 
 interface IntegrationState {
   asten: { enabled: boolean; configured: boolean; callbackConfigured: boolean; callbackUrl?: string; dispatchEnabled: boolean; mode: string; securityMessage: string };
@@ -12,7 +12,7 @@ interface IntegrationState {
 }
 
 const compactCard = 'rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-2.5';
-const action = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-[var(--portal-brand-action-border)] bg-[var(--portal-brand-action)] px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm hover:brightness-95 disabled:opacity-40';
+const action = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-[var(--portal-brand-header)] bg-[var(--portal-brand-header)] px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm hover:brightness-95 disabled:opacity-40';
 const input = 'min-h-8 min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[10px] text-slate-800 outline-none focus:border-slate-400';
 
 function State({ ok, label }: { ok: boolean; label: string }) {
@@ -21,7 +21,6 @@ function State({ ok, label }: { ok: boolean; label: string }) {
 
 export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = ({ isMaster }) => {
   const [status, setStatus] = useState<IntegrationState | null>(null);
-  const [settingsSnapshot, setSettingsSnapshot] = useState<GlobalSettings | null>(null);
   const [departmentEmail, setDepartmentEmail] = useState('');
   const [token, setToken] = useState('');
   const [working, setWorking] = useState('');
@@ -33,7 +32,6 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
     try {
       const [infra, portalSettings] = await Promise.all([apiClient.getInfrastructureStatus(), apiClient.getSettings()]);
       setStatus(infra);
-      setSettingsSnapshot(portalSettings);
       setDepartmentEmail(String(portalSettings.emailConfig?.roomReservationDepartmentEmail || ''));
     } catch (error) {
       setMessage({ ok: false, text: error instanceof Error ? error.message : 'Falha ao consultar integrações.' });
@@ -52,27 +50,6 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
     try { const result = await apiClient.testSupabaseConnection(); setMessage({ ok: result.connected, text: result.message }); await load(); }
     catch (error) { setMessage({ ok: false, text: error instanceof Error ? error.message : 'Falha no teste do Supabase.' }); }
     finally { setWorking(''); }
-  };
-  const saveDepartmentEmail = async () => {
-    const normalized = departmentEmail.trim().toLowerCase();
-    if (normalized && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
-      setMessage({ ok: false, text: 'Informe um e-mail válido para o Departamento de Enfermagem.' });
-      return;
-    }
-    setWorking('department-email'); setMessage(null);
-    try {
-      const updated = await apiClient.updateSettings({
-        emailConfig: {
-          ...(settingsSnapshot?.emailConfig || {}),
-          roomReservationDepartmentEmail: normalized,
-        },
-      });
-      setSettingsSnapshot(updated);
-      setDepartmentEmail(String(updated.emailConfig?.roomReservationDepartmentEmail || normalized));
-      setMessage({ ok: true, text: normalized ? 'E-mail do Departamento de Enfermagem salvo para solicitações de reserva de local.' : 'E-mail de reserva de local removido.' });
-    } catch (error) {
-      setMessage({ ok: false, text: error instanceof Error ? error.message : 'Não foi possível salvar o e-mail do departamento.' });
-    } finally { setWorking(''); }
   };
   const runHomologation = async () => {
     setWorking('homologation'); setMessage(null); setHasRunTests(true);
@@ -96,15 +73,12 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
   const departmentReady = Boolean(departmentEmail.trim());
 
   return <div id="infrastructure-integrations-panel" className="flex min-h-full h-full flex-col bg-[var(--portal-surface-panel)]">
+    <SettingsWorkspaceHeaderPortal>
+      <button type="button" onClick={runHomologation} disabled={working === 'homologation'} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-white/80 bg-transparent px-3 py-1 text-[10px] font-black text-white hover:bg-white/10 disabled:opacity-50">
+        {working === 'homologation' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <RefreshCw className="h-3.5 w-3.5"/>}Executar testes
+      </button>
+    </SettingsWorkspaceHeaderPortal>
     <section className="flex min-h-full flex-1 flex-col overflow-hidden bg-[var(--portal-surface-panel)]">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 bg-[var(--portal-surface-panel)] px-3 py-2.5">
-        <div>
-          <h3 className="text-[11px] font-black uppercase tracking-wide text-slate-950">Integrações e plataformas</h3>
-          <p className="mt-0.5 text-[9px] text-slate-600">Conexões e destinos usados pelo Portal para assinatura, arquivos, dados, publicação e reserva de local.</p>
-        </div>
-        <button type="button" onClick={runHomologation} disabled={working === 'homologation'} className={action}>{working === 'homologation' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <RefreshCw className="h-3.5 w-3.5"/>}Executar testes</button>
-      </div>
-
       <div className="grid flex-1 content-start gap-2 bg-[var(--portal-surface-panel)] p-2.5 lg:grid-cols-2 xl:grid-cols-5">
         <section className={compactCard} aria-labelledby="asten-integration-title">
           <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-1.5"><KeyRound className="h-4 w-4 shrink-0 text-[var(--portal-brand-action)]"/><h4 id="asten-integration-title" className="truncate text-[10px] font-black uppercase text-slate-900">Asten</h4></div><State ok={astenReady} label={astenReady ? 'Pronta' : 'Pendente'}/></div>
@@ -119,9 +93,9 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
         <section className={compactCard} aria-label="Vercel"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black uppercase"><Server className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/>Vercel</span><State ok={vercelReady} label={vercelReady?'Detectado':'Pendente'}/></div><p className="mt-3 text-[8.5px] leading-4 text-slate-700">{status?.vercel.message||'Aguardando status.'}</p></section>
 
         <section className={compactCard} aria-labelledby="department-email-title">
-          <div className="flex items-center justify-between gap-1"><span className="flex min-w-0 items-center gap-1 text-[9px] font-black uppercase"><Mail className="h-3.5 w-3.5 shrink-0 text-[var(--portal-brand-action)]"/><span id="department-email-title" className="truncate">Departamento</span></span><State ok={departmentReady} label={departmentReady?'Configurado':'Pendente'}/></div>
-          <p className="mt-1.5 text-[8.5px] leading-4 text-slate-600">Destino dos e-mails de solicitação de reserva de local para defesa.</p>
-          <div className="mt-2 grid gap-2"><input aria-label="E-mail do Departamento de Enfermagem" type="email" autoComplete="email" value={departmentEmail} onChange={(event)=>setDepartmentEmail(event.target.value)} placeholder="E-mail do Departamento de Enfermagem" className={input}/><button type="button" onClick={saveDepartmentEmail} disabled={working==='department-email'} className={action}>{working==='department-email'?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Save className="h-3.5 w-3.5"/>}Salvar destino</button></div>
+          <div className="flex items-center justify-between gap-1"><span className="flex min-w-0 items-center gap-1 text-[9px] font-black uppercase"><Mail className="h-3.5 w-3.5 shrink-0 text-[var(--portal-brand-action)]"/><span id="department-email-title" className="truncate">Departamento</span></span><State ok={Boolean(departmentEmail.trim())} label={departmentEmail.trim()?'Configurado':'Pendente'}/></div>
+          <p className="mt-2 text-[8.5px] leading-4 text-slate-700">O destinatário da reserva é definido no modelo de e-mail correspondente. Esta integração apenas acompanha a configuração atualmente publicada.</p>
+          {departmentEmail.trim() ? <div className="mt-2 rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-[9px] font-bold text-slate-700">{departmentEmail}</div> : null}
         </section>
       </div>
     </section>
