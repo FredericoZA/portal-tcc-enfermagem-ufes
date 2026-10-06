@@ -36,5 +36,5 @@ test('título da seção de cadastro fica dentro do cartão', () => {
 });
 
 test('release consolidada foi avançada sem regredir o contrato 1.0.76', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.77');
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.78');
 });
