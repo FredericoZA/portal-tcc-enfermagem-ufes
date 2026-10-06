@@ -53,6 +53,6 @@ test('lista da Comissão usa superfície do popup e mantém branco nos campos e 
   assert.match(commission, /bg-white p-1\.5 text-rose-700/);
 });
 
-test('release é 1.0.76', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.76');
+test('release é 1.0.77', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.77');
 });
