@@ -23,7 +23,7 @@ export const StudentNames: React.FC<StudentNamesProps> = ({
   align = 'center',
   className = '',
   itemClassName = 'text-xs font-bold text-slate-900',
-  showIcon = true,
+  showIcon = false,
   truncate = false,
   showMatricula = true,
 }) => {
@@ -73,9 +73,10 @@ export const GcalStudentNames: React.FC<GcalStudentNamesProps> = ({
   align = 'center',
   className = '',
   itemClassName = 'text-xs font-bold text-slate-900',
-  showIcon = true,
+  showIcon = false,
 }) => {
   if (!alunoStr) return null;
+  const displayValue = showIcon ? alunoStr : alunoStr.replaceAll('🪪', '').replace(/\s+/g, ' ').trim();
 
   const alignClass =
     align === 'left'
@@ -85,14 +86,14 @@ export const GcalStudentNames: React.FC<GcalStudentNamesProps> = ({
       : 'items-center text-center justify-center';
 
   // Split by ' e ' or ' e 🪪' or '/'
-  const parts = alunoStr.split(/\s+e\s+(?=🪪|\d|\w+)|(?<=\w)\s*\/\s*(?=\w)/i);
+  const parts = displayValue.split(/\s+e\s+(?=🪪|\d|\w+)|(?<=\w)\s*\/\s*(?=\w)/i);
 
   if (parts.length <= 1) {
-    const hasIcon = alunoStr.includes('🪪');
+    const hasIcon = displayValue.includes('🪪');
     return (
       <div className={`flex items-center gap-1 ${alignClass} ${itemClassName}`}>
         {showIcon && !hasIcon && <span className="shrink-0">🪪</span>}
-        <span>{alunoStr}</span>
+        <span>{displayValue}</span>
       </div>
     );
   }
