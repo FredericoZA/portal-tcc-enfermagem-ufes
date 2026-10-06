@@ -25,7 +25,7 @@ export const DEFAULT_BRAND_KIT: IntegrationBrandKit = {
   fontFamily: 'Arial',
   documentHeaderText: 'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO\nCURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA',
   documentFooterText: 'Departamento de Enfermagem • Centro de Ciências da Saúde • Vitória/ES',
-  emailFooterText: 'Colegiado do Curso de Graduação em Enfermagem e Obstetrícia • UFES'
+  emailFooterText: 'Comissão de TCC do Departamento de Enfermagem • UFES'
 };
 
 export const DEFAULT_REPLICATION_GUIDE: PortalReplicationGuide = {
@@ -65,10 +65,11 @@ export function defaultDocumentDesign(templateId: string, brand = DEFAULT_BRAND_
 export function defaultEmailDesign(templateId: string, brand = DEFAULT_BRAND_KIT): EmailDesignConfig {
   return {
     templateId,
+    headerText: brand.courseName,
     logoUrl: brand.courseLogoUrl,
     heroImageUrl: brand.emailBannerUrl,
     buttonLabel: 'Acessar o Portal de TCC',
-    buttonUrl: '{{LINK_PORTAL}}',
+    buttonUrl: '<<LINK_PORTAL>>',
     footerText: brand.emailFooterText,
     contentWidth: 640,
     borderRadius: 12
