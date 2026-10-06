@@ -26,6 +26,7 @@ test('engrenagem usa layout compacto e mantém Definir padrão restrito ao Maste
   assert.match(component, /portal-settings-date-grid/);
   assert.match(component, /isMaster&&<button[^>]*portal-popup-action[^>]*>[\s\S]*Definir padrão/);
   assert.doesNotMatch(component, /portal-settings-close-button/);
+  assert.match(component, /event\.key === 'Escape'/);
   assert.match(css, /\.portal-table-settings-popover \{[\s\S]*520px/);
   assert.match(css, /\.portal-settings-page-size-options \{[\s\S]*flex-wrap: nowrap/);
 });
