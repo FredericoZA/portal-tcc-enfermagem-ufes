@@ -1779,22 +1779,19 @@ export async function createPortalApp() {
     const identity=getPortalIdentity(req)!;
     const type=String(req.params.type||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,48);
     const model=(currentSettings.documentModels as Record<string,any>|undefined)?.[type];
-    if(!model?.driveFileId)return res.status(404).json({error:'Modelo documental não encontrado no Drive.'});
-    try{
-      const accessToken=await getGoogleWorkspaceAccessToken();
-      const mediaRes=await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(model.driveFileId)}?alt=media`,{headers:{Authorization:`Bearer ${accessToken}`}});
-      if(!mediaRes.ok)throw new Error(`Google Drive retornou ${mediaRes.status} ao ler o modelo.`);
-      const bytes=Buffer.from(await mediaRes.arrayBuffer());
-      const extracted=await extractDocxTemplateText(bytes);
-      const variables=Array.from(new Set(extracted.variables));
-      const now=new Date().toISOString();
-      const versions=(model.versions||[]).map((version:any)=>version.version===model.activeVersion?{...version,variables}:version);
-      currentSettings.documentModels={...(currentSettings.documentModels||{}),[type]:{...model,variables,versions}};
-      currentSettings.updatedAt=now;
-      auditLogsStore.push({id:`log-${Date.now()}-model-vars`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'DETECCAO_VARIAVEIS_MODELO',entityType:'document_model',entityId:type,before:{variables:model.variables||[]},after:{variables},timestamp:now});
-      await persistPortalStateDurably();
-      res.json({type,variables,detectedAt:now});
-    }catch(error){res.status(422).json({error:error instanceof Error?error.message:'Não foi possível detectar as variáveis do modelo.'});}
+    if(!model?.driveFileId)return res.status(404).json({error:'Modelo documental publicado não encontrado.'});
+    // O upload/importação já inspeciona o DOCX/Google Doc e grava as variáveis
+    // junto da versão publicada e do fingerprint. Não relê um arquivo mutável do
+    // Drive aqui: alterações externas precisam ser publicadas como nova versão.
+    const activeVersion=(model.versions||[]).find((version:any)=>version.version===model.activeVersion);
+    const variables=Array.from(new Set((activeVersion?.variables||model.variables||[]).map((value:any)=>String(value||'').trim()).filter(Boolean)));
+    const now=new Date().toISOString();
+    const versions=(model.versions||[]).map((version:any)=>version.version===model.activeVersion?{...version,variables}:version);
+    currentSettings.documentModels={...(currentSettings.documentModels||{}),[type]:{...model,variables,versions}};
+    currentSettings.updatedAt=now;
+    auditLogsStore.push({id:`log-${Date.now()}-model-vars`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'DETECCAO_VARIAVEIS_MODELO',entityType:'document_model',entityId:type,before:{variables:model.variables||[]},after:{variables,source:'PUBLISHED_MODEL_VERSION'},timestamp:now});
+    await persistPortalStateDurably();
+    res.json({type,variables,detectedAt:now});
   });
 
   app.post('/api/admin/models/:type/versions/:version/restore',requireAuthenticated,requireAdministrator,(req,res)=>{const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Reautentique-se para restaurar um modelo.'});const type=String(req.params.type||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,48);const model=(currentSettings.documentModels as Record<string,any>|undefined)?.[type],selected=model?.versions?.find((item:any)=>item.version===Number(req.params.version));if(!model||!selected)return res.status(404).json({error:'Versão do modelo não encontrada.'});if(!selected.contentSha256)return res.status(409).json({error:'Esta versão antiga não possui hash de integridade. Importe ou envie novamente o modelo para publicá-la com segurança.'});const before={activeVersion:model.activeVersion,driveFileId:model.driveFileId};currentSettings.documentModels={...(currentSettings.documentModels||{}),[type]:{...model,...selected,templateContentText:'',activeVersion:selected.version,versions:model.versions}};currentSettings.updatedAt=new Date().toISOString();auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'RESTAURACAO_VERSAO_MODELO',entityType:'document_model',entityId:type,before,after:{activeVersion:selected.version,driveFileId:selected.driveFileId,contentSha256:selected.contentSha256},timestamp:currentSettings.updatedAt});persistPortalState();res.json({type,activeVersion:selected.version,fileName:selected.fileName,driveFileId:selected.driveFileId,driveFileUrl:selected.driveFileUrl,variables:selected.variables,contentSha256:selected.contentSha256,configured:true});});
