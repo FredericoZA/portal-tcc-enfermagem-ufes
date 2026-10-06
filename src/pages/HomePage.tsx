@@ -1043,6 +1043,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     }
   };
 
+  useEffect(() => {
+    const defenseModalOpen = Boolean(selectedDayDefenses || selectedDayGcalEvents);
+    if (!defenseModalOpen) return;
+    const handleDefenseModalKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setSelectedDayDefenses(null);
+      setSelectedDayGcalEvents(null);
+    };
+    document.addEventListener('keydown', handleDefenseModalKeyDown);
+    return () => document.removeEventListener('keydown', handleDefenseModalKeyDown);
+  }, [selectedDayDefenses, selectedDayGcalEvents]);
+
   return (
     <div id="home-page-container" className="space-y-4 max-w-7xl mx-auto py-1 sm:py-2">
       
@@ -1079,7 +1091,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                               setPickerYear(year);
                               setShowMonthPickerPopup(!showMonthPickerPopup);
                             }}
-                            className={`portal-calendar-period-button ${defStyles.calendarNavBtnClass} text-[10px] sm:text-[11px] font-extrabold uppercase outline-none cursor-pointer shadow-2xs transition-all shrink-0`}
+                            className={`portal-calendar-period-button ${defStyles.calendarNavBtnClass} font-bold normal-case tracking-normal outline-none cursor-pointer shadow-2xs transition-all shrink-0`}
                             title="Selecionar Mês e Ano"
                           >
                             <CalendarIcon className="w-3.5 h-3.5 opacity-80 shrink-0" />
@@ -1164,7 +1176,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <button
                           type="button"
                           onClick={handleGoToToday}
-                          className={`portal-calendar-today-button ${defStyles.calendarNavBtnClass} text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider cursor-pointer transition-all shadow-2xs shrink-0`}
+                          className={`portal-calendar-today-button ${defStyles.calendarNavBtnClass} font-bold normal-case tracking-normal cursor-pointer transition-all shadow-2xs shrink-0`}
                           title="Ir para o mês atual"
                         >
                           Hoje
@@ -1310,8 +1322,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               
               // Max width adjusted for 2 columns max side-by-side
               const modalMaxWidthClass = totalSelectedEvents >= 2
-                ? 'max-w-4xl w-full' 
-                : 'max-w-xl w-full';
+                ? 'max-w-6xl w-full'
+                : 'max-w-3xl w-full';
 
               const popupIsCustomHeader = calendarPopupFormat.headerThemeMode === 'custom';
               const popupHeaderBg = popupIsCustomHeader && calendarPopupFormat.headerBgColor ? calendarPopupFormat.headerBgColor : undefined;
@@ -1399,7 +1411,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   }}
                 >
                   <div
-                    className={`bg-white rounded-2xl border border-slate-300 ${modalMaxWidthClass} max-h-[88vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 ${defStyles.fontFamilyClass}`}
+                    className={`bg-[var(--portal-surface-page)] rounded-2xl border border-slate-300 ${modalMaxWidthClass} max-h-[88vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 ${defStyles.fontFamilyClass}`}
                     style={defStyles.rootStyle}
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -1414,43 +1426,16 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           <span className={`text-[10px] font-black uppercase tracking-widest block opacity-85 ${isDarkHeader ? 'text-white/80' : 'text-slate-700'}`}>
                             {calendarPopupFormat.headerCustomTitle || 'Agenda de Defesas de TCC'}
                           </span>
-                          <h3 className={`font-black text-sm sm:text-base uppercase tracking-tight flex items-center gap-2 mt-0.5 ${isDarkHeader ? 'text-white' : 'text-slate-900'}`}>
-                            <span>
-                              {selectedDayDefenses && selectedDayDefenses.length > 0
-                                ? `Defesas em ${formatDatePt(selectedDayDefenses[0].defesa?.startAt)}`
-                                : selectedDayGcalEvents && selectedDayGcalEvents.length > 0
-                                  ? `Defesas em ${formatDatePt(selectedDayGcalEvents[0].start)}`
-                                  : 'Defesas do Dia'}
-                            </span>
-                            <span className={`text-[10px] sm:text-[10.5px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wide border ${
-                              isDarkHeader 
-                                ? 'bg-black/30 text-white border-white/20' 
-                                : 'bg-slate-200 text-slate-800 border-slate-300'
-                            }`}>
-                              {totalSelectedEvents} {totalSelectedEvents === 1 ? 'APRESENTAÇÃO' : 'APRESENTAÇÕES'}
-                            </span>
+                          <h3 className={`font-black text-sm sm:text-base uppercase tracking-tight mt-0.5 ${isDarkHeader ? 'text-white' : 'text-slate-900'}`}>
+                            {selectedDayDefenses && selectedDayDefenses.length > 0
+                              ? `Defesas em ${formatDatePt(selectedDayDefenses[0].defesa?.startAt)}`
+                              : selectedDayGcalEvents && selectedDayGcalEvents.length > 0
+                                ? `Defesas em ${formatDatePt(selectedDayGcalEvents[0].start)}`
+                                : 'Defesas do Dia'}
                           </h3>
                         </div>
                       </div>
 
-                      {/* Header Actions: Close button */}
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedDayDefenses(null);
-                            setSelectedDayGcalEvents(null);
-                          }}
-                          className={`p-2 rounded-xl transition-all cursor-pointer border ${
-                            isDarkHeader 
-                              ? 'text-white/80 hover:text-white bg-black/25 hover:bg-black/45 border-white/15' 
-                              : 'text-slate-700 hover:text-slate-950 bg-white/70 hover:bg-white border-slate-300'
-                          }`}
-                          title="Fechar visualização"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
                     </div>
 
                     {/* Modal Body with vertical scroll */}
@@ -1543,6 +1528,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                             align="left" 
                                             itemClassName="text-xs font-black text-slate-900" 
                                             showMatricula={calendarPopupFormat.showStudentRegistration !== false}
+                                            showIcon={false}
                                           />
                                         </div>
                                       )}

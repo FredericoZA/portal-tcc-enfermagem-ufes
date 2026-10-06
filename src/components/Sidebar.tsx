@@ -144,11 +144,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   const sidebarAccent = layoutConfig.sidebarSubtitleColor || 'var(--portal-sidebar-active-accent)';
   const getNavLabel = (id: string, fallback: string) => layoutConfig.sidebarNavLabels?.[id] || fallback;
   const getNavEmoji = (id: string, fallback: string) => layoutConfig.sidebarNavEmojis?.[id] || fallback;
-  const renderNavIcon = (id: string, Icon: React.ComponentType<{ className?: string }>, defaultEmoji: string, isActive: boolean) => {
-    const rawEmoji = getNavEmoji(id, defaultEmoji); const emoji = Array.from(rawEmoji || '')[0] || defaultEmoji;
-    if ((layoutConfig.sidebarIconMode || 'emoji') === 'lucide') return <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-200'}`} />;
-    return <span className="text-base shrink-0 leading-none">{emoji}</span>;
-  };
+  const renderNavIcon = (Icon: React.ComponentType<{ className?: string }>) => (
+    <Icon className="h-5 w-5 shrink-0 text-white" aria-hidden="true" />
+  );
   // A identidade pública salva pelo Master é a fonte de verdade. Configurações privadas
   // de integração ficam apenas como fallback de migração e nunca substituem a logo pública.
   const sidebarLogoSrc = (layoutConfig.sidebarLogoType === 'custom' && layoutConfig.sidebarCustomLogoUrl ? layoutConfig.sidebarCustomLogoUrl : '') || courseLogo || configuredLogo || '/colenf-logo.png';
@@ -197,7 +195,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           return order.map((itemKey, idx) => {
             if (itemKey.startsWith('DIVIDER')) { if (layoutConfig.sidebarShowDividers === false || layoutConfig.sidebarDividerStyle === 'none') return null; return <div key={`${itemKey}-${idx}`} className="my-2.5 pt-0.5 border-t transition-colors" style={{ borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider, borderStyle: layoutConfig.sidebarDividerStyle || 'solid' }} />; }
             const item = allNavMap[itemKey]; if (!item || !item.visible) return null; const Icon = item.icon; const isActive = currentTab === item.id || (item.id === 'home' && currentTab === 'calendario');
-            return <button key={item.id} id={`nav-item-${item.id}`} onClick={() => handleNav(item.id)} className={`portal-sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-transparent outline-none focus-visible:ring-2 focus-visible:ring-[#74FF96] focus-visible:ring-offset-1 focus-visible:ring-offset-[#06372d] font-bold text-xs uppercase tracking-wider transition-all text-left cursor-pointer ${isActive ? 'portal-sidebar-nav-active font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || 'var(--portal-sidebar-active)',color: layoutConfig.sidebarActiveTextColor || '#ffffff'} : { color: layoutConfig.sidebarTextColor || '#f8fafc' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
+            return <button key={item.id} id={`nav-item-${item.id}`} onClick={() => handleNav(item.id)} className={`portal-sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-transparent outline-none focus-visible:ring-2 focus-visible:ring-[#74FF96] focus-visible:ring-offset-1 focus-visible:ring-offset-[#06372d] transition-all text-left cursor-pointer ${isActive ? 'portal-sidebar-nav-active font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || 'var(--portal-sidebar-active)',color: layoutConfig.sidebarActiveTextColor || '#ffffff'} : { color: layoutConfig.sidebarTextColor || '#f8fafc' }}><div className="flex items-center gap-3">{renderNavIcon(Icon)}<span>{item.label}</span></div></button>;
           });
         })()}
       </nav>

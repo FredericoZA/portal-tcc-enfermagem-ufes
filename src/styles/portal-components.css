@@ -219,6 +219,7 @@ button[aria-label^="Configurar exibição"],
 .portal-card,
 .portal-workspace,
 .portal-modal-surface {
+  background: var(--portal-surface-page);
   color: var(--portal-text-dark);
   font-family: var(--portal-font-family);
 }
@@ -247,10 +248,14 @@ button[aria-label^="Configurar exibição"],
   gap: 6px;
   padding: 4px 10px;
   border: 1px solid var(--portal-border);
-  border-radius: 9999px;
-  background: var(--portal-surface-inner);
+  border-radius: 8px;
+  background: var(--portal-surface-card);
   color: var(--portal-text-dark);
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
   cursor: pointer;
 }
 
@@ -371,7 +376,7 @@ button[aria-label^="Configurar exibição"],
 .portal-modal-body,
 .portal-process-dialog,
 .portal-process-dialog-body {
-  background: var(--portal-surface-panel);
+  background: var(--portal-surface-page);
 }
 
 .portal-modal-body .portal-layer-card,
@@ -394,21 +399,21 @@ button[aria-label^="Configurar exibição"],
 .portal-core-column-popup {
   width: min(300px, calc(100vw - 24px));
   padding: 8px;
-  background: var(--portal-surface-inner);
+  background: var(--portal-surface-page);
 }
 
 .portal-search-popover {
   min-width: 240px;
   max-width: min(360px, calc(100vw - 24px));
   padding: 10px;
-  background: var(--portal-surface-panel);
+  background: var(--portal-surface-page);
 }
 
 .portal-table-settings-popover {
-  width: min(620px, calc(100vw - 24px));
-  max-width: min(620px, calc(100vw - 24px));
-  padding: 10px;
-  background: var(--portal-surface-panel);
+  width: min(520px, calc(100vw - 24px));
+  max-width: min(520px, calc(100vw - 24px));
+  padding: 9px;
+  background: var(--portal-surface-page);
 }
 
 .portal-core-popup-title {
@@ -493,9 +498,31 @@ button[aria-label^="Configurar exibição"],
 
 .portal-core-filter-values {
   max-height: 220px;
-  overflow: auto;
+  overflow-y: scroll;
+  overflow-x: hidden;
   display: grid;
   gap: 2px;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--portal-brand-action) var(--portal-surface-panel);
+}
+
+.portal-core-filter-values::-webkit-scrollbar {
+  width: 8px;
+}
+
+.portal-core-filter-values::-webkit-scrollbar-track {
+  background: var(--portal-surface-panel);
+  border-radius: 999px;
+}
+
+.portal-core-filter-values::-webkit-scrollbar-thumb {
+  background: var(--portal-brand-action);
+  border-radius: 999px;
+}
+
+.portal-core-filter-value input[type="checkbox"] {
+  accent-color: var(--portal-brand-header);
 }
 
 .portal-core-column-menu[data-filter-active="true"] {
@@ -574,15 +601,19 @@ button[aria-label^="Configurar exibição"],
 
 .portal-settings-top-grid {
   display: grid;
-  grid-template-columns: minmax(250px, .9fr) minmax(280px, 1.1fr);
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 6px;
 }
 
 .portal-settings-control-card {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
   border: 1px solid var(--portal-border);
-  border-radius: 10px;
-  background: var(--portal-surface-card);
-  padding: 8px;
+  border-radius: 9px;
+  background: var(--portal-surface-panel);
+  padding: 6px 8px;
 }
 
 .portal-settings-control-title {
@@ -597,7 +628,7 @@ button[aria-label^="Configurar exibição"],
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-top: 6px;
+  margin-top: 0;
   flex-wrap: nowrap;
 }
 
@@ -625,7 +656,7 @@ button[aria-label^="Configurar exibição"],
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 0;
 }
 
 .portal-settings-date-field > span {
@@ -655,11 +686,11 @@ button[aria-label^="Configurar exibição"],
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 8px;
-  padding: 8px;
+  margin-top: 6px;
+  padding: 6px 8px;
   border: 1px solid var(--portal-border);
-  border-radius: 10px;
-  background: var(--portal-surface-card);
+  border-radius: 9px;
+  background: var(--portal-surface-panel);
 }
 
 .portal-core-wrap-setting strong {
@@ -874,11 +905,16 @@ button[aria-label^="Configurar exibição"],
 
 .portal-calendar-period-button {
   width: max-content;
-  min-width: 194px;
+  min-width: 174px;
   max-width: none;
-  padding: 0 14px;
-  gap: 7px;
+  min-height: 27px;
+  height: 27px;
+  padding: 0 11px;
+  gap: 6px;
   flex: 0 0 auto;
+  font-size: var(--portal-sheet-filter-chip-font-size);
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .portal-calendar-period-button > span {
@@ -887,18 +923,25 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-calendar-step-button {
-  width: var(--portal-toolbar-button-size);
-  min-width: var(--portal-toolbar-button-size);
-  max-width: var(--portal-toolbar-button-size);
+  width: 27px;
+  min-width: 27px;
+  max-width: 27px;
+  min-height: 27px;
+  height: 27px;
   padding: 0;
-  flex: 0 0 var(--portal-toolbar-button-size);
+  flex: 0 0 27px;
 }
 
 .portal-calendar-today-button {
   width: max-content;
-  min-width: 56px;
-  padding: 0 12px;
+  min-width: 50px;
+  min-height: 27px;
+  height: 27px;
+  padding: 0 10px;
   flex: 0 0 auto;
+  font-size: var(--portal-sheet-filter-chip-font-size);
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 @media (max-width: 639px) {
@@ -942,7 +985,7 @@ button[aria-label^="Configurar exibição"],
 .portal-sidebar-nav-item {
   font-size: var(--portal-sidebar-nav-font-size);
   font-weight: 800;
-  letter-spacing: .01em;
+  letter-spacing: .025em;
   text-transform: none;
 }
 
@@ -977,4 +1020,29 @@ button[aria-label^="Configurar exibição"],
 .portal-calendar-day-number {
   font-size: 12px;
   line-height: 1;
+}
+
+
+/* Portal TCC11 — hierarquia visual canônica dos diálogos. */
+.portal-feedback-dialog {
+  background: var(--portal-surface-page);
+}
+
+.portal-feedback-dialog form > div {
+  background: var(--portal-surface-panel);
+}
+
+.portal-feedback-dialog footer {
+  background: var(--portal-surface-page);
+  border-color: var(--portal-border);
+}
+
+.portal-settings-columns-card {
+  background: var(--portal-surface-card);
+}
+
+@media (max-width: 560px) {
+  .portal-settings-control-card {
+    grid-template-columns: 1fr;
+  }
 }
