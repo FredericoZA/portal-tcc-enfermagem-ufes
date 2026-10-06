@@ -42,14 +42,16 @@ test('rodapé credita Sabrina e centraliza comissão com um único membro', () =
   assert.match(footer, /membersList\.length === 1 \? 'grid-cols-1'/);
 });
 
-test('contas administrativas e membros usam ações nomeadas e ícones consistentes', () => {
-  const accounts = read('src/components/AuditAndSecuritySection.tsx');
+test('identidade e rodapé usam formulário único com salvamento automático', () => {
   const identity = read('src/components/CommissionIdentityPanel.tsx');
-  assert.match(accounts, /<Save className="h-3\.5 w-3\.5"/);
-  assert.match(accounts, /Salvar Contas Administrativas/);
-  assert.match(identity, /Salvar membros/);
+  const config = read('src/pages/ConfiguracoesPage.tsx');
+  assert.match(identity, /Identidade e dados do rodapé/);
+  assert.match(identity, /Salvo automaticamente/);
+  assert.match(identity, /Adicionar membro/);
+  assert.doesNotMatch(identity, /Salvar membros|Salvar Contas Administrativas/);
+  assert.doesNotMatch(config, /MasterAndPresidentConfigForm/);
 });
 
-test('release Portal TCC11 é 1.0.77', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.77');
+test('release Portal TCC11 é 1.0.78', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.78');
 });
