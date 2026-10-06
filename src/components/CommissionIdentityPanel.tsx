@@ -169,7 +169,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
   const saveOnBlur = () => { if (currentFingerprint !== lastSavedFingerprintRef.current) void persistIdentity(false); };
 
   return (
-    <section className="portal-commission-identity-panel portal-layer-card rounded-lg border border-slate-300" aria-labelledby="commission-management-title">
+    <section className="portal-commission-identity-panel portal-layer-panel rounded-lg border border-slate-300" aria-labelledby="commission-management-title">
       <div className="flex flex-col gap-2 border-b border-slate-300 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-[var(--portal-brand-action)]" />
@@ -181,12 +181,12 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
         <div className="flex flex-wrap items-center gap-2">
           {savedText && <span className="text-[9px] font-bold text-emerald-800" role="status">{savedText}</span>}
           <button type="button" onClick={addMember} className={actionClass}><Plus className="h-3.5 w-3.5" />Adicionar membro</button>
-          <button type="button" onClick={() => void persistIdentity(true)} disabled={saving} className={actionClass} aria-busy={saving}><Save className="h-3.5 w-3.5" />{saving ? 'Salvando…' : 'Salvar'}</button>
+          <button type="button" onClick={() => void persistIdentity(true)} disabled={saving} className={actionClass} aria-busy={saving}><Save className="h-3.5 w-3.5" />{saving ? 'Salvando…' : 'Salvar membros'}</button>
         </div>
       </div>
 
       <div className="grid gap-2 p-2.5 lg:grid-cols-2">
-        <div className="portal-layer-panel rounded-lg border border-slate-300 p-2.5">
+        <div className="portal-layer-card rounded-lg border border-slate-300 p-2.5">
           <div className="mb-2 flex items-center gap-1.5"><UserRoundCog className="h-4 w-4 text-[var(--portal-brand-action)]"/><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Presidente da Comissão</h4></div>
           <div className="grid gap-2 sm:grid-cols-2">
             <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">Nome</span><input value={presidentName} onChange={(event) => setPresidentName(event.target.value)} onBlur={saveOnBlur} className={inputClass} /></label>
@@ -194,7 +194,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
           </div>
         </div>
 
-        <div className="portal-layer-panel rounded-lg border border-slate-300 p-2.5">
+        <div className="portal-layer-card rounded-lg border border-slate-300 p-2.5">
           <div className="mb-2 flex items-center gap-1.5"><Mail className="h-4 w-4 text-[var(--portal-brand-action)]"/><h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">Secretaria</h4></div>
           <div className="grid gap-2 sm:grid-cols-3">
             <label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">Nome</span><input value={secretaryName} onChange={(event) => setSecretaryName(event.target.value)} onBlur={saveOnBlur} className={inputClass} /></label>
