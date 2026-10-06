@@ -35,6 +35,7 @@ export interface DocumentDesignConfig {
 
 export interface EmailDesignConfig {
   templateId: string;
+  headerText: string;
   logoUrl: string;
   heroImageUrl: string;
   buttonLabel: string;
