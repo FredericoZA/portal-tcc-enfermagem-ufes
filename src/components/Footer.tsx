@@ -100,7 +100,7 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
             </div>
             <div className="pt-2 border-t" style={{borderColor:footerDivider}}>
               <div className="font-extrabold uppercase tracking-wider text-[9px]" style={{color:footerMuted}}>{layoutConfig.footerMembersLabel||'Membros da Comissão'}</div>
-              <div className="mt-1 grid items-start gap-x-4 gap-y-1 text-center sm:grid-cols-2">
+              <div className={`mt-1 grid items-start gap-x-4 gap-y-1 text-center ${membersList.length === 1 ? 'grid-cols-1' : 'sm:grid-cols-2'}`}>
                 {membersList.length?membersList.map((member)=><div key={member.id||member.name} className="flex flex-col items-center justify-start"><div className="min-h-[18px]"><CopyableName name={member.name} email={member.email} id={`member-${member.id||member.name}`}/></div>{(member.startDate||member.endDate)&&<p className="text-[9px]" style={{color:footerMuted}}>{member.startDate?`Início: ${formatTermDate(member.startDate)}`:''}{member.startDate&&member.endDate?' · ':''}{member.endDate?`Fim: ${formatTermDate(member.endDate)}`:''}</p>}</div>):<p className="sm:col-span-2" style={{color:footerMuted}}>Não configurado</p>}
               </div>
             </div>
@@ -110,6 +110,7 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
               <div className="min-w-0 max-w-[250px] flex flex-col justify-center items-center text-center gap-1">
                 <div className="flex flex-col items-center"><div className="font-extrabold uppercase tracking-wider text-[9px] leading-tight" style={{color:footerMuted}}>Desenvolvimento da Plataforma<br/>e Suporte</div><div className="mt-0.5 text-[12px]"><CopyableName name={devName} email={contactEmail} id="secretary"/></div></div>
                 {whatsappUrl&&<a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1 font-bold uppercase tracking-wider text-[10px] rounded-lg transition-all hover:brightness-95" style={{backgroundColor:WHATSAPP_BUTTON_GREEN,color:whatsappText}}><WhatsAppMark className="w-3.5 h-3.5"/>WhatsApp Secretaria</a>}
+                <p className="max-w-[250px] text-center text-[9px] leading-3.5 font-normal" style={{color:footerMuted}}>Sistema inspirado na solução desenvolvida por Sabrina Lemos Rodrigues — PPGEMF</p>
               </div>
               {qrCodeSource&&<div className="relative w-[104px] h-[104px] sm:w-[112px] sm:h-[112px] shrink-0 rounded-xl border border-slate-300 bg-white p-1.5 shadow-lg"><img src={qrCodeSource} alt="QR Code para contato pelo WhatsApp" className="block h-full w-full rounded-lg object-contain p-0" referrerPolicy="no-referrer"/><span className="absolute left-1/2 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-white shadow-md ring-[3px] ring-white" style={{backgroundColor:WHATSAPP_GREEN}}><WhatsAppMark className="h-5 w-5"/></span></div>}
             </div>

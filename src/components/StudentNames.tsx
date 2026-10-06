@@ -23,7 +23,7 @@ export const StudentNames: React.FC<StudentNamesProps> = ({
   align = 'center',
   className = '',
   itemClassName = 'text-xs font-bold text-slate-900',
-  showIcon = true,
+  showIcon = false,
   truncate = false,
   showMatricula = true,
 }) => {
@@ -73,7 +73,7 @@ export const GcalStudentNames: React.FC<GcalStudentNamesProps> = ({
   align = 'center',
   className = '',
   itemClassName = 'text-xs font-bold text-slate-900',
-  showIcon = true,
+  showIcon = false,
 }) => {
   if (!alunoStr) return null;
 
@@ -84,15 +84,14 @@ export const GcalStudentNames: React.FC<GcalStudentNamesProps> = ({
       ? 'items-end text-right justify-end'
       : 'items-center text-center justify-center';
 
-  // Split by ' e ' or ' e 🪪' or '/'
-  const parts = alunoStr.split(/\s+e\s+(?=🪪|\d|\w+)|(?<=\w)\s*\/\s*(?=\w)/i);
+  const cleanAlunoStr = alunoStr.replace(/🪪/g, '').replace(/\s{2,}/g, ' ').trim();
+  const parts = cleanAlunoStr.split(/\s+e\s+(?=\d|\w+)|(?<=\w)\s*\/\s*(?=\w)/i);
 
   if (parts.length <= 1) {
-    const hasIcon = alunoStr.includes('🪪');
     return (
       <div className={`flex items-center gap-1 ${alignClass} ${itemClassName}`}>
-        {showIcon && !hasIcon && <span className="shrink-0">🪪</span>}
-        <span>{alunoStr}</span>
+        {showIcon && <span className="shrink-0" aria-hidden="true">🪪</span>}
+        <span>{cleanAlunoStr}</span>
       </div>
     );
   }
@@ -101,10 +100,9 @@ export const GcalStudentNames: React.FC<GcalStudentNamesProps> = ({
     <div className={`flex flex-col gap-0.5 ${alignClass} ${className}`}>
       {parts.map((p, idx) => {
         const cleanPart = p.trim();
-        const hasIcon = cleanPart.includes('🪪');
         return (
           <div key={idx} className={`flex items-center gap-1 ${alignClass} ${itemClassName}`}>
-            {showIcon && !hasIcon && <span className="shrink-0">🪪</span>}
+            {showIcon && <span className="shrink-0" aria-hidden="true">🪪</span>}
             <span>{cleanPart}</span>
           </div>
         );

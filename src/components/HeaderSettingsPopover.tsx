@@ -147,7 +147,7 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
     if(isOpen){setIsOpen(false);return;}
     if(gearButtonRef.current){
       const rect=gearButtonRef.current.getBoundingClientRect();
-      const popupWidth=Math.min(canManageColumns?620:360,window.innerWidth-32);
+      const popupWidth=Math.min(canManageColumns?520:360,window.innerWidth-32);
       let left=Math.min(rect.right-popupWidth,window.innerWidth-popupWidth-16);
       left=Math.max(16,left);
       let top=rect.bottom+8;

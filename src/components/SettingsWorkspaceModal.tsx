@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
 
 export interface SettingsWorkspaceSection {
   id: string;
@@ -44,6 +43,20 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
     if (!open) setHeaderHost(null);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      const nestedLayerOpen = document.getElementsByClassName('portal-search-popover').length > 0
+        || document.getElementsByClassName('portal-table-settings-popover').length > 0
+        || document.getElementsByClassName('portal-core-column-popup').length > 0
+        || Boolean(document.querySelector('dialog[open]'));
+      if (!nestedLayerOpen) onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
+
   const current = useMemo(() => sections.find((section) => section.id === activeId) || sections[0], [sections, activeId]);
   if (!open || !current) return null;
 
@@ -64,7 +77,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       {singlePaneContent}
     </main>
   ) : (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
       <aside className="max-h-52 w-full shrink-0 overflow-y-auto border-b border-slate-300 p-3 md:max-h-none md:w-64 md:border-b-0 md:border-r" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
         <div className="rounded-xl border border-slate-300 p-2 shadow-sm" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>
           <div className="mb-2 border-b border-slate-200 px-2 pb-2 text-[10px] font-black uppercase tracking-wider text-slate-600">Navegação</div>
@@ -89,7 +102,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       <main
         className={`portal-settings-workspace-main min-w-0 flex-1 overflow-y-auto ${fullBleed ? 'p-0' : 'p-3 sm:p-4'}`}
         data-portal-full-bleed={fullBleed ? 'true' : 'false'}
-        style={{ backgroundColor: fullBleed ? 'var(--portal-surface-card)' : 'var(--portal-surface-panel)' }}
+        style={{ backgroundColor: 'var(--portal-surface-panel)' }}
       >
         <div
           className={`portal-settings-workspace-content min-w-0 ${fullBleed ? 'min-h-full h-full rounded-none' : 'rounded-xl'}`}
@@ -110,13 +123,12 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       className="portal-settings-workspace flex max-h-[94vh] w-full max-w-[1600px] flex-col overflow-hidden rounded-2xl border border-slate-300 shadow-2xl"
-      style={{ backgroundColor: 'var(--portal-surface-panel)' }}
+      style={{ backgroundColor: 'var(--portal-surface-page)' }}
     >
       <header className="portal-settings-workspace-header flex items-center justify-between gap-3 border-b-[15px] border-white px-4 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}>
         <div className="flex min-w-0 items-center gap-2">{TitleIcon && <TitleIcon className="h-5 w-5 shrink-0"/>}<h2 className="truncate text-sm font-black uppercase tracking-wide">{title}</h2></div>
         <div className="flex min-w-0 items-center justify-end gap-1.5">
           <div ref={setHeaderHost} className="flex min-w-0 flex-wrap items-center justify-end gap-1.5" data-settings-workspace-header-actions="true" />
-          <button type="button" onClick={onClose} className="portal-modal-header-close shrink-0" aria-label="Fechar"><X className="h-4 w-4"/></button>
         </div>
       </header>
 

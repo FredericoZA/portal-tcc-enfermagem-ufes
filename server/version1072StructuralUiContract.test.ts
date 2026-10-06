@@ -43,7 +43,7 @@ test('calendário usa controles autossuficientes com período em formato pílula
   assert.equal((home.match(/portal-calendar-step-button/g) || []).length, 2);
   assert.match(css, /\.portal-calendar-toolbar \{[\s\S]*display: flex/);
   assert.match(css, /\.portal-calendar-period-control \{[\s\S]*width: max-content/);
-  assert.match(css, /\.portal-calendar-period-button \{[\s\S]*min-width: 194px/);
+  assert.match(css, /\.portal-calendar-period-button \{[\s\S]*min-width: 168px/);
 });
 
 test('planilhas não inserem emojis no texto de células/cabeçalhos', () => {
@@ -71,6 +71,6 @@ test('sidebar não duplica logs e assinaturas de Configurações', () => {
   assert.doesNotMatch(sidebar, /label: getNavLabel\('asten-logs'/);
 });
 
-test('release é 1.0.76', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.76');
+test('release atual é 1.0.77', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.77');
 });
