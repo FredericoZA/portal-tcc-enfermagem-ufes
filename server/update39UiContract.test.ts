@@ -12,16 +12,16 @@ test('filtros de Meus TCCs e Presidência usam a geometria canônica', async () 
   assert.match(css, /--portal-sheet-content-divider:\s*15px/);
 });
 
-test('identidade centraliza Presidência Secretaria e Comissão sem duplicar troca administrativa', async () => {
+test('identidade centraliza Master, Presidência, Secretaria e Comissão com autosave seguro', async () => {
   const panel = await source('src/components/CommissionIdentityPanel.tsx');
-  assert.ok(panel.includes('Presidente da Comissão'));
-  assert.ok(panel.includes('Secretaria'));
+  assert.ok(panel.includes('Nome da Secretaria / Administrador Master'));
+  assert.ok(panel.includes('Nome da Presidente da Comissão'));
+  assert.ok(panel.includes('E-mail de contato da Secretaria'));
   assert.ok(panel.includes('Membros da Comissão'));
   assert.ok(panel.includes('if (!isMaster) return null'));
   assert.ok(panel.includes('apiClient.updateSettings'));
-  assert.ok(!panel.includes('Nome da Secretaria / Administrador Master'));
-  assert.ok(!panel.includes('portal-president-master-transfer'));
-  assert.ok(!panel.includes('createAdministrationTransfer'));
+  assert.ok(panel.includes('createAdministrationTransfer'));
+  assert.ok(panel.includes('Salvo automaticamente'));
 });
 
 test('update 39 abre cadastro individual e envio de lista em popups compactos', async () => {
@@ -55,8 +55,9 @@ test('personalização expõe apenas superfícies atuais sem camada corretiva gl
   assert.ok(!main.includes('PortalUiEnhancer'));
 });
 
-test('administração institucional permanece restrita ao Master no componente responsável', async () => {
+test('administração institucional permanece restrita ao Master com reautenticação em trocas sensíveis', async () => {
   const identity = await source('src/components/CommissionIdentityPanel.tsx');
   assert.ok(identity.includes('if (!isMaster) return null'));
-  assert.ok(!identity.includes('createAdministrationTransfer'));
+  assert.ok(identity.includes('createAdministrationTransfer'));
+  assert.ok(identity.includes('REAUTHENTICATION_REQUIRED'));
 });
