@@ -590,10 +590,15 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-settings-control-card {
-  border: 1px solid var(--portal-border);
-  border-radius: 10px;
-  background: var(--portal-surface-card);
-  padding: 8px;
+  display: grid;
+  grid-template-columns: minmax(130px, .8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-bottom: 1px solid var(--portal-border);
+  border-radius: 0;
+  background: transparent;
+  padding: 6px 2px;
 }
 
 .portal-settings-control-title {
@@ -756,7 +761,8 @@ button[aria-label^="Configurar exibição"],
 @media (max-width: 680px) {
   .portal-table-settings-popover { width: calc(100vw - 24px); }
   .portal-settings-top-grid,
-  .portal-settings-column-grid { grid-template-columns: 1fr; }
+  .portal-settings-column-grid,
+  .portal-settings-control-card { grid-template-columns: 1fr; }
   .portal-core-wrap-setting { align-items: flex-start; flex-direction: column; }
 }
 
@@ -887,6 +893,8 @@ button[aria-label^="Configurar exibição"],
   width: max-content;
   min-width: 168px;
   max-width: none;
+  min-height: calc(var(--portal-toolbar-button-size) * .9);
+  height: calc(var(--portal-toolbar-button-size) * .9);
   padding: 0 10px;
   gap: 6px;
   flex: 0 0 auto;
@@ -910,6 +918,8 @@ button[aria-label^="Configurar exibição"],
 .portal-calendar-today-button {
   width: max-content;
   min-width: 48px;
+  min-height: calc(var(--portal-toolbar-button-size) * .9);
+  height: calc(var(--portal-toolbar-button-size) * .9);
   padding: 0 9px;
   flex: 0 0 auto;
   font-size: var(--portal-sheet-filter-label-font-size);
