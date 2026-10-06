@@ -19,7 +19,8 @@ test('barra lateral usa ícones Lucide brancos e texto corrido maior', () => {
 test('calendário mantém título principal e compacta apenas controles da direita', () => {
   const home = read('src/pages/HomePage.tsx');
   const css = read('src/styles/portal-components.css');
-  assert.match(home, /CALENDÁRIO DE DEFESAS/);
+  assert.match(home, /Calendário de Defesas — \{monthNamesPt\[month\]\} de \{year\}/);
+  assert.match(home, /<h1 className="text-base sm:text-lg font-black uppercase/);
   assert.match(css, /\.portal-calendar-period-button \{[\s\S]*height:\s*27px[\s\S]*font-size:\s*var\(--portal-sheet-filter-chip-font-size\)[\s\S]*text-transform:\s*none/);
   assert.match(css, /\.portal-calendar-today-button \{[\s\S]*height:\s*27px[\s\S]*font-size:\s*var\(--portal-sheet-filter-chip-font-size\)[\s\S]*text-transform:\s*none/);
 });
