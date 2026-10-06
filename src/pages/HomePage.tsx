@@ -2626,7 +2626,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Body with Unified ProcessoDetailPage */}
-            <div className="p-3 sm:p-5 bg-slate-100 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="max-h-[90vh] overflow-y-auto custom-scrollbar" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
               <ProcessoDetailPage
                 processId={selectedProcessDetails.id}
                 onBack={handleCloseDetails}
@@ -2641,36 +2641,28 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       {/* LOGIN MODAL FOR STUDENTS AND PROFESSORS */}
       {showLoginModal && (() => {
         return (
-          <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn">
-            <div className={`bg-white ${loginPopupConfig.borderRadius || 'rounded-2xl'} border border-slate-200/90 shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150`}>
+          <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowLoginModal(false); }}>
+            <div className={`${loginPopupConfig.borderRadius || 'rounded-2xl'} border border-slate-300 shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150`} style={{ backgroundColor: 'var(--portal-surface-page)' }}>
               {/* Header with Institutional Identity */}
               <div className="portal-modal-header border-b px-5 py-3.5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <GraduationCap className="h-5 w-5 shrink-0 text-white" aria-hidden="true" />
                   <div>
-                    <h3 className="font-black text-lg sm:text-xl leading-tight text-white">
+                    <h3 className="font-black text-sm leading-tight text-white">
                       {loginPopupConfig.title || 'Acesso ao Portal do TCC'}
                     </h3>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowLoginModal(false)}
-                  className="portal-modal-header-close"
-                  aria-label="Fechar acesso ao portal"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </div>
 
-              <div className="p-5 sm:p-6 space-y-4">
+              <div className="space-y-3 p-4">
                 <p className="text-xs text-slate-600 leading-relaxed">
                   {loginPopupConfig.description}
                 </p>
 
                 {/* Informative helper box */}
                 {loginPopupConfig.showTipsBox && (
-                  <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-1.5 text-[11.5px] text-slate-700">
+                  <div className="rounded-xl border border-slate-300 p-3 space-y-1.5 text-[11px] text-slate-700" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
                     <div className="font-semibold text-slate-900 flex items-center gap-1.5">
                       <Info className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                       <span>Orientações para identificação:</span>
@@ -2698,13 +2690,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     <button
                       type="button"
                       onClick={() => {if(loginStep==='code'){setLoginStep('email');setLoginCodeInput('');setLoginMessage('');}else setShowLoginModal(false);}}
-                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition-colors cursor-pointer"
+                      className="portal-popup-secondary-action min-w-[96px]"
                     >
                       {loginStep==='code'?'Trocar e-mail':'Cancelar'}
                     </button>
                     <button
                       type="submit"
-                      className="portal-popup-action min-h-9 px-5 text-[11px]"
+                      className="portal-popup-action min-w-[96px]"
                     >
                       <span>{loginWorking?'Aguarde…':loginStep==='email'?'Enviar código':'Entrar'}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
