@@ -1079,7 +1079,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                               setPickerYear(year);
                               setShowMonthPickerPopup(!showMonthPickerPopup);
                             }}
-                            className={`portal-calendar-period-button ${defStyles.calendarNavBtnClass} text-[10px] font-bold normal-case outline-none cursor-pointer shadow-2xs transition-all shrink-0`}
+                            className={`portal-calendar-period-button ${defStyles.calendarNavBtnClass} font-bold normal-case outline-none cursor-pointer shadow-2xs transition-all shrink-0`}
                             title="Selecionar Mês e Ano"
                           >
                             <CalendarIcon className="w-3.5 h-3.5 opacity-80 shrink-0" />
@@ -1164,7 +1164,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <button
                           type="button"
                           onClick={handleGoToToday}
-                          className={`portal-calendar-today-button ${defStyles.calendarNavBtnClass} text-[10px] font-bold normal-case cursor-pointer transition-all shadow-2xs shrink-0`}
+                          className={`portal-calendar-today-button ${defStyles.calendarNavBtnClass} font-bold normal-case cursor-pointer transition-all shadow-2xs shrink-0`}
                           title="Ir para o mês atual"
                         >
                           Hoje
@@ -1411,6 +1411,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <div className="flex items-center gap-3">
                         <ColorfulHeaderIcon type="calendar" textFormat={defensesTextFormat} />
                         <div>
+                          <span className={`text-[10px] font-black uppercase tracking-widest block opacity-85 ${isDarkHeader ? 'text-white/80' : 'text-slate-700'}`}>
+                            {calendarPopupFormat.headerCustomTitle || 'Agenda de Defesas de TCC'}
+                          </span>
+                          <h3 className={`font-black text-sm sm:text-base uppercase tracking-tight mt-0.5 ${isDarkHeader ? 'text-white' : 'text-slate-900'}`}>
+                            {selectedDayDefenses && selectedDayDefenses.length > 0
+                              ? `Defesas em ${formatDatePt(selectedDayDefenses[0].defesa?.startAt)}`
+                              : selectedDayGcalEvents && selectedDayGcalEvents.length > 0
+                                ? `Defesas em ${formatDatePt(selectedDayGcalEvents[0].start)}`
+                                : 'Defesas do Dia'}
                           </h3>
                         </div>
                       </div>
