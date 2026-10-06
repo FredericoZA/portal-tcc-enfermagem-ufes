@@ -247,10 +247,11 @@ button[aria-label^="Configurar exibição"],
   gap: 6px;
   padding: 4px 10px;
   border: 1px solid var(--portal-border);
-  border-radius: 9999px;
-  background: var(--portal-surface-inner);
+  border-radius: 8px;
+  background: var(--portal-surface-card);
   color: var(--portal-text-dark);
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 750;
   cursor: pointer;
 }
 
@@ -335,7 +336,7 @@ button[aria-label^="Configurar exibição"],
 /* Modais. */
 .portal-modal-surface,
 [role="dialog"] > .portal-modal-surface {
-  background: var(--portal-surface-panel);
+  background: var(--portal-surface-page);
   border: 1px solid var(--portal-border);
   border-radius: var(--portal-panel-radius);
   overflow: hidden;
@@ -371,6 +372,11 @@ button[aria-label^="Configurar exibição"],
 .portal-modal-body,
 .portal-process-dialog,
 .portal-process-dialog-body {
+  background: var(--portal-surface-page);
+}
+
+.portal-modal-body > .portal-layer-panel,
+.portal-process-dialog-body > .portal-layer-panel {
   background: var(--portal-surface-panel);
 }
 
@@ -405,10 +411,10 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-table-settings-popover {
-  width: min(620px, calc(100vw - 24px));
-  max-width: min(620px, calc(100vw - 24px));
+  width: min(520px, calc(100vw - 24px));
+  max-width: min(520px, calc(100vw - 24px));
   padding: 10px;
-  background: var(--portal-surface-panel);
+  background: var(--portal-surface-page);
 }
 
 .portal-core-popup-title {
@@ -498,6 +504,11 @@ button[aria-label^="Configurar exibição"],
   gap: 2px;
 }
 
+.portal-core-filter-value input[type="checkbox"],
+.portal-settings-column-item input[type="checkbox"] {
+  accent-color: var(--portal-brand-header);
+}
+
 .portal-core-column-menu[data-filter-active="true"] {
   background: var(--portal-neutral-bg);
   color: var(--portal-text-dark);
@@ -574,7 +585,7 @@ button[aria-label^="Configurar exibição"],
 
 .portal-settings-top-grid {
   display: grid;
-  grid-template-columns: minmax(250px, .9fr) minmax(280px, 1.1fr);
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 
