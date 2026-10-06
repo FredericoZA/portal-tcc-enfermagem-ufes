@@ -72,5 +72,5 @@ test('sidebar não duplica logs e assinaturas de Configurações', () => {
 });
 
 test('release atual é 1.0.77', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.77');
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.78');
 });
