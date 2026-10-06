@@ -43,6 +43,15 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
     if (!open) setHeaderHost(null);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   const current = useMemo(() => sections.find((section) => section.id === activeId) || sections[0], [sections, activeId]);
   if (!open || !current) return null;
 
