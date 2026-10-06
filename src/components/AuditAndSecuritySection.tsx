@@ -64,7 +64,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
   return (
     <div className="portal-admin-accounts-panel space-y-2">
 
-      <form onSubmit={handleSaveAccounts} className="portal-layer-panel space-y-3 rounded-lg border border-slate-300 p-2.5">
+      <form onSubmit={handleSaveAccounts} className="portal-layer-card space-y-3 rounded-lg border border-slate-300 p-2.5">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {/* Secretaria / Usuário Master */}
           <div className="min-w-0 space-y-2 md:first:border-r md:first:border-slate-300 md:first:pr-3">
