@@ -837,6 +837,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [selectedFilterYear, setSelectedFilterYear] = useState<number | 'all'>('all'); // Show all years by default in lists
   const [selectedDayDefenses, setSelectedDayDefenses] = useState<ProcessData[] | null>(null);
   const [selectedDayGcalEvents, setSelectedDayGcalEvents] = useState<any[] | null>(null);
+
+  useEffect(() => {
+    if (!selectedDayDefenses && !selectedDayGcalEvents) return;
+    const closeDayDefensesOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setSelectedDayDefenses(null);
+      setSelectedDayGcalEvents(null);
+    };
+    window.addEventListener('keydown', closeDayDefensesOnEscape);
+    return () => window.removeEventListener('keydown', closeDayDefensesOnEscape);
+  }, [selectedDayDefenses, selectedDayGcalEvents]);
+
   // Excel-style column sorting and filtering states
   const [sortColumn, setSortColumn] = useState<'date' | 'title' | 'student' | 'orientador' | 'progress' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
