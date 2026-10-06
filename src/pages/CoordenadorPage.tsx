@@ -270,6 +270,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   );
 
   const isDeclarationActionable = (processId: string): boolean => {
+    const process = allProcesses.find((item) => item.id === processId);
+    if (!process || process.avaliacao?.status !== 'CONCLUIDO') return false;
     const job = getDeclarationJob(processId);
     return !job || canRetryDeclarationJob(job);
   };
@@ -795,8 +797,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                 <div className="portal-sheet-toolbar-actions">
                   {activeTab !== 'concluidos' && (
                     <>
-                      <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={handleSignSelected} className="portal-sign-bulk-btn disabled:opacity-45" title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
-                      <button type="button" disabled={selectedIds.length < 2 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className="portal-sign-bulk-btn disabled:opacity-45" title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
+                      <button type="button" disabled={selectedIds.filter(isDeclarationActionable).length < 2 || signingIds.length > 0} onClick={handleSignSelected} className="portal-sign-bulk-btn disabled:opacity-45" title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
+                      <button type="button" disabled={selectedIds.filter(isDeclarationActionable).length < 2 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className="portal-sign-bulk-btn disabled:opacity-45" title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
                     </>
                   )}
                 </div>
