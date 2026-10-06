@@ -107,7 +107,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
 
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] px-3 py-2">
           <p className="min-w-0 flex-1 text-[10px] leading-4 text-slate-600">
-            Os e-mails de acesso são protegidos pela transferência segura de função. Este botão atualiza os dados administrativos sem iniciar uma transferência nem exigir nova autenticação.
+            A Presidente da Comissão é automaticamente o contato de recuperação do Master. Os e-mails de acesso são protegidos pela transferência segura de função. Este botão atualiza os dados administrativos sem iniciar uma transferência nem exigir nova autenticação.
           </p>
           <button type="submit" disabled={isSaving} className="portal-popup-action min-h-8 shrink-0 px-3 text-[10px]">
             <Save className="h-3.5 w-3.5" aria-hidden="true" />
