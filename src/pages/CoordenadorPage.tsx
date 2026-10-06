@@ -270,6 +270,9 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   );
 
   const isDeclarationActionable = (processId: string): boolean => {
+    const process = allProcesses.find((item) => item.id === processId)
+      || queue.find((item) => item?.process?.id === processId)?.process;
+    if (!process || process.avaliacao?.status !== 'CONCLUIDO') return false;
     const job = getDeclarationJob(processId);
     return !job || canRetryDeclarationJob(job);
   };
