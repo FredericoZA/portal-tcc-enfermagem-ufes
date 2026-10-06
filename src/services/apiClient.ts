@@ -227,6 +227,7 @@ export const apiClient = {
   },async()=>fetchApi<any>(`/api/public/verification/${encodeURIComponent(code)}/check-file`,{method:'POST',body:JSON.stringify({contentBase64:await fileToLegacyBase64(file,true)})})),
   downloadInstitutionalDossier:(id:string)=>downloadApiFile(`/api/admin/processes/${encodeURIComponent(id)}/dossier`),
   getDocumentModels:()=>fetchApi<Record<string,any>>('/api/admin/models'),
+  detectDocumentModelVariables:(type:string)=>fetchApi<{type:string;variables:string[];detectedAt:string}>(`/api/admin/models/${encodeURIComponent(type)}/detect-variables`,{method:'POST'}),
   uploadDocumentModelFile:(type:string,file:File)=>withDevelopmentFallback(file,async()=>{
     const staged=await stageFile(file,{purpose:'DOCUMENT_MODEL'});
     return fetchApi<any>(`/api/admin/models/${type}`,{method:'POST',body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type})});
