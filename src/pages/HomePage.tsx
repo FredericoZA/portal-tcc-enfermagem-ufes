@@ -1399,7 +1399,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   }}
                 >
                   <div
-                    className={`bg-white rounded-2xl border border-slate-300 ${modalMaxWidthClass} max-h-[88vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 ${defStyles.fontFamilyClass}`}
+                    className={`bg-[var(--portal-surface-page)] rounded-2xl border border-slate-300 ${modalMaxWidthClass} max-h-[88vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 ${defStyles.fontFamilyClass}`}
                     style={defStyles.rootStyle}
                     onClick={(e) => e.stopPropagation()}
                   >
