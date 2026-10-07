@@ -1,8 +1,8 @@
 import { portalConfirm } from '../services/portalDialogs';
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, ExternalLink, Eye, FilePlus2, FileUp, Link2, Loader2, ShieldAlert, Sparkles, Trash2 } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Eye, FilePlus2, FileUp, Link2, Loader2, Merge, Plus, ShieldAlert, Sparkles, Trash2, WandSparkles } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
-import { SettingsWorkspaceHeaderPortal } from './SettingsWorkspaceModal';
+import { getVariableUsage, mergeVariableAcrossArtifacts, normalizeVariableKey } from '../services/integrationStudioService';
 
 const BASE_SLOTS: Array<[string, string]> = [
   ['CONVITE', 'Carta-convite'], ['ATA', 'Ata de defesa'], ['TERMO', 'Termo de autorização para publicação'], ['DECLARACAO', 'Declaração de participação na banca']
@@ -10,18 +10,37 @@ const BASE_SLOTS: Array<[string, string]> = [
 
 const normalizeModelKey = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 48);
 const humanizeModelKey = (value: string) => value.toLowerCase().split('_').filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
-const action='inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-40';
-const greenAction='inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-[var(--portal-brand-header)] bg-[var(--portal-brand-header)] px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm hover:brightness-95 disabled:opacity-40';
+const action='inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-[9px] font-black tracking-wide text-slate-900 shadow-none hover:bg-slate-50 disabled:opacity-40';
 
-interface MasterDocumentModelsPanelProps { onCatalogChanged?: (models: Record<string, any>) => void; }
+type VariableColumn = { id:string; name:string; label?:string; description?:string; dataType?:'text'|'date'|'email'|'number'|'url'; aliases?:string[]; format?:{bold?:boolean;italic?:boolean;color?:string} };
+type StudioMatrixRow = { id:string; name:string; driveFileUrl:string; fields:Record<string,boolean> };
+type StudioDocTemplate = { id:string; type?:string; label:string; fileName:string; variables:string[]; templateContentText:string; [key:string]:any };
+type StudioEmailTemplate = { id:string; name:string; recipient?:string; subject:string; body:string; htmlBody?:string; [key:string]:any };
+type StudioFormTemplate = { id:string; title:string; questions:Array<{fieldKey:string;[key:string]:any}>; [key:string]:any };
 
-export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps> = ({ onCatalogChanged }) => {
+interface MasterDocumentModelsPanelProps {
+  onCatalogChanged?: (models: Record<string, any>) => void;
+  matrixColumns: VariableColumn[];
+  setMatrixColumns: React.Dispatch<React.SetStateAction<VariableColumn[]>>;
+  matrixRows: StudioMatrixRow[];
+  setMatrixRows: React.Dispatch<React.SetStateAction<StudioMatrixRow[]>>;
+  docTemplates: StudioDocTemplate[];
+  setDocTemplates: React.Dispatch<React.SetStateAction<StudioDocTemplate[]>>;
+  emailTemplates: StudioEmailTemplate[];
+  setEmailTemplates: React.Dispatch<React.SetStateAction<StudioEmailTemplate[]>>;
+  formTemplates: StudioFormTemplate[];
+  setFormTemplates: React.Dispatch<React.SetStateAction<StudioFormTemplate[]>>;
+}
+
+export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps> = ({ onCatalogChanged, matrixColumns, setMatrixColumns, matrixRows, setMatrixRows, docTemplates, setDocTemplates, emailTemplates, setEmailTemplates, formTemplates, setFormTemplates }) => {
   const [models, setModels] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState('');
   const [message, setMessage] = useState('');
   const [links, setLinks] = useState<Record<string, string>>({});
   const [newModelName, setNewModelName] = useState('');
+  const [showNewModel, setShowNewModel] = useState(false);
+  const [mergeTargets, setMergeTargets] = useState<Record<string,string>>({});
   const [pendingSlots, setPendingSlots] = useState<Array<[string, string]>>([]);
   const [previewType, setPreviewType] = useState('');
   const [samplePreview, setSamplePreview] = useState<Record<string, string>>({});
@@ -108,13 +127,55 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
     finally { setWorking(''); }
   };
 
+  const resolveVariableColumn = (raw:string) => {
+    const key=normalizeVariableKey(raw);
+    return matrixColumns.find(column => [column.id,column.name,...(column.aliases||[])].some(value => normalizeVariableKey(String(value||''))===key));
+  };
+
+  const consolidateDocumentVariables = (rawVariables:string[]) => {
+    const normalized=rawVariables.map(normalizeVariableKey).filter(Boolean);
+    if(!normalized.length){setMessage('Este documento não possui variáveis detectadas para consolidar.');return;}
+    setMatrixColumns(previous => {
+      const next=[...previous];
+      const known=new Set(next.flatMap(column=>[column.id,column.name,...(column.aliases||[])].map(value=>normalizeVariableKey(String(value||''))).filter(Boolean)));
+      for(const key of normalized){
+        if(known.has(key)) continue;
+        next.push({id:key,name:key,label:key.replace(/_/g,' ').toLowerCase().replace(/(^|\s)\S/g,letter=>letter.toUpperCase()),dataType:/EMAIL/.test(key)?'email':/DATA|HORA/.test(key)?'date':'text',aliases:[key]});
+        known.add(key);
+      }
+      return next;
+    });
+    setMessage(`${normalized.length} variável(is) consolidada(s) a partir deste documento.`);
+  };
+
+  const mergeDocumentVariable = async (type:string, raw:string) => {
+    const source=resolveVariableColumn(raw);
+    const mergeKey=`${type}:${normalizeVariableKey(raw)}`;
+    const targetId=mergeTargets[mergeKey]||'';
+    if(!source||!targetId||source.id===targetId)return;
+    const target=matrixColumns.find(column=>column.id===targetId);
+    if(!target)return;
+    const usage=getVariableUsage([source.id,source.name,...(source.aliases||[])],{matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates});
+    if(!(await portalConfirm(`Mesclar “${source.label||source.name}” em “${target.label||target.name}”? A variável antiga será preservada como alias.`)))return;
+    const result=mergeVariableAcrossArtifacts({matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates},source.id,target.id);
+    setMatrixColumns(result.matrixColumns);
+    setMatrixRows(result.matrixRows);
+    setDocTemplates(result.docTemplates);
+    setEmailTemplates(result.emailTemplates);
+    setFormTemplates(result.formTemplates);
+    setMergeTargets(current=>({...current,[mergeKey]:''}));
+    setMessage(`Mescla concluída em ${result.affectedArtifacts.length} artefato(s). Uso anterior: ${usage.documents.length} documento(s), ${usage.emails.length} e-mail(s) e ${usage.forms.length} formulário(s).`);
+  };
+
   return <section className="portal-master-models-catalog min-h-full" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
-    <SettingsWorkspaceHeaderPortal>
-      <div className="flex min-w-0 items-center gap-1.5">
-        <input id="new-master-model" value={newModelName} onChange={event=>setNewModelName(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();addSlot();}}} placeholder="Nome do novo documento" className="min-h-8 w-[220px] rounded-lg border border-white/60 bg-white px-2.5 py-1 text-[10px] text-slate-900 outline-none sm:w-[280px]"/>
-        <button type="button" onClick={addSlot} disabled={!newModelName.trim()} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-white/80 bg-transparent px-2.5 py-1 text-[9px] font-black uppercase text-white hover:bg-white/10 disabled:opacity-40"><FilePlus2 className="h-3.5 w-3.5"/>Adicionar documento</button>
+    <div className="flex items-center justify-between gap-3 p-3 pb-0">
+      <div>
+        <h3 className="text-[11px] font-black uppercase tracking-wide text-slate-900">Modelos oficiais e variáveis</h3>
+        <p className="mt-0.5 text-[9px] text-slate-600">Cada variável é administrada dentro do documento em que existe.</p>
       </div>
-    </SettingsWorkspaceHeaderPortal>
+      <button type="button" onClick={()=>setShowNewModel(value=>!value)} className={action} aria-label="Adicionar documento"><Plus className="h-3.5 w-3.5"/>Novo documento</button>
+    </div>
+    {showNewModel&&<div className="mx-3 mt-2 flex max-w-xl items-center gap-2 rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)] p-2.5"><input id="new-master-model" autoFocus value={newModelName} onChange={event=>setNewModelName(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();addSlot();setShowNewModel(false);}}} placeholder="Nome do novo documento" className="min-h-8 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[10px] text-slate-900 outline-none"/><button type="button" onClick={()=>{addSlot();setShowNewModel(false);}} disabled={!newModelName.trim()} className={action}><FilePlus2 className="h-3.5 w-3.5"/>Criar</button></div>}
 
     {message&&<p role="status" className="mx-2 mt-2 rounded-lg border border-slate-300 px-2.5 py-1.5 text-[10px] font-semibold text-slate-700" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>{message}</p>}
 
@@ -124,17 +185,16 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
         <div className="flex items-center justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-[10px] text-slate-900">{model?.label||label}</strong><span className="block truncate text-[8.5px] text-slate-500">{hasFile?`${model.fileName} · v${model.activeVersion||1}`:'Aguardando DOCX'}{model?.variables?.length?` · ${model.variables.length} variáveis`:''}</span></div><div className="flex shrink-0 items-center gap-1">{integrityReady?<CheckCircle2 className="h-4 w-4 text-[var(--portal-brand-action)]"/>:<ShieldAlert className="h-4 w-4 text-amber-700"/>}<button type="button" onClick={()=>void removeModel(type,String(model?.label||label))} disabled={Boolean(working)} aria-label={`Excluir modelo ${model?.label||label}`} title={`Excluir modelo ${model?.label||label}`} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-[#c62828] disabled:opacity-40">{deleting?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Trash2 className="h-3.5 w-3.5"/>}</button></div></div>
         {linkImportEnabled&&<div className="mt-1.5 flex gap-1"><input aria-label={`Link do modelo ${label}`} value={links[type]||''} onChange={event=>setLinks(current=>({...current,[type]:event.target.value}))} placeholder="Link ou ID do Drive" className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px]"/><button type="button" onClick={()=>void importLink(type)} disabled={Boolean(working)||!(links[type]||'').trim()} className={action}><Link2 className="h-3 w-3"/>Importar</button></div>}
         <div className="mt-1.5 flex flex-wrap gap-1.5">
-          <label className={`${greenAction} cursor-pointer`}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}{hasFile?'Substituir DOCX':'Enviar DOCX'}<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/></label>
+          <label className={`${action} cursor-pointer`}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}{hasFile?'Substituir DOCX':'Enviar DOCX'}<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/></label>
           {hasFile&&model?.driveFileUrl&&<a href={model.driveFileUrl} target="_blank" rel="noreferrer" className={action}><Eye className="h-3.5 w-3.5"/>Visualizar modelo original</a>}
-          {hasFile&&['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)&&<button type="button" onClick={()=>void generateSamplePreview(type)} disabled={samplePreviewLoading===type} className={greenAction}>{samplePreviewLoading===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Sparkles className="h-3.5 w-3.5"/>}Prévia preenchida</button>}
-          {hasFile&&<button type="button" onClick={()=>void detectVariables(type)} disabled={working===`detect-${type}`} className={action}>{working===`detect-${type}`?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Sparkles className="h-3.5 w-3.5"/>}Detectar variáveis</button>}
+          {hasFile&&['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)&&<button type="button" onClick={()=>void generateSamplePreview(type)} disabled={samplePreviewLoading===type} className={action}>{samplePreviewLoading===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Sparkles className="h-3.5 w-3.5"/>}Prévia preenchida</button>}
           {model?.driveFileUrl&&<a href={model.driveFileUrl} target="_blank" rel="noreferrer" className={action}><ExternalLink className="h-3.5 w-3.5"/>Abrir no Drive</a>}
         </div>
-        <div className="mt-2 rounded-md border border-slate-300 p-2" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
-          <div className="mb-1 text-[8.5px] font-black uppercase tracking-wide text-slate-600">Variáveis deste modelo</div>
+        <div className="mt-2 rounded-xl border border-slate-300 p-2.5" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
+          <div className="flex flex-wrap items-center justify-between gap-2"><div><div className="text-[8.5px] font-black uppercase tracking-wide text-slate-700">Variáveis deste documento</div><p className="mt-0.5 text-[8px] text-slate-500">Descoberta e consolidação ficam vinculadas ao documento.</p></div><div className="flex gap-1.5">{hasFile&&<button type="button" onClick={()=>void detectVariables(type)} disabled={working===`detect-${type}`} className={action}>{working===`detect-${type}`?<Loader2 className="h-3 w-3 animate-spin"/>:<Sparkles className="h-3 w-3"/>}Descobrir</button>}{model?.variables?.length?<button type="button" onClick={()=>consolidateDocumentVariables(model.variables)} className={action}><WandSparkles className="h-3 w-3"/>Consolidar</button>:null}</div></div>
           {model?.variables?.length
-            ? <div className="flex flex-wrap gap-1">{model.variables.map((variable:string)=><code key={variable} className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[8.5px] font-bold text-slate-700">{variable}</code>)}</div>
-            : <p className="text-[9px] text-slate-500">{hasFile?'Nenhuma variável foi detectada neste arquivo.':'As variáveis aparecerão aqui depois do envio do DOCX.'}</p>}
+            ? <div className="mt-2 space-y-1.5">{model.variables.map((variable:string)=>{const key=normalizeVariableKey(variable);const column=resolveVariableColumn(variable);const mergeKey=`${type}:${key}`;return <div key={variable} className="grid gap-1.5 rounded-lg border border-slate-300 bg-white p-2 lg:grid-cols-[minmax(150px,.9fr)_minmax(170px,1fr)_120px_minmax(180px,1fr)_auto] lg:items-center"><code className="truncate text-[8.5px] font-black text-[var(--portal-brand-action)]">{variable}</code>{column?<input value={column.label||''} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,label:event.target.value}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]" placeholder="Nome legível"/>:<span className="text-[9px] text-amber-800">Pendente de consolidação</span>}{column?<select value={column.dataType||'text'} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,dataType:event.target.value as VariableColumn['dataType']}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]"><option value="text">Texto</option><option value="date">Data</option><option value="email">E-mail</option><option value="number">Número</option><option value="url">URL</option></select>:<span/>}{column?<select value={mergeTargets[mergeKey]||''} onChange={event=>setMergeTargets(current=>({...current,[mergeKey]:event.target.value}))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]"><option value="">Mesclar com…</option>{matrixColumns.filter(item=>item.id!==column.id).map(item=><option key={item.id} value={item.id}>{item.label||item.name}</option>)}</select>:<span/>}{column&&mergeTargets[mergeKey]?<button type="button" onClick={()=>void mergeDocumentVariable(type,variable)} className={action}><Merge className="h-3 w-3"/>Mesclar</button>:<span className="text-right text-[8px] text-slate-400">{column?'Canônica':'Pendente'}</span>}</div>;})}</div>
+            : <p className="mt-2 rounded-lg border border-dashed border-slate-300 bg-white p-3 text-[9px] text-slate-500">{hasFile?'Nenhuma variável foi detectada neste arquivo. Use “Descobrir”.':'As variáveis aparecerão aqui depois do envio do DOCX.'}</p>}
         </div>
         {previewType===type&&hasFile&&samplePreview[type]&&<div className="mt-2 overflow-hidden rounded-lg border border-slate-300 bg-white"><div className="flex items-center justify-between border-b border-slate-300 px-2.5 py-1.5" style={{ backgroundColor: 'var(--portal-surface-card)' }}><span className="text-[9px] font-black uppercase text-slate-600">Amostra preenchida com dados fictícios</span><span className="text-[8.5px] text-slate-500">Sem validade · somente conferência visual</span></div><iframe title={`Visualização de ${model?.label||label}`} src={samplePreview[type]} className="h-[520px] w-full bg-white" loading="lazy"/></div>}
         {model?.versions?.length>1&&<details className="mt-1.5 rounded-md border border-slate-300 bg-white px-2 py-1"><summary className="cursor-pointer text-[8.5px] font-black uppercase text-slate-600">Histórico ({model.versions.length})</summary><div className="mt-1 space-y-1">{[...model.versions].reverse().map((version:any)=><div key={version.version} className="flex items-center justify-between gap-2 text-[8.5px]"><span className="truncate"><strong>v{version.version}</strong> · {version.fileName}</span>{version.version!==model.activeVersion&&version.contentSha256&&<button type="button" onClick={()=>void restore(type,version.version)} className={action}>Restaurar</button>}</div>)}</div></details>}
