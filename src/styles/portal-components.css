@@ -1065,14 +1065,14 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-settings-workspace-divider {
-  height: var(--portal-sheet-title-divider);
-  min-height: var(--portal-sheet-title-divider);
+  height: var(--portal-sheet-content-divider);
+  min-height: var(--portal-sheet-content-divider);
   background: var(--portal-surface-inner);
 }
 
 .portal-settings-single-pane,
 .portal-settings-workspace-main {
-  background: var(--portal-surface-panel);
+  background: var(--portal-surface-page);
 }
 
 .portal-settings-single-pane > :first-child {
@@ -1080,7 +1080,19 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-settings-workspace-content[data-portal-full-bleed="true"] {
-  background: var(--portal-surface-panel);
+  background: var(--portal-surface-page);
+}
+
+.portal-settings-workspace[data-portal-compact="true"] {
+  min-height: 0;
+}
+
+.portal-settings-workspace[data-portal-compact="true"] .portal-settings-single-pane {
+  min-height: 280px;
+}
+
+.portal-identity-panel > .grid > label {
+  background: var(--portal-surface-panel) !important;
 }
 
 .portal-settings-workspace aside {
