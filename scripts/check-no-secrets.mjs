@@ -68,11 +68,21 @@ function isPlaceholder(rawValue) {
 
   if (!value) return true;
   if (/^(?:\.\.\.|<[^>]+>|CHANGE_ME|REPLACE_ME|SEU[-_A-Z0-9]*|ID_DA_[A-Z0-9_]+)$/i.test(value)) return true;
-  if (value.startsWith('${{') || value.startsWith('${') || value.includes('process.env.')) return true;
+
+  // Só uma substituição que ocupa o valor inteiro é considerada segura. Assim,
+  // `${PROTO}://user:senha@host/db` continua sendo inspecionado como literal.
+  if (/^\$\{[A-Za-z_][A-Za-z0-9_]*\}$/.test(value)) return true;
+  if (/^\$\{\{\s*[^{}]+\s*\}\}$/.test(value)) return true;
+
+  // Referências de ambiente em código são aceitas apenas quando todo o valor é
+  // uma expressão simples, sem sufixos/prefixos literais que possam esconder segredo.
+  if (/^process\.env\.[A-Z0-9_]+$/i.test(value)) return true;
+  if (/^String\(process\.env\.[A-Z0-9_]+\s*\|\|\s*['"]{2}\)$/i.test(value)) return true;
   if (/^(?:true|false|null|undefined)$/i.test(value)) return true;
 
-  // Valores calculados em código não são credenciais literais.
-  if (/^[A-Za-z_$][\w$]*(?:\.|\(|\[)/.test(value)) return true;
+  // Valores calculados em código não são credenciais literais quando a expressão
+  // inteira é uma chamada/acesso; strings interpoladas não entram nesta exceção.
+  if (/^[A-Za-z_$][\w$]*(?:\.|\(|\[)[^'"`]*$/.test(value)) return true;
 
   return false;
 }
@@ -85,13 +95,19 @@ function assertScannerContract() {
   const quotedJson = `"${databaseKey}": "postgresql://example:example@db.invalid/app",`;
   const envAssignment = `${astenKey}="example-token-not-a-real-credential"`;
   const placeholderJson = `"${databaseKey}": ""`;
+  const wholeSubstitution = `${databaseKey}=\${DB_CONNECTION}`;
+  const mixedSubstitution = `${databaseKey}=\${DB_PROTOCOL}://example:hardcoded-value@db.invalid/app`;
 
   const jsonMatch = assignmentPattern.exec(quotedJson);
   const envMatch = assignmentPattern.exec(envAssignment);
   const placeholderMatch = assignmentPattern.exec(placeholderJson);
+  const wholeSubstitutionMatch = assignmentPattern.exec(wholeSubstitution);
+  const mixedSubstitutionMatch = assignmentPattern.exec(mixedSubstitution);
   if (!jsonMatch || isPlaceholder(jsonMatch[2])) throw new Error('Contrato interno do scanner falhou para chave JSON citada.');
   if (!envMatch || isPlaceholder(envMatch[2])) throw new Error('Contrato interno do scanner falhou para atribuição .env.');
   if (!placeholderMatch || !isPlaceholder(placeholderMatch[2])) throw new Error('Contrato interno do scanner falhou para placeholder vazio.');
+  if (!wholeSubstitutionMatch || !isPlaceholder(wholeSubstitutionMatch[2])) throw new Error('Contrato interno do scanner falhou para substituição integral.');
+  if (!mixedSubstitutionMatch || isPlaceholder(mixedSubstitutionMatch[2])) throw new Error('Contrato interno do scanner falhou para substituição mista com literal.');
 }
 
 function shouldScanAssignments(file) {
