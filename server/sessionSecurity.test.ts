@@ -24,8 +24,8 @@ function signedCookie(overrides: Record<string, unknown> = {}): string {
   return `${payload}.${signature}`;
 }
 
-async function attach(cookie: string) {
-  const req: any = { headers: { cookie: `portal_tcc_session=${encodeURIComponent(cookie)}` }, method: 'POST', originalUrl: '/api/test', path: '/api/test' };
+async function attach(cookie: string, name = 'portal_tcc_session') {
+  const req: any = { headers: { cookie: `${name}=${encodeURIComponent(cookie)}` }, method: 'POST', originalUrl: '/api/test', path: '/api/test' };
   const res: any = { setHeader() {} };
   await new Promise<void>((resolve) => attachPortalIdentity(req, res, () => resolve()));
   return req;
@@ -60,6 +60,28 @@ test('sessão assinada com uid incoerente é rejeitada', async () => {
   process.env.PORTAL_SESSION_SECRET = SECRET;
   try {
     const req = await attach(signedCookie({ uid: 'email:outro@example.edu' }));
+    assert.equal(getPortalIdentity(req), null);
+    assert.match(String(req.portalAuthError), /Sessão inválida/i);
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousNodeEnv;
+    if (previousVercel === undefined) delete process.env.VERCEL; else process.env.VERCEL = previousVercel;
+    if (previousSecret === undefined) delete process.env.PORTAL_SESSION_SECRET; else process.env.PORTAL_SESSION_SECRET = previousSecret;
+  }
+});
+
+test('sessão demo assinada nunca é aceita em runtime de produção', async () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  const previousVercel = process.env.VERCEL;
+  const previousSecret = process.env.PORTAL_SESSION_SECRET;
+  process.env.NODE_ENV = 'production';
+  delete process.env.VERCEL;
+  process.env.PORTAL_SESSION_SECRET = SECRET;
+  try {
+    const req = await attach(signedCookie({
+      uid: 'demo:admin@example.edu',
+      isDemo: true,
+      method: 'DEVELOPMENT_DEMO'
+    }), '__Host-portal_tcc_session');
     assert.equal(getPortalIdentity(req), null);
     assert.match(String(req.portalAuthError), /Sessão inválida/i);
   } finally {
