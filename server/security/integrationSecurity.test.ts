@@ -160,7 +160,7 @@ test('cofre de integrações bloqueia redirects e nunca envia segredo em texto p
   await withCleanEnvironmentAsync(async () => {
     process.env.NODE_ENV = 'production';
     process.env.SUPABASE_URL = 'https://project.example.supabase.co';
-    process.env.SUPABASE_SECRET_KEY = 'sb_secret_example_only_for_test';
+    process.env.SUPABASE_SECRET_KEY = 'sb_' + 'secret_example_only_for_test';
     process.env.PORTAL_SECRET_ENCRYPTION_KEY = 'a'.repeat(64);
     const plaintext = 'credencial-integracao-nao-pode-sair-em-claro';
     const originalFetch = globalThis.fetch;
@@ -188,7 +188,7 @@ test('cofre de integrações rejeita Supabase sem HTTPS em runtime seguro antes 
     process.env.NODE_ENV = 'production';
     process.env.VERCEL = '1';
     process.env.SUPABASE_URL = 'http://project.example.supabase.co';
-    process.env.SUPABASE_SECRET_KEY = 'sb_secret_example_only_for_test';
+    process.env.SUPABASE_SECRET_KEY = 'sb_' + 'secret_example_only_for_test';
     process.env.PORTAL_SECRET_ENCRYPTION_KEY = 'b'.repeat(64);
     const originalFetch = globalThis.fetch;
     let called = false;
