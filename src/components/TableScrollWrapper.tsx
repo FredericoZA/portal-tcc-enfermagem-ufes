@@ -5,12 +5,12 @@ interface TableScrollWrapperProps {
 }
 
 /**
- * Contêiner canônico das planilhas.
- * O comportamento de resize, filtros, sticky, paginação e arraste fica
- * restrito a este host, sem varredura global do aplicativo.
+ * Contêiner estrutural das planilhas.
+ * O comportamento de resize, filtros, sticky, paginação e arraste é aplicado
+ * pelo único PortalSpreadsheetRuntime montado na raiz da aplicação.
  */
 export const TableScrollWrapper: React.FC<TableScrollWrapperProps> = ({ children }) => {
-   return (
+  return (
     <div
         data-portal-scroll-host="true"
         className="portal-spreadsheet-scroll-host table-sticky-container w-full overflow-auto bg-white"
