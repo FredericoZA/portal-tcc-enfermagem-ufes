@@ -17,9 +17,9 @@ test('superfícies administrativas usam a paleta canônica do Portal', async () 
   assert.ok(css.includes('--portal-surface-inner: #ffffff'));
   assert.ok(css.includes('--portal-brand-action: #337959'));
   assert.ok(css.includes('--portal-brand-header: #005830'));
-  assert.ok(modal.includes("var(--portal-surface-panel)"));
+  assert.ok(modal.includes("var(--portal-surface-page)"));
   assert.ok(modal.includes("var(--portal-surface-card)"));
-  assert.ok(modal.includes("var(--portal-surface-inner)"));
+  assert.ok(css.includes("background: var(--portal-surface-inner)"));
   assert.ok(css.includes('.portal-settings-launcher'));
   assert.ok(css.includes('background: var(--portal-surface-card)'));
 });
