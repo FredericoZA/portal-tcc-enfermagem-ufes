@@ -54,10 +54,15 @@ function encryptionKeysAreSeparated(): boolean {
     process.env.PORTAL_SESSION_SECRET,
     process.env.PORTAL_OTP_PEPPER,
     process.env.GOOGLE_OAUTH_STATE_SECRET,
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET,
     process.env.PORTAL_VERIFICATION_SECRET,
     process.env.PORTAL_UPLOAD_BINDING_SECRET,
+    process.env.PORTAL_SECURITY_WEBHOOK_SECRET,
     process.env.ASTEN_SESSION_ENCRYPTION_KEY,
-    process.env.ASTEN_WEBHOOK_SECRET
+    process.env.ASTEN_WEBHOOK_SECRET,
+    process.env.CRON_SECRET,
+    process.env.SUPABASE_SECRET_KEY,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
   ].map((item) => String(item || '').trim()).filter(Boolean);
   return values.every((value) => !otherSecrets.includes(value));
 }
@@ -188,7 +193,9 @@ export async function saveIntegrationSecret(
       metadata: { ...metadata, [CRYPTO_KEY_METADATA_FIELD]: keyId },
       updated_at: now
     }),
-    signal: AbortSignal.timeout(15_000)
+    signal: AbortSignal.timeout(15_000),
+    redirect: 'error',
+    cache: 'no-store'
   });
   if (!response.ok) throw new Error(`Não foi possível guardar a credencial de ${normalizedProvider} (${response.status}).`);
 }
@@ -202,7 +209,7 @@ export async function loadIntegrationSecret(provider: string): Promise<{ value: 
   }
   const response = await fetch(
     `${supabaseUrl()}/rest/v1/portal_integration_secrets?provider=eq.${encodeURIComponent(normalizedProvider)}&select=provider,ciphertext,iv,auth_tag,metadata,updated_at&limit=1`,
-    { headers: adminHeaders(), signal: AbortSignal.timeout(12_000) }
+    { headers: adminHeaders(), signal: AbortSignal.timeout(12_000), redirect: 'error', cache: 'no-store' }
   );
   if (!response.ok) throw new Error(`Não foi possível ler a credencial de ${normalizedProvider} (${response.status}).`);
   const rows = await response.json() as StoredSecretRow[];
@@ -221,7 +228,7 @@ export async function deleteIntegrationSecret(provider: string): Promise<void> {
   }
   const response = await fetch(
     `${supabaseUrl()}/rest/v1/portal_integration_secrets?provider=eq.${encodeURIComponent(normalizedProvider)}`,
-    { method: 'DELETE', headers: adminHeaders(), signal: AbortSignal.timeout(12_000) }
+    { method: 'DELETE', headers: adminHeaders(), signal: AbortSignal.timeout(12_000), redirect: 'error', cache: 'no-store' }
   );
   if (!response.ok) throw new Error(`Não foi possível remover a credencial de ${normalizedProvider} (${response.status}).`);
 }
