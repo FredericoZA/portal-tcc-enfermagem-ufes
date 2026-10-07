@@ -1905,7 +1905,7 @@ export const ConfiguracoesPage: React.FC = () => {
 
         setDocTemplates(syncedTemplates);
         setSelectedDocId(syncedTemplates[0].id);
-        showNotification(`🟢 ${syncedTemplates.length} arquivo(s) espelhado(s) com sucesso da pasta do Google Drive!`);
+        showNotification(`${syncedTemplates.length} arquivo(s) espelhado(s) com sucesso da pasta do Google Drive!`);
       } else {
         showNotification('ℹ️ Nenhum arquivo encontrado nesta pasta do Google Drive.');
       }
@@ -1990,7 +1990,7 @@ export const ConfiguracoesPage: React.FC = () => {
             driveFileUrl: `https://docs.google.com/document/d/${fileId}/edit`,
             lastUpdated: new Date().toLocaleString('pt-BR')
           } : d));
-          showNotification(`🟢 Sucesso: O modelo "${doc.label}" foi atualizado e espelhado no Google Docs!`);
+          showNotification(`O modelo "${doc.label}" foi atualizado e espelhado no Google Docs.`);
         } else {
           showNotification('Criando arquivo no Google Docs para espelhamento...');
           const metadata = {
@@ -2016,7 +2016,7 @@ export const ConfiguracoesPage: React.FC = () => {
               driveFileUrl: `https://docs.google.com/document/d/${newFile.id}/edit`,
               lastUpdated: new Date().toLocaleString('pt-BR')
             } : d));
-            showNotification(`🟢 Sucesso: O modelo "${doc.label}" foi criado e espelhado na pasta /Modelos!`);
+            showNotification(`O modelo "${doc.label}" foi criado e espelhado na pasta /Modelos.`);
           }
         }
       }
