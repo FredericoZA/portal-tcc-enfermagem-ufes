@@ -4,10 +4,10 @@ import { readFileSync } from 'node:fs';
 
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
-test('contrato global de pop-up permanece canônico na evolução 1.0.79',()=>{
+test('contrato global de pop-up permanece canônico na rodada TCC12',()=>{
   const css=read('src/styles/portal-components.css');
   const modal=read('src/components/SettingsWorkspaceModal.tsx');
-  assert.match(css,/Portal TCC 1\.0\.79 — pop-ups e artefatos institucionais/);
+  assert.match(css,/Portal TCC12 — pop-ups e artefatos institucionais/);
   assert.match(css,/\.portal-modal-header \{[\s\S]*background: var\(--portal-brand-header\)/);
   assert.match(css,/\.portal-modal-surface,[\s\S]*background: var\(--portal-surface-panel\)/);
   assert.match(modal,/portal-modal-header-close/);
@@ -93,6 +93,6 @@ test('Indicadores preserva margens por ser página de cards',()=>{
   assert.match(page,/px-3 pb-4 pt-3 sm:px-4 sm:pt-4/);
 });
 
-test('release Portal TCC evoluiu para 1.0.79',()=>{
-  assert.equal(JSON.parse(read('package.json')).version,'1.0.79');
+test('release Portal TCC permanece em 1.0.78 nesta rodada visual',()=>{
+  assert.equal(JSON.parse(read('package.json')).version,'1.0.78');
 });
