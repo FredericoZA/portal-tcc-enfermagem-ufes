@@ -379,7 +379,7 @@ export const TccDetailPopupEditorModal: React.FC<TccDetailPopupEditorModalProps>
                 title="Calcular cores derivadas de fundo, texto e borda com base na cor principal"
               >
                 <Wand2 className="w-3.5 h-3.5 text-emerald-700" />
-                <span>⚡ Gerar Derivadas</span>
+                <span>Gerar Derivadas</span>
               </button>
             </div>
 
