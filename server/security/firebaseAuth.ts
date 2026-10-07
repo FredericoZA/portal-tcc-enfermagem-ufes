@@ -34,10 +34,13 @@ export function getPortalSessionRuntimeStatus() {
     || sessionSecret() !== String(process.env.GOOGLE_OAUTH_STATE_SECRET).trim();
   const distinctFromSensitiveSecrets = process.env.NODE_ENV !== 'production' || ![
     process.env.PORTAL_SECRET_ENCRYPTION_KEY,
+    process.env.PORTAL_SECRET_ENCRYPTION_KEY_V2,
     process.env.PORTAL_VERIFICATION_SECRET,
     process.env.PORTAL_UPLOAD_BINDING_SECRET,
+    process.env.PORTAL_SECURITY_WEBHOOK_SECRET,
     process.env.ASTEN_SESSION_ENCRYPTION_KEY,
-    process.env.ASTEN_WEBHOOK_SECRET
+    process.env.ASTEN_WEBHOOK_SECRET,
+    process.env.CRON_SECRET
   ].map((value) => String(value || '').trim()).filter(Boolean).includes(sessionSecret());
   return {
     configured: secretConfigured && distinctFromOtp && distinctFromGoogleOAuth && distinctFromSensitiveSecrets,
