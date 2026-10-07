@@ -1907,7 +1907,7 @@ export const ConfiguracoesPage: React.FC = () => {
         setSelectedDocId(syncedTemplates[0].id);
         showNotification(`${syncedTemplates.length} arquivo(s) espelhado(s) com sucesso da pasta do Google Drive!`);
       } else {
-        showNotification('ℹ️ Nenhum arquivo encontrado nesta pasta do Google Drive.');
+        showNotification('Nenhum arquivo encontrado nesta pasta do Google Drive.');
       }
     } catch (err: any) {
       console.error(err);
