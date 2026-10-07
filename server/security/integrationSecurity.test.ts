@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildAstenEnvelopeParams,
+  callAsten,
   getAstenIntegrationStatus,
   getAstenSecurityPreflight,
   safeCompareWebhookSecret
@@ -17,12 +18,17 @@ import { getPortalSessionRuntimeStatus } from './firebaseAuth';
 const MANAGED_ENV = [
   'NODE_ENV',
   'VERCEL',
+  'APP_URL',
+  'PORTAL_PUBLIC_URL',
   'ASTEN_INTEGRATION_ENABLED',
   'ASTEN_ALLOW_STORED_TOKEN',
   'ASTEN_API_KEY',
   'ASTEN_SESSION_ENCRYPTION_KEY',
   'ASTEN_CALLBACK_URL',
   'ASTEN_WEBHOOK_SECRET',
+  'ASTEN_REQUIRE_CODE',
+  'ASTEN_REQUIRE_LOGIN',
+  'ASTEN_AUTHENTICATION_OPTION',
   'GOOGLE_OAUTH_CLIENT_ID',
   'GOOGLE_OAUTH_CLIENT_SECRET',
   'GOOGLE_OAUTH_STATE_SECRET',
@@ -32,16 +38,28 @@ const MANAGED_ENV = [
   'PORTAL_ALLOW_LOCAL_OTP_STORE'
 ] as const;
 
-function withCleanEnvironment(run: () => void): void {
-  const previous = Object.fromEntries(MANAGED_ENV.map((key) => [key, process.env[key]]));
-  for (const key of MANAGED_ENV) delete process.env[key];
-  try { run(); } finally {
-    for (const key of MANAGED_ENV) {
-      const value = previous[key];
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
+function snapshotManagedEnvironment() {
+  return Object.fromEntries(MANAGED_ENV.map((key) => [key, process.env[key]]));
+}
+
+function restoreManagedEnvironment(previous: Record<string, string | undefined>): void {
+  for (const key of MANAGED_ENV) {
+    const value = previous[key];
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
   }
+}
+
+function withCleanEnvironment(run: () => void): void {
+  const previous = snapshotManagedEnvironment();
+  for (const key of MANAGED_ENV) delete process.env[key];
+  try { run(); } finally { restoreManagedEnvironment(previous); }
+}
+
+async function withCleanEnvironmentAsync(run: () => Promise<void>): Promise<void> {
+  const previous = snapshotManagedEnvironment();
+  for (const key of MANAGED_ENV) delete process.env[key];
+  try { await run(); } finally { restoreManagedEnvironment(previous); }
 }
 
 test('Asten bloqueia despacho e criação de envelope sem callback HTTPS autenticado', () => {
@@ -75,6 +93,57 @@ test('Asten aceita somente callback HTTPS e segredo de webhook forte', () => {
 
     process.env.ASTEN_WEBHOOK_SECRET = 'w'.repeat(31);
     assert.equal(safeCompareWebhookSecret(process.env.ASTEN_WEBHOOK_SECRET), false);
+  });
+});
+
+test('Asten rejeita credencial com caracteres de controle antes de acessar a rede', async () => {
+  await withCleanEnvironmentAsync(async () => {
+    process.env.ASTEN_INTEGRATION_ENABLED = 'true';
+    const originalFetch = globalThis.fetch;
+    let called = false;
+    (globalThis as any).fetch = async () => { called = true; throw new Error('não deveria acessar a rede'); };
+    try {
+      await assert.rejects(callAsten('getIdentificador', {}, 'token-valido-123\nX-Injetado: sim'), /Configuração Asten inválida/i);
+      assert.equal(called, false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
+test('Asten bloqueia redirects e não propaga credencial em mensagem de erro do provedor', async () => {
+  await withCleanEnvironmentAsync(async () => {
+    process.env.ASTEN_INTEGRATION_ENABLED = 'true';
+    const token = 'asten-token-ultrassecreto-123456789';
+    const originalFetch = globalThis.fetch;
+    let capturedUrl = '';
+    let capturedInit: RequestInit | undefined;
+    (globalThis as any).fetch = async (input: string | URL | Request, init?: RequestInit) => {
+      capturedUrl = String(input);
+      capturedInit = init;
+      return new Response(JSON.stringify({ error: { message: `Token recusado: ${token}\ntrace interno` } }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' }
+      });
+    };
+    try {
+      await assert.rejects(
+        callAsten('getIdentificador', {}, token),
+        (error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          assert.equal(message.includes(token), false);
+          assert.equal(message.includes('[credencial omitida]'), true);
+          assert.equal(/[\r\n]/.test(message), false);
+          return true;
+        }
+      );
+      assert.equal(capturedUrl, 'https://plataforma.astenassinatura.com.br/api/getIdentificador');
+      assert.equal(capturedInit?.redirect, 'error');
+      assert.equal(capturedInit?.cache, 'no-store');
+      assert.equal((capturedInit?.headers as Record<string, string>)['x-api-key'], token);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });
 
