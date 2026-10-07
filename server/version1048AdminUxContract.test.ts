@@ -38,10 +38,11 @@ test('Modelos e Variáveis usa popups específicos e une modelos com documentos'
     assert.ok(config.includes(`title: '${title}'`));
   }
   assert.ok(config.includes("activeSettingsPanel === 'models-documents'"));
-  assert.ok(config.includes("key=\"studio-variables-unified\""));
+  assert.ok(!config.includes("key=\"studio-variables-unified\""));
+  assert.ok(config.includes("label: 'Documentos e variáveis'"));
   assert.ok(!config.includes("id: 'variables', title: 'Variáveis'"));
   assert.ok(!config.includes('initialTab="documents"'));
-  assert.ok(models.includes('Variáveis deste modelo'));
+  assert.ok(models.includes('Variáveis deste documento'));
   assert.ok(models.includes('Visualizar modelo'));
 });
 
