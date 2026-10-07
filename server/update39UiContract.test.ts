@@ -56,8 +56,12 @@ test('personalização expõe apenas superfícies atuais sem camada corretiva gl
 });
 
 test('administração institucional permanece restrita ao Master com reautenticação em trocas sensíveis', async () => {
-  const identity = await source('src/components/CommissionIdentityPanel.tsx');
+  const [identity, reauthentication] = await Promise.all([
+    source('src/components/CommissionIdentityPanel.tsx'),
+    source('src/services/reauthentication.ts'),
+  ]);
   assert.ok(identity.includes('if (!isMaster) return null'));
   assert.ok(identity.includes('createAdministrationTransfer'));
-  assert.ok(identity.includes('REAUTHENTICATION_REQUIRED'));
+  assert.ok(identity.includes('retryAfterPortalReauthentication'));
+  assert.ok(reauthentication.includes('REAUTHENTICATION_REQUIRED'));
 });
