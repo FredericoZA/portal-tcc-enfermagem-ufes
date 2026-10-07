@@ -1092,7 +1092,7 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-identity-panel > .grid > label {
-  background: var(--portal-surface-panel) !important;
+  background: var(--portal-surface-panel);
 }
 
 .portal-settings-workspace aside {
