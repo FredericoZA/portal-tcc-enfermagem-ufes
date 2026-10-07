@@ -28,8 +28,8 @@ import { loadTableConfig, type ColumnDef } from './TableColumnSelectorPanel';
 import { loadGlobalTableConfig, type TableTextFormat } from '../utils/tableFormatters';
 import { SettingsWorkspaceHeaderPortal } from './SettingsWorkspaceModal';
 
-const whiteButton = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-white bg-white px-2.5 py-1 text-[9px] font-black tracking-wide text-slate-900 shadow-sm transition hover:bg-slate-50 disabled:opacity-50';
-const popupActionButton = 'portal-popup-action min-h-8 px-2.5 text-[10px]';
+const whiteButton = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-[9px] font-black tracking-wide text-slate-900 shadow-none transition hover:bg-slate-50 disabled:opacity-50';
+const popupActionButton = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-[10px] font-black text-slate-900 shadow-none transition hover:bg-slate-50 disabled:opacity-50';
 const inputClass = 'w-full min-h-8 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900 outline-none focus:border-slate-400';
 
 const roleLabels: Record<ProcessRole, string> = {
@@ -198,7 +198,7 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
     <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} allColumns={ACCESS_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="authorized_access" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Acesso"/>
   </div>;
 
-  return <section id="authorized-access-panel" data-settings-sheet="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'min-h-full' : 'overflow-hidden rounded-xl border border-slate-300 shadow-sm'} style={{ backgroundColor: 'var(--portal-surface-card)' }}>
+  return <section id="authorized-access-panel" data-settings-sheet="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'min-h-full' : 'overflow-hidden rounded-xl border border-slate-300 shadow-sm'} style={{ backgroundColor: 'var(--portal-surface-page)' }}>
     {embedded ? <SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal> : <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-3 py-2 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><div className="flex items-center gap-2"><UserCheck className="h-4 w-4"/><h3 className="text-xs font-black uppercase tracking-wide">Acesso</h3></div>{toolbar}</header>}
 
     <div className="p-0">
