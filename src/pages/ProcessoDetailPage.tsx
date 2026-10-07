@@ -1363,12 +1363,12 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <div className="flex flex-wrap items-center gap-1.5 text-[11px] pt-2 border-t border-slate-200/70 text-slate-600 font-medium">
                           {localFormat.showAdvisorEmail !== false && process.orientador.email && (
                             <span className="bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-700 truncate">
-                              ✉ {process.orientador.email}
+                              {process.orientador.email}
                             </span>
                           )}
                           {localFormat.showAdvisorInstitution !== false && (
                             <span className="bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-700">
-                              🏛️ {process.orientador.instituicao || installationProfile.defaultInstitutionName}
+                              {process.orientador.instituicao || installationProfile.defaultInstitutionName}
                             </span>
                           )}
                         </div>
@@ -1394,12 +1394,12 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                           <div className="flex flex-wrap items-center gap-1.5 text-[11px] pt-2 border-t border-slate-200/70 text-slate-600 font-medium">
                             {localFormat.showAdvisorEmail !== false && process.coorientador.email && (
                               <span className="bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-700 truncate">
-                                ✉ {process.coorientador.email}
+                                {process.coorientador.email}
                               </span>
                             )}
                             {localFormat.showAdvisorInstitution !== false && (
                               <span className="bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-700">
-                                🏛️ {process.coorientador.instituicao || installationProfile.defaultInstitutionName}
+                                {process.coorientador.instituicao || installationProfile.defaultInstitutionName}
                               </span>
                             )}
                           </div>
@@ -1721,7 +1721,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       </div>
 
                       <div className="p-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-slate-600 font-medium">
-                        📌 {docInfo.signNote}
+                        {docInfo.signNote}
                       </div>
 
                       {/* Status Badge */}
@@ -2128,7 +2128,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
               </div>
               <div>
                 <h2 className="text-base font-black uppercase tracking-tight text-rose-900">
-                  ⚠️ ATENÇÃO: EXCLUSÃO DE TRABALHO
+                  ATENÇÃO: EXCLUSÃO DE TRABALHO
                 </h2>
                 <p className="text-xs text-rose-700 font-bold">
                   Exclusão Definitiva de Processo de TCC
