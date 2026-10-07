@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowUp, Columns3, ListFilter, Lock, RotateCcw, Settings, Star } from 'lucide-react';
+import { ArrowDown, ArrowUp, Columns3, ListFilter, Lock, RotateCcw, Settings, Star, X } from 'lucide-react';
 import { DEFAULT_TABLE_TEXT_FORMAT, TableTextFormat, loadTableConfig } from './TableColumnSelectorPanel';
 import { getTableStyles } from '../utils/tableFormatters';
 import { useAuth } from '../context/AuthContext';
@@ -218,6 +218,9 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
       <div ref={popupRef} data-portal-table-master={isMaster?'true':'false'} className="portal-table-settings-popover portal-modal-surface fixed z-[1000001] max-h-[calc(100vh-1.5rem)] overflow-y-auto text-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150" style={{top:popoverPos.top,left:popoverPos.left}}>
         <div className="portal-settings-popover-header">
           <span className="flex items-center gap-1.5 text-[10.5px] font-black uppercase tracking-wider text-white"><Settings className="h-3.5 w-3.5 text-white" aria-hidden="true"/>Exibição da planilha</span>
+          <button type="button" onClick={()=>setIsOpen(false)} className="portal-modal-header-close" aria-label="Fechar configuração da planilha" title="Fechar">
+            <X className="h-3.5 w-3.5" aria-hidden="true"/>
+          </button>
         </div>
         <div className="portal-settings-top-grid">
           <section className="portal-settings-control-card">
