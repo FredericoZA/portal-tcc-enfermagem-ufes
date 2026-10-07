@@ -77,6 +77,23 @@ function isPlaceholder(rawValue) {
   return false;
 }
 
+function assertScannerContract() {
+  // As chaves são montadas em partes para o próprio scanner não confundir
+  // esses exemplos sintéticos com credenciais versionadas.
+  const databaseKey = 'DATABASE_' + 'URL';
+  const astenKey = 'ASTEN_' + 'API_KEY';
+  const quotedJson = `"${databaseKey}": "postgresql://example:example@db.invalid/app",`;
+  const envAssignment = `${astenKey}="example-token-not-a-real-credential"`;
+  const placeholderJson = `"${databaseKey}": ""`;
+
+  const jsonMatch = assignmentPattern.exec(quotedJson);
+  const envMatch = assignmentPattern.exec(envAssignment);
+  const placeholderMatch = assignmentPattern.exec(placeholderJson);
+  if (!jsonMatch || isPlaceholder(jsonMatch[2])) throw new Error('Contrato interno do scanner falhou para chave JSON citada.');
+  if (!envMatch || isPlaceholder(envMatch[2])) throw new Error('Contrato interno do scanner falhou para atribuição .env.');
+  if (!placeholderMatch || !isPlaceholder(placeholderMatch[2])) throw new Error('Contrato interno do scanner falhou para placeholder vazio.');
+}
+
 function shouldScanAssignments(file) {
   if (/(?:^|\/)(?:docs?|test-results|playwright-report)\//i.test(file)) return false;
   if (/\.(?:test|spec)\.[cm]?[jt]sx?$/i.test(file)) return false;
@@ -84,6 +101,7 @@ function shouldScanAssignments(file) {
   return true;
 }
 
+assertScannerContract();
 const findings = [];
 
 for (const file of trackedFiles) {
