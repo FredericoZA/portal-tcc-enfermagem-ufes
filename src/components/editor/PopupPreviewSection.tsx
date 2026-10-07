@@ -829,7 +829,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
                 className="p-3 text-white font-black text-xs uppercase"
                 style={{ backgroundColor: tccDetailFormat.headerBgColor || '#005830' }}
               >
-                🎓 Detalhes da Banca
+                Detalhes da Banca
               </div>
               <div className="p-3 text-xs space-y-2">
                 <p className="text-slate-600 font-medium">Informações da defesa e membros examinadores.</p>
@@ -848,7 +848,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
                 className="p-3 text-white font-black text-xs uppercase"
                 style={{ backgroundColor: generalPopupsConfig.uploadAtaHeaderBg || '#005830' }}
               >
-                📄 Ata Assinada
+                Ata Assinada
               </div>
               <div className="p-3 text-xs space-y-2">
                 <p className="text-slate-600 font-medium">Validação da assinatura Asten e arquivamento no Drive.</p>
@@ -867,7 +867,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
                 className="p-3 text-white font-black text-xs uppercase"
                 style={{ backgroundColor: loginPopupConfig.cardBgColor || '#005830' }}
               >
-                🔐 Acesso ao Portal
+                Acesso ao Portal
               </div>
               <div className="p-3 text-xs space-y-2">
                 <p className="text-slate-600 font-medium">Identificação de alunos e docentes.</p>

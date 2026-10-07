@@ -143,7 +143,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   const sidebarFooterMutedColor = isHeaderLight ? '#64748b' : '#d6d9d7';
   const sidebarAccent = layoutConfig.sidebarSubtitleColor || 'var(--portal-sidebar-active-accent)';
   const getNavLabel = (id: string, fallback: string) => layoutConfig.sidebarNavLabels?.[id] || fallback;
-  const getNavEmoji = (id: string, fallback: string) => layoutConfig.sidebarNavEmojis?.[id] || fallback;
   const renderNavIcon = (_id: string, Icon: React.ComponentType<{ className?: string }>, _defaultEmoji: string, _isActive: boolean) => (
     <Icon className="h-4 w-4 shrink-0 text-white" aria-hidden="true" />
   );
@@ -172,16 +171,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
       <nav id="sidebar-nav" className="flex-1 p-3 space-y-1.5 overflow-y-auto">
         {(() => {
           const allNavMap: Record<string, { id: string; label: string; icon: React.ComponentType<{ className?: string }>; emoji: string; visible: boolean }> = {
-            home: { id: 'home', label: getNavLabel('home', 'Calendário'), icon: Calendar, emoji: '📅', visible: true },
-            biblioteca: { id: 'biblioteca', label: getNavLabel('biblioteca', 'Repositório'), icon: BookOpen, emoji: '📚', visible: true },
-            'como-chegar': { id: 'como-chegar', label: getNavLabel('como-chegar', 'Como chegar'), icon: MapPin, emoji: getNavEmoji('como-chegar', '📍'), visible: true },
-            tutorial: { id: 'tutorial', label: getNavLabel('tutorial', 'Como usar'), icon: HelpCircle, emoji: '❓', visible: true },
-            'fluxo-tcc': { id: 'fluxo-tcc', label: getNavLabel('fluxo-tcc', 'Fluxo do TCC'), icon: GitBranch, emoji: getNavEmoji('fluxo-tcc', '🔀'), visible: true },
-            'meus-processos': { id: 'meus-processos', label: getNavLabel('meus-processos', 'Meus TCCs'), icon: FileText, emoji: '📋', visible: !isVisitor },
-            coordenador: { id: 'coordenador', label: getNavLabel('coordenador', 'Área do Presidente'), icon: Award, emoji: '🏛️', visible: isMasterAdmin && !isVisitor },
-            configuracoes: { id: 'configuracoes', label: getNavLabel('configuracoes', 'Configurações'), icon: Settings, emoji: '⚙️', visible: isMasterAdmin && !isVisitor },
-            analise: { id: 'analise', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: getNavEmoji('indicadores', '📊'), visible: true },
-            replicar: { id: 'replicar', label: getNavLabel('replicar', 'Replicar Portal'), icon: Copy, emoji: getNavEmoji('replicar', '🧩'), visible: true }
+            home: { id: 'home', label: getNavLabel('home', 'Calendário'), icon: Calendar, emoji: '', visible: true },
+            biblioteca: { id: 'biblioteca', label: getNavLabel('biblioteca', 'Repositório'), icon: BookOpen, emoji: '', visible: true },
+            'como-chegar': { id: 'como-chegar', label: getNavLabel('como-chegar', 'Como chegar'), icon: MapPin, emoji: '', visible: true },
+            tutorial: { id: 'tutorial', label: getNavLabel('tutorial', 'Como usar'), icon: HelpCircle, emoji: '', visible: true },
+            'fluxo-tcc': { id: 'fluxo-tcc', label: getNavLabel('fluxo-tcc', 'Fluxo do TCC'), icon: GitBranch, emoji: '', visible: true },
+            'meus-processos': { id: 'meus-processos', label: getNavLabel('meus-processos', 'Meus TCCs'), icon: FileText, emoji: '', visible: !isVisitor },
+            coordenador: { id: 'coordenador', label: getNavLabel('coordenador', 'Área do Presidente'), icon: Award, emoji: '', visible: isMasterAdmin && !isVisitor },
+            configuracoes: { id: 'configuracoes', label: getNavLabel('configuracoes', 'Configurações'), icon: Settings, emoji: '', visible: isMasterAdmin && !isVisitor },
+            analise: { id: 'analise', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: '', visible: true },
+            replicar: { id: 'replicar', label: getNavLabel('replicar', 'Replicar Portal'), icon: Copy, emoji: '', visible: true }
           };
           const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0 ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'assinaturas'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key) : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'DIVIDER_2', 'analise', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'];
           const order = [...configuredOrder].filter((key) => key !== 'analise');

@@ -130,9 +130,9 @@ test('configurações removem personalização global e usam três grupos operac
 });
 
 test('modelos e documentos compartilham catálogo, variáveis e visualização segura', () => {
-  assert.match(documentModels, /Variáveis deste modelo/);
+  assert.match(documentModels, /Variáveis deste documento/);
   assert.match(documentModels, /Visualizar modelo original/);
-  assert.match(documentModels, /Detectar variáveis/);
+  assert.match(documentModels, /Descobrir/);
   assert.match(documentModels, /model\.driveFileUrl/);
   assert.match(documentModels, /samplePreview\[type\]/);
   assert.match(configPage, /syncMasterModelCatalog/);

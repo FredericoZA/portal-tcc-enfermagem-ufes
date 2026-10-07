@@ -1049,7 +1049,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                       <div className="min-w-0 flex-1 space-y-0.5">
                         <div className="flex items-center gap-1">
                           <span className="bg-slate-200 text-slate-800 border border-slate-300 px-1.5 py-0.2 rounded-full text-[8.5px] font-black uppercase shrink-0">
-                            📄 MODELO
+                            MODELO
                           </span>
                           <span className="font-bold text-slate-900 text-[11px] truncate block max-w-[170px]" title={row.name}>
                             {row.name}
@@ -1128,14 +1128,14 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                       <div className="min-w-0 flex-1 space-y-0.5">
                         <div className="flex items-center gap-1">
                           <span className="bg-slate-200 text-slate-800 border border-slate-300 px-1.5 py-0.2 rounded-full text-[8.5px] font-black uppercase shrink-0">
-                            📋 FORMULÁRIO
+                            FORMULÁRIO
                           </span>
                           <span className="font-bold text-slate-900 text-[11px] truncate block max-w-[170px]" title={form.title}>
                             {form.title}
                           </span>
                         </div>
                         <span className="text-[9.5px] text-slate-600 font-mono block truncate max-w-[170px]">
-                          👤 Papel: {form.targetRole} | {form.questions.length} campos
+                          Papel: {form.targetRole} | {form.questions.length} campos
                         </span>
                       </div>
                       <button
@@ -1196,14 +1196,14 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                       <div className="min-w-0 flex-1 space-y-0.5">
                         <div className="flex items-center gap-1">
                           <span className="bg-slate-200 text-slate-800 border border-slate-300 px-1.5 py-0.2 rounded-full text-[8.5px] font-black uppercase shrink-0">
-                            ✉️ E-MAIL
+                            E-MAIL
                           </span>
                           <span className="font-bold text-slate-900 text-[11px] truncate block max-w-[170px]" title={email.name}>
                             {email.name}
                           </span>
                         </div>
                         <span className="text-[9.5px] text-slate-600 font-mono block truncate max-w-[170px]">
-                          📌 Gatilho: {email.triggerStage}
+                          Gatilho: {email.triggerStage}
                         </span>
                       </div>
                       <button
@@ -1316,7 +1316,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
         <div className="bg-slate-50 border border-slate-300 p-4 rounded-md space-y-3 animate-in fade-in duration-150">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2">
             <h4 className="text-xs font-black uppercase text-slate-900 flex items-center gap-2">
-              <span>📄</span> INSERIR NOVO MODELO DE ARQUIVO .DOCX
+              INSERIR NOVO MODELO DE ARQUIVO .DOCX
             </h4>
             <button
               type="button"
@@ -1553,7 +1553,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
 
               <div className="bg-slate-50 p-3 border border-slate-300 rounded space-y-2">
                 <label className="block text-[11px] font-bold uppercase text-slate-900">
-                  📎 Anexos Automáticos Vinculados:
+                  Anexos Automáticos Vinculados:
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   {docTemplates.map(doc => {
@@ -1824,7 +1824,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
           <div className="bg-white border border-slate-300 rounded-xl max-w-xl w-full p-5 space-y-4 shadow-xl animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-base">✉️</span>
+                
                 <h3 className="text-xs font-black uppercase tracking-wide text-slate-900">
                   Criar Novo Modelo de E-mail
                 </h3>
@@ -1937,7 +1937,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
           <div className="bg-white border border-slate-300 rounded-xl max-w-2xl w-full p-5 space-y-4 shadow-xl animate-in fade-in zoom-in-95 duration-150 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-base">📝</span>
+                
                 <h3 className="text-xs font-black uppercase tracking-wide text-slate-900">
                   Criar Novo Formulário
                 </h3>
@@ -2178,7 +2178,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                 />
 
                 <div className="space-y-0.5">
-                  <label className="block text-[8px] font-black text-slate-500 uppercase">⚡ Evento Gatilho:</label>
+                  <label className="block text-[8px] font-black text-slate-500 uppercase">Evento Gatilho:</label>
                   <input
                     type="text"
                     value={stage.triggerEvent}
@@ -2206,9 +2206,9 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                     {stage.actions.map(act => (
                       <div key={act.id} className="p-1.5 rounded-lg border border-slate-300 bg-slate-50 text-[10px] flex items-center justify-between gap-1 shadow-2xs">
                         <div className="truncate font-bold text-slate-900 flex items-center gap-1">
-                          {act.type === 'doc' && <span>📄</span>}
-                          {act.type === 'email' && <span>✉️</span>}
-                          {act.type === 'form' && <span>📝</span>}
+                          
+                          
+                          
                           <span className="truncate">{act.title}</span>
                         </div>
                         <button
@@ -2230,7 +2230,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   <div className="bg-white border border-slate-300 p-2 rounded-xl space-y-1.5 text-xs shadow-xs">
                     <div className="text-[9px] font-bold uppercase text-slate-700">Selecione para vincular:</div>
                     <div className="space-y-1 max-h-40 overflow-y-auto">
-                      <div className="text-[8px] font-black uppercase text-amber-800 pt-0.5">📝 Formulários:</div>
+                      <div className="text-[8px] font-black uppercase text-amber-800 pt-0.5">Formulários:</div>
                       {formTemplates.map(f => (
                         <button
                           key={f.id}
@@ -2242,7 +2242,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                         </button>
                       ))}
 
-                      <div className="text-[8px] font-black uppercase text-slate-700 pt-1">📄 Modelos (.docx):</div>
+                      <div className="text-[8px] font-black uppercase text-slate-700 pt-1">Modelos (.docx):</div>
                       {docTemplates.map(d => (
                         <button
                           key={d.id}
@@ -2254,7 +2254,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                         </button>
                       ))}
 
-                      <div className="text-[8px] font-black uppercase text-sky-800 pt-1">✉️ E-mails:</div>
+                      <div className="text-[8px] font-black uppercase text-sky-800 pt-1">E-mails:</div>
                       {emailTemplates.map(em => (
                         <button
                           key={em.id}
@@ -2296,7 +2296,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
           <div className="bg-white border border-slate-300 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-xl animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-xl">📄</span>
+                
                 <h3 className="text-sm font-black uppercase tracking-wide text-slate-900">
                   IMPORTAR NOVO MODELO DE DOCUMENTO (.DOCX)
                 </h3>
@@ -2365,7 +2365,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                     className="w-full bg-slate-50 border border-slate-300 p-2.5 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400"
                   />
                   <p className="text-[10px] text-slate-500 mt-1">
-                    💡 O sistema varrerá o documento do Google Drive e extrairá automaticamente todos os marcadores (<code className="font-mono bg-slate-100 px-1 py-0.5 border rounded">&lt;&lt;variavel&gt;&gt;</code>) para a planilha.
+                    O sistema varrerá o documento do Google Drive e extrairá automaticamente todos os marcadores (<code className="font-mono bg-slate-100 px-1 py-0.5 border rounded">&lt;&lt;variavel&gt;&gt;</code>) para a planilha.
                   </p>
                 </div>
               ) : (
@@ -3031,7 +3031,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3.5">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2">
             <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-              <span>🏷️</span> Identificação & Código de Invocação no Modelo
+              Identificação & Código de Invocação no Modelo
             </h4>
             <span className="text-[10px] font-bold text-slate-500 uppercase bg-slate-200 px-2 py-0.5 rounded">
               ID: {variable.id}
@@ -3091,7 +3091,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
           <div className="bg-white border-2 border-slate-300 rounded-xl p-3 flex items-center justify-between gap-3 shadow-2xs">
             <div className="space-y-0.5">
               <span className="text-[10px] font-black uppercase text-slate-600 tracking-wider block">
-                📌 Código exato para usar nos modelos (.docx) e e-mails:
+                Código exato para usar nos modelos (.docx) e e-mails:
               </span>
               <div className="font-mono text-sm sm:text-base font-extrabold text-slate-900 tracking-wide">
                 {markerCode}
@@ -3125,7 +3125,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
             <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-300 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black uppercase tracking-wide text-slate-900">
-                  📄 1. Modelos de Documentos (.docx)
+                  1. Modelos de Documentos (.docx)
                 </span>
                 <span className="text-[10.5px] font-bold bg-white text-slate-800 border border-slate-300 px-2 py-0.5 rounded-full">
                   {selectedModelIds.length} de {matrixRows.length} ativos
@@ -3177,7 +3177,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
             <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-300 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black uppercase tracking-wide text-slate-900">
-                  📋 2. Formulários Dinâmicos de Coleta
+                  2. Formulários Dinâmicos de Coleta
                 </span>
                 <span className="text-[10.5px] font-bold bg-white text-slate-800 border border-slate-300 px-2 py-0.5 rounded-full">
                   {selectedFormIds.length} vinculados
@@ -3232,7 +3232,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
             <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-300 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black uppercase tracking-wide text-slate-900">
-                  ✉️ 3. E-mails Automáticos do Fluxo
+                  3. E-mails Automáticos do Fluxo
                 </span>
                 <span className="text-[10.5px] font-bold bg-white text-slate-800 border border-slate-300 px-2 py-0.5 rounded-full">
                   {selectedEmailIds.length} vinculados
@@ -3286,7 +3286,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
         {/* BLOCO 3: FORMATAÇÃO DE SAÍDA NO DOCUMENTO (NEGRITO, ITÁLICO, TIPO, PREFIXO) */}
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3.5">
           <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5 border-b border-slate-200 pb-2">
-            <span>✍️</span> Regras de Formatação no Documento Gerado
+            Regras de Formatação no Documento Gerado
           </h4>
 
           <div className="grid gap-3 sm:grid-cols-3">

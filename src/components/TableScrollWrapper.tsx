@@ -1,22 +1,17 @@
-import React, { useRef } from 'react';
-import { PortalSpreadsheetRuntime } from './PortalSpreadsheetRuntime';
+import React from 'react';
 
 interface TableScrollWrapperProps {
   children: React.ReactNode;
 }
 
 /**
- * Contêiner canônico das planilhas.
- * O comportamento de resize, filtros, sticky, paginação e arraste fica
- * restrito a este host, sem varredura global do aplicativo.
+ * Contêiner estrutural das planilhas.
+ * O comportamento de resize, filtros, sticky, paginação e arraste é aplicado
+ * pelo único PortalSpreadsheetRuntime montado na raiz da aplicação.
  */
 export const TableScrollWrapper: React.FC<TableScrollWrapperProps> = ({ children }) => {
-  const hostRef = useRef<HTMLDivElement>(null);
-
   return (
-    <>
-      <div
-        ref={hostRef}
+    <div
         data-portal-scroll-host="true"
         className="portal-spreadsheet-scroll-host table-sticky-container w-full overflow-auto bg-white"
         style={{
@@ -26,11 +21,9 @@ export const TableScrollWrapper: React.FC<TableScrollWrapperProps> = ({ children
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        <div className="min-w-max">
-          {children}
-        </div>
+      <div className="min-w-max">
+        {children}
       </div>
-      <PortalSpreadsheetRuntime rootRef={hostRef} />
-    </>
+    </div>
   );
 };

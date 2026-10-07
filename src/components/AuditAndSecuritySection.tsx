@@ -356,12 +356,12 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
             onClick={handleDownloadFullBackup}
             className="portal-backup-action inline-flex min-w-[172px] items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-[#f0f0f0] px-3 py-1.5 text-[11px] font-bold text-slate-800 shadow-sm transition-all hover:bg-slate-200"
           >
-            <span>📥</span>
+            
             <span>Baixar Backup JSON</span>
           </button>
 
           <label className="portal-backup-action inline-flex min-w-[172px] items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-[#f0f0f0] px-3 py-1.5 text-[11px] font-bold text-slate-800 shadow-sm transition-all hover:bg-slate-200">
-            <span>📤</span>
+            
             <span>Restaurar Backup</span>
             <input
               type="file"
@@ -377,7 +377,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
       <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2.5">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <span className="text-[11px] font-extrabold uppercase tracking-wide text-slate-700 flex items-center gap-1">
-            🔍 Filtrar Registros do Sistema:
+            Filtrar Registros do Sistema:
           </span>
           {(userFilter || actionFilter || referenceFilter || startDateFilter || endDateFilter || pageSize !== 25) && (
             <button
@@ -605,7 +605,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
                 onClick={() => setSelectedLogForDiff(null)}
                 className="text-slate-400 hover:text-slate-700 font-bold text-xs cursor-pointer"
               >
-                ✕ Fechar
+                Fechar
               </button>
             </div>
 

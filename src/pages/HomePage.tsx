@@ -1953,7 +1953,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   return (
                     <td key="defesaDataHora" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} align-middle ${alignClass} ${defStyles.borderClass} cursor-grab`}>
                       <div className={`flex items-center justify-center gap-1 ${defStyles.cellFontSizeClass}`}>
-                        <span>{formatCellText('defesaDataHora', formatDateNumeric(proc.defesa?.startAt), defensesTextFormat, '⏰')}</span>
+                        <span>{formatCellText('defesaDataHora', formatDateNumeric(proc.defesa?.startAt), defensesTextFormat, '')}</span>
                       </div>
                       <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}</div>
                     </td>
@@ -1968,7 +1968,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   return (
                     <td key="titulo" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
                       <div className={`${defStyles.cellWrapClass} ${alignClass} ${defStyles.cellFontSizeClass}`} title={formatTccTitle(proc.titulo)}>
-                        {formatCellText('titulo', formatTccTitle(proc.titulo), defensesTextFormat, '📖')}
+                        {formatCellText('titulo', formatTccTitle(proc.titulo), defensesTextFormat, '')}
                       </div>
                     </td>
                   );
@@ -1977,7 +1977,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     <td key="aluno1" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
                       <div className="w-full mx-auto">
                         <div className={`${defStyles.cellFontSizeClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} leading-tight ${defStyles.cellWrapClass}`}>
-                          {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), defensesTextFormat, '🎓')}
+                          {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), defensesTextFormat, '')}
                         </div>
                       </div>
                     </td>
@@ -1989,7 +1989,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         {proc.aluno2?.nome ? (
                           <>
                             <div className={`${defStyles.cellFontSizeClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} leading-tight ${defStyles.cellWrapClass}`}>
-                              {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), defensesTextFormat, '🎓')}
+                              {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), defensesTextFormat, '')}
                             </div>
                           </>
                         ) : (
@@ -2003,10 +2003,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     <td key="orientador" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
                       <div className="w-full mx-auto">
                         <div className={`${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                          {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), defensesTextFormat, '👨‍🏫')}
+                          {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), defensesTextFormat, '')}
                         </div>
                         <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
-                          {formatCellText('orientador', cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName), defensesTextFormat, '📍')}
+                          {formatCellText('orientador', cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName), defensesTextFormat, '')}
                         </div>
                       </div>
                     </td>
@@ -2018,10 +2018,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         {ev1 ? (
                           <div>
                             <div className={`font-normal ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                              {formatCellText('membro1', formatProfessorName(ev1.nome), defensesTextFormat, '👥')}
+                              {formatCellText('membro1', formatProfessorName(ev1.nome), defensesTextFormat, '')}
                             </div>
                             <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
-                              {formatCellText('membro1', cleanInst(ev1.instituicao || installationProfile.defaultInstitutionName), defensesTextFormat, '📍')}
+                              {formatCellText('membro1', cleanInst(ev1.instituicao || installationProfile.defaultInstitutionName), defensesTextFormat, '')}
                             </div>
                           </div>
                         ) : (
@@ -2037,10 +2037,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         {ev2 ? (
                           <div>
                             <div className={`font-normal ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                              {formatCellText('membro2', formatProfessorName(ev2.nome), defensesTextFormat, '👥')}
+                              {formatCellText('membro2', formatProfessorName(ev2.nome), defensesTextFormat, '')}
                             </div>
                             <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
-                              {formatCellText('membro2', cleanInst(ev2.instituicao || 'Instituição Externa'), defensesTextFormat, '📍')}
+                              {formatCellText('membro2', cleanInst(ev2.instituicao || 'Instituição Externa'), defensesTextFormat, '')}
                             </div>
                           </div>
                         ) : (
@@ -2056,10 +2056,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         {proc.coorientador?.nome ? (
                           <div>
                             <div className={`${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                              {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), defensesTextFormat, '👨‍🏫')}
+                              {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), defensesTextFormat, '')}
                             </div>
                             <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
-                              {formatCellText('coorientador', cleanInst(proc.coorientador.instituicao || 'Instituição Externa'), defensesTextFormat, '📍')}
+                              {formatCellText('coorientador', cleanInst(proc.coorientador.instituicao || 'Instituição Externa'), defensesTextFormat, '')}
                             </div>
                           </div>
                         ) : (
@@ -2090,7 +2090,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 case 'defesaLocal':
                   return (
                     <td key="defesaLocal" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.cellFontSizeClass} leading-normal ${defStyles.cellWrapClass} align-middle cursor-grab`}>
-                      <span>{formatCellText('defesaLocal', proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar', defensesTextFormat, '📍')}</span>
+                      <span>{formatCellText('defesaLocal', proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar', defensesTextFormat, '')}</span>
                     </td>
                   );
                 default:
@@ -2355,7 +2355,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     return (
                       <td key="titulo" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
                         <div className={`${acervoStyles.cellWrapClass} ${alignClass} ${acervoStyles.cellFontSizeClass}`} title={formatTccTitle(proc.titulo)}>
-                          {formatCellText('titulo', formatTccTitle(proc.titulo), acervoTextFormat, '📖')}
+                          {formatCellText('titulo', formatTccTitle(proc.titulo), acervoTextFormat, '')}
                         </div>
                       </td>
                     );
@@ -2364,7 +2364,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <td key="aluno1" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
                         <div className="w-full mx-auto">
                           <div className={`${acervoStyles.cellFontSizeClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                            {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), acervoTextFormat, '🎓')}
+                            {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), acervoTextFormat, '')}
                           </div>
                         </div>
                       </td>
@@ -2376,7 +2376,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           {proc.aluno2?.nome ? (
                             <>
                               <div className={`${acervoStyles.cellFontSizeClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), acervoTextFormat, '🎓')}
+                                {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), acervoTextFormat, '')}
                               </div>
                             </>
                           ) : (
@@ -2390,10 +2390,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <td key="orientador" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
                         <div className="w-full mx-auto">
                           <div className={`${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                            {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), acervoTextFormat, '👨‍🏫')}
+                            {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), acervoTextFormat, '')}
                           </div>
                           <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
-                            {formatCellText('orientador', cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName), acervoTextFormat, '📍')}
+                            {formatCellText('orientador', cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName), acervoTextFormat, '')}
                           </div>
                         </div>
                       </td>
@@ -2405,10 +2405,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           {ev1 ? (
                             <div>
                               <div className={`font-normal ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                {formatCellText('membro1', formatProfessorName(ev1.nome), acervoTextFormat, '👥')}
+                                {formatCellText('membro1', formatProfessorName(ev1.nome), acervoTextFormat, '')}
                               </div>
                               <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
-                                {formatCellText('membro1', cleanInst(ev1.instituicao || installationProfile.defaultInstitutionName), acervoTextFormat, '📍')}
+                                {formatCellText('membro1', cleanInst(ev1.instituicao || installationProfile.defaultInstitutionName), acervoTextFormat, '')}
                               </div>
                             </div>
                           ) : (
@@ -2424,10 +2424,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           {ev2 ? (
                             <div>
                               <div className={`font-normal ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                {formatCellText('membro2', formatProfessorName(ev2.nome), acervoTextFormat, '👥')}
+                                {formatCellText('membro2', formatProfessorName(ev2.nome), acervoTextFormat, '')}
                               </div>
                               <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
-                                {formatCellText('membro2', cleanInst(ev2.instituicao || 'Instituição Externa'), acervoTextFormat, '📍')}
+                                {formatCellText('membro2', cleanInst(ev2.instituicao || 'Instituição Externa'), acervoTextFormat, '')}
                               </div>
                             </div>
                           ) : (
@@ -2443,10 +2443,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           {proc.coorientador?.nome ? (
                             <div>
                               <div className={`${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), acervoTextFormat, '👨‍🏫')}
+                                {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), acervoTextFormat, '')}
                               </div>
                               <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
-                                {formatCellText('coorientador', cleanInst(proc.coorientador.instituicao || 'Instituição Externa'), acervoTextFormat, '📍')}
+                                {formatCellText('coorientador', cleanInst(proc.coorientador.instituicao || 'Instituição Externa'), acervoTextFormat, '')}
                               </div>
                             </div>
                           ) : (
@@ -2478,7 +2478,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     return (
                       <td key="defesaDataHora" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
                         <div className={`${acervoStyles.cellFontSizeClass} whitespace-nowrap`}>
-                          {formatCellText('defesaDataHora', formatDateNumeric(proc.defesa?.startAt), acervoTextFormat, '⏰')}
+                          {formatCellText('defesaDataHora', formatDateNumeric(proc.defesa?.startAt), acervoTextFormat, '')}
                         </div>
                         <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}</div>
                       </td>
@@ -2487,7 +2487,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     return (
                       <td key="defesaLocal" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} leading-normal ${acervoStyles.cellWrapClass} align-middle`}>
                         <div className="flex flex-col items-center justify-center gap-0.5 leading-tight">
-                          <span>{formatCellText('defesaLocal', proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar', acervoTextFormat, '📍')}</span>
+                          <span>{formatCellText('defesaLocal', proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar', acervoTextFormat, '')}</span>
                         </div>
                       </td>
                     );

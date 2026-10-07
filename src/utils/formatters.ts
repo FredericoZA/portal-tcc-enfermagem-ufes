@@ -253,7 +253,7 @@ export function getSortedStudents<T extends { nome: string; matricula?: string }
 
 /**
  * Format student display string for document headers and tables:
- * Always sorted alphabetically. Example: "🪪 MATRÍCULA - Nome A e 🪪 MATRÍCULA - Nome B"
+ * Always sorted alphabetically. Example: "MATRÍCULA - Nome A e MATRÍCULA - Nome B"
  */
 export function formatStudentsString(
   aluno1: { nome: string; matricula: string },
@@ -265,7 +265,7 @@ export function formatStudentsString(
 
   const parts = sorted.map(a => 
     includeBadge && a.matricula
-      ? `🪪 ${a.matricula} - ${formatNameTitleCase(a.nome)}`
+      ? `${a.matricula} - ${formatNameTitleCase(a.nome)}`
       : `${formatNameTitleCase(a.nome)}${a.matricula ? ` (${a.matricula})` : ''}`
   );
 

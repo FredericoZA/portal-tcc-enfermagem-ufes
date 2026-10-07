@@ -15,7 +15,7 @@ export const EMBLEM_PRESETS = [
   {
     id: 'generic_academic_emblem',
     name: 'Emblema acadêmico neutro',
-    icon: '🏛️',
+    icon: '',
     url: '',
   }
 ];

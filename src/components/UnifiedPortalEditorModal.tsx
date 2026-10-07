@@ -1638,20 +1638,20 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                                     color: siteConfig.sidebarActiveTextColor || '#a4ebd4',
                                   }}
                                 >
-                                  <span>📅</span>
-                                  <span>Calendário Geral</span>
+                                  
+                                  <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden="true"/><span>Calendário Geral</span>
                                 </div>
                                 <div className="px-3 py-2 rounded-lg font-medium opacity-80 hover:opacity-100 flex items-center gap-2">
-                                  <span>📚</span>
-                                  <span>Repositório de TCCs</span>
+                                  
+                                  <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden="true"/><span>Repositório de TCCs</span>
                                 </div>
                                 <div className="px-3 py-2 rounded-lg font-medium opacity-80 hover:opacity-100 flex items-center gap-2">
-                                  <span>🎓</span>
-                                  <span>Meus Processos</span>
+                                  
+                                  <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true"/><span>Meus Processos</span>
                                 </div>
                                 <div className="px-3 py-2 rounded-lg font-medium opacity-80 hover:opacity-100 flex items-center gap-2">
-                                  <span>📋</span>
-                                  <span>Área do Presidente</span>
+                                  
+                                  <Award className="h-3.5 w-3.5 shrink-0" aria-hidden="true"/><span>Área do Presidente</span>
                                 </div>
                               </div>
                             </div>
@@ -1704,7 +1704,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                                     type="text"
                                     readOnly
                                     value=""
-                                    placeholder="🔍 Buscar aluno, orientador, título..."
+                                    placeholder="Buscar aluno, orientador, título..."
                                     className="w-full bg-white border border-slate-300 rounded-md p-1 text-xs text-slate-600 font-medium"
                                   />
                                 </div>
@@ -1821,7 +1821,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                                 className="p-2.5 text-white font-black text-xs uppercase flex items-center justify-between"
                                 style={{ backgroundColor: tccDetailFormat.headerBgColor || siteConfig.headerBgColor || '#005830' }}
                               >
-                                <span>🎓 Detalhes da Banca</span>
+                                <span>Detalhes da Banca</span>
                                 <span className="text-[9px] bg-white/20 px-1.5 py-0.5 rounded">TCC</span>
                               </div>
                               <div className="p-2.5 text-[11px] space-y-1.5 text-slate-700 font-medium">
@@ -1843,7 +1843,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                                 className="p-2.5 text-white font-black text-xs uppercase flex items-center justify-between"
                                 style={{ backgroundColor: generalPopupsConfig.uploadAtaHeaderBg || siteConfig.headerBgColor || '#005830' }}
                               >
-                                <span>📄 Ata Assinada & PDF</span>
+                                <span>Ata Assinada & PDF</span>
                                 <span className="text-[9px] bg-white/20 px-1.5 py-0.5 rounded">PDF</span>
                               </div>
                               <div className="p-2.5 text-[11px] space-y-1.5 text-slate-700 font-medium">
@@ -1865,7 +1865,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                                 className="p-2.5 text-white font-black text-xs uppercase flex items-center justify-between"
                                 style={{ backgroundColor: loginPopupConfig.cardBgColor || siteConfig.headerBgColor || '#005830' }}
                               >
-                                <span>🔐 Acesso ao Portal</span>
+                                <span>Acesso ao Portal</span>
                                 <span className="text-[9px] bg-white/20 px-1.5 py-0.5 rounded">LOGIN</span>
                               </div>
                               <div className="p-2.5 text-[11px] space-y-1.5 text-slate-700 font-medium">
@@ -1909,7 +1909,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                               className={`px-3 py-1 text-[10.5px] font-black text-white shadow-2xs cursor-pointer flex items-center gap-1.5 ${buttonRadiusClass}`}
                               style={{ backgroundColor: siteConfig.footerWhatsappBtnBg || siteConfig.headerBgColor || '#005830' }}
                             >
-                              <span>💬</span>
+                              
                               <span>{siteConfig.footerWhatsappText || 'Suporte WhatsApp'}</span>
                             </span>
                           </div>
@@ -1939,7 +1939,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                             : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200'
                         }`}
                       >
-                        🌙 Escuro
+                        Escuro
                       </button>
                       <button
                         type="button"
@@ -1950,7 +1950,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                             : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200'
                         }`}
                       >
-                        ☀️ Claro
+                        Claro
                       </button>
                     </div>
                   </div>
@@ -2268,14 +2268,14 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                             borderColor: siteConfig.sidebarActiveBorderColor || '#7bc394',
                           }}
                         >
-                          <span>📅 {siteConfig.sidebarNavLabels?.home || 'Calendário'}</span>
+                          <span>{siteConfig.sidebarNavLabels?.home || 'Calendário'}</span>
                           <span className="text-[9px] bg-white/20 px-1.5 py-0.5 rounded">Ativo</span>
                         </div>
                         <div className="px-3 py-2 rounded-lg font-medium text-xs opacity-80">
-                          <span>📚 {siteConfig.sidebarNavLabels?.biblioteca || 'Repositório'}</span>
+                          <span>{siteConfig.sidebarNavLabels?.biblioteca || 'Repositório'}</span>
                         </div>
                         <div className="px-3 py-2 rounded-lg font-medium text-xs opacity-80">
-                          <span>📋 {siteConfig.sidebarNavLabels?.['meus-processos'] || 'Meus TCCs'}</span>
+                          <span>{siteConfig.sidebarNavLabels?.['meus-processos'] || 'Meus TCCs'}</span>
                         </div>
                       </div>
                     </div>

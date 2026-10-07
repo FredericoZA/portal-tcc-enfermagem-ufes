@@ -174,13 +174,9 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
   const updateMember = (id: string, updates: Partial<CommissionMemberInfo>) => setMembers(prev => prev.map(member => member.id === id ? { ...member, ...updates } : member));
 
   return (
-    <section className="space-y-3 p-3 sm:p-4" style={{ backgroundColor: 'var(--portal-surface-page)' }} aria-labelledby="identity-footer-title">
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-300 px-3 py-2" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
-        <div>
-          <h3 id="identity-footer-title" className="text-xs font-black uppercase tracking-wide text-slate-950">Identidade e dados do rodapé</h3>
-          <p className="mt-0.5 text-[10px] text-slate-600">As alterações são salvas automaticamente.</p>
-        </div>
-        <div className="text-right text-[9px] font-bold">{saving ? <span className="text-slate-500">Salvando…</span> : statusText ? <span className="text-emerald-800">{statusText}</span> : null}</div>
+    <section className="portal-identity-panel space-y-3 p-3 sm:p-4" style={{ backgroundColor: 'var(--portal-surface-page)' }} aria-label="Dados de rodapé e identidade">
+      <div className="flex min-h-4 justify-end text-right text-[9px] font-bold">
+        {saving ? <span className="text-slate-500">Salvando…</span> : statusText ? <span className="text-[var(--portal-brand-action)]">{statusText}</span> : <span className="text-slate-500">Alterações salvas automaticamente</span>}
       </div>
 
       <div className="grid gap-2 md:grid-cols-2">

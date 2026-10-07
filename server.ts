@@ -1061,7 +1061,8 @@ function assertSignatureEligibility(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO
   if(type==='TERMO'&&!publicationRequested(p))throw new Error(`${p.protocolo}: o termo só é aplicável quando o aluno solicita publicação.`);
   if(type==='TERMO'&&!p.acervo?.authorizationConfirmedAt)throw new Error(`${p.protocolo}: a autorização de publicação ainda não foi confirmada.`);
 }
-async function createSignatureJob(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',actor:string,renderVariables:Record<string,string>={},provider:'ASTEN'|'GOV_BR'='ASTEN'):Promise<SignatureJob>{
+const signatureJobCreationLocks=new Map<string,Promise<SignatureJob>>();
+async function createSignatureJobUnlocked(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',actor:string,renderVariables:Record<string,string>={},provider:'ASTEN'|'GOV_BR'='ASTEN'):Promise<SignatureJob>{
   assertSignatureEligibility(p,type);
   const signers=deriveSignatureSigners(p,type);
   if(signers.some(s=>!isValidPortalEmail(s.email)))throw new Error(`${p.protocolo}: signatário sem e-mail válido.`);
@@ -1081,6 +1082,14 @@ async function createSignatureJob(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',
   signatureJobsStore.push(job);
   await persistPortalStateDurably();
   return job;
+}
+async function createSignatureJob(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',actor:string,renderVariables:Record<string,string>={},provider:'ASTEN'|'GOV_BR'='ASTEN'):Promise<SignatureJob>{
+  const lockKey=`${p.id}|${type}|${provider}|${p.dataRevision}`;
+  const inFlight=signatureJobCreationLocks.get(lockKey);
+  if(inFlight)return inFlight;
+  const task=createSignatureJobUnlocked(p,type,actor,renderVariables,provider).finally(()=>signatureJobCreationLocks.delete(lockKey));
+  signatureJobCreationLocks.set(lockKey,task);
+  return task;
 }
 const signatureDispatchLocks=new Set<string>();
 async function dispatchSignatureJobAutomatically(job:SignatureJob):Promise<SignatureJob>{

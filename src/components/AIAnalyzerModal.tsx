@@ -63,13 +63,13 @@ export const AIAnalyzerModal: React.FC<AIAnalyzerModalProps> = ({
       } else {
         setMessages((prev) => [
           ...prev,
-          { role: 'assistant', text: `⚠️ ${data.error || 'Erro ao comunicar com a IA.'}` },
+          { role: 'assistant', text: `${data.error || 'Erro ao comunicar com a IA.'}` },
         ]);
       }
     } catch (err: any) {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', text: '⚠️ Falha ao se conectar com o servidor para análise.' },
+        { role: 'assistant', text: 'Falha ao se conectar com o servidor para análise.' },
       ]);
     } finally {
       setLoading(false);
@@ -106,20 +106,20 @@ export const AIAnalyzerModal: React.FC<AIAnalyzerModalProps> = ({
             onClick={() => handleSendPrompt('Faça um resumo geral da estrutura deste projeto e quais tecnologias ele usa.')}
             className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 whitespace-nowrap"
           >
-            🔍 Resumo Geral da Estrutura
+            Resumo Geral da Estrutura
           </button>
           <button
             onClick={() => handleSendPrompt('Quais são os principais arquivos e o ponto de entrada deste projeto?')}
             className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 whitespace-nowrap"
           >
-            🚀 Ponto de Entrada Principal
+            Ponto de Entrada Principal
           </button>
           {activeFileContent && (
             <button
               onClick={() => handleSendPrompt(`Explique detalhadamente o arquivo ${activeFileContent.name}`)}
               className="px-2.5 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 whitespace-nowrap"
             >
-              📄 Explicar {activeFileContent.name}
+              Explicar {activeFileContent.name}
             </button>
           )}
         </div>

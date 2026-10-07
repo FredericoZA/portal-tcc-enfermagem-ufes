@@ -103,7 +103,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
                 <input
                   type="text"
                   readOnly
-                  placeholder="🔍 Buscar aluno, orientador, título..."
+                  placeholder="Buscar aluno, orientador, título..."
                   className="w-full bg-slate-50 border border-slate-300 rounded-md p-1.5 text-xs text-slate-600 font-medium"
                 />
               </div>
@@ -249,7 +249,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
                 <input
                   type="text"
                   readOnly
-                  placeholder="🔍 Pesquisar por tema, autor, orientador, ano ou palavras-chave..."
+                  placeholder="Pesquisar por tema, autor, orientador, ano ou palavras-chave..."
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-medium text-slate-700 pl-3"
                 />
               </div>

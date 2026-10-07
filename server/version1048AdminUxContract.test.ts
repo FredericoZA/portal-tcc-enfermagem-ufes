@@ -17,9 +17,9 @@ test('superfícies administrativas usam a paleta canônica do Portal', async () 
   assert.ok(css.includes('--portal-surface-inner: #ffffff'));
   assert.ok(css.includes('--portal-brand-action: #337959'));
   assert.ok(css.includes('--portal-brand-header: #005830'));
-  assert.ok(modal.includes("var(--portal-surface-panel)"));
+  assert.ok(modal.includes("var(--portal-surface-page)"));
   assert.ok(modal.includes("var(--portal-surface-card)"));
-  assert.ok(modal.includes("var(--portal-surface-inner)"));
+  assert.ok(css.includes("background: var(--portal-surface-inner)"));
   assert.ok(css.includes('.portal-settings-launcher'));
   assert.ok(css.includes('background: var(--portal-surface-card)'));
 });
@@ -38,10 +38,11 @@ test('Modelos e Variáveis usa popups específicos e une modelos com documentos'
     assert.ok(config.includes(`title: '${title}'`));
   }
   assert.ok(config.includes("activeSettingsPanel === 'models-documents'"));
-  assert.ok(config.includes("key=\"studio-variables-unified\""));
+  assert.ok(!config.includes("key=\"studio-variables-unified\""));
+  assert.ok(config.includes("label: 'Documentos e variáveis'"));
   assert.ok(!config.includes("id: 'variables', title: 'Variáveis'"));
   assert.ok(!config.includes('initialTab="documents"'));
-  assert.ok(models.includes('Variáveis deste modelo'));
+  assert.ok(models.includes('Variáveis deste documento'));
   assert.ok(models.includes('Visualizar modelo'));
 });
 

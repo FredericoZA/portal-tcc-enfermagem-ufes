@@ -551,7 +551,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
         return (
           <td key="titulo" className={`${styles.cellPadClass} ${widthClass} ${styles.cellWeightClass} ${styles.cellTextColorClass} ${alignClass} ${styles.borderClass} align-middle`}>
             <div className={`${styles.cellWrapClass} ${alignClass} ${styles.cellFontSizeClass}`} title={formatTccTitle(proc.titulo)}>
-              {formatCellText('titulo', formatTccTitle(proc.titulo), meusProcessosTextFormat, '📖')}
+              {formatCellText('titulo', formatTccTitle(proc.titulo), meusProcessosTextFormat, '')}
             </div>
           </td>
         );
@@ -560,7 +560,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
           <td key="aluno1" className={`${styles.cellPadClass} ${widthClass} ${alignClass} ${styles.borderClass} align-middle`}>
             <div className="w-full mx-auto">
               <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
-                {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), meusProcessosTextFormat, '🎓')}
+                {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), meusProcessosTextFormat, '')}
               </div>
               <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 uppercase tracking-tight">Matrícula</div>
               <div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno1?.matricula || '2026101890'}</div>
@@ -574,7 +574,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               {proc.aluno2?.nome ? (
                 <>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
-                    {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), meusProcessosTextFormat, '🎓')}
+                    {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), meusProcessosTextFormat, '')}
                   </div>
                   <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 uppercase tracking-tight">Matrícula</div>
                   <div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno2.matricula || '2026101891'}</div>
@@ -590,7 +590,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
           <td key="orientador" className={`${styles.cellPadClass} ${widthClass} ${alignClass} ${styles.borderClass} align-middle`}>
             <div className="w-full mx-auto">
               <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
-                {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), meusProcessosTextFormat, '👨‍🏫')}
+                {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), meusProcessosTextFormat, '')}
               </div>
               <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                 {cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName)}
@@ -605,7 +605,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               {ev1 ? (
                 <div>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
-                    {formatCellText('membro1', formatProfessorName(ev1.nome), meusProcessosTextFormat, '👥')}
+                    {formatCellText('membro1', formatProfessorName(ev1.nome), meusProcessosTextFormat, '')}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono mt-0.5 leading-tight break-words">
                     {cleanInst(ev1.instituicao || installationProfile.defaultInstitutionName)}
@@ -624,7 +624,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               {ev2 ? (
                 <div>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
-                    {formatCellText('membro2', formatProfessorName(ev2.nome), meusProcessosTextFormat, '👥')}
+                    {formatCellText('membro2', formatProfessorName(ev2.nome), meusProcessosTextFormat, '')}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono mt-0.5 leading-tight break-words">
                     {cleanInst(ev2.instituicao || 'Instituição Externa')}
@@ -643,7 +643,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               {proc.coorientador?.nome ? (
                 <div>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
-                    {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), meusProcessosTextFormat, '👨‍🏫')}
+                    {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), meusProcessosTextFormat, '')}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                     {cleanInst(proc.coorientador.instituicao || 'Instituição Externa')}

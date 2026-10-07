@@ -120,7 +120,7 @@ assert.match(studio, /localTime > remoteTime/);
 assert.match(studio, /'Publicando…' : 'Publicar'/);
 assert.match(studio, /createEmailTemplate/);
 assert.match(studio, /deleteSelectedEmail/);
-assert.match(studio, /Documentos anexados/);
+assert.match(studio, />Anexos /);
 assert.match(studio, /Somente após assinatura/);
 assert.match(studio, /Anexar quando gerado/);
 assert.match(studio, /createFormTemplate/);
@@ -141,7 +141,7 @@ assert.doesNotMatch(studio, /<strong>Fonte oficial única\.<\/strong>/);
 assert.doesNotMatch(studio, />Finalidade no fluxo</);
 
 assert.match(masterModels, /Nome do novo documento/);
-assert.match(masterModels, /Adicionar documento/);
+assert.match(masterModels, /Novo documento/);
 assert.match(masterModels, /addSlot/);
 assert.match(masterModels, /removeModel/);
 assert.match(masterModels, /deleteDocumentModel/);

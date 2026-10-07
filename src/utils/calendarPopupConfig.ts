@@ -5,7 +5,7 @@ export interface CalendarPopupFormat {
   headerBgColor?: string; // e.g. '#435649', '#1e293b', etc.
   headerTextColor?: string; // e.g. '#ffffff'
   headerCustomTitle?: string; // e.g. "AGENDA DE DEFESAS DE TCC"
-  headerEmoji?: string; // e.g. '📅', '🎓', '🏥', '📑'
+  headerEmoji?: string; // compatibilidade histórica; interface canônica não exibe emoji
   modalBgColor?: string; // e.g. '#f1f5f9'
   cardBgColor?: string; // e.g. '#ffffff'
   cardInnerBgColor?: string; // e.g. '#f8fafc'
@@ -30,12 +30,12 @@ export interface CalendarPopupFormat {
   progressBarGlow?: boolean; // efeito de brilho suave
 
   // === 3. DECIDIR O QUE APARECE EM CADA CARD (VISIBILIDADE DOS CAMPOS) ===
-  showTime?: boolean; // Horário da defesa (⏰ 06:00 às 07:30)
+  showTime?: boolean; // Horário da defesa (06:00 às 07:30)
   timeBadgeStyle?: 'pill' | 'outlined' | 'clean';
   timeTextColor?: string;
-  showLocation?: boolean; // Local (📍 Auditório / Sala)
+  showLocation?: boolean; // Local (Auditório / Sala)
   locationBadgeBg?: string;
-  showProtocol?: boolean; // Protocolo (📓 TCC-2026-0002)
+  showProtocol?: boolean; // Protocolo (TCC-2026-0002)
   protocolBadgeBg?: string;
   protocolBadgeText?: string;
   showTitle?: boolean; // Título do trabalho
@@ -69,7 +69,7 @@ export const DEFAULT_CALENDAR_POPUP_FORMAT: CalendarPopupFormat = {
   headerBgColor: '#154d41',
   headerTextColor: '#ffffff',
   headerCustomTitle: 'AGENDA DE DEFESAS DE TCC',
-  headerEmoji: '📅',
+  headerEmoji: '',
   modalBgColor: '#f2f2f2',
   cardBgColor: '#f2f2f2',
   cardInnerBgColor: '#f8fafc',

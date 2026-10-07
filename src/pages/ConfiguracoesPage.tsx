@@ -1905,9 +1905,9 @@ export const ConfiguracoesPage: React.FC = () => {
 
         setDocTemplates(syncedTemplates);
         setSelectedDocId(syncedTemplates[0].id);
-        showNotification(`🟢 ${syncedTemplates.length} arquivo(s) espelhado(s) com sucesso da pasta do Google Drive!`);
+        showNotification(`${syncedTemplates.length} arquivo(s) espelhado(s) com sucesso da pasta do Google Drive!`);
       } else {
-        showNotification('ℹ️ Nenhum arquivo encontrado nesta pasta do Google Drive.');
+        showNotification('Nenhum arquivo encontrado nesta pasta do Google Drive.');
       }
     } catch (err: any) {
       console.error(err);
@@ -1990,7 +1990,7 @@ export const ConfiguracoesPage: React.FC = () => {
             driveFileUrl: `https://docs.google.com/document/d/${fileId}/edit`,
             lastUpdated: new Date().toLocaleString('pt-BR')
           } : d));
-          showNotification(`🟢 Sucesso: O modelo "${doc.label}" foi atualizado e espelhado no Google Docs!`);
+          showNotification(`O modelo "${doc.label}" foi atualizado e espelhado no Google Docs.`);
         } else {
           showNotification('Criando arquivo no Google Docs para espelhamento...');
           const metadata = {
@@ -2016,7 +2016,7 @@ export const ConfiguracoesPage: React.FC = () => {
               driveFileUrl: `https://docs.google.com/document/d/${newFile.id}/edit`,
               lastUpdated: new Date().toLocaleString('pt-BR')
             } : d));
-            showNotification(`🟢 Sucesso: O modelo "${doc.label}" foi criado e espelhado na pasta /Modelos!`);
+            showNotification(`O modelo "${doc.label}" foi criado e espelhado na pasta /Modelos.`);
           }
         }
       }
@@ -2172,8 +2172,7 @@ export const ConfiguracoesPage: React.FC = () => {
                 ] : activeSettingsPanel === 'integrations' ? [
                   { id: 'integrations', label: 'Integrações e plataformas', description: 'Asten, Google, Supabase, Vercel e serviços externos.', icon: Globe, fullBleed: true, content: <InfrastructureIntegrationsPanel isMaster /> },
                 ] : activeSettingsPanel === 'models-documents' ? [
-                  { id: 'documents', label: 'Documentos', description: 'Modelos oficiais, arquivo ativo, versões e prévia fiel.', icon: FileText, fullBleed: true, content: <MasterDocumentModelsPanel onCatalogChanged={syncMasterModelCatalog} /> },
-                  { id: 'variables', fullBleed: true, label: 'Variáveis', description: 'Catálogo canônico, usos, mescla e propagação nos artefatos.', icon: Sliders, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-variables-unified" initialTab="variables" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
+                  { id: 'documents', label: 'Documentos e variáveis', description: 'Modelos oficiais, versões, variáveis, mescla e prévia no mesmo contexto.', icon: FileText, fullBleed: true, content: <MasterDocumentModelsPanel onCatalogChanged={syncMasterModelCatalog} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} docTemplates={docTemplates} setDocTemplates={setDocTemplates} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} /> },
                 ] : activeSettingsPanel === 'emails' ? [
                   { id: 'emails', fullBleed: true, label: 'E-mails', description: 'Modelos, variáveis, anexos e pré-visualização.', icon: Mail, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-emails" initialTab="emails" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'forms' ? [

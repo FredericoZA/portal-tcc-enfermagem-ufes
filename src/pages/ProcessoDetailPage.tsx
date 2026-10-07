@@ -11,9 +11,7 @@ import { StudentNames } from '../components/StudentNames';
 import { DocumentPreviewModal } from '../components/DocumentPreviewModal';
 import { CorrectionRequestModal } from '../components/CorrectionRequestModal';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
-import { NursingEmblemLogo } from '../components/NursingEmblemLogo';
 import { DynamicStudioForms } from '../components/DynamicStudioForms';
-import { ProcessFlowPanel } from '../components/ProcessFlowPanel';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import {
   ArrowLeft,
@@ -56,7 +54,9 @@ import {
   Sparkles,
   Layers,
   Plus,
-  ClipboardList
+  ClipboardList,
+  Mail,
+  IdCard
 } from 'lucide-react';
 
 interface ProcessoDetailPageProps {
@@ -733,182 +733,28 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       style={{ backgroundColor: 'var(--portal-surface-page)', color: '#0f172a' }}
     >
       {isModal ? (
-        <header
-          className="portal-modal-header flex flex-wrap items-center justify-between gap-3 border-x-0 border-t-0 border-b-[5px] border-white p-4"
-          style={{ backgroundColor: 'var(--portal-brand-header)', color: '#ffffff' }}
-        >
-          <div className="flex min-w-0 items-center gap-3">
-            {localFormat.showHeaderEmblem !== false ? <NursingEmblemLogo size={38} className="shrink-0" customSrc={settings?.integrationStudio?.brandKit?.courseLogoUrl || settings?.integrationStudio?.brandKit?.universityLogoUrl || ''} /> : null}
-            <div className="min-w-0">
-              <h1 className="truncate text-sm font-black uppercase tracking-tight">{localFormat.headerTitleText || 'Painel de Gestão e Detalhes do TCC'}</h1>
-              <p className="mt-0.5 truncate text-[11px] font-semibold opacity-90">{localFormat.headerSubtitleText || `${installationProfile.courseName} • ${installationProfile.institutionAcronym}`}</p>
-            </div>
+        <header className="portal-modal-header flex items-center justify-between gap-3 px-4" style={{ backgroundColor: 'var(--portal-brand-header)', color: '#ffffff' }}>
+          <div className="flex min-w-0 items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-white" aria-hidden="true"/><div className="min-w-0"><h1 className="truncate text-[12px] font-black uppercase tracking-wide">Detalhes do TCC</h1><p className="mt-0.5 truncate text-[10px] font-semibold text-white/85">Enfermagem e Obstetrícia · Maruípe/UFES</p></div></div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {localFormat.showHeaderRoleBadge !== false && <span className="inline-flex min-h-8 items-center gap-1 rounded-full border border-white bg-white px-3 text-[9px] font-black text-slate-900">{readOnly?'Consulta':isStudent?'Discente':isAdvisor||isCoAdvisor?'Orientador':isCommissionPresident?'Presidência':isMasterAdmin?'Admin Master':''}</span>}
+            <button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-slate-900" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/></button>
+            {isEvaluationSubmitted&&isMasterAdmin&&<button type="button" onClick={()=>void handleReopenEvaluation()} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-slate-900" aria-label="Reabrir avaliação"><RotateCcw className="h-4 w-4"/></button>}
+            {isMasterAdmin&&<button type="button" onClick={()=>setShowDeleteModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-rose-700" aria-label="Excluir trabalho"><Trash2 className="h-4 w-4"/></button>}
           </div>
-          {localFormat.showHeaderProtocolPill !== false ? <span className="rounded-full border border-white/30 bg-black/15 px-3 py-1 text-[10px] font-black">{process.protocolo}</span> : null}
         </header>
       ) : null}
       {process.coauthorAcceptance?.status==='PENDING'&&<section className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950"><div className="flex flex-wrap items-center justify-between gap-3"><div><strong className="text-sm">Aceite do segundo autor pendente</strong><p className="mt-1 text-xs">O fluxo documental permanece bloqueado até o e-mail convidado confirmar ou recusar o vínculo.</p></div>{normalizeEmail(process.coauthorAcceptance.invitedEmail||'')===normalizeEmail(userEmail)&&<div className="flex gap-2"><button type="button" onClick={()=>void handleCoauthorDecision('REJECT')} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-black">Recusar</button><button type="button" onClick={()=>void handleCoauthorDecision('ACCEPT')} className="rounded-lg bg-amber-800 px-3 py-2 text-xs font-black text-white">Aceitar autoria</button></div>}</div></section>}
       {process.coauthorAcceptance?.status==='REJECTED'&&<section className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-900">O segundo autor recusou o vínculo. Corrija ou remova os dados da dupla antes de continuar.</section>}
       
-      {/* ========================================================================= */}
-      {/* 1. TITLE & PROTOCOL SUMMARY CARD (TOP BAR WITH BADGE, GEAR, AND CLOSE)    */}
-      {/* ========================================================================= */}
-      <div className="space-y-3 border-b border-slate-300 p-4 sm:p-5" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
-        <div className="space-y-1.5">
-          {/* Top Line: Identification, Stage, Grade ON LEFT + Master User Badge, Gear, Close ON RIGHT */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            {/* Left Zone: Protocol, Stage, Grade */}
-            <div className="flex items-center gap-2 flex-wrap text-xs">
-              <span className="text-[11px] font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
-                {process.protocolo}
-              </span>
-              <span
-                className="text-[11px] font-bold px-2 py-0.5 rounded border shadow-2xs"
-                style={{
-                  backgroundColor: localFormat.badgeBgColor || '#e6f4ed',
-                  color: localFormat.badgeTextColor || primaryAccentColor,
-                  borderColor: localFormat.badgeBorderColor || '#a3d9be'
-                }}
-              >
-                Etapa: {process.etapaAtual}
-              </span>
-              {process.avaliacao?.status === 'CONCLUIDO' && (
-                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded">
-                  Conceito: {process.avaliacao.resultadoLabel || 'Aprovado'}
-                </span>
-              )}
-            </div>
-
-            {/* Right Zone: Master Badge, Gear Settings, Close Button */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              {/* User Role Badge */}
-              {localFormat.showHeaderRoleBadge !== false && (
-                <div>
-                  {readOnly ? (
-                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md border border-slate-200 flex items-center gap-1">
-                      <Eye className="w-3 h-3 text-slate-400" />
-                      <span>Consulta</span>
-                    </span>
-                  ) : isStudent ? (
-                    <span className="text-[10px] font-bold text-sky-800 bg-sky-50 px-2 py-1 rounded-md border border-sky-200 flex items-center gap-1">
-                      <GraduationCap className="w-3 h-3 text-sky-600" />
-                      <span>Discente</span>
-                    </span>
-                  ) : isAdvisor || isCoAdvisor ? (
-                    <span className="text-[10px] font-bold text-purple-800 bg-purple-50 px-2 py-1 rounded-md border border-purple-200 flex items-center gap-1">
-                      <Award className="w-3 h-3 text-purple-600" />
-                      <span>Orientador</span>
-                    </span>
-                  ) : isCommissionPresident ? (
-                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
-                      Presidente da Comissão
-                    </span>
-                  ) : isMasterAdmin ? (
-                    <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-1 rounded-md border border-amber-200 flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3 text-amber-600" />
-                      <span>Admin Master</span>
-                    </span>
-                  ) : null}
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => setShowAuditLogModal(true)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-[var(--portal-brand-action)] shadow-sm hover:bg-slate-50"
-                title="Histórico de Auditoria"
-                aria-label="Abrir histórico de auditoria"
-              >
-                <History className="h-4 w-4" />
-              </button>
-              {isEvaluationSubmitted && isMasterAdmin && (
-                <button type="button" onClick={() => void handleReopenEvaluation()} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-amber-300 bg-white text-amber-700" title="Reabrir avaliação" aria-label="Reabrir avaliação">
-                  <RotateCcw className="h-4 w-4" />
-                </button>
-              )}
-              {isMasterAdmin && (
-                <button type="button" onClick={() => setShowDeleteModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-300 bg-white text-rose-700" title="Excluir trabalho" aria-label="Excluir trabalho">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <h1 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
-            {process.titulo}
-          </h1>
-        </div>
-
-        {/* Metadata in one clean row */}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-2 border-t border-slate-100 text-xs text-slate-600">
-          <div className="flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="font-semibold text-slate-800">{process.aluno1.nome}</span>
-            {process.aluno2 && <span className="text-slate-500">e {process.aluno2.nome}</span>}
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <Award className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span>Orientador(a): <strong className="text-slate-800">{process.orientador.nome}</strong></span>
-          </div>
-
-          {process.defesa?.startAt && (
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span>{formatDatePt(process.defesa.startAt)} • {formatTimeExtenso(process.defesa.startAt)}</span>
-            </div>
-          )}
-
-          {process.defesa?.local && (
-            <div className="flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span>{process.defesa.local}</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 2. STATE MACHINE / ETAPA PROGRESS BAR                                     */}
-      {/* ========================================================================= */}
-      {localFormat.showStateMachine !== false && (
-        <EtapaProgressBar currentEtapa={process.etapaAtual} />
-      )}
-
-      {/* ========================================================================= */}
-      {/* 3. NAVIGATION TABS ROW                                                    */}
-      {/* ========================================================================= */}
-      <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar p-1.5 bg-slate-100/90 rounded-xl border border-slate-200 shadow-2xs">
-        {[
-          { id: 'cadastral', label: 'Ficha Cadastral & Defesa', icon: FileText, show: localFormat.showSectionCadastral !== false },
-          { id: 'banca', label: 'Banca Examinadora', icon: Users, show: localFormat.showSectionBanca !== false },
-          { id: 'avaliacao', label: 'Avaliação & Ata', icon: Award, show: localFormat.showSectionAvaliacao !== false },
-          { id: 'forms', label: 'Formulários', icon: ClipboardList, show: true },
-          { id: 'docs', label: 'Documentos', icon: FileCheck, show: localFormat.showSectionDocs !== false },
-          { id: 'acervo', label: 'Repositório Digital', icon: BookOpen, show: localFormat.showSectionAcervo !== false },
-        ]
-          .filter((t) => t.show !== false)
-          .map((tab) => {
-            const isSelected = activeTab === tab.id;
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                  isSelected
-                    ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/90'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: isSelected ? primaryAccentColor : '#94a3b8' }} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-      </div>
-
-      <ProcessFlowPanel process={process} jobs={signatureJobs} canConfirm={Boolean((isStudent||isMasterAdmin)&&!readOnly)} onUpdated={loadData}/>
+      {localFormat.showStateMachine !== false && <div className="px-3 pt-3"><div className="overflow-hidden rounded-xl border border-[var(--portal-border)] bg-white"><EtapaProgressBar currentEtapa={process.etapaAtual}/></div></div>}
+      <section className="mx-3 mt-3 rounded-xl border border-[var(--portal-border)] p-4" style={{backgroundColor:'var(--portal-surface-panel)'}}>
+        <div className="flex flex-wrap items-center gap-2"><span className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[10px] font-black">{process.protocolo}</span>{process.avaliacao?.status==='CONCLUIDO'&&<span className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-black">Conceito: {process.avaliacao.resultadoLabel||'Aprovado'}</span>}</div>
+        <h2 className="mt-3 text-sm font-black text-slate-950">{process.titulo}</h2>
+        <div className="mt-3 grid gap-2 border-t border-slate-300 pt-3 text-[10px] text-slate-700 sm:grid-cols-2 xl:grid-cols-4"><div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5"/><span>{process.aluno1.nome}{process.aluno2?` e ${process.aluno2.nome}`:''}</span></div><div className="flex items-center gap-1.5"><Award className="h-3.5 w-3.5"/><span>Orientador(a): <strong>{process.orientador.nome}</strong></span></div>{process.defesa?.startAt&&<div className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5"/><span>{formatDatePt(process.defesa.startAt)} · {formatTimeExtenso(process.defesa.startAt)}</span></div>}{process.defesa?.local&&<div className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5"/><span>{process.defesa.local}</span></div>}</div>
+      </section>
+      <section className="mx-3 mt-3 rounded-xl border border-[var(--portal-border)] p-2" style={{backgroundColor:'var(--portal-surface-card)'}}><div className="flex items-center gap-1 overflow-x-auto custom-scrollbar">{[
+        {id:'cadastral',label:'Ficha Cadastral & Defesa',icon:FileText,show:localFormat.showSectionCadastral!==false},{id:'banca',label:'Banca Examinadora',icon:Users,show:localFormat.showSectionBanca!==false},{id:'avaliacao',label:'Avaliação & Ata',icon:Award,show:localFormat.showSectionAvaliacao!==false},{id:'forms',label:'Formulários',icon:ClipboardList,show:true},{id:'docs',label:'Documentos',icon:FileCheck,show:localFormat.showSectionDocs!==false},{id:'acervo',label:'Repositório Digital',icon:BookOpen,show:localFormat.showSectionAcervo!==false}
+      ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} type="button" onClick={()=>setActiveTab(tab.id)} className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold ${selected?'border-slate-300 bg-white text-slate-950':'border-transparent bg-[var(--portal-surface-panel)] text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
 
       {isTabVisible('forms') && (
         <DynamicStudioForms
@@ -1297,13 +1143,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <div className="flex flex-col gap-1 text-[11px] pt-2 border-t border-slate-200/70 text-slate-600 font-medium">
                           {localFormat.showStudentEmail !== false && process.aluno1.email && (
                             <div className="flex items-center gap-1.5 text-slate-700">
-                              <span className="text-slate-400 text-xs">✉</span>
+                              <Mail className="h-3 w-3 shrink-0 text-slate-400" aria-hidden="true" />
                               <span className="font-semibold text-slate-800 truncate">{process.aluno1.email}</span>
                             </div>
                           )}
                           {localFormat.showStudentMatricula !== false && process.aluno1.matricula && (
                             <div className="flex items-center gap-1.5 text-slate-700 font-mono">
-                              <span className="text-slate-400 text-xs font-sans">🆔 Matrícula:</span>
+                              <span className="inline-flex items-center gap-1 text-slate-400 text-xs font-sans"><IdCard className="h-3 w-3 shrink-0" aria-hidden="true" />Matrícula:</span>
                               <strong className="text-slate-900">{process.aluno1.matricula}</strong>
                             </div>
                           )}
@@ -1330,13 +1176,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                           <div className="flex flex-col gap-1 text-[11px] pt-2 border-t border-slate-200/70 text-slate-600 font-medium">
                             {localFormat.showStudentEmail !== false && process.aluno2.email && (
                               <div className="flex items-center gap-1.5 text-slate-700">
-                                <span className="text-slate-400 text-xs">✉</span>
+                                <Mail className="h-3 w-3 shrink-0 text-slate-400" aria-hidden="true" />
                                 <span className="font-semibold text-slate-800 truncate">{process.aluno2.email}</span>
                               </div>
                             )}
                             {localFormat.showStudentMatricula !== false && process.aluno2.matricula && (
                               <div className="flex items-center gap-1.5 text-slate-700 font-mono">
-                                <span className="text-slate-400 text-xs font-sans">🆔 Matrícula:</span>
+                                <span className="inline-flex items-center gap-1 text-slate-400 text-xs font-sans"><IdCard className="h-3 w-3 shrink-0" aria-hidden="true" />Matrícula:</span>
                                 <strong className="text-slate-900">{process.aluno2.matricula}</strong>
                               </div>
                             )}
@@ -1363,12 +1209,12 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <div className="flex flex-wrap items-center gap-1.5 text-[11px] pt-2 border-t border-slate-200/70 text-slate-600 font-medium">
                           {localFormat.showAdvisorEmail !== false && process.orientador.email && (
                             <span className="bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-700 truncate">
-                              ✉ {process.orientador.email}
+                              {process.orientador.email}
                             </span>
                           )}
                           {localFormat.showAdvisorInstitution !== false && (
                             <span className="bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-700">
-                              🏛️ {process.orientador.instituicao || installationProfile.defaultInstitutionName}
+                              {process.orientador.instituicao || installationProfile.defaultInstitutionName}
                             </span>
                           )}
                         </div>
@@ -1394,12 +1240,12 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                           <div className="flex flex-wrap items-center gap-1.5 text-[11px] pt-2 border-t border-slate-200/70 text-slate-600 font-medium">
                             {localFormat.showAdvisorEmail !== false && process.coorientador.email && (
                               <span className="bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-700 truncate">
-                                ✉ {process.coorientador.email}
+                                {process.coorientador.email}
                               </span>
                             )}
                             {localFormat.showAdvisorInstitution !== false && (
                               <span className="bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-700">
-                                🏛️ {process.coorientador.instituicao || installationProfile.defaultInstitutionName}
+                                {process.coorientador.instituicao || installationProfile.defaultInstitutionName}
                               </span>
                             )}
                           </div>
@@ -1721,7 +1567,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       </div>
 
                       <div className="p-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-slate-600 font-medium">
-                        📌 {docInfo.signNote}
+                        {docInfo.signNote}
                       </div>
 
                       {/* Status Badge */}
@@ -2128,7 +1974,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
               </div>
               <div>
                 <h2 className="text-base font-black uppercase tracking-tight text-rose-900">
-                  ⚠️ ATENÇÃO: EXCLUSÃO DE TRABALHO
+                  ATENÇÃO: EXCLUSÃO DE TRABALHO
                 </h2>
                 <p className="text-xs text-rose-700 font-bold">
                   Exclusão Definitiva de Processo de TCC

@@ -8,7 +8,8 @@ test('Documentos e Variáveis compartilham o mesmo workspace',()=>{
   const config=read('src/pages/ConfiguracoesPage.tsx');
   assert.match(config,/title: 'Documentos e Variáveis'/);
   assert.match(config,/id: 'documents'.*MasterDocumentModelsPanel/s);
-  assert.match(config,/key="studio-variables-unified".*initialTab="variables"/s);
+  assert.doesNotMatch(config,/key="studio-variables-unified"/);
+  assert.match(config,/label: 'Documentos e variáveis'/);
   assert.doesNotMatch(config,/title: 'Variáveis', text: 'Definições canônicas/);
 });
 
@@ -16,7 +17,7 @@ test('workspace de configurações tem cabeçalho compacto e fechamento explíci
   const modal=read('src/components/SettingsWorkspaceModal.tsx');
   const css=read('src/styles/portal-components.css');
   assert.match(modal,/portal-settings-workspace-divider/);
-  assert.match(modal,/aria-label="Fechar janela"/);
+  assert.doesNotMatch(modal,/aria-label="Fechar janela"/);
   assert.doesNotMatch(modal,/>Navegação</);
   assert.match(css,/height: var\(--portal-sheet-title-height\)/);
   assert.match(css,/\.portal-settings-backdrop \{[\s\S]*rgba\(1, 31, 23, \.72\)/);

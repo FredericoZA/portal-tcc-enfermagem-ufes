@@ -237,35 +237,35 @@ export const DEFAULT_TABLE_TEXT_FORMAT: TableTextFormat = {
   // Ações e Textos dos Botões do Topo
   showNewDefenseButton: true,
   newDefenseButtonText: 'Nova Defesa',
-  newDefenseButtonEmoji: '➕',
+  newDefenseButtonEmoji: '',
   showWhatsappButton: true,
   whatsappButtonText: 'WhatsApp Secretária',
-  whatsappButtonEmoji: '💬',
+  whatsappButtonEmoji: '',
   whatsappButtonUrl: 'https://wa.me/message/HUKHX3BJAWNHJ1',
   showCadastrarTrabalhoButton: true,
   cadastrarTrabalhoButtonText: 'Cadastrar Trabalho',
-  cadastrarTrabalhoButtonEmoji: '🎓',
+  cadastrarTrabalhoButtonEmoji: '',
   showDownloadDadosButton: true,
   downloadDadosButtonText: 'Download dos Dados',
-  downloadDadosButtonEmoji: '📥',
+  downloadDadosButtonEmoji: '',
   showEnviarAssinadosButton: true,
   enviarAssinadosButtonText: 'Enviar Assinados',
-  enviarAssinadosButtonEmoji: '📤',
+  enviarAssinadosButtonEmoji: '',
   showBaixarSelecionadosButton: true,
   baixarSelecionadosButtonText: 'Baixar Selecionados',
-  baixarSelecionadosButtonEmoji: '📦',
+  baixarSelecionadosButtonEmoji: '',
   searchButtonText: 'Buscar...',
-  searchButtonEmoji: '🔍',
-  refreshButtonEmoji: '🔄',
-  settingsButtonEmoji: '⚙️',
+  searchButtonEmoji: '',
+  refreshButtonEmoji: '',
+  settingsButtonEmoji: '',
 
   // Chips dos Filtros
   filterAllLabel: 'TODAS',
-  filterAllEmoji: '📋',
+  filterAllEmoji: '',
   filterPendingLabel: 'A DEFENDER',
-  filterPendingEmoji: '⏳',
+  filterPendingEmoji: '',
   filterConcludedLabel: 'JÁ DEFENDIDAS',
-  filterConcludedEmoji: '✅',
+  filterConcludedEmoji: '',
 
   // Células
   boldCells: false,
@@ -428,7 +428,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
         updatedBy: userEmail,
       };
       localStorage.setItem(`default_table_config_${storageKey}`, JSON.stringify(payload));
-      setSaveMessage(`✓ Ordem e colunas salvas para "${tabTitle}". Use “Publicar” na Personalização do Portal para sincronizar com todos os usuários.`);
+      setSaveMessage(`Ordem e colunas salvas para "${tabTitle}". Use “Publicar” na Personalização do Portal para sincronizar com todos os usuários.`);
       setTimeout(() => setSaveMessage(null), 5000);
     } catch (e) {
       console.error(e);
