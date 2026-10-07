@@ -1,4 +1,5 @@
 import React from 'react';
+import { IdCard } from 'lucide-react';
 import { formatNameTitleCase } from '../utils/formatters';
 
 export interface StudentInfo {
@@ -49,7 +50,7 @@ export const StudentNames: React.FC<StudentNamesProps> = ({
         const matriculaStr = showMatricula && st.matricula ? `${st.matricula} - ` : '';
         return (
           <div key={st.matricula || idx} className={`flex items-center gap-1 ${alignClass} ${itemClassName}`}>
-            {showIcon && <span className="shrink-0">🪪</span>}
+            {showIcon && <IdCard className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
             <span className={truncate ? 'truncate' : ''}>
               {matriculaStr}{formattedName}
             </span>
@@ -90,7 +91,7 @@ export const GcalStudentNames: React.FC<GcalStudentNamesProps> = ({
   if (parts.length <= 1) {
     return (
       <div className={`flex items-center gap-1 ${alignClass} ${itemClassName}`}>
-        {showIcon && <span className="shrink-0" aria-hidden="true">🪪</span>}
+        {showIcon && <IdCard className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
         <span>{cleanAlunoStr}</span>
       </div>
     );
@@ -102,7 +103,7 @@ export const GcalStudentNames: React.FC<GcalStudentNamesProps> = ({
         const cleanPart = p.trim();
         return (
           <div key={idx} className={`flex items-center gap-1 ${alignClass} ${itemClassName}`}>
-            {showIcon && <span className="shrink-0" aria-hidden="true">🪪</span>}
+            {showIcon && <IdCard className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
             <span>{cleanPart}</span>
           </div>
         );
