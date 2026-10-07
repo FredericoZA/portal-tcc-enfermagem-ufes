@@ -7,6 +7,7 @@ import {
   getAstenSecurityPreflight,
   safeCompareWebhookSecret
 } from '../integrations/asten';
+import { saveIntegrationSecret } from '../integrations/integrationSecrets';
 import {
   buildGoogleAuthorizationUrl,
   getGoogleOAuthSecurityPreflight,
@@ -33,9 +34,17 @@ const MANAGED_ENV = [
   'GOOGLE_OAUTH_CLIENT_SECRET',
   'GOOGLE_OAUTH_STATE_SECRET',
   'PORTAL_SECRET_ENCRYPTION_KEY',
+  'PORTAL_SECRET_ENCRYPTION_KEY_V2',
+  'PORTAL_VERIFICATION_SECRET',
+  'PORTAL_UPLOAD_BINDING_SECRET',
+  'PORTAL_SECURITY_WEBHOOK_SECRET',
   'PORTAL_SESSION_SECRET',
   'PORTAL_OTP_PEPPER',
-  'PORTAL_ALLOW_LOCAL_OTP_STORE'
+  'PORTAL_ALLOW_LOCAL_OTP_STORE',
+  'CRON_SECRET',
+  'SUPABASE_URL',
+  'SUPABASE_SECRET_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY'
 ] as const;
 
 function snapshotManagedEnvironment() {
@@ -147,6 +156,33 @@ test('Asten bloqueia redirects e não propaga credencial em mensagem de erro do 
   });
 });
 
+test('cofre de integrações bloqueia redirects e nunca envia segredo em texto puro no payload', async () => {
+  await withCleanEnvironmentAsync(async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.SUPABASE_URL = 'https://project.example.supabase.co';
+    process.env.SUPABASE_SECRET_KEY = 'sb_secret_example_only_for_test';
+    process.env.PORTAL_SECRET_ENCRYPTION_KEY = 'a'.repeat(64);
+    const plaintext = 'credencial-integracao-nao-pode-sair-em-claro';
+    const originalFetch = globalThis.fetch;
+    let capturedInit: RequestInit | undefined;
+    (globalThis as any).fetch = async (_input: string | URL | Request, init?: RequestInit) => {
+      capturedInit = init;
+      return new Response('', { status: 201 });
+    };
+    try {
+      await saveIntegrationSecret('asten', plaintext, { identifier: 'test' });
+      assert.equal(capturedInit?.redirect, 'error');
+      assert.equal(capturedInit?.cache, 'no-store');
+      const body = String(capturedInit?.body || '');
+      assert.equal(body.includes(plaintext), false);
+      assert.equal(body.includes('ciphertext'), true);
+      assert.equal(body.includes('auth_tag'), true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
 test('OTP não reutiliza PORTAL_SESSION_SECRET como pepper', () => {
   withCleanEnvironment(() => {
     process.env.NODE_ENV = 'development';
@@ -160,7 +196,7 @@ test('OTP não reutiliza PORTAL_SESSION_SECRET como pepper', () => {
   });
 });
 
-test('produção exige segredos distintos para sessão, OTP e estado OAuth', () => {
+test('produção exige segredos distintos para sessão, OTP, OAuth e demais chaves operacionais', () => {
   withCleanEnvironment(() => {
     process.env.NODE_ENV = 'production';
     process.env.PORTAL_SESSION_SECRET = 's'.repeat(48);
@@ -168,7 +204,7 @@ test('produção exige segredos distintos para sessão, OTP e estado OAuth', () 
     process.env.GOOGLE_OAUTH_STATE_SECRET = process.env.PORTAL_SESSION_SECRET;
     process.env.GOOGLE_OAUTH_CLIENT_ID = 'client.apps.googleusercontent.com';
     process.env.GOOGLE_OAUTH_CLIENT_SECRET = 'client-secret';
-    process.env.PORTAL_SECRET_ENCRYPTION_KEY = 'e'.repeat(48);
+    process.env.PORTAL_SECRET_ENCRYPTION_KEY = 'e'.repeat(64);
 
     assert.equal(getPortalSessionRuntimeStatus().configured, false);
     assert.equal(getOtpRuntimeStatus().pepperSeparated, false);
@@ -181,5 +217,14 @@ test('produção exige segredos distintos para sessão, OTP e estado OAuth', () 
     assert.equal(getPortalSessionRuntimeStatus().configured, true);
     assert.equal(getGoogleOAuthSecurityPreflight().ready, true);
     assert.equal(getGoogleWorkspaceConfigStatus().oauthConfigured, true);
+
+    process.env.PORTAL_SECRET_ENCRYPTION_KEY_V2 = process.env.PORTAL_SESSION_SECRET;
+    assert.equal(getPortalSessionRuntimeStatus().configured, false);
+    process.env.PORTAL_SECRET_ENCRYPTION_KEY_V2 = 'v'.repeat(48);
+    process.env.PORTAL_SECURITY_WEBHOOK_SECRET = process.env.PORTAL_SESSION_SECRET;
+    assert.equal(getPortalSessionRuntimeStatus().configured, false);
+    process.env.PORTAL_SECURITY_WEBHOOK_SECRET = 'w'.repeat(48);
+    process.env.CRON_SECRET = process.env.PORTAL_SESSION_SECRET;
+    assert.equal(getPortalSessionRuntimeStatus().configured, false);
   });
 });
