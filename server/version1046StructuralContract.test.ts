@@ -54,11 +54,11 @@ test('configurações separam artefatos e unem modelos com documentos', () => {
   assert.match(studio, /portal-studio-tabs/);
   assert.match(studio, /Editor de modelos e variáveis/);
   assert.match(studio, /var\(--portal-brand-action\)/);
-  assert.match(config, /Modelos e Documentos/);
+  assert.match(config, /Documentos e Variáveis/);
   assert.match(config, /title: 'E-mails'/);
   assert.match(config, /title: 'Formulários'/);
   assert.match(config, /title: 'Fluxos'/);
-  assert.match(config, /title: 'Variáveis'/);
+  assert.doesNotMatch(config, /id: 'variables', title: 'Variáveis'/);
   assert.doesNotMatch(config, /initialTab="documents"/);
   assert.match(models, /Variáveis deste modelo/);
   assert.match(models, /Visualizar modelo/);
