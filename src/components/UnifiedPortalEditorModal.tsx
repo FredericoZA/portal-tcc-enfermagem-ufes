@@ -1639,19 +1639,19 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                                   }}
                                 >
                                   
-                                  <span>Calendário Geral</span>
+                                  <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden="true"/><span>Calendário Geral</span>
                                 </div>
                                 <div className="px-3 py-2 rounded-lg font-medium opacity-80 hover:opacity-100 flex items-center gap-2">
                                   
-                                  <span>Repositório de TCCs</span>
+                                  <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden="true"/><span>Repositório de TCCs</span>
                                 </div>
                                 <div className="px-3 py-2 rounded-lg font-medium opacity-80 hover:opacity-100 flex items-center gap-2">
                                   
-                                  <span>Meus Processos</span>
+                                  <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true"/><span>Meus Processos</span>
                                 </div>
                                 <div className="px-3 py-2 rounded-lg font-medium opacity-80 hover:opacity-100 flex items-center gap-2">
                                   
-                                  <span>Área do Presidente</span>
+                                  <Award className="h-3.5 w-3.5 shrink-0" aria-hidden="true"/><span>Área do Presidente</span>
                                 </div>
                               </div>
                             </div>
