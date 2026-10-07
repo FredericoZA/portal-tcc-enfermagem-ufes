@@ -729,17 +729,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   return (
     <div
       id="process-detail-container"
-      className={`portal-tcc-detail space-y-3 ${modalWidthClass} ${modalRadiusClass} ${modalShadowClass} mx-auto overflow-hidden`}
+      className={`portal-tcc-detail ${isModal ? 'space-y-0' : 'space-y-3 mx-auto'} ${modalWidthClass} ${modalRadiusClass} ${modalShadowClass} overflow-hidden`}
       style={{ backgroundColor: 'var(--portal-surface-page)', color: '#0f172a' }}
     >
       {isModal ? (
         <header
-          className={`${modalRadiusClass} flex flex-wrap items-center justify-between gap-3 border p-4`}
-          style={{
-            backgroundColor: localFormat.headerBgColor || 'var(--portal-brand-header)',
-            color: localFormat.headerTextColor || '#ffffff',
-            borderColor: localFormat.headerBgColor || 'var(--portal-brand-header)',
-          }}
+          className="portal-modal-header flex flex-wrap items-center justify-between gap-3 border-x-0 border-t-0 border-b-[5px] border-white p-4"
+          style={{ backgroundColor: 'var(--portal-brand-header)', color: '#ffffff' }}
         >
           <div className="flex min-w-0 items-center gap-3">
             {localFormat.showHeaderEmblem !== false ? <NursingEmblemLogo size={38} className="shrink-0" customSrc={settings?.integrationStudio?.brandKit?.courseLogoUrl || settings?.integrationStudio?.brandKit?.universityLogoUrl || ''} /> : null}
@@ -2076,10 +2072,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 <p className="mt-0.5 text-[10px] font-mono text-white/80">Protocolo: {process.protocolo}</p>
               </div>
             </header>
-            <div className="max-h-[calc(85vh-58px)] overflow-y-auto p-3" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
-              <div className="overflow-hidden rounded-lg border border-slate-300" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
+            <div className="max-h-[calc(85vh-58px)] overflow-y-auto" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
                 <TableScrollWrapper>
-                  <table className="w-full border-collapse text-left text-xs">
+                  <table className="w-full border-collapse text-left text-xs" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
                     <thead>
                       <tr className="border-b border-slate-300 text-[10px] font-extrabold uppercase tracking-wider text-slate-900" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
                         <th className="p-3">Data e Hora</th>
@@ -2100,7 +2095,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     </tbody>
                   </table>
                 </TableScrollWrapper>
-              </div>
             </div>
           </div>
         </div>
