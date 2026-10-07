@@ -17,6 +17,7 @@ import {
   CircleAlert,
   ClipboardList,
   Cloud,
+  Eye,
   FileClock,
   FileText,
   FolderSync,
