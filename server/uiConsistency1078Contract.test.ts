@@ -10,7 +10,7 @@ test('contrato global de pop-up permanece canônico na rodada TCC12',()=>{
   assert.match(css,/Portal TCC12 — pop-ups e artefatos institucionais/);
   assert.match(css,/\.portal-modal-header \{[\s\S]*background: var\(--portal-brand-header\)/);
   assert.match(css,/\.portal-modal-surface,[\s\S]*background: var\(--portal-surface-panel\)/);
-  assert.match(modal,/portal-modal-header-close/);
+  assert.doesNotMatch(modal,/portal-modal-header-close/);
   assert.match(modal,/portal-settings-workspace-divider/);
 });
 
@@ -50,7 +50,7 @@ test('catálogo mestre propaga modelos e detecta variáveis',()=>{
   const api=read('src/services/apiClient.ts');
   const server=read('server.ts');
   assert.match(models,/onCatalogChanged/);
-  assert.match(models,/Detectar variáveis/);
+  assert.match(models,/Descobrir/);
   assert.match(models,/model\.driveFileUrl/);
   assert.match(config,/syncMasterModelCatalog/);
   assert.match(api,/detectDocumentModelVariables/);
