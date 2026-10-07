@@ -117,13 +117,13 @@
 }
 
 .portal-settings-workspace {
-  background: var(--portal-surface-panel);
+  background: var(--portal-surface-page);
 }
 
 .portal-settings-workspace-main,
 .portal-settings-workspace-content {
   min-width: 0;
-  background: var(--portal-surface-panel);
+  background: var(--portal-surface-page);
 }
 
 [data-portal-full-bleed="true"] .portal-settings-workspace-main,
