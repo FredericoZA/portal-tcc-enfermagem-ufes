@@ -296,6 +296,15 @@ function applyPagination(table: HTMLTableElement) {
 
   const allRows = Array.from(table.tBodies).flatMap((tbody) => Array.from(tbody.rows));
   const visibleRows = allRows.filter((row) => !rowIsExternallyHidden(row));
+
+  if (visibleRows.length === 0) {
+    saveCurrentPage(key, 1);
+    const parent = host.parentElement;
+    parent?.querySelectorAll<HTMLElement>(`:scope > .portal-spreadsheet-pager[data-portal-table-key="${key}"][data-portal-generated="true"]`).forEach((pager) => pager.remove());
+    allRows.forEach((row) => row.classList.remove('portal-runtime-page-hidden'));
+    return;
+  }
+
   const pageSize = readPageSize(key);
   const totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(visibleRows.length / pageSize));
   const current = Math.min(totalPages, readCurrentPage(key));
@@ -357,14 +366,15 @@ function applyPagination(table: HTMLTableElement) {
 }
 
 function removeOrphanPagers(root: HTMLElement) {
-  const parent = root.parentElement;
-  if (!parent) return;
-  parent.querySelectorAll<HTMLElement>(':scope > .portal-spreadsheet-pager[data-portal-generated="true"]').forEach((pager) => {
+  root.querySelectorAll<HTMLElement>('.portal-spreadsheet-pager[data-portal-generated="true"]').forEach((pager) => {
     const key = pager.dataset.portalTableKey as TableKey | undefined;
-    const ownerExists = key
-      ? Array.from(root.querySelectorAll<HTMLTableElement>('table')).some((table) => table.isConnected && tableKey(table) === key)
-      : false;
-    if (!ownerExists) pager.remove();
+    const host = pager.previousElementSibling as HTMLElement | null;
+    const ownsAdjacentHost = Boolean(
+      key
+      && host?.matches('[data-portal-scroll-host="true"],.portal-spreadsheet-scroll-host,.table-sticky-container')
+      && Array.from(host.querySelectorAll<HTMLTableElement>('table')).some((table) => table.isConnected && tableKey(table) === key)
+    );
+    if (!ownsAdjacentHost) pager.remove();
   });
 }
 
