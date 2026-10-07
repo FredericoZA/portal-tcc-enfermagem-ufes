@@ -11,9 +11,7 @@ import { StudentNames } from '../components/StudentNames';
 import { DocumentPreviewModal } from '../components/DocumentPreviewModal';
 import { CorrectionRequestModal } from '../components/CorrectionRequestModal';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
-import { NursingEmblemLogo } from '../components/NursingEmblemLogo';
 import { DynamicStudioForms } from '../components/DynamicStudioForms';
-import { ProcessFlowPanel } from '../components/ProcessFlowPanel';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import {
   ArrowLeft,
