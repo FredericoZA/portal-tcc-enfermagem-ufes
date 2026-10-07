@@ -1002,7 +1002,7 @@ button[aria-label^="Configurar exibição"],
 }
 
 
-/* Portal TCC 1.0.79 — pop-ups e artefatos institucionais. */
+/* Portal TCC12 — pop-ups e artefatos institucionais. */
 .portal-settings-backdrop {
   background: rgba(1, 31, 23, .72);
   backdrop-filter: blur(2px);
@@ -1070,11 +1070,11 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-settings-workspace aside {
-  background: var(--portal-surface-card) !important;
+  background: var(--portal-surface-card);
 }
 
 .portal-settings-workspace aside > div {
-  background: var(--portal-surface-inner) !important;
+  background: var(--portal-surface-inner);
   box-shadow: none;
 }
 
