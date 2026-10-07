@@ -1182,3 +1182,27 @@ button[aria-label^="Configurar exibição"],
   border: 1px solid var(--portal-border);
   border-radius: 8px;
 }
+
+.portal-settings-header-pill {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(255,255,255,.9);
+  border-radius: 999px;
+  background: #fff;
+  padding: 4px 12px;
+  color: var(--portal-text-dark);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .025em;
+  text-transform: uppercase;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+
+.portal-settings-header-pill:hover,
+.portal-settings-header-pill[aria-pressed="true"] {
+  background: var(--portal-surface-page);
+  border-color: var(--portal-border);
+}
