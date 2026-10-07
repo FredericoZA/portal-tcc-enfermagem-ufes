@@ -54,7 +54,7 @@ const sensitiveEnvKeys = [
 ];
 
 const assignmentPattern = new RegExp(
-  `\\b(${sensitiveEnvKeys.join('|')})\\b\\s*(?:=|:)\\s*(.+)$`
+  `["']?\\b(${sensitiveEnvKeys.join('|')})\\b["']?\\s*(?:=|:)\\s*(.+)$`
 );
 
 function isPlaceholder(rawValue) {
