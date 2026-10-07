@@ -15,13 +15,14 @@ test('sessão usa janela móvel de três horas com teto absoluto de doze horas',
   assert.ok(auth.includes("requestPath === '/api/me' || req.path === '/me'"));
 });
 
-test('sessão assinada também valida integridade temporal e identidade antes de aceitar', async () => {
+test('sessão assinada valida integridade temporal, identidade e bloqueia demo em runtime seguro', async () => {
   const auth = await source('server/security/firebaseAuth.ts');
   assert.ok(auth.includes('identity.authTime > now + 60'));
   assert.ok(auth.includes('identity.authTime < identity.issuedAt - 60'));
   assert.ok(auth.includes('identity.expiresAt > absoluteExpiry'));
-  assert.ok(auth.includes("identity.uid !== `email:${normalizedEmail}`"));
-  assert.ok(auth.includes("identity.isDemo !== (identity.method === 'DEVELOPMENT_DEMO')"));
+  assert.ok(auth.includes('const expectedUid = isDemoIdentity ? `demo:${normalizedEmail}` : `email:${normalizedEmail}`'));
+  assert.ok(auth.includes('identity.uid !== expectedUid'));
+  assert.ok(auth.includes('secureRuntime() && isDemoIdentity'));
 });
 
 test('atividade real renova a sessão sem timer agressivo e F5 reconfirma identidade', async () => {
