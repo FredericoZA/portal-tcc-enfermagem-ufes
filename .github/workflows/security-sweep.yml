@@ -2,35 +2,43 @@ name: Security sweep
 
 on:
   schedule:
-    - cron: '41 6 * * 1'
+    - cron: '43 5 * * 3'
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: security-sweep-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   security-sweep:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
-          node-version: 22
+          node-version: '22'
           cache: npm
       - name: Alinhar npm ao packageManager
         run: npm install --global npm@11.9.0
-      - name: Instalar dependências reproduzivelmente
+      - name: Instalar dependências bloqueadas pelo lockfile
         run: npm ci
       - name: Auditar dependências de produção
         run: npm audit --omit=dev --audit-level=high
-      - name: Procurar segredos versionados
+      - name: Auditar cadeia completa de build e desenvolvimento
+        run: npm audit --audit-level=high
+      - name: Procurar credenciais versionadas
         run: npm run test:secrets
-      - name: Validar tipos e contratos unitários
-        run: npm run lint && npm run test:unit
-      - name: Validar fluxos de segurança
+      - name: Validar tipos
+        run: npm run lint
+      - name: Executar testes unitários
+        run: npm run test:unit
+      - name: Executar contratos de segurança
         run: npm run test:secure-flow
