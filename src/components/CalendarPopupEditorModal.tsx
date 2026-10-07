@@ -758,7 +758,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                     <label className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50">
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-emerald-800" />
-                        <span className="text-xs font-bold text-slate-900">Horário da Defesa (⏰ 06:00 às 07:30)</span>
+                        <span className="text-xs font-bold text-slate-900">Horário da Defesa (06:00 às 07:30)</span>
                       </div>
                       <input
                         type="checkbox"
