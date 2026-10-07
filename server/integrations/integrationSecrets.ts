@@ -18,6 +18,20 @@ function supabaseUrl(): string {
   return String(process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
 }
 
+function validatedSupabaseUrl(): string {
+  const raw = supabaseUrl();
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw);
+    if (parsed.username || parsed.password) return '';
+    if (!['https:', 'http:'].includes(parsed.protocol)) return '';
+    if ((process.env.NODE_ENV === 'production' || process.env.VERCEL) && parsed.protocol !== 'https:') return '';
+    return raw;
+  } catch {
+    return '';
+  }
+}
+
 function supabaseSecret(): string {
   return String(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 }
@@ -54,10 +68,15 @@ function encryptionKeysAreSeparated(): boolean {
     process.env.PORTAL_SESSION_SECRET,
     process.env.PORTAL_OTP_PEPPER,
     process.env.GOOGLE_OAUTH_STATE_SECRET,
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET,
     process.env.PORTAL_VERIFICATION_SECRET,
     process.env.PORTAL_UPLOAD_BINDING_SECRET,
+    process.env.PORTAL_SECURITY_WEBHOOK_SECRET,
     process.env.ASTEN_SESSION_ENCRYPTION_KEY,
-    process.env.ASTEN_WEBHOOK_SECRET
+    process.env.ASTEN_WEBHOOK_SECRET,
+    process.env.CRON_SECRET,
+    process.env.SUPABASE_SECRET_KEY,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
   ].map((item) => String(item || '').trim()).filter(Boolean);
   return values.every((value) => !otherSecrets.includes(value));
 }
@@ -81,7 +100,7 @@ function adminHeaders(): Record<string, string> {
 }
 
 function canUseSupabase(): boolean {
-  return Boolean(supabaseUrl() && supabaseSecret());
+  return Boolean(validatedSupabaseUrl() && supabaseSecret());
 }
 
 function allowLocalFallback(): boolean {
@@ -179,7 +198,7 @@ export async function saveIntegrationSecret(
   }
   const encrypted = encrypt(normalizedProvider, value);
   const { keyId, ...cipherFields } = encrypted;
-  const response = await fetch(`${supabaseUrl()}/rest/v1/portal_integration_secrets?on_conflict=provider`, {
+  const response = await fetch(`${validatedSupabaseUrl()}/rest/v1/portal_integration_secrets?on_conflict=provider`, {
     method: 'POST',
     headers: { ...adminHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify({
@@ -188,7 +207,9 @@ export async function saveIntegrationSecret(
       metadata: { ...metadata, [CRYPTO_KEY_METADATA_FIELD]: keyId },
       updated_at: now
     }),
-    signal: AbortSignal.timeout(15_000)
+    signal: AbortSignal.timeout(15_000),
+    redirect: 'error',
+    cache: 'no-store'
   });
   if (!response.ok) throw new Error(`Não foi possível guardar a credencial de ${normalizedProvider} (${response.status}).`);
 }
@@ -201,8 +222,8 @@ export async function loadIntegrationSecret(provider: string): Promise<{ value: 
     return { value: local.value, metadata: local.metadata, updatedAt: local.updatedAt };
   }
   const response = await fetch(
-    `${supabaseUrl()}/rest/v1/portal_integration_secrets?provider=eq.${encodeURIComponent(normalizedProvider)}&select=provider,ciphertext,iv,auth_tag,metadata,updated_at&limit=1`,
-    { headers: adminHeaders(), signal: AbortSignal.timeout(12_000) }
+    `${validatedSupabaseUrl()}/rest/v1/portal_integration_secrets?provider=eq.${encodeURIComponent(normalizedProvider)}&select=provider,ciphertext,iv,auth_tag,metadata,updated_at&limit=1`,
+    { headers: adminHeaders(), signal: AbortSignal.timeout(12_000), redirect: 'error', cache: 'no-store' }
   );
   if (!response.ok) throw new Error(`Não foi possível ler a credencial de ${normalizedProvider} (${response.status}).`);
   const rows = await response.json() as StoredSecretRow[];
@@ -220,8 +241,8 @@ export async function deleteIntegrationSecret(provider: string): Promise<void> {
     return;
   }
   const response = await fetch(
-    `${supabaseUrl()}/rest/v1/portal_integration_secrets?provider=eq.${encodeURIComponent(normalizedProvider)}`,
-    { method: 'DELETE', headers: adminHeaders(), signal: AbortSignal.timeout(12_000) }
+    `${validatedSupabaseUrl()}/rest/v1/portal_integration_secrets?provider=eq.${encodeURIComponent(normalizedProvider)}`,
+    { method: 'DELETE', headers: adminHeaders(), signal: AbortSignal.timeout(12_000), redirect: 'error', cache: 'no-store' }
   );
   if (!response.ok) throw new Error(`Não foi possível remover a credencial de ${normalizedProvider} (${response.status}).`);
 }

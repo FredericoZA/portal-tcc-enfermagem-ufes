@@ -6,12 +6,27 @@ function normalizedOrigin(value: string): string | null {
   catch { return null; }
 }
 
+function secureRuntime(): boolean {
+  return process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
+}
+
+function configuredPortalOrigin(): string | null {
+  const preferred = normalizedOrigin(String(process.env.PORTAL_PUBLIC_URL || '').trim());
+  if (preferred) return preferred;
+  return normalizedOrigin(String(process.env.APP_URL || '').trim());
+}
+
 function expectedRequestOrigins(req: express.Request): Set<string> {
+  const configuredOrigin = configuredPortalOrigin();
+  if (configuredOrigin) return new Set([configuredOrigin]);
+
+  // Em runtime seguro, ausência de URL pública canônica deve falhar fechada.
+  // Host/X-Forwarded-Host são controlados pela requisição e não podem ampliar
+  // a fronteira de confiança de mutações de navegador em produção.
+  if (secureRuntime()) return new Set();
+
+  // Fallback apenas para desenvolvimento/testes locais sem URL canônica.
   const values = new Set<string>();
-  for (const raw of [process.env.PORTAL_PUBLIC_URL, process.env.APP_URL]) {
-    const origin = normalizedOrigin(String(raw || '').trim());
-    if (origin) values.add(origin);
-  }
   const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
   const proto = forwardedProto || req.protocol || 'https';
   const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();

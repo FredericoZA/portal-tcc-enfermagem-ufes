@@ -30,7 +30,8 @@ function productionPreflight(): StartupFailure | null {
 
   const exclusives = [
     'PORTAL_SESSION_SECRET', 'PORTAL_OTP_PEPPER', 'GOOGLE_OAUTH_STATE_SECRET',
-    'PORTAL_SECRET_ENCRYPTION_KEY', 'PORTAL_VERIFICATION_SECRET', 'PORTAL_UPLOAD_BINDING_SECRET',
+    'PORTAL_SECRET_ENCRYPTION_KEY', 'PORTAL_SECRET_ENCRYPTION_KEY_V2',
+    'PORTAL_VERIFICATION_SECRET', 'PORTAL_UPLOAD_BINDING_SECRET', 'PORTAL_SECURITY_WEBHOOK_SECRET',
     'ASTEN_SESSION_ENCRYPTION_KEY', 'ASTEN_WEBHOOK_SECRET', 'CRON_SECRET'
   ].map((name) => [name, String(process.env[name] || '').trim()] as const).filter(([, value]) => value);
   const seen = new Set<string>();
@@ -49,6 +50,11 @@ function runtimeSignal(error: unknown): string {
   if (/^[A-Z0-9_]{2,64}$/.test(candidate)) return candidate;
   if (error instanceof Error && /^[A-Za-z]{2,40}Error$/.test(error.name)) return error.name.toUpperCase();
   return 'UNKNOWN';
+}
+
+function safeStartupLog(stage: StartupStage, error: unknown): void {
+  const name = error instanceof Error && /^[A-Za-z0-9_.-]{1,64}$/.test(error.name) ? error.name : 'Error';
+  console.error('[Startup] Falha ao inicializar o Portal TCC.', JSON.stringify({ stage, name, signal: runtimeSignal(error) }));
 }
 
 function classifyStartupFailure(error: unknown, stage?: StartupStage): StartupFailure {
@@ -92,12 +98,12 @@ function startup(): Promise<StartupState> {
           const app = await createPortalApp();
           return { app: app as StartupState['app'], error: null };
         } catch (error) {
-          console.error('[Startup] Falha ao criar a aplicação do Portal TCC:', error);
+          safeStartupLog('CREATE_APP', error);
           return { app: null, error, stage: 'CREATE_APP' as const };
         }
       })
       .catch((error) => {
-        console.error('[Startup] Falha ao carregar o bundle compilado do Portal TCC:', error);
+        safeStartupLog('IMPORT_SERVER', error);
         return { app: null, error, stage: 'IMPORT_SERVER' as const };
       });
   }

@@ -5,6 +5,8 @@ const API_BASE = 'https://plataforma.astenassinatura.com.br/api';
 const SESSION_TTL_MS = 10 * 60 * 1000;
 const MAX_ASTEN_JSON_BYTES = 72 * 1024 * 1024;
 const MAX_ASTEN_PDF_BYTES = 50 * 1024 * 1024;
+const MAX_ASTEN_TOKEN_LENGTH = 4096;
+const MAX_PROVIDER_ERROR_LENGTH = 300;
 type Service = 'getIdentificador' | 'getRepositoriosDoUsuario' | 'inserirEnvelope' | 'encaminharEnvelopeParaAssinaturas' | 'getDadosEnvelope' | 'getSignatariosPorEnvelope' | 'downloadPDFEnvelopeDocs' | 'getDocumentosEXMLsAssinadosDoEnvelope' | 'reenviarLinksDeAssinatura' | 'cancelarEnvelope';
 const allowed = new Set<Service>(['getIdentificador','getRepositoriosDoUsuario','inserirEnvelope','encaminharEnvelopeParaAssinaturas','getDadosEnvelope','getSignatariosPorEnvelope','downloadPDFEnvelopeDocs','getDocumentosEXMLsAssinadosDoEnvelope','reenviarLinksDeAssinatura','cancelarEnvelope']);
 interface Session { token: string; ownerEmail: string; identifier: string; repositoryId?: number; expiresAt: number; }
@@ -12,6 +14,18 @@ const sessions = new Map<string, Session>();
 const enabled = () => process.env.ASTEN_INTEGRATION_ENABLED === 'true';
 const storedToken = () => process.env.ASTEN_ALLOW_STORED_TOKEN === 'true' ? String(process.env.ASTEN_API_KEY || '').trim() || null : null;
 const MIN_WEBHOOK_SECRET_LENGTH = 32;
+
+function assertValidAstenToken(token: string): void {
+  if (token.length < 12 || token.length > MAX_ASTEN_TOKEN_LENGTH || /[\u0000-\u001f\u007f]/.test(token)) {
+    throw new Error('Configuração Asten inválida.');
+  }
+}
+
+function safeProviderError(value: unknown, token: string, fallback: string): string {
+  let message = String(value || fallback).replace(/[\u0000-\u001f\u007f]+/g, ' ').trim();
+  if (token) message = message.split(token).join('[credencial omitida]');
+  return (message || fallback).slice(0, MAX_PROVIDER_ERROR_LENGTH);
+}
 
 export interface AstenSecurityPreflight {
   callbackUrl: string;
@@ -101,16 +115,28 @@ function openSealedSession(id: string): Session | null {
 export async function callAsten(service: Service, params: Record<string, unknown>, token: string): Promise<any> {
   if (!enabled()) throw new Error('A integração Asten está bloqueada pelo interruptor de segurança.');
   if (!allowed.has(service)) throw new Error('Serviço Asten não permitido.');
-  if (new URL(API_BASE).hostname !== 'plataforma.astenassinatura.com.br' || !token || token.length < 12) throw new Error('Configuração Asten inválida.');
+  const apiToken = String(token || '').trim();
+  if (new URL(API_BASE).protocol !== 'https:' || new URL(API_BASE).hostname !== 'plataforma.astenassinatura.com.br') throw new Error('Configuração Asten inválida.');
+  assertValidAstenToken(apiToken);
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 30000);
   try {
-    const response = await fetch(`${API_BASE}/${service}`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'x-api-key': token }, body: JSON.stringify({ params }), signal: controller.signal });
+    const response = await fetch(`${API_BASE}/${service}`, {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'x-api-key': apiToken },
+      body: JSON.stringify({ params }),
+      signal: controller.signal,
+      redirect: 'error',
+      cache: 'no-store'
+    });
     const contentLength = Number(response.headers.get('content-length') || 0);
     if (Number.isFinite(contentLength) && contentLength > MAX_ASTEN_JSON_BYTES) throw new Error('A resposta da Asten excedeu o limite seguro do portal.');
     const raw = await response.text();
     if (Buffer.byteLength(raw, 'utf8') > MAX_ASTEN_JSON_BYTES) throw new Error('A resposta da Asten excedeu o limite seguro do portal.');
     const payload = (() => { try { return raw ? JSON.parse(raw) : {}; } catch { return {}; } })();
-    if (!response.ok || payload?.error) throw new Error(String(payload?.error?.message || payload?.error?.descricao || `Asten respondeu ${response.status}.`).slice(0, 600));
+    if (!response.ok || payload?.error) {
+      const fallback = `Asten respondeu ${response.status}.`;
+      throw new Error(safeProviderError(payload?.error?.message || payload?.error?.descricao, apiToken, fallback));
+    }
     return payload?.response ?? payload;
   } finally { clearTimeout(timer); }
 }

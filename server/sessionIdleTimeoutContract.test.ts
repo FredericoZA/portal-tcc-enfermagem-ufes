@@ -4,14 +4,25 @@ import { readFile } from 'node:fs/promises';
 
 const source = (path:string) => readFile(path,'utf8');
 
-test('sessão usa janela móvel de três horas e preserva a emissão original', async () => {
+test('sessão usa janela móvel de três horas com teto absoluto de doze horas', async () => {
   const auth = await source('server/security/firebaseAuth.ts');
   assert.ok(auth.includes('SESSION_IDLE_TTL_SECONDS = 3 * 60 * 60'));
+  assert.ok(auth.includes('SESSION_ABSOLUTE_TTL_SECONDS = 12 * 60 * 60'));
   assert.ok(auth.includes('expiresAt: now + SESSION_IDLE_TTL_SECONDS'));
-  assert.ok(auth.includes('Max-Age=${SESSION_IDLE_TTL_SECONDS}'));
-  assert.ok(auth.includes('return { ...identity, expiresAt: now + SESSION_IDLE_TTL_SECONDS };'));
+  assert.ok(auth.includes('identity.issuedAt + SESSION_ABSOLUTE_TTL_SECONDS'));
+  assert.ok(auth.includes('Math.min(now + SESSION_IDLE_TTL_SECONDS, absoluteExpiry)'));
+  assert.ok(auth.includes('Math.min(SESSION_IDLE_TTL_SECONDS, identity.expiresAt - now)'));
   assert.ok(auth.includes("requestPath === '/api/me' || req.path === '/me'"));
-  assert.ok(!auth.includes('SESSION_TTL_SECONDS = 12 * 60 * 60'));
+});
+
+test('sessão assinada valida integridade temporal, identidade e bloqueia demo em runtime seguro', async () => {
+  const auth = await source('server/security/firebaseAuth.ts');
+  assert.ok(auth.includes('identity.authTime > now + 60'));
+  assert.ok(auth.includes('identity.authTime < identity.issuedAt - 60'));
+  assert.ok(auth.includes('identity.expiresAt > absoluteExpiry'));
+  assert.ok(auth.includes('const expectedUid = isDemoIdentity ? `demo:${normalizedEmail}` : `email:${normalizedEmail}`'));
+  assert.ok(auth.includes('identity.uid !== expectedUid'));
+  assert.ok(auth.includes('secureRuntime() && isDemoIdentity'));
 });
 
 test('atividade real renova a sessão sem timer agressivo e F5 reconfirma identidade', async () => {
