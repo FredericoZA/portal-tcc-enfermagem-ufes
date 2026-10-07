@@ -1201,7 +1201,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <div className="min-w-[620px] md:min-w-0">
                           {/* Dias úteis: o calendário público exibe somente segunda a sexta. */}
                           <div data-portal-sheet-column-header="true" className={`${defStyles.calendarDaysHeaderClass} py-2.5 px-4 sm:px-6 select-none`} style={defStyles.bannerHeaderStyle}>
-                            <div className="grid grid-cols-5 text-center font-black text-[11px] uppercase tracking-wider">
+                            <div className="portal-calendar-weekdays-grid grid grid-cols-5 text-center uppercase">
                               <div>SEG</div>
                               <div>TER</div>
                               <div>QUA</div>
