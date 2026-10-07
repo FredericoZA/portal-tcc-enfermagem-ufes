@@ -170,6 +170,27 @@
   color: var(--portal-text-light);
 }
 
+.portal-calendar-weekdays-grid {
+  width: 100%;
+  font-family: var(--portal-font-family);
+  font-size: var(--portal-sheet-column-font-size);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.portal-calendar-period-button,
+.portal-calendar-today-button,
+.portal-calendar-step-button {
+  font-family: var(--portal-font-family);
+  letter-spacing: 0;
+}
+
+.portal-calendar-period-button,
+.portal-calendar-today-button {
+  font-weight: 800;
+}
+
 .portal-calendar-empty-cell {
   background: var(--portal-surface-panel);
 }
