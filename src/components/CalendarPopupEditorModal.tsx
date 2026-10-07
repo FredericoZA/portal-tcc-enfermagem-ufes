@@ -772,7 +772,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                     <label className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50">
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-slate-600" />
-                        <span className="text-xs font-bold text-slate-900">Local da Apresentação (📍 Auditório / Sala)</span>
+                        <span className="text-xs font-bold text-slate-900">Local da Apresentação (Auditório / Sala)</span>
                       </div>
                       <input
                         type="checkbox"
@@ -1176,7 +1176,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                           className="text-[10px] font-bold px-2 py-0.5 rounded-md truncate max-w-[120px]"
                           style={{ backgroundColor: format.locationBadgeBg || '#f1f5f9', color: '#475569' }}
                         >
-                          📍 Auditório Rosa
+                          Auditório Rosa
                         </span>
                       )}
                       {format.showProtocol !== false && (
@@ -1313,7 +1313,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
             </div>
 
             <div className="pt-4 border-t border-slate-800 text-[11px] text-slate-400">
-              💡 As preferências são salvas instantaneamente e sincronizadas com todas as visualizações do calendário.
+              As preferências são salvas instantaneamente e sincronizadas com todas as visualizações do calendário.
             </div>
           </div>
         </div>
