@@ -25,7 +25,7 @@ test('ícones das barras são brancos e canônicos', () => {
 
 test('filtro selecionado usa reforço global e rótulo FILTRAR', () => {
   const css = read('src/styles/portal-components.css');
-  assert.match(css, /filter: brightness\(\.81\)/);
+  assert.match(css, /background:\s*var\(--portal-filter-selected-bg\)/);
   assert.match(css, /outline: 1px solid var\(--portal-text-dark\)/);
   for (const file of ['src/pages/HomePage.tsx','src/pages/MeusProcessosPage.tsx','src/pages/CoordenadorPage.tsx','src/pages/PortalTutorialPage.tsx']) {
     assert.match(read(file), /FILTRAR:/);

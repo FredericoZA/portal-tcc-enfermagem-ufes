@@ -49,7 +49,7 @@ test('editor de e-mail é compacto e usa blocos recolhíveis',()=>{
 test('detalhes do TCC seguem a nova hierarquia visual',()=>{
   const detail=read('src/pages/ProcessoDetailPage.tsx');
   assert.match(detail,/>Detalhes do TCC</);
-  assert.match(detail,/Enfermagem e Obstetrícia · Maruípe\/UFES/);
+  assert.match(detail,/Enfermagem e Obstetrícia UFES, Maruípe UFES/);
   assert.doesNotMatch(detail,/Painel de Gestão e Detalhes do TCC/);
   assert.match(detail,/EtapaProgressBar currentEtapa/);
   assert.match(detail,/Conceito:/);

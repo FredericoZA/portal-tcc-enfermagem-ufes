@@ -810,6 +810,9 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   )}
                 </div>
                 <div className="portal-sheet-toolbar-terminal">
+                  <button type="button" onClick={()=>void loadData()} disabled={isLoading} className="portal-toolbar-icon-button disabled:opacity-45" title="Atualizar declarações" aria-label="Atualizar declarações">
+                    <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                  </button>
                   <SearchPopover
                     value={searchFilter}
                     onChange={setSearchFilter}
