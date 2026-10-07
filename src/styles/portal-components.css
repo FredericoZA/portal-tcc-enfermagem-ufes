@@ -407,8 +407,15 @@ button[aria-label^="Configurar exibição"],
 .portal-search-popover {
   min-width: 240px;
   max-width: min(360px, calc(100vw - 24px));
-  padding: 10px;
+  padding: 0;
+  overflow: hidden;
   background: var(--portal-surface-panel);
+}
+
+.portal-search-popover > .portal-modal-header {
+  width: 100%;
+  margin: 0;
+  border-radius: 0;
 }
 
 .portal-table-settings-popover {
