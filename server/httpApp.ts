@@ -7,11 +7,18 @@ function normalizedOrigin(value: string): string | null {
 }
 
 function expectedRequestOrigins(req: express.Request): Set<string> {
-  const values = new Set<string>();
+  const configuredOrigins = new Set<string>();
   for (const raw of [process.env.PORTAL_PUBLIC_URL, process.env.APP_URL]) {
     const origin = normalizedOrigin(String(raw || '').trim());
-    if (origin) values.add(origin);
+    if (origin) configuredOrigins.add(origin);
   }
+
+  // Em produção a URL pública configurada é a fronteira de confiança. Não
+  // ampliamos essa fronteira com Host/X-Forwarded-Host enviados na requisição.
+  // O fallback pelo host existe apenas para desenvolvimento/testes sem URL canônica.
+  if (configuredOrigins.size > 0) return configuredOrigins;
+
+  const values = new Set<string>();
   const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
   const proto = forwardedProto || req.protocol || 'https';
   const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
