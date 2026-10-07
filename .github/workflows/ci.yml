@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -27,6 +31,8 @@ jobs:
         run: npm ci
       - name: Auditar dependências de produção
         run: npm audit --omit=dev --audit-level=high
+      - name: Auditar cadeia completa de build e desenvolvimento
+        run: npm audit --audit-level=high
       - name: Verificar ausência de segredos versionados
         run: npm run test:secrets
       - name: Validar TypeScript
