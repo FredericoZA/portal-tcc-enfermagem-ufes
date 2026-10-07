@@ -69,11 +69,11 @@ test('mutações de navegador exigem origem confiável', async () => {
   }
 });
 
-test('URL pública configurada prevalece sobre Host e X-Forwarded-Host', async () => {
+test('PORTAL_PUBLIC_URL é a origem canônica e prevalece sobre APP_URL e Host', async () => {
   const previousPublicUrl = process.env.PORTAL_PUBLIC_URL;
   const previousAppUrl = process.env.APP_URL;
   process.env.PORTAL_PUBLIC_URL = 'https://portal.example';
-  delete process.env.APP_URL;
+  process.env.APP_URL = 'https://legacy.example';
   const app = createPortalHttpApp();
   app.use(express.json());
   app.post('/mutate', (_req, res) => res.json({ ok: true }));
@@ -90,16 +90,55 @@ test('URL pública configurada prevalece sobre Host e X-Forwarded-Host', async (
     });
     assert.equal(canonical.status, 200);
 
-    const spoofedHost = await fetch(base + '/mutate', {
-      method: 'POST',
-      headers: { origin: 'https://attacker.invalid', 'sec-fetch-site': 'same-origin', 'x-forwarded-host': 'attacker.invalid', 'x-forwarded-proto': 'https', 'content-type': 'application/json' },
-      body: '{}'
-    });
-    assert.equal(spoofedHost.status, 403);
-    assert.equal((await spoofedHost.json()).code, 'ORIGIN_VALIDATION_FAILED');
+    for (const origin of ['https://legacy.example', 'https://attacker.invalid']) {
+      const rejected = await fetch(base + '/mutate', {
+        method: 'POST',
+        headers: { origin, 'sec-fetch-site': 'same-origin', 'x-forwarded-host': 'attacker.invalid', 'x-forwarded-proto': 'https', 'content-type': 'application/json' },
+        body: '{}'
+      });
+      assert.equal(rejected.status, 403);
+      assert.equal((await rejected.json()).code, 'ORIGIN_VALIDATION_FAILED');
+    }
   } finally {
     await new Promise<void>(resolve => server.close(() => resolve()));
     if (previousPublicUrl === undefined) delete process.env.PORTAL_PUBLIC_URL; else process.env.PORTAL_PUBLIC_URL = previousPublicUrl;
     if (previousAppUrl === undefined) delete process.env.APP_URL; else process.env.APP_URL = previousAppUrl;
+  }
+});
+
+test('runtime seguro sem URL canônica não confia em Host ou X-Forwarded-Host', async () => {
+  const previousPublicUrl = process.env.PORTAL_PUBLIC_URL;
+  const previousAppUrl = process.env.APP_URL;
+  const previousNodeEnv = process.env.NODE_ENV;
+  const previousVercel = process.env.VERCEL;
+  delete process.env.PORTAL_PUBLIC_URL;
+  delete process.env.APP_URL;
+  process.env.NODE_ENV = 'production';
+  process.env.VERCEL = '1';
+  const app = createPortalHttpApp();
+  app.use(express.json());
+  app.post('/mutate', (_req, res) => res.json({ ok: true }));
+  const server = app.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+  const base = `http://127.0.0.1:${address.port}`;
+  try {
+    const spoofed = await fetch(base + '/mutate', {
+      method: 'POST',
+      headers: { origin: 'https://attacker.invalid', 'sec-fetch-site': 'same-origin', 'x-forwarded-host': 'attacker.invalid', 'x-forwarded-proto': 'https', 'content-type': 'application/json' },
+      body: '{}'
+    });
+    assert.equal(spoofed.status, 403);
+    assert.equal((await spoofed.json()).code, 'ORIGIN_VALIDATION_FAILED');
+
+    const serverToServer = await fetch(base + '/mutate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+    assert.equal(serverToServer.status, 200);
+  } finally {
+    await new Promise<void>(resolve => server.close(() => resolve()));
+    if (previousPublicUrl === undefined) delete process.env.PORTAL_PUBLIC_URL; else process.env.PORTAL_PUBLIC_URL = previousPublicUrl;
+    if (previousAppUrl === undefined) delete process.env.APP_URL; else process.env.APP_URL = previousAppUrl;
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousNodeEnv;
+    if (previousVercel === undefined) delete process.env.VERCEL; else process.env.VERCEL = previousVercel;
   }
 });
