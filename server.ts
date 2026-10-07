@@ -913,9 +913,12 @@ function historicalStudioAnswers(processId:string):Record<string,string|number|b
   }
   return answers;
 }
-function configuredRoomReservationDepartmentEmail():string{
-  const value=normalizeEmail(String(currentSettings.emailConfig?.roomReservationDepartmentEmail||''));
-  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value)?value:'';
+function configuredRoomReservationDepartmentEmail(studio:any=currentSettings.integrationStudio):string{
+  const template=Array.isArray(studio?.emailTemplates)?studio.emailTemplates.find((item:any)=>String(item?.id||'')==='email-reserva'):undefined;
+  const templateRecipient=normalizeEmail(String(template?.recipient||''));
+  if(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(templateRecipient))return templateRecipient;
+  const legacy=normalizeEmail(String(currentSettings.emailConfig?.roomReservationDepartmentEmail||''));
+  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(legacy)?legacy:'';
 }
 function nativeReservationWorkflowStudio(){
   return {
@@ -924,8 +927,8 @@ function nativeReservationWorkflowStudio(){
     emailTemplates:[{
       id:'email-reserva',
       name:'Solicitação de reserva ao departamento',
-      recipient:'{{DEPARTAMENTO_EMAIL}}',
-      subject:'[TCC {{PROTOCOLO}}] Solicitação de reserva',
+      recipient:configuredRoomReservationDepartmentEmail(),
+      subject:'[TCC <<PROTOCOLO>>] Solicitação de reserva',
       body:'Prezados,\\n\\nSolicitamos reserva para a defesa de {{CAMPO_01}}.\\nTítulo: {{TITULO}}\\nData e hora: {{DEFESA_DATA_HORA}}\\nLocal preferido: {{DEFESA_LOCAL}}\\nCaso indisponível, solicitamos o local alternativo: {{LOCAL_ALTERNATIVO}}.\\n\\nPor favor, confirmem o agendamento ao aluno: {{ALUNO_1_EMAIL}}.\\nOrientador: {{ORIENTADOR_NOME}}.\\n\\nAtenciosamente, Secretaria do curso',
       attachments:[]
     }],
@@ -953,8 +956,11 @@ function reservationWorkflowStudio(source:typeof currentSettings.integrationStud
   const departmentTemplateIds=new Set(studio.emailTemplates.filter((template:any)=>String(template?.recipient||'').includes('DEPARTAMENTO_EMAIL')).map((template:any)=>String(template?.id||'')).filter(Boolean));
   const nativeTemplate=nativeReservationWorkflowStudio().emailTemplates[0];
   const reservationIndex=studio.emailTemplates.findIndex((template:any)=>String(template?.id||'')==='email-reserva');
-  if(reservationIndex>=0)studio.emailTemplates[reservationIndex]={...studio.emailTemplates[reservationIndex],recipient:'{{DEPARTAMENTO_EMAIL}}'};
-  else studio.emailTemplates.push(nativeTemplate);
+  if(reservationIndex>=0){
+    const existing=studio.emailTemplates[reservationIndex];
+    const legacyMarker=/^\\s*(?:\\{\\{|<<)\\s*DEPARTAMENTO_EMAIL\\s*(?:\\}\\}|>>)\\s*$/i.test(String(existing?.recipient||''));
+    studio.emailTemplates[reservationIndex]={...existing,recipient:legacyMarker?configuredRoomReservationDepartmentEmail():String(existing?.recipient||'').trim()};
+  }else studio.emailTemplates.push(nativeTemplate);
   studio.workflowStages=Array.isArray(studio.workflowStages)?studio.workflowStages:[];
   let initial=studio.workflowStages.find((stage:any)=>normalizeWorkflowEventCode(stage?.triggerEvent||stage?.eventCode)==='TCC_CREATED');
   if(!initial){initial={id:'stage-registration-reservation',stageNumber:1,title:'Cadastro e pedido de reserva',triggerEvent:'TCC_CREATED',actions:[]};studio.workflowStages.unshift(initial);}
@@ -969,10 +975,10 @@ function reservationWorkflowStudio(source:typeof currentSettings.integrationStud
 }
 async function executeConfiguredWorkflowEvent(process:ProcessData,eventCode:WorkflowEventCode,actorEmail:string,extraVariables?:Record<string,unknown>,resumeRun?:WorkflowRun):Promise<WorkflowRun|undefined>{
   const normalizedEvent=normalizeWorkflowEventCode(eventCode);
-  const departmentEmail=configuredRoomReservationDepartmentEmail();
   const studio=normalizedEvent==='TCC_CREATED'?reservationWorkflowStudio(currentSettings.integrationStudio):currentSettings.integrationStudio;
   if(!studio)return;
-  if(normalizedEvent==='TCC_CREATED'&&!departmentEmail)throw new Error('Configure o E-mail do Departamento de Enfermagem em Configurações → Integrações e Plataforma antes de cadastrar TCCs.');
+  const departmentEmail=configuredRoomReservationDepartmentEmail(studio);
+  if(normalizedEvent==='TCC_CREATED'&&!departmentEmail)throw new Error('Informe o e-mail do Departamento de Enfermagem em Configurações → Modelos e Variáveis → E-mails antes de cadastrar TCCs.');
   const customFormEvent=String(eventCode).match(/^FORM_(.+)_SUBMITTED$/i);
   if(customFormEvent){
     const latest=studioFormSubmissionsStore.filter(item=>item.processId===process.id&&item.formId===customFormEvent[1]).sort((a,b)=>b.submittedAt.localeCompare(a.submittedAt))[0];
@@ -982,7 +988,7 @@ async function executeConfiguredWorkflowEvent(process:ProcessData,eventCode:Work
   const run=await executeWorkflowEvent(studio,{process,eventCode,actorEmail,actorRoles:getActiveProcessRoles(actorEmail,process.id),extraVariables:effectiveVariables,completedActions:resumeRun?.actions},{
     createDocument:async({template,idempotencyKey,variables})=>executeConfiguredDocumentAction(process,template,actorEmail,idempotencyKey,variables,eventCode),
     createFormTask:async({form,idempotencyKey})=>({externalId:`form_task_${String(form.id||idempotencyKey)}`}),
-    sendEmail:async({template,to,subject,text,html,eventVariables,idempotencyKey})=>{const templateId=String(template.id||'');if(templateId==='email-reserva'){const configured=configuredRoomReservationDepartmentEmail();const recipients=Array.from(new Set(to.map(recipient=>normalizeEmail(recipient)).filter(Boolean)));if(!configured)throw new Error('O e-mail do Departamento de Enfermagem não está configurado.');if(recipients.length!==1||recipients[0]!==configured)throw new Error('Envio de reserva bloqueado: o destinatário publicado diverge do e-mail cadastrado em Integrações.');}const attachments=await resolveWorkflowEmailAttachments(process,template);const records=[];for(const recipient of to){const accepted=emailDeliveriesStore.find(record=>record.processId===process.id&&record.templateId===templateId&&record.recipient===normalizeEmail(recipient)&&record.status==='ACCEPTED_BY_GMAIL');if(eventCode==='LOCATION_CONFIRMED'&&process.defesa.invitationSentAt&&accepted){records.push(accepted);continue;}records.push(await sendTrackedPortalEmail({process,recipient,subject,text,html,templateId,workflowEventCode:eventCode,workflowEventVariables:eventVariables,idempotencyKey:`${idempotencyKey}:${recipient}`,attachments}));}if(records.some(record=>record.status!=='ACCEPTED_BY_GMAIL')){const error=new Error('Um ou mais e-mails do fluxo aguardam nova tentativa.') as Error&{externalId:string};error.externalId=records.map(record=>record.id).join(',');throw error;}return{externalId:records.map(record=>record.id).join(',')};},
+    sendEmail:async({template,to,subject,text,html,eventVariables,idempotencyKey})=>{const templateId=String(template.id||'');if(templateId==='email-reserva'){const configured=configuredRoomReservationDepartmentEmail(studio);const recipients=Array.from(new Set(to.map(recipient=>normalizeEmail(recipient)).filter(Boolean)));if(!configured)throw new Error('O e-mail do Departamento de Enfermagem não está configurado no modelo de e-mail.');if(recipients.length!==1||recipients[0]!==configured)throw new Error('Envio de reserva bloqueado: o destinatário diverge do e-mail definido no modelo de solicitação de reserva.');}const attachments=await resolveWorkflowEmailAttachments(process,template);const records=[];for(const recipient of to){const accepted=emailDeliveriesStore.find(record=>record.processId===process.id&&record.templateId===templateId&&record.recipient===normalizeEmail(recipient)&&record.status==='ACCEPTED_BY_GMAIL');if(eventCode==='LOCATION_CONFIRMED'&&process.defesa.invitationSentAt&&accepted){records.push(accepted);continue;}records.push(await sendTrackedPortalEmail({process,recipient,subject,text,html,templateId,workflowEventCode:eventCode,workflowEventVariables:eventVariables,idempotencyKey:`${idempotencyKey}:${recipient}`,attachments}));}if(records.some(record=>record.status!=='ACCEPTED_BY_GMAIL')){const error=new Error('Um ou mais e-mails do fluxo aguardam nova tentativa.') as Error&{externalId:string};error.externalId=records.map(record=>record.id).join(',');throw error;}return{externalId:records.map(record=>record.id).join(',')};},
     executeSystemAction:async({action})=>{throw new Error(`A ação interna “${action.title}” não possui executor publicado. Use uma ação de formulário, documento ou e-mail.`);}
   });
   const existing=workflowRunsStore.findIndex(item=>item.id===run.id);if(existing>=0)workflowRunsStore[existing]=run;else workflowRunsStore.push(run);
@@ -1514,7 +1520,7 @@ export async function createPortalApp() {
     res.setHeader('Cache-Control','private, no-store');res.json({baseRevision:before.revision,changes,activeProcesses:processesStore.filter(p=>p.status!=='CONCLUIDO').length,notice:'Processos em andamento usam a revisão publicada nos próximos eventos. Documentos já expedidos permanecem preservados.'});
   });
   app.post('/api/admin/models/:type/preview',requireAuthenticated,requireAdministrator,async(req,res)=>{
-    const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Entre novamente antes de gerar uma amostra com os modelos do Drive.'});
+    const identity=getPortalIdentity(req)!;
     const type=String(req.params.type).toUpperCase() as 'CONVITE'|'ATA'|'TERMO'|'DECLARACAO';if(!['CONVITE','ATA','TERMO','DECLARACAO'].includes(type))return res.status(404).json({error:'Modelo inválido.'});
     try{
       const studio=req.body?.studio||currentSettings.integrationStudio;if(!studio)throw new Error('Configure o Estúdio primeiro.');
@@ -1767,6 +1773,25 @@ export async function createPortalApp() {
       auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'MODELO_DOCUMENTAL_IMPORTADO_DO_DRIVE',entityType:'document_model',entityId:type,before:before?{fileName:before.fileName,driveFileId:before.driveFileId}:undefined,after:{fileName:model.fileName,driveFileId:model.driveFileId,variables:model.variables,source:'GOOGLE_DRIVE'},timestamp:now});await persistPortalStateDurably();
       res.status(201).json({type,fileName:model.fileName,driveFileId:model.driveFileId,driveFileUrl:model.driveFileUrl,variables:model.variables,uploadedAt:model.uploadedAt,uploadedBy:model.uploadedBy,contentSha256:model.contentSha256,driveRevisionId:model.driveRevisionId,driveModifiedTime:model.driveModifiedTime,configured:true});
     }catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível importar o modelo do Drive.'});}
+  });
+
+  app.post('/api/admin/models/:type/detect-variables',requireAuthenticated,requireAdministrator,async(req,res)=>{
+    const identity=getPortalIdentity(req)!;
+    const type=String(req.params.type||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,48);
+    const model=(currentSettings.documentModels as Record<string,any>|undefined)?.[type];
+    if(!model?.driveFileId)return res.status(404).json({error:'Modelo documental publicado não encontrado.'});
+    // O upload/importação já inspeciona o DOCX/Google Doc e grava as variáveis
+    // junto da versão publicada e do fingerprint. Não relê um arquivo mutável do
+    // Drive aqui: alterações externas precisam ser publicadas como nova versão.
+    const activeVersion=(model.versions||[]).find((version:any)=>version.version===model.activeVersion);
+    const variables=Array.from(new Set((activeVersion?.variables||model.variables||[]).map((value:any)=>String(value||'').trim()).filter(Boolean)));
+    const now=new Date().toISOString();
+    const versions=(model.versions||[]).map((version:any)=>version.version===model.activeVersion?{...version,variables}:version);
+    currentSettings.documentModels={...(currentSettings.documentModels||{}),[type]:{...model,variables,versions}};
+    currentSettings.updatedAt=now;
+    auditLogsStore.push({id:`log-${Date.now()}-model-vars`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'DETECCAO_VARIAVEIS_MODELO',entityType:'document_model',entityId:type,before:{variables:model.variables||[]},after:{variables,source:'PUBLISHED_MODEL_VERSION'},timestamp:now});
+    await persistPortalStateDurably();
+    res.json({type,variables,detectedAt:now});
   });
 
   app.post('/api/admin/models/:type/versions/:version/restore',requireAuthenticated,requireAdministrator,(req,res)=>{const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Reautentique-se para restaurar um modelo.'});const type=String(req.params.type||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,48);const model=(currentSettings.documentModels as Record<string,any>|undefined)?.[type],selected=model?.versions?.find((item:any)=>item.version===Number(req.params.version));if(!model||!selected)return res.status(404).json({error:'Versão do modelo não encontrada.'});if(!selected.contentSha256)return res.status(409).json({error:'Esta versão antiga não possui hash de integridade. Importe ou envie novamente o modelo para publicá-la com segurança.'});const before={activeVersion:model.activeVersion,driveFileId:model.driveFileId};currentSettings.documentModels={...(currentSettings.documentModels||{}),[type]:{...model,...selected,templateContentText:'',activeVersion:selected.version,versions:model.versions}};currentSettings.updatedAt=new Date().toISOString();auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'RESTAURACAO_VERSAO_MODELO',entityType:'document_model',entityId:type,before,after:{activeVersion:selected.version,driveFileId:selected.driveFileId,contentSha256:selected.contentSha256},timestamp:currentSettings.updatedAt});persistPortalState();res.json({type,activeVersion:selected.version,fileName:selected.fileName,driveFileId:selected.driveFileId,driveFileUrl:selected.driveFileUrl,variables:selected.variables,contentSha256:selected.contentSha256,configured:true});});

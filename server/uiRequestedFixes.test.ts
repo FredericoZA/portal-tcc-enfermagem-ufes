@@ -8,6 +8,7 @@ const read = (path: string) => readFileSync(path, 'utf8');
 const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
 const css = readPortalCss();
 const identity = read('src/components/CommissionIdentityPanel.tsx');
+const reauthentication = read('src/services/reauthentication.ts');
 const workspace = read('src/components/SettingsWorkspaceModal.tsx');
 const integrations = read('src/components/InfrastructureIntegrationsPanel.tsx');
 const configPage = read('src/pages/ConfiguracoesPage.tsx');
@@ -82,14 +83,15 @@ test('tutorial usa somente as superfícies canônicas', () => {
   assert.doesNotMatch(tutorial, /bg-\[#(?:e1e6e9|d5dce0|005830|337959)\]/i);
 });
 
-test('Rodapé e Identidade é exclusivo do Master, persiste e atualiza o rodapé', () => {
+test('Rodapé e Identidade é exclusivo do Master, autosalva e preserva troca administrativa segura', () => {
   assert.match(identity, /if \(!isMaster\) return null/);
   assert.match(identity, /apiClient\.updateSettings/);
-  assert.match(identity, /await refreshAuth\(\)/);
   assert.match(identity, /commissionPresidentContactEmail/);
-  assert.match(identity, /portal-layer-card/);
-  assert.doesNotMatch(identity, /Acessos administrativos/i);
-  assert.doesNotMatch(identity, /createAdministrationTransfer/);
+  assert.match(identity, /createAdministrationTransfer/);
+  assert.match(identity, /retryAfterPortalReauthentication/);
+  assert.match(reauthentication, /REAUTHENTICATION_REQUIRED/);
+  assert.match(identity, /Salvo automaticamente/);
+  assert.doesNotMatch(identity, /Salvar membros|Salvar Contas Administrativas/);
 });
 
 test('Rodapé e Integrações são entradas independentes e workspaces diretos', () => {
@@ -103,17 +105,15 @@ test('Rodapé e Integrações são entradas independentes e workspaces diretos',
   assert.match(integrations, /flex min-h-full h-full flex-col/);
 });
 
-test('e-mail do Departamento persiste, é fail-closed e nunca cai em destinatário fixo', () => {
-  assert.match(integrations, /roomReservationDepartmentEmail/);
-  assert.match(integrations, /E-mail do Departamento de Enfermagem/);
-  assert.match(server, /emailConfigPatch\.roomReservationDepartmentEmail=departmentEmail/);
-  assert.match(server, /configuredRoomReservationDepartmentEmail/);
+test('e-mail do Departamento é definido no modelo de e-mail e permanece fail-closed', () => {
+  assert.match(configPage, /roomReservationDepartmentEmail/);
+  assert.match(configPage, /id: 'email-reserva'/);
+  assert.match(server, /configuredRoomReservationDepartmentEmail\(studio/);
   assert.match(server, /templateId==='email-reserva'/);
-  assert.match(server, /destinatário publicado diverge do e-mail cadastrado em Integrações/);
-  assert.match(server, /normalizedEvent==='TCC_CREATED'\?reservationWorkflowStudio\(currentSettings\.integrationStudio\):currentSettings\.integrationStudio/);
-  assert.doesNotMatch(server, /roomReservationDepartmentEmail\|\|operationalConfig\(studio\)\.reservation\.departmentEmail/);
+  assert.match(server, /destinatário diverge do e-mail definido no modelo de solicitação de reserva/);
+  assert.match(server, /Configurações → Modelos e Variáveis → E-mails/);
   assert.doesNotMatch(operational, /dptenfccs@gmail\.com/);
-  assert.match(courseStudioValidator, /RESERVATION_EMAIL_RECIPIENT_MUST_BE_CONFIGURED/);
+  assert.match(courseStudioValidator, /Informe diretamente o e-mail do Departamento de Enfermagem/);
 });
 
 test('configurações removem personalização global e usam três grupos operacionais', () => {
@@ -129,11 +129,13 @@ test('configurações removem personalização global e usam três grupos operac
   assert.match(configPage, /id: 'variables', title: 'Variáveis'/);
 });
 
-test('modelos e documentos compartilham arquivo, variáveis e visualização', () => {
+test('modelos e documentos compartilham catálogo, variáveis e visualização segura', () => {
   assert.match(documentModels, /Variáveis deste modelo/);
-  assert.match(documentModels, /Visualizar modelo/);
-  assert.match(documentModels, /const previewUrl = \(driveFileId\?: string\)/);
-  assert.match(documentModels, /<iframe title=/);
+  assert.match(documentModels, /Visualizar modelo original/);
+  assert.match(documentModels, /Detectar variáveis/);
+  assert.match(documentModels, /model\.driveFileUrl/);
+  assert.match(documentModels, /samplePreview\[type\]/);
+  assert.match(configPage, /syncMasterModelCatalog/);
   assert.doesNotMatch(configPage, /initialTab="documents"/);
 });
 

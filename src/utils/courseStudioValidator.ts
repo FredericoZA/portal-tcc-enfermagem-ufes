@@ -260,10 +260,10 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
   emails.forEach((email, index) => {
     if (!text(email.name) || !text(email.subject) || !text(email.body)) add({ code: 'INCOMPLETE_EMAIL', path: `emailTemplates.${index}`, message: 'Cada e-mail precisa de nome, assunto e corpo em texto.', severity: 'ERROR', area: 'EMAIL' });
     if (!text(email.recipient)) add({ code: 'MISSING_RECIPIENT', path: `emailTemplates.${index}.recipient`, message: `Defina o destinatário de “${text(email.name) || text(email.id)}”.`, severity: 'ERROR', area: 'EMAIL' });
-    if (text(email.id) === 'email-reserva' && text(email.recipient).replace(/\\s+/g, '') !== '{{DEPARTAMENTO_EMAIL}}') add({
+    if (text(email.id) === 'email-reserva' && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(text(email.recipient))) add({
       code: 'RESERVATION_EMAIL_RECIPIENT_MUST_BE_CONFIGURED',
       path: `emailTemplates.${index}.recipient`,
-      message: 'O pedido de reserva deve usar exclusivamente {{DEPARTAMENTO_EMAIL}}, definido em Integrações e Plataforma.',
+      message: 'Informe diretamente o e-mail do Departamento de Enfermagem no modelo de solicitação de reserva.',
       severity: 'ERROR',
       area: 'EMAIL'
     });

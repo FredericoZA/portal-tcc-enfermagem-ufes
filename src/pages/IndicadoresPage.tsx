@@ -137,7 +137,7 @@ export const IndicadoresPage: React.FC = () => {
     };
   }, [data]);
 
-  return <div id="indicadores-publicos-page" className="mx-auto max-w-none">
+  return <div id="indicadores-publicos-page" className="mx-auto max-w-none px-3 pb-4 pt-3 sm:px-4 sm:pt-4">
     <section className="portal-public-header">
       <div className="portal-public-title-row gap-2">
         <ColorfulHeaderIcon type="indicators" />

@@ -11,7 +11,7 @@ import { InfrastructureIntegrationsPanel } from '../components/InfrastructureInt
 import { AuthorizedStudentsPanel } from '../components/AuthorizedStudentsPanel';
 import { MasterDocumentModelsPanel } from '../components/MasterDocumentModelsPanel';
 import { updateRuntimeDocumentTemplates, BASE_DOCUMENT_TEMPLATES } from '../utils/documentTemplateEngine';
-import { AuditAndSecuritySection, AuditLogsTable, MasterAndPresidentConfigForm } from '../components/AuditAndSecuritySection';
+import { AuditAndSecuritySection, AuditLogsTable } from '../components/AuditAndSecuritySection';
 import { CommissionIdentityPanel } from '../components/CommissionIdentityPanel';
 import { AuditLogsPage } from './AuditLogsPage';
 import { AstenLogsPage } from './AstenLogsPage';
@@ -1005,6 +1005,44 @@ export const ConfiguracoesPage: React.FC = () => {
     ];
   });
 
+  const syncMasterModelCatalog = (catalog: Record<string, any>) => {
+    const entries = Object.entries(catalog || {}).filter(([key, value]) => key !== '__capabilities' && value && typeof value === 'object') as Array<[string, any]>;
+    if (!entries.length) return;
+    setDocTemplates(previous => {
+      const next = [...previous];
+      for (const [type, model] of entries) {
+        const index = next.findIndex(item => String(item.type || '').toUpperCase() === type.toUpperCase());
+        const current = index >= 0 ? next[index] : undefined;
+        const mapped: DocTemplateItem = {
+          id: current?.id || `master-${type.toLowerCase()}`,
+          type,
+          label: String(model.label || current?.label || type),
+          fileName: String(model.fileName || current?.fileName || `${type}.docx`),
+          description: current?.description || 'Modelo documental publicado e versionado no Drive institucional.',
+          variables: Array.isArray(model.variables) ? model.variables : (current?.variables || []),
+          fields: current?.fields || [],
+          templateContentText: current?.templateContentText || '',
+          lastUpdated: String(model.uploadedAt || current?.lastUpdated || ''),
+          driveFileUrl: String(model.driveFileUrl || current?.driveFileUrl || ''),
+          driveFileId: String(model.driveFileId || current?.driveFileId || ''),
+        };
+        if (index >= 0) next[index] = mapped; else next.push(mapped);
+      }
+      return next;
+    });
+    setMatrixColumns(previous => {
+      const next = [...previous];
+      const known = new Set(next.flatMap(column => [column.id, column.name, ...(column.aliases || [])].map(value => String(value || '').toUpperCase())));
+      for (const [, model] of entries) for (const raw of Array.isArray(model.variables) ? model.variables : []) {
+        const name = String(raw || '').replace(/^<<|>>$/g, '').replace(/^\{\{|\}\}$/g, '').replace(/^\[\[|\]\]$/g, '').replace(/^«|»$/g, '').replace(/^-|-$/g, '').trim().replace(/[^a-zA-Z0-9À-ÿ]+/g, '_').replace(/^_+|_+$/g, '').toUpperCase();
+        if (!name || known.has(name)) continue;
+        next.push({ id: name, name, label: name.replace(/_/g, ' '), dataType: /EMAIL/.test(name) ? 'email' : /DATA|HORA/.test(name) ? 'date' : 'text', aliases: [String(raw)] });
+        known.add(name);
+      }
+      return next;
+    });
+  };
+
   // Keep runtime document template engine synchronized with docTemplates state & localStorage
   useEffect(() => {
     localStorage.setItem('portal_doc_templates', JSON.stringify(docTemplates));
@@ -1071,38 +1109,61 @@ export const ConfiguracoesPage: React.FC = () => {
     return [
       {
         id: 'email-reserva', name: 'Solicitação de reserva ao departamento', triggerStage: 'Cadastro inicial',
-        recipient: '{{DEPARTAMENTO_EMAIL}}', subject: '[TCC {{PROTOCOLO}}] Solicitação de reserva',
-        body: 'Prezados,\n\nSolicitamos reserva para a defesa de {{CAMPO_01}}.\nTítulo: {{TITULO}}\nData e hora: {{DEFESA_DATA_HORA}}\nLocal preferido: {{DEFESA_LOCAL}}\nCaso indisponível, solicitamos o local alternativo: {{LOCAL_ALTERNATIVO}}.\n\nPor favor, confirmem o agendamento ao aluno: {{ALUNO_1_EMAIL}}.\nOrientador: {{ORIENTADOR_NOME}}.\n\nAtenciosamente, Secretaria do curso', attachments: []
+        recipient: String(settings?.emailConfig?.roomReservationDepartmentEmail || ''), subject: '[TCC <<PROTOCOLO>>] Solicitação de reserva',
+        body: 'Prezados,\n\nSolicitamos reserva para a defesa de <<CAMPO_01>>.\nTítulo: <<TITULO>>\nData e hora: <<DEFESA_DATA_HORA>>\nLocal preferido: <<DEFESA_LOCAL>>\nCaso indisponível, solicitamos o local alternativo: <<LOCAL_ALTERNATIVO>>.\n\nPor favor, confirmem o agendamento ao aluno: <<ALUNO_1_EMAIL>>.\nOrientador: <<ORIENTADOR_NOME>>.\n\nAtenciosamente, Comissão de TCC do Departamento de Enfermagem', attachments: []
       },
       {
         id: 'email-convite',
         name: 'E-mail de Convite para Membros da Banca',
         triggerStage: 'Etapa 2 - Confirmação da Banca pelo Aluno/Orientador',
-        recipient: '{{BANCA_EMAILS}}, {{ORIENTADOR_EMAIL}}',
-        subject: '[Portal TCC] Convite para Banca Examinadora — -CAMPO_01-',
-        body: 'Prezado(a),\n\nConvidamos V. Sa. para compor a Comissão Examinadora da defesa de TCC do discente -CAMPO_01-, sob orientação de -CAMPO_03-.\n\nTítulo: -CAMPO_02-\nData/Horário: -CAMPO_04-\nLocal: -CAMPO_07_LOCAL-\n\nAcesse o portal: {{LINK_PORTAL}}\n\nAtenciosamente,\nComissão de TCC',
+        recipient: '<<BANCA_EMAILS>>, <<ORIENTADOR_EMAIL>>',
+        subject: '[Portal TCC] Convite para Banca Examinadora — <<CAMPO_01>>',
+        body: 'Prezado(a),\n\nConvidamos V. Sa. para compor a Comissão Examinadora da defesa de TCC do discente <<CAMPO_01>>, sob orientação de <<CAMPO_03>>.\n\nTítulo: <<CAMPO_02>>\nData/Horário: <<CAMPO_04>>\nLocal: <<CAMPO_07_LOCAL>>\n\nAcesse o portal: <<LINK_PORTAL>>\n\nAtenciosamente,\nComissão de TCC do Departamento de Enfermagem',
         attachments: ['tmpl-convite']
       },
       {
         id: 'email-confirmacao',
         name: 'E-mail de Confirmação de Agendamento',
         triggerStage: 'Etapa 3 - Agendamento Confirmado',
-        recipient: '{{ALUNO_EMAIL}}, {{ALUNO_2_EMAIL}}, {{ORIENTADOR_EMAIL}}',
-        subject: '[Portal TCC] Agendamento confirmado — -CAMPO_12-',
-        body: 'Prezado(a) -CAMPO_01-,\n\nSua defesa de TCC foi agendada e confirmada.\n\nTítulo: -CAMPO_02-\nData/Horário: -CAMPO_04-\nLocal: -CAMPO_07_LOCAL-\n\nAcompanhe o status em seu painel: {{LINK_PORTAL}}\n\nAtenciosamente,\nComissão de TCC',
+        recipient: '<<ALUNO_EMAIL>>, <<ALUNO_2_EMAIL>>, <<ORIENTADOR_EMAIL>>',
+        subject: '[Portal TCC] Agendamento confirmado — <<CAMPO_12>>',
+        body: 'Prezado(a) <<CAMPO_01>>,\n\nSua defesa de TCC foi agendada e confirmada.\n\nTítulo: <<CAMPO_02>>\nData/Horário: <<CAMPO_04>>\nLocal: <<CAMPO_07_LOCAL>>\n\nAcompanhe o status em seu painel: <<LINK_PORTAL>>\n\nAtenciosamente,\nComissão de TCC do Departamento de Enfermagem',
         attachments: []
       },
       {
         id: 'email-conclusao',
         name: 'E-mail de Envio de Ata e Certificados Assinados',
         triggerStage: 'Etapa 5 - Conclusão e Assinatura do Presidente',
-        recipient: '{{PARTICIPANTES_EMAILS}}',
-        subject: '[Portal TCC] Documentos da defesa disponíveis — -CAMPO_01-',
-        body: 'Prezado(a) -CAMPO_01-,\n\nA ata e as declarações concluídas estão disponíveis no seu painel: {{LINK_PORTAL}}\n\nAtenciosamente,\nComissão de TCC',
+        recipient: '<<PARTICIPANTES_EMAILS>>',
+        subject: '[Portal TCC] Documentos da defesa disponíveis — <<CAMPO_01>>',
+        body: 'Prezado(a) <<CAMPO_01>>,\n\nA ata e as declarações concluídas estão disponíveis no seu painel: <<LINK_PORTAL>>\n\nAtenciosamente,\nComissão de TCC do Departamento de Enfermagem',
         attachments: ['tmpl-ata', 'tmpl-declaracao', 'tmpl-termo']
       }
     ];
   });
+
+  useEffect(() => {
+    const configuredDepartmentEmail = String(settings?.emailConfig?.roomReservationDepartmentEmail || '').trim().toLowerCase();
+    setEmailTemplates(previous => previous.map(email => {
+      const next = { ...email };
+      const normalizeMarkers = (value?: string) => String(value || '')
+        .replace(/\{\{\s*([A-Z0-9_]+)\s*\}\}/gi, '<<$1>>')
+        .replace(/-((?:CAMPO|FIELD)_[A-Z0-9_]+)-/gi, '<<$1>>');
+      next.subject = normalizeMarkers(next.subject);
+      next.body = normalizeMarkers(next.body);
+      next.htmlBody = next.htmlBody ? normalizeMarkers(next.htmlBody) : next.htmlBody;
+      next.cc = next.cc ? normalizeMarkers(next.cc) : next.cc;
+      next.bcc = next.bcc ? normalizeMarkers(next.bcc) : next.bcc;
+      next.replyTo = next.replyTo ? normalizeMarkers(next.replyTo) : next.replyTo;
+      const recipient = String(next.recipient || '');
+      if (email.id === 'email-reserva' && /^\s*(?:\{\{|<<)\s*DEPARTAMENTO_EMAIL\s*(?:\}\}|>>)\s*$/i.test(recipient)) {
+        next.recipient = configuredDepartmentEmail;
+      } else {
+        next.recipient = normalizeMarkers(recipient);
+      }
+      return next;
+    }));
+  }, [settings?.emailConfig?.roomReservationDepartmentEmail]);
 
   useEffect(() => {
     localStorage.setItem('portal_email_templates', JSON.stringify(emailTemplates));
@@ -2108,25 +2169,25 @@ export const ConfiguracoesPage: React.FC = () => {
               onClose={() => setActiveSettingsPanel(null)}
               sections={
                 activeSettingsPanel === 'identity' ? [
-                  { id: 'identity', label: 'Rodapé e identidade', description: 'Responsáveis, contatos e identidade operacional.', icon: Building2, content: settings ? <div className="space-y-3"><MasterAndPresidentConfigForm settings={settings} onSettingsUpdated={() => { void refreshAuth(); showNotification('Configurações atualizadas.'); }} showNotification={showNotification} /><CommissionIdentityPanel isMaster /></div> : null },
+                  { id: 'identity', label: 'Rodapé e identidade', description: 'Responsáveis, contatos e identidade operacional.', icon: Building2, fullBleed: true, content: settings ? <CommissionIdentityPanel isMaster /> : null },
                 ] : activeSettingsPanel === 'integrations' ? [
                   { id: 'integrations', label: 'Integrações e plataformas', description: 'Asten, Google, Supabase, Vercel e serviços externos.', icon: Globe, fullBleed: true, content: <InfrastructureIntegrationsPanel isMaster /> },
                 ] : activeSettingsPanel === 'models-documents' ? [
-                  { id: 'models-documents', label: 'Modelos e documentos', description: 'Arquivo ativo, variáveis detectadas, visualização e histórico em um único lugar.', icon: FileText, fullBleed: true, content: <MasterDocumentModelsPanel /> },
+                  { id: 'models-documents', label: 'Modelos e documentos', description: 'Arquivo ativo, variáveis detectadas, visualização e histórico em um único lugar.', icon: FileText, fullBleed: true, content: <MasterDocumentModelsPanel onCatalogChanged={syncMasterModelCatalog} /> },
                 ] : activeSettingsPanel === 'emails' ? [
-                  { id: 'emails', label: 'E-mails', description: 'Modelos, variáveis, anexos e pré-visualização.', icon: Mail, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-emails" initialTab="emails" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
+                  { id: 'emails', fullBleed: true, label: 'E-mails', description: 'Modelos, variáveis, anexos e pré-visualização.', icon: Mail, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-emails" initialTab="emails" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'forms' ? [
-                  { id: 'forms', label: 'Formulários', description: 'Campos, regras, variáveis e prévia no mesmo contexto.', icon: ClipboardList, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-forms" initialTab="forms" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
+                  { id: 'forms', fullBleed: true, label: 'Formulários', description: 'Campos, regras, variáveis e prévia no mesmo contexto.', icon: ClipboardList, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-forms" initialTab="forms" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'workflow' ? [
-                  { id: 'workflow', label: 'Fluxos', description: 'Etapas e ações do fluxo operacional.', icon: Layers, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-workflow" initialTab="workflow" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
+                  { id: 'workflow', fullBleed: true, label: 'Fluxos', description: 'Etapas e ações do fluxo operacional.', icon: Layers, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-workflow" initialTab="workflow" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'variables' ? [
-                  { id: 'variables', label: 'Variáveis', description: 'Definições canônicas, usos, mescla e propagação.', icon: Sliders, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-variables" initialTab="variables" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
+                  { id: 'variables', fullBleed: true, label: 'Variáveis', description: 'Definições canônicas, usos, mescla e propagação.', icon: Sliders, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-variables" initialTab="variables" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'access' ? [
-                  { id: 'authorizations', label: 'Autorizações de acesso', description: 'Gerencie discentes e demais perfis autorizados.', icon: Lock, content: <AuthorizedStudentsPanel canManage /> },
+                  { id: 'authorizations', label: 'Autorizações de acesso', description: 'Gerencie discentes e demais perfis autorizados.', icon: Lock, content: <AuthorizedStudentsPanel canManage embedded /> },
                 ] : activeSettingsPanel === 'signatures' ? [
-                  { id: 'signature-ledger', label: 'Registros de assinatura', description: 'Documentos enviados, método e situação.', icon: FileCheck2, content: <AstenLogsPage /> },
+                  { id: 'signature-ledger', label: 'Registros de assinatura', description: 'Documentos enviados, método e situação.', icon: FileCheck2, content: <AstenLogsPage embedded /> },
                 ] : [
-                  { id: 'audit-ledger', label: 'Registro de logs', description: 'Auditoria e histórico técnico do Portal.', icon: ClipboardList, content: <AuditLogsPage /> },
+                  { id: 'audit-ledger', label: 'Registro de logs', description: 'Auditoria e histórico técnico do Portal.', icon: ClipboardList, content: <AuditLogsPage embedded /> },
                 ]
               }
             />

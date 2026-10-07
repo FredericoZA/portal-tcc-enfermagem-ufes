@@ -12,20 +12,19 @@ test('guia não repete botão de acesso ao portal', async () => {
   assert.ok(!tutorial.includes('Acessar o Portal'));
 });
 
-test('comissão reúne Presidência, Secretaria e membros sem duplicar acessos nem personalização do símbolo', async () => {
+test('comissão reúne identidade, contatos e membros em formulário único com autosave', async () => {
   const panel = await source('src/components/CommissionIdentityPanel.tsx');
-  assert.ok(panel.includes('Presidência, Secretaria e Comissão'));
-  assert.ok(panel.includes('Presidente da Comissão'));
-  assert.ok(panel.includes('Secretaria'));
+  assert.ok(panel.includes('Identidade e dados do rodapé'));
+  assert.ok(panel.includes('Nome da Presidente da Comissão'));
+  assert.ok(panel.includes('E-mail de contato da Secretaria'));
   assert.ok(panel.includes('Membros da Comissão'));
   assert.ok(panel.includes('Adicionar membro'));
   assert.ok(panel.includes('if (!isMaster) return null'));
   assert.ok(panel.includes('apiClient.updateSettings'));
-  assert.ok(panel.includes('await refreshAuth()'));
-  assert.ok(!panel.includes('createAdministrationTransfer'));
+  assert.ok(panel.includes('createAdministrationTransfer'));
+  assert.ok(panel.includes('Salvo automaticamente'));
   assert.ok(!panel.includes('QRCode.toDataURL'));
   assert.ok(!panel.includes('courseLogoDataUrl'));
-  assert.ok(!panel.includes('ADICIONAR / SUBSTITUIR SÍMBOLO'));
 });
 
 test('configurações não exibem blocos redundantes e Indicadores usam somente dados públicos agregados', async () => {

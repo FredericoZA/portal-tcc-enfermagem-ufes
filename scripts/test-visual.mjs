@@ -415,7 +415,11 @@ try {
             if (!root || !first) return 999;
             return Math.round(first.getBoundingClientRect().top - root.getBoundingClientRect().top);
           }, tab).catch(() => 999);
-          if (headerGap > 1) report.errors.push(`master-${label}-${width}: cabeçalho verde não encosta no topo (gap ${headerGap}px).`);
+          if (tab === 'indicadores') {
+            if (headerGap < 10 || headerGap > 24) report.errors.push(`master-${label}-${width}: Indicadores deve preservar margem superior de página de cards (gap ${headerGap}px).`);
+          } else if (headerGap > 1) {
+            report.errors.push(`master-${label}-${width}: cabeçalho verde não encosta no topo (gap ${headerGap}px).`);
+          }
         }
         await capture(page, `master-${label}-${width}`);
       }

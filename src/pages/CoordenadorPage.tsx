@@ -415,7 +415,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const renderSignatureActionCell = (proc: ProcessData) => {
     const job=getDeclarationJob(proc.id);const govJob=getGovDeclarationJob(proc.id);const working=signingIds.includes(proc.id);const status=getDeclarationStatus(proc.id);const actionable=isDeclarationActionable(proc.id);
     const govUploadAvailable=Boolean(govJob && !['SIGNED','ARCHIVED','CANCELED'].includes(govJob.status));
-    return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}><div className="flex flex-wrap items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>{govUploadAvailable&&<label className="portal-sign-provider-btn cursor-pointer" title="Enviar o PDF já assinado no Gov.br"><input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event)=>{const file=event.currentTarget.files?.[0];event.currentTarget.value='';if(file)void handleGovSignedUpload(proc.id,file);}}/><Download className="h-3.5 w-3.5 rotate-180"/><span>Enviar assinado</span></label>}</div>{!actionable&&<span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[8px] font-black uppercase ${status.tone}`} title={job?.lastError||status.label}>{status.label}</span>}</td>;
+    return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}><div className="flex flex-wrap items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>{govUploadAvailable&&<label className="portal-sign-provider-btn cursor-pointer" title="Enviar o PDF já assinado no Gov.br"><input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event)=>{const file=event.currentTarget.files?.[0];event.currentTarget.value='';if(file)void handleGovSignedUpload(proc.id,file);}}/><Download className="h-3.5 w-3.5 rotate-180"/><span>Enviar assinado</span></label>}</div></td>;
   };
 
   const renderCompletedActionCell = (proc: ProcessData) => {
@@ -496,11 +496,9 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         const signatureStatus = getDeclarationStatus(proc.id, proc.status);
         return (
           <td key={colKey} className={cellClass}>
-            <div className="flex items-center justify-center mx-auto">
-              <span className={`inline-flex items-center justify-center rounded-full border px-2 py-1 text-[9px] font-black uppercase leading-none ${signatureStatus.tone}`}>
-                {signatureStatus.label}
-              </span>
-            </div>
+            <span className="text-[10px] font-semibold text-slate-800">
+              {signatureStatus.label}
+            </span>
           </td>
         );
       }

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Eye, RefreshCw, RotateCcw, ShieldCheck, X } from 'lucide-react';
+import { Eye, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { portalConfirm, portalNotice } from '../services/portalDialogs';
@@ -73,6 +73,12 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(initialConfig.visibleColumns || DEFAULT_VISIBLE);
   const [textFormat] = useState<TableTextFormat>(() => ({ ...loadGlobalTableConfig(), ...(initialConfig.textFormat || {}) }));
   const [selectedJob, setSelectedJob] = useState<SignatureJob | null>(null);
+  useEffect(() => {
+    if (!selectedJob) return;
+    const closeSelectedSignatureOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setSelectedJob(null); };
+    window.addEventListener('keydown', closeSelectedSignatureOnEscape);
+    return () => window.removeEventListener('keydown', closeSelectedSignatureOnEscape);
+  }, [selectedJob]);
   const [workingId, setWorkingId] = useState('');
 
   const load = async (silent = false) => {
@@ -173,15 +179,15 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
     </div>
 
     {selectedJob && <div className="fixed inset-0 z-[1000009] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm" onClick={() => setSelectedJob(null)}>
-      <section role="dialog" aria-modal="true" aria-label="Auditoria do registro de assinatura" className="w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
-        <header className="flex items-center justify-between border-b-[16px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><strong className="text-xs uppercase">Auditoria da assinatura</strong><button type="button" onClick={() => setSelectedJob(null)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black"><X className="h-4 w-4"/></button></header>
-        <div className="max-h-[78vh] overflow-y-auto p-4" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
+      <section role="dialog" aria-modal="true" aria-label="Auditoria do registro de assinatura" className="w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-300 shadow-2xl" style={{ backgroundColor: 'var(--portal-surface-page)' }} onClick={(event) => event.stopPropagation()}>
+        <header className="flex items-center gap-2 border-b-[5px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true"/><strong className="text-xs uppercase">Auditoria da assinatura</strong></header>
+        <div className="max-h-[78vh] overflow-y-auto p-3" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{[
             ['Processo', selectedJob.protocol || selectedJob.processId], ['Documento', selectedJob.documentTitle], ['Método', providerLabel(selectedJob.provider)],
             ['Situação', selectedJob.status], ['Solicitado por', selectedJob.createdBy], ['Solicitado em', dateTime(selectedJob.createdAt)],
             ['Protocolo externo', selectedJob.providerEnvelopeId || '—'], ['Enviado em', dateTime(selectedJob.sentAt)], ['Assinado / concluído em', dateTime(selectedJob.signedAt || selectedJob.completedAt)],
             ['Hash assinado', selectedJob.signedSha256 || '—'], ['Último erro', selectedJob.lastError || '—'],
-          ].map(([label, value]) => <div key={label} className="rounded-xl border border-slate-300 bg-white p-3"><div className="text-[9px] font-black uppercase tracking-wide text-slate-500">{label}</div><div className="mt-1 break-words text-xs font-semibold text-slate-900">{value}</div></div>)}</div>
+          ].map(([label, value]) => <div key={label} className="rounded-xl border border-slate-300 p-3" style={{ backgroundColor: 'var(--portal-surface-panel)' }}><div className="text-[9px] font-black uppercase tracking-wide text-slate-500">{label}</div><div className="mt-1 break-words text-xs font-semibold text-slate-900">{value}</div></div>)}</div>
 
           <section className="mt-3 overflow-hidden rounded-xl border border-slate-300 bg-white">
             <div className="px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}>Signatários e evidências</div>

@@ -399,8 +399,9 @@ button[aria-label^="Configurar exibição"],
 
 .portal-core-column-popup {
   width: min(300px, calc(100vw - 24px));
-  padding: 8px;
-  background: var(--portal-surface-inner);
+  padding: 0 8px 8px;
+  overflow: hidden;
+  background: var(--portal-surface-page);
 }
 
 .portal-search-popover {
@@ -411,19 +412,32 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-table-settings-popover {
-  width: min(520px, calc(100vw - 24px));
-  max-width: min(520px, calc(100vw - 24px));
-  padding: 10px;
+  width: min(460px, calc(100vw - 24px));
+  max-width: min(460px, calc(100vw - 24px));
+  padding: 0 10px 10px;
+  overflow: hidden;
   background: var(--portal-surface-page);
 }
 
 .portal-core-popup-title {
-  margin: 0 0 6px;
-  padding: 1px 1px 6px;
-  border-bottom: 1px solid var(--portal-border);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 -8px 8px;
+  padding: 9px 10px;
+  border-bottom: 5px solid var(--portal-surface-inner);
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
   font-size: 11px;
   font-weight: 850;
   line-height: 1.2;
+}
+
+.portal-core-popup-title svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  stroke: currentColor;
 }
 
 .portal-core-filter-title {
@@ -560,27 +574,11 @@ button[aria-label^="Configurar exibição"],
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 8px;
-  padding-bottom: 7px;
-  border-bottom: 1px solid var(--portal-border);
-}
-
-.portal-settings-close-button {
-  width: 27px;
-  height: 27px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--portal-brand-action);
-  cursor: pointer;
-}
-
-.portal-settings-close-button:hover {
-  background: var(--portal-surface-card);
-  color: var(--portal-brand-header);
+  margin: 0 -10px 8px;
+  padding: 9px 10px;
+  border-bottom: 5px solid var(--portal-surface-inner);
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
 }
 
 .portal-settings-top-grid {
@@ -748,10 +746,10 @@ button[aria-label^="Configurar exibição"],
 
 .portal-settings-column-item[data-visible="false"] { opacity: .62; }
 
-.portal-settings-footer {
+ .portal-settings-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   margin-top: 8px;
   padding-top: 7px;
@@ -1001,4 +999,52 @@ button[aria-label^="Configurar exibição"],
 .portal-calendar-day-number {
   font-size: 12px;
   line-height: 1;
+}
+
+
+/* Portal TCC 1.0.78 — contrato visual único para pop-ups. */
+.portal-settings-workspace {
+  background: var(--portal-surface-page);
+}
+.portal-settings-workspace-header {
+  min-height: 48px;
+}
+.portal-settings-single-pane > :first-child {
+  min-height: 100%;
+}
+.portal-settings-single-pane [data-portal-surface="panel"],
+.portal-popup-section {
+  background: var(--portal-surface-panel);
+}
+.portal-modal-header {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 5px solid var(--portal-surface-inner);
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
+}
+.portal-feedback-dialog > form {
+  background: var(--portal-surface-page);
+}
+.portal-feedback-dialog footer {
+  background: var(--portal-surface-page);
+}
+.portal-feedback-dialog .portal-action,
+.portal-feedback-dialog .portal-action-primary {
+  min-width: 96px;
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 10px;
+}
+.portal-core-sort-actions,
+.portal-core-selection-actions,
+.portal-core-filter-values {
+  background: var(--portal-surface-panel);
+}
+.portal-core-filter-values {
+  padding: 4px 5px;
+  border: 1px solid var(--portal-border);
+  border-radius: 8px;
 }

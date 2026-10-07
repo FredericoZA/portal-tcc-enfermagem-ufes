@@ -174,7 +174,7 @@ export default function App() {
               }
             />
 
-            <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto min-h-[500px]">
+            <main className={`flex-1 w-full min-h-[500px] ${['logs','asten-logs'].includes(currentTab) ? 'p-0 max-w-none' : 'p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto'}`}>
               <PortalErrorBoundary key={currentTab}><Suspense fallback={<PageLoadingFallback />}>{renderMainTab()}</Suspense></PortalErrorBoundary>
             </main>
 
@@ -195,11 +195,11 @@ export default function App() {
               onClick={(event) => event.stopPropagation()}
             >
               <div
-                className="portal-process-dialog-body max-h-[90vh] overflow-y-auto p-2 custom-scrollbar sm:p-3"
-                style={{ backgroundColor: 'var(--portal-surface-panel)' }}
+                className="portal-process-dialog-body max-h-[90vh] overflow-y-auto custom-scrollbar"
+                style={{ backgroundColor: 'var(--portal-surface-page)' }}
               >
                 <PortalErrorBoundary key={selectedProcessId}><Suspense fallback={<PageLoadingFallback />}>
-                  <ProcessoDetailPage processId={selectedProcessId} readOnly={selectedProcessReadOnly} onBack={handleCloseProcess} isModal={false} />
+                  <ProcessoDetailPage processId={selectedProcessId} readOnly={selectedProcessReadOnly} onBack={handleCloseProcess} isModal={true} />
                 </Suspense></PortalErrorBoundary>
               </div>
             </div>

@@ -9,7 +9,7 @@ test('modal de acesso usa cabeçalho institucional e ícone branco sem cápsula'
   assert.match(home, /portal-modal-header border-b/);
   assert.match(home, /<GraduationCap className="h-5 w-5 shrink-0 text-white"/);
   assert.doesNotMatch(home, />🎓<|currentTheme\.headerBg|cardBgColor \?/);
-  assert.match(home, /className="portal-modal-header-close"/);
+  assert.doesNotMatch(home, /aria-label="Fechar acesso ao portal"/);
 });
 
 test('chips de filtro usam somente a geometria canônica', () => {
@@ -25,8 +25,9 @@ test('engrenagem usa layout compacto e mantém Definir padrão restrito ao Maste
   assert.match(component, /portal-settings-page-size-options/);
   assert.match(component, /portal-settings-date-grid/);
   assert.match(component, /isMaster&&<button[^>]*portal-popup-action[^>]*>[\s\S]*Definir padrão/);
-  assert.match(component, /portal-settings-close-button/);
-  assert.match(css, /\.portal-table-settings-popover \{[\s\S]*520px/);
+  assert.doesNotMatch(component, /portal-settings-close-button|>Concluir</);
+  assert.match(component, /document\.addEventListener\('mousedown',outside\)/);
+  assert.match(css, /\.portal-table-settings-popover \{[\s\S]*460px/);
   assert.match(css, /\.portal-settings-page-size-options \{[\s\S]*flex-wrap: nowrap/);
 });
 
@@ -37,22 +38,21 @@ test('menu de coluna é compacto e possui ação concluir verde', () => {
   assert.match(css, /\.portal-core-done \{[\s\S]*background: var\(--portal-brand-header\)/);
 });
 
-test('ações internas de configuração usam verde institucional e não caixa alta', () => {
+test('ações internas de configuração usam o contrato institucional compartilhado', () => {
   const css = read('src/styles/portal-components.css');
   const commission = read('src/components/CommissionIdentityPanel.tsx');
-  const audit = read('src/components/AuditAndSecuritySection.tsx');
   assert.match(css, /\.portal-popup-action \{[\s\S]*text-transform: none/);
-  assert.match(commission, /const actionClass = 'portal-popup-action/);
-  assert.match(audit, /className="portal-popup-action/);
+  assert.match(commission, /var\(--portal-brand-action\)/);
+  assert.doesNotMatch(commission, /Salvar membros|Salvar Contas Administrativas/);
 });
 
 test('lista da Comissão usa superfície do popup e mantém branco nos campos e lixeira', () => {
   const commission = read('src/components/CommissionIdentityPanel.tsx');
-  assert.match(commission, /bg-\[var\(--portal-surface-panel\)\]/);
+  assert.match(commission, /backgroundColor: 'var\(--portal-surface-panel\)'/);
   assert.match(commission, /const inputClass = '[^']*bg-white/);
-  assert.match(commission, /bg-white p-1\.5 text-rose-700/);
+  assert.match(commission, /bg-white text-rose-700/);
 });
 
-test('release atual é 1.0.77', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.77');
+test('release atual é 1.0.78', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.78');
 });
