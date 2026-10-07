@@ -581,25 +581,6 @@ button[aria-label^="Configurar exibição"],
   color: var(--portal-text-light);
 }
 
-.portal-settings-close-button {
-  display: none;
-  width: 27px;
-  height: 27px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--portal-brand-action);
-  cursor: pointer;
-}
-
-.portal-settings-close-button:hover {
-  background: var(--portal-surface-card);
-  color: var(--portal-brand-header);
-}
-
 .portal-settings-top-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -765,10 +746,10 @@ button[aria-label^="Configurar exibição"],
 
 .portal-settings-column-item[data-visible="false"] { opacity: .62; }
 
-.portal-settings-footer {
+ .portal-settings-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   margin-top: 8px;
   padding-top: 7px;
