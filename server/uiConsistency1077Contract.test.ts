@@ -45,7 +45,8 @@ test('rodapé credita Sabrina e centraliza comissão com um único membro', () =
 test('identidade e rodapé usam formulário único com salvamento automático', () => {
   const identity = read('src/components/CommissionIdentityPanel.tsx');
   const config = read('src/pages/ConfiguracoesPage.tsx');
-  assert.match(identity, /Identidade e dados do rodapé/);
+  assert.match(identity, /aria-label="Dados de rodapé e identidade"/);
+  assert.doesNotMatch(identity, /Identidade e dados do rodapé/);
   assert.match(identity, /Salvo automaticamente/);
   assert.match(identity, /Adicionar membro/);
   assert.doesNotMatch(identity, /Salvar membros|Salvar Contas Administrativas/);
