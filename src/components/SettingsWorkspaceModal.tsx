@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
 
 export interface SettingsWorkspaceSection {
   id: string;
@@ -133,9 +132,6 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
         </div>
         <div className="portal-settings-workspace-actions">
           <div ref={setHeaderHost} className="flex min-w-0 flex-wrap items-center justify-end gap-1.5" data-settings-workspace-header-actions="true" />
-          <button type="button" onClick={onClose} className="portal-modal-header-close" aria-label="Fechar janela" title="Fechar">
-            <X className="h-4 w-4" aria-hidden="true"/>
-          </button>
         </div>
       </header>
       <div className="portal-settings-workspace-divider" aria-hidden="true" />
