@@ -79,10 +79,8 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
     </main>
   ) : (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
-      <aside className="max-h-52 w-full shrink-0 overflow-y-auto border-b border-slate-300 p-3 md:max-h-none md:w-64 md:border-b-0 md:border-r" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
-        <div className="rounded-xl border border-slate-300 p-2 shadow-sm" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>
-          <div className="mb-2 border-b border-slate-200 px-2 pb-2 text-[10px] font-black uppercase tracking-wider text-slate-600">Navegação</div>
-          <div className="space-y-1">{sections.map((section) => {
+      <aside className="max-h-44 w-full shrink-0 overflow-y-auto border-b border-slate-300 p-2 md:max-h-none md:w-56 md:border-b-0 md:border-r" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
+        <div className="space-y-1">{sections.map((section) => {
             const Icon = section.icon;
             const selected = section.id === current.id;
             return <button
@@ -97,7 +95,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
               {Icon && <Icon className="mt-0.5 h-4 w-4 shrink-0"/>}
               <span className="min-w-0"><strong className="block text-[11px] font-black uppercase">{section.label}</strong>{section.description && <span className={`mt-0.5 block text-[9px] leading-4 ${selected ? 'text-white/80' : 'text-slate-500'}`}>{section.description}</span>}</span>
             </button>;
-          })}</div>
+          })}
         </div>
       </aside>
       <main
