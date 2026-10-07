@@ -8,6 +8,7 @@ const read = (path: string) => readFileSync(path, 'utf8');
 const runtime = read('src/components/PortalSpreadsheetRuntime.tsx');
 const css = readPortalCss();
 const identity = read('src/components/CommissionIdentityPanel.tsx');
+const reauthentication = read('src/services/reauthentication.ts');
 const workspace = read('src/components/SettingsWorkspaceModal.tsx');
 const integrations = read('src/components/InfrastructureIntegrationsPanel.tsx');
 const configPage = read('src/pages/ConfiguracoesPage.tsx');
@@ -87,7 +88,8 @@ test('Rodapé e Identidade é exclusivo do Master, autosalva e preserva troca ad
   assert.match(identity, /apiClient\.updateSettings/);
   assert.match(identity, /commissionPresidentContactEmail/);
   assert.match(identity, /createAdministrationTransfer/);
-  assert.match(identity, /REAUTHENTICATION_REQUIRED/);
+  assert.match(identity, /retryAfterPortalReauthentication/);
+  assert.match(reauthentication, /REAUTHENTICATION_REQUIRED/);
   assert.match(identity, /Salvo automaticamente/);
   assert.doesNotMatch(identity, /Salvar membros|Salvar Contas Administrativas/);
 });
