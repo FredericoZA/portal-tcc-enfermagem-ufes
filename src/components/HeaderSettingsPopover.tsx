@@ -215,13 +215,14 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
       <Settings className="h-3.5 w-3.5 text-current"/>{hasActiveFilters&&<span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--portal-brand-action)] ring-2 ring-white"/>}
     </button>
     {isOpen&&createPortal(
-      <div ref={popupRef} data-portal-table-master={isMaster?'true':'false'} className="portal-table-settings-popover portal-modal-surface fixed z-[1000001] max-h-[calc(100vh-1.5rem)] overflow-y-auto text-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150" style={{top:popoverPos.top,left:popoverPos.left}}>
+      <div ref={popupRef} data-portal-table-master={isMaster?'true':'false'} className="portal-table-settings-popover portal-modal-surface fixed z-[1000001] max-h-[calc(100vh-1.5rem)] overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150" style={{top:popoverPos.top,left:popoverPos.left}}>
         <div className="portal-settings-popover-header">
           <span className="flex items-center gap-1.5 text-[10.5px] font-black uppercase tracking-wider text-white"><Settings className="h-3.5 w-3.5 text-white" aria-hidden="true"/>Exibição da planilha</span>
           <button type="button" onClick={()=>setIsOpen(false)} className="portal-modal-header-close" aria-label="Fechar configuração da planilha" title="Fechar">
             <X className="h-3.5 w-3.5" aria-hidden="true"/>
           </button>
         </div>
+        <div className="portal-settings-popover-body">
         <div className="portal-settings-top-grid">
           <section className="portal-settings-control-card">
             <div className="flex items-center justify-between gap-2"><span className="portal-settings-control-title flex items-center gap-1"><ListFilter className="h-3 w-3"/>Linhas por página</span><span className="text-[8.5px] font-bold text-slate-500">Atual: {pageSize==='all'?'Todos':pageSize}</span></div>
@@ -257,6 +258,7 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
         </section>}
         {saveMessage&&<div role="status" className="mt-2 rounded-lg border border-[var(--portal-border)] bg-[var(--portal-surface-card)] px-3 py-2 text-[9px] font-semibold text-[var(--portal-brand-action)]">{saveMessage}</div>}
         <div className="portal-settings-footer"><button type="button" onClick={restoreDefault} className="portal-popup-secondary-action"><RotateCcw className="h-3 w-3"/>Restaurar padrão</button></div>
+        </div>
       </div>,document.body)}
   </div>;
 };
