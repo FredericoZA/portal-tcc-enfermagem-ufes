@@ -93,8 +93,11 @@ function decodeSession(value: string): PortalIdentity {
   }
   if (!identity.sessionId || !/^[A-Za-z0-9_-]{20,100}$/.test(identity.sessionId)) throw new Error('Sessão sem identificador seguro.');
   const normalizedEmail = normalizeEmail(identity.email);
-  if (!normalizedEmail || identity.uid !== `email:${normalizedEmail}` && !identity.uid.startsWith('demo:')) throw new Error('Sessão inválida.');
-  if (identity.isDemo !== (identity.method === 'DEVELOPMENT_DEMO')) throw new Error('Sessão inválida.');
+  const isDemoIdentity = identity.method === 'DEVELOPMENT_DEMO';
+  if (!normalizedEmail || identity.isDemo !== isDemoIdentity) throw new Error('Sessão inválida.');
+  if (secureRuntime() && isDemoIdentity) throw new Error('Sessão inválida.');
+  const expectedUid = isDemoIdentity ? `demo:${normalizedEmail}` : `email:${normalizedEmail}`;
+  if (identity.uid !== expectedUid) throw new Error('Sessão inválida.');
   return { ...identity, email: normalizedEmail };
 }
 
@@ -110,7 +113,7 @@ function parseCookies(req: Request): Record<string, string> {
 }
 
 function demoIdentity(req: Request): PortalIdentity | null {
-  if (process.env.NODE_ENV === 'production' || process.env.PORTAL_ALLOW_INSECURE_DEMO_AUTH !== 'true') return null;
+  if (secureRuntime() || process.env.PORTAL_ALLOW_INSECURE_DEMO_AUTH !== 'true') return null;
   const email = normalizeEmail(String(req.headers['x-demo-user-email'] || ''));
   if (!email) return null;
   const now = Math.floor(Date.now() / 1000);
