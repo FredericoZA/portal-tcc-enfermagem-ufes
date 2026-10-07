@@ -13,10 +13,14 @@ test('release 1.0.78 usa contrato global de pop-up',()=>{
   assert.doesNotMatch(modal,/portal-modal-header-close/);
 });
 
-test('configuração de planilha ficou mais estreita sem reorganizar colunas',()=>{
+test('configuração de planilha ficou mais estreita, autosalva e fecha pelo entorno',()=>{
   const css=read('src/styles/portal-components.css');
+  const popover=read('src/components/HeaderSettingsPopover.tsx');
   assert.match(css,/\.portal-table-settings-popover \{[\s\S]*460px/);
   assert.match(css,/\.portal-core-popup-title \{[\s\S]*background: var\(--portal-brand-header\)/);
+  assert.match(popover,/document\.addEventListener\('mousedown',outside\)/);
+  assert.doesNotMatch(popover,/portal-settings-close-button|>Concluir</);
+  assert.match(popover,/text-white[^\n]*Exibição da planilha/);
 });
 
 test('identidade do rodapé é única e usa autosave',()=>{
@@ -66,17 +70,21 @@ test('e-mail usa cabeçalho configurável, anexos dinâmicos e sintaxe canônica
 
 test('registros administrativos são planilhas full-bleed',()=>{
   const config=read('src/pages/ConfiguracoesPage.tsx');
+  const app=read('src/App.tsx');
   assert.match(config,/<AuthorizedStudentsPanel canManage embedded \/>/);
   assert.match(config,/<AstenLogsPage embedded \/>/);
   assert.match(config,/<AuditLogsPage embedded \/>/);
+  assert.match(app,/\['logs','asten-logs'\]\.includes\(currentTab\) \? 'p-0 max-w-none'/);
 });
 
-test('histórico do processo abre direto e fecha pelo backdrop',()=>{
+test('histórico do processo abre direto, é full-bleed e fecha pelo backdrop',()=>{
   const detail=read('src/pages/ProcessoDetailPage.tsx');
   assert.match(detail,/Histórico de Auditoria/);
   assert.match(detail,/setShowAuditLogModal\(true\)/);
   assert.match(detail,/event\.target === event\.currentTarget/);
+  assert.match(detail,/isModal \? 'space-y-0'/);
   assert.doesNotMatch(detail,/Fechar Histórico/);
+  assert.doesNotMatch(detail,/process-audit-title[\s\S]{0,1200}overflow-y-auto p-3/);
 });
 
 test('Indicadores preserva margens por ser página de cards',()=>{
