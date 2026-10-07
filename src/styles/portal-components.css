@@ -1206,3 +1206,36 @@ button[aria-label^="Configurar exibição"],
   background: var(--portal-surface-page);
   border-color: var(--portal-border);
 }
+
+
+/* Portal TCC13 — Detalhes do TCC: uma única caixa de trabalho sob o fluxo. */
+.portal-tcc-workspace {
+  background: var(--portal-surface-page);
+}
+
+.portal-tcc-workspace-summary,
+.portal-tcc-workspace-tabs {
+  background: var(--portal-surface-card);
+}
+
+.portal-tcc-workspace-content {
+  background: var(--portal-surface-page);
+}
+
+.portal-tcc-workspace-content > * {
+  margin-top: 0;
+}
+
+.portal-tcc-workspace-content > * + * {
+  margin-top: 12px;
+}
+
+.portal-tcc-workspace-content .portal-card {
+  background: var(--portal-surface-inner);
+}
+
+.portal-tcc-workspace-content .portal-section-header {
+  background: var(--portal-surface-card);
+  border-color: var(--portal-border);
+  color: var(--portal-text-dark);
+}
