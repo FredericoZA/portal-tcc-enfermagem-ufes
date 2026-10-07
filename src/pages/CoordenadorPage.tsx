@@ -496,11 +496,9 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         const signatureStatus = getDeclarationStatus(proc.id, proc.status);
         return (
           <td key={colKey} className={cellClass}>
-            <div className="flex items-center justify-center mx-auto">
-              <span className={`inline-flex items-center justify-center rounded-full border px-2 py-1 text-[9px] font-black uppercase leading-none ${signatureStatus.tone}`}>
-                {signatureStatus.label}
-              </span>
-            </div>
+            <span className="text-[10px] font-semibold text-slate-800">
+              {signatureStatus.label}
+            </span>
           </td>
         );
       }
