@@ -16,6 +16,7 @@ export interface PortalIdentity {
 
 const LEGACY_COOKIE_NAME = 'portal_tcc_session';
 export const SESSION_IDLE_TTL_SECONDS = 3 * 60 * 60;
+export const SESSION_ABSOLUTE_TTL_SECONDS = 12 * 60 * 60;
 const secureRuntime = () => process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
 const cookieName = () => secureRuntime() ? '__Host-portal_tcc_session' : LEGACY_COOKIE_NAME;
 
@@ -71,11 +72,30 @@ function decodeSession(value: string): PortalIdentity {
   if (received.length !== expected.length || !timingSafeEqual(received, expected)) throw new Error('Sessão adulterada.');
   const identity = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as PortalIdentity;
   const now = Math.floor(Date.now() / 1000);
-  if (!identity?.email || !identity.expiresAt || identity.expiresAt <= now || identity.issuedAt > now + 60) {
+  const validMethod = ['EMAIL_OTP', 'GOOGLE_BOOTSTRAP', 'DEVELOPMENT_DEMO'].includes(String(identity?.method || ''));
+  const absoluteExpiry = Number(identity?.issuedAt || 0) + SESSION_ABSOLUTE_TTL_SECONDS;
+  if (
+    !identity?.email
+    || !identity.uid
+    || identity.emailVerified !== true
+    || !validMethod
+    || !Number.isSafeInteger(identity.issuedAt)
+    || !Number.isSafeInteger(identity.authTime)
+    || !Number.isSafeInteger(identity.expiresAt)
+    || identity.expiresAt <= now
+    || identity.issuedAt > now + 60
+    || identity.authTime > now + 60
+    || identity.authTime < identity.issuedAt - 60
+    || absoluteExpiry <= now
+    || identity.expiresAt > absoluteExpiry
+  ) {
     throw new Error('Sessão expirada.');
   }
   if (!identity.sessionId || !/^[A-Za-z0-9_-]{20,100}$/.test(identity.sessionId)) throw new Error('Sessão sem identificador seguro.');
-  return { ...identity, email: normalizeEmail(identity.email) };
+  const normalizedEmail = normalizeEmail(identity.email);
+  if (!normalizedEmail || identity.uid !== `email:${normalizedEmail}` && !identity.uid.startsWith('demo:')) throw new Error('Sessão inválida.');
+  if (identity.isDemo !== (identity.method === 'DEVELOPMENT_DEMO')) throw new Error('Sessão inválida.');
+  return { ...identity, email: normalizedEmail };
 }
 
 function parseCookies(req: Request): Record<string, string> {
@@ -103,15 +123,18 @@ function demoIdentity(req: Request): PortalIdentity | null {
 function writePortalSessionCookie(res: Response, identity: PortalIdentity): void {
   const token = encodeSession(identity);
   const secure = secureRuntime();
+  const now = Math.floor(Date.now() / 1000);
+  const maxAge = Math.max(0, Math.min(SESSION_IDLE_TTL_SECONDS, identity.expiresAt - now));
   res.setHeader('Set-Cookie', [
     `${cookieName()}=${encodeURIComponent(token)}`, 'Path=/', 'HttpOnly', 'SameSite=Lax',
-    secure ? 'Secure' : '', 'Priority=High', `Max-Age=${SESSION_IDLE_TTL_SECONDS}`
+    secure ? 'Secure' : '', 'Priority=High', `Max-Age=${maxAge}`
   ].filter(Boolean).join('; '));
 }
 
 function refreshPortalIdentity(identity: PortalIdentity): PortalIdentity {
   const now = Math.floor(Date.now() / 1000);
-  return { ...identity, expiresAt: now + SESSION_IDLE_TTL_SECONDS };
+  const absoluteExpiry = identity.issuedAt + SESSION_ABSOLUTE_TTL_SECONDS;
+  return { ...identity, expiresAt: Math.min(now + SESSION_IDLE_TTL_SECONDS, absoluteExpiry) };
 }
 
 function shouldRefreshForUserActivity(req: Request): boolean {
