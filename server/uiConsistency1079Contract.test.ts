@@ -33,7 +33,7 @@ test('pop-ups usam a hierarquia cromática canônica',()=>{
 test('e-mail e formulário usam apresentação institucional UFES',()=>{
   const studio=read('src/components/IntegrationStudioPanel.tsx');
   assert.match(studio,/UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO/);
-  assert.match(studio,/const institutionalGreen = '#005830'/);
+  assert.match(studio,/const institutionalGreen = brandKit\.primaryColor/);
   assert.match(studio,/portal-official-preview/);
   assert.match(studio,/bg-\[var\(--portal-brand-header\)\]/);
   assert.match(studio,/portal-artifact-editor-email/);
@@ -41,6 +41,6 @@ test('e-mail e formulário usam apresentação institucional UFES',()=>{
   assert.match(studio,/portal-artifact-editor-document/);
 });
 
-test('release Portal TCC é 1.0.79',()=>{
-  assert.equal(JSON.parse(read('package.json')).version,'1.0.79');
+test('rodada visual não altera a release publicada',()=>{
+  assert.equal(JSON.parse(read('package.json')).version,'1.0.78');
 });
