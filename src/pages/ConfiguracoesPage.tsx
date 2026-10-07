@@ -2108,11 +2108,10 @@ export const ConfiguracoesPage: React.FC = () => {
               <span className="portal-settings-group-line h-px flex-1" />
             </div>
             {[
-              { id: 'models-documents', title: 'Modelos e Documentos', text: 'Cadastre modelos, confira as variáveis detectadas e visualize o arquivo.', icon: FileText },
-              { id: 'emails', title: 'E-mails', text: 'Modelos de mensagem, destinatários, variáveis e anexos.', icon: Mail },
-              { id: 'forms', title: 'Formulários', text: 'Campos, regras, respostas e variáveis dos formulários.', icon: ClipboardList },
+              { id: 'models-documents', title: 'Documentos e Variáveis', text: 'Modelos oficiais, versões, variáveis detectadas, mescla e propagação em um único espaço.', icon: FileText },
+              { id: 'emails', title: 'E-mails', text: 'Mensagens institucionais, destinatários, variáveis, anexos e prévia final.', icon: Mail },
+              { id: 'forms', title: 'Formulários', text: 'Formulários institucionais, campos, regras, variáveis e prévia final.', icon: ClipboardList },
               { id: 'workflow', title: 'Fluxos', text: 'Etapas, eventos e ações do processo de TCC.', icon: Layers },
-              { id: 'variables', title: 'Variáveis', text: 'Definições canônicas, usos, mescla e propagação.', icon: Sliders },
             ].map(({ id, title, text, icon: Icon }) => (
               <button key={id} type="button" onClick={() => setActiveSettingsPanel(id as any)} className="portal-settings-launcher flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left shadow-sm">
                 <Icon className="portal-settings-launcher-icon h-5 w-5 shrink-0" />
@@ -2145,7 +2144,7 @@ export const ConfiguracoesPage: React.FC = () => {
               title={
                 activeSettingsPanel === 'identity' ? 'Rodapé e Identidade'
                 : activeSettingsPanel === 'integrations' ? 'Integrações e Plataforma'
-                : activeSettingsPanel === 'models-documents' ? 'Modelos e Documentos'
+                : activeSettingsPanel === 'models-documents' ? 'Documentos e Variáveis'
                 : activeSettingsPanel === 'emails' ? 'E-mails'
                 : activeSettingsPanel === 'forms' ? 'Formulários'
                 : activeSettingsPanel === 'workflow' ? 'Fluxos'
@@ -2173,7 +2172,8 @@ export const ConfiguracoesPage: React.FC = () => {
                 ] : activeSettingsPanel === 'integrations' ? [
                   { id: 'integrations', label: 'Integrações e plataformas', description: 'Asten, Google, Supabase, Vercel e serviços externos.', icon: Globe, fullBleed: true, content: <InfrastructureIntegrationsPanel isMaster /> },
                 ] : activeSettingsPanel === 'models-documents' ? [
-                  { id: 'models-documents', label: 'Modelos e documentos', description: 'Arquivo ativo, variáveis detectadas, visualização e histórico em um único lugar.', icon: FileText, fullBleed: true, content: <MasterDocumentModelsPanel onCatalogChanged={syncMasterModelCatalog} /> },
+                  { id: 'documents', label: 'Documentos', description: 'Modelos oficiais, arquivo ativo, versões e prévia fiel.', icon: FileText, fullBleed: true, content: <MasterDocumentModelsPanel onCatalogChanged={syncMasterModelCatalog} /> },
+                  { id: 'variables', fullBleed: true, label: 'Variáveis', description: 'Catálogo canônico, usos, mescla e propagação nos artefatos.', icon: Sliders, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-variables-unified" initialTab="variables" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'emails' ? [
                   { id: 'emails', fullBleed: true, label: 'E-mails', description: 'Modelos, variáveis, anexos e pré-visualização.', icon: Mail, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-emails" initialTab="emails" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'forms' ? [

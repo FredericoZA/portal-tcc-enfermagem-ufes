@@ -122,11 +122,11 @@ test('configurações removem personalização global e usam três grupos operac
   assert.match(configPage, /Institucional e Plataforma/);
   assert.match(configPage, /Modelos e Variáveis/);
   assert.match(configPage, /Acesso e Registros/);
-  assert.match(configPage, /id: 'models-documents', title: 'Modelos e Documentos'/);
+  assert.match(configPage, /id: 'models-documents', title: 'Documentos e Variáveis'/);
   assert.match(configPage, /id: 'emails', title: 'E-mails'/);
   assert.match(configPage, /id: 'forms', title: 'Formulários'/);
   assert.match(configPage, /id: 'workflow', title: 'Fluxos'/);
-  assert.match(configPage, /id: 'variables', title: 'Variáveis'/);
+  assert.doesNotMatch(configPage, /id: 'variables', title: 'Variáveis'/);
 });
 
 test('modelos e documentos compartilham catálogo, variáveis e visualização segura', () => {

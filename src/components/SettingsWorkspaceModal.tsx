@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
 
 export interface SettingsWorkspaceSection {
   id: string;
@@ -72,16 +73,14 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       className="portal-settings-single-pane min-w-0 flex-1 overflow-auto p-0"
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
-      style={{ backgroundColor: 'var(--portal-surface-page)' }}
+      style={{ backgroundColor: 'var(--portal-surface-panel)' }}
     >
       {singlePaneContent}
     </main>
   ) : (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
-      <aside className="max-h-52 w-full shrink-0 overflow-y-auto border-b border-slate-300 p-3 md:max-h-none md:w-64 md:border-b-0 md:border-r" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
-        <div className="rounded-xl border border-slate-300 p-2 shadow-sm" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>
-          <div className="mb-2 border-b border-slate-200 px-2 pb-2 text-[10px] font-black uppercase tracking-wider text-slate-600">Navegação</div>
-          <div className="space-y-1">{sections.map((section) => {
+      <aside className="max-h-44 w-full shrink-0 overflow-y-auto border-b border-slate-300 p-2 md:max-h-none md:w-56 md:border-b-0 md:border-r" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
+        <div className="space-y-1">{sections.map((section) => {
             const Icon = section.icon;
             const selected = section.id === current.id;
             return <button
@@ -96,7 +95,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
               {Icon && <Icon className="mt-0.5 h-4 w-4 shrink-0"/>}
               <span className="min-w-0"><strong className="block text-[11px] font-black uppercase">{section.label}</strong>{section.description && <span className={`mt-0.5 block text-[9px] leading-4 ${selected ? 'text-white/80' : 'text-slate-500'}`}>{section.description}</span>}</span>
             </button>;
-          })}</div>
+          })}
         </div>
       </aside>
       <main
@@ -115,22 +114,29 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
     </div>
   );
 
-  return <div className="fixed inset-0 z-[1000005] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
+  return <div className="portal-settings-backdrop fixed inset-0 z-[1000005] flex items-center justify-center p-2 sm:p-4" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
     <section
       role="dialog"
       aria-modal="true"
       aria-label={title}
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
-      className="portal-settings-workspace flex max-h-[94vh] w-full max-w-[1600px] flex-col overflow-hidden rounded-2xl border border-slate-300 shadow-2xl"
+      className="portal-settings-workspace flex h-[min(92vh,900px)] w-full max-w-[1500px] flex-col overflow-hidden"
       style={{ backgroundColor: 'var(--portal-surface-page)' }}
     >
-      <header className="portal-settings-workspace-header flex items-center justify-between gap-3 border-b-[15px] border-white px-4 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}>
-        <div className="flex min-w-0 items-center gap-2">{TitleIcon && <TitleIcon className="h-5 w-5 shrink-0"/>}<h2 className="truncate text-sm font-black uppercase tracking-wide">{title}</h2></div>
-        <div className="flex min-w-0 items-center justify-end gap-1.5">
+      <header className="portal-settings-workspace-header">
+        <div className="portal-settings-workspace-title min-w-0">
+          {TitleIcon && <TitleIcon className="h-4 w-4 shrink-0" aria-hidden="true"/>}
+          <h2 className="truncate">{title}</h2>
+        </div>
+        <div className="portal-settings-workspace-actions">
           <div ref={setHeaderHost} className="flex min-w-0 flex-wrap items-center justify-end gap-1.5" data-settings-workspace-header-actions="true" />
+          <button type="button" onClick={onClose} className="portal-modal-header-close" aria-label="Fechar janela" title="Fechar">
+            <X className="h-4 w-4" aria-hidden="true"/>
+          </button>
         </div>
       </header>
+      <div className="portal-settings-workspace-divider" aria-hidden="true" />
 
       <SettingsWorkspaceHeaderHostContext.Provider value={headerHost}>
         {workspaceContent}

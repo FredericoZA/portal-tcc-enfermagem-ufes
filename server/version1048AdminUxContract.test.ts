@@ -34,10 +34,12 @@ test('Modelos e Variáveis usa popups específicos e une modelos com documentos'
   assert.ok(studio.includes('hideTabs'));
   const studioReturn = studio.slice(studio.indexOf('portal-workspace portal-studio'));
   assert.equal((studioReturn.match(/<aside/g) || []).length, 0);
-  for (const title of ['Modelos e Documentos', 'E-mails', 'Formulários', 'Fluxos', 'Variáveis']) {
+  for (const title of ['Documentos e Variáveis', 'E-mails', 'Formulários', 'Fluxos']) {
     assert.ok(config.includes(`title: '${title}'`));
   }
   assert.ok(config.includes("activeSettingsPanel === 'models-documents'"));
+  assert.ok(config.includes("key=\"studio-variables-unified\""));
+  assert.ok(!config.includes("id: 'variables', title: 'Variáveis'"));
   assert.ok(!config.includes('initialTab="documents"'));
   assert.ok(models.includes('Variáveis deste modelo'));
   assert.ok(models.includes('Visualizar modelo'));

@@ -336,7 +336,7 @@ button[aria-label^="Configurar exibição"],
 /* Modais. */
 .portal-modal-surface,
 [role="dialog"] > .portal-modal-surface {
-  background: var(--portal-surface-page);
+  background: var(--portal-surface-panel);
   border: 1px solid var(--portal-border);
   border-radius: var(--portal-panel-radius);
   overflow: hidden;
@@ -372,17 +372,17 @@ button[aria-label^="Configurar exibição"],
 .portal-modal-body,
 .portal-process-dialog,
 .portal-process-dialog-body {
-  background: var(--portal-surface-page);
+  background: var(--portal-surface-panel);
 }
 
 .portal-modal-body > .portal-layer-panel,
 .portal-process-dialog-body > .portal-layer-panel {
-  background: var(--portal-surface-panel);
+  background: var(--portal-surface-card);
 }
 
 .portal-modal-body .portal-layer-card,
 .portal-process-dialog-body .portal-layer-card {
-  background: var(--portal-surface-card);
+  background: var(--portal-surface-inner);
 }
 
 /* Popovers gerados pelo runtime tabular. */
@@ -1002,35 +1002,141 @@ button[aria-label^="Configurar exibição"],
 }
 
 
-/* Portal TCC 1.0.78 — contrato visual único para pop-ups. */
+/* Portal TCC12 — pop-ups e artefatos institucionais. */
+.portal-settings-backdrop {
+  background: rgba(1, 31, 23, .72);
+  backdrop-filter: blur(2px);
+}
+
 .portal-settings-workspace {
-  background: var(--portal-surface-page);
-}
-.portal-settings-workspace-header {
-  min-height: 48px;
-}
-.portal-settings-single-pane > :first-child {
-  min-height: 100%;
-}
-.portal-settings-single-pane [data-portal-surface="panel"],
-.portal-popup-section {
   background: var(--portal-surface-panel);
+  border: 1px solid var(--portal-border-strong);
+  border-radius: var(--portal-panel-radius);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, .28);
 }
-.portal-modal-header {
-  min-height: 48px;
+
+.portal-settings-workspace-header {
+  box-sizing: border-box;
+  min-height: var(--portal-sheet-title-height);
+  height: var(--portal-sheet-title-height);
   display: flex;
   align-items: center;
-  gap: 8px;
-  border-bottom: 5px solid var(--portal-surface-inner);
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 var(--portal-bar-padding-x);
   background: var(--portal-brand-header);
   color: var(--portal-text-light);
 }
-.portal-feedback-dialog > form {
-  background: var(--portal-surface-page);
+
+.portal-settings-workspace-title,
+.portal-settings-workspace-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.portal-settings-workspace-title h2 {
+  margin: 0;
+  color: var(--portal-text-light);
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+.portal-settings-workspace-actions {
+  min-width: 0;
+  margin-left: auto;
+}
+
+.portal-settings-workspace-divider {
+  height: var(--portal-sheet-title-divider);
+  min-height: var(--portal-sheet-title-divider);
+  background: var(--portal-surface-inner);
+}
+
+.portal-settings-single-pane,
+.portal-settings-workspace-main {
+  background: var(--portal-surface-panel);
+}
+
+.portal-settings-single-pane > :first-child {
+  min-height: 100%;
+}
+
+.portal-settings-workspace-content[data-portal-full-bleed="true"] {
+  background: var(--portal-surface-panel);
+}
+
+.portal-settings-workspace aside {
+  background: var(--portal-surface-card);
+}
+
+.portal-settings-workspace aside > div {
+  background: var(--portal-surface-inner);
+  box-shadow: none;
+}
+
+.portal-settings-workspace aside button {
+  min-height: 42px;
+}
+
+#portal-models-workspace,
+.portal-master-models-catalog {
+  background: var(--portal-surface-panel);
+}
+
+#portal-models-workspace .portal-studio {
+  padding: 10px;
+}
+
+.portal-studio-panel {
+  background: var(--portal-surface-card);
+  border-color: var(--portal-border);
+  box-shadow: none;
+}
+
+.portal-artifact-editor {
+  align-items: start;
+}
+
+.portal-artifact-editor > :first-child,
+.portal-official-preview {
+  background: var(--portal-surface-card);
+}
+
+.portal-artifact-editor :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]) {
+  background: var(--portal-surface-inner);
+  border-color: var(--portal-border);
+}
+
+.portal-artifact-editor details,
+.portal-artifact-editor .portal-layer-inner {
+  background: var(--portal-surface-inner);
+}
+
+.portal-modal-header {
+  min-height: var(--portal-sheet-title-height);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--portal-bar-padding-x);
+  border-bottom: 0;
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
+}
+
+.portal-modal-header-close {
+  flex: 0 0 30px;
+  border-radius: var(--portal-control-radius);
+}
+
+.portal-feedback-dialog > form,
 .portal-feedback-dialog footer {
-  background: var(--portal-surface-page);
+  background: var(--portal-surface-panel);
 }
+
 .portal-feedback-dialog .portal-action,
 .portal-feedback-dialog .portal-action-primary {
   min-width: 96px;
@@ -1038,11 +1144,13 @@ button[aria-label^="Configurar exibição"],
   padding: 4px 10px;
   font-size: 10px;
 }
+
 .portal-core-sort-actions,
 .portal-core-selection-actions,
 .portal-core-filter-values {
   background: var(--portal-surface-panel);
 }
+
 .portal-core-filter-values {
   padding: 4px 5px;
   border: 1px solid var(--portal-border);
