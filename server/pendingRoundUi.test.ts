@@ -14,7 +14,8 @@ test('guia não repete botão de acesso ao portal', async () => {
 
 test('comissão reúne identidade, contatos e membros em formulário único com autosave', async () => {
   const panel = await source('src/components/CommissionIdentityPanel.tsx');
-  assert.ok(panel.includes('Identidade e dados do rodapé'));
+  assert.ok(panel.includes('aria-label="Dados de rodapé e identidade"'));
+  assert.ok(!panel.includes('Identidade e dados do rodapé'));
   assert.ok(panel.includes('Nome da Presidente da Comissão'));
   assert.ok(panel.includes('E-mail de contato da Secretaria'));
   assert.ok(panel.includes('Membros da Comissão'));
