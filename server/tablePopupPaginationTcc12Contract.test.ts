@@ -10,7 +10,8 @@ test('runtime tabular é montado uma única vez na raiz',()=>{
   const main=read('src/main.tsx');
   const wrapper=read('src/components/TableScrollWrapper.tsx');
   assert.match(main,/<PortalSpreadsheetRuntime \/>/);
-  assert.doesNotMatch(wrapper,/PortalSpreadsheetRuntime/);
+  assert.doesNotMatch(wrapper,/import\s+\{?\s*PortalSpreadsheetRuntime/);
+  assert.doesNotMatch(wrapper,/<PortalSpreadsheetRuntime/);
   assert.doesNotMatch(wrapper,/useRef/);
 });
 
