@@ -96,18 +96,18 @@ const DEFAULT_NAV_LABELS = {
 } as const;
 
 const DEFAULT_NAV_EMOJIS = {
-  home: '📅',
-  biblioteca: '📚',
-  'como-chegar': '📍',
-  tutorial: '❓',
-  'fluxo-tcc': '🔀',
-  replicar: '🧩',
-  'meus-processos': '📋',
-  coordenador: '🏛️',
-  configuracoes: '⚙️',
-  logs: '🧾',
-  'asten-logs': '🛡️',
-  indicadores: '📊',
+  home: '',
+  biblioteca: '',
+  'como-chegar': '',
+  tutorial: '',
+  'fluxo-tcc': '',
+  replicar: '',
+  'meus-processos': '',
+  coordenador: '',
+  configuracoes: '',
+  logs: '',
+  'asten-logs': '',
+  indicadores: '',
 } as const;
 
 export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
@@ -126,7 +126,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   sidebarCustomLogoUrl: '/api/public/runtime-assets/0d8980ef61e92bca98fabe43a9ce190da409935f5ebfccc2c5f991066c7c77d7',
   sidebarNavLabels: { ...DEFAULT_NAV_LABELS },
   sidebarNavEmojis: { ...DEFAULT_NAV_EMOJIS },
-  sidebarIconMode: 'emoji',
+  sidebarIconMode: 'lucide',
   sidebarSessionLabel: 'Sessão ativa',
   sidebarLocationText: 'Campus de Maruípe · Vitória/ES',
   sidebarBgColor: PORTAL_THEME.chrome.sidebarFooter,
