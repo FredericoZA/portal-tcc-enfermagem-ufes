@@ -734,7 +734,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     >
       {isModal ? (
         <header className="portal-modal-header flex items-center justify-between gap-3 px-4" style={{ backgroundColor: 'var(--portal-brand-header)', color: '#ffffff' }}>
-          <div className="flex min-w-0 items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-white" aria-hidden="true"/><div className="min-w-0"><h1 className="truncate text-[12px] font-black uppercase tracking-wide">Detalhes do TCC</h1><p className="mt-0.5 truncate text-[10px] font-semibold text-white/85">Enfermagem e Obstetrícia · Maruípe/UFES</p></div></div>
+          <div className="flex min-w-0 items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-white" aria-hidden="true"/><div className="min-w-0"><h1 className="truncate text-[12px] font-black uppercase tracking-wide">Detalhes do TCC</h1><p className="mt-0.5 truncate text-[10px] font-semibold text-white/85">Enfermagem e Obstetrícia UFES, Maruípe UFES</p></div></div>
           <div className="flex shrink-0 items-center gap-1.5">
             {localFormat.showHeaderRoleBadge !== false && <span className="inline-flex min-h-8 items-center gap-1 rounded-full border border-white bg-white px-3 text-[9px] font-black text-slate-900">{readOnly?'Consulta':isStudent?'Discente':isAdvisor||isCoAdvisor?'Orientador':isCommissionPresident?'Presidência':isMasterAdmin?'Admin Master':''}</span>}
             <button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-slate-900" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/></button>
