@@ -87,7 +87,7 @@ export const EmergencyRecoveryModal: React.FC<EmergencyRecoveryModalProps> = ({
             </div>
             <div>
               <h3 className="font-black text-base sm:text-lg uppercase tracking-wider text-red-100 flex items-center gap-2">
-                <span>🚨 Protocolo de Emergência</span>
+                <span>Protocolo de Emergência</span>
               </h3>
               <p className="text-xs text-red-300 font-medium">
                 Recuperação de Dono / Troca da Conta Master do Portal
@@ -193,7 +193,7 @@ export const EmergencyRecoveryModal: React.FC<EmergencyRecoveryModalProps> = ({
                 <span>Processando...</span>
               ) : (
                 <>
-                  <span>🚨 Transferir Dono do Site</span>
+                  <span>Transferir Dono do Site</span>
                 </>
               )}
             </button>
