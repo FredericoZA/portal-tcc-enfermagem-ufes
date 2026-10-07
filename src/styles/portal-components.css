@@ -1118,7 +1118,6 @@ button[aria-label^="Configurar exibição"],
 
 .portal-modal-header {
   min-height: var(--portal-sheet-title-height);
-  height: var(--portal-sheet-title-height);
   display: flex;
   align-items: center;
   gap: 8px;
