@@ -42,3 +42,12 @@ test('produção mantém fallbacks inseguros desligados e Asten fail-closed', ()
   assert.equal(config.env?.PORTAL_PERSISTENCE_PROVIDER, 'supabase');
   assert.equal(config.env?.ASTEN_INTEGRATION_ENABLED, 'false');
 });
+
+test('bootstrap de produção não registra exceção bruta e separa chaves de rotação', () => {
+  const apiEntry = readFileSync('api/index.ts', 'utf8');
+  assert.match(apiEntry, /safeStartupLog\('CREATE_APP', error\)/);
+  assert.match(apiEntry, /safeStartupLog\('IMPORT_SERVER', error\)/);
+  assert.doesNotMatch(apiEntry, /console\.error\([^\n]*,\s*error\s*\)/);
+  assert.match(apiEntry, /'PORTAL_SECRET_ENCRYPTION_KEY_V2'/);
+  assert.match(apiEntry, /'PORTAL_SECURITY_WEBHOOK_SECRET'/);
+});
