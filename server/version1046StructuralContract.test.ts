@@ -60,7 +60,7 @@ test('configurações separam artefatos e unem modelos com documentos', () => {
   assert.match(config, /title: 'Fluxos'/);
   assert.doesNotMatch(config, /id: 'variables', title: 'Variáveis'/);
   assert.doesNotMatch(config, /initialTab="documents"/);
-  assert.match(models, /Variáveis deste modelo/);
+  assert.match(models, /Variáveis deste documento/);
   assert.match(models, /Visualizar modelo/);
 });
 
