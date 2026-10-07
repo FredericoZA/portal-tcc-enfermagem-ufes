@@ -56,7 +56,9 @@ import {
   Sparkles,
   Layers,
   Plus,
-  ClipboardList
+  ClipboardList,
+  Mail,
+  IdCard
 } from 'lucide-react';
 
 interface ProcessoDetailPageProps {
@@ -1297,13 +1299,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <div className="flex flex-col gap-1 text-[11px] pt-2 border-t border-slate-200/70 text-slate-600 font-medium">
                           {localFormat.showStudentEmail !== false && process.aluno1.email && (
                             <div className="flex items-center gap-1.5 text-slate-700">
-                              <span className="text-slate-400 text-xs">✉</span>
+                              <Mail className="h-3 w-3 shrink-0 text-slate-400" aria-hidden="true" />
                               <span className="font-semibold text-slate-800 truncate">{process.aluno1.email}</span>
                             </div>
                           )}
                           {localFormat.showStudentMatricula !== false && process.aluno1.matricula && (
                             <div className="flex items-center gap-1.5 text-slate-700 font-mono">
-                              <span className="text-slate-400 text-xs font-sans">🆔 Matrícula:</span>
+                              <span className="inline-flex items-center gap-1 text-slate-400 text-xs font-sans"><IdCard className="h-3 w-3 shrink-0" aria-hidden="true" />Matrícula:</span>
                               <strong className="text-slate-900">{process.aluno1.matricula}</strong>
                             </div>
                           )}
@@ -1330,13 +1332,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                           <div className="flex flex-col gap-1 text-[11px] pt-2 border-t border-slate-200/70 text-slate-600 font-medium">
                             {localFormat.showStudentEmail !== false && process.aluno2.email && (
                               <div className="flex items-center gap-1.5 text-slate-700">
-                                <span className="text-slate-400 text-xs">✉</span>
+                                <Mail className="h-3 w-3 shrink-0 text-slate-400" aria-hidden="true" />
                                 <span className="font-semibold text-slate-800 truncate">{process.aluno2.email}</span>
                               </div>
                             )}
                             {localFormat.showStudentMatricula !== false && process.aluno2.matricula && (
                               <div className="flex items-center gap-1.5 text-slate-700 font-mono">
-                                <span className="text-slate-400 text-xs font-sans">🆔 Matrícula:</span>
+                                <span className="inline-flex items-center gap-1 text-slate-400 text-xs font-sans"><IdCard className="h-3 w-3 shrink-0" aria-hidden="true" />Matrícula:</span>
                                 <strong className="text-slate-900">{process.aluno2.matricula}</strong>
                               </div>
                             )}
