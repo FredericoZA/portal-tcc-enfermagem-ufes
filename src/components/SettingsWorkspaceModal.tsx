@@ -63,6 +63,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
 
   const singlePane = sections.length === 1;
   const sheetWorkspace = singlePane && SHEET_SECTION_IDS.has(current.id);
+  const compactWorkspace = singlePane && ['identity', 'authorizations'].includes(current.id);
   const fullBleed = current.fullBleed ?? (current.id === 'integrations' || current.id === 'models-documents' || sheetWorkspace);
   const singlePaneContent = singlePane && React.isValidElement(current.content)
     ? React.cloneElement(current.content as React.ReactElement<EmbeddedCapableProps>, { embedded: true })
@@ -73,7 +74,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       className="portal-settings-single-pane min-w-0 flex-1 overflow-auto p-0"
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
-      style={{ backgroundColor: 'var(--portal-surface-panel)' }}
+      style={{ backgroundColor: 'var(--portal-surface-page)' }}
     >
       {singlePaneContent}
     </main>
@@ -101,7 +102,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       <main
         className={`portal-settings-workspace-main min-w-0 flex-1 overflow-y-auto ${fullBleed ? 'p-0' : 'p-3 sm:p-4'}`}
         data-portal-full-bleed={fullBleed ? 'true' : 'false'}
-        style={{ backgroundColor: 'var(--portal-surface-panel)' }}
+        style={{ backgroundColor: 'var(--portal-surface-page)' }}
       >
         <div
           className={`portal-settings-workspace-content min-w-0 ${fullBleed ? 'min-h-full h-full rounded-none' : 'rounded-xl'}`}
@@ -121,7 +122,8 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       aria-label={title}
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
-      className="portal-settings-workspace flex h-[min(92vh,900px)] w-full max-w-[1500px] flex-col overflow-hidden"
+      data-portal-compact={compactWorkspace ? 'true' : 'false'}
+      className={`portal-settings-workspace flex w-full flex-col overflow-hidden ${compactWorkspace ? 'h-auto max-h-[72vh] max-w-[980px]' : 'h-[min(92vh,900px)] max-w-[1500px]'}`}
       style={{ backgroundColor: 'var(--portal-surface-page)' }}
     >
       <header className="portal-settings-workspace-header">
