@@ -65,7 +65,7 @@ export const SearchPopover: React.FC<SearchPopoverProps> = ({
       </button>
 
       {isOpen && createPortal(
-        <div ref={popupRef} className="portal-search-popover portal-modal-surface fixed z-[1000001] border rounded-xl shadow-2xl w-64 max-h-[calc(100vh-1rem)] overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150" style={{ top: `${popoverPos.top}px`, left: `${popoverPos.left}px` }}>
+        <div ref={popupRef} className="portal-search-popover portal-modal-surface fixed z-[1000001] w-64 max-h-[calc(100vh-1rem)] overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150" style={{ top: `${popoverPos.top}px`, left: `${popoverPos.left}px` }}>
           <div className="portal-modal-header flex items-center justify-between px-3 py-1.5">
             <span className="text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5"><Search className="w-3.5 h-3.5" />Buscar Registros</span>
             <button type="button" onClick={() => setIsOpen(false)} className="portal-modal-header-close" aria-label="Fechar busca" title="Fechar"><X className="h-3.5 w-3.5" aria-hidden="true"/></button>
