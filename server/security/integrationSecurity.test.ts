@@ -183,6 +183,25 @@ test('cofre de integrações bloqueia redirects e nunca envia segredo em texto p
   });
 });
 
+test('cofre de integrações rejeita Supabase sem HTTPS em runtime seguro antes da rede', async () => {
+  await withCleanEnvironmentAsync(async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.VERCEL = '1';
+    process.env.SUPABASE_URL = 'http://project.example.supabase.co';
+    process.env.SUPABASE_SECRET_KEY = 'sb_secret_example_only_for_test';
+    process.env.PORTAL_SECRET_ENCRYPTION_KEY = 'b'.repeat(64);
+    const originalFetch = globalThis.fetch;
+    let called = false;
+    (globalThis as any).fetch = async () => { called = true; return new Response('', { status: 201 }); };
+    try {
+      await assert.rejects(saveIntegrationSecret('asten', 'credencial-teste-valida'), /armazenamento seguro do Supabase/i);
+      assert.equal(called, false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
 test('OTP não reutiliza PORTAL_SESSION_SECRET como pepper', () => {
   withCleanEnvironment(() => {
     process.env.NODE_ENV = 'development';
