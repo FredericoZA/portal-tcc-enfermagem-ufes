@@ -21,7 +21,8 @@ test('identidade centraliza Master, Presidência, Secretaria e Comissão com aut
   assert.ok(panel.includes('if (!isMaster) return null'));
   assert.ok(panel.includes('apiClient.updateSettings'));
   assert.ok(panel.includes('createAdministrationTransfer'));
-  assert.ok(panel.includes('Salvo automaticamente'));
+  assert.ok(panel.includes('setTimeout(() => { void persistRegularFields(); }, 700)'));
+  assert.ok(!panel.includes('Alterações salvas automaticamente'));
 });
 
 test('update 39 abre cadastro individual e envio de lista em popups compactos', async () => {
