@@ -293,7 +293,12 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
   const dispatchDeclarationToAsten = async (processId: string) => {
     if (!canSendAsten(processId)) throw new Error('Esta declaração não está disponível para novo envio pela Asten.');
-    await apiClient.signProcessDocument(processId, 'DECLARACAO', 'ASTEN');
+    const previous=latestDeclarationJob(signatureJobs,processId,'ASTEN');
+    if(previous&&['WAITING_INTEGRATION','QUEUED','PROVIDER_ERROR'].includes(previous.status)){
+      await apiClient.retrySignatureJob(previous.id);
+    }else{
+      await apiClient.signProcessDocument(processId, 'DECLARACAO', 'ASTEN');
+    }
   };
 
   const handleSignOne = async (processId: string) => {

@@ -251,7 +251,7 @@ const FormQuestionEditor: React.FC<{
       <input aria-label="Rótulo do campo" value={question.label} onChange={(event) => onChange({ label: event.target.value })} className={inputClass} placeholder="Pergunta" />
       <select aria-label="Variável vinculada" value={question.fieldKey} onChange={event=>onChange({fieldKey:event.target.value,isReuseOfFieldKey:Boolean(event.target.value)})} className={inputClass}>
         <option value="">Selecione a variável…</option>
-        {variables.map(variable=><option key={variable.id} value={normalizeVariableKey(variable.name||variable.id)}>{variable.label||variable.name}</option>)}
+        {variables.map(variable=><option key={variable.id} value={normalizeVariableKey(/^CAMPO_/i.test(variable.id)?variable.id:(variable.name||variable.id))}>{variable.label||variable.name}</option>)}
       </select>
       <select aria-label="Tipo do campo" value={question.fieldType} onChange={(event) => onChange({ fieldType: event.target.value as FormQuestionItem['fieldType'] })} className={inputClass}>{['text', 'textarea', 'date', 'datetime-local', 'email', 'number', 'select', 'radio', 'checkbox', 'file'].map((type) => <option key={type}>{type}</option>)}</select>
       <button type="button" onClick={onDelete} aria-label={`Excluir campo ${question.label}`} className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -300,7 +300,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [selectedFormId, setSelectedFormId] = useState(formTemplates[0]?.id || '');
   const [selectedVariableId, setSelectedVariableId] = useState(matrixColumns[0]?.id || '');
   const [selectedFormQuestionId, setSelectedFormQuestionId] = useState(formTemplates[0]?.questions?.[0]?.id || '');
-  const [editingFormPart, setEditingFormPart] = useState<'title'|'description'|'stage'|'submit'|null>(null);
+  const [editingFormPart, setEditingFormPart] = useState<'title'|'description'|'stage'|'submit'|'confirmation'|null>(null);
   const [editingFormQuestionLabelId, setEditingFormQuestionLabelId] = useState('');
   const [showFormFieldComposer, setShowFormFieldComposer] = useState(false);
   const [newFormFieldVariableId, setNewFormFieldVariableId] = useState('');
@@ -358,7 +358,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       const key=normalizeVariableKey(question.fieldKey);
       if(key)allowedKeys.add(key);
     }));
-    return matrixColumns.filter(column=>allowedKeys.has(normalizeVariableKey(column.name||column.id)));
+    return matrixColumns.filter(column=>allowedKeys.has(normalizeVariableKey(column.id))||allowedKeys.has(normalizeVariableKey(column.name))||(column.aliases||[]).some(alias=>allowedKeys.has(normalizeVariableKey(alias))));
   },[formTemplates,matrixColumns]);
   const validationReport = useMemo(() => validateCourseStudio({
     schemaVersion: 3,
@@ -592,7 +592,12 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
   const updateSelectedEmail = (updates: Partial<EmailTemplateItem>) => {
     if (!selectedEmail) return;
-    setEmailTemplates((previous) => previous.map((item) => item.id === selectedEmail.id ? { ...item, ...updates } : item));
+    setEmailTemplates((previous) => previous.map((item) => {
+      if(item.id!==selectedEmail.id)return item;
+      // O editor direto é a fonte de verdade: descarta HTML antigo para evitar envios desatualizados.
+      if(Object.prototype.hasOwnProperty.call(updates,'body') && updates.body!==item.body && item.htmlBody?.trim())return {...item,...updates,htmlBody:''};
+      return {...item,...updates};
+    }));
     setIsDirty(true);
   };
 
@@ -687,7 +692,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     if(!selectedForm)return;
     const variable=matrixColumns.find(column=>column.id===newFormFieldVariableId);
     if(!variable){notify('Selecione uma variável antes de adicionar o campo.');return;}
-    const fieldKey=normalizeVariableKey(variable.name||variable.id);
+    const fieldKey=normalizeVariableKey(/^CAMPO_/i.test(variable.id)?variable.id:(variable.name||variable.id));
     const existing=selectedForm.questions.find(question=>normalizeVariableKey(question.fieldKey)===fieldKey);
     if(existing){
       setSelectedFormQuestionId(existing.id);
@@ -1212,11 +1217,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                   <label className="sm:col-span-2"><span className={labelClass}>Assunto</span><TemplateVariableControl value={selectedEmail.subject} onChange={value=>updateSelectedEmail({subject:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Assunto"/></label>
                 </div>
 
-                {selectedEmailDesign.heroImageUrl&&<label className="group relative block cursor-pointer" title="Alterar imagem do e-mail">
+                {selectedEmailDesign.heroImageUrl ? <label className="group relative block cursor-pointer" title="Alterar imagem do e-mail">
                   <img src={selectedEmailDesign.heroImageUrl} alt="Imagem do e-mail" className="h-36 w-full object-cover"/>
                   <span className="absolute inset-0 hidden items-center justify-center bg-black/35 text-white group-hover:flex"><Pencil className="mr-1 h-4 w-4"/>Alterar imagem</span>
                   <input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedEmailDesign({heroImageUrl:value});}}/>
-                </label>}
+                </label> : <label className="flex cursor-pointer items-center justify-center gap-2 border-b border-dashed border-slate-300 bg-white px-4 py-3 text-[10px] font-bold text-slate-600"><Image className="h-3.5 w-3.5"/>Adicionar imagem ao e-mail<input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedEmailDesign({heroImageUrl:value});}}/></label>}
 
                 <div className="flex items-center gap-3 border-b-[5px] border-white bg-[var(--portal-brand-header)] px-4 py-3">
                   <label className="group relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white p-1" title="Alterar logo do e-mail">
@@ -1426,7 +1431,9 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                     {editingFormPart==='submit'
                       ? <input autoFocus value={selectedFormDesign.submitLabel} onChange={event=>updateSelectedFormDesign({submitLabel:event.target.value})} onBlur={()=>setEditingFormPart(null)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-center text-[10px] font-black"/>
                       : <button type="button" onDoubleClick={()=>setEditingFormPart('submit')} className="group flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase text-white" style={{backgroundColor:brandKit.primaryColor}} title="Duplo clique para editar o texto do botão"><span>{selectedFormDesign.submitLabel}</span><Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100"/></button>}
-                    <p className="mt-2 text-center text-[9px] text-slate-500">{selectedFormDesign.confirmationMessage}</p>
+                    {editingFormPart==='confirmation'
+                      ? <textarea autoFocus rows={2} value={selectedFormDesign.confirmationMessage||''} onChange={event=>updateSelectedFormDesign({confirmationMessage:event.target.value})} onBlur={()=>setEditingFormPart(null)} className="mt-2 w-full rounded-lg border border-slate-300 bg-white p-2 text-center text-[10px] text-slate-700" aria-label="Mensagem após envio"/>
+                      : <button type="button" onClick={()=>setEditingFormPart('confirmation')} className="group mt-2 w-full text-center text-[9px] text-slate-500" title="Editar mensagem após envio"><span>{selectedFormDesign.confirmationMessage||'Adicionar mensagem após envio'}</span><Pencil className="ml-1 inline h-3 w-3 opacity-0 group-hover:opacity-100"/></button>}
                   </div>
                 </div>
               </article>

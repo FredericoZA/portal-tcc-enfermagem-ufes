@@ -43,7 +43,9 @@ export function canSendDeclarationToAsten(
   jobs: SignatureJob[],
   processId: string
 ): boolean {
-  if (!hasPendingDeclaration(queue, processId)) return false;
+  const existingAstenJob=latestDeclarationJob(jobs,processId,'ASTEN');
+  const recoverable=existingAstenJob && ['WAITING_INTEGRATION','QUEUED','PROVIDER_ERROR'].includes(existingAstenJob.status) && existingAstenJob.providerCreationState!=='UNCERTAIN';
+  if (!hasPendingDeclaration(queue, processId) && !recoverable) return false;
 
   const govJob = latestDeclarationJob(jobs, processId, 'GOV_BR');
   if (govJob && ['READY_FOR_REVIEW', 'APPROVED', 'SIGNED', 'DRIVE_SYNC_PENDING', 'ARCHIVED'].includes(govJob.status)) return false;

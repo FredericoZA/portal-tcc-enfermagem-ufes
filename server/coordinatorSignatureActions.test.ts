@@ -64,3 +64,9 @@ test('processo sem declaração pendente não habilita os botões', () => {
   assert.equal(canSendDeclarationToAsten([], [], 'p1'), false);
   assert.equal(canPrepareDeclarationForGovBr([], [], 'p1'), false);
 });
+
+
+test('declaração com falha recuperável mantém ação segura mesmo fora da fila pendente', () => {
+  assert.equal(canSendDeclarationToAsten([], [job('ASTEN', 'PROVIDER_ERROR')], 'p1'), true);
+  assert.equal(canSendDeclarationToAsten([], [job('ASTEN', 'PROVIDER_ERROR', {providerCreationState:'UNCERTAIN'})], 'p1'), false);
+});
