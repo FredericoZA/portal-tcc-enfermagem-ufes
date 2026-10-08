@@ -137,7 +137,7 @@ export const IndicadoresPage: React.FC = () => {
     };
   }, [data]);
 
-  return <div id="indicadores-publicos-page" className="mx-auto max-w-none px-3 pb-4 pt-3 sm:px-4 sm:pt-4">
+  return <div id="indicadores-publicos-page" className="mx-auto max-w-none overflow-hidden">
     <section className="portal-public-header">
       <div className="portal-public-title-row gap-2">
         <ColorfulHeaderIcon type="indicators" />
@@ -145,6 +145,7 @@ export const IndicadoresPage: React.FC = () => {
       </div>
     </section>
     <PortalSectionDivider />
+    <div className="space-y-3 px-3 pb-4 pt-3 sm:px-4 sm:pt-4">
 
     {loading && <div className={panel}>Carregando estatísticas acadêmicas…</div>}
     {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-900">{error}</div>}
@@ -213,5 +214,6 @@ export const IndicadoresPage: React.FC = () => {
 
       <div className="px-1 pb-2 text-[9px] text-slate-500">Dados agregados; categorias abaixo de {data.privacy.minimumBucketSize} registros são suprimidas. Atualizado em {new Date(data.generatedAt).toLocaleString('pt-BR')}.</div>
     </div>}
+    </div>
   </div>;
 };

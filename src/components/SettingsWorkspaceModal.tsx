@@ -114,7 +114,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
     </div>
   );
 
-  return <div className="portal-settings-backdrop fixed inset-0 z-[1000005] flex items-center justify-center p-2 sm:p-4" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
+  return <div className="portal-modal-backdrop fixed inset-0 z-[1000005] flex items-center justify-center p-2 sm:p-4" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
     <section
       role="dialog"
       aria-modal="true"

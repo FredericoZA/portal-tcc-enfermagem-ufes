@@ -83,9 +83,13 @@ export const DynamicStudioForms: React.FC<{ processId: string; locale?: string; 
     return <input {...common} type={type} value={String(value)} placeholder={question.fieldType === 'file' ? copy.fileLink : question.placeholder} onChange={event => updateAnswer(form.id, question, question.fieldType === 'number' && event.target.value !== '' ? Number(event.target.value) : event.target.value)} />;
   };
 
-  if (loading) return <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">Carregando formulários publicados…</div>;
-  return <section className="space-y-4" aria-labelledby="studio-forms-title">
-    <div className="flex items-center gap-2"><ClipboardList className="h-5 w-5" style={{ color: accentColor }} /><div><h2 id="studio-forms-title" className="text-sm font-black uppercase text-slate-900">{copy.formsTitle}</h2><p className="text-xs text-slate-500">Somente formulários publicados para o seu papel aparecem aqui.</p></div></div>
+  if (loading) return <section className="portal-card overflow-hidden"><header className="portal-section-header px-4"><ClipboardList className="h-4 w-4" /><h2 className="text-xs font-black uppercase">Formulários</h2></header><div className="p-5 text-sm text-slate-600">Carregando formulários publicados…</div></section>;
+  return <section className="portal-card overflow-hidden" aria-labelledby="studio-forms-title">
+    <header className="portal-section-header px-4">
+      <ClipboardList className="h-4 w-4" />
+      <div><h2 id="studio-forms-title" className="text-xs font-black uppercase">{copy.formsTitle}</h2><p className="text-[10px] font-semibold opacity-75">Somente formulários publicados para o seu papel aparecem aqui.</p></div>
+    </header>
+    <div className="space-y-4 p-4">
     {notice && <div role="status" className={`flex items-start gap-2 rounded-xl border p-3 text-sm ${notice.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-950'}`}>{notice.ok ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <AlertCircle className="h-5 w-5 shrink-0" />}<span>{notice.text}</span></div>}
     {!forms.length && <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-600">{copy.emptyForms}</div>}
     {forms.map(form => {
@@ -98,5 +102,6 @@ export const DynamicStudioForms: React.FC<{ processId: string; locale?: string; 
         </div>
       </article>;
     })}
+    </div>
   </section>;
 };

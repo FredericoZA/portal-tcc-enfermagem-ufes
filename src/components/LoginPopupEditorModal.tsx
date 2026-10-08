@@ -72,13 +72,13 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
   const currentTheme = THEME_OPTIONS.find((t) => t.id === config.headerTheme) || THEME_OPTIONS[0];
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+    <div className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-center justify-center p-3 sm:p-5 animate-fadeIn" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="portal-standard-modal portal-modal-surface w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150" onMouseDown={(event) => event.stopPropagation()}>
         
         {/* TOP BAR */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800 shrink-0">
+        <div className="portal-modal-header px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-700 border border-slate-600 text-slate-100 flex items-center justify-center shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-white border border-white/80 text-[var(--portal-brand-header)] flex items-center justify-center shadow-xs">
               <Lock className="w-5 h-5" />
             </div>
             <div>
@@ -88,7 +88,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                   Visual em Tempo Real
                 </span>
               </h2>
-              <p className="text-xs text-slate-400 font-medium">
+              <p className="text-xs text-white/80 font-medium">
                 Configure textos e o padrão branco/cinza do popup de acesso
               </p>
             </div>
@@ -98,7 +98,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
             <button
               type="button"
               onClick={handleReset}
-              className="px-3 py-1.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="portal-settings-header-pill"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Restaurar Padrão</span>
@@ -106,24 +106,17 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
             <button
               type="button"
               onClick={handleSave}
-              className="px-5 py-1.5 rounded-xl bg-slate-600 hover:bg-slate-700 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+              className="portal-settings-header-pill"
             >
               {savedSuccess ? <Check className="w-4 h-4" /> : <Sparkles className="w-3.5 h-3.5" />}
               <span>{savedSuccess ? 'Salvo!' : 'Salvar Alterações'}</span>
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Fechar editor de acesso"
-              className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer ml-2"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         </div>
+        <div className="portal-modal-divider" aria-hidden="true" />
 
         {/* WORKSPACE AREA: 2 COLUMNS (CONTROLS LEFT, LIVE PREVIEW RIGHT) */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0 overflow-hidden bg-slate-100">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0 overflow-hidden bg-[var(--portal-surface-page)]">
           
           {/* LEFT: CONTROLS PANEL (5 COLS) */}
           <div className="lg:col-span-5 bg-white border-r border-slate-200 flex flex-col h-full overflow-hidden">
@@ -408,7 +401,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
           </div>
 
           {/* RIGHT: LIVE PREVIEW (7 COLS) */}
-          <div className="lg:col-span-7 bg-slate-900/90 flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto custom-scrollbar">
+          <div className="lg:col-span-7 bg-[var(--portal-surface-card)] flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto custom-scrollbar">
             <div className="w-full max-w-lg">
               <div className="mb-2 flex items-center justify-between text-[11px] text-slate-400 font-mono">
                 <span>PREVIEW AO VIVO DO POPUP</span>
@@ -436,7 +429,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                     </div>
                   </div>
                   <div className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 flex items-center justify-center transition-colors">
-                    <X className="w-4 h-4" />
+                    <span className="text-[9px] font-bold">ESC</span>
                   </div>
                 </div>
 

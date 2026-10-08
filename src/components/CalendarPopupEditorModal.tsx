@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  X,
   Palette,
   Layout,
   Sliders,
@@ -162,37 +161,27 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
       : 'font-black';
 
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center z-[1000002] p-3 sm:p-5 animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl border border-slate-300 w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150">
+    <div className="portal-modal-backdrop fixed inset-0 z-[1000002] flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-150" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="portal-standard-modal portal-modal-surface w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150" onMouseDown={(event) => event.stopPropagation()}>
         
         {/* HEADER DO MODAL */}
-        <div className="bg-slate-100 p-4 sm:p-5 flex items-center justify-between border-b border-slate-300 shrink-0">
+        <div className="portal-modal-header px-4 sm:px-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <span className="p-2 bg-white text-slate-800 rounded-xl border border-slate-300 shadow-2xs">
+            <span className="p-2 bg-white text-slate-800 rounded-xl border border-white/80 shadow-2xs">
               <Sliders className="w-5 h-5 text-slate-700" />
             </span>
             <div>
-              <h2 className="text-sm sm:text-base font-black uppercase tracking-tight text-slate-900 flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-black uppercase tracking-tight text-white flex items-center gap-2">
                 <span>Personalizar Popup do Calendário</span>
-                <span className="text-[10px] bg-emerald-100 text-emerald-900 font-extrabold px-2 py-0.5 rounded-full border border-emerald-300">
-                  Secretário Master
-                </span>
               </h2>
-              <p className="text-[11px] text-slate-600 font-medium mt-0.5">
+              <p className="text-[11px] text-white/80 font-medium mt-0.5">
                 Configure estilos completos, cores, barras de progresso e visibilidade dos campos com pré-visualização ao vivo.
               </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-200 transition-colors cursor-pointer border border-transparent hover:border-slate-300"
-            title="Fechar editor"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
+        <div className="portal-modal-divider" aria-hidden="true" />
 
         {/* NAVEGAÇÃO DE ABAS */}
         <div className="bg-slate-50 border-b border-slate-200 px-4 pt-2 flex items-center gap-1.5 overflow-x-auto shrink-0 select-none">
@@ -1140,14 +1129,14 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
           </div>
 
           {/* PAINEL DIREITO: PRÉ-VISUALIZAÇÃO AO VIVO (5 colunas) */}
-          <div className="lg:col-span-5 p-4 sm:p-6 bg-slate-900 flex flex-col justify-between overflow-y-auto max-h-[calc(92vh-180px)] select-none">
+          <div className="lg:col-span-5 p-4 sm:p-6 bg-[var(--portal-surface-card)] flex flex-col justify-between overflow-y-auto max-h-[calc(92vh-180px)] select-none">
             <div className="space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
                   <Eye className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Pré-visualização em Tempo Real</span>
                 </span>
-                <span className="text-[9.5px] font-mono text-slate-500 bg-slate-800 px-2 py-0.5 rounded-md">
+                <span className="text-[9.5px] font-mono text-slate-600 bg-white px-2 py-0.5 rounded-md">
                   Amostra do Card
                 </span>
               </div>

@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  X,
   Palette,
   Eye,
   RotateCcw,
@@ -187,17 +186,17 @@ export const TccDetailPopupEditorModal: React.FC<TccDetailPopupEditorModalProps>
   };
 
   return (
-    <div className="fixed inset-0 z-[1000001] flex items-center justify-center p-3 sm:p-5 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="w-full max-w-3xl max-h-[92vh] bg-white rounded-2xl border border-slate-200 shadow-2xl flex flex-col overflow-hidden text-slate-900 animate-in zoom-in-95 duration-150">
+    <div className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-150" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="portal-standard-modal portal-modal-surface w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden text-slate-900 animate-in zoom-in-95 duration-150" onMouseDown={(event) => event.stopPropagation()}>
         
         {/* Header Bar */}
-        <div className="bg-slate-50 border-b border-slate-200 p-3 sm:p-4 shrink-0 flex items-center justify-between gap-3">
+        <div className="portal-modal-header px-4 shrink-0 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center justify-center shrink-0 shadow-2xs">
+            <div className="w-8 h-8 rounded-lg bg-white text-[var(--portal-brand-header)] border border-white/80 flex items-center justify-center shrink-0 shadow-2xs">
               <Palette className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="font-black text-xs sm:text-sm uppercase tracking-wide text-slate-900">
+              <h2 className="font-black text-xs sm:text-sm uppercase tracking-wide text-white">
                 Personalização Visual do Painel de TCC
               </h2>
             </div>
@@ -213,19 +212,12 @@ export const TccDetailPopupEditorModal: React.FC<TccDetailPopupEditorModalProps>
               <span>Restaurar</span>
             </button>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer shrink-0"
-              title="Fechar"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         </div>
+        <div className="portal-modal-divider" aria-hidden="true" />
 
         {/* FIXED TOP DEMONSTRATION SECTION */}
-        <div className="shrink-0 bg-slate-100/90 border-b border-slate-200 p-3 sm:p-4 shadow-2xs">
+        <div className="shrink-0 bg-[var(--portal-surface-page)] border-b border-slate-200 p-3 sm:p-4 shadow-2xs">
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
             <div className="bg-slate-50 px-3 py-1.5 border-b border-slate-200 flex items-center justify-between">
               <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">

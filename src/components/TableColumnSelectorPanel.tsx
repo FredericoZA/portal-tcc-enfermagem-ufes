@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Lock, ArrowUp, ArrowDown, RotateCcw, Check, List, X, Star } from 'lucide-react';
+import { Shield, Lock, ArrowUp, ArrowDown, RotateCcw, Check, List, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { loadGlobalTableConfig } from '../utils/tableFormatters';
 
@@ -460,17 +460,17 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
   };
 
   return (
-    <section className="bg-slate-800 border border-slate-600 p-4 rounded-xl space-y-3 shadow-xl text-white mt-2 transition-all animate-fadeIn" aria-label={`Configurar colunas de ${tabTitle}`}>
+    <section className="portal-modal-card mt-2 space-y-3 p-4 text-slate-900 transition-all animate-fadeIn" aria-label={`Configurar colunas de ${tabTitle}`}>
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700 pb-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 pb-2.5">
         <div className="flex items-center gap-2">
-          <List className="w-4 h-4 text-slate-300 shrink-0" />
-          <span className="text-xs font-black uppercase text-slate-100 tracking-wider">
+          <List className="w-4 h-4 text-[var(--portal-brand-action)] shrink-0" />
+          <span className="text-xs font-black uppercase text-slate-900 tracking-wider">
             Exibição & Ordem das Colunas — {tabTitle}
           </span>
           {isMaster && (
-            <span className="inline-flex items-center gap-1 bg-slate-700 text-slate-200 border border-slate-500 text-[9.5px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
-              <Shield className="w-3 h-3 text-slate-300" /> Modo Administrador Master
+            <span className="inline-flex items-center gap-1 bg-[var(--portal-surface-inner)] text-slate-700 border border-slate-300 text-[9.5px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+              <Shield className="w-3 h-3 text-[var(--portal-brand-action)]" /> Modo Administrador Master
             </span>
           )}
         </div>
@@ -481,10 +481,10 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
             <button
               type="button"
               onClick={handleSetAsDefault}
-              className="inline-flex items-center gap-1.5 bg-slate-600 hover:bg-slate-500 text-white font-black text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full shadow-md transition-all cursor-pointer hover:scale-105 active:scale-95 border border-slate-400"
+              className="portal-action portal-action-primary text-[10px] uppercase tracking-wider"
               title="Salvar esta ordem e seleção de colunas como o padrão do sistema para esta aba"
             >
-              <Star className="w-3.5 h-3.5 fill-white text-white" />
+              <Star className="w-3.5 h-3.5" />
               <span>Definir como Padrão</span>
             </button>
           )}
@@ -492,7 +492,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
           <button
             type="button"
             onClick={() => handleSelectAll(true)}
-            className="text-[10px] font-bold text-slate-300 hover:text-white underline cursor-pointer"
+            className="text-[10px] font-bold text-slate-700 hover:text-slate-950 underline cursor-pointer"
           >
             Marcar Todos
           </button>
@@ -500,45 +500,28 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
           <button
             type="button"
             onClick={handleRestoreDefault}
-            className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-300 hover:text-white underline cursor-pointer"
+            className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-700 hover:text-slate-950 underline cursor-pointer"
           >
             <RotateCcw className="w-3 h-3" />
             <span>Restaurar Padrão</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-300 hover:text-white font-bold text-xs ml-2 cursor-pointer p-1"
-            title="Fechar painel"
-            aria-label="Fechar configuração de colunas"
-          >
-            <X className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Confirmation Message Toast */}
       {saveMessage && (
-        <div role="status" aria-live="polite" className="bg-slate-700 border border-slate-500 text-slate-100 text-xs px-3 py-2 rounded-lg font-bold flex items-center justify-between shadow-sm animate-fadeIn">
+        <div role="status" aria-live="polite" className="portal-modal-inner text-xs px-3 py-2 font-bold flex items-center justify-between animate-fadeIn">
           <div className="flex items-center gap-2">
             <Check className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>{saveMessage}</span>
           </div>
-          <button
-            type="button"
-            onClick={() => setSaveMessage(null)}
-            className="text-slate-300 hover:text-white font-black text-xs"
-          >
-            ✕
-          </button>
         </div>
       )}
 
       {/* Columns List with Drag/Move & Visibility Checkboxes */}
       <div className="space-y-1.5">
-        <p className="text-[11px] text-slate-300 font-medium">
-          Marque os campos que deseja visualizar na tabela e utilize os botões <span className="font-bold text-white">▲ / ▼</span> para reordenar a posição de cada coluna. {fixedColumnKey ? <span className="font-extrabold text-slate-200">A coluna fixa é mantida em primeiro lugar.</span> : null}
+        <p className="text-[11px] text-slate-600 font-medium">
+          Marque os campos que deseja visualizar na tabela e utilize os botões <span className="font-bold text-slate-900">▲ / ▼</span> para reordenar a posição de cada coluna. {fixedColumnKey ? <span className="font-extrabold text-slate-700">A coluna fixa é mantida em primeiro lugar.</span> : null}
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 pt-1 max-h-72 overflow-y-auto pr-1">
@@ -552,10 +535,10 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
                 key={key}
                 className={`flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-all ${
                   isFixed
-                    ? 'bg-slate-700 border-slate-500 text-slate-100 font-extrabold shadow-xs'
+                    ? 'bg-[var(--portal-surface-inner)] border-slate-300 text-slate-900 font-extrabold shadow-xs'
                     : isVisible
-                    ? 'bg-slate-700/80 border-slate-600 text-white font-medium'
-                    : 'bg-slate-900/60 border-slate-700 text-slate-400 line-through'
+                    ? 'bg-[var(--portal-surface-inner)] border-slate-300 text-slate-900 font-medium'
+                    : 'bg-[var(--portal-surface-panel)] border-slate-300 text-slate-500 line-through'
                 }`}
               >
                 <label className="flex items-center gap-2 cursor-pointer select-none truncate flex-1 min-w-0">
@@ -568,7 +551,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
                         setVisibleColumns((prev) => ({ ...prev, [key]: e.target.checked }));
                       }
                     }}
-                    className="rounded border-slate-500 text-slate-600 focus:ring-slate-400 disabled:opacity-80 cursor-pointer"
+                    className="rounded border-slate-400 text-[var(--portal-brand-action)] focus:ring-[var(--portal-focus)] disabled:opacity-80 cursor-pointer"
                   />
                   <span className="truncate text-[11.5px]">
                     {colDef.label}
@@ -577,8 +560,8 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
 
                 {/* Fixed Badge or Reorder Action Buttons */}
                 {isFixed ? (
-                  <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase tracking-wider text-slate-200 bg-slate-800 px-2 py-0.5 rounded-full border border-slate-500 shrink-0">
-                    <Lock className="w-2.5 h-2.5 text-slate-300" />
+                  <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase tracking-wider text-slate-600 bg-[var(--portal-surface-card)] px-2 py-0.5 rounded-full border border-slate-300 shrink-0">
+                    <Lock className="w-2.5 h-2.5 text-slate-500" />
                     1º Fixo
                   </span>
                 ) : (
@@ -588,7 +571,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
                       type="button"
                       disabled={index <= (fixedColumnKey ? 1 : 0)}
                       onClick={() => handleMove(index, index - 1)}
-                      className="p-1 rounded hover:bg-slate-600 disabled:opacity-20 disabled:hover:bg-transparent text-white transition-colors cursor-pointer"
+                      className="p-1 rounded hover:bg-[var(--portal-surface-card)] disabled:opacity-20 disabled:hover:bg-transparent text-slate-700 transition-colors cursor-pointer"
                       aria-label={`Mover ${colDef.label} para cima`}
                     >
                       <ArrowUp className="w-3.5 h-3.5" />
@@ -599,7 +582,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
                       type="button"
                       disabled={index >= normalizedOrder.length - 1}
                       onClick={() => handleMove(index, index + 1)}
-                      className="p-1 rounded hover:bg-slate-600 disabled:opacity-20 disabled:hover:bg-transparent text-white transition-colors cursor-pointer"
+                      className="p-1 rounded hover:bg-[var(--portal-surface-card)] disabled:opacity-20 disabled:hover:bg-transparent text-slate-700 transition-colors cursor-pointer"
                       aria-label={`Mover ${colDef.label} para baixo`}
                     >
                       <ArrowDown className="w-3.5 h-3.5" />

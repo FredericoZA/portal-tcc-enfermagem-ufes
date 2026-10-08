@@ -25,6 +25,7 @@ export function PortalDialogs() {
     onCancel={event => { event.preventDefault(); cancel(); }} onKeyDown={event => event.stopPropagation()}>
     <form onSubmit={event => { event.preventDefault(); finishPortalDialog(current.kind === 'prompt' ? value : true); }}>
       <header className="portal-modal-header p-4"><TitleIcon className="h-4 w-4 shrink-0 text-white" aria-hidden="true"/><h2 id="portal-feedback-title" className="text-[14px] font-bold">{current.title}</h2></header>
+      <div className="portal-modal-divider" aria-hidden="true" />
       <div className="space-y-4 p-4"><div className="flex items-start gap-2.5">{isError && <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-700" aria-hidden="true"/>}<p id="portal-feedback-message" className="whitespace-pre-wrap text-[13px] leading-5">{current.message}</p></div>
         {current.kind === 'prompt' && <label className="block"><span className="sr-only">Resposta</span><input autoFocus className="portal-input" value={value} onChange={event => setValue(event.target.value)} /></label>}
       </div>

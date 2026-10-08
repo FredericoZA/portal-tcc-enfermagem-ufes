@@ -1,5 +1,6 @@
 import { PortalDialogs } from './components/PortalDialogs';
 import { PortalErrorBoundary } from './components/PortalErrorBoundary';
+import { PortalModalShell } from './components/PortalModalShell';
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { UserSimulatorBar } from './components/UserSimulatorBar';
@@ -42,6 +43,7 @@ export default function App() {
   const [selectedProcessReadOnly, setSelectedProcessReadOnly] = useState<boolean>(false);
   const [isOpenMobileSidebar, setIsOpenMobileSidebar] = useState(false);
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
+  const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   const [emergencySecretKeyParam] = useState('');
   const processDialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -59,6 +61,11 @@ export default function App() {
 
   const handleNavigate = (tab: string) => {
     setSelectedProcessId(null);
+    if (tab === 'novo-processo') {
+      setIsRegistrationModalOpen(true);
+      return;
+    }
+    setIsRegistrationModalOpen(false);
     setCurrentTab(tab);
   };
 
@@ -139,6 +146,7 @@ export default function App() {
             currentTab={currentTab}
             setCurrentTab={(tab) => {
               setSelectedProcessId(null);
+              setIsRegistrationModalOpen(false);
               setCurrentTab(tab);
             }}
             isOpenMobile={isOpenMobileSidebar}
@@ -183,14 +191,14 @@ export default function App() {
         </div>
 
         {selectedProcessId && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/80 p-2 backdrop-blur-xs animate-fadeIn sm:p-4 md:p-6" onClick={handleCloseProcess}>
+          <div className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-start justify-center overflow-y-auto p-2 animate-fadeIn sm:p-4 md:p-6" onClick={handleCloseProcess}>
             <div
               ref={processDialogRef}
               role="dialog"
               aria-modal="true"
               aria-label="Detalhes do Trabalho de TCC"
               tabIndex={-1}
-              className="portal-process-dialog relative my-2 w-full max-w-6xl overflow-hidden rounded-2xl border border-slate-300 shadow-2xl animate-in zoom-in-95 duration-150 sm:my-4"
+              className="portal-standard-modal portal-process-dialog relative my-2 w-full max-w-6xl overflow-hidden animate-in zoom-in-95 duration-150 sm:my-4"
               style={{ backgroundColor: 'var(--portal-surface-panel)' }}
               onClick={(event) => event.stopPropagation()}
             >
@@ -205,6 +213,28 @@ export default function App() {
             </div>
           </div>
         )}
+
+        <PortalModalShell
+          open={isRegistrationModalOpen}
+          onClose={() => setIsRegistrationModalOpen(false)}
+          title="Cadastrar Trabalho de TCC"
+          subtitle="Novo processo de Trabalho de Conclusão de Curso"
+          maxWidthClass="max-w-6xl"
+          heightClass="max-h-[92vh]"
+          bodyClassName="p-3 sm:p-4"
+        >
+          <PortalErrorBoundary key="registration-modal">
+            <Suspense fallback={<PageLoadingFallback />}>
+              <WizardCadastroPage
+                onSuccess={(newId) => {
+                  setIsRegistrationModalOpen(false);
+                  handleSelectProcess(newId, false);
+                }}
+                onCancel={() => setIsRegistrationModalOpen(false)}
+              />
+            </Suspense>
+          </PortalErrorBoundary>
+        </PortalModalShell>
 
         <EmergencyRecoveryModal isOpen={isEmergencyModalOpen} onClose={() => setIsEmergencyModalOpen(false)} defaultSecretKey={emergencySecretKeyParam} />
       </div>

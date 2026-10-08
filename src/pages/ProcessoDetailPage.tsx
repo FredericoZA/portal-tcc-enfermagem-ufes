@@ -10,6 +10,7 @@ import { EtapaProgressBar } from '../components/EtapaProgressBar';
 import { StudentNames } from '../components/StudentNames';
 import { DocumentPreviewModal } from '../components/DocumentPreviewModal';
 import { CorrectionRequestModal } from '../components/CorrectionRequestModal';
+import { PortalModalShell } from '../components/PortalModalShell';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { DynamicStudioForms } from '../components/DynamicStudioForms';
 import { resolveInstallationProfile } from '../utils/installationProfile';
@@ -27,7 +28,6 @@ import {
   Edit,
   CheckCircle2,
   Lock,
-  RotateCcw,
   AlertCircle,
   FileCheck,
   Send,
@@ -45,7 +45,6 @@ import {
   History,
   Check,
   ShieldCheck,
-  X,
   Info,
   Building,
   GraduationCap,
@@ -736,25 +735,26 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         <header className="portal-modal-header flex items-center justify-between gap-3 px-4" style={{ backgroundColor: 'var(--portal-brand-header)', color: '#ffffff' }}>
           <div className="flex min-w-0 items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-white" aria-hidden="true"/><div className="min-w-0"><h1 className="truncate text-[12px] font-black uppercase tracking-wide">Detalhes do TCC</h1><p className="mt-0.5 truncate text-[10px] font-semibold text-white/85">Enfermagem e Obstetrícia UFES, Maruípe UFES</p></div></div>
           <div className="flex shrink-0 items-center gap-1.5">
-            {localFormat.showHeaderRoleBadge !== false && <span className="inline-flex min-h-8 items-center gap-1 rounded-full border border-white bg-white px-3 text-[9px] font-black text-slate-900">{readOnly?'Consulta':isStudent?'Discente':isAdvisor||isCoAdvisor?'Orientador':isCommissionPresident?'Presidência':isMasterAdmin?'Admin Master':''}</span>}
             <button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-slate-900" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/></button>
-            {isEvaluationSubmitted&&isMasterAdmin&&<button type="button" onClick={()=>void handleReopenEvaluation()} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-slate-900" aria-label="Reabrir avaliação"><RotateCcw className="h-4 w-4"/></button>}
             {isMasterAdmin&&<button type="button" onClick={()=>setShowDeleteModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-rose-700" aria-label="Excluir trabalho"><Trash2 className="h-4 w-4"/></button>}
           </div>
         </header>
       ) : null}
+      {isModal && <div className="portal-modal-divider" aria-hidden="true" />}
       {process.coauthorAcceptance?.status==='PENDING'&&<section className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950"><div className="flex flex-wrap items-center justify-between gap-3"><div><strong className="text-sm">Aceite do segundo autor pendente</strong><p className="mt-1 text-xs">O fluxo documental permanece bloqueado até o e-mail convidado confirmar ou recusar o vínculo.</p></div>{normalizeEmail(process.coauthorAcceptance.invitedEmail||'')===normalizeEmail(userEmail)&&<div className="flex gap-2"><button type="button" onClick={()=>void handleCoauthorDecision('REJECT')} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-black">Recusar</button><button type="button" onClick={()=>void handleCoauthorDecision('ACCEPT')} className="rounded-lg bg-amber-800 px-3 py-2 text-xs font-black text-white">Aceitar autoria</button></div>}</div></section>}
       {process.coauthorAcceptance?.status==='REJECTED'&&<section className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-900">O segundo autor recusou o vínculo. Corrija ou remova os dados da dupla antes de continuar.</section>}
       
       {localFormat.showStateMachine !== false && <div className="px-3 pt-3"><div className="overflow-hidden rounded-xl border border-[var(--portal-border)] bg-white"><EtapaProgressBar currentEtapa={process.etapaAtual}/></div></div>}
-      <section className="mx-3 mt-3 rounded-xl border border-[var(--portal-border)] p-4" style={{backgroundColor:'var(--portal-surface-panel)'}}>
+      <section id="tcc-detail-workspace" className="portal-tcc-workspace mx-3 mt-3 overflow-hidden rounded-xl border border-[var(--portal-border)]">
+      <section className="portal-tcc-workspace-summary p-4" style={{backgroundColor:'var(--portal-surface-card)'}}>
         <div className="flex flex-wrap items-center gap-2"><span className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[10px] font-black">{process.protocolo}</span>{process.avaliacao?.status==='CONCLUIDO'&&<span className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-black">Conceito: {process.avaliacao.resultadoLabel||'Aprovado'}</span>}</div>
         <h2 className="mt-3 text-sm font-black text-slate-950">{process.titulo}</h2>
         <div className="mt-3 grid gap-2 border-t border-slate-300 pt-3 text-[10px] text-slate-700 sm:grid-cols-2 xl:grid-cols-4"><div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5"/><span>{process.aluno1.nome}{process.aluno2?` e ${process.aluno2.nome}`:''}</span></div><div className="flex items-center gap-1.5"><Award className="h-3.5 w-3.5"/><span>Orientador(a): <strong>{process.orientador.nome}</strong></span></div>{process.defesa?.startAt&&<div className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5"/><span>{formatDatePt(process.defesa.startAt)} · {formatTimeExtenso(process.defesa.startAt)}</span></div>}{process.defesa?.local&&<div className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5"/><span>{process.defesa.local}</span></div>}</div>
       </section>
-      <section className="mx-3 mt-3 rounded-xl border border-[var(--portal-border)] p-2" style={{backgroundColor:'var(--portal-surface-card)'}}><div className="flex items-center gap-1 overflow-x-auto custom-scrollbar">{[
+      <section className="portal-tcc-workspace-tabs border-t border-[var(--portal-border)] p-2" style={{backgroundColor:'var(--portal-surface-card)'}}><div className="flex items-center gap-1 overflow-x-auto custom-scrollbar">{[
         {id:'cadastral',label:'Ficha Cadastral & Defesa',icon:FileText,show:localFormat.showSectionCadastral!==false},{id:'banca',label:'Banca Examinadora',icon:Users,show:localFormat.showSectionBanca!==false},{id:'avaliacao',label:'Avaliação & Ata',icon:Award,show:localFormat.showSectionAvaliacao!==false},{id:'forms',label:'Formulários',icon:ClipboardList,show:true},{id:'docs',label:'Documentos',icon:FileCheck,show:localFormat.showSectionDocs!==false},{id:'acervo',label:'Repositório Digital',icon:BookOpen,show:localFormat.showSectionAcervo!==false}
       ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} type="button" onClick={()=>setActiveTab(tab.id)} className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold ${selected?'border-slate-300 bg-white text-slate-950':'border-transparent bg-[var(--portal-surface-panel)] text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
+      <div className="portal-tcc-workspace-content p-3">
 
       {isTabVisible('forms') && (
         <DynamicStudioForms
@@ -768,8 +768,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* SECTION 1: FICHA CADASTRAL E IDENTIFICAÇÃO DO PROCESSO                    */}
       {/* ========================================================================= */}
       {localFormat.showSectionCadastral !== false && isTabVisible('cadastral') && (
-        <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
-          <div className="bg-slate-50/80 border-b border-slate-200 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+        <div className="portal-card overflow-hidden">
+          <div className="portal-section-header px-4 py-3 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-slate-700" />
               <h2 className="text-xs font-black uppercase tracking-wider text-slate-900">
@@ -785,7 +785,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     onClick={() => setEditingSection(null)}
                     className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer"
                   >
-                    <X className="w-3.5 h-3.5" />
                     <span>Cancelar</span>
                   </button>
                 ) : (
@@ -1265,8 +1264,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* SECTION 3: COMPOSIÇÃO DA BANCA EXAMINADORA                                */}
       {/* ========================================================================= */}
       {localFormat.showSectionBanca !== false && isTabVisible('banca') && (
-        <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
-          <div className="bg-slate-50/80 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
+        <div className="portal-card overflow-hidden">
+          <div className="portal-section-header px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
               <Users className="w-3.5 h-3.5 text-slate-600" />
               <span>Banca Examinadora</span>
@@ -1280,7 +1279,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     onClick={() => setEditingSection(null)}
                     className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors cursor-pointer"
                   >
-                    <X className="w-3.5 h-3.5" />
                     <span>Cancelar</span>
                   </button>
                 ) : (
@@ -1455,8 +1453,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* SECTION 5: PAINEL DE DOCUMENTOS E ASSINATURAS GERENCIADAS                */}
       {/* ========================================================================= */}
       {localFormat.showSectionDocs !== false && isTabVisible('docs') && (
-        <div id="documents-panel-section" className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden space-y-0">
-          <div className="bg-slate-50/80 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
+        <div id="documents-panel-section" className="portal-card overflow-hidden space-y-0">
+          <div className="portal-section-header px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
               <FileCheck className="w-3.5 h-3.5 text-emerald-700" />
               <span>Documentos Oficiais do Processo</span>
@@ -1631,8 +1629,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* SECTION 6: FICHA E ACERVO PÚBLICO NO REPOSITÓRIO DIGITAL                  */}
       {/* ========================================================================= */}
       {localFormat.showSectionAcervo !== false && isTabVisible('acervo') && (
-        <div id="acervo-digital-section" className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
-          <div className="bg-slate-50/80 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between">
+        <div id="acervo-digital-section" className="portal-card overflow-hidden">
+          <div className="portal-section-header px-4 py-2.5 flex items-center justify-between">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
               <BookOpen className="w-3.5 h-3.5 text-slate-600" />
               <span>Repositório Digital</span>
@@ -1900,6 +1898,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         </div>
       )}
 
+      </div>
+      </section>
+
       {/* ========================================================================= */}
       {/* POPUPS & MODALS: AUDIT LOG, PREVIEWS, DELETE                               */}
       {/* ========================================================================= */}
@@ -1907,10 +1908,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* Audit Log Modal (Full dialog view via gear) */}
       {showAuditLogModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 p-4 backdrop-blur-xs"
+          className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-center justify-center p-4"
           onMouseDown={(event) => { if (event.target === event.currentTarget) setShowAuditLogModal(false); }}
         >
-          <div role="dialog" aria-modal="true" aria-labelledby="process-audit-title" className="portal-modal-surface max-h-[85vh] w-full max-w-3xl overflow-hidden shadow-2xl">
+          <div role="dialog" aria-modal="true" aria-labelledby="process-audit-title" className="portal-standard-modal portal-modal-surface max-h-[85vh] w-full max-w-3xl overflow-hidden">
             <header className="portal-modal-header justify-start px-4 py-3">
               <History className="h-5 w-5 shrink-0 text-white" aria-hidden="true" />
               <div className="min-w-0">
@@ -1918,6 +1919,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 <p className="mt-0.5 text-[10px] font-mono text-white/80">Protocolo: {process.protocolo}</p>
               </div>
             </header>
+            <div className="portal-modal-divider" aria-hidden="true" />
             <div className="max-h-[calc(85vh-58px)] overflow-y-auto" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
                 <TableScrollWrapper>
                   <table className="w-full border-collapse text-left text-xs" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
@@ -1965,77 +1967,37 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       />
 
       {/* Master Admin Delete Confirmation Modal */}
-      {showDeleteModal && process && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl border border-rose-300 shadow-2xl max-w-lg w-full p-6 space-y-4 animate-fadeIn">
-            <div className="flex items-center gap-3 text-rose-700 border-b border-rose-200 pb-3">
-              <div className="p-2 bg-rose-100 rounded-full">
-                <AlertTriangle className="w-6 h-6 text-rose-600" />
-              </div>
-              <div>
-                <h2 className="text-base font-black uppercase tracking-tight text-rose-900">
-                  ATENÇÃO: EXCLUSÃO DE TRABALHO
-                </h2>
-                <p className="text-xs text-rose-700 font-bold">
-                  Exclusão Definitiva de Processo de TCC
-                </p>
-              </div>
+      <PortalModalShell
+        open={Boolean(showDeleteModal && process)}
+        onClose={() => { setShowDeleteModal(false); setDeleteConfirmInput(''); }}
+        title="Exclusão de Trabalho de TCC"
+        subtitle="Ação administrativa irreversível"
+        icon={AlertTriangle}
+        maxWidthClass="max-w-lg"
+        zIndexClass="z-[1000003]"
+      >
+        <div className="space-y-4">
+          <section className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-xs text-rose-950">
+            <p className="font-black">Você está prestes a excluir definitivamente este Trabalho de TCC.</p>
+            <div className="mt-3 rounded-lg border border-rose-200 bg-white p-3 font-mono text-[11px] font-bold text-slate-900">
+              <div>Protocolo: {process.protocolo}</div>
+              <div className="truncate">Título: {process.titulo}</div>
+              <div>Aluno(s): {formatStudentsString(process.aluno1, process.aluno2)}</div>
             </div>
-
-            <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl space-y-2 text-xs text-rose-950">
-              <p className="font-bold leading-relaxed">
-                Você está prestes a EXCLUIR DEFINITIVAMENTE o TCC:
-              </p>
-              <div className="bg-white p-2.5 rounded-lg border border-rose-300 font-mono text-[11px] font-bold text-slate-900">
-                <div>Protocolo: {process.protocolo}</div>
-                <div className="truncate">Título: {process.titulo}</div>
-                <div>Aluno(s): {formatStudentsString(process.aluno1, process.aluno2)}</div>
-              </div>
-              <p className="leading-relaxed text-[11px] pt-1 font-semibold text-rose-900">
-                Esta ação é irreversível e removerá todos os registros do discente, banca e repositório.
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
-                Para autorizar, digite <span className="font-mono font-black text-rose-700">EXCLUIR</span> abaixo:
-              </label>
-              <input
-                type="text"
-                placeholder="Digite EXCLUIR para autorizar"
-                value={deleteConfirmInput}
-                onChange={(e) => setDeleteConfirmInput(e.target.value)}
-                className="w-full text-xs font-mono font-bold p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-rose-500 uppercase"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setDeleteConfirmInput('');
-                }}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteProcess}
-                disabled={isDeleting || deleteConfirmInput.trim().toUpperCase() !== 'EXCLUIR'}
-                className={`px-5 py-2 font-extrabold text-xs uppercase tracking-wider rounded-xl text-white transition-all ${
-                  deleteConfirmInput.trim().toUpperCase() === 'EXCLUIR' && !isDeleting
-                    ? 'bg-rose-600 hover:bg-rose-700 cursor-pointer shadow-md'
-                    : 'bg-slate-300 cursor-not-allowed'
-                }`}
-              >
-                {isDeleting ? 'Excluindo...' : 'Confirmar Exclusão Definitiva'}
-              </button>
-            </div>
+            <p className="mt-3 text-[11px] font-semibold leading-5">Esta ação removerá os registros vinculados ao processo. Use somente quando a exclusão definitiva for realmente necessária.</p>
+          </section>
+          <section className="portal-modal-card p-4">
+            <label className="mb-1 block text-xs font-bold text-slate-800">Para autorizar, digite <span className="font-mono font-black text-rose-700">EXCLUIR</span>.</label>
+            <input type="text" placeholder="Digite EXCLUIR para autorizar" value={deleteConfirmInput} onChange={(e) => setDeleteConfirmInput(e.target.value)} className="portal-input font-mono font-bold uppercase" />
+          </section>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => { setShowDeleteModal(false); setDeleteConfirmInput(''); }} className="portal-action">Cancelar</button>
+            <button type="button" onClick={handleDeleteProcess} disabled={isDeleting || deleteConfirmInput.trim().toUpperCase() !== 'EXCLUIR'} className="portal-action border-rose-700 bg-rose-700 text-white disabled:cursor-not-allowed disabled:opacity-40">
+              {isDeleting ? 'Excluindo...' : 'Confirmar exclusão definitiva'}
+            </button>
           </div>
         </div>
-      )}
+      </PortalModalShell>
 
     </div>
   );

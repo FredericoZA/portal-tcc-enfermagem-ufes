@@ -10,7 +10,6 @@ import {
   Columns,
   RotateCcw,
   CheckCircle2,
-  X,
   Building2,
   Menu,
   Layers,
@@ -1394,17 +1393,17 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
   const headerContrast = contrastRatio(siteConfig.headerTextColor || '#ffffff', siteConfig.headerBgColor || '#005830');
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto" role="presentation">
-      <div className="portal-modal-surface relative w-full max-w-7xl bg-slate-100 rounded-2xl shadow-2xl border border-slate-300 flex flex-col max-h-[92vh] overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="portal-customization-title">
+    <div className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-center justify-center p-2 sm:p-4 overflow-y-auto" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="portal-standard-modal portal-modal-surface relative w-full max-w-7xl flex flex-col max-h-[92vh] overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="portal-customization-title" onMouseDown={(event) => event.stopPropagation()}>
         
         {/* MODAL HEADER */}
-        <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shrink-0">
+        <div className="portal-modal-header px-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-slate-100 text-slate-700 rounded-xl border border-slate-200">
-              <Palette className="w-5 h-5 text-slate-700" />
+            <div className="p-2 bg-white text-[var(--portal-brand-header)] rounded-xl border border-white/80">
+              <Palette className="w-5 h-5 text-[var(--portal-brand-header)]" />
             </div>
             <div>
-              <h2 id="portal-customization-title" className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+              <h2 id="portal-customization-title" className="text-sm sm:text-base font-black text-white uppercase tracking-tight flex items-center gap-2">
                 <span>Personalização do Portal do TCC</span>
               </h2>
             </div>
@@ -1414,7 +1413,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
             <button
               type="button"
               onClick={publishAppearance}
-              className="px-3 py-1.5 text-xs font-black text-white bg-emerald-700 hover:bg-emerald-800 border border-emerald-800 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="portal-settings-header-pill"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Publicar no portal</span>
@@ -1422,34 +1421,24 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
             <button
               type="button"
               onClick={handleRestoreDefaults}
-              className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="portal-settings-header-pill"
               title="Restaurar todos os padrões originais"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Restaurar Padrão</span>
             </button>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-              aria-label="Fechar"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         </div>
+        <div className="portal-modal-divider" aria-hidden="true" />
 
         {/* NOTIFICATION FEEDBACK TOAST */}
         {saveMessage && (
-          <div className="bg-slate-800 text-white px-4 py-2 text-xs font-bold flex items-center justify-between shrink-0 animate-fade-in">
+          <div className="bg-[var(--portal-brand-action)] text-white px-4 py-2 text-xs font-bold flex items-center justify-between shrink-0 animate-fade-in">
             <span className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               <span>{saveMessage}</span>
             </span>
-            <button type="button" onClick={() => setSaveMessage(null)} className="text-white hover:opacity-80">
-              <X className="w-4 h-4" />
-            </button>
           </div>
         )}
 
@@ -1457,7 +1446,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
         <div className="flex flex-1 min-h-0 flex-col overflow-hidden md:flex-row">
           
           {/* CATEGORIZED NAVIGATION SIDEBAR WITH LINKING COLUMN */}
-          <div className="max-h-48 w-full bg-slate-100 text-slate-800 border-b border-slate-300 flex flex-col shrink-0 overflow-y-auto p-3 space-y-3 md:max-h-none md:w-72 md:border-b-0 md:border-r">
+          <div className="max-h-48 w-full bg-[var(--portal-surface-card)] text-slate-800 border-b border-slate-300 flex flex-col shrink-0 overflow-y-auto p-3 space-y-3 md:max-h-none md:w-72 md:border-b-0 md:border-r">
             
             {/* TEMAS PRONTOS */}
             <div className="space-y-1">

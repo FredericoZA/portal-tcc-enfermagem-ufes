@@ -332,9 +332,12 @@ const DayDatePickerPopover: React.FC<DayDatePickerPopoverProps> = ({
           <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} />
 
           <div
-            className="fixed z-[9999] bg-white border border-slate-300 rounded-xl shadow-2xl p-3 w-64 text-slate-800 animate-in fade-in zoom-in-95 duration-150"
+            className="portal-modal-surface fixed z-[9999] w-64 overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150"
             style={{ top: `${popoverPos.top}px`, left: `${popoverPos.left}px` }}
           >
+            <div className="portal-modal-header px-3"><CalendarIcon className="h-3.5 w-3.5 text-white" /><span className="text-[10.5px] font-black uppercase tracking-wider">Selecionar data</span></div>
+            <div className="portal-modal-divider" aria-hidden="true" />
+            <div className="p-3">
             <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
               <button
                 type="button"
@@ -433,6 +436,7 @@ const DayDatePickerPopover: React.FC<DayDatePickerPopoverProps> = ({
                   Limpar
                 </button>
               )}
+            </div>
             </div>
           </div>
         </>
@@ -1107,7 +1111,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                 onClick={() => setShowMonthPickerPopup(false)} 
                               />
                               {/* Popover Card */}
-                              <div className="absolute top-full left-0 sm:left-auto sm:right-0 mt-2 z-50 bg-white border border-slate-300 rounded-xl shadow-2xl p-3.5 w-64 text-slate-800 animate-in fade-in zoom-in-95 duration-150">
+                              <div className="portal-modal-surface absolute top-full left-0 sm:left-auto sm:right-0 mt-2 z-50 w-64 overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150">
+                                <div className="portal-modal-header px-3"><CalendarIcon className="h-3.5 w-3.5 text-white" /><span className="text-[10.5px] font-black uppercase tracking-wider">Selecionar mês</span></div>
+                                <div className="portal-modal-divider" aria-hidden="true" />
+                                <div className="p-3.5">
                                 {/* Year Navigator Header */}
                                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
                                   <button
@@ -1148,14 +1155,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                         }}
                                         className={`px-2 py-2 rounded-lg text-[11px] font-black transition-all text-center cursor-pointer ${
                                           isSelected
-                                            ? 'bg-slate-200 text-slate-900 border-slate-400 ring-2 ring-slate-400 font-black shadow-xs'
-                                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold'
+                                            ? 'bg-[var(--portal-filter-selected-bg)] text-slate-950 border border-slate-700 font-black'
+                                            : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold'
                                         }`}
                                       >
                                         {mName.slice(0, 3)}
                                       </button>
                                     );
                                   })}
+                                </div>
                                 </div>
                               </div>
                             </>
@@ -1404,29 +1412,26 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               return (
                 <div
                   id="day-defenses-modal"
-                  className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center z-[999999] p-3 sm:p-5 animate-in fade-in duration-150"
+                  className="portal-modal-backdrop fixed inset-0 z-[999999] flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-150"
                   onClick={() => {
                     setSelectedDayDefenses(null);
                     setSelectedDayGcalEvents(null);
                   }}
                 >
                   <div
-                    className={`bg-white rounded-2xl border border-slate-300 ${modalMaxWidthClass} max-h-[88vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 ${defStyles.fontFamilyClass}`}
+                    className={`portal-standard-modal portal-modal-surface ${modalMaxWidthClass} max-h-[88vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 ${defStyles.fontFamilyClass}`}
                     style={defStyles.rootStyle}
                     onClick={(e) => e.stopPropagation()}
                   >
                     {/* Modal Header synchronized with the table/calendar theme */}
-                    <div 
-                      className={`${popupIsCustomHeader ? '' : defStyles.bannerHeaderClass} p-3.5 sm:p-4.5 flex items-center justify-between border-b transition-colors shrink-0`}
-                      style={headerCustomStyle}
-                    >
+                    <div className="portal-modal-header px-4 flex items-center justify-between shrink-0">
                       <div className="flex items-center gap-3">
                         <ColorfulHeaderIcon type="calendar" textFormat={defensesTextFormat} />
                         <div>
-                          <span className={`text-[10px] font-black uppercase tracking-widest block opacity-85 ${isDarkHeader ? 'text-white/80' : 'text-slate-700'}`}>
+                          <span className="text-[10px] font-black uppercase tracking-widest block text-white/80">
                             {calendarPopupFormat.headerCustomTitle || 'Agenda de Defesas de TCC'}
                           </span>
-                          <h3 className={`font-black text-sm sm:text-base uppercase tracking-tight mt-0.5 ${isDarkHeader ? 'text-white' : 'text-slate-900'}`}>
+                          <h3 className="font-black text-sm sm:text-base uppercase tracking-tight mt-0.5 text-white">
                             {selectedDayDefenses && selectedDayDefenses.length > 0
                               ? `Defesas em ${formatDatePt(selectedDayDefenses[0].defesa?.startAt)}`
                               : selectedDayGcalEvents && selectedDayGcalEvents.length > 0
@@ -1436,12 +1441,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         </div>
                       </div>
                     </div>
+                    <div className="portal-modal-divider" aria-hidden="true" />
 
                     {/* Modal Body with vertical scroll */}
-                    <div 
-                      className="p-4 sm:p-5 overflow-y-auto custom-scrollbar space-y-4 flex-1 max-h-[calc(88vh-80px)] transition-colors"
-                      style={{ backgroundColor: calendarPopupFormat.modalBgColor || 'var(--portal-surface-page)' }}
-                    >
+                    <div className="p-4 sm:p-5 overflow-y-auto custom-scrollbar space-y-4 flex-1 max-h-[calc(88vh-80px)] bg-[var(--portal-surface-page)]">
                       {selectedDayDefenses && selectedDayDefenses.length > 0 && (
                         <div className="space-y-3">
                           <div className={`grid ${gridColsClass}`}>
@@ -2544,24 +2547,14 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
       {/* MODAL ABSTRACT PREVIEW IN LIBRARY */}
       {selectedLibDoc && (
-        <div className="fixed inset-0 bg-slate-900/70 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white border border-slate-300 rounded-sm max-w-2xl w-full p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-emerald-700" />
-                <h3 className="font-extrabold text-sm uppercase text-slate-900">
-                  Ficha Acadêmica & Resumo do TCC
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedLibDoc(null)}
-                className="text-slate-400 hover:text-slate-800 text-xs font-bold cursor-pointer"
-              >
-                ✖
-              </button>
+        <div className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-center justify-center p-4 animate-fadeIn" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedLibDoc(null); }}>
+          <div className="portal-standard-modal portal-modal-surface max-w-2xl w-full max-h-[90vh] overflow-hidden" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="portal-modal-header px-4">
+              <BookOpen className="w-4 h-4 text-white" />
+              <h3 className="font-extrabold text-sm uppercase text-white">Ficha Acadêmica & Resumo do TCC</h3>
             </div>
-
+            <div className="portal-modal-divider" aria-hidden="true" />
+            <div className="max-h-[calc(90vh-60px)] overflow-y-auto p-4 space-y-4">
             <div className="space-y-3 text-xs text-slate-800">
               <div className="bg-emerald-100 p-3 rounded border border-emerald-300 font-mono text-[11px] text-emerald-950">
                 Protocolo: <strong>{selectedLibDoc.protocolo}</strong> • Data da Defesa: <strong>{formatDatePt(selectedLibDoc.defesa?.startAt)}</strong>
@@ -2592,13 +2585,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={() => setSelectedLibDoc(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase rounded-2xs cursor-pointer"
-              >
-                Fechar
-              </button>
+              <button type="button" onClick={() => setSelectedLibDoc(null)} className="portal-action">Fechar</button>
+            </div>
             </div>
           </div>
         </div>
@@ -2618,11 +2606,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       {/* FULL PROCESS DETAILS & CONFIGURATIONS POP-UP FORM */}
       {selectedProcessDetails && (
         <div
-          className="fixed inset-0 bg-slate-900/80 z-50 overflow-y-auto p-2 sm:p-4 md:p-6 backdrop-blur-xs animate-fadeIn flex justify-center items-start"
+          className="portal-modal-backdrop fixed inset-0 z-[1000001] overflow-y-auto p-2 sm:p-4 md:p-6 animate-fadeIn flex justify-center items-start"
           onClick={handleCloseDetails}
         >
           <div
-            className="max-w-6xl w-full bg-slate-100 rounded-2xl shadow-2xl border border-slate-300 overflow-hidden relative my-2 sm:my-4 animate-in zoom-in-95 duration-150"
+            className="portal-standard-modal portal-modal-surface max-w-6xl w-full overflow-hidden relative my-2 sm:my-4 animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Body with Unified ProcessoDetailPage */}
@@ -2641,8 +2629,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       {/* LOGIN MODAL FOR STUDENTS AND PROFESSORS */}
       {showLoginModal && (() => {
         return (
-          <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowLoginModal(false); }}>
-            <div className={`${loginPopupConfig.borderRadius || 'rounded-2xl'} border border-slate-300 shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150`} style={{ backgroundColor: 'var(--portal-surface-page)' }}>
+          <div className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-center justify-center p-4 animate-fadeIn" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowLoginModal(false); }}>
+            <div className={`portal-standard-modal portal-modal-surface ${loginPopupConfig.borderRadius || 'rounded-2xl'} max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150`} style={{ backgroundColor: 'var(--portal-surface-page)' }} onMouseDown={(event) => event.stopPropagation()}>
               {/* Header with Institutional Identity */}
               <div className="portal-modal-header border-b px-5 py-3.5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -2654,6 +2642,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   </div>
                 </div>
               </div>
+              <div className="portal-modal-divider" aria-hidden="true" />
 
               <div className="space-y-3 p-4">
                 <p className="text-xs text-slate-600 leading-relaxed">
