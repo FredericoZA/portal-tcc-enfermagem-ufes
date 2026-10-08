@@ -70,7 +70,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
 
   const workspaceContent = singlePane ? (
     <main
-      className={`portal-settings-single-pane min-w-0 flex-1 p-0 ${sheetWorkspace ? 'overflow-hidden' : 'overflow-auto'}`}
+      className={`portal-settings-single-pane min-h-0 min-w-0 flex-1 p-0 ${sheetWorkspace ? 'flex flex-col overflow-hidden' : 'overflow-auto'}`}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
       style={{ backgroundColor: 'var(--portal-surface-page)' }}
