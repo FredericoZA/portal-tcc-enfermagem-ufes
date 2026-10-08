@@ -297,4 +297,4 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
     </article>
     {loading&&<p className="px-3 pb-2 pt-2 text-[9px] text-slate-500">Consultando modelos…</p>}
   </section>;
-
+};
