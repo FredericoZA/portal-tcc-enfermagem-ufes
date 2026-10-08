@@ -72,13 +72,13 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
   const vercelReady = Boolean(status?.vercel.detected && status?.vercel.projectIdPresent);
   const departmentReady = Boolean(departmentEmail.trim());
 
-  return <div id="infrastructure-integrations-panel" className="flex min-h-full h-full flex-col bg-[var(--portal-surface-panel)]">
+  return <div id="infrastructure-integrations-panel" className="flex min-h-full h-full flex-col bg-[var(--portal-surface-page)]">
     <SettingsWorkspaceHeaderPortal>
       <button type="button" onClick={runHomologation} disabled={working === 'homologation'} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-white bg-white px-3 py-1 text-[10px] font-black text-slate-950 shadow-sm hover:bg-slate-100 disabled:opacity-50">
         {working === 'homologation' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <RefreshCw className="h-3.5 w-3.5"/>}Executar testes
       </button>
     </SettingsWorkspaceHeaderPortal>
-    <div className="grid flex-1 content-start gap-3 bg-[var(--portal-surface-panel)] p-3 md:grid-cols-2 lg:grid-cols-6">
+    <div className="grid flex-1 content-start gap-3 bg-[var(--portal-surface-page)] p-3 md:grid-cols-2 lg:grid-cols-6">
         <section className={`${compactCard} lg:col-span-2`} aria-labelledby="asten-integration-title">
           <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-1.5"><KeyRound className="h-4 w-4 shrink-0 text-[var(--portal-brand-action)]"/><h4 id="asten-integration-title" className="truncate text-[10px] font-black uppercase text-slate-900">Asten</h4></div><State ok={astenReady} label={astenReady ? 'Pronta' : 'Pendente'}/></div>
           <div className="mt-2 grid gap-2"><input aria-label="Token da API Asten" type="password" autoComplete="new-password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Token da API Asten" className={input}/><button type="button" onClick={connectAsten} disabled={working === 'asten' || !token.trim() || !status?.asten.enabled} className={action}>{working === 'asten' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ShieldCheck className="h-3.5 w-3.5"/>}Validar e conectar</button></div>
@@ -98,9 +98,9 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
         </section>
     </div>
 
-    {hasRunTests && <section className="border-t border-slate-300 bg-[var(--portal-surface-panel)]" aria-live="polite">
+    {hasRunTests && <section className="border-t border-slate-300 bg-[var(--portal-surface-page)]" aria-live="polite">
       <div className="border-b border-slate-300 bg-slate-200 px-3 py-2"><h3 className="text-[10px] font-black uppercase tracking-wide text-slate-950">Resultado dos testes</h3></div>
-      <div className="bg-[var(--portal-surface-panel)] p-2.5">
+      <div className="bg-[var(--portal-surface-page)] p-2.5">
         {message && <div role="status" className={`mb-2 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold ${message.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>{message.text}</div>}
         {working === 'homologation' && <div className="rounded-lg border border-slate-300 bg-white px-3 py-3 text-[10px] font-semibold text-slate-600">Executando testes das integrações…</div>}
         {working !== 'homologation' && homologation.length > 0 && <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">{homologation.map((check) => <div key={check.id} className={`rounded-lg border px-2 py-1.5 text-[9px] ${check.status === 'PASS' ? 'border-emerald-200 bg-white text-emerald-900' : check.status === 'PENDING' ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-red-200 bg-red-50 text-red-900'}`}><strong>{check.label}</strong><span className="ml-1">— {check.message}</span></div>)}</div>}
