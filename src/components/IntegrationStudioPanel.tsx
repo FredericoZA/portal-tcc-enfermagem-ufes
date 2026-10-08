@@ -321,6 +321,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const appliedSnapshotRef = useRef<string>('');
   const hasHydratedRef = useRef(false);
   const remoteAutosaveRequestRef = useRef(0);
+  const currentDraftFingerprintRef = useRef('');
 
   useEffect(() => { if (initialTab) setActiveTab(initialTab); }, [initialTab]);
 
@@ -465,6 +466,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   });
 
   const draftFingerprint = useMemo(() => JSON.stringify({ brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl }), [brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl]);
+  currentDraftFingerprintRef.current=draftFingerprint;
   const flushDraftRef = useRef<() => void>(()=>{});
   flushDraftRef.current = () => { if(!hasHydratedRef.current||!isDirty||isSaving)return; const draft=buildSnapshot(); draft.revision=revision; draft.savedAt=new Date().toISOString(); draft.publication={status:'DRAFT',publishedRevision:initialMeta.publication?.publishedRevision,publishedAt:initialMeta.publication?.publishedAt,validationScore:validationReport.score}; saveLocalStudio(draft); };
   useEffect(()=>()=>flushDraftRef.current(),[]);
@@ -494,7 +496,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         setRevision(snapshot.revision);
         setLastSavedAt(snapshot.savedAt);
         setDraftSavedAt('');
-        setIsDirty(current=>current && draftFingerprint!==fingerprint);
+        setIsDirty(currentDraftFingerprintRef.current!==fingerprint);
         appliedSnapshotRef.current=`${snapshot.savedAt}:${snapshot.revision}`;
       }).catch(error=>{
         console.error('Autosave do estúdio falhou',error);
