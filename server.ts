@@ -90,6 +90,24 @@ import { buildContinuousIntelligenceState, renderStatisticalReport, type Continu
 dotenv.config({path:'.env.local',override:false,quiet:true});
 dotenv.config({path:'.env',override:false,quiet:true});
 
+const runtimePackageVersion = (() => {
+  try {
+    const parsed = JSON.parse(readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')) as { version?: string };
+    return String(parsed.version || '').trim();
+  } catch {
+    return '';
+  }
+})();
+
+function runtimeGitCommit(): string {
+  return String(
+    process.env.VERCEL_GIT_COMMIT_SHA ||
+    process.env.GITHUB_SHA ||
+    process.env.PORTAL_GIT_COMMIT ||
+    ''
+  ).trim();
+}
+
 interface PersistedPortalState {
   registrationDrafts?: Record<string,RegistrationDraft>;
   reminders?: ReminderRecord[];
@@ -1277,8 +1295,15 @@ export async function createPortalApp() {
   });
 
   // Health check
-  app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  app.get('/api/health', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      version: runtimePackageVersion,
+      commit: runtimeGitCommit(),
+      runtime: productionRuntime ? 'production' : serveCompiledClient ? 'local-compiled' : 'local-source'
+    });
   });
 
   app.use('/api', attachPortalIdentity);

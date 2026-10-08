@@ -4,7 +4,7 @@ Software aberto para centralizar o ciclo de Trabalho de Conclusão de Curso de u
 
 Esta implantação atende **somente o Curso de Enfermagem**. Identidade, regras, modelos DOCX, e-mails, formulários, fluxo e aparência são publicados pelo usuário Master em **Configurações**. O código aberto e o guia do GitHub permitem que outra secretaria crie uma instalação independente, sem transformar este portal em um sistema multicurso.
 
-A versão atual é **1.0.0-rc.10**, revisão final para implantação. Inclui correções de falhas HTTP, formulários, retomada e aparência.
+A versão de execução é definida em `package.json`. Não use documentação histórica para inferir qual build está em produção; compare sempre os commits com `npm run parity:check`.
 
 Desde a **RC9**, o formulário do orientador está integrado à tela e à API: a conferência explícita dos dados, a nota válida e a revisão atual são obrigatórias. A ata continua sendo preenchida pelo DOCX do Master. Tabelas e pop-ups compartilham aparência publicada; mensagens e confirmações usam o diálogo do portal. O aluno continua registrando a confirmação recebida do departamento, sem depender de acesso do departamento ao portal.
 
@@ -36,7 +36,9 @@ cp .env.development.example .env.local
 npm run dev
 ```
 
-O portal inicia em `http://localhost:3000`. O arquivo de desenvolvimento habilita apenas dados e autenticação simulados locais; nunca o envie à Vercel. Para produção, use `.env.example` como checklist de variáveis do painel da Vercel. Produção bloqueia inicialização sem Master de bootstrap, segredos fortes e runtime Supabase v6. Uploads de DOCX e PDF usam URL assinada de curta duração para um bucket Supabase privado; depois da validação de tamanho, MIME e SHA-256, o arquivo é enviado ao Drive e removido do staging.
+O portal inicia em `http://localhost:3000`. `npm run dev` usa Vite/HMR e dados locais. Para validar o mesmo artefato de frontend que será publicado, use `npm run dev:compiled`; ele executa o build antes de iniciar o servidor local. Antes de comparar qualquer tela local com a Vercel, execute `npm run parity:check` e confirme que os commits coincidem.
+
+O arquivo de desenvolvimento habilita apenas dados e autenticação simulados locais; nunca o envie à Vercel. Para produção, use `.env.example` como checklist de variáveis do painel da Vercel. Produção bloqueia inicialização sem Master de bootstrap, segredos fortes e runtime Supabase v6. Uploads de DOCX e PDF usam URL assinada de curta duração para um bucket Supabase privado; depois da validação de tamanho, MIME e SHA-256, o arquivo é enviado ao Drive e removido do staging.
 
 ## Verificar
 
