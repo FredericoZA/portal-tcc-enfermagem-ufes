@@ -14,6 +14,8 @@ import {
   BookOpenCheck,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CircleAlert,
   ClipboardList,
   Cloud,
@@ -749,7 +751,14 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     if(!type)return;
     const source=type==='doc'?docTemplates.find(item=>item.id===refId):type==='email'?emailTemplates.find(item=>item.id===refId):type==='form'?formTemplates.find(item=>item.id===refId):undefined;
     const title=type==='doc'?(source as DocTemplateItem | undefined)?.label:type==='email'?(source as EmailTemplateItem | undefined)?.name:type==='form'?(source as FormTemplateItem | undefined)?.title:'Ação interna do sistema';
-    setWorkflowStages(previous=>previous.map(stage=>stage.id===stageId?{...stage,actions:[...stage.actions,{id:`action-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,type,refId:type==='action'?undefined:refId,title:title||'Nova ação',recipientOrDetail:''}]}:stage));
+    setWorkflowStages(previous=>previous.map(stage=>{
+      if(stage.id!==stageId)return stage;
+      const alreadyExists=type==='action'
+        ? stage.actions.some(action=>action.type==='action'&&!action.refId)
+        : stage.actions.some(action=>action.type===type&&action.refId===refId);
+      if(alreadyExists)return stage;
+      return {...stage,actions:[...stage.actions,{id:`action-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,type,refId:type==='action'?undefined:refId,title:title||'Nova ação',recipientOrDetail:''}]};
+    }));
     setIsDirty(true);
   };
   const updateWorkflowAction = (stageId:string,actionId:string,patch:Partial<WorkflowActionItem>) => {setWorkflowStages(previous=>previous.map(stage=>stage.id===stageId?{...stage,actions:stage.actions.map(action=>action.id===actionId?{...action,...patch}:action)}:stage));setIsDirty(true);};
@@ -765,60 +774,6 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       return {...stage,actions};
     }));
     setIsDirty(true);
-  };
-
-  const setWorkflowDragPayload = (event:React.DragEvent, payload:Record<string,unknown>) => {
-    event.dataTransfer.effectAllowed='move';
-    event.dataTransfer.setData('application/x-portal-workflow', JSON.stringify(payload));
-  };
-
-  const readWorkflowDragPayload = (event:React.DragEvent):Record<string,any>|null => {
-    try {
-      const raw=event.dataTransfer.getData('application/x-portal-workflow');
-      return raw?JSON.parse(raw):null;
-    } catch {
-      return null;
-    }
-  };
-
-  const handleWorkflowStageDrop = (event:React.DragEvent, targetStageId:string) => {
-    event.preventDefault();
-    const payload=readWorkflowDragPayload(event);
-    if(!payload)return;
-    if(payload.kind==='palette' && typeof payload.value==='string'){
-      addWorkflowAction(targetStageId,payload.value);
-      return;
-    }
-    if(payload.kind==='stage' && typeof payload.stageId==='string' && payload.stageId!==targetStageId){
-      setWorkflowStages(previous=>{
-        const from=previous.findIndex(stage=>stage.id===payload.stageId);
-        const to=previous.findIndex(stage=>stage.id===targetStageId);
-        if(from<0||to<0)return previous;
-        const next=[...previous];
-        const [moved]=next.splice(from,1);
-        next.splice(to,0,moved);
-        return next.map((stage,index)=>({...stage,stageNumber:index+1}));
-      });
-      setIsDirty(true);
-      return;
-    }
-    if(payload.kind==='action' && typeof payload.stageId==='string' && typeof payload.actionId==='string'){
-      setWorkflowStages(previous=>{
-        const sourceStage=previous.find(stage=>stage.id===payload.stageId);
-        const action=sourceStage?.actions.find(item=>item.id===payload.actionId);
-        if(!action)return previous;
-        return previous.map(stage=>{
-          if(stage.id===payload.stageId && stage.id===targetStageId){
-            const actions=stage.actions.filter(item=>item.id!==payload.actionId);
-            return {...stage,actions:[...actions,action]};
-          }
-          if(stage.id===payload.stageId)return {...stage,actions:stage.actions.filter(item=>item.id!==payload.actionId)};
-          if(stage.id===targetStageId)return {...stage,actions:[...stage.actions,action]};
-          return stage;
-        });
-      });
-      setIsDirty(true);
-    }
   };
 
   const emailPreviewHtml = useMemo(() => {
@@ -887,6 +842,32 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     return `executa uma ação interna; a publicação será bloqueada se não houver executor`;
   };
 
+
+  const selectedWorkflowStage = workflowStages.find(stage => stage.id === selectedWorkflowStageId) || workflowStages[0];
+  const selectedWorkflowStageIndex = selectedWorkflowStage ? workflowStages.findIndex(stage => stage.id === selectedWorkflowStage.id) : -1;
+  const workflowCatalog = [
+    ...docTemplates.map(item => ({ value:`doc:${item.id}`, type:'doc' as const, label:item.label, detail:'Documento' })),
+    ...emailTemplates.map(item => ({ value:`email:${item.id}`, type:'email' as const, label:item.name, detail:'E-mail' })),
+    ...formTemplates.map(item => ({ value:`form:${item.id}`, type:'form' as const, label:item.title, detail:'Formulário' })),
+    { value:'action:internal', type:'action' as const, label:'Ação interna do sistema', detail:'Ação' },
+  ];
+  const workflowCatalogAction = (stage: WorkflowStageItem, value:string) => {
+    const [type,refId]=value.split(':',2);
+    return stage.actions.find(action => type==='action'
+      ? action.type==='action'&&!action.refId
+      : action.type===type&&action.refId===refId);
+  };
+  const toggleWorkflowCatalogItem = (stage:WorkflowStageItem,value:string,checked:boolean) => {
+    const existing=workflowCatalogAction(stage,value);
+    if(checked){
+      if(!existing)addWorkflowAction(stage.id,value);
+      return;
+    }
+    if(existing)removeWorkflowAction(stage.id,existing.id);
+  };
+  const selectedWorkflowRows = selectedWorkflowStage
+    ? workflowCatalog.map(item => ({...item,action:workflowCatalogAction(selectedWorkflowStage,item.value)}))
+    : [];
   return (
     <div className={`portal-workspace portal-studio ${hideTabs ? 'mb-0 overflow-visible border-0 bg-transparent shadow-none' : `${panelClass} mb-5 overflow-hidden`}`}>
       <div className={`${hideTabs ? 'hidden' : 'portal-studio-heading flex flex-wrap items-center justify-between gap-2 border-b border-[var(--portal-brand-action-border)] bg-[var(--portal-brand-action)] px-3 py-2.5 text-white'}`}>
@@ -1114,45 +1095,119 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         )}
 
         {activeTab === 'workflow' && (
-          <div className="space-y-4">
-            <div className={`${panelClass} flex flex-col gap-2.5 p-3 sm:flex-row sm:items-center sm:justify-between`}>
-              <div><div className="flex items-center gap-2"><Workflow className="h-4 w-4 text-emerald-700"/><h4 className="text-xs font-black uppercase">Fluxo executável</h4></div><p className="mt-1 text-[11px] leading-relaxed text-slate-600">Cada etapa responde a um evento real do processo. Vincule documentos, e-mails e formulários publicados; o servidor valida as referências antes de executar.</p></div>
-              <button type="button" onClick={addWorkflowStage} className={`${actionClass} shrink-0 border-emerald-700 bg-emerald-700 text-white`}><Plus className="h-3.5 w-3.5"/>Adicionar etapa</button>
-            </div>
-            <section className={`${panelClass} p-3`} aria-labelledby="workflow-secretary-mode-title">
-              <div className="flex items-center gap-2"><BookOpenCheck className="h-4 w-4 text-emerald-700"/><h4 id="workflow-secretary-mode-title" className="text-xs font-black uppercase">Leitura simples do fluxo</h4></div>
-              <p className="mt-1 text-[11px] leading-5 text-slate-600">O portal executa as ações de cima para baixo. Formulários liberam dados, documentos usam o modelo ativo do Drive, a Asten coleta as assinaturas e o Gmail envia somente os anexos já disponíveis.</p>
-              <div className="mt-3 grid gap-2 lg:grid-cols-2">{workflowStages.map((stage, stageIndex) => <article key={`summary-${stage.id}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="text-[10px] font-black uppercase text-slate-500">Etapa {stageIndex + 1} · quando {workflowEvents.find(([value]) => value === stage.triggerEvent)?.[1] || stage.triggerEvent}</div><p className="mt-1 text-xs leading-5 text-slate-800">{stage.actions.length ? stage.actions.map(describeWorkflowAction).join('; depois, ') : 'nenhuma ação configurada.'}</p></article>)}</div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{[
-                ['Convite', 'Sem assinatura'], ['Ata', 'Orientador'], ['Termo', 'Aluno(s) + orientador, prioridade 1'], ['Declaração', 'Presidente da Comissão']
-              ].map(([document, rule]) => <div key={document} className="rounded-xl border border-emerald-200 bg-emerald-50 p-3"><strong className="block text-[10px] uppercase text-emerald-900">{document}</strong><span className="text-[10px] text-emerald-800">{rule}</span></div>)}</div>
-            </section>
-            <section className={`${panelClass} p-3`} aria-label="Paleta de ações do fluxo">
-              <div className="text-[10px] font-black uppercase text-slate-500">Arraste para uma etapa</div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {docTemplates.map(item=><button key={`palette-doc-${item.id}`} type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:`doc:${item.id}`})} className="portal-action cursor-grab"><FileText className="h-3.5 w-3.5"/>{item.label}</button>)}
-                {emailTemplates.map(item=><button key={`palette-email-${item.id}`} type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:`email:${item.id}`})} className="portal-action cursor-grab"><Mail className="h-3.5 w-3.5"/>{item.name}</button>)}
-                {formTemplates.map(item=><button key={`palette-form-${item.id}`} type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:`form:${item.id}`})} className="portal-action cursor-grab"><ClipboardList className="h-3.5 w-3.5"/>{item.title}</button>)}
-                <button type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:'action:internal'})} className="portal-action cursor-grab"><Settings2 className="h-3.5 w-3.5"/>Ação interna</button>
+          <div className="space-y-3 pb-5" data-portal-workflow-editor="true">
+            <section
+              className="overflow-hidden rounded-xl border border-[var(--portal-border)]"
+              style={{ backgroundColor: 'var(--portal-surface-inner)' }}
+              aria-labelledby="workflow-timeline-title"
+            >
+              <div className="flex items-center justify-between px-4 pt-3">
+                <div>
+                  <h4 id="workflow-timeline-title" className="text-[11px] font-black uppercase tracking-wider text-slate-700">Fluxo do Processo</h4>
+                  <p className="mt-0.5 text-[9px] text-slate-500">Selecione uma etapa para editar. A ordem exibida aqui é a ordem do processo.</p>
+                </div>
+                <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
+                  {workflowStages.length} etapa(s)
+                </span>
               </div>
-              <p className="mt-2 text-[9px] text-slate-500">Também é possível usar os seletores e setas abaixo; o arrastar e soltar é um atalho, não a única forma de operar.</p>
+
+              <div className="overflow-x-auto px-4 pb-3 pt-2">
+                <div className="flex min-w-max items-start">
+                  {workflowStages.map((stage,index)=>{
+                    const selected=stage.id===selectedWorkflowStage?.id;
+                    return <React.Fragment key={stage.id}>
+                      <button
+                        type="button"
+                        onClick={()=>setSelectedWorkflowStageId(stage.id)}
+                        className="group flex w-28 shrink-0 flex-col items-center text-center"
+                        aria-pressed={selected}
+                        title={stage.title}
+                      >
+                        <span className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black transition-colors ${selected ? 'bg-slate-900 text-white ring-2 ring-emerald-600 ring-offset-1' : 'border border-emerald-700 bg-white text-emerald-800 group-hover:bg-emerald-50'}`}>
+                          {index+1}
+                        </span>
+                        <span className={`mt-1.5 max-w-28 text-[9px] leading-3 ${selected?'font-black text-slate-900':'font-semibold text-slate-600'}`}>
+                          {stage.title}
+                        </span>
+                      </button>
+                      <span className="mt-3.5 h-0.5 w-10 shrink-0 bg-emerald-700/70" aria-hidden="true" />
+                    </React.Fragment>;
+                  })}
+                  <button type="button" onClick={addWorkflowStage} className="group flex w-24 shrink-0 flex-col items-center text-center" title="Adicionar etapa" aria-label="Adicionar etapa">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition-colors group-hover:border-emerald-600 group-hover:text-emerald-700"><Plus className="h-3.5 w-3.5"/></span>
+                    <span className="mt-1.5 text-[9px] font-black text-slate-600">Adicionar etapa</span>
+                  </button>
+                </div>
+              </div>
             </section>
-            <div className="space-y-3">
-              {workflowStages.map((stage,index)=><div key={stage.id} draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'stage',stageId:stage.id})} onDragOver={event=>{event.preventDefault();event.dataTransfer.dropEffect='move';}} onDrop={event=>handleWorkflowStageDrop(event,stage.id)} className={`${panelClass} overflow-hidden`}>
-                <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 p-3">
-                  <span className="rounded-full bg-slate-800 px-2.5 py-1 text-[9px] font-black text-white">ETAPA {index+1}</span>
-                  <input aria-label="Título da etapa" value={stage.title} onChange={event=>updateWorkflowStage(stage.id,{title:event.target.value})} className={`${inputClass} min-w-[220px] flex-1 font-bold`}/>
-                  <button type="button" onClick={()=>moveWorkflowStage(index,-1)} disabled={index===0} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-bold disabled:opacity-30">↑</button>
-                  <button type="button" onClick={()=>moveWorkflowStage(index,1)} disabled={index===workflowStages.length-1} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-bold disabled:opacity-30">↓</button>
-                  <button type="button" onClick={()=>setSelectedWorkflowStageId(selectedWorkflowStageId===stage.id?'':stage.id)} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[9px] font-black uppercase text-slate-700">{selectedWorkflowStageId===stage.id?'Ocultar':'Editar'}</button><button type="button" onClick={()=>removeWorkflowStage(stage.id)} className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5"/></button>
+
+            {selectedWorkflowStage && (
+              <section
+                className="overflow-hidden rounded-xl border border-[var(--portal-border)]"
+                style={{ backgroundColor: 'var(--portal-surface-panel)' }}
+                aria-label={`Configuração da etapa ${selectedWorkflowStageIndex+1}`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <div className="text-[9px] font-black uppercase tracking-wider text-slate-500">Etapa {selectedWorkflowStageIndex+1}</div>
+                    <div className="truncate text-xs font-black text-slate-900">{selectedWorkflowStage.title}</div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button type="button" onClick={()=>moveWorkflowStage(selectedWorkflowStageIndex,-1)} disabled={selectedWorkflowStageIndex<=0} className="portal-toolbar-icon-button disabled:opacity-30" title="Mover etapa para a esquerda" aria-label="Mover etapa para a esquerda"><ChevronLeft className="h-3.5 w-3.5"/></button>
+                    <button type="button" onClick={()=>moveWorkflowStage(selectedWorkflowStageIndex,1)} disabled={selectedWorkflowStageIndex<0||selectedWorkflowStageIndex>=workflowStages.length-1} className="portal-toolbar-icon-button disabled:opacity-30" title="Mover etapa para a direita" aria-label="Mover etapa para a direita"><ChevronRight className="h-3.5 w-3.5"/></button>
+                    <button type="button" onClick={()=>removeWorkflowStage(selectedWorkflowStage.id)} className="portal-toolbar-icon-button text-rose-700" title="Excluir etapa" aria-label="Excluir etapa"><Trash2 className="h-3.5 w-3.5"/></button>
+                  </div>
                 </div>
-                <div className={selectedWorkflowStageId===stage.id?'space-y-3 p-4':'hidden'}>
-                  <div className="grid gap-3 md:grid-cols-[.8fr_1.2fr]"><div><label className={labelClass}>Evento disparador</label><input list={`workflow-event-catalog-${stage.id}`} value={stage.triggerEvent} onChange={event=>updateWorkflowStage(stage.id,{triggerEvent:event.target.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')})} className={inputClass} placeholder="Ex.: FORM_AVALIACAO_SUBMITTED"/><datalist id={`workflow-event-catalog-${stage.id}`}>{workflowEvents.map(([value,label])=><option key={value} value={value}>{label}</option>)}</datalist><p className="mt-1 text-[9px] text-slate-500">Para formulário personalizado, use FORM_ID_DO_FORMULARIO_SUBMITTED.</p></div><div><label className={labelClass}>Objetivo da etapa</label><input value={stage.description} onChange={event=>updateWorkflowStage(stage.id,{description:event.target.value})} className={inputClass}/></div></div>
-                  <div className="space-y-2"><div className="text-[10px] font-black uppercase text-slate-500">Ações em ordem</div>{stage.actions.map((action,actionIndex)=><div key={action.id} draggable onDragStart={event=>{event.stopPropagation();setWorkflowDragPayload(event,{kind:'action',stageId:stage.id,actionId:action.id});}} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="grid gap-2 md:grid-cols-[auto_.8fr_1fr_auto]"><span className="self-center rounded-full bg-white px-2 py-1 text-[9px] font-black text-slate-500">{actionIndex+1}</span><div className="flex gap-1"><button type="button" aria-label={`Mover ${action.title} para cima`} disabled={actionIndex===0} onClick={()=>moveWorkflowAction(stage.id,actionIndex,-1)} className="portal-action">↑</button><button type="button" aria-label={`Mover ${action.title} para baixo`} disabled={actionIndex===stage.actions.length-1} onClick={()=>moveWorkflowAction(stage.id,actionIndex,1)} className="portal-action">↓</button></div><input value={action.title} onChange={event=>updateWorkflowAction(stage.id,action.id,{title:event.target.value})} className={inputClass}/><input value={action.recipientOrDetail||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder="Destinatário ou detalhe"/><button type="button" onClick={()=>removeWorkflowAction(stage.id,action.id)} className="rounded-lg border border-rose-200 bg-white p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5"/></button></div><details className="mt-2 rounded-lg border border-slate-200 bg-white p-2"><summary className="cursor-pointer text-[9px] font-black uppercase text-slate-600">Condição para executar</summary><div className="mt-2 grid gap-2 sm:grid-cols-3"><select value={action.condition?.fieldKey||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:event.target.value?{fieldKey:event.target.value,operator:action.condition?.operator||'EQUALS',value:action.condition?.value||''}:undefined})} className={inputClass}><option value="">Sempre executar</option>{matrixColumns.map(item=><option key={item.id} value={normalizeVariableKey(item.name)}>{item.label||item.name}</option>)}</select>{action.condition&&<><select value={action.condition.operator} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,operator:event.target.value as any}})} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">É verdadeiro</option></select>{!['NOT_EMPTY','IS_TRUE'].includes(action.condition.operator)&&<input value={action.condition.value||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,value:event.target.value}})} className={inputClass} placeholder="Valor esperado"/>}</>}</div></details></div>)}</div>
-                  <div><label className={labelClass}>Adicionar ação vinculada</label><select value="" onChange={event=>{if(event.target.value)addWorkflowAction(stage.id,event.target.value);}} className={inputClass}><option value="">Selecione documento, e-mail ou formulário…</option><optgroup label="Documentos">{docTemplates.map(item=><option key={item.id} value={`doc:${item.id}`}>{item.label}</option>)}</optgroup><optgroup label="E-mails">{emailTemplates.map(item=><option key={item.id} value={`email:${item.id}`}>{item.name}</option>)}</optgroup><optgroup label="Formulários">{formTemplates.map(item=><option key={item.id} value={`form:${item.id}`}>{item.title}</option>)}</optgroup></select></div>
+
+                <div className="grid gap-2 border-b border-slate-300 p-3 md:grid-cols-[1fr_.9fr_1.2fr]">
+                  <div><label className={labelClass}>Título da etapa</label><input value={selectedWorkflowStage.title} onChange={event=>updateWorkflowStage(selectedWorkflowStage.id,{title:event.target.value})} className={inputClass}/></div>
+                  <div><label className={labelClass}>Evento disparador</label><input list={`workflow-event-catalog-${selectedWorkflowStage.id}`} value={selectedWorkflowStage.triggerEvent} onChange={event=>updateWorkflowStage(selectedWorkflowStage.id,{triggerEvent:event.target.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')})} className={inputClass}/><datalist id={`workflow-event-catalog-${selectedWorkflowStage.id}`}>{workflowEvents.map(([value,label])=><option key={value} value={value}>{label}</option>)}</datalist></div>
+                  <div><label className={labelClass}>Objetivo da etapa</label><input value={selectedWorkflowStage.description} onChange={event=>updateWorkflowStage(selectedWorkflowStage.id,{description:event.target.value})} className={inputClass}/></div>
                 </div>
-              </div>)}
-            </div>
+
+                <div className="overflow-auto" data-portal-workflow-stage-sheet="true">
+                  <table className="w-full min-w-[1180px] border-collapse text-left text-[10px]">
+                    <thead>
+                      <tr className="text-white" style={{ backgroundColor:'var(--portal-brand-header)' }}>
+                        <th className="w-16 border-r border-white/25 px-2 py-2 text-center">Usar</th>
+                        <th className="w-24 border-r border-white/25 px-2 py-2 text-center">Ordem</th>
+                        <th className="w-28 border-r border-white/25 px-2 py-2">Tipo</th>
+                        <th className="min-w-[220px] border-r border-white/25 px-2 py-2">Item / título</th>
+                        <th className="min-w-[210px] border-r border-white/25 px-2 py-2">Destinatário / detalhe</th>
+                        <th className="min-w-[340px] border-r border-white/25 px-2 py-2">Condição para execução</th>
+                        <th className="w-16 px-2 py-2 text-center">Excluir</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedWorkflowRows.map((row)=>{
+                        const action=row.action;
+                        const actionIndex=action?selectedWorkflowStage.actions.findIndex(item=>item.id===action.id):-1;
+                        const condition=action?.condition;
+                        return <tr key={row.value} className="border-b border-slate-300" style={{ backgroundColor:'var(--portal-surface-panel)' }}>
+                          <td className="border-r border-slate-300 px-2 py-2 text-center">
+                            <input type="checkbox" checked={Boolean(action)} onChange={event=>toggleWorkflowCatalogItem(selectedWorkflowStage,row.value,event.target.checked)} aria-label={`Usar ${row.label} nesta etapa`} />
+                          </td>
+                          <td className="border-r border-slate-300 px-2 py-2">
+                            {action ? <div className="flex items-center justify-center gap-1"><span className="min-w-5 text-center font-black text-slate-700">{actionIndex+1}</span><button type="button" className="portal-toolbar-icon-button !h-6 !min-h-6 !w-6 !min-w-6" disabled={actionIndex===0} onClick={()=>moveWorkflowAction(selectedWorkflowStage.id,actionIndex,-1)} aria-label={`Mover ${action.title} para cima`}>↑</button><button type="button" className="portal-toolbar-icon-button !h-6 !min-h-6 !w-6 !min-w-6" disabled={actionIndex===selectedWorkflowStage.actions.length-1} onClick={()=>moveWorkflowAction(selectedWorkflowStage.id,actionIndex,1)} aria-label={`Mover ${action.title} para baixo`}>↓</button></div> : <span className="block text-center text-slate-400">—</span>}
+                          </td>
+                          <td className="border-r border-slate-300 px-2 py-2 font-black uppercase text-slate-600">{row.detail}</td>
+                          <td className="border-r border-slate-300 px-2 py-2"><input disabled={!action} value={action?.title||row.label} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{title:event.target.value})} className={inputClass}/></td>
+                          <td className="border-r border-slate-300 px-2 py-2"><input disabled={!action} value={action?.recipientOrDetail||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder={action?'Detalhe opcional':'Selecione o item'}/></td>
+                          <td className="border-r border-slate-300 px-2 py-2">
+                            <div className="grid grid-cols-3 gap-1">
+                              <select disabled={!action} value={condition?.fieldKey||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{condition:event.target.value?{fieldKey:event.target.value,operator:condition?.operator||'EQUALS',value:condition?.value||''}:undefined})} className={inputClass}><option value="">Sempre executar</option>{matrixColumns.map(item=><option key={item.id} value={normalizeVariableKey(item.name)}>{item.label||item.name}</option>)}</select>
+                              <select disabled={!action||!condition} value={condition?.operator||'EQUALS'} onChange={event=>action&&condition&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{condition:{...condition,operator:event.target.value as any}})} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">É verdadeiro</option></select>
+                              <input disabled={!action||!condition||['NOT_EMPTY','IS_TRUE'].includes(condition.operator)} value={condition?.value||''} onChange={event=>action&&condition&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{condition:{...condition,value:event.target.value}})} className={inputClass} placeholder="Valor"/>
+                            </div>
+                          </td>
+                          <td className="px-2 py-2 text-center">{action?<button type="button" onClick={()=>removeWorkflowAction(selectedWorkflowStage.id,action.id)} className="portal-toolbar-icon-button !h-6 !min-h-6 !w-6 !min-w-6 text-rose-700" title="Remover item da etapa" aria-label={`Remover ${action.title} da etapa`}><Trash2 className="h-3 w-3"/></button>:<span className="text-slate-400">—</span>}</td>
+                        </tr>;
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
           </div>
         )}
 
