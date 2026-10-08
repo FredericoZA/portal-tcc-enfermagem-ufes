@@ -332,9 +332,12 @@ const DayDatePickerPopover: React.FC<DayDatePickerPopoverProps> = ({
           <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} />
 
           <div
-            className="fixed z-[9999] bg-white border border-slate-300 rounded-xl shadow-2xl p-3 w-64 text-slate-800 animate-in fade-in zoom-in-95 duration-150"
+            className="portal-modal-surface fixed z-[9999] w-64 overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150"
             style={{ top: `${popoverPos.top}px`, left: `${popoverPos.left}px` }}
           >
+            <div className="portal-modal-header px-3"><CalendarIcon className="h-3.5 w-3.5 text-white" /><span className="text-[10.5px] font-black uppercase tracking-wider">Selecionar data</span></div>
+            <div className="portal-modal-divider" aria-hidden="true" />
+            <div className="p-3">
             <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
               <button
                 type="button"
@@ -433,6 +436,7 @@ const DayDatePickerPopover: React.FC<DayDatePickerPopoverProps> = ({
                   Limpar
                 </button>
               )}
+            </div>
             </div>
           </div>
         </>
@@ -1107,7 +1111,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                 onClick={() => setShowMonthPickerPopup(false)} 
                               />
                               {/* Popover Card */}
-                              <div className="absolute top-full left-0 sm:left-auto sm:right-0 mt-2 z-50 bg-white border border-slate-300 rounded-xl shadow-2xl p-3.5 w-64 text-slate-800 animate-in fade-in zoom-in-95 duration-150">
+                              <div className="portal-modal-surface absolute top-full left-0 sm:left-auto sm:right-0 mt-2 z-50 w-64 overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150">
+                                <div className="portal-modal-header px-3"><CalendarIcon className="h-3.5 w-3.5 text-white" /><span className="text-[10.5px] font-black uppercase tracking-wider">Selecionar mês</span></div>
+                                <div className="portal-modal-divider" aria-hidden="true" />
+                                <div className="p-3.5">
                                 {/* Year Navigator Header */}
                                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
                                   <button
@@ -1148,14 +1155,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                         }}
                                         className={`px-2 py-2 rounded-lg text-[11px] font-black transition-all text-center cursor-pointer ${
                                           isSelected
-                                            ? 'bg-slate-200 text-slate-900 border-slate-400 ring-2 ring-slate-400 font-black shadow-xs'
-                                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold'
+                                            ? 'bg-[var(--portal-filter-selected-bg)] text-slate-950 border border-slate-700 font-black'
+                                            : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold'
                                         }`}
                                       >
                                         {mName.slice(0, 3)}
                                       </button>
                                     );
                                   })}
+                                </div>
                                 </div>
                               </div>
                             </>
@@ -2641,8 +2649,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       {/* LOGIN MODAL FOR STUDENTS AND PROFESSORS */}
       {showLoginModal && (() => {
         return (
-          <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowLoginModal(false); }}>
-            <div className={`${loginPopupConfig.borderRadius || 'rounded-2xl'} border border-slate-300 shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150`} style={{ backgroundColor: 'var(--portal-surface-page)' }}>
+          <div className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-center justify-center p-4 animate-fadeIn" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowLoginModal(false); }}>
+            <div className={`portal-standard-modal portal-modal-surface ${loginPopupConfig.borderRadius || 'rounded-2xl'} max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150`} style={{ backgroundColor: 'var(--portal-surface-page)' }} onMouseDown={(event) => event.stopPropagation()}>
               {/* Header with Institutional Identity */}
               <div className="portal-modal-header border-b px-5 py-3.5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -2654,6 +2662,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   </div>
                 </div>
               </div>
+              <div className="portal-modal-divider" aria-hidden="true" />
 
               <div className="space-y-3 p-4">
                 <p className="text-xs text-slate-600 leading-relaxed">
