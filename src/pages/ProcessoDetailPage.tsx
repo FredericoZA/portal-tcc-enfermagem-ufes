@@ -769,8 +769,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* SECTION 1: FICHA CADASTRAL E IDENTIFICAÇÃO DO PROCESSO                    */}
       {/* ========================================================================= */}
       {localFormat.showSectionCadastral !== false && isTabVisible('cadastral') && (
-        <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
-          <div className="bg-slate-50/80 border-b border-slate-200 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+        <div className="portal-card overflow-hidden">
+          <div className="portal-section-header px-4 py-3 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-slate-700" />
               <h2 className="text-xs font-black uppercase tracking-wider text-slate-900">
@@ -1266,8 +1266,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* SECTION 3: COMPOSIÇÃO DA BANCA EXAMINADORA                                */}
       {/* ========================================================================= */}
       {localFormat.showSectionBanca !== false && isTabVisible('banca') && (
-        <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
-          <div className="bg-slate-50/80 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
+        <div className="portal-card overflow-hidden">
+          <div className="portal-section-header px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
               <Users className="w-3.5 h-3.5 text-slate-600" />
               <span>Banca Examinadora</span>
@@ -1456,8 +1456,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* SECTION 5: PAINEL DE DOCUMENTOS E ASSINATURAS GERENCIADAS                */}
       {/* ========================================================================= */}
       {localFormat.showSectionDocs !== false && isTabVisible('docs') && (
-        <div id="documents-panel-section" className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden space-y-0">
-          <div className="bg-slate-50/80 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
+        <div id="documents-panel-section" className="portal-card overflow-hidden space-y-0">
+          <div className="portal-section-header px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
               <FileCheck className="w-3.5 h-3.5 text-emerald-700" />
               <span>Documentos Oficiais do Processo</span>
@@ -1632,8 +1632,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* SECTION 6: FICHA E ACERVO PÚBLICO NO REPOSITÓRIO DIGITAL                  */}
       {/* ========================================================================= */}
       {localFormat.showSectionAcervo !== false && isTabVisible('acervo') && (
-        <div id="acervo-digital-section" className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
-          <div className="bg-slate-50/80 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between">
+        <div id="acervo-digital-section" className="portal-card overflow-hidden">
+          <div className="portal-section-header px-4 py-2.5 flex items-center justify-between">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
               <BookOpen className="w-3.5 h-3.5 text-slate-600" />
               <span>Repositório Digital</span>
