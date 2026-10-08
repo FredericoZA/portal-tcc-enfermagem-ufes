@@ -133,9 +133,9 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
       </div>}
     </div>
 
-    {selectedLog && <div className="fixed inset-0 z-[1000008] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm" onClick={() => setSelectedLog(null)}>
-      <div role="dialog" aria-modal="true" aria-label="Detalhes do registro de log" className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-300 shadow-2xl" style={{ backgroundColor: 'var(--portal-surface-page)' }} onClick={event => event.stopPropagation()}>
-        <div className="flex items-center gap-2 border-b-[5px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><FileCheck2 className="h-4 w-4"/><strong className="text-xs uppercase">Detalhes do registro</strong></div>
+    {selectedLog && <div className="portal-modal-backdrop fixed inset-0 z-[1000008] flex items-center justify-center p-4" onClick={() => setSelectedLog(null)}>
+      <div role="dialog" aria-modal="true" aria-label="Detalhes do registro de log" className="portal-standard-modal portal-modal-surface w-full max-w-4xl overflow-hidden" style={{ backgroundColor: 'var(--portal-surface-page)' }} onClick={event => event.stopPropagation()}>
+        <div className="portal-modal-header px-4"><FileCheck2 className="h-4 w-4"/><strong className="text-xs uppercase">Detalhes do registro</strong></div><div className="portal-modal-divider" aria-hidden="true" />
         <div className="grid max-h-[75vh] gap-3 overflow-y-auto p-3 md:grid-cols-2" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
           <section className="rounded-xl border border-slate-300 p-3" style={{ backgroundColor: 'var(--portal-surface-panel)' }}><strong className="text-[10px] uppercase text-slate-600">Estado anterior</strong><pre className="mt-2 max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[10px]">{selectedLog.before ? JSON.stringify(selectedLog.before, null, 2) : '(sem estado anterior)'}</pre></section>
           <section className="rounded-xl border border-slate-300 p-3" style={{ backgroundColor: 'var(--portal-surface-panel)' }}><strong className="text-[10px] uppercase text-slate-600">Estado posterior</strong><pre className="mt-2 max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[10px]">{selectedLog.after ? JSON.stringify(selectedLog.after, null, 2) : '(sem estado posterior)'}</pre></section>
