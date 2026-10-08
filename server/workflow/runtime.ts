@@ -264,7 +264,7 @@ function mergeMarkers(source: string, variables: Record<string, string>, html: b
 export function filterTemplateVariables(variables: Record<string,string>,studio:IntegrationStudioSettings): Record<string,string> {
   const blocked=new Set<string>();
   for(const form of studio.formTemplates||[]){
-    for(const question of form.questions||[]){
+    for(const question of (Array.isArray(form.questions)?form.questions:[])){
       if(question.availableToTemplates===false && question.fieldKey)blocked.add(normalizeWorkflowEventCode(String(question.fieldKey)));
     }
   }
