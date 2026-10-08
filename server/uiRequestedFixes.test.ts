@@ -90,7 +90,8 @@ test('Rodapé e Identidade é exclusivo do Master, autosalva e preserva troca ad
   assert.match(identity, /createAdministrationTransfer/);
   assert.match(identity, /retryAfterPortalReauthentication/);
   assert.match(reauthentication, /REAUTHENTICATION_REQUIRED/);
-  assert.match(identity, /Salvo automaticamente/);
+  assert.match(identity, /setTimeout\(\(\) => \{ void persistRegularFields\(\); \}, 700\)/);
+  assert.doesNotMatch(identity, /Alterações salvas automaticamente/);
   assert.doesNotMatch(identity, /Salvar membros|Salvar Contas Administrativas/);
 });
 
@@ -130,11 +131,14 @@ test('configurações removem personalização global e usam três grupos operac
 });
 
 test('modelos e documentos compartilham catálogo, variáveis e visualização segura', () => {
-  assert.match(documentModels, /Variáveis deste documento/);
+  assert.match(documentModels, /data-portal-document-direct-editor="true"/);
   assert.match(documentModels, /Visualizar modelo original/);
-  assert.match(documentModels, /Descobrir/);
+  assert.match(documentModels, /Atualizar variáveis/);
+  assert.match(documentModels, /variableUsageTitle/);
   assert.match(documentModels, /model\.driveFileUrl/);
   assert.match(documentModels, /samplePreview\[type\]/);
+  assert.doesNotMatch(documentModels, /Abrir no Drive/);
+  assert.doesNotMatch(documentModels, />Consolidar</);
   assert.match(configPage, /syncMasterModelCatalog/);
   assert.doesNotMatch(configPage, /initialTab="documents"/);
 });
