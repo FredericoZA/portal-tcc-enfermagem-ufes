@@ -11,7 +11,6 @@ GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 import {
   Activity,
   AtSign,
-  BookOpenCheck,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -821,28 +820,6 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     return pairs.sort((a,b)=>b.score-a.score).slice(0,8);
   }, [matrixColumns]);
 
-  const describeWorkflowAction = (action: WorkflowActionItem): string => {
-    if (action.type === 'form') {
-      const form = formTemplates.find(item => item.id === action.refId);
-      return `libera “${form?.title || action.title}” para ${form?.targetRole || 'o perfil definido'}`;
-    }
-    if (action.type === 'email') {
-      const email = emailTemplates.find(item => item.id === action.refId);
-      return `envia “${email?.name || action.title}” para ${email?.recipient || 'destinatários ainda não definidos'}`;
-    }
-    if (action.type === 'doc') {
-      const doc = docTemplates.find(item => item.id === action.refId);
-      const type = String(doc?.type || doc?.id || '').toUpperCase();
-      if (type.includes('CONVITE')) return `gera o Convite em PDF, arquiva no Drive e não solicita assinatura`;
-      if (type.includes('ATA')) return `gera a Ata pelo modelo ativo e envia à Asten para o orientador`;
-      if (type.includes('TERMO')) return `gera o Termo somente com publicação e envia à Asten para aluno(s) e orientador, simultaneamente`;
-      if (type.includes('DECLARACAO')) return `gera a Declaração e envia à Asten para o Presidente da Comissão`;
-      return `gera “${doc?.label || action.title}” pelo modelo ativo do Drive`;
-    }
-    return `executa uma ação interna; a publicação será bloqueada se não houver executor`;
-  };
-
-
   const selectedWorkflowStage = workflowStages.find(stage => stage.id === selectedWorkflowStageId) || workflowStages[0];
   const selectedWorkflowStageIndex = selectedWorkflowStage ? workflowStages.findIndex(stage => stage.id === selectedWorkflowStage.id) : -1;
   const workflowCatalog = [
@@ -852,6 +829,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     { value:'action:internal', type:'action' as const, label:'Ação interna do sistema', detail:'Ação' },
   ];
   const workflowCatalogAction = (stage: WorkflowStageItem, value:string) => {
+    if(value.startsWith('existing:'))return stage.actions.find(action=>action.id===value.slice('existing:'.length));
     const [type,refId]=value.split(':',2);
     return stage.actions.find(action => type==='action'
       ? action.type==='action'&&!action.refId
@@ -860,13 +838,24 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const toggleWorkflowCatalogItem = (stage:WorkflowStageItem,value:string,checked:boolean) => {
     const existing=workflowCatalogAction(stage,value);
     if(checked){
-      if(!existing)addWorkflowAction(stage.id,value);
+      if(!existing&&!value.startsWith('existing:'))addWorkflowAction(stage.id,value);
       return;
     }
     if(existing)removeWorkflowAction(stage.id,existing.id);
   };
   const selectedWorkflowRows = selectedWorkflowStage
-    ? workflowCatalog.map(item => ({...item,action:workflowCatalogAction(selectedWorkflowStage,item.value)}))
+    ? (() => {
+        const matchedIds=new Set<string>();
+        const catalogRows=workflowCatalog.map(item=>{
+          const action=workflowCatalogAction(selectedWorkflowStage,item.value);
+          if(action)matchedIds.add(action.id);
+          return {...item,action};
+        });
+        const preservedRows=selectedWorkflowStage.actions
+          .filter(action=>!matchedIds.has(action.id))
+          .map(action=>({value:`existing:${action.id}`,type:action.type,label:action.title,detail:'Ação existente',action}));
+        return [...catalogRows,...preservedRows];
+      })()
     : [];
   return (
     <div className={`portal-workspace portal-studio ${hideTabs ? 'mb-0 overflow-visible border-0 bg-transparent shadow-none' : `${panelClass} mb-5 overflow-hidden`}`}>
