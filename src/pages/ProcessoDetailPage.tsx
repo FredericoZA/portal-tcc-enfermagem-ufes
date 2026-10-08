@@ -45,7 +45,6 @@ import {
   History,
   Check,
   ShieldCheck,
-  X,
   Info,
   Building,
   GraduationCap,
@@ -786,7 +785,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     onClick={() => setEditingSection(null)}
                     className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer"
                   >
-                    <X className="w-3.5 h-3.5" />
                     <span>Cancelar</span>
                   </button>
                 ) : (
@@ -1281,7 +1279,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     onClick={() => setEditingSection(null)}
                     className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors cursor-pointer"
                   >
-                    <X className="w-3.5 h-3.5" />
                     <span>Cancelar</span>
                   </button>
                 ) : (
