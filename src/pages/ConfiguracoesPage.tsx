@@ -158,6 +158,7 @@ export interface FormQuestionItem {
   expectedAnswer: string;
   required: boolean;
   isReuseOfFieldKey?: boolean;
+  availableToTemplates?: boolean;
   helpText?: string;
   placeholder?: string;
   options?: string[];
