@@ -1190,7 +1190,7 @@ export const ConfiguracoesPage: React.FC = () => {
       description: 'O aluno confirma o local autorizado pelo Departamento de Enfermagem. O convite só é gerado depois desta confirmação.',
       questions: [
         { id: 'q2-1', fieldKey: 'CAMPO_07_LOCAL', label: 'Local confirmado para a defesa', fieldType: 'text', expectedAnswer: 'Sala, auditório ou endereço eletrônico autorizado', required: true },
-        { id: 'q2-2', fieldKey: 'COMPROVANTE_LOCAL_URL', label: 'Comprovação da autorização do local (opcional)', fieldType: 'file', expectedAnswer: 'Comprovante opcional em PDF; o aluno declara a confirmação recebida', required: false }
+        { id: 'q2-2', fieldKey: 'COMPROVANTE_LOCAL_URL', label: 'Comprovação da autorização do local (opcional)', fieldType: 'file', expectedAnswer: 'Comprovante opcional em PDF; o aluno declara a confirmação recebida', required: false, availableToTemplates: false }
       ]
     },
     {
@@ -1212,12 +1212,12 @@ export const ConfiguracoesPage: React.FC = () => {
       targetRole: 'Aluno',
       description: 'Formulário final do aluno para entregar o trabalho, registrar cinco palavras-chave, resumo sintético e decidir a publicação.',
       questions: [
-        { id: 'q4-1', fieldKey: 'PALAVRAS_CHAVE', label: 'Cinco palavras-chave', fieldType: 'text', expectedAnswer: 'Exatamente cinco palavras ou expressões, separadas por ponto e vírgula', required: true },
-        { id: 'q4-2', fieldKey: 'RESUMO_SINTETICO', label: 'Resumo sintético do trabalho', fieldType: 'textarea', expectedAnswer: 'De três a cinco parágrafos separados por linha em branco', required: true },
-        { id: 'q4-3', fieldKey: 'TRABALHO_FINAL_PDF', label: 'Trabalho final em PDF', fieldType: 'file', expectedAnswer: 'Arquivo final completo em PDF', required: true },
+        { id: 'q4-1', fieldKey: 'PALAVRAS_CHAVE', label: 'Cinco palavras-chave', fieldType: 'text', expectedAnswer: 'Exatamente cinco palavras ou expressões, separadas por ponto e vírgula', required: true, availableToTemplates: false },
+        { id: 'q4-2', fieldKey: 'RESUMO_SINTETICO', label: 'Resumo sintético do trabalho', fieldType: 'textarea', expectedAnswer: 'De três a cinco parágrafos separados por linha em branco', required: true, availableToTemplates: false },
+        { id: 'q4-3', fieldKey: 'TRABALHO_FINAL_PDF', label: 'Trabalho final em PDF', fieldType: 'file', expectedAnswer: 'Arquivo final completo em PDF', required: true, availableToTemplates: false },
         { id: 'q4-4', fieldKey: 'PUBLICAR_TRABALHO_COMPLETO', label: 'Autoriza tornar o trabalho completo público?', fieldType: 'radio', expectedAnswer: 'Sim ou não', required: true, options: ['Sim', 'Não'] },
         { id: 'q4-5', fieldKey: 'INCLUIR_RESUMO_EXPANDIDO', label: 'Deseja anexar um resumo expandido?', fieldType: 'radio', expectedAnswer: 'Sim ou não', required: true, options: ['Sim', 'Não'] },
-        { id: 'q4-6', fieldKey: 'RESUMO_EXPANDIDO_PDF', label: 'Resumo expandido em PDF', fieldType: 'file', expectedAnswer: 'Arquivo opcional em PDF', required: false, visibleWhen: { fieldKey: 'INCLUIR_RESUMO_EXPANDIDO', operator: 'EQUALS', value: 'Sim' } },
+        { id: 'q4-6', fieldKey: 'RESUMO_EXPANDIDO_PDF', label: 'Resumo expandido em PDF', fieldType: 'file', expectedAnswer: 'Arquivo opcional em PDF', required: false, availableToTemplates: false, visibleWhen: { fieldKey: 'INCLUIR_RESUMO_EXPANDIDO', operator: 'EQUALS', value: 'Sim' } },
         { id: 'q4-7', fieldKey: 'PUBLICAR_RESUMO_EXPANDIDO', label: 'Autoriza tornar o resumo expandido público?', fieldType: 'radio', expectedAnswer: 'Sim ou não', required: true, options: ['Sim', 'Não'], visibleWhen: { fieldKey: 'INCLUIR_RESUMO_EXPANDIDO', operator: 'EQUALS', value: 'Sim' } }
       ]
     }
