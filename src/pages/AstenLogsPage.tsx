@@ -178,9 +178,9 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
       </>}
     </div>
 
-    {selectedJob && <div className="fixed inset-0 z-[1000009] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm" onClick={() => setSelectedJob(null)}>
-      <section role="dialog" aria-modal="true" aria-label="Auditoria do registro de assinatura" className="w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-300 shadow-2xl" style={{ backgroundColor: 'var(--portal-surface-page)' }} onClick={(event) => event.stopPropagation()}>
-        <header className="flex items-center gap-2 border-b-[5px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true"/><strong className="text-xs uppercase">Auditoria da assinatura</strong></header>
+    {selectedJob && <div className="portal-modal-backdrop fixed inset-0 z-[1000009] flex items-center justify-center p-4" onClick={() => setSelectedJob(null)}>
+      <section role="dialog" aria-modal="true" aria-label="Auditoria do registro de assinatura" className="portal-standard-modal portal-modal-surface w-full max-w-5xl overflow-hidden" style={{ backgroundColor: 'var(--portal-surface-page)' }} onClick={(event) => event.stopPropagation()}>
+        <header className="portal-modal-header px-4"><ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true"/><strong className="text-xs uppercase">Auditoria da assinatura</strong></header><div className="portal-modal-divider" aria-hidden="true" />
         <div className="max-h-[78vh] overflow-y-auto p-3" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{[
             ['Processo', selectedJob.protocol || selectedJob.processId], ['Documento', selectedJob.documentTitle], ['Método', providerLabel(selectedJob.provider)],
