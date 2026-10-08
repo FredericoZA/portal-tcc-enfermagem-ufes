@@ -59,11 +59,15 @@ test('bundle compilado local preserva autenticação demo e seletor de usuário'
   assert.match(app,/isLocalDemoFrontend\(\) && <UserSimulatorBar/);
 });
 
-test('exemplo local contém sessão e OTP suficientes para funcionar sem serviços externos',()=>{
+test('bootstrap gera segredos locais sem versioná-los',()=>{
   const env=read('.env.development.example');
+  const prepare=read('scripts/prepare-local.mjs');
   assert.match(env,/PORTAL_ALLOW_INSECURE_DEMO_AUTH="true"/);
-  assert.match(env,/PORTAL_SESSION_SECRET="[^"]{32,}"/);
-  assert.match(env,/PORTAL_OTP_PEPPER="[^"]{32,}"/);
+  assert.match(env,/PORTAL_SESSION_SECRET=""/);
+  assert.match(env,/PORTAL_OTP_PEPPER=""/);
   assert.match(env,/PORTAL_OTP_DELIVERY_MODE="log"/);
   assert.match(env,/PORTAL_OTP_TEST_CODE="\d{6}"/);
+  assert.match(prepare,/randomBytes\(36\)\.toString\('base64url'\)/);
+  assert.match(prepare,/ensureSecret\('PORTAL_SESSION_SECRET'\)/);
+  assert.match(prepare,/ensureSecret\('PORTAL_OTP_PEPPER'\)/);
 });
