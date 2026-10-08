@@ -1,15 +1,12 @@
 import { portalConfirm } from '../services/portalDialogs';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   LoginPopupConfig,
   DEFAULT_LOGIN_POPUP_CONFIG,
   saveLoginPopupConfig
 } from '../utils/loginPopupConfig';
 import {
-  X,
-  Sparkles,
   RotateCcw,
-  Check,
   Palette,
   Layout,
   Type,
@@ -49,19 +46,21 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
   const [config, setConfig] = useState<LoginPopupConfig>(() => ({ ...DEFAULT_LOGIN_POPUP_CONFIG, ...initialConfig }));
   const [activeTab, setActiveTab] = useState<'textos' | 'estilo' | 'elementos'>('textos');
   const [previewEmail, setPreviewEmail] = useState('');
-  const [savedSuccess, setSavedSuccess] = useState(false);
+  useEffect(() => {
+    if (!isOpen) return;
+    setConfig({ ...DEFAULT_LOGIN_POPUP_CONFIG, ...initialConfig });
+  }, [isOpen, initialConfig]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = window.setTimeout(() => {
+      saveLoginPopupConfig(config);
+      onSave?.(config);
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [config, isOpen, onSave]);
 
   if (!isOpen) return null;
-
-  const handleSave = () => {
-    saveLoginPopupConfig(config);
-    if (onSave) onSave(config);
-    setSavedSuccess(true);
-    setTimeout(() => {
-      setSavedSuccess(false);
-      onClose();
-    }, 800);
-  };
 
   const handleReset = async () => {
     if ((await portalConfirm('Deseja restaurar os padrões institucionais do popup de login?'))) {
@@ -102,14 +101,6 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Restaurar Padrão</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="portal-settings-header-pill"
-            >
-              {savedSuccess ? <Check className="w-4 h-4" /> : <Sparkles className="w-3.5 h-3.5" />}
-              <span>{savedSuccess ? 'Salvo!' : 'Salvar Alterações'}</span>
             </button>
           </div>
         </div>
