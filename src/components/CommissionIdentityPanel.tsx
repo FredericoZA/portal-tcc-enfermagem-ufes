@@ -133,8 +133,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
       await durableRetry(() => apiClient.updateSettings(patch as any));
       await refreshAuth();
       lastSavedRef.current = next;
-      setStatusText('Salvo automaticamente');
-      window.setTimeout(() => setStatusText(''), 1800);
+
     } catch (error: any) {
       setErrorText(error instanceof Error ? error.message : 'Não foi possível salvar os dados do rodapé.');
     } finally { setSaving(false); }
@@ -174,11 +173,8 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
   const updateMember = (id: string, updates: Partial<CommissionMemberInfo>) => setMembers(prev => prev.map(member => member.id === id ? { ...member, ...updates } : member));
 
   return (
-    <section className="portal-identity-panel space-y-3 p-3 sm:p-4" style={{ backgroundColor: 'var(--portal-surface-page)' }} aria-label="Dados de rodapé e identidade">
-      <div className="flex min-h-4 justify-end text-right text-[9px] font-bold">
-        {saving ? <span className="text-slate-500">Salvando…</span> : statusText ? <span className="text-[var(--portal-brand-action)]">{statusText}</span> : <span className="text-slate-500">Alterações salvas automaticamente</span>}
-      </div>
-
+    <section className="portal-identity-panel space-y-2 p-3 sm:p-4" style={{ backgroundColor: 'var(--portal-surface-page)' }} aria-label="Dados de rodapé e identidade">
+      {statusText && <div className="text-right text-[9px] font-bold text-[var(--portal-brand-action)]">{statusText}</div>}
       <div className="grid gap-2 md:grid-cols-2">
         <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>Nome da Secretaria / Administrador Master</span><input value={masterName} onChange={event => setMasterName(event.target.value)} onBlur={() => void persistRegularFields()} className={inputClass}/></label>
         <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>E-mail de acesso do Usuário Master</span><input type="email" value={masterEmail} onChange={event => setMasterEmail(event.target.value)} onBlur={() => void persistSensitiveEmails()} className={inputClass}/></label>
