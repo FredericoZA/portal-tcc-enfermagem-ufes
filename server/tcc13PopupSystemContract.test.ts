@@ -98,3 +98,13 @@ test('Indicadores usa título full-width, faixa branca e respiro antes das caixa
   assert.match(page,/<PortalSectionDivider \/>/);
   assert.match(page,/px-3 pb-4 pt-3 sm:px-4 sm:pt-4/);
 });
+
+
+test('editor do popup de login usa autosave e não exibe salvar ou X',()=>{
+  const source=read('src/components/LoginPopupEditorModal.tsx');
+  assert.match(source,/window\.setTimeout\(\(\) => \{/);
+  assert.match(source,/saveLoginPopupConfig\(config\)/);
+  assert.doesNotMatch(source,/Salvar Alterações/);
+  assert.doesNotMatch(source,/<X\b/);
+  assert.doesNotMatch(source,/handleSave/);
+});
