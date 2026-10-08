@@ -18,6 +18,9 @@ test('desenvolvimento oferece bootstrap único, modo compilado e verificação d
   assert.match(compiled,/PORTAL_SERVE_COMPILED_CLIENT: 'true'/);
   assert.match(compiled,/PORTAL_GIT_COMMIT: commit/);
   assert.match(compiled,/VITE_PORTAL_LOCAL_DEMO_AUTH: 'true'/);
+  assert.match(compiled,/PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'true'/);
+  assert.match(compiled,/PORTAL_ALLOW_LOCAL_OTP_STORE: 'true'/);
+  assert.match(compiled,/PORTAL_OTP_DELIVERY_MODE: 'log'/);
 });
 
 test('build local identifica o mesmo commit que CI e Vercel',()=>{
