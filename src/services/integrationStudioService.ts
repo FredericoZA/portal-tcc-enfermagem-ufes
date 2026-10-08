@@ -188,6 +188,7 @@ export function discoverVariables(artifacts: StudioArtifacts): string[] {
   });
   artifacts.formTemplates.forEach((form) => {
     (form.questions || []).forEach((question: any) => {
+      if (question.availableToTemplates === false) return;
       const key = normalizeVariableKey(question.fieldKey);
       if (key) keys.add(key);
     });
