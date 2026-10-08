@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -13,9 +14,22 @@ const packageVersion = (() => {
   }
 })();
 
+function localGitCommit(): string {
+  try {
+    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], { encoding: 'utf8' }).trim();
+  } catch {
+    return '';
+  }
+}
+
 export default defineConfig(() => {
   const appVersion = packageVersion || process.env.npm_package_version || '0.0.0';
-  const gitCommit = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || '').slice(0, 7);
+  const gitCommit = (
+    process.env.VERCEL_GIT_COMMIT_SHA ||
+    process.env.GITHUB_SHA ||
+    process.env.PORTAL_GIT_COMMIT ||
+    localGitCommit()
+  ).slice(0, 7);
 
   return {
     plugins: [react(), tailwindcss()],
