@@ -10,7 +10,6 @@ import {
   Columns,
   RotateCcw,
   CheckCircle2,
-  X,
   Building2,
   Menu,
   Layers,
@@ -1440,9 +1439,6 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               <span>{saveMessage}</span>
             </span>
-            <button type="button" onClick={() => setSaveMessage(null)} className="text-white hover:opacity-80">
-              <X className="w-4 h-4" />
-            </button>
           </div>
         )}
 
