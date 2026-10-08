@@ -4,6 +4,7 @@ import { PortalModalShell } from './components/PortalModalShell';
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { UserSimulatorBar } from './components/UserSimulatorBar';
+import { isLocalDemoFrontend } from './utils/runtimeEnvironment';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -139,7 +140,7 @@ export default function App() {
       <PortalDialogs />
       <PortalAccessRedirect />
       <div id="portal-app-root" className="min-h-screen flex flex-col font-sans antialiased text-slate-900" style={{ ...getPortalSemanticRootVars(), backgroundColor: 'var(--portal-surface-page)' }}>
-        {(import.meta as any).env?.DEV && <UserSimulatorBar />}
+        {isLocalDemoFrontend() && <UserSimulatorBar />}
 
         <div className="flex-1 flex overflow-hidden">
           <Sidebar

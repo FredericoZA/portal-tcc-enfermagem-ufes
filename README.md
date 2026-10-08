@@ -31,12 +31,12 @@ Desde a **RC9**, o formulário do orientador está integrado à tela e à API: a
 Requisitos: Node.js 22 e npm 11.
 
 ```bash
-npm ci
-cp .env.development.example .env.local
-npm run dev
+npm run local
 ```
 
-O portal inicia em `http://localhost:3000`. `npm run dev` usa Vite/HMR e dados locais. Para validar o mesmo artefato de frontend que será publicado, use `npm run dev:compiled`; ele executa o build antes de iniciar o servidor local. Antes de comparar qualquer tela local com a Vercel, execute `npm run parity:check` e confirme que os commits coincidem.
+O portal inicia em `http://localhost:3000`. O comando `npm run local` prepara automaticamente o workspace: cria `.env.local` a partir do exemplo seguro caso ele ainda não exista, instala dependências quando necessário, compila o frontend e serve o mesmo tipo de artefato usado na produção, mantendo autenticação e dados de demonstração locais.
+
+Para desenvolvimento rápido com HMR, depois da preparação use `npm run dev`. Antes de comparar qualquer tela local com a Vercel, execute `npm run parity:check` e confirme que os commits coincidem.
 
 O arquivo de desenvolvimento habilita apenas dados e autenticação simulados locais; nunca o envie à Vercel. Para produção, use `.env.example` como checklist de variáveis do painel da Vercel. Produção bloqueia inicialização sem Master de bootstrap, segredos fortes e runtime Supabase v6. Uploads de DOCX e PDF usam URL assinada de curta duração para um bucket Supabase privado; depois da validação de tamanho, MIME e SHA-256, o arquivo é enviado ao Drive e removido do staging.
 
