@@ -1082,6 +1082,23 @@ function assertSignatureEligibility(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO
 const signatureJobCreationLocks=new Map<string,Promise<SignatureJob>>();
 async function createSignatureJobUnlocked(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',actor:string,renderVariables:Record<string,string>={},provider:'ASTEN'|'GOV_BR'='ASTEN'):Promise<SignatureJob>{
   assertSignatureEligibility(p,type);
+  const conflictingJobs=signatureJobsStore.filter(job=>
+    job.processId===p.id &&
+    job.documentType===type &&
+    job.sourceDataRevision===p.dataRevision &&
+    job.provider!==provider &&
+    job.status!=='CANCELED'
+  );
+  if(provider==='ASTEN'&&conflictingJobs.some(job=>job.provider==='GOV_BR')){
+    throw new Error('Já existe assinatura Gov.br ativa para este documento. Não é permitido iniciar também a Asten.');
+  }
+  if(provider==='GOV_BR'&&conflictingJobs.some(job=>
+    job.provider==='ASTEN' &&
+    (job.providerCreationState==='UNCERTAIN'||Boolean(job.providerEnvelopeId)||
+      ['SENDING','SENT','PARTIALLY_SIGNED','SIGNED','DRIVE_SYNC_PENDING','ARCHIVED'].includes(job.status))
+  )){
+    throw new Error('A assinatura Asten já foi iniciada. Confira o envelope antes de mudar para Gov.br.');
+  }
   const signers=deriveSignatureSigners(p,type);
   if(signers.some(s=>!isValidPortalEmail(s.email)))throw new Error(`${p.protocolo}: signatário sem e-mail válido.`);
   const verificationCode=buildDocumentVerificationCode(p,type);
@@ -1097,6 +1114,13 @@ async function createSignatureJobUnlocked(p:ProcessData,type:'ATA'|'TERMO'|'DECL
   const {accessToken,folderId}=await ensureWorkflowProcessFolder(p);
   const uploaded=await uploadGeneratedPdfToDrive({rootFolderId:currentSettings.driveRootFolderId,protocol:p.protocolo,accessToken,processFolderId:folderId,processId:p.id,jobId:job.id,documentType:type,fileName:job.fileName,pdf,sha256:contentSha256});
   job.driveUnsignedFileId=String(uploaded.id);
+  if(provider==='GOV_BR'){
+    for(const previous of conflictingJobs.filter(item=>item.provider==='ASTEN')){
+      previous.status='CANCELED';
+      previous.lastError='Substituído por assinatura Gov.br antes do envio à Asten.';
+      previous.updatedAt=new Date().toISOString();
+    }
+  }
   signatureJobsStore.push(job);
   await persistPortalStateDurably();
   return job;
@@ -1111,6 +1135,21 @@ async function createSignatureJob(p:ProcessData,type:'ATA'|'TERMO'|'DECLARACAO',
 }
 const signatureDispatchLocks=new Set<string>();
 async function dispatchSignatureJobAutomatically(job:SignatureJob):Promise<SignatureJob>{
+  if(job.status==='CANCELED')return job;
+  const conflictingGov=signatureJobsStore.some(other=>
+    other.processId===job.processId &&
+    other.documentType===job.documentType &&
+    other.sourceDataRevision===job.sourceDataRevision &&
+    other.provider==='GOV_BR' &&
+    other.status!=='CANCELED'
+  );
+  if(job.provider==='ASTEN'&&conflictingGov){
+    job.status='CANCELED';
+    job.lastError='Envio Asten bloqueado: assinatura Gov.br já ativa.';
+    job.updatedAt=new Date().toISOString();
+    await persistPortalStateDurably();
+    return job;
+  }
   if(job.status==='DRIVE_SYNC_PENDING')return archiveSignatureJobAutomatically(job);
   if(['SENT','PARTIALLY_SIGNED','SIGNED','ARCHIVED'].includes(job.status)||signatureDispatchLocks.has(job.id))return job;
   if(job.providerCreationState==='UNCERTAIN'&&!job.providerEnvelopeId){job.status='PROVIDER_ERROR';job.lastError='A criação do envelope ficou com resultado incerto. Não repita automaticamente: confira a conta Asten e faça a reconciliação administrativa.';job.updatedAt=new Date().toISOString();return job;}
@@ -2920,7 +2959,7 @@ export async function createPortalApp() {
     }catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível arquivar o PDF assinado pelo Gov.br.'});}
   });
 
-  app.post('/api/signatures/jobs/:id/retry',requireAuthenticated,requireAdministrator,async(req,res)=>{const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Entre novamente antes de repetir o envio.',code:'REAUTHENTICATION_REQUIRED'});const job=signatureJobsStore.find(item=>item.id===req.params.id);if(!job)return res.status(404).json({error:'Item não encontrado.'});if(!allowSignatureRetry(identity.email,job.id))return res.status(429).json({error:'Muitas tentativas de reenvio em sequência. Aguarde um minuto e tente novamente.',code:'SIGNATURE_RETRY_RATE_LIMIT'});const signatureProcess=processesStore.find(item=>item.id===job.processId);if(!signatureProcess)return res.status(409).json({error:'O processo associado não está disponível.'});try{assertSignatureEligibility(signatureProcess,job.documentType as 'ATA'|'TERMO'|'DECLARACAO');if(job.sourceDataRevision!==signatureProcess.dataRevision)throw new Error(`${signatureProcess.protocolo}: os dados mudaram desde a geração desta assinatura. Gere o documento novamente pelo fluxo atual.`);}catch(error){return res.status(409).json({error:error instanceof Error?error.message:'O processo ainda não está elegível para assinatura.',code:'SIGNATURE_FLOW_GATE'});}await dispatchSignatureJobAutomatically(job);const failed=['PROVIDER_ERROR','WAITING_INTEGRATION','DRIVE_SYNC_PENDING'].includes(job.status);if(!failed){const process=processesStore.find(item=>item.id===job.processId);if(process){const eventCode:WorkflowEventCode=job.documentType==='ATA'?'EVALUATION_SUBMITTED':job.documentType==='DECLARACAO'?'PUBLICATION_CLEARED':'REPOSITORY_SUBMITTED';await executeConfiguredWorkflowEvent(process,eventCode,identity.email);}}res.status(failed?409:200).json(publicSignatureJob(job));});
+  app.post('/api/signatures/jobs/:id/retry',requireAuthenticated,requireAdministrator,async(req,res)=>{const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Entre novamente antes de repetir o envio.',code:'REAUTHENTICATION_REQUIRED'});const job=signatureJobsStore.find(item=>item.id===req.params.id);if(!job)return res.status(404).json({error:'Item não encontrado.'});if(job.status==='CANCELED'||(job.provider==='ASTEN'&&signatureJobsStore.some(other=>other.processId===job.processId&&other.documentType===job.documentType&&other.sourceDataRevision===job.sourceDataRevision&&other.provider==='GOV_BR'&&other.status!=='CANCELED')))return res.status(409).json({error:'Assinatura Asten cancelada ou substituída por Gov.br. Não é permitido reenviar.',code:'SIGNATURE_PROVIDER_CONFLICT'});if(!allowSignatureRetry(identity.email,job.id))return res.status(429).json({error:'Muitas tentativas de reenvio em sequência. Aguarde um minuto e tente novamente.',code:'SIGNATURE_RETRY_RATE_LIMIT'});const signatureProcess=processesStore.find(item=>item.id===job.processId);if(!signatureProcess)return res.status(409).json({error:'O processo associado não está disponível.'});try{assertSignatureEligibility(signatureProcess,job.documentType as 'ATA'|'TERMO'|'DECLARACAO');if(job.sourceDataRevision!==signatureProcess.dataRevision)throw new Error(`${signatureProcess.protocolo}: os dados mudaram desde a geração desta assinatura. Gere o documento novamente pelo fluxo atual.`);}catch(error){return res.status(409).json({error:error instanceof Error?error.message:'O processo ainda não está elegível para assinatura.',code:'SIGNATURE_FLOW_GATE'});}await dispatchSignatureJobAutomatically(job);const failed=['PROVIDER_ERROR','WAITING_INTEGRATION','DRIVE_SYNC_PENDING'].includes(job.status);if(!failed){const process=processesStore.find(item=>item.id===job.processId);if(process){const eventCode:WorkflowEventCode=job.documentType==='ATA'?'EVALUATION_SUBMITTED':job.documentType==='DECLARACAO'?'PUBLICATION_CLEARED':'REPOSITORY_SUBMITTED';await executeConfiguredWorkflowEvent(process,eventCode,identity.email);}}res.status(failed?409:200).json(publicSignatureJob(job));});
   app.post('/api/signatures/jobs/generate',requireAuthenticated,requireAdministrator,(_req,res)=>res.status(410).json({error:'A geração em lote foi desativada. Use a ação do documento dentro do TCC.',code:'LEGACY_SIGNATURE_GENERATION_DISABLED'}));
   app.post('/api/signatures/jobs/:id/approve',requireAuthenticated,requireAdministrator,(_req,res)=>res.status(410).json({error:'A aprovação de buffer foi desativada. Use a ação do documento dentro do TCC.',code:'LEGACY_SIGNATURE_APPROVAL_DISABLED'}));
   app.post('/api/signatures/jobs/:id/dispatch',requireAuthenticated,requireAdministrativeOperator,(_req,res)=>res.status(410).json({error:'O disparo de buffer foi desativado. Use a ação do documento dentro do TCC.',code:'LEGACY_SIGNATURE_DISPATCH_DISABLED'}));
