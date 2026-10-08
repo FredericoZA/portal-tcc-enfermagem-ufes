@@ -1315,3 +1315,31 @@ button[aria-label^="Configurar exibição"],
 .portal-table-settings-popover > .portal-settings-popover-header .portal-modal-header-close {
   display: none;
 }
+
+
+/* Estúdio legado migrado para a mesma geometria dos pop-ups canônicos sem
+   alterar a lógica funcional dos formulários. */
+.portal-flow-modal {
+  background: var(--portal-surface-page);
+}
+
+.portal-flow-modal > .portal-flow-modal-header {
+  box-sizing: border-box;
+  width: calc(100% + 40px);
+  min-height: var(--portal-sheet-title-height);
+  margin: -20px -20px 0;
+  padding: 0 var(--portal-bar-padding-x);
+  border: 0;
+  border-bottom: var(--portal-sheet-content-divider) solid var(--portal-surface-inner);
+  border-radius: 0;
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
+}
+
+.portal-flow-modal > .portal-flow-modal-header :is(h1,h2,h3,h4,p,span,svg) {
+  color: inherit !important;
+}
+
+.portal-flow-modal > :not(.portal-flow-modal-header) {
+  position: relative;
+}
