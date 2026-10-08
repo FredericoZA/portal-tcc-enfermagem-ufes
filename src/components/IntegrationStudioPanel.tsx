@@ -171,6 +171,71 @@ function formatAuditAction(action: string): string {
   return labels[action] || action;
 }
 
+const TemplateVariableControl: React.FC<{
+  value: string;
+  onChange: (value:string)=>void;
+  variables: Array<{id:string;name:string;label?:string}>;
+  multiline?: boolean;
+  rows?: number;
+  className?: string;
+  placeholder?: string;
+  ariaLabel?: string;
+}> = ({ value, onChange, variables, multiline=false, rows=4, className='', placeholder='', ariaLabel }) => {
+  const ref=useRef<HTMLInputElement|HTMLTextAreaElement|null>(null);
+  const [cursor,setCursor]=useState(value.length);
+  const trigger=value.lastIndexOf('<<',Math.max(0,cursor));
+  const rawQuery=trigger>=0?value.slice(trigger+2,cursor):'';
+  const menuOpen=trigger>=0&&!rawQuery.includes('>>')&&!rawQuery.includes('\n');
+  const query=normalizeVariableKey(rawQuery);
+  const options=menuOpen
+    ? variables.filter(variable=>{
+        const key=normalizeVariableKey(variable.name||variable.id);
+        const label=normalizeVariableKey(variable.label||'');
+        return !query||key.includes(query)||label.includes(query);
+      }).slice(0,10)
+    : [];
+
+  const syncCursor=(target:HTMLInputElement|HTMLTextAreaElement)=>{
+    setCursor(target.selectionStart??target.value.length);
+  };
+  const choose=(variable:{id:string;name:string;label?:string})=>{
+    if(trigger<0)return;
+    const key=normalizeVariableKey(variable.name||variable.id);
+    const token=`<<${key}>>`;
+    const next=value.slice(0,trigger)+token+value.slice(cursor);
+    const nextCursor=trigger+token.length;
+    onChange(next);
+    setCursor(nextCursor);
+    window.requestAnimationFrame(()=>{
+      const el=ref.current;
+      if(!el)return;
+      el.focus();
+      el.setSelectionRange(nextCursor,nextCursor);
+    });
+  };
+
+  const shared={
+    value,
+    placeholder,
+    'aria-label':ariaLabel,
+    onChange:(event:React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement>)=>{onChange(event.target.value);syncCursor(event.target);},
+    onClick:(event:React.MouseEvent<HTMLInputElement|HTMLTextAreaElement>)=>syncCursor(event.currentTarget),
+    onKeyUp:(event:React.KeyboardEvent<HTMLInputElement|HTMLTextAreaElement>)=>syncCursor(event.currentTarget),
+    className,
+  };
+  return <div className="relative">
+    {multiline
+      ? <textarea ref={node=>{ref.current=node;}} rows={rows} {...shared}/>
+      : <input ref={node=>{ref.current=node;}} {...shared}/>}
+    {menuOpen&&options.length>0&&<div className="absolute left-0 top-full z-30 mt-1 max-h-56 w-full min-w-[280px] overflow-auto rounded-lg border border-slate-300 bg-white p-1 shadow-xl" role="listbox" aria-label="Variáveis disponíveis">
+      {options.map(variable=><button key={variable.id} type="button" onMouseDown={event=>event.preventDefault()} onClick={()=>choose(variable)} className="flex w-full items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left hover:bg-slate-100">
+        <span className="truncate text-[10px] font-bold text-slate-800">{variable.label||variable.name}</span>
+        <code className="shrink-0 text-[9px] text-[var(--portal-brand-action)]">{`<<${normalizeVariableKey(variable.name||variable.id)}>>`}</code>
+      </button>)}
+    </div>}
+  </div>;
+};
+
 const FormQuestionEditor: React.FC<{
   question: FormQuestionItem;
   index: number;
@@ -198,6 +263,7 @@ const FormQuestionEditor: React.FC<{
     <div className="mt-2 flex flex-wrap gap-3 text-[10px] font-bold text-slate-600">
       <label className="flex items-center gap-2"><input type="checkbox" checked={question.required} onChange={(event) => onChange({ required: event.target.checked })} />Campo obrigatório</label>
       <label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(question.visibleWhen?.fieldKey)} onChange={(event) => onChange({ visibleWhen: event.target.checked ? { fieldKey: previousQuestions[0]?.fieldKey || '', operator: 'EQUALS', value: '' } : undefined })} />Exibição condicional</label>
+      <label className="flex items-center gap-2"><input type="checkbox" checked={question.availableToTemplates !== false} onChange={(event) => onChange({ availableToTemplates: event.target.checked })} />Disponível para e-mails e documentos</label>
     </div>
     {(question.fieldType === 'select' || question.fieldType === 'radio') && <div className="mt-2"><label className={labelClass}>Opções (uma por linha)</label><textarea rows={3} value={(question.options || []).join('\n')} onChange={(event) => onChange({ options: event.target.value.split('\n').map((value) => value.trim()).filter(Boolean) })} className={inputClass}/></div>}
     {question.visibleWhen?.fieldKey !== undefined && <div className="mt-2 grid gap-2 rounded-lg border border-slate-300 bg-slate-50 p-2 sm:grid-cols-3"><select value={condition.fieldKey} onChange={(event) => onChange({ visibleWhen: { ...condition, fieldKey: event.target.value } })} className={inputClass}><option value="">Campo anterior…</option>{previousQuestions.filter((item) => item.fieldKey).map((item) => <option key={item.id} value={item.fieldKey}>{item.label}</option>)}</select><select value={condition.operator} onChange={(event) => onChange({ visibleWhen: { ...condition, operator: event.target.value as typeof condition.operator } })} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">Está marcado</option></select>{!['NOT_EMPTY', 'IS_TRUE'].includes(condition.operator) && <input value={condition.value || ''} onChange={(event) => onChange({ visibleWhen: { ...condition, value: event.target.value } })} className={inputClass} placeholder="Valor esperado"/>}</div>}
@@ -281,6 +347,15 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const selectedFormDesign = selectedForm
     ? { ...defaultFormDesign(selectedForm.id, brandKit), ...(formDesigns[selectedForm.id] || {}) }
     : defaultFormDesign('', brandKit);
+  const templateVariables = useMemo(() => {
+    const allowedKeys=new Set<string>();
+    formTemplates.forEach(form=>form.questions.forEach(question=>{
+      if(question.availableToTemplates===false)return;
+      const key=normalizeVariableKey(question.fieldKey);
+      if(key)allowedKeys.add(key);
+    }));
+    return matrixColumns.filter(column=>allowedKeys.has(normalizeVariableKey(column.name||column.id)));
+  },[formTemplates,matrixColumns]);
   const validationReport = useMemo(() => validateCourseStudio({
     schemaVersion: 3,
     brandKit,
@@ -594,7 +669,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       expectedAnswer:'',
       required:false,
       validation:{},
-      isReuseOfFieldKey:true
+      isReuseOfFieldKey:true,
+      availableToTemplates:true
     };
     updateSelectedForm({questions:[...selectedForm.questions,question]});
     setSelectedFormQuestionId(question.id);
