@@ -62,7 +62,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
 
   const singlePane = sections.length === 1;
   const sheetWorkspace = singlePane && SHEET_SECTION_IDS.has(current.id);
-  const compactWorkspace = singlePane && ['identity', 'authorizations', 'integrations'].includes(current.id);
+  const compactWorkspace = singlePane && ['identity', 'integrations'].includes(current.id);
   const fullBleed = current.fullBleed ?? (current.id === 'integrations' || current.id === 'models-documents' || sheetWorkspace);
   const singlePaneContent = singlePane && React.isValidElement(current.content)
     ? React.cloneElement(current.content as React.ReactElement<EmbeddedCapableProps>, { embedded: true })
@@ -70,7 +70,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
 
   const workspaceContent = singlePane ? (
     <main
-      className="portal-settings-single-pane min-w-0 flex-1 overflow-auto p-0"
+      className={`portal-settings-single-pane min-w-0 flex-1 p-0 ${sheetWorkspace ? 'overflow-hidden' : 'overflow-auto'}`}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
       style={{ backgroundColor: 'var(--portal-surface-page)' }}
@@ -122,7 +122,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       data-portal-compact={compactWorkspace ? 'true' : 'false'}
-      className={`portal-settings-workspace flex w-full flex-col overflow-hidden ${compactWorkspace ? 'h-auto max-h-[72vh] max-w-[980px]' : 'h-[min(92vh,900px)] max-w-[1500px]'}`}
+      className={`portal-settings-workspace flex w-full flex-col overflow-hidden ${sheetWorkspace ? 'h-[min(82vh,760px)] max-w-[1500px]' : compactWorkspace ? 'h-auto max-h-[72vh] max-w-[980px]' : 'h-[min(92vh,900px)] max-w-[1500px]'}`}
       style={{ backgroundColor: 'var(--portal-surface-page)' }}
     >
       <header className="portal-settings-workspace-header">
