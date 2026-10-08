@@ -320,6 +320,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [isDirty, setIsDirty] = useState(false);
   const appliedSnapshotRef = useRef<string>('');
   const hasHydratedRef = useRef(false);
+  const remoteAutosaveRequestRef = useRef(0);
 
   useEffect(() => { if (initialTab) setActiveTab(initialTab); }, [initialTab]);
 
@@ -480,6 +481,27 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     }, 650);
     return () => window.clearTimeout(timer);
   }, [draftFingerprint, isDirty, isSaving, revision, validationReport.score]);
+
+  useEffect(() => {
+    if (!hideTabs || !hasHydratedRef.current || !isDirty || isSaving) return;
+    const fingerprint=draftFingerprint;
+    const timer=window.setTimeout(() => {
+      const requestId=++remoteAutosaveRequestRef.current;
+      const snapshot=buildSnapshot();
+      void apiClient.updateSettings({ integrationStudio: snapshot }).then(() => {
+        if(requestId!==remoteAutosaveRequestRef.current)return;
+        saveLocalStudio(snapshot);
+        setRevision(snapshot.revision);
+        setLastSavedAt(snapshot.savedAt);
+        setDraftSavedAt('');
+        setIsDirty(current=>current && draftFingerprint!==fingerprint);
+        appliedSnapshotRef.current=`${snapshot.savedAt}:${snapshot.revision}`;
+      }).catch(error=>{
+        console.error('Autosave do estúdio falhou',error);
+      });
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [hideTabs,draftFingerprint,isDirty,isSaving,revision,validationReport.score]);
 
   const persistSnapshot = async (withAudit = false) => {
     if (isSaving) return;
