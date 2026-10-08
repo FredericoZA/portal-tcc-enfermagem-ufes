@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, X } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { TableTextFormat } from './TableColumnSelectorPanel';
 import { getTableStyles } from '../utils/tableFormatters';
 
@@ -66,15 +66,15 @@ export const SearchPopover: React.FC<SearchPopoverProps> = ({
 
       {isOpen && createPortal(
         <div ref={popupRef} className="portal-search-popover portal-modal-surface fixed z-[1000001] w-64 max-h-[calc(100vh-1rem)] overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150" style={{ top: `${popoverPos.top}px`, left: `${popoverPos.left}px` }}>
-          <div className="portal-modal-header flex items-center justify-between px-3 py-1.5">
+          <div className="portal-modal-header flex items-center px-3 py-1.5">
             <span className="text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5"><Search className="w-3.5 h-3.5" />Buscar Registros</span>
-            <button type="button" onClick={() => setIsOpen(false)} className="portal-modal-header-close" aria-label="Fechar busca" title="Fechar"><X className="h-3.5 w-3.5" aria-hidden="true"/></button>
           </div>
+          <div className="portal-modal-divider" aria-hidden="true" />
           <div className="p-2.5 flex flex-col gap-2">
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input ref={inputRef} type="text" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} className="w-full pl-8 pr-7 py-1 bg-slate-50 border border-slate-200 text-slate-800 text-xs placeholder-slate-400 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-300 focus:border-slate-300 font-medium h-8" />
-              {value && <button type="button" onClick={() => { onChange(''); inputRef.current?.focus(); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold transition-colors">✕</button>}
+              <input ref={inputRef} type="text" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} className="w-full pl-8 pr-14 py-1 bg-white border border-slate-300 text-slate-800 text-xs placeholder-slate-400 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-300 focus:border-slate-300 font-medium h-8" />
+              {value && <button type="button" onClick={() => { onChange(''); inputRef.current?.focus(); }} className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-[9px] font-bold text-slate-500 hover:bg-slate-100">Limpar</button>}
             </div>
             <div className="flex justify-between items-center text-[9px] text-slate-400/80">
               <span>ESC para fechar</span>
