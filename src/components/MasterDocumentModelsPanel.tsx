@@ -86,7 +86,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
     const label = newModelName.trim(); const type = normalizeModelKey(label);
     if (label.length < 3 || type.length < 2) { setMessage('Informe um nome descritivo para o novo modelo.'); return; }
     if (slots.some(([current]) => current === type)) { setMessage('Já existe um modelo com esse identificador.'); return; }
-    setPendingSlots(current => [...current, [type, label]]); setNewModelName(''); setMessage('Novo espaço criado. Envie o DOCX para publicá-lo e versioná-lo no Drive.');
+    setPendingSlots(current => [...current, [type, label]]); setSelectedType(type); setNewModelName(''); setMessage('Novo espaço criado. Envie o DOCX para publicá-lo e versioná-lo no Drive.');
   };
 
   const upload = async (type: string, file?: File) => {
@@ -103,7 +103,18 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
     setWorking(`detect-${type}`); setMessage('');
     try {
       const result = await apiClient.detectDocumentModelVariables(type);
-      setMessage(`${result.variables.length} variável(is) detectada(s) no modelo.`);
+      const normalized=result.variables.map(normalizeVariableKey).filter(Boolean);
+      setMatrixColumns(previous=>{
+        const next=[...previous];
+        const known=new Set(next.flatMap(column=>[column.id,column.name,...(column.aliases||[])].map(value=>normalizeVariableKey(String(value||''))).filter(Boolean)));
+        for(const key of normalized){
+          if(known.has(key))continue;
+          next.push({id:key,name:key,label:key.replace(/_/g,' ').toLowerCase().replace(/(^|\s)\S/g,letter=>letter.toUpperCase()),dataType:/EMAIL/.test(key)?'email':/DATA|HORA/.test(key)?'date':'text',aliases:[key]});
+          known.add(key);
+        }
+        return next;
+      });
+      setMessage(`${result.variables.length} variável(is) detectada(s) e sincronizada(s) automaticamente.`);
       await load();
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível detectar as variáveis.'); }
     finally { setWorking(''); }
@@ -161,10 +172,14 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
 
   const variableUsageTitle=(raw:string)=>{
     const column=resolveVariableColumn(raw);
-    const keys=column?[column.id,column.name,...(column.aliases||[])]:[raw];
+    const keys=(column?[column.id,column.name,...(column.aliases||[])]:[raw]).map(normalizeVariableKey);
     const usage=getVariableUsage(keys,{matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates});
+    const backendDocuments=Object.entries(models)
+      .filter(([modelType,value])=>modelType!=='__capabilities'&&value&&typeof value==='object'&&((value as any).variables||[]).some((item:string)=>keys.includes(normalizeVariableKey(item))))
+      .map(([modelType,value])=>String((value as any).label||humanizeModelKey(modelType)));
+    const documents=Array.from(new Set([...usage.documents,...backendDocuments]));
     const parts=[
-      usage.documents.length?`Documentos: ${usage.documents.join(', ')}`:'',
+      documents.length?`Documentos: ${documents.join(', ')}`:'',
       usage.emails.length?`E-mails: ${usage.emails.join(', ')}`:'',
       usage.forms.length?`Formulários: ${usage.forms.join(', ')}`:'',
     ].filter(Boolean);
