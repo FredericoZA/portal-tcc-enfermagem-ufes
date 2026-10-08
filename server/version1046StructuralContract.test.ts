@@ -60,8 +60,9 @@ test('configurações separam artefatos e unem modelos com documentos', () => {
   assert.match(config, /title: 'Fluxos'/);
   assert.doesNotMatch(config, /id: 'variables', title: 'Variáveis'/);
   assert.doesNotMatch(config, /initialTab="documents"/);
-  assert.match(models, /Variáveis deste documento/);
-  assert.match(models, /Visualizar modelo/);
+  assert.match(models, /data-portal-document-direct-editor="true"/);
+  assert.match(models, /aria-label="Selecionar documento"/);
+  assert.match(models, /Visualizar modelo original/);
 });
 
 test('runtime tabular canônico substitui as camadas 1.0.52 e 1.0.53', () => {
