@@ -1146,78 +1146,114 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         )}
 
         {activeTab === 'emails' && selectedEmail && (
-          <>
+          <div className="min-h-full bg-[var(--portal-surface-page)] pb-5" data-portal-email-direct-editor="true">
             <SettingsWorkspaceHeaderPortal>
-              <button type="button" onClick={()=>setShowEmailHtmlAdvanced(value=>!value)} className="portal-settings-header-pill" aria-pressed={showEmailHtmlAdvanced}>
-                <Type className="h-3.5 w-3.5" />
-                HTML avançado
-              </button>
-            </SettingsWorkspaceHeaderPortal>
-            <div className="portal-artifact-editor portal-artifact-editor-email grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(420px,.92fr)]">
-              <div className="space-y-2.5">
-                <section className={`${panelClass} overflow-hidden`}>
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 px-3 py-2.5">
-                    <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-[var(--portal-brand-action)]" /><h4 className="text-xs font-black uppercase">Editor profissional de e-mail</h4></div>
-                    <div className="flex items-center gap-1">
-                      <select value={selectedEmail.id} onChange={(e) => setSelectedEmailId(e.target.value)} className="max-w-[220px] rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-bold">{emailTemplates.map((email) => <option key={email.id} value={email.id}>{email.name}</option>)}</select>
-                      <button type="button" onClick={createEmailTemplate} className="portal-action rounded-full bg-white" aria-label="Criar modelo de e-mail"><Plus className="h-3.5 w-3.5"/></button>
-                      <button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="portal-action rounded-full bg-white text-rose-700 disabled:opacity-30" aria-label="Excluir modelo de e-mail"><Trash2 className="h-3.5 w-3.5"/></button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 p-3">
-                    <details open className="rounded-xl border border-slate-300 bg-[var(--portal-surface-card)]">
-                      <summary className="cursor-pointer select-none px-3 py-2 text-[10px] font-black uppercase text-slate-800">Dados do e-mail</summary>
-                      <div className="grid gap-2 border-t border-slate-300 p-3 sm:grid-cols-2">
-                        <div className="sm:col-span-2"><label className={labelClass}>Nome da rotina</label><input value={selectedEmail.name} onChange={(e) => updateSelectedEmail({ name: e.target.value })} className={inputClass} /></div>
-                        <div><label className={labelClass}>Destinatário</label><input value={selectedEmail.recipient || ''} onChange={(e) => updateSelectedEmail({ recipient: e.target.value })} className={inputClass} placeholder="<<ALUNO_EMAIL>>" /></div>
-                        <div><label className={labelClass}>Responder para</label><input value={selectedEmail.replyTo || ''} onChange={(e) => updateSelectedEmail({ replyTo: e.target.value })} className={inputClass} /></div>
-                        <div><label className={labelClass}>CC</label><input value={selectedEmail.cc || ''} onChange={(e) => updateSelectedEmail({ cc: e.target.value })} className={inputClass} /></div>
-                        <div><label className={labelClass}>CCO</label><input value={selectedEmail.bcc || ''} onChange={(e) => updateSelectedEmail({ bcc: e.target.value })} className={inputClass} /></div>
-                        <div className="sm:col-span-2"><label className={labelClass}>Assunto</label><input value={selectedEmail.subject} onChange={(e) => updateSelectedEmail({ subject: e.target.value })} className={inputClass} /></div>
-                        <div className="sm:col-span-2"><label className={labelClass}>Corpo em texto</label><textarea rows={7} value={selectedEmail.body} onChange={(e) => updateSelectedEmail({ body: e.target.value })} className={inputClass} /></div>
-                      </div>
-                    </details>
-
-                    <details className="rounded-xl border border-slate-300 bg-[var(--portal-surface-card)]">
-                      <summary className="cursor-pointer select-none px-3 py-2 text-[10px] font-black uppercase text-slate-800">Cabeçalho</summary>
-                      <div className="grid gap-2 border-t border-slate-300 p-3 sm:grid-cols-2">
-                        <div className="sm:col-span-2"><label className={labelClass}>Texto do cabeçalho</label><input value={selectedEmailDesign.headerText} onChange={(e) => updateSelectedEmailDesign({ headerText: e.target.value })} className={inputClass} placeholder="Curso de Graduação em Enfermagem e Obstetrícia" /></div>
-                        <div><label className={labelClass}>Logo do curso</label><input value={selectedEmailDesign.logoUrl} onChange={(e) => updateSelectedEmailDesign({ logoUrl: e.target.value })} className={inputClass} /></div>
-                        <div><label className={labelClass}>Imagem acima do cabeçalho</label><input value={selectedEmailDesign.heroImageUrl} onChange={(e) => updateSelectedEmailDesign({ heroImageUrl: e.target.value })} className={inputClass} /></div>
-                        <label className={`${actionClass} cursor-pointer rounded-full border-slate-300 bg-white text-slate-700`}><Image className="h-3.5 w-3.5" />Adicionar logo<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const value = await readTemplateImage(e.target.files?.[0]); if (value) updateSelectedEmailDesign({ logoUrl: value }); }} /></label>
-                        <label className={`${actionClass} cursor-pointer rounded-full border-slate-300 bg-white text-slate-700`}><Image className="h-3.5 w-3.5" />Adicionar imagem<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const value = await readTemplateImage(e.target.files?.[0]); if (value) updateSelectedEmailDesign({ heroImageUrl: value }); }} /></label>
-                      </div>
-                    </details>
-
-                    <details className="rounded-xl border border-slate-300 bg-[var(--portal-surface-card)]">
-                      <summary className="cursor-pointer select-none px-3 py-2 text-[10px] font-black uppercase text-slate-800">Rodapé e ação</summary>
-                      <div className="grid gap-2 border-t border-slate-300 p-3 sm:grid-cols-2">
-                        <div className="sm:col-span-2"><label className={labelClass}>Rodapé</label><textarea rows={2} value={selectedEmailDesign.footerText} onChange={(e) => updateSelectedEmailDesign({ footerText: e.target.value })} className={inputClass} /></div>
-                        <div><label className={labelClass}>Texto do botão</label><input value={selectedEmailDesign.buttonLabel} onChange={(e) => updateSelectedEmailDesign({ buttonLabel: e.target.value })} className={inputClass} /></div>
-                        <div><label className={labelClass}>Destino do botão</label><input value={selectedEmailDesign.buttonUrl} onChange={(e) => updateSelectedEmailDesign({ buttonUrl: e.target.value })} className={inputClass} /></div>
-                      </div>
-                    </details>
-
-                    <details className="rounded-xl border border-slate-300 bg-[var(--portal-surface-card)]">
-                      <summary className="cursor-pointer select-none px-3 py-2 text-[10px] font-black uppercase text-slate-800">Anexos <span className="ml-1 font-normal text-slate-500">({(selectedEmail.attachments||[]).length})</span></summary>
-                      <div className="grid gap-1.5 border-t border-slate-300 p-3">{docTemplates.map(doc=>{const attached=(selectedEmail.attachments||[]).includes(doc.id);const mode=selectedEmail.attachmentModes?.[doc.id]||'SIGNED';return <div key={doc.id} className={`rounded-lg border px-2.5 py-2 ${attached?'border-[#9bb9a8] bg-white':'border-slate-200 bg-[var(--portal-surface-panel)]'}`}><div className="flex flex-wrap items-center justify-between gap-2"><label className="flex min-w-0 items-center gap-2 text-[10px] font-bold text-slate-800"><input type="checkbox" checked={attached} onChange={(e)=>{const next=e.target.checked?Array.from(new Set([...(selectedEmail.attachments||[]),doc.id])):(selectedEmail.attachments||[]).filter(id=>id!==doc.id);updateSelectedEmail({attachments:next});}}/><span className="truncate">{doc.label}</span></label>{attached&&<select aria-label={`Versão do anexo ${doc.label}`} value={mode} onChange={(e)=>updateSelectedEmail({attachmentModes:{...(selectedEmail.attachmentModes||{}),[doc.id]:e.target.value as 'AVAILABLE'|'SIGNED'}})} className="rounded-full border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-700"><option value="AVAILABLE">Anexar quando gerado</option><option value="SIGNED">Somente após assinatura</option></select>}</div></div>;})}</div>
-                    </details>
-
-                    {showEmailHtmlAdvanced&&<div className="rounded-xl border border-slate-300 bg-[var(--portal-surface-card)] p-3"><div className="mb-2 flex items-center justify-between"><strong className="text-[10px] uppercase text-slate-800">HTML avançado opcional</strong><span className="text-[9px] text-slate-500">Sobrescreve a composição textual quando preenchido</span></div><textarea rows={8} value={selectedEmail.htmlBody || ''} onChange={(e) => updateSelectedEmail({ htmlBody: e.target.value })} className={`${inputClass} font-mono`} placeholder="<p>Conteúdo HTML...</p>" /></div>}
-                  </div>
-                </section>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <select
+                  value={selectedEmail.id}
+                  onChange={event=>setSelectedEmailId(event.target.value)}
+                  className="max-w-[260px] rounded-full border border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950"
+                  aria-label="Selecionar e-mail"
+                >
+                  {emailTemplates.map(email=><option key={email.id} value={email.id}>{email.name}</option>)}
+                </select>
+                <button type="button" onClick={createEmailTemplate} className="portal-toolbar-icon-button" title="Adicionar e-mail" aria-label="Adicionar e-mail"><Plus className="h-3.5 w-3.5"/></button>
+                <button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-30" title="Excluir e-mail" aria-label="Excluir e-mail"><Trash2 className="h-3.5 w-3.5"/></button>
+                <button type="button" onClick={()=>setShowEmailHtmlAdvanced(value=>!value)} className="portal-settings-header-pill" aria-pressed={showEmailHtmlAdvanced}>
+                  <Type className="h-3.5 w-3.5"/><span>HTML avançado</span>
+                </button>
               </div>
+            </SettingsWorkspaceHeaderPortal>
 
-              <section className={`${panelClass} overflow-hidden`}>
-                <div className="border-b border-slate-300 px-3 py-2.5">
-                  <div className="flex items-center gap-2"><Eye className="h-4 w-4 text-[var(--portal-brand-action)]" /><h4 className="text-xs font-black uppercase text-slate-900">Pré-visualização</h4></div>
-                  <p className="mt-0.5 truncate text-[9px] text-slate-500">Assunto: {selectedEmail.subject}</p>
+            <div className="mx-auto w-full max-w-5xl p-3 pb-5">
+              <article className="overflow-visible rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] shadow-sm">
+                <div className="grid gap-2 border-b border-slate-300 p-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <label className="lg:col-span-2"><span className={labelClass}>Nome da rotina</span><input value={selectedEmail.name} onChange={event=>updateSelectedEmail({name:event.target.value})} className={inputClass}/></label>
+                  <label><span className={labelClass}>Destinatário</span><TemplateVariableControl value={selectedEmail.recipient||''} onChange={value=>updateSelectedEmail({recipient:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Destinatário"/></label>
+                  <label><span className={labelClass}>Responder para</span><TemplateVariableControl value={selectedEmail.replyTo||''} onChange={value=>updateSelectedEmail({replyTo:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Responder para"/></label>
+                  <label><span className={labelClass}>CC</span><TemplateVariableControl value={selectedEmail.cc||''} onChange={value=>updateSelectedEmail({cc:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="CC"/></label>
+                  <label><span className={labelClass}>CCO</span><TemplateVariableControl value={selectedEmail.bcc||''} onChange={value=>updateSelectedEmail({bcc:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="CCO"/></label>
+                  <label className="sm:col-span-2"><span className={labelClass}>Assunto</span><TemplateVariableControl value={selectedEmail.subject} onChange={value=>updateSelectedEmail({subject:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Assunto"/></label>
                 </div>
-                <iframe title="Pré-visualização do e-mail" sandbox="" srcDoc={emailPreviewHtml} className="h-[620px] w-full border-0 bg-white" />
-              </section>
+
+                {selectedEmailDesign.heroImageUrl&&<label className="group relative block cursor-pointer" title="Alterar imagem do e-mail">
+                  <img src={selectedEmailDesign.heroImageUrl} alt="Imagem do e-mail" className="h-36 w-full object-cover"/>
+                  <span className="absolute inset-0 hidden items-center justify-center bg-black/35 text-white group-hover:flex"><Pencil className="mr-1 h-4 w-4"/>Alterar imagem</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedEmailDesign({heroImageUrl:value});}}/>
+                </label>}
+
+                <div className="flex items-center gap-3 border-b-[5px] border-white bg-[var(--portal-brand-header)] px-4 py-3">
+                  <label className="group relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white p-1" title="Alterar logo do e-mail">
+                    {(selectedEmailDesign.logoUrl||brandKit.courseLogoUrl)
+                      ? <img src={selectedEmailDesign.logoUrl||brandKit.courseLogoUrl} alt="Logo" className="h-full w-full object-contain"/>
+                      : <Image className="h-5 w-5 text-slate-500"/>}
+                    <span className="absolute inset-0 hidden items-center justify-center bg-black/45 text-white group-hover:flex"><Pencil className="h-3.5 w-3.5"/></span>
+                    <input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedEmailDesign({logoUrl:value});}}/>
+                  </label>
+                  <input
+                    value={selectedEmailDesign.headerText}
+                    onChange={event=>updateSelectedEmailDesign({headerText:event.target.value})}
+                    className="min-w-0 flex-1 border-0 bg-transparent text-[12px] font-black uppercase text-white outline-none placeholder:text-white/70"
+                    aria-label="Texto do cabeçalho do e-mail"
+                    placeholder={brandKit.courseName}
+                  />
+                </div>
+
+                <div className="bg-white p-5">
+                  <div className="mb-3 text-[9px] font-bold uppercase tracking-wider text-slate-500">Assunto</div>
+                  <TemplateVariableControl value={selectedEmail.subject} onChange={value=>updateSelectedEmail({subject:value})} variables={templateVariables} className="w-full border-0 bg-transparent p-0 text-lg font-black text-slate-900 outline-none" ariaLabel="Assunto no modelo do e-mail"/>
+                  <div className="my-4 h-px bg-slate-200"/>
+
+                  <div className="relative">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Corpo do e-mail</span>
+                      <span className="text-[9px] text-slate-400">Digite &lt;&lt; para escolher uma variável disponível</span>
+                    </div>
+                    <TemplateVariableControl
+                      multiline
+                      rows={12}
+                      value={selectedEmail.body}
+                      onChange={value=>updateSelectedEmail({body:value})}
+                      variables={templateVariables}
+                      className="min-h-[300px] w-full resize-y border-0 bg-transparent p-0 text-[13px] leading-6 text-slate-900 outline-none"
+                      placeholder="Escreva o e-mail. Use << para inserir variáveis."
+                      ariaLabel="Corpo do e-mail"
+                    />
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap items-center gap-2">
+                    <input value={selectedEmailDesign.buttonLabel} onChange={event=>updateSelectedEmailDesign({buttonLabel:event.target.value})} className="min-w-[180px] rounded-lg border-0 px-3 py-2 text-[10px] font-black uppercase text-white outline-none" style={{backgroundColor:brandKit.primaryColor}} aria-label="Texto do botão do e-mail"/>
+                    <TemplateVariableControl value={selectedEmailDesign.buttonUrl} onChange={value=>updateSelectedEmailDesign({buttonUrl:value})} variables={templateVariables} className="min-w-[260px] flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-[10px] text-slate-700 outline-none" placeholder="Destino do botão" ariaLabel="Destino do botão do e-mail"/>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-300 bg-[var(--portal-surface-card)] p-3">
+                  <textarea value={selectedEmailDesign.footerText} onChange={event=>updateSelectedEmailDesign({footerText:event.target.value})} rows={2} className="w-full resize-y border-0 bg-transparent text-[10px] text-slate-600 outline-none" aria-label="Rodapé do e-mail"/>
+                </div>
+
+                <details className="border-t border-slate-300 bg-[var(--portal-surface-panel)]">
+                  <summary className="cursor-pointer select-none px-3 py-2 text-[10px] font-black uppercase text-slate-700">Anexos ({(selectedEmail.attachments||[]).length})</summary>
+                  <div className="grid gap-1.5 border-t border-slate-300 p-3 sm:grid-cols-2">
+                    {docTemplates.map(doc=>{
+                      const attached=(selectedEmail.attachments||[]).includes(doc.id);
+                      const mode=selectedEmail.attachmentModes?.[doc.id]||'SIGNED';
+                      return <div key={doc.id} className={`rounded-lg border px-2.5 py-2 ${attached?'border-[#9bb9a8] bg-white':'border-slate-200 bg-[var(--portal-surface-card)]'}`}>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <label className="flex min-w-0 items-center gap-2 text-[10px] font-bold text-slate-800"><input type="checkbox" checked={attached} onChange={event=>{const next=event.target.checked?Array.from(new Set([...(selectedEmail.attachments||[]),doc.id])):(selectedEmail.attachments||[]).filter(id=>id!==doc.id);updateSelectedEmail({attachments:next});}}/><span className="truncate">{doc.label}</span></label>
+                          {attached&&<select aria-label={`Versão do anexo ${doc.label}`} value={mode} onChange={event=>updateSelectedEmail({attachmentModes:{...(selectedEmail.attachmentModes||{}),[doc.id]:event.target.value as 'AVAILABLE'|'SIGNED'}})} className="rounded-full border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-700"><option value="AVAILABLE">Quando gerado</option><option value="SIGNED">Após assinatura</option></select>}
+                        </div>
+                      </div>;
+                    })}
+                  </div>
+                </details>
+
+                {showEmailHtmlAdvanced&&<div className="border-t border-slate-300 bg-[var(--portal-surface-card)] p-3">
+                  <div className="mb-2 text-[9px] font-black uppercase text-slate-700">HTML avançado opcional</div>
+                  <TemplateVariableControl multiline rows={10} value={selectedEmail.htmlBody||''} onChange={value=>updateSelectedEmail({htmlBody:value})} variables={templateVariables} className={`${inputClass} font-mono`} placeholder="<p>Conteúdo HTML...</p>" ariaLabel="HTML avançado"/>
+                </div>}
+              </article>
             </div>
-          </>
+          </div>
         )}
 
         {activeTab === 'forms' && selectedForm && (
