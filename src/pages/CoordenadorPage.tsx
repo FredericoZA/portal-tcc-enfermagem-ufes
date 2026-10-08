@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { apiClient, ApiRequestError } from '../services/apiClient';
+import { apiClient } from '../services/apiClient';
 import { ProcessData, SignatureJob, AstenIntegrationStatus } from '../types';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumeric, formatTimeExtenso } from '../utils/formatters';
@@ -254,19 +254,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     );
   };
 
-  const getDeclarationJob = (processId: string): SignatureJob | undefined =>
-    signatureJobs
-      .filter((job) => job.processId === processId && job.documentType === 'DECLARACAO' && job.provider === 'ASTEN')
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
-
   const getLatestDeclarationJob = (processId: string): SignatureJob | undefined =>
     latestDeclarationJob(signatureJobs, processId);
-
-  const canRetryDeclarationJob = (job?: SignatureJob): boolean => Boolean(
-    job &&
-    job.providerCreationState !== 'UNCERTAIN' &&
-    ['WAITING_INTEGRATION', 'QUEUED', 'PROVIDER_ERROR'].includes(job.status)
-  );
 
   const canSendAsten = (processId: string): boolean =>
     canSendDeclarationToAsten(queue, signatureJobs, processId);
@@ -303,25 +292,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   };
 
   const dispatchDeclarationToAsten = async (processId: string) => {
-    const job = getDeclarationJob(processId);
-    if (job && canRetryDeclarationJob(job)) {
-      try {
-        await apiClient.retrySignatureJob(job.id);
-        return;
-      } catch (error) {
-        const staleRevision = error instanceof ApiRequestError
-          && error.code === 'SIGNATURE_FLOW_GATE'
-          && /dados mudaram desde a geração/i.test(error.message);
-        if (!staleRevision) throw error;
-        await apiClient.signProcessDocument(processId, 'DECLARACAO');
-        return;
-      }
-    }
-    if (!job) {
-      await apiClient.signProcessDocument(processId, 'DECLARACAO');
-      return;
-    }
-    throw new Error('Esta declaração já foi enviada para a Asten ou exige conferência antes de novo envio.');
+    if (!canSendAsten(processId)) throw new Error('Esta declaração não está disponível para novo envio pela Asten.');
+    await apiClient.signProcessDocument(processId, 'DECLARACAO', 'ASTEN');
   };
 
   const handleSignOne = async (processId: string) => {
