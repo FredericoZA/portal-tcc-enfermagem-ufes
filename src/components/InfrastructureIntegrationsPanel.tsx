@@ -11,7 +11,7 @@ interface IntegrationState {
   persistence: { provider: string; snapshotReady: boolean; normalizedSchemaReady: boolean; transactionalRuntimeReady: boolean; productionSafe: boolean; message: string };
 }
 
-const compactCard = 'rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-2.5';
+const compactCard = 'min-h-[126px] rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-3';
 const action = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-[var(--portal-brand-header)] bg-[var(--portal-brand-header)] px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm hover:brightness-95 disabled:opacity-40';
 const input = 'min-h-8 min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[10px] text-slate-800 outline-none focus:border-slate-400';
 
@@ -74,31 +74,29 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
 
   return <div id="infrastructure-integrations-panel" className="flex min-h-full h-full flex-col bg-[var(--portal-surface-panel)]">
     <SettingsWorkspaceHeaderPortal>
-      <button type="button" onClick={runHomologation} disabled={working === 'homologation'} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-white/80 bg-transparent px-3 py-1 text-[10px] font-black text-white hover:bg-white/10 disabled:opacity-50">
+      <button type="button" onClick={runHomologation} disabled={working === 'homologation'} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-white bg-white px-3 py-1 text-[10px] font-black text-slate-950 shadow-sm hover:bg-slate-100 disabled:opacity-50">
         {working === 'homologation' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <RefreshCw className="h-3.5 w-3.5"/>}Executar testes
       </button>
     </SettingsWorkspaceHeaderPortal>
-    <section className="flex min-h-full flex-1 flex-col overflow-hidden bg-[var(--portal-surface-panel)]">
-      <div className="grid flex-1 content-start gap-2 bg-[var(--portal-surface-panel)] p-2.5 lg:grid-cols-2 xl:grid-cols-5">
-        <section className={compactCard} aria-labelledby="asten-integration-title">
+    <div className="grid flex-1 content-start gap-3 bg-[var(--portal-surface-panel)] p-3 md:grid-cols-2 lg:grid-cols-6">
+        <section className={`${compactCard} lg:col-span-2`} aria-labelledby="asten-integration-title">
           <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-1.5"><KeyRound className="h-4 w-4 shrink-0 text-[var(--portal-brand-action)]"/><h4 id="asten-integration-title" className="truncate text-[10px] font-black uppercase text-slate-900">Asten</h4></div><State ok={astenReady} label={astenReady ? 'Pronta' : 'Pendente'}/></div>
           <div className="mt-2 grid gap-2"><input aria-label="Token da API Asten" type="password" autoComplete="new-password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Token da API Asten" className={input}/><button type="button" onClick={connectAsten} disabled={working === 'asten' || !token.trim() || !status?.asten.enabled} className={action}>{working === 'asten' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ShieldCheck className="h-3.5 w-3.5"/>}Validar e conectar</button></div>
           <div className="mt-1.5 flex items-center gap-1.5 text-[8.5px] text-slate-700"><span className="min-w-0 flex-1">Callback: <strong>{status?.asten.callbackConfigured?'configurado':'pendente'}</strong> · envio: <strong>{status?.asten.dispatchEnabled?'habilitado':'bloqueado'}</strong></span>{status?.asten.callbackUrl&&<button type="button" title="Copiar callback" onClick={()=>void navigator.clipboard?.writeText(status.asten.callbackUrl||'')} className="rounded border border-slate-300 bg-white p-1 text-slate-700"><Copy className="h-3 w-3"/></button>}</div>
         </section>
 
-        <section className={compactCard} aria-label="Google Drive"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black uppercase"><Cloud className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/>Google Drive</span><State ok={googleReady} label={googleReady?'Conectado':'Pendente'}/></div><button type="button" onClick={()=>{window.location.href='/api/integrations/google/oauth/start?returnTo=/?google=connected';}} className={`${action} mt-3 w-full`}><ExternalLink className="h-3.5 w-3.5"/>Conectar Google</button></section>
+        <section className={`${compactCard} lg:col-span-2`} aria-label="Google Drive"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black uppercase"><Cloud className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/>Google Drive</span><State ok={googleReady} label={googleReady?'Conectado':'Pendente'}/></div><button type="button" onClick={()=>{window.location.href='/api/integrations/google/oauth/start?returnTo=/?google=connected';}} className={`${action} mt-3 w-full`}><ExternalLink className="h-3.5 w-3.5"/>Conectar Google</button></section>
 
-        <section className={compactCard} aria-label="Supabase"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black uppercase"><Database className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/>Supabase</span><State ok={supabaseReady} label={supabaseReady?'Pronto':'Pendente'}/></div><button type="button" onClick={testSupabase} disabled={working==='supabase'||!status?.supabase.configured} className={`${action} mt-3 w-full`}>{working==='supabase'?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Database className="h-3.5 w-3.5"/>}Testar conexão</button><p className="mt-2 text-[8.5px] leading-4 text-slate-700">{status?.supabase.message || 'Aguardando status.'}</p></section>
+        <section className={`${compactCard} lg:col-span-2`} aria-label="Supabase"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black uppercase"><Database className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/>Supabase</span><State ok={supabaseReady} label={supabaseReady?'Pronto':'Pendente'}/></div><button type="button" onClick={testSupabase} disabled={working==='supabase'||!status?.supabase.configured} className={`${action} mt-3 w-full`}>{working==='supabase'?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Database className="h-3.5 w-3.5"/>}Testar conexão</button><p className="mt-2 text-[8.5px] leading-4 text-slate-700">{status?.supabase.message || 'Aguardando status.'}</p></section>
 
-        <section className={compactCard} aria-label="Vercel"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black uppercase"><Server className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/>Vercel</span><State ok={vercelReady} label={vercelReady?'Detectado':'Pendente'}/></div><p className="mt-3 text-[8.5px] leading-4 text-slate-700">{status?.vercel.message||'Aguardando status.'}</p></section>
+        <section className={`${compactCard} lg:col-span-3`} aria-label="Vercel"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black uppercase"><Server className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/>Vercel</span><State ok={vercelReady} label={vercelReady?'Detectado':'Pendente'}/></div><p className="mt-3 text-[8.5px] leading-4 text-slate-700">{status?.vercel.message||'Aguardando status.'}</p></section>
 
-        <section className={compactCard} aria-labelledby="department-email-title">
+        <section className={`${compactCard} lg:col-span-3`} aria-labelledby="department-email-title">
           <div className="flex items-center justify-between gap-1"><span className="flex min-w-0 items-center gap-1 text-[9px] font-black uppercase"><Mail className="h-3.5 w-3.5 shrink-0 text-[var(--portal-brand-action)]"/><span id="department-email-title" className="truncate">Departamento</span></span><State ok={Boolean(departmentEmail.trim())} label={departmentEmail.trim()?'Configurado':'Pendente'}/></div>
           <p className="mt-2 text-[8.5px] leading-4 text-slate-700">O destinatário da reserva é definido no modelo de e-mail correspondente. Esta integração apenas acompanha a configuração atualmente publicada.</p>
           {departmentEmail.trim() ? <div className="mt-2 rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-[9px] font-bold text-slate-700">{departmentEmail}</div> : null}
         </section>
-      </div>
-    </section>
+    </div>
 
     {hasRunTests && <section className="border-t border-slate-300 bg-[var(--portal-surface-panel)]" aria-live="polite">
       <div className="border-b border-slate-300 bg-slate-200 px-3 py-2"><h3 className="text-[10px] font-black uppercase tracking-wide text-slate-950">Resultado dos testes</h3></div>
