@@ -320,7 +320,9 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [isDirty, setIsDirty] = useState(false);
   const appliedSnapshotRef = useRef<string>('');
   const hasHydratedRef = useRef(false);
-  const remoteAutosaveRequestRef = useRef(0);
+  const remoteAutosaveInFlightRef = useRef(false);
+  const [autosaveError, setAutosaveError] = useState('');
+  const [autosaveRetry, setAutosaveRetry] = useState(0);
   const currentDraftFingerprintRef = useRef('');
 
   useEffect(() => { if (initialTab) setActiveTab(initialTab); }, [initialTab]);
@@ -488,22 +490,31 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     if (!hideTabs || !hasHydratedRef.current || !isDirty || isSaving) return;
     const fingerprint=draftFingerprint;
     const timer=window.setTimeout(() => {
-      const requestId=++remoteAutosaveRequestRef.current;
+      if(remoteAutosaveInFlightRef.current)return;
+      if(!validationReport.ready){
+        setAutosaveError('Configuração incompleta: o rascunho está salvo somente neste navegador. Corrija os campos obrigatórios para publicar no servidor.');
+        return;
+      }
+      remoteAutosaveInFlightRef.current=true;
       const snapshot=buildSnapshot();
       void apiClient.updateSettings({ integrationStudio: snapshot }).then(() => {
-        if(requestId!==remoteAutosaveRequestRef.current)return;
         saveLocalStudio(snapshot);
         setRevision(snapshot.revision);
         setLastSavedAt(snapshot.savedAt);
         setDraftSavedAt('');
+        setAutosaveError('');
+        // Alterações feitas durante a requisição continuam sujas e serão enviadas após esta revisão.
         setIsDirty(currentDraftFingerprintRef.current!==fingerprint);
         appliedSnapshotRef.current=`${snapshot.savedAt}:${snapshot.revision}`;
       }).catch(error=>{
         console.error('Autosave do estúdio falhou',error);
+        setAutosaveError(error instanceof Error ? error.message : 'Não foi possível salvar no servidor. O rascunho continua neste navegador.');
+      }).finally(()=>{
+        remoteAutosaveInFlightRef.current=false;
       });
     }, 900);
     return () => window.clearTimeout(timer);
-  }, [hideTabs,draftFingerprint,isDirty,isSaving,revision,validationReport.score]);
+  }, [hideTabs,draftFingerprint,isDirty,isSaving,revision,validationReport.ready,autosaveRetry]);
 
   const persistSnapshot = async (withAudit = false) => {
     if (isSaving) return;
@@ -1043,6 +1054,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     : [];
   return (
     <div className={`portal-workspace portal-studio ${hideTabs ? 'mb-0 overflow-visible border-0 bg-transparent shadow-none' : `${panelClass} mb-5 overflow-hidden`}`}>
+      {hideTabs && autosaveError && <div role="alert" className="mx-3 my-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950"><span>Alterações ainda não publicadas: {autosaveError}</span><button type="button" className="rounded-md border border-amber-400 bg-white px-2 py-1 font-bold" onClick={()=>setAutosaveRetry(value=>value+1)}>Tentar salvar novamente</button></div>}
       <div className={`${hideTabs ? 'hidden' : 'portal-studio-heading flex flex-wrap items-center justify-between gap-2 border-b border-[var(--portal-brand-action-border)] bg-[var(--portal-brand-action)] px-3 py-2.5 text-white'}`}>
         <div><h3 className="text-xs font-black uppercase tracking-wide">Editor de modelos e variáveis</h3><p className="mt-0.5 text-[9px] text-white/80">Selecione uma área acima e trabalhe com seleção, edição e visualização no mesmo contexto.</p></div>
         <div className="flex items-center gap-2"><div className="hidden text-right text-[9px] font-semibold text-white/80 md:block">{isDirty ? (draftSavedAt ? `Rascunho automático ${new Date(draftSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Salvando rascunho…') : (lastSavedAt ? `Publicado ${new Date(lastSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Ainda não publicado')}</div><button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-white bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-black shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Publicando…' : 'Publicar'}</button></div>

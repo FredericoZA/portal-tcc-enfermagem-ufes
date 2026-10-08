@@ -2,7 +2,8 @@ import { portalConfirm } from '../services/portalDialogs';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Eye, FilePlus2, FileUp, Link2, Loader2, Merge, Plus, ShieldAlert, Sparkles, Trash2 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
-import { getVariableUsage, mergeVariableAcrossArtifacts, normalizeVariableKey } from '../services/integrationStudioService';
+import { getVariableUsage, mergeVariableAcrossArtifacts, normalizeVariableKey, saveLocalStudio } from '../services/integrationStudioService';
+import { validateCourseStudio } from '../utils/courseStudioValidator';
 import { SettingsWorkspaceHeaderPortal } from './SettingsWorkspaceModal';
 
 const BASE_SLOTS: Array<[string, string]> = [
@@ -49,7 +50,8 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const [samplePreviewLoading, setSamplePreviewLoading] = useState('');
   const [selectedType, setSelectedType] = useState('CONVITE');
   const studioAutosaveReadyRef=useRef(false);
-  const studioAutosaveRequestRef=useRef(0);
+  const studioAutosaveInFlightRef=useRef(false);
+  const studioAutosavePendingRef=useRef(false);
   const linkImportEnabled = Boolean(models.__capabilities?.existingModelLinkImportEnabled);
 
   const slots = useMemo(() => {
@@ -66,32 +68,48 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const selectedSlot=slots.find(([type])=>type===selectedType)||slots[0];
   const load = async () => { setLoading(true); try { const next=await apiClient.getDocumentModels(); setModels(next); onCatalogChanged?.(next); } catch (error) { setMessage(error instanceof Error ? error.message : 'Falha ao carregar os modelos.'); } finally { setLoading(false); } };
   const studioAutosaveFingerprint=useMemo(()=>JSON.stringify({matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates}),[matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates]);
+  const studioAutosaveCurrentRef=useRef({matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates});
+  studioAutosaveCurrentRef.current={matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates};
   useEffect(()=>{
     if(!studioAutosaveReadyRef.current){studioAutosaveReadyRef.current=true;return;}
-    const fingerprint=studioAutosaveFingerprint;
     const timer=window.setTimeout(()=>{
-      const requestId=++studioAutosaveRequestRef.current;
+      if(studioAutosaveInFlightRef.current){studioAutosavePendingRef.current=true;return;}
+      studioAutosaveInFlightRef.current=true;
       void (async()=>{
         try{
-          const latest=await apiClient.getSettings();
-          const base=(latest.integrationStudio||{}) as any;
-          const snapshot={
-            ...base,
-            schemaVersion:3,
-            revision:Number(base.revision||0)+1,
-            savedAt:new Date().toISOString(),
-            savedBy:actorEmail||base.savedBy||'',
-            matrixColumns,
-            matrixRows,
-            docTemplates:docTemplates.map(doc=>({...doc,templateContentText:''})),
-            emailTemplates,
-            formTemplates,
-            publication:{...(base.publication||{}),status:'DRAFT'}
-          };
-          await apiClient.updateSettings({integrationStudio:snapshot});
-          if(requestId===studioAutosaveRequestRef.current)setMessage(current=>current||'');
+          do{
+            studioAutosavePendingRef.current=false;
+            const current=studioAutosaveCurrentRef.current;
+            const latest=await apiClient.getSettings();
+            const base=(latest.integrationStudio||{}) as any;
+            const snapshot={
+              ...base,
+              schemaVersion:3,
+              revision:Number(base.revision||0)+1,
+              savedAt:new Date().toISOString(),
+              savedBy:actorEmail||base.savedBy||'',
+              matrixColumns:current.matrixColumns,
+              matrixRows:current.matrixRows,
+              docTemplates:current.docTemplates.map(doc=>({...doc,templateContentText:''})),
+              emailTemplates:current.emailTemplates,
+              formTemplates:current.formTemplates,
+              publication:{...(base.publication||{}),status:'PUBLISHED',publishedRevision:Number(base.revision||0)+1,publishedAt:new Date().toISOString()}
+            };
+            const report=validateCourseStudio(snapshot);
+            if(!report.ready){
+              saveLocalStudio({...snapshot,publication:{...snapshot.publication,status:'DRAFT'}} as any);
+              setMessage('Rascunho salvo somente neste navegador: corrija as pendências dos modelos antes da publicação automática.');
+              break;
+            }
+            await apiClient.updateSettings({integrationStudio:snapshot});
+            saveLocalStudio(snapshot as any);
+            setMessage('');
+          }while(studioAutosavePendingRef.current);
         }catch(error){
           console.error('Autosave de documentos e variáveis falhou',error);
+          setMessage(error instanceof Error? `Não foi possível salvar no servidor: ${error.message}`:'Não foi possível salvar no servidor.');
+        }finally{
+          studioAutosaveInFlightRef.current=false;
         }
       })();
     },900);
