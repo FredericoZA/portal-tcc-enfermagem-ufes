@@ -14,14 +14,15 @@ test('contrato global de pop-up permanece canônico na rodada TCC12',()=>{
   assert.match(modal,/portal-settings-workspace-divider/);
 });
 
-test('configuração de planilha segue o shell canônico e oferece fechamento explícito',()=>{
+test('configuração de planilha segue o shell canônico sem X redundante',()=>{
   const css=read('src/styles/portal-components.css');
   const popover=read('src/components/HeaderSettingsPopover.tsx');
   assert.match(css,/\.portal-table-settings-popover \{[\s\S]*460px/);
   assert.match(css,/\.portal-table-settings-popover > \.portal-settings-popover-header[\s\S]*margin: 0/);
   assert.match(css,/border-radius: var\(--portal-panel-radius\)/);
   assert.match(popover,/document\.addEventListener\('mousedown',outside\)/);
-  assert.match(popover,/aria-label="Fechar configuração da planilha"/);
+  assert.doesNotMatch(popover,/aria-label="Fechar configuração da planilha"/);
+  assert.doesNotMatch(popover,/<X\b/);
   assert.match(popover,/portal-settings-popover-body/);
 });
 
