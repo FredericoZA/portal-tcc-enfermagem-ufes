@@ -80,6 +80,7 @@ export function defaultFormDesign(templateId: string, brand = DEFAULT_BRAND_KIT)
   return {
     templateId,
     logoUrl: brand.courseLogoUrl,
+    universityLogoUrl: brand.universityLogoUrl,
     bannerImageUrl: brand.emailBannerUrl,
     introText: 'Preencha os dados abaixo. As informações reutilizadas serão aproveitadas automaticamente nas etapas seguintes.',
     confirmationMessage: 'Dados recebidos com sucesso. Você receberá a confirmação por e-mail.',
