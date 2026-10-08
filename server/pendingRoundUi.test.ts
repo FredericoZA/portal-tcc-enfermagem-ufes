@@ -23,7 +23,8 @@ test('comissão reúne identidade, contatos e membros em formulário único com 
   assert.ok(panel.includes('if (!isMaster) return null'));
   assert.ok(panel.includes('apiClient.updateSettings'));
   assert.ok(panel.includes('createAdministrationTransfer'));
-  assert.ok(panel.includes('Salvo automaticamente'));
+  assert.ok(panel.includes('setTimeout(() => { void persistRegularFields(); }, 700)'));
+  assert.ok(!panel.includes('Alterações salvas automaticamente'));
   assert.ok(!panel.includes('QRCode.toDataURL'));
   assert.ok(!panel.includes('courseLogoDataUrl'));
 });
