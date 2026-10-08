@@ -1,5 +1,6 @@
 import { ProcessData, GlobalSettings, AuditLog, DocumentCorrectionRequest, GoogleCalendarSyncedEvent, SignatureJob, AstenIntegrationStatus, ContinuousIntelligenceOverview, ImprovementStatus, LivingPortalArtifactKind } from '../types';
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
+import { isLocalDemoFrontend } from '../utils/runtimeEnvironment';
 import {
   fileToLegacyBase64,
   mayUseLegacyDevelopmentUpload,
@@ -9,12 +10,6 @@ import {
   uploadBinaryToSignedUrl
 } from './secureStagedUpload';
 let activeUserEmail = '';
-
-function localDemoRuntime(): boolean {
-  const env=(import.meta as any).env || {};
-  return Boolean(env.DEV || env.VITE_PORTAL_LOCAL_DEMO_AUTH === 'true');
-}
-
 type WorkflowProcessResponse = ProcessData & { workflowPending?: boolean; workflowError?: string };
 
 export class ApiRequestError extends Error {
@@ -38,7 +33,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     'Content-Type': 'application/json',
     ...((options.headers || {}) as Record<string,string>)
   };
-  if(localDemoRuntime()&&getActiveUserEmail())headers['x-demo-user-email']=getActiveUserEmail();
+  if(isLocalDemoFrontend()&&getActiveUserEmail())headers['x-demo-user-email']=getActiveUserEmail();
 
   const response = await fetch(endpoint, {
     ...options,
@@ -56,7 +51,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 
 async function downloadApiFile(endpoint: string): Promise<{ blob: Blob; fileName: string }> {
   const headers: Record<string, string> = {};
-  if (localDemoRuntime() && getActiveUserEmail()) {
+  if (isLocalDemoFrontend() && getActiveUserEmail()) {
     headers['x-demo-user-email'] = getActiveUserEmail();
   }
 
@@ -76,7 +71,7 @@ async function downloadApiFile(endpoint: string): Promise<{ blob: Blob; fileName
   return { blob: await response.blob(), fileName };
 }
 
-export async function getApiAuthHeaders():Promise<Record<string,string>>{if(localDemoRuntime()&&getActiveUserEmail())return{'x-demo-user-email':getActiveUserEmail()};return{};}
+export async function getApiAuthHeaders():Promise<Record<string,string>>{if(isLocalDemoFrontend()&&getActiveUserEmail())return{'x-demo-user-email':getActiveUserEmail()};return{};}
 
 async function createStagedUpload(descriptor: StagedUploadDescriptor): Promise<StagedUploadTicket> {
   return fetchApi<StagedUploadTicket>('/api/uploads/staging', {
@@ -101,7 +96,7 @@ async function stageFile(file: File, descriptor: Omit<StagedUploadDescriptor, 'f
 async function withDevelopmentFallback<T>(file:File, operation:()=>Promise<T>, fallback:()=>Promise<T>):Promise<T>{
   try{return await operation();}catch(error){
     const status=error instanceof ApiRequestError?error.status:0;
-    if(!mayUseLegacyDevelopmentUpload(status,file.size,localDemoRuntime()))throw error;
+    if(!mayUseLegacyDevelopmentUpload(status,file.size,isLocalDemoFrontend()))throw error;
     return fallback();
   }
 }
