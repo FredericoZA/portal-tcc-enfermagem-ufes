@@ -26,7 +26,11 @@ function run(bin, args, env) {
 }
 
 const commit = gitCommit();
-const baseEnv = { ...process.env, PORTAL_GIT_COMMIT: commit };
+const baseEnv = {
+  ...process.env,
+  PORTAL_GIT_COMMIT: commit,
+  VITE_PORTAL_LOCAL_DEMO_AUTH: 'true'
+};
 
 const buildCode = await run(command('npm'), ['run', 'build'], baseEnv);
 if (buildCode !== 0) process.exit(buildCode);
