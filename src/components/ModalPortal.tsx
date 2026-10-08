@@ -25,7 +25,7 @@ export const ModalPortal: React.FC<ModalPortalProps> = ({ children, onClose, lab
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[1000000] bg-slate-950/55 backdrop-blur-[1px] flex items-start sm:items-center justify-center p-2 sm:p-5 overflow-y-auto overscroll-contain"
+      className="portal-modal-backdrop fixed inset-0 z-[1000000] flex items-start sm:items-center justify-center p-2 sm:p-5 overflow-y-auto overscroll-contain"
       role="dialog"
       aria-modal="true"
       aria-labelledby={labelledBy}
