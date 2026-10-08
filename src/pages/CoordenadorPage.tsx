@@ -45,6 +45,7 @@ import {
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { PORTAL_SEMANTIC_COLORS } from '../utils/portalSemanticTokens';
 import { formatProcessLabel } from '../components/PortalProcessPill';
+import { canPrepareDeclarationForGovBr, canSendDeclarationToAsten, latestDeclarationJob } from '../utils/coordinatorSignatureActions';
 
 const ALL_COORDINATOR_COLUMNS: ColumnDef[] = [
   { key: 'protocolo', label: 'Processo', isFixed: true },
@@ -259,9 +260,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
 
   const getLatestDeclarationJob = (processId: string): SignatureJob | undefined =>
-    signatureJobs
-      .filter((job) => job.processId === processId && job.documentType === 'DECLARACAO' && job.status !== 'CANCELED')
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+    latestDeclarationJob(signatureJobs, processId);
 
   const canRetryDeclarationJob = (job?: SignatureJob): boolean => Boolean(
     job &&
@@ -269,12 +268,14 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     ['WAITING_INTEGRATION', 'QUEUED', 'PROVIDER_ERROR'].includes(job.status)
   );
 
-  const isDeclarationActionable = (processId: string): boolean => {
-    const process = allProcesses.find((item) => item.id === processId);
-    if (!process || process.avaliacao?.status !== 'CONCLUIDO') return false;
-    const job = getDeclarationJob(processId);
-    return !job || canRetryDeclarationJob(job);
-  };
+  const canSendAsten = (processId: string): boolean =>
+    canSendDeclarationToAsten(queue, signatureJobs, processId);
+
+  const canPrepareGov = (processId: string): boolean =>
+    canPrepareDeclarationForGovBr(queue, signatureJobs, processId);
+
+  const isDeclarationSelectable = (processId: string): boolean =>
+    canSendAsten(processId) || canPrepareGov(processId);
 
   const getDeclarationStatus = (processId: string, processStatus?: ProcessData['status']): { label: string; tone: string } => {
     const job = getLatestDeclarationJob(processId);
@@ -340,7 +341,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
   const handleSignSelected = async () => {
     const pendingIds = new Set(pendingItems.map((item) => item.process.id));
-    const ids = selectedIds.filter((id) => pendingIds.has(id) && isDeclarationActionable(id));
+    const ids = selectedIds.filter((id) => pendingIds.has(id) && canSendAsten(id));
     if (!ids.length) {
       setSigningMessage('Selecione ao menos uma declaração que ainda possa ser enviada ou reprocessada na Asten.');
       return;
@@ -392,8 +393,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   };
 
   const handleSignSelectedGov = async () => {
-    const pendingIds=new Set(pendingItems.map(item=>item.process.id));const ids=selectedIds.filter(id=>pendingIds.has(id)&&isDeclarationActionable(id));
-    if(ids.length<2){setSigningMessage('Selecione pelo menos dois trabalhos para usar a assinatura em bloco.');return;}
+    const pendingIds=new Set(pendingItems.map(item=>item.process.id));const ids=selectedIds.filter(id=>pendingIds.has(id)&&canPrepareGov(id));
+    if(!ids.length){setSigningMessage('Selecione ao menos uma declaração disponível para assinatura Gov.br.');return;}
     window.open('https://assinador.iti.br/','_blank','noopener,noreferrer');setSigningIds(prev=>Array.from(new Set([...prev,...ids])));let completed=0;const failures:string[]=[];
     for(const id of ids){try{const result=await apiClient.signProcessDocument(id,'DECLARACAO','GOV_BR');const file=await apiClient.downloadGovBrSigningPdf(result.job.id);downloadBrowserFile(file.blob,file.fileName);completed++;}catch(error){const proc=pendingItems.find(item=>item.process.id===id)?.process;failures.push(`${proc?.protocolo||id}: ${error instanceof Error?error.message:'falha'}`);}}
     setSigningIds(prev=>prev.filter(id=>!ids.includes(id)));setSelectedIds([]);await loadData();setSigningMessage(failures.length?`${completed} PDF(s) Gov.br preparados; ${failures.length} falha(s): ${failures.join(' | ')}`:`${completed} PDF(s) preparados. Assine-os no Gov.br e envie os arquivos assinados pelas fichas dos TCCs.`);
@@ -413,9 +414,9 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   };
 
   const renderSignatureActionCell = (proc: ProcessData) => {
-    const job=getDeclarationJob(proc.id);const govJob=getGovDeclarationJob(proc.id);const working=signingIds.includes(proc.id);const status=getDeclarationStatus(proc.id);const actionable=isDeclarationActionable(proc.id);
+    const govJob=getGovDeclarationJob(proc.id);const working=signingIds.includes(proc.id);const astenActionable=canSendAsten(proc.id);const govActionable=canPrepareGov(proc.id);
     const govUploadAvailable=Boolean(govJob && !['SIGNED','ARCHIVED','CANCELED'].includes(govJob.status));
-    return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}><div className="flex flex-wrap items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working||!actionable} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>{govUploadAvailable&&<label className="portal-sign-provider-btn cursor-pointer" title="Enviar o PDF já assinado no Gov.br"><input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event)=>{const file=event.currentTarget.files?.[0];event.currentTarget.value='';if(file)void handleGovSignedUpload(proc.id,file);}}/><Download className="h-3.5 w-3.5 rotate-180"/><span>Enviar assinado</span></label>}</div></td>;
+    return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}><div className="flex flex-wrap items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||!astenActionable} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working||!govActionable} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>{govUploadAvailable&&<label className="portal-sign-provider-btn cursor-pointer" title="Enviar o PDF já assinado no Gov.br"><input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event)=>{const file=event.currentTarget.files?.[0];event.currentTarget.value='';if(file)void handleGovSignedUpload(proc.id,file);}}/><Download className="h-3.5 w-3.5 rotate-180"/><span>Enviar assinado</span></label>}</div></td>;
   };
 
   const renderCompletedActionCell = (proc: ProcessData) => {
@@ -765,7 +766,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       ? completedRows
       : [...pendingRows, ...completedRows];
   const sortedRows = getSortedAndFilteredItems(visibleRows);
-  const visibleRowIds = sortedRows.map((row) => row.process.id);
+  const visibleRowIds = sortedRows.filter((row) => row.pending && isDeclarationSelectable(row.process.id)).map((row) => row.process.id);
   const allVisibleSelected = visibleRowIds.length > 0 && visibleRowIds.every((id) => selectedIds.includes(id));
   const toggleSelectAllVisible = () => toggleSelectionGroup(visibleRowIds);
 
@@ -804,8 +805,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                 <div className="portal-sheet-toolbar-actions">
                   {activeTab !== 'concluidos' && (
                     <>
-                      <button type="button" disabled={selectedIds.length === 0 || signingIds.length > 0} onClick={handleSignSelected} className="portal-sign-bulk-btn disabled:opacity-45" title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
-                      <button type="button" disabled={selectedIds.length === 0 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className="portal-sign-bulk-btn disabled:opacity-45" title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
+                      <button type="button" disabled={!selectedIds.some((id)=>canSendAsten(id)) || signingIds.length > 0} onClick={handleSignSelected} className="portal-sign-bulk-btn disabled:opacity-45" title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
+                      <button type="button" disabled={!selectedIds.some((id)=>canPrepareGov(id)) || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className="portal-sign-bulk-btn disabled:opacity-45" title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
                     </>
                   )}
                 </div>
@@ -944,7 +945,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                             <button
                               type="button"
                               onClick={() => toggleSelectItem(proc.id)}
-                              className="cursor-pointer text-slate-400 hover:text-emerald-700 flex justify-center mx-auto"
+                              disabled={!row.pending || !isDeclarationSelectable(proc.id)}
+                              className="cursor-pointer text-slate-400 hover:text-emerald-700 flex justify-center mx-auto disabled:cursor-not-allowed disabled:opacity-30"
                               aria-label={isSelected ? 'Desmarcar item' : 'Selecionar item'}
                             >
                               {isSelected ? (
