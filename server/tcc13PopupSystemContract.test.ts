@@ -185,3 +185,41 @@ test('editor de fluxo usa timeline clicável e planilha da etapa sem paleta de a
   assert.doesNotMatch(studio,/Arraste para uma etapa/);
   assert.doesNotMatch(studio,/application\/x-portal-workflow/);
 });
+
+
+test('editor de formulário é o próprio formulário e não um painel lateral de configuração',()=>{
+  const studio=read('src/components/IntegrationStudioPanel.tsx');
+  assert.match(studio,/data-portal-form-direct-editor="true"/);
+  assert.match(studio,/aria-label="Selecionar formulário"/);
+  assert.match(studio,/title="Adicionar formulário"/);
+  assert.match(studio,/title="Excluir formulário"/);
+  assert.match(studio,/universityLogoUrl/);
+  assert.match(studio,/title="Alterar logo da UFES"/);
+  assert.match(studio,/title="Alterar logo do curso"/);
+  assert.match(studio,/Duplo clique para editar a pergunta/);
+  assert.match(studio,/title="Configurar campo"/);
+  assert.match(studio,/Adicionar campo vinculado a uma variável/);
+  assert.match(studio,/Verificar e criar/);
+  assert.match(studio,/Já existem variáveis semelhantes/);
+  assert.doesNotMatch(studio,/Construtor de formulário/);
+  assert.doesNotMatch(studio,/Pré-visualização/);
+});
+
+test('campos de formulário exigem variável canônica e não aceitam chave livre',()=>{
+  const studio=read('src/components/IntegrationStudioPanel.tsx');
+  const editorStart=studio.indexOf('const FormQuestionEditor');
+  const editorEnd=studio.indexOf('export const IntegrationStudioPanel',editorStart);
+  const editor=studio.slice(editorStart,editorEnd);
+  assert.match(editor,/aria-label="Variável vinculada"/);
+  assert.match(editor,/<select aria-label="Variável vinculada"/);
+  assert.doesNotMatch(editor,/placeholder="CHAVE_DA_VARIAVEL"/);
+  assert.match(studio,/addFormQuestionFromVariable/);
+  assert.match(studio,/Essa variável já está vinculada a um campo deste formulário/);
+});
+
+test('design de formulário suporta logos separados de universidade e curso',()=>{
+  const types=read('src/types/integrationStudio.ts');
+  const service=read('src/services/integrationStudioService.ts');
+  assert.match(types,/universityLogoUrl: string/);
+  assert.match(service,/universityLogoUrl: brand\.universityLogoUrl/);
+});
