@@ -8,6 +8,8 @@
     "node": "22.x"
   },
   "scripts": {
+    "local": "node scripts/prepare-local.mjs && node scripts/start-local-compiled.mjs",
+    "local:prepare": "node scripts/prepare-local.mjs",
     "dev": "tsx server.ts",
     "dev:compiled": "node scripts/start-local-compiled.mjs",
     "parity:check": "node scripts/portal-parity.mjs",
