@@ -593,22 +593,14 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
 
       {/* Log Diff Modal */}
       {selectedLogForDiff && (
-        <div className="fixed inset-0 bg-slate-900/60 z-50 overflow-y-auto p-4 backdrop-blur-xs flex items-center justify-center animate-fadeIn">
-          <div className="max-w-2xl w-full bg-white rounded-2xl shadow-2xl border border-slate-300 overflow-hidden relative p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <h4 className="font-black text-xs sm:text-sm uppercase text-slate-900 flex items-center gap-2">
-                <FileCheck2 className="w-5 h-5 text-slate-700" />
-                <span>Registro de Edição #{selectedLogForDiff.id}</span>
-              </h4>
-              <button
-                type="button"
-                onClick={() => setSelectedLogForDiff(null)}
-                className="text-slate-400 hover:text-slate-700 font-bold text-xs cursor-pointer"
-              >
-                Fechar
-              </button>
+        <div className="portal-modal-backdrop fixed inset-0 z-[1000011] flex items-center justify-center overflow-y-auto p-4 animate-fadeIn" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedLogForDiff(null); }}>
+          <div className="portal-standard-modal portal-modal-surface max-w-2xl w-full overflow-hidden relative" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="portal-modal-header px-4">
+              <FileCheck2 className="w-4 h-4 text-white" />
+              <h4 className="font-black text-xs sm:text-sm uppercase text-white">Registro de Edição #{selectedLogForDiff.id}</h4>
             </div>
-
+            <div className="portal-modal-divider" aria-hidden="true" />
+            <div className="space-y-4 p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
                 <span className="font-extrabold text-slate-800 uppercase block text-[10px]">Estado Anterior:</span>
@@ -626,13 +618,8 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
             </div>
 
             <div className="pt-2 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSelectedLogForDiff(null)}
-                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 rounded-xl text-xs font-bold cursor-pointer"
-              >
-                Entendido
-              </button>
+              <button type="button" onClick={() => setSelectedLogForDiff(null)} className="portal-action">Entendido</button>
+            </div>
             </div>
           </div>
         </div>
