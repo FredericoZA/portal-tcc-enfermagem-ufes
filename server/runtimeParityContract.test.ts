@@ -4,13 +4,20 @@ import { readFileSync } from 'node:fs';
 
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
-test('desenvolvimento oferece modo compilado e verificação de paridade',()=>{
+test('desenvolvimento oferece bootstrap único, modo compilado e verificação de paridade',()=>{
   const pkg=JSON.parse(read('package.json'));
+  assert.equal(pkg.scripts.local,'node scripts/prepare-local.mjs && node scripts/start-local-compiled.mjs');
   assert.equal(pkg.scripts['dev:compiled'],'node scripts/start-local-compiled.mjs');
   assert.equal(pkg.scripts['parity:check'],'node scripts/portal-parity.mjs');
+
+  const prepare=read('scripts/prepare-local.mjs');
+  assert.match(prepare,/copyFile\('\.env\.development\.example', '\.env\.local'\)/);
+  assert.match(prepare,/npm'\), \['ci'\]/);
+
   const compiled=read('scripts/start-local-compiled.mjs');
   assert.match(compiled,/PORTAL_SERVE_COMPILED_CLIENT: 'true'/);
   assert.match(compiled,/PORTAL_GIT_COMMIT: commit/);
+  assert.match(compiled,/VITE_PORTAL_LOCAL_DEMO_AUTH: 'true'/);
 });
 
 test('build local identifica o mesmo commit que CI e Vercel',()=>{
@@ -40,4 +47,23 @@ test('aparência continua com um único entrypoint canônico de CSS',()=>{
     './styles/portal-pages.css',
     './styles/portal-responsive.css',
   ]);
+});
+
+
+test('bundle compilado local preserva autenticação demo e seletor de usuário',()=>{
+  const runtime=read('src/utils/runtimeEnvironment.ts');
+  const api=read('src/services/apiClient.ts');
+  const app=read('src/App.tsx');
+  assert.match(runtime,/VITE_PORTAL_LOCAL_DEMO_AUTH === 'true'/);
+  assert.match(api,/isLocalDemoFrontend\(\)/);
+  assert.match(app,/isLocalDemoFrontend\(\) && <UserSimulatorBar/);
+});
+
+test('exemplo local contém sessão e OTP suficientes para funcionar sem serviços externos',()=>{
+  const env=read('.env.development.example');
+  assert.match(env,/PORTAL_ALLOW_INSECURE_DEMO_AUTH="true"/);
+  assert.match(env,/PORTAL_SESSION_SECRET="[^"]{32,}"/);
+  assert.match(env,/PORTAL_OTP_PEPPER="[^"]{32,}"/);
+  assert.match(env,/PORTAL_OTP_DELIVERY_MODE="log"/);
+  assert.match(env,/PORTAL_OTP_TEST_CODE="\d{6}"/);
 });
