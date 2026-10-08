@@ -1337,7 +1337,7 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-flow-modal > .portal-flow-modal-header :is(h1,h2,h3,h4,p,span,svg) {
-  color: inherit !important;
+  color: inherit;
 }
 
 .portal-flow-modal > :not(.portal-flow-modal-header) {
