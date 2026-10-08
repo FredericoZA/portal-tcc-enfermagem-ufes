@@ -7,6 +7,7 @@ import type { AuditLog } from '../types';
 import { SearchPopover } from '../components/SearchPopover';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SettingsWorkspaceHeaderPortal } from '../components/SettingsWorkspaceModal';
+import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { loadTableConfig, type ColumnDef } from '../components/TableColumnSelectorPanel';
 import { loadGlobalTableConfig, type TableTextFormat } from '../utils/tableFormatters';
 
@@ -19,7 +20,6 @@ const LOG_COLUMNS: ColumnDef[] = [
 ];
 const DEFAULT_ORDER = LOG_COLUMNS.map(column => column.key);
 const DEFAULT_VISIBLE = Object.fromEntries(LOG_COLUMNS.map(column => [column.key, true]));
-const whiteButton = 'inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-white bg-white px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-900 shadow-sm hover:bg-slate-50';
 
 export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const { isMasterAdmin } = useAuth();
@@ -114,23 +114,23 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   };
 
   const toolbar = <div className="portal-audit-toolbar flex flex-wrap items-center justify-end gap-1.5">
-    <button type="button" onClick={() => void downloadBackup()} className={whiteButton}><Download className="h-3.5 w-3.5"/>Backup</button>
-    <button type="button" onClick={() => restoreInputRef.current?.click()} className={whiteButton}><Upload className="h-3.5 w-3.5"/>Restaurar</button>
+    <button type="button" onClick={() => void downloadBackup()} className="portal-toolbar-icon-button" title="Baixar backup JSON" aria-label="Baixar backup JSON"><Download className="h-3.5 w-3.5"/></button>
+    <button type="button" onClick={() => restoreInputRef.current?.click()} className="portal-toolbar-icon-button" title="Restaurar backup JSON" aria-label="Restaurar backup JSON"><Upload className="h-3.5 w-3.5"/></button>
     <input ref={restoreInputRef} type="file" accept=".json,application/json" className="hidden" onChange={event => restoreBackup(event.target.files?.[0])}/>
     <SearchPopover value={search} onChange={setSearch} placeholder="Usuário, ação, processo ou entidade" textFormat={textFormat}/>
     <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} allColumns={LOG_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="audit_logs" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Registro de logs"/>
   </div>;
 
-  return <div id="audit-logs-page" data-settings-sheet="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'min-h-full' : 'space-y-0 overflow-hidden rounded-2xl border border-slate-300 shadow-sm'} style={{ backgroundColor: 'var(--portal-surface-card)' }}>
+  return <div id="audit-logs-page" data-settings-sheet="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'flex h-full min-h-0 flex-col' : 'space-y-0 overflow-hidden rounded-2xl border border-slate-300 shadow-sm'} style={{ backgroundColor: 'var(--portal-surface-page)' }}>
     {embedded ? <SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal> : <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><div className="flex items-center gap-2"><FileCheck2 className="h-5 w-5 shrink-0"/><h1 className="text-sm font-black uppercase tracking-wide">Registro de logs</h1></div>{toolbar}</header>}
 
-    <div className="portal-audit-table-shell">
-      {loading ? <div className="m-3 rounded-xl border border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Carregando histórico…</div> : shown.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Nenhum registro encontrado com os filtros atuais.</div> : <div className="overflow-x-auto bg-white">
+    <div className="portal-audit-table-shell flex min-h-0 flex-1 flex-col">
+      {loading ? <div className="m-3 rounded-xl border border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Carregando histórico…</div> : shown.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Nenhum registro encontrado com os filtros atuais.</div> : <TableScrollWrapper fillHeight>
         <table className="portal-spreadsheet-table portal-audit-table w-full min-w-[860px] border-collapse text-left text-xs">
           <thead><tr>{activeColumns.map(key => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wide ${key === 'options' ? 'text-right' : ''}`}>{LOG_COLUMNS.find(column => column.key === key)?.label || key}</th>)}</tr></thead>
           <tbody className="divide-y divide-slate-200">{shown.map(log => <tr key={log.id}>{activeColumns.map(key => <td key={key} className={`px-3 py-1 text-slate-950 ${key === 'options' ? 'text-right' : ''}`}>{renderCell(log, key)}</td>)}</tr>)}</tbody>
         </table>
-      </div>}
+      </TableScrollWrapper>}
     </div>
 
     {selectedLog && <div className="portal-modal-backdrop fixed inset-0 z-[1000008] flex items-center justify-center p-4" onClick={() => setSelectedLog(null)}>

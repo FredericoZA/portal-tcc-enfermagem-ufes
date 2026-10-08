@@ -27,10 +27,13 @@ test('modal de defesa fecha pelo fundo e não exibe contador nem X', () => {
   assert.doesNotMatch(home, /title="Fechar visualização"/);
 });
 
-test('assinatura em lote respeita avaliação no cliente e revalida no servidor', () => {
+test('assinatura em lote usa a fila pendente como fonte do cliente e revalida no servidor', () => {
   const page = read('src/pages/CoordenadorPage.tsx');
+  const helper = read('src/utils/coordinatorSignatureActions.ts');
   const server = read('server.ts');
-  assert.match(page, /process\.avaliacao\?\.status !== 'CONCLUIDO'/);
+  assert.match(page, /canSendAsten/);
+  assert.match(page, /canPrepareGov/);
+  assert.match(helper, /hasPendingDeclaration/);
   assert.match(server, /function assertSignatureEligibility/);
   assert.match(server, /SIGNATURE_FLOW_GATE/);
   assert.match(server, /assertSignatureEligibility\(signatureProcess/);
@@ -47,7 +50,8 @@ test('identidade e rodapé usam formulário único com salvamento automático', 
   const config = read('src/pages/ConfiguracoesPage.tsx');
   assert.match(identity, /aria-label="Dados de rodapé e identidade"/);
   assert.doesNotMatch(identity, /Identidade e dados do rodapé/);
-  assert.match(identity, /Salvo automaticamente/);
+  assert.match(identity, /setTimeout\(\(\) => \{ void persistRegularFields\(\); \}, 700\)/);
+  assert.doesNotMatch(identity, /Alterações salvas automaticamente/);
   assert.match(identity, /Adicionar membro/);
   assert.doesNotMatch(identity, /Salvar membros|Salvar Contas Administrativas/);
   assert.doesNotMatch(config, /MasterAndPresidentConfigForm/);

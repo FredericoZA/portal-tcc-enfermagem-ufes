@@ -11,9 +11,10 @@ GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 import {
   Activity,
   AtSign,
-  BookOpenCheck,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CircleAlert,
   ClipboardList,
   Cloud,
@@ -27,6 +28,7 @@ import {
   Mail,
   Merge,
   Palette,
+  Pencil,
   Plus,
   RefreshCw,
   Save,
@@ -169,6 +171,71 @@ function formatAuditAction(action: string): string {
   return labels[action] || action;
 }
 
+const TemplateVariableControl: React.FC<{
+  value: string;
+  onChange: (value:string)=>void;
+  variables: Array<{id:string;name:string;label?:string}>;
+  multiline?: boolean;
+  rows?: number;
+  className?: string;
+  placeholder?: string;
+  ariaLabel?: string;
+}> = ({ value, onChange, variables, multiline=false, rows=4, className='', placeholder='', ariaLabel }) => {
+  const ref=useRef<HTMLInputElement|HTMLTextAreaElement|null>(null);
+  const [cursor,setCursor]=useState(value.length);
+  const trigger=value.lastIndexOf('<<',Math.max(0,cursor));
+  const rawQuery=trigger>=0?value.slice(trigger+2,cursor):'';
+  const menuOpen=trigger>=0&&!rawQuery.includes('>>')&&!rawQuery.includes('\n');
+  const query=normalizeVariableKey(rawQuery);
+  const options=menuOpen
+    ? variables.filter(variable=>{
+        const key=normalizeVariableKey(variable.name||variable.id);
+        const label=normalizeVariableKey(variable.label||'');
+        return !query||key.includes(query)||label.includes(query);
+      }).slice(0,10)
+    : [];
+
+  const syncCursor=(target:HTMLInputElement|HTMLTextAreaElement)=>{
+    setCursor(target.selectionStart??target.value.length);
+  };
+  const choose=(variable:{id:string;name:string;label?:string})=>{
+    if(trigger<0)return;
+    const key=normalizeVariableKey(variable.name||variable.id);
+    const token=`<<${key}>>`;
+    const next=value.slice(0,trigger)+token+value.slice(cursor);
+    const nextCursor=trigger+token.length;
+    onChange(next);
+    setCursor(nextCursor);
+    window.requestAnimationFrame(()=>{
+      const el=ref.current;
+      if(!el)return;
+      el.focus();
+      el.setSelectionRange(nextCursor,nextCursor);
+    });
+  };
+
+  const shared={
+    value,
+    placeholder,
+    'aria-label':ariaLabel,
+    onChange:(event:React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement>)=>{onChange(event.target.value);syncCursor(event.target);},
+    onClick:(event:React.MouseEvent<HTMLInputElement|HTMLTextAreaElement>)=>syncCursor(event.currentTarget),
+    onKeyUp:(event:React.KeyboardEvent<HTMLInputElement|HTMLTextAreaElement>)=>syncCursor(event.currentTarget),
+    className,
+  };
+  return <div className="relative">
+    {multiline
+      ? <textarea ref={node=>{ref.current=node;}} rows={rows} {...shared}/>
+      : <input ref={node=>{ref.current=node;}} {...shared}/>}
+    {menuOpen&&options.length>0&&<div className="absolute left-0 top-full z-30 mt-1 max-h-56 w-full min-w-[280px] overflow-auto rounded-lg border border-slate-300 bg-white p-1 shadow-xl" role="listbox" aria-label="Variáveis disponíveis">
+      {options.map(variable=><button key={variable.id} type="button" onMouseDown={event=>event.preventDefault()} onClick={()=>choose(variable)} className="flex w-full items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left hover:bg-slate-100">
+        <span className="truncate text-[10px] font-bold text-slate-800">{variable.label||variable.name}</span>
+        <code className="shrink-0 text-[9px] text-[var(--portal-brand-action)]">{`<<${normalizeVariableKey(variable.name||variable.id)}>>`}</code>
+      </button>)}
+    </div>}
+  </div>;
+};
+
 const FormQuestionEditor: React.FC<{
   question: FormQuestionItem;
   index: number;
@@ -182,7 +249,10 @@ const FormQuestionEditor: React.FC<{
   return <article className="rounded-xl border border-slate-200 bg-slate-50 p-3" aria-label={`Campo ${index + 1}: ${question.label}`}>
     <div className="grid gap-2 sm:grid-cols-[1fr_.8fr_.7fr_auto]">
       <input aria-label="Rótulo do campo" value={question.label} onChange={(event) => onChange({ label: event.target.value })} className={inputClass} placeholder="Pergunta" />
-      <input aria-label="Variável vinculada" value={question.fieldKey} onChange={event=>onChange({fieldKey:event.target.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')})} className={inputClass} placeholder="CHAVE_DA_VARIAVEL" />
+      <select aria-label="Variável vinculada" value={question.fieldKey} onChange={event=>onChange({fieldKey:event.target.value,isReuseOfFieldKey:Boolean(event.target.value)})} className={inputClass}>
+        <option value="">Selecione a variável…</option>
+        {variables.map(variable=><option key={variable.id} value={normalizeVariableKey(/^CAMPO_/i.test(variable.id)?variable.id:(variable.name||variable.id))}>{variable.label||variable.name}</option>)}
+      </select>
       <select aria-label="Tipo do campo" value={question.fieldType} onChange={(event) => onChange({ fieldType: event.target.value as FormQuestionItem['fieldType'] })} className={inputClass}>{['text', 'textarea', 'date', 'datetime-local', 'email', 'number', 'select', 'radio', 'checkbox', 'file'].map((type) => <option key={type}>{type}</option>)}</select>
       <button type="button" onClick={onDelete} aria-label={`Excluir campo ${question.label}`} className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5" /></button>
     </div>
@@ -193,6 +263,7 @@ const FormQuestionEditor: React.FC<{
     <div className="mt-2 flex flex-wrap gap-3 text-[10px] font-bold text-slate-600">
       <label className="flex items-center gap-2"><input type="checkbox" checked={question.required} onChange={(event) => onChange({ required: event.target.checked })} />Campo obrigatório</label>
       <label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(question.visibleWhen?.fieldKey)} onChange={(event) => onChange({ visibleWhen: event.target.checked ? { fieldKey: previousQuestions[0]?.fieldKey || '', operator: 'EQUALS', value: '' } : undefined })} />Exibição condicional</label>
+      <label className="flex items-center gap-2"><input type="checkbox" checked={question.availableToTemplates !== false} onChange={(event) => onChange({ availableToTemplates: event.target.checked })} />Disponível para e-mails e documentos</label>
     </div>
     {(question.fieldType === 'select' || question.fieldType === 'radio') && <div className="mt-2"><label className={labelClass}>Opções (uma por linha)</label><textarea rows={3} value={(question.options || []).join('\n')} onChange={(event) => onChange({ options: event.target.value.split('\n').map((value) => value.trim()).filter(Boolean) })} className={inputClass}/></div>}
     {question.visibleWhen?.fieldKey !== undefined && <div className="mt-2 grid gap-2 rounded-lg border border-slate-300 bg-slate-50 p-2 sm:grid-cols-3"><select value={condition.fieldKey} onChange={(event) => onChange({ visibleWhen: { ...condition, fieldKey: event.target.value } })} className={inputClass}><option value="">Campo anterior…</option>{previousQuestions.filter((item) => item.fieldKey).map((item) => <option key={item.id} value={item.fieldKey}>{item.label}</option>)}</select><select value={condition.operator} onChange={(event) => onChange({ visibleWhen: { ...condition, operator: event.target.value as typeof condition.operator } })} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">Está marcado</option></select>{!['NOT_EMPTY', 'IS_TRUE'].includes(condition.operator) && <input value={condition.value || ''} onChange={(event) => onChange({ visibleWhen: { ...condition, value: event.target.value } })} className={inputClass} placeholder="Valor esperado"/>}</div>}
@@ -229,6 +300,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [selectedFormId, setSelectedFormId] = useState(formTemplates[0]?.id || '');
   const [selectedVariableId, setSelectedVariableId] = useState(matrixColumns[0]?.id || '');
   const [selectedFormQuestionId, setSelectedFormQuestionId] = useState(formTemplates[0]?.questions?.[0]?.id || '');
+  const [editingFormPart, setEditingFormPart] = useState<'title'|'description'|'stage'|'submit'|'confirmation'|null>(null);
+  const [editingFormQuestionLabelId, setEditingFormQuestionLabelId] = useState('');
+  const [showFormFieldComposer, setShowFormFieldComposer] = useState(false);
+  const [newFormFieldVariableId, setNewFormFieldVariableId] = useState('');
+  const [newFormVariableName, setNewFormVariableName] = useState('');
   const [selectedWorkflowStageId, setSelectedWorkflowStageId] = useState(workflowStages[0]?.id || '');
   const [documentPreview, setDocumentPreview] = useState<{docId:string;base64?:string;remoteUrl?:string;analysis?:unknown}|null>(null);
   const [documentPreviewLoading, setDocumentPreviewLoading] = useState(false);
@@ -244,6 +320,10 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [isDirty, setIsDirty] = useState(false);
   const appliedSnapshotRef = useRef<string>('');
   const hasHydratedRef = useRef(false);
+  const remoteAutosaveInFlightRef = useRef(false);
+  const [autosaveError, setAutosaveError] = useState('');
+  const [autosaveRetry, setAutosaveRetry] = useState(0);
+  const currentDraftFingerprintRef = useRef('');
 
   useEffect(() => { if (initialTab) setActiveTab(initialTab); }, [initialTab]);
 
@@ -257,13 +337,29 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       setSelectedFormQuestionId(selectedForm.questions[0]?.id || '');
     }
   }, [selectedForm?.id, selectedForm?.questions, selectedFormQuestionId]);
+  useEffect(() => {
+    setEditingFormPart(null);
+    setEditingFormQuestionLabelId('');
+    setShowFormFieldComposer(false);
+    setNewFormFieldVariableId('');
+    setNewFormVariableName('');
+  }, [selectedForm?.id]);
   const selectedVariable = matrixColumns.find((item) => item.id === selectedVariableId) || matrixColumns[0];
   const selectedEmailDesign = selectedEmail
     ? { ...defaultEmailDesign(selectedEmail.id, brandKit), ...(emailDesigns[selectedEmail.id] || {}) }
     : defaultEmailDesign('', brandKit);
   const selectedFormDesign = selectedForm
-    ? formDesigns[selectedForm.id] || defaultFormDesign(selectedForm.id, brandKit)
+    ? { ...defaultFormDesign(selectedForm.id, brandKit), ...(formDesigns[selectedForm.id] || {}) }
     : defaultFormDesign('', brandKit);
+  const templateVariables = useMemo(() => {
+    const allowedKeys=new Set<string>();
+    formTemplates.forEach(form=>form.questions.forEach(question=>{
+      if(question.availableToTemplates===false)return;
+      const key=normalizeVariableKey(question.fieldKey);
+      if(key)allowedKeys.add(key);
+    }));
+    return matrixColumns.filter(column=>allowedKeys.has(normalizeVariableKey(column.id))||allowedKeys.has(normalizeVariableKey(column.name))||(column.aliases||[]).some(alias=>allowedKeys.has(normalizeVariableKey(alias))));
+  },[formTemplates,matrixColumns]);
   const validationReport = useMemo(() => validateCourseStudio({
     schemaVersion: 3,
     brandKit,
@@ -372,6 +468,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   });
 
   const draftFingerprint = useMemo(() => JSON.stringify({ brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl }), [brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl]);
+  currentDraftFingerprintRef.current=draftFingerprint;
   const flushDraftRef = useRef<() => void>(()=>{});
   flushDraftRef.current = () => { if(!hasHydratedRef.current||!isDirty||isSaving)return; const draft=buildSnapshot(); draft.revision=revision; draft.savedAt=new Date().toISOString(); draft.publication={status:'DRAFT',publishedRevision:initialMeta.publication?.publishedRevision,publishedAt:initialMeta.publication?.publishedAt,validationScore:validationReport.score}; saveLocalStudio(draft); };
   useEffect(()=>()=>flushDraftRef.current(),[]);
@@ -388,6 +485,36 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     }, 650);
     return () => window.clearTimeout(timer);
   }, [draftFingerprint, isDirty, isSaving, revision, validationReport.score]);
+
+  useEffect(() => {
+    if (!hideTabs || !hasHydratedRef.current || !isDirty || isSaving) return;
+    const fingerprint=draftFingerprint;
+    const timer=window.setTimeout(() => {
+      if(remoteAutosaveInFlightRef.current)return;
+      if(!validationReport.ready){
+        setAutosaveError('Configuração incompleta: o rascunho está salvo somente neste navegador. Corrija os campos obrigatórios para publicar no servidor.');
+        return;
+      }
+      remoteAutosaveInFlightRef.current=true;
+      const snapshot=buildSnapshot();
+      void apiClient.updateSettings({ integrationStudio: snapshot }).then(() => {
+        saveLocalStudio(snapshot);
+        setRevision(snapshot.revision);
+        setLastSavedAt(snapshot.savedAt);
+        setDraftSavedAt('');
+        setAutosaveError('');
+        // Alterações feitas durante a requisição continuam sujas e serão enviadas após esta revisão.
+        setIsDirty(currentDraftFingerprintRef.current!==fingerprint);
+        appliedSnapshotRef.current=`${snapshot.savedAt}:${snapshot.revision}`;
+      }).catch(error=>{
+        console.error('Autosave do estúdio falhou',error);
+        setAutosaveError(error instanceof Error ? error.message : 'Não foi possível salvar no servidor. O rascunho continua neste navegador.');
+      }).finally(()=>{
+        remoteAutosaveInFlightRef.current=false;
+      });
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [hideTabs,draftFingerprint,isDirty,isSaving,revision,validationReport.ready,autosaveRetry]);
 
   const persistSnapshot = async (withAudit = false) => {
     if (isSaving) return;
@@ -465,7 +592,12 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
   const updateSelectedEmail = (updates: Partial<EmailTemplateItem>) => {
     if (!selectedEmail) return;
-    setEmailTemplates((previous) => previous.map((item) => item.id === selectedEmail.id ? { ...item, ...updates } : item));
+    setEmailTemplates((previous) => previous.map((item) => {
+      if(item.id!==selectedEmail.id)return item;
+      // O editor direto é a fonte de verdade: descarta HTML antigo para evitar envios desatualizados.
+      if(Object.prototype.hasOwnProperty.call(updates,'body') && updates.body!==item.body && item.htmlBody?.trim())return {...item,...updates,htmlBody:''};
+      return {...item,...updates};
+    }));
     setIsDirty(true);
   };
 
@@ -516,6 +648,75 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const moveSelectedFormQuestion = (index:number,direction:-1|1) => {
     if(!selectedForm)return;const target=index+direction;if(target<0||target>=selectedForm.questions.length)return;
     const questions=[...selectedForm.questions];[questions[index],questions[target]]=[questions[target],questions[index]];updateSelectedForm({questions});
+  };
+
+  const variableSimilarityScore = (candidate:string, column:MatrixColumn):number => {
+    const candidateKey=normalizeVariableKey(candidate);
+    const columnKey=normalizeVariableKey(column.name||column.id);
+    if(!candidateKey||!columnKey)return 0;
+    if(candidateKey===columnKey)return 1;
+    if(candidateKey.includes(columnKey)||columnKey.includes(candidateKey))return .86;
+    const a=new Set(candidateKey.split('_').filter(Boolean));
+    const b=new Set(columnKey.split('_').filter(Boolean));
+    const shared=[...a].filter(token=>b.has(token)).length;
+    const union=new Set([...a,...b]).size;
+    return union?shared/union:0;
+  };
+
+  const createFormVariable = async () => {
+    const candidate=normalizeVariableKey(newFormVariableName);
+    if(!candidate){notify('Informe o nome da nova variável.');return;}
+    const exact=matrixColumns.find(column=>normalizeVariableKey(column.name||column.id)===candidate);
+    if(exact){setNewFormFieldVariableId(exact.id);setNewFormVariableName('');notify('Essa variável já existe e foi selecionada.');return;}
+    const similar=matrixColumns
+      .map(column=>({column,score:variableSimilarityScore(candidate,column)}))
+      .filter(item=>item.score>=.48)
+      .sort((a,b)=>b.score-a.score)
+      .slice(0,4);
+    if(similar.length){
+      const names=similar.map(item=>item.column.label||item.column.name).join(', ');
+      const confirmed=await portalConfirm(`Já existem variáveis semelhantes: ${names}. Deseja criar “${candidate}” mesmo assim?`);
+      if(!confirmed)return;
+    }
+    const id=`var_${candidate.toLowerCase()}_${Date.now().toString(36)}`;
+    const label=candidate.toLowerCase().split('_').map(part=>part.charAt(0).toUpperCase()+part.slice(1)).join(' ');
+    const next:MatrixColumn={id,name:candidate,label,dataType:'text',aliases:[],format:{bold:false,italic:false,color:brandKit.primaryColor}};
+    setMatrixColumns(previous=>[...previous,next]);
+    setNewFormFieldVariableId(id);
+    setNewFormVariableName('');
+    setIsDirty(true);
+    notify(`Variável ${label} criada e selecionada.`);
+  };
+
+  const addFormQuestionFromVariable = () => {
+    if(!selectedForm)return;
+    const variable=matrixColumns.find(column=>column.id===newFormFieldVariableId);
+    if(!variable){notify('Selecione uma variável antes de adicionar o campo.');return;}
+    const fieldKey=normalizeVariableKey(/^CAMPO_/i.test(variable.id)?variable.id:(variable.name||variable.id));
+    const existing=selectedForm.questions.find(question=>normalizeVariableKey(question.fieldKey)===fieldKey);
+    if(existing){
+      setSelectedFormQuestionId(existing.id);
+      setEditingFormQuestionLabelId('');
+      setShowFormFieldComposer(false);
+      notify('Essa variável já está vinculada a um campo deste formulário.');
+      return;
+    }
+    const question:FormQuestionItem={
+      id:`question-${Date.now()}`,
+      fieldKey,
+      label:variable.label||variable.name||fieldKey,
+      fieldType:variable.dataType==='date'?'date':variable.dataType==='email'?'email':variable.dataType==='number'?'number':'text',
+      expectedAnswer:'',
+      required:false,
+      validation:{},
+      isReuseOfFieldKey:true,
+      availableToTemplates:true
+    };
+    updateSelectedForm({questions:[...selectedForm.questions,question]});
+    setSelectedFormQuestionId(question.id);
+    setEditingFormQuestionLabelId(question.id);
+    setShowFormFieldComposer(false);
+    setNewFormFieldVariableId('');
   };
 
   const handleDriveScan = async () => {
@@ -749,7 +950,14 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     if(!type)return;
     const source=type==='doc'?docTemplates.find(item=>item.id===refId):type==='email'?emailTemplates.find(item=>item.id===refId):type==='form'?formTemplates.find(item=>item.id===refId):undefined;
     const title=type==='doc'?(source as DocTemplateItem | undefined)?.label:type==='email'?(source as EmailTemplateItem | undefined)?.name:type==='form'?(source as FormTemplateItem | undefined)?.title:'Ação interna do sistema';
-    setWorkflowStages(previous=>previous.map(stage=>stage.id===stageId?{...stage,actions:[...stage.actions,{id:`action-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,type,refId:type==='action'?undefined:refId,title:title||'Nova ação',recipientOrDetail:''}]}:stage));
+    setWorkflowStages(previous=>previous.map(stage=>{
+      if(stage.id!==stageId)return stage;
+      const alreadyExists=type==='action'
+        ? stage.actions.some(action=>action.type==='action'&&!action.refId)
+        : stage.actions.some(action=>action.type===type&&action.refId===refId);
+      if(alreadyExists)return stage;
+      return {...stage,actions:[...stage.actions,{id:`action-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,type,refId:type==='action'?undefined:refId,title:title||'Nova ação',recipientOrDetail:''}]};
+    }));
     setIsDirty(true);
   };
   const updateWorkflowAction = (stageId:string,actionId:string,patch:Partial<WorkflowActionItem>) => {setWorkflowStages(previous=>previous.map(stage=>stage.id===stageId?{...stage,actions:stage.actions.map(action=>action.id===actionId?{...action,...patch}:action)}:stage));setIsDirty(true);};
@@ -765,60 +973,6 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       return {...stage,actions};
     }));
     setIsDirty(true);
-  };
-
-  const setWorkflowDragPayload = (event:React.DragEvent, payload:Record<string,unknown>) => {
-    event.dataTransfer.effectAllowed='move';
-    event.dataTransfer.setData('application/x-portal-workflow', JSON.stringify(payload));
-  };
-
-  const readWorkflowDragPayload = (event:React.DragEvent):Record<string,any>|null => {
-    try {
-      const raw=event.dataTransfer.getData('application/x-portal-workflow');
-      return raw?JSON.parse(raw):null;
-    } catch {
-      return null;
-    }
-  };
-
-  const handleWorkflowStageDrop = (event:React.DragEvent, targetStageId:string) => {
-    event.preventDefault();
-    const payload=readWorkflowDragPayload(event);
-    if(!payload)return;
-    if(payload.kind==='palette' && typeof payload.value==='string'){
-      addWorkflowAction(targetStageId,payload.value);
-      return;
-    }
-    if(payload.kind==='stage' && typeof payload.stageId==='string' && payload.stageId!==targetStageId){
-      setWorkflowStages(previous=>{
-        const from=previous.findIndex(stage=>stage.id===payload.stageId);
-        const to=previous.findIndex(stage=>stage.id===targetStageId);
-        if(from<0||to<0)return previous;
-        const next=[...previous];
-        const [moved]=next.splice(from,1);
-        next.splice(to,0,moved);
-        return next.map((stage,index)=>({...stage,stageNumber:index+1}));
-      });
-      setIsDirty(true);
-      return;
-    }
-    if(payload.kind==='action' && typeof payload.stageId==='string' && typeof payload.actionId==='string'){
-      setWorkflowStages(previous=>{
-        const sourceStage=previous.find(stage=>stage.id===payload.stageId);
-        const action=sourceStage?.actions.find(item=>item.id===payload.actionId);
-        if(!action)return previous;
-        return previous.map(stage=>{
-          if(stage.id===payload.stageId && stage.id===targetStageId){
-            const actions=stage.actions.filter(item=>item.id!==payload.actionId);
-            return {...stage,actions:[...actions,action]};
-          }
-          if(stage.id===payload.stageId)return {...stage,actions:stage.actions.filter(item=>item.id!==payload.actionId)};
-          if(stage.id===targetStageId)return {...stage,actions:[...stage.actions,action]};
-          return stage;
-        });
-      });
-      setIsDirty(true);
-    }
   };
 
   const emailPreviewHtml = useMemo(() => {
@@ -866,29 +1020,46 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     return pairs.sort((a,b)=>b.score-a.score).slice(0,8);
   }, [matrixColumns]);
 
-  const describeWorkflowAction = (action: WorkflowActionItem): string => {
-    if (action.type === 'form') {
-      const form = formTemplates.find(item => item.id === action.refId);
-      return `libera “${form?.title || action.title}” para ${form?.targetRole || 'o perfil definido'}`;
-    }
-    if (action.type === 'email') {
-      const email = emailTemplates.find(item => item.id === action.refId);
-      return `envia “${email?.name || action.title}” para ${email?.recipient || 'destinatários ainda não definidos'}`;
-    }
-    if (action.type === 'doc') {
-      const doc = docTemplates.find(item => item.id === action.refId);
-      const type = String(doc?.type || doc?.id || '').toUpperCase();
-      if (type.includes('CONVITE')) return `gera o Convite em PDF, arquiva no Drive e não solicita assinatura`;
-      if (type.includes('ATA')) return `gera a Ata pelo modelo ativo e envia à Asten para o orientador`;
-      if (type.includes('TERMO')) return `gera o Termo somente com publicação e envia à Asten para aluno(s) e orientador, simultaneamente`;
-      if (type.includes('DECLARACAO')) return `gera a Declaração e envia à Asten para o Presidente da Comissão`;
-      return `gera “${doc?.label || action.title}” pelo modelo ativo do Drive`;
-    }
-    return `executa uma ação interna; a publicação será bloqueada se não houver executor`;
+  const selectedWorkflowStage = workflowStages.find(stage => stage.id === selectedWorkflowStageId) || workflowStages[0];
+  const selectedWorkflowStageIndex = selectedWorkflowStage ? workflowStages.findIndex(stage => stage.id === selectedWorkflowStage.id) : -1;
+  const workflowCatalog = [
+    ...docTemplates.map(item => ({ value:`doc:${item.id}`, type:'doc' as const, label:item.label, detail:'Documento' })),
+    ...emailTemplates.map(item => ({ value:`email:${item.id}`, type:'email' as const, label:item.name, detail:'E-mail' })),
+    ...formTemplates.map(item => ({ value:`form:${item.id}`, type:'form' as const, label:item.title, detail:'Formulário' })),
+    { value:'action:internal', type:'action' as const, label:'Ação interna do sistema', detail:'Ação' },
+  ];
+  const workflowCatalogAction = (stage: WorkflowStageItem, value:string) => {
+    if(value.startsWith('existing:'))return stage.actions.find(action=>action.id===value.slice('existing:'.length));
+    const [type,refId]=value.split(':',2);
+    return stage.actions.find(action => type==='action'
+      ? action.type==='action'&&!action.refId
+      : action.type===type&&action.refId===refId);
   };
-
+  const toggleWorkflowCatalogItem = (stage:WorkflowStageItem,value:string,checked:boolean) => {
+    const existing=workflowCatalogAction(stage,value);
+    if(checked){
+      if(!existing&&!value.startsWith('existing:'))addWorkflowAction(stage.id,value);
+      return;
+    }
+    if(existing)removeWorkflowAction(stage.id,existing.id);
+  };
+  const selectedWorkflowRows = selectedWorkflowStage
+    ? (() => {
+        const matchedIds=new Set<string>();
+        const catalogRows=workflowCatalog.map(item=>{
+          const action=workflowCatalogAction(selectedWorkflowStage,item.value);
+          if(action)matchedIds.add(action.id);
+          return {...item,action};
+        });
+        const preservedRows=selectedWorkflowStage.actions
+          .filter(action=>!matchedIds.has(action.id))
+          .map(action=>({value:`existing:${action.id}`,type:action.type,label:action.title,detail:'Ação existente',action}));
+        return [...catalogRows,...preservedRows];
+      })()
+    : [];
   return (
     <div className={`portal-workspace portal-studio ${hideTabs ? 'mb-0 overflow-visible border-0 bg-transparent shadow-none' : `${panelClass} mb-5 overflow-hidden`}`}>
+      {hideTabs && autosaveError && <div role="alert" className="mx-3 my-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950"><span>Alterações ainda não publicadas: {autosaveError}</span><button type="button" className="rounded-md border border-amber-400 bg-white px-2 py-1 font-bold" onClick={()=>setAutosaveRetry(value=>value+1)}>Tentar salvar novamente</button></div>}
       <div className={`${hideTabs ? 'hidden' : 'portal-studio-heading flex flex-wrap items-center justify-between gap-2 border-b border-[var(--portal-brand-action-border)] bg-[var(--portal-brand-action)] px-3 py-2.5 text-white'}`}>
         <div><h3 className="text-xs font-black uppercase tracking-wide">Editor de modelos e variáveis</h3><p className="mt-0.5 text-[9px] text-white/80">Selecione uma área acima e trabalhe com seleção, edição e visualização no mesmo contexto.</p></div>
         <div className="flex items-center gap-2"><div className="hidden text-right text-[9px] font-semibold text-white/80 md:block">{isDirty ? (draftSavedAt ? `Rascunho automático ${new Date(draftSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Salvando rascunho…') : (lastSavedAt ? `Publicado ${new Date(lastSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Ainda não publicado')}</div><button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-white bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-black shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Publicando…' : 'Publicar'}</button></div>
@@ -1016,143 +1187,374 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         )}
 
         {activeTab === 'emails' && selectedEmail && (
-          <>
+          <div className="min-h-full bg-[var(--portal-surface-page)] pb-5" data-portal-email-direct-editor="true">
             <SettingsWorkspaceHeaderPortal>
-              <button type="button" onClick={()=>setShowEmailHtmlAdvanced(value=>!value)} className="portal-settings-header-pill" aria-pressed={showEmailHtmlAdvanced}>
-                <Type className="h-3.5 w-3.5" />
-                HTML avançado
-              </button>
-            </SettingsWorkspaceHeaderPortal>
-            <div className="portal-artifact-editor portal-artifact-editor-email grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(420px,.92fr)]">
-              <div className="space-y-2.5">
-                <section className={`${panelClass} overflow-hidden`}>
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 px-3 py-2.5">
-                    <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-[var(--portal-brand-action)]" /><h4 className="text-xs font-black uppercase">Editor profissional de e-mail</h4></div>
-                    <div className="flex items-center gap-1">
-                      <select value={selectedEmail.id} onChange={(e) => setSelectedEmailId(e.target.value)} className="max-w-[220px] rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-bold">{emailTemplates.map((email) => <option key={email.id} value={email.id}>{email.name}</option>)}</select>
-                      <button type="button" onClick={createEmailTemplate} className="portal-action rounded-full bg-white" aria-label="Criar modelo de e-mail"><Plus className="h-3.5 w-3.5"/></button>
-                      <button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="portal-action rounded-full bg-white text-rose-700 disabled:opacity-30" aria-label="Excluir modelo de e-mail"><Trash2 className="h-3.5 w-3.5"/></button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 p-3">
-                    <details open className="rounded-xl border border-slate-300 bg-[var(--portal-surface-card)]">
-                      <summary className="cursor-pointer select-none px-3 py-2 text-[10px] font-black uppercase text-slate-800">Dados do e-mail</summary>
-                      <div className="grid gap-2 border-t border-slate-300 p-3 sm:grid-cols-2">
-                        <div className="sm:col-span-2"><label className={labelClass}>Nome da rotina</label><input value={selectedEmail.name} onChange={(e) => updateSelectedEmail({ name: e.target.value })} className={inputClass} /></div>
-                        <div><label className={labelClass}>Destinatário</label><input value={selectedEmail.recipient || ''} onChange={(e) => updateSelectedEmail({ recipient: e.target.value })} className={inputClass} placeholder="<<ALUNO_EMAIL>>" /></div>
-                        <div><label className={labelClass}>Responder para</label><input value={selectedEmail.replyTo || ''} onChange={(e) => updateSelectedEmail({ replyTo: e.target.value })} className={inputClass} /></div>
-                        <div><label className={labelClass}>CC</label><input value={selectedEmail.cc || ''} onChange={(e) => updateSelectedEmail({ cc: e.target.value })} className={inputClass} /></div>
-                        <div><label className={labelClass}>CCO</label><input value={selectedEmail.bcc || ''} onChange={(e) => updateSelectedEmail({ bcc: e.target.value })} className={inputClass} /></div>
-                        <div className="sm:col-span-2"><label className={labelClass}>Assunto</label><input value={selectedEmail.subject} onChange={(e) => updateSelectedEmail({ subject: e.target.value })} className={inputClass} /></div>
-                        <div className="sm:col-span-2"><label className={labelClass}>Corpo em texto</label><textarea rows={7} value={selectedEmail.body} onChange={(e) => updateSelectedEmail({ body: e.target.value })} className={inputClass} /></div>
-                      </div>
-                    </details>
-
-                    <details className="rounded-xl border border-slate-300 bg-[var(--portal-surface-card)]">
-                      <summary className="cursor-pointer select-none px-3 py-2 text-[10px] font-black uppercase text-slate-800">Cabeçalho</summary>
-                      <div className="grid gap-2 border-t border-slate-300 p-3 sm:grid-cols-2">
-                        <div className="sm:col-span-2"><label className={labelClass}>Texto do cabeçalho</label><input value={selectedEmailDesign.headerText} onChange={(e) => updateSelectedEmailDesign({ headerText: e.target.value })} className={inputClass} placeholder="Curso de Graduação em Enfermagem e Obstetrícia" /></div>
-                        <div><label className={labelClass}>Logo do curso</label><input value={selectedEmailDesign.logoUrl} onChange={(e) => updateSelectedEmailDesign({ logoUrl: e.target.value })} className={inputClass} /></div>
-                        <div><label className={labelClass}>Imagem acima do cabeçalho</label><input value={selectedEmailDesign.heroImageUrl} onChange={(e) => updateSelectedEmailDesign({ heroImageUrl: e.target.value })} className={inputClass} /></div>
-                        <label className={`${actionClass} cursor-pointer rounded-full border-slate-300 bg-white text-slate-700`}><Image className="h-3.5 w-3.5" />Adicionar logo<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const value = await readTemplateImage(e.target.files?.[0]); if (value) updateSelectedEmailDesign({ logoUrl: value }); }} /></label>
-                        <label className={`${actionClass} cursor-pointer rounded-full border-slate-300 bg-white text-slate-700`}><Image className="h-3.5 w-3.5" />Adicionar imagem<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const value = await readTemplateImage(e.target.files?.[0]); if (value) updateSelectedEmailDesign({ heroImageUrl: value }); }} /></label>
-                      </div>
-                    </details>
-
-                    <details className="rounded-xl border border-slate-300 bg-[var(--portal-surface-card)]">
-                      <summary className="cursor-pointer select-none px-3 py-2 text-[10px] font-black uppercase text-slate-800">Rodapé e ação</summary>
-                      <div className="grid gap-2 border-t border-slate-300 p-3 sm:grid-cols-2">
-                        <div className="sm:col-span-2"><label className={labelClass}>Rodapé</label><textarea rows={2} value={selectedEmailDesign.footerText} onChange={(e) => updateSelectedEmailDesign({ footerText: e.target.value })} className={inputClass} /></div>
-                        <div><label className={labelClass}>Texto do botão</label><input value={selectedEmailDesign.buttonLabel} onChange={(e) => updateSelectedEmailDesign({ buttonLabel: e.target.value })} className={inputClass} /></div>
-                        <div><label className={labelClass}>Destino do botão</label><input value={selectedEmailDesign.buttonUrl} onChange={(e) => updateSelectedEmailDesign({ buttonUrl: e.target.value })} className={inputClass} /></div>
-                      </div>
-                    </details>
-
-                    <details className="rounded-xl border border-slate-300 bg-[var(--portal-surface-card)]">
-                      <summary className="cursor-pointer select-none px-3 py-2 text-[10px] font-black uppercase text-slate-800">Anexos <span className="ml-1 font-normal text-slate-500">({(selectedEmail.attachments||[]).length})</span></summary>
-                      <div className="grid gap-1.5 border-t border-slate-300 p-3">{docTemplates.map(doc=>{const attached=(selectedEmail.attachments||[]).includes(doc.id);const mode=selectedEmail.attachmentModes?.[doc.id]||'SIGNED';return <div key={doc.id} className={`rounded-lg border px-2.5 py-2 ${attached?'border-[#9bb9a8] bg-white':'border-slate-200 bg-[var(--portal-surface-panel)]'}`}><div className="flex flex-wrap items-center justify-between gap-2"><label className="flex min-w-0 items-center gap-2 text-[10px] font-bold text-slate-800"><input type="checkbox" checked={attached} onChange={(e)=>{const next=e.target.checked?Array.from(new Set([...(selectedEmail.attachments||[]),doc.id])):(selectedEmail.attachments||[]).filter(id=>id!==doc.id);updateSelectedEmail({attachments:next});}}/><span className="truncate">{doc.label}</span></label>{attached&&<select aria-label={`Versão do anexo ${doc.label}`} value={mode} onChange={(e)=>updateSelectedEmail({attachmentModes:{...(selectedEmail.attachmentModes||{}),[doc.id]:e.target.value as 'AVAILABLE'|'SIGNED'}})} className="rounded-full border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-700"><option value="AVAILABLE">Anexar quando gerado</option><option value="SIGNED">Somente após assinatura</option></select>}</div></div>;})}</div>
-                    </details>
-
-                    {showEmailHtmlAdvanced&&<div className="rounded-xl border border-slate-300 bg-[var(--portal-surface-card)] p-3"><div className="mb-2 flex items-center justify-between"><strong className="text-[10px] uppercase text-slate-800">HTML avançado opcional</strong><span className="text-[9px] text-slate-500">Sobrescreve a composição textual quando preenchido</span></div><textarea rows={8} value={selectedEmail.htmlBody || ''} onChange={(e) => updateSelectedEmail({ htmlBody: e.target.value })} className={`${inputClass} font-mono`} placeholder="<p>Conteúdo HTML...</p>" /></div>}
-                  </div>
-                </section>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <select
+                  value={selectedEmail.id}
+                  onChange={event=>setSelectedEmailId(event.target.value)}
+                  className="max-w-[260px] rounded-full border border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950"
+                  aria-label="Selecionar e-mail"
+                >
+                  {emailTemplates.map(email=><option key={email.id} value={email.id}>{email.name}</option>)}
+                </select>
+                <button type="button" onClick={createEmailTemplate} className="portal-toolbar-icon-button" title="Adicionar e-mail" aria-label="Adicionar e-mail"><Plus className="h-3.5 w-3.5"/></button>
+                <button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-30" title="Excluir e-mail" aria-label="Excluir e-mail"><Trash2 className="h-3.5 w-3.5"/></button>
+                <button type="button" onClick={()=>setShowEmailHtmlAdvanced(value=>!value)} className="portal-settings-header-pill" aria-pressed={showEmailHtmlAdvanced}>
+                  <Type className="h-3.5 w-3.5"/><span>HTML avançado</span>
+                </button>
               </div>
+            </SettingsWorkspaceHeaderPortal>
 
-              <section className={`${panelClass} overflow-hidden`}>
-                <div className="border-b border-slate-300 px-3 py-2.5">
-                  <div className="flex items-center gap-2"><Eye className="h-4 w-4 text-[var(--portal-brand-action)]" /><h4 className="text-xs font-black uppercase text-slate-900">Pré-visualização</h4></div>
-                  <p className="mt-0.5 truncate text-[9px] text-slate-500">Assunto: {selectedEmail.subject}</p>
+            <div className="mx-auto w-full max-w-5xl p-3 pb-5">
+              <article className="overflow-visible rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] shadow-sm">
+                <div className="grid gap-2 border-b border-slate-300 p-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <label className="lg:col-span-2"><span className={labelClass}>Nome da rotina</span><input value={selectedEmail.name} onChange={event=>updateSelectedEmail({name:event.target.value})} className={inputClass}/></label>
+                  <label><span className={labelClass}>Destinatário</span><TemplateVariableControl value={selectedEmail.recipient||''} onChange={value=>updateSelectedEmail({recipient:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Destinatário"/></label>
+                  <label><span className={labelClass}>Responder para</span><TemplateVariableControl value={selectedEmail.replyTo||''} onChange={value=>updateSelectedEmail({replyTo:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Responder para"/></label>
+                  <label><span className={labelClass}>CC</span><TemplateVariableControl value={selectedEmail.cc||''} onChange={value=>updateSelectedEmail({cc:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="CC"/></label>
+                  <label><span className={labelClass}>CCO</span><TemplateVariableControl value={selectedEmail.bcc||''} onChange={value=>updateSelectedEmail({bcc:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="CCO"/></label>
+                  <label className="sm:col-span-2"><span className={labelClass}>Assunto</span><TemplateVariableControl value={selectedEmail.subject} onChange={value=>updateSelectedEmail({subject:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Assunto"/></label>
                 </div>
-                <iframe title="Pré-visualização do e-mail" sandbox="" srcDoc={emailPreviewHtml} className="h-[620px] w-full border-0 bg-white" />
-              </section>
+
+                {selectedEmailDesign.heroImageUrl ? <label className="group relative block cursor-pointer" title="Alterar imagem do e-mail">
+                  <img src={selectedEmailDesign.heroImageUrl} alt="Imagem do e-mail" className="h-36 w-full object-cover"/>
+                  <span className="absolute inset-0 hidden items-center justify-center bg-black/35 text-white group-hover:flex"><Pencil className="mr-1 h-4 w-4"/>Alterar imagem</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedEmailDesign({heroImageUrl:value});}}/>
+                </label> : <label className="flex cursor-pointer items-center justify-center gap-2 border-b border-dashed border-slate-300 bg-white px-4 py-3 text-[10px] font-bold text-slate-600"><Image className="h-3.5 w-3.5"/>Adicionar imagem ao e-mail<input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedEmailDesign({heroImageUrl:value});}}/></label>}
+
+                <div className="flex items-center gap-3 border-b-[5px] border-white bg-[var(--portal-brand-header)] px-4 py-3">
+                  <label className="group relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white p-1" title="Alterar logo do e-mail">
+                    {(selectedEmailDesign.logoUrl||brandKit.courseLogoUrl)
+                      ? <img src={selectedEmailDesign.logoUrl||brandKit.courseLogoUrl} alt="Logo" className="h-full w-full object-contain"/>
+                      : <Image className="h-5 w-5 text-slate-500"/>}
+                    <span className="absolute inset-0 hidden items-center justify-center bg-black/45 text-white group-hover:flex"><Pencil className="h-3.5 w-3.5"/></span>
+                    <input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedEmailDesign({logoUrl:value});}}/>
+                  </label>
+                  <input
+                    value={selectedEmailDesign.headerText}
+                    onChange={event=>updateSelectedEmailDesign({headerText:event.target.value})}
+                    className="min-w-0 flex-1 border-0 bg-transparent text-[12px] font-black uppercase text-white outline-none placeholder:text-white/70"
+                    aria-label="Texto do cabeçalho do e-mail"
+                    placeholder={brandKit.courseName}
+                  />
+                </div>
+
+                <div className="bg-white p-5">
+                  <div className="mb-3 text-[9px] font-bold uppercase tracking-wider text-slate-500">Assunto</div>
+                  <TemplateVariableControl value={selectedEmail.subject} onChange={value=>updateSelectedEmail({subject:value})} variables={templateVariables} className="w-full border-0 bg-transparent p-0 text-lg font-black text-slate-900 outline-none" ariaLabel="Assunto no modelo do e-mail"/>
+                  <div className="my-4 h-px bg-slate-200"/>
+
+                  <div className="relative">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Corpo do e-mail</span>
+                      <span className="text-[9px] text-slate-400">Digite &lt;&lt; para escolher uma variável disponível</span>
+                    </div>
+                    <TemplateVariableControl
+                      multiline
+                      rows={12}
+                      value={selectedEmail.body}
+                      onChange={value=>updateSelectedEmail({body:value})}
+                      variables={templateVariables}
+                      className="min-h-[300px] w-full resize-y border-0 bg-transparent p-0 text-[13px] leading-6 text-slate-900 outline-none"
+                      placeholder="Escreva o e-mail. Use << para inserir variáveis."
+                      ariaLabel="Corpo do e-mail"
+                    />
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap items-center gap-2">
+                    <input value={selectedEmailDesign.buttonLabel} onChange={event=>updateSelectedEmailDesign({buttonLabel:event.target.value})} className="min-w-[180px] rounded-lg border-0 px-3 py-2 text-[10px] font-black uppercase text-white outline-none" style={{backgroundColor:brandKit.primaryColor}} aria-label="Texto do botão do e-mail"/>
+                    <TemplateVariableControl value={selectedEmailDesign.buttonUrl} onChange={value=>updateSelectedEmailDesign({buttonUrl:value})} variables={templateVariables} className="min-w-[260px] flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-[10px] text-slate-700 outline-none" placeholder="Destino do botão" ariaLabel="Destino do botão do e-mail"/>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-300 bg-[var(--portal-surface-card)] p-3">
+                  <textarea value={selectedEmailDesign.footerText} onChange={event=>updateSelectedEmailDesign({footerText:event.target.value})} rows={2} className="w-full resize-y border-0 bg-transparent text-[10px] text-slate-600 outline-none" aria-label="Rodapé do e-mail"/>
+                </div>
+
+                <details className="border-t border-slate-300 bg-[var(--portal-surface-panel)]">
+                  <summary className="cursor-pointer select-none px-3 py-2 text-[10px] font-black uppercase text-slate-700">Anexos ({(selectedEmail.attachments||[]).length})</summary>
+                  <div className="grid gap-1.5 border-t border-slate-300 p-3 sm:grid-cols-2">
+                    {docTemplates.map(doc=>{
+                      const attached=(selectedEmail.attachments||[]).includes(doc.id);
+                      const mode=selectedEmail.attachmentModes?.[doc.id]||'SIGNED';
+                      return <div key={doc.id} className={`rounded-lg border px-2.5 py-2 ${attached?'border-[#9bb9a8] bg-white':'border-slate-200 bg-[var(--portal-surface-card)]'}`}>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <label className="flex min-w-0 items-center gap-2 text-[10px] font-bold text-slate-800"><input type="checkbox" checked={attached} onChange={event=>{const next=event.target.checked?Array.from(new Set([...(selectedEmail.attachments||[]),doc.id])):(selectedEmail.attachments||[]).filter(id=>id!==doc.id);updateSelectedEmail({attachments:next});}}/><span className="truncate">{doc.label}</span></label>
+                          {attached&&<select aria-label={`Versão do anexo ${doc.label}`} value={mode} onChange={event=>updateSelectedEmail({attachmentModes:{...(selectedEmail.attachmentModes||{}),[doc.id]:event.target.value as 'AVAILABLE'|'SIGNED'}})} className="rounded-full border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-700"><option value="AVAILABLE">Quando gerado</option><option value="SIGNED">Após assinatura</option></select>}
+                        </div>
+                      </div>;
+                    })}
+                  </div>
+                </details>
+
+                {showEmailHtmlAdvanced&&<div className="border-t border-slate-300 bg-[var(--portal-surface-card)] p-3">
+                  <div className="mb-2 text-[9px] font-black uppercase text-slate-700">HTML avançado opcional</div>
+                  <TemplateVariableControl multiline rows={10} value={selectedEmail.htmlBody||''} onChange={value=>updateSelectedEmail({htmlBody:value})} variables={templateVariables} className={`${inputClass} font-mono`} placeholder="<p>Conteúdo HTML...</p>" ariaLabel="HTML avançado"/>
+                </div>}
+              </article>
             </div>
-          </>
+          </div>
         )}
 
         {activeTab === 'forms' && selectedForm && (
-          <div className="portal-artifact-editor portal-artifact-editor-form grid gap-3 xl:grid-cols-[minmax(0,1.08fr)_minmax(380px,.92fr)]">
-            <div className={`${panelClass} space-y-2.5 p-3`}>
-              <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-[var(--portal-brand-action)]" /><h4 className="text-xs font-black uppercase">Construtor de formulário</h4></div><div className="flex items-center gap-1"><select value={selectedForm.id} onChange={(e) => setSelectedFormId(e.target.value)} className="max-w-[220px] rounded-lg border border-slate-300 px-2 py-1.5 text-[10px] font-bold">{formTemplates.map((form) => <option key={form.id} value={form.id}>{form.title}</option>)}</select><button type="button" onClick={createFormTemplate} className="portal-action" aria-label="Criar formulário"><Plus className="h-3.5 w-3.5"/></button><button type="button" onClick={()=>void deleteSelectedForm()} disabled={formTemplates.length<=1} className="portal-action text-rose-700 disabled:opacity-30" aria-label="Excluir formulário"><Trash2 className="h-3.5 w-3.5"/></button></div></div>
-              <div><label className={labelClass}>Título</label><input value={selectedForm.title} onChange={(e) => updateSelectedForm({ title: e.target.value })} className={inputClass} /></div>
-              <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Etapa</label><input value={selectedForm.stage} onChange={(e) => updateSelectedForm({ stage: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>Público</label><select value={selectedForm.targetRole} onChange={(e) => updateSelectedForm({ targetRole: e.target.value as FormTemplateItem['targetRole'] })} className={inputClass}>{['Aluno', 'Orientador', 'Banca', 'Presidente da Comissão'].map((role) => <option key={role}>{role}</option>)}</select></div></div>
-              <div><label className={labelClass}>Descrição</label><textarea rows={3} value={selectedForm.description} onChange={(e) => updateSelectedForm({ description: e.target.value })} className={inputClass} /></div>
-              <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Logo</label><input value={selectedFormDesign.logoUrl} onChange={(e) => updateSelectedFormDesign({ logoUrl: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>Banner</label><input value={selectedFormDesign.bannerImageUrl} onChange={(e) => updateSelectedFormDesign({ bannerImageUrl: e.target.value })} className={inputClass} /></div></div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <label className={`${actionClass} cursor-pointer border-slate-300 bg-white text-slate-700`}><Image className="h-3.5 w-3.5" />Enviar logo do formulário<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const value = await readTemplateImage(e.target.files?.[0]); if (value) updateSelectedFormDesign({ logoUrl: value }); }} /></label>
-                <label className={`${actionClass} cursor-pointer border-slate-300 bg-white text-slate-700`}><Image className="h-3.5 w-3.5" />Enviar banner do formulário<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const value = await readTemplateImage(e.target.files?.[0]); if (value) updateSelectedFormDesign({ bannerImageUrl: value }); }} /></label>
+          <div className="min-h-full bg-[var(--portal-surface-page)] pb-5" data-portal-form-direct-editor="true">
+            <SettingsWorkspaceHeaderPortal>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <select
+                  value={selectedForm.id}
+                  onChange={(event)=>setSelectedFormId(event.target.value)}
+                  className="max-w-[260px] rounded-full border border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950"
+                  aria-label="Selecionar formulário"
+                >
+                  {formTemplates.map(form=><option key={form.id} value={form.id}>{form.title}</option>)}
+                </select>
+                <button type="button" onClick={createFormTemplate} className="portal-toolbar-icon-button" title="Adicionar formulário" aria-label="Adicionar formulário"><Plus className="h-3.5 w-3.5"/></button>
+                <button type="button" onClick={()=>void deleteSelectedForm()} disabled={formTemplates.length<=1} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-30" title="Excluir formulário" aria-label="Excluir formulário"><Trash2 className="h-3.5 w-3.5"/></button>
               </div>
-              <div><label className={labelClass}>Introdução</label><textarea rows={2} value={selectedFormDesign.introText} onChange={(e) => updateSelectedFormDesign({ introText: e.target.value })} className={inputClass} /></div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between"><span className={labelClass}>Campos, regras e variáveis</span><button type="button" onClick={() => updateSelectedForm({ questions: [...selectedForm.questions, { id: `question-${Date.now()}`, fieldKey: '', label: 'Novo campo', fieldType: 'text', expectedAnswer: '', required: false, validation: {} }] })} className={`${actionClass} border-[var(--portal-brand-action-border)] bg-white text-[var(--portal-brand-action)]`}><Plus className="h-3 w-3" />Adicionar campo</button></div>
-                <div className="space-y-2"><div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 p-2"><span className="text-[9px] font-black uppercase text-slate-500">Editar campo</span><select value={selectedFormQuestionId} onChange={(e)=>setSelectedFormQuestionId(e.target.value)} className="min-w-[220px] flex-1 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-[10px] font-bold">{selectedForm.questions.map((question,index)=><option key={question.id} value={question.id}>{index+1}. {question.label}</option>)}</select></div>{selectedForm.questions.map((question,index)=>question.id===selectedFormQuestionId?<div key={question.id} className="space-y-1"><div className="flex justify-end gap-1"><button type="button" className="portal-action" disabled={index===0} onClick={()=>moveSelectedFormQuestion(index,-1)} aria-label={`Mover ${question.label} para cima`}>↑</button><button type="button" className="portal-action" disabled={index===selectedForm.questions.length-1} onClick={()=>moveSelectedFormQuestion(index,1)} aria-label={`Mover ${question.label} para baixo`}>↓</button></div><FormQuestionEditor question={question} index={index} variables={matrixColumns} previousQuestions={selectedForm.questions.slice(0,index)} onChange={(updates)=>updateSelectedForm({questions:selectedForm.questions.map((item)=>item.id===question.id?{...item,...updates}:item)})} onDelete={()=>updateSelectedForm({questions:selectedForm.questions.filter((item)=>item.id!==question.id)})}/></div>:null)}</div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Texto do botão</label><input value={selectedFormDesign.submitLabel} onChange={(e) => updateSelectedFormDesign({ submitLabel: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>Mensagem após envio</label><input value={selectedFormDesign.confirmationMessage} onChange={(e) => updateSelectedFormDesign({ confirmationMessage: e.target.value })} className={inputClass} /></div></div>
+            </SettingsWorkspaceHeaderPortal>
+
+            <div className="mx-auto w-full max-w-4xl p-3 pb-5">
+              <article className="overflow-hidden rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] shadow-sm" style={{fontFamily:brandKit.fontFamily}}>
+                <div className="flex items-center gap-3 border-b-[5px] border-white bg-[var(--portal-brand-header)] px-4 py-3">
+                  <label className="group relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white p-1" title="Alterar logo da UFES">
+                    {(selectedFormDesign.universityLogoUrl||brandKit.universityLogoUrl)
+                      ? <img src={selectedFormDesign.universityLogoUrl||brandKit.universityLogoUrl} alt="UFES" className="h-full w-full object-contain"/>
+                      : <Image className="h-5 w-5 text-slate-500"/>}
+                    <span className="absolute inset-0 hidden items-center justify-center bg-black/45 text-white group-hover:flex"><Pencil className="h-3.5 w-3.5"/></span>
+                    <input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedFormDesign({universityLogoUrl:value});}}/>
+                  </label>
+                  <label className="group relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white p-1" title="Alterar logo do curso">
+                    {(selectedFormDesign.logoUrl||brandKit.courseLogoUrl)
+                      ? <img src={selectedFormDesign.logoUrl||brandKit.courseLogoUrl} alt="Curso" className="h-full w-full object-contain"/>
+                      : <Image className="h-5 w-5 text-slate-500"/>}
+                    <span className="absolute inset-0 hidden items-center justify-center bg-black/45 text-white group-hover:flex"><Pencil className="h-3.5 w-3.5"/></span>
+                    <input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedFormDesign({logoUrl:value});}}/>
+                  </label>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[9px] font-black uppercase tracking-[0.14em] text-white/85">{brandKit.institutionName}</div>
+                    <div className="mt-1 text-[11px] font-black uppercase leading-tight text-white">{brandKit.courseName}</div>
+                  </div>
+                </div>
+
+                {selectedFormDesign.bannerImageUrl ? (
+                  <label className="group relative block cursor-pointer" title="Alterar imagem do formulário">
+                    <img src={selectedFormDesign.bannerImageUrl} alt="Imagem do formulário" className="h-32 w-full object-cover"/>
+                    <span className="absolute inset-0 hidden items-center justify-center bg-black/35 text-white group-hover:flex"><Pencil className="mr-1 h-4 w-4"/>Alterar imagem</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedFormDesign({bannerImageUrl:value});}}/>
+                  </label>
+                ) : (
+                  <label className="flex cursor-pointer items-center justify-center gap-2 border-b border-dashed border-slate-300 bg-white px-4 py-3 text-[10px] font-bold text-slate-600">
+                    <Image className="h-3.5 w-3.5"/>Adicionar imagem ao formulário
+                    <input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedFormDesign({bannerImageUrl:value});}}/>
+                  </label>
+                )}
+
+                <div className="p-4">
+                  <div className="mb-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {editingFormPart==='stage'
+                        ? <input autoFocus value={selectedForm.stage} onChange={event=>updateSelectedForm({stage:event.target.value})} onBlur={()=>setEditingFormPart(null)} className="max-w-[260px] rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-black uppercase text-[var(--portal-brand-action)]"/>
+                        : <button type="button" onDoubleClick={()=>setEditingFormPart('stage')} onClick={()=>setEditingFormPart('stage')} className="group inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-[var(--portal-brand-action)]" title="Editar etapa"><span>{selectedForm.stage||'Definir etapa'}</span><Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100"/></button>}
+                      <select value={selectedForm.targetRole} onChange={event=>updateSelectedForm({targetRole:event.target.value as FormTemplateItem['targetRole']})} className="rounded-full border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-700" aria-label="Público do formulário">
+                        {['Aluno','Orientador','Banca','Presidente da Comissão'].map(role=><option key={role}>{role}</option>)}
+                      </select>
+                    </div>
+
+                    {editingFormPart==='title'
+                      ? <input autoFocus value={selectedForm.title} onChange={event=>updateSelectedForm({title:event.target.value})} onBlur={()=>setEditingFormPart(null)} className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-lg font-black text-slate-900"/>
+                      : <button type="button" onDoubleClick={()=>setEditingFormPart('title')} onClick={()=>setEditingFormPart('title')} className="group mt-1 flex max-w-full items-center gap-2 text-left" title="Editar título"><h3 className="text-lg font-black text-slate-900">{selectedForm.title}</h3><Pencil className="h-3.5 w-3.5 shrink-0 text-slate-400 opacity-0 group-hover:opacity-100"/></button>}
+
+                    {editingFormPart==='description'
+                      ? <textarea autoFocus rows={2} value={selectedForm.description} onChange={event=>{updateSelectedForm({description:event.target.value});updateSelectedFormDesign({introText:event.target.value});}} onBlur={()=>setEditingFormPart(null)} className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"/>
+                      : <button type="button" onDoubleClick={()=>setEditingFormPart('description')} onClick={()=>setEditingFormPart('description')} className="group mt-1 flex max-w-full items-start gap-2 text-left" title="Editar descrição"><p className="text-xs text-slate-600">{selectedForm.description||selectedFormDesign.introText||'Clique para adicionar uma descrição.'}</p><Pencil className="mt-0.5 h-3 w-3 shrink-0 text-slate-400 opacity-0 group-hover:opacity-100"/></button>}
+                  </div>
+
+                  {selectedFormDesign.showProgress && <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full w-1/3 rounded-full" style={{backgroundColor:brandKit.primaryColor}}/></div>}
+
+                  <div className="space-y-3">
+                    {selectedForm.questions.map((question,index)=>{
+                      const editingLabel=editingFormQuestionLabelId===question.id;
+                      const selectedQuestion=selectedFormQuestionId===question.id;
+                      return <section key={question.id} className="rounded-lg border border-slate-300 bg-white p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            {editingLabel
+                              ? <input autoFocus value={question.label} onChange={event=>updateSelectedForm({questions:selectedForm.questions.map(item=>item.id===question.id?{...item,label:event.target.value}:item)})} onBlur={()=>setEditingFormQuestionLabelId('')} className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs font-bold text-slate-900"/>
+                              : <button type="button" onDoubleClick={()=>setEditingFormQuestionLabelId(question.id)} className="group flex max-w-full items-center gap-1.5 text-left" title="Duplo clique para editar a pergunta"><span className="text-xs font-bold text-slate-800">{index+1}. {question.label}{question.required&&<span className="ml-1 text-rose-600">*</span>}</span><Pencil className="h-3 w-3 shrink-0 text-slate-400 opacity-0 group-hover:opacity-100"/></button>}
+                            <div className="mt-1 text-[9px] font-semibold text-slate-500">Variável: {question.fieldKey||'não vinculada'}</div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button type="button" onClick={()=>{setSelectedFormQuestionId(question.id);setEditingFormQuestionLabelId('');}} className="portal-toolbar-icon-button !h-7 !min-h-7 !w-7 !min-w-7" title="Configurar campo" aria-label={`Configurar ${question.label}`}><Pencil className="h-3 w-3"/></button>
+                            <button type="button" onClick={()=>moveSelectedFormQuestion(index,-1)} disabled={index===0} className="portal-toolbar-icon-button !h-7 !min-h-7 !w-7 !min-w-7 disabled:opacity-30" title="Mover campo para cima" aria-label={`Mover ${question.label} para cima`}>↑</button>
+                            <button type="button" onClick={()=>moveSelectedFormQuestion(index,1)} disabled={index===selectedForm.questions.length-1} className="portal-toolbar-icon-button !h-7 !min-h-7 !w-7 !min-w-7 disabled:opacity-30" title="Mover campo para baixo" aria-label={`Mover ${question.label} para baixo`}>↓</button>
+                          </div>
+                        </div>
+
+                        <div className="mt-2">
+                          {question.fieldType==='textarea'
+                            ? <textarea disabled rows={3} className={inputClass} placeholder={question.placeholder||question.helpText||''}/>
+                            : question.fieldType==='select'||question.fieldType==='radio'
+                              ? <select disabled className={inputClass}><option>{question.options?.[0]||'Selecione uma opção'}</option></select>
+                              : question.fieldType==='checkbox'
+                                ? <label className="flex items-center gap-2 text-xs text-slate-700"><input type="checkbox" disabled/>Confirmar</label>
+                                : <input disabled type={question.fieldType==='date'?'date':question.fieldType==='number'?'number':question.fieldType==='email'?'email':question.fieldType==='file'?'file':'text'} className={inputClass} placeholder={question.placeholder||`Variável: ${question.fieldKey||'não vinculada'}`}/>}
+                        </div>
+
+                        {selectedQuestion && <div className="mt-3 border-t border-slate-200 pt-3"><FormQuestionEditor question={question} index={index} variables={matrixColumns} previousQuestions={selectedForm.questions.slice(0,index)} onChange={updates=>updateSelectedForm({questions:selectedForm.questions.map(item=>item.id===question.id?{...item,...updates}:item)})} onDelete={()=>updateSelectedForm({questions:selectedForm.questions.filter(item=>item.id!==question.id)})}/></div>}
+                      </section>;
+                    })}
+                  </div>
+
+                  <div className="mt-4">
+                    {!showFormFieldComposer
+                      ? <button type="button" onClick={()=>setShowFormFieldComposer(true)} className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-[10px] font-black text-slate-900"><Plus className="h-3.5 w-3.5"/>Adicionar campo</button>
+                      : <section className="rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-3">
+                          <div className="text-[9px] font-black uppercase tracking-wider text-slate-600">Adicionar campo vinculado a uma variável</div>
+                          <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto]">
+                            <select value={newFormFieldVariableId} onChange={event=>setNewFormFieldVariableId(event.target.value)} className={inputClass}>
+                              <option value="">Selecione uma variável existente…</option>
+                              {matrixColumns.map(variable=><option key={variable.id} value={variable.id}>{variable.label||variable.name}</option>)}
+                            </select>
+                            <button type="button" onClick={addFormQuestionFromVariable} disabled={!newFormFieldVariableId} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-black text-slate-900 disabled:opacity-40">Adicionar</button>
+                          </div>
+                          <div className="my-2 flex items-center gap-2 text-[9px] font-bold uppercase text-slate-400"><span className="h-px flex-1 bg-slate-300"/><span>ou criar variável</span><span className="h-px flex-1 bg-slate-300"/></div>
+                          <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+                            <input value={newFormVariableName} onChange={event=>setNewFormVariableName(event.target.value)} className={inputClass} placeholder="Ex.: NOME_DO_CAMPO"/>
+                            <button type="button" onClick={()=>void createFormVariable()} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-black text-slate-900">Verificar e criar</button>
+                          </div>
+                          <p className="mt-2 text-[9px] leading-4 text-slate-500">Antes de criar uma nova variável o Portal procura equivalentes e pede confirmação quando encontrar uma possível duplicidade.</p>
+                        </section>}
+                  </div>
+
+                  <div className="mt-4">
+                    {editingFormPart==='submit'
+                      ? <input autoFocus value={selectedFormDesign.submitLabel} onChange={event=>updateSelectedFormDesign({submitLabel:event.target.value})} onBlur={()=>setEditingFormPart(null)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-center text-[10px] font-black"/>
+                      : <button type="button" onDoubleClick={()=>setEditingFormPart('submit')} className="group flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase text-white" style={{backgroundColor:brandKit.primaryColor}} title="Duplo clique para editar o texto do botão"><span>{selectedFormDesign.submitLabel}</span><Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100"/></button>}
+                    {editingFormPart==='confirmation'
+                      ? <textarea autoFocus rows={2} value={selectedFormDesign.confirmationMessage||''} onChange={event=>updateSelectedFormDesign({confirmationMessage:event.target.value})} onBlur={()=>setEditingFormPart(null)} className="mt-2 w-full rounded-lg border border-slate-300 bg-white p-2 text-center text-[10px] text-slate-700" aria-label="Mensagem após envio"/>
+                      : <button type="button" onClick={()=>setEditingFormPart('confirmation')} className="group mt-2 w-full text-center text-[9px] text-slate-500" title="Editar mensagem após envio"><span>{selectedFormDesign.confirmationMessage||'Adicionar mensagem após envio'}</span><Pencil className="ml-1 inline h-3 w-3 opacity-0 group-hover:opacity-100"/></button>}
+                  </div>
+                </div>
+              </article>
             </div>
-            <div className="portal-official-preview rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] p-3"><div className="mx-auto max-w-xl overflow-hidden rounded-xl border border-[var(--portal-border)] bg-white shadow-sm" style={{ fontFamily: brandKit.fontFamily }}><div className="flex items-center gap-3 border-b-[5px] border-white bg-[var(--portal-brand-header)] px-4 py-3">{(selectedFormDesign.logoUrl || brandKit.universityLogoUrl || brandKit.courseLogoUrl) && <img src={selectedFormDesign.logoUrl || brandKit.universityLogoUrl || brandKit.courseLogoUrl} alt="UFES" className="h-12 w-12 shrink-0 rounded-full bg-white object-contain p-1" />}<div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[0.14em] text-white/85">UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO</div><div className="mt-1 text-[11px] font-black uppercase leading-tight text-white">{brandKit.courseName}</div></div></div>{selectedFormDesign.bannerImageUrl && <img src={selectedFormDesign.bannerImageUrl} alt="Banner" className="h-28 w-full object-cover" />}<div className="p-4"><div className="mb-3"><div className="text-[9px] font-black uppercase tracking-wider text-[var(--portal-brand-action)]">{selectedForm.stage}</div><h3 className="mt-1 text-lg font-black text-slate-900">{selectedForm.title}</h3><p className="mt-1 text-xs text-slate-500">{selectedFormDesign.introText || selectedForm.description}</p></div>{selectedFormDesign.showProgress && <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full w-1/3 rounded-full" style={{ backgroundColor: brandKit.primaryColor }} /></div>}<div className="space-y-3">{selectedForm.questions.map((question, index) => <div key={question.id}><label className="mb-1.5 block text-xs font-bold text-slate-800">{index + 1}. {question.label}{question.required && <span className="ml-1 text-rose-600">*</span>}</label>{question.fieldType === 'textarea' ? <textarea disabled className={inputClass} rows={3} /> : question.fieldType === 'select' || question.fieldType === 'radio' ? <select disabled className={inputClass}><option>Selecione uma opção</option></select> : question.fieldType === 'checkbox' ? <label className="flex items-center gap-2 text-xs"><input type="checkbox" disabled />Confirmar</label> : <input disabled type={question.fieldType === 'date' ? 'date' : question.fieldType === 'number' ? 'number' : question.fieldType === 'email' ? 'email' : question.fieldType === 'file' ? 'file' : 'text'} className={inputClass} placeholder={`Variável: ${question.fieldKey || 'não vinculada'}`} />}</div>)}<button type="button" className="w-full rounded-lg px-3 py-2 text-[10px] font-black uppercase text-white" style={{ backgroundColor: brandKit.primaryColor }}>{selectedFormDesign.submitLabel}</button></div></div></div></div>
           </div>
         )}
 
         {activeTab === 'workflow' && (
-          <div className="space-y-4">
-            <div className={`${panelClass} flex flex-col gap-2.5 p-3 sm:flex-row sm:items-center sm:justify-between`}>
-              <div><div className="flex items-center gap-2"><Workflow className="h-4 w-4 text-emerald-700"/><h4 className="text-xs font-black uppercase">Fluxo executável</h4></div><p className="mt-1 text-[11px] leading-relaxed text-slate-600">Cada etapa responde a um evento real do processo. Vincule documentos, e-mails e formulários publicados; o servidor valida as referências antes de executar.</p></div>
-              <button type="button" onClick={addWorkflowStage} className={`${actionClass} shrink-0 border-emerald-700 bg-emerald-700 text-white`}><Plus className="h-3.5 w-3.5"/>Adicionar etapa</button>
-            </div>
-            <section className={`${panelClass} p-3`} aria-labelledby="workflow-secretary-mode-title">
-              <div className="flex items-center gap-2"><BookOpenCheck className="h-4 w-4 text-emerald-700"/><h4 id="workflow-secretary-mode-title" className="text-xs font-black uppercase">Leitura simples do fluxo</h4></div>
-              <p className="mt-1 text-[11px] leading-5 text-slate-600">O portal executa as ações de cima para baixo. Formulários liberam dados, documentos usam o modelo ativo do Drive, a Asten coleta as assinaturas e o Gmail envia somente os anexos já disponíveis.</p>
-              <div className="mt-3 grid gap-2 lg:grid-cols-2">{workflowStages.map((stage, stageIndex) => <article key={`summary-${stage.id}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="text-[10px] font-black uppercase text-slate-500">Etapa {stageIndex + 1} · quando {workflowEvents.find(([value]) => value === stage.triggerEvent)?.[1] || stage.triggerEvent}</div><p className="mt-1 text-xs leading-5 text-slate-800">{stage.actions.length ? stage.actions.map(describeWorkflowAction).join('; depois, ') : 'nenhuma ação configurada.'}</p></article>)}</div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{[
-                ['Convite', 'Sem assinatura'], ['Ata', 'Orientador'], ['Termo', 'Aluno(s) + orientador, prioridade 1'], ['Declaração', 'Presidente da Comissão']
-              ].map(([document, rule]) => <div key={document} className="rounded-xl border border-emerald-200 bg-emerald-50 p-3"><strong className="block text-[10px] uppercase text-emerald-900">{document}</strong><span className="text-[10px] text-emerald-800">{rule}</span></div>)}</div>
-            </section>
-            <section className={`${panelClass} p-3`} aria-label="Paleta de ações do fluxo">
-              <div className="text-[10px] font-black uppercase text-slate-500">Arraste para uma etapa</div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {docTemplates.map(item=><button key={`palette-doc-${item.id}`} type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:`doc:${item.id}`})} className="portal-action cursor-grab"><FileText className="h-3.5 w-3.5"/>{item.label}</button>)}
-                {emailTemplates.map(item=><button key={`palette-email-${item.id}`} type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:`email:${item.id}`})} className="portal-action cursor-grab"><Mail className="h-3.5 w-3.5"/>{item.name}</button>)}
-                {formTemplates.map(item=><button key={`palette-form-${item.id}`} type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:`form:${item.id}`})} className="portal-action cursor-grab"><ClipboardList className="h-3.5 w-3.5"/>{item.title}</button>)}
-                <button type="button" draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'palette',value:'action:internal'})} className="portal-action cursor-grab"><Settings2 className="h-3.5 w-3.5"/>Ação interna</button>
+          <div className="space-y-3 pb-5" data-portal-workflow-editor="true">
+            <section
+              className="overflow-hidden rounded-xl border border-[var(--portal-border)]"
+              style={{ backgroundColor: 'var(--portal-surface-inner)' }}
+              aria-labelledby="workflow-timeline-title"
+            >
+              <div className="flex items-center justify-between px-4 pt-3">
+                <div>
+                  <h4 id="workflow-timeline-title" className="text-[11px] font-black uppercase tracking-wider text-slate-700">Fluxo do Processo</h4>
+                  <p className="mt-0.5 text-[9px] text-slate-500">Selecione uma etapa para editar. A ordem exibida aqui é a ordem do processo.</p>
+                </div>
+                <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
+                  {workflowStages.length} etapa(s)
+                </span>
               </div>
-              <p className="mt-2 text-[9px] text-slate-500">Também é possível usar os seletores e setas abaixo; o arrastar e soltar é um atalho, não a única forma de operar.</p>
+
+              <div className="overflow-x-auto px-4 pb-3 pt-2">
+                <div className="flex min-w-max items-start">
+                  {workflowStages.map((stage,index)=>{
+                    const selected=stage.id===selectedWorkflowStage?.id;
+                    return <React.Fragment key={stage.id}>
+                      <button
+                        type="button"
+                        onClick={()=>setSelectedWorkflowStageId(stage.id)}
+                        className="group flex w-28 shrink-0 flex-col items-center text-center"
+                        aria-pressed={selected}
+                        title={stage.title}
+                      >
+                        <span className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black transition-colors ${selected ? 'bg-slate-900 text-white ring-2 ring-emerald-600 ring-offset-1' : 'border border-emerald-700 bg-white text-emerald-800 group-hover:bg-emerald-50'}`}>
+                          {index+1}
+                        </span>
+                        <span className={`mt-1.5 max-w-28 text-[9px] leading-3 ${selected?'font-black text-slate-900':'font-semibold text-slate-600'}`}>
+                          {stage.title}
+                        </span>
+                      </button>
+                      <span className="mt-3.5 h-0.5 w-10 shrink-0 bg-emerald-700/70" aria-hidden="true" />
+                    </React.Fragment>;
+                  })}
+                  <button type="button" onClick={addWorkflowStage} className="group flex w-24 shrink-0 flex-col items-center text-center" title="Adicionar etapa" aria-label="Adicionar etapa">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition-colors group-hover:border-emerald-600 group-hover:text-emerald-700"><Plus className="h-3.5 w-3.5"/></span>
+                    <span className="mt-1.5 text-[9px] font-black text-slate-600">Adicionar etapa</span>
+                  </button>
+                </div>
+              </div>
             </section>
-            <div className="space-y-3">
-              {workflowStages.map((stage,index)=><div key={stage.id} draggable onDragStart={event=>setWorkflowDragPayload(event,{kind:'stage',stageId:stage.id})} onDragOver={event=>{event.preventDefault();event.dataTransfer.dropEffect='move';}} onDrop={event=>handleWorkflowStageDrop(event,stage.id)} className={`${panelClass} overflow-hidden`}>
-                <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 p-3">
-                  <span className="rounded-full bg-slate-800 px-2.5 py-1 text-[9px] font-black text-white">ETAPA {index+1}</span>
-                  <input aria-label="Título da etapa" value={stage.title} onChange={event=>updateWorkflowStage(stage.id,{title:event.target.value})} className={`${inputClass} min-w-[220px] flex-1 font-bold`}/>
-                  <button type="button" onClick={()=>moveWorkflowStage(index,-1)} disabled={index===0} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-bold disabled:opacity-30">↑</button>
-                  <button type="button" onClick={()=>moveWorkflowStage(index,1)} disabled={index===workflowStages.length-1} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-bold disabled:opacity-30">↓</button>
-                  <button type="button" onClick={()=>setSelectedWorkflowStageId(selectedWorkflowStageId===stage.id?'':stage.id)} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[9px] font-black uppercase text-slate-700">{selectedWorkflowStageId===stage.id?'Ocultar':'Editar'}</button><button type="button" onClick={()=>removeWorkflowStage(stage.id)} className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5"/></button>
+
+            {selectedWorkflowStage && (
+              <section
+                className="overflow-hidden rounded-xl border border-[var(--portal-border)]"
+                style={{ backgroundColor: 'var(--portal-surface-panel)' }}
+                aria-label={`Configuração da etapa ${selectedWorkflowStageIndex+1}`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <div className="text-[9px] font-black uppercase tracking-wider text-slate-500">Etapa {selectedWorkflowStageIndex+1}</div>
+                    <div className="truncate text-xs font-black text-slate-900">{selectedWorkflowStage.title}</div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button type="button" onClick={()=>moveWorkflowStage(selectedWorkflowStageIndex,-1)} disabled={selectedWorkflowStageIndex<=0} className="portal-toolbar-icon-button disabled:opacity-30" title="Mover etapa para a esquerda" aria-label="Mover etapa para a esquerda"><ChevronLeft className="h-3.5 w-3.5"/></button>
+                    <button type="button" onClick={()=>moveWorkflowStage(selectedWorkflowStageIndex,1)} disabled={selectedWorkflowStageIndex<0||selectedWorkflowStageIndex>=workflowStages.length-1} className="portal-toolbar-icon-button disabled:opacity-30" title="Mover etapa para a direita" aria-label="Mover etapa para a direita"><ChevronRight className="h-3.5 w-3.5"/></button>
+                    <button type="button" onClick={()=>removeWorkflowStage(selectedWorkflowStage.id)} className="portal-toolbar-icon-button text-rose-700" title="Excluir etapa" aria-label="Excluir etapa"><Trash2 className="h-3.5 w-3.5"/></button>
+                  </div>
                 </div>
-                <div className={selectedWorkflowStageId===stage.id?'space-y-3 p-4':'hidden'}>
-                  <div className="grid gap-3 md:grid-cols-[.8fr_1.2fr]"><div><label className={labelClass}>Evento disparador</label><input list={`workflow-event-catalog-${stage.id}`} value={stage.triggerEvent} onChange={event=>updateWorkflowStage(stage.id,{triggerEvent:event.target.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')})} className={inputClass} placeholder="Ex.: FORM_AVALIACAO_SUBMITTED"/><datalist id={`workflow-event-catalog-${stage.id}`}>{workflowEvents.map(([value,label])=><option key={value} value={value}>{label}</option>)}</datalist><p className="mt-1 text-[9px] text-slate-500">Para formulário personalizado, use FORM_ID_DO_FORMULARIO_SUBMITTED.</p></div><div><label className={labelClass}>Objetivo da etapa</label><input value={stage.description} onChange={event=>updateWorkflowStage(stage.id,{description:event.target.value})} className={inputClass}/></div></div>
-                  <div className="space-y-2"><div className="text-[10px] font-black uppercase text-slate-500">Ações em ordem</div>{stage.actions.map((action,actionIndex)=><div key={action.id} draggable onDragStart={event=>{event.stopPropagation();setWorkflowDragPayload(event,{kind:'action',stageId:stage.id,actionId:action.id});}} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="grid gap-2 md:grid-cols-[auto_.8fr_1fr_auto]"><span className="self-center rounded-full bg-white px-2 py-1 text-[9px] font-black text-slate-500">{actionIndex+1}</span><div className="flex gap-1"><button type="button" aria-label={`Mover ${action.title} para cima`} disabled={actionIndex===0} onClick={()=>moveWorkflowAction(stage.id,actionIndex,-1)} className="portal-action">↑</button><button type="button" aria-label={`Mover ${action.title} para baixo`} disabled={actionIndex===stage.actions.length-1} onClick={()=>moveWorkflowAction(stage.id,actionIndex,1)} className="portal-action">↓</button></div><input value={action.title} onChange={event=>updateWorkflowAction(stage.id,action.id,{title:event.target.value})} className={inputClass}/><input value={action.recipientOrDetail||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder="Destinatário ou detalhe"/><button type="button" onClick={()=>removeWorkflowAction(stage.id,action.id)} className="rounded-lg border border-rose-200 bg-white p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5"/></button></div><details className="mt-2 rounded-lg border border-slate-200 bg-white p-2"><summary className="cursor-pointer text-[9px] font-black uppercase text-slate-600">Condição para executar</summary><div className="mt-2 grid gap-2 sm:grid-cols-3"><select value={action.condition?.fieldKey||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:event.target.value?{fieldKey:event.target.value,operator:action.condition?.operator||'EQUALS',value:action.condition?.value||''}:undefined})} className={inputClass}><option value="">Sempre executar</option>{matrixColumns.map(item=><option key={item.id} value={normalizeVariableKey(item.name)}>{item.label||item.name}</option>)}</select>{action.condition&&<><select value={action.condition.operator} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,operator:event.target.value as any}})} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">É verdadeiro</option></select>{!['NOT_EMPTY','IS_TRUE'].includes(action.condition.operator)&&<input value={action.condition.value||''} onChange={event=>updateWorkflowAction(stage.id,action.id,{condition:{...action.condition!,value:event.target.value}})} className={inputClass} placeholder="Valor esperado"/>}</>}</div></details></div>)}</div>
-                  <div><label className={labelClass}>Adicionar ação vinculada</label><select value="" onChange={event=>{if(event.target.value)addWorkflowAction(stage.id,event.target.value);}} className={inputClass}><option value="">Selecione documento, e-mail ou formulário…</option><optgroup label="Documentos">{docTemplates.map(item=><option key={item.id} value={`doc:${item.id}`}>{item.label}</option>)}</optgroup><optgroup label="E-mails">{emailTemplates.map(item=><option key={item.id} value={`email:${item.id}`}>{item.name}</option>)}</optgroup><optgroup label="Formulários">{formTemplates.map(item=><option key={item.id} value={`form:${item.id}`}>{item.title}</option>)}</optgroup></select></div>
+
+                <div className="grid gap-2 border-b border-slate-300 p-3 md:grid-cols-[1fr_.9fr_1.2fr]">
+                  <div><label className={labelClass}>Título da etapa</label><input value={selectedWorkflowStage.title} onChange={event=>updateWorkflowStage(selectedWorkflowStage.id,{title:event.target.value})} className={inputClass}/></div>
+                  <div><label className={labelClass}>Evento disparador</label><input list={`workflow-event-catalog-${selectedWorkflowStage.id}`} value={selectedWorkflowStage.triggerEvent} onChange={event=>updateWorkflowStage(selectedWorkflowStage.id,{triggerEvent:event.target.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')})} className={inputClass}/><datalist id={`workflow-event-catalog-${selectedWorkflowStage.id}`}>{workflowEvents.map(([value,label])=><option key={value} value={value}>{label}</option>)}</datalist></div>
+                  <div><label className={labelClass}>Objetivo da etapa</label><input value={selectedWorkflowStage.description} onChange={event=>updateWorkflowStage(selectedWorkflowStage.id,{description:event.target.value})} className={inputClass}/></div>
                 </div>
-              </div>)}
-            </div>
+
+                <div className="overflow-auto" data-portal-workflow-stage-sheet="true">
+                  <table className="w-full min-w-[1180px] border-collapse text-left text-[10px]">
+                    <thead>
+                      <tr className="text-white" style={{ backgroundColor:'var(--portal-brand-header)' }}>
+                        <th className="w-16 border-r border-white/25 px-2 py-2 text-center">Usar</th>
+                        <th className="w-24 border-r border-white/25 px-2 py-2 text-center">Ordem</th>
+                        <th className="w-28 border-r border-white/25 px-2 py-2">Tipo</th>
+                        <th className="min-w-[220px] border-r border-white/25 px-2 py-2">Item / título</th>
+                        <th className="min-w-[210px] border-r border-white/25 px-2 py-2">Destinatário / detalhe</th>
+                        <th className="min-w-[340px] border-r border-white/25 px-2 py-2">Condição para execução</th>
+                        <th className="w-16 px-2 py-2 text-center">Excluir</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedWorkflowRows.map((row)=>{
+                        const action=row.action;
+                        const actionIndex=action?selectedWorkflowStage.actions.findIndex(item=>item.id===action.id):-1;
+                        const condition=action?.condition;
+                        return <tr key={row.value} className="border-b border-slate-300" style={{ backgroundColor:'var(--portal-surface-panel)' }}>
+                          <td className="border-r border-slate-300 px-2 py-2 text-center">
+                            <input type="checkbox" checked={Boolean(action)} onChange={event=>toggleWorkflowCatalogItem(selectedWorkflowStage,row.value,event.target.checked)} aria-label={`Usar ${row.label} nesta etapa`} />
+                          </td>
+                          <td className="border-r border-slate-300 px-2 py-2">
+                            {action ? <div className="flex items-center justify-center gap-1"><span className="min-w-5 text-center font-black text-slate-700">{actionIndex+1}</span><button type="button" className="portal-toolbar-icon-button !h-6 !min-h-6 !w-6 !min-w-6" disabled={actionIndex===0} onClick={()=>moveWorkflowAction(selectedWorkflowStage.id,actionIndex,-1)} aria-label={`Mover ${action.title} para cima`}>↑</button><button type="button" className="portal-toolbar-icon-button !h-6 !min-h-6 !w-6 !min-w-6" disabled={actionIndex===selectedWorkflowStage.actions.length-1} onClick={()=>moveWorkflowAction(selectedWorkflowStage.id,actionIndex,1)} aria-label={`Mover ${action.title} para baixo`}>↓</button></div> : <span className="block text-center text-slate-400">—</span>}
+                          </td>
+                          <td className="border-r border-slate-300 px-2 py-2 font-black uppercase text-slate-600">{row.detail}</td>
+                          <td className="border-r border-slate-300 px-2 py-2"><input disabled={!action} value={action?.title||row.label} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{title:event.target.value})} className={inputClass}/></td>
+                          <td className="border-r border-slate-300 px-2 py-2"><input disabled={!action} value={action?.recipientOrDetail||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder={action?'Detalhe opcional':'Selecione o item'}/></td>
+                          <td className="border-r border-slate-300 px-2 py-2">
+                            <div className="grid grid-cols-3 gap-1">
+                              <select disabled={!action} value={condition?.fieldKey||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{condition:event.target.value?{fieldKey:event.target.value,operator:condition?.operator||'EQUALS',value:condition?.value||''}:undefined})} className={inputClass}><option value="">Sempre executar</option>{matrixColumns.map(item=><option key={item.id} value={normalizeVariableKey(item.name)}>{item.label||item.name}</option>)}</select>
+                              <select disabled={!action||!condition} value={condition?.operator||'EQUALS'} onChange={event=>action&&condition&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{condition:{...condition,operator:event.target.value as any}})} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">É verdadeiro</option></select>
+                              <input disabled={!action||!condition||['NOT_EMPTY','IS_TRUE'].includes(condition.operator)} value={condition?.value||''} onChange={event=>action&&condition&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{condition:{...condition,value:event.target.value}})} className={inputClass} placeholder="Valor"/>
+                            </div>
+                          </td>
+                          <td className="px-2 py-2 text-center">{action?<button type="button" onClick={()=>removeWorkflowAction(selectedWorkflowStage.id,action.id)} className="portal-toolbar-icon-button !h-6 !min-h-6 !w-6 !min-w-6 text-rose-700" title="Remover item da etapa" aria-label={`Remover ${action.title} da etapa`}><Trash2 className="h-3 w-3"/></button>:<span className="text-slate-400">—</span>}</td>
+                        </tr>;
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
           </div>
         )}
 

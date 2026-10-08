@@ -42,8 +42,11 @@ test('Modelos e Variáveis usa popups específicos e une modelos com documentos'
   assert.ok(config.includes("label: 'Documentos e variáveis'"));
   assert.ok(!config.includes("id: 'variables', title: 'Variáveis'"));
   assert.ok(!config.includes('initialTab="documents"'));
-  assert.ok(models.includes('Variáveis deste documento'));
-  assert.ok(models.includes('Visualizar modelo'));
+  assert.ok(models.includes('data-portal-document-direct-editor="true"'));
+  assert.ok(models.includes('aria-label="Selecionar documento"'));
+  assert.ok(models.includes('Visualizar modelo original'));
+  assert.ok(!models.includes('Abrir no Drive'));
+  assert.ok(!models.includes('>Consolidar<'));
 });
 
 test('calendário e Lista de Defesas compartilham estado, tons e resumo solicitado', async () => {

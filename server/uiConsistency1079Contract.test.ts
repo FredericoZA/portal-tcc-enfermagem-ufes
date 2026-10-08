@@ -31,15 +31,15 @@ test('pop-ups usam a hierarquia cromática canônica',()=>{
   assert.match(css,/\.portal-modal-body \.portal-layer-card,[\s\S]*background: var\(--portal-surface-inner\)/);
 });
 
-test('e-mail e formulário usam apresentação institucional UFES',()=>{
+test('e-mail e formulário usam apresentação institucional UFES em edição direta',()=>{
   const studio=read('src/components/IntegrationStudioPanel.tsx');
   assert.match(studio,/UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO/);
   assert.match(studio,/const institutionalGreen = brandKit\.primaryColor/);
-  assert.match(studio,/portal-official-preview/);
   assert.match(studio,/bg-\[var\(--portal-brand-header\)\]/);
-  assert.match(studio,/portal-artifact-editor-email/);
-  assert.match(studio,/portal-artifact-editor-form/);
-  assert.match(studio,/portal-artifact-editor-document/);
+  assert.match(studio,/data-portal-email-direct-editor="true"/);
+  assert.match(studio,/data-portal-form-direct-editor="true"/);
+  assert.match(studio,/Alterar logo da UFES/);
+  assert.match(studio,/Alterar logo do curso/);
 });
 
 test('rodada visual não altera a release publicada',()=>{

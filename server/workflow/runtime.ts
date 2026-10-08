@@ -259,6 +259,24 @@ function mergeMarkers(source: string, variables: Record<string, string>, html: b
   });
 }
 
+/** Impede que respostas marcadas como privadas no formulário sejam propagadas
+ * por modelos publicados, inclusive via marcadores antigos ou aliases. */
+export function filterTemplateVariables(variables: Record<string,string>,studio:IntegrationStudioSettings): Record<string,string> {
+  const blocked=new Set<string>();
+  for(const form of studio.formTemplates||[]){
+    for(const question of (Array.isArray(form.questions)?form.questions:[])){
+      if(question.availableToTemplates===false && question.fieldKey)blocked.add(normalizeWorkflowEventCode(String(question.fieldKey)));
+    }
+  }
+  for(const raw of studio.matrixColumns||[]){
+    const column=raw as Record<string,unknown>;
+    const keys=[column.id,column.name,...(Array.isArray(column.aliases)?column.aliases:[])]
+      .map(value=>normalizeWorkflowEventCode(String(value||''))).filter(Boolean);
+    if(keys.some(key=>blocked.has(key)))keys.forEach(key=>blocked.add(key));
+  }
+  return Object.fromEntries(Object.entries(variables).filter(([key])=>!blocked.has(normalizeWorkflowEventCode(key))));
+}
+
 export function mergeWorkflowVariables(source: string, variables: Record<string, string>): string {
   return mergeMarkers(source, variables, false);
 }
@@ -348,7 +366,7 @@ export async function executeWorkflowEvent(
       if (action.kind === 'DOCUMENT') {
         const template = artifactById(studio.docTemplates, action.referenceId);
         if (!template) throw new Error(`Modelo ${action.referenceId} não localizado.`);
-        output = await ports.createDocument({ template, variables: plan.variables, processId: plan.processId, idempotencyKey: action.idempotencyKey });
+        output = await ports.createDocument({ template, variables: filterTemplateVariables(plan.variables,studio), processId: plan.processId, idempotencyKey: action.idempotencyKey });
       } else if (action.kind === 'FORM') {
         const form = artifactById(studio.formTemplates, action.referenceId);
         if (!form) throw new Error(`Formulário ${action.referenceId} não localizado.`);
@@ -356,8 +374,9 @@ export async function executeWorkflowEvent(
       } else if (action.kind === 'EMAIL') {
         const template = artifactById(studio.emailTemplates, action.referenceId);
         if (!template) throw new Error(`E-mail ${action.referenceId} não localizado.`);
-        const renderedVariables = presentVariables(plan.variables, String(template.id), studio);
-        const recipients = parseRecipients(text(template.recipient) || action.detail || '', plan.variables);
+        const allowedVariables=filterTemplateVariables(plan.variables,studio);
+        const renderedVariables = presentVariables(allowedVariables, String(template.id), studio);
+        const recipients = parseRecipients(text(template.recipient) || action.detail || '', allowedVariables);
         if (!recipients.length) throw new Error(`E-mail ${action.referenceId} sem destinatário válido.`);
         output = await ports.sendEmail({
           template,
@@ -365,7 +384,7 @@ export async function executeWorkflowEvent(
           subject: mergeWorkflowVariables(text(template.subject), renderedVariables),
           text: mergeWorkflowVariables(text(template.body), renderedVariables),
           html: text(template.htmlBody) ? mergeWorkflowHtmlVariables(text(template.htmlBody), renderedVariables) : undefined,
-          variables: plan.variables,
+          variables: allowedVariables,
           processId: plan.processId,
           protocol: plan.protocol,
           eventVariables,

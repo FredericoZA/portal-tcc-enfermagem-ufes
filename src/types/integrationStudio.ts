@@ -48,6 +48,7 @@ export interface EmailDesignConfig {
 export interface FormDesignConfig {
   templateId: string;
   logoUrl: string;
+  universityLogoUrl: string;
   bannerImageUrl: string;
   introText: string;
   confirmationMessage: string;

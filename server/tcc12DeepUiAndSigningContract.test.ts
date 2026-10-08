@@ -20,30 +20,32 @@ test('workspaces com autosave não exibem X redundante',()=>{
   assert.match(modal,/event\.key !== 'Escape'/);
 });
 
-test('documentos e variáveis são um único workspace contextual',()=>{
+test('documentos e variáveis são um único workspace contextual e editam um modelo por vez',()=>{
   const config=read('src/pages/ConfiguracoesPage.tsx');
   const panel=read('src/components/MasterDocumentModelsPanel.tsx');
   assert.match(config,/id: 'documents', label: 'Documentos e variáveis'/);
   assert.doesNotMatch(config,/key="studio-variables-unified"/);
-  assert.match(panel,/Variáveis deste documento/);
+  assert.match(panel,/data-portal-document-direct-editor="true"/);
+  assert.match(panel,/aria-label="Selecionar documento"/);
+  assert.match(panel,/SettingsWorkspaceHeaderPortal/);
   assert.match(panel,/mergeVariableAcrossArtifacts/);
-  assert.match(panel,/Consolidar/);
-  assert.doesNotMatch(panel,/SettingsWorkspaceHeaderPortal/);
+  assert.match(panel,/Atualizar variáveis/);
+  assert.doesNotMatch(panel,/>Consolidar</);
+  assert.doesNotMatch(panel,/Abrir no Drive/);
 });
 
-test('editor de e-mail é compacto e usa blocos recolhíveis',()=>{
+test('editor de e-mail usa o próprio modelo como editor direto',()=>{
   const studio=read('src/components/IntegrationStudioPanel.tsx');
-  assert.match(studio,/Dados do e-mail/);
-  assert.match(studio,/Cabeçalho/);
-  assert.match(studio,/Rodapé e ação/);
+  assert.match(studio,/data-portal-email-direct-editor="true"/);
+  assert.match(studio,/aria-label="Selecionar e-mail"/);
+  assert.match(studio,/title="Adicionar e-mail"/);
+  assert.match(studio,/title="Excluir e-mail"/);
   assert.match(studio,/HTML avançado/);
+  assert.match(studio,/TemplateVariableControl/);
+  assert.match(studio,/Digite &lt;&lt; para escolher uma variável disponível/);
   assert.match(studio,/SettingsWorkspaceHeaderPortal/);
-  assert.match(studio,/Imagem acima do cabeçalho/);
-  assert.match(studio,/Pré-visualização/);
-  assert.doesNotMatch(studio,/Pré-visualização protegida/);
-  const heroIndex=studio.indexOf('alt="Imagem institucional"');
-  const headerIndex=studio.indexOf('UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO');
-  assert.ok(heroIndex >= 0 && headerIndex >= 0 && heroIndex < headerIndex);
+  assert.doesNotMatch(studio,/Editor profissional de e-mail/);
+  assert.doesNotMatch(studio,/Pré-visualização/);
 });
 
 test('detalhes do TCC seguem a nova hierarquia visual',()=>{
@@ -60,7 +62,8 @@ test('detalhes do TCC seguem a nova hierarquia visual',()=>{
 test('seleção da planilha habilita ações em lote e servidor serializa criação idempotente',()=>{
   const coordinator=read('src/pages/CoordenadorPage.tsx');
   const server=read('server.ts');
-  assert.match(coordinator,/disabled=\{selectedIds\.length === 0 \|\| signingIds\.length > 0\}/);
+  assert.match(coordinator,/disabled=\{!selectedIds\.some\(\(id\)=>canSendAsten\(id\)\) \|\| signingIds\.length > 0\}/);
+  assert.match(coordinator,/disabled=\{!selectedIds\.some\(\(id\)=>canPrepareGov\(id\)\) \|\| signingIds\.length > 0\}/);
   assert.match(server,/const signatureJobCreationLocks=new Map<string,Promise<SignatureJob>>\(\)/);
   assert.match(server,/createSignatureJobUnlocked/);
   assert.match(server,/const inFlight=signatureJobCreationLocks\.get\(lockKey\)/);

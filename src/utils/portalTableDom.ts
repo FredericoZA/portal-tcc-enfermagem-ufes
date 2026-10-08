@@ -359,7 +359,9 @@ function restoreWidths(table: HTMLTableElement) {
 }
 
 export function enhancePortalTable(table: HTMLTableElement) {
-  if (table.closest('[role="dialog"]') || table.closest('.portal-core-column-popup') || table.closest('[data-portal-workspace-open="true"]')) return;
+  const dialog = table.closest<HTMLElement>('[role="dialog"]');
+  const sheetDialog = dialog?.dataset.portalSheetWorkspace === 'true';
+  if ((dialog && !sheetDialog) || table.closest('.portal-core-column-popup') || table.closest('[data-portal-workspace-open="true"]')) return;
   const headerRow = table.tHead?.rows[0];
   if (!headerRow || headerRow.cells.length < 2 || !table.tBodies[0]) return;
   table.classList.add('portal-core-table');

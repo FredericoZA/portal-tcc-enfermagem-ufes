@@ -192,18 +192,18 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
 
   const toolbar = <div className="flex flex-wrap items-center justify-end gap-1.5">
     {canManage && <>
-      <button type="button" onClick={() => setModal('add')} className={whiteButton}><Plus className="h-3.5 w-3.5" />Adicionar acesso</button>
-      <button type="button" onClick={() => setModal('list')} className={popupActionButton}><FileSpreadsheet className="h-3.5 w-3.5" />Envio de lista</button>
+      <button type="button" onClick={() => setModal('add')} className="portal-toolbar-icon-button" title="Adicionar acesso" aria-label="Adicionar acesso"><Plus className="h-3.5 w-3.5" /></button>
+      <button type="button" onClick={() => setModal('list')} className="portal-toolbar-icon-button" title="Enviar lista de acessos" aria-label="Enviar lista de acessos"><FileSpreadsheet className="h-3.5 w-3.5" /></button>
     </>}
     <SearchPopover value={search} onChange={setSearch} placeholder="Buscar por nome, e-mail ou matrícula" textFormat={textFormat}/>
     <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} allColumns={ACCESS_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="authorized_access" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Acesso"/>
   </div>;
 
-  return <section id="authorized-access-panel" data-settings-sheet="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'min-h-full' : 'overflow-hidden rounded-xl border border-slate-300 shadow-sm'} style={{ backgroundColor: 'var(--portal-surface-page)' }}>
+  return <section id="authorized-access-panel" data-settings-sheet="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'flex h-full min-h-0 flex-col' : 'overflow-hidden rounded-xl border border-slate-300 shadow-sm'} style={{ backgroundColor: 'var(--portal-surface-page)' }}>
     {embedded ? <SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal> : <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-3 py-2 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><div className="flex items-center gap-2"><UserCheck className="h-4 w-4"/><h3 className="text-xs font-black uppercase tracking-wide">Acesso</h3></div>{toolbar}</header>}
 
-    <div className="p-0">
-      {loading ? <div className="m-3 rounded-xl border border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Carregando acessos…</div> : shown.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Nenhum acesso encontrado.</div> : <TableScrollWrapper>
+    <div className="flex min-h-0 flex-1 flex-col p-0">
+      {loading ? <div className="m-3 rounded-xl border border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Carregando acessos…</div> : shown.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Nenhum acesso encontrado.</div> : <TableScrollWrapper fillHeight>
         <table className="portal-spreadsheet-table w-full min-w-[900px] border-collapse text-left text-xs">
           <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wide ${['active','actions'].includes(key) ? 'text-center' : ''}`}>{ACCESS_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
           <tbody className="divide-y divide-slate-200">{shown.map((entry, entryIndex) => <tr key={`${entry.id}-${entry.origin}-${entryIndex}`}>{activeColumns.map((key) => <td key={key} className={`px-3 py-1 text-slate-950 ${['active','actions'].includes(key) ? 'text-center' : ''}`}>{renderCell(entry, key)}</td>)}</tr>)}</tbody>
