@@ -1145,25 +1145,144 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         )}
 
         {activeTab === 'forms' && selectedForm && (
-          <div className="portal-artifact-editor portal-artifact-editor-form grid gap-3 xl:grid-cols-[minmax(0,1.08fr)_minmax(380px,.92fr)]">
-            <div className={`${panelClass} space-y-2.5 p-3`}>
-              <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-[var(--portal-brand-action)]" /><h4 className="text-xs font-black uppercase">Construtor de formulário</h4></div><div className="flex items-center gap-1"><select value={selectedForm.id} onChange={(e) => setSelectedFormId(e.target.value)} className="max-w-[220px] rounded-lg border border-slate-300 px-2 py-1.5 text-[10px] font-bold">{formTemplates.map((form) => <option key={form.id} value={form.id}>{form.title}</option>)}</select><button type="button" onClick={createFormTemplate} className="portal-action" aria-label="Criar formulário"><Plus className="h-3.5 w-3.5"/></button><button type="button" onClick={()=>void deleteSelectedForm()} disabled={formTemplates.length<=1} className="portal-action text-rose-700 disabled:opacity-30" aria-label="Excluir formulário"><Trash2 className="h-3.5 w-3.5"/></button></div></div>
-              <div><label className={labelClass}>Título</label><input value={selectedForm.title} onChange={(e) => updateSelectedForm({ title: e.target.value })} className={inputClass} /></div>
-              <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Etapa</label><input value={selectedForm.stage} onChange={(e) => updateSelectedForm({ stage: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>Público</label><select value={selectedForm.targetRole} onChange={(e) => updateSelectedForm({ targetRole: e.target.value as FormTemplateItem['targetRole'] })} className={inputClass}>{['Aluno', 'Orientador', 'Banca', 'Presidente da Comissão'].map((role) => <option key={role}>{role}</option>)}</select></div></div>
-              <div><label className={labelClass}>Descrição</label><textarea rows={3} value={selectedForm.description} onChange={(e) => updateSelectedForm({ description: e.target.value })} className={inputClass} /></div>
-              <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Logo</label><input value={selectedFormDesign.logoUrl} onChange={(e) => updateSelectedFormDesign({ logoUrl: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>Banner</label><input value={selectedFormDesign.bannerImageUrl} onChange={(e) => updateSelectedFormDesign({ bannerImageUrl: e.target.value })} className={inputClass} /></div></div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <label className={`${actionClass} cursor-pointer border-slate-300 bg-white text-slate-700`}><Image className="h-3.5 w-3.5" />Enviar logo do formulário<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const value = await readTemplateImage(e.target.files?.[0]); if (value) updateSelectedFormDesign({ logoUrl: value }); }} /></label>
-                <label className={`${actionClass} cursor-pointer border-slate-300 bg-white text-slate-700`}><Image className="h-3.5 w-3.5" />Enviar banner do formulário<input type="file" accept="image/*" className="hidden" onChange={async (e) => { const value = await readTemplateImage(e.target.files?.[0]); if (value) updateSelectedFormDesign({ bannerImageUrl: value }); }} /></label>
+          <div className="min-h-full bg-[var(--portal-surface-page)] pb-5" data-portal-form-direct-editor="true">
+            <SettingsWorkspaceHeaderPortal>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <select
+                  value={selectedForm.id}
+                  onChange={(event)=>setSelectedFormId(event.target.value)}
+                  className="max-w-[260px] rounded-full border border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950"
+                  aria-label="Selecionar formulário"
+                >
+                  {formTemplates.map(form=><option key={form.id} value={form.id}>{form.title}</option>)}
+                </select>
+                <button type="button" onClick={createFormTemplate} className="portal-toolbar-icon-button" title="Adicionar formulário" aria-label="Adicionar formulário"><Plus className="h-3.5 w-3.5"/></button>
+                <button type="button" onClick={()=>void deleteSelectedForm()} disabled={formTemplates.length<=1} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-30" title="Excluir formulário" aria-label="Excluir formulário"><Trash2 className="h-3.5 w-3.5"/></button>
               </div>
-              <div><label className={labelClass}>Introdução</label><textarea rows={2} value={selectedFormDesign.introText} onChange={(e) => updateSelectedFormDesign({ introText: e.target.value })} className={inputClass} /></div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between"><span className={labelClass}>Campos, regras e variáveis</span><button type="button" onClick={() => updateSelectedForm({ questions: [...selectedForm.questions, { id: `question-${Date.now()}`, fieldKey: '', label: 'Novo campo', fieldType: 'text', expectedAnswer: '', required: false, validation: {} }] })} className={`${actionClass} border-[var(--portal-brand-action-border)] bg-white text-[var(--portal-brand-action)]`}><Plus className="h-3 w-3" />Adicionar campo</button></div>
-                <div className="space-y-2"><div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 p-2"><span className="text-[9px] font-black uppercase text-slate-500">Editar campo</span><select value={selectedFormQuestionId} onChange={(e)=>setSelectedFormQuestionId(e.target.value)} className="min-w-[220px] flex-1 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-[10px] font-bold">{selectedForm.questions.map((question,index)=><option key={question.id} value={question.id}>{index+1}. {question.label}</option>)}</select></div>{selectedForm.questions.map((question,index)=>question.id===selectedFormQuestionId?<div key={question.id} className="space-y-1"><div className="flex justify-end gap-1"><button type="button" className="portal-action" disabled={index===0} onClick={()=>moveSelectedFormQuestion(index,-1)} aria-label={`Mover ${question.label} para cima`}>↑</button><button type="button" className="portal-action" disabled={index===selectedForm.questions.length-1} onClick={()=>moveSelectedFormQuestion(index,1)} aria-label={`Mover ${question.label} para baixo`}>↓</button></div><FormQuestionEditor question={question} index={index} variables={matrixColumns} previousQuestions={selectedForm.questions.slice(0,index)} onChange={(updates)=>updateSelectedForm({questions:selectedForm.questions.map((item)=>item.id===question.id?{...item,...updates}:item)})} onDelete={()=>updateSelectedForm({questions:selectedForm.questions.filter((item)=>item.id!==question.id)})}/></div>:null)}</div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2"><div><label className={labelClass}>Texto do botão</label><input value={selectedFormDesign.submitLabel} onChange={(e) => updateSelectedFormDesign({ submitLabel: e.target.value })} className={inputClass} /></div><div><label className={labelClass}>Mensagem após envio</label><input value={selectedFormDesign.confirmationMessage} onChange={(e) => updateSelectedFormDesign({ confirmationMessage: e.target.value })} className={inputClass} /></div></div>
+            </SettingsWorkspaceHeaderPortal>
+
+            <div className="mx-auto w-full max-w-4xl p-3 pb-5">
+              <article className="overflow-hidden rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] shadow-sm" style={{fontFamily:brandKit.fontFamily}}>
+                <div className="flex items-center gap-3 border-b-[5px] border-white bg-[var(--portal-brand-header)] px-4 py-3">
+                  <label className="group relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white p-1" title="Alterar logo da UFES">
+                    {(selectedFormDesign.universityLogoUrl||brandKit.universityLogoUrl)
+                      ? <img src={selectedFormDesign.universityLogoUrl||brandKit.universityLogoUrl} alt="UFES" className="h-full w-full object-contain"/>
+                      : <Image className="h-5 w-5 text-slate-500"/>}
+                    <span className="absolute inset-0 hidden items-center justify-center bg-black/45 text-white group-hover:flex"><Pencil className="h-3.5 w-3.5"/></span>
+                    <input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedFormDesign({universityLogoUrl:value});}}/>
+                  </label>
+                  <label className="group relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white p-1" title="Alterar logo do curso">
+                    {(selectedFormDesign.logoUrl||brandKit.courseLogoUrl)
+                      ? <img src={selectedFormDesign.logoUrl||brandKit.courseLogoUrl} alt="Curso" className="h-full w-full object-contain"/>
+                      : <Image className="h-5 w-5 text-slate-500"/>}
+                    <span className="absolute inset-0 hidden items-center justify-center bg-black/45 text-white group-hover:flex"><Pencil className="h-3.5 w-3.5"/></span>
+                    <input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedFormDesign({logoUrl:value});}}/>
+                  </label>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[9px] font-black uppercase tracking-[0.14em] text-white/85">{brandKit.institutionName}</div>
+                    <div className="mt-1 text-[11px] font-black uppercase leading-tight text-white">{brandKit.courseName}</div>
+                  </div>
+                </div>
+
+                {selectedFormDesign.bannerImageUrl ? (
+                  <label className="group relative block cursor-pointer" title="Alterar imagem do formulário">
+                    <img src={selectedFormDesign.bannerImageUrl} alt="Imagem do formulário" className="h-32 w-full object-cover"/>
+                    <span className="absolute inset-0 hidden items-center justify-center bg-black/35 text-white group-hover:flex"><Pencil className="mr-1 h-4 w-4"/>Alterar imagem</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedFormDesign({bannerImageUrl:value});}}/>
+                  </label>
+                ) : (
+                  <label className="flex cursor-pointer items-center justify-center gap-2 border-b border-dashed border-slate-300 bg-white px-4 py-3 text-[10px] font-bold text-slate-600">
+                    <Image className="h-3.5 w-3.5"/>Adicionar imagem ao formulário
+                    <input type="file" accept="image/*" className="hidden" onChange={async event=>{const value=await readTemplateImage(event.target.files?.[0]);if(value)updateSelectedFormDesign({bannerImageUrl:value});}}/>
+                  </label>
+                )}
+
+                <div className="p-4">
+                  <div className="mb-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {editingFormPart==='stage'
+                        ? <input autoFocus value={selectedForm.stage} onChange={event=>updateSelectedForm({stage:event.target.value})} onBlur={()=>setEditingFormPart(null)} className="max-w-[260px] rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-black uppercase text-[var(--portal-brand-action)]"/>
+                        : <button type="button" onDoubleClick={()=>setEditingFormPart('stage')} onClick={()=>setEditingFormPart('stage')} className="group inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-[var(--portal-brand-action)]" title="Editar etapa"><span>{selectedForm.stage||'Definir etapa'}</span><Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100"/></button>}
+                      <select value={selectedForm.targetRole} onChange={event=>updateSelectedForm({targetRole:event.target.value as FormTemplateItem['targetRole']})} className="rounded-full border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-700" aria-label="Público do formulário">
+                        {['Aluno','Orientador','Banca','Presidente da Comissão'].map(role=><option key={role}>{role}</option>)}
+                      </select>
+                    </div>
+
+                    {editingFormPart==='title'
+                      ? <input autoFocus value={selectedForm.title} onChange={event=>updateSelectedForm({title:event.target.value})} onBlur={()=>setEditingFormPart(null)} className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-lg font-black text-slate-900"/>
+                      : <button type="button" onDoubleClick={()=>setEditingFormPart('title')} onClick={()=>setEditingFormPart('title')} className="group mt-1 flex max-w-full items-center gap-2 text-left" title="Editar título"><h3 className="text-lg font-black text-slate-900">{selectedForm.title}</h3><Pencil className="h-3.5 w-3.5 shrink-0 text-slate-400 opacity-0 group-hover:opacity-100"/></button>}
+
+                    {editingFormPart==='description'
+                      ? <textarea autoFocus rows={2} value={selectedForm.description} onChange={event=>{updateSelectedForm({description:event.target.value});updateSelectedFormDesign({introText:event.target.value});}} onBlur={()=>setEditingFormPart(null)} className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"/>
+                      : <button type="button" onDoubleClick={()=>setEditingFormPart('description')} onClick={()=>setEditingFormPart('description')} className="group mt-1 flex max-w-full items-start gap-2 text-left" title="Editar descrição"><p className="text-xs text-slate-600">{selectedForm.description||selectedFormDesign.introText||'Clique para adicionar uma descrição.'}</p><Pencil className="mt-0.5 h-3 w-3 shrink-0 text-slate-400 opacity-0 group-hover:opacity-100"/></button>}
+                  </div>
+
+                  {selectedFormDesign.showProgress && <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full w-1/3 rounded-full" style={{backgroundColor:brandKit.primaryColor}}/></div>}
+
+                  <div className="space-y-3">
+                    {selectedForm.questions.map((question,index)=>{
+                      const editingLabel=editingFormQuestionLabelId===question.id;
+                      const selectedQuestion=selectedFormQuestionId===question.id;
+                      return <section key={question.id} className="rounded-lg border border-slate-300 bg-white p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            {editingLabel
+                              ? <input autoFocus value={question.label} onChange={event=>updateSelectedForm({questions:selectedForm.questions.map(item=>item.id===question.id?{...item,label:event.target.value}:item)})} onBlur={()=>setEditingFormQuestionLabelId('')} className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs font-bold text-slate-900"/>
+                              : <button type="button" onDoubleClick={()=>setEditingFormQuestionLabelId(question.id)} className="group flex max-w-full items-center gap-1.5 text-left" title="Duplo clique para editar a pergunta"><span className="text-xs font-bold text-slate-800">{index+1}. {question.label}{question.required&&<span className="ml-1 text-rose-600">*</span>}</span><Pencil className="h-3 w-3 shrink-0 text-slate-400 opacity-0 group-hover:opacity-100"/></button>}
+                            <div className="mt-1 text-[9px] font-semibold text-slate-500">Variável: {question.fieldKey||'não vinculada'}</div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button type="button" onClick={()=>{setSelectedFormQuestionId(question.id);setEditingFormQuestionLabelId('');}} className="portal-toolbar-icon-button !h-7 !min-h-7 !w-7 !min-w-7" title="Configurar campo" aria-label={`Configurar ${question.label}`}><Pencil className="h-3 w-3"/></button>
+                            <button type="button" onClick={()=>moveSelectedFormQuestion(index,-1)} disabled={index===0} className="portal-toolbar-icon-button !h-7 !min-h-7 !w-7 !min-w-7 disabled:opacity-30" title="Mover campo para cima" aria-label={`Mover ${question.label} para cima`}>↑</button>
+                            <button type="button" onClick={()=>moveSelectedFormQuestion(index,1)} disabled={index===selectedForm.questions.length-1} className="portal-toolbar-icon-button !h-7 !min-h-7 !w-7 !min-w-7 disabled:opacity-30" title="Mover campo para baixo" aria-label={`Mover ${question.label} para baixo`}>↓</button>
+                          </div>
+                        </div>
+
+                        <div className="mt-2">
+                          {question.fieldType==='textarea'
+                            ? <textarea disabled rows={3} className={inputClass} placeholder={question.placeholder||question.helpText||''}/>
+                            : question.fieldType==='select'||question.fieldType==='radio'
+                              ? <select disabled className={inputClass}><option>{question.options?.[0]||'Selecione uma opção'}</option></select>
+                              : question.fieldType==='checkbox'
+                                ? <label className="flex items-center gap-2 text-xs text-slate-700"><input type="checkbox" disabled/>Confirmar</label>
+                                : <input disabled type={question.fieldType==='date'?'date':question.fieldType==='number'?'number':question.fieldType==='email'?'email':question.fieldType==='file'?'file':'text'} className={inputClass} placeholder={question.placeholder||`Variável: ${question.fieldKey||'não vinculada'}`}/>}
+                        </div>
+
+                        {selectedQuestion && <div className="mt-3 border-t border-slate-200 pt-3"><FormQuestionEditor question={question} index={index} variables={matrixColumns} previousQuestions={selectedForm.questions.slice(0,index)} onChange={updates=>updateSelectedForm({questions:selectedForm.questions.map(item=>item.id===question.id?{...item,...updates}:item)})} onDelete={()=>updateSelectedForm({questions:selectedForm.questions.filter(item=>item.id!==question.id)})}/></div>}
+                      </section>;
+                    })}
+                  </div>
+
+                  <div className="mt-4">
+                    {!showFormFieldComposer
+                      ? <button type="button" onClick={()=>setShowFormFieldComposer(true)} className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-[10px] font-black text-slate-900"><Plus className="h-3.5 w-3.5"/>Adicionar campo</button>
+                      : <section className="rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-3">
+                          <div className="text-[9px] font-black uppercase tracking-wider text-slate-600">Adicionar campo vinculado a uma variável</div>
+                          <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto]">
+                            <select value={newFormFieldVariableId} onChange={event=>setNewFormFieldVariableId(event.target.value)} className={inputClass}>
+                              <option value="">Selecione uma variável existente…</option>
+                              {matrixColumns.map(variable=><option key={variable.id} value={variable.id}>{variable.label||variable.name}</option>)}
+                            </select>
+                            <button type="button" onClick={addFormQuestionFromVariable} disabled={!newFormFieldVariableId} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-black text-slate-900 disabled:opacity-40">Adicionar</button>
+                          </div>
+                          <div className="my-2 flex items-center gap-2 text-[9px] font-bold uppercase text-slate-400"><span className="h-px flex-1 bg-slate-300"/><span>ou criar variável</span><span className="h-px flex-1 bg-slate-300"/></div>
+                          <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+                            <input value={newFormVariableName} onChange={event=>setNewFormVariableName(event.target.value)} className={inputClass} placeholder="Ex.: NOME_DO_CAMPO"/>
+                            <button type="button" onClick={()=>void createFormVariable()} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-black text-slate-900">Verificar e criar</button>
+                          </div>
+                          <p className="mt-2 text-[9px] leading-4 text-slate-500">Antes de criar uma nova variável o Portal procura equivalentes e pede confirmação quando encontrar uma possível duplicidade.</p>
+                        </section>}
+                  </div>
+
+                  <div className="mt-4">
+                    {editingFormPart==='submit'
+                      ? <input autoFocus value={selectedFormDesign.submitLabel} onChange={event=>updateSelectedFormDesign({submitLabel:event.target.value})} onBlur={()=>setEditingFormPart(null)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-center text-[10px] font-black"/>
+                      : <button type="button" onDoubleClick={()=>setEditingFormPart('submit')} className="group flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase text-white" style={{backgroundColor:brandKit.primaryColor}} title="Duplo clique para editar o texto do botão"><span>{selectedFormDesign.submitLabel}</span><Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100"/></button>}
+                    <p className="mt-2 text-center text-[9px] text-slate-500">{selectedFormDesign.confirmationMessage}</p>
+                  </div>
+                </div>
+              </article>
             </div>
-            <div className="portal-official-preview rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] p-3"><div className="mx-auto max-w-xl overflow-hidden rounded-xl border border-[var(--portal-border)] bg-white shadow-sm" style={{ fontFamily: brandKit.fontFamily }}><div className="flex items-center gap-3 border-b-[5px] border-white bg-[var(--portal-brand-header)] px-4 py-3">{(selectedFormDesign.logoUrl || brandKit.universityLogoUrl || brandKit.courseLogoUrl) && <img src={selectedFormDesign.logoUrl || brandKit.universityLogoUrl || brandKit.courseLogoUrl} alt="UFES" className="h-12 w-12 shrink-0 rounded-full bg-white object-contain p-1" />}<div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[0.14em] text-white/85">UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO</div><div className="mt-1 text-[11px] font-black uppercase leading-tight text-white">{brandKit.courseName}</div></div></div>{selectedFormDesign.bannerImageUrl && <img src={selectedFormDesign.bannerImageUrl} alt="Banner" className="h-28 w-full object-cover" />}<div className="p-4"><div className="mb-3"><div className="text-[9px] font-black uppercase tracking-wider text-[var(--portal-brand-action)]">{selectedForm.stage}</div><h3 className="mt-1 text-lg font-black text-slate-900">{selectedForm.title}</h3><p className="mt-1 text-xs text-slate-500">{selectedFormDesign.introText || selectedForm.description}</p></div>{selectedFormDesign.showProgress && <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full w-1/3 rounded-full" style={{ backgroundColor: brandKit.primaryColor }} /></div>}<div className="space-y-3">{selectedForm.questions.map((question, index) => <div key={question.id}><label className="mb-1.5 block text-xs font-bold text-slate-800">{index + 1}. {question.label}{question.required && <span className="ml-1 text-rose-600">*</span>}</label>{question.fieldType === 'textarea' ? <textarea disabled className={inputClass} rows={3} /> : question.fieldType === 'select' || question.fieldType === 'radio' ? <select disabled className={inputClass}><option>Selecione uma opção</option></select> : question.fieldType === 'checkbox' ? <label className="flex items-center gap-2 text-xs"><input type="checkbox" disabled />Confirmar</label> : <input disabled type={question.fieldType === 'date' ? 'date' : question.fieldType === 'number' ? 'number' : question.fieldType === 'email' ? 'email' : question.fieldType === 'file' ? 'file' : 'text'} className={inputClass} placeholder={`Variável: ${question.fieldKey || 'não vinculada'}`} />}</div>)}<button type="button" className="w-full rounded-lg px-3 py-2 text-[10px] font-black uppercase text-white" style={{ backgroundColor: brandKit.primaryColor }}>{selectedFormDesign.submitLabel}</button></div></div></div></div>
           </div>
         )}
 
