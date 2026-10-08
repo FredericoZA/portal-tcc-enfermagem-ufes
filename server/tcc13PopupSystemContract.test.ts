@@ -223,3 +223,53 @@ test('design de formulário suporta logos separados de universidade e curso',()=
   assert.match(types,/universityLogoUrl: string/);
   assert.match(service,/universityLogoUrl: brand\.universityLogoUrl/);
 });
+
+
+test('editor de e-mail usa modelo único autoeditável e autocomplete sem criar variável',()=>{
+  const studio=read('src/components/IntegrationStudioPanel.tsx');
+  assert.match(studio,/data-portal-email-direct-editor="true"/);
+  assert.match(studio,/aria-label="Selecionar e-mail"/);
+  assert.match(studio,/title="Adicionar e-mail"/);
+  assert.match(studio,/title="Excluir e-mail"/);
+  assert.match(studio,/HTML avançado/);
+  assert.match(studio,/Digite &lt;&lt; para escolher uma variável disponível/);
+  assert.match(studio,/const TemplateVariableControl/);
+  assert.match(studio,/role="listbox" aria-label="Variáveis disponíveis"/);
+  assert.match(studio,/templateVariables/);
+  assert.doesNotMatch(studio,/Editor profissional de e-mail/);
+  assert.doesNotMatch(studio,/Pré-visualização/);
+});
+
+test('formulário separa campos internos dos campos publicáveis para templates',()=>{
+  const page=read('src/pages/ConfiguracoesPage.tsx');
+  const studio=read('src/components/IntegrationStudioPanel.tsx');
+  const service=read('src/services/integrationStudioService.ts');
+  assert.match(page,/availableToTemplates\?: boolean/);
+  assert.match(studio,/Disponível para e-mails e documentos/);
+  assert.match(studio,/question\.availableToTemplates===false/);
+  assert.match(service,/question\.availableToTemplates === false/);
+  assert.match(page,/fieldKey: 'PALAVRAS_CHAVE'[\s\S]*availableToTemplates: false/);
+});
+
+test('documentos e variáveis exibem um documento por vez e sem consolidar manualmente',()=>{
+  const docs=read('src/components/MasterDocumentModelsPanel.tsx');
+  assert.match(docs,/data-portal-document-direct-editor="true"/);
+  assert.match(docs,/aria-label="Selecionar documento"/);
+  assert.match(docs,/title="Adicionar documento"/);
+  assert.match(docs,/title="Excluir documento"/);
+  assert.match(docs,/Atualizar variáveis/);
+  assert.match(docs,/sincronizada\(s\) automaticamente/);
+  assert.match(docs,/variableUsageTitle/);
+  assert.doesNotMatch(docs,/Modelos oficiais e variáveis/);
+  assert.doesNotMatch(docs,/Descoberta e consolidação/);
+  assert.doesNotMatch(docs,/>Consolidar</);
+  assert.doesNotMatch(docs,/Abrir no Drive/);
+});
+
+test('editores integrados salvam automaticamente no servidor',()=>{
+  const studio=read('src/components/IntegrationStudioPanel.tsx');
+  const docs=read('src/components/MasterDocumentModelsPanel.tsx');
+  assert.match(studio,/hideTabs[\s\S]*apiClient\.updateSettings\(\{ integrationStudio: snapshot \}\)/);
+  assert.match(docs,/apiClient\.getSettings\(\)/);
+  assert.match(docs,/apiClient\.updateSettings\(\{integrationStudio:snapshot\}\)/);
+});
