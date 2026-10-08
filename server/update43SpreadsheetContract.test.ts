@@ -33,7 +33,8 @@ test('planilhas permitem rolagem vertical e horizontal no próprio contêiner', 
   assert.doesNotMatch(scroll, /overflow-y-visible/);
   assert.match(scroll, /portal-spreadsheet-scroll-host/);
   assert.match(scroll, /overflow-auto/);
-  assert.match(scroll, /maxHeight: 'min\(68vh, 720px\)'/);
+  assert.match(scroll, /maxHeight: fillHeight \? 'none' : 'min\(68vh, 720px\)'/);
+  assert.match(scroll, /height: fillHeight \? '100%' : undefined/);
   assert.match(runtime, /addEventListener\('mousedown'/);
   assert.match(runtime, /window\.addEventListener\('mousemove'/);
   assert.match(runtime, /addEventListener\('wheel'/);
