@@ -29,7 +29,12 @@ const commit = gitCommit();
 const baseEnv = {
   ...process.env,
   PORTAL_GIT_COMMIT: commit,
-  VITE_PORTAL_LOCAL_DEMO_AUTH: 'true'
+  VITE_PORTAL_LOCAL_DEMO_AUTH: 'true',
+  PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'true',
+  PORTAL_ALLOW_LOCAL_OTP_STORE: 'true',
+  PORTAL_ALLOW_LOCAL_SECRET_STORE: 'true',
+  PORTAL_TEST_DOCUMENT_RENDERER: 'true',
+  PORTAL_OTP_DELIVERY_MODE: 'log'
 };
 
 const buildCode = await run(command('npm'), ['run', 'build'], baseEnv);
