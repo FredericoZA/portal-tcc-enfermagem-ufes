@@ -34,6 +34,8 @@ test('busca e configuração copiam a geometria canônica do Portal',()=>{
   assert.match(css,/\.portal-table-settings-popover > \.portal-settings-popover-header[\s\S]*padding: 0 var\(--portal-bar-padding-x\)/);
   assert.match(css,/\.portal-settings-popover-body \{[\s\S]*background: var\(--portal-surface-panel\)/);
   assert.doesNotMatch(search,/rounded-xl/);
-  assert.match(search,/aria-label="Fechar busca"/);
-  assert.match(settings,/aria-label="Fechar configuração da planilha"/);
+  assert.doesNotMatch(search,/aria-label="Fechar busca"/);
+  assert.match(search,/ESC para fechar/);
+  assert.doesNotMatch(settings,/aria-label="Fechar configuração da planilha"/);
+  assert.match(settings,/document\.addEventListener\('mousedown',outside\)/);
 });
