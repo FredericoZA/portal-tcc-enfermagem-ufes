@@ -1,5 +1,6 @@
 import { PortalDialogs } from './components/PortalDialogs';
 import { PortalErrorBoundary } from './components/PortalErrorBoundary';
+import { PortalModalShell } from './components/PortalModalShell';
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { UserSimulatorBar } from './components/UserSimulatorBar';
@@ -42,6 +43,7 @@ export default function App() {
   const [selectedProcessReadOnly, setSelectedProcessReadOnly] = useState<boolean>(false);
   const [isOpenMobileSidebar, setIsOpenMobileSidebar] = useState(false);
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
+  const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   const [emergencySecretKeyParam] = useState('');
   const processDialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -59,6 +61,11 @@ export default function App() {
 
   const handleNavigate = (tab: string) => {
     setSelectedProcessId(null);
+    if (tab === 'novo-processo') {
+      setIsRegistrationModalOpen(true);
+      return;
+    }
+    setIsRegistrationModalOpen(false);
     setCurrentTab(tab);
   };
 
@@ -139,6 +146,7 @@ export default function App() {
             currentTab={currentTab}
             setCurrentTab={(tab) => {
               setSelectedProcessId(null);
+              setIsRegistrationModalOpen(false);
               setCurrentTab(tab);
             }}
             isOpenMobile={isOpenMobileSidebar}
@@ -205,6 +213,28 @@ export default function App() {
             </div>
           </div>
         )}
+
+        <PortalModalShell
+          open={isRegistrationModalOpen}
+          onClose={() => setIsRegistrationModalOpen(false)}
+          title="Cadastrar Trabalho de TCC"
+          subtitle="Novo processo de Trabalho de Conclusão de Curso"
+          maxWidthClass="max-w-6xl"
+          heightClass="max-h-[92vh]"
+          bodyClassName="p-3 sm:p-4"
+        >
+          <PortalErrorBoundary key="registration-modal">
+            <Suspense fallback={<PageLoadingFallback />}>
+              <WizardCadastroPage
+                onSuccess={(newId) => {
+                  setIsRegistrationModalOpen(false);
+                  handleSelectProcess(newId, false);
+                }}
+                onCancel={() => setIsRegistrationModalOpen(false)}
+              />
+            </Suspense>
+          </PortalErrorBoundary>
+        </PortalModalShell>
 
         <EmergencyRecoveryModal isOpen={isEmergencyModalOpen} onClose={() => setIsEmergencyModalOpen(false)} defaultSecretKey={emergencySecretKeyParam} />
       </div>
