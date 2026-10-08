@@ -28,6 +28,7 @@ import {
   Mail,
   Merge,
   Palette,
+  Pencil,
   Plus,
   RefreshCw,
   Save,
@@ -183,7 +184,10 @@ const FormQuestionEditor: React.FC<{
   return <article className="rounded-xl border border-slate-200 bg-slate-50 p-3" aria-label={`Campo ${index + 1}: ${question.label}`}>
     <div className="grid gap-2 sm:grid-cols-[1fr_.8fr_.7fr_auto]">
       <input aria-label="Rótulo do campo" value={question.label} onChange={(event) => onChange({ label: event.target.value })} className={inputClass} placeholder="Pergunta" />
-      <input aria-label="Variável vinculada" value={question.fieldKey} onChange={event=>onChange({fieldKey:event.target.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')})} className={inputClass} placeholder="CHAVE_DA_VARIAVEL" />
+      <select aria-label="Variável vinculada" value={question.fieldKey} onChange={event=>onChange({fieldKey:event.target.value,isReuseOfFieldKey:Boolean(event.target.value)})} className={inputClass}>
+        <option value="">Selecione a variável…</option>
+        {variables.map(variable=><option key={variable.id} value={normalizeVariableKey(variable.name||variable.id)}>{variable.label||variable.name}</option>)}
+      </select>
       <select aria-label="Tipo do campo" value={question.fieldType} onChange={(event) => onChange({ fieldType: event.target.value as FormQuestionItem['fieldType'] })} className={inputClass}>{['text', 'textarea', 'date', 'datetime-local', 'email', 'number', 'select', 'radio', 'checkbox', 'file'].map((type) => <option key={type}>{type}</option>)}</select>
       <button type="button" onClick={onDelete} aria-label={`Excluir campo ${question.label}`} className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5" /></button>
     </div>
@@ -230,6 +234,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [selectedFormId, setSelectedFormId] = useState(formTemplates[0]?.id || '');
   const [selectedVariableId, setSelectedVariableId] = useState(matrixColumns[0]?.id || '');
   const [selectedFormQuestionId, setSelectedFormQuestionId] = useState(formTemplates[0]?.questions?.[0]?.id || '');
+  const [editingFormPart, setEditingFormPart] = useState<'title'|'description'|'stage'|'submit'|null>(null);
+  const [editingFormQuestionLabelId, setEditingFormQuestionLabelId] = useState('');
+  const [showFormFieldComposer, setShowFormFieldComposer] = useState(false);
+  const [newFormFieldVariableId, setNewFormFieldVariableId] = useState('');
+  const [newFormVariableName, setNewFormVariableName] = useState('');
   const [selectedWorkflowStageId, setSelectedWorkflowStageId] = useState(workflowStages[0]?.id || '');
   const [documentPreview, setDocumentPreview] = useState<{docId:string;base64?:string;remoteUrl?:string;analysis?:unknown}|null>(null);
   const [documentPreviewLoading, setDocumentPreviewLoading] = useState(false);
@@ -258,12 +267,19 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       setSelectedFormQuestionId(selectedForm.questions[0]?.id || '');
     }
   }, [selectedForm?.id, selectedForm?.questions, selectedFormQuestionId]);
+  useEffect(() => {
+    setEditingFormPart(null);
+    setEditingFormQuestionLabelId('');
+    setShowFormFieldComposer(false);
+    setNewFormFieldVariableId('');
+    setNewFormVariableName('');
+  }, [selectedForm?.id]);
   const selectedVariable = matrixColumns.find((item) => item.id === selectedVariableId) || matrixColumns[0];
   const selectedEmailDesign = selectedEmail
     ? { ...defaultEmailDesign(selectedEmail.id, brandKit), ...(emailDesigns[selectedEmail.id] || {}) }
     : defaultEmailDesign('', brandKit);
   const selectedFormDesign = selectedForm
-    ? formDesigns[selectedForm.id] || defaultFormDesign(selectedForm.id, brandKit)
+    ? { ...defaultFormDesign(selectedForm.id, brandKit), ...(formDesigns[selectedForm.id] || {}) }
     : defaultFormDesign('', brandKit);
   const validationReport = useMemo(() => validateCourseStudio({
     schemaVersion: 3,
@@ -517,6 +533,74 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const moveSelectedFormQuestion = (index:number,direction:-1|1) => {
     if(!selectedForm)return;const target=index+direction;if(target<0||target>=selectedForm.questions.length)return;
     const questions=[...selectedForm.questions];[questions[index],questions[target]]=[questions[target],questions[index]];updateSelectedForm({questions});
+  };
+
+  const variableSimilarityScore = (candidate:string, column:MatrixColumn):number => {
+    const candidateKey=normalizeVariableKey(candidate);
+    const columnKey=normalizeVariableKey(column.name||column.id);
+    if(!candidateKey||!columnKey)return 0;
+    if(candidateKey===columnKey)return 1;
+    if(candidateKey.includes(columnKey)||columnKey.includes(candidateKey))return .86;
+    const a=new Set(candidateKey.split('_').filter(Boolean));
+    const b=new Set(columnKey.split('_').filter(Boolean));
+    const shared=[...a].filter(token=>b.has(token)).length;
+    const union=new Set([...a,...b]).size;
+    return union?shared/union:0;
+  };
+
+  const createFormVariable = async () => {
+    const candidate=normalizeVariableKey(newFormVariableName);
+    if(!candidate){notify('Informe o nome da nova variável.');return;}
+    const exact=matrixColumns.find(column=>normalizeVariableKey(column.name||column.id)===candidate);
+    if(exact){setNewFormFieldVariableId(exact.id);setNewFormVariableName('');notify('Essa variável já existe e foi selecionada.');return;}
+    const similar=matrixColumns
+      .map(column=>({column,score:variableSimilarityScore(candidate,column)}))
+      .filter(item=>item.score>=.48)
+      .sort((a,b)=>b.score-a.score)
+      .slice(0,4);
+    if(similar.length){
+      const names=similar.map(item=>item.column.label||item.column.name).join(', ');
+      const confirmed=await portalConfirm(`Já existem variáveis semelhantes: ${names}. Deseja criar “${candidate}” mesmo assim?`);
+      if(!confirmed)return;
+    }
+    const id=`var_${candidate.toLowerCase()}_${Date.now().toString(36)}`;
+    const label=candidate.toLowerCase().split('_').map(part=>part.charAt(0).toUpperCase()+part.slice(1)).join(' ');
+    const next:MatrixColumn={id,name:candidate,label,dataType:'text',aliases:[],format:{bold:false,italic:false,color:brandKit.primaryColor}};
+    setMatrixColumns(previous=>[...previous,next]);
+    setNewFormFieldVariableId(id);
+    setNewFormVariableName('');
+    setIsDirty(true);
+    notify(`Variável ${label} criada e selecionada.`);
+  };
+
+  const addFormQuestionFromVariable = () => {
+    if(!selectedForm)return;
+    const variable=matrixColumns.find(column=>column.id===newFormFieldVariableId);
+    if(!variable){notify('Selecione uma variável antes de adicionar o campo.');return;}
+    const fieldKey=normalizeVariableKey(variable.name||variable.id);
+    const existing=selectedForm.questions.find(question=>normalizeVariableKey(question.fieldKey)===fieldKey);
+    if(existing){
+      setSelectedFormQuestionId(existing.id);
+      setEditingFormQuestionLabelId('');
+      setShowFormFieldComposer(false);
+      notify('Essa variável já está vinculada a um campo deste formulário.');
+      return;
+    }
+    const question:FormQuestionItem={
+      id:`question-${Date.now()}`,
+      fieldKey,
+      label:variable.label||variable.name||fieldKey,
+      fieldType:variable.dataType==='date'?'date':variable.dataType==='email'?'email':variable.dataType==='number'?'number':'text',
+      expectedAnswer:'',
+      required:false,
+      validation:{},
+      isReuseOfFieldKey:true
+    };
+    updateSelectedForm({questions:[...selectedForm.questions,question]});
+    setSelectedFormQuestionId(question.id);
+    setEditingFormQuestionLabelId(question.id);
+    setShowFormFieldComposer(false);
+    setNewFormFieldVariableId('');
   };
 
   const handleDriveScan = async () => {
