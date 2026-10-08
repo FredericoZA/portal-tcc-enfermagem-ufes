@@ -191,14 +191,14 @@ export default function App() {
         </div>
 
         {selectedProcessId && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/80 p-2 backdrop-blur-xs animate-fadeIn sm:p-4 md:p-6" onClick={handleCloseProcess}>
+          <div className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-start justify-center overflow-y-auto p-2 animate-fadeIn sm:p-4 md:p-6" onClick={handleCloseProcess}>
             <div
               ref={processDialogRef}
               role="dialog"
               aria-modal="true"
               aria-label="Detalhes do Trabalho de TCC"
               tabIndex={-1}
-              className="portal-process-dialog relative my-2 w-full max-w-6xl overflow-hidden rounded-2xl border border-slate-300 shadow-2xl animate-in zoom-in-95 duration-150 sm:my-4"
+              className="portal-standard-modal portal-process-dialog relative my-2 w-full max-w-6xl overflow-hidden animate-in zoom-in-95 duration-150 sm:my-4"
               style={{ backgroundColor: 'var(--portal-surface-panel)' }}
               onClick={(event) => event.stopPropagation()}
             >
