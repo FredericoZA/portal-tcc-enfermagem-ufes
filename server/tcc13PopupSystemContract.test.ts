@@ -71,3 +71,30 @@ test('popups públicos e administrativos usam superfície canônica',()=>{
   assert.match(access,/portal-standard-modal portal-modal-surface/);
   assert.match(audit,/portal-standard-modal portal-modal-surface/);
 });
+
+
+test('editores e workspaces restantes seguem o mesmo shell e não reintroduzem botão X',()=>{
+  const modalPaths=[
+    'src/components/CalendarPopupEditorModal.tsx',
+    'src/components/LoginPopupEditorModal.tsx',
+    'src/components/TccDetailPopupEditorModal.tsx',
+    'src/components/UnifiedPortalEditorModal.tsx',
+    'src/components/SettingsWorkspaceModal.tsx',
+  ];
+  for(const path of modalPaths){
+    const source=read(path);
+    assert.match(source,/portal-modal-backdrop/);
+    assert.doesNotMatch(source,/aria-label="Fechar/);
+    assert.doesNotMatch(source,/<X\b/);
+  }
+  const columns=read('src/components/TableColumnSelectorPanel.tsx');
+  assert.doesNotMatch(columns,/bg-slate-8(?:00|50)/);
+  assert.doesNotMatch(columns,/aria-label="Fechar configuração de colunas"/);
+});
+
+test('Indicadores usa título full-width, faixa branca e respiro antes das caixas',()=>{
+  const page=read('src/pages/IndicadoresPage.tsx');
+  assert.match(page,/portal-public-header/);
+  assert.match(page,/<PortalSectionDivider \/>/);
+  assert.match(page,/px-3 pb-4 pt-3 sm:px-4 sm:pt-4/);
+});
