@@ -336,7 +336,7 @@ button[aria-label^="Configurar exibição"],
 /* Modais. */
 .portal-modal-surface,
 [role="dialog"] > .portal-modal-surface {
-  background: var(--portal-surface-panel);
+  background: var(--portal-surface-page);
   border: 1px solid var(--portal-border);
   border-radius: var(--portal-panel-radius);
   overflow: hidden;
@@ -372,7 +372,7 @@ button[aria-label^="Configurar exibição"],
 .portal-modal-body,
 .portal-process-dialog,
 .portal-process-dialog-body {
-  background: var(--portal-surface-panel);
+  background: var(--portal-surface-page);
 }
 
 .portal-modal-body > .portal-layer-panel,
@@ -394,7 +394,7 @@ button[aria-label^="Configurar exibição"],
   overflow: hidden;
   border: 1px solid var(--portal-border);
   border-radius: var(--portal-panel-radius);
-  background: var(--portal-surface-panel);
+  background: var(--portal-surface-page);
   color: var(--portal-text-dark);
   box-shadow: 0 2px 7px rgba(15, 23, 42, .08);
 }
@@ -1160,7 +1160,7 @@ button[aria-label^="Configurar exibição"],
 
 .portal-feedback-dialog > form,
 .portal-feedback-dialog footer {
-  background: var(--portal-surface-panel);
+  background: var(--portal-surface-page);
 }
 
 .portal-feedback-dialog .portal-action,
@@ -1238,4 +1238,80 @@ button[aria-label^="Configurar exibição"],
   background: var(--portal-surface-card);
   border-color: var(--portal-border);
   color: var(--portal-text-dark);
+}
+
+
+/* Portal TCC13 — arquitetura canônica de pop-ups.
+   Cabeçalho verde full-width -> faixa branca -> corpo branco-gelo -> subcaixas. */
+.portal-modal-backdrop {
+  background: rgba(15, 23, 42, .66);
+  backdrop-filter: blur(2px);
+}
+
+.portal-standard-modal {
+  max-height: calc(100dvh - 24px);
+  border: 1px solid var(--portal-border-strong);
+  border-radius: var(--portal-panel-radius);
+  background: var(--portal-surface-page);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, .28);
+}
+
+.portal-modal-divider {
+  width: 100%;
+  height: var(--portal-sheet-content-divider);
+  min-height: var(--portal-sheet-content-divider);
+  background: var(--portal-surface-inner);
+}
+
+.portal-modal-body {
+  background: var(--portal-surface-page);
+}
+
+.portal-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--portal-border);
+  background: var(--portal-surface-page);
+}
+
+.portal-modal-card {
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+  background: var(--portal-surface-card);
+}
+
+.portal-modal-inner {
+  border: 1px solid var(--portal-border);
+  border-radius: 10px;
+  background: var(--portal-surface-inner);
+}
+
+.portal-search-popover > .portal-modal-divider,
+.portal-table-settings-popover > .portal-modal-divider {
+  height: 8px;
+  min-height: 8px;
+}
+
+.portal-search-popover > :not(.portal-modal-header):not(.portal-modal-divider),
+.portal-table-settings-popover > :not(.portal-settings-popover-header):not(.portal-modal-divider) {
+  background: var(--portal-surface-page);
+}
+
+/* Um título estrutural nunca recebe margem externa dentro do próprio pop-up. */
+.portal-standard-modal > .portal-modal-header,
+.portal-search-popover > .portal-modal-header,
+.portal-table-settings-popover > .portal-settings-popover-header {
+  width: 100%;
+  margin: 0;
+  border-radius: 0;
+}
+
+/* X de fechamento não faz parte do padrão visual dos pop-ups. */
+.portal-standard-modal > .portal-modal-header .portal-modal-header-close,
+.portal-search-popover > .portal-modal-header .portal-modal-header-close,
+.portal-table-settings-popover > .portal-settings-popover-header .portal-modal-header-close {
+  display: none;
 }
