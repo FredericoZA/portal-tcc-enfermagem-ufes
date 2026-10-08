@@ -55,13 +55,14 @@ const DEFAULT_VISIBLE = Object.fromEntries(ACCESS_COLUMNS.map((column) => [colum
 function CompactModal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   if (typeof document === 'undefined') return null;
   return createPortal(
-    <div className="fixed inset-0 z-[1000012] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-[1px]" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-3xl overflow-hidden rounded-xl border border-slate-300 shadow-2xl" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
-        <div className="flex items-center gap-2 border-b-[5px] border-white px-3 py-2.5 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}>
+    <div className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-3" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="portal-standard-modal portal-modal-surface w-full max-w-3xl overflow-hidden">
+        <div className="portal-modal-header px-3">
           {title === 'Envio de lista' ? <FileSpreadsheet className="h-4 w-4 shrink-0" aria-hidden="true"/> : <UserCheck className="h-4 w-4 shrink-0" aria-hidden="true"/>}
           <h3 className="text-xs font-black uppercase tracking-wide">{title}</h3>
         </div>
-        <div className="max-h-[78vh] overflow-y-auto p-3" style={{ backgroundColor: 'var(--portal-surface-page)' }}>{children}</div>
+        <div className="portal-modal-divider" aria-hidden="true" />
+        <div className="max-h-[78vh] overflow-y-auto bg-[var(--portal-surface-page)] p-3">{children}</div>
       </div>
     </div>, document.body,
   );
