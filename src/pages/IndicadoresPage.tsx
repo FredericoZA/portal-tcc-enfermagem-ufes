@@ -145,7 +145,7 @@ export const IndicadoresPage: React.FC = () => {
       </div>
     </section>
     <PortalSectionDivider />
-    <div className="space-y-3 p-3 sm:p-4">
+    <div className="space-y-3 px-3 pb-4 pt-3 sm:px-4 sm:pt-4">
 
     {loading && <div className={panel}>Carregando estatísticas acadêmicas…</div>}
     {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-900">{error}</div>}
