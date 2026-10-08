@@ -31,7 +31,8 @@ test('identidade do rodapé é única e usa autosave',()=>{
   const identity=read('src/components/CommissionIdentityPanel.tsx');
   assert.match(config,/content: settings \? <CommissionIdentityPanel isMaster \/>/);
   assert.doesNotMatch(config,/MasterAndPresidentConfigForm/);
-  assert.match(identity,/Salvo automaticamente/);
+  assert.match(identity,/setTimeout\(\(\) => \{ void persistRegularFields\(\); \}, 700\)/);
+  assert.doesNotMatch(identity,/Alterações salvas automaticamente/);
   assert.match(identity,/setTimeout\(\(\) => \{ void persistRegularFields\(\); \}, 700\)/);
   assert.doesNotMatch(identity,/Salvar membros|Salvar Contas Administrativas/);
 });
@@ -51,7 +52,8 @@ test('catálogo mestre propaga modelos e detecta variáveis',()=>{
   const api=read('src/services/apiClient.ts');
   const server=read('server.ts');
   assert.match(models,/onCatalogChanged/);
-  assert.match(models,/Descobrir/);
+  assert.match(models,/Atualizar variáveis/);
+  assert.match(models,/sincronizada\(s\) automaticamente/);
   assert.match(models,/model\.driveFileUrl/);
   assert.match(config,/syncMasterModelCatalog/);
   assert.match(api,/detectDocumentModelVariables/);
