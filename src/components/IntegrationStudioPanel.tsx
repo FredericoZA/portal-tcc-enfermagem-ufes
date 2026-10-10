@@ -135,7 +135,7 @@ const PREVIEW_VARIABLES: Record<string,string> = {
   TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TCC_TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TITULO_TRABALHO:'Segurança do paciente e qualidade da assistência de enfermagem', CAMPO_02:'Segurança do paciente e qualidade da assistência de enfermagem',
   ALUNOS_NOMES:'Ana Carolina Souza e Bruno Martins Lima', ALUNO_NOME:'Ana Carolina Souza', NOME_ALUNO:'Ana Carolina Souza', CAMPO_01:'Ana Carolina Souza e Bruno Martins Lima',
   ORIENTADOR_NOME:'Profa. Dra. Maria Silva', CAMPO_03:'Profa. Dra. Maria Silva', DEFESA_DATA_HORA:'15 de outubro de 2026 às 14h', DEFESA_DATA_HORA_EXTENSO:'15 de outubro de 2026 às 14h', CAMPO_04:'15 de outubro de 2026 às 14h',
-  DEFESA_LOCAL:'Auditório do CCS — UFES', LOCAL_DEFESA:'Auditório do CCS — UFES', CAMPO_07_LOCAL:'Auditório do CCS — UFES', PROTOCOLO:'2026-999', CAMPO_12:'2026-999'
+  DEFESA_LOCAL:'Auditório do CCS — UFES', LOCAL_DEFESA:'Auditório do CCS — UFES', CAMPO_07_LOCAL:'Auditório do CCS — UFES', PROTOCOLO:'2026-999', CAMPO_12:'2026-999',
   ALUNO_1_EMAIL:'ana.souza@exemplo.edu.br',ALUNO_2_EMAIL:'bruno.martins@exemplo.edu.br',
   DEPARTAMENTO_EMAIL:'departamento@exemplo.ufes.br',ORIENTADOR_EMAIL:'maria.silva@exemplo.ufes.br',
   LOCAL_ALTERNATIVO:'Sala de reuniões do CCS',EXAMINADOR_2_NOME:'Prof. João Oliveira',EXAMINADOR_3_NOME:'Profa. Carla Santos',
