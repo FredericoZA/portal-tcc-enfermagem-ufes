@@ -50,7 +50,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       const nestedLayerOpen = document.getElementsByClassName('portal-search-popover').length > 0
         || document.getElementsByClassName('portal-table-settings-popover').length > 0
         || document.getElementsByClassName('portal-core-column-popup').length > 0
-        || Boolean(document.querySelector('dialog[open]'));
+        || Boolean(document.querySelector('dialog[open], [data-portal-preview-dialog="true"]'));
       if (!nestedLayerOpen) onClose();
     };
     window.addEventListener('keydown', onKeyDown);
