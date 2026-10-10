@@ -10,7 +10,7 @@ import { parseStudentImportFile } from '../../src/utils/studentImport';
 
 test('contrato Asten mantém PDF confidencial, envio explícito e prioridade paralela', () => {
   process.env.ASTEN_WEBHOOK_SECRET='w'.repeat(40);
-  process.env.ASTEN_CALLBACK_URL='https://portal.example/api/integrations/asten/callback';
+  process.env.ASTEN_CALLBACK_URL='https://portal.example/api/integrations/asten/webhook';
   process.env.PORTAL_PUBLIC_URL='https://portal.example';
   process.env.ASTEN_REQUIRE_CODE='true';
   const contentBase64=Buffer.from('%PDF-1.4\nobj\n%%EOF','utf8').toString('base64');
