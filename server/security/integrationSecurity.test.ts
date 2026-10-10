@@ -126,6 +126,30 @@ test('Asten exige endpoint exato de webhook e rejeita query/fragmento no callbac
   });
 });
 
+test('Asten exige login e segredo de webhook exclusivo dos demais segredos', () => {
+  withCleanEnvironment(() => {
+    const shared = 'z'.repeat(48);
+    process.env.PORTAL_PUBLIC_URL = 'https://portal.example';
+    process.env.ASTEN_CALLBACK_URL = 'https://portal.example/api/integrations/asten/webhook';
+    process.env.ASTEN_WEBHOOK_SECRET = shared;
+    process.env.PORTAL_SESSION_SECRET = shared;
+
+    let preflight = getAstenSecurityPreflight();
+    assert.equal(preflight.webhookSecretSeparated, false);
+    assert.equal(preflight.callbackConfigured, false);
+
+    process.env.ASTEN_WEBHOOK_SECRET = 'w'.repeat(48);
+    process.env.ASTEN_REQUIRE_LOGIN = 'false';
+    preflight = getAstenSecurityPreflight();
+    assert.equal(preflight.signerLoginRequired, false);
+    assert.equal(preflight.callbackConfigured, false);
+
+    process.env.ASTEN_REQUIRE_LOGIN = 'true';
+    assert.equal(getAstenSecurityPreflight().callbackConfigured, true);
+  });
+});
+
+
 test('Asten rejeita credencial com caracteres de controle antes de acessar a rede', async () => {
   await withCleanEnvironmentAsync(async () => {
     process.env.ASTEN_INTEGRATION_ENABLED = 'true';
