@@ -62,8 +62,8 @@ test('detalhes do TCC seguem a nova hierarquia visual',()=>{
 test('seleção da planilha habilita ações em lote e servidor serializa criação idempotente',()=>{
   const coordinator=read('src/pages/CoordenadorPage.tsx');
   const server=read('server.ts');
-  assert.match(coordinator,/disabled=\{!selectedIds\.some\(\(id\)=>canSendAsten\(id\)\) \|\| signingIds\.length > 0\}/);
-  assert.match(coordinator,/disabled=\{!selectedIds\.some\(\(id\)=>canPrepareGov\(id\)\) \|\| signingIds\.length > 0\}/);
+  assert.match(coordinator,/disabled=\{selectedIds\.length===0 \|\| signingIds\.length > 0\}/);
+  assert.match(coordinator,/Esta declaração ainda não está disponível para assinatura Gov\.br/);
   assert.match(server,/const signatureJobCreationLocks=new Map<string,Promise<SignatureJob>>\(\)/);
   assert.match(server,/createSignatureJobUnlocked/);
   assert.match(server,/const inFlight=signatureJobCreationLocks\.get\(lockKey\)/);
