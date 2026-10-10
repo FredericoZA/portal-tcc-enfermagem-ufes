@@ -294,7 +294,7 @@ test('produção exige segredos distintos para sessão, OTP, OAuth e demais chav
     assert.equal(getOtpRuntimeStatus().pepperSeparated, false);
     assert.equal(getGoogleOAuthSecurityPreflight().stateSecretSeparated, false);
     assert.equal(getGoogleWorkspaceConfigStatus().oauthConfigured, false);
-    assert.throws(() => buildGoogleAuthorizationUrl({}), /diferente de PORTAL_SESSION_SECRET/i);
+    assert.throws(() => buildGoogleAuthorizationUrl({}), /exclusivo e diferente dos demais segredos/i);
 
     process.env.PORTAL_OTP_PEPPER = 'o'.repeat(48);
     process.env.GOOGLE_OAUTH_STATE_SECRET = 'g'.repeat(48);
