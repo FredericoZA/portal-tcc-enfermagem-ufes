@@ -1360,3 +1360,17 @@ button[aria-label^="Configurar exibição"],
 .portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-stage-sheet="true"] thead th {background:var(--portal-brand-header);}
 .portal-settings-workspace [data-portal-email-direct-editor="true"] > div > article {background:var(--portal-surface-page);border-color:transparent;box-shadow:none;}
 @media(max-width:640px) {.portal-settings-workspace {max-height:calc(100dvh - 24px)}}
+
+/* TCC14: ajuste final das hierarquias visuais aprovadas. */
+.portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"],
+.portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"] > .flex,
+.portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-scroll-host {
+  background:var(--portal-surface-panel)!important;
+}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-scroll-host {border:0;border-radius:0;box-shadow:none;scrollbar-gutter:auto;}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"] > .flex {margin:0;border:0;}
+.portal-tcc-workspace-summary {background-color:var(--portal-surface-panel)!important;}
+.portal-tcc-workspace-tabs {background-color:var(--portal-surface-panel)!important;}
+.portal-tcc-workspace-tabs button:not(:focus-visible) {border-radius:9999px;}
+.portal-tcc-workspace-content {padding-bottom:20px!important;}
+.portal-process-dialog-body {overscroll-behavior:contain;}
