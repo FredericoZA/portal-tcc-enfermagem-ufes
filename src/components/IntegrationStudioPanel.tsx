@@ -2,6 +2,7 @@ import { portalConfirm } from '../services/portalDialogs';
 import { upgradeStudioDraft } from '../utils/studioUpgrade';
 import { OperationalDesignerPanel } from './OperationalDesignerPanel';
 import { operationalConfig as resolveOperationalConfig } from '../utils/operationalConfig';
+import { evaluateStudioCondition } from '../utils/courseStudioValidator';
 import type { OperationalConfig } from '../types/operationalConfig';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
