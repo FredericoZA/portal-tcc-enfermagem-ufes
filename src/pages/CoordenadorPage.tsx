@@ -242,10 +242,10 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
   // Seleção em lote é aplicada sobre a visão atualmente exibida.
   const toggleSelectionGroup = (ids: string[]) => {
-    const allSelected = ids.length > 0 && ids.every((id) => selectedIds.includes(id));
-    setSelectedIds((current) => allSelected
-      ? current.filter((id) => !ids.includes(id))
-      : Array.from(new Set([...current, ...ids])));
+    setSelectedIds((current) => {
+      const allSelected = ids.length > 0 && ids.every((id) => current.includes(id));
+      return allSelected ? current.filter((id) => !ids.includes(id)) : Array.from(new Set([...current, ...ids]));
+    });
   };
 
   const toggleSelectItem = (id: string) => {
@@ -779,6 +779,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
               <div className="portal-sheet-toolbar shrink-0">
                 <div className="portal-sheet-toolbar-actions">
+                  {selectedIds.length>0&&<span role="status" className="rounded-full border border-white/50 px-2 py-1 text-[10px] font-bold text-white">{selectedIds.length} selecionado(s)</span>}
                   {activeTab !== 'concluidos' && (
                     <>
                       <button type="button" disabled={selectedIds.length===0 || signingIds.length > 0} onClick={handleSignSelected} className="portal-sign-bulk-btn disabled:opacity-45" title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
