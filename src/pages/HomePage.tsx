@@ -936,8 +936,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     try {
       const emailToUse=loginEmailInput.trim().toLowerCase();
       if(loginStep==='email'){
-        await apiClient.requestLoginCode(emailToUse);
-        setLoginStep('code');setLoginMessage('Código enviado. Consulte seu e-mail; ele expira em 10 minutos.');
+        const response=await apiClient.requestLoginCode(emailToUse);
+        if(!response.sent){setLoginStep('email');setLoginMessage(response.message||'Este e-mail não está cadastrado no Portal TCC. Entre em contato com a secretaria.');return;}
+        setLoginStep('code');setLoginMessage('Código solicitado. Consulte seu e-mail; ele expira em 10 minutos.');
         return;
       }
       const session=await apiClient.verifyLoginCode(emailToUse,loginCodeInput);

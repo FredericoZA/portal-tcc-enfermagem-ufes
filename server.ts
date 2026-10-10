@@ -1426,9 +1426,19 @@ export async function createPortalApp() {
     const email=normalizeEmail(String(req.body?.email||''));
     if(!isValidPortalEmail(email))return res.status(400).json({error:'Informe um e-mail válido.'});
     const allowedByIp=allowOtpRequestFromIp(req.ip||'');
-    if(allowedByIp&&canRequestPortalAccess(email))await requestPortalOtp({email,ip:req.ip,portalName:resolveInstallationProfile(currentSettings).portalName}).catch(()=>undefined);
-    await enforceMinimumResponseTime(startedAt);
-    res.json({sent:true,expiresInMinutes:10,message:'Se o e-mail estiver autorizado, um código será enviado.'});
+    if(!allowedByIp){await enforceMinimumResponseTime(startedAt);return res.status(429).json({error:'Limite de solicitações atingido. Aguarde alguns minutos.'});}
+    if(!canRequestPortalAccess(email)){
+      await enforceMinimumResponseTime(startedAt);
+      return res.json({sent:false,code:'EMAIL_NOT_REGISTERED',expiresInMinutes:0,message:'Este e-mail não está cadastrado ou autorizado no Portal TCC. Confira o endereço ou solicite acesso à secretaria.'});
+    }
+    try {
+      await requestPortalOtp({email,ip:req.ip,portalName:resolveInstallationProfile(currentSettings).portalName});
+      await enforceMinimumResponseTime(startedAt);
+      return res.json({sent:true,expiresInMinutes:10,message:'Código solicitado com sucesso. Confira sua caixa de entrada.'});
+    }catch(error){
+      await enforceMinimumResponseTime(startedAt);
+      return res.status(503).json({error:error instanceof Error?error.message:'Não foi possível enviar o código. Tente novamente mais tarde.'});
+    }
   });
 
   app.post('/api/auth/verify-code',async(req,res)=>{

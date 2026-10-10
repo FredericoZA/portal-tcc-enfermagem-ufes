@@ -12,7 +12,7 @@ interface IntegrationState {
 }
 
 const compactCard = 'min-h-[126px] rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-3';
-const action = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-[var(--portal-brand-header)] bg-[var(--portal-brand-header)] px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm hover:brightness-95 disabled:opacity-40';
+const action = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-[var(--portal-brand-header)] bg-[var(--portal-brand-header)] px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-white shadow-sm hover:brightness-95 disabled:opacity-40';
 const input = 'min-h-8 min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[10px] text-slate-800 outline-none focus:border-slate-400';
 
 function State({ ok, label }: { ok: boolean; label: string }) {
@@ -74,7 +74,7 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
 
   return <div id="infrastructure-integrations-panel" className="flex min-h-full h-full flex-col bg-[var(--portal-surface-page)]">
     <SettingsWorkspaceHeaderPortal>
-      <button type="button" onClick={runHomologation} disabled={working === 'homologation'} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-white bg-white px-3 py-1 text-[10px] font-black text-slate-950 shadow-sm hover:bg-slate-100 disabled:opacity-50">
+      <button type="button" onClick={runHomologation} disabled={working === 'homologation'} className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-white bg-white px-3 py-1 text-[10px] font-black text-slate-950 shadow-sm hover:bg-slate-100 disabled:opacity-50">
         {working === 'homologation' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <RefreshCw className="h-3.5 w-3.5"/>}Executar testes
       </button>
     </SettingsWorkspaceHeaderPortal>

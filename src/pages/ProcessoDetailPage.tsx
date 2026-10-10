@@ -728,14 +728,14 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   return (
     <div
       id="process-detail-container"
-      className={`portal-tcc-detail ${isModal ? 'space-y-0' : 'space-y-3 mx-auto'} ${modalWidthClass} ${modalRadiusClass} ${modalShadowClass} overflow-hidden`}
+      className={`portal-tcc-detail ${isModal ? 'space-y-0' : 'space-y-3 mx-auto'} ${modalWidthClass} ${modalRadiusClass} ${modalShadowClass} ${isModal ? 'overflow-visible pb-5' : 'overflow-hidden'}`}
       style={{ backgroundColor: 'var(--portal-surface-page)', color: '#0f172a' }}
     >
       {isModal ? (
-        <header className="portal-modal-header flex items-center justify-between gap-3 px-4" style={{ backgroundColor: 'var(--portal-brand-header)', color: '#ffffff' }}>
+        <header className="portal-modal-header sticky top-0 z-30 flex items-center justify-between gap-3 px-4" style={{ backgroundColor: 'var(--portal-brand-header)', color: '#ffffff' }}>
           <div className="flex min-w-0 items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-white" aria-hidden="true"/><div className="min-w-0"><h1 className="truncate text-[12px] font-black uppercase tracking-wide">Detalhes do TCC</h1><p className="mt-0.5 truncate text-[10px] font-semibold text-white/85">Enfermagem e Obstetrícia UFES, Maruípe UFES</p></div></div>
           <div className="flex shrink-0 items-center gap-1.5">
-            <button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-slate-900" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/></button>
+            <button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-white bg-white px-3 text-[10px] font-bold text-slate-900" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/>Histórico de Auditoria</button>
             {isMasterAdmin&&<button type="button" onClick={()=>setShowDeleteModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-rose-700" aria-label="Excluir trabalho"><Trash2 className="h-4 w-4"/></button>}
           </div>
         </header>
