@@ -10,7 +10,7 @@ import { parseStudentImportFile } from '../../src/utils/studentImport';
 
 test('contrato Asten mantém PDF confidencial, envio explícito e prioridade paralela', () => {
   process.env.ASTEN_WEBHOOK_SECRET='w'.repeat(40);
-  process.env.ASTEN_CALLBACK_URL='https://portal.example/api/integrations/asten/callback';
+  process.env.ASTEN_CALLBACK_URL='https://portal.example/api/integrations/asten/webhook';
   process.env.PORTAL_PUBLIC_URL='https://portal.example';
   process.env.ASTEN_REQUIRE_CODE='true';
   const contentBase64=Buffer.from('%PDF-1.4\nobj\n%%EOF','utf8').toString('base64');
@@ -49,6 +49,24 @@ test('estado OAuth Google rejeita adulteração e limita o retorno ao portal', (
   assert.throws(()=>decodeGoogleOAuthState(`${replacement}${body.slice(1)}.${signature}`),/adulterado|inválido/i);
   assert.match(url.searchParams.get('scope')||'',/gmail\.send/);
   assert.match(url.searchParams.get('scope')||'',/drive\.file/);
+});
+
+test('OAuth Google mantém returnTo restrito ao próprio portal', () => {
+  process.env.NODE_ENV='development';
+  process.env.GOOGLE_OAUTH_CLIENT_ID='client.apps.googleusercontent.com';
+  process.env.GOOGLE_OAUTH_CLIENT_SECRET='secret';
+  process.env.GOOGLE_OAUTH_STATE_SECRET='s'.repeat(48);
+  process.env.PORTAL_SECRET_ENCRYPTION_KEY='e'.repeat(48);
+  process.env.APP_URL='https://portal.example';
+
+  const external=new URL(buildGoogleAuthorizationUrl({email:'master@example.edu',returnTo:'https://attacker.invalid/roubo'}));
+  assert.equal(decodeGoogleOAuthState(external.searchParams.get('state')!).returnTo,'/?google=connected');
+
+  const protocolRelative=new URL(buildGoogleAuthorizationUrl({returnTo:'//attacker.invalid/roubo'}));
+  assert.equal(decodeGoogleOAuthState(protocolRelative.searchParams.get('state')!).returnTo,'/?google=connected');
+
+  const internal=new URL(buildGoogleAuthorizationUrl({returnTo:'/configuracoes?aba=integracoes'}));
+  assert.equal(decodeGoogleOAuthState(internal.searchParams.get('state')!).returnTo,'/configuracoes?aba=integracoes');
 });
 
 test('acesso a modelos preexistentes do Drive exige opção administrativa explícita', () => {

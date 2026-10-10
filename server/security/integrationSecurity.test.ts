@@ -94,7 +94,7 @@ test('Asten aceita somente callback HTTPS e segredo de webhook forte', () => {
   withCleanEnvironment(() => {
     const secret = 'w'.repeat(48);
     process.env.PORTAL_PUBLIC_URL = 'https://portal.example';
-    process.env.ASTEN_CALLBACK_URL = 'https://portal.example/api/integrations/asten/callback';
+    process.env.ASTEN_CALLBACK_URL = 'https://portal.example/api/integrations/asten/webhook';
     process.env.ASTEN_WEBHOOK_SECRET = secret;
     assert.equal(getAstenSecurityPreflight().callbackConfigured, true);
     assert.equal(safeCompareWebhookSecret(secret), true);
@@ -104,6 +104,51 @@ test('Asten aceita somente callback HTTPS e segredo de webhook forte', () => {
     assert.equal(safeCompareWebhookSecret(process.env.ASTEN_WEBHOOK_SECRET), false);
   });
 });
+
+test('Asten exige endpoint exato de webhook e rejeita query/fragmento no callback', () => {
+  withCleanEnvironment(() => {
+    process.env.PORTAL_PUBLIC_URL = 'https://portal.example';
+    process.env.ASTEN_WEBHOOK_SECRET = 'w'.repeat(48);
+
+    for (const callback of [
+      'https://portal.example/api/integrations/asten/callback',
+      'https://portal.example/api/integrations/asten/webhook?token=valor',
+      'https://portal.example/api/integrations/asten/webhook#fragmento'
+    ]) {
+      process.env.ASTEN_CALLBACK_URL = callback;
+      const preflight = getAstenSecurityPreflight();
+      assert.equal(preflight.callbackEndpointValid, false);
+      assert.equal(preflight.callbackConfigured, false);
+    }
+
+    process.env.ASTEN_CALLBACK_URL = 'https://portal.example/api/integrations/asten/webhook';
+    assert.equal(getAstenSecurityPreflight().callbackEndpointValid, true);
+  });
+});
+
+test('Asten exige login e segredo de webhook exclusivo dos demais segredos', () => {
+  withCleanEnvironment(() => {
+    const shared = 'z'.repeat(48);
+    process.env.PORTAL_PUBLIC_URL = 'https://portal.example';
+    process.env.ASTEN_CALLBACK_URL = 'https://portal.example/api/integrations/asten/webhook';
+    process.env.ASTEN_WEBHOOK_SECRET = shared;
+    process.env.PORTAL_SESSION_SECRET = shared;
+
+    let preflight = getAstenSecurityPreflight();
+    assert.equal(preflight.webhookSecretSeparated, false);
+    assert.equal(preflight.callbackConfigured, false);
+
+    process.env.ASTEN_WEBHOOK_SECRET = 'w'.repeat(48);
+    process.env.ASTEN_REQUIRE_LOGIN = 'false';
+    preflight = getAstenSecurityPreflight();
+    assert.equal(preflight.signerLoginRequired, false);
+    assert.equal(preflight.callbackConfigured, false);
+
+    process.env.ASTEN_REQUIRE_LOGIN = 'true';
+    assert.equal(getAstenSecurityPreflight().callbackConfigured, true);
+  });
+});
+
 
 test('Asten rejeita credencial com caracteres de controle antes de acessar a rede', async () => {
   await withCleanEnvironmentAsync(async () => {
@@ -141,7 +186,7 @@ test('Asten bloqueia redirects e não propaga credencial em mensagem de erro do 
         (error: unknown) => {
           const message = error instanceof Error ? error.message : String(error);
           assert.equal(message.includes(token), false);
-          assert.equal(message.includes('[credencial omitida]'), true);
+          assert.match(message, /rejeitou a credencial|autorização/i);
           assert.equal(/[\r\n]/.test(message), false);
           return true;
         }
@@ -202,6 +247,26 @@ test('cofre de integrações rejeita Supabase sem HTTPS em runtime seguro antes 
   });
 });
 
+test('OTP rejeita Supabase sem HTTPS em runtime seguro antes da rede', async () => {
+  await withCleanEnvironmentAsync(async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.VERCEL = '1';
+    process.env.SUPABASE_URL = 'http://project.example.supabase.co';
+    process.env.SUPABASE_SECRET_KEY = 'sb_' + 'secret_example_only_for_test';
+    process.env.PORTAL_OTP_PEPPER = 'o'.repeat(48);
+    const originalFetch = globalThis.fetch;
+    let called = false;
+    (globalThis as any).fetch = async () => { called = true; return new Response('', { status: 200 }); };
+    try {
+      assert.equal(getOtpRuntimeStatus().configured, false);
+      assert.equal(getOtpRuntimeStatus().durable, false);
+      assert.equal(called, false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
 test('OTP não reutiliza PORTAL_SESSION_SECRET como pepper', () => {
   withCleanEnvironment(() => {
     process.env.NODE_ENV = 'development';
@@ -229,7 +294,7 @@ test('produção exige segredos distintos para sessão, OTP, OAuth e demais chav
     assert.equal(getOtpRuntimeStatus().pepperSeparated, false);
     assert.equal(getGoogleOAuthSecurityPreflight().stateSecretSeparated, false);
     assert.equal(getGoogleWorkspaceConfigStatus().oauthConfigured, false);
-    assert.throws(() => buildGoogleAuthorizationUrl({}), /diferente de PORTAL_SESSION_SECRET/i);
+    assert.throws(() => buildGoogleAuthorizationUrl({}), /exclusivo e diferente dos demais segredos/i);
 
     process.env.PORTAL_OTP_PEPPER = 'o'.repeat(48);
     process.env.GOOGLE_OAUTH_STATE_SECRET = 'g'.repeat(48);

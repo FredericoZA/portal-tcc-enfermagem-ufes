@@ -1,8 +1,53 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
+import { request as httpRequest } from 'node:http';
 import express from 'express';
 import { createPortalHttpApp, portalHttpError } from './httpApp';
+
+function rawHttpRequest(url: URL, method: string): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const req = httpRequest({
+      hostname: url.hostname,
+      port: url.port,
+      path: url.pathname,
+      method
+    }, (res) => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', chunk => { body += chunk; });
+      res.on('end', () => resolve({ status: res.statusCode || 0, body }));
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+test('Express aplica baseline de headers e bloqueia TRACE em qualquer runtime', async () => {
+  const app = createPortalHttpApp();
+  app.get('/api/health', (_req, res) => res.json({ ok: true }));
+  const server = app.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+  const base = `http://127.0.0.1:${address.port}`;
+  try {
+    const response = await fetch(base + '/api/health');
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(response.headers.get('x-frame-options'), 'DENY');
+    assert.equal(response.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
+    assert.equal(response.headers.get('cross-origin-resource-policy'), 'same-origin');
+    assert.equal(response.headers.get('x-permitted-cross-domain-policies'), 'none');
+    assert.match(response.headers.get('cache-control') || '', /no-store/);
+
+    const trace = await rawHttpRequest(new URL(base + '/api/health'), 'TRACE');
+    assert.equal(trace.status, 405);
+    assert.equal(JSON.parse(trace.body).code, 'METHOD_NOT_ALLOWED');
+  } finally {
+    await new Promise<void>(resolve => server.close(() => resolve()));
+  }
+});
 
 test('API retorna JSON após rejeição assíncrona, omite o segredo e continua atendendo', async () => {
   const app = createPortalHttpApp();

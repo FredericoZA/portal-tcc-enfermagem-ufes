@@ -8,6 +8,8 @@ const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
 const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
+const MAX_OAUTH_STATE_LENGTH = 16 * 1024;
+const DEFAULT_GOOGLE_RETURN_TO = '/?google=connected';
 
 export const GOOGLE_WORKSPACE_SCOPES = [
   'openid',
@@ -114,8 +116,29 @@ function redirectUri(): string { return `${appUrl()}/api/integrations/google/oau
 function stateSecret(): string { return String(process.env.GOOGLE_OAUTH_STATE_SECRET || '').trim(); }
 
 function oauthStateSecretSeparated(): boolean {
-  const sessionSecret = String(process.env.PORTAL_SESSION_SECRET || '').trim();
-  return process.env.NODE_ENV !== 'production' || !sessionSecret || stateSecret() !== sessionSecret;
+  if (process.env.NODE_ENV !== 'production') return true;
+  const secret = stateSecret();
+  const otherSecrets = [
+    process.env.PORTAL_SESSION_SECRET,
+    process.env.PORTAL_OTP_PEPPER,
+    process.env.PORTAL_SECRET_ENCRYPTION_KEY,
+    process.env.PORTAL_SECRET_ENCRYPTION_KEY_V2,
+    process.env.PORTAL_VERIFICATION_SECRET,
+    process.env.PORTAL_UPLOAD_BINDING_SECRET,
+    process.env.PORTAL_SECURITY_WEBHOOK_SECRET,
+    process.env.ASTEN_SESSION_ENCRYPTION_KEY,
+    process.env.ASTEN_WEBHOOK_SECRET,
+    process.env.CRON_SECRET,
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET
+  ].map(value => String(value || '').trim()).filter(Boolean);
+  return Boolean(secret) && !otherSecrets.includes(secret);
+}
+
+function safeGoogleReturnTo(value: unknown): string {
+  const candidate = String(value || '').trim();
+  if (!candidate || candidate.length > 1024 || /[\r\n]/.test(candidate)) return DEFAULT_GOOGLE_RETURN_TO;
+  if (!candidate.startsWith('/') || candidate.startsWith('//')) return DEFAULT_GOOGLE_RETURN_TO;
+  return candidate;
 }
 
 export function getGoogleOAuthSecurityPreflight() {
@@ -123,7 +146,7 @@ export function getGoogleOAuthSecurityPreflight() {
   const stateSecretSeparated = oauthStateSecretSeparated();
   const issues: string[] = [];
   if (!stateSecretStrong) issues.push('GOOGLE_OAUTH_STATE_SECRET precisa ter pelo menos 32 caracteres.');
-  if (!stateSecretSeparated) issues.push('GOOGLE_OAUTH_STATE_SECRET deve ser diferente de PORTAL_SESSION_SECRET em produção.');
+  if (!stateSecretSeparated) issues.push('GOOGLE_OAUTH_STATE_SECRET deve ser exclusivo e diferente dos demais segredos em produção.');
   return {
     stateSecretStrong,
     stateSecretSeparated,
@@ -146,7 +169,9 @@ function encodeState(payload: Record<string, unknown>): string {
 
 export function decodeGoogleOAuthState(value: string): { email?: string; bootstrap: boolean; returnTo: string; exp: number } {
   assertGoogleOAuthSecurityPreflight();
-  const [body, supplied] = String(value || '').split('.');
+  const rawState = String(value || '');
+  if (!rawState || rawState.length > MAX_OAUTH_STATE_LENGTH) throw new Error('Estado OAuth inválido.');
+  const [body, supplied] = rawState.split('.');
   if (!body || !supplied) throw new Error('Estado OAuth inválido.');
   const expected = createHmac('sha256', stateSecret()).update(body).digest();
   const received = Buffer.from(supplied, 'base64url');
@@ -156,7 +181,7 @@ export function decodeGoogleOAuthState(value: string): { email?: string; bootstr
   return {
     email: parsed.email ? String(parsed.email).toLowerCase() : undefined,
     bootstrap: Boolean(parsed.bootstrap),
-    returnTo: String(parsed.returnTo || '/?google=connected'),
+    returnTo: safeGoogleReturnTo(parsed.returnTo),
     exp: Number(parsed.exp)
   };
 }
@@ -182,7 +207,7 @@ export function buildGoogleAuthorizationUrl(input: { email?: string; bootstrap?:
   const state = encodeState({
     email: input.email?.toLowerCase(),
     bootstrap: Boolean(input.bootstrap),
-    returnTo: input.returnTo || '/?google=connected',
+    returnTo: safeGoogleReturnTo(input.returnTo),
     exp: Date.now() + 10 * 60_000
   });
   const params = new URLSearchParams({
@@ -204,11 +229,15 @@ async function tokenRequest(params: URLSearchParams): Promise<GoogleTokenRespons
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
     body: params,
-    signal: AbortSignal.timeout(20_000)
+    signal: AbortSignal.timeout(20_000),
+    redirect: 'error',
+    cache: 'no-store'
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || !payload?.access_token) {
-    throw new Error(String(payload?.error_description || payload?.error || `Google OAuth respondeu ${response.status}.`));
+    throw new Error(response.status === 401 || response.status === 403
+      ? 'O Google rejeitou a credencial ou a autorização OAuth.'
+      : `Não foi possível concluir a autorização Google (HTTP ${response.status}).`);
   }
   return payload as GoogleTokenResponse;
 }
@@ -224,7 +253,9 @@ export async function exchangeGoogleAuthorizationCode(code: string): Promise<{ e
   if (!tokens.refresh_token) throw new Error('O Google não devolveu autorização permanente. Revogue o acesso anterior e autorize novamente.');
   const userResponse = await fetch(GOOGLE_USERINFO_URL, {
     headers: { Authorization: `Bearer ${tokens.access_token}`, Accept: 'application/json' },
-    signal: AbortSignal.timeout(12_000)
+    signal: AbortSignal.timeout(12_000),
+    redirect: 'error',
+    cache: 'no-store'
   });
   const user = await userResponse.json().catch(() => ({}));
   if (!userResponse.ok || !user?.email || user?.verified_email === false) throw new Error('Não foi possível validar o e-mail da conta Google.');

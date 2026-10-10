@@ -17,8 +17,21 @@ interface OtpChallenge {
 const localChallenges = new Map<string, OtpChallenge>();
 
 function supabaseUrl(): string { return String(process.env.SUPABASE_URL || '').trim().replace(/\/$/, ''); }
+function validatedSupabaseUrl(): string {
+  const raw = supabaseUrl();
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw);
+    if (parsed.username || parsed.password) return '';
+    if (!['https:', 'http:'].includes(parsed.protocol)) return '';
+    if ((process.env.NODE_ENV === 'production' || process.env.VERCEL) && parsed.protocol !== 'https:') return '';
+    return raw;
+  } catch {
+    return '';
+  }
+}
 function supabaseSecret(): string { return String(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim(); }
-function canUseSupabase(): boolean { return Boolean(supabaseUrl() && supabaseSecret()); }
+function canUseSupabase(): boolean { return Boolean(validatedSupabaseUrl() && supabaseSecret()); }
 function allowLocalFallback(): boolean { return process.env.NODE_ENV !== 'production' && process.env.PORTAL_ALLOW_LOCAL_OTP_STORE === 'true'; }
 function pepper(): string { return String(process.env.PORTAL_OTP_PEPPER || '').trim(); }
 function pepperIsSeparated(): boolean {
@@ -68,11 +81,13 @@ async function insertChallenge(challenge: OtpChallenge): Promise<void> {
     localChallenges.set(challenge.id, challenge);
     return;
   }
-  const response = await fetch(`${supabaseUrl()}/rest/v1/portal_otp_challenges`, {
+  const response = await fetch(`${validatedSupabaseUrl()}/rest/v1/portal_otp_challenges`, {
     method: 'POST',
     headers: { ...adminHeaders(), Prefer: 'return=minimal' },
     body: JSON.stringify(challenge),
-    signal: AbortSignal.timeout(12_000)
+    signal: AbortSignal.timeout(12_000),
+    redirect: 'error',
+    cache: 'no-store'
   });
   if (!response.ok) throw new Error(`Não foi possível registrar o código de acesso (${response.status}).`);
 }
@@ -91,8 +106,8 @@ async function recentChallenges(email: string): Promise<OtpChallenge[]> {
     order: 'created_at.desc',
     limit: '10'
   });
-  const response = await fetch(`${supabaseUrl()}/rest/v1/portal_otp_challenges?${query}`, {
-    headers: adminHeaders(), signal: AbortSignal.timeout(12_000)
+  const response = await fetch(`${validatedSupabaseUrl()}/rest/v1/portal_otp_challenges?${query}`, {
+    headers: adminHeaders(), signal: AbortSignal.timeout(12_000), redirect: 'error', cache: 'no-store'
   });
   if (!response.ok) throw new Error(`Não foi possível consultar os códigos de acesso (${response.status}).`);
   return await response.json() as OtpChallenge[];
@@ -103,7 +118,7 @@ async function recentChallengesForIp(ip:string):Promise<number>{
   const since=new Date(Date.now()-15*60_000).toISOString();
   if(!canUseSupabase())return[...localChallenges.values()].filter(challenge=>challenge.requested_ip_hash===ipHash&&challenge.created_at>=since).length;
   const query=new URLSearchParams({requested_ip_hash:`eq.${ipHash}`,created_at:`gte.${since}`,select:'id',limit:'11'});
-  const response=await fetch(`${supabaseUrl()}/rest/v1/portal_otp_challenges?${query}`,{headers:adminHeaders(),signal:AbortSignal.timeout(12_000)});
+  const response=await fetch(`${validatedSupabaseUrl()}/rest/v1/portal_otp_challenges?${query}`,{headers:adminHeaders(),signal:AbortSignal.timeout(12_000),redirect:'error',cache:'no-store'});
   if(!response.ok)throw new Error(`Não foi possível validar o limite de solicitações (${response.status}).`);
   const rows=await response.json();return Array.isArray(rows)?rows.length:0;
 }
@@ -116,11 +131,13 @@ async function updateChallenge(id: string, changes: Partial<OtpChallenge>, expec
     return true;
   }
   const attemptsFilter=expectedAttempts===undefined?'':`&attempts=eq.${expectedAttempts}`;
-  const response = await fetch(`${supabaseUrl()}/rest/v1/portal_otp_challenges?id=eq.${encodeURIComponent(id)}&consumed_at=is.null${attemptsFilter}`, {
+  const response = await fetch(`${validatedSupabaseUrl()}/rest/v1/portal_otp_challenges?id=eq.${encodeURIComponent(id)}&consumed_at=is.null${attemptsFilter}`, {
     method: 'PATCH',
     headers: { ...adminHeaders(), Prefer: 'return=representation' },
     body: JSON.stringify(changes),
-    signal: AbortSignal.timeout(12_000)
+    signal: AbortSignal.timeout(12_000),
+    redirect: 'error',
+    cache: 'no-store'
   });
   if (!response.ok) throw new Error(`Não foi possível atualizar o código de acesso (${response.status}).`);
   const rows = await response.json();

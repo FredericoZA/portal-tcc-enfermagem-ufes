@@ -7,6 +7,8 @@ const MAX_ASTEN_JSON_BYTES = 72 * 1024 * 1024;
 const MAX_ASTEN_PDF_BYTES = 50 * 1024 * 1024;
 const MAX_ASTEN_TOKEN_LENGTH = 4096;
 const MAX_PROVIDER_ERROR_LENGTH = 300;
+const MAX_ASTEN_SESSION_ID_LENGTH = 16 * 1024;
+const ASTEN_WEBHOOK_PATH = '/api/integrations/asten/webhook';
 type Service = 'getIdentificador' | 'getRepositoriosDoUsuario' | 'inserirEnvelope' | 'encaminharEnvelopeParaAssinaturas' | 'getDadosEnvelope' | 'getSignatariosPorEnvelope' | 'downloadPDFEnvelopeDocs' | 'getDocumentosEXMLsAssinadosDoEnvelope' | 'reenviarLinksDeAssinatura' | 'cancelarEnvelope';
 const allowed = new Set<Service>(['getIdentificador','getRepositoriosDoUsuario','inserirEnvelope','encaminharEnvelopeParaAssinaturas','getDadosEnvelope','getSignatariosPorEnvelope','downloadPDFEnvelopeDocs','getDocumentosEXMLsAssinadosDoEnvelope','reenviarLinksDeAssinatura','cancelarEnvelope']);
 interface Session { token: string; ownerEmail: string; identifier: string; repositoryId?: number; expiresAt: number; }
@@ -31,7 +33,10 @@ export interface AstenSecurityPreflight {
   callbackUrl: string;
   callbackUrlSecure: boolean;
   callbackSameOrigin: boolean;
+  callbackEndpointValid: boolean;
   webhookSecretStrong: boolean;
+  webhookSecretSeparated: boolean;
+  signerLoginRequired: boolean;
   signerCodeRequired: boolean;
   callbackConfigured: boolean;
   issues: string[];
@@ -52,25 +57,63 @@ export function getAstenSecurityPreflight(): AstenSecurityPreflight {
   const callbackUrlSecure = isSecureCallbackUrl(callbackUrl);
   const expectedPortalUrl = String(process.env.PORTAL_PUBLIC_URL || process.env.APP_URL || '').trim();
   let callbackSameOrigin = false;
-  if (callbackUrlSecure && expectedPortalUrl) {
-    try { callbackSameOrigin = new URL(callbackUrl).origin === new URL(expectedPortalUrl).origin; }
-    catch { callbackSameOrigin = false; }
+  let callbackEndpointValid = false;
+  if (callbackUrlSecure) {
+    try {
+      const parsedCallback = new URL(callbackUrl);
+      callbackEndpointValid =
+        parsedCallback.pathname === ASTEN_WEBHOOK_PATH &&
+        parsedCallback.search === '' &&
+        parsedCallback.hash === '';
+      if (expectedPortalUrl) callbackSameOrigin = parsedCallback.origin === new URL(expectedPortalUrl).origin;
+    } catch {
+      callbackSameOrigin = false;
+      callbackEndpointValid = false;
+    }
   }
-  const webhookSecretStrong = webhookSecret.length >= MIN_WEBHOOK_SECRET_LENGTH;
+  const webhookSecretStrong =
+    webhookSecret.length >= MIN_WEBHOOK_SECRET_LENGTH &&
+    webhookSecret.length <= 4096 &&
+    !/[\u0000-\u001f\u007f]/.test(webhookSecret);
+  const otherSecrets = [
+    process.env.PORTAL_SESSION_SECRET,
+    process.env.PORTAL_OTP_PEPPER,
+    process.env.PORTAL_SECRET_ENCRYPTION_KEY,
+    process.env.PORTAL_SECRET_ENCRYPTION_KEY_V2,
+    process.env.PORTAL_VERIFICATION_SECRET,
+    process.env.PORTAL_UPLOAD_BINDING_SECRET,
+    process.env.CRON_SECRET,
+    process.env.ASTEN_SESSION_ENCRYPTION_KEY
+  ].map(value => String(value || '').trim()).filter(Boolean);
+  const webhookSecretSeparated = Boolean(webhookSecret) && !otherSecrets.includes(webhookSecret);
+  const signerLoginRequired = process.env.ASTEN_REQUIRE_LOGIN !== 'false';
   const signerCodeRequired = process.env.ASTEN_REQUIRE_CODE !== 'false';
   const issues: string[] = [];
   if (!callbackUrlSecure) issues.push('Configure ASTEN_CALLBACK_URL com uma URL HTTPS válida, sem credenciais embutidas.');
   if (!expectedPortalUrl) issues.push('Configure PORTAL_PUBLIC_URL para validar a origem do callback Asten.');
   if (!callbackSameOrigin) issues.push('ASTEN_CALLBACK_URL deve usar a mesma origem pública do portal.');
-  if (!webhookSecretStrong) issues.push(`Configure ASTEN_WEBHOOK_SECRET com pelo menos ${MIN_WEBHOOK_SECRET_LENGTH} caracteres.`);
+  if (!callbackEndpointValid) issues.push(`ASTEN_CALLBACK_URL deve apontar exatamente para ${ASTEN_WEBHOOK_PATH}, sem query string ou fragmento.`);
+  if (!webhookSecretStrong) issues.push(`Configure ASTEN_WEBHOOK_SECRET com pelo menos ${MIN_WEBHOOK_SECRET_LENGTH} caracteres válidos e sem controles.`);
+  if (!webhookSecretSeparated) issues.push('ASTEN_WEBHOOK_SECRET deve ser exclusivo e diferente dos demais segredos do portal.');
+  if (!signerLoginRequired) issues.push('ASTEN_REQUIRE_LOGIN não pode ser desativado neste portal.');
   if (!signerCodeRequired) issues.push('ASTEN_REQUIRE_CODE não pode ser desativado neste portal.');
   return {
     callbackUrl,
     callbackUrlSecure,
     callbackSameOrigin,
+    callbackEndpointValid,
     webhookSecretStrong,
+    webhookSecretSeparated,
+    signerLoginRequired,
     signerCodeRequired,
-    callbackConfigured: callbackUrlSecure && callbackSameOrigin && webhookSecretStrong && signerCodeRequired,
+    callbackConfigured:
+      callbackUrlSecure &&
+      callbackSameOrigin &&
+      callbackEndpointValid &&
+      webhookSecretStrong &&
+      webhookSecretSeparated &&
+      signerLoginRequired &&
+      signerCodeRequired,
     issues
   };
 }
@@ -100,6 +143,7 @@ function sealSession(session: Session): string {
 }
 
 function openSealedSession(id: string): Session | null {
+  if (id.length > MAX_ASTEN_SESSION_ID_LENGTH) throw new Error('Sessão Asten inválida ou adulterada.');
   if (!id.startsWith('v1.')) return null;
   const key = sessionEncryptionKey();
   if (!key) throw new Error('A chave de sessão Asten do servidor não está disponível.');
@@ -134,6 +178,9 @@ export async function callAsten(service: Service, params: Record<string, unknown
     if (Buffer.byteLength(raw, 'utf8') > MAX_ASTEN_JSON_BYTES) throw new Error('A resposta da Asten excedeu o limite seguro do portal.');
     const payload = (() => { try { return raw ? JSON.parse(raw) : {}; } catch { return {}; } })();
     if (!response.ok || payload?.error) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Asten rejeitou a credencial ou a autorização da conta.');
+      }
       const fallback = `Asten respondeu ${response.status}.`;
       throw new Error(safeProviderError(payload?.error?.message || payload?.error?.descricao, apiToken, fallback));
     }
