@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ProcessData } from '../types';
 import type { RegistrationAnswers } from '../types/operationalConfig';
 import { apiClient } from '../services/apiClient';
-import { acceptEvaluationAnswers, EVALUATION_FORM_ID, evaluationQuestions, evaluationReviewRows } from '../utils/evaluationForm';
+import { acceptEvaluationAnswers, EVALUATION_FORM_ID, evaluationQuestions } from '../utils/evaluationForm';
 import { evaluateStudioCondition } from '../utils/courseStudioValidator';
 
 interface EvaluationDraft {
@@ -57,6 +57,14 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
   const [now, setNow] = useState(Date.now());
   const [schemaRetry, setSchemaRetry] = useState(0);
   const [draftSavedAt, setDraftSavedAt] = useState(initialDraft?.savedAt || '');
+  const [serverSavedAt,setServerSavedAt]=useState('');
+  const [autosaveRetry,setAutosaveRetry]=useState(0);
+  const saveInFlight=useRef(false);
+  const savePending=useRef(false);
+  const savedServerFingerprint=useRef('');
+  const attemptedFinalization=useRef('');
+  const finalizeInFlight=useRef(false);
+  const fingerprint=JSON.stringify(answers);
 
   useEffect(() => {
     let active = true;
@@ -67,7 +75,15 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
     setSchema(null);
     setError('');
     if (restored) setNotice('Rascunho recuperado automaticamente após a atualização da página.');
-    if (canEvaluate) apiClient.getEvaluationSchema(process.id).then(value => { if (active) setSchema(value); }).catch(e => { if (active) setError(e.message); });
+    if (canEvaluate) {
+      apiClient.getEvaluationSchema(process.id).then(value => { if(active)setSchema(value); }).catch(e=>{if(active)setError(e.message);});
+      apiClient.getEvaluationDraft(process.id).then(draft=>{
+        if(!active||!draft||draft.dataRevision!==process.dataRevision)return;
+        setAnswers(previous=>Object.keys(previous).length?previous:draft.answers);
+        savedServerFingerprint.current=JSON.stringify(draft.answers);
+        setServerSavedAt(draft.savedAt);
+      }).catch(e=>{if(active)setError(e instanceof Error?e.message:'Não foi possível restaurar o rascunho do servidor.');});
+    }
     return () => { active = false; };
   }, [process.id, process.dataRevision, canEvaluate, schemaRetry]);
 
@@ -80,6 +96,22 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
     return () => window.clearTimeout(timer);
   }, [answers, confirmed, canEvaluate, process.id, process.dataRevision, process.avaliacao.status]);
 
+  useEffect(()=>{
+    if(!canEvaluate||!schema||process.avaliacao.status==='CONCLUIDO'||fingerprint===savedServerFingerprint.current)return;
+    const timer=window.setTimeout(()=>{
+      if(saveInFlight.current){savePending.current=true;return;}
+      saveInFlight.current=true;
+      const sentFingerprint=fingerprint;
+      void apiClient.saveEvaluationDraft(process.id,answers,process.dataRevision).then(saved=>{
+        savedServerFingerprint.current=sentFingerprint;setServerSavedAt(saved.savedAt);setError('');
+      }).catch(e=>setError(e instanceof Error?e.message:'Não foi possível salvar a avaliação no servidor.')).finally(()=>{
+        saveInFlight.current=false;
+        if(savePending.current){savePending.current=false;setAutosaveRetry(n=>n+1);}
+      });
+    },600);
+    return()=>window.clearTimeout(timer);
+  },[answers,fingerprint,canEvaluate,schema,process.id,process.dataRevision,process.avaliacao.status,autosaveRetry]);
+
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer); }, []);
   const studio = schema?.studio;
   const fields = evaluationQuestions(studio);
@@ -87,7 +119,7 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
   const values = { ...answers };
   const started = Number.isFinite(Date.parse(process.defesa.startAt)) && Date.parse(process.defesa.startAt) <= now;
   const released = process.defesa.localStatus === 'CONFIRMADO' && Boolean(process.defesa.invitationSentAt) && started;
-  const reviewRows = process.avaliacao.dataReview?.fields || evaluationReviewRows(process, studio);
+  const hasRequiredAnswers=Boolean(answers.RESULTADO&&String(answers.PARECER||'').trim());
   const standardOpinion = () => {
     const selected = outcomeOptions.find((option) => option.code === answers.RESULTADO);
     const label = String(selected?.label || '').toLowerCase();
@@ -95,9 +127,8 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
     if (label.includes('reprov')) return 'A banca examinadora deliberou pela reprovação do Trabalho de Conclusão de Curso, conforme fundamentação registrada neste parecer.';
     return 'A banca examinadora deliberou pela aprovação do Trabalho de Conclusão de Curso.';
   };
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault(); setError(''); setNotice('');
-    if (!confirmed) { setError('Confira os dados e marque a confirmação antes de enviar.'); return; }
+  const submit = async () => {
+    setError(''); setNotice('');
     if (!schema) { setError('Aguarde o carregamento do formulário.'); return; }
     setBusy(true);
     try {
@@ -105,35 +136,46 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
       const response = await apiClient.submitEvaluation(process.id, { ...data, dataConfirmed: true, expectedDataRevision: process.dataRevision, expectedSchemaRevision: Number(studio.revision || 0) } as any);
       clearDraft(process.id);
       setDraftSavedAt('');
+      setServerSavedAt('');
       setNotice(response.workflowPending ? `Avaliação salva. A geração ou o encaminhamento da ata está pendente: ${response.workflowError || 'a secretaria deve acompanhar a etapa.'}` : 'Avaliação salva. Acompanhe a ata e sua assinatura na Asten na área de documentos.');
       await onUpdated();
     } catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível salvar a avaliação.'); }
     finally { setBusy(false); }
   };
+  useEffect(()=>{
+    if(!canEvaluate||!schema||!released||busy||process.avaliacao.status==='CONCLUIDO'||!hasRequiredAnswers)return;
+    if(fingerprint!==savedServerFingerprint.current||attemptedFinalization.current===fingerprint)return;
+    const timer=window.setTimeout(()=>{
+      if(finalizeInFlight.current||attemptedFinalization.current===fingerprint)return;
+      try{acceptEvaluationAnswers({resultadoCode:answers.RESULTADO,parecer:answers.PARECER,answers},outcomeOptions,studio);}catch{return;}
+      attemptedFinalization.current=fingerprint;finalizeInFlight.current=true;
+      void submit().finally(()=>{finalizeInFlight.current=false;});
+    },7000);
+    return()=>window.clearTimeout(timer);
+  },[answers,fingerprint,schema,canEvaluate,released,busy,process.avaliacao.status,serverSavedAt,hasRequiredAnswers]);
+
   return <section id="evaluation-section" className="portal-card overflow-hidden" aria-labelledby="evaluation-title">
     <header className="portal-section-header flex flex-wrap items-center justify-between gap-3 p-4">
       <div>
         <h2 id="evaluation-title" className="text-lg font-bold">Avaliação e ata da defesa</h2>
-        {draftSavedAt && process.avaliacao.status !== 'CONCLUIDO' && <p className="mt-1 text-[11px] text-slate-500">Rascunho salvo automaticamente às {new Date(draftSavedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.</p>}
+        {draftSavedAt && process.avaliacao.status !== 'CONCLUIDO' && <p className="mt-1 text-[11px] text-slate-500">Rascunho local salvo às {new Date(draftSavedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.</p>}
       </div>
       {process.avaliacao.status === 'CONCLUIDO' && canReopen && <button id="reopen-evaluation-btn" type="button" className="portal-action" onClick={onReopen}>Reabrir avaliação</button>}
     </header>
     <div className="space-y-5 p-4 sm:p-5">
       {notice && <p role="status" className="portal-notice">{notice}</p>}
-      {error && <p role="alert" className="portal-error">{error}</p>}
+      {canEvaluate&&process.avaliacao.status!=='CONCLUIDO'&&<p role="status" className="text-xs font-medium text-slate-600">{busy?'Finalizando avaliação…':saveInFlight.current?'Salvando no servidor…':fingerprint===savedServerFingerprint.current&&serverSavedAt?'Salvo no servidor às '+new Date(serverSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'Aguardando salvamento automático…'} {hasRequiredAnswers&&released?'· A ata será concluída automaticamente após alguns segundos sem novas edições.':''}</p>}
+      {error && <p role="alert" className="portal-error">{error}<button type="button" onClick={()=>{attemptedFinalization.current='';setAutosaveRetry(n=>n+1);}} className="ml-2 rounded-full border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900">Tentar novamente</button></p>}
       {process.avaliacao.status === 'CONCLUIDO' ? <>
         <dl className="grid gap-4 sm:grid-cols-2"><div><dt>Resultado</dt><dd className="font-semibold">{process.avaliacao.resultadoLabel || process.avaliacao.resultadoCode || 'Não informado'}</dd></div><div><dt>Responsável pelo registro</dt><dd>{process.avaliacao.submittedBy}</dd></div></dl>
         <p className="whitespace-pre-wrap">{process.avaliacao.parecer}</p>
-        <details><summary>Dados conferidos para esta ata</summary>{process.avaliacao.dataReview ? <div className="overflow-x-auto"><table className="portal-data-table"><tbody>{reviewRows.map(([label, value], i) => <tr key={i}><th scope="row">{label}</th><td>{value}</td></tr>)}</tbody></table></div> : <p>Conferência dos dados deste registro anterior: não confirmado.</p>}</details>
-      </> : !canEvaluate ? <p>A avaliação será preenchida pelo orientador no dia da apresentação.</p> : !schema ? error ? <button type="button" className="portal-action" onClick={() => setSchemaRetry(n => n + 1)}>Tentar carregar o formulário novamente</button> : <p role="status">Carregando o formulário do orientador…</p> : <form onSubmit={submit} className="space-y-5">
-        <p>Confira os dados informados pelo aluno, registre o resultado e o parecer da banca. O sistema preencherá o modelo DOCX da ata e encaminhará o documento para sua assinatura na Asten.</p>
-        <div className="overflow-x-auto"><table className="portal-data-table"><caption className="mb-2 text-left font-semibold">Dados do cadastro do aluno</caption><tbody>{reviewRows.map(([label, value], i) => <tr key={i}><th scope="row">{label}</th><td>{value}</td></tr>)}</tbody></table></div>
-        <p>Se houver erro nos dados acadêmicos, não finalize a avaliação; a secretaria deverá corrigir o cadastro do processo.</p>
-        <label className="portal-confirmation"><input id="evaluation-data-confirmed" type="checkbox" required checked={confirmed} onChange={e => setConfirmed(e.target.checked)} disabled={busy} /><span>Conferi nomes, matrículas, orientação, coorientação, banca, título, data, horário, local e demais respostas do aluno. Os dados acima estão corretos.</span></label>
+
+      </> : !canEvaluate ? <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">Você não possui permissão para preencher esta avaliação. O registro é reservado ao orientador autorizado.</p> : !schema ? error ? <button type="button" className="portal-action" onClick={() => setSchemaRetry(n => n + 1)}>Tentar carregar o formulário novamente</button> : <p role="status">Carregando o formulário do orientador…</p> : <div className="space-y-5">
+        <p>Informe apenas o resultado da apresentação e o parecer da banca. O Portal salva o rascunho automaticamente e conclui a ata quando todos os campos estão completos.</p>
         {!released && <p className="portal-notice">{!process.defesa.invitationSentAt ? 'O registro será liberado após a confirmação do local e o envio do convite.' : 'A avaliação será liberada no horário da apresentação.'}</p>}
         <fieldset disabled={busy || !released} className="grid gap-5 sm:grid-cols-2">
           <legend className="mb-3 text-lg font-semibold">{String(studio.formTemplates?.find(f => f.id === EVALUATION_FORM_ID)?.title || 'Resultado da apresentação')}</legend>
-          {fields.filter(f => evaluateStudioCondition(f.visibleWhen, values)).map(field => {
+          {fields.filter(f=>['RESULTADO','PARECER'].includes(f.fieldKey)).map(field => {
             const key = field.fieldKey, value = answers[key] ?? '';
             const id = `evaluation-${key}`;
             const common = { id, className: 'portal-input', required: Boolean(field.required), 'aria-describedby': field.helpText ? `${id}-help` : undefined };
@@ -148,8 +190,7 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
             </label>;
           })}
         </fieldset>
-        <button id="submit-evaluation-btn" className="portal-action portal-action-primary" type="submit" disabled={busy || !released || !confirmed}>{busy ? 'Registrando avaliação…' : 'Registrar avaliação e gerar ata'}</button>
-      </form>}
+      </div>}
     </div>
   </section>;
 }
