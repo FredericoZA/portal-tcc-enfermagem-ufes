@@ -247,6 +247,26 @@ test('cofre de integrações rejeita Supabase sem HTTPS em runtime seguro antes 
   });
 });
 
+test('OTP rejeita Supabase sem HTTPS em runtime seguro antes da rede', async () => {
+  await withCleanEnvironmentAsync(async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.VERCEL = '1';
+    process.env.SUPABASE_URL = 'http://project.example.supabase.co';
+    process.env.SUPABASE_SECRET_KEY = 'sb_' + 'secret_example_only_for_test';
+    process.env.PORTAL_OTP_PEPPER = 'o'.repeat(48);
+    const originalFetch = globalThis.fetch;
+    let called = false;
+    (globalThis as any).fetch = async () => { called = true; return new Response('', { status: 200 }); };
+    try {
+      assert.equal(getOtpRuntimeStatus().configured, false);
+      assert.equal(getOtpRuntimeStatus().durable, false);
+      assert.equal(called, false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
 test('OTP não reutiliza PORTAL_SESSION_SECRET como pepper', () => {
   withCleanEnvironment(() => {
     process.env.NODE_ENV = 'development';
