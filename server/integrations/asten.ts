@@ -35,6 +35,8 @@ export interface AstenSecurityPreflight {
   callbackSameOrigin: boolean;
   callbackEndpointValid: boolean;
   webhookSecretStrong: boolean;
+  webhookSecretSeparated: boolean;
+  signerLoginRequired: boolean;
   signerCodeRequired: boolean;
   callbackConfigured: boolean;
   issues: string[];
@@ -69,14 +71,31 @@ export function getAstenSecurityPreflight(): AstenSecurityPreflight {
       callbackEndpointValid = false;
     }
   }
-  const webhookSecretStrong = webhookSecret.length >= MIN_WEBHOOK_SECRET_LENGTH;
+  const webhookSecretStrong =
+    webhookSecret.length >= MIN_WEBHOOK_SECRET_LENGTH &&
+    webhookSecret.length <= 4096 &&
+    !/[\u0000-\u001f\u007f]/.test(webhookSecret);
+  const otherSecrets = [
+    process.env.PORTAL_SESSION_SECRET,
+    process.env.PORTAL_OTP_PEPPER,
+    process.env.PORTAL_SECRET_ENCRYPTION_KEY,
+    process.env.PORTAL_SECRET_ENCRYPTION_KEY_V2,
+    process.env.PORTAL_VERIFICATION_SECRET,
+    process.env.PORTAL_UPLOAD_BINDING_SECRET,
+    process.env.CRON_SECRET,
+    process.env.ASTEN_SESSION_ENCRYPTION_KEY
+  ].map(value => String(value || '').trim()).filter(Boolean);
+  const webhookSecretSeparated = Boolean(webhookSecret) && !otherSecrets.includes(webhookSecret);
+  const signerLoginRequired = process.env.ASTEN_REQUIRE_LOGIN !== 'false';
   const signerCodeRequired = process.env.ASTEN_REQUIRE_CODE !== 'false';
   const issues: string[] = [];
   if (!callbackUrlSecure) issues.push('Configure ASTEN_CALLBACK_URL com uma URL HTTPS válida, sem credenciais embutidas.');
   if (!expectedPortalUrl) issues.push('Configure PORTAL_PUBLIC_URL para validar a origem do callback Asten.');
   if (!callbackSameOrigin) issues.push('ASTEN_CALLBACK_URL deve usar a mesma origem pública do portal.');
   if (!callbackEndpointValid) issues.push(`ASTEN_CALLBACK_URL deve apontar exatamente para ${ASTEN_WEBHOOK_PATH}, sem query string ou fragmento.`);
-  if (!webhookSecretStrong) issues.push(`Configure ASTEN_WEBHOOK_SECRET com pelo menos ${MIN_WEBHOOK_SECRET_LENGTH} caracteres.`);
+  if (!webhookSecretStrong) issues.push(`Configure ASTEN_WEBHOOK_SECRET com pelo menos ${MIN_WEBHOOK_SECRET_LENGTH} caracteres válidos e sem controles.`);
+  if (!webhookSecretSeparated) issues.push('ASTEN_WEBHOOK_SECRET deve ser exclusivo e diferente dos demais segredos do portal.');
+  if (!signerLoginRequired) issues.push('ASTEN_REQUIRE_LOGIN não pode ser desativado neste portal.');
   if (!signerCodeRequired) issues.push('ASTEN_REQUIRE_CODE não pode ser desativado neste portal.');
   return {
     callbackUrl,
@@ -84,8 +103,17 @@ export function getAstenSecurityPreflight(): AstenSecurityPreflight {
     callbackSameOrigin,
     callbackEndpointValid,
     webhookSecretStrong,
+    webhookSecretSeparated,
+    signerLoginRequired,
     signerCodeRequired,
-    callbackConfigured: callbackUrlSecure && callbackSameOrigin && callbackEndpointValid && webhookSecretStrong && signerCodeRequired,
+    callbackConfigured:
+      callbackUrlSecure &&
+      callbackSameOrigin &&
+      callbackEndpointValid &&
+      webhookSecretStrong &&
+      webhookSecretSeparated &&
+      signerLoginRequired &&
+      signerCodeRequired,
     issues
   };
 }
