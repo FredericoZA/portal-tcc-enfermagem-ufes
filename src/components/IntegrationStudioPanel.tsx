@@ -309,6 +309,16 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [showEmailHtmlAdvanced, setShowEmailHtmlAdvanced] = useState(false);
   const [previewMode, setPreviewMode] = useState<'email'|'form'|null>(null);
   const [documentPreviewOpen, setDocumentPreviewOpen] = useState(false);
+  useEffect(()=>{
+    if(!previewMode&&!documentPreviewOpen)return;
+    const closePreview=(event:KeyboardEvent)=>{
+      if(event.key!=='Escape')return;
+      event.stopImmediatePropagation();
+      setPreviewMode(null);setDocumentPreviewOpen(false);
+    };
+    window.addEventListener('keydown',closePreview,true);
+    return()=>window.removeEventListener('keydown',closePreview,true);
+  },[previewMode,documentPreviewOpen]);
   const [selectedFormId, setSelectedFormId] = useState(formTemplates[0]?.id || '');
   const [selectedVariableId, setSelectedVariableId] = useState(matrixColumns[0]?.id || '');
   const [selectedFormQuestionId, setSelectedFormQuestionId] = useState(formTemplates[0]?.questions?.[0]?.id || '');
@@ -1071,14 +1081,14 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     : [];
   return (
     <div className={`portal-workspace portal-studio ${hideTabs ? 'mb-0 overflow-visible border-0 bg-transparent shadow-none' : `${panelClass} mb-5 overflow-hidden`}`}>
-      {previewMode==='email'&&selectedEmail&&<div role="presentation" className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-4" onMouseDown={event=>{if(event.target===event.currentTarget)setPreviewMode(null);}}>
+      {previewMode==='email'&&selectedEmail&&<div role="presentation" data-portal-preview-dialog="true" className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-4" onMouseDown={event=>{if(event.target===event.currentTarget)setPreviewMode(null);}}>
         <section role="dialog" aria-modal="true" aria-label="Prévia do e-mail com dados fictícios" className="portal-standard-modal flex h-[min(86dvh,840px)] w-full max-w-4xl flex-col overflow-hidden bg-white">
           <header className="portal-modal-header shrink-0 justify-between"><strong className="text-xs font-black uppercase">Ver modelo · E-mail demonstrativo</strong><button type="button" onClick={()=>setPreviewMode(null)} className="rounded-full bg-white px-4 py-1 text-xs font-bold text-slate-900">Fechar</button></header>
           <p className="shrink-0 bg-amber-50 p-2 text-xs text-amber-950">Prévia com dados fictícios. Nenhum e-mail será enviado.</p>
           <iframe title="E-mail fictício preenchido" sandbox="" referrerPolicy="no-referrer" srcDoc={emailPreviewHtml} className="min-h-0 flex-1 bg-white" />
         </section>
       </div>}
-      {previewMode==='form'&&selectedForm&&<div role="presentation" className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-4" onMouseDown={event=>{if(event.target===event.currentTarget)setPreviewMode(null);}}>
+      {previewMode==='form'&&selectedForm&&<div role="presentation" data-portal-preview-dialog="true" className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-4" onMouseDown={event=>{if(event.target===event.currentTarget)setPreviewMode(null);}}>
         <section role="dialog" aria-modal="true" aria-label="Prévia do formulário com respostas fictícias" className="portal-standard-modal flex h-[min(86dvh,840px)] w-full max-w-3xl flex-col overflow-hidden bg-white">
           <header className="portal-modal-header shrink-0 justify-between"><strong className="text-xs font-black uppercase">Ver modelo · Formulário demonstrativo</strong><button type="button" onClick={()=>setPreviewMode(null)} className="rounded-full bg-white px-4 py-1 text-xs font-bold text-slate-900">Fechar</button></header>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[var(--portal-surface-page)] p-4">
@@ -1093,7 +1103,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
           </div>
         </section>
       </div>}
-      {documentPreviewOpen&&documentPreview&&selectedDoc&&documentPreview.docId===selectedDoc.id&&<div role="presentation" className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-4" onMouseDown={event=>{if(event.target===event.currentTarget)setDocumentPreviewOpen(false);}}>
+      {documentPreviewOpen&&documentPreview&&selectedDoc&&documentPreview.docId===selectedDoc.id&&<div role="presentation" data-portal-preview-dialog="true" className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-4" onMouseDown={event=>{if(event.target===event.currentTarget)setDocumentPreviewOpen(false);}}>
         <section role="dialog" aria-modal="true" aria-label="Documento demonstrativo preenchido" className="portal-standard-modal flex h-[min(90dvh,900px)] w-full max-w-5xl flex-col overflow-hidden bg-white">
           <header className="portal-modal-header shrink-0 justify-between"><strong className="text-xs font-black uppercase">Prévia fiel · {selectedDoc.label} · Sem validade</strong><button type="button" onClick={()=>setDocumentPreviewOpen(false)} className="rounded-full bg-white px-4 py-1 text-xs font-bold text-slate-900">Fechar</button></header>
           <div className="min-h-0 flex-1 overflow-auto p-3"><PdfCanvasPreview base64={documentPreview.base64} remoteUrl={documentPreview.remoteUrl} label={selectedDoc.label}/></div>
