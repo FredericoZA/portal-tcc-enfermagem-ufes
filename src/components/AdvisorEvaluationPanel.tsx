@@ -51,6 +51,7 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
   const initialDraft = useMemo(() => readDraft(process), [process.id, process.dataRevision]);
   const [answers, setAnswers] = useState<RegistrationAnswers>(initialDraft?.answers || {});
   const [confirmed, setConfirmed] = useState(Boolean(initialDraft?.confirmed));
+  const [formalConsent,setFormalConsent]=useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState(initialDraft ? 'Rascunho recuperado automaticamente após a atualização da página.' : '');
@@ -74,6 +75,7 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
     savedServerFingerprint.current='';
     attemptedFinalization.current='';
     setConfirmed(Boolean(restored?.confirmed));
+    setFormalConsent(false);
     setAnswers(restored?.answers||{});
     setDraftSavedAt(restored?.savedAt||'');
     setServerSavedAt('');
@@ -136,6 +138,7 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
   const submit = async () => {
     setError(''); setNotice('');
     if (!schema) { setError('Aguarde o carregamento do formulário.'); return; }
+    if(!formalConsent){setError('Confirme o encerramento da ata antes de concluir o registro.');return;}
     setBusy(true);
     try {
       const data = acceptEvaluationAnswers({ resultadoCode: answers.RESULTADO, parecer: answers.PARECER, answers }, outcomeOptions, studio);
@@ -149,7 +152,7 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
     finally { setBusy(false); }
   };
   useEffect(()=>{
-    if(!draftLoaded||!canEvaluate||!schema||!released||busy||process.avaliacao.status==='CONCLUIDO'||!hasRequiredAnswers)return;
+    if(!draftLoaded||!canEvaluate||!schema||!released||busy||process.avaliacao.status==='CONCLUIDO'||!hasRequiredAnswers||!formalConsent)return;
     if(fingerprint!==savedServerFingerprint.current||attemptedFinalization.current===fingerprint)return;
     const timer=window.setTimeout(()=>{
       if(finalizeInFlight.current||attemptedFinalization.current===fingerprint)return;
@@ -158,7 +161,7 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
       void submit().finally(()=>{finalizeInFlight.current=false;});
     },7000);
     return()=>window.clearTimeout(timer);
-  },[answers,fingerprint,schema,canEvaluate,released,busy,process.avaliacao.status,serverSavedAt,hasRequiredAnswers,draftLoaded,autosaveRetry]);
+  },[answers,fingerprint,schema,canEvaluate,released,busy,process.avaliacao.status,serverSavedAt,hasRequiredAnswers,draftLoaded,autosaveRetry,formalConsent]);
 
   return <section id="evaluation-section" className="portal-card overflow-hidden" aria-labelledby="evaluation-title">
     <header className="portal-section-header flex flex-wrap items-center justify-between gap-3 p-4">
@@ -170,18 +173,18 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
     </header>
     <div className="space-y-5 p-4 sm:p-5">
       {notice && <p role="status" className="portal-notice">{notice}</p>}
-      {canEvaluate&&process.avaliacao.status!=='CONCLUIDO'&&<p role="status" className="text-xs font-medium text-slate-600">{busy?'Finalizando avaliação…':saveInFlight.current?'Salvando no servidor…':fingerprint===savedServerFingerprint.current&&serverSavedAt?'Salvo no servidor às '+new Date(serverSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'Aguardando salvamento automático…'} {hasRequiredAnswers&&released?'· A ata será concluída automaticamente após alguns segundos sem novas edições.':''}</p>}
+      {canEvaluate&&process.avaliacao.status!=='CONCLUIDO'&&<p role="status" className="text-xs font-medium text-slate-600">{busy?'Finalizando avaliação…':saveInFlight.current?'Salvando no servidor…':fingerprint===savedServerFingerprint.current&&serverSavedAt?'Salvo no servidor às '+new Date(serverSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'Aguardando salvamento automático…'} {formalConsent&&hasRequiredAnswers&&released?'· Conclusão da ata autorizada; aguardando estabilidade do rascunho.':''}</p>}
       {error && <p role="alert" className="portal-error">{error}<button type="button" onClick={()=>{attemptedFinalization.current='';setAutosaveRetry(n=>n+1);}} className="ml-2 rounded-full border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900">Tentar novamente</button></p>}
       {process.avaliacao.status === 'CONCLUIDO' ? <>
         <dl className="grid gap-4 sm:grid-cols-2"><div><dt>Resultado</dt><dd className="font-semibold">{process.avaliacao.resultadoLabel || process.avaliacao.resultadoCode || 'Não informado'}</dd></div><div><dt>Responsável pelo registro</dt><dd>{process.avaliacao.submittedBy}</dd></div></dl>
         <p className="whitespace-pre-wrap">{process.avaliacao.parecer}</p>
 
       </> : !canEvaluate ? <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">Você não possui permissão para preencher esta avaliação. O registro é reservado ao orientador autorizado.</p> : !schema ? error ? <button type="button" className="portal-action" onClick={() => setSchemaRetry(n => n + 1)}>Tentar carregar o formulário novamente</button> : <p role="status">Carregando o formulário do orientador…</p> : <div className="space-y-5">
-        <p>Informe apenas o resultado da apresentação e o parecer da banca. O Portal salva o rascunho automaticamente e conclui a ata quando todos os campos estão completos.</p>
+        <p>Informe o resultado e o parecer. O rascunho é salvo automaticamente; a ata oficial só será concluída após sua confirmação explícita.</p>
         {!released && <p className="portal-notice">{!process.defesa.invitationSentAt ? 'O registro será liberado após a confirmação do local e o envio do convite.' : 'A avaliação será liberada no horário da apresentação.'}</p>}
-        <fieldset disabled={busy || !released} className="grid gap-5 sm:grid-cols-2">
+        <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-2">
           <legend className="mb-3 text-lg font-semibold">{String(studio.formTemplates?.find(f => f.id === EVALUATION_FORM_ID)?.title || 'Resultado da apresentação')}</legend>
-          {fields.filter(f=>['RESULTADO','PARECER'].includes(f.fieldKey)).map(field => {
+          {fields.filter(field=>evaluateStudioCondition(field.visibleWhen,values)).map(field => {
             const key = field.fieldKey, value = answers[key] ?? '';
             const id = `evaluation-${key}`;
             const common = { id, className: 'portal-input', required: Boolean(field.required), 'aria-describedby': field.helpText ? `${id}-help` : undefined };
@@ -196,6 +199,10 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
             </label>;
           })}
         </fieldset>
+        <label className="flex items-start gap-2 rounded-lg border border-slate-300 bg-white p-3 text-xs text-slate-800">
+          <input type="checkbox" checked={formalConsent} onChange={event=>setFormalConsent(event.target.checked)} disabled={busy||!released||!hasRequiredAnswers} aria-label="Confirmar conclusão oficial da ata" className="mt-0.5 h-4 w-4"/>
+          <span>Confirmo o resultado, o parecer e os dados da ata e autorizo o registro oficial e a preparação do documento para assinatura. O rascunho continua automático; esta confirmação só é necessária para concluir a ata.</span>
+        </label>
       </div>}
     </div>
   </section>;
