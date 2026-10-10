@@ -135,6 +135,8 @@ export const apiClient = {
     method: 'DELETE'
   }),
   getEvaluationSchema: (id: string) => fetchApi<{ studio: Partial<IntegrationStudioSettings>; outcomes: GlobalSettings['evaluationOutcomeOptions'] }>(`/api/processes/${id}/evaluation/schema`),
+  getEvaluationDraft:(id:string)=>fetchApi<{processId:string;dataRevision:number;answers:Record<string,string|number|boolean>;savedAt:string}|null>(`/api/processes/${encodeURIComponent(id)}/evaluation/draft`),
+  saveEvaluationDraft:(id:string,answers:Record<string,string|number|boolean>,expectedDataRevision:number)=>fetchApi<{savedAt:string;answers:Record<string,string|number|boolean>}>(`/api/processes/${encodeURIComponent(id)}/evaluation/draft`,{method:'PUT',body:JSON.stringify({answers,expectedDataRevision})}),
   submitEvaluation: (id: string, data: { resultadoCode: string; parecer: string; answers?: Record<string, string | number | boolean>; dataConfirmed: true; expectedDataRevision: number; expectedSchemaRevision: number }) => fetchApi<ProcessData & { workflowPending?: boolean; workflowError?: string }>(`/api/processes/${id}/evaluation`, {
     method: 'POST',
     body: JSON.stringify(data)
