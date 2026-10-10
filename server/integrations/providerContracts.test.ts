@@ -51,6 +51,24 @@ test('estado OAuth Google rejeita adulteração e limita o retorno ao portal', (
   assert.match(url.searchParams.get('scope')||'',/drive\.file/);
 });
 
+test('OAuth Google mantém returnTo restrito ao próprio portal', () => {
+  process.env.NODE_ENV='development';
+  process.env.GOOGLE_OAUTH_CLIENT_ID='client.apps.googleusercontent.com';
+  process.env.GOOGLE_OAUTH_CLIENT_SECRET='secret';
+  process.env.GOOGLE_OAUTH_STATE_SECRET='s'.repeat(48);
+  process.env.PORTAL_SECRET_ENCRYPTION_KEY='e'.repeat(48);
+  process.env.APP_URL='https://portal.example';
+
+  const external=new URL(buildGoogleAuthorizationUrl({email:'master@example.edu',returnTo:'https://attacker.invalid/roubo'}));
+  assert.equal(decodeGoogleOAuthState(external.searchParams.get('state')!).returnTo,'/?google=connected');
+
+  const protocolRelative=new URL(buildGoogleAuthorizationUrl({returnTo:'//attacker.invalid/roubo'}));
+  assert.equal(decodeGoogleOAuthState(protocolRelative.searchParams.get('state')!).returnTo,'/?google=connected');
+
+  const internal=new URL(buildGoogleAuthorizationUrl({returnTo:'/configuracoes?aba=integracoes'}));
+  assert.equal(decodeGoogleOAuthState(internal.searchParams.get('state')!).returnTo,'/configuracoes?aba=integracoes');
+});
+
 test('acesso a modelos preexistentes do Drive exige opção administrativa explícita', () => {
   delete process.env.GOOGLE_ALLOW_EXISTING_MODEL_LINKS;
   assert.equal(getGoogleWorkspaceScopes().includes('https://www.googleapis.com/auth/drive.readonly'),false);
