@@ -46,6 +46,16 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const [mergeTargets, setMergeTargets] = useState<Record<string,string>>({});
   const [pendingSlots, setPendingSlots] = useState<Array<[string, string]>>([]);
   const [previewType, setPreviewType] = useState('');
+  useEffect(()=>{
+    if(!previewType)return;
+    const closePreview=(event:KeyboardEvent)=>{
+      if(event.key!=='Escape')return;
+      event.stopImmediatePropagation();
+      setPreviewType('');
+    };
+    window.addEventListener('keydown',closePreview,true);
+    return()=>window.removeEventListener('keydown',closePreview,true);
+  },[previewType]);
   const [samplePreview, setSamplePreview] = useState<Record<string, string>>({});
   const [samplePreviewLoading, setSamplePreviewLoading] = useState('');
   const [selectedType, setSelectedType] = useState('CONVITE');
@@ -259,7 +269,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
       </div>
     </SettingsWorkspaceHeaderPortal>
 
-    {previewType===type&&hasFile&&samplePreview[type]&&<div role="presentation" className="portal-modal-backdrop fixed inset-0 z-[1000013] flex items-center justify-center p-4" onMouseDown={event=>{if(event.currentTarget===event.target)setPreviewType('');}}>
+    {previewType===type&&hasFile&&samplePreview[type]&&<div role="presentation" data-portal-preview-dialog="true" className="portal-modal-backdrop fixed inset-0 z-[1000013] flex items-center justify-center p-4" onMouseDown={event=>{if(event.currentTarget===event.target)setPreviewType('');}}>
       <section role="dialog" aria-modal="true" aria-label="Prévia do documento preenchido" className="portal-standard-modal flex h-[min(90dvh,900px)] w-full max-w-5xl flex-col overflow-hidden bg-white">
         <header className="portal-modal-header shrink-0 justify-between"><strong className="text-xs font-black uppercase">Prévia preenchida · Sem validade</strong><button type="button" onClick={()=>setPreviewType('')} className="rounded-full bg-white px-4 py-1 text-xs font-bold text-slate-900">Fechar</button></header>
         <div className="flex shrink-0 items-center justify-between bg-amber-50 p-2 text-xs text-amber-950"><span>Somente demonstração. Nenhum documento real foi criado.</span><a href={samplePreview[type]} target="_blank" rel="noreferrer" className="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-800">Abrir / baixar PDF</a></div>
