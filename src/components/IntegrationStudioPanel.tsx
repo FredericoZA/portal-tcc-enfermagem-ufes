@@ -1230,7 +1230,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                 <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-white/60"/>
                 <select value={selectedEmail.id} onChange={event=>setSelectedEmailId(event.target.value)}
                   className="w-[clamp(138px,16vw,226px)] max-w-[33vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                  aria-label="Selecionar modelo de e-mail" title={selectedEmail.name}>
+                  aria-label="Selecionar e-mail" title={selectedEmail.name}>
                   {emailTemplates.map(email=><option key={email.id} value={email.id}>{email.name}</option>)}
                 </select>
               </div>
@@ -1337,7 +1337,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                 <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-white/60"/>
                 <select value={selectedForm.id} onChange={event=>setSelectedFormId(event.target.value)}
                   className="w-[clamp(138px,16vw,226px)] max-w-[33vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                  aria-label="Selecionar modelo de formulário" title={selectedForm.title}>
+                  aria-label="Selecionar formulário" title={selectedForm.title}>
                   {formTemplates.map(form=><option key={form.id} value={form.id}>{form.title}</option>)}
                 </select>
               </div>
