@@ -204,7 +204,7 @@ export default function App() {
               onClick={(event) => event.stopPropagation()}
             >
               <div
-                className="portal-process-dialog-body max-h-[90vh] overflow-y-auto custom-scrollbar"
+                className="portal-process-dialog-body max-h-[calc(100dvh-64px)] overflow-y-auto custom-scrollbar"
                 style={{ backgroundColor: 'var(--portal-surface-page)' }}
               >
                 <PortalErrorBoundary key={selectedProcessId}><Suspense fallback={<PageLoadingFallback />}>

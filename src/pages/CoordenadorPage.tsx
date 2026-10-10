@@ -242,10 +242,10 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
   // Seleção em lote é aplicada sobre a visão atualmente exibida.
   const toggleSelectionGroup = (ids: string[]) => {
-    const allSelected = ids.length > 0 && ids.every((id) => selectedIds.includes(id));
-    setSelectedIds((current) => allSelected
-      ? current.filter((id) => !ids.includes(id))
-      : Array.from(new Set([...current, ...ids])));
+    setSelectedIds((current) => {
+      const allSelected = ids.length > 0 && ids.every((id) => current.includes(id));
+      return allSelected ? current.filter((id) => !ids.includes(id)) : Array.from(new Set([...current, ...ids]));
+    });
   };
 
   const toggleSelectItem = (id: string) => {
@@ -263,10 +263,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const canPrepareGov = (processId: string): boolean =>
     canPrepareDeclarationForGovBr(queue, signatureJobs, processId);
 
-  const isDeclarationSelectable = (processId: string): boolean =>
-    canSendAsten(processId) || canPrepareGov(processId);
-
-  const getDeclarationStatus = (processId: string, processStatus?: ProcessData['status']): { label: string; tone: string } => {
+   const getDeclarationStatus = (processId: string, processStatus?: ProcessData['status']): { label: string; tone: string } => {
     const job = getLatestDeclarationJob(processId);
     if (!job) {
       return processStatus === 'CONCLUIDO'
@@ -303,6 +300,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
   const handleSignOne = async (processId: string) => {
     if (signingIds.includes(processId)) return;
+    if(!canSendAsten(processId)){setSigningMessage('Esta declaração ainda não pode ser enviada à Asten. Verifique se o documento foi gerado ou se já existe uma assinatura em andamento.');return;}
     setSigningMessage('');
     setSigningIds((prev) => [...prev, processId]);
     try {
@@ -362,6 +360,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
   const handleGovOne = async (processId: string) => {
     if(signingIds.includes(processId))return;
+    if(!canPrepareGov(processId)){setSigningMessage('Esta declaração ainda não está disponível para assinatura Gov.br. Verifique a geração do documento, suas pendências ou assinaturas anteriores.');return;}
     const signerWindow=window.open('https://assinador.iti.br/','_blank','noopener,noreferrer');
     setSigningMessage(''); setSigningIds(prev=>[...prev,processId]);
     try{const result=await apiClient.signProcessDocument(processId,'DECLARACAO','GOV_BR');const file=await apiClient.downloadGovBrSigningPdf(result.job.id);downloadBrowserFile(file.blob,file.fileName);setSigningMessage('PDF preparado e baixado. O Assinador Gov.br foi aberto em outra aba; depois da assinatura, envie o PDF assinado na ficha do TCC.');await loadData();}
@@ -393,7 +392,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const renderSignatureActionCell = (proc: ProcessData) => {
     const govJob=getGovDeclarationJob(proc.id);const working=signingIds.includes(proc.id);const astenActionable=canSendAsten(proc.id);const govActionable=canPrepareGov(proc.id);
     const govUploadAvailable=Boolean(govJob && !['SIGNED','ARCHIVED','CANCELED'].includes(govJob.status));
-    return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}><div className="flex flex-wrap items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||!astenActionable} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working||!govActionable} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>{govUploadAvailable&&<label className="portal-sign-provider-btn cursor-pointer" title="Enviar o PDF já assinado no Gov.br"><input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event)=>{const file=event.currentTarget.files?.[0];event.currentTarget.value='';if(file)void handleGovSignedUpload(proc.id,file);}}/><Download className="h-3.5 w-3.5 rotate-180"/><span>Enviar assinado</span></label>}</div></td>;
+    return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}><div className="flex flex-wrap items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>{govUploadAvailable&&<label className="portal-sign-provider-btn cursor-pointer" title="Enviar o PDF já assinado no Gov.br"><input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event)=>{const file=event.currentTarget.files?.[0];event.currentTarget.value='';if(file)void handleGovSignedUpload(proc.id,file);}}/><Download className="h-3.5 w-3.5 rotate-180"/><span>Enviar assinado</span></label>}</div></td>;
   };
 
   const renderCompletedActionCell = (proc: ProcessData) => {
@@ -743,7 +742,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       ? completedRows
       : [...pendingRows, ...completedRows];
   const sortedRows = getSortedAndFilteredItems(visibleRows);
-  const visibleRowIds = sortedRows.filter((row) => row.pending && isDeclarationSelectable(row.process.id)).map((row) => row.process.id);
+  const visibleRowIds = sortedRows.map((row) => row.process.id);
   const allVisibleSelected = visibleRowIds.length > 0 && visibleRowIds.every((id) => selectedIds.includes(id));
   const toggleSelectAllVisible = () => toggleSelectionGroup(visibleRowIds);
 
@@ -780,10 +779,11 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
               <div className="portal-sheet-toolbar shrink-0">
                 <div className="portal-sheet-toolbar-actions">
+                  {selectedIds.length>0&&<span role="status" className="rounded-full border border-white/50 px-2 py-1 text-[10px] font-bold text-white">{selectedIds.length} selecionado(s)</span>}
                   {activeTab !== 'concluidos' && (
                     <>
-                      <button type="button" disabled={!selectedIds.some((id)=>canSendAsten(id)) || signingIds.length > 0} onClick={handleSignSelected} className="portal-sign-bulk-btn disabled:opacity-45" title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
-                      <button type="button" disabled={!selectedIds.some((id)=>canPrepareGov(id)) || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className="portal-sign-bulk-btn disabled:opacity-45" title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
+                      <button type="button" disabled={selectedIds.length===0 || signingIds.length > 0} onClick={handleSignSelected} className="portal-sign-bulk-btn disabled:opacity-45" title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
+                      <button type="button" disabled={selectedIds.length===0 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className="portal-sign-bulk-btn disabled:opacity-45" title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
                     </>
                   )}
                 </div>
@@ -922,7 +922,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                             <button
                               type="button"
                               onClick={() => toggleSelectItem(proc.id)}
-                              disabled={!row.pending || !isDeclarationSelectable(proc.id)}
+                              disabled={signingIds.includes(proc.id)}
                               className="cursor-pointer text-slate-400 hover:text-emerald-700 flex justify-center mx-auto disabled:cursor-not-allowed disabled:opacity-30"
                               aria-label={isSelected ? 'Desmarcar item' : 'Selecionar item'}
                             >

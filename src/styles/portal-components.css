@@ -1343,3 +1343,34 @@ button[aria-label^="Configurar exibição"],
 .portal-flow-modal > :not(.portal-flow-modal-header) {
   position: relative;
 }
+
+/* TCC14 — superfície contínua das planilhas, margens externas e rolagem do fluxo. */
+.portal-settings-workspace {max-height:calc(100dvh - 48px);}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-settings-workspace-divider {display:none;}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-settings-single-pane,
+.portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"] {background:var(--portal-surface-panel);padding:0;margin:0;border:0;border-radius:0;}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-table {margin:0;border-radius:0;}
+.portal-settings-workspace[data-portal-workflow-workspace="true"] .portal-studio,
+.portal-settings-workspace[data-portal-workflow-workspace="true"] #portal-models-workspace {height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
+.portal-settings-workspace[data-portal-workflow-workspace="true"] .portal-studio > div:last-child {flex:1;min-height:0;display:flex;flex-direction:column;}
+.portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-editor="true"] {flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:12px 12px 16px;}
+.portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-editor="true"] > section:last-child {flex:1;min-height:0;display:flex;flex-direction:column;}
+.portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-stage-sheet="true"] {flex:1;min-height:0;overflow:auto;padding-bottom:16px;}
+.portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-stage-sheet="true"] thead {position:sticky;top:0;z-index:2;}
+.portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-stage-sheet="true"] thead th {background:var(--portal-brand-header);}
+.portal-settings-workspace [data-portal-email-direct-editor="true"] > div > article {background:var(--portal-surface-page);border-color:transparent;box-shadow:none;}
+@media(max-width:640px) {.portal-settings-workspace {max-height:calc(100dvh - 24px)}}
+
+/* TCC14: ajuste final das hierarquias visuais aprovadas. */
+.portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"],
+.portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"] > .flex,
+.portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-scroll-host {
+  background:var(--portal-surface-panel);
+}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-scroll-host {border:0;border-radius:0;box-shadow:none;scrollbar-gutter:auto;}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"] > .flex {margin:0;border:0;}
+.portal-tcc-workspace-summary {background-color:var(--portal-surface-panel);}
+.portal-tcc-workspace-tabs {background-color:var(--portal-surface-panel);}
+.portal-tcc-workspace-tabs button:not(:focus-visible) {border-radius:9999px;}
+.portal-tcc-workspace-content {padding-bottom:20px;}
+.portal-process-dialog-body {overscroll-behavior:contain;}

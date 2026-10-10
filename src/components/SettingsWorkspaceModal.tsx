@@ -50,7 +50,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       const nestedLayerOpen = document.getElementsByClassName('portal-search-popover').length > 0
         || document.getElementsByClassName('portal-table-settings-popover').length > 0
         || document.getElementsByClassName('portal-core-column-popup').length > 0
-        || Boolean(document.querySelector('dialog[open]'));
+        || Boolean(document.querySelector('dialog[open], [data-portal-preview-dialog="true"]'));
       if (!nestedLayerOpen) onClose();
     };
     window.addEventListener('keydown', onKeyDown);
@@ -62,6 +62,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
 
   const singlePane = sections.length === 1;
   const sheetWorkspace = singlePane && SHEET_SECTION_IDS.has(current.id);
+  const workflowWorkspace = singlePane && current.id === 'workflow';
   const compactWorkspace = singlePane && ['identity', 'integrations'].includes(current.id);
   const fullBleed = current.fullBleed ?? (current.id === 'integrations' || current.id === 'models-documents' || sheetWorkspace);
   const singlePaneContent = singlePane && React.isValidElement(current.content)
@@ -70,9 +71,10 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
 
   const workspaceContent = singlePane ? (
     <main
-      className={`portal-settings-single-pane min-h-0 min-w-0 flex-1 p-0 ${sheetWorkspace ? 'flex flex-col overflow-hidden' : 'overflow-auto'}`}
+      className={`portal-settings-single-pane min-h-0 min-w-0 flex-1 p-0 ${sheetWorkspace ? 'flex flex-col overflow-hidden' : workflowWorkspace ? 'flex flex-col overflow-hidden' : 'overflow-auto'}`}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
+      data-portal-workflow-workspace={workflowWorkspace ? 'true' : 'false'}
       style={{ backgroundColor: 'var(--portal-surface-page)' }}
     >
       {singlePaneContent}
@@ -120,9 +122,10 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       aria-modal="true"
       aria-label={title}
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
+      data-portal-workflow-workspace={workflowWorkspace ? 'true' : 'false'}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       data-portal-compact={compactWorkspace ? 'true' : 'false'}
-      className={`portal-settings-workspace flex w-full flex-col overflow-hidden ${sheetWorkspace ? 'h-[min(82vh,760px)] max-w-[1500px]' : compactWorkspace ? 'h-auto max-h-[72vh] max-w-[980px]' : 'h-[min(92vh,900px)] max-w-[1500px]'}`}
+      className={`portal-settings-workspace flex w-full flex-col overflow-hidden ${sheetWorkspace ? 'h-[calc(100dvh-48px)] max-w-[1500px]' : compactWorkspace ? 'h-auto max-h-[calc(100dvh-48px)] max-w-[1240px]' : 'h-[calc(100dvh-48px)] max-w-[1500px]'}`}
       style={{ backgroundColor: 'var(--portal-surface-page)' }}
     >
       <header className="portal-settings-workspace-header">

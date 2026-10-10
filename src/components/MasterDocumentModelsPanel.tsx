@@ -46,6 +46,16 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const [mergeTargets, setMergeTargets] = useState<Record<string,string>>({});
   const [pendingSlots, setPendingSlots] = useState<Array<[string, string]>>([]);
   const [previewType, setPreviewType] = useState('');
+  useEffect(()=>{
+    if(!previewType)return;
+    const closePreview=(event:KeyboardEvent)=>{
+      if(event.key!=='Escape')return;
+      event.stopImmediatePropagation();
+      setPreviewType('');
+    };
+    window.addEventListener('keydown',closePreview,true);
+    return()=>window.removeEventListener('keydown',closePreview,true);
+  },[previewType]);
   const [samplePreview, setSamplePreview] = useState<Record<string, string>>({});
   const [samplePreviewLoading, setSamplePreviewLoading] = useState('');
   const [selectedType, setSelectedType] = useState('CONVITE');
@@ -249,14 +259,23 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   return <section className="portal-master-models-catalog min-h-full bg-[var(--portal-surface-page)] pb-5" data-portal-document-direct-editor="true">
     <SettingsWorkspaceHeaderPortal>
       <div className="flex min-w-0 items-center gap-1.5">
-        <select value={type} onChange={event=>setSelectedType(event.target.value)} className="max-w-[280px] rounded-full border border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950" aria-label="Selecionar documento">
-          {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{models[slotType]?.label||slotLabel}</option>)}
-        </select>
         <button type="button" onClick={()=>setShowNewModel(value=>!value)} className="portal-toolbar-icon-button" title="Adicionar documento" aria-label="Adicionar documento"><Plus className="h-3.5 w-3.5"/></button>
         <button type="button" onClick={()=>void removeModel(type,String(model?.label||label))} disabled={Boolean(working)} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-30" title="Excluir documento" aria-label="Excluir documento">{deleting?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Trash2 className="h-3.5 w-3.5"/>}</button>
+        {hasFile&&['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)&&<button type="button" onClick={()=>void generateSamplePreview(type)} disabled={samplePreviewLoading===type} className="portal-settings-header-pill"><Eye className="h-3.5 w-3.5"/>{samplePreviewLoading===type?'Gerando…':'Ver modelo'}</button>}
+        <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-white/60"/>
+        <select value={type} onChange={event=>setSelectedType(event.target.value)} className="w-[clamp(138px,16vw,226px)] max-w-[33vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm" aria-label="Selecionar documento" title={String(model?.label||label)}>
+          {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{models[slotType]?.label||slotLabel}</option>)}
+        </select>
       </div>
     </SettingsWorkspaceHeaderPortal>
 
+    {previewType===type&&hasFile&&samplePreview[type]&&<div role="presentation" data-portal-preview-dialog="true" className="portal-modal-backdrop fixed inset-0 z-[1000013] flex items-center justify-center p-4" onMouseDown={event=>{if(event.currentTarget===event.target)setPreviewType('');}}>
+      <section role="dialog" aria-modal="true" aria-label="Prévia do documento preenchido" className="portal-standard-modal flex h-[min(90dvh,900px)] w-full max-w-5xl flex-col overflow-hidden bg-white">
+        <header className="portal-modal-header shrink-0 justify-between"><strong className="text-xs font-black uppercase">Prévia preenchida · Sem validade</strong><button type="button" onClick={()=>setPreviewType('')} className="rounded-full bg-white px-4 py-1 text-xs font-bold text-slate-900">Fechar</button></header>
+        <div className="flex shrink-0 items-center justify-between bg-amber-50 p-2 text-xs text-amber-950"><span>Somente demonstração. Nenhum documento real foi criado.</span><a href={samplePreview[type]} target="_blank" rel="noreferrer" className="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-800">Abrir / baixar PDF</a></div>
+        <iframe title={`PDF demonstrativo de ${model?.label||label}`} src={samplePreview[type]} className="min-h-0 w-full flex-1 bg-white" />
+      </section>
+    </div>}
     {showNewModel&&<div className="mx-auto mt-3 flex max-w-xl items-center gap-2 rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)] p-2.5">
       <input id="new-master-model" autoFocus value={newModelName} onChange={event=>setNewModelName(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();addSlot();setShowNewModel(false);}}} placeholder="Nome do novo documento" className="min-h-8 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[10px] text-slate-900 outline-none"/>
       <button type="button" onClick={()=>{addSlot();setShowNewModel(false);}} disabled={!newModelName.trim()} className={action}><FilePlus2 className="h-3.5 w-3.5"/>Criar</button>
@@ -282,7 +301,6 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
         <div className="flex flex-wrap gap-1.5">
           <label className={`${action} cursor-pointer`}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}{hasFile?'Substituir DOCX':'Enviar DOCX'}<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/></label>
           {hasFile&&model?.driveFileUrl&&<a href={model.driveFileUrl} target="_blank" rel="noreferrer" className={action}><Eye className="h-3.5 w-3.5"/>Visualizar modelo original</a>}
-          {hasFile&&['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)&&<button type="button" onClick={()=>void generateSamplePreview(type)} disabled={samplePreviewLoading===type} className={action}>{samplePreviewLoading===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Sparkles className="h-3.5 w-3.5"/>}Prévia preenchida</button>}
           {hasFile&&<button type="button" onClick={()=>void detectVariables(type)} disabled={working===`detect-${type}`} className={action}>{working===`detect-${type}`?<Loader2 className="h-3 w-3 animate-spin"/>:<Sparkles className="h-3 w-3"/>}Atualizar variáveis</button>}
         </div>
 
@@ -303,9 +321,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
             : <p className="rounded-lg border border-dashed border-slate-300 bg-white p-3 text-[9px] text-slate-500">{hasFile?'Nenhuma variável foi detectada neste arquivo. Use “Atualizar variáveis”.':'As variáveis aparecerão aqui depois do envio do DOCX.'}</p>}
         </section>
 
-        {previewType===type&&hasFile&&samplePreview[type]&&<div className="overflow-hidden rounded-lg border border-slate-300 bg-white">
-          <iframe title={`Visualização de ${model?.label||label}`} src={samplePreview[type]} className="h-[520px] w-full bg-white" loading="lazy"/>
-        </div>}
+
 
         {model?.versions?.length>1&&<details className="rounded-md border border-slate-300 bg-white px-2 py-1">
           <summary className="cursor-pointer text-[8.5px] font-black uppercase text-slate-600">Histórico ({model.versions.length})</summary>

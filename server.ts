@@ -108,7 +108,9 @@ function runtimeGitCommit(): string {
   ).trim();
 }
 
+interface EvaluationAutosaveDraft {processId:string;dataRevision:number;answers:Record<string,string|number|boolean>;savedAt:string;savedBy:string;}
 interface PersistedPortalState {
+  evaluationDrafts?: Record<string,EvaluationAutosaveDraft>;
   registrationDrafts?: Record<string,RegistrationDraft>;
   reminders?: ReminderRecord[];
   settings?: GlobalSettings;
@@ -167,6 +169,7 @@ function loadPersistedPortalState(): PersistedPortalState {
 
 const persistedPortalState = loadPersistedPortalState();
 let registrationDraftsStore=pruneDrafts(persistedPortalState.registrationDrafts||{});
+let evaluationDraftsStore=new Map<string,EvaluationAutosaveDraft>(Object.entries(persistedPortalState.evaluationDrafts||{}));
 let reminderRecordsStore:ReminderRecord[]=persistedPortalState.reminders||[];
 const productionRuntime=process.env.NODE_ENV==='production'||Boolean(process.env.VERCEL);
 const bootstrapMasterEmail=normalizeEmail(String(process.env.PORTAL_BOOTSTRAP_MASTER_EMAIL||''));
@@ -320,7 +323,7 @@ async function saveRemoteSnapshotWithRecovery(snapshot:PersistedPortalState):Pro
 function snapshotPortalState() {
   const signatureMetadata=signatureJobsStore.map(({artifactBase64:_artifact,...job})=>job);
   const formMetadata=formArchiveJobsStore.map(({artifactBase64:_artifact,...job})=>({...job,artifactBase64:''}));
-  return { registrationDrafts:registrationDraftsStore, reminders:reminderRecordsStore, settings: currentSettings, processes: processesStore, memberships: membershipsStore, correctionRequests: correctionRequestsStore, signatureJobs: signatureMetadata, astenCallbackFingerprints: Array.from(astenCallbackFingerprints).slice(-5000), revokedSessionIds:Array.from(revokedSessionIdsStore).slice(-10000), authorizedStudents: authorizedStudentsStore, formArchiveJobs:formMetadata, studioFormSubmissions:studioFormSubmissionsStore.slice(-10000),emailDeliveries:emailDeliveriesStore.slice(-10000),workflowRuns:workflowRunsStore.slice(-10000),astenWebhookEvents:astenWebhookEventsStore.slice(-10000),administrationTransfers:administrationTransfersStore.slice(-1000),notificationPreferences:notificationPreferencesStore,dataSubjectRequests:dataSubjectRequestsStore.slice(-5000),legalHolds:legalHoldsStore.slice(-5000),studioVersions:studioVersionsStore.slice(-30),continuousIntelligence:continuousIntelligenceStore,auditLogs: auditLogsStore.slice(-5000) };
+  return { registrationDrafts:registrationDraftsStore, evaluationDrafts:Object.fromEntries(evaluationDraftsStore), reminders:reminderRecordsStore, settings: currentSettings, processes: processesStore, memberships: membershipsStore, correctionRequests: correctionRequestsStore, signatureJobs: signatureMetadata, astenCallbackFingerprints: Array.from(astenCallbackFingerprints).slice(-5000), revokedSessionIds:Array.from(revokedSessionIdsStore).slice(-10000), authorizedStudents: authorizedStudentsStore, formArchiveJobs:formMetadata, studioFormSubmissions:studioFormSubmissionsStore.slice(-10000),emailDeliveries:emailDeliveriesStore.slice(-10000),workflowRuns:workflowRunsStore.slice(-10000),astenWebhookEvents:astenWebhookEventsStore.slice(-10000),administrationTransfers:administrationTransfersStore.slice(-1000),notificationPreferences:notificationPreferencesStore,dataSubjectRequests:dataSubjectRequestsStore.slice(-5000),legalHolds:legalHoldsStore.slice(-5000),studioVersions:studioVersionsStore.slice(-30),continuousIntelligence:continuousIntelligenceStore,auditLogs: auditLogsStore.slice(-5000) };
 }
 
 function persistPortalState(throwOnFailure = false): void {
@@ -349,6 +352,7 @@ async function persistPortalStateDurably():Promise<void>{
 
 function applyPersistedState(state: PersistedPortalState) {
   registrationDraftsStore=pruneDrafts(state.registrationDrafts||{});
+  evaluationDraftsStore=new Map(Object.entries(state.evaluationDrafts||{}));
   reminderRecordsStore=state.reminders||[];
   if (state.settings) { currentSettings = { ...INITIAL_SETTINGS, ...state.settings }; delete (currentSettings as any).recoverySecretKey;delete (currentSettings as any).courseCoordinatorEmail;delete (currentSettings as any).courseCoordinatorName;for(const model of Object.values(currentSettings.documentModels||{}))if(model)model.templateContentText=''; }
   if (state.processes) processesStore = state.processes;
@@ -1426,9 +1430,19 @@ export async function createPortalApp() {
     const email=normalizeEmail(String(req.body?.email||''));
     if(!isValidPortalEmail(email))return res.status(400).json({error:'Informe um e-mail válido.'});
     const allowedByIp=allowOtpRequestFromIp(req.ip||'');
-    if(allowedByIp&&canRequestPortalAccess(email))await requestPortalOtp({email,ip:req.ip,portalName:resolveInstallationProfile(currentSettings).portalName}).catch(()=>undefined);
-    await enforceMinimumResponseTime(startedAt);
-    res.json({sent:true,expiresInMinutes:10,message:'Se o e-mail estiver autorizado, um código será enviado.'});
+    if(!allowedByIp){await enforceMinimumResponseTime(startedAt);return res.status(429).json({error:'Limite de solicitações atingido. Aguarde alguns minutos.'});}
+    if(!canRequestPortalAccess(email)){
+      await enforceMinimumResponseTime(startedAt);
+      return res.json({sent:false,code:'EMAIL_NOT_REGISTERED',expiresInMinutes:0,message:'Este e-mail não está cadastrado ou autorizado no Portal TCC. Confira o endereço ou solicite acesso à secretaria.'});
+    }
+    try {
+      await requestPortalOtp({email,ip:req.ip,portalName:resolveInstallationProfile(currentSettings).portalName});
+      await enforceMinimumResponseTime(startedAt);
+      return res.json({sent:true,expiresInMinutes:10,message:'Código solicitado com sucesso. Confira sua caixa de entrada.'});
+    }catch(error){
+      await enforceMinimumResponseTime(startedAt);
+      return res.status(503).json({error:error instanceof Error?error.message:'Não foi possível enviar o código. Tente novamente mais tarde.'});
+    }
   });
 
   app.post('/api/auth/verify-code',async(req,res)=>{
@@ -2414,7 +2428,7 @@ export async function createPortalApp() {
       timestamp: new Date().toISOString()
     });
 
-    signatureJobsStore=signatureJobsStore.filter(job=>job.processId!==req.params.id);persistPortalState();res.json({ message: 'Trabalho de TCC excluído com sucesso.' });
+    signatureJobsStore=signatureJobsStore.filter(job=>job.processId!==req.params.id);evaluationDraftsStore.delete(req.params.id);persistPortalState();res.json({ message: 'Trabalho de TCC excluído com sucesso.' });
   });
 
   app.get('/api/processes/:id/evaluation/schema', requireAuthenticated, (req, res) => {
@@ -2430,6 +2444,42 @@ export async function createPortalApp() {
       operationalConfig: { ...operationalConfig(studio), reservation: { ...operationalConfig(studio).reservation, departmentEmail: '' }, presentations: {}, workflow: undefined },
       operationsPolicy: { timezone: studio?.operationsPolicy?.timezone || currentSettings.timezone || 'America/Sao_Paulo' },
     } });
+  });
+
+  // Rascunho durável da ata, separado de ações externas de finalização.
+  app.get('/api/processes/:id/evaluation/draft',requireAuthenticated,(req,res)=>{
+    const email=getPortalIdentity(req)!.email;
+    const process=processesStore.find(item=>item.id===req.params.id);
+    if(!process||!canAccessProcess(email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
+    if(!hasFullAdministration(email)&&!getActiveProcessRoles(email,process.id).includes('ADVISOR'))return res.status(403).json({error:'Apenas o orientador autorizado pode acessar este rascunho.'});
+    const draft=evaluationDraftsStore.get(process.id);
+    res.setHeader('Cache-Control','private, no-store');
+    return res.json(draft?.dataRevision===process.dataRevision?draft:null);
+  });
+  app.put('/api/processes/:id/evaluation/draft',requireAuthenticated,async(req,res)=>{
+    const email=getPortalIdentity(req)!.email;
+    const process=processesStore.find(item=>item.id===req.params.id);
+    if(!process||!canAccessProcess(email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
+    if(!hasFullAdministration(email)&&!getActiveProcessRoles(email,process.id).includes('ADVISOR'))return res.status(403).json({error:'Apenas o orientador autorizado pode editar este rascunho.'});
+    if(process.avaliacao.status==='CONCLUIDO')return res.status(409).json({error:'Avaliação já concluída.'});
+    if(Number(req.body?.expectedDataRevision)!==process.dataRevision)return res.status(409).json({error:'Os dados do TCC foram alterados. Atualize a ficha antes de continuar.'});
+    const raw=req.body?.answers;
+    if(!raw||typeof raw!=='object'||Array.isArray(raw))return res.status(400).json({error:'Rascunho inválido.'});
+    const entries=Object.entries(raw);
+    if(entries.length>40||JSON.stringify(raw).length>25000)return res.status(413).json({error:'Rascunho excede o limite permitido.'});
+    for(const [key,value] of entries){
+      if(!/^[A-Z][A-Z0-9_]{0,79}$/.test(key)||!['string','number','boolean'].includes(typeof value)||String(value).length>10000)return res.status(400).json({error:'O rascunho contém um campo inválido.'});
+    }
+    const answers=Object.fromEntries(entries) as Record<string,string|number|boolean>;
+    const previous=evaluationDraftsStore.get(process.id);
+    const draft:EvaluationAutosaveDraft={processId:process.id,dataRevision:process.dataRevision,answers,savedAt:new Date().toISOString(),savedBy:email};
+    evaluationDraftsStore.set(process.id,draft);
+    try{await persistPortalStateDurably();}catch{
+      if(previous)evaluationDraftsStore.set(process.id,previous);else evaluationDraftsStore.delete(process.id);
+      return res.status(503).json({error:'Não foi possível persistir o rascunho.'});
+    }
+    res.setHeader('Cache-Control','private, no-store');
+    return res.json(draft);
   });
 
   // POST /api/processes/:id/evaluation (Orientador submits evaluation)
@@ -2488,6 +2538,7 @@ export async function createPortalApp() {
       timestamp: nowISO
     });
 
+    evaluationDraftsStore.delete(proc.id);
     persistPortalState();const evaluationArchive=await archiveProcessFormSnapshot(updated,'AVALIACAO');if(evaluationArchive.status!=='ARCHIVED')return res.status(202).json({...updated,workflowPending:true,workflowError:evaluationArchive.lastError});const evaluationRun=await executeConfiguredWorkflowEvent(updated,'EVALUATION_SUBMITTED',actorEmail);const missingEvaluationDocuments=missingSignatureJobsForRevision(updated,['ATA']);if(!evaluationRun||evaluationRun.status!=='COMPLETED'||missingEvaluationDocuments.length)return res.status(202).json({...updated,workflowPending:true,workflowError:evaluationRun?.actions.find(action=>action.status==='FAILED')?.error||`O fluxo posterior à avaliação não criou: ${missingEvaluationDocuments.join(', ')||'ATA'}.`});res.json(updated);
   });
 

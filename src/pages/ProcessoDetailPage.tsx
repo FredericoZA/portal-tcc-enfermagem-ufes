@@ -721,21 +721,21 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const isTabVisible = (tabId: string) => {
     if (localFormat.viewMode === 'continuous') return true;
-    if (tabId === 'defesa' && activeTab === 'cadastral') return true;
+    if ((tabId === 'defesa' || tabId === 'banca') && activeTab === 'cadastral') return true;
     return activeTab === tabId;
   };
 
   return (
     <div
       id="process-detail-container"
-      className={`portal-tcc-detail ${isModal ? 'space-y-0' : 'space-y-3 mx-auto'} ${modalWidthClass} ${modalRadiusClass} ${modalShadowClass} overflow-hidden`}
+      className={`portal-tcc-detail ${isModal ? 'space-y-0' : 'space-y-3 mx-auto'} ${modalWidthClass} ${modalRadiusClass} ${modalShadowClass} ${isModal ? 'overflow-visible pb-5' : 'overflow-hidden'}`}
       style={{ backgroundColor: 'var(--portal-surface-page)', color: '#0f172a' }}
     >
       {isModal ? (
-        <header className="portal-modal-header flex items-center justify-between gap-3 px-4" style={{ backgroundColor: 'var(--portal-brand-header)', color: '#ffffff' }}>
+        <header className="portal-modal-header sticky top-0 z-30 flex items-center justify-between gap-3 px-4" style={{ backgroundColor: 'var(--portal-brand-header)', color: '#ffffff' }}>
           <div className="flex min-w-0 items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-white" aria-hidden="true"/><div className="min-w-0"><h1 className="truncate text-[12px] font-black uppercase tracking-wide">Detalhes do TCC</h1><p className="mt-0.5 truncate text-[10px] font-semibold text-white/85">Enfermagem e Obstetrícia UFES, Maruípe UFES</p></div></div>
           <div className="flex shrink-0 items-center gap-1.5">
-            <button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-slate-900" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/></button>
+            <button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-white bg-white px-3 text-[10px] font-bold text-slate-900" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/>Histórico de Auditoria</button>
             {isMasterAdmin&&<button type="button" onClick={()=>setShowDeleteModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-rose-700" aria-label="Excluir trabalho"><Trash2 className="h-4 w-4"/></button>}
           </div>
         </header>
@@ -746,13 +746,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       
       {localFormat.showStateMachine !== false && <div className="px-3 pt-3"><div className="overflow-hidden rounded-xl border border-[var(--portal-border)] bg-white"><EtapaProgressBar currentEtapa={process.etapaAtual}/></div></div>}
       <section id="tcc-detail-workspace" className="portal-tcc-workspace mx-3 mt-3 overflow-hidden rounded-xl border border-[var(--portal-border)]">
-      <section className="portal-tcc-workspace-summary p-4" style={{backgroundColor:'var(--portal-surface-card)'}}>
+      <section className="portal-tcc-workspace-summary p-4" style={{backgroundColor:'var(--portal-surface-panel)'}}>
         <div className="flex flex-wrap items-center gap-2"><span className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[10px] font-black">{process.protocolo}</span>{process.avaliacao?.status==='CONCLUIDO'&&<span className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-black">Conceito: {process.avaliacao.resultadoLabel||'Aprovado'}</span>}</div>
         <h2 className="mt-3 text-sm font-black text-slate-950">{process.titulo}</h2>
         <div className="mt-3 grid gap-2 border-t border-slate-300 pt-3 text-[10px] text-slate-700 sm:grid-cols-2 xl:grid-cols-4"><div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5"/><span>{process.aluno1.nome}{process.aluno2?` e ${process.aluno2.nome}`:''}</span></div><div className="flex items-center gap-1.5"><Award className="h-3.5 w-3.5"/><span>Orientador(a): <strong>{process.orientador.nome}</strong></span></div>{process.defesa?.startAt&&<div className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5"/><span>{formatDatePt(process.defesa.startAt)} · {formatTimeExtenso(process.defesa.startAt)}</span></div>}{process.defesa?.local&&<div className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5"/><span>{process.defesa.local}</span></div>}</div>
       </section>
-      <section className="portal-tcc-workspace-tabs border-t border-[var(--portal-border)] p-2" style={{backgroundColor:'var(--portal-surface-card)'}}><div className="flex items-center gap-1 overflow-x-auto custom-scrollbar">{[
-        {id:'cadastral',label:'Ficha Cadastral & Defesa',icon:FileText,show:localFormat.showSectionCadastral!==false},{id:'banca',label:'Banca Examinadora',icon:Users,show:localFormat.showSectionBanca!==false},{id:'avaliacao',label:'Avaliação & Ata',icon:Award,show:localFormat.showSectionAvaliacao!==false},{id:'forms',label:'Formulários',icon:ClipboardList,show:true},{id:'docs',label:'Documentos',icon:FileCheck,show:localFormat.showSectionDocs!==false},{id:'acervo',label:'Repositório Digital',icon:BookOpen,show:localFormat.showSectionAcervo!==false}
+      <section className="portal-tcc-workspace-tabs border-t border-[var(--portal-border)] p-2" style={{backgroundColor:'var(--portal-surface-panel)'}}><div className="flex items-center gap-1 overflow-x-auto custom-scrollbar">{[
+        {id:'cadastral',label:'Ficha Cadastral & Defesa + Banca Examinadora',icon:FileText,show:localFormat.showSectionCadastral!==false||localFormat.showSectionBanca!==false},{id:'avaliacao',label:'Avaliação & Ata',icon:Award,show:localFormat.showSectionAvaliacao!==false},{id:'forms',label:'Formulários',icon:ClipboardList,show:true},{id:'docs',label:'Documentos',icon:FileCheck,show:localFormat.showSectionDocs!==false},{id:'acervo',label:'Repositório Digital',icon:BookOpen,show:localFormat.showSectionAcervo!==false}
       ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} type="button" onClick={()=>setActiveTab(tab.id)} className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold ${selected?'border-slate-300 bg-white text-slate-950':'border-transparent bg-[var(--portal-surface-panel)] text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
       <div className="portal-tcc-workspace-content p-3">
 

@@ -82,10 +82,14 @@ async function staticChecks() {
     ]);
   });
 
-  await check('OTP é enumerativamente neutro, expirável e de uso único', () => {
+  await check('OTP comunica cadastro de forma clara, aplica limite por IP, expira e é de uso único', () => {
     includesEvery(server, [
       '/api/auth/request-code',
-      'Se o e-mail estiver autorizado, um código será enviado.',
+      "if(!allowedByIp)",
+      "canRequestPortalAccess(email)",
+      "code:'EMAIL_NOT_REGISTERED'",
+      "status(429)",
+      'await enforceMinimumResponseTime(startedAt)',
       '/api/auth/verify-code'
     ]);
     includesEvery(otp, [

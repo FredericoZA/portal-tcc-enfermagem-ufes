@@ -2,6 +2,7 @@ import { portalConfirm } from '../services/portalDialogs';
 import { upgradeStudioDraft } from '../utils/studioUpgrade';
 import { OperationalDesignerPanel } from './OperationalDesignerPanel';
 import { operationalConfig as resolveOperationalConfig } from '../utils/operationalConfig';
+import { evaluateStudioCondition } from '../utils/courseStudioValidator';
 import type { OperationalConfig } from '../types/operationalConfig';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
@@ -134,7 +135,13 @@ const PREVIEW_VARIABLES: Record<string,string> = {
   TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TCC_TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TITULO_TRABALHO:'Segurança do paciente e qualidade da assistência de enfermagem', CAMPO_02:'Segurança do paciente e qualidade da assistência de enfermagem',
   ALUNOS_NOMES:'Ana Carolina Souza e Bruno Martins Lima', ALUNO_NOME:'Ana Carolina Souza', NOME_ALUNO:'Ana Carolina Souza', CAMPO_01:'Ana Carolina Souza e Bruno Martins Lima',
   ORIENTADOR_NOME:'Profa. Dra. Maria Silva', CAMPO_03:'Profa. Dra. Maria Silva', DEFESA_DATA_HORA:'15 de outubro de 2026 às 14h', DEFESA_DATA_HORA_EXTENSO:'15 de outubro de 2026 às 14h', CAMPO_04:'15 de outubro de 2026 às 14h',
-  DEFESA_LOCAL:'Auditório do CCS — UFES', LOCAL_DEFESA:'Auditório do CCS — UFES', CAMPO_07_LOCAL:'Auditório do CCS — UFES', PROTOCOLO:'2026-999', CAMPO_12:'2026-999'
+  DEFESA_LOCAL:'Auditório do CCS — UFES', LOCAL_DEFESA:'Auditório do CCS — UFES', CAMPO_07_LOCAL:'Auditório do CCS — UFES', PROTOCOLO:'2026-999', CAMPO_12:'2026-999',
+  ALUNO_1_EMAIL:'ana.souza@exemplo.edu.br',ALUNO_2_EMAIL:'bruno.martins@exemplo.edu.br',
+  DEPARTAMENTO_EMAIL:'departamento@exemplo.ufes.br',ORIENTADOR_EMAIL:'maria.silva@exemplo.ufes.br',
+  LOCAL_ALTERNATIVO:'Sala de reuniões do CCS',EXAMINADOR_2_NOME:'Prof. João Oliveira',EXAMINADOR_3_NOME:'Profa. Carla Santos',
+  RESULTADO:'Aprovado',PARECER:'A banca aprovou o trabalho fictício, com destaque para a qualidade metodológica.',
+  BANCA_NOMES:'Profa. Maria Silva, Prof. João Oliveira e Profa. Carla Santos',LINK_PORTAL:'https://portal-tcc-enfermagem-ufes.vercel.app',
+
 };
 function applyPreviewVariables(value:string):string{
  let out=String(value||'');
@@ -149,7 +156,10 @@ function applyPreviewVariables(value:string):string{
   ];
   for(const pattern of patterns) out=out.replace(pattern,replacement);
  }
- return out;
+ return out.replace(/<<\s*([A-Z][A-Z0-9_]+)\s*>>|\{\{\s*([A-Z][A-Z0-9_]+)\s*\}\}|\[\[\s*([A-Z][A-Z0-9_]+)\s*\]\]/gi,(_marker,a,b,c)=>{
+   const key=String(a||b||c||'').toUpperCase();
+   return PREVIEW_VARIABLES[key]||('Exemplo de '+key.replaceAll('_',' ').toLowerCase());
+ });
 }
 const PdfCanvasPreview: React.FC<{base64?:string;remoteUrl?:string;label:string}> = ({base64,remoteUrl,label}) => {
  const hostRef=useRef<HTMLDivElement|null>(null); const [error,setError]=useState('');
@@ -297,6 +307,18 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [selectedDocId, setSelectedDocId] = useState(docTemplates[0]?.id || '');
   const [selectedEmailId, setSelectedEmailId] = useState(emailTemplates[0]?.id || '');
   const [showEmailHtmlAdvanced, setShowEmailHtmlAdvanced] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'email'|'form'|null>(null);
+  const [documentPreviewOpen, setDocumentPreviewOpen] = useState(false);
+  useEffect(()=>{
+    if(!previewMode&&!documentPreviewOpen)return;
+    const closePreview=(event:KeyboardEvent)=>{
+      if(event.key!=='Escape')return;
+      event.stopImmediatePropagation();
+      setPreviewMode(null);setDocumentPreviewOpen(false);
+    };
+    window.addEventListener('keydown',closePreview,true);
+    return()=>window.removeEventListener('keydown',closePreview,true);
+  },[previewMode,documentPreviewOpen]);
   const [selectedFormId, setSelectedFormId] = useState(formTemplates[0]?.id || '');
   const [selectedVariableId, setSelectedVariableId] = useState(matrixColumns[0]?.id || '');
   const [selectedFormQuestionId, setSelectedFormQuestionId] = useState(formTemplates[0]?.questions?.[0]?.id || '');
@@ -585,7 +607,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     if(!selectedDoc)return; const raw=String(selectedDoc.type||selectedDoc.id||'').toUpperCase(); const type=(['CONVITE','ATA','TERMO','DECLARACAO'] as const).find(item=>raw.includes(item));
     if(!type){setDocumentPreviewError('Associe este modelo a um tipo oficial antes de gerar a prévia.');return;}
     const requestId=++documentPreviewRequestRef.current; const requestedDocId=selectedDoc.id; setDocumentPreviewLoading(true);setDocumentPreviewError('');
-    try{const response=await apiClient.previewDocumentModel(type,buildSnapshot());if(requestId!==documentPreviewRequestRef.current||requestedDocId!==selectedDocId)return;setDocumentPreview({docId:requestedDocId,base64:response.contentBase64,remoteUrl:response.downloadUrl,analysis:response.analysis});}
+    try{const response=await apiClient.previewDocumentModel(type,buildSnapshot());if(requestId!==documentPreviewRequestRef.current||requestedDocId!==selectedDocId)return;setDocumentPreview({docId:requestedDocId,base64:response.contentBase64,remoteUrl:response.downloadUrl,analysis:response.analysis});setDocumentPreviewOpen(true);}
     catch(error:any){if(requestId===documentPreviewRequestRef.current)setDocumentPreviewError(error?.message||'Não foi possível gerar a prévia fiel.');}
     finally{if(requestId===documentPreviewRequestRef.current)setDocumentPreviewLoading(false);}
   };
@@ -1059,6 +1081,34 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     : [];
   return (
     <div className={`portal-workspace portal-studio ${hideTabs ? 'mb-0 overflow-visible border-0 bg-transparent shadow-none' : `${panelClass} mb-5 overflow-hidden`}`}>
+      {previewMode==='email'&&selectedEmail&&<div role="presentation" data-portal-preview-dialog="true" className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-4" onMouseDown={event=>{if(event.target===event.currentTarget)setPreviewMode(null);}}>
+        <section role="dialog" aria-modal="true" aria-label="Prévia do e-mail com dados fictícios" className="portal-standard-modal flex h-[min(86dvh,840px)] w-full max-w-4xl flex-col overflow-hidden bg-white">
+          <header className="portal-modal-header shrink-0 justify-between"><strong className="text-xs font-black uppercase">Ver modelo · E-mail demonstrativo</strong><button type="button" onClick={()=>setPreviewMode(null)} className="rounded-full bg-white px-4 py-1 text-xs font-bold text-slate-900">Fechar</button></header>
+          <p className="shrink-0 bg-amber-50 p-2 text-xs text-amber-950">Prévia com dados fictícios. Nenhum e-mail será enviado.</p>
+          <iframe title="E-mail fictício preenchido" sandbox="" referrerPolicy="no-referrer" srcDoc={emailPreviewHtml} className="min-h-0 flex-1 bg-white" />
+        </section>
+      </div>}
+      {previewMode==='form'&&selectedForm&&<div role="presentation" data-portal-preview-dialog="true" className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-4" onMouseDown={event=>{if(event.target===event.currentTarget)setPreviewMode(null);}}>
+        <section role="dialog" aria-modal="true" aria-label="Prévia do formulário com respostas fictícias" className="portal-standard-modal flex h-[min(86dvh,840px)] w-full max-w-3xl flex-col overflow-hidden bg-white">
+          <header className="portal-modal-header shrink-0 justify-between"><strong className="text-xs font-black uppercase">Ver modelo · Formulário demonstrativo</strong><button type="button" onClick={()=>setPreviewMode(null)} className="rounded-full bg-white px-4 py-1 text-xs font-bold text-slate-900">Fechar</button></header>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[var(--portal-surface-page)] p-4">
+            <p className="rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-950">Demonstração somente leitura, com respostas fictícias. Nada será salvo nem enviado.</p>
+            <div className="overflow-hidden rounded-xl border border-slate-300 bg-white">
+              <div className="bg-[var(--portal-brand-header)] p-4 text-xs font-bold text-white">{brandKit.institutionName} — {brandKit.courseName}</div>
+              <div className="space-y-3 p-4"><h2 className="text-lg font-bold">{selectedForm.title}</h2><p className="text-xs text-slate-600">{selectedForm.description}</p>
+                {selectedForm.questions.filter(question=>evaluateStudioCondition(question.visibleWhen,PREVIEW_VARIABLES)).map((question,index)=><div key={question.id} className="rounded-lg border border-slate-200 bg-[var(--portal-surface-inner)] p-3"><label className="block text-xs font-bold">{index+1}. {question.label}{question.required?' *':''}</label><div className="mt-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">{question.fieldType==='checkbox'?'☑ Sim':PREVIEW_VARIABLES[normalizeVariableKey(question.fieldKey)]||question.options?.[0]||'Exemplo de preenchimento'}</div></div>)}
+                <p className="rounded-full bg-slate-100 px-4 py-2 text-center text-xs font-semibold text-slate-500">{selectedFormDesign.submitLabel||'Enviar formulário'} · somente prévia</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>}
+      {documentPreviewOpen&&documentPreview&&selectedDoc&&documentPreview.docId===selectedDoc.id&&<div role="presentation" data-portal-preview-dialog="true" className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-4" onMouseDown={event=>{if(event.target===event.currentTarget)setDocumentPreviewOpen(false);}}>
+        <section role="dialog" aria-modal="true" aria-label="Documento demonstrativo preenchido" className="portal-standard-modal flex h-[min(90dvh,900px)] w-full max-w-5xl flex-col overflow-hidden bg-white">
+          <header className="portal-modal-header shrink-0 justify-between"><strong className="text-xs font-black uppercase">Prévia fiel · {selectedDoc.label} · Sem validade</strong><button type="button" onClick={()=>setDocumentPreviewOpen(false)} className="rounded-full bg-white px-4 py-1 text-xs font-bold text-slate-900">Fechar</button></header>
+          <div className="min-h-0 flex-1 overflow-auto p-3"><PdfCanvasPreview base64={documentPreview.base64} remoteUrl={documentPreview.remoteUrl} label={selectedDoc.label}/></div>
+        </section>
+      </div>}
       {hideTabs && autosaveError && <div role="alert" className="mx-3 my-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950"><span>Alterações ainda não publicadas: {autosaveError}</span><button type="button" className="rounded-md border border-amber-400 bg-white px-2 py-1 font-bold" onClick={()=>setAutosaveRetry(value=>value+1)}>Tentar salvar novamente</button></div>}
       <div className={`${hideTabs ? 'hidden' : 'portal-studio-heading flex flex-wrap items-center justify-between gap-2 border-b border-[var(--portal-brand-action-border)] bg-[var(--portal-brand-action)] px-3 py-2.5 text-white'}`}>
         <div><h3 className="text-xs font-black uppercase tracking-wide">Editor de modelos e variáveis</h3><p className="mt-0.5 text-[9px] text-white/80">Selecione uma área acima e trabalhe com seleção, edição e visualização no mesmo contexto.</p></div>
@@ -1182,7 +1232,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] leading-5 text-slate-700">O arquivo visual permanece no Google Drive; o Portal substitui apenas as variáveis reconhecidas e preserva a formatação do modelo.{selectedDoc.driveFileUrl && <a href={selectedDoc.driveFileUrl} target="_blank" rel="noreferrer" className="mt-2 block font-black underline">Abrir e editar o modelo no Google Drive</a>}</div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="text-[10px] font-black uppercase text-slate-600">Variáveis reconhecidas neste modelo</div><div className="mt-2 flex flex-wrap gap-1.5">{(selectedDoc.variables || []).map((variable) => <code key={variable} className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[9px] text-[var(--portal-brand-action)]">{variable}</code>)}{!(selectedDoc.variables || []).length && <span className="text-[11px] text-slate-500">As variáveis aparecerão após o cadastro do DOCX oficial.</span>}</div></div>
             </div>
-            <div className="rounded-2xl border border-slate-300 bg-slate-100 p-4 sm:p-5"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><strong className="text-xs uppercase text-slate-900">Prévia fiel do PDF final</strong><p className="mt-1 text-[10px] text-slate-600">Mesmo pipeline oficial do Google Drive, com dados fictícios estáveis; o modelo original não é alterado.</p></div><button type="button" onClick={()=>void generateFaithfulDocumentPreview()} disabled={documentPreviewLoading} className="portal-action border-emerald-700 bg-emerald-700 text-white disabled:opacity-50"><FileText className="h-3.5 w-3.5"/>{documentPreviewLoading?'Gerando…':'Gerar prévia fiel'}</button></div>{documentPreviewError?<div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-800">{documentPreviewError}</div>:null}{documentPreview?.docId===selectedDoc.id?<PdfCanvasPreview base64={documentPreview.base64} remoteUrl={documentPreview.remoteUrl} label={selectedDoc.label}/>:<div className="flex min-h-[420px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-600">Gere a amostra para conferir margens, cores, paginação, tabelas e substituição das variáveis.</div>}</div>
+            <div className="rounded-2xl border border-slate-300 bg-slate-100 p-4 sm:p-5"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><strong className="text-xs uppercase text-slate-900">Prévia fiel do PDF final</strong><p className="mt-1 text-[10px] text-slate-600">Mesmo pipeline oficial do Google Drive, com dados fictícios estáveis; o modelo original não é alterado.</p></div><button type="button" onClick={()=>void generateFaithfulDocumentPreview()} disabled={documentPreviewLoading} className="portal-action rounded-full border-emerald-700 bg-emerald-700 text-white disabled:opacity-50"><FileText className="h-3.5 w-3.5"/>{documentPreviewLoading?'Gerando…':'Gerar prévia fiel'}</button></div>{documentPreviewError?<div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-800">{documentPreviewError}</div>:null}{documentPreview?.docId===selectedDoc.id?<PdfCanvasPreview base64={documentPreview.base64} remoteUrl={documentPreview.remoteUrl} label={selectedDoc.label}/>:<div className="flex min-h-[420px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-600">Gere a amostra para conferir margens, cores, paginação, tabelas e substituição das variáveis.</div>}</div>
           </div>
         )}
 
@@ -1190,19 +1240,18 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
           <div className="min-h-full bg-[var(--portal-surface-page)] pb-5" data-portal-email-direct-editor="true">
             <SettingsWorkspaceHeaderPortal>
               <div className="flex min-w-0 items-center gap-1.5">
-                <select
-                  value={selectedEmail.id}
-                  onChange={event=>setSelectedEmailId(event.target.value)}
-                  className="max-w-[260px] rounded-full border border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950"
-                  aria-label="Selecionar e-mail"
-                >
-                  {emailTemplates.map(email=><option key={email.id} value={email.id}>{email.name}</option>)}
-                </select>
                 <button type="button" onClick={createEmailTemplate} className="portal-toolbar-icon-button" title="Adicionar e-mail" aria-label="Adicionar e-mail"><Plus className="h-3.5 w-3.5"/></button>
                 <button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-30" title="Excluir e-mail" aria-label="Excluir e-mail"><Trash2 className="h-3.5 w-3.5"/></button>
+                <button type="button" onClick={()=>setPreviewMode('email')} className="portal-settings-header-pill" aria-label="Ver modelo de e-mail com dados fictícios"><Eye className="h-3.5 w-3.5"/>Ver modelo</button>
                 <button type="button" onClick={()=>setShowEmailHtmlAdvanced(value=>!value)} className="portal-settings-header-pill" aria-pressed={showEmailHtmlAdvanced}>
                   <Type className="h-3.5 w-3.5"/><span>HTML avançado</span>
                 </button>
+                <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-white/60"/>
+                <select value={selectedEmail.id} onChange={event=>setSelectedEmailId(event.target.value)}
+                  className="w-[clamp(138px,16vw,226px)] max-w-[33vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  aria-label="Selecionar e-mail" title={selectedEmail.name}>
+                  {emailTemplates.map(email=><option key={email.id} value={email.id}>{email.name}</option>)}
+                </select>
               </div>
             </SettingsWorkspaceHeaderPortal>
 
@@ -1301,16 +1350,15 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
           <div className="min-h-full bg-[var(--portal-surface-page)] pb-5" data-portal-form-direct-editor="true">
             <SettingsWorkspaceHeaderPortal>
               <div className="flex min-w-0 items-center gap-1.5">
-                <select
-                  value={selectedForm.id}
-                  onChange={(event)=>setSelectedFormId(event.target.value)}
-                  className="max-w-[260px] rounded-full border border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950"
-                  aria-label="Selecionar formulário"
-                >
-                  {formTemplates.map(form=><option key={form.id} value={form.id}>{form.title}</option>)}
-                </select>
                 <button type="button" onClick={createFormTemplate} className="portal-toolbar-icon-button" title="Adicionar formulário" aria-label="Adicionar formulário"><Plus className="h-3.5 w-3.5"/></button>
                 <button type="button" onClick={()=>void deleteSelectedForm()} disabled={formTemplates.length<=1} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-30" title="Excluir formulário" aria-label="Excluir formulário"><Trash2 className="h-3.5 w-3.5"/></button>
+                <button type="button" onClick={()=>setPreviewMode('form')} className="portal-settings-header-pill" aria-label="Ver formulário preenchido com dados fictícios"><Eye className="h-3.5 w-3.5"/>Ver modelo</button>
+                <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-white/60"/>
+                <select value={selectedForm.id} onChange={event=>setSelectedFormId(event.target.value)}
+                  className="w-[clamp(138px,16vw,226px)] max-w-[33vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  aria-label="Selecionar formulário" title={selectedForm.title}>
+                  {formTemplates.map(form=><option key={form.id} value={form.id}>{form.title}</option>)}
+                </select>
               </div>
             </SettingsWorkspaceHeaderPortal>
 
