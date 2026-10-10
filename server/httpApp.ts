@@ -42,6 +42,21 @@ function expectedRequestOrigins(req: express.Request): Set<string> {
  * must be same-origin (or explicitly match the configured public origin). Server-to-server
  * callbacks normally do not send Origin/Sec-Fetch-Site and remain compatible.
  */
+export const portalSecurityHeaders: RequestHandler = (req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self), payment=(), usb=()');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+  if (req.method === 'TRACE' || req.method === 'CONNECT') {
+    res.setHeader('Allow', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS');
+    return res.status(405).json({ error: 'Método HTTP não permitido.', code: 'METHOD_NOT_ALLOWED' });
+  }
+  next();
+};
+
 export const requireMutationOrigin: RequestHandler = (req, res, next) => {
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method.toUpperCase())) return next();
 
@@ -76,6 +91,7 @@ export function createPortalHttpApp() {
     (app as any)[method] = (...args: unknown[]) => register(...args.map(wrap));
   }
   app.disable('x-powered-by');
+  app.use(portalSecurityHeaders);
   app.use(requireMutationOrigin);
   return app;
 }
