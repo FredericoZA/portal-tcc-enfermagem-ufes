@@ -94,7 +94,7 @@ test('Asten aceita somente callback HTTPS e segredo de webhook forte', () => {
   withCleanEnvironment(() => {
     const secret = 'w'.repeat(48);
     process.env.PORTAL_PUBLIC_URL = 'https://portal.example';
-    process.env.ASTEN_CALLBACK_URL = 'https://portal.example/api/integrations/asten/callback';
+    process.env.ASTEN_CALLBACK_URL = 'https://portal.example/api/integrations/asten/webhook';
     process.env.ASTEN_WEBHOOK_SECRET = secret;
     assert.equal(getAstenSecurityPreflight().callbackConfigured, true);
     assert.equal(safeCompareWebhookSecret(secret), true);
@@ -102,6 +102,27 @@ test('Asten aceita somente callback HTTPS e segredo de webhook forte', () => {
 
     process.env.ASTEN_WEBHOOK_SECRET = 'w'.repeat(31);
     assert.equal(safeCompareWebhookSecret(process.env.ASTEN_WEBHOOK_SECRET), false);
+  });
+});
+
+test('Asten exige endpoint exato de webhook e rejeita query/fragmento no callback', () => {
+  withCleanEnvironment(() => {
+    process.env.PORTAL_PUBLIC_URL = 'https://portal.example';
+    process.env.ASTEN_WEBHOOK_SECRET = 'w'.repeat(48);
+
+    for (const callback of [
+      'https://portal.example/api/integrations/asten/callback',
+      'https://portal.example/api/integrations/asten/webhook?token=valor',
+      'https://portal.example/api/integrations/asten/webhook#fragmento'
+    ]) {
+      process.env.ASTEN_CALLBACK_URL = callback;
+      const preflight = getAstenSecurityPreflight();
+      assert.equal(preflight.callbackEndpointValid, false);
+      assert.equal(preflight.callbackConfigured, false);
+    }
+
+    process.env.ASTEN_CALLBACK_URL = 'https://portal.example/api/integrations/asten/webhook';
+    assert.equal(getAstenSecurityPreflight().callbackEndpointValid, true);
   });
 });
 
@@ -141,7 +162,7 @@ test('Asten bloqueia redirects e não propaga credencial em mensagem de erro do 
         (error: unknown) => {
           const message = error instanceof Error ? error.message : String(error);
           assert.equal(message.includes(token), false);
-          assert.equal(message.includes('[credencial omitida]'), true);
+          assert.match(message, /rejeitou a credencial|autorização/i);
           assert.equal(/[\r\n]/.test(message), false);
           return true;
         }
