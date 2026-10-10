@@ -115,7 +115,7 @@ test('os três workspaces de registros são popups-planilha full-bleed com rolag
   const scroll=read('src/components/TableScrollWrapper.tsx');
   assert.match(modal,/new Set\(\['authorizations', 'signature-ledger', 'audit-ledger'\]\)/);
   assert.match(modal,/sheetWorkspace \? 'flex flex-col overflow-hidden'/);
-  assert.match(modal,/sheetWorkspace \? 'h-\[min\(82vh,760px\)\] max-w-\[1500px\]'/);
+  assert.match(modal,/sheetWorkspace \? 'h-\[calc\(100dvh-48px\)\] max-w-\[1500px\]'/);
   assert.match(scroll,/fillHeight \? 'none'/);
   assert.match(scroll,/fillHeight \? '100%' : undefined/);
 
