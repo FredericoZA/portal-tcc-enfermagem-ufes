@@ -1348,7 +1348,7 @@ button[aria-label^="Configurar exibição"],
 .portal-settings-workspace {max-height:calc(100dvh - 48px);}
 .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-settings-workspace-divider {display:none;}
 .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-settings-single-pane,
-.portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"] {background:var(--portal-surface-panel);padding:0!important;margin:0!important;border:0!important;border-radius:0!important;}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"] {background:var(--portal-surface-panel);padding:0;margin:0;border:0;border-radius:0;}
 .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-table {margin:0;border-radius:0;}
 .portal-settings-workspace[data-portal-workflow-workspace="true"] .portal-studio,
 .portal-settings-workspace[data-portal-workflow-workspace="true"] #portal-models-workspace {height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
@@ -1365,12 +1365,12 @@ button[aria-label^="Configurar exibição"],
 .portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"],
 .portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"] > .flex,
 .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-scroll-host {
-  background:var(--portal-surface-panel)!important;
+  background:var(--portal-surface-panel);
 }
 .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-scroll-host {border:0;border-radius:0;box-shadow:none;scrollbar-gutter:auto;}
 .portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"] > .flex {margin:0;border:0;}
-.portal-tcc-workspace-summary {background-color:var(--portal-surface-panel)!important;}
-.portal-tcc-workspace-tabs {background-color:var(--portal-surface-panel)!important;}
+.portal-tcc-workspace-summary {background-color:var(--portal-surface-panel);}
+.portal-tcc-workspace-tabs {background-color:var(--portal-surface-panel);}
 .portal-tcc-workspace-tabs button:not(:focus-visible) {border-radius:9999px;}
-.portal-tcc-workspace-content {padding-bottom:20px!important;}
+.portal-tcc-workspace-content {padding-bottom:20px;}
 .portal-process-dialog-body {overscroll-behavior:contain;}
