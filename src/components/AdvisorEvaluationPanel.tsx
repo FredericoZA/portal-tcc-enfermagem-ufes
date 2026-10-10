@@ -59,6 +59,7 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
   const [draftSavedAt, setDraftSavedAt] = useState(initialDraft?.savedAt || '');
   const [serverSavedAt,setServerSavedAt]=useState('');
   const [autosaveRetry,setAutosaveRetry]=useState(0);
+  const [draftLoaded,setDraftLoaded]=useState(false);
   const saveInFlight=useRef(false);
   const savePending=useRef(false);
   const savedServerFingerprint=useRef('');
@@ -67,25 +68,30 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
   const fingerprint=JSON.stringify(answers);
 
   useEffect(() => {
-    let active = true;
-    const restored = readDraft(process);
+    let active=true;
+    const restored=readDraft(process);
+    setDraftLoaded(false);
+    savedServerFingerprint.current='';
+    attemptedFinalization.current='';
     setConfirmed(Boolean(restored?.confirmed));
-    setAnswers(restored?.answers || {});
-    setDraftSavedAt(restored?.savedAt || '');
+    setAnswers(restored?.answers||{});
+    setDraftSavedAt(restored?.savedAt||'');
+    setServerSavedAt('');
     setSchema(null);
     setError('');
-    if (restored) setNotice('Rascunho recuperado automaticamente após a atualização da página.');
-    if (canEvaluate) {
-      apiClient.getEvaluationSchema(process.id).then(value => { if(active)setSchema(value); }).catch(e=>{if(active)setError(e.message);});
-      apiClient.getEvaluationDraft(process.id).then(draft=>{
-        if(!active||!draft||draft.dataRevision!==process.dataRevision)return;
-        setAnswers(previous=>Object.keys(previous).length?previous:draft.answers);
-        savedServerFingerprint.current=JSON.stringify(draft.answers);
+    if(restored)setNotice('Rascunho local recuperado; verificando versão do servidor.');
+    if(!canEvaluate||process.avaliacao.status==='CONCLUIDO'){setDraftLoaded(true);return()=>{active=false;};}
+    void Promise.all([apiClient.getEvaluationSchema(process.id),apiClient.getEvaluationDraft(process.id)]).then(([value,draft])=>{
+      if(!active)return;
+      if(draft&&draft.dataRevision===process.dataRevision){
+        const localIsNewer=restored&&Date.parse(restored.savedAt)>Date.parse(draft.savedAt);
+        if(!localIsNewer){setAnswers(draft.answers);savedServerFingerprint.current=JSON.stringify(draft.answers);setDraftSavedAt(draft.savedAt);}
         setServerSavedAt(draft.savedAt);
-      }).catch(e=>{if(active)setError(e instanceof Error?e.message:'Não foi possível restaurar o rascunho do servidor.');});
-    }
-    return () => { active = false; };
-  }, [process.id, process.dataRevision, canEvaluate, schemaRetry]);
+      }
+      setSchema(value);
+    }).catch(error=>{if(active)setError(error instanceof Error?error.message:'Não foi possível carregar a avaliação.');}).finally(()=>{if(active)setDraftLoaded(true);});
+    return()=>{active=false;};
+  },[process.id,process.dataRevision,process.avaliacao.status,canEvaluate,schemaRetry]);
 
   useEffect(() => {
     if (!canEvaluate || process.avaliacao.status === 'CONCLUIDO') return;
@@ -97,7 +103,7 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
   }, [answers, confirmed, canEvaluate, process.id, process.dataRevision, process.avaliacao.status]);
 
   useEffect(()=>{
-    if(!canEvaluate||!schema||process.avaliacao.status==='CONCLUIDO'||fingerprint===savedServerFingerprint.current)return;
+    if(!draftLoaded||!canEvaluate||!schema||process.avaliacao.status==='CONCLUIDO'||fingerprint===savedServerFingerprint.current)return;
     const timer=window.setTimeout(()=>{
       if(saveInFlight.current){savePending.current=true;return;}
       saveInFlight.current=true;
@@ -110,7 +116,7 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
       });
     },600);
     return()=>window.clearTimeout(timer);
-  },[answers,fingerprint,canEvaluate,schema,process.id,process.dataRevision,process.avaliacao.status,autosaveRetry]);
+  },[answers,fingerprint,canEvaluate,schema,process.id,process.dataRevision,process.avaliacao.status,autosaveRetry,draftLoaded]);
 
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer); }, []);
   const studio = schema?.studio;
@@ -143,7 +149,7 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
     finally { setBusy(false); }
   };
   useEffect(()=>{
-    if(!canEvaluate||!schema||!released||busy||process.avaliacao.status==='CONCLUIDO'||!hasRequiredAnswers)return;
+    if(!draftLoaded||!canEvaluate||!schema||!released||busy||process.avaliacao.status==='CONCLUIDO'||!hasRequiredAnswers)return;
     if(fingerprint!==savedServerFingerprint.current||attemptedFinalization.current===fingerprint)return;
     const timer=window.setTimeout(()=>{
       if(finalizeInFlight.current||attemptedFinalization.current===fingerprint)return;
@@ -152,7 +158,7 @@ export function AdvisorEvaluationPanel({ process, canEvaluate, canReopen, onReop
       void submit().finally(()=>{finalizeInFlight.current=false;});
     },7000);
     return()=>window.clearTimeout(timer);
-  },[answers,fingerprint,schema,canEvaluate,released,busy,process.avaliacao.status,serverSavedAt,hasRequiredAnswers]);
+  },[answers,fingerprint,schema,canEvaluate,released,busy,process.avaliacao.status,serverSavedAt,hasRequiredAnswers,draftLoaded,autosaveRetry]);
 
   return <section id="evaluation-section" className="portal-card overflow-hidden" aria-labelledby="evaluation-title">
     <header className="portal-section-header flex flex-wrap items-center justify-between gap-3 p-4">
