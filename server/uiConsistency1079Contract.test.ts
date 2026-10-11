@@ -43,5 +43,5 @@ test('e-mail e formulário usam apresentação institucional UFES em edição di
 });
 
 test('rodada visual não altera a release publicada',()=>{
-  assert.equal(JSON.parse(read('package.json')).version,'1.0.79');
+  assert.equal(JSON.parse(read('package.json')).version,'1.0.80');
 });
