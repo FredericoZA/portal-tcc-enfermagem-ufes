@@ -96,6 +96,8 @@ test('Asten aceita somente callback HTTPS e segredo de webhook forte', () => {
     process.env.PORTAL_PUBLIC_URL = 'https://portal.example';
     process.env.ASTEN_CALLBACK_URL = 'https://portal.example/api/integrations/asten/webhook';
     process.env.ASTEN_WEBHOOK_SECRET = secret;
+    process.env.ASTEN_REQUIRE_CODE='false';
+    process.env.ASTEN_AUTHENTICATION_OPTION='2';
     assert.equal(getAstenSecurityPreflight().callbackConfigured, true);
     assert.equal(safeCompareWebhookSecret(secret), true);
     assert.equal(safeCompareWebhookSecret('fraco'), false);
@@ -145,7 +147,14 @@ test('Asten exige login e segredo de webhook exclusivo dos demais segredos', () 
     assert.equal(preflight.callbackConfigured, false);
 
     process.env.ASTEN_REQUIRE_LOGIN = 'true';
+    process.env.ASTEN_REQUIRE_CODE='false';
+    process.env.ASTEN_AUTHENTICATION_OPTION='2';
     assert.equal(getAstenSecurityPreflight().callbackConfigured, true);
+    process.env.ASTEN_AUTHENTICATION_OPTION='4';
+    assert.equal(getAstenSecurityPreflight().callbackConfigured,false);
+    process.env.ASTEN_AUTHENTICATION_OPTION='2';
+    process.env.ASTEN_REQUIRE_CODE='true';
+    assert.equal(getAstenSecurityPreflight().callbackConfigured,false);
   });
 });
 
