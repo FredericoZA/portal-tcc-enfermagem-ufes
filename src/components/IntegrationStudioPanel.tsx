@@ -1240,6 +1240,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
           <div className="min-h-0 bg-[var(--portal-surface-page)]" data-portal-email-direct-editor="true">
             <SettingsWorkspaceHeaderPortal>
               <div className="flex min-w-0 items-center gap-1.5">
+                {hideTabs&&initialTab==='workflow'&&<button type="button" onClick={()=>setActiveTab('workflow')} className="portal-settings-header-pill" title="Voltar à etapa do Fluxo" aria-label="Voltar a Fluxos"><ChevronLeft className="h-3.5 w-3.5"/>Voltar a Fluxos</button>}
                 <button type="button" onClick={()=>setPreviewMode('email')} className="portal-settings-header-pill" aria-label="Ver modelo de e-mail com dados fictícios"><Eye className="h-3.5 w-3.5"/>Ver modelo</button>
                 <button type="button" onClick={()=>setShowEmailHtmlAdvanced(value=>!value)} className="portal-settings-header-pill" aria-pressed={showEmailHtmlAdvanced}>
                   <Type className="h-3.5 w-3.5"/><span>HTML avançado</span>
