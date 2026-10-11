@@ -96,6 +96,7 @@ test('Asten aceita somente callback HTTPS e segredo de webhook forte', () => {
     process.env.PORTAL_PUBLIC_URL = 'https://portal.example';
     process.env.ASTEN_CALLBACK_URL = 'https://portal.example/api/integrations/asten/webhook';
     process.env.ASTEN_WEBHOOK_SECRET = secret;
+    process.env.ASTEN_AUTHENTICATION_OPTION='2';process.env.ASTEN_REQUIRE_CODE='false';
     assert.equal(getAstenSecurityPreflight().callbackConfigured, true);
     assert.equal(safeCompareWebhookSecret(secret), true);
     assert.equal(safeCompareWebhookSecret('fraco'), false);
@@ -109,6 +110,7 @@ test('Asten exige endpoint exato de webhook e rejeita query/fragmento no callbac
   withCleanEnvironment(() => {
     process.env.PORTAL_PUBLIC_URL = 'https://portal.example';
     process.env.ASTEN_WEBHOOK_SECRET = 'w'.repeat(48);
+    process.env.ASTEN_AUTHENTICATION_OPTION='2';process.env.ASTEN_REQUIRE_CODE='false';
 
     for (const callback of [
       'https://portal.example/api/integrations/asten/callback',
@@ -133,6 +135,7 @@ test('Asten exige login e segredo de webhook exclusivo dos demais segredos', () 
     process.env.ASTEN_CALLBACK_URL = 'https://portal.example/api/integrations/asten/webhook';
     process.env.ASTEN_WEBHOOK_SECRET = shared;
     process.env.PORTAL_SESSION_SECRET = shared;
+    process.env.ASTEN_AUTHENTICATION_OPTION='2';process.env.ASTEN_REQUIRE_CODE='false';
 
     let preflight = getAstenSecurityPreflight();
     assert.equal(preflight.webhookSecretSeparated, false);
