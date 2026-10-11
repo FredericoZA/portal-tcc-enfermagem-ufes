@@ -48,8 +48,8 @@ test('escala tipográfica reduz ruído e aumenta a hierarquia dos títulos', () 
   const formatters = read('src/utils/tableFormatters.ts');
 
   assert.match(tokens, /--portal-sheet-title-font-size: 18px/);
-  assert.match(tokens, /--portal-sheet-filter-label-font-size: 9px/);
-  assert.match(tokens, /--portal-sheet-filter-chip-font-size: 10px/);
+  assert.match(tokens, /--portal-sheet-filter-label-font-size: 11px/);
+  assert.match(tokens, /--portal-sheet-filter-chip-font-size: 11px/);
   assert.match(tokens, /--portal-sheet-body-font-size: 11px/);
   assert.match(sheet, /font-size: var\(--portal-sheet-title-font-size\)/);
   assert.match(sheet, /font-size: var\(--portal-sheet-body-font-size\)/);
