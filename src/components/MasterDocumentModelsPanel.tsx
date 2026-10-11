@@ -1,6 +1,6 @@
 import { portalConfirm } from '../services/portalDialogs';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Eye, FilePlus2, FileUp, Link2, Loader2, Merge, Plus, ShieldAlert, Sparkles, Trash2 } from 'lucide-react';
+import { CheckCircle2, Eye, FileText, FilePlus2, FileUp, Link2, Loader2, Merge, Plus, ShieldAlert, Sparkles, Trash2 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import { getVariableUsage, mergeVariableAcrossArtifacts, normalizeVariableKey, saveLocalStudio } from '../services/integrationStudioService';
 import { validateCourseStudio } from '../utils/courseStudioValidator';
