@@ -188,7 +188,7 @@ export async function callAsten(service: Service, params: Record<string, unknown
   } finally { clearTimeout(timer); }
 }
 
-function resolveAstenRepository(value: unknown): number {
+export function resolveAstenRepository(value: unknown): number {
   // A API responde com uma lista de repositórios, não com um ID solto.
   // Nunca percorrer recursivamente o objeto: Usuario.id não é Repositorio.id.
   const collection = Array.isArray(value) ? value : null;
