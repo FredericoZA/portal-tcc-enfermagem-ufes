@@ -30,7 +30,7 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
   return (
     <div id="avaliacoes-page-container" className="space-y-3 max-w-7xl mx-auto py-1.5">
       <div className="bg-[var(--portal-brand-header)] text-white p-3.5 sm:p-4 rounded-2xl border border-emerald-900/80 shadow-sm space-y-1">
-        <div className="text-emerald-200 text-[10px] font-extrabold uppercase tracking-widest leading-none">
+        <div className="text-emerald-200 text-xs font-extrabold uppercase tracking-widest leading-none">
           {profile.institutionAcronym} • {profile.departmentName || profile.institutionName}
         </div>
         <div className="flex items-center gap-2 mt-1">
@@ -39,7 +39,7 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
             Avaliações de TCC Sob Sua Orientação
           </h1>
         </div>
-        <p className="text-[10px] sm:text-[11px] text-emerald-100/95 font-medium leading-normal mt-0.5">
+        <p className="text-xs sm:text-xs text-emerald-100/95 font-medium leading-normal mt-0.5">
           Confira os dados do aluno, selecione o resultado e registre o parecer da banca.
         </p>
       </div>
@@ -66,7 +66,7 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
               <div className="space-y-2 max-w-2xl">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-black text-slate-900 tracking-tight">{proc.protocolo}</span>
-                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-sm uppercase tracking-wider ${
+                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-sm uppercase tracking-wider ${
                     proc.avaliacao.status === 'CONCLUIDO' ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-950 border border-amber-300'
                   }`}>
                     {proc.avaliacao.status === 'CONCLUIDO' ? 'Avaliação Concluída' : 'Avaliação Pendente'}
