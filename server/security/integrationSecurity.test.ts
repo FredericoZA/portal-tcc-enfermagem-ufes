@@ -159,6 +159,15 @@ test('Asten exige login e segredo de webhook exclusivo dos demais segredos', () 
 });
 
 
+test('Asten não confunde HTTP 200 com operação rejeitada pelo provedor', async()=>{
+  await withCleanEnvironmentAsync(async()=>{
+    const originalFetch=globalThis.fetch;
+    (globalThis as any).fetch=async()=>new Response(JSON.stringify({response:{data:{listaAvisos:{aviso:{tipo:'E',mensagem:'Permissão negada'}}}}}),{status:200,headers:{'content-type':'application/json'}});
+    try{await assert.rejects(callAsten('getIdentificador',{},'token-de-teste-comprido-1234'),/Permissão negada/);}
+    finally{globalThis.fetch=originalFetch;}
+  });
+});
+
 test('Asten rejeita credencial com caracteres de controle antes de acessar a rede', async () => {
   await withCleanEnvironmentAsync(async () => {
     process.env.ASTEN_INTEGRATION_ENABLED = 'true';
