@@ -156,6 +156,7 @@ export interface AstenWebhookEvent {
   processedAt?: string;
   attempts?: number;
   retryAfter?: string;
+  processingLeaseUntil?: string;
   lastError?: string;
 }
 
