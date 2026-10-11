@@ -1238,7 +1238,7 @@ async function archiveSignatureJobAutomatically(job:SignatureJob):Promise<Signat
     job.signedAt=job.signedAt||job.completedAt||new Date().toISOString();
     const signerEvidence=await callAsten('getSignatariosPorEnvelope',{idEnvelope:job.providerEnvelopeId},asten.token);
     assertAstenEnvelopeSigners(signerEvidence,job.signers.map(signer=>({email:signer.email,order:signer.signingOrder})));
-    const response=await callAsten('downloadPDFEnvelopeDocs',{idEnvelope:job.providerEnvelopeId},asten.token);
+    const response=await callAsten('downloadPDFEnvelopeDocs',{idEnvelope:job.providerEnvelopeId,incluirDocs:'N'},asten.token);
     const pdf=extractAstenSignedPdf(response);
     const fileName=buildPortalDriveFileName({protocol:process.protocolo,title:process.titulo,studentNames:[process.aluno1.nome,process.aluno2?.nome].filter(Boolean) as string[],documentType:job.documentType,version:job.documentVersion,lifecycle:'ASSINADO'});
     const signedSha256=createHash('sha256').update(pdf).digest('hex');
