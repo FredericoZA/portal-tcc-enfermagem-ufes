@@ -250,7 +250,7 @@ button[aria-label^="Configurar exibição"],
   border-radius: 8px;
   background: var(--portal-surface-card);
   color: var(--portal-text-dark);
-  font-size: 10px;
+  font-size: var(--portal-font-size-small);
   font-weight: 750;
   cursor: pointer;
 }
@@ -269,9 +269,9 @@ button[aria-label^="Configurar exibição"],
   border-radius: 8px;
   background: var(--portal-brand-header);
   color: var(--portal-text-light);
-  font-size: 10px;
+  font-size: var(--portal-font-size-small);
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.2;
   letter-spacing: 0;
   text-transform: none;
   cursor: pointer;
@@ -301,7 +301,7 @@ button[aria-label^="Configurar exibição"],
   border-radius: 8px;
   background: var(--portal-surface-card);
   color: var(--portal-text-dark);
-  font-size: 10px;
+  font-size: var(--portal-font-size-small);
   font-weight: 750;
   line-height: 1;
   letter-spacing: 0;
@@ -1168,7 +1168,7 @@ button[aria-label^="Configurar exibição"],
   min-width: 96px;
   min-height: 30px;
   padding: 4px 10px;
-  font-size: 10px;
+  font-size: var(--portal-font-size-small);
 }
 
 .portal-core-sort-actions,
