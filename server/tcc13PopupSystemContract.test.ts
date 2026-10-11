@@ -115,7 +115,7 @@ test('os três workspaces de registros são popups-planilha full-bleed com rolag
   const scroll=read('src/components/TableScrollWrapper.tsx');
   assert.match(modal,/new Set\(\['authorizations', 'signature-ledger', 'audit-ledger'\]\)/);
   assert.match(modal,/sheetWorkspace \? 'flex flex-col overflow-hidden'/);
-  assert.match(modal,/sheetWorkspace \? 'h-\[calc\(100dvh-48px\)\] max-w-\[1500px\]'/);
+  assert.match(modal,/sheetWorkspace \? 'h-auto max-h-\[calc\(100dvh-48px\)\]'/);
   assert.match(scroll,/fillHeight \? 'none'/);
   assert.match(scroll,/fillHeight \? '100%' : undefined/);
 
@@ -125,7 +125,7 @@ test('os três workspaces de registros são popups-planilha full-bleed com rolag
     'src/pages/AuditLogsPage.tsx',
   ]){
     const source=read(file);
-    assert.match(source,/flex h-full min-h-0 flex-col/);
+    assert.match(source,/flex min-h-0 flex-col/);
     assert.match(source,/TableScrollWrapper fillHeight/);
   }
 });
@@ -153,7 +153,7 @@ test('ajustes estéticos recentes preservam autosave silencioso e integrações 
   const identity=read('src/components/CommissionIdentityPanel.tsx');
   const integrations=read('src/components/InfrastructureIntegrationsPanel.tsx');
   assert.doesNotMatch(identity,/Alterações salvas automaticamente/);
-  assert.match(identity,/portal-identity-panel space-y-2/);
+  assert.match(identity,/portal-identity-panel space-y-\[5px\] p-0/);
   assert.match(integrations,/lg:col-span-2/);
   assert.match(integrations,/lg:grid-cols-4/);
   assert.doesNotMatch(integrations,/id="department-email-title"/);
@@ -193,7 +193,7 @@ test('editor de formulário é o próprio formulário e não um painel lateral d
   assert.match(studio,/data-portal-form-direct-editor="true"/);
   assert.match(studio,/aria-label="Selecionar formulário"/);
   assert.match(studio,/title="Adicionar formulário"/);
-  assert.match(studio,/title="Excluir formulário"/);
+  assert.match(studio,/title="Excluir somente este formulário"/);
   assert.match(studio,/universityLogoUrl/);
   assert.match(studio,/title="Alterar logo da UFES"/);
   assert.match(studio,/title="Alterar logo do curso"/);
@@ -230,8 +230,8 @@ test('editor de e-mail usa modelo único autoeditável e autocomplete sem criar 
   const studio=read('src/components/IntegrationStudioPanel.tsx');
   assert.match(studio,/data-portal-email-direct-editor="true"/);
   assert.match(studio,/aria-label="Selecionar e-mail"/);
-  assert.match(studio,/title="Adicionar e-mail"/);
-  assert.match(studio,/title="Excluir e-mail"/);
+  assert.match(studio,/title="Adicionar outro modelo de e-mail"/);
+  assert.match(studio,/title="Excluir somente este modelo de e-mail"/);
   assert.match(studio,/HTML avançado/);
   assert.match(studio,/Digite &lt;&lt; para escolher uma variável disponível/);
   assert.match(studio,/const TemplateVariableControl/);
@@ -256,8 +256,8 @@ test('documentos e variáveis exibem um documento por vez e sem consolidar manua
   const docs=read('src/components/MasterDocumentModelsPanel.tsx');
   assert.match(docs,/data-portal-document-direct-editor="true"/);
   assert.match(docs,/aria-label="Selecionar documento"/);
-  assert.match(docs,/title="Adicionar documento"/);
-  assert.match(docs,/title="Excluir documento"/);
+  assert.match(docs,/title="Adicionar arquivo ou alterar a origem do documento"/);
+  assert.match(docs,/title="Excluir somente este documento"/);
   assert.match(docs,/Atualizar variáveis/);
   assert.match(docs,/sincronizada\(s\) automaticamente/);
   assert.match(docs,/variableUsageTitle/);
