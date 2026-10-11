@@ -1388,9 +1388,15 @@ button[aria-label^="Configurar exibição"],
 .portal-settings-workspace[data-portal-workflow-workspace="true"] .portal-studio > div:last-child {flex:0 1 auto;overflow:visible;}
 .portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-editor="true"] {flex:0 1 auto;overflow:visible;padding:0;}
 .portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-editor="true"] > section:last-child {flex:0 1 auto;min-height:0;}
-.portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-stage-sheet="true"] {flex:0 1 auto;max-height:calc(100dvh - 380px);overflow:auto;}
+.portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-stage-sheet="true"] {flex:0 1 auto;max-height:max(160px,calc(100dvh - 380px));overflow:auto;}
 @media(max-width:640px){
   .portal-settings-workspace {max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);}
   .portal-settings-workspace:not([data-portal-sheet-workspace="true"]) .portal-settings-single-pane {padding:15px;}
-  .portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-stage-sheet="true"] {max-height:calc(100dvh - 330px);}
+  .portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-stage-sheet="true"] {max-height:max(160px,calc(100dvh - 330px));}
+}
+
+/* Telas baixas: não comprimir a planilha de Fluxos até zero; permitir scroll de todo o conteúdo como fallback. */
+@media(max-height:560px){
+ .portal-settings-workspace[data-portal-workflow-workspace="true"] .portal-settings-single-pane {overflow-y:auto;}
+ .portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-stage-sheet="true"] {min-height:160px;}
 }
