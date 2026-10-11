@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, parseAstenAccountAndRepository, extractAstenSignedPdf } from './asten';
+import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, parseAstenAccountAndRepository, extractAstenSignedPdf, callAsten } from './asten';
 import { buildGoogleAuthorizationUrl, decodeGoogleOAuthState, getGoogleWorkspaceScopes } from './googleWorkspace';
 import { buildSupabaseAdminHeaders } from './supabase';
 import { buildProtocol, emailMatchesDomains } from '../../src/utils/installationProfile';
@@ -149,4 +149,41 @@ test('outbox Asten bloqueia recriação após resultado ambíguo', () => {
   assert.match(migration,/return jsonb_build_object\('outcome','UNCERTAIN'\)/);
   assert.match(migration,/asten_transactional_outbox', true/);
   assert.match(migration,/force row level security/i);
+});
+
+
+test('Asten bloqueia mutações mas permite consultar envelopes sem habilitar envios', async () => {
+  const savedFlag=process.env.ASTEN_INTEGRATION_ENABLED;
+  const savedPilot=process.env.ASTEN_PILOT_APPROVED;
+  const originalFetch=globalThis.fetch;
+  const called:string[]=[];
+  try{
+    process.env.ASTEN_INTEGRATION_ENABLED='false';
+    process.env.ASTEN_PILOT_APPROVED='false';
+    globalThis.fetch=async (request)=>{
+      const url=String(request);
+      called.push(url);
+      if(url.endsWith('/getIdentificador')){
+        return new Response(JSON.stringify({response:{Usuario:{id:26}}}),{status:200,headers:{'content-type':'application/json'}});
+      }
+      return new Response(JSON.stringify({response:{status:2}}),{status:200,headers:{'content-type':'application/json'}});
+    };
+    const token='token-de-teste-exclusivamente-ficticio';
+    const identity=await callAsten('getIdentificador',{},token);
+    assert.equal(identity.Usuario.id,26);
+    await callAsten('getRepositoriosDoUsuario',{idProprietario:26},token);
+    await callAsten('getDadosEnvelope',{idEnvelope:11},token);
+    await callAsten('getSignatariosPorEnvelope',{idEnvelope:11},token);
+    await callAsten('downloadPDFEnvelopeDocs',{idEnvelope:11,incluirDocs:'N'},token);
+    for(const service of ['inserirEnvelope','encaminharEnvelopeParaAssinaturas','reenviarLinksDeAssinatura','cancelarEnvelope'] as const){
+      await assert.rejects(callAsten(service,{},token),/bloquead/i);
+    }
+    assert.equal(called.length,5,'As operações proibidas não devem alcançar a rede da Asten');
+  }finally{
+    globalThis.fetch=originalFetch;
+    if(savedFlag===undefined)delete process.env.ASTEN_INTEGRATION_ENABLED;
+    else process.env.ASTEN_INTEGRATION_ENABLED=savedFlag;
+    if(savedPilot===undefined)delete process.env.ASTEN_PILOT_APPROVED;
+    else process.env.ASTEN_PILOT_APPROVED=savedPilot;
+  }
 });
