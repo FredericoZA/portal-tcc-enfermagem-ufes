@@ -7,7 +7,7 @@ import { retryAfterPortalReauthentication } from '../services/reauthentication';
 interface Props { isMaster: boolean; }
 interface CommissionMemberInfo { id: string; name: string; email?: string; active: boolean; }
 
-const inputClass = 'w-full min-h-8 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200';
+const inputClass = 'w-full min-h-8 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200';
 const fieldClass = 'rounded-lg border border-slate-300 p-2.5';
 const labelClass = 'mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-600';
 
@@ -173,9 +173,9 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
   const updateMember = (id: string, updates: Partial<CommissionMemberInfo>) => setMembers(prev => prev.map(member => member.id === id ? { ...member, ...updates } : member));
 
   return (
-    <section className="portal-identity-panel space-y-2 p-3 sm:p-4" style={{ backgroundColor: 'var(--portal-surface-page)' }} aria-label="Dados de rodapé e identidade">
+    <section className="portal-identity-panel space-y-[5px] p-0" style={{ backgroundColor: 'var(--portal-surface-page)' }} aria-label="Dados de rodapé e identidade">
       {statusText && <div className="text-right text-[9px] font-bold text-[var(--portal-brand-action)]">{statusText}</div>}
-      <div className="grid gap-2 md:grid-cols-2">
+      <div className="grid gap-[5px] md:grid-cols-2">
         <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>Nome da Secretaria / Administrador Master</span><input value={masterName} onChange={event => setMasterName(event.target.value)} onBlur={() => void persistRegularFields()} className={inputClass}/></label>
         <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>E-mail de acesso do Usuário Master</span><input type="email" value={masterEmail} onChange={event => setMasterEmail(event.target.value)} onBlur={() => void persistSensitiveEmails()} className={inputClass}/></label>
         <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>Nome da Presidente da Comissão</span><input value={presidentName} onChange={event => setPresidentName(event.target.value)} onBlur={() => void persistRegularFields()} className={inputClass}/></label>

@@ -38,5 +38,5 @@ test('popup e logs preservam o contrato canônico na release 1.0.78',()=>{
   assert.match(settings,/aria-label="Configurar exibição da planilha"/);
   assert.match(css,/--portal-sheet-title-divider:\s*5px/);
   assert.match(css,/--portal-sheet-content-divider:\s*15px/);
-  assert.equal(pkg.version,'1.0.78');
+  assert.equal(pkg.version,'1.0.79');
 });

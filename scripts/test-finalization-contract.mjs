@@ -148,7 +148,7 @@ assert.doesNotMatch(studio, /<strong>Fonte oficial única\.<\/strong>/);
 assert.doesNotMatch(studio, />Finalidade no fluxo</);
 
 assert.match(masterModels, /Nome do novo documento/);
-assert.match(masterModels, /title="Adicionar documento"/);
+assert.match(masterModels, /title="Adicionar arquivo ou alterar a origem do documento"/);
 assert.match(masterModels, /data-portal-document-direct-editor="true"/);
 assert.match(masterModels, /aria-label="Selecionar documento"/);
 assert.doesNotMatch(masterModels, />Consolidar</);

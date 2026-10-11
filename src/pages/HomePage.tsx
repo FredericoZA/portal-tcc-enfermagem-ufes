@@ -1253,7 +1253,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     }}
                     className={`portal-calendar-day-cell border-r border-b border-slate-200 p-2 flex flex-col justify-between transition-all duration-150 relative group select-none ${
                       hasEvents
-                        ? 'bg-white border-slate-300 cursor-pointer min-h-[118px] shadow-2xs active:scale-[0.98]'
+                        ? 'bg-white border-slate-200 cursor-pointer min-h-[118px] active:scale-[0.98]'
                         : 'bg-white border-slate-200 cursor-default min-h-[118px]'
                     }`}
                     title={hasEvents ? `Clique para abrir as ${totalEvents} defesas do dia ${dayNum}` : undefined}

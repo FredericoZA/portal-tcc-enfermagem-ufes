@@ -125,7 +125,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       data-portal-workflow-workspace={workflowWorkspace ? 'true' : 'false'}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       data-portal-compact={compactWorkspace ? 'true' : 'false'}
-      className={`portal-settings-workspace flex w-full flex-col overflow-hidden ${sheetWorkspace ? 'h-[calc(100dvh-48px)] max-w-[1500px]' : compactWorkspace ? 'h-auto max-h-[calc(100dvh-48px)] max-w-[1240px]' : 'h-[calc(100dvh-48px)] max-w-[1500px]'}`}
+      className={`portal-settings-workspace flex w-fit min-w-[min(640px,calc(100vw-48px))] max-w-[calc(100vw-48px)] flex-col overflow-hidden ${sheetWorkspace ? 'h-auto max-h-[calc(100dvh-48px)]' : compactWorkspace ? 'h-auto max-h-[calc(100dvh-48px)]' : 'h-auto max-h-[calc(100dvh-48px)]'}`}
       style={{ backgroundColor: 'var(--portal-surface-page)' }}
     >
       <header className="portal-settings-workspace-header">

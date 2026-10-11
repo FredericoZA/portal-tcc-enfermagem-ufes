@@ -1237,27 +1237,34 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         )}
 
         {activeTab === 'emails' && selectedEmail && (
-          <div className="min-h-full bg-[var(--portal-surface-page)] pb-5" data-portal-email-direct-editor="true">
+          <div className="min-h-0 bg-[var(--portal-surface-page)]" data-portal-email-direct-editor="true">
             <SettingsWorkspaceHeaderPortal>
               <div className="flex min-w-0 items-center gap-1.5">
-                <button type="button" onClick={createEmailTemplate} className="portal-toolbar-icon-button" title="Adicionar e-mail" aria-label="Adicionar e-mail"><Plus className="h-3.5 w-3.5"/></button>
-                <button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-30" title="Excluir e-mail" aria-label="Excluir e-mail"><Trash2 className="h-3.5 w-3.5"/></button>
+                {hideTabs&&initialTab==='workflow'&&<button type="button" onClick={()=>setActiveTab('workflow')} className="portal-settings-header-pill" title="Voltar à etapa do Fluxo" aria-label="Voltar a Fluxos"><ChevronLeft className="h-3.5 w-3.5"/>Voltar a Fluxos</button>}
                 <button type="button" onClick={()=>setPreviewMode('email')} className="portal-settings-header-pill" aria-label="Ver modelo de e-mail com dados fictícios"><Eye className="h-3.5 w-3.5"/>Ver modelo</button>
                 <button type="button" onClick={()=>setShowEmailHtmlAdvanced(value=>!value)} className="portal-settings-header-pill" aria-pressed={showEmailHtmlAdvanced}>
                   <Type className="h-3.5 w-3.5"/><span>HTML avançado</span>
                 </button>
                 <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-white/60"/>
+                <Mail className="h-3.5 w-3.5 shrink-0 text-white" aria-hidden="true"/>
                 <select value={selectedEmail.id} onChange={event=>setSelectedEmailId(event.target.value)}
-                  className="w-[clamp(138px,16vw,226px)] max-w-[33vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  className="w-[clamp(115px,13vw,172px)] max-w-[25vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                   aria-label="Selecionar e-mail" title={selectedEmail.name}>
                   {emailTemplates.map(email=><option key={email.id} value={email.id}>{email.name}</option>)}
                 </select>
               </div>
             </SettingsWorkspaceHeaderPortal>
 
-            <div className="mx-auto w-full max-w-5xl p-3 pb-5">
-              <article className="overflow-visible rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] shadow-sm">
-                <div className="grid gap-2 border-b border-slate-300 p-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mx-auto w-full max-w-[880px]">
+              <article className="overflow-visible rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-card)] p-[5px] shadow-sm">
+                <div className="grid gap-[5px] border-b border-slate-300 bg-[var(--portal-surface-panel)] p-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="col-span-full flex items-center justify-between gap-2">
+                    <strong className="text-[10px] font-black uppercase text-slate-700">Configuração deste e-mail</strong>
+                    <div className="flex items-center gap-1.5">
+                      <button type="button" onClick={createEmailTemplate} className="inline-flex min-h-8 items-center gap-1 rounded-full border border-slate-300 bg-white px-3 text-[10px] font-semibold text-slate-800" title="Adicionar outro modelo de e-mail"><Plus className="h-3.5 w-3.5"/>Adicionar</button>
+                      <button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="inline-flex min-h-8 items-center gap-1 rounded-full border border-slate-300 bg-white px-3 text-[10px] font-semibold text-rose-700 disabled:opacity-30" title="Excluir somente este modelo de e-mail" aria-label={`Excluir e-mail ${selectedEmail.name}`}><Trash2 className="h-3.5 w-3.5"/>Excluir</button>
+                    </div>
+                  </div>
                   <label className="lg:col-span-2"><span className={labelClass}>Nome da rotina</span><input value={selectedEmail.name} onChange={event=>updateSelectedEmail({name:event.target.value})} className={inputClass}/></label>
                   <label><span className={labelClass}>Destinatário</span><TemplateVariableControl value={selectedEmail.recipient||''} onChange={value=>updateSelectedEmail({recipient:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Destinatário"/></label>
                   <label><span className={labelClass}>Responder para</span><TemplateVariableControl value={selectedEmail.replyTo||''} onChange={value=>updateSelectedEmail({replyTo:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Responder para"/></label>
@@ -1347,22 +1354,22 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         )}
 
         {activeTab === 'forms' && selectedForm && (
-          <div className="min-h-full bg-[var(--portal-surface-page)] pb-5" data-portal-form-direct-editor="true">
+          <div className="min-h-0 bg-[var(--portal-surface-page)]" data-portal-form-direct-editor="true">
             <SettingsWorkspaceHeaderPortal>
               <div className="flex min-w-0 items-center gap-1.5">
                 <button type="button" onClick={createFormTemplate} className="portal-toolbar-icon-button" title="Adicionar formulário" aria-label="Adicionar formulário"><Plus className="h-3.5 w-3.5"/></button>
-                <button type="button" onClick={()=>void deleteSelectedForm()} disabled={formTemplates.length<=1} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-30" title="Excluir formulário" aria-label="Excluir formulário"><Trash2 className="h-3.5 w-3.5"/></button>
                 <button type="button" onClick={()=>setPreviewMode('form')} className="portal-settings-header-pill" aria-label="Ver formulário preenchido com dados fictícios"><Eye className="h-3.5 w-3.5"/>Ver modelo</button>
                 <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-white/60"/>
+                <ClipboardList className="h-3.5 w-3.5 shrink-0 text-white" aria-hidden="true"/>
                 <select value={selectedForm.id} onChange={event=>setSelectedFormId(event.target.value)}
-                  className="w-[clamp(138px,16vw,226px)] max-w-[33vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  className="w-[clamp(115px,13vw,172px)] max-w-[25vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                   aria-label="Selecionar formulário" title={selectedForm.title}>
                   {formTemplates.map(form=><option key={form.id} value={form.id}>{form.title}</option>)}
                 </select>
               </div>
             </SettingsWorkspaceHeaderPortal>
 
-            <div className="mx-auto w-full max-w-4xl p-3 pb-5">
+            <div className="mx-auto w-full max-w-[810px]">
               <article className="overflow-hidden rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] shadow-sm" style={{fontFamily:brandKit.fontFamily}}>
                 <div className="flex items-center gap-3 border-b-[5px] border-white bg-[var(--portal-brand-header)] px-4 py-3">
                   <label className="group relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white p-1" title="Alterar logo da UFES">
@@ -1383,6 +1390,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                     <div className="text-[9px] font-black uppercase tracking-[0.14em] text-white/85">{brandKit.institutionName}</div>
                     <div className="mt-1 text-[11px] font-black uppercase leading-tight text-white">{brandKit.courseName}</div>
                   </div>
+                  <button type="button" onClick={()=>void deleteSelectedForm()} disabled={formTemplates.length<=1} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/70 bg-white text-rose-700 disabled:opacity-40" title="Excluir somente este formulário" aria-label={`Excluir formulário ${selectedForm.title}`}><Trash2 className="h-4 w-4"/></button>
                 </div>
 
                 {selectedFormDesign.bannerImageUrl ? (
@@ -1492,8 +1500,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         {activeTab === 'workflow' && (
           <div className="space-y-3 pb-5" data-portal-workflow-editor="true">
             <section
-              className="overflow-hidden rounded-xl border border-[var(--portal-border)]"
-              style={{ backgroundColor: 'var(--portal-surface-inner)' }}
+              className="overflow-hidden rounded-lg"
+              style={{ backgroundColor: 'var(--portal-surface-page)' }}
               aria-labelledby="workflow-timeline-title"
             >
               <div className="flex items-center justify-between px-4 pt-3">
@@ -1554,14 +1562,14 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                   </div>
                 </div>
 
-                <div className="grid gap-2 border-b border-slate-300 p-3 md:grid-cols-[1fr_.9fr_1.2fr]">
+                <div className="grid gap-2 border-b border-slate-300 p-3 md:grid-cols-[1fr_.9fr_1.2fr] [&_input]:text-[10px] [&_input]:text-center">
                   <div><label className={labelClass}>Título da etapa</label><input value={selectedWorkflowStage.title} onChange={event=>updateWorkflowStage(selectedWorkflowStage.id,{title:event.target.value})} className={inputClass}/></div>
                   <div><label className={labelClass}>Evento disparador</label><input list={`workflow-event-catalog-${selectedWorkflowStage.id}`} value={selectedWorkflowStage.triggerEvent} onChange={event=>updateWorkflowStage(selectedWorkflowStage.id,{triggerEvent:event.target.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')})} className={inputClass}/><datalist id={`workflow-event-catalog-${selectedWorkflowStage.id}`}>{workflowEvents.map(([value,label])=><option key={value} value={value}>{label}</option>)}</datalist></div>
                   <div><label className={labelClass}>Objetivo da etapa</label><input value={selectedWorkflowStage.description} onChange={event=>updateWorkflowStage(selectedWorkflowStage.id,{description:event.target.value})} className={inputClass}/></div>
                 </div>
 
-                <div className="overflow-auto" data-portal-workflow-stage-sheet="true">
-                  <table className="w-full min-w-[1180px] border-collapse text-left text-[10px]">
+                <div className="overflow-auto [&_input]:text-center [&_select]:text-center" data-portal-workflow-stage-sheet="true">
+                  <table className="w-full min-w-[1180px] border-collapse text-center text-[10px]">
                     <thead>
                       <tr className="text-white" style={{ backgroundColor:'var(--portal-brand-header)' }}>
                         <th className="w-16 border-r border-white/25 px-2 py-2 text-center">Usar</th>
@@ -1585,9 +1593,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                           <td className="border-r border-slate-300 px-2 py-2">
                             {action ? <div className="flex items-center justify-center gap-1"><span className="min-w-5 text-center font-black text-slate-700">{actionIndex+1}</span><button type="button" className="portal-toolbar-icon-button !h-6 !min-h-6 !w-6 !min-w-6" disabled={actionIndex===0} onClick={()=>moveWorkflowAction(selectedWorkflowStage.id,actionIndex,-1)} aria-label={`Mover ${action.title} para cima`}>↑</button><button type="button" className="portal-toolbar-icon-button !h-6 !min-h-6 !w-6 !min-w-6" disabled={actionIndex===selectedWorkflowStage.actions.length-1} onClick={()=>moveWorkflowAction(selectedWorkflowStage.id,actionIndex,1)} aria-label={`Mover ${action.title} para baixo`}>↓</button></div> : <span className="block text-center text-slate-400">—</span>}
                           </td>
-                          <td className="border-r border-slate-300 px-2 py-2 font-black uppercase text-slate-600">{row.detail}</td>
+                          <td className="border-r border-slate-300 px-2 py-2 text-center font-black uppercase text-slate-600">{row.detail}</td>
                           <td className="border-r border-slate-300 px-2 py-2"><input disabled={!action} value={action?.title||row.label} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{title:event.target.value})} className={inputClass}/></td>
-                          <td className="border-r border-slate-300 px-2 py-2"><input disabled={!action} value={action?.recipientOrDetail||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder={action?'Detalhe opcional':'Selecione o item'}/></td>
+                          <td className="border-r border-slate-300 px-2 py-2">{action?.type==='email'&&action.refId==='email-reserva'
+                            ? <button type="button" onClick={()=>{setSelectedEmailId('email-reserva');setActiveTab('emails');}} title="Editar o destinatário no modelo Solicitação de reserva" className="w-full cursor-pointer rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-center text-[10px] font-semibold text-[var(--portal-brand-action)] underline underline-offset-2">{emailTemplates.find(item=>item.id===action.refId)?.recipient||'Definir destinatário no modelo de e-mail'}</button>
+                            : <input disabled={!action} value={action?.recipientOrDetail||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder={action?'Detalhe opcional':'Selecione o item'}/>}</td>
                           <td className="border-r border-slate-300 px-2 py-2">
                             <div className="grid grid-cols-3 gap-1">
                               <select disabled={!action} value={condition?.fieldKey||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{condition:event.target.value?{fieldKey:event.target.value,operator:condition?.operator||'EQUALS',value:condition?.value||''}:undefined})} className={inputClass}><option value="">Sempre executar</option>{matrixColumns.map(item=><option key={item.id} value={normalizeVariableKey(item.name)}>{item.label||item.name}</option>)}</select>

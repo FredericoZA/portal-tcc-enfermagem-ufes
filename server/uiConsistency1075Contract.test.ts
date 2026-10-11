@@ -54,5 +54,5 @@ test('lista da Comissão usa superfície do popup e mantém branco nos campos e 
 });
 
 test('release atual é 1.0.78', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.78');
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.79');
 });
