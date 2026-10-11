@@ -98,5 +98,5 @@ test('Indicadores preserva margens por ser página de cards',()=>{
 });
 
 test('release Portal TCC permanece em 1.0.78 nesta rodada visual',()=>{
-  assert.equal(JSON.parse(read('package.json')).version,'1.0.79');
+  assert.equal(JSON.parse(read('package.json')).version,'1.0.80');
 });
