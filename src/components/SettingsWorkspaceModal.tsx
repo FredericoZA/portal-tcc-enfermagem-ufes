@@ -95,7 +95,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
                 : { backgroundColor: 'var(--portal-surface-inner)' }}
             >
               {Icon && <Icon className="mt-0.5 h-4 w-4 shrink-0"/>}
-              <span className="min-w-0"><strong className="block text-[11px] font-black uppercase">{section.label}</strong>{section.description && <span className={`mt-0.5 block text-[9px] leading-4 ${selected ? 'text-white/80' : 'text-slate-500'}`}>{section.description}</span>}</span>
+              <span className="min-w-0"><strong className="block text-xs font-black uppercase">{section.label}</strong>{section.description && <span className={`mt-0.5 block text-xs leading-4 ${selected ? 'text-white/80' : 'text-slate-500'}`}>{section.description}</span>}</span>
             </button>;
           })}
         </div>
