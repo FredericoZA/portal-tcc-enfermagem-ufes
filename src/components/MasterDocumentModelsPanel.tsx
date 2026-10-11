@@ -43,6 +43,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const [links, setLinks] = useState<Record<string, string>>({});
   const [newModelName, setNewModelName] = useState('');
   const [showNewModel, setShowNewModel] = useState(false);
+  const [showImportControls, setShowImportControls] = useState(false);
   const [mergeTargets, setMergeTargets] = useState<Record<string,string>>({});
   const [pendingSlots, setPendingSlots] = useState<Array<[string, string]>>([]);
   const [previewType, setPreviewType] = useState('');
@@ -259,11 +260,9 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   return <section className="portal-master-models-catalog min-h-0 bg-[var(--portal-surface-page)] pb-0" data-portal-document-direct-editor="true">
     <SettingsWorkspaceHeaderPortal>
       <div className="flex min-w-0 items-center gap-1.5">
-        <button type="button" onClick={()=>setShowNewModel(value=>!value)} className="portal-toolbar-icon-button" title="Adicionar documento" aria-label="Adicionar documento"><Plus className="h-3.5 w-3.5"/></button>
-        <button type="button" onClick={()=>void removeModel(type,String(model?.label||label))} disabled={Boolean(working)} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-30" title="Excluir documento" aria-label="Excluir documento">{deleting?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Trash2 className="h-3.5 w-3.5"/>}</button>
-        {hasFile&&['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)&&<button type="button" onClick={()=>void generateSamplePreview(type)} disabled={samplePreviewLoading===type} className="portal-settings-header-pill"><Eye className="h-3.5 w-3.5"/>{samplePreviewLoading===type?'Gerando…':'Ver modelo'}</button>}
+        <FileText className="h-3.5 w-3.5 shrink-0 text-white" aria-hidden="true"/>
         <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-white/60"/>
-        <select value={type} onChange={event=>setSelectedType(event.target.value)} className="w-[clamp(138px,16vw,226px)] max-w-[33vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm" aria-label="Selecionar documento" title={String(model?.label||label)}>
+        <select value={type} onChange={event=>setSelectedType(event.target.value)} className="w-[clamp(120px,13vw,172px)] max-w-[28vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm" aria-label="Selecionar documento" title={String(model?.label||label)}>
           {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{models[slotType]?.label||slotLabel}</option>)}
         </select>
       </div>
@@ -289,17 +288,25 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
           <strong className="block truncate text-[12px] text-slate-900">{model?.label||label}</strong>
           <span className="block truncate text-[9px] text-slate-500">{hasFile?`${model.fileName} · v${model.activeVersion||1}`:'Aguardando DOCX'}{model?.variables?.length?` · ${model.variables.length} variáveis`:''}</span>
         </div>
-        {integrityReady?<CheckCircle2 className="h-4 w-4 text-[var(--portal-brand-action)]"/>:<ShieldAlert className="h-4 w-4 text-amber-700"/>}
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <button type="button" onClick={()=>setShowNewModel(value=>!value)} className={action} title="Criar outro modelo"><Plus className="h-3 w-3"/>Novo modelo</button>
+          <button type="button" onClick={()=>setShowImportControls(value=>!value)} className={action} aria-expanded={showImportControls} title="Adicionar arquivo ou alterar a origem do documento"><FilePlus2 className="h-3 w-3"/>Adicionar documento</button>
+          {hasFile&&['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)&&<button type="button" onClick={()=>void generateSamplePreview(type)} disabled={samplePreviewLoading===type} className={action} aria-label="Ver modelo demonstrativo"><Eye className="h-3 w-3"/>{samplePreviewLoading===type?'Gerando…':'Ver modelo'}</button>}
+          <button type="button" onClick={()=>void removeModel(type,String(model?.label||label))} disabled={Boolean(working)} className="inline-flex min-h-8 items-center justify-center rounded-full border border-slate-300 bg-white px-2 text-rose-700 disabled:opacity-40" title="Excluir somente este documento" aria-label={`Excluir o documento ${model?.label||label}`}>{deleting?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Trash2 className="h-3.5 w-3.5"/>}</button>
+          {integrityReady?<CheckCircle2 className="h-4 w-4 text-[var(--portal-brand-action)]"/>:<ShieldAlert className="h-4 w-4 text-amber-700"/>}
+        </div>
       </div>
 
       <div className="space-y-3 p-3">
-        {linkImportEnabled&&<div className="flex gap-1.5">
-          <input aria-label={`Link do modelo ${label}`} value={links[type]||''} onChange={event=>setLinks(current=>({...current,[type]:event.target.value}))} placeholder="Link ou ID do Drive" className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px]"/>
-          <button type="button" onClick={()=>void importLink(type)} disabled={Boolean(working)||!(links[type]||'').trim()} className={action}><Link2 className="h-3 w-3"/>Importar</button>
+        {(showImportControls||!hasFile)&&<div className="space-y-2 rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-2" aria-label="Gerenciar arquivo do modelo">
+          {linkImportEnabled&&<div className="flex gap-1.5">
+            <input aria-label={`Link do modelo ${label}`} value={links[type]||''} onChange={event=>setLinks(current=>({...current,[type]:event.target.value}))} placeholder="Link ou ID do Drive" className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px]"/>
+            <button type="button" onClick={()=>void importLink(type)} disabled={Boolean(working)||!(links[type]||'').trim()} className={action}><Link2 className="h-3 w-3"/>Importar</button>
+          </div>}
+          <label className={`${action} cursor-pointer`}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}{hasFile?'Substituir DOCX':'Enviar DOCX'}<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/></label>
         </div>}
 
         <div className="flex flex-wrap gap-1.5">
-          <label className={`${action} cursor-pointer`}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}{hasFile?'Substituir DOCX':'Enviar DOCX'}<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/></label>
           {hasFile&&model?.driveFileUrl&&<a href={model.driveFileUrl} target="_blank" rel="noreferrer" className={action}><Eye className="h-3.5 w-3.5"/>Visualizar modelo original</a>}
           {hasFile&&<button type="button" onClick={()=>void detectVariables(type)} disabled={working===`detect-${type}`} className={action}>{working===`detect-${type}`?<Loader2 className="h-3 w-3 animate-spin"/>:<Sparkles className="h-3 w-3"/>}Atualizar variáveis</button>}
         </div>
@@ -310,7 +317,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
                 const key=normalizeVariableKey(variable);
                 const column=resolveVariableColumn(variable);
                 const mergeKey=`${type}:${key}`;
-                return <div key={variable} title={variableUsageTitle(variable)} className="grid gap-1.5 rounded-lg border border-slate-300 bg-white p-2 lg:grid-cols-[minmax(150px,.9fr)_minmax(170px,1fr)_120px_minmax(180px,1fr)_auto] lg:items-center">
+                return <div key={variable} title={variableUsageTitle(variable)} className="grid gap-1.5 rounded-lg border border-slate-300 bg-[var(--portal-surface-panel)] p-2 lg:grid-cols-[minmax(150px,.9fr)_minmax(170px,1fr)_120px_minmax(180px,1fr)_auto] lg:items-center">
                   <code className="truncate text-[8.5px] font-black text-[var(--portal-brand-action)]">{variable}</code>
                   {column?<input value={column.label||''} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,label:event.target.value}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]" placeholder="Nome legível"/>:<span className="text-[9px] text-amber-800">Variável ainda não vinculada</span>}
                   {column?<select value={column.dataType||'text'} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,dataType:event.target.value as VariableColumn['dataType']}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]"><option value="text">Texto</option><option value="date">Data</option><option value="email">E-mail</option><option value="number">Número</option><option value="url">URL</option></select>:<span/>}
