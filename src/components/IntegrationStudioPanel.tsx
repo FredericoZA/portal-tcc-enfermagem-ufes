@@ -514,7 +514,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     const timer=window.setTimeout(() => {
       if(remoteAutosaveInFlightRef.current)return;
       if(!validationReport.ready){
-        setAutosaveError('Configuração incompleta: o rascunho está salvo somente neste navegador. Corrija os campos obrigatórios para publicar no servidor.');
+        setAutosaveError('Salvamento no servidor pendente: revise os campos obrigatórios. O rascunho local continua disponível.');
         return;
       }
       remoteAutosaveInFlightRef.current=true;
@@ -1241,16 +1241,15 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
             <SettingsWorkspaceHeaderPortal>
               <div className="flex min-w-0 items-center gap-1.5">
                 {hideTabs&&initialTab==='workflow'&&<button type="button" onClick={()=>setActiveTab('workflow')} className="portal-settings-header-pill" title="Voltar à etapa do Fluxo" aria-label="Voltar a Fluxos"><ChevronLeft className="h-3.5 w-3.5"/>Voltar a Fluxos</button>}
+                <button type="button" onClick={createEmailTemplate} className="portal-toolbar-icon-button" title="Adicionar modelo de e-mail" aria-label="Adicionar modelo de e-mail"><Plus className="h-3.5 w-3.5"/></button>
                 <button type="button" onClick={()=>setPreviewMode('email')} className="portal-settings-header-pill" aria-label="Ver modelo de e-mail com dados fictícios"><Eye className="h-3.5 w-3.5"/>Ver modelo</button>
                 <button type="button" onClick={()=>setShowEmailHtmlAdvanced(value=>!value)} className="portal-settings-header-pill" aria-pressed={showEmailHtmlAdvanced}>
                   <Type className="h-3.5 w-3.5"/><span>HTML avançado</span>
                 </button>
-                <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-white/60"/>
-                <Mail className="h-3.5 w-3.5 shrink-0 text-white" aria-hidden="true"/>
                 <select value={selectedEmail.id} onChange={event=>setSelectedEmailId(event.target.value)}
                   className="w-[clamp(115px,13vw,172px)] max-w-[25vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                   aria-label="Selecionar e-mail" title={selectedEmail.name}>
-                  {emailTemplates.map(email=><option key={email.id} value={email.id}>{email.name}</option>)}
+                  {emailTemplates.map(email=><option key={email.id} value={email.id}>{'✉️ '+email.name}</option>)}
                 </select>
               </div>
             </SettingsWorkspaceHeaderPortal>
@@ -1261,8 +1260,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                   <div className="col-span-full flex items-center justify-between gap-2">
                     <strong className="text-[10px] font-black uppercase text-slate-700">Configuração deste e-mail</strong>
                     <div className="flex items-center gap-1.5">
-                      <button type="button" onClick={createEmailTemplate} className="inline-flex min-h-8 items-center gap-1 rounded-full border border-slate-300 bg-white px-3 text-[10px] font-semibold text-slate-800" title="Adicionar outro modelo de e-mail"><Plus className="h-3.5 w-3.5"/>Adicionar</button>
-                      <button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="inline-flex min-h-8 items-center gap-1 rounded-full border border-slate-300 bg-white px-3 text-[10px] font-semibold text-rose-700 disabled:opacity-30" title="Excluir somente este modelo de e-mail" aria-label={`Excluir e-mail ${selectedEmail.name}`}><Trash2 className="h-3.5 w-3.5"/>Excluir</button>
+                      <button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-rose-700 disabled:opacity-30" title="Excluir somente este modelo de e-mail" aria-label={`Excluir e-mail ${selectedEmail.name}`}><Trash2 className="h-3.5 w-3.5"/></button>
                     </div>
                   </div>
                   <label className="lg:col-span-2"><span className={labelClass}>Nome da rotina</span><input value={selectedEmail.name} onChange={event=>updateSelectedEmail({name:event.target.value})} className={inputClass}/></label>
@@ -1359,12 +1357,10 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               <div className="flex min-w-0 items-center gap-1.5">
                 <button type="button" onClick={createFormTemplate} className="portal-toolbar-icon-button" title="Adicionar formulário" aria-label="Adicionar formulário"><Plus className="h-3.5 w-3.5"/></button>
                 <button type="button" onClick={()=>setPreviewMode('form')} className="portal-settings-header-pill" aria-label="Ver formulário preenchido com dados fictícios"><Eye className="h-3.5 w-3.5"/>Ver modelo</button>
-                <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-white/60"/>
-                <ClipboardList className="h-3.5 w-3.5 shrink-0 text-white" aria-hidden="true"/>
                 <select value={selectedForm.id} onChange={event=>setSelectedFormId(event.target.value)}
                   className="w-[clamp(115px,13vw,172px)] max-w-[25vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                   aria-label="Selecionar formulário" title={selectedForm.title}>
-                  {formTemplates.map(form=><option key={form.id} value={form.id}>{form.title}</option>)}
+                  {formTemplates.map(form=><option key={form.id} value={form.id}>{'📋 '+form.title}</option>)}
                 </select>
               </div>
             </SettingsWorkspaceHeaderPortal>
@@ -1506,7 +1502,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
             >
               <div className="flex items-center justify-between px-4 pt-3">
                 <div>
-                  <h4 id="workflow-timeline-title" className="text-[11px] font-black uppercase tracking-wider text-slate-700">Fluxo do Processo</h4>
+                  <h4 id="workflow-timeline-title" className="text-[13px] font-black uppercase tracking-wider text-slate-700">Fluxo do Processo</h4>
                   <p className="mt-0.5 text-[9px] text-slate-500">Selecione uma etapa para editar. A ordem exibida aqui é a ordem do processo.</p>
                 </div>
                 <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
@@ -1515,14 +1511,14 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               </div>
 
               <div className="overflow-x-auto px-4 pb-3 pt-2">
-                <div className="flex min-w-max items-start">
+                <div className="flex min-w-full items-start">
                   {workflowStages.map((stage,index)=>{
                     const selected=stage.id===selectedWorkflowStage?.id;
                     return <React.Fragment key={stage.id}>
                       <button
                         type="button"
                         onClick={()=>setSelectedWorkflowStageId(stage.id)}
-                        className="group flex w-28 shrink-0 flex-col items-center text-center"
+                        className="group flex min-w-24 flex-1 flex-col items-center text-center"
                         aria-pressed={selected}
                         title={stage.title}
                       >
@@ -1533,10 +1529,10 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                           {stage.title}
                         </span>
                       </button>
-                      <span className="mt-3.5 h-0.5 w-10 shrink-0 bg-emerald-700/70" aria-hidden="true" />
+                      <span className="mt-3.5 h-0.5 min-w-4 flex-[0.3] bg-emerald-700/70" aria-hidden="true" />
                     </React.Fragment>;
                   })}
-                  <button type="button" onClick={addWorkflowStage} className="group flex w-24 shrink-0 flex-col items-center text-center" title="Adicionar etapa" aria-label="Adicionar etapa">
+                  <button type="button" onClick={addWorkflowStage} className="group flex min-w-20 flex-[0.7] flex-col items-center text-center" title="Adicionar etapa" aria-label="Adicionar etapa">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition-colors group-hover:border-emerald-600 group-hover:text-emerald-700"><Plus className="h-3.5 w-3.5"/></span>
                     <span className="mt-1.5 text-[9px] font-black text-slate-600">Adicionar etapa</span>
                   </button>
