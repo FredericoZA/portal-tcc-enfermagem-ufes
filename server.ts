@@ -3146,8 +3146,11 @@ export async function createPortalApp() {
     astenWebhookEventsStore.push(event);
     try{await persistPortalStateDurably();}
     catch{
-      astenCallbackFingerprints.delete(event.fingerprint);
-      astenWebhookEventsStore=astenWebhookEventsStore.filter(item=>item.id!==event.id);
+      // Em conflito CAS o estado remoto já foi recarregado. Remover por ID apagaria
+      // a confirmação gravada por outra instância com o mesmo fingerprint.
+      astenWebhookEventsStore=astenWebhookEventsStore.filter(item=>item!==event);
+      if(!astenWebhookEventsStore.some(item=>item.fingerprint===event.fingerprint))
+        astenCallbackFingerprints.delete(event.fingerprint);
       return res.status(503).json({error:'Não foi possível registrar o evento de forma durável. A Asten deve tentar novamente.'});
     }
     res.setHeader('Cache-Control','no-store');
