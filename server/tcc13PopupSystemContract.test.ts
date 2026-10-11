@@ -230,7 +230,7 @@ test('editor de e-mail usa modelo único autoeditável e autocomplete sem criar 
   const studio=read('src/components/IntegrationStudioPanel.tsx');
   assert.match(studio,/data-portal-email-direct-editor="true"/);
   assert.match(studio,/aria-label="Selecionar e-mail"/);
-  assert.match(studio,/title="Adicionar outro modelo de e-mail"/);
+  assert.match(studio,/title="Adicionar modelo de e-mail"/);
   assert.match(studio,/title="Excluir somente este modelo de e-mail"/);
   assert.match(studio,/HTML avançado/);
   assert.match(studio,/Digite &lt;&lt; para escolher uma variável disponível/);
