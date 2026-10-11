@@ -103,7 +103,7 @@ test('Rodapé e Integrações são entradas independentes e workspaces diretos',
   const main = read('src/main.tsx');
   assert.doesNotMatch(main, /PortalSettingsRuntime/);
   assert.match(workspace, /data-portal-full-bleed/);
-  assert.match(integrations, /flex min-h-full h-full flex-col/);
+  assert.match(integrations, /flex min-h-0 flex-col/);
 });
 
 test('e-mail do Departamento é definido no modelo de e-mail e permanece fail-closed', () => {
