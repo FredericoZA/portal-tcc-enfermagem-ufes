@@ -1030,16 +1030,18 @@ function workflowOperationsOverview(){
 async function reconcileAstenWebhookReceipts(limit=10){
   const now=Date.now();
   const candidates=astenWebhookEventsStore
-    .filter(event=>!event.processedAt&&(!event.retryAfter||Date.parse(event.retryAfter)<=now))
+    .filter(event=>!event.processedAt&&(!event.retryAfter||Date.parse(event.retryAfter)<=now)&&(!event.processingLeaseUntil||Date.parse(event.processingLeaseUntil)<=now))
     .slice(0,Math.min(20,Math.max(1,limit)));
   const result={scanned:candidates.length,processed:0,failed:0};
   for(const event of candidates){
     const job=event.matchedJobId?signatureJobsStore.find(item=>item.id===event.matchedJobId):undefined;
     try{
+      event.processingLeaseUntil=new Date(Date.now()+5*60000).toISOString();
+      await persistPortalStateDurably();
       if(!job||!job.providerEnvelopeId)throw new Error('Evento sem envelope local reconhecido; aguarda reconciliação administrativa.');
       if(job.status==='ARCHIVED'){
         event.processedAt=new Date().toISOString();
-        event.lastError=undefined;event.retryAfter=undefined;
+        event.lastError=undefined;event.retryAfter=undefined;event.processingLeaseUntil=undefined;
         await persistPortalStateDurably();result.processed++;continue;
       }
       const connection=await getPersistentAstenConnection();
@@ -1056,11 +1058,12 @@ async function reconcileAstenWebhookReceipts(limit=10){
         if(job.status!=='ARCHIVED')throw new Error('PDF concluído ainda não está arquivado no Drive.');
       }else job.lastError=undefined;
       event.processedAt=new Date().toISOString();
-      event.lastError=undefined;event.retryAfter=undefined;
+      event.lastError=undefined;event.retryAfter=undefined;event.processingLeaseUntil=undefined;
       auditLogsStore.push({id:`log-${Date.now()}-asten-reconcile`,processId:job.processId,actorEmail:'webhook@asten.local',actorRoles:[],action:'CALLBACK_ASTEN_RECONCILIADO',entityType:'signature_job',entityId:job.id,after:{envelopeId:event.envelopeId,status:job.status,callbackFingerprint:event.fingerprint},timestamp:event.processedAt});
       await persistPortalStateDurably();
       result.processed++;
     }catch(error){
+      event.processingLeaseUntil=undefined;
       event.attempts=(event.attempts||0)+1;
       event.lastError=(error instanceof Error?error.message:'Aguardando confirmação da Asten.').slice(0,300);
       const retryMinutes=Math.min(60,Math.pow(2,Math.min(event.attempts,5)));
