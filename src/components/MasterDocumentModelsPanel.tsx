@@ -311,7 +311,9 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
 
         <section className="rounded-xl border border-slate-300 bg-[var(--portal-surface-card)] p-2.5" aria-label="Variáveis do documento">
           {model?.variables?.length
-            ? <div className="space-y-1.5">{model.variables.map((variable:string)=>{
+            ? <div className="space-y-1.5">{(model.variables as string[])
+              .filter((variable,index,all)=>all.findIndex(other=>normalizeVariableKey(other)===normalizeVariableKey(variable))===index)
+              .map((variable:string)=>{
                 const key=normalizeVariableKey(variable);
                 const column=resolveVariableColumn(variable);
                 const mergeKey=`${type}:${key}`;
