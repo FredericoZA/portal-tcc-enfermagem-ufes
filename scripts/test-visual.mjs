@@ -144,7 +144,32 @@ try {
           });
         }
       }
-      return { histogram, outliers };
+      // A amostragem por tags acima monitora a regressão histórica.
+      // A contagem abaixo examina cada NÓ DE TEXTO visível, inclusive conteúdo
+      // direto em <div>, <li> e <article>, evitando contar pais e filhos duas vezes.
+      const textNodeHistogram = {};
+      const textNodeOutliers = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const parent = node.parentElement;
+        const sample = (node.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 80);
+        if (!parent || !sample || parent.closest('script,style,svg,noscript,[hidden],[aria-hidden="true"]')) continue;
+        if (!parent.getClientRects().length) continue;
+        const style = getComputedStyle(parent);
+        if (style.display === 'none' || style.visibility === 'hidden') continue;
+        const px = Math.round(parseFloat(style.fontSize)*10)/10;
+        if (!Number.isFinite(px)) continue;
+        const region = parent.closest('.portal-settings-workspace') ? 'configuracoes-popup' :
+          insideSheet(parent) ? 'planilha-calendario' : 'portal-geral';
+        const key = `${region}:${px}px`;
+        textNodeHistogram[key]=(textNodeHistogram[key]||0)+1;
+        if(px<10.5&&region!=='planilha-calendario'&&textNodeOutliers.length<16) {
+          textNodeOutliers.push({size:px,region,tag:parent.tagName.toLowerCase(),
+            classes:String(parent.getAttribute('class')||'').slice(0,120),sample});
+        }
+      }
+      return { histogram, outliers, textNodes:{histogram:textNodeHistogram,outliers:textNodeOutliers} };
     });
     report.typography.push({ screen: name, ...fonts });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2);
@@ -567,7 +592,9 @@ try {
   await writeFile(path.join(output, 'typography-audit.json'), JSON.stringify(report.typography, null, 2));
   const allFonts = {};
   for (const screen of report.typography) for (const [size,count] of Object.entries(screen.histogram)) allFonts[size]=(allFonts[size]||0)+count;
-  console.log('[TYPOGRAPHY_AUDIT]', JSON.stringify({ screens:report.typography.length, histogram:allFonts,
+  const allTextNodes={};
+  for(const screen of report.typography) for(const [size,count] of Object.entries(screen.textNodes?.histogram||{})) allTextNodes[size]=(allTextNodes[size]||0)+count;
+  console.log('[TYPOGRAPHY_AUDIT]', JSON.stringify({ screens:report.typography.length, histogram:allFonts, textNodeHistogram:allTextNodes,
     sampleOutliers:report.typography.filter(screen=>screen.outliers.length).slice(0,12).map(screen=>({screen:screen.screen,outliers:screen.outliers.slice(0,3)})) }));
   await writeFile(path.join(output, 'resultado.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
