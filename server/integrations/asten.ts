@@ -191,7 +191,12 @@ export async function callAsten(service: Service, params: Record<string, unknown
       const fallback = `Asten respondeu ${response.status}.`;
       throw new Error(safeProviderError(payload?.error?.message || payload?.error?.descricao, apiToken, fallback));
     }
-    return payload?.response ?? payload;
+    const result=payload?.response ?? payload;
+    const providerNotices=result?.data?.listaAvisos?.aviso;
+    const notices=Array.isArray(providerNotices)?providerNotices:providerNotices?[providerNotices]:[];
+    const failure=notices.find((notice:any)=>String(notice?.tipo||'').toUpperCase()==='E');
+    if(failure)throw new Error(safeProviderError(failure.mensagem,apiToken,'A Asten rejeitou a operação.'));
+    return result;
   } finally { clearTimeout(timer); }
 }
 
