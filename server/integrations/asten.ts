@@ -324,7 +324,19 @@ export function buildAstenEnvelopeParams(input: { description: string; fileName:
   envelope.urlCallbackHeaderValue = String(process.env.ASTEN_WEBHOOK_SECRET || '').trim();
   return { Envelope: envelope, encaminharImediatamente: 'N', detectarCampos: 'N', verificarDuplicidadeConteudo: 'S', processarImagensEmSegundoPlano: 'N' };
 }
-export function extractAstenEnvelopeIdentity(response: any) { const data = response?.data ?? response; const id = data?.idEnvelope ?? data?.Envelope?.id ?? data?.id; if (!id) throw new Error('A Asten não retornou o ID do envelope; reconciliação manual necessária.'); return { id: String(id), hash: data?.hashSHA256 ? String(data.hashSHA256) : undefined }; }
+export function extractAstenEnvelopeIdentity(response: any) {
+  const data = response?.data ?? response;
+  const rawId = data?.idEnvelope ?? data?.Envelope?.id ?? data?.id;
+  const id = String(rawId ?? '').trim();
+  // A própria reconciliação e os callbacks usam IDs numéricos com até 24 dígitos.
+  // Jamais persistir um ID inválido ou encaminhar assinatura para ele.
+  if (!/^[1-9][0-9]{0,23}$/.test(id)) {
+    throw new Error('A Asten não confirmou um ID numérico de envelope válido; reconciliação manual necessária.');
+  }
+  const rawHash = data?.hashSHA256;
+  const hash = rawHash == null ? undefined : String(rawHash).trim();
+  return { id, ...(hash ? { hash } : {}) };
+}
 export function assertAstenEnvelopeSigners(response: unknown, expected: Array<{email:string;order:number}>): void {
   const evidence:Array<{email:string;order:number;signed:boolean}>=[];
   const normalizedStatus=(value:unknown)=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
