@@ -1302,6 +1302,8 @@ export async function createPortalApp() {
 
   // Em produção os binários vão direto ao bucket privado. O limite abaixo só
   // cobre JSON e o fallback local de até 2 MB, nunca os PDFs/DOCX completos.
+  // Callbacks Asten devem ser pequenos; limitar antes do parser geral impede payloads volumosos.
+  app.use('/api/integrations/asten/webhook', express.json({ limit: '64kb' }));
   app.use(express.json({ limit: '4mb' }));
 
   app.use('/api', async (req, res, next) => {
