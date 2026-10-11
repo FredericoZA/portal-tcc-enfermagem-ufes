@@ -131,7 +131,7 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
     const demo = job.id === DEMO_JOB.id;
     const canRetry = !demo && RETRYABLE_STATUSES.has(job.status) && job.providerCreationState !== 'UNCERTAIN';
     const canReconcile = !demo && Boolean(job.providerEnvelopeId) && !FINAL_STATUSES.has(job.status);
-    return <div className="flex items-center justify-end gap-1 whitespace-nowrap">
+    return <div className="flex items-center justify-center gap-1 whitespace-nowrap">
       <button type="button" onClick={() => setSelectedJob(job)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50"><Eye className="h-3 w-3"/>Auditar</button>
       {canRetry && <button type="button" onClick={() => void retry(job)} disabled={busy} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50 disabled:opacity-50"><RefreshCw className={`h-3 w-3 ${busy ? 'animate-spin' : ''}`}/>Reenviar</button>}
       {canReconcile && <button type="button" onClick={() => void reconcile(job)} disabled={busy} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50 disabled:opacity-50"><RotateCcw className={`h-3 w-3 ${busy ? 'animate-spin' : ''}`}/>Reconciliar</button>}
@@ -163,16 +163,16 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
     <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} allColumns={SIGNATURE_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="signature_logs" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Registros de Assinatura"/>
   </div>;
 
-  return <div id="asten-logs-page" data-settings-sheet="true" data-portal-signature-logs="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'flex h-full min-h-0 flex-col' : 'overflow-hidden rounded-2xl border border-slate-300 shadow-sm'} style={{ backgroundColor: embedded ? 'var(--portal-surface-panel)' : 'var(--portal-surface-page)' }}>
+  return <div id="asten-logs-page" data-settings-sheet="true" data-portal-signature-logs="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'flex min-h-0 flex-col' : 'overflow-hidden rounded-2xl border border-slate-300 shadow-sm'} style={{ backgroundColor: embedded ? 'var(--portal-surface-panel)' : 'var(--portal-surface-page)' }}>
     {embedded ? <SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal> : <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 shrink-0"/><h1 className="text-sm font-black uppercase tracking-wide">Registros de Assinatura</h1></div>{toolbar}</header>}
 
     <div className="portal-signature-table-shell flex min-h-0 flex-1 flex-col p-0">
       {loading ? <div className="m-3 rounded-xl border border-slate-300 p-8 text-center text-xs font-semibold text-slate-700" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>Carregando registros de assinatura…</div> : renderedJobs.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-400 p-8 text-center text-xs font-semibold text-slate-700" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>Nenhum registro de assinatura encontrado com os filtros atuais.</div> : <>
         {showDemo && <div className="border-b border-amber-300 bg-amber-50 px-3 py-1.5 text-[9px] font-semibold text-amber-900">Demonstração visual: este registro existe apenas na interface, não é salvo e não entra em estatísticas.</div>}
         <TableScrollWrapper fillHeight>
-          <table className="portal-spreadsheet-table w-full min-w-[1900px] border-collapse text-left text-xs">
-            <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wide ${key === 'actions' ? 'sticky right-0 z-20 text-right' : ''}`} style={key === 'actions' ? { backgroundColor: 'var(--portal-brand-header)' } : undefined}>{SIGNATURE_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
-            <tbody className="divide-y divide-slate-200">{renderedJobs.map((job) => <tr key={job.id}>{activeColumns.map((key) => <td key={key} className={`px-3 py-1 text-slate-950 ${key === 'actions' ? 'sticky right-0 z-10 border-l border-slate-200 bg-white text-right' : ''}`}>{renderCell(job, key)}</td>)}</tr>)}</tbody>
+          <table className="portal-spreadsheet-table w-full min-w-[1900px] border-collapse text-center text-xs">
+            <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wide ${key === 'actions' ? 'sticky right-0 z-20 text-center' : ''}`} style={key === 'actions' ? { backgroundColor: 'var(--portal-brand-header)' } : undefined}>{SIGNATURE_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
+            <tbody className="divide-y divide-slate-200">{renderedJobs.map((job) => <tr key={job.id}>{activeColumns.map((key) => <td key={key} className={`px-3 py-1 text-slate-950 ${key === 'actions' ? 'sticky right-0 z-10 border-l border-slate-200 bg-white text-center' : ''}`}>{renderCell(job, key)}</td>)}</tr>)}</tbody>
           </table>
         </TableScrollWrapper>
       </>}
