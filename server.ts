@@ -1025,6 +1025,52 @@ function workflowOperationsOverview(){
   catch(error){planningError=error instanceof Error?error.message:'Não foi possível calcular os prazos publicados.';}
   return {studioRevision:studio?.revision||0,queueTotal:queue.length,queue:queue.slice(0,500),deadlineTotal:deadlines.length,deadlineOverdueTotal:deadlines.filter(item=>item.overdue).length,deadlines:deadlines.slice(0,500),reminders:reminderRecordsStore.slice(-200).reverse(),planningError};
 }
+// Webhooks são recebidos e persistidos antes da resposta HTTP. A reconciliação
+// ocorre no cron ou por comando administrativo, nunca como condição para o ACK.
+async function reconcileAstenWebhookReceipts(limit=10){
+  const now=Date.now();
+  const candidates=astenWebhookEventsStore
+    .filter(event=>!event.processedAt&&(!event.retryAfter||Date.parse(event.retryAfter)<=now))
+    .slice(0,Math.min(20,Math.max(1,limit)));
+  const result={scanned:candidates.length,processed:0,failed:0};
+  for(const event of candidates){
+    const job=event.matchedJobId?signatureJobsStore.find(item=>item.id===event.matchedJobId):undefined;
+    try{
+      if(!job||!job.providerEnvelopeId)throw new Error('Evento sem envelope local reconhecido; aguarda reconciliação administrativa.');
+      if(job.status==='ARCHIVED'){
+        event.processedAt=new Date().toISOString();
+        event.lastError=undefined;event.retryAfter=undefined;
+        await persistPortalStateDurably();result.processed++;continue;
+      }
+      const connection=await getPersistentAstenConnection();
+      if(!connection)throw new Error('Asten não está conectada para confirmar o recebimento.');
+      const state=await callAsten('getDadosEnvelope',{idEnvelope:job.providerEnvelopeId,getLobs:'N'},connection.token);
+      const verified=inferAstenJobStatus(state,job.status);
+      if(event.status==='SIGNED'&&verified!=='SIGNED'&&verified!=='ARCHIVED'){
+        throw new Error('O provedor ainda não confirma todas as assinaturas.');
+      }
+      job.status=verified;job.updatedAt=new Date().toISOString();
+      if(verified==='SIGNED'){
+        job.completedAt=job.updatedAt;
+        await archiveSignatureJobAutomatically(job);
+        if(job.status!=='ARCHIVED')throw new Error('PDF concluído ainda não está arquivado no Drive.');
+      }else job.lastError=undefined;
+      event.processedAt=new Date().toISOString();
+      event.lastError=undefined;event.retryAfter=undefined;
+      auditLogsStore.push({id:`log-${Date.now()}-asten-reconcile`,processId:job.processId,actorEmail:'webhook@asten.local',actorRoles:[],action:'CALLBACK_ASTEN_RECONCILIADO',entityType:'signature_job',entityId:job.id,after:{envelopeId:event.envelopeId,status:job.status,callbackFingerprint:event.fingerprint},timestamp:event.processedAt});
+      await persistPortalStateDurably();
+      result.processed++;
+    }catch(error){
+      event.attempts=(event.attempts||0)+1;
+      event.lastError=(error instanceof Error?error.message:'Aguardando confirmação da Asten.').slice(0,300);
+      const retryMinutes=Math.min(60,Math.pow(2,Math.min(event.attempts,5)));
+      event.retryAfter=new Date(Date.now()+retryMinutes*60000).toISOString();
+      await persistPortalStateDurably();
+      result.failed++;
+    }
+  }
+  return result;
+}
 async function runWorkflowMaintenance(){
   const now=new Date(),studio=currentSettings.integrationStudio,policy=workflowPolicy(studio);
   const previousDraftCount=Object.keys(registrationDraftsStore).length;registrationDraftsStore=pruneDrafts(registrationDraftsStore,now);
@@ -1406,10 +1452,13 @@ export async function createPortalApp() {
     const[uploadsResult,downloadsResult,intelligenceResult]=await Promise.allSettled([cleanupExpiredStagedUploads(500),cleanupExpiredDownloadTransfers(500),refreshContinuousIntelligence('SYSTEM','system@portal.local',true)]);
     const failures=[uploadsResult,downloadsResult,intelligenceResult].filter(result=>result.status==='rejected').map(result=>result.status==='rejected'?(result.reason instanceof Error?result.reason.message:String(result.reason)):'');
     const intelligence=intelligenceResult.status==='fulfilled'?{version:intelligenceResult.value.artifacts.TCC_STATISTICAL_REPORT.version,proposalsActive:intelligenceResult.value.proposals.filter(item=>item.evidenceActive).length,driveStatus:Object.fromEntries(Object.entries(intelligenceResult.value.artifacts).map(([kind,artifact])=>[kind,artifact.driveSyncStatus]))}:null;
+    let astenReconciliation:Awaited<ReturnType<typeof reconcileAstenWebhookReceipts>>|null=null;
+    try{astenReconciliation=await reconcileAstenWebhookReceipts(10);if(astenReconciliation.failed)failures.push('Há callbacks Asten pendentes; confira o painel de integrações.');}
+    catch(error){failures.push(error instanceof Error?error.message:'Falha ao conciliar eventos da Asten.');}
     let workflow:Awaited<ReturnType<typeof runWorkflowMaintenance>>|null=null;
     try{workflow=await runWorkflowMaintenance();if(workflow.failed||workflow.configurationErrors.length)failures.push('Há lembretes com falha; confira a central de andamento.');}catch(error){failures.push(error instanceof Error?error.message:'Falha na manutenção do fluxo.');}
     res.setHeader('Cache-Control','no-store');
-    res.status(failures.length?502:200).json({ok:failures.length===0,uploads:uploadsResult.status==='fulfilled'?uploadsResult.value:null,downloads:downloadsResult.status==='fulfilled'?downloadsResult.value:null,intelligence,workflow,failures,executedAt:new Date().toISOString()});
+    res.status(failures.length?502:200).json({ok:failures.length===0,uploads:uploadsResult.status==='fulfilled'?uploadsResult.value:null,downloads:downloadsResult.status==='fulfilled'?downloadsResult.value:null,intelligence,workflow,astenReconciliation,failures,executedAt:new Date().toISOString()});
   });
 
   // GET /api/me
@@ -3018,24 +3067,27 @@ export async function createPortalApp() {
   app.post('/api/signatures/jobs/:id/archive',requireAuthenticated,requireAdministrator,(_req,res)=>res.status(410).json({error:'O arquivamento manual legado foi desativado; o callback Asten arquiva automaticamente no Drive.',code:'LEGACY_SIGNATURE_ARCHIVE_DISABLED'}));
   app.post('/api/integrations/asten/webhook',async(req,res)=>{
     if(!safeCompareWebhookSecret(String(req.headers['x-portal-webhook-key']||'')))return res.status(401).json({error:'Callback não autorizado.'});
-    const event=normalizeAstenWebhookEvent({payload:req.body,knownFingerprints:astenCallbackFingerprints,jobs:signatureJobsStore});astenWebhookEventsStore.push(event);
+    const event=normalizeAstenWebhookEvent({payload:req.body,knownFingerprints:astenCallbackFingerprints,jobs:signatureJobsStore});
     if(event.duplicate)return res.status(200).json({received:true,duplicate:true});
+    const hasEnvelope=Boolean(event.envelopeId&&/^\\d+$/.test(event.envelopeId));
+    if(!hasEnvelope)return res.status(400).json({error:'Evento sem identificador válido do envelope.'});
+    astenWebhookEventsStore.push(event);
     astenCallbackFingerprints.add(event.fingerprint);
-    const job=event.matchedJobId?signatureJobsStore.find(item=>item.id===event.matchedJobId):undefined;
-    if(job){
-      const proposedStatus=mapAstenEventToJobStatus(event.status,job.status);job.updatedAt=event.receivedAt;
-      try{
-        const connection=await getPersistentAstenConnection();if(!connection||!job.providerEnvelopeId)throw new Error('Conexão Asten ou envelope indisponível para confirmação.');
-        const providerState=await callAsten('getDadosEnvelope',{idEnvelope:job.providerEnvelopeId,getLobs:'N'},connection.token);
-        const verifiedStatus=inferAstenJobStatus(providerState,job.status);
-        if(proposedStatus==='SIGNED'&&verifiedStatus!=='SIGNED')throw new Error('A Asten ainda não confirmou a conclusão de todos os signatários.');
-        job.status=verifiedStatus;
-        if(job.status==='SIGNED'){job.completedAt=job.updatedAt;await archiveSignatureJobAutomatically(job);}
-        else job.lastError=undefined;
-      }catch(error){job.lastError=`Callback recebido, aguardando reconciliação com a Asten: ${error instanceof Error?error.message:'falha de confirmação'}`;}
-      auditLogsStore.push({id:`log-${Date.now()}`,processId:job.processId,actorEmail:'webhook@asten.local',actorRoles:[],action:'CALLBACK_ASTEN_RECEBIDO',entityType:'signature_job',entityId:job.id,after:{envelopeId:event.envelopeId,status:job.status,callbackFingerprint:event.fingerprint,providerVerified:job.status==='SIGNED'||job.status==='ARCHIVED'},timestamp:job.updatedAt});
+    try {
+      // Não responder 200 antes da confirmação de gravação durável.
+      await persistPortalStateDurably();
+      return res.status(200).json({received:true,queued:true});
+    }catch{
+      astenWebhookEventsStore=astenWebhookEventsStore.filter(item=>item.id!==event.id);
+      astenCallbackFingerprints.delete(event.fingerprint);
+      return res.status(503).json({error:'Não foi possível confirmar o recebimento. Reenvie o callback.'});
     }
-    persistPortalState();res.status(200).json({received:true,matched:Boolean(job)});
+  });
+  app.post('/api/admin/asten/reconcile-events',requireAuthenticated,requireAdministrator,async(req,res)=>{
+    const identity=getPortalIdentity(req)!;
+    if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Reautentique-se para reconciliar os recebimentos.'});
+    try{res.json(await reconcileAstenWebhookReceipts(10));}
+    catch(error){res.status(503).json({error:error instanceof Error?error.message:'Falha na reconciliação Asten.'});}
   });
 
   // Extract text from binary DOCX zip buffer (Word files)
