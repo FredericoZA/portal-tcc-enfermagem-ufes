@@ -514,7 +514,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     const timer=window.setTimeout(() => {
       if(remoteAutosaveInFlightRef.current)return;
       if(!validationReport.ready){
-        setAutosaveError('Configuração incompleta: o rascunho está salvo somente neste navegador. Corrija os campos obrigatórios para publicar no servidor.');
+        setAutosaveError('Revise os campos obrigatórios. As alterações ainda não foram publicadas no servidor.');
         return;
       }
       remoteAutosaveInFlightRef.current=true;
@@ -1514,30 +1514,30 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               </div>
 
               <div className="overflow-x-auto px-4 pb-3 pt-2">
-                <div className="flex min-w-max items-start">
+                <div className="flex min-w-full items-start justify-between">
                   {workflowStages.map((stage,index)=>{
                     const selected=stage.id===selectedWorkflowStage?.id;
                     return <React.Fragment key={stage.id}>
                       <button
                         type="button"
                         onClick={()=>setSelectedWorkflowStageId(stage.id)}
-                        className="group flex w-28 shrink-0 flex-col items-center text-center"
+                        className="group flex w-32 shrink-0 flex-col items-center text-center"
                         aria-pressed={selected}
                         title={stage.title}
                       >
                         <span className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black transition-colors ${selected ? 'bg-slate-900 text-white ring-2 ring-emerald-600 ring-offset-1' : 'border border-emerald-700 bg-white text-emerald-800 group-hover:bg-emerald-50'}`}>
                           {index+1}
                         </span>
-                        <span className={`mt-1.5 max-w-28 text-[9px] leading-3 ${selected?'font-black text-slate-900':'font-semibold text-slate-600'}`}>
+                        <span className={`mt-1.5 max-w-32 text-[11px] leading-4 ${selected?'font-black text-slate-900':'font-semibold text-slate-600'}`}>
                           {stage.title}
                         </span>
                       </button>
                       <span className="mt-3.5 h-0.5 w-10 shrink-0 bg-emerald-700/70" aria-hidden="true" />
                     </React.Fragment>;
                   })}
-                  <button type="button" onClick={addWorkflowStage} className="group flex w-24 shrink-0 flex-col items-center text-center" title="Adicionar etapa" aria-label="Adicionar etapa">
+                  <button type="button" onClick={addWorkflowStage} className="group flex w-28 shrink-0 flex-col items-center text-center" title="Adicionar etapa" aria-label="Adicionar etapa">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition-colors group-hover:border-emerald-600 group-hover:text-emerald-700"><Plus className="h-3.5 w-3.5"/></span>
-                    <span className="mt-1.5 text-[9px] font-black text-slate-600">Adicionar etapa</span>
+                    <span className="mt-1.5 text-[11px] font-black text-slate-600">Adicionar etapa</span>
                   </button>
                 </div>
               </div>
