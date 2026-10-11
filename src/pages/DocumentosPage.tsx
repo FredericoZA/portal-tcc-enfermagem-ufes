@@ -32,7 +32,7 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({ onSelectProcess 
   return (
     <div id="documentos-page-container" className="space-y-3.5 max-w-7xl mx-auto py-1.5">
       <div className="bg-[var(--portal-brand-header)] text-white p-3.5 sm:p-4 rounded-2xl border border-emerald-900/80 shadow-sm space-y-1">
-        <div className="text-emerald-200 text-[10px] font-extrabold uppercase tracking-widest leading-none">
+        <div className="text-emerald-200 text-xs font-extrabold uppercase tracking-widest leading-none">
           {profile.institutionAcronym} • {profile.departmentName || profile.institutionName}
         </div>
         <div className="flex items-center gap-2 mt-1">
@@ -41,7 +41,7 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({ onSelectProcess 
             Documentos Oficiais de TCC Disponíveis
           </h1>
         </div>
-        <p className="text-[10px] sm:text-[11px] text-emerald-100/95 font-medium leading-normal mt-0.5">
+        <p className="text-xs sm:text-xs text-emerald-100/95 font-medium leading-normal mt-0.5">
           Acesse Convites, Atas, Termos de Autorização e Declarações da Banca autorizados para o seu perfil.
         </p>
       </div>
@@ -79,8 +79,8 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({ onSelectProcess 
                   return (
                     <div key={docType} className="p-3.5 bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
                       <div>
-                        <div className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">{docType}</div>
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                        <div className="font-bold text-slate-900 uppercase tracking-wider text-xs">{docType}</div>
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                           {isAvailable ? 'Disponível' : 'Aguardando Avaliação'}
                         </div>
                       </div>
@@ -112,7 +112,7 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({ onSelectProcess 
                             });
                             setPreviewProtocol(proc.protocolo);
                           }}
-                          className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-sm shadow-2xs"
+                          className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs uppercase tracking-wider px-2.5 py-1 rounded-sm shadow-2xs"
                         >
                           Visualizar
                         </button>
