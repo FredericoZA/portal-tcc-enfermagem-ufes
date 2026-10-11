@@ -21,7 +21,7 @@ const ExternalAction: React.FC<{
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    className="portal-action-green relative flex min-h-[64px] w-full flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2.5 text-center text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm transition hover:brightness-95"
+    className="portal-action-green relative flex min-h-[64px] w-full flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2.5 text-center text-xs font-extrabold uppercase tracking-wide text-white shadow-sm transition hover:brightness-95"
   >
     <ExternalLink className="absolute right-2 top-2 h-3 w-3 shrink-0 opacity-75" />
     <Icon className="h-5 w-5 shrink-0" />
@@ -56,7 +56,7 @@ export const ComoChegarPage: React.FC = () => {
               referrerPolicy="no-referrer-when-downgrade"
               allowFullScreen
             />
-            <div className="flex items-center justify-between gap-3 px-3 py-2 text-[10px] font-semibold text-slate-600">
+            <div className="flex items-center justify-between gap-3 px-3 py-2 text-xs font-semibold text-slate-600">
               <span>Mapa interativo em modo satélite com o Departamento de Enfermagem marcado.</span>
               <a
                 href={GOOGLE_MAPS_PLACE}
@@ -77,8 +77,8 @@ export const ComoChegarPage: React.FC = () => {
                 <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[var(--portal-brand-action)]" />
                 <div className="min-w-0">
                   <h2 className="text-xs font-black uppercase tracking-wide text-slate-900">Departamento de Enfermagem — CCS/UFES</h2>
-                  <p className="mt-0.5 text-[11px] leading-4 text-slate-700">{location}</p>
-                  <p className="mt-1 text-[10px] leading-4 text-slate-600">Os aplicativos de navegação usam a localização atual do dispositivo quando essa permissão estiver disponível.</p>
+                  <p className="mt-0.5 text-xs leading-4 text-slate-700">{location}</p>
+                  <p className="mt-1 text-xs leading-4 text-slate-600">Os aplicativos de navegação usam a localização atual do dispositivo quando essa permissão estiver disponível.</p>
                 </div>
               </div>
               <div className="mt-3 grid grid-cols-3 gap-1.5">
@@ -93,7 +93,7 @@ export const ComoChegarPage: React.FC = () => {
                 <Navigation className="h-4 w-4 text-[var(--portal-brand-action)]" />
                 Referências de chegada
               </h2>
-              <div className="mt-2 space-y-1.5 text-[11px] leading-4 text-slate-700">
+              <div className="mt-2 space-y-1.5 text-xs leading-4 text-slate-700">
                 <p className="portal-layer-inner rounded-lg border border-slate-200 bg-white px-3 py-2"><strong>Vindo do HUCAM:</strong> suba a ladeira principal do Campus de Maruípe e mantenha-se à direita nas duas bifurcações.</p>
                 <p className="portal-layer-inner rounded-lg border border-slate-200 bg-white px-3 py-2"><strong>Referência:</strong> o Departamento de Enfermagem fica em frente à Capela Universitária de Maruípe.</p>
                 <p className="portal-layer-inner rounded-lg border border-slate-200 bg-white px-3 py-2"><strong>Estacionamento:</strong> há vagas externas gratuitas, sujeitas à lotação.</p>
@@ -107,15 +107,15 @@ export const ComoChegarPage: React.FC = () => {
               </h2>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 <div className="portal-layer-inner rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-                  <div className="text-[10px] font-extrabold uppercase tracking-wide text-slate-900">Auditório de Enfermagem</div>
-                  <div className="mt-0.5 text-[10px] text-slate-600">1º pavimento</div>
+                  <div className="text-xs font-extrabold uppercase tracking-wide text-slate-900">Auditório de Enfermagem</div>
+                  <div className="mt-0.5 text-xs text-slate-600">1º pavimento</div>
                 </div>
                 <div className="portal-layer-inner rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-                  <div className="text-[10px] font-extrabold uppercase tracking-wide text-slate-900">Sala de Reuniões</div>
-                  <div className="mt-0.5 text-[10px] text-slate-600">2º pavimento</div>
+                  <div className="text-xs font-extrabold uppercase tracking-wide text-slate-900">Sala de Reuniões</div>
+                  <div className="mt-0.5 text-xs text-slate-600">2º pavimento</div>
                 </div>
               </div>
-              <p className="mt-2 text-[10px] leading-4 text-slate-600">O local específico de cada defesa continua indicado no calendário e no convite da apresentação.</p>
+              <p className="mt-2 text-xs leading-4 text-slate-600">O local específico de cada defesa continua indicado no calendário e no convite da apresentação.</p>
             </section>
           </div>
         </div>
