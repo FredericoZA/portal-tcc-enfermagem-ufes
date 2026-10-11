@@ -1404,7 +1404,7 @@ button[aria-label^="Configurar exibição"],
 /* Portal TCC16: contrato único dos campos e exclusões.
    Uma regra semântica, sem alterar botões de edição/ação ou folhas de planilha. */
 :root {
-  --portal-editor-field-font-size: 10px;
+  --portal-editor-field-font-size: 11px;
   --portal-editor-action-font-size: 10px;
   --portal-delete-icon-color: #dc2626;
 }
@@ -1416,19 +1416,16 @@ button[aria-label^="Configurar exibição"],
 .portal-settings-workspace button:not([aria-label^="Selecionar"]) {
   font-size: var(--portal-editor-action-font-size);
 }
-button:has(svg.lucide-trash-2),
-button:has(svg.lucide-trash) {
+button:has(svg[class*="lucide-trash"]) {
   background-color: var(--portal-surface-inner);
   color: var(--portal-delete-icon-color);
   border-color: var(--portal-border);
   border-radius: 9999px;
 }
-button:has(svg.lucide-trash-2):not(:disabled):hover,
-button:has(svg.lucide-trash):not(:disabled):hover {
+button:has(svg[class*="lucide-trash"]):not(:disabled):hover {
   background-color: #fff1f2;
 }
-button:has(svg.lucide-trash-2) :is(svg.lucide-trash-2,svg.lucide-trash),
-button:has(svg.lucide-trash) :is(svg.lucide-trash-2,svg.lucide-trash) {
+button:has(svg[class*="lucide-trash"]) svg[class*="lucide-trash"] {
   color: var(--portal-delete-icon-color);
 }
 .portal-settings-workspace [data-portal-form-direct-editor="true"] {
