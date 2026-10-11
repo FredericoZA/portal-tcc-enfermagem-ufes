@@ -188,11 +188,25 @@ export async function callAsten(service: Service, params: Record<string, unknown
   } finally { clearTimeout(timer); }
 }
 
-function findId(value: any): number | undefined {
-  if (!value) return undefined;
-  if (Array.isArray(value)) { for (const child of value) { const id = findId(child); if (id) return id; } }
-  if (typeof value === 'object') { for (const [key, child] of Object.entries(value)) { if (/^(id|idRepositorio)$/i.test(key) && Number.isFinite(Number(child))) return Number(child); const id = findId(child); if (id) return id; } }
-  return undefined;
+function resolveAstenRepository(value: unknown): number {
+  // A API responde com uma lista de repositórios, não com um ID solto.
+  // Nunca percorrer recursivamente o objeto: Usuario.id não é Repositorio.id.
+  const collection = Array.isArray(value) ? value : null;
+  if (!collection) throw new Error('A Asten não devolveu uma lista verificável de repositórios.');
+  const valid = collection
+    .filter((item): item is Record<string,unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+    .map(item => ({
+      id: Number(item.id),
+      mayCreate: item.isProprietario === 'S' || item.compartilharCriacaoDocs === 'S'
+    }))
+    .filter(item => Number.isSafeInteger(item.id) && item.id > 0 && item.mayCreate);
+  const configured = Number(process.env.ASTEN_REPOSITORY_ID || 0);
+  if (configured && (!Number.isSafeInteger(configured) || !valid.some(item => item.id === configured))) {
+    throw new Error('O repositório Asten configurado não pertence à conta ou não permite criar envelopes.');
+  }
+  if (configured) return configured;
+  if (valid.length !== 1) throw new Error('Configure ASTEN_REPOSITORY_ID para escolher um único repositório Asten autorizado.');
+  return valid[0].id;
 }
 
 export async function createEphemeralAstenSession(ownerEmail: string, suppliedToken?: string) {
@@ -203,7 +217,7 @@ export async function createEphemeralAstenSession(ownerEmail: string, suppliedTo
   if (!Number.isSafeInteger(ownerId) || ownerId < 1) throw new Error('A Asten não confirmou o identificador do proprietário.');
   const repositories = await callAsten('getRepositoriosDoUsuario', { idProprietario: ownerId }, token);
   const id = randomBytes(32).toString('base64url');
-  const session: Session = { token, ownerEmail: ownerEmail.toLowerCase(), identifier: String(ownerId), repositoryId: Number(process.env.ASTEN_REPOSITORY_ID || 0) || findId(repositories), expiresAt: Date.now() + SESSION_TTL_MS };
+  const session: Session = { token, ownerEmail: ownerEmail.toLowerCase(), identifier: String(ownerId), repositoryId: resolveAstenRepository(repositories), expiresAt: Date.now() + SESSION_TTL_MS };
   const key = sessionEncryptionKey();
   if (!key && (process.env.VERCEL || process.env.NODE_ENV === 'production')) throw new Error('Configure ASTEN_SESSION_ENCRYPTION_KEY antes de usar sessões temporárias em produção.');
   const sessionId = key ? sealSession(session) : id;
@@ -231,7 +245,7 @@ export async function connectPersistentAsten(tokenInput: string) {
   const ownerId = Number(identity?.Usuario?.id ?? identity?.usuario?.id ?? identity?.idUsuario ?? identity?.id);
   if (!Number.isSafeInteger(ownerId) || ownerId < 1) throw new Error('A Asten não confirmou o identificador do proprietário.');
   const repositories = await callAsten('getRepositoriosDoUsuario', { idProprietario: ownerId }, token);
-  const repositoryId = Number(process.env.ASTEN_REPOSITORY_ID || 0) || findId(repositories);
+  const repositoryId = resolveAstenRepository(repositories);
   if (!repositoryId) throw new Error('Nenhum repositório Asten foi localizado para esta conta.');
   const identifier = String(ownerId);
   await saveIntegrationSecret('asten', token, {
