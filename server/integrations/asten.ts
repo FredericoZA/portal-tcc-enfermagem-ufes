@@ -162,7 +162,8 @@ function openSealedSession(id: string): Session | null {
 }
 
 export async function callAsten(service: Service, params: Record<string, unknown>, token: string): Promise<any> {
-  if (!enabled()) throw new Error('A integração Asten está bloqueada pelo interruptor de segurança.');
+  // Conectar/validar a conta não autoriza criar, cancelar ou encaminhar documentos.
+  if (!enabled() && !['getIdentificador','getRepositoriosDoUsuario'].includes(service)) throw new Error('A integração Asten está bloqueada para operações de documentos.');
   if (!allowed.has(service)) throw new Error('Serviço Asten não permitido.');
   const apiToken = String(token || '').trim();
   if (new URL(API_BASE).protocol !== 'https:' || new URL(API_BASE).hostname !== 'plataforma.astenassinatura.com.br') throw new Error('Configuração Asten inválida.');
