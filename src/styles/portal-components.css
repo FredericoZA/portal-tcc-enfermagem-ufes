@@ -1378,7 +1378,18 @@ button[aria-label^="Configurar exibição"],
 /* TCC15: modal segue o conteúdo e só rola quando a área disponível acaba. */
 .portal-settings-workspace {width:max-content;max-width:calc(100vw - 48px);max-height:calc(100dvh - 48px);}
 .portal-settings-workspace[data-portal-compact="true"] .portal-settings-single-pane {min-height:0;}
-.portal-settings-workspace:not([data-portal-sheet-workspace="true"]) .portal-settings-single-pane {padding:15px;overflow-y:auto;overscroll-behavior:contain;}
+/* Padrão compartilhado: a margem inferior também permanece visível ao final da rolagem. */
+.portal-settings-workspace:not([data-portal-sheet-workspace="true"]) .portal-settings-single-pane {padding:15px;overflow-y:auto;overscroll-behavior:contain;scroll-padding-bottom:15px;}
+.portal-settings-workspace:not([data-portal-sheet-workspace="true"]) .portal-settings-single-pane > :last-child {margin-bottom:0;}
+
+/* Campos editáveis dos pop-ups: escala tipográfica única, sem alterar textos de leitura. */
+.portal-settings-workspace .portal-settings-single-pane input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.portal-settings-workspace .portal-settings-single-pane textarea,
+.portal-settings-workspace .portal-settings-single-pane select {font-size:12px;line-height:1.4;}
+
+/* Ações de exclusão: botão branco e símbolo vermelho, com a mesma linguagem da Identidade. */
+button:has(svg[class*="lucide-trash"]) {background-color:#fff;color:#be123c;border-color:var(--portal-border);}
+button:has(svg[class*="lucide-trash"]) svg {color:#be123c;stroke:#be123c;}
 .portal-settings-workspace:not([data-portal-sheet-workspace="true"]) .portal-settings-single-pane > :first-child {min-height:0;}
 .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-settings-single-pane {flex:0 1 auto;overflow:hidden;}
 .portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"] {height:auto;min-height:0;max-height:calc(100dvh - 135px);overflow:hidden;}
