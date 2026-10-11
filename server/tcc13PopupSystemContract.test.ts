@@ -182,7 +182,7 @@ test('editor de fluxo usa timeline clicável e planilha da etapa sem paleta de a
   assert.match(studio,/>Ordem<\/th>/);
   assert.match(studio,/>Condição para execução<\/th>/);
   assert.match(studio,/type="checkbox" checked=\{Boolean\(action\)\}/);
-  assert.match(studio,/pb-5/);
+  assert.match(studio,/pb-\[15px\]/);
   assert.doesNotMatch(studio,/Arraste para uma etapa/);
   assert.doesNotMatch(studio,/application\/x-portal-workflow/);
 });
@@ -230,7 +230,7 @@ test('editor de e-mail usa modelo único autoeditável e autocomplete sem criar 
   const studio=read('src/components/IntegrationStudioPanel.tsx');
   assert.match(studio,/data-portal-email-direct-editor="true"/);
   assert.match(studio,/aria-label="Selecionar e-mail"/);
-  assert.match(studio,/title="Adicionar outro modelo de e-mail"/);
+  assert.match(studio,/title="Adicionar e-mail"/);
   assert.match(studio,/title="Excluir somente este modelo de e-mail"/);
   assert.match(studio,/HTML avançado/);
   assert.match(studio,/Digite &lt;&lt; para escolher uma variável disponível/);
