@@ -17,6 +17,7 @@ const report = {
   fixtureProcesses: 0,
   fixtureStatuses: [],
   screenshots: [],
+  typography: [],
   errors: [],
   warnings: [],
   scope: 'Dados fictícios locais; valida responsividade, overflow, navegação e perfis. Não valida provedores externos, zoom manual ou leitor de tela.'
@@ -116,6 +117,36 @@ try {
     if (await page.locator('vite-error-overlay').count()) throw new Error(`${name}: overlay de erro do Vite.`);
     const file = `${name}.png`;
     await page.screenshot({ path: path.join(output, file), fullPage: true });
+    // Inventário dos valores EFETIVOS de font-size no Chromium, por página e modal.
+    // Inclui os elementos visíveis com texto, não apenas as declarações do CSS.
+    const fonts = await page.evaluate(() => {
+      const histogram = {};
+      const outliers = [];
+      const selectors = 'h1,h2,h3,h4,h5,h6,p,label,button,a,td,th,span,strong,small,input,textarea,select,summary,[role="heading"]';
+      const insideSheet = (el) => Boolean(el.closest('.portal-spreadsheet-table,.portal-spreadsheet-scroll-host,.portal-calendar-day-cell,.portal-calendar-empty-cell'));
+      for (const el of document.querySelectorAll(selectors)) {
+        if (el.closest('script,style,[hidden],[aria-hidden="true"]') || !el.getClientRects().length) continue;
+        const style = getComputedStyle(el);
+        if (style.visibility === 'hidden' || style.display === 'none') continue;
+        const label = (el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 80);
+        if (!label) continue;
+        const px = Math.round(parseFloat(style.fontSize)*10)/10;
+        if (!Number.isFinite(px)) continue;
+        const region = el.closest('.portal-settings-workspace') ? 'configuracoes-popup' :
+          insideSheet(el) ? 'planilha-calendario' : 'portal-geral';
+        const key = `${region}:${px}px`;
+        histogram[key] = (histogram[key] || 0) + 1;
+        if (px < 10.5 && outliers.length < 24 && region !== 'planilha-calendario') {
+          outliers.push({
+            size: px, region, tag: el.tagName.toLowerCase(),
+            classes: String(el.getAttribute('class') || '').slice(0, 120),
+            sample: label
+          });
+        }
+      }
+      return { histogram, outliers };
+    });
+    report.typography.push({ screen: name, ...fonts });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2);
     const overflowElements = overflow ? await page.evaluate(() => {
       const viewport = innerWidth;
@@ -533,6 +564,11 @@ try {
     });
   }
   if (dataDir) await rm(dataDir, { recursive: true, force: true });
+  await writeFile(path.join(output, 'typography-audit.json'), JSON.stringify(report.typography, null, 2));
+  const allFonts = {};
+  for (const screen of report.typography) for (const [size,count] of Object.entries(screen.histogram)) allFonts[size]=(allFonts[size]||0)+count;
+  console.log('[TYPOGRAPHY_AUDIT]', JSON.stringify({ screens:report.typography.length, histogram:allFonts,
+    sampleOutliers:report.typography.filter(screen=>screen.outliers.length).slice(0,12).map(screen=>({screen:screen.screen,outliers:screen.outliers.slice(0,3)})) }));
   await writeFile(path.join(output, 'resultado.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
 }
