@@ -91,6 +91,14 @@ export function normalizeAstenWebhookEvent(input: {
   };
 }
 
+/** Worker: não reprocessar ACKs já concluídos ou reivindicados por outra instância. */
+export function isReconcileableAstenWebhookEvent(event:AstenWebhookEvent,now=Date.now()):boolean{
+  if(event.duplicate||!event.matchedJobId||event.processedAt||event.safePayload?.processedAt)return false;
+  if(event.retryAfter&&Date.parse(event.retryAfter)>now)return false;
+  if(event.processingLeaseUntil&&Date.parse(event.processingLeaseUntil)>now)return false;
+  return true;
+}
+
 const EVENT_RANK: Record<AstenEventStatus, number> = { UNMATCHED: 0, CREATED: 1, SENT: 2, PARTIALLY_SIGNED: 3, SIGNED: 4, DECLINED: 4, CANCELED: 4, EXPIRED: 4, ERROR: 4 };
 const TERMINAL = new Set<AstenEventStatus>(['SIGNED', 'DECLINED', 'CANCELED', 'EXPIRED']);
 
