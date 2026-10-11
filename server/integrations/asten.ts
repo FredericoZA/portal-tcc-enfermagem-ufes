@@ -15,7 +15,13 @@ interface Session { token: string; ownerEmail: string; identifier: string; repos
 const sessions = new Map<string, Session>();
 const readonlyAstenServices = new Set<Service>(['getIdentificador', 'getRepositoriosDoUsuario', 'getDadosEnvelope', 'getSignatariosPorEnvelope', 'downloadPDFEnvelopeDocs', 'getDocumentosEXMLsAssinadosDoEnvelope']);
 // Dupla autorização: credencial validada não autoriza enviar documentos.
-const enabled = () => process.env.ASTEN_INTEGRATION_ENABLED === 'true' && process.env.ASTEN_PILOT_APPROVED === 'true';
+// Em produção, uma autorização de release adicional evita que variáveis antigas
+// da Vercel liberem assinaturas automaticamente na publicação desta revisão.
+const enabled = () =>
+  process.env.ASTEN_INTEGRATION_ENABLED === 'true' &&
+  process.env.ASTEN_PILOT_APPROVED === 'true' &&
+  (process.env.NODE_ENV !== 'production' && !process.env.VERCEL ||
+    process.env.ASTEN_PRODUCTION_RELEASE_APPROVED === 'true');
 const storedToken = () => process.env.ASTEN_ALLOW_STORED_TOKEN === 'true' ? String(process.env.ASTEN_API_KEY || '').trim() || null : null;
 const MIN_WEBHOOK_SECRET_LENGTH = 32;
 
