@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { ProcessData } from '../../src/types';
-import { buildAstenOperationalDashboard, buildCanonicalSignaturePlan, mapAstenEventToJobStatus, normalizeAstenWebhookEvent, publicationAuthorizationRequired, reduceAstenTimeline } from './astenEventLedger';
+import { buildAstenOperationalDashboard, buildCanonicalSignaturePlan, isReconcileableAstenWebhookEvent, mapAstenEventToJobStatus, normalizeAstenWebhookEvent, publicationAuthorizationRequired, reduceAstenTimeline } from './astenEventLedger';
 
 const processFixture = {
   id: 'p1', protocolo: 'TCC-1', titulo: 'Teste', etapaAtual: 'ASSINATURA', status: 'AGUARDANDO_ASSINATURA', createdByEmail: 'a@ufes.br',
@@ -50,3 +50,24 @@ test('webhook documentado pela Asten traz id em envelope.id',()=>{
     assert.equal(event.status,'SIGNED');
     assert.equal(JSON.stringify(event.safePayload).includes('segredo'),false);
   });
+
+test('worker Asten respeita processamento, lease e retry antes de acessar rede externa',()=>{
+  const event=normalizeAstenWebhookEvent({
+    payload:{envelope:{id:3725,status:'3'}},
+    jobs:[{id:'j3725',processId:'p1',protocol:'TCC-1',documentType:'ATA',status:'SENT',providerEnvelopeId:'3725',updatedAt:''}]
+  });
+  const now=Date.parse('2026-10-11T15:00:00.000Z');
+  assert.equal(isReconcileableAstenWebhookEvent(event,now),true);
+  event.processingLeaseUntil=new Date(now+600_000).toISOString();
+  assert.equal(isReconcileableAstenWebhookEvent(event,now),false);
+  event.processingLeaseUntil=new Date(now-1).toISOString();
+  event.retryAfter=new Date(now+30_000).toISOString();
+  assert.equal(isReconcileableAstenWebhookEvent(event,now),false);
+  event.retryAfter=new Date(now-1).toISOString();
+  assert.equal(isReconcileableAstenWebhookEvent(event,now),true);
+  event.processedAt=new Date(now).toISOString();
+  assert.equal(isReconcileableAstenWebhookEvent(event,now),false);
+  event.processedAt=undefined;
+  event.safePayload.processedAt=new Date(now).toISOString();
+  assert.equal(isReconcileableAstenWebhookEvent(event,now),false);
+});
