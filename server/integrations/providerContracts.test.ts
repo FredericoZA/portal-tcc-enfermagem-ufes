@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, resolveAstenRepository, extractAstenSignedPdf } from './asten';
+import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, resolveAstenRepository, extractAstenSignedPdf, callAsten } from './asten';
 import { buildGoogleAuthorizationUrl, decodeGoogleOAuthState, getGoogleWorkspaceScopes } from './googleWorkspace';
 import { buildSupabaseAdminHeaders } from './supabase';
 import { buildProtocol, emailMatchesDomains } from '../../src/utils/installationProfile';
@@ -162,4 +162,30 @@ test('outbox Asten bloqueia recriação após resultado ambíguo', () => {
   assert.match(migration,/return jsonb_build_object\('outcome','UNCERTAIN'\)/);
   assert.match(migration,/asten_transactional_outbox', true/);
   assert.match(migration,/force row level security/i);
+});
+
+test('Asten permite validar conta com envios desligados mas bloqueia mudanças de envelopes',async()=>{
+  const previousFlag=process.env.ASTEN_INTEGRATION_ENABLED;
+  const previousFetch=globalThis.fetch;
+  const urls:string[]=[];
+  process.env.ASTEN_INTEGRATION_ENABLED='false';
+  try{
+    globalThis.fetch=async (input)=>{
+      const url=String(input);
+      urls.push(url);
+      const response=url.endsWith('/getIdentificador')?{Usuario:{id:42}}:[{id:123,isProprietario:'S'}];
+      return new Response(JSON.stringify({response}),{status:200,headers:{'content-type':'application/json'}});
+    };
+    const token='token-ficticio-para-contrato-123456';
+    assert.deepEqual(await callAsten('getIdentificador',{},token),{Usuario:{id:42}});
+    assert.deepEqual(await callAsten('getRepositoriosDoUsuario',{idProprietario:42},token),[{id:123,isProprietario:'S'}]);
+    await assert.rejects(callAsten('inserirEnvelope',{},token),/bloquead/i);
+    await assert.rejects(callAsten('encaminharEnvelopeParaAssinaturas',{},token),/bloquead/i);
+    await assert.rejects(callAsten('cancelarEnvelope',{},token),/bloquead/i);
+    assert.equal(urls.length,2);
+  }finally{
+    globalThis.fetch=previousFetch;
+    if(previousFlag===undefined)delete process.env.ASTEN_INTEGRATION_ENABLED;
+    else process.env.ASTEN_INTEGRATION_ENABLED=previousFlag;
+  }
 });
