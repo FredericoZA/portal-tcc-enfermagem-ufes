@@ -1516,8 +1516,20 @@ export async function createPortalApp() {
       res.status(result.failed?207:200).json({ok:result.failed===0,...result});
     }catch{res.status(503).json({error:'Falha ao persistir a reconciliação Asten.'});}
   });
-  // A reconciliação agregada é exclusiva do cron autenticado; para intervenção
-  // manual, o Master usa a rota já protegida e limitada por assinatura individual.
+  // O Master pode antecipar a reconciliação manualmente, sem despachar envelopes.
+  app.post('/api/admin/asten/reconcile-events',requireAuthenticated,requireAdministrator,async(req,res)=>{
+    const identity=getPortalIdentity(req)!;
+    if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Reautentique-se para reconciliar callbacks Asten.'});
+    if(!allowSignatureRetry(identity.email,'asten-webhook-batch'))return res.status(429).json({error:'A reconciliação foi solicitada recentemente. Tente depois.'});
+    try{
+      const result=await reconcileQueuedAstenCallbacks(5);
+      res.setHeader('Cache-Control','no-store');
+      res.status(result.failed?207:200).json({ok:result.failed===0,...result});
+    }catch{
+      res.status(503).json({error:'A reconciliação Asten ainda não pôde ser concluída.'});
+    }
+  });
+
 
   // GET /api/me
   app.get('/api/me', (req, res) => {
