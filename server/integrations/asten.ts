@@ -13,7 +13,8 @@ type Service = 'getIdentificador' | 'getRepositoriosDoUsuario' | 'inserirEnvelop
 const allowed = new Set<Service>(['getIdentificador','getRepositoriosDoUsuario','inserirEnvelope','encaminharEnvelopeParaAssinaturas','getDadosEnvelope','getSignatariosPorEnvelope','downloadPDFEnvelopeDocs','getDocumentosEXMLsAssinadosDoEnvelope','reenviarLinksDeAssinatura','cancelarEnvelope']);
 interface Session { token: string; ownerEmail: string; identifier: string; repositoryId?: number; expiresAt: number; }
 const sessions = new Map<string, Session>();
-const enabled = () => process.env.ASTEN_INTEGRATION_ENABLED === 'true';
+// Dupla autorização: credencial validada não autoriza enviar documentos.
+const enabled = () => process.env.ASTEN_INTEGRATION_ENABLED === 'true' && process.env.ASTEN_PILOT_APPROVED === 'true';
 const storedToken = () => process.env.ASTEN_ALLOW_STORED_TOKEN === 'true' ? String(process.env.ASTEN_API_KEY || '').trim() || null : null;
 const MIN_WEBHOOK_SECRET_LENGTH = 32;
 
