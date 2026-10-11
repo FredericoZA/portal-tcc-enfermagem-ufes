@@ -1237,7 +1237,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         )}
 
         {activeTab === 'emails' && selectedEmail && (
-          <div className="min-h-full bg-[var(--portal-surface-page)] pb-5" data-portal-email-direct-editor="true">
+          <div className="min-h-0 bg-[var(--portal-surface-page)]" data-portal-email-direct-editor="true">
             <SettingsWorkspaceHeaderPortal>
               <div className="flex min-w-0 items-center gap-1.5">
                 <button type="button" onClick={createEmailTemplate} className="portal-toolbar-icon-button" title="Adicionar e-mail" aria-label="Adicionar e-mail"><Plus className="h-3.5 w-3.5"/></button>
@@ -1255,7 +1255,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               </div>
             </SettingsWorkspaceHeaderPortal>
 
-            <div className="mx-auto w-full max-w-5xl p-3 pb-5">
+            <div className="mx-auto w-full max-w-[880px]">
               <article className="overflow-visible rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] shadow-sm">
                 <div className="grid gap-2 border-b border-slate-300 p-3 sm:grid-cols-2 lg:grid-cols-4">
                   <label className="lg:col-span-2"><span className={labelClass}>Nome da rotina</span><input value={selectedEmail.name} onChange={event=>updateSelectedEmail({name:event.target.value})} className={inputClass}/></label>
@@ -1347,7 +1347,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         )}
 
         {activeTab === 'forms' && selectedForm && (
-          <div className="min-h-full bg-[var(--portal-surface-page)] pb-5" data-portal-form-direct-editor="true">
+          <div className="min-h-0 bg-[var(--portal-surface-page)]" data-portal-form-direct-editor="true">
             <SettingsWorkspaceHeaderPortal>
               <div className="flex min-w-0 items-center gap-1.5">
                 <button type="button" onClick={createFormTemplate} className="portal-toolbar-icon-button" title="Adicionar formulário" aria-label="Adicionar formulário"><Plus className="h-3.5 w-3.5"/></button>
@@ -1362,7 +1362,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               </div>
             </SettingsWorkspaceHeaderPortal>
 
-            <div className="mx-auto w-full max-w-4xl p-3 pb-5">
+            <div className="mx-auto w-full max-w-[810px]">
               <article className="overflow-hidden rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] shadow-sm" style={{fontFamily:brandKit.fontFamily}}>
                 <div className="flex items-center gap-3 border-b-[5px] border-white bg-[var(--portal-brand-header)] px-4 py-3">
                   <label className="group relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white p-1" title="Alterar logo da UFES">

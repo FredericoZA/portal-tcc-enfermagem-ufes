@@ -1114,7 +1114,7 @@ button[aria-label^="Configurar exibição"],
 }
 
 #portal-models-workspace .portal-studio {
-  padding: 10px;
+  padding: 0;
 }
 
 .portal-studio-panel {
@@ -1346,7 +1346,7 @@ button[aria-label^="Configurar exibição"],
 
 /* TCC14 — superfície contínua das planilhas, margens externas e rolagem do fluxo. */
 .portal-settings-workspace {max-height:calc(100dvh - 48px);}
-.portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-settings-workspace-divider {display:none;}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-settings-workspace-divider {display:block;height:15px;min-height:15px;background:#fff;}
 .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-settings-single-pane,
 .portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"] {background:var(--portal-surface-panel);padding:0;margin:0;border:0;border-radius:0;}
 .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-table {margin:0;border-radius:0;}
@@ -1374,3 +1374,23 @@ button[aria-label^="Configurar exibição"],
 .portal-tcc-workspace-tabs button:not(:focus-visible) {border-radius:9999px;}
 .portal-tcc-workspace-content {padding-bottom:20px;}
 .portal-process-dialog-body {overscroll-behavior:contain;}
+
+/* TCC15: modal segue o conteúdo e só rola quando a área disponível acaba. */
+.portal-settings-workspace {width:max-content;max-width:calc(100vw - 48px);max-height:calc(100dvh - 48px);}
+.portal-settings-workspace[data-portal-compact="true"] .portal-settings-single-pane {min-height:0;}
+.portal-settings-workspace:not([data-portal-sheet-workspace="true"]) .portal-settings-single-pane {padding:15px;overflow-y:auto;overscroll-behavior:contain;}
+.portal-settings-workspace:not([data-portal-sheet-workspace="true"]) .portal-settings-single-pane > :first-child {min-height:0;}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-settings-single-pane {flex:0 1 auto;overflow:hidden;}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"] {height:auto;min-height:0;max-height:calc(100dvh - 135px);overflow:hidden;}
+.portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-scroll-host {max-height:calc(100dvh - 170px);overflow:auto;}
+.portal-settings-workspace[data-portal-workflow-workspace="true"] .portal-studio,
+.portal-settings-workspace[data-portal-workflow-workspace="true"] #portal-models-workspace {height:auto;max-height:100%;overflow:visible;}
+.portal-settings-workspace[data-portal-workflow-workspace="true"] .portal-studio > div:last-child {flex:0 1 auto;overflow:visible;}
+.portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-editor="true"] {flex:0 1 auto;overflow:visible;padding:0;}
+.portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-editor="true"] > section:last-child {flex:0 1 auto;min-height:0;}
+.portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-stage-sheet="true"] {flex:0 1 auto;max-height:calc(100dvh - 380px);overflow:auto;}
+@media(max-width:640px){
+  .portal-settings-workspace {max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);}
+  .portal-settings-workspace:not([data-portal-sheet-workspace="true"]) .portal-settings-single-pane {padding:15px;}
+  .portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-stage-sheet="true"] {max-height:calc(100dvh - 330px);}
+}

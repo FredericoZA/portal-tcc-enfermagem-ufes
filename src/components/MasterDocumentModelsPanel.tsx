@@ -256,7 +256,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const integrityReady=Boolean(model?.configured&&model?.contentSha256);
   const deleting=working===`delete-${type}`;
 
-  return <section className="portal-master-models-catalog min-h-full bg-[var(--portal-surface-page)] pb-5" data-portal-document-direct-editor="true">
+  return <section className="portal-master-models-catalog min-h-0 bg-[var(--portal-surface-page)] pb-0" data-portal-document-direct-editor="true">
     <SettingsWorkspaceHeaderPortal>
       <div className="flex min-w-0 items-center gap-1.5">
         <button type="button" onClick={()=>setShowNewModel(value=>!value)} className="portal-toolbar-icon-button" title="Adicionar documento" aria-label="Adicionar documento"><Plus className="h-3.5 w-3.5"/></button>
@@ -283,7 +283,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
 
     {message&&<p role="status" className="mx-3 mt-3 rounded-lg border border-slate-300 px-2.5 py-1.5 text-[10px] font-semibold text-slate-700" style={{backgroundColor:'var(--portal-surface-panel)'}}>{message}</p>}
 
-    <article className="mx-3 mt-3 overflow-hidden rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)]">
+    <article className="mt-2 overflow-hidden rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 p-3">
         <div className="min-w-0">
           <strong className="block truncate text-[12px] text-slate-900">{model?.label||label}</strong>
