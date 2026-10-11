@@ -163,7 +163,8 @@ function openSealedSession(id: string): Session | null {
 }
 
 export async function callAsten(service: Service, params: Record<string, unknown>, token: string): Promise<any> {
-  if (!enabled()) throw new Error('A integração Asten está bloqueada pelo interruptor de segurança.');
+  // Permite testar e conectar a conta sem habilitar criação de envelopes ou envios.
+  if(!enabled()&&!['getIdentificador','getRepositoriosDoUsuario'].includes(service))throw new Error('A integração Asten está bloqueada para operações de documentos.');
   if (!allowed.has(service)) throw new Error('Serviço Asten não permitido.');
   const apiToken = String(token || '').trim();
   if (new URL(API_BASE).protocol !== 'https:' || new URL(API_BASE).hostname !== 'plataforma.astenassinatura.com.br') throw new Error('Configuração Asten inválida.');
@@ -249,6 +250,7 @@ export async function connectPersistentAsten(tokenInput: string) {
   await saveIntegrationSecret('asten', token, {
     identifier,
     repositoryId,
+    validatedContractVersion:2,
     connectedAt: new Date().toISOString()
   });
   return { identifier, repositoryId, connectedAt: new Date().toISOString() };
@@ -256,7 +258,7 @@ export async function connectPersistentAsten(tokenInput: string) {
 
 export async function getPersistentAstenConnection(): Promise<{ token: string; identifier: string; repositoryId: number } | null> {
   const stored = await loadIntegrationSecret('asten').catch(() => null);
-  if (!stored?.value) return null;
+  if (!stored?.value||stored.metadata?.validatedContractVersion!==2) return null;
   const repositoryId = Number(stored.metadata?.repositoryId || process.env.ASTEN_REPOSITORY_ID || 0);
   if (!repositoryId) return null;
   return { token: stored.value, identifier: String(stored.metadata?.identifier || ''), repositoryId };
@@ -328,10 +330,13 @@ export function assertAstenEnvelopeSigners(response: unknown, expected: Array<{e
       const signedAt=value.dataAssinatura||value.dataHoraAssinatura||value.dhAssinatura||value.signedAt||value.momentoAssinatura;
       const flag=value.assinado??value.assinaturaRealizada??value.signed;
       const flagText=normalizedStatus(flag);
-      const statusText=normalizedStatus(value.statusAssinatura??value.situacaoAssinatura??value.status??value.situacao);
+      const rawStatus=value.statusAssinatura??value.situacaoAssinatura??value.status??value.situacao;
+      const statusText=normalizedStatus(rawStatus);
       const negativeStatus=/(^|\b)(nao[ _-]?assinado|pendente|aguardando|recusad|cancelad|expirad|nao[ _-]?conclu|nao[ _-]?finaliz)(\b|$)/.test(statusText);
       const positiveStatus=/(^|\b)(assinado|concluido|concluida|finalizado|finalizada)(\b|$)/.test(statusText);
-      const signed=!negativeStatus&&(Boolean(signedAt)||(typeof flag==='boolean'&&flag)||['s','sim','true','1'].includes(flagText)||positiveStatus);
+      const numerical=String(rawStatus??'').trim();
+      const signed= !negativeStatus && numerical!=='1'&&numerical!=='2'&&numerical!=='4'&&numerical!=='5'&&numerical!=='6' &&
+        (numerical==='3'||Boolean(signedAt)||(typeof flag==='boolean'&&flag)||['s','sim','true','1'].includes(flagText)||positiveStatus);
       evidence.push({email,order,signed});
       return;
     }
