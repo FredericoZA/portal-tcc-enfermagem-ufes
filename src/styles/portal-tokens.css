@@ -94,6 +94,8 @@
   --portal-editor-field-font-size: var(--portal-font-size-small);
   --portal-editor-action-font-size: var(--portal-font-size-small);
   --portal-editor-label-font-size: var(--portal-font-size-small);
+  --portal-popover-text-font-size: var(--portal-font-size-small);
+  --portal-compact-menu-font-size: var(--portal-sheet-body-font-size);
   --portal-delete-icon-color: #dc2626;
 
   /* Escala tipográfica canônica de navegação e planilhas. */
