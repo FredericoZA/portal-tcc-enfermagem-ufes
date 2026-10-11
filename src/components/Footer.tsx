@@ -79,7 +79,7 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
         <MapPin className="h-4 w-4 shrink-0 text-slate-600" />
         <span><strong className="text-slate-700">Local das Apresentações:</strong> {locationText}</span>
       </div>
-      <div className="mt-1.5 grid gap-1.5 border-t border-slate-200 pt-1.5 text-[10px] sm:grid-cols-3 sm:text-[11px]">
+      <div className="mt-1.5 grid gap-1.5 border-t border-slate-200 pt-1.5 text-xs sm:grid-cols-3 sm:text-xs">
         <div className="flex gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5"><Lightbulb className="h-4 w-4 shrink-0 text-slate-500"/><span><strong>Vindo do HUCAM:</strong> subir a ladeira principal do campus de Maruípe e manter-se à direita nas duas bifurcações.</span></div>
         <div className="flex gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5"><Info className="h-4 w-4 shrink-0 text-slate-500"/><span><strong>Referência:</strong> prédio em frente à Capela Universitária de Maruípe.</span></div>
         <div className="flex gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5"><Car className="h-4 w-4 shrink-0 text-slate-500"/><span><strong>Estacionamento:</strong> vagas externas gratuitas, sujeitas à lotação.</span></div>
@@ -91,26 +91,26 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
   return <>
     {locationCard}
     <footer id="home-page-footer-notes" className="space-y-1 pt-1 pb-1.5 border-t border-slate-200 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 relative">
-      <div className="overflow-hidden rounded-lg border text-[11px]" style={{backgroundColor:footerBg,color:footerText,borderColor:footerBorder}}>
+      <div className="overflow-hidden rounded-lg border text-xs" style={{backgroundColor:footerBg,color:footerText,borderColor:footerBorder}}>
         <div className="grid md:grid-cols-[1fr_1.18fr] items-stretch">
           <div className="flex flex-col justify-center p-2.5 md:border-r space-y-2 text-center" style={{borderColor:footerDivider}}>
             <div className="flex flex-col items-center">
-              <div className="font-extrabold uppercase tracking-wider text-[9px]" style={{color:footerMuted}}>{layoutConfig.footerPresidentLabel||'Presidente da Comissão'}</div>
+              <div className="font-extrabold uppercase tracking-wider text-xs" style={{color:footerMuted}}>{layoutConfig.footerPresidentLabel||'Presidente da Comissão'}</div>
               <div className="mt-0.5 flex min-h-[20px] items-center justify-center text-[12px]"><CopyableName name={presidentName} email={presidentEmail} id="president"/></div>
             </div>
             <div className="pt-2 border-t" style={{borderColor:footerDivider}}>
-              <div className="font-extrabold uppercase tracking-wider text-[9px]" style={{color:footerMuted}}>{layoutConfig.footerMembersLabel||'Membros da Comissão'}</div>
+              <div className="font-extrabold uppercase tracking-wider text-xs" style={{color:footerMuted}}>{layoutConfig.footerMembersLabel||'Membros da Comissão'}</div>
               <div className={`mt-1 grid items-start gap-x-4 gap-y-1 text-center ${membersList.length === 1 ? 'grid-cols-1' : 'sm:grid-cols-2'}`}>
-                {membersList.length?membersList.map((member)=><div key={member.id||member.name} className="flex flex-col items-center justify-start"><div className="min-h-[18px]"><CopyableName name={member.name} email={member.email} id={`member-${member.id||member.name}`}/></div>{(member.startDate||member.endDate)&&<p className="text-[9px]" style={{color:footerMuted}}>{member.startDate?`Início: ${formatTermDate(member.startDate)}`:''}{member.startDate&&member.endDate?' · ':''}{member.endDate?`Fim: ${formatTermDate(member.endDate)}`:''}</p>}</div>):<p className="sm:col-span-2" style={{color:footerMuted}}>Não configurado</p>}
+                {membersList.length?membersList.map((member)=><div key={member.id||member.name} className="flex flex-col items-center justify-start"><div className="min-h-[18px]"><CopyableName name={member.name} email={member.email} id={`member-${member.id||member.name}`}/></div>{(member.startDate||member.endDate)&&<p className="text-xs" style={{color:footerMuted}}>{member.startDate?`Início: ${formatTermDate(member.startDate)}`:''}{member.startDate&&member.endDate?' · ':''}{member.endDate?`Fim: ${formatTermDate(member.endDate)}`:''}</p>}</div>):<p className="sm:col-span-2" style={{color:footerMuted}}>Não configurado</p>}
               </div>
             </div>
           </div>
           <div className="flex items-center justify-center px-3 py-1.5 min-h-[112px]">
             <div className="flex w-fit max-w-full items-center justify-center gap-2">
               <div className="min-w-0 max-w-[250px] flex flex-col justify-center items-center text-center gap-1">
-                <div className="flex flex-col items-center"><div className="font-extrabold uppercase tracking-wider text-[9px] leading-tight" style={{color:footerMuted}}>Desenvolvimento da Plataforma<br/>e Suporte</div><div className="mt-0.5 text-[12px]"><CopyableName name={devName} email={contactEmail} id="secretary"/></div></div>
-                {whatsappUrl&&<a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1 font-bold uppercase tracking-wider text-[10px] rounded-lg transition-all hover:brightness-95" style={{backgroundColor:WHATSAPP_BUTTON_GREEN,color:whatsappText}}><WhatsAppMark className="w-3.5 h-3.5"/>WhatsApp Secretaria</a>}
-                <p className="max-w-[250px] text-center text-[9px] leading-3.5 font-normal" style={{color:footerMuted}}>Sistema inspirado na solução desenvolvida por Sabrina Lemos Rodrigues — PPGEMF</p>
+                <div className="flex flex-col items-center"><div className="font-extrabold uppercase tracking-wider text-xs leading-tight" style={{color:footerMuted}}>Desenvolvimento da Plataforma<br/>e Suporte</div><div className="mt-0.5 text-[12px]"><CopyableName name={devName} email={contactEmail} id="secretary"/></div></div>
+                {whatsappUrl&&<a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1 font-bold uppercase tracking-wider text-xs rounded-lg transition-all hover:brightness-95" style={{backgroundColor:WHATSAPP_BUTTON_GREEN,color:whatsappText}}><WhatsAppMark className="w-3.5 h-3.5"/>WhatsApp Secretaria</a>}
+                <p className="max-w-[250px] text-center text-xs leading-3.5 font-normal" style={{color:footerMuted}}>Sistema inspirado na solução desenvolvida por Sabrina Lemos Rodrigues — PPGEMF</p>
               </div>
               {qrCodeSource&&<div className="relative w-[104px] h-[104px] sm:w-[112px] sm:h-[112px] shrink-0 rounded-xl border border-slate-300 bg-white p-1.5 shadow-lg"><img src={qrCodeSource} alt="QR Code para contato pelo WhatsApp" className="block h-full w-full rounded-lg object-contain p-0" referrerPolicy="no-referrer"/><span className="absolute left-1/2 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-white shadow-md ring-[3px] ring-white" style={{backgroundColor:WHATSAPP_GREEN}}><WhatsAppMark className="h-5 w-5"/></span></div>}
             </div>
