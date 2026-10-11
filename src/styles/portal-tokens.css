@@ -106,6 +106,6 @@
   --portal-sheet-filter-chip-font-size: 11px;
   --portal-sheet-column-font-size: 11px;
   --portal-sheet-body-font-size: 11px;
-  --portal-calendar-event-font-size: 8.5px;
-  --portal-calendar-event-secondary-font-size: 7.5px;
+  --portal-calendar-event-font-size: 11px;
+  --portal-calendar-event-secondary-font-size: 10px;
 }
