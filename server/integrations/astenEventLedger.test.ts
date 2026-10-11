@@ -43,3 +43,10 @@ test('assinatura concluída permite retomar arquivamento pendente no Drive',()=>
   assert.equal(mapAstenEventToJobStatus('SIGNED','DRIVE_SYNC_PENDING'),'SIGNED');
   assert.equal(mapAstenEventToJobStatus('SENT','DRIVE_SYNC_PENDING'),'DRIVE_SYNC_PENDING');
 });
+
+test('webhook documentado pela Asten traz id em envelope.id',()=>{
+    const event=normalizeAstenWebhookEvent({payload:{tokenAPI:'segredo',envelope:{id:'3725',status:'3'}}});
+    assert.equal(event.envelopeId,'3725');
+    assert.equal(event.status,'SIGNED');
+    assert.equal(JSON.stringify(event.safePayload).includes('segredo'),false);
+  });
