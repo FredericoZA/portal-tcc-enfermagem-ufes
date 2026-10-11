@@ -13,15 +13,25 @@ test('contrato Asten mantém PDF confidencial, envio explícito e prioridade par
   process.env.ASTEN_CALLBACK_URL='https://portal.example/api/integrations/asten/webhook';
   process.env.PORTAL_PUBLIC_URL='https://portal.example';
   process.env.ASTEN_REQUIRE_CODE='true';
+  process.env.ASTEN_AUTHENTICATION_OPTION='2';
   const contentBase64=Buffer.from('%PDF-1.4\nobj\n%%EOF','utf8').toString('base64');
   const payload=buildAstenEnvelopeParams({description:'TCC-2026-0001 — Termo',fileName:'termo.pdf',mimeType:'application/pdf',contentBase64,repositoryId:42,signers:[{name:'Aluno',email:'aluno@example.edu',order:1},{name:'Orientador',email:'orientador@example.edu',order:1}]});
   const envelope=payload.Envelope as any;
   assert.equal(payload.encaminharImediatamente,'N');
   assert.equal(envelope.confidencial,'S');
+  assert.equal(envelope.usarOrdem,'S');
+  assert.equal(envelope.listaSignatariosEnvelope.SignatarioEnvelope[0].ConfigAssinatura.exigirCodigo,'N');
   assert.deepEqual(envelope.listaSignatariosEnvelope.SignatarioEnvelope.map((item:any)=>item.ordem),[1,1]);
   assert.equal(envelope.listaSignatariosEnvelope.SignatarioEnvelope[0].ConfigAssinatura.permitirDelegar,'N');
   assert.equal(envelope.urlCallbackHeaderProp,'x-portal-webhook-key');
   assert.equal('tokenAPI' in envelope,false);
+});
+
+test('autenticação SMS sem telefone é bloqueada antes de enviar documentos',()=>{
+  process.env.ASTEN_AUTHENTICATION_OPTION='4';
+  const pdf=Buffer.from('%PDF-1.4\\n%%EOF').toString('base64');
+  assert.throws(()=>buildAstenEnvelopeParams({description:'Piloto',fileName:'piloto.pdf',mimeType:'application/pdf',contentBase64:pdf,repositoryId:42,signers:[{name:'Pessoa teste',email:'teste@example.edu',order:1}]}),/telefone verificado/);
+  process.env.ASTEN_AUTHENTICATION_OPTION='2';
 });
 
 test('PDF Asten só é aceito com signatários e ordens exatamente confirmados', () => {
