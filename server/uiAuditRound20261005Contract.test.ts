@@ -65,7 +65,7 @@ test('sidebar usa texto corrido menor e ações de sessão mais compactas', () =
   assert.match(components, /font-size: var\(--portal-sidebar-session-action-font-size\)/);
 });
 
-test('eventos do calendário usam tipografia 30 por cento mais densa', () => {
+test('eventos do calendário preservam legibilidade compacta de 10–11px', () => {
   const tokens = read('src/styles/portal-tokens.css');
   const components = read('src/styles/portal-components.css');
   assert.match(tokens, /--portal-calendar-event-font-size: 8\.5px/);
