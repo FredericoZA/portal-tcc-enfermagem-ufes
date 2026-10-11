@@ -260,10 +260,8 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   return <section className="portal-master-models-catalog min-h-0 bg-[var(--portal-surface-page)] pb-0" data-portal-document-direct-editor="true">
     <SettingsWorkspaceHeaderPortal>
       <div className="flex min-w-0 items-center gap-1.5">
-        <FileText className="h-3.5 w-3.5 shrink-0 text-white" aria-hidden="true"/>
-        <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-white/60"/>
         <select value={type} onChange={event=>setSelectedType(event.target.value)} className="w-[clamp(120px,13vw,172px)] max-w-[28vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm" aria-label="Selecionar documento" title={String(model?.label||label)}>
-          {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{models[slotType]?.label||slotLabel}</option>)}
+          {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{'📄 '+(models[slotType]?.label||slotLabel)}</option>)}
         </select>
       </div>
     </SettingsWorkspaceHeaderPortal>

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams } from './asten';
+import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, resolveAstenRepository, extractAstenSignedPdf, callAsten } from './asten';
 import { buildGoogleAuthorizationUrl, decodeGoogleOAuthState, getGoogleWorkspaceScopes } from './googleWorkspace';
 import { buildSupabaseAdminHeaders } from './supabase';
 import { buildProtocol, emailMatchesDomains } from '../../src/utils/installationProfile';
@@ -12,16 +12,46 @@ test('contrato Asten mantém PDF confidencial, envio explícito e prioridade par
   process.env.ASTEN_WEBHOOK_SECRET='w'.repeat(40);
   process.env.ASTEN_CALLBACK_URL='https://portal.example/api/integrations/asten/webhook';
   process.env.PORTAL_PUBLIC_URL='https://portal.example';
-  process.env.ASTEN_REQUIRE_CODE='true';
+  process.env.ASTEN_REQUIRE_CODE='false';
+  process.env.ASTEN_AUTHENTICATION_OPTION='2';
   const contentBase64=Buffer.from('%PDF-1.4\nobj\n%%EOF','utf8').toString('base64');
   const payload=buildAstenEnvelopeParams({description:'TCC-2026-0001 — Termo',fileName:'termo.pdf',mimeType:'application/pdf',contentBase64,repositoryId:42,signers:[{name:'Aluno',email:'aluno@example.edu',order:1},{name:'Orientador',email:'orientador@example.edu',order:1}]});
   const envelope=payload.Envelope as any;
   assert.equal(payload.encaminharImediatamente,'N');
   assert.equal(envelope.confidencial,'S');
+  assert.equal(envelope.usarOrdem,'S');
+  assert.equal(envelope.listaSignatariosEnvelope.SignatarioEnvelope[0].ConfigAssinatura.exigirCodigo,'N');
   assert.deepEqual(envelope.listaSignatariosEnvelope.SignatarioEnvelope.map((item:any)=>item.ordem),[1,1]);
   assert.equal(envelope.listaSignatariosEnvelope.SignatarioEnvelope[0].ConfigAssinatura.permitirDelegar,'N');
   assert.equal(envelope.urlCallbackHeaderProp,'x-portal-webhook-key');
   assert.equal('tokenAPI' in envelope,false);
+});
+
+test('autenticação SMS sem telefone é bloqueada antes de enviar documentos',()=>{
+  process.env.ASTEN_AUTHENTICATION_OPTION='4';
+  const pdf=Buffer.from('%PDF-1.4\\n%%EOF').toString('base64');
+  assert.throws(()=>buildAstenEnvelopeParams({description:'Piloto',fileName:'piloto.pdf',mimeType:'application/pdf',contentBase64:pdf,repositoryId:42,signers:[{name:'Pessoa teste',email:'teste@example.edu',order:1}]}),/telefone|método que não dependa de telefone/);
+  process.env.ASTEN_AUTHENTICATION_OPTION='2';
+});
+
+test('repositórios Asten são extraídos apenas da lista oficial e respeitam autorização', () => {
+  const old=process.env.ASTEN_REPOSITORY_ID;
+  try {
+    delete process.env.ASTEN_REPOSITORY_ID;
+    assert.equal(resolveAstenRepository([{id:'113',Usuario:{id:'3'},isProprietario:'S',nome:'Meu'}]),113);
+    assert.throws(()=>resolveAstenRepository([{id:'113',Usuario:{id:'3'},isProprietario:'S'},{id:'40',Usuario:{id:'3'},compartilharCriacaoDocs:'S'}]),/ASTEN_REPOSITORY_ID/);
+    process.env.ASTEN_REPOSITORY_ID='40';
+    assert.equal(resolveAstenRepository([{id:'113',Usuario:{id:'3'},isProprietario:'S'},{id:'40',Usuario:{id:'3'},compartilharCriacaoDocs:'S'}]),40);
+    process.env.ASTEN_REPOSITORY_ID='3';
+    assert.throws(()=>resolveAstenRepository([{id:'113',Usuario:{id:'3'},isProprietario:'S'}]),/não pertence/);
+    assert.throws(()=>resolveAstenRepository({Usuario:{id:'3'}}),/lista verificável/);
+  } finally {if(old===undefined)delete process.env.ASTEN_REPOSITORY_ID;else process.env.ASTEN_REPOSITORY_ID=old;}
+});
+
+test('PDF da resposta documentada da Asten é extraído e ZIP é rejeitado', () => {
+  const pdf=Buffer.concat([Buffer.from('%PDF-1.4\\n'),Buffer.alloc(160),Buffer.from('%%EOF')]);
+  assert.deepEqual(extractAstenSignedPdf({envelopeContent:pdf.toString('base64'),mimeType:'application/pdf'}),pdf);
+  assert.throws(()=>extractAstenSignedPdf({envelopeContent:Buffer.alloc(200).toString('base64'),mimeType:'application/zip'}),/não retornou um PDF/);
 });
 
 test('PDF Asten só é aceito com signatários e ordens exatamente confirmados', () => {
@@ -132,4 +162,30 @@ test('outbox Asten bloqueia recriação após resultado ambíguo', () => {
   assert.match(migration,/return jsonb_build_object\('outcome','UNCERTAIN'\)/);
   assert.match(migration,/asten_transactional_outbox', true/);
   assert.match(migration,/force row level security/i);
+});
+
+test('Asten permite validar conta com envios desligados mas bloqueia mudanças de envelopes',async()=>{
+  const previousFlag=process.env.ASTEN_INTEGRATION_ENABLED;
+  const previousFetch=globalThis.fetch;
+  const urls:string[]=[];
+  process.env.ASTEN_INTEGRATION_ENABLED='false';
+  try{
+    globalThis.fetch=async (input)=>{
+      const url=String(input);
+      urls.push(url);
+      const response=url.endsWith('/getIdentificador')?{Usuario:{id:42}}:[{id:123,isProprietario:'S'}];
+      return new Response(JSON.stringify({response}),{status:200,headers:{'content-type':'application/json'}});
+    };
+    const token='token-ficticio-para-contrato-123456';
+    assert.deepEqual(await callAsten('getIdentificador',{},token),{Usuario:{id:42}});
+    assert.deepEqual(await callAsten('getRepositoriosDoUsuario',{idProprietario:42},token),[{id:123,isProprietario:'S'}]);
+    await assert.rejects(callAsten('inserirEnvelope',{},token),/bloquead/i);
+    await assert.rejects(callAsten('encaminharEnvelopeParaAssinaturas',{},token),/bloquead/i);
+    await assert.rejects(callAsten('cancelarEnvelope',{},token),/bloquead/i);
+    assert.equal(urls.length,2);
+  }finally{
+    globalThis.fetch=previousFetch;
+    if(previousFlag===undefined)delete process.env.ASTEN_INTEGRATION_ENABLED;
+    else process.env.ASTEN_INTEGRATION_ENABLED=previousFlag;
+  }
 });

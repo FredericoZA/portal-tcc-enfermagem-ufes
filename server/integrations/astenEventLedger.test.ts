@@ -39,6 +39,16 @@ test('webhook remove segredos, detecta duplicata e consolida painel', () => {
   assert.equal(dashboard.needsAttention.length, 1);
 });
 
+test('webhook oficial da Asten em envelope.id encontra a assinatura correta',()=>{
+  const payload={tokenAPI:'segredo-nunca-exibir',envelope:{id:'3725',status:'3',listaSignatarios:[{id:'1833',status:'3',emailSignatario:'teste@example.edu'}]}};
+  const item=normalizeAstenWebhookEvent({payload,jobs:[{id:'j3725',processId:'p1',protocol:'TCC-1',documentType:'ATA',status:'SENT',providerEnvelopeId:'3725',updatedAt:''}]});
+  assert.equal(item.envelopeId,'3725');
+  assert.equal(item.status,'SIGNED');
+  assert.equal(item.matchedJobId,'j3725');
+  assert.deepEqual(Object.keys(item.safePayload).sort(),['envelopeId','status']);
+  assert.equal(JSON.stringify(item.safePayload).includes('segredo-nunca-exibir'),false);
+});
+
 test('assinatura concluída permite retomar arquivamento pendente no Drive',()=>{
   assert.equal(mapAstenEventToJobStatus('SIGNED','DRIVE_SYNC_PENDING'),'SIGNED');
   assert.equal(mapAstenEventToJobStatus('SENT','DRIVE_SYNC_PENDING'),'DRIVE_SYNC_PENDING');

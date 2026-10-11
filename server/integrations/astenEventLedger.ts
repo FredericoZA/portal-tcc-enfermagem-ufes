@@ -35,7 +35,17 @@ function visit(value: unknown, keys: RegExp): string | undefined {
 }
 
 export function extractAstenEnvelopeId(payload: unknown): string | undefined {
-  return visit(payload, /^(idEnvelope|envelopeId|id_envelope)$/i);
+  // O webhook oficial usa envelope.id; os outros nomes são compatibilidade com eventos legados.
+  if(payload && typeof payload==='object' && !Array.isArray(payload)){
+    const record=payload as Record<string,unknown>;
+    const nested=record.envelope||record.Envelope;
+    if(nested&&typeof nested==='object'&&!Array.isArray(nested)){
+      const id=(nested as Record<string,unknown>).id;
+      if((typeof id==='string'||typeof id==='number')&&/^\d+$/.test(String(id)))return String(id);
+    }
+  }
+  const legacy=visit(payload,/^(idEnvelope|envelopeId|id_envelope)$/i);
+  return legacy&&/^\d+$/.test(legacy)?legacy:undefined;
 }
 
 export function inferAstenEventStatus(payload: unknown): AstenEventStatus {

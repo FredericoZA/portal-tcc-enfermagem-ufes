@@ -420,7 +420,7 @@ async function liveChecks() {
     });
 
     await check('runtime: webhook rejeita segredo errado e deduplica', async () => {
-      const payload = { evento: 'teste_homologacao', idEnvelope: 'envelope-inexistente-001', status: 'EM_ANDAMENTO' };
+      const payload = { evento: 'teste_homologacao', envelope: { id: '999999001', status: '2' } };
       const rejected = await request('/api/integrations/asten/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'x-portal-webhook-key': 'errado' }, body: JSON.stringify(payload) });
       assert.equal(rejected.response.status, 401);
       const accepted = await request('/api/integrations/asten/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'x-portal-webhook-key': 'test-webhook-secret-0123456789abcdef' }, body: JSON.stringify(payload) });
