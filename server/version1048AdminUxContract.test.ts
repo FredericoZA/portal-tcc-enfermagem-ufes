@@ -89,7 +89,7 @@ test('Registro de Logs mantém tabela compacta e camada final branca', async () 
     readPortalCss(),
   ]);
   assert.ok(logs.includes("px-3 py-1 text-slate-950"));
-  assert.ok(logs.includes("px-2 py-0.5 text-[9px]"));
+  assert.ok(logs.includes("px-2 py-0.5 text-[11px]"));
   assert.ok(css.includes('--portal-surface-inner: #ffffff'));
   assert.ok(logs.includes('data-settings-sheet="true"'));
 });
