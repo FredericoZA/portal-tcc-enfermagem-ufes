@@ -153,6 +153,11 @@ export interface AstenWebhookEvent {
   duplicate: boolean;
   matchedJobId?: string;
   safePayload: Record<string, unknown>;
+  processedAt?: string;
+  processingLeaseUntil?: string;
+  retryAfter?: string;
+  attempts?: number;
+  lastError?: string;
 }
 
 export interface AstenEnvelopeTimeline {
