@@ -199,9 +199,11 @@ export async function createEphemeralAstenSession(ownerEmail: string, suppliedTo
   const token = String(suppliedToken || storedToken() || '').trim();
   if (!token) throw new Error('Informe o token Asten para esta sessão protegida. Ele não será persistido.');
   const identity = await callAsten('getIdentificador', {}, token);
-  const repositories = await callAsten('getRepositoriosDoUsuario', {}, token).catch(() => null);
+  const ownerId = Number(identity?.Usuario?.id ?? identity?.usuario?.id ?? identity?.idUsuario ?? identity?.id);
+  if (!Number.isSafeInteger(ownerId) || ownerId < 1) throw new Error('A Asten não confirmou o identificador do proprietário.');
+  const repositories = await callAsten('getRepositoriosDoUsuario', { idProprietario: ownerId }, token);
   const id = randomBytes(32).toString('base64url');
-  const session: Session = { token, ownerEmail: ownerEmail.toLowerCase(), identifier: String(identity?.identificador || identity?.idUsuario || identity?.id || 'conta-validada'), repositoryId: Number(process.env.ASTEN_REPOSITORY_ID || 0) || findId(repositories), expiresAt: Date.now() + SESSION_TTL_MS };
+  const session: Session = { token, ownerEmail: ownerEmail.toLowerCase(), identifier: String(ownerId), repositoryId: Number(process.env.ASTEN_REPOSITORY_ID || 0) || findId(repositories), expiresAt: Date.now() + SESSION_TTL_MS };
   const key = sessionEncryptionKey();
   if (!key && (process.env.VERCEL || process.env.NODE_ENV === 'production')) throw new Error('Configure ASTEN_SESSION_ENCRYPTION_KEY antes de usar sessões temporárias em produção.');
   const sessionId = key ? sealSession(session) : id;
@@ -226,10 +228,12 @@ export async function connectPersistentAsten(tokenInput: string) {
   const token = String(tokenInput || '').trim();
   if (!token) throw new Error('Informe o token da API Asten.');
   const identity = await callAsten('getIdentificador', {}, token);
-  const repositories = await callAsten('getRepositoriosDoUsuario', {}, token);
+  const ownerId = Number(identity?.Usuario?.id ?? identity?.usuario?.id ?? identity?.idUsuario ?? identity?.id);
+  if (!Number.isSafeInteger(ownerId) || ownerId < 1) throw new Error('A Asten não confirmou o identificador do proprietário.');
+  const repositories = await callAsten('getRepositoriosDoUsuario', { idProprietario: ownerId }, token);
   const repositoryId = Number(process.env.ASTEN_REPOSITORY_ID || 0) || findId(repositories);
   if (!repositoryId) throw new Error('Nenhum repositório Asten foi localizado para esta conta.');
-  const identifier = String(identity?.identificador || identity?.idUsuario || identity?.id || 'conta-validada');
+  const identifier = String(ownerId);
   await saveIntegrationSecret('asten', token, {
     identifier,
     repositoryId,
@@ -291,8 +295,9 @@ export function buildAstenEnvelopeParams(input: { description: string; fileName:
   if (new Set(normalizedSigners.map((signer) => signer.email)).size !== normalizedSigners.length) throw new Error('A lista Asten contém signatários duplicados.');
   const requireLogin = process.env.ASTEN_REQUIRE_LOGIN === 'false' ? 'N' : 'S';
   const authenticationOption = Number(process.env.ASTEN_AUTHENTICATION_OPTION || 4);
+  if (authenticationOption === 4 || authenticationOption === 7) throw new Error('Autenticação Asten por SMS/WhatsApp exige telefone verificado de cada signatário; o Portal ainda não fornece esse dado. Envio bloqueado até configuração compatível.');
   if (!Number.isSafeInteger(authenticationOption) || authenticationOption < 1 || authenticationOption > 99) throw new Error('ASTEN_AUTHENTICATION_OPTION inválida.');
-  const envelope: Record<string, unknown> = { descricao: description, Repositorio: { id: input.repositoryId }, listaDocumentos: { Documento: [{ nomeArquivo: fileName, mimeType, conteudo: compactBase64 }] }, listaSignatariosEnvelope: { SignatarioEnvelope: normalizedSigners.map((s) => ({ ordem: s.order, ConfigAssinatura: { emailSignatario: s.email, nomeSignatario: s.name, opcaoAutenticacao: authenticationOption, tipoAssinatura: 1, permitirDelegar: 'N', exigirLogin: requireLogin, exigirCodigo: 'S', exigirDadosIdentif: 'S' } })) }, confidencial: 'S', exigirLeitura: 'S', bloquearDesenhoPaginas: 'S' };
+  const envelope: Record<string, unknown> = { descricao: description, Repositorio: { id: input.repositoryId }, listaDocumentos: { Documento: [{ nomeArquivo: fileName, mimeType, conteudo: compactBase64 }] }, listaSignatariosEnvelope: { SignatarioEnvelope: normalizedSigners.map((s) => ({ ordem: s.order, ConfigAssinatura: { emailSignatario: s.email, nomeSignatario: s.name, opcaoAutenticacao: authenticationOption, tipoAssinatura: 1, permitirDelegar: 'N', exigirLogin: requireLogin, exigirCodigo: 'N', exigirDadosIdentif: 'S' } })) }, confidencial: 'S', usarOrdem: 'S', exigirLeitura: 'S', bloquearDesenhoPaginas: 'S' };
   envelope.urlCallback = security.callbackUrl;
   envelope.urlCallbackHeaderProp = 'x-portal-webhook-key';
   envelope.urlCallbackHeaderValue = String(process.env.ASTEN_WEBHOOK_SECRET || '').trim();
@@ -331,7 +336,8 @@ export function assertAstenEnvelopeSigners(response: unknown, expected: Array<{e
   if(actual.some(signer=>!signer.signed))throw new Error('A Asten ainda não confirma a assinatura de todos os participantes esperados.');
 }
 export function extractAstenSignedPdf(response: any): Buffer {
-  const candidates: unknown[] = [response?.pdfBase64,response?.conteudoBase64,response?.arquivoBase64,response?.data?.pdfBase64,response?.data?.conteudoBase64,response?.Documento?.conteudo,response?.documento?.conteudo];
+  if (response?.mimeType && String(response.mimeType).toLowerCase() !== 'application/pdf') throw new Error('A Asten não retornou um PDF; o arquivamento foi bloqueado.');
+  const candidates: unknown[] = [response?.envelopeContent,response?.pdfBase64,response?.conteudoBase64,response?.arquivoBase64,response?.data?.pdfBase64,response?.data?.conteudoBase64,response?.Documento?.conteudo,response?.documento?.conteudo];
   const visit = (value: any): string | null => {
     if (typeof value === 'string' && value.length > 100) return value.includes('base64,') ? value.split('base64,').pop() || null : value;
     if (Array.isArray(value)) for (const item of value) { const found = visit(item); if (found) return found; }
