@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams } from './asten';
+import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, resolveAstenRepository, extractAstenSignedPdf } from './asten';
 import { buildGoogleAuthorizationUrl, decodeGoogleOAuthState, getGoogleWorkspaceScopes } from './googleWorkspace';
 import { buildSupabaseAdminHeaders } from './supabase';
 import { buildProtocol, emailMatchesDomains } from '../../src/utils/installationProfile';
@@ -32,6 +32,26 @@ test('autenticação SMS sem telefone é bloqueada antes de enviar documentos',(
   const pdf=Buffer.from('%PDF-1.4\\n%%EOF').toString('base64');
   assert.throws(()=>buildAstenEnvelopeParams({description:'Piloto',fileName:'piloto.pdf',mimeType:'application/pdf',contentBase64:pdf,repositoryId:42,signers:[{name:'Pessoa teste',email:'teste@example.edu',order:1}]}),/telefone verificado/);
   process.env.ASTEN_AUTHENTICATION_OPTION='2';
+});
+
+test('repositórios Asten são extraídos apenas da lista oficial e respeitam autorização', () => {
+  const old=process.env.ASTEN_REPOSITORY_ID;
+  try {
+    delete process.env.ASTEN_REPOSITORY_ID;
+    assert.equal(resolveAstenRepository([{id:'113',Usuario:{id:'3'},isProprietario:'S',nome:'Meu'}]),113);
+    assert.throws(()=>resolveAstenRepository([{id:'113',Usuario:{id:'3'},isProprietario:'S'},{id:'40',Usuario:{id:'3'},compartilharCriacaoDocs:'S'}]),/ASTEN_REPOSITORY_ID/);
+    process.env.ASTEN_REPOSITORY_ID='40';
+    assert.equal(resolveAstenRepository([{id:'113',Usuario:{id:'3'},isProprietario:'S'},{id:'40',Usuario:{id:'3'},compartilharCriacaoDocs:'S'}]),40);
+    process.env.ASTEN_REPOSITORY_ID='3';
+    assert.throws(()=>resolveAstenRepository([{id:'113',Usuario:{id:'3'},isProprietario:'S'}]),/não pertence/);
+    assert.throws(()=>resolveAstenRepository({Usuario:{id:'3'}}),/lista verificável/);
+  } finally {if(old===undefined)delete process.env.ASTEN_REPOSITORY_ID;else process.env.ASTEN_REPOSITORY_ID=old;}
+});
+
+test('PDF da resposta documentada da Asten é extraído e ZIP é rejeitado', () => {
+  const pdf=Buffer.concat([Buffer.from('%PDF-1.4\\n'),Buffer.alloc(160),Buffer.from('%%EOF')]);
+  assert.deepEqual(extractAstenSignedPdf({envelopeContent:pdf.toString('base64'),mimeType:'application/pdf'}),pdf);
+  assert.throws(()=>extractAstenSignedPdf({envelopeContent:Buffer.alloc(200).toString('base64'),mimeType:'application/zip'}),/não retornou um PDF/);
 });
 
 test('PDF Asten só é aceito com signatários e ordens exatamente confirmados', () => {
