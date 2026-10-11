@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, parseAstenAccountAndRepository, extractAstenSignedPdf, callAsten } from './asten';
+import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, parseAstenAccountAndRepository, extractAstenSignedPdf, extractAstenEnvelopeIdentity, callAsten } from './asten';
 import { buildGoogleAuthorizationUrl, decodeGoogleOAuthState, getGoogleWorkspaceScopes } from './googleWorkspace';
 import { buildSupabaseAdminHeaders } from './supabase';
 import { buildProtocol, emailMatchesDomains } from '../../src/utils/installationProfile';
@@ -35,6 +35,14 @@ test('API Asten resolve Usuario.id e recusa repositório não autorizado',()=>{
   assert.throws(()=>parseAstenAccountAndRepository({},repos,'113'),/Usuario.id/);
   assert.throws(()=>parseAstenAccountAndRepository(identity,[...repos,{id:'114',Usuario:{id:'3'},isProprietario:'S'}],undefined),/ASTEN_REPOSITORY_ID/);
 });
+test('Asten não encaminha documentos para ID de envelope inválido',()=>{
+  assert.deepEqual(extractAstenEnvelopeIdentity({data:{idEnvelope:345}}),{id:'345'});
+  assert.deepEqual(extractAstenEnvelopeIdentity({Envelope:{id:'4321'},hashSHA256:'h'}),{id:'4321',hash:'h'});
+  for (const value of [0,-1,'',null,'sem-id','abc123','1; DROP', '0','9'.repeat(25)]) {
+    assert.throws(()=>extractAstenEnvelopeIdentity({data:{idEnvelope:value}}),/ID numérico/);
+  }
+});
+
 test('PDF Asten usa envelopeContent e recusa ZIP ou retorno genérico',()=>{
   const pdf=Buffer.concat([Buffer.from('%PDF-1.4\\n'),Buffer.alloc(130),Buffer.from('%%EOF')]);
   assert.deepEqual(extractAstenSignedPdf({envelopeContent:pdf.toString('base64'),mimeType:'application/pdf'}),pdf);
