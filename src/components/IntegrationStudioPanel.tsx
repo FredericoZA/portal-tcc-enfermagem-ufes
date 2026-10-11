@@ -1492,8 +1492,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         {activeTab === 'workflow' && (
           <div className="space-y-3 pb-5" data-portal-workflow-editor="true">
             <section
-              className="overflow-hidden rounded-xl border border-[var(--portal-border)]"
-              style={{ backgroundColor: 'var(--portal-surface-inner)' }}
+              className="overflow-hidden rounded-lg"
+              style={{ backgroundColor: 'var(--portal-surface-page)' }}
               aria-labelledby="workflow-timeline-title"
             >
               <div className="flex items-center justify-between px-4 pt-3">
@@ -1554,14 +1554,14 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                   </div>
                 </div>
 
-                <div className="grid gap-2 border-b border-slate-300 p-3 md:grid-cols-[1fr_.9fr_1.2fr]">
+                <div className="grid gap-2 border-b border-slate-300 p-3 md:grid-cols-[1fr_.9fr_1.2fr] [&_input]:text-[10px] [&_input]:text-center">
                   <div><label className={labelClass}>Título da etapa</label><input value={selectedWorkflowStage.title} onChange={event=>updateWorkflowStage(selectedWorkflowStage.id,{title:event.target.value})} className={inputClass}/></div>
                   <div><label className={labelClass}>Evento disparador</label><input list={`workflow-event-catalog-${selectedWorkflowStage.id}`} value={selectedWorkflowStage.triggerEvent} onChange={event=>updateWorkflowStage(selectedWorkflowStage.id,{triggerEvent:event.target.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')})} className={inputClass}/><datalist id={`workflow-event-catalog-${selectedWorkflowStage.id}`}>{workflowEvents.map(([value,label])=><option key={value} value={value}>{label}</option>)}</datalist></div>
                   <div><label className={labelClass}>Objetivo da etapa</label><input value={selectedWorkflowStage.description} onChange={event=>updateWorkflowStage(selectedWorkflowStage.id,{description:event.target.value})} className={inputClass}/></div>
                 </div>
 
-                <div className="overflow-auto" data-portal-workflow-stage-sheet="true">
-                  <table className="w-full min-w-[1180px] border-collapse text-left text-[10px]">
+                <div className="overflow-auto [&_input]:text-center [&_select]:text-center" data-portal-workflow-stage-sheet="true">
+                  <table className="w-full min-w-[1180px] border-collapse text-center text-[10px]">
                     <thead>
                       <tr className="text-white" style={{ backgroundColor:'var(--portal-brand-header)' }}>
                         <th className="w-16 border-r border-white/25 px-2 py-2 text-center">Usar</th>
@@ -1585,9 +1585,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                           <td className="border-r border-slate-300 px-2 py-2">
                             {action ? <div className="flex items-center justify-center gap-1"><span className="min-w-5 text-center font-black text-slate-700">{actionIndex+1}</span><button type="button" className="portal-toolbar-icon-button !h-6 !min-h-6 !w-6 !min-w-6" disabled={actionIndex===0} onClick={()=>moveWorkflowAction(selectedWorkflowStage.id,actionIndex,-1)} aria-label={`Mover ${action.title} para cima`}>↑</button><button type="button" className="portal-toolbar-icon-button !h-6 !min-h-6 !w-6 !min-w-6" disabled={actionIndex===selectedWorkflowStage.actions.length-1} onClick={()=>moveWorkflowAction(selectedWorkflowStage.id,actionIndex,1)} aria-label={`Mover ${action.title} para baixo`}>↓</button></div> : <span className="block text-center text-slate-400">—</span>}
                           </td>
-                          <td className="border-r border-slate-300 px-2 py-2 font-black uppercase text-slate-600">{row.detail}</td>
+                          <td className="border-r border-slate-300 px-2 py-2 text-center font-black uppercase text-slate-600">{row.detail}</td>
                           <td className="border-r border-slate-300 px-2 py-2"><input disabled={!action} value={action?.title||row.label} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{title:event.target.value})} className={inputClass}/></td>
-                          <td className="border-r border-slate-300 px-2 py-2"><input disabled={!action} value={action?.recipientOrDetail||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder={action?'Detalhe opcional':'Selecione o item'}/></td>
+                          <td className="border-r border-slate-300 px-2 py-2">{action?.type==='email'&&action.refId==='email-reserva'
+                            ? <button type="button" onClick={()=>{setSelectedEmailId('email-reserva');setActiveTab('emails');}} title="Editar o destinatário no modelo Solicitação de reserva" className="w-full cursor-pointer rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-center text-[10px] font-semibold text-[var(--portal-brand-action)] underline underline-offset-2">{emailTemplates.find(item=>item.id===action.refId)?.recipient||'Definir destinatário no modelo de e-mail'}</button>
+                            : <input disabled={!action} value={action?.recipientOrDetail||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder={action?'Detalhe opcional':'Selecione o item'}/>}</td>
                           <td className="border-r border-slate-300 px-2 py-2">
                             <div className="grid grid-cols-3 gap-1">
                               <select disabled={!action} value={condition?.fieldKey||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{condition:event.target.value?{fieldKey:event.target.value,operator:condition?.operator||'EQUALS',value:condition?.value||''}:undefined})} className={inputClass}><option value="">Sempre executar</option>{matrixColumns.map(item=><option key={item.id} value={normalizeVariableKey(item.name)}>{item.label||item.name}</option>)}</select>
