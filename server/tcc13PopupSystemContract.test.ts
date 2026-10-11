@@ -155,7 +155,8 @@ test('ajustes estéticos recentes preservam autosave silencioso e integrações 
   assert.doesNotMatch(identity,/Alterações salvas automaticamente/);
   assert.match(identity,/portal-identity-panel space-y-2/);
   assert.match(integrations,/lg:col-span-2/);
-  assert.match(integrations,/lg:col-span-3/);
+  assert.match(integrations,/lg:grid-cols-4/);
+  assert.doesNotMatch(integrations,/id="department-email-title"/);
   assert.match(integrations,/bg-\[var\(--portal-surface-page\)\]/);
   assert.match(integrations,/border border-white bg-white[\s\S]*text-slate-950/);
 });
