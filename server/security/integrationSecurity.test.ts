@@ -22,6 +22,8 @@ const MANAGED_ENV = [
   'APP_URL',
   'PORTAL_PUBLIC_URL',
   'ASTEN_INTEGRATION_ENABLED',
+  'ASTEN_PILOT_APPROVED',
+  'ASTEN_PRODUCTION_RELEASE_APPROVED',
   'ASTEN_ALLOW_STORED_TOKEN',
   'ASTEN_API_KEY',
   'ASTEN_SESSION_ENCRYPTION_KEY',
@@ -70,6 +72,19 @@ async function withCleanEnvironmentAsync(run: () => Promise<void>): Promise<void
   for (const key of MANAGED_ENV) delete process.env[key];
   try { await run(); } finally { restoreManagedEnvironment(previous); }
 }
+
+test('Asten em produção não envia mesmo com flags antigas sem autorização específica de release', async () => {
+  await withCleanEnvironmentAsync(async () => {
+    process.env.NODE_ENV='production';
+    process.env.VERCEL='1';
+    process.env.ASTEN_INTEGRATION_ENABLED='true';
+    process.env.ASTEN_PILOT_APPROVED='true';
+    assert.equal(getAstenIntegrationStatus().enabled,false);
+    await assert.rejects(callAsten('inserirEnvelope',{},'token-ficticio-para-contrato'),/bloqueada/i);
+    process.env.ASTEN_PRODUCTION_RELEASE_APPROVED='true';
+    assert.equal(getAstenIntegrationStatus().enabled,true);
+  });
+});
 
 test('Asten bloqueia despacho e criação de envelope sem callback HTTPS autenticado', () => {
   withCleanEnvironment(() => {
