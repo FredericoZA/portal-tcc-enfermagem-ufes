@@ -1157,8 +1157,18 @@ async function dispatchSignatureJobAutomatically(job:SignatureJob):Promise<Signa
   if(job.status==='DRIVE_SYNC_PENDING')return archiveSignatureJobAutomatically(job);
   if(['SENT','PARTIALLY_SIGNED','SIGNED','ARCHIVED'].includes(job.status)||signatureDispatchLocks.has(job.id))return job;
   if(job.providerCreationState==='UNCERTAIN'&&!job.providerEnvelopeId){job.status='PROVIDER_ERROR';job.lastError='A criação do envelope ficou com resultado incerto. Não repita automaticamente: confira a conta Asten e faça a reconciliação administrativa.';job.updatedAt=new Date().toISOString();return job;}
+  // O interruptor de envios é verificado ANTES de renderizar PDF, criar arquivo no Drive
+  // ou reivindicar um envelope. Conectar a conta nunca libera disparos automaticamente.
+  const dispatchPreflight=await getPersistentAstenStatus();
+  if(!dispatchPreflight.dispatchEnabled){
+    job.status='WAITING_INTEGRATION';
+    job.lastError='Envio Asten desativado ou sem autorização para o piloto. A conexão de leitura continua disponível.';
+    job.updatedAt=new Date().toISOString();
+    await persistPortalStateDurably();
+    return job;
+  }
   const connection=await getPersistentAstenConnection();
-  if(!connection){job.status='WAITING_INTEGRATION';job.lastError='Conecte a conta Asten em Configurações para concluir o envio.';job.updatedAt=new Date().toISOString();return job;}
+  if(!connection){job.status='WAITING_INTEGRATION';job.lastError='Conecte a conta Asten em Configurações para concluir o envio.';job.updatedAt=new Date().toISOString();await persistPortalStateDurably();return job;}
   signatureDispatchLocks.add(job.id);
   try{
     job.status='SENDING';job.lastError=undefined;job.updatedAt=new Date().toISOString();await persistPortalStateDurably();
