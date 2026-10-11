@@ -3069,7 +3069,7 @@ export async function createPortalApp() {
     if(!safeCompareWebhookSecret(String(req.headers['x-portal-webhook-key']||'')))return res.status(401).json({error:'Callback não autorizado.'});
     const event=normalizeAstenWebhookEvent({payload:req.body,knownFingerprints:astenCallbackFingerprints,jobs:signatureJobsStore});
     if(event.duplicate)return res.status(200).json({received:true,duplicate:true});
-    const hasEnvelope=Boolean(event.envelopeId&&/^\\d+$/.test(event.envelopeId));
+    const hasEnvelope=Boolean(event.envelopeId&&/^\d+$/.test(event.envelopeId));
     if(!hasEnvelope)return res.status(400).json({error:'Evento sem identificador válido do envelope.'});
     astenWebhookEventsStore.push(event);
     astenCallbackFingerprints.add(event.fingerprint);
