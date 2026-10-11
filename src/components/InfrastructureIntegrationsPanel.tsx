@@ -39,7 +39,7 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
 
   const connectAsten = async () => {
     setWorking('asten'); setMessage(null);
-    try { await apiClient.connectAsten(token.trim()); setToken(''); setMessage({ ok: true, text: 'Asten conectada. Token validado e armazenado somente no servidor.' }); await load(); }
+    try { await apiClient.connectAsten(token.trim()); setToken(''); setMessage({ ok: true, text: 'Conta Asten validada e token protegido no servidor. O envio de assinaturas continua bloqueado até a homologação e autorização.' }); await load(); }
     catch (error) { setMessage({ ok: false, text: error instanceof Error ? error.message : 'Não foi possível validar a Asten.' }); }
     finally { setWorking(''); }
   };
@@ -78,7 +78,7 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
     <div className="grid content-start gap-[5px] bg-[var(--portal-surface-page)] p-0 md:grid-cols-2 lg:grid-cols-4">
         <section className={`${compactCard} lg:col-span-2`} aria-labelledby="asten-integration-title">
           <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-1.5"><KeyRound className="h-4 w-4 shrink-0 text-[var(--portal-brand-action)]"/><h4 id="asten-integration-title" className="truncate text-[10px] font-black uppercase text-slate-900">Asten</h4></div><State ok={astenReady} label={astenReady ? 'Pronta' : 'Pendente'}/></div>
-          <div className="mt-2 grid gap-2"><input aria-label="Token da API Asten" type="password" autoComplete="new-password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Token da API Asten" className={input}/><button type="button" onClick={connectAsten} disabled={working === 'asten' || !token.trim() || !status?.asten.enabled} className={action}>{working === 'asten' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ShieldCheck className="h-3.5 w-3.5"/>}Validar e conectar</button></div>
+          <div className="mt-2 grid gap-2"><input aria-label="Token da API Asten" type="password" autoComplete="new-password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Token da API Asten" className={input}/><button type="button" onClick={connectAsten} disabled={working === 'asten' || !token.trim()} className={action}>{working === 'asten' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ShieldCheck className="h-3.5 w-3.5"/>}Validar e conectar</button><p className="text-[9px] text-slate-600">Conectar a conta não autoriza envios reais. A habilitação de assinaturas é uma etapa separada.</p></div>
           <div className="mt-1.5 flex items-center gap-1.5 text-[8.5px] text-slate-700"><span className="min-w-0 flex-1">Callback: <strong>{status?.asten.callbackConfigured?'configurado':'pendente'}</strong> · envio: <strong>{status?.asten.dispatchEnabled?'habilitado':'bloqueado'}</strong></span>{status?.asten.callbackUrl&&<button type="button" title="Copiar callback" onClick={()=>void navigator.clipboard?.writeText(status.asten.callbackUrl||'')} className="rounded border border-slate-300 bg-white p-1 text-slate-700"><Copy className="h-3 w-3"/></button>}</div>
         </section>
 
