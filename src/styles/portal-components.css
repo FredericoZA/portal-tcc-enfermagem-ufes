@@ -1447,3 +1447,36 @@ button:has(svg[class*="lucide-trash"]) svg[class*="lucide-trash"] {
 .portal-settings-workspace .portal-settings-single-pane {
   scroll-padding-bottom: 15px;
 }
+
+/* TCC15: os pop-ups de exibição e filtro antes usavam letras de 8–9,5px.
+   Aplicar a mesma escala visual do restante do Portal, mantendo tabelas em 11px. */
+.portal-table-settings-popover {
+  font-size: var(--portal-popover-text-font-size);
+}
+.portal-table-settings-popover :is(
+  .portal-settings-control-title,
+  .portal-settings-page-size-button,
+  .portal-settings-date-field > span,
+  .portal-settings-date-field input,
+  .portal-core-wrap-setting strong,
+  .portal-core-wrap-setting span,
+  .portal-core-wrap-actions button,
+  .portal-settings-column-item,
+  .portal-settings-popover-body input,
+  .portal-settings-popover-body select,
+  .portal-settings-popover-body button
+) {
+  font-size: var(--portal-popover-text-font-size);
+  line-height: 1.3;
+}
+.portal-core-column-popup :is(
+  .portal-core-filter-title,
+  .portal-core-menu-action,
+  .portal-core-selection-action,
+  .portal-core-filter-search,
+  .portal-core-filter-value,
+  .portal-core-clear-filter,
+  .portal-core-done
+) {
+  font-size: var(--portal-compact-menu-font-size);
+}
