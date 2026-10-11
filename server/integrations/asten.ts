@@ -38,6 +38,7 @@ export interface AstenSecurityPreflight {
   webhookSecretSeparated: boolean;
   signerLoginRequired: boolean;
   signerCodeRequired: boolean;
+  signerAuthenticationCompatible: boolean;
   callbackConfigured: boolean;
   issues: string[];
 }
@@ -88,6 +89,8 @@ export function getAstenSecurityPreflight(): AstenSecurityPreflight {
   const webhookSecretSeparated = Boolean(webhookSecret) && !otherSecrets.includes(webhookSecret);
   const signerLoginRequired = process.env.ASTEN_REQUIRE_LOGIN !== 'false';
   const signerCodeRequired = process.env.ASTEN_REQUIRE_CODE !== 'false';
+  const selectedAuthentication=Number(process.env.ASTEN_AUTHENTICATION_OPTION||0);
+  const signerAuthenticationCompatible=[1,2,3,5,6].includes(selectedAuthentication)&&!signerCodeRequired;
   const issues: string[] = [];
   if (!callbackUrlSecure) issues.push('Configure ASTEN_CALLBACK_URL com uma URL HTTPS válida, sem credenciais embutidas.');
   if (!expectedPortalUrl) issues.push('Configure PORTAL_PUBLIC_URL para validar a origem do callback Asten.');
@@ -96,7 +99,8 @@ export function getAstenSecurityPreflight(): AstenSecurityPreflight {
   if (!webhookSecretStrong) issues.push(`Configure ASTEN_WEBHOOK_SECRET com pelo menos ${MIN_WEBHOOK_SECRET_LENGTH} caracteres válidos e sem controles.`);
   if (!webhookSecretSeparated) issues.push('ASTEN_WEBHOOK_SECRET deve ser exclusivo e diferente dos demais segredos do portal.');
   if (!signerLoginRequired) issues.push('ASTEN_REQUIRE_LOGIN não pode ser desativado neste portal.');
-  if (!signerCodeRequired) issues.push('ASTEN_REQUIRE_CODE não pode ser desativado neste portal.');
+  if (signerCodeRequired) issues.push('O código de acesso próprio ainda não é distribuído com segurança pelo Portal. Escolha e aprove um método alternativo antes de definir ASTEN_REQUIRE_CODE=false.');
+  if (![1,2,3,5,6].includes(selectedAuthentication)) issues.push('Defina ASTEN_AUTHENTICATION_OPTION com um método que não dependa de telefone e seja autorizado pela instituição.');
   return {
     callbackUrl,
     callbackUrlSecure,
@@ -106,6 +110,7 @@ export function getAstenSecurityPreflight(): AstenSecurityPreflight {
     webhookSecretSeparated,
     signerLoginRequired,
     signerCodeRequired,
+    signerAuthenticationCompatible,
     callbackConfigured:
       callbackUrlSecure &&
       callbackSameOrigin &&
@@ -113,7 +118,7 @@ export function getAstenSecurityPreflight(): AstenSecurityPreflight {
       webhookSecretStrong &&
       webhookSecretSeparated &&
       signerLoginRequired &&
-      signerCodeRequired,
+      signerAuthenticationCompatible,
     issues
   };
 }
