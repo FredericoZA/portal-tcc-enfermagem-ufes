@@ -394,6 +394,48 @@ try {
             report.errors.push(`master-configuracoes-${width}: hub de Configurações fora da arquitetura nativa (${JSON.stringify(settingsUi)}).`);
           }
         }
+        // Tipografia e geometria dos seis editores administrativos: confirmar estilos
+        // COMPUTADOS em navegador real, não somente strings das classes Tailwind.
+        if (tab === 'configuracoes' && width === 1440) {
+          for (const [title,slug] of [
+            ['Rodapé e Identidade','identidade'],
+            ['Integrações e Plataforma','integracoes'],
+            ['Documentos e Variáveis','documentos'],
+            ['E-mails','emails'],
+            ['Formulários','formularios'],
+            ['Fluxos','fluxos']
+          ]) {
+            const launcher=page.locator('#portal-settings-hub .portal-settings-launcher').filter({hasText:title}).first();
+            await launcher.click();
+            const modal=page.locator('.portal-settings-workspace');
+            await modal.waitFor({state:'visible'});
+            const visual=await page.evaluate(()=>{
+              const root=document.querySelector('.portal-settings-workspace');
+              const pane=root?.querySelector('.portal-settings-single-pane');
+              const fields=Array.from(root?.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),textarea,select')||[])
+                .filter(el=>el.getClientRects().length>0)
+                .map(el=>({tag:el.tagName,size:parseFloat(getComputedStyle(el).fontSize)}));
+              const trash=Array.from(root?.querySelectorAll('button:has(svg[class*="lucide-trash"])')||[])
+                .filter(el=>el.getClientRects().length>0)
+                .map(el=>({background:getComputedStyle(el).backgroundColor,icon:getComputedStyle(el.querySelector('svg')).color}));
+              return {width:root?.getBoundingClientRect().width||0,viewport:innerWidth,
+                bodyFont:pane?parseFloat(getComputedStyle(pane).fontSize):0,
+                heading:parseFloat(getComputedStyle(root.querySelector('.portal-settings-workspace-title h2')).fontSize),
+                fields,trash};
+            });
+            if(Math.abs(visual.bodyFont-14)>0.25||Math.abs(visual.heading-14)>0.25||
+              visual.fields.some(field=>Math.abs(field.size-12)>0.5)||
+              visual.width>visual.viewport-8){
+              report.errors.push(`config-${slug}: escala/viewport divergente (${JSON.stringify(visual).slice(0,750)})`);
+            }
+            if(visual.trash.some(item=>item.background!=='rgb(255, 255, 255)'||item.icon!=='rgb(220, 38, 38)')){
+              report.errors.push(`config-${slug}: exclusão fora do padrão branco/vermelho (${JSON.stringify(visual.trash)})`);
+            }
+            await capture(page,`master-config-modal-${slug}-1440`);
+            await page.keyboard.press('Escape');
+            await modal.waitFor({state:'hidden'});
+          }
+        }
         if (tab === 'fluxo-tcc' && width >= 1440) {
           const fluxoGeometry = await page.evaluate(() => {
             const root = document.querySelector('#fluxo-tcc-page')?.getBoundingClientRect();
