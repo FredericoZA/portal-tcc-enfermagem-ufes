@@ -12,7 +12,7 @@
 1. Confirmar CI/QA/CodeQL do PR e publicação da atualização de segurança com o **envio Asten desabilitado**.
 2. Conferir credenciais no cofre de produção, sem as revelar: `ASTEN_WEBHOOK_SECRET` exclusivo (32+ caracteres), `PORTAL_SECRET_ENCRYPTION_KEY` com cofre Supabase durável, `ASTEN_CALLBACK_URL` apontando para `https://portal-tcc-enfermagem-ufes.vercel.app/api/integrations/asten/webhook`, `PORTAL_PUBLIC_URL` oficial, `ASTEN_REQUIRE_LOGIN=true`, `ASTEN_REQUIRE_CODE=false`, `ASTEN_AUTHENTICATION_OPTION=2` até decisão institucional formal.
 3. Verificar o plano Asten (API pode depender de contrato e saldo), acesso do Master, isolamento de dados, RLS da outbox v6 e Google Drive privado.
-4. **Não ativar `ASTEN_INTEGRATION_ENABLED=true` antes de um teste controlado autorizado.** Conectar e consultar a conta é permitido mesmo com os envios bloqueados.
+4. **Não ativar `ASTEN_INTEGRATION_ENABLED=true` antes de um teste controlado autorizado.** Produção exige ainda `ASTEN_PILOT_APPROVED=true` e `ASTEN_PRODUCTION_RELEASE_APPROVED=true`; este último deve permanecer **false/ausente durante a publicação para revisão estética**. Conectar e consultar a conta é permitido mesmo com os envios bloqueados.
 5. Vercel no plano Hobby tem cron **somente diário**. O serviço de reconciliação automática está programado para `04:23 UTC`, podendo variar até uma hora. Não prometer atualização de assinatura instantânea. O Master pode reconciliar um envelope específico usando o fluxo já autenticado/limitado do Portal. Frequência maior exige desenho de agendamento alternativo ou aprovação de plano superior.
 
 ## 1 — Na Asten (você)
@@ -43,6 +43,6 @@
 - Desligar envios ao terminar o piloto; emitir relatório com evidências (sem segredos ou dados pessoais).
 
 ## 4 — Ativação real
-**Somente após aceite formal do Master e responsável institucional**, com metodologia de identificação, custos, plano, prazo máximo de sincronização, política de privacidade e contingência definidos. Realizar backup verificável, registrar mudança em GitHub, habilitar em janela controlada, monitorar logs e preparar rollback que **bloqueia novos envios**, sem apagar envelopes já existentes.
+**Somente após aceite formal do Master e responsável institucional**, e depois de aprovar explicitamente as três flags `ASTEN_INTEGRATION_ENABLED`, `ASTEN_PILOT_APPROVED` e `ASTEN_PRODUCTION_RELEASE_APPROVED` em escopo de produção. com metodologia de identificação, custos, plano, prazo máximo de sincronização, política de privacidade e contingência definidos. Realizar backup verificável, registrar mudança em GitHub, habilitar em janela controlada, monitorar logs e preparar rollback que **bloqueia novos envios**, sem apagar envelopes já existentes.
 
 **Nunca:** colocar `ASTEN_WEBHOOK_SECRET`, API token, `CRON_SECRET` ou chave de criptografia em repositório, print ou conversa. Não ativar assinatura real só para verificar se o botão funciona.
