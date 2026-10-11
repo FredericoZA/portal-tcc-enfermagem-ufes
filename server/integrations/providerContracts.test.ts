@@ -12,7 +12,7 @@ test('contrato Asten mantém PDF confidencial, envio explícito e prioridade par
   process.env.ASTEN_WEBHOOK_SECRET='w'.repeat(40);
   process.env.ASTEN_CALLBACK_URL='https://portal.example/api/integrations/asten/webhook';
   process.env.PORTAL_PUBLIC_URL='https://portal.example';
-  process.env.ASTEN_REQUIRE_CODE='true';
+  process.env.ASTEN_REQUIRE_CODE='false';
   process.env.ASTEN_AUTHENTICATION_OPTION='2';
   const contentBase64=Buffer.from('%PDF-1.4\nobj\n%%EOF','utf8').toString('base64');
   const payload=buildAstenEnvelopeParams({description:'TCC-2026-0001 — Termo',fileName:'termo.pdf',mimeType:'application/pdf',contentBase64,repositoryId:42,signers:[{name:'Aluno',email:'aluno@example.edu',order:1},{name:'Orientador',email:'orientador@example.edu',order:1}]});
