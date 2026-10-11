@@ -2089,7 +2089,7 @@ export const ConfiguracoesPage: React.FC = () => {
           <section id="portal-settings-hub" className="portal-settings-list space-y-2 bg-transparent">
             <div className="flex items-center gap-2 py-1 pt-3" aria-label="Grupo institucional e plataforma">
               <span className="portal-settings-group-line h-px flex-1" />
-              <span className="portal-settings-group-label text-[10px] font-black uppercase tracking-[0.16em]">Institucional e Plataforma</span>
+              <span className="portal-settings-group-label text-xs font-black uppercase tracking-[0.16em]">Institucional e Plataforma</span>
               <span className="portal-settings-group-line h-px flex-1" />
             </div>
             {[
@@ -2098,14 +2098,14 @@ export const ConfiguracoesPage: React.FC = () => {
             ].map(({ id, title, text, icon: Icon }) => (
               <button key={id} type="button" onClick={() => setActiveSettingsPanel(id as any)} className="portal-settings-launcher flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left shadow-sm">
                 <Icon className="portal-settings-launcher-icon h-5 w-5 shrink-0" />
-                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[11px] leading-4 text-slate-600">{text}</span></span>
+                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-xs leading-4 text-slate-600">{text}</span></span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
               </button>
             ))}
 
             <div className="flex items-center gap-2 py-1 pt-3" aria-label="Grupo modelos e variáveis">
               <span className="portal-settings-group-line h-px flex-1" />
-              <span className="portal-settings-group-label text-[10px] font-black uppercase tracking-[0.16em]">Modelos e Variáveis</span>
+              <span className="portal-settings-group-label text-xs font-black uppercase tracking-[0.16em]">Modelos e Variáveis</span>
               <span className="portal-settings-group-line h-px flex-1" />
             </div>
             {[
@@ -2116,14 +2116,14 @@ export const ConfiguracoesPage: React.FC = () => {
             ].map(({ id, title, text, icon: Icon }) => (
               <button key={id} type="button" onClick={() => setActiveSettingsPanel(id as any)} className="portal-settings-launcher flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left shadow-sm">
                 <Icon className="portal-settings-launcher-icon h-5 w-5 shrink-0" />
-                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[11px] leading-4 text-slate-600">{text}</span></span>
+                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-xs leading-4 text-slate-600">{text}</span></span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
               </button>
             ))}
 
             <div className="flex items-center gap-2 py-1 pt-3" aria-label="Grupo acesso e registros">
               <span className="portal-settings-group-line h-px flex-1" />
-              <span className="portal-settings-group-label text-[10px] font-black uppercase tracking-[0.16em]">Acesso e Registros</span>
+              <span className="portal-settings-group-label text-xs font-black uppercase tracking-[0.16em]">Acesso e Registros</span>
               <span className="portal-settings-group-line h-px flex-1" />
             </div>
             {[
@@ -2133,7 +2133,7 @@ export const ConfiguracoesPage: React.FC = () => {
             ].map(({ id, title, text, icon: Icon }) => (
               <button key={id} type="button" onClick={() => setActiveSettingsPanel(id as any)} className="portal-settings-launcher flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left shadow-sm">
                 <Icon className="portal-settings-launcher-icon h-5 w-5 shrink-0" />
-                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[11px] leading-4 text-slate-600">{text}</span></span>
+                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-xs leading-4 text-slate-600">{text}</span></span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
               </button>
             ))}
