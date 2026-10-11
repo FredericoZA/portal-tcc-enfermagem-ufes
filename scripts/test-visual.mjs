@@ -97,7 +97,7 @@ try {
 
   const navigate = async (page, tab) => {
     await page.evaluate(target => window.dispatchEvent(new CustomEvent('portal:navigate', { detail: target })), tab);
-    await page.locator('main').waitFor({ state: 'visible' });
+    await page.locator('#portal-app-root main').first().waitFor({ state: 'visible' });
     const lazyFallback = page.getByText('Carregando conteúdo...', { exact: true });
     if (await lazyFallback.count()) {
       await lazyFallback.first().waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
@@ -106,7 +106,7 @@ try {
   };
 
   const capture = async (page, name) => {
-    await page.locator('main').waitFor({ state: 'visible' });
+    await page.locator('#portal-app-root main').first().waitFor({ state: 'visible' });
     const lazyFallback = page.getByText('Carregando conteúdo...', { exact: true });
     if (await lazyFallback.count()) {
       await lazyFallback.first().waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
