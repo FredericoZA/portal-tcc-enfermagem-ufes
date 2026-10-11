@@ -889,7 +889,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                           {formatProcessLabel(proc.protocolo || proc.id)}
                         </span>
                         <span
-                          className="text-[10px] font-black px-2 py-0.5 rounded uppercase border"
+                          className="text-[11px] font-black px-2 py-0.5 rounded uppercase border"
                           style={{
                             backgroundColor: '#FFFFFF',
                             borderColor: roleConfig.borderColor,
@@ -916,7 +916,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       <div className="pt-2 flex items-center justify-between border-t border-slate-300/50">
                         <div className="flex gap-1">
                           <span
-                            className="text-[10px] font-black px-2 py-0.5 rounded uppercase border"
+                            className="text-[11px] font-black px-2 py-0.5 rounded uppercase border"
                             style={{
                               backgroundColor: '#FFFFFF',
                               borderColor: roleConfig.borderColor,
