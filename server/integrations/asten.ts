@@ -13,6 +13,7 @@ type Service = 'getIdentificador' | 'getRepositoriosDoUsuario' | 'inserirEnvelop
 const allowed = new Set<Service>(['getIdentificador','getRepositoriosDoUsuario','inserirEnvelope','encaminharEnvelopeParaAssinaturas','getDadosEnvelope','getSignatariosPorEnvelope','downloadPDFEnvelopeDocs','getDocumentosEXMLsAssinadosDoEnvelope','reenviarLinksDeAssinatura','cancelarEnvelope']);
 interface Session { token: string; ownerEmail: string; identifier: string; repositoryId?: number; expiresAt: number; }
 const sessions = new Map<string, Session>();
+const readonlyAstenServices = new Set<Service>(['getIdentificador', 'getRepositoriosDoUsuario', 'getDadosEnvelope', 'getSignatariosPorEnvelope', 'downloadPDFEnvelopeDocs', 'getDocumentosEXMLsAssinadosDoEnvelope']);
 // Dupla autorização: credencial validada não autoriza enviar documentos.
 const enabled = () => process.env.ASTEN_INTEGRATION_ENABLED === 'true' && process.env.ASTEN_PILOT_APPROVED === 'true';
 const storedToken = () => process.env.ASTEN_ALLOW_STORED_TOKEN === 'true' ? String(process.env.ASTEN_API_KEY || '').trim() || null : null;
@@ -164,8 +165,9 @@ function openSealedSession(id: string): Session | null {
 }
 
 export async function callAsten(service: Service, params: Record<string, unknown>, token: string): Promise<any> {
-  // Permite testar e conectar a conta sem habilitar criação de envelopes ou envios.
-  if(!enabled()&&!['getIdentificador','getRepositoriosDoUsuario'].includes(service))throw new Error('A integração Asten está bloqueada para operações de documentos.');
+  // Consulta de envelopes existentes permanece disponível durante suspensão de novos envios.
+  // Mutações de envelopes exigem autorização dupla e permanecem bloqueadas no modo seguro.
+  if (!enabled() && !readonlyAstenServices.has(service)) throw new Error('A integração Asten está bloqueada para operações de documentos.');
   if (!allowed.has(service)) throw new Error('Serviço Asten não permitido.');
   const apiToken = String(token || '').trim();
   if (new URL(API_BASE).protocol !== 'https:' || new URL(API_BASE).hostname !== 'plataforma.astenassinatura.com.br') throw new Error('Configuração Asten inválida.');
