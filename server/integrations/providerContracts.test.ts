@@ -30,7 +30,7 @@ test('contrato Asten mantém PDF confidencial, envio explícito e prioridade par
 test('autenticação SMS sem telefone é bloqueada antes de enviar documentos',()=>{
   process.env.ASTEN_AUTHENTICATION_OPTION='4';
   const pdf=Buffer.from('%PDF-1.4\\n%%EOF').toString('base64');
-  assert.throws(()=>buildAstenEnvelopeParams({description:'Piloto',fileName:'piloto.pdf',mimeType:'application/pdf',contentBase64:pdf,repositoryId:42,signers:[{name:'Pessoa teste',email:'teste@example.edu',order:1}]}),/telefone verificado/);
+  assert.throws(()=>buildAstenEnvelopeParams({description:'Piloto',fileName:'piloto.pdf',mimeType:'application/pdf',contentBase64:pdf,repositoryId:42,signers:[{name:'Pessoa teste',email:'teste@example.edu',order:1}]}),/telefone|método que não dependa de telefone/);
   process.env.ASTEN_AUTHENTICATION_OPTION='2';
 });
 
