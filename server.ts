@@ -74,7 +74,7 @@ import { buildProcessArchiveFileName, downloadDrivePdf, ensurePortalProcessDrive
 import { renderGoogleDriveTemplateToPdf } from './server/integrations/googleDocsRenderer';
 import { dispatchTrackedEmail } from './server/integrations/trackedGmail';
 import { buildProcessVariables, compileWorkflow, executeWorkflowEvent, mergeWorkflowHtmlVariables, mergeWorkflowVariables, normalizeWorkflowEventCode, parseRecipients } from './server/workflow/runtime';
-import { buildAstenOperationalDashboard, mapAstenEventToJobStatus, normalizeAstenWebhookEvent } from './server/integrations/astenEventLedger';
+import { buildAstenOperationalDashboard, isReconcileableAstenWebhookEvent, mapAstenEventToJobStatus, normalizeAstenWebhookEvent } from './server/integrations/astenEventLedger';
 import { buildPortalDriveFileName } from './src/services/googleDriveOrganizer';
 import { getOtpRuntimeStatus, requestPortalOtp, verifyPortalOtp } from './server/security/portalOtp';
 import { bootstrapGoogleDriveStructure, buildGoogleAuthorizationUrl, decodeGoogleOAuthState, exchangeGoogleAuthorizationCode, getGoogleOAuthSecurityPreflight, getGoogleWorkspaceAccessToken, getGoogleWorkspaceStatus, persistGoogleWorkspaceAuthorization, publishMasterDocumentModel, readPrivatePortalBackup, registerMasterDocumentModelFromDrive, sendGmailMessage, storePrivatePortalBackup, synchronizeDefenseCalendar, upsertLivingIntelligenceFile, verifyMasterDocumentModelFingerprint, verifyPrivateDriveFolder } from './server/integrations/googleWorkspace';
@@ -1449,8 +1449,7 @@ export async function createPortalApp() {
     const result={checked:0,confirmed:0,pending:0,failed:0};
     const now=Date.now();
     const candidates=astenWebhookEventsStore
-      .filter(event=>!event.duplicate&&event.matchedJobId&&!event.processedAt&&!event.safePayload?.processedAt)
-      .filter(event=>(!event.retryAfter||Date.parse(event.retryAfter)<=now)&&(!event.processingLeaseUntil||Date.parse(event.processingLeaseUntil)<=now))
+      .filter(event=>isReconcileableAstenWebhookEvent(event,now))
       .sort((a,b)=>a.receivedAt.localeCompare(b.receivedAt))
       .slice(0,Math.min(10,Math.max(1,limit)))
       .map(event=>event.id);
