@@ -1460,7 +1460,9 @@ export async function createPortalApp() {
     }catch{res.status(503).json({error:'Falha ao persistir a reconciliação Asten.'});}
   });
   app.post('/api/admin/asten/reconcile-queued',requireAuthenticated,requireAdministrator,async(req,res)=>{
-    if(!hasRecentAuthentication(getPortalIdentity(req)!))return res.status(428).json({error:'Reautentique-se para reconciliar eventos Asten.'});
+    const identity=getPortalIdentity(req)!;
+    if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Reautentique-se para reconciliar eventos Asten.'});
+    if(!allowSignatureRetry(identity.email,'asten-reconcile-queued'))return res.status(429).json({error:'Muitas reconciliações em sequência. Aguarde um minuto.',code:'ASTEN_RECONCILE_RATE_LIMIT'});
     try{res.json(await reconcileQueuedAstenCallbacks());}catch{res.status(503).json({error:'Falha ao persistir a reconciliação Asten.'});}
   });
 
