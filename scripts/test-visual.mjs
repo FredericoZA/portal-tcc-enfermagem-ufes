@@ -435,6 +435,29 @@ try {
             await page.keyboard.press('Escape');
             await modal.waitFor({state:'hidden'});
           }
+          for(const [title,slug] of [
+            ['Acesso','acesso'],
+            ['Registros de Assinatura','assinaturas'],
+            ['Registro de Logs','logs']
+          ]){
+            await page.locator('#portal-settings-hub .portal-settings-launcher').filter({hasText:title}).first().click();
+            const modal=page.locator('.portal-settings-workspace');
+            await modal.waitFor({state:'visible'});
+            const sheet=await page.evaluate(()=>{
+              const root=document.querySelector('.portal-settings-workspace');
+              const table=root?.querySelector('.portal-spreadsheet-table');
+              return {sheet:root?.getAttribute('data-portal-sheet-workspace'),
+                width:root?.getBoundingClientRect().width||0,viewport:innerWidth,
+                font:table?parseFloat(getComputedStyle(table).fontSize):null};
+            });
+            if(sheet.sheet!=='true'||sheet.width>sheet.viewport-8||
+              (sheet.font!==null&&Math.abs(sheet.font-11)>0.5)){
+              report.errors.push(`config-${slug}: planilha deve manter 11px e respeitar o viewport (${JSON.stringify(sheet)})`);
+            }
+            await capture(page,`master-config-modal-${slug}-1440`);
+            await page.keyboard.press('Escape');
+            await modal.waitFor({state:'hidden'});
+          }
         }
         if (tab === 'fluxo-tcc' && width >= 1440) {
           const fluxoGeometry = await page.evaluate(() => {
