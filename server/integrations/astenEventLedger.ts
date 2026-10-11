@@ -35,7 +35,9 @@ function visit(value: unknown, keys: RegExp): string | undefined {
 }
 
 export function extractAstenEnvelopeId(payload: unknown): string | undefined {
-  return visit(payload, /^(idEnvelope|envelopeId|id_envelope)$/i);
+  const outer=payload as any;
+  const id=outer?.envelope?.id??outer?.Envelope?.id??outer?.idEnvelope??outer?.envelopeId;
+  return id===undefined||id===null?visit(payload,/^(idEnvelope|envelopeId|id_envelope)$/i):String(id);
 }
 
 export function inferAstenEventStatus(payload: unknown): AstenEventStatus {
