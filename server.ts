@@ -1451,7 +1451,7 @@ export async function createPortalApp() {
   }
   app.get('/api/cron/asten-reconcile',async(req,res)=>{
     const expected=String(process.env.CRON_SECRET||'').trim();
-    const supplied=String(req.headers.authorization||'').replace(/^Bearer\\s+/i,'').trim();
+    const supplied=String(req.headers.authorization||'').replace(/^Bearer\s+/i,'').trim();
     if(expected.length<32||!supplied||!timingSafeEqual(createHash('sha256').update(expected).digest(),createHash('sha256').update(supplied).digest()))return res.status(401).json({error:'Não autorizado.'});
     try{
       const result=await reconcileQueuedAstenCallbacks();
@@ -3073,7 +3073,7 @@ export async function createPortalApp() {
     if(!safeCompareWebhookSecret(String(req.headers['x-portal-webhook-key']||'')))return res.status(401).json({error:'Callback não autorizado.'});
     if(!req.body||typeof req.body!=='object'||Array.isArray(req.body))return res.status(400).json({error:'Payload inválido.'});
     const event=normalizeAstenWebhookEvent({payload:req.body,knownFingerprints:astenCallbackFingerprints,jobs:signatureJobsStore});
-    if(!event.envelopeId||!/^\\d{1,24}$/.test(event.envelopeId))return res.status(400).json({error:'Identificador do envelope inválido.'});
+    if(!event.envelopeId||!/^\d{1,24}$/.test(event.envelopeId))return res.status(400).json({error:'Identificador do envelope inválido.'});
     if(!event.matchedJobId)return res.status(409).json({error:'Envelope ainda não registrado no Portal. Solicite reprocessamento posteriormente.'});
     if(event.duplicate)return res.status(200).json({received:true,duplicate:true});
     astenCallbackFingerprints.add(event.fingerprint);
