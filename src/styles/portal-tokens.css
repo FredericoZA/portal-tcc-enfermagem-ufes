@@ -100,10 +100,10 @@
 
   /* Escala tipográfica canônica de navegação e planilhas. */
   --portal-sidebar-nav-font-size: 13px;
-  --portal-sidebar-session-action-font-size: 10px;
+  --portal-sidebar-session-action-font-size: 12px;
   --portal-sheet-title-font-size: 18px;
-  --portal-sheet-filter-label-font-size: 9px;
-  --portal-sheet-filter-chip-font-size: 10px;
+  --portal-sheet-filter-label-font-size: 11px;
+  --portal-sheet-filter-chip-font-size: 11px;
   --portal-sheet-column-font-size: 11px;
   --portal-sheet-body-font-size: 11px;
   --portal-calendar-event-font-size: 8.5px;
