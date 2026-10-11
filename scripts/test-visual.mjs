@@ -266,6 +266,9 @@ try {
           }
         }
         if (tab === 'indicadores') {
+          // O painel carrega métricas de forma assíncrona após montar a rota;
+          // aguardar os dados reais antes de aplicar o contrato visual.
+          await page.locator('#indicadores-publicos-page').getByText(/TCCs cadastrados/i).first().waitFor({state:'visible',timeout:8000}).catch(()=>{});
           const indicatorError = await page.getByText('Não foi possível carregar os indicadores.', { exact: true }).count();
           const metricText = await page.locator('#indicadores-publicos-page').innerText().catch(() => '');
           if (indicatorError || !/TCCs cadastrados/i.test(metricText)) {
