@@ -322,7 +322,7 @@ button[aria-label^="Configurar exibição"],
   border-radius: var(--portal-control-radius);
   background: var(--portal-surface-inner);
   color: var(--portal-text-dark);
-  font-size: 11px;
+  font-size: var(--portal-type-content);
   font-weight: 800;
   white-space: nowrap;
 }
@@ -440,7 +440,7 @@ button[aria-label^="Configurar exibição"],
   border-bottom: 8px solid var(--portal-surface-inner);
   background: var(--portal-brand-header);
   color: var(--portal-text-light);
-  font-size: 11px;
+  font-size: var(--portal-type-content);
   font-weight: 850;
   line-height: 1.2;
 }
@@ -454,7 +454,7 @@ button[aria-label^="Configurar exibição"],
 
 .portal-core-filter-title {
   margin: 8px 0 3px;
-  font-size: 9.5px;
+  font-size: var(--portal-type-content);
   font-weight: 850;
   line-height: 1;
   text-transform: uppercase;
@@ -474,7 +474,7 @@ button[aria-label^="Configurar exibição"],
   border-radius: 8px;
   background: var(--portal-surface-card);
   color: var(--portal-text-dark);
-  font-size: 10px;
+  font-size: var(--portal-type-content);
   font-weight: 750;
   line-height: 1.15;
   text-align: left;
@@ -504,7 +504,7 @@ button[aria-label^="Configurar exibição"],
   border-radius: 7px;
   background: var(--portal-surface-card);
   color: var(--portal-text-dark);
-  font-size: 9px;
+  font-size: var(--portal-type-content);
   font-weight: 750;
   cursor: pointer;
 }
@@ -520,7 +520,7 @@ button[aria-label^="Configurar exibição"],
   border-radius: 8px;
   background: var(--portal-surface-inner);
   color: var(--portal-text-dark);
-  font-size: 10px;
+  font-size: var(--portal-type-content);
 }
 
 .portal-core-filter-values {
@@ -548,7 +548,7 @@ button[aria-label^="Configurar exibição"],
   gap: 6px;
   min-height: 25px;
   padding: 0 2px;
-  font-size: 10px;
+  font-size: var(--portal-type-content);
   line-height: 1.15;
 }
 
@@ -564,7 +564,7 @@ button[aria-label^="Configurar exibição"],
   min-height: 27px;
   padding: 0 9px;
   border-radius: 7px;
-  font-size: 9.5px;
+  font-size: var(--portal-type-content);
   font-weight: 800;
   cursor: pointer;
 }
@@ -614,7 +614,7 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-settings-control-title {
-  font-size: 9px;
+  font-size: var(--portal-type-content);
   font-weight: 850;
   line-height: 1;
   text-transform: uppercase;
@@ -637,7 +637,7 @@ button[aria-label^="Configurar exibição"],
   border-radius: 8px;
   background: var(--portal-surface-inner);
   color: var(--portal-text-dark);
-  font-size: 9.5px;
+  font-size: var(--portal-type-content);
   font-weight: 800;
   line-height: 1;
   cursor: pointer;
@@ -659,7 +659,7 @@ button[aria-label^="Configurar exibição"],
 .portal-settings-date-field > span {
   display: block;
   margin-bottom: 2px;
-  font-size: 8.5px;
+  font-size: var(--portal-type-content);
   font-weight: 750;
   color: var(--portal-text-muted);
 }
@@ -674,7 +674,7 @@ button[aria-label^="Configurar exibição"],
   border-radius: 8px;
   background: var(--portal-surface-inner);
   color: var(--portal-text-dark);
-  font-size: 9.5px;
+  font-size: var(--portal-type-content);
   font-weight: 700;
 }
 
@@ -692,7 +692,7 @@ button[aria-label^="Configurar exibição"],
 
 .portal-core-wrap-setting strong {
   display: block;
-  font-size: 9.5px;
+  font-size: var(--portal-type-content);
   font-weight: 850;
   line-height: 1.15;
 }
@@ -700,7 +700,7 @@ button[aria-label^="Configurar exibição"],
 .portal-core-wrap-setting span {
   display: block;
   margin-top: 2px;
-  font-size: 8.5px;
+  font-size: var(--portal-type-content);
   line-height: 1.2;
   color: var(--portal-text-muted);
 }
@@ -719,7 +719,7 @@ button[aria-label^="Configurar exibição"],
   border-radius: 8px;
   background: var(--portal-surface-inner);
   color: var(--portal-text-dark);
-  font-size: 9px;
+  font-size: var(--portal-type-content);
   font-weight: 750;
   cursor: pointer;
 }
@@ -821,7 +821,7 @@ button[aria-label^="Configurar exibição"],
 
 .portal-theme-btn-pill-primary {
   padding: 8px 16px;
-  font-size: 12px;
+  font-size: var(--portal-type-content);
   text-transform: uppercase;
   letter-spacing: .025em;
 }
@@ -1004,14 +1004,14 @@ button[aria-label^="Configurar exibição"],
 .portal-registration-section-title {
   grid-column: 1 / -1;
   margin: 0;
-  font-size: 16px;
+  font-size: var(--portal-type-content);
   line-height: 1.2;
   font-weight: 800;
   color: var(--portal-text-dark);
 }
 
 .portal-calendar-day-number {
-  font-size: 12px;
+  font-size: var(--portal-type-content);
   line-height: 1;
 }
 
@@ -1052,7 +1052,7 @@ button[aria-label^="Configurar exibição"],
 .portal-settings-workspace-title h2 {
   margin: 0;
   color: var(--portal-text-light);
-  font-size: 13px;
+  font-size: var(--portal-type-title);
   line-height: 1;
   font-weight: 900;
   letter-spacing: .035em;
@@ -1194,7 +1194,7 @@ button[aria-label^="Configurar exibição"],
   background: #fff;
   padding: 4px 12px;
   color: var(--portal-text-dark);
-  font-size: 9px;
+  font-size: var(--portal-type-content);
   font-weight: 900;
   letter-spacing: .025em;
   text-transform: uppercase;
