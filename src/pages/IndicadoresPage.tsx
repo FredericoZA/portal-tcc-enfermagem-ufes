@@ -66,7 +66,7 @@ const LineTrend: React.FC<{ items?: Bucket[] }> = ({ items = [] }) => {
         <text x={x} y={Math.max(13, y - 10)} textAnchor="middle" fontSize="10" fontWeight="800" fill="var(--portal-text-dark)">{item.count}</text>
       </g>)}
     </svg>
-    <div className="grid min-w-[620px] gap-1 text-[9px] text-slate-600" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+    <div className="grid min-w-[620px] gap-1 text-xs text-slate-600" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
       {items.map((item) => <span key={`${item.key || item.label}-${item.label}`} className="truncate text-center" title={item.label}>{item.label}</span>)}
     </div>
   </div>;
@@ -82,7 +82,7 @@ const Funnel: React.FC<{ data: PublicIndicators }> = ({ data }) => {
   const base = Math.max(1, data.totals.registered);
   return <div className="space-y-2.5">{rows.map((row, index) => <div key={row.label} className="grid grid-cols-[100px_1fr_70px] items-center gap-2 text-[11px]">
     <strong className="text-slate-800">{row.label}</strong>
-    <div className="h-8 overflow-hidden rounded-lg border border-slate-300 bg-white"><div className="flex h-full items-center justify-end rounded-lg bg-[var(--portal-brand-action)] pr-2 text-[10px] font-black text-white" style={{ width: `${Math.max(8, (row.count / base) * 100)}%` }}>{row.count}</div></div>
+    <div className="h-8 overflow-hidden rounded-lg border border-slate-300 bg-white"><div className="flex h-full items-center justify-end rounded-lg bg-[var(--portal-brand-action)] pr-2 text-xs font-black text-white" style={{ width: `${Math.max(8, (row.count / base) * 100)}%` }}>{row.count}</div></div>
     <span className="text-right font-black text-slate-950">{index === 0 ? '100%' : `${pct(row.count, base)}%`}</span>
   </div>)}</div>;
 };
@@ -172,17 +172,17 @@ export const IndicadoresPage: React.FC = () => {
           [CalendarDays, 'Concentração no pico', `${analytics.peakShare}%`, monthLabel(data.descriptive?.peakMonth)],
           [Users2, 'Coautoria', `${data.totals.coauthorRate}%`, 'do acervo'],
           [TrendingUp, 'Último mês', analytics.monthOverMonth === null ? '—' : `${analytics.monthOverMonth >= 0 ? '+' : ''}${analytics.monthOverMonth}%`, analytics.latestMonth],
-        ].map(([Icon, label, value, detail]: any) => <article key={label} className="portal-layer-inner rounded-xl border border-slate-300 p-3 shadow-sm"><Icon className="h-4 w-4 text-[var(--portal-brand-action)]"/><strong className="mt-2 block text-xl text-slate-950">{value}</strong><h3 className="text-[9px] font-black uppercase text-slate-800">{label}</h3><p className="mt-1 text-[9px] text-slate-500">{detail}</p></article>)}
+        ].map(([Icon, label, value, detail]: any) => <article key={label} className="portal-layer-inner rounded-xl border border-slate-300 p-3 shadow-sm"><Icon className="h-4 w-4 text-[var(--portal-brand-action)]"/><strong className="mt-2 block text-xl text-slate-950">{value}</strong><h3 className="text-xs font-black uppercase text-slate-800">{label}</h3><p className="mt-1 text-xs text-slate-500">{detail}</p></article>)}
       </section>
 
       <section className="grid gap-3 xl:grid-cols-[1.7fr_1fr]">
-        <article className={panel}><h2 className="text-xs font-black uppercase text-slate-950">Defesas por mês — tendência</h2><p className="mb-2 mt-1 text-[10px] text-slate-600">Evolução temporal com todos os períodos agregados disponíveis.</p><LineTrend items={data.months}/></article>
-        <article className={panel}><h2 className="text-xs font-black uppercase text-slate-950">Funil agregado</h2><p className="mb-3 mt-1 text-[10px] text-slate-600">Conversão acumulada da base registrada até publicação.</p><Funnel data={data}/></article>
+        <article className={panel}><h2 className="text-xs font-black uppercase text-slate-950">Defesas por mês — tendência</h2><p className="mb-2 mt-1 text-xs text-slate-600">Evolução temporal com todos os períodos agregados disponíveis.</p><LineTrend items={data.months}/></article>
+        <article className={panel}><h2 className="text-xs font-black uppercase text-slate-950">Funil agregado</h2><p className="mb-3 mt-1 text-xs text-slate-600">Conversão acumulada da base registrada até publicação.</p><Funnel data={data}/></article>
       </section>
 
       <section className="grid gap-3 xl:grid-cols-2">
-        <article className={panel}><h2 className="text-xs font-black uppercase text-slate-950">Evolução anual</h2><p className="mb-3 mt-1 text-[10px] text-slate-600">Comparação do volume entre os anos disponíveis. Variação mais recente: {analytics.yearOverYear === null ? 'não disponível' : `${analytics.yearOverYear >= 0 ? '+' : ''}${analytics.yearOverYear}%`}.</p><BarList items={data.years}/></article>
-        <article className={panel}><h2 className="text-xs font-black uppercase text-slate-950">Situação dos processos</h2><p className="mb-3 mt-1 text-[10px] text-slate-600">Distribuição da base por situação registrada.</p><BarList items={data.byStatus} percentage/></article>
+        <article className={panel}><h2 className="text-xs font-black uppercase text-slate-950">Evolução anual</h2><p className="mb-3 mt-1 text-xs text-slate-600">Comparação do volume entre os anos disponíveis. Variação mais recente: {analytics.yearOverYear === null ? 'não disponível' : `${analytics.yearOverYear >= 0 ? '+' : ''}${analytics.yearOverYear}%`}.</p><BarList items={data.years}/></article>
+        <article className={panel}><h2 className="text-xs font-black uppercase text-slate-950">Situação dos processos</h2><p className="mb-3 mt-1 text-xs text-slate-600">Distribuição da base por situação registrada.</p><BarList items={data.byStatus} percentage/></article>
       </section>
 
       {data.descriptive && <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -193,7 +193,7 @@ export const IndicadoresPage: React.FC = () => {
           ['Mês de pico', `${monthLabel(data.descriptive.peakMonth)} · ${data.descriptive.peakMonthCount}`],
           ['Tempo médio', `${num(data.descriptive.completionDaysMean)} d`],
           ['Tempo mediano', `${num(data.descriptive.completionDaysMedian)} d`],
-        ].map(([label, value]) => <article key={label} className="portal-layer-card rounded-xl border border-slate-300 p-3"><strong className="text-lg text-slate-950">{value}</strong><div className="mt-1 text-[9px] font-black uppercase text-slate-700">{label}</div></article>)}
+        ].map(([label, value]) => <article key={label} className="portal-layer-card rounded-xl border border-slate-300 p-3"><strong className="text-lg text-slate-950">{value}</strong><div className="mt-1 text-xs font-black uppercase text-slate-700">{label}</div></article>)}
       </section>}
 
       <section className="grid gap-3 lg:grid-cols-3">
@@ -212,7 +212,7 @@ export const IndicadoresPage: React.FC = () => {
         <article className={panel}><h2 className="text-xs font-black uppercase">Resultados das bancas</h2><div className="mt-3"><BarList items={data.outcomes} percentage/></div></article>
       </section>
 
-      <div className="px-1 pb-2 text-[9px] text-slate-500">Dados agregados; categorias abaixo de {data.privacy.minimumBucketSize} registros são suprimidas. Atualizado em {new Date(data.generatedAt).toLocaleString('pt-BR')}.</div>
+      <div className="px-1 pb-2 text-xs text-slate-500">Dados agregados; categorias abaixo de {data.privacy.minimumBucketSize} registros são suprimidas. Atualizado em {new Date(data.generatedAt).toLocaleString('pt-BR')}.</div>
     </div>}
     </div>
   </div>;

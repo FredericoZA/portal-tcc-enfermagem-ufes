@@ -132,9 +132,9 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
     const canRetry = !demo && RETRYABLE_STATUSES.has(job.status) && job.providerCreationState !== 'UNCERTAIN';
     const canReconcile = !demo && Boolean(job.providerEnvelopeId) && !FINAL_STATUSES.has(job.status);
     return <div className="flex items-center justify-center gap-1 whitespace-nowrap">
-      <button type="button" onClick={() => setSelectedJob(job)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50"><Eye className="h-3 w-3"/>Auditar</button>
-      {canRetry && <button type="button" onClick={() => void retry(job)} disabled={busy} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50 disabled:opacity-50"><RefreshCw className={`h-3 w-3 ${busy ? 'animate-spin' : ''}`}/>Reenviar</button>}
-      {canReconcile && <button type="button" onClick={() => void reconcile(job)} disabled={busy} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50 disabled:opacity-50"><RotateCcw className={`h-3 w-3 ${busy ? 'animate-spin' : ''}`}/>Reconciliar</button>}
+      <button type="button" onClick={() => setSelectedJob(job)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-900 hover:bg-slate-50"><Eye className="h-3 w-3"/>Auditar</button>
+      {canRetry && <button type="button" onClick={() => void retry(job)} disabled={busy} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-900 hover:bg-slate-50 disabled:opacity-50"><RefreshCw className={`h-3 w-3 ${busy ? 'animate-spin' : ''}`}/>Reenviar</button>}
+      {canReconcile && <button type="button" onClick={() => void reconcile(job)} disabled={busy} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-900 hover:bg-slate-50 disabled:opacity-50"><RotateCcw className={`h-3 w-3 ${busy ? 'animate-spin' : ''}`}/>Reconciliar</button>}
     </div>;
   };
 
@@ -144,7 +144,7 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
     if (key === 'protocol') return job.protocol || job.processId || '—';
     if (key === 'documentTitle') return job.documentTitle || job.documentType || '—';
     if (key === 'provider') return providerLabel(job.provider);
-    if (key === 'status') return <span className={`inline-flex rounded-md border px-2 py-0.5 text-[9px] font-black uppercase ${statusToneClass(job.status)}`}>{job.status}</span>;
+    if (key === 'status') return <span className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-black uppercase ${statusToneClass(job.status)}`}>{job.status}</span>;
     if (key === 'signers') return signerSummary(job.signers);
     if (key === 'signedBy') return signedBySummary(job);
     if (key === 'signedAt') return dateTime(job.signedAt || job.completedAt);
@@ -168,10 +168,10 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
 
     <div className="portal-signature-table-shell flex min-h-0 flex-1 flex-col p-0">
       {loading ? <div className="m-3 rounded-xl border border-slate-300 p-8 text-center text-xs font-semibold text-slate-700" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>Carregando registros de assinatura…</div> : renderedJobs.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-400 p-8 text-center text-xs font-semibold text-slate-700" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>Nenhum registro de assinatura encontrado com os filtros atuais.</div> : <>
-        {showDemo && <div className="border-b border-amber-300 bg-amber-50 px-3 py-1.5 text-[9px] font-semibold text-amber-900">Demonstração visual: este registro existe apenas na interface, não é salvo e não entra em estatísticas.</div>}
+        {showDemo && <div className="border-b border-amber-300 bg-amber-50 px-3 py-1.5 text-[11px] font-semibold text-amber-900">Demonstração visual: este registro existe apenas na interface, não é salvo e não entra em estatísticas.</div>}
         <TableScrollWrapper fillHeight>
           <table className="portal-spreadsheet-table w-full min-w-[1900px] border-collapse text-center text-xs">
-            <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wide ${key === 'actions' ? 'sticky right-0 z-20 text-center' : ''}`} style={key === 'actions' ? { backgroundColor: 'var(--portal-brand-header)' } : undefined}>{SIGNATURE_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
+            <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[11px] font-black uppercase tracking-wide ${key === 'actions' ? 'sticky right-0 z-20 text-center' : ''}`} style={key === 'actions' ? { backgroundColor: 'var(--portal-brand-header)' } : undefined}>{SIGNATURE_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-200">{renderedJobs.map((job) => <tr key={job.id}>{activeColumns.map((key) => <td key={key} className={`px-3 py-1 text-slate-950 ${key === 'actions' ? 'sticky right-0 z-10 border-l border-slate-200 bg-white text-center' : ''}`}>{renderCell(job, key)}</td>)}</tr>)}</tbody>
           </table>
         </TableScrollWrapper>
@@ -187,13 +187,13 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
             ['Situação', selectedJob.status], ['Solicitado por', selectedJob.createdBy], ['Solicitado em', dateTime(selectedJob.createdAt)],
             ['Protocolo externo', selectedJob.providerEnvelopeId || '—'], ['Enviado em', dateTime(selectedJob.sentAt)], ['Assinado / concluído em', dateTime(selectedJob.signedAt || selectedJob.completedAt)],
             ['Hash assinado', selectedJob.signedSha256 || '—'], ['Último erro', selectedJob.lastError || '—'],
-          ].map(([label, value]) => <div key={label} className="rounded-xl border border-slate-300 p-3" style={{ backgroundColor: 'var(--portal-surface-panel)' }}><div className="text-[9px] font-black uppercase tracking-wide text-slate-500">{label}</div><div className="mt-1 break-words text-xs font-semibold text-slate-900">{value}</div></div>)}</div>
+          ].map(([label, value]) => <div key={label} className="rounded-xl border border-slate-300 p-3" style={{ backgroundColor: 'var(--portal-surface-panel)' }}><div className="text-[11px] font-black uppercase tracking-wide text-slate-500">{label}</div><div className="mt-1 break-words text-xs font-semibold text-slate-900">{value}</div></div>)}</div>
 
           <section className="mt-3 overflow-hidden rounded-xl border border-slate-300 bg-white">
-            <div className="px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}>Signatários e evidências</div>
+            <div className="px-3 py-2 text-[11px] font-black uppercase tracking-wide text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}>Signatários e evidências</div>
             <div className="overflow-x-auto"><table className="portal-spreadsheet-table w-full min-w-[760px] border-collapse text-left text-xs"><thead><tr><th className="px-3 py-1.5">Ordem</th><th className="px-3 py-1.5">Pessoa</th><th className="px-3 py-1.5">E-mail</th><th className="px-3 py-1.5">Papel</th><th className="px-3 py-1.5">Estado</th><th className="px-3 py-1.5">Assinado em</th></tr></thead><tbody>{selectedJob.signers.length ? selectedJob.signers.slice().sort((a,b)=>a.signingOrder-b.signingOrder).map((signer)=><tr key={signer.id}><td className="px-3 py-1">{signer.signingOrder}</td><td className="px-3 py-1 font-semibold">{signer.name || '—'}</td><td className="px-3 py-1">{signer.email}</td><td className="px-3 py-1">{roleLabel(signer.role)}</td><td className="px-3 py-1">{signer.status}</td><td className="px-3 py-1">{dateTime(signer.signedAt)}</td></tr>) : <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-500">Nenhum signatário registrado.</td></tr>}</tbody></table></div>
           </section>
-          <div className="mt-3 rounded-xl border border-slate-300 bg-white p-3 text-[10px] leading-4 text-slate-600">O Portal preserva a identidade dos signatários, documento, método, protocolo externo e marcos temporais disponíveis. Quando o provedor não devolve horário individual por signatário, o sistema exibe apenas o horário confirmado do documento, sem inventar evidência individual.</div>
+          <div className="mt-3 rounded-xl border border-slate-300 bg-white p-3 text-[11px] leading-4 text-slate-600">O Portal preserva a identidade dos signatários, documento, método, protocolo externo e marcos temporais disponíveis. Quando o provedor não devolve horário individual por signatário, o sistema exibe apenas o horário confirmado do documento, sem inventar evidência individual.</div>
         </div>
       </section>
     </div>}

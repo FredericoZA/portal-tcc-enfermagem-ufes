@@ -419,16 +419,14 @@ async function liveChecks() {
       assert.ok(!result.body?.job, 'um trabalho Asten não deveria ser criado antes do arquivamento no Drive');
     });
 
-    await check('runtime: webhook rejeita segredo errado e deduplica', async () => {
-      const payload = { evento: 'teste_homologacao', idEnvelope: 'envelope-inexistente-001', status: 'EM_ANDAMENTO' };
-      const rejected = await request('/api/integrations/asten/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'x-portal-webhook-key': 'errado' }, body: JSON.stringify(payload) });
-      assert.equal(rejected.response.status, 401);
-      const accepted = await request('/api/integrations/asten/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'x-portal-webhook-key': 'test-webhook-secret-0123456789abcdef' }, body: JSON.stringify(payload) });
-      assert.equal(accepted.response.status, 200, JSON.stringify(accepted.body));
-      assert.equal(accepted.body?.duplicate, undefined);
-      const duplicate = await request('/api/integrations/asten/webhook', { method: 'POST', headers: { 'content-type': 'application/json', 'x-portal-webhook-key': 'test-webhook-secret-0123456789abcdef' }, body: JSON.stringify(payload) });
-      assert.equal(duplicate.response.status, 200);
-      assert.equal(duplicate.body?.duplicate, true);
+    await check('runtime: webhook exige segredo, envelope válido e vínculo com o portal', async () => {
+      const invalid = { evento: 'teste_homologacao', idEnvelope:'envelope-inexistente-001', status:'EM_ANDAMENTO' };
+      const rejected = await request('/api/integrations/asten/webhook', { method:'POST', headers:{'content-type':'application/json','x-portal-webhook-key':'errado'}, body:JSON.stringify(invalid) });
+      assert.equal(rejected.response.status,401);
+      const malformed = await request('/api/integrations/asten/webhook', { method:'POST', headers:{'content-type':'application/json','x-portal-webhook-key':'test-webhook-secret-0123456789abcdef'}, body:JSON.stringify(invalid) });
+      assert.equal(malformed.response.status,400);
+      const unmatched = await request('/api/integrations/asten/webhook', { method:'POST', headers:{'content-type':'application/json','x-portal-webhook-key':'test-webhook-secret-0123456789abcdef'}, body:JSON.stringify({envelope:{id:'123456',status:'2'}}) });
+      assert.equal(unmatched.response.status,409,'O Portal deve recusar eventos de envelopes externos.');
     });
 
     await check('runtime: logs são pesquisáveis por pessoa ou código', async () => {

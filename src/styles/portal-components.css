@@ -250,7 +250,7 @@ button[aria-label^="Configurar exibição"],
   border-radius: 8px;
   background: var(--portal-surface-card);
   color: var(--portal-text-dark);
-  font-size: 10px;
+  font-size: var(--portal-font-size-small);
   font-weight: 750;
   cursor: pointer;
 }
@@ -269,9 +269,9 @@ button[aria-label^="Configurar exibição"],
   border-radius: 8px;
   background: var(--portal-brand-header);
   color: var(--portal-text-light);
-  font-size: 10px;
+  font-size: var(--portal-font-size-small);
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.2;
   letter-spacing: 0;
   text-transform: none;
   cursor: pointer;
@@ -301,7 +301,7 @@ button[aria-label^="Configurar exibição"],
   border-radius: 8px;
   background: var(--portal-surface-card);
   color: var(--portal-text-dark);
-  font-size: 10px;
+  font-size: var(--portal-font-size-small);
   font-weight: 750;
   line-height: 1;
   letter-spacing: 0;
@@ -1168,7 +1168,7 @@ button[aria-label^="Configurar exibição"],
   min-width: 96px;
   min-height: 30px;
   padding: 4px 10px;
-  font-size: 10px;
+  font-size: var(--portal-font-size-small);
 }
 
 .portal-core-sort-actions,
@@ -1378,7 +1378,7 @@ button[aria-label^="Configurar exibição"],
 /* TCC15: modal segue o conteúdo e só rola quando a área disponível acaba. */
 .portal-settings-workspace {width:max-content;max-width:calc(100vw - 48px);max-height:calc(100dvh - 48px);}
 .portal-settings-workspace[data-portal-compact="true"] .portal-settings-single-pane {min-height:0;}
-.portal-settings-workspace:not([data-portal-sheet-workspace="true"]) .portal-settings-single-pane {padding:15px;overflow-y:auto;overscroll-behavior:contain;}
+.portal-settings-workspace:not([data-portal-sheet-workspace="true"]) .portal-settings-single-pane {padding:15px;overflow-y:auto;overscroll-behavior:contain;scroll-padding-bottom:15px;}
 .portal-settings-workspace:not([data-portal-sheet-workspace="true"]) .portal-settings-single-pane > :first-child {min-height:0;}
 .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-settings-single-pane {flex:0 1 auto;overflow:hidden;}
 .portal-settings-workspace[data-portal-sheet-workspace="true"] [data-settings-sheet="true"] {height:auto;min-height:0;max-height:calc(100dvh - 135px);overflow:hidden;}
@@ -1399,4 +1399,84 @@ button[aria-label^="Configurar exibição"],
 @media(max-height:560px){
  .portal-settings-workspace[data-portal-workflow-workspace="true"] .portal-settings-single-pane {overflow-y:auto;}
  .portal-settings-workspace[data-portal-workflow-workspace="true"] [data-portal-workflow-stage-sheet="true"] {min-height:160px;}
+}
+
+/* TCC15: escala única para os editores; mantém densidade das planilhas e
+   a tipografia de títulos/documentos, sem sobrescrever visualizações oficiais. */
+.portal-settings-workspace:not([data-portal-sheet-workspace="true"]) .portal-settings-single-pane,
+.portal-settings-workspace-main {
+  font-family: var(--portal-font-family);
+  font-size: var(--portal-settings-body-font-size);
+  line-height: 1.45;
+}
+.portal-settings-workspace .portal-settings-workspace-title h2 {
+  font-size: var(--portal-settings-body-font-size);
+}
+.portal-settings-workspace :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea),
+.portal-identity-panel :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+  font-family: var(--portal-font-family);
+  font-size: var(--portal-editor-field-font-size);
+  line-height: 1.4;
+}
+.portal-settings-workspace :is(.portal-action,.portal-settings-header-pill,.portal-toolbar-icon-button),
+.portal-settings-workspace:not([data-portal-sheet-workspace="true"]) button:not([aria-label^="Selecionar"]) {
+  font-size: var(--portal-editor-action-font-size);
+}
+.portal-settings-workspace :is(.portal-settings-control-title,.portal-settings-date-field > span,.portal-core-filter-title,.portal-core-wrap-setting strong,.portal-core-wrap-setting span) {
+  font-size: var(--portal-editor-label-font-size);
+}
+.portal-settings-workspace .portal-settings-single-pane > :last-child {
+  margin-bottom: 0;
+}
+button:has(svg[class*="lucide-trash"]) {
+  background-color: var(--portal-surface-inner);
+  color: var(--portal-delete-icon-color);
+  border-color: var(--portal-border);
+  border-radius: 9999px;
+}
+button:has(svg[class*="lucide-trash"]):not(:disabled):hover {
+  background-color: #fff1f2;
+}
+button:has(svg[class*="lucide-trash"]) svg[class*="lucide-trash"] {
+  color: var(--portal-delete-icon-color);
+  stroke: var(--portal-delete-icon-color);
+}
+.portal-settings-workspace [data-portal-form-direct-editor="true"] {
+  padding-bottom: 15px;
+}
+.portal-settings-workspace .portal-settings-single-pane {
+  scroll-padding-bottom: 15px;
+}
+
+/* TCC15: os pop-ups de exibição e filtro antes usavam letras de 8–9,5px.
+   Aplicar a mesma escala visual do restante do Portal, mantendo tabelas em 11px. */
+.portal-table-settings-popover {
+  font-size: var(--portal-popover-text-font-size);
+}
+.portal-table-settings-popover :is(
+  .portal-settings-control-title,
+  .portal-settings-page-size-button,
+  .portal-settings-date-field > span,
+  .portal-settings-date-field input,
+  .portal-core-wrap-setting strong,
+  .portal-core-wrap-setting span,
+  .portal-core-wrap-actions button,
+  .portal-settings-column-item,
+  .portal-settings-popover-body input,
+  .portal-settings-popover-body select,
+  .portal-settings-popover-body button
+) {
+  font-size: var(--portal-popover-text-font-size);
+  line-height: 1.3;
+}
+.portal-core-column-popup :is(
+  .portal-core-filter-title,
+  .portal-core-menu-action,
+  .portal-core-selection-action,
+  .portal-core-filter-search,
+  .portal-core-filter-value,
+  .portal-core-clear-filter,
+  .portal-core-done
+) {
+  font-size: var(--portal-compact-menu-font-size);
 }

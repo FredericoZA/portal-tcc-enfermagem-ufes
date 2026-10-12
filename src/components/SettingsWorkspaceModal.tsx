@@ -65,7 +65,10 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
   const workflowWorkspace = singlePane && current.id === 'workflow';
   const compactWorkspace = singlePane && ['identity', 'integrations'].includes(current.id);
   const fullBleed = current.fullBleed ?? (current.id === 'integrations' || current.id === 'models-documents' || sheetWorkspace);
-  const singlePaneContent = singlePane && React.isValidElement(current.content)
+  // Não repassar a propriedade React "embedded" para elementos HTML nativos
+  // (como o wrapper <div> do estúdio), pois não é atributo DOM booleano válido.
+  const canEmbedComponent = singlePane && React.isValidElement(current.content) && typeof current.content.type !== 'string';
+  const singlePaneContent = canEmbedComponent
     ? React.cloneElement(current.content as React.ReactElement<EmbeddedCapableProps>, { embedded: true })
     : current.content;
 
@@ -95,7 +98,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
                 : { backgroundColor: 'var(--portal-surface-inner)' }}
             >
               {Icon && <Icon className="mt-0.5 h-4 w-4 shrink-0"/>}
-              <span className="min-w-0"><strong className="block text-[11px] font-black uppercase">{section.label}</strong>{section.description && <span className={`mt-0.5 block text-[9px] leading-4 ${selected ? 'text-white/80' : 'text-slate-500'}`}>{section.description}</span>}</span>
+              <span className="min-w-0"><strong className="block text-xs font-black uppercase">{section.label}</strong>{section.description && <span className={`mt-0.5 block text-xs leading-4 ${selected ? 'text-white/80' : 'text-slate-500'}`}>{section.description}</span>}</span>
             </button>;
           })}
         </div>

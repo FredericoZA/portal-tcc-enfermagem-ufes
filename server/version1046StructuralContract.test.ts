@@ -5,7 +5,7 @@ import { readPortalCss } from './testUtils/portalCss';
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
 test('release estrutural atual é 1.0.77', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.79');
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.80');
 });
 
 test('estado de defesa é calculado na página pública sem pós-processamento global', () => {

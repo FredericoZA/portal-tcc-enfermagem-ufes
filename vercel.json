@@ -28,9 +28,10 @@
     "PORTAL_DRIVE_ROOT_FOLDER_ID": "1zkG3fBm2tJESZjZP0_7jStUuPNXCwRPS",
     "GOOGLE_ALLOW_EXISTING_MODEL_LINKS": "true",
     "ASTEN_INTEGRATION_ENABLED": "false",
-    "ASTEN_AUTHENTICATION_OPTION": "4",
+    "ASTEN_PILOT_APPROVED": "false",
+    "ASTEN_AUTHENTICATION_OPTION": "2",
     "ASTEN_REQUIRE_LOGIN": "true",
-    "ASTEN_REQUIRE_CODE": "true",
+    "ASTEN_REQUIRE_CODE": "false",
     "ASTEN_CALLBACK_URL": "https://portal-tcc-enfermagem-ufes.vercel.app/api/integrations/asten/webhook"
   },
   "functions": {
@@ -49,6 +50,10 @@
     {
       "path": "/api/cron/storage-cleanup",
       "schedule": "17 3 * * *"
+    },
+    {
+      "path": "/api/cron/asten-reconcile",
+      "schedule": "23 4 * * *"
     }
   ],
   "headers": [

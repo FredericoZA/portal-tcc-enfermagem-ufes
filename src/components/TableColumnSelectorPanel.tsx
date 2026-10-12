@@ -469,7 +469,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
             Exibição & Ordem das Colunas — {tabTitle}
           </span>
           {isMaster && (
-            <span className="inline-flex items-center gap-1 bg-[var(--portal-surface-inner)] text-slate-700 border border-slate-300 text-[9.5px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1 bg-[var(--portal-surface-inner)] text-slate-700 border border-slate-300 text-xs font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
               <Shield className="w-3 h-3 text-[var(--portal-brand-action)]" /> Modo Administrador Master
             </span>
           )}
@@ -481,7 +481,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
             <button
               type="button"
               onClick={handleSetAsDefault}
-              className="portal-action portal-action-primary text-[10px] uppercase tracking-wider"
+              className="portal-action portal-action-primary text-xs uppercase tracking-wider"
               title="Salvar esta ordem e seleção de colunas como o padrão do sistema para esta aba"
             >
               <Star className="w-3.5 h-3.5" />
@@ -492,7 +492,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
           <button
             type="button"
             onClick={() => handleSelectAll(true)}
-            className="text-[10px] font-bold text-slate-700 hover:text-slate-950 underline cursor-pointer"
+            className="text-xs font-bold text-slate-700 hover:text-slate-950 underline cursor-pointer"
           >
             Marcar Todos
           </button>
@@ -500,7 +500,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
           <button
             type="button"
             onClick={handleRestoreDefault}
-            className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-700 hover:text-slate-950 underline cursor-pointer"
+            className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-slate-950 underline cursor-pointer"
           >
             <RotateCcw className="w-3 h-3" />
             <span>Restaurar Padrão</span>
@@ -520,7 +520,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
 
       {/* Columns List with Drag/Move & Visibility Checkboxes */}
       <div className="space-y-1.5">
-        <p className="text-[11px] text-slate-600 font-medium">
+        <p className="text-xs text-slate-600 font-medium">
           Marque os campos que deseja visualizar na tabela e utilize os botões <span className="font-bold text-slate-900">▲ / ▼</span> para reordenar a posição de cada coluna. {fixedColumnKey ? <span className="font-extrabold text-slate-700">A coluna fixa é mantida em primeiro lugar.</span> : null}
         </p>
 
@@ -553,14 +553,14 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
                     }}
                     className="rounded border-slate-400 text-[var(--portal-brand-action)] focus:ring-[var(--portal-focus)] disabled:opacity-80 cursor-pointer"
                   />
-                  <span className="truncate text-[11.5px]">
+                  <span className="truncate text-xs">
                     {colDef.label}
                   </span>
                 </label>
 
                 {/* Fixed Badge or Reorder Action Buttons */}
                 {isFixed ? (
-                  <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase tracking-wider text-slate-600 bg-[var(--portal-surface-card)] px-2 py-0.5 rounded-full border border-slate-300 shrink-0">
+                  <span className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-wider text-slate-600 bg-[var(--portal-surface-card)] px-2 py-0.5 rounded-full border border-slate-300 shrink-0">
                     <Lock className="w-2.5 h-2.5 text-slate-500" />
                     1º Fixo
                   </span>

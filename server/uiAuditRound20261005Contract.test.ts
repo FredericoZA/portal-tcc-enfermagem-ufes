@@ -48,8 +48,8 @@ test('escala tipográfica reduz ruído e aumenta a hierarquia dos títulos', () 
   const formatters = read('src/utils/tableFormatters.ts');
 
   assert.match(tokens, /--portal-sheet-title-font-size: 18px/);
-  assert.match(tokens, /--portal-sheet-filter-label-font-size: 9px/);
-  assert.match(tokens, /--portal-sheet-filter-chip-font-size: 10px/);
+  assert.match(tokens, /--portal-sheet-filter-label-font-size: 11px/);
+  assert.match(tokens, /--portal-sheet-filter-chip-font-size: 11px/);
   assert.match(tokens, /--portal-sheet-body-font-size: 11px/);
   assert.match(sheet, /font-size: var\(--portal-sheet-title-font-size\)/);
   assert.match(sheet, /font-size: var\(--portal-sheet-body-font-size\)/);
@@ -65,11 +65,11 @@ test('sidebar usa texto corrido menor e ações de sessão mais compactas', () =
   assert.match(components, /font-size: var\(--portal-sidebar-session-action-font-size\)/);
 });
 
-test('eventos do calendário usam tipografia 30 por cento mais densa', () => {
+test('eventos do calendário preservam escala compacta de 11px', () => {
   const tokens = read('src/styles/portal-tokens.css');
   const components = read('src/styles/portal-components.css');
-  assert.match(tokens, /--portal-calendar-event-font-size: 8\.5px/);
-  assert.match(tokens, /--portal-calendar-event-secondary-font-size: 7\.5px/);
+  assert.match(tokens, /--portal-calendar-event-font-size: 11px/);
+  assert.match(tokens, /--portal-calendar-event-secondary-font-size: 11px/);
   assert.match(components, /\.portal-calendar-defense-summary \{[\s\S]*font-size: var\(--portal-calendar-event-font-size\)/);
 });
 

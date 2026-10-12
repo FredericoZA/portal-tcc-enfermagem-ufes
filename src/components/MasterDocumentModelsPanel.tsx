@@ -12,7 +12,7 @@ const BASE_SLOTS: Array<[string, string]> = [
 
 const normalizeModelKey = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 48);
 const humanizeModelKey = (value: string) => value.toLowerCase().split('_').filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
-const action='inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-[9px] font-black tracking-wide text-slate-900 shadow-none hover:bg-slate-50 disabled:opacity-40';
+const action='inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-black tracking-wide text-slate-900 shadow-none hover:bg-slate-50 disabled:opacity-40';
 
 type VariableColumn = { id:string; name:string; label?:string; description?:string; dataType?:'text'|'date'|'email'|'number'|'url'; aliases?:string[]; format?:{bold?:boolean;italic?:boolean;color?:string} };
 type StudioMatrixRow = { id:string; name:string; driveFileUrl:string; fields:Record<string,boolean> };
@@ -260,10 +260,8 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   return <section className="portal-master-models-catalog min-h-0 bg-[var(--portal-surface-page)] pb-0" data-portal-document-direct-editor="true">
     <SettingsWorkspaceHeaderPortal>
       <div className="flex min-w-0 items-center gap-1.5">
-        <FileText className="h-3.5 w-3.5 shrink-0 text-white" aria-hidden="true"/>
-        <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-white/60"/>
-        <select value={type} onChange={event=>setSelectedType(event.target.value)} className="w-[clamp(120px,13vw,172px)] max-w-[28vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm" aria-label="Selecionar documento" title={String(model?.label||label)}>
-          {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{models[slotType]?.label||slotLabel}</option>)}
+        <select value={type} onChange={event=>setSelectedType(event.target.value)} className="w-[clamp(120px,13vw,172px)] max-w-[28vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-xs font-black text-slate-950 shadow-sm" aria-label="Selecionar documento" title={String(model?.label||label)}>
+          {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{'📄 '+(models[slotType]?.label||slotLabel)}</option>)}
         </select>
       </div>
     </SettingsWorkspaceHeaderPortal>
@@ -276,17 +274,17 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
       </section>
     </div>}
     {showNewModel&&<div className="mx-auto mt-3 flex max-w-xl items-center gap-2 rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)] p-2.5">
-      <input id="new-master-model" autoFocus value={newModelName} onChange={event=>setNewModelName(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();addSlot();setShowNewModel(false);}}} placeholder="Nome do novo documento" className="min-h-8 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[10px] text-slate-900 outline-none"/>
+      <input id="new-master-model" autoFocus value={newModelName} onChange={event=>setNewModelName(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();addSlot();setShowNewModel(false);}}} placeholder="Nome do novo documento" className="min-h-8 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900 outline-none"/>
       <button type="button" onClick={()=>{addSlot();setShowNewModel(false);}} disabled={!newModelName.trim()} className={action}><FilePlus2 className="h-3.5 w-3.5"/>Criar</button>
     </div>}
 
-    {message&&<p role="status" className="mx-3 mt-3 rounded-lg border border-slate-300 px-2.5 py-1.5 text-[10px] font-semibold text-slate-700" style={{backgroundColor:'var(--portal-surface-panel)'}}>{message}</p>}
+    {message&&<p role="status" className="mx-3 mt-3 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700" style={{backgroundColor:'var(--portal-surface-panel)'}}>{message}</p>}
 
     <article className="mt-2 overflow-hidden rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 p-3">
         <div className="min-w-0">
           <strong className="block truncate text-[12px] text-slate-900">{model?.label||label}</strong>
-          <span className="block truncate text-[9px] text-slate-500">{hasFile?`${model.fileName} · v${model.activeVersion||1}`:'Aguardando DOCX'}{model?.variables?.length?` · ${model.variables.length} variáveis`:''}</span>
+          <span className="block truncate text-xs text-slate-500">{hasFile?`${model.fileName} · v${model.activeVersion||1}`:'Aguardando DOCX'}{model?.variables?.length?` · ${model.variables.length} variáveis`:''}</span>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-1.5">
           <button type="button" onClick={()=>setShowNewModel(value=>!value)} className={action} title="Criar outro modelo"><Plus className="h-3 w-3"/>Novo modelo</button>
@@ -300,7 +298,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
       <div className="space-y-3 p-3">
         {(showImportControls||!hasFile)&&<div className="space-y-2 rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-2" aria-label="Gerenciar arquivo do modelo">
           {linkImportEnabled&&<div className="flex gap-1.5">
-            <input aria-label={`Link do modelo ${label}`} value={links[type]||''} onChange={event=>setLinks(current=>({...current,[type]:event.target.value}))} placeholder="Link ou ID do Drive" className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px]"/>
+            <input aria-label={`Link do modelo ${label}`} value={links[type]||''} onChange={event=>setLinks(current=>({...current,[type]:event.target.value}))} placeholder="Link ou ID do Drive" className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs"/>
             <button type="button" onClick={()=>void importLink(type)} disabled={Boolean(working)||!(links[type]||'').trim()} className={action}><Link2 className="h-3 w-3"/>Importar</button>
           </div>}
           <label className={`${action} cursor-pointer`}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}{hasFile?'Substituir DOCX':'Enviar DOCX'}<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/></label>
@@ -313,29 +311,31 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
 
         <section className="rounded-xl border border-slate-300 bg-[var(--portal-surface-card)] p-2.5" aria-label="Variáveis do documento">
           {model?.variables?.length
-            ? <div className="space-y-1.5">{model.variables.map((variable:string)=>{
+            ? <div className="space-y-1.5">{(model.variables as string[])
+              .filter((variable,index,all)=>all.findIndex(other=>normalizeVariableKey(other)===normalizeVariableKey(variable))===index)
+              .map((variable:string)=>{
                 const key=normalizeVariableKey(variable);
                 const column=resolveVariableColumn(variable);
                 const mergeKey=`${type}:${key}`;
                 return <div key={variable} title={variableUsageTitle(variable)} className="grid gap-1.5 rounded-lg border border-slate-300 bg-[var(--portal-surface-panel)] p-2 lg:grid-cols-[minmax(150px,.9fr)_minmax(170px,1fr)_120px_minmax(180px,1fr)_auto] lg:items-center">
-                  <code className="truncate text-[8.5px] font-black text-[var(--portal-brand-action)]">{variable}</code>
-                  {column?<input value={column.label||''} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,label:event.target.value}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]" placeholder="Nome legível"/>:<span className="text-[9px] text-amber-800">Variável ainda não vinculada</span>}
-                  {column?<select value={column.dataType||'text'} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,dataType:event.target.value as VariableColumn['dataType']}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]"><option value="text">Texto</option><option value="date">Data</option><option value="email">E-mail</option><option value="number">Número</option><option value="url">URL</option></select>:<span/>}
-                  {column?<select value={mergeTargets[mergeKey]||''} onChange={event=>setMergeTargets(current=>({...current,[mergeKey]:event.target.value}))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]"><option value="">Mesclar com…</option>{matrixColumns.filter(item=>item.id!==column.id).map(item=><option key={item.id} value={item.id}>{item.label||item.name}</option>)}</select>:<span/>}
-                  {column&&mergeTargets[mergeKey]?<button type="button" onClick={()=>void mergeDocumentVariable(type,variable)} className={action}><Merge className="h-3 w-3"/>Mesclar</button>:<span className="text-right text-[8px] text-slate-400">{column?'Canônica':'Pendente'}</span>}
+                  <code className="truncate text-xs font-black text-[var(--portal-brand-action)]">{variable}</code>
+                  {column?<input value={column.label||''} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,label:event.target.value}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-xs" placeholder="Nome legível"/>:<span className="text-xs text-amber-800">Variável ainda não vinculada</span>}
+                  {column?<select value={column.dataType||'text'} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,dataType:event.target.value as VariableColumn['dataType']}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-xs"><option value="text">Texto</option><option value="date">Data</option><option value="email">E-mail</option><option value="number">Número</option><option value="url">URL</option></select>:<span/>}
+                  {column?<select value={mergeTargets[mergeKey]||''} onChange={event=>setMergeTargets(current=>({...current,[mergeKey]:event.target.value}))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-xs"><option value="">Mesclar com…</option>{matrixColumns.filter(item=>item.id!==column.id).map(item=><option key={item.id} value={item.id}>{item.label||item.name}</option>)}</select>:<span/>}
+                  {column&&mergeTargets[mergeKey]?<button type="button" onClick={()=>void mergeDocumentVariable(type,variable)} className={action}><Merge className="h-3 w-3"/>Mesclar</button>:<span className="text-right text-xs text-slate-400">{column?'Canônica':'Pendente'}</span>}
                 </div>;
               })}</div>
-            : <p className="rounded-lg border border-dashed border-slate-300 bg-white p-3 text-[9px] text-slate-500">{hasFile?'Nenhuma variável foi detectada neste arquivo. Use “Atualizar variáveis”.':'As variáveis aparecerão aqui depois do envio do DOCX.'}</p>}
+            : <p className="rounded-lg border border-dashed border-slate-300 bg-white p-3 text-xs text-slate-500">{hasFile?'Nenhuma variável foi detectada neste arquivo. Use “Atualizar variáveis”.':'As variáveis aparecerão aqui depois do envio do DOCX.'}</p>}
         </section>
 
 
 
         {model?.versions?.length>1&&<details className="rounded-md border border-slate-300 bg-white px-2 py-1">
-          <summary className="cursor-pointer text-[8.5px] font-black uppercase text-slate-600">Histórico ({model.versions.length})</summary>
-          <div className="mt-1 space-y-1">{[...model.versions].reverse().map((version:any)=><div key={version.version} className="flex items-center justify-between gap-2 text-[8.5px]"><span className="truncate"><strong>v{version.version}</strong> · {version.fileName}</span>{version.version!==model.activeVersion&&version.contentSha256&&<button type="button" onClick={()=>void restore(type,version.version)} className={action}>Restaurar</button>}</div>)}</div>
+          <summary className="cursor-pointer text-xs font-black uppercase text-slate-600">Histórico ({model.versions.length})</summary>
+          <div className="mt-1 space-y-1">{[...model.versions].reverse().map((version:any)=><div key={version.version} className="flex items-center justify-between gap-2 text-xs"><span className="truncate"><strong>v{version.version}</strong> · {version.fileName}</span>{version.version!==model.activeVersion&&version.contentSha256&&<button type="button" onClick={()=>void restore(type,version.version)} className={action}>Restaurar</button>}</div>)}</div>
         </details>}
       </div>
     </article>
-    {loading&&<p className="px-3 pb-2 pt-2 text-[9px] text-slate-500">Consultando modelos…</p>}
+    {loading&&<p className="px-3 pb-2 pt-2 text-xs text-slate-500">Consultando modelos…</p>}
   </section>;
 };

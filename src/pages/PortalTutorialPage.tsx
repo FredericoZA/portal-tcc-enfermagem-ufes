@@ -199,7 +199,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
         <div className="portal-layer-card flex items-start gap-3 rounded-2xl border border-slate-300 p-3.5 shadow-2xs sm:p-4">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--portal-brand-action)] text-white shadow-sm"><UserCheck className="h-5 w-5" /></span>
           <div className="min-w-0">
-            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-[var(--portal-brand-action)]">Visão selecionada</div>
+            <div className="text-xs font-black uppercase tracking-[0.16em] text-[var(--portal-brand-action)]">Visão selecionada</div>
             <h2 className="mt-0.5 text-lg font-black text-slate-950">{active.title}</h2>
             <p className="mt-1 max-w-4xl text-sm leading-6 text-slate-700">{active.description}</p>
           </div>
@@ -240,7 +240,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
             <ol className="grid gap-2.5 lg:grid-cols-2">
               {active.steps.map((step, index) => (
                 <li key={step.title} className="portal-layer-card flex h-full gap-3 rounded-xl border border-slate-300 px-3.5 py-3 text-sm leading-5 text-slate-700 shadow-2xs">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--portal-brand-action)] text-[10px] font-black text-white">{index + 1}</span>
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--portal-brand-action)] text-xs font-black text-white">{index + 1}</span>
                   <div className="min-w-0">
                     <div className="text-xs font-black text-slate-950">{step.title.replace(/^\d+\.\s*/, '')}</div>
                     <p className="mt-1 text-xs leading-5 text-slate-700">{step.text}</p>

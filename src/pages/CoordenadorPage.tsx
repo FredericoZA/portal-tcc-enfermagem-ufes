@@ -473,7 +473,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         const signatureStatus = getDeclarationStatus(proc.id, proc.status);
         return (
           <td key={colKey} className={cellClass}>
-            <span className="text-[10px] font-semibold text-slate-800">
+            <span className="text-[11px] font-semibold text-slate-800">
               {signatureStatus.label}
             </span>
           </td>
@@ -487,7 +487,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               <span className="font-normal text-black">{proc.defesa?.startAt ? formatDateNumeric(proc.defesa.startAt) : 'N/A'}</span>
             </div>
             {proc.defesa?.startAt && (
-              <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa.startAt)}</div>
+              <div className="text-[11px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa.startAt)}</div>
             )}
           </td>
         );
@@ -509,7 +509,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                 {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), coordTextFormat)}
               </div>
               {proc.aluno1?.matricula && (
-                <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5">Matrícula: {proc.aluno1.matricula}</div>
+                <div className="text-[11px] text-slate-500 font-mono font-medium mt-0.5">Matrícula: {proc.aluno1.matricula}</div>
               )}
             </div>
           </td>
@@ -525,7 +525,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                     {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), coordTextFormat)}
                   </div>
                   {proc.aluno2?.matricula && (
-                    <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5">Matrícula: {proc.aluno2.matricula}</div>
+                    <div className="text-[11px] text-slate-500 font-mono font-medium mt-0.5">Matrícula: {proc.aluno2.matricula}</div>
                   )}
                 </>
               ) : (
@@ -542,7 +542,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
                 {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), coordTextFormat)}
               </div>
-              <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
+              <div className="text-[11px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                 {cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName)}
               </div>
             </div>
@@ -560,7 +560,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
                     {formatCellText('membro1', formatProfessorName(memb.nome), coordTextFormat)}
                   </div>
-                  <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
+                  <div className="text-[11px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                     {cleanInst(memb.instituicao || installationProfile.defaultInstitutionName)}
                   </div>
                 </>
@@ -583,7 +583,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
                     {formatCellText('membro2', formatProfessorName(memb.nome), coordTextFormat)}
                   </div>
-                  <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
+                  <div className="text-[11px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                     {cleanInst(memb.instituicao || installationProfile.defaultInstitutionName)}
                   </div>
                 </>
@@ -604,7 +604,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
                     {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), coordTextFormat)}
                   </div>
-                  <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
+                  <div className="text-[11px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                     {cleanInst(proc.coorientador.instituicao || installationProfile.defaultInstitutionName)}
                   </div>
                 </>
@@ -779,7 +779,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
               <div className="portal-sheet-toolbar shrink-0">
                 <div className="portal-sheet-toolbar-actions">
-                  {selectedIds.length>0&&<span role="status" className="rounded-full border border-white/50 px-2 py-1 text-[10px] font-bold text-white">{selectedIds.length} selecionado(s)</span>}
+                  {selectedIds.length>0&&<span role="status" className="rounded-full border border-white/50 px-2 py-1 text-[11px] font-bold text-white">{selectedIds.length} selecionado(s)</span>}
                   {activeTab !== 'concluidos' && (
                     <>
                       <button type="button" disabled={selectedIds.length===0 || signingIds.length > 0} onClick={handleSignSelected} className="portal-sign-bulk-btn disabled:opacity-45" title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
@@ -860,7 +860,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                       >
                         <span className="portal-filter-dot w-2 h-2 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: semanticTone.border }} />
                         <span className="whitespace-nowrap font-extrabold">{chip.label}</span>
-                        <span className="text-[9px] px-1.5 py-0.2 rounded-full font-black shadow-2xs" style={{ backgroundColor: semanticTone.border, color: '#ffffff' }}>{filter.count}</span>
+                        <span className="text-[11px] px-1.5 py-0.2 rounded-full font-black shadow-2xs" style={{ backgroundColor: semanticTone.border, color: '#ffffff' }}>{filter.count}</span>
                       </button>
                     );
                   })}

@@ -733,9 +733,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     >
       {isModal ? (
         <header className="portal-modal-header sticky top-0 z-30 flex items-center justify-between gap-3 px-4" style={{ backgroundColor: 'var(--portal-brand-header)', color: '#ffffff' }}>
-          <div className="flex min-w-0 items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-white" aria-hidden="true"/><div className="min-w-0"><h1 className="truncate text-[12px] font-black uppercase tracking-wide">Detalhes do TCC</h1><p className="mt-0.5 truncate text-[10px] font-semibold text-white/85">Enfermagem e Obstetrícia UFES, Maruípe UFES</p></div></div>
+          <div className="flex min-w-0 items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-white" aria-hidden="true"/><div className="min-w-0"><h1 className="truncate text-[12px] font-black uppercase tracking-wide">Detalhes do TCC</h1><p className="mt-0.5 truncate text-[11px] font-semibold text-white/85">Enfermagem e Obstetrícia UFES, Maruípe UFES</p></div></div>
           <div className="flex shrink-0 items-center gap-1.5">
-            <button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-white bg-white px-3 text-[10px] font-bold text-slate-900" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/>Histórico de Auditoria</button>
+            <button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-white bg-white px-3 text-[11px] font-bold text-slate-900" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/>Histórico de Auditoria</button>
             {isMasterAdmin&&<button type="button" onClick={()=>setShowDeleteModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-rose-700" aria-label="Excluir trabalho"><Trash2 className="h-4 w-4"/></button>}
           </div>
         </header>
@@ -747,13 +747,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {localFormat.showStateMachine !== false && <div className="px-3 pt-3"><div className="overflow-hidden rounded-xl border border-[var(--portal-border)] bg-white"><EtapaProgressBar currentEtapa={process.etapaAtual}/></div></div>}
       <section id="tcc-detail-workspace" className="portal-tcc-workspace mx-3 mt-3 overflow-hidden rounded-xl border border-[var(--portal-border)]">
       <section className="portal-tcc-workspace-summary p-4" style={{backgroundColor:'var(--portal-surface-panel)'}}>
-        <div className="flex flex-wrap items-center gap-2"><span className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[10px] font-black">{process.protocolo}</span>{process.avaliacao?.status==='CONCLUIDO'&&<span className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-black">Conceito: {process.avaliacao.resultadoLabel||'Aprovado'}</span>}</div>
+        <div className="flex flex-wrap items-center gap-2"><span className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-black">{process.protocolo}</span>{process.avaliacao?.status==='CONCLUIDO'&&<span className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-black">Conceito: {process.avaliacao.resultadoLabel||'Aprovado'}</span>}</div>
         <h2 className="mt-3 text-sm font-black text-slate-950">{process.titulo}</h2>
-        <div className="mt-3 grid gap-2 border-t border-slate-300 pt-3 text-[10px] text-slate-700 sm:grid-cols-2 xl:grid-cols-4"><div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5"/><span>{process.aluno1.nome}{process.aluno2?` e ${process.aluno2.nome}`:''}</span></div><div className="flex items-center gap-1.5"><Award className="h-3.5 w-3.5"/><span>Orientador(a): <strong>{process.orientador.nome}</strong></span></div>{process.defesa?.startAt&&<div className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5"/><span>{formatDatePt(process.defesa.startAt)} · {formatTimeExtenso(process.defesa.startAt)}</span></div>}{process.defesa?.local&&<div className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5"/><span>{process.defesa.local}</span></div>}</div>
+        <div className="mt-3 grid gap-2 border-t border-slate-300 pt-3 text-[11px] text-slate-700 sm:grid-cols-2 xl:grid-cols-4"><div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5"/><span>{process.aluno1.nome}{process.aluno2?` e ${process.aluno2.nome}`:''}</span></div><div className="flex items-center gap-1.5"><Award className="h-3.5 w-3.5"/><span>Orientador(a): <strong>{process.orientador.nome}</strong></span></div>{process.defesa?.startAt&&<div className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5"/><span>{formatDatePt(process.defesa.startAt)} · {formatTimeExtenso(process.defesa.startAt)}</span></div>}{process.defesa?.local&&<div className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5"/><span>{process.defesa.local}</span></div>}</div>
       </section>
       <section className="portal-tcc-workspace-tabs border-t border-[var(--portal-border)] p-2" style={{backgroundColor:'var(--portal-surface-panel)'}}><div className="flex items-center gap-1 overflow-x-auto custom-scrollbar">{[
         {id:'cadastral',label:'Ficha Cadastral & Defesa + Banca Examinadora',icon:FileText,show:localFormat.showSectionCadastral!==false||localFormat.showSectionBanca!==false},{id:'avaliacao',label:'Avaliação & Ata',icon:Award,show:localFormat.showSectionAvaliacao!==false},{id:'forms',label:'Formulários',icon:ClipboardList,show:true},{id:'docs',label:'Documentos',icon:FileCheck,show:localFormat.showSectionDocs!==false},{id:'acervo',label:'Repositório Digital',icon:BookOpen,show:localFormat.showSectionAcervo!==false}
-      ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} type="button" onClick={()=>setActiveTab(tab.id)} className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold ${selected?'border-slate-300 bg-white text-slate-950':'border-transparent bg-[var(--portal-surface-panel)] text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
+      ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} type="button" onClick={()=>setActiveTab(tab.id)} className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-bold ${selected?'border-slate-300 bg-white text-slate-950':'border-transparent bg-[var(--portal-surface-panel)] text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
       <div className="portal-tcc-workspace-content p-3">
 
       {isTabVisible('forms') && (
@@ -828,7 +828,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Nome Completo</label>
+                        <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Nome Completo</label>
                         <input
                           type="text"
                           required
@@ -838,7 +838,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">E-mail Institucional</label>
+                        <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">E-mail Institucional</label>
                         <input
                           type="email"
                           required
@@ -848,7 +848,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Matrícula institucional</label>
+                        <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Matrícula institucional</label>
                         <input
                           type="text"
                           value={cadastralForm.aluno1Matricula}
@@ -879,7 +879,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     {cadastralForm.hasAluno2 && (
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
                         <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Nome Completo</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Nome Completo</label>
                           <input
                             type="text"
                             value={cadastralForm.aluno2Nome}
@@ -888,7 +888,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">E-mail Institucional</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">E-mail Institucional</label>
                           <input
                             type="email"
                             value={cadastralForm.aluno2Email}
@@ -897,7 +897,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Matrícula institucional</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Matrícula institucional</label>
                           <input
                             type="text"
                             value={cadastralForm.aluno2Matricula}
@@ -916,7 +916,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Nome do Professor</label>
+                        <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Nome do Professor</label>
                         <input
                           type="text"
                           required
@@ -926,7 +926,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">E-mail</label>
+                        <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">E-mail</label>
                         <input
                           type="email"
                           required
@@ -936,7 +936,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Instituição / Departamento</label>
+                        <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Instituição / Departamento</label>
                         <input
                           type="text"
                           value={cadastralForm.orientadorInstituicao}
@@ -967,7 +967,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     {cadastralForm.hasCoorientador && (
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
                         <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Nome do Coorientador</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Nome do Coorientador</label>
                           <input
                             type="text"
                             value={cadastralForm.coorientadorNome}
@@ -976,7 +976,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">E-mail</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">E-mail</label>
                           <input
                             type="email"
                             value={cadastralForm.coorientadorEmail}
@@ -985,7 +985,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Instituição</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Instituição</label>
                           <input
                             type="text"
                             value={cadastralForm.coorientadorInstituicao}
@@ -1004,7 +1004,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Data e Hora da Apresentação</label>
+                        <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Data e Hora da Apresentação</label>
                         <input
                           type="datetime-local"
                           value={defesaForm.startAt}
@@ -1013,7 +1013,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Local / Sala / Auditório</label>
+                        <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Local / Sala / Auditório</label>
                         <input
                           type="text"
                           placeholder="Ex.: sala de defesas ou link da videoconferência"
@@ -1023,7 +1023,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Formato da Sessão</label>
+                        <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Formato da Sessão</label>
                         <select
                           value={defesaForm.formato}
                           onChange={(e) => setDefesaForm({ ...defesaForm, formato: e.target.value })}
@@ -1061,7 +1061,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 {/* Top Metadata & Defesa Info Grid */}
                 <div className="bg-slate-50/90 border border-slate-200/90 rounded-xl p-3.5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 shadow-2xs">
                   <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
                       Protocolo
                     </span>
                     <span className="font-mono font-bold text-slate-900 text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-md inline-block">
@@ -1070,7 +1070,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   </div>
 
                   <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
                       Etapa Regimental
                     </span>
                     <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md inline-block">
@@ -1079,7 +1079,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   </div>
 
                   <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
                       Data da Defesa
                     </span>
                     <span className="font-semibold text-slate-900 text-xs block">
@@ -1088,7 +1088,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   </div>
 
                   <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
                       Horário
                     </span>
                     <span className="font-semibold text-slate-900 text-xs block">
@@ -1097,7 +1097,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   </div>
 
                   <div className="col-span-2 sm:col-span-1">
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
                       Local / Auditório
                     </span>
                     <span className="font-semibold text-slate-900 text-xs truncate block" title={process.defesa?.local}>
@@ -1130,7 +1130,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                             <GraduationCap className="w-4 h-4 text-emerald-800" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">
+                            <span className="text-[11px] font-bold uppercase text-slate-400 tracking-wider block">
                               Discente Autor {hasAluno2 ? '1' : ''}
                             </span>
                             <span className="text-xs sm:text-sm font-extrabold text-slate-900 truncate block">
@@ -1163,7 +1163,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                               <GraduationCap className="w-4 h-4 text-emerald-800" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">
+                              <span className="text-[11px] font-bold uppercase text-slate-400 tracking-wider block">
                                 Discente Autor 2
                               </span>
                               <span className="text-xs sm:text-sm font-extrabold text-slate-900 truncate block">
@@ -1196,7 +1196,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                             <Award className="w-4 h-4 text-purple-800" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">
+                            <span className="text-[11px] font-bold uppercase text-slate-400 tracking-wider block">
                               Docente Orientador(a)
                             </span>
                             <span className="text-xs sm:text-sm font-extrabold text-slate-900 truncate block">
@@ -1227,7 +1227,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                               <Users className="w-4 h-4 text-indigo-800" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">
+                              <span className="text-[11px] font-bold uppercase text-slate-400 tracking-wider block">
                                 Coorientador(a)
                               </span>
                               <span className="text-xs sm:text-sm font-extrabold text-slate-900 truncate block">
@@ -1323,7 +1323,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
                         <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Nome do Membro</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Nome do Membro</label>
                           <input
                             type="text"
                             required
@@ -1334,7 +1334,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">E-mail</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">E-mail</label>
                           <input
                             type="email"
                             required
@@ -1345,7 +1345,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Instituição</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Instituição</label>
                           <input
                             type="text"
                             value={membro.instituicao || ''}
@@ -1356,7 +1356,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Titulação / Função</label>
+                          <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Titulação / Função</label>
                           <input
                             type="text"
                             value={membro.titulacao || ''}
@@ -1400,7 +1400,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
               <TableScrollWrapper>
                 <table className="w-full text-xs text-left border-collapse border border-slate-200 rounded-lg overflow-hidden bg-white">
                   <thead>
-                    <tr className="bg-slate-50 text-slate-700 border-b border-slate-200 font-bold uppercase text-[10.5px]">
+                    <tr className="bg-slate-50 text-slate-700 border-b border-slate-200 font-bold uppercase text-[11px]">
                       <th className="p-3">Função na Banca</th>
                       <th className="p-3">Examinador</th>
                       <th className="p-3">E-mail</th>
@@ -1417,7 +1417,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <td className="p-3 font-semibold text-slate-900">
                           {membro.nome}
                           {membro.titulacao && (
-                            <span className="text-[10px] text-slate-500 block font-normal">{membro.titulacao}</span>
+                            <span className="text-[11px] text-slate-500 block font-normal">{membro.titulacao}</span>
                           )}
                         </td>
                         <td className="p-3 font-mono text-slate-600 text-[11px]">
@@ -1427,7 +1427,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                           {membro.instituicao || (membro.membroTipo === 'EXTERNO' ? 'Instituição externa' : installationProfile.defaultInstitutionName)}
                         </td>
                         <td className="p-3 text-center">
-                          <span className="inline-block bg-emerald-50 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200">
+                          <span className="inline-block bg-emerald-50 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded border border-emerald-200">
                             Confirmado
                           </span>
                         </td>
@@ -1482,7 +1482,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 <Info className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                 <span>Regras de geração e assinatura de cada documento:</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 text-[10.5px]">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 text-[11px]">
                 <div className="p-2 bg-white rounded border border-slate-200">
                   <span className="font-bold text-slate-900 block">1. Carta Convite</span>
                   <span className="text-slate-500">Não requer assinatura.</span>
@@ -1557,21 +1557,21 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                             <h3 className="font-extrabold text-xs sm:text-[13px] text-slate-900 leading-snug truncate" title={docInfo.title}>
                               {docInfo.title}
                             </h3>
-                            <span className="text-[10px] font-mono font-bold text-slate-400">
+                            <span className="text-[11px] font-mono font-bold text-slate-400">
                               Versão {doc.currentVersion}
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="p-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-slate-600 font-medium">
+                      <div className="p-1.5 bg-slate-50 border border-slate-200 rounded text-[11px] text-slate-600 font-medium">
                         {docInfo.signNote}
                       </div>
 
                       {/* Status Badge */}
                       <div className="flex items-center justify-between pt-1">
                         <span
-                          className={`font-black uppercase text-[10px] px-2.5 py-0.5 rounded-md border tracking-wide ${
+                          className={`font-black uppercase text-[11px] px-2.5 py-0.5 rounded-md border tracking-wide ${
                             doc.status === 'ASSINADO' || doc.status === 'DISPONIVEL'
                               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                               : 'bg-amber-50 text-amber-800 border-amber-200'
@@ -1581,7 +1581,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         </span>
 
                         {doc.type === 'DECLARACAO' && (
-                          <span className="text-[10px] font-bold text-emerald-900 bg-emerald-50 border border-emerald-200/90 px-2 py-0.5 rounded-md">
+                          <span className="text-[11px] font-bold text-emerald-900 bg-emerald-50 border border-emerald-200/90 px-2 py-0.5 rounded-md">
                             Assinatura Presidente
                           </span>
                         )}
@@ -1616,7 +1616,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       </button>
                     </div>
                     {canRequestSignature&&<div className="grid grid-cols-2 gap-2"><button type="button" onClick={()=>handleSignDocument(doc,'ASTEN')} disabled={signatureWorking!==''||alreadySent} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#344125] px-3 py-2 text-xs font-black text-white hover:bg-[#28331d] disabled:bg-slate-300"><ShieldCheck className="h-4 w-4"/>Asten</button><button type="button" onClick={()=>handleSignDocument(doc,'GOV_BR')} disabled={signatureWorking!==''||alreadySent} className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-600 px-3 py-2 text-xs font-black text-white hover:bg-slate-700 disabled:bg-slate-300"><ShieldCheck className="h-4 w-4"/>Gov.br</button></div>}
-                    {signatureJobs.filter(job=>job.documentType===doc.type&&job.provider==='GOV_BR'&&job.status!=='ARCHIVED'&&job.status!=='CANCELED').sort((a,b)=>b.documentVersion-a.documentVersion).slice(0,1).map(job=><div key={job.id} className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2"><div className="text-[10px] font-black uppercase text-slate-600">Assinatura Gov.br · {job.status}</div><div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={()=>void handleGovBrDownload(job)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-[10px] font-black text-slate-800">1. Baixar PDF</button><label className="cursor-pointer rounded-lg bg-slate-600 px-3 py-2 text-[10px] font-black text-white">2. Enviar PDF assinado<input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={e=>void handleGovBrUpload(job,e.target.files?.[0])}/></label></div></div>)}
+                    {signatureJobs.filter(job=>job.documentType===doc.type&&job.provider==='GOV_BR'&&job.status!=='ARCHIVED'&&job.status!=='CANCELED').sort((a,b)=>b.documentVersion-a.documentVersion).slice(0,1).map(job=><div key={job.id} className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2"><div className="text-[11px] font-black uppercase text-slate-600">Assinatura Gov.br · {job.status}</div><div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={()=>void handleGovBrDownload(job)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-[11px] font-black text-slate-800">1. Baixar PDF</button><label className="cursor-pointer rounded-lg bg-slate-600 px-3 py-2 text-[11px] font-black text-white">2. Enviar PDF assinado<input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={e=>void handleGovBrUpload(job,e.target.files?.[0])}/></label></div></div>)}
                   </div>
                 );
               })}
@@ -1650,7 +1650,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       <Tag className="w-3.5 h-3.5 text-emerald-700" />
                       <span>Palavras-Chave</span>
                     </span>
-                    <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    <span className="text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full">
                       PREENCHIDO
                     </span>
                   </div>
@@ -1670,7 +1670,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       <FileText className="w-3.5 h-3.5 text-emerald-700" />
                       <span>Documentos Anexados</span>
                     </span>
-                    <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    <span className="text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full">
                       {[process.acervo?.resumoExpandidoFileId,process.acervo?.trabalhoCompletoFileId].filter(Boolean).length} ARQUIVO(S)
                     </span>
                   </div>
@@ -1678,7 +1678,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   <div className="space-y-2 pt-0.5">
                     <div className="flex items-center justify-between gap-2 p-2.5 bg-slate-50/80 rounded-lg border border-slate-200">
                       <div className="min-w-0">
-                        <span className="text-[9.5px] font-bold text-slate-400 uppercase block">Resumo Expandido</span>
+                        <span className="text-[11px] font-bold text-slate-400 uppercase block">Resumo Expandido</span>
                         <span className="font-bold text-slate-800 text-xs truncate block">{process.acervo?.resumoExpandidoFileName || 'Não anexado'}</span>
                       </div>
                       <button
@@ -1694,7 +1694,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
                     <div className="flex items-center justify-between gap-2 p-2.5 bg-slate-50/80 rounded-lg border border-slate-200">
                       <div className="min-w-0">
-                        <span className="text-[9.5px] font-bold text-slate-400 uppercase block">Monografia Completa</span>
+                        <span className="text-[11px] font-bold text-slate-400 uppercase block">Monografia Completa</span>
                         <span className="font-bold text-slate-800 text-xs truncate block">{process.acervo?.trabalhoCompletoFileName || 'Não anexado'}</span>
                       </div>
                       <button
@@ -1717,7 +1717,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
                       <span>Resumo Síntese do TCC</span>
                     </span>
-                    <span className="text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md">
+                    <span className="text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md">
                       PÚBLICO NO REPOSITÓRIO
                     </span>
                   </div>
@@ -1740,7 +1740,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <span>Palavras-Chave</span>
                         <span className="text-rose-500">*</span>
                       </label>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoKeywords.trim() ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${acervoKeywords.trim() ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
                         {acervoKeywords.trim() ? 'PREENCHIDO' : 'PENDENTE'}
                       </span>
                     </div>
@@ -1774,7 +1774,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <span>Resumo Síntese do TCC</span>
                         <span className="text-rose-500">*</span>
                       </label>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoResumo.trim() ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${acervoResumo.trim() ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
                         {acervoResumo.trim() ? `${acervoResumo.trim().length} CARACTERES` : 'PENDENTE'}
                       </span>
                     </div>
@@ -1799,7 +1799,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <Upload className="w-3.5 h-3.5 text-emerald-700" />
                         <span>Arquivo do Resumo Expandido</span>
                       </label>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoResumoExpandido.trim() ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${acervoResumoExpandido.trim() ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
                         {acervoResumoExpandido.trim() ? 'ANEXADO' : 'OPCIONAL'}
                       </span>
                     </div>
@@ -1822,7 +1822,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <span>Arquivo do Trabalho Completo / Monografia (PDF)</span>
                         <span className="text-rose-500">*</span>
                       </label>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoTrabalhoCompleto.trim() ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'}`}>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${acervoTrabalhoCompleto.trim() ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'}`}>
                         {acervoTrabalhoCompleto.trim() ? 'ANEXADO' : 'OBRIGATÓRIO'}
                       </span>
                     </div>
@@ -1854,7 +1854,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       <span className="text-xs font-bold text-slate-900 block">
                         Tornar este Trabalho de TCC Público no Repositório Digital
                       </span>
-                      <span className="text-[10.5px] text-slate-500 block">
+                      <span className="text-[11px] text-slate-500 block">
                         Permite consulta e visualização por alunos e comunidade acadêmica
                       </span>
                     </div>
@@ -1871,7 +1871,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     />
                     <div>
                       <span className="text-xs font-bold text-slate-900 block">Publicar também o resumo expandido</span>
-                      <span className="text-[10.5px] text-slate-500 block">Escolha independente do trabalho completo; exige arquivo anexado.</span>
+                      <span className="text-[11px] text-slate-500 block">Escolha independente do trabalho completo; exige arquivo anexado.</span>
                     </div>
                   </label>
                   </div>
@@ -1916,7 +1916,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
               <History className="h-5 w-5 shrink-0 text-white" aria-hidden="true" />
               <div className="min-w-0">
                 <h2 id="process-audit-title" className="truncate text-sm font-black uppercase text-white">Histórico & Log de Alterações do Processo</h2>
-                <p className="mt-0.5 text-[10px] font-mono text-white/80">Protocolo: {process.protocolo}</p>
+                <p className="mt-0.5 text-[11px] font-mono text-white/80">Protocolo: {process.protocolo}</p>
               </div>
             </header>
             <div className="portal-modal-divider" aria-hidden="true" />
@@ -1924,7 +1924,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 <TableScrollWrapper>
                   <table className="w-full border-collapse text-left text-xs" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
                     <thead>
-                      <tr className="border-b border-slate-300 text-[10px] font-extrabold uppercase tracking-wider text-slate-900" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
+                      <tr className="border-b border-slate-300 text-[11px] font-extrabold uppercase tracking-wider text-slate-900" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
                         <th className="p-3">Data e Hora</th>
                         <th className="p-3">Usuário / Papel</th>
                         <th className="p-3">Ação Realizada</th>
@@ -1935,8 +1935,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       {auditLogs.map((log) => (
                         <tr key={log.id} className="bg-white/70 hover:bg-white">
                           <td className="p-3 font-mono font-bold text-slate-700 whitespace-nowrap">{log.timestamp}</td>
-                          <td className="p-3"><div className="font-bold text-slate-900">{log.user}</div><span className="text-[10px] font-mono text-[var(--portal-brand-action)]">{log.role}</span></td>
-                          <td className="p-3"><span className="text-[10px] font-bold text-slate-800">{log.action}</span></td>
+                          <td className="p-3"><div className="font-bold text-slate-900">{log.user}</div><span className="text-[11px] font-mono text-[var(--portal-brand-action)]">{log.role}</span></td>
+                          <td className="p-3"><span className="text-[11px] font-bold text-slate-800">{log.action}</span></td>
                           <td className="p-3 leading-snug text-slate-700">{log.details}</td>
                         </tr>
                       ))}

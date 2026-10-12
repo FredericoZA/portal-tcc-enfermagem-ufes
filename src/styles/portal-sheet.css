@@ -66,28 +66,28 @@
 }
 
 .portal-process-pill-tag {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   line-height: 1.1;
 }
 
 .portal-process-pill-subtext {
   margin-top: 2px;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1.1;
 }
 
 .portal-progress-percent {
   color: var(--portal-text-dark);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 900;
   line-height: 1;
 }
 
 .portal-progress-label {
   color: var(--portal-brand-action);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
   line-height: 1;
 }
@@ -418,8 +418,8 @@ td[data-portal-core-process-state="upcoming"] > div,
 }
 
 .portal-spreadsheet-pager button {
-  min-width: 22px;
-  height: 20px;
+  min-width: 24px;
+  height: 22px;
   margin: 0;
   padding: 0 5px;
   border: 1px solid var(--portal-border);
@@ -427,7 +427,7 @@ td[data-portal-core-process-state="upcoming"] > div,
   border-radius: 0;
   background: var(--portal-surface-inner);
   color: var(--portal-text-dark);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
 }
 

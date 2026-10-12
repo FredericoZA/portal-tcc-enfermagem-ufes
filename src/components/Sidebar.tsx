@@ -203,12 +203,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
         {isVisitor ? <button id="bottom-access-portal-btn" type="button" onClick={() => handleNav('acessar-portal')} className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-xs font-black uppercase tracking-wide text-slate-800 shadow-sm hover:bg-white transition-colors"><LogIn className="w-4 h-4" />Entrar no Portal</button> : <>
           <button id="bottom-logout-portal-btn" type="button" onClick={() => void handleLogout()} disabled={isLoggingOut} className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-xs font-black uppercase tracking-wide text-slate-800 shadow-sm hover:bg-white disabled:opacity-60 transition-colors"><LogOut className="w-4 h-4" />{isLoggingOut ? 'Saindo…' : 'Sair do Portal'}</button>
           <div className="pt-2 border-t w-full" style={{ borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider }}>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-center" style={{ color: sidebarFooterMutedColor }}>{layoutConfig.sidebarSessionLabel || 'Sessão ativa'}</div>
+            <div className="text-xs font-bold uppercase tracking-widest text-center" style={{ color: sidebarFooterMutedColor }}>{layoutConfig.sidebarSessionLabel || 'Sessão ativa'}</div>
             <div className="mt-1 text-xs font-semibold break-all text-center" style={{ color: sidebarFooterTextColor }} title={userEmail}>{userEmail}</div>
           </div>
         </>}
-        <div className="flex items-center justify-center gap-1.5 text-[10px] whitespace-normal leading-4 text-center" style={{ color: sidebarFooterMutedColor }} title={userLocation}><MapPin className="h-3 w-3 shrink-0"/><span>{userLocation}</span></div>
-        <div className="text-[9px] font-medium tracking-wide text-center" style={{ color: sidebarFooterMutedColor }} title={buildCommit ? `Fingerprint do build: ${buildCommit}` : undefined}>Versão do sistema: {appVersion}{buildCommit ? ` · ${buildCommit}` : ''}</div>
+        <div className="flex items-center justify-center gap-1.5 text-xs whitespace-normal leading-4 text-center" style={{ color: sidebarFooterMutedColor }} title={userLocation}><MapPin className="h-3 w-3 shrink-0"/><span>{userLocation}</span></div>
+        <div className="text-xs font-medium tracking-wide text-center" style={{ color: sidebarFooterMutedColor }} title={buildCommit ? `Fingerprint do build: ${buildCommit}` : undefined}>Versão do sistema: {appVersion}{buildCommit ? ` · ${buildCommit}` : ''}</div>
       </div>
     </aside>
   </>;

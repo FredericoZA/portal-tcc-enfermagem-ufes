@@ -93,7 +93,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
+              <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                 Nome da Secretaria / Administrador Master:
               </label>
               <input
@@ -107,7 +107,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
+              <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                 E-mail de acesso do Usuário Master:
               </label>
               <input
@@ -130,7 +130,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
+              <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                 Nome do Presidente da Comissão:
               </label>
               <input
@@ -144,7 +144,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
+              <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
                 E-mail da Presidência e recuperação do Master:
               </label>
               <input
@@ -159,13 +159,13 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] px-3 py-2 text-[10px] leading-4 text-slate-600">A Presidente da Comissão é automaticamente o contato de recuperação do Master e é o único contato ativo para iniciar a troca segura do usuário Master.</div>
+        <div className="rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] px-3 py-2 text-xs leading-4 text-slate-600">A Presidente da Comissão é automaticamente o contato de recuperação do Master e é o único contato ativo para iniciar a troca segura do usuário Master.</div>
 
         <div className="flex items-center justify-end pt-1">
           <button
             type="submit"
             disabled={isSaving}
-            className="portal-popup-action min-h-8 px-3 text-[10px]"
+            className="portal-popup-action min-h-8 px-3 text-xs"
           >
             <Save className="h-3.5 w-3.5" aria-hidden="true" />
             <span>{isSaving ? 'Salvando...' : 'Salvar Contas Administrativas'}</span>
@@ -341,11 +341,11 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
         <div>
           <h3 className="text-xs font-black uppercase text-slate-900 tracking-wide flex items-center gap-2">
             <span>Registro de Logs e Auditoria de Segurança</span>
-            <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] rounded-full font-mono border border-slate-200">
+            <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs rounded-full font-mono border border-slate-200">
               {totalLogs} de {auditLogs.length} registro(s)
             </span>
           </h3>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-xs text-slate-500">
             Histórico detalhado de alterações, submissões, avaliações e exclusões com suporte a restauração.
           </p>
         </div>
@@ -354,13 +354,13 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
           <button
             type="button"
             onClick={handleDownloadFullBackup}
-            className="portal-backup-action inline-flex min-w-[172px] items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-[#f0f0f0] px-3 py-1.5 text-[11px] font-bold text-slate-800 shadow-sm transition-all hover:bg-slate-200"
+            className="portal-backup-action inline-flex min-w-[172px] items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-[#f0f0f0] px-3 py-1.5 text-xs font-bold text-slate-800 shadow-sm transition-all hover:bg-slate-200"
           >
             
             <span>Baixar Backup JSON</span>
           </button>
 
-          <label className="portal-backup-action inline-flex min-w-[172px] items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-[#f0f0f0] px-3 py-1.5 text-[11px] font-bold text-slate-800 shadow-sm transition-all hover:bg-slate-200">
+          <label className="portal-backup-action inline-flex min-w-[172px] items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-[#f0f0f0] px-3 py-1.5 text-xs font-bold text-slate-800 shadow-sm transition-all hover:bg-slate-200">
             
             <span>Restaurar Backup</span>
             <input
@@ -376,14 +376,14 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
       {/* COMPREHENSIVE FILTERS TOOLBAR */}
       <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2.5">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <span className="text-[11px] font-extrabold uppercase tracking-wide text-slate-700 flex items-center gap-1">
+          <span className="text-xs font-extrabold uppercase tracking-wide text-slate-700 flex items-center gap-1">
             Filtrar Registros do Sistema:
           </span>
           {(userFilter || actionFilter || referenceFilter || startDateFilter || endDateFilter || pageSize !== 25) && (
             <button
               type="button"
               onClick={resetAllFilters}
-              className="text-[10.5px] font-bold text-rose-700 hover:text-rose-900 underline cursor-pointer"
+              className="text-xs font-bold text-rose-700 hover:text-rose-900 underline cursor-pointer"
             >
               Limpar Filtros
             </button>
@@ -393,7 +393,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
           {/* Filter 1: User */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">Usuário (Quem)</label>
+            <label className="block text-xs font-bold uppercase text-slate-600 mb-0.5">Usuário (Quem)</label>
             <input
               type="text"
               placeholder="Buscar por e-mail..."
@@ -405,7 +405,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
 
           {/* Filter 2: Action */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">Ação / Atividade</label>
+            <label className="block text-xs font-bold uppercase text-slate-600 mb-0.5">Ação / Atividade</label>
             <select
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value)}
@@ -420,7 +420,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
 
           {/* Filter 3: Work / Process Reference */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">Referência do Trabalho</label>
+            <label className="block text-xs font-bold uppercase text-slate-600 mb-0.5">Referência do Trabalho</label>
             <input
               type="text"
               placeholder="Nº TCC, ID ou Módulo..."
@@ -432,7 +432,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
 
           {/* Filter 4: Start Date */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">Data Inicial</label>
+            <label className="block text-xs font-bold uppercase text-slate-600 mb-0.5">Data Inicial</label>
             <input
               type="date"
               value={startDateFilter}
@@ -443,7 +443,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
 
           {/* Filter 5: End Date */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">Data Final</label>
+            <label className="block text-xs font-bold uppercase text-slate-600 mb-0.5">Data Final</label>
             <input
               type="date"
               value={endDateFilter}
@@ -454,7 +454,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
 
           {/* Filter 6: Lines limit per page */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">Linhas por Página</label>
+            <label className="block text-xs font-bold uppercase text-slate-600 mb-0.5">Linhas por Página</label>
             <select
               value={pageSize === 'all' ? 'all' : String(pageSize)}
               onChange={(e) => {
@@ -481,14 +481,14 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
       ) : paginatedLogs.length === 0 ? (
         <div className="p-8 text-center text-xs text-slate-500 font-medium border border-dashed border-slate-300 rounded-xl bg-slate-50/50 space-y-1">
           <p className="font-bold text-slate-700">Nenhum registro de log encontrado com os filtros selecionados.</p>
-          <p className="text-[11px]">Tente alterar a busca por usuário, período de datas ou ação.</p>
+          <p className="text-xs">Tente alterar a busca por usuário, período de datas ou ação.</p>
         </div>
       ) : (
         <div className="space-y-3">
           <div className="overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-100 text-slate-800 font-black uppercase text-[10px] tracking-wider border-b border-slate-200">
+                <tr className="bg-slate-100 text-slate-800 font-black uppercase text-xs tracking-wider border-b border-slate-200">
                   <th className="p-2.5">Data / Hora</th>
                   <th className="p-2.5">Usuário (Quem)</th>
                   <th className="p-2.5">Ação / Atividade</th>
@@ -501,7 +501,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
                   const isRolling = isRollingBackId === log.id;
                   return (
                     <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="p-2.5 font-mono text-[11px] text-slate-600 whitespace-nowrap">
+                      <td className="p-2.5 font-mono text-xs text-slate-600 whitespace-nowrap">
                         {new Date(log.timestamp).toLocaleString('pt-BR')}
                       </td>
 
@@ -509,8 +509,8 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
                         {log.actorEmail}
                       </td>
 
-                      <td className="p-2.5 font-bold text-slate-800 uppercase text-[11px]">
-                        <span className="inline-block bg-slate-100 text-slate-800 border border-slate-300 px-2 py-0.5 rounded text-[10px]">
+                      <td className="p-2.5 font-bold text-slate-800 uppercase text-xs">
+                        <span className="inline-block bg-slate-100 text-slate-800 border border-slate-300 px-2 py-0.5 rounded text-xs">
                           {log.action}
                         </span>
                       </td>
@@ -521,7 +521,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
                             TCC #{log.processId}
                           </span>
                         ) : (
-                          <span className="text-[10px] font-mono text-slate-500">
+                          <span className="text-xs font-mono text-slate-500">
                             {log.entityType || 'Sistema'}
                           </span>
                         )}
@@ -533,7 +533,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
                             <button
                               type="button"
                               onClick={() => setSelectedLogForDiff(log)}
-                              className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-800 rounded text-[10.5px] font-bold border border-slate-300 cursor-pointer"
+                              className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-800 rounded text-xs font-bold border border-slate-300 cursor-pointer"
                             >
                               Detalhes
                             </button>
@@ -543,7 +543,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
                             type="button"
                             disabled={isRolling}
                             onClick={() => handleRollbackLog(log.id)}
-                            className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 rounded text-[10.5px] font-bold transition-colors cursor-pointer disabled:opacity-50"
+                            className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 rounded text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
                           >
                             <span>{isRolling ? 'Restaurando...' : 'Restaurar'}</span>
                           </button>
@@ -559,7 +559,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
           {/* PAGINATION FOOTER CONTROLS */}
           {pageSize !== 'all' && totalPages > 1 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1 border-t border-slate-200 text-xs">
-              <span className="text-slate-600 font-medium text-[11px]">
+              <span className="text-slate-600 font-medium text-xs">
                 Mostrando <strong className="text-slate-900">{startIndex + 1}</strong> a <strong className="text-slate-900">{Math.min(startIndex + effectivePageSize, totalLogs)}</strong> de <strong className="text-slate-900">{totalLogs}</strong> registros
               </span>
 
@@ -603,15 +603,15 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
             <div className="space-y-4 p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                <span className="font-extrabold text-slate-800 uppercase block text-[10px]">Estado Anterior:</span>
-                <pre className="font-mono text-[10px] bg-slate-100 p-2 rounded max-h-48 overflow-y-auto custom-scrollbar">
+                <span className="font-extrabold text-slate-800 uppercase block text-xs">Estado Anterior:</span>
+                <pre className="font-mono text-xs bg-slate-100 p-2 rounded max-h-48 overflow-y-auto custom-scrollbar">
                   {selectedLogForDiff.before ? JSON.stringify(selectedLogForDiff.before, null, 2) : '(Nenhum estado prévio)'}
                 </pre>
               </div>
 
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                <span className="font-extrabold text-slate-800 uppercase block text-[10px]">Estado Atual:</span>
-                <pre className="font-mono text-[10px] bg-slate-100 p-2 rounded max-h-48 overflow-y-auto custom-scrollbar">
+                <span className="font-extrabold text-slate-800 uppercase block text-xs">Estado Atual:</span>
+                <pre className="font-mono text-xs bg-slate-100 p-2 rounded max-h-48 overflow-y-auto custom-scrollbar">
                   {selectedLogForDiff.after ? JSON.stringify(selectedLogForDiff.after, null, 2) : '(Sem dados registrados)'}
                 </pre>
               </div>

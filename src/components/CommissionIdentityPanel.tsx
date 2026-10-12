@@ -7,9 +7,9 @@ import { retryAfterPortalReauthentication } from '../services/reauthentication';
 interface Props { isMaster: boolean; }
 interface CommissionMemberInfo { id: string; name: string; email?: string; active: boolean; }
 
-const inputClass = 'w-full min-h-8 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200';
+const inputClass = 'w-full min-h-8 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200';
 const fieldClass = 'rounded-lg border border-slate-300 p-2.5';
-const labelClass = 'mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-600';
+const labelClass = 'mb-1 block text-xs font-black uppercase tracking-wide text-slate-600';
 
 function makeId(): string { return `commission-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`; }
 function validEmail(value: string): boolean { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value); }
@@ -174,7 +174,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
 
   return (
     <section className="portal-identity-panel space-y-[5px] p-0" style={{ backgroundColor: 'var(--portal-surface-page)' }} aria-label="Dados de rodapé e identidade">
-      {statusText && <div className="text-right text-[9px] font-bold text-[var(--portal-brand-action)]">{statusText}</div>}
+      {statusText && <div className="text-right text-xs font-bold text-[var(--portal-brand-action)]">{statusText}</div>}
       <div className="grid gap-[5px] md:grid-cols-2">
         <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>Nome da Secretaria / Administrador Master</span><input value={masterName} onChange={event => setMasterName(event.target.value)} onBlur={() => void persistRegularFields()} className={inputClass}/></label>
         <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>E-mail de acesso do Usuário Master</span><input type="email" value={masterEmail} onChange={event => setMasterEmail(event.target.value)} onBlur={() => void persistSensitiveEmails()} className={inputClass}/></label>
@@ -186,8 +186,8 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
 
       <div className="overflow-hidden rounded-lg border border-slate-300" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
         <div className="flex items-center justify-between gap-2 border-b border-slate-300 px-3 py-2" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
-          <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-800">Membros da Comissão</h4>
-          <span className="text-[9px] font-bold text-slate-500">{normalizeMembers(members).length} cadastrado(s)</span>
+          <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">Membros da Comissão</h4>
+          <span className="text-xs font-bold text-slate-500">{normalizeMembers(members).length} cadastrado(s)</span>
         </div>
         <div className="divide-y divide-slate-300">
           {members.map(member => (
@@ -197,11 +197,11 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
               <button type="button" onClick={() => setMembers(prev => prev.filter(item => item.id !== member.id))} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-rose-700" aria-label={`Excluir ${member.name || 'membro'}`}><Trash2 className="h-3.5 w-3.5"/></button>
             </div>
           ))}
-          {members.length === 0 && <p className="px-3 py-3 text-[10px] text-slate-500">Nenhum membro adicional cadastrado.</p>}
+          {members.length === 0 && <p className="px-3 py-3 text-xs text-slate-500">Nenhum membro adicional cadastrado.</p>}
         </div>
-        <button type="button" onClick={() => setMembers(prev => [...prev, { id: makeId(), name: '', email: '', active: true }])} className="flex w-full items-center gap-2 border-t border-slate-300 px-3 py-2 text-left text-[10px] font-black text-[var(--portal-brand-action)] hover:bg-white/60"><Plus className="h-3.5 w-3.5"/>Adicionar membro</button>
+        <button type="button" onClick={() => setMembers(prev => [...prev, { id: makeId(), name: '', email: '', active: true }])} className="flex w-full items-center gap-2 border-t border-slate-300 px-3 py-2 text-left text-xs font-black text-[var(--portal-brand-action)] hover:bg-white/60"><Plus className="h-3.5 w-3.5"/>Adicionar membro</button>
       </div>
-      {errorText && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-semibold text-rose-800" role="alert">{errorText}</div>}
+      {errorText && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800" role="alert">{errorText}</div>}
     </section>
   );
 };

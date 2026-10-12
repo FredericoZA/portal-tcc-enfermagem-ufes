@@ -58,5 +58,5 @@ test('identidade e rodapé usam formulário único com salvamento automático', 
 });
 
 test('release Portal TCC11 é 1.0.78', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.0.79');
+  assert.equal(JSON.parse(read('package.json')).version, '1.0.80');
 });

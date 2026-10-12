@@ -54,7 +54,7 @@ export const PortalReplicationPage: React.FC = () => {
               <p className="mt-1 text-xs leading-4 text-slate-600">{text}</p>
               {'href' in tool && tool.href ? (
                 <div className="mt-auto pt-2">
-                  <a href={tool.href} target="_blank" rel="noreferrer" className="portal-action-green inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] font-black text-white shadow-sm">
+                  <a href={tool.href} target="_blank" rel="noreferrer" className="portal-action-green inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-black text-white shadow-sm">
                     Abrir no GitHub <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 </div>
@@ -71,7 +71,7 @@ export const PortalReplicationPage: React.FC = () => {
                 href="/api/public/replication-models/all/download"
                 download
                 title="Baixar os quatro modelos em um único arquivo ZIP"
-                className="portal-action-green inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] font-black text-white shadow-sm"
+                className="portal-action-green inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-black text-white shadow-sm"
               >
                 <Download className="h-3.5 w-3.5" />
                 Baixar modelos
