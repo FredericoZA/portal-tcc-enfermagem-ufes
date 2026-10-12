@@ -182,16 +182,28 @@ try {
         const heading=parseFloat(getComputedStyle(dialog.querySelector('h2')).fontSize);
         const message=parseFloat(getComputedStyle(dialog.querySelector('p')).fontSize);
         dialog.remove();
-        return {heading,message};
+        // Exercita a prioridade CSS com as classes históricas dos botões de exclusão.
+        const deleteButton=document.createElement('button');
+        deleteButton.className='bg-rose-50 text-rose-700';
+        deleteButton.innerHTML='<svg class="lucide lucide-trash-2"></svg>';
+        document.body.appendChild(deleteButton);
+        const trash={
+          background:getComputedStyle(deleteButton).backgroundColor,
+          color:getComputedStyle(deleteButton.querySelector('svg')).color
+        };
+        deleteButton.remove();
+        return {heading,message,trash};
       });
       if(dialogFonts.heading!==18||dialogFonts.message!==11)
         report.errors.push(`Diálogo nativo fora da escala: ${JSON.stringify(dialogFonts)}`);
+      if(dialogFonts.trash.background!=='rgb(255, 255, 255)'||dialogFonts.trash.color!=='rgb(220, 38, 38)')
+        report.errors.push(`Botão de exclusão sem prioridade correta: ${JSON.stringify(dialogFonts.trash)}`);
     }
 
     // Contrato absoluto: todos os textos visíveis devem usar somente 11, 14 ou 18 px.
     // Valida as fontes COMPUTADAS, inclusive quando o Tailwind ou um estilo inline
     // tentar restabelecer dimensões históricas.
-    const offScale = Object.entries(fonts.textNodes.histogram)
+    const offScale = Object.entries({ ...fonts.histogram, ...fonts.textNodes.histogram })
       .filter(([key]) => ![11, 14, 18].includes(Number(key.split(':').at(-1).replace('px', ''))));
     if (offScale.length) report.errors.push(`${name}: fonte fora da escala 18/14/11 (${JSON.stringify(offScale)})`);
     const navAndTitles = await page.evaluate(() => {
