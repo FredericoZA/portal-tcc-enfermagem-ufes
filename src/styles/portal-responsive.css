@@ -155,8 +155,8 @@ body dialog.portal-modal-surface,
 body dialog.portal-modal-surface * {
   font-size: var(--portal-type-content);
 }
-/* Títulos principais, não os rótulos de cada célula. */
-body #portal-app-root :is(h1, h2, h3),
+/* Somente títulos principais: h3 dentro de cards é conteúdo e permanece 11px. */
+body #portal-app-root :is(h1, h2),
 body #portal-app-root [data-portal-sheet-title="true"] :is(h1, h2, h3),
 body #portal-app-root .portal-public-title-row :is(h1, h2, h3),
 body .portal-modal-backdrop :is(h1, h2, h3),
