@@ -35,7 +35,9 @@ function visit(value: unknown, keys: RegExp): string | undefined {
 }
 
 export function extractAstenEnvelopeId(payload: unknown): string | undefined {
-  return visit(payload, /^(idEnvelope|envelopeId|id_envelope)$/i);
+  const outer=payload as any;
+  const id=outer?.envelope?.id??outer?.Envelope?.id??outer?.idEnvelope??outer?.envelopeId;
+  return id===undefined||id===null?visit(payload,/^(idEnvelope|envelopeId|id_envelope)$/i):String(id);
 }
 
 export function inferAstenEventStatus(payload: unknown): AstenEventStatus {
@@ -87,6 +89,14 @@ export function normalizeAstenWebhookEvent(input: {
     matchedJobId: matchedJob?.id,
     safePayload
   };
+}
+
+/** Worker: não reprocessar ACKs já concluídos ou reivindicados por outra instância. */
+export function isReconcileableAstenWebhookEvent(event:AstenWebhookEvent,now=Date.now()):boolean{
+  if(event.duplicate||!event.matchedJobId||event.processedAt||event.safePayload?.processedAt)return false;
+  if(event.retryAfter&&Date.parse(event.retryAfter)>now)return false;
+  if(event.processingLeaseUntil&&Date.parse(event.processingLeaseUntil)>now)return false;
+  return true;
 }
 
 const EVENT_RANK: Record<AstenEventStatus, number> = { UNMATCHED: 0, CREATED: 1, SENT: 2, PARTIALLY_SIGNED: 3, SIGNED: 4, DECLINED: 4, CANCELED: 4, EXPIRED: 4, ERROR: 4 };

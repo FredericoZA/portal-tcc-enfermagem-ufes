@@ -17,6 +17,8 @@ export interface SignatureJob {
   createdAt: string; createdBy: string; updatedAt: string; approvedAt?: string; approvedBy?: string;
   approvalExpiresAt?: string; provider: 'ASTEN' | 'GOV_BR'; providerEnvelopeId?: string; providerEnvelopeHash?: string;
   providerCreationState?: 'PENDING' | 'CREATING' | 'CONFIRMED' | 'UNCERTAIN';
+  /** Falhas ambíguas de encaminhamento não autorizam novo envio automático. */
+  providerDispatchState?: 'PENDING' | 'SENDING' | 'SENT' | 'UNCERTAIN';
   sentAt?: string; completedAt?: string; lastError?: string; driveUnsignedFileId?: string; driveSignedFileId?: string;
   driveSignedWebViewLink?: string; signedSha256?: string; verificationCode?: string; artifactBase64?: string;
   /** Snapshot normalizado das variáveis usadas para renderizar esta versão. */
