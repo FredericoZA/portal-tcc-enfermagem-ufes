@@ -34,7 +34,7 @@ test('engrenagem usa layout compacto e mantém Definir padrão restrito ao Maste
 test('menu de coluna é compacto e possui ação concluir verde', () => {
   const css = read('src/styles/portal-components.css');
   assert.match(css, /\.portal-core-column-popup \{[\s\S]*300px/);
-  assert.match(css, /\.portal-core-menu-action \{[\s\S]*font-size: 10px/);
+  assert.match(css, /\.portal-core-menu-action \{[\s\S]*font-size: var\(--portal-type-content\)/);
   assert.match(css, /\.portal-core-done \{[\s\S]*background: var\(--portal-brand-header\)/);
 });
 
