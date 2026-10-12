@@ -23,7 +23,6 @@ test('Vercel mantém bloqueio de piloto e release mesmo com conta conectada',()=
   const conf=JSON.parse(read('vercel.json'));
   for(const flag of ['ASTEN_INTEGRATION_ENABLED','ASTEN_PILOT_APPROVED','ASTEN_PRODUCTION_RELEASE_APPROVED'])
     assert.equal(conf.env[flag],'false');
-  assert.equal(conf.git.deploymentEnabled['**'],false);
-  assert.equal(conf.git.deploymentEnabled.main,true);
+  assert.equal(conf.git.deploymentEnabled,false);
   assert.equal(conf.crons.filter((item:{path:string})=>item.path==='/api/cron/asten-reconcile').length,1);
 });

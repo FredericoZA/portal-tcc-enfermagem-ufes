@@ -22,7 +22,7 @@ test('número do dia não fica menor que o cabeçalho semanal', () => {
   const css = read('src/styles/portal-components.css');
 
   assert.match(home, /portal-calendar-day-number/);
-  assert.match(css, /\.portal-calendar-day-number \{[\s\S]*font-size: 12px/);
+  assert.match(css, /\.portal-calendar-day-number \{[\s\S]*font-size: var\(--portal-type-content\)/);
 });
 
 test('título da seção de cadastro fica dentro do cartão', () => {

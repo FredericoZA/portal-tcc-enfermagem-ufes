@@ -182,7 +182,6 @@ assert.match(visualQa, /overflowElements/);
 assert.match(visualQa, /forcedColors: 'active'/);
 assert.match(visualQa, /page\.keyboard\.press\('Tab'\)/);
 
-assert.equal(vercel.git?.deploymentEnabled?.['**'], false, 'As branches de trabalho não podem disparar previews automáticos na Vercel.');
-assert.equal(vercel.git?.deploymentEnabled?.main, true, 'A branch principal deve manter a publicação automática na Vercel.');
+assert.equal(vercel.git?.deploymentEnabled, false, 'Nenhuma branch pode publicar automaticamente sem autorização explícita.');
 
 console.log('Contrato da finalização do backlog aprovado.');
