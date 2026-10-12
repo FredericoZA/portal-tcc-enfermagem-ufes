@@ -66,28 +66,28 @@
 }
 
 .portal-process-pill-tag {
-  font-size: 10px;
+  font-size: var(--portal-type-content);
   font-weight: 800;
   line-height: 1.1;
 }
 
 .portal-process-pill-subtext {
   margin-top: 2px;
-  font-size: 8px;
+  font-size: var(--portal-type-content);
   font-weight: 700;
   line-height: 1.1;
 }
 
 .portal-progress-percent {
   color: var(--portal-text-dark);
-  font-size: 10px;
+  font-size: var(--portal-type-content);
   font-weight: 900;
   line-height: 1;
 }
 
 .portal-progress-label {
   color: var(--portal-brand-action);
-  font-size: 8px;
+  font-size: var(--portal-type-content);
   font-weight: 800;
   line-height: 1;
 }
@@ -427,7 +427,7 @@ td[data-portal-core-process-state="upcoming"] > div,
   border-radius: 0;
   background: var(--portal-surface-inner);
   color: var(--portal-text-dark);
-  font-size: 10px;
+  font-size: var(--portal-type-content);
   line-height: 1;
 }
 
@@ -457,5 +457,5 @@ td[data-portal-core-process-state="upcoming"] > div,
   border-top: 1px solid var(--portal-border);
   border-bottom: 1px solid var(--portal-border);
   background: var(--portal-surface-inner);
-  font-size: 10px;
+  font-size: var(--portal-type-content);
 }
