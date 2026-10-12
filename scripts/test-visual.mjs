@@ -172,6 +172,23 @@ try {
       return { histogram, outliers, textNodes:{histogram:textNodeHistogram,outliers:textNodeOutliers} };
     });
     report.typography.push({ screen: name, ...fonts });
+    // Contrato absoluto: todos os textos visíveis devem usar somente 11, 14 ou 18 px.
+    // Valida as fontes COMPUTADAS, inclusive quando o Tailwind ou um estilo inline
+    // tentar restabelecer dimensões históricas.
+    const offScale = Object.entries(fonts.textNodes.histogram)
+      .filter(([key]) => ![11, 14, 18].includes(Number(key.split(':').at(-1).replace('px', ''))));
+    if (offScale.length) report.errors.push(`${name}: fonte fora da escala 18/14/11 (${JSON.stringify(offScale)})`);
+    const navAndTitles = await page.evaluate(() => {
+      const visibleSizes = (selector) => Array.from(document.querySelectorAll(selector))
+        .filter(el => el.getClientRects().length > 0)
+        .map(el => Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10);
+      return {
+        sidebar: visibleSizes('#sidebar-nav button, #sidebar-nav button span'),
+        titles: visibleSizes('#portal-app-root h1, #portal-app-root h2, .portal-settings-workspace-title h2, [data-portal-sheet-title="true"] h3')
+      };
+    });
+    if (navAndTitles.sidebar.some(size => size !== 14)) report.errors.push(`${name}: navegação lateral fora de 14px`);
+    if (navAndTitles.titles.some(size => size !== 18)) report.errors.push(`${name}: títulos fora de 18px`);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2);
     const overflowElements = overflow ? await page.evaluate(() => {
       const viewport = innerWidth;
@@ -479,8 +496,8 @@ try {
                 heading:parseFloat(getComputedStyle(root.querySelector('.portal-settings-workspace-title h2')).fontSize),
                 fields,trash};
             });
-            if(Math.abs(visual.bodyFont-14)>0.25||Math.abs(visual.heading-14)>0.25||
-              visual.fields.some(field=>Math.abs(field.size-12)>0.5)||
+            if(Math.abs(visual.bodyFont-11)>0.25||Math.abs(visual.heading-18)>0.25||
+              visual.fields.some(field=>Math.abs(field.size-11)>0.5)||
               visual.width>visual.viewport-8){
               report.errors.push(`config-${slug}: escala/viewport divergente (${JSON.stringify(visual).slice(0,750)})`);
             }
