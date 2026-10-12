@@ -1509,6 +1509,8 @@ export async function createPortalApp() {
     const expected=String(process.env.CRON_SECRET||'').trim();
     const supplied=String(req.headers.authorization||'').replace(/^Bearer\s+/i,'').trim();
     if(expected.length<32||!supplied||!timingSafeEqual(createHash('sha256').update(expected).digest(),createHash('sha256').update(supplied).digest()))return res.status(401).json({error:'Não autorizado.'});
+    // Limita invocações autenticadas além do segredo dedicado; defesa contra retries duplicados.
+    if(!allowSignatureRetry('cron@portal.local','asten-cron-reconcile'))return res.status(429).json({error:'Reconciliação já executada recentemente.'});
     try{
       const result=await reconcileQueuedAstenCallbacks();
       res.setHeader('Cache-Control','no-store');
