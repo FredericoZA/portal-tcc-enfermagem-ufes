@@ -196,7 +196,11 @@ body #portal-app-root #sidebar-nav * {
   @media (max-width: 640px) {
     body #portal-app-root :is(input, select, textarea):focus,
     body .portal-modal-backdrop :is(input, select, textarea):focus,
-    body .portal-feedback-dialog :is(input, select, textarea):focus {
+    body .portal-feedback-dialog :is(input, select, textarea):focus,
+    body .portal-table-settings-popover :is(input, select, textarea):focus,
+    body .portal-core-column-popup :is(input, select, textarea):focus,
+    body .portal-search-popover :is(input, select, textarea):focus,
+    body dialog.portal-modal-surface :is(input, select, textarea):focus {
       font-size: 16px;
     }
   }
