@@ -19,12 +19,13 @@ body :where(*) {
   font-size: var(--portal-type-content) !important;
 }
 /* Texto principal e navegação lateral. */
-body :where(h1, h2, h3, h4, .portal-sidebar-nav-item, .portal-sidebar-nav-item *,
+body :where(h3, h4, .portal-sidebar-nav-item, .portal-sidebar-nav-item *,
   #sidebar-user-footer > button, #sidebar-user-footer > button *) {
   font-size: var(--portal-type-navigation) !important;
 }
-/* Títulos de planilhas e de cabeçalhos de página, sem escalar seus botões. */
+/* Cabeçalhos principais (inclusive de planilhas e pop-ups) usam 18px. */
 body :where(
+  h1, h2, .portal-settings-workspace-title h2,
   [data-portal-sheet-title="true"] :is(h1,h2,h3),
   .portal-public-title-row :is(h1,h2,h3),
   .portal-sheet-title-heading,
