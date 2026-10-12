@@ -11,3 +11,29 @@
  * Cores, dimensões e z-index: portal-tokens.css.
  * Demais arquivos apenas consomem tokens sem redefinir a paleta estrutural.
  */
+
+/* Escala estrita de leitura — Portal TCC */
+/* O root HTML continua em 16px para que dimensões rem (padding, ícones,
+   breakpoints) não mudem. Somente a fonte renderizada é normalizada. */
+body :where(*) {
+  font-size: var(--portal-type-content) !important;
+}
+/* Texto principal e navegação lateral. */
+body :where(h1, h2, h3, h4, .portal-sidebar-nav-item, .portal-sidebar-nav-item *,
+  #sidebar-user-footer > button, #sidebar-user-footer > button *) {
+  font-size: var(--portal-type-navigation) !important;
+}
+/* Títulos de planilhas e de cabeçalhos de página, sem escalar seus botões. */
+body :where(
+  [data-portal-sheet-title="true"] :is(h1,h2,h3),
+  .portal-public-title-row :is(h1,h2,h3),
+  .portal-sheet-title-heading,
+  .portal-table-banner :is(h1,h2,h3),
+  .portal-section-header :is(h1,h2,h3)
+) {
+  font-size: var(--portal-type-title) !important;
+}
+/* Campos e controles adotam a mesma escala de conteúdo, sem zoom iOS. */
+@media (pointer: coarse) {
+  body :where(input,textarea,select) { font-size: 11px !important; }
+}
