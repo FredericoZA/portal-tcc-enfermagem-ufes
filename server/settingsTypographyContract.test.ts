@@ -8,7 +8,7 @@ test('Configurações acompanha a escala canônica do portal sem microtextos nos
   const tokens = read('src/styles/portal-tokens.css');
   const css = read('src/styles/portal-components.css');
   assert.match(tokens, /--portal-font-size:\s*14px/);
-  assert.match(tokens, /--portal-font-size-small:\s*12px/);
+  assert.match(tokens, /--portal-font-size-small:\s*11px/);
   assert.match(tokens, /--portal-editor-field-font-size:\s*var\(--portal-font-size-small\)/);
   assert.match(tokens, /--portal-editor-action-font-size:\s*var\(--portal-font-size-small\)/);
   assert.match(css, /\.portal-settings-workspace[^\n]*input:not/);
