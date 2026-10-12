@@ -202,7 +202,7 @@ const TemplateVariableControl: React.FC<{
         const key=normalizeVariableKey(variable.name||variable.id);
         const label=normalizeVariableKey(variable.label||'');
         return !query||key.includes(query)||label.includes(query);
-      }).slice(0,10)
+      }).filter((variable,index,all)=>all.findIndex(item=>item.id===variable.id)===index).slice(0,10)
     : [];
 
   const syncCursor=(target:HTMLInputElement|HTMLTextAreaElement)=>{
@@ -261,7 +261,7 @@ const FormQuestionEditor: React.FC<{
       <input aria-label="Rótulo do campo" value={question.label} onChange={(event) => onChange({ label: event.target.value })} className={inputClass} placeholder="Pergunta" />
       <select aria-label="Variável vinculada" value={question.fieldKey} onChange={event=>onChange({fieldKey:event.target.value,isReuseOfFieldKey:Boolean(event.target.value)})} className={inputClass}>
         <option value="">Selecione a variável…</option>
-        {variables.map(variable=><option key={variable.id} value={normalizeVariableKey(/^CAMPO_/i.test(variable.id)?variable.id:(variable.name||variable.id))}>{variable.label||variable.name}</option>)}
+        {variables.filter((variable,index,all)=>all.findIndex(item=>item.id===variable.id)===index).map(variable=><option key={variable.id} value={normalizeVariableKey(/^CAMPO_/i.test(variable.id)?variable.id:(variable.name||variable.id))}>{variable.label||variable.name}</option>)}
       </select>
       <select aria-label="Tipo do campo" value={question.fieldType} onChange={(event) => onChange({ fieldType: event.target.value as FormQuestionItem['fieldType'] })} className={inputClass}>{['text', 'textarea', 'date', 'datetime-local', 'email', 'number', 'select', 'radio', 'checkbox', 'file'].map((type) => <option key={type}>{type}</option>)}</select>
       <button type="button" onClick={onDelete} aria-label={`Excluir campo ${question.label}`} className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -1049,7 +1049,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     ...emailTemplates.map(item => ({ value:`email:${item.id}`, type:'email' as const, label:item.name, detail:'E-mail' })),
     ...formTemplates.map(item => ({ value:`form:${item.id}`, type:'form' as const, label:item.title, detail:'Formulário' })),
     { value:'action:internal', type:'action' as const, label:'Ação interna do sistema', detail:'Ação' },
-  ];
+  ].filter((item,index,all)=>all.findIndex(other=>other.value===item.value)===index);
   const workflowCatalogAction = (stage: WorkflowStageItem, value:string) => {
     if(value.startsWith('existing:'))return stage.actions.find(action=>action.id===value.slice('existing:'.length));
     const [type,refId]=value.split(':',2);
@@ -1600,7 +1600,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                             : <input disabled={!action} value={action?.recipientOrDetail||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder={action?'Detalhe opcional':'Selecione o item'}/>}</td>
                           <td className="border-r border-slate-300 px-2 py-2">
                             <div className="grid grid-cols-3 gap-1">
-                              <select disabled={!action} value={condition?.fieldKey||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{condition:event.target.value?{fieldKey:event.target.value,operator:condition?.operator||'EQUALS',value:condition?.value||''}:undefined})} className={inputClass}><option value="">Sempre executar</option>{matrixColumns.map(item=><option key={item.id} value={normalizeVariableKey(item.name)}>{item.label||item.name}</option>)}</select>
+                              <select disabled={!action} value={condition?.fieldKey||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{condition:event.target.value?{fieldKey:event.target.value,operator:condition?.operator||'EQUALS',value:condition?.value||''}:undefined})} className={inputClass}><option value="">Sempre executar</option>{matrixColumns.filter((item,index,all)=>all.findIndex(other=>other.id===item.id)===index).map(item=><option key={item.id} value={normalizeVariableKey(item.name)}>{item.label||item.name}</option>)}</select>
                               <select disabled={!action||!condition} value={condition?.operator||'EQUALS'} onChange={event=>action&&condition&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{condition:{...condition,operator:event.target.value as any}})} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">É verdadeiro</option></select>
                               <input disabled={!action||!condition||['NOT_EMPTY','IS_TRUE'].includes(condition.operator)} value={condition?.value||''} onChange={event=>action&&condition&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{condition:{...condition,value:event.target.value}})} className={inputClass} placeholder="Valor"/>
                             </div>

@@ -65,7 +65,9 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
   const workflowWorkspace = singlePane && current.id === 'workflow';
   const compactWorkspace = singlePane && ['identity', 'integrations'].includes(current.id);
   const fullBleed = current.fullBleed ?? (current.id === 'integrations' || current.id === 'models-documents' || sheetWorkspace);
-  const singlePaneContent = singlePane && React.isValidElement(current.content)
+  // Um elemento HTML nativo não aceita o atributo booleano "embedded".
+  const canEmbedComponent = singlePane && React.isValidElement(current.content) && typeof current.content.type !== 'string';
+  const singlePaneContent = canEmbedComponent
     ? React.cloneElement(current.content as React.ReactElement<EmbeddedCapableProps>, { embedded: true })
     : current.content;
 

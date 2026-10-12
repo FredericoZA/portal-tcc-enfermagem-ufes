@@ -130,3 +130,78 @@
     break-inside: avoid;
   }
 }
+
+/* ==========================================================================
+   ESCALA GLOBAL 18 / 14 / 11 — única regra de consolidação tipográfica.
+   O uso de especificidade explícita substitui classes Tailwind legadas sem
+   recorrer a prioridade artificial nem criar oitava folha CSS.
+   ========================================================================== */
+body {
+  font-size: var(--portal-type-content);
+}
+body #portal-app-root,
+body #portal-app-root *,
+body .portal-modal-backdrop,
+body .portal-modal-backdrop *,
+body .portal-table-settings-popover,
+body .portal-table-settings-popover *,
+body .portal-core-column-popup,
+body .portal-core-column-popup *,
+body .portal-search-popover,
+body .portal-search-popover *,
+body .portal-feedback-dialog,
+body .portal-feedback-dialog *,
+body dialog.portal-modal-surface,
+body dialog.portal-modal-surface * {
+  font-size: var(--portal-type-content);
+}
+/* Somente títulos principais: h3 dentro de cards é conteúdo e permanece 11px. */
+body #portal-app-root :is(h1, h2),
+body #portal-app-root [data-portal-sheet-title="true"] :is(h1, h2, h3),
+body #portal-app-root .portal-public-title-row :is(h1, h2, h3),
+body .portal-modal-backdrop :is(h1, h2, h3),
+body .portal-feedback-dialog :is(h1, h2, h3),
+body .portal-settings-workspace .portal-settings-workspace-title h2 {
+  font-size: var(--portal-type-title);
+  line-height: 1.15;
+}
+/* 14px apenas na navegação lateral. */
+body #portal-app-root #sidebar-nav,
+body #portal-app-root #sidebar-nav * {
+  font-size: var(--portal-type-navigation);
+}
+/* Espaçamentos administrativos de 4/8/12/16px sem modificar cabeçalhos,
+   espessura dos divisores ou alturas canônicas das linhas da planilha. */
+.portal-settings-top-grid,
+.portal-settings-column-grid {
+  gap: var(--portal-space-compact);
+}
+.portal-settings-control-card,
+.portal-settings-columns-card {
+  padding: var(--portal-space-compact);
+}
+.portal-settings-workspace-title,
+.portal-settings-workspace-actions {
+  gap: var(--portal-space-compact);
+}
+.portal-settings-workspace .portal-settings-single-pane :is(label, p, button, input, select, textarea),
+.portal-table-settings-popover :is(label, p, button, input, select, textarea) {
+  line-height: 1.35;
+}
+
+/* Evita zoom automático do Safari ao focar campos em telas estreitas.
+   Exceção técnica temporária APENAS no foco de iOS; em repouso toda a interface
+   mantém exatamente 18/14/11px. Não aumenta textos de outros elementos. */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 640px) {
+    body #portal-app-root :is(input, select, textarea):focus,
+    body .portal-modal-backdrop :is(input, select, textarea):focus,
+    body .portal-feedback-dialog :is(input, select, textarea):focus,
+    body .portal-table-settings-popover :is(input, select, textarea):focus,
+    body .portal-core-column-popup :is(input, select, textarea):focus,
+    body .portal-search-popover :is(input, select, textarea):focus,
+    body dialog.portal-modal-surface :is(input, select, textarea):focus {
+      font-size: 16px;
+    }
+  }
+}
