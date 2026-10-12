@@ -17,6 +17,7 @@ const report = {
   fixtureProcesses: 0,
   fixtureStatuses: [],
   screenshots: [],
+  typography: [],
   errors: [],
   warnings: [],
   scope: 'Dados fictícios locais; valida responsividade, overflow, navegação e perfis. Não valida provedores externos, zoom manual ou leitor de tela.'
@@ -97,7 +98,7 @@ try {
 
   const navigate = async (page, tab) => {
     await page.evaluate(target => window.dispatchEvent(new CustomEvent('portal:navigate', { detail: target })), tab);
-    await page.locator('main').waitFor({ state: 'visible' });
+    await page.locator('#portal-app-root main').first().waitFor({ state: 'visible' });
     const lazyFallback = page.getByText('Carregando conteúdo...', { exact: true });
     if (await lazyFallback.count()) {
       await lazyFallback.first().waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
@@ -106,7 +107,7 @@ try {
   };
 
   const capture = async (page, name) => {
-    await page.locator('main').waitFor({ state: 'visible' });
+    await page.locator('#portal-app-root main').first().waitFor({ state: 'visible' });
     const lazyFallback = page.getByText('Carregando conteúdo...', { exact: true });
     if (await lazyFallback.count()) {
       await lazyFallback.first().waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
@@ -116,6 +117,78 @@ try {
     if (await page.locator('vite-error-overlay').count()) throw new Error(`${name}: overlay de erro do Vite.`);
     const file = `${name}.png`;
     await page.screenshot({ path: path.join(output, file), fullPage: true });
+    // Inventário dos valores EFETIVOS de font-size no Chromium, por página e modal.
+    // Inclui os elementos visíveis com texto, não apenas as declarações do CSS.
+    const fonts = await page.evaluate(() => {
+      const histogram = {};
+      const outliers = [];
+      const selectors = 'h1,h2,h3,h4,h5,h6,p,label,button,a,td,th,span,strong,small,input,textarea,select,summary,[role="heading"]';
+      const insideSheet = (el) => Boolean(el.closest('.portal-spreadsheet-table,.portal-spreadsheet-scroll-host,.portal-calendar-day-cell,.portal-calendar-empty-cell'));
+      for (const el of document.querySelectorAll(selectors)) {
+        if (el.closest('script,style,[hidden],[aria-hidden="true"]') || !el.getClientRects().length) continue;
+        const style = getComputedStyle(el);
+        if (style.visibility === 'hidden' || style.display === 'none') continue;
+        const label = (el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 80);
+        if (!label) continue;
+        const px = Math.round(parseFloat(style.fontSize)*10)/10;
+        if (!Number.isFinite(px)) continue;
+        const region = el.closest('.portal-settings-workspace') ? 'configuracoes-popup' :
+          insideSheet(el) ? 'planilha-calendario' : 'portal-geral';
+        const key = `${region}:${px}px`;
+        histogram[key] = (histogram[key] || 0) + 1;
+        if (px < 10.5 && outliers.length < 24 && region !== 'planilha-calendario') {
+          outliers.push({
+            size: px, region, tag: el.tagName.toLowerCase(),
+            classes: String(el.getAttribute('class') || '').slice(0, 120),
+            sample: label
+          });
+        }
+      }
+      // A amostragem por tags acima monitora a regressão histórica.
+      // A contagem abaixo examina cada NÓ DE TEXTO visível, inclusive conteúdo
+      // direto em <div>, <li> e <article>, evitando contar pais e filhos duas vezes.
+      const textNodeHistogram = {};
+      const textNodeOutliers = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const parent = node.parentElement;
+        const sample = (node.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 80);
+        if (!parent || !sample || parent.closest('script,style,svg,noscript,[hidden],[aria-hidden="true"]')) continue;
+        if (!parent.getClientRects().length) continue;
+        const style = getComputedStyle(parent);
+        if (style.display === 'none' || style.visibility === 'hidden') continue;
+        const px = Math.round(parseFloat(style.fontSize)*10)/10;
+        if (!Number.isFinite(px)) continue;
+        const region = parent.closest('.portal-settings-workspace') ? 'configuracoes-popup' :
+          insideSheet(parent) ? 'planilha-calendario' : 'portal-geral';
+        const key = `${region}:${px}px`;
+        textNodeHistogram[key]=(textNodeHistogram[key]||0)+1;
+        if(px<10.5&&region!=='planilha-calendario'&&textNodeOutliers.length<16) {
+          textNodeOutliers.push({size:px,region,tag:parent.tagName.toLowerCase(),
+            classes:String(parent.getAttribute('class')||'').slice(0,120),sample});
+        }
+      }
+      return { histogram, outliers, textNodes:{histogram:textNodeHistogram,outliers:textNodeOutliers} };
+    });
+    report.typography.push({ screen: name, ...fonts });
+    // Contrato absoluto: todos os textos visíveis devem usar somente 11, 14 ou 18 px.
+    // Valida as fontes COMPUTADAS, inclusive quando o Tailwind ou um estilo inline
+    // tentar restabelecer dimensões históricas.
+    const offScale = Object.entries(fonts.textNodes.histogram)
+      .filter(([key]) => ![11, 14, 18].includes(Number(key.split(':').at(-1).replace('px', ''))));
+    if (offScale.length) report.errors.push(`${name}: fonte fora da escala 18/14/11 (${JSON.stringify(offScale)})`);
+    const navAndTitles = await page.evaluate(() => {
+      const visibleSizes = (selector) => Array.from(document.querySelectorAll(selector))
+        .filter(el => el.getClientRects().length > 0)
+        .map(el => Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10);
+      return {
+        sidebar: visibleSizes('#sidebar-nav button, #sidebar-nav button span'),
+        titles: visibleSizes('#portal-app-root h1, #portal-app-root h2, .portal-settings-workspace-title h2, [data-portal-sheet-title="true"] h3')
+      };
+    });
+    if (navAndTitles.sidebar.some(size => size !== 14)) report.errors.push(`${name}: navegação lateral fora de 14px`);
+    if (navAndTitles.titles.some(size => size !== 18)) report.errors.push(`${name}: títulos fora de 18px`);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2);
     const overflowElements = overflow ? await page.evaluate(() => {
       const viewport = innerWidth;
@@ -266,6 +339,9 @@ try {
           }
         }
         if (tab === 'indicadores') {
+          // O painel carrega métricas de forma assíncrona após montar a rota;
+          // aguardar os dados reais antes de aplicar o contrato visual.
+          await page.locator('#indicadores-publicos-page').getByText(/TCCs cadastrados/i).first().waitFor({state:'visible',timeout:8000}).catch(()=>{});
           const indicatorError = await page.getByText('Não foi possível carregar os indicadores.', { exact: true }).count();
           const metricText = await page.locator('#indicadores-publicos-page').innerText().catch(() => '');
           if (indicatorError || !/TCCs cadastrados/i.test(metricText)) {
@@ -391,6 +467,71 @@ try {
             report.errors.push(`master-configuracoes-${width}: hub de Configurações fora da arquitetura nativa (${JSON.stringify(settingsUi)}).`);
           }
         }
+        // Tipografia e geometria dos seis editores administrativos: confirmar estilos
+        // COMPUTADOS em navegador real, não somente strings das classes Tailwind.
+        if (tab === 'configuracoes' && width === 1440) {
+          for (const [title,slug] of [
+            ['Rodapé e Identidade','identidade'],
+            ['Integrações e Plataforma','integracoes'],
+            ['Documentos e Variáveis','documentos'],
+            ['E-mails','emails'],
+            ['Formulários','formularios'],
+            ['Fluxos','fluxos']
+          ]) {
+            const launcher=page.locator('#portal-settings-hub .portal-settings-launcher').filter({hasText:title}).first();
+            await launcher.click();
+            const modal=page.locator('.portal-settings-workspace');
+            await modal.waitFor({state:'visible'});
+            const visual=await page.evaluate(()=>{
+              const root=document.querySelector('.portal-settings-workspace');
+              const pane=root?.querySelector('.portal-settings-single-pane');
+              const fields=Array.from(root?.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),textarea,select')||[])
+                .filter(el=>el.getClientRects().length>0)
+                .map(el=>({tag:el.tagName,size:parseFloat(getComputedStyle(el).fontSize)}));
+              const trash=Array.from(root?.querySelectorAll('button:has(svg[class*="lucide-trash"])')||[])
+                .filter(el=>el.getClientRects().length>0)
+                .map(el=>({background:getComputedStyle(el).backgroundColor,icon:getComputedStyle(el.querySelector('svg')).color}));
+              return {width:root?.getBoundingClientRect().width||0,viewport:innerWidth,
+                bodyFont:pane?parseFloat(getComputedStyle(pane).fontSize):0,
+                heading:parseFloat(getComputedStyle(root.querySelector('.portal-settings-workspace-title h2')).fontSize),
+                fields,trash};
+            });
+            if(Math.abs(visual.bodyFont-11)>0.25||Math.abs(visual.heading-18)>0.25||
+              visual.fields.some(field=>Math.abs(field.size-11)>0.5)||
+              visual.width>visual.viewport-8){
+              report.errors.push(`config-${slug}: escala/viewport divergente (${JSON.stringify(visual).slice(0,750)})`);
+            }
+            if(visual.trash.some(item=>item.background!=='rgb(255, 255, 255)'||item.icon!=='rgb(220, 38, 38)')){
+              report.errors.push(`config-${slug}: exclusão fora do padrão branco/vermelho (${JSON.stringify(visual.trash)})`);
+            }
+            await capture(page,`master-config-modal-${slug}-1440`);
+            await page.keyboard.press('Escape');
+            await modal.waitFor({state:'hidden'});
+          }
+          for(const [title,slug] of [
+            ['Acesso','acesso'],
+            ['Registros de Assinatura','assinaturas'],
+            ['Registro de Logs','logs']
+          ]){
+            await page.locator('#portal-settings-hub .portal-settings-launcher').filter({hasText:title}).first().click();
+            const modal=page.locator('.portal-settings-workspace');
+            await modal.waitFor({state:'visible'});
+            const sheet=await page.evaluate(()=>{
+              const root=document.querySelector('.portal-settings-workspace');
+              const table=root?.querySelector('.portal-spreadsheet-table');
+              return {sheet:root?.getAttribute('data-portal-sheet-workspace'),
+                width:root?.getBoundingClientRect().width||0,viewport:innerWidth,
+                font:table?parseFloat(getComputedStyle(table).fontSize):null};
+            });
+            if(sheet.sheet!=='true'||sheet.width>sheet.viewport-8||
+              (sheet.font!==null&&Math.abs(sheet.font-11)>0.5)){
+              report.errors.push(`config-${slug}: planilha deve manter 11px e respeitar o viewport (${JSON.stringify(sheet)})`);
+            }
+            await capture(page,`master-config-modal-${slug}-1440`);
+            await page.keyboard.press('Escape');
+            await modal.waitFor({state:'hidden'});
+          }
+        }
         if (tab === 'fluxo-tcc' && width >= 1440) {
           const fluxoGeometry = await page.evaluate(() => {
             const root = document.querySelector('#fluxo-tcc-page')?.getBoundingClientRect();
@@ -465,6 +606,13 @@ try {
     });
   }
   if (dataDir) await rm(dataDir, { recursive: true, force: true });
+  await writeFile(path.join(output, 'typography-audit.json'), JSON.stringify(report.typography, null, 2));
+  const allFonts = {};
+  for (const screen of report.typography) for (const [size,count] of Object.entries(screen.histogram)) allFonts[size]=(allFonts[size]||0)+count;
+  const allTextNodes={};
+  for(const screen of report.typography) for(const [size,count] of Object.entries(screen.textNodes?.histogram||{})) allTextNodes[size]=(allTextNodes[size]||0)+count;
+  console.log('[TYPOGRAPHY_AUDIT]', JSON.stringify({ screens:report.typography.length, histogram:allFonts, textNodeHistogram:allTextNodes,
+    sampleOutliers:report.typography.filter(screen=>screen.outliers.length).slice(0,12).map(screen=>({screen:screen.screen,outliers:screen.outliers.slice(0,3)})) }));
   await writeFile(path.join(output, 'resultado.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
 }
