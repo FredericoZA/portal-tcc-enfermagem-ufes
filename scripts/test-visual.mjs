@@ -172,6 +172,22 @@ try {
       return { histogram, outliers, textNodes:{histogram:textNodeHistogram,outliers:textNodeOutliers} };
     });
     report.typography.push({ screen: name, ...fonts });
+    if (name === 'master-inicio-320') {
+      const dialogFonts=await page.evaluate(()=>{
+        const dialog=document.createElement('dialog');
+        dialog.className='portal-feedback-dialog portal-modal-surface';
+        dialog.style.display='block';
+        dialog.innerHTML='<header><h2>Confirmação</h2></header><p>Mensagem de teste</p>';
+        document.body.appendChild(dialog);
+        const heading=parseFloat(getComputedStyle(dialog.querySelector('h2')).fontSize);
+        const message=parseFloat(getComputedStyle(dialog.querySelector('p')).fontSize);
+        dialog.remove();
+        return {heading,message};
+      });
+      if(dialogFonts.heading!==18||dialogFonts.message!==11)
+        report.errors.push(`Diálogo nativo fora da escala: ${JSON.stringify(dialogFonts)}`);
+    }
+
     // Contrato absoluto: todos os textos visíveis devem usar somente 11, 14 ou 18 px.
     // Valida as fontes COMPUTADAS, inclusive quando o Tailwind ou um estilo inline
     // tentar restabelecer dimensões históricas.
