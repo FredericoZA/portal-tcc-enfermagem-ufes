@@ -1,0 +1,54 @@
+/* Portal TCC — única escala visual (18 / 14 / 11px).
+   Importado por último: neutraliza fontes históricas do Tailwind, estilos inline
+   e regras legadas em pop-ups portaledos, sem reescrever layouts ou dados. */
+:root {
+  --portal-type-title: 18px;
+  --portal-type-navigation: 14px;
+  --portal-type-content: 11px;
+  --portal-space-tight: 4px;
+  --portal-space-compact: 8px;
+  --portal-space-regular: 12px;
+  --portal-space-panel: 16px;
+}
+
+/* Texto comum: textos de cartões, indicadores, ações, tabelas, formulários,
+   menus contextuais, filtros, etiquetas, links e controles em qualquer tela. */
+body,
+body * {
+  font-size: var(--portal-type-content) !important;
+}
+
+/* Hierarquia única de títulos, inclusive títulos de planilhas e workspaces. */
+body :is(h1, h2),
+body [data-portal-sheet-title="true"] :is(h1, h2, h3),
+body .portal-public-title-row :is(h1, h2, h3),
+body .portal-settings-workspace-title h2,
+body .portal-settings-title-bar :is(h1, h2, h3) {
+  font-size: var(--portal-type-title) !important;
+  line-height: 1.15;
+}
+
+/* Navegação lateral, somente os rótulos navegáveis — não campos nem rodapé. */
+body #sidebar-nav,
+body #sidebar-nav * {
+  font-size: var(--portal-type-navigation) !important;
+}
+
+/* Espaçamentos reutilizáveis, sem alterar a geometria fixa de cabeçalhos,
+   a altura das linhas de planilha nem a responsividade já homologada. */
+.portal-settings-top-grid,
+.portal-settings-column-grid {
+  gap: var(--portal-space-compact);
+}
+.portal-settings-control-card,
+.portal-settings-columns-card {
+  padding: var(--portal-space-compact);
+}
+.portal-settings-workspace-title,
+.portal-settings-workspace-actions {
+  gap: var(--portal-space-compact);
+}
+.portal-settings-workspace .portal-settings-single-pane :is(label, p, button, input, select, textarea),
+.portal-table-settings-popover :is(label, p, button, input, select, textarea) {
+  line-height: 1.35;
+}
