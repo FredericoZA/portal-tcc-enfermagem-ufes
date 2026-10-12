@@ -130,3 +130,57 @@
     break-inside: avoid;
   }
 }
+
+
+/* ==========================================================================
+   ESCALA GLOBAL 18 / 14 / 11 — única regra de consolidação tipográfica.
+   O uso de especificidade explícita substitui classes Tailwind legadas sem
+   recorrer a !important nem criar oitava folha CSS.
+   ========================================================================== */
+body {
+  font-size: var(--portal-type-content);
+}
+body #portal-app-root,
+body #portal-app-root *,
+body .portal-modal-backdrop,
+body .portal-modal-backdrop *,
+body .portal-table-settings-popover,
+body .portal-table-settings-popover *,
+body .portal-core-column-popup,
+body .portal-core-column-popup *,
+body .portal-search-popover,
+body .portal-search-popover * {
+  font-size: var(--portal-type-content);
+}
+/* Títulos principais, não os rótulos de cada célula. */
+body #portal-app-root :is(h1, h2),
+body #portal-app-root [data-portal-sheet-title="true"] :is(h1, h2, h3),
+body #portal-app-root .portal-public-title-row :is(h1, h2, h3),
+body .portal-modal-backdrop :is(h1, h2),
+body .portal-settings-workspace .portal-settings-workspace-title h2 {
+  font-size: var(--portal-type-title);
+  line-height: 1.15;
+}
+/* 14px apenas na navegação lateral. */
+body #portal-app-root #sidebar-nav,
+body #portal-app-root #sidebar-nav * {
+  font-size: var(--portal-type-navigation);
+}
+/* Espaçamentos administrativos de 4/8/12/16px sem modificar cabeçalhos,
+   espessura dos divisores ou alturas canônicas das linhas da planilha. */
+.portal-settings-top-grid,
+.portal-settings-column-grid {
+  gap: var(--portal-space-compact);
+}
+.portal-settings-control-card,
+.portal-settings-columns-card {
+  padding: var(--portal-space-compact);
+}
+.portal-settings-workspace-title,
+.portal-settings-workspace-actions {
+  gap: var(--portal-space-compact);
+}
+.portal-settings-workspace .portal-settings-single-pane :is(label, p, button, input, select, textarea),
+.portal-table-settings-popover :is(label, p, button, input, select, textarea) {
+  line-height: 1.35;
+}
