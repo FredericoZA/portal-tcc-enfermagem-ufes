@@ -182,6 +182,7 @@ assert.match(visualQa, /overflowElements/);
 assert.match(visualQa, /forcedColors: 'active'/);
 assert.match(visualQa, /page\.keyboard\.press\('Tab'\)/);
 
-assert.equal(vercel.git?.deploymentEnabled?.['work/finalizacao-portal-tcc'], false, 'A branch de trabalho não pode disparar deployment na Vercel.');
+assert.equal(vercel.git?.deploymentEnabled?.['**'], false, 'As branches de trabalho não podem disparar previews automáticos na Vercel.');
+assert.equal(vercel.git?.deploymentEnabled?.main, true, 'A branch principal deve manter a publicação automática na Vercel.');
 
 console.log('Contrato da finalização do backlog aprovado.');
