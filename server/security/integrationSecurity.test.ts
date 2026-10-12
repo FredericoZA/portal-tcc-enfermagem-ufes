@@ -22,6 +22,8 @@ const MANAGED_ENV = [
   'APP_URL',
   'PORTAL_PUBLIC_URL',
   'ASTEN_INTEGRATION_ENABLED',
+  'ASTEN_PILOT_APPROVED',
+  'ASTEN_PRODUCTION_RELEASE_APPROVED',
   'ASTEN_ALLOW_STORED_TOKEN',
   'ASTEN_API_KEY',
   'ASTEN_SESSION_ENCRYPTION_KEY',
@@ -71,6 +73,19 @@ async function withCleanEnvironmentAsync(run: () => Promise<void>): Promise<void
   try { await run(); } finally { restoreManagedEnvironment(previous); }
 }
 
+test('Asten em produção não envia mesmo com flags antigas sem autorização específica de release', async () => {
+  await withCleanEnvironmentAsync(async () => {
+    process.env.NODE_ENV='production';
+    process.env.VERCEL='1';
+    process.env.ASTEN_INTEGRATION_ENABLED='true';
+    process.env.ASTEN_PILOT_APPROVED='true';
+    assert.equal(getAstenIntegrationStatus().enabled,false);
+    await assert.rejects(callAsten('inserirEnvelope',{},'token-ficticio-para-contrato'),/bloqueada/i);
+    process.env.ASTEN_PRODUCTION_RELEASE_APPROVED='true';
+    assert.equal(getAstenIntegrationStatus().enabled,true);
+  });
+});
+
 test('Asten bloqueia despacho e criação de envelope sem callback HTTPS autenticado', () => {
   withCleanEnvironment(() => {
     process.env.ASTEN_INTEGRATION_ENABLED = 'true';
@@ -96,6 +111,8 @@ test('Asten aceita somente callback HTTPS e segredo de webhook forte', () => {
     process.env.PORTAL_PUBLIC_URL = 'https://portal.example';
     process.env.ASTEN_CALLBACK_URL = 'https://portal.example/api/integrations/asten/webhook';
     process.env.ASTEN_WEBHOOK_SECRET = secret;
+    process.env.ASTEN_REQUIRE_CODE='false';
+    process.env.ASTEN_AUTHENTICATION_OPTION='2';
     assert.equal(getAstenSecurityPreflight().callbackConfigured, true);
     assert.equal(safeCompareWebhookSecret(secret), true);
     assert.equal(safeCompareWebhookSecret('fraco'), false);
@@ -145,10 +162,26 @@ test('Asten exige login e segredo de webhook exclusivo dos demais segredos', () 
     assert.equal(preflight.callbackConfigured, false);
 
     process.env.ASTEN_REQUIRE_LOGIN = 'true';
+    process.env.ASTEN_REQUIRE_CODE='false';
+    process.env.ASTEN_AUTHENTICATION_OPTION='2';
     assert.equal(getAstenSecurityPreflight().callbackConfigured, true);
+    process.env.ASTEN_AUTHENTICATION_OPTION='4';
+    assert.equal(getAstenSecurityPreflight().callbackConfigured,false);
+    process.env.ASTEN_AUTHENTICATION_OPTION='2';
+    process.env.ASTEN_REQUIRE_CODE='true';
+    assert.equal(getAstenSecurityPreflight().callbackConfigured,false);
   });
 });
 
+
+test('Asten não confunde HTTP 200 com operação rejeitada pelo provedor', async()=>{
+  await withCleanEnvironmentAsync(async()=>{
+    const originalFetch=globalThis.fetch;
+    (globalThis as any).fetch=async()=>new Response(JSON.stringify({response:{data:{listaAvisos:{aviso:{tipo:'E',mensagem:'Permissão negada'}}}}}),{status:200,headers:{'content-type':'application/json'}});
+    try{await assert.rejects(callAsten('getIdentificador',{},'token-de-teste-comprido-1234'),/Permissão negada/);}
+    finally{globalThis.fetch=originalFetch;}
+  });
+});
 
 test('Asten rejeita credencial com caracteres de controle antes de acessar a rede', async () => {
   await withCleanEnvironmentAsync(async () => {
