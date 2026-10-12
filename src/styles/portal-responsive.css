@@ -135,7 +135,7 @@
 /* ==========================================================================
    ESCALA GLOBAL 18 / 14 / 11 — única regra de consolidação tipográfica.
    O uso de especificidade explícita substitui classes Tailwind legadas sem
-   recorrer a !important nem criar oitava folha CSS.
+   recorrer a prioridade artificial nem criar oitava folha CSS.
    ========================================================================== */
 body {
   font-size: var(--portal-type-content);
