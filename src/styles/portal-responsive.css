@@ -26,7 +26,7 @@
     right: -17px;
     transform: translateY(-50%);
     color: var(--portal-brand-action);
-    font-size: 19px;
+    font-size: var(--portal-type-title);
     font-weight: 900;
   }
 
@@ -39,7 +39,7 @@
     left: -17px;
     transform: translateY(-50%);
     color: var(--portal-brand-action);
-    font-size: 19px;
+    font-size: var(--portal-type-title);
     font-weight: 900;
   }
 
@@ -50,7 +50,7 @@
     left: 50%;
     transform: translateX(-50%);
     color: var(--portal-brand-action);
-    font-size: 21px;
+    font-size: var(--portal-type-title);
     font-weight: 900;
   }
 }
