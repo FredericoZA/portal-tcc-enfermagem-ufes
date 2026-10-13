@@ -70,3 +70,11 @@ test('não confia na primeira de duas variáveis com o mesmo nome',()=>{
     assert.equal(f.exec().status,2);
   }finally{f.cleanup();}
 });
+
+test('recusa declarações exportadas de credenciais externas mesmo com valor vazio',()=>{
+  const f=fixture();
+  try{
+    writeFileSync(join(f.cwd,'.env'),'export SUPABASE_SECRET_KEY=""\n');
+    assert.equal(f.exec().status,2);
+  }finally{f.cleanup();}
+});
