@@ -47,3 +47,15 @@ test('não sobrescreve segredos existentes e recusa credenciais de produção',(
     assert.equal(readFileSync(join(f.cwd,'.env.local'),'utf8'),saved);
   }finally{f.cleanup();}
 });
+
+
+test('não permite credenciais externas em .env nem herdadas pelo processo',()=>{
+  const f=fixture();
+  try{
+    writeFileSync(join(f.cwd,'.env'),'SUPABASE_SECRET_KEY="conta-remota"\n');
+    const blocked=f.exec();assert.equal(blocked.status,2);
+    rmSync(join(f.cwd,'.env'));
+    const inherited=spawnSync(process.execPath,[entry],{cwd:f.cwd,encoding:'utf8',timeout:10_000,env:{...process.env,PORTAL_PERSISTENCE_PROVIDER:'supabase'}});
+    assert.equal(inherited.status,2);
+  }finally{f.cleanup();}
+});

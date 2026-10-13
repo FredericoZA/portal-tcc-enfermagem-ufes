@@ -49,8 +49,8 @@ if (!(await exists('.env.local'))) {
 let localEnv = await readFile('.env.local', 'utf8');
 const configLines = localEnv.split(/\r?\n/);
 
-function readConfigValue(name) {
-  const line = configLines.find((item) => new RegExp('^\\s*' + name + '\\s*=').test(item));
+function readConfigValue(name, lines = configLines) {
+  const line = lines.find((item) => new RegExp('^\\s*' + name + '\\s*=').test(item));
   if (!line) return '';
   const value = line.slice(line.indexOf('=') + 1).trim();
   if (value.startsWith('"')) return value.slice(1).split('"')[0];
@@ -60,9 +60,16 @@ function readConfigValue(name) {
 
 // O comando local usa dados fictícios e não aceita credenciais de produção.
 // Integrações externas exigem um ambiente de homologação separado e intencional.
-if (readConfigValue('PORTAL_PERSISTENCE_PROVIDER').toLowerCase() === 'supabase' ||
-    readConfigValue('SUPABASE_SECRET_KEY') || readConfigValue('GOOGLE_OAUTH_CLIENT_SECRET') ||
-    readConfigValue('ASTEN_API_KEY')) {
+const fallbackEnvLines = (await exists('.env')) ? (await readFile('.env', 'utf8')).split(/\r?\n/) : [];
+const containsExternalServices = (lines) =>
+  readConfigValue('PORTAL_PERSISTENCE_PROVIDER', lines).toLowerCase() === 'supabase' ||
+  Boolean(readConfigValue('SUPABASE_SECRET_KEY', lines) ||
+          readConfigValue('SUPABASE_SERVICE_ROLE_KEY', lines) ||
+          readConfigValue('GOOGLE_OAUTH_CLIENT_SECRET', lines) ||
+          readConfigValue('ASTEN_API_KEY', lines));
+if (containsExternalServices(configLines) || containsExternalServices(fallbackEnvLines) ||
+    process.env.PORTAL_PERSISTENCE_PROVIDER?.toLowerCase() === 'supabase' ||
+    ['SUPABASE_SECRET_KEY','SUPABASE_SERVICE_ROLE_KEY','GOOGLE_OAUTH_CLIENT_SECRET','ASTEN_API_KEY'].some(key => Boolean(process.env[key]))) {
   console.error('[Portal TCC] .env.local contém configuração de provedores externos. O comando local seguro não pode usar credenciais reais. Configure um ambiente de homologação separado e execute manualmente npm run dev após avaliação técnica.');
   process.exit(2);
 }
