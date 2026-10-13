@@ -33,7 +33,7 @@ test('API Asten resolve Usuario.id e recusa repositório não autorizado',()=>{
   assert.deepEqual(parseAstenAccountAndRepository(identity,repos,undefined),{identifier:'3',repositoryId:113});
   assert.throws(()=>parseAstenAccountAndRepository(identity,repos,'44'),/não pertence/);
   assert.throws(()=>parseAstenAccountAndRepository({},repos,'113'),/Usuario.id/);
-  assert.throws(()=>parseAstenAccountAndRepository(identity,[...repos,{id:'114',Usuario:{id:'3'},isProprietario:'S'}],undefined),/ASTEN_REPOSITORY_ID/);
+  assert.throws(()=>parseAstenAccountAndRepository(identity,[...repos,{id:'114',Usuario:{id:'3'},isProprietario:'S'}],undefined),/Selecione um no Portal/);
 });
 test('Asten não encaminha documentos para ID de envelope inválido',()=>{
   assert.deepEqual(extractAstenEnvelopeIdentity({data:{idEnvelope:345}}),{id:'345'});

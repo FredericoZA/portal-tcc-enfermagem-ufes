@@ -22,14 +22,14 @@
 4. Quando o responsável técnico confirmar o ambiente preparado: marque **Ativar API de Integração → Sim**, clique **Salvar** e localize o **Token** que a Asten gerar.
 5. Não divulgue o token. Não cole o token em URL, arquivo, print, chat, e-mail ou campo de configuração pública.
 6. **Deixe a “URL de Callback” global da Asten em branco inicialmente.** O Portal envia callback e cabeçalho de autenticação por envelope em `inserirEnvelope`; uma URL global preenchida sem o segredo personalizado será recusada (401). Não marque “Forçar JSON” automaticamente; a API já é acessada com cabeçalhos JSON por código.
-7. Se houver mais de um repositório disponível, o responsável técnico escolherá o ID autorizado e o guardará no ambiente de execução como `ASTEN_REPOSITORY_ID`, sem adivinhar.
+7. Na versão com seletor, o Portal consulta repositórios da conta e permite selecionar aquele que possui permissão para criar envelopes. Não é necessário inserir um ID manualmente se a Asten devolver locais autorizados. `ASTEN_REPOSITORY_ID` continua sendo um bloqueio opcional para instalações que exijam um repositório fixo; quando definido, não pode ser substituído pela interface.
 
 ## 2 — No Portal TCC (você, conta Master)
 1. Abra o site oficial e acesse **Configurações → Integrações e Plataforma → Asten**.
 2. Cole o token **somente** no campo **Token da API Asten**.
-3. Clique **Validar e conectar**. O Portal consulta a Asten, valida identidade e repositório e armazena o token criptografado no servidor. O campo limpa o token após sucesso.
+3. Clique **Validar e conectar**. Se a Asten informar **mais de um repositório autorizado**, o Portal mostrará uma lista. Escolha o repositório institucional e clique novamente em **Validar e conectar**. Com um único repositório autorizado, a seleção é automática. O token só é armazenado criptografado após a validação final; o campo limpa após sucesso.
 4. Resultado esperado: conta validada; **envio: bloqueado** até fase piloto. Uma mensagem de pendência no status não significa que o token falhou: o despacho continua desligado de propósito.
-5. Se retornar erro de repositório, não mexa nas permissões por tentativa e erro: comunique apenas o texto do erro **sem token**. O técnico escolherá a origem adequada.
+5. Se não houver repositório elegível, crie ou solicite um repositório Asten com autorização para criar envelopes. Se um repositório existente não aparecer, confirme as permissões da conta Asten; nunca escolha um ID inventado nem envie o token por mensagens.
 6. Se retornar erro de conta/token, verificar se o botão Salvar foi confirmado na Asten e se a API está prevista no plano.
 
 ## 3 — Piloto controlado (responsável técnico + Master)
@@ -46,3 +46,18 @@
 **Somente após aceite formal do Master e responsável institucional**, e depois de aprovar explicitamente as três flags `ASTEN_INTEGRATION_ENABLED`, `ASTEN_PILOT_APPROVED` e `ASTEN_PRODUCTION_RELEASE_APPROVED` em escopo de produção. com metodologia de identificação, custos, plano, prazo máximo de sincronização, política de privacidade e contingência definidos. Realizar backup verificável, registrar mudança em GitHub, habilitar em janela controlada, monitorar logs e preparar rollback que **bloqueia novos envios**, sem apagar envelopes já existentes.
 
 **Nunca:** colocar `ASTEN_WEBHOOK_SECRET`, API token, `CRON_SECRET` ou chave de criptografia em repositório, print ou conversa. Não ativar assinatura real só para verificar se o botão funciona.
+
+## Organização proposta dos documentos na Asten (ainda depende de validar a API de pastas)
+
+**Um repositório:** `Portal TCC | Enfermagem UFES`.
+
+Pastas sugeridas **dentro do repositório**:
+
+- `01 — Atas de defesa`
+- `02 — Termos de autorização de publicação`
+- `03 — Declarações de banca`
+- `90 — Homologação (documentos fictícios)`
+
+A pasta de homologação deve ser restrita e não conter documentos de alunos. Não criar duplicatas por ano ou aluno antes de definir a política de retenção e pesquisa. O sistema atualmente especifica o **ID do repositório** ao inserir o envelope; o envio automático para uma pasta específica **NÃO está implementado nem homologado**. Até existir suporte confirmado na API, os envelopes poderão ficar na raiz desse repositório e ser organizados manualmente no painel da Asten. O registro institucional assinado continua sendo arquivado no Google Drive privado, com organização por processo/tipo documental e identificadores rastreáveis.
+
+Manual oficial Asten sobre repositórios e pastas: https://ajuda.astenassinatura.com.br/article/62-locais-de-armazenamento .

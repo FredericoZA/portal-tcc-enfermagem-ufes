@@ -14,7 +14,10 @@ test('vincular a conta Asten independe de habilitar envio de documentos',()=>{
   assert.match(server,/allowSignatureRetry\('cron@portal\.local','asten-cron-reconcile'\)/);
   assert.match(server,/allowSignatureRetry\(identity\.email,'asten-webhook-batch'\)/);
   assert.match(server,/allowSignatureRetry\(identity\.email,req\.params\.id\)/);
-  assert.match(panel,/disabled=\{working === 'asten' \|\| !token\.trim\(\)\}/);
+  assert.match(panel,/disabled=\{working === 'asten' \|\| !token\.trim\(\)/);
+  assert.match(panel,/astenRepositories\.length>1/);
+  assert.match(server,/app\.post\('\/api\/integrations\/asten\/repositories',requireAuthenticated,requireAdministrator/);
+  assert.match(server,/allowSignatureRetry\(identity\.email,'asten-repository-list'\)/);
   assert.doesNotMatch(panel,/disabled=\{working === 'asten' \|\| !token\.trim\(\) \|\| !status\?\.asten\.enabled\}/);
   assert.match(panel,/envio permanece bloqueado até a homologação e liberação/);
 });

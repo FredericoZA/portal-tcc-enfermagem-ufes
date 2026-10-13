@@ -22,6 +22,8 @@ function State({ ok, label }: { ok: boolean; label: string }) {
 export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = ({ isMaster }) => {
   const [status, setStatus] = useState<IntegrationState | null>(null);
   const [token, setToken] = useState('');
+  const [astenRepositories, setAstenRepositories] = useState<Array<{id:number;name:string}>>([]);
+  const [astenRepositoryId, setAstenRepositoryId] = useState('');
   const [working, setWorking] = useState('');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [homologation, setHomologation] = useState<Array<{ id: string; label: string; status: 'PASS' | 'FAIL' | 'PENDING'; message: string }>>([]);
@@ -39,9 +41,26 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
 
   const connectAsten = async () => {
     setWorking('asten'); setMessage(null);
-    try { await apiClient.connectAsten(token.trim()); setToken(''); setMessage({ ok: true, text: 'Conta Asten validada; credencial protegida no servidor. O envio permanece bloqueado até a homologação e liberação.' }); await load(); }
-    catch (error) { setMessage({ ok: false, text: error instanceof Error ? error.message : 'Não foi possível validar a Asten.' }); }
-    finally { setWorking(''); }
+    try {
+      let repositoryId=astenRepositoryId ? Number(astenRepositoryId) : undefined;
+      if(!astenRepositories.length){
+        const result=await apiClient.listAstenRepositories(token.trim());
+        setAstenRepositories(result.repositories);
+        if(!result.repositories.length)throw new Error('A conta não possui repositório autorizado para criar envelopes. Crie um na Asten ou peça permissão ao proprietário.');
+        if(result.repositories.length>1){
+          setMessage({ok:false,text:'A Asten encontrou vários repositórios autorizados. Selecione abaixo aquele que será usado pelo Portal e clique novamente em Validar e conectar.'});
+          return;
+        }
+        repositoryId=result.repositories[0].id;
+        setAstenRepositoryId(String(repositoryId));
+      }
+      if(!repositoryId)throw new Error('Selecione o repositório institucional da Asten.');
+      await apiClient.connectAsten(token.trim(),repositoryId);
+      setToken('');setAstenRepositories([]);setAstenRepositoryId('');
+      setMessage({ ok: true, text: 'Conta Asten validada e repositório autorizado conectado. O envio permanece bloqueado até a homologação e liberação.' });
+      await load();
+    }catch(error){setMessage({ok:false,text:error instanceof Error?error.message:'Não foi possível validar a Asten.'});}
+    finally{setWorking('');}
   };
   const testSupabase = async () => {
     setWorking('supabase'); setMessage(null);
@@ -78,7 +97,7 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
     <div className="grid content-start gap-[5px] bg-[var(--portal-surface-page)] p-0 md:grid-cols-2 lg:grid-cols-4">
         <section className={`${compactCard} lg:col-span-2`} aria-labelledby="asten-integration-title">
           <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-1.5"><KeyRound className="h-4 w-4 shrink-0 text-[var(--portal-brand-action)]"/><h4 id="asten-integration-title" className="truncate text-[10px] font-black uppercase text-slate-900">Asten</h4></div><State ok={astenReady} label={astenReady ? 'Pronta' : status?.asten.configured ? 'Conectada' : 'Pendente'}/></div>
-          <div className="mt-2 grid gap-2"><input aria-label="Token da API Asten" type="password" autoComplete="new-password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="Token da API Asten" className={input}/><button type="button" onClick={connectAsten} disabled={working === 'asten' || !token.trim()} className={action}>{working === 'asten' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ShieldCheck className="h-3.5 w-3.5"/>}Validar e conectar</button></div>
+          <div className="mt-2 grid gap-2"><input aria-label="Token da API Asten" type="password" autoComplete="new-password" value={token} onChange={(event) => {setToken(event.target.value);setAstenRepositories([]);setAstenRepositoryId('');}} placeholder="Token da API Asten" className={input}/>{astenRepositories.length>1&&<label className="grid gap-1 text-[11px] font-semibold text-slate-800">Repositório institucional<select aria-label="Repositório Asten" value={astenRepositoryId} onChange={(event)=>setAstenRepositoryId(event.target.value)} className={input}><option value="">Selecione o repositório</option>{astenRepositories.map(repository=><option key={repository.id} value={repository.id}>{repository.name} (ID {repository.id})</option>)}</select></label>}<button type="button" onClick={connectAsten} disabled={working === 'asten' || !token.trim() || (astenRepositories.length>1&&!astenRepositoryId)} className={action}>{working === 'asten' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ShieldCheck className="h-3.5 w-3.5"/>}Validar e conectar</button></div>
           <div className="mt-1.5 flex items-center gap-1.5 text-[8.5px] text-slate-700"><span className="min-w-0 flex-1">Callback: <strong>{status?.asten.callbackConfigured?'configurado':'pendente'}</strong> · envio: <strong>{status?.asten.dispatchEnabled?'habilitado':'bloqueado'}</strong></span>{status?.asten.callbackUrl&&<button type="button" title="Copiar callback" onClick={()=>void navigator.clipboard?.writeText(status.asten.callbackUrl||'')} className="rounded border border-slate-300 bg-white p-1 text-slate-700"><Copy className="h-3 w-3"/></button>}</div>
         </section>
 

@@ -66,7 +66,7 @@ import {
 } from './src/services/serverDriveSync';
 import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngine';
 import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie } from './server/security/firebaseAuth';
-import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSecurityPreflight, getPersistentAstenConnection, getPersistentAstenStatus, safeCompareWebhookSecret } from './server/integrations/asten';
+import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, listAstenConnectableRepositories, extractAstenEnvelopeIdentity, getAstenSecurityPreflight, getPersistentAstenConnection, getPersistentAstenStatus, safeCompareWebhookSecret } from './server/integrations/asten';
 import { appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, getSupabaseRuntimeStatus, loadPortalRuntimeState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
@@ -3005,9 +3005,20 @@ export async function createPortalApp() {
     persistPortalState();res.json(report);
   });
   app.post('/api/integrations/asten/session',requireAuthenticated,requireAdministrator,(_req,res)=>res.status(410).json({error:'A sessão temporária legada foi desativada. Configure a Asten uma vez e use o botão do documento.',code:'LEGACY_ASTEN_SESSION_DISABLED'}));
+  // A consulta é somente leitura, exige Master/reautenticação e não persiste o token.
+  app.post('/api/integrations/asten/repositories',requireAuthenticated,requireAdministrator,async(req,res)=>{
+    const identity=getPortalIdentity(req)!;
+    if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Entre novamente antes de consultar a conta Asten.'});
+    if(!allowSignatureRetry(identity.email,'asten-repository-list'))return res.status(429).json({error:'Muitas consultas Asten. Aguarde um minuto.'});
+    try{res.setHeader('Cache-Control','private, no-store');res.json(await listAstenConnectableRepositories(String(req.body?.token||'')));}
+    catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível consultar os repositórios Asten.'});}
+  });
   app.post('/api/integrations/asten/connect',requireAuthenticated,requireAdministrator,async(req,res)=>{
     const identity=getPortalIdentity(req)!;if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Entre novamente antes de alterar a integração Asten.'});
-    try{const result=await connectPersistentAsten(String(req.body?.token||''));auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'CONEXAO_ASTEN',entityType:'integration',entityId:'asten',after:{identifier:result.identifier,repositoryId:result.repositoryId},timestamp:new Date().toISOString()});persistPortalState();res.json(await getPersistentAstenStatus());}catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível conectar a conta Asten.'});}
+    if(!allowSignatureRetry(identity.email,'asten-repository-connect'))return res.status(429).json({error:'Muitas tentativas de conexão. Aguarde um minuto.'});
+    const selected=req.body?.repositoryId;
+    if(selected!==undefined&&(!Number.isSafeInteger(selected)||selected<=0))return res.status(400).json({error:'Escolha um repositório Asten válido.'});
+    try{const result=await connectPersistentAsten(String(req.body?.token||''),selected);auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'CONEXAO_ASTEN',entityType:'integration',entityId:'asten',after:{identifier:result.identifier,repositoryId:result.repositoryId},timestamp:new Date().toISOString()});persistPortalState();res.json(await getPersistentAstenStatus());}catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível conectar a conta Asten.'});}
   });
   app.get('/api/signatures/jobs',requireAuthenticated,requireAdministrator,(_req,res)=>res.json(signatureJobsStore.slice().reverse().map(publicSignatureJob)));
   app.get('/api/admin/asten/dashboard',requireAuthenticated,requireAdministrator,(_req,res)=>res.json(buildAstenOperationalDashboard({jobs:signatureJobsStore,events:astenWebhookEventsStore})));
