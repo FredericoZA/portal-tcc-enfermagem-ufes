@@ -33,8 +33,8 @@ test('conta com um único repositório pode conectar sem seleção; sem permiss�
 });
 
 test('nomes retornados para seleção são curtos e não incluem controles',()=>{
-  const catalog=listAuthorizedAstenRepositories(identity,[{id:10,nome:'Pasta\\nProibida'.repeat(50),Usuario:{id:41},isProprietario:'S'}]);
+  const catalog=listAuthorizedAstenRepositories(identity,[{id:10,nome:'Pasta\nProibida'.repeat(50),Usuario:{id:41},isProprietario:'S'}]);
   assert.equal(catalog.repositories.length,1);
   assert.ok(catalog.repositories[0].name.length<=120);
-  assert.doesNotMatch(catalog.repositories[0].name,/\\n/);
+  assert.doesNotMatch(catalog.repositories[0].name,/\n/);
 });
