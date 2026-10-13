@@ -209,7 +209,10 @@ export async function callAsten(service: Service, params: Record<string, unknown
   } finally { clearTimeout(timer); }
 }
 
-export function parseAstenAccountAndRepository(identity: unknown, repositories: unknown, configuredRepositoryId: string | undefined): {identifier:string;repositoryId:number} {
+export interface AstenRepositoryChoice { id: number; name: string; }
+
+/** Exibe somente locais cujo vínculo e permissão de criação foram confirmados. */
+export function listAuthorizedAstenRepositories(identity: unknown, repositories: unknown): {identifier:string;repositories:AstenRepositoryChoice[]} {
   const ownerId=Number((identity as any)?.Usuario?.id);
   if(!Number.isSafeInteger(ownerId)||ownerId<=0)throw new Error('A Asten não retornou Usuario.id válido para esta conta.');
   if(!Array.isArray(repositories))throw new Error('A Asten não retornou a lista de repositórios esperada.');
@@ -217,11 +220,22 @@ export function parseAstenAccountAndRepository(identity: unknown, repositories: 
     const id=Number(item?.id),owner=Number(item?.Usuario?.id);
     return Number.isSafeInteger(id)&&id>0&&owner===ownerId&&(item?.isProprietario==='S'||item?.compartilharCriacaoDocs==='S');
   });
+  const unique=new Map<number,AstenRepositoryChoice>();
+  for(const item of authorized){
+    const id=Number(item.id);
+    const name=String(item.nome||item.descricao||item.name||`Repositório ${id}`).replace(/[\\u0000-\\u001f\\u007f]/g,' ').trim().slice(0,120);
+    if(!unique.has(id))unique.set(id,{id,name:name||`Repositório ${id}`});
+  }
+  return {identifier:String(ownerId),repositories:[...unique.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'))};
+}
+
+export function parseAstenAccountAndRepository(identity: unknown, repositories: unknown, configuredRepositoryId: string | undefined): {identifier:string;repositoryId:number} {
+  const catalog=listAuthorizedAstenRepositories(identity,repositories);
   const requested=String(configuredRepositoryId||'').trim();
   if(requested&&!/^[1-9][0-9]*$/.test(requested))throw new Error('ASTEN_REPOSITORY_ID deve ser um ID numérico válido.');
-  const selected=requested?authorized.find((item:any)=>Number(item.id)===Number(requested)):authorized.length===1?authorized[0]:undefined;
-  if(!selected)throw new Error(requested?'O repositório Asten informado não pertence à conta ou não permite criar envelopes.':'Configure ASTEN_REPOSITORY_ID: nenhum repositório único e autorizado foi localizado.');
-  return {identifier:String(ownerId),repositoryId:Number(selected.id)};
+  const selected=requested?catalog.repositories.find(item=>item.id===Number(requested)):catalog.repositories.length===1?catalog.repositories[0]:undefined;
+  if(!selected)throw new Error(requested?'O repositório Asten informado não pertence à conta ou não permite criar envelopes.':catalog.repositories.length===0?'Nenhum repositório Asten com permissão de criação foi encontrado. Crie um repositório na Asten ou peça acesso ao proprietário.':'Há vários repositórios Asten autorizados. Selecione um no Portal antes de conectar.');
+  return {identifier:catalog.identifier,repositoryId:selected.id};
 }
 export async function createEphemeralAstenSession(ownerEmail: string, suppliedToken?: string) {
   const token = String(suppliedToken || storedToken() || '').trim();
@@ -253,14 +267,34 @@ export function getAstenIntegrationStatus() {
   return { enabled: enabled(), mode: enabled() ? (stored ? 'SERVER_SECRET' : statelessSessionReady ? 'STATELESS_ENCRYPTED_SESSION' : 'EPHEMERAL_SESSION') : 'DISABLED', configured: stored || statelessSessionReady || activeSession, dispatchEnabled: enabled() && credentialReady && security.callbackConfigured, sessionTtlMinutes: 10, callbackConfigured: security.callbackConfigured, securityIssues: security.issues, securityMessage: !enabled() ? 'Integração bloqueada. Ative somente depois de configurar autenticação e segredos no servidor.' : security.callbackConfigured ? 'Todo envio exige autenticação, callback HTTPS e webhook autenticado.' : `Envio bloqueado: ${security.issues.join(' ')}` } as const;
 }
 
-export async function connectPersistentAsten(tokenInput: string) {
+export async function listAstenConnectableRepositories(tokenInput: string): Promise<{identifier:string;repositories:AstenRepositoryChoice[]}> {
+  const token=String(tokenInput||'').trim();
+  assertValidAstenToken(token);
+  const identity=await callAsten('getIdentificador',{},token);
+  const ownerId=Number(identity?.Usuario?.id);
+  if(!Number.isSafeInteger(ownerId)||ownerId<=0)throw new Error('A Asten não retornou o ID da conta.');
+  const repositories=await callAsten('getRepositoriosDoUsuario',{idProprietario:ownerId},token);
+  const catalog=listAuthorizedAstenRepositories(identity,repositories);
+  const configured=String(process.env.ASTEN_REPOSITORY_ID||'').trim();
+  if(configured){
+    const selected=parseAstenAccountAndRepository(identity,repositories,configured);
+    return {identifier:catalog.identifier,repositories:catalog.repositories.filter(item=>item.id===selected.repositoryId)};
+  }
+  return catalog;
+}
+
+export async function connectPersistentAsten(tokenInput: string, selectedRepositoryId?: number) {
   const token = String(tokenInput || '').trim();
   if (!token) throw new Error('Informe o token da API Asten.');
   const identity = await callAsten('getIdentificador', {}, token);
   const ownerId=Number(identity?.Usuario?.id);
   if(!Number.isSafeInteger(ownerId)||ownerId<=0)throw new Error('A Asten não retornou o ID da conta.');
   const repositories=await callAsten('getRepositoriosDoUsuario',{idProprietario:ownerId},token);
-  const {repositoryId,identifier}=parseAstenAccountAndRepository(identity,repositories,process.env.ASTEN_REPOSITORY_ID);
+  const configured=String(process.env.ASTEN_REPOSITORY_ID||'').trim();
+  if(configured&&selectedRepositoryId!==undefined&&String(selectedRepositoryId)!==configured)
+    throw new Error('O repositório escolhido difere do repositório fixado no ambiente do Portal.');
+  const requested=configured||(selectedRepositoryId===undefined?undefined:String(selectedRepositoryId));
+  const {repositoryId,identifier}=parseAstenAccountAndRepository(identity,repositories,requested);
   await saveIntegrationSecret('asten', token, {
     identifier,
     repositoryId,
