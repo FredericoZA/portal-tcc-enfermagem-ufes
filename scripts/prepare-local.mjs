@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { access, copyFile, readFile, writeFile } from 'node:fs/promises';
+import { access, chmod, copyFile, readFile, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { constants } from 'node:fs';
 import { spawn } from 'node:child_process';
@@ -49,6 +49,21 @@ if (!(await exists('.env.local'))) {
 let localEnv = await readFile('.env.local', 'utf8');
 const configLines = localEnv.split(/\r?\n/);
 
+function rejectDuplicateEnvKeys(lines, source) {
+  const seen = new Set();
+  for (const line of lines) {
+    const match = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(line);
+    if (!match) continue;
+    const name = match[1];
+    if (seen.has(name)) {
+      console.error('[Portal TCC] ' + source + ' repete ' + name + '. Elimine chaves duplicadas antes de iniciar o ambiente local.');
+      process.exit(2);
+    }
+    seen.add(name);
+  }
+}
+rejectDuplicateEnvKeys(configLines, '.env.local');
+
 function readConfigValue(name, lines = configLines) {
   const line = lines.find((item) => new RegExp('^\\s*' + name + '\\s*=').test(item));
   if (!line) return '';
@@ -61,6 +76,7 @@ function readConfigValue(name, lines = configLines) {
 // O comando local usa dados fictícios e não aceita credenciais de produção.
 // Integrações externas exigem um ambiente de homologação separado e intencional.
 const fallbackEnvLines = (await exists('.env')) ? (await readFile('.env', 'utf8')).split(/\r?\n/) : [];
+rejectDuplicateEnvKeys(fallbackEnvLines, '.env');
 const containsExternalServices = (lines) =>
   readConfigValue('PORTAL_PERSISTENCE_PROVIDER', lines).toLowerCase() === 'supabase' ||
   Boolean(readConfigValue('SUPABASE_SECRET_KEY', lines) ||
@@ -88,6 +104,8 @@ ensureSecret('PORTAL_SESSION_SECRET');
 ensureSecret('PORTAL_OTP_PEPPER');
 const normalizedEnv = configLines.join('\n').replace(/\n*$/, '\n');
 if (normalizedEnv !== localEnv) await writeFile('.env.local', normalizedEnv, { encoding: 'utf8', mode: 0o600 });
+// writeFile(mode) não altera permissões de arquivo já copiado (ex.: 0644).
+if (process.platform !== 'win32') await chmod('.env.local', 0o600);
 
 const vitePath = process.platform === 'win32' ? 'node_modules/.bin/vite.cmd' : 'node_modules/.bin/vite';
 if (!(await exists(vitePath))) {

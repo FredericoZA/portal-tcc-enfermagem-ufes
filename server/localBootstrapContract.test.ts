@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -29,6 +29,7 @@ test('preparação cria segredos fortes e é idempotente',()=>{
     const env1=readFileSync(join(f.cwd,'.env.local'),'utf8');
     assert.ok(secret(env1,'PORTAL_SESSION_SECRET').length>=32);
     assert.ok(secret(env1,'PORTAL_OTP_PEPPER').length>=32);
+    if(process.platform!=='win32')assert.equal(statSync(join(f.cwd,'.env.local')).mode&0o777,0o600);
     assert.notEqual(secret(env1,'PORTAL_SESSION_SECRET'),secret(env1,'PORTAL_OTP_PEPPER'));
     const second=f.exec();assert.equal(second.status,0,second.stderr);
     assert.equal(readFileSync(join(f.cwd,'.env.local'),'utf8'),env1);
@@ -57,5 +58,15 @@ test('não permite credenciais externas em .env nem herdadas pelo processo',()=>
     rmSync(join(f.cwd,'.env'));
     const inherited=spawnSync(process.execPath,[entry],{cwd:f.cwd,encoding:'utf8',timeout:10_000,env:{...process.env,PORTAL_PERSISTENCE_PROVIDER:'supabase'}});
     assert.equal(inherited.status,2);
+  }finally{f.cleanup();}
+});
+
+test('não confia na primeira de duas variáveis com o mesmo nome',()=>{
+  const f=fixture('PORTAL_PERSISTENCE_PROVIDER="local_file"\nPORTAL_PERSISTENCE_PROVIDER="supabase"\nPORTAL_SESSION_SECRET=""\nPORTAL_OTP_PEPPER=""\n');
+  try{
+    assert.equal(f.exec().status,2);
+    writeFileSync(join(f.cwd,'.env.local'),'PORTAL_SESSION_SECRET=""\nPORTAL_OTP_PEPPER=""\n');
+    writeFileSync(join(f.cwd,'.env'),'PORTAL_PERSISTENCE_PROVIDER="local_file"\nPORTAL_PERSISTENCE_PROVIDER="supabase"\n');
+    assert.equal(f.exec().status,2);
   }finally{f.cleanup();}
 });
