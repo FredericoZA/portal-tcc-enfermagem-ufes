@@ -26,6 +26,8 @@ Desde a **RC9**, o formulário do orientador está integrado à tela e à API: a
 - Os dois arquivos vivos são recalculados diariamente e sob demanda, permanecem privados no Drive e não incluem nomes, e-mails, matrículas, títulos ou resumos.
 - O relatório institucional usa dados agregados, filtros de período, comparação, gráficos vetoriais e metodologia explícita; grupos pequenos continuam protegidos.
 
+> **Migração local (Portal TCC 16):** consulte [Guia de continuidade local e estado das plataformas](./docs/TRANSICAO_LOCAL_PORTAL_TCC16_2026-10-13.md). O modo padrão é isolado; nunca copie segredos da Vercel nem uma base de produção para o computador.
+
 ## Executar localmente
 
 Requisitos: Node.js 22 e npm 11.

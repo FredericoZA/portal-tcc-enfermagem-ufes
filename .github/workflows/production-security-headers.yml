@@ -1,9 +1,12 @@
 name: Production security headers
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: 'SHA completo da revisão publicada na Vercel'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -19,10 +22,13 @@ jobs:
     steps:
       - name: Aguardar revisão e validar headers
         shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
           set -euo pipefail
           origin="https://portal-tcc-enfermagem-ufes.vercel.app"
-          expected="$GITHUB_SHA"
+          expected="$EXPECTED_SHA"
+          [[ "$expected" =~ ^[0-9a-f]{40}$ ]] || { echo "Informe SHA Git completo (40 caracteres)."; exit 2; }
           health_body="$(mktemp)"
           root_headers="$(mktemp)"
           api_headers="$(mktemp)"

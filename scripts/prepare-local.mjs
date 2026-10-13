@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { access, copyFile, readFile, writeFile } from 'node:fs/promises';
+import { access, chmod, copyFile, readFile, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { constants } from 'node:fs';
 import { spawn } from 'node:child_process';
@@ -47,55 +47,63 @@ if (!(await exists('.env.local'))) {
 }
 
 let localEnv = await readFile('.env.local', 'utf8');
-function ensureSecret(name) {
-  const pattern = new RegExp(`^\\s*${name}\\s*=\\s*"([^"]*)"\\s*#!/usr/bin/env node
+const configLines = localEnv.split(/\r?\n/);
 
-import { access, copyFile, readFile, writeFile } from 'node:fs/promises';
-import { randomBytes } from 'node:crypto';
-import { constants } from 'node:fs';
-import { spawn } from 'node:child_process';
-
-function command(name) {
-  return process.platform === 'win32' ? `${name}.cmd` : name;
-}
-
-async function exists(path) {
-  try {
-    await access(path, constants.F_OK);
-    return true;
-  } catch {
-    return false;
+function rejectDuplicateEnvKeys(lines, source) {
+  const seen = new Set();
+  for (const line of lines) {
+    const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(line);
+    if (!match) continue;
+    const name = match[1];
+    if (seen.has(name)) {
+      console.error('[Portal TCC] ' + source + ' repete ' + name + '. Elimine chaves duplicadas antes de iniciar o ambiente local.');
+      process.exit(2);
+    }
+    seen.add(name);
   }
 }
+rejectDuplicateEnvKeys(configLines, '.env.local');
 
-function run(bin, args) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(bin, args, { stdio: 'inherit', env: process.env });
-    child.on('error', reject);
-    child.on('exit', (code, signal) => {
-      if (signal) reject(new Error(`Processo encerrado por sinal ${signal}.`));
-      else resolve(code ?? 1);
-    });
-  });
+function readConfigValue(name, lines = configLines) {
+  const line = lines.find((item) => new RegExp('^\\s*(?:export\\s+)?' + name + '\\s*=').test(item));
+  if (!line) return '';
+  const value = line.slice(line.indexOf('=') + 1).trim();
+  if (value.startsWith('"')) return value.slice(1).split('"')[0];
+  if (value.startsWith("'")) return value.slice(1).split("'")[0];
+  return value.split('#')[0].trim();
 }
 
-const major = Number(process.versions.node.split('.')[0]);
-if (major !== 22) {
-  console.error(`[Portal TCC] Node ${process.versions.node} detectado. Este projeto exige Node 22.x.`);
+// O comando local usa dados fictícios e não aceita credenciais de produção.
+// Integrações externas exigem um ambiente de homologação separado e intencional.
+const fallbackEnvLines = (await exists('.env')) ? (await readFile('.env', 'utf8')).split(/\r?\n/) : [];
+rejectDuplicateEnvKeys(fallbackEnvLines, '.env');
+// Falhar fechado: mesmo um valor vazio ou multilinha para provedores externos
+// não pertence ao modo demo. A conta de homologação é configurada separadamente.
+const containsExternalServices = (lines) => lines.some((line) =>
+  /^\s*(?:export\s+)?(?:PORTAL_PERSISTENCE_PROVIDER|SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|GOOGLE_OAUTH_CLIENT_SECRET|ASTEN_API_KEY)\s*=/.test(line));
+if (containsExternalServices(configLines) || containsExternalServices(fallbackEnvLines) ||
+    process.env.PORTAL_PERSISTENCE_PROVIDER?.toLowerCase() === 'supabase' ||
+    ['SUPABASE_SECRET_KEY','SUPABASE_SERVICE_ROLE_KEY','GOOGLE_OAUTH_CLIENT_SECRET','ASTEN_API_KEY'].some(key => Boolean(process.env[key]))) {
+  console.error('[Portal TCC] .env.local contém configuração de provedores externos. O comando local seguro não pode usar credenciais reais. Configure um ambiente de homologação separado e execute manualmente npm run dev após avaliação técnica.');
   process.exit(2);
 }
 
-, 'm');
-  const current = localEnv.match(pattern)?.[1] || '';
-  if (current.length >= 32) return;
+function ensureSecret(name) {
+  const existing = readConfigValue(name);
+  if (existing.length >= 32) return;
   const value = randomBytes(36).toString('base64url');
-  if (pattern.test(localEnv)) localEnv = localEnv.replace(pattern, `${name}="${value}"`);
-  else localEnv += `\\n${name}="${value}"`;
-  console.log(`[Portal TCC] ${name} gerado apenas para este ambiente local.`);
+  const index = configLines.findIndex((line) => new RegExp('^\\s*(?:export\\s+)?' + name + '\\s*=').test(line));
+  if (index >= 0) configLines[index] = name + '="' + value + '"';
+  else configLines.push(name + '="' + value + '"');
+  console.log('[Portal TCC] ' + name + ' gerado apenas para este ambiente local.');
 }
+
 ensureSecret('PORTAL_SESSION_SECRET');
 ensureSecret('PORTAL_OTP_PEPPER');
-await writeFile('.env.local', localEnv.endsWith('\\n') ? localEnv : localEnv + '\\n', 'utf8');
+const normalizedEnv = configLines.join('\n').replace(/\n*$/, '\n');
+if (normalizedEnv !== localEnv) await writeFile('.env.local', normalizedEnv, { encoding: 'utf8', mode: 0o600 });
+// writeFile(mode) não altera permissões de arquivo já copiado (ex.: 0644).
+if (process.platform !== 'win32') await chmod('.env.local', 0o600);
 
 const vitePath = process.platform === 'win32' ? 'node_modules/.bin/vite.cmd' : 'node_modules/.bin/vite';
 if (!(await exists(vitePath))) {
