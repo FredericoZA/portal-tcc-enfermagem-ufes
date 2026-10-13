@@ -37,7 +37,7 @@ jobs:
         run: npm run test:visual
       - name: Publicar capturas
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: visual-refactor-${{ github.sha }}
           path: artifacts/visual-refactor
