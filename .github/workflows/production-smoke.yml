@@ -1,9 +1,12 @@
 name: Production smoke
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: 'SHA completo da revisão publicada na Vercel'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -23,7 +26,8 @@ jobs:
           set -euo pipefail
           origin="https://portal-tcc-enfermagem-ufes.vercel.app"
           url="$origin/api/health"
-          expected="$GITHUB_SHA"
+          expected="${{ inputs.expected_sha }}"
+          [[ "$expected" =~ ^[0-9a-f]{40}$ ]] || { echo "Informe SHA Git completo (40 caracteres)."; exit 2; }
           body="$(mktemp)"
           root_body="$(mktemp)"
           root_headers="$(mktemp)"
