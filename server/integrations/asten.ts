@@ -223,7 +223,7 @@ export function listAuthorizedAstenRepositories(identity: unknown, repositories:
   const unique=new Map<number,AstenRepositoryChoice>();
   for(const item of authorized){
     const id=Number(item.id);
-    const name=String(item.nome||item.descricao||item.name||`Repositório ${id}`).replace(/[\\u0000-\\u001f\\u007f]/g,' ').trim().slice(0,120);
+    const name=String(item.nome||item.descricao||item.name||`Repositório ${id}`).replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,120);
     if(!unique.has(id))unique.set(id,{id,name:name||`Repositório ${id}`});
   }
   return {identifier:String(ownerId),repositories:[...unique.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'))};
