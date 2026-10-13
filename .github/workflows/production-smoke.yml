@@ -22,11 +22,13 @@ jobs:
     steps:
       - name: Aguardar deploy e validar runtime de produção
         shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
           set -euo pipefail
           origin="https://portal-tcc-enfermagem-ufes.vercel.app"
           url="$origin/api/health"
-          expected="${{ inputs.expected_sha }}"
+          expected="$EXPECTED_SHA"
           [[ "$expected" =~ ^[0-9a-f]{40}$ ]] || { echo "Informe SHA Git completo (40 caracteres)."; exit 2; }
           body="$(mktemp)"
           root_body="$(mktemp)"
