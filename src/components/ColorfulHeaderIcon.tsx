@@ -11,6 +11,7 @@ import {
   GitBranch,
   GraduationCap,
   HelpCircle,
+  Info,
   ListTodo,
   MapPin,
   ShieldCheck,
@@ -33,6 +34,7 @@ export type HeaderIconType =
   | 'documents'
   | 'indicators'
   | 'tutorial'
+  | 'guidance'
   | 'flow'
   | 'replication';
 
@@ -63,6 +65,7 @@ export const ColorfulHeaderIcon: React.FC<ColorfulHeaderIconProps> = ({
     documents: FileText,
     indicators: BarChart3,
     tutorial: HelpCircle,
+    guidance: Info,
     flow: GitBranch,
     replication: Code2,
   }[type] || ShieldCheck;
