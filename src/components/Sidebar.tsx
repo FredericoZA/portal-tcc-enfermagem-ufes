@@ -11,6 +11,7 @@ import {
   FileText,
   GitBranch,
   HelpCircle,
+  Info,
   LogIn,
   LogOut,
   MapPin,
@@ -174,6 +175,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             home: { id: 'home', label: getNavLabel('home', 'Calendário'), icon: Calendar, emoji: '', visible: true },
             biblioteca: { id: 'biblioteca', label: getNavLabel('biblioteca', 'Repositório'), icon: BookOpen, emoji: '', visible: true },
             'como-chegar': { id: 'como-chegar', label: getNavLabel('como-chegar', 'Como chegar'), icon: MapPin, emoji: '', visible: true },
+            'informacoes-gerais': { id: 'informacoes-gerais', label: getNavLabel('informacoes-gerais', 'Informações gerais'), icon: Info, emoji: '', visible: true },
             tutorial: { id: 'tutorial', label: getNavLabel('tutorial', 'Como usar'), icon: HelpCircle, emoji: '', visible: true },
             'fluxo-tcc': { id: 'fluxo-tcc', label: getNavLabel('fluxo-tcc', 'Fluxo do TCC'), icon: GitBranch, emoji: '', visible: true },
             'meus-processos': { id: 'meus-processos', label: getNavLabel('meus-processos', 'Meus TCCs'), icon: FileText, emoji: '', visible: !isVisitor },
@@ -182,13 +184,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             analise: { id: 'analise', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: '', visible: true },
             replicar: { id: 'replicar', label: getNavLabel('replicar', 'Replicar Portal'), icon: Copy, emoji: '', visible: true }
           };
-          const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0 ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'assinaturas'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key) : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'DIVIDER_2', 'analise', 'como-chegar', 'tutorial', 'fluxo-tcc', 'replicar'];
+          const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0 ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'assinaturas'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key) : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'DIVIDER_2', 'analise', 'como-chegar', 'informacoes-gerais', 'tutorial', 'fluxo-tcc', 'replicar'];
           const order = [...configuredOrder].filter((key) => key !== 'analise');
           const indicatorsAnchor = order.indexOf('como-chegar');
           order.splice(indicatorsAnchor >= 0 ? indicatorsAnchor : order.length, 0, 'analise');
           const sanitizedOrder = order.filter((key) => !['logs', 'asten-logs'].includes(key));
           order.splice(0, order.length, ...sanitizedOrder);
           if (!order.includes('como-chegar')) { const tutorialIndex = order.indexOf('tutorial'); order.splice(tutorialIndex >= 0 ? tutorialIndex : order.length, 0, 'como-chegar'); }
+          if (!order.includes('informacoes-gerais')) { const tutorialIndex = order.indexOf('tutorial'); order.splice(tutorialIndex >= 0 ? tutorialIndex : order.length, 0, 'informacoes-gerais'); }
           if (!order.includes('fluxo-tcc')) { const replicationIndex = order.indexOf('replicar'); order.splice(replicationIndex >= 0 ? replicationIndex : order.length, 0, 'fluxo-tcc'); }
           if (!order.includes('replicar')) order.push('replicar');
           return order.map((itemKey, idx) => {
