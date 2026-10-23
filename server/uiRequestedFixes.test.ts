@@ -168,9 +168,9 @@ test('contrato visual global usa um único stylesheet autoritativo', () => {
 });
 
 test('contrato visual global mantém quatro superfícies e geometria aprovada', () => {
-  assert.match(css, /--portal-surface-page:\s*#f1f5f9/);
-  assert.match(css, /--portal-surface-panel:\s*#e1e6e9/);
-  assert.match(css, /--portal-surface-card:\s*#d5dce0/);
+  assert.match(css, /--portal-surface-page:\s*#f6f7f8/);
+  assert.match(css, /--portal-surface-panel:\s*#e9edef/);
+  assert.match(css, /--portal-surface-card:\s*#d8dfe3/);
   assert.match(css, /--portal-surface-inner:\s*#ffffff/);
   assert.match(css, /--portal-sheet-title-height:\s*45px/);
   assert.match(css, /--portal-sheet-title-divider:\s*5px/);

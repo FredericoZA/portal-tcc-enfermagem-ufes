@@ -37,7 +37,6 @@ export const DRIVE_FOLDER_NAMES = {
   continuousIntelligence: '01_INTELIGENCIA_CONTINUA',
   models: '01_DOCUMENTOS',
   processes: '02_PROCESSOS',
-  publicRepository: '03_REPOSITORIO_PUBLICO',
   modelTypes: {
     CONVITE: '01_CARTA_CONVITE',
     ATA: '02_ATA_DEFESA',
@@ -395,13 +394,38 @@ export async function verifyPrivateDriveFolder(accessToken:string,folderId:strin
   if(broad.length)throw new Error('A pasta raiz do portal está compartilhada por link ou domínio. Remova essas permissões no Google Drive antes de armazenar documentos sigilosos.');
 }
 
+/** Separate operational storage from the academic folders browsed by users. */
+export async function resolvePortalTechnicalRoot(accessToken:string,rootFolderId:string):Promise<string>{
+  const configured=String(process.env.PORTAL_DRIVE_TECHNICAL_FOLDER_ID||'').trim();
+  if(!configured){
+    if(process.env.NODE_ENV==='production')throw new Error('Configure PORTAL_DRIVE_TECHNICAL_FOLDER_ID antes de publicar os destinos técnicos separados.');
+    return (await ensureFolder(accessToken,DRIVE_FOLDER_NAMES.system,rootFolderId)).file.id;
+  }
+  if(!/^[a-zA-Z0-9_-]{10,}$/.test(configured)||configured===rootFolderId)throw new Error('A pasta técnica deve ser diferente da raiz acadêmica.');
+  const folder=await driveJson<DriveFile & {capabilities?:{canAddChildren?:boolean}}>(accessToken,`${DRIVE_API}/files/${encodeURIComponent(configured)}?fields=id,name,mimeType,parents,capabilities(canAddChildren)`);
+  if(folder.mimeType!=='application/vnd.google-apps.folder'||folder.capabilities?.canAddChildren!==true)throw new Error('A pasta técnica deve existir e permitir gravação pela conta Google do portal.');
+  if((folder.parents||[]).includes(rootFolderId))throw new Error('A pasta técnica deve ficar fora da raiz acadêmica.');
+  await verifyPrivateDriveFolder(accessToken,configured);
+  return configured;
+}
+
+export async function ensurePortalRenderFolder(accessToken:string,rootFolderId:string):Promise<string>{
+  if(!/^[a-zA-Z0-9_-]{10,}$/.test(rootFolderId))throw new Error('Configure a raiz do Drive antes de preparar documentos.');
+  await verifyPrivateDriveFolder(accessToken,rootFolderId);
+  const technicalRoot=await resolvePortalTechnicalRoot(accessToken,rootFolderId);
+  const temporary=await ensureFolder(accessToken,'03_TEMPORARIOS_DOCUMENTAIS',technicalRoot);
+  await verifyPrivateDriveFolder(accessToken,temporary.file.id);
+  return temporary.file.id;
+}
+
 async function uploadBinary(
   accessToken: string,
-  input: { name: string; parentId: string; mimeType: string; content: Buffer; appProperties?: Record<string, string> }
+  input: { name: string; parentId: string; mimeType: string; content: Buffer; appProperties?: Record<string, string>; targetMimeType?: string }
 ): Promise<DriveFile> {
   const boundary = `portal-tcc-${Date.now().toString(36)}`;
   const metadata = JSON.stringify({
     name: input.name,
+    ...(input.targetMimeType ? {mimeType:input.targetMimeType} : {}),
     parents: [input.parentId],
     appProperties: { portal: 'portal-tcc', ...(input.appProperties || {}) }
   });
@@ -453,8 +477,8 @@ export async function upsertLivingIntelligenceFile(input: {
   const bytes = Buffer.from(input.content, 'utf8');
   if (!bytes.length || bytes.length > 2 * 1024 * 1024) throw new Error('O arquivo vivo deve ter entre 1 byte e 2 MB.');
   await verifyPrivateDriveFolder(input.accessToken, input.rootFolderId);
-  const systemFolder = await ensureFolder(input.accessToken, DRIVE_FOLDER_NAMES.system, input.rootFolderId);
-  const intelligenceFolder = await ensureFolder(input.accessToken, DRIVE_FOLDER_NAMES.continuousIntelligence, systemFolder.file.id);
+  const technicalRoot = await resolvePortalTechnicalRoot(input.accessToken,input.rootFolderId);
+  const intelligenceFolder = await ensureFolder(input.accessToken, DRIVE_FOLDER_NAMES.continuousIntelligence, technicalRoot);
   const existing = await findChild(input.accessToken, input.fileName, intelligenceFolder.file.id);
   const appProperties = {
     portal: 'portal-tcc',
@@ -512,8 +536,8 @@ export async function storePrivatePortalBackup(input:{accessToken:string;rootFol
   if(!/^[a-f0-9]{64}$/.test(input.sha256))throw new Error('Hash do backup inválido.');
   if(!input.content.length||input.content.length>32*1024*1024)throw new Error('Backup fora do limite seguro de 32 MB.');
   await verifyPrivateDriveFolder(input.accessToken,input.rootFolderId);
-  const systemFolder=await ensureFolder(input.accessToken,DRIVE_FOLDER_NAMES.system,input.rootFolderId);
-  const backupFolder=await ensureFolder(input.accessToken,'02_BACKUPS_CIFRADOS',systemFolder.file.id);
+  const technicalRoot=await resolvePortalTechnicalRoot(input.accessToken,input.rootFolderId);
+  const backupFolder=await ensureFolder(input.accessToken,'02_BACKUPS_CIFRADOS',technicalRoot);
   await verifyPrivateDriveFolder(input.accessToken,backupFolder.file.id);
   const created=await uploadBinary(input.accessToken,{name:input.fileName,parentId:backupFolder.file.id,mimeType:'application/octet-stream',content:input.content,appProperties:{schema:'9',lifecycle:'encrypted-backup',sha256:input.sha256,createdAt:new Date().toISOString()}});
   return{id:created.id,name:created.name,webViewLink:created.webViewLink||`https://drive.google.com/file/d/${created.id}/view`,folderId:backupFolder.file.id};
@@ -558,8 +582,7 @@ export async function bootstrapGoogleDriveStructure(accessToken?: string, option
   for (const [key, name] of Object.entries({
     system: DRIVE_FOLDER_NAMES.system,
     models: DRIVE_FOLDER_NAMES.models,
-    processes: DRIVE_FOLDER_NAMES.processes,
-    publicRepository: DRIVE_FOLDER_NAMES.publicRepository
+    processes: DRIVE_FOLDER_NAMES.processes
   })) {
     const result = await ensureFolder(token, name, root.file.id);
     result.created ? createdFolders++ : existingFolders++;
@@ -570,7 +593,7 @@ export async function bootstrapGoogleDriveStructure(accessToken?: string, option
     const typeFolder = await ensureFolder(token, folderName, folders.models);
     typeFolder.created ? createdFolders++ : existingFolders++;
     folders[`documents.${type}`] = typeFolder.file.id;
-    for (const lifecycle of DRIVE_FOLDER_NAMES.modelLifecycles) {
+    for (const lifecycle of DRIVE_FOLDER_NAMES.modelLifecycles.filter(name=>type!=='CONVITE'||name!=='03_ASSINADOS')) {
       const lifecycleFolder = await ensureFolder(token, lifecycle, typeFolder.file.id);
       lifecycleFolder.created ? createdFolders++ : existingFolders++;
       folders[`documents.${type}.${lifecycle}`] = lifecycleFolder.file.id;
@@ -604,7 +627,7 @@ async function ensureDocumentModelFolders(accessToken:string,manifest:GoogleDriv
     typeFolderId=(await ensureFolder(accessToken,folderName,manifest.folders.models)).file.id;
     manifest.folders[`documents.${type}`]=typeFolderId;
   }
-  for(const lifecycle of DRIVE_FOLDER_NAMES.modelLifecycles){
+  for(const lifecycle of DRIVE_FOLDER_NAMES.modelLifecycles.filter(name=>type!=='CONVITE'||name!=='03_ASSINADOS')){
     const key=`documents.${type}.${lifecycle}`;
     if(!manifest.folders[key])manifest.folders[key]=(await ensureFolder(accessToken,lifecycle,typeFolderId)).file.id;
   }
@@ -656,6 +679,17 @@ export async function verifyMasterDocumentModelFingerprint(input:{accessToken:st
     throw new Error('O modelo foi alterado diretamente no Google Drive. Revise e publique uma nova versão em Configurações antes de gerar documentos.');
   }
   return current;
+}
+
+export async function accessListGoogleSheetsTemplate(input:{accessToken:string;rootFolderId:string;content:Buffer}){
+  const token=input.accessToken;
+  await verifyPrivateDriveFolder(token,input.rootFolderId);
+  const system=await ensureFolder(token,DRIVE_FOLDER_NAMES.system,input.rootFolderId);
+  const mimeType='application/vnd.google-apps.spreadsheet';
+  const name='MODELO_LISTA_ACESSO_V2';
+  const existing=await findChild(token,name,system.file.id,mimeType);
+  const file=existing||await uploadBinary(token,{name,parentId:system.file.id,mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',targetMimeType:mimeType,content:input.content,appProperties:{purpose:'access-list-template',schema:'2'}});
+  return {id:file.id,url:`https://docs.google.com/spreadsheets/d/${encodeURIComponent(file.id)}/copy`,created:!existing};
 }
 
 export async function publishMasterDocumentModel(input:{type:string;fileName:string;content:Buffer;rootFolderName?:string}){
@@ -724,7 +758,7 @@ function encodeMimeHeader(value: string): string {
   return /^[\x20-\x7E]*$/.test(safe) ? safe : `=?UTF-8?B?${Buffer.from(safe, 'utf8').toString('base64')}?=`;
 }
 
-export interface GmailMessageInput { to: string; subject: string; text: string; html?: string; attachments?: Array<{ fileName: string; mimeType: string; content: Buffer }> }
+export interface GmailMessageInput { to: string; cc?: string[]; subject: string; text: string; html?: string; attachments?: Array<{ fileName: string; mimeType: string; content: Buffer }> }
 
 export function buildGmailRawMessage(input: GmailMessageInput, boundarySeed = Date.now().toString(36)): string {
   const alternativeBoundary = `portal-tcc-alt-${boundarySeed}`;
@@ -761,6 +795,7 @@ export function buildGmailRawMessage(input: GmailMessageInput, boundarySeed = Da
   ].join('\r\n'):body;
   return [
     `To: ${sanitizeHeader(input.to)}`,
+    ...(input.cc?.length?[`Cc: ${input.cc.map(email=>{if(!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email))throw new Error('E-mail de cópia inválido.');return email.trim().toLowerCase();}).join(', ')}`]:[]),
     `Subject: ${encodeMimeHeader(input.subject)}`,
     'MIME-Version: 1.0',
     content

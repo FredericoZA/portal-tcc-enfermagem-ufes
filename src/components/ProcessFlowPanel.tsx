@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { ProcessData, SignatureJob } from '../types';
+import {registrationQuestions} from '../utils/operationalConfig';
+import {useAuth} from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 
 export function ProcessFlowPanel({
@@ -13,6 +15,10 @@ export function ProcessFlowPanel({
   canConfirm: boolean;
   onUpdated: () => Promise<void>;
 }) {
+  const {settings}=useAuth();
+  const [configuredPlaces,setConfiguredPlaces]=useState<string[]>([]);
+  useEffect(()=>{if(!canConfirm)return;let active=true;void apiClient.getRegistrationSchema().then(schema=>{if(active)setConfiguredPlaces(registrationQuestions(schema).find(question=>question.fieldKey==='DEFESA_LOCAL')?.options||[]);}).catch(()=>{});return()=>{active=false;};},[canConfirm,process.id]);
+  const places=[...new Set([...configuredPlaces,process.defesa.local,process.defesa.alternateLocation,process.registrationAnswers?.DEFESA_LOCAL,process.registrationAnswers?.LOCAL_ALTERNATIVO,...(registrationQuestions(settings?.integrationStudio).find(q=>q.fieldKey==='DEFESA_LOCAL')?.options||[])].filter(Boolean).map(String))];
   const [local, setLocal] = useState(process.defesa.local || '');
   const [received, setReceived] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -54,6 +60,8 @@ export function ProcessFlowPanel({
 
   const confirm = async (event: React.FormEvent) => {
     event.preventDefault();
+    if(busy)return;
+    if(!file&&!hasLocationProof){setMessage('Anexe o comprovante da resposta do departamento (e-mail em PDF) antes de confirmar o local.');return;}
     setBusy(true);
     setMessage('');
     try {
@@ -71,7 +79,7 @@ export function ProcessFlowPanel({
       );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Não foi possível confirmar.');
-      await onUpdated();
+      // Preserve the typed location, checkbox and selected file after a failure.
     } finally {
       setBusy(false);
     }
@@ -88,44 +96,33 @@ export function ProcessFlowPanel({
     <section
       id="process-operational-actions"
       className="portal-process-operational-actions rounded-xl border border-slate-300 p-3 sm:p-4"
-      style={{ backgroundColor: 'var(--portal-surface-inner)' }}
+      style={{ backgroundColor: 'var(--portal-surface-card)' }}
       aria-label="Ações operacionais da defesa"
     >
       {canShowConfirmationForm && (
         <form onSubmit={confirm} className="space-y-3">
           <div>
-            <h2 className="text-xs font-black uppercase tracking-wide text-slate-900">Confirmação do local da defesa</h2>
-            <p className="mt-1 text-[11px] leading-4 text-slate-600">
+            <h2 className="text-xs font-black normal-case tracking-wide text-slate-900">Confirmação do local da defesa</h2>
+            <p role="note" className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
               Registre a resposta do departamento. A confirmação libera a geração e o envio do convite à banca.
             </p>
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
-            <label className="text-[10px] font-bold uppercase tracking-wide text-slate-700">
+            <label className="text-[10px] font-bold normal-case tracking-wide text-slate-700">
               Local confirmado
-              <input
-                required
-                className="portal-input mt-1"
-                value={local}
-                maxLength={200}
-                onChange={(event) => setLocal(event.target.value)}
-                list="confirmation-places"
-              />
+              <select required disabled={busy} className="portal-input mt-1" value={local} onChange={event=>setLocal(event.target.value)} aria-label="Local confirmado">
+                <option value="">Selecione o local confirmado</option>
+                {places.map(place=><option key={place} value={place}>{place}</option>)}
+              </select>
             </label>
-            <datalist id="confirmation-places">
-              {[...new Set([
-                process.defesa.local,
-                process.registrationAnswers?.LOCAL_PREFERENCIAL,
-                process.registrationAnswers?.LOCAL_ALTERNATIVO,
-              ].filter(Boolean).map(String))].map((place) => <option key={place}>{place}</option>)}
-            </datalist>
-
-            <label className="text-[10px] font-bold uppercase tracking-wide text-slate-700">
-              Comprovante da resposta — PDF até 1 MB
+            <label className="text-[10px] font-bold normal-case tracking-wide text-slate-700">
+              Comprovante da resposta (e-mail), PDF até 1 MB
               <input
                 className="portal-input mt-1"
                 type="file"
                 accept="application/pdf,.pdf"
+                disabled={busy}
                 onChange={(event) => setFile(event.target.files?.[0] || null)}
               />
             </label>
@@ -136,6 +133,7 @@ export function ProcessFlowPanel({
               className="mt-0.5 h-4 w-4"
               type="checkbox"
               checked={received}
+              disabled={busy}
               required
               onChange={(event) => setReceived(event.target.checked)}
             />

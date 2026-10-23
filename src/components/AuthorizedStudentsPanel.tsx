@@ -11,13 +11,11 @@ import {
   UserCheck,
   UserX,
 } from 'lucide-react';
-import { apiClient } from '../services/apiClient';
+import { apiClient, ApiRequestError } from '../services/apiClient';
 import type { AuthorizedStudent, ProcessRole } from '../types';
 import {
   parseStudentImportFile,
   parseStudentImportText,
-  studentImportTemplateGoogleSheetsTsv,
-  studentImportTemplateXlsx,
   type StudentImportRow,
 } from '../utils/studentImport';
 import { portalConfirm, portalNotice } from '../services/portalDialogs';
@@ -29,7 +27,7 @@ import { loadGlobalTableConfig, type TableTextFormat } from '../utils/tableForma
 import { SettingsWorkspaceHeaderPortal } from './SettingsWorkspaceModal';
 
 const whiteButton = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-[9px] font-black tracking-wide text-slate-900 shadow-none transition hover:bg-slate-50 disabled:opacity-50';
-const popupActionButton = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-[10px] font-black text-slate-900 shadow-none transition hover:bg-slate-50 disabled:opacity-50';
+const popupActionButton = 'portal-button-primary inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-[var(--portal-brand-header)] bg-[var(--portal-brand-header)] px-3 py-1 text-[10px] font-black text-white shadow-none transition';
 const inputClass = 'w-full min-h-8 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900 outline-none focus:border-slate-400';
 
 const roleLabels: Record<ProcessRole, string> = {
@@ -59,7 +57,7 @@ function CompactModal({ title, onClose, children }: { title: string; onClose: ()
       <div role="dialog" aria-modal="true" aria-label={title} className="portal-standard-modal portal-modal-surface w-full max-w-3xl overflow-hidden">
         <div className="portal-modal-header px-3">
           {title === 'Envio de lista' ? <FileSpreadsheet className="h-4 w-4 shrink-0" aria-hidden="true"/> : <UserCheck className="h-4 w-4 shrink-0" aria-hidden="true"/>}
-          <h3 className="text-xs font-black uppercase tracking-wide">{title}</h3>
+          <h3 className="text-xs font-black normal-case tracking-wide">{title}</h3>
         </div>
         <div className="portal-modal-divider" aria-hidden="true" />
         <div className="max-h-[78vh] overflow-y-auto bg-[var(--portal-surface-page)] p-3">{children}</div>
@@ -84,6 +82,8 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
   const [textFormat] = useState<TableTextFormat>(() => ({ ...loadGlobalTableConfig(), ...(initialConfig.textFormat || {}) }));
   const [importRows, setImportRows] = useState<StudentImportRow[]>([]);
   const [pasteText, setPasteText] = useState('');
+  const [importFile,setImportFile]=useState<File|null>(null);
+  const [dragging,setDragging]=useState(false);
   const [modal, setModal] = useState<'add' | 'list' | null>(null);
 
   const load = async () => {
@@ -115,8 +115,9 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
   };
 
   const remove = async (entry: AuthorizedStudent) => {
-    if (!(await portalConfirm('Excluir este acesso manual? Esta ação não remove vínculos acadêmicos de TCC.'))) return;
-    try { await apiClient.deleteAuthorizedStudent(entry.id); await load(); }
+    const linked=entry.origin==='TCC_FORM'||Boolean(entry.processIds?.length);
+    if (!(await portalConfirm(linked?'Revogar o acesso desta pessoa ao Portal? Os dados e vínculos acadêmicos do TCC serão preservados.':'Excluir este acesso manual? Esta ação não remove vínculos acadêmicos de TCC.'))) return;
+    try { if(linked)await apiClient.updateAuthorizedStudent(entry.id,{active:false});else await apiClient.deleteAuthorizedStudent(entry.id); await load(); }
     catch (error) { portalNotice(error instanceof Error ? error.message : 'Falha ao excluir o acesso.'); }
   };
 
@@ -138,28 +139,32 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
     setSaving(true);
     try {
       await apiClient.importAuthorizedStudents(importRows);
-      setImportRows([]); setPasteText(''); setModal(null); await load();
+      setImportRows([]); setPasteText(''); setImportFile(null); setModal(null); await load();
     } catch (error) { portalNotice(error instanceof Error ? error.message : 'Falha ao importar acessos.'); }
     finally { setSaving(false); }
   };
 
-  const downloadExcelTemplate = async () => {
-    try {
-      const blob = await studentImportTemplateXlsx();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a'); link.href = url; link.download = 'modelo_lista_acesso.xlsx'; link.click(); URL.revokeObjectURL(url);
-    } catch { portalNotice('Não foi possível gerar o modelo em Excel.'); }
+  const downloadExcelTemplate = () => {
+    const link=document.createElement('a');
+    link.href='/api/public/templates/access-list.xlsx';link.download='modelo_lista_acesso.xlsx';
+    document.body.appendChild(link);link.click();link.remove();
   };
 
+  const [preparingGoogleTemplate,setPreparingGoogleTemplate]=useState(false);
+  const [googleTemplateUrl,setGoogleTemplateUrl]=useState('');
   const openGoogleSheetsTemplate = async () => {
-    const sheetWindow = window.open('https://sheets.new', '_blank', 'noopener,noreferrer');
+    setPreparingGoogleTemplate(true);
     try {
-      await navigator.clipboard.writeText(studentImportTemplateGoogleSheetsTsv());
-      portalNotice('O modelo foi copiado. Na planilha do Google que abriu, cole na célula A1.');
-    } catch {
-      if (sheetWindow) sheetWindow.close();
-      portalNotice('Não foi possível copiar o modelo automaticamente. Use o modelo Excel ou copie os dados diretamente da sua planilha.');
-    }
+      const result=await apiClient.getAccessListGoogleTemplate();
+      if(!/^https:\/\/docs\.google\.com\/spreadsheets\/d\/[a-zA-Z0-9_-]+\/copy$/.test(result.url))throw new Error('O servidor retornou um endereço de planilha inválido.');
+      setGoogleTemplateUrl(result.url);
+      window.open(result.url,'_blank','noopener,noreferrer');
+    } catch (error) {
+      if(error instanceof ApiRequestError&&error.code==='GOOGLE_TEMPLATE_UNAVAILABLE'){
+        downloadExcelTemplate();
+        portalNotice('Use o modelo formatado baixado. No Google Planilhas, use Arquivo > Importar > Fazer upload. Para abrir o modelo diretamente, conecte o Google Drive em Integrações.');
+      }else portalNotice(error instanceof Error?error.message:'Não foi possível preparar o modelo.');
+    } finally {setPreparingGoogleTemplate(false);}
   };
 
   const filtered = useMemo(() => {
@@ -182,10 +187,10 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
       ? <select aria-label={`Qualidade de ${entry.nome}`} value={adminRole} onChange={(event) => void changeRole(entry, event.target.value as ProcessRole)} className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold">{roles.map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}</select>
       : <span className="text-[9px] font-bold">{roleLabels[adminRole]}</span>;
     if (key === 'active') return canManage
-      ? <button type="button" onClick={() => void toggle(entry)} className={`inline-flex min-h-7 items-center gap-1 rounded-md border px-2 py-1 text-[8px] font-black uppercase ${entry.active ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-300 bg-slate-100 text-slate-700'}`}>{entry.active ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}{entry.active ? 'Ativo' : 'Inativo'}</button>
+      ? <button type="button" onClick={() => void toggle(entry)} className={`inline-flex min-h-7 items-center gap-1 rounded-md border px-2 py-1 text-[8px] font-black normal-case ${entry.active ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-300 bg-slate-100 text-slate-700'}`}>{entry.active ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}{entry.active ? 'Ativo' : 'Inativo'}</button>
       : <span className="text-[9px]">{entry.active ? 'Ativo' : 'Inativo'}</span>;
-    if (key === 'actions') return canManage && canDelete
-      ? <button type="button" onClick={() => void remove(entry)} className="rounded-md border border-slate-200 bg-white p-1.5 text-rose-700 hover:bg-rose-50" aria-label={`Excluir ${entry.nome}`}><Trash2 className="h-3.5 w-3.5" /></button>
+    if (key === 'actions') return canManage
+      ? <button type="button" onClick={() => void remove(entry)} className="rounded-md border border-slate-200 bg-white p-1.5 text-rose-700 hover:bg-rose-50" disabled={!canDelete&&!entry.active} title={canDelete?'Excluir acesso manual':entry.active?'Revogar acesso sem apagar o TCC':'Acesso já revogado'} aria-label={`${canDelete?'Excluir':'Revogar acesso de'} ${entry.nome}`}><Trash2 className="h-3.5 w-3.5" /></button>
       : <span className="text-slate-300">—</span>;
     return '—';
   };
@@ -195,24 +200,43 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
       <button type="button" onClick={() => setModal('add')} className="portal-toolbar-icon-button" title="Adicionar acesso" aria-label="Adicionar acesso"><Plus className="h-3.5 w-3.5" /></button>
       <button type="button" onClick={() => setModal('list')} className="portal-toolbar-icon-button" title="Enviar lista de acessos" aria-label="Enviar lista de acessos"><FileSpreadsheet className="h-3.5 w-3.5" /></button>
     </>}
+    {canManage && <span className="portal-toolbar-group-divider" role="separator" aria-orientation="vertical" />}
     <SearchPopover value={search} onChange={setSearch} placeholder="Buscar por nome, e-mail ou matrícula" textFormat={textFormat}/>
     <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} allColumns={ACCESS_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="authorized_access" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Acesso"/>
   </div>;
 
   return <section id="authorized-access-panel" data-settings-sheet="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'flex min-h-0 flex-col' : 'overflow-hidden rounded-xl border border-slate-300 shadow-sm'} style={{ backgroundColor: embedded ? 'var(--portal-surface-panel)' : 'var(--portal-surface-page)' }}>
-    {embedded ? <SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal> : <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-3 py-2 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><div className="flex items-center gap-2"><UserCheck className="h-4 w-4"/><h3 className="text-xs font-black uppercase tracking-wide">Acesso</h3></div>{toolbar}</header>}
+    {embedded ? <SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal> : <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-3 py-2 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><div className="flex items-center gap-2"><UserCheck className="h-4 w-4"/><h3 className="text-xs font-black normal-case tracking-wide">Acesso</h3></div>{toolbar}</header>}
 
-    <div className="flex min-h-0 flex-1 flex-col p-0">
-      {loading ? <div className="m-3 rounded-xl border border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Carregando acessos…</div> : shown.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-xs font-semibold text-slate-500">Nenhum acesso encontrado.</div> : <TableScrollWrapper fillHeight>
+    <div className="portal-access-table-shell flex min-h-0 flex-1 flex-col p-0">
+      <TableScrollWrapper fillHeight>
         <table className="portal-spreadsheet-table w-full min-w-[900px] border-collapse text-center text-xs">
-          <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wide ${['active','actions'].includes(key) ? 'text-center' : ''}`}>{ACCESS_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
-          <tbody className="divide-y divide-slate-200">{shown.map((entry, entryIndex) => <tr key={`${entry.id}-${entry.origin}-${entryIndex}`}>{activeColumns.map((key) => <td key={key} className={`px-3 py-1 text-slate-950 ${['active','actions'].includes(key) ? 'text-center' : ''}`}>{renderCell(entry, key)}</td>)}</tr>)}</tbody>
+          <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black normal-case tracking-wide ${['active','actions'].includes(key) ? 'text-center' : ''}`}>{ACCESS_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
+          <tbody className="divide-y divide-slate-200">{(loading || shown.length === 0) && <tr><td colSpan={activeColumns.length} className="portal-sheet-empty-cell" role="status">{loading ? 'Carregando acessos…' : 'Nenhum acesso encontrado.'}</td></tr>}{shown.map((entry, entryIndex) => <tr key={`${entry.id}-${entry.origin}-${entryIndex}`}>{activeColumns.map((key) => <td key={key} className={`px-3 py-1 text-slate-950 ${['active','actions'].includes(key) ? 'text-center' : ''}`}>{renderCell(entry, key)}</td>)}</tr>)}</tbody>
         </table>
-      </TableScrollWrapper>}
+      </TableScrollWrapper>
     </div>
 
-    {modal === 'add' && <CompactModal title="Adicionar acesso" onClose={() => setModal(null)}><form onSubmit={add} className="space-y-2"><div className="grid gap-2 sm:grid-cols-2"><label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">Nome completo</span><input required value={nome} onChange={(event) => setNome(event.target.value)} className={inputClass} /></label><label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">E-mail</span><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} placeholder="usuario@gmail.com" /></label><label><span className="mb-1 block text-[9px] font-black uppercase text-slate-600">Matrícula — opcional</span><input value={matricula} onChange={(event) => setMatricula(event.target.value)} className={inputClass} /></label></div><p className="text-[10px] leading-4 text-slate-600">O acesso é definido por esta lista. O e-mail não precisa pertencer a um domínio institucional.</p><div className="flex justify-end pt-1"><button disabled={saving} className={popupActionButton}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}Adicionar</button></div></form></CompactModal>}
+    {modal === 'add' && <CompactModal title="Adicionar acesso" onClose={() => setModal(null)}><form onSubmit={add} className="space-y-2"><div className="grid gap-2 sm:grid-cols-2"><label><span className="mb-1 block text-[9px] font-black normal-case text-slate-600">Nome completo</span><input required value={nome} onChange={(event) => setNome(event.target.value)} className={inputClass} /></label><label><span className="mb-1 block text-[9px] font-black normal-case text-slate-600">E-mail</span><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} placeholder="usuario@gmail.com" /></label><label><span className="mb-1 block text-[9px] font-black normal-case text-slate-600">Matrícula — opcional</span><input value={matricula} onChange={(event) => setMatricula(event.target.value)} className={inputClass} /></label></div><p className="text-[10px] leading-4 text-slate-600">O acesso é definido por esta lista. O e-mail não precisa pertencer a um domínio institucional.</p><div className="flex justify-end pt-1"><button disabled={saving} className={popupActionButton}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}Adicionar</button></div></form></CompactModal>}
 
-    {modal === 'list' && <CompactModal title="Envio de lista" onClose={() => setModal(null)}><div className="space-y-3"><p className="text-[10px] leading-4 text-slate-600">Use uma planilha Excel normal, uma planilha do Google ou simplesmente copie e cole as colunas. O Portal faz a leitura e conversão internamente.</p><div className="flex flex-wrap gap-2"><button type="button" onClick={() => void downloadExcelTemplate()} className={popupActionButton}><Download className="h-3.5 w-3.5" />Modelo Excel</button><button type="button" onClick={() => void openGoogleSheetsTemplate()} className={whiteButton}><FileSpreadsheet className="h-3.5 w-3.5" />Modelo Google Planilhas</button></div><textarea value={pasteText} onChange={(event) => setPasteText(event.target.value)} rows={4} className={`${inputClass} min-h-[86px] font-mono`} placeholder={'nome\temail\tmatricula\nMaria Silva\tmaria@gmail.com\t202612345'} /><div className="flex flex-wrap gap-2"><button type="button" onClick={readPaste} className={popupActionButton}><ClipboardPaste className="h-3.5 w-3.5" />Interpretar dados colados</button><label className={`${popupActionButton} cursor-pointer`}><Upload className="h-3.5 w-3.5" />Selecionar planilha<input className="sr-only" type="file" accept=".xlsx,.csv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain" onChange={(event) => void readImport(event.target.files?.[0])} /></label></div>{importRows.length > 0 && <div className="overflow-hidden rounded-lg border border-slate-300 bg-white"><div className="border-b border-slate-200 px-2.5 py-1.5 text-[10px] font-bold text-slate-700">{importRows.length} pessoa(s) pronta(s) para conferência</div><div className="max-h-48 overflow-auto"><table className="portal-spreadsheet-table w-full text-left text-[10px]"><thead><tr><th className="p-1.5">Linha</th><th className="p-1.5">Nome</th><th className="p-1.5">E-mail</th><th className="p-1.5">Matrícula</th></tr></thead><tbody>{importRows.slice(0, 100).map((row) => <tr key={`${row.row}-${row.email}`} className="border-t border-slate-100"><td className="p-1.5">{row.row}</td><td className="p-1.5">{row.nome || '—'}</td><td className="p-1.5">{row.email || '—'}</td><td className="p-1.5">{row.matricula || '—'}</td></tr>)}</tbody></table></div><div className="flex justify-end border-t border-slate-200 p-2"><button type="button" disabled={saving} onClick={() => void confirmImport()} className={popupActionButton}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}Importar {importRows.length}</button></div></div>}</div></CompactModal>}
+    {modal === 'list' && <CompactModal title="Envio de lista" onClose={() => setModal(null)}><div className="space-y-4" data-access-import="true">
+      <div className="flex flex-wrap gap-2">
+        <span className="text-xs text-slate-700">Modelos</span>
+        <button type="button" onClick={() => void downloadExcelTemplate()} className={`${whiteButton} portal-button-secondary`}><Download className="h-3.5 w-3.5"/>Excel</button>
+        {googleTemplateUrl?<a href={googleTemplateUrl} target="_blank" rel="noreferrer" className={`${whiteButton} portal-button-secondary`}><FileSpreadsheet className="h-3.5 w-3.5"/>Google Planilha</a>:<button type="button" onClick={() => void openGoogleSheetsTemplate()} disabled={preparingGoogleTemplate} className={`${whiteButton} portal-button-secondary`}>{preparingGoogleTemplate?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileSpreadsheet className="h-3.5 w-3.5"/>}Google Planilha</button>}
+      </div>
+      <div className={`rounded-xl border-2 border-dashed p-3 ${dragging?'border-[var(--portal-brand-header)]':'border-[var(--portal-border)]'} bg-white`}
+        onDragOver={event=>{event.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)}
+        onDrop={event=>{event.preventDefault();setDragging(false);const file=event.dataTransfer.files[0];if(file){setImportFile(file);setPasteText('');setImportRows([]);}else{setPasteText(event.dataTransfer.getData('text/plain'));setImportFile(null);setImportRows([]);}}}>
+        <label htmlFor="access-import-text" className="mb-2 block text-xs font-bold">Dados da lista de acesso</label>
+        <div className="relative">
+          <textarea id="access-import-text" aria-label="Dados da lista de acesso" aria-describedby="access-import-file-status" value={pasteText} onChange={event=>{setPasteText(event.target.value);setImportFile(null);setImportRows([]);}} rows={6} className={`${inputClass} block min-h-40 resize-y pb-14 font-mono`} placeholder={'Cole ou escreva nome, email e matrícula aqui. Também é possível arrastar uma planilha.\nnome\temail\tmatricula\nMaria Silva\tmaria@example.invalid\t202612345'}/>
+          <label className={`${whiteButton} absolute bottom-3 right-3 cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--portal-brand-header)]`}><Upload className="h-3.5 w-3.5"/>Adicionar arquivo<input aria-label="Selecionar planilha" className="sr-only" type="file" accept=".xlsx,.csv,.txt" onChange={event=>{const file=event.target.files?.[0];if(file){setImportFile(file);setPasteText('');setImportRows([]);}event.currentTarget.value='';}}/></label>
+        </div>
+        <p id="access-import-file-status" className="mt-2 break-words text-xs text-slate-600" role="status">{importFile?`Arquivo: ${importFile.name}`:'XLSX, CSV ou TXT, até 5 MB'}</p>
+      </div>
+      <div className="flex justify-end"><button type="button" disabled={!importFile&&!pasteText.trim()} onClick={()=>{if(importFile)void readImport(importFile);else readPaste();}} className={popupActionButton}><ClipboardPaste className="h-3.5 w-3.5"/>Interpretar dados</button></div>
+      {importRows.length>0&&<div className="overflow-hidden rounded-lg border border-slate-300 bg-white"><div className="border-b border-slate-200 px-3 py-2 text-xs font-bold">{importRows.length} pessoa(s) para conferência</div><div className="max-h-48 overflow-auto"><table className="w-full text-left text-xs"><thead><tr><th className="p-2">Linha</th><th className="p-2">Nome</th><th className="p-2">E-mail</th><th className="p-2">Matrícula</th></tr></thead><tbody>{importRows.slice(0,100).map(row=><tr key={`${row.row}-${row.email}`}><td className="p-2">{row.row}</td><td className="p-2">{row.nome||'—'}</td><td className="p-2">{row.email||'—'}</td><td className="p-2">{row.matricula||'—'}</td></tr>)}</tbody></table></div><div className="flex justify-end border-t p-2"><button type="button" disabled={saving} onClick={()=>void confirmImport()} className={popupActionButton}>{saving?'Importando…':`Importar ${importRows.length}`}</button></div></div>}
+    </div></CompactModal>}
   </section>;
 };

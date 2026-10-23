@@ -22,7 +22,7 @@ export const ColorField: React.FC<{
   <label className="flex items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs hover:border-slate-300 transition-all">
     <span className="truncate text-slate-800 font-bold">{label}</span>
     <span className="flex items-center gap-2 shrink-0">
-      <span className="text-[10px] font-mono font-extrabold text-slate-500 uppercase">{value || '#ffffff'}</span>
+      <span className="text-[10px] font-mono font-extrabold text-slate-500 normal-case">{value || '#ffffff'}</span>
       <input
         type="color"
         value={value || '#ffffff'}
@@ -40,7 +40,7 @@ export const TextField: React.FC<{
   onChange: (val: string) => void;
 }> = ({ label, value, placeholder, onChange }) => (
   <div className="space-y-1">
-    <label className="block text-[10.5px] font-black text-slate-700 uppercase tracking-wider">
+    <label className="block text-[10.5px] font-black text-slate-700 normal-case tracking-wider">
       {label}
     </label>
     <input
@@ -59,7 +59,7 @@ export const FontSelectorField: React.FC<{
   onChange: (val: string) => void;
 }> = ({ label, value, onChange }) => (
   <div className="space-y-1">
-    <label className="block text-[10.5px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+    <label className="block text-[10.5px] font-black text-slate-700 normal-case tracking-wider flex items-center gap-1.5">
       <Type className="w-3.5 h-3.5 text-slate-600" />
       <span>{label}</span>
     </label>

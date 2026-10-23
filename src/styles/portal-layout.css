@@ -125,7 +125,16 @@ body,
   padding-left: 10px;
 }
 
-#portal-app-root main {
+/* Escape não muda o item ativo; Tab mantém foco acessível na navegação. */
+#portal-sidebar[data-keyboard-navigation="false"] .portal-sidebar-nav-item:focus-visible {
+  outline: none;
+}
+#portal-sidebar[data-keyboard-navigation="true"] .portal-sidebar-nav-item:focus-visible {
+  outline: 2px solid var(--portal-text-light);
+  outline-offset: 2px;
+}
+
+#portal-app-root .portal-page-main {
   width: 100%;
   max-width: none;
   min-width: 0;

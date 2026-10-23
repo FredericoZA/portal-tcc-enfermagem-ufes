@@ -81,7 +81,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
               <Lock className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
+              <h2 className="text-sm font-black normal-case tracking-wider text-white flex items-center gap-2">
                 <span>Personalizar Popup de Login & Acesso</span>
                 <span className="text-[10px] bg-slate-700 text-slate-100 border border-slate-600 px-2 py-0.5 rounded font-mono">
                   Visual em Tempo Real
@@ -116,7 +116,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab('textos')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-black normal-case tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   activeTab === 'textos'
                     ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
                     : 'text-slate-600 hover:text-slate-900'
@@ -128,7 +128,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab('estilo')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-black normal-case tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   activeTab === 'estilo'
                     ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
                     : 'text-slate-600 hover:text-slate-900'
@@ -140,7 +140,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab('elementos')}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-black normal-case tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   activeTab === 'elementos'
                     ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
                     : 'text-slate-600 hover:text-slate-900'
@@ -158,7 +158,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
               {activeTab === 'textos' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    <label className="block text-[11px] font-bold normal-case tracking-wider text-slate-700 mb-1">
                       Título do Modal
                     </label>
                     <input
@@ -170,7 +170,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    <label className="block text-[11px] font-bold normal-case tracking-wider text-slate-700 mb-1">
                       Subtítulo Institucional
                     </label>
                     <input
@@ -182,7 +182,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    <label className="block text-[11px] font-bold normal-case tracking-wider text-slate-700 mb-1">
                       Instruções / Descrição
                     </label>
                     <textarea
@@ -194,7 +194,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                   </div>
 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                    <span className="text-[11px] font-black uppercase text-slate-800 block">
+                    <span className="text-[11px] font-black normal-case text-slate-800 block">
                       Dicas na Caixa Informativa
                     </span>
                     <div>
@@ -222,7 +222,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    <label className="block text-[11px] font-bold normal-case tracking-wider text-slate-700 mb-1">
                       Rótulo do Campo de E-mail
                     </label>
                     <input
@@ -234,7 +234,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    <label className="block text-[11px] font-bold normal-case tracking-wider text-slate-700 mb-1">
                       Placeholder do Campo de E-mail
                     </label>
                     <input
@@ -246,7 +246,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    <label className="block text-[11px] font-bold normal-case tracking-wider text-slate-700 mb-1">
                       Texto do Botão de Ação
                     </label>
                     <input
@@ -263,7 +263,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
               {activeTab === 'estilo' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    <label className="block text-[11px] font-bold normal-case tracking-wider text-slate-700 mb-2">
                       Tema de Cores do Cabeçalho & Botão
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -291,7 +291,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    <label className="block text-[11px] font-bold normal-case tracking-wider text-slate-700 mb-2">
                       Arredondamento dos Cantos
                     </label>
                     <div className="grid grid-cols-4 gap-2">
@@ -318,7 +318,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
               {activeTab === 'elementos' && (
                 <div className="space-y-4">
                   <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                    <span className="text-xs font-black uppercase text-slate-900 block">
+                    <span className="text-xs font-black normal-case text-slate-900 block">
                       Elementos Visíveis
                     </span>
 
@@ -362,7 +362,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                   {config.showSecurityFooter && (
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        <label className="block text-[11px] font-bold normal-case tracking-wider text-slate-700 mb-1">
                           Texto de Segurança (Esquerda)
                         </label>
                         <input
@@ -373,7 +373,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        <label className="block text-[11px] font-bold normal-case tracking-wider text-slate-700 mb-1">
                           Texto de Localização (Direita)
                         </label>
                         <input
@@ -395,7 +395,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
           <div className="lg:col-span-7 bg-[var(--portal-surface-card)] flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto custom-scrollbar">
             <div className="w-full max-w-lg">
               <div className="mb-2 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                <span>PREVIEW AO VIVO DO POPUP</span>
+                <span>Preview ao vivo do popup</span>
                 <span className="text-emerald-400 font-bold">● Sincronizado</span>
               </div>
 
@@ -420,7 +420,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                     </div>
                   </div>
                   <div className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 flex items-center justify-center transition-colors">
-                    <span className="text-[9px] font-bold">ESC</span>
+                    <span className="text-[9px] font-bold">Esc</span>
                   </div>
                 </div>
 
@@ -445,7 +445,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
 
                   <div className="space-y-4 pt-1">
                     <div className="space-y-1.5">
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                      <label className="block text-[11px] font-bold normal-case tracking-wider text-slate-700">
                         {config.emailLabel} <span className="text-rose-500">*</span>
                       </label>
                       <div className="relative">
@@ -469,7 +469,7 @@ export const LoginPopupEditorModal: React.FC<LoginPopupEditorModalProps> = ({
                       </button>
                       <button
                         type="button"
-                        className={`px-5 py-2 ${currentTheme.btnBg} text-white text-xs font-bold uppercase tracking-wide rounded-xl flex items-center gap-2 shadow-2xs`}
+                        className={`px-5 py-2 ${currentTheme.btnBg} text-white text-xs font-bold normal-case tracking-wide rounded-xl flex items-center gap-2 shadow-2xs`}
                       >
                         <span>{config.buttonText}</span>
                         <ArrowRight className="w-3.5 h-3.5" />

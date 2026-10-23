@@ -115,7 +115,9 @@ test('os três workspaces de registros são popups-planilha full-bleed com rolag
   const scroll=read('src/components/TableScrollWrapper.tsx');
   assert.match(modal,/new Set\(\['authorizations', 'signature-ledger', 'audit-ledger'\]\)/);
   assert.match(modal,/sheetWorkspace \? 'flex flex-col overflow-hidden'/);
-  assert.match(modal,/sheetWorkspace \? 'h-auto max-h-\[calc\(100dvh-48px\)\]'/);
+  const css=read('src/styles/portal-components.css');
+  assert.match(css,/\.portal-settings-workspace\[data-portal-sheet-workspace="true"\]\s*\{[^}]*height:\s*min\(760px, calc\(100dvh - 48px\)\)/);
+  assert.match(css,/\[data-portal-sheet-workspace="true"\] \.portal-settings-workspace-divider\s*\{\s*display: block;[\s\S]*?height:\s*15px/);
   assert.match(scroll,/fillHeight \? 'none'/);
   assert.match(scroll,/fillHeight \? '100%' : undefined/);
 
@@ -149,26 +151,32 @@ test('planilhas dentro do popup recebem ordenar, filtrar e resize do runtime can
   assert.match(dom,/installResizer/);
 });
 
-test('ajustes estéticos recentes preservam autosave silencioso e integrações em 3 mais 2',()=>{
+test('integrações distribuem Asten e demais serviços em duas colunas sem alterar autosave',()=>{
   const identity=read('src/components/CommissionIdentityPanel.tsx');
   const integrations=read('src/components/InfrastructureIntegrationsPanel.tsx');
   assert.doesNotMatch(identity,/Alterações salvas automaticamente/);
   assert.match(identity,/portal-identity-panel space-y-\[5px\] p-0/);
-  assert.match(integrations,/lg:col-span-2/);
-  assert.match(integrations,/lg:grid-cols-4/);
+  assert.match(integrations,/className="portal-infrastructure-grid"/);
+  assert.match(integrations,/className="grid min-w-0 content-start gap-3"/);
+  const css=read('src/styles/portal-components.css');
+  assert.match(css,/\.portal-infrastructure-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1\.3fr\) minmax\(0, 1fr\)/);
   assert.doesNotMatch(integrations,/id="department-email-title"/);
   assert.match(integrations,/bg-\[var\(--portal-surface-page\)\]/);
   assert.match(integrations,/border border-white bg-white[\s\S]*text-slate-950/);
 });
 
-test('fila da Presidência valida Asten e Gov.br separadamente e Gov funciona com uma seleção',()=>{
+test('fila da Presidência valida a elegibilidade Asten e aceita uma seleção',()=>{
   const page=read('src/pages/CoordenadorPage.tsx');
   assert.match(page,/canSendDeclarationToAsten/);
-  assert.match(page,/canPrepareDeclarationForGovBr/);
-  assert.match(page,/selectedIds\.filter\(\(id\) => pendingIds\.has\(id\) && canSendAsten\(id\)\)/);
-  assert.match(page,/selectedIds\.filter\(id=>pendingIds\.has\(id\)&&canPrepareGov\(id\)\)/);
+  assert.doesNotMatch(page,/canPrepareDeclarationForGovBr/);
+  assert.match(page,/selectedIds\.filter\(\(id\) => pendingIds\.has\(id\)\)/);
+  assert.match(page,/AstenDeclarationBatchModal/);
+  assert.doesNotMatch(page,/canPrepareGov/);
   assert.doesNotMatch(page,/ids\.length<2/);
-  assert.match(page,/Selecione ao menos uma declaração disponível para assinatura Gov\.br/);
+  assert.match(page,/<span>Asten<\/span>/);
+  assert.match(page,/dispatchDeclarationBatch/);
+  assert.match(page,/signatureActionLock\.current\.run/);
+  assert.match(page,/remainingSelectedDeclarations/);
 });
 
 test('editor de fluxo usa timeline clicável e planilha da etapa sem paleta de arraste',()=>{
@@ -195,8 +203,9 @@ test('editor de formulário é o próprio formulário e não um painel lateral d
   assert.match(studio,/title="Adicionar formulário"/);
   assert.match(studio,/title="Excluir somente este formulário"/);
   assert.match(studio,/universityLogoUrl/);
-  assert.match(studio,/title="Alterar logo da UFES"/);
-  assert.match(studio,/title="Alterar logo do curso"/);
+  assert.doesNotMatch(studio,/title="Alterar logo da UFES"/);
+  assert.doesNotMatch(studio,/title="Alterar logo do curso"/);
+  assert.doesNotMatch(studio,/Adicionar imagem ao formulário/);
   assert.match(studio,/Duplo clique para editar a pergunta/);
   assert.match(studio,/title="Configurar campo"/);
   assert.match(studio,/Adicionar campo vinculado a uma variável/);
@@ -232,7 +241,7 @@ test('editor de e-mail usa modelo único autoeditável e autocomplete sem criar 
   assert.match(studio,/aria-label="Selecionar e-mail"/);
   assert.match(studio,/title="Adicionar outro modelo de e-mail"/);
   assert.match(studio,/title="Excluir somente este modelo de e-mail"/);
-  assert.match(studio,/HTML avançado/);
+  assert.doesNotMatch(studio,/HTML avançado/);
   assert.match(studio,/Digite &lt;&lt; para escolher uma variável disponível/);
   assert.match(studio,/const TemplateVariableControl/);
   assert.match(studio,/role="listbox" aria-label="Variáveis disponíveis"/);
@@ -249,17 +258,19 @@ test('formulário separa campos internos dos campos publicáveis para templates'
   assert.match(studio,/Disponível para e-mails e documentos/);
   assert.match(studio,/question\.availableToTemplates===false/);
   assert.match(service,/question\.availableToTemplates === false/);
-  assert.match(page,/fieldKey: 'PALAVRAS_CHAVE'[\s\S]*availableToTemplates: false/);
+  assert.doesNotMatch(page,/id: 'form-homologacao-coordenador'/);
+  assert.match(read('server/workflow/runtime.ts'),/studio\.processFieldSchemas/);
 });
 
 test('documentos e variáveis exibem um documento por vez e sem consolidar manualmente',()=>{
   const docs=read('src/components/MasterDocumentModelsPanel.tsx');
   assert.match(docs,/data-portal-document-direct-editor="true"/);
   assert.match(docs,/aria-label="Selecionar documento"/);
-  assert.match(docs,/title="Adicionar arquivo ou alterar a origem do documento"/);
+  assert.match(docs,/hasFile\?'Substituir documento':'Adicionar documento'/);
+  assert.match(docs,/documentInputRef\.current\?\.click\(\)/);
   assert.match(docs,/title="Excluir somente este documento"/);
   assert.match(docs,/Atualizar variáveis/);
-  assert.match(docs,/sincronizada\(s\) automaticamente/);
+  assert.match(docs,/sincronizada\(s\) com a versão publicada/);
   assert.match(docs,/variableUsageTitle/);
   assert.doesNotMatch(docs,/Modelos oficiais e variáveis/);
   assert.doesNotMatch(docs,/Descoberta e consolidação/);

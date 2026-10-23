@@ -41,9 +41,9 @@ for (const canonicalImport of [
 ]) assert.ok(indexCss.includes(canonicalImport), `Folha canônica ausente do entrypoint: ${canonicalImport}`);
 
 for (const [token, value] of [
-  ['--portal-surface-page', '#f1f5f9'],
-  ['--portal-surface-panel', '#e1e6e9'],
-  ['--portal-surface-card', '#d5dce0'],
+  ['--portal-surface-page', '#f6f7f8'],
+  ['--portal-surface-panel', '#e9edef'],
+  ['--portal-surface-card', '#d8dfe3'],
   ['--portal-surface-inner', '#ffffff'],
   ['--portal-brand-header', '#005830'],
   ['--portal-brand-action', '#337959'],
@@ -93,9 +93,10 @@ for (const removedLabel of ['Botões no Topo', 'Estilo Base Planilhas', 'Colunas
 for (const canonicalSheet of ["sheet_calendar", "sheet_repository", "sheet_my_tccs", "sheet_coordinator"]) assert.ok(editor.includes(canonicalSheet));
 
 assert.match(access, /Matrícula — opcional/);
-assert.match(access, /planilha Excel normal/);
-assert.match(access, /Modelo Excel/);
-assert.match(access, /Modelo Google Planilhas/);
+assert.match(access, /parseStudentImportFile/);
+assert.match(access, /\/api\/public\/templates\/access-list\.xlsx/);
+assert.match(access, />Excel<\/button>/);
+assert.match(access, /Google Planilha/);
 assert.match(access, /Selecionar planilha/);
 assert.doesNotMatch(access, />Tipo</);
 assert.doesNotMatch(access, />TCCs</);
@@ -120,9 +121,9 @@ assert.match(studio, /localTime > remoteTime/);
 assert.match(studio, /'Publicando…' : 'Publicar'/);
 assert.match(studio, /createEmailTemplate/);
 assert.match(studio, /deleteSelectedEmail/);
-assert.match(studio, />Anexos /);
-assert.match(studio, /Após assinatura/);
-assert.match(studio, /Quando gerado/);
+assert.match(studio, /sem anexos PDF/);
+assert.doesNotMatch(studio, />Anexos /);
+
 assert.match(studio, /createFormTemplate/);
 assert.match(studio, /deleteSelectedForm/);
 assert.match(studio, /moveSelectedFormQuestion/);
@@ -148,7 +149,7 @@ assert.doesNotMatch(studio, /<strong>Fonte oficial única\.<\/strong>/);
 assert.doesNotMatch(studio, />Finalidade no fluxo</);
 
 assert.match(masterModels, /Nome do novo documento/);
-assert.match(masterModels, /title="Adicionar arquivo ou alterar a origem do documento"/);
+assert.match(masterModels, /hasFile\?'Substituir documento':'Adicionar documento'/);
 assert.match(masterModels, /data-portal-document-direct-editor="true"/);
 assert.match(masterModels, /aria-label="Selecionar documento"/);
 assert.doesNotMatch(masterModels, />Consolidar</);

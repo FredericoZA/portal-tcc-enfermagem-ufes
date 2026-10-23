@@ -1,12 +1,14 @@
 # Padrão Visual Oficial — Portal TCC
 
+Atualizado em 16/10/2026. Revisão 3.0. O PDF correspondente está em `output/pdf/padrao-visual-portal-tcc.pdf` e no Drive, dentro de `00_SISTEMA`.
+
 Este documento registra os invariantes visuais do Portal. Eles devem ser reutilizados em todas as abas, tabelas, planilhas, pop-ups e áreas administrativas. Mudanças locais não devem criar uma nova paleta ou um novo padrão de espaçamento.
 
 ## 1. Hierarquia de superfícies
 
-1. **Fundo geral da página:** branco-gelo `#f1f5f9`.
-2. **Superfície principal de tela/planilha:** `#e1e6e9`.
-3. **Blocos/células internas:** `#d5dce0`.
+1. **Fundo geral da página:** branco-gelo `#f6f7f8`.
+2. **Superfície principal de tela/planilha:** `#e9edef`.
+3. **Blocos/células internas:** `#d8dfe3`.
 4. **Conteúdo de contraste, inputs e cartões internos:** branco `#ffffff`.
 
 A hierarquia deve ser visível. Nunca usar a mesma cor para fundo geral, planilha e blocos internos.
@@ -44,7 +46,7 @@ A hierarquia deve ser visível. Nunca usar a mesma cor para fundo geral, planilh
 
 ## 5. Pop-ups e modais
 
-- Fundo principal do pop-up: `#e1e6e9`.
+- Fundo principal do pop-up: branco gelo `#f6f7f8`; painel cinza claro `#e9edef`; grupo interno cinza médio `#d8dfe3`; campos e linhas brancos `#ffffff`.
 - Campos e cartões internos podem usar branco.
 - Cabeçalho deve seguir a identidade institucional.
 - Evitar padding vertical excessivo.
@@ -112,3 +114,24 @@ Para editores:
 `popup → seções funcionais → campos/controles`
 
 Pop-ups com planilha não devem ter uma moldura lateral adicional em volta da tabela. O cabeçalho da planilha é parte direta da estrutura do popup.
+
+## Decisões de 16/10/2026
+
+- Acesso, Registros de Assinatura e Registro de Logs são planilhas flutuantes: zero margem lateral; somente borda de 1 px e faixa branca de 15 px entre título e tabela. Estado vazio dentro da tabela, com colunas preservadas.
+- Detalhes do TCC usa as quatro superfícies e o verde institucional `#005830`. Sem verde bebê ou roxo decorativo. Título em branco, resumo em cinza claro, grupos em cinza médio e controles brancos. Aba ativa e ações principais verdes.
+- O texto escuro é `#0f172a`; o secundário é `#526273`.
+- A raiz do Drive mantém Sistema, Documentos, Processos, Repositório Público e Lixo. Imagens e PDF visual pertencem a Sistema. Homologação fica em Sistema como configuração de testes.
+- Os pilotos continuam identificados como fictícios. Reorganizar arquivos existentes não altera automaticamente a raiz de futuros envios do ambiente de homologação.
+- O renderizador reproduzível do PDF é `scripts/documents/render-visual-guide.py`.
+
+## Ajustes aprovados em 22/10/2026
+
+- Rótulos, títulos, botões e estados usam capitalização normal. Siglas acadêmicas,
+  protocolos e o conteúdo dos modelos documentais originais são preservados.
+- No Repositório dos detalhes do TCC, campos e superfícies internas usam branco-gelo
+  `#f6f7f8`, dentro dos grupos cinza médio. O botão final fica centralizado.
+- Documentos indisponíveis mostram a razão na caixa amarela; Ver e Baixar ficam
+  cinza e desabilitados. Quando liberados, Ver usa sálvia e Baixar usa verde escuro.
+- Alterar data, horário ou local da defesa abre confirmação de atenção vermelha,
+  informa o impacto no calendário e a obrigação de avisar e reconfirmar com o
+  departamento. A alteração confirmada permanece registrada no histórico.

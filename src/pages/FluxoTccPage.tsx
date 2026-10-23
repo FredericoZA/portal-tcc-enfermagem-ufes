@@ -1,3 +1,4 @@
+import { SignatureFlowSummary } from '../components/SignatureFlowSummary';
 import React from 'react';
 import {
   BookOpenCheck,
@@ -36,7 +37,7 @@ const phases = [
     summary: 'A defesa só recebe local definitivo depois da confirmação do espaço reservado pelo Departamento.',
     details: [
       'O aluno solicita ou acompanha a reserva conforme a rotina administrativa do Departamento.',
-      'A sala ou o auditório só deve ser registrado no Portal depois da confirmação real da reserva.',
+      'Depois da resposta do departamento, um dos autores anexa o e-mail em PDF, informa o local autorizado e confirma. Não há aceite separado do segundo autor.',
       'Data e horário são conferidos juntamente com o local para evitar conflito entre agenda e espaço físico.',
       'Se houver mudança posterior, o processo deve ser atualizado antes da divulgação final da defesa.',
     ],
@@ -67,11 +68,11 @@ const phases = [
     details: [
       'O orientador confere novamente autoria, título, banca, data, horário e local antes da avaliação.',
       'Registra o resultado previsto no fluxo e o parecer correspondente, sem inserir nota numérica quando ela não fizer parte da regra do curso.',
-      'A prévia da Ata deve ser revisada antes do encaminhamento para assinatura.',
+      'O orientador revisa a prévia e escolhe Asten (preferencial) ou Gov.br em Avaliação e ata. Somente o professor orientador assina a ata.',
       'Falhas de assinatura ou divergências documentais devem ser corrigidas pela causa, sem criar versões duplicadas desnecessárias.',
     ],
-    gate: 'Resultado, parecer e dados da Ata conferidos pelo orientador.',
-    result: 'Ata pronta para a modalidade de assinatura aplicável ao processo.',
+    gate: 'Ata assinada pelo orientador e arquivada no processo para liberar a entrega final.',
+    result: 'Ata arquivada; alunos recebem instruções para a entrega final, com ciência ao orientador.',
   },
   {
     n: 5,
@@ -97,7 +98,7 @@ const phases = [
     details: [
       'O aluno define separadamente quais conteúdos poderão ser disponibilizados publicamente.',
       'O Termo só é exigido quando a escolha de publicação tornar o documento aplicável.',
-      'Autores e orientador conferem os dados antes de iniciar a assinatura.',
+      'Todos os autores e o orientador assinam. O método é escolhido no Repositório: Asten (preferencial) ou Gov.br.',
       'A conclusão da assinatura é acompanhada no próprio processo para que a etapa seguinte use o estado correto.',
     ],
     gate: 'Escolhas de publicação registradas e Termo resolvido quando necessário.',
@@ -112,7 +113,7 @@ const phases = [
     details: [
       'A declaração reutiliza os dados da defesa e a composição efetivamente registrada da banca.',
       'A Presidência verifica se os documentos anteriores e as entregas obrigatórias estão resolvidos.',
-      'O documento é conferido antes do encaminhamento para a modalidade de assinatura disponível.',
+      'A presidência da comissão assina por Asten (preferencial) ou escolhe Gov.br na Área do Presidente antes de iniciar a assinatura.',
       'Pendências de integração, assinatura ou arquivo são tratadas antes da conclusão para preservar a rastreabilidade do processo.',
     ],
     gate: 'Documentos e pendências administrativas obrigatórias resolvidos.',
@@ -140,7 +141,7 @@ export const FluxoTccPage: React.FC = () => (
     <section className="portal-public-header">
       <div className="portal-public-title-row gap-2">
         <ColorfulHeaderIcon type="flow" />
-        <h1 className="text-sm font-black uppercase tracking-tight text-white sm:text-base">Fluxo do TCC</h1>
+        <h1 className="text-sm font-black normal-case tracking-tight text-white sm:text-base">Fluxo do TCC</h1>
       </div>
     </section>
     <PortalSectionDivider />
@@ -160,9 +161,9 @@ export const FluxoTccPage: React.FC = () => (
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-sm font-black text-slate-950 sm:text-base">{title}</h2>
-                  <span className="rounded-full border border-slate-300 bg-[#eef1f3] px-2 py-1 text-[8.5px] font-black uppercase tracking-wide text-slate-700">{actor}</span>
+                  <span className="rounded-full border border-slate-300 bg-[#eef1f3] px-2 py-1 text-[8.5px] font-black normal-case tracking-wide text-slate-700">{actor}</span>
                 </div>
-                <span className="mt-1 inline-block text-[8.5px] font-black uppercase tracking-[0.16em] text-[var(--portal-brand-action)]">Etapa {n}</span>
+                <span className="mt-1 inline-block text-[8.5px] font-black normal-case tracking-[0.16em] text-[var(--portal-brand-action)]">Etapa {n}</span>
               </div>
             </div>
 
@@ -189,5 +190,6 @@ export const FluxoTccPage: React.FC = () => (
         ))}
       </div>
     </section>
+    <div className="px-3 pb-3 sm:px-5 sm:pb-5"><SignatureFlowSummary /></div>
   </div>
 );

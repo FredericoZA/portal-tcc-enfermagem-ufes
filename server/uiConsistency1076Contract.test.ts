@@ -12,7 +12,7 @@ test('calendário público exibe somente segunda a sexta', () => {
   assert.match(home, /const firstBusinessDayOffset/);
   assert.match(home, /const trailingBusinessDayCells/);
   assert.match(home, /grid grid-cols-5 text-center/);
-  assert.match(home, /<div>SEG<\/div>[\s\S]*<div>TER<\/div>[\s\S]*<div>QUA<\/div>[\s\S]*<div>QUI<\/div>[\s\S]*<div>SEX<\/div>/);
+  assert.match(home, /<div>Seg<\/div>[\s\S]*<div>Ter<\/div>[\s\S]*<div>Qua<\/div>[\s\S]*<div>Qui<\/div>[\s\S]*<div>Sex<\/div>/);
   assert.doesNotMatch(home, /<div>DOM<\/div>|<div>SÁB<\/div>|portal-core-calendar-weekend/);
   assert.match(home, /businessDays\.map\(\(dayNum, idx\)/);
 });

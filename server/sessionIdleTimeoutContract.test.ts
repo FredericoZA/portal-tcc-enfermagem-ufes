@@ -27,9 +27,12 @@ test('sessão assinada valida integridade temporal, identidade e bloqueia demo e
 
 test('atividade real renova a sessão sem timer agressivo e F5 reconfirma identidade', async () => {
   const context = await source('src/context/AuthContext.tsx');
+  const client = await source('src/services/apiClient.ts');
   assert.ok(context.includes('AUTH_CACHE_MAX_AGE_MS = 3 * 60 * 60 * 1000'));
   assert.ok(context.includes('SESSION_ACTIVITY_TOUCH_INTERVAL_MS = 60 * 1000'));
-  assert.ok(context.includes("fetch('/api/me', { method: 'GET', credentials: 'include'"));
+  assert.ok(context.includes('void apiClient.getMe()'));
+  assert.ok(client.includes("credentials: 'include'"));
+  assert.ok(client.includes("headers['x-demo-user-email']=getActiveUserEmail()"));
   assert.ok(context.includes("['pointerdown', 'keydown', 'touchstart', 'wheel', 'focus']"));
   assert.ok(context.includes('getIdentityWithRetry().then(applyIdentity)'));
 });

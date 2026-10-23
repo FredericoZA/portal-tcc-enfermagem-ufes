@@ -14,24 +14,26 @@ test('Asten não bloqueia a inicialização global e mantém barreira própria d
   assert.ok(asten.includes('callbackConfigured'));
 });
 
-test('Portal oferece Asten e Gov.br como vias independentes de assinatura',async()=>{
+test('Asten mantém fluxo automático e Gov.br exige conferência manual por documento',async()=>{
   const [server,client,page,types]=await Promise.all([source('server.ts'),source('src/services/apiClient.ts'),source('src/pages/ProcessoDetailPage.tsx'),source('src/types/signatures.ts')]);
-  assert.ok(types.includes("provider: 'ASTEN' | 'GOV_BR'"));
-  assert.ok(server.includes("provider:'ASTEN'|'GOV_BR'"));
+  assert.ok(types.includes("provider: 'ASTEN' | 'GOV_BR'")); // histórico permanece legível
+  assert.ok(server.includes("canInitiateSignature(identity.email,process,type)"));
+  assert.ok(server.includes('assertGovbrManualApproval(job,process.dataRevision,confirmation)'));
+  assert.ok(server.includes('GOVBR_CONFERENCIA_MANUAL_APROVADA'));
   assert.ok(server.includes("/api/signatures/jobs/:id/govbr/download"));
   assert.ok(server.includes("/api/signatures/jobs/:id/govbr/complete"));
-  assert.ok(server.includes("purpose:'GOV_BR_SIGNED_PDF'"));
   assert.ok(client.includes("provider:'ASTEN'|'GOV_BR'='ASTEN'"));
-  assert.ok(page.includes("handleSignDocument(doc,'ASTEN')"));
-  assert.ok(page.includes("handleSignDocument(doc,'GOV_BR')"));
+  assert.ok(page.includes('handleSignDocument(doc)'));
+  assert.ok(page.includes('GovbrSignatureModal'));
+  assert.ok(!page.includes('handleGovBr'));
+  assert.ok(!page.includes('GOV_BR_SIGNED_PDF'));
 });
 
-test('assinatura Gov.br preserva ordem dos signatários',async()=>{
+test('servidor usa política única de signatários cadastrados',async()=>{
   const server=await source('server.ts');
-  assert.ok(server.includes("import { nextPendingSignatureSigner } from './server/workflow/signatureOrder'"));
-  assert.ok(server.split('nextPendingSignatureSigner(job.signers)').length>=3);
-  assert.ok(server.includes("role:'ADVISOR' as const,name:p.orientador.nome,email:normalizeEmail(p.orientador.email),signingOrder:2"));
-  assert.ok(server.includes("code:'SIGNING_ORDER_REQUIRED'"));
+  assert.ok(server.includes("from './server/workflow/signaturePolicy'"));
+  assert.ok(server.includes('return registeredSignatureSigners(p,type,currentSettings)'));
+  assert.ok(server.includes('assertRegisteredSignatureEligibility(p,type,signatureJobsStore)'));
 });
 
 test('Presidência é o contato único de recuperação do Master',async()=>{

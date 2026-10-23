@@ -96,8 +96,8 @@ test('Presidente mantém seleção React com duas colunas fixas opacas e control
   assert.match(runtime, /portal-sheet-checkbox/);
   assert.match(runtime, /portalStickySelection/);
   assert.match(runtime, /opaqueColor/);
-  assert.match(css, /width:\s*54px/);
-  assert.match(css, /left:\s*54px/);
+  assert.match(css, /width:\s*64px/);
+  assert.match(css, /left:\s*64px/);
   assert.match(css, /--portal-sheet-column-control-size:\s*15px/);
   assert.match(contract, /data-portal-sheet="president"[\s\S]*data-portal-sticky-selection/);
   assert.match(contract, /data-portal-has-filter="true"[\s\S]*border-bottom:\s*var\(--portal-sheet-content-divider\) solid var\(--portal-surface-inner\)/);

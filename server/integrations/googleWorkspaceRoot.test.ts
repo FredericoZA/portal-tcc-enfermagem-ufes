@@ -1,8 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { bootstrapGoogleDriveStructure } from './googleWorkspace';
+import { bootstrapGoogleDriveStructure,ensurePortalRenderFolder } from './googleWorkspace';
 
 const rootId = 'pasta_raiz_institucional_123';
+test('conversões ficam dentro do Sistema e não soltas na raiz nem entre modelos ativos',async t=>{
+  const created:any[]=[];
+  t.mock.method(globalThis,'fetch',async(input:unknown,init?:RequestInit)=>{
+    if(String(input).includes('/permissions?'))return reply({permissions:[{type:'user',role:'owner'}]});
+    if(init?.method==='POST'){const body=JSON.parse(String(init.body));created.push(body);return reply({id:`folder-${created.length}`,name:body.name});}
+    return reply({files:[]});
+  });
+  assert.equal(await ensurePortalRenderFolder('test-token',rootId),'folder-2');
+  assert.deepEqual(created.map(file=>({name:file.name,parents:file.parents})),[{name:'00_SISTEMA',parents:[rootId]},{name:'03_TEMPORARIOS_DOCUMENTAIS',parents:['folder-1']}]);
+});
 function reply(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
@@ -25,7 +35,10 @@ test('raiz existente é reutilizada e todas as novas pastas ficam dentro dela', 
   assert.equal(result.existingFolders, 1);
   assert.ok(created.length > 4);
   assert.ok(created.every(file=>file.parents?.length===1));
-  assert.deepEqual(created.slice(0,4).map(file=>file.parents[0]),[rootId,rootId,rootId,rootId]);
+  assert.deepEqual(created.filter(file=>file.parents[0]===rootId).map(file=>file.name),['00_SISTEMA','01_DOCUMENTOS','02_PROCESSOS']);
+  assert.equal(result.folders['documents.CONVITE.03_ASSINADOS'],undefined);
+  assert.ok(result.folders['documents.ATA.03_ASSINADOS']);
+  assert.ok(created.every(file=>file.name!=='03_REPOSITORIO_PUBLICO'));
   assert.ok(created.every(file=>file.name!=='PORTAL_TCC'));
 });
 

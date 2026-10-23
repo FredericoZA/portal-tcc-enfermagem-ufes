@@ -15,6 +15,11 @@ export function previewProcess(studio:Partial<IntegrationStudioSettings>, suppli
     if(!['string','number','boolean'].includes(typeof value)||String(value).length>10000)throw new Error(`Amostra inválida: ${key}.`);
     answers[key]=value as string|number|boolean;
   }
+  const sampleNames:Record<string,string>={ALUNO_1_NOME:'Mariana Alves da Silva',ALUNO_2_NOME:'Lucas Pereira Costa',ORIENTADOR_NOME:'Ana Carolina Martins',COORIENTADOR_NOME:'Paulo Henrique Souza',EXAMINADOR_2_NOME:'Beatriz Oliveira Santos',EXAMINADOR_3_NOME:'Rafael Almeida Lima'};
+  for(const [key,value] of Object.entries(sampleNames))if(supplied[key]===undefined)answers[key]=value;
+  if(supplied.TITULO===undefined)answers.TITULO='Educação em saúde na atenção primária: práticas de enfermagem para promoção do autocuidado';
+  // Canonical date fields may be customized as text in the studio; samples still need a valid instant.
+  if(supplied.DEFESA_DATA_HORA===undefined)answers.DEFESA_DATA_HORA='2026-10-20T14:30';
   answers.TEM_ALUNO_2=supplied.TEM_ALUNO_2==='Sim'?'Sim':'Não';answers.TEM_COORIENTADOR=supplied.TEM_COORIENTADOR==='Sim'?'Sim':'Não';
   const payload=registrationPayload(answers,studio.operationsPolicy?.timezone||'America/Sao_Paulo');
   const person=(value:any)=>({nome:value.nome,email:value.email,matricula:value.matricula});
@@ -22,5 +27,7 @@ export function previewProcess(studio:Partial<IntegrationStudioSettings>, suppli
   const yes=(value:unknown,fallback=false)=>value===undefined?fallback:value===true||/^(sim|true|1)$/i.test(String(value).trim());
   const keywords=String(supplied.PALAVRAS_CHAVE||'').split(/[;,\n]+/).map(value=>value.trim()).filter(Boolean);
   const p:ProcessData={id:'model-preview',protocolo:'AMOSTRA-SEM-VALIDADE',createdByEmail:'amostra@example.invalid',createdAt:'2026-10-01T12:00:00Z',updatedAt:'2026-10-01T12:00:00Z',dataRevision:1,status:'AGUARDANDO_ASSINATURA',etapaAtual:'REPOSITORIO',titulo:payload.titulo,aluno1:person(payload.aluno1),aluno2:payload.aluno2?person(payload.aluno2):null,orientador:advisor(payload.orientador)!,coorientador:advisor(payload.coorientador),banca:payload.banca.map((member,index)=>({id:`sample-${index+1}`,nome:member.nome,email:member.email,siape:member.siape,instituicao:member.instituicao,funcao:(index===0?'EXAMINER_2':'EXAMINER_3')})),defesa:{...payload.defesa,endAt:new Date(Date.parse(payload.defesa.startAt)+90*60_000).toISOString(),localStatus:'CONFIRMADO'},registrationAnswers:payload.registrationAnswers,avaliacao:{status:'CONCLUIDO',resultadoCode:'APROVADO',resultadoLabel:String(supplied.RESULTADO||'Aprovado'),parecer:String(supplied.PARECER||'Parecer fictício para conferência do modelo.')},acervo:{submittedAt:'2026-10-21T12:00:00Z',publishFullWork:yes(supplied.PUBLICAR_TRABALHO,true),publishExpandedAbstract:yes(supplied.PUBLICAR_RESUMO_EXPANDIDO),palavrasChave:keywords.length?keywords.slice(0,5):['Cuidado','Ensino','Pesquisa','Saúde','Enfermagem'],resumoSintese:String(supplied.RESUMO_SINTETICO||'Resumo fictício.\n\nMétodo fictício.\n\nResultados fictícios.')}};
-  return {process:p,variables:buildProcessVariables({process:p,eventCode:'MODEL_PREVIEW',actorEmail:'amostra@example.invalid',actorRoles:[],extraVariables:answers})};
+  const variables=buildProcessVariables({process:p,eventCode:'MODEL_PREVIEW',actorEmail:'amostra@example.invalid',actorRoles:[],extraVariables:answers});
+  variables.DEFESA_DATA_HORA=p.defesa.startAt;
+  return {process:p,variables};
 }

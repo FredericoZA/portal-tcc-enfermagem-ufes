@@ -30,7 +30,7 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     env: { ...process.env, NODE_ENV: 'development', PORT: String(port), PORTAL_DATA_DIR: directory,
       PORTAL_SESSION_SECRET: 'test-session-secret-0123456789-abcdef', PORTAL_OTP_PEPPER: 'test-otp-pepper-0123456789-abcdef',
       PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'true', PORTAL_ALLOW_LOCAL_OTP_STORE: 'true', PORTAL_ALLOW_LOCAL_SECRET_STORE: 'true',
-      PORTAL_OTP_DELIVERY_MODE: 'log', ASTEN_INTEGRATION_ENABLED: 'false', PORTAL_PERSISTENCE_PROVIDER: 'local_file',
+      PORTAL_TEST_DOCUMENT_RENDERER:'true', PORTAL_OTP_DELIVERY_MODE: 'log', ASTEN_INTEGRATION_ENABLED: 'false', PORTAL_PERSISTENCE_PROVIDER: 'local_file',
       SUPABASE_URL: '', SUPABASE_SERVICE_ROLE_KEY: '', SUPABASE_SECRET_KEY: '',
     }, stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -85,7 +85,29 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     assert.equal((await request(route, p.aluno1.email, body)).status, 403);
     assert.equal((await request(route, p.orientador.email, { ...body, dataConfirmed: false })).body.code, 'DATA_REVIEW_REQUIRED');
     assert.equal((await request(route, p.orientador.email, { ...body, expectedDataRevision: 0 })).status, 409);
-    const saved = await request(route, p.orientador.email, body);
+    assert.equal((await request(route,p.orientador.email,body)).body.code,'ATA_PREVIEW_REQUIRED');
+    assert.equal((await request(route+'/preview',p.aluno1.email,body)).status,403);
+    const preview=await request(route+'/preview',p.orientador.email,body);
+    assert.equal(preview.status,200,JSON.stringify(preview.body));
+    assert.ok(preview.body.contentBase64);
+    assert.ok(preview.body.documentText);
+    const documentText='Ata revisada integralmente, com a conferência dos dados do trabalho, da autoria e da Comissão Examinadora.';
+    const revised=await request(route+'/preview',p.orientador.email,{...body,documentText});
+    assert.equal(revised.status,200,JSON.stringify(revised.body));assert.equal(revised.body.documentText,documentText);
+    assert.equal((await request(route,p.orientador.email,{...body,documentText:documentText+' Alterado.',previewToken:revised.body.previewToken})).body.code,'ATA_PREVIEW_REQUIRED');
+    const saveDraft=async(email:string,value:unknown)=>{const response=await fetch(base+route+'/draft',{method:'PUT',headers:{'content-type':'application/json','x-demo-user-email':email},body:JSON.stringify(value)});return {status:response.status,body:await response.json()};};
+    const draftInput={answers:{RESULTADO:'APROVADO',PARECER:body.parecer},documentText,expectedDataRevision:p.dataRevision};
+    assert.equal((await saveDraft(p.aluno1.email,draftInput)).status,403);
+    assert.equal((await saveDraft(p.orientador.email,{...draftInput,documentText:'x'.repeat(60001)})).status,400);
+    assert.equal((await saveDraft(p.orientador.email,draftInput)).status,200);
+    const draft=await request(route+'/draft');assert.equal(draft.body.documentText,documentText);
+    assert.equal((await request(route+'/draft',p.aluno1.email)).status,403);
+
+
+    assert.equal((await request(route,p.orientador.email,{...body,parecer:'Parecer alterado após a prévia.',previewToken:preview.body.previewToken})).body.code,'ATA_PREVIEW_REQUIRED');
+    const earlyPreview=await request(`/api/processes/${local.id}/evaluation/preview`,p.orientador.email,body);
+    assert.equal(earlyPreview.status,200,JSON.stringify(earlyPreview.body));
+    const saved = await request(route, p.orientador.email, {...body,previewToken:preview.body.previewToken});
     assert.equal(saved.status, 202); // Saved locally; Google archive intentionally unavailable.
     assert.equal(saved.body.avaliacao.notaFinal, undefined);
     assert.equal(saved.body.avaliacao.dataReview.confirmedBy, p.orientador.email);
@@ -101,6 +123,7 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     assert.equal(disk.studioFormSubmissions[0].formSnapshot.questions[0].label, 'Escolha');
     assert.equal(disk.settings.portalAppearance, undefined);
     assert.equal(disk.processes[0].avaliacao.notaFinal, undefined);
+    assert.equal((disk.formArchiveJobs||[]).some((job:any)=>job.formType==='AVALIACAO'),false,'A avaliação integrada não gera outro formulário em PDF.');
   } finally {
     if (child.exitCode === null) {
       child.kill('SIGTERM');

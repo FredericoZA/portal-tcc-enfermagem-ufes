@@ -36,6 +36,7 @@ test('detecta marcadores restantes sem confundir títulos comuns', () => {
   ] } };
   assert.deepEqual(findUnresolvedTemplateMarkers(document), ['<<CAMPO_DESCONHECIDO>>', '-CAMPO_11-']);
   assert.deepEqual(findUnresolvedTemplateMarkers({ body: { content: [{ textRun: { content: 'ATA DE DEFESA' } }] } }), []);
+  assert.deepEqual(findUnresolvedTemplateMarkers({body:{content:[{textRun:{content:'Protocolo PILOTO-AST'}},{textRun:{content:'EN-1; TCC-2026-0001. Campo: -CAMPO_11-.'}}]}}),['-CAMPO_11-']);
 });
 
 test('copia Google Doc nativo, mescla, exporta PDF e remove temporário', async () => {

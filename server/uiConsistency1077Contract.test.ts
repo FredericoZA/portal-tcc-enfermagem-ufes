@@ -7,9 +7,9 @@ const read = (path: string) => readFileSync(new URL('../' + path, import.meta.ur
 test('Portal TCC11 mantém a hierarquia global branco gelo, cinzas e branco', () => {
   const tokens = read('src/styles/portal-tokens.css');
   const css = read('src/styles/portal-components.css');
-  assert.match(tokens, /--portal-surface-page:\s*#f1f5f9/);
-  assert.match(tokens, /--portal-surface-panel:\s*#e1e6e9/);
-  assert.match(tokens, /--portal-surface-card:\s*#d5dce0/);
+  assert.match(tokens, /--portal-surface-page:\s*#f6f7f8/);
+  assert.match(tokens, /--portal-surface-panel:\s*#e9edef/);
+  assert.match(tokens, /--portal-surface-card:\s*#d8dfe3/);
   assert.match(tokens, /--portal-surface-inner:\s*#ffffff/);
   assert.match(css, /\.portal-modal-surface,[\s\S]*background:\s*var\(--portal-surface-page\)/);
 });
@@ -32,16 +32,16 @@ test('assinatura em lote usa a fila pendente como fonte do cliente e revalida no
   const helper = read('src/utils/coordinatorSignatureActions.ts');
   const server = read('server.ts');
   assert.match(page, /canSendAsten/);
-  assert.match(page, /canPrepareGov/);
+  assert.doesNotMatch(page, /canPrepareGov/);
   assert.match(helper, /hasPendingDeclaration/);
   assert.match(server, /function assertSignatureEligibility/);
   assert.match(server, /SIGNATURE_FLOW_GATE/);
   assert.match(server, /assertSignatureEligibility\(signatureProcess/);
 });
 
-test('rodapé credita Sabrina e centraliza comissão com um único membro', () => {
+test('rodapé remove atribuição indevida e centraliza comissão com um único membro', () => {
   const footer = read('src/components/Footer.tsx');
-  assert.match(footer, /Sabrina Lemos Rodrigues — PPGEMF/);
+  assert.doesNotMatch(footer, /Sabrina Lemos Rodrigues — PPGEMF/);
   assert.match(footer, /membersList\.length === 1 \? 'grid-cols-1'/);
 });
 

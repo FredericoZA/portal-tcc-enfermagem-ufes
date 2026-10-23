@@ -1,20 +1,27 @@
-import { portalNotice, portalPrompt } from '../services/portalDialogs';
+import {publicationDeclined,finalDeliveryMessage} from '../utils/finalDeliveryPresentation';
+import {InlineProcessField} from '../components/InlineProcessField';
+import {localDateTimeToIso} from '../utils/operationalConfig';
+import {readProcessLink,setProcessLink,processLink,processWorkflowSection,type ProcessSection} from '../utils/processLink';
+import { portalConfirm, portalNotice, portalPrompt } from '../services/portalDialogs';
 import { AdvisorEvaluationPanel } from '../components/AdvisorEvaluationPanel';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ProcessData, ProcessDocument, ProcessRole, SignatureJob } from '../types';
 import { TccDetailPopupFormat, DEFAULT_TCC_DETAIL_POPUP_FORMAT, loadTccDetailPopupFormat, TCC_DETAIL_POPUP_CONFIG_EVENT } from '../types/tccDetailFormat';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
+import { useSignatureUpdates } from '../hooks/useSignatureUpdates';
 import { formatDatePt, formatDateExtensoTotal, formatTimeExtenso, formatStudentsString, normalizeEmail, formatNameTitleCase } from '../utils/formatters';
+import { ProcessFlowPanel } from '../components/ProcessFlowPanel';
+import { GovbrSignatureModal } from '../components/GovbrSignatureModal';
+import { PortalModalShell } from '../components/PortalModalShell';
 import { EtapaProgressBar } from '../components/EtapaProgressBar';
 import { StudentNames } from '../components/StudentNames';
 import { DocumentPreviewModal } from '../components/DocumentPreviewModal';
 import { CorrectionRequestModal } from '../components/CorrectionRequestModal';
-import { PortalModalShell } from '../components/PortalModalShell';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
-import { DynamicStudioForms } from '../components/DynamicStudioForms';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import {
+  Link as LinkIcon,
   ArrowLeft,
   Calendar,
   Clock,
@@ -53,7 +60,6 @@ import {
   Sparkles,
   Layers,
   Plus,
-  ClipboardList,
   Mail,
   IdCard
 } from 'lucide-react';
@@ -120,7 +126,37 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     return () => window.removeEventListener(TCC_DETAIL_POPUP_CONFIG_EVENT, handleFormatChange);
   }, [externalFormat]);
 
-  const [activeTab, setActiveTab] = useState<string>('cadastral');
+  const [downloadPicker, setDownloadPicker] = useState(false);
+  const [downloadSelection, setDownloadSelection] = useState<string[]>([]);
+  const [govbrDocument, setGovbrDocument] = useState<ProcessDocument | null>(null);
+  const [activeTab, setActiveTab] = useState<string>(()=>typeof window==='undefined'?'cadastral':readProcessLink(window.location.search)?.section||'cadastral');
+
+  const [copyFeedback,setCopyFeedback]=useState<{ok:boolean;text:string}|null>(null);
+  useEffect(()=>{
+    if(!copyFeedback)return;
+    const timer=window.setTimeout(()=>setCopyFeedback(null),copyFeedback.ok?3000:6000);
+    return()=>window.clearTimeout(timer);
+  },[copyFeedback]);
+  useEffect(()=>setCopyFeedback(null),[processId]);
+  const copyProcessLink=async()=>{
+    if(!process)return;
+    try{
+      await navigator.clipboard.writeText(processLink(window.location.origin,process.id,activeTab as ProcessSection));
+      setCopyFeedback({ok:true,text:'Link do TCC copiado.'});
+    }catch{setCopyFeedback({ok:false,text:'Não foi possível copiar. Use o endereço desta página.'});}
+  };
+
+  const workflowTab = useRef<{id:string;stage:string}|null>(null);
+  useEffect(()=>{
+    if(!process)return;
+    const stage=processWorkflowSection(process),previous=workflowTab.current;
+    const initial=!previous||previous.id!==process.id;
+    const explicitlyLinked=typeof window!=='undefined'&&new URLSearchParams(window.location.search).has('secao');
+    if((initial&&(!explicitlyLinked||process.status==='CONCLUIDO'||process.etapaAtual==='CONCLUIDO'))||(!initial&&previous.stage!==stage)){
+      setActiveTab(stage);setProcessLink(process.id,stage);
+    }
+    workflowTab.current={id:process.id,stage};
+  },[process]);
 
   // Modals & Popovers state
   const [showGearMenu, setShowGearMenu] = useState(false);
@@ -176,6 +212,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const [acervoResumo, setAcervoResumo] = useState('');
   const [acervoResumoExpandido, setAcervoResumoExpandido] = useState('');
   const [acervoTrabalhoCompleto, setAcervoTrabalhoCompleto] = useState('');
+  const [termSignatureProvider,setTermSignatureProvider]=useState<'ASTEN'|'GOV_BR'>('ASTEN');
   const [acervoIsPublic, setAcervoIsPublic] = useState(false);
   const [acervoExpandedPublic, setAcervoExpandedPublic] = useState(false);
   const [acervoAuthorizationConfirmed, setAcervoAuthorizationConfirmed] = useState(false);
@@ -192,8 +229,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     if (onUpdateFormat) onUpdateFormat(newFmt);
   };
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async ({ preserveAcervoDraft = false, quiet = false }: { preserveAcervoDraft?: boolean; quiet?:boolean } = {}) => {
+    if(!quiet)setIsLoading(true);
     setErrorMsg('');
     try {
       const [pData, docsData,signatureData,verificationData] = await Promise.all([
@@ -239,13 +276,16 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
       // Populate Acervo Form
       if (pData.acervo) {
-        setAcervoKeywords(pData.acervo.palavrasChave ? pData.acervo.palavrasChave.join(', ') : '');
-        setAcervoResumo(pData.acervo.resumoSintese || '');
         setAcervoResumoExpandido(pData.acervo.resumoExpandidoFileName || '');
         setAcervoTrabalhoCompleto(pData.acervo.trabalhoCompletoFileName || '');
-        setAcervoIsPublic(Boolean(pData.acervo.publishFullWork));
-        setAcervoExpandedPublic(Boolean(pData.acervo.publishExpandedAbstract));
-        setAcervoAuthorizationConfirmed(Boolean(pData.acervo.authorizationConfirmedAt));
+        // Upload refreshes persisted file references without replacing unsaved final-data fields.
+        if (!preserveAcervoDraft) {
+          setAcervoKeywords(pData.acervo.palavrasChave ? pData.acervo.palavrasChave.join(', ') : '');
+          setAcervoResumo(pData.acervo.resumoSintese || '');
+          setAcervoIsPublic(Boolean(pData.acervo.publishFullWork));
+          setAcervoExpandedPublic(Boolean(pData.acervo.publishExpandedAbstract));
+          setAcervoAuthorizationConfirmed(Boolean(pData.acervo.authorizationConfirmedAt));
+        }
       }
 
       // Generate audit log history
@@ -295,9 +335,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
       setAuditLogs(generatedLogs);
     } catch (err: any) {
+      if(quiet)throw err;
       setErrorMsg(err.message || 'Erro ao carregar o processo.');
     } finally {
-      setIsLoading(false);
+      if(!quiet)setIsLoading(false);
     }
   };
 
@@ -305,11 +346,19 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     loadData();
   }, [processId, userEmail]);
 
+  useSignatureUpdates({
+    jobs: signatureJobs,
+    processId,
+    scopeKey: userEmail,
+    enabled: !isLoading && !errorMsg && !editingSection && !signatureWorking,
+    onChange: loadData,
+  });
+
   if (isLoading) {
     return (
       <div className="bg-white p-12 text-center rounded-2xl border border-slate-200 text-slate-600 font-medium shadow-2xs">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-600 border-t-transparent mb-3"></div>
-        <p className="text-xs font-bold uppercase tracking-wider text-emerald-950">Carregando Ficha e Dados do TCC...</p>
+        <p className="text-xs font-bold normal-case tracking-wider text-emerald-950">Carregando Ficha e Dados do TCC...</p>
       </div>
     );
   }
@@ -342,25 +391,26 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const canAdvisorEdit = (isAdvisor || isCoAdvisor) && !isAcervoSubmitted && !readOnly;
   const canCoordinatorEdit = isMasterAdmin && !readOnly;
 
-  const canEditData = canCoordinatorEdit;
+  const canEditData = canCoordinatorEdit || Boolean((isStudent || isAdvisor) && !isEvaluationSubmitted && !readOnly && !process.defesa.invitationDriveFileId && !process.defesa.invitationSentAt);
 
-  const handleSignDocument=async(doc:ProcessDocument,provider:'ASTEN'|'GOV_BR')=>{
-    setSignatureWorking(`${doc.type}:${provider}`);setSignatureNotice(null);
+  const canEditDefense=canCoordinatorEdit||Boolean((isStudent||isAdvisor)&&!readOnly);
+  const defenseLocal=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(process.defesa.startAt)).replace(' ','T');
+  const inlineField=(label:string,value:string,patch:(value:string)=>Record<string,unknown>,type='text',display=value,editable=canEditData,confirmDefenseChange=false)=><InlineProcessField label={label} value={value} display={display} type={type} editable={editable} beforeEdit={confirmDefenseChange?()=>portalConfirm(`Tem certeza de que deseja alterar ${label==='Data da defesa'?'a data da defesa':label==='Horário da defesa'?'o horário da defesa':'o local da defesa'}? Essa mudança afeta o calendário da defesa. Informe o departamento sobre a alteração, pois ele reservou o local, a data e o horário anteriores. Confirme com o departamento a disponibilidade do novo agendamento. Ao salvar, o histórico registrará quem realizou a alteração, a data e hora do registro e os valores anteriores e novos.`,{title:'Atenção: alterar agendamento da defesa',tone:'warning',confirmLabel:'Sim, quero alterar',cancelLabel:'Manter como está'}):undefined} onSave={async next=>{await apiClient.updateProcess(process.id,patch(next.trim()));await loadData({quiet:true,preserveAcervoDraft:true});}}/>;
+
+  const handleSignDocument=async(doc:ProcessDocument)=>{
+    setSignatureWorking(doc.type);setSignatureNotice(null);
     try{
-      const result=await apiClient.signProcessDocument(process.id,doc.type,provider);
+      const result=await apiClient.signProcessDocument(process.id,doc.type);
       setSignatureNotice({ok:true,text:result.message});
       await loadData();
     }catch(error){setSignatureNotice({ok:false,text:error instanceof Error?error.message:'Não foi possível enviar o documento à Asten.'});}
     finally{setSignatureWorking('');}
   };
 
-  const handleGovBrDownload=async(job:SignatureJob)=>{try{const {blob,fileName}=await apiClient.downloadGovBrSigningPdf(job.id);const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=fileName;a.click();URL.revokeObjectURL(url);setSignatureNotice({ok:true,text:'PDF baixado. Assine no Gov.br e envie o PDF resultante nesta mesma área.'});}catch(error){setSignatureNotice({ok:false,text:error instanceof Error?error.message:'Não foi possível baixar o PDF para o Gov.br.'});}};
-  const handleGovBrUpload=async(job:SignatureJob,file?:File)=>{if(!file)return;setSignatureWorking(`${job.documentType}:GOV_UPLOAD`);try{await apiClient.uploadGovBrSignedPdf(job.id,process.id,file);setSignatureNotice({ok:true,text:'PDF assinado no Gov.br recebido e arquivado. Se houver outro signatário, ele deve repetir o procedimento com esta versão.'});await loadData();}catch(error){setSignatureNotice({ok:false,text:error instanceof Error?error.message:'Não foi possível receber o PDF assinado.'});}finally{setSignatureWorking('');}};
-
   const handleDownloadDossier = async () => {
     setIsDownloadingDossier(true);
     try {
-      const { blob, fileName } = await apiClient.downloadInstitutionalDossier(process.id);
+      const { blob, fileName } = await apiClient.downloadInstitutionalDossier(process.id,downloadSelection);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -368,7 +418,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setDownloadPicker(false);
     } catch (error) {
       setSignatureNotice({ok:false,text:error instanceof Error?error.message:'Não foi possível gerar o dossiê institucional.'});
     } finally {
@@ -552,6 +603,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const handleSubmitAcervo = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!ataIsArchived) {
+      portalNotice('Aguarde o arquivamento da Ata assinada para salvar a entrega final.');
+      return;
+    }
 
     const keywordsList = acervoKeywords
       .split(',')
@@ -591,6 +646,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         publishFullWork: acervoIsPublic,
         publishExpandedAbstract: acervoExpandedPublic,
         workType: 'MONOGRAFIA',
+        signatureProvider: termSignatureProvider,
         authorizationConfirmed: (acervoIsPublic||acervoExpandedPublic)&&acervoAuthorizationConfirmed
       });
 
@@ -604,9 +660,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       };
       setAuditLogs(prev => [newLog, ...prev]);
 
-      portalNotice(result.workflowPending
-        ? `Entrega final salva. Há uma pendência no arquivamento ou nos documentos: ${result.workflowError || 'a secretaria deve acompanhar a etapa.'}`
-        : 'Entrega final salva. Acompanhe os documentos e as assinaturas. A publicação autorizada será liberada após a conclusão das etapas aplicáveis.');
+      portalNotice(finalDeliveryMessage(result));
       await loadData();
     } catch (err: any) {
       portalNotice(err.message || 'Erro ao salvar dados do acervo.');
@@ -616,7 +670,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   };
 
   const handleAcervoPdfUpload = async (kind:'trabalho-completo'|'resumo-expandido',file?:File) => {
-    if(!file)return;
+    if(!file||acervoUploading||isSubmittingAcervo)return;
     if(file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf')){portalNotice('Selecione um arquivo PDF.');return;}
     if(file.size>24*1024*1024){portalNotice('O PDF deve ter no máximo 24 MB.');return;}
     setAcervoUploading(kind);
@@ -624,7 +678,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       const uploaded=await apiClient.uploadProcessPdfFile(processId,kind,file);
       if(kind==='trabalho-completo')setAcervoTrabalhoCompleto(uploaded.fileName);else setAcervoResumoExpandido(uploaded.fileName);
       portalNotice('PDF armazenado com segurança na pasta deste TCC no Google Drive.');
-      await loadData();
+      await loadData({ preserveAcervoDraft: true });
     }catch(err:any){portalNotice(err.message||'Falha ao enviar o PDF ao Google Drive.');}
     finally{setAcervoUploading('');}
   };
@@ -681,7 +735,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       : localFormat.cardStyle === 'flat'
       ? 'shadow-none'
       : localFormat.cardStyle === 'subtle_tint'
-      ? 'shadow-2xs bg-slate-50/70'
+      ? 'shadow-2xs bg-[var(--portal-surface-card)]'
       : 'shadow-2xs';
 
   const titleSizeClass =
@@ -733,529 +787,63 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     >
       {isModal ? (
         <header className="portal-modal-header sticky top-0 z-30 flex items-center justify-between gap-3 px-4" style={{ backgroundColor: 'var(--portal-brand-header)', color: '#ffffff' }}>
-          <div className="flex min-w-0 items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-white" aria-hidden="true"/><div className="min-w-0"><h1 className="truncate text-[12px] font-black uppercase tracking-wide">Detalhes do TCC</h1><p className="mt-0.5 truncate text-[10px] font-semibold text-white/85">Enfermagem e Obstetrícia UFES, Maruípe UFES</p></div></div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-white bg-white px-3 text-[10px] font-bold text-slate-900" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/>Histórico de Auditoria</button>
+
+          <div className="flex min-w-0 items-center gap-2"><FileText className="h-4 w-4 shrink-0 text-white" aria-hidden="true"/><div className="min-w-0"><h1 className="truncate text-[12px] font-black normal-case tracking-wide">Detalhes do TCC</h1></div></div>
+          <div className="relative flex shrink-0 items-center gap-1.5">
+            <span role="status" aria-live="polite" aria-atomic="true" className={copyFeedback?'portal-copy-feedback pointer-events-none absolute right-0 top-full z-50 mt-2 w-max max-w-[min(300px,80vw)] whitespace-normal rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] px-3 py-2 text-xs font-normal normal-case text-slate-800 shadow-sm':'sr-only'}>{copyFeedback?.text||''}</span>
+          <button type="button" className="portal-toolbar-icon-button rounded-full bg-white text-slate-950" aria-label="Copiar link do trabalho" title="Copiar link do trabalho" onClick={()=>void copyProcessLink()}><LinkIcon className="h-4 w-4"/></button>
+            <button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-slate-950" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/></button>
             {isMasterAdmin&&<button type="button" onClick={()=>setShowDeleteModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-rose-700" aria-label="Excluir trabalho"><Trash2 className="h-4 w-4"/></button>}
           </div>
         </header>
       ) : null}
       {isModal && <div className="portal-modal-divider" aria-hidden="true" />}
-      {process.coauthorAcceptance?.status==='PENDING'&&<section className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950"><div className="flex flex-wrap items-center justify-between gap-3"><div><strong className="text-sm">Aceite do segundo autor pendente</strong><p className="mt-1 text-xs">O fluxo documental permanece bloqueado até o e-mail convidado confirmar ou recusar o vínculo.</p></div>{normalizeEmail(process.coauthorAcceptance.invitedEmail||'')===normalizeEmail(userEmail)&&<div className="flex gap-2"><button type="button" onClick={()=>void handleCoauthorDecision('REJECT')} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-black">Recusar</button><button type="button" onClick={()=>void handleCoauthorDecision('ACCEPT')} className="rounded-lg bg-amber-800 px-3 py-2 text-xs font-black text-white">Aceitar autoria</button></div>}</div></section>}
-      {process.coauthorAcceptance?.status==='REJECTED'&&<section className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-900">O segundo autor recusou o vínculo. Corrija ou remova os dados da dupla antes de continuar.</section>}
-      
-      {localFormat.showStateMachine !== false && <div className="px-3 pt-3"><div className="overflow-hidden rounded-xl border border-[var(--portal-border)] bg-white"><EtapaProgressBar currentEtapa={process.etapaAtual}/></div></div>}
-      <section id="tcc-detail-workspace" className="portal-tcc-workspace mx-3 mt-3 overflow-hidden rounded-xl border border-[var(--portal-border)]">
-      <section className="portal-tcc-workspace-summary p-4" style={{backgroundColor:'var(--portal-surface-panel)'}}>
-        <div className="flex flex-wrap items-center gap-2"><span className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[10px] font-black">{process.protocolo}</span>{process.avaliacao?.status==='CONCLUIDO'&&<span className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[10px] font-black">Conceito: {process.avaliacao.resultadoLabel||'Aprovado'}</span>}</div>
-        <h2 className="mt-3 text-sm font-black text-slate-950">{process.titulo}</h2>
-        <div className="mt-3 grid gap-2 border-t border-slate-300 pt-3 text-[10px] text-slate-700 sm:grid-cols-2 xl:grid-cols-4"><div className="flex items-center gap-1.5"><User className="h-3.5 w-3.5"/><span>{process.aluno1.nome}{process.aluno2?` e ${process.aluno2.nome}`:''}</span></div><div className="flex items-center gap-1.5"><Award className="h-3.5 w-3.5"/><span>Orientador(a): <strong>{process.orientador.nome}</strong></span></div>{process.defesa?.startAt&&<div className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5"/><span>{formatDatePt(process.defesa.startAt)} · {formatTimeExtenso(process.defesa.startAt)}</span></div>}{process.defesa?.local&&<div className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5"/><span>{process.defesa.local}</span></div>}</div>
-      </section>
-      <section className="portal-tcc-workspace-tabs border-t border-[var(--portal-border)] p-2" style={{backgroundColor:'var(--portal-surface-panel)'}}><div className="flex items-center gap-1 overflow-x-auto custom-scrollbar">{[
-        {id:'cadastral',label:'Ficha Cadastral & Defesa + Banca Examinadora',icon:FileText,show:localFormat.showSectionCadastral!==false||localFormat.showSectionBanca!==false},{id:'avaliacao',label:'Avaliação & Ata',icon:Award,show:localFormat.showSectionAvaliacao!==false},{id:'forms',label:'Formulários',icon:ClipboardList,show:true},{id:'docs',label:'Documentos',icon:FileCheck,show:localFormat.showSectionDocs!==false},{id:'acervo',label:'Repositório Digital',icon:BookOpen,show:localFormat.showSectionAcervo!==false}
-      ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} type="button" onClick={()=>setActiveTab(tab.id)} className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold ${selected?'border-slate-300 bg-white text-slate-950':'border-transparent bg-[var(--portal-surface-panel)] text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
+      {localFormat.showStateMachine !== false && <div className="px-3 pt-3"><EtapaProgressBar currentEtapa={process.etapaAtual}/></div>}
+      <section id="tcc-detail-workspace" className="portal-tcc-workspace mx-3 mt-3">
+      <section aria-label="Seções do TCC" className="portal-tcc-workspace-tabs"><div className="portal-tcc-tab-list flex flex-wrap items-stretch gap-1">{[
+        {id:'cadastral',label:'Dados do processo',icon:FileText,show:localFormat.showSectionCadastral!==false||localFormat.showSectionBanca!==false},{id:'avaliacao',label:'Avaliação e ata',icon:Award,show:localFormat.showSectionAvaliacao!==false},{id:'acervo',label:'Repositório',icon:BookOpen,show:localFormat.showSectionAcervo!==false},{id:'docs',label:'Documentos do processo',icon:FileCheck,show:localFormat.showSectionDocs!==false}
+      ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} type="button" onClick={()=>{setActiveTab(tab.id);setProcessLink(process.id,tab.id as ProcessSection);}} aria-pressed={selected} className={`flex min-h-9 min-w-0 flex-1 justify-center items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold ${selected?'portal-tcc-tab-selected border-[var(--portal-brand-header)] bg-white text-slate-950':'border-white bg-white text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
       <div className="portal-tcc-workspace-content p-3">
-
-      {isTabVisible('forms') && (
-        <DynamicStudioForms
-          processId={process.id}
-          locale={settings.integrationStudio?.operationsPolicy?.defaultLocale}
-          accentColor={primaryAccentColor}
-        />
-      )}
 
       {/* ========================================================================= */}
       {/* SECTION 1: FICHA CADASTRAL E IDENTIFICAÇÃO DO PROCESSO                    */}
       {/* ========================================================================= */}
       {localFormat.showSectionCadastral !== false && isTabVisible('cadastral') && (
-        <div className="portal-card overflow-hidden">
-          <div className="portal-section-header px-4 py-3 flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-slate-700" />
-              <h2 className="text-xs font-black uppercase tracking-wider text-slate-900">
-                Ficha Cadastral do Trabalho & Agendamento da Defesa
-              </h2>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {canEditData && (
-                editingSection === 'cadastral' ? (
-                  <button
-                    type="button"
-                    onClick={() => setEditingSection(null)}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer"
-                  >
-                    <span>Cancelar</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setEditingSection('cadastral')}
-                    className="inline-flex items-center gap-1 text-xs font-black text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 shadow-2xs transition-colors cursor-pointer"
-                  >
-                    <Edit className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Editar Ficha & Defesa</span>
-                  </button>
-                )
-              )}
-              <span className="text-[11px] text-slate-500 font-semibold bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
-                Registrado em {process.createdAt ? new Date(process.createdAt).toLocaleDateString('pt-BR') : '10/08/2026'}
-              </span>
-            </div>
-          </div>
+        <div className="portal-tcc-cadastral overflow-hidden">
 
           <div className="p-4 sm:p-5">
-            {editingSection === 'cadastral' && !readOnly ? (
-              <form onSubmit={handleSaveCadastralEdit} className="space-y-4">
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
-                      Título Completo do Trabalho de TCC <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={cadastralForm.titulo}
-                      onChange={(e) => setCadastralForm({ ...cadastralForm, titulo: e.target.value })}
-                      className="w-full text-xs p-2.5 border border-slate-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-700 outline-none"
-                    />
-                  </div>
-
-                  {/* Discente 1 */}
-                  <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200 space-y-2">
-                    <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                      Discente Autor Principal (Aluno 1)
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Nome Completo</label>
-                        <input
-                          type="text"
-                          required
-                          value={cadastralForm.aluno1Nome}
-                          onChange={(e) => setCadastralForm({ ...cadastralForm, aluno1Nome: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">E-mail Institucional</label>
-                        <input
-                          type="email"
-                          required
-                          value={cadastralForm.aluno1Email}
-                          onChange={(e) => setCadastralForm({ ...cadastralForm, aluno1Email: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Matrícula institucional</label>
-                        <input
-                          type="text"
-                          value={cadastralForm.aluno1Matricula}
-                          onChange={(e) => setCadastralForm({ ...cadastralForm, aluno1Matricula: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white font-mono focus:ring-2 focus:ring-emerald-700 outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Discente 2 (Coautoria) */}
-                  <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                        Discente 2 (Coautoria)
-                      </span>
-                      <label className="flex items-center gap-1.5 text-xs text-slate-600 font-medium cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={cadastralForm.hasAluno2}
-                          onChange={(e) => setCadastralForm({ ...cadastralForm, hasAluno2: e.target.checked })}
-                          className="w-3.5 h-3.5 text-emerald-800 rounded border-slate-300 cursor-pointer"
-                        />
-                        <span>Trabalho em dupla (coautoria)</span>
-                      </label>
-                    </div>
-
-                    {cadastralForm.hasAluno2 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Nome Completo</label>
-                          <input
-                            type="text"
-                            value={cadastralForm.aluno2Nome}
-                            onChange={(e) => setCadastralForm({ ...cadastralForm, aluno2Nome: e.target.value })}
-                            className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">E-mail Institucional</label>
-                          <input
-                            type="email"
-                            value={cadastralForm.aluno2Email}
-                            onChange={(e) => setCadastralForm({ ...cadastralForm, aluno2Email: e.target.value })}
-                            className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Matrícula institucional</label>
-                          <input
-                            type="text"
-                            value={cadastralForm.aluno2Matricula}
-                            onChange={(e) => setCadastralForm({ ...cadastralForm, aluno2Matricula: e.target.value })}
-                            className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white font-mono focus:ring-2 focus:ring-emerald-700 outline-none"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Docente Orientador */}
-                  <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200 space-y-2">
-                    <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                      Docente Orientador(a)
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Nome do Professor</label>
-                        <input
-                          type="text"
-                          required
-                          value={cadastralForm.orientadorNome}
-                          onChange={(e) => setCadastralForm({ ...cadastralForm, orientadorNome: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">E-mail</label>
-                        <input
-                          type="email"
-                          required
-                          value={cadastralForm.orientadorEmail}
-                          onChange={(e) => setCadastralForm({ ...cadastralForm, orientadorEmail: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Instituição / Departamento</label>
-                        <input
-                          type="text"
-                          value={cadastralForm.orientadorInstituicao}
-                          onChange={(e) => setCadastralForm({ ...cadastralForm, orientadorInstituicao: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Coorientador */}
-                  <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                        Coorientador(a) (Opcional)
-                      </span>
-                      <label className="flex items-center gap-1.5 text-xs text-slate-600 font-medium cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={cadastralForm.hasCoorientador}
-                          onChange={(e) => setCadastralForm({ ...cadastralForm, hasCoorientador: e.target.checked })}
-                          className="w-3.5 h-3.5 text-emerald-800 rounded border-slate-300 cursor-pointer"
-                        />
-                        <span>Possui coorientador</span>
-                      </label>
-                    </div>
-
-                    {cadastralForm.hasCoorientador && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Nome do Coorientador</label>
-                          <input
-                            type="text"
-                            value={cadastralForm.coorientadorNome}
-                            onChange={(e) => setCadastralForm({ ...cadastralForm, coorientadorNome: e.target.value })}
-                            className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">E-mail</label>
-                          <input
-                            type="email"
-                            value={cadastralForm.coorientadorEmail}
-                            onChange={(e) => setCadastralForm({ ...cadastralForm, coorientadorEmail: e.target.value })}
-                            className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Instituição</label>
-                          <input
-                            type="text"
-                            value={cadastralForm.coorientadorInstituicao}
-                            onChange={(e) => setCadastralForm({ ...cadastralForm, coorientadorInstituicao: e.target.value })}
-                            className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Agendamento da Defesa */}
-                  <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200 space-y-2">
-                    <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                      Agendamento da Defesa Pública
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Data e Hora da Apresentação</label>
-                        <input
-                          type="datetime-local"
-                          value={defesaForm.startAt}
-                          onChange={(e) => setDefesaForm({ ...defesaForm, startAt: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Local / Sala / Auditório</label>
-                        <input
-                          type="text"
-                          placeholder="Ex.: sala de defesas ou link da videoconferência"
-                          value={defesaForm.local}
-                          onChange={(e) => setDefesaForm({ ...defesaForm, local: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Formato da Sessão</label>
-                        <select
-                          value={defesaForm.formato}
-                          onChange={(e) => setDefesaForm({ ...defesaForm, formato: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none cursor-pointer"
-                        >
-                          <option value="Presencial">Presencial</option>
-                          <option value="Remoto / Online">Remoto / Online</option>
-                          <option value="Híbrido">Híbrido</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
+            <div className="space-y-3">
+              <section className="portal-tcc-data-box" aria-label="Dados do processo">
+                <h2 className="mb-3 text-xs font-bold normal-case">Dados do processo</h2>
+                <div className="portal-tcc-record-row portal-tcc-record-row-primary">
+                  <div><span>Protocolo</span>{inlineField('Protocolo',process.protocolo,value=>({protocolo:value}),'text',process.protocolo,isMasterAdmin&&!readOnly)}</div>
+                  <div className="portal-tcc-record-title"><span>Título do trabalho</span>{inlineField('Título do trabalho',process.titulo,value=>({titulo:value}))}</div>
+                  <div><span>Data de registro</span><strong>{new Date(process.createdAt).toLocaleDateString('pt-BR')}</strong></div>
                 </div>
-
-                <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
-                  <button
-                    type="button"
-                    onClick={() => setEditingSection(null)}
-                    className="text-xs font-bold px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="text-xs font-extrabold uppercase tracking-wider text-white px-5 py-2 rounded-lg bg-emerald-800 hover:bg-emerald-900 shadow-2xs cursor-pointer transition-all flex items-center gap-1.5"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    <span>Salvar Ficha & Defesa</span>
-                  </button>
+                <div className="portal-tcc-record-row portal-tcc-record-row-defense">
+                  <div><span>Data da defesa</span>{inlineField('Data da defesa',defenseLocal.slice(0,10),value=>({defesa:{startAt:localDateTimeToIso(`${value}T${defenseLocal.slice(11,16)}`,'America/Sao_Paulo')}}),'date',formatDatePt(process.defesa.startAt),canEditDefense,true)}</div>
+                  <div><span>Horário</span>{inlineField('Horário da defesa',defenseLocal.slice(11,16),value=>({defesa:{startAt:localDateTimeToIso(`${defenseLocal.slice(0,10)}T${value}`,'America/Sao_Paulo')}}),'time',formatTimeExtenso(process.defesa.startAt),canEditDefense,true)}</div>
+                  <div><span>Local da defesa</span>{inlineField('Local da defesa',process.defesa.local,value=>({defesa:{local:value}}),'text',process.defesa.local||'A confirmar',canEditDefense,true)}</div>
                 </div>
-              </form>
-            ) : (
-              <div className="space-y-4">
-                
-                {/* Top Metadata & Defesa Info Grid */}
-                <div className="bg-slate-50/90 border border-slate-200/90 rounded-xl p-3.5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 shadow-2xs">
-                  <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                      Protocolo
-                    </span>
-                    <span className="font-mono font-bold text-slate-900 text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-md inline-block">
-                      {process.protocolo}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                      Etapa Regimental
-                    </span>
-                    <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md inline-block">
-                      {process.etapaAtual}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                      Data da Defesa
-                    </span>
-                    <span className="font-semibold text-slate-900 text-xs block">
-                      {formatDatePt(process.defesa?.startAt)}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                      Horário
-                    </span>
-                    <span className="font-semibold text-slate-900 text-xs block">
-                      {formatTimeExtenso(process.defesa?.startAt)} (90 min)
-                    </span>
-                  </div>
-
-                  <div className="col-span-2 sm:col-span-1">
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                      Local / Auditório
-                    </span>
-                    <span className="font-semibold text-slate-900 text-xs truncate block" title={process.defesa?.local}>
-                      {process.defesa?.local || installationProfile.defaultDefenseLocation}
-                    </span>
-                  </div>
-                </div>
-
-                {/* People Grid (Discentes e Orientadores filling 100% of row width) */}
-                {(() => {
-                  const hasAluno2 = Boolean(process.aluno2);
-                  const hasCoorientador = Boolean(process.coorientador && process.coorientador.nome && process.coorientador.nome.trim() !== '');
-                  
-                  // Total cards: 2 (1 student + 1 orientador), 3 (2 students + 1 orientador OR 1 student + 1 orientador + 1 coorientador), 4 (all)
-                  const totalPeople = (hasAluno2 ? 2 : 1) + 1 + (hasCoorientador ? 1 : 0);
-
-                  let gridColsClass = 'grid-cols-1 sm:grid-cols-2';
-                  if (totalPeople === 3) {
-                    gridColsClass = 'grid-cols-1 sm:grid-cols-3';
-                  } else if (totalPeople === 4) {
-                    gridColsClass = 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
-                  }
-
-                  return (
-                    <div className={`grid ${gridColsClass} gap-3`}>
-                      {/* Aluno 1 */}
-                      <div className="bg-slate-50/90 border border-slate-200/90 rounded-xl p-3.5 space-y-2 shadow-2xs">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 shadow-2xs">
-                            <GraduationCap className="w-4 h-4 text-emerald-800" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">
-                              Discente Autor {hasAluno2 ? '1' : ''}
-                            </span>
-                            <span className="text-xs sm:text-sm font-extrabold text-slate-900 truncate block">
-                              {process.aluno1.nome}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-col gap-1 text-[11px] pt-2 border-t border-slate-200/70 text-slate-600 font-medium">
-                          {localFormat.showStudentEmail !== false && process.aluno1.email && (
-                            <div className="flex items-center gap-1.5 text-slate-700">
-                              <Mail className="h-3 w-3 shrink-0 text-slate-400" aria-hidden="true" />
-                              <span className="font-semibold text-slate-800 truncate">{process.aluno1.email}</span>
-                            </div>
-                          )}
-                          {localFormat.showStudentMatricula !== false && process.aluno1.matricula && (
-                            <div className="flex items-center gap-1.5 text-slate-700 font-mono">
-                              <span className="inline-flex items-center gap-1 text-slate-400 text-xs font-sans"><IdCard className="h-3 w-3 shrink-0" aria-hidden="true" />Matrícula:</span>
-                              <strong className="text-slate-900">{process.aluno1.matricula}</strong>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Aluno 2 (Se tiver) */}
-                      {hasAluno2 && process.aluno2 && (
-                        <div className="bg-slate-50/90 border border-slate-200/90 rounded-xl p-3.5 space-y-2 shadow-2xs">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 shadow-2xs">
-                              <GraduationCap className="w-4 h-4 text-emerald-800" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">
-                                Discente Autor 2
-                              </span>
-                              <span className="text-xs sm:text-sm font-extrabold text-slate-900 truncate block">
-                                {process.aluno2.nome}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-1 text-[11px] pt-2 border-t border-slate-200/70 text-slate-600 font-medium">
-                            {localFormat.showStudentEmail !== false && process.aluno2.email && (
-                              <div className="flex items-center gap-1.5 text-slate-700">
-                                <Mail className="h-3 w-3 shrink-0 text-slate-400" aria-hidden="true" />
-                                <span className="font-semibold text-slate-800 truncate">{process.aluno2.email}</span>
-                              </div>
-                            )}
-                            {localFormat.showStudentMatricula !== false && process.aluno2.matricula && (
-                              <div className="flex items-center gap-1.5 text-slate-700 font-mono">
-                                <span className="inline-flex items-center gap-1 text-slate-400 text-xs font-sans"><IdCard className="h-3 w-3 shrink-0" aria-hidden="true" />Matrícula:</span>
-                                <strong className="text-slate-900">{process.aluno2.matricula}</strong>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Orientador */}
-                      <div className="bg-slate-50/90 border border-slate-200/90 rounded-xl p-3.5 space-y-2 shadow-2xs">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center shrink-0 shadow-2xs">
-                            <Award className="w-4 h-4 text-purple-800" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">
-                              Docente Orientador(a)
-                            </span>
-                            <span className="text-xs sm:text-sm font-extrabold text-slate-900 truncate block">
-                              {process.orientador.nome}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-1.5 text-[11px] pt-2 border-t border-slate-200/70 text-slate-600 font-medium">
-                          {localFormat.showAdvisorEmail !== false && process.orientador.email && (
-                            <span className="bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-700 truncate">
-                              {process.orientador.email}
-                            </span>
-                          )}
-                          {localFormat.showAdvisorInstitution !== false && (
-                            <span className="bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-700">
-                              {process.orientador.instituicao || installationProfile.defaultInstitutionName}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Coorientador (Se tiver) */}
-                      {hasCoorientador && process.coorientador && (
-                        <div className="bg-slate-50/90 border border-slate-200/90 rounded-xl p-3.5 space-y-2 shadow-2xs">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center shrink-0 shadow-2xs">
-                              <Users className="w-4 h-4 text-indigo-800" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">
-                                Coorientador(a)
-                              </span>
-                              <span className="text-xs sm:text-sm font-extrabold text-slate-900 truncate block">
-                                {process.coorientador.nome}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-1.5 text-[11px] pt-2 border-t border-slate-200/70 text-slate-600 font-medium">
-                            {localFormat.showAdvisorEmail !== false && process.coorientador.email && (
-                              <span className="bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-700 truncate">
-                                {process.coorientador.email}
-                              </span>
-                            )}
-                            {localFormat.showAdvisorInstitution !== false && (
-                              <span className="bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-700">
-                                {process.coorientador.instituicao || installationProfile.defaultInstitutionName}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-              </div>
-            )}
+              </section>
+              <section className="portal-tcc-members-box"><h2 className="mb-3 text-xs font-bold normal-case">Dados dos membros</h2><dl className="portal-tcc-people-grid">
+                {[
+                  {role:'Discente autor 1',person:process.aluno1,student:true,key:'aluno1'},
+                  ...(process.aluno2?[{role:'Discente autor 2',person:process.aluno2,student:true,key:'aluno2'}]:[]),
+                  {role:'Orientador(a)',person:process.orientador,student:false,key:'orientador'},
+                  ...process.banca.filter(person=>normalizeEmail(person.email)!==normalizeEmail(process.orientador.email)&&normalizeEmail(person.email)!==normalizeEmail(process.coorientador?.email||'')).map((person,index)=>({role:`Examinador ${index+1}`,person,student:false,key:'banca'})),
+                  ...(process.coorientador?.nome?.trim()?[{role:'Coorientador(a)',person:process.coorientador,student:false,key:'coorientador'}]:[])
+                ].map(({role,person,student,key})=>{
+                  const field=(property:string,value:string)=>key==='banca'?{banca:process.banca.map(member=>member===person?{...member,[property]:value}:member)}:{[key]:{...person,[property]:value}};
+                  return <div key={role}><dt>{role}</dt>
+                    <dd className="portal-member-field font-bold"><span className="portal-member-field-label">Nome</span>{inlineField(`Nome — ${role}`,person.nome,value=>field('nome',value))}</dd>
+                    {(student?localFormat.showStudentEmail:localFormat.showAdvisorEmail)!==false&&<dd className="portal-member-field"><span className="portal-member-field-label">E-mail</span>{inlineField(`E-mail — ${role}`,person.email,value=>field('email',value),'email')}</dd>}
+                    {(!student||localFormat.showStudentMatricula!==false)&&<dd className="portal-member-field"><span className="portal-member-field-label">Número de registro<br/>(matrícula, SIAPE ou outros)</span>{inlineField(`Número de registro — ${role}`,String(student?('matricula' in person?person.matricula:''):('siape' in person?person.siape||'':'')),value=>field(student?'matricula':'siape',value))}</dd>}
+                    {(student||localFormat.showAdvisorInstitution!==false)&&<dd className="portal-member-field"><span className="portal-member-field-label">Instituição</span>{student?<span className="portal-inline-field-value">UFES</span>:inlineField(`Instituição — ${role}`,String(('instituicao' in person&&person.instituicao)||''),value=>field('instituicao',value))}</dd>}
+                  </div>;
+                })}
+              </dl></section>
+            </div>
           </div>
         </div>
       )}
@@ -1263,184 +851,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* ========================================================================= */}
       {/* SECTION 3: COMPOSIÇÃO DA BANCA EXAMINADORA                                */}
       {/* ========================================================================= */}
-      {localFormat.showSectionBanca !== false && isTabVisible('banca') && (
-        <div className="portal-card overflow-hidden">
-          <div className="portal-section-header px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-              <Users className="w-3.5 h-3.5 text-slate-600" />
-              <span>Banca Examinadora</span>
-            </h2>
-
-            <div className="flex items-center gap-2">
-              {canEditData && (
-                editingSection === 'banca' ? (
-                  <button
-                    type="button"
-                    onClick={() => setEditingSection(null)}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors cursor-pointer"
-                  >
-                    <span>Cancelar</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setEditingSection('banca')}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 shadow-2xs transition-colors cursor-pointer"
-                  >
-                    <Edit className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Editar Banca</span>
-                  </button>
-                )
-              )}
-              <span className="text-[11px] text-slate-500">
-                {process.banca.length} docente(s) membros
-              </span>
-            </div>
-          </div>
-
-          <div className="p-4 sm:p-5">
-            {editingSection === 'banca' && !readOnly ? (
-              <form onSubmit={handleSaveBancaEdit} className="space-y-4">
-                <div className="space-y-3">
-                  {bancaForm.map((membro, idx) => (
-                    <div key={membro.id || idx} className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-emerald-700" />
-                          <span>Membro #{idx + 1} {membro.funcao === 'ORIENTADOR' ? '(Presidente)' : ''}</span>
-                        </span>
-                        {bancaForm.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveExaminer(idx)}
-                            className="text-xs font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1 cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Remover</span>
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Nome do Membro</label>
-                          <input
-                            type="text"
-                            required
-                            value={membro.nome || ''}
-                            onChange={(e) => handleUpdateExaminer(idx, 'nome', e.target.value)}
-                            className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">E-mail</label>
-                          <input
-                            type="email"
-                            required
-                            value={membro.email || ''}
-                            onChange={(e) => handleUpdateExaminer(idx, 'email', e.target.value)}
-                            className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Instituição</label>
-                          <input
-                            type="text"
-                            value={membro.instituicao || ''}
-                            onChange={(e) => handleUpdateExaminer(idx, 'instituicao', e.target.value)}
-                            placeholder="Ex.: nome da instituição"
-                            className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Titulação / Função</label>
-                          <input
-                            type="text"
-                            value={membro.titulacao || ''}
-                            onChange={(e) => handleUpdateExaminer(idx, 'titulacao', e.target.value)}
-                            placeholder="Ex: Prof. Dr. / Profª. Me."
-                            className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={handleAddExaminer}
-                    className="w-full py-2.5 border-2 border-dashed border-slate-300 hover:border-emerald-600 rounded-xl text-xs font-bold text-slate-600 hover:text-emerald-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer bg-slate-50/50"
-                  >
-                    <Plus className="w-4 h-4 text-emerald-700" />
-                    <span>Adicionar Novo Membro à Banca</span>
-                  </button>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
-                  <button
-                    type="button"
-                    onClick={() => setEditingSection(null)}
-                    className="text-xs font-bold px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="text-xs font-extrabold uppercase tracking-wider text-white px-5 py-2 rounded-lg bg-emerald-800 hover:bg-emerald-900 shadow-2xs cursor-pointer transition-all flex items-center gap-1.5"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    <span>Salvar Banca</span>
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <TableScrollWrapper>
-                <table className="w-full text-xs text-left border-collapse border border-slate-200 rounded-lg overflow-hidden bg-white">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-700 border-b border-slate-200 font-bold uppercase text-[10.5px]">
-                      <th className="p-3">Função na Banca</th>
-                      <th className="p-3">Examinador</th>
-                      <th className="p-3">E-mail</th>
-                      <th className="p-3">Instituição</th>
-                      <th className="p-3 text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {process.banca.map((membro, idx) => (
-                      <tr key={membro.id || idx} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="p-3 font-semibold text-slate-800">
-                          {membro.funcao === 'ORIENTADOR' ? 'Presidente (Orientador)' : `Examinador ${idx + 1}`}
-                        </td>
-                        <td className="p-3 font-semibold text-slate-900">
-                          {membro.nome}
-                          {membro.titulacao && (
-                            <span className="text-[10px] text-slate-500 block font-normal">{membro.titulacao}</span>
-                          )}
-                        </td>
-                        <td className="p-3 font-mono text-slate-600 text-[11px]">
-                          {membro.email}
-                        </td>
-                        <td className="p-3 text-slate-700">
-                          {membro.instituicao || (membro.membroTipo === 'EXTERNO' ? 'Instituição externa' : installationProfile.defaultInstitutionName)}
-                        </td>
-                        <td className="p-3 text-center">
-                          <span className="inline-block bg-emerald-50 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200">
-                            Confirmado
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TableScrollWrapper>
-            )}
-          </div>
-        </div>
-      )}
-
+      {isTabVisible('cadastral') && process.defesa.localStatus !== 'CONFIRMADO' && <ProcessFlowPanel process={process} jobs={signatureJobs} canConfirm={(isStudent || isMasterAdmin) && !readOnly} onUpdated={loadData}/>}
       {/* ========================================================================= */}
       {/* SECTION 4: CAMPO DE AVALIAÇÃO E NOTAS DA BANCA                            */}
       {/* ========================================================================= */}
@@ -1454,21 +865,14 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* ========================================================================= */}
       {localFormat.showSectionDocs !== false && isTabVisible('docs') && (
         <div id="documents-panel-section" className="portal-card overflow-hidden space-y-0">
-          <div className="portal-section-header px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-              <FileCheck className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Documentos Oficiais do Processo</span>
-            </h2>
+          <div className="px-4 pt-3 flex items-center justify-end gap-2">
+
             <div className="flex items-center gap-2">
               {(isMasterAdmin || isCommissionPresident) && (
-                <button type="button" onClick={handleDownloadDossier} disabled={isDownloadingDossier} className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100 disabled:cursor-wait disabled:opacity-60">
-                  <HardDrive className="h-3.5 w-3.5" />
-                  {isDownloadingDossier ? 'Gerando dossiê…' : 'Baixar dossiê integral'}
+                <button type="button" onClick={()=>{setDownloadSelection(documents.filter(doc=>doc.status==='DISPONIVEL'||doc.status==='ASSINADO').map(doc=>doc.type));setDownloadPicker(true);}} disabled={isDownloadingDossier} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 disabled:opacity-60" aria-label="Escolher documentos para baixar" title="Baixar documentos">
+                  <Download className="h-4 w-4" />
                 </button>
               )}
-              <span className="px-2.5 py-1 bg-white text-slate-700 border border-slate-300 rounded-md text-[11px] font-bold shadow-2xs">
-                Envio direto pela Asten
-              </span>
               <span className="text-[11px] text-slate-500 font-medium">
                 {documents.length} documento(s)
               </span>
@@ -1476,37 +880,11 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           </div>
 
           <div className="p-3 sm:p-4 space-y-3">
-            {/* REGRAS DE ASSINATURA DERIVADAS DO TIPO DO DOCUMENTO */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-700 space-y-1.5">
-              <div className="font-bold text-slate-900 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
-                <Info className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                <span>Regras de geração e assinatura de cada documento:</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 text-[10.5px]">
-                <div className="p-2 bg-white rounded border border-slate-200">
-                  <span className="font-bold text-slate-900 block">1. Carta Convite</span>
-                  <span className="text-slate-500">Não requer assinatura.</span>
-                </div>
-                <div className="p-2 bg-white rounded border border-slate-200">
-                  <span className="font-bold text-slate-900 block">2. Ata Oficial da Defesa</span>
-                  <span className="text-slate-500">Assinatura do professor orientador.</span>
-                </div>
-                <div className="p-2 bg-white rounded border border-slate-200">
-                  <span className="font-bold text-slate-900 block">3. Termo de Autorização</span>
-                  <span className="text-slate-500">Assinatura do Orientador e Discente.</span>
-                </div>
-                <div className="p-2 bg-white rounded border border-slate-200">
-                  <span className="font-bold text-slate-900 block">4. Declaração de Banca</span>
-                  <span className="text-slate-500">Assinatura do Presidente da Comissão.</span>
-                </div>
-              </div>
-            </div>
-
-            {signatureNotice&&<div role="status" className={`rounded-lg border p-3 text-xs font-bold ${signatureNotice.ok?'border-emerald-200 bg-emerald-50 text-emerald-900':'border-red-200 bg-red-50 text-red-900'}`}>{signatureNotice.text}</div>}
+            {signatureNotice&&<div role="status" className={`rounded-lg border p-3 text-xs font-bold ${signatureNotice.ok?'border-[var(--portal-border)] bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)]':'border-red-200 bg-red-50 text-red-900'}`}>{signatureNotice.text}</div>}
 
             {verifications.length > 0 && (
-              <div className="rounded-xl border border-sky-200 bg-sky-50 p-3">
-                <div className="mb-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-wide text-sky-950"><ShieldCheck className="h-4 w-4" />Autenticidade dos documentos assinados</div>
+              <div className="rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] p-3">
+                <div className="mb-2 flex items-center gap-2 text-[11px] font-black normal-case tracking-wide text-sky-950"><ShieldCheck className="h-4 w-4" />Autenticidade dos documentos assinados</div>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {verifications.map((verification) => (
                     <a key={`${verification.documentType}-${verification.version}`} href={verification.url} target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-sky-900 hover:border-sky-400">
@@ -1517,86 +895,94 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5">
               {documents.map((doc) => {
-                const isDownloadable = doc.status === 'DISPONIVEL' || doc.status === 'ASSINADO';
+                const termDeclined=doc.type==='TERMO'&&publicationDeclined(process);
+                const isDownloadable = !termDeclined&&(doc.status === 'DISPONIVEL' || doc.status === 'ASSINADO');
                 const latestJob=signatureJobs.filter(job=>job.documentType===doc.type&&job.status!=='CANCELED').sort((a,b)=>b.documentVersion-a.documentVersion)[0];
                 const alreadySent=Boolean(latestJob&&['SENDING','SENT','PARTIALLY_SIGNED','SIGNED','DRIVE_SYNC_PENDING','ARCHIVED'].includes(latestJob.status));
-                const canRequestSignature=doc.requiresSignature&&doc.status!=='NAO_DISPONIVEL'&&(isMasterAdmin||(doc.type==='ATA'&&isAdvisor)||(doc.type==='TERMO'&&(isStudent||isAdvisor)));
+                const canRequestSignature=!termDeclined&&doc.requiresSignature&&doc.status!=='NAO_DISPONIVEL'&&(isMasterAdmin||(doc.type==='ATA'&&isAdvisor)||(doc.type==='TERMO'&&(isStudent||isAdvisor)));
 
                 const getDocInfo = (type: string) => {
                   switch (type) {
                     case 'CONVITE':
-                      return { title: '1. Carta-Convite da Banca', signNote: 'Sem necessidade de assinatura' };
+                      return { title: '1. Carta-Convite da Banca', signNote: 'Não requer assinatura', availability: 'Confirme o local e envie o convite à banca.' };
                     case 'ATA':
-                      return { title: '2. Ata Oficial da Defesa Final', signNote: 'Assinatura: Professor Orientador' };
+                      return { title: '2. Ata Oficial da Defesa Final', signNote: 'Professor orientador', availability: 'Aguarda confirmação da ata após a defesa.' };
                     case 'TERMO':
-                      return { title: '3. Termo de Autorização e Publicação', signNote: 'Assinatura: Orientador + Discente' };
+                      return { title: '3. Termo de Autorização e Publicação', signNote: 'Orientador e todos os autores', availability: 'Solicite publicação na entrega do Repositório.' };
                     case 'DECLARACAO':
-                      return { title: '4. Declaração de Participação na Banca', signNote: 'Assinatura: Presidente da Comissão' };
+                      return { title: '4. Declaração de Participação na Banca', signNote: 'Presidência', availability: 'Aguarda entrega final, ata e termo aplicável assinados.' };
                     default:
-                      return { title: doc.title, signNote: 'Assinatura gerenciada pelo portal' };
+                      return { title: doc.title, signNote: 'Assinatura gerenciada pelo portal', availability: 'Após concluir a etapa responsável pela geração deste documento.' };
                   }
                 };
 
                 const docInfo = getDocInfo(doc.type);
+                const downloadPending=termDeclined?'Não foi autorizada a publicação do trabalho nem do resumo expandido por autores e orientação.':doc.status==='NAO_DISPONIVEL'?docInfo.availability:doc.status==='GERANDO'?'O PDF está sendo gerado.':doc.status==='AGUARDANDO_ASSINATURA'?'Aguarda as assinaturas e o arquivamento do PDF.':doc.status==='COM_ERRO'?'A geração falhou. A comissão deve verificar a pendência.':'Consulte a versão atual deste documento.';
 
                 return (
                   <div
                     key={doc.id}
-                    className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between gap-3"
+                    className={`portal-tcc-document-card ${isDownloadable?'':'portal-document-unavailable'} border border-slate-200/90 rounded-xl p-3.5 flex flex-col gap-3`}
                   >
                     {/* Header: Document Title, Version and Status Badge */}
                     <div className="space-y-2">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/80 flex items-center justify-center shrink-0">
-                            <FileCheck className="w-4 h-4 text-emerald-700" />
+                          <div className="w-8 h-8 rounded-lg bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border border-[var(--portal-border)] flex items-center justify-center shrink-0">
+                            <FileCheck className="w-4 h-4 text-[var(--portal-brand-header)]" />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-extrabold text-xs sm:text-[13px] text-slate-900 leading-snug truncate" title={docInfo.title}>
-                              {docInfo.title}
+                            <h3 className="portal-document-title font-extrabold text-xs sm:text-[13px] text-slate-900 leading-snug" title={docInfo.title}>
+                              {doc.type==='CONVITE'?<>1. Carta-Convite<br/>da Banca</>:doc.type==='ATA'?<>2. Ata Oficial<br/>da Defesa Final</>:docInfo.title}
                             </h3>
-                            <span className="text-[10px] font-mono font-bold text-slate-400">
+                            <span className="text-[10px] font-mono font-bold text-[var(--portal-text-muted)]">
                               Versão {doc.currentVersion}
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="p-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-slate-600 font-medium">
-                        {docInfo.signNote}
+                      <div className="portal-document-signers p-1.5 bg-white border border-slate-200 rounded text-[10px] text-slate-600 font-medium">
+                        <span className="font-bold">{doc.type==='CONVITE'?'Assinatura':'Quem assina'}</span>
+                        <span>{termDeclined?'Não necessária':doc.type==='CONVITE'?'Não necessária':docInfo.signNote}</span>
                       </div>
 
                       {/* Status Badge */}
-                      <div className="flex items-center justify-between pt-1">
+                      <div className="flex flex-wrap items-start justify-between gap-2 pt-1">
                         <span
-                          className={`font-black uppercase text-[10px] px-2.5 py-0.5 rounded-md border tracking-wide ${
+                          className={`portal-document-status font-black normal-case text-[10px] px-2.5 py-0.5 rounded-md border tracking-wide ${
                             doc.status === 'ASSINADO' || doc.status === 'DISPONIVEL'
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : 'bg-amber-50 text-amber-800 border-amber-200'
+                              ? 'portal-document-status-available'
+                              : doc.status === 'COM_ERRO'
+                                ? 'bg-rose-50 text-rose-800 border-rose-200'
+                                : 'bg-amber-50 text-amber-800 border-amber-200'
                           }`}
                         >
-                          {doc.status}
+                          {termDeclined?'Não autorizado':doc.status === 'NAO_DISPONIVEL' ? 'Não disponível' : ({DISPONIVEL:'Disponível',ASSINADO:'Assinado',AGUARDANDO_ASSINATURA:'Aguardando assinatura'}[doc.status] || 'Não disponível')}
+                          {!isDownloadable&&<span className="block text-[11px] font-medium normal-case leading-snug tracking-normal">{downloadPending}</span>}
                         </span>
 
-                        {doc.type === 'DECLARACAO' && (
-                          <span className="text-[10px] font-bold text-emerald-900 bg-emerald-50 border border-emerald-200/90 px-2 py-0.5 rounded-md">
-                            Assinatura Presidente
-                          </span>
-                        )}
                       </div>
                     </div>
 
+                    {((canRequestSignature&&!alreadySent)||latestJob?.provider==='GOV_BR')&&<div className="portal-document-signature-actions flex flex-col gap-2">
+                    {canRequestSignature&&!alreadySent&&<button type="button" onClick={()=>handleSignDocument(doc)} disabled={signatureWorking!==''} className="portal-document-sign inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-bold"><ShieldCheck className="h-4 w-4"/>Asten</button>}
+                    {canRequestSignature&&!alreadySent&&<button type="button" onClick={()=>setGovbrDocument(doc)} className="portal-action"><FileCheck className="h-4 w-4"/>Gov.br</button>}
+                    {latestJob?.provider==='GOV_BR'&&<button type="button" onClick={()=>setGovbrDocument(doc)} className="portal-action">Continuar Gov.br</button>}
+                    </div>}
+
                     {/* Action Buttons: Ver & Baixar PDF */}
-                    <div className="flex items-center gap-2 pt-2.5 border-t border-slate-100">
+                    <div className="portal-document-actions flex items-center gap-2 pt-2.5 border-t border-slate-100">
                       <button
                         type="button"
                         onClick={() => setSelectedPreviewDoc(doc)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+                        disabled={!isDownloadable}
+                        className="portal-document-view flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer disabled:cursor-not-allowed"
                         title="Visualizar documento em tela"
                       >
-                        <Eye className="w-3.5 h-3.5 text-slate-500" />
+                        <Eye className="w-3.5 h-3.5" />
                         <span>Ver</span>
                       </button>
 
@@ -1604,10 +990,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         type="button"
                         onClick={() => handleDirectDownload(doc)}
                         disabled={!isDownloadable}
-                        className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-2xs ${
+                        className={`portal-document-download flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-2xs ${
                           isDownloadable
                             ? 'text-white bg-[var(--portal-brand-header)] hover:bg-[#004827] cursor-pointer'
-                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                            : 'bg-slate-200 text-[var(--portal-text-muted)] cursor-not-allowed'
                         }`}
                         title="Baixar PDF do documento"
                       >
@@ -1615,8 +1001,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <span>Baixar PDF</span>
                       </button>
                     </div>
-                    {canRequestSignature&&<div className="grid grid-cols-2 gap-2"><button type="button" onClick={()=>handleSignDocument(doc,'ASTEN')} disabled={signatureWorking!==''||alreadySent} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#344125] px-3 py-2 text-xs font-black text-white hover:bg-[#28331d] disabled:bg-slate-300"><ShieldCheck className="h-4 w-4"/>Asten</button><button type="button" onClick={()=>handleSignDocument(doc,'GOV_BR')} disabled={signatureWorking!==''||alreadySent} className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-600 px-3 py-2 text-xs font-black text-white hover:bg-slate-700 disabled:bg-slate-300"><ShieldCheck className="h-4 w-4"/>Gov.br</button></div>}
-                    {signatureJobs.filter(job=>job.documentType===doc.type&&job.provider==='GOV_BR'&&job.status!=='ARCHIVED'&&job.status!=='CANCELED').sort((a,b)=>b.documentVersion-a.documentVersion).slice(0,1).map(job=><div key={job.id} className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2"><div className="text-[10px] font-black uppercase text-slate-600">Assinatura Gov.br · {job.status}</div><div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={()=>void handleGovBrDownload(job)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-[10px] font-black text-slate-800">1. Baixar PDF</button><label className="cursor-pointer rounded-lg bg-slate-600 px-3 py-2 text-[10px] font-black text-white">2. Enviar PDF assinado<input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={e=>void handleGovBrUpload(job,e.target.files?.[0])}/></label></div></div>)}
+
                   </div>
                 );
               })}
@@ -1629,136 +1014,65 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* SECTION 6: FICHA E ACERVO PÚBLICO NO REPOSITÓRIO DIGITAL                  */}
       {/* ========================================================================= */}
       {localFormat.showSectionAcervo !== false && isTabVisible('acervo') && (
-        <div id="acervo-digital-section" className="portal-card overflow-hidden">
-          <div className="portal-section-header px-4 py-2.5 flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-              <BookOpen className="w-3.5 h-3.5 text-slate-600" />
-              <span>Repositório Digital</span>
-            </h2>
-            <span className="text-[11px] text-slate-500 font-medium">
-              Acervo {installationProfile.courseName} — {installationProfile.institutionAcronym}
-            </span>
-          </div>
-
-          <div className="p-4 sm:p-5">
+        <div id="acervo-digital-section" className="overflow-hidden">
+          <div className="portal-repository-content">
             {readOnly ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Card 1: Palavras-Chave */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                      <Tag className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Palavras-Chave</span>
-                    </span>
-                    <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full">
-                      PREENCHIDO
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {(process.acervo?.palavrasChave || []).map((kw, i) => (
-                      <span key={i} className="text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200 px-2.5 py-1 rounded-lg">
-                        #{kw}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Card 2: Arquivos do Repositório */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Documentos Anexados</span>
-                    </span>
-                    <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full">
-                      {[process.acervo?.resumoExpandidoFileId,process.acervo?.trabalhoCompletoFileId].filter(Boolean).length} ARQUIVO(S)
-                    </span>
-                  </div>
-
-                  <div className="space-y-2 pt-0.5">
-                    <div className="flex items-center justify-between gap-2 p-2.5 bg-slate-50/80 rounded-lg border border-slate-200">
-                      <div className="min-w-0">
-                        <span className="text-[9.5px] font-bold text-slate-400 uppercase block">Resumo Expandido</span>
-                        <span className="font-bold text-slate-800 text-xs truncate block">{process.acervo?.resumoExpandidoFileName || 'Não anexado'}</span>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={!process.acervo?.resumoExpandidoFileId}
-                        onClick={() => window.open(`/api/processes/${process.id}/files/resumo-expandido/download`,'_blank','noopener,noreferrer')}
-                        className="text-white font-bold text-xs px-3 py-1.5 rounded-lg bg-[var(--portal-brand-header)] hover:bg-[#004827] flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs transition-colors"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Baixar</span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 p-2.5 bg-slate-50/80 rounded-lg border border-slate-200">
-                      <div className="min-w-0">
-                        <span className="text-[9.5px] font-bold text-slate-400 uppercase block">Monografia Completa</span>
-                        <span className="font-bold text-slate-800 text-xs truncate block">{process.acervo?.trabalhoCompletoFileName || 'Não anexado'}</span>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={!process.acervo?.trabalhoCompletoFileId}
-                        onClick={() => window.open(`/api/processes/${process.id}/files/trabalho-completo/download`,'_blank','noopener,noreferrer')}
-                        className="text-white font-bold text-xs px-3 py-1.5 rounded-lg bg-[var(--portal-brand-header)] hover:bg-[#004827] flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs transition-colors"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Baixar</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 3: Resumo Síntese */}
-                <div className="md:col-span-2 bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                      <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Resumo Síntese do TCC</span>
-                    </span>
-                    <span className="text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md">
-                      PÚBLICO NO REPOSITÓRIO
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-700 leading-relaxed font-normal bg-slate-50/60 p-3 rounded-lg border border-slate-200/70 whitespace-pre-wrap">
-                    {process.acervo?.resumoSintese || 'Resumo sintético ainda não informado.'}
-                  </p>
-                </div>
+              <div className="portal-repository-grid">
+                <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Resumo síntese do TCC</h3><p className="whitespace-pre-wrap text-sm">{process.acervo?.resumoSintese||'Resumo ainda não informado.'}</p></section>
+                <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Palavras-chave</h3><div className="grid grid-cols-1 gap-2 sm:grid-cols-5">{(process.acervo?.palavrasChave||[]).map((word,index)=><span key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs">{word}</span>)}</div></section>
+                {[
+                  {kind:'trabalho-completo',title:'Trabalho completo',id:process.acervo?.trabalhoCompletoFileId,name:process.acervo?.trabalhoCompletoFileName},
+                  {kind:'resumo-expandido',title:'Resumo expandido',id:process.acervo?.resumoExpandidoFileId,name:process.acervo?.resumoExpandidoFileName},
+                ].map(file=><section key={file.kind} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4"><div><h3 className="text-xs font-bold">{file.title}</h3><p className="mt-2 text-sm">{file.name||'Não anexado'}</p></div><button type="button" disabled={!file.id} className="portal-action" onClick={()=>window.open(`/api/processes/${process.id}/files/${file.kind}/download`,'_blank','noopener,noreferrer')}><Download className="h-4 w-4"/>Baixar</button></section>)}
               </div>
             ) : (
-              <form onSubmit={handleSubmitAcervo} className="space-y-4">
-                {!ataIsArchived&&<p role="status" className="portal-card p-4">A entrega final será liberada após a Ata assinada pelo orientador retornar da Asten e ser arquivada no Drive.</p>}
-                <fieldset disabled={!ataIsArchived} className="space-y-4 disabled:opacity-60">
-                {/* Row 1: Palavras-chave and Resumo Síntese */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Card 1: Palavras-Chave */}
-                  <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
+              <form id="repository-delivery-form" onSubmit={handleSubmitAcervo} className="space-y-2">
+                <fieldset className="portal-repository-grid">
+                                  {/* Card 2: Resumo Síntese */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                        <Tag className="w-3.5 h-3.5 text-emerald-700" />
+                      <label className="text-xs font-extrabold normal-case tracking-wider text-slate-800 flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-[var(--portal-brand-header)]" />
+                        <span>Resumo Síntese do TCC</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoResumo.trim() ? 'bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border-[var(--portal-border)]' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
+                        {acervoResumo.trim() ? 'Preenchido' : 'Pendente'}
+                      </span>
+                    </div>
+
+                    <textarea
+                      required
+                      disabled={!ataIsArchived} value={acervoResumo}
+                      aria-label="Resumo síntese do TCC"
+                      aria-describedby="acervo-resumo-limit"
+                      maxLength={2000}
+                      rows={8}
+                      onChange={(e) => setAcervoResumo(e.target.value)}
+                      placeholder="Resumo do TCC: objetivo, método, principais resultados e conclusão, em até três parágrafos e 2.000 caracteres."
+                      className="w-full text-xs font-medium p-3 border border-slate-300 rounded-lg bg-[var(--portal-surface-inner)] focus:bg-white focus:ring-2 focus:ring-emerald-700 outline-none transition-all font-sans"
+                    />
+                    <p id="acervo-resumo-limit" className="text-right text-xs text-slate-600">{acervoResumo.length.toLocaleString('pt-BR')} / 2.000 caracteres · até três parágrafos</p>
+                  </div>
+                  {/* Card 1: Palavras-Chave */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-extrabold normal-case tracking-wider text-slate-800 flex items-center gap-1.5">
+                        <Tag className="w-3.5 h-3.5 text-[var(--portal-brand-header)]" />
                         <span>Palavras-Chave</span>
                         <span className="text-rose-500">*</span>
                       </label>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoKeywords.trim() ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
-                        {acervoKeywords.trim() ? 'PREENCHIDO' : 'PENDENTE'}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoKeywords.trim() ? 'bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border-[var(--portal-border)]' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
+                        {acervoKeywords.trim() ? 'Preenchido' : 'Pendente'}
                       </span>
                     </div>
 
-                    <input
-                      type="text"
-                      required
-                      placeholder="Informe exatamente cinco palavras-chave, separadas por vírgula"
-                      value={acervoKeywords}
-                      onChange={(e) => setAcervoKeywords(e.target.value)}
-                      className="w-full text-xs font-medium p-2.5 border border-slate-300 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-700 outline-none transition-all"
-                    />
-
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">{Array.from({length:5},(_,index)=><input key={index} aria-label={`Palavra-chave ${index+1}`} required disabled={!ataIsArchived} className="portal-input" value={acervoKeywords.split(',')[index]||''} onChange={event=>{const words=Array.from({length:5},(_,i)=>acervoKeywords.split(',')[i]||'');words[index]=event.target.value.replaceAll(',','');setAcervoKeywords(words.join(','));}}/>)}</div>
                     {/* Preview of Tags */}
                     {acervoKeywords.trim() && (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
+                      <div className="flex flex-wrap justify-center gap-1.5 pt-1">
                         {acervoKeywords.split(',').map(s => s.trim()).filter(Boolean).map((kw, i) => (
-                          <span key={i} className="text-[11px] font-bold bg-emerald-50 text-emerald-900 border border-emerald-200 px-2 py-0.5 rounded-md">
+                          <span key={i} className="text-[11px] font-bold bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border border-[var(--portal-border)] px-2 py-0.5 rounded-md">
                             #{kw}
                           </span>
                         ))}
@@ -1766,64 +1080,17 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     )}
                   </div>
 
-                  {/* Card 2: Resumo Síntese */}
-                  <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                        <FileText className="w-3.5 h-3.5 text-emerald-700" />
-                        <span>Resumo Síntese do TCC</span>
-                        <span className="text-rose-500">*</span>
-                      </label>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoResumo.trim() ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
-                        {acervoResumo.trim() ? `${acervoResumo.trim().length} CARACTERES` : 'PENDENTE'}
-                      </span>
-                    </div>
-
-                    <textarea
-                      rows={3}
-                      required
-                      placeholder="Escreva de três a cinco parágrafos sobre objetivos, metodologia, achados e conclusões, separados por uma linha em branco."
-                      value={acervoResumo}
-                      onChange={(e) => setAcervoResumo(e.target.value)}
-                      className="w-full text-xs font-medium p-3 border border-slate-300 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-700 outline-none transition-all font-sans"
-                    />
-                  </div>
-                </div>
-
-                {/* Row 2: Arquivos do Repositório (Resumo Expandido & Monografia Completa) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Card 3: Resumo Expandido */}
-                  <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                        <Upload className="w-3.5 h-3.5 text-emerald-700" />
-                        <span>Arquivo do Resumo Expandido</span>
-                      </label>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoResumoExpandido.trim() ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                        {acervoResumoExpandido.trim() ? 'ANEXADO' : 'OPCIONAL'}
-                      </span>
-                    </div>
-
-                    <input
-                      type="file"
-                      accept="application/pdf,.pdf"
-                      disabled={Boolean(acervoUploading)}
-                      onChange={(e) => handleAcervoPdfUpload('resumo-expandido',e.target.files?.[0])}
-                      className="w-full text-xs font-medium p-2.5 border border-slate-300 rounded-lg bg-slate-50/50 file:mr-3 file:border-0 file:rounded-md file:bg-emerald-800 file:text-white file:px-3 file:py-1.5 file:font-bold"
-                    />
-                    {acervoResumoExpandido && <p className="text-[11px] text-emerald-800 font-semibold break-all">Armazenado: {acervoResumoExpandido}</p>}
-                  </div>
 
                   {/* Card 4: Monografia Completa */}
-                  <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
+                  <div className="portal-repository-file-card bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                        <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
+                      <label className="text-xs font-extrabold normal-case tracking-wider text-slate-800 flex items-center gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5 text-[var(--portal-brand-header)]" />
                         <span>Arquivo do Trabalho Completo / Monografia (PDF)</span>
                         <span className="text-rose-500">*</span>
                       </label>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoTrabalhoCompleto.trim() ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'}`}>
-                        {acervoTrabalhoCompleto.trim() ? 'ANEXADO' : 'OBRIGATÓRIO'}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoTrabalhoCompleto.trim() ? 'bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border-[var(--portal-border)]' : 'bg-rose-50 text-rose-800 border-rose-200'}`}>
+                        {acervoTrabalhoCompleto.trim() ? 'Anexado' : 'Obrigatório'}
                       </span>
                     </div>
 
@@ -1831,24 +1098,18 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       type="file"
                       accept="application/pdf,.pdf"
                       required={!acervoTrabalhoCompleto}
-                      disabled={Boolean(acervoUploading)}
+                      disabled={!ataIsArchived || Boolean(acervoUploading)}
                       onChange={(e) => handleAcervoPdfUpload('trabalho-completo',e.target.files?.[0])}
-                      className="w-full text-xs font-medium p-2.5 border border-slate-300 rounded-lg bg-slate-50/50 file:mr-3 file:border-0 file:rounded-md file:bg-emerald-800 file:text-white file:px-3 file:py-1.5 file:font-bold"
+                      className="w-full text-xs font-medium p-2.5 border border-slate-300 rounded-lg bg-[var(--portal-surface-inner)] file:mr-3 file:border-0 file:rounded-md file:bg-[var(--portal-brand-header)] file:text-white file:px-3 file:py-1.5 file:font-bold"
                     />
-                    {acervoTrabalhoCompleto && <p className="text-[11px] text-emerald-800 font-semibold break-all">Armazenado: {acervoTrabalhoCompleto}</p>}
-                  </div>
-                </div>
-
-                {/* Card 5: Visibilidade & Ação de Salvar */}
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                  <div className="grid gap-3 md:grid-cols-2">
-                  <label htmlFor="acervo-public-toggle" className="flex items-center gap-2.5 cursor-pointer select-none rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="portal-repository-file-status text-[11px] text-[var(--portal-brand-header)] font-semibold break-all" aria-hidden={!acervoTrabalhoCompleto}>{acervoTrabalhoCompleto ? <>Armazenado: {acervoTrabalhoCompleto}</> : null}</p>
+                  <label htmlFor="acervo-public-toggle" className="portal-repository-choice flex items-center gap-2.5 cursor-pointer select-none rounded-lg border border-slate-200 bg-white p-3">
                     <input
                       id="acervo-public-toggle"
                       type="checkbox"
                       checked={acervoIsPublic}
                       onChange={(e) => {setAcervoIsPublic(e.target.checked);setAcervoAuthorizationConfirmed(false);}}
-                      className="w-4 h-4 text-emerald-800 rounded border-slate-300 focus:ring-emerald-700 cursor-pointer"
+                      className="w-4 h-4 text-[var(--portal-brand-header)] rounded border-slate-300 focus:ring-emerald-700 cursor-pointer"
                     />
                     <div>
                       <span className="text-xs font-bold text-slate-900 block">
@@ -1859,40 +1120,59 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       </span>
                     </div>
                   </label>
+                  </div>
+                  {/* Card 3: Resumo Expandido */}
+                  <div className="portal-repository-file-card bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-extrabold normal-case tracking-wider text-slate-800 flex items-center gap-1.5">
+                        <Upload className="w-3.5 h-3.5 text-[var(--portal-brand-header)]" />
+                        <span>Arquivo do Resumo Expandido</span>
+                      </label>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoResumoExpandido.trim() ? 'bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border-[var(--portal-border)]' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                        {acervoResumoExpandido.trim() ? 'Anexado' : 'Opcional'}
+                      </span>
+                    </div>
 
-                  <label htmlFor="acervo-expanded-public-toggle" className={`flex items-center gap-2.5 select-none rounded-lg border border-slate-200 bg-white p-3 ${acervoResumoExpandido?'cursor-pointer':'cursor-not-allowed opacity-60'}`}>
+                    <input
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      disabled={!ataIsArchived || Boolean(acervoUploading)}
+                      onChange={(e) => handleAcervoPdfUpload('resumo-expandido',e.target.files?.[0])}
+                      className="w-full text-xs font-medium p-2.5 border border-slate-300 rounded-lg bg-[var(--portal-surface-inner)] file:mr-3 file:border-0 file:rounded-md file:bg-[var(--portal-brand-header)] file:text-white file:px-3 file:py-1.5 file:font-bold"
+                    />
+                    <p className="portal-repository-file-status text-[11px] text-[var(--portal-brand-header)] font-semibold break-all" aria-hidden={!acervoResumoExpandido}>{acervoResumoExpandido ? <>Armazenado: {acervoResumoExpandido}</> : null}</p>
+                  <label htmlFor="acervo-expanded-public-toggle" className={`portal-repository-choice flex items-center gap-2.5 select-none rounded-lg border border-slate-200 bg-white p-3 ${acervoResumoExpandido?'cursor-pointer':'cursor-not-allowed opacity-60'}`}>
                     <input
                       id="acervo-expanded-public-toggle"
                       type="checkbox"
                       checked={acervoExpandedPublic}
                       disabled={!acervoResumoExpandido}
                       onChange={(e) => {setAcervoExpandedPublic(e.target.checked);setAcervoAuthorizationConfirmed(false);}}
-                      className="w-4 h-4 text-emerald-800 rounded border-slate-300 focus:ring-emerald-700 cursor-pointer"
+                      className="w-4 h-4 text-[var(--portal-brand-header)] rounded border-slate-300 focus:ring-emerald-700 cursor-pointer"
                     />
                     <div>
-                      <span className="text-xs font-bold text-slate-900 block">Publicar também o resumo expandido</span>
+                      <span className="text-xs font-bold text-slate-900 block">Tornar este resumo expandido público no Repositório Digital</span>
                       <span className="text-[10.5px] text-slate-500 block">Escolha independente do trabalho completo; exige arquivo anexado.</span>
                     </div>
                   </label>
                   </div>
 
+
+                </fieldset>
+                {/* Card 5: Visibilidade & Ação de Salvar */}
+                <div className="space-y-3">
+
+
+                  {(acervoIsPublic||acervoExpandedPublic)&&<label className="block text-xs font-bold">Assinatura do Termo<select aria-label="Assinatura do Termo" className="portal-input mt-1" value={termSignatureProvider} onChange={event=>setTermSignatureProvider(event.target.value as 'ASTEN'|'GOV_BR')}><option value="ASTEN">Asten, assinatura pelo e-mail</option><option value="GOV_BR">Gov.br, devolver PDF com todas as assinaturas</option></select></label>}
                   {(acervoIsPublic||acervoExpandedPublic)&&<label className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-950">
-                    <input type="checkbox" required checked={acervoAuthorizationConfirmed} onChange={(event)=>setAcervoAuthorizationConfirmed(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-amber-400 text-emerald-800"/>
-                    <span className="text-xs leading-5"><strong>Autorizo a publicação:</strong> {acervoIsPublic?'trabalho completo':''}{acervoIsPublic&&acervoExpandedPublic?' e ':''}{acervoExpandedPublic?'resumo expandido':''}. Esta escolha gerará o Termo de Autorização para assinatura simultânea do(s) aluno(s) e orientador pela Asten.</span>
+                    <input type="checkbox" required checked={acervoAuthorizationConfirmed} onChange={(event)=>setAcervoAuthorizationConfirmed(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-amber-400 text-[var(--portal-brand-header)]"/>
+                    <span className="text-xs leading-5"><strong>Autorizo a publicação:</strong> {acervoIsPublic?'trabalho completo':''}{acervoIsPublic&&acervoExpandedPublic?' e ':''}{acervoExpandedPublic?'resumo expandido':''}. Esta escolha gerará o Termo de Autorização para assinatura do(s) aluno(s) e orientador pelo meio selecionado.</span>
                   </label>}
 
-                  <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={isSubmittingAcervo}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 text-white font-bold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl bg-[var(--portal-brand-header)] hover:bg-[#004827] transition-all cursor-pointer shadow-md shrink-0"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>{isSubmittingAcervo ? 'Salvando...' : 'Salvar no Acervo'}</span>
-                  </button>
-                  </div>
+            {(isMasterAdmin||isStudent)&&!isAcervoSubmitted&&!readOnly&&<div className="flex justify-center pt-2"><button type="submit" disabled={isSubmittingAcervo||Boolean(acervoUploading)||!ataIsArchived} className="portal-action portal-button-primary"><Save className="h-4 w-4"/>{isSubmittingAcervo?'Salvando e finalizando…':'Salvar no acervo e finalizar o processo'}</button></div>}
+
                 </div>
-              </fieldset></form>
+              </form>
             )}
           </div>
         </div>
@@ -1906,6 +1186,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* ========================================================================= */}
 
       {/* Audit Log Modal (Full dialog view via gear) */}
+      {govbrDocument&&<GovbrSignatureModal process={process} documentType={govbrDocument.type as 'ATA'|'TERMO'|'DECLARACAO'} canApprove={isMasterAdmin} initialJob={signatureJobs.find(job=>job.documentType===govbrDocument.type&&job.provider==='GOV_BR'&&job.sourceDataRevision===process.dataRevision&&job.status!=='CANCELED')} onChange={()=>void loadData()} onClose={()=>setGovbrDocument(null)}/>}
+      <PortalModalShell zIndexClass="z-[1000002]" open={downloadPicker} onClose={()=>setDownloadPicker(false)} title="Baixar documentos" icon={Download} maxWidthClass="max-w-lg" bodyClassName="p-4" footer={<div className="flex justify-end gap-2"><button type="button" className="portal-action" onClick={()=>setDownloadPicker(false)}>Fechar</button><button type="button" disabled={isDownloadingDossier||!downloadSelection.length} className="portal-action" onClick={()=>void handleDownloadDossier()}>{isDownloadingDossier?'Preparando…':'Baixar selecionados'}</button></div>}>
+        <div className="space-y-2">{documents.map(doc=><label key={doc.id} className="flex items-center gap-2 rounded-lg border p-3"><input type="checkbox" disabled={!['DISPONIVEL','ASSINADO'].includes(doc.status)} checked={downloadSelection.includes(doc.type)} onChange={event=>setDownloadSelection(current=>event.target.checked?[...current,doc.type]:current.filter(type=>type!==doc.type))}/><span>{doc.title}<small className="block">{doc.status==='DISPONIVEL'?'Disponível':doc.status==='ASSINADO'?'Assinado':'Não disponível'}</small></span></label>)}</div>
+      </PortalModalShell>
       {showAuditLogModal && (
         <div
           className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-center justify-center p-4"
@@ -1915,7 +1199,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
             <header className="portal-modal-header justify-start px-4 py-3">
               <History className="h-5 w-5 shrink-0 text-white" aria-hidden="true" />
               <div className="min-w-0">
-                <h2 id="process-audit-title" className="truncate text-sm font-black uppercase text-white">Histórico & Log de Alterações do Processo</h2>
+                <h2 id="process-audit-title" className="truncate text-sm font-black normal-case text-white">Histórico & Log de Alterações do Processo</h2>
                 <p className="mt-0.5 text-[10px] font-mono text-white/80">Protocolo: {process.protocolo}</p>
               </div>
             </header>
@@ -1924,7 +1208,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 <TableScrollWrapper>
                   <table className="w-full border-collapse text-left text-xs" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
                     <thead>
-                      <tr className="border-b border-slate-300 text-[10px] font-extrabold uppercase tracking-wider text-slate-900" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
+                      <tr className="border-b border-slate-300 text-[10px] font-extrabold normal-case tracking-wider text-slate-900" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
                         <th className="p-3">Data e Hora</th>
                         <th className="p-3">Usuário / Papel</th>
                         <th className="p-3">Ação Realizada</th>
@@ -1987,8 +1271,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
             <p className="mt-3 text-[11px] font-semibold leading-5">Esta ação removerá os registros vinculados ao processo. Use somente quando a exclusão definitiva for realmente necessária.</p>
           </section>
           <section className="portal-modal-card p-4">
-            <label className="mb-1 block text-xs font-bold text-slate-800">Para autorizar, digite <span className="font-mono font-black text-rose-700">EXCLUIR</span>.</label>
-            <input type="text" placeholder="Digite EXCLUIR para autorizar" value={deleteConfirmInput} onChange={(e) => setDeleteConfirmInput(e.target.value)} className="portal-input font-mono font-bold uppercase" />
+            <label className="mb-1 block text-xs font-bold text-slate-800">Para autorizar, digite <span className="font-mono font-black text-rose-700">Excluir</span>.</label>
+            <input type="text" placeholder="Digite EXCLUIR para autorizar" value={deleteConfirmInput} onChange={(e) => setDeleteConfirmInput(e.target.value)} className="portal-input font-mono font-bold normal-case" />
           </section>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => { setShowDeleteModal(false); setDeleteConfirmInput(''); }} className="portal-action">Cancelar</button>

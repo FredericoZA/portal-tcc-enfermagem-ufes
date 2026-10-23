@@ -12,8 +12,8 @@ test('superfícies administrativas usam a paleta canônica do Portal', async () 
     readPortalCss(),
   ]);
   assert.ok(tokens.includes('PORTAL_THEME.surface.panel'));
-  assert.ok(css.includes('--portal-surface-panel: #e1e6e9'));
-  assert.ok(css.includes('--portal-surface-card: #d5dce0'));
+  assert.ok(css.includes('--portal-surface-panel: #e9edef'));
+  assert.ok(css.includes('--portal-surface-card: #d8dfe3'));
   assert.ok(css.includes('--portal-surface-inner: #ffffff'));
   assert.ok(css.includes('--portal-brand-action: #337959'));
   assert.ok(css.includes('--portal-brand-header: #005830'));
@@ -72,9 +72,10 @@ test('Registros de Assinatura mostra a linha completa e somente ações suportad
     source('src/services/apiClient.ts'),
     source('server.ts'),
   ]);
-  assert.ok(page.includes("{ key: 'actions', label: 'Ações', isFixed: true }"));
+  assert.ok(page.includes("{ key: 'protocol', label: 'Processo', isFixed: true }"));
+  assert.ok(page.includes("{ key: 'actions', label: 'Ações' }"));
   assert.ok(page.includes('min-w-[1900px]'));
-  assert.ok(page.includes('sticky right-0'));
+  assert.ok(!page.includes('sticky right-0'));
   assert.ok(page.includes('Reenviar'));
   assert.ok(page.includes('Reconciliar'));
   assert.ok(client.includes('reconcileSignatureJob'));

@@ -12,7 +12,7 @@ function studio(): IntegrationStudioSettings {
     driveModelosFolderUrl: 'https://drive.google.com/drive/folders/1234567890',
     brandKit: {
       institutionName: 'Universidade', courseName: 'Curso', universityLogoUrl: '', courseLogoUrl: '', emailBannerUrl: '',
-      primaryColor: '#005a3c', secondaryColor: '#17324d', accentColor: '#d4a017', textColor: '#ffffff', fontFamily: 'Arial',
+      primaryColor: '#005a3c', secondaryColor: '#17324d', accentColor: '#d4a017', textColor: '#172033', fontFamily: 'Arial',
       documentHeaderText: 'Universidade', documentFooterText: 'Curso', emailFooterText: 'Comissão'
     },
     documentDesigns: {}, emailDesigns: {}, formDesigns: {},

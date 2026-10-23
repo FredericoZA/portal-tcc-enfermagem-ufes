@@ -9,11 +9,11 @@ const MAX_ASTEN_TOKEN_LENGTH = 4096;
 const MAX_PROVIDER_ERROR_LENGTH = 300;
 const MAX_ASTEN_SESSION_ID_LENGTH = 16 * 1024;
 const ASTEN_WEBHOOK_PATH = '/api/integrations/asten/webhook';
-type Service = 'getIdentificador' | 'getRepositoriosDoUsuario' | 'inserirEnvelope' | 'encaminharEnvelopeParaAssinaturas' | 'getDadosEnvelope' | 'getSignatariosPorEnvelope' | 'downloadPDFEnvelopeDocs' | 'getDocumentosEXMLsAssinadosDoEnvelope' | 'reenviarLinksDeAssinatura' | 'cancelarEnvelope';
-const allowed = new Set<Service>(['getIdentificador','getRepositoriosDoUsuario','inserirEnvelope','encaminharEnvelopeParaAssinaturas','getDadosEnvelope','getSignatariosPorEnvelope','downloadPDFEnvelopeDocs','getDocumentosEXMLsAssinadosDoEnvelope','reenviarLinksDeAssinatura','cancelarEnvelope']);
+type Service = 'getIdentificador' | 'getRepositoriosDoUsuario' | 'getPastasDoRepositorio' | 'getDadosPasta' | 'inserirEnvelope' | 'encaminharEnvelopeParaAssinaturas' | 'getDadosEnvelope' | 'getSignatariosPorEnvelope' | 'downloadPDFEnvelopeDocs' | 'getDocumentosEXMLsAssinadosDoEnvelope' | 'reenviarLinksDeAssinatura' | 'cancelarEnvelope';
+const allowed = new Set<Service>(['getIdentificador','getRepositoriosDoUsuario','getPastasDoRepositorio','getDadosPasta','inserirEnvelope','encaminharEnvelopeParaAssinaturas','getDadosEnvelope','getSignatariosPorEnvelope','downloadPDFEnvelopeDocs','getDocumentosEXMLsAssinadosDoEnvelope','reenviarLinksDeAssinatura','cancelarEnvelope']);
 interface Session { token: string; ownerEmail: string; identifier: string; repositoryId?: number; expiresAt: number; }
 const sessions = new Map<string, Session>();
-const readonlyAstenServices = new Set<Service>(['getIdentificador', 'getRepositoriosDoUsuario', 'getDadosEnvelope', 'getSignatariosPorEnvelope', 'downloadPDFEnvelopeDocs', 'getDocumentosEXMLsAssinadosDoEnvelope']);
+const readonlyAstenServices = new Set<Service>(['getIdentificador', 'getRepositoriosDoUsuario', 'getPastasDoRepositorio', 'getDadosPasta', 'getDadosEnvelope', 'getSignatariosPorEnvelope', 'downloadPDFEnvelopeDocs', 'getDocumentosEXMLsAssinadosDoEnvelope']);
 // Dupla autorização: credencial validada não autoriza enviar documentos.
 // Em produção, uma autorização de release adicional evita que variáveis antigas
 // da Vercel liberem assinaturas automaticamente na publicação desta revisão.
@@ -98,7 +98,11 @@ export function getAstenSecurityPreflight(): AstenSecurityPreflight {
   const signerLoginRequired = process.env.ASTEN_REQUIRE_LOGIN !== 'false';
   // Asten exigirCodigo requires a manually distributed code, not delivered by the provider.
   const signerCodeRequired = process.env.ASTEN_REQUIRE_CODE !== 'false';
-  const authenticationMethodSupported = [1, 2, 3, 5, 6].includes(Number(process.env.ASTEN_AUTHENTICATION_OPTION || 0));
+  // O provedor exige SMS para envelopes confidenciais; os celulares são validados por signatário antes da criação.
+  const profile=String(process.env.ASTEN_SIGNING_PROFILE||'CONFIDENTIAL_SMS');
+  const emailProfile=profile==='EMAIL_LINK'||profile==='EMAIL_LOGIN';
+  const authenticationMethodSupported = emailProfile ? Number(process.env.ASTEN_AUTHENTICATION_OPTION||0)===0 : profile==='CONFIDENTIAL_SMS'&&Number(process.env.ASTEN_AUTHENTICATION_OPTION || 0) === 4;
+  const signerAccessConfigured=profile==='EMAIL_LINK'?!signerLoginRequired:signerLoginRequired;
   const issues: string[] = [];
   if (!callbackUrlSecure) issues.push('Configure ASTEN_CALLBACK_URL com uma URL HTTPS válida, sem credenciais embutidas.');
   if (!expectedPortalUrl) issues.push('Configure PORTAL_PUBLIC_URL para validar a origem do callback Asten.');
@@ -106,9 +110,9 @@ export function getAstenSecurityPreflight(): AstenSecurityPreflight {
   if (!callbackEndpointValid) issues.push(`ASTEN_CALLBACK_URL deve apontar exatamente para ${ASTEN_WEBHOOK_PATH}, sem query string ou fragmento.`);
   if (!webhookSecretStrong) issues.push(`Configure ASTEN_WEBHOOK_SECRET com pelo menos ${MIN_WEBHOOK_SECRET_LENGTH} caracteres válidos e sem controles.`);
   if (!webhookSecretSeparated) issues.push('ASTEN_WEBHOOK_SECRET deve ser exclusivo e diferente dos demais segredos do portal.');
-  if (!signerLoginRequired) issues.push('ASTEN_REQUIRE_LOGIN não pode ser desativado neste portal.');
+  if (!signerAccessConfigured) issues.push('ASTEN_REQUIRE_LOGIN deve corresponder ao perfil de assinatura escolhido.');
   if (signerCodeRequired) issues.push('Defina ASTEN_REQUIRE_CODE=false: o código manual não dispõe de entrega independente segura.');
-  if (!authenticationMethodSupported) issues.push('Configure ASTEN_AUTHENTICATION_OPTION como 1, 2, 3, 5 ou 6. SMS e WhatsApp exigem celular verificado.');
+  if (!authenticationMethodSupported) issues.push('Configure o perfil Asten: CONFIDENTIAL_SMS usa autenticação 4; EMAIL_LINK e EMAIL_LOGIN usam 0, sem SMS.');
   return {
     callbackUrl,
     callbackUrlSecure,
@@ -125,7 +129,7 @@ export function getAstenSecurityPreflight(): AstenSecurityPreflight {
       callbackEndpointValid &&
       webhookSecretStrong &&
       webhookSecretSeparated &&
-      signerLoginRequired &&
+      signerAccessConfigured &&
       !signerCodeRequired &&
       authenticationMethodSupported,
     issues
@@ -198,7 +202,8 @@ export async function callAsten(service: Service, params: Record<string, unknown
         throw new Error('Asten rejeitou a credencial ou a autorização da conta.');
       }
       const fallback = `Asten respondeu ${response.status}.`;
-      throw new Error(safeProviderError(payload?.error?.message || payload?.error?.descricao, apiToken, fallback));
+      const providerError = typeof payload?.error === 'string' ? payload.error : payload?.error?.message || payload?.error?.descricao;
+      throw new Error(safeProviderError(providerError, apiToken, fallback));
     }
     const result=payload?.response ?? payload;
     const providerNotices=result?.data?.listaAvisos?.aviso;
@@ -207,6 +212,13 @@ export async function callAsten(service: Service, params: Record<string, unknown
     if(failure)throw new Error(safeProviderError(failure.mensagem,apiToken,'A Asten rejeitou a operação.'));
     return result;
   } finally { clearTimeout(timer); }
+}
+
+export class AstenRepositorySelectionError extends Error {
+  readonly code = 'ASTEN_REPOSITORY_SELECTION_REQUIRED';
+  constructor(readonly repositories: Array<{id: number; name: string}>) {
+    super('Escolha o repositório Asten para guardar os documentos. ASTEN_REPOSITORY_ID não foi definido.');
+  }
 }
 
 export function parseAstenAccountAndRepository(identity: unknown, repositories: unknown, configuredRepositoryId: string | undefined): {identifier:string;repositoryId:number} {
@@ -219,8 +231,9 @@ export function parseAstenAccountAndRepository(identity: unknown, repositories: 
   });
   const requested=String(configuredRepositoryId||'').trim();
   if(requested&&!/^[1-9][0-9]*$/.test(requested))throw new Error('ASTEN_REPOSITORY_ID deve ser um ID numérico válido.');
+  if (!requested && authorized.length > 1) throw new AstenRepositorySelectionError(authorized.map((item:any) => ({id: Number(item.id), name: String(item.nome || item.descricao || `Repositório ${item.id}`).slice(0, 160)})));
   const selected=requested?authorized.find((item:any)=>Number(item.id)===Number(requested)):authorized.length===1?authorized[0]:undefined;
-  if(!selected)throw new Error(requested?'O repositório Asten informado não pertence à conta ou não permite criar envelopes.':'Configure ASTEN_REPOSITORY_ID: nenhum repositório único e autorizado foi localizado.');
+  if(!selected)throw new Error(requested?'O repositório Asten informado não pertence à conta ou não permite criar envelopes.':'Nenhum repositório Asten autorizado para criar documentos foi localizado. Confira os repositórios e as permissões da conta na Asten.');
   return {identifier:String(ownerId),repositoryId:Number(selected.id)};
 }
 export async function createEphemeralAstenSession(ownerEmail: string, suppliedToken?: string) {
@@ -253,21 +266,21 @@ export function getAstenIntegrationStatus() {
   return { enabled: enabled(), mode: enabled() ? (stored ? 'SERVER_SECRET' : statelessSessionReady ? 'STATELESS_ENCRYPTED_SESSION' : 'EPHEMERAL_SESSION') : 'DISABLED', configured: stored || statelessSessionReady || activeSession, dispatchEnabled: enabled() && credentialReady && security.callbackConfigured, sessionTtlMinutes: 10, callbackConfigured: security.callbackConfigured, securityIssues: security.issues, securityMessage: !enabled() ? 'Integração bloqueada. Ative somente depois de configurar autenticação e segredos no servidor.' : security.callbackConfigured ? 'Todo envio exige autenticação, callback HTTPS e webhook autenticado.' : `Envio bloqueado: ${security.issues.join(' ')}` } as const;
 }
 
-export async function connectPersistentAsten(tokenInput: string) {
+export async function connectPersistentAsten(tokenInput: string, repositoryId?: string) {
   const token = String(tokenInput || '').trim();
   if (!token) throw new Error('Informe o token da API Asten.');
   const identity = await callAsten('getIdentificador', {}, token);
   const ownerId=Number(identity?.Usuario?.id);
   if(!Number.isSafeInteger(ownerId)||ownerId<=0)throw new Error('A Asten não retornou o ID da conta.');
   const repositories=await callAsten('getRepositoriosDoUsuario',{idProprietario:ownerId},token);
-  const {repositoryId,identifier}=parseAstenAccountAndRepository(identity,repositories,process.env.ASTEN_REPOSITORY_ID);
+  const {repositoryId: selectedRepositoryId,identifier}=parseAstenAccountAndRepository(identity,repositories,repositoryId || process.env.ASTEN_REPOSITORY_ID);
   await saveIntegrationSecret('asten', token, {
     identifier,
-    repositoryId,
+    repositoryId: selectedRepositoryId,
     validatedContractVersion:2,
     connectedAt: new Date().toISOString()
   });
-  return { identifier, repositoryId, connectedAt: new Date().toISOString() };
+  return { identifier, repositoryId: selectedRepositoryId, connectedAt: new Date().toISOString() };
 }
 
 export async function getPersistentAstenConnection(): Promise<{ token: string; identifier: string; repositoryId: number } | null> {
@@ -298,8 +311,26 @@ export async function getPersistentAstenStatus() {
   } as const;
 }
 
-export function buildAstenEnvelopeParams(input: { description: string; fileName: string; mimeType: string; contentBase64: string; signers: Array<{name:string;email:string;order:number}>; repositoryId?: number; }) {
-  if (!input.repositoryId) throw new Error('Nenhum repositório Asten foi localizado.');
+export async function getAstenSignerPhones(): Promise<Record<string,string>> {
+  const stored=await loadIntegrationSecret('asten_signer_contacts');
+  if(!stored)return {};
+  const origin=new URL(String(process.env.APP_URL||process.env.PORTAL_PUBLIC_URL||'')).origin;
+  if(stored.metadata.portalOrigin!==origin)throw new Error('Os contatos Asten pertencem a outra instalação.');
+  const contacts=JSON.parse(stored.value) as Record<string,string>;
+  if(!contacts||Array.isArray(contacts)||typeof contacts!=='object')throw new Error('Contatos Asten inválidos.');
+  for(const[email,phone]of Object.entries(contacts))if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)||!/^\d{10,13}$/.test(String(phone)))throw new Error('Contato Asten inválido.');
+  return contacts;
+}
+
+export type AstenSigningProfile='CONFIDENTIAL_SMS'|'EMAIL_LOGIN'|'EMAIL_LINK';
+export function getAstenSigningProfile():AstenSigningProfile {
+  const profile=process.env.ASTEN_SIGNING_PROFILE||'CONFIDENTIAL_SMS';
+  if(!['CONFIDENTIAL_SMS','EMAIL_LOGIN','EMAIL_LINK'].includes(profile))throw new Error('Perfil de assinatura Asten inválido.');
+  return profile as AstenSigningProfile;
+}
+export function buildAstenEnvelopeParams(input: { description: string; fileName: string; mimeType: string; contentBase64: string; signers: Array<{name:string;email:string;order:number;cellphone?:string}>; repositoryId?: number; folderId?:number; authenticationProfile?:AstenSigningProfile; }) {
+  if (!Number.isSafeInteger(input.repositoryId) || input.repositoryId <= 0) throw new Error('Nenhum repositório Asten válido foi localizado.');
+  if (input.folderId !== undefined && (!Number.isSafeInteger(input.folderId) || input.folderId <= 0)) throw new Error('A pasta Asten informada é inválida.');
   const security = assertAstenDispatchPreflight();
   const description = String(input.description || '').trim();
   const fileName = String(input.fileName || '').trim();
@@ -315,20 +346,44 @@ export function buildAstenEnvelopeParams(input: { description: string; fileName:
   const normalizedSigners = input.signers.map((signer) => ({
     name: String(signer.name || '').trim(),
     email: String(signer.email || '').trim().toLowerCase(),
-    order: Number(signer.order)
+    order: Number(signer.order),
+    cellphone: signer.cellphone === undefined ? undefined : String(signer.cellphone).replace(/[\s()+-]/g,'')
   }));
   if (normalizedSigners.some((signer) => !signer.name || signer.name.length > 200 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(signer.email) || !Number.isSafeInteger(signer.order) || signer.order < 1 || signer.order > 50)) {
     throw new Error('Há signatário Asten com nome, e-mail ou ordem inválidos.');
   }
   if (new Set(normalizedSigners.map((signer) => signer.email)).size !== normalizedSigners.length) throw new Error('A lista Asten contém signatários duplicados.');
-  const requireLogin = process.env.ASTEN_REQUIRE_LOGIN === 'false' ? 'N' : 'S';
-  const authenticationOption = Number(process.env.ASTEN_AUTHENTICATION_OPTION || 0);
-  if(![1,2,3,5,6].includes(authenticationOption))throw new Error('ASTEN_AUTHENTICATION_OPTION não homologada. SMS/WhatsApp exigem telefone e código manual requer entrega segura.');
-  const envelope: Record<string, unknown> = { descricao: description, usarOrdem:'S', Repositorio: { id: input.repositoryId }, listaDocumentos: { Documento: [{ nomeArquivo: fileName, mimeType, conteudo: compactBase64 }] }, listaSignatariosEnvelope: { SignatarioEnvelope: normalizedSigners.map((s) => ({ ordem: s.order, ConfigAssinatura: { emailSignatario: s.email, nomeSignatario: s.name, opcaoAutenticacao: authenticationOption, tipoAssinatura: 1, permitirDelegar: 'N', exigirLogin: requireLogin, exigirCodigo: 'N', exigirDadosIdentif: 'S' } })) }, confidencial: 'S', exigirLeitura: 'S', bloquearDesenhoPaginas: 'S' };
+  if(normalizedSigners.some(signer=>signer.cellphone!==undefined&&!/^\d{10,13}$/.test(signer.cellphone)))throw new Error('Celular do signatário Asten inválido.');
+  const profile=input.authenticationProfile||getAstenSigningProfile();
+  if(!['CONFIDENTIAL_SMS','EMAIL_LOGIN','EMAIL_LINK'].includes(profile))throw new Error('Perfil de assinatura Asten inválido.');
+  const sms=profile==='CONFIDENTIAL_SMS';
+  if(sms&&normalizedSigners.some(signer=>!signer.cellphone))throw new Error('Informe o celular autorizado de todos os signatários antes de criar o envelope confidencial Asten.');
+  const envelope: Record<string, unknown> = { descricao: description, usarOrdem:'S', Repositorio: { id: input.repositoryId }, listaDocumentos: { Documento: [{ nomeArquivo: fileName, mimeType, conteudo: compactBase64 }] }, listaSignatariosEnvelope: { SignatarioEnvelope: normalizedSigners.map((s) => ({ ordem: s.order, ConfigAssinatura: { emailSignatario: s.email, nomeSignatario: s.name, ...(sms&&s.cellphone ? {celularSignatario:s.cellphone} : {}), opcaoAutenticacao: sms?'4':null, tipoAssinatura: 1, permitirDelegar: 'N', exigirLogin: profile==='EMAIL_LINK'?'N':'S', exigirCodigo: 'N', exigirDadosIdentif: profile==='EMAIL_LINK'?'N':'S' } })) }, confidencial: sms?'S':'N', exigirLeitura: 'S', bloquearDesenhoPaginas: 'S' };
+  if (input.folderId !== undefined) envelope.Pasta = { id: input.folderId };
   envelope.urlCallback = security.callbackUrl;
   envelope.urlCallbackHeaderProp = 'x-portal-webhook-key';
   envelope.urlCallbackHeaderValue = String(process.env.ASTEN_WEBHOOK_SECRET || '').trim();
-  return { Envelope: envelope, encaminharImediatamente: 'N', detectarCampos: 'N', verificarDuplicidadeConteudo: 'S', processarImagensEmSegundoPlano: 'N' };
+  return { Envelope: envelope, encaminharImediatamente: 'N', detectarCampos: 'N', detectarModeloSimilar:'N', verificarDuplicidadeConteudo: 'S', processarImagensEmSegundoPlano: 'N' };
+}
+export function assertAstenEnvelopeAuthentication(response:unknown, expected:Array<{email:string;order:number;cellphone?:string}>,profile:AstenSigningProfile='CONFIDENTIAL_SMS'):void {
+  const actual:Array<{email:string;order:number;config:any}>=[];
+  const visit=(value:any):void=>{
+    if(Array.isArray(value)){value.forEach(visit);return;}
+    if(!value||typeof value!=='object')return;
+    const config=value.ConfigAssinatura||value.configAssinatura;
+    if(config?.emailSignatario){actual.push({email:String(config.emailSignatario).trim().toLowerCase(),order:Number(value.ordem),config});return;}
+    Object.values(value).forEach(visit);
+  };
+  visit(response);
+  if(actual.length!==expected.length||expected.some(wanted=>!actual.some(s=>s.email===wanted.email.trim().toLowerCase()&&s.order===wanted.order)))throw new Error('Os signatários gravados na Asten divergem do envio aprovado.');
+  for(const signer of actual){
+    const wanted=expected.find(s=>s.email.trim().toLowerCase()===signer.email&&s.order===signer.order)!;
+    const c=signer.config;
+    const sms=profile==='CONFIDENTIAL_SMS';
+    const authenticationMatches=sms?String(c.opcaoAutenticacao)==='4':(c.opcaoAutenticacao===undefined||c.opcaoAutenticacao===null||['','0'].includes(String(c.opcaoAutenticacao).trim()));
+    const phoneMatches=!sms||(/^\d{10,13}$/.test(wanted.cellphone||'')&&String(c.celularSignatario).replace(/[\s()+-]/g,'')===wanted.cellphone);
+    if(!authenticationMatches||c.exigirLogin!==(profile==='EMAIL_LINK'?'N':'S')||c.exigirDadosIdentif!==(profile==='EMAIL_LINK'?'N':'S')||c.exigirCodigo!=='N'||c.permitirDelegar!=='N'||!phoneMatches)throw new Error('A autenticação ou o celular gravado na Asten diverge do envio aprovado.');
+  }
 }
 export function extractAstenEnvelopeIdentity(response: any) {
   const data = response?.data ?? response;
@@ -343,8 +398,8 @@ export function extractAstenEnvelopeIdentity(response: any) {
   const hash = rawHash == null ? undefined : String(rawHash).trim();
   return { id, ...(hash ? { hash } : {}) };
 }
-export function assertAstenEnvelopeSigners(response: unknown, expected: Array<{email:string;order:number}>): void {
-  const evidence:Array<{email:string;order:number;signed:boolean}>=[];
+export function assertAstenEnvelopeSigners(response: unknown, expected: Array<{email:string;order:number}>): Array<{email:string;order:number;signedAt?:string}> {
+  const evidence:Array<{email:string;order:number;signed:boolean;signedAt?:string}>=[];
   const normalizedStatus=(value:unknown)=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const visit=(value:any):void=>{
     if(Array.isArray(value)){value.forEach(visit);return;}
@@ -363,19 +418,20 @@ export function assertAstenEnvelopeSigners(response: unknown, expected: Array<{e
       const numerical=String(rawStatus??'').trim();
       const signed= !negativeStatus && numerical!=='1'&&numerical!=='2'&&numerical!=='4'&&numerical!=='5'&&numerical!=='6' &&
         (numerical==='3'||Boolean(signedAt)||(typeof flag==='boolean'&&flag)||['s','sim','true','1'].includes(flagText)||positiveStatus);
-      evidence.push({email,order,signed});
+      evidence.push({email,order,signed,...(typeof signedAt==='string'&&Number.isFinite(Date.parse(signedAt))?{signedAt:new Date(signedAt).toISOString()}: {})});
       return;
     }
     Object.values(value).forEach(visit);
   };
   visit(response);
-  const unique=new Map<string,{email:string;order:number;signed:boolean}>();
+  const unique=new Map<string,{email:string;order:number;signed:boolean;signedAt?:string}>();
   for(const signer of evidence){const key=`${signer.email}|${signer.order}`;const previous=unique.get(key);unique.set(key,previous?{...signer,signed:previous.signed||signer.signed}:signer);}
   const actual=[...unique.values()];
   const wanted=expected.map(signer=>({email:String(signer.email||'').trim().toLowerCase(),order:Number(signer.order)}));
   if(!actual.length)throw new Error('A Asten não devolveu evidência verificável dos signatários; o PDF não será arquivado.');
   if(actual.length!==wanted.length||wanted.some(signer=>!actual.some(item=>item.email===signer.email&&item.order===signer.order)))throw new Error('Os signatários ou a ordem do envelope Asten divergem da versão registrada no portal.');
   if(actual.some(signer=>!signer.signed))throw new Error('A Asten ainda não confirma a assinatura de todos os participantes esperados.');
+  return actual.map(({email,order,signedAt})=>({email,order,signedAt}));
 }
 export function extractAstenSignedPdf(response: any): Buffer {
   // API Asten: envelopeContent, com incluirDocs=N para receber PDF (S retorna ZIP).

@@ -1,4 +1,5 @@
 // Formatadores de data, hora e texto para o fluxo acadêmico configurável.
+import type { ProcessData } from '../types';
 
 const PORTAL_TIME_ZONE = 'America/Sao_Paulo';
 const MONTHS_PT = [
@@ -204,6 +205,12 @@ export function formatDateNumeric(dateStr: string): string {
   return `${String(parts.day).padStart(2, '0')}/${String(parts.month).padStart(2, '0')}/${parts.year}`;
 }
 
+/** Horário civil do portal, independente do fuso do servidor. */
+export function formatTime24h(value:string):string {
+  const parts=parsePortalDateTime(value);
+  return parts?`${String(parts.hour).padStart(2,'0')}:${String(parts.minute).padStart(2,'0')}`:'';
+}
+
 /**
  * Date fully written in Portuguese, e.g. "vinte e quatro de agosto de dois mil e vinte e seis".
  */
@@ -288,9 +295,30 @@ export function sanitizeFilename(name: string): string {
 }
 
 /**
+ * Reads the configured pipeline length without failing when storage is unavailable.
+ * The same fallback is used by the calendar and the participant's process table.
+ */
+export function getWorkflowStagesCount(storage?: Pick<Storage, 'getItem'>): number {
+  try {
+    const saved = (storage ?? (typeof window === 'undefined' ? undefined : window.localStorage))
+      ?.getItem('workflow_pipeline_stages');
+    if (saved) {
+      const stages: unknown = JSON.parse(saved);
+      if (Array.isArray(stages) && stages.length > 0) return stages.length;
+    }
+  } catch {
+    // A corrupt or blocked browser preference must not hide the process table.
+  }
+  return 5;
+}
+
+/**
  * Calculates process progress percentage and step label
  */
-export function getProcessProgress(proc: any, totalStages: number = 6) {
+export function getProcessProgress(
+  proc: Pick<ProcessData, 'status' | 'etapaAtual'>,
+  totalStages: number = getWorkflowStagesCount()
+) {
   let stepNumber = 1;
   let percent = 20;
   let label = '';
@@ -302,7 +330,11 @@ export function getProcessProgress(proc: any, totalStages: number = 6) {
   } else if (proc.status === 'AGUARDANDO_ASSINATURA') {
     stepNumber = totalStages;
     percent = Math.round(((totalStages * 2 - 1) / (totalStages * 2)) * 100);
-    label = `Etapa ${stepNumber}/${totalStages}: Aguardando Assinatura do Presidente`;
+    label = `Etapa ${stepNumber}/${totalStages}: Aguardando Assinaturas`;
+  } else if (proc.status === 'AGUARDANDO_DADOS_FINAIS' || proc.etapaAtual === 'REPOSITORIO') {
+    stepNumber = totalStages;
+    percent = Math.round(((totalStages * 2 - 1) / (totalStages * 2)) * 100);
+    label = `Etapa ${stepNumber}/${totalStages}: Dados finais e repositório`;
   } else if (proc.status === 'EM_AVALIACAO') {
     stepNumber = Math.max(1, totalStages - 1);
     percent = Math.round((stepNumber / totalStages) * 100);

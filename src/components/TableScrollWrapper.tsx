@@ -19,7 +19,6 @@ export const TableScrollWrapper: React.FC<TableScrollWrapperProps> = ({ children
           maxHeight: fillHeight ? 'none' : 'min(68vh, 720px)',
           height: fillHeight ? '100%' : undefined,
           overscrollBehavior: 'contain',
-          scrollbarGutter: 'stable both-edges',
           WebkitOverflowScrolling: 'touch',
         }}
       >

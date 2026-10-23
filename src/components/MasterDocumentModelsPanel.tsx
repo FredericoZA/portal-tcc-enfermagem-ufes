@@ -1,10 +1,11 @@
+import {DocumentFilePreview} from './DocumentFilePreview';
 import { portalConfirm } from '../services/portalDialogs';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Eye, FileText, FilePlus2, FileUp, Link2, Loader2, Merge, Plus, ShieldAlert, Sparkles, Trash2 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import { getVariableUsage, mergeVariableAcrossArtifacts, normalizeVariableKey, saveLocalStudio } from '../services/integrationStudioService';
 import { validateCourseStudio } from '../utils/courseStudioValidator';
-import { SettingsWorkspaceHeaderPortal } from './SettingsWorkspaceModal';
+import { SettingsWorkspaceHeaderPortal, SettingsWorkspaceSelector } from './SettingsWorkspaceModal';
 
 const BASE_SLOTS: Array<[string, string]> = [
   ['CONVITE', 'Carta-convite'], ['ATA', 'Ata de defesa'], ['TERMO', 'Termo de autorização para publicação'], ['DECLARACAO', 'Declaração de participação na banca']
@@ -12,7 +13,7 @@ const BASE_SLOTS: Array<[string, string]> = [
 
 const normalizeModelKey = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 48);
 const humanizeModelKey = (value: string) => value.toLowerCase().split('_').filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
-const action='inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-[9px] font-black tracking-wide text-slate-900 shadow-none hover:bg-slate-50 disabled:opacity-40';
+const action='portal-button-secondary inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-[9px] font-black tracking-wide text-slate-900 shadow-none hover:bg-slate-50 disabled:opacity-40';
 
 type VariableColumn = { id:string; name:string; label?:string; description?:string; dataType?:'text'|'date'|'email'|'number'|'url'; aliases?:string[]; format?:{bold?:boolean;italic?:boolean;color?:string} };
 type StudioMatrixRow = { id:string; name:string; driveFileUrl:string; fields:Record<string,boolean> };
@@ -43,7 +44,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const [links, setLinks] = useState<Record<string, string>>({});
   const [newModelName, setNewModelName] = useState('');
   const [showNewModel, setShowNewModel] = useState(false);
-  const [showImportControls, setShowImportControls] = useState(false);
+  const documentInputRef=useRef<HTMLInputElement>(null);
   const [mergeTargets, setMergeTargets] = useState<Record<string,string>>({});
   const [pendingSlots, setPendingSlots] = useState<Array<[string, string]>>([]);
   const [previewType, setPreviewType] = useState('');
@@ -58,6 +59,8 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
     return()=>window.removeEventListener('keydown',closePreview,true);
   },[previewType]);
   const [samplePreview, setSamplePreview] = useState<Record<string, string>>({});
+  const previewUrlsRef=useRef<Record<string,string>>({});
+  useEffect(()=>()=>{(Object.values(previewUrlsRef.current) as string[]).forEach(url=>{if(url.startsWith('blob:'))URL.revokeObjectURL(url);});},[]);
   const [samplePreviewLoading, setSamplePreviewLoading] = useState('');
   const [selectedType, setSelectedType] = useState('CONVITE');
   const studioAutosaveReadyRef=useRef(false);
@@ -109,7 +112,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
             const report=validateCourseStudio(snapshot);
             if(!report.ready){
               saveLocalStudio({...snapshot,publication:{...snapshot.publication,status:'DRAFT'}} as any);
-              setMessage('Rascunho salvo somente neste navegador: corrija as pendências dos modelos antes da publicação automática.');
+              setMessage('');
               break;
             }
             await apiClient.updateSettings({integrationStudio:snapshot});
@@ -129,15 +132,30 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const sampleAnswers = {
     ALUNO_NOME: 'Ana Carolina Souza', ALUNOS_NOMES: 'Ana Carolina Souza e Bruno Martins Lima',
     TITULO: 'Segurança do paciente e qualidade da assistência de enfermagem',
-    ORIENTADOR_NOME: 'Profa. Dra. Maria Silva', DEFESA_DATA_HORA: '15 de outubro de 2026 às 14h',
+    ORIENTADOR_NOME: 'Profa. Dra. Maria Silva', DEFESA_DATA_HORA: '2026-10-15T14:00',
     DEFESA_LOCAL: 'Auditório do CCS — UFES', PROTOCOLO: '2026-999'
   };
   const generateSamplePreview = async (type: string) => {
+    if(models[type]?.driveFileId?.startsWith('local_model_')){
+      setSamplePreviewLoading(type);setMessage('');
+      try{
+        const {blob}=await apiClient.getLocalDocumentModelFile(type);
+        const url=URL.createObjectURL(blob);
+        if(previewUrlsRef.current[type]?.startsWith('blob:'))URL.revokeObjectURL(previewUrlsRef.current[type]);
+        previewUrlsRef.current[type]=url;setSamplePreview(current=>({...current,[type]:url}));setPreviewType(type);
+      }catch(error){setMessage(error instanceof Error?error.message:'Não foi possível carregar o DOCX local.');}
+      finally{setSamplePreviewLoading('');}
+      return;
+    }
+    if(models[type]?.driveFileId?.startsWith('test_drive_')){setMessage('Este cadastro demonstrativo ainda não tem um DOCX. Envie o arquivo em Adicionar documento para visualizar e detectar as variáveis.');return;}
     if (!['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)) { setMessage('A prévia preenchida está disponível para os quatro documentos institucionais do fluxo.'); return; }
     setSamplePreviewLoading(type); setMessage('');
     try {
-      const result = await apiClient.previewOfficialModel(type, undefined, sampleAnswers);
-      const url = result.downloadUrl || (result.contentBase64 ? `data:application/pdf;base64,${result.contentBase64}` : '');
+      const result = await apiClient.previewOfficialModel(type, {matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates}, sampleAnswers);
+      const bytes=result.contentBase64?Uint8Array.from(atob(result.contentBase64),(c)=>c.charCodeAt(0)):new Uint8Array(await (await fetch(result.downloadUrl,{credentials:'same-origin'})).arrayBuffer());
+      if(bytes.length>32*1024*1024 || new TextDecoder().decode(bytes.slice(0,5))!=='%PDF-')throw new Error('O servidor não retornou um PDF válido para a prévia.');
+      const url=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
+      if(previewUrlsRef.current[type]?.startsWith('blob:'))URL.revokeObjectURL(previewUrlsRef.current[type]);previewUrlsRef.current[type]=url;
       if (!url) throw new Error('A prévia foi gerada, mas o PDF não ficou disponível.');
       setSamplePreview(current => ({ ...current, [type]: url }));
       setPreviewType(type);
@@ -158,7 +176,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
     if (file.type !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || !file.name.toLowerCase().endsWith('.docx')) { setMessage('Envie um arquivo DOCX válido.'); return; }
     if (file.size > 12 * 1024 * 1024) { setMessage('O arquivo ultrapassa o limite de 12 MB.'); return; }
     setWorking(type); setMessage('');
-    try { await apiClient.uploadDocumentModelFile(type, file); setPendingSlots(current => current.filter(([slot]) => slot !== type)); setMessage('Modelo cadastrado, versionado e publicado no Google Drive.'); await load(); }
+    try { await apiClient.uploadDocumentModelFile(type, file); setPendingSlots(current => current.filter(([slot]) => slot !== type)); setMessage('Modelo cadastrado e versionado.'); await load(); }
     catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível cadastrar o modelo.'); }
     finally { setWorking(''); }
   };
@@ -178,7 +196,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
         }
         return next;
       });
-      setMessage(`${result.variables.length} variável(is) detectada(s) e sincronizada(s) automaticamente.`);
+      setMessage(result.variables.length ? `${result.variables.length} variável(is) sincronizada(s) com a versão publicada.` : 'Este modelo não tem variáveis registradas. Envie o DOCX com os marcadores para identificá-las.');
       await load();
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível detectar as variáveis.'); }
     finally { setWorking(''); }
@@ -257,22 +275,19 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const integrityReady=Boolean(model?.configured&&model?.contentSha256);
   const deleting=working===`delete-${type}`;
 
-  return <section className="portal-master-models-catalog min-h-0 bg-[var(--portal-surface-page)] pb-0" data-portal-document-direct-editor="true">
+  return <section className="portal-master-models-catalog min-h-0 bg-[var(--portal-surface-panel)] pb-0" data-portal-document-direct-editor="true">
     <SettingsWorkspaceHeaderPortal>
-      <div className="flex min-w-0 items-center gap-1.5">
-        <FileText className="h-3.5 w-3.5 shrink-0 text-white" aria-hidden="true"/>
-        <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-white/60"/>
-        <select value={type} onChange={event=>setSelectedType(event.target.value)} className="w-[clamp(120px,13vw,172px)] max-w-[28vw] cursor-pointer rounded-full border-2 border-white bg-white px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm" aria-label="Selecionar documento" title={String(model?.label||label)}>
-          {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{models[slotType]?.label||slotLabel}</option>)}
-        </select>
-      </div>
+      <button type="button" onClick={()=>setShowNewModel(value=>!value)} className="portal-toolbar-icon-button" title="Criar outro modelo" aria-label="Novo modelo"><Plus className="h-3.5 w-3.5"/></button>
+      <SettingsWorkspaceSelector icon={FileText} aria-label="Selecionar documento" title={String(model?.label||label)} value={type} onChange={setSelectedType}>
+        {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{models[slotType]?.label||slotLabel}</option>)}
+      </SettingsWorkspaceSelector>
     </SettingsWorkspaceHeaderPortal>
 
     {previewType===type&&hasFile&&samplePreview[type]&&<div role="presentation" data-portal-preview-dialog="true" className="portal-modal-backdrop fixed inset-0 z-[1000013] flex items-center justify-center p-4" onMouseDown={event=>{if(event.currentTarget===event.target)setPreviewType('');}}>
       <section role="dialog" aria-modal="true" aria-label="Prévia do documento preenchido" className="portal-standard-modal flex h-[min(90dvh,900px)] w-full max-w-5xl flex-col overflow-hidden bg-white">
-        <header className="portal-modal-header shrink-0 justify-between"><strong className="text-xs font-black uppercase">Prévia preenchida · Sem validade</strong><button type="button" onClick={()=>setPreviewType('')} className="rounded-full bg-white px-4 py-1 text-xs font-bold text-slate-900">Fechar</button></header>
-        <div className="flex shrink-0 items-center justify-between bg-amber-50 p-2 text-xs text-amber-950"><span>Somente demonstração. Nenhum documento real foi criado.</span><a href={samplePreview[type]} target="_blank" rel="noreferrer" className="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-800">Abrir / baixar PDF</a></div>
-        <iframe title={`PDF demonstrativo de ${model?.label||label}`} src={samplePreview[type]} className="min-h-0 w-full flex-1 bg-white" />
+        <header className="portal-modal-header shrink-0 justify-between"><strong className="flex items-center gap-2 text-xs font-black normal-case"><FileText className="h-4 w-4"/>{model?.driveFileId?.startsWith('local_model_')?'Modelo DOCX local · Demonstração':'Prévia preenchida · Sem validade'}</strong></header>
+        <div className="flex shrink-0 items-center justify-between bg-amber-50 p-2 text-xs text-amber-950"><span>{model?.driveFileId?.startsWith('local_model_')?'Modelo original de demonstração. A paginação final do PDF exige conferência no Google Drive.':'Somente demonstração. Nenhum documento real foi criado.'}</span><a href={samplePreview[type]} target="_blank" rel="noreferrer" className="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-800">{model?.driveFileId?.startsWith('local_model_')?'Baixar DOCX':'Abrir / baixar PDF'}</a></div>
+        <DocumentFilePreview url={samplePreview[type]} format={model?.driveFileId?.startsWith('local_model_')?'docx':'pdf'} label={model?.label||label}/>
       </section>
     </div>}
     {showNewModel&&<div className="mx-auto mt-3 flex max-w-xl items-center gap-2 rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)] p-2.5">
@@ -289,16 +304,16 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
           <span className="block truncate text-[9px] text-slate-500">{hasFile?`${model.fileName} · v${model.activeVersion||1}`:'Aguardando DOCX'}{model?.variables?.length?` · ${model.variables.length} variáveis`:''}</span>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-1.5">
-          <button type="button" onClick={()=>setShowNewModel(value=>!value)} className={action} title="Criar outro modelo"><Plus className="h-3 w-3"/>Novo modelo</button>
-          <button type="button" onClick={()=>setShowImportControls(value=>!value)} className={action} aria-expanded={showImportControls} title="Adicionar arquivo ou alterar a origem do documento"><FilePlus2 className="h-3 w-3"/>Adicionar documento</button>
-          {hasFile&&['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)&&<button type="button" onClick={()=>void generateSamplePreview(type)} disabled={samplePreviewLoading===type} className={action} aria-label="Ver modelo demonstrativo"><Eye className="h-3 w-3"/>{samplePreviewLoading===type?'Gerando…':'Ver modelo'}</button>}
-          <button type="button" onClick={()=>void removeModel(type,String(model?.label||label))} disabled={Boolean(working)} className="inline-flex min-h-8 items-center justify-center rounded-full border border-slate-300 bg-white px-2 text-rose-700 disabled:opacity-40" title="Excluir somente este documento" aria-label={`Excluir o documento ${model?.label||label}`}>{deleting?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Trash2 className="h-3.5 w-3.5"/>}</button>
+          {hasFile&&['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)&&<button type="button" onClick={()=>void generateSamplePreview(type)} disabled={samplePreviewLoading===type} className="portal-toolbar-icon-button disabled:opacity-40" title="Ver modelo demonstrativo" aria-label="Ver modelo demonstrativo" aria-busy={samplePreviewLoading===type}>{samplePreviewLoading===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Eye className="h-3.5 w-3.5"/>}</button>}
+          <button type="button" onClick={()=>documentInputRef.current?.click()} disabled={Boolean(working)} className="portal-toolbar-icon-button disabled:opacity-40" title={hasFile?'Substituir documento':'Adicionar documento'} aria-label={hasFile?'Substituir documento':'Adicionar documento'}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}</button>
+          <input ref={documentInputRef} type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" aria-label="Arquivo DOCX do modelo" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/>
+          <button type="button" onClick={()=>void removeModel(type,String(model?.label||label))} disabled={Boolean(working)} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-40" title="Excluir somente este documento" aria-label={`Excluir o documento ${model?.label||label}`}>{deleting?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Trash2 className="h-3.5 w-3.5"/>}</button>
           {integrityReady?<CheckCircle2 className="h-4 w-4 text-[var(--portal-brand-action)]"/>:<ShieldAlert className="h-4 w-4 text-amber-700"/>}
         </div>
       </div>
 
       <div className="space-y-3 p-3">
-        {(showImportControls||!hasFile)&&<div className="space-y-2 rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-2" aria-label="Gerenciar arquivo do modelo">
+        {(linkImportEnabled||!hasFile)&&<div className="space-y-2 rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-2" aria-label="Gerenciar arquivo do modelo">
           {linkImportEnabled&&<div className="flex gap-1.5">
             <input aria-label={`Link do modelo ${label}`} value={links[type]||''} onChange={event=>setLinks(current=>({...current,[type]:event.target.value}))} placeholder="Link ou ID do Drive" className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px]"/>
             <button type="button" onClick={()=>void importLink(type)} disabled={Boolean(working)||!(links[type]||'').trim()} className={action}><Link2 className="h-3 w-3"/>Importar</button>
@@ -311,7 +326,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
           {hasFile&&<button type="button" onClick={()=>void detectVariables(type)} disabled={working===`detect-${type}`} className={action}>{working===`detect-${type}`?<Loader2 className="h-3 w-3 animate-spin"/>:<Sparkles className="h-3 w-3"/>}Atualizar variáveis</button>}
         </div>
 
-        <section className="rounded-xl border border-slate-300 bg-[var(--portal-surface-card)] p-2.5" aria-label="Variáveis do documento">
+        <section className="border-t border-[var(--portal-border)] pt-3" aria-label="Variáveis do documento">
           {model?.variables?.length
             ? <div className="space-y-1.5">{(model.variables as string[])
               .filter((variable,index,all)=>all.findIndex(other=>normalizeVariableKey(other)===normalizeVariableKey(variable))===index)
@@ -319,7 +334,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
                 const key=normalizeVariableKey(variable);
                 const column=resolveVariableColumn(variable);
                 const mergeKey=`${type}:${key}`;
-                return <div key={variable} title={variableUsageTitle(variable)} className="grid gap-1.5 rounded-lg border border-slate-300 bg-[var(--portal-surface-panel)] p-2 lg:grid-cols-[minmax(150px,.9fr)_minmax(170px,1fr)_120px_minmax(180px,1fr)_auto] lg:items-center">
+                return <div key={variable} title={variableUsageTitle(variable)} className="grid gap-1.5 rounded-lg border border-slate-300 bg-[var(--portal-surface-nested)] p-2 lg:grid-cols-[minmax(150px,.9fr)_minmax(170px,1fr)_120px_minmax(180px,1fr)_auto] lg:items-center">
                   <code className="truncate text-[8.5px] font-black text-[var(--portal-brand-action)]">{variable}</code>
                   {column?<input value={column.label||''} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,label:event.target.value}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]" placeholder="Nome legível"/>:<span className="text-[9px] text-amber-800">Variável ainda não vinculada</span>}
                   {column?<select value={column.dataType||'text'} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,dataType:event.target.value as VariableColumn['dataType']}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]"><option value="text">Texto</option><option value="date">Data</option><option value="email">E-mail</option><option value="number">Número</option><option value="url">URL</option></select>:<span/>}
@@ -333,7 +348,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
 
 
         {model?.versions?.length>1&&<details className="rounded-md border border-slate-300 bg-white px-2 py-1">
-          <summary className="cursor-pointer text-[8.5px] font-black uppercase text-slate-600">Histórico ({model.versions.length})</summary>
+          <summary className="cursor-pointer text-[8.5px] font-black normal-case text-slate-600">Histórico ({model.versions.length})</summary>
           <div className="mt-1 space-y-1">{[...model.versions].reverse().map((version:any)=><div key={version.version} className="flex items-center justify-between gap-2 text-[8.5px]"><span className="truncate"><strong>v{version.version}</strong> · {version.fileName}</span>{version.version!==model.activeVersion&&version.contentSha256&&<button type="button" onClick={()=>void restore(type,version.version)} className={action}>Restaurar</button>}</div>)}</div>
         </details>}
       </div>

@@ -16,8 +16,9 @@ test('Vercel não dispara builds em nenhuma branch, incluindo main', () => {
   assert.equal(config.git?.deploymentEnabled, false);
 });
 
-test('controle de builds não modifica configuração de segurança da Asten', () => {
-  assert.equal(config.env?.ASTEN_INTEGRATION_ENABLED, 'false');
+test('release Asten autorizado preserva autenticação e cofre durável', () => {
+  assert.equal(config.env?.ASTEN_INTEGRATION_ENABLED, 'true');
+  assert.equal(config.env?.ASTEN_PRODUCTION_RELEASE_APPROVED, 'true');
   assert.equal(config.env?.PORTAL_ALLOW_INSECURE_DEMO_AUTH, 'false');
   assert.equal(config.env?.PORTAL_ALLOW_LOCAL_SECRET_STORE, 'false');
 });

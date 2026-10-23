@@ -139,6 +139,7 @@ export interface EvaluationOutcomeOption {
 }
 
 export interface EvaluationInfo {
+  documentText?: string;
   answers?: Record<string, string | number | boolean>;
   dataReview?: {
     sourceDataRevision: number;
@@ -211,6 +212,7 @@ export interface AuthorizedStudent {
 }
 
 export interface ProcessData {
+  previousProtocols?: string[];
   registrationAnswers?: Record<string, string | number | boolean>;
   registrationRevision?: number;
   completedAt?: string;
@@ -239,6 +241,7 @@ export interface ProcessData {
   driveFolderId?: string;
   driveFolderUrl?: string;
   driveSyncedAt?: string;
+  signatureProviderPreferences?: Partial<Record<'ATA'|'TERMO'|'DECLARACAO', 'ASTEN'|'GOV_BR'>>;
   dataRevision: number;
   createdAt: string;
   updatedAt: string;

@@ -1,3 +1,4 @@
+import type { Request, Response } from 'express';
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 'crypto';
 import { normalizeEmail } from '../../src/utils/formatters';
 import { sendGmailMessage } from '../integrations/googleWorkspace';
@@ -160,7 +161,7 @@ export function getOtpRuntimeStatus() {
   } as const;
 }
 
-export async function requestPortalOtp(input: { email: string; ip?: string; portalName?:string }): Promise<void> {
+export async function requestPortalOtp(input: { email: string; ip?: string; portalName?:string }): Promise<string> {
   assertConfigured();
   const email = normalizeEmail(input.email);
   if(input.ip&&(await recentChallengesForIp(input.ip))>=10)throw new Error('Limite temporário de solicitações atingido. Tente novamente mais tarde.');
@@ -189,7 +190,7 @@ export async function requestPortalOtp(input: { email: string; ip?: string; port
 
   if (process.env.NODE_ENV !== 'production' && process.env.PORTAL_OTP_DELIVERY_MODE === 'log') {
     console.info(`[Portal OTP desenvolvimento] ${email}: ${code}`);
-    return;
+    return id;
   }
 
   try {
@@ -205,14 +206,16 @@ export async function requestPortalOtp(input: { email: string; ip?: string; port
     await updateChallenge(id, { consumed_at: new Date().toISOString() }).catch(() => undefined);
     throw error;
   }
+  return id;
 }
 
-export async function verifyPortalOtp(input: { email: string; code: string }): Promise<void> {
+export async function verifyPortalOtp(input: { email: string; code: string; challengeId: string }): Promise<void> {
   assertConfigured();
   const email = normalizeEmail(input.email);
   const code = String(input.code || '').trim();
   if (!/^\d{6}$/.test(code)) throw new Error('Informe o código de seis dígitos.');
-  const challenge = (await recentChallenges(email)).find((item) => !item.consumed_at);
+  if (!/^[A-Za-z0-9_-]{24}$/.test(input.challengeId || '')) throw new Error('Solicite o código neste navegador.');
+  const challenge = (await recentChallenges(email)).find((item) => item.id === input.challengeId && !item.consumed_at);
   if (!challenge || new Date(challenge.expires_at).getTime() <= Date.now()) throw new Error('Código inválido ou expirado.');
   if (challenge.attempts >= challenge.max_attempts) throw new Error('Código bloqueado após excesso de tentativas.');
   const matches = safeEqualHex(hashCode(challenge.id, email, code), challenge.code_hash);
@@ -227,4 +230,13 @@ export async function verifyPortalOtp(input: { email: string; code: string }): P
   }
   const consumed = await updateChallenge(challenge.id, { consumed_at: new Date().toISOString() },challenge.attempts);
   if (!consumed) throw new Error('Este código já foi utilizado.');
+}
+
+const OTP_COOKIE = 'portal_otp_challenge';
+export function setOtpChallengeCookie(res: Response, challengeId: string): void {
+  res.cookie(OTP_COOKIE, challengeId, {httpOnly:true, secure:process.env.NODE_ENV==='production'||Boolean(process.env.VERCEL), sameSite:'lax', path:'/api', maxAge:10*60_000});
+}
+export function readOtpChallengeCookie(req: Request): string {
+  const value=String(req.headers.cookie||'').split(';').map(part=>part.trim()).find(part=>part.startsWith(`${OTP_COOKIE}=`))?.slice(OTP_COOKIE.length+1)||'';
+  return /^[A-Za-z0-9_-]{24}$/.test(value)?value:'';
 }

@@ -67,7 +67,7 @@ export const SearchPopover: React.FC<SearchPopoverProps> = ({
       {isOpen && createPortal(
         <div ref={popupRef} className="portal-search-popover portal-modal-surface fixed z-[1000001] w-64 max-h-[calc(100vh-1rem)] overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150" style={{ top: `${popoverPos.top}px`, left: `${popoverPos.left}px` }}>
           <div className="portal-modal-header flex items-center px-3 py-1.5">
-            <span className="text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5"><Search className="w-3.5 h-3.5" />Buscar Registros</span>
+            <span className="text-[11px] font-black normal-case tracking-wider flex items-center gap-1.5"><Search className="w-3.5 h-3.5" />Buscar Registros</span>
           </div>
           <div className="portal-modal-divider" aria-hidden="true" />
           <div className="p-2.5 flex flex-col gap-2">
@@ -78,7 +78,7 @@ export const SearchPopover: React.FC<SearchPopoverProps> = ({
             </div>
             <div className="flex justify-between items-center text-[9px] text-slate-400/80">
               <span>ESC para fechar</span>
-              <button type="button" onClick={() => setIsOpen(false)} className="portal-action-primary px-2 py-0.5 font-extrabold uppercase rounded-full border transition-colors cursor-pointer hover:brightness-95 leading-5">OK</button>
+              <button type="button" onClick={() => setIsOpen(false)} className="portal-action-primary px-2 py-0.5 font-extrabold normal-case rounded-full border transition-colors cursor-pointer hover:brightness-95 leading-5">OK</button>
             </div>
           </div>
         </div>,

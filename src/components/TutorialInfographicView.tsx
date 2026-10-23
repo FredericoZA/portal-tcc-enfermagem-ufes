@@ -41,7 +41,7 @@ export const TutorialInfographicView: React.FC<TutorialInfographicProps> = ({
       {activeSection === 'perfis' && (
         <div className="space-y-4">
           <div className="border-b border-slate-200 pb-3">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+            <h3 className="text-sm font-black text-slate-900 normal-case tracking-tight">
               Instruções por Perfil de Acesso
             </h3>
             <p className="text-xs text-slate-600 mt-0.5">
@@ -60,13 +60,13 @@ export const TutorialInfographicView: React.FC<TutorialInfographicProps> = ({
                     <span className="text-[11px] font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                       {row.etapa}
                     </span>
-                    <span className="text-[10px] font-bold uppercase text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    <span className="text-[10px] font-bold normal-case text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                       {row.perfil}
                     </span>
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-black text-slate-900 uppercase">
+                    <h4 className="text-xs font-black text-slate-900 normal-case">
                       {row.acao}
                     </h4>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
@@ -99,7 +99,7 @@ export const TutorialInfographicView: React.FC<TutorialInfographicProps> = ({
       {activeSection === 'modulos' && (
         <div className="space-y-4">
           <div className="border-b border-slate-200 pb-3">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+            <h3 className="text-sm font-black text-slate-900 normal-case tracking-tight">
               Módulos do Sistema
             </h3>
             <p className="text-xs text-slate-600 mt-0.5">
@@ -130,7 +130,7 @@ export const TutorialInfographicView: React.FC<TutorialInfographicProps> = ({
                         <ModIcon className="w-3.5 h-3.5" />
                       </div>
                       <div>
-                        <h4 className="text-xs font-black text-slate-900 uppercase">
+                        <h4 className="text-xs font-black text-slate-900 normal-case">
                           {mod.modulo}
                         </h4>
                         <span className="text-[10px] text-slate-500 font-medium block">
@@ -144,7 +144,7 @@ export const TutorialInfographicView: React.FC<TutorialInfographicProps> = ({
                     </div>
 
                     <div className="space-y-1 text-xs">
-                      <span className="text-[10px] font-bold uppercase text-slate-500">Recursos:</span>
+                      <span className="text-[10px] font-bold normal-case text-slate-500">Recursos:</span>
                       <p className="text-[11px] text-slate-600 leading-relaxed">
                         {mod.recursos}
                       </p>
@@ -152,7 +152,7 @@ export const TutorialInfographicView: React.FC<TutorialInfographicProps> = ({
                   </div>
 
                   <div className="pt-2 border-t border-slate-200 text-xs">
-                    <span className="text-[10px] font-bold text-slate-800 uppercase flex items-center gap-1">
+                    <span className="text-[10px] font-bold text-slate-800 normal-case flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3 text-slate-600" />
                       {mod.acoes}
                     </span>
@@ -168,7 +168,7 @@ export const TutorialInfographicView: React.FC<TutorialInfographicProps> = ({
       {activeSection === 'fluxo' && (
         <div className="space-y-4">
           <div className="border-b border-slate-200 pb-3">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+            <h3 className="text-sm font-black text-slate-900 normal-case tracking-tight">
               Fluxo Regimental de Defesa
             </h3>
             <p className="text-xs text-slate-600 mt-0.5">
@@ -185,7 +185,7 @@ export const TutorialInfographicView: React.FC<TutorialInfographicProps> = ({
 
                 <div className="bg-white rounded-lg border border-slate-300 p-3.5 space-y-2 shadow-2xs hover:border-slate-400 transition-colors">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                    <h4 className="text-xs font-black text-slate-900 uppercase">
+                    <h4 className="text-xs font-black text-slate-900 normal-case">
                       {fase.fase}
                     </h4>
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
@@ -203,7 +203,7 @@ export const TutorialInfographicView: React.FC<TutorialInfographicProps> = ({
                   </p>
 
                   <div className="flex items-center gap-2 pt-0.5">
-                    <span className="text-[10px] font-bold uppercase text-slate-500">Entregável:</span>
+                    <span className="text-[10px] font-bold normal-case text-slate-500">Entregável:</span>
                     <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                       <FileCheck className="w-3 h-3 text-slate-600" />
                       {fase.entregavel}
@@ -220,7 +220,7 @@ export const TutorialInfographicView: React.FC<TutorialInfographicProps> = ({
       {activeSection === 'faq' && (
         <div className="space-y-4">
           <div className="border-b border-slate-200 pb-3">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+            <h3 className="text-sm font-black text-slate-900 normal-case tracking-tight">
               Perguntas Frequentes (FAQ)
             </h3>
             <p className="text-xs text-slate-600 mt-0.5">
@@ -236,7 +236,7 @@ export const TutorialInfographicView: React.FC<TutorialInfographicProps> = ({
               >
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                    <span className="text-[10px] font-bold normal-case px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
                       {faq.categoria}
                     </span>
                   </div>

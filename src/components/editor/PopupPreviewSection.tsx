@@ -67,7 +67,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         {/* REALISTIC LIVE PREVIEW */}
         <div className="w-full bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
           <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+            <span className="text-[11px] font-black normal-case text-slate-800 flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5 text-slate-700" />
               <span>Preview Ao Vivo: Pop-up de Detalhes da Defesa de TCC</span>
             </span>
@@ -88,15 +88,15 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
                     <Calendar className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-200 block">
+                    <span className="text-[10px] font-black normal-case tracking-wider text-emerald-200 block">
                       Defesa de Trabalho de Conclusão de Curso
                     </span>
-                    <h3 className="font-black text-sm uppercase tracking-tight">
+                    <h3 className="font-black text-sm normal-case tracking-tight">
                       Detalhes da Banca Examinadora
                     </h3>
                   </div>
                 </div>
-                <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full font-bold uppercase">
+                <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full font-bold normal-case">
                   Confirmada
                 </span>
               </div>
@@ -105,7 +105,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
               <div className="p-4 space-y-3.5 text-xs text-slate-800">
                 {/* Title and student card */}
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                  <span className="text-[10px] font-extrabold uppercase text-slate-500">Título do Trabalho</span>
+                  <span className="text-[10px] font-extrabold normal-case text-slate-500">Título do Trabalho</span>
                   <p className="font-bold text-slate-900 leading-snug">
                     Título de exemplo do Trabalho de Conclusão de Curso
                   </p>
@@ -113,12 +113,12 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">Discente / Autor(a)</span>
+                    <span className="text-[10px] font-bold text-slate-500 normal-case">Discente / Autor(a)</span>
                     <div className="font-extrabold text-slate-900">Ana Clara Mendes da Silva</div>
                     <div className="text-[10px] text-slate-500">Matrícula: 2021104829</div>
                   </div>
                   <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-0.5">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">Orientador(a)</span>
+                    <span className="text-[10px] font-bold text-slate-500 normal-case">Orientador(a)</span>
                     <div className="font-extrabold text-slate-900">Prof.ª Drª. Beatriz Santos Costa</div>
                     <div className="text-[10px] text-slate-500">Presidente da Banca</div>
                   </div>
@@ -129,14 +129,14 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-emerald-700 shrink-0" />
                     <div>
-                      <div className="text-[10px] font-bold text-slate-500 uppercase">Data & Horário</div>
+                      <div className="text-[10px] font-bold text-slate-500 normal-case">Data & Horário</div>
                       <div className="font-extrabold text-slate-900">28/11/2026 às 14:00</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-emerald-700 shrink-0" />
                     <div>
-                      <div className="text-[10px] font-bold text-slate-500 uppercase">Local da Defesa</div>
+                      <div className="text-[10px] font-bold text-slate-500 normal-case">Local da Defesa</div>
                       <div className="font-extrabold text-slate-900">Local de defesa configurado</div>
                     </div>
                   </div>
@@ -144,7 +144,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
 
                 {/* Committee members */}
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase">Membros Examinadores da Banca</span>
+                  <span className="text-[10px] font-bold text-slate-500 normal-case">Membros Examinadores da Banca</span>
                   <div className="text-[11px] font-medium text-slate-700 space-y-0.5">
                     <div>• Prof. Dr. Membro Interno (Instituição configurada)</div>
                     <div>• Prof.ª Drª. Juliana Fernandes Rocha (Membro Externo)</div>
@@ -155,7 +155,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
                 <div className="pt-2 flex flex-col sm:flex-row items-center gap-2">
                   <button
                     type="button"
-                    className={`w-full py-2.5 text-xs font-black uppercase text-white shadow-2xs transition-all flex items-center justify-center gap-2 ${buttonRadiusClass}`}
+                    className={`w-full py-2.5 text-xs font-black normal-case text-white shadow-2xs transition-all flex items-center justify-center gap-2 ${buttonRadiusClass}`}
                     style={{ backgroundColor: actionBg }}
                   >
                     <CheckCircle className="w-4 h-4" />
@@ -176,7 +176,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         {/* CONTROLS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
               CORES DO POP-UP DE DETALHES
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -204,7 +204,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
               OPÇÕES DE EXIBIÇÃO
             </h3>
             <div className="space-y-2 text-xs text-slate-700">
@@ -243,7 +243,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         {/* REALISTIC LIVE PREVIEW */}
         <div className="w-full bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
           <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+            <span className="text-[11px] font-black normal-case text-slate-800 flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5 text-slate-700" />
               <span>Preview Ao Vivo: Pop-up de Agendamento de Nova Defesa</span>
             </span>
@@ -261,7 +261,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
                 <div className="flex items-center gap-2.5">
                   <Plus className="w-5 h-5 text-white" />
                   <div>
-                    <h3 className="font-black text-sm uppercase">{generalPopupsConfig.newDefenseTitle || 'Agendar Defesa de TCC'}</h3>
+                    <h3 className="font-black text-sm normal-case">{generalPopupsConfig.newDefenseTitle || 'Agendar Defesa de TCC'}</h3>
                     <p className="text-[10px] opacity-90">{generalPopupsConfig.newDefenseSubtitle || 'Cadastro formal da banca examinadora'}</p>
                   </div>
                 </div>
@@ -270,34 +270,34 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
               <div className="p-4 space-y-3 text-xs text-slate-800">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-extrabold uppercase text-slate-600 block mb-1">Nome do Discente</label>
+                    <label className="text-[10px] font-extrabold normal-case text-slate-600 block mb-1">Nome do Discente</label>
                     <input type="text" readOnly value="Mariana Ribeiro Costa" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold" />
                   </div>
                   <div>
-                    <label className="text-[10px] font-extrabold uppercase text-slate-600 block mb-1">Matrícula institucional</label>
+                    <label className="text-[10px] font-extrabold normal-case text-slate-600 block mb-1">Matrícula institucional</label>
                     <input type="text" readOnly value="2022103941" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-extrabold uppercase text-slate-600 block mb-1">Título do Trabalho de Conclusão</label>
+                  <label className="text-[10px] font-extrabold normal-case text-slate-600 block mb-1">Título do Trabalho de Conclusão</label>
                   <input type="text" readOnly value="Segurança do Paciente na Administração de Medicamentos" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold" />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-extrabold uppercase text-slate-600 block mb-1">Data & Horário</label>
+                    <label className="text-[10px] font-extrabold normal-case text-slate-600 block mb-1">Data & Horário</label>
                     <input type="text" readOnly value="14/11/2026 às 14:00" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold" />
                   </div>
                   <div>
-                    <label className="text-[10px] font-extrabold uppercase text-slate-600 block mb-1">Local / Sala / Link</label>
+                    <label className="text-[10px] font-extrabold normal-case text-slate-600 block mb-1">Local / Sala / Link</label>
                     <input type="text" readOnly value="Local de defesa configurado" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold" />
                   </div>
                 </div>
 
                 <button
                   type="button"
-                  className={`w-full py-2.5 text-xs font-black uppercase shadow-2xs transition-all ${buttonRadiusClass}`}
+                  className={`w-full py-2.5 text-xs font-black normal-case shadow-2xs transition-all ${buttonRadiusClass}`}
                   style={{ backgroundColor: btnBg, color: generalPopupsConfig.newDefenseBtnText || '#ffffff' }}
                 >
                   Salvar e Agendar Defesa
@@ -310,7 +310,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         {/* CONTROLS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
               CORES DO AGENDAMENTO
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -328,7 +328,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
               FONTE DOS POP-UPS
             </h3>
             <FontSelectorField
@@ -352,7 +352,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         {/* REALISTIC LIVE PREVIEW */}
         <div className="w-full bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
           <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+            <span className="text-[11px] font-black normal-case text-slate-800 flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5 text-slate-700" />
               <span>Preview Ao Vivo: Documento Assinado pela Asten</span>
             </span>
@@ -370,7 +370,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
                 <div className="flex items-center gap-2.5">
                   <FileCheck className="w-5 h-5 text-white" />
                   <div>
-                    <h3 className="font-black text-sm uppercase">{generalPopupsConfig.uploadAtaTitle || 'Documento assinado pela Asten'}</h3>
+                    <h3 className="font-black text-sm normal-case">{generalPopupsConfig.uploadAtaTitle || 'Documento assinado pela Asten'}</h3>
                     <p className="text-[10px] opacity-90">{generalPopupsConfig.uploadAtaSubtitle || 'Arquivamento automático no Google Drive'}</p>
                   </div>
                 </div>
@@ -395,7 +395,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
 
                 <button
                   type="button"
-                  className={`w-full py-2.5 text-xs font-black uppercase shadow-2xs transition-all ${buttonRadiusClass}`}
+                  className={`w-full py-2.5 text-xs font-black normal-case shadow-2xs transition-all ${buttonRadiusClass}`}
                   style={{ backgroundColor: btnBg, color: generalPopupsConfig.uploadAtaBtnText || '#ffffff' }}
                 >
                   Enviar Ata Assinada para Homologação
@@ -408,7 +408,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         {/* CONTROLS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
               CORES DO UPLOAD DE ATA
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -426,7 +426,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
               INFORMAÇÃO DO COMPONENTE
             </h3>
             <p className="text-xs text-slate-600 font-medium leading-relaxed">
@@ -448,7 +448,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         {/* REALISTIC LIVE PREVIEW */}
         <div className="w-full bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
           <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+            <span className="text-[11px] font-black normal-case text-slate-800 flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5 text-slate-700" />
               <span>Preview Ao Vivo: Ficha Hipoar e Critérios de Avaliação</span>
             </span>
@@ -466,7 +466,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
                 <div className="flex items-center gap-2.5">
                   <Award className="w-5 h-5 text-white" />
                   <div>
-                    <h3 className="font-black text-sm uppercase">{generalPopupsConfig.hipoarTitle || 'Ficha de Avaliação Hipoar'}</h3>
+                    <h3 className="font-black text-sm normal-case">{generalPopupsConfig.hipoarTitle || 'Ficha de Avaliação Hipoar'}</h3>
                     <p className="text-[10px] opacity-90">{generalPopupsConfig.hipoarSubtitle || 'Critérios de pontuação da banca examinadora'}</p>
                   </div>
                 </div>
@@ -495,7 +495,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
 
                 <button
                   type="button"
-                  className={`w-full py-2.5 text-xs font-black uppercase text-white shadow-2xs transition-all ${buttonRadiusClass}`}
+                  className={`w-full py-2.5 text-xs font-black normal-case text-white shadow-2xs transition-all ${buttonRadiusClass}`}
                   style={{ backgroundColor: btnBg }}
                 >
                   Salvar Avaliação da Banca
@@ -508,7 +508,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         {/* CONTROLS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
               CORES DA FICHA HIPOAR
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -526,7 +526,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
               DESCRIÇÃO
             </h3>
             <p className="text-xs text-slate-600 font-medium leading-relaxed">
@@ -547,7 +547,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         {/* REALISTIC LIVE PREVIEW */}
         <div className="w-full bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
           <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+            <span className="text-[11px] font-black normal-case text-slate-800 flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5 text-slate-700" />
               <span>Preview Ao Vivo: Visualizador de Documentos PDF</span>
             </span>
@@ -578,7 +578,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
               {/* PDF Page simulation */}
               <div className="p-6 bg-slate-800 flex justify-center">
                 <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6 space-y-3 text-[10px] text-slate-800">
-                  <div className="text-center font-black uppercase text-[11px] border-b pb-2 text-slate-900">
+                  <div className="text-center font-black normal-case text-[11px] border-b pb-2 text-slate-900">
                     UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO<br />
                     CENTRO DE CIÊNCIAS DA SAÚDE • ENFERMAGEM
                   </div>
@@ -600,7 +600,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
 
         {/* CONTROLS */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-          <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+          <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
             BARRA DE FERRAMENTAS DO PDF
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -626,7 +626,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         {/* REALISTIC LIVE PREVIEW */}
         <div className="w-full bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
           <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+            <span className="text-[11px] font-black normal-case text-slate-800 flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5 text-slate-700" />
               <span>Prévia ao vivo: modal de acesso restrito</span>
             </span>
@@ -642,7 +642,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
                 style={{ backgroundColor: cardBg }}
               >
                 <NursingEmblemLogo size={52} className="text-white" />
-                <h3 className="font-black text-sm uppercase tracking-tight text-white">
+                <h3 className="font-black text-sm normal-case tracking-tight text-white">
                   {loginPopupConfig.title || 'Portal de TCC • Instituição configurada'}
                 </h3>
                 <p className="text-[10.5px] opacity-90">
@@ -652,17 +652,17 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
 
               <div className="p-4 space-y-3 text-xs text-left">
                 <div>
-                  <label className="text-[10px] font-extrabold uppercase text-slate-600 block mb-1">E-mail institucional ou cadastrado</label>
+                  <label className="text-[10px] font-extrabold normal-case text-slate-600 block mb-1">E-mail institucional ou cadastrado</label>
                   <input type="email" readOnly placeholder="nome@ufes.br" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-extrabold uppercase text-slate-600 block mb-1">Código de confirmação</label>
+                  <label className="text-[10px] font-extrabold normal-case text-slate-600 block mb-1">Código de confirmação</label>
                   <input type="text" readOnly placeholder="000000" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold tracking-[0.25em]" />
                 </div>
 
                 <button
                   type="button"
-                  className={`w-full py-2.5 text-xs font-black uppercase shadow-2xs transition-all mt-2 ${buttonRadiusClass}`}
+                  className={`w-full py-2.5 text-xs font-black normal-case shadow-2xs transition-all mt-2 ${buttonRadiusClass}`}
                   style={{ backgroundColor: btnBg, color: btnText }}
                 >
                   {loginPopupConfig.buttonText || 'Confirmar código'}
@@ -675,7 +675,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         {/* CONTROLS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
               CORES DO LOGIN
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -698,7 +698,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
               TEXTOS DO LOGIN
             </h3>
             <div className="space-y-3">
@@ -729,7 +729,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         {/* REALISTIC LIVE PREVIEW */}
         <div className="w-full bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
           <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+            <span className="text-[11px] font-black normal-case text-slate-800 flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5 text-slate-700" />
               <span>Preview Ao Vivo: Certidão de Ouvinte & Correções</span>
             </span>
@@ -747,7 +747,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
                 <div className="flex items-center gap-2.5">
                   <Award className="w-5 h-5 text-white" />
                   <div>
-                    <h3 className="font-black text-sm uppercase">{generalPopupsConfig.correctionTitle || 'Solicitação de correção'}</h3>
+                    <h3 className="font-black text-sm normal-case">{generalPopupsConfig.correctionTitle || 'Solicitação de correção'}</h3>
                     <p className="text-[10px] opacity-90">{generalPopupsConfig.correctionSubtitle || 'Descreva o ajuste necessário no documento'}</p>
                   </div>
                 </div>
@@ -755,17 +755,17 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
 
               <div className="p-4 space-y-3 text-xs text-slate-800">
                 <div>
-                  <label className="text-[10px] font-extrabold uppercase text-slate-600 block mb-1">Nome Completo do Ouvinte</label>
+                  <label className="text-[10px] font-extrabold normal-case text-slate-600 block mb-1">Nome Completo do Ouvinte</label>
                   <input type="text" readOnly value="Lucas de Oliveira Santos" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-extrabold uppercase text-slate-600 block mb-1">Defesa Assistida</label>
+                  <label className="text-[10px] font-extrabold normal-case text-slate-600 block mb-1">Defesa Assistida</label>
                   <input type="text" readOnly value="Trabalho acadêmico de exemplo (28/11/2026)" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold" />
                 </div>
 
                 <button
                   type="button"
-                  className={`w-full py-2.5 text-xs font-black uppercase text-white shadow-2xs transition-all ${buttonRadiusClass}`}
+                  className={`w-full py-2.5 text-xs font-black normal-case text-white shadow-2xs transition-all ${buttonRadiusClass}`}
                   style={{ backgroundColor: btnBg }}
                 >
                   Gerar Certificado em PDF
@@ -778,7 +778,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         {/* CONTROLS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
               CORES DO CERTIFICADO
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -796,7 +796,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
               UTILIDADE
             </h3>
             <p className="text-xs text-slate-600 font-medium leading-relaxed">
@@ -813,7 +813,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
     <div className="space-y-4">
       <div className="w-full bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
         <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-          <span className="text-[11px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+          <span className="text-[11px] font-black normal-case text-slate-800 flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5 text-slate-700" />
             <span>Estilo Global de Pop-ups e Modais</span>
           </span>
@@ -826,7 +826,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="bg-white border border-slate-300 rounded-xl overflow-hidden shadow-xs">
               <div
-                className="p-3 text-white font-black text-xs uppercase"
+                className="p-3 text-white font-black text-xs normal-case"
                 style={{ backgroundColor: tccDetailFormat.headerBgColor || '#005830' }}
               >
                 Detalhes da Banca
@@ -845,7 +845,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
 
             <div className="bg-white border border-slate-300 rounded-xl overflow-hidden shadow-xs">
               <div
-                className="p-3 text-white font-black text-xs uppercase"
+                className="p-3 text-white font-black text-xs normal-case"
                 style={{ backgroundColor: generalPopupsConfig.uploadAtaHeaderBg || '#005830' }}
               >
                 Ata Assinada
@@ -864,7 +864,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
 
             <div className="bg-white border border-slate-300 rounded-xl overflow-hidden shadow-xs">
               <div
-                className="p-3 text-white font-black text-xs uppercase"
+                className="p-3 text-white font-black text-xs normal-case"
                 style={{ backgroundColor: loginPopupConfig.cardBgColor || '#005830' }}
               >
                 Acesso ao Portal
@@ -886,7 +886,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-          <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+          <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
             CORES GLOBAIS DE MODAIS
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -912,7 +912,7 @@ export const PopupPreviewSection: React.FC<PopupPreviewSectionProps> = ({
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-          <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+          <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
             TIPOGRAFIA DOS POP-UPS
           </h3>
           <FontSelectorField

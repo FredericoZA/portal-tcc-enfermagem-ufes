@@ -1,7 +1,11 @@
+import {PortalOperationStatus} from './components/PortalOperationStatus';
+import {ProcessDeepLink} from './components/ProcessDeepLink';
+import {setProcessLink} from './utils/processLink';
 import { PortalDialogs } from './components/PortalDialogs';
 import { PortalErrorBoundary } from './components/PortalErrorBoundary';
 import { PortalModalShell } from './components/PortalModalShell';
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import {GraduationCap} from 'lucide-react';
 import { AuthProvider } from './context/AuthContext';
 import { UserSimulatorBar } from './components/UserSimulatorBar';
 import { isLocalDemoFrontend } from './utils/runtimeEnvironment';
@@ -51,16 +55,19 @@ export default function App() {
 
   const handleSelectProcess = (id: string, readOnly = false) => {
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setProcessLink(id,null,true);
     setSelectedProcessId(id);
     setSelectedProcessReadOnly(readOnly);
   };
 
   const handleCloseProcess = () => {
+    setProcessLink(null);
     setSelectedProcessId(null);
     window.setTimeout(() => previousFocusRef.current?.focus(), 0);
   };
 
   const handleNavigate = (tab: string) => {
+    setProcessLink(null);
     setSelectedProcessId(null);
     if (tab === 'novo-processo') {
       setIsRegistrationModalOpen(true);
@@ -69,6 +76,11 @@ export default function App() {
     setIsRegistrationModalOpen(false);
     setCurrentTab(tab);
   };
+
+  useEffect(()=>{
+    const open=(event:Event)=>{const link=(event as CustomEvent).detail;setSelectedProcessId(link?.id||null);setSelectedProcessReadOnly(Boolean(link?.readOnly));};
+    window.addEventListener('portal:open-process',open);return()=>window.removeEventListener('portal:open-process',open);
+  },[]);
 
   useEffect(() => {
     const navigate = (event: Event) => handleNavigate(String((event as CustomEvent).detail || 'home'));
@@ -138,7 +150,9 @@ export default function App() {
   return (
     <AuthProvider>
       <PortalDialogs />
+      <PortalOperationStatus />
       <PortalAccessRedirect />
+      <ProcessDeepLink />
       <div id="portal-app-root" className="min-h-screen flex flex-col font-sans antialiased text-slate-900" style={{ ...getPortalSemanticRootVars(), backgroundColor: 'var(--portal-surface-page)' }}>
         {isLocalDemoFrontend() && <UserSimulatorBar />}
 
@@ -146,6 +160,7 @@ export default function App() {
           <Sidebar
             currentTab={currentTab}
             setCurrentTab={(tab) => {
+              setProcessLink(null);
               setSelectedProcessId(null);
               setIsRegistrationModalOpen(false);
               setCurrentTab(tab);
@@ -158,6 +173,7 @@ export default function App() {
             <Header
               onOpenMobileSidebar={() => setIsOpenMobileSidebar(true)}
               onGoHome={() => {
+                setProcessLink(null);
                 setSelectedProcessId(null);
                 setCurrentTab('home');
               }}
@@ -183,7 +199,7 @@ export default function App() {
               }
             />
 
-            <main className={`flex-1 w-full min-h-[500px] ${['logs','asten-logs'].includes(currentTab) ? 'p-0 max-w-none' : 'p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto'}`}>
+            <main className={`portal-page-main flex-1 w-full min-h-[500px] ${['logs','asten-logs'].includes(currentTab) ? 'p-0 max-w-none' : 'p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto'}`}>
               <PortalErrorBoundary key={currentTab}><Suspense fallback={<PageLoadingFallback />}>{renderMainTab()}</Suspense></PortalErrorBoundary>
             </main>
 
@@ -207,7 +223,7 @@ export default function App() {
                 className="portal-process-dialog-body max-h-[calc(100dvh-64px)] overflow-y-auto custom-scrollbar"
                 style={{ backgroundColor: 'var(--portal-surface-page)' }}
               >
-                <PortalErrorBoundary key={selectedProcessId}><Suspense fallback={<PageLoadingFallback />}>
+                <PortalErrorBoundary key={`${selectedProcessId}:${selectedProcessReadOnly}`}><Suspense fallback={<PageLoadingFallback />}>
                   <ProcessoDetailPage processId={selectedProcessId} readOnly={selectedProcessReadOnly} onBack={handleCloseProcess} isModal={true} />
                 </Suspense></PortalErrorBoundary>
               </div>
@@ -219,7 +235,7 @@ export default function App() {
           open={isRegistrationModalOpen}
           onClose={() => setIsRegistrationModalOpen(false)}
           title="Cadastrar Trabalho de TCC"
-          subtitle="Novo processo de Trabalho de Conclusão de Curso"
+          icon={GraduationCap}
           maxWidthClass="max-w-6xl"
           heightClass="max-h-[92vh]"
           bodyClassName="p-3 sm:p-4"

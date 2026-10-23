@@ -48,13 +48,9 @@ async function ensureFolder(accessToken: string, parentId: string, name: string)
 export async function ensurePortalProcessDriveFolder(input:{accessToken:string;rootFolderId:string;protocol:string;processId:string}){
   await assertPrivateContainer(input.accessToken,input.rootFolderId);
   const processes=await ensureFolder(input.accessToken,input.rootFolderId,'02_PROCESSOS');
-  const year=input.protocol.match(/TCC-(\d{4})-/)?.[1]||String(new Date().getFullYear());
-  const yearFolder=await ensureFolder(input.accessToken,processes.id,year);
-  const processFolder=await ensureFolder(input.accessToken,yearFolder.id,input.protocol);
-  const processFolders=await Promise.all(['00_MANIFESTO','00_FORMULARIOS','01_TRABALHO_COMPLETO','02_RESUMO_EXPANDIDO','03_CARTA_CONVITE','04_ATA_DEFESA','05_TERMO_AUTORIZACAO','06_DECLARACAO_COMISSAO','07_COMPROVANTES_ASTEN','08_PUBLICACAO','09_COMPROVANTE_RESERVA'].map(name=>ensureFolder(input.accessToken,processFolder.id,name)));
-  const formsFolder=processFolders.find(folder=>folder.name==='00_FORMULARIOS');
-  if(!formsFolder)throw new Error('Não foi possível preparar a pasta de formulários do TCC.');
-  await Promise.all(Object.values(FORM_FOLDER).map(name=>ensureFolder(input.accessToken,formsFolder.id,name)));
+  const processFolder=await ensureFolder(input.accessToken,processes.id,input.protocol);
+  // Each upload creates its own destination on demand. Do not pre-create
+  // empty legacy document/publication trees for every new process.
   return {id:String(processFolder.id),webViewLink:String(processFolder.webViewLink||`https://drive.google.com/drive/folders/${processFolder.id}`)};
 }
 
@@ -104,8 +100,7 @@ async function uploadArtifactPdf(input:{rootFolderId?:string;protocol?:string;ac
     const names:Record<string,string>={CONVITE:'01_CARTA_CONVITE',ATA:'02_ATA_DEFESA',TERMO:'03_TERMO_AUTORIZACAO',DECLARACAO:'04_DECLARACAO_PARTICIPACAO'};
     const typeFolder=await ensureFolder(input.accessToken,documents.id,names[input.documentType]||input.documentType);
     const lifecycleFolder=await ensureFolder(input.accessToken,typeFolder.id,input.lifecycle==='GERADO'?'02_GERADOS':'03_ASSINADOS');
-    const processFolder=await ensureFolder(input.accessToken,lifecycleFolder.id,input.protocol);
-    parentId=processFolder.id;
+    parentId=lifecycleFolder.id;
   } else {
     const legacy=await ensureFolder(input.accessToken,input.processFolderId,DOCUMENT_FOLDER[input.documentType]||'07_COMPROVANTES_ASTEN');
     parentId=legacy.id;
@@ -173,30 +168,14 @@ export async function uploadProcessSourcePdf(input:{accessToken:string;processFo
   return created;
 }
 
-export async function publishPrivatePdfCopy(input:{accessToken:string;processFolderId:string;sourceFileId:string;processId:string;artifactType:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO';sha256?:string;version?:number}){
+/** Publication serves the authorized process source through the Portal; Drive remains private. */
+export async function preparePrivatePublicationSource(input:{accessToken:string;processFolderId:string;sourceFileId:string;processId:string;artifactType:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO';sha256?:string;version?:number}){
   await assertPrivateContainer(input.accessToken,input.processFolderId);
-  await assertPrivateContainer(input.accessToken,input.sourceFileId);
-  const sourceResponse=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.sourceFileId)}?fields=id,name,mimeType,trashed,appProperties&supportsAllDrives=true`,input.accessToken);
-  const source=await sourceResponse.json();
-  if(source.trashed||source.mimeType!=='application/pdf')throw new Error('O arquivo de origem autorizado não é um PDF disponível.');
-  if(input.sha256&&source.appProperties?.sha256&&source.appProperties.sha256!==input.sha256)throw new Error('O hash do arquivo de origem diverge da versão autorizada.');
-  const publicationFolder=await ensureFolder(input.accessToken,input.processFolderId,'08_PUBLICACAO');
-  const query=`'${escapeQuery(publicationFolder.id)}' in parents and appProperties has { key='publicationSourceFileId' and value='${escapeQuery(input.sourceFileId)}' } and trashed = false`;
-  const existingResponse=await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink,appProperties)&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true`,input.accessToken);
-  const existing=(await existingResponse.json()).files||[];
-  if(existing.length>1)throw new Error('Há cópias públicas duplicadas para a mesma versão do arquivo.');
-  let file=existing[0];
-  if(!file){
-    const publicName=`PUBLICO__${String(source.name||input.artifactType).replace(/[^a-zA-Z0-9À-ÿ._ -]/g,"_").slice(0,150)}`;
-    const copied=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.sourceFileId)}/copy?fields=id,name,webViewLink,appProperties&supportsAllDrives=true`,input.accessToken,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:publicName,parents:[publicationFolder.id],appProperties:{portal:'portal-tcc',portalProcessId:input.processId,artifactType:input.artifactType,publicationSourceFileId:input.sourceFileId,sha256:input.sha256||source.appProperties?.sha256||'',artifactVersion:String(input.version||source.appProperties?.artifactVersion||1),lifecycle:'PUBLIC_COPY'}})});
-    file=await copied.json();
-  }
-  const permissionsResponse=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(file.id)}/permissions?fields=permissions(id,type,role)&supportsAllDrives=true`,input.accessToken);
-  const permissions=(await permissionsResponse.json()).permissions||[];
-  if(!permissions.some((permission:any)=>permission.type==='anyone'&&permission.role==='reader')){
-    await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(file.id)}/permissions?supportsAllDrives=true&sendNotificationEmail=false`,input.accessToken,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'anyone',role:'reader',allowFileDiscovery:false})});
-  }
-  return {id:String(file.id),webViewLink:String(file.webViewLink||`https://drive.google.com/file/d/${file.id}/view`),name:String(file.name||source.name||''),sha256:String(input.sha256||source.appProperties?.sha256||''),version:Number(input.version||source.appProperties?.artifactVersion||1)};
+  if(!/^[a-f0-9]{64}$/i.test(input.sha256||''))throw new Error('O arquivo autorizado precisa de um hash SHA-256 válido.');
+  const source=await downloadDrivePdf(input.accessToken,input.sourceFileId,{processId:input.processId,artifactType:input.artifactType});
+  if(createHash('sha256').update(source.pdf).digest('hex')!==input.sha256!.toLowerCase())throw new Error('O arquivo mudou desde a autorização de publicação.');
+  const kind=input.artifactType==='TRABALHO_COMPLETO'?'trabalho-completo':'resumo-expandido';
+  return {id:input.sourceFileId,webViewLink:`/api/public/processes/${encodeURIComponent(input.processId)}/files/${kind}/download`,name:source.fileName,sha256:input.sha256!,version:input.version||1};
 }
 
 export async function withdrawDriveFilePublicAccess(accessToken:string,fileId:string):Promise<{removed:number}>{
@@ -253,4 +232,12 @@ export async function downloadDrivePdf(accessToken:string,fileId:string,expected
   const storedSha256=String(metadata.appProperties?.sha256||'').toLowerCase();
   if(storedSha256&&createHash('sha256').update(pdf).digest('hex')!==storedSha256)throw new Error('O conteúdo do PDF no Drive diverge do hash registrado pelo portal.');
   return{pdf,fileName:String(metadata.name||'documento.pdf').replace(/[\r\n"]/g,'_')};
+}
+
+export async function renamePortalProcessFolder(input:{accessToken:string;fileId:string;previousProtocol:string;protocol:string}){
+ await assertPrivateContainer(input.accessToken,input.fileId);
+ const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,name,mimeType,trashed&supportsAllDrives=true`,input.accessToken);
+ const folder=await response.json();
+ if(folder.trashed||folder.mimeType!=='application/vnd.google-apps.folder'||folder.name!==input.previousProtocol)throw new Error('A pasta do processo mudou no Drive. Confira a sincronização antes de alterar o protocolo.');
+ await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,name&supportsAllDrives=true`,input.accessToken,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:input.protocol})});
 }

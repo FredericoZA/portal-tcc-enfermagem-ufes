@@ -40,7 +40,8 @@ test('produção mantém fallbacks inseguros desligados e Asten fail-closed', ()
   assert.equal(config.env?.PORTAL_ALLOW_LOCAL_OTP_STORE, 'false');
   assert.equal(config.env?.PORTAL_ALLOW_LOCAL_SECRET_STORE, 'false');
   assert.equal(config.env?.PORTAL_PERSISTENCE_PROVIDER, 'supabase');
-  assert.equal(config.env?.ASTEN_INTEGRATION_ENABLED, 'false');
+  assert.equal(config.env?.ASTEN_INTEGRATION_ENABLED, 'true');
+  assert.equal(config.env?.ASTEN_PRODUCTION_RELEASE_APPROVED, 'true');
 });
 
 test('bootstrap de produção não registra exceção bruta e separa chaves de rotação', () => {
