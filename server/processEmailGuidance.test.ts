@@ -6,9 +6,9 @@ const process={id:'proc-123',protocolo:'TCC-2026-0042',etapaAtual:'CADASTRO' as 
 const base='https://portal.example/?tcc=outro&secao=geral';
 test('cadastro orienta departamento, autores e orientação com link específico autenticado',()=>{
  const text=processEmailGuidance(process,base,'TCC_CREATED');
- for(const expected of ['Departamento:','Autores:','Orientação:','Banca:','código recebido','1. Departamento','Confirmar local e enviar convite'])assert.ok(text.includes(expected),expected);
+ for(const expected of ['Departamento:','Autores:','código recebido','1. Departamento','Confirmar local e enviar convite'])assert.ok(text.includes(expected),expected);
  const links=text.match(/https:\/\/[^\s)]+/g)||[];
- assert.ok(links.length>=3);
+ assert.ok(links.length>=2);
  for(const raw of links){const url=new URL(raw);assert.equal(url.searchParams.get('tcc'),process.id);assert.equal(url.searchParams.has('token'),false);}
 });
 test('convite, assinatura e conclusão apresentam as ações e abas próprias',()=>{
@@ -39,4 +39,12 @@ test('convite e conclusão identificam o e-mail e abrem diretamente os documento
   assert.match(text.split('\n')[2],/secao=docs/);
   assert.match(text,/não leva PDFs anexados/);
  }
+});
+
+test('orientações de conferência da orientação pertencem ao convite e não à confirmação de local',()=>{
+ const confirmation=processEmailGuidance(process,base,'LOCATION_CONFIRMED','email-confirmacao');
+ assert.doesNotMatch(confirmation,/Orientação:|Banca:|Avaliação e ata/);
+ const invitation=processEmailGuidance(process,base,'TCC_CREATED','email-convite');
+ assert.match(invitation,/Orientação: confira os dados do trabalho/);
+ assert.match(invitation,/Banca: acesse Documentos/);
 });

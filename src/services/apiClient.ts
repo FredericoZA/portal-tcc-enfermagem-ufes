@@ -125,8 +125,8 @@ export const apiClient = {
   verifyLoginCode:(email:string,code:string)=>fetchApi<any>('/api/auth/verify-code',{method:'POST',body:JSON.stringify({email,code})}),
   logout:()=>fetchApi<{signedOut:boolean}>('/api/auth/logout',{method:'POST'}),
   getSettings: () => fetchApi<GlobalSettings>('/api/settings'),
-  saveStudioImage:(input:{kind:'email'|'form';templateId:string;field:'logoUrl'|'heroImageUrl';value:string;expectedRevision:number})=>fetchApi<{revision:number;savedAt:string;imageUrl:string}>('/api/admin/studio/image',{method:'PATCH',body:JSON.stringify(input)}),
-  updateSettings: (settings: Partial<GlobalSettings>) => fetchApi<GlobalSettings>('/api/admin/settings', {
+  saveStudioImage:(input:{kind:'email'|'form';templateId:string;field:'logoUrl'|'heroImageUrl';value:string;expectedRevision:number;expectedImageValue?:string})=>fetchApi<{revision:number;savedAt:string;imageUrl:string;studio:IntegrationStudioSettings}>('/api/admin/studio/image',{method:'PATCH',body:JSON.stringify(input)}),
+  updateSettings: (settings: Partial<GlobalSettings>&{studioExpectedRevision?:number}) => fetchApi<GlobalSettings>('/api/admin/settings', {
     method: 'PATCH',
     body: JSON.stringify(settings)
   }),
@@ -279,6 +279,8 @@ export const apiClient = {
     const staged=await stageFile(file,{purpose:kind==='trabalho-completo'?'PROCESS_FULL_WORK':'PROCESS_EXPANDED_ABSTRACT',processId:id});
     return fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type})});
   },async()=>fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})})),
+  getProcessAuditLogs:(id:string)=>fetchApi<AuditLog[]>(`/api/processes/${encodeURIComponent(id)}/audit-logs`),
+  downloadProcessAuditLogs:(id:string)=>downloadApiFile(`/api/processes/${encodeURIComponent(id)}/audit-logs/pdf`),
   getAuditLogs: () => fetchApi<AuditLog[]>('/api/admin/audit-logs'),
   rollbackAuditLog: (logId: string) => fetchApi<{ message: string; process?: ProcessData; settings?: GlobalSettings }>(`/api/admin/rollback-log/${logId}`, {
     method: 'POST'

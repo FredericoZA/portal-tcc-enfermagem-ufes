@@ -1,3 +1,6 @@
+import {googleModelReference} from './server/googleModelReference';
+import replicationModelHandler from './api/replication-model';
+import {auditChanges,sanitizeProcessAudit} from './src/utils/processAudit';
 import {ataClosingTime} from './src/utils/ataClosingTime';
 import {withProcessEmailButton} from './server/workflow/processEmailButton';
 import {withDeclarationAfterTerm} from './src/utils/declarationWorkflow';
@@ -1364,7 +1367,7 @@ export async function createPortalApp() {
     res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
     res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=(), payment=(), usb=()');
     const storageOrigin=supabaseConnectOrigin();
-    res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self'${developmentNonce?` 'nonce-${developmentNonce}'`:''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'${storageOrigin?` ${storageOrigin}`:''}${developmentNonce?' ws: wss:':''}; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`);
+    res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self'${developmentNonce?` 'nonce-${developmentNonce}'`:''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'${storageOrigin?` ${storageOrigin}`:''}${developmentNonce?' ws: wss:':''}; frame-src 'self' https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`);
     if(productionRuntime)res.setHeader('Strict-Transport-Security','max-age=31536000; includeSubDomains');
     next();
   });
@@ -2015,13 +2018,15 @@ export async function createPortalApp() {
     let imageUrl=req.body.value;
     if(getSupabaseRuntimeStatus().durablePersistenceReady){
       try{imageUrl=await persistStudioRuntimeImage(req.body.value);}catch{return res.status(503).json({error:'Não foi possível armazenar a imagem. Tente novamente.'});}
+      // Storage can yield while another request saves settings: recheck against the latest state.
+      try{studio=applyStudioImage(currentSettings.integrationStudio!,req.body,identity.email);}catch{return res.status(409).json({error:'Esta imagem foi alterada em outra sessão. Seu arquivo continua selecionado.',code:'STUDIO_REVISION_CONFLICT'});}
       const designs=req.body.kind==='email'?studio.emailDesigns:studio.formDesigns;
       designs[req.body.templateId][req.body.field]=imageUrl;
     }
     currentSettings={...currentSettings,integrationStudio:studio,updatedAt:studio.savedAt};
     auditLogsStore.push({id:`studio-image-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'ALTERACAO_IMAGEM_ESTUDIO',entityType:'integration_studio',entityId:req.body.templateId,after:{kind:req.body.kind,field:req.body.field,revision:studio.revision},timestamp:studio.savedAt});
     try{await persistPortalStateDurably();}catch{return res.status(503).json({error:'Não foi possível confirmar a gravação da imagem. Recarregue e tente novamente.'});}
-    res.json({revision:studio.revision,savedAt:studio.savedAt,imageUrl});
+    res.json({revision:studio.revision,savedAt:studio.savedAt,imageUrl,studio});
   });
 
   // PATCH /api/admin/settings
@@ -2040,6 +2045,7 @@ export async function createPortalApp() {
     });
 
     if(containsSensitiveConfigurationKey(req.body))return res.status(400).json({error:'Segredos não podem ser salvos nas configurações.'});
+    if(req.body?.integrationStudio&&req.body.studioExpectedRevision!==undefined&&req.body.studioExpectedRevision!==Number(currentSettings.integrationStudio?.revision||0))return res.status(409).json({error:'Outra sessão salvou alterações. Seu rascunho foi preservado; confira a revisão atual antes de salvar.',code:'STUDIO_REVISION_CONFLICT'});
     if (req.body?.integrationStudio && currentSettings.integrationStudio && Number(req.body.integrationStudio.revision) <= Number(currentSettings.integrationStudio.revision)) {
       return res.status(409).json({ error: 'O Estúdio foi alterado em outra aba ou sessão. Recarregue antes de publicar novamente.', code: 'STUDIO_REVISION_CONFLICT' });
     }
@@ -2051,7 +2057,7 @@ export async function createPortalApp() {
       if(errors.length)return res.status(400).json({error:'O pacote do curso ainda contém pendências. Corrija modelos, formulários, e-mails e etapas antes de publicar.',code:'COURSE_PACKAGE_VALIDATION_FAILED',score:packageValidation.score,issues:errors.slice(0,40)});
     }
     const before = { ...currentSettings };
-    const settingsPatch={...(req.body||{})};for(const protectedKey of ['courseCoordinatorEmail','courseCoordinatorName','documentModels','masterEmail','ownerEmail','commissionPresidentEmail','masterRecoveryEmails','sessionValidAfter','driveRootFolderId','calendarId','installationProfile','academicCycles','featureFlags','portalAppearance','tableAppearance','tableLayouts'])delete settingsPatch[protectedKey];
+    const settingsPatch={...(req.body||{})};for(const protectedKey of ['courseCoordinatorEmail','courseCoordinatorName','documentModels','masterEmail','ownerEmail','commissionPresidentEmail','masterRecoveryEmails','sessionValidAfter','driveRootFolderId','calendarId','installationProfile','academicCycles','featureFlags','portalAppearance','tableAppearance','tableLayouts','studioExpectedRevision'])delete settingsPatch[protectedKey];
     if(settingsPatch.emailConfig&&typeof settingsPatch.emailConfig==='object'&&!Array.isArray(settingsPatch.emailConfig)){
       const emailConfigPatch={...settingsPatch.emailConfig};
       if(Object.prototype.hasOwnProperty.call(emailConfigPatch,'roomReservationDepartmentEmail')){
@@ -3655,14 +3661,14 @@ export async function createPortalApp() {
     let fetchedViaApi = false;
 
     if (url && typeof url === 'string') {
-      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
-      const docId = match ? match[1] : (url.trim().length > 20 && !url.includes('/') ? url.trim() : null);
+      const docId=googleModelReference(url);
+      if(!docId)return res.status(400).json({error:'Informe um link válido do Google Drive/Docs ou o ID do modelo.',tags:[]});
 
       if (docId) {
         // 1. If OAuth accessToken is provided, call Google Docs API v1 first
         if (accessToken) {
           try {
-            const gdocRes = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
+            const gdocRes = await fetch(`https://docs.googleapis.com/v1/documents/${encodeURIComponent(docId)}`, {
               headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Accept': 'application/json'
@@ -3687,7 +3693,7 @@ export async function createPortalApp() {
           // 2. Drive API v3 Export as plain text
           if (!fetchedContent) {
             try {
-              const driveRes = await fetch(`https://www.googleapis.com/drive/v3/files/${docId}/export?mimeType=text/plain`, {
+              const driveRes = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(docId)}/export?mimeType=text/plain`, {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
               });
               if (driveRes.ok) {
@@ -3702,7 +3708,7 @@ export async function createPortalApp() {
           // 3. Drive API v3 Media Download (for binary .docx files on Google Drive)
           if (!fetchedContent) {
             try {
-              const mediaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${docId}?alt=media`, {
+              const mediaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(docId)}?alt=media`, {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
               });
               if (mediaRes.ok) {
@@ -3806,6 +3812,26 @@ export async function createPortalApp() {
     // Sem fallback público: a varredura usa exclusivamente a conta Google autorizada no servidor.
 
     res.json({ folderId, files });
+  });
+
+  app.get('/api/public/replication-models/:slug/download',replicationModelHandler);
+
+  // Process history follows the same access rules as its documents.
+  app.get(['/api/processes/:id/audit-logs','/api/processes/:id/audit-logs/pdf'],requireAuthenticated,(req,res)=>{
+    const identity=getPortalIdentity(req)!;
+    const process=processesStore.find(item=>item.id===req.params.id);
+    if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
+    res.setHeader('Cache-Control','private, no-store');
+    const rows=sanitizeProcessAudit(auditLogsStore.filter(log=>log.processId===process.id||(log.entityId===process.id&&log.entityType==='processo')).slice().sort((a,b)=>b.timestamp.localeCompare(a.timestamp))) as typeof auditLogsStore;
+    if(!req.path.endsWith('/pdf'))return res.json(rows);
+    const body=rows.map(log=>`${new Date(log.timestamp).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})} (Brasília)
+${log.actorEmail} | ${log.actorRoles.join(', ')}
+${log.action}
+${auditChanges(log)}`).join('\n\n');
+    const pdf=createProfessionalPdf({title:'Histórico de alterações',protocol:process.protocolo,body:body||'Nenhum evento registrado.',institution:currentSettings.integrationStudio?.brandKit?.institutionName,course:currentSettings.integrationStudio?.brandKit?.courseName,footer:'Registros do servidor - horário de Brasília'});
+    res.setHeader('Content-Type','application/pdf');
+    res.setHeader('Content-Disposition',`attachment; filename="historico-${process.protocolo.replace(/[^a-zA-Z0-9-]/g,'')}.pdf"`);
+    return res.send(pdf);
   });
 
   // GET /api/admin/audit-logs

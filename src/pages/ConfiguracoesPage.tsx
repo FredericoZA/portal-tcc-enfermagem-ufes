@@ -192,6 +192,7 @@ export interface WorkflowStageItem {
   triggerEvent: string;
   description: string;
   actions: WorkflowActionItem[];
+  hiddenCatalogItems?: string[];
 }
 
 export interface DocFieldItem {

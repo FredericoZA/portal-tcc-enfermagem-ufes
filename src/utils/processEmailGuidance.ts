@@ -26,17 +26,17 @@ export function processEmailGuidance(process:Pick<ProcessData,'id'|'protocolo'|'
    'Confiram os campos e cliquem em Salvar no acervo e finalizar o processo. Um dos autores realiza a entrega pelo trabalho; a dupla não precisa enviar novamente. A conclusão depende das assinaturas e documentos finais aplicáveis.',
    'Orientação: esta mensagem também é enviada para sua ciência. Acompanhe a entrega da versão final e assine o Termo quando houver solicitação de publicação.'
   ];
- }else if(templateId==='email-reserva'||event==='TCC_CREATED'||templateId==='email-instrucoes-cadastro'){
+ }else if(templateId==='email-reserva'||templateId==='email-instrucoes-cadastro'||(!templateId&&event==='TCC_CREATED')){
   steps=[
    'Departamento: responda ao pedido de reserva confirmando a disponibilidade do local, da data e do horário. Esta é a única providência solicitada ao departamento; não é necessário preencher o Portal.',
-   `Autores: aguardem a resposta do departamento. Depois, um dos autores deve acessar Dados do processo (${general}), selecionar o local autorizado, anexar a resposta em PDF de até 1 MB, marcar o recebimento da confirmação e clicar em Confirmar local e enviar convite. Uma pessoa realiza esta etapa pela dupla.`,
-   `Orientação: confira os dados do trabalho e dos participantes em Dados do processo (${general}) e acompanhe a confirmação do local. Os campos permitidos podem ser corrigidos diretamente ao clicar no texto.`,
-   'Banca: aguarde o convite com a confirmação da defesa.'
+   `Autores: aguardem a resposta do departamento. Depois, um dos autores deve acessar Dados do processo (${general}), selecionar o local autorizado, anexar a resposta em PDF de até 1 MB, marcar o recebimento da confirmação e clicar em Confirmar local e enviar convite. Uma pessoa realiza esta etapa pela dupla.`
   ];
+ }else if(templateId==='email-confirmacao'){
+  steps=[`Autores: confiram a confirmação do local, a data e o horário em Dados do processo (${general}). Aguardem o convite formal enviado aos participantes da banca.`];
  }else if(['LOCATION_CONFIRMED','INVITATION_SENT'].includes(event)||templateId==='email-convite'){
   steps=[
    `Autores: confiram data, horário, local e composição da banca em Dados do processo (${general}) e compareçam à defesa conforme o agendamento.`,
-   `Orientação: confira o agendamento e conduza a defesa. Após a apresentação, acesse Avaliação e ata (${evaluation}), informe o resultado e o parecer, escolha a forma de assinatura, clique em Visualizar ata, confira o documento, marque a confirmação da leitura e confirme a ata para prosseguir.`,
+   `Orientação: confira os dados do trabalho e dos participantes em Dados do processo (${general}). Os campos permitidos podem ser corrigidos diretamente ao clicar no texto. Confira o agendamento e conduza a defesa. Após a apresentação, acesse Avaliação e ata (${evaluation}), informe o resultado e o parecer, escolha a forma de assinatura, clique em Visualizar ata, confira o documento, marque a confirmação da leitura e confirme a ata para prosseguir.`,
    `Banca: acesse Documentos do processo (${documents}), clique em Ver na Carta-Convite da Banca e em Baixar PDF para guardar o convite. Confira data, horário e local em Dados do processo (${general}) e participe da defesa.`
   ];
  }else if(event==='PROCESS_COMPLETED'||templateId==='email-conclusao'){

@@ -32,11 +32,17 @@ test('HTTP: imagem persiste mesmo com pacote incompleto, sem publicar outros cam
   const saved=await patch('master@portal.local',input);assert.equal(saved.status,200,JSON.stringify(saved.body));
   assert.equal(saved.body.imageUrl,image);assert.equal(saved.body.revision,input.expectedRevision+1);
   assert.equal((await patch('master@portal.local',input)).status,409);
+  const formSaved=await patch('master@portal.local',{kind:'form',templateId:'incomplete-form',field:'logoUrl',value:image,expectedRevision:input.expectedRevision,expectedImageValue:''});
+  assert.equal(formSaved.status,200,JSON.stringify(formSaved.body));assert.equal(formSaved.body.revision,saved.body.revision+1);
+  assert.equal((await patch('master@portal.local',{...input,expectedImageValue:''})).status,409,'same image changed in another session');
+  const stalePackage=await fetch(base+'/api/admin/settings',{method:'PATCH',headers:{'content-type':'application/json','x-demo-user-email':'master@portal.local'},body:JSON.stringify({integrationStudio:{...studio,revision:999},studioExpectedRevision:0})});
+  assert.equal(stalePackage.status,409,'stale full draft cannot overwrite the saved images by jumping revision');
   const state=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));
   assert.equal(state.settings.integrationStudio.emailDesigns['email-fixture'].heroImageUrl,image);
   assert.deepEqual(state.settings.integrationStudio.emailTemplates,studio.emailTemplates);
   assert.deepEqual(state.settings.integrationStudio.formTemplates,studio.formTemplates);
-  assert.equal(state.auditLogs.filter((log:any)=>log.action==='ALTERACAO_IMAGEM_ESTUDIO').length,1);
+  assert.equal(state.settings.integrationStudio.formDesigns['incomplete-form'].logoUrl,image);
+  assert.equal(state.auditLogs.filter((log:any)=>log.action==='ALTERACAO_IMAGEM_ESTUDIO').length,2);
   assert.equal(state.processes.length,0);
  }finally{child.kill('SIGTERM');await new Promise(resolve=>child.once('exit',resolve));await rm(directory,{recursive:true,force:true});}
 });

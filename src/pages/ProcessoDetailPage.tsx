@@ -1,3 +1,4 @@
+import {auditChanges} from '../utils/processAudit';
 import {publicationDeclined,finalDeliveryMessage} from '../utils/finalDeliveryPresentation';
 import {InlineProcessField} from '../components/InlineProcessField';
 import {localDateTimeToIso} from '../utils/operationalConfig';
@@ -233,11 +234,12 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     if(!quiet)setIsLoading(true);
     setErrorMsg('');
     try {
-      const [pData, docsData,signatureData,verificationData] = await Promise.all([
+      const [pData, docsData,signatureData,verificationData,recordedLogs] = await Promise.all([
         apiClient.getProcessById(processId),
         apiClient.getProcessDocuments(processId).catch(() => []),
         apiClient.getProcessSignatureJobs(processId).catch(() => []),
-        apiClient.getProcessVerifications(processId).catch(() => [])
+        apiClient.getProcessVerifications(processId).catch(() => []),
+        apiClient.getProcessAuditLogs(processId)
       ]);
       setProcess(pData);
       setDocuments(docsData);
@@ -288,52 +290,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         }
       }
 
-      // Generate audit log history
-      const generatedLogs: AuditLogEntry[] = [
-        {
-          id: 'log-1',
-          timestamp: pData.createdAt ? new Date(pData.createdAt).toLocaleString('pt-BR') : '10/08/2026 10:00:00',
-          user: pData.createdByEmail || 'Discente',
-          role: 'Discente Autor',
-          action: 'CADASTRO_INICIAL',
-          details: `Início do processo de TCC e submissão do protocolo ${pData.protocolo}`
-        }
-      ];
+      setAuditLogs(recordedLogs.map(log=>({id:log.id,timestamp:new Date(log.timestamp).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}),user:log.actorEmail,role:log.actorRoles.join(', '),action:log.action,details:auditChanges(log)})));
 
-      if (pData.defesa?.startAt) {
-        generatedLogs.push({
-          id: 'log-2',
-          timestamp: new Date(pData.createdAt || Date.now()).toLocaleString('pt-BR'),
-          user: pData.orientador.email || 'Orientador',
-          role: 'Docente Orientador',
-          action: 'AGENDAMENTO_DEFESA',
-          details: `Apresentação agendada para ${formatDatePt(pData.defesa.startAt)} às ${formatTimeExtenso(pData.defesa.startAt)} em ${pData.defesa.local}`
-        });
-      }
-
-      if (pData.avaliacao?.status === 'CONCLUIDO') {
-        generatedLogs.push({
-          id: 'log-3',
-          timestamp: pData.avaliacao.submittedAt ? new Date(pData.avaliacao.submittedAt).toLocaleString('pt-BR') : 'Avaliante',
-          user: pData.avaliacao.submittedBy || pData.orientador.email,
-          role: 'Docente Orientador',
-          action: 'REGISTRO_RESULTADO_PARECER',
-          details: `Registro do resultado final e parecer da avaliação`
-        });
-      }
-
-      if (pData.acervo?.submittedAt) {
-        generatedLogs.push({
-          id: 'log-4',
-          timestamp: new Date(pData.acervo.submittedAt).toLocaleString('pt-BR'),
-          user: pData.acervo.submittedBy || 'Discente',
-          role: 'Discente Autor',
-          action: 'SUBMISSAO_REPOSITORIO',
-          details: `Trabalho catalogado e submetido ao Acervo Digital com status ${pData.acervo.isPublic ? 'PÚBLICO' : 'PRIVADO'}`
-        });
-      }
-
-      setAuditLogs(generatedLogs);
     } catch (err: any) {
       if(quiet)throw err;
       setErrorMsg(err.message || 'Erro ao carregar o processo.');
@@ -475,15 +433,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         defesa: updatedDefesa
       });
 
-      const newLog: AuditLogEntry = {
-        id: `log-${Date.now()}`,
-        timestamp: new Date().toLocaleString('pt-BR'),
-        user: userEmail || 'Usuário do Sistema',
-        role: isCommissionPresident ? 'Presidente da Comissão' : isMasterAdmin ? 'Administrador Master' : 'Orientador',
-        action: 'EDICAO_FICHA_CADASTRAL',
-        details: `Atualização dos dados cadastrais e agendamento (Título: "${cadastralForm.titulo.substring(0, 35)}...")`
-      };
-      setAuditLogs(prev => [newLog, ...prev]);
 
       setEditingSection(null);
       await loadData();
@@ -509,15 +458,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         defesa: updatedDefesa
       });
 
-      const newLog: AuditLogEntry = {
-        id: `log-${Date.now()}`,
-        timestamp: new Date().toLocaleString('pt-BR'),
-        user: userEmail || 'Usuário do Sistema',
-        role: isCommissionPresident ? 'Presidente da Comissão' : isMasterAdmin ? 'Administrador Master' : 'Orientador',
-        action: 'EDICAO_DEFESA',
-        details: `Alteração no agendamento da defesa: ${formatDatePt(updatedDefesa.startAt)} em ${updatedDefesa.local}`
-      };
-      setAuditLogs(prev => [newLog, ...prev]);
 
       setEditingSection(null);
       await loadData();
@@ -565,15 +505,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         banca: bancaForm
       });
 
-      const newLog: AuditLogEntry = {
-        id: `log-${Date.now()}`,
-        timestamp: new Date().toLocaleString('pt-BR'),
-        user: userEmail || 'Usuário do Sistema',
-        role: isCommissionPresident ? 'Presidente da Comissão' : isMasterAdmin ? 'Administrador Master' : 'Orientador',
-        action: 'EDICAO_BANCA',
-        details: `Atualização da composição da banca examinadora (${bancaForm.length} membros)`
-      };
-      setAuditLogs(prev => [newLog, ...prev]);
 
       setEditingSection(null);
       await loadData();
@@ -650,15 +581,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         authorizationConfirmed: (acervoIsPublic||acervoExpandedPublic)&&acervoAuthorizationConfirmed
       });
 
-      const newLog: AuditLogEntry = {
-        id: `log-acervo-${Date.now()}`,
-        timestamp: new Date().toLocaleString('pt-BR'),
-        user: userEmail || 'Discente',
-        role: 'Discente Autor',
-        action: 'SUBMISSAO_REPOSITORIO',
-        details: `Entrega final registrada. Publicação solicitada: ${acervoIsPublic || acervoExpandedPublic ? 'Sim; aguarda documentos e assinaturas aplicáveis.' : 'Não.'}`
-      };
-      setAuditLogs(prev => [newLog, ...prev]);
 
       portalNotice(finalDeliveryMessage(result));
       await loadData();
@@ -1200,11 +1122,12 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
               <History className="h-5 w-5 shrink-0 text-white" aria-hidden="true" />
               <div className="min-w-0">
                 <h2 id="process-audit-title" className="truncate text-sm font-black normal-case text-white">Histórico & Log de Alterações do Processo</h2>
-                <p className="mt-0.5 text-[10px] font-mono text-white/80">Protocolo: {process.protocolo}</p>
+                <p className="mt-0.5 text-[10px] font-mono text-white/80">Protocolo: {process.protocolo} · Horários de Brasília</p>
               </div>
             </header>
             <div className="portal-modal-divider" aria-hidden="true" />
-            <div className="max-h-[calc(85vh-58px)] overflow-y-auto" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
+            <div className="flex justify-end gap-2 p-3"><button type="button" className="portal-action" onClick={()=>void apiClient.downloadProcessAuditLogs(processId).then(({blob,fileName})=>{const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=fileName;anchor.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}).catch(error=>portalNotice(error.message))}><Download className="h-4 w-4"/>Baixar histórico em PDF</button><button type="button" className="portal-action" onClick={()=>setShowAuditLogModal(false)}>Fechar</button></div>
+            <div className="max-h-[calc(85vh-140px)] overflow-y-auto" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
                 <TableScrollWrapper>
                   <table className="w-full border-collapse text-left text-xs" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
                     <thead>
@@ -1216,12 +1139,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-300">
+                      {!auditLogs.length&&<tr><td colSpan={4} className="p-4 text-center text-slate-600">Nenhum evento registrado para este processo.</td></tr>}
                       {auditLogs.map((log) => (
                         <tr key={log.id} className="bg-white/70 hover:bg-white">
                           <td className="p-3 font-mono font-bold text-slate-700 whitespace-nowrap">{log.timestamp}</td>
                           <td className="p-3"><div className="font-bold text-slate-900">{log.user}</div><span className="text-[10px] font-mono text-[var(--portal-brand-action)]">{log.role}</span></td>
                           <td className="p-3"><span className="text-[10px] font-bold text-slate-800">{log.action}</span></td>
-                          <td className="p-3 leading-snug text-slate-700">{log.details}</td>
+                          <td className="whitespace-pre-wrap p-3 leading-snug text-slate-700">{log.details}</td>
                         </tr>
                       ))}
                     </tbody>

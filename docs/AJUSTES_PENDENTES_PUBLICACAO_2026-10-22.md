@@ -552,3 +552,81 @@ completo em PUBLICACAO_2026-10-22_RODADA_52.md. Sem reenvio retroativo ou migra�
   a conta Google do runtime. Os arquivos originais/assinados foram preservados;
   não foram substituídos por modelos fictícios. A atualização dos arquivos reais
   ainda depende de acesso à conta/pasta correta.
+
+## Revisão de 23/10/2026 — acumular alterações, aguardar nova autorização Vercel
+
+A instrução mais recente do usuário revoga a publicação imediata autorizada antes:
+registrar os pedidos e publicar somente quando ele pedir novamente.
+
+### Replicar Portal — uma única sequência de caixas
+
+- Relato: o site publicado separa instruções/guia de IA e ferramentas, repetindo
+  duas formas de explicar a replicação. Unificar em caixas com sequência lógica:
+  código, guia para IA, modelos e preparação dos serviços da instalação própria.
+- Uma grade de oito caixas já existe no código local; o screenshot recebido é da
+  versão publicada anterior. Conferir clareza/ordem dessa grade na próxima rodada.
+- Evidência: /var/folders/z7/dydknr1510xgkqm0y47pv9m40000gn/T/codex-clipboard-86aff388-c192-4f07-b2e9-1bcdc8ad6289.png.
+- Não houve nova publicação no Vercel ao registrar esta anotação.
+
+### Outros pedidos recebidos — registro anterior à execução da rodada 54
+
+- Fluxos: lixeira deve excluir a linha inteira do item, com comportamento distinto
+  de desmarcar Usar. Definir persistência e recuperação sem apagar indevidamente
+  o modelo de documento/e-mail/formulário compartilhado em outras etapas.
+- Histórico do TCC (ícone de relógio): conferir cobertura de alterações, inclusive
+  data, hora e local, exibindo autor, momento, campos e valores antes/depois;
+  disponibilizar download em PDF, respeitando as permissões do processo.
+- Modelos de replicação: referências antigas deram 404. A pasta oficial foi
+  localizada depois e contém modelos ativos. Ata/convite são DOCX; Termo e
+  Declaração são Docs nativos. A API de distribuição ainda não foi atualizada.
+- GitHub: snapshot enviado à branch codex/public-review53, PR 166 aberto. Push
+  direto à main foi rejeitado pela regra de validação validate. Não afirmar
+  atualização da main nem merge antes da confirmação dos checks e da integração.
+
+### Erro 04 — conflito de revisão ao salvar imagem de e-mail/formulário
+
+- Relato no ambiente publicado, em 23/10/2026: não consegue salvar imagem nos
+  dois editores. Mensagem: O Estúdio foi alterado. Recarregue antes de salvar a imagem.
+- Evidência: /var/folders/z7/dydknr1510xgkqm0y47pv9m40000gn/T/codex-clipboard-f5a99301-2b4e-4c32-a5c4-efc559e0fe4e.png.
+- Diferente do erro 03 de autenticação recente: este relato corresponde ao
+  conflito de revisão do Estúdio. Não presumir que a correção OTP já o resolve.
+- [x] Reproduzir o conflito entre revisão local, atualização das configurações,
+  salvamento automático e PATCH de imagem; considerar também duas abas.
+- [x] Corrigir sem sobrescrever edição de outra sessão, perder rascunho ou imagem
+  selecionada; manter controle de revisão no servidor.
+- [x] Validar e-mail e formulário com conflito real/simulado, nova tentativa,
+  confirmação de persistência e reabertura, além do caso de autenticação recente.
+- Status atualizado: correção local executada e validada na rodada 54; sem novo deploy.
+
+### Orientação no modelo de e-mail incorreto
+
+- Usuário indicou que a observação da captura pertence ao e-mail de convite da
+  banca, não ao e-mail de confirmação do local.
+- Evidência: /var/folders/z7/dydknr1510xgkqm0y47pv9m40000gn/T/codex-clipboard-d842c143-c93a-4009-ac09-cf5c51a82011.png.
+- A captura mostra orientações de conferência de dados pela orientação e de
+  aguardar o convite pela banca. Conferir o trecho indicado, seu modelo/evento
+  e a composição automática das orientações antes de mover o texto.
+- [x] Realocar a observação indicada para o convite; manter na confirmação do
+  local apenas as instruções pertinentes a essa etapa e seus destinatários.
+- Status atualizado: orientação corrigida e testada localmente na rodada 54; sem publicação no Vercel.
+
+## Execução consolidada em 23/10/2026 — rodada 54
+
+O usuário determinou executar os pedidos, mantendo somente a publicação no Vercel
+suspensa. A orientação anterior de apenas acumular anotações está substituída.
+
+Foram executados o conflito de imagens, a exclusão persistente de linhas do fluxo,
+o histórico real com PDF, a correção das orientações de e-mail e a atualização
+da API dos modelos de replicação. Os ajustes visuais públicos anteriores foram
+preservados e conferidos. Os estados históricos acima descrevem as rodadas em
+que foram escritos; as pendências funcionais listadas foram tratadas nesta rodada.
+
+Verificação: 662 testes unitários, 17 contratos, 40 verificações de fluxo seguro,
+TypeScript, acessibilidade estática, build e smoke HTTP aprovados. A galeria local
+gerou 70 capturas sem erros. Testes de navegador e HTTP confirmaram preservação
+de rascunho/imagens, remoção e recuperação de linha e auditoria de agendamento.
+
+Registro completo: [CONFERENCIA_LOCAL_2026-10-23_RODADA_54.md](CONFERENCIA_LOCAL_2026-10-23_RODADA_54.md).
+
+GitHub e Vercel permanecem estados distintos: PR 166 aberto para revisão; os
+alertas de segurança não foram encerrados. Não houve nova publicação no Vercel.

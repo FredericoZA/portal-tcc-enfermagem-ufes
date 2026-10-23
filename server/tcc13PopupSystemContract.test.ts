@@ -281,7 +281,7 @@ test('documentos e variáveis exibem um documento por vez e sem consolidar manua
 test('editores integrados salvam automaticamente no servidor',()=>{
   const studio=read('src/components/IntegrationStudioPanel.tsx');
   const docs=read('src/components/MasterDocumentModelsPanel.tsx');
-  assert.match(studio,/hideTabs[\s\S]*apiClient\.updateSettings\(\{ integrationStudio: snapshot \}\)/);
+  assert.match(studio,/hideTabs[\s\S]*apiClient\.updateSettings\(\{ integrationStudio: snapshot,studioExpectedRevision:/);
   assert.match(docs,/apiClient\.getSettings\(\)/);
   assert.match(docs,/apiClient\.updateSettings\(\{integrationStudio:snapshot\}\)/);
 });

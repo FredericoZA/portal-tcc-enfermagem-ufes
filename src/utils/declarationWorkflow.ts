@@ -17,6 +17,6 @@ export function withDeclarationAfterTerm(source:IntegrationStudioSettings):Integ
  // It cannot depend on whether either file was selected for public disclosure.
  const action={...(selected||{}),id:String(selected?.id||'action-final-declaration'),type:'doc',refId:declaration.id,title:String(selected?.title||'Gerar declaração e solicitar assinatura da presidência')};
  delete (action as Record<string,unknown>).condition;
- cleared.actions.push(action);
+ if(!(cleared.hiddenCatalogItems as string[]|undefined)?.includes(`doc:${declaration.id}`))cleared.actions.push(action);
  return {...source,workflowStages:registrationFirst(stages)};
 }

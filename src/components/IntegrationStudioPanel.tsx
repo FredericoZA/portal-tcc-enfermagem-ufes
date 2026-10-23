@@ -1,3 +1,4 @@
+import {mergeStudioDraft} from '../utils/studioDraftMerge';
 import { signatureWorkflowBinding } from '../utils/signatureWorkflowBindings';
 import { orderEmailTemplates } from '../utils/emailTemplateIdentity';
 import {processEmailGuidance,withProcessEmailGuidance} from '../utils/processEmailGuidance';
@@ -346,6 +347,9 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [lastSavedAt, setLastSavedAt] = useState(initialMeta.savedAt || '');
   const [draftSavedAt, setDraftSavedAt] = useState('');
   const [isDirty, setIsDirty] = useState(false);
+  const currentStudioSnapshotRef=useRef<IntegrationStudioSettings|null>(null);
+  const serverStudioRef=useRef(normalizeStudioSettings(initialStudio));
+  const [imageMergeBlocked,setImageMergeBlocked]=useState(false);
   const appliedSnapshotRef = useRef<string>('');
   const hasHydratedRef = useRef(false);
   const remoteAutosaveInFlightRef = useRef(false);
@@ -410,17 +414,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     setVariableDraft(selectedVariable ? { ...selectedVariable, aliases: [...(selectedVariable.aliases || [])], format: { ...(selectedVariable.format || {}) } } : null);
   }, [selectedVariableId, selectedVariable?.id]);
 
-  useEffect(() => {
-    const remote = normalizeStudioSettings(initialStudio);
-    const local = normalizeStudioSettings(!hasHydratedRef.current ? localStudio : loadLocalStudio());
-    const remoteTime = Date.parse(String(remote.savedAt || '')) || 0;
-    const localTime = Date.parse(String(local.savedAt || '')) || 0;
-    const preferred = localTime > remoteTime ? local : (initialStudio || localStudio);
-    const source = upgradeStudioDraft(normalizeStudioSettings(preferred));
-    const sourceKey = `${source.savedAt || ''}:${source.revision || 0}`;
-    if (!source.savedAt || sourceKey === appliedSnapshotRef.current) return;
-    appliedSnapshotRef.current = sourceKey;
-    hasHydratedRef.current = true;
+  const applyStudioSource=(source:Partial<IntegrationStudioSettings>)=>{
     if (source.brandKit) setBrandKit(source.brandKit);
     if (source.documentDesigns) setDocumentDesigns(source.documentDesigns);
     if (source.emailDesigns) setEmailDesigns(source.emailDesigns);
@@ -460,6 +454,21 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     setLastDriveSyncAt(source.lastDriveSyncAt || '');
     setLastDriveSyncStatus(source.lastDriveSyncStatus || 'never');
     setIsDirty(false);
+  };
+
+  useEffect(() => {
+    const remote = normalizeStudioSettings(initialStudio);
+    const local = normalizeStudioSettings(!hasHydratedRef.current ? localStudio : loadLocalStudio());
+    const remoteTime = Date.parse(String(remote.savedAt || '')) || 0;
+    const localTime = Date.parse(String(local.savedAt || '')) || 0;
+    const preferred = localTime > remoteTime ? local : (initialStudio || localStudio);
+    const source = upgradeStudioDraft(normalizeStudioSettings(preferred));
+    const sourceKey = `${source.savedAt || ''}:${source.revision || 0}`;
+    if (!source.savedAt || sourceKey === appliedSnapshotRef.current) return;
+    appliedSnapshotRef.current = sourceKey;
+    hasHydratedRef.current = true;
+    serverStudioRef.current=remote;
+    applyStudioSource(source);
   }, [initialStudio]);
 
   useEffect(() => {
@@ -497,6 +506,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     lastDriveSyncStatus
   });
 
+  currentStudioSnapshotRef.current=buildSnapshot();
+
   const draftFingerprint = useMemo(() => JSON.stringify({ brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl }), [brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl]);
   currentDraftFingerprintRef.current=draftFingerprint;
   const flushDraftRef = useRef<() => void>(()=>{});
@@ -517,7 +528,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   }, [draftFingerprint, isDirty, isSaving, revision, validationReport.score]);
 
   useEffect(() => {
-    if (!hideTabs || !hasHydratedRef.current || !isDirty || isSaving) return;
+    if (!hideTabs || !hasHydratedRef.current || !isDirty || isSaving || imageMergeBlocked) return;
     const fingerprint=draftFingerprint;
     const timer=window.setTimeout(() => {
       if(remoteAutosaveInFlightRef.current)return;
@@ -527,14 +538,16 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       }
       remoteAutosaveInFlightRef.current=true;
       const snapshot=buildSnapshot();
-      void apiClient.updateSettings({ integrationStudio: snapshot }).then(() => {
+      void apiClient.updateSettings({ integrationStudio: snapshot,studioExpectedRevision:Number(serverStudioRef.current.revision||0) }).then(() => {
         saveLocalStudio(snapshot);
+        serverStudioRef.current=snapshot;
         setRevision(snapshot.revision);
         setLastSavedAt(snapshot.savedAt);
         setDraftSavedAt('');
         setAutosaveError('');
         // Alterações feitas durante a requisição continuam sujas e serão enviadas após esta revisão.
         setIsDirty(currentDraftFingerprintRef.current!==fingerprint);
+        if(currentDraftFingerprintRef.current!==fingerprint)setAutosaveRetry(value=>value+1);
         appliedSnapshotRef.current=`${snapshot.savedAt}:${snapshot.revision}`;
       }).catch(error=>{
         console.error('Autosave do estúdio falhou',error);
@@ -544,10 +557,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       });
     }, 900);
     return () => window.clearTimeout(timer);
-  }, [hideTabs,draftFingerprint,isDirty,isSaving,revision,validationReport.ready,autosaveRetry]);
+  }, [hideTabs,draftFingerprint,isDirty,isSaving,revision,validationReport.ready,autosaveRetry,imageMergeBlocked]);
 
   const persistSnapshot = async (withAudit = false) => {
     if (isSaving) return;
+    if(imageMergeBlocked){notify('Seu rascunho foi preservado. Resolva o conflito indicado antes de publicar outras alterações.');return;}
     if (!validationReport.ready) {
       setActiveTab('overview');
       notify(`Publicação bloqueada: corrija ${validationReport.errors} erro(s) na configuração operacional do portal.`);
@@ -560,7 +574,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         : auditTrail;
       const snapshot = buildSnapshot(nextAudit);
       saveLocalStudio(snapshot);
-      await apiClient.updateSettings({ integrationStudio: snapshot });
+      await apiClient.updateSettings({ integrationStudio: snapshot,studioExpectedRevision:Number(serverStudioRef.current.revision||0) });
+      serverStudioRef.current=snapshot;
       setAuditTrail(nextAudit);
       setRevision(snapshot.revision);
       setLastSavedAt(snapshot.savedAt);
@@ -594,12 +609,14 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [imageSavedAt,setImageSavedAt]=useState('');
   const uploadTemplateImage = async (file:File|undefined,kind:'email'|'form',field:'logoUrl'|'heroImageUrl') => {
     if(!file)return;
-    if(imageSaveInFlightRef.current||remoteAutosaveInFlightRef.current){notify('Aguarde o salvamento em andamento e selecione a imagem novamente.');return;}
+    if(imageSaveInFlightRef.current){notify('Uma imagem já está sendo salva. Aguarde a conclusão.');return;}
     const templateId=kind==='email'?selectedEmail?.id:selectedForm?.id;
     if(!templateId)return;
     imageSaveInFlightRef.current=true;
     setIsSaving(true);
+    let preparedImage='';
     try{
+      while(remoteAutosaveInFlightRef.current)await new Promise(resolve=>window.setTimeout(resolve,50));
       if(!['image/png','image/jpeg','image/webp'].includes(file.type))throw new Error('Use uma imagem PNG, JPEG ou WebP.');
       if(file.size>10*1024*1024)throw new Error('A imagem deve ter até 10 MB.');
       const bitmap=await createImageBitmap(file);
@@ -610,17 +627,37 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         const context=canvas.getContext('2d');if(!context)throw new Error('Não foi possível preparar a imagem.');
         context.drawImage(bitmap,0,0,canvas.width,canvas.height);value=canvas.toDataURL('image/webp',0.85);
       }finally{bitmap.close();}
+      preparedImage=value;
       // Keep the prepared image and target while confirming access; retry only once.
-      const imageInput={kind,templateId,field,value,expectedRevision:revision};
+      const collection=kind==='email'?'emailDesigns':'formDesigns';
+      const base=serverStudioRef.current;
+      const imageInput={kind,templateId,field,value,expectedRevision:Number(base.revision||0),expectedImageValue:(base[collection]?.[templateId] as any)?.[field]||''};
       const saved=await retryAfterPortalReauthentication(
         () => apiClient.saveStudioImage(imageInput),
         'Digite o código enviado ao seu e-mail para salvar a imagem. A imagem selecionada será mantida e o envio continuará após a confirmação.'
       );
-      if(kind==='email')setEmailDesigns(previous=>({...previous,[templateId]:{...selectedEmailDesign,...previous[templateId],templateId,[field]:saved.imageUrl}}));
-      else setFormDesigns(previous=>({...previous,[templateId]:{...selectedFormDesign,...previous[templateId],templateId,logoUrl:saved.imageUrl}}));
+      const local=structuredClone(currentStudioSnapshotRef.current||buildSnapshot());
+      (local[collection] as any)[templateId]={...(local[collection] as any)[templateId],[field]:saved.imageUrl};
+      const baseline=structuredClone(base);
+      (baseline[collection] as any)[templateId]={...(baseline[collection] as any)[templateId],[field]:saved.imageUrl};
+      try{
+        const merged=mergeStudioDraft(baseline,local,saved.studio);
+        applyStudioSource(merged);serverStudioRef.current=saved.studio;saveLocalStudio(merged);
+        setIsDirty(true);setImageMergeBlocked(false);
+      }catch(error){setImageMergeBlocked(true);saveLocalStudio(local);throw error;}
       setRevision(saved.revision);setLastSavedAt(saved.savedAt);setImageSavedAt(saved.savedAt);setAutosaveError('');
       notify('Imagem salva no servidor.');
-    }catch(error){notify(error instanceof Error?error.message:'Não foi possível salvar a imagem.');}
+    }catch(error){
+      if(preparedImage){
+        const draft=structuredClone(currentStudioSnapshotRef.current||buildSnapshot());const collection=kind==='email'?'emailDesigns':'formDesigns';
+        (draft[collection] as any)[templateId]={...(draft[collection] as any)[templateId],templateId,[field]:preparedImage};
+        saveLocalStudio(draft);
+        if(kind==='email')setEmailDesigns(draft.emailDesigns);else setFormDesigns(draft.formDesigns);
+        setImageMergeBlocked(true);setIsDirty(true);
+        setAutosaveError('A imagem foi preservada no rascunho deste navegador. Reabra o editor, confira a alteração de outra sessão e selecione a imagem para tentar novamente.');
+      }
+      notify(error instanceof Error?error.message:'Não foi possível salvar a imagem.');
+    }
     finally{imageSaveInFlightRef.current=false;setIsSaving(false);}
   };
 
@@ -1005,6 +1042,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const addWorkflowAction = (stageId:string,value:string) => {
     const [type,refId]=value.split(':',2) as ['doc'|'email'|'form'|'action',string];
     if(!type)return;
+    const hidden=workflowStages.find(stage=>stage.id===stageId)?.hiddenCatalogItems?.includes(value);
+    if(hidden){setWorkflowStages(previous=>previous.map(stage=>stage.id===stageId?{...stage,hiddenCatalogItems:(stage.hiddenCatalogItems||[]).filter(item=>item!==value)}:stage));setIsDirty(true);return;}
     const binding=type==='doc'?signatureWorkflowBinding(docTemplates.find(item=>item.id===refId)):undefined;
     if(binding&&workflowStages.find(stage=>stage.id===stageId)?.triggerEvent!==binding.event){notify('Selecione a etapa responsável por este documento antes de adicionar a assinatura.');return;}
     const source=type==='doc'?docTemplates.find(item=>item.id===refId):type==='email'?emailTemplates.find(item=>item.id===refId):type==='form'?formTemplates.find(item=>item.id===refId):undefined;
@@ -1014,13 +1053,19 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       const alreadyExists=type==='action'
         ? stage.actions.some(action=>action.type==='action'&&!action.refId)
         : stage.actions.some(action=>action.type===type&&action.refId===refId);
-      if(alreadyExists)return stage;
-      return {...stage,actions:[...stage.actions,{id:`action-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,type,refId:type==='action'?undefined:refId,title:title||'Nova ação',recipientOrDetail:''}]};
+      if(alreadyExists)return {...stage,hiddenCatalogItems:(stage.hiddenCatalogItems||[]).filter(item=>item!==`${type}:${refId}`)};
+      return {...stage,hiddenCatalogItems:(stage.hiddenCatalogItems||[]).filter(item=>item!==`${type}:${refId}`),actions:[...stage.actions,{id:`action-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,type,refId:type==='action'?undefined:refId,title:title||'Nova ação',recipientOrDetail:''}]};
     }));
     setIsDirty(true);
   };
   const updateWorkflowAction = (stageId:string,actionId:string,patch:Partial<WorkflowActionItem>) => {setWorkflowStages(previous=>previous.map(stage=>stage.id===stageId?{...stage,actions:stage.actions.map(action=>action.id===actionId?{...action,...patch}:action)}:stage));setIsDirty(true);};
   const removeWorkflowAction = (stageId:string,actionId:string) => {setWorkflowStages(previous=>previous.map(stage=>stage.id===stageId?{...stage,actions:stage.actions.filter(action=>action.id!==actionId)}:stage));setIsDirty(true);};
+
+  const deleteWorkflowRow = (stageId:string,value:string,actionId?:string) => {
+    const [type,refId]=value.split(':',2);
+    setWorkflowStages(previous=>previous.map(stage=>stage.id===stageId?{...stage,hiddenCatalogItems:[...new Set([...(stage.hiddenCatalogItems||[]),value])],actions:stage.actions.filter(action=>action.id!==actionId&&!(action.type===type&&action.refId===refId))}:stage));
+    setIsDirty(true);
+  };
 
   const moveWorkflowAction = (stageId:string, actionIndex:number, direction:-1|1) => {
     setWorkflowStages(previous=>previous.map(stage=>{
@@ -1109,7 +1154,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const selectedWorkflowRows = selectedWorkflowStage
     ? (() => {
         const matchedIds=new Set<string>();
-        const catalogRows=workflowCatalog.map(item=>{
+        const catalogRows=workflowCatalog.filter(item=>!selectedWorkflowStage.hiddenCatalogItems?.includes(item.value)).map(item=>{
           const action=workflowCatalogAction(selectedWorkflowStage,item.value);
           if(action)matchedIds.add(action.id);
           return {...item,action};
@@ -1150,7 +1195,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
           <div className="min-h-0 flex-1 overflow-auto p-3"><PdfCanvasPreview base64={documentPreview.base64} remoteUrl={documentPreview.remoteUrl} label={selectedDoc.label}/></div>
         </section>
       </div>}
-      {hideTabs && autosaveError && <div role="alert" className="mx-3 my-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950"><span>Alterações ainda não publicadas: {autosaveError}</span><button type="button" className="rounded-md border border-amber-400 bg-white px-2 py-1 font-bold" onClick={()=>setAutosaveRetry(value=>value+1)}>Tentar salvar novamente</button></div>}
+      {hideTabs && autosaveError && <div role="alert" className="mx-3 my-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950"><span>Alterações ainda não publicadas: {autosaveError}</span><button type="button" className="rounded-md border border-amber-400 bg-white px-2 py-1 font-bold" onClick={()=>imageMergeBlocked?window.location.reload():setAutosaveRetry(value=>value+1)}>{imageMergeBlocked?'Reabrir e conferir':'Tentar salvar novamente'}</button></div>}
       <div className={`${hideTabs ? 'hidden' : 'portal-studio-heading flex flex-wrap items-center justify-between gap-2 border-b border-[var(--portal-brand-action-border)] bg-[var(--portal-brand-action)] px-3 py-2.5 text-white'}`}>
         <div><h3 className="text-xs font-black normal-case tracking-wide">Editor de modelos e variáveis</h3><p className="mt-0.5 text-[9px] text-white/80">Selecione uma área acima e trabalhe com seleção, edição e visualização no mesmo contexto.</p></div>
         <div className="flex items-center gap-2"><div className="hidden text-right text-[9px] font-semibold text-white/80 md:block">{isDirty ? (draftSavedAt ? `Rascunho automático ${new Date(draftSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Salvando rascunho…') : (lastSavedAt ? `Publicado ${new Date(lastSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Ainda não publicado')}</div><button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-white bg-white px-3 py-1.5 text-[10px] font-black normal-case tracking-wide text-black shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Publicando…' : 'Publicar'}</button></div>
@@ -1604,7 +1649,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                               <input disabled={!action||!condition||['NOT_EMPTY','IS_TRUE'].includes(condition.operator)} value={condition?.value||''} onChange={event=>action&&condition&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{condition:{...condition,value:event.target.value}})} className={inputClass} placeholder="Valor"/>
                             </div>
                           </td>
-                          <td className="px-2 py-2 text-center">{action?<button type="button" onClick={()=>removeWorkflowAction(selectedWorkflowStage.id,action.id)} className="portal-toolbar-icon-button !h-6 !min-h-6 !w-6 !min-w-6 text-rose-700" title="Remover item da etapa" aria-label={`Remover ${action.title} da etapa`}><Trash2 className="h-3 w-3"/></button>:<span className="text-slate-400">—</span>}</td>
+                          <td className="px-2 py-2 text-center">{<button type="button" onClick={()=>deleteWorkflowRow(selectedWorkflowStage.id,row.value,action?.id)} className="portal-toolbar-icon-button !h-6 !min-h-6 !w-6 !min-w-6 text-rose-700" title="Remover item da etapa" aria-label={`Excluir ${row.label} da etapa`}><Trash2 className="h-3 w-3"/></button>}</td>
                         </tr>;
                       })}
                     </tbody>

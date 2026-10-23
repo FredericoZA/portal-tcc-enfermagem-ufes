@@ -26,7 +26,7 @@ export function upgradeStudioDraft(source: Partial<IntegrationStudioSettings>): 
   let initial=stages.find(s=>s.triggerEvent==='TCC_CREATED');
   if(!initial){initial={id:'stage-registration',title:'Cadastro e pedido de reserva',triggerEvent:'TCC_CREATED',actions:[]};stages.unshift(initial);}
   initial.actions=(initial.actions||[]).filter((a:any)=>!(a.type==='email'&&a.refId==='email-confirmacao'));
-  if(!initial.actions.some((a:any)=>a.refId===reservation!.id))initial.actions.unshift({id:'action-reservation-request',type:'email',refId:reservation.id,title:'Solicitar reserva ao departamento'});
+  if(!initial.hiddenCatalogItems?.includes(`email:${reservation.id}`)&&!initial.actions.some((a:any)=>a.refId===reservation!.id))initial.actions.unshift({id:'action-reservation-request',type:'email',refId:reservation.id,title:'Solicitar reserva ao departamento'});
   value.workflowStages=registrationFirst(stages);
   value.operationalConfig=operationalConfig(value);
   value.formTemplates ||= [];

@@ -33,11 +33,12 @@ try {
     const dependencies = process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES;
     if (dependencies) ({ chromium } = createRequire(path.join(dependencies, '__portal_resolver.cjs'))('playwright'));
   }
-  if (!chromium || !existsSync(chromium.executablePath())) {
+  const executablePath=process.env.PORTAL_VISUAL_BROWSER_EXECUTABLE;
+  if (!chromium || !existsSync(executablePath||chromium.executablePath())) {
     throw Object.assign(new Error('Chromium de automação ausente. Instale Playwright e seu navegador no ambiente de verificação.'), { unavailable: true });
   }
 
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true,...(executablePath?{executablePath}:{}) });
   dataDir = await mkdtemp(path.join(tmpdir(), 'portal-visual-'));
   const port = 40500 + Math.floor(Math.random() * 1000);
   const base = `http://127.0.0.1:${port}`;
@@ -46,6 +47,7 @@ try {
     env: {
       ...process.env,
       NODE_ENV: 'development',
+      DISABLE_HMR: 'true',
       VERCEL: '',
       PORT: String(port),
       PORTAL_DATA_DIR: dataDir,
@@ -310,15 +312,15 @@ try {
             calendarVisual.cellCount < 20
             || calendarVisual.cellCount > 23
             || calendarVisual.dayColors.length !== 1
-            || calendarVisual.dayColors[0] !== 'rgb(213, 220, 224)'
+            || calendarVisual.dayColors[0] !== 'rgb(216, 223, 227)'
           ) {
             report.errors.push(`master-calendario-${width}: grade útil ou cor dos dias divergente (${JSON.stringify(calendarVisual)}).`);
           }
           if (
             calendarVisual.emptyCount > 0
-            && (calendarVisual.emptyColors.length !== 1 || calendarVisual.emptyColors[0] !== 'rgb(225, 230, 233)')
+            && (calendarVisual.emptyColors.length !== 1 || calendarVisual.emptyColors[0] !== 'rgb(233, 237, 239)')
           ) {
-            report.errors.push(`master-calendario-${width}: vazios do calendário não usam #E1E6E9 (${JSON.stringify(calendarVisual)}).`);
+            report.errors.push(`master-calendario-${width}: vazios do calendário não usam a superfície canônica do painel (${JSON.stringify(calendarVisual)}).`);
           }
           if (
             Math.abs(calendarVisual.dividerTop - 5) > 0.5
@@ -349,8 +351,8 @@ try {
             };
           }, tab);
           if (
-            layerContract.panel !== 'rgb(225, 230, 233)'
-            || layerContract.card !== 'rgb(213, 220, 224)'
+            layerContract.panel !== 'rgb(233, 237, 239)'
+            || layerContract.card !== 'rgb(216, 223, 227)'
             || (layerContract.inner && layerContract.inner !== 'rgb(255, 255, 255)')
           ) {
             report.errors.push(`master-${label}-${width}: contrato das superfícies divergente (${JSON.stringify(layerContract)}).`);
@@ -388,7 +390,7 @@ try {
             const box = document.querySelector('#portal-tutorial-finish-card');
             return box ? getComputedStyle(box).backgroundColor : '';
           });
-          if (tutorialColor !== 'rgb(213, 220, 224)') {
+          if (tutorialColor !== 'rgb(216, 223, 227)') {
             report.errors.push(`master-como-usar-${width}: caixa final fora da camada cinza (${tutorialColor}).`);
           }
         }
@@ -397,8 +399,8 @@ try {
             const cards = Array.from(document.querySelectorAll('#portal-replication-page .portal-layer-card'));
             return cards.map((el) => Math.round(el.getBoundingClientRect().height));
           });
-          if (!modelCards.length || Math.max(...modelCards) > 160) {
-            report.errors.push(`master-replicar-${width}: cartões de modelos continuam altos (${JSON.stringify(modelCards)}).`);
+          if (modelCards.length !== 8 || Math.max(...modelCards) > 260 || Math.max(...modelCards)-Math.min(...modelCards)>1) {
+            report.errors.push(`master-replicar-${width}: grade de oito cartões de replicação divergente (${JSON.stringify(modelCards)}).`);
           }
         }
         if (tab === 'coordenador' && width >= 768) {
@@ -417,7 +419,7 @@ try {
               return dot ? getComputedStyle(dot).backgroundColor : '';
             });
             const asten = document.querySelector('#coordenador-page-root button[title="Assinar selecionados pela Asten"]');
-            const gov = document.querySelector('#coordenador-page-root button[title="Preparar selecionados para assinatura Gov.br"]');
+            const gov = document.querySelector('#coordenador-page-root button[title="Assinar selecionados pelo Gov.br"]');
             const search = document.querySelector('#coordenador-page-root button[aria-label^="Buscar registros"]');
             const refresh = document.querySelector('#coordenador-refresh-btn');
             const settings = document.querySelector('#coordenador-page-root button[aria-label="Configurar exibição da planilha"]');

@@ -23,7 +23,7 @@ export function withRepositoryDeliveryEmail(source:IntegrationStudioSettings):In
  if(!studio.workflowStages.some(stage=>(stage.actions as Record<string,unknown>[]).some(action=>action.refId===REPOSITORY_DELIVERY_EMAIL_ID||action.referenceId===REPOSITORY_DELIVERY_EMAIL_ID))){
   const action={id:'action-repository-delivery-guidance',type:'email',refId:REPOSITORY_DELIVERY_EMAIL_ID,title:'Orientar autores e orientador sobre a entrega final',condition:{fieldKey:REPOSITORY_DELIVERY_READY,operator:'IS_TRUE'}};
   const stage=studio.workflowStages.find(stage=>stage.triggerEvent==='SIGNATURE_COMPLETED');
-  if(stage)(stage.actions as Record<string,unknown>[]).push(action);
+  if(stage){if(!(stage.hiddenCatalogItems as string[]|undefined)?.includes(`email:${REPOSITORY_DELIVERY_EMAIL_ID}`))(stage.actions as Record<string,unknown>[]).push(action);}
   else{const index=studio.workflowStages.findIndex(stage=>stage.triggerEvent==='REPOSITORY_SUBMITTED');studio.workflowStages.splice(index<0?studio.workflowStages.length:index,0,{id:'stage-repository-delivery-guidance',title:'Ata assinada e orientações para entrega final',triggerEvent:'SIGNATURE_COMPLETED',description:'Após arquivar a ata assinada, orientar os autores e dar ciência ao orientador.',actions:[action]});}
  }
  studio.workflowStages=registrationFirst(studio.workflowStages);
