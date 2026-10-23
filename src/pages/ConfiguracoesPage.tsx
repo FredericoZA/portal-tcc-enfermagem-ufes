@@ -1,3 +1,7 @@
+import {uniqueEmailTemplates} from '../utils/emailTemplateIdentity';
+import {registrationFirst} from '../utils/workflowStageOrder';
+import {consolidateProcessForms} from '../utils/processFormConsolidation';
+import {upgradeOperationalEmailTemplate} from '../utils/operationalEmails';
 import { portalNotice, portalPrompt, portalConfirm } from '../services/portalDialogs';
 import { REGISTRATION_QUESTIONS } from '../utils/operationalConfig';
 import React, { useState, useEffect } from 'react';
@@ -120,6 +124,11 @@ export const DEFAULT_MATRIX_COLUMNS: MatrixColumn[] = [
   { id: 'ORIENTADOR_EMAIL', name: 'ORIENTADOR_EMAIL', label: 'E-mail do orientador', dataType: 'email' },
   { id: 'COORIENTADOR_EMAIL', name: 'COORIENTADOR_EMAIL', label: 'E-mail do coorientador', dataType: 'email' },
   { id: 'BANCA_EMAILS', name: 'BANCA_EMAILS', label: 'E-mails da banca', dataType: 'email' },
+  {id:'LINK_PROCESSO',name:'LINK_PROCESSO',label:'Link individual do TCC',dataType:'text'},
+  {id:'DESTINATARIO_NOME',name:'DESTINATARIO_NOME',label:'Nome do destinatário do e-mail',dataType:'text'},
+  {id:'DESTINATARIO_EMAIL',name:'DESTINATARIO_EMAIL',label:'Endereço do destinatário do e-mail',dataType:'email'},
+  {id:'ORIENTADOR_TRATAMENTO',name:'ORIENTADOR_TRATAMENTO',label:'Orientador com tratamento formal',dataType:'text'},
+  {id:'ORIENTACOES_ACESSO',name:'ORIENTACOES_ACESSO',label:'Passo a passo de acesso por destinatário',dataType:'text'},
   { id: 'PARTICIPANTES_EMAILS', name: 'PARTICIPANTES_EMAILS', label: 'E-mails de todos os participantes', dataType: 'email' },
   { id: 'PUBLICAR_TRABALHO', name: 'PUBLICAR_TRABALHO', label: 'Existe algum conteúdo autorizado para publicação', dataType: 'text' },
   { id: 'PUBLICAR_TRABALHO_COMPLETO', name: 'PUBLICAR_TRABALHO_COMPLETO', label: 'Publicação do trabalho completo', dataType: 'text' },
@@ -183,6 +192,7 @@ export interface WorkflowStageItem {
   triggerEvent: string;
   description: string;
   actions: WorkflowActionItem[];
+  hiddenCatalogItems?: string[];
 }
 
 export interface DocFieldItem {
@@ -1105,12 +1115,12 @@ export const ConfiguracoesPage: React.FC = () => {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplateItem[]>(() => {
     const saved = localStorage.getItem('portal_email_templates');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+      try { return JSON.parse(saved).map(upgradeOperationalEmailTemplate); } catch (e) { console.error(e); }
     }
     return [
       {
         id: 'email-reserva', name: 'Solicitação de reserva ao departamento', triggerStage: 'Cadastro inicial',
-        recipient: String(settings?.emailConfig?.roomReservationDepartmentEmail || ''), subject: '[TCC <<PROTOCOLO>>] Solicitação de reserva',
+        recipient: String(settings?.emailConfig?.roomReservationDepartmentEmail || ''), subject: 'Solicitação de reserva de sala para apresentação de TCC - Curso de Enfermagem [<<PROTOCOLO>>]',
         body: 'Prezados,\n\nSolicitamos reserva para a defesa de <<CAMPO_01>>.\nTítulo: <<TITULO>>\nData e hora: <<DEFESA_DATA_HORA>>\nLocal preferido: <<DEFESA_LOCAL>>\nCaso indisponível, solicitamos o local alternativo: <<LOCAL_ALTERNATIVO>>.\n\nPor favor, confirmem o agendamento ao aluno: <<ALUNO_1_EMAIL>>.\nOrientador: <<ORIENTADOR_NOME>>.\n\nAtenciosamente, Comissão de TCC do Departamento de Enfermagem', attachments: []
       },
       {
@@ -1140,8 +1150,20 @@ export const ConfiguracoesPage: React.FC = () => {
         body: 'Prezado(a) <<CAMPO_01>>,\n\nA ata e as declarações concluídas estão disponíveis no seu painel: <<LINK_PORTAL>>\n\nAtenciosamente,\nComissão de TCC do Departamento de Enfermagem',
         attachments: ['tmpl-ata', 'tmpl-declaracao', 'tmpl-termo']
       }
-    ];
+    ].map(upgradeOperationalEmailTemplate);
   });
+
+  useEffect(() => {
+    const unique=uniqueEmailTemplates(emailTemplates);
+    if(unique.length===emailTemplates.length)return;
+    // Preserve the pre-repair contents before removing records with repeated IDs.
+    const key='portal_email_template_recovery_v1';
+    let previous:unknown[]=[];
+    try{const raw=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(raw))previous=raw;}catch{}
+    const snapshot=JSON.stringify(emailTemplates);
+    if(!previous.some(entry=>JSON.stringify(entry)===snapshot))localStorage.setItem(key,JSON.stringify([...previous,emailTemplates]));
+    setEmailTemplates(unique);
+  },[emailTemplates]);
 
   useEffect(() => {
     const configuredDepartmentEmail = String(settings?.emailConfig?.roomReservationDepartmentEmail || '').trim().toLowerCase();
@@ -1162,7 +1184,7 @@ export const ConfiguracoesPage: React.FC = () => {
       } else {
         next.recipient = normalizeMarkers(recipient);
       }
-      return next;
+      return upgradeOperationalEmailTemplate(next);
     }));
   }, [settings?.emailConfig?.roomReservationDepartmentEmail]);
 
@@ -1176,57 +1198,19 @@ export const ConfiguracoesPage: React.FC = () => {
   const defaultFormTemplates: FormTemplateItem[] = [
     {
       id: 'form-reserva-aluno',
-      title: 'Formulário 1: Cadastro inicial do TCC e participantes',
+      title: 'Cadastro inicial do TCC e participantes',
       stage: 'Etapa 1 - Cadastro inicial pelo aluno',
       targetRole: 'Aluno',
       description: 'O aluno autor informa os dados do trabalho, do segundo autor, se houver, do orientador, coorientador e banca. Os e-mails informados passam a ter acesso somente a este processo.',
       questions: REGISTRATION_QUESTIONS.map(q => ({ ...q, expectedAnswer: q.helpText || '' })) as FormQuestionItem[]
     },
-    {
-      id: 'form-banca-orientador',
-      title: 'Formulário 2: Confirmação do local da defesa',
-      stage: 'Etapa 2 - Confirmação do local e convite',
-      targetRole: 'Aluno',
-      description: 'O aluno confirma o local autorizado pelo Departamento de Enfermagem. O convite só é gerado depois desta confirmação.',
-      questions: [
-        { id: 'q2-1', fieldKey: 'CAMPO_07_LOCAL', label: 'Local confirmado para a defesa', fieldType: 'text', expectedAnswer: 'Sala, auditório ou endereço eletrônico autorizado', required: true },
-        { id: 'q2-2', fieldKey: 'COMPROVANTE_LOCAL_URL', label: 'Comprovação da autorização do local (opcional)', fieldType: 'file', expectedAnswer: 'Comprovante opcional em PDF; o aluno declara a confirmação recebida', required: false, availableToTemplates: false }
-      ]
-    },
-    {
-      id: 'form-parecer-banca',
-      title: 'Formulário 3: Conferência, nota e parecer da defesa',
-      stage: 'Etapa 4 - Apresentação & Preenchimento da Ata',
-      targetRole: 'Orientador',
-      description: 'O orientador confere os dados do aluno, registra nota de 0 a 10, resultado e parecer para preencher o DOCX da ata.',
-      questions: [
-        { id: 'q3-1', fieldKey: 'CAMPO_09', label: 'Resultado da defesa', fieldType: 'select', expectedAnswer: 'Aprovado, aprovado com ressalva ou reprovado', required: true, options: ['Aprovado', 'Aprovado com ressalva', 'Reprovado'] },
-        { id: 'q3-grade', fieldKey: 'NOTA_FINAL', label: 'Nota final (0 a 10)', fieldType: 'number', required: true, expectedAnswer: 'Nota com até duas casas decimais', validation: { min: 0, max: 10 } },
-        { id: 'q3-2', fieldKey: 'CAMPO_11', label: 'Parágrafo do parecer do orientador', fieldType: 'textarea', expectedAnswer: 'Um ou dois parágrafos sobre apresentação, arguição e resultado; sem repetir abertura ou encerramento da ata', required: true }
-      ]
-    },
-    {
-      id: 'form-homologacao-coordenador',
-      title: 'Formulário 4: Entrega final e decisão de publicação',
-      stage: 'Etapa 5 - Assinatura, Certificados & Repositório',
-      targetRole: 'Aluno',
-      description: 'Formulário final do aluno para entregar o trabalho, registrar cinco palavras-chave, resumo sintético e decidir a publicação.',
-      questions: [
-        { id: 'q4-1', fieldKey: 'PALAVRAS_CHAVE', label: 'Cinco palavras-chave', fieldType: 'text', expectedAnswer: 'Exatamente cinco palavras ou expressões, separadas por ponto e vírgula', required: true, availableToTemplates: false },
-        { id: 'q4-2', fieldKey: 'RESUMO_SINTETICO', label: 'Resumo sintético do trabalho', fieldType: 'textarea', expectedAnswer: 'De três a cinco parágrafos separados por linha em branco', required: true, availableToTemplates: false },
-        { id: 'q4-3', fieldKey: 'TRABALHO_FINAL_PDF', label: 'Trabalho final em PDF', fieldType: 'file', expectedAnswer: 'Arquivo final completo em PDF', required: true, availableToTemplates: false },
-        { id: 'q4-4', fieldKey: 'PUBLICAR_TRABALHO_COMPLETO', label: 'Autoriza tornar o trabalho completo público?', fieldType: 'radio', expectedAnswer: 'Sim ou não', required: true, options: ['Sim', 'Não'] },
-        { id: 'q4-5', fieldKey: 'INCLUIR_RESUMO_EXPANDIDO', label: 'Deseja anexar um resumo expandido?', fieldType: 'radio', expectedAnswer: 'Sim ou não', required: true, options: ['Sim', 'Não'] },
-        { id: 'q4-6', fieldKey: 'RESUMO_EXPANDIDO_PDF', label: 'Resumo expandido em PDF', fieldType: 'file', expectedAnswer: 'Arquivo opcional em PDF', required: false, availableToTemplates: false, visibleWhen: { fieldKey: 'INCLUIR_RESUMO_EXPANDIDO', operator: 'EQUALS', value: 'Sim' } },
-        { id: 'q4-7', fieldKey: 'PUBLICAR_RESUMO_EXPANDIDO', label: 'Autoriza tornar o resumo expandido público?', fieldType: 'radio', expectedAnswer: 'Sim ou não', required: true, options: ['Sim', 'Não'], visibleWhen: { fieldKey: 'INCLUIR_RESUMO_EXPANDIDO', operator: 'EQUALS', value: 'Sim' } }
-      ]
-    }
+
   ];
 
   const [formTemplates, setFormTemplates] = useState<FormTemplateItem[]>(() => {
     const saved = localStorage.getItem('portal_form_templates');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+      try { return consolidateProcessForms({formTemplates:JSON.parse(saved)}).formTemplates as unknown as FormTemplateItem[]; } catch (e) { console.error(e); }
     }
     return defaultFormTemplates;
   });
@@ -1247,7 +1231,6 @@ export const ConfiguracoesPage: React.FC = () => {
       triggerEvent: 'TCC_CREATED',
       description: 'Registra autoria, título, orientador, coorientador, banca, data e horário; o local permanece pendente.',
       actions: [
-        { id: 'act-200', type: 'form', refId: 'form-banca-orientador', title: 'Libera Formulário 2 (Confirmação do local)', recipientOrDetail: 'Preenchido pelo aluno antes da geração do convite' },
         { id: 'act-102', type: 'email', refId: 'email-reserva', title: 'Solicita reserva ao departamento', recipientOrDetail: 'Destinatário definido pelo Master' }
       ]
     },
@@ -1269,7 +1252,6 @@ export const ConfiguracoesPage: React.FC = () => {
       triggerEvent: 'INVITATION_SENT',
       description: 'Mantém os participantes informados e orienta o acesso do orientador no dia da avaliação.',
       actions: [
-        { id: 'act-301', type: 'form', refId: 'form-parecer-banca', title: 'Libera Formulário 3 (Resultado e parecer)', recipientOrDetail: 'Disponível ao orientador a partir da defesa' },
         { id: 'act-302', type: 'email', refId: 'email-confirmacao', title: 'Lembrete da defesa e acesso à avaliação', recipientOrDetail: 'Destinatários: aluno, orientador e banca' }
       ]
     },
@@ -1281,7 +1263,6 @@ export const ConfiguracoesPage: React.FC = () => {
       description: 'O orientador confere os dados, registra o resultado e escreve o parágrafo variável do parecer.',
       actions: [
         { id: 'act-401', type: 'doc', refId: 'tmpl-ata', title: 'Gera Ata de Defesa e envia à Asten', recipientOrDetail: 'Assinatura do orientador' },
-        { id: 'act-402', type: 'form', refId: 'form-homologacao-coordenador', title: 'Libera Formulário 4 (Entrega final)', recipientOrDetail: 'Disponível ao aluno após a avaliação' }
       ]
     },
     {
@@ -1310,13 +1291,18 @@ export const ConfiguracoesPage: React.FC = () => {
   const [workflowStages, setWorkflowStages] = useState<WorkflowStageItem[]>(() => {
     const saved = localStorage.getItem('workflow_pipeline_stages');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+      try { return registrationFirst(JSON.parse(saved)); } catch (e) { console.error(e); }
     }
-    return initialPipelineStages;
+    return registrationFirst(initialPipelineStages);
   });
 
   const [draggedPayload, setDraggedPayload] = useState<{ type: 'doc' | 'email' | 'form' | 'action'; id: string; title: string; recipientOrDetail?: string } | null>(null);
   const [addingToStageId, setAddingToStageId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ordered=registrationFirst<WorkflowStageItem>(workflowStages);
+    if(ordered.some((stage,index)=>stage.id!==workflowStages[index]?.id||stage.stageNumber!==workflowStages[index]?.stageNumber))setWorkflowStages(ordered);
+  },[workflowStages]);
 
   // Save workflow pipeline to localStorage on changes
   useEffect(() => {
@@ -1327,6 +1313,7 @@ export const ConfiguracoesPage: React.FC = () => {
     const newStages = [...workflowStages];
     const targetIndex = direction === 'left' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newStages.length) return;
+    if((index===0||targetIndex===0)&&newStages[0].triggerEvent==='TCC_CREATED')return;
     
     const temp = newStages[index];
     newStages[index] = newStages[targetIndex];
@@ -2089,7 +2076,7 @@ export const ConfiguracoesPage: React.FC = () => {
           <section id="portal-settings-hub" className="portal-settings-list space-y-2 bg-transparent">
             <div className="flex items-center gap-2 py-1 pt-3" aria-label="Grupo institucional e plataforma">
               <span className="portal-settings-group-line h-px flex-1" />
-              <span className="portal-settings-group-label text-[10px] font-black uppercase tracking-[0.16em]">Institucional e Plataforma</span>
+              <span className="portal-settings-group-label text-[10px] font-black normal-case tracking-[0.16em]">Institucional e Plataforma</span>
               <span className="portal-settings-group-line h-px flex-1" />
             </div>
             {[
@@ -2098,32 +2085,32 @@ export const ConfiguracoesPage: React.FC = () => {
             ].map(({ id, title, text, icon: Icon }) => (
               <button key={id} type="button" onClick={() => setActiveSettingsPanel(id as any)} className="portal-settings-launcher flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left shadow-sm">
                 <Icon className="portal-settings-launcher-icon h-5 w-5 shrink-0" />
-                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[11px] leading-4 text-slate-600">{text}</span></span>
+                <span className="min-w-0 flex-1"><strong className="block text-xs font-black normal-case tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[11px] leading-4 text-slate-600">{text}</span></span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
               </button>
             ))}
 
             <div className="flex items-center gap-2 py-1 pt-3" aria-label="Grupo modelos e variáveis">
               <span className="portal-settings-group-line h-px flex-1" />
-              <span className="portal-settings-group-label text-[10px] font-black uppercase tracking-[0.16em]">Modelos e Variáveis</span>
+              <span className="portal-settings-group-label text-[10px] font-black normal-case tracking-[0.16em]">Modelos e Variáveis</span>
               <span className="portal-settings-group-line h-px flex-1" />
             </div>
             {[
               { id: 'models-documents', title: 'Documentos e Variáveis', text: 'Modelos oficiais, versões, variáveis detectadas, mescla e propagação em um único espaço.', icon: FileText },
               { id: 'emails', title: 'E-mails', text: 'Mensagens institucionais, destinatários, variáveis, anexos e prévia final.', icon: Mail },
-              { id: 'forms', title: 'Formulários', text: 'Formulários institucionais, campos, regras, variáveis e prévia final.', icon: ClipboardList },
+              { id: 'forms', title: 'Formulários', text: 'Formulários, campos, regras, variáveis e prévia.', icon: ClipboardList },
               { id: 'workflow', title: 'Fluxos', text: 'Etapas, eventos e ações do processo de TCC.', icon: Layers },
             ].map(({ id, title, text, icon: Icon }) => (
               <button key={id} type="button" onClick={() => setActiveSettingsPanel(id as any)} className="portal-settings-launcher flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left shadow-sm">
                 <Icon className="portal-settings-launcher-icon h-5 w-5 shrink-0" />
-                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[11px] leading-4 text-slate-600">{text}</span></span>
+                <span className="min-w-0 flex-1"><strong className="block text-xs font-black normal-case tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[11px] leading-4 text-slate-600">{text}</span></span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
               </button>
             ))}
 
             <div className="flex items-center gap-2 py-1 pt-3" aria-label="Grupo acesso e registros">
               <span className="portal-settings-group-line h-px flex-1" />
-              <span className="portal-settings-group-label text-[10px] font-black uppercase tracking-[0.16em]">Acesso e Registros</span>
+              <span className="portal-settings-group-label text-[10px] font-black normal-case tracking-[0.16em]">Acesso e Registros</span>
               <span className="portal-settings-group-line h-px flex-1" />
             </div>
             {[
@@ -2133,7 +2120,7 @@ export const ConfiguracoesPage: React.FC = () => {
             ].map(({ id, title, text, icon: Icon }) => (
               <button key={id} type="button" onClick={() => setActiveSettingsPanel(id as any)} className="portal-settings-launcher flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left shadow-sm">
                 <Icon className="portal-settings-launcher-icon h-5 w-5 shrink-0" />
-                <span className="min-w-0 flex-1"><strong className="block text-xs font-black uppercase tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[11px] leading-4 text-slate-600">{text}</span></span>
+                <span className="min-w-0 flex-1"><strong className="block text-xs font-black normal-case tracking-wide text-black">{title}</strong><span className="mt-0.5 block text-[11px] leading-4 text-slate-600">{text}</span></span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
               </button>
             ))}
@@ -2177,7 +2164,7 @@ export const ConfiguracoesPage: React.FC = () => {
                 ] : activeSettingsPanel === 'emails' ? [
                   { id: 'emails', fullBleed: true, label: 'E-mails', description: 'Modelos, variáveis, anexos e pré-visualização.', icon: Mail, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-emails" initialTab="emails" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'forms' ? [
-                  { id: 'forms', fullBleed: true, label: 'Formulários', description: 'Campos, regras, variáveis e prévia no mesmo contexto.', icon: ClipboardList, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-forms" initialTab="forms" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
+                  { id: 'forms', fullBleed: true, label: 'Formulários', description: 'Criação, exclusão, campos e regras dos formulários.', icon: ClipboardList, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-forms" initialTab="forms" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'workflow' ? [
                   { id: 'workflow', fullBleed: true, label: 'Fluxos', description: 'Etapas e ações do fluxo operacional.', icon: Layers, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-workflow" initialTab="workflow" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudio} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'variables' ? [

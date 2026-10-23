@@ -15,7 +15,7 @@ test('paleta semântica possui uma única fonte de valores no CSS canônico', as
   assert.ok(main.includes("import './index.css';"));
   assert.ok(tokens.includes("PORTAL_THEME.semantic.defense"));
   assert.ok(tokens.includes('resolvePortalFilterTone'));
-  assert.ok(css.includes('--portal-surface-page: #f1f5f9'));
+  assert.ok(css.includes('--portal-surface-page: #f6f7f8'));
   assert.ok(css.includes('--portal-defense-defended-bg: #bed8c3'));
   assert.ok(css.includes('--portal-defense-upcoming-bg: #e8dda7'));
   assert.ok(css.includes('background: var(--portal-tone-bg)'));

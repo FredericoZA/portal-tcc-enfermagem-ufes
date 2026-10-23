@@ -70,8 +70,8 @@ function expandedAbstractState(process: ProcessData): PublicArtifactState {
 }
 
 /**
- * Contrato do repositório anônimo. Os links só existem para cópias explicitamente
- * publicadas; originais privados e seus IDs nunca são serializados.
+ * Contrato do repositório anônimo. Os links passam pela autorização do Portal;
+ * os originais permanecem privados e seus IDs nunca são serializados.
  */
 export function publicRepositoryView(process: ProcessData) {
   const workState = fullWorkState(process);

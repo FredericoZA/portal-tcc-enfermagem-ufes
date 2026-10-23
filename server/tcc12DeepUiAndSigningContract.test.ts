@@ -40,7 +40,7 @@ test('editor de e-mail usa o próprio modelo como editor direto',()=>{
   assert.match(studio,/aria-label="Selecionar e-mail"/);
   assert.match(studio,/title="Adicionar outro modelo de e-mail"/);
   assert.match(studio,/title="Excluir somente este modelo de e-mail"/);
-  assert.match(studio,/HTML avançado/);
+  assert.doesNotMatch(studio,/HTML avançado/);
   assert.match(studio,/TemplateVariableControl/);
   assert.match(studio,/Digite &lt;&lt; para escolher uma variável disponível/);
   assert.match(studio,/SettingsWorkspaceHeaderPortal/);
@@ -51,19 +51,22 @@ test('editor de e-mail usa o próprio modelo como editor direto',()=>{
 test('detalhes do TCC seguem a nova hierarquia visual',()=>{
   const detail=read('src/pages/ProcessoDetailPage.tsx');
   assert.match(detail,/>Detalhes do TCC</);
-  assert.match(detail,/Enfermagem e Obstetrícia UFES, Maruípe UFES/);
+  assert.doesNotMatch(detail,/Enfermagem e Obstetrícia UFES, Maruípe UFES/);
   assert.doesNotMatch(detail,/Painel de Gestão e Detalhes do TCC/);
   assert.match(detail,/EtapaProgressBar currentEtapa/);
-  assert.match(detail,/Conceito:/);
-  assert.match(detail,/Ficha Cadastral & Defesa/);
-  assert.doesNotMatch(detail,/ProcessFlowPanel/);
+  assert.doesNotMatch(detail,/aria-label="Identificação do TCC"/);
+  assert.match(detail,/portal-tcc-record-title[\s\S]*process.titulo/);
+  assert.match(detail,/label:'Dados do processo'/);
+  assert.match(detail,/ProcessFlowPanel[\s\S]*canConfirm=\{\(isStudent \|\| isMasterAdmin\)/);
 });
 
 test('seleção da planilha habilita ações em lote e servidor serializa criação idempotente',()=>{
   const coordinator=read('src/pages/CoordenadorPage.tsx');
   const server=read('server.ts');
-  assert.match(coordinator,/disabled=\{selectedIds\.length===0 \|\| signingIds\.length > 0\}/);
-  assert.match(coordinator,/Esta declaração ainda não está disponível para assinatura Gov\.br/);
+  assert.match(coordinator,/disabled=\{dataLoadFailed \|\| selectedIds\.length===0 \|\| signingIds\.length > 0\}/);
+  assert.match(coordinator,/AstenDeclarationBatchModal/);
+  assert.match(coordinator,/disabled=\{dataLoadFailed \|\| selectedGovbrProcesses\.length===0 \|\| signingIds\.length > 0\}/);
+  assert.match(coordinator,/dispatchDeclarationToAsten\(queue, signatureJobs, id, apiClient\)/);
   assert.match(server,/const signatureJobCreationLocks=new Map<string,Promise<SignatureJob>>\(\)/);
   assert.match(server,/createSignatureJobUnlocked/);
   assert.match(server,/const inFlight=signatureJobCreationLocks\.get\(lockKey\)/);

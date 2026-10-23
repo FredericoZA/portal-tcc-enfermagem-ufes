@@ -15,7 +15,7 @@ const themeBridge = read('../src/constants/theme.ts');
 const docs = read('../docs/ARQUITETURA_VISUAL_CANONICA.md');
 
 const required = [
-  '#f1f5f9', '#e1e6e9', '#d5dce0', '#ffffff',
+  '#f6f7f8', '#e9edef', '#d8dfe3', '#ffffff',
   '#005830', '#337959', '#011f17', '#154d41',
   '45px', '5px', '15px', '35px', '30px', '24px'
 ];
@@ -57,7 +57,7 @@ test('entrypoint visual só compõe as folhas canônicas', () => {
 
 test('paleta estrutural concreta existe apenas nos tokens', () => {
   const implementation = [layout, components, sheets, pages, responsive, themeBridge].join('\n');
-  for (const hex of ['#f1f5f9', '#e1e6e9', '#d5dce0', '#005830', '#337959', '#011f17', '#154d41']) {
+  for (const hex of ['#f6f7f8', '#e9edef', '#d8dfe3', '#005830', '#337959', '#011f17', '#154d41']) {
     assert.ok(!implementation.includes(hex), `cor estrutural hardcoded fora dos tokens: ${hex}`);
   }
 });

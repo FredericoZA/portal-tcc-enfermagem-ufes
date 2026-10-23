@@ -20,19 +20,21 @@
     "SUPABASE_URL": "https://vvgdmycmotazqjvpywmk.supabase.co",
     "SUPABASE_SECURE_FILES_BUCKET": "portal-secure-transfer",
     "PORTAL_DRIVE_ROOT_FOLDER_ID": "1zkG3fBm2tJESZjZP0_7jStUuPNXCwRPS",
+    "PORTAL_DRIVE_TECHNICAL_FOLDER_ID": "1j1_8TCUjo09I9AA2QSP9gcNIMp2Rv3bn",
     "GOOGLE_ALLOW_EXISTING_MODEL_LINKS": "true",
-    "ASTEN_INTEGRATION_ENABLED": "false",
-    "ASTEN_AUTHENTICATION_OPTION": "2",
-    "ASTEN_REQUIRE_LOGIN": "true",
+    "ASTEN_INTEGRATION_ENABLED": "true",
+    "ASTEN_AUTHENTICATION_OPTION": "0",
+    "ASTEN_REQUIRE_LOGIN": "false",
     "ASTEN_REQUIRE_CODE": "false",
     "ASTEN_CALLBACK_URL": "https://portal-tcc-enfermagem-ufes.vercel.app/api/integrations/asten/webhook",
-    "ASTEN_PILOT_APPROVED": "false",
-    "ASTEN_PRODUCTION_RELEASE_APPROVED": "false"
+    "ASTEN_PILOT_APPROVED": "true",
+    "ASTEN_PRODUCTION_RELEASE_APPROVED": "true",
+    "ASTEN_SIGNING_PROFILE": "EMAIL_LINK"
   },
   "functions": {
     "api/index.ts": {
       "maxDuration": 300,
-      "includeFiles": "dist/server/**"
+      "includeFiles": "{dist/server/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs}"
     },
     "api/replication-model.ts": {
       "maxDuration": 60

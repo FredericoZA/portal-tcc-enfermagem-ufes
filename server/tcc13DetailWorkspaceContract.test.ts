@@ -7,7 +7,8 @@ const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8
 test('detalhes do TCC usam um único workspace abaixo do fluxo',()=>{
   const page=read('src/pages/ProcessoDetailPage.tsx');
   assert.match(page,/id="tcc-detail-workspace"/);
-  assert.match(page,/portal-tcc-workspace-summary/);
+  assert.doesNotMatch(page,/aria-label="Identificação do TCC"/);
+  assert.match(page,/portal-tcc-record-title/);
   assert.match(page,/portal-tcc-workspace-tabs/);
   assert.match(page,/portal-tcc-workspace-content/);
 });

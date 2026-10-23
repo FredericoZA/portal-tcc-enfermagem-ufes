@@ -1,3 +1,5 @@
+import { ClipboardList } from 'lucide-react';
+import {normalizeRegistrationValue} from '../utils/registrationNormalization';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
@@ -9,12 +11,16 @@ import type { RegistrationAnswers, RegistrationQuestion } from '../types/operati
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
 
 function Question({ field, value, readOnly, onChange }: { field: RegistrationQuestion; value: unknown; readOnly: boolean; onChange: (value: string|boolean)=>void }) {
-  return <label className={`block ${field.fieldType==='textarea'?'sm:col-span-2':''}`}>
-    <span className="mb-2 block text-sm font-semibold">{field.label}{field.required?' *':''}</span>
-    {field.fieldType==='checkbox'?<input type="checkbox" className="h-6 w-6" checked={value===true} onChange={e=>onChange(e.target.checked)}/>:
+  const [touched,setTouched]=useState(false);
+  const normalized=normalizeRegistrationValue(field.fieldKey,field.fieldType,value);
+  const issue=touched?(field.required&&!String(normalized??'').trim()?'Preencha este campo.':field.fieldType==='email'&&normalized&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(normalized))?'Confira o e-mail. Use nome@domínio, sem espaços.':validateStudioAnswer(normalized,field.validation)):null;
+  return <label className={`block ${field.fieldType==='textarea'||['DEFESA_LOCAL','LOCAL_ALTERNATIVO','DEFESA_DATA_HORA'].includes(field.fieldKey)?'sm:col-span-2':''}`}>
+    <span className="mb-2 block text-sm font-semibold">{({DEFESA_LOCAL:'Primeira opção de local',LOCAL_ALTERNATIVO:'Segunda opção de local',DEFESA_DATA_HORA:'Data e horário da defesa'} as Record<string,string>)[field.fieldKey]||field.label}{field.required?' *':''}</span>
+    {field.fieldType==='datetime-local'?<span className="portal-registration-date-time grid grid-cols-2 gap-3"><input aria-label="Data da defesa" className="portal-input" type="date" value={String(value??'').split('T')[0]||''} onChange={e=>onChange(`${e.target.value}T${String(value??'').split('T')[1]||'14:00'}`)}/><input aria-label="Horário da defesa" className="portal-input" type="time" step={300} value={String(value??'').split('T')[1]||''} onChange={e=>onChange(`${String(value??'').split('T')[0]||''}T${e.target.value}`)}/></span>:field.fieldType==='checkbox'?<input type="checkbox" className="h-6 w-6" checked={value===true} onChange={e=>onChange(e.target.checked)}/>:
       field.fieldType==='textarea'?<textarea className="portal-input" rows={5} value={String(value??'')} maxLength={field.validation?.maxLength||10000} onChange={e=>onChange(e.target.value)}/>:
       ['select','radio'].includes(field.fieldType)?<select className="portal-input" value={String(value??'')} onChange={e=>onChange(e.target.value)}><option value="">Selecione…</option>{field.options?.map(option=><option key={option}>{option}</option>)}</select>:
-      <input className="portal-input" type={['email','number','date','datetime-local'].includes(field.fieldType)?field.fieldType:'text'} readOnly={readOnly} value={String(value??'')} placeholder={field.placeholder} maxLength={field.validation?.maxLength||500} onChange={e=>onChange(e.target.value)}/>}
+      <input className="portal-input" type={['email','number','date','datetime-local'].includes(field.fieldType)?field.fieldType:'text'} readOnly={readOnly} value={String(value??'')} aria-invalid={issue?true:undefined} onBlur={()=>{onChange(String(normalizeRegistrationValue(field.fieldKey,field.fieldType,value??'')));setTouched(true);}} placeholder={field.placeholder} maxLength={field.validation?.maxLength||500} onChange={e=>onChange(e.target.value)}/>}
+    {issue&&<span role="alert" className="mt-1 block text-xs text-red-800">{issue}</span>}
     {field.helpText&&<span className="mt-1 block text-sm opacity-80">{field.helpText}</span>}
   </label>;
 }
@@ -59,7 +65,7 @@ export function ConfigurableRegistration({ onSuccess, onCancel }: { onSuccess:(i
     const timer=setTimeout(queueSave,900);return()=>clearTimeout(timer);
   },[answers,currentSection,eligibility,busy,studio?.revision,isMasterAdmin,draftReview]);
   const check=(all:boolean)=>{
-    for(const field of all?visible:selected){const value=answers[field.fieldKey];
+    for(const field of all?visible:selected){const value=normalizeRegistrationValue(field.fieldKey,field.fieldType,answers[field.fieldKey]);
       if(field.required&&(!String(value??'').trim()||field.fieldType==='checkbox'&&value!==true))return `Preencha: ${field.label}.`;
       if(value&&field.fieldType==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value)))return `Revise o e-mail: ${field.label}.`;
       if(value&&field.options?.length&&!field.options.includes(String(value)))return `Selecione uma opção válida: ${field.label}.`;
@@ -67,17 +73,17 @@ export function ConfigurableRegistration({ onSuccess, onCancel }: { onSuccess:(i
     }return '';
   };
   const submit=async(event:React.FormEvent)=>{
-    event.preventDefault();const problem=check(currentSection===sections.length-1);if(problem){setError(problem);return;}setError('');
+    event.preventDefault();setAnswers(current=>Object.fromEntries(Object.entries(current).map(([key,value])=>[key,normalizeRegistrationValue(key,fields.find(f=>f.fieldKey===key)?.fieldType||'text',value)])) as RegistrationAnswers);const problem=check(currentSection===sections.length-1);if(problem){setError(problem);return;}setError('');
     if(currentSection<sections.length-1){setSection(currentSection+1);return;}
     if(draftReview){setError('Confira a mudança do formulário e aceite a revisão atual antes de enviar.');return;}
     setBusy(true);paused.current=true;
-    try{await draftQueue.current;const accepted=Object.fromEntries(visible.map(f=>[f.fieldKey,answers[f.fieldKey]??'']));const result=await apiClient.createProcess(registrationPayload(accepted,studio?.operationsPolicy?.timezone||'America/Sao_Paulo'));if(result.workflowPending)portalNotice(`Cadastro salvo. O pedido de reserva ainda está pendente: ${result.workflowError||'a secretaria deve acompanhar a etapa.'}`);onSuccess(result.id);}
+    try{await draftQueue.current;const accepted=Object.fromEntries(visible.map(f=>[f.fieldKey,normalizeRegistrationValue(f.fieldKey,f.fieldType,answers[f.fieldKey]??'')])) as RegistrationAnswers;const result=await apiClient.createProcess(registrationPayload(accepted,studio?.operationsPolicy?.timezone||'America/Sao_Paulo'));portalNotice(result.workflowPending?`Cadastro salvo. O pedido de reserva ainda está pendente: ${result.workflowError||'a secretaria deve acompanhar a etapa.'}`:'Cadastro concluído. O pedido de confirmação do local foi encaminhado ao departamento, com os autores e o orientador em cópia.\n\nPróximo passo: aguarde a resposta do departamento. Em Meus TCCs, abra seu trabalho e entre em Dados do processo. Confira as informações; os campos permitidos podem ser corrigidos pela canetinha. Depois da confirmação, escolha o local autorizado, anexe a resposta em PDF de até 1 MB, marque o recebimento da confirmação e clique em Confirmar local e enviar convite.',{title:'Cadastro concluído — próximos passos'});onSuccess(result.id);}
     catch(e){setError(e instanceof Error?e.message:'Não foi possível cadastrar o TCC.');paused.current=false;}
     finally{setBusy(false);}
   };
   if(eligibility!=='ready')return <section className="portal-card p-6" aria-live="polite"><p>{eligibility==='loading'?'Verificando acesso e rascunho…':eligibility==='existing'?'Você já possui um TCC. Continue em Meus TCCs.':'Não foi possível carregar o cadastro. Atualize a página para tentar novamente.'}</p><button type="button" onClick={onCancel} className="portal-action mt-4">Voltar</button></section>;
   return <form onSubmit={submit} className="portal-workspace mx-auto max-w-4xl space-y-5" aria-labelledby="registration-title">
-    <header className="portal-card p-5"><p className="text-sm">Etapa {currentSection+1} de {sections.length}</p><h1 id="registration-title" className="mt-1 text-xl font-bold">{String(studio?.formTemplates?.find(f=>f.id==='form-reserva-aluno')?.title||'Cadastrar meu TCC')}</h1><p className="mt-2 text-sm leading-5">O departamento receberá o pedido de reserva. Após a confirmação, registre o local autorizado para enviar o convite à banca.</p><progress aria-label="Progresso do cadastro" className="mt-3 h-2 w-full" value={currentSection+1} max={sections.length}/>{!isMasterAdmin&&<p role="status" className="mt-2 text-sm">{draftStatus} Expiração após {workflowPolicy(studio).draftExpiryDays} dias sem salvar.</p>}</header>
+    <header className="portal-card p-5"><div className="mb-3 flex items-center gap-3"><ClipboardList className="h-5 w-5 text-[var(--portal-brand-header)]" aria-hidden="true"/>{studio?.formDesigns?.['form-reserva-aluno']?.logoUrl&&<img src={studio.formDesigns['form-reserva-aluno'].logoUrl} alt="Imagem do formulário" className="h-14 w-14 object-contain"/>}</div><p className="text-sm">Etapa {currentSection+1} de {sections.length}</p><h1 id="registration-title" className="mt-1 text-xl font-bold">{String(studio?.formTemplates?.find(f=>f.id==='form-reserva-aluno')?.title||'Cadastrar meu TCC')}</h1><p className="mt-2 text-sm leading-5">O departamento receberá o pedido de reserva. Após a confirmação, registre o local autorizado para enviar o convite à banca.</p><progress aria-label="Progresso do cadastro" className="mt-3 h-2 w-full" value={currentSection+1} max={sections.length}/>{!isMasterAdmin&&<p role="status" className="mt-2 text-sm">{draftStatus} Expiração após {workflowPolicy(studio).draftExpiryDays} dias sem salvar.</p>}</header>
     {draftReview&&<aside role="alert" className="portal-card p-4"><p>O Master publicou uma nova versão do formulário. Confira os campos recuperados; perguntas removidas não entrarão no cadastro.</p><button type="button" className="portal-action mt-3" onClick={()=>{paused.current=false;setDraftReview(false);}}>Conferi e vou usar a versão atual</button></aside>}
     {error&&<p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-red-900">{error}</p>}
     <fieldset disabled={busy} className="portal-card grid gap-5 p-5 sm:grid-cols-2"><legend className="sr-only">{sections[currentSection]}</legend><h2 className="portal-registration-section-title sm:col-span-2">{sections[currentSection]}</h2>{selected.map(field=><React.Fragment key={field.fieldKey}><Question field={field} value={answers[field.fieldKey]} readOnly={field.fieldKey==='ALUNO_1_EMAIL'&&!isMasterAdmin} onChange={value=>setAnswers(a=>({...a,[field.fieldKey]:value}))}/></React.Fragment>)}</fieldset>

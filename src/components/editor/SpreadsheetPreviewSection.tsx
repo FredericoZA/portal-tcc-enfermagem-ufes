@@ -54,7 +54,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
         {/* LIVE REALISTIC PREVIEW */}
         <div className="w-full bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
           <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+            <span className="text-[11px] font-black normal-case text-slate-800 flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5 text-slate-700" />
               <span>Preview Ao Vivo: Calendário Público de Defesas</span>
             </span>
@@ -67,7 +67,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
             {/* Top Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-2 bg-white p-3 rounded-xl border border-slate-200">
               <div>
-                <h4 className="text-xs sm:text-sm font-black uppercase text-slate-900 tracking-tight">
+                <h4 className="text-xs sm:text-sm font-black normal-case text-slate-900 tracking-tight">
                   {tableFormat.tableTitle || 'Calendário de Defesas Públicas de TCC'}
                 </h4>
                 <p className="text-[10.5px] font-bold text-slate-500">
@@ -124,7 +124,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
               <table className="w-full text-xs text-left">
                 <thead>
                   <tr
-                    className="font-black uppercase text-[10px] tracking-wider"
+                    className="font-black normal-case text-[10px] tracking-wider"
                     style={{ backgroundColor: headerBg, color: headerText }}
                   >
                     <th className="p-3">Discente & Título</th>
@@ -147,7 +147,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
                     <td className="p-3">Auditório Central (Presencial)</td>
                     <td className="p-3 text-center">
                       <span className={`px-2.5 py-0.5 text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 ${buttonRadiusClass}`}>
-                        CONFIRMADA
+                        Confirmada
                       </span>
                     </td>
                   </tr>
@@ -163,7 +163,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
                     <td className="p-3">Sala de Seminários 02</td>
                     <td className="p-3 text-center">
                       <span className={`px-2.5 py-0.5 text-[9px] font-black bg-blue-100 text-blue-800 border border-blue-300 ${buttonRadiusClass}`}>
-                        AGENDADA
+                        Agendada
                       </span>
                     </td>
                   </tr>
@@ -176,7 +176,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
         {/* CONTROLS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2 flex items-center gap-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-slate-700" />
               <span>Cores do Calendário Público</span>
             </h3>
@@ -205,8 +205,8 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-              TÍTULOS E RÓTULOS DO CALENDÁRIO
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+              Títulos e rótulos do calendário
             </h3>
             <div className="space-y-3">
               <TextField
@@ -233,7 +233,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
         {/* LIVE REALISTIC PREVIEW */}
         <div className="w-full bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
           <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+            <span className="text-[11px] font-black normal-case text-slate-800 flex items-center gap-1.5">
               <BookOpen className="w-3.5 h-3.5 text-slate-700" />
               <span>Preview Ao Vivo: Repositório & Acervo de TCCs Homologados</span>
             </span>
@@ -273,7 +273,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
               <table className="w-full text-xs text-left">
                 <thead>
                   <tr
-                    className="font-black uppercase text-[10px] tracking-wider"
+                    className="font-black normal-case text-[10px] tracking-wider"
                     style={{ backgroundColor: headerBg, color: headerText }}
                   >
                     <th className="p-3">Ano/Semestre</th>
@@ -295,7 +295,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
                     <td className="p-3 text-center">
                       <button
                         type="button"
-                        className={`px-2.5 py-1 text-[10px] font-black uppercase text-white shadow-2xs flex items-center justify-center gap-1 mx-auto ${buttonRadiusClass}`}
+                        className={`px-2.5 py-1 text-[10px] font-black normal-case text-white shadow-2xs flex items-center justify-center gap-1 mx-auto ${buttonRadiusClass}`}
                         style={{ backgroundColor: buttonBg }}
                       >
                         <FileCheck className="w-3 h-3" />
@@ -314,7 +314,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
                     <td className="p-3 text-center">
                       <button
                         type="button"
-                        className={`px-2.5 py-1 text-[10px] font-black uppercase text-white shadow-2xs flex items-center justify-center gap-1 mx-auto ${buttonRadiusClass}`}
+                        className={`px-2.5 py-1 text-[10px] font-black normal-case text-white shadow-2xs flex items-center justify-center gap-1 mx-auto ${buttonRadiusClass}`}
                         style={{ backgroundColor: buttonBg }}
                       >
                         <FileCheck className="w-3 h-3" />
@@ -331,7 +331,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
         {/* CONTROLS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2 flex items-center gap-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2 flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-slate-700" />
               <span>Cores do Repositório</span>
             </h3>
@@ -360,8 +360,8 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-              TEXTOS E OPÇÕES DO REPOSITÓRIO
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+              Textos e opções do repositório
             </h3>
             <div className="space-y-3">
               <TextField
@@ -386,7 +386,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
         {/* LIVE REALISTIC PREVIEW */}
         <div className="w-full bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
           <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+            <span className="text-[11px] font-black normal-case text-slate-800 flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-slate-700" />
               <span>Preview Ao Vivo: Meus TCCs (Painel do Discente & Orientador)</span>
             </span>
@@ -399,18 +399,18 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
             {/* Status overview cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-                <div className="text-[10px] font-bold text-slate-500 uppercase">Processos Ativos</div>
+                <div className="text-[10px] font-bold text-slate-500 normal-case">Processos Ativos</div>
                 <div className="text-lg font-black text-slate-900 mt-0.5">1 Trabalho</div>
               </div>
               <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-                <div className="text-[10px] font-bold text-slate-500 uppercase">Etapa do Fluxo</div>
+                <div className="text-[10px] font-bold text-slate-500 normal-case">Etapa do Fluxo</div>
                 <div className="text-xs font-black text-emerald-700 mt-1 flex items-center gap-1">
                   <CheckCircle className="w-3.5 h-3.5" />
                   <span>Defesa Realizada • Ata Pronta</span>
                 </div>
               </div>
               <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-                <div className="text-[10px] font-bold text-slate-500 uppercase">Minha Função</div>
+                <div className="text-[10px] font-bold text-slate-500 normal-case">Minha Função</div>
                 <div className="text-xs font-black text-slate-900 mt-1">Discente / Autor(a)</div>
               </div>
             </div>
@@ -420,7 +420,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
               <table className="w-full text-xs text-left">
                 <thead>
                   <tr
-                    className="font-black uppercase text-[10px] tracking-wider"
+                    className="font-black normal-case text-[10px] tracking-wider"
                     style={{ backgroundColor: headerBg, color: headerText }}
                   >
                     <th className="p-3">Protocolo</th>
@@ -451,7 +451,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
                     <td className="p-3 text-center">
                       <button
                         type="button"
-                        className={`px-3 py-1 text-[10px] font-black uppercase text-white shadow-2xs flex items-center justify-center gap-1 mx-auto ${buttonRadiusClass}`}
+                        className={`px-3 py-1 text-[10px] font-black normal-case text-white shadow-2xs flex items-center justify-center gap-1 mx-auto ${buttonRadiusClass}`}
                         style={{ backgroundColor: buttonBg }}
                       >
                         <FileCheck className="w-3 h-3" />
@@ -468,7 +468,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
         {/* CONTROLS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2 flex items-center gap-2">
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2 flex items-center gap-2">
               <FileText className="w-4 h-4 text-slate-700" />
               <span>Cores da Área "Meus TCCs"</span>
             </h3>
@@ -492,8 +492,8 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-              DESCRIÇÃO DA ÁREA
+            <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+              Descrição da área
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed font-medium">
               Esta visualização permite aos estudantes e orientadores autenticados acompanhar o progresso de suas bancas, visualizar a versão final corrigida e baixar a Ata com as assinaturas digitais.
@@ -510,7 +510,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
       {/* LIVE REALISTIC PREVIEW */}
       <div className="w-full bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
         <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-          <span className="text-[11px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+          <span className="text-[11px] font-black normal-case text-slate-800 flex items-center gap-1.5">
             <Award className="w-3.5 h-3.5 text-slate-700" />
             <span>Prévia ao vivo: Área do Presidente da Comissão</span>
           </span>
@@ -523,7 +523,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
           {/* Executive Action Bar */}
           <div className="bg-white p-3 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h4 className="text-xs sm:text-sm font-black uppercase text-slate-900 tracking-tight">
+              <h4 className="text-xs sm:text-sm font-black normal-case text-slate-900 tracking-tight">
                 Gestão da Comissão de TCC • Instituição configurada
               </h4>
               <p className="text-[10.5px] font-bold text-slate-500">
@@ -547,7 +547,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
             <table className="w-full text-xs text-left">
               <thead>
                 <tr
-                  className="font-black uppercase text-[10px] tracking-wider"
+                  className="font-black normal-case text-[10px] tracking-wider"
                   style={{ backgroundColor: headerBg, color: headerText }}
                 >
                   <th className="p-3">Discente & Orientador</th>
@@ -569,18 +569,18 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
                   </td>
                   <td className="p-3 text-center">
                     <span className="px-2 py-0.5 text-[9px] font-black bg-emerald-100 text-emerald-800 rounded border border-emerald-300">
-                      NOTA 9.8 • APROVADO
+                      Nota 9.8 • aprovado
                     </span>
                   </td>
                   <td className="p-3 text-center">
                     <span className="px-2 py-0.5 text-[9px] font-black bg-emerald-100 text-emerald-800 rounded border border-emerald-300">
-                      3/3 ASSINADAS
+                      3/3 Assinadas
                     </span>
                   </td>
                   <td className="p-3 text-center">
                     <button
                       type="button"
-                      className={`px-3 py-1 text-[10px] font-black uppercase text-white shadow-2xs flex items-center justify-center gap-1 mx-auto ${buttonRadiusClass}`}
+                      className={`px-3 py-1 text-[10px] font-black normal-case text-white shadow-2xs flex items-center justify-center gap-1 mx-auto ${buttonRadiusClass}`}
                       style={{ backgroundColor: buttonBg }}
                     >
                       <ShieldCheck className="w-3 h-3" />
@@ -597,7 +597,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
       {/* CONTROLS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-          <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2 flex items-center gap-2">
+          <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2 flex items-center gap-2">
             <Award className="w-4 h-4 text-slate-700" />
             <span>Cores da Área do Presidente</span>
           </h3>
@@ -621,8 +621,8 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-          <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-            CONTROLE ADMINISTRATIVO
+          <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+            Controle administrativo
           </h3>
           <p className="text-xs text-slate-600 leading-relaxed font-medium">
             Permite à presidência da comissão gerenciar a emissão de documentos, acompanhar as assinaturas Asten e homologar formalmente os TCCs para o colegiado do curso.

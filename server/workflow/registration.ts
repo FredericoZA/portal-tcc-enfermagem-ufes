@@ -1,3 +1,4 @@
+import {normalizeRegistrationValue as normalizeTypedValue} from '../../src/utils/registrationNormalization';
 import type { IntegrationStudioSettings } from '../../src/types/integrationStudio';
 import type { RegistrationAnswers } from '../../src/types/operationalConfig';
 import { registrationPayload, registrationQuestions } from '../../src/utils/operationalConfig';
@@ -11,19 +12,6 @@ const LEGACY_LOCATION_ALIASES = new Map<string, string>([
   ['auditorio do predio do departamento de enfermagem', 'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES']
 ]);
 
-function normalizeRegistrationValue(fieldKey: string, fieldType: string, raw: unknown): unknown {
-  if (typeof raw !== 'string') return raw;
-  let value = raw.normalize('NFC').trim();
-  if (fieldType === 'email') return normalizeEmail(value);
-  if (/_NOME$/.test(fieldKey)) return formatNameTitleCase(value.replace(/\s+/g, ' '));
-  if (/MATRICULA$/.test(fieldKey) || /_SIAPE$/.test(fieldKey)) return value.replace(/[^0-9]/g, '');
-  if (fieldKey === 'TITULO') return formatTccTitle(value.replace(/\s+/g, ' '));
-  value = value.replace(/\s+/g, ' ');
-  if (fieldKey === 'DEFESA_LOCAL' || fieldKey === 'LOCAL_ALTERNATIVO') {
-    return LEGACY_LOCATION_ALIASES.get(value.toLocaleLowerCase('pt-BR')) || value;
-  }
-  return value;
-}
 
 function validateDefenseBusinessDay(value: unknown) {
   const text = String(value ?? '').trim();
@@ -70,7 +58,8 @@ export function acceptRegistration(input: any, studio?: Partial<IntegrationStudi
   for (const question of registrationQuestions(studio)) {
     if (!evaluateStudioCondition(question.visibleWhen, { ...answers, ...accepted })) continue;
     const rawValue = answers[question.fieldKey];
-    const value = normalizeRegistrationValue(question.fieldKey, question.fieldType, rawValue);
+    let value = normalizeTypedValue(question.fieldKey, question.fieldType, rawValue);
+    if(typeof value==='string'&&['DEFESA_LOCAL','LOCAL_ALTERNATIVO'].includes(question.fieldKey))value=LEGACY_LOCATION_ALIASES.get(value.toLocaleLowerCase('pt-BR'))||value;
     const missing = !String(value ?? '').trim() || (question.fieldType === 'checkbox' && value !== true);
 
     if (value !== undefined && !['string', 'number', 'boolean'].includes(typeof value)) throw new Error(`${question.label}: valor inválido.`);

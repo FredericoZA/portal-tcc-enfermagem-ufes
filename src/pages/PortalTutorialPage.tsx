@@ -1,3 +1,4 @@
+import {PortalIllustratedGuide} from '../components/PortalIllustratedGuide';
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ClipboardCheck, UserCheck } from 'lucide-react';
 import { PortalSectionDivider } from '../components/PortalSectionDivider';
@@ -36,7 +37,7 @@ const roleContent: Record<Role, RoleGuide> = {
     steps: [
       { title: '1. Entrar no processo correto', text: 'Acesse com seu e-mail e confira se o Portal reconheceu o trabalho ao qual você está vinculado. Não crie um segundo processo para corrigir um cadastro já existente.' },
       { title: '2. Fazer o cadastro inicial', text: 'Informe autoria, título, orientador, coorientador quando houver, banca e data/horário pretendidos. Revise grafia, acentuação e ordem dos nomes antes de concluir.' },
-      { title: '3. Solicitar e confirmar o local', text: 'A reserva da sala ou auditório ocorre conforme a rotina do Departamento. Depois de receber a confirmação, volte ao processo e registre somente o local efetivamente reservado.' },
+      { title: '3. Solicitar e confirmar o local', text: 'A reserva da sala ou auditório ocorre conforme a rotina do Departamento. Depois de receber a confirmação, volte ao processo, anexe o e-mail de resposta em PDF e registre somente o local efetivamente reservado. Um dos autores faz essa confirmação pela dupla.' },
       { title: '4. Conferir a divulgação da defesa', text: 'Depois da confirmação de data, horário e local, confira como a apresentação aparece no calendário público. Havendo divergência, solicite a correção antes da defesa.' },
       { title: '5. Acompanhar a situação da banca', text: 'Verifique se orientador, coorientador e membros avaliadores estão corretamente identificados. Alterações de banca devem ser resolvidas antes da geração final dos documentos.' },
       { title: '6. Aguardar o registro da defesa', text: 'Após a apresentação, o orientador registra o resultado e o parecer. O aluno não deve avançar para a entrega final usando informações provisórias ou antes da liberação da etapa seguinte.' },
@@ -95,37 +96,17 @@ const roleContent: Record<Role, RoleGuide> = {
   },
   presidente: {
     title: 'Presidente da Comissão',
-    description: 'Use esta visão para acompanhar pendências administrativas, conferir documentos finais e garantir que cada TCC percorra o fluxo previsto antes do encerramento.',
-    before: [
-      'Acesse com o e-mail vinculado à função de Presidente da Comissão.',
-      'Use a área administrativa para identificar processos parados e a etapa em que cada pendência se encontra.',
-      'Antes de intervir, verifique se a pendência pertence ao aluno, orientador, banca, assinatura, integração ou administração.',
-    ],
+    description: 'Confira e assine as declarações de participação da banca quando forem liberadas pelo processo.',
+    before: ['Entre com o e-mail vinculado à Presidência da Comissão.', 'Aguarde a liberação da declaração. O aluno faz a entrega final e o orientador registra a avaliação.'],
     steps: [
-      { title: '1. Acompanhar o painel de processos', text: 'Priorize processos com pendências reais e verifique qual requisito ainda impede a progressão. Evite refazer etapas que já foram concluídas corretamente.' },
-      { title: '2. Conferir o histórico do processo', text: 'Use os registros existentes para entender o que já foi enviado, confirmado, assinado ou corrigido antes de executar nova ação administrativa.' },
-      { title: '3. Validar documentos finais', text: 'Antes de encaminhar documentos da Comissão, confira título, autoria, banca, data, local e resultado da defesa.' },
-      { title: '4. Tratar pendências de assinatura', text: 'Identifique se a falha está na geração, no envio, no provedor de assinatura ou na ausência de um signatário. Corrija a causa antes de reenviar.' },
-      { title: '5. Conferir a declaração da banca', text: 'Quando disponível, revise a declaração de participação e confirme se os membros e suas funções correspondem ao processo.' },
-      { title: '6. Verificar entrega e publicação', text: 'Confirme se a versão final e os metadados foram enviados e se as autorizações de publicação foram registradas quando necessárias.' },
-      { title: '7. Acompanhar integrações', text: 'Quando houver sincronização com Drive, Docs, Gmail, Calendar ou outro serviço, diferencie falha de integração de pendência acadêmica para evitar ações incorretas.' },
-      { title: '8. Liberar o encerramento', text: 'O processo só deve ser considerado apto à conclusão quando as entregas, documentos e assinaturas exigidas para aquele TCC estiverem resolvidas.' },
-      { title: '9. Preservar rastreabilidade', text: 'Use o histórico e os registros do Portal como referência administrativa. Evite correções fora do fluxo quando houver uma ação própria do sistema para a mesma finalidade.' },
+      {title:'1. Abrir o trabalho',text:'Use o link recebido no e-mail ou abra o TCC na Área do Presidente. Confira o protocolo e os participantes.'},
+      {title:'2. Conferir a declaração',text:'Em Documentos do processo, localize a Declaração de Participação na Banca e clique em Ver. Confira os nomes e os dados da defesa.'},
+      {title:'3. Assinar',text:'Siga a solicitação recebida pelo método de assinatura escolhido. Na Asten, use o link enviado pelo provedor. No Gov.br, assine e devolva o PDF pela opção correspondente do Portal.'},
+      {title:'4. Conferir o arquivamento',text:'Acompanhe o retorno da assinatura em Documentos do processo. Depois de arquivado, o PDF pode ser baixado. A conclusão do processo é automática quando todas as etapas obrigatórias terminarem.'},
     ],
-    checklist: [
-      'Etapa e responsável pela pendência identificados.',
-      'Documentos finais conferidos.',
-      'Assinaturas necessárias resolvidas.',
-      'Entrega final e publicação verificadas.',
-      'Processo apto ao encerramento sem pendências remanescentes.',
-    ],
-    mistakes: [
-      'Refazer uma etapa já concluída sem investigar a causa do problema.',
-      'Tratar falha de integração como se fosse pendência acadêmica.',
-      'Encerrar processo com assinatura ou documento obrigatório pendente.',
-      'Alterar dados históricos sem necessidade administrativa comprovada.',
-    ],
-    finish: 'A atuação administrativa sobre um TCC termina quando o processo está íntegro, sem pendências obrigatórias e apto à conclusão conforme as regras configuradas no Portal.',
+    checklist:['Declaração e participantes conferidos.','Assinatura concluída.','PDF assinado arquivado.'],
+    mistakes:['Assinar sem conferir a declaração.','Repetir o pedido de assinatura enquanto o envio anterior estiver pendente.'],
+    finish:'A participação da Presidência termina quando as declarações sob sua responsabilidade estiverem assinadas e arquivadas.',
   },
   visitante: {
     title: 'Visitante',
@@ -170,11 +151,11 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
       <section className="portal-public-header text-white">
         <div className="portal-public-title-row gap-2">
           <ColorfulHeaderIcon type="tutorial" />
-          <h1 className="text-base font-black uppercase tracking-tight text-white sm:text-lg">Como usar o Portal de TCC</h1>
+          <h1 className="text-base font-black normal-case tracking-tight text-white sm:text-lg">Como usar o Portal de TCC</h1>
         </div>
 
         <div className="portal-public-filter-row portal-tutorial-filter-row flex-wrap gap-2 text-xs min-w-0">
-          <span className="portal-filter-label opacity-80 shrink-0">FILTRAR:</span>
+          <span className="portal-filter-label opacity-80 shrink-0">Filtrar:</span>
           <div className="flex items-center gap-1.5 flex-wrap">
             {(Object.keys(roleContent) as Role[]).map((key) => {
               const selected = role === key;
@@ -199,7 +180,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
         <div className="portal-layer-card flex items-start gap-3 rounded-2xl border border-slate-300 p-3.5 shadow-2xs sm:p-4">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--portal-brand-action)] text-white shadow-sm"><UserCheck className="h-5 w-5" /></span>
           <div className="min-w-0">
-            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-[var(--portal-brand-action)]">Visão selecionada</div>
+            <div className="text-[9px] font-black normal-case tracking-[0.16em] text-[var(--portal-brand-action)]">Visão selecionada</div>
             <h2 className="mt-0.5 text-lg font-black text-slate-950">{active.title}</h2>
             <p className="mt-1 max-w-4xl text-sm leading-6 text-slate-700">{active.description}</p>
           </div>
@@ -208,7 +189,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
         <div className="mt-3 grid gap-3 xl:grid-cols-[0.9fr_2.1fr]">
           <aside className="space-y-3">
             <section className="portal-layer-card rounded-xl border border-slate-300 p-3.5 shadow-2xs">
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
+              <div className="flex items-center gap-2 text-xs font-black normal-case tracking-wide text-slate-900">
                 <ClipboardCheck className="h-4 w-4 text-[var(--portal-brand-action)]" />Antes de começar
               </div>
               <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-700">
@@ -217,7 +198,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
             </section>
 
             <section className="portal-layer-card rounded-xl border border-slate-300 p-3.5 shadow-2xs">
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
+              <div className="flex items-center gap-2 text-xs font-black normal-case tracking-wide text-slate-900">
                 <CheckCircle2 className="h-4 w-4 text-[var(--portal-brand-action)]" />Conferência antes de encerrar
               </div>
               <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-700">
@@ -226,7 +207,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
             </section>
 
             <section className="portal-layer-card rounded-xl border border-slate-300 p-3.5 shadow-2xs">
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
+              <div className="flex items-center gap-2 text-xs font-black normal-case tracking-wide text-slate-900">
                 <AlertTriangle className="h-4 w-4 text-[var(--portal-brand-action)]" />Erros a evitar
               </div>
               <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-700">
@@ -236,7 +217,7 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
           </aside>
 
           <div>
-            <h3 className="mb-2 text-xs font-black uppercase tracking-wide text-slate-900">Passo a passo</h3>
+            <h3 className="mb-2 text-xs font-black normal-case tracking-wide text-slate-900">Passo a passo</h3>
             <ol className="grid gap-2.5 lg:grid-cols-2">
               {active.steps.map((step, index) => (
                 <li key={step.title} className="portal-layer-card flex h-full gap-3 rounded-xl border border-slate-300 px-3.5 py-3 text-sm leading-5 text-slate-700 shadow-2xs">
@@ -247,14 +228,14 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = ({ onNaviga
                   </div>
                 </li>
               ))}
-            </ol>
-
-            <div id="portal-tutorial-finish-card" className="portal-layer-card mt-3 rounded-xl border px-4 py-3 shadow-2xs">
-              <div className="text-xs font-black uppercase tracking-wide text-slate-900">Quando esta participação termina</div>
+              <li id="portal-tutorial-finish-card" className={`portal-layer-card rounded-xl border border-slate-300 px-3.5 py-3 shadow-2xs ${active.steps.length % 2 === 0 ? 'lg:col-span-2' : ''}`}>
+              <div className="text-xs font-black normal-case tracking-wide text-slate-900">Quando esta participação termina</div>
               <p className="mt-1.5 text-xs leading-5 text-slate-700">{active.finish}</p>
-            </div>
+              </li>
+            </ol>
           </div>
         </div>
+        <PortalIllustratedGuide role={role}/>
       </section>
     </div>
   );

@@ -1,4 +1,5 @@
 import { PORTAL_THEME } from '../theme/portalTheme';
+import { isLocalDemoFrontend } from './runtimeEnvironment';
 
 // Site Layout Configuration System (Header, Sidebar, Footer)
 // Nesta instalação UFES, a identidade visual estrutural é fixa no código.
@@ -115,15 +116,15 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   headerCourseTitle: 'Curso de Graduação em Enfermagem e Obstetrícia · CCS/UFES',
   headerShowRoleBadges: true,
   headerShowEmblem: true,
-  headerCustomLogoUrl: '/api/public/runtime-assets/2466f8db8eb7c79073c197bea09fa53946ca0ca1392a192792fa0d4f0f2e420f',
+  headerCustomLogoUrl: isLocalDemoFrontend() ? '/colenf-logo.svg' : '/api/public/runtime-assets/2466f8db8eb7c79073c197bea09fa53946ca0ca1392a192792fa0d4f0f2e420f',
   headerBgColor: PORTAL_THEME.brand.headerInstitution,
   headerTextColor: PORTAL_THEME.text.dark,
   headerTitleColor: PORTAL_THEME.brand.action,
   headerBgImage: '',
-  sidebarTitle: 'PORTAL DE TCC',
+  sidebarTitle: 'Portal de TCC',
   sidebarSubtitle: 'Enfermagem',
   sidebarLogoType: 'custom',
-  sidebarCustomLogoUrl: '/api/public/runtime-assets/0d8980ef61e92bca98fabe43a9ce190da409935f5ebfccc2c5f991066c7c77d7',
+  sidebarCustomLogoUrl: isLocalDemoFrontend() ? '/colenf-logo.svg' : '/api/public/runtime-assets/0d8980ef61e92bca98fabe43a9ce190da409935f5ebfccc2c5f991066c7c77d7',
   sidebarNavLabels: { ...DEFAULT_NAV_LABELS },
   sidebarNavEmojis: { ...DEFAULT_NAV_EMOJIS },
   sidebarIconMode: 'lucide',

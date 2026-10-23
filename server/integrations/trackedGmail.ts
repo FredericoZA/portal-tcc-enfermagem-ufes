@@ -14,6 +14,7 @@ export interface TrackedEmailInput {
   workflowEventVariables?: Record<string, string>;
   templateId?: string;
   recipient: string;
+  cc?: string[];
   subject: string;
   text: string;
   html?: string;
@@ -28,7 +29,7 @@ export interface EmailDeliveryJournal {
 }
 
 export interface TrackedGmailPorts {
-  send(input: { to: string; subject: string; text: string; html?: string; attachments?: Array<{ fileName: string; mimeType: string; content: Buffer }> }): Promise<GmailAcceptedResponse | void>;
+  send(input: { to: string; cc?: string[]; subject: string; text: string; html?: string; attachments?: Array<{ fileName: string; mimeType: string; content: Buffer }> }): Promise<GmailAcceptedResponse | void>;
   journal: EmailDeliveryJournal;
   now?: () => Date;
 }
@@ -39,7 +40,7 @@ const hash = (value: string | Buffer): string => createHash('sha256').update(val
 export function emailDeliveryIdempotencyKey(input: TrackedEmailInput): string {
   if (input.idempotencyKey) return input.idempotencyKey;
   const attachmentHashes=(input.attachments||[]).map(item=>`${item.fileName}:${hash(item.content)}`).join(';');
-  return hash([input.processId || '', input.workflowRunId || '', input.templateId || '', cleanEmail(input.recipient), input.subject, input.text, input.html || '',attachmentHashes].join('|'));
+  return hash([input.processId || '', input.workflowRunId || '', input.templateId || '', cleanEmail(input.recipient), input.subject, input.text, input.html || '',attachmentHashes,(input.cc||[]).map(cleanEmail).sort().join(',')].join('|'));
 }
 
 export function retryDelayMilliseconds(attemptNumber: number): number {
@@ -67,6 +68,7 @@ export function initialEmailDelivery(input: TrackedEmailInput, now = new Date())
     templateId: input.templateId,
     idempotencyKey: key,
     recipient: cleanEmail(input.recipient),
+    cc: input.cc?.map(cleanEmail),
     subject: input.subject.trim().slice(0, 998),
     renderedText: input.text,
     renderedHtml: input.html,
@@ -97,7 +99,7 @@ export async function dispatchTrackedEmail(input: TrackedEmailInput, ports: Trac
   const attemptNumber = record.attempts.length + 1;
   const startedAt = now.toISOString();
   try {
-    const response = (await ports.send({ to: record.recipient, subject: record.subject, text: input.text, html: input.html, attachments: input.attachments })) || {};
+    const response = (await ports.send({ to: record.recipient, cc: record.cc, subject: record.subject, text: input.text, html: input.html, attachments: input.attachments })) || {};
     const completedAt = (ports.now || (() => new Date()))().toISOString();
     const attempt: EmailDeliveryAttempt = { number: attemptNumber, startedAt, completedAt, status: 'ACCEPTED_BY_GMAIL', gmailMessageId: response?.id, gmailThreadId: response?.threadId };
     record.attempts.push(attempt);

@@ -30,12 +30,12 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
   return (
     <div id="avaliacoes-page-container" className="space-y-3 max-w-7xl mx-auto py-1.5">
       <div className="bg-[var(--portal-brand-header)] text-white p-3.5 sm:p-4 rounded-2xl border border-emerald-900/80 shadow-sm space-y-1">
-        <div className="text-emerald-200 text-[10px] font-extrabold uppercase tracking-widest leading-none">
+        <div className="text-emerald-200 text-[10px] font-extrabold normal-case tracking-widest leading-none">
           {profile.institutionAcronym} • {profile.departmentName || profile.institutionName}
         </div>
         <div className="flex items-center gap-2 mt-1">
           <ColorfulHeaderIcon type="evaluation" />
-          <h1 className="text-sm sm:text-base font-black text-white uppercase tracking-tight">
+          <h1 className="text-sm sm:text-base font-black text-white normal-case tracking-tight">
             Avaliações de TCC Sob Sua Orientação
           </h1>
         </div>
@@ -51,7 +51,7 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
       ) : processes.length === 0 ? (
         <div className="bg-white p-8 text-center border border-slate-200 space-y-2">
           <CheckSquare className="w-8 h-8 text-slate-400 mx-auto" />
-          <h3 className="font-bold text-slate-800 text-sm uppercase">Nenhuma avaliação pendente</h3>
+          <h3 className="font-bold text-slate-800 text-sm normal-case">Nenhuma avaliação pendente</h3>
           <p className="text-xs text-slate-500">
             Você não possui processos de TCC aguardando avaliação no momento.
           </p>
@@ -66,14 +66,14 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
               <div className="space-y-2 max-w-2xl">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-black text-slate-900 tracking-tight">{proc.protocolo}</span>
-                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-sm uppercase tracking-wider ${
+                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-sm normal-case tracking-wider ${
                     proc.avaliacao.status === 'CONCLUIDO' ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-950 border border-amber-300'
                   }`}>
                     {proc.avaliacao.status === 'CONCLUIDO' ? 'Avaliação Concluída' : 'Avaliação Pendente'}
                   </span>
                 </div>
 
-                <h3 className="font-bold text-slate-900 text-sm uppercase">{proc.titulo}</h3>
+                <h3 className="font-bold text-slate-900 text-sm normal-case">{proc.titulo}</h3>
                 <div className="text-xs text-slate-600 space-y-1">
                   <div>
                     <strong>Aluno(s):</strong>
@@ -85,7 +85,7 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
 
               <button
                 onClick={() => onSelectProcess(proc.id)}
-                className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-sm shadow-xs transition-colors"
+                className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs normal-case tracking-wider px-5 py-2.5 rounded-sm shadow-xs transition-colors"
               >
                 <span>{proc.avaliacao.status === 'CONCLUIDO' ? 'Ver Parecer Registrado' : 'Realizar Avaliação'}</span>
                 <ArrowRight className="w-4 h-4" />

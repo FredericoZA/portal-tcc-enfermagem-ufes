@@ -160,6 +160,7 @@ export interface IntegrationStudioSettings {
   docTemplates: Array<Record<string, unknown>>;
   emailTemplates: Array<Record<string, unknown>>;
   formTemplates: Array<Record<string, unknown>>;
+  processFieldSchemas?: Record<string, import('./operationalConfig').RegistrationQuestion[]>;
   workflowStages: Array<Record<string, unknown>>;
   operationsPolicy?: CourseOperationsPolicy;
   replicationGuide?: PortalReplicationGuide;

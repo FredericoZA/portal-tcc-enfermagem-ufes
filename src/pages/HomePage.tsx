@@ -1,8 +1,9 @@
+import {readProcessLink,setProcessLink} from '../utils/processLink';
 import React, { useState, useEffect, useRef } from 'react';
 import { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
 import { portalConfirm } from '../services/portalDialogs';
-import { formatDatePt, formatDateNumeric, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle } from '../utils/formatters';
+import { formatDatePt, formatDateNumeric, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
 import { OnlineSystemTutorial } from '../components/OnlineSystemTutorial';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { loadTableConfig, ColumnDef, TableTextFormat, DEFAULT_TABLE_TEXT_FORMAT } from '../components/TableColumnSelectorPanel';
@@ -11,7 +12,6 @@ import { TABLE_LAYOUTS_EVENT } from '../utils/portalAppearanceLinks';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
 import { ProgressIndicator } from '../components/ProgressIndicator';
-import { ProcessoDetailPage } from './ProcessoDetailPage';
 import { StudentNames, GcalStudentNames } from '../components/StudentNames';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
 import { useAuth } from '../context/AuthContext';
@@ -135,23 +135,6 @@ const getStartAndEndTime = (startIso: string, endIso?: string) => {
   return `${startStr} às ${endStr}`;
 };
 
-// Helper to get count of stages from master configuration
-const getWorkflowStagesCount = (): number => {
-  if (typeof window === 'undefined') return 5;
-  try {
-    const saved = localStorage.getItem('workflow_pipeline_stages');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.length;
-      }
-    }
-  } catch (e) {
-    console.error(e);
-  }
-  return 5;
-};
-
 // Helper to render process number stacked on multiple lines
 const renderProtocoloMultiLine = (protocolo: string) => {
   if (!protocolo) return <span className="font-mono text-slate-400">—</span>;
@@ -167,66 +150,6 @@ const renderProtocoloMultiLine = (protocolo: string) => {
     );
   }
   return <span className="font-mono font-extrabold text-[10.5px] text-slate-900 leading-tight block break-all">{protocolo}</span>;
-};
-
-// Helper to calculate progress percentage and stage label
-const getProcessProgress = (proc: ProcessData) => {
-  const totalStages = getWorkflowStagesCount();
-  
-  let stepNumber = 1;
-  let percent = 20;
-  let label = '';
-  
-  if (proc.status === 'CONCLUIDO') {
-    stepNumber = totalStages;
-    percent = 100;
-    label = `Etapa ${stepNumber}/${totalStages}: Concluído & Ata Registrada`;
-  } else if (proc.status === 'AGUARDANDO_ASSINATURA') {
-    stepNumber = totalStages;
-    percent = Math.round(((totalStages * 2 - 1) / (totalStages * 2)) * 100);
-    label = `Etapa ${stepNumber}/${totalStages}: Aguardando Assinaturas`;
-  } else if (proc.status === 'EM_AVALIACAO') {
-    stepNumber = Math.max(1, totalStages - 1);
-    percent = Math.round((stepNumber / totalStages) * 100);
-    label = `Etapa ${stepNumber}/${totalStages}: Defesa Realizada & Em Avaliação`;
-  } else if (proc.status === 'AGUARDANDO_DEFESA' || proc.etapaAtual === 'DEFESA' || proc.etapaAtual === 'AGENDAMENTO') {
-    stepNumber = Math.max(1, totalStages - 2);
-    percent = Math.round((stepNumber / totalStages) * 100);
-    label = `Etapa ${stepNumber}/${totalStages}: Defesa Agendada`;
-  } else if (proc.etapaAtual === 'CONVITE' || proc.etapaAtual === 'CADASTRO') {
-    stepNumber = Math.min(2, totalStages);
-    percent = Math.round((stepNumber / totalStages) * 100);
-    label = `Etapa ${stepNumber}/${totalStages}: Banca Definida & Convites Enviados`;
-  } else {
-    stepNumber = 1;
-    percent = Math.round((stepNumber / totalStages) * 100);
-    label = `Etapa ${stepNumber}/${totalStages}: Inscrição Registrada`;
-  }
-  
-  return { percent, label, color: 'bg-emerald-600' };
-};
-
-const getFriendlyEtapaLabel = (etapa: string): string => {
-  switch (etapa) {
-    case 'CADASTRO': return 'Cadastro';
-    case 'AGENDAMENTO': return 'Agendamento';
-    case 'CONVITE': return 'Banca';
-    case 'DEFESA': return 'Defesa';
-    case 'AVALIACAO': return 'Avaliação';
-    case 'ASSINATURA': return 'Assinatura';
-    case 'DOCUMENTOS': return 'Documentos';
-    case 'CONCLUIDO': return 'Concluído';
-    default: return etapa;
-  }
-};
-
-const getStepNumberLabel = (label: string): string => {
-  const match = label.match(/Etapa\s+([\d.]+)\/(\d+)/i);
-  if (match) {
-    const current = match[1].replace('.', ',');
-    return `Fase ${current}`;
-  }
-  return '';
 };
 
 interface DayDatePickerPopoverProps {
@@ -317,7 +240,7 @@ const DayDatePickerPopover: React.FC<DayDatePickerPopoverProps> = ({
         ref={buttonRef}
         type="button"
         onClick={handleToggle}
-        className={`flex items-center gap-1.5 px-3 py-1 text-[10px] sm:text-[11px] font-extrabold uppercase rounded-full border outline-none cursor-pointer h-7.5 shadow-2xs transition-all shrink-0 bg-emerald-950 hover:bg-black text-white ${
+        className={`flex items-center gap-1.5 px-3 py-1 text-[10px] sm:text-[11px] font-extrabold normal-case rounded-full border outline-none cursor-pointer h-7.5 shadow-2xs transition-all shrink-0 bg-emerald-950 hover:bg-black text-white ${
           value ? 'border-emerald-400' : 'border-emerald-500'
         }`}
         title={`Selecionar ${placeholder}`}
@@ -335,7 +258,7 @@ const DayDatePickerPopover: React.FC<DayDatePickerPopoverProps> = ({
             className="portal-modal-surface fixed z-[9999] w-64 overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150"
             style={{ top: `${popoverPos.top}px`, left: `${popoverPos.left}px` }}
           >
-            <div className="portal-modal-header px-3"><CalendarIcon className="h-3.5 w-3.5 text-white" /><span className="text-[10.5px] font-black uppercase tracking-wider">Selecionar data</span></div>
+            <div className="portal-modal-header px-3"><CalendarIcon className="h-3.5 w-3.5 text-white" /><span className="text-[10.5px] font-black normal-case tracking-wider">Selecionar data</span></div>
             <div className="portal-modal-divider" aria-hidden="true" />
             <div className="p-3">
             <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
@@ -378,7 +301,7 @@ const DayDatePickerPopover: React.FC<DayDatePickerPopoverProps> = ({
 
             <div className="grid grid-cols-7 gap-1 text-center mb-1">
               {daysOfWeek.map((dow, idx) => (
-                <span key={idx} className="text-[10px] font-bold text-slate-400 uppercase">
+                <span key={idx} className="text-[10px] font-bold text-slate-400 normal-case">
                   {dow}
                 </span>
               ))}
@@ -587,9 +510,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   // Library specific state
   const [libSearch, setLibSearch] = useState('');
   const [selectedLibDoc, setSelectedLibDoc] = useState<ProcessData | null>(null);
-  const [selectedProcessDetails, setSelectedProcessDetails] = useState<ProcessData | null>(null);
-  const [selectedProcessDocs, setSelectedProcessDocs] = useState<any[]>([]);
-  const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const libSortColumn: string | null = null;
   const libSortDirection: 'asc' | 'desc' = 'asc';
 
@@ -881,10 +801,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     }
   };
 
-  const handleCloseDetails = () => {
-    setSelectedProcessDetails(null);
-    refreshData();
-  };
+
 
   useEffect(() => {
     Promise.all([
@@ -897,24 +814,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     });
   }, []);
 
-  useEffect(() => {
-    if (selectedProcessDetails) {
-      setIsLoadingDocs(true);
-      apiClient.getProcessDocuments(selectedProcessDetails.id)
-        .then((docs) => {
-          setSelectedProcessDocs(docs);
-        })
-        .catch((err) => {
-          console.error('Error fetching process documents', err);
-          setSelectedProcessDocs([]);
-        })
-        .finally(() => {
-          setIsLoadingDocs(false);
-        });
-    } else {
-      setSelectedProcessDocs([]);
-    }
-  }, [selectedProcessDetails]);
+
 
   const filteredProcesses = processes.filter((proc) => {
     const term = searchTerm.toLowerCase();
@@ -945,6 +845,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       await switchUser(emailToUse);
       setShowLoginModal(false);
       setLoginStep('email');setLoginCodeInput('');setLoginMessage('');
+      if(readProcessLink(window.location.search))return;
       if (session.globalRoles?.length) {
         onNavigate('coordenador');
       } else {
@@ -1080,7 +981,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <ColorfulHeaderIcon type="calendar" textFormat={defensesTextFormat} />
-                          <h1 className="text-base sm:text-lg font-black uppercase tracking-tight leading-snug">
+                          <h1 className="text-base sm:text-lg font-black normal-case tracking-tight leading-snug">
                             Calendário de Defesas — {monthNamesPt[month]} de {year}
                           </h1>
                         </div>
@@ -1113,7 +1014,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                               />
                               {/* Popover Card */}
                               <div className="portal-modal-surface absolute top-full left-0 sm:left-auto sm:right-0 mt-2 z-50 w-64 overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150">
-                                <div className="portal-modal-header px-3"><CalendarIcon className="h-3.5 w-3.5 text-white" /><span className="text-[10.5px] font-black uppercase tracking-wider">Selecionar mês</span></div>
+                                <div className="portal-modal-header px-3"><CalendarIcon className="h-3.5 w-3.5 text-white" /><span className="text-[10.5px] font-black normal-case tracking-wider">Selecionar mês</span></div>
                                 <div className="portal-modal-divider" aria-hidden="true" />
                                 <div className="p-3.5">
                                 {/* Year Navigator Header */}
@@ -1210,12 +1111,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <div className="min-w-[620px] md:min-w-0">
                           {/* Dias úteis: o calendário público exibe somente segunda a sexta. */}
                           <div data-portal-sheet-column-header="true" className={`${defStyles.calendarDaysHeaderClass} py-2.5 px-4 sm:px-6 select-none`} style={defStyles.bannerHeaderStyle}>
-                            <div className="grid grid-cols-5 text-center font-black text-[11px] uppercase tracking-wider">
-                              <div>SEG</div>
-                              <div>TER</div>
-                              <div>QUA</div>
-                              <div>QUI</div>
-                              <div>SEX</div>
+                            <div className="grid grid-cols-5 text-center font-black text-[11px] normal-case tracking-wider">
+                              <div>Seg</div>
+                              <div>Ter</div>
+                              <div>Qua</div>
+                              <div>Qui</div>
+                              <div>Sex</div>
                             </div>
                           </div>
 
@@ -1429,10 +1330,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <div className="flex items-center gap-3">
                         <ColorfulHeaderIcon type="calendar" textFormat={defensesTextFormat} />
                         <div>
-                          <span className="text-[10px] font-black uppercase tracking-widest block text-white/80">
+                          <span className="text-[10px] font-black normal-case tracking-widest block text-white/80">
                             {calendarPopupFormat.headerCustomTitle || 'Agenda de Defesas de TCC'}
                           </span>
-                          <h3 className="font-black text-sm sm:text-base uppercase tracking-tight mt-0.5 text-white">
+                          <h3 className="font-black text-sm sm:text-base normal-case tracking-tight mt-0.5 text-white">
                             {selectedDayDefenses && selectedDayDefenses.length > 0
                               ? `Defesas em ${formatDatePt(selectedDayDefenses[0].defesa?.startAt)}`
                               : selectedDayGcalEvents && selectedDayGcalEvents.length > 0
@@ -1460,7 +1361,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                   onClick={() => {
                                     setSelectedDayDefenses(null);
                                     setSelectedDayGcalEvents(null);
-                                    setSelectedProcessDetails(proc);
+                                    setProcessLink(proc.id,null,true);window.dispatchEvent(new CustomEvent('portal:open-process',{detail:{id:proc.id,readOnly:!userEmail}}));
                                   }}
                                   className={`text-slate-900 ${cardPaddingClass} ${cardRadiusClass} ${cardBorderClass} ${cardGapClass} ${cardShadowClass} hover:shadow-md cursor-pointer transition-all group flex flex-col`}
                                   style={{
@@ -1522,7 +1423,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                     >
                                       {calendarPopupFormat.showStudents !== false && (
                                         <div>
-                                          <span className="font-black text-slate-500 text-[10px] uppercase tracking-wider block mb-0.5">
+                                          <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block mb-0.5">
                                             {calendarPopupFormat.studentLabel || (proc.aluno2 ? 'Discentes Apresentadores:' : 'Discente Apresentador:')}
                                           </span>
                                           <StudentNames 
@@ -1536,7 +1437,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                       )}
                                       {calendarPopupFormat.showAdvisor !== false && (
                                         <div>
-                                          <span className="font-black text-slate-500 text-[10px] uppercase tracking-wider block">
+                                          <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block">
                                             {calendarPopupFormat.advisorLabel || 'Orientador(a):'}
                                           </span>
                                           <span className="font-bold text-slate-900">{formatProfessorName(proc.orientador?.nome)}</span>
@@ -1547,7 +1448,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                       )}
                                       {calendarPopupFormat.showCoAdvisor !== false && proc.coorientador && (
                                         <div>
-                                          <span className="font-black text-slate-500 text-[10px] uppercase tracking-wider block">
+                                          <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block">
                                             {calendarPopupFormat.coAdvisorLabel || 'Coorientador(a):'}
                                           </span>
                                           <span className="font-bold text-slate-900">{formatProfessorName(proc.coorientador.nome)}</span>
@@ -1558,7 +1459,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                       )}
                                       {calendarPopupFormat.showCommittee !== false && proc.banca && proc.banca.filter(b => b.funcao !== 'ORIENTADOR').length > 0 && (
                                         <div>
-                                          <span className="font-black text-slate-500 text-[10px] uppercase tracking-wider block">
+                                          <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block">
                                             {calendarPopupFormat.committeeLabel || 'Banca Examinadora:'}
                                           </span>
                                           <div className="space-y-0.5 mt-0.5">
@@ -1579,7 +1480,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                   {calendarPopupFormat.showProgressBar !== false && (
                                     <div className="space-y-1 pt-2 border-t border-slate-100">
                                       {calendarPopupFormat.showProgressPercent !== false && (
-                                        <div className="flex items-center justify-between text-[9.5px] font-semibold text-slate-600 uppercase">
+                                        <div className="flex items-center justify-between text-[9.5px] font-semibold text-slate-600 normal-case">
                                           <span>{progress.label}</span>
                                           <span className="text-slate-900 font-mono font-bold">{progress.percent}%</span>
                                         </div>
@@ -1620,7 +1521,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                     if (matchedProc) {
                                       setSelectedDayDefenses(null);
                                       setSelectedDayGcalEvents(null);
-                                      setSelectedProcessDetails(matchedProc);
+                                      setProcessLink(matchedProc.id,null,true);window.dispatchEvent(new CustomEvent('portal:open-process',{detail:{id:matchedProc.id,readOnly:!userEmail}}));
                                     }
                                   }}
                                   className={`text-slate-900 ${cardPaddingClass} ${cardRadiusClass} border ${cardGapClass} shadow-xs ${matchedProc ? 'hover:border-slate-500 hover:shadow-md cursor-pointer transition-all group' : ''} flex flex-col`}
@@ -1678,19 +1579,19 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                     >
                                       {calendarPopupFormat.showStudents !== false && (
                                         <div>
-                                          <span className="font-black text-slate-500 text-[10px] uppercase tracking-wider block mb-0.5">Discente(s) Apresentador(es):</span>
+                                          <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block mb-0.5">Discente(s) Apresentador(es):</span>
                                           <GcalStudentNames alunoStr={parsed.aluno} align="left" itemClassName="text-xs font-black text-slate-900" />
                                         </div>
                                       )}
                                       {calendarPopupFormat.showAdvisor !== false && (
                                         <div>
-                                          <span className="font-black text-slate-500 text-[10px] uppercase tracking-wider block">Orientador(a):</span>
+                                          <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block">Orientador(a):</span>
                                           <span className="font-bold text-slate-900">{formatProfessorName(parsed.orientador)}</span>
                                         </div>
                                       )}
                                       {calendarPopupFormat.showCoAdvisor !== false && parsed.coorientador && (
                                         <div>
-                                          <span className="font-black text-slate-500 text-[10px] uppercase tracking-wider block">Coorientador(a):</span>
+                                          <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block">Coorientador(a):</span>
                                           <span className="font-bold text-slate-900">{formatProfessorName(parsed.coorientador)}</span>
                                         </div>
                                       )}
@@ -1729,7 +1630,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 <div data-portal-sheet-title="true" className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 py-2 text-center sm:flex-row sm:px-4 sm:py-2.5 sm:text-left">
                   <div className="flex items-center gap-2">
                     <ColorfulHeaderIcon type="list" textFormat={defensesTextFormat} />
-                    <h2 className="text-base sm:text-lg font-black uppercase tracking-tight">
+                    <h2 className="text-base sm:text-lg font-black normal-case tracking-tight">
                       {getEditableTableText(defensesCustomLabels, '__tableTitle', `Lista de Defesas — ${monthNamesPt[month]} de ${year}`)}
                     </h2>
                   </div>
@@ -1775,12 +1676,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 {/* INTEGRATED TOOLBAR BAR FOR STATUS & FILTERS */}
                 <div data-portal-sheet-filter="true" className="portal-defense-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 text-xs">
                   <span className="portal-filter-label opacity-80 shrink-0">
-                    FILTRAR:
+                    Filtrar:
                   </span>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {(['all', 'upcoming', 'defended'] as const).map((statusKey) => {
                       const isSelected = defenseStatusFilter === statusKey;
-                      const fallbackLabel = statusKey === 'all' ? 'TODAS' : statusKey === 'upcoming' ? 'A DEFENDER' : 'JÁ DEFENDIDAS';
+                      const fallbackLabel = statusKey === 'all' ? 'Todas' : statusKey === 'upcoming' ? 'A defender' : 'Já defendidas';
                       const chip = getFilterChipProps(statusKey, isSelected, defensesTextFormat, fallbackLabel, '');
 
                       return (
@@ -1939,7 +1840,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       key="protocolo"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedProcessDetails(proc);
+                        setProcessLink(proc.id,null,true);window.dispatchEvent(new CustomEvent('portal:open-process',{detail:{id:proc.id,readOnly:!userEmail}}));
                       }}
                       className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.borderClass} align-middle ${alignClass} cursor-pointer ${defStyles.firstColCellHoverClass} group/col0 transition-colors`}
                       title="Clique aqui para abrir os detalhes e documentos deste TCC"
@@ -2156,7 +2057,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   <div data-portal-sheet-title="true" className={`${acervoBannerStyles.bannerHeaderClass} p-3.5 sm:p-4 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-colors`} style={acervoBannerStyles.bannerHeaderStyle}>
                     <div className="flex items-center gap-2">
                       <ColorfulHeaderIcon type="repository" textFormat={acervoTextFormat} />
-                      <h1 className="text-base sm:text-lg font-black uppercase tracking-tight">
+                      <h1 className="text-base sm:text-lg font-black normal-case tracking-tight">
                         {getEditableTableText(acervoCustomLabels, '__tableTitle', 'Repositório & Acervo Digital')}
                       </h1>
                     </div>
@@ -2336,7 +2237,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         key="protocolo"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedProcessDetails(proc);
+                          setProcessLink(proc.id,null,true);window.dispatchEvent(new CustomEvent('portal:open-process',{detail:{id:proc.id,readOnly:!userEmail}}));
                         }}
                         className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.borderClass} align-middle ${alignClass} cursor-pointer ${acervoStyles.firstColCellHoverClass} group/col0 transition-colors`}
                         title="Clique aqui no Nº do Processo para abrir o TCC"
@@ -2552,7 +2453,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           <div className="portal-standard-modal portal-modal-surface max-w-2xl w-full max-h-[90vh] overflow-hidden" onMouseDown={(event) => event.stopPropagation()}>
             <div className="portal-modal-header px-4">
               <BookOpen className="w-4 h-4 text-white" />
-              <h3 className="font-extrabold text-sm uppercase text-white">Ficha Acadêmica & Resumo do TCC</h3>
+              <h3 className="font-extrabold text-sm normal-case text-white">Ficha Acadêmica & Resumo do TCC</h3>
             </div>
             <div className="portal-modal-divider" aria-hidden="true" />
             <div className="max-h-[calc(90vh-60px)] overflow-y-auto p-4 space-y-4">
@@ -2562,23 +2463,23 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               </div>
 
               <div>
-                <span className="font-bold text-slate-500 uppercase text-[10px] block">Título do Trabalho:</span>
+                <span className="font-bold text-slate-500 normal-case text-[10px] block">Título do Trabalho:</span>
                 <p className="font-extrabold text-sm text-slate-900 leading-snug">{formatTccTitle(selectedLibDoc.titulo)}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded border border-slate-200">
                 <div>
-                  <span className="font-bold text-slate-500 uppercase text-[10px] block mb-0.5">Discente(s):</span>
+                  <span className="font-bold text-slate-500 normal-case text-[10px] block mb-0.5">Discente(s):</span>
                   <StudentNames aluno1={selectedLibDoc.aluno1} aluno2={selectedLibDoc.aluno2} align="left" itemClassName="font-bold text-slate-900 text-xs" />
                 </div>
                 <div>
-                  <span className="font-bold text-slate-500 uppercase text-[10px] block">Orientador(a):</span>
+                  <span className="font-bold text-slate-500 normal-case text-[10px] block">Orientador(a):</span>
                   <p className="font-bold text-slate-900">{formatProfessorName(selectedLibDoc.orientador?.nome)}</p>
                 </div>
               </div>
 
               <div>
-                <span className="font-bold text-slate-500 uppercase text-[10px] block mb-1">Resumo Expandido:</span>
+                <span className="font-bold text-slate-500 normal-case text-[10px] block mb-1">Resumo Expandido:</span>
                 <p className="text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded border border-slate-200 font-sans text-xs">
                   {selectedLibDoc.acervo?.resumoSintese || 'Resumo não cadastrado.'}
                 </p>
@@ -2604,29 +2505,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
 
 
-      {/* FULL PROCESS DETAILS & CONFIGURATIONS POP-UP FORM */}
-      {selectedProcessDetails && (
-        <div
-          className="portal-modal-backdrop fixed inset-0 z-[1000001] overflow-y-auto p-2 sm:p-4 md:p-6 animate-fadeIn flex justify-center items-start"
-          onClick={handleCloseDetails}
-        >
-          <div
-            className="portal-standard-modal portal-modal-surface max-w-6xl w-full overflow-hidden relative my-2 sm:my-4 animate-in zoom-in-95 duration-150"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Body with Unified ProcessoDetailPage */}
-            <div className="max-h-[90vh] overflow-y-auto custom-scrollbar" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
-              <ProcessoDetailPage
-                processId={selectedProcessDetails.id}
-                onBack={handleCloseDetails}
-                readOnly={!userEmail}
-                isModal={true}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* LOGIN MODAL FOR STUDENTS AND PROFESSORS */}
       {showLoginModal && (() => {
         return (
@@ -2646,9 +2524,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               <div className="portal-modal-divider" aria-hidden="true" />
 
               <div className="space-y-3 p-4">
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  {loginPopupConfig.description}
-                </p>
 
                 {/* Informative helper box */}
                 {loginPopupConfig.showTipsBox && (

@@ -47,9 +47,9 @@ test('configurações não exibem blocos redundantes e Indicadores usam somente 
 test('paleta principal usa quatro superfícies e identidade canônica sem oliva legado', async () => {
   const css = await readPortalCss();
   for (const forbidden of ['#5f6937', '#4f582e', '#738044', '#8c9862']) assert.ok(!css.includes(forbidden), `Cor legada ainda presente: ${forbidden}`);
-  assert.ok(css.includes('--portal-surface-page: #f1f5f9'));
-  assert.ok(css.includes('--portal-surface-panel: #e1e6e9'));
-  assert.ok(css.includes('--portal-surface-card: #d5dce0'));
+  assert.ok(css.includes('--portal-surface-page: #f6f7f8'));
+  assert.ok(css.includes('--portal-surface-panel: #e9edef'));
+  assert.ok(css.includes('--portal-surface-card: #d8dfe3'));
   assert.ok(css.includes('--portal-surface-inner: #ffffff'));
   assert.ok(css.includes('--portal-brand-header: #005830'));
   assert.ok(css.includes('--portal-sidebar-footer: #011f17'));

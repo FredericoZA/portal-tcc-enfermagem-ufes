@@ -22,11 +22,33 @@ interface SettingsWorkspaceModalProps {
 type EmbeddedCapableProps = { embedded?: boolean };
 
 const SettingsWorkspaceHeaderHostContext = createContext<HTMLDivElement | null>(null);
+const SettingsWorkspaceLeadingHostContext = createContext<HTMLDivElement | null>(null);
+export const SettingsWorkspaceLeadingPortal: React.FC<{children:React.ReactNode}> = ({children}) => {
+  const host=useContext(SettingsWorkspaceLeadingHostContext);
+  return host?createPortal(children,host):null;
+};
 
 export const SettingsWorkspaceHeaderPortal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const host = useContext(SettingsWorkspaceHeaderHostContext);
   return host ? createPortal(children, host) : null;
 };
+
+/** Mantém o ícone e a seleção no mesmo controle, inclusive em cabeçalhos estreitos. */
+export const SettingsWorkspaceSelector: React.FC<{
+  icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+  'aria-label': string;
+  title?: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: React.ReactNode;
+}> = ({ icon: Icon, 'aria-label': label, title, value, onChange, children }) => (
+  <label className="portal-settings-header-selector">
+    <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+    <select aria-label={label} title={title} value={value} onChange={event => onChange(event.target.value)}>
+      {children}
+    </select>
+  </label>
+);
 
 const SHEET_SECTION_IDS = new Set(['authorizations', 'signature-ledger', 'audit-ledger']);
 
@@ -34,6 +56,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
   const firstId = sections[0]?.id || '';
   const [activeId, setActiveId] = useState(firstId);
   const [headerHost, setHeaderHost] = useState<HTMLDivElement | null>(null);
+  const [leadingHost,setLeadingHost]=useState<HTMLDivElement|null>(null);
 
   useEffect(() => {
     if (open && (!activeId || !sections.some((section) => section.id === activeId))) setActiveId(firstId);
@@ -73,7 +96,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
 
   const workspaceContent = singlePane ? (
     <main
-      className={`portal-settings-single-pane min-h-0 min-w-0 flex-1 p-0 ${sheetWorkspace ? 'flex flex-col overflow-hidden' : workflowWorkspace ? 'flex flex-col overflow-hidden' : 'overflow-auto'}`}
+      className={`portal-settings-single-pane min-h-0 min-w-0 flex-1 p-0 ${sheetWorkspace ? 'flex flex-col overflow-hidden' : workflowWorkspace ? 'overflow-y-auto overflow-x-hidden' : 'overflow-auto'}`}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
       data-portal-workflow-workspace={workflowWorkspace ? 'true' : 'false'}
@@ -97,7 +120,7 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
                 : { backgroundColor: 'var(--portal-surface-inner)' }}
             >
               {Icon && <Icon className="mt-0.5 h-4 w-4 shrink-0"/>}
-              <span className="min-w-0"><strong className="block text-[11px] font-black uppercase">{section.label}</strong>{section.description && <span className={`mt-0.5 block text-[9px] leading-4 ${selected ? 'text-white/80' : 'text-slate-500'}`}>{section.description}</span>}</span>
+              <span className="min-w-0"><strong className="block text-[11px] font-black normal-case">{section.label}</strong>{section.description && <span className={`mt-0.5 block text-[9px] leading-4 ${selected ? 'text-white/80' : 'text-slate-500'}`}>{section.description}</span>}</span>
             </button>;
           })}
         </div>
@@ -126,14 +149,17 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       data-portal-sheet-workspace={sheetWorkspace ? 'true' : 'false'}
       data-portal-workflow-workspace={workflowWorkspace ? 'true' : 'false'}
       data-portal-full-bleed={fullBleed ? 'true' : 'false'}
+      data-portal-form-workspace={singlePane && current.id === 'forms' ? 'true' : 'false'}
+      data-portal-email-workspace={singlePane && current.id === 'emails' ? 'true' : 'false'}
       data-portal-compact={compactWorkspace ? 'true' : 'false'}
-      className={`portal-settings-workspace flex w-fit min-w-[min(640px,calc(100vw-48px))] max-w-[calc(100vw-48px)] flex-col overflow-hidden ${sheetWorkspace ? 'h-auto max-h-[calc(100dvh-48px)]' : compactWorkspace ? 'h-auto max-h-[calc(100dvh-48px)]' : 'h-auto max-h-[calc(100dvh-48px)]'}`}
+      className="portal-settings-workspace flex flex-col overflow-hidden"
       style={{ backgroundColor: 'var(--portal-surface-page)' }}
     >
       <header className="portal-settings-workspace-header">
         <div className="portal-settings-workspace-title min-w-0">
           {TitleIcon && <TitleIcon className="h-4 w-4 shrink-0" aria-hidden="true"/>}
           <h2 className="truncate">{title}</h2>
+          <div ref={setLeadingHost} className="flex items-center gap-2"/>
         </div>
         <div className="portal-settings-workspace-actions">
           <div ref={setHeaderHost} className="flex min-w-0 flex-wrap items-center justify-end gap-1.5" data-settings-workspace-header-actions="true" />
@@ -141,9 +167,11 @@ export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ 
       </header>
       <div className="portal-settings-workspace-divider" aria-hidden="true" />
 
+      <SettingsWorkspaceLeadingHostContext.Provider value={leadingHost}>
       <SettingsWorkspaceHeaderHostContext.Provider value={headerHost}>
         {workspaceContent}
       </SettingsWorkspaceHeaderHostContext.Provider>
+      </SettingsWorkspaceLeadingHostContext.Provider>
     </section>
   </div>;
 };

@@ -75,7 +75,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   return (
     <div className="space-y-2 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
       <div className="flex items-center justify-between">
-        <label className="block text-[11px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+        <label className="block text-[11px] font-black text-slate-800 normal-case tracking-wider flex items-center gap-1.5">
           <ImageIcon className="w-3.5 h-3.5 text-slate-700" />
           <span>{label}</span>
         </label>
@@ -197,7 +197,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
       {/* Quick Emblem Presets */}
       {showPresets && (
         <div className="pt-2 border-t border-slate-100 space-y-1.5">
-          <div className="text-[10px] font-black text-slate-600 uppercase tracking-wider">
+          <div className="text-[10px] font-black text-slate-600 normal-case tracking-wider">
             Ou use o emblema acadêmico neutro:
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">

@@ -114,9 +114,8 @@ async function staticChecks() {
   });
 
   await check('Asten usa os signatários e a ordem definidos', () => {
-    assert.match(server, /if\(type==='ATA'\)return\[\{[^\n]*role:'ADVISOR'/);
-    assert.match(server, /if\(type==='TERMO'\)\{[\s\S]{0,1400}role:'STUDENT'[\s\S]{0,500}signingOrder:1[\s\S]{0,1200}role:'ADVISOR'[\s\S]{0,400}signingOrder:2/);
-    assert.match(server, /role:'PRESIDENT'[^\n]*signingOrder:1/);
+    assert.ok(server.includes("from './server/workflow/signaturePolicy'"));
+    assert.ok(server.includes('return registeredSignatureSigners(p,type,currentSettings)'));
     assert.match(asten, /ordem:\s*s\.order/);
   });
 
@@ -302,10 +301,15 @@ async function liveChecks() {
     await check('runtime: OTP autorizado é de uso único', async () => {
       const requested = await request('/api/auth/request-code', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: newStudent }) });
       assert.equal(requested.response.status, 200, JSON.stringify(requested.body));
-      const verified = await request('/api/auth/verify-code', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: newStudent, code: '123456' }) });
+      const otpCookie = requested.response.headers.get('set-cookie').split(';')[0];
+      for(let attempt=0;attempt<5;attempt++){
+        const unrelated = await request('/api/auth/verify-code',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:newStudent,code:'000000'})});
+        assert.equal(unrelated.response.status,401);
+      }
+      const verified = await request('/api/auth/verify-code', { method: 'POST', headers: { 'content-type': 'application/json', cookie:otpCookie }, body: JSON.stringify({ email: newStudent, code: '123456' }) });
       assert.equal(verified.response.status, 200, JSON.stringify(verified.body));
       assert.match(verified.response.headers.get('set-cookie') || '', /HttpOnly/i);
-      const reused = await request('/api/auth/verify-code', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: newStudent, code: '123456' }) });
+      const reused = await request('/api/auth/verify-code', { method: 'POST', headers: { 'content-type': 'application/json', cookie:otpCookie }, body: JSON.stringify({ email: newStudent, code: '123456' }) });
       assert.equal(reused.response.status, 401, JSON.stringify(reused.body));
     });
 
@@ -314,6 +318,22 @@ async function liveChecks() {
       const unrelated = await request('/api/processes/demo-proc-3/files/trabalho-completo/download', { headers: asUser('joao.pedro@aluno.ufes.br') });
       assert.equal(unauth.response.status, 401);
       assert.equal(unrelated.response.status, 404);
+    });
+
+    await check('runtime: somente Master configura pastas Asten; aluno não inicia ata ou declaração',async()=>{
+      for(const email of [ordinaryStudent,president]){
+        const forbidden=await request('/api/integrations/asten/folders',{headers:asUser(email)});
+        assert.equal(forbidden.response.status,403);
+        const mutation=await request('/api/integrations/asten/folders',{method:'PUT',headers:asUser(email),body:JSON.stringify({mapping:{ATA:1,TERMO:2,DECLARACAO:3}})});
+        assert.equal(mutation.response.status,403);
+      }
+      const anonymous=await request('/api/integrations/asten/folders');assert.equal(anonymous.response.status,401);
+      for(const type of ['ATA','DECLARACAO']){
+        const wrongRole=await request(`/api/processes/demo-proc-3/documents/${type}/sign`,{method:'POST',headers:asUser('lucas.almeida@aluno.ufes.br'),body:JSON.stringify({recipientEmail:'forjado@example.org',signers:[{email:'forjado@example.org'}]})});
+        assert.equal(wrongRole.response.status,403);
+        const unrelated=await request(`/api/processes/demo-proc-3/documents/${type}/sign`,{method:'POST',headers:asUser('joao.pedro@aluno.ufes.br'),body:'{}'});
+        assert.equal(unrelated.response.status,404);
+      }
     });
 
     await check('runtime: rota pública é anônima e separada', async () => {
@@ -364,15 +384,16 @@ async function liveChecks() {
           // em memória, sem enviar qualquer arquivo para uma integração externa.
           integrationStudio: {
             schemaVersion: 3, revision: 999999, savedAt: new Date().toISOString(), savedBy: master,
-            brandKit: { institutionName: 'Universidade de Teste', courseName: 'Curso de Teste', primaryColor: '#005830', secondaryColor: '#ffffff', accentColor: '#0f766e', textColor: '#ffffff', universityLogoUrl: '', courseLogoUrl: '', emailBannerUrl: '', fontFamily: 'Arial', documentHeaderText: '', documentFooterText: '', emailFooterText: '' },
+            brandKit: { institutionName: 'Universidade de Teste', courseName: 'Curso de Teste', primaryColor: '#005830', secondaryColor: '#ffffff', accentColor: '#0f766e', textColor: '#172033', universityLogoUrl: '', courseLogoUrl: '', emailBannerUrl: '', fontFamily: 'Arial', documentHeaderText: '', documentFooterText: '', emailFooterText: '' },
             driveModelosFolderUrl: '', documentDesigns: {}, emailDesigns: {}, formDesigns: {}, matrixColumns: [{ id: 'AUTORIZACAO_TESTE', name: 'AUTORIZACAO_TESTE', label: 'Autorização de teste', dataType: 'text' }, { id: 'PUBLICAR_TRABALHO', name: 'PUBLICAR_TRABALHO', label: 'Publicar trabalho', dataType: 'text' }], matrixRows: [],
             docTemplates: Object.values(models).map((model) => ({ ...model, driveFileUrl: `https://drive.google.com/file/d/${model.driveFileId}/view` })),
             emailTemplates: [{ id: 'email-convite-test', name: 'Convite', recipient: '{{ORIENTADOR_EMAIL}}', subject: 'Convite {{PROTOCOLO}}', body: 'Segue o convite.', attachments: ['model-convite'] }], formTemplates: [{ id: 'confirmacao-aluno', title: 'Confirmação do aluno', stage: 'DADOS FINAIS', targetRole: 'Aluno', description: 'Formulário configurável para teste.', isActive: true, questions: [{ id: 'aceite', fieldKey: 'AUTORIZACAO_TESTE', label: 'Confirma a informação?', fieldType: 'select', expectedAnswer: '', options: ['Sim', 'Não'], required: true }] }],
             workflowStages: [
               { id: 'stage-invite', stageNumber: 1, title: 'Convite', triggerEvent: 'LOCATION_CONFIRMED', actions: [{ id: 'invite-doc', type: 'doc', refId: 'model-convite', title: 'Gerar convite' }, { id: 'invite-mail', type: 'email', refId: 'email-convite-test', title: 'Enviar convite' }] },
               { id: 'stage-ata', stageNumber: 2, title: 'Ata', triggerEvent: 'EVALUATION_SUBMITTED', actions: [{ id: 'ata-doc', type: 'doc', refId: 'model-ata', title: 'Gerar ata' }] },
-              { id: 'stage-test', stageNumber: 3, title: 'Teste', triggerEvent: 'REPOSITORY_SUBMITTED', description: 'Libera o formulário configurável após os dados finais.', actions: [{ id: 'term-doc', type: 'doc', refId: 'model-termo', title: 'Gerar termo', condition: { fieldKey: 'PUBLICAR_TRABALHO', operator: 'IS_TRUE' } }, { id: 'action-test', type: 'form', refId: 'confirmacao-aluno', title: 'Liberar confirmação do aluno' }] }
+              { id: 'stage-test', stageNumber: 3, title: 'Teste', triggerEvent: 'REPOSITORY_SUBMITTED', description: 'Libera o formulário configurável após os dados finais.', actions: [{ id: 'term-doc', type: 'doc', refId: 'model-termo', title: 'Gerar termo', condition: { fieldKey: 'PUBLICAR_TRABALHO', operator: 'IS_TRUE' } }] }
               ,{ id:'stage-declaration',stageNumber:4,title:'Declaração',triggerEvent:'PUBLICATION_CLEARED',actions:[{id:'declaration-doc',type:'doc',refId:'model-declaracao',title:'Gerar declaração'}]}
+              ,{id:'stage-future-form',stageNumber:5,title:'Confirmação futura',triggerEvent:'PROCESS_COMPLETED',actions:[{ id: 'action-test', type: 'form', refId: 'confirmacao-aluno', title: 'Liberar confirmação do aluno' }]}
             ],
             auditTrail: []
           }
@@ -381,7 +402,7 @@ async function liveChecks() {
       assert.equal(configured.response.status, 200, JSON.stringify(configured.body));
       const baseFinalData = {
         palavrasChave: ['Oncologia', 'Quimioterapia', 'Enfermagem', 'Segurança', 'Cuidado'],
-        resumoSintese: 'Primeiro parágrafo do resumo sintético.\n\nSegundo parágrafo do resumo sintético.\n\nTerceiro parágrafo com conclusões.',
+        resumoSintese: 'Primeiro parágrafo do resumo sintético, com objetivos e método.\n\nSegundo parágrafo do resumo sintético, com resultados e conclusões.',
         workType: 'MONOGRAFIA'
       };
       const privateSubmission = await request('/api/processes/demo-proc-3/final-data', {
@@ -391,7 +412,10 @@ async function liveChecks() {
       assert.ok([200,202].includes(privateSubmission.response.status), JSON.stringify(privateSubmission.body));
       const privateDocs = await request('/api/processes/demo-proc-3/documents', { headers: asUser('lucas.almeida@aluno.ufes.br') });
       assert.equal(privateDocs.response.status, 200, JSON.stringify(privateDocs.body));
-      assert.ok(!privateDocs.body.some((document) => document.type === 'TERMO'), 'TERMO apareceu sem publicação');
+      const pendingDeclarationJobs=await request('/api/processes/demo-proc-3/signatures',{headers:asUser(master)});
+      assert.equal(pendingDeclarationJobs.response.status,200);
+      assert.ok(!pendingDeclarationJobs.body.some(job=>job.documentType==='DECLARACAO'),'Declaração não pode iniciar Asten antes da escolha da Presidência');
+      assert.ok(privateDocs.body.filter((document)=>document.type==='TERMO').every((document)=>document.status==='NAO_DISPONIVEL'), 'TERMO disponível sem publicação');
       const prohibitedTerm = await request('/api/processes/demo-proc-3/documents/TERMO/sign', { method: 'POST', headers: asUser('lucas.almeida@aluno.ufes.br'), body: '{}' });
       assert.equal(prohibitedTerm.response.status, 409, JSON.stringify(prohibitedTerm.body));
 
@@ -405,7 +429,7 @@ async function liveChecks() {
       assert.ok(publicDocs.body.some((document) => document.type === 'TERMO'), 'TERMO ausente com publicação autorizada');
     });
 
-    await check('runtime: formulário futuro permanece bloqueado sem arquivamento da etapa anterior', async () => {
+    await check('runtime: formulário futuro permanece bloqueado até o evento configurado', async () => {
       const available = await request('/api/processes/demo-proc-3/forms', { headers: asUser('lucas.almeida@aluno.ufes.br') });
       assert.equal(available.response.status, 200, JSON.stringify(available.body));
       assert.ok(!available.body.some((form) => form.id === 'confirmacao-aluno'));
@@ -417,6 +441,15 @@ async function liveChecks() {
       const result = await request('/api/processes/demo-proc-3/documents/TERMO/sign', { method: 'POST', headers: asUser('lucas.almeida@aluno.ufes.br'), body: '{}' });
       assert.equal(result.response.status, 409, JSON.stringify(result.body));
       assert.ok(!result.body?.job, 'um trabalho Asten não deveria ser criado antes do arquivamento no Drive');
+    });
+
+    await check('runtime: Gov.br exige documento preparado e permite Ata sem aprovar automaticamente',async()=>{
+      const headers=asUser(master);
+      const upload=await request('/api/uploads/staging',{method:'POST',headers,body:JSON.stringify({purpose:'GOV_BR_SIGNED_PDF',processId:'demo-proc-3'})});
+      assert.equal(upload.response.status,409);assert.equal(upload.body.code,'GOVBR_JOB_REQUIRED');
+      const signed=await request('/api/signatures/jobs/qualquer/govbr/complete',{method:'POST',headers,body:'{}'});assert.equal(signed.response.status,409);
+      const download=await request('/api/signatures/jobs/qualquer/govbr/download',{headers});assert.equal(download.response.status,409);
+      const manual=await request('/api/processes/demo-proc-3/documents/ATA/sign',{method:'POST',headers,body:JSON.stringify({provider:'GOV_BR'})});assert.equal(manual.response.status,200);assert.equal(manual.body.job.provider,'GOV_BR');assert.equal(manual.body.job.status,'READY_FOR_REVIEW');
     });
 
     await check('runtime: webhook exige segredo, envelope válido e vínculo com o portal', async () => {
@@ -467,6 +500,10 @@ async function liveChecks() {
     await check('runtime: confirmação do local exige declaração explícita e comprovante válido', async () => {
       const processes=(await request('/api/processes',{headers:asUser(master)})).body;const target=processes.find(process=>process.aluno1?.email===newStudent);assert.ok(target?.id);
       const blocked=await request(`/api/processes/${target.id}/confirm-location`,{method:'POST',headers:asUser(master),body:JSON.stringify({local:'Auditório',confirmationReceived:false})});assert.equal(blocked.response.status,400);
+      const before=await request(`/api/processes/${target.id}`,{headers:asUser(master)});
+      const missing=await request(`/api/processes/${target.id}/confirm-location`,{method:'POST',headers:asUser(master),body:JSON.stringify({local:'Auditório',confirmationReceived:true})});
+      assert.equal(missing.response.status,400);assert.equal(missing.body.code,'LOCATION_PROOF_REQUIRED');assert.match(missing.body.error,/Anexe.*e-mail/);
+      const after=await request(`/api/processes/${target.id}`,{headers:asUser(master)});assert.equal(after.body.dataRevision,before.body.dataRevision);assert.equal(after.body.defesa.localStatus,before.body.defesa.localStatus);
       const badProof=await request(`/api/processes/${target.id}/location-proof`,{method:'POST',headers:asUser(master),body:JSON.stringify({fileName:'texto.pdf',contentBase64:Buffer.from('isto não é pdf').toString('base64')})});assert.equal(badProof.response.status,422);
     });
 

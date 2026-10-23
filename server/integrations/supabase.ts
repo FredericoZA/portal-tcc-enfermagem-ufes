@@ -71,6 +71,15 @@ async function externalizeRuntimeImages(payload:object):Promise<object>{
   return sanitized;
 }
 
+// E-mail clients need an HTTPS image even when its optimized bytes are small.
+export async function persistStudioRuntimeImage(dataUrl:string):Promise<string>{
+  const match=dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
+  if(!match||dataUrl.length>4*1024*1024)throw new Error('Imagem inválida.');
+  const assetKey=createHash('sha256').update(dataUrl).digest('hex');
+  await upsertRuntimeAsset({assetKey,mimeType:match[1],dataUrl,byteLength:Buffer.from(match[2],'base64').length});
+  return runtimeAssetReference(assetKey);
+}
+
 export async function appendSupabaseAuditEvent(input:{externalId:string;occurredAt:string;processCode?:string;eventType:string;entityType:string;entityId?:string;details?:Record<string,unknown>}):Promise<void>{
   if(!getSupabaseRuntimeStatus().durablePersistenceReady)return;
   const response=await fetch(`${supabaseUrl()}/rest/v1/portal_audit_events`,{method:'POST',headers:{...adminHeaders(),Prefer:'return=minimal'},body:JSON.stringify({external_id:input.externalId,occurred_at:input.occurredAt,process_code:input.processCode||null,event_type:input.eventType,entity_type:input.entityType,entity_id:input.entityId||null,details:input.details||{}}),signal:AbortSignal.timeout(8_000)});
@@ -141,12 +150,12 @@ export function getSupabaseRuntimeStatus(): Omit<SupabaseRuntimeStatus, 'connect
   };
 }
 
-export async function loadPortalRuntimeState<T extends object>(): Promise<T | null> {
+export async function loadPortalRuntimeState<T extends object>(trackRevision=true): Promise<T | null> {
   if (!getSupabaseRuntimeStatus().durablePersistenceReady) return null;
   const response = await fetch(`${stateEndpoint()}?id=eq.global&select=payload,revision&limit=1`, { headers: adminHeaders(), signal: AbortSignal.timeout(20_000) });
   if (!response.ok) throw new Error(`Falha ao carregar o estado do Supabase (${response.status}).`);
   const rows = await response.json();
-  knownRevision=rows?.[0]?Number(rows[0].revision||1):0;
+  if(trackRevision)knownRevision=rows?.[0]?Number(rows[0].revision||1):0;
   return rows?.[0]?.payload && typeof rows[0].payload === 'object' ? rows[0].payload as T : null;
 }
 
@@ -163,7 +172,12 @@ export async function savePortalRuntimeState(payload: object): Promise<void> {
   });
   if (!response.ok) {
     const detail=await response.text().catch(()=>'');
-    if(response.status===409||detail.includes('40001')||detail.toLowerCase().includes('concorr'))throw new Error('Conflito de concorrência: outra instância atualizou o portal. Recarregue antes de tentar novamente.');
+    let errorCode='';
+    try{errorCode=String(JSON.parse(detail)?.code||'');}catch{}
+    // PT409 is a business revision conflict, not a PostgreSQL serialization
+    // failure. Keep legacy 40001 compatibility, but never retry either here:
+    // the caller must reload the authoritative state and review its change.
+    if(errorCode==='PT409'||errorCode==='40001'||detail.toLowerCase().includes('conflito de concorr'))throw new Error('Conflito de concorrência: outra instância atualizou o portal. Recarregue antes de tentar novamente.');
     throw new Error(`Falha no commit transacional do Supabase (${response.status})${detail?`: ${detail.slice(0,180)}`:''}.`);
   }
   const result=await response.json().catch(()=>null);
@@ -198,5 +212,28 @@ export async function testSupabaseRuntimeConnection(): Promise<SupabaseRuntimeSt
     return { ...base, connected: true, normalizedSchemaReady, transactionalRuntimeReady, message: transactionalRuntimeReady?'Conexão validada: runtime transacional v6, transporte privado e outbox Asten estão ativos. Execute ainda o piloto real antes de abrir o portal.':normalizedSchemaReady?'Esquema normalizado detectado, mas a migração v6 da outbox Asten ainda não foi confirmada.':'Conexão básica validada. Aplique todas as migrações, inclusive a v6 da outbox Asten, antes da homologação.' };
   } catch (error) {
     return { ...base, connected: false, message: error instanceof Error ? error.message : 'Falha ao testar o Supabase.' };
+  }
+}
+
+type DiagnosticCacheEntry={key:string;expiresAt:number;value:SupabaseRuntimeStatus};
+let diagnosticCache:DiagnosticCacheEntry|null=null;
+let diagnosticPending:{key:string;promise:Promise<SupabaseRuntimeStatus>}|null=null;
+
+/** Short-lived administrative diagnostics only. Authorization, mutations and
+ * startup validation continue to read/test the database directly. */
+export async function getSupabaseRuntimeConnectionStatus():Promise<SupabaseRuntimeStatus>{
+  const key=createHash('sha256').update(`${supabaseUrl()}|${String(process.env.PORTAL_PERSISTENCE_PROVIDER||'')}|${supabaseSecret()}`).digest('hex');
+  if(diagnosticCache?.key===key&&diagnosticCache.expiresAt>Date.now())return {...diagnosticCache.value};
+  if(diagnosticPending?.key===key)return {...await diagnosticPending.promise};
+  const promise=testSupabaseRuntimeConnection();
+  diagnosticPending={key,promise};
+  try{
+    const value=await promise;
+    if(value.connected&&value.transactionalRuntimeReady){
+      diagnosticCache={key,value:{...value},expiresAt:Date.now()+30_000};
+    }
+    return {...value};
+  }finally{
+    if(diagnosticPending?.promise===promise)diagnosticPending=null;
   }
 }

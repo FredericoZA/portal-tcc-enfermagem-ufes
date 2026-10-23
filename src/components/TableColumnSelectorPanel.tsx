@@ -208,16 +208,16 @@ export const DEFAULT_TABLE_TEXT_FORMAT: TableTextFormat = {
   filterColorMode: 'number_only',
   filterColorScheme: 'theme',
   filterItemsConfig: {
-    aluno: { key: 'aluno', label: 'ALUNO', emoji: '', dotColor: '#eab308', bgColor: '#fef9c3', textColor: '#713f12', borderColor: '#eab308', badgeBgColor: '#eab308', badgeTextColor: '#ffffff' },
-    banca: { key: 'banca', label: 'BANCA', emoji: '', dotColor: '#f97316', bgColor: '#fff7ed', textColor: '#7c2d12', borderColor: '#f97316', badgeBgColor: '#f97316', badgeTextColor: '#ffffff' },
-    avaliador: { key: 'avaliador', label: 'AVALIADOR', emoji: '', dotColor: '#0284c7', bgColor: '#f0f9ff', textColor: '#0369a1', borderColor: '#38bdf8', badgeBgColor: '#0284c7', badgeTextColor: '#ffffff' },
-    visualizador: { key: 'visualizador', label: 'VISUALIZADOR', emoji: '', dotColor: '#64748b', bgColor: '#f8fafc', textColor: '#1e293b', borderColor: '#94a3b8', badgeBgColor: '#64748b', badgeTextColor: '#ffffff' },
-    modelos: { key: 'modelos', label: 'MODELOS', emoji: '', dotColor: '#f97316', bgColor: '#fff7ed', textColor: '#7c2d12', borderColor: '#f97316', badgeBgColor: '#f97316', badgeTextColor: '#ffffff' },
-    formularios: { key: 'formularios', label: 'FORMULÁRIOS', emoji: '', dotColor: '#0284c7', bgColor: '#f0f9ff', textColor: '#0369a1', borderColor: '#38bdf8', badgeBgColor: '#0284c7', badgeTextColor: '#ffffff' },
-    emails: { key: 'emails', label: 'E-MAILS', emoji: '', dotColor: '#10b981', bgColor: '#ecfdf5', textColor: '#065f46', borderColor: '#34d399', badgeBgColor: '#10b981', badgeTextColor: '#ffffff' },
-    all: { key: 'all', label: 'TODAS', emoji: '', dotColor: '#2563eb', bgColor: '#eff6ff', textColor: '#1e3a8a', borderColor: '#60a5fa', badgeBgColor: '#2563eb', badgeTextColor: '#ffffff' },
-    pending: { key: 'pending', label: 'A DEFENDER', emoji: '', dotColor: '#eab308', bgColor: '#fef9c3', textColor: '#713f12', borderColor: '#eab308', badgeBgColor: '#eab308', badgeTextColor: '#ffffff' },
-    concluded: { key: 'concluded', label: 'JÁ DEFENDIDAS', emoji: '', dotColor: '#16a34a', bgColor: '#f0fdf4', textColor: '#14532d', borderColor: '#4ade80', badgeBgColor: '#16a34a', badgeTextColor: '#ffffff' },
+    aluno: { key: 'aluno', label: 'Aluno', emoji: '', dotColor: '#eab308', bgColor: '#fef9c3', textColor: '#713f12', borderColor: '#eab308', badgeBgColor: '#eab308', badgeTextColor: '#ffffff' },
+    banca: { key: 'banca', label: 'Banca', emoji: '', dotColor: '#f97316', bgColor: '#fff7ed', textColor: '#7c2d12', borderColor: '#f97316', badgeBgColor: '#f97316', badgeTextColor: '#ffffff' },
+    avaliador: { key: 'avaliador', label: 'Avaliador', emoji: '', dotColor: '#0284c7', bgColor: '#f0f9ff', textColor: '#0369a1', borderColor: '#38bdf8', badgeBgColor: '#0284c7', badgeTextColor: '#ffffff' },
+    visualizador: { key: 'visualizador', label: 'Visualizador', emoji: '', dotColor: '#64748b', bgColor: '#f8fafc', textColor: '#1e293b', borderColor: '#94a3b8', badgeBgColor: '#64748b', badgeTextColor: '#ffffff' },
+    modelos: { key: 'modelos', label: 'Modelos', emoji: '', dotColor: '#f97316', bgColor: '#fff7ed', textColor: '#7c2d12', borderColor: '#f97316', badgeBgColor: '#f97316', badgeTextColor: '#ffffff' },
+    formularios: { key: 'formularios', label: 'Formulários', emoji: '', dotColor: '#0284c7', bgColor: '#f0f9ff', textColor: '#0369a1', borderColor: '#38bdf8', badgeBgColor: '#0284c7', badgeTextColor: '#ffffff' },
+    emails: { key: 'emails', label: 'E-mails', emoji: '', dotColor: '#10b981', bgColor: '#ecfdf5', textColor: '#065f46', borderColor: '#34d399', badgeBgColor: '#10b981', badgeTextColor: '#ffffff' },
+    all: { key: 'all', label: 'Todas', emoji: '', dotColor: '#2563eb', bgColor: '#eff6ff', textColor: '#1e3a8a', borderColor: '#60a5fa', badgeBgColor: '#2563eb', badgeTextColor: '#ffffff' },
+    pending: { key: 'pending', label: 'A defender', emoji: '', dotColor: '#eab308', bgColor: '#fef9c3', textColor: '#713f12', borderColor: '#eab308', badgeBgColor: '#eab308', badgeTextColor: '#ffffff' },
+    concluded: { key: 'concluded', label: 'Já defendidas', emoji: '', dotColor: '#16a34a', bgColor: '#f0fdf4', textColor: '#14532d', borderColor: '#4ade80', badgeBgColor: '#16a34a', badgeTextColor: '#ffffff' },
   },
   firstColHighlight: 'slate',
   toolbarButtonColor: '#ffffff',
@@ -260,11 +260,11 @@ export const DEFAULT_TABLE_TEXT_FORMAT: TableTextFormat = {
   settingsButtonEmoji: '',
 
   // Chips dos Filtros
-  filterAllLabel: 'TODAS',
+  filterAllLabel: 'Todas',
   filterAllEmoji: '',
-  filterPendingLabel: 'A DEFENDER',
+  filterPendingLabel: 'A defender',
   filterPendingEmoji: '',
-  filterConcludedLabel: 'JÁ DEFENDIDAS',
+  filterConcludedLabel: 'Já defendidas',
   filterConcludedEmoji: '',
 
   // Células
@@ -465,11 +465,11 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 pb-2.5">
         <div className="flex items-center gap-2">
           <List className="w-4 h-4 text-[var(--portal-brand-action)] shrink-0" />
-          <span className="text-xs font-black uppercase text-slate-900 tracking-wider">
+          <span className="text-xs font-black normal-case text-slate-900 tracking-wider">
             Exibição & Ordem das Colunas — {tabTitle}
           </span>
           {isMaster && (
-            <span className="inline-flex items-center gap-1 bg-[var(--portal-surface-inner)] text-slate-700 border border-slate-300 text-[9.5px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1 bg-[var(--portal-surface-inner)] text-slate-700 border border-slate-300 text-[9.5px] font-extrabold px-2 py-0.5 rounded-full normal-case tracking-wider">
               <Shield className="w-3 h-3 text-[var(--portal-brand-action)]" /> Modo Administrador Master
             </span>
           )}
@@ -481,7 +481,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
             <button
               type="button"
               onClick={handleSetAsDefault}
-              className="portal-action portal-action-primary text-[10px] uppercase tracking-wider"
+              className="portal-action portal-action-primary text-[10px] normal-case tracking-wider"
               title="Salvar esta ordem e seleção de colunas como o padrão do sistema para esta aba"
             >
               <Star className="w-3.5 h-3.5" />
@@ -560,7 +560,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
 
                 {/* Fixed Badge or Reorder Action Buttons */}
                 {isFixed ? (
-                  <span className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase tracking-wider text-slate-600 bg-[var(--portal-surface-card)] px-2 py-0.5 rounded-full border border-slate-300 shrink-0">
+                  <span className="inline-flex items-center gap-1 text-[9.5px] font-black normal-case tracking-wider text-slate-600 bg-[var(--portal-surface-card)] px-2 py-0.5 rounded-full border border-slate-300 shrink-0">
                     <Lock className="w-2.5 h-2.5 text-slate-500" />
                     1º Fixo
                   </span>

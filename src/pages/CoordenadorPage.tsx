@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
+import { useSignatureUpdates } from '../hooks/useSignatureUpdates';
 import { ProcessData, SignatureJob, AstenIntegrationStatus } from '../types';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumeric, formatTimeExtenso } from '../utils/formatters';
@@ -27,7 +28,6 @@ import {
   Award,
   Download,
   CheckCircle2,
-  FileCheck,
   Shield,
   CheckSquare,
   Square,
@@ -36,16 +36,27 @@ import {
   ArrowRight,
   FileText,
   Filter,
-  RefreshCw,
   List,
   FileSpreadsheet,
   AlertCircle,
-  RotateCcw
+  RotateCcw,
+  FileSignature
 } from 'lucide-react';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { PORTAL_SEMANTIC_COLORS } from '../utils/portalSemanticTokens';
 import { formatProcessLabel } from '../components/PortalProcessPill';
-import { canPrepareDeclarationForGovBr, canSendDeclarationToAsten, latestDeclarationJob } from '../utils/coordinatorSignatureActions';
+import {
+  canSendDeclarationToAsten,
+  canReviewDeclarationWithGovbr,
+  createSignatureActionLock,
+  dispatchDeclarationBatch,
+  dispatchDeclarationToAsten,
+  latestDeclarationJob,
+  remainingSelectedDeclarations
+} from '../utils/coordinatorSignatureActions';
+import {GovbrSignatureModal} from '../components/GovbrSignatureModal';
+import {PortalModalShell} from '../components/PortalModalShell';
+import {AstenDeclarationBatchModal} from '../components/AstenDeclarationBatchModal';
 
 const ALL_COORDINATOR_COLUMNS: ColumnDef[] = [
   { key: 'protocolo', label: 'Processo', isFixed: true },
@@ -116,9 +127,14 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const [activeTab, setActiveTab] = useState<'todos' | 'pendentes' | 'concluidos'>('pendentes');
   const [searchFilter, setSearchFilter] = useState('');
   const [signatureJobs, setSignatureJobs] = useState<SignatureJob[]>([]);
+  const [govbrProcess,setGovbrProcess]=useState<ProcessData|null>(null);
+  const [govbrPickerOpen,setGovbrPickerOpen]=useState(false);
+  const [astenReviewIds,setAstenReviewIds]=useState<string[]|null>(null);
   const [astenStatus, setAstenStatus] = useState<AstenIntegrationStatus | null>(null);
   const [signingIds, setSigningIds] = useState<string[]>([]);
   const [signingMessage, setSigningMessage] = useState('');
+  const [dataLoadFailed, setDataLoadFailed] = useState(false);
+  const signatureActionLock = useRef(createSignatureActionLock());
   
   // Selection state for batch operations
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -199,8 +215,12 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       setAllProcesses(procsData || []);
       setSignatureJobs(jobsData || []);
       setAstenStatus(integration || null);
+      setDataLoadFailed(false);
+      return { queue: queueData || [], jobs: jobsData || [] };
     } catch (err) {
       console.error('Erro ao carregar dados do Presidente:', err);
+      setDataLoadFailed(true);
+      return null;
     } finally {
       setIsLoading(false);
     }
@@ -209,6 +229,12 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   useEffect(() => {
     loadData();
   }, []);
+
+  useSignatureUpdates({
+    jobs: signatureJobs,
+    enabled: !isLoading && !dataLoadFailed && signingIds.length === 0,
+    onChange: loadData,
+  });
 
   // Filter pending vs completed
   const pendingItems = queue.filter(item => {
@@ -258,10 +284,9 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     latestDeclarationJob(signatureJobs, processId);
 
   const canSendAsten = (processId: string): boolean =>
-    canSendDeclarationToAsten(queue, signatureJobs, processId);
+    !dataLoadFailed && canSendDeclarationToAsten(queue, signatureJobs, processId);
 
-  const canPrepareGov = (processId: string): boolean =>
-    canPrepareDeclarationForGovBr(queue, signatureJobs, processId);
+  const canOpenGovbr=(proc:ProcessData)=>!dataLoadFailed&&canReviewDeclarationWithGovbr(signatureJobs,proc.id,proc.dataRevision);
 
    const getDeclarationStatus = (processId: string, processStatus?: ProcessData['status']): { label: string; tone: string } => {
     const job = getLatestDeclarationJob(processId);
@@ -270,10 +295,10 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         ? { label: 'Sem registro', tone: 'border-slate-300 bg-slate-100 text-slate-700' }
         : { label: 'Pendente', tone: 'border-amber-300 bg-amber-50 text-amber-900' };
     }
-    if (job.provider === 'ASTEN' && job.providerCreationState === 'UNCERTAIN') {
+    if (job.provider === 'ASTEN' && (job.providerCreationState === 'UNCERTAIN' || job.providerDispatchState === 'UNCERTAIN')) {
       return { label: 'Conferir na Asten', tone: 'border-amber-400 bg-amber-100 text-amber-950' };
     }
-    if (job.status === 'READY_FOR_REVIEW') return { label: 'Pronta para assinatura', tone: 'border-sky-300 bg-sky-50 text-sky-900' };
+    if (job.status === 'READY_FOR_REVIEW') return { label: job.provider==='GOV_BR'?(job.govbrReview?'Conferência ITI pendente':'Assinatura Gov.br pendente'):'Pronta para assinatura', tone: 'border-sky-300 bg-sky-50 text-sky-900' };
     if (job.status === 'APPROVED') return { label: 'Aprovada para envio', tone: 'border-sky-300 bg-sky-50 text-sky-900' };
     if (['WAITING_INTEGRATION', 'QUEUED'].includes(job.status)) return { label: job.provider === 'ASTEN' ? 'Na fila Asten' : 'Na fila', tone: 'border-sky-300 bg-sky-50 text-sky-900' };
     if (job.status === 'SENDING') return { label: 'Enviando', tone: 'border-sky-300 bg-sky-50 text-sky-900' };
@@ -288,60 +313,45 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     return { label: 'Atenção', tone: 'border-red-300 bg-red-50 text-red-900' };
   };
 
-  const dispatchDeclarationToAsten = async (processId: string) => {
-    if (!canSendAsten(processId)) throw new Error('Esta declaração não está disponível para novo envio pela Asten.');
-    const previous=latestDeclarationJob(signatureJobs,processId,'ASTEN');
-    if(previous&&['WAITING_INTEGRATION','QUEUED','PROVIDER_ERROR'].includes(previous.status)){
-      await apiClient.retrySignatureJob(previous.id);
-    }else{
-      await apiClient.signProcessDocument(processId, 'DECLARACAO', 'ASTEN');
-    }
+  const handleSignDeclarations = async (processIds: string[]) => {
+    await signatureActionLock.current.run(async () => {
+      setSigningMessage('');
+      setSigningIds([...new Set(processIds)]);
+      try {
+        const result = await dispatchDeclarationBatch(processIds, id =>
+          dispatchDeclarationToAsten(queue, signatureJobs, id, apiClient)
+        );
+        // Também recarrega após erro de rede: o servidor pode ter concluído o envio.
+        const refreshed = await loadData();
+        setSelectedIds(current => remainingSelectedDeclarations(current, result, refreshed));
+        const failures = result.failures.map(failure => {
+          const process = allProcesses.find(item => item.id === failure.processId) ||
+            queue.find(item => item.process?.id === failure.processId)?.process;
+          return `${process?.protocolo || failure.processId}: ${failure.message}`;
+        });
+        const messages = [`${result.completedIds.length} declaração(ões) encaminhada(s) para assinatura pela Asten.`];
+        if (failures.length) messages.push(`${failures.length} falha(s): ${failures.join(' | ')}`);
+        if (result.unattemptedIds.length) messages.push(`${result.unattemptedIds.length} declaração(ões) não foram tentadas. Entre novamente antes de continuar.`);
+        if (!refreshed) messages.push('Não foi possível atualizar a fila. Atualize as declarações antes de continuar.');
+        setSigningMessage(messages.join(' '));
+      } finally {
+        setSigningIds([]);
+      }
+    });
   };
 
   const handleSignOne = async (processId: string) => {
-    if (signingIds.includes(processId)) return;
-    if(!canSendAsten(processId)){setSigningMessage('Esta declaração ainda não pode ser enviada à Asten. Verifique se o documento foi gerado ou se já existe uma assinatura em andamento.');return;}
-    setSigningMessage('');
-    setSigningIds((prev) => [...prev, processId]);
-    try {
-      await dispatchDeclarationToAsten(processId);
-      setSigningMessage('Declaração encaminhada para assinatura pela Asten.');
-      await loadData();
-    } catch (error) {
-      setSigningMessage(error instanceof Error ? error.message : 'Não foi possível encaminhar a declaração para a Asten.');
-    } finally {
-      setSigningIds((prev) => prev.filter((id) => id !== processId));
-    }
+    setAstenReviewIds([processId]);
   };
 
   const handleSignSelected = async () => {
     const pendingIds = new Set(pendingItems.map((item) => item.process.id));
-    const ids = selectedIds.filter((id) => pendingIds.has(id) && canSendAsten(id));
+    const ids = selectedIds.filter((id) => pendingIds.has(id));
     if (!ids.length) {
       setSigningMessage('Selecione ao menos uma declaração que ainda possa ser enviada ou reprocessada na Asten.');
       return;
     }
-    setSigningMessage('');
-    setSigningIds((prev) => Array.from(new Set([...prev, ...ids])));
-    let completed = 0;
-    const failures: string[] = [];
-    for (const id of ids) {
-      try {
-        await dispatchDeclarationToAsten(id);
-        completed += 1;
-      } catch (error) {
-        const process = pendingItems.find((item) => item.process.id === id)?.process;
-        failures.push(`${process?.protocolo || id}: ${error instanceof Error ? error.message : 'falha no envio'}`);
-      }
-    }
-    setSigningIds((prev) => prev.filter((id) => !ids.includes(id)));
-    setSelectedIds([]);
-    await loadData();
-    setSigningMessage(
-      failures.length
-        ? `${completed} declaração(ões) encaminhada(s). ${failures.length} falha(s): ${failures.join(' | ')}`
-        : `${completed} declaração(ões) encaminhada(s) para assinatura pela Asten.`
-    );
+    setAstenReviewIds(ids);
   };
 
   const downloadBrowserFile = (blob: Blob, fileName: string) => {
@@ -358,41 +368,12 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     }
   };
 
-  const handleGovOne = async (processId: string) => {
-    if(signingIds.includes(processId))return;
-    if(!canPrepareGov(processId)){setSigningMessage('Esta declaração ainda não está disponível para assinatura Gov.br. Verifique a geração do documento, suas pendências ou assinaturas anteriores.');return;}
-    const signerWindow=window.open('https://assinador.iti.br/','_blank','noopener,noreferrer');
-    setSigningMessage(''); setSigningIds(prev=>[...prev,processId]);
-    try{const result=await apiClient.signProcessDocument(processId,'DECLARACAO','GOV_BR');const file=await apiClient.downloadGovBrSigningPdf(result.job.id);downloadBrowserFile(file.blob,file.fileName);setSigningMessage('PDF preparado e baixado. O Assinador Gov.br foi aberto em outra aba; depois da assinatura, envie o PDF assinado na ficha do TCC.');await loadData();}
-    catch(error){signerWindow?.close();setSigningMessage(error instanceof Error?error.message:'Não foi possível preparar a assinatura Gov.br.');}
-    finally{setSigningIds(prev=>prev.filter(id=>id!==processId));}
-  };
-
-  const handleSignSelectedGov = async () => {
-    const pendingIds=new Set(pendingItems.map(item=>item.process.id));const ids=selectedIds.filter(id=>pendingIds.has(id)&&canPrepareGov(id));
-    if(!ids.length){setSigningMessage('Selecione ao menos uma declaração disponível para assinatura Gov.br.');return;}
-    window.open('https://assinador.iti.br/','_blank','noopener,noreferrer');setSigningIds(prev=>Array.from(new Set([...prev,...ids])));let completed=0;const failures:string[]=[];
-    for(const id of ids){try{const result=await apiClient.signProcessDocument(id,'DECLARACAO','GOV_BR');const file=await apiClient.downloadGovBrSigningPdf(result.job.id);downloadBrowserFile(file.blob,file.fileName);completed++;}catch(error){const proc=pendingItems.find(item=>item.process.id===id)?.process;failures.push(`${proc?.protocolo||id}: ${error instanceof Error?error.message:'falha'}`);}}
-    setSigningIds(prev=>prev.filter(id=>!ids.includes(id)));setSelectedIds([]);await loadData();setSigningMessage(failures.length?`${completed} PDF(s) Gov.br preparados; ${failures.length} falha(s): ${failures.join(' | ')}`:`${completed} PDF(s) preparados. Assine-os no Gov.br e envie os arquivos assinados pelas fichas dos TCCs.`);
-  };
-
-  const getGovDeclarationJob = (processId: string): SignatureJob | undefined =>
-    signatureJobs.filter((job) => job.processId === processId && job.documentType === 'DECLARACAO' && job.provider === 'GOV_BR').sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
-
-  const handleGovSignedUpload = async (processId: string, file: File) => {
-    const job = getGovDeclarationJob(processId);
-    if (!job) { setSigningMessage('Prepare primeiro o PDF para assinatura Gov.br.'); return; }
-    if (signingIds.includes(processId)) return;
-    setSigningIds((prev) => [...prev, processId]); setSigningMessage('');
-    try { await apiClient.uploadGovBrSignedPdf(job.id, processId, file); setSigningMessage('Arquivo assinado no Gov.br recebido e associado ao TCC.'); await loadData(); }
-    catch (error) { setSigningMessage(error instanceof Error ? error.message : 'Não foi possível enviar o arquivo assinado.'); }
-    finally { setSigningIds((prev) => prev.filter((id) => id !== processId)); }
-  };
-
   const renderSignatureActionCell = (proc: ProcessData) => {
-    const govJob=getGovDeclarationJob(proc.id);const working=signingIds.includes(proc.id);const astenActionable=canSendAsten(proc.id);const govActionable=canPrepareGov(proc.id);
-    const govUploadAvailable=Boolean(govJob && !['SIGNED','ARCHIVED','CANCELED'].includes(govJob.status));
-    return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}><div className="flex flex-wrap items-center justify-center gap-1.5"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working} className="portal-sign-provider-btn" title="Assinar esta declaração pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" onClick={()=>void handleGovOne(proc.id)} disabled={working} className="portal-sign-provider-btn" title="Preparar PDF e abrir o Assinador Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>{govUploadAvailable&&<label className="portal-sign-provider-btn cursor-pointer" title="Enviar o PDF já assinado no Gov.br"><input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event)=>{const file=event.currentTarget.files?.[0];event.currentTarget.value='';if(file)void handleGovSignedUpload(proc.id,file);}}/><Download className="h-3.5 w-3.5 rotate-180"/><span>Enviar assinado</span></label>}</div></td>;
+    const working=signingIds.length > 0;
+    const govbrJob=latestDeclarationJob(signatureJobs.filter(job=>job.sourceDataRevision===proc.dataRevision),proc.id,'GOV_BR');
+    const canContinueGovbr=govbrJob&&['READY_FOR_REVIEW','DRIVE_SYNC_PENDING'].includes(govbrJob.status);
+    const astenStarted=!canOpenGovbr(proc);
+    return <td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}><div className="flex flex-wrap items-center justify-center gap-1"><button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working||dataLoadFailed||(!canSendAsten(proc.id)&&!canOpenGovbr(proc))} className="portal-sign-provider-btn" title="Revisar declaração para assinatura pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button><button type="button" className="portal-sign-provider-btn" disabled={working||dataLoadFailed||Boolean(astenStarted)} onClick={()=>setGovbrProcess(proc)} title={astenStarted?'A assinatura Asten já foi iniciada. Confira o envelope antes de mudar de provedor.':'Assinar no Gov.br e conferir no VALIDAR/ITI'}><FileSignature className="h-3.5 w-3.5"/><span>Gov.br</span></button></div></td>;
   };
 
   const renderCompletedActionCell = (proc: ProcessData) => {
@@ -742,7 +723,12 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
       ? completedRows
       : [...pendingRows, ...completedRows];
   const sortedRows = getSortedAndFilteredItems(visibleRows);
-  const visibleRowIds = sortedRows.map((row) => row.process.id);
+  const visibleRowIds = sortedRows.filter(row => row.pending && (canSendAsten(row.process.id)||canOpenGovbr(row.process))).map((row) => row.process.id);
+  const selectedGovbrProcesses=pendingItems.map(item=>item.process).filter(proc=>selectedIds.includes(proc.id)&&canOpenGovbr(proc));
+  const openSelectedGovbr=()=>{
+    if(selectedGovbrProcesses.length===1)setGovbrProcess(selectedGovbrProcesses[0]);
+    else if(selectedGovbrProcesses.length>1)setGovbrPickerOpen(true);
+  };
   const allVisibleSelected = visibleRowIds.length > 0 && visibleRowIds.every((id) => selectedIds.includes(id));
   const toggleSelectAllVisible = () => toggleSelectionGroup(visibleRowIds);
 
@@ -751,14 +737,22 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
   return (
     <div id="coordenador-page-root" className="space-y-3 max-w-7xl mx-auto py-1.5">
+      {astenReviewIds&&<AstenDeclarationBatchModal processIds={astenReviewIds} dispatchReady={astenStatus?.dispatchEnabled===true} onClose={()=>setAstenReviewIds(null)} onSend={ids=>{setAstenReviewIds(null);void handleSignDeclarations(ids);}}/>}
+      {govbrPickerOpen&&<PortalModalShell open title="Declarações para assinatura gov.br" icon={FileSignature} onClose={()=>setGovbrPickerOpen(false)} maxWidthClass="max-w-2xl" bodyClassName="max-h-[70dvh] overflow-y-auto p-4" footer={<button type="button" className="portal-action" onClick={()=>setGovbrPickerOpen(false)}>Fechar</button>}><div className="space-y-2">{selectedGovbrProcesses.map(proc=><button type="button" key={proc.id} className="flex w-full flex-col gap-1 rounded-lg border border-slate-300 bg-white p-3 text-left text-xs hover:border-emerald-700" onClick={()=>{setGovbrPickerOpen(false);setGovbrProcess(proc);}}><strong>{proc.protocolo}</strong><span>{proc.titulo}</span></button>)}</div></PortalModalShell>}
+      {govbrProcess&&<GovbrSignatureModal key={govbrProcess.id} process={govbrProcess} initialJob={latestDeclarationJob(signatureJobs.filter(job=>job.sourceDataRevision===govbrProcess.dataRevision),govbrProcess.id,'GOV_BR')} onChange={job=>{setSignatureJobs(current=>[...current.filter(item=>item.id!==job.id),job]);if(job.status==='ARCHIVED')setSelectedIds(current=>current.filter(id=>id!==job.processId));}} onClose={()=>{setGovbrProcess(null);void loadData();}}/>}
       {signingMessage && (
         <div role="status" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800">
           {signingMessage}
         </div>
       )}
+      {dataLoadFailed && (
+        <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
+          Não foi possível carregar o estado atual das assinaturas. Atualize as declarações para continuar.
+        </div>
+      )}
       {activeTab !== 'concluidos' && astenStatus && !astenStatus.dispatchEnabled && (
         <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
-          Asten ainda requer configuração para despacho. As declarações continuam visíveis nesta fila até a integração estar pronta.
+          Asten ainda requer configuração para despacho. As declarações elegíveis também podem ser assinadas no Gov.br, com conferência manual no VALIDAR/ITI.
         </div>
       )}
 
@@ -772,7 +766,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
             <div data-portal-sheet-title="true" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
               <div className="flex items-center gap-2">
                 <ColorfulHeaderIcon type="coordination" textFormat={coordTextFormat} />
-                <h1 className="text-base sm:text-lg font-black uppercase tracking-tight leading-snug">
+                <h1 className="text-base sm:text-lg font-black normal-case tracking-tight leading-snug">
                   {getEditableTableText(customLabels, '__tableTitle', 'Gestão e Assinatura de Declarações')}
                 </h1>
               </div>
@@ -782,15 +776,12 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   {selectedIds.length>0&&<span role="status" className="rounded-full border border-white/50 px-2 py-1 text-[10px] font-bold text-white">{selectedIds.length} selecionado(s)</span>}
                   {activeTab !== 'concluidos' && (
                     <>
-                      <button type="button" disabled={selectedIds.length===0 || signingIds.length > 0} onClick={handleSignSelected} className="portal-sign-bulk-btn disabled:opacity-45" title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
-                      <button type="button" disabled={selectedIds.length===0 || signingIds.length > 0} onClick={()=>void handleSignSelectedGov()} className="portal-sign-bulk-btn disabled:opacity-45" title="Preparar selecionados para assinatura Gov.br"><FileCheck className="h-3.5 w-3.5"/><span>Gov</span></button>
+                      <button type="button" disabled={dataLoadFailed || selectedIds.length===0 || signingIds.length > 0} onClick={handleSignSelected} className="portal-sign-bulk-btn disabled:opacity-45" title="Assinar selecionados pela Asten"><Shield className="h-3.5 w-3.5"/><span>Asten</span></button>
+                      <button type="button" disabled={dataLoadFailed || selectedGovbrProcesses.length===0 || signingIds.length > 0} onClick={openSelectedGovbr} className="portal-sign-bulk-btn disabled:opacity-45" title="Assinar selecionados pelo Gov.br" aria-label="Assinar selecionados pelo Gov.br"><FileSignature className="h-3.5 w-3.5"/><span>Gov.br</span></button>
                     </>
                   )}
                 </div>
                 <div className="portal-sheet-toolbar-terminal">
-                  <button type="button" onClick={()=>void loadData()} disabled={isLoading} className="portal-toolbar-icon-button disabled:opacity-45" title="Atualizar declarações" aria-label="Atualizar declarações">
-                    <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                  </button>
                   <SearchPopover
                     value={searchFilter}
                     onChange={setSearchFilter}
@@ -832,7 +823,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               {/* Filter Row Switcher with FILTRAR prefix following site standard */}
               <div className="flex items-center gap-2 shrink-0">
                 <span className="portal-filter-label shrink-0 mr-1 opacity-80">
-                  FILTRAR:
+                  Filtrar:
                 </span>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {([
@@ -892,9 +883,10 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                         <button
                           type="button"
                           onClick={toggleSelectAllVisible}
+                          disabled={signingIds.length > 0 || visibleRowIds.length === 0}
                           className={`cursor-pointer ${isDarkTheme ? 'text-white/80 hover:text-white' : 'text-slate-600 hover:text-emerald-800'} flex justify-center mx-auto`}
-                          title="Selecionar/Deselecionar todos os itens visíveis"
-                          aria-label="Selecionar ou deselecionar todos os itens visíveis"
+                          title="Selecionar/Deselecionar declarações disponíveis"
+                          aria-label="Selecionar ou deselecionar declarações disponíveis"
                         >
                           {allVisibleSelected ? (
                             <CheckSquare className={`w-4 h-4 ${isDarkTheme ? 'text-emerald-300' : 'text-emerald-700'}`} />
@@ -922,14 +914,14 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                             <button
                               type="button"
                               onClick={() => toggleSelectItem(proc.id)}
-                              disabled={signingIds.includes(proc.id)}
+                              disabled={signingIds.length > 0 || !row.pending || (!canSendAsten(proc.id)&&!canOpenGovbr(proc))}
                               className="cursor-pointer text-slate-400 hover:text-emerald-700 flex justify-center mx-auto disabled:cursor-not-allowed disabled:opacity-30"
                               aria-label={isSelected ? 'Desmarcar item' : 'Selecionar item'}
                             >
                               {isSelected ? (
                                 <CheckSquare className="w-4.5 h-4.5 text-emerald-700" />
                               ) : (
-                                <Square className="w-4.5 h-4.5 text-slate-300" />
+                                <Square className="w-4.5 h-4.5 text-slate-500" />
                               )}
                             </button>
                           </td>

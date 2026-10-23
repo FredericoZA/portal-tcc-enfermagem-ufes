@@ -40,7 +40,7 @@ export const PortalModalShell: React.FC<PortalModalShellProps> = ({
   labelledBy,
   closeOnBackdrop = true,
   closeOnEscape = true,
-  zIndexClass = 'z-[1000000]',
+  zIndexClass = 'z-[1000010]',
 }) => {
   useEffect(() => {
     if (!open || !closeOnEscape) return;
@@ -78,7 +78,7 @@ export const PortalModalShell: React.FC<PortalModalShellProps> = ({
         <header className="portal-modal-header shrink-0">
           {Icon && <Icon className="h-4 w-4 shrink-0 text-white" aria-hidden="true" />}
           <div className="min-w-0">
-            <h2 id={titleId} className="truncate text-[13px] font-black uppercase tracking-wide text-white">{title}</h2>
+            <h2 id={titleId} className="truncate text-[13px] font-black normal-case tracking-wide text-white">{title}</h2>
             {subtitle && <p className="mt-0.5 truncate text-[10px] font-semibold text-white/85">{subtitle}</p>}
           </div>
         </header>

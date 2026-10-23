@@ -20,6 +20,8 @@ export interface StagedUploadDescriptor {
   sha256: string;
 }
 
+export class StagedUploadCapacityError extends Error {}
+
 export interface StagedUploadTicket {
   uploadId: string;
   uploadUrl: string;
@@ -187,20 +189,24 @@ export async function ensurePrivateStagingBucket():Promise<void>{
   const id=encodeURIComponent(stagingBucket());
   const current=await fetch(`${storageBaseUrl()}/bucket/${id}`,{headers:buildSupabaseAdminHeaders(),signal:AbortSignal.timeout(10_000)});
   if(current.ok){
-    const bucket=await current.json() as {public?:boolean};
+    const bucket=await current.json() as {public?:boolean;file_size_limit?:number};
     if(bucket.public)throw new Error('O bucket de staging está público. Torne-o privado antes de aceitar uploads.');
+    if(!Number.isSafeInteger(bucket.file_size_limit)||bucket.file_size_limit!<=0||bucket.file_size_limit!>110*1024*1024)throw new Error('O bucket deve impor um limite por arquivo de até 110 MB para garantir a reserva de capacidade.');
     return;
   }
   if(current.status!==404)throw new Error(`Não foi possível validar o bucket de staging (${current.status}).`);
   const created=await fetch(`${storageBaseUrl()}/bucket`,{
     method:'POST',headers:buildSupabaseAdminHeaders(),
-    body:JSON.stringify({id:stagingBucket(),name:stagingBucket(),public:false,file_size_limit:MAX_BYTES.VERIFICATION_PDF,allowed_mime_types:[PDF_MIME,DOCX_MIME]}),
+    body:JSON.stringify({id:stagingBucket(),name:stagingBucket(),public:false,file_size_limit:110*1024*1024,allowed_mime_types:[PDF_MIME,DOCX_MIME,'application/zip']}),
     signal:AbortSignal.timeout(10_000)
   });
   if(!created.ok&&created.status!==409)throw new Error(`Não foi possível criar o bucket privado de staging (${created.status}).`);
 }
 
 export async function createSupabaseStagedUpload(input:StagedUploadDescriptor):Promise<StagedUploadTicket>{
+  // Legacy ticket rows remain readable for cleanup, but public authenticity
+  // verification now compares bytes locally and must never allocate storage.
+  if(input.purpose==='VERIFICATION_PDF')throw new Error('A conferência do PDF acontece no navegador. O envio público de arquivos para verificação foi desativado.');
   assertConfigured();
   validateStagedUploadDescriptor(input);
   await ensurePrivateStagingBucket();
@@ -209,6 +215,7 @@ export async function createSupabaseStagedUpload(input:StagedUploadDescriptor):P
   const expiresAt=new Date(Date.now()+15*60_000).toISOString();
   const row={
     id:uploadId,purpose:input.purpose,requester_hash:bindingHash(input.requesterBinding),
+    principal_hash:bindingHash(input.requesterBinding.replace(/^(session:.*):[0-9]+$/, '$1')),
     process_external_id:input.processId||null,verification_code_hash:input.verificationCode?bindingHash(input.verificationCode):null,
     object_path:objectPath,original_file_name:input.fileName,mime_type:input.mimeType.toLowerCase(),
     expected_size:input.size,expected_sha256:input.sha256,status:'PENDING',expires_at:expiresAt
@@ -216,6 +223,7 @@ export async function createSupabaseStagedUpload(input:StagedUploadDescriptor):P
   const inserted=await fetch(`${dataBaseUrl()}/portal_upload_staging`,{
     method:'POST',headers:{...buildSupabaseAdminHeaders(),Prefer:'return=minimal'},body:JSON.stringify(row),signal:AbortSignal.timeout(10_000)
   });
+  if(inserted.status===429)throw new StagedUploadCapacityError('Limite temporário de uploads atingido. Aguarde a expiração das autorizações anteriores.');
   if(!inserted.ok)throw new Error(`Não foi possível registrar o upload temporário (${inserted.status}).`);
   try{
     const signedResponse=await fetch(`${storageBaseUrl()}/object/upload/sign/${encodeURIComponent(stagingBucket())}/${encodePath(objectPath)}`,{
@@ -294,9 +302,12 @@ export async function withSupabaseStagedUpload<T>(input:{
   return result;
 }
 
+// Retain the row beyond the provider's two-hour signed URL lifetime.
+// Deleting it after the app's 15-minute deadline would let a still-valid URL
+// recreate an untracked object and prematurely release its allocation.
 export async function cleanupExpiredStagedUploads(limit=100):Promise<number>{
   assertConfigured();
-  const response=await fetch(`${dataBaseUrl()}/portal_upload_staging?status=in.(PENDING,CONSUMING,CONSUMED,CLEANUP_PENDING,REJECTED,EXPIRED)&expires_at=lt.${encodeURIComponent(new Date().toISOString())}&select=*&limit=${Math.min(Math.max(limit,1),500)}`,{
+  const response=await fetch(`${dataBaseUrl()}/portal_upload_staging?status=in.(PENDING,CONSUMING,CONSUMED,CLEANUP_PENDING,REJECTED,EXPIRED)&expires_at=lt.${encodeURIComponent(new Date().toISOString())}&created_at=lt.${encodeURIComponent(new Date(Date.now()-135*60_000).toISOString())}&select=*&limit=${Math.min(Math.max(limit,1),500)}`,{
     headers:buildSupabaseAdminHeaders(),signal:AbortSignal.timeout(10_000)
   });
   const rows=await jsonOrThrow<StagedUploadRow[]>(response,'Listagem de uploads expirados');
@@ -328,6 +339,7 @@ async function recordDownloadTransfer(row:{id:string;objectPath:string;fileName:
     body:JSON.stringify({id:row.id,object_path:row.objectPath,file_name:row.fileName,mime_type:row.mimeType,size_bytes:row.size,sha256:row.sha256,requester_hash:bindingHash(row.requesterBinding),status:'ACTIVE',expires_at:row.expiresAt}),
     signal:AbortSignal.timeout(10_000)
   });
+  if(response.status===429)throw new StagedUploadCapacityError('Limite temporário de downloads atingido. Aguarde a limpeza automática dos arquivos temporários.');
   if(!response.ok)throw new Error(`Não foi possível registrar o download temporário (${response.status}).`);
 }
 
@@ -352,9 +364,17 @@ export async function createSupabaseEphemeralDownload(input:{
   const objectPath=`downloads/${new Date().toISOString().slice(0,10)}/${sha256.slice(0,20)}/${id}.${extension}`;
   const expiresInSeconds=Math.min(Math.max(Number(input.expiresInSeconds||60),30),300);
   const expiresAt=new Date(Date.now()+expiresInSeconds*1000).toISOString();
-  await uploadPrivateObject(objectPath,input.bytes,input.mimeType);
+  // Reserve quota atomically before allocating any storage bytes.
+  const reservation={id,objectPath,fileName,mimeType:input.mimeType,size:input.bytes.length,sha256,requesterBinding:input.requesterBinding,expiresAt};
+  try{await recordDownloadTransfer(reservation);}catch(error){
+    if(!(error instanceof StagedUploadCapacityError))throw error;
+    // A confirmed quota rejection creates no reservation/object; drain a bounded
+    // batch of expired transfers before one safe reservation retry.
+    await cleanupExpiredDownloadTransfers(16);
+    await recordDownloadTransfer(reservation);
+  }
   try{
-    await recordDownloadTransfer({id,objectPath,fileName,mimeType:input.mimeType,size:input.bytes.length,sha256,requesterBinding:input.requesterBinding,expiresAt});
+    await uploadPrivateObject(objectPath,input.bytes,input.mimeType);
     const signedResponse=await fetch(`${storageBaseUrl()}/object/sign/${encodeURIComponent(stagingBucket())}/${encodePath(objectPath)}`,{
       method:'POST',headers:buildSupabaseAdminHeaders(),body:JSON.stringify({expiresIn:expiresInSeconds}),signal:AbortSignal.timeout(10_000)
     });

@@ -1,3 +1,6 @@
+import {upgradeOperationalEmailTemplate,recipientEmailVariables} from '../../src/utils/operationalEmails';
+import {processLink} from '../../src/utils/processLink';
+import {formatDateNumeric,formatTime24h} from '../../src/utils/formatters';
 import { presentVariables } from '../../src/utils/operationalConfig';
 import { createHash } from 'crypto';
 import nodeProcess from 'node:process';
@@ -207,7 +210,7 @@ export function buildProcessVariables(context: WorkflowRuntimeContext): Record<s
     BANCA_NOMES: bankNames,
     BANCA_EMAILS: bankEmails,
     PARTICIPANTES_EMAILS: participantEmails,
-    DEFESA_DATA_HORA: process.defesa.startAt,
+    DEFESA_DATA_HORA: `${formatDateNumeric(process.defesa.startAt)} às ${formatTime24h(process.defesa.startAt)}`,
     DEFESA_LOCAL: process.defesa.local,
     RESULTADO: process.avaliacao.resultadoLabel || '',
     // Compatibilidade com modelos históricos: esta instalação não registra nota numérica.
@@ -224,6 +227,7 @@ export function buildProcessVariables(context: WorkflowRuntimeContext): Record<s
     TRABALHO_FINAL_PDF: process.acervo?.trabalhoCompletoFileUrl || '',
     RESUMO_EXPANDIDO_PDF: process.acervo?.resumoExpandidoFileUrl || '',
     LINK_PORTAL: portalUrl,
+    LINK_PROCESSO: portalUrl?processLink(portalUrl,process.id):'',
     EVENTO: context.eventCode,
     ATOR_EMAIL: context.actorEmail
   };
@@ -263,7 +267,7 @@ function mergeMarkers(source: string, variables: Record<string, string>, html: b
  * por modelos publicados, inclusive via marcadores antigos ou aliases. */
 export function filterTemplateVariables(variables: Record<string,string>,studio:IntegrationStudioSettings): Record<string,string> {
   const blocked=new Set<string>();
-  for(const form of studio.formTemplates||[]){
+  for(const form of [...(studio.formTemplates||[]),...Object.values(studio.processFieldSchemas||{}).map(questions=>({questions}))]){
     for(const question of (Array.isArray(form.questions)?form.questions:[])){
       if(question.availableToTemplates===false && question.fieldKey)blocked.add(normalizeWorkflowEventCode(String(question.fieldKey)));
     }
@@ -378,18 +382,20 @@ export async function executeWorkflowEvent(
         const renderedVariables = presentVariables(allowedVariables, String(template.id), studio);
         const recipients = parseRecipients(text(template.recipient) || action.detail || '', allowedVariables);
         if (!recipients.length) throw new Error(`E-mail ${action.referenceId} sem destinatário válido.`);
-        output = await ports.sendEmail({
-          template,
-          to: recipients,
-          subject: mergeWorkflowVariables(text(template.subject), renderedVariables),
-          text: mergeWorkflowVariables(text(template.body), renderedVariables),
-          html: text(template.htmlBody) ? mergeWorkflowHtmlVariables(text(template.htmlBody), renderedVariables) : undefined,
-          variables: allowedVariables,
-          processId: plan.processId,
-          protocol: plan.protocol,
-          eventVariables,
-          idempotencyKey: action.idempotencyKey
-        });
+        const personalizedTemplate=upgradeOperationalEmailTemplate(template);
+        const deliveries:Array<{externalId?:string}>=[];
+        for(const recipient of recipients){
+          const personal=filterTemplateVariables(recipientEmailVariables(context.process,recipient,renderedVariables,plan.variables.LINK_PORTAL,context.eventCode,String(template.id)),studio);
+          deliveries.push(await ports.sendEmail({
+            template:personalizedTemplate,to:[recipient],
+            subject:mergeWorkflowVariables(text(personalizedTemplate.subject),personal),
+            text:mergeWorkflowVariables(text(personalizedTemplate.body),personal),
+            html:text(personalizedTemplate.htmlBody)?mergeWorkflowHtmlVariables(text(personalizedTemplate.htmlBody),personal):undefined,
+            variables:allowedVariables,processId:plan.processId,protocol:plan.protocol,eventVariables,idempotencyKey:action.idempotencyKey,
+          }));
+        }
+        output={externalId:deliveries.map(item=>item.externalId).filter(Boolean).join(',')};
+
       } else if (ports.executeSystemAction) {
         output = await ports.executeSystemAction({ action, variables: plan.variables, processId: plan.processId, idempotencyKey: action.idempotencyKey });
       } else throw new Error(`A ação interna “${action.title}” não possui executor seguro.`);

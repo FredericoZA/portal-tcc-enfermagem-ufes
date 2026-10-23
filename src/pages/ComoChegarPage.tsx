@@ -21,7 +21,7 @@ const ExternalAction: React.FC<{
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    className="portal-action-green relative flex min-h-[64px] w-full flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2.5 text-center text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm transition hover:brightness-95"
+    className="portal-action-green relative flex min-h-[64px] w-full flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2.5 text-center text-[9px] font-extrabold normal-case tracking-wide text-white shadow-sm transition hover:brightness-95"
   >
     <ExternalLink className="absolute right-2 top-2 h-3 w-3 shrink-0 opacity-75" />
     <Icon className="h-5 w-5 shrink-0" />
@@ -40,7 +40,7 @@ export const ComoChegarPage: React.FC = () => {
       <section className="portal-public-header">
         <div className="portal-public-title-row gap-2">
           <ColorfulHeaderIcon type="location" />
-          <h1 className="text-sm font-black uppercase tracking-tight text-white sm:text-base">Como chegar</h1>
+          <h1 className="text-sm font-black normal-case tracking-tight text-white sm:text-base">Como chegar</h1>
         </div>
       </section>
       <PortalSectionDivider />
@@ -76,7 +76,7 @@ export const ComoChegarPage: React.FC = () => {
               <div className="flex items-start gap-2.5">
                 <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[var(--portal-brand-action)]" />
                 <div className="min-w-0">
-                  <h2 className="text-xs font-black uppercase tracking-wide text-slate-900">Departamento de Enfermagem — CCS/UFES</h2>
+                  <h2 className="text-xs font-black normal-case tracking-wide text-slate-900">Departamento de Enfermagem — CCS/UFES</h2>
                   <p className="mt-0.5 text-[11px] leading-4 text-slate-700">{location}</p>
                   <p className="mt-1 text-[10px] leading-4 text-slate-600">Os aplicativos de navegação usam a localização atual do dispositivo quando essa permissão estiver disponível.</p>
                 </div>
@@ -89,7 +89,7 @@ export const ComoChegarPage: React.FC = () => {
             </section>
 
             <section className="portal-layer-card rounded-2xl border border-slate-300 p-3 shadow-sm">
-              <h2 className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
+              <h2 className="flex items-center gap-2 text-xs font-black normal-case tracking-wide text-slate-900">
                 <Navigation className="h-4 w-4 text-[var(--portal-brand-action)]" />
                 Referências de chegada
               </h2>
@@ -101,17 +101,17 @@ export const ComoChegarPage: React.FC = () => {
             </section>
 
             <section className="portal-layer-card rounded-2xl border border-slate-300 p-3 shadow-sm">
-              <h2 className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-900">
+              <h2 className="flex items-center gap-2 text-xs font-black normal-case tracking-wide text-slate-900">
                 <Building2 className="h-4 w-4 text-[var(--portal-brand-action)]" />
                 Locais atuais de apresentação
               </h2>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 <div className="portal-layer-inner rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-                  <div className="text-[10px] font-extrabold uppercase tracking-wide text-slate-900">Auditório de Enfermagem</div>
+                  <div className="text-[10px] font-extrabold normal-case tracking-wide text-slate-900">Auditório de Enfermagem</div>
                   <div className="mt-0.5 text-[10px] text-slate-600">1º pavimento</div>
                 </div>
                 <div className="portal-layer-inner rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-                  <div className="text-[10px] font-extrabold uppercase tracking-wide text-slate-900">Sala de Reuniões</div>
+                  <div className="text-[10px] font-extrabold normal-case tracking-wide text-slate-900">Sala de Reuniões</div>
                   <div className="mt-0.5 text-[10px] text-slate-600">2º pavimento</div>
                 </div>
               </div>

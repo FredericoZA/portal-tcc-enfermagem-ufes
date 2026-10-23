@@ -158,12 +158,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (touchInFlight || now - lastTouchAt < SESSION_ACTIVITY_TOUCH_INTERVAL_MS) return;
       lastTouchAt = now;
       touchInFlight = true;
-      void fetch('/api/me', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json' } })
-        .then(async response => {
-          if (!response.ok) return;
-          const meRes = await response.json();
-          applyIdentity(meRes);
-        })
+      void apiClient.getMe()
+        .then(applyIdentity)
         .catch(() => undefined)
         .finally(() => { touchInFlight = false; });
     };

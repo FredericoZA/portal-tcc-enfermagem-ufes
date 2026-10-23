@@ -1,3 +1,4 @@
+import {documentMainBody,bodyEditRequests} from './googleDocsBody';
 import { buildMarkerBoldRequests } from './googleDocsStyles';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
@@ -31,6 +32,8 @@ export interface GoogleTemplateRenderInput {
   templateUrlOrId: string;
   replacements: Record<string, string | number | boolean | null | undefined>;
   boldMarkers?: string[];
+  documentText?: string;
+  legacyDefenseLocations?: {selected:string;alternatives:string[]};
   temporaryParentId?: string;
   outputName?: string;
   fetchImpl?: FetchLike;
@@ -45,6 +48,7 @@ export interface GoogleTemplateRenderResult {
   replacementsChanged: number;
   unresolvedMarkers: string[];
   tabCount: number;
+  documentText?: string;
 }
 
 export function extractGoogleDriveFileId(value: string): string {
@@ -90,6 +94,12 @@ function normalizeVariableKey(raw: string): string {
 
 function replacementMarkers(key: string): string[] {
   return [`<<${key}>>`, `{{${key}}}`, `[[${key}]]`, `«${key}»`, `-${key}-`];
+}
+
+/** Apply compatibility replacements only to the temporary document copy. */
+export function buildLegacyLocationRequests(input:GoogleTemplateRenderInput['legacyDefenseLocations'],tabIds:string[]=[]){
+ if(!input?.selected.trim())return [];
+ return [...new Set(input.alternatives.map(value=>value.trim()).filter(value=>value&&value!==input.selected))].map(location=>({replaceAllText:{containsText:{text:location,matchCase:true},replaceText:input.selected,...(tabIds.length?{tabsCriteria:{tabIds}}:{})}}));
 }
 
 export function buildGoogleDocsReplacementRequests(
@@ -141,7 +151,7 @@ function collectGoogleDocumentText(value: unknown, output: string[] = []): strin
 
 export function findUnresolvedTemplateMarkers(document: unknown): string[] {
   const source = collectGoogleDocumentText(document).join('');
-  const matches = source.match(/<<[^<>\r\n]{2,100}>>|\{\{[^{}\r\n]{2,100}\}\}|\[\[[^\[\]\r\n]{2,100}\]\]|«[^«»\r\n]{2,100}»|-(?:CAMPO_)?[A-Z][A-Z0-9_]{2,80}-/g) || [];
+  const matches = source.match(/<<[^<>\r\n]{2,100}>>|\{\{[^{}\r\n]{2,100}\}\}|\[\[[^\[\]\r\n]{2,100}\]\]|«[^«»\r\n]{2,100}»|(?<![\p{L}\p{N}_])-(?:CAMPO_)?[A-Z][A-Z0-9_]{2,80}-(?![\p{L}\p{N}_])/gu) || [];
   return Array.from(new Set(matches.map((item) => item.trim()))).slice(0, 50);
 }
 
@@ -254,7 +264,9 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
     const readback = await readbackResponse.json() as GoogleDocumentReadback;
     if (String(readback.documentId || '') !== temporaryFileId) throw new Error('O Google Docs devolveu um documento diferente da cópia temporária.');
     const tabIds = collectTabIds(readback.tabs);
-    const requests = [...buildMarkerBoldRequests(readback, input.boldMarkers || []), ...buildGoogleDocsReplacementRequests(input.replacements, tabIds)];
+    const literalRequests=buildLegacyLocationRequests(input.legacyDefenseLocations,tabIds);
+    const boldRequests=buildMarkerBoldRequests(readback,input.boldMarkers||[]);
+    const requests = [...boldRequests, ...literalRequests, ...buildGoogleDocsReplacementRequests(input.replacements, tabIds)];
     let replacementsChanged = 0;
     if (requests.length) {
       const batchResponse = await googleRequest(fetchImpl, input.accessToken, `${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`, {
@@ -264,7 +276,7 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
       }, 'Falha ao mesclar as variáveis no modelo');
       const batch = await batchResponse.json() as { documentId?: string; replies?: Array<{ replaceAllText?: { occurrencesChanged?: number } }> };
       if (String(batch.documentId || '') !== temporaryFileId) throw new Error('A atualização não confirmou o documento temporário correto.');
-      replacementsChanged = (batch.replies || []).reduce((total, reply) => total + Number(reply.replaceAllText?.occurrencesChanged || 0), 0);
+      replacementsChanged = (batch.replies || []).slice(boldRequests.length+literalRequests.length).reduce((total, reply) => total + Number(reply.replaceAllText?.occurrencesChanged || 0), 0);
     }
 
     const mergedReadbackResponse = await googleRequest(
@@ -274,7 +286,14 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
       {},
       'Falha ao conferir marcadores restantes no documento preenchido'
     );
-    const unresolvedMarkers = findUnresolvedTemplateMarkers(await mergedReadbackResponse.json());
+    const mergedDocument=await mergedReadbackResponse.json();
+    let documentText=documentMainBody(mergedDocument)?.text;
+    if(input.documentText!==undefined){
+      const edits=bodyEditRequests(mergedDocument,input.documentText);
+      if(edits.length)await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:edits,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao aplicar a revisão integral da ata');
+      documentText=input.documentText;
+    }
+    const unresolvedMarkers = input.documentText!==undefined?findUnresolvedTemplateMarkers({textRun:{content:input.documentText}}):findUnresolvedTemplateMarkers(mergedDocument);
 
     const exportResponse = await googleRequest(
       fetchImpl,
@@ -295,7 +314,8 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
       convertedFromDocx: source.mimeType === DOCX_MIME,
       replacementsChanged,
       unresolvedMarkers,
-      tabCount: Math.max(1, tabIds.length)
+      tabCount: Math.max(1, tabIds.length),
+      documentText
     };
   } catch (error) {
     primaryError = error;

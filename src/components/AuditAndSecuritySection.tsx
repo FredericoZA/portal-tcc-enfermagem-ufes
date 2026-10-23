@@ -68,10 +68,10 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
       };
       let res = await apiClient.updateSettings(updated);
       const transfers:string[]=[];
-      if(normMasterEmail&&normMasterEmail!==(settings.masterEmail||'').toLowerCase()){await createTransferWithInlineReauthentication('MASTER_ADMIN',normMasterEmail);transfers.push('Master');}
-      if(normPresidentEmail&&normPresidentEmail!==(settings.commissionPresidentEmail||'').toLowerCase()){await createTransferWithInlineReauthentication('COMMISSION_PRESIDENT',normPresidentEmail);transfers.push('Presidência');}
+      if(normPresidentEmail&&normPresidentEmail!==(settings.commissionPresidentEmail||'').toLowerCase()){const result=await createTransferWithInlineReauthentication('COMMISSION_PRESIDENT',normPresidentEmail);transfers.push(result.status==='COMPLETED'?'Presidência atualizada':'Presidência pendente');}
+      if(normMasterEmail&&normMasterEmail!==(settings.masterEmail||'').toLowerCase()){const result=await createTransferWithInlineReauthentication('MASTER_ADMIN',normMasterEmail);transfers.push(result.status==='COMPLETED'?'Master atualizado':'Master pendente');}
       onSettingsUpdated(res);
-      showNotification(transfers.length?`Dados salvos. Convite de transferência enviado para: ${transfers.join(' e ')}.`:'Dados administrativos e contatos de recuperação atualizados.');
+      showNotification(transfers.length?`Dados salvos: ${transfers.join(' e ')}.`:'Dados administrativos e contatos de recuperação atualizados.');
     } catch (err: any) {
       portalNotice('Erro ao salvar contas do sistema: ' + err.message);
     } finally {
@@ -87,13 +87,13 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
           {/* Secretaria / Usuário Master */}
           <div className="min-w-0 space-y-2 md:first:border-r md:first:border-slate-300 md:first:pr-3">
             <div className="border-b border-slate-200 pb-1.5">
-              <span className="text-xs font-black uppercase text-slate-800 tracking-wide">
+              <span className="text-xs font-black normal-case text-slate-800 tracking-wide">
                 Usuário Master
               </span>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
+              <label className="block text-[10px] font-bold normal-case text-slate-700 mb-1">
                 Nome da Secretaria / Administrador Master:
               </label>
               <input
@@ -107,7 +107,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
+              <label className="block text-[10px] font-bold normal-case text-slate-700 mb-1">
                 E-mail de acesso do Usuário Master:
               </label>
               <input
@@ -124,13 +124,13 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
           {/* Presidente da Comissão */}
           <div className="min-w-0 space-y-2 md:first:border-r md:first:border-slate-300 md:first:pr-3">
             <div className="border-b border-slate-200 pb-1.5">
-              <span className="text-xs font-black uppercase text-slate-800 tracking-wide">
+              <span className="text-xs font-black normal-case text-slate-800 tracking-wide">
                 Presidente da Comissão
               </span>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
+              <label className="block text-[10px] font-bold normal-case text-slate-700 mb-1">
                 Nome do Presidente da Comissão:
               </label>
               <input
@@ -144,7 +144,7 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
+              <label className="block text-[10px] font-bold normal-case text-slate-700 mb-1">
                 E-mail da Presidência e recuperação do Master:
               </label>
               <input
@@ -339,7 +339,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
     <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-4">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
         <div>
-          <h3 className="text-xs font-black uppercase text-slate-900 tracking-wide flex items-center gap-2">
+          <h3 className="text-xs font-black normal-case text-slate-900 tracking-wide flex items-center gap-2">
             <span>Registro de Logs e Auditoria de Segurança</span>
             <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] rounded-full font-mono border border-slate-200">
               {totalLogs} de {auditLogs.length} registro(s)
@@ -376,7 +376,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
       {/* COMPREHENSIVE FILTERS TOOLBAR */}
       <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2.5">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <span className="text-[11px] font-extrabold uppercase tracking-wide text-slate-700 flex items-center gap-1">
+          <span className="text-[11px] font-extrabold normal-case tracking-wide text-slate-700 flex items-center gap-1">
             Filtrar Registros do Sistema:
           </span>
           {(userFilter || actionFilter || referenceFilter || startDateFilter || endDateFilter || pageSize !== 25) && (
@@ -393,7 +393,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
           {/* Filter 1: User */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">Usuário (Quem)</label>
+            <label className="block text-[10px] font-bold normal-case text-slate-600 mb-0.5">Usuário (Quem)</label>
             <input
               type="text"
               placeholder="Buscar por e-mail..."
@@ -405,7 +405,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
 
           {/* Filter 2: Action */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">Ação / Atividade</label>
+            <label className="block text-[10px] font-bold normal-case text-slate-600 mb-0.5">Ação / Atividade</label>
             <select
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value)}
@@ -420,7 +420,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
 
           {/* Filter 3: Work / Process Reference */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">Referência do Trabalho</label>
+            <label className="block text-[10px] font-bold normal-case text-slate-600 mb-0.5">Referência do Trabalho</label>
             <input
               type="text"
               placeholder="Nº TCC, ID ou Módulo..."
@@ -432,7 +432,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
 
           {/* Filter 4: Start Date */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">Data Inicial</label>
+            <label className="block text-[10px] font-bold normal-case text-slate-600 mb-0.5">Data Inicial</label>
             <input
               type="date"
               value={startDateFilter}
@@ -443,7 +443,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
 
           {/* Filter 5: End Date */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">Data Final</label>
+            <label className="block text-[10px] font-bold normal-case text-slate-600 mb-0.5">Data Final</label>
             <input
               type="date"
               value={endDateFilter}
@@ -454,7 +454,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
 
           {/* Filter 6: Lines limit per page */}
           <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">Linhas por Página</label>
+            <label className="block text-[10px] font-bold normal-case text-slate-600 mb-0.5">Linhas por Página</label>
             <select
               value={pageSize === 'all' ? 'all' : String(pageSize)}
               onChange={(e) => {
@@ -488,7 +488,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
           <div className="overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-100 text-slate-800 font-black uppercase text-[10px] tracking-wider border-b border-slate-200">
+                <tr className="bg-slate-100 text-slate-800 font-black normal-case text-[10px] tracking-wider border-b border-slate-200">
                   <th className="p-2.5">Data / Hora</th>
                   <th className="p-2.5">Usuário (Quem)</th>
                   <th className="p-2.5">Ação / Atividade</th>
@@ -509,7 +509,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
                         {log.actorEmail}
                       </td>
 
-                      <td className="p-2.5 font-bold text-slate-800 uppercase text-[11px]">
+                      <td className="p-2.5 font-bold text-slate-800 normal-case text-[11px]">
                         <span className="inline-block bg-slate-100 text-slate-800 border border-slate-300 px-2 py-0.5 rounded text-[10px]">
                           {log.action}
                         </span>
@@ -597,20 +597,20 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
           <div className="portal-standard-modal portal-modal-surface max-w-2xl w-full overflow-hidden relative" onMouseDown={(event) => event.stopPropagation()}>
             <div className="portal-modal-header px-4">
               <FileCheck2 className="w-4 h-4 text-white" />
-              <h4 className="font-black text-xs sm:text-sm uppercase text-white">Registro de Edição #{selectedLogForDiff.id}</h4>
+              <h4 className="font-black text-xs sm:text-sm normal-case text-white">Registro de Edição #{selectedLogForDiff.id}</h4>
             </div>
             <div className="portal-modal-divider" aria-hidden="true" />
             <div className="space-y-4 p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                <span className="font-extrabold text-slate-800 uppercase block text-[10px]">Estado Anterior:</span>
+                <span className="font-extrabold text-slate-800 normal-case block text-[10px]">Estado Anterior:</span>
                 <pre className="font-mono text-[10px] bg-slate-100 p-2 rounded max-h-48 overflow-y-auto custom-scrollbar">
                   {selectedLogForDiff.before ? JSON.stringify(selectedLogForDiff.before, null, 2) : '(Nenhum estado prévio)'}
                 </pre>
               </div>
 
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                <span className="font-extrabold text-slate-800 uppercase block text-[10px]">Estado Atual:</span>
+                <span className="font-extrabold text-slate-800 normal-case block text-[10px]">Estado Atual:</span>
                 <pre className="font-mono text-[10px] bg-slate-100 p-2 rounded max-h-48 overflow-y-auto custom-scrollbar">
                   {selectedLogForDiff.after ? JSON.stringify(selectedLogForDiff.after, null, 2) : '(Sem dados registrados)'}
                 </pre>

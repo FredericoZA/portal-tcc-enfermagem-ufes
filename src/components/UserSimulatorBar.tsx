@@ -51,10 +51,10 @@ export const UserSimulatorBar: React.FC = () => {
   };
 
   return (
-    <div id="user-simulator-bar" className="bg-slate-950 text-slate-100 text-xs px-2 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 sm:gap-3 border-b border-slate-800 shadow-inner overflow-x-hidden">
+    <div id="user-simulator-bar" className="bg-slate-950 text-slate-100 text-xs px-2 sm:px-4 lg:pl-68 py-2 flex flex-wrap items-center justify-between gap-2 sm:gap-3 border-b border-slate-800 shadow-inner overflow-x-hidden">
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center gap-1 font-bold text-emerald-300 bg-emerald-950 px-2.5 py-0.5 rounded-full border border-emerald-700/50 uppercase tracking-wider text-[10px]">
-          <Shield className="w-3 h-3 text-emerald-400" /> SIMULAÇÃO DE PERFIL
+        <span className="inline-flex items-center gap-1 font-bold text-emerald-300 bg-emerald-950 px-2.5 py-0.5 rounded-full border border-emerald-700/50 normal-case tracking-wider text-[10px]">
+          <Shield className="w-3 h-3 text-emerald-400" /> Simulação de perfil
         </span>
         <span className="text-slate-400 hidden lg:inline text-[11px] font-medium">
           Alternar e-mail para simular permissões de qualquer usuário
@@ -64,7 +64,7 @@ export const UserSimulatorBar: React.FC = () => {
       <div className="flex min-w-0 w-full sm:w-auto items-center gap-2 sm:gap-3 flex-wrap">
         <div className="flex min-w-0 max-w-full items-center gap-1.5">
           <UserCheck className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-slate-300 font-bold uppercase text-[10px] tracking-wider">Simular como:</span>
+          <span className="text-slate-300 font-bold normal-case text-[10px] tracking-wider">Simular como:</span>
           <select
             id="preset-user-select"
             value={userEmail}
@@ -94,7 +94,7 @@ export const UserSimulatorBar: React.FC = () => {
           <button
             id="switch-custom-email-btn"
             type="submit"
-            className="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1 rounded-full transition-colors font-bold text-[10px] uppercase tracking-wider cursor-pointer"
+            className="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1 rounded-full transition-colors font-bold text-[10px] normal-case tracking-wider cursor-pointer"
           >
             Entrar
           </button>
@@ -105,7 +105,7 @@ export const UserSimulatorBar: React.FC = () => {
           onClick={handleResetDemo}
           disabled={isResetting}
           title="Restaurar dados de demonstração da Fase 1"
-          className="flex items-center gap-1 bg-amber-900/60 hover:bg-amber-800 text-amber-200 px-3 py-1 rounded-full border border-amber-700/50 transition-colors font-bold text-[10px] uppercase tracking-wider cursor-pointer"
+          className="flex items-center gap-1 bg-amber-900/60 hover:bg-amber-800 text-amber-200 px-3 py-1 rounded-full border border-amber-700/50 transition-colors font-bold text-[10px] normal-case tracking-wider cursor-pointer"
         >
           <RefreshCw className={`w-3 h-3 ${isResetting ? 'animate-spin' : ''}`} />
           <span>Restaurar Dados</span>

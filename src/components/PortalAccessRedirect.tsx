@@ -1,3 +1,4 @@
+import {readProcessLink} from '../utils/processLink';
 import React, { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,12 +12,22 @@ export const PortalAccessRedirect: React.FC = () => {
   const redirectedForRef = useRef('');
 
   useEffect(() => {
-    if (isLoading || !isAuthenticated || !userEmail) return;
+    if (isLoading) return;
+    if (!isAuthenticated || !userEmail) {
+      // Expiration closes restricted workspaces instead of leaving an empty
+      // administrative route. Clear the key so the same user can enter again.
+      if (redirectedForRef.current) {
+        redirectedForRef.current = '';
+        window.dispatchEvent(new CustomEvent('portal:navigate', { detail: 'home' }));
+      }
+      return;
+    }
 
     const identityKey = `${userEmail.toLowerCase()}|${globalRoles.slice().sort().join(',')}`;
     if (redirectedForRef.current === identityKey) return;
     redirectedForRef.current = identityKey;
 
+    if(readProcessLink(window.location.search))return;
     const destination = globalRoles.includes('MASTER_ADMIN')
       ? 'configuracoes'
       : globalRoles.includes('COMMISSION_PRESIDENT')

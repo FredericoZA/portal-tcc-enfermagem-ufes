@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, parseAstenAccountAndRepository, extractAstenSignedPdf, extractAstenEnvelopeIdentity, callAsten } from './asten';
+import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, AstenRepositorySelectionError, parseAstenAccountAndRepository, extractAstenSignedPdf, extractAstenEnvelopeIdentity, callAsten } from './asten';
 import { buildGoogleAuthorizationUrl, decodeGoogleOAuthState, getGoogleWorkspaceScopes } from './googleWorkspace';
 import { buildSupabaseAdminHeaders } from './supabase';
 import { buildProtocol, emailMatchesDomains } from '../../src/utils/installationProfile';
@@ -13,18 +13,42 @@ test('contrato Asten mantém PDF confidencial, envio explícito e prioridade par
   process.env.ASTEN_CALLBACK_URL='https://portal.example/api/integrations/asten/webhook';
   process.env.PORTAL_PUBLIC_URL='https://portal.example';
   process.env.ASTEN_REQUIRE_CODE='false';
-  process.env.ASTEN_AUTHENTICATION_OPTION='2';
+  process.env.ASTEN_AUTHENTICATION_OPTION='4';
   const contentBase64=Buffer.from('%PDF-1.4\nobj\n%%EOF','utf8').toString('base64');
-  const payload=buildAstenEnvelopeParams({description:'TCC-2026-0001 — Termo',fileName:'termo.pdf',mimeType:'application/pdf',contentBase64,repositoryId:42,signers:[{name:'Aluno',email:'aluno@example.edu',order:1},{name:'Orientador',email:'orientador@example.edu',order:1}]});
+  const payload=buildAstenEnvelopeParams({description:'TCC-2026-0001 — Termo',fileName:'termo.pdf',mimeType:'application/pdf',contentBase64,repositoryId:42,signers:[{name:'Aluno',email:'aluno@example.edu',order:1,cellphone:'(11) 99999-9999'},{name:'Orientador',email:'orientador@example.edu',order:1,cellphone:'11999998888'}]});
   const envelope=payload.Envelope as any;
   assert.equal(payload.encaminharImediatamente,'N');
+  assert.equal(payload.detectarModeloSimilar,'N');
+  assertAstenEnvelopeAuthentication(envelope.listaSignatariosEnvelope,[{email:'aluno@example.edu',order:1,cellphone:'11999999999'},{email:'orientador@example.edu',order:1,cellphone:'11999998888'}]);
+  const divergent=structuredClone(envelope.listaSignatariosEnvelope);
+  divergent.SignatarioEnvelope[0].ConfigAssinatura.opcaoAutenticacao='2';
+  assert.throws(()=>assertAstenEnvelopeAuthentication(divergent,[{email:'aluno@example.edu',order:1,cellphone:'11999999999'},{email:'orientador@example.edu',order:1,cellphone:'11999998888'}]),/autenticação/);
+  assert.throws(()=>buildAstenEnvelopeParams({description:'Teste',fileName:'teste.pdf',mimeType:'application/pdf',contentBase64,repositoryId:42,signers:[{name:'Aluno',email:'aluno@example.edu',order:1}]}),/celular autorizado/);
   assert.equal(envelope.confidencial,'S');
   assert.equal(envelope.usarOrdem,'S');
   assert.equal(envelope.listaSignatariosEnvelope.SignatarioEnvelope[0].ConfigAssinatura.exigirCodigo,'N');
+  assert.equal(envelope.listaSignatariosEnvelope.SignatarioEnvelope[0].ConfigAssinatura.opcaoAutenticacao,'4');
+  assert.equal(envelope.listaSignatariosEnvelope.SignatarioEnvelope[0].ConfigAssinatura.celularSignatario,'11999999999');
+  assert.equal(envelope.listaSignatariosEnvelope.SignatarioEnvelope[1].ConfigAssinatura.celularSignatario,'11999998888');
+  assert.throws(()=>buildAstenEnvelopeParams({description:'Teste',fileName:'teste.pdf',mimeType:'application/pdf',contentBase64,repositoryId:42,signers:[{name:'Aluno',email:'aluno@example.edu',order:1,cellphone:'invalido'}]}),/Celular.*inválido/);
   assert.deepEqual(envelope.listaSignatariosEnvelope.SignatarioEnvelope.map((item:any)=>item.ordem),[1,1]);
   assert.equal(envelope.listaSignatariosEnvelope.SignatarioEnvelope[0].ConfigAssinatura.permitirDelegar,'N');
   assert.equal(envelope.urlCallbackHeaderProp,'x-portal-webhook-key');
   assert.equal('tokenAPI' in envelope,false);
+});
+
+test('Asten informa erro textual do provedor sem revelar a credencial', async () => {
+  const originalFetch=globalThis.fetch;
+  const token='token-ficticio-do-teste-asten';
+  try {
+    globalThis.fetch=async()=>new Response(JSON.stringify({error:`Saldo indisponível para ${token}`}),{status:400,headers:{'content-type':'application/json'}});
+    await assert.rejects(callAsten('getIdentificador',{},token),(error:unknown)=>{
+      assert.ok(error instanceof Error);
+      assert.match(error.message,/Saldo indisponível/);
+      assert.ok(!error.message.includes(token));
+      return true;
+    });
+  } finally { globalThis.fetch=originalFetch; }
 });
 
 test('API Asten resolve Usuario.id e recusa repositório não autorizado',()=>{
@@ -35,6 +59,21 @@ test('API Asten resolve Usuario.id e recusa repositório não autorizado',()=>{
   assert.throws(()=>parseAstenAccountAndRepository({},repos,'113'),/Usuario.id/);
   assert.throws(()=>parseAstenAccountAndRepository(identity,[...repos,{id:'114',Usuario:{id:'3'},isProprietario:'S'}],undefined),/ASTEN_REPOSITORY_ID/);
 });
+test('Asten distingue lista vazia e permite selecionar somente um repositório autorizado', () => {
+  const identity = {Usuario: {id: 3}};
+  const repos = [{id: 113, nome: 'Portal TCC', Usuario: {id: 3}, isProprietario: 'S'}, {id: 114, nome: 'Secretaria', Usuario: {id: 3}, compartilharCriacaoDocs: 'S'}, {id: 115, nome: 'Conta de terceiro', Usuario: {id: 4}, isProprietario: 'S'}];
+  assert.throws(() => parseAstenAccountAndRepository(identity, repos, undefined), (error: unknown) => {
+    assert.ok(error instanceof AstenRepositorySelectionError);
+    assert.equal(error.code, 'ASTEN_REPOSITORY_SELECTION_REQUIRED');
+    assert.deepEqual(error.repositories, [{id: 113, name: 'Portal TCC'}, {id: 114, name: 'Secretaria'}]);
+    return true;
+  });
+  assert.deepEqual(parseAstenAccountAndRepository(identity, repos, '114'), {identifier: '3', repositoryId: 114});
+  assert.throws(() => parseAstenAccountAndRepository(identity, repos, '115'), /não pertence/);
+  assert.throws(() => parseAstenAccountAndRepository(identity, repos, '114x'), /numérico/);
+  assert.throws(() => parseAstenAccountAndRepository(identity, [], undefined), /Nenhum repositório Asten autorizado/);
+});
+
 test('Asten não encaminha documentos para ID de envelope inválido',()=>{
   assert.deepEqual(extractAstenEnvelopeIdentity({data:{idEnvelope:345}}),{id:'345'});
   assert.deepEqual(extractAstenEnvelopeIdentity({Envelope:{id:'4321'},hashSHA256:'h'}),{id:'4321',hash:'h'});
@@ -193,5 +232,25 @@ test('Asten bloqueia mutações mas permite consultar envelopes sem habilitar en
     else process.env.ASTEN_INTEGRATION_ENABLED=savedFlag;
     if(savedPilot===undefined)delete process.env.ASTEN_PILOT_APPROVED;
     else process.env.ASTEN_PILOT_APPROVED=savedPilot;
+  }
+});
+
+test('assinatura simples usa somente link de e-mail, sem login, identificação adicional ou celular',()=>{
+  const prior={profile:process.env.ASTEN_SIGNING_PROFILE,option:process.env.ASTEN_AUTHENTICATION_OPTION,login:process.env.ASTEN_REQUIRE_LOGIN};
+  try{
+    process.env.ASTEN_SIGNING_PROFILE='EMAIL_LINK';process.env.ASTEN_AUTHENTICATION_OPTION='0';process.env.ASTEN_REQUIRE_LOGIN='false';
+    const input={description:'Ata fictícia',fileName:'ata.pdf',mimeType:'application/pdf',contentBase64:Buffer.from('%PDF-1.4\n%%EOF').toString('base64'),repositoryId:42,signers:[{name:'Orientador',email:'orientador@example.edu',order:1}]};
+    const payload=buildAstenEnvelopeParams(input);const envelope=payload.Envelope as any;
+    assert.equal(envelope.confidencial,'N');assert.equal(payload.encaminharImediatamente,'N');
+    const config=envelope.listaSignatariosEnvelope.SignatarioEnvelope[0].ConfigAssinatura;
+    assert.equal(config.exigirLogin,'N');assert.equal(config.exigirDadosIdentif,'N');assert.equal(config.opcaoAutenticacao,null);assert.equal('celularSignatario' in config,false);
+    assertAstenEnvelopeAuthentication(envelope.listaSignatariosEnvelope,[{email:'orientador@example.edu',order:1}],'EMAIL_LINK');
+    delete config.opcaoAutenticacao; // API real omite o campo quando não há autenticação extra.
+    assertAstenEnvelopeAuthentication(envelope.listaSignatariosEnvelope,[{email:'orientador@example.edu',order:1}],'EMAIL_LINK');
+    config.opcaoAutenticacao='4';assert.throws(()=>assertAstenEnvelopeAuthentication(envelope.listaSignatariosEnvelope,[{email:'orientador@example.edu',order:1}],'EMAIL_LINK'),/autenticação/);
+    delete config.opcaoAutenticacao;
+    config.exigirLogin='S';assert.throws(()=>assertAstenEnvelopeAuthentication(envelope.listaSignatariosEnvelope,[{email:'orientador@example.edu',order:1}],'EMAIL_LINK'),/autenticação/);
+  }finally{
+    for(const[key,value]of [['ASTEN_SIGNING_PROFILE',prior.profile],['ASTEN_AUTHENTICATION_OPTION',prior.option],['ASTEN_REQUIRE_LOGIN',prior.login]] as const){if(value===undefined)delete process.env[key];else process.env[key]=value;}
   }
 });

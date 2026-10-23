@@ -120,6 +120,7 @@ export interface EmailDeliveryRecord {
   templateId?: string;
   idempotencyKey: string;
   recipient: string;
+  cc?: string[];
   subject: string;
   /** Conteúdo efetivamente renderizado no momento da primeira tentativa. */
   renderedText?: string;
