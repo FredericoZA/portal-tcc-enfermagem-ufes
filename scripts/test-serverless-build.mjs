@@ -21,6 +21,8 @@ try {
   await symlink(path.join(root, 'node_modules'), path.join(directory, 'node_modules'), 'dir');
   await writeFile(path.join(directory, 'package.json'), '{"type":"module"}\n');
   const names = ['index', 'runtime-asset', 'replication-model', 'public-indicators'];
+  const adapters = (await readdir(path.join(root, 'api'))).filter((name) => name.endsWith('.ts') && !name.endsWith('.d.ts')).sort();
+  assert.deepEqual(adapters, names.map((name) => name + '.ts').sort(), 'Every deployable API adapter must participate in the artifact smoke test.');
   for (const name of names) {
     const source = await readFile(path.join(root, 'api', name + '.ts'), 'utf8');
     const { code } = await transform(source, { loader: 'ts', format: 'esm', target: 'node22' });
