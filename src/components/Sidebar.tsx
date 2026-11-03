@@ -15,7 +15,6 @@ import {
   HelpCircle,
   Info,
   Lightbulb,
-  Inbox,
   LogIn,
   LogOut,
   MapPin,
@@ -101,7 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   }, []);
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [feedbackMode,setFeedbackMode]=useState<'submit'|'inbox'|null>(null);
+  const [feedbackMode,setFeedbackMode]=useState<'submit'|null>(null);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
   const appVersion = String((import.meta as any).env?.VITE_APP_VERSION || '0.0.0');
   const buildCommit = String((import.meta as any).env?.VITE_GIT_COMMIT || '').slice(0, 7);
@@ -190,7 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           <NursingEmblemLogo size={64.8} className="shrink-0" customSrc={sidebarLogoSrc} />
           <div className="flex flex-col flex-1 min-w-0 items-center justify-center text-center pr-1">
             <h1 className="font-black text-[14.4px] sm:text-[15.3px] tracking-tight uppercase leading-tight text-center whitespace-normal w-full" style={{ color: sidebarHeaderTitleColor }}>{layoutConfig.sidebarTitle || 'Portal de TCC'}</h1>
-            <div className="mt-1.5 w-full text-center text-[10.8px] sm:text-[11.7px] font-black tracking-[0.055em] leading-[1.25] uppercase" style={{ color: sidebarAccent }}>
+            <div className="portal-sidebar-subtitle mt-1.5 w-full text-center font-black tracking-[0.055em] leading-[1.25] uppercase" style={{ color: sidebarAccent }}>
               <span className="block">{layoutConfig.sidebarSubtitle || 'Enfermagem'}</span>
             </div>
           </div>
@@ -211,10 +210,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             coordenador: { id: 'coordenador', label: getNavLabel('coordenador', 'Área do Presidente'), icon: Award, emoji: '', visible: (isMasterAdmin || isCommissionPresident) && !isVisitor },
             configuracoes: { id: 'configuracoes', label: getNavLabel('configuracoes', 'Configurações'), icon: Settings, emoji: '', visible: isMasterAdmin && !isVisitor },
             analise: { id: 'analise', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: '', visible: true },
-            replicar: { id: 'replicar', label: getNavLabel('replicar', 'Replicar Portal'), icon: Copy, emoji: '', visible: true }
+            replicar: { id: 'replicar', label: getNavLabel('replicar', 'Replicar Portal'), icon: Copy, emoji: '', visible: true },
+            sugestoes: { id: 'sugestoes', label: getNavLabel('sugestoes', 'Sugestões de melhoria'), icon: Lightbulb, emoji: '', visible: true }
           };
           const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0 ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'assinaturas'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key) : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'DIVIDER_2', 'analise', 'como-chegar', 'informacoes-gerais', 'tutorial', 'fluxo-tcc', 'replicar'];
-          const order = [...configuredOrder].filter((key) => key !== 'analise');
+          const order = [...configuredOrder].filter((key) => key !== 'analise' && key !== 'sugestoes');
           const indicatorsAnchor = order.indexOf('como-chegar');
           order.splice(indicatorsAnchor >= 0 ? indicatorsAnchor : order.length, 0, 'analise');
           const sanitizedOrder = order.filter((key) => !['logs', 'asten-logs'].includes(key));
@@ -223,10 +223,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           if (!order.includes('informacoes-gerais')) { const tutorialIndex = order.indexOf('tutorial'); order.splice(tutorialIndex >= 0 ? tutorialIndex : order.length, 0, 'informacoes-gerais'); }
           if (!order.includes('fluxo-tcc')) { const replicationIndex = order.indexOf('replicar'); order.splice(replicationIndex >= 0 ? replicationIndex : order.length, 0, 'fluxo-tcc'); }
           if (!order.includes('replicar')) order.push('replicar');
+          order.splice(order.indexOf('replicar') + 1, 0, 'sugestoes');
           return order.map((itemKey, idx) => {
             if (itemKey.startsWith('DIVIDER')) { if (layoutConfig.sidebarShowDividers === false || layoutConfig.sidebarDividerStyle === 'none') return null; return <div key={`${itemKey}-${idx}`} className="my-2.5 pt-0.5 border-t transition-colors" style={{ borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider, borderStyle: layoutConfig.sidebarDividerStyle || 'solid' }} />; }
             const item = allNavMap[itemKey]; if (!item || !item.visible) return null; const Icon = item.icon; const isActive = currentTab === item.id || (item.id === 'home' && currentTab === 'calendario');
-            return <button key={item.id} id={`nav-item-${item.id}`} onClick={() => handleNav(item.id)} className={`portal-sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-transparent outline-none font-bold text-left transition-all cursor-pointer ${isActive ? 'portal-sidebar-nav-active font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || 'var(--portal-sidebar-active)',color: layoutConfig.sidebarActiveTextColor || '#ffffff'} : { color: layoutConfig.sidebarTextColor || '#f8fafc' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
+            return <button key={item.id} id={`nav-item-${item.id}`} type="button" onClick={() => {
+              if (item.id === 'sugestoes') {
+                setFeedbackMode('submit');
+                setIsOpenMobile(false);
+              } else handleNav(item.id);
+            }} className={`portal-sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-transparent outline-none font-bold text-left transition-all cursor-pointer ${isActive ? 'portal-sidebar-nav-active font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || 'var(--portal-sidebar-active)',color: layoutConfig.sidebarActiveTextColor || '#ffffff'} : { color: layoutConfig.sidebarTextColor || '#f8fafc' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
           });
         })()}
       </nav>
@@ -239,18 +245,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             <div className="mt-1 text-xs font-semibold break-all text-center" style={{ color: sidebarFooterTextColor }} title={userEmail}>{userEmail}</div>
           </div>
         </>}
-        <button id="bottom-suggestions-btn" type="button" onClick={() => setFeedbackMode('submit')} className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/70 bg-emerald-100 px-3 py-2.5 text-xs font-bold text-emerald-950 shadow-sm transition-colors hover:bg-white">
-          <Lightbulb className="h-4 w-4" aria-hidden="true"/> Sugestões de melhoria
-        </button>
-        {(isMasterAdmin||isCommissionPresident)&&(
-          <button id="bottom-feedback-inbox-btn" type="button" onClick={() => setFeedbackMode('inbox')} className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/30 px-3 py-2 text-[11px] font-bold text-white hover:bg-white/10">
-            <Inbox className="h-3.5 w-3.5" aria-hidden="true"/> Sugestões recebidas
-          </button>
-        )}
         <div className="flex items-center justify-center gap-1.5 text-[10px] whitespace-normal leading-4 text-center" style={{ color: sidebarFooterMutedColor }} title={userLocation}><MapPin className="h-3 w-3 shrink-0"/><span>{userLocation}</span></div>
         <div className="text-[9px] font-medium tracking-wide text-center" style={{ color: sidebarFooterMutedColor }} title={buildCommit ? `Fingerprint do build: ${buildCommit}` : undefined}>Versão do sistema: {appVersion}{buildCommit ? ` · ${buildCommit}` : ''}</div>
       </div>
     </aside>
-    <FeedbackModal open={feedbackMode!==null} mode={feedbackMode||'submit'} onClose={()=>setFeedbackMode(null)} />
+    <FeedbackModal open={feedbackMode!==null} onClose={()=>setFeedbackMode(null)} />
   </>;
 };

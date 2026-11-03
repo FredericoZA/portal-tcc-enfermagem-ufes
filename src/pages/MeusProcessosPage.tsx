@@ -22,6 +22,7 @@ import { formatProcessLabel } from '../components/PortalProcessPill';
 import { loadTableConfig, ColumnDef } from '../components/TableColumnSelectorPanel';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
+import { TccAbstractPopover } from '../components/TccAbstractPopover';
 import { ProgressIndicator } from '../components/ProgressIndicator';
 import { 
   TableTextFormat, 
@@ -429,7 +430,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     const colDef = ALL_MEUS_PROCESSOS_COLUMNS.find(c => c.key === colKey);
     const rawLabel = colDef?.label || colKey;
     const formattedLabel = formatColumnLabel(colKey, rawLabel, meusProcessosTextFormat, customLabels);
-    const widthClass = `${getColWidthClass(colKey, columnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, meusProcessosTextFormat)}`;
+    const widthClass = `${getColWidthClass(colKey, columnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, meusProcessosTextFormat)}`;
     return (
       <th
         key={colKey}
@@ -451,7 +452,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     const ev2 = evalMembers[1];
     const progress = getProcessProgress(proc);
     const roleConfig = ROLE_CONFIGS[getRoleCategoryForProcess(getUserRolesForProcess(proc.id))];
-    const widthClass = `${getColWidthClass(colKey, columnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, meusProcessosTextFormat)}`;
+    const widthClass = `${getColWidthClass(colKey, columnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, meusProcessosTextFormat)}`;
     const alignClass = styles.cellAlignClass;
 
     switch (colKey) {
@@ -603,12 +604,8 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
         );
       case 'resumo':
         return (
-          <td key="resumo" className={`${styles.cellPadClass} ${widthClass} ${styles.cellTextColorClass} ${alignClass} ${styles.borderClass} align-middle leading-relaxed whitespace-pre-wrap break-words ${styles.cellFontSizeClass}`}>
-            {proc.acervo?.resumoSintese ? (
-              proc.acervo.resumoSintese
-            ) : (
-              `Trabalho de Conclusão de Curso intitulado "${formatTccTitle(proc.titulo)}", submetido a ${installationProfile.courseName} — ${installationProfile.institutionName}.`
-            )}
+          <td key="resumo" data-portal-filter-value={proc.acervo?.resumoSintese || ''} className={`${styles.cellPadClass} ${widthClass} ${styles.cellTextColorClass} ${alignClass} ${styles.borderClass} align-middle`}>
+            <TccAbstractPopover summary={proc.acervo?.resumoSintese} processLabel={formatProcessLabel(proc.protocolo || proc.id)} />
           </td>
         );
       case 'palavrasChave':

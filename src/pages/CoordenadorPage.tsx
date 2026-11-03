@@ -11,6 +11,7 @@ import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumeric
 import { loadTableConfig, ColumnDef } from '../components/TableColumnSelectorPanel';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
+import { TccAbstractPopover } from '../components/TccAbstractPopover';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
 import { 
   TableTextFormat, 
@@ -116,7 +117,7 @@ const COORDINATOR_DEFAULT_COLUMN_WIDTHS: Record<string, string> = {
   membro1: 'w-[190px] min-w-[190px]',
   membro2: 'w-[190px] min-w-[190px]',
   coorientador: 'w-[190px] min-w-[190px]',
-  resumo: 'w-[220px] min-w-[220px]',
+  resumo: 'w-[100px] min-w-[88px]',
   palavrasChave: 'w-[180px] min-w-[180px]',
   defesaLocal: 'w-[160px] min-w-[160px]',
 };
@@ -607,12 +608,9 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         );
 
       case 'resumo': {
-        const text = proc.acervo?.resumoSintese || (proc.titulo ? `TCC: ${proc.titulo}` : 'Sem resumo');
         return (
-          <td key={colKey} className={`${cellClass} text-slate-500`}>
-            <div className={`${styles.cellWrapClass} ${styles.cellFontSizeClass} line-clamp-2 max-w-[200px] mx-auto`} title={text}>
-              {formatCellText('resumo', text, coordTextFormat)}
-            </div>
+          <td key={colKey} data-portal-filter-value={proc.acervo?.resumoSintese || ''} className={cellClass}>
+            <TccAbstractPopover summary={proc.acervo?.resumoSintese} processLabel={formatProcessLabel(proc.protocolo || proc.id)} />
           </td>
         );
       }

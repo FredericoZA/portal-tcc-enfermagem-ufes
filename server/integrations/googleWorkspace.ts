@@ -587,7 +587,6 @@ export async function bootstrapGoogleDriveStructure(accessToken?: string, option
   folders.root = root.file.id;
 
   for (const [key, name] of Object.entries({
-    system: DRIVE_FOLDER_NAMES.system,
     models: DRIVE_FOLDER_NAMES.models,
     processes: DRIVE_FOLDER_NAMES.processes
   })) {

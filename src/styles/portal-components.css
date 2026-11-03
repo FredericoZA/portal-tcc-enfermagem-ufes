@@ -106,6 +106,121 @@
   flex: none;
 }
 
+/* Resumos nas planilhas: somente o acionador ocupa espaço na célula. */
+.portal-abstract-trigger,
+.portal-abstract-unavailable {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+
+.portal-abstract-trigger {
+  padding: 0;
+  border: 1px solid var(--portal-border);
+  border-radius: 999px;
+  background: var(--portal-surface-inner);
+  color: var(--portal-brand-header);
+  cursor: pointer;
+}
+
+.portal-abstract-trigger:hover,
+.portal-abstract-trigger[aria-expanded="true"] {
+  background: var(--portal-brand-sage);
+  border-color: var(--portal-brand-action);
+  color: var(--portal-text-dark);
+}
+
+.portal-abstract-trigger:focus-visible,
+.portal-abstract-close:focus-visible,
+.portal-abstract-content:focus-visible {
+  outline: 2px solid var(--portal-focus);
+  outline-offset: 2px;
+}
+
+.portal-abstract-close:focus-visible {
+  outline-color: var(--portal-text-light);
+}
+
+.portal-abstract-unavailable {
+  gap: 2px;
+  color: var(--portal-text-muted);
+}
+
+.portal-abstract-popover {
+  position: fixed;
+  z-index: 1000002;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: min(440px, calc(100vw - 24px));
+  max-height: min(360px, calc(100vh - 24px));
+  overflow: hidden;
+  border: 1px solid var(--portal-border);
+  border-radius: 10px;
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+  font: 12px/1.55 var(--portal-font-family);
+  text-align: left;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 18%);
+}
+
+.portal-abstract-heading {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--portal-brand-header);
+  color: var(--portal-text-light);
+}
+
+.portal-abstract-heading strong,
+.portal-abstract-heading span {
+  display: block;
+}
+
+.portal-abstract-heading span {
+  opacity: .85;
+  font-size: 11px;
+}
+
+.portal-abstract-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--portal-border);
+  border-radius: 999px;
+  background: var(--portal-surface-inner);
+  color: var(--portal-text-dark);
+  cursor: pointer;
+}
+
+.portal-abstract-content {
+  min-height: 0;
+  padding: 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (pointer: coarse) {
+  .portal-abstract-trigger,
+  .portal-abstract-close {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 /* Botões de ícone da barra — todos circulares. */
 .portal-header-action,
 .portal-toolbar-icon-button,

@@ -1,6 +1,6 @@
 import { legacyRepositoryProcess } from './src/utils/legacyRepository';
 import { readLegacyAcademicPdf } from './server/legacyArchiveFiles';
-import { validateLegacyBatch, mergeLegacyBatch, legacyCatalogRevision, publicLegacyAcademicView, canonicalLegacyRecord, legacyFileIsPublic, legacyAdministrativeFiles } from './server/legacyArchive';
+import { validateLegacyBatch, mergeLegacyBatch, legacyCatalogRevision, publicLegacyAcademicView, privateLegacyAcademicView, canonicalLegacyRecord, legacyFileIsPublic, legacyAdministrativeFiles } from './server/legacyArchive';
 import type { LegacyAcademicRecord } from './src/types/legacyArchive';
 import {EVALUATION_OUTCOMES} from './src/utils/evaluationForm';
 import {renderInstitutionName} from './src/utils/institutionName';
@@ -78,7 +78,7 @@ import type { RegistrationDraft, ReminderRecord } from './src/types/workflowOper
 import { buildAdvancedAnalytics, analyticsCsv, analyticsMarkdown } from './server/advancedAnalytics';
 import { simulateWorkflow } from './server/workflow/simulator';
 import { acceptRegistration } from './server/workflow/registration';
-import { FeedbackError, submitPublicFeedback, listFeedbackForAdmins, feedbackImageForAdmin, markFeedbackReviewed } from './server/publicFeedback';
+import { FeedbackError, submitPublicFeedback, listFeedbackForAdmins, listFeedbackPageForAdmin, feedbackImageForAdmin, markFeedbackReviewed } from './server/publicFeedback';
 import { validateReservationChange } from './server/workflow/reservationChange';
 import { officialInvitationEmail } from './server/workflow/officialInvitation';
 import { invitationTemplateCorrections } from './server/workflow/invitationTemplate';
@@ -1585,7 +1585,7 @@ export async function createPortalApp() {
 
   const requireAdministrativeOperator=requireGlobalRoles('MASTER_ADMIN','COMMISSION_PRESIDENT');
   // Sugestões públicas: sem login para o envio, mas consulta e imagens somente
-  // para a administração. Nada é inserido no estado transacional dos TCCs.
+  // para o Master. Nada é inserido no estado transacional dos TCCs.
   app.post('/api/public/feedback',async(req,res)=>{
     res.setHeader('Cache-Control','no-store');
     try{
@@ -1599,12 +1599,15 @@ export async function createPortalApp() {
       });
     }
   });
-  app.get('/api/admin/feedback',requireAuthenticated,requireAdministrator,async(_req,res)=>{
+  app.get('/api/admin/feedback',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),async(req,res)=>{
     res.setHeader('Cache-Control','private, no-store');
-    try{res.json(await listFeedbackForAdmins());}
-    catch{res.status(503).json({error:'Não foi possível consultar as sugestões.'});}
+    try{
+      res.json(req.query.paginated==='true'
+        ?await listFeedbackPageForAdmin(req.query.before)
+        :await listFeedbackForAdmins());
+    }catch(error){res.status(error instanceof FeedbackError?error.status:503).json({error:'Não foi possível consultar as sugestões.'});}
   });
-  app.get('/api/admin/feedback/:id/image',requireAuthenticated,requireAdministrator,async(req,res)=>{
+  app.get('/api/admin/feedback/:id/image',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),async(req,res)=>{
     res.setHeader('Cache-Control','private, no-store');
     res.setHeader('X-Content-Type-Options','nosniff');
     try{
@@ -1615,13 +1618,13 @@ export async function createPortalApp() {
       res.status(error instanceof FeedbackError?error.status:503).json({error:'Não foi possível consultar a imagem.'});
     }
   });
-  app.patch('/api/admin/feedback/:id/review',requireAuthenticated,requireAdministrator,async(req,res)=>{
+  app.patch('/api/admin/feedback/:id/review',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),async(req,res)=>{
     res.setHeader('Cache-Control','private, no-store');
     try{
       const actor=getPortalIdentity(req)!.email;
       const updated=await markFeedbackReviewed(String(req.params.id||''),actor);
       if(!updated)return res.status(404).json({error:'Sugestão não encontrada.'});
-      res.json({reviewed:true});
+      res.json({reviewed:true,record:updated});
     }catch(error){res.status(error instanceof FeedbackError?error.status:503).json({error:'Não foi possível atualizar a sugestão.'});}
   });
 
@@ -2531,6 +2534,23 @@ export async function createPortalApp() {
   app.get('/api/admin/legacy-academic-records',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),(_req,res)=>{
     res.setHeader('Cache-Control','private, no-store');
     res.json({revision:legacyCatalogRevision(legacyAcademicRecordsStore),records:legacyAcademicRecordsStore});
+  });
+  app.get('/api/admin/legacy-academic-records/:id/academic',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),(req,res)=>{
+    res.setHeader('Cache-Control','private, no-store');
+    const record=legacyAcademicRecordsStore.find(r=>r.id===req.params.id);
+    if(!record)return res.status(404).json({error:'Trabalho histórico não encontrado.'});
+    return res.json(privateLegacyAcademicView(record));
+  });
+  app.get('/api/admin/legacy-academic-records/:id/files/:index/download',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),async(req,res)=>{
+    res.setHeader('Cache-Control','private, no-store');
+    const record=legacyAcademicRecordsStore.find(r=>r.id===req.params.id);
+    const index=/^(0|[1-9]\d?)$/.test(req.params.index)?Number(req.params.index):-1;
+    const file=record?.attachments[index];
+    if(!record||!file)return res.status(404).json({error:'Arquivo histórico não encontrado.'});
+    try{
+      const pdf=await readLegacyAcademicPdf(file);
+      await deliverPortalDownload({res,bytes:pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:`legacy-academic-admin:${getPortalIdentity(req)!.email}:${record.id}:${index}`,cacheControl:'private, no-store, max-age=0'});
+    }catch{return res.status(409).json({error:'Não foi possível conferir o arquivo histórico. O original permanece preservado para revisão.'});}
   });
   app.get('/api/admin/legacy-academic-records/:id/documents',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),(req,res)=>{
     res.setHeader('Cache-Control','private, no-store');

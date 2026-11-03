@@ -3,7 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { normalizePersonName } from '../src/utils/personNameCase';
 import { renderTccTitle } from '../src/utils/formatters';
 import { buildProcessArchiveFileName } from './integrations/googleDriveArchive';
-import type { LegacyAcademicRecord, LegacyAttachment, LegacyAdministrativeFile, PublicLegacyAcademicRecord } from '../src/types/legacyArchive';
+import type { LegacyAcademicRecord, LegacyAttachment, LegacyAdministrativeFile, PublicLegacyAcademicRecord, PrivateLegacyAcademicView } from '../src/types/legacyArchive';
 
 const bounded = (value: unknown, max = 1000): string => {
   if (typeof value !== 'string' || value.length > max || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value)) throw new Error('Texto histórico inválido.');
@@ -110,4 +110,19 @@ export function publicLegacyAcademicView(r: LegacyAcademicRecord): PublicLegacyA
     orientador:r.orientador,coorientador:r.coorientador,coorientadorInstituicao:r.coorientadorInstituicao,
     examinadores:r.examinadores,resumo:legacyAuthorization(r.provenance)==='AUTHORIZED'?r.resumo:'',palavrasChave:r.palavrasChave,dataDefesa:r.dataDefesa,horaDefesa:r.horaDefesa,localDefesa:r.localDefesa,filesRestricted:!r.attachments.some(file=>legacyFileIsPublic(r,file)),authorizationDecision:legacyAuthorization(r.provenance),
     publicFiles:r.attachments.flatMap((file,index)=>legacyFileIsPublic(r,file)?[{index,kind:file.kind,downloadUrl:`/api/legacy-academic-records/${encodeURIComponent(r.id)}/files/${index}/download`}]:[])};
+}
+
+/** This projection is served exclusively by the Master-authorized route. */
+export function privateLegacyAcademicView(record: LegacyAcademicRecord): PrivateLegacyAcademicView {
+  return {
+    resumo: record.resumo,
+    palavrasChave: [...record.palavrasChave],
+    files: record.attachments.map((file, index) => ({
+      index,
+      kind: file.kind,
+      fileName: file.fileName,
+      downloadUrl: `/api/admin/legacy-academic-records/${encodeURIComponent(record.id)}/files/${index}/download`,
+      isPublic: legacyFileIsPublic(record, file),
+    })),
+  };
 }

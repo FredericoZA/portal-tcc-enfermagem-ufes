@@ -35,7 +35,7 @@ test('raiz existente é reutilizada e todas as novas pastas ficam dentro dela', 
   assert.equal(result.existingFolders, 1);
   assert.ok(created.length > 4);
   assert.ok(created.every(file=>file.parents?.length===1));
-  assert.deepEqual(created.filter(file=>file.parents[0]===rootId).map(file=>file.name),['00_SISTEMA','01_DOCUMENTOS','02_PROCESSOS']);
+  assert.deepEqual(created.filter(file=>file.parents[0]===rootId).map(file=>file.name),['01_DOCUMENTOS','02_PROCESSOS']);
   assert.equal(result.folders['documents.CONVITE.03_ASSINADOS'],undefined);
   assert.ok(result.folders['documents.ATA.03_ASSINADOS']);
   assert.ok(created.every(file=>file.name!=='03_REPOSITORIO_PUBLICO'));

@@ -50,7 +50,7 @@ export const SettingsWorkspaceSelector: React.FC<{
   </label>
 );
 
-const SHEET_SECTION_IDS = new Set(['authorizations', 'signature-ledger', 'audit-ledger']);
+const SHEET_SECTION_IDS = new Set(['authorizations', 'signature-ledger', 'audit-ledger', 'feedback-ledger']);
 
 export const SettingsWorkspaceModal: React.FC<SettingsWorkspaceModalProps> = ({ open, title, icon: TitleIcon, sections, onClose }) => {
   const firstId = sections[0]?.id || '';

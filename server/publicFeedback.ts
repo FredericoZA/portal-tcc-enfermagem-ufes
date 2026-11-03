@@ -1,5 +1,6 @@
 import { createHmac, randomUUID } from 'node:crypto';
 import { buildSupabaseAdminHeaders, getSupabaseRuntimeStatus } from './integrations/supabase';
+import { storePrivatePortalImage, readPrivatePortalImage } from './integrations/googleDriveImages';
 
 const TABLE = 'portal_feedback';
 const MAX_IMAGE_BYTES = 1_500_000;
@@ -21,6 +22,7 @@ export interface FeedbackRecord {
   status: 'NEW' | 'REVIEWED';
   created_at: string;
   reviewed_at: string | null;
+  reviewed_by: string | null;
 }
 
 export class FeedbackError extends Error {
@@ -83,7 +85,7 @@ async function feedbackRequest(url:string, options:RequestInit):Promise<Response
 const endpoint=()=>String(process.env.SUPABASE_URL||'').trim().replace(/\/$/,'')+'/rest/v1/'+TABLE;
 
 export async function submitPublicFeedback(
-  input:unknown,ip:string,secret:string,
+  input:unknown,ip:string,secret:string,archive=storePrivatePortalImage,
 ):Promise<{id:string;createdAt:string}> {
   const validated=validatePublicFeedback(input);
   if(validated.suppressed)return {id:'',createdAt:new Date().toISOString()};
@@ -97,9 +99,16 @@ export async function submitPublicFeedback(
   const count=await prior.json() as Array<{id:string}>;
   if(count.length>=3)throw new FeedbackError(429,'Muitas sugestões em pouco tempo. Tente novamente mais tarde.');
   const id=randomUUID();
+  let imageReference:{image_drive_file_id:string;image_sha256:string}|undefined;
+  if(validated.image){
+    // The screenshot is archived privately; only its reference reaches Postgres.
+    await feedbackRequest(endpoint()+'?select=image_drive_file_id,image_sha256&limit=0',{headers});
+    const image=await archive({bytes:Buffer.from(validated.image.base64,'base64'),mimeType:validated.image.mime,kind:'FEEDBACK_IMAGE',key:id});
+    imageReference={image_drive_file_id:image.driveFileId,image_sha256:image.contentSha256};
+  }
   const payload={
     id,description:validated.description,image_mime:validated.image?.mime||null,
-    image_base64:validated.image?.base64||null,image_size:validated.image?.size||null,
+    image_size:validated.image?.size||null,...imageReference,
     ip_fingerprint:visitor,status:'NEW',
   };
   const stored=await feedbackRequest(endpoint()+'?select=id%2Ccreated_at',{
@@ -111,32 +120,71 @@ export async function submitPublicFeedback(
   return {id:data[0].id,createdAt:data[0].created_at};
 }
 
+const FEEDBACK_SELECT='id,description,image_mime,image_size,status,created_at,reviewed_at,reviewed_by';
+const FEEDBACK_PAGE_SIZE=100;
+const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export interface FeedbackPage {items:FeedbackRecord[];nextCursor:string|null;}
+
+/** Opaque keyset cursor; timestamp and UUID are validated before PostgREST filtering. */
+function decodeFeedbackCursor(value:unknown):{createdAt:string;id:string}|null {
+  if(value===undefined)return null;
+  if(typeof value!=='string'||!value||value.length>240||!/^[A-Za-z0-9_-]+$/.test(value))throw new FeedbackError(400,'Página de sugestões inválida.');
+  try{
+    const bytes=Buffer.from(value,'base64url');
+    if(bytes.toString('base64url')!==value)throw Error('Noncanonical cursor');
+    const data=JSON.parse(bytes.toString('utf8'));
+    if(!data||typeof data.createdAt!=='string'||data.createdAt.length>40||!Number.isFinite(Date.parse(data.createdAt))||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(data.createdAt)||typeof data.id!=='string'||!uuidPattern.test(data.id))throw Error('Invalid cursor data');
+    return {createdAt:data.createdAt,id:data.id};
+  }catch{throw new FeedbackError(400,'Página de sugestões inválida.');}
+}
+
 export async function listFeedbackForAdmins():Promise<FeedbackRecord[]> {
-  const query=new URLSearchParams({
-    select:'id,description,image_mime,image_size,status,created_at,reviewed_at',
-    order:'created_at.desc',limit:'100',
-  });
+  const query=new URLSearchParams({select:FEEDBACK_SELECT,order:'created_at.desc,id.desc',limit:String(FEEDBACK_PAGE_SIZE)});
   const response=await feedbackRequest(endpoint()+'?'+query,{headers:credentialHeaders()});
   return (await response.json()) as FeedbackRecord[];
 }
 
-export async function feedbackImageForAdmin(id:string):Promise<{bytes:Buffer;mime:string}|null> {
-  if(!/^[0-9a-f-]{36}$/i.test(id))throw new FeedbackError(400,'Identificador inválido.');
-  const query=new URLSearchParams({select:'image_mime,image_base64',id:'eq.'+id,limit:'1'});
+export async function listFeedbackPageForAdmin(before?:unknown):Promise<FeedbackPage> {
+  const cursor=decodeFeedbackCursor(before);
+  const query=new URLSearchParams({select:FEEDBACK_SELECT,order:'created_at.desc,id.desc',limit:String(FEEDBACK_PAGE_SIZE+1)});
+  if(cursor)query.set('or',`(created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id}))`);
   const response=await feedbackRequest(endpoint()+'?'+query,{headers:credentialHeaders()});
-  const items=await response.json() as Array<{image_mime:string|null;image_base64:string|null}>;
+  const rows=await response.json() as FeedbackRecord[];
+  const items=rows.slice(0,FEEDBACK_PAGE_SIZE),last=items[items.length-1];
+  return {items,nextCursor:rows.length>FEEDBACK_PAGE_SIZE&&last
+    ?Buffer.from(JSON.stringify({createdAt:last.created_at,id:last.id})).toString('base64url'):null};
+}
+
+export async function feedbackImageForAdmin(id:string,read=readPrivatePortalImage):Promise<{bytes:Buffer;mime:string}|null> {
+  if(!uuidPattern.test(id))throw new FeedbackError(400,'Identificador inválido.');
+  // select=* also supports the old schema during a rolling deployment.
+  const query=new URLSearchParams({select:'*',id:'eq.'+id,limit:'1'});
+  const response=await feedbackRequest(endpoint()+'?'+query,{headers:credentialHeaders()});
+  const items=await response.json() as Array<{image_mime:string|null;image_base64:string|null;image_size:number|null;image_drive_file_id?:string|null;image_sha256?:string|null}>;
   const item=items[0];
+  if(item?.image_drive_file_id&&item.image_mime){
+    const bytes=await read({driveFileId:item.image_drive_file_id,contentSha256:String(item.image_sha256||''),mimeType:item.image_mime,byteLength:Number(item.image_size)},'FEEDBACK_IMAGE');
+    return {bytes,mime:item.image_mime};
+  }
   if(!item?.image_mime||!item.image_base64)return null;
   const found=checkFeedbackImage(`data:${item.image_mime};base64,${item.image_base64}`);
   return found?{bytes:Buffer.from(found.base64,'base64'),mime:found.mime}:null;
 }
 
-export async function markFeedbackReviewed(id:string,actorEmail:string):Promise<boolean> {
-  if(!/^[0-9a-f-]{36}$/i.test(id))throw new FeedbackError(400,'Identificador inválido.');
-  const response=await feedbackRequest(endpoint()+'?id=eq.'+encodeURIComponent(id),{
+export async function markFeedbackReviewed(id:string,actorEmail:string):Promise<FeedbackRecord|null> {
+  if(!uuidPattern.test(id))throw new FeedbackError(400,'Identificador inválido.');
+  const query=new URLSearchParams({id:'eq.'+id,status:'eq.NEW',select:FEEDBACK_SELECT});
+  const response=await feedbackRequest(endpoint()+'?'+query,{
     method:'PATCH',
     headers:{...credentialHeaders(),Prefer:'return=representation'},
     body:JSON.stringify({status:'REVIEWED',reviewed_at:new Date().toISOString(),reviewed_by:actorEmail}),
   });
-  return (await response.json() as Array<{id:string}>).length===1;
+  const updated=await response.json() as FeedbackRecord[];
+  if(updated.length===1)return updated[0];
+  // Repeated clicks never replace the original reviewer or review timestamp.
+  const existingQuery=new URLSearchParams({select:FEEDBACK_SELECT,id:'eq.'+id,limit:'1'});
+  const existing=await feedbackRequest(endpoint()+'?'+existingQuery,{headers:credentialHeaders()});
+  const record=(await existing.json() as FeedbackRecord[])[0];
+  return record?.status==='REVIEWED'?record:null;
 }

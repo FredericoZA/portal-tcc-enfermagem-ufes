@@ -24,8 +24,10 @@ import { CommissionIdentityPanel } from '../components/CommissionIdentityPanel';
 import { AuditLogsPage } from './AuditLogsPage';
 import { AstenLogsPage } from './AstenLogsPage';
 import { SettingsWorkspaceModal } from '../components/SettingsWorkspaceModal';
+import { FeedbackInboxPanel } from '../components/FeedbackInboxPanel';
 import {
   Settings,
+  Lightbulb,
   Settings as SettingsIcon,
   BookOpen,
   HelpCircle,
@@ -260,7 +262,7 @@ export const ConfiguracoesPage: React.FC = () => {
   const { userEmail, settings, refreshAuth, isMasterAdmin } = useAuth();
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const [activeSettingsPanel, setActiveSettingsPanel] = useState<'identity' | 'integrations' | 'models-documents' | 'emails' | 'forms' | 'workflow' | 'variables' | 'access' | 'signatures' | 'logs' | null>(null);
+  const [activeSettingsPanel, setActiveSettingsPanel] = useState<'identity' | 'integrations' | 'models-documents' | 'emails' | 'forms' | 'workflow' | 'variables' | 'access' | 'signatures' | 'logs' | 'feedback' | null>(null);
 
   // Google Calendar & Workspace Sync State
   const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
@@ -2107,6 +2109,7 @@ export const ConfiguracoesPage: React.FC = () => {
               { id: 'access', title: 'Acesso', text: 'Autorizações e pessoas com acesso ao Portal.', icon: Lock },
               { id: 'signatures', title: 'Registros de Assinatura', text: 'Fila, método, situação e histórico de assinatura.', icon: FileCheck2 },
               { id: 'logs', title: 'Registro de Logs', text: 'Auditoria, histórico técnico e rastreabilidade.', icon: ClipboardList },
+              { id: 'feedback', title: 'Sugestões de melhoria', text: 'Sugestões recebidas, imagens e histórico de revisão.', icon: Lightbulb },
             ].map(({ id, title, text, icon: Icon }) => (
               <button key={id} type="button" onClick={() => setActiveSettingsPanel(id as any)} className="portal-settings-launcher flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left shadow-sm">
                 <Icon className="portal-settings-launcher-icon h-5 w-5 shrink-0" />
@@ -2129,6 +2132,7 @@ export const ConfiguracoesPage: React.FC = () => {
                 : activeSettingsPanel === 'variables' ? 'Variáveis'
                 : activeSettingsPanel === 'access' ? 'Acesso'
                 : activeSettingsPanel === 'signatures' ? 'Registros de Assinatura'
+                : activeSettingsPanel === 'feedback' ? 'Sugestões de melhoria'
                 : 'Registro de Logs'
               }
               icon={
@@ -2141,6 +2145,7 @@ export const ConfiguracoesPage: React.FC = () => {
                 : activeSettingsPanel === 'variables' ? Sliders
                 : activeSettingsPanel === 'access' ? Lock
                 : activeSettingsPanel === 'signatures' ? FileCheck2
+                : activeSettingsPanel === 'feedback' ? Lightbulb
                 : ClipboardList
               }
               onClose={() => setActiveSettingsPanel(null)}
@@ -2163,6 +2168,8 @@ export const ConfiguracoesPage: React.FC = () => {
                   { id: 'authorizations', label: 'Autorizações de acesso', description: 'Gerencie discentes e demais perfis autorizados.', icon: Lock, content: <AuthorizedStudentsPanel canManage embedded /> },
                 ] : activeSettingsPanel === 'signatures' ? [
                   { id: 'signature-ledger', label: 'Registros de assinatura', description: 'Documentos enviados, método e situação.', icon: FileCheck2, content: <AstenLogsPage embedded /> },
+                ] : activeSettingsPanel === 'feedback' ? [
+                  { id: 'feedback-ledger', label: 'Sugestões de melhoria', description: 'Mensagens recebidas e revisão pelo Master.', icon: Lightbulb, content: <FeedbackInboxPanel embedded /> },
                 ] : [
                   { id: 'audit-ledger', label: 'Registro de logs', description: 'Auditoria e histórico técnico do Portal.', icon: ClipboardList, content: <AuditLogsPage embedded /> },
                 ]

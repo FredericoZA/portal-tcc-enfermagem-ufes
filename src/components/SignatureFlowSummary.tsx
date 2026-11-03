@@ -13,23 +13,23 @@ const signatureSteps: SignatureStep[] = [
   {
     document: 'Ata da defesa',
     signers: 'Professor orientador.',
-    when: 'Após confirmar a avaliação e conferir a prévia da ata.',
-    where: 'Após registrar a avaliação, o orientador confere e assina em Documentos administrativos.',
-    how: 'Não há aviso separado do Portal para assinar a ata. Com a ata assinada e arquivada, os autores recebem as orientações para a entrega final no Repositório; o orientador também é informado.',
+    when: 'Após registrar o conceito e o parecer, a partir do horário da defesa.',
+    where: 'Documentos administrativos → Ata Oficial da Defesa Final → Asten ou Gov.br.',
+    how: 'O orientador solicita a assinatura nessa caixa. A ata assinada e arquivada libera a entrega final; autores e orientador recebem as instruções.',
   },
   {
     document: 'Termo de autorização de publicação',
     signers: 'Professor orientador e todos os alunos autores.',
     when: 'Após a entrega final, quando houver autorização para tornar público o trabalho, o resumo expandido ou ambos.',
-    where: 'Após confirmar a entrega, em Documentos administrativos → Termo de autorização. A entrega não inicia a assinatura automaticamente.',
+    where: 'Documentos administrativos → Termo de Autorização e Publicação → Asten ou Gov.br. Confirmar a entrega não solicita assinatura automaticamente.',
     how: 'No Asten, todos assinam no mesmo nível. Pelo Gov.br, somente o orientador devolve um único PDF com todas as assinaturas. Sem publicação autorizada, não há Termo nem aviso de assinatura.',
   },
   {
     document: 'Declaração de participação na banca',
     signers: 'Presidente da Comissão.',
     when: 'Por último: após a entrega final, a ata arquivada e o termo assinado e arquivado, quando aplicável.',
-    where: 'Asten é o padrão. A presidência pode usar a alternativa Gov.br na Área do Presidente.',
-    how: 'A solicitação usa o e-mail da presidência definido em Rodapé e Identidade. A presidência da comissão assina a declaração; o orientador preside a sessão e assina a ata. O processo só termina após o arquivamento dos documentos obrigatórios.',
+    where: 'Área do Presidente → declaração do TCC → Asten ou Gov.br.',
+    how: 'A assinatura usa o e-mail da presidência configurado no Portal. A declaração assinada e arquivada permite concluir o processo; ela não é assinada pelos autores ou pela banca.',
   },
 ];
 
@@ -50,9 +50,8 @@ export const SignatureFlowSummary: React.FC = () => (
       </h2>
     </div>
 
-    <p className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-center text-[11px] leading-[1.6] text-slate-700">
-      <strong className="text-slate-900">Asten é o método preferencial.</strong> A alternativa Gov.br está disponível nos pontos indicados abaixo.
-      Após a assinatura e o arquivamento, use apenas Ver e Baixar PDF.
+    <p className="portal-instruction mb-3 rounded-lg px-3 py-2 text-[11px] leading-[1.6]">
+      <strong>Orientações:</strong> prefira o Asten para assinar pelo link recebido por e-mail. A escolha do método acontece na caixa do documento ou na Área do Presidente, conforme indicado abaixo.
     </p>
 
     <div className="overflow-x-auto rounded-xl border border-slate-300" role="region" aria-label="Tabela de assinaturas do processo" tabIndex={0}>
@@ -88,22 +87,23 @@ export const SignatureFlowSummary: React.FC = () => (
     </div>
 
     <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
-      <div className="rounded-xl border border-slate-300 bg-slate-100 p-3 text-center text-[11px] leading-[1.7] text-slate-700">
-        <h3 className="mb-1 font-black text-slate-900">Asten: solicitação automática por e-mail</h3>
+      <div className="portal-instruction rounded-xl p-3 text-[11px] leading-[1.7]">
+        <h3 className="mb-1 font-black text-slate-900">Asten: solicitar e acompanhar</h3>
         <p>
-          Ao solicitar Asten, o Portal primeiro gera o PDF com o modelo publicado e o envia à plataforma.
-          Somente após a confirmação do envio, o Asten encaminha o convite aos signatários cadastrados.
-          Cada pessoa abre o link recebido e assina. O Portal acompanha o retorno e arquiva o documento assinado.
-          Essas mensagens pertencem ao serviço Asten e não são modelos da aba E-mails do Portal.
+          Clique em Asten no documento disponível para solicitar a assinatura. Cada responsável recebe
+          um e-mail do Asten para assinar. Acompanhe a situação na caixa do documento e aguarde o arquivamento
+          do PDF assinado. Enquanto o envio ou a assinatura estiver pendente, evite repetir o pedido.
         </p>
       </div>
-      <div className="rounded-xl border border-slate-300 bg-slate-100 p-3 text-center text-[11px] leading-[1.7] text-slate-700">
+      <div className="portal-instruction rounded-xl p-3 text-[11px] leading-[1.7]">
         <h3 className="mb-1 font-black text-slate-900">Gov.br: assinar e devolver o PDF</h3>
         <p>
-          Clique em Gerar e baixar PDF na opção Gov.br do documento. Assine esse PDF no Gov.br e
-          devolva o arquivo com todas as assinaturas exigidas na mesma janela do Portal.
-          Não é necessário acessar o Drive. A secretaria confere no VALIDAR/ITI antes do arquivamento.
-          Apenas enviar o arquivo não conclui a etapa.
+          Abra Gov.br na caixa do documento. Use Gerar e baixar PDF ou Baixar PDF para assinar;
+          depois abra o assinador Gov.br e devolva o mesmo arquivo por Devolver PDF assinado.
+          O orientador devolve a ata e o termo; a presidência devolve a declaração. O Master confere
+          as assinaturas no VALIDAR/ITI e registra Aprovar conferência e arquivar. Na Área do Presidente,
+          a presidência também pode conferir a declaração.
+          Apenas enviar o PDF não conclui a assinatura nem libera a próxima etapa.
         </p>
       </div>
     </div>

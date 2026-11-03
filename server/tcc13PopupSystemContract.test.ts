@@ -110,10 +110,10 @@ test('editor do popup de login usa autosave e não exibe salvar ou X',()=>{
 });
 
 
-test('os três workspaces de registros são popups-planilha full-bleed com rolagem interna',()=>{
+test('os quatro workspaces de registros são popups-planilha full-bleed com rolagem interna',()=>{
   const modal=read('src/components/SettingsWorkspaceModal.tsx');
   const scroll=read('src/components/TableScrollWrapper.tsx');
-  assert.match(modal,/new Set\(\['authorizations', 'signature-ledger', 'audit-ledger'\]\)/);
+  assert.match(modal,/new Set\(\['authorizations', 'signature-ledger', 'audit-ledger', 'feedback-ledger'\]\)/);
   assert.match(modal,/sheetWorkspace \? 'flex flex-col overflow-hidden'/);
   const css=read('src/styles/portal-components.css');
   assert.match(css,/\.portal-settings-workspace\[data-portal-sheet-workspace="true"\]\s*\{[^}]*height:\s*min\(760px, calc\(100dvh - 48px\)\)/);
@@ -125,9 +125,10 @@ test('os três workspaces de registros são popups-planilha full-bleed com rolag
     'src/components/AuthorizedStudentsPanel.tsx',
     'src/pages/AstenLogsPage.tsx',
     'src/pages/AuditLogsPage.tsx',
+    'src/components/FeedbackInboxPanel.tsx',
   ]){
     const source=read(file);
-    assert.match(source,/flex min-h-0 flex-col/);
+    assert.match(source,/\bflex\b[^\n]*\bmin-h-0\b[^\n]*\bflex-col\b/);
     assert.match(source,/TableScrollWrapper fillHeight/);
   }
 });

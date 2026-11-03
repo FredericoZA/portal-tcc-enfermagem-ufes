@@ -1,6 +1,7 @@
 import {withPortalOperation,requestOperationLabel} from './portalOperations';
 import { ProcessData, GlobalSettings, AuditLog, DocumentCorrectionRequest, GoogleCalendarSyncedEvent, SignatureJob, AstenIntegrationStatus, ContinuousIntelligenceOverview, ImprovementStatus, LivingPortalArtifactKind } from '../types';
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
+import type { FeedbackEntry, FeedbackPage } from '../types/feedback';
 import type {AstenDocumentFoldersStatus,AstenDocumentFolderType} from '../types/signatures';
 import { isLocalDemoFrontend } from '../utils/runtimeEnvironment';
 import {verifyPublicPdfLocally,type PublicDocumentVerification} from '../utils/publicPdfVerification';
@@ -133,6 +134,8 @@ export const apiClient = {
   importLegacyAcademicRecords:(records:unknown[],expectedRevision:string)=>fetchApi<{imported:number;total:number;revision:string}>('/api/admin/legacy-academic-records/import',{method:'POST',body:JSON.stringify({records,expectedRevision})}),
   getLegacyAcademicRecords:()=>fetchApi<import('../types/legacyArchive').PublicLegacyAcademicRecord[]>('/api/legacy-academic-records'),
   getPrivateLegacyAcademicRecords:()=>fetchApi<{revision:string;records:import('../types/legacyArchive').LegacyAcademicRecord[]}>('/api/admin/legacy-academic-records'),
+  getPrivateLegacyAcademicView:(id:string)=>fetchApi<import('../types/legacyArchive').PrivateLegacyAcademicView>(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/academic`),
+  downloadPrivateLegacyAcademicFile:(id:string,index:number)=>downloadApiFile(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/files/${index}/download`),
   getLegacyAdministrativeDocuments:(id:string)=>fetchApi<import('../types/legacyArchive').LegacyAdministrativeFileView[]>(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/documents`),
   downloadLegacyAdministrativeDocument:(id:string,index:number)=>downloadApiFile(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/documents/${index}/download`),
   getRegistrationDraft:()=>fetchApi<import('../types/workflowOperations').RegistrationDraft|null>('/api/registration/draft'),
@@ -153,12 +156,11 @@ export const apiClient = {
   updateDriveRootFolder:(folderId:string)=>fetchApi<{folderId:string}>('/api/admin/drive-root',{method:'POST',body:JSON.stringify({folderId})}),
   sendPublicFeedback: (data:{description:string;imageDataUrl?:string;extraField?:string}) =>
     fetchApi<{received:boolean;reference?:string}>('/api/public/feedback',{method:'POST',body:JSON.stringify(data)}),
-  getFeedbackForAdmin: () => fetchApi<Array<{
-    id:string;description:string;image_mime:string|null;image_size:number|null;
-    status:'NEW'|'REVIEWED';created_at:string;reviewed_at:string|null;
-  }>>('/api/admin/feedback'),
+  getFeedbackForAdmin: () => fetchApi<FeedbackEntry[]>('/api/admin/feedback'),
+  getFeedbackPageForAdmin: (cursor?:string) => fetchApi<FeedbackPage>(`/api/admin/feedback?paginated=true${cursor?`&before=${encodeURIComponent(cursor)}`:''}`),
+  getFeedbackImage: (id:string) => downloadApiFileRequest(`/api/admin/feedback/${encodeURIComponent(id)}/image`),
   markFeedbackReviewed: (id:string) =>
-    fetchApi<{reviewed:boolean}>(`/api/admin/feedback/${encodeURIComponent(id)}/review`,{method:'PATCH',body:'{}'}),
+    fetchApi<{reviewed:boolean;record:FeedbackEntry}>(`/api/admin/feedback/${encodeURIComponent(id)}/review`,{method:'PATCH',body:'{}'}),
   getPortalSyncVersion:()=>fetchApi<{revision:number}>('/api/sync/version'),
   getPublicSyncVersion:()=>fetchApi<{token:string}>('/api/public/sync/version'),
   getProcesses: () => fetchApi<ProcessData[]>('/api/processes'),

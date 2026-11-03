@@ -18,7 +18,7 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
   await writeFile(path.join(dir,'legacy-import','drive-pdfs','tcc.pdf'),pdf);
   await writeFile(path.join(dir,'legacy-import','drive-pdfs','admin.pdf'),pdf);
   const privateDocument={driveFileId:'private_admin_123456',fileName:'instrumento.pdf',sourceFileName:'admin.pdf',folderId:'private_folder_12345',kind:'AVALIACAO',sha256:createHash('sha256').update(pdf).digest('hex'),visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT'};
-  const importedRecord={...record,provenance:{...record.provenance,administrativeDocuments:[privateDocument]}};
+  const importedRecord={...record,attachments:[{...record.attachments[0],sha256:createHash('sha256').update(pdf).digest('hex')}],provenance:{...record.provenance,administrativeDocuments:[privateDocument]}};
   const port=43000+Math.floor(Math.random()*1000),base=`http://127.0.0.1:${port}`;
   const child=spawn(process.execPath,['--import','tsx','server.ts'],{cwd:process.cwd(),env:{...process.env,NODE_ENV:'development',PORT:String(port),PORTAL_DATA_DIR:dir,PORTAL_ALLOW_INSECURE_DEMO_AUTH:'true',PORTAL_PERSISTENCE_PROVIDER:'local_file',PORTAL_ALLOW_LOCAL_SECRET_STORE:'true',PORTAL_ALLOW_LOCAL_OTP_STORE:'true',PORTAL_SESSION_SECRET:'test-legacy-session-secret-123456789',PORTAL_OTP_PEPPER:'test-legacy-otp-pepper-123456789',SUPABASE_URL:'',SUPABASE_SERVICE_ROLE_KEY:'',SUPABASE_SECRET_KEY:'',VERCEL:'',PORTAL_TEST_DOCUMENT_RENDERER:'true',PORTAL_LOCAL_REVIEW_DATA:'true',ASTEN_INTEGRATION_ENABLED:'false'},stdio:'ignore'});
   const request=async(url:string,email='',body?:unknown)=>{const res=await fetch(base+url,{method:body===undefined?'GET':'POST',headers:{'content-type':'application/json',...(email?{'x-demo-user-email':email}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});return{status:res.status,body:await res.json()};};
@@ -43,6 +43,24 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
     assert.equal(detail.body.aluno1.email,'');assert.equal(detail.body.avaliacao.status,'PENDENTE');
     assert.ok(!JSON.stringify(detail.body).includes('private_file_123456'));
     assert.ok(!JSON.stringify(detail.body).includes('instrumento.pdf'));
+    const academicRoute='/api/admin/legacy-academic-records/legado-0001/academic';
+    assert.equal((await request(academicRoute)).status,401);
+    for(const email of ['student@example.invalid','presidente@portal.local'])assert.equal((await request(academicRoute,email)).status,403);
+    const academic=await request(academicRoute,master);
+    assert.equal(academic.status,200);assert.equal(academic.body.resumo,'Privado');
+    assert.equal(academic.body.files.length,1);assert.equal(academic.body.files[0].isPublic,false);
+    assert.ok(!JSON.stringify(academic.body).includes('private_file_123456'));
+    assert.ok(!JSON.stringify(academic.body).includes('originalConsent'));
+    const privateAcademicDownload=academic.body.files[0].downloadUrl;
+    assert.equal((await request(privateAcademicDownload)).status,401);
+    assert.equal((await request(privateAcademicDownload,'student@example.invalid')).status,403);
+    const privateAcademicPdf=await fetch(base+privateAcademicDownload,{headers:{'x-demo-user-email':master}});
+    assert.equal(privateAcademicPdf.status,200);assert.match(privateAcademicPdf.headers.get('cache-control')||'',/private.*no-store/);
+    assert.deepEqual(Buffer.from(await privateAcademicPdf.arrayBuffer()),pdf);
+    assert.equal((await request('/api/admin/legacy-academic-records/legado-0001/files/1/download',master)).status,404);
+    assert.equal((await request('/api/admin/legacy-academic-records/legado-0001/files/-1/download',master)).status,404);
+    assert.equal((await request('/api/admin/legacy-academic-records/legado-0999/academic',master)).status,404);
+    assert.equal((await request('/api/legacy-academic-records/legado-0001/files/0/download',master)).status,404);
     const privateDocs='/api/admin/legacy-academic-records/legado-0001/documents';
     assert.equal((await request(privateDocs)).status,401);
     assert.equal((await request(privateDocs,'student@example.invalid')).status,403);
@@ -69,6 +87,7 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
     assert.equal((await request('/api/legacy-academic-records/legado-0002/files/1/download')).status,404);
     await writeFile(path.join(dir,'legacy-import','drive-pdfs','tcc.pdf'),Buffer.from('%PDF-tampered'));
     assert.equal((await request('/api/legacy-academic-records/legado-0002/files/0/download')).status,409);
+    assert.equal((await request(privateAcademicDownload,master)).status,409);
     const state=JSON.parse(await readFile(path.join(dir,'portal-state.json'),'utf8'));
     assert.equal(state.legacyAcademicRecords.length,2);assert.deepEqual(state.processes,[]);assert.deepEqual(state.signatureJobs,[]);assert.deepEqual(state.emailDeliveries,[]);assert.deepEqual(state.workflowRuns,[]);
   }finally{child.kill('SIGTERM');await new Promise<void>(r=>{if(child.exitCode!==null||child.signalCode!==null)return r();child.once('exit',()=>r());});await rm(dir,{recursive:true,force:true});}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ensureProcessDriveStructure} from '../../src/services/googleDriveOrganizer';
+import {ensureProcessDriveStructure,bootstrapPortalDriveStructure} from '../../src/services/googleDriveOrganizer';
 import {ensurePortalRenderFolder,resolvePortalTechnicalRoot,storePrivatePortalBackup,upsertLivingIntelligenceFile} from './googleWorkspace';
 
 const academic='academic_root_123456';
@@ -21,6 +21,18 @@ test('organizar processo cria apenas sua pasta e não recria formulários antigo
  const result=await ensureProcessDriveStructure('test-token',academic,{id:'p1',protocolo:'TCC-2026-0001'});
  assert.equal(result.createdCount,1);
  assert.deepEqual(writes.map(item=>({name:item.name,parents:item.parents})),[{name:'TCC-2026-0001',parents:[academic]}]);
+});
+
+test('bootstrap da configuração cria somente documentos e processos na raiz acadêmica',async t=>{
+ const writes:any[]=[];
+ t.mock.method(globalThis,'fetch',async(_input:unknown,init?:RequestInit)=>{
+  if(init?.method==='POST'){const body=JSON.parse(String(init.body));writes.push(body);return reply({id:`created_folder_${writes.length}`,name:body.name});}
+  return reply({files:[]});
+ });
+ const result=await bootstrapPortalDriveStructure('test-token',academic);
+ assert.deepEqual(writes.filter(item=>item.parents[0]===academic).map(item=>item.name),['01_DOCUMENTOS','02_PROCESSOS']);
+ assert.equal(result.folders.system,undefined);
+ assert.equal(writes.some(item=>item.name==='00_SISTEMA'),false);
 });
 
 test('conversões, backups e relatórios usam a raiz técnica sem criar outro Sistema',async t=>{

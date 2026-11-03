@@ -170,6 +170,10 @@ body #portal-app-root #sidebar-nav,
 body #portal-app-root #sidebar-nav * {
   font-size: var(--portal-type-navigation);
 }
+body #portal-app-root .portal-sidebar-subtitle,
+body #portal-app-root .portal-sidebar-subtitle * {
+  font-size: calc(var(--portal-type-content) * 1.1);
+}
 /* Espaçamentos administrativos de 4/8/12/16px sem modificar cabeçalhos,
    espessura dos divisores ou alturas canônicas das linhas da planilha. */
 .portal-settings-top-grid,

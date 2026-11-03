@@ -9,7 +9,9 @@ test('login público usa orientação única e exemplo de e-mail neutro',async()
   const home=await source('src/pages/HomePage.tsx');
   assert.ok(home.includes('placeholder="nome@exemplo.com"'));
   assert.ok(home.includes('Como funciona o acesso:'));
-  assert.ok(home.includes('Demais usuários:'));
+  assert.ok(home.includes('Qual e-mail usar:'));
+  assert.ok(home.includes('endereço cadastrado e ativo na lista de acesso, institucional ou pessoal'));
+  assert.ok(!home.includes('Discentes:</strong> utilize seu e-mail institucional'));
   assert.ok(!home.includes('Master, Presidência'));
   assert.ok(!home.includes('>Acesso sem senha<'));
 });

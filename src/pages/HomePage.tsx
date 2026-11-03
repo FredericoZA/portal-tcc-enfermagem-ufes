@@ -14,6 +14,7 @@ import { getTableStyles, getActionPillStyles, formatColumnLabel, formatCellText,
 import { TABLE_LAYOUTS_EVENT } from '../utils/portalAppearanceLinks';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
+import { TccAbstractPopover } from '../components/TccAbstractPopover';
 import { ProgressIndicator } from '../components/ProgressIndicator';
 import { StudentNames, GcalStudentNames } from '../components/StudentNames';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
@@ -529,7 +530,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       loginDestinationRef.current=key;setShowLoginModal(true);
     };
     window.addEventListener('portal:request-login',request);
-    if(readProcessLink(window.location.search)?.section==='avaliacao')request();
+    const evaluationLink=readProcessLink(window.location.search);
+    if(evaluationLink?.section==='avaliacao'&&!/^legado-\d{4}$/.test(evaluationLink.id))request();
     return()=>{window.removeEventListener('portal:request-login',request);};
   },[authLoading,isAuthenticated]);
 
@@ -1862,7 +1864,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               const colDef = ALL_DEFENSES_COLUMNS.find(c => c.key === colKey);
               const rawLabel = colDef?.label || colKey;
               const formattedLabel = formatColumnLabel(colKey, rawLabel, defensesTextFormat, defensesCustomLabels);
-              const widthClass = `${getColWidthClass(colKey, defensesColumnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, defensesTextFormat)}`;
+              const widthClass = `${getColWidthClass(colKey, defensesColumnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, defensesTextFormat)}`;
               return (
                 <th
                   key={colKey}
@@ -1879,7 +1881,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
             const renderDefensesBodyCell = (colKey: string, proc: any, progress: any, defenseState: DefenseState, ev1: any, ev2: any, cleanInst: (s?: string) => string) => {
               if (!defensesVisibleColumns[colKey]) return null;
-              const widthClass = `${getColWidthClass(colKey, defensesColumnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, defensesTextFormat)}`;
+              const widthClass = `${getColWidthClass(colKey, defensesColumnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, defensesTextFormat)}`;
               const alignClass = defStyles.cellAlignClass;
 
               switch (colKey) {
@@ -2024,12 +2026,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   );
                 case 'resumo':
                   return (
-                    <td key="resumo" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.cellFontSizeClass} ${defStyles.borderClass} leading-relaxed ${defStyles.cellWrapClass} align-middle cursor-grab`}>
-                      {proc.acervo?.resumoSintese ? (
-                        proc.acervo.resumoSintese
-                      ) : (
-                        proc.legacyRecord?'Resumo não disponível para consulta pública':`Trabalho de Conclusão de Curso intitulado "${formatTccTitle(proc.titulo)}", submetido a ${installationProfile.courseName} — ${installationProfile.institutionName}.`
-                      )}
+                    <td key="resumo" data-portal-filter-value={proc.acervo?.resumoSintese || ''} className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.borderClass} align-middle`}>
+                      <TccAbstractPopover summary={proc.acervo?.resumoSintese} processLabel={formatProcessLabel(proc.protocolo || proc.id)} unavailableLabel={proc.legacyRecord ? 'Resumo não disponível para consulta pública' : undefined} />
                     </td>
                   );
                 case 'palavrasChave':
@@ -2263,7 +2261,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 const colDef = ALL_ACERVO_COLUMNS.find(c => c.key === colKey);
                 const rawLabel = colDef?.label || colKey;
                 const formattedLabel = formatColumnLabel(colKey, rawLabel, acervoTextFormat, acervoCustomLabels);
-                const widthClass = `${getColWidthClass(colKey, acervoColumnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, acervoTextFormat)}`;
+                const widthClass = `${getColWidthClass(colKey, acervoColumnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, acervoTextFormat)}`;
 
                 return (
                   <th
@@ -2280,7 +2278,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
               const renderAcervoBodyCell = (colKey: string, proc: any, progress: any, ev1: any, ev2: any, cleanInst: (s?: string) => string) => {
                 if (!visibleColumns[colKey]) return null;
-                const widthClass = `${getColWidthClass(colKey, acervoColumnWidths, 'min-w-[95px]')} ${getColumnWeightClass(colKey, acervoTextFormat)}`;
+                const widthClass = `${getColWidthClass(colKey, acervoColumnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, acervoTextFormat)}`;
                 const alignClass = acervoStyles.cellAlignClass;
 
                 switch (colKey) {
@@ -2415,12 +2413,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     );
                   case 'resumo':
                     return (
-                      <td key="resumo" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.cellFontSizeClass} ${acervoStyles.borderClass} leading-relaxed ${acervoStyles.cellWrapClass} align-middle`}>
-                        {proc.acervo?.resumoSintese ? (
-                          proc.acervo.resumoSintese
-                        ) : (
-                          proc.legacyRecord?'Resumo não disponível para consulta pública':`Trabalho de Conclusão de Curso intitulado "${formatTccTitle(proc.titulo)}", submetido a ${installationProfile.courseName} — ${installationProfile.institutionName}.`
-                        )}
+                      <td key="resumo" data-portal-filter-value={proc.acervo?.resumoSintese || ''} className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
+                        <TccAbstractPopover summary={proc.acervo?.resumoSintese} processLabel={formatProcessLabel(proc.protocolo || proc.id)} unavailableLabel={proc.legacyRecord ? 'Resumo não disponível para consulta pública' : undefined} />
                       </td>
                     );
                   case 'palavrasChave':
@@ -2580,15 +2574,14 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                 {/* Informative helper box */}
                 {loginPopupConfig.showTipsBox && (
-                  <div className="rounded-xl border border-slate-300 p-3 space-y-1.5 text-[11px] text-slate-700" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
+                  <div className="portal-instruction p-3 space-y-1.5 text-[11px]">
                     <div className="font-semibold text-slate-900 flex items-center gap-1.5">
                       <Info className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                       <span>Orientações para identificação:</span>
                     </div>
                         <ul className="space-y-1 pl-5 list-disc text-slate-600 text-[11px]">
                           <li><strong>Como funciona o acesso:</strong> informe o e-mail cadastrado no Portal. Enviaremos um código de acesso de uso único para esse endereço.</li>
-                          <li><strong>Discentes:</strong> utilize seu e-mail institucional @edu.ufes.br.</li>
-                          <li><strong>Demais usuários:</strong> docentes, integrantes de banca e demais usuários devem utilizar exatamente o e-mail cadastrado no Portal, que pode ser institucional ou pessoal.</li>
+                          <li><strong>Qual e-mail usar:</strong> utilize o endereço cadastrado e ativo na lista de acesso, institucional ou pessoal. Para acessar um TCC existente, use o e-mail informado no seu vínculo com o processo.</li>
                         </ul>
                   </div>
                 )}

@@ -34,8 +34,25 @@ export function ProcessDocumentCard({title, meta, signerLabel, signerNote, statu
   </article>;
 }
 
-export function ProcessDocumentsPanel({count, toolbar, notices, children}: {count: number; toolbar?: React.ReactNode; notices?: React.ReactNode; children: React.ReactNode}) {
-  return <div id="documents-panel-section" className="portal-card overflow-hidden space-y-0">
+export function ReservationReceiptCard({downloadUrl, historical = false}: {downloadUrl?: string; historical?: boolean}) {
+  return <article className={`portal-tcc-document-card ${downloadUrl ? '' : 'portal-document-unavailable'} border border-slate-200/90 rounded-xl p-3.5 flex flex-col gap-3`} aria-label="Comprovante de reserva">
+    <div className="flex items-center gap-2.5 min-w-0">
+      <div className="w-8 h-8 rounded-lg bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border border-[var(--portal-border)] flex items-center justify-center shrink-0"><FileCheck className="w-4 h-4" /></div>
+      <h3 className="portal-document-title font-extrabold text-xs sm:text-[13px] text-slate-900 leading-snug">Comprovante de reserva</h3>
+    </div>
+    <p className="text-xs">Resposta do responsável pelo local: aceite ou recusa da reserva.</p>
+    <div className={`portal-document-status font-black normal-case text-[10px] px-2.5 py-0.5 rounded-md border tracking-wide ${downloadUrl ? 'portal-document-status-available' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
+      {downloadUrl ? 'Disponível' : historical ? 'Não disponível' : 'Aguardando resposta'}
+      {!downloadUrl && <span className="block text-[11px] font-medium normal-case leading-snug tracking-normal">{historical ? 'Comprovante não localizado no acervo importado.' : 'O comprovante será disponibilizado após o aceite ou a recusa da reserva.'}</span>}
+    </div>
+    <div className="portal-document-actions flex items-center gap-2 pt-2.5 border-t border-slate-100">
+      {downloadUrl ? <a className="portal-action portal-button-primary w-full" href={downloadUrl} target="_blank" rel="noreferrer"><Download className="h-4 w-4"/>Baixar comprovante</a> : <button type="button" disabled className="portal-action w-full"><Download className="h-4 w-4"/>Baixar comprovante</button>}
+    </div>
+  </article>;
+}
+
+export function ProcessDocumentsPanel({id = 'documents-panel-section', count, toolbar, notices, children}: {id?: string; count: number; toolbar?: React.ReactNode; notices?: React.ReactNode; children: React.ReactNode}) {
+  return <div id={id} className="portal-card overflow-hidden space-y-0">
     <div className="px-4 pt-3 flex items-center justify-end gap-2"><div className="flex items-center gap-2">{toolbar}<span className="text-[11px] text-slate-500 font-medium">{count} documento(s)</span></div></div>
     <div className="p-3 sm:p-4 space-y-3">{notices}<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2">{children}</div></div>
   </div>;

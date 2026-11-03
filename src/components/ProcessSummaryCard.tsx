@@ -209,7 +209,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
         )}
         {error && !reservationOpen && <p role="alert" className="mt-2 text-[10px] text-red-700">{error}</p>}
       </section>
-      <ProcessGuidanceNotice />
+      {!process.legacyRecord && <ProcessGuidanceNotice />}
 
       <PortalModalShell
         open={reservationOpen}

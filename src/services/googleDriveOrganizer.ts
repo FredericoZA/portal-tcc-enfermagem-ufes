@@ -14,7 +14,7 @@ async function ensure(accessToken:string,name:string,parentId:string,appProperti
 
 export async function bootstrapPortalDriveStructure(accessToken:string,rootInput:string):Promise<DriveStructureManifest>{
   const rootId=extractGoogleDriveFolderId(rootInput); const root={id:rootId,name:'PORTAL_TCC',mimeType:'application/vnd.google-apps.folder'}; const folders:Record<string,GoogleDriveFile>={}; let createdCount=0,existingCount=0;
-  for(const [key,name] of Object.entries({system:PORTAL_DRIVE_STRUCTURE.system,models:PORTAL_DRIVE_STRUCTURE.models,processes:PORTAL_DRIVE_STRUCTURE.processes})){const r=await ensure(accessToken,name,rootId,{portal:'portal-tcc',schema:'4',section:key});folders[key]=r.file;r.created?createdCount++:existingCount++;}
+  for(const [key,name] of Object.entries({models:PORTAL_DRIVE_STRUCTURE.models,processes:PORTAL_DRIVE_STRUCTURE.processes})){const r=await ensure(accessToken,name,rootId,{portal:'portal-tcc',schema:'4',section:key});folders[key]=r.file;r.created?createdCount++:existingCount++;}
   for(const name of PORTAL_DRIVE_STRUCTURE.modelChildren){const r=await ensure(accessToken,name,folders.models.id,{portal:'portal-tcc',type:'document'});folders[`models/${name}`]=r.file;r.created?createdCount++:existingCount++;for(const lifecycle of ['00_MODELO_ATIVO','01_HISTORICO_MODELOS','02_GERADOS',...(name==='01_CARTA_CONVITE'?[]:['03_ASSINADOS'])]){const c=await ensure(accessToken,lifecycle,r.file.id,{portal:'portal-tcc',lifecycle});folders[`models/${name}/${lifecycle}`]=c.file;c.created?createdCount++:existingCount++;}}
   return {root,folders,createdCount,existingCount};
 }

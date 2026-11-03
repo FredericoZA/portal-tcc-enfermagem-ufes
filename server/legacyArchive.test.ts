@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateLegacyBatch,mergeLegacyBatch,legacyCatalogRevision,publicLegacyAcademicView,canonicalLegacyRecord,legacyFileIsPublic} from './legacyArchive';
+import {validateLegacyBatch,mergeLegacyBatch,legacyCatalogRevision,publicLegacyAcademicView,privateLegacyAcademicView,canonicalLegacyRecord,legacyFileIsPublic} from './legacyArchive';
 
 export const legacyFixture = () => ({
   id:'legado-0001',protocolo:'Legado 001',sourceFingerprint:'a'.repeat(64),titulo:'Trabalho histórico',autores:['Autora demonstrativa'],orientador:'Professor demonstrativo',coorientador:'',coorientadorInstituicao:'',examinadores:[],resumo:'Resumo de origem',palavrasChave:['Enfermagem'],dataDefesa:'2023-06-01',horaDefesa:'14:00:00',localDefesa:'Auditório',isPublic:false,publishFullWork:false,publishExpandedAbstract:false,publicationState:'NOT_REQUESTED',authorizationDecision:'DENIED',attachments:[{driveFileId:'private_file_123456',fileName:'arquivo.pdf',kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64),evidence:'Título e autoria conferidos'}],provenance:{originalConsent:['Não'],sourceUrl:'https://example.invalid/source'}
@@ -15,6 +15,19 @@ test('public legacy projection never includes abstracts, consent, source URLs or
   const [r]=validateLegacyBatch([legacyFixture()]);const json=JSON.stringify(publicLegacyAcademicView(r));
   for(const secret of ['private_file_123456','arquivo.pdf','Resumo de origem','sourceUrl','originalConsent'])assert.ok(!json.includes(secret));
   assert.equal(JSON.parse(json).filesRestricted,true);
+});
+test('Master academic view exposes private contents without changing publication consent or storage references',()=>{
+  const [record]=validateLegacyBatch([legacyFixture()]);
+  const before=structuredClone(record);
+  const view=privateLegacyAcademicView(record);
+  assert.equal(view.resumo,'Resumo de origem');
+  assert.equal(view.files[0].isPublic,false);
+  assert.match(view.files[0].downloadUrl,/^\/api\/admin\/legacy-academic-records\/legado-0001\/files\/0\/download$/);
+  assert.ok(!JSON.stringify(view).includes('private_file_123456'));
+  assert.ok(!JSON.stringify(view).includes('originalConsent'));
+  assert.deepEqual(record,before);
+  assert.deepEqual(publicLegacyAcademicView(record).publicFiles,[]);
+  assert.equal(publicLegacyAcademicView(record).resumo,'');
 });
 test('legacy import is idempotent, preserves stable identifiers and rejects collisions',()=>{
   const batch=validateLegacyBatch([legacyFixture()]);const revision=legacyCatalogRevision(batch);

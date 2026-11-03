@@ -2,7 +2,7 @@ import {inspectPdfLayout} from '../server/workflow/documentQuality';
 import {previewProcess} from '../server/workflow/modelPreview';
 import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
-import {loadPortalRuntimeState,savePortalRuntimeState,testSupabaseRuntimeConnection,persistStudioRuntimeImage,buildSupabaseAdminHeaders} from '../server/integrations/supabase';
+import {loadPortalRuntimeState,savePortalRuntimeState,testSupabaseRuntimeConnection,loadRuntimeImage,buildSupabaseAdminHeaders} from '../server/integrations/supabase';
 import {renderGoogleDriveTemplateToPdf} from '../server/integrations/googleDocsRenderer';
 import {ensurePortalRenderFolder,getGoogleWorkspaceAccessToken,verifyPrivateDriveFolder,verifyMasterDocumentModelFingerprint} from '../server/integrations/googleWorkspace';
 import {loadIntegrationSecret} from '../server/integrations/integrationSecrets';
@@ -28,16 +28,14 @@ report.push({id:'original-database',ok:db.connected&&!!db.transactionalRuntimeRe
 const state=await loadPortalRuntimeState<any>();
 assert.ok(state?.settings,'Estado original não encontrado.');
 await check('email-image-storage',async()=>{
-  const value='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
-  const {createHash}=await import('node:crypto');const key=createHash('sha256').update(value).digest('hex');
-  const endpoint=`${process.env.SUPABASE_URL}/rest/v1/portal_runtime_assets?asset_key=eq.${key}`;
-  const before=await fetch(endpoint+'&select=asset_key',{headers:buildSupabaseAdminHeaders()});assert.ok(before.ok);
-  const existed=(await before.json()).length>0;
-  try{
-    assert.equal(await persistStudioRuntimeImage(value),`/api/public/runtime-assets/${key}`);
-    const readback=await fetch(endpoint+'&select=data_url',{headers:buildSupabaseAdminHeaders()});assert.ok(readback.ok);
-    assert.equal((await readback.json())[0]?.data_url,value);
-  }finally{if(!existed){const removed=await fetch(endpoint,{method:'DELETE',headers:buildSupabaseAdminHeaders()});assert.ok(removed.ok,'Remover somente o asset técnico recém-criado.');}}
+  // Verify the actual configured images without creating disposable binary files.
+  const keys=[...new Set([...JSON.stringify(state.settings).matchAll(/\/api\/public\/runtime-assets\/([a-f0-9]{64})/g)].map(match=>match[1]))];
+  for(const key of keys){
+    const metadata=await fetch(`${process.env.SUPABASE_URL}/rest/v1/portal_runtime_assets?asset_key=eq.${key}&select=*&limit=1`,{headers:buildSupabaseAdminHeaders()});assert.ok(metadata.ok);
+    const row=(await metadata.json())[0];assert.ok(row?.drive_file_id,'Migre e confira as imagens permanentes no Drive antes de concluir a publicação.');
+    const image=await loadRuntimeImage(key);assert.ok(image?.bytes.length,'A imagem configurada precisa estar legível no arquivo privado.');
+    assert.equal(image.bytes.length,Number(row.byte_length));assert.equal(image.mimeType,row.mime_type);
+  }
 });
 if(process.env.PORTAL_RELEASE_WORKFLOW_SETUP&&!state.settings.integrationStudio?.workflowStages?.length){
   const studio=JSON.parse(process.env.PORTAL_RELEASE_WORKFLOW_SETUP);

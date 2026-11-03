@@ -1,4 +1,5 @@
 import { createHash, createHmac, randomUUID } from 'node:crypto';
+import { storePrivatePortalImage, readPrivatePortalImage, type PrivatePortalImage } from './googleDriveImages';
 
 export interface SupabaseRuntimeStatus {
   configured: boolean;
@@ -16,7 +17,6 @@ const supabaseSecret = () => String(process.env.SUPABASE_SECRET_KEY || process.e
 const providerEnabled = () => process.env.PORTAL_PERSISTENCE_PROVIDER === 'supabase';
 const stateEndpoint = () => `${supabaseUrl()}/rest/v1/portal_runtime_state`;
 const runtimeAssetsEndpoint = () => `${supabaseUrl()}/rest/v1/portal_runtime_assets`;
-const LARGE_RUNTIME_IMAGE_THRESHOLD=32_768;
 let knownRevision:number|null=null;
 /** Revisão do estado operacional confirmada pelo banco, após a leitura/commit da requisição. */
 export function currentPortalRuntimeRevision():number|null { return knownRevision; }
@@ -40,8 +40,7 @@ export const buildSupabaseAdminHeaders = () => {
 };
 const adminHeaders = buildSupabaseAdminHeaders;
 
-function parseLargeRuntimeImage(value:string):{mimeType:string;base64:string}|null{
-  if(value.length<LARGE_RUNTIME_IMAGE_THRESHOLD)return null;
+function parseRuntimeImage(value:string):{mimeType:string;base64:string}|null{
   const match=/^data:(image\/[a-zA-Z0-9.+-]+);base64,([\s\S]+)$/.exec(value);
   return match?{mimeType:match[1],base64:match[2]}:null;
 }
@@ -52,7 +51,7 @@ type RuntimeAsset={assetKey:string;mimeType:string;dataUrl:string;byteLength:num
 
 function collectAndExternalizeRuntimeImages(value:unknown,assets:Map<string,RuntimeAsset>):unknown{
   if(typeof value==='string'){
-    const image=parseLargeRuntimeImage(value);
+    const image=parseRuntimeImage(value);
     if(!image)return value;
     const assetKey=createHash('sha256').update(value).digest('hex');
     if(!assets.has(assetKey))assets.set(assetKey,{assetKey,mimeType:image.mimeType,dataUrl:value,byteLength:Buffer.from(image.base64,'base64').length});
@@ -65,11 +64,16 @@ function collectAndExternalizeRuntimeImages(value:unknown,assets:Map<string,Runt
   return value;
 }
 
-async function upsertRuntimeAsset(asset:RuntimeAsset):Promise<void>{
+async function upsertRuntimeAsset(asset:RuntimeAsset,archive=storePrivatePortalImage):Promise<void>{
+  // Check the additive migration before creating a file. Missing columns fail closed.
+  const prior=await fetch(`${runtimeAssetsEndpoint()}?select=drive_file_id,content_sha256&limit=0`,{headers:adminHeaders(),signal:AbortSignal.timeout(15_000)});
+  if(!prior.ok)throw new Error('O armazenamento de imagens no Drive ainda não está preparado.');
+  const stored=await archive({bytes:Buffer.from(asset.dataUrl.split(',')[1],'base64'),mimeType:asset.mimeType,kind:'RUNTIME_ASSET',key:asset.assetKey});
   const response=await fetch(`${runtimeAssetsEndpoint()}?on_conflict=asset_key`,{
     method:'POST',
     headers:{...adminHeaders(),Prefer:'resolution=merge-duplicates,return=minimal'},
-    body:JSON.stringify({asset_key:asset.assetKey,mime_type:asset.mimeType,data_url:asset.dataUrl,byte_length:asset.byteLength,updated_at:new Date().toISOString()}),
+    // Omit data_url: upsert must preserve legacy bytes until verified migration.
+    body:JSON.stringify({asset_key:asset.assetKey,mime_type:asset.mimeType,byte_length:asset.byteLength,drive_file_id:stored.driveFileId,content_sha256:stored.contentSha256,updated_at:new Date().toISOString()}),
     signal:AbortSignal.timeout(20_000)
   });
   if(!response.ok){
@@ -86,12 +90,30 @@ async function externalizeRuntimeImages(payload:object):Promise<object>{
 }
 
 // E-mail clients need an HTTPS image even when its optimized bytes are small.
-export async function persistStudioRuntimeImage(dataUrl:string):Promise<string>{
+export async function persistStudioRuntimeImage(dataUrl:string,archive=storePrivatePortalImage):Promise<string>{
   const match=dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
   if(!match||dataUrl.length>4*1024*1024)throw new Error('Imagem inválida.');
   const assetKey=createHash('sha256').update(dataUrl).digest('hex');
-  await upsertRuntimeAsset({assetKey,mimeType:match[1],dataUrl,byteLength:Buffer.from(match[2],'base64').length});
+  await upsertRuntimeAsset({assetKey,mimeType:match[1],dataUrl,byteLength:Buffer.from(match[2],'base64').length},archive);
   return runtimeAssetReference(assetKey);
+}
+
+/** Legacy reads remain available while verified Drive references are backfilled. */
+export async function loadRuntimeImage(assetKey:string,read=readPrivatePortalImage):Promise<{bytes:Buffer;mimeType:string}|null>{
+  if(!/^[a-f0-9]{64}$/.test(assetKey))return null;
+  const response=await fetch(`${runtimeAssetsEndpoint()}?asset_key=eq.${assetKey}&select=*&limit=1`,{headers:adminHeaders(),signal:AbortSignal.timeout(15_000)});
+  if(!response.ok)throw new Error(`O banco não confirmou a leitura da imagem (${response.status}).`);
+  const item=(await response.json() as Array<Record<string,unknown>>)[0];
+  if(!item)return null;
+  if(item.drive_file_id){
+    const ref:PrivatePortalImage={driveFileId:String(item.drive_file_id),contentSha256:String(item.content_sha256||''),mimeType:String(item.mime_type||''),byteLength:Number(item.byte_length)};
+    return {bytes:await read(ref,'RUNTIME_ASSET'),mimeType:ref.mimeType};
+  }
+  const match=/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(String(item.data_url||''));
+  if(!match)return null;
+  const bytes=Buffer.from(match[2],'base64');
+  if(!bytes.length||bytes.length>4*1024*1024||bytes.toString('base64')!==match[2])throw new Error('Imagem inválida.');
+  return {bytes,mimeType:match[1]};
 }
 
 export async function appendSupabaseAuditEvent(input:{externalId:string;occurredAt:string;processCode?:string;eventType:string;entityType:string;entityId?:string;details?:Record<string,unknown>}):Promise<void>{

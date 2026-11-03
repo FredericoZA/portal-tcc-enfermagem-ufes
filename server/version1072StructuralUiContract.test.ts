@@ -27,10 +27,12 @@ test('filtro selecionado usa reforço global e rótulo Filtrar', () => {
   const css = read('src/styles/portal-components.css');
   assert.match(css, /background:\s*var\(--portal-filter-selected-bg\)/);
   assert.match(css, /outline: 1px solid var\(--portal-text-dark\)/);
-  for (const file of ['src/pages/HomePage.tsx','src/pages/MeusProcessosPage.tsx','src/pages/CoordenadorPage.tsx','src/pages/PortalTutorialPage.tsx']) {
+  for (const file of ['src/pages/HomePage.tsx','src/pages/MeusProcessosPage.tsx','src/pages/CoordenadorPage.tsx']) {
     assert.match(read(file), /Filtrar:/);
   }
   assert.doesNotMatch(read('src/pages/PortalTutorialPage.tsx'), /Filtrar visão:/i);
+  assert.match(read('src/pages/PortalTutorialPage.tsx'), /role="group" aria-label="Perfil do manual"/);
+  assert.match(read('src/pages/PortalTutorialPage.tsx'), /aria-pressed=\{role === key\}/);
 });
 
 test('calendário usa controles autossuficientes com período em formato pílula', () => {

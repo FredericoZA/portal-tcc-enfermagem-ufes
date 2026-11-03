@@ -1,76 +1,318 @@
-import React,{useState} from 'react';
+import React, {useState} from 'react';
+import {ArrowLeft, ArrowRight, ExternalLink} from 'lucide-react';
 
-type GuideImage={id:string;title:string;steps:string[];done:string;roles:string[];imageId?:string|null};
-export const guideActivities:GuideImage[]=[
- {id:'ficha',title:'Abrir e conferir a ficha',roles:['aluno','orientador'],steps:['Em Meus TCCs, clique no código do trabalho. Entre com o mesmo e-mail informado no cadastro para acessar as ações do seu papel.','Em Dados do processo, confira título, participantes e agendamento. Os campos permitidos mostram a opção de editar; protocolo e data de criação são definidos pelo sistema.','Use as abas Avaliação e ata, Repositório acadêmico e Documentos administrativos. A faixa superior mostra a etapa atual. O avanço do processo bloqueia a edição das etapas anteriores.'],done:'Os dados da ficha correspondem ao trabalho. Campos bloqueados não devem ser corrigidos criando outro processo.'},
- {id:'confirmacao',title:'Acompanhar a confirmação da reserva',roles:['aluno'],steps:['Ao enviar o cadastro, o pedido vai ao departamento para auditório ou sala de reuniões, ou ao orientador para outro local. Apenas o responsável recebe os botões de decisão; os autores recebem a comunicação informativa.','O responsável aceita ou recusa o único local, a data e o horário solicitados. O Portal registra a resposta e o comprovante e avisa os envolvidos.','Abra Documentos administrativos para consultar o comprovante da reserva ou da recusa.','Se houver recusa, use Solicitar nova data em Dados do processo. Preencha a alteração e clique em Enviar novo pedido de reserva. O novo agendamento depende de outro aceite.'],done:'O resultado está registrado. Se houver pendência de envio, informe o protocolo à comissão.'},
- {id:'avaliacao',title:'Registrar o conceito e conferir a ata',roles:['orientador'],steps:['Após a apresentação, entre com o e-mail do orientador e abra Avaliação e ata. O registro é liberado com local confirmado, convite enviado e a partir do horário da defesa.','Selecione Aprovado, Aprovado com ressalva ou Reprovado e preencha o parecer. Usar texto-padrão é apenas uma sugestão: confira e ajuste ao que a banca decidiu.','O Portal TCC registra conceito e documentação. Faça a avaliação e lance a nota no Portal do Professor (professor.ufes.br).','Clique em Visualizar ata. Confira a prévia, marque a confirmação e clique em Registrar avaliação e ir para documentos. A escolha da assinatura fica em Documentos administrativos e não é enviada automaticamente ao concluir a avaliação.'],done:'O conceito e o parecer foram registrados. A aba Documentos administrativos abre para dar continuidade ao processo.'},
- {id:'documentos',title:'Conferir, assinar e baixar documentos',roles:['aluno','orientador'],steps:['Abra Documentos administrativos. As cinco caixas do processo atual reúnem comprovante de reserva, carta-convite, ata, termo de autorização e declaração.','Somente o orientador assina a ata. Todos os autores e o orientador assinam o termo quando houver publicação autorizada. A declaração é assinada pela presidência da comissão. Comprovante e convite não exigem assinatura.','Na caixa do documento, Asten solicita a assinatura por e-mail. Gov.br abre a janela para baixar o PDF e devolver o arquivo assinado.','Use Ver e Baixar PDF quando o arquivo estiver disponível. Documento ainda indisponível mostra a pendência que falta resolver.'],done:'Os documentos assinados e arquivados ficam disponíveis. A devolução pelo Gov.br ainda depende de conferência administrativa.'},
- {id:'repositorio',title:'Entregar os arquivos e escolher o que será público',roles:['aluno'],steps:['Em Repositório acadêmico, preencha o resumo em até três parágrafos e 2.000 caracteres e informe as cinco palavras-chave.','Clique em Escolher arquivo e anexe o PDF final do trabalho completo. Esse envio é obrigatório para os TCCs novos. O resumo expandido é opcional.','Marque a publicação do trabalho e do resumo expandido separadamente, apenas se desejar torná-los públicos. Anexar o PDF não autoriza sua publicação.','Clique em Confirmar entrega e ir para documentos. Se houver publicação autorizada, o termo será preparado em Documentos administrativos, onde se escolhe Asten ou Gov.br. Sem publicação, não haverá termo para assinar.','Após o envio, os campos ficam bloqueados. Editar entrega permite corrigir enquanto essa etapa estiver aberta, podendo exigir novas assinaturas. Após a assinatura da declaração ou a conclusão, a edição deixa de estar disponível.'],done:'A entrega está registrada e a continuidade está em Documentos administrativos. O processo termina após o arquivamento da documentação obrigatória.'},
- {id:'consulta-publica',imageId:'calendario',title:'Consultar calendário e trabalhos publicados',roles:['visitante'],steps:['No menu lateral, clique em Calendário. Selecione o mês e o dia para conferir as defesas e seus locais.','Clique no código do TCC para abrir os detalhes públicos. Para editar, avaliar ou assinar, o participante precisa entrar com o e-mail vinculado ao processo.','Em Repositório, pesquise os trabalhos atuais e legados. A presença de um registro não significa que seus PDFs estejam autorizados para publicação.'],done:'Você consultou os dados públicos sem precisar entrar no Portal.'},
- {id:'acesso',imageId:'acesso',title:'Entrar pelo link recebido por e-mail',roles:['aluno','orientador'],steps:['Abra o link do TCC recebido por e-mail. A ficha pública pode ser consultada sem login; para realizar uma ação, entre com o e-mail vinculado ao processo.','Solicite o código e digite os seis dígitos recebidos. Confira o spam se necessário. Não compartilhe o código de acesso.','Após entrar, o Portal retorna ao trabalho e à aba indicada no link. Se o TCC não aparecer, confira o e-mail utilizado e informe o protocolo à comissão, sem criar novo cadastro.','Os e-mails trazem avisos e links. Os documentos ficam no Portal, em Documentos administrativos.'],done:'O TCC está aberto com as ações permitidas ao seu papel.'},
- {id:'cadastro',imageId:'cadastro',title:'Cadastrar o TCC e os participantes',roles:['aluno'],steps:['Entre com o e-mail cadastrado e autorizado. Em Meus TCCs, use Cadastrar TCC se ainda não houver um trabalho em seu nome.','Preencha os autores na ordem desejada para os documentos. Informe o segundo autor apenas quando houver. Confira nomes, e-mails e registros; o e-mail do primeiro autor corresponde ao acesso usado no cadastro.','Preencha orientador, examinadores e coorientador, se houver, com tratamento, titulação e instituição. Em títulos e instituições, use *UFES* para preservar siglas e/ou acrônimos em maiúsculas; os asteriscos não aparecem nos documentos.','Use Continuar para salvar e avançar. Na última etapa, leia as orientações da reserva, escolha um único local e preencha data e horário. Para outro local, o nome informado será usado nos documentos e o orientador confirmará o pedido.','Confira os dados nas tabelas e clique em Cadastrar e solicitar reserva. O local fica bloqueado no intervalo da defesa (1h30), aguardando o aceite ou a recusa. Esse controle não verifica reservas externas ao Portal.'],done:'O protocolo foi criado e a solicitação está registrada. Aguarde a resposta do responsável pelo local.'},
- {id:'agenda',imageId:'ficha',title:'Conferir ou corrigir data, horário e local',roles:['aluno','orientador'],steps:['Em Dados do processo, confira data, horário e local. Para mudar a reserva, use Alterar reserva; após uma recusa, use Solicitar nova data.','No formulário, preencha os novos dados e clique em Enviar novo pedido de reserva. Não basta mudar um campo: confirme o envio do pedido.','A confirmação anterior deixa de valer. O novo pedido segue para o departamento ou para o orientador, conforme o local escolhido. Aguarde o novo aceite.','A alteração fica no histórico. Se a etapa estiver bloqueada, informe o protocolo à comissão; não crie outro TCC para contornar a restrição.'],done:'O novo pedido está registrado. O agendamento só fica confirmado após a resposta do responsável.'},
- {id:'repositorio-publico',imageId:'consulta-publica',title:'Pesquisar o Repositório público',roles:['visitante'],steps:['No menu lateral, clique em Repositório. Digite na busca ou use os filtros para localizar o trabalho. A busca atualiza os resultados sem botão de confirmação.','Clique no código do TCC para abrir a mesma ficha de detalhes em modo de consulta. O login é opcional para a consulta pública. E-mails, matrículas e registros não aparecem na ficha pública.','Em Repositório acadêmico, consulte os arquivos autorizados para publicação. Em Documentos administrativos dos processos atuais, consulte o comprovante, o convite e os documentos assinados liberados ao público.'],done:'Você acessou as informações e os arquivos liberados para consulta pública.'},
- {id:'local-publico',imageId:'calendario',title:'Conferir data e local da defesa',roles:['visitante'],steps:['Abra Calendário e selecione o mês desejado. Confira os filtros antes de concluir que uma defesa não está agendada.','Confira a data, o horário e o local antes de se deslocar. Em Como chegar, consulte as opções de mapa e rota.','O visitante não altera dados, registra conceito nem assina documentos.'],done:'Você sabe quando e onde a defesa ocorrerá.'},
- {id:'legados',imageId:'legados',title:'Consultar trabalhos legados',roles:['visitante'],steps:['No mesmo Repositório, procure códigos como 001 - Legado. Eles identificam trabalhos antigos importados, com numeração diferente dos processos novos.','Abra o código para consultar os dados disponíveis. Campos ou arquivos ausentes na origem podem permanecer sem preenchimento; um TCC antigo pode ter somente resumo expandido.','Trabalho completo e resumo expandido só ficam públicos com autorização confirmada. A documentação administrativa antiga permanece privada para consulta do Master no respectivo processo.','Os legados servem como histórico. A importação não solicita nova defesa, avaliação ou assinatura.'],done:'Você consultou o registro histórico sem iniciar outro processo.'},
-];
-
-export const guideActivityOrder:Record<string,string[]>={
- aluno:['acesso','cadastro','ficha','agenda','confirmacao','repositorio','documentos'],
- orientador:['acesso','ficha','agenda','avaliacao','documentos'],
- visitante:['consulta-publica','local-publico','repositorio-publico','legados']
+export type GuideRole = 'aluno' | 'orientador' | 'visitante';
+export type GuideActivity = {
+  id: string;
+  title: string;
+  roles: GuideRole[];
+  imageId: string;
+  imageCaption: string;
+  relatedImages?: {id: string; caption: string}[];
+  steps: string[];
+  done: string;
+  help: string[];
 };
 
-export function PortalIllustratedGuide({role='aluno'}:{role?:string}){
- const order=guideActivityOrder[role]||[];
- const available=guideActivities.filter(image=>image.roles.includes(role)).sort((a,b)=>{const rank=(id:string)=>{const index=order.indexOf(id);return index<0?order.length:index;};return rank(a.id)-rank(b.id);});
- const [selected,setSelected]=useState({role,id:''});
- const current=available.find(image=>selected.role===role&&image.id===selected.id)||available[0];
- const roleTitle=({aluno:'Aluno',orientador:'Orientador',visitante:'Visitante'} as Record<string,string>)[role]||role;
- const imageId=current?.imageId||current?.id;
- const imageUrl=`/manual/${imageId}.jpg?v=2026-11-02`;
- const steps=current?.id==='documentos'&&role==='aluno'?[
-  'Em Documentos administrativos, consulte o comprovante, o convite e os arquivos disponíveis nas cinco caixas.',
-  'O aluno assina somente o Termo de Autorização, quando houver publicação autorizada. A ata é assinada pelo orientador; a declaração, pela presidência da comissão.',
-  'Prefira o Asten: abra a solicitação recebida no seu e-mail e assine. Pelo Gov.br, assine o mesmo PDF do termo e entregue-o ao orientador, que reúne todas as assinaturas e devolve o arquivo completo no Portal.',
-  'Use Ver e Baixar PDF quando o documento estiver disponível. Um arquivo ainda indisponível pode depender de assinatura ou arquivamento.'
- ]:current?.id==='documentos'&&role==='orientador'?[
-  'Em Documentos administrativos, confira a ata e, quando houver publicação autorizada, o termo. A escolha entre Asten e Gov.br fica na caixa de cada documento.',
-  'Somente o orientador assina a ata. O termo é assinado por todos os autores e pelo orientador. Prefira o Asten: solicite uma vez e siga o link recebido por e-mail; todos assinam o termo no mesmo nível.',
-  'Pelo Gov.br, baixe o PDF, assine e devolva na mesma janela. No termo, reúna todas as assinaturas no mesmo arquivo e devolva o PDF completo. O envio depende de conferência administrativa antes do arquivamento.',
-  'Depois de assinado e arquivado, use apenas Ver e Baixar PDF. A ata arquivada libera a entrega final; não solicite nova assinatura do documento concluído.'
- ]:current?.steps||[];
- if(!current)return null;
- return <section className="portal-illustrated-guide mt-5 rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-card)] p-4" aria-label="Manual ilustrado">
-  <h2 className="text-base font-bold">Veja onde clicar · {roleTitle}</h2>
-  <div className="portal-tcc-workspace-tabs mt-4" role="tablist" aria-label={`Atividades de ${roleTitle}`}>
-   <div className="portal-guide-tab-list flex flex-wrap items-stretch gap-0">{available.map((item,index)=><button key={item.id} type="button" id={`guide-tab-${role}-${item.id}`} role="tab" aria-selected={current.id===item.id} aria-controls={`guide-panel-${role}`} tabIndex={current.id===item.id?0:-1} className={`portal-guide-tab rounded-t-lg border border-[var(--portal-border)] px-3 py-2 text-xs font-semibold ${current.id===item.id?'text-[var(--portal-brand-header)]':'text-slate-600'}`} onClick={()=>setSelected({role,id:item.id})} onKeyDown={event=>{
-    const next=event.key==='ArrowRight'?(index+1)%available.length:event.key==='ArrowLeft'?(index-1+available.length)%available.length:event.key==='Home'?0:event.key==='End'?available.length-1:-1;
-    if(next<0)return;event.preventDefault();setSelected({role,id:available[next].id});(event.currentTarget.parentElement?.querySelectorAll('[role="tab"]')[next] as HTMLButtonElement|undefined)?.focus();
-   }}>{item.title}</button>)}</div>
-  </div>
-  <div id={`guide-panel-${role}`} role="tabpanel" aria-labelledby={`guide-tab-${role}-${current.id}`} className="portal-guide-sheet rounded-b-lg border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] p-4">
-  <h3 className="text-sm font-bold">{current.title}</h3>
-  <div className="portal-guide-content mt-3 grid items-start gap-5 md:grid-cols-[3fr_2fr]">
-  <ol className="my-0 max-w-4xl list-decimal space-y-3 pl-6 text-sm leading-6">{steps.map(step=><li key={step}>{step}</li>)}</ol>
-  {current.imageId!==null&&<figure className={`portal-guide-figure mx-auto ${imageId==='acesso'?'w-1/4 md:w-1/2':'w-1/2 md:w-full'}`}>
-   <div className="overflow-hidden rounded-lg border border-slate-300 bg-slate-100">
-    <img src={imageUrl} alt={`Tela atual de demonstração: ${current.title}. Os passos acima descrevem os controles.`} loading="lazy" className="block h-auto w-full"/>
-   </div>
-   <figcaption className="mt-2 text-xs leading-5 text-slate-600">Imagem demonstrativa da interface atual. <a className="underline" href={imageUrl} target="_blank" rel="noreferrer">Abrir imagem em tamanho maior</a>.</figcaption>
-  </figure>}
-  </div>
-  <p className="mt-3 max-w-4xl text-sm leading-6"><strong>Como saber que terminou:</strong> {current.done}</p>
-  <details className="mt-4 border-t border-slate-300 pt-3"><summary className="cursor-pointer text-sm font-bold">Algo deu errado?</summary><ul className="mt-2 max-w-4xl list-disc space-y-2 pl-5 text-sm leading-6">{(role==='visitante'?[
-   'A defesa não aparece: confira os filtros do calendário e o período selecionado.',
-   'O PDF não está disponível: o trabalho completo e o resumo expandido exigem autorização de publicação; os documentos administrativos atuais dependem da emissão, assinatura quando exigida e liberação para consulta. A documentação administrativa dos legados permanece privada.',
-   'O local mudou: confira novamente o calendário antes de se deslocar.'
-  ]:[
-   'O TCC não aparece: confira o e-mail usado no acesso e peça à comissão para conferir seu vínculo.',
-   'Campo ou ação indisponível: confira a etapa anterior e quem é o responsável pela atividade.',
-   'Erro de envio ou assinatura: guarde o protocolo e a mensagem e informe à comissão. Evite repetir o pedido enquanto houver uma operação pendente.'
-  ]).map(item=><li key={item}>{item}</li>)}</ul></details>
-  </div>
- </section>;
+// Labels intentionally follow the controls displayed in the current portal.
+// Screenshots are captured from the same components with fictitious examples.
+export const guideActivities: GuideActivity[] = [
+  {
+    id: 'acesso', title: 'Entrar com o e-mail do processo', roles: ['aluno', 'orientador'], imageId: 'acesso',
+    imageCaption: 'Janela de acesso por e-mail. O código é pessoal e não deve ser compartilhado.',
+    steps: [
+      'No menu lateral, clique em Entrar no Portal. Se veio de um e-mail do TCC, use a janela de acesso aberta sobre a ficha.',
+      'Informe o e-mail autorizado e solicite o código. Digite os seis dígitos recebidos nesse endereço para concluir o acesso.',
+      'Use o mesmo endereço registrado como autor ou orientador. Depois do acesso, abra Meus TCCs ou continue no trabalho e na aba do link recebido.',
+      'Sem entrar, você pode consultar os dados públicos. Entrar libera apenas as ações e os documentos permitidos ao seu vínculo.',
+    ],
+    done: 'Sua conta aparece no Portal e o processo exibe as ações correspondentes ao seu papel.',
+    help: [
+      'Código não recebido: confira o endereço digitado e a pasta de spam. Aguarde o prazo exibido antes de solicitar outro código.',
+      'Código vencido: solicite um novo e use o mais recente. Não envie códigos ou credenciais em sugestões de melhoria.',
+      'TCC não aparece: confira se o e-mail do cadastro é o mesmo do acesso e informe o protocolo à comissão.',
+    ],
+  },
+  {
+    id: 'cadastro', title: 'Cadastrar o TCC e os participantes', roles: ['aluno'], imageId: 'cadastro',
+    imageCaption: 'Cadastro inicial: sete etapas, com o e-mail do primeiro autor vinculado à conta.',
+    relatedImages: [{id: 'reserva', caption: 'Última etapa: leia as orientações da reserva e confira todos os dados antes de enviar.'}],
+    steps: [
+      'Em Meus TCCs, clique em Cadastrar TCC. Se o trabalho já existe, abra seu código em vez de criar outro processo.',
+      'Preencha o autor e, se houver, o segundo autor. A ordem dos autores será mantida nos documentos. O e-mail do primeiro autor é o da conta e fica bloqueado.',
+      'Informe orientador, examinadores e coorientador, quando houver, com nome, e-mail, registro, tratamento, titulação e instituição nos campos solicitados. Confira as sugestões antes de aceitá-las.',
+      'Em títulos e instituições, escreva *UFES* para preservar uma sigla e/ou acrônimo em maiúsculas. Os asteriscos não aparecem nos documentos. Nomes de pessoas seguem a capitalização do Portal.',
+      'Use Continuar para salvar e avançar. Salvar e sair guarda o rascunho para retomar depois. A reserva é preenchida na última etapa; confira todas as tabelas antes de Cadastrar e solicitar reserva.',
+    ],
+    done: 'Um protocolo foi criado e o pedido de reserva foi registrado. O agendamento ainda aguarda a decisão do responsável.',
+    help: [
+      'Campo incorreto na conferência: use Voltar para corrigir a etapa correspondente.',
+      'Dados repetidos entre pessoas: confira quem ocupa cada função, os nomes, os e-mails e os registros antes de enviar.',
+      'Rascunho alterado em outra aba: mantenha uma única aba de preenchimento e siga a orientação exibida antes de salvar.',
+    ],
+  },
+  {
+    id: 'ficha', title: 'Abrir e conferir a ficha', roles: ['aluno', 'orientador'], imageId: 'ficha',
+    imageCaption: 'Dados do processo e tabela compacta de participantes, no modelo usado por todos os TCCs.',
+    steps: [
+      'Em Meus TCCs, clique no código do trabalho. A mesma ficha também abre pelos códigos do Calendário, do Repositório e pelos links dos e-mails.',
+      'Em Dados do processo, confira título, participantes, data, horário e local. Protocolo e data de registro são definidos pelo sistema e não podem ser alterados.',
+      'As outras abas são Conceito e Ata, Repositório acadêmico e Documentos administrativos. A faixa superior indica a etapa atual; abrir uma aba não conclui essa etapa.',
+      'Os campos editáveis exibem o controle de edição. Após a emissão ou o envio do convite, os dados cadastrais ficam bloqueados para autores e orientador. A reserva tem um controle próprio de alteração.',
+    ],
+    done: 'A ficha corresponde ao trabalho e os dados conferidos estão corretos.',
+    help: [
+      'Sem controles de edição: confira seu acesso, seu papel e a etapa do trabalho. Campos de consulta não ficam editáveis apenas por clicar neles.',
+      'Informação incorreta em etapa bloqueada: informe o protocolo e a correção à comissão. Não crie outro processo para contornar o bloqueio.',
+    ],
+  },
+  {
+    id: 'agenda', title: 'Escolher ou alterar a reserva', roles: ['aluno', 'orientador'], imageId: 'confirmacao',
+    imageCaption: 'Alteração de reserva em Dados do processo: um novo pedido exige outro aceite.',
+    steps: [
+      'Na última etapa do cadastro, escolha um único local e informe data e horário. Para auditório e sala de reuniões, a homologação cabe ao departamento. Para outro local, informe o nome exato: ele aparecerá nos documentos e o orientador receberá o pedido.',
+      'Considere mapa de salas, aulas, eventos, reservas e horários de uso do prédio. A consulta prévia pode evitar retrabalho; o Portal não controla os agendamentos externos.',
+      'Ao enviar, o espaço selecionado fica bloqueado no intervalo da defesa, de 1h30. O aceite confirma a reserva; a recusa libera o intervalo. Outro espaço pode ter uma defesa no mesmo horário, desde que não haja participantes em comum.',
+      'Para mudar um processo existente, abra Dados do processo e clique em Alterar reserva ou, após uma recusa, Solicitar nova data. Preencha os novos dados e clique em Enviar nova solicitação.',
+      'O novo pedido invalida a confirmação anterior. Aguarde outro aceite do departamento ou do orientador. A alteração deixa de estar disponível após o registro do conceito ou da entrega final.',
+    ],
+    done: 'O pedido está registrado com a data, o horário e o local pretendidos; a confirmação só vale depois do aceite.',
+    help: [
+      'Horário ocupado: escolha outro intervalo ou outro espaço e envie o pedido corrigido.',
+      'Reserva recusada: use Solicitar nova data no mesmo TCC. Não é necessário refazer o cadastro dos participantes.',
+      'Local externo: o orientador também precisa garantir a reserva junto ao espaço escolhido; o bloqueio do Portal não faz essa reserva externa.',
+    ],
+  },
+  {
+    id: 'confirmacao', title: 'Acompanhar a confirmação da reserva', roles: ['aluno'], imageId: 'documentos',
+    imageCaption: 'O comprovante fica na primeira caixa de Documentos administrativos, junto dos outros documentos.',
+    steps: [
+      'O responsável pelo local recebe os botões de aceitar ou recusar. Os autores e o orientador recebem uma comunicação informativa, sem os botões reservados ao responsável. Se o responsável for o próprio orientador, ele recebe a mensagem de decisão.',
+      'Acompanhe o resultado no processo e pelos avisos por e-mail. Em Documentos administrativos, abra ou baixe o comprovante de aceite ou de recusa.',
+      'Depois do aceite, confira a data, o horário e o local no Calendário e os dados da carta-convite em Documentos administrativos.',
+      'Os examinadores e o coorientador, quando houver, recebem o convite em uma mensagem de grupo. Os documentos são consultados no Portal.',
+    ],
+    done: 'A reserva está confirmada, o comprovante está disponível e os dados da defesa foram conferidos.',
+    help: [
+      'Ainda aguardando resposta: o envio do cadastro não equivale ao aceite da reserva.',
+      'Ao aceitar ou recusar pelo e-mail, o responsável acompanha o registro automático e o download do comprovante. Se houver erro, confira o resultado antes de repetir; após alterar a reserva, use o e-mail mais recente.',
+      'Pedido recusado: volte a Dados do processo e use Solicitar nova data.',
+    ],
+  },
+  {
+    id: 'avaliacao', title: 'Registrar o conceito e conferir a ata', roles: ['orientador'], imageId: 'avaliacao',
+    imageCaption: 'Conceito e Ata: preenchimento pelo orientador. A escolha da assinatura acontece em outra aba.',
+    relatedImages: [{id: 'ata-previa', caption: 'Conferência da prévia: confirme os dados antes de registrar o conceito e continuar nos documentos.'}],
+    steps: [
+      'Entre com o e-mail do orientador, abra o TCC e a aba Conceito e Ata. O registro é liberado com local confirmado, convite enviado e a partir do horário da defesa.',
+      'Selecione Aprovado, Aprovado com ressalva ou Reprovado e preencha o Parecer da banca. Usar texto-padrão é uma sugestão: revise-o conforme o que a banca decidiu.',
+      'Neste Portal, registre o conceito e a documentação. Faça a avaliação e lance a nota no Portal do Professor, em professor.ufes.br.',
+      'Clique em Visualizar ata. Confira os dados e o texto da prévia, marque a confirmação de conferência e clique em Registrar avaliação e ir para documentos.',
+      'O Portal abre Documentos administrativos. O registro não envia uma assinatura automaticamente: escolha Asten ou Gov.br na caixa da ata.',
+    ],
+    done: 'O conceito e o parecer foram registrados; a ata está pronta para o orientador solicitar a assinatura em Documentos administrativos.',
+    help: [
+      'Registro indisponível: confira o horário da defesa, a confirmação do local, o envio do convite e se está na conta do orientador.',
+      'Prévia incorreta: corrija o preenchimento antes de confirmar. A prévia por si só não registra o conceito.',
+      'Reabrir avaliação só aparece para orientador e Master enquanto permitido. A primeira entrega final bloqueia a reabertura, mesmo se a entrega for reaberta depois.',
+    ],
+  },
+  {
+    id: 'documentos', title: 'Conferir, assinar e baixar documentos', roles: ['aluno', 'orientador'], imageId: 'documentos',
+    imageCaption: 'Cinco caixas na mesma linha no computador: comprovante, convite, ata, termo e declaração.',
+    steps: [
+      'Abra Documentos administrativos. Cada caixa informa a disponibilidade, os responsáveis e as ações do documento. Comprovante e carta-convite não exigem assinatura.',
+      'Somente o orientador assina a ata. Todos os autores e o orientador assinam o termo, se houver publicação autorizada. A declaração é assinada pela presidência da comissão.',
+      'O responsável escolhe o método na caixa do documento. Prefira o Asten: solicite uma vez e siga o link recebido por e-mail. O Portal acompanha o retorno e o arquivamento; o envio do convite não significa que o documento foi assinado.',
+      'Pelo Gov.br, baixe o PDF original, assine e devolva na mesma janela. No termo, cada autor assina o mesmo arquivo; o orientador reúne todas as assinaturas e devolve um único PDF completo.',
+      'Use Ver e Baixar PDF quando disponíveis. A ata assinada e arquivada libera a entrega final. A conclusão do processo depende também da entrega e dos demais documentos obrigatórios.',
+    ],
+    done: 'O documento aparece assinado e arquivado, com as ações de consulta e download disponíveis.',
+    help: [
+      'Sem botão de assinatura: confira quem assina, seu vínculo e a condição exibida na caixa. Alunos não solicitam assinatura da ata.',
+      'Solicitação Asten pendente: acompanhe o estado e o e-mail cadastrado; não crie outra solicitação para o mesmo documento.',
+      'PDF devolvido pelo Gov.br: aguarde a conferência do Master. O envio isolado ainda não libera a próxima etapa.',
+    ],
+  },
+  {
+    id: 'assinatura-gov', title: 'Assinar e devolver pelo Gov.br', roles: ['aluno', 'orientador'], imageId: 'gov',
+    imageCaption: 'Janela Gov.br com download e devolução. A conferência administrativa é uma etapa posterior.',
+    steps: [
+      'Em Documentos administrativos, abra Gov.br na caixa do documento. O orientador pode preparar a ata e, quando aplicável, o termo.',
+      'Em 1. Baixar o documento, clique em Gerar e baixar PDF ou Baixar PDF para assinar. Use Abrir assinador Gov.br para assinar esse arquivo. Não o imprima nem gere outro PDF por cima dele.',
+      'Na ata, basta a assinatura do orientador. No termo, todos os autores e o orientador precisam assinar o mesmo PDF. O aluno encaminha sua assinatura ao orientador, que reúne o arquivo completo.',
+      'O orientador usa 2. Devolver o documento assinado → Devolver PDF assinado e seleciona o PDF completo. O Portal aceita PDF de até 50 MB.',
+      'O Master confere o arquivo no VALIDAR/ITI e registra a aprovação e o arquivamento. Até essa conferência, o documento permanece pendente.',
+    ],
+    done: 'Após a conferência e o arquivamento, a caixa do documento deixa de mostrar assinatura pendente.',
+    help: [
+      'Devolução indisponível: confirme se o PDF foi preparado e se está na conta responsável. No termo, somente o orientador devolve o arquivo; o Master também pode intervir.',
+      'Arquivo recusado: confira a versão do documento e as assinaturas exigidas. Preserve o original preparado pelo Portal.',
+      'Para reduzir as etapas de download e devolução, prefira o Asten quando disponível.',
+    ],
+  },
+  {
+    id: 'repositorio', title: 'Entregar os arquivos e escolher o que será público', roles: ['aluno'], imageId: 'repositorio',
+    imageCaption: 'Repositório acadêmico: PDF do TCC obrigatório, resumo expandido opcional e escolhas independentes de publicação.',
+    relatedImages: [{id: 'entrega-confirmada', caption: 'Depois da entrega: campos bloqueados e Editar entrega disponível enquanto a etapa permitir.'}],
+    steps: [
+      'Depois de a ata assinada ser arquivada, abra Repositório acadêmico. Qualquer um dos autores pode realizar a entrega.',
+      'Preencha o resumo síntese em até três parágrafos e 2.000 caracteres. Informe exatamente cinco palavras-chave, uma em cada campo.',
+      'Clique em Escolher arquivo para anexar o PDF final do trabalho completo, obrigatório nos TCCs novos. O PDF do resumo expandido é opcional.',
+      'Escolha separadamente se deseja tornar público o TCC e o resumo expandido. Anexar um arquivo não autoriza sua publicação. Sem nenhuma autorização, não haverá termo para assinar.',
+      'Confira tudo e clique em Confirmar entrega e ir para documentos. Os campos ficam bloqueados. Havendo publicação autorizada, assinem o termo em Documentos administrativos.',
+      'Se ainda permitido, Editar entrega reabre os dados e pode exigir novas assinaturas. Depois da assinatura da declaração ou da conclusão, essa opção deixa de estar disponível.',
+    ],
+    done: 'A entrega foi registrada. A continuidade está em Documentos administrativos; o encerramento depende dos documentos obrigatórios arquivados.',
+    help: [
+      'Entrega bloqueada: confira se a ata foi realmente assinada e arquivada. Escolher o método ou apenas devolver um PDF não conclui a assinatura.',
+      'Publicação do resumo indisponível: anexe o resumo expandido antes de marcar sua publicação.',
+      'Termo ausente: ele só é necessário quando algum arquivo foi escolhido para publicação.',
+    ],
+  },
+  {
+    id: 'consulta-publica', title: 'Consultar calendário e trabalhos publicados', roles: ['visitante'], imageId: 'calendario',
+    imageCaption: 'Calendário público: confira o período e abra o código da defesa desejada.',
+    steps: [
+      'No menu lateral, clique em Calendário. Selecione o mês e o dia para conferir as defesas, horários e locais.',
+      'Clique no código do TCC para abrir os detalhes públicos. Não é necessário entrar no Portal para consultar esses dados.',
+      'Na ficha, confira Dados do processo, Conceito e Ata, Repositório acadêmico e Documentos administrativos. Somente as informações e os arquivos liberados ficam disponíveis.',
+      'Para editar, registrar conceito ou assinar, entre com um e-mail vinculado ao processo. A consulta pública não libera essas ações.',
+    ],
+    done: 'Você localizou a defesa e consultou os dados públicos sem precisar entrar no Portal.',
+    help: [
+      'Defesa não aparece: confira os filtros e o período selecionado.',
+      'Apareceu uma solicitação de login: feche a janela se quiser continuar apenas a consulta pública.',
+    ],
+  },
+  {
+    id: 'local-publico', title: 'Conferir data e local da defesa', roles: ['visitante'], imageId: 'calendario',
+    imageCaption: 'Confira novamente o calendário antes de se deslocar: o agendamento pode ter sido alterado.',
+    steps: [
+      'No Calendário, selecione o período da defesa e abra o código do TCC.',
+      'Confira a data, o horário e o local em Dados do processo. Use o comprovante disponível em Documentos administrativos para consultar o resultado da reserva.',
+      'No menu Como chegar, consulte os mapas e as opções de rota. Para outro local, considere o endereço informado no processo.',
+    ],
+    done: 'Você sabe quando e onde a defesa ocorrerá.',
+    help: ['Convite antigo com outra data: use as informações atualizadas no processo e no Calendário.'],
+  },
+  {
+    id: 'repositorio-publico', title: 'Pesquisar o Repositório público', roles: ['visitante'], imageId: 'consulta-publica',
+    imageCaption: 'Busca e filtros do Repositório. O ícone de resumo evita linhas extensas na tabela.',
+    steps: [
+      'No menu lateral, clique em Repositório. Abra a busca e digite título, autor ou outro dado do trabalho. A lista é filtrada enquanto você escreve, sem botão OK.',
+      'Use os filtros e a paginação da tabela. Na coluna Resumo, passe o mouse sobre o ícone, use o foco do teclado ou toque no ícone no celular para ler o texto completo.',
+      'Clique no código para abrir a mesma ficha do TCC em modo de consulta. E-mails, matrículas e registros não aparecem na ficha pública.',
+      'Em Repositório acadêmico, abra os PDFs autorizados. A presença do trabalho na lista não torna todos os seus arquivos públicos.',
+    ],
+    done: 'Você localizou o trabalho, leu o resumo e acessou os arquivos liberados para publicação.',
+    help: [
+      'Poucos resultados: limpe a busca e confira os filtros.',
+      'Sem link para PDF: o arquivo pode ser privado ou não ter sido entregue. A ausência do link não é um erro de acesso.',
+    ],
+  },
+  {
+    id: 'legados', title: 'Consultar trabalhos legados', roles: ['visitante'], imageId: 'legados',
+    imageCaption: 'Exemplo histórico com dados fictícios, na mesma ficha e nas mesmas abas do restante do Portal.',
+    steps: [
+      'No mesmo Repositório, procure códigos como 001 - Legado. A numeração identifica os trabalhos antigos importados.',
+      'Abra o código e consulte as mesmas abas dos demais TCCs. Dados ou arquivos ausentes na origem podem permanecer sem preenchimento. Um trabalho antigo pode ter apenas resumo expandido.',
+      'Os arquivos acadêmicos só ficam públicos com autorização confirmada. A documentação administrativa antiga permanece privada para consulta do Master.',
+      'O registro histórico não inicia outro cadastro, defesa ou assinatura. Não crie um novo processo para completar um trabalho antigo.',
+    ],
+    done: 'Você consultou os dados e os arquivos disponíveis do registro histórico.',
+    help: ['Documento antigo restrito: a importação não autoriza a divulgação de dados pessoais ou de protocolos de assinatura presentes nos arquivos.'],
+  },
+  {
+    id: 'sugestoes', title: 'Informar um problema ou sugerir melhoria', roles: ['aluno', 'orientador', 'visitante'], imageId: 'sugestoes',
+    imageCaption: 'Sugestões de melhoria fica no menu lateral, logo abaixo de Replicar Portal.',
+    steps: [
+      'No menu lateral, clique em Sugestões de melhoria, abaixo de Replicar Portal. O envio também está disponível sem login.',
+      'Descreva em qual tela estava, o que tentou fazer e o que ocorreu. Informe o protocolo do TCC quando necessário; não inclua códigos de acesso ou credenciais.',
+      'Se ajudar, anexe uma imagem PNG, JPEG ou WebP de até 1,5 MB. Remova dados pessoais que não sejam necessários para explicar o problema.',
+      'Clique em Enviar sugestão e aguarde a confirmação. O Master acompanha os registros em Configurações → Sugestões de melhoria.',
+    ],
+    done: 'O Portal confirmou o recebimento da sugestão. Marcar uma sugestão como revisada não significa que a alteração já foi implementada.',
+    help: ['Erro ao enviar: mantenha o texto, confira o tamanho da imagem e tente novamente após a mensagem de erro. Sem confirmação, o envio não está concluído.'],
+  },
+];
+
+export const guideActivityOrder: Record<GuideRole, string[]> = {
+  aluno: ['acesso', 'cadastro', 'ficha', 'agenda', 'confirmacao', 'repositorio', 'documentos', 'assinatura-gov', 'sugestoes'],
+  orientador: ['acesso', 'ficha', 'agenda', 'avaliacao', 'documentos', 'assinatura-gov', 'sugestoes'],
+  visitante: ['consulta-publica', 'local-publico', 'repositorio-publico', 'legados', 'sugestoes'],
+};
+
+export function activitiesForRole(role: string): GuideActivity[] {
+  if (!Object.hasOwn(guideActivityOrder, role)) return [];
+  return guideActivityOrder[role as GuideRole].flatMap(id => guideActivities.filter(item => item.id === id && item.roles.includes(role as GuideRole)));
+}
+
+function GuideText({text}: {text: string}) {
+  const parts = text.split('professor.ufes.br');
+  return <>{parts.map((part, index) => <React.Fragment key={index}>{index > 0 && <a href="https://professor.ufes.br/" target="_blank" rel="noopener noreferrer" className="underline">professor.ufes.br</a>}{part}</React.Fragment>)}</>;
+}
+
+export function PortalIllustratedGuide({role = 'aluno'}: {role?: string}) {
+  const available = activitiesForRole(role);
+  const [selected, setSelected] = useState({role, id: ''});
+  const current = available.find(item => selected.role === role && item.id === selected.id) || available[0];
+  if (!current) return null;
+  const index = available.indexOf(current);
+  const roleTitle = ({aluno: 'Aluno', orientador: 'Orientador', visitante: 'Visitante'} as Record<string, string>)[role];
+  const imageUrl = `/manual/${current.imageId}.jpg?v=2026-11-03`;
+  const selectActivity = (next: number, focus = false) => {
+    const item = available[next];
+    if (!item) return;
+    setSelected({role, id: item.id});
+    if (focus) document.getElementById(`guide-tab-${role}-${item.id}`)?.focus();
+  };
+
+  return (
+    <section className="portal-illustrated-guide mt-3 rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-card)] p-3 sm:p-4" aria-label="Manual ilustrado">
+      <h3 className="text-sm font-bold">Veja onde clicar · {roleTitle}</h3>
+      <div className="portal-guide-activities mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-3" role="tablist" aria-label={`Atividades de ${roleTitle}`}>
+        {available.map((item, activityIndex) => (
+          <button key={item.id} type="button" id={`guide-tab-${role}-${item.id}`} role="tab" aria-selected={current.id === item.id} aria-controls={`guide-panel-${role}`} tabIndex={current.id === item.id ? 0 : -1} className={`portal-guide-activity flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-xs font-semibold ${current.id === item.id ? 'border-[var(--portal-brand-header)] bg-[var(--portal-brand-header)] text-white' : 'border-[var(--portal-border)] bg-[var(--portal-surface-panel)] text-slate-700'}`} onClick={() => selectActivity(activityIndex)} onKeyDown={event => {
+            const next = event.key === 'ArrowRight' ? (activityIndex + 1) % available.length : event.key === 'ArrowLeft' ? (activityIndex - 1 + available.length) % available.length : event.key === 'Home' ? 0 : event.key === 'End' ? available.length - 1 : -1;
+            if (next < 0) return;
+            event.preventDefault();
+            selectActivity(next, true);
+          }}>
+            <span className="shrink-0 tabular-nums" aria-hidden="true">{activityIndex + 1}.</span><span>{item.title}</span>
+          </button>
+        ))}
+      </div>
+      <div id={`guide-panel-${role}`} role="tabpanel" aria-labelledby={`guide-tab-${role}-${current.id}`} className="portal-guide-sheet mt-3 rounded-lg border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] p-3 sm:p-4">
+        <h4 className="text-base font-bold">{current.title}</h4>
+        <div className="portal-guide-content mt-3 grid items-start gap-4 xl:grid-cols-[2fr_3fr]">
+          <ol className="my-0 list-decimal space-y-3 pl-5 text-sm leading-6">{current.steps.map(step => <li key={step}><GuideText text={step} /></li>)}</ol>
+          <figure className="portal-guide-figure m-0 min-w-0 w-full">
+            <a href={imageUrl} target="_blank" rel="noreferrer" aria-label={`Ampliar imagem: ${current.title}`} className="block overflow-hidden rounded-lg border border-slate-300 bg-white">
+              <img src={imageUrl} alt={current.imageCaption} loading="lazy" className="block h-auto max-h-[520px] w-full object-contain" />
+            </a>
+            <figcaption className="mt-2 text-xs leading-5 text-slate-600">{current.imageCaption} <a className="inline-flex items-center gap-1 underline" href={imageUrl} target="_blank" rel="noreferrer">Abrir imagem em tamanho maior<ExternalLink className="h-3 w-3" aria-hidden="true" /></a></figcaption>
+            <p className="mt-1 text-xs leading-5 text-slate-600">Exemplo ilustrado com dados fictícios. O estado e as ações variam conforme o trabalho e seu perfil.</p>
+          </figure>
+        </div>
+        {current.relatedImages?.map(related => {
+          const url = `/manual/${related.id}.jpg?v=2026-11-03`;
+          return <details key={related.id} className="mt-3 rounded-lg border border-slate-300 p-3">
+            <summary className="cursor-pointer text-xs font-semibold">Ver exemplo: {related.caption}</summary>
+            <a href={url} target="_blank" rel="noreferrer" className="mt-3 block" aria-label={`Ampliar imagem: ${related.caption}`}><img src={url} alt={related.caption} loading="lazy" className="mx-auto block h-auto max-h-[560px] w-full object-contain" /></a>
+          </details>;
+        })}
+        <p className="mt-4 text-sm leading-6"><strong>Como saber que terminou:</strong> {current.done}</p>
+        <details key={`${role}-${current.id}`} className="portal-instruction mt-3 p-3">
+          <summary className="cursor-pointer text-sm font-bold">Algo deu errado?</summary>
+          <ul className="mt-2 list-disc space-y-2 pl-5 text-xs leading-5">{current.help.map(item => <li key={item}>{item}</li>)}</ul>
+        </details>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2" aria-label="Navegação das atividades">
+          <button type="button" className="portal-action" disabled={index === 0} onClick={() => selectActivity(index - 1, true)}><ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />Anterior</button>
+          <span className="text-xs text-slate-600">Atividade {index + 1} de {available.length}</span>
+          <button type="button" className="portal-action" disabled={index === available.length - 1} onClick={() => selectActivity(index + 1, true)}>Próxima<ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></button>
+        </div>
+      </div>
+    </section>
+  );
 }

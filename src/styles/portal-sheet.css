@@ -4,6 +4,10 @@
 
 /* Adaptadores canônicos usados pelo TypeScript.
    Nenhuma cor real é definida fora dos tokens de :root. */
+:is(.portal-core-table, .portal-runtime-spreadsheet) tr:is(.portal-core-filter-hidden, .portal-runtime-page-hidden) {
+  display: none;
+}
+
 .portal-font {
   font-family: var(--portal-font-family);
 }

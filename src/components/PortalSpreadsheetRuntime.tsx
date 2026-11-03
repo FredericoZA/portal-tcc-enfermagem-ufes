@@ -13,6 +13,7 @@ const DEFAULT_PAGE_SIZE: Record<TableKey, PageSize> = {
   authorized_access: 25,
   signature_logs: 25,
   audit_logs: 25,
+  feedback_inbox: 25,
 };
 
 const PAGE_SIZE_PREFIX = 'portal_table_page_size_';

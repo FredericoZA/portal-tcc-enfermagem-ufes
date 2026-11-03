@@ -44,6 +44,18 @@ export type LegacyAdministrativeFileView = Pick<LegacyAdministrativeFile, 'fileN
   index: number;
   downloadUrl: string;
 };
+/** Master-only academic view; publication consent is unchanged by private access. */
+export interface PrivateLegacyAcademicView {
+  resumo: string;
+  palavrasChave: string[];
+  files: {
+    index: number;
+    kind: LegacyAttachment['kind'];
+    fileName: string;
+    downloadUrl: string;
+    isPublic: boolean;
+  }[];
+}
 export type PublicLegacyAcademicRecord = Pick<LegacyAcademicRecord,
   'id' | 'protocolo' | 'titulo' | 'autores' | 'orientador' | 'coorientador' |
   'coorientadorInstituicao' | 'examinadores' | 'resumo' | 'palavrasChave' | 'dataDefesa' |

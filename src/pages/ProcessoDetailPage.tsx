@@ -1,6 +1,6 @@
 import {ProcessSummaryCard} from '../components/ProcessSummaryCard';
 import {LegacyAdministrativeDocuments} from '../components/LegacyAdministrativeDocuments';
-import {ProcessDocumentCard, ProcessDocumentsPanel} from '../components/ProcessDocumentCard';
+import {ProcessDocumentCard, ProcessDocumentsPanel, ReservationReceiptCard} from '../components/ProcessDocumentCard';
 import {publicProcessDetail} from '../utils/publicProcessDetail';
 import {documentSignatureCompleted,documentSignatureArchived} from '../utils/documentSignatureState';
 import {defenseEndAt} from '../utils/defenseSchedule';
@@ -15,6 +15,7 @@ import { portalConfirm, portalNotice, portalPrompt } from '../services/portalDia
 import { AdvisorEvaluationPanel } from '../components/AdvisorEvaluationPanel';
 import React, { useState, useEffect, useRef } from 'react';
 import { ProcessData, ProcessDocument, ProcessRole, SignatureJob } from '../types';
+import type { PrivateLegacyAcademicView } from '../types/legacyArchive';
 import { TccDetailPopupFormat, DEFAULT_TCC_DETAIL_POPUP_FORMAT, loadTccDetailPopupFormat, TCC_DETAIL_POPUP_CONFIG_EVENT } from '../types/tccDetailFormat';
 import { useAuth } from '../context/AuthContext';
 import { apiClient, ApiRequestError } from '../services/apiClient';
@@ -113,6 +114,14 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const [isDownloadingDossier,setIsDownloadingDossier]=useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const legacyAccessKey = `${processId}|${userEmail}|${isAuthenticated}|${isMasterAdmin}`;
+  const legacyAccessScope = useRef(legacyAccessKey);
+  legacyAccessScope.current = legacyAccessKey;
+  const [privateLegacyAcademic, setPrivateLegacyAcademic] = useState<{accessKey:string;data:PrivateLegacyAcademicView|null;error:string}|null>(null);
+  const privateLegacyAccess = isAuthenticated && isMasterAdmin && privateLegacyAcademic?.accessKey === legacyAccessKey ? privateLegacyAcademic : null;
+  const privateLegacyData = privateLegacyAccess?.data;
+  const [legacyAcademicDownload, setLegacyAcademicDownload] = useState<number|null>(null);
+  const [legacyAcademicDownloadError, setLegacyAcademicDownloadError] = useState('');
 
   // Format and Customization State
   const [localFormat, setLocalFormat] = useState<TccDetailPopupFormat>(() => {
@@ -157,11 +166,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   };
 
   const workflowTab = useRef<{id:string;stage:string}|null>(null);
-  useEffect(()=>{
-    if(process?.legacyRecord&&!isMasterAdmin&&activeTab==='docs'){
-      setActiveTab('cadastral');setProcessLink(process.id,'cadastral');
-    }
-  },[process?.id,process?.legacyRecord,isMasterAdmin,activeTab]);
   useEffect(()=>{
     if(!process)return;
     const stage=process.legacyRecord?'cadastral':processWorkflowSection(process),previous=workflowTab.current;
@@ -247,6 +251,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   };
 
   const loadData = async (options: { preserveAcervoDraft?: boolean; quiet?:boolean } | boolean = {}) => {
+    const requestScope = legacyAccessScope.current;
     const background=options===true;
     const {preserveAcervoDraft=false,quiet=background}=typeof options==='boolean'?{}:options;
     if(!quiet)setIsLoading(true);
@@ -259,6 +264,17 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           return;
         }
         const publicDetail = publicProcessDetail(data);
+        let academicAccess:typeof privateLegacyAcademic = null;
+        if (data.legacyRecord && isAuthenticated && isMasterAdmin) {
+          try {
+            academicAccess = {accessKey:requestScope,data:await apiClient.getPrivateLegacyAcademicView(data.id),error:''};
+          } catch {
+            academicAccess = {accessKey:requestScope,data:null,error:'Não foi possível consultar os arquivos restritos. Reabra esta aba para tentar novamente.'};
+          }
+        }
+        // A response started by a previous identity must never populate private content.
+        if (requestScope !== legacyAccessScope.current) return;
+        setPrivateLegacyAcademic(academicAccess);
         setProcess(publicDetail.process); setDocuments(publicDetail.documents);
         setSignatureJobs([]); setVerifications([]); setAuditLogs([]);
         return;
@@ -340,7 +356,22 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     setRemoteUpdatePending(false);
     setSignatureNotice(null);
     loadData();
-  }, [processId, userEmail, readOnly, isAuthenticated]);
+  }, [processId, userEmail, readOnly, isAuthenticated, isMasterAdmin]);
+
+  const downloadPrivateLegacyFile = async (index:number) => {
+    if (!privateLegacyData || !process?.legacyRecord || legacyAcademicDownload !== null) return;
+    const requestScope = legacyAccessScope.current;
+    setLegacyAcademicDownload(index); setLegacyAcademicDownloadError('');
+    try {
+      const {blob,fileName} = await apiClient.downloadPrivateLegacyAcademicFile(process.id,index);
+      if (requestScope !== legacyAccessScope.current) return;
+      const url = URL.createObjectURL(blob), anchor = document.createElement('a');
+      anchor.href = url; anchor.download = fileName; anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url),30000);
+    } catch {
+      if (requestScope === legacyAccessScope.current) setLegacyAcademicDownloadError('Não foi possível conferir e baixar o arquivo. O original permanece preservado.');
+    } finally { setLegacyAcademicDownload(null); }
+  };
 
   useSignatureUpdates({
     jobs: signatureJobs,
@@ -781,14 +812,14 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           <button type="button" onClick={()=>{setEditingSection(null);editingSectionRef.current=null;void loadData(true);}} className="rounded-lg bg-amber-800 px-3 py-2 font-bold text-white">Descartar edição e atualizar</button>
         </div>
       )}
-      {!process.legacyRecord && localFormat.showStateMachine !== false && <div className="px-3 pt-3"><EtapaProgressBar currentEtapa={process.etapaAtual}/></div>}
+      {localFormat.showStateMachine !== false && <div className="px-3 pt-3"><EtapaProgressBar currentEtapa={process.etapaAtual} historical={process.legacyRecord}/></div>}
       <section id="tcc-detail-workspace" className="portal-tcc-workspace mx-3 mt-3">
       <section aria-label="Seções do TCC" className="portal-tcc-workspace-tabs"><div className="portal-tcc-tab-list flex flex-wrap items-stretch gap-1">{[
-        {id:'cadastral',label:'Dados do processo',icon:FileText,show:localFormat.showSectionCadastral!==false||localFormat.showSectionBanca!==false},{id:'avaliacao',label:'Conceito e Ata',icon:Award,show:!process.legacyRecord&&localFormat.showSectionAvaliacao!==false},{id:'acervo',label:'Repositório acadêmico',icon:BookOpen,show:localFormat.showSectionAcervo!==false},{id:'docs',label:'Documentos administrativos',icon:FileCheck,show:(!process.legacyRecord||isMasterAdmin)&&localFormat.showSectionDocs!==false}
+        {id:'cadastral',label:'Dados do processo',icon:FileText,show:localFormat.showSectionCadastral!==false||localFormat.showSectionBanca!==false},{id:'avaliacao',label:'Conceito e Ata',icon:Award,show:localFormat.showSectionAvaliacao!==false},{id:'acervo',label:'Repositório acadêmico',icon:BookOpen,show:localFormat.showSectionAcervo!==false},{id:'docs',label:'Documentos administrativos',icon:FileCheck,show:localFormat.showSectionDocs!==false}
       ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} type="button" onClick={()=>{setActiveTab(tab.id);setProcessLink(process.id,tab.id as ProcessSection);}} aria-pressed={selected} className={`flex min-h-9 min-w-0 flex-1 justify-center items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold ${selected?'portal-tcc-tab-selected border-[var(--portal-brand-header)] bg-white text-slate-950':'border-white bg-white text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
       <div className="portal-tcc-workspace-content p-3">
 
-      {!readOnly && isTabVisible('cadastral') && process.defesa.localStatus !== 'CONFIRMADO' && <ProcessFlowPanel process={process} jobs={signatureJobs} canConfirm={(isStudent || isMasterAdmin) && !readOnly} onUpdated={loadData} onChangeReservation={canEditDefense?()=>{document.querySelector<HTMLButtonElement>('[aria-label="Alterar reserva da defesa"]')?.click();}:undefined}/> }
+      {!readOnly && !process.legacyRecord && isTabVisible('cadastral') && process.defesa.localStatus !== 'CONFIRMADO' && <ProcessFlowPanel process={process} jobs={signatureJobs} canConfirm={(isStudent || isMasterAdmin) && !readOnly} onUpdated={loadData} onChangeReservation={canEditDefense?()=>{document.querySelector<HTMLButtonElement>('[aria-label="Alterar reserva da defesa"]')?.click();}:undefined}/> }
 
       {/* ========================================================================= */}
       {/* SECTION 1: FICHA CADASTRAL E IDENTIFICAÇÃO DO PROCESSO                    */}
@@ -841,14 +872,17 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* SECTION 4: CAMPO DE AVALIAÇÃO E NOTAS DA BANCA                            */}
       {/* ========================================================================= */}
       {localFormat.showSectionAvaliacao !== false && isTabVisible('avaliacao') && (
-        <AdvisorEvaluationPanel publicReadOnly={readOnly} process={process} canEvaluate={(isAdvisor || isMasterAdmin) && !readOnly}
-          canReopen={(isMasterAdmin || isAdvisor) && !readOnly && !isAcervoSubmitted && !process.acervo?.firstSubmittedAt && process.status!=='CONCLUIDO'} onReopen={handleReopenEvaluation} onUpdated={async()=>{await loadData();setActiveTab('docs');setProcessLink(process.id,'docs');}} />
+        <>
+        <AdvisorEvaluationPanel publicReadOnly={readOnly} process={process} canEvaluate={!process.legacyRecord && (isAdvisor || isMasterAdmin) && !readOnly}
+          canReopen={!process.legacyRecord && (isMasterAdmin || isAdvisor) && !readOnly && !isAcervoSubmitted && !process.acervo?.firstSubmittedAt && process.status!=='CONCLUIDO'} onReopen={handleReopenEvaluation} onUpdated={async()=>{await loadData();setActiveTab('docs');setProcessLink(process.id,'docs');}} />
+        {process.legacyRecord && <LegacyAdministrativeDocuments processId={process.id} canAccessOriginals={isMasterAdmin} section="evaluation"/>}
+        </>
       )}
 
       {/* ========================================================================= */}
       {/* SECTION 5: PAINEL DE DOCUMENTOS E ASSINATURAS GERENCIADAS                */}
       {/* ========================================================================= */}
-      {process.legacyRecord && isMasterAdmin && localFormat.showSectionDocs !== false && isTabVisible('docs') && <LegacyAdministrativeDocuments processId={process.id}/>}
+      {process.legacyRecord && localFormat.showSectionDocs !== false && isTabVisible('docs') && <LegacyAdministrativeDocuments processId={process.id} canAccessOriginals={isMasterAdmin}/>}
       {!process.legacyRecord && localFormat.showSectionDocs !== false && isTabVisible('docs') && (
         <ProcessDocumentsPanel count={documents.length+1} toolbar={
           !readOnly&&(isMasterAdmin||isCommissionPresident)?<button type="button" onClick={()=>{setDownloadSelection(documents.filter(doc=>doc.status==='DISPONIVEL'||doc.status==='ASSINADO').map(doc=>doc.type));setDownloadPicker(true);}} disabled={isDownloadingDossier} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 disabled:opacity-60" aria-label="Escolher documentos para baixar" title="Baixar documentos"><Download className="h-4 w-4"/></button>:undefined
@@ -871,20 +905,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
         </>}>
 
-              <article className={`portal-tcc-document-card ${hasReservationReceipt ? '' : 'portal-document-unavailable'} border border-slate-200/90 rounded-xl p-3.5 flex flex-col gap-3`} aria-label="Comprovante de reserva">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border border-[var(--portal-border)] flex items-center justify-center shrink-0"><FileCheck className="w-4 h-4" /></div>
-                  <h3 className="portal-document-title font-extrabold text-xs sm:text-[13px] text-slate-900 leading-snug">Comprovante de reserva</h3>
-                </div>
-                <p className="text-xs">Resposta do responsável pelo local: aceite ou recusa da reserva.</p>
-                <div className={`portal-document-status font-black normal-case text-[10px] px-2.5 py-0.5 rounded-md border tracking-wide ${hasReservationReceipt ? 'portal-document-status-available' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
-                  {hasReservationReceipt ? 'Disponível' : 'Aguardando resposta'}
-                  {!hasReservationReceipt && <span className="block text-[11px] font-medium normal-case leading-snug tracking-normal">O comprovante será disponibilizado após o aceite ou a recusa da reserva.</span>}
-                </div>
-                <div className="portal-document-actions flex items-center gap-2 pt-2.5 border-t border-slate-100">
-                  {hasReservationReceipt ? <a className="portal-action portal-button-primary w-full" href={`/api/public/processes/${encodeURIComponent(process.protocolo)}/reservation-receipt`} target="_blank" rel="noreferrer"><Download className="h-4 w-4"/>Baixar comprovante</a> : <button type="button" disabled className="portal-action w-full"><Download className="h-4 w-4"/>Baixar comprovante</button>}
-                </div>
-              </article>
+              <ReservationReceiptCard downloadUrl={hasReservationReceipt ? `/api/public/processes/${encodeURIComponent(process.protocolo)}/reservation-receipt` : undefined}/>
               {documents.map((doc) => {
                 const termDeclined=doc.type==='TERMO'&&publicationDeclined(process);
                 const isDownloadable = !termDeclined&&(doc.status === 'DISPONIVEL' || doc.status === 'ASSINADO');
@@ -935,12 +956,18 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           <div className="portal-repository-content">
             {readOnly ? (
               <div className="portal-repository-grid">
-                <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Resumo síntese do TCC</h3><p className="whitespace-pre-wrap text-sm">{process.acervo?.resumoSintese||(process.legacyRecord?'Resumo não disponível para consulta pública.':'Resumo ainda não informado.')}</p></section>
-                <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Palavras-chave</h3><div className="grid grid-cols-1 gap-2 sm:grid-cols-5">{(process.acervo?.palavrasChave||[]).map((word,index)=><span key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs">{word}</span>)}</div></section>
+                {privateLegacyAccess?.error&&<p role="alert" className="portal-instruction p-3 text-xs">{privateLegacyAccess.error}</p>}
+                {privateLegacyAccess&&legacyAcademicDownloadError&&<p role="alert" className="portal-instruction p-3 text-xs">{legacyAcademicDownloadError}</p>}
+                <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Resumo síntese do TCC</h3><p className="whitespace-pre-wrap text-sm">{privateLegacyData?.resumo||process.acervo?.resumoSintese||(process.legacyRecord?(privateLegacyData?'Resumo não informado.':'Resumo não disponível para consulta pública.'):'Resumo ainda não informado.')}</p></section>
+                <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Palavras-chave</h3><div className="grid grid-cols-1 gap-2 sm:grid-cols-5">{(privateLegacyData?.palavrasChave||process.acervo?.palavrasChave||[]).map((word,index)=><span key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs">{word}</span>)}</div></section>
                 {[
-                  {kind:'trabalho-completo',title:'Trabalho completo',url:process.acervo?.trabalhoCompletoFileUrl},
-                  {kind:'resumo-expandido',title:'Resumo expandido',url:process.acervo?.resumoExpandidoFileUrl},
-                ].map(file=><section key={file.kind} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4"><div><h3 className="text-xs font-bold">{file.title}</h3><p className="mt-2 text-sm">{file.url?'Disponível para consulta pública':'Não disponível para consulta pública'}</p></div><button type="button" disabled={!file.url} className="portal-action" onClick={()=>file.url&&window.open(file.url,'_blank','noopener,noreferrer')}><Download className="h-4 w-4"/>Baixar</button></section>)}
+                  {kind:'TRABALHO_COMPLETO',title:'Trabalho completo',url:process.acervo?.trabalhoCompletoFileUrl},
+                  {kind:'RESUMO_EXPANDIDO',title:'Resumo expandido',url:process.acervo?.resumoExpandidoFileUrl},
+                  ...(privateLegacyData?.files.some(file=>file.kind==='DOCUMENTO_ACADEMICO')?[{kind:'DOCUMENTO_ACADEMICO',title:'Documento acadêmico',url:undefined}]:[]),
+                ].flatMap(definition=>{
+                  const originals=privateLegacyData?.files.filter(file=>file.kind===definition.kind)||[];
+                  return originals.length?originals.map(file=>({...definition,url:file.downloadUrl,fileName:file.fileName,privateIndex:file.index,isPublic:file.isPublic})):[{...definition,fileName:undefined,privateIndex:undefined,isPublic:Boolean(definition.url)}];
+                }).map(file=><section key={`${file.kind}-${file.privateIndex??'public'}`} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4"><div className="min-w-0"><h3 className="text-xs font-bold">{file.title}</h3><p className="mt-2 text-sm">{file.url?(file.isPublic?'Disponível para consulta pública':'Disponível para consulta restrita'):'Não disponível para consulta pública'}</p>{file.fileName&&<p className="mt-1 break-all text-xs text-slate-600">{file.fileName}</p>}</div><button type="button" disabled={!file.url||legacyAcademicDownload!==null} className="portal-action shrink-0" onClick={()=>{if(file.privateIndex!==undefined)void downloadPrivateLegacyFile(file.privateIndex);else if(file.url)window.open(file.url,'_blank','noopener,noreferrer');}}><Download className="h-4 w-4"/>{legacyAcademicDownload===file.privateIndex?'Baixando…':'Baixar'}</button></section>)}
               </div>
             ) : (
               <form id="repository-delivery-form" data-delivery-locked={acervoFieldsLocked} onSubmit={handleSubmitAcervo} className="space-y-2">
