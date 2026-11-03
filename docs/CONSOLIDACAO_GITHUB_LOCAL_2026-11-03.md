@@ -30,17 +30,21 @@ de produção retornou zero vulnerabilidades conhecidas. Conferência de navegad
 legados no mesmo detalhe, cinco cartões alinhados em desktop, layout móvel sem
 transbordamento e sem exceções JavaScript nessas telas.
 
-Importação planejada para a base principal: somente os 102 registros históricos
-validados. Não importar os 411 processos do ambiente local. Publicação dos PDFs
+Importação concluída na base principal: somente os 102 registros históricos
+validados. Os 411 processos demonstrativos locais não foram importados. Publicação dos PDFs
 segue a autorização de origem: 50 registros autorizados, 50 recusados e dois
 conflitantes mantidos restritos. Existem 49 referências de PDFs acadêmicos,
 41 publicáveis e oito restritas, além de 64 documentos administrativos associados
 que permanecem privados. Ausências históricas não geram documentos nem fatos novos.
-A operação grava uma cópia de recuperação na tabela privada de backups existente,
-atualiza somente o catálogo e verifica a preservação do restante do estado.
+A operação gravou a cópia de recuperação 8 na tabela privada de backups existente
+(revisão 883), atualizou somente o catálogo para a revisão 884 e confirmou a
+preservação de todos os outros campos do estado. Usuários, configurações e filas
+da produção permaneceram iguais ao backup. A homologação não foi alterada.
 
 Limites: a revisão não comprova ausência de toda vulnerabilidade possível nem uma
 homologação completa dos provedores reais. O expurgo definitivo de envelopes Asten
 continua dependente de contrato de API validado; não deve ser reportado como concluído.
+A lista apresenta um estado de carregamento enquanto a consulta está pendente,
+sem anunciar ausência de TCCs antes da resposta.
 Os resultados efetivos da publicação e da importação ficam na evidência privada
 `.portal-data/reconciliacao-2026-11-03/`, incluindo hash do pacote e ID do deploy.

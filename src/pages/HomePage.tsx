@@ -494,12 +494,21 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
   const [processes, setProcesses] = useState<ProcessData[]>([]);
   const [legacyProcesses,setLegacyProcesses]=useState<ProcessData[]>([]);
+  const [legacyLoading, setLegacyLoading] = useState(true);
   const repositoryProcesses=[...processes,...legacyProcesses];
   const [googleEvents, setGoogleEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [loadAttempt, setLoadAttempt] = useState(0);
-  useEffect(()=>{let active=true;apiClient.getLegacyAcademicRecords().then(records=>{if(active)setLegacyProcesses(records.map(legacyRepositoryProcess));}).catch(()=>{if(active)setLoadError('Não foi possível carregar o histórico do repositório. Recarregue para tentar novamente.');});return()=>{active=false;};},[userEmail,loadAttempt]);
+  useEffect(() => {
+    let active = true;
+    setLegacyLoading(true);
+    apiClient.getLegacyAcademicRecords()
+      .then(records => { if (active) setLegacyProcesses(records.map(legacyRepositoryProcess)); })
+      .catch(() => { if (active) setLoadError('Não foi possível carregar o histórico do repositório. Recarregue para tentar novamente.'); })
+      .finally(() => { if (active) setLegacyLoading(false); });
+    return () => { active = false; };
+  }, [userEmail, loadAttempt]);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'calendar' | 'cards'>('calendar');
   const [loginEmailInput, setLoginEmailInput] = useState('');
@@ -2236,6 +2245,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 : sortedLibProcesses.slice(0, libRecordsLimit);
 
               if (displayedLibProcesses.length === 0) {
+                if (isLoading || legacyLoading) {
+                  return <p role="status" className="p-6 text-center text-sm text-slate-600">Carregando o repositório…</p>;
+                }
+                if (loadError) return null;
                 return (
                   <div className="p-12 text-center text-xs text-slate-500 space-y-2 bg-white border border-slate-200 shadow-2xs rounded-lg">
                     <p className="font-bold text-slate-700 text-sm">Nenhum TCC encontrado para os filtros selecionados.</p>
