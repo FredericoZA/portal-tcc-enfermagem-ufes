@@ -1028,7 +1028,7 @@ async function executeConfiguredWorkflowEvent(process:ProcessData,eventCode:Work
     const latest=studioFormSubmissionsStore.filter(item=>item.processId===process.id&&item.formId===customFormEvent[1]).sort((a,b)=>b.submittedAt.localeCompare(a.submittedAt))[0];
     if(!latest||latest.archiveStatus!=='ARCHIVED')return;
   }
-  const effectiveVariables={...(process.registrationAnswers||{}),...historicalStudioAnswers(process.id),...(extraVariables||{}),DEPARTAMENTO_EMAIL:departmentEmail,LOCAL_ALTERNATIVO:process.defesa.alternateLocation||''};
+  const effectiveVariables={...(process.registrationAnswers||{}),...historicalStudioAnswers(process.id),...(extraVariables||{}),DEPARTAMENTO_EMAIL:departmentEmail,DEFESA_LOCAL:process.defesa.local,LOCAL_OUTRO_NOME:process.defesa.local,LOCAL_ALTERNATIVO:process.defesa.alternateLocation||''};
   const run=await executeWorkflowEvent(studio,{process,eventCode,actorEmail,actorRoles:getActiveProcessRoles(actorEmail,process.id),extraVariables:effectiveVariables,completedActions:resumeRun?.actions},{
     createDocument:async({template,idempotencyKey,variables})=>executeConfiguredDocumentAction(process,template,actorEmail,idempotencyKey,variables,eventCode),
     createFormTask:async({form,idempotencyKey})=>({externalId:`form_task_${String(form.id||idempotencyKey)}`}),
