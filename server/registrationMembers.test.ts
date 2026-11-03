@@ -37,7 +37,7 @@ const answers: RegistrationAnswers = {
 test('resumo apresenta os seis participantes na ordem usada em Dados dos membros', () => {
   const rows = buildRegistrationMemberRows(answers, 'UFES');
   assert.deepEqual(rows.map(({ role }) => role), [
-    'Aluno autor', 'Aluno autor', 'Orientador', 'Examinador', 'Examinador', 'Coorientador',
+    'Aluno autor', 'Aluno autor', 'Orientadora', 'Examinador', 'Examinadora', 'Coorientador',
   ]);
   assert.equal(rows[0].name, 'Ana Maria de Souza');
   assert.equal(rows[0].reference, 'Aluno');
