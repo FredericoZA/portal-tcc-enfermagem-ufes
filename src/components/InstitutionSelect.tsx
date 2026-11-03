@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getKnownInstitutions, registerInstitution } from '../utils/institutionManager';
 import { Building2 } from 'lucide-react';
+import { RegistrationFieldPreview } from './RegistrationFieldPreview';
 
 interface InstitutionSelectProps {
   id?: string;
@@ -70,6 +71,8 @@ export const InstitutionSelect: React.FC<InstitutionSelectProps> = ({
           ))}
         </datalist>
       </div>
+
+      <RegistrationFieldPreview kind="institution" value={value} />
 
       {helpText && (
         <p className="text-[10px] text-slate-500 leading-tight">{helpText}</p>
