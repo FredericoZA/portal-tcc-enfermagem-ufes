@@ -73,7 +73,7 @@ import {
 import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngine';
 import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie } from './server/security/firebaseAuth';
 import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSecurityPreflight, getPersistentAstenConnection, getPersistentAstenStatus, safeCompareWebhookSecret } from './server/integrations/asten';
-import { appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, getSupabaseRuntimeStatus, loadPortalRuntimeState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
+import { appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, currentPortalRuntimeRevision, getSupabaseRuntimeStatus, loadPortalRuntimeState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
 import { buildProcessArchiveFileName, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, publishPrivatePdfCopy, withdrawDriveFilePublicAccess, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadProcessSourcePdf, uploadSignedPdfToDrive, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
@@ -315,6 +315,7 @@ function synchronizeProcessParticipants(process:ProcessData,actor:string):void{
 }
 
 let remotePersistenceQueue: Promise<void> = Promise.resolve();
+let localPortalChangeSequence = 0;
 
 async function saveRemoteSnapshotWithRecovery(snapshot:PersistedPortalState):Promise<void>{
   try{await savePortalRuntimeState(snapshot);}catch(error){
@@ -343,6 +344,7 @@ function persistPortalState(throwOnFailure = false): void {
     const temporaryFile = `${portalStateFile}.tmp`;
     writeFileSync(temporaryFile, JSON.stringify(snapshot, null, 2), 'utf8');
     renameSync(temporaryFile, portalStateFile);
+    localPortalChangeSequence += 1;
   } catch (error) {
     console.error('[Persistence] Falha ao persistir as configurações do portal:', error);
     if (throwOnFailure) throw error;
@@ -1423,6 +1425,16 @@ export async function createPortalApp() {
   }catch{return res.status(403).json({error:'Origem da requisição inválida.',code:'ORIGIN_NOT_ALLOWED'});}next();});
   const requireGlobalRoles=(...roles:GlobalRole[])=>(req:express.Request,res:express.Response,next:express.NextFunction)=>{const identity=getPortalIdentity(req);if(!identity)return res.status(401).json({error:'Autenticação institucional obrigatória.'});const userRoles=getUserRolesForEmail(identity.email).globalRoles;if(!roles.some(role=>userRoles.includes(role)))return res.status(403).json({error:'Seu perfil não tem permissão para esta operação.'});next();};
   const requireAdministrator=requireGlobalRoles('MASTER_ADMIN','COMMISSION_PRESIDENT');
+  // Resposta mínima para atualização automática. A revisão já foi carregada
+  // pelo middleware que valida o estado durável antes de cada rota autenticada.
+  app.get('/api/sync/version',requireAuthenticated,(_req,res)=>{
+    res.setHeader('Cache-Control','private, no-store, max-age=0');
+    const revision=getSupabaseRuntimeStatus().durablePersistenceReady
+      ? currentPortalRuntimeRevision()
+      : localPortalChangeSequence;
+    res.json({revision:revision ?? 0});
+  });
+
   const requireAdministrativeOperator=requireGlobalRoles('MASTER_ADMIN','COMMISSION_PRESIDENT');
   // Sugestões públicas: sem login para o envio, mas consulta e imagens somente
   // para a administração. Nada é inserido no estado transacional dos TCCs.
