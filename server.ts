@@ -1358,7 +1358,10 @@ export async function createPortalApp() {
 
   app.use('/api', async (req, res, next) => {
     const durable = getSupabaseRuntimeStatus().durablePersistenceReady;
-    const publicRead = req.method === 'GET' && (req.path.startsWith('/public/') || req.path === '/health');
+    const publicRead = req.method === 'GET' && (
+      req.path === '/health' || req.path === '/public/sync/version' ||
+      req.path.startsWith('/public/runtime-assets/')
+    );
     if (!durable || publicRead) return next();
     try {
       await remotePersistenceQueue;
