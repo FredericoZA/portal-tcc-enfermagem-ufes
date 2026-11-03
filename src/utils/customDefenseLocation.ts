@@ -36,12 +36,17 @@ export function getCustomLocationFieldValue(answers: Record<string, unknown>): s
   const candidates = [
     CUSTOM_LOCATION_FIELD, 'OUTRO_LOCAL_NOME', 'NOME_COMPLETO_LOCAL',
     'DEFESA_LOCAL_OUTRO_NOME', 'DEFESA_LOCAL_PERSONALIZADO', 'LOCAL_PERSONALIZADO_NOME',
+    'LOCAL_NOME', 'LOCAL_NOME_COMPLETO', 'DEFESA_LOCAL_NOME', 'NOME_LOCAL', 'NOME_DO_LOCAL',
   ];
   for (const key of candidates) {
     const value = String(answers[key] ?? '').trim();
     if (value) return value;
   }
-  return '';
+  const alternate = Object.entries(answers).find(([key, value]) =>
+    /^(?:DEFESA_)?(?:OUTRO_)?LOCAL(?:_OUTRO)?_(?:NOME|NOME_COMPLETO|ENDERECO_NOME)$/.test(key)
+    && typeof value === 'string' && value.trim()
+  );
+  return alternate ? String(alternate[1]).trim() : '';
 }
 
 /** Filtro específico: nunca encaminhar local customizado ao departamento. */
