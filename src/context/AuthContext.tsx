@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { GlobalRole, ProcessMembership, GlobalSettings } from '../types';
 import { apiClient, ApiRequestError, setActiveUserEmail, getActiveUserEmail } from '../services/apiClient';
 import { loadSiteLayoutConfig } from '../utils/siteLayoutConfig';
@@ -137,8 +138,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    refreshAuth();
+    void refreshAuth();
   }, []);
+
+  useEffect(()=>{
+    let active=true;
+    const update=()=>{
+      // Não ativa o estado de carregamento: mantém a tela e os rascunhos abertos.
+      void apiClient.getSettings().then(data=>{if(active)applyPublicSettings(data);}).catch(()=>undefined);
+      if(isAuthenticated)void apiClient.getMe().then(data=>{if(active)applyIdentity(data);}).catch(()=>undefined);
+    };
+    window.addEventListener(PORTAL_LIVE_UPDATE_EVENT,update);
+    return ()=>{active=false;window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT,update);};
+  },[isAuthenticated]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
