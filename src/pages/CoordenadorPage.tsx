@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { ProcessData, SignatureJob, AstenIntegrationStatus } from '../types';
@@ -186,8 +187,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   };
 
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (background = false) => {
+    if (!background) setIsLoading(true);
     try {
       const [queueData, procsData, jobsData, integration] = await Promise.all([
         apiClient.getCoordinatorQueue(),
@@ -202,12 +203,15 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     } catch (err) {
       console.error('Erro ao carregar dados do Presidente:', err);
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    void loadData();
+    const update = () => { void loadData(true); };
+    window.addEventListener(PORTAL_LIVE_UPDATE_EVENT,update);
+    return () => window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT,update);
   }, []);
 
   // Filter pending vs completed
