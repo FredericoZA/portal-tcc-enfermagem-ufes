@@ -13,6 +13,7 @@ import { CorrectionRequestModal } from '../components/CorrectionRequestModal';
 import { PortalModalShell } from '../components/PortalModalShell';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { DynamicStudioForms } from '../components/DynamicStudioForms';
+import { RegistrationFieldPreview } from '../components/RegistrationFieldPreview';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import {
   ArrowLeft,
@@ -819,6 +820,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       onChange={(e) => setCadastralForm({ ...cadastralForm, titulo: e.target.value })}
                       className="w-full text-xs p-2.5 border border-slate-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-700 outline-none"
                     />
+                    <RegistrationFieldPreview kind="title" value={cadastralForm.titulo} />
                   </div>
 
                   {/* Discente 1 */}
@@ -943,6 +945,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                           onChange={(e) => setCadastralForm({ ...cadastralForm, orientadorInstituicao: e.target.value })}
                           className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
                         />
+                        <RegistrationFieldPreview kind="institution" value={cadastralForm.orientadorInstituicao} />
                       </div>
                     </div>
                   </div>
@@ -992,6 +995,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                             onChange={(e) => setCadastralForm({ ...cadastralForm, coorientadorInstituicao: e.target.value })}
                             className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
                           />
+                          <RegistrationFieldPreview kind="institution" value={cadastralForm.coorientadorInstituicao} />
                         </div>
                       </div>
                     )}
@@ -1353,6 +1357,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                             placeholder="Ex.: nome da instituição"
                             className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
                           />
+                          <RegistrationFieldPreview kind="institution" value={membro.instituicao || ''} />
                         </div>
 
                         <div>
