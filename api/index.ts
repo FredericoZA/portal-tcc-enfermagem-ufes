@@ -9,7 +9,7 @@ function configured(name: string, minLength = 1): boolean {
 }
 
 function deployedCommit(): string {
-  return String(process.env.VERCEL_GIT_COMMIT_SHA || '');
+  return String(process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || process.env.PORTAL_GIT_COMMIT || '').trim();
 }
 
 function productionPreflight(): StartupFailure | null {
