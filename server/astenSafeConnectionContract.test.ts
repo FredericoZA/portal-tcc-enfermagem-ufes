@@ -19,10 +19,11 @@ test('vincular a conta Asten independe de habilitar envio de documentos',()=>{
   assert.match(panel,/envio permanece bloqueado até a homologação e liberação/);
 });
 
-test('Vercel mantém bloqueio de piloto e release mesmo com conta conectada',()=>{
+test('Vercel libera Asten para produção autorizada sem liberar deploy por Git',()=>{
   const conf=JSON.parse(read('vercel.json'));
   for(const flag of ['ASTEN_INTEGRATION_ENABLED','ASTEN_PILOT_APPROVED','ASTEN_PRODUCTION_RELEASE_APPROVED'])
-    assert.equal(conf.env[flag],'false');
+    assert.equal(conf.env[flag],'true');
+  assert.equal(conf.env.ASTEN_SIGNING_PROFILE,'EMAIL_LINK');
   assert.equal(conf.git.deploymentEnabled,false);
   assert.equal(conf.crons.filter((item:{path:string})=>item.path==='/api/cron/asten-reconcile').length,1);
 });

@@ -5,8 +5,13 @@ export type PublicArtifactState = 'NOT_PRESENTED' | 'PRIVATE' | 'PUBLIC';
 const stateLabel = (state: PublicArtifactState): string =>
   state === 'PUBLIC' ? 'Publicado' : state === 'PRIVATE' ? 'Não publicado pelo autor' : 'Não apresentado';
 
-function personName(value: { nome?: string } | null | undefined) {
-  return value ? { nome: String(value.nome || '').trim() } : null;
+function personName(value: { nome?: string; tratamento?: string; titulacao?: string; instituicao?: string } | null | undefined) {
+  return value ? {
+    nome: String(value.nome || '').trim(),
+    tratamento: value.tratamento,
+    titulacao: value.titulacao,
+    instituicao: value.instituicao,
+  } : null;
 }
 
 /**
@@ -23,11 +28,10 @@ export function publicCalendarView(process: ProcessData) {
     aluno1: personName(process.aluno1),
     aluno2: personName(process.aluno2),
     orientador: personName(process.orientador),
-    coorientador: process.coorientador
-      ? { nome: process.coorientador.nome, instituicao: process.coorientador.instituicao || '' }
-      : null,
+    coorientador: personName(process.coorientador),
     banca: process.banca.map((member) => ({
       nome: member.nome,
+      tratamento: member.tratamento,
       funcao: member.funcao,
       membroTipo: member.membroTipo,
       instituicao: member.instituicao,
@@ -39,6 +43,7 @@ export function publicCalendarView(process: ProcessData) {
       endAt: process.defesa.endAt,
       local: process.defesa.local,
       localStatus: process.defesa.localStatus,
+      hasReservationReceipt: Boolean(process.defesa.departmentResponse),
     },
     createdAt: process.createdAt,
     updatedAt: process.updatedAt,
@@ -70,8 +75,8 @@ function expandedAbstractState(process: ProcessData): PublicArtifactState {
 }
 
 /**
- * Contrato do repositório anônimo. Os links só existem para cópias explicitamente
- * publicadas; originais privados e seus IDs nunca são serializados.
+ * Contrato do repositório anônimo. Os links passam pela autorização do Portal;
+ * os originais permanecem privados e seus IDs nunca são serializados.
  */
 export function publicRepositoryView(process: ProcessData) {
   const workState = fullWorkState(process);
@@ -85,11 +90,10 @@ export function publicRepositoryView(process: ProcessData) {
     aluno1: personName(process.aluno1),
     aluno2: personName(process.aluno2),
     orientador: personName(process.orientador),
-    coorientador: process.coorientador
-      ? { nome: process.coorientador.nome, instituicao: process.coorientador.instituicao || '' }
-      : null,
+    coorientador: personName(process.coorientador),
     banca: process.banca.map((member) => ({
       nome: member.nome,
+      tratamento: member.tratamento,
       funcao: member.funcao,
       membroTipo: member.membroTipo,
       instituicao: member.instituicao,
@@ -101,6 +105,7 @@ export function publicRepositoryView(process: ProcessData) {
       endAt: process.defesa.endAt,
       local: process.defesa.local,
       localStatus: process.defesa.localStatus,
+      hasReservationReceipt: Boolean(process.defesa.departmentResponse),
     },
     avaliacao: {
       status: process.avaliacao.status,

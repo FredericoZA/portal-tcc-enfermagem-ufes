@@ -11,7 +11,9 @@ import {
   formatProfessorName, 
   formatTccTitle, 
   formatStudentsString, 
-  normalizeEmail
+  normalizeEmail,
+  getProcessProgress,
+  getStepNumberLabel
 } from '../utils/formatters';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { StudentNames } from '../components/StudentNames';
@@ -110,69 +112,6 @@ const ROLE_TONES: Record<ProcessRoleCategory, string> = {
   BANCA: 'board',
   AVALIADOR: 'evaluator',
   VISUALIZADOR: 'viewer',
-};
-
-// Helper to get count of stages from master configuration
-const getWorkflowStagesCount = (): number => {
-  if (typeof window === 'undefined') return 5;
-  try {
-    const saved = localStorage.getItem('workflow_pipeline_stages');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.length;
-      }
-    }
-  } catch (e) {
-    console.error(e);
-  }
-  return 5;
-};
-
-// Helper to calculate progress percentage and stage label
-const getProcessProgress = (proc: ProcessData) => {
-  const totalStages = getWorkflowStagesCount();
-  
-  let stepNumber = 1;
-  let percent = 20;
-  let label = '';
-  
-  if (proc.status === 'CONCLUIDO') {
-    stepNumber = totalStages;
-    percent = 100;
-    label = `Etapa ${stepNumber}/${totalStages}: Concluído & Ata Registrada`;
-  } else if (proc.status === 'AGUARDANDO_ASSINATURA') {
-    stepNumber = totalStages;
-    percent = Math.round(((totalStages * 2 - 1) / (totalStages * 2)) * 100);
-    label = `Etapa ${stepNumber}/${totalStages}: Aguardando Assinaturas`;
-  } else if (proc.status === 'EM_AVALIACAO') {
-    stepNumber = Math.max(1, totalStages - 1);
-    percent = Math.round((stepNumber / totalStages) * 100);
-    label = `Etapa ${stepNumber}/${totalStages}: Defesa Realizada & Em Avaliação`;
-  } else if (proc.status === 'AGUARDANDO_DEFESA' || proc.etapaAtual === 'DEFESA' || proc.etapaAtual === 'AGENDAMENTO') {
-    stepNumber = Math.max(1, totalStages - 2);
-    percent = Math.round((stepNumber / totalStages) * 100);
-    label = `Etapa ${stepNumber}/${totalStages}: Defesa Agendada`;
-  } else if (proc.etapaAtual === 'CONVITE' || proc.etapaAtual === 'CADASTRO') {
-    stepNumber = Math.min(2, totalStages);
-    percent = Math.round((stepNumber / totalStages) * 100);
-    label = `Etapa ${stepNumber}/${totalStages}: Banca Definida & Convites Enviados`;
-  } else {
-    stepNumber = 1;
-    percent = Math.round((stepNumber / totalStages) * 100);
-    label = `Etapa ${stepNumber}/${totalStages}: Inscrição Registrada`;
-  }
-  
-  return { percent, label, color: 'bg-emerald-600' };
-};
-
-const getStepNumberLabel = (label: string): string => {
-  const match = label.match(/Etapa\s+([\d.]+)\/(\d+)/i);
-  if (match) {
-    const current = match[1].replace('.', ',');
-    return `Fase ${current}`;
-  }
-  return '';
 };
 
 export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
@@ -569,7 +508,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
                 {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), meusProcessosTextFormat, '')}
               </div>
-              <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 uppercase tracking-tight">Matrícula</div>
+              <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 tracking-tight">Matrícula</div>
               <div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno1?.matricula || '2026101890'}</div>
             </div>
           </td>
@@ -583,7 +522,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
                     {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), meusProcessosTextFormat, '')}
                   </div>
-                  <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 uppercase tracking-tight">Matrícula</div>
+                  <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 tracking-tight">Matrícula</div>
                   <div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno2.matricula || '2026101891'}</div>
                 </>
               ) : (
@@ -707,7 +646,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
             <div data-portal-sheet-title="true" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5">
               <div className="flex items-center gap-2">
                 <ColorfulHeaderIcon type="graduation" textFormat={meusProcessosTextFormat} />
-                <h1 className="text-sm sm:text-base font-black uppercase tracking-wide leading-tight">
+                <h1 className="text-sm sm:text-base font-black normal-case tracking-wide leading-tight">
                   {getEditableTableText(customLabels, '__tableTitle', 'Meus Trabalhos de Conclusão de Curso')}
                 </h1>
               </div>
@@ -767,7 +706,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
             {/* INTEGRATED TOOLBAR FOR FILTERS (Single clean dividing line) */}
             <div data-portal-sheet-filter="true" className="portal-meus-processos-filter-row flex w-full min-w-0 flex-wrap items-center gap-2 text-xs">
               <span className="portal-filter-label shrink-0 mr-1 opacity-80">
-                FILTRAR:
+                Filtrar:
               </span>
               <div className="flex flex-wrap items-center gap-1.5" data-portal-role-filter-group="true">
                 <button
@@ -835,7 +774,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               <button
                 type="button"
                 onClick={onNavigateToWizard}
-                className="mt-2 inline-flex items-center gap-1.5 bg-emerald-950 hover:bg-black text-white px-3.5 py-1.5 border border-emerald-500 rounded-full text-xs font-extrabold uppercase tracking-wider cursor-pointer transition-all shadow-2xs h-8"
+                className="mt-2 inline-flex items-center gap-1.5 bg-emerald-950 hover:bg-black text-white px-3.5 py-1.5 border border-emerald-500 rounded-full text-xs font-extrabold normal-case tracking-wider cursor-pointer transition-all shadow-2xs h-8"
               >
                 <span>Cadastrar Novo Trabalho de TCC</span>
               </button>
@@ -896,7 +835,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                           {formatProcessLabel(proc.protocolo || proc.id)}
                         </span>
                         <span
-                          className="text-[10px] font-black px-2 py-0.5 rounded uppercase border"
+                          className="text-[10px] font-black px-2 py-0.5 rounded normal-case border"
                           style={{
                             backgroundColor: '#FFFFFF',
                             borderColor: roleConfig.borderColor,
@@ -923,7 +862,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       <div className="pt-2 flex items-center justify-between border-t border-slate-300/50">
                         <div className="flex gap-1">
                           <span
-                            className="text-[10px] font-black px-2 py-0.5 rounded uppercase border"
+                            className="text-[10px] font-black px-2 py-0.5 rounded normal-case border"
                             style={{
                               backgroundColor: '#FFFFFF',
                               borderColor: roleConfig.borderColor,

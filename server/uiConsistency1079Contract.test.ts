@@ -25,21 +25,21 @@ test('workspace de configurações tem cabeçalho compacto e fechamento explíci
 
 test('pop-ups usam a hierarquia cromática canônica',()=>{
   const css=read('src/styles/portal-components.css');
-  assert.match(css,/\.portal-modal-surface,[\s\S]*background: var\(--portal-surface-panel\)/);
-  assert.match(css,/\.portal-modal-body,[\s\S]*background: var\(--portal-surface-panel\)/);
-  assert.match(css,/\.portal-modal-body > \.portal-layer-panel,[\s\S]*background: var\(--portal-surface-card\)/);
-  assert.match(css,/\.portal-modal-body \.portal-layer-card,[\s\S]*background: var\(--portal-surface-inner\)/);
+  assert.match(css,/\.portal-modal-surface,[^{]*\{[^}]*background: var\(--portal-surface-page\)/);
+  assert.match(css,/\.portal-modal-body,[^{]*\{[^}]*background: var\(--portal-surface-page\)/);
+  assert.match(css,/\.portal-modal-body > \.portal-layer-panel,[^{]*\{[^}]*background: var\(--portal-surface-panel\)/);
+  assert.match(css,/\.portal-modal-body \.portal-layer-card,[^{]*\{[^}]*background: var\(--portal-surface-card\)/);
 });
 
 test('e-mail e formulário usam apresentação institucional UFES em edição direta',()=>{
   const studio=read('src/components/IntegrationStudioPanel.tsx');
-  assert.match(studio,/UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO/);
-  assert.match(studio,/const institutionalGreen = brandKit\.primaryColor/);
+  assert.match(studio,/operationalEmailLayout/);
+  assert.match(read('src/utils/operationalEmailLayout.ts'),/brand.*primaryColor/);
   assert.match(studio,/bg-\[var\(--portal-brand-header\)\]/);
   assert.match(studio,/data-portal-email-direct-editor="true"/);
   assert.match(studio,/data-portal-form-direct-editor="true"/);
-  assert.match(studio,/Alterar logo da UFES/);
-  assert.match(studio,/Alterar logo do curso/);
+  assert.doesNotMatch(studio,/Alterar logo da UFES/);
+  assert.doesNotMatch(studio,/Alterar logo do curso/);
 });
 
 test('rodada visual não altera a release publicada',()=>{

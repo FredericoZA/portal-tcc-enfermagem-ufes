@@ -2,11 +2,15 @@
 
 Este é o roteiro vigente para liberar o Portal TCC para uso institucional. Os documentos `HOMOLOGACAO_RC*.md` permanecem apenas como histórico das respectivas versões.
 
-## Estado técnico já confirmado
+## Estado técnico e limites — 28/10/2026
 
-Na revisão técnica de 13/09/2026, o código publicado foi aprovado por CI, auditoria de dependências, testes unitários/contratuais, fluxo seguro, contrato institucional, Vercel e Production smoke. Os quatro modelos ativos do Google Drive — convite, ata, termo e declaração — foram localizados, lidos e exportados para PDF com sucesso.
+A publicação anterior foi confirmada em 27/10/2026 às 23:34 (Brasília), deployment `dpl_9QML2t7qpwyWrQnDbu7ef3Xfqpwy`, com alias de produção. Evidências locais: `.portal-data/latest-release-inspect.log`, `.portal-data/latest-release-ci.log` e `.portal-data/latest-release-security.log`. Naquela rodada, 818 testes unitários, 17 contratos de provedores e 40 verificações de fluxo seguro passaram, além de TypeScript, acessibilidade estática, build e smoke HTTP local. São evidências daquela versão; uma publicação posterior exige novos registros.
 
-Essas evidências não substituem o piloto acadêmico real. A homologação ponta a ponta permanece **não confirmada** até a validação da Asten e a execução dos cenários abaixo com contas de teste autorizadas.
+O envio real da declaração do TCC de teste 2026-0003 foi confirmado na Asten, envelope 93108, em 27/10/2026. Envio confirmado não significa assinatura concluída ou arquivamento. Não criar outro envelope para comprovar o mesmo envio.
+
+A exclusão definitiva de envelopes Asten permanece pendente de contrato de API confirmado. Cancelar a assinatura ou mover para a lixeira não comprova expurgo. A fila de limpeza deve permanecer pendente até a remoção efetiva; não marcar sucesso para esconder resíduos. As rotinas de Drive, Calendar, armazenamento temporário e banco exigem evidências próprias de execução real.
+
+A homologação ponta a ponta permanece **não confirmada** até concluir os pilotos abaixo e conferir o arquivamento dos documentos realmente assinados. Testes isolados não comprovam operação dos serviços externos.
 
 ## Pré-condições
 
@@ -23,11 +27,11 @@ Essas evidências não substituem o piloto acadêmico real. A homologação pont
 1. Autorize um aluno de teste e confirme que o código de acesso funciona somente conforme a política vigente.
 2. Cadastre um TCC individual com título, orientador, banca, data e horário.
 3. Confirme que o processo permanece bloqueado enquanto o local não estiver confirmado.
-4. Confirme o local reservado e valide a continuidade do fluxo.
+4. Abra o formulário enviado ao departamento, confirme um local e valide o comprovante, a comunicação e a continuidade. Repita com negativa: o comprovante deve indicar indisponibilidade.
 5. Verifique o convite gerado pelo modelo ativo, sem marcadores pendentes, o envio pelo Gmail e o evento no Calendar.
 6. Entre como orientador, confira os dados e registre apenas **resultado e parecer**, sem nota numérica.
-7. Confirme que a Ata é gerada com os dados revisados, enviada à Asten somente ao orientador, assinada e arquivada no Drive privado.
-8. Envie a entrega final e confirme que ela permanece bloqueada antes da Ata assinada/arquivada.
+7. Confirme que a Ata é gerada com os dados revisados. Teste Asten somente com o orientador como signatário. Em outro cenário, prepare pelo Gov.br: o processo deve continuar pendente até a devolução, conferência e arquivamento. As ações ficam em Documentos do processo.
+8. Confirme que a entrega permanece bloqueada antes da Ata assinada/arquivada. Depois, preencha o Repositório e use Confirmar entrega final; confira o bloqueio dos campos e o botão centralizado Acompanhar documentos.
 9. Teste as escolhas de publicação do trabalho completo e do resumo expandido.
 10. Quando houver conteúdo autorizado, confirme o Termo com aluno e orientador como signatários aplicáveis.
 11. Na Área do Presidente, confira e envie a declaração à Asten; confirme assinatura e arquivamento.
@@ -39,8 +43,7 @@ Essas evidências não substituem o piloto acadêmico real. A homologação pont
 
 Repita o fluxo com dois autores e valide adicionalmente:
 
-- convite e aceite de coautoria;
-- bloqueio quando a coautoria não estiver aceita;
+- ordem Aluno 1 e Aluno 2 preservada no texto e nos blocos individuais dos documentos;
 - acesso correto de ambos os autores;
 - variáveis dos dois alunos nos documentos;
 - Termo com todos os signatários aplicáveis;
@@ -63,6 +66,10 @@ Provoque, em ambiente de teste, pelo menos uma falha controlada em uma etapa ext
 - Confirme headers de segurança, cookies e proteção contra autenticação de demonstração em produção.
 - Verifique o cron autenticado, limpeza de staging e logs sem segredos.
 - Execute as rotinas de saúde, integridade Portal × Drive e backup/restauração de ensaio.
+
+## Exclusão Master
+
+Em um processo fictício separado, verifique a exclusão independentemente da etapa. Confira os artefatos vinculados no Drive, eventos no Calendar, objetos temporários, histórico e referências do banco. Não remover modelos compartilhados, a pasta raiz ou arquivos de outro processo. Repita a limpeza para comprovar idempotência. Com envelopes Asten, exigir evidência de expurgo definitivo antes de encerrar a fila. Não usar processos ativos ou documentos institucionais como material descartável.
 
 ## Interface
 

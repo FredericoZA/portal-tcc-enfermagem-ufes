@@ -1,7 +1,8 @@
-export type PortalDialogOptions = { title?: string; confirmLabel?: string; cancelLabel?: string };
+export type PortalDialogOptions = { title?: string; confirmLabel?: string; cancelLabel?: string; tone?: 'default' | 'warning' };
 
 export type PortalDialog = {
   kind: 'notice' | 'confirm' | 'prompt';
+  tone: 'default' | 'warning';
   message: string;
   initialValue: string;
   title: string;
@@ -24,6 +25,7 @@ function request(kind: PortalDialog['kind'], message: unknown, initialValue = ''
     const defaults = DEFAULT_COPY[kind];
     queue.push({
       kind,
+      tone: options.tone || 'default',
       message: String(message ?? ''),
       initialValue,
       title: options.title?.trim() || defaults.title,

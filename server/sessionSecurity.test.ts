@@ -5,6 +5,20 @@ import { attachPortalIdentity, getPortalIdentity, SESSION_ABSOLUTE_TTL_SECONDS }
 
 const SECRET = 'session-test-secret-with-more-than-thirty-two-characters';
 
+test('atividade renova apenas a validade da sessão e preserva identidade, idade do login e teto absoluto',async()=>{
+ const previous={NODE_ENV:process.env.NODE_ENV,VERCEL:process.env.VERCEL,PORTAL_SESSION_SECRET:process.env.PORTAL_SESSION_SECRET};
+ process.env.NODE_ENV='test';delete process.env.VERCEL;process.env.PORTAL_SESSION_SECRET=SECRET;
+ try{
+  const now=Math.floor(Date.now()/1000),issuedAt=now-3600;
+  const req:any={headers:{cookie:`portal_tcc_session=${signedCookie({issuedAt,authTime:issuedAt,expiresAt:now+60})}`},method:'GET',originalUrl:'/api/me',path:'/api/me'};
+  let header='';const res:any={setHeader(_key:string,value:string){header=value;}};
+  await new Promise<void>(resolve=>attachPortalIdentity(req,res,()=>resolve()));
+  const identity=getPortalIdentity(req)!;
+  assert.equal(identity.authTime,issuedAt);assert.equal(identity.issuedAt,issuedAt);assert.equal(identity.email,'admin@example.edu');
+  assert.ok(identity.expiresAt>now+60);assert.ok(identity.expiresAt<=issuedAt+SESSION_ABSOLUTE_TTL_SECONDS);assert.match(header,/HttpOnly/);
+ }finally{for(const [key,value] of Object.entries(previous)){if(value===undefined)delete process.env[key];else process.env[key]=value;}}
+});
+
 function signedCookie(overrides: Record<string, unknown> = {}): string {
   const now = Math.floor(Date.now() / 1000);
   const identity = {

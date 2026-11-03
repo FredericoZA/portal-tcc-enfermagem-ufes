@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../utils/portalLiveEvents';
 import { GlobalRole, ProcessMembership, GlobalSettings } from '../types';
-import { apiClient, ApiRequestError, setActiveUserEmail, getActiveUserEmail } from '../services/apiClient';
+import { apiClient, ApiRequestError, setActiveUserEmail, getActiveUserEmail, invalidateIdentityRequests, PORTAL_SESSION_EXPIRED_EVENT } from '../services/apiClient';
 import { loadSiteLayoutConfig } from '../utils/siteLayoutConfig';
 
 interface AuthContextType {
@@ -87,6 +87,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [settings, setSettings] = useState<GlobalSettings | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated,setIsAuthenticated]=useState(false);
+  // Respostas anteriores a uma saída/troca de conta não pertencem à sessão atual.
+  const identityRevision = useRef(0);
 
   const applyPublicSettings = (rawSettings: GlobalSettings) => {
     // A aparência do Portal é definida pelo código. Configurações visuais antigas
@@ -117,10 +119,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMemberships([]);
   };
 
+  useEffect(()=>{
+    const expired=()=>{identityRevision.current+=1;clearIdentity();setIsLoading(false);};
+    window.addEventListener(PORTAL_SESSION_EXPIRED_EVENT,expired);
+    return()=>window.removeEventListener(PORTAL_SESSION_EXPIRED_EVENT,expired);
+  },[]);
+
   const refreshAuth=async()=>{
+    const revision=++identityRevision.current;
+    const isCurrent=()=>identityRevision.current===revision;
     setIsLoading(true);
-    const settingsTask=apiClient.getSettings().then(applyPublicSettings).catch(err=>{console.error('Erro ao carregar configurações públicas do portal:',err);syncPortalFavicon(loadSiteLayoutConfig());});
-    const identityTask=getIdentityWithRetry().then(applyIdentity).catch(err=>{
+    const settingsTask=apiClient.getSettings().then(value=>{if(isCurrent())applyPublicSettings(value);}).catch(err=>{if(!isCurrent())return;console.error('Erro ao carregar configurações públicas do portal:',err);syncPortalFavicon(loadSiteLayoutConfig());});
+    const identityTask=getIdentityWithRetry().then(value=>{if(isCurrent())applyIdentity(value);}).catch(err=>{
+      if(!isCurrent())return;
       const definitiveUnauthorized = err instanceof ApiRequestError && err.status === 401;
       const cached = definitiveUnauthorized ? null : readCachedIdentity();
       if (cached) {
@@ -134,7 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('Sessão não confirmada; mantendo o Portal em modo público.',err);
       clearIdentity();
     });
-    await Promise.allSettled([settingsTask,identityTask]);setIsLoading(false);
+    await Promise.allSettled([settingsTask,identityTask]);if(isCurrent())setIsLoading(false);
   };
 
   useEffect(() => {
@@ -155,46 +166,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const recoverAfterReconnect = () => { void refreshAuth(); };
+    const synchronizeTabs = (event: StorageEvent) => {
+      if (event.key !== 'portal_tcc_active_email') return;
+      invalidateIdentityRequests();
+      identityRevision.current+=1;
+      clearIdentity();
+      setSettings(null);
+      void refreshAuth();
+    };
     syncPortalFavicon(loadSiteLayoutConfig());
     window.addEventListener('online', recoverAfterReconnect);
-    return () => window.removeEventListener('online', recoverAfterReconnect);
+    window.addEventListener('storage', synchronizeTabs);
+    return () => {
+      window.removeEventListener('online', recoverAfterReconnect);
+      window.removeEventListener('storage', synchronizeTabs);
+    };
   }, []);
 
   useEffect(() => {
     if (!isAuthenticated || typeof window === 'undefined') return;
     let lastTouchAt = 0;
     let touchInFlight = false;
+    let active = true;
 
     const touchSession = () => {
       const now = Date.now();
       if (touchInFlight || now - lastTouchAt < SESSION_ACTIVITY_TOUCH_INTERVAL_MS) return;
       lastTouchAt = now;
       touchInFlight = true;
-      void fetch('/api/me', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json' } })
-        .then(async response => {
-          if (!response.ok) return;
-          const meRes = await response.json();
-          applyIdentity(meRes);
-        })
-        .catch(() => undefined)
+      const revision=identityRevision.current;
+      void apiClient.getMe()
+        .then(value=>{if(active&&revision===identityRevision.current)applyIdentity(value);})
+        .catch(error => {if(active&&revision===identityRevision.current&&error instanceof ApiRequestError&&error.status===401)clearIdentity();})
         .finally(() => { touchInFlight = false; });
     };
 
     const activityEvents: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'touchstart', 'wheel', 'focus'];
     activityEvents.forEach(eventName => window.addEventListener(eventName, touchSession, { passive: true }));
-    return () => activityEvents.forEach(eventName => window.removeEventListener(eventName, touchSession));
-  }, [isAuthenticated]);
+    return () => {active=false;activityEvents.forEach(eventName => window.removeEventListener(eventName, touchSession));};
+  }, [isAuthenticated,userEmail]);
 
   const switchUser = async (email: string) => {
+    identityRevision.current+=1;
+    clearIdentity();
+    setSettings(null);
     setActiveUserEmail(email);
-    setUserEmailState(email);
     await refreshAuth();
   };
 
   const hasAdvisorRole = memberships.some((m) => m.roles.includes('ADVISOR'));
   const isCommissionPresident = globalRoles.includes('COMMISSION_PRESIDENT');
   const isMasterAdmin = globalRoles.includes('MASTER_ADMIN');
-  const logout=async()=>{await apiClient.logout();setActiveUserEmail('');clearIdentity();await refreshAuth();};
+  const logout=async()=>{
+    await apiClient.logout();
+    identityRevision.current+=1;
+    setActiveUserEmail('');
+    clearIdentity();
+    setSettings(null);
+    // O retorno à área pública não depende da latência de outra leitura do banco.
+    void refreshAuth();
+  };
 
   return (
     <AuthContext.Provider

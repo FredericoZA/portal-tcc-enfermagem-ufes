@@ -1,9 +1,10 @@
 import { formatNameTitleCase, normalizeEmail } from './formatters';
 
-export const OTHER_DEFENSE_LOCATION = 'Outro local — informar endereço/nome';
-export const CUSTOM_LOCATION_FIELD = 'DEFESA_OUTRO_LOCAL_NOME';
+export { CUSTOM_DEFENSE_LOCATION as OTHER_DEFENSE_LOCATION } from './reservationLocation';
+export const CUSTOM_LOCATION_FIELD = 'DEFESA_LOCAL_PERSONALIZADO';
 
 export function isOtherDefenseLocation(value: unknown): boolean {
+  if(value==='__OUTRO_LOCAL__')return true;
   const normalized = String(value ?? '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -11,6 +12,7 @@ export function isOtherDefenseLocation(value: unknown): boolean {
     .replace(/[—–]/g, '-')
     .replace(/\s+/g, ' ')
     .trim();
+  if(normalized==='outro local')return true;
   return /^outro local(?:\s*-\s*informar (?:endereco\/nome|nome\/endereco))?$/.test(normalized);
 }
 
@@ -34,7 +36,7 @@ export function renderCustomLocationName(raw: string): string {
 
 export function getCustomLocationFieldValue(answers: Record<string, unknown>): string {
   const candidates = [
-    CUSTOM_LOCATION_FIELD, 'OUTRO_LOCAL_NOME', 'NOME_COMPLETO_LOCAL',
+    CUSTOM_LOCATION_FIELD, 'DEFESA_OUTRO_LOCAL_NOME', 'OUTRO_LOCAL_NOME', 'NOME_COMPLETO_LOCAL',
     'DEFESA_LOCAL_OUTRO_NOME', 'DEFESA_LOCAL_PERSONALIZADO', 'LOCAL_PERSONALIZADO_NOME',
     'LOCAL_NOME', 'LOCAL_NOME_COMPLETO', 'DEFESA_LOCAL_NOME', 'NOME_LOCAL', 'NOME_DO_LOCAL',
   ];

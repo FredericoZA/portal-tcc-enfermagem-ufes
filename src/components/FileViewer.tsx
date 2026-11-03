@@ -141,8 +141,8 @@ export const FileViewer: React.FC<FileViewerProps> = ({
       {/* Top File Action Toolbar */}
       <div className="h-12 px-4 border-b border-slate-800 bg-slate-900 flex items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="font-mono text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase font-semibold">
-            .{ext || 'FILE'}
+          <span className="font-mono text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 normal-case font-semibold">
+            .{ext || 'File'}
           </span>
           <span className="font-semibold text-xs text-slate-100 truncate">
             {activeItem.name}

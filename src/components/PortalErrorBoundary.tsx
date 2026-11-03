@@ -21,22 +21,6 @@ export class PortalErrorBoundary extends Component<{ children: ReactNode }, { fa
     return { failed: true };
   }
 
-  componentDidMount() {
-    if (typeof window === 'undefined') return;
-
-    const url = new URL(window.location.href);
-    if (!url.searchParams.has(CHUNK_RECOVERY_PARAM)) return;
-
-    try {
-      window.sessionStorage.removeItem(CHUNK_RECOVERY_KEY);
-    } catch {
-      // O parâmetro na URL é o guard primário quando storage estiver indisponível.
-    }
-
-    url.searchParams.delete(CHUNK_RECOVERY_PARAM);
-    window.history.replaceState(window.history.state, '', url.toString());
-  }
-
   componentDidCatch(error: unknown, _info: ErrorInfo) {
     if (!isStaleLazyChunkError(error) || typeof window === 'undefined') return;
 

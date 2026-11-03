@@ -560,7 +560,7 @@ const ColorField: React.FC<{
   <label className="flex items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs hover:border-slate-300 transition-all">
     <span className="truncate text-slate-800 font-bold">{label}</span>
     <span className="flex items-center gap-2 shrink-0">
-      <span className="text-[10px] font-mono font-extrabold text-slate-500 uppercase">{value || '#ffffff'}</span>
+      <span className="text-[10px] font-mono font-extrabold text-slate-500 normal-case">{value || '#ffffff'}</span>
       <input
         type="color"
         value={value || '#ffffff'}
@@ -578,7 +578,7 @@ const TextField: React.FC<{
   onChange: (val: string) => void;
 }> = ({ label, value, placeholder, onChange }) => (
   <div className="space-y-1">
-    <label className="block text-[10.5px] font-black text-slate-700 uppercase tracking-wider">
+    <label className="block text-[10.5px] font-black text-slate-700 normal-case tracking-wider">
       {label}
     </label>
     <input
@@ -597,7 +597,7 @@ const FontSelectorField: React.FC<{
   onChange: (val: string) => void;
 }> = ({ label, value, onChange }) => (
   <div className="space-y-1">
-    <label className="block text-[10.5px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+    <label className="block text-[10.5px] font-black text-slate-700 normal-case tracking-wider flex items-center gap-1.5">
       <Type className="w-3.5 h-3.5 text-slate-600" />
       <span>{label}</span>
     </label>
@@ -622,7 +622,7 @@ const ImageField: React.FC<{
   onChange: (val: string) => void;
 }> = ({ label, value, placeholder, onChange }) => (
   <div className="space-y-1.5">
-    <label className="block text-[10.5px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+    <label className="block text-[10.5px] font-black text-slate-700 normal-case tracking-wider flex items-center gap-1.5">
       <ImageIcon className="w-3.5 h-3.5 text-slate-600" />
       <span>{label}</span>
     </label>
@@ -1403,7 +1403,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
               <Palette className="w-5 h-5 text-[var(--portal-brand-header)]" />
             </div>
             <div>
-              <h2 id="portal-customization-title" className="text-sm sm:text-base font-black text-white uppercase tracking-tight flex items-center gap-2">
+              <h2 id="portal-customization-title" className="text-sm sm:text-base font-black text-white normal-case tracking-tight flex items-center gap-2">
                 <span>Personalização do Portal do TCC</span>
               </h2>
             </div>
@@ -1466,7 +1466,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
 
             {/* BLOCO 1: BARRAS DO PORTAL */}
             <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs space-y-1">
-              <div className="text-[10.5px] font-black uppercase tracking-wider text-slate-900 pb-1.5 border-b border-slate-100 flex items-center justify-between">
+              <div className="text-[10.5px] font-black normal-case tracking-wider text-slate-900 pb-1.5 border-b border-slate-100 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5 text-slate-700" />
                   <span>Barras do Portal</span>
@@ -1480,7 +1480,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
 
             {/* BLOCO 2: PLANILHAS E TABELAS */}
             <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs space-y-1">
-              <div className="text-[10.5px] font-black uppercase tracking-wider text-slate-900 pb-1.5 border-b border-slate-100 flex items-center justify-between">
+              <div className="text-[10.5px] font-black normal-case tracking-wider text-slate-900 pb-1.5 border-b border-slate-100 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <TableProperties className="w-3.5 h-3.5 text-slate-700" />
                   <span>Planilhas e Tabelas</span>
@@ -1500,7 +1500,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
 
             {/* BLOCO 3: POPUPS E MODAIS */}
             <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs space-y-1">
-              <div className="text-[10.5px] font-black uppercase tracking-wider text-slate-900 pb-1.5 border-b border-slate-100 flex items-center justify-between">
+              <div className="text-[10.5px] font-black normal-case tracking-wider text-slate-900 pb-1.5 border-b border-slate-100 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <Maximize2 className="w-3.5 h-3.5 text-slate-700" />
                   <span>Popups e Modais</span>
@@ -1545,7 +1545,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                     /* FULL REALISTIC LIVE PREVIEWS (FIXED AT THE TOP) */
                     <div className={`w-full bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden flex flex-col ${getFontFamilyClass()}`}>
                       <div className="bg-slate-100 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-                        <span className="text-[11px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+                        <span className="text-[11px] font-black normal-case text-slate-800 flex items-center gap-1.5">
                           <Eye className="w-4 h-4 text-slate-700" />
                           <span>Exemplo Ao Vivo do Portal (Preview em Tempo Real)</span>
                         </span>
@@ -1576,13 +1576,13 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                             )}
                             <div>
                               <div
-                                className="text-[9px] font-extrabold uppercase tracking-widest leading-none"
+                                className="text-[9px] font-extrabold normal-case tracking-widest leading-none"
                                 style={{ color: siteConfig.headerTextColor || '#ffffff' }}
                               >
                                 {siteConfig.headerInstitutionText || 'Unidade acadêmica • Instituição'}
                               </div>
                               <h4
-                                className="text-xs sm:text-sm font-black uppercase tracking-tight leading-tight mt-1"
+                                className="text-xs sm:text-sm font-black normal-case tracking-tight leading-tight mt-1"
                                 style={{ color: siteConfig.headerTitleColor || '#ffffff' }}
                               >
                                 {siteConfig.headerCourseTitle || 'Curso de Graduação'}
@@ -1591,10 +1591,10 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                           </div>
 
                           <div className="hidden sm:flex items-center gap-2">
-                            <span className="text-[10px] font-black uppercase bg-white/20 text-white px-2.5 py-1 rounded-md">
+                            <span className="text-[10px] font-black normal-case bg-white/20 text-white px-2.5 py-1 rounded-md">
                               Portal de TCC
                             </span>
-                            <span className="text-[10px] font-black uppercase bg-black/30 text-white px-2.5 py-1 rounded-md">
+                            <span className="text-[10px] font-black normal-case bg-black/30 text-white px-2.5 py-1 rounded-md">
                               Sessão Ativa
                             </span>
                           </div>
@@ -1613,10 +1613,10 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                           >
                             <div className="space-y-2">
                               <div
-                                className="p-2 rounded-lg font-black uppercase text-[10px] text-center tracking-wider shadow-2xs"
+                                className="p-2 rounded-lg font-black normal-case text-[10px] text-center tracking-wider shadow-2xs"
                                 style={{ backgroundColor: siteConfig.sidebarHeaderBgColor || '#011812' }}
                               >
-                                {siteConfig.sidebarTitle || 'PORTAL DE TCC'}
+                                {siteConfig.sidebarTitle || 'Portal de TCC'}
                               </div>
 
                               <div className="space-y-1 text-xs">
@@ -1658,7 +1658,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                               
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <div>
-                                  <h3 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-tight">
+                                  <h3 className="text-xs sm:text-sm font-black text-slate-900 normal-case tracking-tight">
                                     Calendário de Defesas Públicas de TCC
                                   </h3>
                                   <p className="text-[10.5px] font-bold text-slate-500">
@@ -1716,7 +1716,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                               <table className="w-full text-xs">
                                 <thead>
                                   <tr
-                                    className="font-black uppercase text-[10px] tracking-wider"
+                                    className="font-black normal-case text-[10px] tracking-wider"
                                     style={{
                                       backgroundColor: localTableFormat.customHeaderColor || siteConfig.headerBgColor || '#005830',
                                       color: localTableFormat.customHeaderTextColor || '#ffffff',
@@ -1742,7 +1742,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                                     <td className={`p-2.5 ${cellAlignClass}`}>Auditório Central (Presencial)</td>
                                     <td className="p-2.5 text-center">
                                       <span className={`px-2 py-0.5 text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 ${buttonRadiusClass}`}>
-                                        CONFIRMADA
+                                        Confirmada
                                       </span>
                                     </td>
                                   </tr>
@@ -1758,7 +1758,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                                     <td className={`p-2.5 ${cellAlignClass}`}>Sala de defesas</td>
                                     <td className="p-2.5 text-center">
                                       <span className={`px-2 py-0.5 text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 ${buttonRadiusClass}`}>
-                                        CONFIRMADA
+                                        Confirmada
                                       </span>
                                     </td>
                                   </tr>
@@ -1774,7 +1774,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                                     <td className={`p-2.5 ${cellAlignClass}`}>Auditório B (Híbrido)</td>
                                     <td className="p-2.5 text-center">
                                       <span className={`px-2 py-0.5 text-[9px] font-black bg-blue-100 text-blue-800 border border-blue-300 ${buttonRadiusClass}`}>
-                                        AGENDADA
+                                        Agendada
                                       </span>
                                     </td>
                                   </tr>
@@ -1798,7 +1798,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
 
                         {/* POPUPS & MODAIS REALTIME PREVIEW CARDS */}
                         <div className="pt-1">
-                          <div className="text-[11px] font-black uppercase tracking-wider text-slate-800 mb-2 flex items-center gap-1.5">
+                          <div className="text-[11px] font-black normal-case tracking-wider text-slate-800 mb-2 flex items-center gap-1.5">
                             <Layers className="w-3.5 h-3.5 text-slate-600" />
                             <span>Pop-ups e Modais Vinculados (Preview Ao Vivo)</span>
                           </div>
@@ -1807,7 +1807,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                             {/* POPUP 1: DETALHES DA BANCA */}
                             <div className="bg-white border border-slate-300 rounded-xl overflow-hidden shadow-xs flex flex-col justify-between">
                               <div
-                                className="p-2.5 text-white font-black text-xs uppercase flex items-center justify-between"
+                                className="p-2.5 text-white font-black text-xs normal-case flex items-center justify-between"
                                 style={{ backgroundColor: tccDetailFormat.headerBgColor || siteConfig.headerBgColor || '#005830' }}
                               >
                                 <span>Detalhes da Banca</span>
@@ -1818,7 +1818,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                                 <div className="text-[10px] text-slate-500">UTI Neonatal • 28/11/2026</div>
                                 <button
                                   type="button"
-                                  className={`w-full py-1 text-[10px] font-black uppercase text-white shadow-2xs transition-all ${buttonRadiusClass}`}
+                                  className={`w-full py-1 text-[10px] font-black normal-case text-white shadow-2xs transition-all ${buttonRadiusClass}`}
                                   style={{ backgroundColor: tccDetailFormat.primaryActionColor || siteConfig.headerBgColor || '#005830' }}
                                 >
                                   Confirmar Presença
@@ -1829,7 +1829,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                             {/* POPUP 2: ATA ASSINADA / DOCUMENTOS */}
                             <div className="bg-white border border-slate-300 rounded-xl overflow-hidden shadow-xs flex flex-col justify-between">
                               <div
-                                className="p-2.5 text-white font-black text-xs uppercase flex items-center justify-between"
+                                className="p-2.5 text-white font-black text-xs normal-case flex items-center justify-between"
                                 style={{ backgroundColor: generalPopupsConfig.uploadAtaHeaderBg || siteConfig.headerBgColor || '#005830' }}
                               >
                                 <span>Ata Assinada & PDF</span>
@@ -1840,7 +1840,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                                 <div className="text-[10px] text-slate-500">Status: Assinada e arquivada via Asten</div>
                                 <button
                                   type="button"
-                                  className={`w-full py-1 text-[10px] font-black uppercase text-white shadow-2xs transition-all ${buttonRadiusClass}`}
+                                  className={`w-full py-1 text-[10px] font-black normal-case text-white shadow-2xs transition-all ${buttonRadiusClass}`}
                                   style={{ backgroundColor: generalPopupsConfig.uploadAtaBtnBg || siteConfig.headerBgColor || '#005830' }}
                                 >
                                   Baixar Ata (PDF)
@@ -1851,18 +1851,18 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                             {/* POPUP 3: LOGIN / ACESSO RESTRITO */}
                             <div className="bg-white border border-slate-300 rounded-xl overflow-hidden shadow-xs flex flex-col justify-between">
                               <div
-                                className="p-2.5 text-white font-black text-xs uppercase flex items-center justify-between"
+                                className="p-2.5 text-white font-black text-xs normal-case flex items-center justify-between"
                                 style={{ backgroundColor: loginPopupConfig.cardBgColor || siteConfig.headerBgColor || '#005830' }}
                               >
                                 <span>Acesso ao Portal</span>
-                                <span className="text-[9px] bg-white/20 px-1.5 py-0.5 rounded">LOGIN</span>
+                                <span className="text-[9px] bg-white/20 px-1.5 py-0.5 rounded">Login</span>
                               </div>
                               <div className="p-2.5 text-[11px] space-y-1.5 text-slate-700 font-medium">
                                 <div className="font-bold text-slate-900">Identificação institucional</div>
                                 <div className="text-[10px] text-slate-500">Alunos & Professores</div>
                                 <button
                                   type="button"
-                                  className={`w-full py-1 text-[10px] font-black uppercase text-white shadow-2xs transition-all ${buttonRadiusClass}`}
+                                  className={`w-full py-1 text-[10px] font-black normal-case text-white shadow-2xs transition-all ${buttonRadiusClass}`}
                                   style={{ backgroundColor: loginPopupConfig.primaryBtnBg || siteConfig.headerBgColor || '#005830' }}
                                 >
                                   Entrar no Sistema
@@ -1912,7 +1912,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                 {/* OS 4 SELETORES PRINCIPAIS E CONTROLES (LOCALIZADOS ABAIXO DO EXEMPLO) */}
                 <div className="bg-white p-4 rounded-xl border border-slate-300 shadow-xs space-y-3.5">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
-                    <span className="text-xs font-black uppercase text-slate-900 tracking-tight flex items-center gap-1.5">
+                    <span className="text-xs font-black normal-case text-slate-900 tracking-tight flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-slate-700" />
                       <span>Configuração Global do Portal (Site Todo)</span>
                     </span>
@@ -1947,7 +1947,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     {/* 1. COR DO PORTAL */}
                     <div className="space-y-1">
-                      <label className="text-[11px] font-black uppercase text-slate-800 block">
+                      <label className="text-[11px] font-black normal-case text-slate-800 block">
                         1. Tema & Cor do Portal
                       </label>
                       <div className="flex items-center gap-2 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-300">
@@ -1974,7 +1974,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
 
                     {/* 2. PADRÃO DE LETRAS */}
                     <div className="space-y-1">
-                      <label className="text-[11px] font-black uppercase text-slate-800 block">
+                      <label className="text-[11px] font-black normal-case text-slate-800 block">
                         2. Padrão de Letras
                       </label>
                       <select
@@ -1990,7 +1990,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
 
                     {/* 3. BOTÕES GERAIS */}
                     <div className="space-y-1">
-                      <label className="text-[11px] font-black uppercase text-slate-800 block">
+                      <label className="text-[11px] font-black normal-case text-slate-800 block">
                         3. Botões Gerais
                       </label>
                       <select
@@ -2006,7 +2006,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
 
                     {/* 4. POP-UPS & MODAIS */}
                     <div className="space-y-1">
-                      <label className="text-[11px] font-black uppercase text-slate-800 block">
+                      <label className="text-[11px] font-black normal-case text-slate-800 block">
                         4. Pop-ups & Modais
                       </label>
                       <select
@@ -2024,7 +2024,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                   {/* CONTRASTE DE TEXTO & ALINHAMENTO (SUB-CONTROLES) */}
                   <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-black uppercase text-slate-800">Contraste de Texto:</span>
+                      <span className="text-xs font-black normal-case text-slate-800">Contraste de Texto:</span>
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
@@ -2063,7 +2063,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-black uppercase text-slate-800">Alinhamento:</span>
+                      <span className="text-xs font-black normal-case text-slate-800">Alinhamento:</span>
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
@@ -2104,7 +2104,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                 {/* PREVIEW ABOVE */}
                 <div className="w-full bg-white border border-slate-300 rounded-xl shadow-2xs overflow-hidden">
                   <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-200 flex items-center justify-between">
-                    <span className="text-[10.5px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+                    <span className="text-[10.5px] font-black normal-case text-slate-800 flex items-center gap-1.5">
                       <Eye className="w-3.5 h-3.5 text-slate-600" />
                       <span>Barra Superior (Preview Ao Vivo)</span>
                     </span>
@@ -2132,10 +2132,10 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                         ) : null}
 
                         <div>
-                          <div className="text-[9px] font-extrabold uppercase tracking-widest leading-tight" style={{ color: siteConfig.headerTextColor || '#047857' }}>
+                          <div className="text-[9px] font-extrabold normal-case tracking-widest leading-tight" style={{ color: siteConfig.headerTextColor || '#047857' }}>
                             {siteConfig.headerInstitutionText || 'Unidade acadêmica • Instituição'}
                           </div>
-                          <h4 className="text-[12px] font-black uppercase tracking-tight leading-snug" style={{ color: siteConfig.headerTitleColor || '#0f172a' }}>
+                          <h4 className="text-[12px] font-black normal-case tracking-tight leading-snug" style={{ color: siteConfig.headerTitleColor || '#0f172a' }}>
                             {siteConfig.headerCourseTitle || 'Curso de Graduação'}
                           </h4>
                         </div>
@@ -2153,8 +2153,8 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                 {/* CONTROLS BELOW */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-                    <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-                      CORES DA BARRA SUPERIOR
+                    <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+                      Cores da barra superior
                     </h3>
                     <div className="space-y-3">
                       <ColorField
@@ -2179,8 +2179,8 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                   </div>
 
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-                    <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-                      LOGOMARCA E IMAGEM DE FUNDO
+                    <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+                      Logomarca e imagem de fundo
                     </h3>
                     <div className="space-y-3">
                       <ImageUploadField
@@ -2199,8 +2199,8 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                   </div>
 
                   <div className="lg:col-span-2 bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-                    <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-                      TEXTOS E TÍTULOS DA BARRA SUPERIOR
+                    <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+                      Textos e títulos da barra superior
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <TextField
@@ -2226,7 +2226,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
               <div className="flex flex-col xl:flex-row items-start gap-5">
                 <div className="w-full xl:w-[300px] shrink-0 bg-white border border-slate-300 rounded-xl shadow-2xs overflow-hidden">
                   <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-200 flex items-center justify-between">
-                    <span className="text-[10.5px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+                    <span className="text-[10.5px] font-black normal-case text-slate-800 flex items-center gap-1.5">
                       <Eye className="w-3.5 h-3.5 text-slate-600" />
                       <span>Barra Lateral (Preview)</span>
                     </span>
@@ -2240,11 +2240,11 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                       }}
                     >
                       <div className="p-2.5 rounded-lg text-center" style={{ backgroundColor: siteConfig.sidebarHeaderBgColor || '#011812' }}>
-                        <div className="font-black uppercase text-xs" style={{ color: siteConfig.sidebarActiveTextColor || '#a4ebd4' }}>
-                          {siteConfig.sidebarTitle || 'PORTAL DE TCC'}
+                        <div className="font-black normal-case text-xs" style={{ color: siteConfig.sidebarActiveTextColor || '#a4ebd4' }}>
+                          {siteConfig.sidebarTitle || 'Portal de TCC'}
                         </div>
-                        <div className="text-[9px] font-extrabold uppercase" style={{ color: siteConfig.sidebarSubtitleColor || '#7bc394' }}>
-                          {siteConfig.sidebarSubtitle || 'CURSO • INSTITUIÇÃO'}
+                        <div className="text-[9px] font-extrabold normal-case" style={{ color: siteConfig.sidebarSubtitleColor || '#7bc394' }}>
+                          {siteConfig.sidebarSubtitle || 'Curso • instituição'}
                         </div>
                       </div>
 
@@ -2273,8 +2273,8 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
 
                 <div className="flex-1 w-full space-y-4">
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-                    <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-                      CORES DA BARRA LATERAL
+                    <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+                      Cores da barra lateral
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       <ColorField
@@ -2311,8 +2311,8 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                   </div>
 
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-                    <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-                      TEXTOS E RÓTULOS DOS MENUS
+                    <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+                      Textos e rótulos dos menus
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <TextField
@@ -2331,8 +2331,8 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                   </div>
 
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-                    <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-                      LOGOMARCA DA BARRA LATERAL
+                    <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+                      Logomarca da barra lateral
                     </h3>
                     <ImageUploadField
                       label="Logo Personalizada da Barra Lateral (Anexar ou Link)"
@@ -2350,7 +2350,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
               <div className="space-y-4">
                 <div className="w-full bg-white border border-slate-300 rounded-xl shadow-2xs overflow-hidden">
                   <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-200 flex items-center justify-between">
-                    <span className="text-[10.5px] font-black uppercase text-slate-800 flex items-center gap-1.5">
+                    <span className="text-[10.5px] font-black normal-case text-slate-800 flex items-center gap-1.5">
                       <Eye className="w-3.5 h-3.5 text-slate-600" />
                       <span>Rodapé e Contatos (Preview Ao Vivo)</span>
                     </span>
@@ -2366,7 +2366,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                     >
                       <div className="flex flex-col md:flex-row items-center justify-between gap-3 pb-2 border-b" style={{ borderColor: siteConfig.footerDividerColor || '#033628' }}>
                         <div>
-                          <div className="font-extrabold uppercase text-[9px]" style={{ color: siteConfig.footerMutedTextColor || '#94a3b8' }}>
+                          <div className="font-extrabold normal-case text-[9px]" style={{ color: siteConfig.footerMutedTextColor || '#94a3b8' }}>
                             {siteConfig.footerPresidentLabel || 'Presidente da Comissão'}
                           </div>
                           <p className="font-bold text-[11px] mt-0.5">
@@ -2392,8 +2392,8 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-                    <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-                      CORES DO RODAPÉ E BOTÕES
+                    <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+                      Cores do rodapé e botões
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <ColorField
@@ -2420,8 +2420,8 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                   </div>
 
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-                    <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-                      TEXTOS E COMISSÃO DE TCC
+                    <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+                      Textos e comissão de TCC
                     </h3>
                     <div className="space-y-3">
                       <TextField
@@ -2444,7 +2444,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
             {activeTab === 'global_table_buttons' && (
               <div className="space-y-4">
                 <div className="bg-slate-200 p-4 rounded-xl border border-slate-300 space-y-2">
-                  <span className="text-[10.5px] font-black uppercase text-slate-700 flex items-center gap-1.5">
+                  <span className="text-[10.5px] font-black normal-case text-slate-700 flex items-center gap-1.5">
                     <Eye className="w-3.5 h-3.5 text-slate-600" />
                     <span>Preview Ao Vivo dos Botões no Topo da Planilha</span>
                   </span>
@@ -2492,8 +2492,8 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-                    <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-                      CORES DOS BOTÕES DA PLANILHA
+                    <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+                      Cores dos botões da planilha
                     </h3>
                     <div className="space-y-3">
                       <ColorField
@@ -2515,8 +2515,8 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                   </div>
 
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-                    <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-                      TEXTOS E RÓTULOS DOS BOTÕES
+                    <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+                      Textos e rótulos dos botões
                     </h3>
                     <div className="space-y-3">
                       <TextField
@@ -2544,7 +2544,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
             {activeTab === 'global_table_style' && (
               <div className="space-y-4">
                 <div className="bg-slate-200 p-4 rounded-xl border border-slate-300 space-y-2">
-                  <span className="text-[10.5px] font-black uppercase text-slate-700 flex items-center gap-1.5">
+                  <span className="text-[10.5px] font-black normal-case text-slate-700 flex items-center gap-1.5">
                     <Eye className="w-3.5 h-3.5 text-slate-600" />
                     <span>Preview Ao Vivo da Tabela</span>
                   </span>
@@ -2557,10 +2557,10 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                             color: localTableFormat.customHeaderTextColor || '#ffffff',
                           }}
                         >
-                          <th className="p-3 font-extrabold uppercase">Data / Hora</th>
-                          <th className="p-3 font-extrabold uppercase">Discente / Autor</th>
-                          <th className="p-3 font-extrabold uppercase">Título do Trabalho</th>
-                          <th className="p-3 font-extrabold uppercase">Orientador(a)</th>
+                          <th className="p-3 font-extrabold normal-case">Data / Hora</th>
+                          <th className="p-3 font-extrabold normal-case">Discente / Autor</th>
+                          <th className="p-3 font-extrabold normal-case">Título do Trabalho</th>
+                          <th className="p-3 font-extrabold normal-case">Orientador(a)</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2576,8 +2576,8 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                 </div>
 
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
-                  <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-                    CORES DO CABEÇALHO E LINHAS DA TABELA
+                  <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
+                    Cores do cabeçalho e linhas da tabela
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     <ColorField
@@ -2638,7 +2638,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
             {activeTab === 'table_columns' && (
               <div className="space-y-4">
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <h3 className="text-xs font-black uppercase text-slate-900">Colunas e ordem — configuração individual</h3>
+                  <h3 className="text-xs font-black normal-case text-slate-900">Colunas e ordem — configuração individual</h3>
                   <p className="mt-1 text-[11px] leading-5 text-slate-600">A aparência pode continuar vinculada ao padrão global; ordem, visibilidade e quantidade de linhas pertencem somente a esta planilha.</p>
                   <div className="mt-4 space-y-2">
                     {layoutColumnOrder.map((key, index) => {
@@ -2654,7 +2654,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
                   </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <h3 className="text-xs font-black uppercase text-slate-900">Linhas exibidas</h3>
+                  <h3 className="text-xs font-black normal-case text-slate-900">Linhas exibidas</h3>
                   <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{[25, 50, 100, 'all'].map((limit) => <button key={String(limit)} type="button" onClick={() => { const value = limit as number | 'all'; setRecordsLimit?.(value); saveSpecificLayout({ recordsLimit: value }); }} className={`rounded-xl border px-3 py-2 text-xs font-black ${recordsLimit === limit ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-800'}`}>{limit === 'all' ? 'Todos' : limit}</button>)}</div>
                 </div>
               </div>

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEMO_PROCESSES, INITIAL_SETTINGS } from '../src/services/demoSeed';
 import { acceptEvaluation, EvaluationError } from './workflow/evaluation';
-import { evaluationQuestions } from '../src/utils/evaluationForm';
+import { evaluationQuestions, standardEvaluationOpinion, acceptEvaluationAnswers } from '../src/utils/evaluationForm';
 import { buildProcessVariables } from './workflow/runtime';
 import { normalizeUnifiedAppearance } from '../src/utils/unifiedAppearance';
 import { portalFontFamily } from '../src/utils/portalFonts';
@@ -13,6 +13,18 @@ const now = new Date('2026-09-09T16:00:00Z');
 const valid = { resultadoCode: 'APROVADO', parecer: 'Parecer registrado pelo orientador.', dataConfirmed: true,
   expectedDataRevision: process.dataRevision, expectedSchemaRevision: settings.integrationStudio?.revision || 0 };
 const accept = (patch: Record<string, unknown> = {}) => acceptEvaluation(process, { ...valid, ...patch }, settings, process.orientador.email, now);
+
+test('parecer padrão é texto corrido para a ata e respeita o resultado escolhido',()=>{
+  assert.equal(standardEvaluationOpinion(process),'');
+  const approved=standardEvaluationOpinion(process,{code:'APROVADO',label:'Aprovado'});
+  assert.doesNotMatch(approved,/\n|PARECER DA BANCA|Processo:|Autoria:|\[Completar/);
+  assert.ok(!approved.includes(process.titulo));
+  assert.match(approved,/clareza|organização/);
+  const rejected=standardEvaluationOpinion(process,{code:'REPROVADO',label:'Reprovado'});
+  assert.match(rejected,/não atendeu|reprovação/);
+  assert.doesNotMatch(rejected,/exemplar|domínio do tema/);
+  assert.equal(acceptEvaluationAnswers({resultadoCode:'APROVADO',parecer:approved},[{code:'APROVADO',label:'Aprovado'}]).parecer,approved);
+});
 
 test('avaliação aceita resultado e parecer sem nota numérica e preserva a conferência', () => {
   const result = accept({ notaFinal: '9,25', answers: { NOTA_FINAL: 9.25 } });
@@ -70,3 +82,11 @@ test('a fonte e as cores publicadas são iguais nas tabelas e nos pop-ups', () =
     assert.deepEqual(normalizeUnifiedAppearance(result), result);
   }
 });
+
+ test('conceitos canônicos prevalecem sobre configuração legada com louvor',()=>{
+  const legacy={...settings,evaluationOutcomeOptions:[{code:'LOUVOR',label:'Aprovado com louvor'}]};
+  for(const [code,label]of [['APROVADO','Aprovado'],['APROVADO_COM_RESSALVA','Aprovado com ressalva'],['REPROVADO','Reprovado']]){
+   assert.equal(acceptEvaluation(process,{...valid,resultadoCode:code},legacy,process.orientador.email,now).resultadoLabel,label);
+  }
+  assert.throws(()=>acceptEvaluation(process,{...valid,resultadoCode:'LOUVOR'},legacy,process.orientador.email,now),EvaluationError);
+ });

@@ -91,12 +91,15 @@ export type ProcessStatus =
   | 'CONCLUIDO';
 
 export interface StudentInfo {
+  tratamento?: 'Aluno'|'Aluna';
   nome: string;
   matricula: string;
   email: string;
 }
 
 export interface AdvisorInfo {
+  tratamento?: 'Professor'|'Professora';
+  titulacao?: string;
   siape?: string;
   nome: string;
   email: string;
@@ -104,6 +107,7 @@ export interface AdvisorInfo {
 }
 
 export interface ExaminerInfo {
+  tratamento?: 'Professor'|'Professora';
   siape?: string;
   id: string;
   nome: string;
@@ -116,6 +120,9 @@ export interface ExaminerInfo {
 }
 
 export interface DefesaInfo {
+  departmentResponse?: {receiptBody?:string;revision:number;decision:'CONFIRMED'|'UNAVAILABLE';respondedAt:string;respondedBy:string;local?:string;startAt:string;endAt:string};
+  reservationRevision?: number;
+  reservationHistory?: Array<{invitationDriveFileId?:string;invitationSentAt?:string;invitationRecipients?:string[];startAt:string;endAt:string;local:string;alternateLocation?:string;locationProof?:import('./workflowOperations').LocationProof;departmentResponse?:DefesaInfo['departmentResponse'];localStatus?:DefesaInfo['localStatus'];localConfirmedAt?:string;localConfirmedBy?:string;localEvidenceUrl?:string;invalidatedAt:string;invalidatedBy:string}>;
   locationProof?: import('./workflowOperations').LocationProof;
   alternateLocation?: string;
   startAt: string;
@@ -155,6 +162,7 @@ export interface EvaluationOutcomeOption {
 }
 
 export interface EvaluationInfo {
+  documentText?: string;
   answers?: Record<string, string | number | boolean>;
   dataReview?: {
     sourceDataRevision: number;
@@ -202,6 +210,7 @@ export interface ProcessAcervoInfo {
   publicationState?: 'NOT_REQUESTED' | 'PENDING_SYNC' | 'PUBLIC' | 'WITHDRAWN';
   workType?: 'MONOGRAFIA' | 'ARTIGO' | 'OUTRO';
   authorizationConfirmedAt?: string;
+  firstSubmittedAt?: string;
   submittedAt?: string;
   submittedBy?: string;
 }
@@ -227,6 +236,10 @@ export interface AuthorizedStudent {
 }
 
 export interface ProcessData {
+  /** Historical repository projection; never a live defense workflow. */
+  legacyRecord?: boolean;
+  authorOrder?: 'ALUNO_1_FIRST' | 'ALUNO_2_FIRST';
+  previousProtocols?: string[];
   registrationAnswers?: Record<string, string | number | boolean>;
   registrationRevision?: number;
   completedAt?: string;
@@ -255,6 +268,7 @@ export interface ProcessData {
   driveFolderId?: string;
   driveFolderUrl?: string;
   driveSyncedAt?: string;
+  signatureProviderPreferences?: Partial<Record<'ATA'|'TERMO'|'DECLARACAO', 'ASTEN'|'GOV_BR'>>;
   dataRevision: number;
   createdAt: string;
   updatedAt: string;
@@ -413,6 +427,7 @@ export interface GlobalSettings {
   templateIds?: Record<string, string>;
   emailConfig?: Record<string, any>;
   integrationStudio?: IntegrationStudioSettings;
+  integrationStudioDraft?: IntegrationStudioSettings;
   documentModels?: Record<string, {
     id: string;
     type: string;

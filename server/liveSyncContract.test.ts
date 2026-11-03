@@ -47,7 +47,7 @@ test('processo excluído deixa de permanecer aberto e falha transitória não eq
   assert.match(detail,/err instanceof ApiRequestError && err\.status===404/);
   assert.match(detail,/onBackRef\.current\(\)/);
   assert.match(detail,/pode ter sido excluído ou seu acesso foi alterado/);
-  assert.match(detail,/if\(!background\)setErrorMsg/);
+  assert.match(detail,/if\(!background\s*&&\s*!quiet\)setErrorMsg/);
   assert.match(detail,/if\(background && editingSectionRef\.current\)/);
   assert.match(detail,/setRemoteUpdatePending\(true\)/);
   assert.match(detail,/Descartar edição e atualizar/);

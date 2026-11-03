@@ -16,7 +16,7 @@ export function addBusinessDays(start:string,count:number,policy:WorkflowOperati
 export function waitingMilestone(p:ProcessData,jobs:SignatureJob[]):{milestone:WaitingMilestone;startedAt:string;responsible:string[]}|null{
   if(p.status==='CONCLUIDO')return null;
   const students=[p.aluno1.email,p.aluno2?.email].filter(Boolean) as string[];
-  if(p.defesa.localStatus!=='CONFIRMADO')return {milestone:'LOCATION',startedAt:p.createdAt,responsible:students};
+  if(p.defesa.localStatus!=='CONFIRMADO')return {milestone:'LOCATION',startedAt:p.defesa.reservationHistory?.at(-1)?.invalidatedAt||p.createdAt,responsible:students};
   if(p.avaliacao.status!=='CONCLUIDO')return {milestone:'EVALUATION',startedAt:p.defesa.startAt,responsible:[p.orientador.email]};
   const ata=latestSignature(p,jobs,'ATA');
   if(!ataArchived(p,jobs))return {milestone:'ATA',startedAt:ata?.createdAt||p.avaliacao.submittedAt||p.updatedAt,responsible:[p.orientador.email]};

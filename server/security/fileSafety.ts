@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import { inspectPdfInWorker } from './pdfInspection';
 
 export type SafeDocumentKind = 'PDF' | 'DOCX';
 
@@ -30,7 +31,7 @@ function rejectIfEicar(bytes: Buffer): void {
   }
 }
 
-function assertSafePdf(bytes: Buffer): void {
+async function assertSafePdf(bytes: Buffer): Promise<void> {
   if (!bytes.subarray(0, 5).equals(Buffer.from('%PDF-'))) {
     throw new UnsafeUploadError('O arquivo não possui uma assinatura PDF válida.');
   }
@@ -38,11 +39,14 @@ function assertSafePdf(bytes: Buffer): void {
   if (!tail.includes('%%EOF')) {
     throw new UnsafeUploadError('O PDF está incompleto ou não possui marcador de término válido.');
   }
+  if (bytes.length > 50 * 1024 * 1024) throw new UnsafeUploadError('O PDF excede o limite de 50 MB.');
   const text = bytes.toString('latin1');
   const marker = PDF_ACTIVE_MARKERS.find((pattern) => pattern.test(text));
   if (marker) {
     throw new UnsafeUploadError('O PDF contém recurso ativo ou incorporado não permitido pelo Portal.');
   }
+  try { await inspectPdfInWorker(bytes); }
+  catch (error) { throw new UnsafeUploadError(error instanceof Error ? error.message : 'Não foi possível verificar o PDF.'); }
 }
 
 function relationshipAttributes(xml: string): Array<Record<string, string>> {
@@ -69,7 +73,7 @@ async function assertSafeDocx(bytes: Buffer): Promise<void> {
 
   let zip: JSZip;
   try {
-    zip = await JSZip.loadAsync(bytes, { checkCRC32: true });
+    zip = await JSZip.loadAsync(bytes);
   } catch {
     throw new UnsafeUploadError('O DOCX está corrompido ou possui estrutura ZIP inválida.');
   }
@@ -98,6 +102,10 @@ async function assertSafeDocx(bytes: Buffer): Promise<void> {
     throw new UnsafeUploadError('O DOCX excede o limite de expansão segura do Portal.');
   }
 
+  // CRC validation expands entries; enforce directory limits first.
+  try { await JSZip.loadAsync(bytes, { checkCRC32: true }); }
+  catch { throw new UnsafeUploadError('O DOCX está corrompido ou possui estrutura ZIP inválida.'); }
+
   const relationshipFiles = entries.filter((entry) => !entry.dir && /\.rels$/i.test(entry.name));
   for (const relationshipFile of relationshipFiles) {
     const xml = await relationshipFile.async('text');
@@ -121,7 +129,7 @@ export async function assertSafeUploadedDocument(bytes: Buffer, kind: SafeDocume
   if (!bytes.length) throw new UnsafeUploadError('O arquivo enviado está vazio.');
   rejectIfEicar(bytes);
   if (kind === 'PDF') {
-    assertSafePdf(bytes);
+    await assertSafePdf(bytes);
     return;
   }
   await assertSafeDocx(bytes);

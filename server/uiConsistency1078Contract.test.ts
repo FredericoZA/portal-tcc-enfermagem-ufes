@@ -53,19 +53,19 @@ test('catálogo mestre propaga modelos e detecta variáveis',()=>{
   const server=read('server.ts');
   assert.match(models,/onCatalogChanged/);
   assert.match(models,/Atualizar variáveis/);
-  assert.match(models,/sincronizada\(s\) automaticamente/);
+  assert.match(models,/sincronizada\(s\) com a versão publicada/);
   assert.match(models,/model\.driveFileUrl/);
   assert.match(config,/syncMasterModelCatalog/);
   assert.match(api,/detectDocumentModelVariables/);
   assert.match(server,/\/api\/admin\/models\/:type\/detect-variables/);
 });
 
-test('e-mail usa cabeçalho configurável, anexos dinâmicos e sintaxe canônica',()=>{
+test('e-mail usa cabeçalho configurável, acesso por links e sintaxe canônica',()=>{
   const studio=read('src/components/IntegrationStudioPanel.tsx');
   const config=read('src/pages/ConfiguracoesPage.tsx');
   const service=read('src/services/integrationStudioService.ts');
   assert.match(studio,/Texto do cabeçalho/);
-  assert.match(studio,/docTemplates\.map\(doc=>/);
+  assert.match(studio,/sem anexos PDF/);
   assert.match(studio,/similarVariableSuggestions\.length > 0/);
   assert.doesNotMatch(studio,/false && similarVariableSuggestions/);
   assert.match(config,/recipient: String\(settings\?\.emailConfig\?\.roomReservationDepartmentEmail \|\| ''\)/);

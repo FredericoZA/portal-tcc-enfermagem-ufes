@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import {deriveSignatureSigners,publicationRequested} from '../workflow/signaturePolicy';
 import type { ProcessData } from '../../src/types';
 import type { SignatureJobStatus } from '../../src/types/signatures';
 import type {
@@ -133,7 +134,7 @@ export function mapAstenEventToJobStatus(event: AstenEventStatus, current: Signa
 }
 
 export function publicationAuthorizationRequired(process: ProcessData): boolean {
-  return Boolean(process.acervo?.publishFullWork || (process.acervo?.publishExpandedAbstract && process.acervo?.resumoExpandidoFileId));
+  return publicationRequested(process);
 }
 
 export function buildCanonicalSignaturePlan(
@@ -141,11 +142,8 @@ export function buildCanonicalSignaturePlan(
   documentType: 'ATA' | 'TERMO' | 'DECLARACAO',
   president: { name: string; email: string }
 ): CanonicalSignaturePlan {
-  if (documentType === 'ATA') return { documentType, required: true, signers: [{ role: 'ADVISOR', name: process.orientador.nome, email: process.orientador.email.toLowerCase(), order: 1 }] };
-  if (documentType === 'DECLARACAO') return { documentType, required: true, signers: [{ role: 'PRESIDENT', name: president.name, email: president.email.toLowerCase(), order: 1 }] };
-  if (!publicationAuthorizationRequired(process)) return { documentType, required: false, reason: 'O aluno não solicitou publicação do trabalho nem do resumo expandido.', signers: [] };
-  const signers: CanonicalSignaturePlan['signers'] = [process.aluno1, process.aluno2].filter(Boolean).map((student) => ({ role: 'STUDENT' as const, name: student!.nome, email: student!.email.toLowerCase(), order: 1 as const }));
-  signers.push({ role: 'ADVISOR', name: process.orientador.nome, email: process.orientador.email.toLowerCase(), order: 1 });
+  if (documentType==='TERMO'&&!publicationAuthorizationRequired(process)) return { documentType, required: false, reason: 'O aluno não solicitou publicação do trabalho nem do resumo expandido.', signers: [] };
+  const signers:CanonicalSignaturePlan['signers']=deriveSignatureSigners(process,documentType,{commissionPresidentName:president.name,commissionPresidentEmail:president.email}).map(signer=>({role:signer.role,name:signer.name,email:signer.email,order:1 as const}));
   return { documentType, required: true, signers };
 }
 

@@ -1,3 +1,6 @@
+import {documentVariables} from './documentVariables';
+import {authorNames,academicName} from './personPresentation';
+import {adaptDocumentLanguage} from './documentLanguage';
 import { ProcessData } from '../types';
 import { formatDateExtensoTotal, formatTimeExtenso, formatStudentsString } from './formatters';
 
@@ -108,10 +111,10 @@ export function generateOfficialDocumentText(
   }
 
   // 4. Form Variable Tag Replacements
-  const discentesString = formatStudentsString(process.aluno1, process.aluno2);
+  const discentesString = authorNames(process);
 
   const bancaNames = (process.banca || [])
-    .map((b) => `${b.nome}${b.instituicao ? ` (${b.instituicao})` : ''}`)
+    .map((b) => `${academicName(b)}${b.instituicao ? ` (${b.instituicao})` : ''}`)
     .join(', ') || 'Professores Examinadores Designados';
 
   const dataHoraStr = process.defesa?.startAt
@@ -126,12 +129,12 @@ export function generateOfficialDocumentText(
   const parecerText = process.avaliacao?.parecer || 'Parecer favorável registrado pela Comissão Examinadora.';
   const protocoloText = process.protocolo || process.id || 'PROTOCOLO_NAO_GERADO';
   const driveUrlText = process.driveFolderUrl || 'Pasta do processo ainda não sincronizada com o Google Drive';
-  const coorientadorName = process.coorientador?.nome || 'Não possui';
+  const coorientadorName = academicName(process.coorientador) || 'Não possui';
 
   const tagReplacements: Record<string, string> = {
     '-CAMPO_01-': discentesString,
     '-CAMPO_02-': process.titulo || 'Trabalho de Conclusão de Curso',
-    '-CAMPO_03-': process.orientador?.nome || 'Orientador Responsável',
+    '-CAMPO_03-': academicName(process.orientador) || 'Orientador',
     '-CAMPO_04-': dataHoraStr,
     '-CAMPO_06-': bancaNames,
     '-CAMPO_07_LOCAL-': localFormatText,
@@ -148,6 +151,7 @@ export function generateOfficialDocumentText(
   });
 
   const semanticValues: Record<string, string> = {
+    ...documentVariables(process),
     ALUNOS_NOMES: discentesString,
     ALUNO_NOME: process.aluno1.nome,
     NOME_ALUNO: process.aluno1.nome,
@@ -157,8 +161,8 @@ export function generateOfficialDocumentText(
     EMAIL_ALUNO: process.aluno1.email,
     TCC_TITULO: process.titulo,
     TITULO_TRABALHO: process.titulo,
-    ORIENTADOR_NOME: process.orientador?.nome || '',
-    NOME_ORIENTADOR: process.orientador?.nome || '',
+    ORIENTADOR_NOME: academicName(process.orientador),
+    NOME_ORIENTADOR: academicName(process.orientador),
     COORIENTADOR_NOME: coorientadorName,
     DEFESA_DATA_HORA_EXTENSO: dataHoraStr,
     DEFESA_DATA: process.defesa?.startAt ? formatDateExtensoTotal(process.defesa.startAt) : '',
@@ -173,9 +177,9 @@ export function generateOfficialDocumentText(
     DRIVE_PASTA_URL: driveUrlText
     ,Alunos: discentesString
     ,'Título do Trabalho': process.titulo
-    ,'Orientador (1)': process.orientador?.nome || ''
-    ,'Examinador (2)': process.banca?.find(item=>item.funcao==='EXAMINER_2')?.nome || process.banca?.[1]?.nome || ''
-    ,'Examinador (3)': process.banca?.find(item=>item.funcao==='EXAMINER_3')?.nome || process.banca?.[2]?.nome || ''
+    ,'Orientador (1)': academicName(process.orientador)
+    ,'Examinador (2)': academicName(process.banca?.find(item=>item.funcao==='EXAMINER_2') || process.banca?.filter(item=>item.funcao!=='ORIENTADOR')[0])
+    ,'Examinador (3)': academicName(process.banca?.find(item=>item.funcao==='EXAMINER_3') || process.banca?.filter(item=>item.funcao!=='ORIENTADOR')[1])
     ,'Data do Preenchimento': formatDateExtensoTotal(new Date().toISOString())
     ,'Data da Defesa (por extenso total)': process.defesa?.startAt ? formatDateExtensoTotal(process.defesa.startAt) : ''
     ,'Hora de Início da Defesa (por extenso)': process.defesa?.startAt ? formatTimeExtenso(process.defesa.startAt) : ''
@@ -204,5 +208,5 @@ export function generateOfficialDocumentText(
   const unresolved = text.match(/(?:-(?:CAMPO|FIELD)_[A-Z0-9_]+-|<<\s*[A-Z][A-Z0-9_]+\s*>>|\[\[\s*[A-Z][A-Z0-9_]+\s*\]\]|«\s*[A-Z][A-Z0-9_]+\s*»|\{\{\s*(?!SE_|FIM_)[A-Z][A-Z0-9_]+\s*\}\})/g);
   if (unresolved?.length) throw new Error(`Variáveis obrigatórias não resolvidas: ${Array.from(new Set(unresolved)).join(', ')}`);
 
-  return text.trim();
+  return adaptDocumentLanguage(text.trim(),process,docType);
 }

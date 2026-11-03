@@ -7,7 +7,7 @@ export function buildRecoveryQueue(input:{processes:ProcessData[];runs:WorkflowR
   const latest=new Map<string,WorkflowRun>();for(const run of [...input.runs].sort((a,b)=>a.startedAt.localeCompare(b.startedAt)))latest.set(`${run.processId}:${run.eventCode}`,run);
   for(const run of latest.values())if(run.status!=='COMPLETED')add({id:run.id,kind:'WORKFLOW',processId:run.processId,title:run.eventCode,state:run.status,reason:run.actions.find(a=>a.status==='FAILED')?.error||'Revise a configuração da etapa.',retryPath:`/api/admin/workflow/runs/${encodeURIComponent(run.id)}/retry`,actionLabel:'Retomar etapa',completedActions:run.actions.filter(a=>a.status==='COMPLETED').map(a=>a.actionId)});
   for(const job of input.jobs){
-    if(input.jobs.some(other=>other.processId===job.processId&&other.documentType===job.documentType&&other.status!=='CANCELED'&&other.documentVersion>job.documentVersion))continue;
+    if(input.jobs.some(other=>other.processId===job.processId&&other.documentType===job.documentType&&other.provider===job.provider&&other.status!=='CANCELED'&&other.documentVersion>job.documentVersion))continue;
     if(!['PROVIDER_ERROR','WAITING_INTEGRATION','DRIVE_SYNC_PENDING','SIGNED','SENDING'].includes(job.status))continue;
     const ambiguous=['UNCERTAIN','CREATING'].includes(job.providerCreationState||'');
     const reconcile=Boolean(job.providerEnvelopeId)&&(ambiguous||['SIGNED','DRIVE_SYNC_PENDING','SENDING'].includes(job.status));

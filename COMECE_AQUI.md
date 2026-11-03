@@ -1,6 +1,6 @@
 # Portal de TCC — comece aqui
 
-Versão: **1.0.0-rc.10**, de 10 de setembro de 2026.
+Guia revisado em **26 de outubro de 2026**. A versão de execução está em `package.json`; este texto não comprova publicação.
 
 Este ZIP contém o código completo do portal, migrações do banco, testes, exemplos de configuração e instruções para implantação. Ele consolida a RC9 e a revisão final RC10. O trabalho nesta rodada foi realizado nos arquivos do sistema; esta entrega não é uma instalação já publicada e homologada nas contas da UFES.
 
@@ -8,10 +8,10 @@ Este ZIP contém o código completo do portal, migrações do banco, testes, exe
 
 1. O aluno autorizado inicia o formulário e informa autores, matrículas, orientador, coorientador opcional, banca, título, data, horário e local.
 2. O fluxo publicado envia o pedido de reserva diretamente para o e-mail do departamento definido pelo Master.
-3. O aluno retoma seu processo e declara que recebeu a confirmação do departamento. O portal registra quem declarou, quando e qual local foi autorizado. O comprovante PDF é opcional. O departamento não precisa entrar no portal.
-4. Após a confirmação, o portal preenche o DOCX do convite com as variáveis do cadastro e envia o PDF aos destinatários configurados.
-5. A partir do horário da apresentação, o orientador confere os dados cadastrados, marca a confirmação, lança a nota e registra o parecer. O portal preenche o DOCX da ata e inicia a rotina de assinatura Asten do orientador.
-6. A entrega final e as escolhas de publicação continuam no processo. Havendo publicação, o termo é assinado pelos alunos autores e pelo orientador. A declaração é assinada pelo Presidente da Comissão.
+3. O departamento confirma ou nega pelo formulário recebido no e-mail. O Portal registra a resposta e o comprovante e avisa autores e orientador. Não há etapa de anexar resposta pelos alunos.
+4. Após a confirmação, o portal preenche o DOCX do convite com as variáveis do cadastro e envia o convite aos dois membros convidados, com autores e orientador em cópia. O botão abre Documentos do processo após o login; PDFs não são anexados aos e-mails.
+5. A partir do horário da apresentação, o orientador confere os dados cadastrados, marca a confirmação, seleciona o resultado e registra o parecer. O portal preenche o DOCX da ata e inicia a rotina de assinatura Asten do orientador.
+6. Após arquivar a ata assinada, qualquer autor pode fazer a entrega final e escolher separadamente a publicação de cada arquivo. Havendo publicação, o termo é assinado pelos alunos autores e pelo orientador. A declaração é assinada pelo Presidente da Comissão.
 7. O processo conclui depois que os documentos aplicáveis voltam assinados e são arquivados no Drive.
 
 A aparência de tabelas e pop-ups usa configuração compartilhada. O Master altera o padrão no editor e publica para os demais usuários. Nos outros navegadores, a configuração é carregada ao recarregar ou entrar novamente. A organização de colunas e os textos próprios de cada tela são preservados.

@@ -21,7 +21,7 @@ const dataDirectory=await mkdtemp(path.join(tmpdir(),'portal-tcc-http-'));
 const child=spawn(process.execPath,[serverBundle],{cwd:root,env:{...process.env,NODE_ENV:'development',PORT:String(port),PORTAL_DATA_DIR:dataDirectory,PORTAL_PERSISTENCE_PROVIDER:'local_file',PORTAL_ALLOW_INSECURE_DEMO_AUTH:'true',PORTAL_ALLOW_LOCAL_OTP_STORE:'true',PORTAL_ALLOW_LOCAL_SECRET_STORE:'true',PORTAL_TEST_DOCUMENT_RENDERER:'true',PORTAL_SERVE_COMPILED_CLIENT:'true',PORTAL_SESSION_SECRET:'http-test-session-secret-0123456789',PORTAL_OTP_PEPPER:'http-test-otp-pepper-0123456789'},stdio:['ignore','pipe','pipe']});
 let output='';child.stdout.on('data',chunk=>{output+=String(chunk);});child.stderr.on('data',chunk=>{output+=String(chunk);});
 const base=`http://127.0.0.1:${port}`;
-async function request(url){let last;for(let attempt=0;attempt<60;attempt++){try{return await fetch(base+url,{redirect:'manual'});}catch(error){last=error;await new Promise(resolve=>setTimeout(resolve,100));}}throw last;}
+async function request(url){let last;for(let attempt=0;attempt<60;attempt++){try{return await fetch(base+url,{redirect:'manual'});}catch(error){last=error;await new Promise(resolve=>setTimeout(resolve,100));}}throw new Error(`Servidor HTTP indisponível. ${output.slice(-2000)}`,{cause:last});}
 try{
   const health=await request('/api/health');if(!health.ok)throw new Error(`Saúde HTTP retornou ${health.status}.`);
   const healthBody=await health.json();if(healthBody.status!=='ok')throw new Error('Saúde HTTP não confirmou status ok.');

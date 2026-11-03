@@ -318,7 +318,7 @@
 
 [data-portal-sheet="president"] [data-portal-sticky-process="true"][data-portal-after-selection="true"] {
   position: sticky;
-  left: 54px;
+  left: 64px;
 }
 
 [data-portal-sheet="president"] tbody [data-portal-sticky-selection="true"],
@@ -334,9 +334,9 @@
 }
 
 [data-portal-selection-column="true"] {
-  width: 54px;
-  min-width: 54px;
-  max-width: 54px;
+  width: 64px;
+  min-width: 64px;
+  max-width: 64px;
 }
 
 /* Controle por coluna: exatamente 15 × 15, sempre no canto superior direito. */
@@ -458,4 +458,18 @@ td[data-portal-core-process-state="upcoming"] > div,
   border-bottom: 1px solid var(--portal-border);
   background: var(--portal-surface-inner);
   font-size: var(--portal-type-content);
+}
+
+/* Registros de assinatura: somente Processo permanece visível na rolagem horizontal. */
+#asten-logs-page .portal-signature-table-shell .portal-spreadsheet-table > :is(thead, tbody) > tr > :first-child {
+  position: sticky;
+  left: 0;
+}
+#asten-logs-page .portal-signature-table-shell .portal-spreadsheet-table > thead > tr > :first-child {
+  z-index: var(--portal-z-sticky-corner);
+  background: var(--portal-brand-header);
+}
+#asten-logs-page .portal-signature-table-shell .portal-spreadsheet-table > tbody > tr > :first-child {
+  z-index: var(--portal-z-sticky-column);
+  background: var(--portal-surface-card);
 }

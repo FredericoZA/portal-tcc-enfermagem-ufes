@@ -196,7 +196,7 @@ export const TccDetailPopupEditorModal: React.FC<TccDetailPopupEditorModalProps>
               <Palette className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="font-black text-xs sm:text-sm uppercase tracking-wide text-white">
+              <h2 className="font-black text-xs sm:text-sm normal-case tracking-wide text-white">
                 Personalização Visual do Painel de TCC
               </h2>
             </div>
@@ -220,7 +220,7 @@ export const TccDetailPopupEditorModal: React.FC<TccDetailPopupEditorModalProps>
         <div className="shrink-0 bg-[var(--portal-surface-page)] border-b border-slate-200 p-3 sm:p-4 shadow-2xs">
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
             <div className="bg-slate-50 px-3 py-1.5 border-b border-slate-200 flex items-center justify-between">
-              <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+              <span className="text-[10.5px] font-black normal-case tracking-wider text-slate-700 flex items-center gap-1.5">
                 <Eye className="w-3.5 h-3.5 text-slate-600" />
                 <span>Demonstração Fixa em Tempo Real</span>
               </span>
@@ -280,7 +280,7 @@ export const TccDetailPopupEditorModal: React.FC<TccDetailPopupEditorModalProps>
                   <GraduationCap className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <span className="text-[9.5px] font-bold uppercase text-slate-400 block">Discente Autor</span>
+                  <span className="text-[9.5px] font-bold normal-case text-slate-400 block">Discente Autor</span>
                   <span className="font-bold text-slate-900 leading-none">Lucas Almeida Ribeiro</span>
                 </div>
               </div>
@@ -292,7 +292,7 @@ export const TccDetailPopupEditorModal: React.FC<TccDetailPopupEditorModalProps>
         <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-5 custom-scrollbar bg-slate-50/50">
 
           <div className="space-y-3">
-            <label className="text-xs font-black uppercase tracking-wider text-slate-800 block">
+            <label className="text-xs font-black normal-case tracking-wider text-slate-800 block">
               Selecione uma cor
             </label>
 
@@ -335,8 +335,8 @@ export const TccDetailPopupEditorModal: React.FC<TccDetailPopupEditorModalProps>
                       </div>
 
                       {isSelected && (
-                        <span className="text-[9px] font-extrabold uppercase bg-slate-900 text-white px-2 py-0.5 rounded">
-                          ATIVO
+                        <span className="text-[9px] font-extrabold normal-case bg-slate-900 text-white px-2 py-0.5 rounded">
+                          Ativo
                         </span>
                       )}
                     </div>
@@ -359,7 +359,7 @@ export const TccDetailPopupEditorModal: React.FC<TccDetailPopupEditorModalProps>
                 <div className="w-6 h-6 rounded bg-slate-100 text-slate-700 flex items-center justify-center">
                   <Sliders className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                <h3 className="text-xs font-black normal-case tracking-wider text-slate-800">
                   Ajuste Fino das Tonalidades Derivadas
                 </h3>
               </div>
@@ -378,7 +378,7 @@ export const TccDetailPopupEditorModal: React.FC<TccDetailPopupEditorModalProps>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
               {/* Primary Color Picker */}
               <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-700 block">
+                <label className="text-[10px] font-black normal-case text-slate-700 block">
                   1. Cor Principal
                 </label>
                 <div className="flex items-center gap-2">
@@ -399,7 +399,7 @@ export const TccDetailPopupEditorModal: React.FC<TccDetailPopupEditorModalProps>
 
               {/* Derived Badge Background Picker */}
               <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-700 block">
+                <label className="text-[10px] font-black normal-case text-slate-700 block">
                   2. Fundo da Tag
                 </label>
                 <div className="flex items-center gap-2">
@@ -420,7 +420,7 @@ export const TccDetailPopupEditorModal: React.FC<TccDetailPopupEditorModalProps>
 
               {/* Derived Badge Text Picker */}
               <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-700 block">
+                <label className="text-[10px] font-black normal-case text-slate-700 block">
                   3. Texto da Tag
                 </label>
                 <div className="flex items-center gap-2">
@@ -441,7 +441,7 @@ export const TccDetailPopupEditorModal: React.FC<TccDetailPopupEditorModalProps>
 
               {/* Derived Badge Border Picker */}
               <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-700 block">
+                <label className="text-[10px] font-black normal-case text-slate-700 block">
                   4. Borda da Tag
                 </label>
                 <div className="flex items-center gap-2">

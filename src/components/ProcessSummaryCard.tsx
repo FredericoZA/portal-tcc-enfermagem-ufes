@@ -14,6 +14,8 @@ import type { IntegrationStudioSettings } from '../types/integrationStudio';
 type ProcessSummaryProps = {
   process: ProcessData;
   canEdit: boolean;
+  canEditReservation?: boolean;
+  onEditingChange?: (editing:boolean)=>void;
   studio?: Partial<IntegrationStudioSettings>;
   onUpdated: () => Promise<void>;
 };
@@ -33,13 +35,14 @@ const fieldLabel = 'text-[10px] font-semibold text-slate-600';
 const fieldValue = 'text-[11px] font-semibold leading-4 text-slate-900';
 
 export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
-  process, canEdit, studio, onUpdated,
+  process, canEdit, canEditReservation=canEdit, onEditingChange, studio, onUpdated,
 }) => {
   const [titleEditing, setTitleEditing] = useState(false);
   const [title, setTitle] = useState(process.titulo);
   const [titleSaving, setTitleSaving] = useState(false);
   const [titleBaseRevision,setTitleBaseRevision]=useState(process.dataRevision);
   const [reservationOpen, setReservationOpen] = useState(false);
+  const [reservationBaseRevision,setReservationBaseRevision]=useState(process.dataRevision);
   const [reservationSending, setReservationSending] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -69,6 +72,8 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
     setCustomLocation('');
   }, [process.id, process.dataRevision, process.titulo, process.defesa?.startAt, process.defesa?.local, titleEditing, reservationOpen]);
 
+  useEffect(()=>{onEditingChange?.(titleEditing||reservationOpen);},[titleEditing,reservationOpen,onEditingChange]);
+
   const saveTitle = async () => {
     const normalized = formatTccTitle(title);
     if (!normalized.trim()) { setError('Informe o título completo do trabalho.'); return; }
@@ -93,6 +98,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
     ));
     setCustomLocation(previousFailed && isOtherDefenseLocation(previousFailed.locationChoice) ? previousFailed.local : '');
     setError('');
+    setReservationBaseRevision(process.dataRevision);
     setReservationOpen(true);
   };
 
@@ -114,12 +120,12 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
         time: requested.time,
         locationChoice,
         customLocation: isOtherDefenseLocation(locationChoice) ? customLocation : '',
-        expectedDataRevision: process.dataRevision,
+        expectedDataRevision: reservationBaseRevision,
       });
       setReservationOpen(false);
-      setNotice(result.emailSent
-        ? 'Nova solicitação enviada ao responsável. A reserva vigente permanece até a confirmação.'
-        : 'Solicitação registrada, mas o envio do e-mail ainda está pendente. A secretaria deve acompanhar a ocorrência.');
+      setNotice(result.workflowPending
+        ? 'Reserva alterada. O novo pedido aguarda envio; acompanhe a situação no processo.'
+        : 'Novo pedido enviado ao responsável. Aguarde o aceite ou a recusa da reserva.');
       await onUpdated();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível solicitar a alteração da reserva.');
@@ -135,7 +141,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
             <span className={fieldLabel}>Protocolo</span>
             <span className={fieldValue}>{process.protocolo}</span>
           </div>
-          <div className={`${compactField} sm:col-span-8`}>
+          <div className={`portal-tcc-record-title ${compactField} sm:col-span-8`}>
             <div className="flex items-center justify-between gap-2">
               <span className={fieldLabel}>Título do trabalho</span>
               {canEdit && !titleEditing && (
@@ -167,14 +173,14 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
           </div>
           <div className={`${compactField} sm:col-span-2`}>
             <span className={fieldLabel}>Horário</span>
-            <span className={fieldValue}>{process.defesa?.startAt ? formatTimeExtenso(process.defesa.startAt) : 'A definir'}</span>
+            <span className={fieldValue}>{process.defesa?.startAt && !/^\d{4}-\d{2}-\d{2}$/.test(process.defesa.startAt) ? formatTimeExtenso(process.defesa.startAt) : 'A definir'}</span>
           </div>
           <div className={`${compactField} sm:col-span-5`}>
             <span className={fieldLabel}>Local da defesa</span>
             <span className={`${fieldValue} break-words`}>{process.defesa?.local || 'A confirmar'}</span>
           </div>
           <div className="flex items-end justify-start sm:col-span-2 sm:justify-end">
-            {canEdit && (
+            {canEditReservation && (
               <button
                 type="button"
                 onClick={openReservation}
@@ -218,7 +224,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
       >
         <form id="reservation-change-form" onSubmit={(event) => void submitReservationChange(event)} className="space-y-3">
           <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-950">
-            O envio cria uma <strong>nova solicitação</strong> ao responsável pelo local. A data, o horário e o local atuais não serão alterados até a confirmação da nova reserva.
+            O envio cria uma <strong>nova solicitação</strong> ao responsável pelo local. A confirmação anterior deixa de valer. O novo local e horário ficam reservados no sistema enquanto aguardam aceite ou recusa.
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className={compactField}>

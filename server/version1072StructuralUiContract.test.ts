@@ -23,12 +23,12 @@ test('ícones das barras são brancos e canônicos', () => {
   assert.match(icon, /text-white/);
 });
 
-test('filtro selecionado usa reforço global e rótulo FILTRAR', () => {
+test('filtro selecionado usa reforço global e rótulo Filtrar', () => {
   const css = read('src/styles/portal-components.css');
   assert.match(css, /background:\s*var\(--portal-filter-selected-bg\)/);
   assert.match(css, /outline: 1px solid var\(--portal-text-dark\)/);
   for (const file of ['src/pages/HomePage.tsx','src/pages/MeusProcessosPage.tsx','src/pages/CoordenadorPage.tsx','src/pages/PortalTutorialPage.tsx']) {
-    assert.match(read(file), /FILTRAR:/);
+    assert.match(read(file), /Filtrar:/);
   }
   assert.doesNotMatch(read('src/pages/PortalTutorialPage.tsx'), /Filtrar visão:/i);
 });

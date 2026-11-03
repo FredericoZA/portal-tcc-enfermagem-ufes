@@ -50,7 +50,7 @@ test('sticky é canônico e preserva exceção estrutural do Presidente', () => 
   assert.match(css, /data-portal-sheet="repository"[\s\S]*:is\(th, td\):first-child/);
   assert.match(css, /data-portal-sheet="my-tccs"[\s\S]*:is\(th, td\):first-child/);
   assert.match(css, /data-portal-sheet="president"[\s\S]*data-portal-sticky-selection/);
-  assert.match(css, /left:\s*54px/);
+  assert.match(css, /left:\s*64px/);
   assert.match(runtime, /dataset\.portalStickyProcess/);
   assert.match(runtime, /dataset\.portalStickyThead/);
 });

@@ -881,7 +881,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <ColorfulHeaderIcon type="variables" />
-              <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900">
+              <h3 className="text-xs sm:text-sm font-black normal-case tracking-wider text-slate-900">
                 {getEditableTableText(variableLabels, '__tableTitle', 'PLANILHA DE VARIÁVEIS')}
               </h3>
             </div>
@@ -890,33 +890,33 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               <button
                 type="button"
                 onClick={() => setIsMergeHistoryModalOpen(true)}
-                className="bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-xl px-3.5 py-1.5 text-xs font-black uppercase tracking-wide flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 transition-all"
+                className="bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-xl px-3.5 py-1.5 text-xs font-black normal-case tracking-wide flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 transition-all"
                 title="Central de Mesclagens: Procurar novas mesclas, fazer mescla manual e ver histórico"
               >
                 <GitMerge className="h-4 w-4 text-slate-700" />
-                <span>MESCLAGENS ({mergeHistory.length})</span>
+                <span>Mesclagens ({mergeHistory.length})</span>
               </button>
             </div>
           </div>
 
           {/* Linha 2 do Cabeçalho: Filtro Padronizado de ponta a ponta */}
           <div className="pt-2 border-t border-slate-200/80 flex flex-wrap items-center gap-2 text-xs min-w-0 w-full">
-            <span className="text-[10px] font-black uppercase tracking-wider shrink-0 text-slate-700">
+            <span className="text-[10px] font-black normal-case tracking-wider shrink-0 text-slate-700">
               {getEditableTableText(variableLabels, '__filterTitle', 'FILTRAR:')}
             </span>
 
             {/* Pílulas de Filtro de Sub-sistemas em tons neutros (Branco e Cinza Claro) */}
             {[
-              { key: 'modelos', label: 'MODELOS', count: sortedMatrixRows.length, isSel: selectedSubSystems.modelos, toggle: () => setSelectedSubSystems(prev => ({ ...prev, modelos: !prev.modelos })) },
-              { key: 'formularios', label: 'FORMULÁRIOS', count: sortedFormTemplates.length, isSel: selectedSubSystems.formularios, toggle: () => setSelectedSubSystems(prev => ({ ...prev, formularios: !prev.formularios })) },
-              { key: 'emails', label: 'E-MAILS', count: sortedEmailTemplates.length, isSel: selectedSubSystems.emails, toggle: () => setSelectedSubSystems(prev => ({ ...prev, emails: !prev.emails })) },
+              { key: 'modelos', label: 'Modelos', count: sortedMatrixRows.length, isSel: selectedSubSystems.modelos, toggle: () => setSelectedSubSystems(prev => ({ ...prev, modelos: !prev.modelos })) },
+              { key: 'formularios', label: 'Formulários', count: sortedFormTemplates.length, isSel: selectedSubSystems.formularios, toggle: () => setSelectedSubSystems(prev => ({ ...prev, formularios: !prev.formularios })) },
+              { key: 'emails', label: 'E-mails', count: sortedEmailTemplates.length, isSel: selectedSubSystems.emails, toggle: () => setSelectedSubSystems(prev => ({ ...prev, emails: !prev.emails })) },
             ].map((sub) => {
               return (
                 <button
                   key={sub.key}
                   type="button"
                   onClick={sub.toggle}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide cursor-pointer transition-all border select-none ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black normal-case tracking-wide cursor-pointer transition-all border select-none ${
                     sub.isSel
                       ? 'bg-slate-200 text-slate-900 border-slate-400 shadow-2xs font-extrabold'
                       : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50 opacity-80'
@@ -948,7 +948,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
           >
           <table className="w-full text-left border-separate border-spacing-0 min-w-[900px]">
             <thead>
-              <tr className="bg-slate-100 text-slate-800 text-[11px] font-semibold uppercase tracking-wider border-b-2 border-slate-300 cursor-pointer">
+              <tr className="bg-slate-100 text-slate-800 text-[11px] font-semibold normal-case tracking-wider border-b-2 border-slate-300 cursor-pointer">
                 
                 {/* Coluna Fixa da Esquerda (Elemento) com Parede Sólida Opaque Sticky Wall no Topo e Esquerda (z-50) */}
                 <th
@@ -963,7 +963,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   className="sticky left-0 top-0 z-50 bg-slate-100 text-slate-800 px-3 py-2.5 min-w-[280px] w-[280px] max-w-[280px] border-b-2 border-r-2 border-slate-300 shadow-[4px_0_10px_rgba(0,0,0,0.08)] select-none cursor-pointer group transition-colors hover:bg-slate-200"
                   title="Clique para ordenar elementos por nome"
                 >
-                  <div className="flex items-center justify-between gap-1.5 whitespace-normal break-words text-[11px] font-semibold uppercase tracking-wider text-slate-800">
+                  <div className="flex items-center justify-between gap-1.5 whitespace-normal break-words text-[11px] font-semibold normal-case tracking-wider text-slate-800">
                     <span className="break-words font-semibold text-slate-800">
                       {formatColumnLabel('element_name', 'ELEMENTO (MODELO / E-MAIL / FORMULÁRIO)', fixedConfigFormat, variableLabels)}
                     </span>
@@ -989,7 +989,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                     className={`px-3 py-2.5 w-[140px] min-w-[140px] max-w-[140px] ${getColWidthClass(col.id, variableWidths)} border-b-2 border-r border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200 sticky top-0 z-20 select-none cursor-pointer group transition-colors`}
                     title={`Clique para ver configurações funcionais da variável ${col.name}`}
                   >
-                    <div className="flex items-start justify-between gap-1 text-[11px] font-semibold uppercase tracking-wider text-slate-800">
+                    <div className="flex items-start justify-between gap-1 text-[11px] font-semibold normal-case tracking-wider text-slate-800">
                       <div className="flex items-center gap-1 min-w-0 flex-1 whitespace-normal break-words leading-tight">
                         <span
                           className="break-words font-semibold text-slate-800"
@@ -1048,8 +1048,8 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                     <div className="flex items-center justify-between gap-1.5 p-2 rounded-lg bg-slate-100 group-hover/mcell:bg-slate-200/90 text-slate-900 border border-slate-300 group-hover/mcell:border-slate-400 shadow-2xs group-hover/mcell:shadow-sm transition-all w-full max-w-full overflow-hidden">
                       <div className="min-w-0 flex-1 space-y-0.5">
                         <div className="flex items-center gap-1">
-                          <span className="bg-slate-200 text-slate-800 border border-slate-300 px-1.5 py-0.2 rounded-full text-[8.5px] font-black uppercase shrink-0">
-                            MODELO
+                          <span className="bg-slate-200 text-slate-800 border border-slate-300 px-1.5 py-0.2 rounded-full text-[8.5px] font-black normal-case shrink-0">
+                            Modelo
                           </span>
                           <span className="font-bold text-slate-900 text-[11px] truncate block max-w-[170px]" title={row.name}>
                             {row.name}
@@ -1127,8 +1127,8 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                     <div className="flex items-center justify-between gap-1.5 p-2 rounded-lg bg-slate-100 group-hover/fcell:bg-slate-200/90 text-slate-900 border border-slate-300 group-hover/fcell:border-slate-400 shadow-2xs group-hover/fcell:shadow-sm transition-all w-full max-w-full overflow-hidden">
                       <div className="min-w-0 flex-1 space-y-0.5">
                         <div className="flex items-center gap-1">
-                          <span className="bg-slate-200 text-slate-800 border border-slate-300 px-1.5 py-0.2 rounded-full text-[8.5px] font-black uppercase shrink-0">
-                            FORMULÁRIO
+                          <span className="bg-slate-200 text-slate-800 border border-slate-300 px-1.5 py-0.2 rounded-full text-[8.5px] font-black normal-case shrink-0">
+                            Formulário
                           </span>
                           <span className="font-bold text-slate-900 text-[11px] truncate block max-w-[170px]" title={form.title}>
                             {form.title}
@@ -1195,8 +1195,8 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                     <div className="flex items-center justify-between gap-1.5 p-2 rounded-lg bg-slate-100 group-hover/ecell:bg-slate-200/90 text-slate-900 border border-slate-300 group-hover/ecell:border-slate-400 shadow-2xs group-hover/ecell:shadow-sm transition-all w-full max-w-full overflow-hidden">
                       <div className="min-w-0 flex-1 space-y-0.5">
                         <div className="flex items-center gap-1">
-                          <span className="bg-slate-200 text-slate-800 border border-slate-300 px-1.5 py-0.2 rounded-full text-[8.5px] font-black uppercase shrink-0">
-                            E-MAIL
+                          <span className="bg-slate-200 text-slate-800 border border-slate-300 px-1.5 py-0.2 rounded-full text-[8.5px] font-black normal-case shrink-0">
+                            E-mail
                           </span>
                           <span className="font-bold text-slate-900 text-[11px] truncate block max-w-[170px]" title={email.name}>
                             {email.name}
@@ -1253,8 +1253,8 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
             <div className="portal-modal-header portal-flow-modal-header flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-purple-700" />
-                <h3 className="text-sm font-black uppercase tracking-wide text-slate-900">
-                  IMPORTAÇÃO INTELIGENTE DE MODELO / FORMULÁRIO (IA)
+                <h3 className="text-sm font-black normal-case tracking-wide text-slate-900">
+                  Importação inteligente de modelo / formulário (IA)
                 </h3>
               </div>
             </div>
@@ -1264,7 +1264,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
             </p>
 
             <div className="space-y-2">
-              <label className="block text-[10.5px] font-extrabold uppercase text-slate-800">
+              <label className="block text-[10.5px] font-extrabold normal-case text-slate-800">
                 Link do Google Drive ou Conteúdo do Texto:
               </label>
               <textarea
@@ -1280,7 +1280,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               <button
                 type="button"
                 onClick={() => setIsImportModalOpen(false)}
-                className="px-3.5 py-2 border border-slate-300 rounded text-xs font-bold uppercase text-slate-700 hover:bg-slate-100 cursor-pointer"
+                className="px-3.5 py-2 border border-slate-300 rounded text-xs font-bold normal-case text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1294,7 +1294,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   setImportInputText('');
                 }}
                 disabled={isScanning || !importInputText.trim()}
-                className="inline-flex items-center gap-1.5 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs uppercase px-4 py-2 rounded shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs normal-case px-4 py-2 rounded shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-purple-200" />
                 <span>{isScanning ? 'Analisando...' : 'Analisar e Mapear Campos'}</span>
@@ -1308,8 +1308,8 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
       {isAddRowOpen && (
         <div className="bg-slate-50 border border-slate-300 p-4 rounded-md space-y-3 animate-in fade-in duration-150">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-            <h4 className="text-xs font-black uppercase text-slate-900 flex items-center gap-2">
-              INSERIR NOVO MODELO DE ARQUIVO .DOCX
+            <h4 className="text-xs font-black normal-case text-slate-900 flex items-center gap-2">
+              Inserir novo modelo de arquivo .DOCX
             </h4>
             <button
               type="button"
@@ -1320,7 +1320,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
             </button>
           </div>
           <div>
-            <label className="block text-[10.5px] font-bold uppercase text-slate-700 mb-1">
+            <label className="block text-[10.5px] font-bold normal-case text-slate-700 mb-1">
               Nome do Modelo:
             </label>
             <input
@@ -1335,7 +1335,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
             <button
               type="button"
               onClick={handleCreateNewDocRow}
-              className="bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs uppercase px-4 py-2 rounded shadow-2xs cursor-pointer border border-slate-300 active:scale-95"
+              className="bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs normal-case px-4 py-2 rounded shadow-2xs cursor-pointer border border-slate-300 active:scale-95"
             >
               Adicionar Modelo
             </button>
@@ -1350,15 +1350,15 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
             <div className="portal-modal-header portal-flow-modal-header flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-orange-600" />
-                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wide text-slate-900">
-                  EDITAR MODELO DE DOCUMENTO (.DOCX)
+                <h3 className="text-xs sm:text-sm font-black normal-case tracking-wide text-slate-900">
+                  Editar modelo de documento (.DOCX)
                 </h3>
               </div>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-800 mb-1">
+                <label className="block text-[11px] font-bold normal-case text-slate-800 mb-1">
                   Nome do Modelo:
                 </label>
                 <input
@@ -1377,7 +1377,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-800 mb-1">
+                <label className="block text-[11px] font-bold normal-case text-slate-800 mb-1">
                   Link do Google Drive (.docx):
                 </label>
                 <input
@@ -1419,7 +1419,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   setEditingModelRow(null);
                   showNotification(`Modelo "${editingModelRow.name}" atualizado!`);
                 }}
-                className="bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs uppercase px-4 py-2 rounded-xl shadow-2xs transition-all cursor-pointer border border-slate-300 active:scale-95"
+                className="bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs normal-case px-4 py-2 rounded-xl shadow-2xs transition-all cursor-pointer border border-slate-300 active:scale-95"
               >
                 Salvar e Fechar
               </button>
@@ -1435,15 +1435,15 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
             <div className="portal-modal-header portal-flow-modal-header flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Mail className="w-5 h-5 text-amber-600" />
-                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wide text-slate-900">
-                  EDITAR MODELO DE E-MAIL AUTOMÁTICO
+                <h3 className="text-xs sm:text-sm font-black normal-case tracking-wide text-slate-900">
+                  Editar modelo de e-mail automático
                 </h3>
               </div>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-800 mb-1">
+                <label className="block text-[11px] font-bold normal-case text-slate-800 mb-1">
                   Nome do Modelo de E-mail:
                 </label>
                 <input
@@ -1454,13 +1454,13 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                     setEditingEmail(prev => prev ? { ...prev, name: val } : null);
                     setEmailTemplates(prev => prev.map(em => em.id === editingEmail.id ? { ...em, name: val } : em));
                   }}
-                  className="w-full bg-slate-50 border border-slate-300 p-2 rounded text-xs font-bold text-slate-900 uppercase"
+                  className="w-full bg-slate-50 border border-slate-300 p-2 rounded text-xs font-bold text-slate-900 normal-case"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-800 mb-1">
+                  <label className="block text-[11px] font-bold normal-case text-slate-800 mb-1">
                     Gatilho (Momento do Disparo):
                   </label>
                   <select
@@ -1482,7 +1482,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-800 mb-1">
+                  <label className="block text-[11px] font-bold normal-case text-slate-800 mb-1">
                     Destinatário Oficial:
                   </label>
                   <input
@@ -1499,7 +1499,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-800 mb-1">
+                <label className="block text-[11px] font-bold normal-case text-slate-800 mb-1">
                   Assunto do E-mail:
                 </label>
                 <input
@@ -1515,7 +1515,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-800 mb-1">
+                <label className="block text-[11px] font-bold normal-case text-slate-800 mb-1">
                   Corpo da Mensagem (Com Marcadores):
                 </label>
                 <textarea
@@ -1531,7 +1531,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               </div>
 
               <div className="bg-slate-50 p-3 border border-slate-300 rounded space-y-2">
-                <label className="block text-[11px] font-bold uppercase text-slate-900">
+                <label className="block text-[11px] font-bold normal-case text-slate-900">
                   Anexos Automáticos Vinculados:
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -1579,7 +1579,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   setEditingEmail(null);
                   showNotification(`E-mail "${editingEmail.name}" atualizado!`);
                 }}
-                className="bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs uppercase px-4 py-2 rounded-xl shadow-2xs transition-all cursor-pointer border border-slate-300 active:scale-95"
+                className="bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs normal-case px-4 py-2 rounded-xl shadow-2xs transition-all cursor-pointer border border-slate-300 active:scale-95"
               >
                 Salvar e Fechar
               </button>
@@ -1595,15 +1595,15 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
             <div className="portal-modal-header portal-flow-modal-header flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ClipboardList className="w-5 h-5 text-sky-600" />
-                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wide text-slate-900">
-                  EDITAR FORMULÁRIO DINÂMICO
+                <h3 className="text-xs sm:text-sm font-black normal-case tracking-wide text-slate-900">
+                  Editar formulário dinâmico
                 </h3>
               </div>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-800 mb-1">
+                <label className="block text-[11px] font-bold normal-case text-slate-800 mb-1">
                   Título do Formulário:
                 </label>
                 <input
@@ -1614,13 +1614,13 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                     setEditingForm(prev => prev ? { ...prev, title: val } : null);
                     setFormTemplates(prev => prev.map(f => f.id === editingForm.id ? { ...f, title: val } : f));
                   }}
-                  className="w-full bg-slate-50 border border-slate-300 p-2 rounded text-xs font-bold text-slate-900 uppercase"
+                  className="w-full bg-slate-50 border border-slate-300 p-2 rounded text-xs font-bold text-slate-900 normal-case"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-800 mb-1">
+                  <label className="block text-[11px] font-bold normal-case text-slate-800 mb-1">
                     Quem Preenche (Público-Alvo):
                   </label>
                   <select
@@ -1640,7 +1640,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-800 mb-1">
+                  <label className="block text-[11px] font-bold normal-case text-slate-800 mb-1">
                     Descrição:
                   </label>
                   <input
@@ -1659,7 +1659,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               {/* Lista de Campos do Formulário */}
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                  <span className="text-xs font-black uppercase text-slate-900">
+                  <span className="text-xs font-black normal-case text-slate-900">
                     Campos de Coleta do Formulário ({editingForm.questions.length})
                   </span>
                   <button
@@ -1677,7 +1677,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                       setEditingForm(prev => prev ? { ...prev, questions: updatedQuestions } : null);
                       setFormTemplates(prev => prev.map(f => f.id === editingForm.id ? { ...f, questions: updatedQuestions } : f));
                     }}
-                    className="bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-[11px] uppercase px-3 py-1 rounded-full cursor-pointer transition-all"
+                    className="bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-[11px] normal-case px-3 py-1 rounded-full cursor-pointer transition-all"
                   >
                     + Adicionar Campo
                   </button>
@@ -1687,7 +1687,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   {editingForm.questions.map((q, qIdx) => (
                     <div key={q.id} className="bg-slate-50 p-3 border border-slate-300 rounded space-y-2 text-xs">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-extrabold text-[10px] bg-slate-200 px-2 py-0.5 rounded uppercase">
+                        <span className="font-extrabold text-[10px] bg-slate-200 px-2 py-0.5 rounded normal-case">
                           Campo #{qIdx + 1}
                         </span>
                         <button
@@ -1705,7 +1705,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-600">Rótulo:</label>
+                          <label className="block text-[10px] font-bold normal-case text-slate-600">Rótulo:</label>
                           <input
                             type="text"
                             value={q.label}
@@ -1720,7 +1720,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-600">Tag Matriz:</label>
+                          <label className="block text-[10px] font-bold normal-case text-slate-600">Tag Matriz:</label>
                           <input
                             type="text"
                             value={q.fieldKey}
@@ -1735,7 +1735,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-600">Tipo do Campo:</label>
+                          <label className="block text-[10px] font-bold normal-case text-slate-600">Tipo do Campo:</label>
                           <select
                             value={q.type}
                             onChange={(e) => {
@@ -1781,7 +1781,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   setEditingForm(null);
                   showNotification(`Formulário "${editingForm.title}" atualizado!`);
                 }}
-                className="bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs uppercase px-4 py-2 rounded-xl shadow-2xs transition-all cursor-pointer border border-slate-300 active:scale-95"
+                className="bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs normal-case px-4 py-2 rounded-xl shadow-2xs transition-all cursor-pointer border border-slate-300 active:scale-95"
               >
                 Salvar e Fechar
               </button>
@@ -1797,7 +1797,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
             <div className="portal-modal-header portal-flow-modal-header flex items-center justify-between">
               <div className="flex items-center gap-2">
                 
-                <h3 className="text-xs font-black uppercase tracking-wide text-slate-900">
+                <h3 className="text-xs font-black normal-case tracking-wide text-slate-900">
                   Criar Novo Modelo de E-mail
                 </h3>
               </div>
@@ -1805,7 +1805,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[10.5px] font-extrabold uppercase text-slate-800 mb-1">
+                <label className="block text-[10.5px] font-extrabold normal-case text-slate-800 mb-1">
                   Nome do Modelo de E-mail:
                 </label>
                 <input
@@ -1813,13 +1813,13 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   placeholder="Ex: NOTIFICAÇÃO DE AGENDAMENTO DE BANCA"
                   value={newEmailName}
                   onChange={(e) => setNewEmailName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 p-2.5 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 uppercase"
+                  className="w-full bg-slate-50 border border-slate-300 p-2.5 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 normal-case"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10.5px] font-extrabold uppercase text-slate-800 mb-1">
+                  <label className="block text-[10.5px] font-extrabold normal-case text-slate-800 mb-1">
                     Gatilho / Momento do Disparo:
                   </label>
                   <select
@@ -1837,7 +1837,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10.5px] font-extrabold uppercase text-slate-800 mb-1">
+                  <label className="block text-[10.5px] font-extrabold normal-case text-slate-800 mb-1">
                     Destinatário:
                   </label>
                   <input
@@ -1851,7 +1851,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               </div>
 
               <div>
-                <label className="block text-[10.5px] font-extrabold uppercase text-slate-800 mb-1">
+                <label className="block text-[10.5px] font-extrabold normal-case text-slate-800 mb-1">
                   Assunto do E-mail:
                 </label>
                 <input
@@ -1864,7 +1864,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               </div>
 
               <div>
-                <label className="block text-[10.5px] font-extrabold uppercase text-slate-800 mb-1">
+                <label className="block text-[10.5px] font-extrabold normal-case text-slate-800 mb-1">
                   Corpo da Mensagem (Suporta variáveis {"{{ALUNO}}"}, {"{{TITULO}}"}):
                 </label>
                 <textarea
@@ -1880,14 +1880,14 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCreateEmailModalOpen(false)}
-                className="px-3.5 py-2 border border-slate-300 rounded-lg text-xs font-bold uppercase text-slate-700 hover:bg-slate-100 cursor-pointer"
+                className="px-3.5 py-2 border border-slate-300 rounded-lg text-xs font-bold normal-case text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleSaveNewEmailModal}
-                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 rounded-lg text-xs font-black uppercase tracking-wide cursor-pointer shadow-2xs transition-colors"
+                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 rounded-lg text-xs font-black normal-case tracking-wide cursor-pointer shadow-2xs transition-colors"
               >
                 Salvar Modelo
               </button>
@@ -1903,7 +1903,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
             <div className="portal-modal-header portal-flow-modal-header flex items-center justify-between">
               <div className="flex items-center gap-2">
                 
-                <h3 className="text-xs font-black uppercase tracking-wide text-slate-900">
+                <h3 className="text-xs font-black normal-case tracking-wide text-slate-900">
                   Criar Novo Formulário
                 </h3>
               </div>
@@ -1911,7 +1911,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
 
             <div className="flex-1 overflow-y-auto space-y-3 pr-1">
               <div>
-                <label className="block text-[10.5px] font-extrabold uppercase text-slate-800 mb-1">
+                <label className="block text-[10.5px] font-extrabold normal-case text-slate-800 mb-1">
                   Título do Formulário:
                 </label>
                 <input
@@ -1919,13 +1919,13 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   placeholder="Ex: FORMULÁRIO DE CADASTRO DE BANCA AVALIADORA"
                   value={newFormTitle}
                   onChange={(e) => setNewFormTitle(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 p-2.5 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 uppercase"
+                  className="w-full bg-slate-50 border border-slate-300 p-2.5 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 normal-case"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10.5px] font-extrabold uppercase text-slate-800 mb-1">
+                  <label className="block text-[10.5px] font-extrabold normal-case text-slate-800 mb-1">
                     Quem Preenche? (Papel Alvo):
                   </label>
                   <select
@@ -1941,7 +1941,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10.5px] font-extrabold uppercase text-slate-800 mb-1">
+                  <label className="block text-[10.5px] font-extrabold normal-case text-slate-800 mb-1">
                     Descrição do Formulário:
                   </label>
                   <input
@@ -1956,7 +1956,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               {/* Adicionar Perguntas ao Novo Formulário */}
               <div className="space-y-2 pt-2 border-t border-slate-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-slate-900">
+                  <span className="text-xs font-black normal-case text-slate-900">
                     Campos de Coleta ({newFormQuestions.length})
                   </span>
                   <button
@@ -1972,7 +1972,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                       };
                       setNewFormQuestions(prev => [...prev, newQ]);
                     }}
-                    className="bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold text-[11px] uppercase px-2.5 py-1 rounded-lg cursor-pointer"
+                    className="bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold text-[11px] normal-case px-2.5 py-1 rounded-lg cursor-pointer"
                   >
                     + Adicionar Campo
                   </button>
@@ -1982,7 +1982,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   {newFormQuestions.map((q, idx) => (
                     <div key={q.id} className="bg-slate-50 p-2.5 border border-slate-300 rounded-lg space-y-2 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-[10px] uppercase text-slate-800 bg-slate-200 px-1.5 py-0.5 rounded">
+                        <span className="font-bold text-[10px] normal-case text-slate-800 bg-slate-200 px-1.5 py-0.5 rounded">
                           Campo #{idx + 1}
                         </span>
                         <button
@@ -1996,7 +1996,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <div>
-                          <label className="block text-[9.5px] font-bold text-slate-600 uppercase">Rótulo:</label>
+                          <label className="block text-[9.5px] font-bold text-slate-600 normal-case">Rótulo:</label>
                           <input
                             type="text"
                             value={q.label}
@@ -2009,7 +2009,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                         </div>
 
                         <div>
-                          <label className="block text-[9.5px] font-bold text-slate-600 uppercase">Tag Matriz:</label>
+                          <label className="block text-[9.5px] font-bold text-slate-600 normal-case">Tag Matriz:</label>
                           <input
                             type="text"
                             value={q.fieldKey}
@@ -2022,7 +2022,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                         </div>
 
                         <div>
-                          <label className="block text-[9.5px] font-bold text-slate-600 uppercase">Tipo:</label>
+                          <label className="block text-[9.5px] font-bold text-slate-600 normal-case">Tipo:</label>
                           <select
                             value={q.fieldType}
                             onChange={(e) => {
@@ -2049,14 +2049,14 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCreateFormModalOpen(false)}
-                className="px-3.5 py-2 border border-slate-300 rounded-lg text-xs font-bold uppercase text-slate-700 hover:bg-slate-100 cursor-pointer"
+                className="px-3.5 py-2 border border-slate-300 rounded-lg text-xs font-bold normal-case text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleSaveNewFormModal}
-                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 rounded-lg text-xs font-black uppercase tracking-wide cursor-pointer shadow-2xs transition-colors"
+                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 rounded-lg text-xs font-black normal-case tracking-wide cursor-pointer shadow-2xs transition-colors"
               >
                 Salvar Formulário
               </button>
@@ -2069,8 +2069,8 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
       <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-5 shadow-sm space-y-4">
         <div className="border-b border-slate-200 pb-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wide text-slate-900 flex items-center gap-2">
-              <span>CONSTRUTOR E PIPELINE DO FLUXO DO PROCESSO DE TCC</span>
+            <h3 className="text-xs sm:text-sm font-black normal-case tracking-wide text-slate-900 flex items-center gap-2">
+              <span>Construtor e pipeline do fluxo do processo de TCC</span>
             </h3>
           </div>
 
@@ -2078,7 +2078,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
             <button
               type="button"
               onClick={handleAddStage}
-              className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer border border-slate-300 active:scale-95"
+              className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold normal-case tracking-wider px-3.5 py-2 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer border border-slate-300 active:scale-95"
             >
               <Plus className="w-3.5 h-3.5 text-slate-700" />
               <span>Criar Nova Etapa</span>
@@ -2092,7 +2092,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
             <div key={stage.id} className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 space-y-2 flex flex-col justify-between shadow-2xs hover:border-slate-300 transition-colors">
               <div className="space-y-2">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                  <span className="text-[10px] font-black text-slate-900 bg-slate-200 border border-slate-300 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                  <span className="text-[10px] font-black text-slate-900 bg-slate-200 border border-slate-300 px-2 py-0.5 rounded-md normal-case tracking-wider">
                     Etapa {stage.stageNumber}
                   </span>
                   <div className="flex items-center gap-0.5">
@@ -2132,11 +2132,11 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                     const val = e.target.value;
                     setWorkflowStages(prev => prev.map(s => s.id === stage.id ? { ...s, title: val } : s));
                   }}
-                  className="w-full bg-white border border-slate-300 font-extrabold text-xs text-slate-900 p-1.5 rounded-lg focus:ring-1 focus:ring-slate-400 outline-none uppercase tracking-tight"
+                  className="w-full bg-white border border-slate-300 font-extrabold text-xs text-slate-900 p-1.5 rounded-lg focus:ring-1 focus:ring-slate-400 outline-none normal-case tracking-tight"
                 />
 
                 <div className="space-y-0.5">
-                  <label className="block text-[8px] font-black text-slate-500 uppercase">Evento Gatilho:</label>
+                  <label className="block text-[8px] font-black text-slate-500 normal-case">Evento Gatilho:</label>
                   <input
                     type="text"
                     value={stage.triggerEvent}
@@ -2151,7 +2151,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
 
               {/* Lista de Ações Vinculadas à Etapa */}
               <div className="space-y-1.5 min-h-[90px] bg-white border border-dashed border-slate-300 p-2 rounded-xl flex-grow">
-                <div className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                <div className="text-[9px] font-extrabold text-slate-400 normal-case tracking-wider flex items-center justify-between">
                   <span>Ações & Elementos ({stage.actions.length})</span>
                 </div>
 
@@ -2186,9 +2186,9 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               <div>
                 {addingToStageId === stage.id ? (
                   <div className="bg-white border border-slate-300 p-2 rounded-xl space-y-1.5 text-xs shadow-xs">
-                    <div className="text-[9px] font-bold uppercase text-slate-700">Selecione para vincular:</div>
+                    <div className="text-[9px] font-bold normal-case text-slate-700">Selecione para vincular:</div>
                     <div className="space-y-1 max-h-40 overflow-y-auto">
-                      <div className="text-[8px] font-black uppercase text-amber-800 pt-0.5">Formulários:</div>
+                      <div className="text-[8px] font-black normal-case text-amber-800 pt-0.5">Formulários:</div>
                       {formTemplates.map(f => (
                         <button
                           key={f.id}
@@ -2200,7 +2200,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                         </button>
                       ))}
 
-                      <div className="text-[8px] font-black uppercase text-slate-700 pt-1">Modelos (.docx):</div>
+                      <div className="text-[8px] font-black normal-case text-slate-700 pt-1">Modelos (.docx):</div>
                       {docTemplates.map(d => (
                         <button
                           key={d.id}
@@ -2212,7 +2212,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                         </button>
                       ))}
 
-                      <div className="text-[8px] font-black uppercase text-sky-800 pt-1">E-mails:</div>
+                      <div className="text-[8px] font-black normal-case text-sky-800 pt-1">E-mails:</div>
                       {emailTemplates.map(em => (
                         <button
                           key={em.id}
@@ -2255,8 +2255,8 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
             <div className="portal-modal-header portal-flow-modal-header flex items-center justify-between">
               <div className="flex items-center gap-2">
                 
-                <h3 className="text-sm font-black uppercase tracking-wide text-slate-900">
-                  IMPORTAR NOVO MODELO DE DOCUMENTO (.DOCX)
+                <h3 className="text-sm font-black normal-case tracking-wide text-slate-900">
+                  Importar novo modelo de documento (.DOCX)
                 </h3>
               </div>
             </div>
@@ -2291,7 +2291,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[10.5px] font-extrabold uppercase text-slate-800 mb-1">
+                <label className="block text-[10.5px] font-extrabold normal-case text-slate-800 mb-1">
                   Nome do Modelo / Documento:
                 </label>
                 <input
@@ -2305,7 +2305,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
 
               {importModelMode === 'drive' ? (
                 <div>
-                  <label className="block text-[10.5px] font-extrabold uppercase text-slate-800 mb-1">
+                  <label className="block text-[10.5px] font-extrabold normal-case text-slate-800 mb-1">
                     URL / Link Compartilhável do Google Drive / Docs:
                   </label>
                   <input
@@ -2342,7 +2342,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   />
                   <label
                     htmlFor="docx-file-input"
-                    className="inline-block bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs uppercase px-3.5 py-1.5 rounded-xl cursor-pointer transition-all border border-slate-300 active:scale-95 shadow-2xs"
+                    className="inline-block bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs normal-case px-3.5 py-1.5 rounded-xl cursor-pointer transition-all border border-slate-300 active:scale-95 shadow-2xs"
                   >
                     Selecionar Arquivo
                   </label>
@@ -2354,14 +2354,14 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               <button
                 type="button"
                 onClick={() => setIsImportModelOpen(false)}
-                className="px-3.5 py-2 border border-slate-300 rounded-xl text-xs font-bold uppercase text-slate-700 hover:bg-slate-100 cursor-pointer"
+                className="px-3.5 py-2 border border-slate-300 rounded-xl text-xs font-bold normal-case text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleProcessImportModel}
-                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-800 rounded-xl text-xs font-bold uppercase tracking-wide cursor-pointer shadow-2xs transition-all border border-slate-300 active:scale-95"
+                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-800 rounded-xl text-xs font-bold normal-case tracking-wide cursor-pointer shadow-2xs transition-all border border-slate-300 active:scale-95"
               >
                 Importar e Mapear Marcadores
               </button>
@@ -2377,8 +2377,8 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
             <div className="portal-modal-header portal-flow-modal-header flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-amber-600 animate-pulse" />
-                <h3 className="text-sm font-black uppercase tracking-wide text-slate-900">
-                  CONSOLIDAÇÃO DE VARIÁVEIS SEMELHANTES (IA)
+                <h3 className="text-sm font-black normal-case tracking-wide text-slate-900">
+                  Consolidação de variáveis semelhantes (IA)
                 </h3>
               </div>
             </div>
@@ -2391,7 +2391,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               {suggestedMerges.length === 0 ? (
                 <div className="p-8 text-center bg-slate-100 border border-slate-300 rounded-md space-y-2">
                   <Check className="w-8 h-8 text-slate-700 mx-auto" />
-                  <p className="text-xs font-black text-slate-900 uppercase">
+                  <p className="text-xs font-black text-slate-900 normal-case">
                     Todas as variáveis estão perfeitamente unificadas!
                   </p>
                   <p className="text-[11px] text-slate-700">
@@ -2403,7 +2403,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   <div key={item.id} className="bg-slate-50 border border-amber-300 rounded-md p-3.5 space-y-3 shadow-2xs">
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-1">
-                        <span className="text-[9.5px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded">
+                        <span className="text-[9.5px] font-black normal-case bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded">
                           {item.reason}
                         </span>
                         <div className="text-xs text-slate-800 font-bold pt-1">
@@ -2460,7 +2460,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                     suggestedMerges.forEach(item => handleApplyMerge(item.colA, item.colB));
                     setIsConsolidateModalOpen(false);
                   }}
-                  className="bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 font-black text-xs uppercase px-4 py-2 rounded shadow-2xs cursor-pointer"
+                  className="bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 font-black text-xs normal-case px-4 py-2 rounded shadow-2xs cursor-pointer"
                 >
                   Mesclar Todas Automaticamente
                 </button>
@@ -2468,7 +2468,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               <button
                 type="button"
                 onClick={() => setIsConsolidateModalOpen(false)}
-                className="ml-auto px-4 py-2 border border-slate-300 rounded text-xs font-bold uppercase text-slate-700 hover:bg-slate-100 cursor-pointer"
+                className="ml-auto px-4 py-2 border border-slate-300 rounded text-xs font-bold normal-case text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 Concluir
               </button>
@@ -2516,8 +2516,8 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   <GitMerge className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-black uppercase tracking-wide text-slate-900">
-                    CENTRAL DE MESCLAGENS DE VARIÁVEIS
+                  <h3 className="text-sm sm:text-base font-black normal-case tracking-wide text-slate-900">
+                    Central de mesclagens de variáveis
                   </h3>
                   <p className="text-[11px] text-slate-500 font-medium">
                     Procure novas mesclas nos modelos, faça unificação manual ou gerencie o histórico.
@@ -2531,7 +2531,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               <button
                 type="button"
                 onClick={() => setMergeModalTab('scan')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wide cursor-pointer transition-all flex items-center gap-1.5 border ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black normal-case tracking-wide cursor-pointer transition-all flex items-center gap-1.5 border ${
                   mergeModalTab === 'scan'
                     ? 'bg-white text-slate-900 border-slate-400 font-black shadow-2xs'
                     : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
@@ -2549,7 +2549,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               <button
                 type="button"
                 onClick={() => setMergeModalTab('manual')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wide cursor-pointer transition-all flex items-center gap-1.5 border ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black normal-case tracking-wide cursor-pointer transition-all flex items-center gap-1.5 border ${
                   mergeModalTab === 'manual'
                     ? 'bg-white text-slate-900 border-slate-400 font-black shadow-2xs'
                     : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
@@ -2562,7 +2562,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               <button
                 type="button"
                 onClick={() => setMergeModalTab('history')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wide cursor-pointer transition-all flex items-center gap-1.5 border ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black normal-case tracking-wide cursor-pointer transition-all flex items-center gap-1.5 border ${
                   mergeModalTab === 'history'
                     ? 'bg-white text-slate-900 border-slate-400 font-black shadow-2xs'
                     : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
@@ -2581,7 +2581,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div>
-                        <h4 className="text-xs font-extrabold uppercase text-slate-900">
+                        <h4 className="text-xs font-extrabold normal-case text-slate-900">
                           Varredura e Análise do Google Drive
                         </h4>
                         <p className="text-[11px] text-slate-600 mt-0.5">
@@ -2592,7 +2592,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                         type="button"
                         onClick={handleScanAndUpdateVariables}
                         disabled={isScanning}
-                        className="bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 font-black text-xs uppercase px-4 py-2.5 rounded-xl shadow-2xs transition-all cursor-pointer inline-flex items-center gap-2 shrink-0 disabled:opacity-50 active:scale-95"
+                        className="bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 font-black text-xs normal-case px-4 py-2.5 rounded-xl shadow-2xs transition-all cursor-pointer inline-flex items-center gap-2 shrink-0 disabled:opacity-50 active:scale-95"
                       >
                         <YinYangIcon className={`w-4 h-4 text-slate-700 ${isScanning ? 'animate-spin' : ''}`} />
                         <span>{isScanning ? 'Analisando...' : 'Procurar Novas Mesclas'}</span>
@@ -2602,14 +2602,14 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
 
                   {/* Sugestões encontradas */}
                   <div className="space-y-2">
-                    <h5 className="text-[11px] font-black uppercase tracking-wider text-slate-700">
+                    <h5 className="text-[11px] font-black normal-case tracking-wider text-slate-700">
                       Mesclas Sugeridas pela IA ({suggestedMerges.length})
                     </h5>
 
                     {suggestedMerges.length === 0 ? (
                       <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-300 rounded-xl space-y-1">
                         <Check className="w-7 h-7 text-slate-600 mx-auto" />
-                        <p className="text-xs font-black text-slate-800 uppercase">
+                        <p className="text-xs font-black text-slate-800 normal-case">
                           Nenhuma nova mescla pendente
                         </p>
                         <p className="text-[11px] text-slate-500">
@@ -2622,7 +2622,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                           <div key={item.id} className="bg-slate-50 border border-amber-300 rounded-xl p-3.5 space-y-3 shadow-2xs">
                             <div className="flex items-start justify-between gap-2">
                               <div className="space-y-1">
-                                <span className="text-[9.5px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded">
+                                <span className="text-[9.5px] font-black normal-case bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded">
                                   {item.reason}
                                 </span>
                                 <div className="text-xs text-slate-800 font-bold pt-1">
@@ -2661,7 +2661,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                             onClick={() => {
                               suggestedMerges.forEach(item => handleApplyMerge(item.colA, item.colB));
                             }}
-                            className="w-full bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 font-black text-xs uppercase py-2.5 rounded-xl shadow-2xs cursor-pointer"
+                            className="w-full bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 font-black text-xs normal-case py-2.5 rounded-xl shadow-2xs cursor-pointer"
                           >
                             Mesclar Todas as Sugestões Automaticamente
                           </button>
@@ -2676,7 +2676,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               {mergeModalTab === 'manual' && (
                 <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-4">
                   <div>
-                    <h4 className="text-xs font-extrabold uppercase text-slate-900">
+                    <h4 className="text-xs font-extrabold normal-case text-slate-900">
                       Unificar Duas Variáveis Manualmente
                     </h4>
                     <p className="text-[11px] text-slate-600 mt-0.5">
@@ -2686,7 +2686,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-slate-700 block">
+                      <label className="text-[10px] font-black normal-case text-slate-700 block">
                         1. Variável a ser absorvida (Secundária):
                       </label>
                       <select
@@ -2704,7 +2704,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-slate-700 block">
+                      <label className="text-[10px] font-black normal-case text-slate-700 block">
                         2. Variável Oficial que permanecerá (Principal):
                       </label>
                       <select
@@ -2736,7 +2736,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                           showNotification(`Variável "${sourceCol.name}" foi mesclada em "${targetCol.name}".`);
                         }
                       }}
-                      className="bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 disabled:opacity-40 font-black text-xs uppercase px-4 py-2.5 rounded-xl shadow-2xs transition-all cursor-pointer inline-flex items-center gap-2 active:scale-95"
+                      className="bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 disabled:opacity-40 font-black text-xs normal-case px-4 py-2.5 rounded-xl shadow-2xs transition-all cursor-pointer inline-flex items-center gap-2 active:scale-95"
                     >
                       <GitMerge className="w-4 h-4 text-slate-700" />
                       <span>Confirmar e Mesclar Variáveis</span>
@@ -2786,7 +2786,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                       <button
                         type="button"
                         onClick={handleResetAllMerges}
-                        className="text-rose-700 hover:text-rose-900 font-extrabold text-xs uppercase underline cursor-pointer"
+                        className="text-rose-700 hover:text-rose-900 font-extrabold text-xs normal-case underline cursor-pointer"
                       >
                         Resetar Todas as Consolidações
                       </button>
@@ -2801,7 +2801,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               <button
                 type="button"
                 onClick={() => setIsMergeHistoryModalOpen(false)}
-                className="px-5 py-2 bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 rounded-xl text-xs font-black uppercase cursor-pointer shadow-2xs transition-all active:scale-95"
+                className="px-5 py-2 bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 rounded-xl text-xs font-black normal-case cursor-pointer shadow-2xs transition-all active:scale-95"
               >
                 Concluir e Fechar
               </button>
@@ -2946,8 +2946,8 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
               <Pencil className="w-5 h-5 text-slate-700" />
             </span>
             <div>
-              <h3 id="variable-config-title" className="text-sm sm:text-base font-black uppercase tracking-wide text-slate-900">
-                CONFIGURAÇÕES DA VARIÁVEL NO SISTEMA
+              <h3 id="variable-config-title" className="text-sm sm:text-base font-black normal-case tracking-wide text-slate-900">
+                Configurações da variável no sistema
               </h3>
               <p className="text-[11px] text-slate-500 font-medium">
                 Defina em quais modelos, formulários e e-mails esta variável atua, seu código e regras de formatação.
@@ -2959,10 +2959,10 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
         {/* BLOCO 1: CÓDIGO DO MARCADOR NO MODELO (.DOCX / EMAIL) E IDENTIFICAÇÃO */}
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3.5">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-            <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+            <h4 className="text-xs font-black normal-case tracking-wider text-slate-900 flex items-center gap-1.5">
               Identificação & Código de Invocação no Modelo
             </h4>
-            <span className="text-[10px] font-bold text-slate-500 uppercase bg-slate-200 px-2 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-slate-500 normal-case bg-slate-200 px-2 py-0.5 rounded">
               ID: {variable.id}
             </span>
           </div>
@@ -2970,7 +2970,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
           <div className="grid gap-3 sm:grid-cols-3">
             {/* Nome Técnico */}
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-slate-700 block">
+              <label className="text-[10px] font-black normal-case text-slate-700 block">
                 Nome da Variável (Chave Técnica)
               </label>
               <input
@@ -2987,7 +2987,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
 
             {/* Nome Legível */}
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-slate-700 block">
+              <label className="text-[10px] font-black normal-case text-slate-700 block">
                 Rótulo Amigável de Exibição
               </label>
               <input
@@ -3000,7 +3000,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
 
             {/* Delimitador Especial */}
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-slate-700 block">
+              <label className="text-[10px] font-black normal-case text-slate-700 block">
                 Caractere Delimitador Especial
               </label>
               <select
@@ -3019,7 +3019,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
           {/* CÓDIGO OFICIAL PRONTO PARA O WORD / MODELO */}
           <div className="bg-white border-2 border-slate-300 rounded-xl p-3 flex items-center justify-between gap-3 shadow-2xs">
             <div className="space-y-0.5">
-              <span className="text-[10px] font-black uppercase text-slate-600 tracking-wider block">
+              <span className="text-[10px] font-black normal-case text-slate-600 tracking-wider block">
                 Código exato para usar nos modelos (.docx) e e-mails:
               </span>
               <div className="font-mono text-sm sm:text-base font-extrabold text-slate-900 tracking-wide">
@@ -3029,7 +3029,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
             <button
               type="button"
               onClick={handleCopyMarker}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-300 rounded-xl text-xs font-black uppercase transition-all cursor-pointer shrink-0 active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-300 rounded-xl text-xs font-black normal-case transition-all cursor-pointer shrink-0 active:scale-95"
             >
               {copiedCode ? (
                 <>
@@ -3053,7 +3053,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
           <div className="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-2xs">
             <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-300 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-wide text-slate-900">
+                <span className="text-xs font-black normal-case tracking-wide text-slate-900">
                   1. Modelos de Documentos (.docx)
                 </span>
                 <span className="text-[10.5px] font-bold bg-white text-slate-800 border border-slate-300 px-2 py-0.5 rounded-full">
@@ -3064,7 +3064,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
                 <button
                   type="button"
                   onClick={handleToggleAllModels}
-                  className="text-[10px] font-black uppercase text-slate-700 hover:text-slate-900 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 cursor-pointer transition-colors"
+                  className="text-[10px] font-black normal-case text-slate-700 hover:text-slate-900 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 cursor-pointer transition-colors"
                 >
                   {selectedModelIds.length === matrixRows.length ? 'Desmarcar Todos' : 'Marcar em Todos os Modelos'}
                 </button>
@@ -3105,7 +3105,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
           <div className="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-2xs">
             <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-300 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-wide text-slate-900">
+                <span className="text-xs font-black normal-case tracking-wide text-slate-900">
                   2. Formulários Dinâmicos de Coleta
                 </span>
                 <span className="text-[10.5px] font-bold bg-white text-slate-800 border border-slate-300 px-2 py-0.5 rounded-full">
@@ -3116,7 +3116,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
                 <button
                   type="button"
                   onClick={handleToggleAllForms}
-                  className="text-[10px] font-black uppercase text-slate-700 hover:text-slate-900 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 cursor-pointer transition-colors"
+                  className="text-[10px] font-black normal-case text-slate-700 hover:text-slate-900 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 cursor-pointer transition-colors"
                 >
                   {selectedFormIds.length === formTemplates.length ? 'Desmarcar Todos' : 'Marcar em Todos'}
                 </button>
@@ -3160,7 +3160,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
           <div className="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-2xs">
             <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-300 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-wide text-slate-900">
+                <span className="text-xs font-black normal-case tracking-wide text-slate-900">
                   3. E-mails Automáticos do Fluxo
                 </span>
                 <span className="text-[10.5px] font-bold bg-white text-slate-800 border border-slate-300 px-2 py-0.5 rounded-full">
@@ -3171,7 +3171,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
                 <button
                   type="button"
                   onClick={handleToggleAllEmails}
-                  className="text-[10px] font-black uppercase text-slate-700 hover:text-slate-900 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 cursor-pointer transition-colors"
+                  className="text-[10px] font-black normal-case text-slate-700 hover:text-slate-900 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300 cursor-pointer transition-colors"
                 >
                   {selectedEmailIds.length === emailTemplates.length ? 'Desmarcar Todos' : 'Marcar em Todos'}
                 </button>
@@ -3214,14 +3214,14 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
 
         {/* BLOCO 3: FORMATAÇÃO DE SAÍDA NO DOCUMENTO (NEGRITO, ITÁLICO, TIPO, PREFIXO) */}
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3.5">
-          <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5 border-b border-slate-200 pb-2">
+          <h4 className="text-xs font-black normal-case tracking-wider text-slate-900 flex items-center gap-1.5 border-b border-slate-200 pb-2">
             Regras de Formatação no Documento Gerado
           </h4>
 
           <div className="grid gap-3 sm:grid-cols-3">
             {/* Tipo de Dado */}
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-slate-700 block">
+              <label className="text-[10px] font-black normal-case text-slate-700 block">
                 Tipo de Dado
               </label>
               <select
@@ -3241,7 +3241,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
 
             {/* Prefixo opcional */}
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-slate-700 block">
+              <label className="text-[10px] font-black normal-case text-slate-700 block">
                 Prefixo Opcional (Ex: Prof(a). Dr(a).)
               </label>
               <input
@@ -3254,7 +3254,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
 
             {/* Cor de Destaque */}
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-slate-700 block">
+              <label className="text-[10px] font-black normal-case text-slate-700 block">
                 Cor de Destaque
               </label>
               <div className="flex items-center gap-2">
@@ -3278,7 +3278,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
 
           {/* BOTÕES DE FORMATAÇÃO TIPOGRÁFICA */}
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="text-[10px] font-black uppercase text-slate-700 mr-2">Estilo do Texto:</span>
+            <span className="text-[10px] font-black normal-case text-slate-700 mr-2">Estilo do Texto:</span>
             <button
               type="button"
               onClick={() =>
@@ -3324,7 +3324,7 @@ const VariableConfigModalContent: React.FC<VariableConfigModalContentProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 text-xs font-bold uppercase shadow-2xs cursor-pointer transition-all active:scale-95"
+            className="rounded-xl bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 text-xs font-bold normal-case shadow-2xs cursor-pointer transition-all active:scale-95"
           >
             Concluir
           </button>

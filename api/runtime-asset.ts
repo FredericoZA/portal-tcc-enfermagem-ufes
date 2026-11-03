@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 import type { Request, Response } from 'express';
 
 const supabaseUrl = () => String(process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
@@ -36,13 +37,18 @@ export default async function handler(req:Request,res:Response){
     const dataUrl=String(rows?.[0]?.data_url||'');
     const match=/^data:(image\/[a-zA-Z0-9.+-]+);base64,([\s\S]+)$/.exec(dataUrl);
     if(!match)return res.status(404).json({error:'Ativo não localizado.'});
-    const content=Buffer.from(match[2],'base64');
+    let content:Buffer=Buffer.from(match[2],'base64');
     if(!content.length||content.length>4*1024*1024)return res.status(502).json({error:'Ativo inválido.'});
-    const mime=String(rows?.[0]?.mime_type||match[1]);
+    let mime=String(rows?.[0]?.mime_type||match[1]);
+    const png=req.query?.format==='png';
+    if(png&&mime!=='image/png'){
+      content=await sharp(content,{limitInputPixels:16_000_000}).png().toBuffer();
+      mime='image/png';
+    }
     res.setHeader('Content-Type',mime.startsWith('image/')?mime:match[1]);
     res.setHeader('Content-Length',String(content.length));
     res.setHeader('Cache-Control','public, max-age=31536000, immutable');
-    res.setHeader('ETag',`"${key}"`);
+    res.setHeader('ETag',`"${key}${png?'-png':''}"`);
     return res.status(200).send(content);
   }catch(error){
     console.error('[RuntimeAsset] Falha ao carregar ativo:',error);

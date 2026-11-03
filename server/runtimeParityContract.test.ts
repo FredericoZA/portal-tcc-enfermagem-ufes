@@ -6,7 +6,8 @@ const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8
 
 test('desenvolvimento oferece bootstrap único, modo compilado e verificação de paridade',()=>{
   const pkg=JSON.parse(read('package.json'));
-  assert.equal(pkg.scripts.local,'node scripts/prepare-local.mjs && node scripts/start-local-compiled.mjs');
+  assert.equal(pkg.scripts.local,'node scripts/prepare-local.mjs && node scripts/start-local-dev.mjs');
+  assert.equal(pkg.scripts['local:compiled'],'node scripts/prepare-local.mjs && node scripts/start-local-compiled.mjs');
   assert.equal(pkg.scripts['dev:compiled'],'node scripts/start-local-compiled.mjs');
   assert.equal(pkg.scripts['parity:check'],'node scripts/portal-parity.mjs');
 

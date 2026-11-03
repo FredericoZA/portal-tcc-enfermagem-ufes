@@ -39,7 +39,7 @@ test('tutorial público segue o padrão compacto por perfil sem blocos instituci
   assert.ok(tutorial.includes('portal-table-filter-chip'));
   assert.ok(tutorial.includes("title: 'Aluno'"));
   assert.ok(tutorial.includes("title: 'Orientador'"));
-  assert.ok(tutorial.includes("title: 'Presidente da Comissão'"));
+  assert.ok(!tutorial.includes("title: 'Presidente da Comissão'"));
   assert.ok(tutorial.includes("title: 'Visitante'"));
   assert.ok(!tutorial.includes('Dados protegidos'));
   assert.ok(!tutorial.includes('Informação acadêmica pública'));

@@ -14,15 +14,15 @@ const signatureSteps: SignatureStep[] = [
     document: 'Ata da defesa',
     signers: 'Professor orientador.',
     when: 'Após confirmar a avaliação e conferir a prévia da ata.',
-    where: 'Após registrar a avaliação, o orientador confere e assina em Documentos do processo.',
+    where: 'Após registrar a avaliação, o orientador confere e assina em Documentos administrativos.',
     how: 'Não há aviso separado do Portal para assinar a ata. Com a ata assinada e arquivada, os autores recebem as orientações para a entrega final no Repositório; o orientador também é informado.',
   },
   {
     document: 'Termo de autorização de publicação',
     signers: 'Professor orientador e todos os alunos autores.',
     when: 'Após a entrega final, quando houver autorização para tornar público o trabalho, o resumo expandido ou ambos.',
-    where: 'Na entrega, em Repositório → Assinatura do Termo.',
-    how: 'Na Asten, todos assinam no mesmo nível. Pelo Gov.br, somente o orientador devolve um único PDF com todas as assinaturas. Sem publicação autorizada, não há Termo nem aviso de assinatura.',
+    where: 'Após confirmar a entrega, em Documentos administrativos → Termo de autorização. A entrega não inicia a assinatura automaticamente.',
+    how: 'No Asten, todos assinam no mesmo nível. Pelo Gov.br, somente o orientador devolve um único PDF com todas as assinaturas. Sem publicação autorizada, não há Termo nem aviso de assinatura.',
   },
   {
     document: 'Declaração de participação na banca',
@@ -92,7 +92,7 @@ export const SignatureFlowSummary: React.FC = () => (
         <h3 className="mb-1 font-black text-slate-900">Asten: solicitação automática por e-mail</h3>
         <p>
           Ao solicitar Asten, o Portal primeiro gera o PDF com o modelo publicado e o envia à plataforma.
-          Somente após a confirmação do envio, a Asten encaminha o convite aos signatários cadastrados.
+          Somente após a confirmação do envio, o Asten encaminha o convite aos signatários cadastrados.
           Cada pessoa abre o link recebido e assina. O Portal acompanha o retorno e arquiva o documento assinado.
           Essas mensagens pertencem ao serviço Asten e não são modelos da aba E-mails do Portal.
         </p>

@@ -171,7 +171,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
               <Sliders className="w-5 h-5 text-slate-700" />
             </span>
             <div>
-              <h2 className="text-sm sm:text-base font-black uppercase tracking-tight text-white flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-black normal-case tracking-tight text-white flex items-center gap-2">
                 <span>Personalizar Popup do Calendário</span>
               </h2>
               <p className="text-[11px] text-white/80 font-medium mt-0.5">
@@ -188,7 +188,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
           <button
             type="button"
             onClick={() => setActiveTab('presets')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-black uppercase tracking-wider rounded-t-xl border-t border-x transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-black normal-case tracking-wider rounded-t-xl border-t border-x transition-all cursor-pointer ${
               activeTab === 'presets'
                 ? 'bg-white text-slate-900 border-slate-300 -mb-[1px] shadow-2xs font-black'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -201,7 +201,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
           <button
             type="button"
             onClick={() => setActiveTab('colors')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-black uppercase tracking-wider rounded-t-xl border-t border-x transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-black normal-case tracking-wider rounded-t-xl border-t border-x transition-all cursor-pointer ${
               activeTab === 'colors'
                 ? 'bg-white text-slate-900 border-slate-300 -mb-[1px] shadow-2xs font-black'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -214,7 +214,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
           <button
             type="button"
             onClick={() => setActiveTab('progress')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-black uppercase tracking-wider rounded-t-xl border-t border-x transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-black normal-case tracking-wider rounded-t-xl border-t border-x transition-all cursor-pointer ${
               activeTab === 'progress'
                 ? 'bg-white text-slate-900 border-slate-300 -mb-[1px] shadow-2xs font-black'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -227,7 +227,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
           <button
             type="button"
             onClick={() => setActiveTab('fields')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-black uppercase tracking-wider rounded-t-xl border-t border-x transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-black normal-case tracking-wider rounded-t-xl border-t border-x transition-all cursor-pointer ${
               activeTab === 'fields'
                 ? 'bg-white text-slate-900 border-slate-300 -mb-[1px] shadow-2xs font-black'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -240,7 +240,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
           <button
             type="button"
             onClick={() => setActiveTab('layout')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-black uppercase tracking-wider rounded-t-xl border-t border-x transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-black normal-case tracking-wider rounded-t-xl border-t border-x transition-all cursor-pointer ${
               activeTab === 'layout'
                 ? 'bg-white text-slate-900 border-slate-300 -mb-[1px] shadow-2xs font-black'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -261,7 +261,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
             {activeTab === 'presets' && (
               <div className="space-y-4">
                 <div className="border border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                  <h3 className="text-xs font-black normal-case tracking-wider text-slate-900 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-amber-500" />
                     <span>Estilos Pré-definidos (1 Clique)</span>
                   </h3>
@@ -306,13 +306,13 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
               <div className="space-y-4">
                 {/* Cabeçalho */}
                 <div className="border border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                  <h3 className="text-xs font-black normal-case tracking-wider text-slate-900 flex items-center gap-1.5">
                     <Palette className="w-4 h-4 text-slate-700" />
                     <span>Cabeçalho do Modal</span>
                   </h3>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-700 block">
+                    <label className="text-[10px] font-black normal-case text-slate-700 block">
                       Origem da cor do cabeçalho
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -347,7 +347,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                   {format.headerThemeMode === 'custom' && (
                     <div className="space-y-3 pt-2 border-t border-slate-200">
                       <div className="space-y-1.5">
-                        <span className="text-[10px] font-black uppercase text-slate-700 block">
+                        <span className="text-[10px] font-black normal-case text-slate-700 block">
                           Paleta Rápida para o Cabeçalho:
                         </span>
                         <div className="flex flex-wrap gap-1.5">
@@ -370,7 +370,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
 
                       <div className="grid grid-cols-2 gap-3 pt-1">
                         <div>
-                          <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                          <label className="text-[10px] font-black normal-case text-slate-600 block mb-1">
                             Cor de Fundo do Topo
                           </label>
                           <div className="flex items-center gap-2">
@@ -384,13 +384,13 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                               type="text"
                               value={format.headerBgColor || '#435649'}
                               onChange={(e) => handleUpdate('headerBgColor', e.target.value)}
-                              className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 uppercase"
+                              className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 normal-case"
                             />
                           </div>
                         </div>
 
                         <div>
-                          <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                          <label className="text-[10px] font-black normal-case text-slate-600 block mb-1">
                             Cor do Texto do Topo
                           </label>
                           <div className="flex items-center gap-2">
@@ -404,7 +404,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                               type="text"
                               value={format.headerTextColor || '#ffffff'}
                               onChange={(e) => handleUpdate('headerTextColor', e.target.value)}
-                              className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 uppercase"
+                              className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 normal-case"
                             />
                           </div>
                         </div>
@@ -414,29 +414,29 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
 
                   {/* Título Personalizado */}
                   <div className="pt-2 border-t border-slate-200">
-                    <label className="text-[10px] font-black uppercase text-slate-700 block mb-1">
+                    <label className="text-[10px] font-black normal-case text-slate-700 block mb-1">
                       Título do Cabeçalho
                     </label>
                     <input
                       type="text"
                       value={format.headerCustomTitle || ''}
                       onChange={(e) => handleUpdate('headerCustomTitle', e.target.value)}
-                      placeholder="AGENDA DE DEFESAS DE TCC"
-                      className="w-full text-xs font-bold bg-white border border-slate-300 rounded-lg px-3 py-1.5 uppercase"
+                      placeholder="Agenda de defesas de TCC"
+                      className="w-full text-xs font-bold bg-white border border-slate-300 rounded-lg px-3 py-1.5 normal-case"
                     />
                   </div>
                 </div>
 
                 {/* Cores do Fundo e dos Cards */}
                 <div className="border border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                  <h3 className="text-xs font-black normal-case tracking-wider text-slate-900 flex items-center gap-1.5">
                     <Layers className="w-4 h-4 text-slate-700" />
                     <span>Cores do Fundo e dos Cards</span>
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-600 block mb-1">
                         Fundo do Modal (Janela)
                       </label>
                       <div className="flex items-center gap-2">
@@ -450,13 +450,13 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                           type="text"
                           value={format.modalBgColor || '#f1f5f9'}
                           onChange={(e) => handleUpdate('modalBgColor', e.target.value)}
-                          className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 uppercase"
+                          className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 normal-case"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-600 block mb-1">
                         Fundo dos Cards de Defesa
                       </label>
                       <div className="flex items-center gap-2">
@@ -470,13 +470,13 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                           type="text"
                           value={format.cardBgColor || '#ffffff'}
                           onChange={(e) => handleUpdate('cardBgColor', e.target.value)}
-                          className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 uppercase"
+                          className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 normal-case"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-600 block mb-1">
                         Fundo do Bloco de Dados Interno
                       </label>
                       <div className="flex items-center gap-2">
@@ -490,13 +490,13 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                           type="text"
                           value={format.cardInnerBgColor || '#f8fafc'}
                           onChange={(e) => handleUpdate('cardInnerBgColor', e.target.value)}
-                          className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 uppercase"
+                          className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 normal-case"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-600 block mb-1">
                         Cor da Borda dos Cards
                       </label>
                       <div className="flex items-center gap-2">
@@ -510,7 +510,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                           type="text"
                           value={format.cardBorderColor || '#cbd5e1'}
                           onChange={(e) => handleUpdate('cardBorderColor', e.target.value)}
-                          className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 uppercase"
+                          className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 normal-case"
                         />
                       </div>
                     </div>
@@ -519,7 +519,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                   {/* Sombras e Espessura da Borda */}
                   <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-700 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-700 block mb-1">
                         Espessura da Borda do Card
                       </label>
                       <select
@@ -535,7 +535,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-700 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-700 block mb-1">
                         Sombra e Elevação
                       </label>
                       <select
@@ -558,7 +558,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
             {activeTab === 'progress' && (
               <div className="space-y-4">
                 <div className="border border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center justify-between">
+                  <h3 className="text-xs font-black normal-case tracking-wider text-slate-900 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <SlidersHorizontal className="w-4 h-4 text-slate-700" />
                       <span>Exibição da Barra de Progresso</span>
@@ -592,7 +592,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
 
                       {/* Modo de cor */}
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-700 block">
+                        <label className="text-[10px] font-black normal-case text-slate-700 block">
                           Modo de Coloração da Barra
                         </label>
                         <div className="grid grid-cols-2 gap-2">
@@ -631,7 +631,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                       {/* Cores da barra personalizada */}
                       {format.progressBarColorMode === 'custom' && (
                         <div className="space-y-2 p-3 bg-white rounded-lg border border-slate-200">
-                          <span className="text-[10px] font-black uppercase text-slate-700 block">
+                          <span className="text-[10px] font-black normal-case text-slate-700 block">
                             Paleta de Cores para a Barra:
                           </span>
                           <div className="flex flex-wrap gap-1.5">
@@ -650,7 +650,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
 
                           <div className="grid grid-cols-2 gap-3 pt-2">
                             <div>
-                              <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                              <label className="text-[10px] font-black normal-case text-slate-600 block mb-1">
                                 Cor do Preenchimento
                               </label>
                               <div className="flex items-center gap-2">
@@ -664,13 +664,13 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                                   type="text"
                                   value={format.progressBarCustomColor || '#10b981'}
                                   onChange={(e) => handleUpdate('progressBarCustomColor', e.target.value)}
-                                  className="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 uppercase"
+                                  className="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 normal-case"
                                 />
                               </div>
                             </div>
 
                             <div>
-                              <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                              <label className="text-[10px] font-black normal-case text-slate-600 block mb-1">
                                 Cor do Trilho (Fundo da Barra)
                               </label>
                               <div className="flex items-center gap-2">
@@ -684,7 +684,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                                   type="text"
                                   value={format.progressBarTrackColor || '#e2e8f0'}
                                   onChange={(e) => handleUpdate('progressBarTrackColor', e.target.value)}
-                                  className="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 uppercase"
+                                  className="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 normal-case"
                                 />
                               </div>
                             </div>
@@ -695,7 +695,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                       {/* Espessura e Efeitos */}
                       <div className="grid grid-cols-2 gap-3 pt-1">
                         <div>
-                          <label className="text-[10px] font-black uppercase text-slate-700 block mb-1">
+                          <label className="text-[10px] font-black normal-case text-slate-700 block mb-1">
                             Espessura da Barra
                           </label>
                           <select
@@ -711,7 +711,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                         </div>
 
                         <div>
-                          <label className="text-[10px] font-black uppercase text-slate-700 block mb-1">
+                          <label className="text-[10px] font-black normal-case text-slate-700 block mb-1">
                             Efeito de Brilho / Glow
                           </label>
                           <select
@@ -734,7 +734,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
             {activeTab === 'fields' && (
               <div className="space-y-4">
                 <div className="border border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                  <h3 className="text-xs font-black normal-case tracking-wider text-slate-900 flex items-center gap-1.5">
                     <Eye className="w-4 h-4 text-slate-700" />
                     <span>Visibilidade dos Campos no Card</span>
                   </h3>
@@ -898,13 +898,13 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
 
                 {/* Rótulos Customizáveis */}
                 <div className="border border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                  <h3 className="text-xs font-black normal-case tracking-wider text-slate-900 flex items-center gap-1.5">
                     <Tag className="w-4 h-4 text-slate-700" />
                     <span>Personalizar Nomes dos Rótulos</span>
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-600 block mb-1">
                         Rótulo de Alunos
                       </label>
                       <input
@@ -917,7 +917,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-600 block mb-1">
                         Rótulo de Orientador
                       </label>
                       <input
@@ -930,7 +930,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-600 block mb-1">
                         Rótulo de Coorientador
                       </label>
                       <input
@@ -943,7 +943,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-600 block mb-1">
                         Rótulo da Banca
                       </label>
                       <input
@@ -963,13 +963,13 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
             {activeTab === 'layout' && (
               <div className="space-y-4">
                 <div className="border border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                  <h3 className="text-xs font-black normal-case tracking-wider text-slate-900 flex items-center gap-1.5">
                     <Layout className="w-4 h-4 text-slate-700" />
                     <span>Disposição e Grade dos Cards</span>
                   </h3>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-700 block">
+                    <label className="text-[10px] font-black normal-case text-slate-700 block">
                       Estrutura de Colunas
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -1016,7 +1016,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
 
                   <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-700 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-700 block mb-1">
                         Espaçamento Interno (Padding)
                       </label>
                       <select
@@ -1031,7 +1031,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-700 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-700 block mb-1">
                         Arredondamento dos Cantos
                       </label>
                       <select
@@ -1051,14 +1051,14 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
 
                 {/* Tipografia do Título */}
                 <div className="border border-slate-200 bg-slate-50 p-4 rounded-xl space-y-3">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                  <h3 className="text-xs font-black normal-case tracking-wider text-slate-900 flex items-center gap-1.5">
                     <Type className="w-4 h-4 text-slate-700" />
                     <span>Tipografia do Título do Trabalho</span>
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-700 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-700 block mb-1">
                         Tamanho do Texto
                       </label>
                       <select
@@ -1074,7 +1074,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-700 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-700 block mb-1">
                         Peso da Fonte
                       </label>
                       <select
@@ -1090,7 +1090,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-700 block mb-1">
+                      <label className="text-[10px] font-black normal-case text-slate-700 block mb-1">
                         Letras Maiúsculas
                       </label>
                       <select
@@ -1105,7 +1105,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-black uppercase text-slate-600 block mb-1">
+                    <label className="text-[10px] font-black normal-case text-slate-600 block mb-1">
                       Cor do Título do TCC
                     </label>
                     <div className="flex items-center gap-2">
@@ -1119,7 +1119,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                         type="text"
                         value={format.cardTitleColor || '#0f172a'}
                         onChange={(e) => handleUpdate('cardTitleColor', e.target.value)}
-                        className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 uppercase"
+                        className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg px-2 py-1 normal-case"
                       />
                     </div>
                   </div>
@@ -1132,7 +1132,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
           <div className="lg:col-span-5 p-4 sm:p-6 bg-[var(--portal-surface-card)] flex flex-col justify-between overflow-y-auto max-h-[calc(92vh-180px)] select-none">
             <div className="space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                <span className="text-[10px] font-black normal-case tracking-widest text-slate-400 flex items-center gap-1.5">
                   <Eye className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Pré-visualização em Tempo Real</span>
                 </span>
@@ -1200,7 +1200,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                   >
                     {format.showStudents !== false && (
                       <div>
-                        <span className="font-black text-slate-500 text-[10px] uppercase tracking-wider block mb-0.5">
+                        <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block mb-0.5">
                           {format.studentLabel || 'Discentes Apresentadores:'}
                         </span>
                         <div className="font-black text-slate-900 text-xs flex items-center gap-1.5">
@@ -1216,7 +1216,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
 
                     {format.showAdvisor !== false && (
                       <div>
-                        <span className="font-black text-slate-500 text-[10px] uppercase tracking-wider block">
+                        <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block">
                           {format.advisorLabel || 'Orientador(a):'}
                         </span>
                         <div className="font-bold text-slate-900 text-xs">
@@ -1232,7 +1232,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
 
                     {format.showCoAdvisor !== false && (
                       <div>
-                        <span className="font-black text-slate-500 text-[10px] uppercase tracking-wider block">
+                        <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block">
                           {format.coAdvisorLabel || 'Coorientador(a):'}
                         </span>
                         <div className="font-bold text-slate-900 text-xs">
@@ -1248,7 +1248,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
 
                     {format.showCommittee !== false && (
                       <div>
-                        <span className="font-black text-slate-500 text-[10px] uppercase tracking-wider block">
+                        <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block">
                           {format.committeeLabel || 'Banca Examinadora:'}
                         </span>
                         <div className="text-[11px] text-slate-800 space-y-0.5 mt-0.5">
@@ -1274,7 +1274,7 @@ export const CalendarPopupEditorModal: React.FC<CalendarPopupEditorModalProps> =
                 {format.showProgressBar !== false && (
                   <div className="space-y-1 pt-2 border-t border-slate-100">
                     {format.showProgressPercent !== false && (
-                      <div className="flex items-center justify-between text-[9.5px] font-semibold text-slate-600 uppercase">
+                      <div className="flex items-center justify-between text-[9.5px] font-semibold text-slate-600 normal-case">
                         <span>ETAPA 4/5: BANCA EXAMINADORA</span>
                         <span className="text-slate-900 font-mono font-bold">{progressPercent}%</span>
                       </div>

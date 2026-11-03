@@ -104,7 +104,7 @@ export const DropZone: React.FC<DropZoneProps> = ({ onFileSelect, onLoadSample, 
 
       {/* Preset Demos / Modelos para teste imediato */}
       <div className="mt-12 border-t border-slate-800/80 pt-8">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 text-center mb-4">
+        <p className="text-xs font-semibold normal-case tracking-wider text-slate-400 text-center mb-4">
           Ainda não enviou seu arquivo? Teste com um projeto modelo:
         </p>
 
