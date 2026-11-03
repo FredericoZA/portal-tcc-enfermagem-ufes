@@ -73,7 +73,7 @@ import {
 import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngine';
 import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie } from './server/security/firebaseAuth';
 import { assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSecurityPreflight, getPersistentAstenConnection, getPersistentAstenStatus, safeCompareWebhookSecret } from './server/integrations/asten';
-import { appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, currentPortalRuntimeRevision, getSupabaseRuntimeStatus, loadPortalRuntimeState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
+import { appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, currentPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, loadPortalRuntimeState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
 import { buildProcessArchiveFileName, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, publishPrivatePdfCopy, withdrawDriveFilePublicAccess, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadProcessSourcePdf, uploadSignedPdfToDrive, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
@@ -1425,6 +1425,18 @@ export async function createPortalApp() {
   }catch{return res.status(403).json({error:'Origem da requisição inválida.',code:'ORIGIN_NOT_ALLOWED'});}next();});
   const requireGlobalRoles=(...roles:GlobalRole[])=>(req:express.Request,res:express.Response,next:express.NextFunction)=>{const identity=getPortalIdentity(req);if(!identity)return res.status(401).json({error:'Autenticação institucional obrigatória.'});const userRoles=getUserRolesForEmail(identity.email).globalRoles;if(!roles.some(role=>userRoles.includes(role)))return res.status(403).json({error:'Seu perfil não tem permissão para esta operação.'});next();};
   const requireAdministrator=requireGlobalRoles('MASTER_ADMIN','COMMISSION_PRESIDENT');
+  // Variação pública sem contagem de processos, IDs ou campos privados.
+  app.get('/api/public/sync/version',async(_req,res)=>{
+    res.setHeader('Cache-Control','public, no-store, max-age=0');
+    try{
+      const token=getSupabaseRuntimeStatus().durablePersistenceReady
+        ? await publicPortalRevisionToken()
+        : createHash('sha256').update('local:'+localPortalChangeSequence).digest('hex').slice(0,24);
+      res.json({token});
+    }catch{
+      res.status(503).json({error:'Não foi possível consultar a atualização do portal.'});
+    }
+  });
   // Resposta mínima para atualização automática. A revisão já foi carregada
   // pelo middleware que valida o estado durável antes de cada rota autenticada.
   app.get('/api/sync/version',requireAuthenticated,(_req,res)=>{
