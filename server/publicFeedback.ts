@@ -102,7 +102,7 @@ export async function submitPublicFeedback(
     image_base64:validated.image?.base64||null,image_size:validated.image?.size||null,
     ip_fingerprint:visitor,status:'NEW',
   };
-  const stored=await feedbackRequest(endpoint(),{
+  const stored=await feedbackRequest(endpoint()+'?select=id%2Ccreated_at',{
     method:'POST',headers:{...headers,Prefer:'return=representation'},
     body:JSON.stringify(payload),
   });
