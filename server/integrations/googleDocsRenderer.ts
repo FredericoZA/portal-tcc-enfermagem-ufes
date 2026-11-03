@@ -312,6 +312,13 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
       const batch = await batchResponse.json() as { documentId?: string; replies?: Array<{ replaceAllText?: { occurrencesChanged?: number } }> };
       if (String(batch.documentId || '') !== temporaryFileId) throw new Error('A atualização não confirmou o documento temporário correto.');
       replacementsChanged = (batch.replies || []).reduce((total, reply) => total + Number(reply.replaceAllText?.occurrencesChanged || 0), 0);
+      if(input.invitationLayout){
+        const literalApplied=(batch.replies||[]).slice(0,literalRequests.length)
+          .filter(item=>Number(item.replaceAllText?.occurrencesChanged||0)>0).length;
+        if(literalApplied<Math.min(4,literalRequests.length)){
+          throw new Error('O modelo da carta-convite mudou: os campos de identificação não correspondem ao modelo validado. Atualize o modelo antes de gerar o PDF.');
+        }
+      }
     }
 
     const mergedReadbackResponse = await googleRequest(
