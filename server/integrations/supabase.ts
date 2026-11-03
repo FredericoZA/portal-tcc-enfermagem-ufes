@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 
 export interface SupabaseRuntimeStatus {
   configured: boolean;
@@ -20,6 +20,18 @@ const LARGE_RUNTIME_IMAGE_THRESHOLD=32_768;
 let knownRevision:number|null=null;
 /** Revisão do estado operacional confirmada pelo banco, após a leitura/commit da requisição. */
 export function currentPortalRuntimeRevision():number|null { return knownRevision; }
+
+/** Sinal opaco de revisão: não revela registros privados nem o contador de operações. */
+export async function publicPortalRevisionToken():Promise<string> {
+  if(!getSupabaseRuntimeStatus().durablePersistenceReady)return 'local';
+  const response=await fetch(stateEndpoint()+'?id=eq.global&select=revision&limit=1',{
+    headers:adminHeaders(),signal:AbortSignal.timeout(12_000),
+  });
+  if(!response.ok)throw new Error('Não foi possível verificar a revisão do portal.');
+  const rows=await response.json() as Array<{revision:number}>;
+  const revision=Number(rows?.[0]?.revision||0);
+  return createHmac('sha256',supabaseSecret()).update('portal-public-sync-v1:'+revision).digest('hex').slice(0,24);
+}
 export const buildSupabaseAdminHeaders = () => {
   const secret = supabaseSecret();
   const headers:Record<string,string>={ apikey: secret, 'Content-Type': 'application/json', Accept: 'application/json' };
