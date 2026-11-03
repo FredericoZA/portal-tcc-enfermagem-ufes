@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { BarChart3, BookOpen, CalendarDays, CheckCircle2, Clock3, FileText, Gauge, MapPin, ShieldCheck, Tags, TrendingUp, Users2 } from 'lucide-react';
 import { PortalSectionDivider } from '../components/PortalSectionDivider';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
@@ -94,7 +95,7 @@ export const IndicadoresPage: React.FC = () => {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/public/indicators', { headers: { Accept: 'application/json' } })
+    const load = () => { void fetch('/api/public/indicators', { headers: { Accept: 'application/json' } })
       .then(async (response) => {
         if (!response.ok) throw new Error('Não foi possível carregar os indicadores.');
         return response.json();
@@ -107,8 +108,10 @@ export const IndicadoresPage: React.FC = () => {
         setData(normalized as PublicIndicators);
       })
       .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : 'Indicadores indisponíveis.'); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+      .finally(() => { if (active) setLoading(false); }); };
+    load();
+    window.addEventListener(PORTAL_LIVE_UPDATE_EVENT,load);
+    return () => { active = false; window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT,load); };
   }, []);
 
   const analytics = useMemo(() => {
