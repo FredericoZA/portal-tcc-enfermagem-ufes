@@ -18,6 +18,8 @@ const stateEndpoint = () => `${supabaseUrl()}/rest/v1/portal_runtime_state`;
 const runtimeAssetsEndpoint = () => `${supabaseUrl()}/rest/v1/portal_runtime_assets`;
 const LARGE_RUNTIME_IMAGE_THRESHOLD=32_768;
 let knownRevision:number|null=null;
+/** Revisão do estado operacional confirmada pelo banco, após a leitura/commit da requisição. */
+export function currentPortalRuntimeRevision():number|null { return knownRevision; }
 export const buildSupabaseAdminHeaders = () => {
   const secret = supabaseSecret();
   const headers:Record<string,string>={ apikey: secret, 'Content-Type': 'application/json', Accept: 'application/json' };
