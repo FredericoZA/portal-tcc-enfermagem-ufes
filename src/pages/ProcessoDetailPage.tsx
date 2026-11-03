@@ -472,7 +472,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         aluno1: updatedAluno1,
         aluno2: updatedAluno2,
         orientador: updatedOrientador,
-        coorientador: updatedCoorientador
+        coorientador: updatedCoorientador,
+        expectedDataRevision: process.dataRevision
       });
 
       const newLog: AuditLogEntry = {
@@ -525,10 +526,15 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const handleSaveBancaEdit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(remoteUpdatePending){
+      portalNotice('A banca foi alterada em outra sessão. Cancele a edição e confira os dados atuais antes de salvar.');
+      return;
+    }
     if (!process) return;
     try {
       await apiClient.updateProcess(process.id, {
-        banca: bancaForm
+        banca: bancaForm,
+        expectedDataRevision: process.dataRevision
       });
 
       const newLog: AuditLogEntry = {
