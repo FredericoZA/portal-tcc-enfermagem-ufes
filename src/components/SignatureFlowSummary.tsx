@@ -50,6 +50,11 @@ export const SignatureFlowSummary: React.FC = () => (
       </h2>
     </div>
 
+    <p className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-center text-[11px] leading-[1.6] text-slate-700">
+      <strong className="text-slate-900">Asten é o método preferencial.</strong> A alternativa Gov.br está disponível nos pontos indicados abaixo.
+      Após a assinatura e o arquivamento, use apenas Ver e Baixar PDF.
+    </p>
+
     <div className="overflow-x-auto rounded-xl border border-slate-300" role="region" aria-label="Tabela de assinaturas do processo" tabIndex={0}>
       <table className="w-full min-w-[1000px] table-fixed border-collapse bg-slate-50">
         <colgroup>
