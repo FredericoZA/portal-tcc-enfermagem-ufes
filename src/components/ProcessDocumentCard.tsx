@@ -1,5 +1,17 @@
 import React from 'react';
 import {Download, Eye, FileCheck} from 'lucide-react';
+import {PortalModalShell} from './PortalModalShell';
+import {apiClient} from '../services/apiClient';
+import {portalNotice} from '../services/portalDialogs';
+
+const DocumentFilePreview=React.lazy(()=>import('./DocumentFilePreview').then(module=>({default:module.DocumentFilePreview})));
+
+function ProcessDocumentActions({available, working = false, onView, onDownload, viewRef}: {available: boolean; working?: boolean; onView: () => void; onDownload: () => void; viewRef?: React.Ref<HTMLButtonElement>}) {
+  return <div className="portal-document-actions flex items-center gap-2 pt-2.5 border-t border-slate-100">
+    <button ref={viewRef} type="button" onClick={onView} disabled={!available || working} className="portal-document-view flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer disabled:cursor-not-allowed" title="Visualizar documento em tela"><Eye className="w-3.5 h-3.5"/><span>Ver</span></button>
+    <button type="button" onClick={onDownload} disabled={!available || working} className={`portal-document-download flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-2xs ${available ? 'text-white bg-[var(--portal-brand-header)] hover:bg-[#004827] cursor-pointer' : 'bg-slate-200 text-[var(--portal-text-muted)] cursor-not-allowed'}`} title="Baixar PDF do documento"><Download className="w-3.5 h-3.5"/><span>{working ? 'Baixando…' : 'Baixar PDF'}</span></button>
+  </div>;
+}
 
 /** Shared presentation for current process documents and imported originals. */
 export function ProcessDocumentCard({title, meta, signerLabel, signerNote, status, statusDescription, tone = 'pending', available, unavailable = !available, working = false, onView, onDownload, children}: {
@@ -27,15 +39,32 @@ export function ProcessDocumentCard({title, meta, signerLabel, signerNote, statu
       </div>
     </div>
     {children}
-    <div className="portal-document-actions flex items-center gap-2 pt-2.5 border-t border-slate-100">
-      <button type="button" onClick={onView} disabled={!available || working} className="portal-document-view flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer disabled:cursor-not-allowed" title="Visualizar documento em tela"><Eye className="w-3.5 h-3.5"/><span>Ver</span></button>
-      <button type="button" onClick={onDownload} disabled={!available || working} className={`portal-document-download flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-2xs ${available ? 'text-white bg-[var(--portal-brand-header)] hover:bg-[#004827] cursor-pointer' : 'bg-slate-200 text-[var(--portal-text-muted)] cursor-not-allowed'}`} title="Baixar PDF do documento"><Download className="w-3.5 h-3.5"/><span>{working ? 'Baixando…' : 'Baixar PDF'}</span></button>
-    </div>
+    <ProcessDocumentActions available={available} working={working} onView={onView} onDownload={onDownload}/>
   </article>;
 }
 
 export function ReservationReceiptCard({downloadUrl, historical = false}: {downloadUrl?: string; historical?: boolean}) {
-  return <article className={`portal-tcc-document-card ${downloadUrl ? '' : 'portal-document-unavailable'} border border-slate-200/90 rounded-xl p-3.5 flex flex-col gap-3`} aria-label="Comprovante de reserva">
+  const [previewUrl,setPreviewUrl]=React.useState<string|null>(null);
+  const [downloading,setDownloading]=React.useState(false);
+  const viewButtonRef=React.useRef<HTMLButtonElement>(null);
+  const previewTitleId=React.useId();
+  const visiblePreviewUrl=downloadUrl&&previewUrl===downloadUrl?downloadUrl:null;
+  const closePreview=()=>{setPreviewUrl(null);viewButtonRef.current?.focus();};
+  const download=async()=>{
+    if(!downloadUrl||downloading)return;
+    setDownloading(true);
+    try{
+      const target=new URL(downloadUrl,window.location.origin);
+      const match=/^\/api\/public\/processes\/([^/]+)\/reservation-receipt$/.exec(target.pathname);
+      if(target.origin!==window.location.origin||!match)throw new Error('Comprovante indisponível.');
+      const {blob,fileName}=await apiClient.downloadReservationReceipt(decodeURIComponent(match[1]));
+      const objectUrl=URL.createObjectURL(blob),anchor=document.createElement('a');
+      anchor.href=objectUrl;anchor.download=fileName;anchor.click();
+      window.setTimeout(()=>URL.revokeObjectURL(objectUrl),30000);
+    }catch(error){portalNotice(error instanceof Error?error.message:'Não foi possível baixar o comprovante.');}
+    finally{setDownloading(false);}
+  };
+  return <><article className={`portal-tcc-document-card ${downloadUrl ? '' : 'portal-document-unavailable'} border border-slate-200/90 rounded-xl p-3.5 flex flex-col gap-3`} aria-label="Comprovante de reserva">
     <div className="flex items-center gap-2.5 min-w-0">
       <div className="w-8 h-8 rounded-lg bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border border-[var(--portal-border)] flex items-center justify-center shrink-0"><FileCheck className="w-4 h-4" /></div>
       <h3 className="portal-document-title font-extrabold text-xs sm:text-[13px] text-slate-900 leading-snug">Comprovante de reserva</h3>
@@ -45,10 +74,12 @@ export function ReservationReceiptCard({downloadUrl, historical = false}: {downl
       {downloadUrl ? 'Disponível' : historical ? 'Não disponível' : 'Aguardando resposta'}
       {!downloadUrl && <span className="block text-[11px] font-medium normal-case leading-snug tracking-normal">{historical ? 'Comprovante não localizado no acervo importado.' : 'O comprovante será disponibilizado após o aceite ou a recusa da reserva.'}</span>}
     </div>
-    <div className="portal-document-actions flex items-center gap-2 pt-2.5 border-t border-slate-100">
-      {downloadUrl ? <a className="portal-action portal-button-primary w-full" href={downloadUrl} target="_blank" rel="noreferrer"><Download className="h-4 w-4"/>Baixar comprovante</a> : <button type="button" disabled className="portal-action w-full"><Download className="h-4 w-4"/>Baixar comprovante</button>}
-    </div>
-  </article>;
+    <ProcessDocumentActions available={Boolean(downloadUrl)} working={downloading} viewRef={viewButtonRef} onView={()=>downloadUrl&&setPreviewUrl(downloadUrl)} onDownload={()=>void download()}/>
+  </article>
+    <PortalModalShell open={Boolean(visiblePreviewUrl)} onClose={closePreview} title="Comprovante de reserva" labelledBy={previewTitleId} icon={FileCheck} maxWidthClass="max-w-5xl" heightClass="max-h-[90vh]" bodyClassName="p-3 overflow-auto" footer={<button type="button" className="portal-action" autoFocus onClick={closePreview}>Fechar</button>}>
+      {visiblePreviewUrl&&<React.Suspense fallback={<p role="status">Carregando comprovante…</p>}><DocumentFilePreview url={visiblePreviewUrl} format="pdf" label="Comprovante de reserva"/></React.Suspense>}
+    </PortalModalShell>
+  </>;
 }
 
 export function ProcessDocumentsPanel({id = 'documents-panel-section', count, toolbar, notices, children}: {id?: string; count: number; toolbar?: React.ReactNode; notices?: React.ReactNode; children: React.ReactNode}) {

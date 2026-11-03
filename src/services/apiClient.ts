@@ -312,6 +312,7 @@ export const apiClient = {
     },async()=>fetchApi<import('../types/workflowOperations').LocationProof>(`/api/processes/${encodeURIComponent(id)}/location-proof`,{method:'POST',body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})}));
   },
   downloadLocationProof:(id:string)=>downloadApiFile(`/api/processes/${encodeURIComponent(id)}/location-proof/download`),
+  downloadReservationReceipt:(protocol:string)=>downloadApiFile(`/api/public/processes/${encodeURIComponent(protocol)}/reservation-receipt`),
   publishReviewedDocumentModel:(type:string,review:{fileId:string;version:number;sha256:string})=>fetchApi<any>(`/api/admin/models/${encodeURIComponent(type)}/publish-reviewed`,{method:'POST',body:JSON.stringify(review)}),
   previewOfficialModel:(type:string,studio:unknown,answers:unknown)=>fetchApi<any>(`/api/admin/models/${encodeURIComponent(type)}/preview`,{method:'POST',body:JSON.stringify({studio,answers})}),
   compareStudioDraft:(studio:unknown,baseRevision?:number)=>fetchApi<any>('/api/admin/studio/compare',{method:'POST',body:JSON.stringify({studio,baseRevision})}),
