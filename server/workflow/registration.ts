@@ -92,7 +92,7 @@ export function acceptRegistration(input: any, studio?: Partial<IntegrationStudi
   }
 
   if (isCustomLocationRegistration(accepted)) {
-    const location = getCustomLocationFieldValue(accepted);
+    const location = getCustomLocationFieldValue({ ...answers, ...accepted });
     if (!location) throw new Error('Nome completo do local: campo obrigatório quando a opção Outro local for escolhida.');
     if (location.length > 200) throw new Error('Nome completo do local: informe até 200 caracteres.');
     if ((location.match(/\*/g) || []).length % 2 !== 0) throw new Error('Nome completo do local: confira os asteriscos usados para as siglas.');
