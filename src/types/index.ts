@@ -124,7 +124,22 @@ export interface DefesaInfo {
   formato?: string;
   banca?: Array<{ nome: string; filiacao?: string; papel?: string }>;
   calendarEventId?: string;
-  localStatus?: 'PENDENTE' | 'CONFIRMADO';
+  localStatus?: 'PENDENTE' | 'CONFIRMADO' | 'NEGADO' | 'RECUSADO' | 'REJEITADO';
+  /** Pedido de alteração independente da reserva vigente. Não substitui a data/local antes de aprovação. */
+  reservationChangeRequest?: {
+    requestId: string;
+    requestedAt: string;
+    requestedBy: string;
+    startAt: string;
+    endAt: string;
+    local: string;
+    recipient: string;
+    status: 'PENDING' | 'SENT' | 'SEND_FAILED' | 'DENIED' | 'APPROVED';
+    sentAt?: string;
+    resolvedAt?: string;
+    resolvedBy?: string;
+    failureMessage?: string;
+  };
   localEvidenceUrl?: string;
   localConfirmedAt?: string;
   localConfirmedBy?: string;
