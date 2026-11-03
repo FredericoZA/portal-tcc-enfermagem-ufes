@@ -354,6 +354,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     };
   },[processId,userEmail]);
 
+  useEffect(()=>{
+    if(!editingSection && remoteUpdatePending){
+      // Cancelar a edição permite reaplicar o estado mais recente com segurança.
+      void loadData(true);
+    }
+  },[editingSection,remoteUpdatePending]);
+
   if (isLoading) {
     return (
       <div className="bg-white p-12 text-center rounded-2xl border border-slate-200 text-slate-600 font-medium shadow-2xs">
