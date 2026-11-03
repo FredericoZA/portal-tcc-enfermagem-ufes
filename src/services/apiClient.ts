@@ -125,6 +125,7 @@ export const apiClient = {
   markFeedbackReviewed: (id:string) =>
     fetchApi<{reviewed:boolean}>(`/api/admin/feedback/${encodeURIComponent(id)}/review`,{method:'PATCH',body:'{}'}),
   getPortalSyncVersion:()=>fetchApi<{revision:number}>('/api/sync/version'),
+  getPublicSyncVersion:()=>fetchApi<{token:string}>('/api/public/sync/version'),
   getProcesses: () => fetchApi<ProcessData[]>('/api/processes'),
   getProcessById: (id: string) => fetchApi<ProcessData>(`/api/processes/${id}`),
   getRegistrationSchema:()=>fetchApi<Partial<import('../types/integrationStudio').IntegrationStudioSettings>>('/api/forms/registration-schema'),
