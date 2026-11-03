@@ -3,6 +3,7 @@ import { PortalErrorBoundary } from './components/PortalErrorBoundary';
 import { PortalModalShell } from './components/PortalModalShell';
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
+import { PortalLiveSync } from './components/PortalLiveSync';
 import { UserSimulatorBar } from './components/UserSimulatorBar';
 import { isLocalDemoFrontend } from './utils/runtimeEnvironment';
 import { Sidebar } from './components/Sidebar';
@@ -140,6 +141,7 @@ export default function App() {
 
   return (
     <AuthProvider>
+      <PortalLiveSync />
       <PortalDialogs />
       <PortalAccessRedirect />
       <div id="portal-app-root" className="min-h-screen flex flex-col font-sans antialiased text-slate-900" style={{ ...getPortalSemanticRootVars(), backgroundColor: 'var(--portal-surface-page)' }}>
