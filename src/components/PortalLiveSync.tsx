@@ -2,11 +2,8 @@ import React, { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 
-/** Evento unificado de atualização dos dados, independente da página ativa. */
-export const PORTAL_LIVE_UPDATE_EVENT = 'portal:remote-data-changed';
-export const PORTAL_LIVE_POLL_INTERVAL_MS = 15_000;
-
-export type PortalLiveUpdate = { revision:string };
+export { PORTAL_LIVE_UPDATE_EVENT, PORTAL_LIVE_POLL_INTERVAL_MS } from '../utils/portalLiveEvents';
+import { PORTAL_LIVE_UPDATE_EVENT, PORTAL_LIVE_POLL_INTERVAL_MS, type PortalLiveUpdate } from '../utils/portalLiveEvents';
 
 /**
  * Consulta somente a revisão transacional (não carrega todos os processos).
