@@ -133,6 +133,7 @@ export interface DefesaInfo {
     startAt: string;
     endAt: string;
     local: string;
+    locationChoice: string;
     recipient: string;
     status: 'PENDING' | 'SENT' | 'SEND_FAILED' | 'DENIED' | 'APPROVED';
     sentAt?: string;
