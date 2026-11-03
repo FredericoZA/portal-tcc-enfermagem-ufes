@@ -1411,7 +1411,16 @@ export async function createPortalApp() {
 
   app.use('/api', attachPortalIdentity);
   app.use('/api',(req,res,next)=>{const identity=getPortalIdentity(req);if(identity&&(identity.issuedAt<Number(currentSettings.sessionValidAfter||0)||revokedSessionIdsStore.has(identity.sessionId))){(req as any).portalIdentity=null;clearPortalSessionCookie(res);}next();});
-  app.use('/api',(req,res,next)=>{if(!['POST','PATCH','PUT','DELETE'].includes(req.method))return next();if(String(req.get('sec-fetch-site')||'').toLowerCase()==='cross-site')return res.status(403).json({error:'Requisição entre sites bloqueada.',code:'CROSS_SITE_REQUEST_BLOCKED'});const origin=String(req.get('origin')||'').trim();if(!origin)return next();const configured=String(process.env.PORTAL_PUBLIC_URL||process.env.APP_URL||'').trim();const expected=configured?new URL(/^https?:\/\//i.test(configured)?configured:`https://${configured}`).origin:`${req.protocol}://${req.get('host')}`;try{if(new URL(origin).origin!==expected)return res.status(403).json({error:'Origem da requisição não autorizada.',code:'ORIGIN_NOT_ALLOWED'});}catch{return res.status(403).json({error:'Origem da requisição inválida.',code:'ORIGIN_NOT_ALLOWED'});}next();});
+  app.use('/api',(req,res,next)=>{if(!['POST','PATCH','PUT','DELETE'].includes(req.method))return next();if(String(req.get('sec-fetch-site')||'').toLowerCase()==='cross-site')return res.status(403).json({error:'Requisição entre sites bloqueada.',code:'CROSS_SITE_REQUEST_BLOCKED'});const origin=String(req.get('origin')||'').trim();if(!origin)return next();const configured=String(process.env.PORTAL_PUBLIC_URL||process.env.APP_URL||'').trim();const expected=configured?new URL(/^https?:\/\//i.test(configured)?configured:`https://${configured}`).origin:`${req.protocol}://${req.get('host')}`;try{
+    const allowed=new Set([expected]);
+    // Cada deployment Vercel pode ter uma URL própria de prévia. Liberar somente
+    // URLs fornecidas pela infraestrutura, sem aceitar um Host arbitrário.
+    for(const host of [process.env.VERCEL_URL,process.env.VERCEL_BRANCH_URL]){
+      const value=String(host||'').trim();
+      if(value)allowed.add(new URL(/^https?:\/\//i.test(value)?value:`https://${value}`).origin);
+    }
+    if(!allowed.has(new URL(origin).origin))return res.status(403).json({error:'Origem da requisição não autorizada.',code:'ORIGIN_NOT_ALLOWED'});
+  }catch{return res.status(403).json({error:'Origem da requisição inválida.',code:'ORIGIN_NOT_ALLOWED'});}next();});
   const requireGlobalRoles=(...roles:GlobalRole[])=>(req:express.Request,res:express.Response,next:express.NextFunction)=>{const identity=getPortalIdentity(req);if(!identity)return res.status(401).json({error:'Autenticação institucional obrigatória.'});const userRoles=getUserRolesForEmail(identity.email).globalRoles;if(!roles.some(role=>userRoles.includes(role)))return res.status(403).json({error:'Seu perfil não tem permissão para esta operação.'});next();};
   const requireAdministrator=requireGlobalRoles('MASTER_ADMIN','COMMISSION_PRESIDENT');
   const requireAdministrativeOperator=requireGlobalRoles('MASTER_ADMIN','COMMISSION_PRESIDENT');
