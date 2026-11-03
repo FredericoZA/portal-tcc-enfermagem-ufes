@@ -51,7 +51,7 @@ test('Registro de logs é página própria com toolbar de planilha', async () =>
 });
 
 test('Indicadores adicionam estatística descritiva, séries e distribuições temporais', async () => {
-  const [page, api] = await Promise.all([source('src/pages/IndicadoresPage.tsx'), source('api/public-indicators.ts')]);
+  const [page, api] = await Promise.all([source('src/pages/IndicadoresPage.tsx'), source('server/vercel/public-indicators.ts')]);
   assert.ok(page.includes('const LineTrend'));
   assert.ok(page.includes('const Funnel'));
   assert.ok(page.includes('monthlyStdDev'));

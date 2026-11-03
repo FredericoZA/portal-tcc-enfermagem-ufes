@@ -27,7 +27,7 @@ test('seleção em lote segue a visão ativa e registro de assinaturas continua 
 test('workspaces administrativos e replicação usam componentes atuais',()=>{
   const workspace=read('src/components/SettingsWorkspaceModal.tsx');
   const replication=read('src/pages/PortalReplicationPage.tsx');
-  const replicationApi=read('api/replication-model.ts');
+  const replicationApi=read('server/vercel/replication-model.ts');
   const integrations=read('src/components/InfrastructureIntegrationsPanel.tsx');
   assert.match(workspace,/portal-settings-workspace/);
   assert.match(workspace,/data-portal-full-bleed/);

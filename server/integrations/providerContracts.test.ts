@@ -182,7 +182,10 @@ test('contrato Vercel encaminha API ao handler e SPA ao build estático', () => 
   assert.equal(config.functions['api/index.ts'].maxDuration,300);
   assert.equal(config.functions['api/replication-model.ts'].maxDuration,60);
   assert.deepEqual(config.crons,[{path:'/api/cron/storage-cleanup',schedule:'17 3 * * *'},{path:'/api/cron/asten-reconcile',schedule:'23 4 * * *'}]);
-  assert.match(packageJson.scripts.build,/--outfile=dist\/server\/server\.cjs/);
+  assert.match(packageJson.scripts.build,/node scripts\/build-server\.mjs/);
+  const buildSource=readFileSync(new URL('../../scripts/build-server.mjs',import.meta.url),'utf8');
+  assert.match(buildSource,/outfile: 'dist\/server\/server\.cjs'/);
+  for(const entry of ['index','runtime-asset','replication-model','public-indicators'])assert.match(config.functions['api/'+entry+'.ts'].includeFiles,/dist\/server\/\*\*/);
   assert.doesNotMatch(packageJson.scripts.build,/--sourcemap/);
   assert.match(viteConfig,/outDir:\s*'dist\/client'/);
   assert.match(serverSource,/dotenv\.config\(\{path:'\.env\.local',override:false,quiet:true\}\)/);

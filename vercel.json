@@ -37,10 +37,16 @@
       "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs}"
     },
     "api/replication-model.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs}"
     },
     "api/runtime-asset.ts": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs}"
+    },
+    "api/public-indicators.ts": {
+      "maxDuration": 30,
+      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs}"
     }
   },
   "crons": [

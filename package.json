@@ -15,7 +15,7 @@
     "dev:compiled": "node scripts/start-local-compiled.mjs",
     "parity:check": "node scripts/portal-parity.mjs",
     "prebuild": "node scripts/verify-production-source.mjs && npm run clean",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --outfile=dist/server/server.cjs",
+    "build": "vite build && node scripts/build-server.mjs",
     "start": "node scripts/start-production.mjs",
     "clean": "node scripts/clean-build.mjs",
     "lint": "tsc --noEmit",
@@ -26,10 +26,11 @@
     "test:a11y": "node scripts/test-accessibility-static.mjs",
     "test:http": "node scripts/test-http-build.mjs",
     "test:finalization": "node scripts/test-finalization-contract.mjs",
-    "test:ci": "npm run test:secrets && npm run lint && npm run test:unit && npm run test:contracts && npm run test:a11y && npm run test:finalization && npm run build && npm run test:http",
+    "test:ci": "npm run test:secrets && npm run lint && npm run test:unit && npm run test:contracts && npm run test:a11y && npm run test:finalization && npm run build && npm run test:serverless && npm run test:http",
     "release:zip": "node scripts/package-release.mjs",
     "test:visual": "node scripts/test-visual.mjs",
-    "test:visual:compare": "node scripts/compare-visual.mjs"
+    "test:visual:compare": "node scripts/compare-visual.mjs",
+    "test:serverless": "node scripts/test-serverless-build.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
