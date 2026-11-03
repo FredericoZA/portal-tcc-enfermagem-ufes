@@ -132,7 +132,7 @@ export const apiClient = {
     method: 'POST',
     body: JSON.stringify(data)
   }),
-  updateProcess: (id: string, data: Partial<ProcessData>) => fetchApi<ProcessData>(`/api/processes/${id}`, {
+  updateProcess: (id: string, data: Partial<ProcessData> & { expectedDataRevision?: number }) => fetchApi<ProcessData>(`/api/processes/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data)
   }),
