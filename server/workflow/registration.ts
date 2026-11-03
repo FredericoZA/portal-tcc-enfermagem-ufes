@@ -3,7 +3,7 @@ import type { RegistrationAnswers } from '../../src/types/operationalConfig';
 import { registrationPayload, registrationQuestions } from '../../src/utils/operationalConfig';
 import { evaluateStudioCondition, validateStudioAnswer } from '../../src/utils/courseStudioValidator';
 import { formatNameTitleCase, formatTccTitle, normalizeEmail } from '../../src/utils/formatters';
-import { CUSTOM_LOCATION_FIELD, getCustomLocationFieldValue, isCustomLocationRegistration, normalizeCustomLocationInput } from '../../src/utils/customDefenseLocation';
+import { CUSTOM_LOCATION_FIELD, OTHER_DEFENSE_LOCATION, getCustomLocationFieldValue, isCustomLocationRegistration, isOtherDefenseLocation, normalizeCustomLocationInput } from '../../src/utils/customDefenseLocation';
 
 const LEGACY_LOCATION_ALIASES = new Map<string, string>([
   ['auditório do departamento de enfermagem', 'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES'],
@@ -24,6 +24,7 @@ function normalizeRegistrationValue(fieldKey: string, fieldType: string, raw: un
   if (fieldKey === 'TITULO') return formatTccTitle(value.replace(/\s+/g, ' '));
   value = value.replace(/\s+/g, ' ');
   if (fieldKey === 'DEFESA_LOCAL' || fieldKey === 'LOCAL_ALTERNATIVO') {
+    if (fieldKey === 'DEFESA_LOCAL' && isOtherDefenseLocation(value)) return OTHER_DEFENSE_LOCATION;
     return LEGACY_LOCATION_ALIASES.get(value.toLocaleLowerCase('pt-BR')) || value;
   }
   return value;
