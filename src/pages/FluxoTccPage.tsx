@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
 import { PortalSectionDivider } from '../components/PortalSectionDivider';
+import { SignatureFlowSummary } from '../components/SignatureFlowSummary';
 
 const phases = [
   {
@@ -188,6 +189,7 @@ export const FluxoTccPage: React.FC = () => (
           </article>
         ))}
       </div>
+      <SignatureFlowSummary />
     </section>
   </div>
 );
