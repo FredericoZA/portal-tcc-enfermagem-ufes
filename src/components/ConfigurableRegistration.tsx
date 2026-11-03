@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { RegistrationFieldPreview, registrationPreviewKind } from './RegistrationFieldPreview';
+import { RegistrationMembersTable } from './RegistrationMembersTable';
+import { resolveInstallationProfile } from '../utils/installationProfile';
 import { isOtherDefenseLocation, normalizeCustomLocationInput } from '../utils/customDefenseLocation';
 import { apiClient } from '../services/apiClient';
 import { portalNotice } from '../services/portalDialogs';
@@ -25,6 +27,7 @@ function Question({ field, value, readOnly, onChange }: { field: RegistrationQue
 }
 export function ConfigurableRegistration({ onSuccess, onCancel }: { onSuccess:(id:string)=>void; onCancel:()=>void }) {
   const { userEmail, settings, isMasterAdmin }=useAuth();
+  const institutionAcronym = resolveInstallationProfile(settings).institutionAcronym;
   const [studio,setStudio]=useState<Partial<IntegrationStudioSettings>|undefined>(settings?.integrationStudio);
   const [answers,setAnswers]=useState<RegistrationAnswers>({ALUNO_1_EMAIL:userEmail,TEM_ALUNO_2:'Não',TEM_COORIENTADOR:'Não'});
   const [section,setSection]=useState(0);
@@ -86,7 +89,7 @@ export function ConfigurableRegistration({ onSuccess, onCancel }: { onSuccess:(i
     {draftReview&&<aside role="alert" className="portal-card p-4"><p>O Master publicou uma nova versão do formulário. Confira os campos recuperados; perguntas removidas não entrarão no cadastro.</p><button type="button" className="portal-action mt-3" onClick={()=>{paused.current=false;setDraftReview(false);}}>Conferi e vou usar a versão atual</button></aside>}
     {error&&<p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-red-900">{error}</p>}
     <fieldset disabled={busy} className="portal-card grid gap-5 p-5 sm:grid-cols-2"><legend className="sr-only">{sections[currentSection]}</legend><h2 className="portal-registration-section-title sm:col-span-2">{sections[currentSection]}</h2>{selected.map(field=><React.Fragment key={field.fieldKey}><Question field={field} value={answers[field.fieldKey]} readOnly={field.fieldKey==='ALUNO_1_EMAIL'&&!isMasterAdmin} onChange={value=>setAnswers(a=>({...a,[field.fieldKey]:value}))}/></React.Fragment>)}</fieldset>
-    {currentSection===sections.length-1&&<><p className="portal-card p-4">Horário no fuso {studio?.operationsPolicy?.timezone||'America/Sao_Paulo'}. A reserva deve ser confirmada antes do convite.</p>{findings.length>0&&<aside className="portal-card p-4"><h2 className="font-bold">Confira antes de gerar os documentos</h2><ul className="mt-2 list-disc space-y-2 pl-5">{findings.map((item,i)=><li key={i}>{fields.find(f=>f.fieldKey===item.fieldKey)?.label||item.fieldKey}: {item.message}</li>)}</ul><p className="mt-2 text-sm">São alertas de conferência. Nenhuma identidade será alterada automaticamente.</p></aside>}</>}
+    {currentSection===sections.length-1&&<><RegistrationMembersTable answers={answers} studentInstitution={institutionAcronym} /><p className="portal-card p-4">Horário no fuso {studio?.operationsPolicy?.timezone||'America/Sao_Paulo'}. A reserva deve ser confirmada antes do convite.</p>{findings.length>0&&<aside className="portal-card p-4"><h2 className="font-bold">Confira antes de gerar os documentos</h2><ul className="mt-2 list-disc space-y-2 pl-5">{findings.map((item,i)=><li key={i}>{fields.find(f=>f.fieldKey===item.fieldKey)?.label||item.fieldKey}: {item.message}</li>)}</ul><p className="mt-2 text-sm">São alertas de conferência. Nenhuma identidade será alterada automaticamente.</p></aside>}</>}
     <footer className="flex flex-wrap justify-between gap-3"><button type="button" className="portal-action" disabled={busy} onClick={async()=>{queueSave();await draftQueue.current;if(currentSection)setSection(currentSection-1);else if(paused.current&&!isMasterAdmin)setError('O rascunho não foi salvo. Mantenha esta tela aberta e confira a mensagem de salvamento antes de sair.');else onCancel();}}>{currentSection?'Voltar':isMasterAdmin?'Voltar':'Salvar e sair'}</button><button type="submit" className="portal-action portal-action-primary" disabled={busy}>{busy?'Cadastrando…':currentSection<sections.length-1?'Continuar':'Cadastrar e solicitar reserva'}</button></footer>
   </form>;
 }
