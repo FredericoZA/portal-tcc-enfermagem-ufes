@@ -7,6 +7,7 @@ import { RegistrationFieldPreview } from './RegistrationFieldPreview';
 import { formatDatePt, formatTimeExtenso, formatTccTitle } from '../utils/formatters';
 import { isOtherDefenseLocation, OTHER_DEFENSE_LOCATION, renderCustomLocationName } from '../utils/customDefenseLocation';
 import { operationalConfig } from '../utils/operationalConfig';
+import { reservationStatusAlert } from '../utils/reservationStatusAlert';
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
 
 type ProcessSummaryProps = {
@@ -43,9 +44,8 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
   const [requested, setRequested] = useState(() => dateTimeForInput(process.defesa?.startAt || ''));
   const [locationChoice, setLocationChoice] = useState(process.defesa?.local || '');
   const [customLocation, setCustomLocation] = useState('');
-  const denial = ['NEGADO', 'RECUSADO', 'REJEITADO', 'DENIED', 'REJECTED'].includes(
-    String(process.defesa?.localStatus || '').toUpperCase(),
-  ) || process.defesa?.reservationChangeRequest?.status === 'DENIED';
+  const alert = reservationStatusAlert(process);
+  const denial = alert?.kind === 'denied';
   const outstanding = ['PENDING', 'SENT'].includes(
     String(process.defesa?.reservationChangeRequest?.status || ''),
   );
@@ -187,18 +187,16 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
             )}
           </div>
         </div>
-        {outstanding && (
-          <p role="status" className="mt-2 text-[10px] font-semibold text-amber-900">
-            Nova solicitação de reserva aguardando confirmação do responsável.
+        {alert && (
+          <p role="alert" className="mt-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-[11px] font-semibold leading-4 text-red-800">
+            {alert.text}
           </p>
         )}
-        {process.defesa.reservationChangeRequest?.status === 'SEND_FAILED' && (
-          <p role="alert" className="mt-2 text-[10px] font-semibold text-amber-900">
-            O envio do e-mail ainda não foi confirmado. Use Alterar reserva para repetir exatamente o mesmo pedido ou procure a secretaria.
+        {notice && !alert && (
+          <p role="status" className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-950">
+            {notice}
           </p>
         )}
-        {denial && <p className="mt-1 text-[10px] font-semibold text-red-700">A reserva foi recusada. É necessário enviar uma nova solicitação.</p>}
-        {notice && <p role="status" className="mt-2 text-[10px] text-emerald-800">{notice}</p>}
         {error && !reservationOpen && <p role="alert" className="mt-2 text-[10px] text-red-700">{error}</p>}
       </section>
 
