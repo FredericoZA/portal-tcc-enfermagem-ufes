@@ -30,6 +30,9 @@ export interface GoogleTemplateRenderInput {
   accessToken: string;
   templateUrlOrId: string;
   replacements: Record<string, string | number | boolean | null | undefined>;
+  /** Substituições pontuais na cópia temporária, sem modificar o modelo original. */
+  literalReplacements?: Array<{find:string;replace:string}>;
+  invitationLayout?: boolean;
   boldMarkers?: string[];
   temporaryParentId?: string;
   outputName?: string;
@@ -222,6 +225,43 @@ async function removeTemporaryFile(fetchImpl: FetchLike, accessToken: string, fi
 }
 
 /**
+ * Alinhamento final aplicado somente à cópia transitória da carta-convite.
+ * Os índices vêm da estrutura real do Docs, não de posições calculadas à mão.
+ */
+export function buildOfficialInvitationParagraphStyles(document: unknown): Array<Record<string,unknown>> {
+  const requests:Array<Record<string,unknown>>=[];
+  const visit=(node:any,tabId?:string):void=>{
+    if(!node||typeof node!=='object')return;
+    if(Array.isArray(node)){node.forEach(item=>visit(item,tabId));return;}
+    if(node.tabProperties?.tabId)tabId=String(node.tabProperties.tabId);
+    if(node.paragraph&&Number.isFinite(node.startIndex)&&Number.isFinite(node.endIndex)){
+      const text=(node.paragraph.elements||[]).map((element:any)=>String(element.textRun?.content||'')).join('').trim();
+      let alignment:'JUSTIFIED'|'END'|'START'|''='';
+      let indentStart:number|undefined;
+      if(/^(?:A Comissão de Trabalho de Conclusão de Curso do Curso|Agradecemos a participação)/.test(text))alignment='JUSTIFIED';
+      if(/^Vitória-ES,\s+\d/.test(text))alignment='END';
+      if(/^(?:Comissão de Trabalho de Conclusão de Curso|Departamento de Enfermagem$|Curso de Enfermagem e Obstetrícia)/.test(text)){
+        alignment='START';indentStart=260;
+      }
+      if(alignment){
+        const paragraphStyle:Record<string,unknown>={alignment};
+        if(indentStart!==undefined)paragraphStyle.indentStart={magnitude:indentStart,unit:'PT'};
+        requests.push({updateParagraphStyle:{
+          range:{startIndex:node.startIndex,endIndex:node.endIndex,...(tabId?{tabId}:{})},
+          paragraphStyle,fields:indentStart!==undefined?'alignment,indentStart':'alignment',
+        }});
+      }
+    }
+    for(const [key,value] of Object.entries(node)){
+      if(key==='paragraph')continue;
+      visit(value,tabId);
+    }
+  };
+  visit(document);
+  return requests;
+}
+
+/**
  * Renders a Master-owned Drive template without changing the source. Native
  * Google Docs are copied; DOCX files are converted by Drive in a temporary
  * Google Doc. Only placeholder text is replaced, preserving the copied layout,
@@ -254,7 +294,14 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
     const readback = await readbackResponse.json() as GoogleDocumentReadback;
     if (String(readback.documentId || '') !== temporaryFileId) throw new Error('O Google Docs devolveu um documento diferente da cópia temporária.');
     const tabIds = collectTabIds(readback.tabs);
-    const requests = [...buildMarkerBoldRequests(readback, input.boldMarkers || []), ...buildGoogleDocsReplacementRequests(input.replacements, tabIds)];
+    const literalRequests=(input.literalReplacements||[]).filter(item=>item.find).map(item=>({
+      replaceAllText:{
+        containsText:{text:item.find,matchCase:true},
+        replaceText:item.replace,
+        ...(tabIds.length?{tabsCriteria:{tabIds}}:{}),
+      },
+    }));
+    const requests = [...literalRequests,...buildMarkerBoldRequests(readback, input.boldMarkers || []), ...buildGoogleDocsReplacementRequests(input.replacements, tabIds)];
     let replacementsChanged = 0;
     if (requests.length) {
       const batchResponse = await googleRequest(fetchImpl, input.accessToken, `${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`, {
@@ -274,7 +321,16 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
       {},
       'Falha ao conferir marcadores restantes no documento preenchido'
     );
-    const unresolvedMarkers = findUnresolvedTemplateMarkers(await mergedReadbackResponse.json());
+    const mergedReadback=await mergedReadbackResponse.json();
+    const unresolvedMarkers = findUnresolvedTemplateMarkers(mergedReadback);
+    if(input.invitationLayout){
+      const layoutRequests=buildOfficialInvitationParagraphStyles(mergedReadback);
+      if(layoutRequests.length){
+        await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{
+          method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:layoutRequests}),
+        },'Falha ao formatar os parágrafos da carta-convite');
+      }
+    }
 
     const exportResponse = await googleRequest(
       fetchImpl,
