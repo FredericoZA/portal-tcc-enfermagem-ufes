@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
 import { portalConfirm } from '../services/portalDialogs';
@@ -876,10 +877,19 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       ]);
       setProcesses(procData);
       setGoogleEvents(gcalData || []);
+      setSelectedProcessDetails((current) => current
+        ? (procData.find((entry) => entry.id === current.id) || null)
+        : null);
     } catch (err) {
       console.error('Erro ao atualizar dados:', err);
     }
   };
+
+  useEffect(() => {
+    const update = () => { void refreshData(); };
+    window.addEventListener(PORTAL_LIVE_UPDATE_EVENT, update);
+    return () => window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT, update);
+  }, []);
 
   const handleCloseDetails = () => {
     setSelectedProcessDetails(null);
