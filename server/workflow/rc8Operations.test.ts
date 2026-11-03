@@ -24,7 +24,7 @@ test('rascunho pertence ao autor, força o e-mail autenticado e detecta concorr�
 
 test('alertas de identidade são consultivos e não alteram as respostas',()=>{
   const answers={ALUNO_1_NOME:'Ana  1',ALUNO_1_MATRICULA:'12',ORIENTADOR_SIAPE:'ABC'};const before=structuredClone(answers);
-  assert.ok(registrationFindings(answers,DEFAULT_WORKFLOW_OPERATIONS).length>=3);assert.deepEqual(answers,before);
+  const findings=registrationFindings(answers,DEFAULT_WORKFLOW_OPERATIONS);assert.ok(findings.length>=1);assert.ok(findings.every(item=>item.fieldKey==='ALUNO_1_NOME'));assert.deepEqual(answers,before);
 });
 
 test('dias úteis excluem fim de semana e feriados e limitam lembretes',()=>{

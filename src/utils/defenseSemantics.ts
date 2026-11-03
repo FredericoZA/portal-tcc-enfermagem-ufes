@@ -43,7 +43,7 @@ export function matchesDefenseFilter(
   return filter === 'all' || getDefenseState(process, now) === filter;
 }
 
-export function getDefenseCalendarSummaryParts(process: DefenseSummaryProcess): { primary: string; secondary: string } {
+export function getDefenseCalendarSummaryParts(process: DefenseSummaryProcess): { primary: string; secondary: string; location: string } {
   const timestamp = validTimestamp(process.defesa?.startAt);
   const time = timestamp === null
     ? 'Horário a definir'
@@ -53,7 +53,7 @@ export function getDefenseCalendarSummaryParts(process: DefenseSummaryProcess): 
     .map((name) => String(name || '').replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .join(' · ');
-  return { primary: [time, title].filter(Boolean).join(' · '), secondary: students };
+  return { primary: [time, title].filter(Boolean).join(' · '), secondary: students, location: process.defesa?.local ? `${process.defesa.local}${process.defesa.localStatus==='CONFIRMADO'?'':' (a confirmar)'}` : 'Local a confirmar' };
 }
 
 export function formatDefenseCalendarSummary(process: DefenseSummaryProcess, maxTitleLength = 46): string {
@@ -69,5 +69,5 @@ export function formatDefenseCalendarSummary(process: DefenseSummaryProcess, max
     .map((name) => String(name || '').replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .join(' · ');
-  return [time, title, students].filter(Boolean).join(' · ');
+  return [time, title, students,process.defesa?.local].filter(Boolean).join(' · ');
 }

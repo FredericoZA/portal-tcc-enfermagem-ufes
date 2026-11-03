@@ -1,0 +1,1084 @@
+{
+  "sourceDeploymentId": "dpl_FBWFQXiG7WWuRC9BRJMJtVsCh8D7",
+  "sourceRef": "work/desenvolvimento-local (CLI, arquivos locais não integralmente versionados)",
+  "deployedCount": 575,
+  "missingCount": 228,
+  "criticalMissingCount": 161,
+  "missingFiles": [
+    {
+      "path": "AGENTS.md",
+      "vercelFileId": "fdce3237fdc893f93e9ddb69e763e8897b4d8252"
+    },
+    {
+      "path": "DESENVOLVIMENTO_LOCAL.md",
+      "vercelFileId": "ab55a75f4cf4f98b9a7778d4c75567d763c40036"
+    },
+    {
+      "path": "DESIGN.md",
+      "vercelFileId": "1a898c83df5d14971dd5ef9a81afc16f8b8d4462"
+    },
+    {
+      "path": "docs/ACESSO_POR_LINK_DE_EMAIL.md",
+      "vercelFileId": "54e2576b611a8d3efe8d2a13fd4ec97d5483aa79"
+    },
+    {
+      "path": "docs/AJUSTES_PENDENTES_PUBLICACAO_2026-10-22.md",
+      "vercelFileId": "3582578c29f6f95a66b2bc4643df1e7cdbf575fc"
+    },
+    {
+      "path": "docs/ASSINATURA_GOVBR_CONFERENCIA_MANUAL.md",
+      "vercelFileId": "76766d5bc7185fc367c5e1d52dd21921d881aa80"
+    },
+    {
+      "path": "docs/CONFERENCIA_FLUXO_2026-10-26.md",
+      "vercelFileId": "1582ec957f5d62cb4ebec357b8ca2b0dd5505139"
+    },
+    {
+      "path": "docs/CONFERENCIA_LOCAL_2026-10-23_RODADA_54.md",
+      "vercelFileId": "1b2b5a4ebd3c7d958799ac4fdf68345d1ea93428"
+    },
+    {
+      "path": "docs/CONSOLIDACAO_ASTEN_2026-10-15.md",
+      "vercelFileId": "f7c51af1175e75b5c7c2a017b3b762e1525b2eb3"
+    },
+    {
+      "path": "docs/CONSULTA_PUBLICA_TCC.md",
+      "vercelFileId": "20624318f22f5f27ed6fbd00b42fe9b8221c1457"
+    },
+    {
+      "path": "docs/CORRECAO_CADASTRO_RESIDUOS_2026-10-26.md",
+      "vercelFileId": "d7a60c413039f9d0b2908856fccc1121851d4585"
+    },
+    {
+      "path": "docs/DIAGNOSTICO_DECLARACAO_ASTEN_2026-10-23.md",
+      "vercelFileId": "98c4200a68fab80c034481c1fe7340ffaeb826f4"
+    },
+    {
+      "path": "docs/EMAILS_E_CONFIRMACAO_DEPARTAMENTO.md",
+      "vercelFileId": "a908d196df7fd75bffb19edda5dc9a745ab751b1"
+    },
+    {
+      "path": "docs/ENTREGA_2026-10-22_RODADA45.md",
+      "vercelFileId": "aa7de66c5dd2b82ffb6bbbb13d9d1bab656dbd69"
+    },
+    {
+      "path": "docs/ENTREGA_2026-10-28.md",
+      "vercelFileId": "4f19d9eccd866580c545e6fcb9b50ea6a6ff2b80"
+    },
+    {
+      "path": "docs/EXCLUSAO_COMPLETA_TCC.md",
+      "vercelFileId": "ff84194900356480b7bf213ee5cf06978930d75b"
+    },
+    {
+      "path": "docs/EXCLUSAO_MASTER_E_CATALOGO.md",
+      "vercelFileId": "270f6253fff6ac3650fc82c5c69dd2d6e96cf5bc"
+    },
+    {
+      "path": "docs/FLUXO_ATUAL_2026-10-26.md",
+      "vercelFileId": "d8c5b7f4a6716b21f9880b6bc61564c78051120b"
+    },
+    {
+      "path": "docs/GOOGLE_OAUTH_MCP_2026-10-19.md",
+      "vercelFileId": "4a37ee429a36df69885d175de2fedcfe24c602c6"
+    },
+    {
+      "path": "docs/PUBLICACAO_2026-10-22_RODADA_50.md",
+      "vercelFileId": "ffc3d5e09a38ffc572ef3428cb3219e3a760cd40"
+    },
+    {
+      "path": "docs/PUBLICACAO_2026-10-22_RODADA_51.md",
+      "vercelFileId": "1da792a4b7845241b4292666396820012b7621bc"
+    },
+    {
+      "path": "docs/PUBLICACAO_2026-10-22_RODADA_52.md",
+      "vercelFileId": "4e8f8ad2b0091810b0ef1c739643c79eb89c4ba4"
+    },
+    {
+      "path": "docs/PUBLICACAO_AJUSTES_RESERVA_2026-10-27.md",
+      "vercelFileId": "f701687a4e6d44d39ba2d2b1cc46cba77650009f"
+    },
+    {
+      "path": "docs/PUBLICACAO_OFICIAL_2026-10-17.md",
+      "vercelFileId": "6a8e05b16dadcd6dee75eec9ff4fddd47a4ac8bf"
+    },
+    {
+      "path": "docs/REFERENCIAS_PESSOAIS_DOCUMENTOS.md",
+      "vercelFileId": "555ff6f054e3d6b7a27af9f800d06d95618e5149"
+    },
+    {
+      "path": "docs/REINICIO_SOLICITACAO_RESERVA.md",
+      "vercelFileId": "a50d3fc8257d5c647cddabfade538799af0ad041"
+    },
+    {
+      "path": "docs/REVISAO_CONTINUIDADE_2026-10-28.md",
+      "vercelFileId": "4d60467f0bce9b2322b8e58c615f794b35549718"
+    },
+    {
+      "path": "docs/REVISAO_FINAL_ENTREGA_2026-10-28.md",
+      "vercelFileId": "067c1bde312dbb5be0ce125a75c8bb46afc02209"
+    },
+    {
+      "path": "docs/REVISAO_GUIAS_PUBLICOS_2026-10-26.md",
+      "vercelFileId": "0aec6310cd4ec04b7fb7e11c68c7bf222922abde"
+    },
+    {
+      "path": "docs/REVISAO_LOCAL_2026-10-20_RODADA20.md",
+      "vercelFileId": "05c606c5f6430980868186ab2ce481ffbfa53a44"
+    },
+    {
+      "path": "docs/REVISAO_LOCAL_2026-10-21_RODADA21.md",
+      "vercelFileId": "55e6e1e1e7816f7e0f2eaf215beb93cb98472a1a"
+    },
+    {
+      "path": "docs/REVISAO_ORIENTACOES_COMPROVANTE.md",
+      "vercelFileId": "990f614d00d1a46f54a527cf80cf9592c3103a1a"
+    },
+    {
+      "path": "docs/REVISAO_PUBLICACAO_2026-10-20.md",
+      "vercelFileId": "ead4c8b4765101eed35ffec165f8984024c76ab7"
+    },
+    {
+      "path": "docs/REVISAO_SEGURANCA_RODADA_52.md",
+      "vercelFileId": "188680d066e70fe5161b887da1444e2a0b0bdaeb"
+    },
+    {
+      "path": "docs/REVISAO_UI_2026-10-16.md",
+      "vercelFileId": "e4fba7040a671ea2264cfaeb3031b1c2ae9c5773"
+    },
+    {
+      "path": "docs/REVISAO_UI_2026-10-17.md",
+      "vercelFileId": "febcc33ee7dd08c05600de39ef9532997f968d9e"
+    },
+    {
+      "path": "docs/ROTEIRO_TESTES_LOCAIS_2026-10-23.md",
+      "vercelFileId": "d0ca34dbebf8127af464d31a885a33150a891401"
+    },
+    {
+      "path": "docs/SESSAO_ADMINISTRATIVA.md",
+      "vercelFileId": "4bdab407d93113f6d7f883ff41755b999c4bc78b"
+    },
+    {
+      "path": "Iniciar Portal TCC.command",
+      "vercelFileId": "c941f3c43dd7bc82f863b072749df38b19b2bd58"
+    },
+    {
+      "path": "PRODUCT.md",
+      "vercelFileId": "9318b69900f39e51576614a3135ce209dcba9e45"
+    },
+    {
+      "path": "public/manual/acesso.jpg",
+      "vercelFileId": "d7cd4df618c09b13f5fdd71763cb45415c6a7693"
+    },
+    {
+      "path": "public/manual/avaliacao.jpg",
+      "vercelFileId": "805ff784b3e79a25c8ea42d23cd430aff89608fa"
+    },
+    {
+      "path": "public/manual/cadastro.jpg",
+      "vercelFileId": "42a6a4fa0e8b66424dbded6433f38ccfec228976"
+    },
+    {
+      "path": "public/manual/calendario.jpg",
+      "vercelFileId": "02613159094f0803b81ec031bb4dbc8ee19c4371"
+    },
+    {
+      "path": "public/manual/confirmacao.jpg",
+      "vercelFileId": "554dd1f24fd3e0c4b8617bf1e2d4dbf6d3b0e3a6"
+    },
+    {
+      "path": "public/manual/consulta-publica.jpg",
+      "vercelFileId": "fcff90cafb75082372228ad329d483aab89d53a9"
+    },
+    {
+      "path": "public/manual/documentos.jpg",
+      "vercelFileId": "840afb9fd3c22406bc52b366ce9a56eb6c70794a"
+    },
+    {
+      "path": "public/manual/ficha.jpg",
+      "vercelFileId": "9fef4332ba5ae1f5b954cb3de3ead4b3e4d673c4"
+    },
+    {
+      "path": "public/manual/presidencia.jpg",
+      "vercelFileId": "a5283106443bf61e71085627ea5b695cc1b599bc"
+    },
+    {
+      "path": "public/manual/repositorio.jpg",
+      "vercelFileId": "5fa28267109770ec06f1d9f2369c3723b835744f"
+    },
+    {
+      "path": "public/replicacao/GUIA_PARA_IA.md",
+      "vercelFileId": "c8d02ec37ecd7d0e8225affdc68687a1f6658e23"
+    },
+    {
+      "path": "public/reservation-confirmation.js",
+      "vercelFileId": "1854a42abcdf780f84c41f2f4968a92ecbbd0380"
+    },
+    {
+      "path": "scripts/check-release-dependencies.mjs",
+      "vercelFileId": "c39f084f2fe80b783c21c68605417b6fb083b89c"
+    },
+    {
+      "path": "scripts/cleanup-reviewed-drive-folders.ts",
+      "vercelFileId": "0f16faa1c1aecfde5033871fdb94d9bc03967075"
+    },
+    {
+      "path": "scripts/consolidate-process-forms.ts",
+      "vercelFileId": "d691f882faa68155d568cdd89b9d1d812deab023"
+    },
+    {
+      "path": "scripts/documents/render-visual-guide.py",
+      "vercelFileId": "df37689dd93b469869fa331398f1ebbdc1720692"
+    },
+    {
+      "path": "scripts/fixtures/asten-readonly-preload.ts",
+      "vercelFileId": "4294a47acac7bcb836ddc3a6e6f55c1a69b98604"
+    },
+    {
+      "path": "scripts/fixtures/govbr-test-pdf.mjs",
+      "vercelFileId": "74d0505b3348439acbf6d5ad2099eb83a28b3e09"
+    },
+    {
+      "path": "scripts/open-local.mjs",
+      "vercelFileId": "63f6b89595b7f4c220a2efbcf9aff5add49ca34e"
+    },
+    {
+      "path": "scripts/prepare-asten-pilot.ts",
+      "vercelFileId": "828d34a3de5a6fb0cc74852759aec5090971e3c5"
+    },
+    {
+      "path": "scripts/prepare-colenf-logo.mjs",
+      "vercelFileId": "c3f6e1333fa3153bd55adc4947577c3d22a5a223"
+    },
+    {
+      "path": "scripts/publish-reviewed-document-models.ts",
+      "vercelFileId": "4f40ae6a2fc1fdca989b7001cf027db096ba6e0c"
+    },
+    {
+      "path": "scripts/render-process-email-gallery.ts",
+      "vercelFileId": "ab972cb40429641009b0d6e9bfe3c2785667b3a3"
+    },
+    {
+      "path": "scripts/repair-studio-presentation.ts",
+      "vercelFileId": "5f43cebd6456d1e3954c77c13a8d6a1c3b3f5f45"
+    },
+    {
+      "path": "scripts/seed-local-review.mjs",
+      "vercelFileId": "7436fba2df8a8b6ac72de9b180727fce7ace0030"
+    },
+    {
+      "path": "scripts/seed-local-scenarios.ts",
+      "vercelFileId": "1b20e706d07294f29b2b92e51b771c8df7cc5e43"
+    },
+    {
+      "path": "scripts/start-local-dev.mjs",
+      "vercelFileId": "92ca18f6d62c0677d41b436897ed9c49daa5e0fb"
+    },
+    {
+      "path": "scripts/test-current-guide-browser.ts",
+      "vercelFileId": "0c76a2dc00512a57f723d4e3a44ea4e8a7a11f67"
+    },
+    {
+      "path": "scripts/test-department-reservation-browser.ts",
+      "vercelFileId": "982ccd3609c7371f44044b0ee70348252b73a8fd"
+    },
+    {
+      "path": "scripts/test-email-link-login.mjs",
+      "vercelFileId": "06ddc2fc75d147339bc3d902bc78491b63ced7fe"
+    },
+    {
+      "path": "scripts/test-scheduling-notice-browser.ts",
+      "vercelFileId": "12bf3bb7a283a5dcee63974af9e70f068d54e125"
+    },
+    {
+      "path": "scripts/verify-production-integrations.ts",
+      "vercelFileId": "78ed72ae709df36fe7f954733047117ddfe67683"
+    },
+    {
+      "path": "server/accessImportHttp.test.ts",
+      "vercelFileId": "99a3abb5ca975965ba3ad7e6d42d056b010e61fc"
+    },
+    {
+      "path": "server/accessImportParsing.test.ts",
+      "vercelFileId": "23e01205ba9b3b2a669108a6de91b161de84d2cc"
+    },
+    {
+      "path": "server/activeAdminSessionHttp.test.ts",
+      "vercelFileId": "5023466956e5c7f3ba17e708d61e2fd0ad1ec854"
+    },
+    {
+      "path": "server/ataSignatureSpacing.test.ts",
+      "vercelFileId": "ac21ab910f8395d5aee024bb7a5c5943ed84d0b4"
+    },
+    {
+      "path": "server/authorizationChoiceEmphasis.test.ts",
+      "vercelFileId": "5f3491bbba37e20953ee93e655fd394085fe5e4e"
+    },
+    {
+      "path": "server/authorizationDisciplineSpacing.test.ts",
+      "vercelFileId": "a51d3fdca1f2c209135fa44c5233e8e9d6a6160c"
+    },
+    {
+      "path": "server/backup/operationalMetadata.test.ts",
+      "vercelFileId": "3abfd163443fd85a72cd3e56a3ed11b57d4a3a16"
+    },
+    {
+      "path": "server/backup/operationalMetadata.ts",
+      "vercelFileId": "e2c628d442642730e24ef84aa79dc6d607bb0308"
+    },
+    {
+      "path": "server/backup/verifiedBackup.test.ts",
+      "vercelFileId": "2484cd86bb3992ad0914862bd99e587faa8ea707"
+    },
+    {
+      "path": "server/backup/verifiedBackup.ts",
+      "vercelFileId": "bbd6dad875e1893080247c911afbe67cafec5dc5"
+    },
+    {
+      "path": "server/colenfOriginalArtwork.test.ts",
+      "vercelFileId": "3482c78e383fbe6470ee782855cc03463f9fb19c"
+    },
+    {
+      "path": "server/completedSignatureActions.test.ts",
+      "vercelFileId": "8f453ea85473c5706c34128f98de220962c1bb06"
+    },
+    {
+      "path": "server/consolidatedEmailNotifications.test.ts",
+      "vercelFileId": "64e7b72b53b7cfe304558bcf004dad4fef183b00"
+    },
+    {
+      "path": "server/courseOfficeRegistrationHttp.test.ts",
+      "vercelFileId": "f37aea04a0ac3739d3e53efa03db2470bded8db4"
+    },
+    {
+      "path": "server/declarationBatchInspection.test.ts",
+      "vercelFileId": "9939c6a30cc703841acf636ebd8d700013b1b807"
+    },
+    {
+      "path": "server/declarationRoleDateStyles.test.ts",
+      "vercelFileId": "b93d1bdda0d11cf8f4bcaa426b538a938a2de583"
+    },
+    {
+      "path": "server/defenseConflicts.test.ts",
+      "vercelFileId": "de45927aaac65b4d578d0223aa23e5c7247918fb"
+    },
+    {
+      "path": "server/defenseConflicts.ts",
+      "vercelFileId": "43a5a130e01bc52e4682303b957a788e645d796b"
+    },
+    {
+      "path": "server/defenseSchedule.test.ts",
+      "vercelFileId": "8be1cf4f7f1a8d5edb22980697dc84a7b8a76f81"
+    },
+    {
+      "path": "server/defenseScheduleEditingHttp.test.ts",
+      "vercelFileId": "996df2e52ccc64572dff444ef37e30a5ab42227a"
+    },
+    {
+      "path": "server/departmentReservationHttp.test.ts",
+      "vercelFileId": "39f25fc0f5bf6bbdba482808d08898d89a502314"
+    },
+    {
+      "path": "server/documentArchiveDelivery.test.ts",
+      "vercelFileId": "4cea5c146b1b23d61dbd403c5c2d4688404f3cfe"
+    },
+    {
+      "path": "server/documentCatalogSync.test.ts",
+      "vercelFileId": "a8dd780f74339acff232747ca0790cb5e8f99946"
+    },
+    {
+      "path": "server/documentDownload.test.ts",
+      "vercelFileId": "0a1116a6b168582c4425a21f5e35ddc538938b0b"
+    },
+    {
+      "path": "server/documentIdentityReview.test.ts",
+      "vercelFileId": "6e0fc52b88633543cc6669753e985d7c07a97e3b"
+    },
+    {
+      "path": "server/documents/assets/colenf-logo.png",
+      "vercelFileId": "e02ad91d15d0970d1e47d61b665fde3f0f4d3dc9"
+    },
+    {
+      "path": "server/documents/assets/colenf-original.png",
+      "vercelFileId": "dc9d9341a75e2ebbd4b538921832feb0eb4bc1a6"
+    },
+    {
+      "path": "server/documents/ataLayout.test.ts",
+      "vercelFileId": "6b21048e11562d8792562f984f847123754d6789"
+    },
+    {
+      "path": "server/documents/ataLayout.ts",
+      "vercelFileId": "393fa7709e8906af953dc67dd54d4725fc1c1d83"
+    },
+    {
+      "path": "server/documents/fonts/NotoSans-Bold.ttf",
+      "vercelFileId": "86ad3e50b3687015f1c90a5b0d9182b10dbe1687"
+    },
+    {
+      "path": "server/documents/fonts/NotoSans-Regular.ttf",
+      "vercelFileId": "33f4a777d254522f7ef4d780a595a83765f33c34"
+    },
+    {
+      "path": "server/documents/fonts/OFL.txt",
+      "vercelFileId": "a675210122a9ed315584708779c097e7d277e1d4"
+    },
+    {
+      "path": "server/documents/registrationSnapshot.ts",
+      "vercelFileId": "98f6673fa4096377783c197bd1f172bfdaa56112"
+    },
+    {
+      "path": "server/documents/reviewedModelPublication.test.ts",
+      "vercelFileId": "93f36680fe8d22f97eb359010bb9996b8289fd58"
+    },
+    {
+      "path": "server/documents/reviewedModelPublication.ts",
+      "vercelFileId": "bf59aa749d47a380367211959751b120303cfcb3"
+    },
+    {
+      "path": "server/documentVariables.test.ts",
+      "vercelFileId": "989f2f9c2b9cadd39b1cf341581fb979050125b4"
+    },
+    {
+      "path": "server/emailTemplateIdentity.test.ts",
+      "vercelFileId": "d8e71eee145a5b20afc042cf4eefd662d47c9cc4"
+    },
+    {
+      "path": "server/evaluationDraftModel.test.ts",
+      "vercelFileId": "0a6fb241f4a8032c03d3191c4384a2598d8117a5"
+    },
+    {
+      "path": "server/evaluationDraftModelHttp.test.ts",
+      "vercelFileId": "a8f4ad74889d32ef48e1a019cc3fe891c191bcb2"
+    },
+    {
+      "path": "server/finalDeliveryPresentation.test.ts",
+      "vercelFileId": "265e8830bbe669502e5fef018305a6107b5f28f6"
+    },
+    {
+      "path": "server/finalDocumentsEmail.test.ts",
+      "vercelFileId": "073d9b7cbd454c3d57e60b576e3686a665cbb40f"
+    },
+    {
+      "path": "server/fixtures/courseStudioFixture.ts",
+      "vercelFileId": "d9ff63956f6287c3db15575d9ccf834379be50aa"
+    },
+    {
+      "path": "server/googleModelReference.test.ts",
+      "vercelFileId": "1afb64a82b997fc570d9e5bf55b38a6c5eaed947"
+    },
+    {
+      "path": "server/studentRegistrationEmail.test.ts",
+      "vercelFileId": "ff47787ac4405f4248f1aeebd03b0b776bb57df3"
+    },
+    {
+      "path": "server/studioAutosaveHttp.test.ts",
+      "vercelFileId": "579b4de8013aa70a10874fa77f605e10e8112742"
+    },
+    {
+      "path": "server/studioAutosaveQueue.test.ts",
+      "vercelFileId": "4ade8578980ff1bb09c9351e04d68e24c85dd9f0"
+    },
+    {
+      "path": "server/studioDraftMerge.test.ts",
+      "vercelFileId": "dcb36861a1ec99d01df69ccbb5f223a7fb9054d5"
+    },
+    {
+      "path": "server/studioImages.ts",
+      "vercelFileId": "4c722cd4fadd6112d72a96b89d79b82488b8d0cc"
+    },
+    {
+      "path": "server/studioImagesHttp.test.ts",
+      "vercelFileId": "47afc3a6513743a33980d6b1e14b93764dfd5e1a"
+    },
+    {
+      "path": "server/studioOperationalCatalog.test.ts",
+      "vercelFileId": "f8d4e9d4799a7da1938011665bc7d1ec13f23864"
+    },
+    {
+      "path": "server/studioPublicationValidation.test.ts",
+      "vercelFileId": "a3209be4a99e1a7d5e7c7f15f621d5fa81fba119"
+    },
+    {
+      "path": "server/tccTitleCase.test.ts",
+      "vercelFileId": "ef714a357805b3ac3626bd69d02bad36fab54191"
+    },
+    {
+      "path": "server/tutorialRoleGuide.test.ts",
+      "vercelFileId": "3a73b2cbdf4c1bb17b575f9a52ffefa06af4d0b2"
+    },
+    {
+      "path": "server/workflow/astenReconciliationDrain.test.ts",
+      "vercelFileId": "cadd0e1b51f68b3720eab7f696480a20951d97c1"
+    },
+    {
+      "path": "server/workflow/astenReconciliationDrain.ts",
+      "vercelFileId": "5a08db672b654064c150423298b001744ae418fa"
+    },
+    {
+      "path": "server/workflow/declarationBatch.test.ts",
+      "vercelFileId": "8a8bc5c633b5036eb79e06a85672c47f667e1d7c"
+    },
+    {
+      "path": "server/workflow/declarationBatch.ts",
+      "vercelFileId": "d0d43a7b5ab1bc40530d2b9e8c8ac6107c9acd3f"
+    },
+    {
+      "path": "server/workflow/emailImages.test.ts",
+      "vercelFileId": "7fe7146bf9d2ea1df407271733e558ea8674956c"
+    },
+    {
+      "path": "server/workflow/emailImages.ts",
+      "vercelFileId": "b09922bef4dfc803a5533f29003182e076ee298c"
+    },
+    {
+      "path": "server/workflow/modelPreviewSource.test.ts",
+      "vercelFileId": "29830d7386e4c0523122b5ce9b106131749c506f"
+    },
+    {
+      "path": "server/workflow/modelPreviewSource.ts",
+      "vercelFileId": "f2ccb43a60bb1b9329172b50041b7afaf2212bf1"
+    },
+    {
+      "path": "server/workflow/operationalEmailRecipients.test.ts",
+      "vercelFileId": "224ff40801a72bdfed23b3b4b9abeebf918defa3"
+    },
+    {
+      "path": "server/workflow/operationalEmailRecipients.ts",
+      "vercelFileId": "e5382aab7a53edf3ef4a6447c29bd3012b32690d"
+    },
+    {
+      "path": "server/workflow/parallelSignatureProviders.test.ts",
+      "vercelFileId": "835653469e5ace6e6c5c70ac03532a4a55035786"
+    },
+    {
+      "path": "server/workflow/processDeletion.ts",
+      "vercelFileId": "672fba1eca21717345b7f82b10e39b9ff25a2355"
+    },
+    {
+      "path": "server/workflow/processEmailButton.ts",
+      "vercelFileId": "9e0cea30bba3990f28106951a5fa44b5ef20a32e"
+    },
+    {
+      "path": "server/workflow/processProtocol.test.ts",
+      "vercelFileId": "afa50664faa1db0b73a7a890f6dd40aeceb440bb"
+    },
+    {
+      "path": "server/workflow/processProtocol.ts",
+      "vercelFileId": "8d421f335452acb7c69f785694fa1f83749fe50f"
+    },
+    {
+      "path": "server/workflow/publicationAccess.test.ts",
+      "vercelFileId": "feddd494a5e65d70676d930a1edc945265de0702"
+    },
+    {
+      "path": "server/workflow/publicationAccess.ts",
+      "vercelFileId": "d13b68e61e072c384fede4ae30ff1cad20350b69"
+    },
+    {
+      "path": "server/workflow/reservationConfirmation.test.ts",
+      "vercelFileId": "64583d4512022877337e5666b815521f874ca05b"
+    },
+    {
+      "path": "server/workflow/reservationConfirmation.ts",
+      "vercelFileId": "846f895f5d26aae08d8c44c09f25dbb39caf2ba9"
+    },
+    {
+      "path": "server/workflow/reservationEmail.test.ts",
+      "vercelFileId": "1f15319e1b1cae73e49c7c7a2717ea7d49727ebe"
+    },
+    {
+      "path": "server/workflow/reservationEmail.ts",
+      "vercelFileId": "59625d07faca093d682a221927b70200b849bfc1"
+    },
+    {
+      "path": "server/workflow/reservationReschedule.test.ts",
+      "vercelFileId": "22bef088df86a13e8ff01b1fa271a63de1744098"
+    },
+    {
+      "path": "server/workflow/reservationReschedule.ts",
+      "vercelFileId": "99e69df21c86df1e14a38f156e055b9b37df9d4e"
+    },
+    {
+      "path": "server/workflow/signaturePolicy.test.ts",
+      "vercelFileId": "f37d01fe5f266ccd6e4203bebccdc4d0b6f32625"
+    },
+    {
+      "path": "server/workflow/signaturePolicy.ts",
+      "vercelFileId": "a8dcf177d56c36d8548eb7df51e7b4fd873d5847"
+    },
+    {
+      "path": "server/workflowRowDeletion.test.ts",
+      "vercelFileId": "fa16c5a2a153edf8d86d3b749e2704235938a152"
+    },
+    {
+      "path": "server/workflowStageOrder.test.ts",
+      "vercelFileId": "18903d38b372db8e00f21a402ca6be6acd0d573d"
+    },
+    {
+      "path": "src/components/AstenDeclarationBatchModal.tsx",
+      "vercelFileId": "0019bc68d503609ee8d1aff39b2eac73e389df37"
+    },
+    {
+      "path": "src/components/AstenDocumentFoldersPanel.tsx",
+      "vercelFileId": "c7bbc4199978ddb1744443eb9b2eb51a64116a00"
+    },
+    {
+      "path": "src/components/DocumentFilePreview.tsx",
+      "vercelFileId": "80f3f05b1d7f7355a52fa6d26f182490b8ac2dbe"
+    },
+    {
+      "path": "src/components/GovbrSignatureModal.tsx",
+      "vercelFileId": "cdf2559a94cfe5f124946698c2bb2baa5824c70c"
+    },
+    {
+      "path": "src/components/InlineProcessField.tsx",
+      "vercelFileId": "97ea0b5b8c674f8ec55a18d6a2814a61d0fb4563"
+    },
+    {
+      "path": "src/components/PortalIllustratedGuide.tsx",
+      "vercelFileId": "322c18fd3295c03dac57b26cef8369ac612973e2"
+    },
+    {
+      "path": "src/components/PortalOperationStatus.tsx",
+      "vercelFileId": "08efcd1b3fd575e9907922788e0615acb87a0b8c"
+    },
+    {
+      "path": "src/components/ProcessDeepLink.tsx",
+      "vercelFileId": "eed586af9fc58ad6fb99ca4f4e4e11908b66c57d"
+    },
+    {
+      "path": "src/components/ProcessDeletionQueuePanel.tsx",
+      "vercelFileId": "b037908db0c118fe651d4cbf5b6413aa31b33aae"
+    },
+    {
+      "path": "src/components/PublicProcessDetail.tsx",
+      "vercelFileId": "197cafa3f6b39bff5bb1ebee6d36b5d5918cb8be"
+    },
+    {
+      "path": "src/components/RegistrationReview.tsx",
+      "vercelFileId": "37f4d3fa24355bfac940eaf560569ed5b6b4eb56"
+    },
+    {
+      "path": "src/components/ReservationChangeForm.tsx",
+      "vercelFileId": "fd9535c6fd1f0b1b8451b0e8e89d7d9f1d99b13a"
+    },
+    {
+      "path": "src/components/ReservationSchedulingNotice.tsx",
+      "vercelFileId": "5840df60cf0c80a6900323ae8f44b4d25fed0cb6"
+    },
+    {
+      "path": "src/hooks/useSignatureUpdates.ts",
+      "vercelFileId": "ffa025555d70e5eba73c9cd5211849e687fd89bd"
+    },
+    {
+      "path": "src/services/portalOperations.ts",
+      "vercelFileId": "54c93ba6685aff80cea2250e5be7dea3b87174ed"
+    },
+    {
+      "path": "src/services/studioAutosave.ts",
+      "vercelFileId": "ce0f406c2155578cdc3a6ebe817a4be50fc25157"
+    },
+    {
+      "path": "src/utils/accessImportValidation.ts",
+      "vercelFileId": "39242b0db93280994e48a5d8bdfc01cde5e12776"
+    },
+    {
+      "path": "src/utils/ataClosingTime.ts",
+      "vercelFileId": "274fab5f42d73dfc243c8d159cb4d3528778fde3"
+    },
+    {
+      "path": "src/utils/consolidatedEmailNotifications.ts",
+      "vercelFileId": "43ac26ae003071f2091d942fa206ee40b2fffaef"
+    },
+    {
+      "path": "src/utils/declarationWorkflow.ts",
+      "vercelFileId": "0c9fb96c3f873504c85e39704f087403aaa2b3ff"
+    },
+    {
+      "path": "src/utils/defenseSchedule.ts",
+      "vercelFileId": "4ef2174351d4355be848dd5953160d2becc46e68"
+    },
+    {
+      "path": "src/utils/documentCatalogSync.ts",
+      "vercelFileId": "aea97ffd40200d157fd5294d8319929ade86741a"
+    },
+    {
+      "path": "src/utils/documentDownload.ts",
+      "vercelFileId": "a55b621c78b7bd1d9907c354d39942678a319533"
+    },
+    {
+      "path": "src/utils/documentLanguage.ts",
+      "vercelFileId": "439fff9bb858b81af3daa303715f3312b8c79f21"
+    },
+    {
+      "path": "src/utils/documentModelErrors.ts",
+      "vercelFileId": "afc32ae04fac8c3e28453feedad39ae119cba0cb"
+    },
+    {
+      "path": "src/utils/documentSignatureState.ts",
+      "vercelFileId": "0fedbac7ae8d099349f4320027f929298b6f7873"
+    },
+    {
+      "path": "src/utils/documentVariables.ts",
+      "vercelFileId": "05c313293301fed5bad0a1e4280a2d9af4e3903c"
+    },
+    {
+      "path": "src/utils/emailTemplateIdentity.ts",
+      "vercelFileId": "5e14f7ba5a89e386f9c4e35e65b1f550b938687d"
+    },
+    {
+      "path": "src/utils/evaluationDraftModel.ts",
+      "vercelFileId": "680e8b11a10107266825c12d0cfaea5d597ddc68"
+    },
+    {
+      "path": "src/utils/finalDeliveryPresentation.ts",
+      "vercelFileId": "9d577f3a6ca153b271e097c5c13392603a8dfc1e"
+    },
+    {
+      "path": "src/utils/finalDocumentsEmail.ts",
+      "vercelFileId": "44ff6de7a638b70f640d7724335885bb1003ed24"
+    },
+    {
+      "path": "src/utils/invitationEmail.ts",
+      "vercelFileId": "f2b83ad7c4ed66dabdbbcb8d940c0efe87ef5256"
+    },
+    {
+      "path": "src/utils/localReviewScenarios.ts",
+      "vercelFileId": "66429c845da358391f349158082351f3f1910052"
+    },
+    {
+      "path": "src/utils/operationalEmailCopy.ts",
+      "vercelFileId": "12c30369d2b1f9ccaa4be9757343eeb8ee009cfc"
+    },
+    {
+      "path": "src/utils/operationalEmailLayout.ts",
+      "vercelFileId": "f8267ec1a3cc3ecce51a3b1aae8cccbd0ab6dff4"
+    },
+    {
+      "path": "src/utils/operationalEmails.ts",
+      "vercelFileId": "61873bb1cdc3f783bf1181af3bc3820dfe803071"
+    },
+    {
+      "path": "src/utils/personNameCase.ts",
+      "vercelFileId": "553df5eb86b99c58437f66bab712cfaca993cc3a"
+    },
+    {
+      "path": "src/utils/personPresentation.ts",
+      "vercelFileId": "490860212b987a8d8e2fb2a612512149c57a2862"
+    },
+    {
+      "path": "src/utils/processAudit.ts",
+      "vercelFileId": "542c9fc992ba9325d856ac09e1d0eb58499dd286"
+    },
+    {
+      "path": "src/utils/processEmailGreeting.ts",
+      "vercelFileId": "d1875dbbddc25ae30b3ce6d39fda43bbf9136cf1"
+    },
+    {
+      "path": "src/utils/processEmailGuidance.ts",
+      "vercelFileId": "9291e536d970636bf271f7a5bb3337dab8a852ca"
+    },
+    {
+      "path": "src/utils/processEmailLinks.ts",
+      "vercelFileId": "89e1bd1b4eda0287c7c8e09784714835f2c4162a"
+    },
+    {
+      "path": "src/utils/processEmailMessage.ts",
+      "vercelFileId": "706306a7b00fb3712c4fdaed4d57dd374b63b032"
+    },
+    {
+      "path": "src/utils/processFormConsolidation.ts",
+      "vercelFileId": "8107733a041cdc72853add8470a3c19ce26db9f7"
+    },
+    {
+      "path": "src/utils/processLink.ts",
+      "vercelFileId": "96dd6dbc060b6300021acf18ffce734a654587c7"
+    },
+    {
+      "path": "src/utils/publicationAuthorization.ts",
+      "vercelFileId": "fb06235d1e3ea27496d73fba1aecee0d5ef14ec0"
+    },
+    {
+      "path": "src/utils/publicPdfVerification.ts",
+      "vercelFileId": "3bbd00c91562a7c66c5b51d235e108f3f520cc73"
+    },
+    {
+      "path": "src/utils/publicProcessDetail.ts",
+      "vercelFileId": "65fff504f3b7423fdbe47b7ec06e9cb562a3bead"
+    },
+    {
+      "path": "src/utils/registrationHistory.ts",
+      "vercelFileId": "c06a5bf22f85e1d39bc0283230038bc3c1adec88"
+    },
+    {
+      "path": "src/utils/registrationIdentity.ts",
+      "vercelFileId": "707c7ea7e3df30f356b34b5b8a9815598ff1eab1"
+    },
+    {
+      "path": "src/utils/registrationNormalization.ts",
+      "vercelFileId": "32fad8c4b047e9aec90353f8669fa10ebffa7de0"
+    },
+    {
+      "path": "src/utils/repositoryDeliveryEmail.ts",
+      "vercelFileId": "333213ebfaeec4bae989a088664ec09ed254978e"
+    },
+    {
+      "path": "src/utils/reservationLocation.ts",
+      "vercelFileId": "bbad61fe51d380b0505e47220e3fc9f4d2d418b0"
+    },
+    {
+      "path": "src/utils/reservationRequestEmail.ts",
+      "vercelFileId": "e061057ad433296b392bb61b168a584126a55e07"
+    },
+    {
+      "path": "src/utils/signatureGuidance.ts",
+      "vercelFileId": "4dde58303b9d1f3a5f1b6e9dc9aedb3ad9f97b19"
+    },
+    {
+      "path": "src/utils/signatureUpdates.ts",
+      "vercelFileId": "b7ef68264a2753e81d63546592c77b85b31713e0"
+    },
+    {
+      "path": "src/utils/signatureWorkflowBindings.ts",
+      "vercelFileId": "5a09c5293af03343f06531d862b305a4446db073"
+    },
+    {
+      "path": "src/utils/studentImportPdf.ts",
+      "vercelFileId": "5054eb406d083791fac5aec6d107675ee0e50059"
+    },
+    {
+      "path": "src/utils/studentRegistrationEmail.ts",
+      "vercelFileId": "f8c30a549b32fc296a2462acfa16a1e32e1b6c17"
+    },
+    {
+      "path": "src/utils/studioDraftMerge.ts",
+      "vercelFileId": "af34edc6da5fabf6272d26022e4885b9c0f3e6a8"
+    },
+    {
+      "path": "src/utils/studioOperationalCatalog.ts",
+      "vercelFileId": "afcbe8a1e40869b55594c8698f62d48c30431aed"
+    },
+    {
+      "path": "src/utils/workflowStageOrder.ts",
+      "vercelFileId": "65aee6d92bcaeec67174d71d8e221b705fe08009"
+    },
+    {
+      "path": "supabase/.temp/cli-latest",
+      "vercelFileId": "3ea3747d906697011e52d3e511280909b48b448b"
+    },
+    {
+      "path": "supabase/migrations/202610140001_asten_webhook_inbox.sql",
+      "vercelFileId": "88c9e09c759d8ecbdcd1f855f4ea3699c1d8b8a2"
+    },
+    {
+      "path": "supabase/migrations/20261015205624_runtime_conflict_no_retry.sql",
+      "vercelFileId": "6ca680ef079b8bc32ccfc3b41db5bb9dc695d206"
+    },
+    {
+      "path": "supabase/migrations/20261022025423_bound_upload_allocations.sql",
+      "vercelFileId": "d0b79490a11de8c89702c60258fc58a31cbd0a16"
+    },
+    {
+      "path": "supabase/migrations/20261022030312_bound_download_allocations.sql",
+      "vercelFileId": "d5306bc964b5f925e71e667356838e443305bd2c"
+    },
+    {
+      "path": "supabase/migrations/20261024120000_govbr_signed_pdf_staging.sql",
+      "vercelFileId": "6ee6ef7aa856e445b627c649b0c485c5499dedf2"
+    },
+    {
+      "path": "supabase/migrations/20261026160000_master_process_purge.sql",
+      "vercelFileId": "f87c6ebfc0af822c5e2dd5a708caa770a03c20cc"
+    },
+    {
+      "path": "supabase/migrations/20261026190000_complete_process_cleanup.sql",
+      "vercelFileId": "800f5c2116f2a3a0532389be3eb680b8b7294d26"
+    },
+    {
+      "path": "supabase/pending/location_proof_staging.sql",
+      "vercelFileId": "4f50aa193e2245cc3d54c09f57b4d8b94413838c"
+    },
+    {
+      "path": "tmp/pdfs/visual-guide-51/page-1.png",
+      "vercelFileId": "03fe65fd8228d39c46b2786d451aba7c6c8b9de1"
+    },
+    {
+      "path": "tmp/pdfs/visual-guide-51/page-2.png",
+      "vercelFileId": "c5717b0b3c340a91bf3b8a1632221a3960c639b9"
+    },
+    {
+      "path": "tmp/pdfs/visual-guide-51/page-3.png",
+      "vercelFileId": "461fd5f00e2bda694753d0c752a8a4b2720421d7"
+    },
+    {
+      "path": "tmp/pdfs/visual-guide-51/page-4.png",
+      "vercelFileId": "4817b33274d41818f6eaae9696f97434b7519af8"
+    },
+    {
+      "path": "tmp/pdfs/visual-guide-51/page-5.png",
+      "vercelFileId": "1265dfeac5942ce5201337d7769c42eaa9e7b966"
+    }
+  ],
+  "criticalSourcePaths": [
+    "public/manual/acesso.jpg",
+    "public/manual/avaliacao.jpg",
+    "public/manual/cadastro.jpg",
+    "public/manual/calendario.jpg",
+    "public/manual/confirmacao.jpg",
+    "public/manual/consulta-publica.jpg",
+    "public/manual/documentos.jpg",
+    "public/manual/ficha.jpg",
+    "public/manual/presidencia.jpg",
+    "public/manual/repositorio.jpg",
+    "public/replicacao/GUIA_PARA_IA.md",
+    "public/reservation-confirmation.js",
+    "server/accessImportHttp.test.ts",
+    "server/accessImportParsing.test.ts",
+    "server/activeAdminSessionHttp.test.ts",
+    "server/ataSignatureSpacing.test.ts",
+    "server/authorizationChoiceEmphasis.test.ts",
+    "server/authorizationDisciplineSpacing.test.ts",
+    "server/backup/operationalMetadata.test.ts",
+    "server/backup/operationalMetadata.ts",
+    "server/backup/verifiedBackup.test.ts",
+    "server/backup/verifiedBackup.ts",
+    "server/colenfOriginalArtwork.test.ts",
+    "server/completedSignatureActions.test.ts",
+    "server/consolidatedEmailNotifications.test.ts",
+    "server/courseOfficeRegistrationHttp.test.ts",
+    "server/declarationBatchInspection.test.ts",
+    "server/declarationRoleDateStyles.test.ts",
+    "server/defenseConflicts.test.ts",
+    "server/defenseConflicts.ts",
+    "server/defenseSchedule.test.ts",
+    "server/defenseScheduleEditingHttp.test.ts",
+    "server/departmentReservationHttp.test.ts",
+    "server/documentArchiveDelivery.test.ts",
+    "server/documentCatalogSync.test.ts",
+    "server/documentDownload.test.ts",
+    "server/documentIdentityReview.test.ts",
+    "server/documents/assets/colenf-logo.png",
+    "server/documents/assets/colenf-original.png",
+    "server/documents/ataLayout.test.ts",
+    "server/documents/ataLayout.ts",
+    "server/documents/fonts/NotoSans-Bold.ttf",
+    "server/documents/fonts/NotoSans-Regular.ttf",
+    "server/documents/fonts/OFL.txt",
+    "server/documents/registrationSnapshot.ts",
+    "server/documents/reviewedModelPublication.test.ts",
+    "server/documents/reviewedModelPublication.ts",
+    "server/documentVariables.test.ts",
+    "server/emailTemplateIdentity.test.ts",
+    "server/evaluationDraftModel.test.ts",
+    "server/evaluationDraftModelHttp.test.ts",
+    "server/finalDeliveryPresentation.test.ts",
+    "server/finalDocumentsEmail.test.ts",
+    "server/fixtures/courseStudioFixture.ts",
+    "server/googleModelReference.test.ts",
+    "server/studentRegistrationEmail.test.ts",
+    "server/studioAutosaveHttp.test.ts",
+    "server/studioAutosaveQueue.test.ts",
+    "server/studioDraftMerge.test.ts",
+    "server/studioImages.ts",
+    "server/studioImagesHttp.test.ts",
+    "server/studioOperationalCatalog.test.ts",
+    "server/studioPublicationValidation.test.ts",
+    "server/tccTitleCase.test.ts",
+    "server/tutorialRoleGuide.test.ts",
+    "server/workflow/astenReconciliationDrain.test.ts",
+    "server/workflow/astenReconciliationDrain.ts",
+    "server/workflow/declarationBatch.test.ts",
+    "server/workflow/declarationBatch.ts",
+    "server/workflow/emailImages.test.ts",
+    "server/workflow/emailImages.ts",
+    "server/workflow/modelPreviewSource.test.ts",
+    "server/workflow/modelPreviewSource.ts",
+    "server/workflow/operationalEmailRecipients.test.ts",
+    "server/workflow/operationalEmailRecipients.ts",
+    "server/workflow/parallelSignatureProviders.test.ts",
+    "server/workflow/processDeletion.ts",
+    "server/workflow/processEmailButton.ts",
+    "server/workflow/processProtocol.test.ts",
+    "server/workflow/processProtocol.ts",
+    "server/workflow/publicationAccess.test.ts",
+    "server/workflow/publicationAccess.ts",
+    "server/workflow/reservationConfirmation.test.ts",
+    "server/workflow/reservationConfirmation.ts",
+    "server/workflow/reservationEmail.test.ts",
+    "server/workflow/reservationEmail.ts",
+    "server/workflow/reservationReschedule.test.ts",
+    "server/workflow/reservationReschedule.ts",
+    "server/workflow/signaturePolicy.test.ts",
+    "server/workflow/signaturePolicy.ts",
+    "server/workflowRowDeletion.test.ts",
+    "server/workflowStageOrder.test.ts",
+    "src/components/AstenDeclarationBatchModal.tsx",
+    "src/components/AstenDocumentFoldersPanel.tsx",
+    "src/components/DocumentFilePreview.tsx",
+    "src/components/GovbrSignatureModal.tsx",
+    "src/components/InlineProcessField.tsx",
+    "src/components/PortalIllustratedGuide.tsx",
+    "src/components/PortalOperationStatus.tsx",
+    "src/components/ProcessDeepLink.tsx",
+    "src/components/ProcessDeletionQueuePanel.tsx",
+    "src/components/PublicProcessDetail.tsx",
+    "src/components/RegistrationReview.tsx",
+    "src/components/ReservationChangeForm.tsx",
+    "src/components/ReservationSchedulingNotice.tsx",
+    "src/hooks/useSignatureUpdates.ts",
+    "src/services/portalOperations.ts",
+    "src/services/studioAutosave.ts",
+    "src/utils/accessImportValidation.ts",
+    "src/utils/ataClosingTime.ts",
+    "src/utils/consolidatedEmailNotifications.ts",
+    "src/utils/declarationWorkflow.ts",
+    "src/utils/defenseSchedule.ts",
+    "src/utils/documentCatalogSync.ts",
+    "src/utils/documentDownload.ts",
+    "src/utils/documentLanguage.ts",
+    "src/utils/documentModelErrors.ts",
+    "src/utils/documentSignatureState.ts",
+    "src/utils/documentVariables.ts",
+    "src/utils/emailTemplateIdentity.ts",
+    "src/utils/evaluationDraftModel.ts",
+    "src/utils/finalDeliveryPresentation.ts",
+    "src/utils/finalDocumentsEmail.ts",
+    "src/utils/invitationEmail.ts",
+    "src/utils/localReviewScenarios.ts",
+    "src/utils/operationalEmailCopy.ts",
+    "src/utils/operationalEmailLayout.ts",
+    "src/utils/operationalEmails.ts",
+    "src/utils/personNameCase.ts",
+    "src/utils/personPresentation.ts",
+    "src/utils/processAudit.ts",
+    "src/utils/processEmailGreeting.ts",
+    "src/utils/processEmailGuidance.ts",
+    "src/utils/processEmailLinks.ts",
+    "src/utils/processEmailMessage.ts",
+    "src/utils/processFormConsolidation.ts",
+    "src/utils/processLink.ts",
+    "src/utils/publicationAuthorization.ts",
+    "src/utils/publicPdfVerification.ts",
+    "src/utils/publicProcessDetail.ts",
+    "src/utils/registrationHistory.ts",
+    "src/utils/registrationIdentity.ts",
+    "src/utils/registrationNormalization.ts",
+    "src/utils/repositoryDeliveryEmail.ts",
+    "src/utils/reservationLocation.ts",
+    "src/utils/reservationRequestEmail.ts",
+    "src/utils/signatureGuidance.ts",
+    "src/utils/signatureUpdates.ts",
+    "src/utils/signatureWorkflowBindings.ts",
+    "src/utils/studentImportPdf.ts",
+    "src/utils/studentRegistrationEmail.ts",
+    "src/utils/studioDraftMerge.ts",
+    "src/utils/studioOperationalCatalog.ts",
+    "src/utils/workflowStageOrder.ts",
+    "supabase/migrations/202610140001_asten_webhook_inbox.sql",
+    "supabase/migrations/20261015205624_runtime_conflict_no_retry.sql",
+    "supabase/migrations/20261022025423_bound_upload_allocations.sql",
+    "supabase/migrations/20261022030312_bound_download_allocations.sql",
+    "supabase/migrations/20261024120000_govbr_signed_pdf_staging.sql",
+    "supabase/migrations/20261026160000_master_process_purge.sql",
+    "supabase/migrations/20261026190000_complete_process_cleanup.sql"
+  ]
+}

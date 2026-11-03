@@ -11,3 +11,8 @@
  * Cores, dimensões e z-index: portal-tokens.css.
  * Demais arquivos apenas consomem tokens sem redefinir a paleta estrutural.
  */
+
+/* Submitted repository data reads as a record until Editar entrega. */
+#repository-delivery-form .portal-repository-locked .portal-input, #repository-delivery-form .portal-repository-locked textarea { background: var(--portal-surface-card, #e5e9eb); color: #334155; opacity: 1; cursor: default; }
+
+#repository-delivery-form[data-delivery-locked="true"] select { background: var(--portal-surface-card, #e5e9eb); color: #334155; opacity: 1; }

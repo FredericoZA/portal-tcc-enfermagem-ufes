@@ -23,7 +23,7 @@ export interface LoginPopupConfig {
 export const DEFAULT_LOGIN_POPUP_CONFIG: LoginPopupConfig = {
   title: 'Acesso ao Portal do TCC',
   subtitle: 'Enfermagem e Obstetrícia · UFES',
-  description: 'Informe o e-mail cadastrado para receber um código de acesso de seis dígitos. Após a validação, os TCCs vinculados ao seu e-mail aparecerão automaticamente.',
+  description: '',
   discenteTip: 'utilize sempre seu e-mail institucional @edu.ufes.br',
   docenteTip: 'utilize exatamente o e-mail informado no cadastro do TCC.',
   emailLabel: 'E-mail cadastrado',

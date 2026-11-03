@@ -80,9 +80,11 @@ rejectDuplicateEnvKeys(fallbackEnvLines, '.env');
 // Falhar fechado: mesmo um valor vazio ou multilinha para provedores externos
 // não pertence ao modo demo. A conta de homologação é configurada separadamente.
 const containsExternalServices = (lines) => lines.some((line) =>
-  /^\s*(?:export\s+)?(?:PORTAL_PERSISTENCE_PROVIDER|SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|GOOGLE_OAUTH_CLIENT_SECRET|ASTEN_API_KEY)\s*=/.test(line));
+  /^\s*(?:export\s+)?(?:SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|GOOGLE_OAUTH_CLIENT_SECRET|ASTEN_API_KEY)\s*=/.test(line)) ||
+  (lines.some(line => /^\s*(?:export\s+)?PORTAL_PERSISTENCE_PROVIDER\s*=/.test(line)) &&
+    readConfigValue('PORTAL_PERSISTENCE_PROVIDER', lines) !== 'local_file');
 if (containsExternalServices(configLines) || containsExternalServices(fallbackEnvLines) ||
-    process.env.PORTAL_PERSISTENCE_PROVIDER?.toLowerCase() === 'supabase' ||
+    (process.env.PORTAL_PERSISTENCE_PROVIDER !== undefined && process.env.PORTAL_PERSISTENCE_PROVIDER !== 'local_file') ||
     ['SUPABASE_SECRET_KEY','SUPABASE_SERVICE_ROLE_KEY','GOOGLE_OAUTH_CLIENT_SECRET','ASTEN_API_KEY'].some(key => Boolean(process.env[key]))) {
   console.error('[Portal TCC] .env.local contém configuração de provedores externos. O comando local seguro não pode usar credenciais reais. Configure um ambiente de homologação separado e execute manualmente npm run dev após avaliação técnica.');
   process.exit(2);

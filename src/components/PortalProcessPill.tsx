@@ -18,6 +18,10 @@ export const normalizeProcessNumber = (value?: string) => {
 };
 
 export const formatProcessLabel = (value?: string) => {
+  const raw = String(value || '').trim();
+  const legacy = /^0*(\d{1,3})\s*-\s*legado$/i.exec(raw)
+    || /^legado[ -]*0*(\d{1,3})$/i.exec(raw);
+  if (legacy) return `${legacy[1].padStart(3, '0')} - Legado`;
   const normalized = normalizeProcessNumber(value);
   return normalized === '—' ? 'TCC' : `TCC - ${normalized}`;
 };

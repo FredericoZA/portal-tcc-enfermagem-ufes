@@ -32,7 +32,7 @@ export const NursingEmblemLogo: React.FC<NursingEmblemLogoProps> = ({ className 
       height={size}
       style={{ width: `${size}px`, height: `${size}px` }}
       onError={() => setImgError(true)}
-      className={`object-contain shrink-0 bg-transparent p-0 transition-transform duration-200 hover:scale-105 ${className}`}
+      className={`rounded-full object-contain shrink-0 bg-transparent p-0 transition-transform duration-200 hover:scale-105 ${className}`}
     />
   );
 };

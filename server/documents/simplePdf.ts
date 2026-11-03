@@ -4,6 +4,7 @@ const normalizePdfText = (value: string) => value
   .replace(/[‘’]/g, "'")
   .replace(/[–—]/g, '-')
   .replace(/…/g, '...')
+  .replace(/☒/g, '[X]').replace(/☐/g, '[ ]')
   .replace(/[^\u0009\u000A\u000D\u0020-\u00FF]/g, '');
 
 const escapeLiteral = (value: string) => normalizePdfText(value)

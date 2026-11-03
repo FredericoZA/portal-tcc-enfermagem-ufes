@@ -13,3 +13,8 @@ review_inputs/
 *.log
 *.zip
 .DS_Store
+
+output/
+.playwright-cli/
+
+.playwright-mcp/

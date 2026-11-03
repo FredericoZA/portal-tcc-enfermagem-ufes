@@ -1,0 +1,51 @@
+import {spawn} from 'node:child_process';
+import {mkdtemp,writeFile,readFile,rm,mkdir} from 'node:fs/promises';
+import path from 'node:path';
+import {tmpdir} from 'node:os';
+import {createRequire} from 'node:module';
+import assert from 'node:assert/strict';
+import {DEMO_PROCESSES,DEMO_MEMBERSHIPS,INITIAL_SETTINGS} from '../src/services/demoSeed';
+import {reservationToken} from '../server/workflow/reservationConfirmation';
+import {reservationRequestEmail} from '../src/utils/reservationRequestEmail';
+import {operationalEmailLayout} from '../src/utils/operationalEmailLayout';
+const require=createRequire(import.meta.url);
+const runtime=process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES;
+const {chromium}=runtime?require(path.join(runtime,'playwright')):require('playwright');
+const directory=await mkdtemp(path.join(tmpdir(),'portal-department-browser-'));
+const out=path.resolve('.portal-data/department-review');await mkdir(out,{recursive:true});
+const p=structuredClone(DEMO_PROCESSES[0]);p.avaliacao={status:'PENDENTE'};p.status='AGUARDANDO_CONFIRMACAO_LOCAL';p.etapaAtual='CONFIRMACAO_LOCAL';p.defesa={...p.defesa,startAt:'2026-11-20T14:10:00-03:00',endAt:'2026-11-20T15:40:00-03:00',local:'Auditório do Departamento de Enfermagem — CCS/UFES',alternateLocation:'Sala de reuniões do Departamento de Enfermagem — CCS/UFES',localStatus:'PENDENTE',invitationDriveFileId:undefined,invitationSentAt:undefined,locationProof:undefined};
+const settings={...INITIAL_SETTINGS,emailConfig:{...INITIAL_SETTINGS.emailConfig,roomReservationDepartmentEmail:'department@example.invalid'},documentModels:{CONVITE:{driveFileId:'fixture-model'}}};
+await writeFile(path.join(directory,'portal-state.json'),JSON.stringify({settings,processes:[p],memberships:DEMO_MEMBERSHIPS.filter(m=>m.processId===p.id),signatureJobs:[]}));
+const port=46500+Math.floor(Math.random()*500),base=`http://127.0.0.1:${port}`,secret='department-browser-secret-0123456789abcdef';
+const child=spawn(process.execPath,['--import','tsx','server.ts'],{cwd:process.cwd(),env:{...process.env,NODE_ENV:'development',HOST:'127.0.0.1',PORT:String(port),PORTAL_PUBLIC_URL:base,APP_URL:base,PORTAL_DATA_DIR:directory,PORTAL_PERSISTENCE_PROVIDER:'local_file',PORTAL_ALLOW_INSECURE_DEMO_AUTH:'true',PORTAL_SERVE_COMPILED_CLIENT:'true',PORTAL_ALLOW_LOCAL_OTP_STORE:'true',PORTAL_ALLOW_LOCAL_SECRET_STORE:'true',PORTAL_SESSION_SECRET:secret,PORTAL_OTP_PEPPER:'department-browser-otp-0123456789abcdef',ASTEN_INTEGRATION_ENABLED:'false',SUPABASE_URL:'',SUPABASE_SECRET_KEY:'',SUPABASE_SERVICE_ROLE_KEY:'',VERCEL:''},stdio:'ignore'});
+let browser:any;
+try{
+ const deadline=Date.now()+25000;while(true){try{if((await fetch(base+'/api/health')).ok)break;}catch{}if(Date.now()>deadline||child.exitCode!==null)throw Error('Servidor não iniciou');await new Promise(r=>setTimeout(r,100));}
+ browser=await chromium.launch({headless:true,...(process.env.PORTAL_VISUAL_BROWSER_EXECUTABLE?{executablePath:process.env.PORTAL_VISUAL_BROWSER_EXECUTABLE}:{})});
+ const page=await browser.newPage({viewport:{width:820,height:1050}});
+ const token=reservationToken({processId:p.id,revision:0,recipient:'department@example.invalid',expiresAt:Date.now()+600000},secret),href=base+'/api/reservation-confirmation/'+token;
+ const request=reservationRequestEmail({process:p,baseUrl:base,courseName:'Curso de Enfermagem e Obstetrícia — CCS/UFES',confirmationUrl:href});
+ const logo='data:image/png;base64,'+(await readFile('public/colenf-logo.png')).toString('base64');
+ const email=operationalEmailLayout({text:request.text,subject:`Solicitação de reserva · ${p.protocolo}`,href,label:`Confirmar reserva · ${p.protocolo}`,studio:{brandKit:{courseName:'Enfermagem e Obstetrícia — UFES',primaryColor:'#005830',courseLogoUrl:logo} as any}});
+ await page.setContent(email.html);assert.equal(await page.locator('a').count(),1);assert.equal(await page.locator('img').evaluate((img:any)=>img.complete&&img.naturalWidth>0),true);
+ await page.screenshot({path:path.join(out,'email.png'),fullPage:true});await writeFile(path.join(out,'email.html'),email.html);
+ await page.goto(href);await page.getByRole('heading',{name:'Confirmar reserva de local'}).waitFor();assert.match(await page.locator('body').innerText(),/14:10 às 15:40/);
+ await page.screenshot({path:path.join(out,'formulario.png'),fullPage:true});await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);await page.screenshot({path:path.join(out,'formulario-mobile.png'),fullPage:true});
+ await page.getByLabel(p.defesa.alternateLocation!,{exact:true}).check();await page.getByLabel('Conferi a data, o horário e o local selecionado.').check();let releasePost!:()=>void,postCount=0;let onIntercept!:()=>void;
+ const intercepted=new Promise<void>(resolve=>{onIntercept=resolve;});
+ const gate=new Promise<void>(resolve=>{releasePost=resolve;});
+ // Keep the old document inspectable while the native POST is intentionally delayed.
+ await page.locator('form').evaluate((form:HTMLFormElement)=>{form.target='reservation-test-target';});
+ const submittedPage=page.waitForEvent('popup');
+ await page.context().route(href,async route=>{if(route.request().method()==='POST'){postCount++;onIntercept();await gate;}await route.continue();});
+ const click=page.getByRole('button',{name:'Enviar resposta'}).click({noWaitAfter:true});
+ await Promise.race([intercepted,new Promise((_,reject)=>setTimeout(()=>reject(Error('POST not intercepted')),8000))]).catch(async error=>{console.log('FORM',await page.locator('form').innerText());throw error;});
+ assert.equal(await page.getByRole('button',{name:'Enviando resposta…',exact:true}).isDisabled(),true);
+ assert.equal(await page.getByRole('progressbar',{name:'Envio da resposta em andamento'}).isVisible(),true);
+ assert.equal(await page.locator('form').getAttribute('aria-busy'),'true');
+ await page.locator('form').evaluate((form:HTMLFormElement)=>form.requestSubmit());assert.equal(postCount,1);
+ await page.screenshot({path:path.join(out,'enviando-resposta.png'),fullPage:true});
+ releasePost();await click;const confirmationPage=await submittedPage;await confirmationPage.getByRole('heading',{name:'Resposta registrada'}).waitFor();await confirmationPage.close();await page.goto(href);await page.getByRole('heading',{name:'Resposta registrada'}).waitFor();await writeFile(path.join(out,'post-response.txt'),await page.locator('body').innerText());await page.screenshot({path:path.join(out,'post-response.png'),fullPage:true});await page.getByRole('heading',{name:'Resposta registrada'}).waitFor();await page.screenshot({path:path.join(out,'confirmado.png'),fullPage:true});
+ const state=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(state.processes[0].defesa.local,p.defesa.alternateLocation);assert.equal(state.processes[0].defesa.localStatus,'CONFIRMADO');
+ await writeFile(path.join(out,'result.json'),JSON.stringify({passed:true,checks:['single email CTA','green header and visible logo','department form without login','90 minute interval','mobile without horizontal overflow','confirmation persisted without student upload'],realEmailSent:false},null,2));console.log('PASS: email, desktop/mobile form and confirmation verified locally.');
+}finally{await browser?.close();if(child.exitCode===null){const stopped=new Promise(r=>child.once('exit',r));child.kill('SIGTERM');await stopped;}await rm(directory,{recursive:true,force:true});}

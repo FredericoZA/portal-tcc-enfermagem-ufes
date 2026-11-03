@@ -49,7 +49,7 @@ test('tutorial público contém orientação operacional detalhada por perfil', 
   assert.match(page, /Conferência antes de encerrar/);
   assert.match(page, /Erros a evitar/);
   assert.match(page, /Passo a passo/);
-  assert.match(page, /Presidente da Comissão/);
+  assert.doesNotMatch(page, /Presidente da Comissão/);
   assert.match(page, /autorizações? de publicação/i);
 });
 

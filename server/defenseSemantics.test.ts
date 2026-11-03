@@ -66,3 +66,11 @@ test('resumo do calendário contém horário e título compacto do TCC', () => {
   assert.ok(summary.endsWith('…'));
   assert.ok(!summary.includes('  '));
 });
+test('resumo da agenda mostra sala confirmada e identifica preferência ainda pendente',async()=>{
+ const {getDefenseCalendarSummaryParts}=await import('../src/utils/defenseSemantics');
+ const process=processAt('AGUARDANDO_CONFIRMACAO_LOCAL','2026-10-30T11:10:00Z');
+ process.defesa.local='Sala de reuniões';process.defesa.localStatus='CONFIRMADO';
+ assert.equal(getDefenseCalendarSummaryParts(process).location,'Sala de reuniões');
+ assert.match(formatDefenseCalendarSummary(process),/Sala de reuniões/);
+ process.defesa.localStatus='PENDENTE';assert.equal(getDefenseCalendarSummaryParts(process).location,'Sala de reuniões (a confirmar)');
+});

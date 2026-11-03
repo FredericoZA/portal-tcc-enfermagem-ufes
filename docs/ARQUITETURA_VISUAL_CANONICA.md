@@ -17,11 +17,13 @@ Conclusão: a mesma propriedade visual pode ser definida em mais de uma camada, 
 
 ## 2. Paleta estrutural canônica
 
+Paleta atualizada na revisão visual local de 16/10/2026. Botões secundários e o contador de etapas usam verde sálvia #8CB1A3; ações principais mantêm #005830.
+
 | Token | HEX | RGB | Uso permitido |
 |---|---|---|---|
-| surface.page | #F1F5F9 | 241, 245, 249 | fundo geral do site — somente nível global |
-| surface.panel | #E1E6E9 | 225, 230, 233 | caixas grandes, planilhas, pop-ups e painéis |
-| surface.card | #D5DCE0 | 213, 220, 224 | caixas internas dentro de painéis |
+| surface.page | #F6F7F8 | 246, 247, 248 | fundo geral do site — somente nível global |
+| surface.panel | #E9EDEF | 233, 237, 239 | caixas grandes, planilhas, pop-ups e painéis |
+| surface.card | #D8DFE3 | 216, 223, 227 | caixas internas dentro de painéis |
 | surface.inner | #FFFFFF | 255, 255, 255 | quarto nível, controles, caixas internas finais e paginação |
 | brand.header | #005830 | 0, 88, 48 | barra de título, cabeçalho de planilha e cabeçalho de modal/pop-up |
 | brand.action | #337959 | 51, 121, 89 | ícones e ações verdes dentro de superfícies claras |
@@ -31,9 +33,9 @@ Conclusão: a mesma propriedade visual pode ser definida em mais de uma camada, 
 | text.light | #FFFFFF | 255, 255, 255 | texto sobre verde institucional |
 
 ### Hierarquia de superfícies
-1. página = #F1F5F9;
-2. painel grande = #E1E6E9;
-3. card/caixa interna = #D5DCE0;
+1. página = #F6F7F8;
+2. painel grande = #E9EDEF;
+3. card/caixa interna = #D8DFE3;
 4. conteúdo interno adicional = #FFFFFF.
 
 Nenhuma tela pode criar um quinto cinza estrutural.

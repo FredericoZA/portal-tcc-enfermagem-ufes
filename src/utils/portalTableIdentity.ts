@@ -6,6 +6,7 @@ export const PORTAL_TABLE_KEYS = [
   'authorized_access',
   'signature_logs',
   'audit_logs',
+  'feedback_inbox',
 ] as const;
 
 export type PortalTableKey = (typeof PORTAL_TABLE_KEYS)[number];
@@ -18,6 +19,7 @@ export const PORTAL_TABLE_CONTAINER_SELECTORS: Record<PortalTableKey, string[]> 
   authorized_access: ['#authorized-access-panel'],
   signature_logs: ['#asten-logs-page'],
   audit_logs: ['#audit-logs-page'],
+  feedback_inbox: ['#feedback-inbox-panel'],
 };
 
 export const normalizePortalTableText = (value: string) => value

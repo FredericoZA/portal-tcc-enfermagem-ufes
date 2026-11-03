@@ -1,3 +1,10 @@
+import {isEmailAddress} from '../../src/utils/emailAddress';
+import {workflowMarkerPattern} from '../../src/utils/templateMarkerPattern';
+import {DOCUMENT_VARIABLE_KEYS,documentVariables} from '../../src/utils/documentVariables';
+import {authorNames,academicName} from '../../src/utils/personPresentation';
+import {upgradeOperationalEmailTemplate,recipientEmailVariables} from '../../src/utils/operationalEmails';
+import {processLink} from '../../src/utils/processLink';
+import {formatDateNumeric,formatTime24h} from '../../src/utils/formatters';
 import { presentVariables } from '../../src/utils/operationalConfig';
 import { createHash } from 'crypto';
 import nodeProcess from 'node:process';
@@ -18,6 +25,7 @@ import { evaluateStudioCondition, SAFE_EMAIL_RECIPIENT_VARIABLES } from '../../s
 type GenericRecord = Record<string, unknown>;
 
 export interface WorkflowRuntimePorts {
+  resolveEmailRecipients?(input:{template:GenericRecord;recipients:string[];variables:Record<string,string>}):string[];
   createDocument(input: {
     template: GenericRecord;
     variables: Record<string, string>;
@@ -60,6 +68,7 @@ const list = (value: unknown): GenericRecord[] => Array.isArray(value) ? value.f
 // variables, but it cannot impersonate another student/advisor or redirect an
 // e-mail by submitting a field with the same name as a canonical variable.
 const RESERVED_PROCESS_VARIABLES = new Set([
+  ...DOCUMENT_VARIABLE_KEYS,
   'PROCESS_ID', 'TCC_ID', 'TCC_CODIGO', 'PROTOCOLO',
   'ALUNO_1_NOME', 'ALUNO_1_EMAIL', 'ALUNO_1_MATRICULA', 'ALUNO_NOME', 'ALUNO_EMAIL',
   'ALUNO_2_NOME', 'ALUNO_2_EMAIL', 'ALUNO_2_MATRICULA',
@@ -164,8 +173,8 @@ export function buildProcessVariables(context: WorkflowRuntimeContext): Record<s
     ? (/^https?:\/\//i.test(configuredPortalUrl) ? configuredPortalUrl : `https://${configuredPortalUrl}`).replace(/\/$/, '')
     : '';
   const process = portalProcess;
-  const studentNames = [process.aluno1.nome, process.aluno2?.nome].filter(Boolean).join(' e ');
-  const bankNames = process.banca.map((member) => member.nome).filter(Boolean).join(', ');
+  const studentNames = authorNames(process);
+  const bankNames = process.banca.map((member) => academicName(member)).filter(Boolean).join(', ');
   const bankEmails = process.banca.map((member) => member.email).filter(Boolean).join(', ');
   const examiner2 = process.banca.find((member) => member.funcao === 'EXAMINER_2') || process.banca[0];
   const examiner3 = process.banca.find((member) => member.funcao === 'EXAMINER_3') || process.banca[1];
@@ -207,7 +216,7 @@ export function buildProcessVariables(context: WorkflowRuntimeContext): Record<s
     BANCA_NOMES: bankNames,
     BANCA_EMAILS: bankEmails,
     PARTICIPANTES_EMAILS: participantEmails,
-    DEFESA_DATA_HORA: process.defesa.startAt,
+    DEFESA_DATA_HORA: `${formatDateNumeric(process.defesa.startAt)} às ${formatTime24h(process.defesa.startAt)}`,
     DEFESA_LOCAL: process.defesa.local,
     RESULTADO: process.avaliacao.resultadoLabel || '',
     // Compatibilidade com modelos históricos: esta instalação não registra nota numérica.
@@ -224,6 +233,7 @@ export function buildProcessVariables(context: WorkflowRuntimeContext): Record<s
     TRABALHO_FINAL_PDF: process.acervo?.trabalhoCompletoFileUrl || '',
     RESUMO_EXPANDIDO_PDF: process.acervo?.resumoExpandidoFileUrl || '',
     LINK_PORTAL: portalUrl,
+    LINK_PROCESSO: portalUrl?processLink(portalUrl,process.id):'',
     EVENTO: context.eventCode,
     ATOR_EMAIL: context.actorEmail
   };
@@ -245,10 +255,13 @@ export function buildProcessVariables(context: WorkflowRuntimeContext): Record<s
     const normalized = normalizeWorkflowEventCode(key);
     if (normalized && !(normalized in variables) && !RESERVED_PROCESS_VARIABLES.has(normalized)) variables[normalized] = scalar(value);
   }
+  Object.assign(variables,documentVariables(process));
+  variables.ORIENTADOR_NOME=academicName(process.orientador);variables.COORIENTADOR_NOME=academicName(process.coorientador);variables.CAMPO_03=variables.ORIENTADOR_NOME;
+  variables.EXAMINADOR_2_NOME=academicName(examiner2);variables.EXAMINADOR_3_NOME=academicName(examiner3);
   return variables;
 }
 
-const workflowMarkers = () => /\{\{\s*([^{}\n]{1,100}?)\s*\}\}|<<\s*([^<>\n]{1,100}?)\s*>>|\[\[\s*([^\[\]\n]{1,100}?)\s*\]\]|«\s*([^«»\n]{1,100}?)\s*»|-((?:CAMPO_)?[A-Z0-9_]+)-/g;
+const workflowMarkers = workflowMarkerPattern;
 
 function mergeMarkers(source: string, variables: Record<string, string>, html: boolean): string {
   // One pass: marker-looking text submitted by a participant stays literal.
@@ -263,7 +276,7 @@ function mergeMarkers(source: string, variables: Record<string, string>, html: b
  * por modelos publicados, inclusive via marcadores antigos ou aliases. */
 export function filterTemplateVariables(variables: Record<string,string>,studio:IntegrationStudioSettings): Record<string,string> {
   const blocked=new Set<string>();
-  for(const form of studio.formTemplates||[]){
+  for(const form of [...(studio.formTemplates||[]),...Object.values(studio.processFieldSchemas||{}).map(questions=>({questions}))]){
     for(const question of (Array.isArray(form.questions)?form.questions:[])){
       if(question.availableToTemplates===false && question.fieldKey)blocked.add(normalizeWorkflowEventCode(String(question.fieldKey)));
     }
@@ -340,7 +353,7 @@ export function parseRecipients(source: string, variables: Record<string, string
   const unsafe = variableKeys.filter((variable) => !SAFE_EMAIL_RECIPIENT_VARIABLES.has(variable));
   if (unsafe.length) throw new Error(`Destinatário usa variável não autorizada: ${Array.from(new Set(unsafe)).join(', ')}.`);
   const merged = mergeWorkflowVariables(source, variables);
-  return Array.from(new Set(merged.split(/[;,\n]+/).map((item) => item.trim().toLowerCase()).filter((item) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item))));
+  return Array.from(new Set(merged.split(/[;,\n]+/).map((item) => item.trim().toLowerCase()).filter((item) => isEmailAddress(item))));
 }
 
 export async function executeWorkflowEvent(
@@ -376,20 +389,25 @@ export async function executeWorkflowEvent(
         if (!template) throw new Error(`E-mail ${action.referenceId} não localizado.`);
         const allowedVariables=filterTemplateVariables(plan.variables,studio);
         const renderedVariables = presentVariables(allowedVariables, String(template.id), studio);
-        const recipients = parseRecipients(text(template.recipient) || action.detail || '', allowedVariables);
+        const configuredRecipients = parseRecipients(text(template.recipient) || action.detail || '', allowedVariables);
+        const recipients = ports.resolveEmailRecipients?ports.resolveEmailRecipients({template,recipients:configuredRecipients,variables:allowedVariables}):configuredRecipients;
         if (!recipients.length) throw new Error(`E-mail ${action.referenceId} sem destinatário válido.`);
-        output = await ports.sendEmail({
-          template,
-          to: recipients,
-          subject: mergeWorkflowVariables(text(template.subject), renderedVariables),
-          text: mergeWorkflowVariables(text(template.body), renderedVariables),
-          html: text(template.htmlBody) ? mergeWorkflowHtmlVariables(text(template.htmlBody), renderedVariables) : undefined,
-          variables: allowedVariables,
-          processId: plan.processId,
-          protocol: plan.protocol,
-          eventVariables,
-          idempotencyKey: action.idempotencyKey
-        });
+        const personalizedTemplate=upgradeOperationalEmailTemplate(template);
+        const deliveries:Array<{externalId?:string}>=[];
+        const recipientGroups=String(template.id)==='email-entrega-repositorio'?[recipients]:recipients.map(recipient=>[recipient]);
+        for(const group of recipientGroups){
+          const recipient=group[0];
+          const personal=filterTemplateVariables(recipientEmailVariables(context.process,recipient,renderedVariables,plan.variables.LINK_PORTAL,context.eventCode,String(template.id)),studio);
+          deliveries.push(await ports.sendEmail({
+            template:personalizedTemplate,to:group,
+            subject:mergeWorkflowVariables(text(personalizedTemplate.subject),personal),
+            text:mergeWorkflowVariables(text(personalizedTemplate.body),personal),
+            html:text(personalizedTemplate.htmlBody)?mergeWorkflowHtmlVariables(text(personalizedTemplate.htmlBody),personal):undefined,
+            variables:allowedVariables,processId:plan.processId,protocol:plan.protocol,eventVariables,idempotencyKey:action.idempotencyKey,
+          }));
+        }
+        output={externalId:deliveries.map(item=>item.externalId).filter(Boolean).join(',')};
+
       } else if (ports.executeSystemAction) {
         output = await ports.executeSystemAction({ action, variables: plan.variables, processId: plan.processId, idempotencyKey: action.idempotencyKey });
       } else throw new Error(`A ação interna “${action.title}” não possui executor seguro.`);

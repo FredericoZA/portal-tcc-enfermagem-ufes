@@ -108,6 +108,9 @@ export interface EmailDeliveryAttempt {
 }
 
 export interface EmailDeliveryRecord {
+  rfcMessageId?:string;
+  replyThreadId?:string;
+  replyMessageId?:string;
   id: string;
   processId?: string;
   protocol?: string;
@@ -120,6 +123,7 @@ export interface EmailDeliveryRecord {
   templateId?: string;
   idempotencyKey: string;
   recipient: string;
+  cc?: string[];
   subject: string;
   /** Conteúdo efetivamente renderizado no momento da primeira tentativa. */
   renderedText?: string;

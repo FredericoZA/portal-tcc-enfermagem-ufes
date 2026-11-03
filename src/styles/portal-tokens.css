@@ -2,16 +2,20 @@
    1. TOKENS
    ========================================================================== */
 :root {
-  /* Superfícies — quatro níveis, sem quinto cinza estrutural. */
-  --portal-surface-page: #f1f5f9;
-  --portal-surface-panel: #e1e6e9;
-  --portal-surface-card: #d5dce0;
+  /* Hierarquia: branco gelo → cinza claro → cinza médio → branco. */
+  --portal-surface-page: #f6f7f8;
+  --portal-surface-panel: #e9edef;
+  --portal-surface-card: #d8dfe3;
+  --portal-surface-header: #b7c1c8;
+  --portal-surface-nested: var(--portal-surface-inner);
   --portal-surface-inner: #ffffff;
 
   /* Identidade. */
   --portal-brand-header: #005830;
   --portal-brand-action: #337959;
   --portal-brand-action-border: #286a4d;
+  --portal-brand-sage: #8cb1a3;
+  --portal-brand-sage-hover: #7fa695;
   --portal-header-institution: #d5dce0;
   --portal-sidebar-footer: #011f17;
   --portal-sidebar-active: #154d41;

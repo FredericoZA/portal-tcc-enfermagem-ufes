@@ -1,9 +1,11 @@
+import { NursingEmblemLogo } from './NursingEmblemLogo';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Menu, Shield, User } from 'lucide-react';
 import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { NotificationBell } from './NotificationBell';
+import { SiteZoomControls } from './SiteZoomControls';
 import { PORTAL_THEME } from '../theme/portalTheme';
 
 interface HeaderProps {
@@ -51,26 +53,25 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome })
         <div className="flex items-center gap-3">
           <button id="open-mobile-sidebar-btn" onClick={onOpenMobileSidebar} className="lg:hidden p-2 rounded-full text-slate-600 focus:outline-none" aria-label="Abrir menu"><Menu className="w-6 h-6" /></button>
           <div className="flex items-center gap-2">
-            {headerLogo && (
-              <img src={headerLogo} alt="Emblema institucional" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 object-contain" referrerPolicy="no-referrer" />
-            )}
+            <NursingEmblemLogo size={40} customSrc={headerLogo||undefined} />
             <button type="button" onClick={onGoHome} className="text-left focus:outline-none cursor-pointer" title="Voltar ao Calendário Público Inicial">
-              <div className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest leading-none mb-1" style={{ color: PORTAL_THEME.text.dark }}>{layoutConfig.headerInstitutionText || installationProfile.institutionName}</div>
-              <h1 className="text-[11px] sm:text-xs md:text-sm font-black tracking-tight uppercase leading-snug flex items-center gap-1.5" style={{ color: PORTAL_THEME.brand.action }}><span>{layoutConfig.headerCourseTitle || `${installationProfile.courseName} · CCS/UFES`}</span></h1>
+              <div className="text-[9px] sm:text-[10px] font-extrabold normal-case tracking-widest leading-none mb-1" style={{ color: PORTAL_THEME.text.dark }}>{layoutConfig.headerInstitutionText || installationProfile.institutionName}</div>
+              <h1 className="text-[11px] sm:text-xs md:text-sm font-black tracking-tight normal-case leading-snug flex items-center gap-1.5" style={{ color: PORTAL_THEME.brand.action }}><span>{layoutConfig.headerCourseTitle || `${installationProfile.courseName} · CCS/UFES`}</span></h1>
             </button>
           </div>
         </div>
 
         {showAuthenticatedIdentity && (
           <div className="hidden md:flex items-center gap-2">
-            <NotificationBell />
+            <NotificationBell key={normalizedEmail} />
+            <SiteZoomControls />
             {layoutConfig.headerShowRoleBadges && (isMaster ? (
-              <span id="role-badge-master" className="inline-flex items-center gap-1 bg-amber-100 text-amber-950 border border-amber-300 text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
-                <Shield className="w-3.5 h-3.5 text-amber-800" />Usuário Master
+              <span id="role-badge-master" className="inline-flex items-center gap-1 bg-red-700 text-white border border-red-800 text-[10px] px-2.5 py-1 rounded-full font-bold normal-case tracking-wider">
+                <Shield className="w-3.5 h-3.5 text-white" />Usuário Master
               </span>
             ) : isCommissionPresident ? (
-              <span id="role-badge-coord" className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 border border-slate-300 text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
-                <Shield className="w-3.5 h-3.5 text-slate-600" />Presidente da Comissão
+              <span id="role-badge-coord" className="inline-flex items-center gap-1 bg-red-700 text-white border border-red-800 text-[10px] px-2.5 py-1 rounded-full font-bold normal-case tracking-wider">
+                <Shield className="w-3.5 h-3.5 text-white" />Presidente da Comissão
               </span>
             ) : null)}
 
@@ -78,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome })
               <User className="w-4 h-4 text-slate-500" />
               <div className="text-xs">
                 <div className="font-bold text-slate-900 truncate max-w-[180px]" title={userEmail}>{userEmail}</div>
-                <div className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">{accessLabel}</div>
+                <div className="text-[10px] text-emerald-700 font-bold normal-case tracking-wider">{accessLabel}</div>
               </div>
             </div>
           </div>

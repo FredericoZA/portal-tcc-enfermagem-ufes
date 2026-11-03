@@ -1,4 +1,5 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
+import { storePrivatePortalImage, readPrivatePortalImage, normalizePortalImage, type PrivatePortalImage } from './googleDriveImages';
 
 export interface SupabaseRuntimeStatus {
   configured: boolean;
@@ -16,8 +17,21 @@ const supabaseSecret = () => String(process.env.SUPABASE_SECRET_KEY || process.e
 const providerEnabled = () => process.env.PORTAL_PERSISTENCE_PROVIDER === 'supabase';
 const stateEndpoint = () => `${supabaseUrl()}/rest/v1/portal_runtime_state`;
 const runtimeAssetsEndpoint = () => `${supabaseUrl()}/rest/v1/portal_runtime_assets`;
-const LARGE_RUNTIME_IMAGE_THRESHOLD=32_768;
 let knownRevision:number|null=null;
+/** Revisão do estado operacional confirmada pelo banco, após a leitura/commit da requisição. */
+export function currentPortalRuntimeRevision():number|null { return knownRevision; }
+
+/** Sinal opaco de revisão: não revela registros privados nem o contador de operações. */
+export async function publicPortalRevisionToken():Promise<string> {
+  if(!getSupabaseRuntimeStatus().durablePersistenceReady)return 'local';
+  const response=await fetch(stateEndpoint()+'?id=eq.global&select=revision&limit=1',{
+    headers:adminHeaders(),signal:AbortSignal.timeout(12_000),
+  });
+  if(!response.ok)throw new Error('Não foi possível verificar a revisão do portal.');
+  const rows=await response.json() as Array<{revision:number}>;
+  const revision=Number(rows?.[0]?.revision||0);
+  return createHmac('sha256',supabaseSecret()).update('portal-public-sync-v1:'+revision).digest('hex').slice(0,24);
+}
 export const buildSupabaseAdminHeaders = () => {
   const secret = supabaseSecret();
   const headers:Record<string,string>={ apikey: secret, 'Content-Type': 'application/json', Accept: 'application/json' };
@@ -26,8 +40,7 @@ export const buildSupabaseAdminHeaders = () => {
 };
 const adminHeaders = buildSupabaseAdminHeaders;
 
-function parseLargeRuntimeImage(value:string):{mimeType:string;base64:string}|null{
-  if(value.length<LARGE_RUNTIME_IMAGE_THRESHOLD)return null;
+function parseRuntimeImage(value:string):{mimeType:string;base64:string}|null{
   const match=/^data:(image\/[a-zA-Z0-9.+-]+);base64,([\s\S]+)$/.exec(value);
   return match?{mimeType:match[1],base64:match[2]}:null;
 }
@@ -38,7 +51,7 @@ type RuntimeAsset={assetKey:string;mimeType:string;dataUrl:string;byteLength:num
 
 function collectAndExternalizeRuntimeImages(value:unknown,assets:Map<string,RuntimeAsset>):unknown{
   if(typeof value==='string'){
-    const image=parseLargeRuntimeImage(value);
+    const image=parseRuntimeImage(value);
     if(!image)return value;
     const assetKey=createHash('sha256').update(value).digest('hex');
     if(!assets.has(assetKey))assets.set(assetKey,{assetKey,mimeType:image.mimeType,dataUrl:value,byteLength:Buffer.from(image.base64,'base64').length});
@@ -51,11 +64,16 @@ function collectAndExternalizeRuntimeImages(value:unknown,assets:Map<string,Runt
   return value;
 }
 
-async function upsertRuntimeAsset(asset:RuntimeAsset):Promise<void>{
+async function upsertRuntimeAsset(asset:RuntimeAsset,archive=storePrivatePortalImage,academicRootId?:string):Promise<void>{
+  // Check the additive migration before creating a file. Missing columns fail closed.
+  const prior=await fetch(`${runtimeAssetsEndpoint()}?select=drive_file_id,content_sha256&limit=0`,{headers:adminHeaders(),signal:AbortSignal.timeout(15_000)});
+  if(!prior.ok)throw new Error('O armazenamento de imagens no Drive ainda não está preparado.');
+  const stored=await archive({bytes:Buffer.from(asset.dataUrl.split(',')[1],'base64'),mimeType:asset.mimeType,kind:'RUNTIME_ASSET',key:asset.assetKey,...(academicRootId!==undefined?{academicRootId}:{})});
   const response=await fetch(`${runtimeAssetsEndpoint()}?on_conflict=asset_key`,{
     method:'POST',
     headers:{...adminHeaders(),Prefer:'resolution=merge-duplicates,return=minimal'},
-    body:JSON.stringify({asset_key:asset.assetKey,mime_type:asset.mimeType,data_url:asset.dataUrl,byte_length:asset.byteLength,updated_at:new Date().toISOString()}),
+    // Omit data_url: upsert must preserve legacy bytes until verified migration.
+    body:JSON.stringify({asset_key:asset.assetKey,mime_type:stored.mimeType,byte_length:stored.byteLength,drive_file_id:stored.driveFileId,content_sha256:stored.contentSha256,updated_at:new Date().toISOString()}),
     signal:AbortSignal.timeout(20_000)
   });
   if(!response.ok){
@@ -64,11 +82,40 @@ async function upsertRuntimeAsset(asset:RuntimeAsset):Promise<void>{
   }
 }
 
-async function externalizeRuntimeImages(payload:object):Promise<object>{
+export async function externalizeRuntimeImages(payload:object,archive=storePrivatePortalImage):Promise<object>{
   const assets=new Map<string,RuntimeAsset>();
   const sanitized=collectAndExternalizeRuntimeImages(payload,assets) as object;
-  for(const asset of assets.values())await upsertRuntimeAsset(asset);
+  const academicRootId=(payload as {settings?:{driveRootFolderId?:string}}).settings?.driveRootFolderId;
+  for(const asset of assets.values())await upsertRuntimeAsset(asset,archive,academicRootId);
   return sanitized;
+}
+
+// E-mail clients need an HTTPS image even when its optimized bytes are small.
+export async function persistStudioRuntimeImage(dataUrl:string,archive=storePrivatePortalImage):Promise<string>{
+  const match=dataUrl.match(/^data:(image\/(?:png|jpeg|webp|gif|svg\+xml));base64,([A-Za-z0-9+/]+={0,2})$/);
+  if(!match||dataUrl.length>4*1024*1024)throw new Error('Imagem inválida.');
+  const assetKey=createHash('sha256').update(dataUrl).digest('hex');
+  await upsertRuntimeAsset({assetKey,mimeType:match[1],dataUrl,byteLength:Buffer.from(match[2],'base64').length},archive);
+  return runtimeAssetReference(assetKey);
+}
+
+/** Legacy reads remain available while verified Drive references are backfilled. */
+export async function loadRuntimeImage(assetKey:string,read=readPrivatePortalImage):Promise<{bytes:Buffer;mimeType:string}|null>{
+  if(!/^[a-f0-9]{64}$/.test(assetKey))return null;
+  const response=await fetch(`${runtimeAssetsEndpoint()}?asset_key=eq.${assetKey}&select=*&limit=1`,{headers:adminHeaders(),signal:AbortSignal.timeout(15_000)});
+  if(!response.ok)throw new Error(`O banco não confirmou a leitura da imagem (${response.status}).`);
+  const item=(await response.json() as Array<Record<string,unknown>>)[0];
+  if(!item)return null;
+  if(item.drive_file_id){
+    const ref:PrivatePortalImage={driveFileId:String(item.drive_file_id),contentSha256:String(item.content_sha256||''),mimeType:String(item.mime_type||''),byteLength:Number(item.byte_length)};
+    return {bytes:await read(ref,'RUNTIME_ASSET'),mimeType:ref.mimeType};
+  }
+  const match=/^data:(image\/(?:png|jpeg|webp|gif|svg\+xml));base64,([A-Za-z0-9+/]+={0,2})$/.exec(String(item.data_url||''));
+  if(!match)return null;
+  const bytes=Buffer.from(match[2],'base64');
+  if(!bytes.length||bytes.length>4*1024*1024||bytes.toString('base64')!==match[2])throw new Error('Imagem inválida.');
+  if(match[1]==='image/gif'||match[1]==='image/svg+xml')return normalizePortalImage(bytes,match[1]);
+  return {bytes,mimeType:match[1]};
 }
 
 export async function appendSupabaseAuditEvent(input:{externalId:string;occurredAt:string;processCode?:string;eventType:string;entityType:string;entityId?:string;details?:Record<string,unknown>}):Promise<void>{
@@ -141,12 +188,12 @@ export function getSupabaseRuntimeStatus(): Omit<SupabaseRuntimeStatus, 'connect
   };
 }
 
-export async function loadPortalRuntimeState<T extends object>(): Promise<T | null> {
+export async function loadPortalRuntimeState<T extends object>(trackRevision=true): Promise<T | null> {
   if (!getSupabaseRuntimeStatus().durablePersistenceReady) return null;
   const response = await fetch(`${stateEndpoint()}?id=eq.global&select=payload,revision&limit=1`, { headers: adminHeaders(), signal: AbortSignal.timeout(20_000) });
   if (!response.ok) throw new Error(`Falha ao carregar o estado do Supabase (${response.status}).`);
   const rows = await response.json();
-  knownRevision=rows?.[0]?Number(rows[0].revision||1):0;
+  if(trackRevision)knownRevision=rows?.[0]?Number(rows[0].revision||1):0;
   return rows?.[0]?.payload && typeof rows[0].payload === 'object' ? rows[0].payload as T : null;
 }
 
@@ -163,7 +210,12 @@ export async function savePortalRuntimeState(payload: object): Promise<void> {
   });
   if (!response.ok) {
     const detail=await response.text().catch(()=>'');
-    if(response.status===409||detail.includes('40001')||detail.toLowerCase().includes('concorr'))throw new Error('Conflito de concorrência: outra instância atualizou o portal. Recarregue antes de tentar novamente.');
+    let errorCode='';
+    try{errorCode=String(JSON.parse(detail)?.code||'');}catch{}
+    // PT409 is a business revision conflict, not a PostgreSQL serialization
+    // failure. Keep legacy 40001 compatibility, but never retry either here:
+    // the caller must reload the authoritative state and review its change.
+    if(errorCode==='PT409'||errorCode==='40001'||detail.toLowerCase().includes('conflito de concorr'))throw new Error('Conflito de concorrência: outra instância atualizou o portal. Recarregue antes de tentar novamente.');
     throw new Error(`Falha no commit transacional do Supabase (${response.status})${detail?`: ${detail.slice(0,180)}`:''}.`);
   }
   const result=await response.json().catch(()=>null);
@@ -199,4 +251,33 @@ export async function testSupabaseRuntimeConnection(): Promise<SupabaseRuntimeSt
   } catch (error) {
     return { ...base, connected: false, message: error instanceof Error ? error.message : 'Falha ao testar o Supabase.' };
   }
+}
+
+type DiagnosticCacheEntry={key:string;expiresAt:number;value:SupabaseRuntimeStatus};
+let diagnosticCache:DiagnosticCacheEntry|null=null;
+let diagnosticPending:{key:string;promise:Promise<SupabaseRuntimeStatus>}|null=null;
+
+/** Short-lived administrative diagnostics only. Authorization, mutations and
+ * startup validation continue to read/test the database directly. */
+export async function getSupabaseRuntimeConnectionStatus():Promise<SupabaseRuntimeStatus>{
+  const key=createHash('sha256').update(`${supabaseUrl()}|${String(process.env.PORTAL_PERSISTENCE_PROVIDER||'')}|${supabaseSecret()}`).digest('hex');
+  if(diagnosticCache?.key===key&&diagnosticCache.expiresAt>Date.now())return {...diagnosticCache.value};
+  if(diagnosticPending?.key===key)return {...await diagnosticPending.promise};
+  const promise=testSupabaseRuntimeConnection();
+  diagnosticPending={key,promise};
+  try{
+    const value=await promise;
+    if(value.connected&&value.transactionalRuntimeReady){
+      diagnosticCache={key,value:{...value},expiresAt:Date.now()+30_000};
+    }
+    return {...value};
+  }finally{
+    if(diagnosticPending?.promise===promise)diagnosticPending=null;
+  }
+}
+
+export async function purgeSupabaseProcessHistory(processId:string,protocol:string,jobIds:string[]):Promise<void>{
+ if(!getSupabaseRuntimeStatus().durablePersistenceReady)return;
+ const response=await fetch(`${supabaseUrl()}/rest/v1/rpc/portal_master_purge_process_history`,{method:'POST',headers:adminHeaders(),body:JSON.stringify({p_external_id:processId,p_protocol:protocol,p_job_ids:jobIds}),signal:AbortSignal.timeout(20000)});
+ if(!response.ok){const detail=await response.json().catch(()=>({}));const code=String(detail?.code||'UNKNOWN').replace(/[^A-Z0-9_]/gi,'').slice(0,24);throw Error(code==='PGRST202'?'Supabase: a atualização da rotina de limpeza ainda não foi instalada.':`Supabase: limpeza pendente (HTTP ${response.status}; código ${code}).`);}
 }

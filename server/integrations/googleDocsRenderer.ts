@@ -1,4 +1,9 @@
-import { buildMarkerBoldRequests } from './googleDocsStyles';
+import {ataPageLayoutRequests,numberAtaLines} from '../documents/ataLayout';
+import {documentMainBody,bodyEditRequests} from './googleDocsBody';
+import {presentationEditRequests,individualAuthorSignatureRequests,individualAuthorSignatureStyleRequests,optionalAuthorBlockRequests,authorizationSignatureLayoutRequests,declarationDateLayoutRequests,ataStudentSignatureLayoutRequests,authorizationOptionsLayoutRequests,ataCoadvisorBlockRequests,coadvisorIdentificationRequests} from './documentPresentation';
+import {academicName,personPresentationVariables} from '../../src/utils/personPresentation';
+import type {ProcessData} from '../../src/types';
+import { buildValueBoldRequests,buildMarkerBoldRequests,buildAtaOpeningNormalRequests,buildAuthorizationChoiceStyleRequests,buildDeclarationCoAdvisorNormalRequests } from './googleDocsStyles';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
 const DOCS_API = 'https://docs.googleapis.com/v1';
@@ -28,9 +33,15 @@ interface GoogleDocumentReadback {
 
 export interface GoogleTemplateRenderInput {
   accessToken: string;
+  presentation?:{process:ProcessData;documentType:string};
   templateUrlOrId: string;
   replacements: Record<string, string | number | boolean | null | undefined>;
+  /** Substituições pontuais na cópia temporária, sem modificar o modelo original. */
+  literalReplacements?: Array<{find:string;replace:string}>;
+  invitationLayout?: boolean;
   boldMarkers?: string[];
+  documentText?: string;
+  legacyDefenseLocations?: {selected:string;alternatives:string[]};
   temporaryParentId?: string;
   outputName?: string;
   fetchImpl?: FetchLike;
@@ -45,6 +56,7 @@ export interface GoogleTemplateRenderResult {
   replacementsChanged: number;
   unresolvedMarkers: string[];
   tabCount: number;
+  documentText?: string;
 }
 
 export function extractGoogleDriveFileId(value: string): string {
@@ -76,20 +88,24 @@ async function googleRequest(fetchImpl: FetchLike, accessToken: string, url: str
 }
 
 function normalizeVariableKey(raw: string): string {
-  const key = String(raw || '')
-    .trim()
-    .replace(/^<<\s*|\s*>>$/g, '')
-    .replace(/^\{\{\s*|\s*\}\}$/g, '')
-    .replace(/^\[\[\s*|\s*\]\]$/g, '')
-    .replace(/^«\s*|\s*»$/g, '')
-    .replace(/^-|-$/g, '')
-    .trim();
+  let key = String(raw || '').trim();
+  for (const [opening, closing] of [['<<', '>>'], ['{{', '}}'], ['[[', ']]'], ['«', '»']]) {
+    if (key.startsWith(opening)) key = key.slice(opening.length).trimStart();
+    if (key.endsWith(closing)) key = key.slice(0, -closing.length).trimEnd();
+  }
+  key = key.replace(/^-|-$/g, '').trim();
   if (!/^[\p{L}\p{N}_ ().,-]{1,100}$/u.test(key)) throw new Error(`Variável de modelo inválida: ${String(raw).slice(0, 80)}`);
   return key;
 }
 
 function replacementMarkers(key: string): string[] {
   return [`<<${key}>>`, `{{${key}}}`, `[[${key}]]`, `«${key}»`, `-${key}-`];
+}
+
+/** Apply compatibility replacements only to the temporary document copy. */
+export function buildLegacyLocationRequests(input:GoogleTemplateRenderInput['legacyDefenseLocations'],tabIds:string[]=[]){
+ if(!input?.selected.trim())return [];
+ return [...new Set(input.alternatives.map(value=>value.trim()).filter(value=>value&&value!==input.selected))].map(location=>({replaceAllText:{containsText:{text:location,matchCase:true},replaceText:input.selected,...(tabIds.length?{tabsCriteria:{tabIds}}:{})}}));
 }
 
 export function buildGoogleDocsReplacementRequests(
@@ -141,7 +157,7 @@ function collectGoogleDocumentText(value: unknown, output: string[] = []): strin
 
 export function findUnresolvedTemplateMarkers(document: unknown): string[] {
   const source = collectGoogleDocumentText(document).join('');
-  const matches = source.match(/<<[^<>\r\n]{2,100}>>|\{\{[^{}\r\n]{2,100}\}\}|\[\[[^\[\]\r\n]{2,100}\]\]|«[^«»\r\n]{2,100}»|-(?:CAMPO_)?[A-Z][A-Z0-9_]{2,80}-/g) || [];
+  const matches = source.match(/<<[^<>\r\n]{2,100}>>|\{\{[^{}\r\n]{2,100}\}\}|\[\[[^\[\]\r\n]{2,100}\]\]|«[^«»\r\n]{2,100}»|(?<![\p{L}\p{N}_])-(?:CAMPO_)?[A-Z][A-Z0-9_]{2,80}-(?![\p{L}\p{N}_])/gu) || [];
   return Array.from(new Set(matches.map((item) => item.trim()))).slice(0, 50);
 }
 
@@ -222,6 +238,43 @@ async function removeTemporaryFile(fetchImpl: FetchLike, accessToken: string, fi
 }
 
 /**
+ * Alinhamento final aplicado somente à cópia transitória da carta-convite.
+ * Os índices vêm da estrutura real do Docs, não de posições calculadas à mão.
+ */
+export function buildOfficialInvitationParagraphStyles(document: unknown): Array<Record<string,unknown>> {
+  const requests:Array<Record<string,unknown>>=[];
+  const visit=(node:any,tabId?:string):void=>{
+    if(!node||typeof node!=='object')return;
+    if(Array.isArray(node)){node.forEach(item=>visit(item,tabId));return;}
+    if(node.tabProperties?.tabId)tabId=String(node.tabProperties.tabId);
+    if(node.paragraph&&Number.isFinite(node.startIndex)&&Number.isFinite(node.endIndex)){
+      const text=(node.paragraph.elements||[]).map((element:any)=>String(element.textRun?.content||'')).join('').trim();
+      let alignment:'JUSTIFIED'|'END'|'START'|''='';
+      let indentStart:number|undefined;
+      if(/^(?:A Comissão de Trabalho de Conclusão de Curso do Curso|Agradecemos a participação)/.test(text))alignment='JUSTIFIED';
+      if(/^Vitória-ES,\s+\d/.test(text))alignment='END';
+      if(/^(?:Comissão de Trabalho de Conclusão de Curso|Departamento de Enfermagem$|Curso de Enfermagem e Obstetrícia)/.test(text)){
+        alignment='START';indentStart=260;
+      }
+      if(alignment){
+        const paragraphStyle:Record<string,unknown>={alignment};
+        if(indentStart!==undefined)paragraphStyle.indentStart={magnitude:indentStart,unit:'PT'};
+        requests.push({updateParagraphStyle:{
+          range:{startIndex:node.startIndex,endIndex:node.endIndex,...(tabId?{tabId}:{})},
+          paragraphStyle,fields:indentStart!==undefined?'alignment,indentStart':'alignment',
+        }});
+      }
+    }
+    for(const [key,value] of Object.entries(node)){
+      if(key==='paragraph')continue;
+      visit(value,tabId);
+    }
+  };
+  visit(document);
+  return requests;
+}
+
+/**
  * Renders a Master-owned Drive template without changing the source. Native
  * Google Docs are copied; DOCX files are converted by Drive in a temporary
  * Google Doc. Only placeholder text is replaced, preserving the copied layout,
@@ -254,7 +307,13 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
     const readback = await readbackResponse.json() as GoogleDocumentReadback;
     if (String(readback.documentId || '') !== temporaryFileId) throw new Error('O Google Docs devolveu um documento diferente da cópia temporária.');
     const tabIds = collectTabIds(readback.tabs);
-    const requests = [...buildMarkerBoldRequests(readback, input.boldMarkers || []), ...buildGoogleDocsReplacementRequests(input.replacements, tabIds)];
+    const invitationLiteralRequests=(input.literalReplacements||[]).filter(item=>item.find).map(item=>({replaceAllText:{containsText:{text:item.find,matchCase:true},replaceText:item.replace,...(tabIds.length?{tabsCriteria:{tabIds}}:{})}}));
+    const literalRequests=[...buildLegacyLocationRequests(input.legacyDefenseLocations,tabIds),...invitationLiteralRequests];
+    const openingRequests=input.presentation?.documentType==='ATA'?buildAtaOpeningNormalRequests(readback):[];
+    const boldRequests=buildMarkerBoldRequests(readback,[...new Set([...Object.keys(input.replacements||{}).map(normalizeVariableKey),...(input.boldMarkers||[]).map(normalizeVariableKey)])]);
+    const optionalRequests=input.presentation?optionalAuthorBlockRequests(readback,input.presentation.process):[];
+    const pageLayoutRequests=input.presentation?.documentType==='ATA'?ataPageLayoutRequests():[];
+    const requests = [...openingRequests,...boldRequests, ...optionalRequests, ...literalRequests, ...buildGoogleDocsReplacementRequests(input.replacements, tabIds),...pageLayoutRequests];
     let replacementsChanged = 0;
     if (requests.length) {
       const batchResponse = await googleRequest(fetchImpl, input.accessToken, `${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`, {
@@ -264,7 +323,12 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
       }, 'Falha ao mesclar as variáveis no modelo');
       const batch = await batchResponse.json() as { documentId?: string; replies?: Array<{ replaceAllText?: { occurrencesChanged?: number } }> };
       if (String(batch.documentId || '') !== temporaryFileId) throw new Error('A atualização não confirmou o documento temporário correto.');
-      replacementsChanged = (batch.replies || []).reduce((total, reply) => total + Number(reply.replaceAllText?.occurrencesChanged || 0), 0);
+      replacementsChanged = (batch.replies || []).slice(openingRequests.length+boldRequests.length+optionalRequests.length+literalRequests.length).reduce((total, reply) => total + Number(reply.replaceAllText?.occurrencesChanged || 0), 0);
+      if(input.invitationLayout){
+        const offset=openingRequests.length+boldRequests.length+optionalRequests.length+literalRequests.length-invitationLiteralRequests.length;
+        const literalApplied=(batch.replies||[]).slice(offset,offset+invitationLiteralRequests.length).filter(item=>Number(item.replaceAllText?.occurrencesChanged||0)>0).length;
+        if(literalApplied<Math.min(4,invitationLiteralRequests.length))throw new Error('O modelo da carta-convite mudou: confira os campos de identificação antes de gerar.');
+      }
     }
 
     const mergedReadbackResponse = await googleRequest(
@@ -274,7 +338,49 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
       {},
       'Falha ao conferir marcadores restantes no documento preenchido'
     );
-    const unresolvedMarkers = findUnresolvedTemplateMarkers(await mergedReadbackResponse.json());
+    let mergedDocument=await mergedReadbackResponse.json();
+    let documentText=documentMainBody(mergedDocument)?.text;
+    if(input.documentText!==undefined){
+      const edits=bodyEditRequests(mergedDocument,input.documentText);
+      if(edits.length)await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:edits,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao aplicar a revisão integral da ata');
+      documentText=input.documentText;
+    }
+    if(input.presentation){
+      const readCurrent=async()=>{const response=await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}?includeTabsContent=true`,{},'Falha ao conferir a redação documental');return response.json();};
+      if(input.documentText!==undefined)mergedDocument=await readCurrent();
+      const edits=presentationEditRequests(mergedDocument,input.presentation.process,input.presentation.documentType);
+      if(edits.length){await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:edits,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao adequar tratamentos e encerramento');mergedDocument=await readCurrent();}
+      const coIdentification=coadvisorIdentificationRequests(mergedDocument,input.presentation.process,input.presentation.documentType);
+      if(coIdentification.length){await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:coIdentification,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao identificar o coorientador');mergedDocument=await readCurrent();}
+      if(['ATA','TERMO','DECLARACAO'].includes(input.presentation.documentType)){
+        const layout=input.presentation.documentType==='ATA'?ataStudentSignatureLayoutRequests(mergedDocument,input.presentation.process):input.presentation.documentType==='TERMO'?[...authorizationSignatureLayoutRequests(mergedDocument,input.presentation.process),...authorizationOptionsLayoutRequests(mergedDocument)]:declarationDateLayoutRequests(mergedDocument);
+        if(layout.length){await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:layout,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao organizar o espaçamento do documento');mergedDocument=await readCurrent();}
+      }
+      if(['ATA','TERMO'].includes(input.presentation.documentType)){
+        const authorEdits=individualAuthorSignatureRequests(mergedDocument,input.presentation.process);
+        if(authorEdits.length){await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:authorEdits,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao separar os blocos de autoria');mergedDocument=await readCurrent();}
+      }
+      if(input.presentation.documentType==='ATA'){
+        const coadvisorEdits=ataCoadvisorBlockRequests(mergedDocument,input.presentation.process);
+        if(coadvisorEdits.length){await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:coadvisorEdits,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao incluir o coorientador na ata');mergedDocument=await readCurrent();}
+      }
+      const p=input.presentation.process;
+      // Grammar adaptation may insert abbreviated prefixes after marker replacement.
+      // Reapply emphasis to the complete participant names as well as the opinion.
+      const names=[p.aluno1?.nome,p.aluno2?.nome,...[p.orientador,p.coorientador,...(p.banca||[])].filter(Boolean).map(person=>academicName(person,'abbreviated'))].filter((value):value is string=>Boolean(value));
+      const emphasis=[...(['ATA','TERMO'].includes(input.presentation.documentType)?individualAuthorSignatureStyleRequests(mergedDocument,p):[]),...buildValueBoldRequests(mergedDocument,[...names,p.avaliacao?.resultadoLabel||'',personPresentationVariables(p).RESULTADO_CONCORDANTE,p.avaliacao?.parecer||'']),...(input.presentation.documentType==='TERMO'?buildAuthorizationChoiceStyleRequests(mergedDocument):[]),...(input.presentation.documentType==='DECLARACAO'?buildDeclarationCoAdvisorNormalRequests(mergedDocument):[])];
+      if(emphasis.length)await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:emphasis,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao formatar resultado e parecer');
+      documentText=documentMainBody(mergedDocument)?.text||documentText;
+    }
+    const unresolvedMarkers = input.documentText!==undefined?findUnresolvedTemplateMarkers({textRun:{content:documentText||input.documentText}}):findUnresolvedTemplateMarkers(mergedDocument);
+    if(input.invitationLayout){
+      const layoutRequests=buildOfficialInvitationParagraphStyles(mergedDocument);
+      if(layoutRequests.length){
+        await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{
+          method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:layoutRequests}),
+        },'Falha ao formatar os parágrafos da carta-convite');
+      }
+    }
 
     const exportResponse = await googleRequest(
       fetchImpl,
@@ -283,10 +389,11 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
       {},
       'Falha ao exportar o modelo preenchido como PDF'
     );
-    const pdf = Buffer.from(await exportResponse.arrayBuffer());
+    let pdf = Buffer.from(await exportResponse.arrayBuffer());
     if (!pdf.subarray(0, 5).equals(Buffer.from('%PDF-')) || pdf.length > MAX_EXPORTED_PDF_BYTES) {
       throw new Error('O Google não devolveu um PDF válido de até 32 MB.');
     }
+    if(input.presentation?.documentType==='ATA')pdf=await numberAtaLines(pdf);
     result = {
       pdf,
       fileName: safeOutputName(input.outputName || source.name),
@@ -295,7 +402,8 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
       convertedFromDocx: source.mimeType === DOCX_MIME,
       replacementsChanged,
       unresolvedMarkers,
-      tabCount: Math.max(1, tabIds.length)
+      tabCount: Math.max(1, tabIds.length),
+      documentText
     };
   } catch (error) {
     primaryError = error;

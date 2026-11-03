@@ -12,9 +12,9 @@ import { loadTableConfig, type ColumnDef } from '../components/TableColumnSelect
 import { loadGlobalTableConfig, type TableTextFormat } from '../utils/tableFormatters';
 
 const SIGNATURE_COLUMNS: ColumnDef[] = [
-  { key: 'createdAt', label: 'Solicitado em', isFixed: true },
+  { key: 'protocol', label: 'Processo', isFixed: true },
+  { key: 'createdAt', label: 'Solicitado em' },
   { key: 'createdBy', label: 'Solicitado por' },
-  { key: 'protocol', label: 'Processo' },
   { key: 'documentTitle', label: 'Documento' },
   { key: 'provider', label: 'Método' },
   { key: 'status', label: 'Situação' },
@@ -27,7 +27,7 @@ const SIGNATURE_COLUMNS: ColumnDef[] = [
   { key: 'completedAt', label: 'Concluído em' },
   { key: 'signedSha256', label: 'Hash assinado' },
   { key: 'lastError', label: 'Último erro' },
-  { key: 'actions', label: 'Ações', isFixed: true },
+  { key: 'actions', label: 'Ações' },
 ];
 const DEFAULT_ORDER = SIGNATURE_COLUMNS.map((column) => column.key);
 const DEFAULT_VISIBLE = Object.fromEntries(SIGNATURE_COLUMNS.map((column) => [column.key, !['attempts','signedSha256','lastError'].includes(column.key)]));
@@ -53,12 +53,6 @@ const DEMO_JOB = {
   signers: [{ id: 'demo-signer', role: 'ADVISOR', name: 'Prof. Demonstração', email: 'demo@portal.local', signingOrder: 1, status: 'SIGNED', signedAt: '2026-09-24T12:01:00-03:00' }],
   provider: 'ASTEN', status: 'SIGNED', providerEnvelopeId: 'DEMO-LOCAL', sentAt: '2026-09-24T12:00:00-03:00', completedAt: '2026-09-24T12:01:00-03:00', signedAt: '2026-09-24T12:01:00-03:00',
 } as SignatureJob;
-
-const statusToneClass = (status: SignatureJobStatus) => {
-  if (['SIGNED', 'ARCHIVED'].includes(status)) return 'portal-tone-signed';
-  if (['WAITING_INTEGRATION', 'QUEUED', 'READY_FOR_REVIEW', 'APPROVED', 'SENDING', 'SENT', 'PARTIALLY_SIGNED', 'DRIVE_SYNC_PENDING'].includes(status)) return 'portal-tone-pending';
-  return 'portal-tone-neutral';
-};
 
 export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const { isMasterAdmin } = useAuth();
@@ -105,7 +99,7 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   const shown = filtered;
   const showDemo = jobs.length === 0 && !search.trim() && !startDate && !endDate;
   const renderedJobs = showDemo ? [DEMO_JOB] : shown;
-  const activeColumns = columnOrder.filter((key) => visibleColumns[key] !== false || key === 'actions');
+  const activeColumns = ['protocol', ...columnOrder.filter((key) => key !== 'protocol' && (visibleColumns[key] !== false || key === 'actions'))];
 
   const retry = async (job: SignatureJob) => {
     if (job.id === DEMO_JOB.id) return;
@@ -144,10 +138,10 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
     if (key === 'protocol') return job.protocol || job.processId || '—';
     if (key === 'documentTitle') return job.documentTitle || job.documentType || '—';
     if (key === 'provider') return providerLabel(job.provider);
-    if (key === 'status') return <span className={`inline-flex rounded-md border px-2 py-0.5 text-[9px] font-black uppercase ${statusToneClass(job.status)}`}>{job.status}</span>;
+    if (key === 'status') return job.status;
     if (key === 'signers') return signerSummary(job.signers);
     if (key === 'signedBy') return signedBySummary(job);
-    if (key === 'signedAt') return dateTime(job.signedAt || job.completedAt);
+    if (key === 'signedAt') return dateTime(job.signedAt || (job.provider==='ASTEN'?job.completedAt:undefined));
     if (key === 'providerEnvelopeId') return job.providerEnvelopeId || '—';
     if (key === 'attempts') return String((job as SignatureJob & { attempts?: number; retryCount?: number }).attempts ?? (job as SignatureJob & { retryCount?: number }).retryCount ?? '—');
     if (key === 'sentAt') return dateTime(job.sentAt);
@@ -164,33 +158,36 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   </div>;
 
   return <div id="asten-logs-page" data-settings-sheet="true" data-portal-signature-logs="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'flex min-h-0 flex-col' : 'overflow-hidden rounded-2xl border border-slate-300 shadow-sm'} style={{ backgroundColor: embedded ? 'var(--portal-surface-panel)' : 'var(--portal-surface-page)' }}>
-    {embedded ? <SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal> : <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 shrink-0"/><h1 className="text-sm font-black uppercase tracking-wide">Registros de Assinatura</h1></div>{toolbar}</header>}
+    {embedded ? <SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal> : <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 shrink-0"/><h1 className="text-sm font-black normal-case tracking-wide">Registros de Assinatura</h1></div>{toolbar}</header>}
 
     <div className="portal-signature-table-shell flex min-h-0 flex-1 flex-col p-0">
-      {loading ? <div className="m-3 rounded-xl border border-slate-300 p-8 text-center text-xs font-semibold text-slate-700" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>Carregando registros de assinatura…</div> : renderedJobs.length === 0 ? <div className="m-3 rounded-xl border border-dashed border-slate-400 p-8 text-center text-xs font-semibold text-slate-700" style={{ backgroundColor: 'var(--portal-surface-inner)' }}>Nenhum registro de assinatura encontrado com os filtros atuais.</div> : <>
+      <>
         {showDemo && <div className="border-b border-amber-300 bg-amber-50 px-3 py-1.5 text-[9px] font-semibold text-amber-900">Demonstração visual: este registro existe apenas na interface, não é salvo e não entra em estatísticas.</div>}
         <TableScrollWrapper fillHeight>
           <table className="portal-spreadsheet-table w-full min-w-[1900px] border-collapse text-center text-xs">
-            <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wide ${key === 'actions' ? 'sticky right-0 z-20 text-center' : ''}`} style={key === 'actions' ? { backgroundColor: 'var(--portal-brand-header)' } : undefined}>{SIGNATURE_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
-            <tbody className="divide-y divide-slate-200">{renderedJobs.map((job) => <tr key={job.id}>{activeColumns.map((key) => <td key={key} className={`px-3 py-1 text-slate-950 ${key === 'actions' ? 'sticky right-0 z-10 border-l border-slate-200 bg-white text-center' : ''}`}>{renderCell(job, key)}</td>)}</tr>)}</tbody>
+            <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black normal-case tracking-wide ${key === 'actions' ? 'text-center' : ''}`} style={key === 'actions' ? { backgroundColor: 'var(--portal-brand-header)' } : undefined}>{SIGNATURE_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
+            <tbody className="divide-y divide-slate-200">{(loading || renderedJobs.length === 0) && <tr><td colSpan={activeColumns.length} className="portal-sheet-empty-cell" role="status">{loading ? 'Carregando registros de assinatura…' : 'Nenhum registro de assinatura encontrado com os filtros atuais.'}</td></tr>}{renderedJobs.map((job) => <tr key={job.id}>{activeColumns.map((key) => <td key={key} className={`px-3 py-1 text-slate-950 ${key === 'actions' ? 'text-center' : ''}`}>{renderCell(job, key)}</td>)}</tr>)}</tbody>
           </table>
         </TableScrollWrapper>
-      </>}
+      </>
     </div>
 
     {selectedJob && <div className="portal-modal-backdrop fixed inset-0 z-[1000009] flex items-center justify-center p-4" onClick={() => setSelectedJob(null)}>
       <section role="dialog" aria-modal="true" aria-label="Auditoria do registro de assinatura" className="portal-standard-modal portal-modal-surface w-full max-w-5xl overflow-hidden" style={{ backgroundColor: 'var(--portal-surface-page)' }} onClick={(event) => event.stopPropagation()}>
-        <header className="portal-modal-header px-4"><ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true"/><strong className="text-xs uppercase">Auditoria da assinatura</strong></header><div className="portal-modal-divider" aria-hidden="true" />
+        <header className="portal-modal-header px-4"><ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true"/><strong className="text-xs normal-case">Auditoria da assinatura</strong></header><div className="portal-modal-divider" aria-hidden="true" />
         <div className="max-h-[78vh] overflow-y-auto p-3" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{[
             ['Processo', selectedJob.protocol || selectedJob.processId], ['Documento', selectedJob.documentTitle], ['Método', providerLabel(selectedJob.provider)],
             ['Situação', selectedJob.status], ['Solicitado por', selectedJob.createdBy], ['Solicitado em', dateTime(selectedJob.createdAt)],
             ['Protocolo externo', selectedJob.providerEnvelopeId || '—'], ['Enviado em', dateTime(selectedJob.sentAt)], ['Assinado / concluído em', dateTime(selectedJob.signedAt || selectedJob.completedAt)],
+            ...(selectedJob.govbrReview?[
+              ['Conferência', 'Manual no VALIDAR/ITI'], ['Conferido por', selectedJob.govbrReview.approvedBy||'Pendente'], ['Conferido em', dateTime(selectedJob.govbrReview.approvedAt)],
+            ]:[]),
             ['Hash assinado', selectedJob.signedSha256 || '—'], ['Último erro', selectedJob.lastError || '—'],
-          ].map(([label, value]) => <div key={label} className="rounded-xl border border-slate-300 p-3" style={{ backgroundColor: 'var(--portal-surface-panel)' }}><div className="text-[9px] font-black uppercase tracking-wide text-slate-500">{label}</div><div className="mt-1 break-words text-xs font-semibold text-slate-900">{value}</div></div>)}</div>
+          ].map(([label, value]) => <div key={label} className="rounded-xl border border-slate-300 p-3" style={{ backgroundColor: 'var(--portal-surface-panel)' }}><div className="text-[9px] font-black normal-case tracking-wide text-slate-500">{label}</div><div className="mt-1 break-words text-xs font-semibold text-slate-900">{value}</div></div>)}</div>
 
           <section className="mt-3 overflow-hidden rounded-xl border border-slate-300 bg-white">
-            <div className="px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}>Signatários e evidências</div>
+            <div className="px-3 py-2 text-[10px] font-black normal-case tracking-wide text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}>Signatários e evidências</div>
             <div className="overflow-x-auto"><table className="portal-spreadsheet-table w-full min-w-[760px] border-collapse text-left text-xs"><thead><tr><th className="px-3 py-1.5">Ordem</th><th className="px-3 py-1.5">Pessoa</th><th className="px-3 py-1.5">E-mail</th><th className="px-3 py-1.5">Papel</th><th className="px-3 py-1.5">Estado</th><th className="px-3 py-1.5">Assinado em</th></tr></thead><tbody>{selectedJob.signers.length ? selectedJob.signers.slice().sort((a,b)=>a.signingOrder-b.signingOrder).map((signer)=><tr key={signer.id}><td className="px-3 py-1">{signer.signingOrder}</td><td className="px-3 py-1 font-semibold">{signer.name || '—'}</td><td className="px-3 py-1">{signer.email}</td><td className="px-3 py-1">{roleLabel(signer.role)}</td><td className="px-3 py-1">{signer.status}</td><td className="px-3 py-1">{dateTime(signer.signedAt)}</td></tr>) : <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-500">Nenhum signatário registrado.</td></tr>}</tbody></table></div>
           </section>
           <div className="mt-3 rounded-xl border border-slate-300 bg-white p-3 text-[10px] leading-4 text-slate-600">O Portal preserva a identidade dos signatários, documento, método, protocolo externo e marcos temporais disponíveis. Quando o provedor não devolve horário individual por signatário, o sistema exibe apenas o horário confirmado do documento, sem inventar evidência individual.</div>

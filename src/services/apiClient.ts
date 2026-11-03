@@ -1,6 +1,10 @@
+import {withPortalOperation,requestOperationLabel} from './portalOperations';
 import { ProcessData, GlobalSettings, AuditLog, DocumentCorrectionRequest, GoogleCalendarSyncedEvent, SignatureJob, AstenIntegrationStatus, ContinuousIntelligenceOverview, ImprovementStatus, LivingPortalArtifactKind } from '../types';
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
+import type { FeedbackEntry, FeedbackPage } from '../types/feedback';
+import type {AstenDocumentFoldersStatus,AstenDocumentFolderType} from '../types/signatures';
 import { isLocalDemoFrontend } from '../utils/runtimeEnvironment';
+import {verifyPublicPdfLocally,type PublicDocumentVerification} from '../utils/publicPdfVerification';
 import {
   fileToLegacyBase64,
   mayUseLegacyDevelopmentUpload,
@@ -10,6 +14,11 @@ import {
   uploadBinaryToSignedUrl
 } from './secureStagedUpload';
 let activeUserEmail = '';
+let activeIdentityRevision = 0;
+export const PORTAL_SESSION_EXPIRED_EVENT='portal:session-expired';
+function reportExpiredSession(status:number,code:string|undefined,revision:number){
+  if(revision===activeIdentityRevision&&status===401&&code==='AUTHENTICATION_REQUIRED'&&typeof window!=='undefined')window.dispatchEvent(new Event(PORTAL_SESSION_EXPIRED_EVENT));
+}
 type WorkflowProcessResponse = ProcessData & { workflowPending?: boolean; workflowError?: string };
 
 export class ApiRequestError extends Error {
@@ -20,15 +29,20 @@ export class ApiRequestError extends Error {
 }
 
 export function setActiveUserEmail(email: string) {
+  invalidateIdentityRequests();
   activeUserEmail = email;
-  if (typeof localStorage !== 'undefined') localStorage.setItem('portal_tcc_active_email', email);
+  try { if (typeof localStorage !== 'undefined') localStorage.setItem('portal_tcc_active_email', email); } catch { /* A sessão por cookie não depende do storage. */ }
 }
+
+export function invalidateIdentityRequests() { activeIdentityRevision+=1; }
 
 export function getActiveUserEmail(): string {
-  return (typeof localStorage !== 'undefined' ? localStorage.getItem('portal_tcc_active_email') : '') || activeUserEmail;
+  try { return (typeof localStorage !== 'undefined' ? localStorage.getItem('portal_tcc_active_email') : null) ?? activeUserEmail; }
+  catch { return activeUserEmail; }
 }
 
-async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+async function fetchApiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const identityRevision=activeIdentityRevision;
   const headers: Record<string,string> = {
     'Content-Type': 'application/json',
     ...((options.headers || {}) as Record<string,string>)
@@ -43,13 +57,24 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new ApiRequestError(errorData.error || `Erro HTTP ${response.status}`, response.status, errorData.code, errorData.issues);
+    reportExpiredSession(response.status,errorData.code,identityRevision);
+    throw new ApiRequestError(errorData.error || errorData.message || `Erro HTTP ${response.status}`, response.status, errorData.code, errorData.issues);
   }
 
   return response.json();
 }
 
-async function downloadApiFile(endpoint: string): Promise<{ blob: Blob; fileName: string }> {
+async function fetchApi<T>(endpoint:string,options:RequestInit={}):Promise<T>{
+ if(['GET','HEAD'].includes((options.method||'GET').toUpperCase()))return fetchApiRequest<T>(endpoint,options);
+ return withPortalOperation(requestOperationLabel(endpoint),()=>fetchApiRequest<T>(endpoint,options));
+}
+
+async function downloadApiFile(endpoint:string):Promise<{blob:Blob;fileName:string}>{
+ return withPortalOperation('Preparando o documento para download…',()=>downloadApiFileRequest(endpoint));
+}
+
+async function downloadApiFileRequest(endpoint: string): Promise<{ blob: Blob; fileName: string }> {
+  const identityRevision=activeIdentityRevision;
   const headers: Record<string, string> = {};
   if (isLocalDemoFrontend() && getActiveUserEmail()) {
     headers['x-demo-user-email'] = getActiveUserEmail();
@@ -58,7 +83,8 @@ async function downloadApiFile(endpoint: string): Promise<{ blob: Blob; fileName
   const response = await fetch(endpoint, { headers, credentials: 'include' });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Erro HTTP ${response.status}`);
+    reportExpiredSession(response.status,errorData.code,identityRevision);
+    throw new Error(errorData.error || errorData.message || `Erro HTTP ${response.status}`);
   }
 
   const disposition = response.headers.get('content-disposition') || '';
@@ -94,53 +120,86 @@ async function stageFile(file: File, descriptor: Omit<StagedUploadDescriptor, 'f
 }
 
 async function withDevelopmentFallback<T>(file:File, operation:()=>Promise<T>, fallback:()=>Promise<T>):Promise<T>{
-  try{return await operation();}catch(error){
-    const status=error instanceof ApiRequestError?error.status:0;
-    if(!mayUseLegacyDevelopmentUpload(status,file.size,isLocalDemoFrontend()))throw error;
-    return fallback();
-  }
+  return withPortalOperation('Enviando e conferindo o documento…',async()=>{
+    if((import.meta as any).env?.VITE_PORTAL_LOCAL_DEMO_AUTH==='true'&&mayUseLegacyDevelopmentUpload(503,file.size,isLocalDemoFrontend()))return fallback();
+    try{return await operation();}catch(error){
+      const status=error instanceof ApiRequestError?error.status:0;
+      if(!mayUseLegacyDevelopmentUpload(status,file.size,isLocalDemoFrontend()))throw error;
+      return fallback();
+    }
+  });
 }
 
 export const apiClient = {
+  importLegacyAcademicRecords:(records:unknown[],expectedRevision:string)=>fetchApi<{imported:number;total:number;revision:string}>('/api/admin/legacy-academic-records/import',{method:'POST',body:JSON.stringify({records,expectedRevision})}),
+  getLegacyAcademicRecords:()=>fetchApi<import('../types/legacyArchive').PublicLegacyAcademicRecord[]>('/api/legacy-academic-records'),
+  getPrivateLegacyAcademicRecords:()=>fetchApi<{revision:string;records:import('../types/legacyArchive').LegacyAcademicRecord[]}>('/api/admin/legacy-academic-records'),
+  getPrivateLegacyAcademicView:(id:string)=>fetchApi<import('../types/legacyArchive').PrivateLegacyAcademicView>(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/academic`),
+  downloadPrivateLegacyAcademicFile:(id:string,index:number)=>downloadApiFile(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/files/${index}/download`),
+  getLegacyAdministrativeDocuments:(id:string)=>fetchApi<import('../types/legacyArchive').LegacyAdministrativeFileView[]>(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/documents`),
+  downloadLegacyAdministrativeDocument:(id:string,index:number)=>downloadApiFile(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/documents/${index}/download`),
   getRegistrationDraft:()=>fetchApi<import('../types/workflowOperations').RegistrationDraft|null>('/api/registration/draft'),
-  saveRegistrationDraft:(data:unknown)=>fetchApi<import('../types/workflowOperations').RegistrationDraft>('/api/registration/draft',{method:'PUT',body:JSON.stringify(data)}),
+  saveRegistrationDraft:(data:unknown)=>fetchApiRequest<import('../types/workflowOperations').RegistrationDraft>('/api/registration/draft',{method:'PUT',body:JSON.stringify(data)}),
   deleteRegistrationDraft:()=>fetchApi<{deleted:boolean}>('/api/registration/draft',{method:'DELETE'}),
   getMe: () => fetchApi<{ userEmail: string; globalRoles: any[]; memberships: any[]; isAuthenticated: boolean }>('/api/me'),
   getAuthStatus:()=>fetchApi<{otp:{configured:boolean};google:{oauthConfigured:boolean;connected:boolean};bootstrapMasterConfigured:boolean}>('/api/setup/status'),
   requestLoginCode:(email:string)=>fetchApi<{sent:boolean;expiresInMinutes:number;message:string}>('/api/auth/request-code',{method:'POST',body:JSON.stringify({email})}),
   verifyLoginCode:(email:string,code:string)=>fetchApi<any>('/api/auth/verify-code',{method:'POST',body:JSON.stringify({email,code})}),
   logout:()=>fetchApi<{signedOut:boolean}>('/api/auth/logout',{method:'POST'}),
+  getPublicProcess:(id:string)=>fetchApi<any>(`/api/public/processes/${encodeURIComponent(id)}`),
   getSettings: () => fetchApi<GlobalSettings>('/api/settings'),
-  updateSettings: (settings: Partial<GlobalSettings>) => fetchApi<GlobalSettings>('/api/admin/settings', {
+  saveStudioImage:(input:{kind:'email'|'form';templateId:string;field:'logoUrl'|'heroImageUrl';value:string;expectedRevision:number;expectedImageValue?:string})=>fetchApi<{revision:number;savedAt:string;imageUrl:string;studio:IntegrationStudioSettings}>('/api/admin/studio/image',{method:'PATCH',body:JSON.stringify(input)}),
+  updateSettings: (settings: Partial<GlobalSettings>&{studioExpectedRevision?:number;studioSaveMode?:'autosave'}) => (settings.studioSaveMode==='autosave'?fetchApiRequest<GlobalSettings>:fetchApi<GlobalSettings>)('/api/admin/settings', {
     method: 'PATCH',
     body: JSON.stringify(settings)
   }),
   updateDriveRootFolder:(folderId:string)=>fetchApi<{folderId:string}>('/api/admin/drive-root',{method:'POST',body:JSON.stringify({folderId})}),
+  sendPublicFeedback: (data:{description:string;imageDataUrl?:string;extraField?:string}) =>
+    fetchApi<{received:boolean;reference?:string}>('/api/public/feedback',{method:'POST',body:JSON.stringify(data)}),
+  getFeedbackForAdmin: () => fetchApi<FeedbackEntry[]>('/api/admin/feedback'),
+  getFeedbackPageForAdmin: (cursor?:string) => fetchApi<FeedbackPage>(`/api/admin/feedback?paginated=true${cursor?`&before=${encodeURIComponent(cursor)}`:''}`),
+  getFeedbackImage: (id:string) => downloadApiFileRequest(`/api/admin/feedback/${encodeURIComponent(id)}/image`),
+  markFeedbackReviewed: (id:string) =>
+    fetchApi<{reviewed:boolean;record:FeedbackEntry}>(`/api/admin/feedback/${encodeURIComponent(id)}/review`,{method:'PATCH',body:'{}'}),
+  getPortalSyncVersion:()=>fetchApi<{revision:number}>('/api/sync/version'),
+  getPublicSyncVersion:()=>fetchApi<{token:string}>('/api/public/sync/version'),
   getProcesses: () => fetchApi<ProcessData[]>('/api/processes'),
   getProcessById: (id: string) => fetchApi<ProcessData>(`/api/processes/${id}`),
+  getRegistrationSuggestions:(field:string,q:string)=>fetchApi<string[]>(`/api/forms/registration-suggestions?field=${encodeURIComponent(field)}&q=${encodeURIComponent(q)}`),
   getRegistrationSchema:()=>fetchApi<Partial<import('../types/integrationStudio').IntegrationStudioSettings>>('/api/forms/registration-schema'),
   createProcess: (data: any) => fetchApi<WorkflowProcessResponse>('/api/processes', {
     method: 'POST',
     body: JSON.stringify(data)
   }),
-  updateProcess: (id: string, data: Partial<ProcessData>) => fetchApi<ProcessData>(`/api/processes/${id}`, {
+  updateProcess: (id: string, data: Partial<ProcessData> & { expectedDataRevision?: number }) => fetchApi<WorkflowProcessResponse&{reservationRestarted?:boolean}>(`/api/processes/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data)
   }),
+  requestReservationChange: (
+    id: string,
+    data: { date: string; time: string; locationChoice: string; customLocation?: string; expectedDataRevision: number },
+  ) => fetchApi<WorkflowProcessResponse & {reservationRestarted?:boolean}>(
+    `/api/processes/${encodeURIComponent(id)}/reservation-change`,
+    { method: 'POST', body: JSON.stringify(data) },
+  ),
   getStudioForm:(processId:string,formId:string)=>fetchApi<any>(`/api/processes/${processId}/forms/${formId}`),
   getStudioForms:(processId:string)=>fetchApi<any[]>(`/api/processes/${processId}/forms`),
   submitStudioForm:(processId:string,formId:string,answers:Record<string,unknown>,expectedFormRevision:number)=>fetchApi<import('../types/courseOperations').StudioFormSubmission>(`/api/processes/${processId}/forms/${formId}/submissions`,{method:'POST',body:JSON.stringify({answers,expectedFormRevision})}),
   getStudioFormSubmissions:(processId:string)=>fetchApi<any[]>(`/api/processes/${processId}/form-submissions`),
-  deleteProcess: (id: string) => fetchApi<{ message: string }>(`/api/processes/${id}`, {
-    method: 'DELETE'
+  deleteProcess: (id: string) => fetchApi<{ message: string; cleanupErrors?:string[]; cleanupPending?:boolean }>(`/api/processes/${id}`, {
+    method: 'DELETE',body:JSON.stringify({confirmation:'EXCLUIR',expectedProcessId:id,deleteFiles:true,clearHistory:true})
   }),
-  getEvaluationSchema: (id: string) => fetchApi<{ studio: Partial<IntegrationStudioSettings>; outcomes: GlobalSettings['evaluationOutcomeOptions'] }>(`/api/processes/${id}/evaluation/schema`),
-  getEvaluationDraft:(id:string)=>fetchApi<{processId:string;dataRevision:number;answers:Record<string,string|number|boolean>;savedAt:string}|null>(`/api/processes/${encodeURIComponent(id)}/evaluation/draft`),
-  saveEvaluationDraft:(id:string,answers:Record<string,string|number|boolean>,expectedDataRevision:number)=>fetchApi<{savedAt:string;answers:Record<string,string|number|boolean>}>(`/api/processes/${encodeURIComponent(id)}/evaluation/draft`,{method:'PUT',body:JSON.stringify({answers,expectedDataRevision})}),
+  getProcessDeletions:()=>fetchApi<import('../../server/workflow/processDeletion').ProcessDeletionTask[]>('/api/admin/process-deletions'),
+  retryProcessDeletion:(id:string)=>fetchApi('/api/admin/process-deletions/'+encodeURIComponent(id)+'/retry',{method:'POST',body:JSON.stringify({})}),
+  getEvaluationSchema: (id: string) => fetchApi<{ studio: Partial<IntegrationStudioSettings>; outcomes: GlobalSettings['evaluationOutcomeOptions'];ataModelFingerprint?:string }>(`/api/processes/${id}/evaluation/schema`),
+  getEvaluationDraft:(id:string)=>fetchApi<{processId:string;dataRevision:number;answers:Record<string,string|number|boolean>;documentText?:string;savedAt:string;modelFingerprint?:string;documentTextReset?:boolean}|null>(`/api/processes/${encodeURIComponent(id)}/evaluation/draft`),
+  saveEvaluationDraft:(id:string,answers:Record<string,string|number|boolean>,expectedDataRevision:number,documentText?:string,expectedModelFingerprint?:string)=>fetchApiRequest<{savedAt:string;answers:Record<string,string|number|boolean>;documentText?:string}>(`/api/processes/${encodeURIComponent(id)}/evaluation/draft`,{method:'PUT',body:JSON.stringify({answers,expectedDataRevision,documentText,expectedModelFingerprint})}),
+  previewEvaluation: (id:string,data:unknown)=>fetchApi<{previewToken:string;documentText?:string;downloadUrl?:string;contentBase64?:string}>(`/api/processes/${encodeURIComponent(id)}/evaluation/preview`,{method:'POST',body:JSON.stringify(data)}),
   submitEvaluation: (id: string, data: { resultadoCode: string; parecer: string; answers?: Record<string, string | number | boolean>; dataConfirmed: true; expectedDataRevision: number; expectedSchemaRevision: number }) => fetchApi<ProcessData & { workflowPending?: boolean; workflowError?: string }>(`/api/processes/${id}/evaluation`, {
     method: 'POST',
     body: JSON.stringify(data)
   }),
+  reopenRepository:(id:string)=>fetchApi<ProcessData>(`/api/processes/${encodeURIComponent(id)}/repository/reopen`,{method:'POST'}),
   reopenEvaluation: (id: string, reason: string) => fetchApi<ProcessData>(`/api/processes/${id}/reopen`, {
     method: 'POST', body: JSON.stringify({ reason })
   }),
@@ -149,8 +208,12 @@ export const apiClient = {
     downloadApiFile(`/api/processes/${id}/documents/${documentId}/download`),
   getProcessSignatureJobs:(id:string)=>fetchApi<SignatureJob[]>(`/api/processes/${id}/signatures`),
   signProcessDocument:(id:string,type:string,provider:'ASTEN'|'GOV_BR'='ASTEN')=>fetchApi<{job:SignatureJob;message:string}>(`/api/processes/${id}/documents/${type}/sign`,{method:'POST',body:JSON.stringify({provider})}),
-  downloadGovBrSigningPdf:(jobId:string)=>downloadApiFile(`/api/signatures/jobs/${encodeURIComponent(jobId)}/govbr/download`),
-  uploadGovBrSignedPdf:async(jobId:string,processId:string,file:File)=>{const staged=await stageFile(file,{purpose:'GOV_BR_SIGNED_PDF',processId});return fetchApi<SignatureJob>(`/api/signatures/jobs/${encodeURIComponent(jobId)}/govbr/complete`,{method:'POST',body:JSON.stringify({stagedUploadId:staged.uploadId})});},
+  downloadGovbrPdf:(jobId:string,returned=false)=>downloadApiFile(`/api/signatures/jobs/${encodeURIComponent(jobId)}/govbr/download${returned?'?kind=returned':''}`),
+  uploadGovbrPdf:(job:SignatureJob,file:File)=>withDevelopmentFallback(file,async()=>{
+    const staged=await stageFile(file,{purpose:'GOV_BR_SIGNED_PDF',processId:job.processId});
+    return fetchApi<SignatureJob>(`/api/signatures/jobs/${encodeURIComponent(job.id)}/govbr/complete`,{method:'POST',body:JSON.stringify(staged)});
+  },async()=>fetchApi<SignatureJob>(`/api/signatures/jobs/${encodeURIComponent(job.id)}/govbr/complete`,{method:'POST',body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})})),
+  approveGovbrPdf:(jobId:string,confirmation:{sha256:string;itiApproved:boolean;signerMatches:boolean;documentMatches:boolean})=>fetchApi<SignatureJob>(`/api/signatures/jobs/${encodeURIComponent(jobId)}/govbr/approve`,{method:'POST',body:JSON.stringify(confirmation)}),
   requestCorrection: (id: string, docId: string, data: { description: string }) => fetchApi<DocumentCorrectionRequest>(`/api/processes/${id}/documents/${docId}/correction-request`, {
     method: 'POST',
     body: JSON.stringify(data)
@@ -161,6 +224,9 @@ export const apiClient = {
     body: JSON.stringify({ processId, fileName })
   }),
   getAstenStatus:()=>fetchApi<AstenIntegrationStatus>('/api/integrations/asten/status'),
+  inspectAstenDeclarations:(processIds:string[])=>fetchApi<import('../types/signatures').AstenDeclarationCheck[]>('/api/president/declarations/asten-preflight',{method:'POST',body:JSON.stringify({processIds})}),
+  getAstenDocumentFolders:()=>fetchApi<AstenDocumentFoldersStatus>('/api/integrations/asten/folders'),
+  saveAstenDocumentFolders:(mapping:Record<AstenDocumentFolderType,number>)=>fetchApi<AstenDocumentFoldersStatus>('/api/integrations/asten/folders',{method:'PUT',body:JSON.stringify({mapping})}),
   getInfrastructureStatus:()=>fetchApi<any>('/api/integrations/status'),
   testSupabaseConnection:()=>fetchApi<{configured:boolean;connected:boolean;durablePersistenceReady:boolean;normalizedSchemaReady:boolean;transactionalRuntimeReady:boolean;keyMode:string;message:string}>('/api/integrations/supabase/test',{method:'POST'}),
   syncGoogleWorkspaceCalendar:()=>fetchApi<{calendarId:string;created:number;events:GoogleCalendarSyncedEvent[]}>('/api/integrations/google/calendar/sync',{method:'POST'}),
@@ -189,12 +255,14 @@ export const apiClient = {
   runDriveIntegrityCheck:()=>fetchApi<any>('/api/admin/integrity/drive',{method:'POST'}),
   getFormArchives:()=>fetchApi<any[]>('/api/admin/form-archives'),
   retryFormArchive:(id:string)=>fetchApi<any>(`/api/admin/form-archives/${encodeURIComponent(id)}/retry`,{method:'POST'}),
-  connectAsten:(token:string)=>fetchApi<AstenIntegrationStatus>('/api/integrations/asten/connect',{method:'POST',body:JSON.stringify({token})}),
+  connectAsten:(token:string,repositoryId?:string)=>fetchApi<AstenIntegrationStatus>('/api/integrations/asten/connect',{method:'POST',body:JSON.stringify({token,repositoryId})}),
   getSignatureJobs:()=>fetchApi<SignatureJob[]>('/api/signatures/jobs'),
   retrySignatureJob:(id:string)=>fetchApi<SignatureJob>(`/api/signatures/jobs/${id}/retry`,{method:'POST'}),
   reconcileSignatureJob:(id:string)=>fetchApi<SignatureJob>(`/api/signatures/jobs/${id}/reconcile`,{method:'POST'}),
   previewDocumentModel:(type:'CONVITE'|'ATA'|'TERMO'|'DECLARACAO',studio:any)=>fetchApi<{analysis:unknown;fileName:string;downloadUrl?:string;contentBase64?:string}>(`/api/admin/models/${type}/preview`,{method:'POST',body:JSON.stringify({studio})}),
   getAuthorizedStudents:()=>fetchApi<any[]>('/api/admin/access-list'),
+  getAccessListGoogleTemplate:()=>fetchApi<{url:string}>('/api/admin/access-list/google-template',{method:'POST'}),
+  getLocalDocumentModelFile:(type:string)=>downloadApiFile(`/api/admin/models/${encodeURIComponent(type)}/local-source`),
   addAuthorizedStudent:(data:{nome:string;email:string;matricula?:string;role?:'STUDENT'|'ADVISOR'|'CO_ADVISOR'|'EXAMINER';memberType?:'INTERNAL'|'EXTERNAL'})=>fetchApi<any>('/api/admin/access-list',{method:'POST',body:JSON.stringify(data)}),
   updateAuthorizedStudent:(id:string,data:any)=>fetchApi<any>(`/api/admin/access-list/${id}`,{method:'PATCH',body:JSON.stringify(data)}),
   deleteAuthorizedStudent:(id:string)=>fetchApi<{deleted:boolean}>(`/api/admin/access-list/${id}`,{method:'DELETE'}),
@@ -224,11 +292,8 @@ export const apiClient = {
   downloadContinuousIntelligenceFile:(kind:LivingPortalArtifactKind)=>downloadApiFile(`/api/admin/continuous-intelligence/files/${encodeURIComponent(kind)}`),
   getProcessVerifications:(id:string)=>fetchApi<any[]>(`/api/processes/${id}/verifications`),
   getPublicVerification:(code:string)=>fetchApi<any>(`/api/public/verification/${encodeURIComponent(code)}`),
-  checkVerificationPdfFile:(code:string,file:File)=>withDevelopmentFallback(file,async()=>{
-    const staged=await stageFile(file,{purpose:'VERIFICATION_PDF',verificationCode:code});
-    return fetchApi<any>(`/api/public/verification/${encodeURIComponent(code)}/check-file`,{method:'POST',body:JSON.stringify({stagedUploadId:staged.uploadId,sha256:staged.sha256})});
-  },async()=>fetchApi<any>(`/api/public/verification/${encodeURIComponent(code)}/check-file`,{method:'POST',body:JSON.stringify({contentBase64:await fileToLegacyBase64(file,true)})})),
-  downloadInstitutionalDossier:(id:string)=>downloadApiFile(`/api/admin/processes/${encodeURIComponent(id)}/dossier`),
+  checkVerificationPdfFile:(code:string,file:File)=>verifyPublicPdfLocally(file,()=>fetchApi<PublicDocumentVerification>(`/api/public/verification/${encodeURIComponent(code)}`)),
+  downloadInstitutionalDossier:(id:string,types?:string[])=>downloadApiFile(`/api/admin/processes/${encodeURIComponent(id)}/dossier${types?`?types=${encodeURIComponent(types.join(','))}`:''}`),
   getDocumentModels:()=>fetchApi<Record<string,any>>('/api/admin/models'),
   detectDocumentModelVariables:(type:string)=>fetchApi<{type:string;variables:string[];detectedAt:string}>(`/api/admin/models/${encodeURIComponent(type)}/detect-variables`,{method:'POST'}),
   uploadDocumentModelFile:(type:string,file:File)=>withDevelopmentFallback(file,async()=>{
@@ -240,10 +305,15 @@ export const apiClient = {
   deleteDocumentModel:(type:string)=>fetchApi<{deleted:boolean;type:string}>(`/api/admin/models/${encodeURIComponent(type)}`,{method:'DELETE'}),
   confirmDefenseLocation:(id:string,data:{local:string;confirmationReceived:boolean;localEvidenceUrl?:string})=>fetchApi<WorkflowProcessResponse>(`/api/processes/${id}/confirm-location`,{method:'POST',body:JSON.stringify(data)}),
   uploadLocationProof:async(id:string,file:File)=>{
-    if(file.size>1024*1024)throw new Error('O comprovante deve ser um PDF de até 1 MB.');
-    return fetchApi<import('../types/workflowOperations').LocationProof>(`/api/processes/${encodeURIComponent(id)}/location-proof`,{method:'POST',body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})});
+    if(file.size>24*1024*1024)throw new Error('O comprovante ultrapassa 24 MB. Envie uma versão menor do PDF.');
+    return withDevelopmentFallback(file,async()=>{
+      const staged=await stageFile(file,{purpose:'LOCATION_PROOF',processId:id});
+      return fetchApi<import('../types/workflowOperations').LocationProof>(`/api/processes/${encodeURIComponent(id)}/location-proof`,{method:'POST',body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type})});
+    },async()=>fetchApi<import('../types/workflowOperations').LocationProof>(`/api/processes/${encodeURIComponent(id)}/location-proof`,{method:'POST',body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})}));
   },
   downloadLocationProof:(id:string)=>downloadApiFile(`/api/processes/${encodeURIComponent(id)}/location-proof/download`),
+  downloadReservationReceipt:(protocol:string)=>downloadApiFile(`/api/public/processes/${encodeURIComponent(protocol)}/reservation-receipt`),
+  publishReviewedDocumentModel:(type:string,review:{fileId:string;version:number;sha256:string})=>fetchApi<any>(`/api/admin/models/${encodeURIComponent(type)}/publish-reviewed`,{method:'POST',body:JSON.stringify(review)}),
   previewOfficialModel:(type:string,studio:unknown,answers:unknown)=>fetchApi<any>(`/api/admin/models/${encodeURIComponent(type)}/preview`,{method:'POST',body:JSON.stringify({studio,answers})}),
   compareStudioDraft:(studio:unknown,baseRevision?:number)=>fetchApi<any>('/api/admin/studio/compare',{method:'POST',body:JSON.stringify({studio,baseRevision})}),
   getWorkflowOperations:()=>fetchApi<any>('/api/admin/workflow/operations'),
@@ -257,6 +327,8 @@ export const apiClient = {
     const staged=await stageFile(file,{purpose:kind==='trabalho-completo'?'PROCESS_FULL_WORK':'PROCESS_EXPANDED_ABSTRACT',processId:id});
     return fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type})});
   },async()=>fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})})),
+  getProcessAuditLogs:(id:string)=>fetchApi<AuditLog[]>(`/api/processes/${encodeURIComponent(id)}/audit-logs`),
+  downloadProcessAuditLogs:(id:string)=>downloadApiFile(`/api/processes/${encodeURIComponent(id)}/audit-logs/pdf`),
   getAuditLogs: () => fetchApi<AuditLog[]>('/api/admin/audit-logs'),
   rollbackAuditLog: (logId: string) => fetchApi<{ message: string; process?: ProcessData; settings?: GlobalSettings }>(`/api/admin/rollback-log/${logId}`, {
     method: 'POST'

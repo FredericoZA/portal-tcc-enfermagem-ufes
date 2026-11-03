@@ -1,4 +1,5 @@
 // Formatadores de data, hora e texto para o fluxo acadêmico configurável.
+import type { ProcessData } from '../types';
 
 const PORTAL_TIME_ZONE = 'America/Sao_Paulo';
 const MONTHS_PT = [
@@ -153,34 +154,33 @@ export function formatProfessorName(name: string): string {
 }
 
 /**
- * Standardizes TCC titles: no fully uppercase titles, neat Sentence/Title case with proper acronyms preserved
+ * Standardizes TCC titles with capitalized main words and preserved acronyms.
  */
 export function formatTccTitle(title: string): string {
   if (!title) return '';
-  let clean = title.trim();
-  const uppercaseAcronyms = ['SUS', 'TCC', 'UFES', 'UTI', 'UTIN', 'CCS', 'AIDS', 'HIV', 'SAMU', 'CAPS', 'UBS', 'EAD', 'EPI', 'EPIS', 'A&E', 'COVID-19', 'COVID19', 'COVID', 'ICU', 'UTI-NEONATAL', 'UTIN-NEONATAL'];
-  const lowercaseWords = ['de', 'do', 'da', 'dos', 'das', 'em', 'um', 'uma', 'e', 'o', 'a', 'no', 'na', 'nos', 'nas', 'com', 'para', 'por', 'sob', 'sobre', 'ao', 'aos', 'à', 'às'];
-
-  const parts = clean.split(':');
-  const formattedParts = parts.map((part) => {
-    let words = part.trim().toLowerCase().split(/\s+/);
-    if (words.length === 0) return '';
-
-    words = words.map((word, index) => {
-      const cleanWord = word.replace(/^[«"'(]+/g, '').replace(/[»)"'.,;?!:]+$/g, '').toUpperCase();
-      if (uppercaseAcronyms.includes(cleanWord)) {
-        return word.replace(new RegExp(cleanWord, 'i'), cleanWord);
-      }
-      if (index > 0 && lowercaseWords.includes(word)) {
-        return word;
-      }
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    });
-
-    return words.join(' ');
+  const protectedAcronyms:string[]=[];
+  const clean = title.normalize('NFC').trim().replace(/\s+/gu, ' ').replace(/\+([^+\n]+?)-|\*([^*\n]+)\*/g,(_match,old:string,current:string)=>{protectedAcronyms.push((old||current).trim().toLocaleUpperCase('pt-BR'));return `protectedacronym${protectedAcronyms.length-1}`;});
+  const acronyms = new Set(['SUS', 'TCC', 'UFES', 'UTI', 'UTIN', 'CCS', 'AIDS', 'HIV', 'SAMU', 'CAPS', 'UBS', 'EAD', 'EPI', 'EPIS', 'COVID', 'COVID19', 'ICU', 'OMS', 'OPAS', 'IST', 'DST', 'DNA', 'RNA', 'LGPD', 'CNS', 'ESF', 'APS', 'ABNT', 'CNPQ', 'CAPES', 'SAE', 'COFEN', 'COREN', 'ANVISA', 'IBGE', 'CEP', 'CONEP', 'TCLE', 'UBSF', 'UPA', 'PIB', 'PNAISC', 'PNSIPN']);
+  // Preserve recognized acronyms and alphanumeric codes without keeping ordinary words in capitals.
+  let wordIndex = 0;
+  const smallWords = new Set(['a', 'as', 'o', 'os', 'de', 'da', 'do', 'das', 'dos', 'e', 'é', 'em', 'no', 'na', 'nos', 'nas', 'por', 'para', 'com']);
+  const formatted = clean.replace(/[\p{L}\p{M}\p{N}]+(?:[-/][\p{L}\p{M}\p{N}]+)*/gu, token => {
+    const first = wordIndex++ === 0;
+    const upper = token.toUpperCase();
+    const code = /\p{L}/u.test(token) && /\p{N}/u.test(token);
+    if (code) return token.replace(/\p{L}+/gu, part => acronyms.has(part.toUpperCase()) ? part.toUpperCase() : part);
+    if (token.includes('-') || token.includes('/')) return token.split(/([-/])/u).map(part => acronyms.has(part.toUpperCase()) ? part.toUpperCase() : part.toLowerCase().replace(/^\p{L}/u, letter => letter.toLocaleUpperCase('pt-BR'))).join('');
+    if (acronyms.has(upper)) return upper;
+    if (/^[B-DF-HJ-NP-TV-Z]{2,6}$/u.test(token)) return token;
+    const lower = token.toLocaleLowerCase('pt-BR');
+    return !first && smallWords.has(lower) ? lower : lower.replace(/^\p{L}/u, letter => letter.toLocaleUpperCase('pt-BR'));
   });
+  return formatted.replace(/\p{L}/u, letter => letter.toUpperCase()).replace(/protectedacronym(\d+)/gi,(_match,index)=>`*${protectedAcronyms[Number(index)]}*`);
+}
 
-  return formattedParts.join(': ');
+/** Display the title without acronym-editing delimiters. */
+export function renderTccTitle(title:string):string {
+  return formatTccTitle(title).replace(/\*([^*]+)\*/g,'$1');
 }
 
 /**
@@ -202,6 +202,12 @@ export function formatDateNumeric(dateStr: string): string {
   const parts = parsePortalDateTime(dateStr);
   if (!parts) return dateStr;
   return `${String(parts.day).padStart(2, '0')}/${String(parts.month).padStart(2, '0')}/${parts.year}`;
+}
+
+/** Horário civil do portal, independente do fuso do servidor. */
+export function formatTime24h(value:string):string {
+  const parts=parsePortalDateTime(value);
+  return parts?`${String(parts.hour).padStart(2,'0')}:${String(parts.minute).padStart(2,'0')}`:'';
 }
 
 /**
@@ -288,9 +294,30 @@ export function sanitizeFilename(name: string): string {
 }
 
 /**
+ * Reads the configured pipeline length without failing when storage is unavailable.
+ * The same fallback is used by the calendar and the participant's process table.
+ */
+export function getWorkflowStagesCount(storage?: Pick<Storage, 'getItem'>): number {
+  try {
+    const saved = (storage ?? (typeof window === 'undefined' ? undefined : window.localStorage))
+      ?.getItem('workflow_pipeline_stages');
+    if (saved) {
+      const stages: unknown = JSON.parse(saved);
+      if (Array.isArray(stages) && stages.length > 0) return stages.length;
+    }
+  } catch {
+    // A corrupt or blocked browser preference must not hide the process table.
+  }
+  return 5;
+}
+
+/**
  * Calculates process progress percentage and step label
  */
-export function getProcessProgress(proc: any, totalStages: number = 6) {
+export function getProcessProgress(
+  proc: Pick<ProcessData, 'status' | 'etapaAtual'>,
+  totalStages: number = getWorkflowStagesCount()
+) {
   let stepNumber = 1;
   let percent = 20;
   let label = '';
@@ -302,7 +329,11 @@ export function getProcessProgress(proc: any, totalStages: number = 6) {
   } else if (proc.status === 'AGUARDANDO_ASSINATURA') {
     stepNumber = totalStages;
     percent = Math.round(((totalStages * 2 - 1) / (totalStages * 2)) * 100);
-    label = `Etapa ${stepNumber}/${totalStages}: Aguardando Assinatura do Presidente`;
+    label = `Etapa ${stepNumber}/${totalStages}: Aguardando Assinaturas`;
+  } else if (proc.status === 'AGUARDANDO_DADOS_FINAIS' || proc.etapaAtual === 'REPOSITORIO') {
+    stepNumber = totalStages;
+    percent = Math.round(((totalStages * 2 - 1) / (totalStages * 2)) * 100);
+    label = `Etapa ${stepNumber}/${totalStages}: Dados finais e repositório`;
   } else if (proc.status === 'EM_AVALIACAO') {
     stepNumber = Math.max(1, totalStages - 1);
     percent = Math.round((stepNumber / totalStages) * 100);

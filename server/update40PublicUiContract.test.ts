@@ -10,10 +10,10 @@ const source = (file: string) => readFile(path.join(root, file), 'utf8');
 test('Replicar Portal consolida ferramentas e reduz ações permanentes', async () => {
   const page = await source('src/pages/PortalReplicationPage.tsx');
   assert.ok(page.includes("title: 'GitHub'"));
-  assert.ok(page.includes("title: 'Vercel'"));
-  assert.ok(page.includes("title: 'Supabase'"));
-  assert.ok(page.includes("title: 'Google Workspace'"));
-  assert.ok(page.includes('Modelos do Google Drive'));
+  assert.ok(page.includes("title:'Supabase, Vercel e Google Workspace'"));
+  assert.ok(page.includes("title:'Asten e Gov.br'"));
+  assert.equal((page.match(/title:/g)||[]).length,5);
+  assert.ok(page.includes("title:'Modelos'"));
   assert.ok(page.includes('Baixar modelos'));
   assert.ok(page.includes('Abrir no GitHub'));
   assert.ok(!page.includes('Identidade institucional'));

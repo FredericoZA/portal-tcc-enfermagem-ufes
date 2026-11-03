@@ -14,6 +14,7 @@ export interface WorkflowOperationsPolicy {
   documentLayout: { signatureReservePoints: number; maximumPages: number };
 }
 export interface LocationProof {
+  reservationRevision?:number;
   driveFileId: string; fileName: string; sha256: string; uploadedAt: string; uploadedBy: string; version: number;
 }
 export interface ReminderRecord {

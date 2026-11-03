@@ -1,3 +1,6 @@
+import {isEmailAddress} from './emailAddress';
+import {studioMarkerPatterns} from './templateMarkerPattern';
+import {DOCUMENT_VARIABLE_KEYS} from './documentVariables';
 import { workflowPolicy } from './workflowOperations';
 import { operationalConfig, REGISTRATION_QUESTIONS, canonicalKey } from './operationalConfig';
 import type {
@@ -74,7 +77,8 @@ const SAFE_DOCUMENT_TRIGGER_BY_TYPE = {
 } as const;
 
 const BUILT_IN_WORKFLOW_VARIABLES = new Set([
-  'PRAZO_ETAPA', 'DATA_LIMITE',
+  ...DOCUMENT_VARIABLE_KEYS,
+  'PRAZO_ETAPA', 'DATA_LIMITE', 'LINK_PROCESSO', 'DESTINATARIO_NOME', 'DESTINATARIO_EMAIL', 'ORIENTADOR_TRATAMENTO', 'ORIENTACOES_ACESSO',
   'DEPARTAMENTO_EMAIL', 'LOCAL_ALTERNATIVO', 'ORIENTADOR_SIAPE', 'ORIENTADOR_INSTITUICAO',
   'PROCESS_ID', 'TCC_ID', 'TCC_CODIGO', 'PROTOCOLO', 'TITULO',
   'ALUNO_1_NOME', 'ALUNO_1_EMAIL', 'ALUNO_1_MATRICULA', 'ALUNO_NOME', 'ALUNO_EMAIL',
@@ -84,7 +88,7 @@ const BUILT_IN_WORKFLOW_VARIABLES = new Set([
   'EXAMINADOR_2_NOME', 'EXAMINADOR_2_EMAIL', 'EXAMINADOR_2_SIAPE', 'EXAMINADOR_2_INSTITUICAO',
   'EXAMINADOR_3_NOME', 'EXAMINADOR_3_EMAIL', 'EXAMINADOR_3_SIAPE', 'EXAMINADOR_3_INSTITUICAO',
   'BANCA_NOMES', 'BANCA_EMAILS', 'PARTICIPANTES_EMAILS',
-  'DEFESA_DATA_HORA', 'DEFESA_LOCAL', 'RESULTADO', 'PARECER',
+  'DEFESA_DATA_HORA', 'DEFESA_LOCAL', 'RESULTADO', 'PARECER', 'ENTREGA_FINAL_LIBERADA',
   'PUBLICAR_TRABALHO', 'PUBLICAR_TRABALHO_COMPLETO', 'INCLUIR_RESUMO_EXPANDIDO',
   'PUBLICAR_RESUMO_EXPANDIDO', 'PALAVRAS_CHAVE', 'RESUMO_SINTETICO',
   'TRABALHO_FINAL_PDF', 'RESUMO_EXPANDIDO_PDF', 'EVENTO', 'ATOR_EMAIL', 'LINK_PORTAL',
@@ -104,13 +108,7 @@ export const SAFE_EMAIL_RECIPIENT_VARIABLES = new Set([
 
 function templateVariableKeys(source: unknown): string[] {
   const textSource = String(source || '');
-  const matches = [
-    ...textSource.matchAll(/\{\{\s*([^{}\r\n]{1,100})\s*\}\}/g),
-    ...textSource.matchAll(/<<\s*([^<>\r\n]{1,100})\s*>>/g),
-    ...textSource.matchAll(/\[\[\s*([^\[\]\r\n]{1,100})\s*\]\]/g),
-    ...textSource.matchAll(/«\s*([^«»\r\n]{1,100})\s*»/g),
-    ...textSource.matchAll(/-((?:CAMPO_)?[A-Z][A-Z0-9_]{1,80})-/g)
-  ];
+  const matches = studioMarkerPatterns().flatMap((pattern) => Array.from(textSource.matchAll(pattern)));
   return Array.from(new Set(matches.map((match) => key(match[1])).filter(Boolean)));
 }
 
@@ -180,7 +178,6 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
   if(!Array.isArray(policy.weekdays)||!policy.weekdays.length||policy.weekdays.some(day=>!Number.isInteger(day)||day<0||day>6))policyErrors.push('Selecione dias úteis válidos.');
   if(!Array.isArray(policy.holidays)||policy.holidays.some(date=>!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date))policyErrors.push('Feriados devem ter datas válidas.');
   if(!Number.isInteger(policy.documentLayout.signatureReservePoints)||!Number.isInteger(policy.documentLayout.maximumPages)||policy.documentLayout.signatureReservePoints<0||policy.documentLayout.signatureReservePoints>300||policy.documentLayout.maximumPages<1||policy.documentLayout.maximumPages>60)policyErrors.push('Revise a reserva de assinatura e o limite de páginas.');
-  if(!Number.isInteger(policy.identity.minimumStudentIdLength)||policy.identity.minimumStudentIdLength<1||policy.identity.minimumStudentIdLength>30||!Number.isInteger(policy.identity.siapeLength)||policy.identity.siapeLength<1||policy.identity.siapeLength>20)policyErrors.push('Use comprimentos válidos para matrícula e SIAPE.');
   if(!Array.isArray(policy.deadlines)||policy.deadlines.length>20)policyErrors.push('Cadastre no máximo vinte regras de prazo.');
   const deadlineIds=new Set<string>();
   for(const rule of Array.isArray(policy.deadlines)?policy.deadlines:[]){
@@ -201,10 +198,10 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
     }
   }
   if(studio.operationalConfig){
-    const reservationEmails=new Set(emails.filter(email=>String(email.recipient||'').includes('DEPARTAMENTO_EMAIL')).map(email=>email.id));
+    const reservationEmails=new Set(emails.filter(email=>email.id==='email-reserva'||String(email.recipient||'').includes('DEPARTAMENTO_EMAIL')).map(email=>email.id));
     const hasReservation=stages.some(stage=>key(stage.triggerEvent)==='TCC_CREATED'&&rows(stage.actions).some(action=>key(action.type)==='EMAIL'&&reservationEmails.has(action.refId)&&!action.condition));
     if(!hasReservation)add({code:'RESERVATION_ACTION_REQUIRED',path:'workflowStages',message:'O cadastro precisa enviar o pedido de reserva ao departamento, sem condição opcional.',severity:'ERROR',area:'WORKFLOW'});
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(operations.reservation.departmentEmail))add({code:'DEPARTMENT_REQUIRED',path:'operationalConfig.reservation',message:'Informe o e-mail do departamento para solicitar a reserva.',severity:'ERROR',area:'OPERATIONS'});
+    if(!isEmailAddress(operations.reservation.departmentEmail))add({code:'DEPARTMENT_REQUIRED',path:'operationalConfig.reservation',message:'Informe o e-mail do departamento para solicitar a reserva.',severity:'ERROR',area:'OPERATIONS'});
     if(!operations.reservation.locations.length||operations.reservation.locations.some(v=>!v.trim())||new Set(operations.reservation.locations.map(canonicalKey)).size!==operations.reservation.locations.length)add({code:'INVALID_LOCATIONS',path:'operationalConfig.reservation.locations',message:'Cadastre locais preenchidos e sem duplicidade.',severity:'ERROR',area:'OPERATIONS'});
     if(!Number.isInteger(operations.diagnostics.staleDays)||operations.diagnostics.staleDays<1||operations.diagnostics.staleDays>365||operations.diagnostics.minimumCoverage<1||operations.diagnostics.minimumCoverage>100)add({code:'INVALID_THRESHOLDS',path:'operationalConfig.diagnostics',message:'Use prazo de 1 a 365 dias e cobertura de 1 a 100%.',severity:'ERROR',area:'OPERATIONS'});
     const aliases=new Set<string>();
@@ -221,8 +218,9 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
   };
 
   const brand = record(studio.brandKit);
-  const ratio = colorContrast(text(brand.textColor) || '#172033', text(brand.primaryColor) || '#005a3c');
-  if (ratio < 4.5) add({ code: 'LOW_CONTRAST', path: 'brandKit', message: `Contraste principal ${ratio.toFixed(2)}:1; o mínimo para texto normal é 4,5:1.`, severity: 'ERROR', area: 'APPEARANCE' });
+  // Body text is on white; headings and buttons use white on the brand color.
+  const ratio = Math.min(colorContrast(text(brand.textColor) || '#172033', '#ffffff'), colorContrast('#ffffff', text(brand.primaryColor) || '#005a3c'));
+  if (ratio < 4.5) add({ code: 'LOW_CONTRAST', path: 'brandKit', message: `Contraste do corpo ou do cabeçalho ${ratio.toFixed(2)}:1; o mínimo para texto normal é 4,5:1.`, severity: 'ERROR', area: 'APPEARANCE' });
   if (!text(brand.institutionName) || !text(brand.courseName)) add({ code: 'MISSING_IDENTITY', path: 'brandKit', message: 'Informe instituição e curso antes de publicar.', severity: 'ERROR', area: 'APPEARANCE' });
 
   const docIds = new Set<string>();
@@ -260,7 +258,7 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
   emails.forEach((email, index) => {
     if (!text(email.name) || !text(email.subject) || !text(email.body)) add({ code: 'INCOMPLETE_EMAIL', path: `emailTemplates.${index}`, message: 'Cada e-mail precisa de nome, assunto e corpo em texto.', severity: 'ERROR', area: 'EMAIL' });
     if (!text(email.recipient)) add({ code: 'MISSING_RECIPIENT', path: `emailTemplates.${index}.recipient`, message: `Defina o destinatário de “${text(email.name) || text(email.id)}”.`, severity: 'ERROR', area: 'EMAIL' });
-    if (text(email.id) === 'email-reserva' && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(text(email.recipient))) add({
+    if (text(email.id) === 'email-reserva' && !isEmailAddress(text(email.recipient))) add({
       code: 'RESERVATION_EMAIL_RECIPIENT_MUST_BE_CONFIGURED',
       path: `emailTemplates.${index}.recipient`,
       message: 'Informe diretamente o e-mail do Departamento de Enfermagem no modelo de solicitação de reserva.',
@@ -348,10 +346,10 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
   const invitationEmailIndex = invitationActions.findIndex((action) => {
     if (key(action.type).toLowerCase() !== 'email') return false;
     const email = emails.find((item) => text(item.id) === text(action.refId || action.referenceId));
-    return Array.isArray(email?.attachments) && email.attachments.some((attachment: unknown) => key(attachment).includes('CONVITE'));
+    return email?.id==='email-convite'||Array.isArray(email?.attachments) && email.attachments.some((attachment: unknown) => key(attachment).includes('CONVITE'));
   });
   if (invitationDocumentIndex < 0 || invitationEmailIndex < 0 || invitationEmailIndex <= invitationDocumentIndex) {
-    add({ code: 'INVALID_INVITATION_PIPELINE', path: 'workflowStages', message: 'Em LOCATION_CONFIRMED, gere primeiro o convite e depois envie um e-mail que o anexe.', severity: 'ERROR', area: 'WORKFLOW' });
+    add({ code: 'INVALID_INVITATION_PIPELINE', path: 'workflowStages', message: 'Em LOCATION_CONFIRMED, gere primeiro o convite e depois envie o e-mail com acesso ao documento no Portal.', severity: 'ERROR', area: 'WORKFLOW' });
   }
 
   const guide = record(studio.replicationGuide);

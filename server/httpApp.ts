@@ -1,5 +1,6 @@
 import express, { type RequestHandler, type ErrorRequestHandler } from 'express';
 import { randomUUID } from 'node:crypto';
+import { portalRequestAdmission } from './security/requestAdmission';
 
 function normalizedOrigin(value: string): string | null {
   try { return new URL(value).origin; }
@@ -92,6 +93,7 @@ export function createPortalHttpApp() {
   }
   app.disable('x-powered-by');
   app.use(portalSecurityHeaders);
+  app.use('/api', portalRequestAdmission);
   app.use(requireMutationOrigin);
   return app;
 }

@@ -9,7 +9,7 @@ test('Presidência usa uma única planilha para Todos, Pendentes e Assinadas', (
   assert.equal((source.match(/<table/g) || []).length, 1);
   assert.match(source, /const visibleRows = activeTab === 'pendentes'/);
   assert.match(source, /const sortedRows = getSortedAndFilteredItems\(visibleRows\)/);
-  assert.match(source, /Selecionar\/Deselecionar todos os itens visíveis/);
+  assert.match(source, /Selecionar\/Deselecionar declarações disponíveis/);
   assert.match(source, /<span>Ações<\/span>/);
 });
 

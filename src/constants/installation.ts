@@ -35,7 +35,7 @@ export const DEFAULT_INSTALLATION_PROFILE: InstallationProfile = {
 export const DEFAULT_FEATURE_FLAGS: PortalFeatureFlag[] = [
   ['ACADEMIC_CYCLES', 'Períodos e editais de submissão', false],
   ['STUDENT_BULK_IMPORT', 'Importação assistida de alunos', true],
-  ['PAIR_ACCEPTANCE', 'Aceite do segundo autor', true],
+
   ['DEFENSE_CONFLICTS', 'Detecção de conflitos de defesa', true],
   ['INSTITUTIONAL_DOSSIER', 'Dossiê institucional verificável', false],
   ['PUBLIC_AUTHENTICITY', 'Consulta pública de autenticidade', false],

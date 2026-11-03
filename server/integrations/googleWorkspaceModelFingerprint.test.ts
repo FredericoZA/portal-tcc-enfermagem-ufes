@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import JSZip from 'jszip';
-import { verifyMasterDocumentModelFingerprint } from './googleWorkspace';
+import { verifyMasterDocumentModelFingerprint,readDriveModelFingerprint } from './googleWorkspace';
 
-test('modelo ativo exige o mesmo conteúdo, revisão e horário publicados', async () => {
+test('modelo ativo exige conteúdo publicado e tolera mudança apenas nos metadados', async () => {
   const originalFetch=globalThis.fetch;
   const zip=new JSZip();
   zip.file('[Content_Types].xml','<Types/>');
@@ -20,8 +20,12 @@ test('modelo ativo exige o mesmo conteúdo, revisão e horário publicados', asy
   };
   try{
     const contentSha256=canonical.digest('hex');
+    const source=await readDriveModelFingerprint('token-de-teste','modelo123456');
+    assert.equal(source.contentSha256,contentSha256);assert.equal(source.driveRevisionId,'rev-7');
+    await assert.doesNotReject(()=>verifyMasterDocumentModelFingerprint({accessToken:'token-de-teste',fileId:'modelo123456',...source}));
     await assert.doesNotReject(() => verifyMasterDocumentModelFingerprint({accessToken:'token-de-teste',fileId:'modelo123456',contentSha256,driveRevisionId:'rev-7',driveModifiedTime:'2026-09-06T12:00:00.000Z'}));
-    await assert.rejects(() => verifyMasterDocumentModelFingerprint({accessToken:'token-de-teste',fileId:'modelo123456',contentSha256:'b'.repeat(64),driveRevisionId:'rev-7'}),/alterado diretamente/i);
-    await assert.rejects(() => verifyMasterDocumentModelFingerprint({accessToken:'token-de-teste',fileId:'modelo123456',contentSha256,driveRevisionId:'rev-anterior'}),/alterado diretamente/i);
+    await assert.rejects(() => verifyMasterDocumentModelFingerprint({accessToken:'token-de-teste',fileId:'modelo123456',contentSha256:'b'.repeat(64),driveRevisionId:'rev-7'}),{name:'DocumentModelError',code:'DOCUMENT_MODEL_CONTENT_CHANGED'});
+    await assert.doesNotReject(() => verifyMasterDocumentModelFingerprint({accessToken:'token-de-teste',fileId:'modelo123456',contentSha256,driveRevisionId:'rev-anterior',driveModifiedTime:'2026-01-01T00:00:00.000Z'}));
+    await assert.rejects(() => verifyMasterDocumentModelFingerprint({accessToken:'token-de-teste',fileId:'modelo123456',contentSha256:'b'.repeat(64),driveRevisionId:'rev-7',driveModifiedTime:'2026-09-06T12:00:00.000Z'}),{name:'DocumentModelError',code:'DOCUMENT_MODEL_CONTENT_CHANGED'});
   }finally{globalThis.fetch=originalFetch;}
 });

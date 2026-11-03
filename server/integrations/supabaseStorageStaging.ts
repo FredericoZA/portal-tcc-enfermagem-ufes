@@ -3,6 +3,7 @@ import { buildSupabaseAdminHeaders, getSupabaseRuntimeStatus } from './supabase'
 import { assertSafeUploadedDocument, UnsafeUploadError } from '../security/fileSafety';
 
 export type StagedUploadPurpose =
+  | 'LOCATION_PROOF'
   | 'DOCUMENT_MODEL'
   | 'PROCESS_FULL_WORK'
   | 'PROCESS_EXPANDED_ABSTRACT'
@@ -19,6 +20,8 @@ export interface StagedUploadDescriptor {
   mimeType: string;
   sha256: string;
 }
+
+export class StagedUploadCapacityError extends Error {}
 
 export interface StagedUploadTicket {
   uploadId: string;
@@ -51,6 +54,7 @@ interface DownloadTransferRow {
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const PDF_MIME = 'application/pdf';
 const MAX_BYTES:Record<StagedUploadPurpose,number> = {
+  LOCATION_PROOF: 24 * 1024 * 1024,
   DOCUMENT_MODEL: 12 * 1024 * 1024,
   PROCESS_FULL_WORK: 24 * 1024 * 1024,
   PROCESS_EXPANDED_ABSTRACT: 24 * 1024 * 1024,
@@ -58,6 +62,7 @@ const MAX_BYTES:Record<StagedUploadPurpose,number> = {
   VERIFICATION_PDF: 50 * 1024 * 1024
 };
 const MIME_TYPES:Record<StagedUploadPurpose,string> = {
+  LOCATION_PROOF: PDF_MIME,
   DOCUMENT_MODEL: DOCX_MIME,
   PROCESS_FULL_WORK: PDF_MIME,
   PROCESS_EXPANDED_ABSTRACT: PDF_MIME,
@@ -120,7 +125,7 @@ export function validateStagedUploadDescriptor(input:StagedUploadDescriptor):voi
   if(input.fileName.length<1||input.fileName.length>240||/[\u0000-\u001f]/.test(input.fileName))throw new Error('Nome de arquivo inválido.');
   const expectedExtension=input.purpose==='DOCUMENT_MODEL'?'.docx':'.pdf';
   if(!input.fileName.toLowerCase().endsWith(expectedExtension))throw new Error(`A extensão esperada é ${expectedExtension}.`);
-  if((input.purpose==='PROCESS_FULL_WORK'||input.purpose==='PROCESS_EXPANDED_ABSTRACT'||input.purpose==='GOV_BR_SIGNED_PDF')&&!input.processId?.trim())throw new Error('O upload deve estar vinculado a um processo.');
+  if((input.purpose==='LOCATION_PROOF'||input.purpose==='PROCESS_FULL_WORK'||input.purpose==='PROCESS_EXPANDED_ABSTRACT'||input.purpose==='GOV_BR_SIGNED_PDF')&&!input.processId?.trim())throw new Error('O upload deve estar vinculado a um processo.');
   if(input.purpose==='VERIFICATION_PDF'&&!input.verificationCode?.trim())throw new Error('A verificação pública deve estar vinculada ao código consultado.');
   if((input.processId?.length||0)>200||(input.verificationCode?.length||0)>200)throw new Error('O vínculo do upload excede o limite permitido.');
 }
@@ -187,20 +192,24 @@ export async function ensurePrivateStagingBucket():Promise<void>{
   const id=encodeURIComponent(stagingBucket());
   const current=await fetch(`${storageBaseUrl()}/bucket/${id}`,{headers:buildSupabaseAdminHeaders(),signal:AbortSignal.timeout(10_000)});
   if(current.ok){
-    const bucket=await current.json() as {public?:boolean};
+    const bucket=await current.json() as {public?:boolean;file_size_limit?:number};
     if(bucket.public)throw new Error('O bucket de staging está público. Torne-o privado antes de aceitar uploads.');
+    if(!Number.isSafeInteger(bucket.file_size_limit)||bucket.file_size_limit!<=0||bucket.file_size_limit!>110*1024*1024)throw new Error('O bucket deve impor um limite por arquivo de até 110 MB para garantir a reserva de capacidade.');
     return;
   }
   if(current.status!==404)throw new Error(`Não foi possível validar o bucket de staging (${current.status}).`);
   const created=await fetch(`${storageBaseUrl()}/bucket`,{
     method:'POST',headers:buildSupabaseAdminHeaders(),
-    body:JSON.stringify({id:stagingBucket(),name:stagingBucket(),public:false,file_size_limit:MAX_BYTES.VERIFICATION_PDF,allowed_mime_types:[PDF_MIME,DOCX_MIME]}),
+    body:JSON.stringify({id:stagingBucket(),name:stagingBucket(),public:false,file_size_limit:110*1024*1024,allowed_mime_types:[PDF_MIME,DOCX_MIME,'application/zip']}),
     signal:AbortSignal.timeout(10_000)
   });
   if(!created.ok&&created.status!==409)throw new Error(`Não foi possível criar o bucket privado de staging (${created.status}).`);
 }
 
 export async function createSupabaseStagedUpload(input:StagedUploadDescriptor):Promise<StagedUploadTicket>{
+  // Legacy ticket rows remain readable for cleanup, but public authenticity
+  // verification now compares bytes locally and must never allocate storage.
+  if(input.purpose==='VERIFICATION_PDF')throw new Error('A conferência do PDF acontece no navegador. O envio público de arquivos para verificação foi desativado.');
   assertConfigured();
   validateStagedUploadDescriptor(input);
   await ensurePrivateStagingBucket();
@@ -209,6 +218,7 @@ export async function createSupabaseStagedUpload(input:StagedUploadDescriptor):P
   const expiresAt=new Date(Date.now()+15*60_000).toISOString();
   const row={
     id:uploadId,purpose:input.purpose,requester_hash:bindingHash(input.requesterBinding),
+    principal_hash:bindingHash(input.requesterBinding.replace(/^(session:.*):[0-9]+$/, '$1')),
     process_external_id:input.processId||null,verification_code_hash:input.verificationCode?bindingHash(input.verificationCode):null,
     object_path:objectPath,original_file_name:input.fileName,mime_type:input.mimeType.toLowerCase(),
     expected_size:input.size,expected_sha256:input.sha256,status:'PENDING',expires_at:expiresAt
@@ -216,6 +226,7 @@ export async function createSupabaseStagedUpload(input:StagedUploadDescriptor):P
   const inserted=await fetch(`${dataBaseUrl()}/portal_upload_staging`,{
     method:'POST',headers:{...buildSupabaseAdminHeaders(),Prefer:'return=minimal'},body:JSON.stringify(row),signal:AbortSignal.timeout(10_000)
   });
+  if(inserted.status===429)throw new StagedUploadCapacityError('Limite temporário de uploads atingido. Aguarde a expiração das autorizações anteriores.');
   if(!inserted.ok)throw new Error(`Não foi possível registrar o upload temporário (${inserted.status}).`);
   try{
     const signedResponse=await fetch(`${storageBaseUrl()}/object/upload/sign/${encodeURIComponent(stagingBucket())}/${encodePath(objectPath)}`,{
@@ -294,9 +305,12 @@ export async function withSupabaseStagedUpload<T>(input:{
   return result;
 }
 
+// Retain the row beyond the provider's two-hour signed URL lifetime.
+// Deleting it after the app's 15-minute deadline would let a still-valid URL
+// recreate an untracked object and prematurely release its allocation.
 export async function cleanupExpiredStagedUploads(limit=100):Promise<number>{
   assertConfigured();
-  const response=await fetch(`${dataBaseUrl()}/portal_upload_staging?status=in.(PENDING,CONSUMING,CONSUMED,CLEANUP_PENDING,REJECTED,EXPIRED)&expires_at=lt.${encodeURIComponent(new Date().toISOString())}&select=*&limit=${Math.min(Math.max(limit,1),500)}`,{
+  const response=await fetch(`${dataBaseUrl()}/portal_upload_staging?status=in.(PENDING,CONSUMING,CONSUMED,CLEANUP_PENDING,REJECTED,EXPIRED)&expires_at=lt.${encodeURIComponent(new Date().toISOString())}&created_at=lt.${encodeURIComponent(new Date(Date.now()-135*60_000).toISOString())}&select=*&limit=${Math.min(Math.max(limit,1),500)}`,{
     headers:buildSupabaseAdminHeaders(),signal:AbortSignal.timeout(10_000)
   });
   const rows=await jsonOrThrow<StagedUploadRow[]>(response,'Listagem de uploads expirados');
@@ -322,12 +336,13 @@ async function uploadPrivateObject(path:string,bytes:Buffer,mimeType:string):Pro
   if(!response.ok){const detail=await response.text().catch(()=>'');throw new Error(`Falha ao preparar o download protegido (${response.status})${detail?`: ${detail.slice(0,120)}`:''}.`);}
 }
 
-async function recordDownloadTransfer(row:{id:string;objectPath:string;fileName:string;mimeType:string;size:number;sha256:string;requesterBinding:string;expiresAt:string}):Promise<void>{
+async function recordDownloadTransfer(row:{id:string;objectPath:string;fileName:string;mimeType:string;size:number;sha256:string;requesterBinding:string;expiresAt:string;processId?:string}):Promise<void>{
   const response=await fetch(`${dataBaseUrl()}/portal_download_transfers`,{
     method:'POST',headers:{...buildSupabaseAdminHeaders(),Prefer:'return=minimal'},
-    body:JSON.stringify({id:row.id,object_path:row.objectPath,file_name:row.fileName,mime_type:row.mimeType,size_bytes:row.size,sha256:row.sha256,requester_hash:bindingHash(row.requesterBinding),status:'ACTIVE',expires_at:row.expiresAt}),
+    body:JSON.stringify({id:row.id,object_path:row.objectPath,file_name:row.fileName,mime_type:row.mimeType,size_bytes:row.size,sha256:row.sha256,requester_hash:bindingHash(row.requesterBinding),status:'ACTIVE',expires_at:row.expiresAt,...(row.processId?{process_external_id:row.processId}:{})}),
     signal:AbortSignal.timeout(10_000)
   });
+  if(response.status===429)throw new StagedUploadCapacityError('Limite temporário de downloads atingido. Aguarde a limpeza automática dos arquivos temporários.');
   if(!response.ok)throw new Error(`Não foi possível registrar o download temporário (${response.status}).`);
 }
 
@@ -337,6 +352,7 @@ export async function createSupabaseEphemeralDownload(input:{
   mimeType:'application/pdf'|'application/zip';
   requesterBinding:string;
   expiresInSeconds?:number;
+  processId?:string;
 }):Promise<{url:string;expiresAt:string;sha256:string}>{
   assertConfigured();
   if(!input.requesterBinding.trim())throw new Error('O download precisa estar vinculado à solicitação autorizada.');
@@ -352,9 +368,17 @@ export async function createSupabaseEphemeralDownload(input:{
   const objectPath=`downloads/${new Date().toISOString().slice(0,10)}/${sha256.slice(0,20)}/${id}.${extension}`;
   const expiresInSeconds=Math.min(Math.max(Number(input.expiresInSeconds||60),30),300);
   const expiresAt=new Date(Date.now()+expiresInSeconds*1000).toISOString();
-  await uploadPrivateObject(objectPath,input.bytes,input.mimeType);
+  // Reserve quota atomically before allocating any storage bytes.
+  const reservation={id,objectPath,fileName,mimeType:input.mimeType,size:input.bytes.length,sha256,requesterBinding:input.requesterBinding,expiresAt};
+  try{await recordDownloadTransfer({...reservation,processId:input.processId});}catch(error){
+    if(!(error instanceof StagedUploadCapacityError))throw error;
+    // A confirmed quota rejection creates no reservation/object; drain a bounded
+    // batch of expired transfers before one safe reservation retry.
+    await cleanupExpiredDownloadTransfers(16);
+    await recordDownloadTransfer({...reservation,processId:input.processId});
+  }
   try{
-    await recordDownloadTransfer({id,objectPath,fileName,mimeType:input.mimeType,size:input.bytes.length,sha256,requesterBinding:input.requesterBinding,expiresAt});
+    await uploadPrivateObject(objectPath,input.bytes,input.mimeType);
     const signedResponse=await fetch(`${storageBaseUrl()}/object/sign/${encodeURIComponent(stagingBucket())}/${encodePath(objectPath)}`,{
       method:'POST',headers:buildSupabaseAdminHeaders(),body:JSON.stringify({expiresIn:expiresInSeconds}),signal:AbortSignal.timeout(10_000)
     });
@@ -384,4 +408,24 @@ export async function cleanupExpiredDownloadTransfers(limit=100):Promise<number>
     }catch{/* uma execução futura tentará novamente */}
   }
   return cleaned;
+}
+
+/** Remove process-bound temporary objects before removing their inventory rows. */
+export async function deleteProcessSupabaseObjects(processId:string):Promise<void>{
+ if(!getSupabaseRuntimeStatus().durablePersistenceReady)return;
+ if(!processId.trim())throw Error('O vínculo do TCC é necessário para a limpeza.');
+ for(const table of ['portal_upload_staging','portal_download_transfers']){
+  // Do not use filenames or hashes to guess ownership of another person's download.
+  while(true){
+   const response=await fetch(`${dataBaseUrl()}/${table}?process_external_id=eq.${encodeURIComponent(processId)}&select=id,object_path&limit=100`,{headers:buildSupabaseAdminHeaders(),signal:AbortSignal.timeout(10000)});
+   const rows=await jsonOrThrow<Array<{id:string;object_path:string}>>(response,'Consulta de arquivos temporários do TCC');
+   if(!rows.length)break;
+   for(const row of rows){
+    if(!row.object_path||row.object_path.startsWith('/')||row.object_path.split('/').includes('..'))throw Error('Caminho de arquivo temporário inválido.');
+    await removeObject(row.object_path);
+    const deleted=await fetch(`${dataBaseUrl()}/${table}?id=eq.${encodeURIComponent(row.id)}&process_external_id=eq.${encodeURIComponent(processId)}`,{method:'DELETE',headers:{...buildSupabaseAdminHeaders(),Prefer:'return=minimal'},signal:AbortSignal.timeout(10000)});
+    if(!deleted.ok)throw Error(`Supabase: remoção do registro temporário pendente (${deleted.status}).`);
+   }
+  }
+ }
 }

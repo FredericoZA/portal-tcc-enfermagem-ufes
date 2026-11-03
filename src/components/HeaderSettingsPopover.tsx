@@ -217,7 +217,7 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
     {isOpen&&createPortal(
       <div ref={popupRef} data-portal-table-master={isMaster?'true':'false'} className="portal-table-settings-popover portal-modal-surface fixed z-[1000001] max-h-[calc(100vh-1.5rem)] overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150" style={{top:popoverPos.top,left:popoverPos.left}}>
         <div className="portal-settings-popover-header">
-          <span className="flex items-center gap-1.5 text-[10.5px] font-black uppercase tracking-wider text-white"><Settings className="h-3.5 w-3.5 text-white" aria-hidden="true"/>Exibição da planilha</span>
+          <span className="flex items-center gap-1.5 text-[10.5px] font-black normal-case tracking-wider text-white"><Settings className="h-3.5 w-3.5 text-white" aria-hidden="true"/>Exibição da planilha</span>
         </div>
         <div className="portal-modal-divider" aria-hidden="true" />
         <div className="portal-settings-popover-body">
@@ -244,13 +244,13 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
         </section>}
         {canManageColumns&&<section className="portal-settings-columns-card" aria-label={`Colunas e ordem de ${defaultTableTitle||'planilha'}`}>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <div><span className="flex items-center gap-1.5 text-[9.5px] font-black uppercase tracking-wider text-slate-800"><Columns3 className="h-3.5 w-3.5"/>Colunas e ordem</span><p className="mt-0.5 text-[8.5px] text-slate-500">Marque para exibir. Use as setas para alterar a ordem.</p></div>
+            <div><span className="flex items-center gap-1.5 text-[9.5px] font-black normal-case tracking-wider text-slate-800"><Columns3 className="h-3.5 w-3.5"/>Colunas e ordem</span><p className="mt-0.5 text-[8.5px] text-slate-500">Marque para exibir. Use as setas para alterar a ordem.</p></div>
             {isMaster&&<button type="button" onClick={saveMasterDefault} className="portal-popup-action"><Star className="h-3 w-3"/>Definir padrão</button>}
           </div>
           <div className="portal-settings-column-grid">
             {normalizedOrder.map((key,index)=>{const column=columnMap.get(key)||{key,label:key};const fixed=key===fixedColumnKey;const shown=fixed||visibleColumns[key]!==false;return <div key={key} className="portal-settings-column-item" data-visible={shown?'true':'false'}>
               <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-[9.5px] font-semibold"><input type="checkbox" checked={shown} disabled={fixed} onChange={e=>toggleColumn(key,e.target.checked)} className="h-3.5 w-3.5"/><span className="truncate">{column.label}</span></label>
-              {fixed?<span className="inline-flex items-center gap-1 rounded-md bg-[var(--portal-surface-card)] px-1.5 py-1 text-[8px] font-black uppercase text-slate-500"><Lock className="h-2.5 w-2.5"/>Fixa</span>:<div className="flex items-center"><button type="button" disabled={index<=(fixedColumnKey?1:0)} onClick={()=>moveColumn(index,-1)} className="rounded p-1 text-slate-600 hover:bg-[var(--portal-surface-card)] disabled:opacity-20" aria-label={`Mover ${column.label} para cima`}><ArrowUp className="h-3.5 w-3.5"/></button><button type="button" disabled={index>=normalizedOrder.length-1} onClick={()=>moveColumn(index,1)} className="rounded p-1 text-slate-600 hover:bg-[var(--portal-surface-card)] disabled:opacity-20" aria-label={`Mover ${column.label} para baixo`}><ArrowDown className="h-3.5 w-3.5"/></button></div>}
+              {fixed?<span className="inline-flex items-center gap-1 rounded-md bg-[var(--portal-surface-card)] px-1.5 py-1 text-[8px] font-black normal-case text-slate-500"><Lock className="h-2.5 w-2.5"/>Fixa</span>:<div className="flex items-center"><button type="button" disabled={index<=(fixedColumnKey?1:0)} onClick={()=>moveColumn(index,-1)} className="rounded p-1 text-slate-600 hover:bg-[var(--portal-surface-card)] disabled:opacity-20" aria-label={`Mover ${column.label} para cima`}><ArrowUp className="h-3.5 w-3.5"/></button><button type="button" disabled={index>=normalizedOrder.length-1} onClick={()=>moveColumn(index,1)} className="rounded p-1 text-slate-600 hover:bg-[var(--portal-surface-card)] disabled:opacity-20" aria-label={`Mover ${column.label} para baixo`}><ArrowDown className="h-3.5 w-3.5"/></button></div>}
             </div>;})}
           </div>
         </section>}

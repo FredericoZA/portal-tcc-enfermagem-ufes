@@ -4,6 +4,7 @@ import type { ProcessData, SignatureJob } from '../src/types';
 import type { IntegrationStudioSettings } from '../src/types/integrationStudio';
 import { DEFAULT_OPERATIONAL_CONFIG, registrationQuestions, localDateTimeToIso, presentVariables, resolveCatalogValue } from '../src/utils/operationalConfig';
 import { acceptRegistration } from './workflow/registration';
+import { OTHER_DEFENSE_LOCATION, CUSTOM_LOCATION_FIELD } from '../src/utils/customDefenseLocation';
 import { ataArchived, declarationReady } from './workflow/gates';
 import { simulateWorkflow } from './workflow/simulator';
 import { buildMarkerBoldRequests } from './integrations/googleDocsStyles';
@@ -18,7 +19,7 @@ function studio():IntegrationStudioSettings {
   const document=(type:string)=>({id:`tmpl-${type.toLowerCase()}`,type,label:type,driveFileId:'fixture123456789',variables:[],templateContentText:''});
   const stage=(id:string,event:string,actions:any[])=>({id,triggerEvent:event,title:id,actions});
   const doc=(type:string)=>({id:`doc-${type}`,type:'doc',refId:`tmpl-${type.toLowerCase()}`,title:type,...(type==='TERMO'?{condition:{fieldKey:'PUBLICAR_TRABALHO',operator:'IS_TRUE'}}:{})});
-  return {schemaVersion:3,revision:1,savedAt:'2026-09-08',savedBy:'master@example.invalid',driveModelosFolderUrl:'',brandKit:{institutionName:'Universidade',courseName:'Enfermagem',primaryColor:'#005830',textColor:'#ffffff'} as any,documentDesigns:{},emailDesigns:{},formDesigns:{},matrixColumns:[],matrixRows:[],docTemplates:['CONVITE','ATA','TERMO','DECLARACAO'].map(document),formTemplates:[],emailTemplates:[{id:'reserva',name:'Reserva',recipient:'{{DEPARTAMENTO_EMAIL}}',subject:'Reserva {{PROTOCOLO}}',body:'{{DEFESA_LOCAL}}'},{id:'convite',name:'Convite',recipient:'{{BANCA_EMAILS}}',subject:'Convite',body:'{{TITULO}}',attachments:['tmpl-convite']}],workflowStages:[stage('cadastro','TCC_CREATED',[{id:'email-reserva',type:'email',refId:'reserva'}]),stage('convite','LOCATION_CONFIRMED',[doc('CONVITE'),{id:'email-convite',type:'email',refId:'convite'}]),stage('avaliacao','EVALUATION_SUBMITTED',[doc('ATA')]),stage('final','REPOSITORY_SUBMITTED',[doc('TERMO')]),stage('presidente','PUBLICATION_CLEARED',[doc('DECLARACAO')])],auditTrail:[],operationalConfig:{...DEFAULT_OPERATIONAL_CONFIG,reservation:{departmentEmail:'departamento@example.invalid',locations:['Sala','Auditório']}}};
+  return {schemaVersion:3,revision:1,savedAt:'2026-09-08',savedBy:'master@example.invalid',driveModelosFolderUrl:'',brandKit:{institutionName:'Universidade',courseName:'Enfermagem',primaryColor:'#005830',textColor:'#172033'} as any,documentDesigns:{},emailDesigns:{},formDesigns:{},matrixColumns:[],matrixRows:[],docTemplates:['CONVITE','ATA','TERMO','DECLARACAO'].map(document),formTemplates:[],emailTemplates:[{id:'reserva',name:'Reserva',recipient:'{{DEPARTAMENTO_EMAIL}}',subject:'Reserva {{PROTOCOLO}}',body:'{{DEFESA_LOCAL}}'},{id:'convite',name:'Convite',recipient:'{{BANCA_EMAILS}}',subject:'Convite',body:'{{TITULO}}',attachments:['tmpl-convite']}],workflowStages:[stage('cadastro','TCC_CREATED',[{id:'email-reserva',type:'email',refId:'reserva'}]),stage('convite','LOCATION_CONFIRMED',[doc('CONVITE'),{id:'email-convite',type:'email',refId:'convite'}]),stage('avaliacao','EVALUATION_SUBMITTED',[doc('ATA')]),stage('final','REPOSITORY_SUBMITTED',[doc('TERMO')]),stage('presidente','PUBLICATION_CLEARED',[doc('DECLARACAO')])],auditTrail:[],operationalConfig:{...DEFAULT_OPERATIONAL_CONFIG,reservation:{departmentEmail:'departamento@example.invalid',locations:['Sala','Auditório']}}};
 }
 
 test('horário do formulário respeita o fuso institucional e rejeita data inexistente',()=>{
@@ -27,7 +28,7 @@ test('horário do formulário respeita o fuso institucional e rejeita data inexi
 });
 test('cadastro publicado mantém SIAPE, opções do Master e bloqueia campo obrigatório ausente',()=>{
   const s=studio();s.formTemplates=[{id:'form-reserva-aluno',questions:[{id:'extra',fieldKey:'PERGUNTA_NOVA',label:'Pergunta da secretaria',required:true,fieldType:'text'}]}];
-  const fields=registrationQuestions(s);assert.ok(fields.some(f=>f.fieldKey==='ORIENTADOR_SIAPE'&&f.required));assert.ok(fields.some(f=>f.fieldKey==='COORIENTADOR_SIAPE'&&!f.required));assert.deepEqual(fields.find(f=>f.fieldKey==='DEFESA_LOCAL')?.options,['Sala','Auditório']);
+  const fields=registrationQuestions(s);assert.ok(fields.some(f=>f.fieldKey==='ORIENTADOR_SIAPE'&&f.required));assert.ok(fields.some(f=>f.fieldKey==='COORIENTADOR_SIAPE'&&!f.required));assert.deepEqual(fields.find(f=>f.fieldKey==='DEFESA_LOCAL')?.options,['Sala','Auditório','__OUTRO_LOCAL__']);
   assert.throws(()=>acceptRegistration({registrationAnswers:{}},s),/Pergunta da secretaria/);
 });
 test('a mesma data tem apresentação numérica e por extenso sem mudar sua origem',()=>{

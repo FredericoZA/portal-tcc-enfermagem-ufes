@@ -24,9 +24,9 @@ test('andamento duplicado deixa de existir sem remover confirmação operacional
   const panel = await source('src/components/ProcessFlowPanel.tsx');
   assert.doesNotMatch(panel, /Andamento do TCC/);
   assert.doesNotMatch(panel, /const steps\s*=/);
-  assert.match(panel, /Confirmação do local da defesa/);
-  assert.match(panel, /confirmDefenseLocation/);
-  assert.match(panel, /uploadLocationProof/);
+  assert.match(panel, /Reserva do local da defesa/);
+  assert.match(panel, /Aguardando o aceite ou a recusa/);
+  assert.match(panel, /downloadLocationProof/);assert.doesNotMatch(panel,/uploadLocationProof|confirmDefenseLocation/);
 });
 
 test('fluxo principal oferece contexto por hover nas etapas', async () => {

@@ -111,7 +111,10 @@ test('e-mail do Departamento é definido no modelo de e-mail e permanece fail-cl
   assert.match(configPage, /id: 'email-reserva'/);
   assert.match(server, /configuredRoomReservationDepartmentEmail\(studio/);
   assert.match(server, /templateId==='email-reserva'/);
-  assert.match(server, /destinatário diverge do e-mail definido no modelo de solicitação de reserva/);
+  assert.match(server, /reservationConfirmationRecipient/);
+  assert.match(server, /destinatário diverge do responsável definido para o local escolhido/);
+  assert.match(server, /reservationApproverEmail\(process,studio\)/);
+  assert.match(server, /recipients.length!==1\|\|recipients\[0\]!==configured/);
   assert.match(server, /Configurações → Modelos e Variáveis → E-mails/);
   assert.doesNotMatch(operational, /dptenfccs@gmail\.com/);
   assert.match(courseStudioValidator, /Informe diretamente o e-mail do Departamento de Enfermagem/);
@@ -168,9 +171,9 @@ test('contrato visual global usa um único stylesheet autoritativo', () => {
 });
 
 test('contrato visual global mantém quatro superfícies e geometria aprovada', () => {
-  assert.match(css, /--portal-surface-page:\s*#f1f5f9/);
-  assert.match(css, /--portal-surface-panel:\s*#e1e6e9/);
-  assert.match(css, /--portal-surface-card:\s*#d5dce0/);
+  assert.match(css, /--portal-surface-page:\s*#f6f7f8/);
+  assert.match(css, /--portal-surface-panel:\s*#e9edef/);
+  assert.match(css, /--portal-surface-card:\s*#d8dfe3/);
   assert.match(css, /--portal-surface-inner:\s*#ffffff/);
   assert.match(css, /--portal-sheet-title-height:\s*45px/);
   assert.match(css, /--portal-sheet-title-divider:\s*5px/);

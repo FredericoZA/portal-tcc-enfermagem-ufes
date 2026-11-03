@@ -33,11 +33,12 @@ try {
     const dependencies = process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES;
     if (dependencies) ({ chromium } = createRequire(path.join(dependencies, '__portal_resolver.cjs'))('playwright'));
   }
-  if (!chromium || !existsSync(chromium.executablePath())) {
+  const executablePath=process.env.PORTAL_VISUAL_BROWSER_EXECUTABLE;
+  if (!chromium || !existsSync(executablePath||chromium.executablePath())) {
     throw Object.assign(new Error('Chromium de automação ausente. Instale Playwright e seu navegador no ambiente de verificação.'), { unavailable: true });
   }
 
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true,...(executablePath?{executablePath}:{}) });
   dataDir = await mkdtemp(path.join(tmpdir(), 'portal-visual-'));
   const port = 40500 + Math.floor(Math.random() * 1000);
   const base = `http://127.0.0.1:${port}`;
@@ -46,8 +47,12 @@ try {
     env: {
       ...process.env,
       NODE_ENV: 'development',
+      DISABLE_HMR: 'true',
+      PORTAL_SERVE_COMPILED_CLIENT: existsSync(path.join(root,'dist/client/index.html')) ? 'true' : 'false',
       VERCEL: '',
       PORT: String(port),
+      PORTAL_PUBLIC_URL: base,
+      APP_URL: base,
       PORTAL_DATA_DIR: dataDir,
       PORTAL_PERSISTENCE_PROVIDER: 'local_file',
       PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'true',
@@ -124,6 +129,9 @@ try {
       const outliers = [];
       const selectors = 'h1,h2,h3,h4,h5,h6,p,label,button,a,td,th,span,strong,small,input,textarea,select,summary,[role="heading"]';
       const insideSheet = (el) => Boolean(el.closest('.portal-spreadsheet-table,.portal-spreadsheet-scroll-host,.portal-calendar-day-cell,.portal-calendar-empty-cell'));
+      const typographyRegion = (el) => el.closest('#portal-sidebar .portal-sidebar-subtitle') ? 'marca-lateral' :
+        el.closest('.portal-settings-workspace') ? 'configuracoes-popup' :
+        insideSheet(el) ? 'planilha-calendario' : 'portal-geral';
       for (const el of document.querySelectorAll(selectors)) {
         if (el.closest('script,style,[hidden],[aria-hidden="true"]') || !el.getClientRects().length) continue;
         const style = getComputedStyle(el);
@@ -132,8 +140,7 @@ try {
         if (!label) continue;
         const px = Math.round(parseFloat(style.fontSize)*10)/10;
         if (!Number.isFinite(px)) continue;
-        const region = el.closest('.portal-settings-workspace') ? 'configuracoes-popup' :
-          insideSheet(el) ? 'planilha-calendario' : 'portal-geral';
+        const region = typographyRegion(el);
         const key = `${region}:${px}px`;
         histogram[key] = (histogram[key] || 0) + 1;
         if (px < 10.5 && outliers.length < 24 && region !== 'planilha-calendario') {
@@ -160,8 +167,7 @@ try {
         if (style.display === 'none' || style.visibility === 'hidden') continue;
         const px = Math.round(parseFloat(style.fontSize)*10)/10;
         if (!Number.isFinite(px)) continue;
-        const region = parent.closest('.portal-settings-workspace') ? 'configuracoes-popup' :
-          insideSheet(parent) ? 'planilha-calendario' : 'portal-geral';
+        const region = typographyRegion(parent);
         const key = `${region}:${px}px`;
         textNodeHistogram[key]=(textNodeHistogram[key]||0)+1;
         if(px<10.5&&region!=='planilha-calendario'&&textNodeOutliers.length<16) {
@@ -200,11 +206,16 @@ try {
         report.errors.push(`Botão de exclusão sem prioridade correta: ${JSON.stringify(dialogFonts.trash)}`);
     }
 
-    // Contrato absoluto: todos os textos visíveis devem usar somente 11, 14 ou 18 px.
+    // O conteúdo usa 11, 14 ou 18 px. A única exceção é a marca lateral:
+    // o subtítulo Enfermagem recebeu o aumento de 10% aprovado (11 * 1,1 = 12,1).
     // Valida as fontes COMPUTADAS, inclusive quando o Tailwind ou um estilo inline
     // tentar restabelecer dimensões históricas.
     const offScale = Object.entries({ ...fonts.histogram, ...fonts.textNodes.histogram })
-      .filter(([key]) => ![11, 14, 18].includes(Number(key.split(':').at(-1).replace('px', ''))));
+      .filter(([key]) => {
+        const [region, size] = key.split(':');
+        const px = Number(size.replace('px', ''));
+        return region === 'marca-lateral' ? px !== 12.1 : ![11, 14, 18].includes(px);
+      });
     if (offScale.length) report.errors.push(`${name}: fonte fora da escala 18/14/11 (${JSON.stringify(offScale)})`);
     const navAndTitles = await page.evaluate(() => {
       const visibleSizes = (selector) => Array.from(document.querySelectorAll(selector))
@@ -310,15 +321,15 @@ try {
             calendarVisual.cellCount < 20
             || calendarVisual.cellCount > 23
             || calendarVisual.dayColors.length !== 1
-            || calendarVisual.dayColors[0] !== 'rgb(213, 220, 224)'
+            || calendarVisual.dayColors[0] !== 'rgb(216, 223, 227)'
           ) {
             report.errors.push(`master-calendario-${width}: grade útil ou cor dos dias divergente (${JSON.stringify(calendarVisual)}).`);
           }
           if (
             calendarVisual.emptyCount > 0
-            && (calendarVisual.emptyColors.length !== 1 || calendarVisual.emptyColors[0] !== 'rgb(225, 230, 233)')
+            && (calendarVisual.emptyColors.length !== 1 || calendarVisual.emptyColors[0] !== 'rgb(233, 237, 239)')
           ) {
-            report.errors.push(`master-calendario-${width}: vazios do calendário não usam #E1E6E9 (${JSON.stringify(calendarVisual)}).`);
+            report.errors.push(`master-calendario-${width}: vazios do calendário não usam a superfície canônica do painel (${JSON.stringify(calendarVisual)}).`);
           }
           if (
             Math.abs(calendarVisual.dividerTop - 5) > 0.5
@@ -339,7 +350,7 @@ try {
               replicar: '#portal-replication-page'
             };
             const root = document.querySelector(ids[currentTab]);
-            const panel = root?.querySelector('.portal-layer-panel');
+            const panel = root?.matches('.portal-layer-panel') ? root : root?.querySelector('.portal-layer-panel');
             const card = root?.querySelector('.portal-layer-card');
             const inner = root?.querySelector('.portal-layer-inner');
             return {
@@ -349,8 +360,8 @@ try {
             };
           }, tab);
           if (
-            layerContract.panel !== 'rgb(225, 230, 233)'
-            || layerContract.card !== 'rgb(213, 220, 224)'
+            layerContract.panel !== 'rgb(233, 237, 239)'
+            || layerContract.card !== 'rgb(216, 223, 227)'
             || (layerContract.inner && layerContract.inner !== 'rgb(255, 255, 255)')
           ) {
             report.errors.push(`master-${label}-${width}: contrato das superfícies divergente (${JSON.stringify(layerContract)}).`);
@@ -384,11 +395,12 @@ try {
           if (repoHeaderLine > 0) report.errors.push(`master-repositorio-${width}: linha indevida permanece no cabeçalho (${repoHeaderLine}px).`);
         }
         if (tab === 'tutorial') {
-          const tutorialColor = await page.evaluate(() => {
-            const box = document.querySelector('#portal-tutorial-finish-card');
+          const finishHeading = page.locator('#portal-tutorial-page').getByRole('heading', {name: 'Conferência antes de encerrar', exact: true});
+          const tutorialColor = await finishHeading.evaluate(heading => {
+            const box = heading.closest('section');
             return box ? getComputedStyle(box).backgroundColor : '';
           });
-          if (tutorialColor !== 'rgb(213, 220, 224)') {
+          if (tutorialColor !== 'rgb(216, 223, 227)') {
             report.errors.push(`master-como-usar-${width}: caixa final fora da camada cinza (${tutorialColor}).`);
           }
         }
@@ -397,8 +409,8 @@ try {
             const cards = Array.from(document.querySelectorAll('#portal-replication-page .portal-layer-card'));
             return cards.map((el) => Math.round(el.getBoundingClientRect().height));
           });
-          if (!modelCards.length || Math.max(...modelCards) > 160) {
-            report.errors.push(`master-replicar-${width}: cartões de modelos continuam altos (${JSON.stringify(modelCards)}).`);
+          if (modelCards.length !== 5 || Math.max(...modelCards) > 260 || Math.max(...modelCards)-Math.min(...modelCards)>1) {
+            report.errors.push(`master-replicar-${width}: grade de cinco cartões de replicação divergente (${JSON.stringify(modelCards)}).`);
           }
         }
         if (tab === 'coordenador' && width >= 768) {
@@ -417,7 +429,7 @@ try {
               return dot ? getComputedStyle(dot).backgroundColor : '';
             });
             const asten = document.querySelector('#coordenador-page-root button[title="Assinar selecionados pela Asten"]');
-            const gov = document.querySelector('#coordenador-page-root button[title="Preparar selecionados para assinatura Gov.br"]');
+            const gov = document.querySelector('#coordenador-page-root button[title="Assinar selecionados pelo Gov.br"]');
             const search = document.querySelector('#coordenador-page-root button[aria-label^="Buscar registros"]');
             const refresh = document.querySelector('#coordenador-refresh-btn');
             const settings = document.querySelector('#coordenador-page-root button[aria-label="Configurar exibição da planilha"]');

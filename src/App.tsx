@@ -1,8 +1,13 @@
+import {PortalOperationStatus} from './components/PortalOperationStatus';
+import {ProcessDeepLink} from './components/ProcessDeepLink';
+import {setProcessLink} from './utils/processLink';
 import { PortalDialogs } from './components/PortalDialogs';
 import { PortalErrorBoundary } from './components/PortalErrorBoundary';
 import { PortalModalShell } from './components/PortalModalShell';
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import {GraduationCap} from 'lucide-react';
 import { AuthProvider } from './context/AuthContext';
+import { PortalLiveSync } from './components/PortalLiveSync';
 import { UserSimulatorBar } from './components/UserSimulatorBar';
 import { isLocalDemoFrontend } from './utils/runtimeEnvironment';
 import { Sidebar } from './components/Sidebar';
@@ -16,6 +21,7 @@ import { getPortalSemanticRootVars } from './utils/portalSemanticTokens';
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })));
 const PortalTutorialPage = lazy(() => import('./pages/PortalTutorialPage').then((module) => ({ default: module.PortalTutorialPage })));
 const FluxoTccPage = lazy(() => import('./pages/FluxoTccPage').then((module) => ({ default: module.FluxoTccPage })));
+const InformacoesGeraisTccPage = lazy(() => import('./pages/InformacoesGeraisTccPage').then((module) => ({ default: module.InformacoesGeraisTccPage })));
 const PortalReplicationPage = lazy(() => import('./pages/PortalReplicationPage').then((module) => ({ default: module.PortalReplicationPage })));
 const MeusProcessosPage = lazy(() => import('./pages/MeusProcessosPage').then((module) => ({ default: module.MeusProcessosPage })));
 const ProcessoDetailPage = lazy(() => import('./pages/ProcessoDetailPage').then((module) => ({ default: module.ProcessoDetailPage })));
@@ -51,16 +57,19 @@ export default function App() {
 
   const handleSelectProcess = (id: string, readOnly = false) => {
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setProcessLink(id,null,true);
     setSelectedProcessId(id);
     setSelectedProcessReadOnly(readOnly);
   };
 
   const handleCloseProcess = () => {
+    setProcessLink(null);
     setSelectedProcessId(null);
     window.setTimeout(() => previousFocusRef.current?.focus(), 0);
   };
 
   const handleNavigate = (tab: string) => {
+    if(tab!=='acessar-portal')setProcessLink(null);
     setSelectedProcessId(null);
     if (tab === 'novo-processo') {
       setIsRegistrationModalOpen(true);
@@ -69,6 +78,17 @@ export default function App() {
     setIsRegistrationModalOpen(false);
     setCurrentTab(tab);
   };
+
+  useEffect(()=>{
+    const open=(event:Event)=>{const link=(event as CustomEvent).detail;setSelectedProcessId(link?.id||null);setSelectedProcessReadOnly(Boolean(link?.readOnly));};
+    window.addEventListener('portal:open-process',open);return()=>window.removeEventListener('portal:open-process',open);
+  },[]);
+
+  useEffect(()=>{
+    const requestLogin=()=>{setIsRegistrationModalOpen(false);setCurrentTab(current=>['home','calendario','biblioteca'].includes(current)?current:'home');};
+    window.addEventListener('portal:request-login',requestLogin);
+    return()=>window.removeEventListener('portal:request-login',requestLogin);
+  },[]);
 
   useEffect(() => {
     const navigate = (event: Event) => handleNavigate(String((event as CustomEvent).detail || 'home'));
@@ -86,7 +106,7 @@ export default function App() {
     if (!selectedProcessId) return;
     processDialogRef.current?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') handleCloseProcess();
+      if (event.key === 'Escape'&&!document.querySelector('[data-portal-login-modal]')) handleCloseProcess();
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
@@ -103,6 +123,8 @@ export default function App() {
         return <PortalTutorialPage onNavigate={handleNavigate} />;
       case 'fluxo-tcc':
         return <FluxoTccPage />;
+      case 'informacoes-gerais':
+        return <InformacoesGeraisTccPage onNavigate={handleNavigate} />;
       case 'replicar':
         return <PortalReplicationPage />;
       case 'acessar-portal':
@@ -137,8 +159,11 @@ export default function App() {
 
   return (
     <AuthProvider>
+      <PortalLiveSync />
       <PortalDialogs />
+      <PortalOperationStatus />
       <PortalAccessRedirect />
+      <ProcessDeepLink />
       <div id="portal-app-root" className="min-h-screen flex flex-col font-sans antialiased text-slate-900" style={{ ...getPortalSemanticRootVars(), backgroundColor: 'var(--portal-surface-page)' }}>
         {isLocalDemoFrontend() && <UserSimulatorBar />}
 
@@ -146,6 +171,7 @@ export default function App() {
           <Sidebar
             currentTab={currentTab}
             setCurrentTab={(tab) => {
+              if(tab!=='acessar-portal')setProcessLink(null);
               setSelectedProcessId(null);
               setIsRegistrationModalOpen(false);
               setCurrentTab(tab);
@@ -158,6 +184,7 @@ export default function App() {
             <Header
               onOpenMobileSidebar={() => setIsOpenMobileSidebar(true)}
               onGoHome={() => {
+                setProcessLink(null);
                 setSelectedProcessId(null);
                 setCurrentTab('home');
               }}
@@ -166,6 +193,7 @@ export default function App() {
                   : currentTab === 'home' ? 'Página Inicial Pública'
                   : currentTab === 'tutorial' ? 'Como usar o Portal'
                   : currentTab === 'fluxo-tcc' ? 'Fluxo do TCC'
+                  : currentTab === 'informacoes-gerais' ? 'Informações gerais do TCC'
                   : currentTab === 'replicar' ? 'Replicar o Portal'
                   : currentTab === 'como-chegar' ? 'Como chegar'
                   : currentTab === 'acessar-portal' ? 'Acesso ao Portal'
@@ -183,7 +211,7 @@ export default function App() {
               }
             />
 
-            <main className={`flex-1 w-full min-h-[500px] ${['logs','asten-logs'].includes(currentTab) ? 'p-0 max-w-none' : 'p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto'}`}>
+            <main className={`portal-page-main flex-1 w-full min-h-[500px] ${['logs','asten-logs'].includes(currentTab) ? 'p-0 max-w-none' : 'p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto'}`}>
               <PortalErrorBoundary key={currentTab}><Suspense fallback={<PageLoadingFallback />}>{renderMainTab()}</Suspense></PortalErrorBoundary>
             </main>
 
@@ -199,7 +227,7 @@ export default function App() {
               aria-modal="true"
               aria-label="Detalhes do Trabalho de TCC"
               tabIndex={-1}
-              className="portal-standard-modal portal-process-dialog relative my-2 w-full max-w-6xl overflow-hidden animate-in zoom-in-95 duration-150 sm:my-4"
+              className="portal-standard-modal portal-process-dialog relative my-2 w-full max-w-[1600px] overflow-hidden animate-in zoom-in-95 duration-150 sm:my-4"
               style={{ backgroundColor: 'var(--portal-surface-panel)' }}
               onClick={(event) => event.stopPropagation()}
             >
@@ -207,7 +235,7 @@ export default function App() {
                 className="portal-process-dialog-body max-h-[calc(100dvh-64px)] overflow-y-auto custom-scrollbar"
                 style={{ backgroundColor: 'var(--portal-surface-page)' }}
               >
-                <PortalErrorBoundary key={selectedProcessId}><Suspense fallback={<PageLoadingFallback />}>
+                <PortalErrorBoundary key={`${selectedProcessId}:${selectedProcessReadOnly}`}><Suspense fallback={<PageLoadingFallback />}>
                   <ProcessoDetailPage processId={selectedProcessId} readOnly={selectedProcessReadOnly} onBack={handleCloseProcess} isModal={true} />
                 </Suspense></PortalErrorBoundary>
               </div>
@@ -219,7 +247,7 @@ export default function App() {
           open={isRegistrationModalOpen}
           onClose={() => setIsRegistrationModalOpen(false)}
           title="Cadastrar Trabalho de TCC"
-          subtitle="Novo processo de Trabalho de Conclusão de Curso"
+          icon={GraduationCap}
           maxWidthClass="max-w-6xl"
           heightClass="max-h-[92vh]"
           bodyClassName="p-3 sm:p-4"

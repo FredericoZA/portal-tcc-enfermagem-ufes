@@ -8,18 +8,19 @@
     "node": "22.x"
   },
   "scripts": {
-    "local": "node scripts/prepare-local.mjs && node scripts/start-local-compiled.mjs",
+    "local": "node scripts/prepare-local.mjs && node scripts/start-local-dev.mjs",
+    "local:compiled": "node scripts/prepare-local.mjs && node scripts/start-local-compiled.mjs",
     "local:prepare": "node scripts/prepare-local.mjs",
-    "dev": "tsx server.ts",
+    "dev": "node scripts/prepare-local.mjs && node scripts/start-local-dev.mjs",
     "dev:compiled": "node scripts/start-local-compiled.mjs",
     "parity:check": "node scripts/portal-parity.mjs",
-    "prebuild": "npm run clean",
+    "prebuild": "node scripts/verify-production-source.mjs && npm run clean",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --outfile=dist/server/server.cjs",
     "start": "node scripts/start-production.mjs",
     "clean": "node scripts/clean-build.mjs",
     "lint": "tsc --noEmit",
     "test:secrets": "node scripts/check-no-secrets.mjs",
-    "test:unit": "node --import tsx --test \"server/**/*.test.ts\"",
+    "test:unit": "node --import tsx --test --test-concurrency=2 \"server/**/*.test.ts\"",
     "test:contracts": "node --import tsx --test server/integrations/providerContracts.test.ts",
     "test:secure-flow": "node scripts/test-secure-flow.mjs",
     "test:a11y": "node scripts/test-accessibility-static.mjs",
@@ -32,8 +33,11 @@
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
+    "@pdf-lib/fontkit": "1.1.1",
     "@tailwindcss/vite": "^4.1.14",
+    "@vercel/functions": "3.10.1",
     "@vitejs/plugin-react": "^5.0.4",
+    "docx-preview": "^0.4.1",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "googleapis": "^173.0.0",
@@ -45,9 +49,11 @@
     "qrcode": "^1.5.4",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "vite": "^6.2.3"
+    "sharp": "0.35.5",
+    "vite": "6.4.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.12",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
@@ -56,11 +62,15 @@
     "pngjs": "7.0.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.3"
+    "typescript": "~5.8.2"
   },
   "overrides": {
-    "qs": "6.16.0",
-    "brace-expansion": "2.1.7"
+    "googleapis-common": {
+      "gaxios": "7.3.1"
+    },
+    "qs": "6.17.0",
+    "brace-expansion": "2.1.7",
+    "body-parser": "1.20.9",
+    "zod": "4.6.6"
   }
 }

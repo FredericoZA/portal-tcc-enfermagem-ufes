@@ -61,6 +61,17 @@ test('não permite credenciais externas em .env nem herdadas pelo processo',()=>
   }finally{f.cleanup();}
 });
 
+test('aceita o provedor local explícito e preserva a configuração existente',()=>{
+  const f=fixture('NODE_ENV="development"\nPORTAL_PERSISTENCE_PROVIDER="local_file"\nPORTAL_SESSION_SECRET=""\nPORTAL_OTP_PEPPER=""\n');
+  try{
+    const first=f.exec();assert.equal(first.status,0,first.stderr);
+    const saved=readFileSync(join(f.cwd,'.env.local'),'utf8');
+    const second=spawnSync(process.execPath,[entry],{cwd:f.cwd,encoding:'utf8',timeout:10_000,env:{...process.env,PORTAL_PERSISTENCE_PROVIDER:'local_file'}});
+    assert.equal(second.status,0,second.stderr);
+    assert.equal(readFileSync(join(f.cwd,'.env.local'),'utf8'),saved);
+  }finally{f.cleanup();}
+});
+
 test('não confia na primeira de duas variáveis com o mesmo nome',()=>{
   const f=fixture('PORTAL_PERSISTENCE_PROVIDER="local_file"\nPORTAL_PERSISTENCE_PROVIDER="supabase"\nPORTAL_SESSION_SECRET=""\nPORTAL_OTP_PEPPER=""\n');
   try{

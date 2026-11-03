@@ -30,7 +30,7 @@ O projeto usa React, Vite e Express. Preserve `package-lock.json` e os scripts a
 
 - Master e Presidente administram. O aluno precisa de autorização prévia e pode ser autor de somente um TCC de graduação.
 - O pedido de reserva vai para o endereço canônico do departamento. O aluno declara que recebeu a confirmação e o processo aguarda essa declaração antes do convite.
-- O orientador confere os dados e informa nota de 0 a 10, com até duas casas decimais. Revisões desatualizadas do processo ou do formulário são recusadas. O resultado vem das opções publicadas, e o texto fixo da ata vem do DOCX do Master.
+- O orientador confere os dados, seleciona o resultado e registra o parecer, sem nota numérica. Revisões desatualizadas do processo ou do formulário são recusadas. O resultado vem das opções publicadas, e o texto fixo da ata vem do DOCX do Master.
 - Convite não é assinado. Ata: orientador. Termo, quando houver publicação: todos os alunos autores e o orientador, em paralelo. Declaração: Presidente da Comissão.
 - Asten executar envio ou criar envelope não significa assinatura concluída. Exija o retorno compatível com os signatários previstos e o arquivamento do PDF assinado.
 - Falhas não liberam a próxima etapa. Preserve a recuperação existente e não repita automaticamente envelopes de resultado incerto.
@@ -67,3 +67,5 @@ O projeto usa React, Vite e Express. Preserve `package-lock.json` e os scripts a
 ## Evidência de encerramento
 
 Relate separadamente: execução local, implantação, persistência real, e-mails reais, PDFs gerados dos DOCX, assinaturas Asten, arquivamento no Drive e inspeção visual. Para cada um, use “aprovado”, “reprovado” ou “não confirmado”, com evidência e próxima ação. Não declare o portal pronto para processos reais apenas porque compilou.
+
+Consulte também `docs/FLUXO_ATUAL_2026-10-26.md` e o guia público em `public/replicacao/GUIA_PARA_IA.md`: a confirmação do local é feita pelo departamento, a ata só pelo orientador, o termo só existe se houver publicação e a devolução do termo Gov.br cabe somente ao orientador. Como usar oferece Aluno, Orientador e Visitante.
