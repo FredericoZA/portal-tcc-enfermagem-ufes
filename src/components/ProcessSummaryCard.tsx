@@ -38,6 +38,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
   const [titleEditing, setTitleEditing] = useState(false);
   const [title, setTitle] = useState(process.titulo);
   const [titleSaving, setTitleSaving] = useState(false);
+  const [titleBaseRevision,setTitleBaseRevision]=useState(process.dataRevision);
   const [reservationOpen, setReservationOpen] = useState(false);
   const [reservationSending, setReservationSending] = useState(false);
   const [notice, setNotice] = useState('');
@@ -59,19 +60,21 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
   ]));
 
   useEffect(() => {
+    // Novas revisões não podem sobrescrever campos de um modal ainda em edição.
+    if(titleEditing || reservationOpen)return;
     setTitle(process.titulo);
-    setTitleEditing(false);
+    setTitleBaseRevision(process.dataRevision);
     setRequested(dateTimeForInput(process.defesa?.startAt || ''));
     setLocationChoice(process.defesa?.local || '');
     setCustomLocation('');
-  }, [process.id, process.dataRevision, process.titulo, process.defesa?.startAt, process.defesa?.local]);
+  }, [process.id, process.dataRevision, process.titulo, process.defesa?.startAt, process.defesa?.local, titleEditing, reservationOpen]);
 
   const saveTitle = async () => {
     const normalized = formatTccTitle(title);
     if (!normalized.trim()) { setError('Informe o título completo do trabalho.'); return; }
     setTitleSaving(true); setError('');
     try {
-      await apiClient.updateProcess(process.id, { titulo: normalized });
+      await apiClient.updateProcess(process.id, { titulo: normalized, expectedDataRevision:titleBaseRevision });
       setTitleEditing(false);
       setNotice('Título atualizado.');
       await onUpdated();
@@ -136,7 +139,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
             <div className="flex items-center justify-between gap-2">
               <span className={fieldLabel}>Título do trabalho</span>
               {canEdit && !titleEditing && (
-                <button type="button" onClick={() => setTitleEditing(true)} aria-label="Editar título do trabalho" title="Editar título" className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 hover:underline">
+                <button type="button" onClick={() => {setTitleBaseRevision(process.dataRevision);setTitleEditing(true);}} aria-label="Editar título do trabalho" title="Editar título" className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 hover:underline">
                   <Pencil className="h-3 w-3" aria-hidden="true" /> Editar
                 </button>
               )}
