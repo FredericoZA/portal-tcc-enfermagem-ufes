@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
+import { PORTAL_LIVE_UPDATE_EVENT } from '../utils/portalLiveEvents';
 import { GlobalRole, ProcessMembership, GlobalSettings } from '../types';
 import { apiClient, ApiRequestError, setActiveUserEmail, getActiveUserEmail } from '../services/apiClient';
 import { loadSiteLayoutConfig } from '../utils/siteLayoutConfig';
