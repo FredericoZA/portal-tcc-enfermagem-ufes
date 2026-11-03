@@ -6,7 +6,7 @@ import { apiClient } from '../services/apiClient';
 export const PORTAL_LIVE_UPDATE_EVENT = 'portal:remote-data-changed';
 export const PORTAL_LIVE_POLL_INTERVAL_MS = 15_000;
 
-export type PortalLiveUpdate = { revision:number };
+export type PortalLiveUpdate = { revision:string };
 
 /**
  * Consulta somente a revisão transacional (não carrega todos os processos).
@@ -17,17 +17,18 @@ export const PortalLiveSync:React.FC = () => {
   const { isAuthenticated, userEmail } = useAuth();
 
   useEffect(() => {
-    if (!isAuthenticated) return;
     let active = true;
     let inFlight = false;
-    let lastRevision: number | null = null;
+    let lastRevision: string | null = null;
 
     const poll = async () => {
       if (!active || inFlight || document.visibilityState === 'hidden' || !navigator.onLine) return;
       inFlight = true;
       try {
-        const { revision } = await apiClient.getPortalSyncVersion();
-        if (!active || !Number.isSafeInteger(revision) || revision < 0) return;
+        const revision = isAuthenticated
+          ? String((await apiClient.getPortalSyncVersion()).revision)
+          : (await apiClient.getPublicSyncVersion()).token;
+        if (!active || !revision) return;
         if (lastRevision !== null && revision !== lastRevision) {
           window.dispatchEvent(new CustomEvent<PortalLiveUpdate>(PORTAL_LIVE_UPDATE_EVENT, {
             detail: {revision},
