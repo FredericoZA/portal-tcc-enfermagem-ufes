@@ -160,8 +160,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
         <button type="button" onClick={() => handleNav('home')} className="flex items-center gap-2 hover:opacity-95 transition-opacity focus:outline-none cursor-pointer flex-1 min-w-0" title="Ir para o Calendário Público Inicial">
           <NursingEmblemLogo size={72} className="shrink-0" customSrc={sidebarLogoSrc} />
           <div className="flex flex-col flex-1 min-w-0 items-center justify-center text-center pr-1">
-            <h1 className="font-black text-[16px] sm:text-[17px] tracking-tight uppercase leading-tight text-center whitespace-normal w-full" style={{ color: sidebarHeaderTitleColor }}>{layoutConfig.sidebarTitle || 'Portal de TCC'}</h1>
-            <div className="mt-1.5 w-full text-center text-[12px] sm:text-[13px] font-black tracking-[0.055em] leading-[1.25] uppercase" style={{ color: sidebarAccent }}>
+            <h1 className="font-black text-[14.4px] sm:text-[15.3px] tracking-tight uppercase leading-tight text-center whitespace-normal w-full" style={{ color: sidebarHeaderTitleColor }}>{layoutConfig.sidebarTitle || 'Portal de TCC'}</h1>
+            <div className="mt-1.5 w-full text-center text-[10.8px] sm:text-[11.7px] font-black tracking-[0.055em] leading-[1.25] uppercase" style={{ color: sidebarAccent }}>
               <span className="block">{layoutConfig.sidebarSubtitle || 'Enfermagem'}</span>
             </div>
           </div>
