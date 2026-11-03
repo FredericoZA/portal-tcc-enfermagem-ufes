@@ -1,4 +1,4 @@
-import { formatNameTitleCase } from './formatters';
+import { formatNameTitleCase, normalizeEmail } from './formatters';
 
 export const OTHER_DEFENSE_LOCATION = 'Outro local — informar endereço/nome';
 export const CUSTOM_LOCATION_FIELD = 'DEFESA_OUTRO_LOCAL_NOME';
@@ -52,4 +52,13 @@ export function getCustomLocationFieldValue(answers: Record<string, unknown>): s
 /** Filtro específico: nunca encaminhar local customizado ao departamento. */
 export function isCustomLocationRegistration(answers: Record<string, unknown> | null | undefined): boolean {
   return isOtherDefenseLocation(answers?.DEFESA_LOCAL);
+}
+
+/** Destinatário oficial do pedido de confirmação, sem fallback para outro papel. */
+export function reservationConfirmationRecipient(
+  answers: Record<string, unknown> | null | undefined,
+  advisorEmail: string,
+  departmentEmail: string,
+): string {
+  return normalizeEmail(isCustomLocationRegistration(answers) ? advisorEmail : departmentEmail);
 }
