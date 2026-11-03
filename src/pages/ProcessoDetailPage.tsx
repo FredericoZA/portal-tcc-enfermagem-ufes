@@ -11,6 +11,7 @@ import { StudentNames } from '../components/StudentNames';
 import { DocumentPreviewModal } from '../components/DocumentPreviewModal';
 import { CorrectionRequestModal } from '../components/CorrectionRequestModal';
 import { PortalModalShell } from '../components/PortalModalShell';
+import { ProcessSummaryCard } from '../components/ProcessSummaryCard';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { DynamicStudioForms } from '../components/DynamicStudioForms';
 import { RegistrationFieldPreview } from '../components/RegistrationFieldPreview';
@@ -161,12 +162,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     coorientadorInstituicao: ''
   });
 
-  const [defesaForm, setDefesaForm] = useState({
-    startAt: '',
-    local: '',
-    formato: 'Presencial'
-  });
-
   const [bancaForm, setBancaForm] = useState<any[]>([]);
 
   // Local Session Audit Log
@@ -226,13 +221,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         coorientadorNome: pData.coorientador?.nome || '',
         coorientadorEmail: pData.coorientador?.email || '',
         coorientadorInstituicao: pData.coorientador?.instituicao || installationProfile.defaultInstitutionName
-      });
-
-      // Populate Defesa Form
-      setDefesaForm({
-        startAt: pData.defesa?.startAt ? pData.defesa.startAt.substring(0, 16) : '',
-        local: pData.defesa?.local || '',
-        formato: pData.defesa?.formato || 'Presencial'
       });
 
       // Populate Banca Form
@@ -408,21 +396,12 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         instituicao: cadastralForm.coorientadorInstituicao.trim() || installationProfile.defaultInstitutionName
       } : null;
 
-      const updatedDefesa = {
-        local: defesaForm.local.trim() || process.defesa?.local || installationProfile.defaultDefenseLocation,
-        startAt: defesaForm.startAt ? new Date(defesaForm.startAt).toISOString() : process.defesa.startAt,
-        endAt: defesaForm.startAt ? new Date(Date.parse(defesaForm.startAt)+(settings.slotDurationMinutes||90)*60_000).toISOString() : process.defesa.endAt,
-        alternateLocation: process.defesa.alternateLocation,
-        formato: defesaForm.formato || 'Presencial'
-      };
-
       await apiClient.updateProcess(process.id, {
         titulo: cadastralForm.titulo.trim(),
         aluno1: updatedAluno1,
         aluno2: updatedAluno2,
         orientador: updatedOrientador,
-        coorientador: updatedCoorientador,
-        defesa: updatedDefesa
+        coorientador: updatedCoorientador
       });
 
       const newLog: AuditLogEntry = {
@@ -431,49 +410,15 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         user: userEmail || 'Usuário do Sistema',
         role: isCommissionPresident ? 'Presidente da Comissão' : isMasterAdmin ? 'Administrador Master' : 'Orientador',
         action: 'EDICAO_FICHA_CADASTRAL',
-        details: `Atualização dos dados cadastrais e agendamento (Título: "${cadastralForm.titulo.substring(0, 35)}...")`
+        details: `Atualização dos dados cadastrais (Título: "${cadastralForm.titulo.substring(0, 35)}...")`
       };
       setAuditLogs(prev => [newLog, ...prev]);
 
       setEditingSection(null);
       await loadData();
-      portalNotice('Ficha cadastral e agendamento atualizados com sucesso!');
+      portalNotice('Ficha cadastral atualizada. Para modificar a reserva, envie uma nova solicitação.');
     } catch (err: any) {
       portalNotice(err.message || 'Erro ao salvar alterações da ficha cadastral.');
-    }
-  };
-
-  const handleSaveDefesaEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!process) return;
-    try {
-      const updatedDefesa = {
-        local: defesaForm.local.trim(),
-        startAt: defesaForm.startAt ? new Date(defesaForm.startAt).toISOString() : process.defesa.startAt,
-        endAt: defesaForm.startAt ? new Date(Date.parse(defesaForm.startAt)+(settings.slotDurationMinutes||90)*60_000).toISOString() : process.defesa.endAt,
-        alternateLocation: process.defesa.alternateLocation,
-        formato: defesaForm.formato
-      };
-
-      await apiClient.updateProcess(process.id, {
-        defesa: updatedDefesa
-      });
-
-      const newLog: AuditLogEntry = {
-        id: `log-${Date.now()}`,
-        timestamp: new Date().toLocaleString('pt-BR'),
-        user: userEmail || 'Usuário do Sistema',
-        role: isCommissionPresident ? 'Presidente da Comissão' : isMasterAdmin ? 'Administrador Master' : 'Orientador',
-        action: 'EDICAO_DEFESA',
-        details: `Alteração no agendamento da defesa: ${formatDatePt(updatedDefesa.startAt)} em ${updatedDefesa.local}`
-      };
-      setAuditLogs(prev => [newLog, ...prev]);
-
-      setEditingSection(null);
-      await loadData();
-      portalNotice('Dados da defesa e agendamento atualizados com sucesso!');
-    } catch (err: any) {
-      portalNotice(err.message || 'Erro ao salvar alterações da defesa.');
     }
   };
 
@@ -795,7 +740,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     className="inline-flex items-center gap-1 text-xs font-black text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 shadow-2xs transition-colors cursor-pointer"
                   >
                     <Edit className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Editar Ficha & Defesa</span>
+                    <span>Editar Ficha</span>
                   </button>
                 )
               )}
@@ -1001,45 +946,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     )}
                   </div>
 
-                  {/* Agendamento da Defesa */}
-                  <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200 space-y-2">
-                    <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                      Agendamento da Defesa Pública
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Data e Hora da Apresentação</label>
-                        <input
-                          type="datetime-local"
-                          value={defesaForm.startAt}
-                          onChange={(e) => setDefesaForm({ ...defesaForm, startAt: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Local / Sala / Auditório</label>
-                        <input
-                          type="text"
-                          placeholder="Ex.: sala de defesas ou link da videoconferência"
-                          value={defesaForm.local}
-                          onChange={(e) => setDefesaForm({ ...defesaForm, local: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Formato da Sessão</label>
-                        <select
-                          value={defesaForm.formato}
-                          onChange={(e) => setDefesaForm({ ...defesaForm, formato: e.target.value })}
-                          className="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-700 outline-none cursor-pointer"
-                        >
-                          <option value="Presencial">Presencial</option>
-                          <option value="Remoto / Online">Remoto / Online</option>
-                          <option value="Híbrido">Híbrido</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
+                  <p className="rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-[11px] leading-4 text-slate-700">
+                    Data, horário e local da defesa não são alterados pela ficha cadastral.
+                    Utilize <strong>Alterar reserva</strong> no quadro Dados do processo para enviar nova solicitação ao responsável.
+                  </p>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
@@ -1055,60 +965,19 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     className="text-xs font-extrabold uppercase tracking-wider text-white px-5 py-2 rounded-lg bg-emerald-800 hover:bg-emerald-900 shadow-2xs cursor-pointer transition-all flex items-center gap-1.5"
                   >
                     <Save className="w-3.5 h-3.5" />
-                    <span>Salvar Ficha & Defesa</span>
+                    <span>Salvar Ficha</span>
                   </button>
                 </div>
               </form>
             ) : (
               <div className="space-y-4">
                 
-                {/* Top Metadata & Defesa Info Grid */}
-                <div className="bg-slate-50/90 border border-slate-200/90 rounded-xl p-3.5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 shadow-2xs">
-                  <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                      Protocolo
-                    </span>
-                    <span className="font-mono font-bold text-slate-900 text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-md inline-block">
-                      {process.protocolo}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                      Etapa Regimental
-                    </span>
-                    <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md inline-block">
-                      {process.etapaAtual}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                      Data da Defesa
-                    </span>
-                    <span className="font-semibold text-slate-900 text-xs block">
-                      {formatDatePt(process.defesa?.startAt)}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                      Horário
-                    </span>
-                    <span className="font-semibold text-slate-900 text-xs block">
-                      {formatTimeExtenso(process.defesa?.startAt)} (90 min)
-                    </span>
-                  </div>
-
-                  <div className="col-span-2 sm:col-span-1">
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                      Local / Auditório
-                    </span>
-                    <span className="font-semibold text-slate-900 text-xs truncate block" title={process.defesa?.local}>
-                      {process.defesa?.local || installationProfile.defaultDefenseLocation}
-                    </span>
-                  </div>
-                </div>
+                <ProcessSummaryCard
+                  process={process}
+                  canEdit={canEditData && !readOnly}
+                  studio={settings.integrationStudio}
+                  onUpdated={loadData}
+                />
 
                 {/* People Grid (Discentes e Orientadores filling 100% of row width) */}
                 {(() => {
