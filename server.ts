@@ -2622,6 +2622,9 @@ export async function createPortalApp() {
     }
 
     const existing = processesStore[procIndex];
+    if(req.body?.expectedDataRevision!==undefined&&Number(req.body.expectedDataRevision)!==existing.dataRevision){
+      return res.status(409).json({error:'Este TCC foi atualizado em outra sessão. Recarregue os dados antes de salvar.',code:'STALE_DATA_REVISION'});
+    }
     if(!canAccessProcess(actorEmail,existing.id))return res.status(404).json({error:'Processo não encontrado.'});
     const activeRoles=getActiveProcessRoles(actorEmail,existing.id);
     const isFullAdministrator=hasFullAdministration(actorEmail);
