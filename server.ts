@@ -17,6 +17,7 @@ import type { RegistrationDraft, ReminderRecord } from './src/types/workflowOper
 import { buildAdvancedAnalytics, analyticsCsv, analyticsMarkdown } from './server/advancedAnalytics';
 import { simulateWorkflow } from './server/workflow/simulator';
 import { acceptRegistration } from './server/workflow/registration';
+import { validateReservationChange, buildReservationChangeEmail } from './server/workflow/reservationChange';
 import { ataArchived, declarationReady } from './server/workflow/gates';
 import { nextPendingSignatureSigner } from './server/workflow/signatureOrder';
 import { operationalConfig, presentVariables } from './src/utils/operationalConfig';
@@ -2450,6 +2451,84 @@ export async function createPortalApp() {
       auditLogsStore.push({id:`log-${Date.now()}-invite`,processId:process.id,actorEmail:identity.email,actorRoles:[...getUserRolesForEmail(identity.email).globalRoles,...roles],action:'FLUXO_CONVITE_CONCLUIDO',entityType:'processo',entityId:process.id,after:{driveFileId:updated.defesa.invitationDriveFileId,recipients},timestamp:updated.updatedAt});
       await persistPortalStateDurably();await executeConfiguredWorkflowEvent(updated,'INVITATION_SENT',identity.email);res.json(updated);
     }catch(error){res.status(502).json({error:error instanceof Error?error.message:'Não foi possível executar o fluxo da carta-convite.'});}
+  });
+
+  // Uma alteração de reserva é apenas uma solicitação até confirmação formal.
+  // Preserva-se a defesa vigente, eventuais PDFs emitidos e o histórico anterior.
+  app.post('/api/processes/:id/reservation-change', requireAuthenticated, async (req, res) => {
+    const identity=getPortalIdentity(req)!;
+    const process=processesStore.find(item=>item.id===req.params.id);
+    if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
+    const roles=getActiveProcessRoles(identity.email,process.id);
+    if(!hasFullAdministration(identity.email)&&!roles.includes('STUDENT'))return res.status(403).json({error:'Somente os alunos autores ou a administração podem solicitar uma nova reserva.'});
+    if(process.status==='CONCLUIDO'||process.avaliacao.status==='CONCLUIDO')return res.status(409).json({error:'A defesa já foi concluída. Solicite uma correção administrativa formal.'});
+    if(Number(req.body?.expectedDataRevision)!==process.dataRevision)return res.status(409).json({error:'Os dados do TCC mudaram. Reabra o processo para conferir os valores antes do envio.',code:'STALE_DATA_REVISION'});
+
+    let proposed:ReturnType<typeof validateReservationChange>;
+    try {
+      const options=operationalConfig(currentSettings.integrationStudio).reservation.locations.filter(Boolean);
+      proposed=validateReservationChange(req.body||{},process,options,currentSettings.slotDurationMinutes||90);
+    } catch(error) {
+      return res.status(400).json({error:error instanceof Error?error.message:'Confira os dados solicitados.'});
+    }
+    const academicError=validateAcademicWindow(proposed.startAt);
+    if(academicError)return res.status(409).json({error:academicError,code:'ACADEMIC_WINDOW_CLOSED'});
+    const conflicts=isPortalFeatureEnabled(currentSettings,'DEFENSE_CONFLICTS')
+      ?findDefenseConflicts({startAt:proposed.startAt,endAt:proposed.endAt,local:proposed.local,emails:participantEmails(process),excludeProcessId:process.id})
+      :[];
+    if(conflicts.length)return res.status(409).json({error:'A nova reserva conflita com outra defesa ou participante. Escolha outro horário ou local.',code:'DEFENSE_CONFLICT',conflicts});
+
+    const departmentEmail=configuredRoomReservationDepartmentEmail();
+    const recipient=reservationConfirmationRecipient({DEFESA_LOCAL:String(req.body?.locationChoice||'')},process.orientador.email,departmentEmail);
+    if(!isValidPortalEmail(recipient))return res.status(409).json({error:proposed.custom?'O e-mail do orientador está inválido ou ausente.':'Configure o e-mail do Departamento antes de solicitar a nova reserva.',code:'RESERVATION_RECIPIENT_MISSING'});
+
+    const previous=process.defesa.reservationChangeRequest;
+    if(previous&&['PENDING','SENT'].includes(previous.status)){
+      return res.status(409).json({error:'Já existe uma nova solicitação aguardando resposta. Aguarde a confirmação ou a recusa antes de enviar outra.',code:'RESERVATION_REQUEST_PENDING'});
+    }
+    const sameFailed=previous?.status==='SEND_FAILED'&&previous.startAt===proposed.startAt&&previous.local===proposed.local&&previous.recipient===recipient;
+    const requestId=sameFailed?previous!.requestId:randomBytes(12).toString('hex');
+    const now=new Date().toISOString();
+    const request:NonNullable<ProcessData['defesa']['reservationChangeRequest']>={
+      requestId,
+      requestedAt:sameFailed?previous!.requestedAt:now,
+      requestedBy:identity.email,
+      startAt:proposed.startAt,
+      endAt:proposed.endAt,
+      local:proposed.local,
+      recipient,
+      status:'PENDING',
+    };
+    process.defesa.reservationChangeRequest=request;
+    process.updatedAt=now;
+    auditLogsStore.push({
+      id:`log-${Date.now()}-reservation-${requestId}`,
+      processId:process.id,actorEmail:identity.email,
+      actorRoles:[...getUserRolesForEmail(identity.email).globalRoles,...roles],
+      action:'NOVA_SOLICITACAO_RESERVA',entityType:'defense_reservation_request',entityId:requestId,
+      after:{requestedAt:request.requestedAt,startAt:request.startAt,endAt:request.endAt,local:request.local,recipient},
+      timestamp:now,
+    });
+    await persistPortalStateDurably();
+    const email=buildReservationChangeEmail(process,proposed,proposed.custom);
+    try {
+      const delivery=await sendTrackedPortalEmail({
+        process,recipient,subject:email.subject,text:email.text,
+        templateId:'email-reserva-alteracao',
+        idempotencyKey:`reservation-change:${process.id}:${requestId}:${recipient}`,
+      });
+      if(delivery.status!=='ACCEPTED_BY_GMAIL')throw new Error('O Gmail ainda não confirmou o envio.');
+      request.status='SENT';request.sentAt=new Date().toISOString();
+      process.updatedAt=request.sentAt;
+      await persistPortalStateDurably();
+      return res.json({process,emailSent:true,status:request.status});
+    } catch(error) {
+      request.status='SEND_FAILED';
+      request.failureMessage=error instanceof Error?error.message:'Não foi possível confirmar o envio.';
+      process.updatedAt=new Date().toISOString();
+      await persistPortalStateDurably();
+      return res.status(202).json({process,emailSent:false,status:request.status});
+    }
   });
 
   // GET /api/processes/:id
