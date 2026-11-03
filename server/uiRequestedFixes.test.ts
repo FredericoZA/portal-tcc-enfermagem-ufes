@@ -111,7 +111,9 @@ test('e-mail do Departamento é definido no modelo de e-mail e permanece fail-cl
   assert.match(configPage, /id: 'email-reserva'/);
   assert.match(server, /configuredRoomReservationDepartmentEmail\(studio/);
   assert.match(server, /templateId==='email-reserva'/);
-  assert.match(server, /destinatário diverge do e-mail definido no modelo de solicitação de reserva/);
+  assert.match(server, /reservationConfirmationRecipient/);
+  assert.match(server, /destinatário diverge do responsável definido para o local escolhido/);
+  assert.match(server, /Envio ao departamento bloqueado: a confirmação do local escolhido cabe ao orientador/);
   assert.match(server, /Configurações → Modelos e Variáveis → E-mails/);
   assert.doesNotMatch(operational, /dptenfccs@gmail\.com/);
   assert.match(courseStudioValidator, /Informe diretamente o e-mail do Departamento de Enfermagem/);
