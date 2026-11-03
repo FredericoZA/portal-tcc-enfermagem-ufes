@@ -10,15 +10,14 @@ import type { RegistrationAnswers, RegistrationQuestion } from '../types/operati
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
 
 function Question({ field, value, readOnly, onChange }: { field: RegistrationQuestion; value: unknown; readOnly: boolean; onChange: (value: string|boolean)=>void }) {
+  const previewKind = registrationPreviewKind(field.fieldKey, field.label, field.fieldType);
   return <label className={`block ${field.fieldType==='textarea'?'sm:col-span-2':''}`}>
     <span className="mb-2 block text-sm font-semibold">{field.label}{field.required?' *':''}</span>
     {field.fieldType==='checkbox'?<input type="checkbox" className="h-6 w-6" checked={value===true} onChange={e=>onChange(e.target.checked)}/>:
       field.fieldType==='textarea'?<textarea className="portal-input" rows={5} value={String(value??'')} maxLength={field.validation?.maxLength||10000} onChange={e=>onChange(e.target.value)}/>:
       ['select','radio'].includes(field.fieldType)?<select className="portal-input" value={String(value??'')} onChange={e=>onChange(e.target.value)}><option value="">Selecione…</option>{field.options?.map(option=><option key={option}>{option}</option>)}</select>:
       <input className="portal-input" type={['email','number','date','datetime-local'].includes(field.fieldType)?field.fieldType:'text'} readOnly={readOnly} value={String(value??'')} placeholder={field.placeholder} maxLength={field.validation?.maxLength||500} onChange={e=>onChange(e.target.value)}/>}
-    {registrationPreviewKind(field.fieldKey, field.label, field.fieldType) && (
-      <RegistrationFieldPreview kind={registrationPreviewKind(field.fieldKey, field.label, field.fieldType)!} value={String(value ?? '')} />
-    )}
+    {previewKind && <RegistrationFieldPreview kind={previewKind} value={String(value ?? '')} />}
     {field.helpText&&<span className="mt-1 block text-sm opacity-80">{field.helpText}</span>}
   </label>;
 }
