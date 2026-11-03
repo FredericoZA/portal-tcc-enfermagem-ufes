@@ -1,5 +1,6 @@
 import { OTHER_DEFENSE_LOCATION, isOtherDefenseLocation, renderCustomLocationName } from '../../src/utils/customDefenseLocation';
 import { formatDatePt, formatTimeExtenso } from '../../src/utils/formatters';
+import { officialParticipantLines } from '../../src/utils/officialParticipants';
 import { localDateTimeToIso } from '../../src/utils/operationalConfig';
 import type { ProcessData } from '../../src/types';
 
@@ -65,8 +66,7 @@ export function buildReservationChangeEmail(
     '',
     `Solicitamos nova confirmação de reserva para o TCC ${process.protocolo}.`,
     `Título: ${process.titulo}`,
-    `Aluno(s): ${[process.aluno1.nome, process.aluno2?.nome].filter(Boolean).join(' e ')}`,
-    `Orientador(a): ${process.orientador.nome}`,
+    ...officialParticipantLines(process).map(item => `${item.role}: ${item.name}`),
     '',
     'Reserva informada anteriormente:',
     `Data: ${formatDatePt(process.defesa.startAt)}`,
