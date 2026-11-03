@@ -2487,6 +2487,9 @@ export async function createPortalApp() {
       return res.status(409).json({error:'Já existe uma nova solicitação aguardando resposta. Aguarde a confirmação ou a recusa antes de enviar outra.',code:'RESERVATION_REQUEST_PENDING'});
     }
     const sameFailed=previous?.status==='SEND_FAILED'&&previous.startAt===proposed.startAt&&previous.local===proposed.local&&previous.recipient===recipient;
+    if(previous?.status==='SEND_FAILED'&&!sameFailed){
+      return res.status(409).json({error:'O envio anterior ainda não foi confirmado. Repita a solicitação com os mesmos dados ou contate a secretaria para conferência.',code:'RESERVATION_EMAIL_UNCONFIRMED'});
+    }
     const requestId=sameFailed?previous!.requestId:randomBytes(12).toString('hex');
     const now=new Date().toISOString();
     const request:NonNullable<ProcessData['defesa']['reservationChangeRequest']>={
@@ -2496,6 +2499,7 @@ export async function createPortalApp() {
       startAt:proposed.startAt,
       endAt:proposed.endAt,
       local:proposed.local,
+      locationChoice:String(req.body.locationChoice),
       recipient,
       status:'PENDING',
     };
