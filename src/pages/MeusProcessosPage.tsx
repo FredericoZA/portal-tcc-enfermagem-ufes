@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { ProcessData, ProcessRole } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
@@ -230,20 +231,26 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
   // A tabela nasce ordenada por data; novas ordenações são tratadas pelo menu canônico de cada coluna.
   const sortColumn: string = 'defesaDataHora';
 
-  const loadProcesses = async () => {
-    setIsLoading(true);
+  const loadProcesses = async (background = false) => {
+    if (!background) setIsLoading(true);
     try {
       const data = await apiClient.getProcesses();
       setProcesses(data);
     } catch (err) {
       console.error('Erro ao buscar processos:', err);
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    loadProcesses();
+    void loadProcesses();
+  }, [userEmail]);
+
+  useEffect(() => {
+    const update = () => { void loadProcesses(true); };
+    window.addEventListener(PORTAL_LIVE_UPDATE_EVENT,update);
+    return () => window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT,update);
   }, [userEmail]);
 
   // Determine roles of user for a given process
