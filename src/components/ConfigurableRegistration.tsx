@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { RegistrationFieldPreview, registrationPreviewKind } from './RegistrationFieldPreview';
 import { apiClient } from '../services/apiClient';
 import { portalNotice } from '../services/portalDialogs';
 import { evaluateStudioCondition, validateStudioAnswer } from '../utils/courseStudioValidator';
@@ -15,6 +16,9 @@ function Question({ field, value, readOnly, onChange }: { field: RegistrationQue
       field.fieldType==='textarea'?<textarea className="portal-input" rows={5} value={String(value??'')} maxLength={field.validation?.maxLength||10000} onChange={e=>onChange(e.target.value)}/>:
       ['select','radio'].includes(field.fieldType)?<select className="portal-input" value={String(value??'')} onChange={e=>onChange(e.target.value)}><option value="">Selecione…</option>{field.options?.map(option=><option key={option}>{option}</option>)}</select>:
       <input className="portal-input" type={['email','number','date','datetime-local'].includes(field.fieldType)?field.fieldType:'text'} readOnly={readOnly} value={String(value??'')} placeholder={field.placeholder} maxLength={field.validation?.maxLength||500} onChange={e=>onChange(e.target.value)}/>}
+    {registrationPreviewKind(field.fieldKey, field.label, field.fieldType) && (
+      <RegistrationFieldPreview kind={registrationPreviewKind(field.fieldKey, field.label, field.fieldType)!} value={String(value ?? '')} />
+    )}
     {field.helpText&&<span className="mt-1 block text-sm opacity-80">{field.helpText}</span>}
   </label>;
 }
