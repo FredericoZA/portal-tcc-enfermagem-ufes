@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { NursingEmblemLogo } from './NursingEmblemLogo';
+import { FeedbackModal } from './FeedbackModal';
 import {
   Award,
   BarChart3,
@@ -12,6 +13,8 @@ import {
   GitBranch,
   HelpCircle,
   Info,
+  Lightbulb,
+  Inbox,
   LogIn,
   LogOut,
   MapPin,
@@ -73,13 +76,14 @@ async function reverseGeocodeUserLocation(latitude: number, longitude: number): 
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isOpenMobile, setIsOpenMobile }) => {
-  const { isMasterAdmin, isAuthenticated, settings, userEmail, logout } = useAuth();
+  const { isMasterAdmin, isCommissionPresident, isAuthenticated, settings, userEmail, logout } = useAuth();
   const courseLogo = String((settings as any)?.courseLogoDataUrl || '');
   const configuredLogo = settings?.integrationStudio?.brandKit?.courseLogoUrl || settings?.integrationStudio?.brandKit?.universityLogoUrl || '';
   const isVisitor = !isAuthenticated;
   const isCollapsed = false;
   const [isHovered, setIsHovered] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [feedbackMode,setFeedbackMode]=useState<'submit'|'inbox'|null>(null);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
   const appVersion = String((import.meta as any).env?.VITE_APP_VERSION || '0.0.0');
   const buildCommit = String((import.meta as any).env?.VITE_GIT_COMMIT || '').slice(0, 7);
@@ -210,9 +214,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             <div className="mt-1 text-xs font-semibold break-all text-center" style={{ color: sidebarFooterTextColor }} title={userEmail}>{userEmail}</div>
           </div>
         </>}
+        <button id="bottom-suggestions-btn" type="button" onClick={() => setFeedbackMode('submit')} className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/70 bg-emerald-100 px-3 py-2.5 text-xs font-bold text-emerald-950 shadow-sm transition-colors hover:bg-white">
+          <Lightbulb className="h-4 w-4" aria-hidden="true"/> Sugestões de melhoria
+        </button>
+        {(isMasterAdmin||isCommissionPresident)&&(
+          <button id="bottom-feedback-inbox-btn" type="button" onClick={() => setFeedbackMode('inbox')} className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/30 px-3 py-2 text-[11px] font-bold text-white hover:bg-white/10">
+            <Inbox className="h-3.5 w-3.5" aria-hidden="true"/> Sugestões recebidas
+          </button>
+        )}
         <div className="flex items-center justify-center gap-1.5 text-[10px] whitespace-normal leading-4 text-center" style={{ color: sidebarFooterMutedColor }} title={userLocation}><MapPin className="h-3 w-3 shrink-0"/><span>{userLocation}</span></div>
         <div className="text-[9px] font-medium tracking-wide text-center" style={{ color: sidebarFooterMutedColor }} title={buildCommit ? `Fingerprint do build: ${buildCommit}` : undefined}>Versão do sistema: {appVersion}{buildCommit ? ` · ${buildCommit}` : ''}</div>
       </div>
     </aside>
+    <FeedbackModal open={feedbackMode!==null} mode={feedbackMode||'submit'} onClose={()=>setFeedbackMode(null)} />
   </>;
 };
