@@ -23,7 +23,9 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
   local.defesa.localConfirmedBy = p.aluno1.email;
   local.defesa.localConfirmedAt = new Date().toISOString();
   const memberships = DEMO_MEMBERSHIPS.filter(m => m.processId === p.id);
-  await writeFile(path.join(directory, 'portal-state.json'), JSON.stringify({ settings, processes: [p, local], memberships: [...memberships, ...memberships.map(m => ({ ...m, id: m.id + '-local', processId: local.id }))] }));
+  const archived=structuredClone(p);archived.id='fixture-reopen-archived';archived.status='AGUARDANDO_DADOS_FINAIS';archived.avaliacao.status='CONCLUIDO';archived.acervo.firstSubmittedAt=undefined;
+  const archivedJob={id:'fixture-archived-ata',processId:archived.id,documentType:'ATA',provider:'ASTEN',documentVersion:1,sourceDataRevision:archived.dataRevision,status:'ARCHIVED',driveSignedFileId:'fixture-signed-ata',signers:[]};
+  await writeFile(path.join(directory, 'portal-state.json'), JSON.stringify({ settings, processes: [p, local,archived],signatureJobs:[archivedJob], memberships: [...memberships, ...[local,archived].flatMap(process=>memberships.map(m => ({ ...m, id: m.id + '-'+process.id, processId: process.id })))] }));
   const port = 41000 + Math.floor(Math.random() * 1000);
   const child = spawn(process.execPath, ['--import', 'tsx', 'server.ts'], {
     cwd: fileURLToPath(new URL('..', import.meta.url)),
@@ -127,7 +129,7 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     assert.equal(disk.studioFormSubmissions[0].formSnapshot.questions[0].label, 'Escolha');
     assert.equal(disk.settings.portalAppearance, undefined);
     assert.equal(disk.processes[0].avaliacao.notaFinal, undefined);
-    assert.equal((disk.signatureJobs||[]).length,0,'Registering evaluation must not create an Asten or Gov.br job.');
+    assert.deepEqual(disk.signatureJobs,[archivedJob],'Registering evaluation must preserve the historical job and not create an Asten or Gov.br job.');
     assert.equal((disk.formArchiveJobs||[]).some((job:any)=>job.formType==='AVALIACAO'),false,'A avaliação integrada não gera outro formulário em PDF.');
     const reopenRoute=`/api/processes/${p.id}/reopen`,reason={reason:'Correção do parecer registrado na defesa.'};
     assert.equal((await request(reopenRoute,p.aluno1.email,reason)).status,403);
@@ -135,6 +137,16 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     const reopened=await request(reopenRoute,p.orientador.email,reason);
     assert.equal(reopened.status,200,JSON.stringify(reopened.body));assert.equal(reopened.body.avaliacao.status,'PENDENTE');
     assert.equal((await request(reopenRoute,'master@portal.local',reason)).status,200);
+    const historicalReopen=await request(`/api/processes/${archived.id}/reopen`,p.orientador.email,reason);
+    assert.equal(historicalReopen.status,200,JSON.stringify(historicalReopen.body));
+    const revisedBody={...body,expectedDataRevision:historicalReopen.body.dataRevision,documentText:'Ata revisada '.repeat(3000)};
+    const historicalPreview=await request(`/api/processes/${archived.id}/evaluation/preview`,p.orientador.email,revisedBody);
+    assert.equal(historicalPreview.status,200,JSON.stringify(historicalPreview.body));
+    const historicalSaved=await request(`/api/processes/${archived.id}/evaluation`,p.orientador.email,{...revisedBody,previewToken:historicalPreview.body.previewToken});
+    assert.equal(historicalSaved.status,200,JSON.stringify(historicalSaved.body));
+    assert.equal(historicalSaved.body.avaliacao.status,'CONCLUIDO');
+    const finalDisk=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));
+    assert.deepEqual(finalDisk.signatureJobs,[archivedJob],'the signed previous ATA remains immutable after corrected evaluation');
 
   } finally {
     if (child.exitCode === null) {

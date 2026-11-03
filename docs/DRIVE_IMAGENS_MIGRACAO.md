@@ -9,6 +9,14 @@ das sugestões no Drive privado. O Supabase passa a guardar somente referências
 tipo, tamanho e SHA-256. As URLs públicas opacas das imagens de identidade e a
 consulta privada de capturas pelo Master permanecem iguais.
 
+A raiz acadêmica vem das configurações persistidas no Portal; a variável
+`PORTAL_DRIVE_ROOT_FOLDER_ID` continua opcional para o bootstrap. Ao salvar um
+novo snapshot, sua raiz é usada na mesma operação. SVGs e GIFs aceitos pelo
+editor são convertidos em PNG no servidor, com transparência e limites de
+tamanho/pixels; GIFs usam o primeiro quadro. A chave e a URL existentes são
+preservadas, e o banco recebe MIME, tamanho e hash dos bytes convertidos.
+Os originais legados permanecem disponíveis para recuperação até a conferência.
+
 ## Ordem de implantação
 
 1. A migração `20261103193915_drive_backed_permanent_images.sql` foi aplicada

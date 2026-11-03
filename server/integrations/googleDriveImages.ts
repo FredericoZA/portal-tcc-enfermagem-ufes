@@ -14,6 +14,7 @@ export interface PrivatePortalImage {
   byteLength: number;
 }
 interface ImageContext { accessToken: string; academicRootId: string; }
+export interface PortalImageInput { bytes: Buffer; mimeType: string; kind: PortalImageKind; key: string; academicRootId?: string; }
 
 function validFileId(value: string): boolean { return /^[a-zA-Z0-9_-]{10,}$/.test(value); }
 function safeKind(kind: PortalImageKind): string {
@@ -23,10 +24,23 @@ function safeKind(kind: PortalImageKind): string {
 }
 function validMime(value: string): value is ImageMime { return Object.hasOwn(MIME_EXTENSION, value); }
 
-/** No OAuth token or Drive identifier is ever returned to the browser. */
-async function context(): Promise<ImageContext> {
-  const academicRootId = String(process.env.PORTAL_DRIVE_ROOT_FOLDER_ID || '').trim();
+/** A pending settings snapshot takes precedence, then the saved installation,
+ * then the optional bootstrap environment. No process-global root cache. */
+export async function resolvePortalImageRoot(snapshotRootId?: string): Promise<string> {
+  let root = snapshotRootId;
+  if (root === undefined) {
+    const { loadPortalRuntimeState } = await import('./supabase');
+    const saved = await loadPortalRuntimeState<{ settings?: { driveRootFolderId?: string } }>(false);
+    root = saved?.settings?.driveRootFolderId || process.env.PORTAL_DRIVE_ROOT_FOLDER_ID;
+  }
+  const academicRootId = String(root || '').trim();
   if (!validFileId(academicRootId)) throw new Error('Configure a raiz privada do Drive antes de armazenar imagens.');
+  return academicRootId;
+}
+
+/** No OAuth token or Drive identifier is ever returned to the browser. */
+async function context(snapshotRootId?: string): Promise<ImageContext> {
+  const academicRootId = await resolvePortalImageRoot(snapshotRootId);
   const { getGoogleWorkspaceAccessToken } = await import('./googleWorkspace');
   return { accessToken: await getGoogleWorkspaceAccessToken(), academicRootId };
 }
@@ -64,6 +78,23 @@ async function validateImage(bytes: Buffer, mime: string): Promise<void> {
   if (metadata.format !== expected || !metadata.width || !metadata.height || (metadata.pages || 1) > 1) throw new Error('A imagem não corresponde ao tipo informado.');
 }
 
+/** The settings editor historically accepts SVG and GIF. Rasterize those
+ * inputs before archiving/serving them; SVG markup is never sent to a browser.
+ * Logos and backgrounds use the first GIF frame, preserving transparency. */
+export async function normalizePortalImage(bytes: Buffer, mimeType: string): Promise<{ bytes: Buffer; mimeType: ImageMime }> {
+  if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new Error('Imagem inválida ou acima de 4 MB.');
+  if (mimeType === 'image/svg+xml' || mimeType === 'image/gif') {
+    const image = sharp(bytes, { limitInputPixels: 16_000_000, pages: 1 });
+    const metadata = await image.metadata();
+    if (metadata.format !== (mimeType === 'image/gif' ? 'gif' : 'svg') || !metadata.width || !metadata.height) throw new Error('A imagem não corresponde ao tipo informado.');
+    const converted = await image.timeout({ seconds: 5 }).png().toBuffer();
+    await validateImage(converted, 'image/png');
+    return { bytes: converted, mimeType: 'image/png' };
+  }
+  await validateImage(bytes, mimeType);
+  return { bytes, mimeType: mimeType as ImageMime };
+}
+
 async function boundedBytes(response: Response, expectedSize: number): Promise<Buffer> {
   const announced = response.headers.get('content-length');
   if (announced && Number(announced) !== expectedSize) throw new Error('O tamanho da imagem no Drive mudou.');
@@ -98,26 +129,26 @@ export async function readPrivatePortalImage(ref: PrivatePortalImage, kind: Port
   return bytes;
 }
 
-/** Archive original bytes in Drive and verify readback before committing its metadata. */
-export async function storePrivatePortalImage(input: { bytes: Buffer; mimeType: string; kind: PortalImageKind; key: string }, suppliedContext?: ImageContext): Promise<PrivatePortalImage> {
+/** Archive validated raster bytes in Drive and verify readback before committing metadata. */
+export async function storePrivatePortalImage(input: PortalImageInput, suppliedContext?: ImageContext): Promise<PrivatePortalImage> {
   if (!/^[a-f0-9-]{32,64}$/.test(input.key)) throw new Error('Identificador da imagem inválido.');
-  await validateImage(input.bytes, input.mimeType);
-  const ctx = suppliedContext || await context();
+  const image = await normalizePortalImage(input.bytes, input.mimeType);
+  const ctx = suppliedContext || await context(input.academicRootId);
   const folderId = await imageFolder(input.kind, ctx, true);
-  const sha256 = createHash('sha256').update(input.bytes).digest('hex');
+  const sha256 = createHash('sha256').update(image.bytes).digest('hex');
   const query = new URLSearchParams({ q: `'${folderId}' in parents and appProperties has { key='imageKey' and value='${input.key}' } and trashed = false`, fields: 'files(id)', pageSize: '2' });
   const existing = await json<{ files?: Array<{ id: string }> }>(ctx.accessToken, `/files?${query}`);
   if ((existing.files?.length || 0) > 1) throw new Error('Há imagens duplicadas no destino privado.');
   let fileId = existing.files?.[0]?.id;
   if (!fileId) {
     const boundary = `portal-image-${randomUUID()}`;
-    const metadata = { name: `${input.key}.${MIME_EXTENSION[input.mimeType as ImageMime]}`, parents: [folderId], appProperties: { portal: 'portal-tcc', imageKind: input.kind, imageKey: input.key, sha256 } };
-    const body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${input.mimeType}\r\n\r\n`), input.bytes, Buffer.from(`\r\n--${boundary}--`)]);
+    const metadata = { name: `${input.key}.${MIME_EXTENSION[image.mimeType]}`, parents: [folderId], appProperties: { portal: 'portal-tcc', imageKind: input.kind, imageKey: input.key, sha256 } };
+    const body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${image.mimeType}\r\n\r\n`), image.bytes, Buffer.from(`\r\n--${boundary}--`)]);
     const uploaded = await fetch(`${DRIVE_UPLOAD_API}/files?uploadType=multipart&fields=id&supportsAllDrives=true`, { method: 'POST', headers: { Authorization: `Bearer ${ctx.accessToken}`, 'Content-Type': `multipart/related; boundary=${boundary}` }, body, signal: AbortSignal.timeout(30_000) });
     if (!uploaded.ok) throw new Error('O Drive não confirmou o arquivo da imagem.');
     fileId = String((await uploaded.json() as { id?: string }).id || '');
   }
-  const ref = { driveFileId: fileId, contentSha256: sha256, mimeType: input.mimeType, byteLength: input.bytes.length };
+  const ref = { driveFileId: fileId, contentSha256: sha256, mimeType: image.mimeType, byteLength: image.bytes.length };
   await readPrivatePortalImage(ref, input.kind, ctx);
   return ref;
 }

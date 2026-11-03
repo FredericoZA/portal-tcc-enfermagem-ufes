@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PDFDocument,StandardFonts} from 'pdf-lib';
-import {parseStudentImportText,parseStudentImportFile} from '../src/utils/studentImport';
+import JSZip from 'jszip';
+import {parseStudentImportText,parseStudentImportFile,studentImportTemplateXlsx} from '../src/utils/studentImport';
 import {accessImportIssues} from '../src/utils/accessImportValidation';
 
 const person={nome:'Maria Silva',email:'maria@example.invalid',matricula:'0000123'};
@@ -28,6 +29,25 @@ test('CSV Windows preserva acentos e zeros à esquerda',async()=>{
  const content=Buffer.from('Nome;E-mail;Matrícula\r\nAndr\xe9 Silva;andre@example.invalid;0000123','latin1');
  const rows=await parseStudentImportFile(new File([content],'LISTA.CSV'));
  assert.equal(rows[0].nome,'André Silva');assert.equal(rows[0].matricula,'0000123');
+});
+test('cabeçalho reconhecido preserva registros alfabéticos, espaçados e zeros à esquerda',()=>{
+ for(const delimiter of [';',',','\t'])for(const matricula of ['ABC','2026 001','0000123','AB 001 / XY']){
+  const input=`Nome completo${delimiter}E-mail${delimiter}Matrícula\nMaria Silva${delimiter}maria@example.invalid${delimiter}${matricula}`;
+  assert.deepEqual(parseStudentImportText(input),[{row:2,nome:'Maria Silva',email:'maria@example.invalid',matricula}]);
+  const reordered=`Matrícula${delimiter}Nome completo${delimiter}E-mail\n${matricula}${delimiter}Maria Silva${delimiter}maria@example.invalid`;
+  assert.deepEqual(parseStudentImportText(reordered),[{row:2,nome:'Maria Silva',email:'maria@example.invalid',matricula}]);
+ }
+ assert.deepEqual(parseStudentImportText('nome;email;matricula\n"Maria; Silva";maria@example.invalid;ABC'),[{row:2,nome:'Maria; Silva',email:'maria@example.invalid',matricula:'ABC'}]);
+});
+test('XLSX com colunas reconhecidas preserva registro sem números e com espaços',async()=>{
+ for(const matricula of ['ABC','2026 001']){
+  const blob=await studentImportTemplateXlsx(),zip=await JSZip.loadAsync(await blob.arrayBuffer());
+  let sheet=await zip.file('xl/worksheets/sheet1.xml')!.async('string');
+  for(const value of ['Maria Silva','maria@example.invalid',matricula])sheet=sheet.replace('<t xml:space="preserve"></t>',`<t xml:space="preserve">${value}</t>`);
+  zip.file('xl/worksheets/sheet1.xml',sheet);
+  const bytes=await zip.generateAsync({type:'uint8array'});
+  assert.deepEqual(await parseStudentImportFile(new File([bytes],'lista.xlsx')),[{row:2,nome:'Maria Silva',email:'maria@example.invalid',matricula}]);
+ }
 });
 test('PDF textual é lido localmente e PDF sem texto informa alternativa',async()=>{
  const doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica),page=doc.addPage();

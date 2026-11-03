@@ -3329,7 +3329,7 @@ export async function createPortalApp() {
     if(!canAccessProcess(actorEmail,proc.id))return res.status(404).json({error:'Processo não encontrado.'});
     const evaluatorRoles=getUserRolesForEmail(actorEmail);const canEvaluate=evaluatorRoles.globalRoles.includes('MASTER_ADMIN')||evaluatorRoles.memberships.some(m=>m.processId===proc.id&&m.roles.includes('ADVISOR'));
     if(!canEvaluate)return res.status(403).json({error:'Somente o orientador ou um administrador pode registrar a avaliação.'});
-    if(proc.avaliacao.status==='CONCLUIDO'||signatureJobsStore.some(job=>job.processId===proc.id&&job.documentType==='ATA'&&job.status!=='CANCELED'))return res.status(409).json({error:'A avaliação já foi concluída e vinculada à Ata. Somente uma reabertura administrativa formal pode criar nova versão.',code:'EVALUATION_ALREADY_SUBMITTED'});
+    if(proc.avaliacao.status==='CONCLUIDO'||signatureJobsStore.some(job=>job.processId===proc.id&&job.documentType==='ATA'&&job.sourceDataRevision===proc.dataRevision&&job.status!=='CANCELED'))return res.status(409).json({error:'A avaliação já foi concluída e vinculada à Ata. Somente uma reabertura administrativa formal pode criar nova versão.',code:'EVALUATION_ALREADY_SUBMITTED'});
     if(proc.defesa.localStatus!=='CONFIRMADO'||!proc.defesa.invitationSentAt)return res.status(409).json({error:'Confirme o local e envie a carta-convite antes de registrar a avaliação.',code:'PREVIOUS_STAGE_REQUIRED'});
     const signatureProvider=req.body?.signatureProvider||'ASTEN';
     if(!['ASTEN','GOV_BR'].includes(signatureProvider))return res.status(400).json({error:'Provedor de assinatura inválido.'});
@@ -4471,9 +4471,9 @@ ${auditChanges(log)}`).join('\n\n');
     const identity=getPortalIdentity(req)!;
     if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Reautentique-se para exportar um backup administrativo.'});
     const exportedAt=new Date().toISOString();
-    const backup={schemaVersion:4,operationalMetadata: {signatureJobs:snapshotPortalState().signatureJobs,formArchiveJobs:snapshotPortalState().formArchiveJobs,emailDeliveries:emailDeliveriesStore,workflowRuns:workflowRunsStore,astenWebhookEvents:astenWebhookEventsStore},title:'Backup administrativo do Portal de TCC',exportedAt,settings:publicSettingsForRequest(true),processes:processesStore,authorizedStudents:authorizedStudentsStore,memberships:membershipsStore,notificationPreferences:notificationPreferencesStore,dataSubjectRequests:dataSubjectRequestsStore,legalHolds:legalHoldsStore,studioVersions:studioVersionsStore};
+    const backup={schemaVersion:5,operationalMetadata: {signatureJobs:snapshotPortalState().signatureJobs,formArchiveJobs:snapshotPortalState().formArchiveJobs,emailDeliveries:emailDeliveriesStore,workflowRuns:workflowRunsStore,astenWebhookEvents:astenWebhookEventsStore},title:'Backup administrativo do Portal de TCC',exportedAt,settings:publicSettingsForRequest(true),processes:processesStore,legacyAcademicRecords:legacyAcademicRecordsStore,authorizedStudents:authorizedStudentsStore,memberships:membershipsStore,notificationPreferences:notificationPreferencesStore,dataSubjectRequests:dataSubjectRequestsStore,legalHolds:legalHoldsStore,studioVersions:studioVersionsStore};
     const checksum=createHash('sha256').update(JSON.stringify(backup)).digest('hex');
-    auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'EXPORTACAO_BACKUP_ADMINISTRATIVO',entityType:'system_backup',entityId:checksum,after:{schemaVersion:4,processCount:processesStore.length},timestamp:exportedAt});
+    auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'EXPORTACAO_BACKUP_ADMINISTRATIVO',entityType:'system_backup',entityId:checksum,after:{schemaVersion:5,processCount:processesStore.length,legacyCount:legacyAcademicRecordsStore.length},timestamp:exportedAt});
     persistPortalState();res.setHeader('Cache-Control','no-store');res.json({...backup,checksum});
   });
 
@@ -4486,31 +4486,43 @@ ${auditChanges(log)}`).join('\n\n');
       return res.status(403).json({ error: 'Apenas o Master ou o Presidente da Comissão pode restaurar backups do sistema.' });
     }
     if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Reautentique-se antes de restaurar um backup.'});
-    const { settings, processes, authorizedStudents, notificationPreferences, dataSubjectRequests, legalHolds, studioVersions, confirmHash } = req.body||{};
+    const { settings, processes, legacyAcademicRecords, authorizedStudents, notificationPreferences, dataSubjectRequests, legalHolds, studioVersions, confirmHash } = req.body||{};
     if(!settings||typeof settings!=='object'||Array.isArray(settings)||!Array.isArray(processes))return res.status(400).json({error:'Backup inválido: configurações e processos são obrigatórios.'});
     if(containsSensitiveConfigurationKey(settings))return res.status(400).json({error:'O backup contém campos de segredo e não pode ser restaurado.'});
     if(processes.length>10_000||processes.some((process:any)=>!process||typeof process!=='object'||!String(process.id||'').trim()||!String(process.protocolo||'').trim()||!String(process.titulo||'').trim()))return res.status(400).json({error:'Backup inválido: coleção de processos fora do formato esperado.'});
     const ids=processes.map((process:any)=>String(process.id));const protocols=processes.map((process:any)=>String(process.protocolo));
     if(new Set(ids).size!==ids.length||new Set(protocols).size!==protocols.length)return res.status(400).json({error:'Backup inválido: processos ou protocolos duplicados.'});
+    // Older exports omit this collection; preserve the current historical archive.
+    // Explicit collections use the import validator, including consent and private Drive references.
+    let safeLegacyAcademicRecords=legacyAcademicRecordsStore;
+    if(legacyAcademicRecords!==undefined){
+      try{
+        if(!Array.isArray(legacyAcademicRecords)||legacyAcademicRecords.length>999)throw new Error('Coleção histórica inválida no backup.');
+        safeLegacyAcademicRecords=[];
+        for(let offset=0;offset<legacyAcademicRecords.length;offset+=500)safeLegacyAcademicRecords.push(...validateLegacyBatch(legacyAcademicRecords.slice(offset,offset+500)));
+        if(new Set(safeLegacyAcademicRecords.map(record=>record.id)).size!==safeLegacyAcademicRecords.length||new Set(safeLegacyAcademicRecords.map(record=>record.sourceFingerprint)).size!==safeLegacyAcademicRecords.length)throw new Error('Trabalhos históricos duplicados no backup.');
+      }catch(error){return res.status(400).json({error:error instanceof Error?error.message:'Acervo histórico inválido no backup.'});}
+    }
     const safeSettings={...redactSensitiveValues(settings),masterEmail:currentSettings.masterEmail,ownerEmail:currentSettings.ownerEmail,commissionPresidentEmail:currentSettings.commissionPresidentEmail,masterRecoveryEmails:currentSettings.masterRecoveryEmails,sessionValidAfter:currentSettings.sessionValidAfter,driveRootFolderId:currentSettings.driveRootFolderId,calendarId:currentSettings.calendarId,documentModels:currentSettings.documentModels};
     const safeProcesses=processes.map((process:any)=>preserveCurrentDriveBindings(process,processesStore.find(current=>current.id===String(process.id))));
     let operationalMetadata:{signatureJobs:typeof signatureJobsStore;formArchiveJobs:typeof formArchiveJobsStore;emailDeliveries:typeof emailDeliveriesStore;workflowRuns:typeof workflowRunsStore;astenWebhookEvents:typeof astenWebhookEventsStore};
     try{
       const imported=req.body?.operationalMetadata||{};const processIds=new Set<string>(safeProcesses.map((process:any)=>String(process.id)));
       operationalMetadata={
-        signatureJobs:mergeOperationalMetadata(signatureJobsStore,imported.signatureJobs,processIds,new Set(['ARCHIVED','CANCELED'])),
+        signatureJobs:mergeOperationalMetadata(signatureJobsStore,imported.signatureJobs,processIds,new Set(['ARCHIVED','SIGNED','DECLINED','EXPIRED','CANCELED'])),
         formArchiveJobs:mergeOperationalMetadata(formArchiveJobsStore,imported.formArchiveJobs,processIds,new Set(['ARCHIVED','CANCELED'])),
-        emailDeliveries:mergeOperationalMetadata(emailDeliveriesStore,imported.emailDeliveries,processIds,new Set(['SENT','DELIVERED','CANCELED'])),
+        emailDeliveries:mergeOperationalMetadata(emailDeliveriesStore,imported.emailDeliveries,processIds,new Set(['ACCEPTED_BY_GMAIL','SENT','DELIVERED','CANCELED'])),
         workflowRuns:mergeOperationalMetadata(workflowRunsStore,imported.workflowRuns,processIds,new Set(['COMPLETED','SUCCESS','CANCELED'])),
-        astenWebhookEvents:mergeOperationalMetadata(astenWebhookEventsStore,imported.astenWebhookEvents,processIds,new Set(['PROCESSED','IGNORED']))
+        astenWebhookEvents:mergeOperationalMetadata(astenWebhookEventsStore,imported.astenWebhookEvents,processIds,event=>{const processedAt=event.processedAt||event.safePayload?.processedAt;return ['PROCESSED','IGNORED'].includes(String(event.status))||(typeof processedAt==='string'&&Number.isFinite(Date.parse(processedAt)));})
       };
     }catch(error){return res.status(409).json({error:error instanceof Error?error.message:'Não foi possível preservar os registros operacionais.'});}
-    const restorePayload={operationalMetadata,schemaVersion:Number(req.body?.schemaVersion||1),settings:safeSettings,processes:safeProcesses,authorizedStudents:Array.isArray(authorizedStudents)?authorizedStudents:authorizedStudentsStore,notificationPreferences:notificationPreferences&&typeof notificationPreferences==='object'&&!Array.isArray(notificationPreferences)?notificationPreferences:{},dataSubjectRequests:Array.isArray(dataSubjectRequests)?dataSubjectRequests:[],legalHolds:Array.isArray(legalHolds)?legalHolds:[],studioVersions:Array.isArray(studioVersions)?studioVersions:[]};
+    const restorePayload={operationalMetadata,schemaVersion:Number(req.body?.schemaVersion||1),settings:safeSettings,processes:safeProcesses,legacyAcademicRecords:safeLegacyAcademicRecords,authorizedStudents:Array.isArray(authorizedStudents)?authorizedStudents:authorizedStudentsStore,notificationPreferences:notificationPreferences&&typeof notificationPreferences==='object'&&!Array.isArray(notificationPreferences)?notificationPreferences:{},dataSubjectRequests:Array.isArray(dataSubjectRequests)?dataSubjectRequests:[],legalHolds:Array.isArray(legalHolds)?legalHolds:[],studioVersions:Array.isArray(studioVersions)?studioVersions:[]};
     const expectedHash=createHash('sha256').update(JSON.stringify(restorePayload)).digest('hex');
-    if(String(confirmHash||'')!==expectedHash)return res.json({requiresConfirmation:true,confirmHash:expectedHash,summary:{processCount:processes.length,authorizedCount:restorePayload.authorizedStudents.length,administratorsPreserved:true,auditTrailPreserved:true}});
+    if(String(confirmHash||'')!==expectedHash)return res.json({requiresConfirmation:true,confirmHash:expectedHash,summary:{processCount:processes.length,legacyCount:restorePayload.legacyAcademicRecords.length,authorizedCount:restorePayload.authorizedStudents.length,administratorsPreserved:true,auditTrailPreserved:true}});
 
     currentSettings={...INITIAL_SETTINGS,...safeSettings,updatedAt:new Date().toISOString()};
     processesStore=JSON.parse(JSON.stringify(safeProcesses));
+    legacyAcademicRecordsStore=structuredClone(restorePayload.legacyAcademicRecords);
     authorizedStudentsStore=JSON.parse(JSON.stringify(restorePayload.authorizedStudents));
     notificationPreferencesStore=JSON.parse(JSON.stringify(restorePayload.notificationPreferences));
     dataSubjectRequestsStore=JSON.parse(JSON.stringify(restorePayload.dataSubjectRequests));
@@ -4530,7 +4542,7 @@ ${auditChanges(log)}`).join('\n\n');
     });
 
     persistPortalState();
-    res.json({ message: 'Backup restaurado com validação. Papéis administrativos e auditoria anterior foram preservados.', processCount: processesStore.length });
+    res.json({ message: 'Backup restaurado com validação. Papéis administrativos e auditoria anterior foram preservados.', processCount: processesStore.length,legacyCount:legacyAcademicRecordsStore.length });
   });
 
   // POST /api/emergency-recover-master (Comunicar Roubo / Troca de Dono por Link de Emergência)

@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomUUID } from 'node:crypto';
-import { storePrivatePortalImage, readPrivatePortalImage, type PrivatePortalImage } from './googleDriveImages';
+import { storePrivatePortalImage, readPrivatePortalImage, normalizePortalImage, type PrivatePortalImage } from './googleDriveImages';
 
 export interface SupabaseRuntimeStatus {
   configured: boolean;
@@ -64,16 +64,16 @@ function collectAndExternalizeRuntimeImages(value:unknown,assets:Map<string,Runt
   return value;
 }
 
-async function upsertRuntimeAsset(asset:RuntimeAsset,archive=storePrivatePortalImage):Promise<void>{
+async function upsertRuntimeAsset(asset:RuntimeAsset,archive=storePrivatePortalImage,academicRootId?:string):Promise<void>{
   // Check the additive migration before creating a file. Missing columns fail closed.
   const prior=await fetch(`${runtimeAssetsEndpoint()}?select=drive_file_id,content_sha256&limit=0`,{headers:adminHeaders(),signal:AbortSignal.timeout(15_000)});
   if(!prior.ok)throw new Error('O armazenamento de imagens no Drive ainda não está preparado.');
-  const stored=await archive({bytes:Buffer.from(asset.dataUrl.split(',')[1],'base64'),mimeType:asset.mimeType,kind:'RUNTIME_ASSET',key:asset.assetKey});
+  const stored=await archive({bytes:Buffer.from(asset.dataUrl.split(',')[1],'base64'),mimeType:asset.mimeType,kind:'RUNTIME_ASSET',key:asset.assetKey,...(academicRootId!==undefined?{academicRootId}:{})});
   const response=await fetch(`${runtimeAssetsEndpoint()}?on_conflict=asset_key`,{
     method:'POST',
     headers:{...adminHeaders(),Prefer:'resolution=merge-duplicates,return=minimal'},
     // Omit data_url: upsert must preserve legacy bytes until verified migration.
-    body:JSON.stringify({asset_key:asset.assetKey,mime_type:asset.mimeType,byte_length:asset.byteLength,drive_file_id:stored.driveFileId,content_sha256:stored.contentSha256,updated_at:new Date().toISOString()}),
+    body:JSON.stringify({asset_key:asset.assetKey,mime_type:stored.mimeType,byte_length:stored.byteLength,drive_file_id:stored.driveFileId,content_sha256:stored.contentSha256,updated_at:new Date().toISOString()}),
     signal:AbortSignal.timeout(20_000)
   });
   if(!response.ok){
@@ -82,16 +82,17 @@ async function upsertRuntimeAsset(asset:RuntimeAsset,archive=storePrivatePortalI
   }
 }
 
-async function externalizeRuntimeImages(payload:object):Promise<object>{
+export async function externalizeRuntimeImages(payload:object,archive=storePrivatePortalImage):Promise<object>{
   const assets=new Map<string,RuntimeAsset>();
   const sanitized=collectAndExternalizeRuntimeImages(payload,assets) as object;
-  for(const asset of assets.values())await upsertRuntimeAsset(asset);
+  const academicRootId=(payload as {settings?:{driveRootFolderId?:string}}).settings?.driveRootFolderId;
+  for(const asset of assets.values())await upsertRuntimeAsset(asset,archive,academicRootId);
   return sanitized;
 }
 
 // E-mail clients need an HTTPS image even when its optimized bytes are small.
 export async function persistStudioRuntimeImage(dataUrl:string,archive=storePrivatePortalImage):Promise<string>{
-  const match=dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
+  const match=dataUrl.match(/^data:(image\/(?:png|jpeg|webp|gif|svg\+xml));base64,([A-Za-z0-9+/]+={0,2})$/);
   if(!match||dataUrl.length>4*1024*1024)throw new Error('Imagem inválida.');
   const assetKey=createHash('sha256').update(dataUrl).digest('hex');
   await upsertRuntimeAsset({assetKey,mimeType:match[1],dataUrl,byteLength:Buffer.from(match[2],'base64').length},archive);
@@ -109,10 +110,11 @@ export async function loadRuntimeImage(assetKey:string,read=readPrivatePortalIma
     const ref:PrivatePortalImage={driveFileId:String(item.drive_file_id),contentSha256:String(item.content_sha256||''),mimeType:String(item.mime_type||''),byteLength:Number(item.byte_length)};
     return {bytes:await read(ref,'RUNTIME_ASSET'),mimeType:ref.mimeType};
   }
-  const match=/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(String(item.data_url||''));
+  const match=/^data:(image\/(?:png|jpeg|webp|gif|svg\+xml));base64,([A-Za-z0-9+/]+={0,2})$/.exec(String(item.data_url||''));
   if(!match)return null;
   const bytes=Buffer.from(match[2],'base64');
   if(!bytes.length||bytes.length>4*1024*1024||bytes.toString('base64')!==match[2])throw new Error('Imagem inválida.');
+  if(match[1]==='image/gif'||match[1]==='image/svg+xml')return normalizePortalImage(bytes,match[1]);
   return {bytes,mimeType:match[1]};
 }
 

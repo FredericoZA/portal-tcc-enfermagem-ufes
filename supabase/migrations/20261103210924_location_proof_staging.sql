@@ -1,5 +1,6 @@
--- Pending next authorized release. CLI migration creation was killed by the local host.
--- Preserve private storage policies and all existing upload purposes.
+-- Applied through Supabase migration API on 2026-11-03; version read back from migration history.
+-- Add only the missing reservation-proof purpose to the existing private staging.
+-- Preserve RLS, grants, MIME/size constraints and every previously allowed purpose.
 begin;
 set local lock_timeout = '5s';
 alter table public.portal_upload_staging drop constraint portal_upload_staging_purpose_check;

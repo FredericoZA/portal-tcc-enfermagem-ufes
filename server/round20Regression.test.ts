@@ -24,6 +24,14 @@ test('conferência da ata expira e rejeita alteração de parecer, modelo, revis
  for(const patch of [{revision:4},{actor:'outro@example.invalid'},{model:'novo'},{parecer:'Outro'}])assert.ok(!validEvaluationPreview(token,'secret',{...binding,...patch},1000));
  assert.ok(!validEvaluationPreview(token+'x','secret',binding,1000));
 });
+test('prévia de ata longa vincula todo o conteúdo por hash sem expor o texto no token',()=>{
+ const binding={process:'p',revision:3,actor:'orientador@example.invalid',documentText:'Texto confidencial da ata '.repeat(2400),answers:{PARECER:'Parecer completo'}};
+ const token=evaluationPreviewToken('secret',binding,2000);
+ assert.ok(token.length<400,'token size is independent of the document length');
+ assert.ok(validEvaluationPreview(token,'secret',binding,1000));
+ assert.ok(!validEvaluationPreview(token,'secret',{...binding,documentText:binding.documentText+'x'},1000));
+ assert.ok(!Buffer.from(token.split('.')[0],'base64url').toString().includes('Texto confidencial'));
+});
 test('resultados antigos perdem faixas numéricas e ressalvas recebem parecer correspondente',()=>{
  const option={code:'APROVADO_RESTRICAO',label:'Aprovado com Restrição (5,00 ≤ x < 7,00)'};assert.equal(evaluationOutcomeLabel(option),'Aprovado com ressalva');
  assert.match(standardEvaluationOpinion({} as any,option),/aprovação com ressalvas/);

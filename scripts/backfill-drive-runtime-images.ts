@@ -1,6 +1,7 @@
 /** Read-only by default. --apply archives/verifies bytes and adds metadata only. */
 import { createHash } from 'node:crypto';
 import { buildSupabaseAdminHeaders, loadRuntimeImage, persistStudioRuntimeImage } from '../server/integrations/supabase';
+import { normalizePortalImage } from '../server/integrations/googleDriveImages';
 
 const apply = process.argv.includes('--apply');
 if (process.argv.slice(2).some(arg => arg !== '--apply')) throw new Error('Use sem opções para conferir ou --apply para arquivar sem apagar o legado.');
@@ -21,11 +22,16 @@ for (const item of inventory) {
   if (!row.ok) throw new Error('Falha ao conferir a imagem antes da migração.');
   const current = (await row.json() as Array<{ data_url?: string | null; drive_file_id?: string | null }>)[0];
   if (!current) throw new Error('A imagem desapareceu durante a conferência.');
+  let expectedMime = item.mime_type, expectedSize = Number(item.byte_length);
   if (!current.drive_file_id) {
     if (!current.data_url || createHash('sha256').update(current.data_url).digest('hex') !== item.asset_key) throw new Error('A origem da imagem não corresponde à chave preservada.');
+    if (item.mime_type === 'image/svg+xml' || item.mime_type === 'image/gif') {
+      const normalized = await normalizePortalImage(Buffer.from(current.data_url.split(',')[1], 'base64'), item.mime_type);
+      expectedMime = normalized.mimeType; expectedSize = normalized.bytes.length;
+    }
     await persistStudioRuntimeImage(current.data_url);
   }
   const verified = await loadRuntimeImage(item.asset_key);
-  if (!verified || verified.bytes.length !== Number(item.byte_length) || verified.mimeType !== item.mime_type) throw new Error('A releitura do Drive não confirmou a imagem.');
+  if (!verified || verified.bytes.length !== expectedSize || verified.mimeType !== expectedMime) throw new Error('A releitura do Drive não confirmou a imagem.');
   console.log(JSON.stringify({ asset_key: item.asset_key, mime_type: verified.mimeType, byte_length: verified.bytes.length, content_sha256: createHash('sha256').update(verified.bytes).digest('hex'), driveVerified: true, legacyBytesPreserved: true }));
 }

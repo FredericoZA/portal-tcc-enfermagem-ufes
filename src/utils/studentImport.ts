@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import {isEmailAddress} from './emailAddress';
 
 export interface StudentImportRow { nome: string; email: string; matricula?: string; row: number; }
 
@@ -58,9 +59,9 @@ function tableToStudents(table:string[][]):StudentImportRow[]{
   const headers=table[headerIndex].map(normalizeHeader),nameIndex=headers.findIndex(header=>nameHeaders.includes(header)),emailIndex=headers.findIndex(header=>emailHeaders.includes(header)),registrationIndex=headers.findIndex(header=>registrationHeaders.includes(header));
   return table.slice(headerIndex+1).map((row,index)=>({cells:row,index})).filter(({cells})=>!cells.every((cell,i)=>normalizeHeader(cell)===headers[i])).map(({cells:row,index})=>{
     const mapped={row:index+headerIndex+2,nome:String(row[nameIndex]||'').trim(),email:String(row[emailIndex]||'').trim().toLowerCase(),matricula:registrationIndex>=0?String(row[registrationIndex]||'').trim()||undefined:undefined};
-    // Pasted/PDF rows can have a different column order from their header.
-    // Identify short lists by their contents, regardless of header order.
-    if((row.length<=3||! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mapped.email))&&(row.join(' ').match(emailPattern)||[]).length===1){
+    // Keep recognized columns, including arbitrary registration codes. Infer
+    // pasted/PDF rows only when their email does not match the header position.
+    if(!isEmailAddress(mapped.email)&&(row.join(' ').match(emailPattern)||[]).length===1){
       return inferStudent(row,index+headerIndex+1);
     }
     return mapped;

@@ -247,7 +247,19 @@ export async function deleteProcessDriveArtifacts(input:{accessToken:string;proc
  const protectedIds=new Set([input.rootFolderId,...input.protectedIds].filter(Boolean)),done=new Set<string>();
  const get=async(id:string)=>{const response=await fetch(`${DRIVE_API}/files/${encodeURIComponent(id)}?fields=id,name,mimeType,parents,appProperties&supportsAllDrives=true`,{headers:{Authorization:`Bearer ${input.accessToken}`},signal:AbortSignal.timeout(15000)});if(response.status===404)return null;if(!response.ok)throw Error(`Drive: não foi possível conferir o arquivo (${response.status}).`);return response.json();};
  let verifiedFolder='';
- if(input.folderId){if(protectedIds.has(input.folderId))throw Error('A pasta configurada é compartilhada com outro recurso e foi preservada.');const folder=await get(input.folderId);if(folder){const parent=await get(folder.parents?.[0]||'');if(folder.name!==input.protocol||parent?.name!=='02_PROCESSOS'||!parent.parents?.includes(input.rootFolderId))throw Error('A pasta não pertence à árvore deste TCC.');verifiedFolder=input.folderId;}}
+ if(input.folderId){
+  if(protectedIds.has(input.folderId))throw Error('A pasta configurada é compartilhada com outro recurso e foi preservada.');
+  const folder=await get(input.folderId);
+  if(folder){
+   const parent=await get(folder.parents?.[0]||'');
+   const folderMime='application/vnd.google-apps.folder';
+   // Previous versions stored processes under 02_PROCESSOS/<year>/<protocol>.
+   // Verify that one annual ancestor rather than expanding the deletion scope.
+   const processRoot=parent?.mimeType===folderMime&&/^\d{4}$/.test(String(parent.name||''))?await get(parent.parents?.[0]||''):parent;
+   if(folder.mimeType!==folderMime||folder.name!==input.protocol||processRoot?.mimeType!==folderMime||processRoot.name!=='02_PROCESSOS'||!processRoot.parents?.includes(input.rootFolderId))throw Error('A pasta não pertence à árvore deste TCC.');
+   verifiedFolder=input.folderId;
+  }
+ }
  const remove=async(id:string,inTree=false):Promise<void>=>{
   if(done.has(id))return;if(protectedIds.has(id))throw Error('Um arquivo compartilhado com outro TCC ou modelo foi preservado.');
   const file=await get(id);if(!file){done.add(id);return;}
