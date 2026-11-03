@@ -10,7 +10,7 @@ const DENIAL_STATUSES = new Set(['DENIED', 'NEGADO', 'RECUSADO', 'REJEITADO', 'R
 const WAITING_STATUSES = new Set(['PENDING', 'SENT']);
 
 /**
- * Apresenta somente um aviso de reserva, priorizando a solicitação mais recente.
+ * Apresenta somente um aviso de reserva, dando prioridade à recusa registrada.
  * Avisos deste fluxo representam pendências/alertas, e não mensagens informativas.
  */
 export function reservationStatusAlert(
@@ -20,14 +20,15 @@ export function reservationStatusAlert(
   const requestStatus = String(request?.status || '').toUpperCase();
   const localStatus = String(process.defesa?.localStatus || '').toUpperCase();
 
-  if (DENIAL_STATUSES.has(requestStatus)) {
+  // Recusa registrada tem precedência: nunca exibir, junto dela, a observação de espera.
+  if (DENIAL_STATUSES.has(requestStatus) || DENIAL_STATUSES.has(localStatus)) {
     return {
       kind: 'denied',
       text: 'O responsável recusou o agendamento. Use “Alterar reserva” para enviar outro pedido de reserva.',
     };
   }
 
-  // Um novo pedido enviado substitui visualmente a recusa de um pedido anterior.
+  // Sem recusa registrada, o pedido aguardando resposta é um alerta vermelho.
   if (WAITING_STATUSES.has(requestStatus)) {
     return {
       kind: 'waiting',
@@ -41,13 +42,6 @@ export function reservationStatusAlert(
     return {
       kind: 'delivery-failed',
       text: 'O envio do e-mail ainda não foi confirmado. Use “Alterar reserva” para repetir o mesmo pedido ou procure a secretaria.',
-    };
-  }
-
-  if (DENIAL_STATUSES.has(localStatus)) {
-    return {
-      kind: 'denied',
-      text: 'O responsável recusou o agendamento. Use “Alterar reserva” para enviar outro pedido de reserva.',
     };
   }
 
