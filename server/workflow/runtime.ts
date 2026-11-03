@@ -1,3 +1,5 @@
+import {isEmailAddress} from '../../src/utils/emailAddress';
+import {workflowMarkerPattern} from '../../src/utils/templateMarkerPattern';
 import {DOCUMENT_VARIABLE_KEYS,documentVariables} from '../../src/utils/documentVariables';
 import {authorNames,academicName} from '../../src/utils/personPresentation';
 import {upgradeOperationalEmailTemplate,recipientEmailVariables} from '../../src/utils/operationalEmails';
@@ -259,7 +261,7 @@ export function buildProcessVariables(context: WorkflowRuntimeContext): Record<s
   return variables;
 }
 
-const workflowMarkers = () => /\{\{\s*([^{}\n]{1,100}?)\s*\}\}|<<\s*([^<>\n]{1,100}?)\s*>>|\[\[\s*([^\[\]\n]{1,100}?)\s*\]\]|«\s*([^«»\n]{1,100}?)\s*»|-((?:CAMPO_)?[A-Z0-9_]+)-/g;
+const workflowMarkers = workflowMarkerPattern;
 
 function mergeMarkers(source: string, variables: Record<string, string>, html: boolean): string {
   // One pass: marker-looking text submitted by a participant stays literal.
@@ -351,7 +353,7 @@ export function parseRecipients(source: string, variables: Record<string, string
   const unsafe = variableKeys.filter((variable) => !SAFE_EMAIL_RECIPIENT_VARIABLES.has(variable));
   if (unsafe.length) throw new Error(`Destinatário usa variável não autorizada: ${Array.from(new Set(unsafe)).join(', ')}.`);
   const merged = mergeWorkflowVariables(source, variables);
-  return Array.from(new Set(merged.split(/[;,\n]+/).map((item) => item.trim().toLowerCase()).filter((item) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item))));
+  return Array.from(new Set(merged.split(/[;,\n]+/).map((item) => item.trim().toLowerCase()).filter((item) => isEmailAddress(item))));
 }
 
 export async function executeWorkflowEvent(

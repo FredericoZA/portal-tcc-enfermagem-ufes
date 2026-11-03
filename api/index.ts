@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { admitPortalRequest } from '../server/security/requestAdmission';
 
 type StartupFailure = { code: string; message: string; missingGroups?: string[]; runtimeSignal?: string };
 type StartupStage = 'IMPORT_SERVER' | 'CREATE_APP';
@@ -125,6 +126,7 @@ function unavailable(res: Response, diagnostic: StartupFailure) {
 }
 
 export default async function handler(req: Request, res: Response) {
+  if (!admitPortalRequest(req, res)) return;
   const preflight = productionPreflight();
   if (preflight) return unavailable(res, preflight);
 

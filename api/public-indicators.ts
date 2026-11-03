@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { admitPortalRequest } from '../server/security/requestAdmission';
 import { loadPortalRuntimeState } from '../server/integrations/supabase';
 import type { ProcessData } from '../src/types';
 
@@ -45,6 +46,7 @@ const localWeekday = (iso:string) => new Intl.DateTimeFormat('pt-BR',{weekday:'l
 const monthKey = (iso:string) => new Intl.DateTimeFormat('sv-SE',{year:'numeric',month:'2-digit',timeZone:PORTAL_TIMEZONE}).format(new Date(iso));
 
 export default async function handler(req: Request, res: Response) {
+  if (!admitPortalRequest(req, res, 'indicators')) return;
   res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   if (req.method !== 'GET') {

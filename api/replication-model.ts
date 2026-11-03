@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { admitPortalRequest } from '../server/security/requestAdmission';
 import JSZip from 'jszip';
 import { getGoogleWorkspaceAccessToken } from '../server/integrations/googleWorkspace';
 
@@ -62,6 +63,7 @@ export async function exportReplicationModel(key: ModelKey, accessToken: string)
 }
 
 export default async function handler(req: Request, res: Response) {
+  if (!admitPortalRequest(req, res, 'download')) return;
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
 

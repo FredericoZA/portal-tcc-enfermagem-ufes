@@ -1,3 +1,4 @@
+import {removeAtaLocationTime} from './legacyTextProcessing';
 import {publicationAuthorizationVariables} from './publicationAuthorization';
 import type {ProcessData} from '../types';
 import {academicName,plainPersonName,facultyRole,authorGrammar,personPresentationVariables} from './personPresentation';
@@ -86,7 +87,7 @@ export function adaptDocumentLanguage(text:string,p:ProcessData,type:string):str
    const coRole=matchCase('Coorientador',facultyRole(p.coorientador,'coorientador'));
    if(!out.includes(coName)&&/apresentando os demais examinadores/iu.test(out))out=out.replace(/(?=Foi dada a palavra)/iu,`Participou também ${p.coorientador.tratamento==='Professora'?'a':'o'} ${coRole.toLocaleLowerCase('pt-BR')} ${coName}. `);
   }
-  out=out.replace(/((?:^|\n)[\p{L} .’'-]+(?:\s*[-–]\s*[A-Z]{2})?[, -]+\d{1,2} de [\p{L}]+ de \d{4})[ \t]+às[ \t]+\d{1,2}:\d{2}(?::\d{2})?/gu,'$1');
+  out=removeAtaLocationTime(out);
   const time=formatTimeExtenso(ataClosingTime(p.defesa.startAt).iso);
   const closing=`Nada mais havendo a tratar, às ${time} foi encerrada a sessão e lavrada a presente ata que segue para ser assinada.`;
   out=out.replace(/Nada mais havendo a tratar,\s*(?:às [^,]+?\s+)?foi encerrada a sessão e lavrada a presente ata,?\s*que (?:será assinada(?: por quem de direito)?|segue para ser assinada)\.?/gi,closing);

@@ -1,3 +1,5 @@
+import {stripDocumentScanningBlocks,delimitedTextParts,stripInlineMarkup} from './src/utils/legacyTextProcessing';
+import {isEmailAddress} from './src/utils/emailAddress';
 import { legacyRepositoryProcess } from './src/utils/legacyRepository';
 import { readLegacyAcademicPdf } from './server/legacyArchiveFiles';
 import { validateLegacyBatch, mergeLegacyBatch, legacyCatalogRevision, publicLegacyAcademicView, privateLegacyAcademicView, canonicalLegacyRecord, legacyFileIsPublic, legacyAdministrativeFiles } from './server/legacyArchive';
@@ -40,7 +42,7 @@ import {authorNames,academicName,STUDENT_TREATMENTS,FACULTY_TREATMENTS,ACADEMIC_
 import {localReviewFilesEnabled,sourceFilesAccessToken,sourceFilesFolder,uploadSourceFile,downloadSourceFile} from './server/localReviewFiles';
 import {modelForRendering} from './server/workflow/modelPreviewSource';
 import type {DriveModelFingerprint} from './server/integrations/googleWorkspace';
-import {googleModelReference} from './server/googleModelReference';
+import {googleModelReference,googleFolderReference} from './server/googleModelReference';
 import replicationModelHandler from './api/replication-model';
 import {auditChanges,sanitizeProcessAudit} from './src/utils/processAudit';
 import {ataClosingTime} from './src/utils/ataClosingTime';
@@ -1448,6 +1450,19 @@ export async function createPortalApp() {
     next();
   });
 
+  // Health stays available without parsing bodies or hydrating the database.
+  // Express also serves HEAD through this GET handler.
+  app.get('/api/health', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      version: runtimePackageVersion,
+      commit: runtimeGitCommit(),
+      runtime: productionRuntime ? 'production' : serveCompiledClient ? 'local-compiled' : 'local-source'
+    });
+  });
+
   // Em produção os binários vão direto ao bucket privado. O limite abaixo só
   // cobre JSON e o fallback local de até 2 MB, nunca os PDFs/DOCX completos.
   // Callbacks Asten devem ser pequenos; limitar antes do parser geral impede payloads volumosos.
@@ -1533,18 +1548,6 @@ export async function createPortalApp() {
       console.log(`[API] ${req.method} ${safeApiLogPath(req.path)}`);
     }
     next();
-  });
-
-  // Health check
-  app.get('/api/health', (_req, res) => {
-    res.setHeader('Cache-Control', 'no-store');
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      version: runtimePackageVersion,
-      commit: runtimeGitCommit(),
-      runtime: productionRuntime ? 'production' : serveCompiledClient ? 'local-compiled' : 'local-source'
-    });
   });
 
   app.use('/api', attachPortalIdentity);
@@ -2003,7 +2006,7 @@ export async function createPortalApp() {
     const presidentEmail=normalizeEmail(currentSettings.commissionPresidentEmail||'');
     if(!presidentEmail)return res.status(409).json({error:'Defina primeiro a Presidente da Comissão e conclua a transferência do e-mail institucional.',code:'COMMISSION_PRESIDENT_REQUIRED'});
     const input:unknown[]=Array.isArray(req.body?.emails)?req.body.emails:[];
-    const requested:string[]=Array.from(new Set<string>(input.map((value:unknown)=>normalizeEmail(String(value))).filter((value:string)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))));
+    const requested:string[]=Array.from(new Set<string>(input.map((value:unknown)=>normalizeEmail(String(value))).filter((value:string)=>isEmailAddress(value))));
     if(requested.length!==1||requested[0]!==presidentEmail)return res.status(400).json({error:'A Presidente da Comissão é o único contato de recuperação permitido para o Master.',code:'PRESIDENT_RECOVERY_ONLY'});
     const before=(currentSettings.masterRecoveryEmails||[]).map(value=>createHash('sha256').update(normalizeEmail(value)).digest('hex'));
     currentSettings={...currentSettings,masterRecoveryEmails:[presidentEmail],updatedAt:new Date().toISOString()};
@@ -4046,7 +4049,7 @@ export async function createPortalApp() {
     if (!inner || typeof inner !== 'string') return false;
 
     // Clean text
-    const tag = inner.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
+    const tag = stripInlineMarkup(inner).trim().replace(/\s+/g, ' ');
     if (tag.length < 2 || tag.length > 80) return false;
 
     // Do not allow purely numbers
@@ -4076,10 +4079,7 @@ export async function createPortalApp() {
     if (!rawContent) return [];
 
     // 1. Strip script, style tags, and HTML comments before extracting
-    let cleanText = rawContent
-      .replace(/<script[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[\s\S]*?<\/style>/gi, '')
-      .replace(/<!--[\s\S]*?-->/g, '');
+    let cleanText = stripDocumentScanningBlocks(rawContent);
 
     // 2. Convert HTML entities
     cleanText = cleanText
@@ -4094,54 +4094,21 @@ export async function createPortalApp() {
 
     const tagsSet = new Set<string>();
 
-    // 3. Pattern for << ... >>
-    const doubleBracketRegex = /<<([\s\S]*?)>>/g;
-    let match: RegExpExecArray | null;
-
-    while ((match = doubleBracketRegex.exec(cleanText)) !== null) {
-      let inner = match[1];
-      inner = inner.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
-      if (isValidDocTag(inner)) {
-        tagsSet.add(`<<${inner}>>`);
-      }
-    }
-
-    // 4. Pattern for {{ ... }} (Double Curly Braces)
-    const doubleCurlyRegex = /\{\{([\s\S]*?)\}\}/g;
-    while ((match = doubleCurlyRegex.exec(cleanText)) !== null) {
-      let inner = match[1];
-      inner = inner.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
-      if (isValidDocTag(inner)) {
-        tagsSet.add(`<<${inner}>>`);
-      }
-    }
-
-    // 5. Pattern for [[ ... ]] (Double Square Braces)
-    const doubleSquareRegex = /\[\[([\s\S]*?)\]\]/g;
-    while ((match = doubleSquareRegex.exec(cleanText)) !== null) {
-      let inner = match[1];
-      inner = inner.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
-      if (isValidDocTag(inner)) {
-        tagsSet.add(`<<${inner}>>`);
-      }
-    }
-
-    // 6. Pattern for « ... »
-    const guillemetRegex = /«([\s\S]*?)»/g;
-    while ((match = guillemetRegex.exec(cleanText)) !== null) {
-      let inner = match[1];
-      inner = inner.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
-      if (isValidDocTag(inner)) {
-        tagsSet.add(`<<${inner}>>`);
+    // Scan each legacy delimiter family in its original priority order.
+    for (const [opening, closing] of [['<<', '>>'], ['{{', '}}'], ['[[', ']]'], ['«', '»']]) {
+      for (const value of delimitedTextParts(cleanText, opening, closing)) {
+        const inner = stripInlineMarkup(value).trim().replace(/\s+/g, ' ');
+        if (isValidDocTag(inner)) tagsSet.add(`<<${inner}>>`);
       }
     }
 
     // 7. Pattern for < ... > (Single angle brackets)
     const htmlTagNames = /^(p|span|div|br|b|i|u|strong|em|a|img|h[1-6]|table|tr|td|th|tbody|thead|tfoot|ul|ol|li|font|xml|code|pre|hr|blockquote|canvas)$/i;
     const singleBracketRegex = /<([a-zA-Z0-9\u00C0-\u024F\s_()#-]+)>/g;
+    let match: RegExpExecArray | null;
     while ((match = singleBracketRegex.exec(cleanText)) !== null) {
       let inner = match[1].trim();
-      inner = inner.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
+      inner = stripInlineMarkup(inner).trim().replace(/\s+/g, ' ');
       if (inner && !htmlTagNames.test(inner) && isValidDocTag(inner)) {
         tagsSet.add(`<<${inner}>>`);
       }
@@ -4260,18 +4227,17 @@ export async function createPortalApp() {
   // POST /api/scan-drive-folder - Real Google Drive Folder file scanning
   app.post('/api/scan-drive-folder', requireAuthenticated, requireAdministrativeOperator, async (req, res) => {
     const { folderUrl } = req.body || {};
-    let accessToken='';try{accessToken=await getGoogleWorkspaceAccessToken();}catch(error){return res.status(409).json({error:error instanceof Error?error.message:'Autorize o Google Workspace antes de varrer modelos.',files:[]});}
 
     if (!folderUrl || typeof folderUrl !== 'string') {
       return res.status(400).json({ error: 'Folder URL is required', files: [] });
     }
 
-    const match = folderUrl.match(/\/folders\/([a-zA-Z0-9_-]+)/) || folderUrl.match(/id=([a-zA-Z0-9_-]+)/);
-    const folderId = match ? match[1] : (folderUrl.trim().length >= 15 && !folderUrl.includes('/') ? folderUrl.trim() : null);
+    const folderId = googleFolderReference(folderUrl);
 
     if (!folderId) {
       return res.status(400).json({ error: 'Invalid Google Drive folder ID', files: [] });
     }
+    let accessToken='';try{accessToken=await getGoogleWorkspaceAccessToken();}catch(error){return res.status(409).json({error:error instanceof Error?error.message:'Autorize o Google Workspace antes de varrer modelos.',files:[]});}
 
     let files: Array<{ id: string; name: string; driveFileUrl: string; mimeType?: string }> = [];
 

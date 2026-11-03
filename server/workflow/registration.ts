@@ -1,3 +1,4 @@
+import {isEmailAddress} from '../../src/utils/emailAddress';
 import {renderInstitutionName} from '../../src/utils/institutionName';
 import {CUSTOM_DEFENSE_LOCATION} from '../../src/utils/reservationLocation';
 import {withAuthorReference} from '../../src/utils/registrationIdentity';
@@ -77,7 +78,7 @@ export function acceptRegistration(input: any, studio?: Partial<IntegrationStudi
     if (value !== undefined && !['string', 'number', 'boolean'].includes(typeof value)) throw new Error(`${question.label}: valor inválido.`);
     if (question.required && missing) throw new Error(`${question.label}: campo obrigatório.`);
     if (value && question.options?.length && !question.options.includes(String(value))) throw new Error(`${question.label}: escolha uma opção publicada pelo Master.`);
-    if (value && question.fieldType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))) throw new Error(`${question.label}: e-mail inválido.`);
+    if (value && question.fieldType === 'email' && !isEmailAddress(String(value))) throw new Error(`${question.label}: e-mail inválido.`);
     if (value !== undefined && value !== '' && question.fieldType === 'number' && !Number.isFinite(Number(value))) throw new Error(`${question.label}: número inválido.`);
     const issue = value !== undefined && value !== '' ? validateStudioAnswer(value, question.validation) : null;
     if (issue) throw new Error(`${question.label}: ${issue}`);

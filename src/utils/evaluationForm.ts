@@ -1,3 +1,4 @@
+import {isEmailAddress} from './emailAddress';
 import type { EvaluationOutcomeOption, ProcessData } from '../types';
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
 import type { RegistrationAnswers, RegistrationQuestion } from '../types/operationalConfig';
@@ -107,7 +108,7 @@ export function acceptEvaluationAnswers(
     if (value === undefined || value === '') continue;
     if (q.fieldType === 'file') throw new Error('Anexos da avaliação devem ser configurados como campos de texto; o PDF da ata é gerado pelo DOCX.');
     if (q.fieldKey !== 'RESULTADO' && q.options?.length && !q.options.includes(String(value))) throw new Error(`${q.label}: selecione uma opção válida.`);
-    if (q.fieldType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))) throw new Error(`${q.label}: e-mail inválido.`);
+    if (q.fieldType === 'email' && !isEmailAddress(String(value))) throw new Error(`${q.label}: e-mail inválido.`);
     if (q.fieldType === 'number' && !Number.isFinite(Number(value))) throw new Error(`${q.label}: número inválido.`);
     const problem = validateStudioAnswer(value, q.validation);
     if (problem) throw new Error(`${q.label}: ${problem}`);

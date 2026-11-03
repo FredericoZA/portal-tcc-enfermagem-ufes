@@ -1,3 +1,4 @@
+import {isEmailAddress} from './emailAddress';
 import {renderInstitutionName} from './institutionName';
 import {CUSTOM_DEFENSE_LOCATION} from './reservationLocation';
 import {normalizePersonName} from './personNameCase';
@@ -89,7 +90,7 @@ export const canonicalKey = (value: unknown) => String(value ?? '')
 export function operationalConfig(studio?: Partial<IntegrationStudioSettings>): OperationalConfig {
   const config = studio?.operationalConfig;
   const reservationRecipient=String(studio?.emailTemplates?.find(item=>item.id==='email-reserva')?.recipient||'').trim();
-  const departmentFallback=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reservationRecipient)?reservationRecipient.toLowerCase():'';
+  const departmentFallback=isEmailAddress(reservationRecipient)?reservationRecipient.toLowerCase():'';
   const configuredCatalogs = Array.isArray(config?.catalogs) ? config.catalogs : [];
   const configuredKinds = new Set(configuredCatalogs.map((entry) => entry.kind));
   const catalogs = [

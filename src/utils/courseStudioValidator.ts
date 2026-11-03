@@ -1,3 +1,5 @@
+import {isEmailAddress} from './emailAddress';
+import {studioMarkerPatterns} from './templateMarkerPattern';
 import {DOCUMENT_VARIABLE_KEYS} from './documentVariables';
 import { workflowPolicy } from './workflowOperations';
 import { operationalConfig, REGISTRATION_QUESTIONS, canonicalKey } from './operationalConfig';
@@ -106,13 +108,7 @@ export const SAFE_EMAIL_RECIPIENT_VARIABLES = new Set([
 
 function templateVariableKeys(source: unknown): string[] {
   const textSource = String(source || '');
-  const matches = [
-    ...textSource.matchAll(/\{\{\s*([^{}\r\n]{1,100})\s*\}\}/g),
-    ...textSource.matchAll(/<<\s*([^<>\r\n]{1,100})\s*>>/g),
-    ...textSource.matchAll(/\[\[\s*([^\[\]\r\n]{1,100})\s*\]\]/g),
-    ...textSource.matchAll(/«\s*([^«»\r\n]{1,100})\s*»/g),
-    ...textSource.matchAll(/-((?:CAMPO_)?[A-Z][A-Z0-9_]{1,80})-/g)
-  ];
+  const matches = studioMarkerPatterns().flatMap((pattern) => Array.from(textSource.matchAll(pattern)));
   return Array.from(new Set(matches.map((match) => key(match[1])).filter(Boolean)));
 }
 
@@ -205,7 +201,7 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
     const reservationEmails=new Set(emails.filter(email=>email.id==='email-reserva'||String(email.recipient||'').includes('DEPARTAMENTO_EMAIL')).map(email=>email.id));
     const hasReservation=stages.some(stage=>key(stage.triggerEvent)==='TCC_CREATED'&&rows(stage.actions).some(action=>key(action.type)==='EMAIL'&&reservationEmails.has(action.refId)&&!action.condition));
     if(!hasReservation)add({code:'RESERVATION_ACTION_REQUIRED',path:'workflowStages',message:'O cadastro precisa enviar o pedido de reserva ao departamento, sem condição opcional.',severity:'ERROR',area:'WORKFLOW'});
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(operations.reservation.departmentEmail))add({code:'DEPARTMENT_REQUIRED',path:'operationalConfig.reservation',message:'Informe o e-mail do departamento para solicitar a reserva.',severity:'ERROR',area:'OPERATIONS'});
+    if(!isEmailAddress(operations.reservation.departmentEmail))add({code:'DEPARTMENT_REQUIRED',path:'operationalConfig.reservation',message:'Informe o e-mail do departamento para solicitar a reserva.',severity:'ERROR',area:'OPERATIONS'});
     if(!operations.reservation.locations.length||operations.reservation.locations.some(v=>!v.trim())||new Set(operations.reservation.locations.map(canonicalKey)).size!==operations.reservation.locations.length)add({code:'INVALID_LOCATIONS',path:'operationalConfig.reservation.locations',message:'Cadastre locais preenchidos e sem duplicidade.',severity:'ERROR',area:'OPERATIONS'});
     if(!Number.isInteger(operations.diagnostics.staleDays)||operations.diagnostics.staleDays<1||operations.diagnostics.staleDays>365||operations.diagnostics.minimumCoverage<1||operations.diagnostics.minimumCoverage>100)add({code:'INVALID_THRESHOLDS',path:'operationalConfig.diagnostics',message:'Use prazo de 1 a 365 dias e cobertura de 1 a 100%.',severity:'ERROR',area:'OPERATIONS'});
     const aliases=new Set<string>();
@@ -262,7 +258,7 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
   emails.forEach((email, index) => {
     if (!text(email.name) || !text(email.subject) || !text(email.body)) add({ code: 'INCOMPLETE_EMAIL', path: `emailTemplates.${index}`, message: 'Cada e-mail precisa de nome, assunto e corpo em texto.', severity: 'ERROR', area: 'EMAIL' });
     if (!text(email.recipient)) add({ code: 'MISSING_RECIPIENT', path: `emailTemplates.${index}.recipient`, message: `Defina o destinatário de “${text(email.name) || text(email.id)}”.`, severity: 'ERROR', area: 'EMAIL' });
-    if (text(email.id) === 'email-reserva' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text(email.recipient))) add({
+    if (text(email.id) === 'email-reserva' && !isEmailAddress(text(email.recipient))) add({
       code: 'RESERVATION_EMAIL_RECIPIENT_MUST_BE_CONFIGURED',
       path: `emailTemplates.${index}.recipient`,
       message: 'Informe diretamente o e-mail do Departamento de Enfermagem no modelo de solicitação de reserva.',

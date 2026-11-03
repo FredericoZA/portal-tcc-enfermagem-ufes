@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import type { Request, Response } from 'express';
+import { admitPortalRequest } from '../server/security/requestAdmission';
 import { loadRuntimeImage } from '../server/integrations/supabase';
 
 const supabaseUrl = () => String(process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
@@ -11,6 +12,7 @@ function assetKey(value:unknown):string|null{
 }
 
 export default async function handler(req:Request,res:Response){
+  if (!admitPortalRequest(req, res, 'asset')) return;
   res.setHeader('X-Content-Type-Options','nosniff');
   if(req.method!=='GET'){
     res.setHeader('Allow','GET');

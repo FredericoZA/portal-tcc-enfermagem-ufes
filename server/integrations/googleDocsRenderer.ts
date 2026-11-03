@@ -88,14 +88,12 @@ async function googleRequest(fetchImpl: FetchLike, accessToken: string, url: str
 }
 
 function normalizeVariableKey(raw: string): string {
-  const key = String(raw || '')
-    .trim()
-    .replace(/^<<\s*|\s*>>$/g, '')
-    .replace(/^\{\{\s*|\s*\}\}$/g, '')
-    .replace(/^\[\[\s*|\s*\]\]$/g, '')
-    .replace(/^«\s*|\s*»$/g, '')
-    .replace(/^-|-$/g, '')
-    .trim();
+  let key = String(raw || '').trim();
+  for (const [opening, closing] of [['<<', '>>'], ['{{', '}}'], ['[[', ']]'], ['«', '»']]) {
+    if (key.startsWith(opening)) key = key.slice(opening.length).trimStart();
+    if (key.endsWith(closing)) key = key.slice(0, -closing.length).trimEnd();
+  }
+  key = key.replace(/^-|-$/g, '').trim();
   if (!/^[\p{L}\p{N}_ ().,-]{1,100}$/u.test(key)) throw new Error(`Variável de modelo inválida: ${String(raw).slice(0, 80)}`);
   return key;
 }

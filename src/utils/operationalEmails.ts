@@ -1,3 +1,4 @@
+import {replaceLegacySalutation} from './legacyTextProcessing';
 import {reviewOperationalEmailCopy} from './operationalEmailCopy';
 import {academicName} from './personPresentation';
 import {processEmailGuidance,emailProcessSection} from './processEmailGuidance';
@@ -9,9 +10,9 @@ type EmailTemplate={id?:unknown;body?:unknown;htmlBody?:unknown;subject?:unknown
 /** Upgrade known legacy copy while retaining recipients, layout and custom paragraphs. */
 export function upgradeOperationalEmailTemplate<T extends EmailTemplate>(template:T):T {
  let body=String(template.body||''),html=String(template.htmlBody||'');
- const salutation=/(Prezad[oa](?:\(a\))?)[^\n]*?,/i;
- body=body.replace(salutation,String(template.id)==='email-reserva'?'Prezado Departamento,':'Prezado(a) <<DESTINATARIO_NOME>>,');
- html=html.replace(/(Prezad[oa](?:\(a\))?)(?:(?!<\/p|<br)[\s\S])*?,/i,String(template.id)==='email-reserva'?'Prezado Departamento,':'Prezado(a) <<DESTINATARIO_NOME>>,');
+ const greeting=String(template.id)==='email-reserva'?'Prezado Departamento,':'Prezado(a) <<DESTINATARIO_NOME>>,';
+ body=replaceLegacySalutation(body,greeting,false);
+ html=replaceLegacySalutation(html,greeting,true);
  if(String(template.id)==='email-convite'){
   const formal=(value:string)=>value.replace(/Convidamos V\.\s*Sa\./gi,'Convidamos Vossas Senhorias').replace(/da defesa de TCC do discente/gi,'da defesa do Trabalho de Conclusão de Curso de autoria de').replace(/do\(s\) discente\(s\)/gi,'de autoria de').replace(/sob orientação de\s*(<<CAMPO_03>>|\{\{ORIENTADOR_NOME\}\}|<<ORIENTADOR_NOME>>)/gi,'sob a orientação de <<ORIENTADOR_NOME_COMPLETO>>');
   body=formal(body).replaceAll('<<ORIENTADOR_TRATAMENTO>>','<<ORIENTADOR_NOME_COMPLETO>>');html=formal(html).replaceAll('<<ORIENTADOR_TRATAMENTO>>','<<ORIENTADOR_NOME_COMPLETO>>');
