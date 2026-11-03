@@ -1,8 +1,9 @@
 import React from 'react';
 import { formatTccTitle } from '../utils/formatters';
 import { renderInstitutionName } from '../utils/institutionName';
+import { renderCustomLocationName } from '../utils/customDefenseLocation';
 
-type PreviewKind = 'title' | 'institution';
+type PreviewKind = 'title' | 'institution' | 'location';
 
 /**
  * A prévia não modifica o campo nem os dados enviados. Mostra a forma como o
@@ -20,7 +21,9 @@ export function RegistrationFieldPreview({
 
   const formatted = kind === 'institution'
     ? renderInstitutionName(input)
-    : formatTccTitle(input);
+    : kind === 'location'
+      ? renderCustomLocationName(input)
+      : formatTccTitle(input);
 
   if (!formatted) return null;
 
@@ -41,6 +44,10 @@ export function registrationPreviewKind(
 
   const key = String(fieldKey || '').toUpperCase();
   const displayLabel = String(label || '').toLocaleLowerCase('pt-BR');
+
+  if (/^nome completo do local\b/u.test(displayLabel) || /^(?:DEFESA_)?(?:OUTRO_)?LOCAL_(?:OUTRO_)?NOME$/.test(key) || key === 'NOME_COMPLETO_LOCAL' || key === 'DEFESA_LOCAL_PERSONALIZADO') {
+    return 'location';
+  }
 
   if (/(^|_)INSTITUICAO($|_)/.test(key) || /\binstituiç[aã]o\b/u.test(displayLabel)) {
     return 'institution';
