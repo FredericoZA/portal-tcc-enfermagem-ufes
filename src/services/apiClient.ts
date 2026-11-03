@@ -127,6 +127,13 @@ export const apiClient = {
     method: 'PATCH',
     body: JSON.stringify(data)
   }),
+  requestReservationChange: (
+    id: string,
+    data: { date: string; time: string; locationChoice: string; customLocation?: string; expectedDataRevision: number },
+  ) => fetchApi<{ process: ProcessData; emailSent: boolean; status: string }>(
+    `/api/processes/${encodeURIComponent(id)}/reservation-change`,
+    { method: 'POST', body: JSON.stringify(data) },
+  ),
   getStudioForm:(processId:string,formId:string)=>fetchApi<any>(`/api/processes/${processId}/forms/${formId}`),
   getStudioForms:(processId:string)=>fetchApi<any[]>(`/api/processes/${processId}/forms`),
   submitStudioForm:(processId:string,formId:string,answers:Record<string,unknown>,expectedFormRevision:number)=>fetchApi<import('../types/courseOperations').StudioFormSubmission>(`/api/processes/${processId}/forms/${formId}/submissions`,{method:'POST',body:JSON.stringify({answers,expectedFormRevision})}),
