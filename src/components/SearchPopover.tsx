@@ -76,8 +76,7 @@ export const SearchPopover: React.FC<SearchPopoverProps> = ({
               <input ref={inputRef} type="text" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} className="w-full pl-8 pr-14 py-1 bg-white border border-slate-300 text-slate-800 text-xs placeholder-slate-400 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-300 focus:border-slate-300 font-medium h-8" />
               {value && <button type="button" onClick={() => { onChange(''); inputRef.current?.focus(); }} className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-[9px] font-bold text-slate-500 hover:bg-slate-100">Limpar</button>}
             </div>
-            <div className="flex justify-between items-center text-[9px] text-slate-400/80">
-              <span>ESC para fechar</span>
+            <div className="flex justify-end items-center text-[9px] text-slate-400/80">
               <button type="button" onClick={() => setIsOpen(false)} className="portal-action-primary px-2 py-0.5 font-extrabold uppercase rounded-full border transition-colors cursor-pointer hover:brightness-95 leading-5">OK</button>
             </div>
           </div>
