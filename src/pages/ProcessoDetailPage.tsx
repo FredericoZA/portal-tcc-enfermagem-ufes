@@ -1,10 +1,11 @@
 import { portalNotice, portalPrompt } from '../services/portalDialogs';
 import { AdvisorEvaluationPanel } from '../components/AdvisorEvaluationPanel';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ProcessData, ProcessDocument, ProcessRole, SignatureJob } from '../types';
 import { TccDetailPopupFormat, DEFAULT_TCC_DETAIL_POPUP_FORMAT, loadTccDetailPopupFormat, TCC_DETAIL_POPUP_CONFIG_EVENT } from '../types/tccDetailFormat';
 import { useAuth } from '../context/AuthContext';
-import { apiClient } from '../services/apiClient';
+import { apiClient, ApiRequestError } from '../services/apiClient';
+import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { formatDatePt, formatDateExtensoTotal, formatTimeExtenso, formatStudentsString, normalizeEmail, formatNameTitleCase } from '../utils/formatters';
 import { EtapaProgressBar } from '../components/EtapaProgressBar';
 import { StudentNames } from '../components/StudentNames';
@@ -141,6 +142,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   // Section-specific Edit Mode state
   const [editingSection, setEditingSection] = useState<'cadastral' | 'defesa' | 'banca' | 'avaliacao' | 'acervo' | null>(null);
+  const [remoteUpdatePending,setRemoteUpdatePending]=useState(false);
+  const editingSectionRef=useRef(editingSection);
+  const lastProcessRevision=useRef<{revision:number;updatedAt:string}|null>(null);
+  const liveRefreshInFlight=useRef(false);
+  const onBackRef=useRef(onBack);
+  useEffect(()=>{editingSectionRef.current=editingSection;},[editingSection]);
+  useEffect(()=>{onBackRef.current=onBack;},[onBack]);
 
   // Form states per section
   const [cadastralForm, setCadastralForm] = useState({
@@ -188,9 +196,11 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     if (onUpdateFormat) onUpdateFormat(newFmt);
   };
 
-  const loadData = async () => {
-    setIsLoading(true);
-    setErrorMsg('');
+  const loadData = async (background = false) => {
+    if (!background) {
+      setIsLoading(true);
+      setErrorMsg('');
+    }
     try {
       const [pData, docsData,signatureData,verificationData] = await Promise.all([
         apiClient.getProcessById(processId),
@@ -198,6 +208,15 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         apiClient.getProcessSignatureJobs(processId).catch(() => []),
         apiClient.getProcessVerifications(processId).catch(() => [])
       ]);
+      if(background && editingSectionRef.current){
+        const latest=lastProcessRevision.current;
+        if(latest && (latest.revision!==pData.dataRevision || latest.updatedAt!==pData.updatedAt)){
+          setRemoteUpdatePending(true);
+        }
+        return;
+      }
+      lastProcessRevision.current={revision:pData.dataRevision,updatedAt:pData.updatedAt};
+      setRemoteUpdatePending(false);
       setProcess(pData);
       setDocuments(docsData);
       setSignatureJobs(signatureData);
@@ -284,15 +303,56 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
       setAuditLogs(generatedLogs);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao carregar o processo.');
+      if(background && err instanceof ApiRequestError && err.status===404){
+        portalNotice('Este TCC não está mais disponível. Ele pode ter sido excluído ou seu acesso foi alterado.');
+        onBackRef.current();
+        return;
+      }
+      if(!background)setErrorMsg(err.message || 'Erro ao carregar o processo.');
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    lastProcessRevision.current=null;
+    setRemoteUpdatePending(false);
+    void loadData();
   }, [processId, userEmail]);
+
+  useEffect(()=>{
+    let active=true;
+    const verify=async()=>{
+      if(!active||liveRefreshInFlight.current||document.visibilityState==='hidden')return;
+      liveRefreshInFlight.current=true;
+      try{
+        // Detecta exclusão mesmo quando há campos em edição, sem tocar no rascunho.
+        if(editingSectionRef.current){
+          const latest=await apiClient.getProcessById(processId);
+          if(!active)return;
+          const current=lastProcessRevision.current;
+          if(current && (latest.dataRevision!==current.revision||latest.updatedAt!==current.updatedAt)){
+            setRemoteUpdatePending(true);
+          }
+        }else{
+          await loadData(true);
+        }
+      }catch(err){
+        if(active&&err instanceof ApiRequestError&&err.status===404){
+          portalNotice('Este TCC não está mais disponível. Ele pode ter sido excluído ou seu acesso foi alterado.');
+          onBackRef.current();
+        }
+      }finally{
+        liveRefreshInFlight.current=false;
+      }
+    };
+    const onUpdate=()=>{void verify();};
+    window.addEventListener(PORTAL_LIVE_UPDATE_EVENT,onUpdate);
+    return()=>{
+      active=false;
+      window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT,onUpdate);
+    };
+  },[processId,userEmail]);
 
   if (isLoading) {
     return (
@@ -368,6 +428,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   // Handlers for individual subdivision edits
   const handleSaveCadastralEdit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(remoteUpdatePending){
+      portalNotice('Este TCC foi alterado em outra sessão. Cancele a edição e confira os dados atuais antes de salvar.');
+      return;
+    }
     if (!process) return;
     try {
       const updatedAluno1 = {
@@ -687,6 +751,12 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         </header>
       ) : null}
       {isModal && <div className="portal-modal-divider" aria-hidden="true" />}
+      {remoteUpdatePending&&(
+        <div role="alert" className="mx-3 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
+          <span>Este TCC foi alterado em outra sessão. Seus campos em edição não foram sobrescritos. Cancele a edição para consultar os dados atuais antes de salvar.</span>
+          <button type="button" onClick={()=>{setEditingSection(null);editingSectionRef.current=null;void loadData(true);}} className="rounded-lg bg-amber-800 px-3 py-2 font-bold text-white">Descartar edição e atualizar</button>
+        </div>
+      )}
       {process.coauthorAcceptance?.status==='PENDING'&&<section className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950"><div className="flex flex-wrap items-center justify-between gap-3"><div><strong className="text-sm">Aceite do segundo autor pendente</strong><p className="mt-1 text-xs">O fluxo documental permanece bloqueado até o e-mail convidado confirmar ou recusar o vínculo.</p></div>{normalizeEmail(process.coauthorAcceptance.invitedEmail||'')===normalizeEmail(userEmail)&&<div className="flex gap-2"><button type="button" onClick={()=>void handleCoauthorDecision('REJECT')} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-black">Recusar</button><button type="button" onClick={()=>void handleCoauthorDecision('ACCEPT')} className="rounded-lg bg-amber-800 px-3 py-2 text-xs font-black text-white">Aceitar autoria</button></div>}</div></section>}
       {process.coauthorAcceptance?.status==='REJECTED'&&<section className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-900">O segundo autor recusou o vínculo. Corrija ou remova os dados da dupla antes de continuar.</section>}
       
