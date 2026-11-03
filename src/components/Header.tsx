@@ -4,6 +4,7 @@ import { Menu, Shield, User } from 'lucide-react';
 import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { NotificationBell } from './NotificationBell';
+import { SiteZoomControls } from './SiteZoomControls';
 import { PORTAL_THEME } from '../theme/portalTheme';
 
 interface HeaderProps {
@@ -64,6 +65,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome })
         {showAuthenticatedIdentity && (
           <div className="hidden md:flex items-center gap-2">
             <NotificationBell />
+            <SiteZoomControls />
             {layoutConfig.headerShowRoleBadges && (isMaster ? (
               <span id="role-badge-master" className="inline-flex items-center gap-1 bg-amber-100 text-amber-950 border border-amber-300 text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
                 <Shield className="w-3.5 h-3.5 text-amber-800" />Usuário Master
