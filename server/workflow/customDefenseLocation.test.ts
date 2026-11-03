@@ -8,6 +8,7 @@ import {
   isOtherDefenseLocation,
   normalizeCustomLocationInput,
   renderCustomLocationName,
+  reservationConfirmationRecipient,
 } from '../../src/utils/customDefenseLocation';
 import { registrationQuestions } from '../../src/utils/operationalConfig';
 import { acceptRegistration } from './registration';
@@ -80,4 +81,20 @@ test('asteriscos desequilibrados são bloqueados', () => {
   const input = makeRegistration();
   input.registrationAnswers[CUSTOM_LOCATION_FIELD] = 'Auditório da *UFES';
   assert.throws(() => acceptRegistration(input), /asteriscos/);
+});
+
+test('outro local endereça somente o orientador; locais fixos continuam no departamento', () => {
+  assert.equal(
+    reservationConfirmationRecipient({ DEFESA_LOCAL: OTHER_DEFENSE_LOCATION }, 'ORIENTADOR@UFES.BR', 'departamento@ufes.br'),
+    'orientador@ufes.br',
+  );
+  assert.equal(
+    reservationConfirmationRecipient({ DEFESA_LOCAL: 'Auditório do Departamento' }, 'orientador@ufes.br', 'DEPARTAMENTO@UFES.BR'),
+    'departamento@ufes.br',
+  );
+  assert.equal(
+    reservationConfirmationRecipient({ DEFESA_LOCAL: OTHER_DEFENSE_LOCATION }, '', 'departamento@ufes.br'),
+    '',
+    'Não deve retornar ao departamento caso o orientador não tenha e-mail válido.',
+  );
 });
