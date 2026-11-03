@@ -13,7 +13,7 @@
     "dev": "tsx server.ts",
     "dev:compiled": "node scripts/start-local-compiled.mjs",
     "parity:check": "node scripts/portal-parity.mjs",
-    "prebuild": "npm run clean",
+    "prebuild": "node scripts/verify-production-source.mjs && npm run clean",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --outfile=dist/server/server.cjs",
     "start": "node scripts/start-production.mjs",
     "clean": "node scripts/clean-build.mjs",
