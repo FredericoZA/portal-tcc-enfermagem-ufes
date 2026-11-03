@@ -1,0 +1,66 @@
+import { formatNameTitleCase } from './formatters';
+import { renderInstitutionName } from './institutionName';
+import type { RegistrationAnswers } from '../types/operationalConfig';
+
+export interface RegistrationMemberRow {
+  key: string;
+  role: string;
+  name: string;
+  reference: string;
+  qualification: string;
+  email: string;
+  registration: string;
+  institution: string;
+}
+
+const PARTICIPANTS = [
+  { prefix: 'ALUNO_1', role: 'Aluno autor', kind: 'student' },
+  { prefix: 'ALUNO_2', role: 'Aluno autor', kind: 'student' },
+  { prefix: 'ORIENTADOR', role: 'Orientador(a)', kind: 'teacher' },
+  { prefix: 'EXAMINADOR_2', role: 'Examinador', kind: 'teacher' },
+  { prefix: 'EXAMINADOR_3', role: 'Examinador', kind: 'teacher' },
+  { prefix: 'COORIENTADOR', role: 'Coorientador(a)', kind: 'teacher' },
+] as const;
+
+const read = (answers: RegistrationAnswers, key: string): string =>
+  String(answers[key] ?? '').trim();
+
+const firstNonempty = (answers: RegistrationAnswers, ...keys: string[]): string =>
+  keys.map((key) => read(answers, key)).find(Boolean) || '';
+
+/**
+ * Constrói somente as linhas visíveis do quadro de conferência.
+ * Mantém cada coluna separada, no padrão de Dados dos membros do detalhe do TCC.
+ * Não persiste nem modifica valores digitados no cadastro.
+ */
+export function buildRegistrationMemberRows(
+  answers: RegistrationAnswers,
+  studentInstitution = 'UFES',
+): RegistrationMemberRow[] {
+  return PARTICIPANTS.flatMap(({ prefix, role, kind }) => {
+    if (prefix === 'ALUNO_2' && read(answers, 'TEM_ALUNO_2') !== 'Sim') return [];
+    if (prefix === 'COORIENTADOR' && read(answers, 'TEM_COORIENTADOR') !== 'Sim') return [];
+
+    const name = read(answers, `${prefix}_NOME`);
+    if (!name) return [];
+
+    const student = kind === 'student';
+    const institutionRaw = firstNonempty(answers, `${prefix}_INSTITUICAO`);
+    return [{
+      key: prefix,
+      role,
+      name: formatNameTitleCase(name),
+      reference: student
+        ? 'Aluno'
+        : firstNonempty(answers, `${prefix}_TRATAMENTO`, `${prefix}_REFERENCIA`) || 'Professor',
+      qualification: student
+        ? '—'
+        : firstNonempty(answers, `${prefix}_TITULACAO`, `${prefix}_TITULACAO_ACADEMICA`) || '—',
+      email: read(answers, `${prefix}_EMAIL`) || '—',
+      registration: firstNonempty(answers, `${prefix}_MATRICULA`, `${prefix}_SIAPE`, `${prefix}_REGISTRO`) || '—',
+      institution: institutionRaw
+        ? renderInstitutionName(institutionRaw)
+        : student ? studentInstitution : 'Não informado',
+    }];
+  });
+}
