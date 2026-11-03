@@ -19,6 +19,7 @@ import { simulateWorkflow } from './server/workflow/simulator';
 import { acceptRegistration } from './server/workflow/registration';
 import { validateReservationChange, buildReservationChangeEmail } from './server/workflow/reservationChange';
 import { officialInvitationEmail } from './server/workflow/officialInvitation';
+import { invitationTemplateCorrections } from './server/workflow/invitationTemplate';
 import { officialParticipantLines, officialIdentificationLines } from './src/utils/officialParticipants';
 import { ataArchived, declarationReady } from './server/workflow/gates';
 import { nextPendingSignatureSigner } from './server/workflow/signatureOrder';
@@ -741,7 +742,12 @@ async function renderOfficialTemplatePdf(p:ProcessData,type:'CONVITE'|'ATA'|'TER
   const accessToken=await getGoogleWorkspaceAccessToken();const outputName=buildPortalDriveFileName({protocol:p.protocolo,title:p.titulo,studentNames:[p.aluno1.nome,p.aluno2?.nome].filter(Boolean) as string[],documentType:type,version:p.dataRevision,lifecycle:'GERADO'});
   await verifyMasterDocumentModelFingerprint({accessToken,fileId:model.driveFileId,contentSha256:model.contentSha256,driveRevisionId:model.driveRevisionId,driveModifiedTime:model.driveModifiedTime});
   const artifactId=String(studioOverride?.docTemplates.find(item=>String(item.type).toUpperCase()===type)?.id||`tmpl-${type.toLowerCase()}`);
-  const rendered=await renderGoogleDriveTemplateToPdf({accessToken,templateUrlOrId:model.driveFileId,replacements:presentVariables(buildOfficialTemplateReplacements(p,verificationCode,extraVariables),artifactId,studioOverride),boldMarkers:(operationalConfig(studioOverride).presentations[artifactId]||[]).filter(rule=>rule.bold).map(rule=>rule.marker),temporaryParentId:p.driveFolderId,outputName});
+  const rendered=await renderGoogleDriveTemplateToPdf({accessToken,templateUrlOrId:model.driveFileId,replacements:presentVariables(buildOfficialTemplateReplacements(p,verificationCode,extraVariables),artifactId,studioOverride),boldMarkers:(operationalConfig(studioOverride).presentations[artifactId]||[]).filter(rule=>rule.bold).map(rule=>rule.marker),temporaryParentId:p.driveFolderId,outputName,
+    ...(type==='CONVITE'?{
+      literalReplacements:invitationTemplateCorrections(p),
+      invitationLayout:true,
+    }:{})
+  });
   await verifyMasterDocumentModelFingerprint({accessToken,fileId:model.driveFileId,contentSha256:model.contentSha256,driveRevisionId:model.driveRevisionId,driveModifiedTime:model.driveModifiedTime});
   if(rendered.replacementsChanged<1)throw new Error(`O modelo ${type} não contém nenhum marcador reconhecido. Revise as variáveis antes de solicitar assinatura.`);
   if(rendered.unresolvedMarkers.length)throw new Error(`O modelo ${type} ainda contém marcadores sem valor: ${rendered.unresolvedMarkers.join(', ')}.`);
