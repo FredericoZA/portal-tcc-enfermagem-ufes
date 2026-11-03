@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
-import handler from '../api/runtime-asset';
+import handler from './vercel/runtime-asset';
 
 test('PNG mail variant preserves alpha on a legacy WebP logo without altering the stored asset',async()=>{
  const oldFetch=globalThis.fetch,oldUrl=process.env.SUPABASE_URL,oldKey=process.env.SUPABASE_SECRET_KEY;

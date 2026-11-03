@@ -43,7 +43,7 @@ import {localReviewFilesEnabled,sourceFilesAccessToken,sourceFilesFolder,uploadS
 import {modelForRendering} from './server/workflow/modelPreviewSource';
 import type {DriveModelFingerprint} from './server/integrations/googleWorkspace';
 import {googleModelReference,googleFolderReference} from './server/googleModelReference';
-import replicationModelHandler from './api/replication-model';
+import replicationModelHandler from './server/vercel/replication-model';
 import {auditChanges,sanitizeProcessAudit} from './src/utils/processAudit';
 import {ataClosingTime} from './src/utils/ataClosingTime';
 import {withDeclarationAfterTerm} from './src/utils/declarationWorkflow';

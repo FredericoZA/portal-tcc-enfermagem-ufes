@@ -45,7 +45,7 @@ test('produção mantém fallbacks inseguros desligados e Asten fail-closed', ()
 });
 
 test('bootstrap de produção não registra exceção bruta e separa chaves de rotação', () => {
-  const apiEntry = readFileSync('api/index.ts', 'utf8');
+  const apiEntry = readFileSync('server/vercel/index.ts', 'utf8');
   assert.match(apiEntry, /safeStartupLog\('CREATE_APP', error\)/);
   assert.match(apiEntry, /safeStartupLog\('IMPORT_SERVER', error\)/);
   assert.doesNotMatch(apiEntry, /console\.error\([^\n]*,\s*error\s*\)/);

@@ -26,7 +26,7 @@ test('solicitação de código repete uma vez somente em falhas transitórias', 
 
 test('503 estruturado expõe mensagem útil e smoke monitora request-code', async () => {
   const [api, smoke] = await Promise.all([
-    source('api/index.ts'),
+    source('server/vercel/index.ts'),
     source('.github/workflows/production-smoke.yml'),
   ]);
   assert.ok(api.includes('error: diagnostic.message'));

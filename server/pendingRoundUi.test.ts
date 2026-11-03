@@ -34,7 +34,7 @@ test('configurações não exibem blocos redundantes e Indicadores usam somente 
     source('src/pages/ConfiguracoesPage.tsx'),
     source('src/components/InfrastructureIntegrationsPanel.tsx'),
     source('src/pages/IndicadoresPage.tsx'),
-    source('api/public-indicators.ts')
+    source('server/vercel/public-indicators.ts')
   ]);
   assert.ok(!config.includes('<OperationsMonitorPanel'));
   assert.ok(!config.includes('Drive gerenciado pelo servidor.'));

@@ -58,6 +58,8 @@ jobs:
         run: npm run test:finalization
       - name: Gerar build de produção
         run: npm run build
+      - name: Testar funções empacotadas em Node sem TypeScript
+        run: npm run test:serverless
       - name: Testar build HTTP
         run: npm run test:http
       - name: Validar importação do servidor em runtime de produção

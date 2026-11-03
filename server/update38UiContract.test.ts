@@ -13,7 +13,7 @@ test('sidebar ativa usa apenas o estado canônico, sem faixa fluorescente histó
 });
 
 test('Replicar Portal oferece um único download agregado dos quatro modelos',async()=>{
-  const [page,api]=await Promise.all([source('src/pages/PortalReplicationPage.tsx'),source('api/replication-model.ts')]);
+  const [page,api]=await Promise.all([source('src/pages/PortalReplicationPage.tsx'),source('server/vercel/replication-model.ts')]);
   assert.ok(page.includes('Baixar modelos'));
   assert.ok(page.includes('/api/public/replication-models/all/download'));
   assert.ok(page.includes('um único arquivo ZIP'));

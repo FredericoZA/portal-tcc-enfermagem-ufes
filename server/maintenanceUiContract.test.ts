@@ -27,7 +27,7 @@ test('cores do processo e calendário compartilham a mesma paleta',()=>{
 
 test('replicação expõe somente download agregado em zip',()=>{
   const page=read('src/pages/PortalReplicationPage.tsx');
-  const api=read('api/replication-model.ts');
+  const api=read('server/vercel/replication-model.ts');
   assert.match(page,/replication-models\/all\/download/);
   assert.doesNotMatch(page,/models\.map/);
   assert.doesNotMatch(page,/showAcceptance/);

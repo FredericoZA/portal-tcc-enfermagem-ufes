@@ -7,7 +7,7 @@ const root=path.resolve(process.cwd());
 const source=(file:string)=>readFile(path.join(root,file),'utf8');
 
 test('Asten não bloqueia a inicialização global e mantém barreira própria de despacho',async()=>{
-  const [api,server,asten]=await Promise.all([source('api/index.ts'),source('server.ts'),source('server/integrations/asten.ts')]);
+  const [api,server,asten]=await Promise.all([source('server/vercel/index.ts'),source('server.ts'),source('server/integrations/asten.ts')]);
   assert.ok(!api.includes("missing.push('ASTEN')"));
   assert.ok(!server.includes("if(process.env.ASTEN_INTEGRATION_ENABLED==='true'){const astenSecurity=getAstenSecurityPreflight();if(!astenSecurity.callbackConfigured)throw"));
   assert.ok(asten.includes('assertAstenDispatchPreflight'));
@@ -51,7 +51,7 @@ test('replicação pública oferece repositório e downloads de cópias independ
     source('src/App.tsx'),
     source('src/components/Sidebar.tsx'),
     source('src/pages/PortalReplicationPage.tsx'),
-    source('api/replication-model.ts'),
+    source('server/vercel/replication-model.ts'),
     source('vercel.json')
   ]);
   assert.ok(app.includes("case 'replicar'"));

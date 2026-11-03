@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import JSZip from 'jszip';
-import {exportReplicationModel} from '../api/replication-model';
+import {exportReplicationModel} from './vercel/replication-model';
 test('replication downloads DOCX bytes directly and exports native Docs without changing templates',async()=>{
  const original=globalThis.fetch;const urls:string[]=[];
  const zip=new JSZip();zip.file('word/document.xml','<w:document>&lt;&lt;alunos&gt;&gt;</w:document>');const bytes=await zip.generateAsync({type:'nodebuffer'});
