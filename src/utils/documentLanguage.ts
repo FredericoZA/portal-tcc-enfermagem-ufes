@@ -90,7 +90,7 @@ export function adaptDocumentLanguage(text:string,p:ProcessData,type:string):str
   out=removeAtaLocationTime(out);
   const time=formatTimeExtenso(ataClosingTime(p.defesa.startAt).iso);
   const closing=`Nada mais havendo a tratar, às ${time} foi encerrada a sessão e lavrada a presente ata que segue para ser assinada.`;
-  out=out.replace(/Nada mais havendo a tratar,\s*(?:às [^,]+?\s+)?foi encerrada a sessão e lavrada a presente ata,?\s*que (?:será assinada(?: por quem de direito)?|segue para ser assinada)\.?/gi,closing);
+  out=out.replace(/Nada mais havendo a tratar,\s*(?:às [^,]+?\s)?foi encerrada a sessão e lavrada a presente ata,?\s*que (?:será assinada(?: por quem de direito)?|segue para ser assinada)\.?/gi,closing);
  }
  return out;
 }
