@@ -3,6 +3,7 @@ import type { RegistrationAnswers } from '../../src/types/operationalConfig';
 import { registrationPayload, registrationQuestions } from '../../src/utils/operationalConfig';
 import { evaluateStudioCondition, validateStudioAnswer } from '../../src/utils/courseStudioValidator';
 import { formatNameTitleCase, formatTccTitle, normalizeEmail } from '../../src/utils/formatters';
+import { CUSTOM_LOCATION_FIELD, getCustomLocationFieldValue, isCustomLocationRegistration, normalizeCustomLocationInput } from '../../src/utils/customDefenseLocation';
 
 const LEGACY_LOCATION_ALIASES = new Map<string, string>([
   ['auditório do departamento de enfermagem', 'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES'],
@@ -18,6 +19,9 @@ function normalizeRegistrationValue(fieldKey: string, fieldType: string, raw: un
   if (/_NOME$/.test(fieldKey)) return formatNameTitleCase(value.replace(/\s+/g, ' '));
   if (/MATRICULA$/.test(fieldKey) || /_SIAPE$/.test(fieldKey)) return value.replace(/[^0-9]/g, '');
   if (fieldKey === 'TITULO') return formatTccTitle(value.replace(/\s+/g, ' '));
+  if (fieldKey === CUSTOM_LOCATION_FIELD || fieldKey === 'OUTRO_LOCAL_NOME' || fieldKey === 'NOME_COMPLETO_LOCAL' || fieldKey === 'DEFESA_LOCAL_OUTRO_NOME') {
+    return normalizeCustomLocationInput(value);
+  }
   value = value.replace(/\s+/g, ' ');
   if (fieldKey === 'DEFESA_LOCAL' || fieldKey === 'LOCAL_ALTERNATIVO') {
     return LEGACY_LOCATION_ALIASES.get(value.toLocaleLowerCase('pt-BR')) || value;
@@ -64,6 +68,9 @@ export function acceptRegistration(input: any, studio?: Partial<IntegrationStudi
     }
     answers.DEFESA_LOCAL = input?.defesa?.local || '';
     answers.LOCAL_ALTERNATIVO = input?.defesa?.alternateLocation || '';
+    if (input?.registrationAnswers && typeof input.registrationAnswers === 'object') {
+      Object.assign(answers, input.registrationAnswers);
+    }
   }
 
   const accepted: RegistrationAnswers = {};
@@ -82,6 +89,16 @@ export function acceptRegistration(input: any, studio?: Partial<IntegrationStudi
     if (issue) throw new Error(`${question.label}: ${issue}`);
     if (String(value ?? '').length > 10000) throw new Error(`${question.label}: texto muito longo.`);
     if (value !== undefined) accepted[question.fieldKey] = value as string | number | boolean;
+  }
+
+  if (isCustomLocationRegistration(accepted)) {
+    const location = getCustomLocationFieldValue(accepted);
+    if (!location) throw new Error('Nome completo do local: campo obrigatório quando a opção Outro local for escolhida.');
+    if (location.length > 200) throw new Error('Nome completo do local: informe até 200 caracteres.');
+    if ((location.match(/\\*/g) || []).length % 2 !== 0) throw new Error('Nome completo do local: confira os asteriscos usados para as siglas.');
+    const canonical = normalizeCustomLocationInput(location);
+    if (!/[\\p{L}]{2}/u.test(canonical)) throw new Error('Nome completo do local: informe um nome válido.');
+    accepted[CUSTOM_LOCATION_FIELD] = canonical;
   }
 
   validateDefenseBusinessDay(accepted.DEFESA_DATA_HORA);
