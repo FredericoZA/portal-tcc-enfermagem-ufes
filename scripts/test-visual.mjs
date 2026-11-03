@@ -129,6 +129,9 @@ try {
       const outliers = [];
       const selectors = 'h1,h2,h3,h4,h5,h6,p,label,button,a,td,th,span,strong,small,input,textarea,select,summary,[role="heading"]';
       const insideSheet = (el) => Boolean(el.closest('.portal-spreadsheet-table,.portal-spreadsheet-scroll-host,.portal-calendar-day-cell,.portal-calendar-empty-cell'));
+      const typographyRegion = (el) => el.closest('#portal-sidebar .portal-sidebar-subtitle') ? 'marca-lateral' :
+        el.closest('.portal-settings-workspace') ? 'configuracoes-popup' :
+        insideSheet(el) ? 'planilha-calendario' : 'portal-geral';
       for (const el of document.querySelectorAll(selectors)) {
         if (el.closest('script,style,[hidden],[aria-hidden="true"]') || !el.getClientRects().length) continue;
         const style = getComputedStyle(el);
@@ -137,8 +140,7 @@ try {
         if (!label) continue;
         const px = Math.round(parseFloat(style.fontSize)*10)/10;
         if (!Number.isFinite(px)) continue;
-        const region = el.closest('.portal-settings-workspace') ? 'configuracoes-popup' :
-          insideSheet(el) ? 'planilha-calendario' : 'portal-geral';
+        const region = typographyRegion(el);
         const key = `${region}:${px}px`;
         histogram[key] = (histogram[key] || 0) + 1;
         if (px < 10.5 && outliers.length < 24 && region !== 'planilha-calendario') {
@@ -165,8 +167,7 @@ try {
         if (style.display === 'none' || style.visibility === 'hidden') continue;
         const px = Math.round(parseFloat(style.fontSize)*10)/10;
         if (!Number.isFinite(px)) continue;
-        const region = parent.closest('.portal-settings-workspace') ? 'configuracoes-popup' :
-          insideSheet(parent) ? 'planilha-calendario' : 'portal-geral';
+        const region = typographyRegion(parent);
         const key = `${region}:${px}px`;
         textNodeHistogram[key]=(textNodeHistogram[key]||0)+1;
         if(px<10.5&&region!=='planilha-calendario'&&textNodeOutliers.length<16) {
@@ -205,11 +206,16 @@ try {
         report.errors.push(`Botão de exclusão sem prioridade correta: ${JSON.stringify(dialogFonts.trash)}`);
     }
 
-    // Contrato absoluto: todos os textos visíveis devem usar somente 11, 14 ou 18 px.
+    // O conteúdo usa 11, 14 ou 18 px. A única exceção é a marca lateral:
+    // o subtítulo Enfermagem recebeu o aumento de 10% aprovado (11 * 1,1 = 12,1).
     // Valida as fontes COMPUTADAS, inclusive quando o Tailwind ou um estilo inline
     // tentar restabelecer dimensões históricas.
     const offScale = Object.entries({ ...fonts.histogram, ...fonts.textNodes.histogram })
-      .filter(([key]) => ![11, 14, 18].includes(Number(key.split(':').at(-1).replace('px', ''))));
+      .filter(([key]) => {
+        const [region, size] = key.split(':');
+        const px = Number(size.replace('px', ''));
+        return region === 'marca-lateral' ? px !== 12.1 : ![11, 14, 18].includes(px);
+      });
     if (offScale.length) report.errors.push(`${name}: fonte fora da escala 18/14/11 (${JSON.stringify(offScale)})`);
     const navAndTitles = await page.evaluate(() => {
       const visibleSizes = (selector) => Array.from(document.querySelectorAll(selector))
@@ -344,7 +350,7 @@ try {
               replicar: '#portal-replication-page'
             };
             const root = document.querySelector(ids[currentTab]);
-            const panel = root?.querySelector('.portal-layer-panel');
+            const panel = root?.matches('.portal-layer-panel') ? root : root?.querySelector('.portal-layer-panel');
             const card = root?.querySelector('.portal-layer-card');
             const inner = root?.querySelector('.portal-layer-inner');
             return {
@@ -389,8 +395,9 @@ try {
           if (repoHeaderLine > 0) report.errors.push(`master-repositorio-${width}: linha indevida permanece no cabeçalho (${repoHeaderLine}px).`);
         }
         if (tab === 'tutorial') {
-          const tutorialColor = await page.evaluate(() => {
-            const box = document.querySelector('#portal-tutorial-finish-card');
+          const finishHeading = page.locator('#portal-tutorial-page').getByRole('heading', {name: 'Conferência antes de encerrar', exact: true});
+          const tutorialColor = await finishHeading.evaluate(heading => {
+            const box = heading.closest('section');
             return box ? getComputedStyle(box).backgroundColor : '';
           });
           if (tutorialColor !== 'rgb(216, 223, 227)') {
