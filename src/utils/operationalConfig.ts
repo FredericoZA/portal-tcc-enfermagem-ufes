@@ -1,5 +1,6 @@
 import { formatTimeExtenso, formatDateExtensoTotal, formatNameTitleCase, formatTccTitle, normalizeEmail } from './formatters';
 import type { IntegrationStudioSettings, StudioValidationRule } from '../types/integrationStudio';
+import { CUSTOM_LOCATION_FIELD, OTHER_DEFENSE_LOCATION, getCustomLocationFieldValue, isOtherDefenseLocation, renderCustomLocationName } from './customDefenseLocation';
 import type { CatalogEntry, OperationalConfig, RegistrationAnswers, RegistrationQuestion, VariablePresentation } from '../types/operationalConfig';
 
 const defaultCatalog = (kind: CatalogEntry['kind'], values: string[]): CatalogEntry[] => values.map((label, index) => ({
@@ -174,6 +175,7 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
 
   q('DEFESA_DATA_HORA', 'Data e hora pretendidas para a defesa', 'Reserva do local', 'datetime-local'),
   q('DEFESA_LOCAL', 'Local que pretende reservar', 'Reserva do local', 'select'),
+  { ...q(CUSTOM_LOCATION_FIELD, 'Nome completo do local', 'Reserva do local', 'text', { fieldKey: 'DEFESA_LOCAL', operator: 'EQUALS', value: OTHER_DEFENSE_LOCATION }), helpText: 'Use iniciais maiúsculas; para siglas em caixa alta, escreva *UFES*. Os asteriscos não aparecem nos documentos.' },
   { ...q('LOCAL_ALTERNATIVO', 'Local alternativo se o preferido estiver ocupado', 'Reserva do local', 'select'), required: false }
 ];
 
@@ -219,7 +221,11 @@ export function registrationQuestions(studio?: Partial<IntegrationStudioSettings
       : { ...custom, fieldKey, section: custom.section || 'Trabalho' });
   }
 
-  for (const core of REGISTRATION_QUESTIONS) if (!seen.has(core.fieldKey)) result.push({ ...core });
+  for (const core of REGISTRATION_QUESTIONS) {
+    if (seen.has(core.fieldKey)) continue;
+    if (core.fieldKey === CUSTOM_LOCATION_FIELD && configured.some(field => /nome completo do local/i.test(String(field.label || '')))) continue;
+    result.push({ ...core });
+  }
 
   const config = operationalConfig(studio);
   const ordered: RegistrationQuestion[] = [];
@@ -234,7 +240,12 @@ export function registrationQuestions(studio?: Partial<IntegrationStudioSettings
   result.forEach(visit);
 
   return ordered.map(field => {
-    if (['DEFESA_LOCAL', 'LOCAL_ALTERNATIVO'].includes(field.fieldKey)) return { ...field, fieldType: 'select', options: config.reservation.locations.filter(Boolean) };
+    if (field.fieldKey === 'DEFESA_LOCAL') {
+      return { ...field, fieldType: 'select', options: [...new Set([...config.reservation.locations.filter(Boolean), OTHER_DEFENSE_LOCATION])] };
+    }
+    if (field.fieldKey === 'LOCAL_ALTERNATIVO') {
+      return { ...field, fieldType: 'select', options: config.reservation.locations.filter(Boolean).filter(option => !isOtherDefenseLocation(option)) };
+    }
     const options = config.catalogs.filter(e => e.kind === field.fieldKey && catalogIsValid(e)).map(e => e.label);
     return options.length ? { ...field, fieldType: 'select', options } : field;
   });
@@ -284,7 +295,9 @@ export function registrationPayload(a: RegistrationAnswers, timezone: string) {
     banca: [2, 3].map(n => ({ ...canonicalPerson(`EXAMINADOR_${n}`, a), funcao: `EXAMINER_${n}` })),
     defesa: {
       startAt: localDateTimeToIso(s('DEFESA_DATA_HORA'), timezone),
-      local: s('DEFESA_LOCAL'),
+      local: isOtherDefenseLocation(s('DEFESA_LOCAL'))
+        ? renderCustomLocationName(getCustomLocationFieldValue(a))
+        : s('DEFESA_LOCAL'),
       alternateLocation: s('LOCAL_ALTERNATIVO')
     },
     registrationAnswers: a
