@@ -116,6 +116,14 @@ export const apiClient = {
     body: JSON.stringify(settings)
   }),
   updateDriveRootFolder:(folderId:string)=>fetchApi<{folderId:string}>('/api/admin/drive-root',{method:'POST',body:JSON.stringify({folderId})}),
+  sendPublicFeedback: (data:{description:string;imageDataUrl?:string;extraField?:string}) =>
+    fetchApi<{received:boolean;reference?:string}>('/api/public/feedback',{method:'POST',body:JSON.stringify(data)}),
+  getFeedbackForAdmin: () => fetchApi<Array<{
+    id:string;description:string;image_mime:string|null;image_size:number|null;
+    status:'NEW'|'REVIEWED';created_at:string;reviewed_at:string|null;
+  }>>('/api/admin/feedback'),
+  markFeedbackReviewed: (id:string) =>
+    fetchApi<{reviewed:boolean}>(`/api/admin/feedback/${encodeURIComponent(id)}/review`,{method:'PATCH',body:'{}'}),
   getProcesses: () => fetchApi<ProcessData[]>('/api/processes'),
   getProcessById: (id: string) => fetchApi<ProcessData>(`/api/processes/${id}`),
   getRegistrationSchema:()=>fetchApi<Partial<import('../types/integrationStudio').IntegrationStudioSettings>>('/api/forms/registration-schema'),
