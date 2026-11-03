@@ -1,11 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, Loader2 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
+import { PORTAL_LIVE_UPDATE_EVENT } from './PortalLiveSync';
 
 export const NotificationBell: React.FC = () => {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => { apiClient.getNotifications().then(setItems).catch(() => setItems([])).finally(() => setLoading(false)); }, []);
+  useEffect(() => {
+    let active=true;
+    const update=()=>{void apiClient.getNotifications().then(data=>{if(active)setItems(data);}).catch(()=>undefined).finally(()=>{if(active)setLoading(false);});};
+    update();
+    window.addEventListener(PORTAL_LIVE_UPDATE_EVENT,update);
+    return ()=>{active=false;window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT,update);};
+  }, []);
   return <details className="relative">
     <summary className="relative flex min-h-11 min-w-11 cursor-pointer list-none items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50" aria-label={`Notificações${items.length ? `: ${items.length} pendente(s)` : ''}`}>
       {loading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Bell className="h-4 w-4"/>}
