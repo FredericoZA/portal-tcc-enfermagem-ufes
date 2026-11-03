@@ -20,6 +20,7 @@ function Question({ field, value, readOnly, onChange }: { field: RegistrationQue
       <input className="portal-input" type={['email','number','date','datetime-local'].includes(field.fieldType)?field.fieldType:'text'} readOnly={readOnly} value={String(value??'')} onBlur={() => { if (previewKind === 'location' && value) onChange(normalizeCustomLocationInput(String(value))); }} placeholder={field.placeholder} maxLength={field.validation?.maxLength||500} onChange={e=>onChange(e.target.value)}/>}
     {previewKind && <RegistrationFieldPreview kind={previewKind} value={String(value ?? '')} />}
     {field.helpText&&<span className="mt-1 block text-sm opacity-80">{field.helpText}</span>}
+    {previewKind === 'location' && !field.helpText && <span className="mt-1 block text-xs text-slate-600">Use iniciais maiúsculas. Para manter siglas em caixa alta, coloque-as entre asteriscos, como *UFES*. Os asteriscos não aparecem nos documentos.</span>}
   </label>;
 }
 export function ConfigurableRegistration({ onSuccess, onCancel }: { onSuccess:(id:string)=>void; onCancel:()=>void }) {
