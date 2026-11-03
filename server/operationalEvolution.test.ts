@@ -4,6 +4,7 @@ import type { ProcessData, SignatureJob } from '../src/types';
 import type { IntegrationStudioSettings } from '../src/types/integrationStudio';
 import { DEFAULT_OPERATIONAL_CONFIG, registrationQuestions, localDateTimeToIso, presentVariables, resolveCatalogValue } from '../src/utils/operationalConfig';
 import { acceptRegistration } from './workflow/registration';
+import { OTHER_DEFENSE_LOCATION, CUSTOM_LOCATION_FIELD } from '../src/utils/customDefenseLocation';
 import { ataArchived, declarationReady } from './workflow/gates';
 import { simulateWorkflow } from './workflow/simulator';
 import { buildMarkerBoldRequests } from './integrations/googleDocsStyles';
@@ -27,7 +28,7 @@ test('horário do formulário respeita o fuso institucional e rejeita data inexi
 });
 test('cadastro publicado mantém SIAPE, opções do Master e bloqueia campo obrigatório ausente',()=>{
   const s=studio();s.formTemplates=[{id:'form-reserva-aluno',questions:[{id:'extra',fieldKey:'PERGUNTA_NOVA',label:'Pergunta da secretaria',required:true,fieldType:'text'}]}];
-  const fields=registrationQuestions(s);assert.ok(fields.some(f=>f.fieldKey==='ORIENTADOR_SIAPE'&&f.required));assert.ok(fields.some(f=>f.fieldKey==='COORIENTADOR_SIAPE'&&!f.required));assert.deepEqual(fields.find(f=>f.fieldKey==='DEFESA_LOCAL')?.options,['Sala','Auditório']);
+  const fields=registrationQuestions(s);assert.ok(fields.some(f=>f.fieldKey==='ORIENTADOR_SIAPE'&&f.required));assert.ok(fields.some(f=>f.fieldKey==='COORIENTADOR_SIAPE'&&!f.required));assert.deepEqual(fields.find(f=>f.fieldKey==='DEFESA_LOCAL')?.options,['Sala','Auditório',OTHER_DEFENSE_LOCATION]);assert.ok(fields.some(f=>f.fieldKey===CUSTOM_LOCATION_FIELD&&f.required));
   assert.throws(()=>acceptRegistration({registrationAnswers:{}},s),/Pergunta da secretaria/);
 });
 test('a mesma data tem apresentação numérica e por extenso sem mudar sua origem',()=>{
