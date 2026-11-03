@@ -17,6 +17,7 @@ import type { RegistrationDraft, ReminderRecord } from './src/types/workflowOper
 import { buildAdvancedAnalytics, analyticsCsv, analyticsMarkdown } from './server/advancedAnalytics';
 import { simulateWorkflow } from './server/workflow/simulator';
 import { acceptRegistration } from './server/workflow/registration';
+import { FeedbackError, submitPublicFeedback, listFeedbackForAdmins, feedbackImageForAdmin, markFeedbackReviewed } from './server/publicFeedback';
 import { validateReservationChange, buildReservationChangeEmail } from './server/workflow/reservationChange';
 import { officialInvitationEmail } from './server/workflow/officialInvitation';
 import { invitationTemplateCorrections } from './server/workflow/invitationTemplate';
@@ -1414,6 +1415,47 @@ export async function createPortalApp() {
   const requireGlobalRoles=(...roles:GlobalRole[])=>(req:express.Request,res:express.Response,next:express.NextFunction)=>{const identity=getPortalIdentity(req);if(!identity)return res.status(401).json({error:'Autenticação institucional obrigatória.'});const userRoles=getUserRolesForEmail(identity.email).globalRoles;if(!roles.some(role=>userRoles.includes(role)))return res.status(403).json({error:'Seu perfil não tem permissão para esta operação.'});next();};
   const requireAdministrator=requireGlobalRoles('MASTER_ADMIN','COMMISSION_PRESIDENT');
   const requireAdministrativeOperator=requireGlobalRoles('MASTER_ADMIN','COMMISSION_PRESIDENT');
+  // Sugestões públicas: sem login para o envio, mas consulta e imagens somente
+  // para a administração. Nada é inserido no estado transacional dos TCCs.
+  app.post('/api/public/feedback',async(req,res)=>{
+    res.setHeader('Cache-Control','no-store');
+    try{
+      const ip=String(req.ip||req.socket.remoteAddress||'').trim();
+      const result=await submitPublicFeedback(req.body,ip,String(process.env.PORTAL_SESSION_SECRET||''));
+      res.status(201).json({received:true,reference:result.id||undefined});
+    }catch(error){
+      if(!(error instanceof FeedbackError))console.error('[Feedback] Falha ao receber sugestão:',error);
+      res.status(error instanceof FeedbackError?error.status:503).json({
+        error:error instanceof FeedbackError?error.message:'Não foi possível registrar a sugestão. Tente novamente.',
+      });
+    }
+  });
+  app.get('/api/admin/feedback',requireAuthenticated,requireAdministrator,async(_req,res)=>{
+    res.setHeader('Cache-Control','private, no-store');
+    try{res.json(await listFeedbackForAdmins());}
+    catch{res.status(503).json({error:'Não foi possível consultar as sugestões.'});}
+  });
+  app.get('/api/admin/feedback/:id/image',requireAuthenticated,requireAdministrator,async(req,res)=>{
+    res.setHeader('Cache-Control','private, no-store');
+    res.setHeader('X-Content-Type-Options','nosniff');
+    try{
+      const image=await feedbackImageForAdmin(String(req.params.id||''));
+      if(!image)return res.status(404).json({error:'Imagem não encontrada.'});
+      res.type(image.mime);res.send(image.bytes);
+    }catch(error){
+      res.status(error instanceof FeedbackError?error.status:503).json({error:'Não foi possível consultar a imagem.'});
+    }
+  });
+  app.patch('/api/admin/feedback/:id/review',requireAuthenticated,requireAdministrator,async(req,res)=>{
+    res.setHeader('Cache-Control','private, no-store');
+    try{
+      const actor=getPortalIdentity(req)!.email;
+      const updated=await markFeedbackReviewed(String(req.params.id||''),actor);
+      if(!updated)return res.status(404).json({error:'Sugestão não encontrada.'});
+      res.json({reviewed:true});
+    }catch(error){res.status(error instanceof FeedbackError?error.status:503).json({error:'Não foi possível atualizar a sugestão.'});}
+  });
+
 
   app.post('/api/uploads/staging',async(req,res)=>{
     const purpose=String(req.body?.purpose||'') as StagedUploadPurpose;
