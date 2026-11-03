@@ -46,7 +46,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
   const denial = ['NEGADO', 'RECUSADO', 'REJEITADO', 'DENIED', 'REJECTED'].includes(
     String(process.defesa?.localStatus || '').toUpperCase(),
   ) || process.defesa?.reservationChangeRequest?.status === 'DENIED';
-  const outstanding = ['PENDING', 'SENT', 'SEND_FAILED'].includes(
+  const outstanding = ['PENDING', 'SENT'].includes(
     String(process.defesa?.reservationChangeRequest?.status || ''),
   );
 
@@ -80,10 +80,14 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
   };
 
   const openReservation = () => {
-    setRequested(dateTimeForInput(process.defesa?.startAt || ''));
-    setLocationChoice(process.defesa?.local && locations.includes(process.defesa.local)
-      ? process.defesa.local : OTHER_DEFENSE_LOCATION);
-    setCustomLocation('');
+    const previousFailed = process.defesa.reservationChangeRequest?.status === 'SEND_FAILED'
+      ? process.defesa.reservationChangeRequest : null;
+    setRequested(dateTimeForInput(previousFailed?.startAt || process.defesa?.startAt || ''));
+    setLocationChoice(previousFailed?.locationChoice || (
+      process.defesa?.local && locations.includes(process.defesa.local)
+        ? process.defesa.local : OTHER_DEFENSE_LOCATION
+    ));
+    setCustomLocation(previousFailed && isOtherDefenseLocation(previousFailed.locationChoice) ? previousFailed.local : '');
     setError('');
     setReservationOpen(true);
   };
@@ -185,9 +189,12 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
         </div>
         {outstanding && (
           <p role="status" className="mt-2 text-[10px] font-semibold text-amber-900">
-            {process.defesa.reservationChangeRequest?.status === 'SEND_FAILED'
-              ? 'Falha ou pendência no envio da nova solicitação. Contate a secretaria.'
-              : 'Nova solicitação de reserva aguardando confirmação do responsável.'}
+            Nova solicitação de reserva aguardando confirmação do responsável.
+          </p>
+        )}
+        {process.defesa.reservationChangeRequest?.status === 'SEND_FAILED' && (
+          <p role="alert" className="mt-2 text-[10px] font-semibold text-amber-900">
+            O envio do e-mail ainda não foi confirmado. Use Alterar reserva para repetir exatamente o mesmo pedido ou procure a secretaria.
           </p>
         )}
         {denial && <p className="mt-1 text-[10px] font-semibold text-red-700">A reserva foi recusada. É necessário enviar uma nova solicitação.</p>}
