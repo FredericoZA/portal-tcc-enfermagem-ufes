@@ -1,5 +1,6 @@
 import { formatNameTitleCase } from './formatters';
 import { renderInstitutionName } from './institutionName';
+import { participantIsFemale } from './officialParticipants';
 import type { RegistrationAnswers } from '../types/operationalConfig';
 
 export interface RegistrationMemberRow {
@@ -45,10 +46,15 @@ export function buildRegistrationMemberRows(
     if (!name) return [];
 
     const student = kind === 'student';
+    const female = participantIsFemale(answers,prefix);
+    const standardizedRole = student ? (female?'Aluna autora':'Aluno autor') :
+      prefix==='ORIENTADOR' ? (female?'Orientadora':'Orientador') :
+      prefix==='COORIENTADOR' ? (female?'Coorientadora':'Coorientador') :
+      (female?'Examinadora':'Examinador');
     const institutionRaw = firstNonempty(answers, `${prefix}_INSTITUICAO`);
     return [{
       key: prefix,
-      role,
+      role: standardizedRole,
       name: formatNameTitleCase(name),
       reference: student
         ? 'Aluno'
