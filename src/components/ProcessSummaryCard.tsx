@@ -4,6 +4,7 @@ import type { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
 import { PortalModalShell } from './PortalModalShell';
 import { RegistrationFieldPreview } from './RegistrationFieldPreview';
+import { ProcessGuidanceNotice } from './ProcessGuidanceNotice';
 import { formatDatePt, formatTimeExtenso, formatTccTitle } from '../utils/formatters';
 import { isOtherDefenseLocation, OTHER_DEFENSE_LOCATION, renderCustomLocationName } from '../utils/customDefenseLocation';
 import { operationalConfig } from '../utils/operationalConfig';
@@ -199,6 +200,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
         )}
         {error && !reservationOpen && <p role="alert" className="mt-2 text-[10px] text-red-700">{error}</p>}
       </section>
+      <ProcessGuidanceNotice />
 
       <PortalModalShell
         open={reservationOpen}
