@@ -9,7 +9,7 @@ type PublicIndicators = {
   generatedAt: string;
   privacy: { containsPersonalData: boolean; smallGroupSuppressed: boolean; minimumGroupSize: number; minimumBucketSize: number };
   totals: { registered: number; completed: number; published: number; defended: number; inProgress: number; completionRate: number; publicationRate: number; coauthorRate: number };
-  descriptive: null | { monthlyMean: number; monthlyMedian: number; monthlyStdDev: number; peakMonth: string | null; peakMonthCount: number; completionDaysMean: number; completionDaysMedian: number; observedMonths: number };
+  descriptive: null | { monthlyMean: number; monthlyMedian: number; monthlyStdDev: number; peakMonth: string | null; peakMonthCount: number; completionDaysMean: number | null; completionDaysMedian: number | null; observedMonths: number };
   byStatus: Array<{ key: string; label: string; count: number }>;
   years: Bucket[];
   months: Bucket[];
@@ -194,8 +194,8 @@ export const IndicadoresPage: React.FC = () => {
           ['Mediana mensal', num(data.descriptive.monthlyMedian)],
           ['Desvio-padrão', num(data.descriptive.monthlyStdDev)],
           ['Mês de pico', `${monthLabel(data.descriptive.peakMonth)} · ${data.descriptive.peakMonthCount}`],
-          ['Tempo médio', `${num(data.descriptive.completionDaysMean)} d`],
-          ['Tempo mediano', `${num(data.descriptive.completionDaysMedian)} d`],
+          ['Tempo médio', data.descriptive.completionDaysMean === null ? 'Amostra insuficiente' : `${num(data.descriptive.completionDaysMean)} d`],
+          ['Tempo mediano', data.descriptive.completionDaysMedian === null ? 'Amostra insuficiente' : `${num(data.descriptive.completionDaysMedian)} d`],
         ].map(([label, value]) => <article key={label} className="portal-layer-card rounded-xl border border-slate-300 p-3"><strong className="text-lg text-slate-950">{value}</strong><div className="mt-1 text-[9px] font-black normal-case text-slate-700">{label}</div></article>)}
       </section>}
 
