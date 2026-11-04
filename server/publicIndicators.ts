@@ -5,7 +5,7 @@ export type PublicIndicatorsPayload = {
   generatedAt: string;
   privacy: { containsPersonalData: false; smallGroupSuppressed: boolean; minimumGroupSize: number; minimumBucketSize: number };
   totals: { registered: number; completed: number; published: number; defended: number; inProgress: number; completionRate: number; publicationRate: number; coauthorRate: number };
-  descriptive: null | { monthlyMean: number; monthlyMedian: number; monthlyStdDev: number; peakMonth: string | null; peakMonthCount: number; completionDaysMean: number; completionDaysMedian: number; observedMonths: number };
+  descriptive: null | { monthlyMean: number; monthlyMedian: number; monthlyStdDev: number; peakMonth: string | null; peakMonthCount: number; completionDaysMean: number | null; completionDaysMedian: number | null; observedMonths: number };
   byStatus: Array<{ key: string; label: string; count: number }>;
   years: PublicIndicatorBucket[];
   months: PublicIndicatorBucket[];
@@ -83,7 +83,8 @@ export function buildPublicIndicators(processes: ProcessData[], now = Date.now()
   const statusCounts = new Map<string, number>();
   for (const process of safe) {
     const status = String(process.status || '');
-    if (!status) continue;
+    // Rótulos desconhecidos não devem ser reproduzidos como texto livre em API pública.
+    if (!Object.prototype.hasOwnProperty.call(STATUS_LABELS,status)) continue;
     statusCounts.set(status, (statusCounts.get(status) || 0) + 1);
   }
   const rawByStatus = Array.from(statusCounts.entries())
@@ -122,10 +123,11 @@ export function buildPublicIndicators(processes: ProcessData[], now = Date.now()
     monthlyMean: round1(mean(monthlyValues)),
     monthlyMedian: round1(median(monthlyValues)),
     monthlyStdDev: round1(stddev(monthlyValues)),
-    peakMonth: peak?.label || null,
-    peakMonthCount: peak?.count || 0,
-    completionDaysMean: round1(mean(completionDays)),
-    completionDaysMedian: round1(median(completionDays)),
+    peakMonth: peak && peak.count >= MIN_PUBLIC_BUCKET_SIZE ? peak.label : null,
+    peakMonthCount: peak && peak.count >= MIN_PUBLIC_BUCKET_SIZE ? peak.count : 0,
+    // Durações com uma ou duas observações poderiam permitir inferência individual.
+    completionDaysMean: completionDays.length >= MIN_PUBLIC_BUCKET_SIZE ? round1(mean(completionDays)) : null,
+    completionDaysMedian: completionDays.length >= MIN_PUBLIC_BUCKET_SIZE ? round1(median(completionDays)) : null,
     observedMonths: monthlyValues.length,
   } : null;
 

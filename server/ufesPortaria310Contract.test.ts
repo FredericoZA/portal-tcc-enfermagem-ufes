@@ -40,3 +40,20 @@ test('parecer utiliza texto-base fixo e indicadores públicos dispensam campos l
   assert.match(indicators,/RESULT_LABELS/);
   assert.doesNotMatch(indicators,/palavrasChave \|\| \[\]\)\.map\(clean\)/);
 });
+
+test('documentos não simulam documentos oficiais ou assinaturas inexistentes',()=>{
+  const docs=read('src/pages/DocumentosPage.tsx');
+  assert.match(docs,/Abrir documentos do TCC/);
+  assert.match(docs,/Legislação, privacidade e revisão humana/);
+  assert.match(docs,/Portaria Normativa GR\/Ufes nº 310\/2026/);
+  assert.doesNotMatch(docs,/generateOfficialDocumentText/);
+  assert.doesNotMatch(docs,/contentPreviewText: generateOfficial/);
+  assert.doesNotMatch(docs,/isAvailable = docType ===/);
+  assert.match(docs,/Disponibilidade e assinaturas: consultar o processo/);
+});
+test('indicadores públicos suprimem períodos e durações de amostra muito pequena',()=>{
+  const indicators=read('server/publicIndicators.ts');
+  assert.match(indicators,/peak\.count >= MIN_PUBLIC_BUCKET_SIZE/);
+  assert.match(indicators,/completionDays\.length >= MIN_PUBLIC_BUCKET_SIZE/);
+  assert.match(indicators,/Object\.prototype\.hasOwnProperty\.call\(STATUS_LABELS,status\)/);
+});
