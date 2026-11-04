@@ -14,16 +14,21 @@ const valid = { resultadoCode: 'APROVADO', parecer: 'Parecer registrado pelo ori
   expectedDataRevision: process.dataRevision, expectedSchemaRevision: settings.integrationStudio?.revision || 0 };
 const accept = (patch: Record<string, unknown> = {}) => acceptEvaluation(process, { ...valid, ...patch }, settings, process.orientador.email, now);
 
-test('parecer padrão é texto corrido para a ata e respeita o resultado escolhido',()=>{
+test('parecer pré-definido não inventa fatos, é estável e exige deliberação humana',()=>{
   assert.equal(standardEvaluationOpinion(process),'');
   const approved=standardEvaluationOpinion(process,{code:'APROVADO',label:'Aprovado'});
-  assert.doesNotMatch(approved,/\n|PARECER DA BANCA|Processo:|Autoria:|\[Completar/);
-  assert.ok(!approved.includes(process.titulo));
-  assert.match(approved,/clareza|organização/);
+  assert.equal(approved,standardEvaluationOpinion(process,{code:'APROVADO',label:'Aprovado'}));
+  assert.doesNotMatch(approved,/clareza|organização|domínio do tema|qualidade do trabalho/i);
+  assert.match(approved,/\[Completar com os fundamentos/);
+  assert.match(approved,/Aprovado/);
   const rejected=standardEvaluationOpinion(process,{code:'REPROVADO',label:'Reprovado'});
-  assert.match(rejected,/não atendeu|reprovação/);
-  assert.doesNotMatch(rejected,/exemplar|domínio do tema/);
-  assert.equal(acceptEvaluationAnswers({resultadoCode:'APROVADO',parecer:approved},[{code:'APROVADO',label:'Aprovado'}]).parecer,approved);
+  assert.match(rejected,/Reprovado/);
+  assert.match(rejected,/\[Completar com os fundamentos/);
+  const withRemarks=standardEvaluationOpinion(process,{code:'APROVADO_COM_RESSALVA',label:'Aprovado com ressalva'});
+  assert.match(withRemarks,/Correções e encaminhamentos/);
+  assert.throws(()=>acceptEvaluationAnswers({resultadoCode:'APROVADO',parecer:approved},[{code:'APROVADO',label:'Aprovado'}]),/Complete a fundamentação/);
+  const reviewed=approved.replace('[Completar com os fundamentos efetivamente apresentados pela banca durante a defesa]','A banca deliberou após discutir os requisitos acadêmicos aplicáveis');
+  assert.equal(acceptEvaluationAnswers({resultadoCode:'APROVADO',parecer:reviewed},[{code:'APROVADO',label:'Aprovado'}]).parecer,reviewed);
 });
 
 test('avaliação aceita resultado e parecer sem nota numérica e preserva a conferência', () => {
