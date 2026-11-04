@@ -400,6 +400,16 @@ td[data-portal-core-process-state="upcoming"] > div,
   color: var(--portal-defense-upcoming-text);
 }
 
+/* Reserva não homologada: mesma agenda, mas sem aparência de confirmação. */
+[data-defense-state][data-reservation-status="pending"] {
+  background: #f0f6f3;
+  border-color: #c8d9d0;
+  color: #526f61;
+}
+.portal-sheet-frame tr[data-reservation-status="pending"] > td {
+  background-color: #f8fbf9;
+}
+
 /* Paginação — branca, 24px e compacta. */
 .portal-spreadsheet-pager {
   box-sizing: border-box;
