@@ -43,19 +43,20 @@ export function processEmailMessage(input:{process:ProcessData;recipient:string;
  const configured=input.studio?.emailTemplates?.find(item=>item.id===variant);
  const stock=OPERATIONAL_EMAIL_CATALOG.find(item=>item[0]===variant);
  // Existing operational messages stay intact; explicit edits to a catalog variant take effect.
- if(configured&&stock&&configured.operationalCatalogEditable===true){
-  const values:Record<string,string>={...input.templateVariables,PROTOCOLO:p.protocolo,TITULO:p.titulo,ALUNOS:[p.aluno1.nome,p.aluno2?.nome].filter(Boolean).join(' e '),ORIENTADOR_NOME_COMPLETO:academicName(p.orientador,'abbreviated'),DEFESA_LOCAL:p.defesa.local,LOCAL_ALTERNATIVO:p.defesa.alternateLocation||'',DEFESA_DATA_HORA:formatDateNumericWithWeekday(p.defesa.startAt)+' às '+formatTime24h(p.defesa.startAt),LINK_PROCESSO:href,ORIENTACOES_ACESSO:processEmailGuidance(p,input.baseUrl,input.eventCode||'',input.templateId||'',input.recipient)};
-  const expand=(source:string)=>source.replace(/<<([A-Z0-9_]+)>>|\{\{([A-Z0-9_]+)\}\}/g,(all,a,b)=>values[a||b]??all);
-  if(configured.body!==stock[4]&&!(input.templateId==='email-reserva'&&/LOCAL_ALTERNATIVO|local alternativo/i.test(String(configured.body))))text=expand(String(configured.body||''));
-  if(configured.subject!==stock[3])subject=expand(String(configured.subject||''));
+ const values:Record<string,string>={...input.templateVariables,PROTOCOLO:p.protocolo,TITULO:p.titulo,ALUNO_1_NOME:p.aluno1.nome,ALUNO_2_NOME:p.aluno2?.nome||'',COORIENTADOR_NOME_COMPLETO:p.coorientador?academicName(p.coorientador,'abbreviated'):'',BANCA_NOMES:p.banca.map(person=>academicName(person,'abbreviated')).join('\n'),DEFESA_HORA:formatTime24h(p.defesa.startAt),DEFESA_DATA:formatDateNumericWithWeekday(p.defesa.startAt),DEFESA_HORARIO:formatTime24h(p.defesa.startAt)+' às '+formatTime24h(defenseEndAt(p.defesa.startAt)),RESPOSTA_REGISTRADA_EM:p.defesa.departmentResponse?formatDateNumericWithWeekday(p.defesa.departmentResponse.respondedAt)+', '+formatTime24h(p.defesa.departmentResponse.respondedAt):'',ALUNOS:[p.aluno1.nome,p.aluno2?.nome].filter(Boolean).join(' e '),ORIENTADOR_NOME_COMPLETO:academicName(p.orientador,'abbreviated'),DEFESA_LOCAL:p.defesa.local,LOCAL_ALTERNATIVO:p.defesa.alternateLocation||'',DEFESA_DATA_HORA:formatDateNumericWithWeekday(p.defesa.startAt)+' às '+formatTime24h(p.defesa.startAt),LINK_PROCESSO:href,ORIENTACOES_ACESSO:processEmailGuidance(p,input.baseUrl,input.eventCode||'',input.templateId||'',input.recipient)};
+ const expand=(source:string)=>source.replace(/<<([A-Z0-9_]+)>>|\{\{([A-Z0-9_]+)\}\}/g,(all,a,b)=>values[a||b]??all);
+ if(configured&&configured.operationalCatalogEditable===true){
+  if((!stock||configured.body!==stock[4])&&!(input.templateId==='email-reserva'&&/LOCAL_ALTERNATIVO|local alternativo/i.test(String(configured.body)))){text=expand(String(configured.body||''));if(!text.includes('ORIENTAÇÕES DO PROCESSO'))text+='\n\n'+values.ORIENTACOES_ACESSO;}
+  if(!stock||configured.subject!==stock[3])subject=expand(String(configured.subject||''));
  }
- text=text.replace(/^Local alternativo:.*$/gmi,'');
- if(input.templateId==='email-entrega-repositorio')subject=`[Portal TCC] Ata assinada — entrega final dos documentos no Repositório acadêmico · ${p.protocolo}`;
+ text=expand(text);subject=expand(subject);
+ text=text.replace(/^Local alternativo:.*$/gmi,'').replace(/^Coorientador:[ \t]*$/gmi,'');
+
  text=withoutGenericProcessFooter(input.templateId==='email-comprovante-reserva'?text:applyProcessEmailGreeting(text,input.templateId,input.eventCode,Boolean(input.departmentUrl)));
  if(input.advisorApproval&&['email-reserva','email-comprovante-reserva'].includes(input.templateId||''))text=text.replace('Prezado Departamento,','Prezado orientador,').replace(/departamento/gi,'orientador');
  const actions=input.templateId==='email-reserva'&&input.departmentUrl?[{href:href+'?decision=accept',label:'Aceitar reserva'},{href:href+'?decision=decline',label:'Recusar reserva'}]:input.templateId==='email-comprovante-reserva'&&p.defesa.departmentResponse?.decision==='UNAVAILABLE'?[{href,label},{href:processLink(input.baseUrl,p.id,'cadastral'),label:'Solicitar nova data'}]:undefined;
  const message=operationalEmailLayout({text,subject,href,label,studio:input.studio,templateId:variant,actions});
  if(actions&&input.templateId==='email-reserva')message.text=message.text.replace(`${label}: ${href}`,actions.map(action=>`${action.label}: ${action.href}`).join('\n'));
  if(actions&&input.templateId==='email-comprovante-reserva')message.text+='\n\nSolicitar nova data: '+processLink(input.baseUrl,p.id,'cadastral');
- return {subject,...message};
+ return {subject,...message,bodyText:text};
 }

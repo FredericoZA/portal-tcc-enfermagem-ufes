@@ -1,3 +1,4 @@
+import type {FormDesignConfig} from '../types/integrationStudio';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle2, ClipboardList, HardDrive, History } from 'lucide-react';
 import type { FormQuestionItem, FormTemplateItem } from '../pages/ConfiguracoesPage';
@@ -8,17 +9,17 @@ import { normalizeAnswerKey as normalizeKey, validateFormAnswers } from '../util
 import { formatDateTimeWithWeekday } from '../utils/formatters';
 import { getPortalMessages } from '../utils/i18n';
 
-type RuntimeForm = FormTemplateItem & { revision?: number };
+type RuntimeForm = FormTemplateItem & { revision?: number; presentation?:Partial<FormDesignConfig> };
 
-export const DynamicStudioForms: React.FC<{ processId: string; locale?: string; accentColor?: string }> = ({ processId, locale, accentColor = 'var(--portal-brand-header)' }) => {
+export const DynamicStudioForms: React.FC<{ processId: string; locale?: string; accentColor?: string; previewForm?:RuntimeForm }> = ({ processId, locale, previewForm, accentColor = 'var(--portal-brand-header)' }) => {
   const copy = getPortalMessages(locale);
-  const [forms, setForms] = useState<RuntimeForm[]>([]);
+  const [forms, setForms] = useState<RuntimeForm[]>(previewForm?[previewForm]:[]);
   const [submissions, setSubmissions] = useState<StudioFormSubmission[]>([]);
   const [answers, setAnswers] = useState<Record<string, Record<string, string | number | boolean>>>({});
   const [errors, setErrors] = useState<Record<string, Record<string, string>>>({});
   const [working, setWorking] = useState('');
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!previewForm);
   const requestGeneration = useRef(0);
   const submitting = useRef(false);
   const activeProcess = useRef<string | null>(processId);
@@ -38,11 +39,12 @@ export const DynamicStudioForms: React.FC<{ processId: string; locale?: string; 
   };
 
   useEffect(() => {
+    if(previewForm){setForms([previewForm]);setLoading(false);return;}
     activeProcess.current = processId; submitting.current = false; setWorking('');
     setForms([]); setSubmissions([]); setAnswers({}); setErrors({}); setNotice(null);
     void refresh();
     return () => { requestGeneration.current++; activeProcess.current = null; };
-  }, [processId]);
+  }, [processId,previewForm]);
 
   const priorByForm = useMemo(() => new Map(forms.map(form => [form.id, submissions.filter(item => item.formId === form.id)])), [forms, submissions]);
 
@@ -53,7 +55,7 @@ export const DynamicStudioForms: React.FC<{ processId: string; locale?: string; 
   };
 
   const submit = async (form: RuntimeForm) => {
-    if (submitting.current) return;
+    if (previewForm||submitting.current) return;
     const values = answers[form.id] || {};
     const { answers: accepted, issues: nextErrors } = validateFormAnswers(form.questions || [], values);
     if (Object.keys(nextErrors).length) { setErrors(previous => ({ ...previous, [form.id]: nextErrors })); return; }
@@ -62,7 +64,7 @@ export const DynamicStudioForms: React.FC<{ processId: string; locale?: string; 
       const result = await apiClient.submitStudioForm(processId, form.id, accepted, Number(form.revision || 0));
       if (activeProcess.current !== processId) return;
       const complete = result.archiveStatus === 'ARCHIVED' && !result.workflowPending;
-      setNotice({ ok: complete, text: complete ? `${copy.saved} ${copy.archived}.` : `${copy.saved} ${result.workflowError || copy.archivePending}` });
+      setNotice({ ok: complete, text: complete ? (form.presentation?.confirmationMessage||`${copy.saved} ${copy.archived}.`) : `${copy.saved} ${result.workflowError || copy.archivePending}` });
       await refresh();
     } catch (error) {
       if (activeProcess.current !== processId) return;
@@ -98,7 +100,7 @@ export const DynamicStudioForms: React.FC<{ processId: string; locale?: string; 
       return <article key={form.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <header className="border-b border-slate-200 bg-slate-50 px-5 py-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><div className="text-[10px] font-black normal-case tracking-wider" style={{ color: accentColor }}>{form.stage} · {form.targetRole}</div><h3 className="mt-1 text-base font-black text-slate-900">{form.title}</h3><p className="mt-1 text-sm text-slate-600">{form.description}</p></div><span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600">{copy.revision} {form.revision || 0}</span></div></header>
         <div className="space-y-5 p-5">{(form.questions || []).filter(question => evaluateStudioCondition(question.visibleWhen, values)).map((question, index) => { const field = normalizeKey(question.fieldKey), issue = errors[form.id]?.[field]; return <div key={question.id}><label htmlFor={`${form.id}-${field}`} className="mb-1.5 block text-sm font-bold text-slate-800">{index + 1}. {question.label}{question.required && <span className="ml-1 text-rose-600">*</span>}</label>{renderField(form, question)}<div id={`${form.id}-${field}-help`} className={`mt-1 text-xs ${issue ? 'font-semibold text-rose-700' : 'text-slate-500'}`}>{issue || question.helpText}</div></div>; })}
-          <button type="button" onClick={() => void submit(form)} disabled={Boolean(working)} className="portal-action portal-action-primary min-h-11">{working === form.id ? copy.submitting : copy.submit}</button>
+          <button type="button" onClick={() => void submit(form)} disabled={Boolean(working)||Boolean(previewForm)} className="portal-action portal-action-primary min-h-11">{working === form.id ? copy.submitting : form.presentation?.submitLabel||copy.submit}</button>
           {!!prior.length && <details className="rounded-xl border border-slate-200 bg-slate-50 p-3"><summary className="flex cursor-pointer items-center gap-2 text-xs font-black normal-case text-slate-700"><History className="h-4 w-4" />{copy.history} ({prior.length})</summary><div className="mt-3 space-y-2">{prior.map(item => <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 text-xs text-slate-600"><span>{formatDateTimeWithWeekday(item.submittedAt)} · v{item.formRevision}</span><span className={`inline-flex items-center gap-1 font-bold ${item.archiveStatus === 'ARCHIVED' ? 'text-emerald-700' : 'text-amber-700'}`}><HardDrive className="h-3.5 w-3.5" />{item.archiveStatus}</span></div>)}</div></details>}
         </div>
       </article>;

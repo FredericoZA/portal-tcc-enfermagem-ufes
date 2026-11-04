@@ -21,7 +21,7 @@ test('HTTP: departamento confirma sem sessão, sem upload e sem duplicar respost
  const post=(body:string)=>fetch(url,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded',origin:base},body});
  try{
   const deadline=Date.now()+20000;while(true){try{if((await fetch(base+'/api/health')).ok)break;}catch{}if(Date.now()>deadline||child.exitCode!==null)throw Error('Servidor não iniciou');await new Promise(r=>setTimeout(r,100));}
-  const page=await fetch(url);assert.equal(page.status,200);assert.match(await page.text(),/Responder solicitação de reserva/);assert.equal((await disk()).processes[0].defesa.localStatus,'PENDENTE');
+  const page=await fetch(url);assert.equal(page.status,200);assert.match(await page.text(),/Confirmação do agendamento/);assert.equal((await disk()).processes[0].defesa.localStatus,'PENDENTE');
   const publicRow=async()=>{const rows=await(await fetch(base+'/api/processes')).json();return rows.find((item:any)=>item.protocolo===p.protocolo);};
   assert.equal(isDefenseOnCalendar(await publicRow()),true,'solicitação aparece antes do aceite');
   assert.equal((await fetch(url+'x')).status,410);

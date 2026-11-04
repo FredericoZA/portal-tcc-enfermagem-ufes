@@ -264,7 +264,7 @@ export const ConfiguracoesPage: React.FC = () => {
   const { userEmail, settings, refreshAuth, isMasterAdmin } = useAuth();
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const [activeSettingsPanel, setActiveSettingsPanel] = useState<'identity' | 'integrations' | 'models-documents' | 'emails' | 'forms' | 'workflow' | 'variables' | 'access' | 'signatures' | 'logs' | 'feedback' | null>(null);
+  const [activeSettingsPanel, setActiveSettingsPanel] = useState<'identity' | 'integrations' | 'models-documents' | 'emails' | 'forms' | 'receipts' | 'workflow' | 'variables' | 'access' | 'signatures' | 'logs' | 'feedback' | null>(null);
 
   // Google Calendar & Workspace Sync State
   const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
@@ -2092,6 +2092,7 @@ export const ConfiguracoesPage: React.FC = () => {
             {[
               { id: 'models-documents', title: 'Documentos e Variáveis', text: 'Modelos oficiais, versões, variáveis detectadas, mescla e propagação em um único espaço.', icon: FileText },
               { id: 'emails', title: 'E-mails', text: 'Mensagens institucionais, destinatários, variáveis, anexos e prévia final.', icon: Mail },
+              { id: 'receipts', title: 'Comprovantes', text: 'Comprovantes de reserva confirmada ou recusada, textos e prévia do PDF real.', icon: FileCheck2 },
               { id: 'forms', title: 'Formulários', text: 'Formulários, campos, regras, variáveis e prévia.', icon: ClipboardList },
               { id: 'workflow', title: 'Fluxos', text: 'Etapas, eventos e ações do processo de TCC.', icon: Layers },
             ].map(({ id, title, text, icon: Icon }) => (
@@ -2129,6 +2130,7 @@ export const ConfiguracoesPage: React.FC = () => {
                 : activeSettingsPanel === 'integrations' ? 'Integrações e Plataforma'
                 : activeSettingsPanel === 'models-documents' ? 'Documentos e Variáveis'
                 : activeSettingsPanel === 'emails' ? 'E-mails'
+                : activeSettingsPanel === 'receipts' ? 'Comprovantes'
                 : activeSettingsPanel === 'forms' ? 'Formulários'
                 : activeSettingsPanel === 'workflow' ? 'Fluxos'
                 : activeSettingsPanel === 'variables' ? 'Variáveis'
@@ -2142,6 +2144,7 @@ export const ConfiguracoesPage: React.FC = () => {
                 : activeSettingsPanel === 'integrations' ? Globe
                 : activeSettingsPanel === 'models-documents' ? FileText
                 : activeSettingsPanel === 'emails' ? Mail
+                : activeSettingsPanel === 'receipts' ? FileCheck2
                 : activeSettingsPanel === 'forms' ? ClipboardList
                 : activeSettingsPanel === 'workflow' ? Layers
                 : activeSettingsPanel === 'variables' ? Sliders
@@ -2160,6 +2163,8 @@ export const ConfiguracoesPage: React.FC = () => {
                   { id: 'documents', label: 'Documentos e variáveis', description: 'Modelos oficiais, versões, variáveis, mescla e prévia no mesmo contexto.', icon: FileText, fullBleed: true, content: <MasterDocumentModelsPanel onCatalogChanged={syncMasterModelCatalog} actorEmail={userEmail || ''} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} docTemplates={docTemplates} setDocTemplates={setDocTemplates} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} /> },
                 ] : activeSettingsPanel === 'emails' ? [
                   { id: 'emails', fullBleed: true, label: 'E-mails', description: 'Modelos, variáveis, anexos e pré-visualização.', icon: Mail, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-emails" initialTab="emails" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudioDraft||settings?.integrationStudio} reservationDepartmentEmail={settings?.emailConfig?.roomReservationDepartmentEmail} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
+                ] : activeSettingsPanel === 'receipts' ? [
+                  { id: 'receipts', fullBleed: true, label: 'Comprovantes', description: 'Comprovantes usados pelo Portal e prévia PDF.', icon: ClipboardList, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-receipts" initialTab="receipts" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudioDraft||settings?.integrationStudio} reservationDepartmentEmail={settings?.emailConfig?.roomReservationDepartmentEmail} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'forms' ? [
                   { id: 'forms', fullBleed: true, label: 'Formulários', description: 'Criação, exclusão, campos e regras dos formulários.', icon: ClipboardList, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-forms" initialTab="forms" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudioDraft||settings?.integrationStudio} reservationDepartmentEmail={settings?.emailConfig?.roomReservationDepartmentEmail} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'workflow' ? [

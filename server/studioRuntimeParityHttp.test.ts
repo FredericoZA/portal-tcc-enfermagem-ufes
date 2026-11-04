@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {spawn,type ChildProcess} from 'node:child_process';
+import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {PDFDocument} from 'pdf-lib';
+import {INITIAL_SETTINGS} from '../src/services/demoSeed';
+import {courseStudioFixture} from './fixtures/courseStudioFixture';
+import {withOperationalCatalog} from '../src/utils/studioOperationalCatalog';
+import {registrationQuestions} from '../src/utils/operationalConfig';
+import {studioSampleProcess} from '../src/utils/studioRuntimePreview';
+import {reservationToken} from './workflow/reservationConfirmation';
+
+test('settings survive restart and control the real form, registration schema and receipt PDF; previews never create work',{timeout:50000},async()=>{
+ const directory=await mkdtemp(path.join(tmpdir(),'portal-studio-parity-'));
+ const port=46900+Math.floor(Math.random()*200),base=`http://127.0.0.1:${port}`,secret='parity-fixture-secret-0123456789abcdef';
+ const studio=withOperationalCatalog(courseStudioFixture());studio.emailTemplates!.find(t=>t.id==='email-reserva')!.recipient='department@example.invalid';
+ studio.formTemplates!.push({id:'form-reserva-aluno',title:'Cadastro inicial',targetRole:'Aluno',description:'Preencha os participantes.',questions:registrationQuestions(studio)});
+ const p=studioSampleProcess();const settings={...INITIAL_SETTINGS,integrationStudio:studio,emailConfig:{roomReservationDepartmentEmail:'department@example.invalid'}};
+ await writeFile(path.join(directory,'portal-state.json'),JSON.stringify({settings,processes:[p],memberships:[],emailDeliveries:[],signatureJobs:[]}));
+ let child:ChildProcess|undefined;
+ const start=async()=>{child=spawn(process.execPath,['--import','tsx','server.ts'],{cwd:process.cwd(),env:{...process.env,NODE_ENV:'development',PORT:String(port),HOST:'127.0.0.1',PORTAL_DATA_DIR:directory,PORTAL_PERSISTENCE_PROVIDER:'local_file',PORTAL_ALLOW_INSECURE_DEMO_AUTH:'true',PORTAL_ALLOW_LOCAL_OTP_STORE:'true',PORTAL_ALLOW_LOCAL_SECRET_STORE:'true',PORTAL_SESSION_SECRET:secret,PORTAL_OTP_PEPPER:'parity-fixture-otp-secret-0123456789',PORTAL_OTP_DELIVERY_MODE:'log',ASTEN_INTEGRATION_ENABLED:'false',SUPABASE_URL:'',SUPABASE_SECRET_KEY:'',SUPABASE_SERVICE_ROLE_KEY:'',VERCEL:''},stdio:'ignore'});const until=Date.now()+20000;while(true){try{if((await fetch(base+'/api/health')).ok)break;}catch{}if(Date.now()>until||child.exitCode!==null)throw Error('Fixture did not start');await new Promise(r=>setTimeout(r,100));}};
+ const stop=async()=>{if(child&&child.exitCode===null){const ended=new Promise(r=>child!.once('exit',r));child.kill('SIGTERM');await ended;}};
+ const headers={'content-type':'application/json','x-demo-user-email':'master@portal.local'};
+ try{
+  await start();const changed=structuredClone(studio);changed.revision=2;
+  changed.formTemplates!.find(t=>t.id==='form-reserva-departamento')!.title='Responder ao pedido de espaço';changed.formTemplates!.find(t=>t.id==='form-reserva-departamento')!.description='Verifique a disponibilidade antes da decisão.';
+  changed.formDesigns['form-reserva-aluno']={templateId:'form-reserva-aluno',introText:'Instrução configurada para os participantes.',submitLabel:'Solicitar o agendamento',confirmationMessage:'Pedido registrado.',showProgress:false,logoUrl:'',universityLogoUrl:'',bannerImageUrl:''};
+  changed.receiptDesign={confirmedTitle:'Comprovante da resposta ao agendamento',declinedTitle:'Registro de indisponibilidade'};
+  const saved=await fetch(base+'/api/admin/settings',{method:'PATCH',headers,body:JSON.stringify({integrationStudio:changed,studioExpectedRevision:1,studioSaveMode:'autosave'})});assert.equal(saved.status,200);const result=await saved.json();assert.equal(result.integrationStudio.revision,2,JSON.stringify(result.integrationStudioDraft?.publication));
+  const token=reservationToken({processId:p.id,revision:0,recipient:'department@example.invalid',expiresAt:Date.now()+600000},secret);
+  const form=await(await fetch(base+'/api/reservation-confirmation/'+token)).text();assert.match(form,/Responder ao pedido de espaço/);assert.match(form,/Verifique a disponibilidade/);
+  const schema=await(await fetch(base+'/api/forms/registration-schema',{headers})).json();assert.equal(schema.formDesigns['form-reserva-aluno'].submitLabel,'Solicitar o agendamento');assert.equal(schema.formDesigns['form-reserva-aluno'].showProgress,false);assert.equal(schema.receiptDesign,undefined);
+  assert.equal((await fetch(base+'/api/admin/receipts/preview',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({decision:'CONFIRMED'})})).status,401);
+  assert.equal((await fetch(base+'/api/admin/receipts/preview',{method:'POST',headers:{...headers,'x-demo-user-email':'student@example.invalid'},body:JSON.stringify({decision:'CONFIRMED'})})).status,403);
+  const preview=await fetch(base+'/api/admin/receipts/preview',{method:'POST',headers,body:JSON.stringify({decision:'CONFIRMED',receiptDesign:changed.receiptDesign})});assert.equal(preview.status,200);const bytes=Buffer.from((await preview.json()).contentBase64,'base64');const pdf=await PDFDocument.load(bytes);assert.match(pdf.getTitle()||'',/sem validade/);const {getDocument}=await import('pdfjs-dist/legacy/build/pdf.mjs');const task=getDocument({data:new Uint8Array(bytes),verbosity:0});const rendered=await task.promise;try{const text=(await(await rendered.getPage(1)).getTextContent()).items.map((item:any)=>item.str||'').join(' ');assert.match(text,/Comprovante da resposta ao agendamento/);assert.match(text,/RESERVA CONFIRMADA/);}finally{await task.destroy();}
+  const state=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(state.processes.length,1);assert.equal(state.emailDeliveries.length,0);assert.equal(state.signatureJobs.length,0);assert.equal(state.processes[0].defesa.localStatus,'PENDENTE');
+  await stop();await start();const reopened=await(await fetch(base+'/api/settings',{headers})).json();assert.equal(reopened.integrationStudio.receiptDesign.confirmedTitle,changed.receiptDesign.confirmedTitle);assert.match(await(await fetch(base+'/api/reservation-confirmation/'+token)).text(),/Responder ao pedido de espaço/);
+ }finally{await stop();await rm(directory,{recursive:true,force:true});}
+});

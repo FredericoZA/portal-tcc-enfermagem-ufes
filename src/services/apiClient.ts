@@ -312,6 +312,7 @@ export const apiClient = {
   getSignatureJobs:()=>fetchApi<SignatureJob[]>('/api/signatures/jobs'),
   retrySignatureJob:(id:string)=>fetchApi<SignatureJob>(`/api/signatures/jobs/${id}/retry`,{method:'POST'}),
   reconcileSignatureJob:(id:string)=>fetchApi<SignatureJob>(`/api/signatures/jobs/${id}/reconcile`,{method:'POST'}),
+  previewReceipt:(decision:'CONFIRMED'|'UNAVAILABLE',receiptDesign:IntegrationStudioSettings['receiptDesign'])=>fetchApi<{contentBase64:string;fileName:string}>('/api/admin/receipts/preview',{method:'POST',body:JSON.stringify({decision,receiptDesign})}),
   previewDocumentModel:(type:'CONVITE'|'ATA'|'TERMO'|'DECLARACAO',studio:any)=>fetchApi<{analysis:unknown;fileName:string;downloadUrl?:string;contentBase64?:string}>(`/api/admin/models/${type}/preview`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({studio})}),
   getAuthorizedStudents:()=>fetchApi<any[]>('/api/admin/access-list'),
   getAccessListGoogleTemplate:()=>fetchApi<{url:string}>('/api/admin/access-list/google-template',{method:'POST'}),

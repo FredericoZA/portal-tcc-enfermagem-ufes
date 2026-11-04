@@ -30,7 +30,7 @@ export function withOperationalCatalog<T extends Partial<IntegrationStudioSettin
     String(action.refId||action.referenceId||'')==='tmpl-ata'&&action.recipientOrDetail==='Assinatura do orientador'
       ?{...action,title:action.title==='Gera Ata de Defesa e envia à Asten'?'Prepara Ata de Defesa para assinatura':action.title,recipientOrDetail:'Orientador e dois examinadores · prioridade 1'}:action)
 }));
- const forms=value.formTemplates||[];const nativeIndex=forms.findIndex(f=>f.id===DEPARTMENT_FORM.id);if(nativeIndex<0)forms.push(structuredClone(DEPARTMENT_FORM));else forms[nativeIndex]={...forms[nativeIndex],...structuredClone(DEPARTMENT_FORM)};value.formTemplates=forms;
+ const forms=value.formTemplates||[];const nativeIndex=forms.findIndex(f=>f.id===DEPARTMENT_FORM.id);if(nativeIndex<0)forms.push(structuredClone(DEPARTMENT_FORM));else forms[nativeIndex]={...structuredClone(DEPARTMENT_FORM),...forms[nativeIndex],targetRole:DEPARTMENT_FORM.targetRole,questions:structuredClone(DEPARTMENT_FORM.questions)};value.formTemplates=forms;
  return value;
 }
-export function operationalEmailVariant(id:string|undefined,department:boolean,unavailable:boolean){return id==='email-reserva'&&!department?'email-reserva-autores':id==='email-comprovante-reserva'?(department?'email-resposta-departamento':unavailable?'email-local-indisponivel':id):id;}
+export function operationalEmailVariant(id:string|undefined,department:boolean,unavailable:boolean){return id==='email-reserva'&&!department?'email-reserva-autores':id==='email-comprovante-reserva'?(unavailable?'email-local-indisponivel':id):id;}

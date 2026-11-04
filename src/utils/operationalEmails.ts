@@ -9,6 +9,7 @@ import {processLink} from './processLink';
 type EmailTemplate={id?:unknown;body?:unknown;htmlBody?:unknown;subject?:unknown;[key:string]:unknown};
 /** Upgrade known legacy copy while retaining recipients, layout and custom paragraphs. */
 export function upgradeOperationalEmailTemplate<T extends EmailTemplate>(template:T):T {
+ if(template.operationalCatalogEditable===true)return template;
  let body=String(template.body||''),html=String(template.htmlBody||'');
  const greeting=String(template.id)==='email-reserva'?'Prezado Departamento,':'Prezado(a) <<DESTINATARIO_NOME>>,';
  body=replaceLegacySalutation(body,greeting,false);

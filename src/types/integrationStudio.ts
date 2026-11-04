@@ -155,6 +155,7 @@ export interface IntegrationStudioSettings {
   documentDesigns: Record<string, DocumentDesignConfig>;
   emailDesigns: Record<string, EmailDesignConfig>;
   formDesigns: Record<string, FormDesignConfig>;
+  receiptDesign?: { confirmedTitle?: string; declinedTitle?: string; confirmedText?: string; declinedText?: string };
   matrixColumns: Array<Record<string, unknown>>;
   matrixRows: Array<Record<string, unknown>>;
   docTemplates: Array<Record<string, unknown>>;

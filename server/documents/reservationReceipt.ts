@@ -1,5 +1,5 @@
+import {receiptDesign} from '../../src/utils/receiptDesign';
 import {DOCUMENT_ISSUER_LINES} from '../../src/utils/institutionalIdentity';
-import {isManagedDefenseLocation} from '../../src/utils/reservationLocation';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {PDFDocument,rgb,type PDFFont,type PDFPage} from 'pdf-lib';
@@ -31,11 +31,12 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  for(const person of [process.aluno1,process.aluno2].filter(Boolean)){if(person!.matricula){authors=authors.replaceAll(`${person!.matricula} - `,'').replaceAll(` (${person!.matricula})`,'');}}
  const title=formatTccTitle(snapshot.get('Título')||process.titulo);
  const confirmed=response.decision==='CONFIRMED';
+ const design=receiptDesign(settings.integrationStudio),receiptTitle=confirmed?design.confirmedTitle:design.declinedTitle;
  const doc=await PDFDocument.create();doc.registerFontkit(fontkit);
  const [regularBytes,boldBytes]=await fontBytes;
  const logo=await doc.embedPng(await logoBytes);
  const regular=await doc.embedFont(regularBytes,{subset:true}),bold=await doc.embedFont(boldBytes,{subset:true});
- doc.setTitle(`${process.protocolo} - ${confirmed?'Comprovante de reserva':'Comprovante de indisponibilidade'}`);doc.setAuthor(institution);doc.setSubject('Resposta ao pedido de agendamento da defesa');
+ doc.setTitle(`${process.protocolo} - ${receiptTitle}`);doc.setAuthor(institution);doc.setSubject('Resposta ao pedido de agendamento da defesa');
  let page:PDFPage,y=0;const margin=46,width=503;
  const wrap=(text:string,font:PDFFont,size:number,max:number)=>{
   const rows:string[]=[];let row='';
@@ -58,16 +59,16 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  const paragraph=(text:string,size=10,font=regular,color=ink)=>{const rows=wrap(text,font,size,width);for(const row of rows){ensure(size+6);draw(row,margin,y,size,font,color);y-=size+6;}};
  const section=(label:string)=>{ensure(62);y-=16;draw(label,margin,y,9,bold,green);y-=10;page.drawLine({start:{x:margin,y},end:{x:549,y},thickness:.7,color:line});y-=21;};
  const field=(label:string,value:string)=>{ensure(32);draw(label,margin,y,9,bold,muted);y-=12;paragraph(value,9);y-=2;};
- newPage();paragraph(confirmed?'Comprovante de reserva':'Comprovante de indisponibilidade',20,bold,green);y-=1;paragraph(process.protocolo,10,bold,muted);y-=12;
- page.drawRectangle({x:margin,y:y-68,width,height:80,color:confirmed?rgb(.90,.96,.92):rgb(1,.97,.88),borderColor:confirmed?rgb(.68,.82,.72):rgb(.90,.79,.45),borderWidth:.7});
+ newPage();paragraph(receiptTitle,20,bold,green);y-=1;paragraph(process.protocolo,10,bold,muted);y-=12;
+ const statement=confirmed?design.confirmedText:design.declinedText;
+ const statementRows=wrap(statement,regular,9,width-68),bannerHeight=Math.max(80,statementRows.length*14+48);ensure(bannerHeight+8);
+ page.drawRectangle({x:margin,y:y-bannerHeight+12,width,height:bannerHeight,color:confirmed?rgb(.90,.96,.92):rgb(1,.97,.88),borderColor:confirmed?rgb(.68,.82,.72):rgb(.90,.79,.45),borderWidth:.7});
  const iconX=margin+23,iconY=y-11;
  page.drawCircle({x:iconX,y:iconY,size:13,color:confirmed?green:rgb(.63,.43,.08)});
  if(confirmed){page.drawLine({start:{x:iconX-6,y:iconY},end:{x:iconX-1,y:iconY-5},thickness:2,color:rgb(1,1,1)});page.drawLine({start:{x:iconX-1,y:iconY-5},end:{x:iconX+7,y:iconY+5},thickness:2,color:rgb(1,1,1)});}
  else{page.drawLine({start:{x:iconX,y:iconY+6},end:{x:iconX,y:iconY-1},thickness:2,color:rgb(1,1,1)});page.drawCircle({x:iconX,y:iconY-6,size:1.2,color:rgb(1,1,1)});}
  draw(confirmed?'RESERVA CONFIRMADA':'RESERVA RECUSADA',margin+47,y-8,12,bold,green);
- const responsible=isManagedDefenseLocation(process.defesa.local)?'O Departamento de Enfermagem':'O orientador';
- const statement=confirmed?`${responsible} confirmou o agendamento da defesa de TCC no local, na data e no horário registrados neste comprovante.`:`${responsible} recusou o agendamento solicitado. Os autores poderão solicitar um novo agendamento pelo Portal.`;
- wrap(statement,regular,9,width-68).forEach((row,i)=>draw(row,margin+47,y-29-i*14,9,regular,ink));y-=80;
+ statementRows.forEach((row,i)=>draw(row,margin+47,y-29-i*14,9,regular,ink));y-=bannerHeight;
  section('Identificação do trabalho');paragraph(`Título do TCC: ${title}`,9);
  const savedAuthors=(response.receiptBody||'').split('\n').filter(row=>row.startsWith('Autor:')).map(row=>row.slice(6).trim()).filter(Boolean);
  const currentAuthors=officialParticipantLines(process).filter(person=>person.key.startsWith('ALUNO_')).map(person=>person.name);

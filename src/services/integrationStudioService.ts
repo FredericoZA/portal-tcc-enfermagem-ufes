@@ -82,9 +82,9 @@ export function defaultFormDesign(templateId: string, brand = DEFAULT_BRAND_KIT)
     logoUrl: brand.courseLogoUrl,
     universityLogoUrl: brand.universityLogoUrl,
     bannerImageUrl: brand.emailBannerUrl,
-    introText: 'Preencha os dados abaixo. As informações reutilizadas serão aproveitadas automaticamente nas etapas seguintes.',
-    confirmationMessage: 'Dados recebidos com sucesso. Você receberá a confirmação por e-mail.',
-    submitLabel: 'Enviar informações',
+    introText: templateId==='form-reserva-aluno'?'Preencha os dados dos autores, do trabalho e da banca. O agendamento será solicitado na última etapa.':'',
+    confirmationMessage: 'Pedido de reserva enviado ao responsável pelo local. Aguarde o resultado por e-mail.',
+    submitLabel: templateId==='form-reserva-aluno'?'Cadastrar e solicitar reserva':'Enviar informações',
     showProgress: true
   };
 }
