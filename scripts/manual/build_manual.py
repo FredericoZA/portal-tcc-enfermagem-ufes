@@ -52,7 +52,7 @@ pages=[
  ('Na última etapa, escolha data, horário e local.','Antes de enviar, considere o mapa de salas, as aulas, os eventos e o funcionamento do prédio. Conversar previamente pode evitar retrabalho.'),
  ('Confira as tabelas e clique em “Cadastrar e solicitar reserva”.','Auditório e sala de reuniões dependem do aceite do Departamento. Para outro local, escreva o nome completo como deverá aparecer nos documentos; o orientador receberá o pedido e deverá viabilizar a reserva externa.'),
  ('Aguarde a resposta ao pedido.','O intervalo da defesa é de 1h30. O local escolhido fica bloqueado no Portal enquanto a solicitação aguarda resposta. Isso não controla reservas realizadas fora do sistema.'),
- ('Acompanhe em “Dados do processo”.','Enviar o pedido não confirma a reserva. Após o aceite, confira data, horário e local. O resultado e o comprovante também são comunicados por e-mail.'),
+ ('Acompanhe em “Dados do processo”.','Enquanto aguarda resposta, o pedido aparece no Calendário com “Aguardando confirmação” em vermelho. O aceite retira o aviso; a recusa retira só o agendamento, preservando o código do TCC. O resultado também chega por e-mail.'),
  ('Se necessário, solicite outra reserva.','Use “Solicitar nova data” após uma recusa ou “Alterar reserva” quando disponível. Na janela, preencha a proposta e clique em “Enviar nova solicitação”. Aguarde o novo aceite.')],note='O protocolo é gerado pelo sistema e não pode ser alterado. Corrigir a data não exige criar outro TCC.'),
  dict(tag='ALUNO • REGRA ESSENCIAL',title='5. Entregar não é tornar público',kind='publication'),
  dict(tag='ALUNO • ENTREGA FINAL',title='6. Anexar e confirmar a entrega',image='repositorio',image_h=186,steps=[

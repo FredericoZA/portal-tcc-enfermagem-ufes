@@ -338,7 +338,7 @@ export async function synchronizeDefenseCalendar(input:{accessToken:string;proce
   }
   const refreshed=created?await googleCalendarJson<{items?:any[]}>(input.accessToken,listUrl):current;
   const syncedAt=new Date().toISOString();
-  const events=(refreshed.items||[]).map(event=>({id:String(event.id),summary:String(event.summary||'Defesa de TCC'),description:event.description?String(event.description):undefined,location:event.location?String(event.location):undefined,start:String(event.start?.dateTime||event.start?.date||''),end:String(event.end?.dateTime||event.end?.date||''),syncedAt})).filter(event=>event.id&&event.start);
+  const events=(refreshed.items||[]).map(event=>({id:String(event.id),summary:String(event.summary||'Defesa de TCC'),portalTccProtocol:event.extendedProperties?.private?.portalTccProtocol?String(event.extendedProperties.private.portalTccProtocol):undefined,description:event.description?String(event.description):undefined,location:event.location?String(event.location):undefined,start:String(event.start?.dateTime||event.start?.date||''),end:String(event.end?.dateTime||event.end?.date||''),syncedAt})).filter(event=>event.id&&event.start);
   return{calendarId,created,events};
 }
 

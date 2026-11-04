@@ -1,7 +1,8 @@
+import {calendarEventMatchesProcess, currentDefenseSelection, isDefenseOnCalendar} from '../utils/defenseReservationState';
 import { legacyRepositoryProcess } from '../utils/legacyRepository';
 import { NursingEmblemLogo } from '../components/NursingEmblemLogo';
 import {readProcessLink,setProcessLink} from '../utils/processLink';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
@@ -553,7 +554,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
   // Library specific state
   const [libSearch, setLibSearch] = useState('');
-  const [selectedLibDoc, setSelectedLibDoc] = useState<ProcessData | null>(null);
+  const [selectedLibSelection, setSelectedLibDoc] = useState<ProcessData | null>(null);
+  const selectedLibDoc = selectedLibSelection ? repositoryProcesses.find(process => process.id === selectedLibSelection.id || process.protocolo === selectedLibSelection.protocolo) || null : null;
   const libSortColumn: string | null = null;
   const libSortDirection: 'asc' | 'desc' = 'asc';
 
@@ -803,8 +805,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [currentCalendarDate, setCurrentCalendarDate] = useState<Date>(() => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), 1); }); // Always open on the user's current month
   const [selectedFilterMonth, setSelectedFilterMonth] = useState<number | 'all'>('all'); // Show all months by default in lists
   const [selectedFilterYear, setSelectedFilterYear] = useState<number | 'all'>('all'); // Show all years by default in lists
-  const [selectedDayDefenses, setSelectedDayDefenses] = useState<ProcessData[] | null>(null);
-  const [selectedDayGcalEvents, setSelectedDayGcalEvents] = useState<any[] | null>(null);
+  const [selectedDayDefenseSelection, setSelectedDayDefenses] = useState<ProcessData[] | null>(null);
+  const selectedDayDefenses = useMemo(() => currentDefenseSelection(selectedDayDefenseSelection, processes), [selectedDayDefenseSelection, processes]);
+  const [selectedDayGoogleSelection, setSelectedDayGcalEvents] = useState<any[] | null>(null);
+  const selectedDayGcalEvents = useMemo(() => {
+    const events = selectedDayGoogleSelection?.filter(event => !processes.some(process => calendarEventMatchesProcess(event, process)));
+    return events?.length ? events : null;
+  }, [selectedDayGoogleSelection, processes]);
 
   useEffect(() => {
     if (!selectedDayDefenses && !selectedDayGcalEvents) return;
@@ -970,13 +977,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   // For a given day, find both processes (defenses) AND google calendar events
   const getEventsForDate = (dayNum: number) => {
     const dayDefenses = filteredProcesses.filter((proc) => {
-      if (!proc.defesa?.startAt) return false;
+      if (!isDefenseOnCalendar(proc)) return false;
       const d = new Date(proc.defesa.startAt);
       return d.getFullYear() === year && d.getMonth() === month && d.getDate() === dayNum;
     });
 
     const dayGcal = googleEvents.filter((ev) => {
       if (!ev.start) return false;
+      // The current process owns the schedule, even if an older Google event survives.
+      if (processes.some(process => calendarEventMatchesProcess(ev, process))) return false;
       const d = new Date(ev.start);
       if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== dayNum) return false;
 
@@ -1770,7 +1779,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           </div>
         ) : (() => {
             const listProcesses = filteredProcesses.filter((proc) => {
-              if (!proc.defesa?.startAt) return false;
+              if (!isDefenseOnCalendar(proc)) return false;
               const d = new Date(proc.defesa.startAt);
               const matchYear = d.getFullYear() === year;
               const matchMonth = d.getMonth() === month;

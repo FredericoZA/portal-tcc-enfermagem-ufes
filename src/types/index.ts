@@ -471,6 +471,7 @@ export interface AuthState {
 
 export interface GoogleCalendarSyncedEvent {
   id: string;
+  portalTccProtocol?: string;
   summary: string;
   description?: string;
   location?: string;

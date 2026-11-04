@@ -1,3 +1,4 @@
+import {calendarEventMatchesProcess, isDefenseReservationDeclined} from './src/utils/defenseReservationState';
 import {stripDocumentScanningBlocks,delimitedTextParts,stripInlineMarkup} from './src/utils/legacyTextProcessing';
 import {isEmailAddress} from './src/utils/emailAddress';
 import { legacyRepositoryProcess } from './src/utils/legacyRepository';
@@ -482,13 +483,14 @@ export async function extractDocxTemplateText(buffer:Buffer):Promise<{text:strin
 // Helper to sync Google Calendar Store from Processes Store
 function generateGoogleEventsFromProcesses(procs: ProcessData[]): GoogleCalendarSyncedEvent[] {
   return procs
-    .filter(p => p.defesa && p.defesa.startAt && p.defesa.localStatus === 'CONFIRMADO')
+    .filter(p => p.defesa && p.defesa.startAt && p.defesa.localStatus === 'CONFIRMADO' && !isDefenseReservationDeclined(p))
     .map(p => {
       const studentName = formatStudentsString(p.aluno1, p.aluno2);
       const coorientadorPart = p.coorientador ? `\nCoorientador: ${p.coorientador.nome}` : '';
       const bancaPart = p.banca && p.banca.length > 0 ? `\nBanca: ${p.banca.map(b => b.nome).join(', ')}` : '';
       return {
         id: `gcal-${p.id}`,
+        portalTccProtocol: p.protocolo,
         summary: `Defesa de TCC - Apresentação: ${studentName}`,
         description: `Trabalho: ${p.titulo}\nOrientador: ${p.orientador?.nome || 'Não definido'}${coorientadorPart}${bancaPart}\nProtocolo: ${p.protocolo}`,
         location: p.defesa.local || resolveInstallationProfile(currentSettings).defaultDefenseLocation,
@@ -4270,7 +4272,8 @@ ${auditChanges(log)}`).join('\n\n');
 
   // GET /api/calendar/events
   app.get('/api/calendar/events', (req, res) => {
-    res.json(googleCalendarEventsStore);
+    res.json(googleCalendarEventsStore.filter(event => !processesStore.some(process =>
+      isDefenseReservationDeclined(process) && calendarEventMatchesProcess(event, process))));
   });
 
   // POST /api/calendar/sync
@@ -4290,6 +4293,7 @@ ${auditChanges(log)}`).join('\n\n');
     // Overwrite with the newly synchronized list
     googleCalendarEventsStore = events.map((ev: any) => ({
       id: ev.id || `gcal-${Date.now()}-${Math.random()}`,
+      portalTccProtocol: typeof ev.portalTccProtocol === 'string' ? ev.portalTccProtocol : undefined,
       summary: ev.summary || 'Sem Título',
       description: ev.description || '',
       location: ev.location || '',

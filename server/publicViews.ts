@@ -1,3 +1,4 @@
+import {publicDefenseReservationStatus} from '../src/utils/defenseReservationState';
 import type { ProcessData } from '../src/types';
 
 export type PublicArtifactState = 'NOT_PRESENTED' | 'PRIVATE' | 'PUBLIC';
@@ -42,7 +43,7 @@ export function publicCalendarView(process: ProcessData) {
       startAt: process.defesa.startAt,
       endAt: process.defesa.endAt,
       local: process.defesa.local,
-      localStatus: process.defesa.localStatus,
+      localStatus: publicDefenseReservationStatus(process),
       hasReservationReceipt: Boolean(process.defesa.departmentResponse),
     },
     createdAt: process.createdAt,
@@ -104,7 +105,7 @@ export function publicRepositoryView(process: ProcessData) {
       startAt: process.defesa.startAt,
       endAt: process.defesa.endAt,
       local: process.defesa.local,
-      localStatus: process.defesa.localStatus,
+      localStatus: publicDefenseReservationStatus(process),
       hasReservationReceipt: Boolean(process.defesa.departmentResponse),
     },
     avaliacao: {
