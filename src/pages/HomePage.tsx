@@ -66,7 +66,7 @@ import {
   LOGIN_POPUP_CONFIG_EVENT
 } from '../utils/loginPopupConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
-import { DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseCalendarSummaryParts, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter } from '../utils/defenseSemantics';
+import { DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseCalendarSummaryParts, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter, isDefenseReservationPending } from '../utils/defenseSemantics';
 import { getPortalToneCssVars } from '../utils/portalSemanticTokens';
 import { formatProcessLabel } from '../components/PortalProcessPill';
 
@@ -494,6 +494,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   }, [initialPublicTab]);
 
   const [processes, setProcesses] = useState<ProcessData[]>([]);
+  // Agenda pública independente do papel ou das permissões da sessão.
+  const [calendarProcesses, setCalendarProcesses] = useState<ProcessData[]>([]);
   const [legacyProcesses,setLegacyProcesses]=useState<ProcessData[]>([]);
   const [legacyLoading, setLegacyLoading] = useState(true);
   const repositoryProcesses=[...processes,...legacyProcesses];
@@ -826,11 +828,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const refreshData = async () => {
     try {
-      const [procData, gcalData] = await Promise.all([
+      const [procData, calendarData, gcalData] = await Promise.all([
         apiClient.getProcesses(),
+        apiClient.getPublicCalendar(),
         apiClient.getGoogleCalendarEvents().catch(() => [])
       ]);
       setProcesses(procData);
+      setCalendarProcesses(calendarData);
       setGoogleEvents(gcalData || []);
     } catch (err) {
       console.error('Erro ao atualizar dados:', err);
@@ -849,13 +853,16 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     setIsLoading(true);
     setLoadError('');
     setProcesses([]);
+    setCalendarProcesses([]);
     setGoogleEvents([]);
     Promise.all([
       apiClient.getProcesses(),
+      apiClient.getPublicCalendar(),
       apiClient.getGoogleCalendarEvents().catch(() => [])
-    ]).then(([procData, gcalData]) => {
+    ]).then(([procData, calendarData, gcalData]) => {
       if (!active) return;
       setProcesses(procData);
+      setCalendarProcesses(calendarData);
       setGoogleEvents(gcalData || []);
     }).catch(() => {
       if (active) setLoadError('Não foi possível carregar os TCCs. Tente novamente.');
@@ -865,7 +872,17 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
 
 
-  const filteredProcesses = processes.filter((proc) => {
+  // Calendário, filtros e Lista de Defesas compartilham a mesma projeção pública.
+  useEffect(() => {
+    setSelectedDayDefenses((current) => {
+      if (!current?.length) return null;
+      const reference = new Date(current[0].defesa.startAt).toDateString();
+      const latest = calendarProcesses.filter((proc) => new Date(proc.defesa.startAt).toDateString() === reference);
+      return latest.length ? latest : null;
+    });
+  }, [calendarProcesses]);
+
+  const filteredProcesses = calendarProcesses.filter((proc) => {
     const term = searchTerm.toLowerCase();
     const students = formatStudentsString(proc.aluno1, proc.aluno2).toLowerCase();
     const orientador = (proc.orientador?.nome || '').toLowerCase();
@@ -1230,15 +1247,17 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <div className="mt-1 flex-1 min-h-0 space-y-1 w-full">
                         {dayDefenses.map((proc) => {
                           const defenseState = getDefenseState(proc);
+                          const isPending = isDefenseReservationPending(proc);
                           return (
                             <span
                               key={proc.id}
                               className="portal-calendar-defense-summary portal-semantic-tone"
                               style={getPortalToneCssVars(defenseState)}
                               data-defense-state={defenseState}
-                              title={formatDefenseCalendarSummary(proc, 160)}
+                              data-reservation-status={isPending ? 'pending' : 'confirmed'}
+                              title={`${formatDefenseCalendarSummary(proc, 160)}${isPending ? ' · Aguardando confirmação do local' : ''}`}
                             >
-                              {(() => { const summary = getDefenseCalendarSummaryParts(proc); return <><span className="portal-calendar-defense-primary">{summary.primary}</span>{summary.secondary && <span className="portal-calendar-defense-secondary">{summary.secondary}</span>}<span className="portal-calendar-defense-secondary font-semibold">{summary.location}</span></>; })()}
+                              {(() => { const summary = getDefenseCalendarSummaryParts(proc); return <><span className="portal-calendar-defense-primary">{summary.primary}</span>{summary.secondary && <span className="portal-calendar-defense-secondary">{summary.secondary}</span>}<span className="portal-calendar-defense-secondary font-semibold">{summary.location}</span>{isPending && <span className="portal-calendar-defense-pending">Aguardando confirmação</span>}</>; })()}
                             </span>
                           );
                         })}
@@ -1409,6 +1428,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                               return (
                                 <div
                                   key={proc.id}
+                                  data-reservation-status={isDefenseReservationPending(proc) ? 'pending' : 'confirmed'}
                                   onClick={() => {
                                     setSelectedDayDefenses(null);
                                     setSelectedDayGcalEvents(null);
@@ -1416,8 +1436,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                   }}
                                   className={`text-slate-900 ${cardPaddingClass} ${cardRadiusClass} ${cardBorderClass} ${cardGapClass} ${cardShadowClass} hover:shadow-md cursor-pointer transition-all group flex flex-col`}
                                   style={{
-                                    backgroundColor: calendarPopupFormat.cardBgColor || '#ffffff',
-                                    borderColor: calendarPopupFormat.cardBorderColor || '#cbd5e1',
+                                    backgroundColor: isDefenseReservationPending(proc) ? '#f7faf9' : (calendarPopupFormat.cardBgColor || '#ffffff'),
+                                    borderColor: isDefenseReservationPending(proc) ? '#cfddd7' : (calendarPopupFormat.cardBorderColor || '#cbd5e1'),
                                   }}
                                   title="Clique para abrir todas as configurações e ficha do TCC"
                                 >
@@ -1451,6 +1471,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           </span>
                                         )}
                                       </div>
+                                    </div>
+                                  )}
+
+                                  {isDefenseReservationPending(proc) && (
+                                    <div className="text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 rounded-md px-2 py-1 self-start">
+                                      Aguardando confirmação do local — reserva provisória
                                     </div>
                                   )}
 
@@ -1564,7 +1590,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           <div className={`grid ${gridColsClass}`}>
                             {selectedDayGcalEvents.map((ev) => {
                               const parsed = parseGcalEvent(ev);
-                              const matchedProc = processes.find(p => p.id === ev.id.replace('gcal-', '') || p.protocolo === ev.id || (p.titulo && parsed.trabalho && p.titulo.toLowerCase().includes(parsed.trabalho.toLowerCase().slice(0, 15))));
+                              const matchedProc = calendarProcesses.find(p => p.id === ev.id.replace('gcal-', '') || p.protocolo === ev.id || (p.titulo && parsed.trabalho && p.titulo.toLowerCase().includes(parsed.trabalho.toLowerCase().slice(0, 15))));
                               return (
                                 <div
                                   key={ev.id}
@@ -1900,6 +1926,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         className={`${defStyles.firstColBtnClass} portal-semantic-tone whitespace-nowrap`}
                         style={getPortalToneCssVars(defenseState)}
                         data-defense-state={defenseState}
+                        data-reservation-status={isDefenseReservationPending(proc) ? 'pending' : 'confirmed'}
                       >
                         {formatProcessLabel(proc.protocolo || proc.id)}
                       </div>
@@ -2043,6 +2070,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   return (
                     <td key="defesaLocal" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.cellFontSizeClass} leading-normal ${defStyles.cellWrapClass} align-middle cursor-grab`}>
                       <span>{formatCellText('defesaLocal', proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar', defensesTextFormat, '')}</span>
+                      {isDefenseReservationPending(proc) && <span className="block text-[9.5px] font-semibold text-slate-500 mt-1">Aguardando confirmação</span>}
                     </td>
                   );
                 default:
@@ -2075,6 +2103,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       return (
                         <tr
                           key={proc.id}
+                          data-reservation-status={isDefenseReservationPending(proc) ? 'pending' : 'confirmed'}
                           className={`transition-all duration-200 ${defStyles.rowZebraClass} ${defStyles.cellTextColorClass}`}
                         >
                           {defensesColumnOrder.map((colKey) => renderDefensesBodyCell(colKey, proc, progress, defenseState, ev1, ev2, cleanInst))}
