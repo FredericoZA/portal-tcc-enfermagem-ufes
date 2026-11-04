@@ -33,6 +33,7 @@ import {finalDocumentsEmail,isFinalDocumentsEmail} from './src/utils/finalDocume
 import {publishReviewedModel} from './server/documents/reviewedModelPublication';
 import {inspectDefenseConflicts} from './server/defenseConflicts';
 import {defenseEndAt} from './src/utils/defenseSchedule';
+import {isPublicCalendarDefense,isDefenseReservationPending} from './src/utils/defenseSemantics';
 import {DocumentModelError} from './src/utils/documentModelErrors';
 import {assertCurrentSignatureRecipients,canReturnGovbrDocument} from './server/workflow/signaturePolicy';
 import {inspectAstenDelivery} from './server/integrations/astenReadiness';
@@ -2139,7 +2140,7 @@ export async function createPortalApp() {
     const date=(value:string)=>{const parsed=new Date(value);return Number.isFinite(parsed.getTime())?parsed.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z'):'';};
     const host=String(req.get('host')||'portal.local');
     const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Portal Institucional de TCC//Agenda//PT','CALSCALE:GREGORIAN','METHOD:PUBLISH',`X-WR-CALNAME:${escapeIcs(resolveInstallationProfile(currentSettings).portalName)}`,`X-WR-TIMEZONE:${escapeIcs(currentSettings.integrationStudio?.operationsPolicy?.timezone||currentSettings.timezone||'America/Sao_Paulo')}`];
-    for(const process of processesStore.filter(item=>item.defesa?.localStatus==='CONFIRMADO'&&item.defesa.startAt))lines.push('BEGIN:VEVENT',`UID:${escapeIcs(process.id)}@${escapeIcs(host)}`,`DTSTAMP:${date(process.updatedAt)}`,`DTSTART:${date(process.defesa.startAt)}`,`DTEND:${date(defenseEndAt(process.defesa.startAt))}`,`SUMMARY:${escapeIcs(`Defesa de TCC — ${formatStudentsString(process.aluno1,process.aluno2)}`)}`,`DESCRIPTION:${escapeIcs(`${process.titulo} | ${process.protocolo}`)}`,`LOCATION:${escapeIcs(process.defesa.local)}`,'END:VEVENT');
+    for(const process of processesStore.filter(isPublicCalendarDefense))lines.push('BEGIN:VEVENT',`UID:${escapeIcs(process.id)}@${escapeIcs(host)}`,`DTSTAMP:${date(process.updatedAt)}`,`DTSTART:${date(process.defesa.startAt)}`,`DTEND:${date(defenseEndAt(process.defesa.startAt))}`,`STATUS:${isDefenseReservationPending(process)?'TENTATIVE':'CONFIRMED'}`,`SUMMARY:${escapeIcs(`Defesa de TCC — ${formatStudentsString(process.aluno1,process.aluno2)}${isDefenseReservationPending(process)?' (aguardando confirmação do local)':''}`)}`,`DESCRIPTION:${escapeIcs(`${process.titulo} | ${process.protocolo}`)}`,`LOCATION:${escapeIcs(process.defesa.local)}`,'END:VEVENT');
     lines.push('END:VCALENDAR');res.setHeader('Content-Type','text/calendar; charset=utf-8');res.setHeader('Content-Disposition','attachment; filename="agenda-defesas.ics"');res.setHeader('Cache-Control','public, max-age=300');res.send(lines.join('\r\n'));
   });
 
@@ -2489,7 +2490,7 @@ export async function createPortalApp() {
   });
 
   // GET /api/processes
-  app.get('/api/public/calendar',(_req,res)=>res.json(processesStore.filter(p=>p.status!=='EM_RASCUNHO'&&p.status!=='CONCLUIDO').map(publicCalendarView)));
+  app.get('/api/public/calendar',(_req,res)=>{res.setHeader('Cache-Control','public, max-age=0, must-revalidate');res.json(processesStore.filter(isPublicCalendarDefense).map(publicCalendarView));});
   app.get('/api/public/repository',(_req,res)=>res.json([...processesStore.filter(p=>p.status==='CONCLUIDO').map(publicRepositoryView),...legacyAcademicRecordsStore.map(r=>legacyRepositoryProcess(publicLegacyAcademicView(r)))]));
   app.get('/api/public/processes/:id',(req,res)=>{
     const legacy=legacyAcademicRecordsStore.find(r=>r.id===req.params.id||r.protocolo===req.params.id);
