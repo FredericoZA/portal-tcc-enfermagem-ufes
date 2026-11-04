@@ -112,7 +112,12 @@ test('Gov.br HTTP isolado: permissões, PDF pendente, conferência por hash, arq
     assert.equal(ataOriginal.subarray(0,5).toString(),'%PDF-');
     assert.equal((await fetch(`${base}${ataEndpoint}/download`,{headers:sessionHeaders(ataFixture.aluno1.email)})).status,403);
     assert.equal((await request(`${ataEndpoint}/complete`,{fileName:'ata.pdf',contentBase64:ataOriginal.toString('base64')},ataFixture.aluno1.email)).status,403,'o aluno não devolve a ata: o orientador reúne as três assinaturas');
-    const ataReturned=await pdfWithTestSignature(ataOriginal);
+    for(const signatureCount of [1,2]){
+      const incomplete=await pdfWithTestSignature(ataOriginal,{signatureCount});
+      const rejected=await request(`${ataEndpoint}/complete`,{fileName:'ata-incompleta.pdf',contentBase64:incomplete.toString('base64')},ataFixture.orientador.email);
+      assert.equal(rejected.status,409);assert.match(rejected.body.error,/exige 3 assinaturas/);
+    }
+    const ataReturned=await pdfWithTestSignature(ataOriginal,{signatureCount:3,earlierRevisionSignatures:true});
     const ataReceived=await request(`${ataEndpoint}/complete`,{fileName:'ata-teste.pdf',contentBase64:ataReturned.toString('base64')},ataFixture.orientador.email);
     assert.equal(ataReceived.status,200,JSON.stringify(ataReceived.body));
     const ataApproval={sha256:ataReceived.body.govbrReview.sha256,itiApproved:true,signerMatches:true,documentMatches:true};

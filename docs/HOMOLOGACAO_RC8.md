@@ -1,5 +1,7 @@
 # Homologação RC8
 
+> Registro histórico. A regra antiga de assinatura exclusiva do orientador foi substituída: a ata exige orientador e dois examinadores. Não use este registro como roteiro vigente. Consulte [a diretriz atual](ASSINATURA_ATA_TRES_DOCENTES.md), o manual e `HOMOLOGACAO_ATUAL.md`.
+
 Os testes locais desta entrega usam dados fictícios e integrações controladas. Eles comprovam contratos e bloqueios do código, mas não comprovam conversão real no Google, entrega Gmail, assinatura Asten, persistência Supabase, execução Vercel ou aparência renderizada. Esses itens continuam **não confirmados** até o piloto na instalação do proprietário.
 
 ## Preparação segura

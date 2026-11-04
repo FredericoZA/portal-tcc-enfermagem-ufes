@@ -46,7 +46,7 @@ export async function simulateWorkflow(studio: IntegrationStudioSettings, scenar
     if (!failed) { p.avaliacao = { status: 'CONCLUIDO', resultadoLabel: 'Aprovado', parecer: 'Parecer fictício' }; await advance('EVALUATION_SUBMITTED', 'Orientador'); }
     const ata = jobs.find(j => j.documentType === 'ATA');
     if (!failed && ata) {
-      events.push({ event: 'ATA_ASSINADA', role: 'Orientador', state: 'RETORNO SIMULADO DA ASTEN E ARQUIVAMENTO' });
+      events.push({ event: 'ATA_ASSINADA', role: 'Orientador e dois examinadores', state: 'TRÊS ASSINATURAS SIMULADAS E ARQUIVAMENTO' });
       ata.status = 'ARCHIVED'; ata.driveSignedFileId = 'simulation-ata';
       p.acervo = { submittedAt: '2026-09-02T12:00:00Z', publishFullWork: scenario.publication !== false, authorizationConfirmedAt: '2026-09-02T12:00:00Z' };
       await advance('REPOSITORY_SUBMITTED', 'Aluno');

@@ -52,3 +52,8 @@ O servidor confere arquivo, versão publicada e hash da amostra. Uma mudança
 posterior exige nova revisão. O histórico anterior e a auditoria são preservados.
 Alunos e outros participantes não podem publicar modelos. Não há repetição de
 OTP nessa operação autenticada de revisão do fluxo Gov.br.
+
+
+## Quantidade de assinaturas
+
+O servidor verifica a presença de assinaturas digitais distintas no envio e novamente antes da aprovação: três na ata, todos os autores e o orientador no termo, e a presidência na declaração. Assinaturas de revisões incrementais anteriores são consideradas; deve existir uma assinatura que cubra o PDF devolvido. Campos repetidos referenciando a mesma assinatura não contam como pessoas diferentes. Essa é uma verificação estrutural: a validade criptográfica e a correspondência de cada titular continuam dependendo da conferência administrativa no VALIDAR/ITI.

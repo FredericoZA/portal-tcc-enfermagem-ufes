@@ -49,7 +49,7 @@ test('a declaração espera o Termo vigente e a Ata arquivados',()=>{
 });
 test('simulação percorre papéis sem efeitos externos e espera confirmação de local',async()=>{
   const hold=await simulateWorkflow(studio(),{locationConfirmed:false});assert.equal(hold.emails.length,1);assert.match(hold.events.at(-1)!.state,/BLOQUEADO/);
-  const full=await simulateWorkflow(studio(),{secondAuthor:true});assert.equal(full.externalEffects,false);assert.ok(full.events.some(e=>e.event==='PUBLICATION_CLEARED'));assert.ok(full.events.some(e=>e.event==='PROCESS_COMPLETED'));
+  const full=await simulateWorkflow(studio(),{secondAuthor:true});assert.equal(full.externalEffects,false);assert.equal(full.events.find(e=>e.event==='ATA_ASSINADA')?.role,'Orientador e dois examinadores');assert.match(full.events.find(e=>e.event==='ATA_ASSINADA')!.state,/TRÊS ASSINATURAS/);assert.ok(full.events.some(e=>e.event==='PUBLICATION_CLEARED'));assert.ok(full.events.some(e=>e.event==='PROCESS_COMPLETED'));
   const failure=await simulateWorkflow(studio(),{failActionId:'doc-CONVITE'});assert.equal(failure.emails.length,1);assert.equal(failure.events.at(-1)!.state,'PARTIAL_FAILURE');
 });
 test('catálogo resolve sinônimos e respeita datas de vigência',()=>{

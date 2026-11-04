@@ -30,8 +30,8 @@ A homologação ponta a ponta permanece **não confirmada** até concluir os pil
 4. Abra o formulário enviado ao departamento, confirme um local e valide o comprovante, a comunicação e a continuidade. Repita com negativa: o comprovante deve indicar indisponibilidade.
 5. Verifique o convite gerado pelo modelo ativo, sem marcadores pendentes, o envio pelo Gmail e o evento no Calendar.
 6. Entre como orientador, confira os dados e registre apenas **resultado e parecer**, sem nota numérica.
-7. Confirme que a Ata é gerada com os dados revisados. Teste Asten somente com o orientador como signatário. Em outro cenário, prepare pelo Gov.br: o processo deve continuar pendente até a devolução, conferência e arquivamento. As ações ficam em Documentos do processo.
-8. Confirme que a entrega permanece bloqueada antes da Ata assinada/arquivada. Depois, preencha o Repositório e use Confirmar entrega final; confira o bloqueio dos campos e o botão centralizado Acompanhar documentos.
+7. Confirme que a Ata é gerada com os dados revisados. Teste Asten com orientador e dois examinadores como signatários, todos na prioridade 1. Com uma ou duas assinaturas, a ata deve permanecer pendente e a entrega bloqueada. Em outro cenário, prepare pelo Gov.br: os três assinam o mesmo PDF, devolvido pelo orientador. PDFs com menos de três assinaturas são recusados. A conferência administrativa no VALIDAR/ITI deve confirmar todos os titulares antes do arquivamento. As ações ficam em Documentos administrativos. O registro do conceito não dispara assinaturas automaticamente.
+8. Confirme que a entrega permanece bloqueada antes da Ata assinada/arquivada. Depois, preencha o Repositório e use Confirmar entrega final; confira o bloqueio dos campos e o botão centralizado Editar entrega, enquanto permitido.
 9. Teste as escolhas de publicação do trabalho completo e do resumo expandido.
 10. Quando houver conteúdo autorizado, confirme o Termo com aluno e orientador como signatários aplicáveis.
 11. Na Área do Presidente, confira e envie a declaração à Asten; confirme assinatura e arquivamento.
@@ -90,3 +90,8 @@ Para cada cenário registre:
 ## Critério de aprovação
 
 O Portal só pode ser aberto aos alunos quando todos os itens críticos acima estiverem aprovados, a Asten real estiver validada, o piloto individual e em dupla estiverem concluídos e não houver pendência crítica aberta.
+
+
+## Regra vigente da ata — 04/11/2026
+
+Consulte `ASSINATURA_ATA_TRES_DOCENTES.md`. Atas históricas arquivadas são preservadas; solicitações pendentes com apenas um signatário não podem ser reutilizadas. O piloto deve incluir o acesso de cada examinador com seu próprio e-mail e comprovar as três assinaturas no provedor. Testes locais não substituem esse piloto real.

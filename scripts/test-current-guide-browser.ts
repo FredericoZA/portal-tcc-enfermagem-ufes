@@ -17,13 +17,13 @@ const page = await context.newPage();
 const errors: string[] = [];
 const checked: Record<string, unknown>[] = [];
 page.on('pageerror', error => errors.push(error.message));
-const roleLabels = {aluno: 'Aluno', orientador: 'Orientador', visitante: 'Visitante'} as const;
+const roleLabels = {aluno: 'Aluno', orientador: 'Orientador', examinador: 'Examinador', visitante: 'Visitante'} as const;
 try {
   await page.goto(base, {waitUntil: 'networkidle'});
   await page.getByRole('button', {name: 'Como usar', exact: true}).click();
   const manual = page.locator('#portal-tutorial-page');
   await manual.getByRole('heading', {name: 'Como usar o Portal de TCC', exact: true}).waitFor();
-  assert.equal(await manual.getByRole('group', {name: 'Perfil do manual'}).getByRole('button').count(), 3);
+  assert.equal(await manual.getByRole('group', {name: 'Perfil do manual'}).getByRole('button').count(), 4);
   for (const role of Object.keys(guideActivityOrder) as (keyof typeof roleLabels)[]) {
     await manual.getByRole('button', {name: roleLabels[role], exact: true}).click();
     assert.equal(await manual.getByRole('heading', {name: /^(Antes de começar|Veja onde clicar|Conferência antes de encerrar|Erros a evitar)/}).count(), 0);
@@ -86,6 +86,7 @@ try {
   assert.equal(await flow.locator('.portal-flow-step').count(), 8);
   assert.equal(await page.locator('#signature-flow-title').count(), 1);
   assert.match(await flow.innerText(), /Portal do Professor/);
+  assert.match(await flow.locator('[aria-labelledby="signature-flow-title"]').innerText(), /Orientador e dois examinadores/);
   await flow.locator('img').scrollIntoViewIfNeeded();
   await flow.locator('img').evaluate(async (img: HTMLImageElement) => { await img.decode(); });
   const signatureLayout = flow.locator('[data-signature-layout]');
@@ -122,7 +123,7 @@ try {
   }
   assert.deepEqual(errors, []);
   await writeFile(path.join(output, 'manual-atual-browser-qa.json'), JSON.stringify({base, checked, viewports: [1440, 768, 390], errors, dataMutations: false}, null, 2));
-  console.log(`PASS: ${checked.length} atividades, três perfis, imagens, teclado, oito passos, um quadro de assinaturas e três larguras. Nenhum login ou envio realizado.`);
+  console.log(`PASS: ${checked.length} atividades, quatro perfis, imagens, teclado, oito passos, um quadro de assinaturas e três larguras. Nenhum login ou envio realizado.`);
 } finally {
   await context.close();
   await browser.close();

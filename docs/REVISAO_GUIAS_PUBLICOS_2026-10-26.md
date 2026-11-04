@@ -1,5 +1,7 @@
 # Revisão local de Como usar e Fluxo do TCC — 26/10/2026
 
+> Registro histórico. A regra antiga de assinatura exclusiva do orientador foi substituída: a ata exige orientador e dois examinadores. Não use este registro como roteiro vigente. Consulte [a diretriz atual](ASSINATURA_ATA_TRES_DOCENTES.md), o manual e `HOMOLOGACAO_ATUAL.md`.
+
 Esta revisão acompanha as regras implementadas de reserva, assinaturas e consulta pública. Não publica alterações no Vercel nem modifica dados de produção.
 
 ## Conteúdo alinhado

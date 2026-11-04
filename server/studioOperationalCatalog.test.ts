@@ -22,3 +22,15 @@ test('operational validation accepts link-only invitation and the post-ata deliv
  const source:any={emailTemplates:[{id:'email-reserva',recipient:'reservas@example.invalid',subject:'Reserva',body:'Pedido'},{id:'email-convite',recipient:'{{BANCA_EMAILS}}',subject:'Convite',body:'Acesse <<LINK_PROCESSO>>',attachments:[]},{id:'delivery',recipient:'{{ALUNO_1_EMAIL}}',subject:'Entrega',body:'Entrega'}],docTemplates:[{id:'convite',type:'CONVITE'}],workflowStages:[{id:'register',triggerEvent:'TCC_CREATED',actions:[{type:'email',refId:'email-reserva'}]},{id:'invite',triggerEvent:'LOCATION_CONFIRMED',actions:[{type:'doc',refId:'convite'},{type:'email',refId:'email-convite'}]},{id:'deliver',triggerEvent:'SIGNATURE_COMPLETED',actions:[{type:'email',refId:'delivery',condition:{fieldKey:'ENTREGA_FINAL_LIBERADA',operator:'IS_TRUE'}}]}]};source.operationalConfig=operationalConfig(source);source.operationalConfig.reservation.locations=['Auditório'];
  const report=validateCourseStudio(source);assert.equal(source.operationalConfig.reservation.departmentEmail,'reservas@example.invalid');assert.deepEqual(report.issues.filter(i=>['INVALID_INVITATION_PIPELINE','INVALID_CONDITION','DEPARTMENT_REQUIRED','RESERVATION_ACTION_REQUIRED'].includes(i.code)),[]);
 });
+
+
+test('configuração antiga da ata migra para três docentes sem recriar envio automático',()=>{
+ const previous={workflowStages:[{id:'avaliacao',triggerEvent:'EVALUATION_SUBMITTED',description:'O orientador confere os dados, registra o resultado e escreve o parágrafo variável do parecer.',actions:[{id:'ata',type:'doc',refId:'tmpl-ata',title:'Gera Ata de Defesa e envia à Asten',recipientOrDetail:'Assinatura do orientador'},{id:'aviso',type:'email',refId:'email-assinatura-ata'}]}]};
+ const updated=withOperationalCatalog(previous as any);
+ const stage=updated.workflowStages[0];
+ assert.match(stage.description,/orientador e dos dois examinadores/);
+ assert.equal(stage.actions.length,1);assert.equal(stage.actions[0].title,'Prepara Ata de Defesa para assinatura');
+ assert.equal(stage.actions[0].recipientOrDetail,'Orientador e dois examinadores · prioridade 1');
+ assert.deepEqual(withOperationalCatalog(updated),updated);
+ assert.equal(previous.workflowStages[0].actions.length,2);
+});

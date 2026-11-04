@@ -3834,7 +3834,7 @@ export async function createPortalApp() {
       if(job.status!=='READY_FOR_REVIEW'||job.govbrReview?.approvedAt)throw new Error('A conferência desta versão já foi aprovada.');
       const receive=async(file:{bytes:Buffer;fileName:string})=>{
         const original=await readGovbrPdf(job,String(job.driveUnsignedFileId||''),job.contentSha256);
-        const sha256=await inspectGovbrReturnedPdf(original,file.bytes,job.contentSha256);
+        const sha256=await inspectGovbrReturnedPdf(original,file.bytes,job.contentSha256,job.signers.length);
         let fileId:string;
         if(localDocumentModelsEnabled())fileId=storeLocalGovbrPdf(file.bytes);
         else{
@@ -3861,7 +3861,7 @@ export async function createPortalApp() {
       if(!['READY_FOR_REVIEW','DRIVE_SYNC_PENDING'].includes(job.status))throw new Error('A versão não está disponível para conferência.');
       const review=job.govbrReview!;
       const [original,pdf]=await Promise.all([readGovbrPdf(job,String(job.driveUnsignedFileId||''),job.contentSha256),readGovbrPdf(job,review.fileId,review.sha256)]);
-      await inspectGovbrReturnedPdf(original,pdf,job.contentSha256);
+      await inspectGovbrReturnedPdf(original,pdf,job.contentSha256,job.signers.length);
       if(!review.approvedAt){
         Object.assign(review,{method:'MANUAL_VALIDAR_ITI',approvedAt:new Date().toISOString(),approvedBy:identity.email,itiApproved:true,signerMatches:true,documentMatches:true});
         job.approvedBy=identity.email;job.approvedAt=review.approvedAt;

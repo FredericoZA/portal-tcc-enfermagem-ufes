@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DEMO_PROCESSES} from '../../src/services/demoSeed';
 import {deriveSignatureSigners,canInitiateSignature,assertCurrentSignatureRecipients} from './signaturePolicy';
-import {assertAstenEnvelopeSigners} from '../integrations/asten';
+import {assertAstenEnvelopeSigners,buildAstenEnvelopeParams} from '../integrations/asten';
 
 const settings = {commissionPresidentName:'Presidência', commissionPresidentEmail:'presidencia@ufes.br'};
 const process = () => structuredClone(DEMO_PROCESSES[0]);
@@ -66,4 +66,21 @@ test('ata: Asten só confirma o conjunto de três assinaturas, bloqueando qualqu
   assert.throws(()=>assertAstenEnvelopeSigners({listaSignatariosEnvelope:{SignatarioEnvelope:missing}},wanted),/divergem/);
   const pending=evidence.map((entry,index)=>index===2?{...entry,statusAssinatura:'Pendente'}:entry);
   assert.throws(()=>assertAstenEnvelopeSigners({listaSignatariosEnvelope:{SignatarioEnvelope:pending}},wanted),/ainda não confirma/);
+});
+
+
+test('ata: payload enviado à Asten contém os três destinatários, nomes completos e prioridade 1',()=>{
+  const environment=globalThis.process.env;
+  const fixture={ASTEN_WEBHOOK_SECRET:'w'.repeat(40),ASTEN_CALLBACK_URL:'https://portal.example/api/integrations/asten/webhook',PORTAL_PUBLIC_URL:'https://portal.example',ASTEN_REQUIRE_CODE:'false',ASTEN_AUTHENTICATION_OPTION:'0',ASTEN_SIGNING_PROFILE:'EMAIL_LINK',ASTEN_REQUIRE_LOGIN:'false'};
+  const saved=Object.fromEntries(Object.keys(fixture).map(key=>[key,environment[key]]));
+  try{
+    Object.assign(environment,fixture);
+    const signers=deriveSignatureSigners(process(),'ATA',settings);
+    const payload=buildAstenEnvelopeParams({description:'TCC-TESTE — Ata',fileName:'ata.pdf',mimeType:'application/pdf',contentBase64:Buffer.from('%PDF-1.4\n%%EOF').toString('base64'),repositoryId:42,authenticationProfile:'EMAIL_LINK',signers:signers.map(signer=>({name:signer.name,email:signer.email,order:signer.signingOrder}))});
+    const envelope=payload.Envelope as any;
+    const actual=envelope.listaSignatariosEnvelope.SignatarioEnvelope;
+    assert.equal(actual.length,3);
+    assert.deepEqual(actual.map((entry:any)=>({email:entry.ConfigAssinatura.emailSignatario,name:entry.ConfigAssinatura.nomeSignatario,order:entry.ordem})),signers.map(signer=>({email:signer.email,name:signer.name,order:1})));
+    assert.ok(actual.every((entry:any)=>entry.ConfigAssinatura.permitirDelegar==='N'));
+  }finally{for(const [key,value] of Object.entries(saved)){if(value===undefined)delete environment[key];else environment[key]=value;}}
 });

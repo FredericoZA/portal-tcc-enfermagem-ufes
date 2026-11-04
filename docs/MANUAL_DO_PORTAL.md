@@ -1,8 +1,6 @@
 # Manual público do Portal de TCC
 
-O atalho **Manual** fica no grupo inferior do menu lateral, junto de **Declaração de
-comparecimento** e **Sugestões**. Abre diretamente `/manual/manual-portal-tcc.pdf`,
-em nova aba, sem solicitar login. Não contém informações reais dos participantes.
+O botão **Manual em PDF** fica fixado no cabeçalho de **Como usar**, disponível nos quatro perfis: Aluno, Orientador, Examinador e Visitante. Abre diretamente `/manual/manual-portal-tcc.pdf`, em nova aba, sem solicitar login. Não contém informações reais dos participantes.
 
 O guia de 04/11/2026 tem 17 páginas para alunos, orientadores e examinadores. Ensina
 acesso por código de e-mail, cadastro, reserva, conceito, conferência documental,
@@ -30,8 +28,8 @@ revisão e cancelamento antes da emissão de uma nova versão.
    configurar `PORTAL_MANUAL_FONT_DIR`. A geração não faz parte do build Vercel.
 4. Renderizar todas as páginas com `pdftoppm` e conferir legibilidade, limites,
    instruções, links e conteúdo antes de distribuir o PDF.
-5. Executar os testes do manual e das assinaturas e verificar no navegador que os
-   três atalhos continuam funcionando. Um teste local não comprova entrega real
+5. Executar os testes do manual e das assinaturas e verificar no navegador que o
+   acesso ao PDF e os quatro perfis continuam funcionando. Um teste local não comprova entrega real
    de e-mail nem assinatura real no Asten.
 
 O gerador escreve a cópia para entrega em `output/pdf/Manual_Portal_TCC_UFES.pdf`
