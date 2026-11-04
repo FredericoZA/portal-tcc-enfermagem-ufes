@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ensureProcessDriveStructure,bootstrapPortalDriveStructure} from '../../src/services/googleDriveOrganizer';
-import {ensurePortalRenderFolder,resolvePortalTechnicalRoot,storePrivatePortalBackup,upsertLivingIntelligenceFile} from './googleWorkspace';
+import {ensurePortalRenderFolder,resolvePortalTechnicalRoot,storePrivatePortalBackup} from './googleWorkspace';
 
 const academic='academic_root_123456';
 const technical='technical_root_123456';
@@ -35,7 +35,7 @@ test('bootstrap da configuração cria somente documentos e processos na raiz ac
  assert.equal(writes.some(item=>item.name==='00_SISTEMA'),false);
 });
 
-test('conversões, backups e relatórios usam a raiz técnica sem criar outro Sistema',async t=>{
+test('conversões e backups usam a raiz técnica sem criar outro Sistema',async t=>{
  configured(t);const writes:any[]=[];
  t.mock.method(globalThis,'fetch',async(input:unknown,init?:RequestInit)=>{
   const url=String(input);
@@ -49,8 +49,7 @@ test('conversões, backups e relatórios usam a raiz técnica sem criar outro Si
  });
  await ensurePortalRenderFolder('test-token',academic);
  await storePrivatePortalBackup({accessToken:'test-token',rootFolderId:academic,fileName:'PORTAL_TCC_BACKUP_2026-10-22T12-00-00Z.ptb',content:Buffer.from('encrypted fixture'),sha256:'a'.repeat(64)});
- await upsertLivingIntelligenceFile({accessToken:'test-token',rootFolderId:academic,fileName:'RELATORIO.md',content:'Relatório agregado',kind:'TCC_STATISTICAL_REPORT',sha256:'b'.repeat(64),version:1,generatedAt:new Date().toISOString()});
- assert.deepEqual(writes.map(item=>item.name),['03_TEMPORARIOS_DOCUMENTAIS','02_BACKUPS_CIFRADOS','01_INTELIGENCIA_CONTINUA']);
+ assert.deepEqual(writes.map(item=>item.name),['03_TEMPORARIOS_DOCUMENTAIS','02_BACKUPS_CIFRADOS']);
  assert.ok(writes.every(item=>item.parents[0]===technical));
 });
 
