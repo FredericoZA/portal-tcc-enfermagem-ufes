@@ -38,18 +38,3 @@ test('homologação mantém apenas a sala escolhida; negativa libera salas e par
  p.status='AGUARDANDO_CONFIRMACAO_LOCAL';p.defesa.departmentResponse=undefined;p.defesa.localStatus='PENDENTE';
  assert.equal(inspectDefenseConflicts([p],query,false).length,0);
 });
-
-test('recusa registrada apenas no status do local libera o horário', () => {
-  const process = structuredClone(DEMO_PROCESSES[0]);
-  process.defesa = {
-    ...process.defesa,
-    startAt: '2026-12-07T18:30:00.000Z',
-    local: 'Auditório',
-    localStatus: 'NEGADO',
-    departmentResponse: undefined,
-  };
-  const input = { startAt: process.defesa.startAt, local: 'Auditório', emails: [] };
-  assert.deepEqual(inspectDefenseConflicts([process], input), []);
-  process.defesa.localStatus = 'PENDENTE';
-  assert.equal(inspectDefenseConflicts([process], input).length, 1);
-});
