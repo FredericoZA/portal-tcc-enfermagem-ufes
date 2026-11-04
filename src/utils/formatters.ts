@@ -6,6 +6,15 @@ const MONTHS_PT = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
 ];
+const WEEKDAYS_PT = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+
+function weekdayFromCivilDate(parts:Pick<PortalDateTimeParts,'year'|'month'|'day'>):string {
+  // Dia da semana calculado na data civil da instituição, sem deslocamento UTC.
+  const civilUtc=new Date(Date.UTC(parts.year,parts.month-1,parts.day));
+  if(civilUtc.getUTCFullYear()!==parts.year||civilUtc.getUTCMonth()!==parts.month-1||civilUtc.getUTCDate()!==parts.day)return '';
+  return WEEKDAYS_PT[civilUtc.getUTCDay()]||'';
+}
+
 
 interface PortalDateTimeParts {
   year: number;
@@ -184,14 +193,16 @@ export function renderTccTitle(title:string):string {
 }
 
 /**
- * Format date in standard Portuguese: "21 de julho de 2026".
+ * Format date in standard Portuguese: "21 de julho de 2026 (terça-feira)".
  * Timestamps absolutos são sempre apresentados no fuso institucional de São Paulo.
  */
 export function formatDatePt(dateStr: string): string {
   if (!dateStr) return '';
   const parts = parsePortalDateTime(dateStr);
   if (!parts) return dateStr;
-  return `${parts.day} de ${MONTHS_PT[parts.month - 1]} de ${parts.year}`;
+  const date=`${parts.day} de ${MONTHS_PT[parts.month - 1]} de ${parts.year}`;
+  const weekday=weekdayFromCivilDate(parts);
+  return weekday?`${date} (${weekday})`:date;
 }
 
 /**
@@ -204,6 +215,16 @@ export function formatDateNumeric(dateStr: string): string {
   return `${String(parts.day).padStart(2, '0')}/${String(parts.month).padStart(2, '0')}/${parts.year}`;
 }
 
+/** Exibição institucional de datas numéricas: preserva DD/MM/AAAA nas entradas e exportações. */
+export function formatDateNumericWithWeekday(dateStr:string):string {
+  const numeric=formatDateNumeric(dateStr);
+  if(!dateStr)return numeric;
+  const parts=parsePortalDateTime(dateStr);
+  const weekday=parts&&weekdayFromCivilDate(parts);
+  return weekday?`${numeric} (${weekday})`:numeric;
+}
+
+
 /** Horário civil do portal, independente do fuso do servidor. */
 export function formatTime24h(value:string):string {
   const parts=parsePortalDateTime(value);
@@ -211,14 +232,16 @@ export function formatTime24h(value:string):string {
 }
 
 /**
- * Date fully written in Portuguese, e.g. "vinte e quatro de agosto de dois mil e vinte e seis".
+ * Date fully written in Portuguese, e.g. "vinte e quatro de agosto de dois mil e vinte e seis (segunda-feira)".
  */
 export function formatDateExtensoTotal(dateStr: string): string {
   if (!dateStr) return '';
   const parts = parsePortalDateTime(dateStr);
   if (!parts) return dateStr;
   const day = parts.day === 1 ? 'primeiro' : numberPt0To99(parts.day);
-  return `${day} de ${MONTHS_PT[parts.month - 1]} de ${yearPt(parts.year)}`;
+  const date=`${day} de ${MONTHS_PT[parts.month - 1]} de ${yearPt(parts.year)}`;
+  const weekday=weekdayFromCivilDate(parts);
+  return weekday?`${date} (${weekday})`:date;
 }
 
 /**

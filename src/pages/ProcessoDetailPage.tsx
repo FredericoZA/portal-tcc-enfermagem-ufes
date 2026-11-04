@@ -21,7 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiClient, ApiRequestError } from '../services/apiClient';
 import { useSignatureUpdates } from '../hooks/useSignatureUpdates';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../utils/portalLiveEvents';
-import { formatDatePt, formatDateExtensoTotal, formatTimeExtenso, formatStudentsString, normalizeEmail, formatNameTitleCase } from '../utils/formatters';
+import { formatDatePt, formatDateNumericWithWeekday, formatTime24h, formatDateExtensoTotal, formatTimeExtenso, formatStudentsString, normalizeEmail, formatNameTitleCase } from '../utils/formatters';
 import { ProcessFlowPanel } from '../components/ProcessFlowPanel';
 import { GovbrSignatureModal } from '../components/GovbrSignatureModal';
 import { PortalModalShell } from '../components/PortalModalShell';
@@ -335,7 +335,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         }
       }
 
-      setAuditLogs(recordedLogs.map(log=>({id:log.id,timestamp:new Date(log.timestamp).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}),user:log.actorEmail,role:log.actorRoles.join(', '),action:log.action,details:auditChanges(log)})));
+      setAuditLogs(recordedLogs.map(log=>({id:log.id,timestamp:formatDateNumericWithWeekday(log.timestamp)+' '+formatTime24h(log.timestamp),user:log.actorEmail,role:log.actorRoles.join(', '),action:log.action,details:auditChanges(log)})));
 
     } catch (err: any) {
       if(background && err instanceof ApiRequestError && err.status===404){

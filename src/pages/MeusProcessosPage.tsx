@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { 
   formatDatePt, 
-  formatDateNumeric, 
+  formatDateNumeric, formatDateNumericWithWeekday, 
   formatTimeExtenso, 
   cleanPersonName, 
   formatProfessorName, 
@@ -479,7 +479,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
         return (
           <td key="defesaDataHora" className={`${styles.cellPadClass} ${widthClass} ${styles.cellWeightClass} ${styles.cellTextColorClass} ${alignClass} ${styles.borderClass} align-middle`}>
             <div className={`flex items-center justify-center ${styles.cellFontSizeClass}`}>
-              <span className="font-normal text-black">{formatDateNumeric(proc.defesa?.startAt)}</span>
+              <span className="font-normal text-black">{formatDateNumericWithWeekday(proc.defesa?.startAt)}</span>
             </div>
             <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa?.startAt)}</div>
           </td>

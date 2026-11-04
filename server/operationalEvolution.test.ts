@@ -32,7 +32,7 @@ test('cadastro publicado mantém SIAPE, opções do Master e bloqueia campo obri
 });
 test('a mesma data tem apresentação numérica e por extenso sem mudar sua origem',()=>{
   const s=studio();s.operationalConfig!.presentations={'tmpl-convite':[{marker:'DATA',source:'DEFESA_DATA_HORA',format:'date',letterCase:'original',bold:false},{marker:'HORA',source:'DEFESA_DATA_HORA',format:'time',letterCase:'original',bold:false}]};
-  const result=presentVariables({DEFESA_DATA_HORA:'2026-09-08T17:30:00Z'},'tmpl-convite',s);assert.equal(result.DATA,'08/09/2026');assert.equal(result.HORA,'14:30');assert.equal(result.DEFESA_DATA_HORA,'2026-09-08T17:30:00Z');
+  const result=presentVariables({DEFESA_DATA_HORA:'2026-09-08T17:30:00Z'},'tmpl-convite',s);assert.equal(result.DATA,'08/09/2026 (terça-feira)');assert.equal(result.HORA,'14:30');assert.equal(result.DEFESA_DATA_HORA,'2026-09-08T17:30:00Z');
 });
 test('negrito localiza marcador dividido entre runs sem formatar o restante do texto',()=>{
   const requests=buildMarkerBoldRequests({tabs:[{tabProperties:{tabId:'t.0'},documentTab:{body:{content:[{paragraph:{elements:[{startIndex:1,textRun:{content:'Olá <<NO'}},{startIndex:9,textRun:{content:'ME>> fim'}}]}}]}}}]},['NOME']);

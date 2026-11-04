@@ -7,7 +7,7 @@ import type {ProcessData,GlobalSettings} from '../../src/types';
 import {resolveInstallationProfile} from '../../src/utils/installationProfile';
 import {officialParticipantLines} from '../../src/utils/officialParticipants';
 import {authorNames} from '../../src/utils/personPresentation';
-import {formatTccTitle,formatDatePt,formatTime24h} from '../../src/utils/formatters';
+import {formatTccTitle,formatDatePt,formatDateNumericWithWeekday,formatTime24h} from '../../src/utils/formatters';
 
 const fontBytes=Promise.all(['Regular','Bold'].map(weight=>readFile(path.join(process.cwd(),'server/documents/fonts',`NotoSans-${weight}.ttf`))));
 const logoBytes=readFile(path.join(process.cwd(),'server/documents/assets/colenf-logo.png'));
@@ -77,7 +77,7 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  field(confirmed?'Local autorizado':'Local solicitado',confirmed?(response.local||snapshot.get('Local')||process.defesa.local):process.defesa.local);
  section('Registro da resposta');
  if(!options.publicView)field('Resposta registrada por',response.respondedBy);
- const registered=new Intl.DateTimeFormat('pt-BR',{timeZone:settings.timezone||'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(response.respondedAt));
+ const registered=`${formatDateNumericWithWeekday(response.respondedAt)} ${formatTime24h(response.respondedAt)}`;
  field('Data e hora do registro',registered);
  const pages=doc.getPages();for(let i=0;i<pages.length;i++){page=pages[i];page.drawLine({start:{x:margin,y:60},end:{x:549,y:60},thickness:.7,color:line});draw('Registro eletrônico do Portal TCC',margin,44,8,regular,muted);const number=`${i+1} / ${pages.length}`;draw(number,549-regular.widthOfTextAtSize(number,8),44,8,regular,muted);}
  return Buffer.from(await doc.save());
