@@ -192,7 +192,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   );
   // A identidade pública salva pelo Master é a fonte de verdade. Configurações privadas
   // de integração ficam apenas como fallback de migração e nunca substituem a logo pública.
-  const sidebarLogoSrc = (layoutConfig.sidebarLogoType === 'custom' && layoutConfig.sidebarCustomLogoUrl ? layoutConfig.sidebarCustomLogoUrl : '') || courseLogo || configuredLogo || '/colenf-logo.png';
+  const sidebarLogoSrc = (layoutConfig.sidebarLogoType === 'custom' && layoutConfig.sidebarCustomLogoUrl ? layoutConfig.sidebarCustomLogoUrl : '') || courseLogo || configuredLogo || '/ufes-crest.png';
 
   return <>
     {isOpenMobile && <div id="sidebar-mobile-backdrop" className="fixed inset-0 bg-slate-900/60 z-40 lg:hidden backdrop-blur-xs" onClick={() => setIsOpenMobile(false)} />}

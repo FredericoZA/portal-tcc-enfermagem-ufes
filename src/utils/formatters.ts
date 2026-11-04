@@ -147,7 +147,7 @@ export function isFemaleName(originalName: string): boolean {
  */
 export function formatProfessorName(name: string): string {
   if (!name) return 'N/A';
-  if (name.trim() === 'Comissão de TCC' || name.trim() === 'Presidência da Comissão') return name;
+  if (name.trim() === 'Comissão de Trabalho de Conclusão de Curso' || name.trim() === 'Presidência da Comissão') return name;
   const clean = cleanPersonName(name);
   const female = isFemaleName(name);
   return female ? `Profª. Drª. ${clean}` : `Prof. Dr. ${clean}`;

@@ -138,7 +138,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
   const [newEmailTrigger, setNewEmailTrigger] = useState('Etapa 1 - Inscrição do TCC');
   const [newEmailRecipient, setNewEmailRecipient] = useState('{{ALUNO_EMAIL}}');
   const [newEmailSubject, setNewEmailSubject] = useState('Notificação do Sistema de TCC');
-  const [newEmailBody, setNewEmailBody] = useState('Prezado(a),\n\nSegue notificação oficial do processo de TCC.\n\nAtenciosamente,\nComissão de TCC');
+  const [newEmailBody, setNewEmailBody] = useState('Prezado(a),\n\nSegue notificação oficial do processo de TCC.\n\nAtenciosamente,\nComissão de Trabalho de Conclusão de Curso');
   const [newEmailAttachments, setNewEmailAttachments] = useState<string[]>([]);
 
   const [isCreateFormModalOpen, setIsCreateFormModalOpen] = useState(false);
@@ -505,7 +505,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
       triggerStage: newEmailTrigger || 'Etapa 1 - Inscrição do TCC',
       recipient: newEmailRecipient || '{{ALUNO_EMAIL}}',
       subject: newEmailSubject || 'Notificação do Sistema de TCC',
-      body: newEmailBody || 'Prezado(a),\n\nSegue notificação oficial referente ao processo de TCC.\n\nAtenciosamente,\nComissão de TCC',
+      body: newEmailBody || 'Prezado(a),\n\nSegue notificação oficial referente ao processo de TCC.\n\nAtenciosamente,\nComissão de Trabalho de Conclusão de Curso',
       attachments: newEmailAttachments || []
     };
     setEmailTemplates(prev => [...prev, newEmailItem]);
@@ -694,7 +694,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
       triggerStage: 'Etapa 2 - Confirmação da Banca pelo Aluno/Orientador',
       recipient: '{{ALUNO_EMAIL}}',
       subject: 'Notificação do Portal de TCC',
-      body: 'Prezado(a) discente,\n\nSeus dados de TCC foram recebidos com sucesso.\n\nAtenciosamente,\nComissão de TCC',
+      body: 'Prezado(a) discente,\n\nSeus dados de TCC foram recebidos com sucesso.\n\nAtenciosamente,\nComissão de Trabalho de Conclusão de Curso',
       attachments: []
     };
     setEmailTemplates(prev => [...prev, newItem]);

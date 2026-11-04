@@ -524,7 +524,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
           <div className="bg-white p-3 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h4 className="text-xs sm:text-sm font-black normal-case text-slate-900 tracking-tight">
-                Gestão da Comissão de TCC • Instituição configurada
+                Gestão da Comissão de Trabalho de Conclusão de Curso • Instituição configurada
               </h4>
               <p className="text-[10.5px] font-bold text-slate-500">
                 12 defesas realizadas • 2 pendentes de homologação de Ata
@@ -625,7 +625,7 @@ export const SpreadsheetPreviewSection: React.FC<SpreadsheetPreviewSectionProps>
             Controle administrativo
           </h3>
           <p className="text-xs text-slate-600 leading-relaxed font-medium">
-            Permite à presidência da comissão gerenciar a emissão de documentos, acompanhar as assinaturas Asten e homologar formalmente os TCCs para o colegiado do curso.
+            Permite à presidência da comissão gerenciar a emissão de documentos, acompanhar as assinaturas Asten e homologar formalmente os TCCs no Departamento de Enfermagem.
           </p>
         </div>
       </div>

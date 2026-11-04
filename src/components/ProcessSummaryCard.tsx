@@ -213,15 +213,14 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
         onClose={() => { if (!reservationSending) setReservationOpen(false); }}
         closeOnBackdrop={!reservationSending}
         closeOnEscape={!reservationSending}
-        title="Alterar reserva da defesa"
-        subtitle={process.protocolo}
+        title={`Alterar reserva da defesa - ${process.protocolo}`}
         icon={CalendarClock}
         maxWidthClass="max-w-lg"
         bodyClassName="p-4"
       >
         <form id="reservation-change-form" onSubmit={(event) => void submitReservationChange(event)} className="space-y-3">
           <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-950">
-            O envio cria uma <strong>nova solicitação</strong> ao responsável pelo local. A confirmação anterior deixa de valer. O novo local e horário ficam reservados no sistema enquanto aguardam aceite ou recusa.
+            Antes de enviar, consulte o Departamento de Enfermagem para conciliar a defesa com aulas, eventos e outras reservas dos espaços. O envio cria uma <strong>nova solicitação</strong> ao responsável pelo local e invalida a confirmação anterior. O novo local e horário ficam bloqueados no Portal por 1h30 de defesa enquanto aguardam aceite ou recusa. Para outro local, combine a disponibilidade com o orientador.
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className={compactField}>

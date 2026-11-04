@@ -55,7 +55,7 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ onSelectProcess }) => {
           </h1>
         </div>
         <p className="text-[10px] sm:text-[11px] font-medium leading-normal mt-0.5 opacity-90">
-          Apresentações públicas registradas pela comissão de TCC. Consulte data, horário e local de cada defesa.
+          Apresentações públicas registradas pela Comissão de Trabalho de Conclusão de Curso. Consulte data, horário e local de cada defesa.
         </p>
         <div className="pt-2">
           <a href="/api/public/calendar.ics" className="inline-flex items-center gap-2 rounded-xl border border-current/20 bg-white/10 px-3 py-2 text-[10px] font-black normal-case tracking-wide hover:bg-white/20" title="Baixar agenda para Google Calendar, Outlook ou Apple Calendar">

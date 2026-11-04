@@ -33,3 +33,12 @@ test('observations and instructions use pale yellow, outside the main text and s
  assert.ok(output.html.indexOf('<a ')<output.html.indexOf('<h2'));
  assert.doesNotMatch(output.text,/<table|bgcolor/);
 });
+
+
+test('modelos antigos de e-mail exibem o nome completo da comissão na emissão',()=>{
+ const output=operationalEmailLayout({text:'Prezados,\n\nAtenciosamente,\nComissão de TCC',subject:'Reserva',href:'https://portal.example/tcc',label:'TCC'});
+ assert.match(output.text,/Comissão de Trabalho de Conclusão de Curso/);
+ assert.match(output.html,/Comissão de Trabalho de Conclusão de Curso/);
+ assert.doesNotMatch(output.text,/Comissão de TCC/);
+ assert.doesNotMatch(output.html,/Comissão de TCC/);
+});

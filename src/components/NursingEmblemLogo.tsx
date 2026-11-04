@@ -7,7 +7,7 @@ interface NursingEmblemLogoProps {
 }
 
 export const NursingEmblemLogo: React.FC<NursingEmblemLogoProps> = ({ className = '', size = 56, customSrc }) => {
-  const logoSrc = customSrc || '/colenf-logo.png';
+  const logoSrc = customSrc || '/ufes-crest.png';
   const [imgError, setImgError] = useState<boolean>(false);
 
   useEffect(() => setImgError(false), [logoSrc]);
@@ -27,12 +27,12 @@ export const NursingEmblemLogo: React.FC<NursingEmblemLogoProps> = ({ className 
   return (
     <img
       src={logoSrc}
-      alt="Logomarca do Curso de Enfermagem da UFES"
+      alt="Brasão da Universidade Federal do Espírito Santo"
       width={size}
       height={size}
       style={{ width: `${size}px`, height: `${size}px` }}
       onError={() => setImgError(true)}
-      className={`rounded-full object-contain shrink-0 bg-transparent p-0 transition-transform duration-200 hover:scale-105 ${className}`}
+      className={`rounded-full object-contain shrink-0 bg-white p-0.5 transition-transform duration-200 hover:scale-105 ${className}`}
     />
   );
 };

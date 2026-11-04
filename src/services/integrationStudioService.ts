@@ -25,7 +25,7 @@ export const DEFAULT_BRAND_KIT: IntegrationBrandKit = {
   fontFamily: 'Arial',
   documentHeaderText: 'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO\nCURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA',
   documentFooterText: 'Departamento de Enfermagem • Centro de Ciências da Saúde • Vitória/ES',
-  emailFooterText: 'Comissão de TCC do Departamento de Enfermagem • UFES'
+  emailFooterText: 'Comissão de Trabalho de Conclusão de Curso do Departamento de Enfermagem • UFES'
 };
 
 export const DEFAULT_REPLICATION_GUIDE: PortalReplicationGuide = {

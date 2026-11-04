@@ -162,8 +162,9 @@ def header(tag,title):
 
 def footer():
  c.setStrokeColor(LINE);c.line(M,47,W-M,47)
- c.setFillColor(MUTED);c.setFont('Portal',9);c.drawString(M,31,'Atualizado em 04/11/2026 • Assinatura pelo Asten')
- c.drawRightString(W-M,31,f'{page_number} / {len(pages)}')
+ c.setFillColor(MUTED);c.setFont('Portal',8);c.drawString(M,34,'Comissão de Trabalho de Conclusão de Curso • Departamento de Enfermagem')
+ c.drawString(M,22,'Atualizado em 04/11/2026 • Assinatura pelo Asten')
+ c.drawRightString(W-M,22,f'{page_number} / {len(pages)}')
  bounds.append({'page':page_number,'lastContentY':round(y,2)})
 
 for page_number,page in enumerate(pages,1):

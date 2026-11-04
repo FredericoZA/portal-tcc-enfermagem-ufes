@@ -113,7 +113,7 @@ const parseGcalEvent = (ev: any) => {
     time = `${startStr} às ${endStr}`;
   }
   
-  let orientador = "Comissão de TCC";
+  let orientador = "Comissão de Trabalho de Conclusão de Curso";
   const orientadorMatch = desc.match(/Orientador:\s*([^\n]+)/i);
   if (orientadorMatch && orientadorMatch[1]) {
     orientador = orientadorMatch[1].trim();

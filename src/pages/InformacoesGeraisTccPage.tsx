@@ -90,7 +90,7 @@ export const InformacoesGeraisTccPage: React.FC<InformacoesGeraisTccPageProps> =
               <p>A orientação deve ser formalizada conforme os procedimentos da disciplina. O orientador também preside a banca de defesa.</p>
             </RuleCard>
             <RuleCard title="Pode haver coorientador?" icon={Info}>
-              <p>O Portal permite cadastrar coorientador <strong>quando houver</strong>. A indicação deve observar os critérios do curso, confirmados com a coordenação da disciplina ou Comissão de TCC.</p>
+              <p>O Portal permite cadastrar coorientador <strong>quando houver</strong>. A indicação deve observar os critérios do curso, confirmados com a coordenação da disciplina ou Comissão de Trabalho de Conclusão de Curso.</p>
               <p>A coorientação não substitui o orientador nem os dois examinadores.</p>
             </RuleCard>
             <RuleCard title="Como é formada a banca" icon={Users}>

@@ -1,6 +1,6 @@
 /**
  * Declaração pública institucional aprovada: modelo A4 para preenchimento à mão.
- * A comissão de TCC integra o Departamento de Enfermagem; a declaração é
+ * A Comissão de Trabalho de Conclusão de Curso integra o Departamento de Enfermagem; a declaração é
  * assinada individualmente pelo(a) professor(a) orientador(a).
  *
  * Usa o brasão institucional local; não consulta dados pessoais nem serviços externos.
@@ -10,8 +10,8 @@ export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array
   const pdf = await PDFDocument.create();
   const imageBytes=crestBytes||new Uint8Array(await (async()=>{const response=await fetch('/ufes-crest.png');if(!response.ok)throw new Error('Não foi possível carregar o brasão da UFES.');return response.arrayBuffer();})());
   const crest=await pdf.embedPng(imageBytes);
-  pdf.setTitle('Declaração de comparecimento - Comissão de TCC');
-  pdf.setAuthor('Departamento de Enfermagem - Comissão de TCC - CCS/UFES');
+  pdf.setTitle('Declaração de comparecimento - Comissão de Trabalho de Conclusão de Curso');
+  pdf.setAuthor('Departamento de Enfermagem - Comissão de Trabalho de Conclusão de Curso - CCS/UFES');
   pdf.setSubject('Modelo para preenchimento manual e assinatura do professor orientador');
 
   const pageWidth = 595.28;
@@ -76,7 +76,7 @@ export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array
   header('CENTRO DE CIÊNCIAS DA SAÚDE',773,9);
   header('DEPARTAMENTO DE ENFERMAGEM',757,9);
   header('Curso de Graduação em Enfermagem e Obstetrícia',741,8.7);
-  header('COMISSÃO DE TCC',726,8.7,sansBold);
+  header('COMISSÃO DE TRABALHO DE CONCLUSÃO DE CURSO',726,8.7,sansBold);
 
   // Título e campos livres para preenchimento manuscrito.
   framed(70, 640, pageWidth - 140, 56);
@@ -108,7 +108,7 @@ export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array
 
   // Rodapé simples, sem faixa escura ou referência ao Colegiado.
   line(64, 48, pageWidth - 48, 1, green);
-  centered('Departamento de Enfermagem · Comissão de TCC · CCS/UFES', 48, 8.8);
+  centered('Departamento de Enfermagem · Comissão de Trabalho de Conclusão de Curso · CCS/UFES', 48, 7.6);
   centered('Campus de Maruípe · Vitória/ES', 34, 8.3, sans, muted);
 
   return pdf.save();

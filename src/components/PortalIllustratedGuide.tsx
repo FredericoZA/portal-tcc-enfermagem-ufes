@@ -68,7 +68,7 @@ export const guideActivities: GuideActivity[] = [
   },
   {
     id: 'agenda', title: 'Escolher ou alterar a reserva', roles: ['aluno', 'orientador'], imageId: 'confirmacao',
-    imageCaption: 'Alteração de reserva em Dados do processo: um novo pedido exige outro aceite.',
+    imageCaption: 'Alteração de reserva em Dados do processo, disponível ao autor e ao orientador enquanto a etapa permitir. Um novo pedido exige outro aceite.',
     steps: [
       'Na última etapa do cadastro, escolha um único local e informe data e horário. Para auditório e sala de reuniões, a homologação cabe ao departamento. Para outro local, informe o nome exato: ele aparecerá nos documentos e o orientador receberá o pedido.',
       'Considere mapa de salas, aulas, eventos, reservas e horários de uso do prédio. A consulta prévia pode evitar retrabalho; o Portal não controla os agendamentos externos.',
@@ -276,7 +276,7 @@ export function PortalIllustratedGuide({role = 'aluno'}: {role?: string}) {
   const selectedId = selected.role === role ? selected.id : '';
   const current = available.find(item => item.id === selectedId) || available[0];
   if (!current) return null;
-  const imageUrl = `/manual/${current.imageId}.jpg?v=2026-11-03-layout2`;
+  const imageUrl = `/manual/${current.imageId}.jpg?v=2026-11-04-identidade-ufes`;
   const index = available.indexOf(current);
   const selectScreen = (next: number) => {
     if (available[next]) setSelected({role, id: available[next].id});
@@ -312,7 +312,7 @@ export function PortalIllustratedGuide({role = 'aluno'}: {role?: string}) {
           </figure>
         </div>
         {current.relatedImages?.map(related => {
-          const url = `/manual/${related.id}.jpg?v=2026-11-03-layout2`;
+          const url = `/manual/${related.id}.jpg?v=2026-11-04-identidade-ufes`;
           return <details key={related.id} className="portal-guide-related mt-3">
             <summary className="cursor-pointer text-xs font-semibold">Ver exemplo: {related.caption}</summary>
             <a href={url} target="_blank" rel="noreferrer" className="portal-guide-image-link mt-3" aria-label={`Ampliar imagem: ${related.caption}`}><img src={url} alt={related.caption} loading="lazy" className="portal-guide-image" /></a>

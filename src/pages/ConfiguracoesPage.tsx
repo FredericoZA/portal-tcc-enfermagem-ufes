@@ -1095,7 +1095,7 @@ export const ConfiguracoesPage: React.FC = () => {
       {
         id: 'email-reserva', name: 'Solicitação de reserva ao departamento', triggerStage: 'Cadastro inicial',
         recipient: String(settings?.emailConfig?.roomReservationDepartmentEmail || ''), subject: 'Solicitação de reserva de sala para apresentação de TCC - Curso de Enfermagem [<<PROTOCOLO>>]',
-        body: 'Prezados,\n\nSolicitamos a reserva de sala ou auditório para a defesa de <<CAMPO_01>>.\nTítulo: <<TITULO>>\nData e hora: <<DEFESA_DATA_HORA>>\nLocal: <<DEFESA_LOCAL>>\nCaso indisponível, solicitamos o local alternativo: <<LOCAL_ALTERNATIVO>>.\n\nPor favor, respondam a este e-mail indicando expressamente qual dos locais foi reservado e confirmando a data e o horário solicitados. Caso nenhum dos locais esteja disponível, informem a indisponibilidade.\n\nOrientador: <<ORIENTADOR_NOME>>.\n\nAtenciosamente, Comissão de TCC do Departamento de Enfermagem', attachments: []
+        body: 'Prezados,\n\nSolicitamos a reserva de sala ou auditório para a defesa de <<CAMPO_01>>.\nTítulo: <<TITULO>>\nData e hora: <<DEFESA_DATA_HORA>>\nLocal: <<DEFESA_LOCAL>>\nCaso indisponível, solicitamos o local alternativo: <<LOCAL_ALTERNATIVO>>.\n\nPor favor, respondam a este e-mail indicando expressamente qual dos locais foi reservado e confirmando a data e o horário solicitados. Caso nenhum dos locais esteja disponível, informem a indisponibilidade.\n\nOrientador: <<ORIENTADOR_NOME>>.\n\nAtenciosamente, Comissão de Trabalho de Conclusão de Curso do Departamento de Enfermagem', attachments: []
       },
       {
         id: 'email-convite',
@@ -1103,7 +1103,7 @@ export const ConfiguracoesPage: React.FC = () => {
         triggerStage: 'Etapa 2 - Confirmação da Banca pelo Aluno/Orientador',
         recipient: '<<BANCA_EMAILS>>, <<ORIENTADOR_EMAIL>>',
         subject: '[Portal TCC] Convite para Banca Examinadora — <<CAMPO_01>>',
-        body: 'Prezado(a),\n\nConvidamos V. Sa. para compor a Comissão Examinadora da defesa de TCC do discente <<CAMPO_01>>, sob orientação de <<CAMPO_03>>.\n\nTítulo: <<CAMPO_02>>\nData/Horário: <<CAMPO_04>>\nLocal: <<CAMPO_07_LOCAL>>\n\nAcesse o portal: <<LINK_PORTAL>>\n\nAtenciosamente,\nComissão de TCC do Departamento de Enfermagem',
+        body: 'Prezado(a),\n\nConvidamos V. Sa. para compor a Comissão Examinadora da defesa de TCC do discente <<CAMPO_01>>, sob orientação de <<CAMPO_03>>.\n\nTítulo: <<CAMPO_02>>\nData/Horário: <<CAMPO_04>>\nLocal: <<CAMPO_07_LOCAL>>\n\nAcesse o portal: <<LINK_PORTAL>>\n\nAtenciosamente,\nComissão de Trabalho de Conclusão de Curso do Departamento de Enfermagem',
         attachments: ['tmpl-convite']
       },
       {
@@ -1112,7 +1112,7 @@ export const ConfiguracoesPage: React.FC = () => {
         triggerStage: 'Etapa 3 - Agendamento Confirmado',
         recipient: '<<ALUNO_EMAIL>>, <<ALUNO_2_EMAIL>>, <<ORIENTADOR_EMAIL>>',
         subject: '[Portal TCC] Agendamento confirmado — <<CAMPO_12>>',
-        body: 'Prezado(a) <<CAMPO_01>>,\n\nSua defesa de TCC foi agendada e confirmada.\n\nTítulo: <<CAMPO_02>>\nData/Horário: <<CAMPO_04>>\nLocal: <<CAMPO_07_LOCAL>>\n\nAcompanhe o status em seu painel: <<LINK_PORTAL>>\n\nAtenciosamente,\nComissão de TCC do Departamento de Enfermagem',
+        body: 'Prezado(a) <<CAMPO_01>>,\n\nSua defesa de TCC foi agendada e confirmada.\n\nTítulo: <<CAMPO_02>>\nData/Horário: <<CAMPO_04>>\nLocal: <<CAMPO_07_LOCAL>>\n\nAcompanhe o status em seu painel: <<LINK_PORTAL>>\n\nAtenciosamente,\nComissão de Trabalho de Conclusão de Curso do Departamento de Enfermagem',
         attachments: []
       },
       {
@@ -1121,7 +1121,7 @@ export const ConfiguracoesPage: React.FC = () => {
         triggerStage: 'Etapa 5 - Conclusão e Assinatura do Presidente',
         recipient: '<<PARTICIPANTES_EMAILS>>',
         subject: '[Portal TCC] Documentos da defesa disponíveis — <<CAMPO_01>>',
-        body: 'Prezado(a) <<CAMPO_01>>,\n\nA ata e as declarações concluídas estão disponíveis no seu painel: <<LINK_PORTAL>>\n\nAtenciosamente,\nComissão de TCC do Departamento de Enfermagem',
+        body: 'Prezado(a) <<CAMPO_01>>,\n\nA ata e as declarações concluídas estão disponíveis no seu painel: <<LINK_PORTAL>>\n\nAtenciosamente,\nComissão de Trabalho de Conclusão de Curso do Departamento de Enfermagem',
         attachments: ['tmpl-ata', 'tmpl-declaracao', 'tmpl-termo']
       }
     ].map(upgradeOperationalEmailTemplate);
@@ -2031,7 +2031,7 @@ export const ConfiguracoesPage: React.FC = () => {
         name: name.trim(),
         triggerStage: 'Etapa 3 - Lembrete Automático 48h Antes',
         subject: '[Portal TCC] Lembrete de defesa',
-        body: 'Prezado(a) {{ALUNO_NOME}},\n\nEste é um lembrete automático sobre sua defesa de TCC agendada para {{DATA_DEFESA}} às {{HORARIO}} no {{LOCAL}}.\n\nAtenciosamente,\nComissão de TCC'
+        body: 'Prezado(a) {{ALUNO_NOME}},\n\nEste é um lembrete automático sobre sua defesa de TCC agendada para {{DATA_DEFESA}} às {{HORARIO}} no {{LOCAL}}.\n\nAtenciosamente,\nComissão de Trabalho de Conclusão de Curso'
       };
       setEmailTemplates((prev) => [...prev, newEmail]);
       setSelectedEmailId(newId);

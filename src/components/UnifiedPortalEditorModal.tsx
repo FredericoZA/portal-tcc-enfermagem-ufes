@@ -2421,7 +2421,7 @@ export const UnifiedPortalEditorModal: React.FC<UnifiedPortalEditorModalProps> =
 
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
                     <h3 className="text-xs font-black normal-case tracking-wide text-slate-900 border-b border-slate-200 pb-2">
-                      Textos e comissão de TCC
+                      Textos e Comissão de Trabalho de Conclusão de Curso
                     </h3>
                     <div className="space-y-3">
                       <TextField

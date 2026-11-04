@@ -397,7 +397,7 @@ export const PORTAL_TABLE_PRESETS: Record<string, PortalTablePreset> = {
     storageKey: 'coordinator',
     name: 'Planilha da Área do Presidente',
     description: 'Gestão administrativa da comissão, atas e aprovações de banca',
-    defaultTitle: 'Gestão da Comissão de TCC',
+    defaultTitle: 'Gestão da Comissão de Trabalho de Conclusão de Curso',
     columns: [
       { key: 'protocolo', label: 'Nº Processo', defaultVisible: true },
       { key: 'envioStatus', label: 'Envio', defaultVisible: true },

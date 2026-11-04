@@ -32,7 +32,7 @@ export function reservationRequestEmail(input:{process:Pick<ProcessData,'id'|'pr
  const reply=participant?`O ${authority} registrará o aceite ou a recusa. Acompanhem o resultado pelo processo e pelos avisos por e-mail.`:'';
  const steps=participant?[]:[`${advisor?'Orientador':'Departamento'}: confira o local, a data e o horário e aceite ou recuse o agendamento pelos botões acima. O Portal registrará o comprovante e avisará os envolvidos.`];
  const href=input.confirmationUrl||processLink(input.baseUrl,p.id,'cadastral');
- const closing=`Atenciosamente,\nComissão de TCC\n${input.courseName}`;
+ const closing=`Atenciosamente,\nComissão de Trabalho de Conclusão de Curso\n${input.courseName}`;
  const text=[greeting,intro,details.join('\n'),observation,reply,`${p.protocolo}: ${href}`,...(steps.length?['ORIENTAÇÕES DO PROCESSO',...steps]:[]),closing].filter(Boolean).join('\n\n');
  const para=(value:string)=>`<p style="margin:0 0 18px">${escape(value).replaceAll('\n\n','</p><p style="margin:0 0 18px">')}</p>`;
  const color=/^#[a-f0-9]{6}$/i.test(input.color||'')?input.color:'#005b3b';

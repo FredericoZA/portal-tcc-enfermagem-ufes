@@ -1,14 +1,14 @@
 # Padrão visual e formatação - Portal TCC
 
-Revisão 5.2 · 03/11/2026
+Revisão 5.3 · 04/11/2026
 
 Guia da identidade visual aplicada ao Portal TCC do Curso de Graduação em Enfermagem e Obstetrícia da Universidade Federal do Espírito Santo. Substitui as orientações visuais conflitantes das revisões anteriores. A referência é a implementação local atual; este documento não comprova publicação na Vercel ou atualização de arquivos já arquivados no Drive.
 
 ## 1. Identidade e paleta
 
-A logomarca COLENF identifica os cabeçalhos institucionais, o acesso, os e-mails e os registros em PDF gerados pelo Portal. Usar a imagem original, com proporção preservada e fundo transparente. Não acrescentar um retângulo preto, distorcer, cortar ou substituir por imagem ilustrativa.
+O brasão da Universidade Federal do Espírito Santo identifica o Portal, o acesso, os formulários, os e-mails e os registros em PDF gerados. A organização responsável é a Comissão de Trabalho de Conclusão de Curso, do Departamento de Enfermagem. Usar o nome completo da comissão e preservar a proporção e a arte original do brasão, sem recortes ou distorções.
 
-A imagem utilizada pela interface é public/colenf-logo.png. Os geradores do servidor usam server/documents/assets/colenf-logo.png, com conteúdo idêntico. Configurações de identidade da instalação continuam sendo respeitadas. A marca institucional não substitui os ícones funcionais dos botões nem deve ser repetida em cada campo. O rodapé de contatos não repete a logomarca acima dos responsáveis.
+A imagem utilizada pela interface é public/ufes-crest.png. Os geradores do servidor usam server/documents/assets/ufes-crest.png. A marca do colegiado não é utilizada nesta instalação. A marca institucional não substitui os ícones funcionais dos botões nem deve ser repetida em cada campo. O rodapé de contatos identifica a Comissão de Trabalho de Conclusão de Curso, sem repetir a logomarca acima dos responsáveis. Documentos históricos assinados permanecem íntegros; a nova identidade aplica-se aos documentos gerados a partir desta revisão.
 
 As superfícies seguem esta hierarquia: página e janela branco-gelo #F6F7F8; painel cinza-claro #E9EDEF; grupo interno cinza médio #D8DFE3; campos e conteúdo branco #FFFFFF. Na planilha compacta dos membros, o cabeçalho é cinza #B7C1C8 e o corpo usa #C4CED4, com conteúdo centralizado.
 

@@ -66,7 +66,7 @@ async function getIdentityWithRetry() {
 
 function syncPortalFavicon(siteConfig: any) {
   if (typeof document === 'undefined') return;
-  const href = String(siteConfig?.sidebarCustomLogoUrl || '/colenf-logo.png').trim() || '/colenf-logo.png';
+  const href = String(siteConfig?.sidebarCustomLogoUrl || '/ufes-crest.png').trim() || '/ufes-crest.png';
   const iconLinks = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="shortcut icon"]'));
   if (!iconLinks.length) {
     const icon = document.createElement('link');
