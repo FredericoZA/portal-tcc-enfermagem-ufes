@@ -19,7 +19,6 @@ const institutionalUiFiles=[
   'src/components/UnifiedPortalEditorModal.tsx',
   'src/components/editor/PopupPreviewSection.tsx',
   'src/components/editor/SpreadsheetPreviewSection.tsx',
-  'src/components/AIAnalyzerModal.tsx',
   'src/components/AuditAndSecuritySection.tsx',
   'src/components/CalendarPopupEditorModal.tsx',
   'src/components/EmergencyRecoveryModal.tsx',

@@ -1,12 +1,12 @@
-# Replicar o Portal Institucional de TCC
+# Tutorial de instalação e replicação do Portal TCC
 
-Revisão documental: 03/11/2026.
+Revisão documental: 04/11/2026.
 
 Este guia prepara uma instalação independente. Ele não autoriza o acesso aos dados, arquivos ou credenciais da instalação de origem.
 
 Código: https://github.com/FredericoZA/portal-tcc-enfermagem-ufes
 
-Leia `README.md`, `CHECKLIST_IMPLANTACAO.md`, `IMPLANTACAO_PRODUCAO.md`, `PROMPT_PARA_IA.md`, `CONTRIBUTING.md`, `SECURITY.md` e `docs/FLUXO_ATUAL_2026-10-26.md`. A versão está em `package.json`; confira também o commit. Arquivos locais, GitHub e Vercel podem estar em revisões diferentes. Relatórios RC anteriores são registros históricos, não certificados da instalação atual.
+Leia `README.md`, `CHECKLIST_IMPLANTACAO.md`, `IMPLANTACAO_PRODUCAO.md`, `COMECE_AQUI.md`, `CONTRIBUTING.md`, `SECURITY.md` e `docs/FLUXO_ATUAL_2026-10-26.md`. A versão está em `package.json`; confira também o commit. Arquivos locais, GitHub e Vercel podem estar em revisões diferentes. Relatórios RC anteriores são registros históricos, não certificados da instalação atual.
 
 ## Arquitetura
 
@@ -22,6 +22,12 @@ Leia `README.md`, `CHECKLIST_IMPLANTACAO.md`, `IMPLANTACAO_PRODUCAO.md`, `PROMPT
 | Gov.br | Assinatura externa do PDF e devolução ao Portal, seguida da conferência administrativa prevista no sistema. |
 
 As integrações do produto usam suas próprias APIs e OAuth. Elas não dependem das ferramentas pessoais do desenvolvedor. Segredos ficam no backend, nunca no navegador, nas variáveis `VITE_`, no pacote ou no GitHub. Tabelas e arquivos internos permanecem privados.
+
+## Escopo do sistema e cuidados institucionais
+
+O Portal TCC é um sistema administrativo baseado em formulários, regras programadas, documentos e integrações de serviços. **Não é necessário contratar, conectar nem fornecer dados a um modelo de inteligência artificial para realizar a instalação ou operar os fluxos acadêmicos.** O cadastramento, as notificações, os relatórios e os textos-padrão usam programação convencional. As decisões acadêmicas permanecem sob responsabilidade dos agentes autorizados.
+
+Para instituições públicas, a adoção do portal deve ser alinhada às regras internas de tecnologia, segurança, acessibilidade, proteção de dados e uso de serviços externos. Não copie documentos preenchidos, informações de estudantes nem credenciais da instalação original para testar a nova. Gere dados fictícios para os testes iniciais.
 
 ## Preparação da nova instalação
 

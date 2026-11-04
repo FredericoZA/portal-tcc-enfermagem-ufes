@@ -8,7 +8,7 @@ A versão de execução é definida em `package.json`. Não use documentação h
 
 O formulário do orientador está integrado à tela e à API: o conceito, o parecer e a revisão atual são obrigatórios. A ata é preenchida pelo DOCX ativo do Master. A avaliação e o lançamento da nota acadêmica são feitos no Portal do Professor. Tabelas e pop-ups compartilham a aparência publicada. O departamento aceita ou recusa a reserva dos locais que administra pelo pedido recebido por e-mail; outros locais são confirmados pelo orientador. A resposta e o comprovante ficam registrados automaticamente.
 
-**Comece por [CHECKLIST_IMPLANTACAO.md](./CHECKLIST_IMPLANTACAO.md)**. A visão geral está em [COMECE_AQUI.md](./COMECE_AQUI.md). Para outra IA, entregue [PROMPT_PARA_IA.md](./PROMPT_PARA_IA.md). O fluxo da revisão atual está em [Fluxo atual](./docs/FLUXO_ATUAL_2026-10-26.md). A descrição [RC9](./docs/FLUXO_OPERACIONAL_RC9.md) é histórica, com [resultados dos testes](./docs/RELATORIO_VALIDACAO_RC10.md) e [homologação pendente](./docs/HOMOLOGACAO_RC10.md). Os documentos RC5 a RC8 registram rodadas anteriores.
+**Comece por [CHECKLIST_IMPLANTACAO.md](./CHECKLIST_IMPLANTACAO.md)**. A visão geral está em [COMECE_AQUI.md](./COMECE_AQUI.md). Para continuidade técnica, consulte também `AGENTS.md` e a documentação de implantação. O fluxo da revisão atual está em [Fluxo atual](./docs/FLUXO_ATUAL_2026-10-26.md). A descrição [RC9](./docs/FLUXO_OPERACIONAL_RC9.md) é histórica, com [resultados dos testes](./docs/RELATORIO_VALIDACAO_RC10.md) e [homologação pendente](./docs/HOMOLOGACAO_RC10.md). Os documentos RC5 a RC8 registram rodadas anteriores.
 
 O estado da assinatura, da organização por pastas e do piloto separado em 15/10/2026 está em [Consolidação Asten](./docs/CONSOLIDACAO_ASTEN_2026-10-15.md). O [roteiro de configuração Asten](./docs/ASTEN_CONFIGURACAO_SEGURA_PASSO_A_PASSO.md) descreve a conexão e os controles de envio. As evidências desse piloto não comprovam publicação dessas alterações no GitHub ou na instalação principal.
 
@@ -68,14 +68,14 @@ Siga, nesta ordem:
 
 1. [Primeiro acesso](./docs/PRIMEIRO_ACESSO.md)
 2. [Implantação de produção](./IMPLANTACAO_PRODUCAO.md)
-3. [Guia da nova instalação](./public/replicacao/GUIA_PARA_IA.md)
+3. [Guia da nova instalação](./public/replicacao/GUIA_DE_INSTALACAO.md)
 4. [Modelos e variáveis](./MODELOS_E_VARIAVEIS.md)
 5. [Referências do curso](./docs/REFERENCIAS_DO_CURSO.md)
 6. [Testes de homologação](./docs/TESTES_HOMOLOGACAO.md)
 7. [Atualização e rollback](./docs/ATUALIZACAO_E_ROLLBACK.md)
 8. [Fluxo operacional RC9](./docs/FLUXO_OPERACIONAL_RC9.md)
 9. [Guia de entrega ao Codex de implantação](./docs/ENTREGA_AO_CODEX.md)
-10. [Inteligência contínua e estatísticas](./docs/INTELIGENCIA_CONTINUA.md)
+10. [Estatísticas e diagnóstico histórico por regras](./docs/INTELIGENCIA_CONTINUA.md)
 
 As integrações externas só podem ser consideradas homologadas depois de um piloto no ambiente do proprietário das credenciais. A instalação deve usar projetos e credenciais próprios, diferentes entre desenvolvimento e produção. Nunca publique ou envie chaves Supabase, OAuth Google, token Asten, segredos de sessão ou webhook.
 

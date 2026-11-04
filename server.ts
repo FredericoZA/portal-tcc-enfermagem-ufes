@@ -1695,9 +1695,12 @@ export async function createPortalApp() {
     const expectedDigest=createHash('sha256').update(expected).digest();
     const suppliedDigest=createHash('sha256').update(supplied).digest();
     if(expected.length<32||!supplied||!timingSafeEqual(expectedDigest,suppliedDigest))return res.status(401).json({error:'Não autorizado.'});
-    const[uploadsResult,downloadsResult,intelligenceResult]=await Promise.allSettled([cleanupExpiredStagedUploads(500),cleanupExpiredDownloadTransfers(500),refreshContinuousIntelligence('SYSTEM','system@portal.local',true)]);
-    const failures=[uploadsResult,downloadsResult,intelligenceResult].filter(result=>result.status==='rejected').map(result=>result.status==='rejected'?(result.reason instanceof Error?result.reason.message:String(result.reason)):'');
-    const intelligence=intelligenceResult.status==='fulfilled'?{version:intelligenceResult.value.artifacts.TCC_STATISTICAL_REPORT.version,proposalsActive:intelligenceResult.value.proposals.filter(item=>item.evidenceActive).length,driveStatus:Object.fromEntries(Object.entries(intelligenceResult.value.artifacts).map(([kind,artifact])=>[kind,artifact.driveSyncStatus]))}:null;
+    // A geração automática antiga de propostas foi descontinuada. Os indicadores
+    // acadêmicos seguem nas rotas independentes; as sugestões vêm do formulário público.
+    // Mantemos o campo intelligence na resposta para compatibilidade com clientes antigos.
+    const[uploadsResult,downloadsResult]=await Promise.allSettled([cleanupExpiredStagedUploads(500),cleanupExpiredDownloadTransfers(500)]);
+    const failures=[uploadsResult,downloadsResult].filter(result=>result.status==='rejected').map(result=>result.status==='rejected'?(result.reason instanceof Error?result.reason.message:String(result.reason)):'');
+    const intelligence=null;
     const processCleanups=[];for(const task of processDeletionTasksStore.slice(0,2)){try{const result=await retryProcessDeletion(task);processCleanups.push({id:task.id,status:result.status});if(result.status==='PENDING')failures.push('Há limpezas de TCC pendentes nas plataformas integradas.');}catch(error){failures.push(error instanceof Error?error.message:'Falha na limpeza de TCC.');}}
     let workflow:Awaited<ReturnType<typeof runWorkflowMaintenance>>|null=null;
     try{workflow=await runWorkflowMaintenance();if(workflow.failed||workflow.configurationErrors.length)failures.push('Há lembretes com falha; confira a central de andamento.');}catch(error){failures.push(error instanceof Error?error.message:'Falha na manutenção do fluxo.');}

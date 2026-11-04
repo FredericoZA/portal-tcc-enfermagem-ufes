@@ -929,7 +929,7 @@
     "public/manual/ficha.jpg",
     "public/manual/presidencia.jpg",
     "public/manual/repositorio.jpg",
-    "public/replicacao/GUIA_PARA_IA.md",
+    "public/replicacao/GUIA_DE_INSTALACAO.md",
     "public/reservation-confirmation.js",
     "server/accessImportHttp.test.ts",
     "server/accessImportParsing.test.ts",
