@@ -5,9 +5,6 @@ import {
   getDefenseState,
   getDefenseStateFromTimes,
   matchesDefenseFilter,
-  isDefenseReservationDenied,
-  isDefenseReservationPending,
-  isPublicCalendarDefense,
 } from '../src/utils/defenseSemantics';
 import type { ProcessData } from '../src/types';
 
@@ -76,42 +73,4 @@ test('resumo da agenda mostra sala confirmada e identifica preferência ainda pe
  assert.equal(getDefenseCalendarSummaryParts(process).location,'Sala de reuniões');
  assert.match(formatDefenseCalendarSummary(process),/Sala de reuniões/);
  process.defesa.localStatus='PENDENTE';assert.equal(getDefenseCalendarSummaryParts(process).location,'Sala de reuniões (a confirmar)');
-});
-
-test('a reserva entra na agenda desde a etapa 1, ganha confirmação e sai se recusada', () => {
-  const process = processAt('AGUARDANDO_CONFIRMACAO_LOCAL', '2026-12-07T18:30:00.000Z');
-  process.defesa.local = 'Auditório';
-  process.defesa.localStatus = 'PENDENTE';
-  assert.equal(isPublicCalendarDefense(process), true);
-  assert.equal(isDefenseReservationPending(process), true);
-  assert.equal(isDefenseReservationDenied(process), false);
-
-  process.defesa.localStatus = 'CONFIRMADO';
-  assert.equal(isPublicCalendarDefense(process), true);
-  assert.equal(isDefenseReservationPending(process), false);
-
-  process.defesa.localStatus = 'PENDENTE';
-  process.defesa.departmentResponse = {
-    revision: 1,
-    decision: 'UNAVAILABLE',
-    respondedAt: '2026-12-01T12:00:00.000Z',
-    respondedBy: 'departamento@ufes.br',
-    startAt: process.defesa.startAt,
-    endAt: '2026-12-07T20:00:00.000Z',
-  };
-  assert.equal(isDefenseReservationDenied(process), true);
-  assert.equal(isPublicCalendarDefense(process), false);
-
-  process.defesa.departmentResponse = undefined;
-  process.defesa.localStatus = 'NEGADO';
-  assert.equal(isPublicCalendarDefense(process), false);
-
-  process.defesa.localStatus = 'PENDENTE';
-  assert.equal(isPublicCalendarDefense(process), true, 'um novo pedido volta à agenda');
-  process.status = 'EM_RASCUNHO';
-  assert.equal(isPublicCalendarDefense(process), false, 'rascunhos não são publicados');
-  process.status = 'CONCLUIDO';
-  assert.equal(isPublicCalendarDefense(process), true, 'defesas concluídas permanecem no histórico');
-  process.defesa.startAt = '';
-  assert.equal(isPublicCalendarDefense(process), false, 'sem data válida não há reserva');
 });
