@@ -265,7 +265,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             const visibleKeys = keys.filter((key) => allNavMap[key]?.visible);
             if (!visibleKeys.length && title !== 'ÁREA DO USUÁRIO') return null;
             return <section key={title} aria-label={title} className={index > 0 ? `pt-3 ${showSectionDividers ? 'border-t' : ''}` : ''} style={index > 0 && showSectionDividers ? sectionDividerStyle : undefined}>
-              <h2 className="portal-sidebar-section-heading px-3.5 mb-2 font-extrabold uppercase tracking-widest" style={{ color: sidebarAccent }}>{title}</h2>
+              <p className="portal-sidebar-section-heading px-3.5 mb-2 font-extrabold uppercase tracking-widest" style={{ color: sidebarAccent }}>{title}</p>
               <div className="space-y-1">
                 {visibleKeys.length ? visibleKeys.map((key, itemIndex) => renderNavItem(key, itemIndex)) : (
                   <p className="portal-sidebar-section-hint px-3.5 py-2 leading-relaxed" style={{ color: layoutConfig.sidebarTextColor || PORTAL_THEME.text.light }}>
