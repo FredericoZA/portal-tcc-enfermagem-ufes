@@ -7,7 +7,7 @@ import {withAuthorReference,registrationIdentityNames,registrationIdentitySenten
 import {academicName,authorIntroduction} from '../utils/personPresentation';
 import { ClipboardList } from 'lucide-react';
 import {normalizeRegistrationValue} from '../utils/registrationNormalization';
-import {renderTccTitle} from '../utils/formatters';
+import {renderTccTitle,formatDateNumericWithWeekday,formatDateWithWeekday} from '../utils/formatters';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { RegistrationFieldPreview, registrationPreviewKind } from './RegistrationFieldPreview';
@@ -29,7 +29,7 @@ export function registrationReviewValue(field:RegistrationQuestion,value:unknown
   if(/_INSTITUICAO$/.test(field.fieldKey))return renderInstitutionName(String(value));
   if(registrationPreviewKind(field.fieldKey,field.label,field.fieldType)==='location')return renderCustomLocationName(String(value));
   if(field.fieldKey==='DEFESA_LOCAL'&&value==='__OUTRO_LOCAL__')return 'Outro local';
-  if(field.fieldType==='datetime-local'){const [date,time]=String(value).split('T');const [year,month,day]=date.split('-');return `${day&&month&&year?`${day}/${month}/${year}`:date}${time?` às ${time}`:''}`;}
+  if(field.fieldType==='datetime-local'){const [date,time]=String(value).split('T');return `${formatDateNumericWithWeekday(date)}${time?` às ${time}`:''}`;}
   return typeof value==='boolean'?(value?'Sim':'Não'):String(value);
 }
 
@@ -54,6 +54,10 @@ function Question({ field, value, readOnly, onChange,optionLabels,recent=[] }: {
       field.fieldType==='textarea'?<textarea className="portal-input" rows={5} value={String(value??'')} maxLength={field.validation?.maxLength||10000} onChange={e=>onChange(e.target.value)}/>:
       ['select','radio'].includes(field.fieldType)?<select className="portal-input" value={String(value??'')} onChange={e=>onChange(e.target.value)}><option value="">Selecione…</option>{field.options?.map(option=><option key={option} value={option}>{option==='__OUTRO_LOCAL__'?'Outro local — informar endereço/nome':optionLabels?.[option]||option}</option>)}</select>:
       <input list={identityField(field.fieldKey)?`registration-${field.fieldKey}`:undefined} autoComplete="off" className="portal-input" type={['email','number','date','datetime-local'].includes(field.fieldType)?field.fieldType:'text'} readOnly={readOnly} value={String(value??'')} aria-invalid={issue?true:undefined} onBlur={()=>{onChange(String(normalizeRegistrationValue(field.fieldKey,field.fieldType,value??'')));setTouched(true);}} placeholder={field.placeholder} maxLength={/_MATRICULA$|_SIAPE$/.test(field.fieldKey)?undefined:field.validation?.maxLength||500} onChange={e=>onChange(e.target.value)}/>}
+    {field.fieldType==='datetime-local' && String(value||'').split('T')[0] &&
+      <span className="mt-1 block text-xs font-semibold text-emerald-900" aria-live="polite">
+        {formatDateWithWeekday(String(value).split('T')[0])}
+      </span>}
     {identityField(field.fieldKey)&&<datalist id={`registration-${field.fieldKey}`}>{suggestions.map(item=><option key={item} value={item}/>)}</datalist>}
     {issue&&<span role="alert" className="mt-1 block text-xs text-red-800">{issue}</span>}
     {(field.fieldKey==='TITULO'||/_INSTITUICAO$/.test(field.fieldKey))&&<span className="mt-1 block text-sm opacity-80">{INSTITUTION_ACRONYM_HELP}</span>}
