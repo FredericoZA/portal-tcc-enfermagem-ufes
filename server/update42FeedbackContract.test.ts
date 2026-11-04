@@ -30,7 +30,7 @@ test('redirecionamento pós-login diferencia Master, Presidente e usuário comum
 
 test('engrenagem permite colunas para usuário comum e persiste por e-mail e planilha',async()=>{
   const settings=await source('src/components/HeaderSettingsPopover.tsx');
-  assert.ok(settings.includes('portal_user_table_config_'));
+  assert.ok((await source('src/utils/tablePreferences.ts')).includes('portal_user_table_config_'));
   assert.ok(settings.includes("const isMaster=globalRoles.includes('MASTER_ADMIN')"));
   assert.ok(settings.includes('const canManageColumns=Boolean(storageKey'));
   assert.ok(settings.includes('Colunas e ordem'));

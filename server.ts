@@ -1,3 +1,4 @@
+import {sanitizeTablePreference,validTableKey,type TablePreference} from './src/utils/tablePreferences';
 import {formPresentation} from './src/utils/formPresentation';
 import {reservationConfirmationView} from './src/utils/reservationConfirmationView';
 import {studioSampleProcess} from './src/utils/studioRuntimePreview';
@@ -214,6 +215,7 @@ interface PersistedPortalState {
   astenWebhookEvents?: AstenWebhookEvent[];
   administrationTransfers?: AdministrationTransfer[];
   notificationPreferences?: Record<string, NotificationPreferences>;
+  tablePreferences?: Record<string, Record<string, TablePreference>>;
   dataSubjectRequests?: DataSubjectRequest[];
   legalHolds?: LegalHold[];
   studioVersions?: StudioVersionRecord[];
@@ -313,6 +315,7 @@ let emailDeliveriesStore:EmailDeliveryRecord[]=persistedPortalState.emailDeliver
 let workflowRunsStore:WorkflowRun[]=persistedPortalState.workflowRuns||[];
 let astenWebhookEventsStore:AstenWebhookEvent[]=persistedPortalState.astenWebhookEvents||[];
 let administrationTransfersStore:AdministrationTransfer[]=persistedPortalState.administrationTransfers||[];
+let tablePreferencesStore: Record<string, Record<string, TablePreference>> = persistedPortalState.tablePreferences || {};
 let notificationPreferencesStore:Record<string,NotificationPreferences>=persistedPortalState.notificationPreferences||{};
 let dataSubjectRequestsStore:DataSubjectRequest[]=persistedPortalState.dataSubjectRequests||[];
 let legalHoldsStore:LegalHold[]=persistedPortalState.legalHolds||[];
@@ -411,7 +414,7 @@ async function saveRemoteSnapshotWithRecovery(snapshot:PersistedPortalState):Pro
 function snapshotPortalState() {
   const signatureMetadata=signatureJobsStore.map(({artifactBase64:_artifact,...job})=>job);
   const formMetadata=formArchiveJobsStore.map(({artifactBase64:_artifact,...job})=>({...job,artifactBase64:''}));
-  return { legacyAcademicRecords:legacyAcademicRecordsStore, processDeletionTasks:processDeletionTasksStore, registrationDrafts:registrationDraftsStore, evaluationDrafts:Object.fromEntries(evaluationDraftsStore), reminders:reminderRecordsStore, settings: currentSettings, processes: processesStore, memberships: membershipsStore, correctionRequests: correctionRequestsStore, signatureJobs: signatureMetadata, astenCallbackFingerprints: Array.from(astenCallbackFingerprints).slice(-5000), revokedSessionIds:Array.from(revokedSessionIdsStore).slice(-10000), authorizedStudents: authorizedStudentsStore, removedAccessProcessKeys:Array.from(removedAccessProcessKeys), formArchiveJobs:formMetadata, studioFormSubmissions:studioFormSubmissionsStore.slice(-10000),emailDeliveries:emailDeliveriesStore.slice(-10000),workflowRuns:workflowRunsStore.slice(-10000),astenWebhookEvents:astenWebhookEventsStore.slice(-10000),administrationTransfers:administrationTransfersStore.slice(-1000),notificationPreferences:notificationPreferencesStore,dataSubjectRequests:dataSubjectRequestsStore.slice(-5000),legalHolds:legalHoldsStore.slice(-5000),studioVersions:studioVersionsStore.slice(-30),continuousIntelligence:continuousIntelligenceStore,auditLogs: auditLogsStore.slice(-5000) };
+  return { legacyAcademicRecords:legacyAcademicRecordsStore, processDeletionTasks:processDeletionTasksStore, registrationDrafts:registrationDraftsStore, evaluationDrafts:Object.fromEntries(evaluationDraftsStore), reminders:reminderRecordsStore, settings: currentSettings, processes: processesStore, memberships: membershipsStore, correctionRequests: correctionRequestsStore, signatureJobs: signatureMetadata, astenCallbackFingerprints: Array.from(astenCallbackFingerprints).slice(-5000), revokedSessionIds:Array.from(revokedSessionIdsStore).slice(-10000), authorizedStudents: authorizedStudentsStore, removedAccessProcessKeys:Array.from(removedAccessProcessKeys), formArchiveJobs:formMetadata, studioFormSubmissions:studioFormSubmissionsStore.slice(-10000),emailDeliveries:emailDeliveriesStore.slice(-10000),workflowRuns:workflowRunsStore.slice(-10000),astenWebhookEvents:astenWebhookEventsStore.slice(-10000),administrationTransfers:administrationTransfersStore.slice(-1000),tablePreferences:tablePreferencesStore,notificationPreferences:notificationPreferencesStore,dataSubjectRequests:dataSubjectRequestsStore.slice(-5000),legalHolds:legalHoldsStore.slice(-5000),studioVersions:studioVersionsStore.slice(-30),continuousIntelligence:continuousIntelligenceStore,auditLogs: auditLogsStore.slice(-5000) };
 }
 
 function persistPortalState(throwOnFailure = false): void {
@@ -460,6 +463,7 @@ function applyPersistedState(state: PersistedPortalState) {
   if (state.workflowRuns) workflowRunsStore = state.workflowRuns;
   if (state.astenWebhookEvents) astenWebhookEventsStore = state.astenWebhookEvents;
   if (state.administrationTransfers) administrationTransfersStore = state.administrationTransfers;
+  if (state.tablePreferences) tablePreferencesStore = state.tablePreferences;
   if (state.notificationPreferences) notificationPreferencesStore = state.notificationPreferences;
   if (state.dataSubjectRequests) dataSubjectRequestsStore = state.dataSubjectRequests;
   if (state.legalHolds) legalHoldsStore = state.legalHolds;
@@ -2094,6 +2098,28 @@ export async function createPortalApp() {
     const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Portal Institucional de TCC//Agenda//PT','CALSCALE:GREGORIAN','METHOD:PUBLISH',`X-WR-CALNAME:${escapeIcs(resolveInstallationProfile(currentSettings).portalName)}`,`X-WR-TIMEZONE:${escapeIcs(currentSettings.integrationStudio?.operationsPolicy?.timezone||currentSettings.timezone||'America/Sao_Paulo')}`];
     for(const process of processesStore.filter(item=>item.defesa?.localStatus==='CONFIRMADO'&&item.defesa.startAt))lines.push('BEGIN:VEVENT',`UID:${escapeIcs(process.id)}@${escapeIcs(host)}`,`DTSTAMP:${date(process.updatedAt)}`,`DTSTART:${date(process.defesa.startAt)}`,`DTEND:${date(defenseEndAt(process.defesa.startAt))}`,`SUMMARY:${escapeIcs(`Defesa de TCC — ${formatStudentsString(process.aluno1,process.aluno2)}`)}`,`DESCRIPTION:${escapeIcs(`${process.titulo} | ${process.protocolo}`)}`,`LOCATION:${escapeIcs(process.defesa.local)}`,'END:VEVENT');
     lines.push('END:VCALENDAR');res.setHeader('Content-Type','text/calendar; charset=utf-8');res.setHeader('Content-Disposition','attachment; filename="agenda-defesas.ics"');res.setHeader('Cache-Control','public, max-age=300');res.send(lines.join('\r\n'));
+  });
+
+  // Table defaults are public presentation; personal preferences stay bound to the session.
+  app.get('/api/table-preferences/:key',requireAuthenticated,(req,res)=>{
+    if(!validTableKey(req.params.key))return res.status(400).json({error:'Planilha inválida.'});
+    res.setHeader('Cache-Control','private, no-store');
+    res.json(tablePreferencesStore[getPortalIdentity(req)!.email]?.[req.params.key] || null);
+  });
+  app.put('/api/table-preferences/:key',requireAuthenticated,async(req,res)=>{
+    if(!validTableKey(req.params.key))return res.status(400).json({error:'Planilha inválida.'});
+    try{const email=getPortalIdentity(req)!.email;const next=sanitizeTablePreference(req.body);tablePreferencesStore[email]={...tablePreferencesStore[email],[req.params.key]:next};await persistPortalStateDurably();res.setHeader('Cache-Control','private, no-store');res.json(next);}
+    catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível salvar a exibição.'});}
+  });
+  app.delete('/api/table-preferences/:key',requireAuthenticated,async(req,res)=>{
+    if(!validTableKey(req.params.key))return res.status(400).json({error:'Planilha inválida.'});
+    const email=getPortalIdentity(req)!.email;tablePreferencesStore[email]={...tablePreferencesStore[email],[req.params.key]:{}};await persistPortalStateDurably();res.json({deleted:true});
+  });
+  app.put('/api/admin/table-defaults/:key',requireAuthenticated,async(req,res)=>{
+    if(!getUserRolesForEmail(getPortalIdentity(req)!.email).globalRoles.includes('MASTER_ADMIN'))return res.status(403).json({error:'Somente o Master pode definir o padrão.'});
+    if(!validTableKey(req.params.key))return res.status(400).json({error:'Planilha inválida.'});
+    try{const next=sanitizeTablePreference(req.body);currentSettings={...currentSettings,tableLayouts:{...currentSettings.tableLayouts,[req.params.key]:next},updatedAt:new Date().toISOString()};auditLogsStore.push({id:`log-${Date.now()}-${randomBytes(4).toString('hex')}`,actorEmail:getPortalIdentity(req)!.email,actorRoles:['MASTER_ADMIN'],action:'PADRAO_PLANILHA_ATUALIZADO',entityType:'settings',entityId:req.params.key,after:next,timestamp:new Date().toISOString()});await persistPortalStateDurably();res.json(next);}
+    catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível salvar o padrão.'});}
   });
 
   app.get('/api/notification-preferences',requireAuthenticated,(req,res)=>{const email=getPortalIdentity(req)!.email;res.setHeader('Cache-Control','private, no-store');res.json(notificationPreferencesStore[email]||{email:true,inPortal:true,dailyDigest:false,workflowEvents:true,signatureEvents:true,failureEvents:true,updatedAt:new Date(0).toISOString()});});
@@ -4474,7 +4500,7 @@ ${auditChanges(log)}`).join('\n\n');
     const identity=getPortalIdentity(req)!;
     if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Reautentique-se para exportar um backup administrativo.'});
     const exportedAt=new Date().toISOString();
-    const backup={schemaVersion:5,operationalMetadata: {signatureJobs:snapshotPortalState().signatureJobs,formArchiveJobs:snapshotPortalState().formArchiveJobs,emailDeliveries:emailDeliveriesStore,workflowRuns:workflowRunsStore,astenWebhookEvents:astenWebhookEventsStore},title:'Backup administrativo do Portal de TCC',exportedAt,settings:publicSettingsForRequest(true),processes:processesStore,legacyAcademicRecords:legacyAcademicRecordsStore,authorizedStudents:authorizedStudentsStore,memberships:membershipsStore,notificationPreferences:notificationPreferencesStore,dataSubjectRequests:dataSubjectRequestsStore,legalHolds:legalHoldsStore,studioVersions:studioVersionsStore};
+    const backup={schemaVersion:5,operationalMetadata: {signatureJobs:snapshotPortalState().signatureJobs,formArchiveJobs:snapshotPortalState().formArchiveJobs,emailDeliveries:emailDeliveriesStore,workflowRuns:workflowRunsStore,astenWebhookEvents:astenWebhookEventsStore},title:'Backup administrativo do Portal de TCC',exportedAt,settings:publicSettingsForRequest(true),processes:processesStore,legacyAcademicRecords:legacyAcademicRecordsStore,authorizedStudents:authorizedStudentsStore,memberships:membershipsStore,tablePreferences:tablePreferencesStore,notificationPreferences:notificationPreferencesStore,dataSubjectRequests:dataSubjectRequestsStore,legalHolds:legalHoldsStore,studioVersions:studioVersionsStore};
     const checksum=createHash('sha256').update(JSON.stringify(backup)).digest('hex');
     auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'EXPORTACAO_BACKUP_ADMINISTRATIVO',entityType:'system_backup',entityId:checksum,after:{schemaVersion:5,processCount:processesStore.length,legacyCount:legacyAcademicRecordsStore.length},timestamp:exportedAt});
     persistPortalState();res.setHeader('Cache-Control','no-store');res.json({...backup,checksum});
@@ -4489,7 +4515,7 @@ ${auditChanges(log)}`).join('\n\n');
       return res.status(403).json({ error: 'Apenas o Master ou o Presidente da Comissão pode restaurar backups do sistema.' });
     }
     if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Reautentique-se antes de restaurar um backup.'});
-    const { settings, processes, legacyAcademicRecords, authorizedStudents, notificationPreferences, dataSubjectRequests, legalHolds, studioVersions, confirmHash } = req.body||{};
+    const { settings, processes, legacyAcademicRecords, authorizedStudents, tablePreferences, notificationPreferences, dataSubjectRequests, legalHolds, studioVersions, confirmHash } = req.body||{};
     if(!settings||typeof settings!=='object'||Array.isArray(settings)||!Array.isArray(processes))return res.status(400).json({error:'Backup inválido: configurações e processos são obrigatórios.'});
     if(containsSensitiveConfigurationKey(settings))return res.status(400).json({error:'O backup contém campos de segredo e não pode ser restaurado.'});
     if(processes.length>10_000||processes.some((process:any)=>!process||typeof process!=='object'||!String(process.id||'').trim()||!String(process.protocolo||'').trim()||!String(process.titulo||'').trim()))return res.status(400).json({error:'Backup inválido: coleção de processos fora do formato esperado.'});
@@ -4519,7 +4545,20 @@ ${auditChanges(log)}`).join('\n\n');
         astenWebhookEvents:mergeOperationalMetadata(astenWebhookEventsStore,imported.astenWebhookEvents,processIds,event=>{const processedAt=event.processedAt||event.safePayload?.processedAt;return ['PROCESSED','IGNORED'].includes(String(event.status))||(typeof processedAt==='string'&&Number.isFinite(Date.parse(processedAt)));})
       };
     }catch(error){return res.status(409).json({error:error instanceof Error?error.message:'Não foi possível preservar os registros operacionais.'});}
-    const restorePayload={operationalMetadata,schemaVersion:Number(req.body?.schemaVersion||1),settings:safeSettings,processes:safeProcesses,legacyAcademicRecords:safeLegacyAcademicRecords,authorizedStudents:Array.isArray(authorizedStudents)?authorizedStudents:authorizedStudentsStore,notificationPreferences:notificationPreferences&&typeof notificationPreferences==='object'&&!Array.isArray(notificationPreferences)?notificationPreferences:{},dataSubjectRequests:Array.isArray(dataSubjectRequests)?dataSubjectRequests:[],legalHolds:Array.isArray(legalHolds)?legalHolds:[],studioVersions:Array.isArray(studioVersions)?studioVersions:[]};
+    let safeTablePreferences=tablePreferencesStore;
+    if(tablePreferences!==undefined){
+      try{
+        if(!tablePreferences||typeof tablePreferences!=='object'||Array.isArray(tablePreferences)||Object.keys(tablePreferences).length>10000)throw Error('Preferências de planilha inválidas no backup.');
+        safeTablePreferences=Object.fromEntries(Object.entries(tablePreferences).map(([email,entries])=>{
+          if(!isEmailAddress(email)||!entries||typeof entries!=='object'||Array.isArray(entries))throw Error('Conta de preferência inválida no backup.');
+          return [normalizeEmail(email),Object.fromEntries(Object.entries(entries).map(([key,value])=>{
+            if(!validTableKey(key))throw Error('Planilha inválida no backup.');
+            return [key,sanitizeTablePreference(value)];
+          }))];
+        }));
+      }catch(error){return res.status(400).json({error:error instanceof Error?error.message:'Preferências inválidas no backup.'});}
+    }
+    const restorePayload={tablePreferences:safeTablePreferences,operationalMetadata,schemaVersion:Number(req.body?.schemaVersion||1),settings:safeSettings,processes:safeProcesses,legacyAcademicRecords:safeLegacyAcademicRecords,authorizedStudents:Array.isArray(authorizedStudents)?authorizedStudents:authorizedStudentsStore,notificationPreferences:notificationPreferences&&typeof notificationPreferences==='object'&&!Array.isArray(notificationPreferences)?notificationPreferences:{},dataSubjectRequests:Array.isArray(dataSubjectRequests)?dataSubjectRequests:[],legalHolds:Array.isArray(legalHolds)?legalHolds:[],studioVersions:Array.isArray(studioVersions)?studioVersions:[]};
     const expectedHash=createHash('sha256').update(JSON.stringify(restorePayload)).digest('hex');
     if(String(confirmHash||'')!==expectedHash)return res.json({requiresConfirmation:true,confirmHash:expectedHash,summary:{processCount:processes.length,legacyCount:restorePayload.legacyAcademicRecords.length,authorizedCount:restorePayload.authorizedStudents.length,administratorsPreserved:true,auditTrailPreserved:true}});
 
@@ -4527,6 +4566,7 @@ ${auditChanges(log)}`).join('\n\n');
     processesStore=JSON.parse(JSON.stringify(safeProcesses));
     legacyAcademicRecordsStore=structuredClone(restorePayload.legacyAcademicRecords);
     authorizedStudentsStore=JSON.parse(JSON.stringify(restorePayload.authorizedStudents));
+    tablePreferencesStore=structuredClone(restorePayload.tablePreferences);
     notificationPreferencesStore=JSON.parse(JSON.stringify(restorePayload.notificationPreferences));
     dataSubjectRequestsStore=JSON.parse(JSON.stringify(restorePayload.dataSubjectRequests));
     legalHoldsStore=JSON.parse(JSON.stringify(restorePayload.legalHolds));

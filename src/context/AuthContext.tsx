@@ -1,3 +1,4 @@
+import {sanitizeTablePreference,validTableKey,TABLE_DEFAULTS_EVENT} from '../utils/tablePreferences';
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../utils/portalLiveEvents';
 import { GlobalRole, ProcessMembership, GlobalSettings } from '../types';
@@ -93,7 +94,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const applyPublicSettings = (rawSettings: GlobalSettings) => {
     // A aparência do Portal é definida pelo código. Configurações visuais antigas
     // permanecem apenas como histórico persistido e não são reaplicadas ao navegador.
+    let layoutsChanged = false;
+    for (const [key, value] of Object.entries(rawSettings.tableLayouts || {})) {
+      if (!validTableKey(key)) continue;
+      try {
+        const serialized = JSON.stringify(sanitizeTablePreference(value));
+        const storageKey = `default_table_config_${key}`;
+        if (localStorage.getItem(storageKey) !== serialized) { localStorage.setItem(storageKey, serialized); layoutsChanged = true; }
+      } catch { /* A broken old preference must not stop authentication. */ }
+    }
     setSettings(rawSettings);
+    if (layoutsChanged) window.dispatchEvent(new Event(TABLE_DEFAULTS_EVENT));
     syncPortalFavicon(loadSiteLayoutConfig());
     if(rawSettings.integrationStudio?.operationsPolicy&&typeof document!=='undefined'){const policy=rawSettings.integrationStudio.operationsPolicy;document.documentElement.lang=policy.defaultLocale||'pt-BR';document.documentElement.style.setProperty('--portal-target-size',`${policy.accessibility?.minimumTargetSize||44}px`);document.documentElement.dataset.portalMotion=policy.accessibility?.reducedMotionByDefault?'reduced':'system';}
   };

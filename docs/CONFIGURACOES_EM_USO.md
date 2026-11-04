@@ -19,3 +19,28 @@ A publicação da configuração continua passando pela validação do pacote. U
 ## Verificação
 
 `studioRuntimeParity.test.ts` e `studioRuntimeParityHttp.test.ts` verificam equivalência com o envio, personalização sem congelar dados fictícios, preservação de edições, autorização, persistência após reinício, PDF real e ausência de efeitos operacionais das prévias. Testes locais não comprovam entrega pelo Gmail, resposta do departamento nem assinatura pelo Asten em produção.
+
+## Exibição das planilhas
+
+A engrenagem de cada planilha controla colunas visíveis, ordem, linhas por página,
+filtro de período e quebra do texto. Larguras ajustadas arrastando o cabeçalho
+seguem a mesma preferência. A identidade visual institucional continua comum.
+
+- **Definir padrão** é exclusivo do Master: salva diretamente o padrão daquela
+  planilha no servidor. Não exige publicar o portal novamente.
+- A preferência pessoal é vinculada à sessão e à planilha. É recuperada em outro
+  navegador após o acesso e prevalece sobre o padrão geral.
+- **Restaurar padrão** remove a personalização da conta e reaplica o padrão do
+  Master, incluindo quebra de texto, paginação e larguras.
+- Preferências pessoais antigas deste navegador são migradas para a conta, sem
+  percorrer ou aproveitar as preferências de outros usuários. Uma restauração
+  fica registrada para impedir que um cache antigo a desfaça em outro aparelho.
+- Salvar a exibição não abre a barra global de processamento nem altera dados
+  de TCC, permissões de acesso ou publicação de arquivos.
+
+Rotas próprias validam somente apresentação de tabelas conhecidas. A sessão
+identifica o dono da preferência; parâmetros de e-mail não selecionam outra
+conta. O padrão do Master é público; preferências pessoais não são incluídas
+em `/api/settings`. Backup administrativo e persistência do estado incluem as
+preferências. Nenhuma alteração às credenciais ou às regras de assinatura é
+necessária.

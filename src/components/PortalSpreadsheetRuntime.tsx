@@ -1,3 +1,4 @@
+import {tablePreferenceKey} from '../utils/tablePreferences';
 import { useLayoutEffect } from 'react';
 import { PORTAL_TABLE_KEYS, inferManagedTableKey, isPortalProcessHeader, normalizePortalTableText, readPortalHeaderLabel, type PortalTableKey } from '../utils/portalTableIdentity';
 import { closePortalTablePopup, enhancePortalTable } from '../utils/portalTableDom';
@@ -35,18 +36,9 @@ function currentPageKey(key: TableKey) {
 }
 
 function storageKeysForTable(key: TableKey) {
-  const keys = [`default_table_config_${key}`];
-  try {
-    for (let index = 0; index < localStorage.length; index += 1) {
-      const candidate = localStorage.key(index);
-      if (candidate?.startsWith('portal_user_table_config_') && candidate.endsWith(`_${key}`)) {
-        keys.push(candidate);
-      }
-    }
-  } catch {
-    // localStorage pode estar indisponível em alguns ambientes.
-  }
-  return keys;
+  // Only the active account may contribute a personal preference.
+  const email = localStorage.getItem('portal_tcc_active_email') || '';
+  return [...(email ? [tablePreferenceKey(email, key)] : []), `default_table_config_${key}`];
 }
 
 let legacyLimitsMigrated = false;
