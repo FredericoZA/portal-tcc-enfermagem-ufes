@@ -449,7 +449,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const isStudent = !readOnly && (normalizeEmail(process.aluno1.email) === normEmail || Boolean(process.aluno2 && normalizeEmail(process.aluno2.email) === normEmail));
   const isAdvisor = !readOnly && normalizeEmail(process.orientador.email) === normEmail;
   const isCoAdvisor = !readOnly && process.coorientador && normalizeEmail(process.coorientador.email) === normEmail;
-  const isExaminer = process.banca.some((b) => normalizeEmail(b.email) === normEmail);
+  const isExaminer = process.banca.some((b) => (b.funcao === 'EXAMINER_2' || b.funcao === 'EXAMINER_3') && normalizeEmail(b.email) === normEmail);
 
   const isEvaluationSubmitted = Boolean(process.avaliacao?.submittedAt) || process.avaliacao?.status === 'CONCLUIDO' || process.avaliacao?.notaFinal !== undefined;
   const isAcervoSubmitted = Boolean(process.acervo?.submittedAt);
@@ -907,14 +907,14 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
               {documents.map((doc) => {
                 const termDeclined=doc.type==='TERMO'&&publicationDeclined(process);
                 const isDownloadable = !termDeclined&&(doc.status === 'DISPONIVEL' || doc.status === 'ASSINADO');
-                const canRequestSignature=!readOnly&&doc.status!=='ASSINADO'&&!documentSignatureCompleted(signatureJobs,process.id,doc.type,process.dataRevision)&&!termDeclined&&doc.requiresSignature&&doc.status!=='NAO_DISPONIVEL'&&(isMasterAdmin||isCommissionPresident||(doc.type==='ATA'&&isAdvisor)||(doc.type==='TERMO'&&(isStudent||isAdvisor)));
+                const canRequestSignature=!readOnly&&doc.status!=='ASSINADO'&&!documentSignatureCompleted(signatureJobs,process.id,doc.type,process.dataRevision)&&!termDeclined&&doc.requiresSignature&&doc.status!=='NAO_DISPONIVEL'&&(isMasterAdmin||isCommissionPresident||(doc.type==='ATA'&&(isAdvisor||isExaminer))||(doc.type==='TERMO'&&(isStudent||isAdvisor)));
 
                 const getDocInfo = (type: string) => {
                   switch (type) {
                     case 'CONVITE':
                       return { title: 'Carta-Convite da Banca', signNote: 'Não requer assinatura', availability: 'Confirme o local e envie o convite à banca.' };
                     case 'ATA':
-                      return { title: 'Ata', signNote: 'Professor orientador', availability: 'Aguarda confirmação da ata após a defesa.' };
+                      return { title: 'Ata', signNote: 'Orientador e dois examinadores', availability: 'Aguarda confirmação da ata após a defesa.' };
                     case 'TERMO':
                       return { title: 'Termo de Autorização e Publicação', signNote: 'Orientador e todos os autores', availability: 'Solicite publicação na entrega do Repositório.' };
                     case 'DECLARACAO':

@@ -99,7 +99,7 @@ export const GovbrSignatureModal:React.FC<Props>=({process,initialJob,onChange,o
         {!review&&!archived&&<p>O envio deixa o arquivo pendente de conferência.</p>}
         {job&&!archived&&<p>Assine o original baixado, sem editar ou imprimir novamente.</p>}
         {!canReturn&&<p>{documentType==='DECLARACAO'?'A devolução da declaração é feita pela Presidência ou pelo Master.':'A devolução deste documento é feita pelo orientador responsável ou pelo Master.'}</p>}
-        <p>{documentType==='DECLARACAO'?'A Presidência assina e devolve a declaração.':documentType==='ATA'?'O orientador assina e devolve a ata.':'O orientador reúne todas as assinaturas no mesmo PDF, assina por último e devolve o arquivo.'}</p>
+        <p>{documentType==='DECLARACAO'?'A Presidência assina e devolve a declaração.':documentType==='ATA'?'O orientador e os dois examinadores assinam o mesmo PDF da ata. O orientador reúne as três assinaturas e devolve o arquivo completo.':'O orientador reúne todas as assinaturas no mesmo PDF, assina por último e devolve o arquivo.'}</p>
       </div>
       <div className="rounded-lg border border-slate-300 bg-white p-3"><strong>{process.protocolo}</strong><p className="mt-1">{process.titulo}</p></div>
       {isLocalDemoFrontend()&&<p className="rounded-lg border border-amber-300 bg-amber-50 p-3">Ambiente de demonstração: o documento de teste não substitui o documento oficial.</p>}

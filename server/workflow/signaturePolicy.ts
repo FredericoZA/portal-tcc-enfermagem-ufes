@@ -40,7 +40,7 @@ function registeredSigner(
     throw new Error(`${process.protocolo}: signatário sem e-mail válido no cadastro.`);
   }
   const email = normalizeSignatureEmail(person!.email);
-  const prefix = role === 'ADVISOR' ? 'advisor' : role === 'STUDENT' ? 'student' : 'president';
+  const prefix = role === 'ADVISOR' ? 'advisor' : role === 'EXAMINER' ? 'examiner' : role === 'STUDENT' ? 'student' : 'president';
   return {
     id: `${prefix}:${email}`,
     role,
@@ -59,7 +59,17 @@ export function deriveSignatureSigners(
 ): SignatureSignerSnapshot[] {
   let signers: SignatureSignerSnapshot[];
   if (type === 'ATA') {
-    signers = [registeredSigner(process, 'ADVISOR', { ...process.orientador, nome: academicName(process.orientador, 'abbreviated') })];
+    // A ata requer os três titulares. A linha de orientador em "banca" não conta duas vezes.
+    const examiner2 = (process.banca || []).filter(member => member.funcao === 'EXAMINER_2');
+    const examiner3 = (process.banca || []).filter(member => member.funcao === 'EXAMINER_3');
+    if (examiner2.length !== 1 || examiner3.length !== 1) {
+      throw new Error(`${process.protocolo}: a ata exige dois examinadores titulares (2º e 3º membros da banca) cadastrados.`);
+    }
+    signers = [
+      registeredSigner(process, 'ADVISOR', { ...process.orientador, nome: academicName(process.orientador, 'abbreviated') }),
+      registeredSigner(process, 'EXAMINER', { ...examiner2[0], nome: academicName(examiner2[0], 'abbreviated') }),
+      registeredSigner(process, 'EXAMINER', { ...examiner3[0], nome: academicName(examiner3[0], 'abbreviated') }),
+    ];
   } else if (type === 'TERMO') {
     signers = [
       registeredSigner(process, 'STUDENT', process.aluno1),
@@ -88,7 +98,8 @@ export function canInitiateSignature(
   if (!isValidSignatureEmail(email)) return false;
   if (globalRoles.includes('MASTER_ADMIN') || globalRoles.includes('COMMISSION_PRESIDENT')) return true;
   const actor = normalizeSignatureEmail(email);
-  if (type === 'ATA') return normalizeSignatureEmail(process.orientador.email) === actor;
+  if (type === 'ATA') return [process.orientador, ...(process.banca || []).filter(member => member.funcao === 'EXAMINER_2' || member.funcao === 'EXAMINER_3')]
+    .some(person => normalizeSignatureEmail(person?.email) === actor);
   if (type === 'TERMO') {
     return [process.aluno1, process.aluno2, process.orientador]
       .some(person => normalizeSignatureEmail(person?.email) === actor);
