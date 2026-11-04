@@ -1,4 +1,5 @@
 import {isEmailAddress} from './emailAddress';
+import { formatDateNumericWithWeekday } from './formatters';
 import type { EvaluationOutcomeOption, ProcessData } from '../types';
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
 import type { RegistrationAnswers, RegistrationQuestion } from '../types/operationalConfig';
@@ -75,7 +76,7 @@ export function evaluationReviewRows(process: ProcessData, studio?: Partial<Inte
     ['Orientador', person(process.orientador)],
     ['Coorientador', process.coorientador ? person(process.coorientador) : 'Não possui'],
     ...process.banca.filter(p=>p.funcao!=='ORIENTADOR').map((p): [string, string] => ['Examinador', person(p)]),
-    ['Data e horário', Number.isFinite(date.getTime()) ? `${new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, dateStyle: 'short', timeStyle: 'short' }).format(date)} (${timezone})` : 'Data inválida'],
+    ['Data e horário', Number.isFinite(date.getTime()) ? `${formatDateNumericWithWeekday(new Intl.DateTimeFormat('sv-SE',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(date))} às ${new Intl.DateTimeFormat('pt-BR',{timeZone:timezone,timeStyle:'short'}).format(date)} (${timezone})` : 'Data inválida'],
     ['Local confirmado pelo aluno', process.defesa.local],
   ];
   const native = /^(ALUNO_|TEM_ALUNO_|ORIENTADOR_|COORIENTADOR_|TEM_COORIENTADOR|EXAMINADOR_|TITULO$|DEFESA_|LOCAL_ALTERNATIVO$)/;
