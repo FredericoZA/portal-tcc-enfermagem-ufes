@@ -10,6 +10,7 @@ import {
   Calendar,
   ChevronLeft,
   Copy,
+  FileDown,
   FileText,
   GitBranch,
   HelpCircle,
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react';
 import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 import { PORTAL_THEME } from '../theme/portalTheme';
+import { downloadBlankAttendanceDeclaration } from '../utils/blankAttendanceDeclaration';
 
 interface SidebarProps {
   currentTab: string;
@@ -100,6 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   }, []);
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isDownloadingAttendance, setIsDownloadingAttendance] = useState(false);
   const [feedbackMode,setFeedbackMode]=useState<'submit'|null>(null);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
   const appVersion = String((import.meta as any).env?.VITE_APP_VERSION || '0.0.0');
@@ -159,6 +162,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
       setIsLoggingOut(false);
     }
   };
+  const handleAttendanceDownload = async () => {
+    if (isDownloadingAttendance) return;
+    setIsDownloadingAttendance(true);
+    try {
+      await downloadBlankAttendanceDeclaration();
+      setIsOpenMobile(false);
+    } catch {
+      portalNotice('Não foi possível baixar a declaração. Tente novamente.', { title: 'Download indisponível' });
+    } finally {
+      setIsDownloadingAttendance(false);
+    }
+  };
   const isColorLight = (hex?: string) => {
     if (!hex) return false;
     if (['#ffffff', '#f8fafc', 'var(--portal-surface-page)', '#e2e8f0', '#f0f1e7', '#e0f2fe', '#fefce8', '#fff1f2'].includes(hex)) return true;
@@ -211,10 +226,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             configuracoes: { id: 'configuracoes', label: getNavLabel('configuracoes', 'Configurações'), icon: Settings, emoji: '', visible: isMasterAdmin && !isVisitor },
             analise: { id: 'analise', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: '', visible: true },
             replicar: { id: 'replicar', label: getNavLabel('replicar', 'Replicar Portal'), icon: Copy, emoji: '', visible: true },
+            'declaracao-comparecimento': { id: 'declaracao-comparecimento', label: 'Declaração de comparecimento', icon: FileDown, emoji: '', visible: true },
             sugestoes: { id: 'sugestoes', label: 'Sugestões', icon: Lightbulb, emoji: '', visible: true }
           };
           const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0 ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'assinaturas'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key) : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'DIVIDER_2', 'analise', 'como-chegar', 'informacoes-gerais', 'tutorial', 'fluxo-tcc', 'replicar'];
-          const order = [...configuredOrder].filter((key) => key !== 'analise' && key !== 'sugestoes');
+          const order = [...configuredOrder].filter((key) => key !== 'analise' && key !== 'sugestoes' && key !== 'declaracao-comparecimento');
           const indicatorsAnchor = order.indexOf('como-chegar');
           order.splice(indicatorsAnchor >= 0 ? indicatorsAnchor : order.length, 0, 'analise');
           const sanitizedOrder = order.filter((key) => !['logs', 'asten-logs'].includes(key));
@@ -230,13 +246,44 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
               if (item.id === 'sugestoes') {
                 setFeedbackMode('submit');
                 setIsOpenMobile(false);
+              } else if (item.id === 'declaracao-comparecimento') {
+                void handleAttendanceDownload();
               } else handleNav(item.id);
-            }} className={`portal-sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-transparent outline-none font-bold text-left transition-all cursor-pointer ${isActive ? 'portal-sidebar-nav-active font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || 'var(--portal-sidebar-active)',color: layoutConfig.sidebarActiveTextColor || '#ffffff'} : { color: layoutConfig.sidebarTextColor || '#f8fafc' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
+            }} disabled={item.id === 'declaracao-comparecimento' && isDownloadingAttendance} title={item.id === 'declaracao-comparecimento' ? 'Baixar PDF em branco para preenchimento manual' : undefined} aria-label={item.id === 'declaracao-comparecimento' ? 'Baixar declaração de comparecimento em PDF' : undefined} className={`portal-sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-transparent outline-none font-bold text-left transition-all cursor-pointer ${isActive ? 'portal-sidebar-nav-active font-extrabold shadow-sm' : 'hover:bg-white/10'} disabled:opacity-60`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || 'var(--portal-sidebar-active)',color: layoutConfig.sidebarActiveTextColor || '#ffffff'} : { color: layoutConfig.sidebarTextColor || '#f8fafc' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
+          };
+          const publicKeys = order.filter((key) => ['home', 'biblioteca'].includes(key));
+          const userKeys = order.filter((key) => ['meus-processos', 'coordenador', 'configuracoes'].includes(key));
+          const informationKeys = order.filter((key) =>
+            !key.startsWith('DIVIDER') && !publicKeys.includes(key) && !userKeys.includes(key)
+          );
+          const showSectionDividers = layoutConfig.sidebarShowDividers !== false && layoutConfig.sidebarDividerStyle !== 'none';
+          const sectionDividerStyle = {
+            borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider,
+            borderStyle: layoutConfig.sidebarDividerStyle || 'solid',
+          };
+          const renderSection = (title: string, keys: string[], index: number) => {
+            const visibleKeys = keys.filter((key) => allNavMap[key]?.visible);
+            if (!visibleKeys.length && title !== 'ÁREA DO USUÁRIO') return null;
+            return <section key={title} aria-label={title} className={index > 0 ? `pt-3 ${showSectionDividers ? 'border-t' : ''}` : ''} style={index > 0 && showSectionDividers ? sectionDividerStyle : undefined}>
+              <p className="portal-sidebar-section-heading px-3.5 mb-2 font-extrabold uppercase tracking-widest" style={{ color: sidebarAccent }}>{title}</p>
+              <div className="space-y-1">
+                {visibleKeys.length ? visibleKeys.map((key, itemIndex) => renderNavItem(key, itemIndex)) : (
+                  <p className="portal-sidebar-section-hint px-3.5 py-2 leading-relaxed" style={{ color: layoutConfig.sidebarTextColor || PORTAL_THEME.text.light }}>
+                    Entre no Portal para acompanhar seus TCCs e atividades.
+                  </p>
+                )}
+              </div>
+            </section>;
           };
           return <>
-            <div className="shrink-0 space-y-1.5">{order.map(renderNavItem)}</div>
-            <div className="mt-auto shrink-0 pt-2.5">
-              {renderNavItem('sugestoes', order.length)}
+            <div className="shrink-0 space-y-3">
+              {renderSection('CONSULTA PÚBLICA', publicKeys, 0)}
+              {renderSection('ÁREA DO USUÁRIO', userKeys, 1)}
+              {renderSection('INFORMAÇÕES', informationKeys, 2)}
+            </div>
+            <div className={`mt-auto shrink-0 space-y-1 pt-2.5 ${showSectionDividers ? 'border-t' : ''}`} style={showSectionDividers ? sectionDividerStyle : undefined}>
+              {renderNavItem('declaracao-comparecimento', order.length)}
+              {renderNavItem('sugestoes', order.length + 1)}
             </div>
           </>;
         })()}
