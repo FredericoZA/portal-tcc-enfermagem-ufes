@@ -1,4 +1,6 @@
-# Inteligência contínua e estatísticas
+# Histórico do módulo de relatórios e diagnósticos por regras
+
+> **Situação:** componente de propostas automatizadas legado, descontinuado na manutenção diária. Este documento é preservado para rastreabilidade. A página pública de **Sugestões** recebe contribuições voluntárias dos usuários; os indicadores institucionais permanecem disponíveis nas rotas próprias.
 
 ## Resultado
 
@@ -11,8 +13,8 @@ Eles ficam em `00_SISTEMA/01_INTELIGENCIA_CONTINUA` dentro da pasta raiz privada
 
 ## Atualização
 
-- **Diária:** a rota autenticada `/api/cron/storage-cleanup` executa a manutenção do staging e recalcula os relatórios.
-- **Sob demanda:** o Master usa **Configurações → Operação, continuidade e conformidade → Atualizar os dois arquivos**.
+- **Diária (descontinuada):** a rota autenticada `/api/cron/storage-cleanup` mantém a limpeza, os backups e as rotinas operacionais, mas não recalcula mais propostas nem relatórios desta funcionalidade legada.
+- **Sob demanda (legado):** a API administrativa ainda preserva as rotas para compatibilidade, mas não há controle ativo dessa funcionalidade na interface atual; não se deve confundir esses relatórios com os indicadores oficiais.
 - **Sem Google conectado:** os relatórios continuam disponíveis para download no painel, com a sincronização do Drive marcada como pendente ou falha.
 - **Persistência:** estatísticas, propostas, decisões e metadados dos arquivos integram o estado transacional e o backup do portal.
 
