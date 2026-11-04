@@ -6,6 +6,7 @@ const fixture=()=>{const p=structuredClone(DEMO_PROCESSES[0]);p.orientador={...p
 test('pedido usa um único local e pede aceite ou recusa sem alternativa',()=>{
  const p=fixture(),message=reservationRequestEmail({process:p,baseUrl:'https://portal.example/',courseName:'Curso de Enfermagem'});
  assert.ok(message.text.startsWith('Prezado Departamento,'));assert.match(message.text,/reserva do auditório/);assert.match(message.text,/Horário: 14:00 às 15:30/);
+ assert.match(message.text,/Data: sexta-feira, 30\/10\/2026/);
  assert.match(message.text,/Local: Auditório/);assert.match(message.text,/Orientador: Prof/);
  assert.doesNotMatch(message.text,/alternativa|Observação:/);
  assert.doesNotMatch(message.text,/Sala de reuniões/);
