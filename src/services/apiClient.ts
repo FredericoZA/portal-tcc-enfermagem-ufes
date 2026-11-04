@@ -309,6 +309,7 @@ export const apiClient = {
   getFormArchives:()=>fetchApi<any[]>('/api/admin/form-archives'),
   retryFormArchive:(id:string)=>fetchApi<any>(`/api/admin/form-archives/${encodeURIComponent(id)}/retry`,{method:'POST'}),
   connectAsten:(token:string,repositoryId?:string)=>fetchApi<AstenIntegrationStatus>('/api/integrations/asten/connect',{method:'POST',body:JSON.stringify({token,repositoryId})}),
+  deleteSignatureJob:(id:string)=>fetchApi<{deleted:boolean;id:string}>(`/api/signatures/jobs/${encodeURIComponent(id)}`,{method:'DELETE'}),
   getSignatureJobs:()=>fetchApi<SignatureJob[]>('/api/signatures/jobs'),
   retrySignatureJob:(id:string)=>fetchApi<SignatureJob>(`/api/signatures/jobs/${id}/retry`,{method:'POST'}),
   reconcileSignatureJob:(id:string)=>fetchApi<SignatureJob>(`/api/signatures/jobs/${id}/reconcile`,{method:'POST'}),

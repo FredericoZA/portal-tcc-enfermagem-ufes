@@ -44,3 +44,22 @@ conta. O padrão do Master é público; preferências pessoais não são incluí
 em `/api/settings`. Backup administrativo e persistência do estado incluem as
 preferências. Nenhuma alteração às credenciais ou às regras de assinatura é
 necessária.
+
+## Excluir registros de assinatura
+
+Em Registros de Assinatura, o Master usa a lixeira da coluna Ações. A coluna
+permanece acessível durante a rolagem horizontal. A exclusão requer confirmação
+e retira o registro das listas operacionais, avisos e painel de assinaturas,
+inclusive depois de recarregar ou reiniciar o servidor. Uma lista vazia não
+recebe mais uma assinatura fictícia de demonstração.
+
+Solicitações Asten pendentes exigem cancelamento confirmado pelo provedor. Se
+houver envio em curso, arquivamento pendente ou criação de envelope com resultado
+incerto, a exclusão é recusada até a conclusão ou reconciliação. Uma falha na
+confirmação não é apresentada como exclusão bem-sucedida.
+
+Excluir o registro de um documento arquivado preserva o PDF original, suas
+assinaturas e a comprovação que mantém o fluxo acadêmico concluído. O sistema
+mantém um marcador privado de exclusão e o evento de auditoria, para que retornos
+atrasados não reativem a solicitação. Isso não equivale a expurgar o envelope já
+concluído da conta externa Asten nem a apagar a assinatura dentro de um PDF.

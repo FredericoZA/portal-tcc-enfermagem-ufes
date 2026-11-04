@@ -10,6 +10,8 @@ export interface SignatureSignerSnapshot {
 }
 
 export interface SignatureJob {
+  /** Excluded from operational lists; archived evidence remains valid. */
+  removedFromLogsAt?: string; removedFromLogsBy?: string;
   signedAt?: string;
   id: string; processId: string; protocol: string; documentType: Exclude<DocumentType, 'CONVITE'>;
   documentTitle: string; documentVersion: number; sourceDataRevision: number; fileName: string; mimeType: string;
