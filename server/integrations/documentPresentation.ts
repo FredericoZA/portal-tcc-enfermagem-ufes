@@ -120,7 +120,7 @@ export function declarationDateLayoutRequests(document:any):any[]{
   const scope=node.tabProperties?.tabId||tabId,content=node.body?.content;
   if(Array.isArray(content))for(let i=0;i<content.length;i++){
    const entry=content[i],text=entry.paragraph?.elements?.map((e:any)=>e.textRun?.content||'').join('').trim()||'';
-   if(!/^[\p{L} .’'-]+(?:[-–]\s*[A-Z]{2})?[, -]+\d{1,2} de [\p{L}]+ de \d{4}\.?$/u.test(text))continue;
+   if(!/^[\p{L} .’'-]+(?:[-–]\s*[A-Z]{2})?[, -]+(?:(?:segunda|terça|quarta|quinta|sexta)-feira|sábado|domingo,\s*)?\d{1,2} de [\p{L}]+ de \d{4}\.?$/u.test(text))continue;
    const range=(value:any)=>({startIndex:value.startIndex,endIndex:value.endIndex,...(scope?{tabId:scope}:{})});
    groups.push({index:entry.startIndex,request:{updateParagraphStyle:{range:range(entry),paragraphStyle:{alignment:'END',spaceAbove:{magnitude:6,unit:'PT'},spaceBelow:{magnitude:6,unit:'PT'},lineSpacing:100},fields:'alignment,spaceAbove,spaceBelow,lineSpacing'}}});
    const previous=content[i-1],before=previous?.paragraph?.elements;
