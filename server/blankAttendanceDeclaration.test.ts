@@ -1,32 +1,42 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { PDFDict, PDFDocument, PDFName } from 'pdf-lib';
+import { PDFDocument, PDFName } from 'pdf-lib';
 import { createBlankAttendanceDeclarationPdf } from '../src/utils/blankAttendanceDeclaration';
 
-test('declaração usa PDF A4 em branco, cabeçalho com logo COLENF e rodapé discreto', async () => {
-  const logo = new Uint8Array(readFileSync('public/colenf-logo.png'));
-  const bytes = await createBlankAttendanceDeclarationPdf(logo);
-  assert.ok(bytes.byteLength > 4_000, 'o documento precisa conter mais que a estrutura PDF vazia');
+test('declaração aprovada gera PDF A4 íntegro, sem imagem e com Comissão de TCC', async () => {
+  const bytes = await createBlankAttendanceDeclarationPdf();
+  assert.ok(bytes.byteLength > 1_000, 'o PDF deve conter a declaração completa');
   const pdf = await PDFDocument.load(bytes);
   assert.equal(pdf.getPageCount(), 1);
-  assert.equal(pdf.getTitle(), 'Declaração de comparecimento - modelo em branco');
-  const { width, height } = pdf.getPage(0).getSize();
+  assert.equal(pdf.getTitle(), 'Declaração de comparecimento - Comissão de TCC');
+  assert.match(pdf.getAuthor() || '', /Departamento de Enfermagem - Comissão de TCC/);
+  assert.doesNotMatch(pdf.getAuthor() || '', /Colegiado/i);
+  const page = pdf.getPage(0);
+  const { width, height } = page.getSize();
   assert.ok(Math.abs(width - 595.28) < 1);
   assert.ok(Math.abs(height - 841.89) < 1);
   assert.equal(pdf.getForm().getFields().length, 0);
-  const resources = pdf.getPage(0).node.Resources();
-  const imageObjects = resources?.lookup(PDFName.of('XObject'), PDFDict);
-  assert.ok(imageObjects && imageObjects.keys().length >= 1, 'a logomarca oficial precisa estar embutida no PDF');
-
-  const source = readFileSync('src/utils/blankAttendanceDeclaration.ts', 'utf8');
-  assert.match(source, /fetch\('\/colenf-logo\.png'/);
-  assert.match(source, /COLEGIADO DO CURSO DE ENFERMAGEM E OBSTETRÍCIA/);
-  assert.match(source, /Assinatura do\(a\) professor\(a\) orientador\(a\)/);
-  assert.doesNotMatch(source, /page\.drawRectangle\(/, 'não usar barras ou caixas decorativas no documento');
+  assert.equal(page.node.Resources()?.lookup(PDFName.of('XObject')), undefined, 'modelo não deve conter imagens');
 });
 
-test('barra lateral mantém o download público diretamente acima das sugestões', () => {
+test('modelo contém estrutura institucional aprovada e assinatura do orientador', () => {
+  const source = readFileSync('src/utils/blankAttendanceDeclaration.ts', 'utf8');
+  for (const text of [
+    'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO',
+    'CENTRO DE CIÊNCIAS DA SAÚDE',
+    'DEPARTAMENTO DE ENFERMAGEM',
+    'COMISSÃO DE TCC',
+    'DECLARAÇÃO DE COMPARECIMENTO',
+    'Assinatura do(a) professor(a) orientador(a)',
+    'Departamento de Enfermagem · Comissão de TCC · CCS/UFES',
+  ]) assert.ok(source.includes(text), `Campo ausente: ${text}`);
+  assert.doesNotMatch(source, /embedPng|drawImage|loadOfficialCourseLogo|fetch\('/, 'o PDF não depende de logomarcas externas');
+  assert.doesNotMatch(source, /COLEGIADO DO CURSO/i);
+  assert.match(source, /declaracao-de-comparecimento-comissao-tcc\.pdf/);
+});
+
+test('barra lateral tem subtítulos, botão público e sugestões imediatamente abaixo', () => {
   const sidebar = readFileSync('src/components/Sidebar.tsx', 'utf8');
   for (const title of ['CONSULTA PÚBLICA', 'ÁREA DO USUÁRIO', 'INFORMAÇÕES']) {
     assert.ok(sidebar.includes(title));
