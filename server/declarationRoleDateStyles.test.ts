@@ -19,3 +19,10 @@ test('standalone declaration date aligns to the right and keeps compact spacing'
  assert.equal(requests[0].updateParagraphStyle.paragraphStyle.spaceAbove.magnitude,6);
  assert.ok(requests[0].updateParagraphStyle.fields.includes('alignment'));
 });
+
+test('data da declaração com dia da semana continua alinhada à direita',()=>{
+ const text='Vitória - ES, terça-feira, 3 de novembro de 2026.\\n';
+ const requests=declarationDateLayoutRequests({body:{content:[{startIndex:1,endIndex:text.length+1,paragraph:{elements:[{startIndex:1,textRun:{content:text}}]}}]}});
+ assert.equal(requests.length,1);
+ assert.equal(requests[0].updateParagraphStyle.paragraphStyle.alignment,'END');
+});
