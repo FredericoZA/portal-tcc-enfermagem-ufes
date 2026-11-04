@@ -227,6 +227,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
             <label className={compactField}>
               <span className={fieldLabel}>Nova data *</span>
               <input required type="date" value={requested.date} onChange={(event) => setRequested((current) => ({ ...current, date: event.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs" />
+              {requested.date&&<span className="text-[11px] font-medium text-emerald-900">{formatDateWithWeekday(requested.date)}</span>}
             </label>
             <label className={compactField}>
               <span className={fieldLabel}>Novo horário *</span>
