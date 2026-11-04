@@ -23,7 +23,7 @@ test('texto e data personalizados respeitam o destinatário e o local escolhido'
  const first=recipientEmailVariables(p,p.aluno1.email,common,'https://portal.example');
  const advisor=recipientEmailVariables(p,p.orientador.email,common,'https://portal.example');
  assert.equal(first.DESTINATARIO_NOME,p.aluno1.nome);assert.equal(advisor.DESTINATARIO_NOME,p.orientador.nome);
- assert.equal(first.CAMPO_04,'23/10/2026 às 20:00');assert.equal(first.CAMPO_07_LOCAL,'Sala de reuniões');
+ assert.equal(first.CAMPO_04,'sexta-feira, 23/10/2026 às 20:00');assert.equal(first.CAMPO_07_LOCAL,'Sala de reuniões');
  assert.match(first.ORIENTACOES_ACESSO,/Dados do processo|confira os dados/);assert.match(advisor.ORIENTACOES_ACESSO,/Avaliação e ata/);
  assert.match(advisor.LINK_PROCESSO,/secao=avaliacao/);assert.match(first.LINK_PROCESSO,/tcc=/);
 });
