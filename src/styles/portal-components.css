@@ -1234,6 +1234,27 @@ button[aria-label^="Configurar exibição"],
   cursor: pointer;
 }
 
+/* Filtro compacto da caixa de sugestões; também funciona no cabeçalho por portal. */
+.portal-feedback-status-filter {
+  box-sizing: border-box;
+  width: 128px;
+  max-width: min(150px, 50vw);
+  height: var(--portal-toolbar-button-size);
+  min-height: var(--portal-toolbar-button-size);
+  padding-inline: 10px;
+  background: var(--portal-brand-sage);
+  border-color: var(--portal-brand-action-border);
+  transition: background-color 150ms ease-out;
+}
+.portal-feedback-status-filter:hover {
+  background: var(--portal-brand-sage-hover);
+}
+.portal-feedback-status-filter select {
+  height: 100%;
+  min-height: 0;
+  padding-block: 0;
+}
+
 .portal-settings-workspace-divider {
   height: var(--portal-sheet-content-divider);
   min-height: var(--portal-sheet-content-divider);
