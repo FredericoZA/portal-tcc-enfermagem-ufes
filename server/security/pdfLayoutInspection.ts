@@ -126,7 +126,8 @@ DecodeStream.prototype.ensureBuffer = function(requested) {
     const message = error instanceof Error && /^O PDF excede/.test(error.message) ? error.message : 'Não foi possível analisar o PDF com segurança.';
     parentPort.postMessage({ok:false,message});
   } finally {
-    if (doc) await doc.destroy(); else if (task) await task.destroy();
+    if (doc && typeof doc.destroy === 'function') await doc.destroy();
+    else if (task && typeof task.destroy === 'function') await task.destroy();
   }
 })();
 `;
