@@ -71,7 +71,8 @@ test('indicadores oferecem painel analítico com séries, comparações e distri
   assert.match(page, /Volatilidade mensal/);
   assert.match(page, /Dia da semana/);
   assert.match(page, /Faixa de horário/);
-  assert.match(page, /Temas recorrentes/);
-  assert.match(page, /Locais das defesas/);
+  assert.doesNotMatch(page, /Temas recorrentes/);
+  assert.doesNotMatch(page, /Locais das defesas/);
+  assert.match(page, /palavras-chave e locais informados/);
   assert.match(page, /Resultados das bancas/);
 });
