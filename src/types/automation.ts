@@ -103,6 +103,8 @@ export interface EmailDeliveryAttempt {
   status: EmailDeliveryStatus;
   gmailMessageId?: string;
   gmailThreadId?: string;
+  /** Conta autenticada retornada pelo provedor ao aceitar esta tentativa. */
+  sender?: string;
   errorCode?: string;
   errorMessage?: string;
 }
@@ -124,8 +126,12 @@ export interface EmailDeliveryRecord {
   idempotencyKey: string;
   recipient: string;
   cc?: string[];
+  auditCopyMode?: 'operational' | 'sensitive';
+  auditCopyEmail?: string;
+  requestedBy?: string;
+  sender?: string;
   subject: string;
-  /** Conteúdo efetivamente renderizado no momento da primeira tentativa. */
+  /** Conteúdo efetivamente enviado à última tentativa, inclusive se ela falhar. */
   renderedText?: string;
   renderedHtml?: string;
   status: EmailDeliveryStatus;

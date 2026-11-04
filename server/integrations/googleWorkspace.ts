@@ -292,7 +292,7 @@ export async function getGoogleWorkspaceStatus() {
   };
 }
 
-export async function getGoogleWorkspaceAccessToken(): Promise<string> {
+async function getGoogleWorkspaceCredentials(): Promise<{accessToken: string; sender?: string}> {
   const stored = await loadIntegrationSecret('google_workspace');
   if (!stored?.value) throw new Error('A conta Google do portal ainda não foi autorizada.');
   const tokens = await tokenRequest(new URLSearchParams({
@@ -301,7 +301,12 @@ export async function getGoogleWorkspaceAccessToken(): Promise<string> {
     refresh_token: stored.value,
     grant_type: 'refresh_token'
   }));
-  return tokens.access_token;
+  const email = String(stored.metadata.email || '').trim().toLowerCase();
+  return {accessToken: tokens.access_token, sender: /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email) ? email : undefined};
+}
+
+export async function getGoogleWorkspaceAccessToken(): Promise<string> {
+  return (await getGoogleWorkspaceCredentials()).accessToken;
 }
 
 async function googleCalendarJson<T>(accessToken:string,url:string,init:RequestInit={}):Promise<T>{
@@ -734,8 +739,10 @@ export function buildGmailRawMessage(input: GmailMessageInput, boundarySeed = Da
   ].join('\r\n');
 }
 
-export async function sendGmailMessage(input: GmailMessageInput): Promise<{id?:string;threadId?:string}> {
-  const accessToken = await getGoogleWorkspaceAccessToken();
+export async function sendGmailMessage(input: GmailMessageInput): Promise<{id?:string;threadId?:string;sender?:string}> {
+  // The authenticated account's email comes from the same credential read used
+  // for the token; no extra userinfo/profile request or secret lookup is needed.
+  const {accessToken,sender} = await getGoogleWorkspaceCredentials();
   const raw = buildGmailRawMessage(input);
   const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
     method: 'POST',
@@ -752,7 +759,7 @@ export async function sendGmailMessage(input: GmailMessageInput): Promise<{id?:s
     throw new Error(String(payload?.error?.message || `Gmail respondeu ${response.status}.`));
   }
   const payload=await response.json().catch(()=>({}));
-  return {id:payload?.id?String(payload.id):undefined,threadId:payload?.threadId?String(payload.threadId):undefined};
+  return {id:payload?.id?String(payload.id):undefined,threadId:payload?.threadId?String(payload.threadId):undefined,sender};
 }
 
 /** Delete only events bound to this exact TCC in the configured calendar. */

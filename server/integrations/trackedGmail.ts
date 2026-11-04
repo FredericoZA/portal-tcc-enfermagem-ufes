@@ -1,9 +1,11 @@
 import { createHash } from 'crypto';
 import type { EmailDeliveryAttempt, EmailDeliveryRecord, EmailDeliveryStatus, WorkflowEventCode } from '../../src/types/automation';
+import { emailAuditCopy, type EmailAuditCopyMode } from './emailAuditCopy';
 
 export interface GmailAcceptedResponse {
   id?: string;
   threadId?: string;
+  sender?: string;
 }
 
 export interface TrackedEmailInput {
@@ -17,6 +19,10 @@ export interface TrackedEmailInput {
   templateId?: string;
   recipient: string;
   cc?: string[];
+  auditCopyMode?: EmailAuditCopyMode;
+  auditCopyEmail?: string;
+  requestedBy?: string;
+  sender?: string;
   subject: string;
   text: string;
   html?: string;
@@ -33,6 +39,7 @@ export interface EmailDeliveryJournal {
 export interface TrackedGmailPorts {
   send(input: { threadId?:string; messageId?:string; inReplyTo?:string; to: string; cc?: string[]; subject: string; text: string; html?: string; attachments?: Array<{ fileName: string; mimeType: string; content: Buffer }> }): Promise<GmailAcceptedResponse | void>;
   journal: EmailDeliveryJournal;
+  auditCopyEmail?: string;
   now?: () => Date;
 }
 
@@ -72,6 +79,10 @@ export function initialEmailDelivery(input: TrackedEmailInput, now = new Date())
     idempotencyKey: key,
     recipient: cleanEmail(input.recipient),
     cc: input.cc?.map(cleanEmail),
+    auditCopyMode: input.auditCopyMode,
+    auditCopyEmail: input.auditCopyEmail,
+    requestedBy: input.requestedBy ? cleanEmail(input.requestedBy) : undefined,
+    sender: input.sender ? cleanEmail(input.sender) : undefined,
     replyThreadId:input.replyThreadId,
     replyMessageId:input.replyMessageId,
     subject: input.subject.trim().slice(0, 998),
@@ -92,6 +103,8 @@ export async function dispatchTrackedEmail(input: TrackedEmailInput, ports: Trac
   if (existing?.status === 'ACCEPTED_BY_GMAIL') return existing;
   const now = (ports.now || (() => new Date()))();
   const record = existing || initialEmailDelivery(input, now);
+  record.requestedBy ||= input.requestedBy ? cleanEmail(input.requestedBy) : undefined;
+  record.sender ||= input.sender ? cleanEmail(input.sender) : undefined;
   if (record.attempts.length >= record.maxAttempts) {
     record.status = 'FAILED';
     record.nextRetryAt = undefined;
@@ -101,15 +114,26 @@ export async function dispatchTrackedEmail(input: TrackedEmailInput, ports: Trac
   }
   if (record.nextRetryAt && new Date(record.nextRetryAt).getTime() > now.getTime()) return record;
 
+  // Preserve the original key: enabling audit copies must never resend accepted mail.
+  // Only a real new attempt can change the recipient/body snapshot in the ledger.
+  Object.assign(record, emailAuditCopy({
+    recipient: record.recipient, cc: input.cc ?? record.cc, text: input.text, html: input.html,
+    auditCopyMode: input.auditCopyMode || record.auditCopyMode,
+    auditCopyEmail: input.auditCopyEmail || ports.auditCopyEmail || record.auditCopyEmail,
+  }));
   const attemptNumber = record.attempts.length + 1;
   const startedAt = now.toISOString();
+  record.renderedText = input.text;
+  record.renderedHtml = input.html;
   try {
     const response = (await ports.send({ threadId:record.replyThreadId,messageId:record.rfcMessageId,inReplyTo:record.replyMessageId,to: record.recipient, cc: record.cc, subject: record.subject, text: input.text, html: input.html, attachments: input.attachments })) || {};
     const completedAt = (ports.now || (() => new Date()))().toISOString();
-    const attempt: EmailDeliveryAttempt = { number: attemptNumber, startedAt, completedAt, status: 'ACCEPTED_BY_GMAIL', gmailMessageId: response?.id, gmailThreadId: response?.threadId };
+    const sender = response.sender ? cleanEmail(response.sender) : undefined;
+    const attempt: EmailDeliveryAttempt = { number: attemptNumber, startedAt, completedAt, status: 'ACCEPTED_BY_GMAIL', gmailMessageId: response?.id, gmailThreadId: response?.threadId, sender };
     record.attempts.push(attempt);
     record.status = 'ACCEPTED_BY_GMAIL';
     record.acceptedAt = completedAt;
+    if (sender) record.sender = sender;
     record.nextRetryAt = undefined;
     record.updatedAt = completedAt;
   } catch (error) {

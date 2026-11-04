@@ -1,6 +1,6 @@
 import {formatDateTimeWithWeekday} from '../utils/formatters';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Download, FileCheck2, Upload } from 'lucide-react';
+import { Download, FileCheck2, Upload, ListFilter } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { portalConfirm, portalNotice } from '../services/portalDialogs';
@@ -11,6 +11,8 @@ import { SettingsWorkspaceHeaderPortal } from '../components/SettingsWorkspaceMo
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { loadTableConfig, type ColumnDef } from '../components/TableColumnSelectorPanel';
 import { loadGlobalTableConfig, type TableTextFormat } from '../utils/tableFormatters';
+import { AuditLogDetails } from '../components/AuditLogDetails';
+import { auditActionLabel, auditIsReservationEmailDecision, auditActor, auditReference, auditSearchText, canRestoreAudit, isEmailAudit } from '../utils/auditLogPresentation';
 
 const LOG_COLUMNS: ColumnDef[] = [
   { key: 'timestamp', label: 'Data / Hora', isFixed: true },
@@ -28,6 +30,7 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [kind, setKind] = useState<'all' | 'activity' | 'email'>('all');
   const [recordsLimit, setRecordsLimit] = useState<number | 'all'>(initialConfig.recordsLimit || 25);
   const [startDate, setStartDate] = useState(initialConfig.startDate || '');
   const [endDate, setEndDate] = useState(initialConfig.endDate || '');
@@ -35,12 +38,6 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(initialConfig.visibleColumns || DEFAULT_VISIBLE);
   const [textFormat] = useState<TableTextFormat>(() => ({ ...loadGlobalTableConfig(), ...(initialConfig.textFormat || {}) }));
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
-  useEffect(() => {
-    if (!selectedLog) return;
-    const closeSelectedAuditOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setSelectedLog(null); };
-    window.addEventListener('keydown', closeSelectedAuditOnEscape);
-    return () => window.removeEventListener('keydown', closeSelectedAuditOnEscape);
-  }, [selectedLog]);
   const [rollingBack, setRollingBack] = useState('');
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
@@ -57,12 +54,13 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
     const start = startDate ? new Date(`${startDate}T00:00:00`).getTime() : 0;
     const end = endDate ? new Date(`${endDate}T23:59:59.999`).getTime() : Number.POSITIVE_INFINITY;
     return logs.filter(log => {
+      if (kind === 'email' && !isEmailAudit(log) || kind === 'activity' && isEmailAudit(log)) return false;
       const timestamp = new Date(log.timestamp).getTime();
       if (Number.isFinite(timestamp) && (timestamp < start || timestamp > end)) return false;
       if (!term) return true;
-      return [log.actorEmail, log.action, log.processId, log.entityType, log.entityId].filter(Boolean).join(' ').toLowerCase().includes(term);
+      return auditSearchText(log).includes(term);
     });
-  }, [logs, search, startDate, endDate]);
+  }, [logs, search, startDate, endDate, kind]);
   const shown = filtered;
   const activeColumns = columnOrder.filter(key => visibleColumns[key] !== false);
 
@@ -105,21 +103,33 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
 
   const renderCell = (log: AuditLog, key: string) => {
     if (key === 'timestamp') return <span className="font-mono text-[11px] whitespace-nowrap">{formatDateTimeWithWeekday(log.timestamp)}</span>;
-    if (key === 'actorEmail') return <span className="font-semibold break-all">{log.actorEmail || 'Sistema'}</span>;
-    if (key === 'action') return <span className="font-semibold text-[10px] normal-case text-slate-900">{log.action || '—'}</span>;
-    if (key === 'reference') return <span className="font-mono text-[11px]">{log.processId ? `TCC ${log.processId}` : `${log.entityType || 'Sistema'}${log.entityId ? ` · ${log.entityId}` : ''}`}</span>;
+    if (key === 'actorEmail') {
+      const actor = auditActor(log);
+      return <span className="break-words text-[11px] font-semibold">{actor.name}{auditIsReservationEmailDecision(log) && <span className="block text-[10px] font-normal text-slate-600">Destinatário do link de resposta</span>}{actor.email && actor.email !== actor.name && <span className="mt-0.5 block break-all text-[10px] font-normal text-slate-600">{actor.email}</span>}</span>;
+    }
+    if (key === 'action') return <span className="font-semibold text-[11px] normal-case text-slate-900">{auditActionLabel(log)}</span>;
+    if (key === 'reference') {
+      const reference = auditReference(log);
+      return <span className="block min-w-0 text-[11px] font-semibold">{reference.title}{reference.detail && <span className="mt-0.5 block max-w-[52ch] truncate text-[10px] font-normal text-slate-600" title={reference.detail}>{reference.detail}</span>}</span>;
+    }
     return <div className="flex justify-center gap-1.5 whitespace-nowrap">
-      {(log.before || log.after) && <button type="button" onClick={() => setSelectedLog(log)} className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-bold hover:bg-slate-50">Detalhes</button>}
-      <button type="button" onClick={() => void rollback(log)} disabled={rollingBack === log.id} className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-bold hover:bg-slate-50 disabled:opacity-50">{rollingBack === log.id ? 'Restaurando…' : 'Restaurar'}</button>
+      <button type="button" onClick={() => setSelectedLog(log)} className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-bold hover:bg-slate-50">Detalhes</button>
+      {canRestoreAudit(log) && <button type="button" onClick={() => void rollback(log)} disabled={rollingBack === log.id} className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-bold hover:bg-slate-50 disabled:opacity-50">{rollingBack === log.id ? 'Restaurando…' : 'Restaurar'}</button>}
     </div>;
   };
 
   const toolbar = <div className="portal-audit-toolbar flex flex-wrap items-center justify-end gap-1.5">
+    <label className="portal-settings-header-selector text-[10px]" style={{ backgroundColor: 'var(--portal-brand-sage)' }} title="Filtrar registro de logs">
+      <ListFilter className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      <select aria-label="Tipo de registro" value={kind} onChange={event => setKind(event.target.value as 'all' | 'activity' | 'email')}>
+        <option value="all">Todos os registros</option><option value="activity">Atividades</option><option value="email">Envios de e-mail</option>
+      </select>
+    </label>
     <button type="button" onClick={() => void downloadBackup()} className="portal-toolbar-icon-button" title="Baixar backup JSON" aria-label="Baixar backup JSON"><Download className="h-3.5 w-3.5"/></button>
     <button type="button" onClick={() => restoreInputRef.current?.click()} className="portal-toolbar-icon-button" title="Restaurar backup JSON" aria-label="Restaurar backup JSON"><Upload className="h-3.5 w-3.5"/></button>
     <input ref={restoreInputRef} type="file" accept=".json,application/json" className="hidden" onChange={event => restoreBackup(event.target.files?.[0])}/>
     <span className="portal-toolbar-group-divider" role="separator" aria-orientation="vertical" />
-    <SearchPopover value={search} onChange={setSearch} placeholder="Usuário, ação, processo ou entidade" textFormat={textFormat}/>
+    <SearchPopover value={search} onChange={setSearch} placeholder="Nome, e-mail, atividade ou TCC" textFormat={textFormat}/>
     <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} allColumns={LOG_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="audit_logs" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Registro de logs"/>
   </div>;
 
@@ -135,14 +145,6 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
       </TableScrollWrapper>
     </div>
 
-    {selectedLog && <div className="portal-modal-backdrop fixed inset-0 z-[1000008] flex items-center justify-center p-4" onClick={() => setSelectedLog(null)}>
-      <div role="dialog" aria-modal="true" aria-label="Detalhes do registro de log" className="portal-standard-modal portal-modal-surface w-full max-w-4xl overflow-hidden" style={{ backgroundColor: 'var(--portal-surface-page)' }} onClick={event => event.stopPropagation()}>
-        <div className="portal-modal-header px-4"><FileCheck2 className="h-4 w-4"/><strong className="text-xs normal-case">Detalhes do registro</strong></div><div className="portal-modal-divider" aria-hidden="true" />
-        <div className="grid max-h-[75vh] gap-3 overflow-y-auto p-3 md:grid-cols-2" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
-          <section className="rounded-xl border border-slate-300 p-3" style={{ backgroundColor: 'var(--portal-surface-panel)' }}><strong className="text-[10px] normal-case text-slate-600">Estado anterior</strong><pre className="mt-2 max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[10px]">{selectedLog.before ? JSON.stringify(selectedLog.before, null, 2) : '(sem estado anterior)'}</pre></section>
-          <section className="rounded-xl border border-slate-300 p-3" style={{ backgroundColor: 'var(--portal-surface-panel)' }}><strong className="text-[10px] normal-case text-slate-600">Estado posterior</strong><pre className="mt-2 max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-2 text-[10px]">{selectedLog.after ? JSON.stringify(selectedLog.after, null, 2) : '(sem estado posterior)'}</pre></section>
-        </div>
-      </div>
-    </div>}
+    {selectedLog && <AuditLogDetails log={selectedLog} onClose={() => setSelectedLog(null)} />}
   </div>;
 };

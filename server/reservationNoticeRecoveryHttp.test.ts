@@ -27,7 +27,7 @@ test('recuperação autenticada reconcilia recusa antiga ainda PENDENTE e cria u
   assert.equal(state.processes[0].defesa.localStatus,'RECUSADO','o cron corrige o estado canônico sem novo clique do departamento');
   assert.equal(state.processes[1].defesa.localStatus,'PENDENTE','uma resposta de revisão anterior não cancela a nova solicitação');
   assert.equal(state.emailDeliveries.length,1);const mail=state.emailDeliveries[0];
-  assert.equal(mail.recipient,'department@example.invalid');assert.deepEqual(mail.cc.sort(),[p.aluno1.email,p.aluno2?.email,p.orientador.email].filter(Boolean).sort());
+  assert.equal(mail.recipient,'department@example.invalid');assert.deepEqual(mail.cc.sort(),[p.aluno1.email,p.aluno2?.email,p.orientador.email,'tccenfermagemufes@gmail.com'].filter(Boolean).sort());
   assert.match(mail.renderedText,/Refazer reserva/);assert.match(mail.renderedText,/evitar retrabalho/);assert.match(mail.subject,/recusado/);
   assert.equal(mail.status,'RETRY','sem Google real, o aviso fica durável para nova tentativa');assert.ok(mail.nextRetryAt);
   assert.equal(state.formArchiveJobs?.length||0,0,'não exige gerar nem arquivar comprovante para recuperar a comunicação');

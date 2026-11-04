@@ -351,6 +351,11 @@ export interface DocumentCorrectionRequest {
 export interface AuditLog {
   id: string;
   processId?: string;
+  processProtocol?: string;
+  processTitle?: string;
+  actorName?: string;
+  source?: 'activity' | 'email';
+  emailDeliveryId?: string;
   actorEmail: string;
   actorRoles: UserRole[];
   action: string;

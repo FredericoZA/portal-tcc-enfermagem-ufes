@@ -382,6 +382,7 @@ export const apiClient = {
   getProcessAuditLogs:(id:string)=>fetchApi<AuditLog[]>(`/api/processes/${encodeURIComponent(id)}/audit-logs`),
   downloadProcessAuditLogs:(id:string)=>downloadApiFile(`/api/processes/${encodeURIComponent(id)}/audit-logs/pdf`),
   getAuditLogs: () => fetchApi<AuditLog[]>('/api/admin/audit-logs'),
+  getEmailDeliveryPreview: (id: string) => fetchApi<{subject:string;text:string;sensitive:boolean}>(`/api/admin/email-deliveries/${encodeURIComponent(id)}/preview`),
   rollbackAuditLog: (logId: string) => fetchApi<{ message: string; process?: ProcessData; settings?: GlobalSettings }>(`/api/admin/rollback-log/${logId}`, {
     method: 'POST'
   }),
