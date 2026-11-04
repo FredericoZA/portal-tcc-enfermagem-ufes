@@ -1,12 +1,12 @@
 import React from 'react';
-import {Database, Download, ExternalLink, FileSignature, FileText, Github, Sparkles} from 'lucide-react';
+import {Database, Download, ExternalLink, FileSignature, FileText, Github, BookOpen} from 'lucide-react';
 import {ColorfulHeaderIcon} from '../components/ColorfulHeaderIcon';
 import {PortalSectionDivider} from '../components/PortalSectionDivider';
 
 const REPOSITORY_URL = 'https://github.com/FredericoZA/portal-tcc-enfermagem-ufes';
 const tools = [
   {icon:Github, title: 'GitHub', text:'Código-fonte e documentação da instalação. Comece lendo README, implantação e política de segurança.', href:REPOSITORY_URL, action:'Abrir no GitHub'},
-  {icon:Sparkles, title:'Guia para a IA', text:'Arquitetura, preparação das contas, fluxo atual e roteiro de validação de uma nova instalação.', href:'/replicacao/GUIA_PARA_IA.md', action:'Baixar guia para a IA', download:true},
+  {icon:BookOpen, title:'Tutorial de instalação', text:'Passo a passo para instalar o Portal em outro curso, configurar os serviços e conferir o funcionamento.', href:'/replicacao/GUIA_DE_INSTALACAO.md', action:'Baixar tutorial', download:true},
   {icon:FileText, title:'Modelos', text:'Convite, ata, termo e declaração em um único arquivo ZIP. Importe cópias próprias e confira as variáveis antes de usar.', href:'/api/public/replication-models/all/download', action:'Baixar modelos', download:true},
   {icon:Database, title:'Supabase, Vercel e Google Workspace', text:'Supabase guarda registros, permissões e filas; Google Drive guarda os arquivos; Vercel mantém o Portal online. O transporte temporário privado de arquivos é removido após o uso.'},
   {icon:FileSignature, title:'Asten e Gov.br', text:'Ata pelo orientador; Termo pelos autores e orientador, se houver publicação; Declaração pela presidência. O guia explica Asten e Gov.br.'},
@@ -19,7 +19,7 @@ export const PortalReplicationPage: React.FC = () => (
     <PortalSectionDivider/>
     <section className="portal-layer-panel p-3 sm:p-4" aria-labelledby="replication-title">
       <h2 id="replication-title" className="text-base font-bold">Criar uma instalação para outro curso</h2>
-      <p className="mt-2 max-w-5xl text-sm leading-6">Código, guia para a IA, modelos e serviços estão reunidos abaixo. Siga o guia para configurar uma instalação com banco, contas, arquivos e credenciais próprios.</p>
+      <p className="mt-2 max-w-5xl text-sm leading-6">Código, tutorial de instalação, modelos e serviços estão reunidos abaixo. Siga o passo a passo para configurar uma instalação independente, com banco, contas, arquivos e credenciais próprios.</p>
       <p className="mt-2 max-w-5xl text-xs leading-5 text-slate-600">Confira a revisão do código no GitHub antes de instalar. Alterações em revisão local só passam a integrar o repositório após sua publicação. A nova instalação deve funcionar com o computador do desenvolvedor desligado.</p>
       <div className="mt-4 grid auto-rows-fr items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {tools.map(({icon:Icon,title,text,...tool})=><article key={title} className={CARD_CLASS}>
