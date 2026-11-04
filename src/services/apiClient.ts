@@ -200,7 +200,6 @@ export const apiClient = {
   verifyLoginCode:(email:string,code:string)=>fetchApi<any>('/api/auth/verify-code',{method:'POST',body:JSON.stringify({email,code})}),
   logout:()=>fetchApi<{signedOut:boolean}>('/api/auth/logout',{method:'POST'}),
   getPublicProcess:(id:string)=>fetchApi<any>(`/api/public/processes/${encodeURIComponent(id)}`),
-  getPublicCalendar:()=>fetchApi<ProcessData[]>('/api/public/calendar'),
   getSettings: () => fetchApi<GlobalSettings>('/api/settings'),
   saveStudioImage:(input:{kind:'email'|'form';templateId:string;field:'logoUrl'|'heroImageUrl';value:string;expectedRevision:number;expectedImageValue?:string})=>fetchApi<{revision:number;savedAt:string;imageUrl:string;studio:IntegrationStudioSettings}>('/api/admin/studio/image',{method:'PATCH',body:JSON.stringify(input)}),
   updateSettings: (settings: Partial<GlobalSettings>&{studioExpectedRevision?:number;studioSaveMode?:'autosave'}) => (settings.studioSaveMode==='autosave'?fetchApiRequest<GlobalSettings>:fetchApi<GlobalSettings>)('/api/admin/settings', {
