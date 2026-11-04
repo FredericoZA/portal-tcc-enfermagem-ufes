@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatDateExtensoTotal, formatDateNumeric, formatDatePt, formatTimeExtenso, getProcessProgress, getWorkflowStagesCount, getStepNumberLabel } from '../src/utils/formatters';
+import { formatDateExtensoTotal, formatDateNumeric, formatDatePt, formatWeekdayPt, formatDateWithWeekday, formatDateNumericWithWeekday, formatDateExtensoWithWeekday, formatTimeExtenso, getProcessProgress, getWorkflowStagesCount, getStepNumberLabel } from '../src/utils/formatters';
 
 test('formatadores preservam valores civis informados no horário institucional', () => {
   assert.equal(formatDatePt('2026-09-11T14:30:00'), '11 de setembro de 2026');
@@ -73,4 +73,25 @@ test('ordenação por progresso acompanha a sequência do fluxo e só termina ap
   const progress = states.map((state) => getProcessProgress(state, 7));
   assert.deepEqual(progress.map((entry) => entry.percent), [14, 29, 71, 86, 93, 93, 100]);
   assert.ok(progress.slice(0, -1).every((entry) => entry.percent < 100));
+});
+
+test('07/12/2026 aparece como segunda-feira em e-mails, comprovantes e telas', () => {
+  assert.equal(formatWeekdayPt('2026-12-07'),'segunda-feira');
+  assert.equal(formatDateWithWeekday('2026-12-07'),'segunda-feira, 7 de dezembro de 2026');
+  assert.equal(formatDateNumericWithWeekday('2026-12-07'),'segunda-feira, 07/12/2026');
+  assert.equal(formatDateExtensoWithWeekday('2026-12-07'),'segunda-feira, sete de dezembro de dois mil e vinte e seis');
+});
+
+test('o fuso institucional preserva a data civil ao atravessar a meia-noite UTC', () => {
+  assert.equal(formatDateWithWeekday('2026-09-12T01:30:00.000Z'),'sexta-feira, 11 de setembro de 2026');
+  assert.equal(formatDateNumericWithWeekday('2026-09-12T01:30:00.000Z'),'sexta-feira, 11/09/2026');
+  assert.equal(formatWeekdayPt('2026-09-12T01:30:00.000Z'),'sexta-feira');
+});
+
+test('sábado, domingo, ano novo e datas inválidas são tratados sem alterar os dados', () => {
+  assert.equal(formatDateWithWeekday('2026-11-07'),'sábado, 7 de novembro de 2026');
+  assert.equal(formatDateWithWeekday('2026-11-08'),'domingo, 8 de novembro de 2026');
+  assert.equal(formatDateNumericWithWeekday('data-a-confirmar'),'data-a-confirmar');
+  assert.equal(formatWeekdayPt('2026-02-31'),'');
+  assert.equal(formatDateNumeric('2026-12-07'),'07/12/2026');
 });
