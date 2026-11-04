@@ -6,8 +6,9 @@ const read = (path: string) => readFileSync(new URL('../' + path, import.meta.ur
 const home = read('src/pages/HomePage.tsx');
 
 test('aviso vermelho aparece somente para reserva sem resposta do departamento', () => {
-  assert.match(home, /process\.defesa\?\.localStatus !== 'PENDENTE'/);
-  assert.match(home, /process\.defesa\?\.departmentResponse/);
+  assert.match(home, /defesa\?\.localStatus !== 'PENDENTE'/);
+  assert.match(home, /defesa\?\.departmentResponse/);
+  assert.match(home, /defesa\?\.hasReservationReceipt/);
   assert.match(home, /\(Aguardando confirmação\)/);
   assert.match(home, /color: '#b91c1c'/);
 });
