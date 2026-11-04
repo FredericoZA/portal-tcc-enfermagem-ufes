@@ -471,7 +471,6 @@ function applyPersistedState(state: PersistedPortalState) {
   if (state.studioVersions) studioVersionsStore = state.studioVersions;
   if (state.studioFormSubmissions) studioFormSubmissionsStore = state.studioFormSubmissions;
   if (state.continuousIntelligence) continuousIntelligenceStore = state.continuousIntelligence;
-  protocolCounter = processesStore.length + 1;
   googleCalendarEventsStore = generateGoogleEventsFromProcesses(processesStore);
   publishRuntimeTemplatesFromSettings();
 }
@@ -583,8 +582,6 @@ function generateGoogleEventsFromProcesses(procs: ProcessData[]): GoogleCalendar
 // Cache of Google Calendar synced events from the Master Account
 let googleCalendarEventsStore: GoogleCalendarSyncedEvent[] = generateGoogleEventsFromProcesses(processesStore);
 
-// Helper counter for TCC protocols
-let protocolCounter = processesStore.length + 1;
 
 // Helper to calculate user roles for an email
 function getUserRolesForEmail(email: string) {
@@ -799,7 +796,7 @@ function validateAcademicWindow(defenseAt?:string):string|null{
 }
 function nextProcessProtocol():string{
   const profile=resolveInstallationProfile(currentSettings);const cycle=currentAcademicCycle();const year=cycle?.year||new Date().getFullYear();
-  return nextAvailableProcessProtocol(profile,year,processesStore.map(process=>process.protocolo),processDeletionTasksStore.map(task=>task.protocol));
+  return nextAvailableProcessProtocol(profile,year,processesStore.map(process=>process.protocolo),processDeletionTasksStore.filter(task=>task.status==='PENDING').map(task=>task.protocol));
 }
 function participantEmails(process:ProcessData):string[]{return Array.from(new Set([process.aluno1.email,process.aluno2?.email,process.orientador.email,process.coorientador?.email,...process.banca.map(member=>member.email)].filter(Boolean).map(value=>normalizeEmail(String(value)))));}
 function normalizeLocation(value:string):string{return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
@@ -2682,7 +2679,6 @@ export async function createPortalApp() {
 
     const academicError=validateAcademicWindow(defesa?.startAt);if(academicError&&!isAdministrative)return res.status(409).json({error:academicError,code:'ACADEMIC_WINDOW_CLOSED'});
 
-    protocolCounter++;
     const protocolo = nextProcessProtocol();
     const newId = `proc-${Date.now()}`;
     const nowISO = new Date().toISOString();
