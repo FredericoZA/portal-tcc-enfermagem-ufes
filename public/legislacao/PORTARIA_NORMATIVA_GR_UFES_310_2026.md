@@ -12,13 +12,7 @@
 
 UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO
 
-PORTARIA
-PORTARIANORMATIVA  Nº XX,
-NORMATIVA Nº 310,DEDE
-XX23
-DEDE OUTUBRO
-XXXXXXX     DE 2026
-DE 2026
+PORTARIA NORMATIVA Nº 310, DE 23 DE OUTUBRO DE 2026
 
 Dispõe sobre o uso de sistemas de inteligência
 artificial no âmbito da Universidade Federal do
@@ -382,8 +376,6 @@ Dados: 2026.10.26
 12:56:46DE CASTRO
 
 SONIA LOPES VICTOR
-Reitor
 Vice-Reitora no Exercício da Reitoria
 
-Publicado em 27/10/2026,
-No BGP.
+Publicado em 27/10/2026, no Boletim de Gestão de Pessoas (BGP).
