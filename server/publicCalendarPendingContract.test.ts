@@ -12,6 +12,9 @@ test('calendário e lista leem projeção pública para visitantes e pessoas aut
   assert.match(page, /const \[calendarProcesses, setCalendarProcesses\]/);
   assert.match(page, /const filteredProcesses = calendarProcesses\.filter/);
   assert.match(page, /apiClient\.getPublicCalendar\(\)/);
+  const agenda = read('src/pages/AgendaPage.tsx');
+  assert.match(agenda, /apiClient\.getPublicCalendar\(\)/);
+  assert.match(agenda, /PORTAL_LIVE_UPDATE_EVENT/);
   assert.match(server, /app\.get\('\/api\/public\/calendar'.*filter\(isPublicCalendarDefense\)/);
 });
 
