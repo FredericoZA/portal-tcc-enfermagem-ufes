@@ -124,7 +124,7 @@ export interface DefesaInfo {
   /** Address fixed when the current reservation request is sent. */
   reservationRequestRecipient?: string;
   reservationRevision?: number;
-  reservationHistory?: Array<{invitationDriveFileId?:string;invitationSentAt?:string;invitationRecipients?:string[];startAt:string;endAt:string;local:string;alternateLocation?:string;locationProof?:import('./workflowOperations').LocationProof;departmentResponse?:DefesaInfo['departmentResponse'];localStatus?:DefesaInfo['localStatus'];localConfirmedAt?:string;localConfirmedBy?:string;localEvidenceUrl?:string;invalidatedAt:string;invalidatedBy:string}>;
+  reservationHistory?: Array<{reservationRevision?:number;receiptContext?:Pick<ProcessData,'titulo'|'aluno1'|'aluno2'|'orientador'|'coorientador'|'banca'>;invitationDriveFileId?:string;invitationSentAt?:string;invitationRecipients?:string[];startAt:string;endAt:string;local:string;alternateLocation?:string;locationProof?:import('./workflowOperations').LocationProof;departmentResponse?:DefesaInfo['departmentResponse'];localStatus?:DefesaInfo['localStatus'];localConfirmedAt?:string;localConfirmedBy?:string;localEvidenceUrl?:string;invalidatedAt:string;invalidatedBy:string}>;
   locationProof?: import('./workflowOperations').LocationProof;
   alternateLocation?: string;
   startAt: string;

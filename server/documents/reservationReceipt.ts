@@ -73,7 +73,14 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  const savedAuthors=(response.receiptBody||'').split('\n').filter(row=>row.startsWith('Autor:')).map(row=>row.slice(6).trim()).filter(Boolean);
  const currentAuthors=officialParticipantLines(process).filter(person=>person.key.startsWith('ALUNO_')).map(person=>person.name);
  const authorRows=savedAuthors.length?savedAuthors:(!snapshot.get('Autoria')||authors===authorNames(process)?currentAuthors:[authors]);
- for(const name of authorRows)paragraph(`Autor: ${name}`,9);
+ // Old free-text snapshots sometimes prefix a name with a registration number.
+ // That number may no longer match today's participant, so exact-current-ID filtering is insufficient.
+ const publicAuthorName=(value:string)=>{
+  const name=value.replace(/^\s*[\p{L}\p{N}._/-]*\d[\p{L}\p{N}._/-]*\s*[-–—:]\s*/u,'')
+   .replace(/\s*\([^)]*\d[^)]*\)/gu,'').trim();
+  return /\d|@/.test(name)?'Nome não disponível no registro original':name;
+ };
+ for(const name of authorRows)paragraph(`Autor: ${options.publicView?publicAuthorName(name):name}`,9);
  for(const participant of officialParticipantLines(process).filter(person=>!person.key.startsWith('ALUNO_')))paragraph(`${participant.role}: ${participant.name}`,9);
  section('Dados da defesa');
  const date=formatDateWithWeekday(response.startAt),time=`${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt)}`;

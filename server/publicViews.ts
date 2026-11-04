@@ -1,3 +1,4 @@
+import {reservationReceipts} from './reservationReceipts';
 import {publicDefenseReservationStatus} from '../src/utils/defenseReservationState';
 import type { ProcessData } from '../src/types';
 
@@ -20,6 +21,7 @@ function personName(value: { nome?: string; tratamento?: string; titulacao?: str
  * e-mail, IDs internos de pessoas ou vínculos do Drive.
  */
 export function publicCalendarView(process: ProcessData) {
+  const receiptCount = reservationReceipts(process).length;
   return {
     id: process.protocolo,
     protocolo: process.protocolo,
@@ -44,7 +46,8 @@ export function publicCalendarView(process: ProcessData) {
       endAt: process.defesa.endAt,
       local: process.defesa.local,
       localStatus: publicDefenseReservationStatus(process),
-      hasReservationReceipt: Boolean(process.defesa.departmentResponse),
+      hasReservationReceipt: receiptCount > 0,
+      reservationReceiptCount: receiptCount,
     },
     createdAt: process.createdAt,
     updatedAt: process.updatedAt,
@@ -82,6 +85,7 @@ function expandedAbstractState(process: ProcessData): PublicArtifactState {
 export function publicRepositoryView(process: ProcessData) {
   const workState = fullWorkState(process);
   const abstractState = expandedAbstractState(process);
+  const receiptCount = reservationReceipts(process).length;
   return {
     id: process.protocolo,
     protocolo: process.protocolo,
@@ -106,7 +110,8 @@ export function publicRepositoryView(process: ProcessData) {
       endAt: process.defesa.endAt,
       local: process.defesa.local,
       localStatus: publicDefenseReservationStatus(process),
-      hasReservationReceipt: Boolean(process.defesa.departmentResponse),
+      hasReservationReceipt: receiptCount > 0,
+      reservationReceiptCount: receiptCount,
     },
     avaliacao: {
       status: process.avaliacao.status,

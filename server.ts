@@ -160,6 +160,7 @@ import { buildProcessArchiveFileName, renamePortalProcessFolder, downloadDrivePd
 import { renderGoogleDriveTemplateToPdf } from './server/integrations/googleDocsRenderer';
 import { dispatchTrackedEmail } from './server/integrations/trackedGmail';
 import { buildAuditFeed, emailDeliveryPreview, emailDeliveryAuditSummary } from './server/auditFeed';
+import { reservationReceipts, reservationReceiptStatus } from './server/reservationReceipts';
 import { buildProcessVariables, compileWorkflow, executeWorkflowEvent, mergeWorkflowHtmlVariables, mergeWorkflowVariables, normalizeWorkflowEventCode, parseRecipients } from './server/workflow/runtime';
 import { buildAstenOperationalDashboard, isReconcileableAstenWebhookEvent, mapAstenEventToJobStatus, normalizeAstenWebhookEvent } from './server/integrations/astenEventLedger';
 import { buildPortalDriveFileName } from './src/services/googleDriveOrganizer';
@@ -2507,12 +2508,23 @@ export async function createPortalApp() {
     if(view.acervo.resumoExpandidoFileUrl)view.acervo.resumoExpandidoFileUrl=`/api/public/processes/${encodeURIComponent(p.protocolo)}/files/resumo-expandido/download`;
     res.setHeader('Cache-Control','private, no-store');res.json({...view,canAccessPrivate,...(canAccessPrivate?{privateProcessId:p.id}:{}),documents:publicAcademicDocuments(p,generateDefaultDocuments(p))});
   });
+  app.get('/api/public/processes/:id/reservation-receipts',(req,res)=>{
+    const p=processesStore.find(item=>item.id===req.params.id||item.protocolo===req.params.id||item.previousProtocols?.includes(req.params.id));
+    if(!p||p.status==='EM_RASCUNHO')return res.status(404).json({error:'TCC não disponível para consulta pública.'});
+    res.setHeader('Cache-Control','no-store');
+    res.json({items:reservationReceipts(p).map(item=>item.summary),currentStatus:reservationReceiptStatus(p)});
+  });
   app.get('/api/public/processes/:id/reservation-receipt',async(req,res)=>{
     if(!allowPublicDownload(req.ip||''))return res.status(429).json({error:'Limite temporário de downloads atingido.'});
-    const p=processesStore.find(item=>item.id===req.params.id||item.protocolo===req.params.id);
-    if(!p||p.status==='EM_RASCUNHO'||!p.defesa.departmentResponse)return res.status(404).json({error:'Comprovante não disponível.'});
+    const p=processesStore.find(item=>item.id===req.params.id||item.protocolo===req.params.id||item.previousProtocols?.includes(req.params.id));
+    if(!p||p.status==='EM_RASCUNHO')return res.status(404).json({error:'Comprovante não disponível.'});
+    const receipts=reservationReceipts(p),receiptId=typeof req.query.receipt==='string'?req.query.receipt:undefined;
+    if(req.query.receipt!==undefined&&!receiptId)return res.status(400).json({error:'Selecione um comprovante válido.'});
+    const selected=receiptId?receipts.find(item=>item.summary.id===receiptId):receipts.find(item=>item.summary.current)||receipts[0];
+    if(!selected)return res.status(404).json({error:'Comprovante não disponível.'});
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
-    res.type('application/pdf').attachment(`${p.protocolo}-comprovante.pdf`).send(await createReservationReceiptPdf(p,currentSettings,{publicView:true}));
+    const suffix=receiptId?`-${selected.summary.id}`:'';
+    res.type('application/pdf').attachment(`${p.protocolo}-comprovante${suffix}.pdf`).send(await createReservationReceiptPdf(selected.process,currentSettings,{publicView:true}));
   });
   app.get('/api/public/processes/:id/documents/:docId/download',async(req,res)=>{
     if(!allowPublicDownload(req.ip||''))return res.status(429).json({error:'Limite temporário de downloads atingido.'});

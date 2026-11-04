@@ -40,3 +40,16 @@ test('receipt lists each author inline and publishes only the recorded instituti
  p.defesa.departmentResponse.departmentEmail=undefined;p.defesa.departmentResponse.respondedBy='advisor-private@example.invalid';
  const external=await textOf(await createReservationReceiptPdf(p,INITIAL_SETTINGS,{publicView:true}));assert.doesNotMatch(external,/@/);
 });
+
+test('public historical author text removes old registrations even after current participants change',async()=>{
+ const p=structuredClone(DEMO_PROCESSES[0]);p.aluno1.matricula='CURRENT-123';
+ p.defesa.departmentResponse={revision:0,decision:'UNAVAILABLE',respondedAt:'2026-11-04T15:41:00Z',respondedBy:'personal@example.invalid',startAt:'2026-12-07T18:30:00Z',endAt:'2026-12-07T20:00:00Z'};
+ for(const author of ['2022101234 - Nome Social','REG2022-123 - Nome Social','Nome Social (2022101234)']){
+  p.defesa.departmentResponse.receiptBody=`Título: Estudo Histórico\nAutoria: ${author}`;
+  const text=await textOf(await createReservationReceiptPdf(p,INITIAL_SETTINGS,{publicView:true}));
+  assert.match(text,/Autor: Nome Social/);assert.doesNotMatch(text,/2022101234|REG2022-123|CURRENT-123|personal@/);
+ }
+ p.defesa.departmentResponse.receiptBody='Título: Estudo Histórico\nAutor: Nome Social registro 2022101234';
+ const text=await textOf(await createReservationReceiptPdf(p,INITIAL_SETTINGS,{publicView:true}));
+ assert.doesNotMatch(text,/2022101234/);assert.match(text,/Nome não disponível no registro original/);
+});

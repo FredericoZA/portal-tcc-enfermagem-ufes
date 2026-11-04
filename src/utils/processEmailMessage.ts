@@ -28,7 +28,7 @@ export function processEmailMessage(input:{process:ProcessData;recipient:string;
  }else if(isFinalDocumentsEmail(input.eventCode,input.templateId)){
   const final=finalDocumentsEmail({process:p,recipient:input.recipient,baseUrl:input.baseUrl,courseName:input.courseName});text=final.text;subject=final.subject;
  }else if(input.templateId==='email-comprovante-reserva'){
-  href=`${input.baseUrl.replace(/\/$/,'')}/api/public/processes/${encodeURIComponent(p.protocolo)}/reservation-receipt`;
+  href=`${input.baseUrl.replace(/\/$/,'')}/api/public/processes/${encodeURIComponent(p.protocolo)}/reservation-receipt${p.defesa.departmentResponse?`?receipt=revision-${p.defesa.departmentResponse.revision}`:''}`;
   const response=p.defesa.departmentResponse,confirmed=response?.decision==='CONFIRMED';
   label=confirmed?`Comprovante de reserva · ${p.protocolo}`:`Comprovante de indisponibilidade · ${p.protocolo}`;
   if(response){

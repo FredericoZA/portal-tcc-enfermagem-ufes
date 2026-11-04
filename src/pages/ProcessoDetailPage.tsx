@@ -456,7 +456,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const isEvaluationSubmitted = Boolean(process.avaliacao?.submittedAt) || process.avaliacao?.status === 'CONCLUIDO' || process.avaliacao?.notaFinal !== undefined;
   const isAcervoSubmitted = Boolean(process.acervo?.submittedAt);
-  const hasReservationReceipt = Boolean(process.defesa.departmentResponse || (process.defesa as { hasReservationReceipt?: boolean }).hasReservationReceipt);
+  const hasReservationReceipt = Boolean(process.defesa.departmentResponse || process.defesa.reservationHistory?.some(item=>item.departmentResponse||item.localConfirmedAt) || (process.defesa as { hasReservationReceipt?: boolean }).hasReservationReceipt);
   const canSubmitAcervo = !readOnly && Boolean(isMasterAdmin || isCommissionPresident || isStudent);
   const acervoFieldsLocked = !canSubmitAcervo || isAcervoSubmitted || !ataIsArchived || isSubmittingAcervo || Boolean(acervoUploading);
 
@@ -906,7 +906,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
         </>}>
 
-              <ReservationReceiptCard downloadUrl={hasReservationReceipt ? `/api/public/processes/${encodeURIComponent(process.protocolo)}/reservation-receipt` : undefined}/>
+              <ReservationReceiptCard protocol={process.protocolo} revision={process.defesa.reservationRevision} currentStatus={effectiveDefenseReservationStatus(process)} downloadUrl={hasReservationReceipt ? `/api/public/processes/${encodeURIComponent(process.protocolo)}/reservation-receipt` : undefined}/>
               {documents.map((doc) => {
                 const termDeclined=doc.type==='TERMO'&&publicationDeclined(process);
                 const isDownloadable = !termDeclined&&(doc.status === 'DISPONIVEL' || doc.status === 'ASSINADO');
