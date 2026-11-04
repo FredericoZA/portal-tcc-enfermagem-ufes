@@ -4,7 +4,7 @@ import {DOCUMENT_VARIABLE_KEYS,documentVariables} from '../../src/utils/document
 import {authorNames,academicName} from '../../src/utils/personPresentation';
 import {upgradeOperationalEmailTemplate,recipientEmailVariables} from '../../src/utils/operationalEmails';
 import {processLink} from '../../src/utils/processLink';
-import {formatDateNumeric,formatTime24h} from '../../src/utils/formatters';
+import {formatDateNumericWithWeekday,formatTime24h} from '../../src/utils/formatters';
 import { presentVariables } from '../../src/utils/operationalConfig';
 import { createHash } from 'crypto';
 import nodeProcess from 'node:process';
@@ -216,7 +216,7 @@ export function buildProcessVariables(context: WorkflowRuntimeContext): Record<s
     BANCA_NOMES: bankNames,
     BANCA_EMAILS: bankEmails,
     PARTICIPANTES_EMAILS: participantEmails,
-    DEFESA_DATA_HORA: `${formatDateNumeric(process.defesa.startAt)} às ${formatTime24h(process.defesa.startAt)}`,
+    DEFESA_DATA_HORA: `${formatDateNumericWithWeekday(process.defesa.startAt)} às ${formatTime24h(process.defesa.startAt)}`,
     DEFESA_LOCAL: process.defesa.local,
     RESULTADO: process.avaliacao.resultadoLabel || '',
     // Compatibilidade com modelos históricos: esta instalação não registra nota numérica.
