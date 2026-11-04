@@ -5,7 +5,7 @@ import fontkit from '@pdf-lib/fontkit';
 import type {ProcessData,GlobalSettings} from '../../src/types';
 import {resolveInstallationProfile} from '../../src/utils/installationProfile';
 import {academicName} from '../../src/utils/personPresentation';
-import {formatDatePt,formatTime24h} from '../../src/utils/formatters';
+import {formatDateWithWeekday,formatTime24h} from '../../src/utils/formatters';
 import {registrationQuestions} from '../../src/utils/operationalConfig';
 
 const fontBytes=Promise.all(['Regular','Bold'].map(weight=>readFile(path.join(process.cwd(),'server/documents/fonts',`NotoSans-${weight}.ttf`))));
@@ -25,7 +25,7 @@ export function registrationSnapshotSections(process:ProcessData,settings:Global
   if(!person?.nome?.trim())continue;
   sections.push({title,fields:[field('Nome nos documentos',academicName(person,'abbreviated'),true),field('E-mail',person.email),field('Matrícula, SIAPE ou outro registro',person.siape),field('Instituição',person.instituicao,true)]});
  }
- sections.push({title:'Agendamento solicitado',fields:[field('Data',formatDatePt(process.defesa.startAt)),field('Horário',`${formatTime24h(process.defesa.startAt)} às ${formatTime24h(process.defesa.endAt)}`),field('Local',process.defesa.local,true),...(process.defesa.alternateLocation?[field('Local alternativo',process.defesa.alternateLocation,true)]:[])]});
+ sections.push({title:'Agendamento solicitado',fields:[field('Data',formatDateWithWeekday(process.defesa.startAt)),field('Horário',`${formatTime24h(process.defesa.startAt)} às ${formatTime24h(process.defesa.endAt)}`),field('Local',process.defesa.local,true),...(process.defesa.alternateLocation?[field('Local alternativo',process.defesa.alternateLocation,true)]:[])]});
  const answers=process.registrationAnswers||{};
  const consumed=new Set(['TITULO','DEFESA_DATA_HORA','DEFESA_LOCAL','DEFESA_LOCAL_PERSONALIZADO','DEFESA_LOCAL_ALTERNATIVO','LOCAL_ALTERNATIVO','TEM_ALUNO_2','TEM_COORIENTADOR','AUTORIA_ORDEM']);
  for(const prefix of ['ALUNO_1','ALUNO_2','ORIENTADOR','COORIENTADOR','EXAMINADOR_2','EXAMINADOR_3'])for(const suffix of ['NOME','EMAIL','MATRICULA','SIAPE','CIAP','TRATAMENTO','TITULACAO','INSTITUICAO'])consumed.add(`${prefix}_${suffix}`);
