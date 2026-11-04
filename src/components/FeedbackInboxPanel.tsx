@@ -105,7 +105,7 @@ export function FeedbackInboxPanel({embedded=false}:{embedded?:boolean}) {
   },[rows,search,status,startDate,endDate]);
   const columns=columnOrder.filter(key=>visibleColumns[key]!==false);
 
-  if(!isMasterAdmin)return <p className="portal-instruction p-4 text-sm">Sugestões de melhoria disponíveis somente para o usuário Master.</p>;
+  if(!isMasterAdmin)return <p className="portal-instruction p-4 text-sm">Sugestões disponíveis somente para o usuário Master.</p>;
 
   const toolbar=<>
     <select aria-label="Filtrar sugestões por situação" value={status} onChange={event=>setStatus(event.target.value as typeof status)} className="portal-input max-w-40 text-xs">
@@ -114,7 +114,7 @@ export function FeedbackInboxPanel({embedded=false}:{embedded?:boolean}) {
     <button type="button" className="portal-toolbar-icon-button" disabled={loading||loadingMore||Boolean(reviewingId)} onClick={()=>void load()} title="Atualizar sugestões" aria-label="Atualizar sugestões"><RefreshCw className="h-3.5 w-3.5"/></button>
     <span className="portal-toolbar-group-divider" role="separator" aria-orientation="vertical"/>
     <SearchPopover value={search} onChange={setSearch} placeholder="Descrição, referência ou responsável" textFormat={textFormat}/>
-    <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} allColumns={COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="feedback_inbox" defaultColumnOrder={ORDER} defaultVisibleColumns={VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Sugestões de melhoria"/>
+    <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} allColumns={COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="feedback_inbox" defaultColumnOrder={ORDER} defaultVisibleColumns={VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Sugestões"/>
   </>;
   function statusBadge(item:FeedbackEntry) {
     return <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold ${item.status==='NEW'?'border-amber-300 bg-amber-50 text-amber-900':'border-slate-300 bg-slate-100 text-slate-700'}`}>{item.status==='NEW'?'Nova':'Revisada'}</span>;
@@ -131,7 +131,7 @@ export function FeedbackInboxPanel({embedded=false}:{embedded?:boolean}) {
     }
   }
   return <div id="feedback-inbox-panel" data-settings-sheet="true" data-embedded={embedded?'true':'false'} className="flex min-h-0 flex-1 flex-col" style={{backgroundColor:'var(--portal-surface-panel)'}}>
-    {embedded?<SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal>:<header className="portal-modal-header flex flex-wrap justify-between gap-3"><h2 className="flex items-center gap-2 text-sm font-bold"><Lightbulb className="h-4 w-4"/>Sugestões de melhoria</h2><div className="flex flex-wrap items-center gap-1.5">{toolbar}</div></header>}
+    {embedded?<SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal>:<header className="portal-modal-header flex flex-wrap justify-between gap-3"><h2 className="flex items-center gap-2 text-sm font-bold"><Lightbulb className="h-4 w-4"/>Sugestões</h2><div className="flex flex-wrap items-center gap-1.5">{toolbar}</div></header>}
     {error&&<p role="alert" className="portal-instruction m-3 p-3 text-xs">{error}</p>}
     <TableScrollWrapper fillHeight>
       <table className="portal-spreadsheet-table w-full min-w-[1180px] border-collapse text-center text-xs">

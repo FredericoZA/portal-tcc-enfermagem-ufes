@@ -31,7 +31,6 @@ import { DocumentPreviewModal } from '../components/DocumentPreviewModal';
 import { CorrectionRequestModal } from '../components/CorrectionRequestModal';
 import { resolveInstallationProfile,isPortalFeatureEnabled } from '../utils/installationProfile';
 import { RegistrationFieldPreview } from '../components/RegistrationFieldPreview';
-import { ProcessGuidanceNotice } from '../components/ProcessGuidanceNotice';
 import {
   Link as LinkIcon,
   ArrowLeft,
@@ -875,7 +874,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         <>
         <AdvisorEvaluationPanel publicReadOnly={readOnly} process={process} canEvaluate={!process.legacyRecord && (isAdvisor || isMasterAdmin) && !readOnly}
           canReopen={!process.legacyRecord && (isMasterAdmin || isAdvisor) && !readOnly && !isAcervoSubmitted && !process.acervo?.firstSubmittedAt && process.status!=='CONCLUIDO'} onReopen={handleReopenEvaluation} onUpdated={async()=>{await loadData();setActiveTab('docs');setProcessLink(process.id,'docs');}} />
-        {process.legacyRecord && <LegacyAdministrativeDocuments processId={process.id} canAccessOriginals={isMasterAdmin} section="evaluation"/>}
         </>
       )}
 
@@ -914,13 +912,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 const getDocInfo = (type: string) => {
                   switch (type) {
                     case 'CONVITE':
-                      return { title: '1. Carta-Convite da Banca', signNote: 'Não requer assinatura', availability: 'Confirme o local e envie o convite à banca.' };
+                      return { title: 'Carta-Convite da Banca', signNote: 'Não requer assinatura', availability: 'Confirme o local e envie o convite à banca.' };
                     case 'ATA':
-                      return { title: '2. Ata Oficial da Defesa Final', signNote: 'Professor orientador', availability: 'Aguarda confirmação da ata após a defesa.' };
+                      return { title: 'Ata', signNote: 'Professor orientador', availability: 'Aguarda confirmação da ata após a defesa.' };
                     case 'TERMO':
-                      return { title: '3. Termo de Autorização e Publicação', signNote: 'Orientador e todos os autores', availability: 'Solicite publicação na entrega do Repositório.' };
+                      return { title: 'Termo de Autorização e Publicação', signNote: 'Orientador e todos os autores', availability: 'Solicite publicação na entrega do Repositório.' };
                     case 'DECLARACAO':
-                      return { title: '4. Declaração de Participação na Banca', signNote: 'Presidência', availability: 'Aguarda entrega final, ata e termo aplicável assinados.' };
+                      return { title: 'Declaração de Participação na Banca', signNote: 'Presidência', availability: 'Aguarda entrega final, ata e termo aplicável assinados.' };
                     default:
                       return { title: doc.title, signNote: 'Assinatura gerenciada pelo portal', availability: 'Após concluir a etapa responsável pela geração deste documento.' };
                   }
@@ -930,9 +928,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 const downloadPending=termDeclined?'Não foi autorizada a publicação do trabalho nem do resumo expandido por autores e orientador.':doc.status==='NAO_DISPONIVEL'?docInfo.availability:doc.status==='GERANDO'?'O PDF está sendo gerado.':doc.status==='AGUARDANDO_ASSINATURA'?'Aguarda as assinaturas e o arquivamento do PDF.':doc.status==='COM_ERRO'?'A geração falhou. A comissão deve verificar a pendência.':'Consulte a versão atual deste documento.';
 
                 return <ProcessDocumentCard key={doc.id}
-                  title={doc.type==='CONVITE'?<>1. Carta-Convite<br/>da Banca</>:doc.type==='ATA'?<>2. Ata Oficial<br/>da Defesa Final</>:docInfo.title}
-                  meta={`Versão ${doc.currentVersion}`}
-                  signerLabel={doc.type==='CONVITE'?'Assinatura':'Quem assina'}
+                  title={doc.type==='CONVITE'?<>Carta-Convite<br/>da Banca</>:doc.type==='ATA'?<>Ata</>:docInfo.title}
                   signerNote={termDeclined||doc.type==='CONVITE'?'Não necessária':docInfo.signNote}
                   status={termDeclined?'Não autorizado':doc.status==='NAO_DISPONIVEL'?'Não disponível':({DISPONIVEL:'Disponível',ASSINADO:'Assinado',AGUARDANDO_ASSINATURA:'Aguardando assinatura'}[doc.status]||'Não disponível')}
                   statusDescription={!isDownloadable?downloadPending:undefined}
@@ -958,7 +954,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
               <div className="portal-repository-grid">
                 {privateLegacyAccess?.error&&<p role="alert" className="portal-instruction p-3 text-xs">{privateLegacyAccess.error}</p>}
                 {privateLegacyAccess&&legacyAcademicDownloadError&&<p role="alert" className="portal-instruction p-3 text-xs">{legacyAcademicDownloadError}</p>}
-                <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Resumo síntese do TCC</h3><p className="whitespace-pre-wrap text-sm">{privateLegacyData?.resumo||process.acervo?.resumoSintese||(process.legacyRecord?(privateLegacyData?'Resumo não informado.':'Resumo não disponível para consulta pública.'):'Resumo ainda não informado.')}</p></section>
+                <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Resumo síntese do TCC</h3><p className="whitespace-pre-wrap text-justify text-sm">{privateLegacyData?.resumo||process.acervo?.resumoSintese||(process.legacyRecord?'Resumo não localizado no acervo importado.':'Resumo ainda não informado.')}</p></section>
                 <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Palavras-chave</h3><div className="grid grid-cols-1 gap-2 sm:grid-cols-5">{(privateLegacyData?.palavrasChave||process.acervo?.palavrasChave||[]).map((word,index)=><span key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs">{word}</span>)}</div></section>
                 {[
                   {kind:'TRABALHO_COMPLETO',title:'Trabalho completo',url:process.acervo?.trabalhoCompletoFileUrl},

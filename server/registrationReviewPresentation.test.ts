@@ -1,0 +1,29 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {registrationReviewValue} from '../src/components/ConfigurableRegistration';
+import {RegistrationReview} from '../src/components/RegistrationReview';
+import type {RegistrationQuestion} from '../src/types/operationalConfig';
+
+const field=(fieldKey:string,label:string,fieldType:RegistrationQuestion['fieldType']='text')=>({fieldKey,label,fieldType,section:'Reserva do local',required:true}) as RegistrationQuestion;
+
+test('a conferência do cadastro mostra o local como nos documentos, preservando a edição original',()=>{
+  const answers={DEFESA_LOCAL:'__OUTRO_LOCAL__',DEFESA_LOCAL_PERSONALIZADO:'laboratório fictício da *ufes*',LOCAL_CONFIGURADO:'auditório da *ufes*'};
+  const fields=[field('DEFESA_LOCAL','Local da defesa','select'),field('DEFESA_LOCAL_PERSONALIZADO','Nome completo do local'),field('LOCAL_CONFIGURADO','Nome completo do local da defesa')];
+  const before=structuredClone(answers);
+  const html=renderToStaticMarkup(React.createElement(RegistrationReview,{fields,valueFor:item=>registrationReviewValue(item,answers[item.fieldKey]),findings:[]}));
+  assert.match(html,/<td>Outro local<\/td>/);
+  assert.match(html,/<td>Laboratório Fictício da UFES<\/td>/);
+  assert.match(html,/<td>Auditório da UFES<\/td>/);
+  assert.doesNotMatch(html,/\*ufes\*|\*UFES\*/);
+  assert.deepEqual(answers,before,'a conferência não modifica o rascunho nem os marcadores do campo editável');
+});
+
+test('a apresentação do local não muda o tratamento de outros campos da conferência',()=>{
+  assert.equal(registrationReviewValue(field('ALUNO_1_NOME','Nome completo do autor'),'Ana Maria'),'Ana Maria');
+  assert.equal(registrationReviewValue(field('ALUNO_1_EMAIL','E-mail do autor','email'),'ana+ufes@example.invalid'),'ana+ufes@example.invalid');
+  assert.equal(registrationReviewValue(field('EXAMINADOR_2_INSTITUICAO','Instituição'),'*ufes*'),'UFES');
+  assert.equal(registrationReviewValue(field('TITULO','Título completo do TCC'),'estudo na *ufes*'),'Estudo na UFES');
+  assert.equal(registrationReviewValue(field('DEFESA_DATA_HORA','Data e horário','datetime-local'),'2026-11-17T14:00'),'17/11/2026 às 14:00');
+});

@@ -1,71 +1,64 @@
 # Instrução de continuidade para a IA de implantação
 
-Você recebeu o Portal Institucional de TCC **1.0.0-rc.10**. Sua tarefa é colocar esta versão em funcionamento no ambiente do proprietário, preservando o código existente, a identidade institucional e as regras abaixo. Trabalhe sobre o pacote recebido. Não substitua a aplicação por uma demonstração nova.
+Revisão documental: 03/11/2026.
+
+Você recebeu o código do Portal Institucional de TCC. Preserve o sistema existente e trabalhe sobre a revisão recebida. Não substitua a aplicação por uma demonstração nova. A versão de execução está em `package.json`; identifique também o commit e as alterações locais antes de declarar que o código coincide com GitHub ou Vercel.
 
 ## Fonte de verdade e leitura
 
-Leia primeiro `CHECKLIST_IMPLANTACAO.md`, `COMECE_AQUI.md`, `README.md`, `docs/FLUXO_OPERACIONAL_RC9.md`, `docs/RELATORIO_VALIDACAO_RC10.md` e `docs/HOMOLOGACAO_RC10.md`. Depois leia `IMPLANTACAO_PRODUCAO.md`, `.env.example`, `docs/PRIMEIRO_ACESSO.md`, `MODELOS_E_VARIAVEIS.md`, `INTEGRACAO_ASTEN_DRIVE.md` e `docs/ATUALIZACAO_E_ROLLBACK.md`.
+Leia `AGENTS.md`, `README.md`, `CHECKLIST_IMPLANTACAO.md`, `COMECE_AQUI.md`, `IMPLANTACAO_PRODUCAO.md`, `.env.example`, `SECURITY.md`, `docs/FLUXO_ATUAL_2026-10-26.md` e `public/replicacao/GUIA_PARA_IA.md`. Consulte ainda `docs/PRIMEIRO_ACESSO.md`, `MODELOS_E_VARIAVEIS.md`, `INTEGRACAO_ASTEN_DRIVE.md` e `docs/ATUALIZACAO_E_ROLLBACK.md`.
 
-A RC10 mantém o fluxo da RC9 e acrescenta as correções descritas no relatório RC10. Essas instruções prevalecem sobre RC5–RC8. Preserve as funcionalidades existentes. Trate os relatórios antigos como evidência histórica, sem atribuir seus testes à execução atual. Não afirme que uma integração funciona sem evidência real; registre **não confirmado** quando faltar essa evidência.
+RC5 a RC10 e relatórios de revisões anteriores são históricos. Não use seus resultados como evidência da instalação atual. O código, as migrações aplicadas, a configuração publicada e o runtime efetivamente implantado precisam ser conferidos separadamente. Se faltar evidência de uma integração, registre “não confirmado”.
 
 ## Arquitetura existente
 
 | Local | Responsabilidade |
 |---|---|
-| `src/pages`, `src/components` | Interface React e editor do Master |
-| `src/components/AdvisorEvaluationPanel.tsx` | Conferência e formulário formal do orientador |
-| `src/services/apiClient.ts` | Comunicação entre navegador e API |
-| `server.ts`, `api/index.ts` | API Express, autorização, persistência e entrada Vercel |
-| `server/workflow` | Eventos, bloqueios, avaliação, geração, prazos e recuperação |
-| `server/integrations` | Google, Asten e Supabase |
-| `src/utils/unifiedAppearance.ts` | Normalização das configurações visuais antigas |
-| `src/utils/portalAppearanceLinks.ts` | Padrão compartilhado de aparência e pop-ups |
-| `src/services/portalDialogs.ts`, `src/components/PortalDialogs.tsx` | Mensagens, confirmações e pedidos de texto |
-| `supabase/migrations` | Migrações necessárias, aplicadas na ordem dos nomes |
-| `scripts` | Compilação, verificação e geração do ZIP |
+| `src/pages`, `src/components`, `src/styles` | Interface React, telas públicas, editor do Master e aparência compartilhada. |
+| `src/components/AdvisorEvaluationPanel.tsx` | Registro de conceito e parecer do orientador. |
+| `src/services/apiClient.ts` | Comunicação entre navegador e API. |
+| `server.ts`, `api/` | API Express, autorização, persistência e entradas Vercel. |
+| `server/workflow` | Eventos, bloqueios, avaliação, geração, prazos e recuperação. |
+| `server/integrations` | Google, Asten e persistência Supabase. |
+| `supabase/migrations` | Migrações incrementais do estado, permissões, transporte e filas. |
+| `scripts` | Preparação local, compilação, testes e pacote de distribuição. |
 
-O projeto usa React, Vite e Express. Preserve `package-lock.json` e os scripts atuais. A produção está preparada para Vercel com Node.js 22, estado no Supabase e documentos no Google Drive. Esta rodada não acrescentou migração SQL; os campos de conferência e aparência estão no estado JSON existente. A RC10 foi validada em Node.js 22.23.2. Repita os testes após configurar o ambiente de implantação.
+Preserve `package-lock.json` e use as versões Node/npm definidas no projeto. Vercel executa o produto online; ele deve funcionar com o computador do desenvolvedor desligado. Supabase guarda registros, revisões, permissões, auditoria e filas. Os arquivos definitivos ficam no Google Drive. O transporte temporário de arquivos usa armazenamento privado com limpeza; não transforme esse staging em arquivo permanente dos TCCs.
 
-## Regras obrigatórias
+## Regras que a implantação deve preservar
 
-- Master e Presidente administram. O aluno precisa de autorização prévia e pode ser autor de somente um TCC de graduação.
-- O pedido de reserva vai para o endereço canônico do departamento. O aluno declara que recebeu a confirmação e o processo aguarda essa declaração antes do convite.
-- O orientador confere os dados, seleciona o resultado e registra o parecer, sem nota numérica. Revisões desatualizadas do processo ou do formulário são recusadas. O resultado vem das opções publicadas, e o texto fixo da ata vem do DOCX do Master.
-- Convite não é assinado. Ata: orientador. Termo, quando houver publicação: todos os alunos autores e o orientador, em paralelo. Declaração: Presidente da Comissão.
-- Asten executar envio ou criar envelope não significa assinatura concluída. Exija o retorno compatível com os signatários previstos e o arquivamento do PDF assinado.
-- Falhas não liberam a próxima etapa. Preserve a recuperação existente e não repita automaticamente envelopes de resultado incerto.
-- Modelos são DOCX externos com marcadores `<<VARIAVEL>>`, versionados no Drive e vinculados por hash. O Master define campos, variáveis, modelos, e-mails e fluxo publicado.
-- Preserve a entrega final, os arquivos privados e a publicação condicional do termo. Não elimine essas etapas para encurtar a implantação.
-- Publique uma aparência comum. Não reintroduza desvinculação visual por tabela ou pop-up. Cada tabela pode manter suas colunas e filtros.
-- Nunca coloque credenciais no código, no ZIP, no repositório ou em variáveis `VITE_`.
-
-## Correções RC10 que devem ser preservadas
-
-- `server/httpApp.ts` encaminha erros assíncronos ao tratamento HTTP. API inexistente devolve JSON 404. Não permita que a aplicação React responda como se fosse uma API válida.
-- `src/utils/studioFormAnswers.ts` valida campos e impede que os quatro formulários nativos apareçam como formulários adicionais. Cada etapa nativa usa seu endpoint próprio.
-- Envie `expectedFormRevision` nos formulários adicionais. O servidor registra o autor no identificador de envio e guarda `formSnapshot` antes de chamar o Drive. A retomada usa as perguntas originais.
-- A confirmação repetida do mesmo local conserva o autor, horário e revisão anteriores. Alteração de local já confirmado exige correção formal.
-- Respostas com `workflowPending` significam dados salvos com continuidade pendente. Não exiba convite enviado ou publicação pública antes de concluir as etapas necessárias.
-- A fonte e as cores compartilhadas são normalizadas em `unifiedAppearance.ts` e `portalFonts.ts`. Não restaure exceções visuais antigas.
-- `PortalErrorBoundary` permite recarregar uma página que falhou. O formulário do orientador oferece nova tentativa quando não consegue carregar a configuração.
-- O desenvolvimento Vite usa nonce para autorizar o preâmbulo React; o cliente compilado mantém `script-src 'self'`. Não abra a política de scripts da produção para corrigir o desenvolvimento.
-- O ZIP não segue links simbólicos nem inclui `.vercel`, `.portal-data`, `.env` real, dependências ou arquivos de execução.
+- Cada instalação tem identidade, contas, projetos, pastas e segredos próprios. Não reutilize a base ou os arquivos privados da origem em outro curso.
+- O autor cria o TCC com sua sessão autenticada e acesso cadastrado ativo. O e-mail do primeiro autor corresponde à sessão. Mantenha as regras de unicidade e os bloqueios de acesso existentes.
+- O protocolo e a data de criação são imutáveis e definidos pelo sistema. Títulos, nomes e instituições seguem a normalização implementada; siglas e/ou acrônimos explícitos em título e instituição usam asteriscos, sem exibir os delimitadores nos documentos.
+- A reserva escolhe um único local por pedido de 1h30. Auditório e sala de reuniões são homologados pelo departamento; outro local é confirmado pelo orientador. O aluno não declara uma confirmação que recebeu fora do sistema e não precisa anexar comprovante.
+- Mapa de salas, aulas, eventos e horários do prédio devem ser considerados para evitar retrabalho. Conversar previamente com o departamento é recomendação, não obrigação de comparecer.
+- Os botões de aceite e recusa vão somente ao responsável. O grupo recebe comunicação informativa. O registro da resposta gera comprovante e avisos, sem pedir uma segunda confirmação idêntica.
+- O convite vai conjuntamente aos examinadores e ao coorientador, quando houver. Não duplique mensagens iguais por destinatário.
+- O orientador registra conceito e parecer; a avaliação e a nota acadêmica são realizadas no Portal do Professor. Os conceitos são Aprovado, Aprovado com ressalva e Reprovado.
+- Registrar o conceito e confirmar a entrega apenas encaminham para Documentos administrativos. Essas ações não iniciam automaticamente uma assinatura. O usuário escolhe Asten ou Gov.br no cartão do documento.
+- Convite e comprovante não são assinados. A ata é assinada somente pelo orientador. Havendo publicação, o termo é assinado por todos os autores e orientador. A declaração é assinada pela presidência da Comissão.
+- A entrega de trabalho completo, resumo e palavras-chave é obrigatória nos processos novos. O PDF do resumo expandido é opcional. Publicação dos PDFs é opcional e independente por arquivo. Sem autorização de nenhum PDF, não há termo.
+- O texto do resumo do catálogo não deve ser ocultado com base na autorização de publicação dos PDFs. E-mails, matrículas, registros e arquivos restritos continuam protegidos.
+- Pelo Gov.br, o orientador reúne as assinaturas exigidas do termo e devolve o PDF completo. Preserve a função administrativa do Master sem dispensar assinaturas. Envio isolado não conclui a conferência administrativa no VALIDAR/ITI.
+- Criar envelope, enviar e-mail ou anexar PDF não comprova assinatura. Exija retorno válido, signatários previstos, revisão atual e arquivamento dos bytes conferidos no Drive. Não repita automaticamente um envelope de resultado incerto.
+- A entrega final bloqueia a reabertura da avaliação. Documentos concluídos bloqueiam a edição do repositório conforme o fluxo. Não remova bloqueios para contornar um erro.
+- Os quatro DOCX ativos são externos, versionados e vinculados por hash. Não invente modelos institucionais nem reescreva PDFs assinados.
+- Legados usam as mesmas telas, código NNN - Legado e campos ausentes preservados. Eles têm instrumento de avaliação como sexto cartão administrativo, quando localizado. Não gere novo instrumento, novas assinaturas ou novos avisos ao importar o histórico.
+- Segredos nunca entram em código, ZIP, GitHub, capturas, logs ou variáveis VITE_. Preserve autorização no servidor, RLS, auditoria, limites de uso e validação dos arquivos.
 
 ## Sequência de execução
 
-1. Identifique se já existe repositório e implantação da mesma instalação. Faça backup antes de modificar um ambiente com dados. Evite criar projetos duplicados.
-2. Instale as dependências com `npm ci`. Execute `npm run test:ci` e `npm run test:secure-flow`. Corrija falhas concretas antes de avançar. Registre versão do Node, comandos e resultados.
-3. Conecte Supabase e aplique as migrações pendentes. Confirme runtime v6, RLS, privilégios das funções, bucket privado, revisão otimista e outbox Asten. Preserve o arquivo documental definitivo no Drive.
-4. Configure a Vercel e as variáveis documentadas em `.env.example`, com segredos próprios do ambiente. Não use o arquivo de demonstração em produção.
-5. Conecte Drive, Docs, Gmail e Calendar pelo OAuth do proprietário. Complete o bootstrap do Master conforme o guia. Configure o token Asten e o callback autenticado pelo portal.
-6. Cadastre os quatro DOCX oficiais e os endereços institucionais, incluindo o departamento e o Presidente. Se esses materiais não estiverem disponíveis, informe exatamente qual item falta; não crie um modelo oficial fictício.
-7. No Estúdio, revise o formulário do aluno e o formulário `form-parecer-banca`. O servidor injeta os campos essenciais de avaliação mesmo em configuração antiga. Confira também a ordem das ações, os marcadores, o destino de cada e-mail e a aparência. Publique a configuração coerente.
-8. Execute o piloto de `docs/HOMOLOGACAO_RC10.md` com destinatários controlados e documentos de teste. Confirme o processo individual e em dupla, com e sem publicação.
-9. Teste a interface no navegador, em computador e celular, incluindo teclado e zoom. Confira o retorno do foco após os diálogos. Gere e revise as capturas usando o procedimento de homologação do pacote.
-10. Entregue URL, identificação da versão, migrações aplicadas, resultados do piloto, pendências e instruções objetivas de uso. Respeite a autorização de publicação dada pelo proprietário e não altere acessos além do necessário para a instalação.
+1. Identifique a instalação, a revisão, os dados existentes e a recuperação disponível. Preserve mudanças ainda não commitadas. Não crie projetos duplicados.
+2. Instale com `npm ci`. Execute `npm run test:ci` e `npm run test:secure-flow`; registre os comandos, o resultado e a versão do Node.
+3. Confira e aplique apenas as migrações pendentes necessárias. Verifique contratos transacionais, RLS, privilégios das funções, bucket privado, revisões, fila Asten e limpeza do transporte temporário.
+4. Configure as variáveis próprias na Vercel a partir de `.env.example`. Não publique a configuração de demonstração local.
+5. Configure o Master, identidade, presidência, destinatários e OAuth do novo domínio. Conecte a conta Google institucional e o Asten pelas funções existentes do Portal.
+6. Cadastre os quatro DOCX próprios. Confira variáveis, formatos, PDFs e os destinos no Drive. Se faltar um item, identifique-o; não use dados de alunos como modelo nem solicite segredos da origem.
+7. Publique uma configuração coerente de formulários, e-mails, ações e aparência. Preserve os componentes visuais compartilhados e o envio conjunto das mensagens iguais.
+8. Execute piloto real com destinatários controlados: um autor ou dupla; reserva aceita, recusada e alterada; convite; conceito; ata; entrega com e sem publicação; termo aplicável e declaração. Confira o armazenamento e os limites de edição.
+9. Confira a interface no navegador, em computador e celular, incluindo teclado, foco, zoom, imagens dos manuais e links. Use dados fictícios nas capturas.
+10. Publique somente com autorização do responsável. Entregue URL, revisão, migrações, configuração, testes executados, resultados reais, pendências e recuperação.
 
 ## Evidência de encerramento
 
-Relate separadamente: execução local, implantação, persistência real, e-mails reais, PDFs gerados dos DOCX, assinaturas Asten, arquivamento no Drive e inspeção visual. Para cada um, use “aprovado”, “reprovado” ou “não confirmado”, com evidência e próxima ação. Não declare o portal pronto para processos reais apenas porque compilou.
-
-Consulte também `docs/FLUXO_ATUAL_2026-10-26.md` e o guia público em `public/replicacao/GUIA_PARA_IA.md`: a confirmação do local é feita pelo departamento, a ata só pelo orientador, o termo só existe se houver publicação e a devolução do termo Gov.br cabe somente ao orientador. Como usar oferece Aluno, Orientador e Visitante.
+Relate separadamente execução local, GitHub, implantação Vercel, persistência Supabase, e-mails, PDFs gerados, assinaturas, arquivamento Drive e inspeção visual. Para cada item, indique aprovado, reprovado ou não confirmado, com evidência. Compilar e passar em testes simulados não comprovam o funcionamento das integrações reais.

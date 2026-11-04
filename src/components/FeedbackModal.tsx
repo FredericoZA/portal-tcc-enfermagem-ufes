@@ -75,7 +75,7 @@ export const FeedbackModal:React.FC<FeedbackModalProps>=({open,onClose})=>{
     onClose={close}
     closeOnBackdrop={!submitting}
     closeOnEscape={!submitting}
-    title="Sugestões de melhoria"
+    title="Sugestões"
     subtitle="Ajude a melhorar o Portal TCC"
     icon={Lightbulb}
     maxWidthClass="max-w-lg"

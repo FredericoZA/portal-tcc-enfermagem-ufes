@@ -12,7 +12,7 @@ export function publicProcessDetail(data: any): { process: ProcessData; document
     dataRevision: 0,
   } as ProcessData;
   const titles: Record<DocumentType, string> = {
-    CONVITE: 'Carta-convite da banca', ATA: 'Ata oficial da defesa final',
+    CONVITE: 'Carta-convite da banca', ATA: 'Ata',
     TERMO: 'Termo de autorização e publicação', DECLARACAO: 'Declaração de participação na banca',
   };
   const documents = (data.legacyRecord?[]:Object.keys(titles) as DocumentType[]).map(type => {

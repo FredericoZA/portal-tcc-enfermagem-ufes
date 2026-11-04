@@ -76,10 +76,10 @@ test('Meus TCCs e Presidente usam o mesmo separador branco canônico após os fi
   assert.doesNotMatch(css, /portal-coordinator-filter-row[\s\S]*border-bottom:\s*2px/);
 });
 
-test('tutorial usa somente as superfícies canônicas', () => {
+test('tutorial usa a superfície canônica e instruções integradas, sem cartões ou avisos decorativos', () => {
   const tutorial = read('src/pages/PortalTutorialPage.tsx');
   assert.match(tutorial, /portal-layer-panel/);
-  assert.match(tutorial, /portal-layer-card/);
+  assert.doesNotMatch(tutorial, /portal-layer-card|portal-instruction|Erros a evitar/);
   assert.doesNotMatch(tutorial, /bg-\[#(?:e1e6e9|d5dce0|005830|337959)\]/i);
 });
 

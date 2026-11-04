@@ -13,7 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { RegistrationFieldPreview, registrationPreviewKind } from './RegistrationFieldPreview';
 import { RegistrationMembersTable } from './RegistrationMembersTable';
 import { resolveInstallationProfile } from '../utils/installationProfile';
-import { isOtherDefenseLocation, normalizeCustomLocationInput } from '../utils/customDefenseLocation';
+import { isOtherDefenseLocation, normalizeCustomLocationInput, renderCustomLocationName } from '../utils/customDefenseLocation';
 import { apiClient } from '../services/apiClient';
 import { portalNotice } from '../services/portalDialogs';
 import { evaluateStudioCondition, validateStudioAnswer } from '../utils/courseStudioValidator';
@@ -22,6 +22,16 @@ import { registrationFindings, workflowPolicy } from '../utils/workflowOperation
 import type {StudentInfo} from '../types';
 import type { RegistrationAnswers, RegistrationQuestion } from '../types/operationalConfig';
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
+
+export function registrationReviewValue(field:RegistrationQuestion,value:unknown):string {
+  if(value===undefined||value===null||value==='')return '';
+  if(field.fieldKey==='TITULO')return renderTccTitle(String(value));
+  if(/_INSTITUICAO$/.test(field.fieldKey))return renderInstitutionName(String(value));
+  if(registrationPreviewKind(field.fieldKey,field.label,field.fieldType)==='location')return renderCustomLocationName(String(value));
+  if(field.fieldKey==='DEFESA_LOCAL'&&value==='__OUTRO_LOCAL__')return 'Outro local';
+  if(field.fieldType==='datetime-local'){const [date,time]=String(value).split('T');const [year,month,day]=date.split('-');return `${day&&month&&year?`${day}/${month}/${year}`:date}${time?` às ${time}`:''}`;}
+  return typeof value==='boolean'?(value?'Sim':'Não'):String(value);
+}
 
 function registrationAuthorPreview(answers:RegistrationAnswers){
  answers=withAuthorReference(answers);
@@ -70,15 +80,7 @@ export function ConfigurableRegistration({ onSuccess, onCancel }: { onSuccess:(i
   const isReservationStep=currentSection===sections.length-1;
   const visible=fields.filter(f=>evaluateStudioCondition(f.visibleWhen,answers));
   const selected=visible.filter(f=>(f.section||'Trabalho')===sections[currentSection]);
-  const reviewValue=(field:RegistrationQuestion)=>{
-    const value=answers[field.fieldKey];
-    if(value===undefined||value===null||value==='')return '';
-    if(field.fieldKey==='TITULO')return renderTccTitle(String(value));
-    if(/_INSTITUICAO$/.test(field.fieldKey))return renderInstitutionName(String(value));
-    if(field.fieldKey==='DEFESA_LOCAL'&&value==='__OUTRO_LOCAL__')return 'Outro local';
-    if(field.fieldType==='datetime-local'){const [date,time]=String(value).split('T');const [year,month,day]=date.split('-');return `${day&&month&&year?`${day}/${month}/${year}`:date}${time?` às ${time}`:''}`;}
-    return typeof value==='boolean'?(value?'Sim':'Não'):String(value);
-  };
+  const reviewValue=(field:RegistrationQuestion)=>registrationReviewValue(field,answers[field.fieldKey]);
   const changeAnswer=(key:string,value:string|boolean)=>setAnswers(current=>key==='TEM_ALUNO_2'?{...current,[key]:value,AUTORIA_REFERENCIA:''}:{...current,[key]:value});
   const renderQuestion=(field:RegistrationQuestion)=><Question recent={registrationFieldHistory(recent,field.fieldKey)} field={field} value={answers[field.fieldKey]} readOnly={field.fieldKey==='ALUNO_1_EMAIL'&&!isMasterAdmin} onChange={value=>changeAnswer(field.fieldKey,value)}/>;
 

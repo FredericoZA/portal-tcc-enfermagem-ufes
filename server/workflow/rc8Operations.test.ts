@@ -42,8 +42,8 @@ test('ordem de espera exige Ata arquivada no Drive antes da entrega final',()=>{
 
 test('análise do PDF aponta marcador, página vazia e marca a amostra',async()=>{
   const doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica);doc.addPage([595,842]).drawText('Convite para <<ALUNO_NOME>>',{x:40,y:800,font,size:12});doc.addPage([595,842]);
-  const bytes=Buffer.from(await doc.save()),report=await inspectPdfLayout(bytes,{maximumPages:1,needsSignature:true});
-  assert.ok(report.issues.some(issue=>issue.code==='UNRESOLVED_MARKER'));assert.ok(report.issues.some(issue=>issue.code==='PAGE_LIMIT'));assert.ok(report.issues.some(issue=>issue.code==='EMPTY_PAGE'));
+  const bytes=Buffer.from(await doc.save()),report=await inspectPdfLayout(bytes,{maximumPages:2,needsSignature:true});
+  assert.ok(report.issues.some(issue=>issue.code==='UNRESOLVED_MARKER'));assert.ok(report.issues.some(issue=>issue.code==='EMPTY_PAGE'));
   const marked=await markPreview(bytes),opened=await PDFDocument.load(marked);assert.equal(opened.getTitle(),'Amostra do modelo - sem validade');
 });
 

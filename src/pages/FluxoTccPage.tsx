@@ -196,18 +196,6 @@ export const FluxoTccPage: React.FC = () => (
     </section>
     <div className="space-y-3 px-3 pb-3 sm:px-5 sm:pb-5">
       <SignatureFlowSummary />
-      <figure className="portal-layer-panel rounded-xl border border-slate-300 p-3 sm:p-4">
-        <figcaption className="mb-3 text-xs leading-5 text-slate-700"><strong>Onde encontrar os documentos:</strong> abra o TCC e selecione Documentos administrativos. As cinco caixas reúnem comprovante de agendamento, carta-convite, ata, termo e declaração. Cada caixa informa a disponibilidade e quem assina. <a href="/manual/documentos.jpg?v=2026-11-03" target="_blank" rel="noreferrer" className="underline">Ampliar imagem</a>.</figcaption>
-        <img src="/manual/documentos.jpg?v=2026-11-03" alt="Exemplo de TCC na aba Documentos administrativos, com as cinco caixas de documentos e os controles de assinatura." loading="lazy" className="mx-auto block h-auto w-full max-w-5xl rounded-lg border border-slate-300" />
-      </figure>
-      <section className="portal-instruction rounded-xl p-4 text-xs leading-5" aria-label="Consulta ao histórico legado">
-        <h2 className="font-bold">Trabalhos legados</h2>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>Códigos como 001 - Legado identificam trabalhos antigos no mesmo Repositório. Eles usam as mesmas abas do TCC, com os dados e arquivos disponíveis na origem.</li>
-          <li>O registro histórico não reinicia o fluxo acima: não exige nova defesa, entrega ou assinatura. Campos sem informação permanecem em branco.</li>
-          <li>Arquivos acadêmicos só ficam públicos com autorização confirmada. Os documentos administrativos antigos permanecem privados para consulta do Master.</li>
-        </ul>
-      </section>
     </div>
   </div>
 );

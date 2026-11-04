@@ -7,15 +7,15 @@ import {PortalModalShell} from './PortalModalShell';
 
 const Preview=lazy(()=>import('./DocumentFilePreview').then(module=>({default:module.DocumentFilePreview})));
 const groups: {kind:LegacyAdministrativeFileView['kind'];label:string}[]=[
-  {kind:'CONVITE',label:'1. Carta-Convite da Banca'},
+  {kind:'CONVITE',label:'Carta-Convite da Banca'},
+  {kind:'ATA',label:'Ata'},
+  {kind:'TERMO',label:'Termo de Autorização e Publicação'},
+  {kind:'DECLARACAO',label:'Declaração de Participação na Banca'},
   {kind:'AVALIACAO',label:'Instrumento de avaliação'},
-  {kind:'ATA',label:'2. Ata Oficial da Defesa Final'},
-  {kind:'TERMO',label:'3. Termo de Autorização e Publicação'},
-  {kind:'DECLARACAO',label:'4. Declaração de Participação na Banca'},
 ];
 
 /** Existing administrative tab, with original historical files and no live signature actions. */
-export function LegacyAdministrativeDocuments({processId, canAccessOriginals = false, section = 'documents'}:{processId:string; canAccessOriginals?:boolean; section?:'documents'|'evaluation'}) {
+export function LegacyAdministrativeDocuments({processId, canAccessOriginals = false}:{processId:string; canAccessOriginals?:boolean}) {
   const [files,setFiles]=useState<LegacyAdministrativeFileView[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
@@ -45,19 +45,17 @@ export function LegacyAdministrativeDocuments({processId, canAccessOriginals = f
     }catch{setError('Não foi possível conferir e baixar o documento. O original permanece preservado.');}
     finally{setDownloading(null);}
   }
-  const visibleGroups=groups.filter(group=>section==='evaluation'?group.kind==='AVALIACAO':group.kind!=='AVALIACAO');
   return <>
-    <ProcessDocumentsPanel id={section==='evaluation'?'legacy-evaluation-documents':'documents-panel-section'} count={visibleGroups.length+(section==='documents'?1:0)} notices={<>
+    <ProcessDocumentsPanel count={groups.length+1} columns={6} notices={<>
       {loading&&<p role="status" className="text-xs">Consultando documentos…</p>}
       {error&&<p role="alert" className="portal-instruction p-3 text-xs">{error}</p>}
     </>}>
-      {section==='documents'&&<ReservationReceiptCard historical/>}
-      {visibleGroups.map(group=>{
+      <ReservationReceiptCard historical/>
+      {groups.map(group=>{
         const documents=canAccessOriginals?files.filter(file=>file.kind===group.kind):[];
         const file=documents.find(item=>item.index===selected[group.kind])||documents[0];
         return <ProcessDocumentCard key={group.kind} title={group.label}
-          meta={documents.length?`${documents.length} arquivo(s)`:undefined}
-          signerLabel="Arquivo" signerNote="Original importado"
+          signerLabel="Arquivo" signerNote={!canAccessOriginals?'Consulta restrita':file?'Original importado':loading?'Consultando acervo':'Não localizado'}
           status={!canAccessOriginals?'Acesso restrito':loading?'Consultando…':file?'Disponível':'Não disponível'}
           statusDescription={!canAccessOriginals?'A consulta aos originais históricos exige uma conta autorizada.':!loading&&!file?'Não localizado no acervo importado.':undefined}
           tone={file?'available':'pending'} available={Boolean(file)&&!loading} working={downloading!==null}

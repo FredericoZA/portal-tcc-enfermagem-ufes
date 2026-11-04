@@ -34,19 +34,19 @@
   "functions": {
     "api/index.ts": {
       "maxDuration": 300,
-      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs}"
+      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs,node_modules/pdfjs-dist/legacy/build/pdf.mjs}"
     },
     "api/replication-model.ts": {
       "maxDuration": 60,
-      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs}"
+      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs,node_modules/pdfjs-dist/legacy/build/pdf.mjs}"
     },
     "api/runtime-asset.ts": {
       "maxDuration": 30,
-      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs}"
+      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs,node_modules/pdfjs-dist/legacy/build/pdf.mjs}"
     },
     "api/public-indicators.ts": {
       "maxDuration": 30,
-      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs}"
+      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs,node_modules/pdfjs-dist/legacy/build/pdf.mjs}"
     }
   },
   "crons": [

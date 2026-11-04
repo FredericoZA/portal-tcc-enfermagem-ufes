@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import {registerModalEscape, topmostModal} from '../utils/modalEscape';
 
 interface PortalModalShellProps {
   open: boolean;
@@ -42,14 +43,27 @@ export const PortalModalShell: React.FC<PortalModalShellProps> = ({
   closeOnEscape = true,
   zIndexClass = 'z-[1000010]',
 }) => {
+  const dialogRef = useRef<HTMLElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const generatedTitleId = useId();
   useEffect(() => {
-    if (!open || !closeOnEscape) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    const dialog = dialogRef.current;
+    if (!open || !dialog) return;
+    return registerModalEscape(dialog, onClose, closeOnEscape);
   }, [open, closeOnEscape, onClose]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!open || !dialog) return;
+    const active = document.activeElement;
+    if (!previousFocusRef.current && active instanceof HTMLElement && !dialog.contains(active)) previousFocusRef.current = active;
+    if (!dialog.contains(active) && topmostModal(document) === dialog) dialog.focus({preventScroll: true});
+    return () => {
+      const previous = previousFocusRef.current;
+      previousFocusRef.current = null;
+      if (previous?.isConnected) previous.focus({preventScroll: true});
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -59,7 +73,7 @@ export const PortalModalShell: React.FC<PortalModalShellProps> = ({
   }, [open]);
 
   if (!open) return null;
-  const titleId = labelledBy || 'portal-modal-title';
+  const titleId = labelledBy || `portal-modal-title-${generatedTitleId}`;
 
   return createPortal(
     <div
@@ -69,6 +83,11 @@ export const PortalModalShell: React.FC<PortalModalShellProps> = ({
       }}
     >
       <section
+        ref={dialogRef}
+        tabIndex={-1}
+        onFocusCapture={(event) => {
+          if (!previousFocusRef.current && event.relatedTarget instanceof HTMLElement && !event.currentTarget.contains(event.relatedTarget)) previousFocusRef.current = event.relatedTarget;
+        }}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
