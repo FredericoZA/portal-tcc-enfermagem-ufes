@@ -20,7 +20,7 @@ Os legados ficam no mesmo Repositório, com códigos como `001 - Legado`, sem co
 
 ## Guias e validação
 
-Como usar mantém apenas Aluno, Orientador e Visitante. Fluxo do TCC descreve os responsáveis e as condições de avanço; a importação legada aparece como histórico, não como uma nova etapa de defesa. O manual ilustrado usa dados fictícios e não altera os documentos reais para produzir capturas.
+Como usar apresenta Aluno, Orientador, Examinador e Visitante. Fluxo do TCC descreve os responsáveis e as condições de avanço; a importação legada aparece como histórico, não como uma nova etapa de defesa. O manual ilustrado usa dados fictícios e não altera os documentos reais para produzir capturas.
 
 A revisão local de textos e imagens não atesta envio real pelo Gmail, assinatura real no Asten ou Gov.br, configuração remota, persistência em Supabase nem atualização da Vercel. Essas verificações são separadas da revisão dos guias.
 
