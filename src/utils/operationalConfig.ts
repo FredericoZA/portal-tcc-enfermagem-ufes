@@ -4,7 +4,7 @@ import {CUSTOM_DEFENSE_LOCATION} from './reservationLocation';
 import {normalizePersonName} from './personNameCase';
 import {AUTHOR_REFERENCE_OPTIONS,authorReferenceOptions,withAuthorReference} from './registrationIdentity';
 import {STUDENT_TREATMENTS,FACULTY_TREATMENTS,ACADEMIC_DEGREES,isPresentationField} from './personPresentation';
-import { formatTimeExtenso, formatDateExtensoTotal, renderTccTitle, normalizeEmail } from './formatters';
+import { formatTimeExtenso, formatDateExtensoWithWeekday, formatWeekdayPt, renderTccTitle, normalizeEmail } from './formatters';
 import type { IntegrationStudioSettings, StudioValidationRule } from '../types/integrationStudio';
 import { CUSTOM_LOCATION_FIELD, OTHER_DEFENSE_LOCATION, getCustomLocationFieldValue, isOtherDefenseLocation, renderCustomLocationName } from './customDefenseLocation';
 import type { CatalogEntry, OperationalConfig, RegistrationAnswers, RegistrationQuestion, VariablePresentation } from '../types/operationalConfig';
@@ -329,10 +329,15 @@ export function formatVariable(value: unknown, presentation: VariablePresentatio
       ...(hasDate ? { dateStyle: long ? 'long' : 'short' } as const : {}),
       ...(hasTime ? { timeStyle: 'short' } as const : {})
     }).format(date);
+    if (hasDate && !long) {
+      const civilDay = new Intl.DateTimeFormat('sv-SE', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+      const weekday = formatWeekdayPt(civilDay);
+      if (weekday) output = `${weekday}, ${output}`;
+    }
     if (long && hasDate) {
       const day = new Intl.DateTimeFormat('sv-SE', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
       const time = new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date);
-      output = formatDateExtensoTotal(day + 'T12:00:00') + (hasTime ? ' às ' + time : '');
+      output = formatDateExtensoWithWeekday(day + 'T12:00:00') + (hasTime ? ' às ' + time : '');
     }
     if (long && hasTime) {
       const time = new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date);
