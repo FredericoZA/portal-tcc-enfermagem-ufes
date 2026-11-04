@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
-import { BarChart3, BookOpen, CalendarDays, CheckCircle2, Clock3, FileText, Gauge, MapPin, ShieldCheck, Tags, TrendingUp, Users2 } from 'lucide-react';
+import { BarChart3, BookOpen, CalendarDays, CheckCircle2, Clock3, FileText, Gauge, ShieldCheck, TrendingUp, Users2 } from 'lucide-react';
 import { PortalSectionDivider } from '../components/PortalSectionDivider';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
 
@@ -205,11 +205,7 @@ export const IndicadoresPage: React.FC = () => {
         <article className={panel}><h2 className="text-xs font-black normal-case">Modalidade</h2><div className="mt-3"><BarList items={data.formats} percentage/></div></article>
       </section>
 
-      <section className="grid gap-3 xl:grid-cols-2">
-        <article className={panel}><div className="flex items-center gap-2"><Tags className="h-4 w-4 text-[var(--portal-brand-action)]"/><h2 className="text-xs font-black normal-case">Temas recorrentes</h2></div><div className="mt-3"><BarList items={data.themes}/></div></article>
-        <article className={panel}><div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[var(--portal-brand-action)]"/><h2 className="text-xs font-black normal-case">Locais das defesas</h2></div><div className="mt-3"><BarList items={data.locations}/></div></article>
-      </section>
-
+      <p className="text-xs leading-5 text-slate-600">Indicadores calculados por regras estatísticas. Dados livres, como palavras-chave e locais informados, não são publicados nesta página; categorias com poucas ocorrências são suprimidas para proteger os participantes.</p>
       <section className="grid gap-3 xl:grid-cols-2">
         <article className={panel}><h2 className="text-xs font-black normal-case">Tipos de trabalho</h2><div className="mt-3"><BarList items={data.workTypes} percentage/></div></article>
         <article className={panel}><h2 className="text-xs font-black normal-case">Resultados das bancas</h2><div className="mt-3"><BarList items={data.outcomes} percentage/></div></article>
