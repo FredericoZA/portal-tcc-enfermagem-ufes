@@ -7,7 +7,7 @@ import type {ProcessData,GlobalSettings} from '../../src/types';
 import {resolveInstallationProfile} from '../../src/utils/installationProfile';
 import {officialParticipantLines} from '../../src/utils/officialParticipants';
 import {authorNames} from '../../src/utils/personPresentation';
-import {formatTccTitle,formatDatePt,formatTime24h} from '../../src/utils/formatters';
+import {formatTccTitle,formatDateWithWeekday,formatDateNumericWithWeekday,formatTime24h} from '../../src/utils/formatters';
 
 const fontBytes=Promise.all(['Regular','Bold'].map(weight=>readFile(path.join(process.cwd(),'server/documents/fonts',`NotoSans-${weight}.ttf`))));
 const logoBytes=readFile(path.join(process.cwd(),'server/documents/assets/colenf-logo.png'));
@@ -70,14 +70,14 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  section('Identificação do trabalho');field('Título do TCC',title);field('Autores',authors);
  for(const participant of officialParticipantLines(process).filter(person=>!person.key.startsWith('ALUNO_')))paragraph(`${participant.role}: ${participant.name}`,9);
  section('Dados da defesa');
- const date=formatDatePt(response.startAt),time=`${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt)}`;
+ const date=formatDateWithWeekday(response.startAt),time=`${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt)}`;
  const dateRows=wrap(date,bold,11,240);const height=Math.max(60,dateRows.length*16+36);ensure(height+8);
  page.drawRectangle({x:margin,y:y-height+16,width,height,color:paper});draw('DATA',margin+12,y,8,bold,muted);draw('HORÁRIO',310,y,8,bold,muted);
  dateRows.forEach((row,i)=>draw(row,margin+12,y-20-i*16,11,bold));draw(time,310,y-20,11,bold);draw('Duração: 1 hora e 30 minutos',310,y-37,8,regular,muted);y-=height;
  field(confirmed?'Local autorizado':'Local solicitado',confirmed?(response.local||snapshot.get('Local')||process.defesa.local):process.defesa.local);
  section('Registro da resposta');
  if(!options.publicView)field('Resposta registrada por',response.respondedBy);
- const registered=new Intl.DateTimeFormat('pt-BR',{timeZone:settings.timezone||'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(response.respondedAt));
+ const registered=`${formatDateNumericWithWeekday(response.respondedAt)}, ${new Intl.DateTimeFormat('pt-BR',{timeZone:settings.timezone||'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(response.respondedAt))}`;
  field('Data e hora do registro',registered);
  const pages=doc.getPages();for(let i=0;i<pages.length;i++){page=pages[i];page.drawLine({start:{x:margin,y:60},end:{x:549,y:60},thickness:.7,color:line});draw('Registro eletrônico do Portal TCC',margin,44,8,regular,muted);const number=`${i+1} / ${pages.length}`;draw(number,549-regular.widthOfTextAtSize(number,8),44,8,regular,muted);}
  return Buffer.from(await doc.save());
