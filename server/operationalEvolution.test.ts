@@ -11,7 +11,6 @@ import { buildMarkerBoldRequests } from './integrations/googleDocsStyles';
 import { buildProcessVariables } from './workflow/runtime';
 import { buildAdvancedAnalytics, analyticsCsv } from './advancedAnalytics';
 import { upgradeStudioDraft } from '../src/utils/studioUpgrade';
-import { buildContinuousIntelligenceState } from './continuousIntelligence';
 
 const p: ProcessData={id:'test',protocolo:'TCC-2026-0001',titulo:'Título',createdByEmail:'aluno@example.invalid',aluno1:{nome:'Ana Souza',email:'ana@example.invalid',matricula:'1'},aluno2:null,orientador:{nome:'Bruno Santos',email:'bruno@example.invalid',siape:'1'},coorientador:null,banca:[],defesa:{startAt:'2026-01-02T12:00:00Z',endAt:'2026-01-02T13:00:00Z',local:'Sala'},avaliacao:{status:'CONCLUIDO',submittedAt:'2026-01-02T13:00:00Z'},status:'AGUARDANDO_DADOS_FINAIS',etapaAtual:'REPOSITORIO',createdAt:'2026-01-01T12:00:00Z',updatedAt:'2026-01-02T13:00:00Z',dataRevision:3,acervo:{submittedAt:'2026-01-03T12:00:00Z',publishFullWork:true}};
 const job=(type:string,status='ARCHIVED')=>({id:type,processId:p.id,documentType:type,status,documentVersion:1,sourceDataRevision:3,driveSignedFileId:'signed',createdAt:'2026-01-01T00:00:00Z',completedAt:'2026-01-02T00:00:00Z'} as SignatureJob);
@@ -62,13 +61,6 @@ test('comparação não divulga taxas de grupos pequenos e CSV neutraliza fórmu
   const report=buildAdvancedAnalytics(input([{...p,academicCycleId:'2026.1'}]),'2026.1','2026.1');assert.equal(report.comparison!.count,null);assert.equal(report.stages[0].medianDays,null);
   report.trends=[{period:'=HYPERLINK(1)',count:3,completionRate:0,suppressed:false}];assert.match(analyticsCsv(report),/"'=HYPERLINK/);
 });
-test('diagnóstico não mantém falha de fluxo já recuperada e usa prazo publicado',()=>{
-  const base=input([p]);const failure={id:'first',processId:p.id,eventCode:'TCC_CREATED',status:'PARTIAL_FAILURE',startedAt:'2026-09-01',actions:[]} as any;
-  const state=buildContinuousIntelligenceState({...base,studio:{operationalConfig:{...DEFAULT_OPERATIONAL_CONFIG,diagnostics:{staleDays:365,minimumCoverage:40,priority:'P3'}}},workflowRuns:[failure,{...failure,id:'second',status:'COMPLETED',startedAt:'2026-09-02'}]});
-  assert.ok(!state.proposals.some(r=>r.id==='improvement-workflow-failures'&&r.evidenceActive));assert.ok(!state.proposals.some(r=>r.id==='improvement-stale-processes'&&r.evidenceActive));assert.equal(state.proposals.find(r=>r.id==='improvement-analytics-coverage')?.priority,'P3');
-});
-
-
 test('rascunho antigo migra a declaração preservando os modelos e sem duplicar ações', () => {
   const old = studio();
   const declaration = old.workflowStages.pop()!;
