@@ -462,6 +462,24 @@ function applyPersistedState(state: PersistedPortalState) {
   publishRuntimeTemplatesFromSettings();
 }
 
+function publishRuntimeTemplatesFromSettings() {
+  // Os modelos pertencem ao Drive do Master. O portal mantém somente metadados
+  // e nunca persiste uma cópia textual ou binária do conteúdo do modelo.
+  updateRuntimeDocumentTemplates([]);
+}
+
+function decodeXmlEntities(value:string):string{return value.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&apos;/g,"'");}
+export async function extractDocxTemplateText(buffer:Buffer):Promise<{text:string;variables:string[]}>{
+  const zip=await JSZip.loadAsync(buffer);const names=Object.keys(zip.files).filter(name=>/^word\/(document|header\d*|footer\d*)\.xml$/.test(name));
+  if(!names.includes('word/document.xml'))throw new Error('DOCX inválido: o documento principal não foi encontrado.');
+  const pieces:string[]=[];
+  for(const name of names){const xml=await zip.file(name)!.async('string');const text=decodeXmlEntities(xml.replace(/<w:tab\/?\s*>/g,'\t').replace(/<\/w:p>/g,'\n').replace(/<\/w:tr>/g,'\n').replace(/<[^>]+>/g,''));if(text.trim())pieces.push(text.trim());}
+  const text=pieces.join('\n\n').replace(/\n{3,}/g,'\n\n').trim();if(!text)throw new Error('O modelo DOCX não contém texto utilizável.');
+  const variables=Array.from(new Set(text.match(/<<[^<>]{2,100}>>|\{\{[^{}]{2,100}\}\}|-[A-Z][A-Z0-9_]{2,80}-/g)||[]));
+  return {text,variables};
+}
+
+// Helper to sync Google Calendar Store from Processes Store
 function generateGoogleEventsFromProcesses(procs: ProcessData[]): GoogleCalendarSyncedEvent[] {
   return procs
     .filter(p => p.defesa && p.defesa.startAt && p.defesa.localStatus === 'CONFIRMADO')
