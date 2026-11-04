@@ -366,14 +366,6 @@ Art. 35. Esta Portaria entra em vigor na data de sua publicação, produzindo ef
 partir do início do período letivo subsequente.
 Parágrafo único. As obrigações cujo cumprimento dependa dos procedimentos, formulários, modelos ou
 orientações previstos no art. 5º produzirão efeitos a partir da publicação dos respectivos instrumentos.
-SONIA LOPES    Assinado de forma digital por
-SONIA LOPES
-VICTOR:8604969 VICTOR:86049690715
-EUSTÁQUIO
-0715     VINICIUS      RIBEIRO
-Dados: 2026.10.26
--03'00'
-12:56:46DE CASTRO
 
 SONIA LOPES VICTOR
 Vice-Reitora no Exercício da Reitoria
