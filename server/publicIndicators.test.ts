@@ -49,3 +49,20 @@ test('indicadores suprimem detalhamento em grupo pequeno', () => {
   assert.deepEqual(payload.byStatus,[]);
   assert.deepEqual(payload.themes,[]);
 });
+
+
+test('API pública não retorna palavras-chave, locais ou resultados com texto livre', () => {
+  const secret='IDENTIFICADOR_PESSOAL_TESTE';
+  const cases=Array.from({length:8},(_,i)=>baseProcess({
+    id:`sig-${i}`,
+    protocolo:`TCC-2026-${i+1}`,
+    acervo:{ publicationState:'PUBLIC', palavrasChave:[secret], workType:'ARTIGO', isPublic:true },
+    defesa:{ startAt:'2026-09-10T12:00:00Z', endAt:'2026-09-10T13:30:00Z', local:secret, localStatus:'CONFIRMADO' },
+    avaliacao:{ status:'CONCLUIDO', resultadoCode:'APROVADO', resultadoLabel:secret, parecer:secret },
+  }));
+  const result=buildPublicIndicators(cases,Date.parse('2026-09-17T12:00:00Z'));
+  assert.deepEqual(result.themes,[]);
+  assert.deepEqual(result.locations,[]);
+  assert.equal(JSON.stringify(result).includes(secret),false);
+  assert.ok(result.outcomes.some(row=>row.label==='Aprovado'&&row.count===8));
+});

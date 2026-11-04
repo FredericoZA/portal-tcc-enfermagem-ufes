@@ -36,7 +36,6 @@ export function getGoogleWorkspaceScopes(): string[] {
 export const DRIVE_FOLDER_NAMES = {
   root: 'PORTAL_TCC',
   system: '00_SISTEMA',
-  continuousIntelligence: '01_INTELIGENCIA_CONTINUA',
   models: '01_DOCUMENTOS',
   processes: '02_PROCESSOS',
   modelTypes: {
@@ -455,87 +454,6 @@ async function uploadBinary(
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(String(payload?.error?.message || `Falha ao enviar ${input.name} ao Drive.`));
   return payload as DriveFile;
-}
-
-export interface LivingIntelligenceDriveFile {
-  id: string;
-  name: string;
-  webViewLink: string;
-  folderId: string;
-  created: boolean;
-}
-
-/**
- * Mantém um único arquivo ativo por nome. Atualizações de conteúdo criam uma
- * nova revisão no próprio Google Drive, evitando cópias concorrentes na pasta.
- */
-export async function upsertLivingIntelligenceFile(input: {
-  accessToken: string;
-  rootFolderId: string;
-  fileName: string;
-  content: string;
-  kind: 'FLOW_IMPROVEMENT_MEMORY' | 'TCC_STATISTICAL_REPORT';
-  sha256: string;
-  version: number;
-  generatedAt: string;
-}): Promise<LivingIntelligenceDriveFile> {
-  if (!/^[a-f0-9]{64}$/.test(input.sha256)) throw new Error('Hash do arquivo vivo inválido.');
-  if (!/^[-A-Z0-9_]+\.md$/.test(input.fileName)) throw new Error('Nome do arquivo vivo inválido.');
-  const bytes = Buffer.from(input.content, 'utf8');
-  if (!bytes.length || bytes.length > 2 * 1024 * 1024) throw new Error('O arquivo vivo deve ter entre 1 byte e 2 MB.');
-  await verifyPrivateDriveFolder(input.accessToken, input.rootFolderId);
-  const technicalRoot = await resolvePortalTechnicalRoot(input.accessToken,input.rootFolderId);
-  const intelligenceFolder = await ensureFolder(input.accessToken, DRIVE_FOLDER_NAMES.continuousIntelligence, technicalRoot);
-  const existing = await findChild(input.accessToken, input.fileName, intelligenceFolder.file.id);
-  const appProperties = {
-    portal: 'portal-tcc',
-    schema: '8',
-    lifecycle: 'living-intelligence',
-    intelligenceKind: input.kind,
-    sha256: input.sha256,
-    reportVersion: String(input.version),
-    generatedAt: input.generatedAt
-  };
-  if (!existing) {
-    const created = await uploadBinary(input.accessToken, {
-      name: input.fileName,
-      parentId: intelligenceFolder.file.id,
-      mimeType: 'text/markdown; charset=utf-8',
-      content: bytes,
-      appProperties
-    });
-    return {
-      id: created.id,
-      name: created.name,
-      webViewLink: created.webViewLink || `https://drive.google.com/file/d/${created.id}/view`,
-      folderId: intelligenceFolder.file.id,
-      created: true
-    };
-  }
-  const response = await fetch(`${DRIVE_UPLOAD_API}/files/${encodeURIComponent(existing.id)}?uploadType=media&fields=id,name,mimeType,webViewLink,parents`, {
-    method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${input.accessToken}`,
-      'Content-Type': 'text/markdown; charset=utf-8',
-      'Content-Length': String(bytes.length),
-      Accept: 'application/json'
-    },
-    body: bytes,
-    signal: AbortSignal.timeout(30_000)
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(String(payload?.error?.message || `Falha ao atualizar ${input.fileName} no Drive.`));
-  const updated = await driveJson<DriveFile>(input.accessToken, `${DRIVE_API}/files/${encodeURIComponent(existing.id)}?fields=id,name,mimeType,webViewLink,parents`, {
-    method: 'PATCH',
-    body: JSON.stringify({ appProperties })
-  });
-  return {
-    id: updated.id,
-    name: updated.name,
-    webViewLink: updated.webViewLink || existing.webViewLink || `https://drive.google.com/file/d/${updated.id}/view`,
-    folderId: intelligenceFolder.file.id,
-    created: false
-  };
 }
 
 export async function storePrivatePortalBackup(input:{accessToken:string;rootFolderId:string;fileName:string;content:Buffer;sha256:string}){

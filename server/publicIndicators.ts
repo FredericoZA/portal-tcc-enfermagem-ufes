@@ -33,7 +33,7 @@ const STATUS_LABELS: Record<string, string> = {
 const WORK_TYPE_LABELS: Record<string, string> = { MONOGRAFIA: 'Monografia', ARTIGO: 'Artigo', OUTRO: 'Outro' };
 
 const round1 = (value: number) => Number(value.toFixed(1));
-const clean = (value: string) => String(value || '').normalize('NFKC').replace(/\s+/g, ' ').trim();
+const RESULT_LABELS:Record<string,string> = { APROVADO:'Aprovado', APROVADO_COM_RESSALVA:'Aprovado com ressalva', REPROVADO:'Reprovado' };
 const mean = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
 const median = (values: number[]) => {
   if (!values.length) return 0;
@@ -93,10 +93,10 @@ export function buildPublicIndicators(processes: ProcessData[], now = Date.now()
   const rawYears = countBuckets(defendedItems.map((process) => formatPart(process.defesa.startAt, { year: 'numeric' }))).sort((a, b) => a.label.localeCompare(b.label));
   const rawMonths = countBuckets(defendedItems.map((process) => yearMonth(process.defesa.startAt))).sort((a, b) => a.label.localeCompare(b.label));
   const completedOrPublic = safe.filter((process) => process.status === 'CONCLUIDO' || process.acervo?.publicationState === 'PUBLIC');
-  const rawThemes = countBuckets(completedOrPublic.flatMap((process) => (process.acervo?.palavrasChave || []).map(clean).filter(Boolean)), 15);
+  // Campos livres (palavras-chave e locais) podem conter dados pessoais,
+  // mesmo que repetidos. Nunca são divulgados pela API pública de indicadores.
   const rawWorkTypes = countBuckets(completedOrPublic.map((process) => WORK_TYPE_LABELS[process.acervo?.workType || ''] || 'Não informado'));
-  const rawLocations = countBuckets(defendedItems.map((process) => clean(process.defesa?.local || '')).filter(Boolean), 8);
-  const rawOutcomes = countBuckets(safe.map((process) => process.avaliacao?.resultadoLabel || process.avaliacao?.resultadoCode || '').filter(Boolean));
+  const rawOutcomes = countBuckets(safe.map((process) => RESULT_LABELS[process.avaliacao?.resultadoCode || ''] || '').filter(Boolean));
   const rawFormats = countBuckets(safe.flatMap((process) => {
     const formats: string[] = [];
     if (process.acervo?.publicFullWorkFileId) formats.push('Trabalho completo');
@@ -150,9 +150,9 @@ export function buildPublicIndicators(processes: ProcessData[], now = Date.now()
     byStatus: smallGroupSuppressed ? [] : rawByStatus.filter((item) => item.count >= MIN_PUBLIC_BUCKET_SIZE),
     years: visible(rawYears),
     months: visible(rawMonths),
-    themes: visible(rawThemes),
+    themes: [],
     workTypes: visible(rawWorkTypes),
-    locations: visible(rawLocations),
+    locations: [],
     outcomes: visible(rawOutcomes),
     formats: visible(rawFormats),
     weekdays: visible(rawWeekdays),

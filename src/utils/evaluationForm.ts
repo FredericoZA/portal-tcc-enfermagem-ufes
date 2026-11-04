@@ -20,23 +20,20 @@ export function evaluationOutcomeLabel(option:EvaluationOutcomeOption):string {
   if(value.includes('aprov'))return 'Aprovado';
   return option.label.replace(/\s*\([^)]*\)/g,'').trim();
 }
-const previousOpinionVariant=new Map<string,number>();
-function variedOpinion(body:string,result:string,endings:string[]):string {
-  const previous=previousOpinionVariant.get(result);
-  const choices=18;
-  const variant=previous===undefined?Math.floor(Math.random()*choices):(previous+1+Math.floor(Math.random()*(choices-1)))%choices;
-  previousOpinionVariant.set(result,variant);
-  const start=['O trabalho','O estudo','O projeto acadêmico'][variant%3];
-  const text=body.replace(/^O trabalho/,start).replace('Durante a exposição e a arguição',Math.floor(variant/3)%2?'Na apresentação e nas respostas à banca':'Durante a exposição e a arguição').replace('A banca identificou',Math.floor(variant/3)%2?'A comissão examinadora identificou':'A banca identificou');
-  return `${text} ${endings[Math.floor(variant/6)]}`;
-}
-export function standardEvaluationOpinion(process:Pick<ProcessData,'titulo'|'protocolo'|'aluno1'|'aluno2'>,outcome?:EvaluationOutcomeOption):string {
-  if(!outcome)return '';
-  const result=evaluationOutcomeLabel(outcome).toLocaleLowerCase('pt-BR');
-  const endings=['A deliberação considera o conjunto da apresentação, da arguição e dos elementos acadêmicos apreciados durante a sessão.', 'O resultado decorre da apreciação conjunta do estudo e das discussões realizadas pelos membros da banca nesta defesa.', 'A decisão sintetiza a análise colegiada do trabalho e os fundamentos acadêmicos discutidos ao longo da apresentação e arguição.'];
-  if(result.includes('reprov'))return variedOpinion('O trabalho apresentado não atendeu satisfatoriamente aos critérios acadêmicos exigidos para a conclusão do curso. A banca identificou limitações na articulação entre os objetivos, o desenvolvimento e as conclusões, bem como aspectos da exposição e da arguição que demandam aprofundamento. Diante da análise realizada, a banca deliberou pela reprovação, conforme as normas do curso.',result,endings);
-  if(result.includes('ressalva'))return variedOpinion('O trabalho demonstrou pertinência temática e contribuição para a formação acadêmica, com desenvolvimento compatível com os objetivos propostos. A apresentação e a discussão permitiram reconhecer os avanços alcançados e os aspectos que ainda exigem aperfeiçoamento. A banca deliberou pela aprovação com ressalvas, condicionada à incorporação das correções e recomendações apresentadas durante a arguição e à conferência da versão definitiva.',result,endings);
-  return variedOpinion('O trabalho foi apresentado com clareza, organização e coerência, evidenciando dedicação na construção do estudo e adequada articulação entre os objetivos, o desenvolvimento e as conclusões. Durante a exposição e a arguição, observou-se domínio do tema e capacidade de reflexão sobre as questões abordadas. A banca reconhece a relevância da discussão para a formação em enfermagem e a qualidade do percurso acadêmico desenvolvido, deliberando pela aprovação do trabalho.',result,endings);
+/**
+ * Texto-base determinístico: não avalia mérito, não consulta modelos de IA e
+ * não inventa observações sobre a defesa. O orientador complementa o que a
+ * banca efetivamente deliberou antes de confirmar a ata.
+ */
+export function standardEvaluationOpinion(_process:Pick<ProcessData,'titulo'|'protocolo'|'aluno1'|'aluno2'>, outcome?:EvaluationOutcomeOption):string {
+  if (!outcome) return '';
+  const result=evaluationOutcomeLabel(outcome);
+  const common=`Após a defesa do Trabalho de Conclusão de Curso, a banca examinadora registrou o resultado "${result}".`;
+  if (result === 'Reprovado')
+    return `${common} Fundamentação da decisão: [Completar com os fundamentos específicos registrados pela banca durante a defesa].`;
+  if (result === 'Aprovado com ressalva')
+    return `${common} Fundamentação e ressalvas: [Completar com as observações efetivamente apresentadas pela banca]. Correções e encaminhamentos: [Completar com as providências definidas na sessão].`;
+  return `${common} Fundamentação da decisão: [Completar com os fundamentos efetivamente apresentados pela banca durante a defesa].`;
 }
 const aliases: Record<string, string> = { CAMPO_09: 'RESULTADO', CAMPO_11: 'PARECER' };
 const LEGACY_GRADE_KEYS = new Set(['CAMPO_10', 'NOTA', 'NOTA_FINAL', 'AVALIACAO_NOTA', 'AVALIACAO_GRADE', 'EVALUATION_GRADE']);

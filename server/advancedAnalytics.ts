@@ -1,7 +1,19 @@
-import type { ProcessData, SignatureJob } from '../src/types';
-import type { WorkflowRun } from '../src/types/automation';
-import type { ContinuousIntelligenceInput } from './continuousIntelligence';
-import { buildTccStatisticalSnapshot } from './continuousIntelligence';
+import type { DocumentCorrectionRequest, ProcessData, SignatureJob, StudioFormSubmission } from '../src/types';
+import type { EmailDeliveryRecord, WorkflowRun } from '../src/types/automation';
+import type { IntegrationStudioSettings } from '../src/types/integrationStudio';
+import { buildTccStatisticalSnapshot } from './statisticalSnapshot';
+export interface AdvancedAnalyticsInput {
+  studio?: Partial<IntegrationStudioSettings>;
+  processes: ProcessData[];
+  workflowRuns: WorkflowRun[];
+  emailDeliveries: EmailDeliveryRecord[];
+  signatureJobs: SignatureJob[];
+  formSubmissions: StudioFormSubmission[];
+  correctionRequests: DocumentCorrectionRequest[];
+  courseName: string;
+  institutionName: string;
+  generatedAt?: string;
+}
 import { latestSignature } from './workflow/gates';
 const day = 86400000;
 const median = (values: number[]) => { const sorted = values.filter(Number.isFinite).sort((a,b) => a-b); return sorted.length < 3 ? null : Number(((sorted[Math.floor(sorted.length/2)] + sorted[Math.floor((sorted.length-1)/2)])/2).toFixed(2)); };
@@ -10,7 +22,7 @@ export function processPeriod(p: ProcessData): string {
   const date = p.defesa?.startAt || p.createdAt;
   return /^\d{4}-\d{2}/.test(date) ? `${date.slice(0,4)}.${Number(date.slice(5,7)) <= 6 ? 1 : 2}` : 'SEM_PERIODO';
 }
-export function buildAdvancedAnalytics(input: ContinuousIntelligenceInput, period?: string, compare?: string) {
+export function buildAdvancedAnalytics(input: AdvancedAnalyticsInput, period?: string, compare?: string) {
   const periods = [...new Set(input.processes.map(processPeriod))].sort().reverse();
   const selected = period ? input.processes.filter(p => processPeriod(p) === period) : input.processes;
   const ids = new Set(selected.map(p => p.id));

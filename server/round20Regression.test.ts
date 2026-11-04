@@ -32,12 +32,18 @@ test('prévia de ata longa vincula todo o conteúdo por hash sem expor o texto n
  assert.ok(!validEvaluationPreview(token,'secret',{...binding,documentText:binding.documentText+'x'},1000));
  assert.ok(!Buffer.from(token.split('.')[0],'base64url').toString().includes('Texto confidencial'));
 });
-test('resultados antigos perdem faixas numéricas e ressalvas recebem parecer correspondente',()=>{
+test('resultados antigos perdem faixas numéricas e ressalvas usam texto-base sem mérito inventado',()=>{
  const option={code:'APROVADO_RESTRICAO',label:'Aprovado com Restrição (5,00 ≤ x < 7,00)'};assert.equal(evaluationOutcomeLabel(option),'Aprovado com ressalva');
- assert.match(standardEvaluationOpinion({} as any,option),/aprovação com ressalvas/);
+ const opinion=standardEvaluationOpinion({} as any,option);
+ assert.match(opinion,/Aprovado com ressalva/);
+ assert.match(opinion,/Fundamentação e ressalvas: \[Completar/);
+ assert.doesNotMatch(opinion,/5,00|7,00/);
 });
 
-test('sugestões consecutivas variam sem alterar a decisão acadêmica',()=>{
+test('rascunhos consecutivos são estáveis e exigem fundamentação humana',()=>{
  const option={code:'APROVADO',label:'Aprovado'};const first=standardEvaluationOpinion({} as any,option);const second=standardEvaluationOpinion({} as any,option);
- assert.notEqual(first,second);assert.match(first,/aprovação do trabalho/);assert.match(second,/aprovação do trabalho/);assert.ok(first.split(/\s+/).length>=85);
+ assert.equal(first,second);
+ assert.match(first,/Aprovado/);
+ assert.match(first,/\[Completar com os fundamentos/);
+ assert.doesNotMatch(first,/clareza|domínio do tema|aprovação do trabalho/i);
 });
