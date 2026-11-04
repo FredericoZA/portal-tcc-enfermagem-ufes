@@ -77,7 +77,9 @@ interface HomePageProps {
 
 /** Apenas sinaliza a reserva ainda sem resposta, sem alterar cores nem agendamento. */
 const PendingDefenseConfirmationNote: React.FC<{ process: Pick<ProcessData, 'defesa'> }> = ({ process }) => {
-  if (process.defesa?.localStatus !== 'PENDENTE' || process.defesa?.departmentResponse) return null;
+  // A projeção anônima substitui departmentResponse por hasReservationReceipt.
+  const defesa = process.defesa as ProcessData['defesa'] & { hasReservationReceipt?: boolean };
+  if (defesa?.localStatus !== 'PENDENTE' || defesa?.departmentResponse || defesa?.hasReservationReceipt) return null;
   return <span className="font-extrabold normal-case" style={{ color: '#b91c1c' }}> (Aguardando confirmação)</span>;
 };
 
