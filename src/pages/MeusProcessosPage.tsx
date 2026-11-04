@@ -4,8 +4,8 @@ import { ProcessData, ProcessRole } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { 
-  formatDatePt, 
-  formatDateNumeric, 
+  formatDateWithWeekday, 
+  formatDateNumericWithWeekday, 
   formatTimeExtenso, 
   cleanPersonName, 
   formatProfessorName, 
@@ -373,7 +373,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
         const row = activeCols.map((k) => {
           switch (k) {
             case 'protocolo': return `"${p.protocolo}"`;
-            case 'defesaDataHora': return `"${p.defesa?.startAt ? `${formatDateNumeric(p.defesa.startAt)} ${formatTimeExtenso(p.defesa.startAt)}` : 'A definir'}"`;
+            case 'defesaDataHora': return `"${p.defesa?.startAt ? `${formatDateNumericWithWeekday(p.defesa.startAt)} ${formatTimeExtenso(p.defesa.startAt)}` : 'A definir'}"`;
             case 'progresso': return `"${getStepNumberLabel(progress.label).replace('Fase ', '')}"`;
             case 'titulo': return `"${(p.titulo || '').replace(/"/g, '""')}"`;
             case 'aluno1': return `"${cleanPersonName(p.aluno1?.nome || '').replace(/"/g, '""')}"`;
@@ -479,7 +479,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
         return (
           <td key="defesaDataHora" className={`${styles.cellPadClass} ${widthClass} ${styles.cellWeightClass} ${styles.cellTextColorClass} ${alignClass} ${styles.borderClass} align-middle`}>
             <div className={`flex items-center justify-center ${styles.cellFontSizeClass}`}>
-              <span className="font-normal text-black">{formatDateNumeric(proc.defesa?.startAt)}</span>
+              <span className="font-normal text-black">{formatDateNumericWithWeekday(proc.defesa?.startAt)}</span>
             </div>
             <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa?.startAt)}</div>
           </td>
@@ -853,7 +853,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                           <StudentNames aluno1={proc.aluno1} aluno2={proc.aluno2} align="left" itemClassName="text-xs font-bold text-slate-900" />
                         </div>
                         <div><strong>Orientador:</strong> {proc.orientador?.nome || 'Não definido'}</div>
-                        <div><strong>Data:</strong> {formatDatePt(proc.defesa?.startAt)}</div>
+                        <div><strong>Data:</strong> {formatDateWithWeekday(proc.defesa?.startAt)}</div>
                       </div>
 
                       <div className="pt-2 flex items-center justify-between border-t border-slate-300/50">
