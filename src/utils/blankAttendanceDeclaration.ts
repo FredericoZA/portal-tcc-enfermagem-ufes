@@ -1,54 +1,86 @@
 /**
- * Modelo público em branco para preenchimento manual após a defesa.
- * Não consulta processos, participantes nem serviços externos.
+ * Modelo público institucional, em branco e preparado para preenchimento manual.
+ * Usa a mesma logomarca COLENF disponibilizada em public/colenf-logo.png.
+ * Não consulta TCCs, contas, participantes ou serviços de IA.
  */
-export async function createBlankAttendanceDeclarationPdf(): Promise<Uint8Array> {
+export async function createBlankAttendanceDeclarationPdf(logoBytes: Uint8Array): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
-  const document = await PDFDocument.create();
-  document.setTitle('Declaração de comparecimento - modelo em branco');
-  document.setSubject('Modelo para preenchimento à mão e assinatura do professor orientador');
-  const page = document.addPage([595.28, 841.89]); // A4, em pontos
-  const regular = await document.embedFont(StandardFonts.TimesRoman);
-  const bold = await document.embedFont(StandardFonts.TimesRomanBold);
-  const black = rgb(0, 0, 0);
-  const gray = rgb(0.25, 0.25, 0.25);
-  const left = 63;
-  const right = 532;
+  const pdf = await PDFDocument.create();
+  pdf.setTitle('Declaração de comparecimento - modelo em branco');
+  pdf.setAuthor('Colegiado do Curso de Enfermagem e Obstetrícia - CCS/UFES');
+  pdf.setSubject('Modelo de declaração para preenchimento manual e assinatura do professor orientador');
 
-  const text = (value: string, y: number, x = left, size = 12, font = regular) => {
-    page.drawText(value, { x, y, size, font, color: black });
-  };
-  const rule = (y: number, start = left, end = right) => {
-    page.drawLine({ start: { x: start, y }, end: { x: end, y }, thickness: 0.65, color: gray });
-  };
+  const page = pdf.addPage([595.28, 841.89]); // A4 em pontos
+  const regular = await pdf.embedFont(StandardFonts.TimesRoman);
+  const institutional = await pdf.embedFont(StandardFonts.Helvetica);
+  const institutionalBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const logo = await pdf.embedPng(logoBytes);
 
-  const title = 'DECLARAÇÃO DE COMPARECIMENTO';
-  text(title, 744, (595.28 - bold.widthOfTextAtSize(title, 16)) / 2, 16, bold);
+  const green = rgb(0, 88 / 255, 48 / 255);
+  const ink = rgb(0.13, 0.18, 0.16);
+  const muted = rgb(0.38, 0.43, 0.41);
+  const ruleColor = rgb(0.42, 0.48, 0.45);
+  const left = 57;
+  const right = 538;
+  const center = 595.28 / 2;
 
-  text('Declaro, para os devidos fins, que', 667);
-  rule(633); // Nome de quem compareceu à defesa
-  text('esteve presente na defesa do Trabalho de Conclusão de Curso (TCC)', 603);
-  text('intitulado:', 574);
-  rule(540);
-  rule(509);
-  rule(478);
+  const text = (
+    value: string, x: number, y: number, size = 12,
+    font = regular, color = ink
+  ) => page.drawText(value, { x, y, size, font, color });
+  const centered = (
+    value: string, y: number, size: number, font = institutionalBold, color = green
+  ) => text(value, center - font.widthOfTextAtSize(value, size) / 2, y, size, font, color);
+  const line = (y: number, x1 = left, x2 = right, thickness = 0.7, color = ruleColor) =>
+    page.drawLine({ start: { x: x1, y }, end: { x: x2, y }, thickness, color });
 
-  text('realizada no dia ______/______/________, com início às ______h______', 440);
-  text('e término às ______h______, no local:', 412);
-  rule(380);
-  rule(349);
+  // Cabeçalho limpo: logo oficial à esquerda e identificação acadêmica à direita.
+  page.drawImage(logo, { x: left, y: 734, width: 69, height: 69 });
+  text('UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO', 140, 783, 10.6, institutionalBold, green);
+  text('CENTRO DE CIÊNCIAS DA SAÚDE', 140, 765, 9.7, institutional, ink);
+  text('COLEGIADO DO CURSO DE ENFERMAGEM E OBSTETRÍCIA', 140, 748, 9.0, institutional, ink);
+  line(716, left, right, 1.3, green);
 
-  text('Local e data: _______________________________________________________', 282);
-  rule(190, 127, 468);
-  const signature = 'Assinatura do(a) professor(a) orientador(a)';
-  text(signature, 170, (595.28 - regular.widthOfTextAtSize(signature, 11)) / 2, 11);
+  centered('DECLARAÇÃO DE COMPARECIMENTO', 656, 16, institutionalBold, green);
 
-  return document.save();
+  text('Declaro, para os devidos fins, que', left, 592, 12.5);
+  line(558);
+  text('esteve presente na defesa do Trabalho de Conclusão de Curso (TCC)', left, 531, 12.0);
+  text('intitulado:', left, 507, 12.0);
+  line(477);
+  line(449);
+  line(421);
+
+  text('realizada no dia ______/______/________, com início às ______h______', left, 376, 11.8);
+  text('e término às ______h______, no local:', left, 348, 11.8);
+  line(315);
+  line(285);
+
+  text('Local e data:', left, 236, 11.8);
+  line(233, 131, right);
+
+  line(157, 141, 454, 0.8);
+  centered('Assinatura do(a) professor(a) orientador(a)', 137, 9.5, institutional, muted);
+
+  // Rodapé institucional simples, sem faixas ou caixas.
+  line(95, left, right, 0.9, green);
+  centered('COLEGIADO DO CURSO DE ENFERMAGEM E OBSTETRÍCIA · CCS/UFES', 77, 8.8, institutionalBold, green);
+  centered('Campus de Maruípe · Vitória/ES', 60, 8.5, institutional, muted);
+
+  return pdf.save();
 }
 
-/** Aciona o download direto do PDF, sem formulário ou janela de pré-visualização. */
+async function loadOfficialCourseLogo(): Promise<Uint8Array> {
+  // Imagem pública e estática do próprio portal, sem depender de sessão ou backend.
+  const response = await fetch('/colenf-logo.png', { cache: 'force-cache' });
+  if (!response.ok) throw new Error('Logomarca do curso indisponível.');
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+/** Baixa o PDF imediatamente após o clique, sem abrir formulários ou pop-ups. */
 export async function downloadBlankAttendanceDeclaration(): Promise<void> {
-  const bytes = await createBlankAttendanceDeclarationPdf();
+  const logoBytes = await loadOfficialCourseLogo();
+  const bytes = await createBlankAttendanceDeclarationPdf(logoBytes);
   const buffer = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(buffer).set(bytes);
   const url = URL.createObjectURL(new Blob([buffer], { type: 'application/pdf' }));
