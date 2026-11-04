@@ -17,7 +17,7 @@ test('declaração usa PDF A4 em branco, cabeçalho com logo COLENF e rodapé di
   assert.equal(pdf.getForm().getFields().length, 0);
   const resources = pdf.getPage(0).node.Resources();
   const imageObjects = resources?.lookup(PDFName.of('XObject'), PDFDict);
-  assert.ok(imageObjects && imageObjects.size() >= 1, 'a logomarca oficial precisa estar embutida no PDF');
+  assert.ok(imageObjects && imageObjects.keys().length >= 1, 'a logomarca oficial precisa estar embutida no PDF');
 
   const source = readFileSync('src/utils/blankAttendanceDeclaration.ts', 'utf8');
   assert.match(source, /fetch\('\/colenf-logo\.png'/);
