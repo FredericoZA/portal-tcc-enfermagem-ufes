@@ -105,7 +105,7 @@ export function acceptEvaluationAnswers(
   const outcome = outcomes.find(o => o.code === input.resultadoCode);
   if (!outcome) throw new Error('Selecione um resultado válido.');
   if (typeof input.parecer !== 'string' || !input.parecer.trim() || input.parecer.length > 10000) throw new Error('Preencha o parecer da banca com até 10.000 caracteres.');
-  if(input.parecer.includes('[Completar com '))throw new Error('Complete a fundamentação e os encaminhamentos do texto-padrão antes de enviar o parecer.');
+  if(/\[\s*(?:completar|preencher|inserir)\b[^\]]{0,300}\]/i.test(input.parecer))throw new Error('Complete a fundamentação e os encaminhamentos do texto-padrão antes de enviar o parecer.');
   const extra = input.answers && typeof input.answers === 'object' && !Array.isArray(input.answers) ? input.answers as Record<string, unknown> : {};
   const variables: Record<string, unknown> = { ...extra, RESULTADO: outcome.code, PARECER: input.parecer.trim() };
   for (const key of LEGACY_GRADE_KEYS) delete variables[key];
