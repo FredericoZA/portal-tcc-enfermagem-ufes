@@ -88,7 +88,6 @@ export function buildTccStatisticalSnapshot(input: Pick<StatisticalSnapshotInput
   const themes: string[] = [];
   const studyTypes: string[] = [];
   const purposes: string[] = [];
-  const keywordValues: string[] = [];
   let keywordCovered = 0;
 
   for (const process of processes) {
@@ -101,7 +100,6 @@ export function buildTccStatisticalSnapshot(input: Pick<StatisticalSnapshotInput
     purposes.push(classify('FINALIDADE_DO_TRABALHO', ['FINALIDADE_DO_TRABALHO', 'FINALIDADE', 'DESTINACAO']));
     const keywords = Array.from(new Set((process.acervo?.palavrasChave || []).map(value=>normalizeLabel(value).toLocaleLowerCase('pt-BR')).filter(value=>value&&!/@|https?:|\d{6,}/i.test(value))));
     if (keywords.length) keywordCovered++;
-    keywordValues.push(...keywords);
   }
 
   const completionDurations = processes
@@ -153,7 +151,8 @@ export function buildTccStatisticalSnapshot(input: Pick<StatisticalSnapshotInput
       areas: distribution(areas, total),
       studyTypes: distribution(studyTypes, total),
       purposes: distribution(purposes, total),
-      keywords: distribution(keywordValues, total)
+      // Palavras-chave são campos livres e não devem sair em agregações exportáveis.
+      keywords: { entries: [], unknown: total, suppressed: 0 }
     },
     dataQuality: {
       areaCoverage: percentage(areas.filter(Boolean).length, total),
