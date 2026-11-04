@@ -1,5 +1,5 @@
 import {withPortalOperation,requestOperationLabel} from './portalOperations';
-import { ProcessData, GlobalSettings, AuditLog, DocumentCorrectionRequest, GoogleCalendarSyncedEvent, SignatureJob, AstenIntegrationStatus, ContinuousIntelligenceOverview, ImprovementStatus, LivingPortalArtifactKind } from '../types';
+import { ProcessData, GlobalSettings, AuditLog, DocumentCorrectionRequest, GoogleCalendarSyncedEvent, SignatureJob, AstenIntegrationStatus } from '../types';
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
 import type { FeedbackEntry, FeedbackPage } from '../types/feedback';
 import type {AstenDocumentFoldersStatus,AstenDocumentFolderType} from '../types/signatures';
@@ -339,10 +339,6 @@ export const apiClient = {
   getAdvancedAnalytics:(period='',compare='')=>fetchApi<any>(`/api/admin/analytics/advanced?${new URLSearchParams({period,compare})}`),
   downloadAdvancedAnalytics:(format:'csv'|'pdf',period='',compare='')=>downloadApiFile(`/api/admin/analytics/advanced?${new URLSearchParams({format,period,compare})}`),
   simulateWorkflow:(studio: unknown,scenario: unknown)=>fetchApi<any>('/api/admin/workflow/simulate',{method:'POST',body:JSON.stringify({studio,scenario})}),
-  getContinuousIntelligence:()=>fetchApi<ContinuousIntelligenceOverview>('/api/admin/continuous-intelligence'),
-  refreshContinuousIntelligence:()=>fetchApi<ContinuousIntelligenceOverview>('/api/admin/continuous-intelligence/refresh',{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
-  updateImprovementProposal:(id:string,status:ImprovementStatus,reviewNote?:string)=>fetchApi<ContinuousIntelligenceOverview>(`/api/admin/continuous-intelligence/proposals/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({status,reviewNote})}),
-  downloadContinuousIntelligenceFile:(kind:LivingPortalArtifactKind)=>downloadApiFile(`/api/admin/continuous-intelligence/files/${encodeURIComponent(kind)}`),
   getProcessVerifications:(id:string)=>fetchApi<any[]>(`/api/processes/${id}/verifications`),
   getPublicVerification:(code:string)=>fetchApi<any>(`/api/public/verification/${encodeURIComponent(code)}`),
   checkVerificationPdfFile:(code:string,file:File)=>verifyPublicPdfLocally(file,()=>fetchApi<PublicDocumentVerification>(`/api/public/verification/${encodeURIComponent(code)}`)),
