@@ -1,6 +1,6 @@
 # Declarações: Gov.br e conferência manual no VALIDAR/ITI
 
-Gov.br pode ser usado junto com a Asten para ata, termo de autorização e declaração, conforme o papel e os pré-requisitos do processo. O orientador assina a ata; autores e orientador assinam o termo; a Presidência assina a declaração. A escolha segue a decisão do usuário de conferir no VALIDAR/ITI e aprovar no Portal.
+Gov.br pode ser usado junto com a Asten para ata, termo de autorização e declaração, conforme o papel e os pré-requisitos do processo. O orientador e os dois examinadores assinam a ata (três assinaturas no mesmo PDF); autores e orientador assinam o termo; a Presidência assina a declaração. A escolha segue a decisão do usuário de conferir no VALIDAR/ITI e aprovar no Portal.
 
 O fluxo usa a sessão autenticada vigente do Portal, sem solicitar outro código para preparar, devolver ou conferir o PDF. Sessões encerradas ou expiradas continuam exigindo o login normal. Na ata e no termo, o orientador reúne as assinaturas exigidas, assina por último e devolve o PDF; na declaração, a devolução cabe à Presidência. Administradores mantêm acesso operacional, sem substituir os signatários cadastrados.
 

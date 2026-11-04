@@ -1,6 +1,6 @@
 import type { DocumentType } from './index';
 
-export type SignatureSignerRole = 'ADVISOR' | 'STUDENT' | 'PRESIDENT';
+export type SignatureSignerRole = 'ADVISOR' | 'EXAMINER' | 'STUDENT' | 'PRESIDENT';
 export type SignatureSignerStatus = 'WAITING' | 'VIEWED' | 'SIGNED' | 'DECLINED';
 export type SignatureJobStatus = 'WAITING_INTEGRATION' | 'QUEUED' | 'READY_FOR_REVIEW' | 'APPROVED' | 'SENDING' | 'SENT' | 'PARTIALLY_SIGNED' | 'SIGNED' | 'DECLINED' | 'EXPIRED' | 'CANCELED' | 'PROVIDER_ERROR' | 'DRIVE_SYNC_PENDING' | 'ARCHIVED';
 

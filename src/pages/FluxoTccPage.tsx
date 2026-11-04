@@ -70,9 +70,9 @@ const phases = [
     details: [
       'Os conceitos são Aprovado, Aprovado com ressalva e Reprovado. A avaliação e o lançamento da nota são feitos no Portal do Professor, em professor.ufes.br.',
       'Clique em Visualizar ata, confira a prévia e confirme a conferência. Use Registrar avaliação e ir para documentos.',
-      'Em Documentos administrativos, escolha Asten ou Gov.br na caixa da ata. Somente o orientador assina. Registrar o conceito não solicita assinatura automaticamente.',
+      'Em Documentos administrativos, escolha Asten ou Gov.br na caixa da ata. Orientador e dois examinadores assinam a mesma ata; registrar o conceito não solicita assinatura automaticamente.',
     ],
-    gate: 'Ata assinada pelo orientador e arquivada; escolher um método ou enviar um PDF ainda não conclui a assinatura.',
+    gate: 'Ata assinada pelo orientador e pelos dois examinadores e arquivada; escolher um método ou enviar um PDF ainda não conclui a assinatura.',
     result: 'Entrega final liberada aos autores, com aviso também ao orientador.',
   },
   {
@@ -114,7 +114,7 @@ const phases = [
     summary: 'A presidência da comissão assina a declaração de participação na banca.',
     details: [
       'A declaração depende da entrega final, da ata arquivada e do termo assinado e arquivado, quando aplicável.',
-      'A presidência da comissão assina a declaração; o orientador preside a sessão e assina a ata. São responsabilidades diferentes.',
+      'A presidência da comissão assina a declaração; o orientador preside a sessão e assina a ata com os dois examinadores. São responsabilidades diferentes.',
       'Pelo Asten, solicite e siga o e-mail de assinatura. Pelo Gov.br, baixe, assine e devolva o PDF; a conferência administrativa ainda é necessária.',
     ],
     gate: 'Declaração assinada e arquivada, sem pendências obrigatórias.',

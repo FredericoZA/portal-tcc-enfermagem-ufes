@@ -1238,9 +1238,9 @@ export const ConfiguracoesPage: React.FC = () => {
       stageNumber: 4,
       title: 'Apresentação & Preenchimento da Ata',
       triggerEvent: 'EVALUATION_SUBMITTED',
-      description: 'O orientador confere os dados, registra o resultado e escreve o parágrafo variável do parecer.',
+      description: 'O orientador registra conceito e parecer; depois, a ata exige assinatura do orientador e dos dois examinadores (prioridade 1) mediante solicitação explícita.',
       actions: [
-        { id: 'act-401', type: 'doc', refId: 'tmpl-ata', title: 'Gera Ata de Defesa e envia à Asten', recipientOrDetail: 'Assinatura do orientador' },
+        { id: 'act-401', type: 'doc', refId: 'tmpl-ata', title: 'Prepara Ata de Defesa para assinatura', recipientOrDetail: 'Orientador e dois examinadores · prioridade 1' },
       ]
     },
     {
@@ -1269,7 +1269,7 @@ export const ConfiguracoesPage: React.FC = () => {
   const [workflowStages, setWorkflowStages] = useState<WorkflowStageItem[]>(() => {
     const saved = localStorage.getItem('workflow_pipeline_stages');
     if (saved) {
-      try { return registrationFirst(JSON.parse(saved)); } catch (e) { console.error(e); }
+      try { return registrationFirst(withOperationalCatalog({workflowStages:JSON.parse(saved)}).workflowStages || []); } catch (e) { console.error(e); }
     }
     return registrationFirst(initialPipelineStages);
   });

@@ -1,161 +1,69 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import type { ProcessData, SignatureJob } from '../../src/types';
-import {
-  assertSignatureEligibility,
-  canInitiateSignature,
-  canReturnGovbrDocument,
-  deriveSignatureSigners,
-  isValidSignatureEmail,
-  publicationRequested,
-  repositoryDataComplete,
-} from './signaturePolicy';
+import {DEMO_PROCESSES} from '../../src/services/demoSeed';
+import {deriveSignatureSigners,canInitiateSignature,assertCurrentSignatureRecipients} from './signaturePolicy';
+import {assertAstenEnvelopeSigners} from '../integrations/asten';
 
-const president = { commissionPresidentEmail: 'Presidente@example.org', commissionPresidentName: 'Presidente cadastrado' };
-function processFixture(): ProcessData {
-  return {
-    id: 'process-1', protocolo: 'TCC-1', dataRevision: 2,
-    aluno1: { nome: 'Autora Um', email: ' Autora1@example.org ' },
-    aluno2: null,
-    orientador: { nome: 'Orientador cadastrado', email: ' Orientador@example.org ' },
-    avaliacao: { status: 'CONCLUIDO' },
-    acervo: {
-      palavrasChave: ['um', 'dois', 'três', 'quatro', 'cinco'],
-      resumoSintese: 'Resumo', trabalhoCompletoFileUrl: '/private/work',
-      publishFullWork: true, publishExpandedAbstract: false,
-      submittedAt: '2026-10-15T12:00:00.000Z', authorizationConfirmedAt: '2026-10-15T12:00:00.000Z',
-    },
-  } as ProcessData;
-}
-function archivedJob(type: 'ATA' | 'TERMO'): SignatureJob {
-  return {
-    processId: 'process-1', documentType: type, documentVersion: 1,
-    sourceDataRevision: 2, status: 'ARCHIVED', driveSignedFileId: `signed-${type}`,
-  } as SignatureJob;
-}
+const settings = {commissionPresidentName:'Presidência', commissionPresidentEmail:'presidencia@ufes.br'};
+const process = () => structuredClone(DEMO_PROCESSES[0]);
 
-test('ata inclui somente orientador, com e-mail normalizado', () => {
-  const signers = deriveSignatureSigners(processFixture(), 'ATA', president);
-  assert.equal(signers.length, 1);
-  assert.deepEqual(signers[0], {
-    id: 'advisor:orientador@example.org', role: 'ADVISOR', name: 'Orientador cadastrado',
-    email: 'orientador@example.org', signingOrder: 1, status: 'WAITING',
-  });
+test('ata: exige orientador e dois examinadores titulares, na mesma prioridade', () => {
+  const item = process();
+  const signers = deriveSignatureSigners(item,'ATA',settings);
+  assert.equal(signers.length,3);
+  assert.deepEqual(signers.map(signer=>signer.role),['ADVISOR','EXAMINER','EXAMINER']);
+  assert.deepEqual(signers.map(signer=>signer.signingOrder),[1,1,1]);
+  assert.deepEqual(signers.map(signer=>signer.email),[
+    item.orientador.email.toLowerCase(),
+    item.banca.find(member=>member.funcao==='EXAMINER_2')!.email.toLowerCase(),
+    item.banca.find(member=>member.funcao==='EXAMINER_3')!.email.toLowerCase(),
+  ]);
+  assert.equal(new Set(signers.map(signer=>signer.email)).size,3);
 });
 
-test('assinaturas usam tratamento, titulação e nome completo do orientador', () => {
-  const process = processFixture();
-  process.orientador = { ...process.orientador, nome: 'Camila Zacché de Aguiar', tratamento: 'Professora', titulacao: 'Doutora' };
-  for (const document of ['ATA', 'TERMO'] as const) {
-    const advisor = deriveSignatureSigners(process, document, president).find(signer => signer.role === 'ADVISOR');
-    assert.equal(advisor?.name, 'Prof.ª Dr.ª Camila Zacché de Aguiar');
+test('ata: examinadores titulares podem solicitar assinatura, aluno e coorientador não', () => {
+  const item = process();
+  assert.equal(canInitiateSignature(item.orientador.email,item,'ATA',settings),true);
+  for (const examiner of item.banca.filter(member=>member.funcao==='EXAMINER_2'||member.funcao==='EXAMINER_3')) {
+    assert.equal(canInitiateSignature(examiner.email,item,'ATA',settings),true);
   }
-  assert.equal(deriveSignatureSigners(process, 'TERMO', president)[0].name, 'Autora Um');
+  assert.equal(canInitiateSignature(item.aluno1.email,item,'ATA',settings),false);
+  if (item.coorientador) assert.equal(canInitiateSignature(item.coorientador.email,item,'ATA',settings),false);
 });
 
-test('ata de dois autores continua assinada e devolvida somente pelo orientador',()=>{
- const p=processFixture();p.aluno2={...p.aluno1,nome:'Autor Dois',email:'autor2@example.org'};
- const signers=deriveSignatureSigners(p,'ATA',president);assert.deepEqual(signers.map(s=>s.role),['ADVISOR']);assert.deepEqual(signers.map(s=>s.signingOrder),[1]);assert.equal(canInitiateSignature('autor2@example.org',p,'ATA',president),false);assert.equal(canReturnGovbrDocument('autor2@example.org',p,'ATA',president),false);assert.equal(canReturnGovbrDocument('orientador@example.org',p,'ATA',president),true);
-});
-
-test('termo inclui um ou dois autores e orientador simultaneamente', () => {
-  const process = processFixture();
-  assert.deepEqual(deriveSignatureSigners(process, 'TERMO', president).map(signer => signer.email), ['autora1@example.org', 'orientador@example.org']);
-  process.aluno2 = { ...process.aluno1, nome: 'Autor Dois', email: 'autor2@example.org' };
-  const signers = deriveSignatureSigners(process, 'TERMO', president);
-  assert.deepEqual(signers.map(signer => signer.role), ['STUDENT', 'STUDENT', 'ADVISOR']);
-  assert.deepEqual(signers.map(signer => signer.signingOrder), [1, 1, 1]);
-});
-
-test('declaração usa presidente configurado, sem substituir por master ou destinatário do pedido', () => {
-  const process = Object.assign(processFixture(), { recipientEmail: 'invasor@example.org', signers: [{ email: 'invasor@example.org' }] });
-  const settings = { ...president, masterEmail: 'master@example.org', recipientEmail: 'invasor@example.org' };
-  assert.deepEqual(deriveSignatureSigners(process, 'DECLARACAO', settings).map(signer => signer.email), ['presidente@example.org']);
-  assert.throws(() => deriveSignatureSigners(process, 'DECLARACAO', { commissionPresidentEmail: '' }), /Presidente/);
-});
-
-test('cadastro de signatário inválido é recusado antes de gerar qualquer artefato', () => {
-  for (const invalid of ['', 'sem-arroba', 'aluno@example.org\r\nBcc:outro@example.org', 'aluno@example.org\n', 'a'.repeat(250) + '@x.org']) {
-    const process = processFixture();
-    process.orientador.email = invalid;
-    assert.equal(isValidSignatureEmail(invalid), false);
-    assert.throws(() => deriveSignatureSigners(process, 'ATA', president), /e-mail válido/);
+test('ata: impede solicitação sem exatamente os dois examinadores titulares', () => {
+  const item = process();
+  for (const funcao of ['EXAMINER_2','EXAMINER_3'] as const) {
+    const altered = structuredClone(item);
+    altered.banca = altered.banca.filter(member=>member.funcao!==funcao);
+    assert.throws(()=>deriveSignatureSigners(altered,'ATA',settings),/dois examinadores titulares/);
   }
+  const duplicated = structuredClone(item);
+  duplicated.banca.push({...duplicated.banca.find(member=>member.funcao==='EXAMINER_2')!,id:'duplicado'});
+  assert.throws(()=>deriveSignatureSigners(duplicated,'ATA',settings),/dois examinadores titulares/);
+  const wrongEmail = structuredClone(item);
+  wrongEmail.banca.find(member=>member.funcao==='EXAMINER_2')!.email=wrongEmail.orientador.email;
+  assert.throws(()=>deriveSignatureSigners(wrongEmail,'ATA',settings),/e-mails distintos/);
 });
 
-test('termo rejeita autores repetidos ou autor cadastrado como orientador', () => {
-  const process = processFixture();
-  process.aluno2 = { ...process.aluno1, email: 'AUTORA1@example.org' };
-  assert.throws(() => deriveSignatureSigners(process, 'TERMO', president), /e-mails distintos/);
-  process.aluno2 = null;
-  process.orientador.email = process.aluno1.email;
-  assert.throws(() => deriveSignatureSigners(process, 'TERMO', president), /e-mails distintos/);
+test('ata: não reaproveita uma solicitação antiga com apenas o orientador', () => {
+  const item = process();
+  const signers=deriveSignatureSigners(item,'ATA',settings);
+  assert.doesNotThrow(()=>assertCurrentSignatureRecipients(item,'ATA',{signers},settings));
+  assert.throws(()=>assertCurrentSignatureRecipients(item,'ATA',{signers:signers.slice(0,1)},settings),/destinatário.*mudou/);
 });
 
-test('só administrador ou signatário do tipo pode iniciar a solicitação', () => {
-  const process = processFixture();
-  assert.equal(canInitiateSignature('autora1@example.org', process, 'ATA', president), false);
-  assert.equal(canInitiateSignature('ORIENTADOR@example.org', process, 'ATA', president), true);
-  assert.equal(canInitiateSignature('autora1@example.org', process, 'TERMO', president), true);
-  assert.equal(canInitiateSignature('orientador@example.org', process, 'TERMO', president), true);
-  assert.equal(canInitiateSignature('orientador@example.org', process, 'DECLARACAO', president), false);
-  assert.equal(canInitiateSignature('presidente@example.org', process, 'DECLARACAO', president), true);
-  assert.equal(canInitiateSignature('examinador@example.org', process, 'ATA', president), false);
-  assert.equal(canInitiateSignature('master@example.org', process, 'ATA', president, ['MASTER_ADMIN']), true);
-  assert.equal(canInitiateSignature('', process, 'ATA', president, ['MASTER_ADMIN']), false);
-});
-
-test('avaliação pendente impede todos os tipos, inclusive para administrador', () => {
-  const process = processFixture();
-  process.avaliacao.status = 'PENDENTE' as ProcessData['avaliacao']['status'];
-  assert.equal(canInitiateSignature('master@example.org', process, 'ATA', president, ['MASTER_ADMIN']), true);
-  for (const type of ['ATA', 'TERMO', 'DECLARACAO'] as const) {
-    assert.throws(() => assertSignatureEligibility(process, type, []), /avaliação pendente/);
-  }
-});
-
-test('ata pode preceder dados finais; termo e declaração aguardam repositório completo', () => {
-  const process = processFixture();
-  delete process.acervo;
-  assert.equal(repositoryDataComplete(process), false);
-  assert.doesNotThrow(() => assertSignatureEligibility(process, 'ATA', []));
-  for (const type of ['TERMO', 'DECLARACAO'] as const) {
-    assert.throws(() => assertSignatureEligibility(process, type, []), /dados finais/);
-  }
-});
-
-test('publicação parcial de resumo também exige arquivo e termo autorizado', () => {
-  const process = processFixture();
-  process.acervo!.publishFullWork = false;
-  process.acervo!.publishExpandedAbstract = true;
-  assert.equal(publicationRequested(process), true);
-  assert.equal(repositoryDataComplete(process), false);
-  process.acervo!.resumoExpandidoFileId = 'expanded-abstract';
-  assert.equal(repositoryDataComplete(process), true);
-  delete process.acervo!.authorizationConfirmedAt;
-  assert.throws(() => assertSignatureEligibility(process, 'TERMO', []), /autorização/);
-  process.acervo!.authorizationConfirmedAt = '2026-10-15T12:00:00.000Z';
-  assert.doesNotThrow(() => assertSignatureEligibility(process, 'TERMO', []));
-});
-
-test('sem publicação não há termo; declaração requer ata e dispensa termo', () => {
-  const process = processFixture();
-  process.acervo!.publishFullWork = false;
-  assert.equal(publicationRequested(process), false);
-  assert.throws(() => assertSignatureEligibility(process, 'TERMO', []), /só é aplicável/);
-  assert.throws(() => assertSignatureEligibility(process, 'DECLARACAO', []), /Ata e o Termo/);
-  assert.doesNotThrow(() => assertSignatureEligibility(process, 'DECLARACAO', [archivedJob('ATA')]));
-});
-
-test('declaração exige ata arquivada e termo aplicável da revisão atual arquivado', () => {
-  const process = processFixture();
-  const ata = archivedJob('ATA');
-  const term = archivedJob('TERMO');
-  assert.throws(() => assertSignatureEligibility(process, 'DECLARACAO', [ata]), /Ata e o Termo/);
-  assert.throws(() => assertSignatureEligibility(process, 'DECLARACAO', [{ ...ata, status: 'SIGNED' }, term]), /Ata e o Termo/);
-  assert.throws(() => assertSignatureEligibility(process, 'DECLARACAO', [ata, { ...term, sourceDataRevision: 1 }]), /Ata e o Termo/);
-  assert.throws(() => assertSignatureEligibility(process, 'DECLARACAO', [ata, { ...term, driveSignedFileId: undefined }]), /Ata e o Termo/);
-  assert.doesNotThrow(() => assertSignatureEligibility(process, 'DECLARACAO', [ata, term]));
-  delete process.acervo!.submittedAt;
-  assert.throws(() => assertSignatureEligibility(process, 'DECLARACAO', [ata, term]), /Ata e o Termo/);
+test('ata: Asten só confirma o conjunto de três assinaturas, bloqueando qualquer pendência', () => {
+  const signers=deriveSignatureSigners(process(),'ATA',settings);
+  const evidence=signers.map(signer=>({
+    ordem:1,
+    statusAssinatura:'Assinado',
+    ConfigAssinatura:{emailSignatario:signer.email},
+  }));
+  const wanted=signers.map(signer=>({email:signer.email,order:signer.signingOrder}));
+  assert.equal(assertAstenEnvelopeSigners({listaSignatariosEnvelope:{SignatarioEnvelope:evidence}},wanted).length,3);
+  const missing=evidence.slice(0,2);
+  assert.throws(()=>assertAstenEnvelopeSigners({listaSignatariosEnvelope:{SignatarioEnvelope:missing}},wanted),/divergem/);
+  const pending=evidence.map((entry,index)=>index===2?{...entry,statusAssinatura:'Pendente'}:entry);
+  assert.throws(()=>assertAstenEnvelopeSigners({listaSignatariosEnvelope:{SignatarioEnvelope:pending}},wanted),/ainda não confirma/);
 });

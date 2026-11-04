@@ -23,7 +23,13 @@ export function withOperationalCatalog<T extends Partial<IntegrationStudioSettin
   const outdated=template.id==='email-reserva'&&/respondam a este e-mail|confirmem ao aluno|confirmem o agendamento|solicitamos reserva para/i.test(legacy)||template.id==='email-convite'&&/Vossas Senhorias|V\.\s*Sa\.|Comissão Examinadora/i.test(legacy)||template.id==='email-conclusao'&&/A ata e as declarações concluídas|anexad/i.test(legacy);
   return outdated?{...template,name:standard[1],subject:standard[3],body:standard[4],htmlBody:'',attachments:[],attachmentModes:{}}:template;
  });
- if(value.workflowStages)value.workflowStages=value.workflowStages.map(stage=>({...stage,actions:(Array.isArray(stage.actions)?stage.actions:[]).filter((action:any)=>!retired.has(String(action.refId||action.referenceId||'')))}));
+ if(value.workflowStages)value.workflowStages=value.workflowStages.map(stage=>({
+  ...stage,
+  ...(stage.triggerEvent==='EVALUATION_SUBMITTED'&&stage.description==='O orientador confere os dados, registra o resultado e escreve o parágrafo variável do parecer.'?{description:'O orientador registra conceito e parecer; depois, a ata exige assinatura do orientador e dos dois examinadores (prioridade 1) mediante solicitação explícita.'}:{}),
+  actions:(Array.isArray(stage.actions)?stage.actions:[]).filter((action:any)=>!retired.has(String(action.refId||action.referenceId||''))).map((action:any)=>
+    String(action.refId||action.referenceId||'')==='tmpl-ata'&&action.recipientOrDetail==='Assinatura do orientador'
+      ?{...action,title:action.title==='Gera Ata de Defesa e envia à Asten'?'Prepara Ata de Defesa para assinatura':action.title,recipientOrDetail:'Orientador e dois examinadores · prioridade 1'}:action)
+}));
  const forms=value.formTemplates||[];const nativeIndex=forms.findIndex(f=>f.id===DEPARTMENT_FORM.id);if(nativeIndex<0)forms.push(structuredClone(DEPARTMENT_FORM));else forms[nativeIndex]={...forms[nativeIndex],...structuredClone(DEPARTMENT_FORM)};value.formTemplates=forms;
  return value;
 }
