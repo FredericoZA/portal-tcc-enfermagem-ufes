@@ -4,7 +4,7 @@ import type { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
 import { PortalModalShell } from './PortalModalShell';
 import { RegistrationFieldPreview } from './RegistrationFieldPreview';
-import { formatDatePt, formatTimeExtenso, formatTccTitle } from '../utils/formatters';
+import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatTccTitle } from '../utils/formatters';
 import { isOtherDefenseLocation, OTHER_DEFENSE_LOCATION, renderCustomLocationName } from '../utils/customDefenseLocation';
 import { operationalConfig } from '../utils/operationalConfig';
 import { reservationStatusAlert } from '../utils/reservationStatusAlert';
@@ -164,11 +164,11 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
           </div>
           <div className={`${compactField} sm:col-span-2`}>
             <span className={fieldLabel}>Data de registro</span>
-            <span className={fieldValue}>{process.createdAt ? new Date(process.createdAt).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—'}</span>
+            <span className={fieldValue}>{process.createdAt ? formatDateNumericWithWeekday(process.createdAt) : '—'}</span>
           </div>
           <div className={`${compactField} sm:col-span-3`}>
             <span className={fieldLabel}>Data da defesa</span>
-            <span className={fieldValue}>{process.defesa?.startAt ? formatDatePt(process.defesa.startAt) : 'A definir'}</span>
+            <span className={fieldValue}>{process.defesa?.startAt ? formatDateWithWeekday(process.defesa.startAt) : 'A definir'}</span>
           </div>
           <div className={`${compactField} sm:col-span-2`}>
             <span className={fieldLabel}>Horário</span>
