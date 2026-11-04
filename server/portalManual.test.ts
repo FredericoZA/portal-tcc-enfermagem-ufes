@@ -17,11 +17,10 @@ test('manual público é PDF legível, com navegação e as três seções de pa
   }
 });
 
-test('atalhos públicos usam o mesmo grupo e o manual abre o PDF diretamente',()=>{
+test('manual em PDF fica no topo de Como usar e é compartilhado pelos perfis',()=>{
   const sidebar=readFileSync('src/components/Sidebar.tsx','utf8');
-  const declaration=sidebar.indexOf("renderNavItem('declaracao-comparecimento', order.length)");
-  const manual=sidebar.indexOf('id="nav-item-manual"');
-  const suggestions=sidebar.indexOf("renderNavItem('sugestoes', order.length + 1)");
-  assert.ok(declaration>=0&&manual>declaration&&suggestions>manual);
-  assert.match(sidebar,/href="\/manual\/manual-portal-tcc\.pdf" target="_blank" rel="noopener noreferrer"/);
+  const tutorial=readFileSync('src/pages/PortalTutorialPage.tsx','utf8');
+  assert.doesNotMatch(sidebar,/id="nav-item-manual"/);
+  assert.match(tutorial,/id="tutorial-manual-pdf" href="\/manual\/manual-portal-tcc\.pdf" target="_blank" rel="noopener noreferrer"/);
+  assert.ok(tutorial.indexOf('id="tutorial-manual-pdf"')<tutorial.indexOf('Meu perfil:'));
 });

@@ -79,8 +79,8 @@ export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array
   header('COMISSÃO DE TRABALHO DE CONCLUSÃO DE CURSO',726,8.7,sansBold);
 
   // Título e campos livres para preenchimento manuscrito.
-  framed(70, 640, pageWidth - 140, 56);
-  centered('DECLARAÇÃO DE COMPARECIMENTO', 673, 16);
+  page.drawRectangle({x:70,y:662,width:pageWidth-140,height:34,color:green});
+  centered('DECLARAÇÃO DE COMPARECIMENTO', 673, 16, sansBold, rgb(1,1,1));
   centered('Modelo em branco para preenchimento manual', 654, 9.2, sans, muted);
   draw('Declaro, para os devidos fins, que', left, 586, 12.5);
   line(553);

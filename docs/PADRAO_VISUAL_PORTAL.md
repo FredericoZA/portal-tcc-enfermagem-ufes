@@ -6,7 +6,7 @@ Guia da identidade visual aplicada ao Portal TCC do Curso de Graduação em Enfe
 
 ## 1. Identidade e paleta
 
-O brasão da Universidade Federal do Espírito Santo identifica o Portal, o acesso, os formulários, os e-mails e os registros em PDF gerados. A organização responsável é a Comissão de Trabalho de Conclusão de Curso, do Departamento de Enfermagem. Usar o nome completo da comissão e preservar a proporção e a arte original do brasão, sem recortes ou distorções.
+O brasão da Universidade Federal do Espírito Santo identifica o acesso, os formulários, os e-mails e os registros em PDF gerados. No topo da barra lateral, a navegação é identificada por uma lâmpada a óleo, no estilo da lâmpada do Aladdin, sem a marca do colegiado. A organização responsável é a Comissão de Trabalho de Conclusão de Curso, do Departamento de Enfermagem. Usar o nome completo da comissão e preservar a proporção e a arte original do brasão, sem recortes ou distorções.
 
 A imagem utilizada pela interface é public/ufes-crest.png. Os geradores do servidor usam server/documents/assets/ufes-crest.png. A marca do colegiado não é utilizada nesta instalação. A marca institucional não substitui os ícones funcionais dos botões nem deve ser repetida em cada campo. O rodapé de contatos identifica a Comissão de Trabalho de Conclusão de Curso, sem repetir a logomarca acima dos responsáveis. Documentos históricos assinados permanecem íntegros; a nova identidade aplica-se aos documentos gerados a partir desta revisão.
 
@@ -89,3 +89,5 @@ O conteúdo legado fica no mesmo repositório, com código próprio e os arquivo
 Validar o PDF renderizado, especialmente quebras de página, nomes longos, rodapés e contraste. Executar TypeScript, build e os testes afetados. Alterações visuais não comprovam integração real com Google, Asten ou Supabase.
 
 Publicação na Vercel e atualização de documentos no Drive são operações separadas do trabalho local. Registrar o ambiente efetivamente conferido. Este guia não altera permissões, contratos externos, pastas ou políticas de exclusão.
+
+No menu lateral, Sugestões e Declaração de comparecimento integram o grupo Informações e aparecem, nessa ordem, após Replicar Portal. O manual em PDF fica no topo de Como usar, junto da navegação por perfis e das telas ilustradas. A declaração é baixada diretamente, sem pop-up.

@@ -37,13 +37,10 @@ test('modelo contém estrutura institucional aprovada e assinatura do orientador
   assert.match(source, /declaracao-de-comparecimento-comissao-tcc\.pdf/);
 });
 
-test('barra lateral tem subtítulos, botão público e sugestões imediatamente abaixo', () => {
+test('declaração integra o grupo Informações após Sugestões e mantém download direto', () => {
   const sidebar = readFileSync('src/components/Sidebar.tsx', 'utf8');
-  for (const title of ['CONSULTA PÚBLICA', 'ÁREA DO USUÁRIO', 'INFORMAÇÕES']) {
-    assert.ok(sidebar.includes(title));
-  }
-  const declaration = sidebar.indexOf("renderNavItem('declaracao-comparecimento', order.length)");
-  const feedback = sidebar.indexOf("renderNavItem('sugestoes', order.length + 1)");
-  assert.ok(declaration >= 0 && feedback > declaration);
+  for (const title of ['CONSULTA PÚBLICA', 'ÁREA DO USUÁRIO', 'INFORMAÇÕES']) assert.ok(sidebar.includes(title));
+  assert.match(sidebar, /order\.splice\(informationEnd, 0, 'sugestoes', 'declaracao-comparecimento'\)/);
+  assert.doesNotMatch(sidebar, /id="nav-item-manual"|mt-auto shrink-0 space-y-1/);
   assert.match(sidebar, /await downloadBlankAttendanceDeclaration\(\)/);
 });

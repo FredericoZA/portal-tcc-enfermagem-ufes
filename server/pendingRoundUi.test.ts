@@ -71,8 +71,8 @@ test('identidade visual é canônica no código e acompanha o favicon', async ()
     source('server.ts'),
     source('src/utils/siteLayoutConfig.ts'),
   ]);
-  assert.ok(sidebar.includes('layoutConfig.sidebarCustomLogoUrl'));
-  assert.ok(sidebar.includes("|| '/ufes-crest.png'"));
+  assert.ok(sidebar.includes('<OilLampIcon size={64.8} />'));
+  assert.ok(!sidebar.includes('<NursingEmblemLogo'));
   assert.ok(auth.includes('syncPortalFavicon'));
   assert.ok(auth.includes('sidebarCustomLogoUrl'));
   assert.ok(!auth.includes('SITE_LAYOUT_EVENT'));

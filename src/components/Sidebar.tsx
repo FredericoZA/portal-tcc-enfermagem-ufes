@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { portalNotice } from '../services/portalDialogs';
-import { NursingEmblemLogo } from './NursingEmblemLogo';
+import { OilLampIcon } from './OilLampIcon';
 import { FeedbackModal } from './FeedbackModal';
 import {
   Award,
@@ -79,8 +79,6 @@ async function reverseGeocodeUserLocation(latitude: number, longitude: number): 
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isOpenMobile, setIsOpenMobile }) => {
   const { isMasterAdmin, isCommissionPresident, isAuthenticated, settings, userEmail, logout } = useAuth();
-  const courseLogo = String((settings as any)?.courseLogoDataUrl || '');
-  const configuredLogo = settings?.integrationStudio?.brandKit?.courseLogoUrl || settings?.integrationStudio?.brandKit?.universityLogoUrl || '';
   const isVisitor = !isAuthenticated;
   const isCollapsed = false;
   const [isHovered, setIsHovered] = useState(false);
@@ -190,9 +188,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   const renderNavIcon = (_id: string, Icon: React.ComponentType<{ className?: string }>, _defaultEmoji: string, _isActive: boolean) => (
     <Icon className="h-4 w-4 shrink-0 text-white" aria-hidden="true" />
   );
-  // A identidade pública salva pelo Master é a fonte de verdade. Configurações privadas
-  // de integração ficam apenas como fallback de migração e nunca substituem a logo pública.
-  const sidebarLogoSrc = (layoutConfig.sidebarLogoType === 'custom' && layoutConfig.sidebarCustomLogoUrl ? layoutConfig.sidebarCustomLogoUrl : '') || courseLogo || configuredLogo || '/ufes-crest.png';
 
   return <>
     {isOpenMobile && <div id="sidebar-mobile-backdrop" className="fixed inset-0 bg-slate-900/60 z-40 lg:hidden backdrop-blur-xs" onClick={() => setIsOpenMobile(false)} />}
@@ -201,7 +196,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
     <aside id="portal-sidebar" data-keyboard-navigation={keyboardNavigation ? 'true' : 'false'} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} style={{backgroundColor: layoutConfig.sidebarBgColor || PORTAL_THEME.chrome.sidebarFooter,borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider,color: layoutConfig.sidebarTextColor || PORTAL_THEME.text.light}} className={`fixed top-0 bottom-0 left-0 z-50 w-64 text-slate-100 flex flex-col border-r transition-all duration-300 ease-in-out ${isOpenMobile ? 'translate-x-0' : '-translate-x-full'} ${isCollapsed ? (isHovered ? 'lg:translate-x-0 lg:shadow-2xl' : 'lg:-translate-x-full') : 'lg:translate-x-0'}`}>
       <div style={{backgroundColor: layoutConfig.sidebarHeaderBgColor || PORTAL_THEME.chrome.sidebarFooter,borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider}} className="px-2.5 py-3.5 border-b flex items-center justify-between relative group">
         <button type="button" onClick={() => handleNav('home')} className="flex items-center gap-2 hover:opacity-95 transition-opacity focus:outline-none cursor-pointer flex-1 min-w-0" title="Ir para o Calendário Público Inicial">
-          <NursingEmblemLogo size={64.8} className="shrink-0" customSrc={sidebarLogoSrc} />
+          <OilLampIcon size={64.8} />
           <div className="flex flex-col flex-1 min-w-0 items-center justify-center text-center pr-1">
             <h1 className="font-black text-[14.4px] sm:text-[15.3px] tracking-tight uppercase leading-tight text-center whitespace-normal w-full" style={{ color: sidebarHeaderTitleColor }}>{layoutConfig.sidebarTitle || 'Portal de TCC'}</h1>
             <div className="portal-sidebar-subtitle mt-1.5 w-full text-center font-black tracking-[0.055em] leading-[1.25] uppercase" style={{ color: sidebarAccent }}>
@@ -239,6 +234,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           if (!order.includes('informacoes-gerais')) { const tutorialIndex = order.indexOf('tutorial'); order.splice(tutorialIndex >= 0 ? tutorialIndex : order.length, 0, 'informacoes-gerais'); }
           if (!order.includes('fluxo-tcc')) { const replicationIndex = order.indexOf('replicar'); order.splice(replicationIndex >= 0 ? replicationIndex : order.length, 0, 'fluxo-tcc'); }
           if (!order.includes('replicar')) order.push('replicar');
+          const informationEnd = order.indexOf('replicar') + 1;
+          order.splice(informationEnd, 0, 'sugestoes', 'declaracao-comparecimento');
           const renderNavItem = (itemKey: string, idx: number) => {
             if (itemKey.startsWith('DIVIDER')) { if (layoutConfig.sidebarShowDividers === false || layoutConfig.sidebarDividerStyle === 'none') return null; return <div key={`${itemKey}-${idx}`} className="my-2.5 pt-0.5 border-t transition-colors" style={{ borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider, borderStyle: layoutConfig.sidebarDividerStyle || 'solid' }} />; }
             const item = allNavMap[itemKey]; if (!item || !item.visible) return null; const Icon = item.icon; const isActive = currentTab === item.id || (item.id === 'home' && currentTab === 'calendario');
@@ -281,13 +278,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
               {renderSection('ÁREA DO USUÁRIO', userKeys, 1)}
               {renderSection('INFORMAÇÕES', informationKeys, 2)}
             </div>
-            <div className={`mt-auto shrink-0 space-y-1 pt-2.5 ${showSectionDividers ? 'border-t' : ''}`} style={showSectionDividers ? sectionDividerStyle : undefined}>
-              {renderNavItem('declaracao-comparecimento', order.length)}
-              <a id="nav-item-manual" href="/manual/manual-portal-tcc.pdf" target="_blank" rel="noopener noreferrer" aria-label="Abrir manual do Portal de TCC em PDF" className="portal-sidebar-nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-transparent outline-none font-bold text-left transition-all cursor-pointer hover:bg-white/10" style={{ color: layoutConfig.sidebarTextColor || '#f8fafc' }}>
-                {renderNavIcon('manual', FileText, '', false)}<span>Manual</span>
-              </a>
-              {renderNavItem('sugestoes', order.length + 1)}
-            </div>
+
           </>;
         })()}
       </nav>
