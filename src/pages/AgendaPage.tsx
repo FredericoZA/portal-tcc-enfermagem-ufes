@@ -7,8 +7,7 @@ import { PortalProcessPill } from '../components/PortalProcessPill';
 import { Clock, Download, MapPin } from 'lucide-react';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
 import { getTableStyles, loadGlobalTableConfig, GLOBAL_TABLE_EVENT, TableTextFormat } from '../utils/tableFormatters';
-import { getDefenseState, isDefenseReservationPending } from '../utils/defenseSemantics';
-import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
+import { getDefenseState } from '../utils/defenseSemantics';
 import { getPortalToneCssVars } from '../utils/portalSemanticTokens';
 import { useAuth } from '../context/AuthContext';
 import { resolveInstallationProfile } from '../utils/installationProfile';
@@ -25,26 +24,17 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ onSelectProcess }) => {
   const [globalFormat, setGlobalFormat] = useState<TableTextFormat>(loadGlobalTableConfig());
 
   useEffect(() => {
-    let active = true;
-    const refresh = () => {
-      void apiClient.getPublicCalendar()
-        .then((data) => { if (active) setProcesses(data); })
-        .finally(() => { if (active) setIsLoading(false); })
-        .catch(() => { /* Mantém a última agenda conhecida em falhas transitórias. */ });
-    };
-    refresh();
+    apiClient.getProcesses().then((data) => {
+      setProcesses(data);
+      setIsLoading(false);
+    });
 
     const handleGlobalFormatChange = (e: any) => {
       const newFormat = e.detail || loadGlobalTableConfig();
       setGlobalFormat(newFormat);
     };
     window.addEventListener(GLOBAL_TABLE_EVENT, handleGlobalFormatChange);
-    window.addEventListener(PORTAL_LIVE_UPDATE_EVENT, refresh);
-    return () => {
-      active = false;
-      window.removeEventListener(GLOBAL_TABLE_EVENT, handleGlobalFormatChange);
-      window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT, refresh);
-    };
+    return () => window.removeEventListener(GLOBAL_TABLE_EVENT, handleGlobalFormatChange);
   }, []);
 
   const styles = getTableStyles(globalFormat);
@@ -83,20 +73,17 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ onSelectProcess }) => {
           {processes.map((proc) => {
             const defenseState = getDefenseState(proc);
             const toneVars = getPortalToneCssVars(defenseState);
-            const pending = isDefenseReservationPending(proc);
             return (
               <div
                 key={proc.id}
-                data-reservation-status={pending ? 'pending' : 'confirmed'}
                 onClick={() => onSelectProcess(proc.id)}
                 className="bg-white p-4 border border-slate-200 shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-3 relative border-l-2 rounded-xl"
-                style={{ ...toneVars, backgroundColor: pending ? '#f7faf9' : '#ffffff', borderLeftColor: pending ? '#c8d9d0' : 'var(--portal-tone-border)' }}
+                style={{ ...toneVars, borderLeftColor: 'var(--portal-tone-border)' }}
               >
                 <div className="space-y-3">
                   <div className="w-12 h-1" style={{ backgroundColor: 'var(--portal-tone-border)' }} />
                   <div className="flex items-center justify-between gap-2 text-xs">
                     <PortalProcessPill value={proc.protocolo || proc.id} tone={defenseState} className="px-2 py-1 rounded-md border font-black tracking-tight" />
-                    {pending && <span className="text-[10px] font-semibold text-slate-600">Aguardando confirmação</span>}
                     <span
                       className="portal-semantic-tone text-[10px] font-bold px-2 py-0.5 rounded-full border normal-case tracking-wider"
                       style={toneVars}
