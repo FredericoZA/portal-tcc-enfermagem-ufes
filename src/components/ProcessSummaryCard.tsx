@@ -184,14 +184,14 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
                 type="button"
                 onClick={openReservation}
                 disabled={outstanding}
-                aria-label="Alterar reserva da defesa"
-                title={outstanding ? 'Há uma solicitação de alteração aguardando resolução.' : 'Solicitar nova reserva'}
+                aria-label={denial ? 'Refazer reserva' : 'Alterar reserva da defesa'}
+                title={outstanding ? 'Há uma solicitação de alteração aguardando resolução.' : denial ? 'Refazer a reserva negada' : 'Solicitar nova reserva'}
                 className={`inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-bold shadow-sm disabled:cursor-not-allowed disabled:opacity-60 ${denial
                   ? 'border-red-700 bg-red-700 text-white hover:bg-red-800'
                   : 'border-emerald-700 bg-emerald-800 text-white hover:bg-emerald-900'}`}
               >
                 <RotateCcw className="h-3.5 w-3.5" aria-hidden="true"/>
-                {denial ? 'Solicitar nova data' : 'Alterar reserva'}
+                {denial ? 'Refazer reserva' : 'Alterar reserva'}
               </button>
             )}
           </div>
@@ -213,7 +213,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
         onClose={() => { if (!reservationSending) setReservationOpen(false); }}
         closeOnBackdrop={!reservationSending}
         closeOnEscape={!reservationSending}
-        title={`Alterar reserva da defesa - ${process.protocolo}`}
+        title={`${denial ? 'Refazer reserva' : 'Alterar reserva da defesa'} - ${process.protocolo}`}
         icon={CalendarClock}
         maxWidthClass="max-w-lg"
         bodyClassName="p-4"

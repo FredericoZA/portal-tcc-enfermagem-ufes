@@ -75,13 +75,13 @@ export const guideActivities: GuideActivity[] = [
       'Na última etapa do cadastro, escolha um único local e informe data e horário. Para auditório e sala de reuniões, a homologação cabe ao departamento. Para outro local, informe o nome exato: ele aparecerá nos documentos e o orientador receberá o pedido.',
       'Considere mapa de salas, aulas, eventos, reservas e horários de uso do prédio. A consulta prévia pode evitar retrabalho; o Portal não controla os agendamentos externos.',
       'Ao enviar, o espaço selecionado fica bloqueado no intervalo da defesa, de 1h30. O aceite confirma a reserva; a recusa libera o intervalo. Outro espaço pode ter uma defesa no mesmo horário, desde que não haja participantes em comum.',
-      'Para mudar um processo existente, abra Dados do processo e clique em Alterar reserva ou, após uma recusa, Solicitar nova data. Preencha os novos dados e clique em Enviar nova solicitação.',
+      'Para mudar um processo existente, abra Dados do processo e clique em Alterar reserva ou, após uma recusa, Refazer reserva. Preencha os novos dados e clique em Enviar nova solicitação.',
       'O novo pedido invalida a confirmação anterior. Aguarde outro aceite do departamento ou do orientador. A alteração deixa de estar disponível após o registro do conceito ou da entrega final.',
     ],
     done: 'O pedido está registrado com a data, o horário e o local pretendidos; a confirmação só vale depois do aceite.',
     help: [
       'Horário ocupado: escolha outro intervalo ou outro espaço e envie o pedido corrigido.',
-      'Reserva recusada: use Solicitar nova data no mesmo TCC. Não é necessário refazer o cadastro dos participantes.',
+      'Reserva recusada: use Refazer reserva no mesmo TCC. Não é necessário refazer o cadastro dos participantes.',
       'Local externo: o orientador também precisa garantir a reserva junto ao espaço escolhido; o bloqueio do Portal não faz essa reserva externa.',
     ],
   },
@@ -98,7 +98,7 @@ export const guideActivities: GuideActivity[] = [
     help: [
       'Ainda aguardando resposta: o envio do cadastro não equivale ao aceite da reserva.',
       'Ao aceitar ou recusar pelo e-mail, o responsável acompanha o registro automático e o download do comprovante. Se houver erro, confira o resultado antes de repetir; após alterar a reserva, use o e-mail mais recente.',
-      'Pedido recusado: volte a Dados do processo e use Solicitar nova data.',
+      'Pedido recusado: volte a Dados do processo e use Refazer reserva.',
     ],
   },
   {

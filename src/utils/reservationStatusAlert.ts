@@ -27,7 +27,7 @@ export function reservationStatusAlert(
   if (DENIAL_STATUSES.has(requestStatus) || DENIAL_STATUSES.has(localStatus)) {
     return {
       kind: 'denied',
-      text: 'O responsável recusou o agendamento. Use “Solicitar nova data” para enviar outro pedido de reserva.',
+      text: 'Reserva negada pelo responsável pelo local. Clique em “Refazer reserva” para enviar uma nova solicitação.',
     };
   }
 

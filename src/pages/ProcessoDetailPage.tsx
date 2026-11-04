@@ -25,6 +25,7 @@ import { useSignatureUpdates } from '../hooks/useSignatureUpdates';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../utils/portalLiveEvents';
 import { formatDatePt, formatDateExtensoTotal, formatTimeExtenso, formatStudentsString, normalizeEmail, formatNameTitleCase } from '../utils/formatters';
 import { ProcessFlowPanel } from '../components/ProcessFlowPanel';
+import { effectiveDefenseReservationStatus } from '../utils/defenseReservationState';
 import { GovbrSignatureModal } from '../components/GovbrSignatureModal';
 import { PortalModalShell } from '../components/PortalModalShell';
 import { EtapaProgressBar } from '../components/EtapaProgressBar';
@@ -820,7 +821,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} type="button" onClick={()=>{setActiveTab(tab.id);setProcessLink(process.id,tab.id as ProcessSection);}} aria-pressed={selected} className={`flex min-h-9 min-w-0 flex-1 justify-center items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold ${selected?'portal-tcc-tab-selected border-[var(--portal-brand-header)] bg-white text-slate-950':'border-white bg-white text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
       <div className="portal-tcc-workspace-content p-3">
 
-      {!readOnly && !process.legacyRecord && isTabVisible('cadastral') && process.defesa.localStatus !== 'CONFIRMADO' && <ProcessFlowPanel process={process} jobs={signatureJobs} canConfirm={(isStudent || isMasterAdmin) && !readOnly} onUpdated={loadData} onChangeReservation={canEditDefense?()=>{document.querySelector<HTMLButtonElement>('[aria-label="Alterar reserva da defesa"]')?.click();}:undefined}/> }
+      {!readOnly && !process.legacyRecord && isTabVisible('cadastral') && effectiveDefenseReservationStatus(process) !== 'CONFIRMADO' && <ProcessFlowPanel process={process} jobs={signatureJobs} canConfirm={(isStudent || isMasterAdmin) && !readOnly} onUpdated={loadData}/> }
 
       {/* ========================================================================= */}
       {/* SECTION 1: FICHA CADASTRAL E IDENTIFICAÇÃO DO PROCESSO                    */}
