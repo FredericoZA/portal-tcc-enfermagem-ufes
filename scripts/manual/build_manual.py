@@ -208,7 +208,7 @@ for page_number,page in enumerate(pages,1):
    ('EXAMINADORES','Recebem o convite, participam da defesa e assinam a ata, cada um pelo seu link do Asten. Não fazem o cadastro nem a entrega do aluno.'),
    ('QUEM ASSINA CADA DOCUMENTO','Ata: orientador e dois examinadores. Termo: todos os autores e orientador, somente quando houver publicação autorizada. Declaração da banca: Presidência da Comissão. Comprovante e carta-convite não exigem assinatura.')]:
    box('<b>'+title+'</b><br/>'+text)
-  para('<b>Acessos de apoio</b><br/>No menu lateral, Sugestões e Declaração de comparecimento ficam após Replicar Portal. O manual completo em PDF está fixado no topo de Como usar.',gap=14)
+  para('<b>Acessos de apoio</b><br/>No menu lateral, Sugestões e Declaração de comparecimento ficam em Informações. Replicar Portal fica abaixo, na seção Replicação. O manual completo em PDF está fixado no topo de Como usar.',gap=14)
   para('<b>Referências e edição</b><br/>Nomes de telas e botões conferidos no código e em capturas locais da versão consolidada em quarta-feira, 04/11/2026. Asten: <link href="'+ASTEN+'" color="#005830">Como assinar um documento?</link>. As figuras usam dados fictícios. Este guia não substitui a conferência do documento antes de assiná-lo.',style='small')
  else:
   header(page['tag'],page['title'])

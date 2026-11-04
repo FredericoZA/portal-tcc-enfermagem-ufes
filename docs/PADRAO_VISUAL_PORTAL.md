@@ -90,7 +90,7 @@ Validar o PDF renderizado, especialmente quebras de página, nomes longos, rodap
 
 Publicação na Vercel e atualização de documentos no Drive são operações separadas do trabalho local. Registrar o ambiente efetivamente conferido. Este guia não altera permissões, contratos externos, pastas ou políticas de exclusão.
 
-No menu lateral, Sugestões e Declaração de comparecimento integram o grupo Informações e aparecem, nessa ordem, após Replicar Portal. O manual em PDF fica no topo de Como usar, junto da navegação por perfis e das telas ilustradas. A declaração é baixada diretamente, sem pop-up.
+No menu lateral, Sugestões e Declaração de comparecimento encerram o grupo Informações, nessa ordem. Replicar Portal aparece em uma seção própria chamada Replicação, depois de Informações, separada por uma linha e com o mesmo padrão dos demais botões. O manual em PDF fica no topo de Como usar, junto da navegação por perfis e das telas ilustradas. A declaração é baixada diretamente, sem pop-up.
 
 
 ## Identidade dos documentos — 04/11/2026

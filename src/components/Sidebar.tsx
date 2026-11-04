@@ -234,7 +234,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           if (!order.includes('informacoes-gerais')) { const tutorialIndex = order.indexOf('tutorial'); order.splice(tutorialIndex >= 0 ? tutorialIndex : order.length, 0, 'informacoes-gerais'); }
           if (!order.includes('fluxo-tcc')) { const replicationIndex = order.indexOf('replicar'); order.splice(replicationIndex >= 0 ? replicationIndex : order.length, 0, 'fluxo-tcc'); }
           if (!order.includes('replicar')) order.push('replicar');
-          const informationEnd = order.indexOf('replicar') + 1;
+          const informationEnd = order.indexOf('replicar');
           order.splice(informationEnd, 0, 'sugestoes', 'declaracao-comparecimento');
           const renderNavItem = (itemKey: string, idx: number) => {
             if (itemKey.startsWith('DIVIDER')) { if (layoutConfig.sidebarShowDividers === false || layoutConfig.sidebarDividerStyle === 'none') return null; return <div key={`${itemKey}-${idx}`} className="my-2.5 pt-0.5 border-t transition-colors" style={{ borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider, borderStyle: layoutConfig.sidebarDividerStyle || 'solid' }} />; }
@@ -250,8 +250,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           };
           const publicKeys = order.filter((key) => ['home', 'biblioteca'].includes(key));
           const userKeys = order.filter((key) => ['meus-processos', 'coordenador', 'configuracoes'].includes(key));
+          const replicationKeys = order.filter((key) => key === 'replicar');
           const informationKeys = order.filter((key) =>
-            !key.startsWith('DIVIDER') && !publicKeys.includes(key) && !userKeys.includes(key)
+            !key.startsWith('DIVIDER') && !publicKeys.includes(key) && !userKeys.includes(key) && !replicationKeys.includes(key)
           );
           const showSectionDividers = layoutConfig.sidebarShowDividers !== false && layoutConfig.sidebarDividerStyle !== 'none';
           const sectionDividerStyle = {
@@ -277,6 +278,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
               {renderSection('CONSULTA PÚBLICA', publicKeys, 0)}
               {renderSection('ÁREA DO USUÁRIO', userKeys, 1)}
               {renderSection('INFORMAÇÕES', informationKeys, 2)}
+              {renderSection('REPLICAÇÃO', replicationKeys, 3)}
             </div>
 
           </>;
