@@ -77,7 +77,7 @@ import { workflowPolicy, registrationFindings } from './src/utils/workflowOperat
 import { publicCalendarView, publicLegacyProcessView, publicRepositoryView } from './server/publicViews';
 import { buildPublicIndicators } from './server/publicIndicators';
 import type { RegistrationDraft, ReminderRecord } from './src/types/workflowOperations';
-import { buildAdvancedAnalytics, analyticsCsv, analyticsMarkdown } from './server/advancedAnalytics';
+import { buildAdvancedAnalytics, analyticsCsv } from './server/advancedAnalytics';
 import { simulateWorkflow } from './server/workflow/simulator';
 import { acceptRegistration } from './server/workflow/registration';
 import { FeedbackError, submitPublicFeedback, listFeedbackForAdmins, listFeedbackPageForAdmin, feedbackImageForAdmin, markFeedbackReviewed } from './server/publicFeedback';
@@ -135,10 +135,7 @@ import {
   LegalHold,
   StudioVersionRecord,
   StudioFormSubmission,
-  ContinuousIntelligenceState,
-  ContinuousIntelligenceOverview,
-  ImprovementStatus,
-  LivingPortalArtifactKind
+  ContinuousIntelligenceState
 } from './src/types';
 import type { AcademicCycle, PortalFeatureKey } from './src/types';
 import type { AstenWebhookEvent, EmailDeliveryRecord, WorkflowRun, WorkflowEventCode } from './src/types/automation';
@@ -159,12 +156,11 @@ import { buildProcessVariables, compileWorkflow, executeWorkflowEvent, mergeWork
 import { buildAstenOperationalDashboard, isReconcileableAstenWebhookEvent, mapAstenEventToJobStatus, normalizeAstenWebhookEvent } from './server/integrations/astenEventLedger';
 import { buildPortalDriveFileName } from './src/services/googleDriveOrganizer';
 import { getOtpRuntimeStatus, requestPortalOtp, verifyPortalOtp, setOtpChallengeCookie, readOtpChallengeCookie } from './server/security/portalOtp';
-import { ensurePortalRenderFolder, accessListGoogleSheetsTemplate, bootstrapGoogleDriveStructure, buildGoogleAuthorizationUrl, safeGoogleReturnTo, decodeGoogleOAuthState, exchangeGoogleAuthorizationCode, getGoogleOAuthSecurityPreflight, getGoogleWorkspaceAccessToken, getGoogleWorkspaceStatus, persistGoogleWorkspaceAuthorization, publishMasterDocumentModel, registerMasterDocumentModelFromDrive, sendGmailMessage, synchronizeDefenseCalendar, upsertLivingIntelligenceFile, verifyMasterDocumentModelFingerprint, readDriveModelFingerprint, verifyPrivateDriveFolder } from './server/integrations/googleWorkspace';
+import { ensurePortalRenderFolder, accessListGoogleSheetsTemplate, bootstrapGoogleDriveStructure, buildGoogleAuthorizationUrl, safeGoogleReturnTo, decodeGoogleOAuthState, exchangeGoogleAuthorizationCode, getGoogleOAuthSecurityPreflight, getGoogleWorkspaceAccessToken, getGoogleWorkspaceStatus, persistGoogleWorkspaceAuthorization, publishMasterDocumentModel, registerMasterDocumentModelFromDrive, sendGmailMessage, synchronizeDefenseCalendar, verifyMasterDocumentModelFingerprint, readDriveModelFingerprint, verifyPrivateDriveFolder } from './server/integrations/googleWorkspace';
 import { deleteIntegrationSecret, getSecretStoreStatus } from './server/integrations/integrationSecrets';
 import { buildProtocol, emailMatchesDomains, isPortalFeatureEnabled, resolveInstallationProfile } from './src/utils/installationProfile';
 import { evaluateStudioCondition, validateCourseStudio, validateStudioAnswer } from './src/utils/courseStudioValidator';
 import { StagedUploadCapacityError, cleanupExpiredDownloadTransfers, cleanupExpiredStagedUploads, createSupabaseEphemeralDownload, createSupabaseStagedUpload, getSupabaseStagingSecurityStatus, shouldUseSupabaseDownloadGateway, withSupabaseStagedUpload, type StagedUploadPurpose } from './server/integrations/supabaseStorageStaging';
-import { buildContinuousIntelligenceState, renderStatisticalReport, type ContinuousIntelligenceInput } from './server/continuousIntelligence';
 
 // A Vercel injeta as variáveis diretamente. Em desenvolvimento, carregamos
 // primeiro o arquivo recomendado pelo guia e depois o .env convencional, sem
@@ -313,18 +309,8 @@ let dataSubjectRequestsStore:DataSubjectRequest[]=persistedPortalState.dataSubje
 let legalHoldsStore:LegalHold[]=persistedPortalState.legalHolds||[];
 let studioVersionsStore:StudioVersionRecord[]=persistedPortalState.studioVersions||[];
 let studioFormSubmissionsStore:StudioFormSubmission[]=persistedPortalState.studioFormSubmissions||[];
-let continuousIntelligenceStore:ContinuousIntelligenceState=persistedPortalState.continuousIntelligence||buildContinuousIntelligenceState({
-  processes:processesStore,
-  workflowRuns:workflowRunsStore,
-  emailDeliveries:emailDeliveriesStore,
-  signatureJobs:signatureJobsStore,
-  formSubmissions:studioFormSubmissionsStore,
-  correctionRequests:correctionRequestsStore,
-  courseName:resolveInstallationProfile(currentSettings).courseName,
-  institutionName:resolveInstallationProfile(currentSettings).institutionName,
-  actor:'SYSTEM'
-});
-let intelligenceRefreshPromise:Promise<ContinuousIntelligenceState>|null=null;
+// Dados históricos legados são preservados, mas nenhum diagnóstico automático é executado.
+let continuousIntelligenceStore:ContinuousIntelligenceState|undefined=persistedPortalState.continuousIntelligence;
 const otpIpBuckets=new Map<string,{startedAt:number;count:number}>();
 function allowOtpRequestFromIp(ip:string):boolean{const key=createHash('sha256').update(`${process.env.PORTAL_OTP_PEPPER||'local'}|${ip||'unknown'}`).digest('hex');const now=Date.now();const current=otpIpBuckets.get(key);if(!current||now-current.startedAt>15*60_000){otpIpBuckets.set(key,{startedAt:now,count:1});return true;}current.count++;return current.count<=10;}
 const publicDownloadBuckets=new Map<string,{startedAt:number;count:number}>();
@@ -476,15 +462,7 @@ function applyPersistedState(state: PersistedPortalState) {
   publishRuntimeTemplatesFromSettings();
 }
 
-function publicContinuousIntelligence():ContinuousIntelligenceOverview{
-  const artifacts=Object.fromEntries(Object.entries(continuousIntelligenceStore.artifacts).map(([kind,artifact])=>{
-    const{markdown:_markdown,...summary}=artifact;
-    return[kind,summary];
-  })) as ContinuousIntelligenceOverview['artifacts'];
-  return{...continuousIntelligenceStore,artifacts};
-}
-
-async function refreshContinuousIntelligence(actor:'SYSTEM'|'MASTER',actorEmail='system@portal.local',syncDrive=true):Promise<ContinuousIntelligenceState>{
+function refreshContinuousIntelligence(actor:'SYSTEM'|'MASTER',actorEmail='system@portal.local',syncDrive=true):Promise<ContinuousIntelligenceState>{
   if(intelligenceRefreshPromise)return intelligenceRefreshPromise;
   intelligenceRefreshPromise=(async()=>{
     const profile=resolveInstallationProfile(currentSettings);
@@ -2084,46 +2062,11 @@ export async function createPortalApp() {
     res.json(report);
   });
   app.post('/api/admin/workflow/simulate',requireAuthenticated,requireAdministrator,async(req,res)=>{try{const studio=req.body?.studio||currentSettings.integrationStudio;if(!studio)return res.status(400).json({error:'Configure o Estúdio primeiro.'});res.setHeader('Cache-Control','private, no-store');res.json(await simulateWorkflow(studio,req.body?.scenario||{}));}catch(error){res.status(400).json({error:error instanceof Error?error.message:'Simulação inválida.'});}});
-  app.get('/api/admin/continuous-intelligence',requireAuthenticated,requireAdministrator,(_req,res)=>{
-    res.setHeader('Cache-Control','private, no-store');
-    res.json(publicContinuousIntelligence());
-  });
-  app.post('/api/admin/continuous-intelligence/refresh',requireAuthenticated,requireAdministrator,async(req,res)=>{
-    const identity=getPortalIdentity(req)!;
-    try{
-      await refreshContinuousIntelligence('MASTER',identity.email,true);
-      res.setHeader('Cache-Control','private, no-store');
-      res.json(publicContinuousIntelligence());
-    }catch(error){res.status(502).json({error:error instanceof Error?error.message:'Não foi possível atualizar os arquivos vivos.'});}
-  });
-  app.patch('/api/admin/continuous-intelligence/proposals/:id',requireAuthenticated,requireAdministrator,async(req,res)=>{
-    const identity=getPortalIdentity(req)!;
-
-    const proposal=continuousIntelligenceStore.proposals.find(item=>item.id===req.params.id);
-    if(!proposal)return res.status(404).json({error:'Proposta de melhoria não encontrada.'});
-    const status=String(req.body?.status||'') as ImprovementStatus;
-    if(!['PROPOSED','APPROVED','REJECTED','IMPLEMENTED'].includes(status))return res.status(400).json({error:'Decisão inválida.'});
-    const before={status:proposal.status,reviewNote:proposal.reviewNote};
-    proposal.status=status;
-    proposal.reviewedAt=new Date().toISOString();
-    proposal.reviewedBy=identity.email;
-    proposal.reviewNote=String(req.body?.reviewNote||'').trim().slice(0,1000)||undefined;
-    auditLogsStore.push({id:`log-${Date.now()}-improvement-decision`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'DECISAO_PROPOSTA_MELHORIA',entityType:'improvement_proposal',entityId:proposal.id,before,after:{status,hasReviewNote:Boolean(proposal.reviewNote)},timestamp:proposal.reviewedAt});
-    try{
-      await refreshContinuousIntelligence('MASTER',identity.email,true);
-      res.json(publicContinuousIntelligence());
-    }catch(error){res.status(502).json({error:error instanceof Error?error.message:'A decisão foi registrada, mas o arquivo não pôde ser atualizado.'});}
-  });
-  app.get('/api/admin/continuous-intelligence/files/:kind',requireAuthenticated,requireAdministrator,(req,res)=>{
-    const kind=String(req.params.kind||'') as LivingPortalArtifactKind;
-    if(!['FLOW_IMPROVEMENT_MEMORY','TCC_STATISTICAL_REPORT'].includes(kind))return res.status(404).json({error:'Arquivo vivo não encontrado.'});
-    const artifact=continuousIntelligenceStore.artifacts[kind];
-    res.setHeader('Cache-Control','private, no-store');
-    res.setHeader('Content-Type','text/markdown; charset=utf-8');
-    res.setHeader('X-Content-Type-Options','nosniff');
-    res.setHeader('Content-Disposition',`attachment; filename="${safeDownloadFileName(artifact.fileName)}"`);
-    res.send(artifact.markdown);
-  });
+  // Endpoint legado mantido apenas para indicar a descontinuação, sem atualizar dados.
+  app.all('/api/admin/continuous-intelligence',requireAuthenticated,requireAdministrator,(_req,res)=>res.status(410).json({error:'Diagnósticos automáticos descontinuados. Utilize Sugestões de melhoria.'}));
+  app.all('/api/admin/continuous-intelligence/refresh',requireAuthenticated,requireAdministrator,(_req,res)=>res.status(410).json({error:'Diagnósticos automáticos descontinuados.'}));
+  app.all('/api/admin/continuous-intelligence/proposals/:id',requireAuthenticated,requireAdministrator,(_req,res)=>res.status(410).json({error:'Propostas automáticas descontinuadas.'}));
+  app.all('/api/admin/continuous-intelligence/files/:kind',requireAuthenticated,requireAdministrator,(_req,res)=>res.status(410).json({error:'Arquivos de diagnóstico descontinuados.'}));
 
   app.get('/api/admin/metrics/definitions',requireAuthenticated,requireAdministrator,(_req,res)=>res.json([
     {key:'processes',label:'Trabalhos cadastrados',unit:'count'},{key:'completionRate',label:'Taxa de conclusão',unit:'percent'},{key:'publicationRate',label:'Taxa de publicação',unit:'percent'},{key:'signatures',label:'Assinaturas Asten',unit:'count'},{key:'emails',label:'Entregas de e-mail',unit:'count'}
@@ -2156,7 +2099,7 @@ export async function createPortalApp() {
       for(const job of formArchiveJobsStore.filter(item=>item.status==='FAILED').slice(-50))notifications.push({id:`form-archive-${job.id}`,severity:'ERROR',category:'FORM_ARCHIVE',title:'Formulário aguardando arquivamento',message:`${job.formType} — ${job.lastError||'Falha no Google Drive'}`,processId:job.processId,createdAt:job.updatedAt});
       for(const submission of studioFormSubmissionsStore.filter(item=>item.archiveStatus==='FAILED').slice(-50))notifications.push({id:`studio-form-${submission.id}`,severity:'ERROR',category:'FORM_ARCHIVE',title:'Formulário personalizado aguardando arquivamento',message:`${submission.formId} — ${submission.archiveError||'Falha no Google Drive'}`,processId:submission.processId,createdAt:submission.submittedAt});
       for(const run of workflowRunsStore.filter(item=>item.status!=='COMPLETED').slice(-50))notifications.push({id:`workflow-${run.id}`,severity:'ERROR',category:'WORKFLOW',title:'Etapa do fluxo requer atenção',message:`${run.eventCode} — ${run.issues.map(issue=>issue.message).join('; ')||'Ação não concluída'}`,processId:run.processId,createdAt:run.completedAt});
-      for(const artifact of Object.values(continuousIntelligenceStore.artifacts).filter(item=>item.driveSyncStatus==='FAILED'))notifications.push({id:`intelligence-${artifact.kind}`,severity:'ERROR',category:'DRIVE',title:'Arquivo vivo aguardando sincronização',message:`${artifact.fileName} — ${artifact.driveError||'Falha no Google Drive'}`,createdAt:artifact.generatedAt});
+
     }
     res.setHeader('Cache-Control','private, no-store');
     res.json(notifications.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,100));
@@ -2181,7 +2124,7 @@ export async function createPortalApp() {
 
   app.post('/api/admin/integrity/drive',requireAuthenticated,requireAdministrator,async(req,res)=>{const identity=getPortalIdentity(req)!;const persistence=getSupabaseRuntimeStatus();if(!persistence.durablePersistenceReady)return res.status(503).json({error:'A persistência Supabase não está pronta; a conferência Portal × Drive não pode ser considerada confiável.'});if(!currentSettings.driveRootFolderId)return res.status(409).json({error:'Pasta raiz do Drive não configurada.'});try{const accessToken=await getGoogleWorkspaceAccessToken();await verifyPrivateDriveFolder(accessToken,currentSettings.driveRootFolderId);const findings:Array<{processId:string;protocol:string;artifact:string;fileId:string;ok:boolean;issues:string[]}> = [];for(const process of processesStore){const acervo=process.acervo;if(!acervo)continue;const checks=[{artifact:'TRABALHO_COMPLETO_PRIVADO',fileId:acervo.trabalhoCompletoFileId,sha:acervo.trabalhoCompletoSha256,version:acervo.trabalhoCompletoVersion,public:false},{artifact:'RESUMO_EXPANDIDO_PRIVADO',fileId:acervo.resumoExpandidoFileId,sha:acervo.resumoExpandidoSha256,version:acervo.resumoExpandidoVersion,public:false},{artifact:'TRABALHO_COMPLETO_PUBLICO',fileId:acervo.publicFullWorkFileId,sha:acervo.trabalhoCompletoSha256,version:acervo.trabalhoCompletoVersion,public:acervo.publicationState==='PUBLIC'&&Boolean(acervo.publishFullWork),source:acervo.trabalhoCompletoFileId},{artifact:'RESUMO_EXPANDIDO_PUBLICO',fileId:acervo.publicExpandedAbstractFileId,sha:acervo.resumoExpandidoSha256,version:acervo.resumoExpandidoVersion,public:acervo.publicationState==='PUBLIC'&&Boolean(acervo.publishExpandedAbstract),source:acervo.resumoExpandidoFileId}];for(const check of checks){if(!check.fileId)continue;const inspected=await inspectPortalDriveArtifact({accessToken,fileId:check.fileId,expectedSha256:check.sha,expectedVersion:check.version,expectPublic:check.public&&check.fileId!==check.source,expectedSourceFileId:check.fileId===check.source?undefined:check.source});findings.push({processId:process.id,protocol:process.protocolo,artifact:check.artifact,fileId:check.fileId,ok:inspected.ok,issues:inspected.issues});}}const failures=findings.filter(item=>!item.ok);const report={executedAt:new Date().toISOString(),executedBy:identity.email,checked:findings.length,failures:failures.length,ok:failures.length===0,findings};auditLogsStore.push({id:`log-${Date.now()}-integrity`,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'VERIFICACAO_INTEGRIDADE_DRIVE',entityType:'drive_integrity',entityId:String(Date.now()),after:{checked:report.checked,failures:report.failures},timestamp:report.executedAt});await persistPortalStateDurably();res.json(report);}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Não foi possível verificar a integridade entre Portal e Drive.'});}});
 
-  app.get('/api/admin/health',requireAuthenticated,requireAdministrator,async(_req,res)=>{const [asten,google]=await Promise.all([getPersistentAstenStatus(),getGoogleWorkspaceStatus()]);const supabase=getSupabaseRuntimeStatus();const secretStore=getSecretStoreStatus();const googleSecurity=getGoogleOAuthSecurityPreflight();const astenReady=Boolean(asten.configured&&asten.dispatchEnabled);const intelligenceStatuses=Object.values(continuousIntelligenceStore.artifacts).map(item=>item.driveSyncStatus);const checks=[{id:'studio',label:'Pacote do curso',status:currentSettings.integrationStudio&&validateCourseStudio(currentSettings.integrationStudio).ready?'PASS':'FAIL',message:currentSettings.integrationStudio?'Validação estrutural executada.':'Estúdio ainda não publicado.'},{id:'supabase',label:'Supabase',status:supabase.durablePersistenceReady?'NOT_CONFIRMED':'WARNING',message:supabase.message},{id:'google',label:'Google Workspace / Drive',status:google.connected&&googleSecurity.ready?'NOT_CONFIRMED':'WARNING',message:google.connected?(googleSecurity.ready?'Autorização encontrada; execute homologação real para confirmar escrita e privacidade.':googleSecurity.issues.join(' ')):'Google não conectado.'},{id:'gmail',label:'Gmail institucional',status:google.connected?'NOT_CONFIRMED':'WARNING',message:google.connected?'Escopo de envio configurado; o envio real deve ser confirmado no piloto controlado.':'Google não conectado.'},{id:'secret-store',label:'Cofre de segredos',status:secretStore.configured?'PASS':'FAIL',message:secretStore.configured?'Segredos cifrados com persistência durável.':'Cofre cifrado/durável não está pronto.'},{id:'asten',label:'Asten',status:astenReady?'NOT_CONFIRMED':'WARNING',message:astenReady?'Credencial encontrada; execute piloto controlado para confirmar.':'Asten não conectado.'},{id:'drive-root',label:'Pasta raiz do Drive',status:currentSettings.driveRootFolderId?'NOT_CONFIRMED':'FAIL',message:currentSettings.driveRootFolderId?'Pasta configurada; privacidade e escrita precisam de homologação real.':'Pasta raiz não configurada.'},{id:'continuous-intelligence',label:'Arquivos vivos',status:intelligenceStatuses.includes('FAILED')?'WARNING':intelligenceStatuses.every(status=>status==='SYNCED')?'PASS':'NOT_CONFIRMED',message:intelligenceStatuses.includes('FAILED')?'Há arquivo vivo aguardando sincronização com o Drive.':intelligenceStatuses.every(status=>status==='SYNCED')?'Os dois arquivos foram atualizados no Drive.':'Os relatórios existem no portal; execute a atualização com o Google conectado.'},{id:'email-failures',label:'Fila de e-mails',status:emailDeliveriesStore.some(item=>item.status==='FAILED')?'WARNING':'PASS',message:`${emailDeliveriesStore.filter(item=>item.status==='FAILED').length} falha(s) pendente(s).`}];const overall=checks.some(item=>item.status==='FAIL')?'UNAVAILABLE':checks.some(item=>item.status==='WARNING'||item.status==='NOT_CONFIRMED')?'DEGRADED':'HEALTHY';res.setHeader('Cache-Control','private, no-store');res.json({generatedAt:new Date().toISOString(),overall,checks});});
+  app.get('/api/admin/health',requireAuthenticated,requireAdministrator,async(_req,res)=>{const [asten,google]=await Promise.all([getPersistentAstenStatus(),getGoogleWorkspaceStatus()]);const supabase=getSupabaseRuntimeStatus();const secretStore=getSecretStoreStatus();const googleSecurity=getGoogleOAuthSecurityPreflight();const astenReady=Boolean(asten.configured&&asten.dispatchEnabled);const checks=[{id:'studio',label:'Pacote do curso',status:currentSettings.integrationStudio&&validateCourseStudio(currentSettings.integrationStudio).ready?'PASS':'FAIL',message:currentSettings.integrationStudio?'Validação estrutural executada.':'Estúdio ainda não publicado.'},{id:'supabase',label:'Supabase',status:supabase.durablePersistenceReady?'NOT_CONFIRMED':'WARNING',message:supabase.message},{id:'google',label:'Google Workspace / Drive',status:google.connected&&googleSecurity.ready?'NOT_CONFIRMED':'WARNING',message:google.connected?(googleSecurity.ready?'Autorização encontrada; execute homologação real para confirmar escrita e privacidade.':googleSecurity.issues.join(' ')):'Google não conectado.'},{id:'gmail',label:'Gmail institucional',status:google.connected?'NOT_CONFIRMED':'WARNING',message:google.connected?'Escopo de envio configurado; o envio real deve ser confirmado no piloto controlado.':'Google não conectado.'},{id:'secret-store',label:'Cofre de segredos',status:secretStore.configured?'PASS':'FAIL',message:secretStore.configured?'Segredos cifrados com persistência durável.':'Cofre cifrado/durável não está pronto.'},{id:'asten',label:'Asten',status:astenReady?'NOT_CONFIRMED':'WARNING',message:astenReady?'Credencial encontrada; execute piloto controlado para confirmar.':'Asten não conectado.'},{id:'drive-root',label:'Pasta raiz do Drive',status:currentSettings.driveRootFolderId?'NOT_CONFIRMED':'FAIL',message:currentSettings.driveRootFolderId?'Pasta configurada; privacidade e escrita precisam de homologação real.':'Pasta raiz não configurada.'},{id:'email-failures',label:'Fila de e-mails',status:emailDeliveriesStore.some(item=>item.status==='FAILED')?'WARNING':'PASS',message:`${emailDeliveriesStore.filter(item=>item.status==='FAILED').length} falha(s) pendente(s).`}];const overall=checks.some(item=>item.status==='FAIL')?'UNAVAILABLE':checks.some(item=>item.status==='WARNING'||item.status==='NOT_CONFIRMED')?'DEGRADED':'HEALTHY';res.setHeader('Cache-Control','private, no-store');res.json({generatedAt:new Date().toISOString(),overall,checks});});
 
   app.patch('/api/admin/studio/image', requireAuthenticated, requireAdministrator, async (req,res)=>{
     const identity=getPortalIdentity(req)!;
