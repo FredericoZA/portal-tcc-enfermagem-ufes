@@ -6,7 +6,7 @@ import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
 import { portalConfirm } from '../services/portalDialogs';
-import { formatDatePt, formatDateNumeric, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
+import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
 import { OnlineSystemTutorial } from '../components/OnlineSystemTutorial';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { loadTableConfig, ColumnDef, TableTextFormat, DEFAULT_TABLE_TEXT_FORMAT } from '../components/TableColumnSelectorPanel';
@@ -671,7 +671,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           case 'coorientador': return proc.coorientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))} (${proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : '';
           case 'resumo': return proc.acervo?.resumoSintese || (proc.titulo ? `TCC: ${proc.titulo}` : 'Sem resumo');
           case 'palavrasChave': return (proc.acervo?.palavrasChave || []).slice(0, 5).join('; ');
-          case 'defesaDataHora': return proc.defesa?.startAt ? `${formatDateNumeric(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
+          case 'defesaDataHora': return proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
           case 'defesaLocal': return proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar';
           default: return '';
         }
@@ -750,7 +750,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
         row.push(`"${kw.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.defesaDataHora) {
-        const dt = proc.defesa?.startAt ? `${formatDateNumeric(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
+        const dt = proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
         row.push(`"${dt}"`);
       }
       if (visibleColumns.defesaLocal) row.push(`"${(proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar').replace(/"/g, '""')}"`);
@@ -1386,9 +1386,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           </span>
                           <h3 className="font-black text-sm sm:text-base normal-case tracking-tight mt-0.5 text-white">
                             {selectedDayDefenses && selectedDayDefenses.length > 0
-                              ? `Defesas em ${formatDatePt(selectedDayDefenses[0].defesa?.startAt)}`
+                              ? `Defesas em ${formatDateWithWeekday(selectedDayDefenses[0].defesa?.startAt)}`
                               : selectedDayGcalEvents && selectedDayGcalEvents.length > 0
-                                ? `Defesas em ${formatDatePt(selectedDayGcalEvents[0].start)}`
+                                ? `Defesas em ${formatDateWithWeekday(selectedDayGcalEvents[0].start)}`
                                 : 'Defesas do Dia'}
                           </h3>
                         </div>
@@ -1909,7 +1909,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   return (
                     <td key="defesaDataHora" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} align-middle ${alignClass} ${defStyles.borderClass} cursor-grab`}>
                       <div className={`flex items-center justify-center gap-1 ${defStyles.cellFontSizeClass}`}>
-                        <span>{formatCellText('defesaDataHora', formatDateNumeric(proc.defesa?.startAt), defensesTextFormat, '')}</span>
+                        <span>{formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), defensesTextFormat, '')}</span>
                       </div>
                       <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}</div>
                     </td>
@@ -2430,7 +2430,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     return (
                       <td key="defesaDataHora" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
                         <div className={`${acervoStyles.cellFontSizeClass} whitespace-nowrap`}>
-                          {formatCellText('defesaDataHora', formatDateNumeric(proc.defesa?.startAt), acervoTextFormat, '')}
+                          {formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), acervoTextFormat, '')}
                         </div>
                         <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}</div>
                       </td>
@@ -2506,7 +2506,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             <div className="max-h-[calc(90vh-60px)] overflow-y-auto p-4 space-y-4">
             <div className="space-y-3 text-xs text-slate-800">
               <div className="bg-emerald-100 p-3 rounded border border-emerald-300 font-mono text-[11px] text-emerald-950">
-                Protocolo: <strong>{selectedLibDoc.protocolo}</strong> • Data da Defesa: <strong>{formatDatePt(selectedLibDoc.defesa?.startAt)}</strong>
+                Protocolo: <strong>{selectedLibDoc.protocolo}</strong> • Data da Defesa: <strong>{formatDateWithWeekday(selectedLibDoc.defesa?.startAt)}</strong>
               </div>
 
               <div>
