@@ -17,8 +17,8 @@ test('visitante consulta sem receber tarefas de avaliação, devolução ou aute
   assert.match(content('visitante'), /E-mails, matrículas e registros não aparecem/);
 });
 
-test('manual possui apenas os três perfis solicitados; perfil desconhecido não recebe tarefas', () => {
-  assert.deepEqual(Object.keys(guideActivityOrder), ['aluno', 'orientador', 'visitante']);
+test('manual possui os quatro perfis, incluindo examinador; perfil desconhecido não recebe tarefas', () => {
+  assert.deepEqual(Object.keys(guideActivityOrder), ['aluno', 'orientador', 'examinador', 'visitante']);
   assert.equal(guide('presidente'), '');
   assert.deepEqual(activitiesForRole('__proto__'), []);
   const source = readFileSync(new URL('../src/pages/PortalTutorialPage.tsx', import.meta.url), 'utf8');
@@ -33,6 +33,14 @@ test('aluno e orientador recebem somente as atividades correspondentes', () => {
   assert.doesNotMatch(student, /Registrar o conceito e conferir/);
   assert.match(advisor, /Registrar o conceito e conferir/);
   assert.doesNotMatch(advisor, /Entregar os arquivos e escolher/);
+});
+
+test('examinador tem assinatura própria sem autorização para avaliar ou entregar o trabalho', () => {
+  const examiner = content('examinador');
+  assert.match(examiner, /dois examinadores/);
+  assert.match(examiner, /três assinaturas/);
+  assert.match(examiner, /link pessoal/);
+  assert.doesNotMatch(activitiesForRole('examinador').map(activity => activity.title).join('\n'), /Registrar o conceito e conferir a ata|Entregar os arquivos e escolher/);
 });
 
 test('atividades têm instruções, condição de conclusão, ajuda contextual e imagem existente', () => {
