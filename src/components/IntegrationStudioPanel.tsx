@@ -1,3 +1,4 @@
+import {reservationRecipientField} from '../utils/reservationRecipientField';
 import {institutionalDocumentLogo} from '../utils/institutionalDocumentLogo';
 import {withOperationalCatalog} from '../utils/studioOperationalCatalog';
 import {applyProcessEmailGreeting} from '../utils/processEmailGreeting';
@@ -103,6 +104,7 @@ type StudioTab = 'operation' | 'overview' | 'brand' | 'documents' | 'emails' | '
 interface IntegrationStudioPanelProps {
   actorEmail: string;
   initialStudio?: IntegrationStudioSettings;
+  reservationDepartmentEmail?:string;
   matrixColumns: MatrixColumn[];
   setMatrixColumns: React.Dispatch<React.SetStateAction<MatrixColumn[]>>;
   matrixRows: MatrixRow[];
@@ -459,7 +461,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     }
     if (source.matrixRows?.length) setMatrixRows(source.matrixRows as unknown as MatrixRow[]);
     if (source.docTemplates?.length) setDocTemplates((source.docTemplates as unknown as DocTemplateItem[]).map((doc) => ({ ...doc, templateContentText: '' })));
-    if (source.emailTemplates?.length) setEmailTemplates(source.emailTemplates as unknown as EmailTemplateItem[]);
+    if (source.emailTemplates?.length) setEmailTemplates(source.emailTemplates.map(email=>email.id==='email-reserva'?{...email,recipient:reservationRecipientField(email.recipient,props.reservationDepartmentEmail)}:email) as unknown as EmailTemplateItem[]);
     if (source.formTemplates?.length) setFormTemplates(source.formTemplates as unknown as FormTemplateItem[]);
     if (source.workflowStages?.length) {
       const eventFallback=['TCC_CREATED','LOCATION_CONFIRMED','INVITATION_SENT','EVALUATION_SUBMITTED','REPOSITORY_SUBMITTED','SIGNATURE_REQUESTED','SIGNATURE_COMPLETED','PROCESS_COMPLETED'];
