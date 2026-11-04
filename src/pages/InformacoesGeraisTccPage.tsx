@@ -134,6 +134,17 @@ export const InformacoesGeraisTccPage: React.FC<InformacoesGeraisTccPageProps> =
               <li><SourceLink href={MATRIZ_CURRICULAR_URL}>Organização curricular do curso</SourceLink></li>
             </ul>
           </section>
+
+          <section className="portal-layer-card space-y-2 rounded-xl border border-slate-300 p-3 shadow-2xs sm:p-4" aria-labelledby="tcc-legislacao">
+            <h2 id="tcc-legislacao" className="flex items-center gap-2 text-xs font-black text-slate-900 sm:text-sm"><ShieldCheck className="h-4 w-4 text-[var(--portal-brand-action)]" aria-hidden="true" />Legislação e proteção de dados</h2>
+            <p className="text-xs leading-5 text-slate-700"><strong>Portaria Normativa GR/Ufes nº 310, de 23 de outubro de 2026</strong>, publicada em 27/10/2026: estabelece regras para o uso institucional de sistemas de inteligência artificial na Universidade.</p>
+            <p className="text-xs leading-5 text-slate-700">O Portal TCC utiliza formulários, fluxos definidos, modelos de documentos e indicadores estatísticos calculados por regras programadas, sem gerar pareceres ou decisões acadêmicas por IA generativa. O texto-base do parecer deve ser complementado e validado pelo orientador, de acordo com a deliberação da banca.</p>
+            <p className="text-xs leading-5 text-slate-700">Essas medidas técnicas buscam adequação à Portaria; não substituem as exigências institucionais de segurança, proteção de dados pessoais e eventual análise da unidade competente.</p>
+            <ul className="space-y-1.5 text-xs leading-5 text-slate-700">
+              <li><SourceLink href="/legislacao/PORTARIA_NORMATIVA_GR_UFES_310_2026.md">Consultar a Portaria nº 310/2026 (transcrição para leitura)</SourceLink></li>
+              <li><SourceLink href="https://atosnormativos.ufes.br/handle/10/21075">Repositório oficial de atos normativos da Ufes</SourceLink></li>
+            </ul>
+          </section>
         </div>
       )}
     </div>
