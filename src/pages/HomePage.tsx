@@ -2600,8 +2600,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <span>Orientações para identificação:</span>
                     </div>
                         <ul className="space-y-1 pl-5 list-disc text-slate-600 text-[11px]">
-                          <li><strong>Como funciona o acesso:</strong> informe o e-mail cadastrado no Portal. Enviaremos um código de acesso de uso único para esse endereço.</li>
-                          <li><strong>Qual e-mail usar:</strong> utilize o endereço cadastrado e ativo na lista de acesso, institucional ou pessoal. Para acessar um TCC existente, use o e-mail informado no seu vínculo com o processo.</li>
+                          <li><strong>Quem pode entrar:</strong> alunos autorizados pela secretaria e participantes vinculados a um TCC. Pedir um código não cria um cadastro.</li>
+                          <li><strong>Qual e-mail usar:</strong> o endereço ativo na lista de acesso ou registrado pelo autor no seu vínculo com o TCC. Orientadores e examinadores podem usar o e-mail institucional ou pessoal informado no processo.</li>
+                          <li><strong>Como entrar:</strong> informe esse e-mail e solicite o código de uso único. O acesso libera somente as funções permitidas ao seu papel.</li>
                         </ul>
                   </div>
                 )}

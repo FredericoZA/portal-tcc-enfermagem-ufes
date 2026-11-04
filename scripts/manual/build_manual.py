@@ -35,7 +35,7 @@ ASTEN='https://ajuda.astenassinatura.com.br/article/86-como-assinar-um-documento
 # Each page has a single task. Step titles use the controls shown by the portal.
 pages=[
  dict(tag='COMECE AQUI',title='Guia prático do\nPortal de TCC',kind='cover'),
- dict(tag='ACESSO • PARA TODOS',title='1. Solicitar o código de acesso',intro='Deixe o Portal e sua caixa de e-mail abertos em abas diferentes. Não é necessário criar uma senha.',image='acesso',image_h=228,steps=[
+ dict(tag='ACESSO • PARA TODOS',title='1. Solicitar o código de acesso',intro='A área do usuário exige autorização da secretaria ou vínculo com um TCC. Solicitar código não cria cadastro. Deixe o Portal e seu e-mail abertos em abas diferentes.',image='acesso',image_h=212,steps=[
  ('Abra o endereço do Portal.',URL),
  ('Clique em “Entrar no Portal”.','O botão fica na parte de baixo do menu lateral. No celular, abra o menu primeiro.'),
  ('Informe seu e-mail e clique em “Enviar código”.','Use o endereço cadastrado no TCC e autorizado no Portal. Ele pode ser institucional ou pessoal. Confira a grafia antes de enviar.')],note='O código chega por e-mail. Não feche o Portal: você voltará a esta janela para digitá-lo.'),
@@ -108,6 +108,12 @@ pages=[
  ('Assinei, mas a próxima etapa continua bloqueada.','Na ata, aguarde orientador e dois examinadores assinarem e o PDF ser arquivado. No termo, aguarde todos os autores e o orientador. Não solicite outro envio para tentar acelerar.'),
  ('O PDF foi anexado, mas a entrega não terminou.','Confira resumo, cinco palavras-chave e PDF final. Clique em “Confirmar entrega e ir para documentos” e aguarde a confirmação. Se persistir, relate em “Sugestões”, com o protocolo e sem códigos ou credenciais.')]),
  dict(tag='CONSULTA RÁPIDA',title='16. Quem faz cada etapa',kind='reference'),
+ dict(tag='ACESSO E PROTEÇÃO DE DADOS',title='17. Quem pode entrar e o que é público',steps=[
+ ('Aluno: autorização pela secretaria.','A secretaria autoriza previamente os alunos, normalmente com e-mail institucional da UFES. A administração pode autorizar outros endereços. Quem não tem autorização nem vínculo com um TCC não entra na área do usuário.'),
+ ('Docentes e demais participantes: vínculo pelo TCC.','Ao concluir o cadastro, o autor vincula os demais autores, orientador, coorientador e examinadores pelos e-mails informados. Um examinador externo também pode entrar com esse mesmo endereço e o código enviado por e-mail. O vínculo libera apenas as funções do seu papel, sem acesso administrativo.'),
+ ('Consulta pública e dados restritos.','Visitantes consultam título, autoria, docentes, resumo textual e dados públicos da defesa. E-mails e matrículas não aparecem na ficha pública. Nome, matrícula e e-mail são dados pessoais; também são tratados documentos, informações acadêmicas e registros técnicos necessários ao processo.'),
+ ('Arquivos e comunicações.','Os originais ficam no Drive privado. A entrega obrigatória não autoriza a publicação do PDF. E-mails são usados para acesso, avisos e assinaturas; destinatários de mensagens do mesmo TCC podem conhecer os endereços dos demais destinatários.'),
+ ('Regras programadas e decisões humanas.','A operação do Portal não usa modelos de inteligência artificial, agentes autônomos ou treinamento com dados dos participantes. Conceitos, pareceres, reservas e autorizações dependem dos responsáveis. Consulte o Aviso de privacidade e a legislação em Informações gerais do TCC.')]),
 ]
 styles={
  'body':ParagraphStyle('body',fontName='Portal',fontSize=13,leading=18.5,textColor=INK,spaceAfter=0),
@@ -186,7 +192,7 @@ for page_number,page in enumerate(pages,1):
   y=H-290
   para('Para alunos, orientadores e examinadores',style='title',gap=13)
   para('Mantenha este PDF aberto enquanto usa o Portal. Comece pelo acesso e, depois, consulte a seção do seu papel. Os títulos dos botões aparecem em <b>negrito</b>.',gap=16)
-  for label,num in [('Acesso por código de e-mail',2),('Aluno: cadastro, reserva e entrega',4),('Entregar não é tornar público',6),('Orientador: conceito, ata e assinatura',9),('Assinar pelo Asten',13),('Examinador: convite, defesa e ata',14)]:
+  for label,num in [('Acesso por código de e-mail',2),('Aluno: cadastro, reserva e entrega',4),('Entregar não é tornar público',6),('Orientador: conceito, ata e assinatura',9),('Assinar pelo Asten',13),('Examinador: convite, defesa e ata',14),('Acesso e proteção de dados',18)]:
    ptop=y;para(f'<b>{label}</b> <font color="#4a5d66"> — página {num}</font>',gap=10)
    c.linkRect('',f'page-{num}',(M,y+7,W-M,ptop+1),relative=0,thickness=0)
   y-=8

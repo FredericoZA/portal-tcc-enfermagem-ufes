@@ -124,27 +124,37 @@ export const InformacoesGeraisTccPage: React.FC<InformacoesGeraisTccPageProps> =
           </div>
 
           <section className="portal-layer-card space-y-2 rounded-xl border border-slate-300 p-3 shadow-2xs sm:p-4">
+            <h2 className="text-xs font-black text-slate-900 sm:text-sm">Quem pode acessar a área do usuário</h2>
+            <p className="text-xs leading-5 text-slate-700">A consulta ao calendário, ao catálogo e aos dados públicos dispensa login. Para cadastrar um TCC, o aluno precisa estar previamente autorizado pela secretaria na lista de acesso, normalmente com seu e-mail institucional da UFES. A administração pode autorizar outros endereços. Solicitar um código não cria um cadastro nem autoriza o acesso de quem está fora dessa lista ou de um processo.</p>
+            <p className="text-xs leading-5 text-slate-700">Ao concluir o cadastro do TCC, o autor vincula os demais autores, orientador, coorientador e examinadores pelos e-mails informados. Esses participantes podem entrar com o mesmo endereço e o código recebido por e-mail, inclusive quando forem de outra instituição. Cada um acessa somente as informações e ações permitidas ao seu papel; o vínculo não concede acesso administrativo.</p>
+          </section>
+
+          <section className="portal-layer-card space-y-2 rounded-xl border border-slate-300 p-3 shadow-2xs sm:p-4">
             <h2 className="text-xs font-black text-slate-900 sm:text-sm">Documentos e próximos passos</h2>
             <p className="text-xs leading-5 text-slate-700"><strong>Documentos administrativos</strong> reúne comprovante de reserva, carta-convite, ata, Termo de Autorização quando aplicável e declaração de participação na banca. A ata exige as três assinaturas da banca (orientador e dois examinadores), e a entrega final só é liberada depois do arquivamento; a declaração é assinada pela presidência da Comissão. Comprovante e convite não exigem assinatura.</p>
             <p className="text-xs leading-5 text-slate-700">A prévia da ata utiliza um modelo institucional e um texto-base de parecer definido em programação para cada resultado da banca. O título do TCC pode ser inserido no rascunho; a fundamentação e as ressalvas devem ser preenchidas pelo orientador. O sistema não atribui avaliação acadêmica por inteligência artificial.</p>
-            <p className="text-xs leading-5 text-slate-700">A <strong>Portaria Normativa GR/Ufes nº 310/2026</strong> regula o uso institucional de sistemas de inteligência artificial. O Portal usa regras programadas para seu fluxo administrativo e indicadores agregados restritos ao Master e à Presidência, com medidas de minimização. Isso não constitui certificação institucional nem dispensa os controles da LGPD; consulte a legislação detalhada logo abaixo.</p>
             <p className="text-xs leading-5 text-slate-700">Nos legados, essa mesma aba também reúne o instrumento de avaliação antigo, quando localizado. Ele não faz parte dos processos novos.</p>
             <p className="text-xs leading-5 text-slate-700">Consulte as fontes para prazos e regras da sua matriz. A norma disponível descreve procedimentos físicos históricos; a tramitação digital deste Portal segue as etapas de cadastro, reserva, conceito, assinaturas e entrega.</p>
             <ul className="space-y-1.5 text-xs leading-5 text-slate-700">
               <li><SourceLink href={NORMAS_TCC_URL}>Normas para elaboração do TCC (documento disponível no site do curso)</SourceLink></li>
               <li><SourceLink href={ORIENTACOES_CURSO_URL}>Orientações institucionais de agendamento, defesa e entrega</SourceLink></li>
-              <li><SourceLink href={MATRIZ_CURRICULAR_URL}>Organização curricular do curso</SourceLink></li>
+              <li><SourceLink href={MATRIZ_CURRICULAR_URL}>Projeto Pedagógico do Curso (PPC) e organização curricular</SourceLink></li>
+              <li><SourceLink href="/manual/manual-portal-tcc.pdf">Manual de uso do Portal: alunos, orientadores e examinadores</SourceLink></li>
             </ul>
           </section>
 
           <section className="portal-layer-card space-y-2 rounded-xl border border-slate-300 p-3 shadow-2xs sm:p-4" aria-labelledby="tcc-legislacao">
             <h2 id="tcc-legislacao" className="flex items-center gap-2 text-xs font-black text-slate-900 sm:text-sm"><ShieldCheck className="h-4 w-4 text-[var(--portal-brand-action)]" aria-hidden="true" />Legislação e proteção de dados</h2>
             <p className="text-xs leading-5 text-slate-700"><strong>Portaria Normativa GR/Ufes nº 310, de 23 de outubro de 2026</strong>, publicada em 27/10/2026: estabelece regras para o uso institucional de sistemas de inteligência artificial na Universidade.</p>
-            <p className="text-xs leading-5 text-slate-700">O Portal TCC utiliza formulários, fluxos definidos, modelos de documentos e indicadores estatísticos calculados por regras programadas, sem gerar pareceres ou decisões acadêmicas por IA generativa. O texto-base do parecer deve ser complementado e validado pelo orientador, de acordo com a deliberação da banca.</p>
+            <p className="text-xs leading-5 text-slate-700">O Portal TCC opera por regras programadas, sem modelos de inteligência artificial, agentes autônomos ou treinamento com os dados dos participantes. O texto-base do parecer deve ser complementado e validado pelo orientador, de acordo com a deliberação da banca. Essa característica da operação não determina nem dispensa as obrigações aplicáveis ao uso de ferramentas durante o desenvolvimento.</p>
+            <p className="text-xs leading-5 text-slate-700">Nome, matrícula e e-mail são <strong>dados pessoais</strong>. O Portal também trata dados acadêmicos, documentos e registros técnicos necessários ao processo. E-mails e matrículas não aparecem na consulta pública; os endereços são usados no acesso e nas comunicações do TCC. A entrega do arquivo não autoriza sua publicação.</p>
             <p className="text-xs leading-5 text-slate-700">Os indicadores exigem identificação do Master ou da Presidência. Os originais dos documentos ficam no Drive privado; cópias públicas passam pelos controles de acesso e de dados restritos. Essas medidas técnicas buscam adequação à Portaria; não substituem as exigências institucionais de segurança, proteção de dados pessoais e eventual análise da unidade competente.</p>
             <ul className="space-y-1.5 text-xs leading-5 text-slate-700">
               <li><SourceLink href="/legislacao/PORTARIA_NORMATIVA_GR_UFES_310_2026.md">Consultar a Portaria nº 310/2026 (transcrição para leitura)</SourceLink></li>
               <li><SourceLink href="https://atosnormativos.ufes.br/handle/10/21075">Repositório oficial de atos normativos da Ufes</SourceLink></li>
+              <li><SourceLink href="https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm">Lei nº 13.709/2018 — Lei Geral de Proteção de Dados Pessoais (LGPD)</SourceLink></li>
+              <li><SourceLink href="https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados">ANPD: dados pessoais e direitos dos titulares</SourceLink></li>
+              <li><SourceLink href="/privacidade.html">Aviso de privacidade do Portal</SourceLink></li>
             </ul>
           </section>
         </div>

@@ -22,7 +22,9 @@ export const guideActivities: GuideActivity[] = [
     imageCaption: 'Janela de acesso por e-mail. O código é pessoal e não deve ser compartilhado.',
     steps: [
       'No menu lateral, clique em Entrar no Portal. Se veio de um e-mail do TCC, use a janela de acesso aberta sobre a ficha.',
-      'Informe o e-mail autorizado e solicite o código. Digite os seis dígitos recebidos nesse endereço para concluir o acesso.',
+      'A secretaria autoriza previamente os alunos na lista de acesso, normalmente pelo e-mail institucional da UFES. Quem ainda não tem autorização não pode entrar na área do usuário; solicitar um código não cria um cadastro.',
+      'Ao concluir o cadastro do TCC, o autor vincula os demais participantes pelos e-mails informados. Orientador, coorientador e examinadores passam a acessar os trabalhos aos quais estão vinculados, conforme seu papel, inclusive com e-mail externo à UFES.',
+      'Informe o e-mail autorizado e solicite o código. Digite os seis dígitos recebidos nesse endereço para concluir o acesso. O endereço precisa estar ativo; a administração pode autorizar exceções ao e-mail institucional.',
       'Use o mesmo endereço registrado como autor, orientador ou examinador. Depois do acesso, abra Meus TCCs ou continue no trabalho e na aba do link recebido.',
       'Sem entrar, você pode consultar os dados públicos. Entrar libera apenas as ações e os documentos permitidos ao seu vínculo.',
     ],

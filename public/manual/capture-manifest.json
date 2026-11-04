@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-11-04T18:28:44.026Z",
+  "capturedAt": "2026-11-04T19:23:03.878Z",
   "source": "Current compiled local UI, built from workspace; isolated temporary local_file backend",
   "synthetic": true,
   "providerTrafficBlocked": true,
@@ -24,17 +24,17 @@
       "id": "acesso",
       "file": "/manual/acesso.jpg",
       "scenario": "Acesso público por e-mail; nenhum código real solicitado",
-      "sha256": "b9bebe89d83e4a295b7d92a2c1cc492c7b3a6f9f7e727a689c41dda7b2242eb0",
+      "sha256": "94769b20ce9885ee5874e6ecfe96feb7c015d3e0d2e66b738d676c60bab6aa2c",
       "width": 512,
-      "height": 358
+      "height": 396
     },
     {
       "id": "codigo-acesso",
       "file": "/manual/codigo-acesso.jpg",
       "scenario": "Código de seis dígitos; resposta interceptada localmente, nenhum e-mail enviado",
-      "sha256": "b28ceca0e80e6a13e2b63be2f5a067d3fb1eea2a284a2520f1f96572649205c2",
+      "sha256": "fd19d8ee246dfcb6a33e1ddee38b7fa92d32b592807c037a954d853880ec4845",
       "width": 512,
-      "height": 484
+      "height": 522
     },
     {
       "id": "cadastro",
@@ -48,7 +48,7 @@
       "id": "ficha",
       "file": "/manual/ficha.jpg",
       "scenario": "Dados do processo fictício, identidade e quatro abas atuais",
-      "sha256": "774af136226274cd736c025348d4245ff3692d5c2d859574127b337f3c8642ce",
+      "sha256": "dbed7046940fe7ac2094ad6c32774fef52592c54047238f2f8883ee00c9d898b",
       "width": 1512,
       "height": 805
     },
@@ -112,7 +112,7 @@
       "id": "documentos-concluidos",
       "file": "/manual/documentos-concluidos.jpg",
       "scenario": "Processo fictício concluído: cinco caixas disponíveis, assinaturas representadas, nenhuma assinatura real solicitada",
-      "sha256": "c2a8401daac45471228a58ec39c66714bd4dd7320ce891f2bdae8dbf69cb845d",
+      "sha256": "4ad5f5d2e8a693dff39c0bd7ed44563caca18e6a98b1fbbceb02872d217a5f5d",
       "width": 1512,
       "height": 632
     },
@@ -136,7 +136,7 @@
       "id": "legados",
       "file": "/manual/legados.jpg",
       "scenario": "Modelo público compartilhado para registro histórico fictício",
-      "sha256": "bbf1a5a2833f050182dc531d147d8835f72991dd1d24491dff12dda050d1463a",
+      "sha256": "590a6c6af9ab35e455bd79f6ead1bbce13c08afb856188421cc36cadde6fa532",
       "width": 1512,
       "height": 646
     },
@@ -152,7 +152,7 @@
       "id": "reserva",
       "file": "/manual/reserva.jpg",
       "scenario": "Última etapa do cadastro: orientações e reserva do único local, dados fictícios, sem enviar",
-      "sha256": "0d2a77c91f8a8f6e3c96779bf776e0fa2700c9569c49398c9501006baf1b4ed7",
+      "sha256": "44ca9331185d3f38ec9f51d83c630f07fdc1efcc5f6612d3db4ceb5455e222ba",
       "width": 1152,
       "height": 1368
     },

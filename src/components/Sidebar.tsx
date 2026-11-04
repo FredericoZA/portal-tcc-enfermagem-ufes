@@ -32,51 +32,6 @@ interface SidebarProps {
   setIsOpenMobile: (open: boolean) => void;
 }
 
-const USER_LOCATION_CACHE_KEY = 'portal_tcc_user_location_v1';
-const USER_LOCATION_CACHE_MS = 24 * 60 * 60 * 1000;
-function readCachedUserLocation(): string | null {
-  try {
-    const raw = localStorage.getItem(USER_LOCATION_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed?.label || !parsed?.savedAt || Date.now() - Number(parsed.savedAt) > USER_LOCATION_CACHE_MS) return null;
-    return String(parsed.label);
-  } catch {
-    return null;
-  }
-}
-
-function saveCachedUserLocation(label: string) {
-  try { localStorage.setItem(USER_LOCATION_CACHE_KEY, JSON.stringify({ label, savedAt: Date.now() })); } catch { /* cache opcional */ }
-}
-
-async function reverseGeocodeUserLocation(latitude: number, longitude: number): Promise<string> {
-  try {
-    const params = new URLSearchParams({
-      format: 'jsonv2',
-      lat: String(latitude),
-      lon: String(longitude),
-      zoom: '18',
-      addressdetails: '1',
-      'accept-language': 'pt-BR',
-    });
-    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, { headers: { Accept: 'application/json' } });
-    if (!response.ok) throw new Error('reverse geocoding unavailable');
-    const payload: any = await response.json();
-    const address = payload?.address || {};
-    const neighborhood = address.neighbourhood || address.suburb || address.quarter || address.city_district || '';
-    const city = address.city || address.town || address.municipality || address.village || address.county || '';
-    const iso = String(address['ISO3166-2-lvl4'] || address['ISO3166-2-lvl6'] || '');
-    const uf = iso.startsWith('BR-') ? iso.slice(3) : '';
-    if (neighborhood && city) return `${neighborhood} · ${city}${uf ? `/${uf}` : ''}`;
-    if (city) return `${city}${uf ? `/${uf}` : ''}`;
-    if (payload?.display_name) return String(payload.display_name).split(',').slice(0, 2).join(',').trim();
-  } catch {
-    // O fallback por coordenadas evita uma segunda chamada a qualquer serviço externo.
-  }
-  return `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`;
-}
-
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isOpenMobile, setIsOpenMobile }) => {
   const { isMasterAdmin, isCommissionPresident, isAuthenticated, settings, userEmail, logout } = useAuth();
   const isVisitor = !isAuthenticated;
@@ -105,46 +60,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
   const appVersion = String((import.meta as any).env?.VITE_APP_VERSION || '0.0.0');
   const buildCommit = String((import.meta as any).env?.VITE_GIT_COMMIT || '').slice(0, 7);
-  const [userLocation, setUserLocation] = useState('Obtendo localização do usuário…');
 
   useEffect(() => {
     const handleLayoutChange = (event: Event) => setLayoutConfig((event as CustomEvent<SiteLayoutConfig>).detail || loadSiteLayoutConfig());
     window.addEventListener(SITE_LAYOUT_EVENT, handleLayoutChange);
     return () => window.removeEventListener(SITE_LAYOUT_EVENT, handleLayoutChange);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    const cached = readCachedUserLocation();
-    if (cached) {
-      setUserLocation(cached);
-      return () => { active = false; };
-    }
-    const policyDocument = document as Document & {
-      permissionsPolicy?: { allowsFeature(name: string): boolean };
-      featurePolicy?: { allowsFeature(name: string): boolean };
-    };
-    const permissionsPolicy = policyDocument.permissionsPolicy || policyDocument.featurePolicy;
-    if (!navigator.geolocation || (permissionsPolicy && !permissionsPolicy.allowsFeature('geolocation'))) {
-      setUserLocation('Localização do usuário indisponível');
-      return () => { active = false; };
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        void reverseGeocodeUserLocation(latitude, longitude).then((label) => {
-          if (!active) return;
-          setUserLocation(label);
-          saveCachedUserLocation(label);
-        });
-      },
-      (error) => {
-        if (!active) return;
-        setUserLocation(error.code === error.PERMISSION_DENIED ? 'Localização não compartilhada' : 'Localização do usuário indisponível');
-      },
-      { enableHighAccuracy: false, timeout: 6000, maximumAge: 12 * 60 * 60 * 1000 }
-    );
-    return () => { active = false; };
   }, []);
 
   const handleNav = (tab: string) => { setCurrentTab(tab); setIsOpenMobile(false); };
@@ -293,7 +213,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             <div className="mt-1 text-xs font-semibold break-all text-center" style={{ color: sidebarFooterTextColor }} title={userEmail}>{userEmail}</div>
           </div>
         </>}
-        <div className="flex items-center justify-center gap-1.5 text-[10px] whitespace-normal leading-4 text-center" style={{ color: sidebarFooterMutedColor }} title={userLocation}><MapPin className="h-3 w-3 shrink-0"/><span>{userLocation}</span></div>
         <div className="text-[9px] font-medium tracking-wide text-center" style={{ color: sidebarFooterMutedColor }} title={buildCommit ? `Fingerprint do build: ${buildCommit}` : undefined}>Versão do sistema: {appVersion}{buildCommit ? ` · ${buildCommit}` : ''}</div>
       </div>
     </aside>
