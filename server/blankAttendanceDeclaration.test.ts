@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { PDFDocument, PDFName } from 'pdf-lib';
+import { PDFDict, PDFDocument, PDFName } from 'pdf-lib';
 import { createBlankAttendanceDeclarationPdf } from '../src/utils/blankAttendanceDeclaration';
 
 test('declaração aprovada gera PDF A4 íntegro, sem imagem e com Comissão de TCC', async () => {
@@ -17,7 +17,8 @@ test('declaração aprovada gera PDF A4 íntegro, sem imagem e com Comissão de 
   assert.ok(Math.abs(width - 595.28) < 1);
   assert.ok(Math.abs(height - 841.89) < 1);
   assert.equal(pdf.getForm().getFields().length, 0);
-  assert.equal(page.node.Resources()?.lookup(PDFName.of('XObject')), undefined, 'modelo não deve conter imagens');
+  const imageResources = page.node.Resources()?.lookup(PDFName.of('XObject'));
+  assert.ok(!imageResources || (imageResources instanceof PDFDict && imageResources.keys().length === 0), 'modelo não deve conter imagens');
 });
 
 test('modelo contém estrutura institucional aprovada e assinatura do orientador', () => {
