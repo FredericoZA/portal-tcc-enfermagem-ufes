@@ -194,6 +194,42 @@ export function formatDatePt(dateStr: string): string {
   return `${parts.day} de ${MONTHS_PT[parts.month - 1]} de ${parts.year}`;
 }
 
+const WEEKDAYS_PT = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'] as const;
+
+/**
+ * Dia da semana da data civil apresentada pelo portal.
+ * Calcula em UTC a partir dos componentes civis para que o fuso do servidor
+ * não mude o dia; timestamps com offset são antes convertidos para Vitória.
+ */
+export function formatWeekdayPt(dateStr:string):string {
+  const parts=parsePortalDateTime(dateStr);
+  if(!parts)return '';
+  const day=new Date(Date.UTC(parts.year,parts.month-1,parts.day));
+  if(day.getUTCFullYear()!==parts.year||day.getUTCMonth()!==parts.month-1||day.getUTCDate()!==parts.day)return '';
+  return WEEKDAYS_PT[day.getUTCDay()];
+}
+
+/** Exibição humana: "segunda-feira, 7 de dezembro de 2026". */
+export function formatDateWithWeekday(dateStr:string):string {
+  const weekday=formatWeekdayPt(dateStr);
+  const date=formatDatePt(dateStr);
+  return weekday?`${weekday}, ${date}`:date;
+}
+
+/** Exibição compacta: "segunda-feira, 07/12/2026". Não usar em campos date nem integrações. */
+export function formatDateNumericWithWeekday(dateStr:string):string {
+  const weekday=formatWeekdayPt(dateStr);
+  const date=formatDateNumeric(dateStr);
+  return weekday?`${weekday}, ${date}`:date;
+}
+
+/** Exibição formal: "segunda-feira, sete de dezembro de dois mil e vinte e seis". */
+export function formatDateExtensoWithWeekday(dateStr:string):string {
+  const weekday=formatWeekdayPt(dateStr);
+  const date=formatDateExtensoTotal(dateStr);
+  return weekday?`${weekday}, ${date}`:date;
+}
+
 /**
  * Format date in numeric format: "21/07/2026".
  */
