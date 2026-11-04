@@ -39,10 +39,11 @@ test('assinatura em lote usa a fila pendente como fonte do cliente e revalida no
   assert.match(server, /assertSignatureEligibility\(signatureProcess/);
 });
 
-test('rodapé remove atribuição indevida e centraliza comissão com um único membro', () => {
+test('rodapé mantém a identificação e coloca todos os membros em linhas individuais', () => {
   const footer = read('src/components/Footer.tsx');
   assert.doesNotMatch(footer, /Sabrina Lemos Rodrigues — PPGEMF/);
-  assert.match(footer, /membersList\.length === 1 \? 'grid-cols-1'/);
+  assert.match(footer, /className="mt-1 grid grid-cols-1 items-start gap-y-1 text-center"/);
+  assert.match(footer, /\.sort\(\(a,b\)=>compareCommissionMemberNames\(a\.name,b\.name\)\)/);
 });
 
 test('identidade e rodapé usam formulário único com salvamento automático', () => {
