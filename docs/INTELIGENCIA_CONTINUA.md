@@ -1,22 +1,22 @@
 # Histórico do módulo de relatórios e diagnósticos por regras
 
-> **Situação:** componente de propostas automatizadas legado, descontinuado na manutenção diária. Este documento é preservado para rastreabilidade. A página pública de **Sugestões** recebe contribuições voluntárias dos usuários; os indicadores institucionais permanecem disponíveis nas rotas próprias.
+> **Situação:** componente legado de propostas automatizadas integralmente desativado na operação e nas APIs administrativas. Este documento é preservado para rastreabilidade. A página pública de **Sugestões** recebe contribuições voluntárias dos usuários; os indicadores institucionais permanecem disponíveis nas rotas próprias.
 
 ## Resultado
 
-O portal mantém dois arquivos Markdown privados e atualizáveis:
+A implementação antiga podia gerar dois arquivos Markdown privados:
 
 1. `MEMORIA_CONTINUA_FLUXOS_E_MELHORIAS.md`
 2. `PANORAMA_ESTATISTICO_DOS_TCCS.md`
 
-Eles ficam em `00_SISTEMA/01_INTELIGENCIA_CONTINUA` dentro da pasta raiz privada do portal. Cada atualização substitui o conteúdo do mesmo arquivo, mantendo o ID estável e criando uma revisão no Google Drive. Assim existem exatamente dois arquivos ativos, sem cópias diárias espalhadas.
+Arquivos eventualmente produzidos anteriormente podem permanecer no Drive privado para rastreabilidade; não são mais recalculados, sincronizados ou exigidos pelo funcionamento do portal.
 
 ## Atualização
 
 - **Diária (descontinuada):** a rota autenticada `/api/cron/storage-cleanup` mantém a limpeza, os backups e as rotinas operacionais, mas não recalcula mais propostas nem relatórios desta funcionalidade legada.
-- **Sob demanda (legado):** a API administrativa ainda preserva as rotas para compatibilidade, mas não há controle ativo dessa funcionalidade na interface atual; não se deve confundir esses relatórios com os indicadores oficiais.
-- **Sem Google conectado:** os relatórios continuam disponíveis para download no painel, com a sincronização do Drive marcada como pendente ou falha.
-- **Persistência:** estatísticas, propostas, decisões e metadados dos arquivos integram o estado transacional e o backup do portal.
+- **Sob demanda:** as rotas administrativas legadas devolvem HTTP 410 (funcionalidade descontinuada). Nenhum administrador pode reativar a geração de propostas por essas rotas.
+- **Indicadores:** continuam disponíveis nas rotas independentes de estatísticas do Portal, sem IA generativa.
+- **Persistência histórica:** os registros anteriores de propostas e metadados permanecem preservados no estado transacional e nos backups, sem novas atualizações.
 
 ## Memória contínua de fluxos e melhorias
 
