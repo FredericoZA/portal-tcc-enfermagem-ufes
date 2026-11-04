@@ -1,3 +1,4 @@
+import {institutionalClosingRequests,institutionalClosingStyleRequests,assertInvitationIdentification} from './institutionalClosing';
 import {institutionalLogoRequests,institutionalHeadingRequests} from './institutionalLogo';
 import {ataPageLayoutRequests,numberAtaLines} from '../documents/ataLayout';
 import {documentMainBody,bodyEditRequests} from './googleDocsBody';
@@ -254,9 +255,9 @@ export function buildOfficialInvitationParagraphStyles(document: unknown): Array
       let alignment:'JUSTIFIED'|'END'|'START'|''='';
       let indentStart:number|undefined;
       if(/^(?:A Comissão de Trabalho de Conclusão de Curso do Curso|Agradecemos a participação)/.test(text))alignment='JUSTIFIED';
-      if(/^Vitória-ES,\s+/.test(text))alignment='END';
+      if(/^(?:Atenciosamente,?|Vitória\s*[-–—]?\s*ES,)/u.test(text))alignment='END';
       if(/^(?:Comissão de Trabalho de Conclusão de Curso|Departamento de Enfermagem$|Curso de Enfermagem e Obstetrícia)/.test(text)){
-        alignment='START';indentStart=260;
+        alignment='END';indentStart=0;
       }
       if(alignment){
         const paragraphStyle:Record<string,unknown>={alignment};
@@ -331,11 +332,7 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
       const batch = await batchResponse.json() as { documentId?: string; replies?: Array<{ replaceAllText?: { occurrencesChanged?: number } }> };
       if (String(batch.documentId || '') !== temporaryFileId) throw new Error('A atualização não confirmou o documento temporário correto.');
       replacementsChanged = (batch.replies || []).slice(openingRequests.length+boldRequests.length+optionalRequests.length+literalRequests.length).reduce((total, reply) => total + Number(reply.replaceAllText?.occurrencesChanged || 0), 0);
-      if(input.invitationLayout){
-        const offset=openingRequests.length+boldRequests.length+optionalRequests.length+literalRequests.length-invitationLiteralRequests.length;
-        const literalApplied=(batch.replies||[]).slice(offset,offset+invitationLiteralRequests.length).filter(item=>Number(item.replaceAllText?.occurrencesChanged||0)>0).length;
-        if(literalApplied<Math.min(4,invitationLiteralRequests.length))throw new Error('O modelo da carta-convite mudou: confira os campos de identificação antes de gerar.');
-      }
+
     }
 
     const mergedReadbackResponse = await googleRequest(
@@ -371,15 +368,20 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
         const coadvisorEdits=ataCoadvisorBlockRequests(mergedDocument,input.presentation.process);
         if(coadvisorEdits.length){await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:coadvisorEdits,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao incluir o coorientador na ata');mergedDocument=await readCurrent();}
       }
+      if(input.institutionalCrestUrl?.endsWith('/national-arms.png')){
+        const closing=institutionalClosingRequests(mergedDocument,input.presentation.documentType);
+        if(closing.length){await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:closing,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao organizar o encerramento institucional');mergedDocument=await readCurrent();}
+      }
       const p=input.presentation.process;
       // Grammar adaptation may insert abbreviated prefixes after marker replacement.
       // Reapply emphasis to the complete participant names as well as the opinion.
       const names=[p.aluno1?.nome,p.aluno2?.nome,...[p.orientador,p.coorientador,...(p.banca||[])].filter(Boolean).map(person=>academicName(person,'abbreviated'))].filter((value):value is string=>Boolean(value));
-      const emphasis=[...(['ATA','TERMO'].includes(input.presentation.documentType)?individualAuthorSignatureStyleRequests(mergedDocument,p):[]),...buildValueBoldRequests(mergedDocument,[...names,p.avaliacao?.resultadoLabel||'',personPresentationVariables(p).RESULTADO_CONCORDANTE,p.avaliacao?.parecer||'']),...(input.presentation.documentType==='TERMO'?buildAuthorizationChoiceStyleRequests(mergedDocument):[]),...(input.presentation.documentType==='DECLARACAO'?buildDeclarationCoAdvisorNormalRequests(mergedDocument):[])];
+      const emphasis=[...(input.institutionalCrestUrl?.endsWith('/national-arms.png')?institutionalClosingStyleRequests(mergedDocument):[]),...(['ATA','TERMO'].includes(input.presentation.documentType)?individualAuthorSignatureStyleRequests(mergedDocument,p):[]),...buildValueBoldRequests(mergedDocument,[...names,p.avaliacao?.resultadoLabel||'',personPresentationVariables(p).RESULTADO_CONCORDANTE,p.avaliacao?.parecer||'']),...(input.presentation.documentType==='TERMO'?buildAuthorizationChoiceStyleRequests(mergedDocument):[]),...(input.presentation.documentType==='DECLARACAO'?buildDeclarationCoAdvisorNormalRequests(mergedDocument):[])];
       if(emphasis.length)await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:emphasis,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao formatar resultado e parecer');
       documentText=documentMainBody(mergedDocument)?.text||documentText;
     }
     const unresolvedMarkers = input.documentText!==undefined?findUnresolvedTemplateMarkers({textRun:{content:documentText||input.documentText}}):findUnresolvedTemplateMarkers(mergedDocument);
+    if(input.invitationLayout&&input.presentation)assertInvitationIdentification(mergedDocument,input.presentation.process);
     if(input.invitationLayout){
       const layoutRequests=buildOfficialInvitationParagraphStyles(mergedDocument);
       if(layoutRequests.length){

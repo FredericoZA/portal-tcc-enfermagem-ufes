@@ -23,7 +23,7 @@ test('invitation addresses invited faculty without implying an established board
  const p=fixture(),source='À Comissão Examinadora\nA Comissão de Trabalho de Conclusão de Curso convida Vossas Senhorias para integrar a Comissão Examinadora da defesa do trabalho identificado a seguir.\nOrientação e presidência: Professora Doutora Maria Oliveira\nDemais integrantes da comissão: Professora Mestra Beatriz Santos e Professor Doutor Rafael Lima\nAgradecemos a participação e a contribuição para a formação acadêmica em Enfermagem.';
  const out=adaptDocumentLanguage(source,p,'CONVITE');
  assert.match(out,/^Aos docentes convidados/);assert.match(out,/A Comissão de Trabalho de Conclusão de Curso convida os docentes abaixo relacionados a participar da banca de defesa/);
- assert.match(out,/Orientadora e Presidente: Prof\.ª Dr\.ª Maria Oliveira/);assert.match(out,/Membro convidado para a banca: Prof\.ª Ma\. Beatriz Santos\nMembro convidado para a banca: Prof\. Dr\. Rafael Lima/);
+ assert.match(out,/Orientadora e Presidente: Prof\.ª Dr\.ª Maria Oliveira/);assert.match(out,/Examinadora:.*Beatriz Santos\nExaminador:.*Rafael Lima/);
  assert.match(out,/Agradecemos a atenção ao convite e esperamos contar/);assert.doesNotMatch(out,/Comissão Examinadora|Demais/);
  assert.equal(adaptDocumentLanguage(out,p,'CONVITE'),out);
 });

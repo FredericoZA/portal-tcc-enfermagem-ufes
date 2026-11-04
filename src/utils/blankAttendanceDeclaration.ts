@@ -1,3 +1,4 @@
+import {DOCUMENT_ISSUER_LINES} from './institutionalIdentity';
 /**
  * Declaração pública institucional aprovada: modelo A4 para preenchimento à mão.
  * A Comissão de Trabalho de Conclusão de Curso integra o Departamento de Enfermagem; a declaração é
@@ -75,8 +76,7 @@ export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array
   header('UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO',790,10,sansBold);
   header('CENTRO DE CIÊNCIAS DA SAÚDE',773,9);
   header('Curso de Graduação em Enfermagem e Obstetrícia',757,8.7);
-  header('DEPARTAMENTO DE ENFERMAGEM',741,9);
-  header('COMISSÃO DE TRABALHO DE CONCLUSÃO DE CURSO',726,8.7,sansBold);
+
 
   // Título e campos livres para preenchimento manuscrito.
   page.drawRectangle({x:70,y:662,width:pageWidth-140,height:34,color:green});
@@ -102,15 +102,14 @@ export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array
   if (lines.length > 3) throw new Error('Texto de orientação excedeu a área reservada.');
   lines.forEach((value, index) => draw(value, left + 8, 210 - index * 11, 8.8, sans, muted));
 
-  draw('Local e data:', left, 150, 11.8);
-  line(147, 133, right);
+  const dateField='Local e data (dia da semana): __________________________________';
+  draw(dateField,right-regular.widthOfTextAtSize(dateField,11),150,11);
   line(103, 152, pageWidth - 152, 0.9);
   centered('Assinatura do(a) professor(a) orientador(a)', 85, 9.5, sans, muted);
 
   // Rodapé simples, sem faixa escura ou referência ao Colegiado.
   line(64, 48, pageWidth - 48, 1, green);
-  centered('Departamento de Enfermagem · Comissão de Trabalho de Conclusão de Curso · CCS/UFES', 48, 7.6);
-  centered('Curso de Graduação em Enfermagem e Obstetrícia · Universidade Federal do Espírito Santo', 34, 7.5, sans, muted);
+  DOCUMENT_ISSUER_LINES.forEach((value,index)=>draw(value,right-sans.widthOfTextAtSize(value,7.6),48-index*12,7.6,sans,muted));
 
   return pdf.save();
 }

@@ -1,4 +1,4 @@
-import {COMMISSION_NAME,DOCUMENT_ISSUER_LINES} from '../../src/utils/institutionalIdentity';
+import {DOCUMENT_ISSUER_LINES} from '../../src/utils/institutionalIdentity';
 import {isManagedDefenseLocation} from '../../src/utils/reservationLocation';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
@@ -48,11 +48,11 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  };
  const draw=(text:string,x:number,top:number,size=10,font=regular,color=ink)=>page.drawText(text,{x,y:top,size,font,color});
  const newPage=()=>{
-  page=doc.addPage([595,842]);page.drawRectangle({x:0,y:677,width:595,height:165,color:green});
+  page=doc.addPage([595,842]);page.drawRectangle({x:0,y:705,width:595,height:137,color:green});
   const logoSize=48;page.drawCircle({x:595/2,y:805,size:25,color:rgb(1,1,1)});page.drawImage(logo,{x:(595-logoSize)/2,y:781,width:logoSize,height:logoSize});
   let top=764;
-  for(const [text,size,font] of [[institution,11,bold],['Centro de Ciências da Saúde',9,regular],[course,9,regular],['Departamento de Enfermagem',9,regular],[COMMISSION_NAME,9,bold]] as const){for(const row of wrap(text,font,size,width)){draw(row,(595-font.widthOfTextAtSize(row,size))/2,top,size,font,rgb(1,1,1));top-=14;}}
-  y=650;
+  for(const [text,size,font] of [[institution,11,bold],['Centro de Ciências da Saúde',9,regular],[course,9,regular]] as const){for(const row of wrap(text,font,size,width)){draw(row,(595-font.widthOfTextAtSize(row,size))/2,top,size,font,rgb(1,1,1));top-=14;}}
+  y=678;
  };
  const ensure=(height:number)=>{if(y-height<88)newPage();};
  const paragraph=(text:string,size=10,font=regular,color=ink)=>{const rows=wrap(text,font,size,width);for(const row of rows){ensure(size+6);draw(row,margin,y,size,font,color);y-=size+6;}};
@@ -84,6 +84,6 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  if(!options.publicView||('departmentEmail' in response&&response.departmentEmail===response.respondedBy))field('attribution' in response&&response.attribution==='EMAIL_LINK'?'Resposta registrada pelo link enviado a':'Resposta registrada por',response.respondedBy);
  const registered=new Intl.DateTimeFormat('pt-BR',{timeZone:settings.timezone||'America/Sao_Paulo',weekday:'long',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(response.respondedAt));
  field('Data e hora do registro',registered);
- const pages=doc.getPages();for(let i=0;i<pages.length;i++){page=pages[i];page.drawLine({start:{x:margin,y:60},end:{x:549,y:60},thickness:.7,color:line});DOCUMENT_ISSUER_LINES.forEach((value,index)=>draw(value,margin,48-index*12,7,regular,muted));const number=`${i+1} / ${pages.length}`;draw(number,549-regular.widthOfTextAtSize(number,8),44,8,regular,muted);}
+ const pages=doc.getPages();for(let i=0;i<pages.length;i++){page=pages[i];page.drawLine({start:{x:margin,y:60},end:{x:549,y:60},thickness:.7,color:line});DOCUMENT_ISSUER_LINES.forEach((value,index)=>draw(value,549-regular.widthOfTextAtSize(value,8),48-index*12,8,regular,muted));if(i===pages.length-1){const issued=`Vitória - ES, ${formatDateWithWeekday(response.respondedAt)}.`;draw(issued,549-regular.widthOfTextAtSize(issued,9),77,9,regular,ink);}const number=`${i+1} / ${pages.length}`;draw(number,margin,44,8,regular,muted);}
  return Buffer.from(await doc.save());
 }

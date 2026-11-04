@@ -20,26 +20,29 @@ export function institutionalLogoRequests(document:unknown, crestUrl?:string):Ar
 }
 
 
-/** Add the department and commission once, immediately below the course heading.
- * Runs only on the temporary unsigned copy, before marker offsets are computed. */
+/** Keep the institutional letterhead to UFES, CCS and course. The issuing
+ * commission belongs in the closing block, not below the course heading. */
 export function institutionalHeadingRequests(document:unknown):Array<Record<string,unknown>>{
- const paragraphs:Array<{text:string;end:number;scope:Record<string,string>}>=[];
+ const paragraphs:Array<{text:string;start:number;end:number;scope:Record<string,string>}>=[];
  const walk=(node:any,scope:Record<string,string>={})=>{
   if(!node||typeof node!=='object')return;
   if(Array.isArray(node)){node.forEach(item=>walk(item,scope));return;}
   const current=node.tabProperties?.tabId?{...scope,tabId:node.tabProperties.tabId}:scope;
-  if(node.paragraph?.elements)paragraphs.push({text:node.paragraph.elements.map((item:any)=>item.textRun?.content||'').join(''),end:node.endIndex,scope:current});
+  if(node.paragraph?.elements)paragraphs.push({text:node.paragraph.elements.map((item:any)=>item.textRun?.content||'').join(''),start:node.startIndex,end:node.endIndex,scope:current});
   for(const [key,value]of Object.entries(node)){
    if(['headers','footers'].includes(key))for(const [segmentId,content]of Object.entries(value||{}))walk(content,{...current,segmentId});
    else if(!['paragraph','textRun'].includes(key))walk(value,current);
   }
  };
  walk(document);
- const heading=paragraphs.find(row=>/^CURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA\s*$/u.test(row.text.trim()));
- if(!heading||!Number.isSafeInteger(heading.end))return [];
- const following=paragraphs.filter(row=>JSON.stringify(row.scope)===JSON.stringify(heading.scope)&&row.end>heading.end&&row.end<heading.end+200).map(row=>row.text).join('');
- const lines=[];
- if(!/DEPARTAMENTO DE ENFERMAGEM/u.test(following))lines.push('DEPARTAMENTO DE ENFERMAGEM');
- if(!/COMISSÃO DE TRABALHO DE CONCLUSÃO DE CURSO/u.test(following))lines.push('COMISSÃO DE TRABALHO DE CONCLUSÃO DE CURSO');
- return lines.length?[{insertText:{location:{index:heading.end-1,...heading.scope},text:'\n'+lines.join('\n')}}]:[];
+ const at=paragraphs.findIndex(row=>/^CURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA\s*$/iu.test(row.text.trim()));
+ if(at<0)return [];
+ const heading=paragraphs[at],extra=[];
+ for(const row of paragraphs.slice(at+1)){
+  if(JSON.stringify(row.scope)!==JSON.stringify(heading.scope))break;
+  if(!row.text.trim())continue;
+  if(!/^(?:DEPARTAMENTO DE ENFERMAGEM|COMISSÃO (?:DE |DOS? )?TRABALHOS? DE CONCLUSÃO DE CURSO)\s*$/iu.test(row.text.trim()))break;
+  if(Number.isSafeInteger(row.start)&&Number.isSafeInteger(row.end))extra.push(row);
+ }
+ return extra.sort((a,b)=>b.start-a.start).map(row=>({deleteContentRange:{range:{startIndex:row.start,endIndex:row.end,...row.scope}}}));
 }

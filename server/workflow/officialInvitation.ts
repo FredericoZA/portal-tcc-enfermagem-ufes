@@ -60,8 +60,8 @@ export function officialInvitationEmail(process: ProcessData, portalUrl?: string
     '<p>Prezados(as),</p><p style="text-align:justify">'+escapeHtml(intro)+'</p>',
     lines,
     ...(url ? ['<p style="margin-top:22px"><a style="color:#005830;font-weight:bold" href="'+escapeHtml(url)+'">Acessar o Portal TCC</a></p>'] : []),
-    '<p style="margin-top:22px">Atenciosamente,</p>',
-    '<p>Comissão de Trabalho de Conclusão de Curso<br>Departamento de Enfermagem<br>Curso de Enfermagem e Obstetrícia — CCS/UFES</p>',
+    '<p style="margin-top:22px;text-align:right">Atenciosamente,</p>',
+    '<p style="text-align:right">Comissão de Trabalho de Conclusão de Curso<br>Departamento de Enfermagem<br>Curso de Enfermagem e Obstetrícia — CCS/UFES</p>',
     '</div></article></div>',
   ].join('');
   return {subject,text,html};

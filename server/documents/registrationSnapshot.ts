@@ -1,4 +1,4 @@
-import {COMMISSION_NAME,DOCUMENT_ISSUER_LINES} from '../../src/utils/institutionalIdentity';
+import {DOCUMENT_ISSUER_LINES} from '../../src/utils/institutionalIdentity';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {PDFDocument,rgb,type PDFFont,type PDFPage} from 'pdf-lib';
@@ -42,7 +42,7 @@ export function registrationSnapshotSections(process:ProcessData,settings:Global
 }
 
 export async function createRegistrationSnapshotPdf(process:ProcessData,settings:GlobalSettings):Promise<Buffer>{
- return renderBrandedRecordPdf({title:'Cadastro inicial de TCC',protocol:process.protocolo,revision:process.registrationRevision||1,sections:registrationSnapshotSections(process,settings),note:'Agendamento sujeito ao aceite do responsável pelo local.',footer:'Registro do cadastro inicial · Portal TCC'},settings);
+ return renderBrandedRecordPdf({title:'Cadastro inicial de TCC',protocol:process.protocolo,revision:process.registrationRevision||1,issuedAt:process.createdAt,sections:registrationSnapshotSections(process,settings),note:'Agendamento sujeito ao aceite do responsável pelo local.',footer:'Registro do cadastro inicial · Portal TCC'},settings);
 }
 
 export async function createBrandedTextPdf(input:{title:string;protocol:string;body:string;footer?:string},settings:GlobalSettings):Promise<Buffer>{
@@ -53,7 +53,7 @@ export async function createBrandedTextPdf(input:{title:string;protocol:string;b
  return renderBrandedRecordPdf({...input,sections:[{title:'Informações registradas',fields}]},settings);
 }
 
-async function renderBrandedRecordPdf(input:{title:string;protocol:string;revision?:number;sections:Section[];note?:string;footer?:string},settings:GlobalSettings):Promise<Buffer>{
+async function renderBrandedRecordPdf(input:{title:string;protocol:string;revision?:number;issuedAt?:string;sections:Section[];note?:string;footer?:string},settings:GlobalSettings):Promise<Buffer>{
  const profile=resolveInstallationProfile(settings),brand=settings.integrationStudio?.brandKit;
  const institution=brand?.institutionName?.trim()||profile.institutionName,course=brand?.courseName?.trim()||profile.courseName;
  const hex=/^#[a-f\d]{6}$/i.test(brand?.primaryColor||'')?brand!.primaryColor:'#005830';
@@ -77,16 +77,16 @@ async function renderBrandedRecordPdf(input:{title:string;protocol:string;revisi
  };
  const text=(value:string,x:number,top:number,size=9,font=normal,color=ink)=>page.drawText(value,{x,y:top,size,font,color});
  const header=()=>{
-  page=doc.addPage([595,842]);page.drawRectangle({x:0,y:684,width:595,height:158,color:green});
+  page=doc.addPage([595,842]);page.drawRectangle({x:0,y:714,width:595,height:128,color:green});
   page.drawCircle({x:297,y:811,size:21,color:rgb(1,1,1)});page.drawImage(logo,{x:277,y:791,width:40,height:40});
   let top=775;
-  for(const [value,size,font]of [[institution,11,bold],['Centro de Ciências da Saúde',9,normal],[course,9,normal],['Departamento de Enfermagem',9,normal],[COMMISSION_NAME,9,bold]] as const)for(const row of wrap(value,font,size,width)){
+  for(const [value,size,font]of [[institution,11,bold],['Centro de Ciências da Saúde',9,normal],[course,9,normal]] as const)for(const row of wrap(value,font,size,width)){
    text(row,(595-font.widthOfTextAtSize(row,size))/2,top,size,font,rgb(1,1,1));top-=15;
   }
-  y=660;for(const titleRow of wrap(input.title,bold,18,width)){text(titleRow,margin,y,18,bold,green);y-=23;}
+  y=690;for(const titleRow of wrap(input.title,bold,18,width)){text(titleRow,margin,y,18,bold,green);y-=23;}
   text(input.protocol,margin,y,10,bold);const revision=input.revision?`Revisão ${input.revision}`:'';text(revision,553-normal.widthOfTextAtSize(revision,8),y,8,normal,muted);y-=20;
  };
- const ensure=(height:number)=>{if(y-height<94)header();};
+ const ensure=(height:number)=>{if(y-height<112)header();};
  const sectionTitle=(title:string)=>{page.drawRectangle({x:margin,y:y-6,width,height:24,color:panel});text(title,margin+10,y+2,10,bold,green);y-=24;};
  const row=(fields:Field[],title:string)=>{
   const sizes=fields.map(value=>value.wide?width:half);
@@ -94,8 +94,8 @@ async function renderBrandedRecordPdf(input:{title:string;protocol:string;revisi
   let offset=0;
   const total=Math.max(...rows.map(value=>value.length));
   while(offset<total){
-   if(y-37<94){header();sectionTitle(`${title} (continuação)`);}
-   const capacity=Math.max(1,Math.floor((y-94-24)/13));
+   if(y-37<112){header();sectionTitle(`${title} (continuação)`);}
+   const capacity=Math.max(1,Math.floor((y-112-24)/13));
    const count=Math.min(total-offset,capacity);
    for(let index=0;index<fields.length;index++){
     const x=margin+index*(half+gap);text(fields[index].label+(offset?' (continuação)':''),x,y,8,bold,muted);
@@ -125,7 +125,8 @@ async function renderBrandedRecordPdf(input:{title:string;protocol:string;revisi
  if(input.note){ensure(35);page.drawRectangle({x:margin,y:y-27,width,height:35,color:rgb(1,.98,.91)});text(input.note,margin+10,y-8,9,normal,ink);}
  const pages=doc.getPages();for(let index=0;index<pages.length;index++){
   page=pages[index];page.drawLine({start:{x:margin,y:80},end:{x:553,y:80},thickness:.6,color:line});
-  DOCUMENT_ISSUER_LINES.forEach((value,row)=>text(value,margin,67-row*12,7,normal,muted));
+  DOCUMENT_ISSUER_LINES.forEach((value,row)=>text(value,553-normal.widthOfTextAtSize(value,7),67-row*12,7,normal,muted));
+  if(input.issuedAt&&index===pages.length-1){const issued=`Vitória - ES, ${formatDateWithWeekday(input.issuedAt)}.`;text(issued,553-normal.widthOfTextAtSize(issued,9),94,9,normal,ink);}
   if(input.footer)text(input.footer,margin,30,6,normal,muted);
   const count=`${index+1} / ${pages.length}`;text(count,553-normal.widthOfTextAtSize(count,8),30,8,normal,muted);
  }

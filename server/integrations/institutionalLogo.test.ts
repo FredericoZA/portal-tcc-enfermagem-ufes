@@ -19,11 +19,15 @@ test('temporary Google Docs replace only identified Colenf images, preserving si
 });
 
 
-test('header includes department and commission once without numbering or rewriting signatories',()=>{
+test('letterhead keeps three institutional lines and removes the issuing unit only below the course',()=>{
  const paragraph=(start:number,text:string)=>({startIndex:start,endIndex:start+text.length,paragraph:{elements:[{textRun:{content:text}}]}});
  const course='CURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA\n';
  const header=paragraph(1,course);
- assert.deepEqual(institutionalHeadingRequests({body:{content:[header]}}),[{insertText:{location:{index:course.length},text:'\nDEPARTAMENTO DE ENFERMAGEM\nCOMISSÃO DE TRABALHO DE CONCLUSÃO DE CURSO'}}]);
- const dept=paragraph(header.endIndex,'DEPARTAMENTO DE ENFERMAGEM\n'),commission=paragraph(header.endIndex+26,'COMISSÃO DE TRABALHO DE CONCLUSÃO DE CURSO\n');
- assert.deepEqual(institutionalHeadingRequests({body:{content:[header,dept,commission]}}),[]);
+ assert.deepEqual(institutionalHeadingRequests({body:{content:[header]}}),[]);
+ const dept=paragraph(header.endIndex,'DEPARTAMENTO DE ENFERMAGEM\n'),commission=paragraph(dept.endIndex,'COMISSÃO DE TRABALHO DE CONCLUSÃO DE CURSO\n');
+ const title=paragraph(commission.endIndex,'CARTA-CONVITE\n'),bodyFooter=paragraph(title.endIndex,'Comissão de Trabalho de Conclusão de Curso\n');
+ assert.deepEqual(institutionalHeadingRequests({body:{content:[header,dept,commission,title,bodyFooter]}}),[
+  {deleteContentRange:{range:{startIndex:commission.startIndex,endIndex:commission.endIndex}}},
+  {deleteContentRange:{range:{startIndex:dept.startIndex,endIndex:dept.endIndex}}}
+ ]);
 });

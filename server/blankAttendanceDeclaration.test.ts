@@ -22,15 +22,15 @@ test('declaração aprovada gera PDF A4 íntegro, com brasão da UFES e Comissã
 });
 
 test('modelo contém estrutura institucional aprovada e assinatura do orientador', () => {
-  const source = readFileSync('src/utils/blankAttendanceDeclaration.ts', 'utf8');
+  const source = readFileSync('src/utils/blankAttendanceDeclaration.ts', 'utf8')+readFileSync('src/utils/institutionalIdentity.ts','utf8');
   for (const text of [
     'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO',
     'CENTRO DE CIÊNCIAS DA SAÚDE',
-    'DEPARTAMENTO DE ENFERMAGEM',
-    'COMISSÃO DE TRABALHO DE CONCLUSÃO DE CURSO',
+    'Departamento de Enfermagem',
+    'Comissão de Trabalho de Conclusão de Curso',
     'DECLARAÇÃO DE COMPARECIMENTO',
     'Assinatura do(a) professor(a) orientador(a)',
-    'Departamento de Enfermagem · Comissão de Trabalho de Conclusão de Curso · CCS/UFES',
+    'DOCUMENT_ISSUER_LINES',
   ]) assert.ok(source.includes(text), `Campo ausente: ${text}`);
   assert.match(source,/fetch\('\/national-arms\.png'\)/, 'o brasão deve ser um arquivo da própria aplicação');
   assert.doesNotMatch(source, /COLEGIADO DO CURSO/i);

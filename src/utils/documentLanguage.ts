@@ -1,4 +1,5 @@
 import {COMMISSION_NAME} from './institutionalIdentity';
+import {officialParticipantLines} from './officialParticipants';
 import {removeAtaLocationTime} from './legacyTextProcessing';
 import {publicationAuthorizationVariables} from './publicationAuthorization';
 import type {ProcessData} from '../types';
@@ -77,8 +78,18 @@ export function adaptDocumentLanguage(text:string,p:ProcessData,type:string):str
    .replace(/Comissão\s+Examinadora/gi,'banca')
    .replace(/convida Vossas Senhorias para integrar a banca/gi,'convida os docentes abaixo relacionados a participar da banca')
    .replace(/Agradecemos a participação e a contribuição para/gi,'Agradecemos a atenção ao convite e esperamos contar com sua contribuição para');
-  const guests=p.banca.filter(person=>person.funcao!=='ORIENTADOR'&&person.email!==p.orientador.email).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
-  out=out.replace(/^Membros convidados para a banca:[^\n]+/gmi,guests.map(person=>`Membro convidado para a banca: ${academicName(person,'abbreviated')}`).join('\n'));
+  const participants=officialParticipantLines(p);
+  const authors=participants.filter(person=>person.key.startsWith('ALUNO_'));
+  const examiners=participants.filter(person=>person.key.startsWith('EXAMINADOR_'));
+  const rows=(people:typeof participants)=>people.map(person=>`${person.role}: ${person.name}`).join('\n');
+  // Older models may already contain names, instead of the original marker text.
+  // Split identification fields only; narrative paragraphs remain grammatical prose.
+  out=out.replace(/^(?:Autoria|Autores(?:\(as\))?):[^\n]+/gmi,()=>rows(authors));
+  out=out.replace(/^(?:Membros convidados para a banca|Examinadores(?:\(as\))?|Avaliadores(?: da banca)?):[^\n]+/gmi,()=>rows(examiners));
+  for(const [label,people]of [['Autor(?:a)?(?: aluno(?:a)?)?',authors],['Examinador(?:a)?',examiners]] as const){
+   out=out.replace(new RegExp(`^${label}:[^\\n]+`,'gmi'),line=>people.length>1&&people.every(person=>line.includes(person.name)||line.includes(person.name.replace(/^(?:Prof[^ ]*\s+|Dr[^ ]*\s+)*/u,'')))?rows(people):line);
+  }
+  out=out.replace(/^Membro convidado para a banca:[^\n]+/gmi,line=>{const member=examiners.find(person=>line.includes(person.name)||line.includes(person.name.replace(/^(?:Prof[^ ]*\s+|Dr[^ ]*\s+)*/u,'')));return member?rows([member]):line;});
   out=out.replace(/^Data:[^\n]+/gmi,`Data: ${formatDateNumericWithWeekday(p.defesa.startAt)}`).replace(/^Horário:[^\n]+/gmi,`Horário: ${formatTime24h(p.defesa.startAt)}`);
  }
  out=out.replace(/,\s*:/g,':');

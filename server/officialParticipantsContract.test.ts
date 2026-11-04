@@ -66,7 +66,7 @@ test('carta substitui trechos aglutinados do modelo ativo sem alterar o arquivo 
   assert.match(map['Atenciosamente,'],/Vitória-ES, terça-feira, 3 de novembro de 2026/);
 });
 
-test('carta alinha data à direita, assinatura recuada e parágrafo justificado',()=>{
+test('carta alinha data e comissão à direita, sem recuo fixo',()=>{
   const entries=[
     {startIndex:10,endIndex:90,paragraph:{elements:[{textRun:{content:'A Comissão de Trabalho de Conclusão de Curso do Curso de Enfermagem convida\n'}}]}},
     {startIndex:90,endIndex:120,paragraph:{elements:[{textRun:{content:'Vitória-ES, terça-feira, 3 de novembro de 2026.\n'}}]}},
@@ -74,8 +74,8 @@ test('carta alinha data à direita, assinatura recuada e parágrafo justificado'
   ];
   const requests=buildOfficialInvitationParagraphStyles({tabs:[{tabProperties:{tabId:'t.0'},documentTab:{body:{content:entries}}}]});
   assert.equal(requests.length,3);
-  assert.deepEqual(requests.map((r:any)=>r.updateParagraphStyle.paragraphStyle.alignment),['JUSTIFIED','END','START']);
-  assert.equal((requests[2] as any).updateParagraphStyle.paragraphStyle.indentStart.magnitude,260);
+  assert.deepEqual(requests.map((r:any)=>r.updateParagraphStyle.paragraphStyle.alignment),['JUSTIFIED','END','END']);
+  assert.equal((requests[2] as any).updateParagraphStyle.paragraphStyle.indentStart.magnitude,0);
 });
 
 

@@ -6,7 +6,9 @@ A imagem `national-arms.png` foi extraída, sem redesenho ou transformação, de
 
 SHA-256: `fdd314c6cdf5cb3d1cb6f244077d3e9b3755262a7b2e76a3a17df71d00451e5b`.
 
-Cabeçalho: Universidade Federal do Espírito Santo; Centro de Ciências da Saúde; Curso de Graduação em Enfermagem e Obstetrícia; Departamento de Enfermagem; Comissão de Trabalho de Conclusão de Curso.
+Cabeçalho: brasão de armas; Universidade Federal do Espírito Santo; Centro de Ciências da Saúde; Curso de Graduação em Enfermagem e Obstetrícia.
+
+Encerramento alinhado à direita: Comissão de Trabalho de Conclusão de Curso; Departamento de Enfermagem; Curso de Enfermagem e Obstetrícia — CCS/UFES. A data da carta-convite fica após Atenciosamente, no encerramento, também alinhada à direita. Autores e examinadores possuem uma linha de identificação por pessoa.
 
 A unidade emissora não substitui as pessoas responsáveis por assinar. A ata continua exigindo orientador e dois examinadores. Os demais documentos conservam seus respectivos signatários.
 

@@ -26,7 +26,7 @@ test('registration PDF has brand identity and paginates very long answers inside
  assert.match(text,/Universidade Federal do Espírito Santo/);assert.match(text,/Cadastro inicial de TCC/);assert.doesNotMatch(text,/ALUNO_1_NOME|NÃO CONFIGURAD/);
  for(const page of pages)for(const item of page.items as any[])if(item.str?.trim()){
   assert.ok(item.transform[5]>=29,`Text outside printable area: ${item.str}`);
-  if(item.transform[5]<80)assert.match(item.str,/^(?:Comissão de Trabalho de Conclusão de Curso|Departamento de Enfermagem|Curso de Graduação em Enfermagem e Obstetrícia · CCS\/UFES|Registro do cadastro inicial · Portal TCC|\d+ \/ \d+)$/,`Body overlaps footer: ${item.str}`);
+  if(item.transform[5]<80)assert.match(item.str,/^(?:Comissão de Trabalho de Conclusão de Curso|Departamento de Enfermagem|Curso de Enfermagem e Obstetrícia — CCS\/UFES|Registro do cadastro inicial · Portal TCC|\d+ \/ \d+)$/,`Body overlaps footer: ${item.str}`);
  }
 });
 

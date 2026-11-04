@@ -155,17 +155,20 @@ def header(tag,title):
  global y
  c.setFillColor(GREEN);c.rect(0,H-58,W,58,fill=1,stroke=0)
  c.setFillColor(colors.white);c.setFont('PortalBold',11);c.drawImage(str(ROOT/'public/national-arms.png'),M,H-47,29,31,mask='auto')
- c.drawString(M+40,H-25,'PORTAL DE TCC  |  ENFERMAGEM / UFES')
- c.setFont('Portal',9);c.drawString(M+40,H-42,'Guia prático de uso • Alunos, orientadores e examinadores')
+ c.drawString(M+40,H-19,'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO')
+ c.setFont('Portal',8);c.drawString(M+40,H-33,'CENTRO DE CIÊNCIAS DA SAÚDE')
+ c.drawString(M+40,H-46,'Curso de Graduação em Enfermagem e Obstetrícia')
  y=H-84
  c.setFillColor(GREEN);c.setFont('PortalBold',10);c.drawString(M,y,tag);y-=15
  para(escape(title).replace('\n','<br/>'),style='title',gap=17)
 
 def footer():
- c.setStrokeColor(LINE);c.line(M,47,W-M,47)
- c.setFillColor(MUTED);c.setFont('Portal',8);c.drawString(M,34,'Comissão de Trabalho de Conclusão de Curso • Departamento de Enfermagem')
- c.drawString(M,22,'Atualizado em quarta-feira, 04/11/2026 • Assinatura pelo Asten')
- c.drawRightString(W-M,22,f'{page_number} / {len(pages)}')
+ c.setStrokeColor(LINE);c.line(M,58,W-M,58)
+ c.setFillColor(MUTED);c.setFont('Portal',7)
+ for i,line in enumerate(['Comissão de Trabalho de Conclusão de Curso','Departamento de Enfermagem','Curso de Enfermagem e Obstetrícia — CCS/UFES']):
+  c.drawRightString(W-M,46-i*10,line)
+ c.drawRightString(W-M,14,'Atualizado em quarta-feira, 04/11/2026 • Assinatura pelo Asten')
+ c.drawString(M,14,f'{page_number} / {len(pages)}')
  bounds.append({'page':page_number,'lastContentY':round(y,2)})
 
 for page_number,page in enumerate(pages,1):
@@ -178,8 +181,6 @@ for page_number,page in enumerate(pages,1):
   c.setFillColor(colors.white);c.setFont('PortalBold',11);c.drawString(M+82,H-59,'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO')
   c.setFont('Portal',10.5);c.drawString(M+82,H-77,'Centro de Ciências da Saúde')
   c.setFont('Portal',8.5);c.drawString(M+82,H-91,'Curso de Graduação em Enfermagem e Obstetrícia')
-  c.drawString(M+82,H-104,'Departamento de Enfermagem')
-  c.drawString(M+82,H-117,'Comissão de Trabalho de Conclusão de Curso')
   c.setFont('PortalBold',31);c.drawString(M,H-155,'Guia prático do');c.drawString(M,H-193,'Portal de TCC')
   c.setFont('Portal',13);c.drawString(M,H-229,'O que fazer, onde clicar e como concluir cada etapa')
   y=H-290

@@ -97,7 +97,7 @@ No menu lateral, Sugestões e Declaração de comparecimento integram o grupo In
 
 Documentos emitidos pelo Portal usam o brasão de armas da República, reproduzido do modelo original da carta-convite. O brasão da UFES fica no cabeçalho superior do site; os ícones operacionais usam a lâmpada ou o ícone da atividade. A logomarca do colegiado não integra os documentos nem as telas operacionais.
 
-A identificação institucional dos documentos apresenta Universidade Federal do Espírito Santo, Centro de Ciências da Saúde, Curso de Graduação em Enfermagem e Obstetrícia, Departamento de Enfermagem e Comissão de Trabalho de Conclusão de Curso. A comissão é a unidade emissora; isso não substitui as assinaturas pessoais exigidas para cada documento. Na ata, assinam orientador e dois examinadores.
+O cabeçalho apresenta o brasão de armas, Universidade Federal do Espírito Santo, Centro de Ciências da Saúde e Curso de Graduação em Enfermagem e Obstetrícia. O encerramento, alinhado à direita e sem recuo fixo, apresenta Comissão de Trabalho de Conclusão de Curso, Departamento de Enfermagem e Curso de Enfermagem e Obstetrícia — CCS/UFES. Na carta-convite, a data fica depois de Atenciosamente e antes desse bloco, também alinhada à direita. Cada autor e examinador ocupa sua própria linha de identificação. A comissão é a unidade emissora; isso não substitui as assinaturas pessoais exigidas para cada documento. Na ata, assinam orientador e dois examinadores.
 
 Datas de leitura exibem o dia da semana, incluindo e-mails, comprovantes, atas, convites, cadastro e históricos. Datas técnicas, valores dos campos date e integrações mantêm o formato original. O dia da semana da defesa aparece ao lado do campo de data na escolha e na alteração da reserva.
 
