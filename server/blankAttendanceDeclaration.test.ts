@@ -7,7 +7,7 @@ import { createBlankAttendanceDeclarationPdf } from '../src/utils/blankAttendanc
 test('declaração usa PDF A4 em branco, cabeçalho com logo COLENF e rodapé discreto', async () => {
   const logo = new Uint8Array(readFileSync('public/colenf-logo.png'));
   const bytes = await createBlankAttendanceDeclarationPdf(logo);
-  assert.ok(bytes.byteLength > logo.byteLength);
+  assert.ok(bytes.byteLength > 4_000, 'o documento precisa conter mais que a estrutura PDF vazia');
   const pdf = await PDFDocument.load(bytes);
   assert.equal(pdf.getPageCount(), 1);
   assert.equal(pdf.getTitle(), 'Declaração de comparecimento - modelo em branco');
