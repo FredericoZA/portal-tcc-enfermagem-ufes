@@ -252,7 +252,7 @@ export function buildOfficialInvitationParagraphStyles(document: unknown): Array
       let alignment:'JUSTIFIED'|'END'|'START'|''='';
       let indentStart:number|undefined;
       if(/^(?:A Comissão de Trabalho de Conclusão de Curso do Curso|Agradecemos a participação)/.test(text))alignment='JUSTIFIED';
-      if(/^Vitória-ES,\s+\d/.test(text))alignment='END';
+      if(/^Vitória-ES,\s+/.test(text))alignment='END';
       if(/^(?:Comissão de Trabalho de Conclusão de Curso|Departamento de Enfermagem$|Curso de Enfermagem e Obstetrícia)/.test(text)){
         alignment='START';indentStart=260;
       }
