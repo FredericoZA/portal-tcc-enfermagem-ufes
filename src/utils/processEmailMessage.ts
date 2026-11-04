@@ -1,6 +1,6 @@
 import {operationalEmailVariant,OPERATIONAL_EMAIL_CATALOG} from './studioOperationalCatalog';
 import {academicName} from './personPresentation';
-import {formatDateNumeric,formatTime24h} from './formatters';
+import {formatDateNumericWithWeekday,formatTime24h} from './formatters';
 import {defenseEndAt} from './defenseSchedule';
 import {applyProcessEmailGreeting} from './processEmailGreeting';
 import {invitationEmail} from './invitationEmail';
@@ -34,7 +34,7 @@ export function processEmailMessage(input:{process:ProcessData;recipient:string;
   if(response){
    subject=`[${p.protocolo}] ${confirmed?'Reserva confirmada':'Agendamento recusado'}`;
    const registered=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(response.respondedAt));
-   text=['Prezados departamento, autores e orientador,',confirmed?'O departamento confirmou a reserva para a defesa do TCC.':'O responsável recusou o agendamento solicitado.',[confirmed?`Resultado: reserva confirmada.\nLocal: ${response.local||p.defesa.local}`:`Resultado: reserva recusada.\nLocal solicitado: ${p.defesa.local}`,`Data: ${formatDateNumeric(response.startAt)}\nHorário: ${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt||defenseEndAt(response.startAt))}`,`Resposta registrada em ${registered}.`].join('\n'),...(confirmed?[processEmailGuidance(p,input.baseUrl,'LOCATION_CONFIRMED','email-confirmacao',input.recipient)]:['ORIENTAÇÕES DO PROCESSO','Autores: ajustem o agendamento no Portal para solicitar uma nova reserva.'])].join('\n\n');
+   text=['Prezados departamento, autores e orientador,',confirmed?'O departamento confirmou a reserva para a defesa do TCC.':'O responsável recusou o agendamento solicitado.',[confirmed?`Resultado: reserva confirmada.\nLocal: ${response.local||p.defesa.local}`:`Resultado: reserva recusada.\nLocal solicitado: ${p.defesa.local}`,`Data: ${formatDateNumericWithWeekday(response.startAt)}\nHorário: ${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt||defenseEndAt(response.startAt))}`,`Resposta registrada em ${registered}.`].join('\n'),...(confirmed?[processEmailGuidance(p,input.baseUrl,'LOCATION_CONFIRMED','email-confirmacao',input.recipient)]:['ORIENTAÇÕES DO PROCESSO','Autores: ajustem o agendamento no Portal para solicitar uma nova reserva.'])].join('\n\n');
   }
  }else{
   text=text.split('ORIENTAÇÕES DO PROCESSO')[0].replace(/\n[ \t]*(Local alternativo:)/gi,'\n\n$1').trim()+'\n\n'+processEmailGuidance(p,input.baseUrl,input.eventCode||'',input.templateId||'',input.recipient);
@@ -44,7 +44,7 @@ export function processEmailMessage(input:{process:ProcessData;recipient:string;
  const stock=OPERATIONAL_EMAIL_CATALOG.find(item=>item[0]===variant);
  // Existing operational messages stay intact; explicit edits to a catalog variant take effect.
  if(configured&&stock&&configured.operationalCatalogEditable===true){
-  const values:Record<string,string>={...input.templateVariables,PROTOCOLO:p.protocolo,TITULO:p.titulo,ALUNOS:[p.aluno1.nome,p.aluno2?.nome].filter(Boolean).join(' e '),ORIENTADOR_NOME_COMPLETO:academicName(p.orientador,'abbreviated'),DEFESA_LOCAL:p.defesa.local,LOCAL_ALTERNATIVO:p.defesa.alternateLocation||'',DEFESA_DATA_HORA:formatDateNumeric(p.defesa.startAt)+' às '+formatTime24h(p.defesa.startAt),LINK_PROCESSO:href,ORIENTACOES_ACESSO:processEmailGuidance(p,input.baseUrl,input.eventCode||'',input.templateId||'',input.recipient)};
+  const values:Record<string,string>={...input.templateVariables,PROTOCOLO:p.protocolo,TITULO:p.titulo,ALUNOS:[p.aluno1.nome,p.aluno2?.nome].filter(Boolean).join(' e '),ORIENTADOR_NOME_COMPLETO:academicName(p.orientador,'abbreviated'),DEFESA_LOCAL:p.defesa.local,LOCAL_ALTERNATIVO:p.defesa.alternateLocation||'',DEFESA_DATA_HORA:formatDateNumericWithWeekday(p.defesa.startAt)+' às '+formatTime24h(p.defesa.startAt),LINK_PROCESSO:href,ORIENTACOES_ACESSO:processEmailGuidance(p,input.baseUrl,input.eventCode||'',input.templateId||'',input.recipient)};
   const expand=(source:string)=>source.replace(/<<([A-Z0-9_]+)>>|\{\{([A-Z0-9_]+)\}\}/g,(all,a,b)=>values[a||b]??all);
   if(configured.body!==stock[4]&&!(input.templateId==='email-reserva'&&/LOCAL_ALTERNATIVO|local alternativo/i.test(String(configured.body))))text=expand(String(configured.body||''));
   if(configured.subject!==stock[3])subject=expand(String(configured.subject||''));
