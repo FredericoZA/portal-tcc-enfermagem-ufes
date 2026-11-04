@@ -196,7 +196,7 @@ export async function generateSampleDocumentsZip(): Promise<Blob> {
 - **Eficiência:** Redução de 25% nos tempos de compilação e deploy.
 
 ### Próximos Passos
-1. Expansão das integrações via IA.
+1. Revisão das integrações documentadas.
 2. Otimização de segurança e criptografia de arquivos.
 `);
 

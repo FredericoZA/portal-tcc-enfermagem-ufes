@@ -3,6 +3,8 @@ import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { BarChart3, BookOpen, CalendarDays, CheckCircle2, Clock3, FileText, Gauge, ShieldCheck, TrendingUp, Users2 } from 'lucide-react';
 import { PortalSectionDivider } from '../components/PortalSectionDivider';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
+import {useAuth} from '../context/AuthContext';
+import {apiClient} from '../services/apiClient';
 
 type Bucket = { label: string; count: number; key?: string };
 type PublicIndicators = {
@@ -89,17 +91,18 @@ const Funnel: React.FC<{ data: PublicIndicators }> = ({ data }) => {
 };
 
 export const IndicadoresPage: React.FC = () => {
+  const {isAuthenticated, isMasterAdmin, isCommissionPresident, userEmail}=useAuth();
+  const canViewIndicators=isAuthenticated && (isMasterAdmin || isCommissionPresident);
   const [data, setData] = useState<PublicIndicators | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    setData(null);
+    setError('');
+    if (!canViewIndicators) {setLoading(false);return;}
     let active = true;
-    const load = () => { void fetch('/api/public/indicators', { headers: { Accept: 'application/json' } })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Não foi possível carregar os indicadores.');
-        return response.json();
-      })
+    const load = () => { setLoading(true);void apiClient.getIndicators()
       .then((payload) => {
         if (!active) return;
         const arrays = ['byStatus', 'years', 'months', 'themes', 'workTypes', 'locations', 'outcomes', 'formats', 'weekdays', 'dayparts'];
@@ -112,7 +115,7 @@ export const IndicadoresPage: React.FC = () => {
     load();
     window.addEventListener(PORTAL_LIVE_UPDATE_EVENT,load);
     return () => { active = false; window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT,load); };
-  }, []);
+  }, [canViewIndicators,userEmail]);
 
   const analytics = useMemo(() => {
     if (!data) return null;
@@ -140,6 +143,7 @@ export const IndicadoresPage: React.FC = () => {
     };
   }, [data]);
 
+  if (!canViewIndicators) return <div className="portal-layer-card rounded-xl p-4 text-sm" role="status">Indicadores disponíveis somente ao Master e à Presidência da Comissão, após identificação no Portal.</div>;
   return <div id="indicadores-publicos-page" className="mx-auto max-w-none overflow-hidden">
     <section className="portal-public-header">
       <div className="portal-public-title-row gap-2">
@@ -205,7 +209,7 @@ export const IndicadoresPage: React.FC = () => {
         <article className={panel}><h2 className="text-xs font-black normal-case">Modalidade</h2><div className="mt-3"><BarList items={data.formats} percentage/></div></article>
       </section>
 
-      <p className="text-xs leading-5 text-slate-600">Indicadores calculados por regras estatísticas. Dados livres, como palavras-chave e locais informados, não são publicados nesta página; categorias com poucas ocorrências são suprimidas para proteger os participantes.</p>
+      <p className="text-xs leading-5 text-slate-600">Indicadores calculados por regras estatísticas. Dados livres, como palavras-chave e locais informados, não são incluídos neste painel; categorias com poucas ocorrências são suprimidas para proteger os participantes.</p>
       <section className="grid gap-3 xl:grid-cols-2">
         <article className={panel}><h2 className="text-xs font-black normal-case">Tipos de trabalho</h2><div className="mt-3"><BarList items={data.workTypes} percentage/></div></article>
         <article className={panel}><h2 className="text-xs font-black normal-case">Resultados das bancas</h2><div className="mt-3"><BarList items={data.outcomes} percentage/></div></article>

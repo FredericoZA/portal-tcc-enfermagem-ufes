@@ -29,19 +29,19 @@ test('comissão reúne identidade, contatos e membros em formulário único com 
   assert.ok(!panel.includes('courseLogoDataUrl'));
 });
 
-test('configurações não exibem blocos redundantes e Indicadores usam somente dados públicos agregados', async () => {
+test('configurações não exibem blocos redundantes e Indicadores exigem acesso administrativo', async () => {
   const [config, infrastructure, indicators, publicApi] = await Promise.all([
     source('src/pages/ConfiguracoesPage.tsx'),
     source('src/components/InfrastructureIntegrationsPanel.tsx'),
     source('src/pages/IndicadoresPage.tsx'),
-    source('server/vercel/public-indicators.ts')
+    source('src/services/apiClient.ts')
   ]);
   assert.ok(!config.includes('<OperationsMonitorPanel'));
   assert.ok(!config.includes('Drive gerenciado pelo servidor.'));
   assert.ok(!infrastructure.includes('Central segura de integrações'));
   assert.ok(!indicators.includes('<OperationsMonitorPanel'));
-  assert.ok(indicators.includes('/api/public/indicators'));
-  assert.ok(publicApi.includes('containsPersonalData:false'));
+  assert.ok(indicators.includes('canViewIndicators'));
+  assert.ok(publicApi.includes('/api/admin/indicators'));
 });
 
 test('paleta principal usa quatro superfícies e identidade canônica sem oliva legado', async () => {

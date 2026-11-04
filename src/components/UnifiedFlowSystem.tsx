@@ -286,7 +286,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
     return Array.from(tags);
   };
 
-  // Scan & Update Variables ("Atualizar Variáveis") with AI Duplicate/Similarity Matching
+  // Scan markers and compare normalized names with programmed string rules.
   const handleScanAndUpdateVariables = async () => {
     setIsScanning(true);
     if (googleToken && driveModelosFolderUrl) {
@@ -326,7 +326,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
 
     setMatrixColumns(newCols);
 
-    // AI similarity detection
+    // Deterministic string similarity, reviewed before merging.
     const candidates: Array<{
       id: string;
       colA: MatrixColumn;
@@ -1246,7 +1246,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
         </div>
       </div>
 
-      {/* MODAL DE IMPORTAÇÃO / VARREDURA INTELIGENTE (IA) DE MARCADORES */}
+      {/* Importação de marcadores por padrões de texto */}
       {isImportModalOpen && (
         <div className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-center justify-center p-4">
           <div className="portal-standard-modal portal-modal-surface portal-flow-modal max-w-xl w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
@@ -1254,7 +1254,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-purple-700" />
                 <h3 className="text-sm font-black normal-case tracking-wide text-slate-900">
-                  Importação inteligente de modelo / formulário (IA)
+                  Importar marcadores de modelo ou formulário
                 </h3>
               </div>
             </div>
@@ -2370,7 +2370,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
         </div>
       )}
 
-      {/* MODAL 2: AI CONSOLIDAÇÃO / MESCLAGEM DE VARIÁVEIS SEMELHANTES (ESTILO CONTATOS DO GOOGLE) */}
+      {/* Revisão de variáveis semelhantes antes da mesclagem */}
       {isConsolidateModalOpen && (
         <div className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-center justify-center p-4">
           <div className="portal-standard-modal portal-modal-surface portal-flow-modal max-w-2xl w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[85vh] flex flex-col">
@@ -2378,13 +2378,13 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-amber-600 animate-pulse" />
                 <h3 className="text-sm font-black normal-case tracking-wide text-slate-900">
-                  Consolidação de variáveis semelhantes (IA)
+                  Revisar variáveis semelhantes
                 </h3>
               </div>
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              O sistema de IA analisou todos os modelos, e-mails e formulários e identificou potenciais <strong>duplicidades e variáveis semelhantes</strong> (estilo mesclagem do Google Contacts). Deseja unificá-las em um único campo padrão?
+              A comparação dos nomes dos marcadores identificou possíveis <strong>duplicidades e variáveis semelhantes</strong>. Confira cada par antes de unificá-lo em um campo padrão.
             </p>
 
             <div className="flex-1 overflow-y-auto space-y-3 pr-1">
@@ -2603,7 +2603,7 @@ export const UnifiedFlowSystem: React.FC<UnifiedFlowSystemProps> = ({
                   {/* Sugestões encontradas */}
                   <div className="space-y-2">
                     <h5 className="text-[11px] font-black normal-case tracking-wider text-slate-700">
-                      Mesclas Sugeridas pela IA ({suggestedMerges.length})
+                      Possíveis mesclas para revisão ({suggestedMerges.length})
                     </h5>
 
                     {suggestedMerges.length === 0 ? (

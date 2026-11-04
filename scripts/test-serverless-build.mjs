@@ -92,9 +92,12 @@ try {
   assert.equal(result.status, 200, 'Replication wrapper must load OAuth/Drive/ZIP dependencies. ' + await result.clone().text());
   assert.equal(result.headers.get('content-type'), 'application/zip');
   assert.equal(Buffer.from(await result.arrayBuffer()).subarray(0, 2).toString('hex'), '504b');
+  const beforeRetiredIndicators = (await (await get('/__smoke/calls')).json()).calls.length;
   result = await get('/indicators');
-  assert.equal(result.status, 200);
-  assert.equal((await result.json()).privacy.containsPersonalData, false);
+  assert.equal(result.status, 410);
+  assert.equal((await result.json()).code, 'PUBLIC_INDICATORS_RETIRED');
+  assert.match(result.headers.get('cache-control'), /private, no-store/);
+  assert.equal((await (await get('/__smoke/calls')).json()).calls.length, beforeRetiredIndicators, 'Retired indicators must not read provider data.');
 
   // Exhaust the download admission budget without provider access. A valid
   // provider operation must then stop at 429, before OAuth or Drive is called.

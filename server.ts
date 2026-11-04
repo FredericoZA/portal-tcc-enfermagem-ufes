@@ -1884,8 +1884,12 @@ export async function createPortalApp() {
   });
 
   app.get('/api/public/installation-profile',(_req,res)=>res.json(resolveInstallationProfile(currentSettings)));
-  app.get('/api/public/indicators',async(_req,res)=>{
-    res.setHeader('Cache-Control','public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+  app.all('/api/public/indicators',(_req,res)=>{
+    res.setHeader('Cache-Control','private, no-store, max-age=0');
+    res.status(410).json({error:'A consulta pública de indicadores foi encerrada. Utilize o acesso administrativo.',code:'PUBLIC_INDICATORS_RETIRED'});
+  });
+  app.get('/api/admin/indicators',requireAuthenticated,requireAdministrator,async(_req,res)=>{
+    res.setHeader('Cache-Control','private, no-store, max-age=0');
     try{
       if(getSupabaseRuntimeStatus().durablePersistenceReady){
         await remotePersistenceQueue;
@@ -1894,7 +1898,7 @@ export async function createPortalApp() {
       }
       res.json(buildPublicIndicators(processesStore));
     }catch(error){
-      console.error('[Indicadores públicos] Falha ao gerar estatísticas:',error);
+      console.error('[Indicadores administrativos] Falha ao gerar estatísticas:',error);
       res.status(503).json({error:'Os indicadores estão temporariamente indisponíveis.'});
     }
   });

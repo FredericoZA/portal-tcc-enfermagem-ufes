@@ -31,7 +31,7 @@ O estado da assinatura, da organização por pastas e do piloto separado em 15/1
 - Formulários personalizados criados no Estúdio aparecem automaticamente no processo apenas para o papel definido, preservam a revisão usada, geram PDF no Drive e podem disparar eventos `FORM_<ID>_SUBMITTED`.
 - Área temática, tema principal, tipo de estudo e finalidade podem ser coletados por campos canônicos configuráveis. Os relatórios não inferem esses dados do título ou do resumo.
 - Os dois arquivos vivos são recalculados diariamente e sob demanda, permanecem privados no Drive e não incluem nomes, e-mails, matrículas, títulos ou resumos.
-- O relatório institucional usa dados agregados, filtros de período, comparação, gráficos vetoriais e metodologia explícita; grupos pequenos continuam protegidos.
+- Indicadores exigem identificação do Master ou da Presidência; as rotas públicas antigas retornam HTTP 410 e não consultam dados. O relatório institucional usa dados agregados, filtros de período, comparação, gráficos vetoriais e metodologia explícita; grupos pequenos continuam protegidos.
 
 > **Migração local (Portal TCC 16):** consulte [Guia de continuidade local e estado das plataformas](./docs/TRANSICAO_LOCAL_PORTAL_TCC16_2026-10-13.md). O modo padrão é isolado; nunca copie segredos da Vercel nem uma base de produção para o computador.
 
@@ -75,7 +75,7 @@ Siga, nesta ordem:
 7. [Atualização e rollback](./docs/ATUALIZACAO_E_ROLLBACK.md)
 8. [Fluxo operacional RC9](./docs/FLUXO_OPERACIONAL_RC9.md)
 9. [Guia de entrega ao Codex de implantação](./docs/ENTREGA_AO_CODEX.md)
-10. [Estatísticas e diagnóstico histórico por regras](./docs/INTELIGENCIA_CONTINUA.md)
+10. [Operação, privacidade e referência normativa](./docs/NOTA_TECNICA_PORTARIA_310_LGPD_2026-11-04.md)
 
 As integrações externas só podem ser consideradas homologadas depois de um piloto no ambiente do proprietário das credenciais. A instalação deve usar projetos e credenciais próprios, diferentes entre desenvolvimento e produção. Nunca publique ou envie chaves Supabase, OAuth Google, token Asten, segredos de sessão ou webhook.
 
