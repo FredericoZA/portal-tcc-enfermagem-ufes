@@ -23,7 +23,7 @@ test('texto e data personalizados respeitam o destinatário e o local escolhido'
  const first=recipientEmailVariables(p,p.aluno1.email,common,'https://portal.example');
  const advisor=recipientEmailVariables(p,p.orientador.email,common,'https://portal.example');
  assert.equal(first.DESTINATARIO_NOME,p.aluno1.nome);assert.equal(advisor.DESTINATARIO_NOME,p.orientador.nome);
- assert.equal(first.CAMPO_04,'23/10/2026 às 20:00');assert.equal(first.CAMPO_07_LOCAL,'Sala de reuniões');
+ assert.equal(first.CAMPO_04,'23/10/2026 (sexta-feira) às 20:00');assert.equal(first.CAMPO_07_LOCAL,'Sala de reuniões');
  assert.match(first.ORIENTACOES_ACESSO,/Dados do processo|confira os dados/);assert.match(advisor.ORIENTACOES_ACESSO,/Avaliação e ata/);
  assert.match(advisor.LINK_PROCESSO,/secao=avaliacao/);assert.match(first.LINK_PROCESSO,/tcc=/);
 });
@@ -47,7 +47,7 @@ test('execução efetiva personaliza cada e-mail e corrige apresentação antiga
  const messages:any[]=[];const run=await executeWorkflowEvent(studio,{process:p,eventCode:'LOCATION_CONFIRMED',actorEmail:p.orientador.email,actorRoles:[]},{createDocument:async()=>({}),createFormTask:async()=>({}),sendEmail:async message=>{messages.push(message);return {externalId:'sent'};}});
  assert.equal(run.status,'COMPLETED',JSON.stringify(run.actions));assert.equal(messages.length,2);
  assert.match(messages[0].text,new RegExp(p.aluno1.nome));assert.match(messages[1].text,new RegExp(p.orientador.nome));
- for(const message of messages){assert.match(message.text,/23\/10\/2026 às 20:00/);assert.doesNotMatch(message.text,/2026-10-23T/);assert.match(message.text,/Sala de reuniões/);assert.equal(message.to.length,1);}
+ for(const message of messages){assert.match(message.text,/23\/10\/2026 \(sexta-feira\) às 20:00/);assert.doesNotMatch(message.text,/2026-10-23T/);assert.match(message.text,/Sala de reuniões/);assert.equal(message.to.length,1);}
 });
 
 test('link público para avaliação mantém dados privados ausentes sem quebrar a tela',()=>{
