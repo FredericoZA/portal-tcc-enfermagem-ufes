@@ -6,7 +6,7 @@ Você recebeu o código do Portal Institucional de TCC. Preserve o sistema exist
 
 ## Fonte de verdade e leitura
 
-Leia `AGENTS.md`, `README.md`, `CHECKLIST_IMPLANTACAO.md`, `COMECE_AQUI.md`, `IMPLANTACAO_PRODUCAO.md`, `.env.example`, `SECURITY.md`, `docs/FLUXO_ATUAL_2026-10-26.md` e `public/replicacao/GUIA_PARA_IA.md`. Consulte ainda `docs/PRIMEIRO_ACESSO.md`, `MODELOS_E_VARIAVEIS.md`, `INTEGRACAO_ASTEN_DRIVE.md` e `docs/ATUALIZACAO_E_ROLLBACK.md`.
+Leia `AGENTS.md`, `README.md`, `CHECKLIST_IMPLANTACAO.md`, `COMECE_AQUI.md`, `IMPLANTACAO_PRODUCAO.md`, `.env.example`, `SECURITY.md`, `docs/FLUXO_ATUAL_2026-10-26.md` e `public/replicacao/GUIA_DE_INSTALACAO.md`. Consulte ainda `docs/PRIMEIRO_ACESSO.md`, `MODELOS_E_VARIAVEIS.md`, `INTEGRACAO_ASTEN_DRIVE.md` e `docs/ATUALIZACAO_E_ROLLBACK.md`.
 
 RC5 a RC10 e relatórios de revisões anteriores são históricos. Não use seus resultados como evidência da instalação atual. O código, as migrações aplicadas, a configuração publicada e o runtime efetivamente implantado precisam ser conferidos separadamente. Se faltar evidência de uma integração, registre “não confirmado”.
 
