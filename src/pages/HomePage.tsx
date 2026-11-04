@@ -1,4 +1,4 @@
-import {calendarEventMatchesProcess, currentDefenseSelection, isDefenseOnCalendar} from '../utils/defenseReservationState';
+import {calendarEventMatchesProcess, currentDefenseSelection, isDefenseOnCalendar, isDefenseReservationPending} from '../utils/defenseReservationState';
 import { legacyRepositoryProcess } from '../utils/legacyRepository';
 import { NursingEmblemLogo } from '../components/NursingEmblemLogo';
 import {readProcessLink,setProcessLink} from '../utils/processLink';
@@ -67,7 +67,7 @@ import {
   LOGIN_POPUP_CONFIG_EVENT
 } from '../utils/loginPopupConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
-import { DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseCalendarSummaryParts, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter } from '../utils/defenseSemantics';
+import { DEFENSE_PENDING_CONFIRMATION_LABEL, DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseCalendarSummaryParts, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter } from '../utils/defenseSemantics';
 import { getPortalToneCssVars } from '../utils/portalSemanticTokens';
 import { formatProcessLabel } from '../components/PortalProcessPill';
 
@@ -76,12 +76,10 @@ interface HomePageProps {
   initialPublicTab?: 'calendario' | 'biblioteca' | 'tutorial';
 }
 
-/** Apenas sinaliza a reserva ainda sem resposta, sem alterar cores nem agendamento. */
+/** The current request controls the notice, independently of receipts from earlier requests. */
 const PendingDefenseConfirmationNote: React.FC<{ process: Pick<ProcessData, 'defesa'> }> = ({ process }) => {
-  // A projeção anônima substitui departmentResponse por hasReservationReceipt.
-  const defesa = process.defesa as ProcessData['defesa'] & { hasReservationReceipt?: boolean };
-  if (defesa?.localStatus !== 'PENDENTE' || defesa?.departmentResponse || defesa?.hasReservationReceipt) return null;
-  return <span className="font-extrabold normal-case" style={{ color: '#b91c1c' }}> (Aguardando confirmação)</span>;
+  if (!isDefenseReservationPending(process)) return null;
+  return <span className="font-extrabold normal-case" style={{color: 'var(--portal-danger)'}}> {DEFENSE_PENDING_CONFIRMATION_LABEL}</span>;
 };
 
 // Helper to parse Google Calendar events for presentations
@@ -1247,15 +1245,19 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <div className="mt-1 flex-1 min-h-0 space-y-1 w-full">
                         {dayDefenses.map((proc) => {
                           const defenseState = getDefenseState(proc);
+                          const summary = getDefenseCalendarSummaryParts(proc);
                           return (
                             <span
                               key={proc.id}
                               className="portal-calendar-defense-summary portal-semantic-tone"
                               style={getPortalToneCssVars(defenseState)}
                               data-defense-state={defenseState}
+                              data-reservation-status={isDefenseReservationPending(proc) ? 'pending' : undefined}
                               title={formatDefenseCalendarSummary(proc, 160)}
                             >
-                              {(() => { const summary = getDefenseCalendarSummaryParts(proc); return <><span className="portal-calendar-defense-primary">{summary.primary}<PendingDefenseConfirmationNote process={proc} /></span>{summary.secondary && <span className="portal-calendar-defense-secondary">{summary.secondary}</span>}<span className="portal-calendar-defense-secondary font-semibold">{summary.location}</span></>; })()}
+                              <span className="portal-calendar-defense-primary">{summary.time}<PendingDefenseConfirmationNote process={proc} /> · {summary.title}</span>
+                              {summary.secondary && <span className="portal-calendar-defense-secondary">{summary.secondary}</span>}
+                              <span className="portal-calendar-defense-secondary font-semibold">{summary.location}</span>
                             </span>
                           );
                         })}
@@ -1431,7 +1433,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                     setSelectedDayGcalEvents(null);
                                     setProcessLink(proc.id,null,true);window.dispatchEvent(new CustomEvent('portal:open-process',{detail:{id:proc.id,readOnly:true}}));
                                   }}
-                                  className={`text-slate-900 ${cardPaddingClass} ${cardRadiusClass} ${cardBorderClass} ${cardGapClass} ${cardShadowClass} hover:shadow-md cursor-pointer transition-all group flex flex-col`}
+                                  data-reservation-status={isDefenseReservationPending(proc) ? 'pending' : undefined}
+                                  className={`portal-calendar-day-defense text-slate-900 ${cardPaddingClass} ${cardRadiusClass} ${cardBorderClass} ${cardGapClass} ${cardShadowClass} hover:shadow-md cursor-pointer transition-all group flex flex-col`}
                                   style={{
                                     backgroundColor: calendarPopupFormat.cardBgColor || '#ffffff',
                                     borderColor: calendarPopupFormat.cardBorderColor || '#cbd5e1',
@@ -1447,7 +1450,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           style={{ color: calendarPopupFormat.timeTextColor || '#065f46' }}
                                         >
                                           <Clock className="w-4 h-4 shrink-0" />
-                                          <span>{getStartAndEndTime(proc.defesa?.startAt)}</span>
+                                          <span>{getStartAndEndTime(proc.defesa?.startAt)}<PendingDefenseConfirmationNote process={proc} /></span>
                                         </div>
                                       ) : <div />}
                                       <div className="flex items-center gap-2">
@@ -1480,7 +1483,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                       style={{ color: calendarPopupFormat.cardTitleColor || '#0f172a' }}
                                     >
                                       {formatTccTitle(proc.titulo)}
-                                      <PendingDefenseConfirmationNote process={proc} />
                                     </h4>
                                   )}
 
@@ -1929,7 +1931,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <div className={`flex items-center justify-center gap-1 ${defStyles.cellFontSizeClass}`}>
                         <span>{formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), defensesTextFormat, '')}</span>
                       </div>
-                      <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}</div>
+                      <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}<PendingDefenseConfirmationNote process={proc} /></div>
                     </td>
                   );
                 case 'progresso':
@@ -1943,7 +1945,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     <td key="titulo" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
                       <div className={`${defStyles.cellWrapClass} ${alignClass} ${defStyles.cellFontSizeClass}`} title={formatTccTitle(proc.titulo)}>
                         {formatCellText('titulo', formatTccTitle(proc.titulo), defensesTextFormat, '')}
-                        <PendingDefenseConfirmationNote process={proc} />
                       </div>
                     </td>
                   );

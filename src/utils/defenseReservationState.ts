@@ -14,6 +14,11 @@ export function effectiveDefenseReservationStatus(process: ReservationProcess): 
   return process.defesa?.localStatus;
 }
 
+/** Historical receipts never suppress the pending state of a new request. */
+export function isDefenseReservationPending(process: ReservationProcess): boolean {
+  return effectiveDefenseReservationStatus(process) === 'PENDENTE';
+}
+
 /** Old refusals retained PENDENTE together with an UNAVAILABLE receipt. */
 export function isDefenseReservationDeclined(process: ReservationProcess): boolean {
   return REFUSED.has(String(effectiveDefenseReservationStatus(process) || '').toUpperCase());

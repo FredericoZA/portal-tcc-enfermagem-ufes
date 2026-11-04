@@ -1100,6 +1100,18 @@ button[aria-label^="Configurar exibição"],
   opacity: .88;
 }
 
+/* Reservation status changes the event text, while temporal background colors stay intact. */
+.portal-calendar-defense-summary[data-reservation-status="pending"],
+.portal-calendar-defense-summary[data-reservation-status="pending"] span,
+.portal-calendar-day-defense[data-reservation-status="pending"],
+.portal-calendar-day-defense[data-reservation-status="pending"] :is(span, h4, p, div) {
+  color: var(--portal-danger) !important;
+}
+
+.portal-calendar-defense-summary[data-reservation-status="pending"] .portal-calendar-defense-secondary {
+  opacity: 1;
+}
+
 /* Navegação lateral: texto corrido, menor e mais encorpado. */
 .portal-sidebar-nav-item {
   font-size: var(--portal-sidebar-nav-font-size);

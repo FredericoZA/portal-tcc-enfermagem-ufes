@@ -90,7 +90,7 @@ export const guideActivities: GuideActivity[] = [
     imageCaption: 'O comprovante fica na primeira caixa de Documentos administrativos, junto dos outros documentos.',
     steps: [
       'O responsável pelo local recebe os botões de aceitar ou recusar. Os autores e o orientador recebem uma comunicação informativa, sem os botões reservados ao responsável. Se o responsável for o próprio orientador, ele recebe a mensagem de decisão.',
-      'Enquanto aguarda resposta, o pedido aparece no Calendário com (Aguardando confirmação) em vermelho após o título. O aceite retira o aviso; a recusa retira somente o agendamento da agenda e mantém o código do TCC. Em Documentos administrativos, consulte o comprovante.',
+      'Enquanto aguarda resposta, o pedido aparece no Calendário com o texto em vermelho e (aguardando confirmação) logo após o horário. O aceite retira o aviso; a recusa retira somente o agendamento da agenda e mantém o código do TCC. Em Documentos administrativos, consulte o comprovante.',
       'Depois do aceite, confira a data, o horário e o local no Calendário e os dados da carta-convite em Documentos administrativos.',
       'Os examinadores e o coorientador, quando houver, recebem o convite em uma mensagem de grupo. Os documentos são consultados no Portal.',
     ],
