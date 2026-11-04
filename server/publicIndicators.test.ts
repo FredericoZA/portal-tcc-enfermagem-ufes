@@ -66,3 +66,25 @@ test('API pública não retorna palavras-chave, locais ou resultados com texto l
   assert.equal(JSON.stringify(result).includes(secret),false);
   assert.ok(result.outcomes.some(row=>row.label==='Aprovado'&&row.count===8));
 });
+
+test('mês isolado e única duração de conclusão não são inferíveis na resposta pública', () => {
+  const processes=Array.from({length:6},(_,i)=>baseProcess({
+    id:`p-${i+1}`,
+    defesa:{ startAt:`2026-${String(i+1).padStart(2,'0')}-10T12:00:00Z`, endAt:'', local:'Auditório', localStatus:'CONFIRMADO' },
+    completedAt: i===0 ? '2026-01-12T12:00:00Z' : undefined,
+  }));
+  const result=buildPublicIndicators(processes,Date.parse('2026-11-01T12:00:00Z'));
+  assert.equal(result.descriptive?.peakMonth,null);
+  assert.equal(result.descriptive?.peakMonthCount,0);
+  assert.equal(result.descriptive?.completionDaysMean,null);
+  assert.equal(result.descriptive?.completionDaysMedian,null);
+  assert.deepEqual(result.months,[]);
+});
+
+test('rótulos de situação inesperados nunca são devolvidos como texto livre', () => {
+  const secret='IDENTIDADE_PESSOAL_NAO_CATALOGADA';
+  const processes=Array.from({length:6},(_,i)=>baseProcess({id:`n-${i}`,status: secret as ProcessData['status']}));
+  const result=buildPublicIndicators(processes,Date.parse('2026-11-01T12:00:00Z'));
+  assert.equal(JSON.stringify(result).includes(secret),false);
+  assert.deepEqual(result.byStatus,[]);
+});

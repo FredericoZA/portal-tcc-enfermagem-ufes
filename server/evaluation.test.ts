@@ -14,21 +14,38 @@ const valid = { resultadoCode: 'APROVADO', parecer: 'Parecer registrado pelo ori
   expectedDataRevision: process.dataRevision, expectedSchemaRevision: settings.integrationStudio?.revision || 0 };
 const accept = (patch: Record<string, unknown> = {}) => acceptEvaluation(process, { ...valid, ...patch }, settings, process.orientador.email, now);
 
-test('parecer pré-definido não inventa fatos, é estável e exige deliberação humana',()=>{
+test('três pareceres personalizados por título, sem IA ou fatos acadêmicos inventados',()=>{
   assert.equal(standardEvaluationOpinion(process),'');
-  const approved=standardEvaluationOpinion(process,{code:'APROVADO',label:'Aprovado'});
-  assert.equal(approved,standardEvaluationOpinion(process,{code:'APROVADO',label:'Aprovado'}));
-  assert.doesNotMatch(approved,/clareza|organização|domínio do tema|qualidade do trabalho/i);
-  assert.match(approved,/\[Completar com os fundamentos/);
-  assert.match(approved,/Aprovado/);
-  const rejected=standardEvaluationOpinion(process,{code:'REPROVADO',label:'Reprovado'});
-  assert.match(rejected,/Reprovado/);
-  assert.match(rejected,/\[Completar com os fundamentos/);
-  const withRemarks=standardEvaluationOpinion(process,{code:'APROVADO_COM_RESSALVA',label:'Aprovado com ressalva'});
-  assert.match(withRemarks,/Correções e encaminhamentos/);
-  assert.throws(()=>acceptEvaluationAnswers({resultadoCode:'APROVADO',parecer:approved},[{code:'APROVADO',label:'Aprovado'}]),/Complete a fundamentação/);
-  const reviewed=approved.replace('[Completar com os fundamentos efetivamente apresentados pela banca durante a defesa]','A banca deliberou após discutir os requisitos acadêmicos aplicáveis');
-  assert.equal(acceptEvaluationAnswers({resultadoCode:'APROVADO',parecer:reviewed},[{code:'APROVADO',label:'Aprovado'}]).parecer,reviewed);
+  const expected=[
+    {code:'APROVADO',label:'Aprovado',snippet:'Fundamentação da decisão:'},
+    {code:'APROVADO_COM_RESSALVA',label:'Aprovado com ressalva',snippet:'Correções e encaminhamentos:'},
+    {code:'REPROVADO',label:'Reprovado',snippet:'Fundamentação da decisão:'},
+  ];
+  for (const outcome of expected){
+    const draft=standardEvaluationOpinion(process,outcome);
+    assert.equal(draft,standardEvaluationOpinion(process,outcome));
+    assert.ok(draft.includes(process.titulo));
+    assert.ok(draft.includes(outcome.label));
+    assert.ok(draft.includes(outcome.snippet));
+    assert.match(draft,/\[Completar com/);
+    assert.doesNotMatch(draft,/clareza|organização|domínio do tema|qualidade do trabalho|nota numérica/i);
+    assert.ok(!draft.includes(process.aluno1.email));
+    assert.ok(!draft.includes(process.aluno1.matricula));
+    assert.throws(()=>acceptEvaluationAnswers({resultadoCode:outcome.code,parecer:draft},[outcome]),/Complete a fundamentação/);
+  }
+  const approved=standardEvaluationOpinion(process,expected[0]);
+  const reviewed=approved.replace('[Completar com os fundamentos efetivamente deliberados pela banca durante a defesa]','Conforme os fundamentos documentados e registrados na sessão de defesa');
+  assert.equal(acceptEvaluationAnswers({resultadoCode:'APROVADO',parecer:reviewed},[expected[0]]).parecer,reviewed);
+  assert.throws(()=>acceptEvaluationAnswers({resultadoCode:'APROVADO',parecer:approved.replace('[Completar','[completar')},[expected[0]]),/Complete a fundamentação/);
+});
+
+test('título excepcional não é cortado nem expõe dados adicionais no texto-base',()=>{
+  const longTitle='Assunto'.repeat(50);
+  const processWithLongTitle={...process,titulo:longTitle};
+  const text=standardEvaluationOpinion(processWithLongTitle,{code:'APROVADO',label:'Aprovado'});
+  assert.ok(!text.includes(longTitle));
+  assert.ok(text.includes('Trabalho de Conclusão de Curso'));
+  assert.equal(standardEvaluationOpinion(process,{code:'NAO_PREVISTO',label:'Resultado desconhecido'}),'');
 });
 
 test('avaliação aceita resultado e parecer sem nota numérica e preserva a conferência', () => {

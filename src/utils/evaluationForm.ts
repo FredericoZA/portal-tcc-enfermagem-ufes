@@ -21,19 +21,33 @@ export function evaluationOutcomeLabel(option:EvaluationOutcomeOption):string {
   return option.label.replace(/\s*\([^)]*\)/g,'').trim();
 }
 /**
- * Texto-base determinístico: não avalia mérito, não consulta modelos de IA e
- * não inventa observações sobre a defesa. O orientador complementa o que a
- * banca efetivamente deliberou antes de confirmar a ata.
+ * Três modelos determinísticos, um por resultado. Somente o título cadastrado
+ * identifica o trabalho; a fundamentação acadêmica precisa vir da banca.
+ * Não há modelo de linguagem, envio externo, avaliação ou seleção aleatória.
  */
-export function standardEvaluationOpinion(_process:Pick<ProcessData,'titulo'|'protocolo'|'aluno1'|'aluno2'>, outcome?:EvaluationOutcomeOption):string {
+export function standardEvaluationOpinion(
+  process: Pick<ProcessData,'titulo'|'protocolo'|'aluno1'|'aluno2'>,
+  outcome?: EvaluationOutcomeOption
+): string {
   if (!outcome) return '';
-  const result=evaluationOutcomeLabel(outcome);
-  const common=`Após a defesa do Trabalho de Conclusão de Curso, a banca examinadora registrou o resultado "${result}".`;
-  if (result === 'Reprovado')
-    return `${common} Fundamentação da decisão: [Completar com os fundamentos específicos registrados pela banca durante a defesa].`;
-  if (result === 'Aprovado com ressalva')
-    return `${common} Fundamentação e ressalvas: [Completar com as observações efetivamente apresentadas pela banca]. Correções e encaminhamentos: [Completar com as providências definidas na sessão].`;
-  return `${common} Fundamentação da decisão: [Completar com os fundamentos efetivamente apresentados pela banca durante a defesa].`;
+  const result = evaluationOutcomeLabel(outcome);
+  if (!['Aprovado','Aprovado com ressalva','Reprovado'].includes(result)) return '';
+  // Não duplicar matrículas, e-mails nem nomes no parecer: já estão na ata.
+  // Títulos excessivamente longos são omitidos, nunca truncados.
+  const title = String(process.titulo || '').normalize('NFKC').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim();
+  const subject = title && title.length <= 300
+    ? ` do Trabalho de Conclusão de Curso intitulado “${title}”`
+    : ' do Trabalho de Conclusão de Curso';
+  const introduction = `Após a defesa${subject}, a banca examinadora registrou o resultado “${result}”.`;
+
+  switch (result) {
+    case 'Aprovado com ressalva':
+      return `${introduction} Fundamentação e ressalvas: [Completar com os fundamentos e as ressalvas efetivamente deliberados pela banca]. Correções e encaminhamentos: [Completar com as providências efetivamente definidas na sessão].`;
+    case 'Reprovado':
+      return `${introduction} Fundamentação da decisão: [Completar com os motivos específicos efetivamente deliberados pela banca durante a defesa].`;
+    default:
+      return `${introduction} Fundamentação da decisão: [Completar com os fundamentos efetivamente deliberados pela banca durante a defesa].`;
+  }
 }
 const aliases: Record<string, string> = { CAMPO_09: 'RESULTADO', CAMPO_11: 'PARECER' };
 const LEGACY_GRADE_KEYS = new Set(['CAMPO_10', 'NOTA', 'NOTA_FINAL', 'AVALIACAO_NOTA', 'AVALIACAO_GRADE', 'EVALUATION_GRADE']);
@@ -91,7 +105,7 @@ export function acceptEvaluationAnswers(
   const outcome = outcomes.find(o => o.code === input.resultadoCode);
   if (!outcome) throw new Error('Selecione um resultado válido.');
   if (typeof input.parecer !== 'string' || !input.parecer.trim() || input.parecer.length > 10000) throw new Error('Preencha o parecer da banca com até 10.000 caracteres.');
-  if(input.parecer.includes('[Completar com '))throw new Error('Complete a fundamentação e os encaminhamentos do texto-padrão antes de enviar o parecer.');
+  if(/\[\s*(?:completar|preencher|inserir)\b[^\]]{0,300}\]/i.test(input.parecer))throw new Error('Complete a fundamentação e os encaminhamentos do texto-padrão antes de enviar o parecer.');
   const extra = input.answers && typeof input.answers === 'object' && !Array.isArray(input.answers) ? input.answers as Record<string, unknown> : {};
   const variables: Record<string, unknown> = { ...extra, RESULTADO: outcome.code, PARECER: input.parecer.trim() };
   for (const key of LEGACY_GRADE_KEYS) delete variables[key];
