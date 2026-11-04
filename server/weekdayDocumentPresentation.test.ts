@@ -32,8 +32,8 @@ test('convite para banca exibe dia da semana e mantém os demais campos',()=>{
 
 test('as variáveis de documentos incluem dia da semana nos formatos numérico e extenso',()=>{
   const date='2026-12-07T15:30:00-03:00';
-  const short = formatVariable(date,{source:'DEFESA_DATA_HORA',format:'datetime_short',letterCase:'normal'} as Parameters<typeof formatVariable>[1]);
-  const long = formatVariable(date,{source:'DEFESA_DATA_HORA',format:'datetime_long',letterCase:'normal'} as Parameters<typeof formatVariable>[1]);
+  const short = formatVariable(date,{source:'DEFESA_DATA_HORA',format:'datetime_short',letterCase:'normal',marker:'DATA',bold:false} as Parameters<typeof formatVariable>[1]);
+  const long = formatVariable(date,{source:'DEFESA_DATA_HORA',format:'datetime_long',letterCase:'normal',marker:'DATA',bold:false} as Parameters<typeof formatVariable>[1]);
   assert.match(short,/07\/12\/2026 \(segunda-feira\) às 15:30/);
   assert.match(long,/sete de dezembro de dois mil e vinte e seis \(segunda-feira\)/);
   assert.match(formatDateExtensoTotal(date),/segunda-feira/);
@@ -41,7 +41,7 @@ test('as variáveis de documentos incluem dia da semana nos formatos numérico e
 
 test('o fuso do documento define o dia da semana mesmo quando cruza a meia-noite',()=>{
   const iso='2026-12-07T03:30:00.000Z';
-  const requested={source:'DEFESA_DATA_HORA',format:'datetime_short',letterCase:'normal'} as Parameters<typeof formatVariable>[1];
+  const requested={source:'DEFESA_DATA_HORA',format:'datetime_short',letterCase:'normal',marker:'DATA',bold:false} as Parameters<typeof formatVariable>[1];
   assert.match(formatVariable(iso,requested,'America/Manaus'),/06\/12\/2026 \(domingo\) às 23:30/);
   assert.match(formatVariable(iso,requested,'America/Sao_Paulo'),/07\/12\/2026 \(segunda-feira\) às 00:30/);
 });
