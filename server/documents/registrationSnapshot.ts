@@ -9,7 +9,7 @@ import {formatDatePt,formatTime24h} from '../../src/utils/formatters';
 import {registrationQuestions} from '../../src/utils/operationalConfig';
 
 const fontBytes=Promise.all(['Regular','Bold'].map(weight=>readFile(path.join(process.cwd(),'server/documents/fonts',`NotoSans-${weight}.ttf`))));
-const logoBytes=readFile(path.join(process.cwd(),'server/documents/assets/colenf-logo.png'));
+const logoBytes=readFile(path.join(process.cwd(),'server/documents/assets/ufes-crest.png'));
 interface Field {label:string;value:string;wide?:boolean}
 interface Section {title:string;fields:Field[]}
 
@@ -77,7 +77,7 @@ async function renderBrandedRecordPdf(input:{title:string;protocol:string;revisi
  const text=(value:string,x:number,top:number,size=9,font=normal,color=ink)=>page.drawText(value,{x,y:top,size,font,color});
  const header=()=>{
   page=doc.addPage([595,842]);page.drawRectangle({x:0,y:730,width:595,height:112,color:green});
-  page.drawImage(logo,{x:277,y:791,width:40,height:40});
+  page.drawCircle({x:297,y:811,size:21,color:rgb(1,1,1)});page.drawImage(logo,{x:277,y:791,width:40,height:40});
   let top=775;
   for(const [value,size,font]of [[institution,11,bold],[course,9,normal]] as const)for(const row of wrap(value,font,size,width)){
    text(row,(595-font.widthOfTextAtSize(row,size))/2,top,size,font,rgb(1,1,1));top-=15;

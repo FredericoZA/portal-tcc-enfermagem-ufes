@@ -171,7 +171,8 @@ for page_number,page in enumerate(pages,1):
  c.addOutlineEntry(page['title'].replace('\n',' '),f'page-{page_number}',level=0)
  if page.get('kind')=='cover':
   c.setFillColor(GREEN);c.rect(0,H-262,W,262,fill=1,stroke=0)
-  c.drawImage(str(ROOT/'public/colenf-logo.png'),M,H-102,65,65,mask='auto')
+  c.setFillColor(colors.white);c.circle(M+32.5,H-69.5,34,fill=1,stroke=0)
+  c.drawImage(str(ROOT/'public/ufes-crest.png'),M,H-102,65,65,mask='auto')
   c.setFillColor(colors.white);c.setFont('PortalBold',11);c.drawString(M+82,H-59,'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO')
   c.setFont('Portal',10.5);c.drawString(M+82,H-79,'Enfermagem e Obstetrícia • CCS')
   c.setFont('PortalBold',31);c.drawString(M,H-155,'Guia prático do');c.drawString(M,H-193,'Portal de TCC')

@@ -34,7 +34,7 @@ export function processEmailMessage(input:{process:ProcessData;recipient:string;
   if(response){
    subject=`[${p.protocolo}] ${confirmed?'Reserva confirmada':'Agendamento recusado'}`;
    const registered=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(response.respondedAt));
-   text=['Prezados departamento, autores e orientador,',confirmed?'O departamento confirmou a reserva para a defesa do TCC.':'O responsável recusou o agendamento solicitado.',[confirmed?`Resultado: reserva confirmada.\nLocal: ${response.local||p.defesa.local}`:`Resultado: reserva recusada.\nLocal solicitado: ${p.defesa.local}`,`Data: ${formatDateNumeric(response.startAt)}\nHorário: ${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt||defenseEndAt(response.startAt))}`,`Resposta registrada em ${registered}.`].join('\n'),...(confirmed?[processEmailGuidance(p,input.baseUrl,'LOCATION_CONFIRMED','email-confirmacao',input.recipient)]:['ORIENTAÇÕES DO PROCESSO','Autores: ajustem o agendamento no Portal para solicitar uma nova reserva.'])].join('\n\n');
+   text=['Prezados departamento, autores e orientador,',confirmed?'O departamento confirmou a reserva para a defesa do TCC.':'O responsável recusou o agendamento solicitado.',[confirmed?`Resultado: reserva confirmada.\nLocal: ${response.local||p.defesa.local}`:`Resultado: reserva recusada.\nLocal solicitado: ${p.defesa.local}`,`Data: ${formatDateNumeric(response.startAt)}\nHorário: ${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt||defenseEndAt(response.startAt))}`,`Resposta registrada em ${registered}.`].join('\n'),...(confirmed?[processEmailGuidance(p,input.baseUrl,'LOCATION_CONFIRMED','email-confirmacao',input.recipient)]:['ORIENTAÇÕES DO PROCESSO','Autores: abram Dados do processo e cliquem em Solicitar nova data. Combinem a disponibilidade do local com o responsável antes de reenviar, para evitar retrabalho.'])].join('\n\n');
   }
  }else{
   text=text.split('ORIENTAÇÕES DO PROCESSO')[0].replace(/\n[ \t]*(Local alternativo:)/gi,'\n\n$1').trim()+'\n\n'+processEmailGuidance(p,input.baseUrl,input.eventCode||'',input.templateId||'',input.recipient);
@@ -53,8 +53,9 @@ export function processEmailMessage(input:{process:ProcessData;recipient:string;
  if(input.templateId==='email-entrega-repositorio')subject=`[Portal TCC] Ata assinada — entrega final dos documentos no Repositório acadêmico · ${p.protocolo}`;
  text=withoutGenericProcessFooter(input.templateId==='email-comprovante-reserva'?text:applyProcessEmailGreeting(text,input.templateId,input.eventCode,Boolean(input.departmentUrl)));
  if(input.advisorApproval&&['email-reserva','email-comprovante-reserva'].includes(input.templateId||''))text=text.replace('Prezado Departamento,','Prezado orientador,').replace(/departamento/gi,'orientador');
- const actions=input.templateId==='email-reserva'&&input.departmentUrl?[{href:href+'?decision=accept',label:'Aceitar reserva'},{href:href+'?decision=decline',label:'Recusar reserva'}]:undefined;
+ const actions=input.templateId==='email-reserva'&&input.departmentUrl?[{href:href+'?decision=accept',label:'Aceitar reserva'},{href:href+'?decision=decline',label:'Recusar reserva'}]:input.templateId==='email-comprovante-reserva'&&p.defesa.departmentResponse?.decision==='UNAVAILABLE'?[{href,label},{href:processLink(input.baseUrl,p.id,'cadastral'),label:'Solicitar nova data'}]:undefined;
  const message=operationalEmailLayout({text,subject,href,label,studio:input.studio,templateId:variant,actions});
- if(actions)message.text=message.text.replace(`${label}: ${href}`,actions.map(action=>`${action.label}: ${action.href}`).join('\n'));
+ if(actions&&input.templateId==='email-reserva')message.text=message.text.replace(`${label}: ${href}`,actions.map(action=>`${action.label}: ${action.href}`).join('\n'));
+ if(actions&&input.templateId==='email-comprovante-reserva')message.text+='\n\nSolicitar nova data: '+processLink(input.baseUrl,p.id,'cadastral');
  return {subject,...message};
 }

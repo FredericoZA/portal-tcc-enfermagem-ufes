@@ -10,7 +10,7 @@ import {authorNames} from '../../src/utils/personPresentation';
 import {formatTccTitle,formatDatePt,formatTime24h} from '../../src/utils/formatters';
 
 const fontBytes=Promise.all(['Regular','Bold'].map(weight=>readFile(path.join(process.cwd(),'server/documents/fonts',`NotoSans-${weight}.ttf`))));
-const logoBytes=readFile(path.join(process.cwd(),'server/documents/assets/colenf-logo.png'));
+const logoBytes=readFile(path.join(process.cwd(),'server/documents/assets/ufes-crest.png'));
 const ink=rgb(.13,.23,.19),muted=rgb(.35,.42,.39),line=rgb(.82,.87,.84),paper=rgb(.96,.98,.97);
 export async function createReservationReceiptPdf(process:ProcessData,settings:GlobalSettings,options:{publicView?:boolean}={}):Promise<Buffer>{
  // Older confirmations predate the department micro-form; retain their recorded facts.
@@ -48,7 +48,7 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  const draw=(text:string,x:number,top:number,size=10,font=regular,color=ink)=>page.drawText(text,{x,y:top,size,font,color});
  const newPage=()=>{
   page=doc.addPage([595,842]);page.drawRectangle({x:0,y:705,width:595,height:137,color:green});
-  const logoSize=48;page.drawImage(logo,{x:(595-logoSize)/2,y:781,width:logoSize,height:logoSize});
+  const logoSize=48;page.drawCircle({x:595/2,y:805,size:25,color:rgb(1,1,1)});page.drawImage(logo,{x:(595-logoSize)/2,y:781,width:logoSize,height:logoSize});
   let top=764;
   for(const [text,size,font] of [[institution,12,bold],[course,10,regular],[profile.departmentName,9,regular]] as const){for(const row of wrap(text,font,size,width)){draw(row,(595-font.widthOfTextAtSize(row,size))/2,top,size,font,rgb(1,1,1));top-=17;}}
   y=675;
@@ -63,11 +63,15 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  page.drawCircle({x:iconX,y:iconY,size:13,color:confirmed?green:rgb(.63,.43,.08)});
  if(confirmed){page.drawLine({start:{x:iconX-6,y:iconY},end:{x:iconX-1,y:iconY-5},thickness:2,color:rgb(1,1,1)});page.drawLine({start:{x:iconX-1,y:iconY-5},end:{x:iconX+7,y:iconY+5},thickness:2,color:rgb(1,1,1)});}
  else{page.drawLine({start:{x:iconX,y:iconY+6},end:{x:iconX,y:iconY-1},thickness:2,color:rgb(1,1,1)});page.drawCircle({x:iconX,y:iconY-6,size:1.2,color:rgb(1,1,1)});}
- draw(confirmed?'RESERVA CONFIRMADA':'LOCAIS INDISPONÍVEIS',margin+47,y-8,12,bold,green);
+ draw(confirmed?'RESERVA CONFIRMADA':'RESERVA RECUSADA',margin+47,y-8,12,bold,green);
  const responsible=isManagedDefenseLocation(process.defesa.local)?'O Departamento de Enfermagem':'O orientador';
  const statement=confirmed?`${responsible} confirmou o agendamento da defesa de TCC no local, na data e no horário registrados neste comprovante.`:`${responsible} recusou o agendamento solicitado. Os autores poderão solicitar um novo agendamento pelo Portal.`;
  wrap(statement,regular,9,width-68).forEach((row,i)=>draw(row,margin+47,y-29-i*14,9,regular,ink));y-=80;
- section('Identificação do trabalho');field('Título do TCC',title);field('Autores',authors);
+ section('Identificação do trabalho');paragraph(`Título do TCC: ${title}`,9);
+ const savedAuthors=(response.receiptBody||'').split('\n').filter(row=>row.startsWith('Autor:')).map(row=>row.slice(6).trim()).filter(Boolean);
+ const currentAuthors=officialParticipantLines(process).filter(person=>person.key.startsWith('ALUNO_')).map(person=>person.name);
+ const authorRows=savedAuthors.length?savedAuthors:(!snapshot.get('Autoria')||authors===authorNames(process)?currentAuthors:[authors]);
+ for(const name of authorRows)paragraph(`Autor: ${name}`,9);
  for(const participant of officialParticipantLines(process).filter(person=>!person.key.startsWith('ALUNO_')))paragraph(`${participant.role}: ${participant.name}`,9);
  section('Dados da defesa');
  const date=formatDatePt(response.startAt),time=`${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt)}`;
@@ -76,7 +80,7 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  dateRows.forEach((row,i)=>draw(row,margin+12,y-20-i*16,11,bold));draw(time,310,y-20,11,bold);draw('Duração: 1 hora e 30 minutos',310,y-37,8,regular,muted);y-=height;
  field(confirmed?'Local autorizado':'Local solicitado',confirmed?(response.local||snapshot.get('Local')||process.defesa.local):process.defesa.local);
  section('Registro da resposta');
- if(!options.publicView)field('Resposta registrada por',response.respondedBy);
+ if(!options.publicView||('departmentEmail' in response&&response.departmentEmail===response.respondedBy))field('attribution' in response&&response.attribution==='EMAIL_LINK'?'Resposta registrada pelo link enviado a':'Resposta registrada por',response.respondedBy);
  const registered=new Intl.DateTimeFormat('pt-BR',{timeZone:settings.timezone||'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(response.respondedAt));
  field('Data e hora do registro',registered);
  const pages=doc.getPages();for(let i=0;i<pages.length;i++){page=pages[i];page.drawLine({start:{x:margin,y:60},end:{x:549,y:60},thickness:.7,color:line});draw('Registro eletrônico do Portal TCC',margin,44,8,regular,muted);const number=`${i+1} / ${pages.length}`;draw(number,549-regular.widthOfTextAtSize(number,8),44,8,regular,muted);}

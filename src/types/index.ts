@@ -120,7 +120,9 @@ export interface ExaminerInfo {
 }
 
 export interface DefesaInfo {
-  departmentResponse?: {receiptBody?:string;revision:number;decision:'CONFIRMED'|'UNAVAILABLE';respondedAt:string;respondedBy:string;local?:string;startAt:string;endAt:string};
+  departmentResponse?: {departmentEmail?:string;attribution?:'EMAIL_LINK';receiptBody?:string;revision:number;decision:'CONFIRMED'|'UNAVAILABLE';respondedAt:string;respondedBy:string;local?:string;startAt:string;endAt:string};
+  /** Address fixed when the current reservation request is sent. */
+  reservationRequestRecipient?: string;
   reservationRevision?: number;
   reservationHistory?: Array<{invitationDriveFileId?:string;invitationSentAt?:string;invitationRecipients?:string[];startAt:string;endAt:string;local:string;alternateLocation?:string;locationProof?:import('./workflowOperations').LocationProof;departmentResponse?:DefesaInfo['departmentResponse'];localStatus?:DefesaInfo['localStatus'];localConfirmedAt?:string;localConfirmedBy?:string;localEvidenceUrl?:string;invalidatedAt:string;invalidatedBy:string}>;
   locationProof?: import('./workflowOperations').LocationProof;

@@ -1,3 +1,4 @@
+import {institutionalDocumentLogo} from './src/utils/institutionalDocumentLogo';
 import {calendarEventMatchesProcess, isDefenseReservationDeclined} from './src/utils/defenseReservationState';
 import {stripDocumentScanningBlocks,delimitedTextParts,stripInlineMarkup} from './src/utils/legacyTextProcessing';
 import {isEmailAddress} from './src/utils/emailAddress';
@@ -761,7 +762,7 @@ async function renderOfficialTemplatePdf(p:ProcessData,type:'CONVITE'|'ATA'|'TER
   const accessToken=await getGoogleWorkspaceAccessToken();const outputName=buildPortalDriveFileName({protocol:p.protocolo,title:p.titulo,studentNames:[p.aluno1.nome,p.aluno2?.nome].filter(Boolean) as string[],documentType:type,version:p.dataRevision,lifecycle:'GERADO'});
   await verifyMasterDocumentModelFingerprint({accessToken,fileId:model.driveFileId,contentSha256:model.contentSha256,driveRevisionId:model.driveRevisionId,driveModifiedTime:model.driveModifiedTime});
   const artifactId=String(studioOverride?.docTemplates.find(item=>String(item.type).toUpperCase()===type)?.id||`tmpl-${type.toLowerCase()}`);
-  const rendered=await renderGoogleDriveTemplateToPdf({presentation:{process:p,documentType:type},accessToken,templateUrlOrId:model.driveFileId,documentText:type==='ATA'?(extraVariables?.ATA_TEXTO_INTEGRAL!==undefined?String(extraVariables.ATA_TEXTO_INTEGRAL):p.avaliacao?.documentText):undefined,legacyDefenseLocations:{selected:p.defesa.local,alternatives:[...operationalConfig(studioOverride).reservation.locations,resolveInstallationProfile(currentSettings).defaultDefenseLocation]},replacements:presentVariables(buildOfficialTemplateReplacements(p,verificationCode,extraVariables,type),artifactId,studioOverride),boldMarkers:(operationalConfig(studioOverride).presentations[artifactId]||[]).filter(rule=>rule.bold).map(rule=>rule.marker),temporaryParentId:await ensurePortalRenderFolder(accessToken,currentSettings.driveRootFolderId||''),outputName,...(type==='CONVITE'?{literalReplacements:invitationTemplateCorrections(p),invitationLayout:true}:{})});
+  const rendered=await renderGoogleDriveTemplateToPdf({institutionalCrestUrl:publicPortalBaseUrl()?new URL(institutionalDocumentLogo(studioOverride),publicPortalBaseUrl()).href:undefined,presentation:{process:p,documentType:type},accessToken,templateUrlOrId:model.driveFileId,documentText:type==='ATA'?(extraVariables?.ATA_TEXTO_INTEGRAL!==undefined?String(extraVariables.ATA_TEXTO_INTEGRAL):p.avaliacao?.documentText):undefined,legacyDefenseLocations:{selected:p.defesa.local,alternatives:[...operationalConfig(studioOverride).reservation.locations,resolveInstallationProfile(currentSettings).defaultDefenseLocation]},replacements:presentVariables(buildOfficialTemplateReplacements(p,verificationCode,extraVariables,type),artifactId,studioOverride),boldMarkers:(operationalConfig(studioOverride).presentations[artifactId]||[]).filter(rule=>rule.bold).map(rule=>rule.marker),temporaryParentId:await ensurePortalRenderFolder(accessToken,currentSettings.driveRootFolderId||''),outputName,...(type==='CONVITE'?{literalReplacements:invitationTemplateCorrections(p),invitationLayout:true}:{})});
   await verifyMasterDocumentModelFingerprint({accessToken,fileId:model.driveFileId,contentSha256:model.contentSha256,driveRevisionId:model.driveRevisionId,driveModifiedTime:model.driveModifiedTime});
   if(rendered.documentText)onDocumentText?.(rendered.documentText);
   if(rendered.replacementsChanged<1)throw new Error(`O modelo ${type} não contém nenhum marcador reconhecido. Revise as variáveis antes de solicitar assinatura.`);
@@ -807,6 +808,7 @@ async function retryExistingFormArchiveJob(job:FormArchiveJob,process:ProcessDat
 async function resumeWorkflowAfterNativeFormArchive(process:ProcessData,formType:ProcessFormArchiveType,actorEmail:string,resumeRun?:WorkflowRun):Promise<void>{
   if(formType==='CADASTRO_INICIAL'){await executeConfiguredWorkflowEvent(process,'TCC_CREATED',actorEmail,undefined,resumeRun);return;}
   if(formType==='CONFIRMACAO_LOCAL'){
+    if(process.defesa.departmentResponse?.decision==='UNAVAILABLE')return;
     const run=await executeConfiguredWorkflowEvent(process,'LOCATION_CONFIRMED',actorEmail,undefined,resumeRun);
     if(run?.status==='COMPLETED'&&process.defesa.invitationDriveFileId){
       const deliveryIds=run.actions.filter(action=>action.kind==='EMAIL'&&action.status==='COMPLETED').flatMap(action=>String(action.externalId||'').split(',').filter(Boolean));
@@ -862,6 +864,7 @@ const emailDeliveryJournal={
 };
 function reservationSecret(){return String(process.env.PORTAL_SESSION_SECRET||(productionRuntime?'':'portal-development-reservation-secret-2026'));}
 function departmentReservationUrl(process:ProcessData,recipient:string){
+ if(!process.defesa.reservationRequestRecipient&&!process.defesa.departmentResponse)process.defesa.reservationRequestRecipient=normalizeEmail(recipient);
  const token=reservationToken({processId:process.id,revision:process.defesa.reservationRevision||0,recipient:normalizeEmail(recipient),expiresAt:Date.now()+14*86400000},reservationSecret());
  return `${publicPortalBaseUrl()}/api/reservation-confirmation/${token}`;
 }
@@ -869,9 +872,10 @@ function emailStudioWithPublicImages(){
  const studio=structuredClone(currentSettings.integrationStudio);
  if(!studio)return studio;
  const asset=(value:string)=>/^data:image\/(png|jpeg|webp);base64,/.test(value||'')?`${publicPortalBaseUrl()}/api/public/runtime-assets/${createHash('sha256').update(value).digest('hex')}`:value?.startsWith('/')&&!value.startsWith('//')?new URL(value,publicPortalBaseUrl()).href:value;
- studio.brandKit.courseLogoUrl=studio.brandKit.courseLogoUrl||studio.brandKit.universityLogoUrl||'/colenf-logo.png';
+ const logo=asset(institutionalDocumentLogo(studio));
+ studio.brandKit.courseLogoUrl=logo;studio.brandKit.universityLogoUrl=logo;
  for(const key of ['courseLogoUrl','universityLogoUrl','emailBannerUrl'] as const)studio.brandKit[key]=asset(studio.brandKit[key]);
- for(const design of Object.values(studio.emailDesigns||{})){design.logoUrl=asset(design.logoUrl);design.heroImageUrl=asset(design.heroImageUrl);}
+ for(const design of Object.values(studio.emailDesigns||{})){design.logoUrl=logo;design.heroImageUrl=asset(design.heroImageUrl);}
  return studio;
 }
 async function sendTrackedPortalEmail(input:{process?:ProcessData;recipient:string;cc?:string[];subject:string;text:string;html?:string;templateId?:string;workflowEventCode?:WorkflowEventCode;workflowEventVariables?:Record<string,string>;idempotencyKey:string;attachments?:Array<{fileName:string;mimeType:string;content:Buffer}>}){
@@ -973,7 +977,7 @@ function configuredRoomReservationDepartmentEmail(studio:any=currentSettings.int
   return reservationDepartmentEmail(template?.recipient,currentSettings.emailConfig?.roomReservationDepartmentEmail);
 }
 function reservationApproverEmail(process:ProcessData,studio:any=currentSettings.integrationStudio):string{
- return isManagedDefenseLocation(process.defesa.local,operationalConfig(studio).reservation.locations)?configuredRoomReservationDepartmentEmail(studio):normalizeEmail(process.orientador.email);
+ return normalizeEmail(process.defesa.reservationRequestRecipient||process.defesa.departmentResponse?.respondedBy||'')||(isManagedDefenseLocation(process.defesa.local,operationalConfig(studio).reservation.locations)?configuredRoomReservationDepartmentEmail(studio):normalizeEmail(process.orientador.email));
 }
 function nativeReservationWorkflowStudio(){
   return {
@@ -2821,7 +2825,10 @@ export async function createPortalApp() {
   const reservationContext=(token:string)=>{
     const claim=readReservationToken(token,reservationSecret());
     const process=claim?processesStore.find(p=>p.id===claim.processId):undefined;
-    if(!claim||!process||claim.revision!==(process.defesa.reservationRevision||0)||claim.recipient!==reservationApproverEmail(process))return null;
+    if(!claim||!process||claim.revision!==(process.defesa.reservationRevision||0))return null;
+    // Previously sent messages retain their original authority after a settings change.
+    const issued=emailDeliveriesStore.some(record=>record.processId===process.id&&record.templateId==='email-reserva'&&normalizeEmail(record.recipient)===claim.recipient&&Number(record.workflowEventVariables?.RESERVATION_REVISION||0)===claim.revision&&record.renderedHtml?.includes('/api/reservation-confirmation/'+token));
+    if(claim.recipient!==reservationApproverEmail(process)&&!issued)return null;
     return {claim,process};
   };
   app.get('/api/reservation-confirmation/:token', (req,res)=>{
@@ -2855,10 +2862,12 @@ export async function createPortalApp() {
     const available=local!=='__UNAVAILABLE__';
     if(available&&findDefenseConflicts({startAt:p.defesa.startAt,endAt:p.defesa.endAt,local,emails:participantEmails(p),excludeProcessId:p.id}).length)return res.status(409).type('html').send(reservationPage('Conflito de agendamento','Este local ou um participante já está reservado nesse intervalo. Volte e selecione outro local, ou informe a indisponibilidade.'));
     const before=structuredClone(p);
+    p.defesa.reservationRequestRecipient=claim.recipient;
     const now=new Date().toISOString();
-    p.defesa.departmentResponse={revision:claim.revision,decision:available?'CONFIRMED':'UNAVAILABLE',respondedAt:now,respondedBy:claim.recipient,local:available?local:undefined,startAt:p.defesa.startAt,endAt:defenseEndAt(p.defesa.startAt)};
+    p.defesa.departmentResponse={departmentEmail:isManagedDefenseLocation(p.defesa.local,operationalConfig(currentSettings.integrationStudio).reservation.locations)?claim.recipient:undefined,attribution:'EMAIL_LINK',revision:claim.revision,decision:available?'CONFIRMED':'UNAVAILABLE',respondedAt:now,respondedBy:claim.recipient,local:available?local:undefined,startAt:p.defesa.startAt,endAt:defenseEndAt(p.defesa.startAt)};
     if(available){p.defesa.local=local;p.defesa.localStatus='CONFIRMADO';p.defesa.localConfirmedAt=now;p.defesa.localConfirmedBy=claim.recipient;p.defesa.localEvidenceUrl=`/api/processes/${p.id}/location-proof/download`;}
-    p.defesa.departmentResponse.receiptBody=[`Protocolo: ${p.protocolo}`,`Título: ${p.titulo}`,`Autoria: ${authorNames(p)}`,`Resposta: ${available?'Reserva confirmada':'Locais indisponíveis'}`,`Local: ${available?local:'Nenhum dos locais disponíveis'}`,`Data: ${formatDatePt(p.defesa.startAt)}`,`Horário: ${formatTime24h(p.defesa.startAt)} às ${formatTime24h(defenseEndAt(p.defesa.startAt))}`,`Departamento: ${claim.recipient}`,`Registrado em: ${now}`,`Revisão da solicitação: ${claim.revision}`].join('\n');
+    else p.defesa.localStatus='RECUSADO';
+    p.defesa.departmentResponse.receiptBody=[`Protocolo: ${p.protocolo}`,`Título: ${p.titulo}`,...officialParticipantLines(p).filter(person=>person.key.startsWith('ALUNO_')).map(person=>`Autor: ${person.name}`),`Resposta: ${available?'Reserva confirmada':'Reserva recusada'}`,`Local: ${p.defesa.local}`,`Data: ${formatDatePt(p.defesa.startAt)}`,`Horário: ${formatTime24h(p.defesa.startAt)} às ${formatTime24h(defenseEndAt(p.defesa.startAt))}`,`Resposta registrada pelo link enviado a: ${claim.recipient}`,`Registrado em: ${now}`,`Revisão da solicitação: ${claim.revision}`].join('\n');
     p.dataRevision++;p.updatedAt=now;
     auditLogsStore.push({id:`reservation-${p.id}-${claim.revision}`,processId:p.id,actorEmail:claim.recipient,actorRoles:[],action:available?'CONFIRMACAO_LOCAL_DEPARTAMENTO':'LOCAL_INDISPONIVEL_DEPARTAMENTO',entityType:'processo',entityId:p.id,after:{...p.defesa.departmentResponse},timestamp:now});
     googleCalendarEventsStore=generateGoogleEventsFromProcesses(processesStore);

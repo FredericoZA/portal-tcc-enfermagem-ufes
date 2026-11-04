@@ -3,11 +3,13 @@
  * A comissão de TCC integra o Departamento de Enfermagem; a declaração é
  * assinada individualmente pelo(a) professor(a) orientador(a).
  *
- * Não contém logomarcas, não consulta dados pessoais e não usa serviços externos.
+ * Usa o brasão institucional local; não consulta dados pessoais nem serviços externos.
  */
-export async function createBlankAttendanceDeclarationPdf(): Promise<Uint8Array> {
+export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
   const pdf = await PDFDocument.create();
+  const imageBytes=crestBytes||new Uint8Array(await (async()=>{const response=await fetch('/ufes-crest.png');if(!response.ok)throw new Error('Não foi possível carregar o brasão da UFES.');return response.arrayBuffer();})());
+  const crest=await pdf.embedPng(imageBytes);
   pdf.setTitle('Declaração de comparecimento - Comissão de TCC');
   pdf.setAuthor('Departamento de Enfermagem - Comissão de TCC - CCS/UFES');
   pdf.setSubject('Modelo para preenchimento manual e assinatura do professor orientador');
@@ -64,13 +66,17 @@ export async function createBlankAttendanceDeclarationPdf(): Promise<Uint8Array>
     return rows;
   };
 
-  // Moldura de página e cabeçalho institucional, sem logomarca.
+  // Cabeçalho institucional com o brasão original, sem alterar a arte.
   framed(22, 22, pageWidth - 44, pageHeight - 44);
-  centered('UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO', 790, 11.2);
-  centered('CENTRO DE CIÊNCIAS DA SAÚDE', 773, 9.7, sans, ink);
-  centered('DEPARTAMENTO DE ENFERMAGEM', 757, 9.7, sans, ink);
-  centered('COMISSÃO DE TCC', 741, 9.7, sansBold, green);
-  line(720, 48, pageWidth - 48, 1.2, green);
+  page.drawRectangle({x:23,y:716,width:pageWidth-46,height:103,color:green});
+  page.drawCircle({x:74,y:767,size:31,color:rgb(1,1,1)});
+  page.drawImage(crest,{x:45,y:738,width:58,height:58});
+  const header=(value:string,y:number,size:number,font=sans)=>draw(value,119,y,size,font,rgb(1,1,1));
+  header('UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO',790,10,sansBold);
+  header('CENTRO DE CIÊNCIAS DA SAÚDE',773,9);
+  header('DEPARTAMENTO DE ENFERMAGEM',757,9);
+  header('Curso de Graduação em Enfermagem e Obstetrícia',741,8.7);
+  header('COMISSÃO DE TCC',726,8.7,sansBold);
 
   // Título e campos livres para preenchimento manuscrito.
   framed(70, 640, pageWidth - 140, 56);

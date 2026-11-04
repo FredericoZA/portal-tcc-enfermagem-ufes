@@ -1,3 +1,4 @@
+import {institutionalDocumentLogo} from '../utils/institutionalDocumentLogo';
 import {withOperationalCatalog} from '../utils/studioOperationalCatalog';
 import {applyProcessEmailGreeting} from '../utils/processEmailGreeting';
 import {withoutGenericProcessFooter} from '../utils/processEmailMessage';
@@ -1360,7 +1361,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                     </div>
                   </div>
                   <label className="lg:col-span-2"><span className={labelClass}>Nome da rotina</span><input value={selectedEmail.name} onChange={event=>updateSelectedEmail({name:event.target.value})} className={inputClass}/></label>
-                  <label><span className={labelClass}>Destinatário</span><TemplateVariableControl value={selectedEmail.recipient||''} onChange={value=>updateSelectedEmail({recipient:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Destinatário"/></label>
+                  <label><span className={labelClass}>{selectedEmail.id==='email-reserva'?'E-mail do departamento para reservas':'Destinatário'}</span><TemplateVariableControl value={selectedEmail.recipient||''} onChange={value=>updateSelectedEmail({recipient:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Destinatário"/></label>
+                  {selectedEmail.id==='email-reserva'&&<p className="col-span-full text-xs text-slate-600">Altere o destinatário neste campo para os próximos pedidos. Solicitações já enviadas mantêm o endereço original até a resposta ou um novo agendamento.</p>}
                   <label><span className={labelClass}>Responder para</span><TemplateVariableControl value={selectedEmail.replyTo||''} onChange={value=>updateSelectedEmail({replyTo:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Responder para"/></label>
                   <label><span className={labelClass}>CC</span><TemplateVariableControl value={selectedEmail.cc||''} onChange={value=>updateSelectedEmail({cc:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="CC"/></label>
                   <label><span className={labelClass}>CCO</span><TemplateVariableControl value={selectedEmail.bcc||''} onChange={value=>updateSelectedEmail({bcc:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="CCO"/></label>
@@ -1376,8 +1378,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
                 <div className="flex items-center gap-3 border-b-[5px] border-white bg-[var(--portal-brand-header)] px-4 py-3">
                   <label className="group relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white p-1" title="Alterar logo do e-mail">
-                    {(selectedEmailDesign.logoUrl||brandKit.courseLogoUrl)
-                      ? <img src={selectedEmailDesign.logoUrl||brandKit.courseLogoUrl} alt="Logo" className="h-full w-full object-contain"/>
+                    {institutionalDocumentLogo({brandKit,emailDesigns},selectedEmail.id)
+                      ? <img src={institutionalDocumentLogo({brandKit,emailDesigns},selectedEmail.id)} alt="Logo" className="h-full w-full object-contain"/>
                       : <Image className="h-5 w-5 text-slate-500"/>}
                     <span className="absolute inset-0 hidden items-center justify-center bg-black/45 text-white group-hover:flex"><Pencil className="h-3.5 w-3.5"/></span>
                     <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event=>{void uploadTemplateImage(event.target.files?.[0],'email','logoUrl');event.target.value='';}}/>

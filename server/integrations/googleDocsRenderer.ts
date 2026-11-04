@@ -1,3 +1,4 @@
+import {institutionalLogoRequests} from './institutionalLogo';
 import {ataPageLayoutRequests,numberAtaLines} from '../documents/ataLayout';
 import {documentMainBody,bodyEditRequests} from './googleDocsBody';
 import {presentationEditRequests,individualAuthorSignatureRequests,individualAuthorSignatureStyleRequests,optionalAuthorBlockRequests,authorizationSignatureLayoutRequests,declarationDateLayoutRequests,ataStudentSignatureLayoutRequests,authorizationOptionsLayoutRequests,ataCoadvisorBlockRequests,coadvisorIdentificationRequests} from './documentPresentation';
@@ -33,6 +34,7 @@ interface GoogleDocumentReadback {
 
 export interface GoogleTemplateRenderInput {
   accessToken: string;
+  institutionalCrestUrl?:string;
   presentation?:{process:ProcessData;documentType:string};
   templateUrlOrId: string;
   replacements: Record<string, string | number | boolean | null | undefined>;
@@ -305,6 +307,11 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
       'Falha ao validar a cópia do modelo'
     );
     const readback = await readbackResponse.json() as GoogleDocumentReadback;
+    if(String(readback.documentId||'')!==temporaryFileId)throw new Error('O Google Docs devolveu um documento diferente da cópia temporária.');
+    const logoRequests=institutionalLogoRequests(readback,input.institutionalCrestUrl);
+    if(logoRequests.length)await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:logoRequests,...(readback.revisionId?{writeControl:{requiredRevisionId:readback.revisionId}}:{})})},'Falha ao aplicar o brasão institucional');
+    // The logo batch advances the revision; read it back before writing text.
+    if(logoRequests.length){const fresh=await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}?includeTabsContent=true`,{},'Falha ao conferir o brasão institucional');Object.assign(readback,await fresh.json());}
     if (String(readback.documentId || '') !== temporaryFileId) throw new Error('O Google Docs devolveu um documento diferente da cópia temporária.');
     const tabIds = collectTabIds(readback.tabs);
     const invitationLiteralRequests=(input.literalReplacements||[]).filter(item=>item.find).map(item=>({replaceAllText:{containsText:{text:item.find,matchCase:true},replaceText:item.replace,...(tabIds.length?{tabsCriteria:{tabIds}}:{})}}));

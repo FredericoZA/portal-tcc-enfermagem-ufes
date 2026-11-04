@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs';
 import { PDFDict, PDFDocument, PDFName } from 'pdf-lib';
 import { createBlankAttendanceDeclarationPdf } from '../src/utils/blankAttendanceDeclaration';
 
-test('declaração aprovada gera PDF A4 íntegro, sem imagem e com Comissão de TCC', async () => {
-  const bytes = await createBlankAttendanceDeclarationPdf();
+test('declaração aprovada gera PDF A4 íntegro, com brasão da UFES e Comissão de TCC', async () => {
+  const bytes = await createBlankAttendanceDeclarationPdf(new Uint8Array(readFileSync('public/ufes-crest.png')));
   assert.ok(bytes.byteLength > 1_000, 'o PDF deve conter a declaração completa');
   const pdf = await PDFDocument.load(bytes);
   assert.equal(pdf.getPageCount(), 1);
@@ -18,7 +18,7 @@ test('declaração aprovada gera PDF A4 íntegro, sem imagem e com Comissão de 
   assert.ok(Math.abs(height - 841.89) < 1);
   assert.equal(pdf.getForm().getFields().length, 0);
   const imageResources = page.node.Resources()?.lookup(PDFName.of('XObject'));
-  assert.ok(!imageResources || (imageResources instanceof PDFDict && imageResources.keys().length === 0), 'modelo não deve conter imagens');
+  assert.ok(imageResources instanceof PDFDict && imageResources.keys().length>0, 'modelo deve conter o brasão institucional');
 });
 
 test('modelo contém estrutura institucional aprovada e assinatura do orientador', () => {
@@ -32,7 +32,7 @@ test('modelo contém estrutura institucional aprovada e assinatura do orientador
     'Assinatura do(a) professor(a) orientador(a)',
     'Departamento de Enfermagem · Comissão de TCC · CCS/UFES',
   ]) assert.ok(source.includes(text), `Campo ausente: ${text}`);
-  assert.doesNotMatch(source, /embedPng|drawImage|loadOfficialCourseLogo|fetch\('/, 'o PDF não depende de logomarcas externas');
+  assert.match(source,/fetch\('\/ufes-crest\.png'\)/, 'o brasão deve ser um arquivo da própria aplicação');
   assert.doesNotMatch(source, /COLEGIADO DO CURSO/i);
   assert.match(source, /declaracao-de-comparecimento-comissao-tcc\.pdf/);
 });
