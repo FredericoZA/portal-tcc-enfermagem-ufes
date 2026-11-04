@@ -33,7 +33,7 @@ export function processEmailMessage(input:{process:ProcessData;recipient:string;
   label=confirmed?`Comprovante de reserva · ${p.protocolo}`:`Comprovante de indisponibilidade · ${p.protocolo}`;
   if(response){
    subject=`[${p.protocolo}] ${confirmed?'Reserva confirmada':'Agendamento recusado'}`;
-   const registered=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(response.respondedAt));
+   const registered=`${formatDateNumericWithWeekday(response.respondedAt)} ${formatTime24h(response.respondedAt)}`;
    text=['Prezados departamento, autores e orientador,',confirmed?'O departamento confirmou a reserva para a defesa do TCC.':'O responsável recusou o agendamento solicitado.',[confirmed?`Resultado: reserva confirmada.\nLocal: ${response.local||p.defesa.local}`:`Resultado: reserva recusada.\nLocal solicitado: ${p.defesa.local}`,`Data: ${formatDateNumericWithWeekday(response.startAt)}\nHorário: ${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt||defenseEndAt(response.startAt))}`,`Resposta registrada em ${registered}.`].join('\n'),...(confirmed?[processEmailGuidance(p,input.baseUrl,'LOCATION_CONFIRMED','email-confirmacao',input.recipient)]:['ORIENTAÇÕES DO PROCESSO','Autores: ajustem o agendamento no Portal para solicitar uma nova reserva.'])].join('\n\n');
   }
  }else{
