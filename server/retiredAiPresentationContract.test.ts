@@ -60,3 +60,18 @@ test('inventário crítico da produção corresponde ao tutorial atual', () => {
     stdio: 'pipe',
   }));
 });
+
+
+test('rotas de recomendações legadas não permitem recriar propostas nem alertas', () => {
+  const server = read('server.ts');
+  assert.doesNotMatch(server, /function refreshContinuousIntelligence\(/);
+  assert.doesNotMatch(server, /buildContinuousIntelligenceState\(/);
+  assert.doesNotMatch(server, /upsertLivingIntelligenceFile\(/);
+  assert.match(server, /app\.all\('\/api\/admin\/continuous-intelligence\/refresh',[\s\S]*?res\.status\(410\)/);
+  assert.match(server, /app\.all\('\/api\/admin\/continuous-intelligence\/proposals\/:id',[\s\S]*?res\.status\(410\)/);
+  assert.doesNotMatch(server, /notifications\.push\(\{id:`intelligence-/);
+  assert.doesNotMatch(server, /id:'continuous-intelligence',label:'Arquivos vivos'/);
+  assert.match(server, /continuousIntelligence:continuousIntelligenceStore/);
+  assert.match(server, /app\.get\('\/api\/admin\/analytics\/advanced'/);
+  assert.match(server, /app\.post\('\/api\/public\/feedback'/);
+});
