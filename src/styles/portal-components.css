@@ -1100,6 +1100,19 @@ button[aria-label^="Configurar exibição"],
   opacity: .88;
 }
 
+.portal-calendar-defense-summary[data-reservation-status="pending"] {
+  border: 1px dashed #c3d7cb;
+  box-shadow: none;
+}
+
+.portal-calendar-defense-pending {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--portal-calendar-event-secondary-font-size);
+  font-weight: 750;
+  color: #49685a;
+}
+
 /* Navegação lateral: texto corrido, menor e mais encorpado. */
 .portal-sidebar-nav-item {
   font-size: var(--portal-sidebar-nav-font-size);
