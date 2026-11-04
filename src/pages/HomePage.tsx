@@ -75,6 +75,14 @@ interface HomePageProps {
   initialPublicTab?: 'calendario' | 'biblioteca' | 'tutorial';
 }
 
+/** Apenas sinaliza a reserva ainda sem resposta, sem alterar cores nem agendamento. */
+const PendingDefenseConfirmationNote: React.FC<{ process: Pick<ProcessData, 'defesa'> }> = ({ process }) => {
+  // A projeção anônima substitui departmentResponse por hasReservationReceipt.
+  const defesa = process.defesa as ProcessData['defesa'] & { hasReservationReceipt?: boolean };
+  if (defesa?.localStatus !== 'PENDENTE' || defesa?.departmentResponse || defesa?.hasReservationReceipt) return null;
+  return <span className="font-extrabold normal-case" style={{ color: '#b91c1c' }}> (Aguardando confirmação)</span>;
+};
+
 // Helper to parse Google Calendar events for presentations
 const parseGcalEvent = (ev: any) => {
   const summary = ev.summary || '';
@@ -1238,7 +1246,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                               data-defense-state={defenseState}
                               title={formatDefenseCalendarSummary(proc, 160)}
                             >
-                              {(() => { const summary = getDefenseCalendarSummaryParts(proc); return <><span className="portal-calendar-defense-primary">{summary.primary}</span>{summary.secondary && <span className="portal-calendar-defense-secondary">{summary.secondary}</span>}<span className="portal-calendar-defense-secondary font-semibold">{summary.location}</span></>; })()}
+                              {(() => { const summary = getDefenseCalendarSummaryParts(proc); return <><span className="portal-calendar-defense-primary">{summary.primary}<PendingDefenseConfirmationNote process={proc} /></span>{summary.secondary && <span className="portal-calendar-defense-secondary">{summary.secondary}</span>}<span className="portal-calendar-defense-secondary font-semibold">{summary.location}</span></>; })()}
                             </span>
                           );
                         })}
@@ -1463,6 +1471,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                       style={{ color: calendarPopupFormat.cardTitleColor || '#0f172a' }}
                                     >
                                       {formatTccTitle(proc.titulo)}
+                                      <PendingDefenseConfirmationNote process={proc} />
                                     </h4>
                                   )}
 
@@ -1925,6 +1934,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     <td key="titulo" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
                       <div className={`${defStyles.cellWrapClass} ${alignClass} ${defStyles.cellFontSizeClass}`} title={formatTccTitle(proc.titulo)}>
                         {formatCellText('titulo', formatTccTitle(proc.titulo), defensesTextFormat, '')}
+                        <PendingDefenseConfirmationNote process={proc} />
                       </div>
                     </td>
                   );
@@ -2312,6 +2322,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <td key="titulo" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
                         <div className={`${acervoStyles.cellWrapClass} ${alignClass} ${acervoStyles.cellFontSizeClass}`} title={formatTccTitle(proc.titulo)}>
                           {formatCellText('titulo', formatTccTitle(proc.titulo), acervoTextFormat, '')}
+                          <PendingDefenseConfirmationNote process={proc} />
                         </div>
                       </td>
                     );
@@ -2511,7 +2522,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
               <div>
                 <span className="font-bold text-slate-500 normal-case text-[10px] block">Título do Trabalho:</span>
-                <p className="font-extrabold text-sm text-slate-900 leading-snug">{formatTccTitle(selectedLibDoc.titulo)}</p>
+                <p className="font-extrabold text-sm text-slate-900 leading-snug">{formatTccTitle(selectedLibDoc.titulo)}<PendingDefenseConfirmationNote process={selectedLibDoc} /></p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded border border-slate-200">

@@ -8,6 +8,22 @@ Código: https://github.com/FredericoZA/portal-tcc-enfermagem-ufes
 
 Leia `README.md`, `CHECKLIST_IMPLANTACAO.md`, `IMPLANTACAO_PRODUCAO.md`, `COMECE_AQUI.md`, `CONTRIBUTING.md`, `SECURITY.md` e `docs/FLUXO_ATUAL_2026-10-26.md`. A versão está em `package.json`; confira também o commit. Arquivos locais, GitHub e Vercel podem estar em revisões diferentes. Relatórios RC anteriores são registros históricos, não certificados da instalação atual.
 
+## Como o Portal funciona
+
+O Portal TCC é um sistema administrativo para o ciclo completo do trabalho de conclusão de curso. A interface apresenta as etapas do processo; a API do servidor valida as permissões e aplica regras previamente definidas. Nenhum resultado acadêmico é decidido automaticamente.
+
+**Caminho de um TCC:** cadastro dos autores e membros da banca → solicitação e confirmação de local e horário → convite → defesa e registro da deliberação pelo orientador → conferência e assinatura da ata → entrega do trabalho final → termo de autorização, quando houver publicação → declaração e encerramento.
+
+**Documentos e parecer:** os modelos DOCX cadastrados pelo administrador são preenchidos com informações do processo e convertidos para PDF. O rascunho do parecer é montado por um texto-base fixo associado ao resultado selecionado, sem consulta a modelos de linguagem, e precisa receber a fundamentação efetiva da banca antes do registro. O orientador confere a ata e confirma o envio.
+
+**Indicadores:** o servidor calcula contagens, percentuais, medianas e distribuições por fórmulas comuns. A visualização pública oculta dados pessoais e campos livres, e suprime resultados com poucos registros. Essa estatística não utiliza modelos generativos, pontuação de estudantes nem inferência de resultados acadêmicos.
+
+**Sugestões:** visitantes podem enviar voluntariamente melhorias pelo formulário público. O administrador lê e analisa as mensagens; elas não alimentam um mecanismo de recomendações ou de alteração automática do código.
+
+**Acesso e segurança:** os participantes têm permissões associadas a seus papéis no processo. O banco Supabase guarda os registros operacionais; documentos e modelos ficam no Google Drive privado. A Asten, o Gov.br e o Gmail são utilizados somente conforme as etapas e autorizações configuradas.
+
+**Legislação:** esta instalação da UFES observa a Portaria Normativa GR/Ufes nº 310/2026 quanto à não utilização de sistemas de IA generativa nas operações descritas. Isso não substitui as verificações de LGPD, segurança da informação, contratos, registros de tratamento e demais exigências institucionais aplicáveis.
+
 ## Arquitetura
 
 | Serviço | Responsabilidade |

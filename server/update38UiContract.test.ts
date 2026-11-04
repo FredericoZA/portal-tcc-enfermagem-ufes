@@ -32,7 +32,8 @@ test('Indicadores mantêm carregamento automático e painel analítico denso',as
   assert.ok(page.includes('const LineTrend'));
   assert.ok(page.includes('const Funnel'));
   assert.ok(page.includes('Evolução anual'));
-  assert.ok(page.includes('Temas recorrentes'));
+  assert.ok(!page.includes('Temas recorrentes'));
+  assert.ok(page.includes('Dados livres') || page.includes('Dados livres,'.replace('D','d')) || page.includes('palavras-chave e locais informados'));
   assert.ok(page.includes('Resultados das bancas'));
   assert.ok(page.includes('Volatilidade mensal'));
 });

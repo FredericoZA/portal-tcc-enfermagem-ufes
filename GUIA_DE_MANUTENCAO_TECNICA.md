@@ -1,8 +1,8 @@
-# Instrução de continuidade para a IA de implantação
+# Guia de manutenção técnica do Portal TCC
 
-Revisão documental: 03/11/2026.
+Revisão documental: 04/11/2026.
 
-Você recebeu o código do Portal Institucional de TCC. Preserve o sistema existente e trabalhe sobre a revisão recebida. Não substitua a aplicação por uma demonstração nova. A versão de execução está em `package.json`; identifique também o commit e as alterações locais antes de declarar que o código coincide com GitHub ou Vercel.
+Este documento orienta as pessoas responsáveis pela manutenção e pela implantação do Portal TCC. Preserve o sistema existente e trabalhe sobre a revisão recebida. Não substitua a aplicação por uma demonstração nova. A versão de execução está em `package.json`; identifique também o commit e as alterações locais antes de declarar que o código coincide com GitHub ou Vercel.
 
 ## Fonte de verdade e leitura
 
@@ -34,7 +34,7 @@ Preserve `package-lock.json` e use as versões Node/npm definidas no projeto. Ve
 - Mapa de salas, aulas, eventos e horários do prédio devem ser considerados para evitar retrabalho. Conversar previamente com o departamento é recomendação, não obrigação de comparecer.
 - Os botões de aceite e recusa vão somente ao responsável. O grupo recebe comunicação informativa. O registro da resposta gera comprovante e avisos, sem pedir uma segunda confirmação idêntica.
 - O convite vai conjuntamente aos examinadores e ao coorientador, quando houver. Não duplique mensagens iguais por destinatário.
-- O orientador registra conceito e parecer; a avaliação e a nota acadêmica são realizadas no Portal do Professor. Os conceitos são Aprovado, Aprovado com ressalva e Reprovado.
+- O orientador registra conceito e fundamentação do parecer, sem avaliação automatizada de mérito; a avaliação e a nota acadêmica são realizadas no Portal do Professor. Os conceitos são Aprovado, Aprovado com ressalva e Reprovado.
 - Registrar o conceito e confirmar a entrega apenas encaminham para Documentos administrativos. Essas ações não iniciam automaticamente uma assinatura. O usuário escolhe Asten ou Gov.br no cartão do documento.
 - Convite e comprovante não são assinados. A ata é assinada somente pelo orientador. Havendo publicação, o termo é assinado por todos os autores e orientador. A declaração é assinada pela presidência da Comissão.
 - A entrega de trabalho completo, resumo e palavras-chave é obrigatória nos processos novos. O PDF do resumo expandido é opcional. Publicação dos PDFs é opcional e independente por arquivo. Sem autorização de nenhum PDF, não há termo.
@@ -45,6 +45,14 @@ Preserve `package-lock.json` e use as versões Node/npm definidas no projeto. Ve
 - Os quatro DOCX ativos são externos, versionados e vinculados por hash. Não invente modelos institucionais nem reescreva PDFs assinados.
 - Legados usam as mesmas telas, código NNN - Legado e campos ausentes preservados. Eles têm instrumento de avaliação como sexto cartão administrativo, quando localizado. Não gere novo instrumento, novas assinaturas ou novos avisos ao importar o histórico.
 - Segredos nunca entram em código, ZIP, GitHub, capturas, logs ou variáveis VITE_. Preserve autorização no servidor, RLS, auditoria, limites de uso e validação dos arquivos.
+
+## Indicadores e conformidade
+
+- Indicadores públicos são contagens e estatísticas calculadas por programação, sem modelos generativos.
+- Dados de texto livre não devem ser publicados na rota de indicadores; grupos pequenos são suprimidos.
+- O parecer é um texto-base fixo que exige preenchimento e confirmação por pessoa autorizada.
+- As contribuições em Sugestões são revisadas pela equipe responsável; não há sistema autônomo de propostas ou mudança de código.
+- Preserve o registro da Portaria Normativa GR/Ufes nº 310/2026 em Informações Gerais, sem confundir adequação técnica com homologação ou certificação institucional.
 
 ## Sequência de execução
 

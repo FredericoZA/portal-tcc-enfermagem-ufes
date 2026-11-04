@@ -2,7 +2,7 @@ import { DEFAULT_OPERATIONAL_CONFIG } from '../src/utils/operationalConfig';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ProcessData, StudioFormSubmission } from '../src/types';
-import { buildContinuousIntelligenceState, buildTccStatisticalSnapshot, LIVING_ARTIFACT_FILE_NAMES } from './continuousIntelligence';
+import { buildTccStatisticalSnapshot } from './statisticalSnapshot';
 
 function process(id: string, overrides: Partial<ProcessData> = {}): ProcessData {
   return {
@@ -52,32 +52,14 @@ test('panorama calcula totais e protege categorias temáticas pequenas', () => {
   assert.equal(result.dataQuality.areaCoverage, 100);
 });
 
-test('relatórios não copiam dados pessoais nem inferem tema pelo título', () => {
-  const state = buildContinuousIntelligenceState({
-    processes: [process('segredo')], workflowRuns: [], emailDeliveries: [], signatureJobs: [], formSubmissions: [], correctionRequests: [],
-    courseName: 'Enfermagem', institutionName: 'Universidade', generatedAt: '2026-02-10T00:00:00.000Z'
-  });
-  const combined = Object.values(state.artifacts).map((artifact) => artifact.markdown).join('\n');
-  assert.doesNotMatch(combined, /Título pessoal sensível/i);
-  assert.doesNotMatch(combined, /aluno-segredo@example\.edu/i);
-  assert.equal(state.statistics.distributions.themes.unknown, 1);
-  assert.equal(state.statistics.privacy.containsPersonalData, false);
-  assert.equal(state.artifacts.FLOW_IMPROVEMENT_MEMORY.fileName, LIVING_ARTIFACT_FILE_NAMES.FLOW_IMPROVEMENT_MEMORY);
-  assert.equal(state.artifacts.TCC_STATISTICAL_REPORT.fileName, LIVING_ARTIFACT_FILE_NAMES.TCC_STATISTICAL_REPORT);
-});
-
-test('decisão do Master e histórico permanecem quando a evidência muda', () => {
-  const first = buildContinuousIntelligenceState({
-    processes: [process('1')], workflowRuns: [{ id: 'run', processId: '1', protocol: 'TCC-1', eventCode: 'TCC_CREATED', actorEmail: 'x@example.edu', startedAt: '2026-01-01T00:00:00.000Z', completedAt: '2026-01-01T00:00:01.000Z', status: 'PARTIAL_FAILURE', actions: [], issues: [] }], emailDeliveries: [], signatureJobs: [], formSubmissions: [], correctionRequests: [], courseName: 'Enfermagem', institutionName: 'Universidade', generatedAt: '2026-02-10T00:00:00.000Z'
-  });
-  const proposal = first.proposals.find((item) => item.id === 'improvement-workflow-failures')!;
-  proposal.status = 'APPROVED';
-  proposal.reviewedAt = '2026-02-10T01:00:00.000Z';
-  const second = buildContinuousIntelligenceState({
-    processes: [process('1')], workflowRuns: [], emailDeliveries: [], signatureJobs: [], formSubmissions: [], correctionRequests: [], courseName: 'Enfermagem', institutionName: 'Universidade', generatedAt: '2026-02-11T00:00:00.000Z', previous: first
-  });
-  const preserved = second.proposals.find((item) => item.id === proposal.id)!;
-  assert.equal(preserved.status, 'APPROVED');
-  assert.equal(preserved.evidenceActive, false);
-  assert.equal(second.artifacts.FLOW_IMPROVEMENT_MEMORY.version, 2);
+test('estatísticas privadas não criam propostas nem incluem títulos ou identidades', () => {
+  const data=buildTccStatisticalSnapshot({processes:[process('sigiloso')],formSubmissions:[],generatedAt:'2026-02-10T00:00:00.000Z'});
+  const encoded=JSON.stringify(data);
+  assert.doesNotMatch(encoded,/Título pessoal sensível|aluno-sigiloso@example.edu|Pessoa sigiloso/);
+  assert.equal(data.distributions.themes.unknown,1);
+  assert.equal(data.privacy.containsPersonalData,false);
+  const repeated=Array.from({length:6},(_,i)=>process(String(i),{acervo:{palavrasChave:['IDENTIFICADOR_SENSIVEL_TESTE']}}));
+  const limited=buildTccStatisticalSnapshot({processes:repeated,formSubmissions:[],generatedAt:'2026-02-10T00:00:00.000Z'});
+  assert.deepEqual(limited.distributions.keywords.entries,[]);
+  assert.equal(JSON.stringify(limited).includes('IDENTIFICADOR_SENSIVEL_TESTE'),false);
 });

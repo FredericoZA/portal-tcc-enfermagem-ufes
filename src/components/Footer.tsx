@@ -6,6 +6,7 @@ import { MapPin, Lightbulb, Info, Car, Check } from 'lucide-react';
 import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { PORTAL_THEME } from '../theme/portalTheme';
+import { compareCommissionMemberNames } from '../utils/commissionMemberOrder';
 
 interface FooterProps { showLocationDirections?: boolean; }
 interface FooterCommissionMember { id?:string; name:string; email?:string; startDate?:string; endDate?:string; active?:boolean; }
@@ -36,7 +37,8 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
   const configured:FooterCommissionMember[]=Array.isArray(typedSettings?.commissionMembers)?typedSettings.commissionMembers.filter((m:FooterCommissionMember)=>m&&m.active!==false&&String(m.name||'').trim()):[];
   const legacy=[settings?.commissionMember2Name,settings?.commissionMember3Name,settings?.commissionMember4Name,settings?.commissionMember5Name].filter(Boolean).map((name,index)=>({id:`legacy-${index}`,name:String(name),active:true}));
   const layout=(layoutConfig.footerMembersList||[]).filter(Boolean).map((name,index)=>({id:`layout-${index}`,name,active:true}));
-  const membersList=configured.length?configured:legacy.length?legacy:layout;
+  const membersList=[...(configured.length?configured:legacy.length?legacy:layout)]
+    .sort((a,b)=>compareCommissionMemberNames(a.name,b.name));
   const devName=settings?.portalMaintainerName||settings?.ownerName||layoutConfig.footerDevName||'Equipe responsável pela instalação';
   const whatsappUrl=layoutConfig.footerWhatsappUrl||settings?.whatsappUrl||'';
   const contactEmail=settings?.contactEmail||settings?.masterEmail||layoutConfig.footerContactEmail||'';
@@ -100,8 +102,8 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
             </div>
             <div className="pt-2 border-t" style={{borderColor:footerDivider}}>
               <div className="font-extrabold normal-case tracking-wider text-[9px]" style={{color:footerMuted}}>{layoutConfig.footerMembersLabel||'Membros da Comissão'}</div>
-              <div className={`mt-1 grid items-start gap-x-4 gap-y-1 text-center ${membersList.length === 1 ? 'grid-cols-1' : 'sm:grid-cols-2'}`}>
-                {membersList.length?membersList.map((member)=><div key={member.id||member.name} className="flex flex-col items-center justify-start"><div className="min-h-[18px]"><CopyableName name={member.name} email={member.email} id={`member-${member.id||member.name}`}/></div>{(member.startDate||member.endDate)&&<p className="text-[9px]" style={{color:footerMuted}}>{member.startDate?`Início: ${formatTermDate(member.startDate)}`:''}{member.startDate&&member.endDate?' · ':''}{member.endDate?`Fim: ${formatTermDate(member.endDate)}`:''}</p>}</div>):<p className="sm:col-span-2" style={{color:footerMuted}}>Não configurado</p>}
+              <div className="mt-1 grid grid-cols-1 items-start gap-y-1 text-center">
+                {membersList.length?membersList.map((member)=><div key={member.id||member.name} className="flex flex-col items-center justify-start"><div className="min-h-[18px]"><CopyableName name={member.name} email={member.email} id={`member-${member.id||member.name}`}/></div>{(member.startDate||member.endDate)&&<p className="text-[9px]" style={{color:footerMuted}}>{member.startDate?`Início: ${formatTermDate(member.startDate)}`:''}{member.startDate&&member.endDate?' · ':''}{member.endDate?`Fim: ${formatTermDate(member.endDate)}`:''}</p>}</div>):<p style={{color:footerMuted}}>Não configurado</p>}
               </div>
             </div>
           </div>
