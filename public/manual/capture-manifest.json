@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-11-03T19:04:18.369Z",
+  "capturedAt": "2026-11-04T01:42:47.717Z",
   "source": "Current compiled local UI, built from workspace; isolated temporary local_file backend",
   "synthetic": true,
   "providerTrafficBlocked": true,
@@ -38,15 +38,15 @@
       "id": "ficha",
       "file": "/manual/ficha.jpg",
       "scenario": "Dados do processo fictício, identidade e quatro abas atuais",
-      "sha256": "5cda850b96b9d2ebee2c8e97df20a367e4a4114d9cfbaf94da07722be17db8f8",
+      "sha256": "86262b7b2ef35493734b16dbfd0a08b9aadcbfaea1e2b732f5e257e38eb34458",
       "width": 1512,
-      "height": 912
+      "height": 805
     },
     {
       "id": "confirmacao",
       "file": "/manual/confirmacao.jpg",
       "scenario": "Alteração explícita da reserva, sem enviar nova solicitação",
-      "sha256": "5f1965ad4bf410f8eaf29775a21f6bb5fb6752393b752536c4d6cae18a60eb99",
+      "sha256": "679e739001269e06deccf91f52bd8c445bf60edf42c78ec23daa7d1e27d60cff",
       "width": 512,
       "height": 380
     },
@@ -70,9 +70,9 @@
       "id": "documentos",
       "file": "/manual/documentos.jpg",
       "scenario": "Cinco caixas administrativas, ata aguardando assinatura, orientador autorizado",
-      "sha256": "0ce15c02875cd0a4de8101fa51a6b18fd95b921e1a5981ff1f2c46fc1c1babef",
+      "sha256": "8a832e12458d73737e504b271a158f5edf4ae99fcfb6bf2e1685bfe445cb0ff9",
       "width": 1512,
-      "height": 837
+      "height": 810
     },
     {
       "id": "gov",
@@ -97,6 +97,14 @@
       "sha256": "75ee098ae76984958fecba4163dfd5781b34af2528c46073d738b7193b7c63bf",
       "width": 1512,
       "height": 936
+    },
+    {
+      "id": "documentos-concluidos",
+      "file": "/manual/documentos-concluidos.jpg",
+      "scenario": "Processo fictício concluído: cinco caixas disponíveis, assinaturas representadas, nenhuma assinatura real solicitada",
+      "sha256": "8897d53fec956aedfc27896b4ea452fcc40c5edda4c83073a52189c24089eb25",
+      "width": 1512,
+      "height": 632
     },
     {
       "id": "calendario",
@@ -126,7 +134,7 @@
       "id": "sugestoes",
       "file": "/manual/sugestoes.jpg",
       "scenario": "Formulário público de sugestões; não enviado",
-      "sha256": "196ce13c687f976157737e2c7fe82e4d18dcf04bf20167ac23ba98c03cb00810",
+      "sha256": "dc20f2e442ae2be7a66a2e85c910cf1ccdcaddd1886afd2bf3a977210fba87c6",
       "width": 512,
       "height": 464
     },
@@ -134,7 +142,7 @@
       "id": "reserva",
       "file": "/manual/reserva.jpg",
       "scenario": "Última etapa do cadastro: orientações e reserva do único local, dados fictícios, sem enviar",
-      "sha256": "52e1a8e167c6553a175727b59d291aed21ab0c29154bb908d098c11264537472",
+      "sha256": "777f1b49b42806abaecb8ea7bf9f09982436caa53a4d5c44b10fad795da37bbc",
       "width": 1152,
       "height": 1350
     },

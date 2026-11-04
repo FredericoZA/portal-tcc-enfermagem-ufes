@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {ArrowLeft, ArrowRight, ExternalLink} from 'lucide-react';
+import {ChevronLeft, ChevronRight, ExternalLink} from 'lucide-react';
 
 export type GuideRole = 'aluno' | 'orientador' | 'visitante';
 export type GuideActivity = {
@@ -119,7 +119,7 @@ export const guideActivities: GuideActivity[] = [
   },
   {
     id: 'documentos', title: 'Conferir, assinar e baixar documentos', roles: ['aluno', 'orientador'], imageId: 'documentos',
-    imageCaption: 'Cinco caixas na mesma linha no computador: comprovante, convite, ata, termo e declaração.',
+    imageCaption: 'Documentos administrativos: comprovante, convite, ata, termo e declaração. Nos legados, o instrumento de avaliação aparece como sexto item.',
     steps: [
       'Abra Documentos administrativos. Cada caixa informa a disponibilidade, os responsáveis e as ações do documento. Comprovante e carta-convite não exigem assinatura.',
       'Somente o orientador assina a ata. Todos os autores e o orientador assinam o termo, se houver publicação autorizada. A declaração é assinada pela presidência da comissão.',
@@ -217,7 +217,7 @@ export const guideActivities: GuideActivity[] = [
     steps: [
       'No mesmo Repositório, procure códigos como 001 - Legado. A numeração identifica os trabalhos antigos importados.',
       'Abra o código e consulte as mesmas abas dos demais TCCs. Dados ou arquivos ausentes na origem podem permanecer sem preenchimento. Um trabalho antigo pode ter apenas resumo expandido.',
-      'Os arquivos acadêmicos só ficam públicos com autorização confirmada. A documentação administrativa antiga permanece privada para consulta do Master.',
+      'O resumo síntese pode ser lido na tabela e na ficha. Os PDFs acadêmicos só ficam públicos com autorização confirmada. A documentação administrativa antiga permanece privada para consulta do Master; o instrumento de avaliação fica no sexto cartão de Documentos administrativos.',
       'O registro histórico não inicia outro cadastro, defesa ou assinatura. Não crie um novo processo para completar um trabalho antigo.',
     ],
     done: 'Você consultou os dados e os arquivos disponíveis do registro histórico.',
@@ -225,12 +225,12 @@ export const guideActivities: GuideActivity[] = [
   },
   {
     id: 'sugestoes', title: 'Informar um problema ou sugerir melhoria', roles: ['aluno', 'orientador', 'visitante'], imageId: 'sugestoes',
-    imageCaption: 'Sugestões de melhoria fica no menu lateral, logo abaixo de Replicar Portal.',
+    imageCaption: 'Sugestões fica na parte inferior do menu lateral e recebe relatos sobre o Portal.',
     steps: [
-      'No menu lateral, clique em Sugestões de melhoria, abaixo de Replicar Portal. O envio também está disponível sem login.',
+      'Na parte inferior do menu lateral, clique em Sugestões. O envio também está disponível sem login.',
       'Descreva em qual tela estava, o que tentou fazer e o que ocorreu. Informe o protocolo do TCC quando necessário; não inclua códigos de acesso ou credenciais.',
       'Se ajudar, anexe uma imagem PNG, JPEG ou WebP de até 1,5 MB. Remova dados pessoais que não sejam necessários para explicar o problema.',
-      'Clique em Enviar sugestão e aguarde a confirmação. O Master acompanha os registros em Configurações → Sugestões de melhoria.',
+      'Clique em Enviar sugestão e aguarde a confirmação. O Master acompanha os registros em Configurações → Sugestões.',
     ],
     done: 'O Portal confirmou o recebimento da sugestão. Marcar uma sugestão como revisada não significa que a alteração já foi implementada.',
     help: ['Erro ao enviar: mantenha o texto, confira o tamanho da imagem e tente novamente após a mensagem de erro. Sem confirmação, o envio não está concluído.'],
@@ -256,62 +256,51 @@ function GuideText({text}: {text: string}) {
 export function PortalIllustratedGuide({role = 'aluno'}: {role?: string}) {
   const available = activitiesForRole(role);
   const [selected, setSelected] = useState({role, id: ''});
-  const current = available.find(item => selected.role === role && item.id === selected.id) || available[0];
+  const selectedId = selected.role === role ? selected.id : '';
+  const current = available.find(item => item.id === selectedId) || available[0];
   if (!current) return null;
+  const imageUrl = `/manual/${current.imageId}.jpg?v=2026-11-03-layout2`;
   const index = available.indexOf(current);
-  const roleTitle = ({aluno: 'Aluno', orientador: 'Orientador', visitante: 'Visitante'} as Record<string, string>)[role];
-  const imageUrl = `/manual/${current.imageId}.jpg?v=2026-11-03`;
-  const selectActivity = (next: number, focus = false) => {
-    const item = available[next];
-    if (!item) return;
-    setSelected({role, id: item.id});
-    if (focus) document.getElementById(`guide-tab-${role}-${item.id}`)?.focus();
+  const selectScreen = (next: number) => {
+    if (available[next]) setSelected({role, id: available[next].id});
   };
 
   return (
-    <section className="portal-illustrated-guide mt-3 rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-card)] p-3 sm:p-4" aria-label="Manual ilustrado">
-      <h3 className="text-sm font-bold">Veja onde clicar · {roleTitle}</h3>
-      <div className="portal-guide-activities mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-3" role="tablist" aria-label={`Atividades de ${roleTitle}`}>
-        {available.map((item, activityIndex) => (
-          <button key={item.id} type="button" id={`guide-tab-${role}-${item.id}`} role="tab" aria-selected={current.id === item.id} aria-controls={`guide-panel-${role}`} tabIndex={current.id === item.id ? 0 : -1} className={`portal-guide-activity flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-xs font-semibold ${current.id === item.id ? 'border-[var(--portal-brand-header)] bg-[var(--portal-brand-header)] text-white' : 'border-[var(--portal-border)] bg-[var(--portal-surface-panel)] text-slate-700'}`} onClick={() => selectActivity(activityIndex)} onKeyDown={event => {
-            const next = event.key === 'ArrowRight' ? (activityIndex + 1) % available.length : event.key === 'ArrowLeft' ? (activityIndex - 1 + available.length) % available.length : event.key === 'Home' ? 0 : event.key === 'End' ? available.length - 1 : -1;
-            if (next < 0) return;
-            event.preventDefault();
-            selectActivity(next, true);
-          }}>
-            <span className="shrink-0 tabular-nums" aria-hidden="true">{activityIndex + 1}.</span><span>{item.title}</span>
-          </button>
-        ))}
-      </div>
-      <div id={`guide-panel-${role}`} role="tabpanel" aria-labelledby={`guide-tab-${role}-${current.id}`} className="portal-guide-sheet mt-3 rounded-lg border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] p-3 sm:p-4">
-        <h4 className="text-base font-bold">{current.title}</h4>
-        <div className="portal-guide-content mt-3 grid items-start gap-4 xl:grid-cols-[2fr_3fr]">
-          <ol className="my-0 list-decimal space-y-3 pl-5 text-sm leading-6">{current.steps.map(step => <li key={step}><GuideText text={step} /></li>)}</ol>
+    <section className="portal-illustrated-guide" aria-label="Manual ilustrado">
+      <div id={`guide-panel-${role}`} role="region" aria-labelledby={`guide-activity-title-${role}`} className="portal-guide-sheet" data-guide-activity={current.id}>
+        <div className="portal-guide-screen-nav flex items-center justify-between gap-3" role="group" aria-label="Navegação das telas" onKeyDown={event => {
+          const next = event.key === 'ArrowRight' ? index + 1 : event.key === 'ArrowLeft' ? index - 1 : event.key === 'Home' ? 0 : event.key === 'End' ? available.length - 1 : -1;
+          if (next < 0 || next >= available.length) return;
+          event.preventDefault();
+          selectScreen(next);
+        }}>
+          <button type="button" className="portal-action portal-guide-screen-arrow" aria-label="Tela anterior" aria-controls={`guide-panel-${role}`} title="Tela anterior" disabled={index === 0} onClick={() => selectScreen(index - 1)}><ChevronLeft className="h-5 w-5" aria-hidden="true"/></button>
+          <h2 id={`guide-activity-title-${role}`} className="portal-guide-screen-title text-center text-base font-bold" aria-live="polite" aria-atomic="true">{current.title} — {index + 1}/{available.length}</h2>
+          <button type="button" className="portal-action portal-guide-screen-arrow" aria-label="Próxima tela" aria-controls={`guide-panel-${role}`} title="Próxima tela" disabled={index === available.length - 1} onClick={() => selectScreen(index + 1)}><ChevronRight className="h-5 w-5" aria-hidden="true"/></button>
+        </div>
+        <div className="portal-guide-content mt-3">
+          <div className="portal-guide-instructions min-w-0">
+            <ol className="my-0 list-decimal space-y-2 pl-5 text-sm leading-6">{current.steps.map(step => <li key={step}><GuideText text={step} /></li>)}</ol>
+            <p className="portal-guide-result mt-3 text-xs leading-5"><strong>Como saber que terminou:</strong> {current.done}</p>
+            <details key={`${role}-${current.id}`} className="portal-guide-help mt-3 text-xs leading-5">
+              <summary className="cursor-pointer font-semibold">Dúvidas desta atividade</summary>
+              <ul className="mt-2 list-disc space-y-1 pl-5">{current.help.map(item => <li key={item}>{item}</li>)}</ul>
+            </details>
+          </div>
           <figure className="portal-guide-figure m-0 min-w-0 w-full">
-            <a href={imageUrl} target="_blank" rel="noreferrer" aria-label={`Ampliar imagem: ${current.title}`} className="block overflow-hidden rounded-lg border border-slate-300 bg-white">
-              <img src={imageUrl} alt={current.imageCaption} loading="lazy" className="block h-auto max-h-[520px] w-full object-contain" />
+            <a href={imageUrl} target="_blank" rel="noreferrer" aria-label={`Ampliar imagem: ${current.title}`} className="portal-guide-image-link">
+              <img src={imageUrl} alt={current.imageCaption} loading="lazy" className="portal-guide-image" />
             </a>
             <figcaption className="mt-2 text-xs leading-5 text-slate-600">{current.imageCaption} <a className="inline-flex items-center gap-1 underline" href={imageUrl} target="_blank" rel="noreferrer">Abrir imagem em tamanho maior<ExternalLink className="h-3 w-3" aria-hidden="true" /></a></figcaption>
-            <p className="mt-1 text-xs leading-5 text-slate-600">Exemplo ilustrado com dados fictícios. O estado e as ações variam conforme o trabalho e seu perfil.</p>
           </figure>
         </div>
         {current.relatedImages?.map(related => {
-          const url = `/manual/${related.id}.jpg?v=2026-11-03`;
-          return <details key={related.id} className="mt-3 rounded-lg border border-slate-300 p-3">
+          const url = `/manual/${related.id}.jpg?v=2026-11-03-layout2`;
+          return <details key={related.id} className="portal-guide-related mt-3">
             <summary className="cursor-pointer text-xs font-semibold">Ver exemplo: {related.caption}</summary>
-            <a href={url} target="_blank" rel="noreferrer" className="mt-3 block" aria-label={`Ampliar imagem: ${related.caption}`}><img src={url} alt={related.caption} loading="lazy" className="mx-auto block h-auto max-h-[560px] w-full object-contain" /></a>
+            <a href={url} target="_blank" rel="noreferrer" className="portal-guide-image-link mt-3" aria-label={`Ampliar imagem: ${related.caption}`}><img src={url} alt={related.caption} loading="lazy" className="portal-guide-image" /></a>
           </details>;
         })}
-        <p className="mt-4 text-sm leading-6"><strong>Como saber que terminou:</strong> {current.done}</p>
-        <details key={`${role}-${current.id}`} className="portal-instruction mt-3 p-3">
-          <summary className="cursor-pointer text-sm font-bold">Algo deu errado?</summary>
-          <ul className="mt-2 list-disc space-y-2 pl-5 text-xs leading-5">{current.help.map(item => <li key={item}>{item}</li>)}</ul>
-        </details>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2" aria-label="Navegação das atividades">
-          <button type="button" className="portal-action" disabled={index === 0} onClick={() => selectActivity(index - 1, true)}><ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />Anterior</button>
-          <span className="text-xs text-slate-600">Atividade {index + 1} de {available.length}</span>
-          <button type="button" className="portal-action" disabled={index === available.length - 1} onClick={() => selectActivity(index + 1, true)}>Próxima<ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></button>
-        </div>
       </div>
     </section>
   );

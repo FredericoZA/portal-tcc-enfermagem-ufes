@@ -26,15 +26,33 @@ try {
   assert.equal(await manual.getByRole('group', {name: 'Perfil do manual'}).getByRole('button').count(), 3);
   for (const role of Object.keys(guideActivityOrder) as (keyof typeof roleLabels)[]) {
     await manual.getByRole('button', {name: roleLabels[role], exact: true}).click();
+    assert.equal(await manual.getByRole('heading', {name: /^(Antes de começar|Veja onde clicar|Conferência antes de encerrar|Erros a evitar)/}).count(), 0);
+    assert.equal(await manual.locator('.portal-tutorial-before').count(), 0);
+    assert.equal(await manual.locator('.portal-tutorial-checklist').count(), 0);
     const activities = activitiesForRole(role);
-    assert.equal(await manual.getByRole('tab').count(), activities.length);
-    for (const activity of activities) {
-      await manual.getByRole('tab', {name: activity.title, exact: true}).click();
-      const panel = manual.getByRole('tabpanel');
-      await panel.getByRole('heading', {name: activity.title, exact: true}).waitFor();
+    const previous = manual.getByRole('button', {name: 'Tela anterior', exact: true});
+    const next = manual.getByRole('button', {name: 'Próxima tela', exact: true});
+    assert.equal(await manual.getByRole('combobox').count(), 0);
+    assert.equal(await previous.isDisabled(), true);
+    assert.equal(await manual.locator('[data-guide-activity]').getByRole('heading', {name: `${activities[0].title} — 1/${activities.length}`, exact: true}).count(), 1);
+    assert.equal(await manual.locator('[data-guide-activity]').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(216, 223, 227)');
+    for (const [activityIndex, activity] of activities.entries()) {
+      const panel = manual.locator('[data-guide-activity]');
+      await panel.getByRole('heading', {name: activity.title, exact: false}).waitFor();
       await panel.locator('img').first().scrollIntoViewIfNeeded();
       await panel.locator('img').first().evaluate(async (img: HTMLImageElement) => { await img.decode(); });
       assert.equal(await panel.locator('img').first().evaluate((img: HTMLImageElement) => img.naturalWidth > 100 && img.naturalHeight > 100), true);
+      const imagePresentation = await panel.locator('img').first().evaluate((img: HTMLImageElement) => ({
+        width: img.getBoundingClientRect().width,
+        naturalWidth: img.naturalWidth,
+        frameBackground: getComputedStyle(img.parentElement!).backgroundColor,
+        frameBorder: getComputedStyle(img.parentElement!).borderTopWidth,
+      }));
+      assert.ok(imagePresentation.width <= imagePresentation.naturalWidth + 1, `${activity.id}: imagem ampliada além da origem`);
+      assert.equal(imagePresentation.frameBackground, 'rgba(0, 0, 0, 0)');
+      assert.equal(imagePresentation.frameBorder, '0px');
+      if (activity.id === 'acesso') assert.ok(imagePresentation.width <= 380);
+      if (activity.id === 'sugestoes') assert.ok(imagePresentation.width <= 400);
       for (const summary of await panel.locator('summary').filter({hasText: 'Ver exemplo:'}).all()) {
         await summary.click();
         const image = summary.locator('..').locator('img');
@@ -42,25 +60,26 @@ try {
         await image.evaluate(async (img: HTMLImageElement) => { await img.decode(); });
         await summary.click();
       }
-      await panel.getByText('Algo deu errado?', {exact: true}).click();
+      await panel.getByText('Dúvidas desta atividade', {exact: true}).click();
       assert.match(await panel.innerText(), /Como saber que terminou/);
       assert.match(await panel.innerText(), new RegExp(activity.help[0].slice(0, 18).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
       checked.push({role, activity: activity.id, image: await panel.locator('img').first().getAttribute('src')});
+      if (activityIndex < activities.length - 1) await next.click();
     }
-    await manual.getByRole('tab').first().click();
-    await manual.getByRole('tab').first().focus();
-    await page.keyboard.press('End');
-    await manual.getByRole('tab').last().waitFor();
-    assert.equal(await manual.getByRole('tab').last().getAttribute('aria-selected'), 'true');
-    assert.equal(await manual.getByRole('button', {name: 'Próxima', exact: true}).isDisabled(), true);
+    assert.equal(await next.isDisabled(), true);
+    await previous.click();
+    await manual.locator('[data-guide-activity]').getByRole('heading', {name: activities.at(-2)!.title, exact: false}).waitFor();
+    await previous.focus();
     await page.keyboard.press('Home');
-    assert.equal(await manual.getByRole('tab').first().getAttribute('aria-selected'), 'true');
-    assert.equal(await manual.getByRole('button', {name: 'Anterior', exact: true}).isDisabled(), true);
-    await manual.getByRole('button', {name: 'Próxima', exact: true}).click();
-    assert.equal(await manual.getByRole('tab').nth(1).getAttribute('aria-selected'), 'true');
+    assert.equal(await previous.isDisabled(), true);
+    await next.focus();
+    await page.keyboard.press('ArrowRight');
+    await manual.locator('[data-guide-activity]').getByRole('heading', {name: activities[1].title, exact: false}).waitFor();
     await manual.screenshot({path: path.join(output, `manual-atual-${role}.png`)});
   }
-  await manual.getByRole('button', {name: 'Ver o Fluxo do TCC', exact: true}).click();
+  assert.equal(await manual.locator('.portal-instruction').count(), 0);
+  assert.equal(await manual.getByRole('button', {name: 'Ver o Fluxo do TCC', exact: true}).count(), 0);
+  await page.getByRole('button', {name: 'Fluxo do TCC', exact: true}).click();
   const flow = page.locator('#fluxo-tcc-page');
   await flow.getByRole('heading', {name: 'Fluxo do TCC', exact: true}).waitFor();
   assert.equal(await flow.getByRole('heading', {name: 'Assinaturas no processo', exact: true}).count(), 1);
@@ -69,12 +88,20 @@ try {
   assert.match(await flow.innerText(), /Portal do Professor/);
   await flow.locator('img').scrollIntoViewIfNeeded();
   await flow.locator('img').evaluate(async (img: HTMLImageElement) => { await img.decode(); });
+  const signatureLayout = flow.locator('[data-signature-layout]');
+  const tableBox = await signatureLayout.getByRole('region').boundingBox();
+  const imageBox = await signatureLayout.locator('figure').boundingBox();
+  assert.ok(tableBox && imageBox && imageBox.x >= tableBox.x + tableBox.width - 1, 'Tabela e imagem lado a lado no desktop');
+  assert.ok(tableBox && imageBox && Math.abs(tableBox.y - imageBox.y) <= 1, 'Tabela e imagem alinhadas pelo topo');
+  assert.equal(await signatureLayout.locator('tbody tr').count(), 5);
+  assert.equal(await flow.locator('[aria-labelledby="signature-flow-title"] .portal-instruction').count(), 0);
   await flow.screenshot({path: path.join(output, 'fluxo-tcc-atual.png')});
   for (const width of [390, 768]) {
     await page.setViewportSize({width, height: 844});
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Overflow fluxo at ${width}`);
     const signatureTable = flow.getByRole('region', {name: 'Tabela de assinaturas do processo'});
-    assert.equal(await signatureTable.evaluate(el => el.scrollWidth > el.clientWidth), true);
+    const tableSize = await signatureTable.evaluate(el => ({available: el.clientWidth, content: el.scrollWidth}));
+    assert.equal(tableSize.content > tableSize.available, tableSize.available < 440, `Rolagem da tabela de assinaturas em ${width}px`);
   }
   await page.setViewportSize({width: 1440, height: 1050});
   await page.getByRole('button', {name: 'Como usar', exact: true}).click();
@@ -83,9 +110,13 @@ try {
     await page.setViewportSize({width, height: 844});
     for (const role of Object.keys(guideActivityOrder) as (keyof typeof roleLabels)[]) {
       await manual.getByRole('button', {name: roleLabels[role], exact: true}).click();
-      await manual.getByRole('tab').last().click();
+      const activities = activitiesForRole(role);
+      const next = manual.getByRole('button', {name: 'Próxima tela', exact: true});
+      await next.focus();
+      await page.keyboard.press('End');
+      await manual.locator('[data-guide-activity]').getByRole('heading', {name: activities.at(-1)!.title, exact: false}).waitFor();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `Overflow ${role} at ${width}`);
-      assert.equal(await manual.getByRole('tabpanel').locator('img').first().evaluate((img: HTMLImageElement) => img.getBoundingClientRect().width <= innerWidth), true);
+      assert.equal(await manual.locator('[data-guide-activity]').locator('img').first().evaluate((img: HTMLImageElement) => img.getBoundingClientRect().width <= innerWidth), true);
     }
     await manual.screenshot({path: path.join(output, `manual-atual-${width}.png`)});
   }

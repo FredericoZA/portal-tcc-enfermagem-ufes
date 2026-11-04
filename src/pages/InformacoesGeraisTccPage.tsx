@@ -45,7 +45,7 @@ const SourceLink: React.FC<{ href: string; children: React.ReactNode }> = ({ hre
  * Normas antigas e instruções digitais atuais podem divergir; não transformar
  * exigências históricas de entrega física em procedimentos operacionais.
  */
-export const InformacoesGeraisTccPage: React.FC<InformacoesGeraisTccPageProps> = ({ onNavigate }) => {
+export const InformacoesGeraisTccPage: React.FC<InformacoesGeraisTccPageProps> = () => {
   const { settings } = useAuth();
   const profile = resolveInstallationProfile(settings);
   const course = profile.courseName || '';
@@ -57,7 +57,7 @@ export const InformacoesGeraisTccPage: React.FC<InformacoesGeraisTccPageProps> =
       <section className="portal-public-header">
         <div className="portal-public-title-row gap-2">
           <ColorfulHeaderIcon type="guidance" />
-          <h1 className="text-sm font-black uppercase tracking-tight text-white sm:text-base">Informações gerais do TCC</h1>
+          <h1 className="text-sm font-black normal-case tracking-tight text-white sm:text-base">Informações gerais do TCC</h1>
         </div>
       </section>
       <PortalSectionDivider />
@@ -72,22 +72,14 @@ export const InformacoesGeraisTccPage: React.FC<InformacoesGeraisTccPageProps> =
         </section>
       ) : (
         <div className="portal-layer-panel space-y-4 p-3 sm:p-4">
-          <div className="portal-layer-card rounded-xl border border-slate-300 p-3 sm:p-4">
-            <p className="text-sm font-bold leading-5 text-slate-900">O que você precisa saber antes de iniciar seu Trabalho de Conclusão de Curso</p>
-            <p className="mt-1 text-xs leading-5 text-slate-700">
-              Estas são orientações gerais do curso de Enfermagem da UFES. O regulamento acadêmico e as instruções institucionais prevalecem.
-              Em caso de divergência entre documentos de épocas diferentes, confirme a regra aplicável à sua matriz curricular com a coordenação.
-            </p>
-          </div>
-
           <div className="grid auto-rows-fr gap-3 md:grid-cols-2 xl:grid-cols-3">
             <RuleCard title="Obrigatoriedade e número de autores" icon={GraduationCap}>
               <p>O TCC é <strong>obrigatório</strong> para concluir o bacharelado em Enfermagem.</p>
               <p>A norma disponível prevê elaboração <strong>individual</strong> e, excepcionalmente, em <strong>dupla (até 2 estudantes)</strong>. A formação de dupla deve ser tratada com o orientador e a coordenação.</p>
             </RuleCard>
             <RuleCard title="Quando realizar o TCC" icon={CalendarDays}>
-              <p>O percurso inclui elaboração do projeto e, depois, desenvolvimento e apresentação do trabalho nas disciplinas correspondentes de TCC I e TCC II.</p>
-              <p>A norma anterior cita Orientação à Monografia I no 7º período e II no 8º. Como há matriz curricular posterior, <strong>esses períodos não devem ser aplicados automaticamente a todos os estudantes</strong>. Confira sua matriz e os pré-requisitos.</p>
+              <p>O TCC deve ser concluído e defendido entre o <strong>7º e o 8º períodos</strong> do curso.</p>
+              <p>O <strong>9º e o 10º períodos</strong> são destinados <strong>exclusivamente ao estágio</strong>.</p>
             </RuleCard>
             <RuleCard title="Temas e ética em pesquisa" icon={BookOpen}>
               <p>Escolha um tema relevante para a Enfermagem, como atenção hospitalar, cuidado domiciliar, saúde coletiva ou ensino em saúde.</p>
@@ -98,8 +90,8 @@ export const InformacoesGeraisTccPage: React.FC<InformacoesGeraisTccPageProps> =
               <p>A orientação deve ser formalizada conforme os procedimentos da disciplina. O orientador também preside a banca de defesa.</p>
             </RuleCard>
             <RuleCard title="Pode haver coorientador?" icon={Info}>
-              <p>O Portal possui campo para coorientador <strong>quando houver</strong>, mas a norma de elaboração consultada não estabelece de modo expresso os critérios de elegibilidade e aprovação da coorientação.</p>
-              <p><strong>Confirme previamente</strong> com a coordenação da disciplina ou Comissão de TCC antes de formalizar a indicação. O cadastro no Portal, por si só, não substitui essa autorização.</p>
+              <p>O Portal permite cadastrar coorientador <strong>quando houver</strong>. A indicação deve observar os critérios do curso, confirmados com a coordenação da disciplina ou Comissão de TCC.</p>
+              <p>A coorientação não substitui o orientador nem os dois examinadores.</p>
             </RuleCard>
             <RuleCard title="Como é formada a banca" icon={Users}>
               <p>A norma disponível prevê <strong>3 integrantes</strong>: o orientador, na presidência, e mais <strong>2 profissionais de nível superior</strong> com conhecimento do tema, preferencialmente enfermeiros.</p>
@@ -111,37 +103,36 @@ export const InformacoesGeraisTccPage: React.FC<InformacoesGeraisTccPageProps> =
             </RuleCard>
             <RuleCard title="Apresentação e avaliação" icon={ClipboardList}>
               <p>A defesa é uma apresentação oral, de caráter público, avaliada por banca examinadora. O estudante deve combinar data e horário com orientador e avaliadores e observar o procedimento de reserva de local.</p>
-              <p>A página institucional prevê <strong>1 hora e 30 minutos por agendamento</strong>, incluindo apresentação, avaliação e organização do espaço. Essa duração da reserva não deve ser confundida com o tempo de fala.</p>
+              <p>O Portal reserva <strong>1 hora e 30 minutos por agendamento</strong>, incluindo apresentação, avaliação e organização do espaço. Esse intervalo não define o tempo de fala.</p>
+              <p>Aqui, o orientador registra <strong>conceito e parecer</strong> para a documentação. A avaliação acadêmica e o lançamento da nota são feitos no <SourceLink href="https://professor.ufes.br/">Portal do Professor</SourceLink>.</p>
             </RuleCard>
             <RuleCard title="Depois da defesa" icon={CheckCircle2}>
               <p>Realize as correções solicitadas pela banca, sob acompanhamento do orientador, e entregue a versão final conforme a orientação institucional.</p>
-              <p>Na rotina digital divulgada pelo curso, a entrega reúne <strong>trabalho final, resumo, ata de apresentação e termo de autorização para publicação</strong>, conforme aplicabilidade, em PDF.</p>
+              <p>No <strong>Repositório acadêmico</strong>, qualquer um dos autores preenche o resumo e as palavras-chave e anexa o PDF do trabalho completo. O PDF do resumo expandido é opcional.</p>
             </RuleCard>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
             <section className="portal-layer-card rounded-xl border border-slate-300 p-3 shadow-2xs sm:p-4">
               <h2 className="flex items-center gap-2 text-xs font-black text-slate-900 sm:text-sm"><CheckCircle2 className="h-4 w-4 text-[var(--portal-brand-action)]" aria-hidden="true" />A entrega do TCC é obrigatória?</h2>
-              <p className="mt-2 text-xs leading-5 text-slate-700"><strong>Sim.</strong> A versão final e os documentos acadêmicos exigidos precisam ser entregues para a conclusão do processo. Na rotina digital divulgada, os arquivos são enviados em PDF.</p>
+              <p className="mt-2 text-xs leading-5 text-slate-700"><strong>Sim.</strong> O PDF do trabalho completo, o resumo e as palavras-chave são obrigatórios na entrega dos processos novos. A entrega não autoriza a publicação do arquivo. Os registros legados preservam o que foi recebido na época, inclusive quando não há trabalho completo anexado.</p>
             </section>
             <section className="portal-layer-card rounded-xl border border-slate-300 p-3 shadow-2xs sm:p-4">
               <h2 className="flex items-center gap-2 text-xs font-black text-slate-900 sm:text-sm"><ShieldCheck className="h-4 w-4 text-[var(--portal-brand-action)]" aria-hidden="true" />É obrigatório publicar o TCC na internet?</h2>
-              <p className="mt-2 text-xs leading-5 text-slate-700"><strong>Não foi identificada obrigação geral de disponibilização pública</strong> nas referências consultadas. Entrega acadêmica e publicação são ações diferentes. No Portal, a divulgação de arquivos depende da autorização expressa aplicável, e não decorre automaticamente da entrega.</p>
+              <p className="mt-2 text-xs leading-5 text-slate-700"><strong>A publicação do TCC na internet não é obrigatória.</strong> Entrega acadêmica e publicação são ações diferentes. No Portal, a divulgação do trabalho e do resumo expandido depende de autorização para cada PDF e não ocorre automaticamente com a entrega. Havendo publicação autorizada, os autores e o orientador assinam o Termo em <strong>Documentos administrativos</strong>. Sem autorização de nenhum arquivo, não há Termo.</p>
             </section>
           </div>
 
           <section className="portal-layer-card space-y-2 rounded-xl border border-slate-300 p-3 shadow-2xs sm:p-4">
-            <h2 className="text-xs font-black text-slate-900 sm:text-sm">Documentos oficiais e próximos passos</h2>
-            <p className="text-xs leading-5 text-slate-700">Consulte as fontes antes de decidir sobre prazos, documentação e situações não previstas. A norma de elaboração disponível descreve também procedimentos físicos históricos, como CD e cópias impressas, que <strong>não devem ser confundidos com a rotina digital atual</strong>.</p>
+            <h2 className="text-xs font-black text-slate-900 sm:text-sm">Documentos e próximos passos</h2>
+            <p className="text-xs leading-5 text-slate-700"><strong>Documentos administrativos</strong> reúne comprovante de reserva, carta-convite, ata, Termo de Autorização quando aplicável e declaração de participação na banca. A ata é assinada pelo orientador; a declaração, pela presidência da Comissão. Comprovante e convite não exigem assinatura.</p>
+            <p className="text-xs leading-5 text-slate-700">Nos legados, essa mesma aba também reúne o instrumento de avaliação antigo, quando localizado. Ele não faz parte dos processos novos.</p>
+            <p className="text-xs leading-5 text-slate-700">Consulte as fontes para prazos e regras da sua matriz. A norma disponível descreve procedimentos físicos históricos; a tramitação digital deste Portal segue as etapas de cadastro, reserva, conceito, assinaturas e entrega.</p>
             <ul className="space-y-1.5 text-xs leading-5 text-slate-700">
               <li><SourceLink href={NORMAS_TCC_URL}>Normas para elaboração do TCC (documento disponível no site do curso)</SourceLink></li>
               <li><SourceLink href={ORIENTACOES_CURSO_URL}>Orientações institucionais de agendamento, defesa e entrega</SourceLink></li>
               <li><SourceLink href={MATRIZ_CURRICULAR_URL}>Organização curricular do curso</SourceLink></li>
             </ul>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <button type="button" onClick={() => onNavigate('tutorial')} className="portal-action-green rounded-lg border px-3 py-2 text-xs font-bold text-white">Como usar o Portal</button>
-              <button type="button" onClick={() => onNavigate('fluxo-tcc')} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-100">Ver fluxo do TCC</button>
-            </div>
           </section>
         </div>
       )}

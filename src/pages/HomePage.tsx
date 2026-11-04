@@ -2027,7 +2027,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 case 'resumo':
                   return (
                     <td key="resumo" data-portal-filter-value={proc.acervo?.resumoSintese || ''} className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.borderClass} align-middle`}>
-                      <TccAbstractPopover summary={proc.acervo?.resumoSintese} processLabel={formatProcessLabel(proc.protocolo || proc.id)} unavailableLabel={proc.legacyRecord ? 'Resumo não disponível para consulta pública' : undefined} />
+                      <TccAbstractPopover summary={proc.acervo?.resumoSintese} processLabel={formatProcessLabel(proc.protocolo || proc.id)} unavailableLabel={proc.legacyRecord ? 'Resumo não localizado no acervo importado' : undefined} />
                     </td>
                   );
                 case 'palavrasChave':
@@ -2414,7 +2414,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   case 'resumo':
                     return (
                       <td key="resumo" data-portal-filter-value={proc.acervo?.resumoSintese || ''} className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
-                        <TccAbstractPopover summary={proc.acervo?.resumoSintese} processLabel={formatProcessLabel(proc.protocolo || proc.id)} unavailableLabel={proc.legacyRecord ? 'Resumo não disponível para consulta pública' : undefined} />
+                        <TccAbstractPopover summary={proc.acervo?.resumoSintese} processLabel={formatProcessLabel(proc.protocolo || proc.id)} unavailableLabel={proc.legacyRecord ? 'Resumo não localizado no acervo importado' : undefined} />
                       </td>
                     );
                   case 'palavrasChave':

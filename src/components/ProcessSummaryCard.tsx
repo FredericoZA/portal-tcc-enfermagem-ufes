@@ -4,7 +4,6 @@ import type { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
 import { PortalModalShell } from './PortalModalShell';
 import { RegistrationFieldPreview } from './RegistrationFieldPreview';
-import { ProcessGuidanceNotice } from './ProcessGuidanceNotice';
 import { formatDatePt, formatTimeExtenso, formatTccTitle } from '../utils/formatters';
 import { isOtherDefenseLocation, OTHER_DEFENSE_LOCATION, renderCustomLocationName } from '../utils/customDefenseLocation';
 import { operationalConfig } from '../utils/operationalConfig';
@@ -209,8 +208,6 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
         )}
         {error && !reservationOpen && <p role="alert" className="mt-2 text-[10px] text-red-700">{error}</p>}
       </section>
-      {!process.legacyRecord && <ProcessGuidanceNotice />}
-
       <PortalModalShell
         open={reservationOpen}
         onClose={() => { if (!reservationSending) setReservationOpen(false); }}
@@ -240,7 +237,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
             <span className={fieldLabel}>Novo local *</span>
             <select required value={locationChoice} onChange={(event) => setLocationChoice(event.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs">
               <option value="">Selecione…</option>
-              {locations.map((value) => <option key={value} value={value}>{value}</option>)}
+              {locations.map((value) => <option key={value} value={value}>{isOtherDefenseLocation(value)?'Outro local — informar endereço/nome':value}</option>)}
             </select>
           </label>
           {isOtherDefenseLocation(locationChoice) && (

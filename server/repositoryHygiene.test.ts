@@ -37,10 +37,10 @@ test('tutorial público segue o padrão compacto por perfil sem blocos instituci
   const tutorial = await source('src/pages/PortalTutorialPage.tsx');
   assert.ok(tutorial.includes('Como usar o Portal de TCC'));
   assert.ok(tutorial.includes('portal-table-filter-chip'));
-  assert.ok(tutorial.includes("title: 'Aluno'"));
-  assert.ok(tutorial.includes("title: 'Orientador'"));
-  assert.ok(!tutorial.includes("title: 'Presidente da Comissão'"));
-  assert.ok(tutorial.includes("title: 'Visitante'"));
+  assert.match(tutorial, /aluno:\s*'Aluno'/);
+  assert.match(tutorial, /orientador:\s*'Orientador'/);
+  assert.ok(!tutorial.includes('Presidente da Comissão'));
+  assert.match(tutorial, /visitante:\s*'Visitante'/);
   assert.ok(!tutorial.includes('Dados protegidos'));
   assert.ok(!tutorial.includes('Informação acadêmica pública'));
   assert.ok(!tutorial.includes('Número do TCC, nome do trabalho, nomes completos, matrícula dos alunos'));

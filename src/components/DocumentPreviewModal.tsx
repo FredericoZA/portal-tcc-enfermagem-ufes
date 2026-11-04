@@ -27,7 +27,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   const profile = resolveInstallationProfile(settings);
   if (!document) return null;
 
-  const previewTitle = `${({CONVITE:'Convite de banca examinadora',ATA:'Ata oficial da defesa final',TERMO:'Termo de autorização para publicação',DECLARACAO:'Declaração de participação na banca'})[document.type]} · ${processProtocol}`;
+  const previewTitle = `${({CONVITE:'Convite de banca examinadora',ATA:'Ata',TERMO:'Termo de autorização para publicação',DECLARACAO:'Declaração de participação na banca'})[document.type]} · ${processProtocol}`;
 
   const currentVer: DocumentVersion | undefined = document.versions?.find((v) => v.isCurrent) || document.versions?.[0];
   const isDownloadable = document.status === 'DISPONIVEL' || document.status === 'ASSINADO';

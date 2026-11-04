@@ -1,48 +1,24 @@
 import React from 'react';
 import { FileSignature } from 'lucide-react';
 
-type SignatureStep = {
-  document: string;
-  signers: string;
-  when: string;
-  where: string;
-  how: string;
-};
-
-const signatureSteps: SignatureStep[] = [
-  {
-    document: 'Ata da defesa',
-    signers: 'Professor orientador.',
-    when: 'Após registrar o conceito e o parecer, a partir do horário da defesa.',
-    where: 'Documentos administrativos → Ata Oficial da Defesa Final → Asten ou Gov.br.',
-    how: 'O orientador solicita a assinatura nessa caixa. A ata assinada e arquivada libera a entrega final; autores e orientador recebem as instruções.',
-  },
-  {
-    document: 'Termo de autorização de publicação',
-    signers: 'Professor orientador e todos os alunos autores.',
-    when: 'Após a entrega final, quando houver autorização para tornar público o trabalho, o resumo expandido ou ambos.',
-    where: 'Documentos administrativos → Termo de Autorização e Publicação → Asten ou Gov.br. Confirmar a entrega não solicita assinatura automaticamente.',
-    how: 'No Asten, todos assinam no mesmo nível. Pelo Gov.br, somente o orientador devolve um único PDF com todas as assinaturas. Sem publicação autorizada, não há Termo nem aviso de assinatura.',
-  },
-  {
-    document: 'Declaração de participação na banca',
-    signers: 'Presidente da Comissão.',
-    when: 'Por último: após a entrega final, a ata arquivada e o termo assinado e arquivado, quando aplicável.',
-    where: 'Área do Presidente → declaração do TCC → Asten ou Gov.br.',
-    how: 'A assinatura usa o e-mail da presidência configurado no Portal. A declaração assinada e arquivada permite concluir o processo; ela não é assinada pelos autores ou pela banca.',
-  },
+const signatureSteps = [
+  {document: 'Comprovante de reserva', signers: 'Não requer assinatura.', procedure: 'Disponível após o aceite ou a recusa do responsável pelo local.'},
+  {document: 'Carta-convite da banca', signers: 'Não requer assinatura.', procedure: 'Disponível após a confirmação da reserva e o envio do convite.'},
+  {document: 'Ata da defesa', signers: 'Professor orientador.', procedure: 'Após registrar o conceito e o parecer, a partir do horário da defesa, solicite a assinatura na caixa Ata. O arquivamento libera a entrega final.'},
+  {document: 'Termo de autorização de publicação', signers: 'Orientador e todos os autores.', procedure: 'Após a entrega final, fica disponível somente se algum PDF tiver publicação autorizada. No Asten, todos assinam no mesmo nível; pelo Gov.br, o orientador devolve um único PDF com todas as assinaturas.'},
+  {document: 'Declaração de participação na banca', signers: 'Presidente da Comissão.', procedure: 'Solicite pela Área do Presidente, após a entrega final e o arquivamento da ata e do termo, quando aplicável. A declaração assinada e arquivada permite concluir o processo.'},
 ];
 
-const headingClasses = 'border border-emerald-800 px-3 py-3 text-left text-[11px] font-black text-white';
-const cellClasses = 'border border-slate-300 px-3 py-3 align-top text-[11px] leading-[1.6] text-slate-700';
+const headingClasses = 'border border-[var(--portal-border-strong)] px-2 py-1.5 text-left text-[11px] font-bold text-[var(--portal-text-dark)]';
+const cellClasses = 'border border-[var(--portal-border)] px-2 py-1.5 align-top text-[11px] leading-[18px] text-[var(--portal-text-dark)]';
 
 export const SignatureFlowSummary: React.FC = () => (
   <section
-    className="portal-layer-panel mt-4 rounded-2xl border border-slate-300 p-3 sm:p-4"
+    className="portal-layer-card mt-4 rounded-xl border border-[var(--portal-border)] p-3 sm:p-4"
     aria-labelledby="signature-flow-title"
   >
-    <div className="mb-3 flex items-center justify-center gap-2">
-      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-100 text-emerald-800" aria-hidden="true">
+    <div className="mb-3 flex items-center gap-2">
+      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--portal-brand-action)] text-[var(--portal-text-light)]" aria-hidden="true">
         <FileSignature className="h-[18px] w-[18px]" />
       </span>
       <h2 id="signature-flow-title" className="text-sm font-black text-slate-950 sm:text-base">
@@ -50,62 +26,35 @@ export const SignatureFlowSummary: React.FC = () => (
       </h2>
     </div>
 
-    <p className="portal-instruction mb-3 rounded-lg px-3 py-2 text-[11px] leading-[1.6]">
-      <strong>Orientações:</strong> prefira o Asten para assinar pelo link recebido por e-mail. A escolha do método acontece na caixa do documento ou na Área do Presidente, conforme indicado abaixo.
-    </p>
+    <p className="mb-3 text-xs leading-5 text-slate-700">Em <strong>Documentos administrativos</strong>, consulte a disponibilidade de cada documento e use <strong>Ver</strong> ou <strong>Baixar PDF</strong>. As assinaturas são solicitadas pelos botões do documento, após o registro do conceito ou da entrega.</p>
 
-    <div className="overflow-x-auto rounded-xl border border-slate-300" role="region" aria-label="Tabela de assinaturas do processo" tabIndex={0}>
-      <table className="w-full min-w-[1000px] table-fixed border-collapse bg-slate-50">
-        <colgroup>
-          <col style={{ width: '17%' }} />
-          <col style={{ width: '16%' }} />
-          <col style={{ width: '19%' }} />
-          <col style={{ width: '22%' }} />
-          <col style={{ width: '26%' }} />
-        </colgroup>
-        <thead className="bg-[var(--portal-brand-header)]">
-          <tr>
+    <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]" data-signature-layout>
+      <div className="min-w-0 overflow-x-auto rounded-xl border border-slate-300" role="region" aria-label="Tabela de assinaturas do processo" tabIndex={0}>
+        <table className="w-full min-w-[440px] table-fixed border-collapse bg-[var(--portal-border)]">
+          <colgroup><col style={{width: '23%'}}/><col style={{width: '22%'}}/><col style={{width: '55%'}}/></colgroup>
+          <thead className="bg-[var(--portal-brand-sage)]"><tr>
             <th scope="col" className={headingClasses}>Documento</th>
             <th scope="col" className={headingClasses}>Quem assina</th>
-            <th scope="col" className={headingClasses}>Quando solicita</th>
-            <th scope="col" className={headingClasses}>Onde escolhe</th>
-            <th scope="col" className={headingClasses}>Como avança</th>
-          </tr>
-        </thead>
-        <tbody>
-          {signatureSteps.map((step, index) => (
-            <tr key={step.document} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-100'}>
-              <th scope="row" className={`${cellClasses} text-left font-bold text-slate-950`}>{step.document}</th>
-              <td className={cellClasses}>{step.signers}</td>
-              <td className={cellClasses}>{step.when}</td>
-              <td className={cellClasses}>{step.where}</td>
-              <td className={cellClasses}>{step.how}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            <th scope="col" className={headingClasses}>Procedimento</th>
+          </tr></thead>
+          <tbody>{signatureSteps.map(step => <tr key={step.document}>
+            <th scope="row" className={`${cellClasses} text-left font-bold`}>{step.document}</th>
+            <td className={cellClasses}>{step.signers}</td>
+            <td className={cellClasses}>{step.procedure}</td>
+          </tr>)}</tbody>
+          <tfoot>
+            <tr><th scope="row" className={`${cellClasses} text-left font-bold`}>Asten · preferencial</th><td colSpan={2} className={cellClasses}>Solicite pelo botão Asten e siga o link recebido por e-mail. Aguarde o arquivamento antes de repetir o pedido. Registrar o conceito ou confirmar a entrega não dispara assinaturas automaticamente.</td></tr>
+            <tr><th scope="row" className={`${cellClasses} text-left font-bold`}>Gov.br</th><td colSpan={2} className={cellClasses}>Baixe, assine e devolva o mesmo PDF: o orientador devolve a ata e o termo; a presidência, a declaração. O Master confere no VALIDAR/ITI e registra o arquivamento; a presidência também pode conferir a declaração.</td></tr>
+          </tfoot>
+        </table>
+      </div>
+      <figure className="m-0 min-w-0 w-full justify-self-center xl:justify-self-end">
+        <a href="/manual/documentos-concluidos.jpg?v=2026-11-04" target="_blank" rel="noreferrer" className="block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--portal-focus)]" aria-label="Ampliar exemplo dos cinco documentos disponíveis">
+          <img src="/manual/documentos-concluidos.jpg?v=2026-11-04" alt="Exemplo de processo concluído, com os cinco documentos administrativos disponíveis e os botões Ver e Baixar PDF alinhados." loading="lazy" className="block h-auto w-full rounded-lg" />
+        </a>
+        <figcaption className="mt-1.5 text-[11px] leading-4 text-slate-600">Exemplo preenchido com dados fictícios. Clique na imagem para ampliar.</figcaption>
+      </figure>
     </div>
 
-    <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
-      <div className="portal-instruction rounded-xl p-3 text-[11px] leading-[1.7]">
-        <h3 className="mb-1 font-black text-slate-900">Asten: solicitar e acompanhar</h3>
-        <p>
-          Clique em Asten no documento disponível para solicitar a assinatura. Cada responsável recebe
-          um e-mail do Asten para assinar. Acompanhe a situação na caixa do documento e aguarde o arquivamento
-          do PDF assinado. Enquanto o envio ou a assinatura estiver pendente, evite repetir o pedido.
-        </p>
-      </div>
-      <div className="portal-instruction rounded-xl p-3 text-[11px] leading-[1.7]">
-        <h3 className="mb-1 font-black text-slate-900">Gov.br: assinar e devolver o PDF</h3>
-        <p>
-          Abra Gov.br na caixa do documento. Use Gerar e baixar PDF ou Baixar PDF para assinar;
-          depois abra o assinador Gov.br e devolva o mesmo arquivo por Devolver PDF assinado.
-          O orientador devolve a ata e o termo; a presidência devolve a declaração. O Master confere
-          as assinaturas no VALIDAR/ITI e registra Aprovar conferência e arquivar. Na Área do Presidente,
-          a presidência também pode conferir a declaração.
-          Apenas enviar o PDF não conclui a assinatura nem libera a próxima etapa.
-        </p>
-      </div>
-    </div>
   </section>
 );

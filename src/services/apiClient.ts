@@ -28,6 +28,51 @@ export class ApiRequestError extends Error {
   }
 }
 
+// Ordinary API calls are bounded independently of a stalled connection. PDF
+// transfers and explicit maintenance jobs get the server's full five-minute budget.
+export const API_REQUEST_TIMEOUT_MS = 120_000;
+export const LONG_REQUEST_TIMEOUT_MS = 300_000;
+export type ApiRequestOptions = RequestInit & { timeoutMs?: number };
+
+export async function withApiRequestDeadline<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
+  options: Pick<ApiRequestOptions, 'signal' | 'timeoutMs' | 'method'> = {},
+): Promise<T> {
+  const timeoutMs = options.timeoutMs ?? API_REQUEST_TIMEOUT_MS;
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new RangeError('Prazo de requisição inválido.');
+  const controller = new AbortController();
+  const isMutation = !['GET', 'HEAD'].includes((options.method || 'GET').toUpperCase());
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let rejectInterruption!: (error: ApiRequestError) => void;
+  const interrupted = new Promise<never>((_, reject) => { rejectInterruption = reject; });
+  const interrupt = (code: 'REQUEST_TIMEOUT' | 'REQUEST_CANCELED', reason?: unknown) => {
+    if (controller.signal.aborted) return;
+    const message = code === 'REQUEST_TIMEOUT'
+      ? 'O prazo de espera terminou.'
+      : 'A espera foi cancelada.';
+    const error = new ApiRequestError(isMutation
+      ? `${message} Não foi possível confirmar o resultado. Confira o processo ou os dados antes de repetir a operação.`
+      : `${message} Não foi possível concluir a consulta. Tente novamente.`, 0, code);
+    // Settle the caller even if a transport ignores abort; abort still releases
+    // native fetch/body reads. Neither cancellation nor timeout retries a write.
+    rejectInterruption(error);
+    controller.abort(code === 'REQUEST_CANCELED' ? reason : error);
+  };
+  const cancel = () => interrupt('REQUEST_CANCELED', options.signal?.reason);
+  options.signal?.addEventListener('abort', cancel, { once: true });
+  try {
+    if (options.signal?.aborted) {
+      cancel();
+      return await interrupted;
+    }
+    timer = setTimeout(() => interrupt('REQUEST_TIMEOUT'), timeoutMs);
+    return await Promise.race([operation(controller.signal), interrupted]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    options.signal?.removeEventListener('abort', cancel);
+  }
+}
+
 export function setActiveUserEmail(email: string) {
   invalidateIdentityRequests();
   activeUserEmail = email;
@@ -41,30 +86,34 @@ export function getActiveUserEmail(): string {
   catch { return activeUserEmail; }
 }
 
-async function fetchApiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+export async function fetchApiRequest<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
   const identityRevision=activeIdentityRevision;
+  const { timeoutMs, ...requestOptions } = options;
   const headers: Record<string,string> = {
     'Content-Type': 'application/json',
     ...((options.headers || {}) as Record<string,string>)
   };
   if(isLocalDemoFrontend()&&getActiveUserEmail())headers['x-demo-user-email']=getActiveUserEmail();
 
-  const response = await fetch(endpoint, {
-    ...options,
-    headers,
-    credentials: 'include'
-  });
+  return withApiRequestDeadline(async signal => {
+    const response = await fetch(endpoint, {
+      ...requestOptions,
+      signal,
+      headers,
+      credentials: 'include'
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    reportExpiredSession(response.status,errorData.code,identityRevision);
-    throw new ApiRequestError(errorData.error || errorData.message || `Erro HTTP ${response.status}`, response.status, errorData.code, errorData.issues);
-  }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      reportExpiredSession(response.status,errorData.code,identityRevision);
+      throw new ApiRequestError(errorData.error || errorData.message || `Erro HTTP ${response.status}`, response.status, errorData.code, errorData.issues);
+    }
 
-  return response.json();
+    return response.json();
+  }, { ...requestOptions, timeoutMs });
 }
 
-async function fetchApi<T>(endpoint:string,options:RequestInit={}):Promise<T>{
+async function fetchApi<T>(endpoint:string,options:ApiRequestOptions={}):Promise<T>{
  if(['GET','HEAD'].includes((options.method||'GET').toUpperCase()))return fetchApiRequest<T>(endpoint,options);
  return withPortalOperation(requestOperationLabel(endpoint),()=>fetchApiRequest<T>(endpoint,options));
 }
@@ -73,28 +122,30 @@ async function downloadApiFile(endpoint:string):Promise<{blob:Blob;fileName:stri
  return withPortalOperation('Preparando o documento para download…',()=>downloadApiFileRequest(endpoint));
 }
 
-async function downloadApiFileRequest(endpoint: string): Promise<{ blob: Blob; fileName: string }> {
+export async function downloadApiFileRequest(endpoint: string, options: Pick<ApiRequestOptions, 'signal' | 'timeoutMs'> = {}): Promise<{ blob: Blob; fileName: string }> {
   const identityRevision=activeIdentityRevision;
   const headers: Record<string, string> = {};
   if (isLocalDemoFrontend() && getActiveUserEmail()) {
     headers['x-demo-user-email'] = getActiveUserEmail();
   }
 
-  const response = await fetch(endpoint, { headers, credentials: 'include' });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    reportExpiredSession(response.status,errorData.code,identityRevision);
-    throw new Error(errorData.error || errorData.message || `Erro HTTP ${response.status}`);
-  }
+  return withApiRequestDeadline(async signal => {
+    const response = await fetch(endpoint, { signal, headers, credentials: 'include' });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      reportExpiredSession(response.status,errorData.code,identityRevision);
+      throw new Error(errorData.error || errorData.message || `Erro HTTP ${response.status}`);
+    }
 
-  const disposition = response.headers.get('content-disposition') || '';
-  const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
-  const plainName = disposition.match(/filename="?([^";]+)"?/i)?.[1];
-  const fileName = encodedName
-    ? decodeURIComponent(encodedName)
-    : plainName || 'documento-assinado.pdf';
+    const disposition = response.headers.get('content-disposition') || '';
+    const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+    const plainName = disposition.match(/filename="?([^";]+)"?/i)?.[1];
+    const fileName = encodedName
+      ? decodeURIComponent(encodedName)
+      : plainName || 'documento-assinado.pdf';
 
-  return { blob: await response.blob(), fileName };
+    return { blob: await response.blob(), fileName };
+  }, { ...options, timeoutMs: options.timeoutMs ?? LONG_REQUEST_TIMEOUT_MS });
 }
 
 export async function getApiAuthHeaders():Promise<Record<string,string>>{if(isLocalDemoFrontend()&&getActiveUserEmail())return{'x-demo-user-email':getActiveUserEmail()};return{};}
@@ -115,7 +166,9 @@ async function stageFile(file: File, descriptor: Omit<StagedUploadDescriptor, 'f
     mimeType: file.type.toLowerCase(),
     sha256
   });
-  await uploadBinaryToSignedUrl(file, ticket);
+  await withApiRequestDeadline(signal => uploadBinaryToSignedUrl(file, ticket, signal), {
+    method: 'PUT', timeoutMs: LONG_REQUEST_TIMEOUT_MS,
+  });
   return { uploadId: ticket.uploadId, sha256 };
 }
 
@@ -194,7 +247,7 @@ export const apiClient = {
   getEvaluationSchema: (id: string) => fetchApi<{ studio: Partial<IntegrationStudioSettings>; outcomes: GlobalSettings['evaluationOutcomeOptions'];ataModelFingerprint?:string }>(`/api/processes/${id}/evaluation/schema`),
   getEvaluationDraft:(id:string)=>fetchApi<{processId:string;dataRevision:number;answers:Record<string,string|number|boolean>;documentText?:string;savedAt:string;modelFingerprint?:string;documentTextReset?:boolean}|null>(`/api/processes/${encodeURIComponent(id)}/evaluation/draft`),
   saveEvaluationDraft:(id:string,answers:Record<string,string|number|boolean>,expectedDataRevision:number,documentText?:string,expectedModelFingerprint?:string)=>fetchApiRequest<{savedAt:string;answers:Record<string,string|number|boolean>;documentText?:string}>(`/api/processes/${encodeURIComponent(id)}/evaluation/draft`,{method:'PUT',body:JSON.stringify({answers,expectedDataRevision,documentText,expectedModelFingerprint})}),
-  previewEvaluation: (id:string,data:unknown)=>fetchApi<{previewToken:string;documentText?:string;downloadUrl?:string;contentBase64?:string}>(`/api/processes/${encodeURIComponent(id)}/evaluation/preview`,{method:'POST',body:JSON.stringify(data)}),
+  previewEvaluation: (id:string,data:unknown)=>fetchApi<{previewToken:string;documentText?:string;downloadUrl?:string;contentBase64?:string}>(`/api/processes/${encodeURIComponent(id)}/evaluation/preview`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify(data)}),
   submitEvaluation: (id: string, data: { resultadoCode: string; parecer: string; answers?: Record<string, string | number | boolean>; dataConfirmed: true; expectedDataRevision: number; expectedSchemaRevision: number }) => fetchApi<ProcessData & { workflowPending?: boolean; workflowError?: string }>(`/api/processes/${id}/evaluation`, {
     method: 'POST',
     body: JSON.stringify(data)
@@ -207,12 +260,12 @@ export const apiClient = {
   downloadProcessDocument: (id: string, documentId: string) =>
     downloadApiFile(`/api/processes/${id}/documents/${documentId}/download`),
   getProcessSignatureJobs:(id:string)=>fetchApi<SignatureJob[]>(`/api/processes/${id}/signatures`),
-  signProcessDocument:(id:string,type:string,provider:'ASTEN'|'GOV_BR'='ASTEN')=>fetchApi<{job:SignatureJob;message:string}>(`/api/processes/${id}/documents/${type}/sign`,{method:'POST',body:JSON.stringify({provider})}),
+  signProcessDocument:(id:string,type:string,provider:'ASTEN'|'GOV_BR'='ASTEN')=>fetchApi<{job:SignatureJob;message:string}>(`/api/processes/${id}/documents/${type}/sign`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({provider})}),
   downloadGovbrPdf:(jobId:string,returned=false)=>downloadApiFile(`/api/signatures/jobs/${encodeURIComponent(jobId)}/govbr/download${returned?'?kind=returned':''}`),
   uploadGovbrPdf:(job:SignatureJob,file:File)=>withDevelopmentFallback(file,async()=>{
     const staged=await stageFile(file,{purpose:'GOV_BR_SIGNED_PDF',processId:job.processId});
-    return fetchApi<SignatureJob>(`/api/signatures/jobs/${encodeURIComponent(job.id)}/govbr/complete`,{method:'POST',body:JSON.stringify(staged)});
-  },async()=>fetchApi<SignatureJob>(`/api/signatures/jobs/${encodeURIComponent(job.id)}/govbr/complete`,{method:'POST',body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})})),
+    return fetchApi<SignatureJob>(`/api/signatures/jobs/${encodeURIComponent(job.id)}/govbr/complete`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify(staged)});
+  },async()=>fetchApi<SignatureJob>(`/api/signatures/jobs/${encodeURIComponent(job.id)}/govbr/complete`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})})),
   approveGovbrPdf:(jobId:string,confirmation:{sha256:string;itiApproved:boolean;signerMatches:boolean;documentMatches:boolean})=>fetchApi<SignatureJob>(`/api/signatures/jobs/${encodeURIComponent(jobId)}/govbr/approve`,{method:'POST',body:JSON.stringify(confirmation)}),
   requestCorrection: (id: string, docId: string, data: { description: string }) => fetchApi<DocumentCorrectionRequest>(`/api/processes/${id}/documents/${docId}/correction-request`, {
     method: 'POST',
@@ -229,9 +282,9 @@ export const apiClient = {
   saveAstenDocumentFolders:(mapping:Record<AstenDocumentFolderType,number>)=>fetchApi<AstenDocumentFoldersStatus>('/api/integrations/asten/folders',{method:'PUT',body:JSON.stringify({mapping})}),
   getInfrastructureStatus:()=>fetchApi<any>('/api/integrations/status'),
   testSupabaseConnection:()=>fetchApi<{configured:boolean;connected:boolean;durablePersistenceReady:boolean;normalizedSchemaReady:boolean;transactionalRuntimeReady:boolean;keyMode:string;message:string}>('/api/integrations/supabase/test',{method:'POST'}),
-  syncGoogleWorkspaceCalendar:()=>fetchApi<{calendarId:string;created:number;events:GoogleCalendarSyncedEvent[]}>('/api/integrations/google/calendar/sync',{method:'POST'}),
+  syncGoogleWorkspaceCalendar:()=>fetchApi<{calendarId:string;created:number;events:GoogleCalendarSyncedEvent[]}>('/api/integrations/google/calendar/sync',{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   applyGoogleDocDesign:(documentId:string,options:any)=>fetchApi<{styledVariables:number;headerUpdated:boolean;footerUpdated:boolean}>(`/api/admin/google/docs/${encodeURIComponent(documentId)}/design`,{method:'POST',body:JSON.stringify(options)}),
-  runInfrastructureHomologation:()=>fetchApi<{id:string;executedAt:string;executedBy:string;readyForProduction:boolean;checks:Array<{id:string;label:string;status:'PASS'|'FAIL'|'PENDING';message:string}>}>('/api/integrations/homologation',{method:'POST'}),
+  runInfrastructureHomologation:()=>fetchApi<{id:string;executedAt:string;executedBy:string;readyForProduction:boolean;checks:Array<{id:string;label:string;status:'PASS'|'FAIL'|'PENDING';message:string}>}>('/api/integrations/homologation',{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   getAstenDashboard:()=>fetchApi<any>('/api/admin/asten/dashboard'),
   getEmailDeliveries:()=>fetchApi<any[]>('/api/admin/email-deliveries'),
   retryEmailDelivery:(id:string)=>fetchApi<any>(`/api/admin/email-deliveries/${encodeURIComponent(id)}/retry`,{method:'POST'}),
@@ -243,7 +296,7 @@ export const apiClient = {
   getStudioVersions:()=>fetchApi<any[]>('/api/admin/studio/versions'),
   compareStudioVersion:(revision:number)=>fetchApi<any>(`/api/admin/studio/versions/${revision}/compare`),
   restoreStudioVersion:(revision:number)=>fetchApi<any>(`/api/admin/studio/versions/${revision}/restore`,{method:'POST'}),
-  runBackupDrill:()=>fetchApi<any>('/api/admin/backup/drill',{method:'POST'}),
+  runBackupDrill:()=>fetchApi<any>('/api/admin/backup/drill',{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   getRetentionPreview:()=>fetchApi<any>('/api/admin/retention/preview'),
   getLegalHolds:()=>fetchApi<any[]>('/api/admin/legal-holds'),
   createLegalHold:(processId:string,reason:string)=>fetchApi<any>('/api/admin/legal-holds',{method:'POST',body:JSON.stringify({processId,reason})}),
@@ -252,14 +305,14 @@ export const apiClient = {
   createPrivacyRequest:(data:any)=>fetchApi<any>('/api/privacy/requests',{method:'POST',body:JSON.stringify(data)}),
   updatePrivacyRequest:(id:string,data:any)=>fetchApi<any>(`/api/admin/privacy/requests/${id}`,{method:'PATCH',body:JSON.stringify(data)}),
   getOperationalHealth:()=>fetchApi<any>('/api/admin/health'),
-  runDriveIntegrityCheck:()=>fetchApi<any>('/api/admin/integrity/drive',{method:'POST'}),
+  runDriveIntegrityCheck:()=>fetchApi<any>('/api/admin/integrity/drive',{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   getFormArchives:()=>fetchApi<any[]>('/api/admin/form-archives'),
   retryFormArchive:(id:string)=>fetchApi<any>(`/api/admin/form-archives/${encodeURIComponent(id)}/retry`,{method:'POST'}),
   connectAsten:(token:string,repositoryId?:string)=>fetchApi<AstenIntegrationStatus>('/api/integrations/asten/connect',{method:'POST',body:JSON.stringify({token,repositoryId})}),
   getSignatureJobs:()=>fetchApi<SignatureJob[]>('/api/signatures/jobs'),
   retrySignatureJob:(id:string)=>fetchApi<SignatureJob>(`/api/signatures/jobs/${id}/retry`,{method:'POST'}),
   reconcileSignatureJob:(id:string)=>fetchApi<SignatureJob>(`/api/signatures/jobs/${id}/reconcile`,{method:'POST'}),
-  previewDocumentModel:(type:'CONVITE'|'ATA'|'TERMO'|'DECLARACAO',studio:any)=>fetchApi<{analysis:unknown;fileName:string;downloadUrl?:string;contentBase64?:string}>(`/api/admin/models/${type}/preview`,{method:'POST',body:JSON.stringify({studio})}),
+  previewDocumentModel:(type:'CONVITE'|'ATA'|'TERMO'|'DECLARACAO',studio:any)=>fetchApi<{analysis:unknown;fileName:string;downloadUrl?:string;contentBase64?:string}>(`/api/admin/models/${type}/preview`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({studio})}),
   getAuthorizedStudents:()=>fetchApi<any[]>('/api/admin/access-list'),
   getAccessListGoogleTemplate:()=>fetchApi<{url:string}>('/api/admin/access-list/google-template',{method:'POST'}),
   getLocalDocumentModelFile:(type:string)=>downloadApiFile(`/api/admin/models/${encodeURIComponent(type)}/local-source`),
@@ -287,7 +340,7 @@ export const apiClient = {
   downloadAdvancedAnalytics:(format:'csv'|'pdf',period='',compare='')=>downloadApiFile(`/api/admin/analytics/advanced?${new URLSearchParams({format,period,compare})}`),
   simulateWorkflow:(studio: unknown,scenario: unknown)=>fetchApi<any>('/api/admin/workflow/simulate',{method:'POST',body:JSON.stringify({studio,scenario})}),
   getContinuousIntelligence:()=>fetchApi<ContinuousIntelligenceOverview>('/api/admin/continuous-intelligence'),
-  refreshContinuousIntelligence:()=>fetchApi<ContinuousIntelligenceOverview>('/api/admin/continuous-intelligence/refresh',{method:'POST'}),
+  refreshContinuousIntelligence:()=>fetchApi<ContinuousIntelligenceOverview>('/api/admin/continuous-intelligence/refresh',{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   updateImprovementProposal:(id:string,status:ImprovementStatus,reviewNote?:string)=>fetchApi<ContinuousIntelligenceOverview>(`/api/admin/continuous-intelligence/proposals/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({status,reviewNote})}),
   downloadContinuousIntelligenceFile:(kind:LivingPortalArtifactKind)=>downloadApiFile(`/api/admin/continuous-intelligence/files/${encodeURIComponent(kind)}`),
   getProcessVerifications:(id:string)=>fetchApi<any[]>(`/api/processes/${id}/verifications`),
@@ -298,26 +351,26 @@ export const apiClient = {
   detectDocumentModelVariables:(type:string)=>fetchApi<{type:string;variables:string[];detectedAt:string}>(`/api/admin/models/${encodeURIComponent(type)}/detect-variables`,{method:'POST'}),
   uploadDocumentModelFile:(type:string,file:File)=>withDevelopmentFallback(file,async()=>{
     const staged=await stageFile(file,{purpose:'DOCUMENT_MODEL'});
-    return fetchApi<any>(`/api/admin/models/${type}`,{method:'POST',body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type})});
-  },async()=>fetchApi<any>(`/api/admin/models/${type}`,{method:'POST',body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})})),
-  importDocumentModelFromDrive:(type:string,linkOrId:string)=>fetchApi<any>(`/api/admin/models/${type}/link`,{method:'POST',body:JSON.stringify({linkOrId})}),
-  restoreDocumentModelVersion:(type:string,version:number)=>fetchApi<any>(`/api/admin/models/${type}/versions/${version}/restore`,{method:'POST'}),
+    return fetchApi<any>(`/api/admin/models/${type}`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type})});
+  },async()=>fetchApi<any>(`/api/admin/models/${type}`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})})),
+  importDocumentModelFromDrive:(type:string,linkOrId:string)=>fetchApi<any>(`/api/admin/models/${type}/link`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({linkOrId})}),
+  restoreDocumentModelVersion:(type:string,version:number)=>fetchApi<any>(`/api/admin/models/${type}/versions/${version}/restore`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   deleteDocumentModel:(type:string)=>fetchApi<{deleted:boolean;type:string}>(`/api/admin/models/${encodeURIComponent(type)}`,{method:'DELETE'}),
   confirmDefenseLocation:(id:string,data:{local:string;confirmationReceived:boolean;localEvidenceUrl?:string})=>fetchApi<WorkflowProcessResponse>(`/api/processes/${id}/confirm-location`,{method:'POST',body:JSON.stringify(data)}),
   uploadLocationProof:async(id:string,file:File)=>{
     if(file.size>24*1024*1024)throw new Error('O comprovante ultrapassa 24 MB. Envie uma versão menor do PDF.');
     return withDevelopmentFallback(file,async()=>{
       const staged=await stageFile(file,{purpose:'LOCATION_PROOF',processId:id});
-      return fetchApi<import('../types/workflowOperations').LocationProof>(`/api/processes/${encodeURIComponent(id)}/location-proof`,{method:'POST',body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type})});
-    },async()=>fetchApi<import('../types/workflowOperations').LocationProof>(`/api/processes/${encodeURIComponent(id)}/location-proof`,{method:'POST',body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})}));
+      return fetchApi<import('../types/workflowOperations').LocationProof>(`/api/processes/${encodeURIComponent(id)}/location-proof`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type})});
+    },async()=>fetchApi<import('../types/workflowOperations').LocationProof>(`/api/processes/${encodeURIComponent(id)}/location-proof`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})}));
   },
   downloadLocationProof:(id:string)=>downloadApiFile(`/api/processes/${encodeURIComponent(id)}/location-proof/download`),
   downloadReservationReceipt:(protocol:string)=>downloadApiFile(`/api/public/processes/${encodeURIComponent(protocol)}/reservation-receipt`),
   publishReviewedDocumentModel:(type:string,review:{fileId:string;version:number;sha256:string})=>fetchApi<any>(`/api/admin/models/${encodeURIComponent(type)}/publish-reviewed`,{method:'POST',body:JSON.stringify(review)}),
-  previewOfficialModel:(type:string,studio:unknown,answers:unknown)=>fetchApi<any>(`/api/admin/models/${encodeURIComponent(type)}/preview`,{method:'POST',body:JSON.stringify({studio,answers})}),
+  previewOfficialModel:(type:string,studio:unknown,answers:unknown)=>fetchApi<any>(`/api/admin/models/${encodeURIComponent(type)}/preview`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({studio,answers})}),
   compareStudioDraft:(studio:unknown,baseRevision?:number)=>fetchApi<any>('/api/admin/studio/compare',{method:'POST',body:JSON.stringify({studio,baseRevision})}),
   getWorkflowOperations:()=>fetchApi<any>('/api/admin/workflow/operations'),
-  runWorkflowMaintenance:()=>fetchApi<any>('/api/admin/workflow/maintenance',{method:'POST'}),
+  runWorkflowMaintenance:()=>fetchApi<any>('/api/admin/workflow/maintenance',{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   retryWorkflowOperation:(path:string,reviewedStudioRevision?:number)=>{
     if(!/^\/api\/(?:admin\/(?:workflow\/(?:runs|reminders)|email-deliveries|form-archives|studio-form-submissions)|signatures\/jobs)\/[^/]+\/(?:retry|reconcile)$/.test(path))throw new Error('Ação de recuperação inválida.');
     return fetchApi<any>(path,{method:'POST',body:JSON.stringify({reviewedStudioRevision})});
@@ -325,17 +378,18 @@ export const apiClient = {
   submitFinalData:(id:string,data:any)=>fetchApi<WorkflowProcessResponse>(`/api/processes/${id}/final-data`,{method:'POST',body:JSON.stringify(data)}),
   uploadProcessPdfFile:(id:string,kind:'trabalho-completo'|'resumo-expandido',file:File)=>withDevelopmentFallback(file,async()=>{
     const staged=await stageFile(file,{purpose:kind==='trabalho-completo'?'PROCESS_FULL_WORK':'PROCESS_EXPANDED_ABSTRACT',processId:id});
-    return fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type})});
-  },async()=>fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})})),
+    return fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type})});
+  },async()=>fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})})),
   getProcessAuditLogs:(id:string)=>fetchApi<AuditLog[]>(`/api/processes/${encodeURIComponent(id)}/audit-logs`),
   downloadProcessAuditLogs:(id:string)=>downloadApiFile(`/api/processes/${encodeURIComponent(id)}/audit-logs/pdf`),
   getAuditLogs: () => fetchApi<AuditLog[]>('/api/admin/audit-logs'),
   rollbackAuditLog: (logId: string) => fetchApi<{ message: string; process?: ProcessData; settings?: GlobalSettings }>(`/api/admin/rollback-log/${logId}`, {
     method: 'POST'
   }),
-  getFullBackup:()=>fetchApi<any>('/api/admin/backup'),
+  getFullBackup:()=>fetchApi<any>('/api/admin/backup',{timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   restoreFullBackup: (data: any) => fetchApi<{ message?: string; requiresConfirmation?:boolean; confirmHash?:string; summary?:any }>(`/api/admin/restore-full-backup`, {
     method: 'POST',
+    timeoutMs: LONG_REQUEST_TIMEOUT_MS,
     body: JSON.stringify(data)
   }),
   requestRecoveryCode:(email:string)=>fetchApi<{sent:boolean;message:string}>('/api/auth/request-recovery-code',{method:'POST',body:JSON.stringify({email})}),

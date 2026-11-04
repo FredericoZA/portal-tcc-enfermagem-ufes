@@ -1,6 +1,7 @@
 import {PortalOperationStatus} from './components/PortalOperationStatus';
 import {ProcessDeepLink} from './components/ProcessDeepLink';
 import {setProcessLink} from './utils/processLink';
+import {registerModalEscape} from './utils/modalEscape';
 import { PortalDialogs } from './components/PortalDialogs';
 import { PortalErrorBoundary } from './components/PortalErrorBoundary';
 import { PortalModalShell } from './components/PortalModalShell';
@@ -105,11 +106,8 @@ export default function App() {
   useEffect(() => {
     if (!selectedProcessId) return;
     processDialogRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape'&&!document.querySelector('[data-portal-login-modal]')) handleCloseProcess();
-    };
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
+    const dialog = processDialogRef.current;
+    if (dialog) return registerModalEscape(dialog, handleCloseProcess);
   }, [selectedProcessId]);
 
   const renderMainTab = () => {

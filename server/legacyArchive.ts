@@ -106,9 +106,11 @@ export function mergeLegacyBatch(existing: LegacyAcademicRecord[], incoming: Leg
   return merged;
 }
 export function publicLegacyAcademicView(r: LegacyAcademicRecord): PublicLegacyAcademicRecord {
+  // The introductory catalog text is public metadata. Publication consent applies
+  // to the attached full work / expanded abstract PDFs, never to this cell.
   return {id:r.id,protocolo:r.protocolo,titulo:r.titulo,autores:r.autores,
     orientador:r.orientador,coorientador:r.coorientador,coorientadorInstituicao:r.coorientadorInstituicao,
-    examinadores:r.examinadores,resumo:legacyAuthorization(r.provenance)==='AUTHORIZED'?r.resumo:'',palavrasChave:r.palavrasChave,dataDefesa:r.dataDefesa,horaDefesa:r.horaDefesa,localDefesa:r.localDefesa,filesRestricted:!r.attachments.some(file=>legacyFileIsPublic(r,file)),authorizationDecision:legacyAuthorization(r.provenance),
+    examinadores:r.examinadores,resumo:r.resumo,palavrasChave:r.palavrasChave,dataDefesa:r.dataDefesa,horaDefesa:r.horaDefesa,localDefesa:r.localDefesa,filesRestricted:!r.attachments.some(file=>legacyFileIsPublic(r,file)),authorizationDecision:legacyAuthorization(r.provenance),
     publicFiles:r.attachments.flatMap((file,index)=>legacyFileIsPublic(r,file)?[{index,kind:file.kind,downloadUrl:`/api/legacy-academic-records/${encodeURIComponent(r.id)}/files/${index}/download`}]:[])};
 }
 

@@ -173,3 +173,111 @@
 }
 
 /* Mobile. */
+
+/* The manual uses the Portal's existing surfaces, without warning-colored chrome. */
+#portal-tutorial-page .portal-guide-sheet {
+  padding: 16px;
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+  background: var(--portal-surface-card);
+  color: var(--portal-text-dark);
+}
+
+#portal-tutorial-page .portal-guide-screen-nav {
+  margin-block: 8px 16px;
+}
+
+#portal-tutorial-page .portal-guide-screen-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--portal-surface-header);
+  color: var(--portal-text-dark);
+  line-height: 24px;
+}
+
+#portal-tutorial-page .portal-guide-screen-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 999px;
+}
+
+#portal-tutorial-page .portal-guide-screen-arrow:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+#portal-tutorial-page .portal-guide-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+#portal-tutorial-page .portal-guide-instructions {
+  max-width: 74ch;
+}
+
+#portal-tutorial-page .portal-guide-image-link {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+#portal-tutorial-page .portal-guide-image {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 460px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+#portal-tutorial-page [data-guide-activity="acesso"] .portal-guide-figure {
+  max-width: 380px;
+  justify-self: center;
+}
+
+#portal-tutorial-page [data-guide-activity="sugestoes"] .portal-guide-figure {
+  max-width: 400px;
+  justify-self: center;
+}
+
+#portal-tutorial-page .portal-guide-result,
+#portal-tutorial-page .portal-guide-help {
+  color: var(--portal-text-muted);
+}
+
+#portal-tutorial-page .portal-guide-help {
+  padding-top: 8px;
+  border-top: 1px solid var(--portal-border);
+}
+
+#portal-tutorial-page .portal-guide-related > summary {
+  cursor: pointer;
+  font-size: var(--portal-type-content);
+  font-weight: 600;
+  color: var(--portal-text-dark);
+}
+
+@media (min-width: 1024px) {
+  #portal-tutorial-page .portal-guide-content {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}

@@ -11,9 +11,10 @@ test('legacy import denies publication without consent, and strips workflow inje
   for(const key of ['isPublic','publishFullWork','publishExpandedAbstract'])assert.throws(()=>validateLegacyBatch([{...legacyFixture(),[key]:true}]));
   assert.throws(()=>validateLegacyBatch([{...legacyFixture(),publicationState:'PUBLIC'}]));
 });
-test('public legacy projection never includes abstracts, consent, source URLs or private Drive references',()=>{
+test('public legacy projection includes catalog text but excludes consent evidence, source URLs and private Drive references',()=>{
   const [r]=validateLegacyBatch([legacyFixture()]);const json=JSON.stringify(publicLegacyAcademicView(r));
-  for(const secret of ['private_file_123456','arquivo.pdf','Resumo de origem','sourceUrl','originalConsent'])assert.ok(!json.includes(secret));
+  for(const secret of ['private_file_123456','arquivo.pdf','sourceUrl','originalConsent'])assert.ok(!json.includes(secret));
+  assert.equal(JSON.parse(json).resumo,r.resumo);
   assert.equal(JSON.parse(json).filesRestricted,true);
 });
 test('Master academic view exposes private contents without changing publication consent or storage references',()=>{
@@ -27,7 +28,7 @@ test('Master academic view exposes private contents without changing publication
   assert.ok(!JSON.stringify(view).includes('originalConsent'));
   assert.deepEqual(record,before);
   assert.deepEqual(publicLegacyAcademicView(record).publicFiles,[]);
-  assert.equal(publicLegacyAcademicView(record).resumo,'');
+  assert.equal(publicLegacyAcademicView(record).resumo,record.resumo);
 });
 test('legacy import is idempotent, preserves stable identifiers and rejects collisions',()=>{
   const batch=validateLegacyBatch([legacyFixture()]);const revision=legacyCatalogRevision(batch);
@@ -57,6 +58,7 @@ test('legacy consent authorizes only available files and supports missing full T
     const denied=canonicalLegacyRecord({...authorized,provenance:{originalConsent:values}});
     assert.equal(legacyFileIsPublic(denied,denied.attachments[0]),false);
     assert.deepEqual(publicLegacyAcademicView(denied).publicFiles,[]);
+    assert.equal(publicLegacyAcademicView(denied).resumo,fixture.resumo,'Catalog text does not depend on file consent.');
     assert.throws(()=>validateLegacyBatch([{...denied,isPublic:true}]));
   }
   assert.equal(canonicalLegacyRecord({...fixture,protocolo:'Legado 1'} as any).protocolo,'001 - Legado');

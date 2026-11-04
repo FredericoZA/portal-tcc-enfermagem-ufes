@@ -26,7 +26,8 @@ test('manual possui apenas os três perfis solicitados; perfil desconhecido não
 });
 
 test('aluno e orientador recebem somente as atividades correspondentes', () => {
-  const student = guide('aluno'), advisor = guide('orientador');
+  const student = activitiesForRole('aluno').map(activity => activity.title).join('\n');
+  const advisor = activitiesForRole('orientador').map(activity => activity.title).join('\n');
   assert.match(student, /Acompanhar a confirmação da reserva/);
   assert.match(student, /Entregar os arquivos/);
   assert.doesNotMatch(student, /Registrar o conceito e conferir/);
@@ -52,13 +53,17 @@ test('atividades têm instruções, condição de conclusão, ajuda contextual e
 test('fichário tem painel acessível, navegação por atividade e imagens ampliáveis também no celular', () => {
   for (const role of Object.keys(guideActivityOrder)) {
     const html = guide(role);
-    assert.equal((html.match(/role="tab"/g) || []).length, activitiesForRole(role).length);
-    assert.match(html, /role="tabpanel"/);
+    assert.match(html, /aria-label="Tela anterior"/);
+    assert.match(html, /aria-label="Próxima tela"/);
+    assert.match(html, new RegExp(`1/${activitiesForRole(role).length}`));
+    assert.doesNotMatch(html, /<select/);
+    assert.match(html, /role="region"/);
     assert.match(html, /aria-controls="guide-panel-/);
     assert.match(html, /Abrir imagem em tamanho maior/);
     assert.match(html, /Como saber que terminou/);
-    assert.match(html, /Algo deu errado/);
-    assert.match(html, /w-full object-contain/);
+    assert.match(html, /Dúvidas desta atividade/);
+    assert.match(html, /portal-guide-image/);
+    assert.doesNotMatch(html, /Veja onde clicar|Algo deu errado|portal-instruction|bg-white/);
     assert.doesNotMatch(html, /w-1\/4|w-1\/2/);
   }
 });
@@ -66,6 +71,7 @@ test('fichário tem painel acessível, navegação por atividade e imagens ampli
 test('guia de cliques fica somente em Como usar e o quadro de assinaturas não se repete no fluxo', () => {
   const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
   assert.match(read('src/pages/PortalTutorialPage.tsx'), /<PortalIllustratedGuide role=\{role\}/);
+  assert.doesNotMatch(read('src/pages/PortalTutorialPage.tsx'), /PortalGuideActivitySelect/);
   const flow = read('src/pages/FluxoTccPage.tsx');
   assert.doesNotMatch(flow, /PortalIllustratedGuide/);
   assert.equal((flow.match(/<SignatureFlowSummary\s*\/>/g) || []).length, 1);

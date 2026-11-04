@@ -197,7 +197,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
         <button id="close-mobile-sidebar-btn" onClick={() => setIsOpenMobile(false)} className="lg:hidden text-slate-300 hover:text-white p-1" aria-label="Fechar menu"><ChevronLeft className="w-5 h-5" /></button>
       </div>
 
-      <nav id="sidebar-nav" className="flex-1 p-3 space-y-1.5 overflow-y-auto">
+      <nav id="sidebar-nav" className="flex flex-1 min-h-0 flex-col gap-4 p-3 overflow-y-auto">
         {(() => {
           const allNavMap: Record<string, { id: string; label: string; icon: React.ComponentType<{ className?: string }>; emoji: string; visible: boolean }> = {
             home: { id: 'home', label: getNavLabel('home', 'Calendário'), icon: Calendar, emoji: '', visible: true },
@@ -211,7 +211,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             configuracoes: { id: 'configuracoes', label: getNavLabel('configuracoes', 'Configurações'), icon: Settings, emoji: '', visible: isMasterAdmin && !isVisitor },
             analise: { id: 'analise', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: '', visible: true },
             replicar: { id: 'replicar', label: getNavLabel('replicar', 'Replicar Portal'), icon: Copy, emoji: '', visible: true },
-            sugestoes: { id: 'sugestoes', label: getNavLabel('sugestoes', 'Sugestões de melhoria'), icon: Lightbulb, emoji: '', visible: true }
+            sugestoes: { id: 'sugestoes', label: 'Sugestões', icon: Lightbulb, emoji: '', visible: true }
           };
           const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0 ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'assinaturas'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key) : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'DIVIDER_2', 'analise', 'como-chegar', 'informacoes-gerais', 'tutorial', 'fluxo-tcc', 'replicar'];
           const order = [...configuredOrder].filter((key) => key !== 'analise' && key !== 'sugestoes');
@@ -223,8 +223,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           if (!order.includes('informacoes-gerais')) { const tutorialIndex = order.indexOf('tutorial'); order.splice(tutorialIndex >= 0 ? tutorialIndex : order.length, 0, 'informacoes-gerais'); }
           if (!order.includes('fluxo-tcc')) { const replicationIndex = order.indexOf('replicar'); order.splice(replicationIndex >= 0 ? replicationIndex : order.length, 0, 'fluxo-tcc'); }
           if (!order.includes('replicar')) order.push('replicar');
-          order.splice(order.indexOf('replicar') + 1, 0, 'sugestoes');
-          return order.map((itemKey, idx) => {
+          const renderNavItem = (itemKey: string, idx: number) => {
             if (itemKey.startsWith('DIVIDER')) { if (layoutConfig.sidebarShowDividers === false || layoutConfig.sidebarDividerStyle === 'none') return null; return <div key={`${itemKey}-${idx}`} className="my-2.5 pt-0.5 border-t transition-colors" style={{ borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider, borderStyle: layoutConfig.sidebarDividerStyle || 'solid' }} />; }
             const item = allNavMap[itemKey]; if (!item || !item.visible) return null; const Icon = item.icon; const isActive = currentTab === item.id || (item.id === 'home' && currentTab === 'calendario');
             return <button key={item.id} id={`nav-item-${item.id}`} type="button" onClick={() => {
@@ -233,7 +232,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
                 setIsOpenMobile(false);
               } else handleNav(item.id);
             }} className={`portal-sidebar-nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-transparent outline-none font-bold text-left transition-all cursor-pointer ${isActive ? 'portal-sidebar-nav-active font-extrabold shadow-sm' : 'hover:bg-white/10'}`} style={isActive ? {backgroundColor: layoutConfig.sidebarActiveBgColor || 'var(--portal-sidebar-active)',color: layoutConfig.sidebarActiveTextColor || '#ffffff'} : { color: layoutConfig.sidebarTextColor || '#f8fafc' }}><div className="flex items-center gap-3">{renderNavIcon(item.id, Icon, item.emoji, isActive)}<span>{item.label}</span></div></button>;
-          });
+          };
+          return <>
+            <div className="shrink-0 space-y-1.5">{order.map(renderNavItem)}</div>
+            <div className="mt-auto shrink-0 pt-2.5">
+              {renderNavItem('sugestoes', order.length)}
+            </div>
+          </>;
         })()}
       </nav>
 

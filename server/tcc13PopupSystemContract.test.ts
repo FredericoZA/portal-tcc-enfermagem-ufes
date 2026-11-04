@@ -10,7 +10,8 @@ test('shell canônico de popup preserva cabeçalho verde, tarja branca e fundo b
   assert.match(shell,/portal-modal-header/);
   assert.match(shell,/portal-modal-divider/);
   assert.match(shell,/portal-modal-body/);
-  assert.match(shell,/event\.key === 'Escape'/);
+  // Keyboard behavior is exercised by scripts/test-modal-keyboard.mjs; the shell delegates to the shared stack.
+  assert.match(shell,/registerModalEscape\(dialog, onClose, closeOnEscape\)/);
   assert.match(css,/\.portal-modal-divider\s*\{[\s\S]*background:\s*var\(--portal-surface-inner\)/);
   assert.match(css,/\.portal-modal-body\s*\{[\s\S]*background:\s*var\(--portal-surface-page\)/);
   assert.match(css,/\.portal-standard-modal\s*\{[\s\S]*background:\s*var\(--portal-surface-page\)/);

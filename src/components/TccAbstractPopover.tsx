@@ -119,7 +119,6 @@ export const TccAbstractPopover: React.FC<TccAbstractPopoverProps> = ({
   if (!text) {
     return <span className="portal-abstract-unavailable" role="img" aria-label={unavailableLabel} title={unavailableLabel}>
       <FileText size={16} aria-hidden="true" />
-      <span aria-hidden="true">—</span>
     </span>;
   }
 
