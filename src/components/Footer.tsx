@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { MapPin, Lightbulb, Info, Car, Check } from 'lucide-react';
 import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../utils/siteLayoutConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
+import { formatDateNumericWithWeekday } from '../utils/formatters';
 import { PORTAL_THEME } from '../theme/portalTheme';
 
 interface FooterProps { showLocationDirections?: boolean; }
@@ -47,7 +48,7 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
 
   const footerBg=layoutConfig.footerBgColor||PORTAL_THEME.chrome.sidebarFooter, footerText=layoutConfig.footerTextColor||PORTAL_THEME.text.light, footerMuted=layoutConfig.footerMutedTextColor||PORTAL_THEME.text.mutedLight, footerBorder=layoutConfig.footerBorderColor||PORTAL_THEME.chrome.divider, footerDivider=layoutConfig.footerDividerColor||PORTAL_THEME.chrome.divider;
   const whatsappText=layoutConfig.footerWhatsappBtnText||PORTAL_THEME.text.light;
-  const formatTermDate=(value?:string)=>{if(!value)return'';const date=new Date(`${value}T12:00:00`);return Number.isNaN(date.getTime())?value:date.toLocaleDateString('pt-BR');};
+  const formatTermDate=(value?:string)=>value?formatDateNumericWithWeekday(value):'';
 
   const copyEmail=async(email:string,key:string)=>{
     if(!email)return;
