@@ -58,4 +58,8 @@ test('estatísticas privadas não criam propostas nem incluem títulos ou identi
   assert.doesNotMatch(encoded,/Título pessoal sensível|aluno-sigiloso@example.edu|Pessoa sigiloso/);
   assert.equal(data.distributions.themes.unknown,1);
   assert.equal(data.privacy.containsPersonalData,false);
+  const repeated=Array.from({length:6},(_,i)=>process(String(i),{acervo:{palavrasChave:['IDENTIFICADOR_SENSIVEL_TESTE']}}));
+  const limited=buildTccStatisticalSnapshot({processes:repeated,formSubmissions:[],generatedAt:'2026-02-10T00:00:00.000Z'});
+  assert.deepEqual(limited.distributions.keywords.entries,[]);
+  assert.equal(JSON.stringify(limited).includes('IDENTIFICADOR_SENSIVEL_TESTE'),false);
 });
