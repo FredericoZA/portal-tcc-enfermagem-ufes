@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
+import { execFileSync } from 'node:child_process';
 
 const read = (path: string): string => readFileSync(path, 'utf8');
 
@@ -48,4 +49,14 @@ test('parecer continua sob revisão humana e não invoca API generativa', () => 
   assert.match(component, /standardOpinion\(\)/);
   assert.match(form, /function standardEvaluationOpinion/);
   assert.match(component, /Confirme que o resultado|Confirmo que o resultado|Confirmo que o resultado, o parecer/);
+});
+
+test('inventário crítico da produção corresponde ao tutorial atual', () => {
+  const manifest = JSON.parse(read('docs/PRODUCTION_CLI_SOURCE_MANIFEST_2026-11-02.json')) as { criticalSourcePaths: string[] };
+  assert.ok(manifest.criticalSourcePaths.includes('public/replicacao/GUIA_DE_INSTALACAO.md'));
+  assert.ok(!manifest.criticalSourcePaths.includes('public/replicacao/GUIA_PARA_IA.md'));
+  assert.doesNotThrow(() => execFileSync(process.execPath, ['scripts/verify-production-source.mjs'], {
+    env: { ...process.env, PORTAL_REQUIRE_SOURCE_PARITY: 'true' },
+    stdio: 'pipe',
+  }));
 });
