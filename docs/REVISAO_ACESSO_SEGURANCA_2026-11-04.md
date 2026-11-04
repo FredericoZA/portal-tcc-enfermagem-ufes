@@ -26,7 +26,7 @@ As páginas oficiais do PPC/organização curricular e das normas de TCC foram c
 
 ## Verificação e limites
 
-- Suíte unitária integrada: 1.045 testes aprovados, zero falhas.
+- Suíte unitária integrada após a reconciliação de reservas: 1.047 testes aprovados, zero falhas.
 - Fluxo seguro local: 40 verificações aprovadas, zero falhas.
 - Regressão HTTP da reserva e fluxos relacionados: 4 testes aprovados.
 - Revisão defensiva adicional: 25 testes selecionados de OTP, acesso, DTO/PDF público e rotas retiradas aprovados.
@@ -37,3 +37,15 @@ As páginas oficiais do PPC/organização curricular e das normas de TCC foram c
 A auditoria estática do Codex Security teve cobertura parcial de autenticação, autorização por processo, projeções públicas, reserva e controles documentais. Identificou uma falha de gravidade média corrigida localmente; não revisou integralmente todos os arquivos nem as dependências instaladas. Medição de tokens do scan indisponível. O relatório original permanece preservado, distinguindo o achado inicial da correção posterior.
 
 Testes locais não comprovam as permissões das contas e pastas reais, políticas atuais do Supabase/Vercel, contratos, retenção, restauração, entrega de e-mail ou assinatura efetiva nos provedores. Essas verificações operacionais permanecem separadas da revisão de código.
+
+## Devolução da reserva recusada — conferência posterior somente de leitura
+
+O endpoint público de produção respondeu com commit `8e02e8c667e04b4338e6b1a45204e70f2a0359b9`, diferente desta candidata. Para o TCC-2026-0006, o banco real confirmou uma resposta `UNAVAILABLE` salva em 04/11/2026 às 12h41 de Brasília, revisão 0, mas o campo antigo continuava `PENDENTE`. A fila continha somente os dois avisos iniciais de solicitação aceitos pelo Gmail; não havia aviso de devolução. Não foram lidos documentos ou credenciais nem feita escrita em produção.
+
+A candidata agora reconcilia o status com a decisão da revisão atual ao carregar o estado, tanto no início quanto na releitura transacional. O alerta da ficha usa a mesma decisão e não mantém uma mensagem antiga de espera. Respostas de revisões anteriores não resolvem pedidos novos. A recuperação autenticada de avisos já existente cria a comunicação ausente ao responsável, autores e orientador, independente da exportação do comprovante, com chave de idempotência.
+
+O teste HTTP reproduz a combinação exata de status antigo, ausência de revisão explícita e decisão de recusa, sem dados pessoais reais. A consulta passa a mostrar a recusa, o calendário libera o intervalo, o estado persistido é reconciliado e uma única mensagem fica registrada na fila. Sem Google conectado no teste, a mensagem fica para nova tentativa: não é prova de entrega real.
+
+Os cabeçalhos estáticos da Vercel também foram alinhados ao Express: geolocalização desabilitada e Nominatim removido da lista de conexões permitidas. Nada desta rodada foi publicado. A recuperação da comunicação antiga deverá ser acionada no ambiente real somente na operação de publicação autorizada; o cron diário pode levar até a próxima execução para recuperá-la automaticamente.
+
+O verificador Supabase retornou apenas dois avisos informativos de RLS sem políticas nas tabelas de fila Asten e Sugestões. A conferência somente de leitura confirmou RLS ativa e ausência de concessões diretas SELECT/INSERT para `anon` e `authenticated` nessas duas tabelas e nas tabelas de runtime, processos e e-mails. Não foram abertas políticas ou concessões para eliminar avisos. Isso verifica essas permissões específicas, não todo o ambiente.

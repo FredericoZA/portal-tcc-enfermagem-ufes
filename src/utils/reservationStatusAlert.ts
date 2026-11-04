@@ -1,4 +1,5 @@
 import type { ProcessData } from '../types';
+import {effectiveDefenseReservationStatus} from './defenseReservationState';
 import { isOtherDefenseLocation } from './customDefenseLocation';
 
 export type ReservationStatusAlert = {
@@ -16,15 +17,17 @@ const WAITING_STATUSES = new Set(['PENDING', 'SENT']);
 export function reservationStatusAlert(
   process: Pick<ProcessData, 'defesa' | 'registrationAnswers'>,
 ): ReservationStatusAlert | null {
-  const request = process.defesa?.reservationChangeRequest;
+  const response = process.defesa?.departmentResponse;
+  const currentDecision = response && response.revision === (process.defesa.reservationRevision || 0);
+  const request = currentDecision ? undefined : process.defesa?.reservationChangeRequest;
   const requestStatus = String(request?.status || '').toUpperCase();
-  const localStatus = String(process.defesa?.localStatus || '').toUpperCase();
+  const localStatus = String(effectiveDefenseReservationStatus(process) || '').toUpperCase();
 
   // Recusa registrada tem precedência: nunca exibir, junto dela, a observação de espera.
   if (DENIAL_STATUSES.has(requestStatus) || DENIAL_STATUSES.has(localStatus)) {
     return {
       kind: 'denied',
-      text: 'O responsável recusou o agendamento. Use “Alterar reserva” para enviar outro pedido de reserva.',
+      text: 'O responsável recusou o agendamento. Use “Solicitar nova data” para enviar outro pedido de reserva.',
     };
   }
 

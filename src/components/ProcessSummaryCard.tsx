@@ -50,7 +50,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
   const [customLocation, setCustomLocation] = useState('');
   const alert = reservationStatusAlert(process);
   const denial = alert?.kind === 'denied';
-  const outstanding = ['PENDING', 'SENT'].includes(
+  const outstanding = alert?.kind === 'waiting' && ['PENDING', 'SENT'].includes(
     String(process.defesa?.reservationChangeRequest?.status || ''),
   );
 
@@ -191,7 +191,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
                   : 'border-emerald-700 bg-emerald-800 text-white hover:bg-emerald-900'}`}
               >
                 <RotateCcw className="h-3.5 w-3.5" aria-hidden="true"/>
-                Alterar reserva
+                {denial ? 'Solicitar nova data' : 'Alterar reserva'}
               </button>
             )}
           </div>

@@ -25,8 +25,18 @@ test('negativa do departamento mostra somente a mensagem exata da recusa', () =>
   const alert = reservationStatusAlert(process('NEGADO'));
   assert.deepEqual(alert, {
     kind: 'denied',
-    text: 'O responsável recusou o agendamento. Use “Alterar reserva” para enviar outro pedido de reserva.',
+    text: 'O responsável recusou o agendamento. Use “Solicitar nova data” para enviar outro pedido de reserva.',
   });
+});
+
+test('resposta salva prevalece sobre PENDENTE e sobre aviso antigo de envio, sem confundir revisões', () => {
+  const p = process('PENDENTE', 'SENT');
+  p.defesa.departmentResponse = {revision: 0, decision: 'UNAVAILABLE', respondedBy: 'secretaria@example.invalid', respondedAt: '2026-11-04T15:41:34.985Z', startAt: p.defesa.startAt, endAt: p.defesa.endAt};
+  assert.equal(reservationStatusAlert(p)?.kind, 'denied');
+  p.defesa.departmentResponse.decision = 'CONFIRMED';
+  assert.equal(reservationStatusAlert(p), null);
+  p.defesa.reservationRevision = 1;
+  assert.equal(reservationStatusAlert(p)?.kind, 'waiting', 'resposta de uma reserva anterior não resolve o pedido novo');
 });
 
 test('recusa prevalece sobre pedido pendente: não mostra simultaneamente a mensagem de espera', () => {

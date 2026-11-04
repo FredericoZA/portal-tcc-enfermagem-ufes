@@ -1,5 +1,5 @@
 import {institutionalDocumentLogo} from './src/utils/institutionalDocumentLogo';
-import {calendarEventMatchesProcess, isDefenseReservationDeclined} from './src/utils/defenseReservationState';
+import {calendarEventMatchesProcess, isDefenseReservationDeclined, effectiveDefenseReservationStatus} from './src/utils/defenseReservationState';
 import {stripDocumentScanningBlocks,delimitedTextParts,stripInlineMarkup} from './src/utils/legacyTextProcessing';
 import {isEmailAddress} from './src/utils/emailAddress';
 import { legacyRepositoryProcess } from './src/utils/legacyRepository';
@@ -277,6 +277,10 @@ if(!productionRuntime&&process.env.PORTAL_TEST_DOCUMENT_RENDERER==='true'){
 let legacyAcademicRecordsStore: LegacyAcademicRecord[] = (persistedPortalState.legacyAcademicRecords || []).map(canonicalLegacyRecord);
 let processDeletionTasksStore:ProcessDeletionTask[]=persistedPortalState.processDeletionTasks||[];
 let processesStore: ProcessData[] = Array.isArray(persistedPortalState.processes) ? persistedPortalState.processes : productionRuntime?[]:JSON.parse(JSON.stringify(DEMO_PROCESSES));
+reconcileRecordedReservationStatuses();
+function reconcileRecordedReservationStatuses(): void {
+  for (const process of processesStore) process.defesa.localStatus = effectiveDefenseReservationStatus(process);
+}
 let membershipsStore: ProcessMembership[] = Array.isArray(persistedPortalState.memberships) ? persistedPortalState.memberships : productionRuntime?[]:JSON.parse(JSON.stringify(DEMO_MEMBERSHIPS));
 let auditLogsStore: AuditLog[] = Array.isArray(persistedPortalState.auditLogs)
   ? persistedPortalState.auditLogs
@@ -439,7 +443,7 @@ function applyPersistedState(state: PersistedPortalState) {
   reminderRecordsStore=state.reminders||[];
   if(state.processDeletionTasks)processDeletionTasksStore=state.processDeletionTasks;
   if (state.settings) { currentSettings = { ...INITIAL_SETTINGS, ...state.settings };if(currentSettings.integrationStudio)currentSettings.integrationStudio=consolidateProcessForms(currentSettings.integrationStudio); delete (currentSettings as any).recoverySecretKey;delete (currentSettings as any).courseCoordinatorEmail;delete (currentSettings as any).courseCoordinatorName;for(const model of Object.values(currentSettings.documentModels||{}))if(model)model.templateContentText=''; }
-  if (state.processes) processesStore = state.processes;
+  if (state.processes) { processesStore = state.processes; reconcileRecordedReservationStatuses(); }
   if (state.memberships) membershipsStore = state.memberships;
   if (state.auditLogs) auditLogsStore = state.auditLogs;
   if (state.correctionRequests) correctionRequestsStore = state.correctionRequests;

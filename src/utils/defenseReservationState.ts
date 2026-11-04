@@ -4,10 +4,19 @@ type ReservationProcess = Pick<ProcessData, 'defesa'>;
 type CalendarProcess = Pick<ProcessData, 'id' | 'protocolo' | 'defesa'>;
 const REFUSED = new Set(['NEGADO', 'RECUSADO', 'REJEITADO']);
 
+/** A saved decision for the current request is authoritative over an old status field. */
+export function effectiveDefenseReservationStatus(process: ReservationProcess): ProcessData['defesa']['localStatus'] {
+  const response = process.defesa?.departmentResponse;
+  if (response && response.revision === (process.defesa.reservationRevision || 0)) {
+    if (response.decision === 'UNAVAILABLE') return 'RECUSADO';
+    if (response.decision === 'CONFIRMED') return 'CONFIRMADO';
+  }
+  return process.defesa?.localStatus;
+}
+
 /** Old refusals retained PENDENTE together with an UNAVAILABLE receipt. */
 export function isDefenseReservationDeclined(process: ReservationProcess): boolean {
-  return process.defesa?.departmentResponse?.decision === 'UNAVAILABLE'
-    || REFUSED.has(String(process.defesa?.localStatus || '').toUpperCase());
+  return REFUSED.has(String(effectiveDefenseReservationStatus(process) || '').toUpperCase());
 }
 
 /** Scheduling eligibility is independent of the defense's existing time-based colors. */
@@ -19,7 +28,7 @@ export function isDefenseOnCalendar(process: ReservationProcess): boolean {
 
 /** Expose the outcome without exposing the private reservation receipt or its author. */
 export function publicDefenseReservationStatus(process: ReservationProcess): ProcessData['defesa']['localStatus'] {
-  return isDefenseReservationDeclined(process) ? 'RECUSADO' : process.defesa?.localStatus;
+  return isDefenseReservationDeclined(process) ? 'RECUSADO' : effectiveDefenseReservationStatus(process);
 }
 
 /** Match only stable portal identifiers, not similar titles or people's names. */

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DEMO_PROCESSES} from '../src/services/demoSeed';
-import {currentDefenseSelection,isDefenseOnCalendar,isDefenseReservationDeclined,publicDefenseReservationStatus,calendarEventMatchesProcess} from '../src/utils/defenseReservationState';
+import {currentDefenseSelection,isDefenseOnCalendar,isDefenseReservationDeclined,publicDefenseReservationStatus,effectiveDefenseReservationStatus,calendarEventMatchesProcess} from '../src/utils/defenseReservationState';
 import {publicCalendarView,publicRepositoryView} from './publicViews';
 import {restartReservation} from './workflow/reservationReschedule';
 import {getDefenseState} from '../src/utils/defenseSemantics';
@@ -53,6 +53,15 @@ test('todas as grafias de recusa existentes liberam o intervalo, sem excluir o r
   assert.equal(inspectDefenseConflicts([p],{startAt:p.defesa.startAt,local:p.defesa.local,emails:[p.aluno1.email]}).length,0);
   assert.equal(publicRepositoryView(p).protocolo,p.protocolo);
  }
+});
+
+test('decisão da revisão atual corrige o status antigo; revisão anterior não altera a nova solicitação',()=>{
+ const p=pending();
+ p.defesa.departmentResponse={revision:0,decision:'CONFIRMED',respondedAt:'2026-11-04T15:41:34.985Z',respondedBy:'secretaria@example.invalid',startAt:p.defesa.startAt,endAt:p.defesa.endAt};
+ assert.equal(effectiveDefenseReservationStatus(p),'CONFIRMADO');
+ p.defesa.departmentResponse.decision='UNAVAILABLE';assert.equal(effectiveDefenseReservationStatus(p),'RECUSADO');
+ p.defesa.reservationRevision=1;assert.equal(effectiveDefenseReservationStatus(p),'PENDENTE');
+ assert.equal(isDefenseOnCalendar(p),true);
 });
 
 test('legados sem estado de reserva continuam visíveis; datas vazias ou inválidas não ocupam agenda',()=>{
