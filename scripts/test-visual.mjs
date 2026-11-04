@@ -351,7 +351,7 @@ try {
             };
             const root = document.querySelector(ids[currentTab]);
             const panel = root?.matches('.portal-layer-panel') ? root : root?.querySelector('.portal-layer-panel');
-            const card = root?.querySelector('.portal-layer-card');
+            const card = root?.querySelector(currentTab === 'tutorial' ? '.portal-guide-sheet' : '.portal-layer-card');
             const inner = root?.querySelector('.portal-layer-inner');
             return {
               panel: panel ? getComputedStyle(panel).backgroundColor : '',
@@ -395,13 +395,12 @@ try {
           if (repoHeaderLine > 0) report.errors.push(`master-repositorio-${width}: linha indevida permanece no cabeçalho (${repoHeaderLine}px).`);
         }
         if (tab === 'tutorial') {
-          const finishHeading = page.locator('#portal-tutorial-page').getByRole('heading', {name: 'Conferência antes de encerrar', exact: true});
-          const tutorialColor = await finishHeading.evaluate(heading => {
-            const box = heading.closest('section');
-            return box ? getComputedStyle(box).backgroundColor : '';
+          const screenTitle = page.locator('#portal-tutorial-page .portal-guide-screen-title');
+          const tutorialHeading = await screenTitle.evaluate(heading => {
+            return {color: getComputedStyle(heading).backgroundColor, text: heading.textContent};
           });
-          if (tutorialColor !== 'rgb(216, 223, 227)') {
-            report.errors.push(`master-como-usar-${width}: caixa final fora da camada cinza (${tutorialColor}).`);
+          if (tutorialHeading.color !== 'rgb(183, 193, 200)' || !/—\s*\d+\/\d+$/.test(tutorialHeading.text || '')) {
+            report.errors.push(`master-como-usar-${width}: título da atividade sem destaque ou contador (${JSON.stringify(tutorialHeading)}).`);
           }
         }
         if (tab === 'replicar' && width >= 1024) {
