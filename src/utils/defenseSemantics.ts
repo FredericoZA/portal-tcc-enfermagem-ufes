@@ -3,25 +3,6 @@ import type { ProcessData } from '../types';
 export type DefenseState = 'upcoming' | 'defended';
 export type DefenseFilter = 'all' | DefenseState;
 
-/** Uma recusa libera a sala e retira o pedido da agenda; o processo de TCC permanece salvo. */
-export function isDefenseReservationDenied(process: Pick<ProcessData, 'defesa'>): boolean {
-  const status = String(process.defesa?.localStatus || '').toUpperCase();
-  return process.defesa?.departmentResponse?.decision === 'UNAVAILABLE'
-    || ['NEGADO', 'RECUSADO', 'REJEITADO'].includes(status);
-}
-
-/** Uma solicitação registrada ocupa provisoriamente o horário, sem ser apresentada como confirmada. */
-export function isDefenseReservationPending(process: Pick<ProcessData, 'defesa'>): boolean {
-  return !isDefenseReservationDenied(process) && process.defesa?.localStatus !== 'CONFIRMADO';
-}
-
-/** Fonte única da seleção de defesas publicada na agenda e no arquivo de calendário. */
-export function isPublicCalendarDefense(process: Pick<ProcessData, 'status' | 'defesa'>): boolean {
-  return process.status !== 'EM_RASCUNHO'
-    && Number.isFinite(Date.parse(process.defesa?.startAt || ''))
-    && !isDefenseReservationDenied(process);
-}
-
 type DefenseSummaryProcess = Pick<ProcessData, 'titulo' | 'defesa'> & Partial<Pick<ProcessData, 'aluno1' | 'aluno2'>>;
 
 const validTimestamp = (value?: string) => {
