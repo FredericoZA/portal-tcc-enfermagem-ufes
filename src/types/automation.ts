@@ -192,7 +192,7 @@ export interface AstenOperationalDashboard {
 }
 
 export interface CanonicalSignatureRecipient {
-  role: 'STUDENT' | 'ADVISOR' | 'PRESIDENT';
+  role: 'STUDENT' | 'ADVISOR' | 'EXAMINER' | 'PRESIDENT';
   name: string;
   email: string;
   order: 1;

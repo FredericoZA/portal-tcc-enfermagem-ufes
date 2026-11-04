@@ -5,7 +5,7 @@
 | Documento | Cadastro | Assinatura |
 |---|---|---|
 | Carta-convite | DOCX escolhido pelo Master | Não assina |
-| Ata de defesa | DOCX escolhido pelo Master | Orientador |
+| Ata de defesa | DOCX escolhido pelo Master | Orientador e dois examinadores, prioridade 1 (três assinaturas) |
 | Termo de autorização | DOCX escolhido pelo Master | Aluno(s) e orientador, prioridade 1 |
 | Declaração de participação | DOCX escolhido pelo Master | Presidente da comissão |
 
