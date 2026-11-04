@@ -188,9 +188,24 @@ export function getSupabaseRuntimeStatus(): Omit<SupabaseRuntimeStatus, 'connect
   };
 }
 
+/** Leitura idempotente: a extração simultânea do JSONB pode atingir o limite
+ * de consulta do PostgREST (57014 / HTTP 500) durante partidas a frio.
+ * Tentativas estritamente limitadas e desencontradas; nunca repetir escritas,
+ * nunca ocultar 401/403, nunca aceitar um estado antigo como substituto.
+ */
+async function fetchPortalStateSnapshot(): Promise<Response> {
+  const url = `${stateEndpoint()}?id=eq.global&select=payload,revision&limit=1`;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const response = await fetch(url, { headers: adminHeaders(), signal: AbortSignal.timeout(20_000) });
+    if (response.ok || ![500, 502, 503, 504].includes(response.status) || attempt === 2) return response;
+    await new Promise<void>(resolve => setTimeout(resolve, 250 * (attempt + 1) + Math.floor(Math.random() * 250)));
+  }
+  throw new Error('Leitura do estado não retornou resposta.');
+}
+
 export async function loadPortalRuntimeState<T extends object>(trackRevision=true): Promise<T | null> {
   if (!getSupabaseRuntimeStatus().durablePersistenceReady) return null;
-  const response = await fetch(`${stateEndpoint()}?id=eq.global&select=payload,revision&limit=1`, { headers: adminHeaders(), signal: AbortSignal.timeout(20_000) });
+  const response = await fetchPortalStateSnapshot();
   if (!response.ok) throw new Error(`Falha ao carregar o estado do Supabase (${response.status}).`);
   const rows = await response.json();
   if(trackRevision)knownRevision=rows?.[0]?Number(rows[0].revision||1):0;
