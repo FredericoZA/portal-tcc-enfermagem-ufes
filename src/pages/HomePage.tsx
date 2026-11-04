@@ -78,7 +78,7 @@ interface HomePageProps {
 /** Apenas sinaliza a reserva ainda sem resposta, sem alterar cores nem agendamento. */
 const PendingDefenseConfirmationNote: React.FC<{ process: Pick<ProcessData, 'defesa'> }> = ({ process }) => {
   if (process.defesa?.localStatus !== 'PENDENTE' || process.defesa?.departmentResponse) return null;
-  return <span className="font-extrabold" style={{ color: '#b91c1c' }}> (Aguardando confirmação)</span>;
+  return <span className="font-extrabold normal-case" style={{ color: '#b91c1c' }}> (Aguardando confirmação)</span>;
 };
 
 // Helper to parse Google Calendar events for presentations
