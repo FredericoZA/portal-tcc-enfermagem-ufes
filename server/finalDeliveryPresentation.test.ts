@@ -30,9 +30,9 @@ test('declaração migra para depois do termo e continua obrigatória sem divulg
  assert.deepEqual(withDeclarationAfterTerm(fixed),fixed);assert.equal((old.workflowStages[0].actions as any[]).length,1);
 });
 test('encerramento da ata é uma hora após o início, inclusive na virada de data',()=>{
- assert.match(ataClosingTime('2026-10-15T13:00:00-03:00').label,/15 de outubro de 2026 às 14:00/);
+ assert.match(ataClosingTime('2026-10-15T13:00:00-03:00').label,/15 de outubro de 2026 \(quinta-feira\) às 14:00/);
  assert.equal(ataClosingTime('2026-10-15T13:00:00').iso,'2026-10-15T17:00:00.000Z');
- assert.match(ataClosingTime('2026-10-15T23:30:00-03:00').label,/16 de outubro de 2026 às 00:30/);
+ assert.match(ataClosingTime('2026-10-15T23:30:00-03:00').label,/16 de outubro de 2026 \(sexta-feira\) às 00:30/);
  assert.throws(()=>ataClosingTime('inválida'));
 });
 test('todos os e-mails do processo recebem botão autenticado e preservam CTA existente',()=>{
