@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { ProcessData } from '../src/types';
-import { officialParticipantLines, officialIdentificationLines } from '../src/utils/officialParticipants';
+import { officialParticipantLines, officialIdentificationLines, participantRole } from '../src/utils/officialParticipants';
 import { officialInvitationEmail } from './workflow/officialInvitation';
 import { invitationTemplateCorrections } from './workflow/invitationTemplate';
 import { buildOfficialInvitationParagraphStyles } from './integrations/googleDocsRenderer';
@@ -76,4 +76,13 @@ test('carta alinha data à direita, assinatura recuada e parágrafo justificado'
   assert.equal(requests.length,3);
   assert.deepEqual(requests.map((r:any)=>r.updateParagraphStyle.paragraphStyle.alignment),['JUSTIFIED','END','START']);
   assert.equal((requests[2] as any).updateParagraphStyle.paragraphStyle.indentStart.magnitude,260);
+});
+
+
+test('tabela usa tratamento do participante mesmo sem respostas de formulário nos legados',()=>{
+  assert.equal(participantRole('student',undefined,'ALUNO_1',{nome:'Nome de exemplo',tratamento:'Aluna'}),'Aluna autora');
+  assert.equal(participantRole('advisor',{},'ORIENTADOR',{tratamento:'Professora'}),'Orientadora');
+  assert.equal(participantRole('examiner',{},'EXAMINADOR_2',{tratamento:'Professora'}),'Examinadora');
+  assert.equal(participantRole('coadvisor',{},'COORIENTADOR',{tratamento:'Professora'}),'Coorientadora');
+  assert.equal(participantRole('examiner',{},'EXAMINADOR_3',{nome:'Maria',tratamento:'Professor'}),'Examinador');
 });

@@ -1,3 +1,4 @@
+import {participantRole} from '../utils/officialParticipants';
 import {ProcessSummaryCard} from '../components/ProcessSummaryCard';
 import {LegacyAdministrativeDocuments} from '../components/LegacyAdministrativeDocuments';
 import {ProcessDocumentCard, ProcessDocumentsPanel, ReservationReceiptCard} from '../components/ProcessDocumentCard';
@@ -838,11 +839,11 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     <thead><tr><th scope="col">Função</th><th scope="col">Nome</th><th scope="col">Referência</th><th scope="col">Titulação</th>{!readOnly&&<><th scope="col">E-mail</th><th scope="col" title="Matrícula, SIAPE ou outro registro">Registro</th></>}<th scope="col">Instituição</th></tr></thead>
                     <tbody>
                 {[
-                  {role:'Aluno autor',person:process.aluno1,student:true,key:'aluno1'},
-                  ...(process.aluno2?[{role:'Aluno autor',person:process.aluno2,student:true,key:'aluno2'}]:[]),
-                  {role:'Orientador(a)',person:process.orientador,student:false,key:'orientador'},
-                  ...process.banca.filter(person=>readOnly?person.funcao!=='ORIENTADOR':normalizeEmail(person.email)!==normalizeEmail(process.orientador.email)&&normalizeEmail(person.email)!==normalizeEmail(process.coorientador?.email||'')).map(person=>({role:'Examinador',person,student:false,key:'banca'})),
-                  ...(process.coorientador?.nome?.trim()?[{role:'Coorientador(a)',person:process.coorientador,student:false,key:'coorientador'}]:[])
+                  {role:participantRole('student',process.registrationAnswers,'ALUNO_1',process.aluno1),person:process.aluno1,student:true,key:'aluno1'},
+                  ...(process.aluno2?[{role:participantRole('student',process.registrationAnswers,'ALUNO_2',process.aluno2),person:process.aluno2,student:true,key:'aluno2'}]:[]),
+                  {role:participantRole('advisor',process.registrationAnswers,'ORIENTADOR',process.orientador),person:process.orientador,student:false,key:'orientador'},
+                  ...process.banca.filter(person=>readOnly?person.funcao!=='ORIENTADOR':normalizeEmail(person.email)!==normalizeEmail(process.orientador.email)&&normalizeEmail(person.email)!==normalizeEmail(process.coorientador?.email||'')).map((person,index)=>({role:participantRole('examiner',process.registrationAnswers,`EXAMINADOR_${person.funcao.match(/EXAMINER_(\d+)/)?.[1]||index+2}`,person),person,student:false,key:'banca'})),
+                  ...(process.coorientador?.nome?.trim()?[{role:participantRole('coadvisor',process.registrationAnswers,'COORIENTADOR',process.coorientador),person:process.coorientador,student:false,key:'coorientador'}]:[])
                 ].map(({role,person,student,key})=>{
                   const field=(property:string,value:string)=>key==='banca'?{banca:process.banca.map(member=>member===person?{...member,[property]:value}:member)}:{[key]:{...person,[property]:value}};
                   return <tr key={`${key}-${person.email||person.nome}`}>

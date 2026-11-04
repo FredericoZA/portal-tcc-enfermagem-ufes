@@ -65,3 +65,19 @@ test('resumo mantém a instituição da instalação sem presumir UFES em outro 
   assert.equal(rows[0].institution, 'IFES');
   assert.equal(rows[1].institution, 'IFES');
 });
+
+test('rótulo e referência acompanham o tratamento feminino cadastrado', () => {
+  const rows = buildRegistrationMemberRows({
+    ...answers,
+    ALUNO_1_TRATAMENTO: 'Aluna',
+    ALUNO_2_TRATAMENTO: 'Aluno',
+    EXAMINADOR_2_TRATAMENTO: 'Professora',
+    COORIENTADOR_TRATAMENTO: 'Professora',
+  });
+  assert.deepEqual(rows.map(({role}) => role), [
+    'Aluna autora', 'Aluno autor', 'Orientadora', 'Examinadora', 'Examinadora', 'Coorientadora',
+  ]);
+  assert.equal(rows[0].reference, 'Aluna');
+  assert.equal(rows[1].reference, 'Aluno');
+  assert.equal(rows.some(({role}) => /\(a\)|\d/.test(role)), false);
+});
