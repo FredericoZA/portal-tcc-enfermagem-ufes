@@ -7,11 +7,12 @@ interface PortalTutorialPageProps {
   onNavigate: (tab: string) => void;
 }
 
-type Role = 'aluno' | 'orientador' | 'visitante';
+type Role = 'aluno' | 'orientador' | 'examinador' | 'visitante';
 
 const roleLabels: Record<Role, string> = {
   aluno: 'Aluno',
   orientador: 'Orientador',
+  examinador: 'Examinador',
   visitante: 'Visitante',
 };
 

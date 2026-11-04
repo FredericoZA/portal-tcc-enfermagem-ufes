@@ -125,7 +125,7 @@ export const InformacoesGeraisTccPage: React.FC<InformacoesGeraisTccPageProps> =
 
           <section className="portal-layer-card space-y-2 rounded-xl border border-slate-300 p-3 shadow-2xs sm:p-4">
             <h2 className="text-xs font-black text-slate-900 sm:text-sm">Documentos e próximos passos</h2>
-            <p className="text-xs leading-5 text-slate-700"><strong>Documentos administrativos</strong> reúne comprovante de reserva, carta-convite, ata, Termo de Autorização quando aplicável e declaração de participação na banca. A ata é assinada pelo orientador; a declaração, pela presidência da Comissão. Comprovante e convite não exigem assinatura.</p>
+            <p className="text-xs leading-5 text-slate-700"><strong>Documentos administrativos</strong> reúne comprovante de reserva, carta-convite, ata, Termo de Autorização quando aplicável e declaração de participação na banca. A ata exige as três assinaturas da banca (orientador e dois examinadores), e a entrega final só é liberada depois do arquivamento; a declaração é assinada pela presidência da Comissão. Comprovante e convite não exigem assinatura.</p>
             <p className="text-xs leading-5 text-slate-700">Nos legados, essa mesma aba também reúne o instrumento de avaliação antigo, quando localizado. Ele não faz parte dos processos novos.</p>
             <p className="text-xs leading-5 text-slate-700">Consulte as fontes para prazos e regras da sua matriz. A norma disponível descreve procedimentos físicos históricos; a tramitação digital deste Portal segue as etapas de cadastro, reserva, conceito, assinaturas e entrega.</p>
             <ul className="space-y-1.5 text-xs leading-5 text-slate-700">

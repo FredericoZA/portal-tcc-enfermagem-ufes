@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import {ChevronLeft, ChevronRight, ExternalLink} from 'lucide-react';
 
-export type GuideRole = 'aluno' | 'orientador' | 'visitante';
+export type GuideRole = 'aluno' | 'orientador' | 'examinador' | 'visitante';
 export type GuideActivity = {
   id: string;
   title: string;
@@ -18,12 +18,12 @@ export type GuideActivity = {
 // Screenshots are captured from the same components with fictitious examples.
 export const guideActivities: GuideActivity[] = [
   {
-    id: 'acesso', title: 'Entrar com o e-mail do processo', roles: ['aluno', 'orientador'], imageId: 'acesso',
+    id: 'acesso', title: 'Entrar com o e-mail do processo', roles: ['aluno', 'orientador', 'examinador'], imageId: 'acesso',
     imageCaption: 'Janela de acesso por e-mail. O código é pessoal e não deve ser compartilhado.',
     steps: [
       'No menu lateral, clique em Entrar no Portal. Se veio de um e-mail do TCC, use a janela de acesso aberta sobre a ficha.',
       'Informe o e-mail autorizado e solicite o código. Digite os seis dígitos recebidos nesse endereço para concluir o acesso.',
-      'Use o mesmo endereço registrado como autor ou orientador. Depois do acesso, abra Meus TCCs ou continue no trabalho e na aba do link recebido.',
+      'Use o mesmo endereço registrado como autor, orientador ou examinador. Depois do acesso, abra Meus TCCs ou continue no trabalho e na aba do link recebido.',
       'Sem entrar, você pode consultar os dados públicos. Entrar libera apenas as ações e os documentos permitidos ao seu vínculo.',
     ],
     done: 'Sua conta aparece no Portal e o processo exibe as ações correspondentes ao seu papel.',
@@ -52,7 +52,7 @@ export const guideActivities: GuideActivity[] = [
     ],
   },
   {
-    id: 'ficha', title: 'Abrir e conferir a ficha', roles: ['aluno', 'orientador'], imageId: 'ficha',
+    id: 'ficha', title: 'Abrir e conferir a ficha', roles: ['aluno', 'orientador', 'examinador'], imageId: 'ficha',
     imageCaption: 'Dados do processo e tabela compacta de participantes, no modelo usado por todos os TCCs.',
     steps: [
       'Em Meus TCCs, clique no código do trabalho. A mesma ficha também abre pelos códigos do Calendário, do Repositório e pelos links dos e-mails.',
@@ -118,13 +118,29 @@ export const guideActivities: GuideActivity[] = [
     ],
   },
   {
-    id: 'documentos', title: 'Conferir, assinar e baixar documentos', roles: ['aluno', 'orientador'], imageId: 'documentos',
+    id: 'assinatura-examinador', title: 'Assinar a ata como examinador', roles: ['examinador'], imageId: 'documentos',
+    imageCaption: 'Documentos administrativos: a caixa da ata apresenta os responsáveis e os métodos de assinatura.',
+    steps: [
+      'Use seu próprio e-mail cadastrado como examinador para entrar no Portal e abra o TCC em Meus TCCs ou pelo link do convite.',
+      'Depois que o orientador registrar o conceito e o parecer, abra Documentos administrativos e confira a ata. O examinador não registra o conceito nem altera o parecer.',
+      'Em Asten, abra a solicitação da ata, se ainda não existir, e assine pelo link pessoal recebido no seu e-mail. A ata só será arquivada quando orientador e os dois examinadores assinarem.',
+      'Se usarem Gov.br, baixe o PDF preparado, assine o mesmo arquivo e encaminhe a versão assinada ao orientador para reunir as três assinaturas e devolver o PDF completo no Portal.',
+    ],
+    done: 'Sua assinatura foi registrada no documento; a etapa só termina depois das três assinaturas e do arquivamento da ata.',
+    help: [
+      'Sem botão na ata: confirme que seu e-mail está registrado como segundo ou terceiro examinador e que o conceito já foi registrado.',
+      'Asten pendente: não duplique a solicitação; use o link pessoal enviado por e-mail e aguarde os demais integrantes.',
+      'Gov.br: não devolva uma versão com uma única assinatura como arquivo final. O orientador reúne todas as assinaturas.',
+    ],
+  },
+  {
+    id: 'documentos', title: 'Conferir, assinar e baixar documentos', roles: ['aluno', 'orientador', 'examinador'], imageId: 'documentos',
     imageCaption: 'Documentos administrativos: comprovante, convite, ata, termo e declaração. Nos legados, o instrumento de avaliação aparece como sexto item.',
     steps: [
       'Abra Documentos administrativos. Cada caixa informa a disponibilidade, os responsáveis e as ações do documento. Comprovante e carta-convite não exigem assinatura.',
-      'Somente o orientador assina a ata. Todos os autores e o orientador assinam o termo, se houver publicação autorizada. A declaração é assinada pela presidência da comissão.',
+      'O orientador e os dois examinadores assinam a ata. Todos os autores e o orientador assinam o termo, se houver publicação autorizada. A declaração é assinada pela presidência da comissão.',
       'O responsável escolhe o método na caixa do documento. Prefira o Asten: solicite uma vez e siga o link recebido por e-mail. O Portal acompanha o retorno e o arquivamento; o envio do convite não significa que o documento foi assinado.',
-      'Pelo Gov.br, baixe o PDF original, assine e devolva na mesma janela. No termo, cada autor assina o mesmo arquivo; o orientador reúne todas as assinaturas e devolve um único PDF completo.',
+      'Pelo Gov.br, cada participante assina o mesmo PDF. Na ata, o orientador reúne a própria assinatura e as dos dois examinadores; no termo, reúne as dos autores e a sua. O orientador devolve um PDF completo para cada documento.',
       'Use Ver e Baixar PDF quando disponíveis. A ata assinada e arquivada libera a entrega final. A conclusão do processo depende também da entrega e dos demais documentos obrigatórios.',
     ],
     done: 'O documento aparece assinado e arquivado, com as ações de consulta e download disponíveis.',
@@ -135,18 +151,18 @@ export const guideActivities: GuideActivity[] = [
     ],
   },
   {
-    id: 'assinatura-gov', title: 'Assinar e devolver pelo Gov.br', roles: ['aluno', 'orientador'], imageId: 'gov',
+    id: 'assinatura-gov', title: 'Assinar e devolver pelo Gov.br', roles: ['aluno', 'orientador', 'examinador'], imageId: 'gov',
     imageCaption: 'Janela Gov.br com download e devolução. A conferência administrativa é uma etapa posterior.',
     steps: [
-      'Em Documentos administrativos, abra Gov.br na caixa do documento. O orientador pode preparar a ata e, quando aplicável, o termo.',
+      'Em Documentos administrativos, abra Gov.br na caixa do documento. O orientador ou um dos examinadores pode preparar a ata; o orientador também pode preparar o termo, quando aplicável.',
       'Em 1. Baixar o documento, clique em Gerar e baixar PDF ou Baixar PDF para assinar. Use Abrir assinador Gov.br para assinar esse arquivo. Não o imprima nem gere outro PDF por cima dele.',
-      'Na ata, basta a assinatura do orientador. No termo, todos os autores e o orientador precisam assinar o mesmo PDF. O aluno encaminha sua assinatura ao orientador, que reúne o arquivo completo.',
+      'Na ata, orientador e dois examinadores devem assinar o mesmo PDF, que é devolvido pelo orientador. No termo, todos os autores e o orientador precisam assinar o mesmo PDF. O aluno encaminha sua assinatura ao orientador, que reúne o arquivo completo.',
       'O orientador usa 2. Devolver o documento assinado → Devolver PDF assinado e seleciona o PDF completo. O Portal aceita PDF de até 50 MB.',
       'O Master confere o arquivo no VALIDAR/ITI e registra a aprovação e o arquivamento. Até essa conferência, o documento permanece pendente.',
     ],
     done: 'Após a conferência e o arquivamento, a caixa do documento deixa de mostrar assinatura pendente.',
     help: [
-      'Devolução indisponível: confirme se o PDF foi preparado e se está na conta responsável. No termo, somente o orientador devolve o arquivo; o Master também pode intervir.',
+      'Devolução indisponível: confirme se o PDF foi preparado e se está na conta responsável. Na ata e no termo, somente o orientador devolve o arquivo; o Master também pode intervir.',
       'Arquivo recusado: confira a versão do documento e as assinaturas exigidas. Preserve o original preparado pelo Portal.',
       'Para reduzir as etapas de download e devolução, prefira o Asten quando disponível.',
     ],
@@ -224,7 +240,7 @@ export const guideActivities: GuideActivity[] = [
     help: ['Documento antigo restrito: a importação não autoriza a divulgação de dados pessoais ou de protocolos de assinatura presentes nos arquivos.'],
   },
   {
-    id: 'sugestoes', title: 'Informar um problema ou sugerir melhoria', roles: ['aluno', 'orientador', 'visitante'], imageId: 'sugestoes',
+    id: 'sugestoes', title: 'Informar um problema ou sugerir melhoria', roles: ['aluno', 'orientador', 'examinador', 'visitante'], imageId: 'sugestoes',
     imageCaption: 'Sugestões fica na parte inferior do menu lateral e recebe relatos sobre o Portal.',
     steps: [
       'Na parte inferior do menu lateral, clique em Sugestões. O envio também está disponível sem login.',
@@ -240,6 +256,7 @@ export const guideActivities: GuideActivity[] = [
 export const guideActivityOrder: Record<GuideRole, string[]> = {
   aluno: ['acesso', 'cadastro', 'ficha', 'agenda', 'confirmacao', 'repositorio', 'documentos', 'assinatura-gov', 'sugestoes'],
   orientador: ['acesso', 'ficha', 'agenda', 'avaliacao', 'documentos', 'assinatura-gov', 'sugestoes'],
+  examinador: ['acesso', 'ficha', 'assinatura-examinador', 'documentos', 'assinatura-gov', 'sugestoes'],
   visitante: ['consulta-publica', 'local-publico', 'repositorio-publico', 'legados', 'sugestoes'],
 };
 

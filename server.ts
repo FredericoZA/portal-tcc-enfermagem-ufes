@@ -1123,13 +1123,13 @@ async function createSignatureJobUnlocked(p:ProcessData,type:'ATA'|'TERMO'|'DECL
   if(type==='ATA'&&p.avaliacao.documentText)renderVariables={...renderVariables,ATA_TEXTO_INTEGRAL:p.avaliacao.documentText};
   if(provider==='GOV_BR'){
     const existing=signatureJobsStore.find(job=>job.processId===p.id&&job.documentType===type&&job.provider==='GOV_BR'&&job.sourceDataRevision===p.dataRevision&&job.status!=='CANCELED');
-    if(existing)return existing;
+    if(existing){assertCurrentSignatureRecipients(p,type,existing,currentSettings);return existing;}
   }
   // Repetir o botão recupera a mesma versão, inclusive quando o resultado do provedor é incerto.
   // Não renderizar outro PDF (com metadados voláteis) e gerar outra chave para contornar a outbox.
   if(provider==='ASTEN'){
     const existing=reusableAstenSignatureJob(signatureJobsStore,p.id,type,p.dataRevision);
-    if(existing)return existing;
+    if(existing){assertCurrentSignatureRecipients(p,type,existing,currentSettings);return existing;}
   }
   const signers=deriveSignatureSigners(p,type);
   if(signers.some(s=>!isValidPortalEmail(s.email)))throw new Error(`${p.protocolo}: signatário sem e-mail válido.`);
@@ -1315,6 +1315,7 @@ async function archiveSignatureJobAutomatically(job:SignatureJob):Promise<Signat
   if(!job.providerEnvelopeId)return job;
   const process=processesStore.find(item=>item.id===job.processId);if(!process)return job;
   try{
+    assertCurrentSignatureRecipients(process,job.documentType,job,currentSettings);
     const[asten,googleAccessToken]=await Promise.all([getPersistentAstenConnection(),getGoogleWorkspaceAccessToken()]);
     if(!asten)throw new Error('Conta Asten não conectada.');
     if(!currentSettings.driveRootFolderId)throw new Error('Pasta raiz do Google Drive não configurada.');
@@ -3394,7 +3395,7 @@ export async function createPortalApp() {
     const finalDataRoles=getActiveProcessRoles(identity.email,process.id);
     if(!hasFullAdministration(identity.email)&&!finalDataRoles.includes('STUDENT'))return res.status(403).json({error:'Somente o aluno, o Master ou o Presidente da Comissão pode concluir os dados de publicação.'});
     if(process.avaliacao.status!=='CONCLUIDO')return res.status(409).json({error:'A avaliação precisa ser concluída antes dos dados finais.'});
-    if(!ataArchived(process,signatureJobsStore))return res.status(409).json({error:'Aguarde a Ata assinada pelo orientador e arquivada no Drive.',code:'ATA_SIGNATURE_REQUIRED'});
+    if(!ataArchived(process,signatureJobsStore))return res.status(409).json({error:'Aguarde a ata assinada pelo orientador e pelos dois examinadores e arquivada no Drive.',code:'ATA_SIGNATURE_REQUIRED'});
     if(process.status==='CONCLUIDO'||process.acervo?.submittedAt||signatureJobsStore.some(job=>job.processId===process.id&&job.documentType!=='ATA'&&job.sourceDataRevision===process.dataRevision&&job.status!=='CANCELED'))return res.status(409).json({error:'Os dados finais ficam bloqueados após a criação do Termo ou da Declaração. Use o fluxo administrativo de retirada ou gere uma nova versão formal.',code:'FINAL_DATA_LOCKED_BY_SIGNATURE'});
     const palavrasChave=Array.isArray(req.body?.palavrasChave)?req.body.palavrasChave.map((value:unknown)=>String(value).trim()).filter(Boolean):[];
     const signatureProvider=req.body?.signatureProvider||'ASTEN';
@@ -3794,7 +3795,8 @@ export async function createPortalApp() {
     if(job.sourceDataRevision!==process.dataRevision)throw new Error('Os dados do TCC mudaram. Prepare uma nova versão da declaração.');
     assertSignatureEligibility(process,job.documentType as 'ATA'|'TERMO'|'DECLARACAO');
     const expected=deriveSignatureSigners(process,job.documentType as 'ATA'|'TERMO'|'DECLARACAO');
-    if(JSON.stringify(expected.map(item=>[item.name,item.email]))!==JSON.stringify(job.signers.map(item=>[item.name,item.email])))throw new Error('O responsável pela assinatura mudou. Prepare uma nova versão.');
+    assertCurrentSignatureRecipients(process,job.documentType as 'ATA'|'TERMO'|'DECLARACAO',job,currentSettings);
+    if(JSON.stringify(expected.map(item=>[item.name,item.email]))!==JSON.stringify(job.signers.map(item=>[item.name,item.email])))throw new Error('Os signatários mudaram. Prepare uma nova versão.');
     return {job,process};
   };
   app.get('/api/signatures/jobs/:id/govbr/download',requireAuthenticated,async(req,res)=>{
