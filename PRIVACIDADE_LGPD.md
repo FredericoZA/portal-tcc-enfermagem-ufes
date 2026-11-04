@@ -13,6 +13,16 @@ O Supabase fornece persistência ao sistema. Ele não deve ser descrito nem conf
 
 Os únicos papéis administrativos globais são `MASTER_ADMIN` e `COMMISSION_PRESIDENT`. A chave `service_role` fica exclusivamente no backend. Navegadores não recebem acesso direto às tabelas normalizadas nem ao Drive.
 
+## Escopo operacional e conformidade técnica (04/11/2026)
+
+A arquitetura atual não requer modelo de inteligência artificial generativa para executar cadastros, documentos, avaliações, assinaturas ou indicadores. O cálculo estatístico é determinístico; modelos de parecer são textos fixos, editados e validados pelo orientador. O módulo antigo de propostas automáticas foi desativado. O formulário público de Sugestões é analisado por pessoas.
+
+**Divulgação pública:** a rota `/api/public/indicators` retorna agregados e categorias controladas, omitindo dados pessoais e campos livres (palavras-chave, locais informados, textos de parecer). A visualização detalhada é suprimida para conjuntos com menos de cinco TCCs e categorias com menos de três ocorrências. Essas salvaguardas reduzem riscos, mas não constituem garantia matemática de anonimização em todas as hipóteses de cruzamento de bases.
+
+**Decisão acadêmica:** o sistema não avalia mérito de TCC por conta própria. O texto-base do parecer contém campos que devem ser substituídos pelos fundamentos efetivamente registrados na defesa; o envio é bloqueado enquanto esses campos permanecerem incompletos.
+
+**Terceiros e controles a validar pela unidade responsável:** revisar finalidade e base legal de cada tratamento, compartilhamentos Google Workspace e Asten, papéis de controlador e operadores, termos contratuais, localização e transferência internacional de dados, acesso das contas administrativas, retenção, exclusão, resposta a incidentes e recuperação. A adequação do software à Portaria GR/Ufes nº 310/2026 não dispensa esses requisitos, nem representa certificação formal da Ufes.
+
 ## Finalidades e bases legais
 
 Antes da produção, o controlador deve registrar com o encarregado de dados da UFES:
