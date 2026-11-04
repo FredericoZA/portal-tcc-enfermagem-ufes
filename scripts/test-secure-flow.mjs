@@ -503,7 +503,7 @@ async function liveChecks() {
       const processes=(await request('/api/processes',{headers:asUser(master)})).body;const target=processes.find(process=>process.aluno1?.email===newStudent);assert.ok(target?.id);
       const blocked=await request(`/api/processes/${target.id}/confirm-location`,{method:'POST',headers:asUser(master),body:JSON.stringify({local:'Auditório',confirmationReceived:false})});assert.equal(blocked.response.status,400);
       const before=await request(`/api/processes/${target.id}`,{headers:asUser(master)});
-      const missing=await request(`/api/processes/${target.id}/confirm-location`,{method:'POST',headers:asUser(master),body:JSON.stringify({local:'Auditório',confirmationReceived:true})});
+      const missing=await request(`/api/processes/${target.id}/confirm-location`,{method:'POST',headers:asUser(master),body:JSON.stringify({local:'Auditório',confirmationReceived:true,manualConfirmationReason:'Conferência administrativa de teste'})});
       assert.equal(missing.response.status,400);assert.equal(missing.body.code,'LOCATION_PROOF_REQUIRED');assert.match(missing.body.error,/Anexe.*e-mail/);
       const after=await request(`/api/processes/${target.id}`,{headers:asUser(master)});assert.equal(after.body.dataRevision,before.body.dataRevision);assert.equal(after.body.defesa.localStatus,before.body.defesa.localStatus);
       const badProof=await request(`/api/processes/${target.id}/location-proof`,{method:'POST',headers:asUser(master),body:JSON.stringify({fileName:'texto.pdf',contentBase64:Buffer.from('isto não é pdf').toString('base64')})});assert.equal(badProof.response.status,422);

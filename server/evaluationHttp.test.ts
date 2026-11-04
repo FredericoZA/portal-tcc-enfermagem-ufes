@@ -73,11 +73,11 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     const repeated = await request(customRoute, master, formBody);
     assert.equal(repeated.status, 202);
     assert.equal(repeated.body.id, customSaved.body.id);
-    const confirmed = await request(`/api/processes/${local.id}/confirm-location`, p.aluno1.email, { local: local.defesa.local, confirmationReceived: true });
+    const confirmed = await request(`/api/processes/${local.id}/confirm-location`, master, { local: local.defesa.local, confirmationReceived: true });
     assert.equal(confirmed.status, 202);
     assert.equal(confirmed.body.dataRevision, local.dataRevision);
     assert.equal(confirmed.body.defesa.localConfirmedAt, local.defesa.localConfirmedAt);
-    assert.equal((await request(`/api/processes/${local.id}/confirm-location`, p.aluno1.email, { local: 'Outro local', confirmationReceived: true })).status, 409);
+    assert.equal((await request(`/api/processes/${local.id}/confirm-location`, master, { local: 'Outro local', confirmationReceived: true })).status, 409);
     assert.equal((await request('/api/does-not-exist')).status, 404);
     assert.equal((await request(route + '/schema', p.aluno1.email)).status, 403);
     const schema = await request(route + '/schema');

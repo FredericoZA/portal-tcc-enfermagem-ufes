@@ -353,7 +353,7 @@ export const apiClient = {
   importDocumentModelFromDrive:(type:string,linkOrId:string)=>fetchApi<any>(`/api/admin/models/${type}/link`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({linkOrId})}),
   restoreDocumentModelVersion:(type:string,version:number)=>fetchApi<any>(`/api/admin/models/${type}/versions/${version}/restore`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   deleteDocumentModel:(type:string)=>fetchApi<{deleted:boolean;type:string}>(`/api/admin/models/${encodeURIComponent(type)}`,{method:'DELETE'}),
-  confirmDefenseLocation:(id:string,data:{local:string;confirmationReceived:boolean;localEvidenceUrl?:string})=>fetchApi<WorkflowProcessResponse>(`/api/processes/${id}/confirm-location`,{method:'POST',body:JSON.stringify(data)}),
+  confirmDefenseLocation:(id:string,data:{local:string;confirmationReceived:boolean;manualConfirmationReason:string;localEvidenceUrl?:string})=>fetchApi<WorkflowProcessResponse>(`/api/processes/${id}/confirm-location`,{method:'POST',body:JSON.stringify(data)}),
   uploadLocationProof:async(id:string,file:File)=>{
     if(file.size>24*1024*1024)throw new Error('O comprovante ultrapassa 24 MB. Envie uma versão menor do PDF.');
     return withDevelopmentFallback(file,async()=>{

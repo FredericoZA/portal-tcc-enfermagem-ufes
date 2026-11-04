@@ -2928,7 +2928,7 @@ export async function createPortalApp() {
     const process=processesStore[index];
     if(!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
     const roles=getActiveProcessRoles(identity.email,process.id);
-    if(!hasFullAdministration(identity.email)&&!roles.includes('STUDENT'))return res.status(403).json({error:'Somente o aluno, o Master ou o Presidente da Comissão pode confirmar o local.'});
+    if(!hasFullAdministration(identity.email))return res.status(403).json({error:'A reserva deve ser decidida pelo responsável pelo link recebido por e-mail. A confirmação manual é restrita à administração.',code:'MANUAL_CONFIRMATION_FORBIDDEN'});
     const local=String(req.body?.local||'').trim();
     if(process.defesa.invitationSentAt)return res.status(409).json({error:'A carta-convite já foi enviada. Para preservar o documento expedido, o local não pode ser confirmado novamente.',code:'INVITATION_ALREADY_SENT'});
     if(process.defesa.invitationDriveFileId&&normalizeLocation(local)!==normalizeLocation(process.defesa.local||''))return res.status(409).json({error:'Já existe uma carta-convite gerada para outro local. Conclua ou corrija formalmente a etapa antes de reenviar.',code:'INVITATION_DOCUMENT_LOCKED'});
@@ -2940,6 +2940,9 @@ export async function createPortalApp() {
       if (normalizeLocation(local) !== normalizeLocation(process.defesa.local || '')) return res.status(409).json({ error: 'O local já foi confirmado. Solicite uma correção formal à secretaria.', code: 'LOCATION_ALREADY_CONFIRMED' });
       return res.status(202).json({ ...process, workflowPending: true, workflowError: 'A confirmação já está salva. A secretaria deve retomar o convite na fila de pendências.' });
     }
+    if(process.defesa.departmentResponse)return res.status(409).json({error:'O responsável já respondeu a este pedido. Solicite uma nova reserva para preservar a decisão registrada.',code:'RESERVATION_DECISION_RECORDED'});
+    const manualConfirmationReason=String(req.body?.manualConfirmationReason||'').trim();
+    if(!manualConfirmationReason||manualConfirmationReason.length>1000)return res.status(400).json({error:'Informe uma justificativa administrativa de até 1.000 caracteres para a confirmação manual.',code:'MANUAL_CONFIRMATION_REASON_REQUIRED'});
     if(!process.defesa.locationProof||(process.defesa.locationProof.reservationRevision||0)!==(process.defesa.reservationRevision||0))return res.status(400).json({error:'Anexe o comprovante da resposta do departamento (e-mail em PDF) antes de confirmar o local.',code:'LOCATION_PROOF_REQUIRED'});
     const conflicts=findDefenseConflicts({startAt:process.defesa.startAt,endAt:process.defesa.endAt,local,emails:participantEmails(process),excludeProcessId:process.id});const overrideReason=String(req.body?.conflictOverrideReason||'').trim();if(conflicts.length&&(!hasFullAdministration(identity.email)||!overrideReason))return res.status(409).json({error:'O local ou um participante já está comprometido em outra defesa.',code:'DEFENSE_CONFLICT',conflicts});
     try{
@@ -2949,7 +2952,7 @@ export async function createPortalApp() {
       processesStore[index]=updated;
       if(conflicts.length)auditLogsStore.push({id:`log-${Date.now()}-conflict`,processId:process.id,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'SOBRESCRITA_CONFLITO_DEFESA',entityType:'defense_schedule',entityId:process.id,after:{reason:overrideReason,conflicts},timestamp:now});
       googleCalendarEventsStore=generateGoogleEventsFromProcesses(processesStore);
-      auditLogsStore.push({id:`log-${Date.now()}`,processId:process.id,actorEmail:identity.email,actorRoles:[...getUserRolesForEmail(identity.email).globalRoles,...roles],action:'CONFIRMACAO_LOCAL',entityType:'processo',entityId:process.id,before:{defesa:process.defesa},after:{defesa:updated.defesa},timestamp:now});
+      auditLogsStore.push({id:`log-${Date.now()}`,processId:process.id,actorEmail:identity.email,actorRoles:[...getUserRolesForEmail(identity.email).globalRoles,...roles],action:'CONFIRMACAO_LOCAL_ADMINISTRATIVA',entityType:'processo',entityId:process.id,before:{defesa:process.defesa},after:{defesa:updated.defesa,reason:manualConfirmationReason,reservationRevision:process.defesa.reservationRevision||0,proofSha256:process.defesa.locationProof.sha256},timestamp:now});
       await persistPortalStateDurably();
       await finishConfirmedReservation(updated,identity.email);
       return res.status(updated.defesa.invitationSentAt?200:202).json({...updated,workflowPending:!updated.defesa.invitationSentAt});
