@@ -1,3 +1,4 @@
+import {formatDateTimeWithWeekday} from '../utils/formatters';
 import {isManagedDefenseLocation} from '../utils/reservationLocation';
 import React,{useState} from 'react';
 import type {ProcessData,SignatureJob} from '../types';
@@ -16,7 +17,7 @@ export function ProcessFlowPanel({process,canConfirm,onChangeReservation}:{proce
   finally{setBusy(false);}
  };
  return <section id="process-operational-actions" className={`portal-process-operational-actions rounded-xl border p-3 sm:p-4 ${waiting?'border-amber-300 bg-amber-50 text-amber-950':'border-slate-300 bg-[var(--portal-surface-card)]'}`}  aria-label="Reserva do local da defesa">
-  {waiting?<p role="status" className="text-sm">{process.defesa.departmentResponse?.decision==='UNAVAILABLE'?'O responsável recusou o agendamento. Use “Solicitar nova data” para enviar outro pedido de reserva.':`Aguardando o aceite ou a recusa do ${isManagedDefenseLocation(process.defesa.local)?'departamento':'orientador'} pelo pedido enviado por e-mail.`}</p>:<p className="text-sm">Local confirmado: <strong>{process.defesa.local}</strong>{process.defesa.localConfirmedAt&&` · ${new Date(process.defesa.localConfirmedAt).toLocaleString('pt-BR')}`}</p>}
+  {waiting?<p role="status" className="text-sm">{process.defesa.departmentResponse?.decision==='UNAVAILABLE'?'O responsável recusou o agendamento. Use “Solicitar nova data” para enviar outro pedido de reserva.':`Aguardando o aceite ou a recusa do ${isManagedDefenseLocation(process.defesa.local)?'departamento':'orientador'} pelo pedido enviado por e-mail.`}</p>:<p className="text-sm">Local confirmado: <strong>{process.defesa.local}</strong>{process.defesa.localConfirmedAt&&` · ${formatDateTimeWithWeekday(process.defesa.localConfirmedAt)}`}</p>}
   <div className="mt-3 flex flex-wrap gap-2">{proof&&<button type="button" className="portal-action" disabled={busy} onClick={()=>void download()}>{busy?'Abrindo…':process.defesa.departmentResponse?.decision==='UNAVAILABLE'?'Abrir comprovante de indisponibilidade':'Abrir comprovante da reserva'}</button>}
   {process.defesa.departmentResponse?.decision==='UNAVAILABLE'&&onChangeReservation&&<button type="button" className="portal-action-primary" onClick={onChangeReservation}>Solicitar nova data</button>}</div>
   {message&&<p role="status" className="mt-3 text-sm">{message}</p>}

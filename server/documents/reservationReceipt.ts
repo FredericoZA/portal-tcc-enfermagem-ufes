@@ -1,3 +1,4 @@
+import {COMMISSION_NAME,DOCUMENT_ISSUER_LINES} from '../../src/utils/institutionalIdentity';
 import {isManagedDefenseLocation} from '../../src/utils/reservationLocation';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
@@ -7,10 +8,10 @@ import type {ProcessData,GlobalSettings} from '../../src/types';
 import {resolveInstallationProfile} from '../../src/utils/installationProfile';
 import {officialParticipantLines} from '../../src/utils/officialParticipants';
 import {authorNames} from '../../src/utils/personPresentation';
-import {formatTccTitle,formatDatePt,formatTime24h} from '../../src/utils/formatters';
+import {formatTccTitle,formatDateWithWeekday,formatDateNumericWithWeekday,formatTime24h} from '../../src/utils/formatters';
 
 const fontBytes=Promise.all(['Regular','Bold'].map(weight=>readFile(path.join(process.cwd(),'server/documents/fonts',`NotoSans-${weight}.ttf`))));
-const logoBytes=readFile(path.join(process.cwd(),'server/documents/assets/ufes-crest.png'));
+const logoBytes=readFile(path.join(process.cwd(),'server/documents/assets/national-arms.png'));
 const ink=rgb(.13,.23,.19),muted=rgb(.35,.42,.39),line=rgb(.82,.87,.84),paper=rgb(.96,.98,.97);
 export async function createReservationReceiptPdf(process:ProcessData,settings:GlobalSettings,options:{publicView?:boolean}={}):Promise<Buffer>{
  // Older confirmations predate the department micro-form; retain their recorded facts.
@@ -47,11 +48,11 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  };
  const draw=(text:string,x:number,top:number,size=10,font=regular,color=ink)=>page.drawText(text,{x,y:top,size,font,color});
  const newPage=()=>{
-  page=doc.addPage([595,842]);page.drawRectangle({x:0,y:705,width:595,height:137,color:green});
+  page=doc.addPage([595,842]);page.drawRectangle({x:0,y:677,width:595,height:165,color:green});
   const logoSize=48;page.drawCircle({x:595/2,y:805,size:25,color:rgb(1,1,1)});page.drawImage(logo,{x:(595-logoSize)/2,y:781,width:logoSize,height:logoSize});
   let top=764;
-  for(const [text,size,font] of [[institution,12,bold],[course,10,regular],[profile.departmentName,9,regular]] as const){for(const row of wrap(text,font,size,width)){draw(row,(595-font.widthOfTextAtSize(row,size))/2,top,size,font,rgb(1,1,1));top-=17;}}
-  y=675;
+  for(const [text,size,font] of [[institution,11,bold],['Centro de Ciências da Saúde',9,regular],[course,9,regular],['Departamento de Enfermagem',9,regular],[COMMISSION_NAME,9,bold]] as const){for(const row of wrap(text,font,size,width)){draw(row,(595-font.widthOfTextAtSize(row,size))/2,top,size,font,rgb(1,1,1));top-=14;}}
+  y=650;
  };
  const ensure=(height:number)=>{if(y-height<88)newPage();};
  const paragraph=(text:string,size=10,font=regular,color=ink)=>{const rows=wrap(text,font,size,width);for(const row of rows){ensure(size+6);draw(row,margin,y,size,font,color);y-=size+6;}};
@@ -74,15 +75,15 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  for(const name of authorRows)paragraph(`Autor: ${name}`,9);
  for(const participant of officialParticipantLines(process).filter(person=>!person.key.startsWith('ALUNO_')))paragraph(`${participant.role}: ${participant.name}`,9);
  section('Dados da defesa');
- const date=formatDatePt(response.startAt),time=`${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt)}`;
+ const date=formatDateWithWeekday(response.startAt),time=`${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt)}`;
  const dateRows=wrap(date,bold,11,240);const height=Math.max(60,dateRows.length*16+36);ensure(height+8);
  page.drawRectangle({x:margin,y:y-height+16,width,height,color:paper});draw('DATA',margin+12,y,8,bold,muted);draw('HORÁRIO',310,y,8,bold,muted);
  dateRows.forEach((row,i)=>draw(row,margin+12,y-20-i*16,11,bold));draw(time,310,y-20,11,bold);draw('Duração: 1 hora e 30 minutos',310,y-37,8,regular,muted);y-=height;
  field(confirmed?'Local autorizado':'Local solicitado',confirmed?(response.local||snapshot.get('Local')||process.defesa.local):process.defesa.local);
  section('Registro da resposta');
  if(!options.publicView||('departmentEmail' in response&&response.departmentEmail===response.respondedBy))field('attribution' in response&&response.attribution==='EMAIL_LINK'?'Resposta registrada pelo link enviado a':'Resposta registrada por',response.respondedBy);
- const registered=new Intl.DateTimeFormat('pt-BR',{timeZone:settings.timezone||'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(response.respondedAt));
+ const registered=new Intl.DateTimeFormat('pt-BR',{timeZone:settings.timezone||'America/Sao_Paulo',weekday:'long',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(response.respondedAt));
  field('Data e hora do registro',registered);
- const pages=doc.getPages();for(let i=0;i<pages.length;i++){page=pages[i];page.drawLine({start:{x:margin,y:60},end:{x:549,y:60},thickness:.7,color:line});draw('Registro eletrônico do Portal TCC',margin,44,8,regular,muted);const number=`${i+1} / ${pages.length}`;draw(number,549-regular.widthOfTextAtSize(number,8),44,8,regular,muted);}
+ const pages=doc.getPages();for(let i=0;i<pages.length;i++){page=pages[i];page.drawLine({start:{x:margin,y:60},end:{x:549,y:60},thickness:.7,color:line});DOCUMENT_ISSUER_LINES.forEach((value,index)=>draw(value,margin,48-index*12,7,regular,muted));const number=`${i+1} / ${pages.length}`;draw(number,549-regular.widthOfTextAtSize(number,8),44,8,regular,muted);}
  return Buffer.from(await doc.save());
 }

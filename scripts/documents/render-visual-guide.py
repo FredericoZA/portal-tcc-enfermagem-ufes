@@ -20,7 +20,7 @@ def token(name):
 for name, weight in [('Portal', 'Regular'), ('PortalBold', 'Bold')]:
     pdfmetrics.registerFont(TTFont(name, str(ROOT / f'server/documents/fonts/NotoSans-{weight}.ttf')))
 GREEN, SAGE, TEXT = token('brand-header'), token('brand-sage'), token('text-dark')
-logo = ImageReader(str(ROOT / 'public/ufes-crest.png'))
+logo = ImageReader(str(ROOT / 'public/national-arms.png'))
 body = ParagraphStyle('body', fontName='Portal', fontSize=9.1, leading=12.9, textColor=HexColor(TEXT), spaceAfter=8)
 intro = ParagraphStyle('intro', parent=body, fontSize=8.4, leading=11.7, textColor=HexColor(token('text-muted')))
 heading = ParagraphStyle('heading', fontName='PortalBold', fontSize=17, leading=22, textColor=HexColor(GREEN), spaceAfter=10)

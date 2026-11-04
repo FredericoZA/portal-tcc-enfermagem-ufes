@@ -1,3 +1,4 @@
+import {formatDateNumericWithWeekday,formatTime24h} from './formatters';
 import {isEmailAddress} from './emailAddress';
 import type { EvaluationOutcomeOption, ProcessData } from '../types';
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
@@ -86,7 +87,7 @@ export function evaluationReviewRows(process: ProcessData, studio?: Partial<Inte
     ['Orientador', person(process.orientador)],
     ['Coorientador', process.coorientador ? person(process.coorientador) : 'Não possui'],
     ...process.banca.filter(p=>p.funcao!=='ORIENTADOR').map((p): [string, string] => ['Examinador', person(p)]),
-    ['Data e horário', Number.isFinite(date.getTime()) ? `${new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, dateStyle: 'short', timeStyle: 'short' }).format(date)} (${timezone})` : 'Data inválida'],
+    ['Data e horário', Number.isFinite(date.getTime()) ? `${`${formatDateNumericWithWeekday(process.defesa.startAt)} às ${formatTime24h(process.defesa.startAt)}`} (${timezone})` : 'Data inválida'],
     ['Local confirmado pelo aluno', process.defesa.local],
   ];
   const native = /^(ALUNO_|TEM_ALUNO_|ORIENTADOR_|COORIENTADOR_|TEM_COORIENTADOR|EXAMINADOR_|TITULO$|DEFESA_|LOCAL_ALTERNATIVO$)/;

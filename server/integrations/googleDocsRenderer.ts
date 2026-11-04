@@ -1,4 +1,4 @@
-import {institutionalLogoRequests} from './institutionalLogo';
+import {institutionalLogoRequests,institutionalHeadingRequests} from './institutionalLogo';
 import {ataPageLayoutRequests,numberAtaLines} from '../documents/ataLayout';
 import {documentMainBody,bodyEditRequests} from './googleDocsBody';
 import {presentationEditRequests,individualAuthorSignatureRequests,individualAuthorSignatureStyleRequests,optionalAuthorBlockRequests,authorizationSignatureLayoutRequests,declarationDateLayoutRequests,ataStudentSignatureLayoutRequests,authorizationOptionsLayoutRequests,ataCoadvisorBlockRequests,coadvisorIdentificationRequests} from './documentPresentation';
@@ -254,7 +254,7 @@ export function buildOfficialInvitationParagraphStyles(document: unknown): Array
       let alignment:'JUSTIFIED'|'END'|'START'|''='';
       let indentStart:number|undefined;
       if(/^(?:A Comissão de Trabalho de Conclusão de Curso do Curso|Agradecemos a participação)/.test(text))alignment='JUSTIFIED';
-      if(/^Vitória-ES,\s+\d/.test(text))alignment='END';
+      if(/^Vitória-ES,\s+/.test(text))alignment='END';
       if(/^(?:Comissão de Trabalho de Conclusão de Curso|Departamento de Enfermagem$|Curso de Enfermagem e Obstetrícia)/.test(text)){
         alignment='START';indentStart=260;
       }
@@ -308,7 +308,7 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
     );
     const readback = await readbackResponse.json() as GoogleDocumentReadback;
     if(String(readback.documentId||'')!==temporaryFileId)throw new Error('O Google Docs devolveu um documento diferente da cópia temporária.');
-    const logoRequests=institutionalLogoRequests(readback,input.institutionalCrestUrl);
+    const logoRequests=[...institutionalLogoRequests(readback,input.institutionalCrestUrl),...(input.institutionalCrestUrl?.endsWith('/national-arms.png')?institutionalHeadingRequests(readback):[])];
     if(logoRequests.length)await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:logoRequests,...(readback.revisionId?{writeControl:{requiredRevisionId:readback.revisionId}}:{})})},'Falha ao aplicar o brasão institucional');
     // The logo batch advances the revision; read it back before writing text.
     if(logoRequests.length){const fresh=await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}?includeTabsContent=true`,{},'Falha ao conferir o brasão institucional');Object.assign(readback,await fresh.json());}

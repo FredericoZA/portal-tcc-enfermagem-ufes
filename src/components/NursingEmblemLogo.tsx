@@ -1,3 +1,4 @@
+import {OilLampIcon} from './OilLampIcon';
 import React, { useEffect, useState } from 'react';
 
 interface NursingEmblemLogoProps {
@@ -7,10 +8,13 @@ interface NursingEmblemLogoProps {
 }
 
 export const NursingEmblemLogo: React.FC<NursingEmblemLogoProps> = ({ className = '', size = 56, customSrc }) => {
-  const logoSrc = customSrc || '/ufes-crest.png';
+  const logoSrc = customSrc || '';
+  const useActivityIcon = !logoSrc || /colenf/iu.test(logoSrc);
   const [imgError, setImgError] = useState<boolean>(false);
 
   useEffect(() => setImgError(false), [logoSrc]);
+
+  if (useActivityIcon) return <OilLampIcon size={size} className={className}/>;
 
   if (imgError) {
     return (

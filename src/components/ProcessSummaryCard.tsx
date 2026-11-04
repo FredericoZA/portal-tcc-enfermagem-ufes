@@ -4,7 +4,7 @@ import type { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
 import { PortalModalShell } from './PortalModalShell';
 import { RegistrationFieldPreview } from './RegistrationFieldPreview';
-import { formatDatePt, formatTimeExtenso, formatTccTitle } from '../utils/formatters';
+import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatTccTitle } from '../utils/formatters';
 import { isOtherDefenseLocation, OTHER_DEFENSE_LOCATION, renderCustomLocationName } from '../utils/customDefenseLocation';
 import { operationalConfig } from '../utils/operationalConfig';
 import { reservationStatusAlert } from '../utils/reservationStatusAlert';
@@ -164,11 +164,11 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
           </div>
           <div className={`${compactField} sm:col-span-2`}>
             <span className={fieldLabel}>Data de registro</span>
-            <span className={fieldValue}>{process.createdAt ? new Date(process.createdAt).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—'}</span>
+            <span className={fieldValue}>{process.createdAt ? formatDateNumericWithWeekday(process.createdAt) : '—'}</span>
           </div>
           <div className={`${compactField} sm:col-span-3`}>
             <span className={fieldLabel}>Data da defesa</span>
-            <span className={fieldValue}>{process.defesa?.startAt ? formatDatePt(process.defesa.startAt) : 'A definir'}</span>
+            <span className={fieldValue}>{process.defesa?.startAt ? formatDateWithWeekday(process.defesa.startAt) : 'A definir'}</span>
           </div>
           <div className={`${compactField} sm:col-span-2`}>
             <span className={fieldLabel}>Horário</span>
@@ -226,6 +226,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
             <label className={compactField}>
               <span className={fieldLabel}>Nova data *</span>
               <input required type="date" value={requested.date} onChange={(event) => setRequested((current) => ({ ...current, date: event.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs" />
+              {requested.date&&<span className="text-[11px] font-medium text-emerald-900">{formatDateWithWeekday(requested.date)}</span>}
             </label>
             <label className={compactField}>
               <span className={fieldLabel}>Novo horário *</span>

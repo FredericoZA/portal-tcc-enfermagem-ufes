@@ -1,3 +1,4 @@
+import {formatDateTimeWithWeekday} from '../utils/formatters';
 import { portalNotice, portalConfirm, portalPrompt } from '../services/portalDialogs';
 import React, { useState, useEffect } from 'react';
 import { apiClient, ApiRequestError } from '../services/apiClient';
@@ -502,7 +503,7 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
                   return (
                     <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-2.5 font-mono text-[11px] text-slate-600 whitespace-nowrap">
-                        {new Date(log.timestamp).toLocaleString('pt-BR')}
+                        {formatDateTimeWithWeekday(log.timestamp)}
                       </td>
 
                       <td className="p-2.5 font-bold text-slate-900">

@@ -7,7 +7,7 @@ import { apiClient } from '../services/apiClient';
 import { useSignatureUpdates } from '../hooks/useSignatureUpdates';
 import { ProcessData, SignatureJob, AstenIntegrationStatus } from '../types';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
-import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumeric, formatTimeExtenso } from '../utils/formatters';
+import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumericWithWeekday, formatTimeExtenso } from '../utils/formatters';
 import { loadTableConfig, ColumnDef } from '../components/TableColumnSelectorPanel';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
@@ -476,7 +476,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         return (
           <td key={colKey} className={`${cellClass} ${styles.cellWeightClass} ${styles.cellTextColorClass}`}>
             <div className={`flex items-center justify-center ${styles.cellFontSizeClass}`}>
-              <span className="font-normal text-black">{proc.defesa?.startAt ? formatDateNumeric(proc.defesa.startAt) : 'N/A'}</span>
+              <span className="font-normal text-black">{proc.defesa?.startAt ? formatDateNumericWithWeekday(proc.defesa.startAt) : 'N/A'}</span>
             </div>
             {proc.defesa?.startAt && (
               <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa.startAt)}</div>

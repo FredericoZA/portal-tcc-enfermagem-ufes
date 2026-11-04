@@ -1,4 +1,3 @@
-import {institutionalDocumentLogo} from '../utils/institutionalDocumentLogo';
 import {INSTITUTION_ACRONYM_HELP,renderInstitutionName} from '../utils/institutionName';
 import {identityField,readRegistrationMemory,saveRegistrationMemory,registrationFieldHistory,matchingRegistrationSuggestions} from '../utils/registrationHistory';
 import {ReservationSchedulingNotice} from './ReservationSchedulingNotice';
@@ -8,7 +7,7 @@ import {withAuthorReference,registrationIdentityNames,registrationIdentitySenten
 import {academicName,authorIntroduction} from '../utils/personPresentation';
 import { ClipboardList } from 'lucide-react';
 import {normalizeRegistrationValue} from '../utils/registrationNormalization';
-import {renderTccTitle} from '../utils/formatters';
+import {renderTccTitle,formatDateNumericWithWeekday,formatDateWithWeekday} from '../utils/formatters';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { RegistrationFieldPreview, registrationPreviewKind } from './RegistrationFieldPreview';
@@ -30,7 +29,7 @@ export function registrationReviewValue(field:RegistrationQuestion,value:unknown
   if(/_INSTITUICAO$/.test(field.fieldKey))return renderInstitutionName(String(value));
   if(registrationPreviewKind(field.fieldKey,field.label,field.fieldType)==='location')return renderCustomLocationName(String(value));
   if(field.fieldKey==='DEFESA_LOCAL'&&value==='__OUTRO_LOCAL__')return 'Outro local';
-  if(field.fieldType==='datetime-local'){const [date,time]=String(value).split('T');const [year,month,day]=date.split('-');return `${day&&month&&year?`${day}/${month}/${year}`:date}${time?` às ${time}`:''}`;}
+  if(field.fieldType==='datetime-local'){const [date,time]=String(value).split('T');return `${formatDateNumericWithWeekday(date)}${time?` às ${time}`:''}`;}
   return typeof value==='boolean'?(value?'Sim':'Não'):String(value);
 }
 
@@ -55,6 +54,10 @@ function Question({ field, value, readOnly, onChange,optionLabels,recent=[] }: {
       field.fieldType==='textarea'?<textarea className="portal-input" rows={5} value={String(value??'')} maxLength={field.validation?.maxLength||10000} onChange={e=>onChange(e.target.value)}/>:
       ['select','radio'].includes(field.fieldType)?<select className="portal-input" value={String(value??'')} onChange={e=>onChange(e.target.value)}><option value="">Selecione…</option>{field.options?.map(option=><option key={option} value={option}>{option==='__OUTRO_LOCAL__'?'Outro local — informar endereço/nome':optionLabels?.[option]||option}</option>)}</select>:
       <input list={identityField(field.fieldKey)?`registration-${field.fieldKey}`:undefined} autoComplete="off" className="portal-input" type={['email','number','date','datetime-local'].includes(field.fieldType)?field.fieldType:'text'} readOnly={readOnly} value={String(value??'')} aria-invalid={issue?true:undefined} onBlur={()=>{onChange(String(normalizeRegistrationValue(field.fieldKey,field.fieldType,value??'')));setTouched(true);}} placeholder={field.placeholder} maxLength={/_MATRICULA$|_SIAPE$/.test(field.fieldKey)?undefined:field.validation?.maxLength||500} onChange={e=>onChange(e.target.value)}/>}
+    {field.fieldType==='datetime-local' && String(value||'').split('T')[0] &&
+      <span className="mt-1 block text-xs font-semibold text-emerald-900" aria-live="polite">
+        {formatDateWithWeekday(String(value).split('T')[0])}
+      </span>}
     {identityField(field.fieldKey)&&<datalist id={`registration-${field.fieldKey}`}>{suggestions.map(item=><option key={item} value={item}/>)}</datalist>}
     {issue&&<span role="alert" className="mt-1 block text-xs text-red-800">{issue}</span>}
     {(field.fieldKey==='TITULO'||/_INSTITUICAO$/.test(field.fieldKey))&&<span className="mt-1 block text-sm opacity-80">{INSTITUTION_ACRONYM_HELP}</span>}
@@ -147,7 +150,7 @@ export function ConfigurableRegistration({ onSuccess, onCancel }: { onSuccess:(i
   });
   if(eligibility!=='ready')return <section className="portal-card p-6" aria-live="polite"><p>{eligibility==='loading'?'Verificando acesso e rascunho…':eligibility==='existing'?'Você já possui um TCC. Continue em Meus TCCs.':'Não foi possível carregar o cadastro. Atualize a página para tentar novamente.'}</p><button type="button" onClick={onCancel} className="portal-action mt-4">Voltar</button></section>;
   return <form onSubmit={submit} className={`portal-workspace mx-auto space-y-5 ${currentSection===sections.length-1?'max-w-7xl':'max-w-4xl'}`} aria-labelledby="registration-title">
-    <header className="portal-card p-5"><div className="flex items-center justify-center">{institutionalDocumentLogo(studio,'form-reserva-aluno')&&<img src={institutionalDocumentLogo(studio,'form-reserva-aluno')} alt="Imagem do formulário" className="mb-3 h-14 w-14 object-contain"/>}</div>{studio?.brandKit?.courseName&&<p className="mb-3 text-center text-base font-bold text-[var(--portal-brand-header)]">{studio.brandKit.courseName}</p>}<p className="text-sm">Etapa {currentSection+1} de {sections.length}</p><h1 id="registration-title" className="mt-1 flex items-center gap-2 text-xl font-bold"><ClipboardList className="h-5 w-5 shrink-0 text-[var(--portal-brand-header)]" aria-hidden="true"/><span>{String(studio?.formTemplates?.find(f=>f.id==='form-reserva-aluno')?.title||'Cadastrar meu TCC')}</span></h1><p className="mt-2 text-sm leading-5">{isReservationStep?'Escolha o local e informe a data e o horário. O departamento confirma as reservas do auditório e da sala de reuniões; outros locais são confirmados pelo orientador. Os envolvidos recebem o resultado por e-mail.':'Preencha os dados dos autores, do trabalho e da banca. O agendamento será solicitado na última etapa.'}</p><progress aria-label="Progresso do cadastro" className="mt-3 h-2 w-full" value={currentSection+1} max={sections.length}/>{!isMasterAdmin&&<p role="status" className="mt-2 text-sm">{draftStatus} Expiração após {workflowPolicy(studio).draftExpiryDays} dias sem salvar.</p>}</header>
+    <header className="portal-card p-5">{studio?.brandKit?.courseName&&<p className="mb-3 text-center text-base font-bold text-[var(--portal-brand-header)]">{studio.brandKit.courseName}</p>}<p className="text-sm">Etapa {currentSection+1} de {sections.length}</p><h1 id="registration-title" className="mt-1 flex items-center gap-2 text-xl font-bold"><ClipboardList className="h-5 w-5 shrink-0 text-[var(--portal-brand-header)]" aria-hidden="true"/><span>{String(studio?.formTemplates?.find(f=>f.id==='form-reserva-aluno')?.title||'Cadastrar meu TCC')}</span></h1><p className="mt-2 text-sm leading-5">{isReservationStep?'Escolha o local e informe a data e o horário. O departamento confirma as reservas do auditório e da sala de reuniões; outros locais são confirmados pelo orientador. Os envolvidos recebem o resultado por e-mail.':'Preencha os dados dos autores, do trabalho e da banca. O agendamento será solicitado na última etapa.'}</p><progress aria-label="Progresso do cadastro" className="mt-3 h-2 w-full" value={currentSection+1} max={sections.length}/>{!isMasterAdmin&&<p role="status" className="mt-2 text-sm">{draftStatus} Expiração após {workflowPolicy(studio).draftExpiryDays} dias sem salvar.</p>}</header>
     {isReservationStep&&<ReservationSchedulingNotice/>}
     {draftReview&&<aside role="alert" className="portal-card p-4"><p>O Master publicou uma nova versão do formulário. Confira os campos recuperados; perguntas removidas não entrarão no cadastro.</p><button type="button" className="portal-action mt-3" onClick={()=>{paused.current=false;setDraftReview(false);}}>Conferi e vou usar a versão atual</button></aside>}
     {error&&<p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-red-900">{error}</p>}

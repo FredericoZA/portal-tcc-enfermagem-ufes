@@ -21,7 +21,7 @@ test('e-mail usa data brasileira e horário de Brasília inclusive quando o UTC 
  assert.equal(formatTime24h('2026-10-24T01:00:00.000Z'),'22:00');
  const process=structuredClone(DEMO_PROCESSES[0]);process.defesa.startAt='2026-10-23T23:00:00.000Z';
  const variables=buildProcessVariables({process,eventCode:'TCC_CREATED',actorEmail:process.aluno1.email,actorRoles:[],extraVariables:{DEFESA_DATA_HORA:process.defesa.startAt}});
- assert.equal(variables.DEFESA_DATA_HORA,'23/10/2026 às 20:00');
+ assert.equal(variables.DEFESA_DATA_HORA,'sexta-feira, 23/10/2026 às 20:00');
 });
 test('reserva copia somente autores e orientador, sem duplicar destinatário nem permitir header injection',()=>{
  const p={aluno1:{email:'aluno@edu.ufes.br'},aluno2:{email:'outro@edu.ufes.br'},orientador:{email:'prof@ufes.br'}};

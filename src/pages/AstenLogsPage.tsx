@@ -1,3 +1,4 @@
+import {formatDateTimeWithWeekday} from '../utils/formatters';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Eye, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -31,7 +32,7 @@ const SIGNATURE_COLUMNS: ColumnDef[] = [
 ];
 const DEFAULT_ORDER = SIGNATURE_COLUMNS.map((column) => column.key);
 const DEFAULT_VISIBLE = Object.fromEntries(SIGNATURE_COLUMNS.map((column) => [column.key, !['attempts','signedSha256','lastError'].includes(column.key)]));
-const dateTime = (value?: string) => value ? new Date(value).toLocaleString('pt-BR') : '—';
+const dateTime = (value?: string) => value ? formatDateTimeWithWeekday(value) : '—';
 const providerLabel = (value?: string) => value === 'ASTEN' ? 'Asten' : value === 'GOV_BR' ? 'Gov.br' : (value || '—');
 const RETRYABLE_STATUSES = new Set<SignatureJobStatus>(['PROVIDER_ERROR', 'WAITING_INTEGRATION', 'DRIVE_SYNC_PENDING', 'EXPIRED']);
 const FINAL_STATUSES = new Set<SignatureJobStatus>(['ARCHIVED', 'CANCELED', 'DECLINED']);

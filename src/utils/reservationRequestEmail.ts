@@ -2,7 +2,7 @@ import {isManagedDefenseLocation} from './reservationLocation';
 import {emailInstructionBox} from './operationalEmailLayout';
 import type {ProcessData} from '../types';
 import {academicName} from './personPresentation';
-import {formatDateNumeric,formatTime24h} from './formatters';
+import {formatDateNumericWithWeekday,formatTime24h} from './formatters';
 import {defenseEndAt} from './defenseSchedule';
 import {processLink} from './processLink';
 
@@ -27,7 +27,7 @@ export function reservationRequestEmail(input:{process:Pick<ProcessData,'id'|'pr
  const greeting=participant?'Prezados autores e orientador,':advisor?'Prezado orientador,':'Prezado Departamento,';
  const authors=[p.aluno1.nome,p.aluno2?.nome].filter(Boolean).join(' e ');
  const intro=participant?`O cadastro do trabalho foi recebido. O agendamento abaixo aguarda confirmação do ${authority}.`:`Solicitamos a reserva ${place.request} para a realização da defesa do Trabalho de Conclusão de Curso de autoria de ${authors}.`;
- const details=[`Título: ${p.titulo}`,...(participant?[`Autoria: ${authors}`]:[]),`Data: ${formatDateNumeric(p.defesa.startAt)}`,`Horário: ${formatTime24h(p.defesa.startAt)} às ${formatTime24h(defenseEndAt(p.defesa.startAt))} (1 hora e 30 minutos)`,`Local: ${p.defesa.local}`,`Orientador: ${academicName(p.orientador,'abbreviated')}`];
+ const details=[`Título: ${p.titulo}`,...(participant?[`Autoria: ${authors}`]:[]),`Data: ${formatDateNumericWithWeekday(p.defesa.startAt)}`,`Horário: ${formatTime24h(p.defesa.startAt)} às ${formatTime24h(defenseEndAt(p.defesa.startAt))} (1 hora e 30 minutos)`,`Local: ${p.defesa.local}`,`Orientador: ${academicName(p.orientador,'abbreviated')}`];
  const observation='';
  const reply=participant?`O ${authority} registrará o aceite ou a recusa. Acompanhem o resultado pelo processo e pelos avisos por e-mail.`:'';
  const steps=participant?[]:[`${advisor?'Orientador':'Departamento'}: confira o local, a data e o horário e aceite ou recuse o agendamento pelos botões acima. O Portal registrará o comprovante e avisará os envolvidos.`];

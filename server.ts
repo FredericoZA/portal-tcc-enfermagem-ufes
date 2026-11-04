@@ -141,7 +141,7 @@ import {
 } from './src/types';
 import type { AcademicCycle, PortalFeatureKey } from './src/types';
 import type { AstenWebhookEvent, EmailDeliveryRecord, WorkflowRun, WorkflowEventCode } from './src/types/automation';
-import { normalizeEmail, formatStudentsString, formatDatePt, formatDateNumeric, formatTime24h, formatDateExtensoTotal, formatTimeExtenso } from './src/utils/formatters';
+import { normalizeEmail, formatStudentsString, formatDateWithWeekday, formatDateNumericWithWeekday, formatDateTimeWithWeekday, formatTime24h, formatDateExtensoWithWeekday, formatTimeExtenso } from './src/utils/formatters';
 import {
   enrichProcessDocumentsWithDrive
 } from './src/services/serverDriveSync';
@@ -459,7 +459,6 @@ function applyPersistedState(state: PersistedPortalState) {
   if (state.studioVersions) studioVersionsStore = state.studioVersions;
   if (state.studioFormSubmissions) studioFormSubmissionsStore = state.studioFormSubmissions;
   if (state.continuousIntelligence) continuousIntelligenceStore = state.continuousIntelligence;
-  protocolCounter = processesStore.length + 1;
   googleCalendarEventsStore = generateGoogleEventsFromProcesses(processesStore);
   publishRuntimeTemplatesFromSettings();
 }
@@ -505,8 +504,6 @@ function generateGoogleEventsFromProcesses(procs: ProcessData[]): GoogleCalendar
 // Cache of Google Calendar synced events from the Master Account
 let googleCalendarEventsStore: GoogleCalendarSyncedEvent[] = generateGoogleEventsFromProcesses(processesStore);
 
-// Helper counter for TCC protocols
-let protocolCounter = processesStore.length + 1;
 
 // Helper to calculate user roles for an email
 function getUserRolesForEmail(email: string) {
@@ -721,7 +718,7 @@ function validateAcademicWindow(defenseAt?:string):string|null{
 }
 function nextProcessProtocol():string{
   const profile=resolveInstallationProfile(currentSettings);const cycle=currentAcademicCycle();const year=cycle?.year||new Date().getFullYear();
-  return nextAvailableProcessProtocol(profile,year,processesStore.map(process=>process.protocolo),processDeletionTasksStore.map(task=>task.protocol));
+  return nextAvailableProcessProtocol(profile,year,processesStore.map(process=>process.protocolo),processDeletionTasksStore.filter(task=>task.status==='PENDING').map(task=>task.protocol));
 }
 function participantEmails(process:ProcessData):string[]{return Array.from(new Set([process.aluno1.email,process.aluno2?.email,process.orientador.email,process.coorientador?.email,...process.banca.map(member=>member.email)].filter(Boolean).map(value=>normalizeEmail(String(value)))));}
 function normalizeLocation(value:string):string{return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
@@ -738,16 +735,16 @@ function buildDocumentVerificationCode(p:ProcessData,type:'ATA'|'TERMO'|'DECLARA
 function evaluationPreviewBinding(p:ProcessData,actor:string,evaluation:ReturnType<typeof acceptEvaluation>,provider:string){return {processId:p.id,dataRevision:p.dataRevision,schemaRevision:currentSettings.integrationStudio?.revision||0,modelSha256:currentSettings.documentModels?.ATA?.contentSha256||'',actor:normalizeEmail(actor),provider,result: evaluation.resultadoCode,answers:evaluation.answers,parecer:evaluation.parecer,documentText:evaluation.documentText};}
 function evaluationPreviewSecret(){return String(process.env.PORTAL_SESSION_SECRET||(productionRuntime?'':'local-evaluation-preview-secret'));}
 function buildOfficialTemplateReplacements(p:ProcessData,verificationCode?:string,extraVariables?:Record<string,unknown>,documentType?:string):Record<string,string>{
-  const students=authorNames(p);const banca=(p.banca||[]).map(item=>`${academicName(item)}${item.instituicao?` (${item.instituicao})`:''}`).join(', ');const date=p.defesa?.startAt?formatDateExtensoTotal(p.defesa.startAt):'';const time=p.defesa?.startAt?formatTimeExtenso(p.defesa.startAt):'';const dateTime=[date,time&&`às ${time}`].filter(Boolean).join(' ');const local=p.defesa?.local||'';const result=p.avaliacao?.resultadoLabel||p.avaliacao?.resultadoCode||'';const replacements:Record<string,string>={
+  const students=authorNames(p);const banca=(p.banca||[]).map(item=>`${academicName(item)}${item.instituicao?` (${item.instituicao})`:''}`).join(', ');const date=p.defesa?.startAt?formatDateExtensoWithWeekday(p.defesa.startAt):'';const time=p.defesa?.startAt?formatTimeExtenso(p.defesa.startAt):'';const dateTime=[date,time&&`às ${time}`].filter(Boolean).join(' ');const local=p.defesa?.local||'';const result=p.avaliacao?.resultadoLabel||p.avaliacao?.resultadoCode||'';const replacements:Record<string,string>={
     CAMPO_01:students,CAMPO_02:p.titulo,CAMPO_03:p.orientador.nome,CAMPO_04:dateTime,CAMPO_06:banca,CAMPO_07_LOCAL:local,CAMPO_09:result,CAMPO_10:'',CAMPO_11:p.avaliacao?.parecer||'',CAMPO_12:p.protocolo,CAMPO_13:p.driveFolderUrl||'',CAMPO_COORIENTADOR:p.coorientador?.nome||'',
     ALUNOS_NOMES:students,ALUNO_NOME:p.aluno1.nome,NOME_ALUNO:p.aluno1.nome,ALUNO_2_NOME:p.aluno2?.nome||'',ALUNO_MATRICULA:p.aluno1.matricula,ALUNO_EMAIL:p.aluno1.email,EMAIL_ALUNO:p.aluno1.email,TCC_TITULO:p.titulo,TITULO_TRABALHO:p.titulo,ORIENTADOR_NOME:p.orientador.nome,NOME_ORIENTADOR:p.orientador.nome,COORIENTADOR_NOME:p.coorientador?.nome||'',DEFESA_DATA_HORA_EXTENSO:dateTime,DEFESA_DATA:date,DATA_DEFESA:date,DEFESA_HORA:time,DEFESA_LOCAL:local,LOCAL_DEFESA:local,BANCA_NOMES:banca,AVALIACAO_RESULTADO:result,AVALIACAO_NOTA:'',AVALIACAO_PARECER:p.avaliacao?.parecer||'',PROTOCOLO:p.protocolo,DRIVE_PASTA_URL:p.driveFolderUrl||'',PALAVRAS_CHAVE:p.acervo?.palavrasChave?.join('; ')||'',RESUMO_SINTETICO:p.acervo?.resumoSintese||'',PUBLICAR_TRABALHO_COMPLETO:p.acervo?.publishFullWork?'SIM':'NÃO',PUBLICAR_RESUMO_EXPANDIDO:p.acervo?.publishExpandedAbstract?'SIM':'NÃO',VALIDACAO_CODIGO:verificationCode||'',VALIDACAO_URL:verificationCode&&publicPortalBaseUrl()?`${publicPortalBaseUrl()}/validar/${verificationCode}`:'',
-    'data do preenchimento':formatDatePt(new Date().toISOString()),'alunos':students,'titulo do trabalho':p.titulo,'orientador (1)':p.orientador.nome,'examinador (2)':(p.banca||[]).find(item=>item.funcao==='EXAMINER_2')?.nome||(p.banca||[])[0]?.nome||'','examinador (3)':(p.banca||[]).find(item=>item.funcao==='EXAMINER_3')?.nome||(p.banca||[])[1]?.nome||'','data da defesa (extenso total)':date,'hora de inicio da defesa (extenso)':time,'local da defesa':local,'hora de início da defesa (por extenso)':time,'data da defesa (por extenso total)':date,'situação':result,'parecer':p.avaliacao?.parecer||'','data da defesa (por extenso)':formatDatePt(p.defesa?.startAt||''),'nome completo aluno (1)':p.aluno1.nome,'nome completo aluno (2)':p.aluno2?.nome||'','coorientador':p.coorientador?.nome||'','Coorientador(a) Prof(ª). Dr(ª).':p.coorientador?'Coorientador(a) Prof(ª). Dr(ª).':''
+    'data do preenchimento':formatDateWithWeekday(new Date().toISOString()),'alunos':students,'titulo do trabalho':p.titulo,'orientador (1)':p.orientador.nome,'examinador (2)':(p.banca||[]).find(item=>item.funcao==='EXAMINER_2')?.nome||(p.banca||[])[0]?.nome||'','examinador (3)':(p.banca||[]).find(item=>item.funcao==='EXAMINER_3')?.nome||(p.banca||[])[1]?.nome||'','data da defesa (extenso total)':date,'hora de inicio da defesa (extenso)':time,'local da defesa':local,'hora de início da defesa (por extenso)':time,'data da defesa (por extenso total)':date,'situação':result,'parecer':p.avaliacao?.parecer||'','data da defesa (por extenso)':formatDateWithWeekday(p.defesa?.startAt||''),'nome completo aluno (1)':p.aluno1.nome,'nome completo aluno (2)':p.aluno2?.nome||'','coorientador':p.coorientador?.nome||'','Coorientador(a) Prof(ª). Dr(ª).':p.coorientador?'Coorientador(a) Prof(ª). Dr(ª).':''
   };
   for(const[rawKey,value]of Object.entries(extraVariables||{})){const normalized=String(rawKey).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').toUpperCase();if(normalized)replacements[normalized]=value===null||value===undefined?'':String(value);}
   if(documentType==='ATA'){
     const closing=ataClosingTime(p.defesa.startAt);
     replacements.ATA_ENCERRAMENTO_DATA_HORA=closing.label;
-    replacements['data da defesa (por extenso)']=formatDatePt(closing.iso);
+    replacements['data da defesa (por extenso)']=formatDateWithWeekday(closing.iso);
   }
   Object.assign(replacements,documentVariables(p));
   replacements['nome completo aluno (1)']=replacements.AUTORIA_PRIMEIRO_NOME;replacements['nome completo aluno (2)']=replacements.AUTORIA_SEGUNDO_NOME;
@@ -772,9 +769,9 @@ async function renderOfficialTemplatePdf(p:ProcessData,type:'CONVITE'|'ATA'|'TER
 }
 function buildFormSnapshotBody(process:ProcessData,formType:ProcessFormArchiveType):string{
   const common=[`Protocolo: ${process.protocolo}`,...officialIdentificationLines(process),`Matrícula(s): ${[process.aluno1.matricula,process.aluno2?.matricula].filter(Boolean).join(' / ')}`,`E-mails participantes: ${Array.from(new Set([process.aluno1.email,process.aluno2?.email,process.orientador.email,process.coorientador?.email,...process.banca.map(item=>item.email)].filter(Boolean))).join('; ')}`];
-  if(formType==='CADASTRO_INICIAL')return [...common,...Object.entries(process.registrationAnswers||{}).map(([key,value])=>`${key}: ${value}`),`Defesa solicitada: ${formatDatePt(process.defesa.startAt)}`,`Banca: ${process.banca.map(item=>`${item.nome} — ${item.instituicao||'Instituição não informada'}`).join('; ')}`].join('\n');
+  if(formType==='CADASTRO_INICIAL')return [...common,...Object.entries(process.registrationAnswers||{}).map(([key,value])=>`${key}: ${value}`),`Defesa solicitada: ${formatDateWithWeekday(process.defesa.startAt)}`,`Banca: ${process.banca.map(item=>`${item.nome} — ${item.instituicao||'Instituição não informada'}`).join('; ')}`].join('\n');
   if(formType==='CONFIRMACAO_LOCAL'&&process.defesa.departmentResponse?.receiptBody)return process.defesa.departmentResponse.receiptBody;
-  if(formType==='CONFIRMACAO_LOCAL')return [...common,`Local: ${process.defesa.departmentResponse?.decision==='UNAVAILABLE'?'Nenhum dos locais disponíveis':process.defesa.local}`,`Confirmação registrada por: ${process.defesa.departmentResponse?.respondedBy||process.defesa.localConfirmedBy||'não confirmado'}`,`Confirmado em: ${process.defesa.departmentResponse?.respondedAt||process.defesa.localConfirmedAt||''}`,`Comprovante informado: ${process.defesa.localEvidenceUrl||'Não informado'}`,`Resposta do departamento: ${process.defesa.departmentResponse?.decision||'Registro manual'}`,`Data: ${formatDatePt(process.defesa.startAt)}`,`Horário: ${formatTime24h(process.defesa.startAt)} às ${formatTime24h(defenseEndAt(process.defesa.startAt))}`].join('\n');
+  if(formType==='CONFIRMACAO_LOCAL')return [...common,`Local: ${process.defesa.departmentResponse?.decision==='UNAVAILABLE'?'Nenhum dos locais disponíveis':process.defesa.local}`,`Confirmação registrada por: ${process.defesa.departmentResponse?.respondedBy||process.defesa.localConfirmedBy||'não confirmado'}`,`Confirmado em: ${formatDateTimeWithWeekday(process.defesa.departmentResponse?.respondedAt||process.defesa.localConfirmedAt||'')}`,`Comprovante informado: ${process.defesa.localEvidenceUrl||'Não informado'}`,`Resposta do departamento: ${process.defesa.departmentResponse?.decision||'Registro manual'}`,`Data: ${formatDateWithWeekday(process.defesa.startAt)}`,`Horário: ${formatTime24h(process.defesa.startAt)} às ${formatTime24h(defenseEndAt(process.defesa.startAt))}`].join('\n');
   if (formType === 'AVALIACAO') return [...common,
     `Resultado: ${process.avaliacao.resultadoLabel || process.avaliacao.resultadoCode || ''}`,
     `Parecer: ${process.avaliacao.parecer || ''}`,
@@ -861,7 +858,7 @@ async function createInstitutionalDossier(process:ProcessData,actorEmail:string,
 }
 const emailDeliveryJournal={
   async findByIdempotencyKey(key:string){return emailDeliveriesStore.find(item=>item.idempotencyKey===key)||null;},
-  async save(record:EmailDeliveryRecord){const index=emailDeliveriesStore.findIndex(item=>item.id===record.id);if(index>=0)emailDeliveriesStore[index]=record;else emailDeliveriesStore.push(record);persistPortalState();}
+  async save(record:EmailDeliveryRecord){const index=emailDeliveriesStore.findIndex(item=>item.id===record.id);if(index>=0)emailDeliveriesStore[index]=record;else emailDeliveriesStore.push(record);await persistPortalStateDurably();}
 };
 function reservationSecret(){return String(process.env.PORTAL_SESSION_SECRET||(productionRuntime?'':'portal-development-reservation-secret-2026'));}
 function departmentReservationUrl(process:ProcessData,recipient:string){
@@ -900,6 +897,33 @@ async function sendTrackedPortalEmail(input:{process?:ProcessData;recipient:stri
   if(copies.some(record=>record.status!=='ACCEPTED_BY_GMAIL'))throw new Error('A solicitação de reserva tem mensagens aos autores ou ao orientador aguardando envio.');
  }
  return delivery;
+}
+
+
+async function notifyReservationResponse(p: ProcessData): Promise<EmailDeliveryRecord | undefined> {
+  const response = p.defesa.departmentResponse;
+  if (!response || response.revision !== (p.defesa.reservationRevision || 0)) return;
+  const confirmed = response.decision === 'CONFIRMED';
+  // Preserve the recipient bound to the answered request even if settings change later.
+  const recipients = [...new Set([response.respondedBy, p.aluno1.email, p.aluno2?.email, p.orientador.email].filter(Boolean) as string[])];
+  const [recipient, ...cc] = recipients;
+  if (!recipient) return;
+  const delivery = await sendTrackedPortalEmail({
+    process: p, recipient, cc,
+    subject: `[${p.protocolo}] ${confirmed ? 'Reserva confirmada' : 'Agendamento recusado'}`,
+    text: [
+      'Prezados departamento, autores e orientador,',
+      confirmed ? `O departamento confirmou a reserva de ${response.local || p.defesa.local}.`
+        : 'O responsável recusou o agendamento solicitado. Ajustem a proposta antes de solicitar nova data, para evitar retrabalho.',
+      `${formatDateWithWeekday(response.startAt)}, ${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt || defenseEndAt(response.startAt))}`,
+      `Resposta registrada em ${formatDateTimeWithWeekday(response.respondedAt)}. Consulte o comprovante no Portal.`
+    ].join('\n\n'),
+    templateId: 'email-comprovante-reserva',
+    workflowEventVariables: { RESERVATION_REVISION: String(response.revision) },
+    idempotencyKey: `reservation-receipt:${p.id}:${response.revision}:${recipient}`
+  });
+  await persistPortalStateDurably();
+  return delivery;
 }
 
 async function finishConfirmedReservation(portalProcess:ProcessData,actor:string){
@@ -1746,6 +1770,23 @@ export async function createPortalApp() {
     })().catch(()=>{console.error('[Asten] Reconciliação automática pendente; evento preservado para nova tentativa.');});
     if(process.env.VERCEL)waitUntil(task);
   }
+
+  app.get('/api/cron/reservation-notices',async(req,res)=>{
+    const expected=String(process.env.CRON_SECRET||'').trim(),supplied=String(req.headers.authorization||'').replace(/^Bearer\s+/i,'').trim();
+    if(expected.length<32||!supplied||!timingSafeEqual(createHash('sha256').update(expected).digest(),createHash('sha256').update(supplied).digest()))return res.status(401).json({error:'Não autorizado.'});
+    if(!allowSignatureRetry('cron@portal.local','reservation-notices'))return res.status(429).json({error:'Recuperação já executada recentemente.'});
+    res.setHeader('Cache-Control','no-store');
+    const began=Date.now();let checked=0,failed=0;
+    for(const p of processesStore.filter(p=>p.defesa.departmentResponse&&p.defesa.departmentResponse.revision===(p.defesa.reservationRevision||0))){
+      if(checked>=25||Date.now()-began>20_000)break;
+      const response=p.defesa.departmentResponse!,key=`reservation-receipt:${p.id}:${response.revision}:${response.respondedBy}`;
+      const previous=emailDeliveriesStore.find(row=>row.idempotencyKey===key);
+      if(previous&&(previous.status==='ACCEPTED_BY_GMAIL'||previous.status==='FAILED'||previous.nextRetryAt&&Date.parse(previous.nextRetryAt)>Date.now()))continue;
+      checked++;try{const notice=await notifyReservationResponse(p);if(notice?.status!=='ACCEPTED_BY_GMAIL')failed++;}catch{failed++;}
+    }
+    await persistPortalStateDurably();res.json({checked,failed});
+  });
+
   app.get('/api/cron/asten-reconcile',async(req,res)=>{
     const expected=String(process.env.CRON_SECRET||'').trim();
     const supplied=String(req.headers.authorization||'').replace(/^Bearer\s+/i,'').trim();
@@ -2578,7 +2619,6 @@ export async function createPortalApp() {
 
     const academicError=validateAcademicWindow(defesa?.startAt);if(academicError&&!isAdministrative)return res.status(409).json({error:academicError,code:'ACADEMIC_WINDOW_CLOSED'});
 
-    protocolCounter++;
     const protocolo = nextProcessProtocol();
     const newId = `proc-${Date.now()}`;
     const nowISO = new Date().toISOString();
@@ -2840,7 +2880,7 @@ export async function createPortalApp() {
     if(p.defesa.departmentResponse)return res.redirect(303,req.path+'/receipt');
     const decision=req.query.decision==='accept'?'accept':req.query.decision==='decline'?'decline':'';
     const responseForm=(choice:string,label:string)=>`<form data-reservation-response ${decision?'data-reservation-auto-submit="true" hidden':''} method="post" action="${e(req.path)}"><input type="hidden" name="decision" value="${choice}"><input type="hidden" name="confirmed" value="yes"><button type="submit" style="background:#337959;color:#fff;border:0;border-radius:24px;padding:14px 22px;font:inherit;font-weight:bold;cursor:pointer">${label}</button></form>`;
-    const summary=`<p><strong>${e(p.protocolo)}</strong><br>${e(p.titulo)}</p><p><strong>Local:</strong> ${e(p.defesa.local)}<br><strong>Data:</strong> ${e(formatDateNumeric(p.defesa.startAt))}<br><strong>Horário:</strong> ${e(formatTime24h(p.defesa.startAt))} às ${e(formatTime24h(defenseEndAt(p.defesa.startAt)))}</p>`;
+    const summary=`<p><strong>${e(p.protocolo)}</strong><br>${e(p.titulo)}</p><p><strong>Local:</strong> ${e(p.defesa.local)}<br><strong>Data:</strong> ${e(formatDateNumericWithWeekday(p.defesa.startAt))}<br><strong>Horário:</strong> ${e(formatTime24h(p.defesa.startAt))} às ${e(formatTime24h(defenseEndAt(p.defesa.startAt)))}</p>`;
     res.type('html').send(reservationPage(decision?'Registrando resposta':'Responder solicitação de reserva',`${summary}${reservationSubmitFeedback}<div id="reservation-result" hidden></div><div style="display:flex;gap:12px;flex-wrap:wrap">${decision!=='decline'?responseForm('accept','Aceitar reserva'):''}${decision!=='accept'?responseForm('decline','Recusar reserva'):''}</div>`));
   });
   app.get('/api/reservation-confirmation/:token/receipt',async(req,res)=>{
@@ -2855,7 +2895,7 @@ export async function createPortalApp() {
     const context=reservationContext(req.params.token);
     if(!context)return res.status(410).type('html').send(reservationPage('Solicitação indisponível','Utilize a solicitação mais recente.'));
     const {process:p,claim}=context;
-    if(p.defesa.departmentResponse)return res.redirect(303,req.path+'/receipt');
+    if(p.defesa.departmentResponse){await notifyReservationResponse(p);return res.redirect(303,req.path+'/receipt');}
     const decision=String(req.body?.decision||'');
     const local=decision==='accept'?p.defesa.local:decision==='decline'?'__UNAVAILABLE__':String(req.body?.local||'');
     if(req.body?.confirmed!=='yes'||![p.defesa.local,'__UNAVAILABLE__'].includes(local))return res.status(400).type('html').send(reservationPage('Confira os campos','Aceite ou recuse o agendamento apresentado.'));
@@ -2868,14 +2908,13 @@ export async function createPortalApp() {
     p.defesa.departmentResponse={departmentEmail:isManagedDefenseLocation(p.defesa.local,operationalConfig(currentSettings.integrationStudio).reservation.locations)?claim.recipient:undefined,attribution:'EMAIL_LINK',revision:claim.revision,decision:available?'CONFIRMED':'UNAVAILABLE',respondedAt:now,respondedBy:claim.recipient,local:available?local:undefined,startAt:p.defesa.startAt,endAt:defenseEndAt(p.defesa.startAt)};
     if(available){p.defesa.local=local;p.defesa.localStatus='CONFIRMADO';p.defesa.localConfirmedAt=now;p.defesa.localConfirmedBy=claim.recipient;p.defesa.localEvidenceUrl=`/api/processes/${p.id}/location-proof/download`;}
     else p.defesa.localStatus='RECUSADO';
-    p.defesa.departmentResponse.receiptBody=[`Protocolo: ${p.protocolo}`,`Título: ${p.titulo}`,...officialParticipantLines(p).filter(person=>person.key.startsWith('ALUNO_')).map(person=>`Autor: ${person.name}`),`Resposta: ${available?'Reserva confirmada':'Reserva recusada'}`,`Local: ${p.defesa.local}`,`Data: ${formatDatePt(p.defesa.startAt)}`,`Horário: ${formatTime24h(p.defesa.startAt)} às ${formatTime24h(defenseEndAt(p.defesa.startAt))}`,`Resposta registrada pelo link enviado a: ${claim.recipient}`,`Registrado em: ${now}`,`Revisão da solicitação: ${claim.revision}`].join('\n');
+    p.defesa.departmentResponse.receiptBody=[`Protocolo: ${p.protocolo}`,`Título: ${p.titulo}`,...officialParticipantLines(p).filter(person=>person.key.startsWith('ALUNO_')).map(person=>`Autor: ${person.name}`),`Resposta: ${available?'Reserva confirmada':'Reserva recusada'}`,`Local: ${p.defesa.local}`,`Data: ${formatDateWithWeekday(p.defesa.startAt)}`,`Horário: ${formatTime24h(p.defesa.startAt)} às ${formatTime24h(defenseEndAt(p.defesa.startAt))}`,`Resposta registrada pelo link enviado a: ${claim.recipient}`,`Registrado em: ${formatDateTimeWithWeekday(now)}`,`Revisão da solicitação: ${claim.revision}`].join('\n');
     p.dataRevision++;p.updatedAt=now;
     auditLogsStore.push({id:`reservation-${p.id}-${claim.revision}`,processId:p.id,actorEmail:claim.recipient,actorRoles:[],action:available?'CONFIRMACAO_LOCAL_DEPARTAMENTO':'LOCAL_INDISPONIVEL_DEPARTAMENTO',entityType:'processo',entityId:p.id,after:{...p.defesa.departmentResponse},timestamp:now});
     googleCalendarEventsStore=generateGoogleEventsFromProcesses(processesStore);
     try{await persistPortalStateDurably();responseSaved=true;}catch(error){Object.assign(p,before);auditLogsStore=auditLogsStore.filter(log=>log.id!==`reservation-${p.id}-${claim.revision}`);googleCalendarEventsStore=generateGoogleEventsFromProcesses(processesStore);throw error;}
+    await notifyReservationResponse(p);
     await archiveProcessFormSnapshot(p,'CONFIRMACAO_LOCAL');
-    const recipients=[...new Set([claim.recipient,p.aluno1.email,p.aluno2?.email,p.orientador.email].filter(Boolean) as string[])];
-    for(const recipient of recipients.slice(0,1))await sendTrackedPortalEmail({process:p,recipient,cc:recipients.filter(item=>item!==recipient),subject:`[${p.protocolo}] ${available?'Reserva confirmada':'Agendamento recusado'}`,text:`Prezado participante,\n\n${available?`O departamento confirmou a reserva de ${local}.`:'O responsável recusou o agendamento solicitado.\n\nPara solicitar uma nova reserva, os autores podem ajustar o agendamento no Portal.'}\n\n${formatDatePt(p.defesa.startAt)}, ${formatTime24h(p.defesa.startAt)} às ${formatTime24h(defenseEndAt(p.defesa.startAt))}\n\nResposta registrada em ${now}. ${recipient===claim.recipient?(available?'Use o botão abaixo para consultar o comprovante.':'Use o botão abaixo para consultar o comprovante de indisponibilidade.'):(available?'O comprovante está disponível em Dados do processo.':'O comprovante de indisponibilidade está disponível em Dados do processo.')}`,templateId:'email-comprovante-reserva',workflowEventVariables:{RESERVATION_REVISION:String(claim.revision)},idempotencyKey:`reservation-receipt:${p.id}:${claim.revision}:${recipient}`});
     let pending=false;
     if(available){try{await finishConfirmedReservation(p,claim.recipient);pending=!p.defesa.invitationSentAt;}catch{pending=true;}}
     res.redirect(303,req.path+'/receipt');

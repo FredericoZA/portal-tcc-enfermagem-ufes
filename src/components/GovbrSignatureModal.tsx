@@ -1,3 +1,4 @@
+import {formatDateTimeWithWeekday} from '../utils/formatters';
 import React,{useEffect,useRef,useState} from 'react';
 import {Download,ExternalLink,FileSignature,Upload} from 'lucide-react';
 import type {ProcessData,SignatureJob} from '../types';
@@ -110,7 +111,7 @@ export const GovbrSignatureModal:React.FC<Props>=({process,initialJob,onChange,o
         <button type="button" className="portal-action" disabled={busy} onClick={()=>void run(reviewModel)}>Visualizar modelo atual</button>
         {modelReview&&<><div className="max-h-80 overflow-auto rounded border border-slate-300"><DocumentFilePreview url={modelReview.url} format="pdf" label="Amostra do modelo atual, sem validade" onLoaded={()=>setModelReviewLoaded(true)}/></div><a href={modelReview.url} target="_blank" rel="noopener noreferrer" className="portal-action">Abrir amostra em outra aba</a><button type="button" className="portal-action portal-button-primary" disabled={busy||!modelReviewLoaded} onClick={()=>void run(publishAndPrepare)}>Publicar modelo revisado e baixar PDF</button></>}
       </section>}
-      {archived?<div role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-3"><strong>Documento conferido e arquivado</strong><p className="mt-1">Conferência manual no VALIDAR/ITI registrada por {review?.approvedBy} em {review?.approvedAt?new Date(review.approvedAt).toLocaleString('pt-BR'):''}.</p></div>:<>
+      {archived?<div role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-3"><strong>Documento conferido e arquivado</strong><p className="mt-1">Conferência manual no VALIDAR/ITI registrada por {review?.approvedBy} em {review?.approvedAt?formatDateTimeWithWeekday(review.approvedAt):''}.</p></div>:<>
         <section className="space-y-2 rounded-lg border border-slate-300 bg-white p-3">
           <h3 className="font-bold">1. Baixar o documento</h3>
           {loadingJob?<p role="status">Carregando o documento…</p>:job?<><p>Versão {job.documentVersion} · Responsável: {job.signers.map(signer=>`${signer.name} (${signer.email})`).join(', ')}</p><div className="flex flex-wrap gap-2"><button type="button" disabled={busy} className="portal-action" onClick={()=>void run(()=>download())}><Download className="h-3.5 w-3.5"/>Baixar PDF para assinar</button><a className="portal-action" href="https://assinador.iti.br/" target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5"/>Abrir assinador Gov.br</a></div></>:<button type="button" disabled={busy} className="portal-action portal-button-primary" onClick={()=>void run(prepareDocument)}>{busy?'Gerando e baixando PDF…':'Gerar e baixar PDF'}</button>}

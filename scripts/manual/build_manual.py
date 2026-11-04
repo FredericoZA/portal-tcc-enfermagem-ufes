@@ -154,8 +154,9 @@ def step(number,title,text):
 def header(tag,title):
  global y
  c.setFillColor(GREEN);c.rect(0,H-58,W,58,fill=1,stroke=0)
- c.setFillColor(colors.white);c.setFont('PortalBold',11);c.drawString(M,H-25,'PORTAL DE TCC  |  ENFERMAGEM / UFES')
- c.setFont('Portal',9);c.drawString(M,H-42,'Guia prático de uso • Alunos, orientadores e examinadores')
+ c.setFillColor(colors.white);c.setFont('PortalBold',11);c.drawImage(str(ROOT/'public/national-arms.png'),M,H-47,29,31,mask='auto')
+ c.drawString(M+40,H-25,'PORTAL DE TCC  |  ENFERMAGEM / UFES')
+ c.setFont('Portal',9);c.drawString(M+40,H-42,'Guia prático de uso • Alunos, orientadores e examinadores')
  y=H-84
  c.setFillColor(GREEN);c.setFont('PortalBold',10);c.drawString(M,y,tag);y-=15
  para(escape(title).replace('\n','<br/>'),style='title',gap=17)
@@ -163,7 +164,7 @@ def header(tag,title):
 def footer():
  c.setStrokeColor(LINE);c.line(M,47,W-M,47)
  c.setFillColor(MUTED);c.setFont('Portal',8);c.drawString(M,34,'Comissão de Trabalho de Conclusão de Curso • Departamento de Enfermagem')
- c.drawString(M,22,'Atualizado em 04/11/2026 • Assinatura pelo Asten')
+ c.drawString(M,22,'Atualizado em quarta-feira, 04/11/2026 • Assinatura pelo Asten')
  c.drawRightString(W-M,22,f'{page_number} / {len(pages)}')
  bounds.append({'page':page_number,'lastContentY':round(y,2)})
 
@@ -173,9 +174,12 @@ for page_number,page in enumerate(pages,1):
  if page.get('kind')=='cover':
   c.setFillColor(GREEN);c.rect(0,H-262,W,262,fill=1,stroke=0)
   c.setFillColor(colors.white);c.circle(M+32.5,H-69.5,34,fill=1,stroke=0)
-  c.drawImage(str(ROOT/'public/ufes-crest.png'),M,H-102,65,65,mask='auto')
+  c.drawImage(str(ROOT/'public/national-arms.png'),M,H-102,65,65,mask='auto')
   c.setFillColor(colors.white);c.setFont('PortalBold',11);c.drawString(M+82,H-59,'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO')
-  c.setFont('Portal',10.5);c.drawString(M+82,H-79,'Enfermagem e Obstetrícia • CCS')
+  c.setFont('Portal',10.5);c.drawString(M+82,H-77,'Centro de Ciências da Saúde')
+  c.setFont('Portal',8.5);c.drawString(M+82,H-91,'Curso de Graduação em Enfermagem e Obstetrícia')
+  c.drawString(M+82,H-104,'Departamento de Enfermagem')
+  c.drawString(M+82,H-117,'Comissão de Trabalho de Conclusão de Curso')
   c.setFont('PortalBold',31);c.drawString(M,H-155,'Guia prático do');c.drawString(M,H-193,'Portal de TCC')
   c.setFont('Portal',13);c.drawString(M,H-229,'O que fazer, onde clicar e como concluir cada etapa')
   y=H-290
@@ -204,7 +208,7 @@ for page_number,page in enumerate(pages,1):
    ('QUEM ASSINA CADA DOCUMENTO','Ata: orientador e dois examinadores. Termo: todos os autores e orientador, somente quando houver publicação autorizada. Declaração da banca: Presidência da Comissão. Comprovante e carta-convite não exigem assinatura.')]:
    box('<b>'+title+'</b><br/>'+text)
   para('<b>Acessos de apoio</b><br/>No menu lateral, Sugestões e Declaração de comparecimento ficam após Replicar Portal. O manual completo em PDF está fixado no topo de Como usar.',gap=14)
-  para('<b>Referências e edição</b><br/>Nomes de telas e botões conferidos no código e em capturas locais da versão consolidada em 04/11/2026. Asten: <link href="'+ASTEN+'" color="#005830">Como assinar um documento?</link>. As figuras usam dados fictícios. Este guia não substitui a conferência do documento antes de assiná-lo.',style='small')
+  para('<b>Referências e edição</b><br/>Nomes de telas e botões conferidos no código e em capturas locais da versão consolidada em quarta-feira, 04/11/2026. Asten: <link href="'+ASTEN+'" color="#005830">Como assinar um documento?</link>. As figuras usam dados fictícios. Este guia não substitui a conferência do documento antes de assiná-lo.',style='small')
  else:
   header(page['tag'],page['title'])
   if page.get('intro'):para(escape(page['intro']),gap=17)

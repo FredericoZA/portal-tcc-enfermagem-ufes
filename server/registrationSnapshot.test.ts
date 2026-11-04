@@ -24,7 +24,10 @@ test('registration PDF has brand identity and paginates very long answers inside
  const pages=await pagesOf(await createRegistrationSnapshotPdf(p,INITIAL_SETTINGS));assert.ok(pages.length>2);
  const text=pages.flatMap(p=>p.items.map((i:any)=>i.str||'')).join(' ');
  assert.match(text,/Universidade Federal do Espírito Santo/);assert.match(text,/Cadastro inicial de TCC/);assert.doesNotMatch(text,/ALUNO_1_NOME|NÃO CONFIGURAD/);
- for(const page of pages)for(const item of page.items as any[])if(item.str?.trim())assert.ok(item.transform[5]>=29,`Text outside printable area: ${item.str}`);
+ for(const page of pages)for(const item of page.items as any[])if(item.str?.trim()){
+  assert.ok(item.transform[5]>=29,`Text outside printable area: ${item.str}`);
+  if(item.transform[5]<80)assert.match(item.str,/^(?:Comissão de Trabalho de Conclusão de Curso|Departamento de Enfermagem|Curso de Graduação em Enfermagem e Obstetrícia · CCS\/UFES|Registro do cadastro inicial · Portal TCC|\d+ \/ \d+)$/,`Body overlaps footer: ${item.str}`);
+ }
 });
 
 test('additional records have the same logo header, Unicode text and printable wrapped title',async()=>{

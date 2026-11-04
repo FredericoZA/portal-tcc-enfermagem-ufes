@@ -30,5 +30,5 @@ test('invitation addresses invited faculty without implying an established board
 test('all documents retain the advisor session presidency and the separate commission presidency',()=>{
  const p=fixture(),source='Orientação e presidência da banca: Professora Doutora Maria Oliveira\nPresidente da Comissão de TCC';
  assert.match(adaptDocumentLanguage(source,p,'ATA'),/Orientadora e Presidente/);
- for(const type of ['CONVITE','TERMO','DECLARACAO']){const out=adaptDocumentLanguage(source,p,type);assert.match(out,/Orientadora e Presidente: Prof\.ª Dr\.ª Maria Oliveira/);assert.doesNotMatch(out,/Orientação e presidência/);assert.match(out,/Presidente da Comissão de TCC/);}
+ for(const type of ['CONVITE','TERMO','DECLARACAO']){const out=adaptDocumentLanguage(source,p,type);assert.match(out,/Orientadora e Presidente: Prof\.ª Dr\.ª Maria Oliveira/);assert.doesNotMatch(out,/Orientação e presidência/);assert.match(out,/Presidente da Comissão de Trabalho de Conclusão de Curso/);}
 });

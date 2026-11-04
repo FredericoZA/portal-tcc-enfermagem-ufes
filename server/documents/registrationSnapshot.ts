@@ -1,3 +1,4 @@
+import {COMMISSION_NAME,DOCUMENT_ISSUER_LINES} from '../../src/utils/institutionalIdentity';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {PDFDocument,rgb,type PDFFont,type PDFPage} from 'pdf-lib';
@@ -5,11 +6,11 @@ import fontkit from '@pdf-lib/fontkit';
 import type {ProcessData,GlobalSettings} from '../../src/types';
 import {resolveInstallationProfile} from '../../src/utils/installationProfile';
 import {academicName} from '../../src/utils/personPresentation';
-import {formatDatePt,formatTime24h} from '../../src/utils/formatters';
+import {formatDateWithWeekday,formatTime24h} from '../../src/utils/formatters';
 import {registrationQuestions} from '../../src/utils/operationalConfig';
 
 const fontBytes=Promise.all(['Regular','Bold'].map(weight=>readFile(path.join(process.cwd(),'server/documents/fonts',`NotoSans-${weight}.ttf`))));
-const logoBytes=readFile(path.join(process.cwd(),'server/documents/assets/ufes-crest.png'));
+const logoBytes=readFile(path.join(process.cwd(),'server/documents/assets/national-arms.png'));
 interface Field {label:string;value:string;wide?:boolean}
 interface Section {title:string;fields:Field[]}
 
@@ -25,7 +26,7 @@ export function registrationSnapshotSections(process:ProcessData,settings:Global
   if(!person?.nome?.trim())continue;
   sections.push({title,fields:[field('Nome nos documentos',academicName(person,'abbreviated'),true),field('E-mail',person.email),field('Matrícula, SIAPE ou outro registro',person.siape),field('Instituição',person.instituicao,true)]});
  }
- sections.push({title:'Agendamento solicitado',fields:[field('Data',formatDatePt(process.defesa.startAt)),field('Horário',`${formatTime24h(process.defesa.startAt)} às ${formatTime24h(process.defesa.endAt)}`),field('Local',process.defesa.local,true),...(process.defesa.alternateLocation?[field('Local alternativo',process.defesa.alternateLocation,true)]:[])]});
+ sections.push({title:'Agendamento solicitado',fields:[field('Data',formatDateWithWeekday(process.defesa.startAt)),field('Horário',`${formatTime24h(process.defesa.startAt)} às ${formatTime24h(process.defesa.endAt)}`),field('Local',process.defesa.local,true),...(process.defesa.alternateLocation?[field('Local alternativo',process.defesa.alternateLocation,true)]:[])]});
  const answers=process.registrationAnswers||{};
  const consumed=new Set(['TITULO','DEFESA_DATA_HORA','DEFESA_LOCAL','DEFESA_LOCAL_PERSONALIZADO','DEFESA_LOCAL_ALTERNATIVO','LOCAL_ALTERNATIVO','TEM_ALUNO_2','TEM_COORIENTADOR','AUTORIA_ORDEM']);
  for(const prefix of ['ALUNO_1','ALUNO_2','ORIENTADOR','COORIENTADOR','EXAMINADOR_2','EXAMINADOR_3'])for(const suffix of ['NOME','EMAIL','MATRICULA','SIAPE','CIAP','TRATAMENTO','TITULACAO','INSTITUICAO'])consumed.add(`${prefix}_${suffix}`);
@@ -76,16 +77,16 @@ async function renderBrandedRecordPdf(input:{title:string;protocol:string;revisi
  };
  const text=(value:string,x:number,top:number,size=9,font=normal,color=ink)=>page.drawText(value,{x,y:top,size,font,color});
  const header=()=>{
-  page=doc.addPage([595,842]);page.drawRectangle({x:0,y:730,width:595,height:112,color:green});
+  page=doc.addPage([595,842]);page.drawRectangle({x:0,y:684,width:595,height:158,color:green});
   page.drawCircle({x:297,y:811,size:21,color:rgb(1,1,1)});page.drawImage(logo,{x:277,y:791,width:40,height:40});
   let top=775;
-  for(const [value,size,font]of [[institution,11,bold],[course,9,normal]] as const)for(const row of wrap(value,font,size,width)){
+  for(const [value,size,font]of [[institution,11,bold],['Centro de Ciências da Saúde',9,normal],[course,9,normal],['Departamento de Enfermagem',9,normal],[COMMISSION_NAME,9,bold]] as const)for(const row of wrap(value,font,size,width)){
    text(row,(595-font.widthOfTextAtSize(row,size))/2,top,size,font,rgb(1,1,1));top-=15;
   }
-  y=704;for(const titleRow of wrap(input.title,bold,18,width)){text(titleRow,margin,y,18,bold,green);y-=23;}
+  y=660;for(const titleRow of wrap(input.title,bold,18,width)){text(titleRow,margin,y,18,bold,green);y-=23;}
   text(input.protocol,margin,y,10,bold);const revision=input.revision?`Revisão ${input.revision}`:'';text(revision,553-normal.widthOfTextAtSize(revision,8),y,8,normal,muted);y-=20;
  };
- const ensure=(height:number)=>{if(y-height<62)header();};
+ const ensure=(height:number)=>{if(y-height<94)header();};
  const sectionTitle=(title:string)=>{page.drawRectangle({x:margin,y:y-6,width,height:24,color:panel});text(title,margin+10,y+2,10,bold,green);y-=24;};
  const row=(fields:Field[],title:string)=>{
   const sizes=fields.map(value=>value.wide?width:half);
@@ -93,8 +94,8 @@ async function renderBrandedRecordPdf(input:{title:string;protocol:string;revisi
   let offset=0;
   const total=Math.max(...rows.map(value=>value.length));
   while(offset<total){
-   if(y-37<62){header();sectionTitle(`${title} (continuação)`);}
-   const capacity=Math.max(1,Math.floor((y-62-24)/13));
+   if(y-37<94){header();sectionTitle(`${title} (continuação)`);}
+   const capacity=Math.max(1,Math.floor((y-94-24)/13));
    const count=Math.min(total-offset,capacity);
    for(let index=0;index<fields.length;index++){
     const x=margin+index*(half+gap);text(fields[index].label+(offset?' (continuação)':''),x,y,8,bold,muted);
@@ -123,8 +124,9 @@ async function renderBrandedRecordPdf(input:{title:string;protocol:string;revisi
  }
  if(input.note){ensure(35);page.drawRectangle({x:margin,y:y-27,width,height:35,color:rgb(1,.98,.91)});text(input.note,margin+10,y-8,9,normal,ink);}
  const pages=doc.getPages();for(let index=0;index<pages.length;index++){
-  page=pages[index];page.drawLine({start:{x:margin,y:44},end:{x:553,y:44},thickness:.6,color:line});
-  text(input.footer||'Registro eletrônico · Portal TCC',margin,30,7,normal,muted);
+  page=pages[index];page.drawLine({start:{x:margin,y:80},end:{x:553,y:80},thickness:.6,color:line});
+  DOCUMENT_ISSUER_LINES.forEach((value,row)=>text(value,margin,67-row*12,7,normal,muted));
+  if(input.footer)text(input.footer,margin,30,6,normal,muted);
   const count=`${index+1} / ${pages.length}`;text(count,553-normal.widthOfTextAtSize(count,8),30,8,normal,muted);
  }
  return Buffer.from(await doc.save());

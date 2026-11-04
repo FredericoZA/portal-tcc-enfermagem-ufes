@@ -1,3 +1,4 @@
+import {formatDateTimeWithWeekday} from '../utils/formatters';
 import {participantRole} from '../utils/officialParticipants';
 import {ProcessSummaryCard} from '../components/ProcessSummaryCard';
 import {LegacyAdministrativeDocuments} from '../components/LegacyAdministrativeDocuments';
@@ -336,7 +337,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         }
       }
 
-      setAuditLogs(recordedLogs.map(log=>({id:log.id,timestamp:new Date(log.timestamp).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}),user:log.actorEmail,role:log.actorRoles.join(', '),action:log.action,details:auditChanges(log)})));
+      setAuditLogs(recordedLogs.map(log=>({id:log.id,timestamp:formatDateTimeWithWeekday(log.timestamp),user:log.actorEmail,role:log.actorRoles.join(', '),action:log.action,details:auditChanges(log)})));
 
     } catch (err: any) {
       if(background && err instanceof ApiRequestError && err.status===404){

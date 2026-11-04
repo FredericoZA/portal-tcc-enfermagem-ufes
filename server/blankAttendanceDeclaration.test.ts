@@ -5,7 +5,7 @@ import { PDFDict, PDFDocument, PDFName } from 'pdf-lib';
 import { createBlankAttendanceDeclarationPdf } from '../src/utils/blankAttendanceDeclaration';
 
 test('declaração aprovada gera PDF A4 íntegro, com brasão da UFES e Comissão de Trabalho de Conclusão de Curso', async () => {
-  const bytes = await createBlankAttendanceDeclarationPdf(new Uint8Array(readFileSync('public/ufes-crest.png')));
+  const bytes = await createBlankAttendanceDeclarationPdf(new Uint8Array(readFileSync('public/national-arms.png')));
   assert.ok(bytes.byteLength > 1_000, 'o PDF deve conter a declaração completa');
   const pdf = await PDFDocument.load(bytes);
   assert.equal(pdf.getPageCount(), 1);
@@ -32,7 +32,7 @@ test('modelo contém estrutura institucional aprovada e assinatura do orientador
     'Assinatura do(a) professor(a) orientador(a)',
     'Departamento de Enfermagem · Comissão de Trabalho de Conclusão de Curso · CCS/UFES',
   ]) assert.ok(source.includes(text), `Campo ausente: ${text}`);
-  assert.match(source,/fetch\('\/ufes-crest\.png'\)/, 'o brasão deve ser um arquivo da própria aplicação');
+  assert.match(source,/fetch\('\/national-arms\.png'\)/, 'o brasão deve ser um arquivo da própria aplicação');
   assert.doesNotMatch(source, /COLEGIADO DO CURSO/i);
   assert.match(source, /declaracao-de-comparecimento-comissao-tcc\.pdf/);
 });

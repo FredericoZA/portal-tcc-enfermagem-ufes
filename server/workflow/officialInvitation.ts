@@ -1,6 +1,6 @@
 import type { ProcessData } from '../../src/types';
 import { officialParticipantLines, officialIdentificationLines } from '../../src/utils/officialParticipants';
-import { formatDatePt } from '../../src/utils/formatters';
+import { formatDateWithWeekday } from '../../src/utils/formatters';
 
 const clean = (s: string) => String(s || '').replace(/[\u0000-\u001f]/g, ' ').trim();
 const escapeHtml = (s: string) => clean(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c));
@@ -16,7 +16,7 @@ function defenseTime(date: string): string {
 export function officialInvitationEmail(process: ProcessData, portalUrl?: string): {
   subject: string; text: string; html: string;
 } {
-  const date = process.defesa?.startAt ? formatDatePt(process.defesa.startAt) : 'A definir';
+  const date = process.defesa?.startAt ? formatDateWithWeekday(process.defesa.startAt) : 'A definir';
   const time = defenseTime(process.defesa?.startAt);
   const location = process.defesa?.local || 'A confirmar';
   const subject = '[Portal TCC] Convite para a banca de TCC — '+process.protocolo;

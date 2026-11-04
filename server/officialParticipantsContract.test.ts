@@ -63,13 +63,13 @@ test('carta substitui trechos aglutinados do modelo ativo sem alterar o arquivo 
   const map=Object.fromEntries(corrections.map(({find,replace})=>[find,replace]));
   assert.match(map['Autoria: <<alunos>>'],/Aluna autora: Ana Maria\nAluno autor: Pedro Silva/);
   assert.match(map['Demais integrantes da comissão: <<examinador (2)>> e <<examinador (3)>>'],/Examinador:.*\nExaminadora:.*\nCoorientador:/);
-  assert.match(map['Atenciosamente,'],/Vitória-ES, 3 de novembro de 2026/);
+  assert.match(map['Atenciosamente,'],/Vitória-ES, terça-feira, 3 de novembro de 2026/);
 });
 
 test('carta alinha data à direita, assinatura recuada e parágrafo justificado',()=>{
   const entries=[
     {startIndex:10,endIndex:90,paragraph:{elements:[{textRun:{content:'A Comissão de Trabalho de Conclusão de Curso do Curso de Enfermagem convida\n'}}]}},
-    {startIndex:90,endIndex:120,paragraph:{elements:[{textRun:{content:'Vitória-ES, 3 de novembro de 2026.\n'}}]}},
+    {startIndex:90,endIndex:120,paragraph:{elements:[{textRun:{content:'Vitória-ES, terça-feira, 3 de novembro de 2026.\n'}}]}},
     {startIndex:120,endIndex:150,paragraph:{elements:[{textRun:{content:'Comissão de Trabalho de Conclusão de Curso\n'}}]}},
   ];
   const requests=buildOfficialInvitationParagraphStyles({tabs:[{tabProperties:{tabId:'t.0'},documentTab:{body:{content:entries}}}]});

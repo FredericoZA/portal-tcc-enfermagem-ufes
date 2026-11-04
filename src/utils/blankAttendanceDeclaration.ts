@@ -8,7 +8,7 @@
 export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
   const pdf = await PDFDocument.create();
-  const imageBytes=crestBytes||new Uint8Array(await (async()=>{const response=await fetch('/ufes-crest.png');if(!response.ok)throw new Error('Não foi possível carregar o brasão da UFES.');return response.arrayBuffer();})());
+  const imageBytes=crestBytes||new Uint8Array(await (async()=>{const response=await fetch('/national-arms.png');if(!response.ok)throw new Error('Não foi possível carregar o brasão de armas.');return response.arrayBuffer();})());
   const crest=await pdf.embedPng(imageBytes);
   pdf.setTitle('Declaração de comparecimento - Comissão de Trabalho de Conclusão de Curso');
   pdf.setAuthor('Departamento de Enfermagem - Comissão de Trabalho de Conclusão de Curso - CCS/UFES');
@@ -66,7 +66,7 @@ export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array
     return rows;
   };
 
-  // Cabeçalho institucional com o brasão original, sem alterar a arte.
+  // Cabeçalho institucional com o brasão de armas original, sem alterar a arte.
   framed(22, 22, pageWidth - 44, pageHeight - 44);
   page.drawRectangle({x:23,y:716,width:pageWidth-46,height:103,color:green});
   page.drawCircle({x:74,y:767,size:31,color:rgb(1,1,1)});
@@ -74,8 +74,8 @@ export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array
   const header=(value:string,y:number,size:number,font=sans)=>draw(value,119,y,size,font,rgb(1,1,1));
   header('UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO',790,10,sansBold);
   header('CENTRO DE CIÊNCIAS DA SAÚDE',773,9);
-  header('DEPARTAMENTO DE ENFERMAGEM',757,9);
-  header('Curso de Graduação em Enfermagem e Obstetrícia',741,8.7);
+  header('Curso de Graduação em Enfermagem e Obstetrícia',757,8.7);
+  header('DEPARTAMENTO DE ENFERMAGEM',741,9);
   header('COMISSÃO DE TRABALHO DE CONCLUSÃO DE CURSO',726,8.7,sansBold);
 
   // Título e campos livres para preenchimento manuscrito.
@@ -89,8 +89,9 @@ export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array
   line(472);
   line(444);
   line(416);
-  draw('realizada no dia ______/______/________, com início às ______h______', left, 372, 11.8);
-  draw('e término às ______h______, no local:', left, 344, 11.8);
+  draw('realizada no dia ______/______/________.', left, 372, 11.8);
+  draw('Dia da semana: ____________________________________________', left, 352, 11.8);
+  draw('Com início às ______h______ e término às ______h______, no local:', left, 332, 11.8);
   line(312);
   line(284);
 
@@ -109,7 +110,7 @@ export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array
   // Rodapé simples, sem faixa escura ou referência ao Colegiado.
   line(64, 48, pageWidth - 48, 1, green);
   centered('Departamento de Enfermagem · Comissão de Trabalho de Conclusão de Curso · CCS/UFES', 48, 7.6);
-  centered('Campus de Maruípe · Vitória/ES', 34, 8.3, sans, muted);
+  centered('Curso de Graduação em Enfermagem e Obstetrícia · Universidade Federal do Espírito Santo', 34, 7.5, sans, muted);
 
   return pdf.save();
 }

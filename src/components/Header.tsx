@@ -53,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, onGoHome })
         <div className="flex items-center gap-3">
           <button id="open-mobile-sidebar-btn" onClick={onOpenMobileSidebar} className="lg:hidden p-2 rounded-full text-slate-600 focus:outline-none" aria-label="Abrir menu"><Menu className="w-6 h-6" /></button>
           <div className="flex items-center gap-2">
-            <NursingEmblemLogo size={40} customSrc={headerLogo||undefined} />
+            <NursingEmblemLogo size={40} customSrc={/UFES|Universidade Federal do Esp[íi]rito Santo/iu.test(installationProfile.institutionName)?'/ufes-crest.png':headerLogo||'/ufes-crest.png'} />
             <button type="button" onClick={onGoHome} className="text-left focus:outline-none cursor-pointer" title="Voltar ao Calendário Público Inicial">
               <div className="text-[9px] sm:text-[10px] font-extrabold normal-case tracking-widest leading-none mb-1" style={{ color: PORTAL_THEME.text.dark }}>{layoutConfig.headerInstitutionText || installationProfile.institutionName}</div>
               <h1 className="text-[11px] sm:text-xs md:text-sm font-black tracking-tight normal-case leading-snug flex items-center gap-1.5" style={{ color: PORTAL_THEME.brand.action }}><span>{layoutConfig.headerCourseTitle || `${installationProfile.courseName} · CCS/UFES`}</span></h1>

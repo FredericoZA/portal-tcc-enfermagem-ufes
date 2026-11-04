@@ -1,3 +1,4 @@
+import {formatDateTimeWithWeekday} from '../utils/formatters';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, FileCheck2, Upload } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -103,7 +104,7 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   if (!isMasterAdmin) return <section className="rounded-xl border border-slate-300 bg-white p-6 text-sm font-semibold text-slate-700">Registro de logs disponível somente para o usuário Master.</section>;
 
   const renderCell = (log: AuditLog, key: string) => {
-    if (key === 'timestamp') return <span className="font-mono text-[11px] whitespace-nowrap">{new Date(log.timestamp).toLocaleString('pt-BR')}</span>;
+    if (key === 'timestamp') return <span className="font-mono text-[11px] whitespace-nowrap">{formatDateTimeWithWeekday(log.timestamp)}</span>;
     if (key === 'actorEmail') return <span className="font-semibold break-all">{log.actorEmail || 'Sistema'}</span>;
     if (key === 'action') return <span className="font-semibold text-[10px] normal-case text-slate-900">{log.action || '—'}</span>;
     if (key === 'reference') return <span className="font-mono text-[11px]">{log.processId ? `TCC ${log.processId}` : `${log.entityType || 'Sistema'}${log.entityId ? ` · ${log.entityId}` : ''}`}</span>;

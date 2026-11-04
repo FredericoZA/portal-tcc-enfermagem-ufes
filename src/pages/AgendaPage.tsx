@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
-import { formatDatePt, formatTimeExtenso } from '../utils/formatters';
+import { formatDateWithWeekday, formatTimeExtenso } from '../utils/formatters';
 import { StudentNames } from '../components/StudentNames';
 import { PortalProcessPill } from '../components/PortalProcessPill';
 import { Clock, Download, MapPin } from 'lucide-react';
@@ -108,7 +108,7 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ onSelectProcess }) => {
                 <div className="pt-3 border-t border-slate-200 space-y-1 text-xs font-medium text-slate-700">
                   <div className="flex items-center gap-1.5 font-bold normal-case text-[11px] tracking-wider" style={{ color: 'var(--portal-tone-text)' }}>
                     <Clock className="w-3.5 h-3.5" />
-                    <span>{formatDatePt(proc.defesa.startAt)} • {formatTimeExtenso(proc.defesa.startAt)}</span>
+                    <span>{formatDateWithWeekday(proc.defesa.startAt)} • {formatTimeExtenso(proc.defesa.startAt)}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-500 text-[11px] truncate">
                     <MapPin className="w-3.5 h-3.5 shrink-0 text-slate-400" />

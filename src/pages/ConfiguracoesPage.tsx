@@ -1,3 +1,4 @@
+import {formatDateTimeWithWeekday} from '../utils/formatters';
 import {reservationRecipientField} from '../utils/reservationRecipientField';
 import {ProcessDeletionQueuePanel} from '../components/ProcessDeletionQueuePanel';
 import {withOperationalCatalog} from '../utils/studioOperationalCatalog';
@@ -1879,7 +1880,7 @@ export const ConfiguracoesPage: React.FC = () => {
           variables: [],
           fields: [],
           templateContentText: '',
-          lastUpdated: dDoc.modifiedTime ? new Date(dDoc.modifiedTime).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR'),
+          lastUpdated: dDoc.modifiedTime ? formatDateTimeWithWeekday(dDoc.modifiedTime) : formatDateTimeWithWeekday(new Date().toISOString()),
           driveFileId: dDoc.id,
           driveFileUrl: dDoc.webViewLink || `https://docs.google.com/document/d/${dDoc.id}/edit`
         }));
@@ -1928,7 +1929,7 @@ export const ConfiguracoesPage: React.FC = () => {
   const handleSaveCurrentDocTemplate = async (doc: DocTemplateItem) => {
     // 1. Save locally
     const updated = docTemplates.map((d) =>
-      d.id === doc.id ? { ...d, lastUpdated: new Date().toLocaleString('pt-BR') } : d
+      d.id === doc.id ? { ...d, lastUpdated: formatDateTimeWithWeekday(new Date().toISOString()) } : d
     );
     setDocTemplates(updated);
 
@@ -1969,7 +1970,7 @@ export const ConfiguracoesPage: React.FC = () => {
             ...d,
             driveFileId: fileId,
             driveFileUrl: `https://docs.google.com/document/d/${fileId}/edit`,
-            lastUpdated: new Date().toLocaleString('pt-BR')
+            lastUpdated: formatDateTimeWithWeekday(new Date().toISOString())
           } : d));
           showNotification(`O modelo "${doc.label}" foi atualizado e espelhado no Google Docs.`);
         } else {
@@ -1995,7 +1996,7 @@ export const ConfiguracoesPage: React.FC = () => {
               ...d,
               driveFileId: newFile.id,
               driveFileUrl: `https://docs.google.com/document/d/${newFile.id}/edit`,
-              lastUpdated: new Date().toLocaleString('pt-BR')
+              lastUpdated: formatDateTimeWithWeekday(new Date().toISOString())
             } : d));
             showNotification(`O modelo "${doc.label}" foi criado e espelhado na pasta /Modelos.`);
           }

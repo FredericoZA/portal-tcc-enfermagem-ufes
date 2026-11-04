@@ -2,7 +2,7 @@ import {documentVariables} from './documentVariables';
 import {authorNames,academicName} from './personPresentation';
 import {adaptDocumentLanguage} from './documentLanguage';
 import { ProcessData } from '../types';
-import { formatDateExtensoTotal, formatTimeExtenso, formatStudentsString } from './formatters';
+import { formatDateExtensoWithWeekday, formatTimeExtenso, formatStudentsString } from './formatters';
 
 export interface BaseDocumentTemplate {
   id: string;
@@ -118,7 +118,7 @@ export function generateOfficialDocumentText(
     .join(', ') || 'Professores Examinadores Designados';
 
   const dataHoraStr = process.defesa?.startAt
-    ? `${formatDateExtensoTotal(process.defesa.startAt)} às ${formatTimeExtenso(process.defesa.startAt)}`
+    ? `${formatDateExtensoWithWeekday(process.defesa.startAt)} às ${formatTimeExtenso(process.defesa.startAt)}`
     : 'Data a ser agendada';
 
   const localFormatText = process.defesa?.local || (isOnline ? 'Defesa on-line — link ainda não informado' : 'Local da defesa ainda não informado');
@@ -165,8 +165,8 @@ export function generateOfficialDocumentText(
     NOME_ORIENTADOR: academicName(process.orientador),
     COORIENTADOR_NOME: coorientadorName,
     DEFESA_DATA_HORA_EXTENSO: dataHoraStr,
-    DEFESA_DATA: process.defesa?.startAt ? formatDateExtensoTotal(process.defesa.startAt) : '',
-    DATA_DEFESA: process.defesa?.startAt ? formatDateExtensoTotal(process.defesa.startAt) : '',
+    DEFESA_DATA: process.defesa?.startAt ? formatDateExtensoWithWeekday(process.defesa.startAt) : '',
+    DATA_DEFESA: process.defesa?.startAt ? formatDateExtensoWithWeekday(process.defesa.startAt) : '',
     DEFESA_LOCAL: localFormatText,
     LOCAL_DEFESA: localFormatText,
     BANCA_NOMES: bancaNames,
@@ -180,8 +180,8 @@ export function generateOfficialDocumentText(
     ,'Orientador (1)': academicName(process.orientador)
     ,'Examinador (2)': academicName(process.banca?.find(item=>item.funcao==='EXAMINER_2') || process.banca?.filter(item=>item.funcao!=='ORIENTADOR')[0])
     ,'Examinador (3)': academicName(process.banca?.find(item=>item.funcao==='EXAMINER_3') || process.banca?.filter(item=>item.funcao!=='ORIENTADOR')[1])
-    ,'Data do Preenchimento': formatDateExtensoTotal(new Date().toISOString())
-    ,'Data da Defesa (por extenso total)': process.defesa?.startAt ? formatDateExtensoTotal(process.defesa.startAt) : ''
+    ,'Data do Preenchimento': formatDateExtensoWithWeekday(new Date().toISOString())
+    ,'Data da Defesa (por extenso total)': process.defesa?.startAt ? formatDateExtensoWithWeekday(process.defesa.startAt) : ''
     ,'Hora de Início da Defesa (por extenso)': process.defesa?.startAt ? formatTimeExtenso(process.defesa.startAt) : ''
     ,'Local da Defesa': localFormatText
     ,Situação: resultadoText

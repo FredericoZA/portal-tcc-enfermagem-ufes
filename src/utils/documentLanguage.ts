@@ -1,14 +1,17 @@
+import {COMMISSION_NAME} from './institutionalIdentity';
 import {removeAtaLocationTime} from './legacyTextProcessing';
 import {publicationAuthorizationVariables} from './publicationAuthorization';
 import type {ProcessData} from '../types';
 import {academicName,plainPersonName,facultyRole,authorGrammar,personPresentationVariables} from './personPresentation';
 import {ataClosingTime} from './ataClosingTime';
-import {formatTimeExtenso,formatDateNumeric,formatTime24h} from './formatters';
+import {formatTimeExtenso,formatDateNumericWithWeekday,formatTime24h} from './formatters';
 const matchCase=(sample:string,value:string)=>sample.split('(')[0].trim()===sample.split('(')[0].trim().toLocaleUpperCase('pt-BR')?value.toLocaleUpperCase('pt-BR'):/^[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ]/.test(sample)?value[0].toLocaleUpperCase('pt-BR')+value.slice(1):value;
 const escape=(value:string)=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 /** Compatibility with old academic wording; never infer a person's gender from a name. */
 export function adaptDocumentLanguage(text:string,p:ProcessData,type:string):string{
  const g=authorGrammar(p),variables=personPresentationVariables(p);let out=text;
+ // Keep institutional issuer names canonical without changing individual signatories.
+ out=out.replace(/Comissão (?:de |dos? )?(?:Trabalhos? de Conclusão de Curso|de TCC)/gu,COMMISSION_NAME);
  const faculty=[p.orientador,p.coorientador,...p.banca].filter(Boolean) as Array<ProcessData['orientador']>;
  const genericTitle=String.raw`(?:Prof(?:essor)?\s*\((?:a|ª|º)\)\.?\s*)(?:Dr\s*\((?:a|ª|º)\)\.?\s*)?`;
  for(const person of faculty.sort((a,b)=>plainPersonName(b).length-plainPersonName(a).length)){
@@ -76,7 +79,7 @@ export function adaptDocumentLanguage(text:string,p:ProcessData,type:string):str
    .replace(/Agradecemos a participação e a contribuição para/gi,'Agradecemos a atenção ao convite e esperamos contar com sua contribuição para');
   const guests=p.banca.filter(person=>person.funcao!=='ORIENTADOR'&&person.email!==p.orientador.email).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   out=out.replace(/^Membros convidados para a banca:[^\n]+/gmi,guests.map(person=>`Membro convidado para a banca: ${academicName(person,'abbreviated')}`).join('\n'));
-  out=out.replace(/^Data:[^\n]+/gmi,`Data: ${formatDateNumeric(p.defesa.startAt)}`).replace(/^Horário:[^\n]+/gmi,`Horário: ${formatTime24h(p.defesa.startAt)}`);
+  out=out.replace(/^Data:[^\n]+/gmi,`Data: ${formatDateNumericWithWeekday(p.defesa.startAt)}`).replace(/^Horário:[^\n]+/gmi,`Horário: ${formatTime24h(p.defesa.startAt)}`);
  }
  out=out.replace(/,\s*:/g,':');
  const result=p.avaliacao?.resultadoLabel||p.avaliacao?.resultadoCode||'',agreed=personPresentationVariables(p).RESULTADO_CONCORDANTE;

@@ -7,7 +7,7 @@ import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
 import { portalConfirm } from '../services/portalDialogs';
-import { formatDatePt, formatDateNumeric, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
+import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
 import { OnlineSystemTutorial } from '../components/OnlineSystemTutorial';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { loadTableConfig, ColumnDef, TableTextFormat, DEFAULT_TABLE_TEXT_FORMAT } from '../components/TableColumnSelectorPanel';
@@ -88,14 +88,14 @@ const PendingDefenseConfirmationNote: React.FC<{ process: Pick<ProcessData, 'def
 const parseGcalEvent = (ev: any) => {
   const summary = ev.summary || '';
   const desc = ev.description || '';
-  
+
   let aluno = summary
     .replace(/Defesa de TCC\s*-\s*Apresentação:\s*/i, '')
     .replace(/Defesa de TCC:\s*/i, '')
     .replace(/Defesa de TCC\s*/i, '')
     .trim();
   if (!aluno) aluno = "Discente não identificado";
-  
+
   let trabalho = "Trabalho de Conclusão de Curso";
   const trabalhoMatch = desc.match(/Trabalho:\s*([^\n]+)/i);
   if (trabalhoMatch && trabalhoMatch[1]) {
@@ -103,7 +103,7 @@ const parseGcalEvent = (ev: any) => {
   } else if (desc && !desc.includes('Orientador:')) {
     trabalho = desc.trim();
   }
-  
+
   let time = 'A definir';
   if (ev.start) {
     const dStart = new Date(ev.start);
@@ -112,7 +112,7 @@ const parseGcalEvent = (ev: any) => {
     const endStr = dEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     time = `${startStr} às ${endStr}`;
   }
-  
+
   let orientador = "Comissão de Trabalho de Conclusão de Curso";
   const orientadorMatch = desc.match(/Orientador:\s*([^\n]+)/i);
   if (orientadorMatch && orientadorMatch[1]) {
@@ -130,7 +130,7 @@ const parseGcalEvent = (ev: any) => {
   if (bancaMatch && bancaMatch[1]) {
     banca = bancaMatch[1].trim();
   }
-  
+
   let local = "";
   const localMatch = desc.match(/Local:\s*([^\n]+)/i);
   if (localMatch && localMatch[1]) local = localMatch[1].trim();
@@ -681,7 +681,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           case 'coorientador': return proc.coorientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))} (${proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : '';
           case 'resumo': return proc.acervo?.resumoSintese || (proc.titulo ? `TCC: ${proc.titulo}` : 'Sem resumo');
           case 'palavrasChave': return (proc.acervo?.palavrasChave || []).slice(0, 5).join('; ');
-          case 'defesaDataHora': return proc.defesa?.startAt ? `${formatDateNumeric(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
+          case 'defesaDataHora': return proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
           case 'defesaLocal': return proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar';
           default: return '';
         }
@@ -760,7 +760,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
         row.push(`"${kw.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.defesaDataHora) {
-        const dt = proc.defesa?.startAt ? `${formatDateNumeric(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
+        const dt = proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
         row.push(`"${dt}"`);
       }
       if (visibleColumns.defesaLocal) row.push(`"${(proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar').replace(/"/g, '""')}"`);
@@ -1074,9 +1074,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           {showMonthPickerPopup && (
                             <>
                               {/* Click outside backdrop */}
-                              <div 
-                                className="fixed inset-0 z-40" 
-                                onClick={() => setShowMonthPickerPopup(false)} 
+                              <div
+                                className="fixed inset-0 z-40"
+                                onClick={() => setShowMonthPickerPopup(false)}
                               />
                               {/* Popover Card */}
                               <div className="portal-modal-surface absolute top-full left-0 sm:left-auto sm:right-0 mt-2 z-50 w-64 overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150">
@@ -1297,10 +1297,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             {/* Modal Popup for Selected Day Defenses (Opens on Day Click: synchronized with site theme, standard header, colors & formatting) */}
             {(selectedDayDefenses || selectedDayGcalEvents) && (() => {
               const totalSelectedEvents = (selectedDayDefenses?.length || 0) + (selectedDayGcalEvents?.length || 0);
-              
+
               // Max width adjusted for 2 columns max side-by-side
               const modalMaxWidthClass = totalSelectedEvents >= 2
-                ? 'max-w-4xl w-full' 
+                ? 'max-w-4xl w-full'
                 : 'max-w-xl w-full';
 
               const popupIsCustomHeader = calendarPopupFormat.headerThemeMode === 'custom';
@@ -1403,9 +1403,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           </span>
                           <h3 className="font-black text-sm sm:text-base normal-case tracking-tight mt-0.5 text-white">
                             {selectedDayDefenses && selectedDayDefenses.length > 0
-                              ? `Defesas em ${formatDatePt(selectedDayDefenses[0].defesa?.startAt)}`
+                              ? `Defesas em ${formatDateWithWeekday(selectedDayDefenses[0].defesa?.startAt)}`
                               : selectedDayGcalEvents && selectedDayGcalEvents.length > 0
-                                ? `Defesas em ${formatDatePt(selectedDayGcalEvents[0].start)}`
+                                ? `Defesas em ${formatDateWithWeekday(selectedDayGcalEvents[0].start)}`
                                 : 'Defesas do Dia'}
                           </h3>
                         </div>
@@ -1442,7 +1442,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                   {showTopRow && (
                                     <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200 text-xs">
                                       {calendarPopupFormat.showTime !== false ? (
-                                        <div 
+                                        <div
                                           className="flex items-center gap-1.5 font-black"
                                           style={{ color: calendarPopupFormat.timeTextColor || '#065f46' }}
                                         >
@@ -1457,7 +1457,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           </span>
                                         )}
                                         {calendarPopupFormat.showProtocol !== false && (
-                                          <span 
+                                          <span
                                             className="font-mono font-bold px-2 py-0.5 rounded-md border border-slate-250 text-[10px]"
                                             style={{
                                               backgroundColor: calendarPopupFormat.protocolBadgeBg || 'var(--portal-surface-page)',
@@ -1473,7 +1473,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                                   {/* Card Title */}
                                   {calendarPopupFormat.showTitle !== false && (
-                                    <h4 
+                                    <h4
                                       className={`${cardTitleWeightClass} leading-snug ${cardTitleSizeClass} ${
                                         calendarPopupFormat.cardTitleUppercase !== false ? 'uppercase' : ''
                                       }`}
@@ -1486,7 +1486,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                                   {/* Students & Professors Details */}
                                   {showDetails && (
-                                    <div 
+                                    <div
                                       className="text-xs text-slate-700 space-y-2 p-3 rounded-lg border border-slate-200 flex-1 flex flex-col justify-center"
                                       style={{ backgroundColor: calendarPopupFormat.cardInnerBgColor || '#f8fafc' }}
                                     >
@@ -1495,11 +1495,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block mb-0.5">
                                             {calendarPopupFormat.studentLabel || (proc.aluno2 ? 'Discentes Apresentadores:' : 'Discente Apresentador:')}
                                           </span>
-                                          <StudentNames 
-                                            aluno1={proc.aluno1} 
-                                            aluno2={proc.aluno2} 
-                                            align="left" 
-                                            itemClassName="text-xs font-black text-slate-900" 
+                                          <StudentNames
+                                            aluno1={proc.aluno1}
+                                            aluno2={proc.aluno2}
+                                            align="left"
+                                            itemClassName="text-xs font-black text-slate-900"
                                             showMatricula={calendarPopupFormat.showStudentRegistration !== false}
                                           />
                                         </div>
@@ -1554,18 +1554,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           <span className="text-slate-900 font-mono font-bold">{progress.percent}%</span>
                                         </div>
                                       )}
-                                      <div 
+                                      <div
                                         className={`w-full ${progressHeightClass} rounded-full overflow-hidden`}
                                         style={{ backgroundColor: calendarPopupFormat.progressBarTrackColor || '#e2e8f0' }}
                                       >
-                                        <div 
+                                        <div
                                           className={`${progressHeightClass} rounded-full transition-all duration-300 ${
                                             calendarPopupFormat.progressBarColorMode === 'custom' ? '' : progress.color
-                                          } ${calendarPopupFormat.progressBarGlow ? 'shadow-[0_0_8px_rgba(16,185,129,0.7)]' : ''}`} 
-                                          style={{ 
+                                          } ${calendarPopupFormat.progressBarGlow ? 'shadow-[0_0_8px_rgba(16,185,129,0.7)]' : ''}`}
+                                          style={{
                                             width: `${progress.percent}%`,
                                             backgroundColor: calendarPopupFormat.progressBarColorMode === 'custom' ? (calendarPopupFormat.progressBarCustomColor || '#10b981') : undefined
-                                          }} 
+                                          }}
                                         />
                                       </div>
                                     </div>
@@ -1626,7 +1626,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                                   {/* Card Title */}
                                   {calendarPopupFormat.showTitle !== false && (
-                                    <h4 
+                                    <h4
                                       className={`font-extrabold leading-snug ${
                                         calendarPopupFormat.cardTitleSize === 'xs'
                                           ? 'text-xs'
@@ -1642,7 +1642,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                                   {/* Card Body */}
                                   {(calendarPopupFormat.showStudents !== false || calendarPopupFormat.showAdvisor !== false || calendarPopupFormat.showCoAdvisor !== false) && (
-                                    <div 
+                                    <div
                                       className="text-xs text-slate-700 space-y-2 p-3 rounded-lg border border-slate-200 flex-1 flex flex-col justify-center"
                                       style={{ backgroundColor: calendarPopupFormat.cardInnerBgColor || '#f8fafc' }}
                                     >
@@ -1905,7 +1905,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               switch (colKey) {
                 case 'protocolo':
                   return (
-                    <td 
+                    <td
                       key="protocolo"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1927,7 +1927,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   return (
                     <td key="defesaDataHora" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} align-middle ${alignClass} ${defStyles.borderClass} cursor-grab`}>
                       <div className={`flex items-center justify-center gap-1 ${defStyles.cellFontSizeClass}`}>
-                        <span>{formatCellText('defesaDataHora', formatDateNumeric(proc.defesa?.startAt), defensesTextFormat, '')}</span>
+                        <span>{formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), defensesTextFormat, '')}</span>
                       </div>
                       <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}</div>
                     </td>
@@ -2303,7 +2303,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 switch (colKey) {
                   case 'protocolo':
                     return (
-                      <td 
+                      <td
                         key="protocolo"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -2450,7 +2450,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     return (
                       <td key="defesaDataHora" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
                         <div className={`${acervoStyles.cellFontSizeClass} whitespace-nowrap`}>
-                          {formatCellText('defesaDataHora', formatDateNumeric(proc.defesa?.startAt), acervoTextFormat, '')}
+                          {formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), acervoTextFormat, '')}
                         </div>
                         <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}</div>
                       </td>
@@ -2526,7 +2526,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             <div className="max-h-[calc(90vh-60px)] overflow-y-auto p-4 space-y-4">
             <div className="space-y-3 text-xs text-slate-800">
               <div className="bg-emerald-100 p-3 rounded border border-emerald-300 font-mono text-[11px] text-emerald-950">
-                Protocolo: <strong>{selectedLibDoc.protocolo}</strong> • Data da Defesa: <strong>{formatDatePt(selectedLibDoc.defesa?.startAt)}</strong>
+                Protocolo: <strong>{selectedLibDoc.protocolo}</strong> • Data da Defesa: <strong>{formatDateWithWeekday(selectedLibDoc.defesa?.startAt)}</strong>
               </div>
 
               <div>

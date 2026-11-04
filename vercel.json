@@ -57,6 +57,10 @@
     {
       "path": "/api/cron/asten-reconcile",
       "schedule": "23 4 * * *"
+    },
+    {
+      "path": "/api/cron/reservation-notices",
+      "schedule": "31 4 * * *"
     }
   ],
   "headers": [

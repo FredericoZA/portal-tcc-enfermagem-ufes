@@ -1,3 +1,4 @@
+import {formatDateNumericWithWeekday,formatTime24h} from '../utils/formatters';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {CheckCheck, Eye, Image, Lightbulb, RefreshCw} from 'lucide-react';
 import {useAuth} from '../context/AuthContext';
@@ -23,7 +24,7 @@ const COLUMNS: ColumnDef[] = [
 ];
 const ORDER=COLUMNS.map(column=>column.key);
 const VISIBLE=Object.fromEntries(ORDER.map(key=>[key,true]));
-const dateText=(value:string|null)=>value&&Number.isFinite(Date.parse(value))?new Date(value).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}):'—';
+const dateText=(value:string|null)=>value&&Number.isFinite(Date.parse(value))?`${formatDateNumericWithWeekday(value)}, ${formatTime24h(value)}`:'—';
 const searchable=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');
 
 /** The existing feedback store, presented in the same administrative sheet as logs. */

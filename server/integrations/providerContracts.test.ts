@@ -181,7 +181,7 @@ test('contrato Vercel encaminha API ao handler e SPA ao build estático', () => 
   assert.equal(config.outputDirectory,'dist/client');
   assert.equal(config.functions['api/index.ts'].maxDuration,300);
   assert.equal(config.functions['api/replication-model.ts'].maxDuration,60);
-  assert.deepEqual(config.crons,[{path:'/api/cron/storage-cleanup',schedule:'17 3 * * *'},{path:'/api/cron/asten-reconcile',schedule:'23 4 * * *'}]);
+  assert.deepEqual(config.crons,[{path:'/api/cron/storage-cleanup',schedule:'17 3 * * *'},{path:'/api/cron/asten-reconcile',schedule:'23 4 * * *'},{path:'/api/cron/reservation-notices',schedule:'31 4 * * *'}]);
   assert.match(packageJson.scripts.build,/node scripts\/build-server\.mjs/);
   const buildSource=readFileSync(new URL('../../scripts/build-server.mjs',import.meta.url),'utf8');
   assert.match(buildSource,/outfile: 'dist\/server\/server\.cjs'/);

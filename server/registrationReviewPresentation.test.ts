@@ -25,5 +25,5 @@ test('a apresentação do local não muda o tratamento de outros campos da confe
   assert.equal(registrationReviewValue(field('ALUNO_1_EMAIL','E-mail do autor','email'),'ana+ufes@example.invalid'),'ana+ufes@example.invalid');
   assert.equal(registrationReviewValue(field('EXAMINADOR_2_INSTITUICAO','Instituição'),'*ufes*'),'UFES');
   assert.equal(registrationReviewValue(field('TITULO','Título completo do TCC'),'estudo na *ufes*'),'Estudo na UFES');
-  assert.equal(registrationReviewValue(field('DEFESA_DATA_HORA','Data e horário','datetime-local'),'2026-11-17T14:00'),'17/11/2026 às 14:00');
+  assert.equal(registrationReviewValue(field('DEFESA_DATA_HORA','Data e horário','datetime-local'),'2026-11-17T14:00'),'terça-feira, 17/11/2026 às 14:00');
 });
