@@ -1548,7 +1548,14 @@ export async function createPortalApp() {
     const cronSecretReused=[process.env.PORTAL_SESSION_SECRET,process.env.PORTAL_OTP_PEPPER,process.env.PORTAL_UPLOAD_BINDING_SECRET,process.env.PORTAL_VERIFICATION_SECRET,process.env.ASTEN_WEBHOOK_SECRET].map(value=>String(value||'').trim()).filter(Boolean).includes(cronSecret);
     if(process.env.VERCEL&&(cronSecret.length<32||cronSecretReused))throw new Error('Implantação bloqueada: configure CRON_SECRET exclusivo com pelo menos 32 caracteres para a limpeza diária do transporte privado.');
     const verificationSecret=String(process.env.PORTAL_VERIFICATION_SECRET||'').trim();if(verificationSecret.length<32)throw new Error('Implantação bloqueada: configure PORTAL_VERIFICATION_SECRET com pelo menos 32 caracteres.');
-        const databaseStatus=await testSupabaseRuntimeConnection();if(!databaseStatus.connected||!databaseStatus.transactionalRuntimeReady)throw new Error('Implantação bloqueada: aplique todas as migrações do Supabase, incluindo a outbox transacional Asten v6, antes de iniciar o portal em produção.');
+    const databaseStatus = await testSupabaseRuntimeConnection();
+    if (!databaseStatus.transactionalRuntimeReady) {
+      const httpStatus = /^Supabase respondeu (\d{3})/.exec(databaseStatus.message)?.[1];
+      const code = !databaseStatus.connected
+        ? (httpStatus ? `SUPABASE_HTTP_${httpStatus}` : 'SUPABASE_CONNECTION_FAILED')
+        : databaseStatus.normalizedSchemaReady ? 'SUPABASE_CAPABILITY_FAILED' : 'SUPABASE_TABLE_CHECK_FAILED';
+      throw Object.assign(new Error('A validação do banco de dados do Portal falhou.'), {code});
+    }
   }
   if (getSupabaseRuntimeStatus().durablePersistenceReady) {
     try {

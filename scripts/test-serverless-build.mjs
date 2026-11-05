@@ -76,6 +76,13 @@ try {
   };
 
   let result = await get('/api/health');
+  assert.equal(result.status, 503);
+  assert.equal((await result.json()).code, 'SUPABASE_CONNECTION_UNAVAILABLE');
+  const callsBeforeCooldown = (await (await get('/__smoke/calls')).json()).calls.length;
+  assert.equal((await get('/api/health')).status, 503);
+  assert.equal((await (await get('/__smoke/calls')).json()).calls.length, callsBeforeCooldown);
+  await new Promise(resolve => setTimeout(resolve, 10_050));
+  result = await get('/api/health');
   assert.equal(result.status, 200, 'Main wrapper must load the real app bundle. ' + await result.clone().text());
   assert.equal((await result.json()).status, 'ok');
   result = await get('/api/me');

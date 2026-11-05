@@ -19,6 +19,7 @@ const ciphertext = Buffer.concat([cipher.update(randomBytes(32).toString('hex'))
 const secretRow = { provider: 'google_workspace', ciphertext: ciphertext.toString('base64'), iv: iv.toString('base64'), auth_tag: cipher.getAuthTag().toString('base64'), metadata: { __portalCryptoKeyId: 'v1' } };
 const calls = [];
 const unexpected = [];
+let initialHealthCheckFailed = false;
 const json = (value) => Response.json(value);
 const runtimePayload={settings:{driveRootFolderId:'root_fixture_123'},processes:[],legacyAcademicRecords:Array.from({length:6},(_,index)=>({
   id:`legado-${String(index+1).padStart(4,'0')}`,protocolo:`${String(index+1).padStart(3,'0')} - Legado`,sourceFingerprint:createHash('sha256').update(String(index)).digest('hex'),titulo:'Private historical title',autores:['Private historical person'],orientador:'Private historical advisor',coorientador:'',coorientadorInstituicao:'',examinadores:[],resumo:'Private historical summary',palavrasChave:['Private historical keyword'],dataDefesa:'2025-08-28',horaDefesa:'',localDefesa:'Private historical location',isPublic:index<3,publishFullWork:index<3,publishExpandedAbstract:false,publicationState:index<3?'PUBLIC':'NOT_REQUESTED',authorizationDecision:index<3?'AUTHORIZED':'DENIED',provenance:{originalConsent:[index<3?'Sim':'Não']},attachments:[{driveFileId:`private_historical_file_${index}`,fileName:'private-historical.pdf',kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64),evidence:'Original histórico'}],
@@ -33,6 +34,10 @@ globalThis.fetch = async (input, init = {}) => {
       return json({ transactional_runtime: true, secure_file_transport: 'SUPABASE_PRIVATE_STORAGE', asten_transactional_outbox: true, schema_version: 6 });
     }
     if (method === 'GET' && url.pathname === '/rest/v1/portal_runtime_state') {
+      if (!initialHealthCheckFailed && url.searchParams.get('select') === 'id') {
+        initialHealthCheckFailed = true;
+        return Response.json({ code: 'TEST_UNAVAILABLE' }, { status: 503 });
+      }
       if(url.searchParams.get('select')==='processes:payload->processes,legacyAcademicRecords:payload->legacyAcademicRecords')return json([{processes:runtimePayload.processes,legacyAcademicRecords:runtimePayload.legacyAcademicRecords}]);
       return json([{payload:runtimePayload,revision:1}]);
     }

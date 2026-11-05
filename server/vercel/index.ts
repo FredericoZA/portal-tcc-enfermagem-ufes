@@ -83,15 +83,18 @@ function classifyStartupFailure(error: unknown, stage?: StartupStage): StartupFa
   if (detail.includes('PORTAL_VERIFICATION_SECRET')) return { code: 'VERIFICATION_SECRET_REQUIRED', message: 'A chave de verificação documental ainda não está configurada.' };
   if (detail.includes('GOOGLE_') || detail.toLowerCase().includes('oauth')) return { code: 'GOOGLE_OAUTH_SECURITY_REQUIRED', message: 'A integração Google ainda não passou na verificação de segurança.' };
   if (detail.includes('PORTAL_SESSION_SECRET') || detail.toLowerCase().includes('sessão')) return { code: 'SESSION_SECRET_REQUIRED', message: 'A proteção de sessão ainda não está configurada.' };
-  if (detail.includes('migrações do Supabase') || detail.includes('outbox transacional')) return { code: 'SUPABASE_SCHEMA_REQUIRED', message: 'O esquema transacional do banco ainda não foi validado.' };
+  if (signal === 'SUPABASE_CONNECTION_FAILED' || /^SUPABASE_HTTP_\d{3}$/.test(signal)) return { code: 'SUPABASE_CONNECTION_UNAVAILABLE', message: 'A conexão do Portal com o banco está indisponível.' };
+  if (signal === 'SUPABASE_CAPABILITY_FAILED' || signal === 'SUPABASE_TABLE_CHECK_FAILED') return { code: 'SUPABASE_SCHEMA_REQUIRED', message: 'O esquema transacional do banco ainda não foi validado.' };
   if (detail.includes('Asten') || detail.includes('ASTEN_')) return { code: 'ASTEN_SECURITY_REQUIRED', message: 'A integração de assinatura ainda não passou na verificação de segurança.' };
   return { code: 'PORTAL_APP_INITIALIZATION_ERROR', message: 'A aplicação foi carregada, mas uma validação interna ainda impede a inicialização segura.', runtimeSignal: signal };
 }
 
 let startupPromise: Promise<StartupState> | null = null;
+let retryStartupAt = 0;
 
 function startup(): Promise<StartupState> {
-  if (!startupPromise) {
+  if (!startupPromise || (retryStartupAt && Date.now() >= retryStartupAt)) {
+    retryStartupAt = 0;
     // This handler is emitted at dist/server/vercel/index.cjs. Keep the main
     // application lazy: admission must run before loading or hydrating it.
     startupPromise = Promise.resolve().then(() => require('../server.cjs'))
@@ -102,6 +105,7 @@ function startup(): Promise<StartupState> {
           return { app: app as StartupState['app'], error: null };
         } catch (error) {
           safeStartupLog('CREATE_APP', error);
+          if (runtimeSignal(error).startsWith('SUPABASE_')) retryStartupAt = Date.now() + 10_000;
           return { app: null, error, stage: 'CREATE_APP' as const };
         }
       })
