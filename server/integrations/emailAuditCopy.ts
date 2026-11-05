@@ -1,7 +1,8 @@
+import {isEmailHeaderAddress} from '../../src/utils/emailAddress';
+
 /** Audit copies are configured by the installation, never by message recipients. */
 export type EmailAuditCopyMode = 'operational' | 'sensitive';
 
-const EMAIL = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
 const normalize = (email: string) => email.trim().toLowerCase();
 
 const ENTITIES: Record<string, string> = {amp:'&',nbsp:' ',quot:'"',apos:"'",lt:'<',gt:'>',oacute:'ó',eacute:'é',atilde:'ã',ccedil:'ç'};
@@ -34,13 +35,13 @@ export function emailAuditCopy(input: {
   auditCopyEmail?: string;
 }): { cc: string[]; auditCopyMode: EmailAuditCopyMode; auditCopyEmail?: string } {
   const auditCopyEmail = input.auditCopyEmail ? normalize(input.auditCopyEmail) : undefined;
-  if (auditCopyEmail && !EMAIL.test(auditCopyEmail)) throw new Error('E-mail de auditoria inválido.');
+  if (auditCopyEmail && !isEmailHeaderAddress(auditCopyEmail)) throw new Error('E-mail de auditoria inválido.');
   const auditCopyMode = input.auditCopyMode === 'sensitive' || hasPersonalEmailAccess(input.text, input.html)
     ? 'sensitive' : 'operational';
   const recipient = normalize(input.recipient);
   if (auditCopyMode === 'sensitive') return { cc: auditCopyEmail && auditCopyEmail !== recipient ? [auditCopyEmail] : [], auditCopyMode, auditCopyEmail };
   const cc = [...new Set([...(input.cc || []), ...(auditCopyEmail ? [auditCopyEmail] : [])].map(normalize))]
     .filter(email => email !== recipient);
-  if (cc.some(email => !EMAIL.test(email))) throw new Error('E-mail de cópia inválido.');
+  if (cc.some(email => !isEmailHeaderAddress(email))) throw new Error('E-mail de cópia inválido.');
   return { cc, auditCopyMode, auditCopyEmail };
 }

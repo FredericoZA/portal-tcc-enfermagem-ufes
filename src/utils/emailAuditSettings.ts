@@ -1,5 +1,6 @@
 import type { GlobalSettings } from '../types';
 import { resolveInstallationProfile } from './installationProfile';
+import { isEmailHeaderAddress } from './emailAddress';
 
 type EmailAuditSettings = Pick<GlobalSettings, 'masterEmail' | 'emailConfig' | 'installationProfile'>;
 
@@ -13,5 +14,5 @@ export function isEmailAuditEnabled(settings: EmailAuditSettings): boolean {
 export function emailAuditMailbox(settings: EmailAuditSettings): string | undefined {
   if (!isEmailAuditEnabled(settings)) return undefined;
   const email = String(settings.masterEmail || '').trim().toLowerCase();
-  return /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email) ? email : undefined;
+  return isEmailHeaderAddress(email) ? email : undefined;
 }
