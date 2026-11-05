@@ -3221,7 +3221,7 @@ export async function createPortalApp() {
       const kind=currentReceipt.summary.decision==='UNAVAILABLE'?'indisponibilidade':'reserva';
       return res.type('application/pdf').attachment(`${process.protocolo}-${kind}.pdf`).send(await createReservationReceiptPdf(currentReceipt.process,currentSettings));
     }
-    if(reservationReceiptStatus(process)!=='CONFIRMADO' || !process.defesa.locationProof || (process.defesa.locationProof.reservationRevision??0)!==(process.defesa.reservationRevision??0))return res.status(404).json({error:'Comprovante não encontrado.'});
+    if(!process.defesa.locationProof || (process.defesa.locationProof.reservationRevision??0)!==(process.defesa.reservationRevision??0))return res.status(404).json({error:'Comprovante não encontrado.'});
     try{const file=await downloadSourceFile(await sourceFilesAccessToken(),process.defesa.locationProof.driveFileId,{processId:process.id,artifactType:'COMPROVANTE_LOCAL'});await deliverPortalDownload({res,processId:process.id,bytes:file.pdf,fileName:process.defesa.locationProof.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:'Não foi possível consultar o comprovante no Drive.'});}
   });
   // A scoped bearer link authorizes only this reservation revision. GET never mutates.
