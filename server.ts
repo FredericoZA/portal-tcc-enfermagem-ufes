@@ -505,7 +505,7 @@ export async function extractDocxTemplateText(buffer:Buffer):Promise<{text:strin
   const zip=await JSZip.loadAsync(buffer);const names=Object.keys(zip.files).filter(name=>/^word\/(document|header\d*|footer\d*)\.xml$/.test(name));
   if(!names.includes('word/document.xml'))throw new Error('DOCX inválido: o documento principal não foi encontrado.');
   const pieces:string[]=[];
-  for(const name of names){const xml=await zip.file(name)!.async('string');const text=decodeXmlEntities(xml.replace(/<w:tab\/?\s*>/g,'\t').replace(/<\/w:p>/g,'\n').replace(/<\/w:tr>/g,'\n').replace(/<[^>]+>/g,''));if(text.trim())pieces.push(text.trim());}
+  for(const name of names){const xml=await zip.file(name)!.async('string');const text=decodeXmlEntities(xml.replace(/<w:tab\/?\s*>/g,'\t').replace(/<\/w:p>/g,'\n').replace(/<\/w:tr>/g,'\n').replace(/<[^<>]+>/g,''));if(text.trim())pieces.push(text.trim());}
   const text=pieces.join('\n\n').replace(/\n{3,}/g,'\n\n').trim();if(!text)throw new Error('O modelo DOCX não contém texto utilizável.');
   const variables=Array.from(new Set(text.match(/<<[^<>]{2,100}>>|\{\{[^{}]{2,100}\}\}|-[A-Z][A-Z0-9_]{2,80}-/g)||[]));
   return {text,variables};
@@ -2419,9 +2419,7 @@ export async function createPortalApp() {
     if(getSupabaseRuntimeStatus().durablePersistenceReady){
       try{imageUrl=await persistStudioRuntimeImage(req.body.value);}catch{return res.status(503).json({error:'Não foi possível armazenar a imagem. Tente novamente.'});}
       // Storage can yield while another request saves settings: recheck against the latest state.
-      try{studio=applyStudioImage((currentSettings.integrationStudioDraft||currentSettings.integrationStudio)!,req.body,identity.email);}catch{return res.status(409).json({error:'Esta imagem foi alterada em outra sessão. Seu arquivo continua selecionado.',code:'STUDIO_REVISION_CONFLICT'});}
-      const designs=req.body.kind==='email'?studio.emailDesigns:studio.formDesigns;
-      designs[req.body.templateId][req.body.field]=imageUrl;
+      try{studio=applyStudioImage((currentSettings.integrationStudioDraft||currentSettings.integrationStudio)!,req.body,identity.email,imageUrl);}catch{return res.status(409).json({error:'Esta imagem foi alterada em outra sessão. Seu arquivo continua selecionado.',code:'STUDIO_REVISION_CONFLICT'});}
     }
     studio={...studio,publication:{...currentSettings.integrationStudio?.publication,status:'DRAFT'}};
     currentSettings={...currentSettings,integrationStudioDraft:studio,updatedAt:studio.savedAt};
