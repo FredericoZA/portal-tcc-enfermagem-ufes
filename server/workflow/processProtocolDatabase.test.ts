@@ -26,11 +26,11 @@ test('runtime CAS commits the process and counter together and rejects a competi
     await db.exec(await readFile('supabase/migrations/20261015205624_runtime_conflict_no_retry.sql','utf8'));
     const commit=(revision:number,payload:SequenceSnapshot)=>db.query<{revision:number}>('select portal_commit_runtime_state($1,$2) revision',[revision,JSON.stringify(payload)]);
     const load=async()=>{const result=await db.query<{payload:SequenceSnapshot;revision:number}>("select payload,revision::int revision from portal_runtime_state where id='global'");return result.rows[0];};
-    const first=reserveNextProcessProtocol(DEFAULT_INSTALLATION_PROFILE,2026,{});
+    const first=reserveNextProcessProtocol(DEFAULT_INSTALLATION_PROFILE,{});
     await commit(0,{processes:[{id:'first',protocolo:first.protocol}],processProtocolCounters:first.counters});
     const stale=await load();
     const candidate=(id:string)=>{
-      const allocation=reserveNextProcessProtocol(DEFAULT_INSTALLATION_PROFILE,2026,stale.payload.processProtocolCounters,stale.payload.processes.map(process=>process.protocolo));
+      const allocation=reserveNextProcessProtocol(DEFAULT_INSTALLATION_PROFILE,stale.payload.processProtocolCounters,stale.payload.processes.map(process=>process.protocolo));
       return {processes:[...stale.payload.processes,{id,protocolo:allocation.protocol}],processProtocolCounters:allocation.counters};
     };
     const competing=await Promise.allSettled([commit(stale.revision,candidate('second-a')),commit(stale.revision,candidate('second-b'))]);
@@ -40,13 +40,13 @@ test('runtime CAS commits the process and counter together and rejects a competi
     assert.equal(rejected.reason.code,'PT409');
     const current=await load();
     assert.equal(current.revision,2);
-    assert.equal(current.payload.processProtocolCounters['TCC-2026'],2);
-    assert.deepEqual(current.payload.processes.map(process=>process.protocolo),['TCC-2026-0001','TCC-2026-0002']);
+    assert.equal(current.payload.processProtocolCounters['TCC-9999'],2);
+    assert.deepEqual(current.payload.processes.map(process=>process.protocolo),['TCC - 00001','TCC - 00002']);
     await commit(current.revision,{...current.payload,processes:[]});
     const restarted=await load();
-    const next=reserveNextProcessProtocol(DEFAULT_INSTALLATION_PROFILE,2026,restarted.payload.processProtocolCounters,restarted.payload.processes.map(process=>process.protocolo));
-    assert.equal(next.protocol,'TCC-2026-0003');
+    const next=reserveNextProcessProtocol(DEFAULT_INSTALLATION_PROFILE,restarted.payload.processProtocolCounters,restarted.payload.processes.map(process=>process.protocolo));
+    assert.equal(next.protocol,'TCC - 00003');
     await commit(restarted.revision,{processes:[{id:'third',protocolo:next.protocol}],processProtocolCounters:next.counters});
-    assert.equal((await load()).payload.processProtocolCounters['TCC-2026'],3);
+    assert.equal((await load()).payload.processProtocolCounters['TCC-9999'],3);
   }finally{await db.close();}
 });

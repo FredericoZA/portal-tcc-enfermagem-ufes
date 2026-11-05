@@ -133,7 +133,7 @@ export function WorkflowSimulationPanel({ studio, showTrace = false }: { studio:
     {showTrace && <details className="rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] p-3">
       <summary className="cursor-pointer font-bold">Consultar a trilha de um TCC</summary>
       <form onSubmit={event => void searchTrace(event)} className="my-3 flex flex-wrap items-end gap-2">
-        <label className="grid gap-1 text-xs">Protocolo do TCC<input className="portal-input" placeholder="TCC-2026-0001" maxLength={60} required disabled={traceBusy} value={protocol} onChange={event => { setProtocol(event.target.value); setTrace(null); }}/></label>
+        <label className="grid gap-1 text-xs">Protocolo do TCC<input className="portal-input" placeholder="TCC - 00001" maxLength={60} required disabled={traceBusy} value={protocol} onChange={event => { setProtocol(event.target.value); setTrace(null); }}/></label>
         <button className="portal-button-secondary" type="submit" disabled={!protocol.trim() || traceBusy}>{traceBusy ? 'Consultando…' : 'Consultar'}</button>
       </form>
       {traceError && <p role="alert" className="text-xs text-red-800">{traceError}</p>}

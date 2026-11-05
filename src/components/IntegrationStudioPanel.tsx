@@ -156,7 +156,7 @@ const PREVIEW_VARIABLES: Record<string,string> = {
   TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TCC_TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TITULO_TRABALHO:'Segurança do paciente e qualidade da assistência de enfermagem', CAMPO_02:'Segurança do paciente e qualidade da assistência de enfermagem',
   ALUNOS_NOMES:'Ana Carolina Souza e Bruno Martins Lima', ALUNO_NOME:'Ana Carolina Souza', NOME_ALUNO:'Ana Carolina Souza', CAMPO_01:'Ana Carolina Souza e Bruno Martins Lima',
   ORIENTADOR_NOME:'Professora Doutora Maria Silva', CAMPO_03:'Professora Doutora Maria Silva', DEFESA_DATA_HORA:'15 de outubro de 2026 às 14h', DEFESA_DATA_HORA_EXTENSO:'15 de outubro de 2026 às 14h', CAMPO_04:'15 de outubro de 2026 às 14h',
-  DEFESA_LOCAL:'Auditório do CCS — UFES', LOCAL_DEFESA:'Auditório do CCS — UFES', CAMPO_07_LOCAL:'Auditório do CCS — UFES', PROTOCOLO:'TCC-2026-0001', CAMPO_12:'TCC-2026-0001',
+  DEFESA_LOCAL:'Auditório do CCS — UFES', LOCAL_DEFESA:'Auditório do CCS — UFES', CAMPO_07_LOCAL:'Auditório do CCS — UFES', PROTOCOLO:'TCC - 00001', CAMPO_12:'TCC - 00001',
   ALUNO_1_EMAIL:'ana.souza@exemplo.edu.br',ALUNO_2_EMAIL:'bruno.martins@exemplo.edu.br',
   DEPARTAMENTO_EMAIL:'departamento@exemplo.ufes.br',ORIENTADOR_EMAIL:'maria.silva@exemplo.ufes.br',
   LOCAL_ALTERNATIVO:'Sala de reuniões do CCS',EXAMINADOR_2_NOME:'Prof. João Oliveira',EXAMINADOR_3_NOME:'Profa. Carla Santos',
@@ -1139,7 +1139,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
   const selectedEmailRoute=operationalEmailRouting(selectedEmail?.id);
   const selectedEmailEvent=selectedEmailRoute?.event||workflowStages.find(stage=>stage.actions?.some(action=>action.refId===selectedEmail?.id))?.triggerEvent||'';
-  const selectedEmailGuidance=processEmailGuidance({id:'amostra',protocolo:'TCC-2026-0001',etapaAtual:'CADASTRO'},PREVIEW_VARIABLES.LINK_PROCESSO,selectedEmailEvent,selectedEmail?.id);
+  const selectedEmailGuidance=processEmailGuidance({id:'amostra',protocolo:'TCC - 00001',etapaAtual:'CADASTRO'},PREVIEW_VARIABLES.LINK_PROCESSO,selectedEmailEvent,selectedEmail?.id);
   const previewStudio=useMemo(()=>({brandKit,emailDesigns,formDesigns,emailTemplates,formTemplates,operationalConfig,operationsPolicy,receiptDesign:receiptConfig} as unknown as Partial<IntegrationStudioSettings>),[brandKit,emailDesigns,formDesigns,emailTemplates,formTemplates,operationalConfig,operationsPolicy,receiptConfig]);
   const effectiveEmail=selectedEmail?studioEditableEmail(previewStudio,selectedEmail.id):undefined;
   const emailPreviewHtml=selectedEmail?studioEmailPreview(previewStudio,selectedEmail.id).html:'';

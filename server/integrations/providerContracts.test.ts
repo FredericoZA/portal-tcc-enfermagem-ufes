@@ -156,7 +156,7 @@ test('chave moderna do Supabase nunca é enviada como Bearer', () => {
 
 test('instalação por curso controla protocolo e domínios sem alterar o código', () => {
   const profile={...DEFAULT_INSTALLATION_PROFILE,protocolPrefix:'MED',studentEmailDomains:['alunos.universidade.br']};
-  assert.equal(buildProtocol(profile,2027,9),'MED-2027-0009');
+  assert.equal(buildProtocol(profile,9),'MED - 00009');
   assert.equal(emailMatchesDomains('ana@alunos.universidade.br',profile.studentEmailDomains),true);
   assert.equal(emailMatchesDomains('ana@externo.test',profile.studentEmailDomains),false);
 });

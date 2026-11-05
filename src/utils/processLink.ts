@@ -1,13 +1,15 @@
 import type {ProcessData} from '../types';
+import {SERIAL_PROCESS_PROTOCOL} from './installationProfile';
 export type ProcessSection='cadastral'|'avaliacao'|'docs'|'acervo';
 const sections:Record<string,ProcessSection>={geral:'cadastral',cadastral:'cadastral',avaliacao:'avaliacao',documentos:'docs',docs:'docs',acervo:'acervo'};
+const isProcessReference=(id:string)=>/^[a-zA-Z0-9_-]{1,200}$/.test(id)||SERIAL_PROCESS_PROTOCOL.test(id);
 export function readProcessLink(search:string):{id:string;section:ProcessSection}|null {
  const params=new URLSearchParams(search),id=params.get('tcc')||'';
- if(!/^[a-zA-Z0-9_-]{1,200}$/.test(id))return null;
+ if(!isProcessReference(id))return null;
  return {id,section:sections[params.get('secao')||'geral']||'cadastral'};
 }
 export function processLink(base:string,id:string,section:ProcessSection='cadastral'):string {
- if(!/^[a-zA-Z0-9_-]{1,200}$/.test(id))throw new Error('Identificador do TCC inválido.');
+ if(!isProcessReference(id))throw new Error('Identificador do TCC inválido.');
  const url=new URL(base);if(!['http:','https:'].includes(url.protocol))throw new Error('Endereço do Portal inválido.');
  url.searchParams.set('tcc',id);url.searchParams.set('secao',section==='cadastral'?'geral':section);url.hash='';return url.toString();
 }

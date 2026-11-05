@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DEMO_PROCESSES,INITIAL_SETTINGS} from '../src/services/demoSeed';
 import {processLink,readProcessLink,processWorkflowSection} from '../src/utils/processLink';
+import {formatProcessLabel} from '../src/components/PortalProcessPill';
 import {recipientEmailVariables,upgradeOperationalEmailTemplate} from '../src/utils/operationalEmails';
 import {buildProcessVariables,executeWorkflowEvent} from './workflow/runtime';
 import {acceptEvaluation,EvaluationError} from './workflow/evaluation';
@@ -17,6 +18,10 @@ test('links únicos preservam ID e seção e não aceitam esquema executável',(
  const first=processLink('https://portal.example/',p.id,'avaliacao');const second=processLink('https://portal.example/','outro');assert.notEqual(first,second);
  assert.deepEqual(readProcessLink(new URL(first).search),{id:p.id,section:'avaliacao'});
  assert.equal(readProcessLink('?tcc=%3Cscript%3E'),null);assert.throws(()=>processLink('javascript:alert(1)','x'));
+ const serial=processLink('https://portal.example/','TCC - 20001','docs');
+ assert.deepEqual(readProcessLink(new URL(serial).search),{id:'TCC - 20001',section:'docs'});
+ assert.equal(formatProcessLabel('TCC - 20001'),'TCC - 20001');
+ assert.equal(formatProcessLabel('123 - Legado'),'123 - Legado');
 });
 test('texto e data personalizados respeitam o destinatário e o local escolhido',()=>{
  const common=buildProcessVariables({process:p,eventCode:'LOCATION_CONFIRMED',actorEmail:p.orientador.email,actorRoles:[]});

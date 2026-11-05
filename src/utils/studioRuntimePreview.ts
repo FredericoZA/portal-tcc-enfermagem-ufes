@@ -7,7 +7,7 @@ import {formatDateNumericWithWeekday,formatTime24h} from './formatters';
 
 /** Synthetic identities only. Never read a real process to illustrate a configuration. */
 export function studioSampleProcess():ProcessData {
- return {id:'amostra-configuracoes',protocolo:'TCC-2026-0001',titulo:'Educação em Saúde na Atenção Primária',etapaAtual:'CADASTRO',status:'AGUARDANDO_CONFIRMACAO_LOCAL',dataRevision:1,
+ return {id:'amostra-configuracoes',protocolo:'TCC - 00001',titulo:'Educação em Saúde na Atenção Primária',etapaAtual:'CADASTRO',status:'AGUARDANDO_CONFIRMACAO_LOCAL',dataRevision:1,
  aluno1:{nome:'Mariana Alves da Silva',email:'mariana@example.invalid',matricula:'DEMO001',tratamento:'Aluna'},
  aluno2:{nome:'Lucas Pereira Costa',email:'lucas@example.invalid',matricula:'DEMO002',tratamento:'Aluno'},
  orientador:{nome:'Ana Carolina Martins',email:'ana@example.invalid',tratamento:'Professora',titulacao:'Doutora',instituicao:'UFES',siape:'DEMO003'},

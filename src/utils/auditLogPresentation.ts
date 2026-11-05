@@ -152,7 +152,7 @@ export function auditActor(log: ReadableAuditLog): { name: string; email: string
 }
 export function auditReference(log: ReadableAuditLog): { title: string; detail: string } {
   const before = object(log.before), after = object(log.after);
-  const protocol = String(log.processProtocol || after.protocolo || before.protocolo || (/^(?:TCC-|\d{3}\s*-\s*Legado)/i.test(log.processId || '') ? log.processId : ''));
+  const protocol = String(log.processProtocol || after.protocolo || before.protocolo || (/^(?:TCC-|TCC - \d{5}$|\d{3}\s*-\s*Legado)/i.test(log.processId || '') ? log.processId : ''));
   if (protocol) return { title: protocol, detail: String(log.processTitle || after.titulo || before.titulo || '') };
   if (log.processId) return { title: 'Processo de TCC', detail: log.processTitle || 'Referência histórica sem protocolo disponível' };
   return { title: entities[log.entityType] || 'Administração do Portal', detail: '' };

@@ -19,7 +19,7 @@ import {createRegistrationSnapshotPdf,createBrandedTextPdf} from './server/docum
 import {processWithPendingAtaStage,documentSignatureCompleted} from './src/utils/documentSignatureState';
 import {createReservationReceiptPdf} from './server/documents/reservationReceipt';
 import {receiptDesign} from './src/utils/receiptDesign';
-import {mergeProcessProtocolCounters,reserveNextProcessProtocol,seedProcessProtocolCounters,type ProcessProtocolCounters} from './server/workflow/processProtocol';
+import {mergeProcessProtocolCounters,ProcessProtocolExhausted,reserveNextProcessProtocol,seedProcessProtocolCounters,type ProcessProtocolCounters} from './server/workflow/processProtocol';
 import {deleteProcessCalendarEvents} from './server/integrations/googleWorkspace';
 import {deleteProcessSupabaseObjects} from './server/integrations/supabaseStorageStaging';
 import {unlinkSync} from 'node:fs';
@@ -778,10 +778,6 @@ function validateAcademicWindow(defenseAt?:string):string|null{
   if(Number.isFinite(close)&&now>close)return`As inscrições do período ${cycle.label} estão encerradas.`;
   if(defenseAt){const defense=Date.parse(defenseAt),start=Date.parse(cycle.defenseStartAt),end=Date.parse(cycle.defenseEndAt);if((Number.isFinite(start)&&defense<start)||(Number.isFinite(end)&&defense>end))return`A defesa precisa ocorrer dentro da janela do período ${cycle.label}.`;}
   return null;
-}
-function nextProcessProtocol():string{
-  const profile=resolveInstallationProfile(currentSettings);const cycle=currentAcademicCycle();const year=cycle?.year||new Date().getFullYear();
-  return reserveNextProcessProtocol(profile,year,processProtocolCountersStore,processesStore.map(process=>process.protocolo)).protocol;
 }
 function findProcessByReference(reference:string):ProcessData|undefined{
   return processesStore.find(process=>process.id===reference)||processesStore.find(process=>process.protocolo===reference)||processesStore.find(process=>process.previousProtocols?.includes(reference));
@@ -2955,7 +2951,13 @@ export async function createPortalApp() {
 
     const academicError=validateAcademicWindow(defesa?.startAt);if(academicError&&!isAdministrative)return res.status(409).json({error:academicError,code:'ACADEMIC_WINDOW_CLOSED'});
 
-    const protocolo = nextProcessProtocol();
+    let protocolReservation: ReturnType<typeof reserveNextProcessProtocol>;
+    try {
+      protocolReservation=reserveNextProcessProtocol(installationProfile,processProtocolCountersStore,processesStore.map(process=>process.protocolo));
+    } catch (error) {
+      if (!(error instanceof ProcessProtocolExhausted)) throw error;
+      return res.status(409).json({error:error.message,code:'PROCESS_PROTOCOL_EXHAUSTED'});
+    }
     const newId = `proc-${Date.now()}`;
     const nowISO = new Date().toISOString();
 
@@ -2967,7 +2969,7 @@ export async function createPortalApp() {
 
     const newProcess: ProcessData = {
       id: newId,
-      protocolo,
+      protocolo: protocolReservation.protocol,
       titulo,
       etapaAtual: 'CONFIRMACAO_LOCAL',
       status: 'AGUARDANDO_CONFIRMACAO_LOCAL',
@@ -3029,7 +3031,7 @@ export async function createPortalApp() {
     };
 
     processesStore.push(newProcess);
-    processProtocolCountersStore=seedProcessProtocolCounters(processProtocolCountersStore,[newProcess.protocolo]);
+    processProtocolCountersStore=protocolReservation.counters;
     upsertAuthorizedAccess({nome:newProcess.aluno1.nome,email:newProcess.aluno1.email,matricula:newProcess.aluno1.matricula,processId:newId,role:'STUDENT',origin:'TCC_FORM',actor:actorEmail});
     if(newProcess.aluno2)upsertAuthorizedAccess({nome:newProcess.aluno2.nome,email:newProcess.aluno2.email,matricula:newProcess.aluno2.matricula,processId:newId,role:'STUDENT',origin:'TCC_FORM',actor:actorEmail});
     upsertAuthorizedAccess({nome:newProcess.orientador.nome,email:newProcess.orientador.email,processId:newId,role:'ADVISOR',origin:'TCC_FORM',actor:actorEmail});

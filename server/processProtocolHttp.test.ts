@@ -13,7 +13,9 @@ const master='master@protocol.invalid';
 const authors=Array.from({length:4},(_,index)=>`author-${index+1}@protocol.invalid`);
 const advisor='advisor@protocol.invalid';
 const year=new Date().getFullYear();
-const code=(sequence:number)=>`TCC-${year}-${String(sequence).padStart(4,'0')}`;
+const code=(sequence:number)=>`TCC - ${String(sequence).padStart(5,'0')}`;
+const historicalCode=(sequence:number)=>`TCC-${year}-${String(sequence).padStart(4,'0')}`;
+const reference=(sequence:number)=>encodeURIComponent(code(sequence));
 
 function initialState(processes:ProcessData[]=[],extra:Record<string,unknown>={}){
   const now=new Date().toISOString();
@@ -92,18 +94,18 @@ test('HTTP: deleting the latest TCC and restarting never reuses its issued proto
     const third=created[2];
     const deleted=await f.request(`/api/processes/${third.id}`,master,'DELETE',{confirmation:'EXCLUIR',expectedProcessId:third.id});
     assert.ok([200,202].includes(deleted.status),await deleted.clone().text());
-    assert.equal((await f.state()).processProtocolCounters[`TCC-${year}`],3);
+    assert.equal((await f.state()).processProtocolCounters['TCC-9999'],3);
     await f.restart();
     assert.equal((await createProcess(f,2)).protocolo,code(4));
     const saved=await f.state();
-    assert.equal(saved.processProtocolCounters[`TCC-${year}`],4);
+    assert.equal(saved.processProtocolCounters['TCC-9999'],4);
     assert.deepEqual(saved.processes.map((process:ProcessData)=>process.protocolo),[code(1),code(2),code(4)]);
   }finally{await f.close();}
 });
 
 function renamedProcess():ProcessData{
   const process=structuredClone(DEMO_PROCESSES[0]);
-  process.id='renumbered-process';process.protocolo=code(1);process.previousProtocols=[code(6)];process.createdByEmail=authors[0];
+  process.id='renumbered-process';process.protocolo=code(1);process.previousProtocols=[historicalCode(6),code(6)];process.createdByEmail=authors[0];
   process.aluno1.email=authors[0];process.aluno2=null;process.orientador.email=advisor;process.avaliacao={status:'PENDENTE'};
   process.status='AGUARDANDO_CONFIRMACAO_LOCAL';process.etapaAtual='CONFIRMACAO_LOCAL';process.acervo=undefined;
   process.defesa={startAt:'2030-11-05T14:00:00Z',endAt:'2030-11-05T15:30:00Z',local:'Sala Histórica de Teste',localStatus:'RECUSADO',reservationRevision:0,
@@ -113,11 +115,11 @@ function renamedProcess():ProcessData{
 
 test('HTTP: a corrected protocol keeps its alias without importing old cleanup numbers into the new counter',{timeout:45000},async()=>{
   const process=renamedProcess();
-  const f=await fixture(initialState([process],{processProtocolCounters:{[`TCC-${year}`]:1},processDeletionTasks:[3,4,5].map(number=>({id:`historical-${number}`,processId:`deleted-${number}`,protocol:code(number),status:'PENDING',envelopes:[`synthetic-${number}`],fileIds:[],protectedIds:[],jobIds:[],errors:[],createdAt:'2030-10-01T12:00:00Z'}))}));
+  const f=await fixture(initialState([process],{processProtocolCounters:{[`TCC-${year}`]:1},processDeletionTasks:[3,4,5].map(number=>({id:`historical-${number}`,processId:`deleted-${number}`,protocol:historicalCode(number),status:'PENDING',envelopes:[`synthetic-${number}`],fileIds:[],protectedIds:[],jobIds:[],errors:[],createdAt:'2030-10-01T12:00:00Z'}))}));
   try{
-    assert.equal((await(await f.request(`/api/public/processes/${code(6)}`,'')).json()).protocolo,code(1));
+    assert.equal((await(await f.request(`/api/public/processes/${historicalCode(6)}`,'')).json()).protocolo,code(1));
     assert.equal((await createProcess(f,1)).protocolo,code(2));
-    assert.equal((await f.state()).processProtocolCounters[`TCC-${year}`],2);
+    assert.equal((await f.state()).processProtocolCounters['TCC-9999'],2);
   }finally{await f.close();}
 });
 
@@ -127,11 +129,11 @@ test('HTTP: current protocols take precedence over an older process alias in eve
   current.defesa={...current.defesa,local:'Sala Atual de Teste',localStatus:'CONFIRMADO',departmentResponse:{...current.defesa.departmentResponse!,decision:'CONFIRMED'}};
   const f=await fixture(initialState([original,current],{processProtocolCounters:{[`TCC-${year}`]:6}}));
   try{
-    for(const prefix of ['/api/processes/','/api/public/processes/'])assert.equal((await(await f.request(prefix+code(6),'')).json()).protocolo,code(6));
-    const receipts=await(await f.request(`/api/public/processes/${code(6)}/reservation-receipts`,'')).json();
+    for(const prefix of ['/api/processes/','/api/public/processes/'])assert.equal((await(await f.request(prefix+reference(6),'')).json()).protocolo,code(6));
+    const receipts=await(await f.request(`/api/public/processes/${reference(6)}/reservation-receipts`,'')).json();
     assert.equal(receipts.currentStatus,'CONFIRMADO');
     assert.equal(receipts.items[0].local,'Sala Atual de Teste');
-    const receipt=await f.request(`/api/public/processes/${code(6)}/reservation-receipt`,'');
+    const receipt=await f.request(`/api/public/processes/${reference(6)}/reservation-receipt`,'');
     assert.equal(receipt.status,200);
     assert.match(receipt.headers.get('Content-Disposition')||'',new RegExp(code(6)));
     assert.equal((await(await f.request(`/api/public/processes/${original.id}`,'')).json()).protocolo,code(1));
