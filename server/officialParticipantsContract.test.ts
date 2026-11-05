@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { ProcessData } from '../src/types';
-import { officialParticipantLines, officialIdentificationLines } from '../src/utils/officialParticipants';
+import { officialParticipantLines, officialIdentificationLines, participantRole } from '../src/utils/officialParticipants';
 import { officialInvitationEmail } from './workflow/officialInvitation';
 import { invitationTemplateCorrections } from './workflow/invitationTemplate';
 import { buildOfficialInvitationParagraphStyles } from './integrations/googleDocsRenderer';
@@ -63,17 +63,26 @@ test('carta substitui trechos aglutinados do modelo ativo sem alterar o arquivo 
   const map=Object.fromEntries(corrections.map(({find,replace})=>[find,replace]));
   assert.match(map['Autoria: <<alunos>>'],/Aluna autora: Ana Maria\nAluno autor: Pedro Silva/);
   assert.match(map['Demais integrantes da comissão: <<examinador (2)>> e <<examinador (3)>>'],/Examinador:.*\nExaminadora:.*\nCoorientador:/);
-  assert.match(map['Atenciosamente,'],/Vitória-ES, 3 de novembro de 2026/);
+  assert.match(map['Atenciosamente,'],/Vitória-ES, terça-feira, 3 de novembro de 2026/);
 });
 
-test('carta alinha data à direita, assinatura recuada e parágrafo justificado',()=>{
+test('carta alinha data e comissão à direita, sem recuo fixo',()=>{
   const entries=[
     {startIndex:10,endIndex:90,paragraph:{elements:[{textRun:{content:'A Comissão de Trabalho de Conclusão de Curso do Curso de Enfermagem convida\n'}}]}},
-    {startIndex:90,endIndex:120,paragraph:{elements:[{textRun:{content:'Vitória-ES, 3 de novembro de 2026.\n'}}]}},
+    {startIndex:90,endIndex:120,paragraph:{elements:[{textRun:{content:'Vitória-ES, terça-feira, 3 de novembro de 2026.\n'}}]}},
     {startIndex:120,endIndex:150,paragraph:{elements:[{textRun:{content:'Comissão de Trabalho de Conclusão de Curso\n'}}]}},
   ];
   const requests=buildOfficialInvitationParagraphStyles({tabs:[{tabProperties:{tabId:'t.0'},documentTab:{body:{content:entries}}}]});
   assert.equal(requests.length,3);
-  assert.deepEqual(requests.map((r:any)=>r.updateParagraphStyle.paragraphStyle.alignment),['JUSTIFIED','END','START']);
-  assert.equal((requests[2] as any).updateParagraphStyle.paragraphStyle.indentStart.magnitude,260);
+  assert.deepEqual(requests.map((r:any)=>r.updateParagraphStyle.paragraphStyle.alignment),['JUSTIFIED','END','END']);
+  assert.equal((requests[2] as any).updateParagraphStyle.paragraphStyle.indentStart.magnitude,0);
+});
+
+
+test('tabela usa tratamento do participante mesmo sem respostas de formulário nos legados',()=>{
+  assert.equal(participantRole('student',undefined,'ALUNO_1',{nome:'Nome de exemplo',tratamento:'Aluna'}),'Aluna autora');
+  assert.equal(participantRole('advisor',{},'ORIENTADOR',{tratamento:'Professora'}),'Orientadora');
+  assert.equal(participantRole('examiner',{},'EXAMINADOR_2',{tratamento:'Professora'}),'Examinadora');
+  assert.equal(participantRole('coadvisor',{},'COORIENTADOR',{tratamento:'Professora'}),'Coorientadora');
+  assert.equal(participantRole('examiner',{},'EXAMINADOR_3',{nome:'Maria',tratamento:'Professor'}),'Examinador');
 });

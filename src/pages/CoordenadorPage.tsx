@@ -7,7 +7,7 @@ import { apiClient } from '../services/apiClient';
 import { useSignatureUpdates } from '../hooks/useSignatureUpdates';
 import { ProcessData, SignatureJob, AstenIntegrationStatus } from '../types';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
-import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumeric, formatTimeExtenso } from '../utils/formatters';
+import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumericWithWeekday, formatTimeExtenso } from '../utils/formatters';
 import { loadTableConfig, ColumnDef } from '../components/TableColumnSelectorPanel';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
@@ -56,7 +56,9 @@ import {
   dispatchDeclarationBatch,
   dispatchDeclarationToAsten,
   latestDeclarationJob,
-  remainingSelectedDeclarations
+  remainingSelectedDeclarations,
+  type PresidencyProcess,
+  type PresidencyQueueItem
 } from '../utils/coordinatorSignatureActions';
 import {GovbrSignatureModal} from '../components/GovbrSignatureModal';
 import {PortalModalShell} from '../components/PortalModalShell';
@@ -101,9 +103,8 @@ interface CoordenadorPageProps {
 }
 
 type CoordinatorRow = {
-  process: ProcessData;
+  process: PresidencyProcess;
   pending: boolean;
-  queueItem?: any;
 };
 
 const COORDINATOR_DEFAULT_COLUMN_WIDTHS: Record<string, string> = {
@@ -125,13 +126,13 @@ const COORDINATOR_DEFAULT_COLUMN_WIDTHS: Record<string, string> = {
 export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProcess }) => {
   const { settings }=useAuth();
   const installationProfile=resolveInstallationProfile(settings);
-  const [queue, setQueue] = useState<any[]>([]);
-  const [allProcesses, setAllProcesses] = useState<ProcessData[]>([]);
+  const [queue, setQueue] = useState<PresidencyQueueItem[]>([]);
+  const [allProcesses, setAllProcesses] = useState<PresidencyProcess[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'todos' | 'pendentes' | 'concluidos'>('pendentes');
   const [searchFilter, setSearchFilter] = useState('');
   const [signatureJobs, setSignatureJobs] = useState<SignatureJob[]>([]);
-  const [govbrProcess,setGovbrProcess]=useState<ProcessData|null>(null);
+  const [govbrProcess,setGovbrProcess]=useState<PresidencyProcess|null>(null);
   const [govbrPickerOpen,setGovbrPickerOpen]=useState(false);
   const [astenReviewIds,setAstenReviewIds]=useState<string[]|null>(null);
   const [astenStatus, setAstenStatus] = useState<AstenIntegrationStatus | null>(null);
@@ -209,18 +210,18 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   const loadData = async (background = false) => {
     if (!background) setIsLoading(true);
     try {
-      const [queueData, procsData, jobsData, integration] = await Promise.all([
+      const [entries, integration] = await Promise.all([
         apiClient.getCoordinatorQueue(),
-        apiClient.getProcesses(),
-        apiClient.getSignatureJobs(),
         apiClient.getAstenStatus()
       ]);
-      setQueue(queueData || []);
-      setAllProcesses(procsData || []);
-      setSignatureJobs(jobsData || []);
+      const queueData=entries.filter(item=>item.process.status!=='CONCLUIDO');
+      const jobsData=entries.flatMap(item=>item.jobs);
+      setQueue(queueData);
+      setAllProcesses(entries.map(item=>item.process));
+      setSignatureJobs(jobsData);
       setAstenStatus(integration || null);
       setDataLoadFailed(false);
-      return { queue: queueData || [], jobs: jobsData || [] };
+      return { queue: queueData, jobs: jobsData };
     } catch (err) {
       console.error('Erro ao carregar dados do Presidente:', err);
       setDataLoadFailed(true);
@@ -240,6 +241,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
   useSignatureUpdates({
     jobs: signatureJobs,
     enabled: !isLoading && !dataLoadFailed && signingIds.length === 0,
+    fetchJobs: async () => (await apiClient.getCoordinatorQueue()).flatMap(item=>item.jobs),
     onChange: loadData,
   });
 
@@ -295,7 +297,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
   const canInspectAsten=(processId:string)=>{const proc=allProcesses.find(item=>item.id===processId);return Boolean(proc&&!dataLoadFailed&&!documentSignatureCompleted(signatureJobs,processId,'DECLARACAO',proc.dataRevision));};
 
-  const canOpenGovbr=(proc:ProcessData)=>!dataLoadFailed&&canReviewDeclarationWithGovbr(signatureJobs,proc.id,proc.dataRevision);
+  const canOpenGovbr=(proc:PresidencyProcess)=>!dataLoadFailed&&proc.status!=='CONCLUIDO'&&canReviewDeclarationWithGovbr(signatureJobs,proc.id,proc.dataRevision);
 
    const getDeclarationStatus = (processId: string, processStatus?: ProcessData['status']): { label: string; tone: string } => {
     const job = getLatestDeclarationJob(processId);
@@ -313,8 +315,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     if (job.status === 'SENDING') return { label: 'Enviando', tone: 'border-sky-300 bg-sky-50 text-sky-900' };
     if (job.status === 'SENT') return { label: 'Aguardando assinatura', tone: 'border-blue-300 bg-blue-50 text-blue-900' };
     if (job.status === 'PARTIALLY_SIGNED') return { label: 'Parcialmente assinada', tone: 'border-indigo-300 bg-indigo-50 text-indigo-900' };
-    if (job.status === 'SIGNED') return { label: 'Assinada', tone: 'border-emerald-300 bg-emerald-50 text-emerald-900' };
-    if (job.status === 'DRIVE_SYNC_PENDING') return { label: 'Assinada · arquivando', tone: 'border-emerald-300 bg-emerald-50 text-emerald-900' };
+    if (job.status === 'SIGNED') return { label: 'Assinatura em conferência', tone: 'border-amber-300 bg-amber-50 text-amber-900' };
+    if (job.status === 'DRIVE_SYNC_PENDING') return { label: 'Conferência ou arquivamento pendente', tone: 'border-amber-300 bg-amber-50 text-amber-900' };
     if (job.status === 'ARCHIVED') return { label: 'Assinada · arquivada', tone: 'border-emerald-300 bg-emerald-50 text-emerald-900' };
     if (job.status === 'PROVIDER_ERROR') return { label: 'Falha recuperável', tone: 'border-red-300 bg-red-50 text-red-900' };
     if (job.status === 'DECLINED') return { label: 'Recusada', tone: 'border-red-300 bg-red-50 text-red-900' };
@@ -366,7 +368,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download=fileName; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
   };
 
-  const handleDownloadSignedDeclaration = async (proc: ProcessData) => {
+  const handleDownloadSignedDeclaration = async (proc: PresidencyProcess) => {
     setSigningMessage('');
     try {
       const { blob, fileName } = await apiClient.downloadProcessDocument(proc.id, 'doc-declaracao');
@@ -376,17 +378,17 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     }
   };
 
-  const renderSignatureButtons=(proc:ProcessData)=>{
-    if(documentSignatureCompleted(signatureJobs,proc.id,'DECLARACAO',proc.dataRevision))return null;
+  const renderSignatureButtons=(proc:PresidencyProcess)=>{
+    if(proc.status==='CONCLUIDO'||documentSignatureCompleted(signatureJobs,proc.id,'DECLARACAO',proc.dataRevision))return null;
     const working=signingIds.length>0||dataLoadFailed;
     return <div className="flex flex-wrap items-center justify-center gap-1">
       <button type="button" onClick={()=>handleSignOne(proc.id)} disabled={working} className="portal-sign-provider-btn portal-signature-provider-action" title="Revisar declaração para assinatura pela Asten"><Shield className="h-3.5 w-3.5"/>Asten</button>
       <button type="button" onClick={()=>setGovbrProcess(proc)} disabled={working} className="portal-sign-provider-btn portal-signature-provider-action" title="Assinar no Gov.br e conferir no VALIDAR/ITI"><FileSignature className="h-3.5 w-3.5"/>Gov.br</button>
     </div>;
   };
-  const renderSignatureActionCell=(proc:ProcessData)=><td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}>{renderSignatureButtons(proc)}</td>;
+  const renderSignatureActionCell=(proc:PresidencyProcess)=><td className={`${styles.cellPadClass} ${styles.borderClass} min-w-[210px] text-center align-middle`}>{renderSignatureButtons(proc)}</td>;
 
-  const renderCompletedActionCell = (proc: ProcessData) => {
+  const renderCompletedActionCell = (proc: PresidencyProcess) => {
     const job = getLatestDeclarationJob(proc.id);
     const archived = job?.status === 'ARCHIVED';
     return (
@@ -476,7 +478,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
         return (
           <td key={colKey} className={`${cellClass} ${styles.cellWeightClass} ${styles.cellTextColorClass}`}>
             <div className={`flex items-center justify-center ${styles.cellFontSizeClass}`}>
-              <span className="font-normal text-black">{proc.defesa?.startAt ? formatDateNumeric(proc.defesa.startAt) : 'N/A'}</span>
+              <span className="font-normal text-black">{proc.defesa?.startAt ? formatDateNumericWithWeekday(proc.defesa.startAt) : 'N/A'}</span>
             </div>
             {proc.defesa?.startAt && (
               <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa.startAt)}</div>
@@ -500,9 +502,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
                 {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), coordTextFormat)}
               </div>
-              {proc.aluno1?.matricula && (
-                <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5">Matrícula: {proc.aluno1.matricula}</div>
-              )}
             </div>
           </td>
         );
@@ -516,9 +515,6 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
                     {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), coordTextFormat)}
                   </div>
-                  {proc.aluno2?.matricula && (
-                    <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5">Matrícula: {proc.aluno2.matricula}</div>
-                  )}
                 </>
               ) : (
                 <span className="text-slate-400 font-mono text-[11px]">—</span>
@@ -642,7 +638,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     }
   };
 
-  const pendingRows: CoordinatorRow[] = pendingItems.map((item) => ({ process: item.process, pending: true, queueItem: item }));
+  const pendingRows: CoordinatorRow[] = pendingItems.map((item) => ({ process: item.process, pending: true }));
   const completedRows: CoordinatorRow[] = completedItems.map((process) => ({ process, pending: false }));
 
   const getSortedAndFilteredItems = (items: CoordinatorRow[]) => {

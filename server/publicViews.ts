@@ -1,3 +1,5 @@
+import {reservationReceipts} from './reservationReceipts';
+import {publicDefenseReservationStatus} from '../src/utils/defenseReservationState';
 import type { ProcessData } from '../src/types';
 
 export type PublicArtifactState = 'NOT_PRESENTED' | 'PRIVATE' | 'PUBLIC';
@@ -19,6 +21,7 @@ function personName(value: { nome?: string; tratamento?: string; titulacao?: str
  * e-mail, IDs internos de pessoas ou vínculos do Drive.
  */
 export function publicCalendarView(process: ProcessData) {
+  const receiptCount = reservationReceipts(process).length;
   return {
     id: process.protocolo,
     protocolo: process.protocolo,
@@ -42,8 +45,9 @@ export function publicCalendarView(process: ProcessData) {
       startAt: process.defesa.startAt,
       endAt: process.defesa.endAt,
       local: process.defesa.local,
-      localStatus: process.defesa.localStatus,
-      hasReservationReceipt: Boolean(process.defesa.departmentResponse),
+      localStatus: publicDefenseReservationStatus(process),
+      hasReservationReceipt: receiptCount > 0,
+      reservationReceiptCount: receiptCount,
     },
     createdAt: process.createdAt,
     updatedAt: process.updatedAt,
@@ -81,6 +85,7 @@ function expandedAbstractState(process: ProcessData): PublicArtifactState {
 export function publicRepositoryView(process: ProcessData) {
   const workState = fullWorkState(process);
   const abstractState = expandedAbstractState(process);
+  const receiptCount = reservationReceipts(process).length;
   return {
     id: process.protocolo,
     protocolo: process.protocolo,
@@ -104,14 +109,11 @@ export function publicRepositoryView(process: ProcessData) {
       startAt: process.defesa.startAt,
       endAt: process.defesa.endAt,
       local: process.defesa.local,
-      localStatus: process.defesa.localStatus,
-      hasReservationReceipt: Boolean(process.defesa.departmentResponse),
+      localStatus: publicDefenseReservationStatus(process),
+      hasReservationReceipt: receiptCount > 0,
+      reservationReceiptCount: receiptCount,
     },
-    avaliacao: {
-      status: process.avaliacao.status,
-      resultadoCode: process.avaliacao.resultadoCode,
-      resultadoLabel: process.avaliacao.resultadoLabel,
-    },
+    avaliacao: { status: process.avaliacao.status },
     acervo: process.acervo
       ? {
           palavrasChave: [...(process.acervo.palavrasChave || [])],

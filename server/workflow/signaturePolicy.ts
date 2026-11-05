@@ -1,4 +1,4 @@
-import {documentSignatureCompleted} from '../../src/utils/documentSignatureState';
+import {currentAtaArchived,documentSignatureCompleted,signatureDocumentRevision} from '../../src/utils/documentSignatureState';
 import {academicName} from '../../src/utils/personPresentation';
 import type { GlobalRole, GlobalSettings, ProcessData, SignatureJob } from '../../src/types';
 import type { SignatureSignerSnapshot } from '../../src/types/signatures';
@@ -40,7 +40,7 @@ function registeredSigner(
     throw new Error(`${process.protocolo}: signatário sem e-mail válido no cadastro.`);
   }
   const email = normalizeSignatureEmail(person!.email);
-  const prefix = role === 'ADVISOR' ? 'advisor' : role === 'STUDENT' ? 'student' : 'president';
+  const prefix = role === 'ADVISOR' ? 'advisor' : role === 'EXAMINER' ? 'examiner' : role === 'STUDENT' ? 'student' : 'president';
   return {
     id: `${prefix}:${email}`,
     role,
@@ -59,7 +59,17 @@ export function deriveSignatureSigners(
 ): SignatureSignerSnapshot[] {
   let signers: SignatureSignerSnapshot[];
   if (type === 'ATA') {
-    signers = [registeredSigner(process, 'ADVISOR', { ...process.orientador, nome: academicName(process.orientador, 'abbreviated') })];
+    // A ata requer os três titulares. A linha de orientador em "banca" não conta duas vezes.
+    const examiner2 = (process.banca || []).filter(member => member.funcao === 'EXAMINER_2');
+    const examiner3 = (process.banca || []).filter(member => member.funcao === 'EXAMINER_3');
+    if (examiner2.length !== 1 || examiner3.length !== 1) {
+      throw new Error(`${process.protocolo}: a ata exige dois examinadores titulares (2º e 3º membros da banca) cadastrados.`);
+    }
+    signers = [
+      registeredSigner(process, 'ADVISOR', { ...process.orientador, nome: academicName(process.orientador, 'abbreviated') }),
+      registeredSigner(process, 'EXAMINER', { ...examiner2[0], nome: academicName(examiner2[0], 'abbreviated') }),
+      registeredSigner(process, 'EXAMINER', { ...examiner3[0], nome: academicName(examiner3[0], 'abbreviated') }),
+    ];
   } else if (type === 'TERMO') {
     signers = [
       registeredSigner(process, 'STUDENT', process.aluno1),
@@ -86,9 +96,9 @@ export function canInitiateSignature(
   globalRoles: readonly GlobalRole[] = [],
 ): boolean {
   if (!isValidSignatureEmail(email)) return false;
-  if (globalRoles.includes('MASTER_ADMIN') || globalRoles.includes('COMMISSION_PRESIDENT')) return true;
+  if (globalRoles.includes('MASTER_ADMIN')) return true;
   const actor = normalizeSignatureEmail(email);
-  if (type === 'ATA') return normalizeSignatureEmail(process.orientador.email) === actor;
+  if (type === 'ATA') return normalizeSignatureEmail(process.orientador?.email) === actor;
   if (type === 'TERMO') {
     return [process.aluno1, process.aluno2, process.orientador]
       .some(person => normalizeSignatureEmail(person?.email) === actor);
@@ -108,7 +118,6 @@ export function canReturnGovbrDocument(
   if (!isValidSignatureEmail(email)) return false;
   if (globalRoles.includes('MASTER_ADMIN')) return true;
   if (type === 'TERMO') return normalizeSignatureEmail(email) === normalizeSignatureEmail(process.orientador.email);
-  if (globalRoles.includes('COMMISSION_PRESIDENT')) return true;
   const responsible = type === 'DECLARACAO' ? settings.commissionPresidentEmail : process.orientador?.email;
   return normalizeSignatureEmail(email) === normalizeSignatureEmail(responsible);
 }
@@ -142,5 +151,15 @@ export function assertCurrentSignatureRecipients(process:ProcessData,type:Signab
 
 /** Prevent a new request through either provider once this revision is signed. */
 export function assertDocumentSignatureOpen(process:ProcessData,type:SignableDocumentType,jobs:SignatureJob[]):void{
- if(process.status==='CONCLUIDO'||process.etapaAtual==='CONCLUIDO'||documentSignatureCompleted(jobs,process.id,type,process.dataRevision))throw new Error('Este documento já está assinado. Utilize Ver ou Baixar PDF.');
+ if(process.status==='CONCLUIDO'||process.etapaAtual==='CONCLUIDO'||(type==='ATA'&&currentAtaArchived(process,jobs))||documentSignatureCompleted(jobs,process.id,type,signatureDocumentRevision(process,type)))throw new Error('Este documento já está assinado. Utilize Ver ou Baixar PDF.');
+}
+
+export function signatureJobMatchesCurrentRevision(process:ProcessData,job:Pick<SignatureJob,'documentType'|'sourceDataRevision'|'status'|'removedFromLogsAt'>):boolean{
+ return !job.removedFromLogsAt&&job.status!=='CANCELED'&&job.sourceDataRevision===signatureDocumentRevision(process,job.documentType);
+}
+
+export function hasCompetingSignatureArchive(process:ProcessData,job:SignatureJob,jobs:SignatureJob[]):boolean{
+ return jobs.some(other=>other.id!==job.id&&other.processId===job.processId&&other.documentType===job.documentType
+   &&other.sourceDataRevision===job.sourceDataRevision&&other.status==='ARCHIVED'&&Boolean(other.driveSignedFileId)
+   &&(job.documentType!=='ATA'||currentAtaArchived(process,[other])));
 }

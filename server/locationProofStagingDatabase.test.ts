@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 
-test('comprovante de reserva usa staging privado sem mudar permissões, limites ou tickets existentes',async()=>{
+test('migração histórica de comprovantes preserva staging privado, limites e tickets existentes',async()=>{
   const db=new PGlite();
   try{
     await db.exec(`create role anon;create role authenticated;create role service_role;

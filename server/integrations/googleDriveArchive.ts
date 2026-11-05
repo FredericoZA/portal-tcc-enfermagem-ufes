@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import {readBoundedResponse,ResponseSizeError} from '../security/boundedResponse';
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
@@ -10,7 +11,7 @@ const FORM_FOLDER={CADASTRO_INICIAL:'01_CADASTRO_INICIAL',CONFIRMACAO_LOCAL:'02_
 export type ProcessFormArchiveType=keyof typeof FORM_FOLDER | (string & {});
 
 async function driveRequest(url: string, accessToken: string, init: RequestInit = {}) {
-  const response = await fetch(url, { ...init, headers: { Authorization: `Bearer ${accessToken}`, ...(init.headers || {}) } });
+  const response = await fetch(url, { ...init, signal:init.signal??AbortSignal.timeout(30_000), headers: { Authorization: `Bearer ${accessToken}`, ...(init.headers || {}) } });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(String(payload?.error?.message || `Google Drive respondeu ${response.status}.`));
@@ -25,9 +26,27 @@ export function isUnsafePrivateContainerPermission(permission:any):boolean{
   return !['owner','organizer','fileorganizer','writer','commenter','reader'].includes(role);
 }
 
+export async function listDriveFilePermissions(accessToken:string,fileId:string):Promise<any[]>{
+  const permissions:any[]=[],seen=new Set<string>();
+  let pageToken='';
+  do{
+    const params=new URLSearchParams({fields:'permissions(id,type,role,domain,emailAddress),nextPageToken',pageSize:'100',supportsAllDrives:'true',...(pageToken?{pageToken}:{})});
+    const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}/permissions?${params}`,accessToken);
+    const result=await response.json();
+    if(result.permissions!==undefined&&!Array.isArray(result.permissions))throw new Error('Não foi possível conferir as permissões do Google Drive.');
+    permissions.push(...(result.permissions||[]));
+    if(result.nextPageToken!==undefined&&typeof result.nextPageToken!=='string')throw new Error('Paginação de permissões inválida no Google Drive.');
+    pageToken=result.nextPageToken||'';
+    if(pageToken){
+      if(seen.has(pageToken)||seen.size>=100)throw new Error('Não foi possível concluir a conferência das permissões do Google Drive.');
+      seen.add(pageToken);
+    }
+  }while(pageToken);
+  return permissions;
+}
+
 async function assertPrivateContainer(accessToken:string,fileId:string){
-  const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}/permissions?fields=permissions(id,type,role,domain,emailAddress)&supportsAllDrives=true`,accessToken);
-  const permissions=(await response.json()).permissions||[];
+  const permissions=await listDriveFilePermissions(accessToken,fileId);
   const unauthorized=permissions.filter(isUnsafePrivateContainerPermission);
   if(unauthorized.length)throw new Error('O destino no Google Drive possui compartilhamento público, por domínio, grupo ou permissão não reconhecida. Acesso nominal de usuários autorizados pode permanecer.');
 }
@@ -180,8 +199,7 @@ export async function preparePrivatePublicationSource(input:{accessToken:string;
 
 export async function withdrawDriveFilePublicAccess(accessToken:string,fileId:string):Promise<{removed:number}>{
   if(!fileId)return {removed:0};
-  const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}/permissions?fields=permissions(id,type,role)&supportsAllDrives=true`,accessToken);
-  const permissions=(await response.json()).permissions||[];
+  const permissions=await listDriveFilePermissions(accessToken,fileId);
   const publicPermissions=permissions.filter((permission:any)=>permission.type==='anyone');
   for(const permission of publicPermissions){
     await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}/permissions/${encodeURIComponent(permission.id)}?supportsAllDrives=true`,accessToken,{method:'DELETE'});
@@ -201,9 +219,8 @@ export async function inspectPortalDriveArtifact(input:{accessToken:string;fileI
     if(input.expectedSha256&&properties.sha256&&properties.sha256!==input.expectedSha256)issues.push('Hash SHA-256 divergente.');
     if(input.expectedVersion&&properties.artifactVersion&&Number(properties.artifactVersion)!==Number(input.expectedVersion))issues.push('Versão divergente.');
     if(input.expectedSourceFileId&&properties.publicationSourceFileId!==input.expectedSourceFileId)issues.push('Cópia pública aponta para origem divergente.');
-    const permissionsResponse=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}/permissions?fields=permissions(id,type,role,domain)&supportsAllDrives=true`,input.accessToken);
-    const permissions=(await permissionsResponse.json()).permissions||[];
-    const broad=permissions.filter((permission:any)=>permission.type==='anyone'||permission.type==='domain'||permission.type==='group');
+    const permissions=await listDriveFilePermissions(input.accessToken,input.fileId);
+    const broad=permissions.filter(isUnsafePrivateContainerPermission);
     const hasPublicReader=permissions.some((permission:any)=>permission.type==='anyone'&&permission.role==='reader');
     if(input.expectPublic&&!hasPublicReader)issues.push('Cópia autorizada não possui leitura pública.');
     if(!input.expectPublic&&broad.length)issues.push('Arquivo privado possui compartilhamento amplo.');
@@ -226,8 +243,9 @@ export async function downloadDrivePdf(accessToken:string,fileId:string,expected
     if(expected.signatureJobId&&properties.portalSignatureJobId!==expected.signatureJobId)throw new Error('O arquivo não pertence a esta solicitação de assinatura.');
   }
   const contentResponse=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,accessToken);
-  const pdf=Buffer.from(await contentResponse.arrayBuffer());
-  if(pdf.length>50*1024*1024)throw new Error('O PDF armazenado ultrapassa o limite seguro de 50 MB.');
+  let pdf:Buffer;
+  try{pdf=await readBoundedResponse(contentResponse,50*1024*1024);}
+  catch(error){if(error instanceof ResponseSizeError)throw new Error('O PDF armazenado ultrapassa o limite seguro de 50 MB ou possui tamanho inválido.');throw error;}
   if(!pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('O arquivo armazenado não é um PDF válido.');
   const storedSha256=String(metadata.appProperties?.sha256||'').toLowerCase();
   if(storedSha256&&createHash('sha256').update(pdf).digest('hex')!==storedSha256)throw new Error('O conteúdo do PDF no Drive diverge do hash registrado pelo portal.');
@@ -243,35 +261,95 @@ export async function renamePortalProcessFolder(input:{accessToken:string;fileId
 }
 
 /** Delete only the selected process tree, after checking its ancestry and protecting shared/model resources. */
-export async function deleteProcessDriveArtifacts(input:{accessToken:string;processId:string;protocol:string;folderId?:string;rootFolderId:string;fileIds:string[];protectedIds:string[]}):Promise<void>{
- const protectedIds=new Set([input.rootFolderId,...input.protectedIds].filter(Boolean)),done=new Set<string>();
- const get=async(id:string)=>{const response=await fetch(`${DRIVE_API}/files/${encodeURIComponent(id)}?fields=id,name,mimeType,parents,appProperties&supportsAllDrives=true`,{headers:{Authorization:`Bearer ${input.accessToken}`},signal:AbortSignal.timeout(15000)});if(response.status===404)return null;if(!response.ok)throw Error(`Drive: não foi possível conferir o arquivo (${response.status}).`);return response.json();};
- let verifiedFolder='';
- if(input.folderId){
-  if(protectedIds.has(input.folderId))throw Error('A pasta configurada é compartilhada com outro recurso e foi preservada.');
-  const folder=await get(input.folderId);
-  if(folder){
-   const parent=await get(folder.parents?.[0]||'');
-   const folderMime='application/vnd.google-apps.folder';
-   // Previous versions stored processes under 02_PROCESSOS/<year>/<protocol>.
-   // Verify that one annual ancestor rather than expanding the deletion scope.
-   const processRoot=parent?.mimeType===folderMime&&/^\d{4}$/.test(String(parent.name||''))?await get(parent.parents?.[0]||''):parent;
-   if(folder.mimeType!==folderMime||folder.name!==input.protocol||processRoot?.mimeType!==folderMime||processRoot.name!=='02_PROCESSOS'||!processRoot.parents?.includes(input.rootFolderId))throw Error('A pasta não pertence à árvore deste TCC.');
-   verifiedFolder=input.folderId;
+export async function deleteProcessDriveArtifacts(input:{accessToken:string;processId:string;protocol:string;folderId?:string;rootFolderId:string;fileIds:string[];protectedIds:string[];jobIds?:string[]}):Promise<void>{
+ if(!input.processId.trim())throw Error('O vínculo do TCC é necessário para a limpeza do Drive.');
+ const protectedIds=new Set([input.rootFolderId,...input.protectedIds].filter(Boolean)),done=new Set<string>(),active=new Set<string>();
+ const jobIds=new Set((input.jobIds||[]).filter(Boolean));
+ const get=async(id:string)=>{
+  if(!id)return null;
+  if(!/^[a-zA-Z0-9_-]+$/.test(id))throw Error('Identificador de arquivo do Drive inválido.');
+  const response=await fetch(`${DRIVE_API}/files/${encodeURIComponent(id)}?fields=id,name,mimeType,parents,appProperties&supportsAllDrives=true`,{headers:{Authorization:`Bearer ${input.accessToken}`},signal:AbortSignal.timeout(15000)});
+  if(response.status===404||response.status===410)return null;
+  if(!response.ok)throw Error(`Drive: não foi possível conferir o arquivo (${response.status}).`);
+  return response.json();
+ };
+ const listIds=async(query:string):Promise<string[]>=>{
+  const ids=new Set<string>(),seen=new Set<string>();let pageToken='';
+  do{
+   const params=new URLSearchParams({q:query,fields:'files(id),nextPageToken',pageSize:'1000',supportsAllDrives:'true',includeItemsFromAllDrives:'true',...(pageToken?{pageToken}:{})});
+   const response=await driveRequest(`${DRIVE_API}/files?${params}`,input.accessToken),result=await response.json();
+   if(result.files!==undefined&&!Array.isArray(result.files))throw Error('Drive: inventário de exclusão inválido.');
+   for(const file of result.files||[]){if(typeof file.id!=='string'||!/^[a-zA-Z0-9_-]+$/.test(file.id))throw Error('Drive: identificador inválido no inventário.');ids.add(file.id);}
+   if(result.nextPageToken!==undefined&&typeof result.nextPageToken!=='string')throw Error('Drive: paginação de exclusão inválida.');
+   pageToken=result.nextPageToken||'';
+   if(pageToken){if(seen.has(pageToken)||seen.size>=100)throw Error('Drive: não foi possível concluir o inventário de exclusão.');seen.add(pageToken);}
+  }while(pageToken);
+  return [...ids];
+ };
+ const folderMime='application/vnd.google-apps.folder';
+ const officialYear=/^[A-Z0-9_-]{1,16}-([1-9]\d{3})-\d+$/.exec(input.protocol)?.[1];
+ const verifyProcessFolder=async(id:string):Promise<string>=>{
+  if(protectedIds.has(id))throw Error('A pasta configurada é compartilhada com outro recurso e foi preservada.');
+  const folder=await get(id);if(!folder)return '';
+  const parent=await get(folder.parents?.[0]||'');
+  const annual=parent?.mimeType===folderMime&&/^\d{4}$/.test(String(parent.name||''));
+  const processRoot=annual?await get(parent.parents?.[0]||''):parent;
+  if(folder.mimeType!==folderMime||folder.name!==input.protocol||processRoot?.mimeType!==folderMime||processRoot.name!=='02_PROCESSOS'||!processRoot.parents?.includes(input.rootFolderId)||(annual&&officialYear&&parent.name!==officialYear))throw Error('A pasta não pertence à árvore deste TCC.');
+  protectedIds.add(String(parent.id));protectedIds.add(String(processRoot.id));
+  return id;
+ };
+ let verifiedFolder=input.folderId?await verifyProcessFolder(input.folderId):'';
+ if(!verifiedFolder&&input.rootFolderId){
+  const childFolders=(parentId:string,name:string)=>listIds(`'${escapeQuery(parentId)}' in parents and name = '${escapeQuery(name)}' and mimeType = '${folderMime}' and trashed = false`);
+  const processRoots=await childFolders(input.rootFolderId,'02_PROCESSOS');
+  if(processRoots.length>1)throw Error('Drive: há pastas 02_PROCESSOS duplicadas; a exclusão foi interrompida.');
+  if(processRoots[0]){
+   const processRoot=await get(processRoots[0]);
+   if(!processRoot||processRoot.mimeType!==folderMime||processRoot.name!=='02_PROCESSOS'||!processRoot.parents?.includes(input.rootFolderId))throw Error('A pasta não pertence à árvore deste TCC.');
+   protectedIds.add(processRoots[0]);
+   const matches=new Set(await childFolders(processRoots[0],input.protocol));
+   if(officialYear){
+    const years=await childFolders(processRoots[0],officialYear);
+    if(years.length>1)throw Error('Drive: há pastas anuais duplicadas; a exclusão foi interrompida.');
+    if(years[0]){
+     const year=await get(years[0]);
+     if(!year||year.mimeType!==folderMime||year.name!==officialYear||!year.parents?.includes(processRoots[0]))throw Error('A pasta anual não pertence à árvore deste TCC.');
+     protectedIds.add(years[0]);
+     for(const id of await childFolders(years[0],input.protocol))matches.add(id);
+    }
+   }
+   if(matches.size>1)throw Error('Drive: há mais de uma pasta com o protocolo deste TCC; a exclusão foi interrompida.');
+   if(matches.size)verifiedFolder=await verifyProcessFolder([...matches][0]);
   }
  }
- const remove=async(id:string,inTree=false):Promise<void>=>{
-  if(done.has(id))return;if(protectedIds.has(id))throw Error('Um arquivo compartilhado com outro TCC ou modelo foi preservado.');
+ const candidates=new Set(input.fileIds.filter(id=>!id.startsWith('local_')));
+ const processQuery=`appProperties has { key='portalProcessId' and value='${escapeQuery(input.processId)}' }`;
+ const allJobs=[...jobIds];
+ for(let offset=0;offset<Math.max(1,allJobs.length);offset+=20){
+  const terms=[...(offset===0?[processQuery]:[]),...allJobs.slice(offset,offset+20).map(id=>`appProperties has { key='portalSignatureJobId' and value='${escapeQuery(id)}' }`)];
+  for(const id of await listIds(terms.map(term=>`(${term})`).join(' or ')))candidates.add(id);
+ }
+ const remove=async(id:string,parentId?:string):Promise<void>=>{
+  if(done.has(id))return;
+  if(protectedIds.has(id))throw Error('Um arquivo compartilhado com outro TCC ou modelo foi preservado.');
+  if(active.has(id))throw Error('Drive: foi encontrado um ciclo na árvore de arquivos.');
   const file=await get(id);if(!file){done.add(id);return;}
-  if(file.appProperties?.portalProcessId&&file.appProperties.portalProcessId!==input.processId)throw Error('Arquivo de outro processo foi preservado.');
-  if(!inTree&&file.appProperties?.portalProcessId!==input.processId)throw Error('Não foi possível comprovar o vínculo de um arquivo ao TCC.');
-  if(file.mimeType==='application/vnd.google-apps.folder'){
-   let pageToken='';do{const result=await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(`'${escapeQuery(id)}' in parents`)}&fields=files(id),nextPageToken&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true${pageToken?'&pageToken='+encodeURIComponent(pageToken):''}`,input.accessToken);const list=await result.json();for(const child of list.files||[])await remove(child.id,true);pageToken=list.nextPageToken||'';}while(pageToken);
-  }
-  const deleted=await fetch(`${DRIVE_API}/files/${encodeURIComponent(id)}?supportsAllDrives=true`,{method:'DELETE',headers:{Authorization:`Bearer ${input.accessToken}`},signal:AbortSignal.timeout(15000)});if(!deleted.ok&&deleted.status!==404)throw Error(`Drive: exclusão não confirmada (${deleted.status}).`);done.add(id);
+  const properties=file.appProperties||{};
+  if(properties.portalProcessId&&properties.portalProcessId!==input.processId)throw Error('Arquivo de outro processo foi preservado.');
+  if(['active-model','historical-model'].includes(String(properties.lifecycle||'')))throw Error('Um modelo documental foi preservado.');
+  const processMatches=properties.portalProcessId===input.processId;
+  if(properties.portalSignatureJobId&&!jobIds.has(properties.portalSignatureJobId)&&!processMatches)throw Error('Arquivo de outra solicitação de assinatura foi preservado.');
+  const jobMatches=properties.portal==='portal-tcc'&&jobIds.has(properties.portalSignatureJobId);
+  const parentMatches=Boolean(parentId&&Array.isArray(file.parents)&&file.parents.includes(parentId));
+  if(id!==verifiedFolder&&!processMatches&&!jobMatches&&!parentMatches)throw Error('Não foi possível comprovar o vínculo de um arquivo ao TCC.');
+  active.add(id);
+  try{
+   if(file.mimeType==='application/vnd.google-apps.folder')for(const childId of await listIds(`'${escapeQuery(id)}' in parents`))await remove(childId,id);
+   const deleted=await fetch(`${DRIVE_API}/files/${encodeURIComponent(id)}?supportsAllDrives=true`,{method:'DELETE',headers:{Authorization:`Bearer ${input.accessToken}`},signal:AbortSignal.timeout(15000)});
+   if(!deleted.ok&&deleted.status!==404&&deleted.status!==410)throw Error(`Drive: exclusão não confirmada (${deleted.status}).`);
+   done.add(id);
+  }finally{active.delete(id);}
  };
- if(verifiedFolder)await remove(verifiedFolder,true);
- for(const id of input.fileIds.filter(id=>!id.startsWith('local_')))await remove(id);
- // Find other app-owned versions that may no longer be the current binding.
- let pageToken='';do{const result=await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(`appProperties has { key='portalProcessId' and value='${escapeQuery(input.processId)}' }`)}&fields=files(id),nextPageToken&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true${pageToken?'&pageToken='+encodeURIComponent(pageToken):''}`,input.accessToken);const list=await result.json();for(const file of list.files||[])await remove(file.id);pageToken=list.nextPageToken||'';}while(pageToken);
+ if(verifiedFolder)await remove(verifiedFolder);
+ for(const id of candidates)await remove(id);
 }

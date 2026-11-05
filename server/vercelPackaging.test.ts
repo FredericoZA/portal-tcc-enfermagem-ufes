@@ -17,3 +17,13 @@ test('every deployed API function uses an explicit compiled artifact and package
     assert.match(config.functions['api/' + adapter].includeFiles, /pdf\.worker\.mjs/);
   }
 });
+
+test('deployment upload excludes local reviews, provider state and credential files', async () => {
+  const ignored = new Set((await readFile('.vercelignore', 'utf8')).split(/\r?\n/).map((line) => line.trim()));
+  for (const name of [
+    '.portal-data/', '.env*', 'output/', 'tmp/', '.vercel/', '.supabase/',
+    '.supabase-temp/', 'supabase/.temp/', '.playwright-cli/', '.playwright-mcp/',
+    '.npmrc', '*.pem', '*.key', '*.p12', '*.pfx', '*.keystore',
+    'credentials*.json', 'client_secret*.json', 'service-account*.json', 'service_account*.json',
+  ]) assert.ok(ignored.has(name), `Missing deployment exclusion: ${name}`);
+});

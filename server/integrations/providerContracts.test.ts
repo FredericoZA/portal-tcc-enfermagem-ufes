@@ -156,7 +156,7 @@ test('chave moderna do Supabase nunca é enviada como Bearer', () => {
 
 test('instalação por curso controla protocolo e domínios sem alterar o código', () => {
   const profile={...DEFAULT_INSTALLATION_PROFILE,protocolPrefix:'MED',studentEmailDomains:['alunos.universidade.br']};
-  assert.equal(buildProtocol(profile,2027,9),'MED-2027-0009');
+  assert.equal(buildProtocol(profile,9),'MED - 00009');
   assert.equal(emailMatchesDomains('ana@alunos.universidade.br',profile.studentEmailDomains),true);
   assert.equal(emailMatchesDomains('ana@externo.test',profile.studentEmailDomains),false);
 });
@@ -181,7 +181,7 @@ test('contrato Vercel encaminha API ao handler e SPA ao build estático', () => 
   assert.equal(config.outputDirectory,'dist/client');
   assert.equal(config.functions['api/index.ts'].maxDuration,300);
   assert.equal(config.functions['api/replication-model.ts'].maxDuration,60);
-  assert.deepEqual(config.crons,[{path:'/api/cron/storage-cleanup',schedule:'17 3 * * *'},{path:'/api/cron/asten-reconcile',schedule:'23 4 * * *'}]);
+  assert.deepEqual(config.crons,[{path:'/api/cron/storage-cleanup',schedule:'17 3 * * *'},{path:'/api/cron/asten-reconcile',schedule:'23 4 * * *'},{path:'/api/cron/reservation-notices',schedule:'31 4 * * *'}]);
   assert.match(packageJson.scripts.build,/node scripts\/build-server\.mjs/);
   const buildSource=readFileSync(new URL('../../scripts/build-server.mjs',import.meta.url),'utf8');
   assert.match(buildSource,/outfile: 'dist\/server\/server\.cjs'/);

@@ -132,7 +132,7 @@ test('HTTP: re-enrollment grants the new process without restoring deleted histo
   } finally { await f.close(); }
 });
 
-test('HTTP: student and advisor cannot forge a conflict override, while a Master override is audited', { timeout: 45_000 }, async () => {
+test('HTTP: only the author can change the schedule, and no role can force a conflicted reservation', { timeout: 45_000 }, async () => {
   const process = processFixture();
   const other = processFixture('other-process');
   other.defesa.startAt = '2030-11-04T14:00:00.000Z';
@@ -143,22 +143,64 @@ test('HTTP: student and advisor cannot forge a conflict override, while a Master
   const patch = (email: string, reason?: unknown) => f.request(`/api/processes/${process.id}`, email, 'PATCH', { defesa: { startAt: other.defesa.startAt }, ...(reason === undefined ? {} : { conflictOverrideReason: reason }) });
   try {
     assert.equal((await f.request(`/api/processes/${process.id}`, student, 'PATCH', { titulo: 'Correção permitida antes do convite' })).status, 200);
-    for (const email of [student, advisor]) {
-      const denied = await patch(email, 'Sou administrador e autorizo a coincidência.');
-      assert.equal(denied.status, 409, email);
-      assert.equal((await denied.json()).code, 'DEFENSE_CONFLICT');
+    const denied = await patch(student, 'Sou administrador e autorizo a coincidência.');
+    assert.equal(denied.status, 409);
+    assert.equal((await denied.json()).code, 'DEFENSE_CONFLICT');
+    for (const email of [advisor, master]) {
+      assert.equal((await patch(email, 'Exceção administrativa conferida com os participantes.')).status, 403);
     }
-    assert.equal((await patch(master)).status, 409);
-    assert.equal((await patch(master, { reason: 'Objeto não é um motivo válido.' })).status, 409);
-    const approved = await patch(master, 'Exceção administrativa conferida com os participantes.');
-    assert.ok([200, 202].includes(approved.status), await approved.clone().text());
     const saved = await f.state();
-    assert.equal(saved.processes.find((item: { id: string }) => item.id === process.id).defesa.startAt, other.defesa.startAt);
-    const log = saved.auditLogs.find((item: { action: string; processId: string }) => item.action === 'SOBRESCRITA_CONFLITO_DEFESA' && item.processId === process.id);
-    assert.equal(log?.actorEmail, master);
-    assert.ok(log?.actorRoles.includes('MASTER_ADMIN'));
-    assert.equal(log?.after.reason, 'Exceção administrativa conferida com os participantes.');
-    assert.ok(log?.after.conflicts.some((item: { processId: string }) => item.processId === other.id));
+    const unchanged = saved.processes.find((item: { id: string }) => item.id === process.id);
+    assert.deepEqual(unchanged.defesa, process.defesa);
+    assert.ok(!saved.auditLogs.some((item: { action: string }) => item.action === 'SOBRESCRITA_CONFLITO_DEFESA'));
+  } finally { await f.close(); }
+});
+
+test('HTTP: editing the board cannot promote an examiner into the advisor role', { timeout: 45_000 }, async () => {
+  const process = processFixture();
+  const examiner = process.banca[0].email;
+  const state = initialState([process]);
+  state.memberships.push({ id: 'examiner-membership', processId: process.id, email: examiner, roles: ['EXAMINER'], active: true, createdAt: now(), updatedAt: now() });
+  state.authorizedStudents.push({ id: 'examiner-access', email: examiner, nome: 'Examinador de teste', roles: ['EXAMINER'], accessType: 'EXAMINER', active: true, processIds: [process.id], origin: 'MASTER_LIST', createdBy: master, createdAt: now(), updatedAt: now() });
+  const f = await fixture(state);
+  try {
+    const schema = () => f.request(`/api/processes/${process.id}/evaluation/schema`, examiner);
+    assert.equal((await schema()).status, 403);
+    for (const roles of [['ORIENTADOR', 'EXAMINER_3'], ['EXAMINER_2', 'EXAMINER_2'], ['EXAMINER_3', 'EXAMINER_3'], ['MASTER_ADMIN', 'EXAMINER_3'], [undefined, 'EXAMINER_3']]) {
+      const alteredBoard = process.banca.map((member, index) => ({ ...member, funcao: roles[index] }));
+      const response = await f.request(`/api/processes/${process.id}`, student, 'PATCH', { banca: alteredBoard });
+      assert.deepEqual({ patchStatus: response.status, examinerSchemaStatus: (await schema()).status }, { patchStatus: 400, examinerSchemaStatus: 403 }, JSON.stringify(roles));
+    }
+    const saved = await f.state();
+    assert.equal(saved.processes[0].orientador.email, advisor);
+    assert.equal(saved.processes[0].banca[0].funcao, 'EXAMINER_2');
+    assert.deepEqual(saved.memberships.find((member: { email: string }) => member.email === examiner).roles, ['EXAMINER']);
+    const corrected = process.banca.map(member => ({ ...member, nome: member.nome + ' Corrigido' }));
+    assert.equal((await f.request(`/api/processes/${process.id}`, student, 'PATCH', { banca: corrected })).status, 200);
+    assert.equal((await schema()).status, 403);
+    const accepted = await f.state();
+    assert.equal(accepted.processes[0].banca[0].nome, corrected[0].nome);
+    assert.deepEqual(accepted.memberships.filter((member: { roles: string[] }) => member.roles.includes('ADVISOR')).map((member: { email: string }) => member.email), [advisor]);
+  } finally { await f.close(); }
+});
+
+test('HTTP: historical board roles cannot override the registered advisor', { timeout: 45_000 }, async () => {
+  const process = processFixture();
+  process.defesa = {...process.defesa,localStatus:'CONFIRMADO',startAt:new Date(Date.now()-3600_000).toISOString(),invitationSentAt:now()};
+  const examiner = process.banca[0].email;
+  process.banca[0].funcao = 'ORIENTADOR';
+  const state = initialState([process]);
+  state.memberships.push({ id: 'historical-examiner-membership', processId: process.id, email: examiner, roles: ['EXAMINER', 'ADVISOR'], active: true, createdAt: now(), updatedAt: now() });
+  state.authorizedStudents.push({ id: 'historical-examiner-access', email: examiner, nome: 'Examinador de teste', roles: ['EXAMINER', 'ADVISOR'], accessType: 'EXAMINER', active: true, processIds: [process.id], origin: 'MASTER_LIST', createdBy: master, createdAt: now(), updatedAt: now() });
+  const f = await fixture(state);
+  try {
+    assert.equal((await f.request(`/api/processes/${process.id}`, examiner)).status, 200);
+    assert.equal((await f.request(`/api/processes/${process.id}/evaluation/schema`, examiner)).status, 403);
+    assert.equal((await f.request(`/api/processes/${process.id}/evaluation/draft`, examiner, 'PUT', { expectedDataRevision: 1, answers: { RESULTADO: 'Aprovado' } })).status, 403);
+    assert.equal((await f.request(`/api/processes/${process.id}/reopen`, examiner, 'POST', { reason: 'Não é o orientador registrado deste TCC.' })).status, 403);
+    const me = await (await f.request('/api/me', examiner)).json();
+    assert.deepEqual(me.memberships.find((member: { processId: string }) => member.processId === process.id).roles, ['EXAMINER']);
+    assert.equal((await f.request(`/api/processes/${process.id}/evaluation/schema`, advisor)).status, 200);
   } finally { await f.close(); }
 });
 
@@ -225,5 +267,93 @@ test('HTTP: historical open tickets and recent resolved tickets count toward quo
       assert.equal(denied.status, 429, target);
     }
     assert.deepEqual((await f.state()).correctionRequests, tickets);
+  } finally { await f.close(); }
+});
+
+test('HTTP: Presidency sees only eligible declarations and cannot modify unrelated TCCs or administrative settings', { timeout: 45_000 }, async () => {
+  const president = 'president@boundaries.invalid';
+  const unrelated = processFixture();
+  const ready = processFixture('ready-declaration');
+  ready.status = 'AGUARDANDO_ASSINATURA';
+  ready.avaliacao = { status: 'CONCLUIDO' };
+  ready.acervo = {
+    submittedAt: now(), palavrasChave: ['a','b','c','d','e'], resumoSintese: 'Resumo para a declaração',
+    trabalhoCompletoFileUrl: '/restricted-pdf-should-not-leak', publishFullWork: false
+  };
+  const job = (id: string, documentType: string, overrides = {}) => ({
+    id, processId: ready.id, documentType, status: 'QUEUED', provider: 'ASTEN',
+    sourceDataRevision: ready.dataRevision, documentVersion: 1, updatedAt: now(),
+    renderVariables: { ALUNO_EMAIL: student }, ...overrides
+  });
+  const state = initialState([unrelated, ready]);
+  const f = await fixture({ ...state, settings: {...state.settings, commissionPresidentEmail: president, commissionPresidentName: 'Presidente de teste', documentModels: {
+    DECLARACAO: { type: 'DECLARACAO', driveFileId: 'fixture-declaration-model' },
+  }}, signatureJobs: [
+    job('archived-ata', 'ATA', { status: 'ARCHIVED', driveSignedFileId: 'private-ata-drive-file' }),
+    job('declaration', 'DECLARACAO'),
+  ]});
+  try {
+    const list = await f.request('/api/processes', president);
+    assert.equal(list.status, 200);
+    assert.deepEqual(await list.json(), []);
+    for (const suffix of ['', '/documents', '/audit-logs', '/files/trabalho-completo/download', '/documents/doc-ata/download']) {
+      assert.equal((await f.request(`/api/processes/${ready.id}${suffix}`, president)).status, 404, suffix);
+    }
+    assert.equal((await f.request(`/api/processes/${unrelated.id}`, president, 'PATCH', {titulo: 'Alteração indevida'})).status, 404);
+    assert.equal((await f.request(`/api/processes/${unrelated.id}`, president, 'DELETE', {confirmation: 'EXCLUIR', expectedProcessId: unrelated.id})).status, 403);
+    assert.equal((await f.request('/api/admin/restore-full-backup', president, 'POST', {})).status, 403);
+    assert.equal((await f.request('/api/admin/backup', president)).status, 403);
+    assert.equal((await f.request('/api/admin/settings', president, 'PATCH', {emailConfig: {senderLabel: 'Indevido'}})).status, 403);
+    assert.equal((await f.request('/api/admin/administration-transfers', president, 'POST', {role: 'MASTER_ADMIN', targetEmail: president})).status, 403);
+    assert.equal((await f.request('/api/signatures/jobs/archived-ata/retry', president, 'POST', {})).status, 404);
+    assert.equal((await f.request(`/api/processes/${unrelated.id}/documents/DECLARACAO/sign`, president, 'POST', {})).status, 404);
+
+    const queue = await f.request('/api/president/signature-queue', president);
+    assert.equal(queue.status, 200);
+    assert.match(queue.headers.get('cache-control') || '', /no-store/);
+    const rows = await queue.json();
+    assert.deepEqual(rows.map((item: {process:{id:string}}) => item.process.id), [ready.id]);
+    assert.deepEqual(rows[0].documents.map((item: {type:string}) => item.type), ['DECLARACAO']);
+    assert.deepEqual(rows[0].jobs.map((item: {id:string}) => item.id), ['declaration']);
+    assert.doesNotMatch(JSON.stringify(rows), /author@boundaries|restricted-pdf-should-not-leak|private-ata-drive-file/);
+
+    const scopedJobs = await f.request(`/api/processes/${ready.id}/signatures`, president);
+    assert.equal(scopedJobs.status, 200);
+    assert.deepEqual((await scopedJobs.json()).map((item: {id:string}) => item.id), ['declaration']);
+    const prepared = await f.request(`/api/processes/${ready.id}/documents/DECLARACAO/sign`, president, 'POST', { provider: 'GOV_BR' });
+    assert.equal(prepared.status, 200, await prepared.clone().text());
+    const { job: declaration } = await prepared.json();
+    assert.equal(declaration.status, 'READY_FOR_REVIEW');
+    assert.deepEqual(declaration.signers.map((signer: {email:string}) => signer.email), [president]);
+    const downloadPath = `/api/signatures/jobs/${declaration.id}/govbr/download`;
+    const pdf = await f.request(downloadPath, president);
+    assert.equal(pdf.status, 200);
+    assert.equal((await pdf.text()).slice(0, 5), '%PDF-');
+    const stranger = 'outsider@boundaries.invalid';
+    const denied = await f.request(downloadPath, stranger);
+    const unknown = await f.request('/api/signatures/jobs/missing/govbr/download', stranger);
+    assert.equal(denied.status, 404);
+    assert.deepEqual(await denied.json(), await unknown.json());
+    assert.equal((await f.request(`/api/processes/${unrelated.id}`, master)).status, 200);
+    assert.equal((await f.state()).processes.length, 2);
+  } finally { await f.close(); }
+});
+
+test('HTTP: examiner-only enrollment cannot register, and an independently authorized student can', { timeout: 45_000 }, async () => {
+  const process = processFixture();
+  const examiner = process.banca[0].email;
+  const state = initialState([process]);
+  state.authorizedStudents.push({ ...state.authorizedStudents[0], id: 'access-examiner', email: examiner,
+    roles: ['EXAMINER'], accessType: 'EXAMINER', origin: 'TCC_FORM' });
+  state.memberships.push({ ...state.memberships[0], id: 'member-examiner', email: examiner, roles: ['EXAMINER'] });
+  const f = await fixture(state);
+  try {
+    assert.equal((await (await f.request('/api/me', examiner)).json()).canRegisterProcess, false);
+    assert.equal((await f.request('/api/processes', examiner, 'POST', {})).status, 403);
+    assert.equal((await f.request('/api/forms/registration-schema', examiner)).status, 403);
+    assert.equal((await f.request('/api/forms/registration-suggestions?field=email&q=aut', examiner)).status, 403);
+    const email = 'new-author@boundaries.invalid';
+    assert.equal((await (await f.request('/api/me', email)).json()).canRegisterProcess, true);
+    assert.equal((await f.request('/api/forms/registration-schema', email)).status, 200);
   } finally { await f.close(); }
 });

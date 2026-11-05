@@ -15,6 +15,7 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
   const custom = { id: 'form-extra-rc10', title: 'Conferência adicional', targetRole: 'Orientador', isActive: true, questions: [
     { id: 'choice', fieldKey: 'ESCOLHA', label: 'Escolha', fieldType: 'select', required: true, options: ['Sim', 'Não'] },
     { id: 'accepted', fieldKey: 'ACEITO', label: 'Confirmo', fieldType: 'checkbox', required: true },
+    { id: 'old-cpf', fieldKey: 'CAMPO_PESSOAL', label: 'CPF', fieldType: 'text', required: true },
   ] };
   settings.integrationStudio = { ...settings.integrationStudio, formTemplates: [...(settings.integrationStudio?.formTemplates || []), custom] } as any;
   const local = structuredClone(p);
@@ -25,14 +26,18 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
   const memberships = DEMO_MEMBERSHIPS.filter(m => m.processId === p.id);
   const archived=structuredClone(p);archived.id='fixture-reopen-archived';archived.status='AGUARDANDO_DADOS_FINAIS';archived.avaliacao.status='CONCLUIDO';archived.acervo.firstSubmittedAt=undefined;
   const archivedJob={id:'fixture-archived-ata',processId:archived.id,documentType:'ATA',provider:'ASTEN',documentVersion:1,sourceDataRevision:archived.dataRevision,status:'ARCHIVED',driveSignedFileId:'fixture-signed-ata',signers:[]};
-  await writeFile(path.join(directory, 'portal-state.json'), JSON.stringify({ settings, processes: [p, local,archived],signatureJobs:[archivedJob], memberships: [...memberships, ...[local,archived].flatMap(process=>memberships.map(m => ({ ...m, id: m.id + '-'+process.id, processId: process.id })))] }));
+  const auto={...structuredClone(p),id:'fixture-asten-intent',protocolo:'TESTE-ASTEN-AUTO'};
+  const resumed={...structuredClone(archived),id:'fixture-asten-sent',protocolo:'TESTE-ASTEN-SENT',astenSignatureIntent:{documentType:'ATA' as const,revision:archived.dataRevision,queuedAt:'2026-01-01T00:00:00Z'}};
+  const sentJob={...archivedJob,id:'fixture-sent-ata',processId:resumed.id,status:'SENT',driveSignedFileId:undefined,providerEnvelopeId:'12345'};
+  const originalJobs=[archivedJob,sentJob];
+  await writeFile(path.join(directory, 'portal-state.json'), JSON.stringify({ settings, processes: [p,local,archived,auto,resumed],signatureJobs:originalJobs, memberships: [...memberships, ...[local,archived,auto,resumed].flatMap(process=>memberships.map(m => ({ ...m, id: m.id + '-'+process.id, processId: process.id })))] }));
   const port = 41000 + Math.floor(Math.random() * 1000);
   const child = spawn(process.execPath, ['--import', 'tsx', 'server.ts'], {
     cwd: fileURLToPath(new URL('..', import.meta.url)),
     env: { ...process.env, NODE_ENV: 'development', PORT: String(port), PORTAL_DATA_DIR: directory,
       PORTAL_SESSION_SECRET: 'test-session-secret-0123456789-abcdef', PORTAL_OTP_PEPPER: 'test-otp-pepper-0123456789-abcdef',
       PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'true', PORTAL_ALLOW_LOCAL_OTP_STORE: 'true', PORTAL_ALLOW_LOCAL_SECRET_STORE: 'true',
-      PORTAL_TEST_DOCUMENT_RENDERER:'true', PORTAL_OTP_DELIVERY_MODE: 'log', ASTEN_INTEGRATION_ENABLED: 'false', PORTAL_PERSISTENCE_PROVIDER: 'local_file',
+      PORTAL_TEST_DOCUMENT_RENDERER:'true', PORTAL_OTP_DELIVERY_MODE: 'log', ASTEN_INTEGRATION_ENABLED: 'false', ASTEN_AUTOMATIC_WORKFLOW_ENABLED:'true', PORTAL_PERSISTENCE_PROVIDER: 'local_file',
       SUPABASE_URL: '', SUPABASE_SERVICE_ROLE_KEY: '', SUPABASE_SECRET_KEY: '',
     }, stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -70,21 +75,27 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     assert.equal(customSaved.status, 202);
     assert.equal(customSaved.body.workflowPending, true);
     assert.equal(customSaved.body.formSnapshot.title, custom.title);
+    assert.ok(!customSaved.body.formSnapshot.questions.some((q:any)=>q.label==='CPF'));
     const repeated = await request(customRoute, master, formBody);
     assert.equal(repeated.status, 202);
     assert.equal(repeated.body.id, customSaved.body.id);
-    const confirmed = await request(`/api/processes/${local.id}/confirm-location`, p.aluno1.email, { local: local.defesa.local, confirmationReceived: true });
-    assert.equal(confirmed.status, 202);
-    assert.equal(confirmed.body.dataRevision, local.dataRevision);
-    assert.equal(confirmed.body.defesa.localConfirmedAt, local.defesa.localConfirmedAt);
-    assert.equal((await request(`/api/processes/${local.id}/confirm-location`, p.aluno1.email, { local: 'Outro local', confirmationReceived: true })).status, 409);
+    const confirmed = await request(`/api/processes/${local.id}/confirm-location`, master, { local: local.defesa.local, confirmationReceived: true });
+    assert.equal(confirmed.status, 404);
+    assert.equal(confirmed.body.code,'API_NOT_FOUND');
+    const unchanged=await request(`/api/processes/${local.id}`,master);
+    assert.equal(unchanged.body.dataRevision,local.dataRevision);
+    assert.equal(unchanged.body.defesa.localConfirmedAt,local.defesa.localConfirmedAt);
+    assert.equal((await request(`/api/processes/${local.id}/confirm-location`, master, { local: 'Outro local', confirmationReceived: true })).status, 404);
     assert.equal((await request('/api/does-not-exist')).status, 404);
     assert.equal((await request(route + '/schema', p.aluno1.email)).status, 403);
+    assert.equal((await request(route + '/schema', master)).status, 403);
+    assert.equal((await request(`/api/processes/${local.id}/evaluation/schema`)).body.code, 'CONCEPT_STAGE_NOT_RELEASED');
     const schema = await request(route + '/schema');
     assert.equal(schema.status, 200);
     assert.equal(schema.body.studio.docTemplates, undefined);
     const body = { signatureProvider:'GOV_BR',dataConfirmed: true, expectedDataRevision: p.dataRevision, expectedSchemaRevision: schema.body.studio.revision, resultadoCode: 'APROVADO', parecer: 'Avaliação realizada e dados conferidos.' };
     assert.equal((await request(route, p.aluno1.email, body)).status, 403);
+    assert.equal((await request(route, master, body)).status, 403);
     assert.equal((await request(route, p.orientador.email, { ...body, dataConfirmed: false })).body.code, 'DATA_REVIEW_REQUIRED');
     assert.equal((await request(route, p.orientador.email, { ...body, expectedDataRevision: 0 })).status, 409);
     assert.equal((await request(route,p.orientador.email,body)).body.code,'ATA_PREVIEW_REQUIRED');
@@ -101,14 +112,16 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     const draftInput={answers:{RESULTADO:'APROVADO',PARECER:body.parecer},documentText,expectedDataRevision:p.dataRevision};
     assert.equal((await saveDraft(p.aluno1.email,draftInput)).status,403);
     assert.equal((await saveDraft(p.orientador.email,{...draftInput,documentText:'x'.repeat(60001)})).status,400);
-    assert.equal((await saveDraft(p.orientador.email,draftInput)).status,200);
+    const savedDraft=await saveDraft(p.orientador.email,{...draftInput,answers:{...draftInput.answers,CPF:'NOVO-DESCARTAR',ORIENTADOR_SIAPE:'NOVO-DESCARTAR',CAMPO_NAO_PUBLICADO:'NOVO-DESCARTAR'}});
+    assert.equal(savedDraft.status,200);assert.doesNotMatch(JSON.stringify(savedDraft.body),/NOVO-DESCARTAR/);
     const draft=await request(route+'/draft');assert.equal(draft.body.documentText,documentText);
     assert.equal((await request(route+'/draft',p.aluno1.email)).status,403);
 
 
     assert.equal((await request(route,p.orientador.email,{...body,parecer:'Parecer alterado após a prévia.',previewToken:preview.body.previewToken})).body.code,'ATA_PREVIEW_REQUIRED');
     const earlyPreview=await request(`/api/processes/${local.id}/evaluation/preview`,p.orientador.email,body);
-    assert.equal(earlyPreview.status,200,JSON.stringify(earlyPreview.body));
+    assert.equal(earlyPreview.status,409,JSON.stringify(earlyPreview.body));
+    assert.equal(earlyPreview.body.code,'CONCEPT_STAGE_NOT_RELEASED');
     const saved = await request(route, p.orientador.email, {...body,previewToken:preview.body.previewToken});
     assert.equal(saved.status, 200); // Registration no longer contacts a signature provider.
     assert.equal(saved.body.avaliacao.notaFinal, undefined);
@@ -129,11 +142,12 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     assert.equal(disk.studioFormSubmissions[0].formSnapshot.questions[0].label, 'Escolha');
     assert.equal(disk.settings.portalAppearance, undefined);
     assert.equal(disk.processes[0].avaliacao.notaFinal, undefined);
-    assert.deepEqual(disk.signatureJobs,[archivedJob],'Registering evaluation must preserve the historical job and not create an Asten or Gov.br job.');
+    assert.deepEqual(disk.signatureJobs,JSON.parse(JSON.stringify(originalJobs)),'Registering evaluation must preserve the historical jobs and not create an Asten or Gov.br job.');
+    assert.equal(disk.processes[0].astenSignatureIntent,undefined,'a opção Gov.br não enfileira Asten');
     assert.equal((disk.formArchiveJobs||[]).some((job:any)=>job.formType==='AVALIACAO'),false,'A avaliação integrada não gera outro formulário em PDF.');
     const reopenRoute=`/api/processes/${p.id}/reopen`,reason={reason:'Correção do parecer registrado na defesa.'};
     assert.equal((await request(reopenRoute,p.aluno1.email,reason)).status,403);
-    assert.equal((await request(reopenRoute,'presidente@portal.local',reason)).status,403);
+    assert.equal((await request(reopenRoute,'presidente@portal.local',reason)).status,404);
     const reopened=await request(reopenRoute,p.orientador.email,reason);
     assert.equal(reopened.status,200,JSON.stringify(reopened.body));assert.equal(reopened.body.avaliacao.status,'PENDENTE');
     assert.equal((await request(reopenRoute,'master@portal.local',reason)).status,200);
@@ -145,8 +159,30 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     const historicalSaved=await request(`/api/processes/${archived.id}/evaluation`,p.orientador.email,{...revisedBody,previewToken:historicalPreview.body.previewToken});
     assert.equal(historicalSaved.status,200,JSON.stringify(historicalSaved.body));
     assert.equal(historicalSaved.body.avaliacao.status,'CONCLUIDO');
+    assert.equal(historicalSaved.body.avaliacao.documentRevision,historicalSaved.body.dataRevision);
+    const staleArchiveUpload=await request(`/api/processes/${archived.id}/files/trabalho-completo`,p.aluno1.email,{});
+    assert.equal(staleArchiveUpload.body.code,'ATA_SIGNATURE_REQUIRED','a ata assinada antes da reabertura não libera o repositório');
+    const autoRoute=`/api/processes/${auto.id}/evaluation`;
+    const autoDraft=await fetch(base+autoRoute+'/draft',{method:'PUT',headers:{'content-type':'application/json','x-demo-user-email':p.orientador.email},body:JSON.stringify(draftInput)});
+    assert.equal(autoDraft.status,200);
+    assert.equal((await request(`/api/processes/${auto.id}`)).body.astenSignatureIntent,undefined,'rascunho não cria intenção de envio');
+    const autoBody={...body,signatureProvider:'ASTEN'};
+    const autoPreview=await request(autoRoute+'/preview',p.orientador.email,autoBody);
+    assert.equal(autoPreview.status,200);
+    const autoResult=await request(autoRoute,p.orientador.email,{...autoBody,previewToken:autoPreview.body.previewToken});
+    assert.ok([200,202].includes(autoResult.status),JSON.stringify(autoResult.body));
+    assert.equal(autoResult.body.astenSignatureIntent.documentType,'ATA');
+    assert.equal(autoResult.body.astenSignatureIntent.revision,autoResult.body.avaliacao.documentRevision);
+    assert.equal((await request(autoRoute,p.orientador.email,{...autoBody,previewToken:autoPreview.body.previewToken})).status,409);
+    for(let attempt=0;attempt<2;attempt++){
+      const maintenance=await request('/api/admin/workflow/maintenance',master,{});
+      assert.equal(maintenance.status,200,JSON.stringify(maintenance.body));
+      assert.ok(maintenance.body.configurationErrors.some((item:string)=>item.includes(auto.protocolo)&&item.includes('Asten')));
+    }
     const finalDisk=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));
-    assert.deepEqual(finalDisk.signatureJobs,[archivedJob],'the signed previous ATA remains immutable after corrected evaluation');
+    assert.deepEqual(finalDisk.signatureJobs,JSON.parse(JSON.stringify(originalJobs)),'a manutenção sem integração não envia nem duplica uma assinatura conhecida');
+    assert.equal(finalDisk.processes.find((item:any)=>item.id===resumed.id).astenSignatureIntent,undefined,'retomada reconhece envelope já encaminhado');
+    assert.ok(finalDisk.processes.find((item:any)=>item.id===auto.id).astenSignatureIntent.attemptedAt,'intenção persiste para próxima tentativa');
 
   } finally {
     if (child.exitCode === null) {

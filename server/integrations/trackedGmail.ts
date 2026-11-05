@@ -1,9 +1,12 @@
 import { createHash } from 'crypto';
 import type { EmailDeliveryAttempt, EmailDeliveryRecord, EmailDeliveryStatus, WorkflowEventCode } from '../../src/types/automation';
+import { emailAuditCopy, type EmailAuditCopyMode } from './emailAuditCopy';
+import { GmailDeliveryError } from './gmailDeliveryError';
 
 export interface GmailAcceptedResponse {
   id?: string;
   threadId?: string;
+  sender?: string;
 }
 
 export interface TrackedEmailInput {
@@ -17,6 +20,11 @@ export interface TrackedEmailInput {
   templateId?: string;
   recipient: string;
   cc?: string[];
+  workflowCc?: string[];
+  auditCopyMode?: EmailAuditCopyMode;
+  auditCopyEmail?: string;
+  requestedBy?: string;
+  sender?: string;
   subject: string;
   text: string;
   html?: string;
@@ -33,11 +41,34 @@ export interface EmailDeliveryJournal {
 export interface TrackedGmailPorts {
   send(input: { threadId?:string; messageId?:string; inReplyTo?:string; to: string; cc?: string[]; subject: string; text: string; html?: string; attachments?: Array<{ fileName: string; mimeType: string; content: Buffer }> }): Promise<GmailAcceptedResponse | void>;
   journal: EmailDeliveryJournal;
+  auditCopyEmail?: string;
   now?: () => Date;
 }
 
 const cleanEmail = (value: string): string => value.trim().toLowerCase();
 const hash = (value: string | Buffer): string => createHash('sha256').update(value).digest('hex');
+const normalizedCopies = (copies: readonly string[]): string[] => [...new Set(copies.map(cleanEmail))];
+
+export function workflowEmailCopies(record: Pick<EmailDeliveryRecord,'cc'|'workflowCc'|'auditCopyEmail'>,knownWorkflowRecipients?:readonly string[]):string[] {
+  if(record.workflowCc!==undefined)return normalizedCopies(record.workflowCc);
+  const previousAudit=record.auditCopyEmail?cleanEmail(record.auditCopyEmail):undefined;
+  const known=new Set(normalizedCopies(knownWorkflowRecipients||[]));
+  return normalizedCopies(record.cc||[]).filter(email=>email!==previousAudit||known.has(email));
+}
+
+function originalWorkflowCopies(input:TrackedEmailInput,record:EmailDeliveryRecord):string[]{
+  if(input.workflowCc!==undefined)return normalizedCopies(input.workflowCc);
+  if(input.cc===undefined)return workflowEmailCopies(record);
+  const copies=normalizedCopies(input.cc),snapshot=normalizedCopies(record.cc||[]);
+  if(copies.length===snapshot.length&&copies.every(email=>snapshot.includes(email)))return workflowEmailCopies(record);
+  return copies;
+}
+
+function currentAuditCopyEmail(input:TrackedEmailInput,ports:TrackedGmailPorts,record:EmailDeliveryRecord):string|undefined{
+  if(Object.hasOwn(ports,'auditCopyEmail'))return ports.auditCopyEmail;
+  if(Object.hasOwn(input,'auditCopyEmail'))return input.auditCopyEmail;
+  return record.auditCopyEmail;
+}
 
 export function emailDeliveryIdempotencyKey(input: TrackedEmailInput): string {
   if (input.idempotencyKey) return input.idempotencyKey;
@@ -50,11 +81,15 @@ export function retryDelayMilliseconds(attemptNumber: number): number {
   return Math.min(24 * 60 * 60_000, 60_000 * (2 ** exponent));
 }
 
-function classifyFailure(error: unknown): { code: string; message: string; retryable: boolean } {
+function classifyFailure(error: unknown): { code: string; message: string; retryable: boolean; uncertain: boolean } {
   const message = error instanceof Error ? error.message : 'Falha desconhecida no Gmail.';
+  if (!(error instanceof GmailDeliveryError) || error.deliveryOutcome === 'UNCERTAIN') {
+    return {code:'GMAIL_DELIVERY_UNCERTAIN',message:message.slice(0,500),retryable:false,uncertain:true};
+  }
   const normalized = message.toLowerCase();
-  const permanent = normalized.includes('invalid recipient') || normalized.includes('destinatário inválido') || normalized.includes('forbidden') || normalized.includes('permission');
-  return { code: permanent ? 'PERMANENT_GMAIL_ERROR' : 'TRANSIENT_GMAIL_ERROR', message: message.slice(0, 500), retryable: !permanent };
+  const rejectedPermanently = error.deliveryOutcome === 'REJECTED' && error.providerStatus !== undefined && error.providerStatus < 500 && ![408,409,425,429].includes(error.providerStatus);
+  const permanent = rejectedPermanently || normalized.includes('invalid recipient') || normalized.includes('destinatário inválido') || normalized.includes('forbidden') || normalized.includes('permission');
+  return { code: permanent ? 'PERMANENT_GMAIL_ERROR' : 'TRANSIENT_GMAIL_ERROR', message: message.slice(0, 500), retryable: !permanent,uncertain:false };
 }
 
 export function initialEmailDelivery(input: TrackedEmailInput, now = new Date()): EmailDeliveryRecord {
@@ -72,6 +107,11 @@ export function initialEmailDelivery(input: TrackedEmailInput, now = new Date())
     idempotencyKey: key,
     recipient: cleanEmail(input.recipient),
     cc: input.cc?.map(cleanEmail),
+    workflowCc: normalizedCopies(input.workflowCc??input.cc??[]),
+    auditCopyMode: input.auditCopyMode,
+    auditCopyEmail: input.auditCopyEmail,
+    requestedBy: input.requestedBy ? cleanEmail(input.requestedBy) : undefined,
+    sender: input.sender ? cleanEmail(input.sender) : undefined,
     replyThreadId:input.replyThreadId,
     replyMessageId:input.replyMessageId,
     subject: input.subject.trim().slice(0, 998),
@@ -86,12 +126,40 @@ export function initialEmailDelivery(input: TrackedEmailInput, now = new Date())
   };
 }
 
+const inFlightDeliveries = new WeakMap<EmailDeliveryJournal, Map<string, Promise<EmailDeliveryRecord>>>();
+
 export async function dispatchTrackedEmail(input: TrackedEmailInput, ports: TrackedGmailPorts): Promise<EmailDeliveryRecord> {
   const key = emailDeliveryIdempotencyKey(input);
+  let active = inFlightDeliveries.get(ports.journal);
+  if (!active) { active = new Map(); inFlightDeliveries.set(ports.journal, active); }
+  const previous = active.get(key);
+  if (previous) return previous;
+  const pending = dispatchClaimedEmail(input, ports, key);
+  active.set(key, pending);
+  try { return await pending; } finally { active.delete(key); }
+}
+
+async function dispatchClaimedEmail(input: TrackedEmailInput, ports: TrackedGmailPorts, key: string): Promise<EmailDeliveryRecord> {
   const existing = await ports.journal.findByIdempotencyKey(key);
   if (existing?.status === 'ACCEPTED_BY_GMAIL') return existing;
   const now = (ports.now || (() => new Date()))();
-  const record = existing || initialEmailDelivery(input, now);
+  const record = existing ? structuredClone(existing) : initialEmailDelivery(input, now);
+  if (record.dispatchState === 'SENDING' || record.dispatchState === 'UNCERTAIN') {
+    const leased = record.dispatchState === 'SENDING' && record.dispatchLeaseUntil && Date.parse(record.dispatchLeaseUntil) > now.getTime();
+    if (leased) return record;
+    if (record.dispatchState === 'SENDING') {
+      record.dispatchState = 'UNCERTAIN';
+      record.status = 'FAILED';
+      record.nextRetryAt = undefined;
+      record.dispatchLeaseUntil = undefined;
+      record.updatedAt = now.toISOString();
+      record.attempts.push({number:record.attempts.length+1,startedAt:record.dispatchStartedAt || record.updatedAt,completedAt:record.updatedAt,status:'FAILED',errorCode:'GMAIL_DELIVERY_UNCERTAIN',errorMessage:'A tentativa foi iniciada, mas o retorno do Gmail não foi confirmado. Confira os envios antes de autorizar nova tentativa.'});
+      await ports.journal.save(record);
+    }
+    return record;
+  }
+  record.requestedBy ||= input.requestedBy ? cleanEmail(input.requestedBy) : undefined;
+  record.sender ||= input.sender ? cleanEmail(input.sender) : undefined;
   if (record.attempts.length >= record.maxAttempts) {
     record.status = 'FAILED';
     record.nextRetryAt = undefined;
@@ -101,17 +169,38 @@ export async function dispatchTrackedEmail(input: TrackedEmailInput, ports: Trac
   }
   if (record.nextRetryAt && new Date(record.nextRetryAt).getTime() > now.getTime()) return record;
 
+  // Preserve the original key: enabling audit copies must never resend accepted mail.
+  // Only a real new attempt can change the recipient/body snapshot in the ledger.
+  const workflowCc=originalWorkflowCopies(input,record);
+  Object.assign(record, {workflowCc}, emailAuditCopy({
+    recipient: record.recipient, cc: workflowCc, text: input.text, html: input.html,
+    auditCopyMode: input.auditCopyMode || record.auditCopyMode,
+    auditCopyEmail: currentAuditCopyEmail(input,ports,record),
+  }));
   const attemptNumber = record.attempts.length + 1;
   const startedAt = now.toISOString();
+  record.renderedText = input.text;
+  record.renderedHtml = input.html;
+  record.status = 'RETRY';
+  record.dispatchState = 'SENDING';
+  record.dispatchStartedAt = startedAt;
+  record.dispatchLeaseUntil = new Date(now.getTime()+120_000).toISOString();
+  record.nextRetryAt = undefined;
+  await ports.journal.save(record);
   try {
     const response = (await ports.send({ threadId:record.replyThreadId,messageId:record.rfcMessageId,inReplyTo:record.replyMessageId,to: record.recipient, cc: record.cc, subject: record.subject, text: input.text, html: input.html, attachments: input.attachments })) || {};
     const completedAt = (ports.now || (() => new Date()))().toISOString();
-    const attempt: EmailDeliveryAttempt = { number: attemptNumber, startedAt, completedAt, status: 'ACCEPTED_BY_GMAIL', gmailMessageId: response?.id, gmailThreadId: response?.threadId };
+    const sender = response.sender ? cleanEmail(response.sender) : undefined;
+    const attempt: EmailDeliveryAttempt = { number: attemptNumber, startedAt, completedAt, status: 'ACCEPTED_BY_GMAIL', gmailMessageId: response?.id, gmailThreadId: response?.threadId, sender };
     record.attempts.push(attempt);
     record.status = 'ACCEPTED_BY_GMAIL';
     record.acceptedAt = completedAt;
+    if (sender) record.sender = sender;
     record.nextRetryAt = undefined;
     record.updatedAt = completedAt;
+    record.dispatchState = undefined;
+    record.dispatchStartedAt = undefined;
+    record.dispatchLeaseUntil = undefined;
   } catch (error) {
     const completed = (ports.now || (() => new Date()))();
     const failure = classifyFailure(error);
@@ -119,6 +208,9 @@ export async function dispatchTrackedEmail(input: TrackedEmailInput, ports: Trac
     const status: EmailDeliveryStatus = canRetry ? 'RETRY' : 'FAILED';
     record.attempts.push({ number: attemptNumber, startedAt, completedAt: completed.toISOString(), status, errorCode: failure.code, errorMessage: failure.message });
     record.status = status;
+    record.dispatchState = failure.uncertain ? 'UNCERTAIN' : undefined;
+    record.dispatchLeaseUntil = undefined;
+    if (!failure.uncertain) record.dispatchStartedAt = undefined;
     record.nextRetryAt = canRetry ? new Date(completed.getTime() + retryDelayMilliseconds(attemptNumber)).toISOString() : undefined;
     record.updatedAt = completed.toISOString();
   }
@@ -129,7 +221,7 @@ export async function dispatchTrackedEmail(input: TrackedEmailInput, ports: Trac
 export function dueEmailRetries(records: EmailDeliveryRecord[], now = new Date()): EmailDeliveryRecord[] {
   const timestamp = now.getTime();
   return records
-    .filter((record) => record.status === 'RETRY' && record.attempts.length < record.maxAttempts && (!record.nextRetryAt || new Date(record.nextRetryAt).getTime() <= timestamp))
+    .filter((record) => record.status === 'RETRY' && !record.dispatchState && record.attempts.length < record.maxAttempts && (!record.nextRetryAt || new Date(record.nextRetryAt).getTime() <= timestamp))
     .sort((a, b) => String(a.nextRetryAt || a.createdAt).localeCompare(String(b.nextRetryAt || b.createdAt)));
 }
 

@@ -40,7 +40,8 @@ const phases = [
       'Antes do pedido, alunos e orientador podem conferir mapa de salas, aulas, eventos, reservas e horários do prédio. Em caso de dúvida, a consulta ao departamento evita retrabalho.',
       'O departamento homologa auditório e sala de reuniões. Outro local é confirmado pelo orientador, que viabiliza a reserva junto ao espaço escolhido.',
       'O pedido bloqueia apenas o local selecionado durante o intervalo da defesa, de 1h30. A recusa libera esse intervalo; o Portal não controla reservas externas.',
-      'Alunos e orientador recebem o resultado. Para corrigir o agendamento, use Alterar reserva em Dados do processo; após recusa, Solicitar nova data. O novo pedido exige outro aceite.',
+      'Enquanto aguarda resposta, o agendamento aparece em vermelho no Calendário, com (aguardando confirmação) após o horário. O aceite retira o aviso; a recusa retira o agendamento e mantém o código do TCC.',
+      'Autores e orientador recebem o resultado. Para corrigir o agendamento, um dos autores usa Alterar reserva em Dados do processo ou Refazer reserva após uma recusa. O novo pedido exige outro aceite.',
     ],
     gate: 'Aceite do responsável registrado para a data, o horário e o local atuais.',
     result: 'Reserva confirmada e comprovante disponível em Documentos administrativos.',
@@ -68,11 +69,11 @@ const phases = [
     where: 'Meus TCCs → TCC → Conceito e Ata',
     summary: 'A partir do horário da defesa, registre o conceito e o parecer para a documentação.',
     details: [
-      'Os conceitos são Aprovado, Aprovado com ressalva e Reprovado. A avaliação e o lançamento da nota são feitos no Portal do Professor, em professor.ufes.br.',
-      'Clique em Visualizar ata, confira a prévia e confirme a conferência. Use Registrar avaliação e ir para documentos.',
-      'Em Documentos administrativos, escolha Asten ou Gov.br na caixa da ata. Somente o orientador assina. Registrar o conceito não solicita assinatura automaticamente.',
+      'Registre o conceito deliberado pela banca: Aprovado, Aprovado com ressalva ou Reprovado. Registre as ressalvas no parecer, quando houver. O docente lança notas e frequência no Portal do Professor, em professor.ufes.br.',
+      'Clique em Visualizar ata, confira a prévia e confirme a conferência. Use Registrar conceito e ata e ir para documentos.',
+      'Em Documentos administrativos, escolha Asten ou Gov.br na caixa da ata. Orientador e dois examinadores assinam a mesma ata; registrar o conceito não solicita assinatura automaticamente.',
     ],
-    gate: 'Ata assinada pelo orientador e arquivada; escolher um método ou enviar um PDF ainda não conclui a assinatura.',
+    gate: 'Ata assinada pelo orientador e pelos dois examinadores e arquivada; escolher um método ou enviar um PDF ainda não conclui a assinatura.',
     result: 'Entrega final liberada aos autores, com aviso também ao orientador.',
   },
   {
@@ -92,7 +93,7 @@ const phases = [
   },
   {
     n: 6,
-    title: 'Assinar o termo, se houver',
+    title: 'Assinar o termo de autorização',
     actor: 'Todos os autores e orientador',
     icon: FileSignature,
     where: 'Documentos administrativos → Termo de Autorização e Publicação',
@@ -103,7 +104,7 @@ const phases = [
       'Pelo Gov.br, o orientador reúne todas as assinaturas no mesmo PDF, assina por último e devolve o arquivo completo. O Master registra a conferência antes do arquivamento.',
     ],
     gate: 'Termo assinado e arquivado, quando houver publicação autorizada.',
-    result: 'Escolhas de publicação formalizadas; declaração da banca liberada quando as demais entregas estiverem resolvidas.',
+    result: 'Quando houver publicação autorizada, o arquivamento do termo libera a etapa da declaração da banca.',
   },
   {
     n: 7,
@@ -114,7 +115,7 @@ const phases = [
     summary: 'A presidência da comissão assina a declaração de participação na banca.',
     details: [
       'A declaração depende da entrega final, da ata arquivada e do termo assinado e arquivado, quando aplicável.',
-      'A presidência da comissão assina a declaração; o orientador preside a sessão e assina a ata. São responsabilidades diferentes.',
+      'A presidência da comissão assina a declaração; o orientador preside a sessão e assina a ata com os dois examinadores. São responsabilidades diferentes.',
       'Pelo Asten, solicite e siga o e-mail de assinatura. Pelo Gov.br, baixe, assine e devolva o PDF; a conferência administrativa ainda é necessária.',
     ],
     gate: 'Declaração assinada e arquivada, sem pendências obrigatórias.',
@@ -149,7 +150,7 @@ export const FluxoTccPage: React.FC = () => (
 
     <section className="portal-layer-panel p-3 sm:p-5">
       <h2 className="mb-2 text-sm font-bold text-slate-950">Passos do processo</h2>
-      <p className="mb-5 text-xs leading-5 text-slate-700">Os passos abaixo mostram quem faz cada ação. Na ficha do TCC, o indicador acompanha as etapas Cadastro, Agendamento, Convite e Banca, Defesa, Avaliação, Assinaturas, Documentos e Concluído. Ele avança conforme os registros e arquivamentos; apenas selecionar um método de assinatura não conclui a etapa.</p>
+      <p className="mb-5 text-xs leading-5 text-slate-700">Os passos abaixo mostram quem faz cada ação. Na ficha do TCC, o indicador acompanha as etapas Cadastro, Agendamento, Convite e Banca, Defesa, Conceito e Ata, Assinaturas, Documentos e Concluído. Ele avança conforme os registros e arquivamentos; apenas selecionar um método de assinatura não conclui a etapa.</p>
       <div className="portal-flow-snake" aria-label="Passos para concluir o TCC">
         {phases.map(({ n, title, actor, icon: Icon, where, summary, details, gate, result }) => (
           <article key={n} className="portal-flow-step portal-layer-card flex h-full flex-col rounded-2xl border border-slate-300 p-4 shadow-sm">

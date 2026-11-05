@@ -1,15 +1,19 @@
+import {DOCUMENT_ISSUER_LINES,documentHeaderLines} from './institutionalIdentity';
+import {drawInstitutionalPdfHeader} from './institutionalPdfHeader';
 /**
  * Declaração pública institucional aprovada: modelo A4 para preenchimento à mão.
- * A comissão de TCC integra o Departamento de Enfermagem; a declaração é
+ * A Comissão de Trabalho de Conclusão de Curso integra o Departamento de Enfermagem; a declaração é
  * assinada individualmente pelo(a) professor(a) orientador(a).
  *
- * Não contém logomarcas, não consulta dados pessoais e não usa serviços externos.
+ * Usa o brasão institucional local; não consulta dados pessoais nem serviços externos.
  */
-export async function createBlankAttendanceDeclarationPdf(): Promise<Uint8Array> {
+export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
   const pdf = await PDFDocument.create();
-  pdf.setTitle('Declaração de comparecimento - Comissão de TCC');
-  pdf.setAuthor('Departamento de Enfermagem - Comissão de TCC - CCS/UFES');
+  const imageBytes=crestBytes||new Uint8Array(await (async()=>{const response=await fetch('/national-arms.png');if(!response.ok)throw new Error('Não foi possível carregar o brasão de armas.');return response.arrayBuffer();})());
+  const crest=await pdf.embedPng(imageBytes);
+  pdf.setTitle('Declaração de comparecimento - Comissão de Trabalho de Conclusão de Curso');
+  pdf.setAuthor('Departamento de Enfermagem - Comissão de Trabalho de Conclusão de Curso - CCS/UFES');
   pdf.setSubject('Modelo para preenchimento manual e assinatura do professor orientador');
 
   const pageWidth = 595.28;
@@ -64,17 +68,15 @@ export async function createBlankAttendanceDeclarationPdf(): Promise<Uint8Array>
     return rows;
   };
 
-  // Moldura de página e cabeçalho institucional, sem logomarca.
+  // Cabeçalho institucional com o brasão de armas original, sem alterar a arte.
   framed(22, 22, pageWidth - 44, pageHeight - 44);
-  centered('UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO', 790, 11.2);
-  centered('CENTRO DE CIÊNCIAS DA SAÚDE', 773, 9.7, sans, ink);
-  centered('DEPARTAMENTO DE ENFERMAGEM', 757, 9.7, sans, ink);
-  centered('COMISSÃO DE TCC', 741, 9.7, sansBold, green);
-  line(720, 48, pageWidth - 48, 1.2, green);
+  page.drawRectangle({x:23,y:719,width:pageWidth-46,height:100,color:green});
+  drawInstitutionalPdfHeader(page,{box:{x:23,y:719,width:pageWidth-46,height:100},lines:documentHeaderLines(),font:sansBold,color:rgb(1,1,1),arms:crest,armsSize:48,armsBackground:rgb(1,1,1),fontSize:9});
+
 
   // Título e campos livres para preenchimento manuscrito.
-  framed(70, 640, pageWidth - 140, 56);
-  centered('DECLARAÇÃO DE COMPARECIMENTO', 673, 16);
+  page.drawRectangle({x:70,y:662,width:pageWidth-140,height:34,color:green});
+  centered('DECLARAÇÃO DE COMPARECIMENTO', 673, 16, sansBold, rgb(1,1,1));
   centered('Modelo em branco para preenchimento manual', 654, 9.2, sans, muted);
   draw('Declaro, para os devidos fins, que', left, 586, 12.5);
   line(553);
@@ -83,8 +85,9 @@ export async function createBlankAttendanceDeclarationPdf(): Promise<Uint8Array>
   line(472);
   line(444);
   line(416);
-  draw('realizada no dia ______/______/________, com início às ______h______', left, 372, 11.8);
-  draw('e término às ______h______, no local:', left, 344, 11.8);
+  draw('realizada no dia ______/______/________.', left, 372, 11.8);
+  draw('Dia da semana: ____________________________________________', left, 352, 11.8);
+  draw('Com início às ______h______ e término às ______h______, no local:', left, 332, 11.8);
   line(312);
   line(284);
 
@@ -95,15 +98,14 @@ export async function createBlankAttendanceDeclarationPdf(): Promise<Uint8Array>
   if (lines.length > 3) throw new Error('Texto de orientação excedeu a área reservada.');
   lines.forEach((value, index) => draw(value, left + 8, 210 - index * 11, 8.8, sans, muted));
 
-  draw('Local e data:', left, 150, 11.8);
-  line(147, 133, right);
+  const dateField='Local e data (dia da semana): __________________________________';
+  draw(dateField,right-regular.widthOfTextAtSize(dateField,11),150,11);
   line(103, 152, pageWidth - 152, 0.9);
   centered('Assinatura do(a) professor(a) orientador(a)', 85, 9.5, sans, muted);
 
   // Rodapé simples, sem faixa escura ou referência ao Colegiado.
   line(64, 48, pageWidth - 48, 1, green);
-  centered('Departamento de Enfermagem · Comissão de TCC · CCS/UFES', 48, 8.8);
-  centered('Campus de Maruípe · Vitória/ES', 34, 8.3, sans, muted);
+  DOCUMENT_ISSUER_LINES.forEach((value,index)=>draw(value,right-sans.widthOfTextAtSize(value,7.6),48-index*12,7.6,sans,muted));
 
   return pdf.save();
 }

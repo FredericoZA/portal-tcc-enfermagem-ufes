@@ -1,12 +1,12 @@
+import {calendarEventMatchesProcess, currentDefenseSelection, isDefenseOnCalendar, isDefenseReservationPending} from '../utils/defenseReservationState';
 import { legacyRepositoryProcess } from '../utils/legacyRepository';
-import { NursingEmblemLogo } from '../components/NursingEmblemLogo';
 import {readProcessLink,setProcessLink} from '../utils/processLink';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { ProcessData } from '../types';
-import { apiClient } from '../services/apiClient';
+import { apiClient, ApiRequestError } from '../services/apiClient';
 import { portalConfirm } from '../services/portalDialogs';
-import { formatDatePt, formatDateNumeric, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
+import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
 import { OnlineSystemTutorial } from '../components/OnlineSystemTutorial';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { loadTableConfig, ColumnDef, TableTextFormat, DEFAULT_TABLE_TEXT_FORMAT } from '../components/TableColumnSelectorPanel';
@@ -51,6 +51,7 @@ import {
   FileCheck,
   RotateCcw,
   Pencil,
+  Lock,
   X
 } from 'lucide-react';
 import {
@@ -66,7 +67,7 @@ import {
   LOGIN_POPUP_CONFIG_EVENT
 } from '../utils/loginPopupConfig';
 import { resolveInstallationProfile } from '../utils/installationProfile';
-import { DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseCalendarSummaryParts, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter } from '../utils/defenseSemantics';
+import { DEFENSE_PENDING_CONFIRMATION_LABEL, DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseCalendarSummaryParts, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter } from '../utils/defenseSemantics';
 import { getPortalToneCssVars } from '../utils/portalSemanticTokens';
 import { formatProcessLabel } from '../components/PortalProcessPill';
 
@@ -75,26 +76,24 @@ interface HomePageProps {
   initialPublicTab?: 'calendario' | 'biblioteca' | 'tutorial';
 }
 
-/** Apenas sinaliza a reserva ainda sem resposta, sem alterar cores nem agendamento. */
+/** The current request controls the notice, independently of receipts from earlier requests. */
 const PendingDefenseConfirmationNote: React.FC<{ process: Pick<ProcessData, 'defesa'> }> = ({ process }) => {
-  // A projeção anônima substitui departmentResponse por hasReservationReceipt.
-  const defesa = process.defesa as ProcessData['defesa'] & { hasReservationReceipt?: boolean };
-  if (defesa?.localStatus !== 'PENDENTE' || defesa?.departmentResponse || defesa?.hasReservationReceipt) return null;
-  return <span className="font-extrabold normal-case" style={{ color: '#b91c1c' }}> (Aguardando confirmação)</span>;
+  if (!isDefenseReservationPending(process)) return null;
+  return <span className="font-extrabold normal-case" style={{color: 'var(--portal-danger)'}}> {DEFENSE_PENDING_CONFIRMATION_LABEL}</span>;
 };
 
 // Helper to parse Google Calendar events for presentations
 const parseGcalEvent = (ev: any) => {
   const summary = ev.summary || '';
   const desc = ev.description || '';
-  
+
   let aluno = summary
     .replace(/Defesa de TCC\s*-\s*Apresentação:\s*/i, '')
     .replace(/Defesa de TCC:\s*/i, '')
     .replace(/Defesa de TCC\s*/i, '')
     .trim();
   if (!aluno) aluno = "Discente não identificado";
-  
+
   let trabalho = "Trabalho de Conclusão de Curso";
   const trabalhoMatch = desc.match(/Trabalho:\s*([^\n]+)/i);
   if (trabalhoMatch && trabalhoMatch[1]) {
@@ -102,7 +101,7 @@ const parseGcalEvent = (ev: any) => {
   } else if (desc && !desc.includes('Orientador:')) {
     trabalho = desc.trim();
   }
-  
+
   let time = 'A definir';
   if (ev.start) {
     const dStart = new Date(ev.start);
@@ -111,8 +110,8 @@ const parseGcalEvent = (ev: any) => {
     const endStr = dEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     time = `${startStr} às ${endStr}`;
   }
-  
-  let orientador = "Comissão de TCC";
+
+  let orientador = "Comissão de Trabalho de Conclusão de Curso";
   const orientadorMatch = desc.match(/Orientador:\s*([^\n]+)/i);
   if (orientadorMatch && orientadorMatch[1]) {
     orientador = orientadorMatch[1].trim();
@@ -129,7 +128,7 @@ const parseGcalEvent = (ev: any) => {
   if (bancaMatch && bancaMatch[1]) {
     banca = bancaMatch[1].trim();
   }
-  
+
   let local = "";
   const localMatch = desc.match(/Local:\s*([^\n]+)/i);
   if (localMatch && localMatch[1]) local = localMatch[1].trim();
@@ -525,8 +524,23 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [loginStep,setLoginStep]=useState<'email'|'code'>('email');
   const [loginWorking,setLoginWorking]=useState(false);
   const [loginMessage,setLoginMessage]=useState('');
+  const [loginResendAt,setLoginResendAt]=useState(0);
+  const [loginResendSeconds,setLoginResendSeconds]=useState(0);
+  const loginRequestInFlight=useRef(false);
+  const loginEmailField=useRef<HTMLInputElement>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const loginDestinationRef=useRef('');
+  useEffect(()=>{
+    if(!showLoginModal||loginStep!=='code'||!loginResendAt)return;
+    const update=()=>{
+      const seconds=Math.max(0,Math.ceil((loginResendAt-Date.now())/1000));
+      setLoginResendSeconds(seconds);
+      if(seconds===0)setLoginResendAt(0);
+    };
+    update();
+    const timer=window.setInterval(update,1000);
+    return()=>window.clearInterval(timer);
+  },[showLoginModal,loginStep,loginResendAt]);
   useEffect(()=>{
     if(authLoading)return;
     if(isAuthenticated){loginDestinationRef.current='';return;}
@@ -553,7 +567,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
   // Library specific state
   const [libSearch, setLibSearch] = useState('');
-  const [selectedLibDoc, setSelectedLibDoc] = useState<ProcessData | null>(null);
+  const [selectedLibSelection, setSelectedLibDoc] = useState<ProcessData | null>(null);
+  const selectedLibDoc = selectedLibSelection ? repositoryProcesses.find(process => process.id === selectedLibSelection.id || process.protocolo === selectedLibSelection.protocolo) || null : null;
   const libSortColumn: string | null = null;
   const libSortDirection: 'asc' | 'desc' = 'asc';
 
@@ -679,7 +694,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           case 'coorientador': return proc.coorientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))} (${proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : '';
           case 'resumo': return proc.acervo?.resumoSintese || (proc.titulo ? `TCC: ${proc.titulo}` : 'Sem resumo');
           case 'palavrasChave': return (proc.acervo?.palavrasChave || []).slice(0, 5).join('; ');
-          case 'defesaDataHora': return proc.defesa?.startAt ? `${formatDateNumeric(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
+          case 'defesaDataHora': return proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
           case 'defesaLocal': return proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar';
           default: return '';
         }
@@ -758,7 +773,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
         row.push(`"${kw.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.defesaDataHora) {
-        const dt = proc.defesa?.startAt ? `${formatDateNumeric(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
+        const dt = proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
         row.push(`"${dt}"`);
       }
       if (visibleColumns.defesaLocal) row.push(`"${(proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar').replace(/"/g, '""')}"`);
@@ -803,8 +818,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [currentCalendarDate, setCurrentCalendarDate] = useState<Date>(() => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), 1); }); // Always open on the user's current month
   const [selectedFilterMonth, setSelectedFilterMonth] = useState<number | 'all'>('all'); // Show all months by default in lists
   const [selectedFilterYear, setSelectedFilterYear] = useState<number | 'all'>('all'); // Show all years by default in lists
-  const [selectedDayDefenses, setSelectedDayDefenses] = useState<ProcessData[] | null>(null);
-  const [selectedDayGcalEvents, setSelectedDayGcalEvents] = useState<any[] | null>(null);
+  const [selectedDayDefenseSelection, setSelectedDayDefenses] = useState<ProcessData[] | null>(null);
+  const selectedDayDefenses = useMemo(() => currentDefenseSelection(selectedDayDefenseSelection, processes), [selectedDayDefenseSelection, processes]);
+  const [selectedDayGoogleSelection, setSelectedDayGcalEvents] = useState<any[] | null>(null);
+  const selectedDayGcalEvents = useMemo(() => {
+    const events = selectedDayGoogleSelection?.filter(event => !processes.some(process => calendarEventMatchesProcess(event, process)));
+    return events?.length ? events : null;
+  }, [selectedDayGoogleSelection, processes]);
 
   useEffect(() => {
     if (!selectedDayDefenses && !selectedDayGcalEvents) return;
@@ -887,21 +907,47 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     );
   });
 
+  const requestLoginCode = async () => {
+    if(loginRequestInFlight.current)return;
+    loginRequestInFlight.current=true;
+    setLoginWorking(true);setLoginMessage('');
+    try {
+      const response=await apiClient.requestLoginCode(loginEmailInput.trim().toLowerCase());
+      if(!response.sent){
+        setLoginMessage(response.message||'Confira o endereço ou solicite acesso à secretaria.');
+        return;
+      }
+      setLoginStep('code');
+      setLoginCodeInput('');
+      setLoginResendSeconds(60);
+      setLoginResendAt(Date.now()+60_000);
+      setLoginMessage('Código enviado. Consulte seu e-mail. Ele expira em 10 minutos.');
+    } catch(error) {
+      if(error instanceof ApiRequestError&&error.code==='OTP_CHALLENGE_ACTIVE'){
+        const remaining=error.retryAfterSeconds??60;
+        setLoginStep('code');
+        setLoginResendSeconds(remaining);
+        setLoginResendAt(Date.now()+remaining*1000);
+      }
+      setLoginMessage(error instanceof Error?error.message:'Não foi possível solicitar o código.');
+    } finally {
+      loginRequestInFlight.current=false;
+      setLoginWorking(false);
+    }
+  };
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(loginStep==='email'){await requestLoginCode();return;}
+    if(loginRequestInFlight.current)return;
+    loginRequestInFlight.current=true;
     setLoginWorking(true);setLoginMessage('');
     try {
       const emailToUse=loginEmailInput.trim().toLowerCase();
-      if(loginStep==='email'){
-        const response=await apiClient.requestLoginCode(emailToUse);
-        if(!response.sent){setLoginStep('email');setLoginMessage(response.message||'Este e-mail não está cadastrado no Portal TCC. Entre em contato com a secretaria.');return;}
-        setLoginStep('code');setLoginMessage('Código solicitado. Consulte seu e-mail; ele expira em 10 minutos.');
-        return;
-      }
       const session=await apiClient.verifyLoginCode(emailToUse,loginCodeInput);
       await switchUser(emailToUse);
       setShowLoginModal(false);
-      setLoginStep('email');setLoginCodeInput('');setLoginMessage('');
+      setLoginStep('email');setLoginCodeInput('');setLoginMessage('');setLoginResendAt(0);setLoginResendSeconds(0);
       if(readProcessLink(window.location.search))return;
       if (session.globalRoles?.length) {
         onNavigate('coordenador');
@@ -910,7 +956,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       }
     } catch (error) {
       setLoginMessage(error instanceof Error?error.message:'Não foi possível concluir o acesso.');
-    } finally {setLoginWorking(false);}
+    } finally {loginRequestInFlight.current=false;setLoginWorking(false);}
   };
 
   // Calendar Grid Generation Logic
@@ -970,13 +1016,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   // For a given day, find both processes (defenses) AND google calendar events
   const getEventsForDate = (dayNum: number) => {
     const dayDefenses = filteredProcesses.filter((proc) => {
-      if (!proc.defesa?.startAt) return false;
+      if (!isDefenseOnCalendar(proc)) return false;
       const d = new Date(proc.defesa.startAt);
       return d.getFullYear() === year && d.getMonth() === month && d.getDate() === dayNum;
     });
 
     const dayGcal = googleEvents.filter((ev) => {
       if (!ev.start) return false;
+      // The current process owns the schedule, even if an older Google event survives.
+      if (processes.some(process => calendarEventMatchesProcess(ev, process))) return false;
       const d = new Date(ev.start);
       if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== dayNum) return false;
 
@@ -1065,9 +1113,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           {showMonthPickerPopup && (
                             <>
                               {/* Click outside backdrop */}
-                              <div 
-                                className="fixed inset-0 z-40" 
-                                onClick={() => setShowMonthPickerPopup(false)} 
+                              <div
+                                className="fixed inset-0 z-40"
+                                onClick={() => setShowMonthPickerPopup(false)}
                               />
                               {/* Popover Card */}
                               <div className="portal-modal-surface absolute top-full left-0 sm:left-auto sm:right-0 mt-2 z-50 w-64 overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150">
@@ -1238,15 +1286,19 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <div className="mt-1 flex-1 min-h-0 space-y-1 w-full">
                         {dayDefenses.map((proc) => {
                           const defenseState = getDefenseState(proc);
+                          const summary = getDefenseCalendarSummaryParts(proc);
                           return (
                             <span
                               key={proc.id}
                               className="portal-calendar-defense-summary portal-semantic-tone"
                               style={getPortalToneCssVars(defenseState)}
                               data-defense-state={defenseState}
+                              data-reservation-status={isDefenseReservationPending(proc) ? 'pending' : undefined}
                               title={formatDefenseCalendarSummary(proc, 160)}
                             >
-                              {(() => { const summary = getDefenseCalendarSummaryParts(proc); return <><span className="portal-calendar-defense-primary">{summary.primary}<PendingDefenseConfirmationNote process={proc} /></span>{summary.secondary && <span className="portal-calendar-defense-secondary">{summary.secondary}</span>}<span className="portal-calendar-defense-secondary font-semibold">{summary.location}</span></>; })()}
+                              <span className="portal-calendar-defense-primary">{summary.time}<PendingDefenseConfirmationNote process={proc} /> · {summary.title}</span>
+                              {summary.secondary && <span className="portal-calendar-defense-secondary">{summary.secondary}</span>}
+                              <span className="portal-calendar-defense-secondary font-semibold">{summary.location}</span>
                             </span>
                           );
                         })}
@@ -1288,10 +1340,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             {/* Modal Popup for Selected Day Defenses (Opens on Day Click: synchronized with site theme, standard header, colors & formatting) */}
             {(selectedDayDefenses || selectedDayGcalEvents) && (() => {
               const totalSelectedEvents = (selectedDayDefenses?.length || 0) + (selectedDayGcalEvents?.length || 0);
-              
+
               // Max width adjusted for 2 columns max side-by-side
               const modalMaxWidthClass = totalSelectedEvents >= 2
-                ? 'max-w-4xl w-full' 
+                ? 'max-w-4xl w-full'
                 : 'max-w-xl w-full';
 
               const popupIsCustomHeader = calendarPopupFormat.headerThemeMode === 'custom';
@@ -1394,9 +1446,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           </span>
                           <h3 className="font-black text-sm sm:text-base normal-case tracking-tight mt-0.5 text-white">
                             {selectedDayDefenses && selectedDayDefenses.length > 0
-                              ? `Defesas em ${formatDatePt(selectedDayDefenses[0].defesa?.startAt)}`
+                              ? `Defesas em ${formatDateWithWeekday(selectedDayDefenses[0].defesa?.startAt)}`
                               : selectedDayGcalEvents && selectedDayGcalEvents.length > 0
-                                ? `Defesas em ${formatDatePt(selectedDayGcalEvents[0].start)}`
+                                ? `Defesas em ${formatDateWithWeekday(selectedDayGcalEvents[0].start)}`
                                 : 'Defesas do Dia'}
                           </h3>
                         </div>
@@ -1410,6 +1462,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <div className="space-y-3">
                           <div className={`grid ${gridColsClass}`}>
                             {selectedDayDefenses.map((proc) => {
+                              const reservationPending = isDefenseReservationPending(proc);
                               const progress = proc.legacyRecord?{percent:100,label:'Registro histórico',color:'text-emerald-700'}:getProcessProgress(proc);
                               const showTopRow = calendarPopupFormat.showTime !== false || (calendarPopupFormat.showLocation !== false && proc.defesa?.local) || calendarPopupFormat.showProtocol !== false;
                               const showDetails = calendarPopupFormat.showStudents !== false || calendarPopupFormat.showAdvisor !== false || (calendarPopupFormat.showCoAdvisor !== false && proc.coorientador) || (calendarPopupFormat.showCommittee !== false && proc.banca && proc.banca.length > 0);
@@ -1422,7 +1475,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                     setSelectedDayGcalEvents(null);
                                     setProcessLink(proc.id,null,true);window.dispatchEvent(new CustomEvent('portal:open-process',{detail:{id:proc.id,readOnly:true}}));
                                   }}
-                                  className={`text-slate-900 ${cardPaddingClass} ${cardRadiusClass} ${cardBorderClass} ${cardGapClass} ${cardShadowClass} hover:shadow-md cursor-pointer transition-all group flex flex-col`}
+                                  data-reservation-status={reservationPending ? 'pending' : undefined}
+                                  className={`portal-calendar-day-defense text-slate-900 ${cardPaddingClass} ${cardRadiusClass} ${cardBorderClass} ${cardGapClass} ${cardShadowClass} hover:shadow-md cursor-pointer transition-all group flex flex-col`}
                                   style={{
                                     backgroundColor: calendarPopupFormat.cardBgColor || '#ffffff',
                                     borderColor: calendarPopupFormat.cardBorderColor || '#cbd5e1',
@@ -1433,12 +1487,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                   {showTopRow && (
                                     <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200 text-xs">
                                       {calendarPopupFormat.showTime !== false ? (
-                                        <div 
+                                        <div
                                           className="flex items-center gap-1.5 font-black"
-                                          style={{ color: calendarPopupFormat.timeTextColor || '#065f46' }}
+                                          style={{ color: reservationPending ? undefined : calendarPopupFormat.timeTextColor || '#065f46' }}
                                         >
                                           <Clock className="w-4 h-4 shrink-0" />
-                                          <span>{getStartAndEndTime(proc.defesa?.startAt)}</span>
+                                          <span>{getStartAndEndTime(proc.defesa?.startAt)}<PendingDefenseConfirmationNote process={proc} /></span>
                                         </div>
                                       ) : <div />}
                                       <div className="flex items-center gap-2">
@@ -1448,11 +1502,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           </span>
                                         )}
                                         {calendarPopupFormat.showProtocol !== false && (
-                                          <span 
+                                          <span
                                             className="font-mono font-bold px-2 py-0.5 rounded-md border border-slate-250 text-[10px]"
                                             style={{
                                               backgroundColor: calendarPopupFormat.protocolBadgeBg || 'var(--portal-surface-page)',
-                                              color: calendarPopupFormat.protocolBadgeText || '#1e293b'
+                                              color: reservationPending ? undefined : calendarPopupFormat.protocolBadgeText || '#1e293b'
                                             }}
                                           >
                                             {proc.protocolo}
@@ -1464,20 +1518,19 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                                   {/* Card Title */}
                                   {calendarPopupFormat.showTitle !== false && (
-                                    <h4 
+                                    <h4
                                       className={`${cardTitleWeightClass} leading-snug ${cardTitleSizeClass} ${
                                         calendarPopupFormat.cardTitleUppercase !== false ? 'uppercase' : ''
                                       }`}
-                                      style={{ color: calendarPopupFormat.cardTitleColor || '#0f172a' }}
+                                      style={{ color: reservationPending ? undefined : calendarPopupFormat.cardTitleColor || '#0f172a' }}
                                     >
                                       {formatTccTitle(proc.titulo)}
-                                      <PendingDefenseConfirmationNote process={proc} />
                                     </h4>
                                   )}
 
                                   {/* Students & Professors Details */}
                                   {showDetails && (
-                                    <div 
+                                    <div
                                       className="text-xs text-slate-700 space-y-2 p-3 rounded-lg border border-slate-200 flex-1 flex flex-col justify-center"
                                       style={{ backgroundColor: calendarPopupFormat.cardInnerBgColor || '#f8fafc' }}
                                     >
@@ -1486,11 +1539,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block mb-0.5">
                                             {calendarPopupFormat.studentLabel || (proc.aluno2 ? 'Discentes Apresentadores:' : 'Discente Apresentador:')}
                                           </span>
-                                          <StudentNames 
-                                            aluno1={proc.aluno1} 
-                                            aluno2={proc.aluno2} 
-                                            align="left" 
-                                            itemClassName="text-xs font-black text-slate-900" 
+                                          <StudentNames
+                                            aluno1={proc.aluno1}
+                                            aluno2={proc.aluno2}
+                                            align="left"
+                                            itemClassName="text-xs font-black text-slate-900"
                                             showMatricula={calendarPopupFormat.showStudentRegistration !== false}
                                           />
                                         </div>
@@ -1545,18 +1598,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           <span className="text-slate-900 font-mono font-bold">{progress.percent}%</span>
                                         </div>
                                       )}
-                                      <div 
+                                      <div
                                         className={`w-full ${progressHeightClass} rounded-full overflow-hidden`}
                                         style={{ backgroundColor: calendarPopupFormat.progressBarTrackColor || '#e2e8f0' }}
                                       >
-                                        <div 
+                                        <div
                                           className={`${progressHeightClass} rounded-full transition-all duration-300 ${
                                             calendarPopupFormat.progressBarColorMode === 'custom' ? '' : progress.color
-                                          } ${calendarPopupFormat.progressBarGlow ? 'shadow-[0_0_8px_rgba(16,185,129,0.7)]' : ''}`} 
-                                          style={{ 
+                                          } ${calendarPopupFormat.progressBarGlow ? 'shadow-[0_0_8px_rgba(16,185,129,0.7)]' : ''}`}
+                                          style={{
                                             width: `${progress.percent}%`,
                                             backgroundColor: calendarPopupFormat.progressBarColorMode === 'custom' ? (calendarPopupFormat.progressBarCustomColor || '#10b981') : undefined
-                                          }} 
+                                          }}
                                         />
                                       </div>
                                     </div>
@@ -1617,7 +1670,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                                   {/* Card Title */}
                                   {calendarPopupFormat.showTitle !== false && (
-                                    <h4 
+                                    <h4
                                       className={`font-extrabold leading-snug ${
                                         calendarPopupFormat.cardTitleSize === 'xs'
                                           ? 'text-xs'
@@ -1633,7 +1686,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                                   {/* Card Body */}
                                   {(calendarPopupFormat.showStudents !== false || calendarPopupFormat.showAdvisor !== false || calendarPopupFormat.showCoAdvisor !== false) && (
-                                    <div 
+                                    <div
                                       className="text-xs text-slate-700 space-y-2 p-3 rounded-lg border border-slate-200 flex-1 flex flex-col justify-center"
                                       style={{ backgroundColor: calendarPopupFormat.cardInnerBgColor || '#f8fafc' }}
                                     >
@@ -1770,7 +1823,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           </div>
         ) : (() => {
             const listProcesses = filteredProcesses.filter((proc) => {
-              if (!proc.defesa?.startAt) return false;
+              if (!isDefenseOnCalendar(proc)) return false;
               const d = new Date(proc.defesa.startAt);
               const matchYear = d.getFullYear() === year;
               const matchMonth = d.getMonth() === month;
@@ -1896,7 +1949,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               switch (colKey) {
                 case 'protocolo':
                   return (
-                    <td 
+                    <td
                       key="protocolo"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1918,9 +1971,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   return (
                     <td key="defesaDataHora" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} align-middle ${alignClass} ${defStyles.borderClass} cursor-grab`}>
                       <div className={`flex items-center justify-center gap-1 ${defStyles.cellFontSizeClass}`}>
-                        <span>{formatCellText('defesaDataHora', formatDateNumeric(proc.defesa?.startAt), defensesTextFormat, '')}</span>
+                        <span>{formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), defensesTextFormat, '')}</span>
                       </div>
-                      <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}</div>
+                      <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}<PendingDefenseConfirmationNote process={proc} /></div>
                     </td>
                   );
                 case 'progresso':
@@ -1934,7 +1987,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     <td key="titulo" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
                       <div className={`${defStyles.cellWrapClass} ${alignClass} ${defStyles.cellFontSizeClass}`} title={formatTccTitle(proc.titulo)}>
                         {formatCellText('titulo', formatTccTitle(proc.titulo), defensesTextFormat, '')}
-                        <PendingDefenseConfirmationNote process={proc} />
                       </div>
                     </td>
                   );
@@ -2294,7 +2346,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 switch (colKey) {
                   case 'protocolo':
                     return (
-                      <td 
+                      <td
                         key="protocolo"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -2441,7 +2493,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     return (
                       <td key="defesaDataHora" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
                         <div className={`${acervoStyles.cellFontSizeClass} whitespace-nowrap`}>
-                          {formatCellText('defesaDataHora', formatDateNumeric(proc.defesa?.startAt), acervoTextFormat, '')}
+                          {formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), acervoTextFormat, '')}
                         </div>
                         <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}</div>
                       </td>
@@ -2517,7 +2569,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             <div className="max-h-[calc(90vh-60px)] overflow-y-auto p-4 space-y-4">
             <div className="space-y-3 text-xs text-slate-800">
               <div className="bg-emerald-100 p-3 rounded border border-emerald-300 font-mono text-[11px] text-emerald-950">
-                Protocolo: <strong>{selectedLibDoc.protocolo}</strong> • Data da Defesa: <strong>{formatDatePt(selectedLibDoc.defesa?.startAt)}</strong>
+                Protocolo: <strong>{selectedLibDoc.protocolo}</strong> • Data da Defesa: <strong>{formatDateWithWeekday(selectedLibDoc.defesa?.startAt)}</strong>
               </div>
 
               <div>
@@ -2571,7 +2623,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               {/* Header with Institutional Identity */}
               <div className="portal-modal-header border-b px-5 py-3.5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <NursingEmblemLogo size={32} />
+                  <Lock className="h-4 w-4 shrink-0 text-white" aria-hidden="true" />
                   <div>
                     <h3 className="font-black text-sm leading-tight text-white">
                       {loginPopupConfig.title || 'Acesso ao Portal do TCC'}
@@ -2591,8 +2643,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <span>Orientações para identificação:</span>
                     </div>
                         <ul className="space-y-1 pl-5 list-disc text-slate-600 text-[11px]">
-                          <li><strong>Como funciona o acesso:</strong> informe o e-mail cadastrado no Portal. Enviaremos um código de acesso de uso único para esse endereço.</li>
-                          <li><strong>Qual e-mail usar:</strong> utilize o endereço cadastrado e ativo na lista de acesso, institucional ou pessoal. Para acessar um TCC existente, use o e-mail informado no seu vínculo com o processo.</li>
+                          <li><strong>Quem pode entrar:</strong> alunos autorizados pela secretaria e participantes vinculados a um TCC. Pedir um código não cria um cadastro.</li>
+                          <li><strong>Qual e-mail usar:</strong> o endereço ativo na lista de acesso ou registrado pelo autor no seu vínculo com o TCC. Orientadores e examinadores podem usar o e-mail institucional ou pessoal informado no processo.</li>
+                          <li><strong>Como entrar:</strong> informe esse e-mail e solicite o código de uso único. O acesso libera somente as funções permitidas ao seu papel.</li>
                         </ul>
                   </div>
                 )}
@@ -2602,23 +2655,35 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   {loginStep==='email'&&bootstrapStatus?.bootstrapMasterConfigured&&bootstrapStatus.google.oauthConfigured&&!bootstrapStatus.google.connected&&<div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900"><strong>Primeira ativação do portal</strong><p className="mt-1 leading-5">Antes do primeiro código, o Master definido na implantação precisa autorizar a conta Google que enviará os e-mails.</p><button type="button" onClick={()=>{window.location.href='/api/integrations/google/oauth/start?returnTo=/?google=connected';}} className="mt-2 rounded-lg bg-slate-700 px-3 py-2 font-black text-white hover:bg-slate-800">Autorizar Google e continuar</button></div>}
 
                   <label className="block text-xs font-bold text-slate-800">E-mail
-                    <input type="email" required disabled={loginStep==='code'} value={loginEmailInput} onChange={event=>setLoginEmailInput(event.target.value)} autoComplete="email" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm disabled:bg-slate-100" placeholder="nome@exemplo.com"/>
+                    <input ref={loginEmailField} type="email" required disabled={loginStep==='code'||loginWorking} value={loginEmailInput} onChange={event=>setLoginEmailInput(event.target.value)} autoComplete="email" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm disabled:bg-slate-100" placeholder="nome@exemplo.com"/>
                   </label>
+                  {loginStep==='email'&&<button type="button" className="portal-popup-secondary-action" disabled={loginWorking} onClick={()=>{
+                    if(!loginEmailField.current?.reportValidity())return;
+                    setLoginMessage('');setLoginCodeInput('');setLoginStep('code');
+                  }}>Já tenho um código</button>}
                   {loginStep==='code'&&<label className="block text-xs font-bold text-slate-800">Código de confirmação
-                    <input type="text" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={loginCodeInput} onChange={event=>setLoginCodeInput(event.target.value.replace(/\D/g,'').slice(0,6))} autoComplete="one-time-code" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-3 text-center text-xl font-black tracking-[0.35em]" placeholder="000000"/>
+                    <input autoFocus type="text" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={loginCodeInput} onChange={event=>setLoginCodeInput(event.target.value.replace(/\D/g,'').slice(0,6))} autoComplete="one-time-code" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-3 text-center text-xl font-black tracking-[0.35em]" placeholder="000000"/>
                   </label>}
+                  {loginStep==='code'&&(
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                      <button type="button" className="portal-popup-secondary-action disabled:opacity-50" disabled={loginWorking||loginResendSeconds>0} onClick={()=>void requestLoginCode()}>Reenviar código</button>
+                      {loginResendSeconds>0&&<span>Disponível em {loginResendSeconds} s</span>}
+                    </div>
+                  )}
                   {loginMessage&&<p role="status" className={`rounded-lg border px-3 py-2 text-xs ${loginMessage.startsWith('Código enviado')?'border-emerald-200 bg-emerald-50 text-emerald-800':'border-amber-200 bg-amber-50 text-amber-900'}`}>{loginMessage}</p>}
 
                   <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                     <button
                       type="button"
-                      onClick={() => {if(loginStep==='code'){setLoginStep('email');setLoginCodeInput('');setLoginMessage('');}else setShowLoginModal(false);}}
+                      disabled={loginWorking}
+                      onClick={() => {if(loginStep==='code'){setLoginStep('email');setLoginCodeInput('');setLoginMessage('');setLoginResendAt(0);setLoginResendSeconds(0);}else setShowLoginModal(false);}}
                       className="portal-popup-secondary-action min-w-[96px]"
                     >
                       {loginStep==='code'?'Trocar e-mail':'Cancelar'}
                     </button>
                     <button
                       type="submit"
+                      disabled={loginWorking}
                       className="portal-popup-action min-w-[96px]"
                     >
                       <span>{loginWorking?'Aguarde…':loginStep==='email'?'Enviar código':'Entrar'}</span>

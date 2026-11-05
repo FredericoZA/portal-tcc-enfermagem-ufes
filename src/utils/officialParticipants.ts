@@ -30,6 +30,11 @@ function roleFor(kind: 'student'|'advisor'|'examiner'|'coadvisor', female: boole
   return names[kind][female ? 1 : 0];
 }
 
+/** Rótulo compartilhado pelas tabelas e documentos, conforme o tratamento cadastrado. */
+export function participantRole(kind: 'student'|'advisor'|'examiner'|'coadvisor', answers: WorkParticipants['registrationAnswers'], prefix: string, person?: PersonRecord): OfficialParticipantLine['role'] {
+  return roleFor(kind, participantIsFemale(answers, prefix, person));
+}
+
 function displayName(name: string, answers: WorkParticipants['registrationAnswers'], prefix: string, student: boolean, person?: PersonRecord): string {
   const clean = String(name || '').trim();
   if (!clean || student || /^(?:prof(?:essor(?:a)?)?\.?|profª\.?|dr(?:a|ª)?\.?)(?:\s|$)/iu.test(clean)) return clean;
@@ -49,7 +54,7 @@ export function officialParticipantLines(process: WorkParticipants): OfficialPar
     if (!String(person?.nome || '').trim()) return;
     result.push({
       key: prefix,
-      role: roleFor(kind,participantIsFemale(process.registrationAnswers,prefix,person)),
+      role: participantRole(kind,process.registrationAnswers,prefix,person),
       name: displayName(String(person.nome),process.registrationAnswers,prefix,kind==='student',person),
     });
   };

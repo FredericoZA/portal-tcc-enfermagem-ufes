@@ -8,9 +8,10 @@ const source=(path:string)=>readFile(path,'utf8');
 test('login público usa orientação única e exemplo de e-mail neutro',async()=>{
   const home=await source('src/pages/HomePage.tsx');
   assert.ok(home.includes('placeholder="nome@exemplo.com"'));
-  assert.ok(home.includes('Como funciona o acesso:'));
+  assert.ok(home.includes('Quem pode entrar:'));
+  assert.ok(home.includes('Pedir um código não cria um cadastro.'));
   assert.ok(home.includes('Qual e-mail usar:'));
-  assert.ok(home.includes('endereço cadastrado e ativo na lista de acesso, institucional ou pessoal'));
+  assert.ok(home.includes('o endereço ativo na lista de acesso ou registrado pelo autor no seu vínculo com o TCC'));
   assert.ok(!home.includes('Discentes:</strong> utilize seu e-mail institucional'));
   assert.ok(!home.includes('Master, Presidência'));
   assert.ok(!home.includes('>Acesso sem senha<'));
@@ -29,7 +30,7 @@ test('redirecionamento pós-login diferencia Master, Presidente e usuário comum
 
 test('engrenagem permite colunas para usuário comum e persiste por e-mail e planilha',async()=>{
   const settings=await source('src/components/HeaderSettingsPopover.tsx');
-  assert.ok(settings.includes('portal_user_table_config_'));
+  assert.ok((await source('src/utils/tablePreferences.ts')).includes('portal_user_table_config_'));
   assert.ok(settings.includes("const isMaster=globalRoles.includes('MASTER_ADMIN')"));
   assert.ok(settings.includes('const canManageColumns=Boolean(storageKey'));
   assert.ok(settings.includes('Colunas e ordem'));

@@ -8,13 +8,14 @@ test('modelo Google converte XLSX formatado em Sheets privado e reutiliza o arqu
     const url=String(input);const decoded=decodeURIComponent(url).replace(/\+/g,' ');
     if(url.includes('/permissions?'))return Response.json({permissions:[]});
     if(decoded.includes("name = '00_SISTEMA'"))return Response.json({files:[{id:'system',name:'00_SISTEMA'}]});
-    if(decoded.includes("name = 'MODELO_LISTA_ACESSO_V2'"))return Response.json({files:exists?[{id:'template',name:'MODELO_LISTA_ACESSO_V2'}]:[]});
+    if(decoded.includes("name = 'MODELO_LISTA_ACESSO_V3'"))return Response.json({files:exists?[{id:'template',name:'MODELO_LISTA_ACESSO_V3'}]:[]});
     if(url.includes('/upload/drive/v3/files?')){
       const body=Buffer.from(init!.body as Buffer).toString('utf8');
       assert.match(body,/application\/vnd.google-apps.spreadsheet/);
       assert.match(body,/application\/vnd.openxmlformats-officedocument.spreadsheetml.sheet/);
       assert.match(body,/"parents":\["system"\]/);uploaded++;exists=true;
-      return Response.json({id:'template',name:'MODELO_LISTA_ACESSO_V2'});
+      assert.match(body,/"schema":"3"/);assert.doesNotMatch(body,/MODELO_LISTA_ACESSO_V2/);
+      return Response.json({id:'template',name:'MODELO_LISTA_ACESSO_V3'});
     }
     throw new Error(`Requisição inesperada: ${url}`);
   };

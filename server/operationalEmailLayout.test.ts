@@ -4,7 +4,8 @@ import {operationalEmailLayout} from '../src/utils/operationalEmailLayout';
 test('shared email envelope renders green header, configured images and exactly one link before guidance',()=>{
  const output=operationalEmailLayout({text:'Olá.\n\nConsulte https://portal.example/?tcc=p e https://portal.example/?tcc=p&secao=docs\n\nORIENTAÇÕES DO PROCESSO\n\nConfira a pendência.',subject:'Reserva',href:'https://portal.example/action',label:'Confirmar reserva',studio:{brandKit:{courseName:'Enfermagem',primaryColor:'#005830',courseLogoUrl:'https://images.example/logo.png',emailBannerUrl:'https://images.example/banner.png'} as any}});
  assert.equal((output.html.match(/<a /g)||[]).length,1);assert.equal((output.text.match(/https?:\/\/\S+/g)||[]).length,1);
- assert.match(output.html,/background:#005830/);assert.match(output.html,/logo.png/);assert.match(output.html,/banner.png/);assert.ok(output.html.indexOf('<a ')<output.html.indexOf('<h2 '));assert.doesNotMatch(output.html,/E-mail de acesso/);
+ assert.match(output.html,/background:#005830/);assert.match(output.html,/national-arms.png/);assert.match(output.html,/banner.png/);assert.ok(output.html.indexOf('<a ')<output.html.indexOf('<h2 '));assert.doesNotMatch(output.html,/E-mail de acesso/);
+ assert.match(output.html,/>ENFERMAGEM<\/div>/);assert.match(output.text,/Olá\./);
 });
 
 import {processEmailGuidance} from '../src/utils/processEmailGuidance';
@@ -16,11 +17,11 @@ test('every workflow notification has one destination and no generic login parag
  }
 });
 
-test('header uses PNG logos with a transparent circular frame',()=>{
+test('UFES email uses the original institutional crest despite a saved course logo',()=>{
  const key='a'.repeat(64);
  const output=operationalEmailLayout({text:'Prezado departamento.',subject:'Reserva',href:'https://portal.example/tcc',label:'TCC',studio:{emailDesigns:{'email-reserva':{logoUrl:`https://portal.example/api/public/runtime-assets/${key}`} as any},brandKit:{primaryColor:'#005830'} as any},templateId:'email-reserva'});
- assert.match(output.html,new RegExp(key+'\\?format=png'));
- assert.match(output.html,/border:0;background-color:transparent;border-radius:50%/);
+ assert.match(output.html,/national-arms.png/);assert.doesNotMatch(output.html,new RegExp(key));
+ assert.match(output.html,/border:0;background-color:#ffffff;border-radius:50%/);
  assert.doesNotMatch(output.html,/background(?:-color)?:\s*(?:black|#000(?:000)?)[;\"]/);
 });
 
@@ -32,4 +33,13 @@ test('observations and instructions use pale yellow, outside the main text and s
  assert.match(output.html,/<\/td><\/tr><\/table><p[^>]*>Atenciosamente/);
  assert.ok(output.html.indexOf('<a ')<output.html.indexOf('<h2'));
  assert.doesNotMatch(output.text,/<table|bgcolor/);
+});
+
+
+test('modelos antigos de e-mail exibem o nome completo da comissão na emissão',()=>{
+ const output=operationalEmailLayout({text:'Prezados,\n\nAtenciosamente,\nComissão de TCC',subject:'Reserva',href:'https://portal.example/tcc',label:'TCC'});
+ assert.match(output.text,/Comissão de Trabalho de Conclusão de Curso/);
+ assert.match(output.html,/Comissão de Trabalho de Conclusão de Curso/);
+ assert.doesNotMatch(output.text,/Comissão de TCC/);
+ assert.doesNotMatch(output.html,/Comissão de TCC/);
 });

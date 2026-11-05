@@ -1,3 +1,4 @@
+import {sanitizeTablePreference,validTableKey,TABLE_DEFAULTS_EVENT} from '../utils/tablePreferences';
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../utils/portalLiveEvents';
 import { GlobalRole, ProcessMembership, GlobalSettings } from '../types';
@@ -11,6 +12,7 @@ interface AuthContextType {
   settings: GlobalSettings | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  canRegisterProcess: boolean;
   switchUser: (email: string) => Promise<void>;
   refreshAuth: () => Promise<void>;
   hasAdvisorRole: boolean;
@@ -24,6 +26,7 @@ interface CachedPortalIdentity {
   globalRoles: GlobalRole[];
   memberships: ProcessMembership[];
   isAuthenticated: boolean;
+  canRegisterProcess: boolean;
   cachedAt: number;
 }
 
@@ -66,7 +69,7 @@ async function getIdentityWithRetry() {
 
 function syncPortalFavicon(siteConfig: any) {
   if (typeof document === 'undefined') return;
-  const href = String(siteConfig?.sidebarCustomLogoUrl || '/colenf-logo.png').trim() || '/colenf-logo.png';
+  const href = String(siteConfig?.sidebarCustomLogoUrl || '/ufes-crest.png').trim() || '/ufes-crest.png';
   const iconLinks = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="shortcut icon"]'));
   if (!iconLinks.length) {
     const icon = document.createElement('link');
@@ -87,27 +90,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [settings, setSettings] = useState<GlobalSettings | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated,setIsAuthenticated]=useState(false);
+  const [canRegisterProcess,setCanRegisterProcess]=useState(false);
   // Respostas anteriores a uma saída/troca de conta não pertencem à sessão atual.
   const identityRevision = useRef(0);
 
   const applyPublicSettings = (rawSettings: GlobalSettings) => {
     // A aparência do Portal é definida pelo código. Configurações visuais antigas
     // permanecem apenas como histórico persistido e não são reaplicadas ao navegador.
+    let layoutsChanged = false;
+    for (const [key, value] of Object.entries(rawSettings.tableLayouts || {})) {
+      if (!validTableKey(key)) continue;
+      try {
+        const serialized = JSON.stringify(sanitizeTablePreference(value));
+        const storageKey = `default_table_config_${key}`;
+        if (localStorage.getItem(storageKey) !== serialized) { localStorage.setItem(storageKey, serialized); layoutsChanged = true; }
+      } catch { /* A broken old preference must not stop authentication. */ }
+    }
     setSettings(rawSettings);
+    if (layoutsChanged) window.dispatchEvent(new Event(TABLE_DEFAULTS_EVENT));
     syncPortalFavicon(loadSiteLayoutConfig());
     if(rawSettings.integrationStudio?.operationsPolicy&&typeof document!=='undefined'){const policy=rawSettings.integrationStudio.operationsPolicy;document.documentElement.lang=policy.defaultLocale||'pt-BR';document.documentElement.style.setProperty('--portal-target-size',`${policy.accessibility?.minimumTargetSize||44}px`);document.documentElement.dataset.portalMotion=policy.accessibility?.reducedMotionByDefault?'reduced':'system';}
   };
 
-  const applyIdentity = (meRes: { userEmail: string; globalRoles: any[]; memberships: any[]; isAuthenticated: boolean }) => {
+  const applyIdentity = (meRes: Awaited<ReturnType<typeof apiClient.getMe>>) => {
     setUserEmailState(meRes.userEmail);
     setIsAuthenticated(meRes.isAuthenticated);
+    setCanRegisterProcess(meRes.canRegisterProcess===true);
     setGlobalRoles(meRes.globalRoles);
     setMemberships(meRes.memberships);
     if (meRes.isAuthenticated) saveCachedIdentity({
       userEmail: meRes.userEmail,
       globalRoles: meRes.globalRoles,
       memberships: meRes.memberships,
-      isAuthenticated: true
+      isAuthenticated: true,
+      canRegisterProcess: meRes.canRegisterProcess===true
     }); else clearCachedIdentity();
   };
 
@@ -115,6 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearCachedIdentity();
     setUserEmailState('');
     setIsAuthenticated(false);
+    setCanRegisterProcess(false);
     setGlobalRoles([]);
     setMemberships([]);
   };
@@ -138,6 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('Falha transitória ao confirmar a sessão; mantendo a identidade em cache até a API responder.', err);
         setUserEmailState(cached.userEmail);
         setIsAuthenticated(true);
+        setCanRegisterProcess(cached.canRegisterProcess===true);
         setGlobalRoles(cached.globalRoles);
         setMemberships(cached.memberships);
         return;
@@ -236,6 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         settings,
         isLoading,
         isAuthenticated,
+        canRegisterProcess,
         switchUser,
         refreshAuth,
         hasAdvisorRole,

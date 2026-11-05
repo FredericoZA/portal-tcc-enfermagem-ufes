@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { ProcessData } from '../src/types';
 import { buildPublicIndicators } from './publicIndicators';
+import {legacyRepositoryProcess} from '../src/utils/legacyRepository';
+import type {PublicLegacyAcademicRecord} from '../src/types/legacyArchive';
 
 const baseProcess = (patch: Partial<ProcessData> = {}): ProcessData => ({
   id: 'p1',
@@ -65,4 +67,83 @@ test('API pública não retorna palavras-chave, locais ou resultados com texto l
   assert.deepEqual(result.locations,[]);
   assert.equal(JSON.stringify(result).includes(secret),false);
   assert.ok(result.outcomes.some(row=>row.label==='Aprovado'&&row.count===8));
+});
+
+test('mês isolado e única duração de conclusão não são inferíveis na resposta pública', () => {
+  const processes=Array.from({length:6},(_,i)=>baseProcess({
+    id:`p-${i+1}`,
+    defesa:{ startAt:`2026-${String(i+1).padStart(2,'0')}-10T12:00:00Z`, endAt:'', local:'Auditório', localStatus:'CONFIRMADO' },
+    completedAt: i===0 ? '2026-01-12T12:00:00Z' : undefined,
+  }));
+  const result=buildPublicIndicators(processes,Date.parse('2026-11-01T12:00:00Z'));
+  assert.equal(result.descriptive,null);
+  assert.deepEqual(result.months,[]);
+});
+
+test('rótulos de situação inesperados nunca são devolvidos como texto livre', () => {
+  const secret='IDENTIDADE_PESSOAL_NAO_CATALOGADA';
+  const processes=Array.from({length:6},(_,i)=>baseProcess({id:`n-${i}`,status: secret as ProcessData['status']}));
+  const result=buildPublicIndicators(processes,Date.parse('2026-11-01T12:00:00Z'));
+  assert.equal(JSON.stringify(result).includes(secret),false);
+  assert.deepEqual(result.byStatus,[]);
+});
+
+test('nomes reservados de objetos não viram categorias nem interrompem os indicadores',()=>{
+  const processes=Array.from({length:6},(_,i)=>baseProcess({id:`prototype-${i}`,acervo:{workType:'constructor' as any},avaliacao:{status:'CONCLUIDO',resultadoCode:'__proto__',resultadoLabel:'Nome Pessoal e matrícula 20260001'}}));
+  const result=buildPublicIndicators(processes,Date.parse('2026-11-01T12:00:00Z'));
+  assert.deepEqual(result.workTypes,[{label:'Não informado',count:6}]);
+  assert.deepEqual(result.outcomes,[]);
+  assert.doesNotMatch(JSON.stringify(result),/constructor|__proto__|Nome Pessoal|20260001/);
+});
+
+test('legados entram como histórico com somente os PDFs autorizados e sem duração inventada',()=>{
+  const records:Array<PublicLegacyAcademicRecord>=Array.from({length:8},(_,i)=>({
+    id:`legado-${i}`,protocolo:`${i+1} - Legado`,titulo:`Título pessoal ${i}`,autores:[`Pessoa ${i}`],orientador:'Orientadora',coorientador:'',coorientadorInstituicao:'',examinadores:[],resumo:'Resumo pessoal',palavrasChave:['Palavra pessoal'],dataDefesa:'2025-08-28',horaDefesa:'',localDefesa:'Local pessoal',filesRestricted:i>=6,authorizationDecision:i<6?'AUTHORIZED':'DENIED',publicFiles:i<6?[{index:0,kind:i<3?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO',downloadUrl:`/api/public/legacy-academic-records/legado-${i}/files/0`}]:[],
+  }));
+  const processes=records.map(legacyRepositoryProcess),before=structuredClone(processes);
+  const result=buildPublicIndicators(processes,Date.parse('2026-11-01T12:00:00Z'));
+  assert.equal(result.totals.registered,8);assert.equal(result.totals.completed,8);assert.equal(result.totals.defended,8);assert.equal(result.totals.published,6);
+  assert.deepEqual(result.formats,[{label:'Resumo expandido',count:3},{label:'Trabalho completo',count:3}]);
+  assert.equal(result.descriptive?.completionDaysMean,null);assert.equal(result.descriptive?.completionDaysMedian,null);
+  assert.deepEqual(result.outcomes,[]);assert.deepEqual(processes,before);
+  assert.doesNotMatch(JSON.stringify(result),/Título pessoal|Pessoa \d|Resumo pessoal|Local pessoal|legado-|\/api\//);
+});
+
+test('uma data passada sem conclusão registrada não comprova que a defesa aconteceu',()=>{
+  const processes=Array.from({length:9},(_,i)=>baseProcess({id:`reservation-${i}`,status:'AGUARDANDO_DEFESA',avaliacao:{status:i<3?'CONCLUIDO':'PENDENTE'},defesa:{startAt:'2026-09-10T12:00:00Z',endAt:'2026-09-10T13:30:00Z',local:'Auditório',localStatus:i<3?'CONFIRMADO':i<6?'RECUSADO':'PENDENTE'}}));
+  const result=buildPublicIndicators(processes,Date.parse('2026-11-01T12:00:00Z'));
+  assert.equal(result.totals.registered,9);assert.equal(result.totals.defended,3);
+  assert.deepEqual(result.years,[{label:'2026',count:3}]);
+  assert.deepEqual(result.months,[{label:'2026-09',count:3}]);
+});
+
+test('data histórica sem horário mantém o dia civil e não inventa turno ou duração',()=>{
+  const processes=Array.from({length:6},(_,i)=>baseProcess({id:`date-only-${i}`,legacyRecord:true,createdAt:'',updatedAt:'',defesa:{startAt:'2026-01-01',endAt:'',local:''}}));
+  const result=buildPublicIndicators(processes,Date.parse('2026-11-01T12:00:00Z'));
+  assert.deepEqual(result.years,[{label:'2026',count:6}]);
+  assert.deepEqual(result.months,[{label:'2026-01',count:6}]);
+  assert.deepEqual(result.weekdays,[{label:'Quinta-feira',count:6}]);
+  assert.deepEqual(result.dayparts,[]);
+  assert.equal(result.descriptive?.completionDaysMean,null);
+});
+
+test('duração inválida não é substituída por zero no tempo médio de conclusão',()=>{
+  const processes=Array.from({length:6},(_,i)=>baseProcess({id:`duration-${i}`,createdAt:'2026-01-01T12:00:00Z',completedAt:i<3?'2025-12-31T12:00:00Z':`2026-02-${String((i-3)*10+1).padStart(2,'0')}T12:00:00Z`}));
+  const result=buildPublicIndicators(processes,Date.parse('2026-11-01T12:00:00Z'));
+  assert.equal(result.descriptive?.completionDaysMean,41);
+  assert.equal(result.descriptive?.completionDaysMedian,41);
+});
+
+test('estatística mensal usa só grupos divulgados e não revela meses suprimidos por medidas auxiliares',()=>{
+  const processes=Array.from({length:6},(_,i)=>baseProcess({id:`monthly-${i}`,defesa:{startAt:`2026-${i<3?'01':i===3?'02':'03'}-10T12:00:00Z`,endAt:'',local:''}}));
+  const result=buildPublicIndicators(processes,Date.parse('2026-11-01T12:00:00Z'));
+  assert.deepEqual(result.months,[{label:'2026-01',count:3}]);
+  assert.equal(result.descriptive?.monthlyMean,3);assert.equal(result.descriptive?.monthlyMedian,3);assert.equal(result.descriptive?.monthlyStdDev,0);assert.equal(result.descriptive?.observedMonths,1);
+});
+
+test('IDs residuais não tornam um arquivo privado ou retirado uma publicação',()=>{
+  const processes=Array.from({length:6},(_,i)=>baseProcess({id:`private-${i}`,acervo:{publicationState:i<3?'WITHDRAWN':'PENDING_SYNC',isPublic:false,publishFullWork:true,publicFullWorkFileId:'private-residual-id',publicFullWorkFileUrl:'https://drive.example.invalid/private'}}));
+  const result=buildPublicIndicators(processes,Date.parse('2026-11-01T12:00:00Z'));
+  assert.equal(result.totals.published,0);assert.deepEqual(result.formats,[]);
+  assert.doesNotMatch(JSON.stringify(result),/private-residual-id|drive\.example/);
 });

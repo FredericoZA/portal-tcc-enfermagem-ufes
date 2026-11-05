@@ -1,4 +1,5 @@
 import type { ProcessData } from '../types';
+import {effectiveDefenseReservationStatus} from './defenseReservationState';
 import { isOtherDefenseLocation } from './customDefenseLocation';
 
 export type ReservationStatusAlert = {
@@ -15,16 +16,23 @@ const WAITING_STATUSES = new Set(['PENDING', 'SENT']);
  */
 export function reservationStatusAlert(
   process: Pick<ProcessData, 'defesa' | 'registrationAnswers'>,
+  access: 'visitor' | 'author' | 'other' = 'other',
 ): ReservationStatusAlert | null {
-  const request = process.defesa?.reservationChangeRequest;
+  const response = process.defesa?.departmentResponse;
+  const currentDecision = response && response.revision === (process.defesa.reservationRevision || 0);
+  const request = currentDecision ? undefined : process.defesa?.reservationChangeRequest;
   const requestStatus = String(request?.status || '').toUpperCase();
-  const localStatus = String(process.defesa?.localStatus || '').toUpperCase();
+  const localStatus = String(effectiveDefenseReservationStatus(process) || '').toUpperCase();
 
   // Recusa registrada tem precedência: nunca exibir, junto dela, a observação de espera.
   if (DENIAL_STATUSES.has(requestStatus) || DENIAL_STATUSES.has(localStatus)) {
+    const message = 'A solicitação de reserva do local para a defesa não foi aprovada.';
+    const instruction = access === 'visitor'
+      ? ' Para enviar uma nova solicitação, o aluno deverá fazer login no Portal TCC e clicar em “Refazer reserva”.'
+      : access === 'author' ? ' Para enviar uma nova solicitação, clique em “Refazer reserva”.' : '';
     return {
       kind: 'denied',
-      text: 'O responsável recusou o agendamento. Use “Alterar reserva” para enviar outro pedido de reserva.',
+      text: message + instruction,
     };
   }
 

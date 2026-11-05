@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync,readFileSync } from 'node:fs';
 
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
@@ -38,11 +38,12 @@ test('cadastro de TCC abre em popup flutuante, não como navegação normal',()=
 });
 
 test('estúdio operacional não conserva backdrops e botões X dos antigos modais',()=>{
-  const studio=read('src/components/UnifiedFlowSystem.tsx');
+  const studio=read('src/components/IntegrationStudioPanel.tsx');
   assert.doesNotMatch(studio,/fixed inset-0 z-50 bg-slate-900\/60/);
   assert.doesNotMatch(studio,/aria-label="Fechar configuração da variável"/);
-  assert.match(studio,/portal-flow-modal/);
-  assert.match(studio,/portal-flow-modal-header/);
+  assert.match(studio,/data-portal-workflow-editor="true"/);
+  assert.match(studio,/SettingsWorkspaceHeaderPortal/);
+  assert.match(studio,/data-portal-preview-dialog="true"/);
 });
 
 test('popups principais abandonam superfícies estruturais escuras',()=>{
@@ -75,10 +76,7 @@ test('popups públicos e administrativos usam superfície canônica',()=>{
 
 test('editores e workspaces restantes seguem o mesmo shell e não reintroduzem botão X',()=>{
   const modalPaths=[
-    'src/components/CalendarPopupEditorModal.tsx',
-    'src/components/LoginPopupEditorModal.tsx',
-    'src/components/TccDetailPopupEditorModal.tsx',
-    'src/components/UnifiedPortalEditorModal.tsx',
+    'src/components/IntegrationStudioPanel.tsx',
     'src/components/SettingsWorkspaceModal.tsx',
   ];
   for(const path of modalPaths){
@@ -100,13 +98,24 @@ test('Indicadores usa título full-width, faixa branca e respiro antes das caixa
 });
 
 
-test('editor do popup de login usa autosave e não exibe salvar ou X',()=>{
-  const source=read('src/components/LoginPopupEditorModal.tsx');
-  assert.match(source,/window\.setTimeout\(\(\) => \{/);
-  assert.match(source,/saveLoginPopupConfig\(config\)/);
-  assert.doesNotMatch(source,/Salvar Alterações/);
-  assert.doesNotMatch(source,/<X\b/);
-  assert.doesNotMatch(source,/handleSave/);
+test('login ativo preserva configurações publicadas e acesso por e-mail e código',()=>{
+  const source=read('src/pages/HomePage.tsx');
+  assert.match(source,/loadLoginPopupConfig\(\)/);
+  assert.match(source,/setLoginPopupConfig\(newConfig\)/);
+  const start=source.indexOf('<div data-portal-login-modal');
+  assert.ok(start>=0);
+  const login=source.slice(start,source.indexOf('</form>',start));
+  assert.match(login,/type="email"/);
+  assert.match(login,/autoComplete="one-time-code"/);
+  assert.doesNotMatch(login,/type="password"|<X\b/);
+});
+
+test('editores paralelos aposentados não permanecem como superfícies alternativas',()=>{
+  for(const file of ['UnifiedFlowSystem','UnifiedPortalEditorModal','CalendarPopupEditorModal','LoginPopupEditorModal','TccDetailPopupEditorModal','SiteLayoutEditorModal','ModalPortal','YinYangIcon','ImageUploadField','PortalPersonalizationHubModal','editor/EditorFields','editor/PopupPreviewSection','editor/SpreadsheetPreviewSection'])assert.equal(existsSync(new URL(`../src/components/${file}.tsx`,import.meta.url)),false,file);
+  const settings=read('src/pages/ConfiguracoesPage.tsx');
+  assert.match(settings,/<SettingsWorkspaceModal/);
+  assert.match(settings,/<IntegrationStudioPanel/);
+  assert.doesNotMatch(settings,/UnifiedFlowSystem|UnifiedPortalEditorModal|PortalPersonalizationHubModal/);
 });
 
 

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {documentSignatureCompleted} from '../src/utils/documentSignatureState';
-import {assertDocumentSignatureOpen} from './workflow/signaturePolicy';
+import {assertDocumentSignatureOpen,signatureJobMatchesCurrentRevision} from './workflow/signaturePolicy';
 import {canSendDeclarationToAsten,canReviewDeclarationWithGovbr} from '../src/utils/coordinatorSignatureActions';
 const process={id:'p1',dataRevision:2} as any;
 for(const type of ['ATA','TERMO','DECLARACAO'] as const)for(const provider of ['ASTEN','GOV_BR'] as const)test(`${type} signed by ${provider} closes both provider actions`,()=>{
@@ -28,4 +28,17 @@ test('a concluded process cannot restart an older signed ata after repository re
  const jobs=[{processId:'p1',documentType:'ATA',provider:'ASTEN',status:'ARCHIVED',sourceDataRevision:1}] as any;
  assert.throws(()=>assertDocumentSignatureOpen({...process,status:'CONCLUIDO'},'ATA',jobs),/já está assinado/);
  assert.throws(()=>assertDocumentSignatureOpen({...process,etapaAtual:'CONCLUIDO'},'ATA',jobs),/já está assinado/);
+});
+
+test('a repository edit preserves the ATA revision; reopening the evaluation retires its old provider request',()=>{
+ const withEvaluation={...process,dataRevision:5,avaliacao:{status:'CONCLUIDO',documentRevision:2}};
+ const job={processId:'p1',documentType:'ATA',provider:'ASTEN',status:'ARCHIVED',sourceDataRevision:2} as const;
+ assert.equal(signatureJobMatchesCurrentRevision(withEvaluation,job),true);
+ assert.throws(()=>assertDocumentSignatureOpen(withEvaluation,'ATA',[job] as any),/já está assinado/);
+ assert.equal(signatureJobMatchesCurrentRevision(withEvaluation,{...job,status:'CANCELED'}),false);
+ assert.equal(signatureJobMatchesCurrentRevision(withEvaluation,{...job,removedFromLogsAt:'2026-11-05'}),false);
+ const reopened={...withEvaluation,avaliacao:{status:'PENDENTE',documentRevision:6},dataRevision:6};
+ assert.equal(signatureJobMatchesCurrentRevision(reopened,job),false);
+ assert.doesNotThrow(()=>assertDocumentSignatureOpen(reopened,'ATA',[job] as any));
+ assert.equal(signatureJobMatchesCurrentRevision(withEvaluation,{...job,documentType:'TERMO'}),false);
 });

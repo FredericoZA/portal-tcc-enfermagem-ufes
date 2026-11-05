@@ -14,24 +14,25 @@ O estado da assinatura, da organização por pastas e do piloto separado em 15/1
 
 ## Regras centrais
 
-- Master e Presidente da Comissão são os únicos administradores globais.
+- O Master administra o Portal. A Presidência acompanha e assina as declarações aptas na sua área. Outros dados privados dependem de vínculo com o TCC.
 - O login usa código de uso único enviado por e-mail, sem senha local.
-- O Master ou Presidente pré-autoriza os alunos. Ao salvar o primeiro formulário, os e-mails válidos dos autores, orientador, coorientador e banca passam a ter acesso ao processo.
+- O Master pré-autoriza os alunos. Ao salvar o primeiro formulário, os e-mails válidos dos autores, orientador, coorientador e banca passam a ter acesso ao processo.
 - Cada aluno pode criar somente um TCC de graduação, mas pode participar sem limite como orientador, coorientador ou examinador em outros processos.
 - Calendário, tutorial e repositório público dispensam login. Dados privados, arquivos e downloads usam autorização por processo.
-- Nenhum modelo documental operacional está incluído. O Master ou o Presidente envia os quatro DOCX em Configurações; cada versão ativa permanece no Drive da própria instalação. A importação de arquivo preexistente por link é opcional e fica desativada por padrão, pois exige o escopo Google `drive.readonly`.
-- As assinaturas são solicitadas explicitamente nos documentos, sem disparo automático ao registrar conceito ou entrega. No Asten: ata somente pelo orientador na prioridade 1; termo pelos autores e orientador simultaneamente, todos na prioridade 1; declaração pela presidência. Convite e comprovante não exigem assinatura. O perfil `EMAIL_LINK` envia o link sem exigir conta Asten, SMS ou celular. O Portal confirma as assinaturas na API e arquiva os bytes originais no Drive privado. Gov.br permite baixar e devolver o PDF, seguido de conferência manual no VALIDAR/ITI. A aprovação exige o hash exato, a revisão atual e confirmação dos titulares e do conteúdo; o envio isolado permanece pendente. Consulte [Assinatura Gov.br e conferência manual](./docs/ASSINATURA_GOVBR_CONFERENCIA_MANUAL.md).
+- Nenhum modelo documental operacional está incluído. O Master envia os quatro DOCX em Configurações; cada versão ativa permanece no Drive da própria instalação. A importação de arquivo preexistente por link é opcional e fica desativada por padrão, pois exige o escopo Google `drive.readonly`.
+- As assinaturas são solicitadas explicitamente nos documentos, sem disparo automático ao registrar conceito ou entrega. No Asten: ata pelo orientador e pelos dois examinadores, todos na prioridade 1 (três assinaturas); termo pelos autores e orientador simultaneamente, todos na prioridade 1; declaração pela presidência. Convite e comprovante não exigem assinatura. O perfil `EMAIL_LINK` envia o link sem exigir conta Asten, SMS ou celular. O Portal confirma as assinaturas na API e arquiva os bytes originais no Drive privado. Gov.br permite baixar e devolver o PDF, seguido de conferência manual no VALIDAR/ITI. A aprovação exige o hash exato, a revisão atual e confirmação dos titulares e do conteúdo; o envio isolado permanece pendente. Consulte [Assinatura Gov.br e conferência manual](./docs/ASSINATURA_GOVBR_CONFERENCIA_MANUAL.md).
+- O Registro de logs reúne atividades e envios, com destinatários, tentativas e conteúdo seguro. Consulte [Auditoria de envios e atividades](./docs/AUDITORIA_ENVIOS_E_ATIVIDADES.md) para cópias institucionais, estados e limites da comprovação.
 - Os destinatários vêm dos cadastros persistidos. O Master escolhe três pastas diferentes no repositório Asten, uma para cada tipo de documento. O Portal valida a conta e o repositório de cada destino e fixa o destino no job antes de criar o envelope; alterar a configuração vale para os próximos envelopes.
 - O retorno HTTPS da Asten é registrado na fila privada `portal_asten_webhook_inbox` e processado em segundo plano na Vercel, com reconciliação diária de contingência. A migração `202610140001_asten_webhook_inbox.sql` é necessária antes de publicar esse fluxo com Supabase.
 - O termo existe somente quando há pedido expresso de publicação.
 - Nos processos novos, trabalho completo, resumo textual e palavras-chave são obrigatórios na entrega; o PDF do resumo expandido é opcional. A publicação dos PDFs é opcional e independente por arquivo. O resumo textual do catálogo não é ocultado pela recusa de publicação do PDF.
 - Registros legados usam as mesmas telas do Portal, com código `NNN - Legado`, campos ausentes preservados e arquivos originais. Documentos administrativos contém cinco cartões nos processos novos e acrescenta o instrumento de avaliação antigo nos legados, quando localizado. A importação não gera novas assinaturas nem autoriza arquivos automaticamente.
 - Google Drive é o arquivo definitivo dos modelos, formulários, trabalhos, documentos gerados e assinados. Supabase guarda o estado operacional, permissões, auditoria, projeções e o staging privado e temporário usado para evitar transportar arquivos grandes pela função Vercel.
+- Cada resposta de reserva gera um comprovante preservado no histórico do mesmo TCC. O cartão informa a quantidade; com mais de um comprovante, Ver e Baixar PDF permitem escolher a resposta por data, local e resultado. Uma nova solicitação pendente mantém o histórico acessível; uma recusa atual aparece em vermelho. Os novos e-mails vinculam o comprovante à resposta original. A consulta pública omite matrículas e e-mails pessoais.
 - Os dois formulários nativos são o cadastro inicial e a homologação da reserva pelo responsável, acessada pelo link enviado por e-mail. Nos locais predefinidos, esse responsável é o departamento; em outro local, é o orientador. Conceito/ata e entrega final são preenchidos nas abas do processo; seus campos e registros históricos são preservados.
 - Formulários personalizados criados no Estúdio aparecem automaticamente no processo apenas para o papel definido, preservam a revisão usada, geram PDF no Drive e podem disparar eventos `FORM_<ID>_SUBMITTED`.
 - Área temática, tema principal, tipo de estudo e finalidade podem ser coletados por campos canônicos configuráveis. Os relatórios não inferem esses dados do título ou do resumo.
-- Os dois arquivos vivos são recalculados diariamente e sob demanda, permanecem privados no Drive e não incluem nomes, e-mails, matrículas, títulos ou resumos.
-- O relatório institucional usa dados agregados, filtros de período, comparação, gráficos vetoriais e metodologia explícita; grupos pequenos continuam protegidos.
+- Os indicadores administrativos agregados exigem identificação do Master ou da Presidência. O relatório avançado e suas exportações são restritos ao Master. As rotas públicas desativadas retornam HTTP 410. O relatório institucional usa dados agregados, filtros de período, comparação, gráficos vetoriais e metodologia explícita; grupos pequenos continuam protegidos.
 
 > **Migração local (Portal TCC 16):** consulte [Guia de continuidade local e estado das plataformas](./docs/TRANSICAO_LOCAL_PORTAL_TCC16_2026-10-13.md). O modo padrão é isolado; nunca copie segredos da Vercel nem uma base de produção para o computador.
 
@@ -75,7 +76,6 @@ Siga, nesta ordem:
 7. [Atualização e rollback](./docs/ATUALIZACAO_E_ROLLBACK.md)
 8. [Fluxo operacional RC9](./docs/FLUXO_OPERACIONAL_RC9.md)
 9. [Guia de entrega ao Codex de implantação](./docs/ENTREGA_AO_CODEX.md)
-10. [Estatísticas e diagnóstico histórico por regras](./docs/INTELIGENCIA_CONTINUA.md)
 
 As integrações externas só podem ser consideradas homologadas depois de um piloto no ambiente do proprietário das credenciais. A instalação deve usar projetos e credenciais próprios, diferentes entre desenvolvimento e produção. Nunca publique ou envie chaves Supabase, OAuth Google, token Asten, segredos de sessão ou webhook.
 

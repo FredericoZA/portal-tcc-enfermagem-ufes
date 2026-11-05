@@ -1,5 +1,7 @@
 # Conferência da revisão local — 26/10/2026
 
+> Registro histórico. A regra antiga de assinatura exclusiva do orientador foi substituída: a ata exige orientador e dois examinadores. Não use este registro como roteiro vigente. Consulte [a diretriz atual](ASSINATURA_ATA_TRES_DOCENTES.md), o manual e `HOMOLOGACAO_ATUAL.md`.
+
 ## Escopo executado
 
 - Fluxo do TCC, Como usar, manual ilustrado e resumo de assinaturas alinhados ao formulário direto do departamento.

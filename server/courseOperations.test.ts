@@ -21,6 +21,12 @@ test('modelo embutido e condição que aponta para campo futuro bloqueiam public
   assert.ok(report.issues.some((issue) => issue.code === 'INVALID_FORM_RULE'));
 });
 
+test('validação configurável mantém formatos simples e processa padrões ambíguos sem backtracking', () => {
+  assert.equal(validateStudioAnswer('20260001', { pattern: '^\\d{8}$' }), null);
+  assert.match(validateStudioAnswer('a'.repeat(10_000), { pattern: '^(a+)+b$' }) || '', /formato esperado/);
+  assert.match(validateStudioAnswer('abc', { pattern: '(?<=a)b' }) || '', /precisa ser revisado/);
+});
+
 test('condições e validações são determinísticas', () => {
   assert.equal(evaluateStudioCondition({ fieldKey: 'PUBLICAR', operator: 'EQUALS', value: 'Sim' }, { PUBLICAR: 'Sim' }), true);
   assert.equal(evaluateStudioCondition({ fieldKey: 'PUBLICAR', operator: 'NOT_EQUALS', value: 'Sim' }, { PUBLICAR: 'Sim' }), false);

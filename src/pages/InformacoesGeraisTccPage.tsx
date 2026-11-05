@@ -6,8 +6,9 @@ import { useAuth } from '../context/AuthContext';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 
 const NORMAS_TCC_URL = 'https://enfermagem.vitoria.ufes.br/sites/enfermagem.vitoria.ufes.br/files/field/anexo/normas_do_tcc_-_de-ufes.pdf';
-const ORIENTACOES_CURSO_URL = 'https://enfermagem.vitoria.ufes.br/pt-br/envio-do-trabalho-de-conclusao-de-curso';
-const MATRIZ_CURRICULAR_URL = 'https://enfermagem.vitoria.ufes.br/pt-br/concepcao-da-organizacao-curricular';
+const PPC_URL = 'https://enfermagem.vitoria.ufes.br/pt-br/concepcao-da-organizacao-curricular';
+const MATRIZ_CURRICULAR_URL = 'https://enfermagem.vitoria.ufes.br/pt-br/matriz-curricular-2020';
+const LGPD_URL = 'https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html';
 
 interface InformacoesGeraisTccPageProps {
   onNavigate: (tab: string) => void;
@@ -21,7 +22,7 @@ const RuleCard: React.FC<{
   <section className="portal-layer-card rounded-xl border border-slate-300 p-3 shadow-2xs sm:p-4">
     <div className="mb-2 flex items-center gap-2">
       <Icon className="h-4 w-4 shrink-0 text-[var(--portal-brand-action)]" aria-hidden="true" />
-      <h2 className="text-xs font-black text-slate-900 sm:text-sm">{title}</h2>
+      <h3 className="text-xs font-black text-slate-900 sm:text-sm">{title}</h3>
     </div>
     <div className="space-y-2 text-xs leading-5 text-slate-700">{children}</div>
   </section>
@@ -72,78 +73,59 @@ export const InformacoesGeraisTccPage: React.FC<InformacoesGeraisTccPageProps> =
         </section>
       ) : (
         <div className="portal-layer-panel space-y-4 p-3 sm:p-4">
-          <div className="grid auto-rows-fr gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <RuleCard title="Obrigatoriedade e número de autores" icon={GraduationCap}>
-              <p>O TCC é <strong>obrigatório</strong> para concluir o bacharelado em Enfermagem.</p>
-              <p>A norma disponível prevê elaboração <strong>individual</strong> e, excepcionalmente, em <strong>dupla (até 2 estudantes)</strong>. A formação de dupla deve ser tratada com o orientador e a coordenação.</p>
-            </RuleCard>
-            <RuleCard title="Quando realizar o TCC" icon={CalendarDays}>
-              <p>O TCC deve ser concluído e defendido entre o <strong>7º e o 8º períodos</strong> do curso.</p>
-              <p>O <strong>9º e o 10º períodos</strong> são destinados <strong>exclusivamente ao estágio</strong>.</p>
-            </RuleCard>
-            <RuleCard title="Temas e ética em pesquisa" icon={BookOpen}>
-              <p>Escolha um tema relevante para a Enfermagem, como atenção hospitalar, cuidado domiciliar, saúde coletiva ou ensino em saúde.</p>
-              <p>O projeto deve ser aprovado pelo orientador. Pesquisas com participantes humanos ou animais devem observar as exigências éticas pertinentes antes de sua execução.</p>
-            </RuleCard>
-            <RuleCard title="Quem pode orientar" icon={Users}>
-              <p>O documento normativo identifica como orientador um <strong>professor do curso de Enfermagem e Obstetrícia da UFES</strong>, cuja área de conhecimento tenha afinidade com o tema.</p>
-              <p>A orientação deve ser formalizada conforme os procedimentos da disciplina. O orientador também preside a banca de defesa.</p>
-            </RuleCard>
-            <RuleCard title="Pode haver coorientador?" icon={Info}>
-              <p>O Portal permite cadastrar coorientador <strong>quando houver</strong>. A indicação deve observar os critérios do curso, confirmados com a coordenação da disciplina ou Comissão de TCC.</p>
-              <p>A coorientação não substitui o orientador nem os dois examinadores.</p>
-            </RuleCard>
-            <RuleCard title="Como é formada a banca" icon={Users}>
-              <p>A norma disponível prevê <strong>3 integrantes</strong>: o orientador, na presidência, e mais <strong>2 profissionais de nível superior</strong> com conhecimento do tema, preferencialmente enfermeiros.</p>
-              <p>Os dois membros convidados são definidos de comum acordo entre orientador e estudante(s). A presença de coorientador não altera automaticamente essa composição.</p>
-            </RuleCard>
-            <RuleCard title="Formatos do trabalho" icon={FileText}>
-              <p>O TCC pode ser apresentado como <strong>monografia ou artigo</strong>, em decisão conjunta com o orientador.</p>
-              <p>A monografia deve seguir a normalização acadêmica aplicável. Para artigo, observe as exigências da norma do curso e do periódico escolhido, quando pertinente. Confira sempre a versão atualizada das orientações de formatação.</p>
-            </RuleCard>
-            <RuleCard title="Apresentação e avaliação" icon={ClipboardList}>
-              <p>A defesa é uma apresentação oral, de caráter público, avaliada por banca examinadora. O estudante deve combinar data e horário com orientador e avaliadores e observar o procedimento de reserva de local.</p>
-              <p>O Portal reserva <strong>1 hora e 30 minutos por agendamento</strong>, incluindo apresentação, avaliação e organização do espaço. Esse intervalo não define o tempo de fala.</p>
-              <p>Aqui, o orientador registra <strong>conceito e parecer</strong> para a documentação. A avaliação acadêmica e o lançamento da nota são feitos no <SourceLink href="https://professor.ufes.br/">Portal do Professor</SourceLink>.</p>
-            </RuleCard>
-            <RuleCard title="Depois da defesa" icon={CheckCircle2}>
-              <p>Realize as correções solicitadas pela banca, sob acompanhamento do orientador, e entregue a versão final conforme a orientação institucional.</p>
-              <p>No <strong>Repositório acadêmico</strong>, qualquer um dos autores preenche o resumo e as palavras-chave e anexa o PDF do trabalho completo. O PDF do resumo expandido é opcional.</p>
-            </RuleCard>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <section className="portal-layer-card rounded-xl border border-slate-300 p-3 shadow-2xs sm:p-4">
-              <h2 className="flex items-center gap-2 text-xs font-black text-slate-900 sm:text-sm"><CheckCircle2 className="h-4 w-4 text-[var(--portal-brand-action)]" aria-hidden="true" />A entrega do TCC é obrigatória?</h2>
-              <p className="mt-2 text-xs leading-5 text-slate-700"><strong>Sim.</strong> O PDF do trabalho completo, o resumo e as palavras-chave são obrigatórios na entrega dos processos novos. A entrega não autoriza a publicação do arquivo. Os registros legados preservam o que foi recebido na época, inclusive quando não há trabalho completo anexado.</p>
-            </section>
-            <section className="portal-layer-card rounded-xl border border-slate-300 p-3 shadow-2xs sm:p-4">
-              <h2 className="flex items-center gap-2 text-xs font-black text-slate-900 sm:text-sm"><ShieldCheck className="h-4 w-4 text-[var(--portal-brand-action)]" aria-hidden="true" />É obrigatório publicar o TCC na internet?</h2>
-              <p className="mt-2 text-xs leading-5 text-slate-700"><strong>A publicação do TCC na internet não é obrigatória.</strong> Entrega acadêmica e publicação são ações diferentes. No Portal, a divulgação do trabalho e do resumo expandido depende de autorização para cada PDF e não ocorre automaticamente com a entrega. Havendo publicação autorizada, os autores e o orientador assinam o Termo em <strong>Documentos administrativos</strong>. Sem autorização de nenhum arquivo, não há Termo.</p>
-            </section>
-          </div>
-
-          <section className="portal-layer-card space-y-2 rounded-xl border border-slate-300 p-3 shadow-2xs sm:p-4">
-            <h2 className="text-xs font-black text-slate-900 sm:text-sm">Documentos e próximos passos</h2>
-            <p className="text-xs leading-5 text-slate-700"><strong>Documentos administrativos</strong> reúne comprovante de reserva, carta-convite, ata, Termo de Autorização quando aplicável e declaração de participação na banca. A ata é assinada pelo orientador; a declaração, pela presidência da Comissão. Comprovante e convite não exigem assinatura.</p>
-            <p className="text-xs leading-5 text-slate-700">Nos legados, essa mesma aba também reúne o instrumento de avaliação antigo, quando localizado. Ele não faz parte dos processos novos.</p>
-            <p className="text-xs leading-5 text-slate-700">Consulte as fontes para prazos e regras da sua matriz. A norma disponível descreve procedimentos físicos históricos; a tramitação digital deste Portal segue as etapas de cadastro, reserva, conceito, assinaturas e entrega.</p>
-            <ul className="space-y-1.5 text-xs leading-5 text-slate-700">
-              <li><SourceLink href={NORMAS_TCC_URL}>Normas para elaboração do TCC (documento disponível no site do curso)</SourceLink></li>
-              <li><SourceLink href={ORIENTACOES_CURSO_URL}>Orientações institucionais de agendamento, defesa e entrega</SourceLink></li>
-              <li><SourceLink href={MATRIZ_CURRICULAR_URL}>Organização curricular do curso</SourceLink></li>
-            </ul>
+          <section aria-labelledby="tcc-sobre-o-trabalho" className="space-y-2">
+            <h2 id="tcc-sobre-o-trabalho" className="text-sm font-black text-slate-900">Sobre o Trabalho de Conclusão de Curso</h2>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <RuleCard title="Obrigatoriedade e número de autores" icon={GraduationCap}>
+                <p>O TCC integra as atividades obrigatórias da graduação em Enfermagem e Obstetrícia. O Portal aceita o cadastro individual ou em dupla, com até dois estudantes, conforme as orientações acadêmicas do curso.</p>
+              </RuleCard>
+              <RuleCard title="Quando realizar o TCC" icon={CalendarDays}>
+                <p>Na matriz de 2020, o TCC I está no 7º período e o TCC II, no 8º. Planeje a conclusão e a defesa para o 8º período. Os Estágios Curriculares I e II estão no 9º e no 10º períodos, respectivamente.</p>
+                <SourceLink href={MATRIZ_CURRICULAR_URL}>Consultar Matriz Curricular 2020</SourceLink>
+              </RuleCard>
+              <RuleCard title="Temas e ética em pesquisa" icon={BookOpen}>
+                <p>Defina o tema com o orientador, considerando o interesse dos autores, a pertinência para a Enfermagem e a viabilidade da pesquisa. Estudos com participantes humanos ou animais devem observar as exigências éticas e as autorizações aplicáveis. Proteja a privacidade e a confidencialidade das informações pessoais, especialmente dos dados de saúde.</p>
+              </RuleCard>
+              <RuleCard title="Quem pode orientar" icon={Users}>
+                <p>A orientação cabe a um professor do Curso de Enfermagem e Obstetrícia da UFES com afinidade com o tema. O orientador acompanha o trabalho, contribui para o rigor científico e metodológico e auxilia na preparação da defesa e na composição da banca.</p>
+              </RuleCard>
+              <RuleCard title="Pode haver coorientador?" icon={Info}>
+                <p>Sim. A coorientação pode complementar o acompanhamento quando o tema ou o método justificar a participação de outro profissional com conhecimento na área. Combine a indicação com o orientador e observe os critérios do curso. A coorientação complementa a orientação titular e a composição da banca segue as regras do curso.</p>
+              </RuleCard>
+              <RuleCard title="Como é formada a banca" icon={Users}>
+                <p>A banca tem três integrantes. O orientador preside a sessão e os outros dois membros são profissionais de nível superior com conhecimento na área do trabalho, preferencialmente enfermeiros. Orientador e autores escolhem os examinadores em comum acordo, conforme as orientações do curso.</p>
+              </RuleCard>
+              <RuleCard title="Formatos do trabalho" icon={FileText}>
+                <p>O TCC pode ser apresentado como monografia ou artigo científico, em comum acordo com o orientador. Consulte as normas do curso para preparar a estrutura, as referências e a apresentação da versão final.</p>
+              </RuleCard>
+              <RuleCard title="Apresentação e defesa" icon={ClipboardList}>
+                <p>A defesa é a apresentação oral do trabalho à banca em sessão pública agendada. Autores e orientador conferem a data, o horário e o local. Depois da defesa, o orientador registra em <strong>Conceito e Ata</strong> a decisão da banca e prepara a ata. O docente lança notas e frequência no <SourceLink href="https://professor.ufes.br/">Portal do Professor</SourceLink>.</p>
+              </RuleCard>
+              <RuleCard title="Entrega e publicação do TCC" icon={CheckCircle2}>
+                <p><strong>A entrega do TCC final em PDF é obrigatória. A publicação é opcional.</strong> Envie o trabalho, o resumo sintético e as palavras-chave mesmo que o PDF fique restrito. A divulgação do trabalho completo depende da autorização expressa dos autores. O PDF do resumo expandido é opcional e tem autorização de publicação independente.</p>
+              </RuleCard>
+            </div>
           </section>
 
-          <section className="portal-layer-card space-y-2 rounded-xl border border-slate-300 p-3 shadow-2xs sm:p-4" aria-labelledby="tcc-legislacao">
-            <h2 id="tcc-legislacao" className="flex items-center gap-2 text-xs font-black text-slate-900 sm:text-sm"><ShieldCheck className="h-4 w-4 text-[var(--portal-brand-action)]" aria-hidden="true" />Legislação e proteção de dados</h2>
-            <p className="text-xs leading-5 text-slate-700"><strong>Portaria Normativa GR/Ufes nº 310, de 23 de outubro de 2026</strong>, publicada em 27/10/2026: estabelece regras para o uso institucional de sistemas de inteligência artificial na Universidade.</p>
-            <p className="text-xs leading-5 text-slate-700">O Portal TCC utiliza formulários, fluxos definidos, modelos de documentos e indicadores estatísticos calculados por regras programadas, sem gerar pareceres ou decisões acadêmicas por IA generativa. O texto-base do parecer deve ser complementado e validado pelo orientador, de acordo com a deliberação da banca.</p>
-            <p className="text-xs leading-5 text-slate-700">Essas medidas técnicas buscam adequação à Portaria; não substituem as exigências institucionais de segurança, proteção de dados pessoais e eventual análise da unidade competente.</p>
-            <ul className="space-y-1.5 text-xs leading-5 text-slate-700">
-              <li><SourceLink href="/legislacao/PORTARIA_NORMATIVA_GR_UFES_310_2026.md">Consultar a Portaria nº 310/2026 (transcrição para leitura)</SourceLink></li>
-              <li><SourceLink href="https://atosnormativos.ufes.br/handle/10/21075">Repositório oficial de atos normativos da Ufes</SourceLink></li>
-            </ul>
+          <section aria-labelledby="tcc-sobre-o-portal" className="space-y-2 border-t border-slate-300 pt-3">
+            <h2 id="tcc-sobre-o-portal" className="text-sm font-black text-slate-900">Informações sobre o Portal TCC</h2>
+            <div className="grid gap-3 md:grid-cols-2">
+              <RuleCard title="Documentos e próximos passos" icon={FileText}>
+                <p>O Portal organiza o cadastro, a reserva do local, a composição da banca, o registro do conceito e da ata, as assinaturas e a entrega final. Os registros e indicadores agregados apoiam a gestão acadêmica e a avaliação institucional do curso.</p>
+                <ul className="space-y-1.5">
+                  <li><SourceLink href={NORMAS_TCC_URL}>Normas para elaboração do TCC</SourceLink></li>
+                  <li><SourceLink href={PPC_URL}>Projeto Pedagógico do Curso (PPC)</SourceLink></li>
+                  <li><SourceLink href="/manual/manual-portal-tcc.pdf">Manual de uso do Portal</SourceLink></li>
+                </ul>
+              </RuleCard>
+              <RuleCard title="Legislação e proteção de dados" icon={ShieldCheck}>
+                <p>O Portal utiliza as informações necessárias à identificação dos participantes e à tramitação acadêmica. Os documentos têm regras de acesso distintas para consulta administrativa e divulgação pública. A entrega do TCC não autoriza a publicação. Consulte a LGPD e o Aviso de Privacidade para conhecer as regras de tratamento dos dados.</p>
+                <ul className="space-y-1.5">
+                  <li><SourceLink href={LGPD_URL}>Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018)</SourceLink></li>
+                  <li><SourceLink href="/privacidade.html">Aviso de privacidade do Portal</SourceLink></li>
+                </ul>
+              </RuleCard>
+            </div>
           </section>
         </div>
       )}

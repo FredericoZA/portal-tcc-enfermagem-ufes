@@ -7,7 +7,7 @@ import {AUTHOR_ORDER_OPTIONS,isPresentationField} from '../../src/utils/personPr
 import {normalizeRegistrationValue as normalizeTypedValue} from '../../src/utils/registrationNormalization';
 import type { IntegrationStudioSettings } from '../../src/types/integrationStudio';
 import type { RegistrationAnswers } from '../../src/types/operationalConfig';
-import { registrationPayload, registrationQuestions } from '../../src/utils/operationalConfig';
+import { registrationAnswersWithoutIdentifiers, registrationPayload, registrationQuestions } from '../../src/utils/operationalConfig';
 import { evaluateStudioCondition, validateStudioAnswer } from '../../src/utils/courseStudioValidator';
 import { formatNameTitleCase, formatTccTitle, normalizeEmail } from '../../src/utils/formatters';
 import { CUSTOM_LOCATION_FIELD, OTHER_DEFENSE_LOCATION, getCustomLocationFieldValue, isCustomLocationRegistration, isOtherDefenseLocation, normalizeCustomLocationInput } from '../../src/utils/customDefenseLocation';
@@ -37,7 +37,7 @@ export function acceptRegistration(input: any, studio?: Partial<IntegrationStudi
   let answers: RegistrationAnswers = {};
 
   if (input?.registrationAnswers && typeof input.registrationAnswers === 'object' && !Array.isArray(input.registrationAnswers)) {
-    answers = { ...input.registrationAnswers };
+    answers = registrationAnswersWithoutIdentifiers(input.registrationAnswers);
   } else {
     const mapPerson = (prefix: string, person: any) => {
       for (const [key, value] of Object.entries(person || {})) answers[`${prefix}_${key.toUpperCase()}`] = String(value ?? '');
@@ -63,7 +63,7 @@ export function acceptRegistration(input: any, studio?: Partial<IntegrationStudi
   }
 
   if(isOtherDefenseLocation(answers.DEFESA_LOCAL)){answers.DEFESA_LOCAL=CUSTOM_DEFENSE_LOCATION;answers.DEFESA_LOCAL_PERSONALIZADO=getCustomLocationFieldValue(answers);}
-  answers=withAuthorReference(answers);
+  answers=withAuthorReference(registrationAnswersWithoutIdentifiers(answers));
   const accepted: RegistrationAnswers = {};
   for(const key of ['ALUNO_1_TRATAMENTO','ALUNO_2_TRATAMENTO'])if(answers[key]){if(!STUDENT_TREATMENTS.includes(answers[key] as any))throw new Error('Referência da autoria inválida.');accepted[key]=answers[key];}
   for (const question of registrationQuestions(studio,answers)) {

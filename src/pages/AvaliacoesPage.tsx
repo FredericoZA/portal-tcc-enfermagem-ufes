@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ProcessData } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
-import { formatDatePt, formatStudentsString } from '../utils/formatters';
+import { formatDateWithWeekday, formatStudentsString } from '../utils/formatters';
 import { StudentNames } from '../components/StudentNames';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
 import { CheckSquare, ArrowRight, AlertCircle } from 'lucide-react';
@@ -79,7 +79,7 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
                     <strong>Aluno(s):</strong>
                     <StudentNames aluno1={proc.aluno1} aluno2={proc.aluno2} align="left" itemClassName="text-xs font-bold text-slate-900" />
                   </div>
-                  <div><strong>Data da Defesa:</strong> {formatDatePt(proc.defesa.startAt)}</div>
+                  <div><strong>Data da Defesa:</strong> {formatDateWithWeekday(proc.defesa.startAt)}</div>
                 </div>
               </div>
 

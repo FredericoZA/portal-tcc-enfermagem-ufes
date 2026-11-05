@@ -1,3 +1,4 @@
+import {formatDateNumericWithWeekday} from '../utils/formatters';
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
@@ -49,7 +50,7 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
 
   const footerBg=layoutConfig.footerBgColor||PORTAL_THEME.chrome.sidebarFooter, footerText=layoutConfig.footerTextColor||PORTAL_THEME.text.light, footerMuted=layoutConfig.footerMutedTextColor||PORTAL_THEME.text.mutedLight, footerBorder=layoutConfig.footerBorderColor||PORTAL_THEME.chrome.divider, footerDivider=layoutConfig.footerDividerColor||PORTAL_THEME.chrome.divider;
   const whatsappText=layoutConfig.footerWhatsappBtnText||PORTAL_THEME.text.light;
-  const formatTermDate=(value?:string)=>{if(!value)return'';const date=new Date(`${value}T12:00:00`);return Number.isNaN(date.getTime())?value:date.toLocaleDateString('pt-BR');};
+  const formatTermDate=(value?:string)=>{if(!value)return'';const date=new Date(`${value}T12:00:00`);return Number.isNaN(date.getTime())?value:formatDateNumericWithWeekday(value);};
 
   const copyEmail=async(email:string,key:string)=>{
     if(!email)return;
@@ -97,11 +98,11 @@ export const Footer: React.FC<FooterProps> = ({ showLocationDirections=false }) 
         <div className="grid md:grid-cols-[1fr_1.18fr] items-stretch">
           <div className="flex flex-col justify-center p-2.5 md:border-r space-y-2 text-center" style={{borderColor:footerDivider}}>
             <div className="flex flex-col items-center">
-              <div className="font-extrabold normal-case tracking-wider text-[9px]" style={{color:footerMuted}}>{layoutConfig.footerPresidentLabel||'Presidente da Comissão'}</div>
+              <div className="font-extrabold normal-case tracking-wider text-[9px]" style={{color:footerMuted}}>{layoutConfig.footerPresidentLabel||'Presidente da Comissão de Trabalho de Conclusão de Curso'}</div>
               <div className="mt-0.5 flex min-h-[20px] items-center justify-center text-[12px]"><CopyableName name={presidentName} email={presidentEmail} id="president"/></div>
             </div>
             <div className="pt-2 border-t" style={{borderColor:footerDivider}}>
-              <div className="font-extrabold normal-case tracking-wider text-[9px]" style={{color:footerMuted}}>{layoutConfig.footerMembersLabel||'Membros da Comissão'}</div>
+              <div className="font-extrabold normal-case tracking-wider text-[9px]" style={{color:footerMuted}}>{layoutConfig.footerMembersLabel||'Membros da Comissão de Trabalho de Conclusão de Curso'}</div>
               <div className="mt-1 grid grid-cols-1 items-start gap-y-1 text-center">
                 {membersList.length?membersList.map((member)=><div key={member.id||member.name} className="flex flex-col items-center justify-start"><div className="min-h-[18px]"><CopyableName name={member.name} email={member.email} id={`member-${member.id||member.name}`}/></div>{(member.startDate||member.endDate)&&<p className="text-[9px]" style={{color:footerMuted}}>{member.startDate?`Início: ${formatTermDate(member.startDate)}`:''}{member.startDate&&member.endDate?' · ':''}{member.endDate?`Fim: ${formatTermDate(member.endDate)}`:''}</p>}</div>):<p style={{color:footerMuted}}>Não configurado</p>}
               </div>

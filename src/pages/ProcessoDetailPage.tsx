@@ -1,15 +1,17 @@
+import {formatDateTimeWithWeekday} from '../utils/formatters';
+import {participantRole} from '../utils/officialParticipants';
 import {ProcessSummaryCard} from '../components/ProcessSummaryCard';
 import {LegacyAdministrativeDocuments} from '../components/LegacyAdministrativeDocuments';
 import {ProcessDocumentCard, ProcessDocumentsPanel, ReservationReceiptCard} from '../components/ProcessDocumentCard';
 import {publicProcessDetail} from '../utils/publicProcessDetail';
-import {documentSignatureCompleted,documentSignatureArchived} from '../utils/documentSignatureState';
+import {currentAtaArchived,documentSignatureCompleted,signatureDocumentRevision} from '../utils/documentSignatureState';
 import {defenseEndAt} from '../utils/defenseSchedule';
 import {STUDENT_TREATMENTS,FACULTY_TREATMENTS,ACADEMIC_DEGREES} from '../utils/personPresentation';
 import {downloadPortalDocument} from '../utils/documentDownload';
 import {auditChanges} from '../utils/processAudit';
-import {publicationDeclined,finalDeliveryMessage} from '../utils/finalDeliveryPresentation';
+import {administrativeDocumentAvailability,administrativeDocumentLabels,finalDeliveryMessage} from '../utils/finalDeliveryPresentation';
 import {InlineProcessField} from '../components/InlineProcessField';
-import {localDateTimeToIso} from '../utils/operationalConfig';
+import {localDateTimeToIso,isRegistrationIdentifierField} from '../utils/operationalConfig';
 import {readProcessLink,setProcessLink,processLink,processWorkflowSection,type ProcessSection} from '../utils/processLink';
 import { portalConfirm, portalNotice, portalPrompt } from '../services/portalDialogs';
 import { AdvisorEvaluationPanel } from '../components/AdvisorEvaluationPanel';
@@ -23,6 +25,7 @@ import { useSignatureUpdates } from '../hooks/useSignatureUpdates';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../utils/portalLiveEvents';
 import { formatDatePt, formatDateExtensoTotal, formatTimeExtenso, formatStudentsString, normalizeEmail, formatNameTitleCase } from '../utils/formatters';
 import { ProcessFlowPanel } from '../components/ProcessFlowPanel';
+import { effectiveDefenseReservationStatus } from '../utils/defenseReservationState';
 import { GovbrSignatureModal } from '../components/GovbrSignatureModal';
 import { PortalModalShell } from '../components/PortalModalShell';
 import { EtapaProgressBar } from '../components/EtapaProgressBar';
@@ -92,6 +95,9 @@ interface AuditLogEntry {
   details: string;
 }
 
+function withoutRegistrationIdentifiers<T extends object>(person:T):Partial<T> {
+  return Object.fromEntries(Object.entries(person).filter(([key])=>!isRegistrationIdentifierField(key)&&!/^(?:registro|ra)$/i.test(key))) as Partial<T>;
+}
 
 export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   processId,
@@ -106,7 +112,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const [process, setProcess] = useState<ProcessData | null>(null);
   const [documents, setDocuments] = useState<ProcessDocument[]>([]);
   const [signatureJobs,setSignatureJobs]=useState<SignatureJob[]>([]);
-  const ataIsArchived=Boolean(process&&documentSignatureArchived(signatureJobs,process.id,'ATA'));
+  const ataIsArchived=Boolean(process&&currentAtaArchived(process,signatureJobs));
   const [signatureWorking,setSignatureWorking]=useState('');
   const [signatureNotice,setSignatureNotice]=useState<{ok:boolean;text:string;documentType?:string}|null>(null);
   const [verifications,setVerifications]=useState<Array<{documentType:string;version:number;code:string;url:string;sha256?:string;signedAt?:string}>>([]);
@@ -209,11 +215,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     cargaHoraria: '60 Horas Aula (TCC II)',
     aluno1Nome: '',
     aluno1Email: '',
-    aluno1Matricula: '',
     hasAluno2: false,
     aluno2Nome: '',
     aluno2Email: '',
-    aluno2Matricula: '',
     orientadorNome: '',
     orientadorEmail: '',
     orientadorInstituicao: '',
@@ -305,11 +309,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         cargaHoraria: '60 Horas Aula (TCC II)',
         aluno1Nome: pData.aluno1?.nome || '',
         aluno1Email: pData.aluno1?.email || '',
-        aluno1Matricula: pData.aluno1?.matricula || '',
         hasAluno2: Boolean(pData.aluno2),
         aluno2Nome: pData.aluno2?.nome || '',
         aluno2Email: pData.aluno2?.email || '',
-        aluno2Matricula: pData.aluno2?.matricula || '',
         orientadorNome: pData.orientador?.nome || '',
         orientadorEmail: pData.orientador?.email || '',
         orientadorInstituicao: pData.orientador?.instituicao || installationProfile.defaultInstitutionName,
@@ -335,7 +337,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         }
       }
 
-      setAuditLogs(recordedLogs.map(log=>({id:log.id,timestamp:new Date(log.timestamp).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}),user:log.actorEmail,role:log.actorRoles.join(', '),action:log.action,details:auditChanges(log)})));
+      setAuditLogs(recordedLogs.map(log=>({id:log.id,timestamp:formatDateTimeWithWeekday(log.timestamp),user:log.actorEmail,role:log.actorRoles.join(', '),action:log.action,details:auditChanges(log)})));
 
     } catch (err: any) {
       if(background && err instanceof ApiRequestError && err.status===404){
@@ -449,12 +451,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const isStudent = !readOnly && (normalizeEmail(process.aluno1.email) === normEmail || Boolean(process.aluno2 && normalizeEmail(process.aluno2.email) === normEmail));
   const isAdvisor = !readOnly && normalizeEmail(process.orientador.email) === normEmail;
   const isCoAdvisor = !readOnly && process.coorientador && normalizeEmail(process.coorientador.email) === normEmail;
-  const isExaminer = process.banca.some((b) => normalizeEmail(b.email) === normEmail);
+  const isExaminer = process.banca.some((b) => (b.funcao === 'EXAMINER_2' || b.funcao === 'EXAMINER_3') && normalizeEmail(b.email) === normEmail);
+  const hasHistoricalRegistration = !readOnly && [process.aluno1, process.aluno2, process.orientador, ...process.banca, process.coorientador].some(person => person && (('matricula' in person && String(person.matricula || '').trim()) || ('siape' in person && String(person.siape || '').trim())));
 
   const isEvaluationSubmitted = Boolean(process.avaliacao?.submittedAt) || process.avaliacao?.status === 'CONCLUIDO' || process.avaliacao?.notaFinal !== undefined;
   const isAcervoSubmitted = Boolean(process.acervo?.submittedAt);
-  const hasReservationReceipt = Boolean(process.defesa.departmentResponse || (process.defesa as { hasReservationReceipt?: boolean }).hasReservationReceipt);
-  const canSubmitAcervo = !readOnly && Boolean(isMasterAdmin || isCommissionPresident || isStudent);
+  const hasReservationReceipt = Boolean(process.defesa.departmentResponse || process.defesa.reservationHistory?.some(item=>item.departmentResponse||item.localConfirmedAt) || (process.defesa as { hasReservationReceipt?: boolean }).hasReservationReceipt);
+  const canSubmitAcervo = isAuthenticated && isStudent;
   const acervoFieldsLocked = !canSubmitAcervo || isAcervoSubmitted || !ataIsArchived || isSubmittingAcervo || Boolean(acervoUploading);
 
   const canStudentEdit = isStudent && !isEvaluationSubmitted && !isAcervoSubmitted && !readOnly;
@@ -463,7 +466,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const canEditData = canCoordinatorEdit || Boolean((isStudent || isAdvisor) && !isEvaluationSubmitted && !readOnly && !process.defesa.invitationDriveFileId && !process.defesa.invitationSentAt);
 
-  const canEditDefense=canCoordinatorEdit||Boolean((isStudent||isAdvisor)&&!isEvaluationSubmitted&&!isAcervoSubmitted&&!readOnly);
+  const canEditDefense=isAuthenticated&&canStudentEdit&&!process.legacyRecord&&process.status!=='CONCLUIDO';
   const defenseDate=new Date(process.defesa.startAt);
   const defenseLocal=Number.isFinite(defenseDate.getTime())?new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(defenseDate).replace(' ','T'):'';
   const inlineField=(label:string,value:string,patch:(value:string)=>Record<string,unknown>,type='text',display=value,editable=canEditData,confirmDefenseChange=false,options?:readonly string[])=><InlineProcessField onEditingChange={editing=>{editingSectionRef.current=editing?'cadastral':null;}} options={options} label={label} value={value} display={display} type={type} editable={!readOnly && editable} beforeEdit={confirmDefenseChange?()=>portalConfirm(`Tem certeza de que deseja alterar ${label==='Data da defesa'?'a data da defesa':label==='Horário da defesa'?'o horário da defesa':'o local da defesa'}? ${!process.defesa.invitationDriveFileId&&!process.defesa.invitationSentAt&&process.avaliacao.status!=='CONCLUIDO'?'Ao salvar, a solicitação de reserva será reenviada ao responsável pelo local e a etapa de confirmação será reiniciada. A confirmação e o comprovante anteriores deixarão de valer. O responsável receberá um novo pedido e deverá confirmar o agendamento novamente.':'Essa mudança afeta o calendário da defesa. Confirme o novo agendamento com o departamento e preserve os documentos já emitidos.'} Ao salvar, o histórico registrará quem realizou a alteração, a data e hora do registro e os valores anteriores e novos.`,{title:'Atenção: alterar agendamento da defesa',tone:'warning',confirmLabel:'Sim, quero alterar',cancelLabel:'Manter como está'}):undefined} onSave={async next=>{const result=await apiClient.updateProcess(process.id,{...patch(next.trim()),expectedDataRevision:process.dataRevision});await loadData({quiet:true,preserveAcervoDraft:true});if(result.reservationRestarted)portalNotice(result.workflowPending?`Agendamento atualizado e confirmação reiniciada. O novo pedido de reserva aguarda envio: ${result.workflowError||'a secretaria deve acompanhar a pendência.'}`:'Agendamento atualizado e novo pedido enviado ao responsável pelo local. Aguarde a confirmação pelo novo pedido.',{title:'Solicitação de reserva reiniciada'});}}/>;
@@ -508,20 +511,19 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     if (!process) return;
     try {
       const updatedAluno1 = {
-        ...process.aluno1,
+        ...withoutRegistrationIdentifiers(process.aluno1),
         nome: cadastralForm.aluno1Nome.trim(),
-        email: cadastralForm.aluno1Email.trim(),
-        matricula: cadastralForm.aluno1Matricula.trim()
+        email: cadastralForm.aluno1Email.trim()
       };
 
       const updatedAluno2 = cadastralForm.hasAluno2 && cadastralForm.aluno2Nome.trim() ? {
+        ...withoutRegistrationIdentifiers(process.aluno2 || {}),
         nome: cadastralForm.aluno2Nome.trim(),
-        email: cadastralForm.aluno2Email.trim(),
-        matricula: cadastralForm.aluno2Matricula.trim()
+        email: cadastralForm.aluno2Email.trim()
       } : null;
 
       const updatedOrientador = {
-        ...process.orientador,
+        ...withoutRegistrationIdentifiers(process.orientador),
         nome: cadastralForm.orientadorNome.trim(),
         email: cadastralForm.orientadorEmail.trim(),
         instituicao: cadastralForm.orientadorInstituicao.trim() || installationProfile.defaultInstitutionName
@@ -691,15 +693,15 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   };
 
   const handleReopenEvaluation = async () => {
-    const reason=(await portalPrompt('Informe o motivo formal da reabertura da avaliação (mínimo de 10 caracteres):',''));
+    const reason=(await portalPrompt('Informe o motivo formal da reabertura de conceito e ata (mínimo de 10 caracteres).',''));
     if (reason!==null) {
       try {
         if(reason.trim().length<10){portalNotice('O motivo precisa ter pelo menos 10 caracteres.');return;}
         await apiClient.reopenEvaluation(process.id,reason.trim());
-        portalNotice('Avaliação reaberta com sucesso.');
+        portalNotice('Registro de conceito e ata reaberto.');
         await loadData();
       } catch (err: any) {
-        portalNotice(err.message || 'Erro ao reabrir avaliação.');
+        portalNotice(err.message || 'Não foi possível reabrir conceito e ata.');
       }
     }
   };
@@ -818,7 +820,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} type="button" onClick={()=>{setActiveTab(tab.id);setProcessLink(process.id,tab.id as ProcessSection);}} aria-pressed={selected} className={`flex min-h-9 min-w-0 flex-1 justify-center items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold ${selected?'portal-tcc-tab-selected border-[var(--portal-brand-header)] bg-white text-slate-950':'border-white bg-white text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
       <div className="portal-tcc-workspace-content p-3">
 
-      {!readOnly && !process.legacyRecord && isTabVisible('cadastral') && process.defesa.localStatus !== 'CONFIRMADO' && <ProcessFlowPanel process={process} jobs={signatureJobs} canConfirm={(isStudent || isMasterAdmin) && !readOnly} onUpdated={loadData} onChangeReservation={canEditDefense?()=>{document.querySelector<HTMLButtonElement>('[aria-label="Alterar reserva da defesa"]')?.click();}:undefined}/> }
+      {!readOnly && !process.legacyRecord && isTabVisible('cadastral') && effectiveDefenseReservationStatus(process) !== 'CONFIRMADO' && <ProcessFlowPanel process={process} jobs={signatureJobs} canConfirm={(isStudent || isMasterAdmin) && !readOnly} onUpdated={loadData}/> }
 
       {/* ========================================================================= */}
       {/* SECTION 1: FICHA CADASTRAL E IDENTIFICAÇÃO DO PROCESSO                    */}
@@ -828,30 +830,30 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
           <div className="p-4 sm:p-5">
             <div className="space-y-3">
-              <ProcessSummaryCard process={process} canEdit={!readOnly&&canEditData} canEditReservation={!readOnly&&canEditDefense&&!process.legacyRecord} studio={settings.integrationStudio} onEditingChange={setSummaryEditing} onUpdated={()=>loadData({quiet:true,preserveAcervoDraft:true})}/>
+              <ProcessSummaryCard process={process} canEdit={!readOnly&&canEditData} canEditReservation={canEditDefense} isAuthenticated={isAuthenticated} studio={settings?.integrationStudio} onEditingChange={setSummaryEditing} onUpdated={()=>loadData({quiet:true,preserveAcervoDraft:true})}/>
               <section className="portal-tcc-members-box" aria-label="Dados dos membros">
                 <h2 className="mb-2 text-xs font-bold normal-case">Dados dos membros</h2>
                 <div className="portal-members-table-scroll" role="region" aria-label="Tabela de membros com rolagem horizontal" tabIndex={0}>
                   <table className="portal-members-table">
                     <caption className="sr-only">Participantes do TCC e seus dados cadastrais</caption>
-                    {!readOnly&&<colgroup><col style={{width:'10%'}}/><col style={{width:'18%'}}/><col style={{width:'10%'}}/><col style={{width:'9%'}}/><col style={{width:'23%'}}/><col style={{width:'13%'}}/><col style={{width:'17%'}}/></colgroup>}
-                    <thead><tr><th scope="col">Função</th><th scope="col">Nome</th><th scope="col">Referência</th><th scope="col">Titulação</th>{!readOnly&&<><th scope="col">E-mail</th><th scope="col" title="Matrícula, SIAPE ou outro registro">Registro</th></>}<th scope="col">Instituição</th></tr></thead>
+                    {!readOnly&&<colgroup><col style={{width:hasHistoricalRegistration?'10%':'12%'}}/><col style={{width:hasHistoricalRegistration?'18%':'23%'}}/><col style={{width:'10%'}}/><col style={{width:'9%'}}/><col style={{width:hasHistoricalRegistration?'23%':'26%'}}/>{hasHistoricalRegistration&&<col style={{width:'13%'}}/>}<col style={{width:hasHistoricalRegistration?'17%':'20%'}}/></colgroup>}
+                    <thead><tr><th scope="col">Função</th><th scope="col">Nome</th><th scope="col">Referência</th><th scope="col">Titulação</th>{!readOnly&&<th scope="col">E-mail</th>}{hasHistoricalRegistration&&<th scope="col" title="Matrícula, SIAPE ou outro registro histórico">Registro</th>}<th scope="col">Instituição</th></tr></thead>
                     <tbody>
                 {[
-                  {role:'Aluno autor',person:process.aluno1,student:true,key:'aluno1'},
-                  ...(process.aluno2?[{role:'Aluno autor',person:process.aluno2,student:true,key:'aluno2'}]:[]),
-                  {role:'Orientador(a)',person:process.orientador,student:false,key:'orientador'},
-                  ...process.banca.filter(person=>readOnly?person.funcao!=='ORIENTADOR':normalizeEmail(person.email)!==normalizeEmail(process.orientador.email)&&normalizeEmail(person.email)!==normalizeEmail(process.coorientador?.email||'')).map(person=>({role:'Examinador',person,student:false,key:'banca'})),
-                  ...(process.coorientador?.nome?.trim()?[{role:'Coorientador(a)',person:process.coorientador,student:false,key:'coorientador'}]:[])
+                  {role:participantRole('student',process.registrationAnswers,'ALUNO_1',process.aluno1),person:process.aluno1,student:true,key:'aluno1'},
+                  ...(process.aluno2?[{role:participantRole('student',process.registrationAnswers,'ALUNO_2',process.aluno2),person:process.aluno2,student:true,key:'aluno2'}]:[]),
+                  {role:participantRole('advisor',process.registrationAnswers,'ORIENTADOR',process.orientador),person:process.orientador,student:false,key:'orientador'},
+                  ...process.banca.filter(person=>readOnly?person.funcao!=='ORIENTADOR':normalizeEmail(person.email)!==normalizeEmail(process.orientador.email)&&normalizeEmail(person.email)!==normalizeEmail(process.coorientador?.email||'')).map((person,index)=>({role:participantRole('examiner',process.registrationAnswers,`EXAMINADOR_${person.funcao.match(/EXAMINER_(\d+)/)?.[1]||index+2}`,person),person,student:false,key:'banca'})),
+                  ...(process.coorientador?.nome?.trim()?[{role:participantRole('coadvisor',process.registrationAnswers,'COORIENTADOR',process.coorientador),person:process.coorientador,student:false,key:'coorientador'}]:[])
                 ].map(({role,person,student,key})=>{
-                  const field=(property:string,value:string)=>key==='banca'?{banca:process.banca.map(member=>member===person?{...member,[property]:value}:member)}:{[key]:{...person,[property]:value}};
+                  const field=(property:string,value:string)=>key==='banca'?{banca:process.banca.map(member=>member===person?{...withoutRegistrationIdentifiers(member),[property]:value}:withoutRegistrationIdentifiers(member))}:{[key]:{...withoutRegistrationIdentifiers(person),[property]:value}};
                   return <tr key={`${key}-${person.email||person.nome}`}>
                     <th scope="row">{role}</th>
                     <td className="font-bold">{inlineField(`Nome — ${role}`,person.nome,value=>field('nome',value))}</td>
                     <td>{inlineField(`Tratamento — ${role}`,person.tratamento||'',value=>field('tratamento',value),'text',person.tratamento||'Não informado',canEditData,false,student?STUDENT_TREATMENTS:FACULTY_TREATMENTS)}</td>
                     <td>{student?<span aria-label="Não se aplica">—</span>:inlineField(`Titulação — ${role}`,'titulacao' in person?person.titulacao||'':'',value=>field('titulacao',value),'text','titulacao' in person?person.titulacao||'Não informada':'Não informada',canEditData,false,ACADEMIC_DEGREES)}</td>
-                    {!readOnly&&<><td>{(student?localFormat.showStudentEmail:localFormat.showAdvisorEmail)!==false?inlineField(`E-mail — ${role}`,person.email,value=>field('email',value),'email'):<span aria-label="Não exibido">—</span>}</td>
-                    <td>{(!student||localFormat.showStudentMatricula!==false)?inlineField(`Número de registro — ${role}`,String(student?('matricula' in person?person.matricula:''):('siape' in person?person.siape||'':'')),value=>field(student?'matricula':'siape',value)):<span aria-label="Não exibido">—</span>}</td></>}
+                    {!readOnly&&<td>{(student?localFormat.showStudentEmail:localFormat.showAdvisorEmail)!==false?inlineField(`E-mail — ${role}`,person.email,value=>field('email',value),'email'):<span aria-label="Não exibido">—</span>}</td>}
+                    {hasHistoricalRegistration&&<td>{(!student||localFormat.showStudentMatricula!==false)?<span className="portal-inline-field-value">{String(student?('matricula' in person?person.matricula||'—':'—'):('siape' in person?person.siape||'—':'—'))}</span>:<span aria-label="Não exibido">—</span>}</td>}
                     <td>{student?<span className="portal-inline-field-value">UFES</span>:localFormat.showAdvisorInstitution!==false?inlineField(`Instituição — ${role}`,String(('instituicao' in person&&person.instituicao)||''),value=>field('instituicao',value)):<span aria-label="Não exibido">—</span>}</td>
                   </tr>;
                 })}
@@ -868,11 +870,11 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* SECTION 3: COMPOSIÇÃO DA BANCA EXAMINADORA                                */}
       {/* ========================================================================= */}
       {/* ========================================================================= */}
-      {/* SECTION 4: CAMPO DE AVALIAÇÃO E NOTAS DA BANCA                            */}
+      {/* SECTION 4: CONCEITO E ATA                                               */}
       {/* ========================================================================= */}
       {localFormat.showSectionAvaliacao !== false && isTabVisible('avaliacao') && (
         <>
-        <AdvisorEvaluationPanel publicReadOnly={readOnly} process={process} canEvaluate={!process.legacyRecord && (isAdvisor || isMasterAdmin) && !readOnly}
+        <AdvisorEvaluationPanel publicReadOnly={readOnly} process={process} canEvaluate={!process.legacyRecord && isAuthenticated && isAdvisor}
           canReopen={!process.legacyRecord && (isMasterAdmin || isAdvisor) && !readOnly && !isAcervoSubmitted && !process.acervo?.firstSubmittedAt && process.status!=='CONCLUIDO'} onReopen={handleReopenEvaluation} onUpdated={async()=>{await loadData();setActiveTab('docs');setProcessLink(process.id,'docs');}} />
         </>
       )}
@@ -882,8 +884,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* ========================================================================= */}
       {process.legacyRecord && localFormat.showSectionDocs !== false && isTabVisible('docs') && <LegacyAdministrativeDocuments processId={process.id} canAccessOriginals={isMasterAdmin}/>}
       {!process.legacyRecord && localFormat.showSectionDocs !== false && isTabVisible('docs') && (
-        <ProcessDocumentsPanel count={documents.length+1} toolbar={
-          !readOnly&&(isMasterAdmin||isCommissionPresident)?<button type="button" onClick={()=>{setDownloadSelection(documents.filter(doc=>doc.status==='DISPONIVEL'||doc.status==='ASSINADO').map(doc=>doc.type));setDownloadPicker(true);}} disabled={isDownloadingDossier} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 disabled:opacity-60" aria-label="Escolher documentos para baixar" title="Baixar documentos"><Download className="h-4 w-4"/></button>:undefined
+        <ProcessDocumentsPanel count={Object.keys(administrativeDocumentLabels).length+1} toolbar={
+          !readOnly&&isMasterAdmin?<button type="button" onClick={()=>{setDownloadSelection(documents.filter(doc=>doc.status==='DISPONIVEL'||doc.status==='ASSINADO').map(doc=>doc.type));setDownloadPicker(true);}} disabled={isDownloadingDossier} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 disabled:opacity-60" aria-label="Escolher documentos para baixar" title="Baixar documentos"><Download className="h-4 w-4"/></button>:undefined
         } notices={<>
             {!readOnly&&documents.some(doc=>doc.requiresSignature&&doc.status!=='ASSINADO'&&doc.status!=='NAO_DISPONIVEL')&&<aside className="portal-instruction p-3 text-xs"><p className="font-semibold">Orientações</p><ul className="mt-1 list-disc space-y-1 pl-5"><li>Somente os responsáveis indicados em cada documento podem assiná-lo.</li><li>Prefira o Asten: solicite a assinatura pelo botão e siga o link recebido por e-mail.</li><li>Pelo Gov.br, baixe o documento, assine e devolva o PDF com todas as assinaturas exigidas.</li></ul></aside>}
             {signatureNotice&&(!signatureNotice.documentType||!documents.some(doc=>doc.type===signatureNotice.documentType&&doc.status==='ASSINADO'))&&<div role="status" className={`rounded-lg border p-3 text-xs font-bold flex items-start justify-between gap-3 ${signatureNotice.ok?'portal-instruction':'border-red-200 bg-red-50 text-red-900'}`}><span>{signatureNotice.text}</span><button type="button" onClick={()=>setSignatureNotice(null)} className="shrink-0 underline" aria-label="Fechar aviso de documento">Fechar aviso</button></div>}
@@ -903,40 +905,50 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
         </>}>
 
-              <ReservationReceiptCard downloadUrl={hasReservationReceipt ? `/api/public/processes/${encodeURIComponent(process.protocolo)}/reservation-receipt` : undefined}/>
-              {documents.map((doc) => {
-                const termDeclined=doc.type==='TERMO'&&publicationDeclined(process);
-                const isDownloadable = !termDeclined&&(doc.status === 'DISPONIVEL' || doc.status === 'ASSINADO');
-                const canRequestSignature=!readOnly&&doc.status!=='ASSINADO'&&!documentSignatureCompleted(signatureJobs,process.id,doc.type,process.dataRevision)&&!termDeclined&&doc.requiresSignature&&doc.status!=='NAO_DISPONIVEL'&&(isMasterAdmin||isCommissionPresident||(doc.type==='ATA'&&isAdvisor)||(doc.type==='TERMO'&&(isStudent||isAdvisor)));
-
-                const getDocInfo = (type: string) => {
-                  switch (type) {
-                    case 'CONVITE':
-                      return { title: 'Carta-Convite da Banca', signNote: 'Não requer assinatura', availability: 'Confirme o local e envie o convite à banca.' };
-                    case 'ATA':
-                      return { title: 'Ata', signNote: 'Professor orientador', availability: 'Aguarda confirmação da ata após a defesa.' };
-                    case 'TERMO':
-                      return { title: 'Termo de Autorização e Publicação', signNote: 'Orientador e todos os autores', availability: 'Solicite publicação na entrega do Repositório.' };
-                    case 'DECLARACAO':
-                      return { title: 'Declaração de Participação na Banca', signNote: 'Presidência', availability: 'Aguarda entrega final, ata e termo aplicável assinados.' };
-                    default:
-                      return { title: doc.title, signNote: 'Assinatura gerenciada pelo portal', availability: 'Após concluir a etapa responsável pela geração deste documento.' };
-                  }
-                };
-
-                const docInfo = getDocInfo(doc.type);
-                const downloadPending=termDeclined?'Não foi autorizada a publicação do trabalho nem do resumo expandido por autores e orientador.':doc.status==='NAO_DISPONIVEL'?docInfo.availability:doc.status==='GERANDO'?'O PDF está sendo gerado.':doc.status==='AGUARDANDO_ASSINATURA'?'Aguarda as assinaturas e o arquivamento do PDF.':doc.status==='COM_ERRO'?'A geração falhou. A comissão deve verificar a pendência.':'Consulte a versão atual deste documento.';
+              <ReservationReceiptCard protocol={process.protocolo} revision={process.defesa.reservationRevision} currentStatus={effectiveDefenseReservationStatus(process)} downloadUrl={hasReservationReceipt ? `/api/public/processes/${encodeURIComponent(process.protocolo)}/reservation-receipt` : undefined}/>
+              {(Object.keys(administrativeDocumentLabels) as ProcessDocument['type'][]).map(type => {
+                const docInfo = administrativeDocumentLabels[type];
+                const doc = documents.find(item => item.type === type);
+                if (!doc) return <ProcessDocumentCard key={type} title={docInfo.title} signerNote={docInfo.signer}
+                  status={docInfo.pending} available={false} onView={()=>{}} onDownload={()=>{}} />;
+                const {publicationDeclined:termDeclined,available:isDownloadable}=administrativeDocumentAvailability(process,doc,readOnly);
+                const revision = signatureDocumentRevision(process, doc.type);
+                const signatureOpen = !readOnly && doc.status !== 'ASSINADO' && doc.status !== 'NAO_DISPONIVEL'
+                  && doc.requiresSignature && !termDeclined && !documentSignatureCompleted(signatureJobs, process.id, doc.type, revision);
+                const canRequestSignature = signatureOpen && (isMasterAdmin || (doc.type === 'DECLARACAO' && isCommissionPresident)
+                  || (doc.type === 'ATA' && isAdvisor) || (doc.type === 'TERMO' && (isStudent || isAdvisor)));
+                const canUseGovbr = canRequestSignature || (signatureOpen && doc.type === 'ATA' && isExaminer && signatureJobs.some(job =>
+                  job.documentType === 'ATA' && job.provider === 'GOV_BR' && job.status === 'READY_FOR_REVIEW'
+                  && job.sourceDataRevision === revision && job.driveUnsignedFileId
+                  && job.signers.some(signer => signer.role === 'EXAMINER' && normalizeEmail(signer.email) === normEmail)));
+                const signingJob = doc.status === 'NAO_DISPONIVEL' ? undefined : signatureJobs.find(job =>
+                  job.documentType === doc.type && job.documentVersion === doc.currentVersion && job.status !== 'CANCELED'
+                  && (doc.type !== 'ATA' || process.avaliacao.documentRevision === undefined || job.sourceDataRevision === process.avaliacao.documentRevision));
+                let status = docInfo.pending;
+                let statusDescription: string | undefined;
+                if (termDeclined) {
+                  status = 'Publicação não autorizada';
+                  statusDescription = 'O termo de autorização não foi gerado.';
+                } else if (isDownloadable) {
+                  status = docInfo.generated;
+                  statusDescription = 'Documento disponível para consulta.';
+                } else if (signingJob?.driveUnsignedFileId) {
+                  status = docInfo.generated;
+                  statusDescription = signingJob.status === 'DRIVE_SYNC_PENDING' ? 'Aguarda o arquivamento do PDF assinado.' : 'Aguarda as assinaturas exigidas.';
+                }
+                if (doc.status === 'GERANDO') statusDescription = 'O PDF está sendo gerado.';
+                if (doc.status === 'COM_ERRO') statusDescription = 'A comissão deve conferir a pendência de assinatura.';
 
                 return <ProcessDocumentCard key={doc.id}
-                  title={doc.type==='CONVITE'?<>Carta-Convite<br/>da Banca</>:doc.type==='ATA'?<>Ata</>:docInfo.title}
-                  signerNote={termDeclined||doc.type==='CONVITE'?'Não necessária':docInfo.signNote}
-                  status={termDeclined?'Não autorizado':doc.status==='NAO_DISPONIVEL'?'Não disponível':({DISPONIVEL:'Disponível',ASSINADO:'Assinado',AGUARDANDO_ASSINATURA:'Aguardando assinatura'}[doc.status]||'Não disponível')}
-                  statusDescription={!isDownloadable?downloadPending:undefined}
-                  tone={doc.status==='ASSINADO'||doc.status==='DISPONIVEL'?'available':doc.status==='COM_ERRO'?'error':'pending'}
-                  available={isDownloadable} unavailable={!isDownloadable&&!canRequestSignature}
+                  title={docInfo.title}
+                  signerNote={docInfo.signer}
+                  status={status}
+                  statusDescription={statusDescription}
+                  tone={termDeclined?'denied':isDownloadable||signingJob?.driveUnsignedFileId?'available':'pending'}
+                  available={isDownloadable} unavailable={!isDownloadable&&!canUseGovbr}
                   onView={()=>setSelectedPreviewDoc(doc)} onDownload={()=>void handleDirectDownload(doc)}>
-                  {canRequestSignature&&<div className="portal-document-signature-actions flex flex-col gap-2">
-                    <button type="button" onClick={()=>handleSignDocument(doc)} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><ShieldCheck className="h-4 w-4"/>Asten</button>
+                  {canUseGovbr&&<div className="portal-document-signature-actions flex flex-col gap-2">
+                    {canRequestSignature&&<button type="button" onClick={()=>handleSignDocument(doc)} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><ShieldCheck className="h-4 w-4"/>Asten</button>}
                     <button type="button" onClick={()=>setGovbrDocument(doc)} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><FileCheck className="h-4 w-4"/>Gov.br</button>
                   </div>}
                 </ProcessDocumentCard>;
@@ -1118,7 +1130,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* ========================================================================= */}
 
       {/* Audit Log Modal (Full dialog view via gear) */}
-      {govbrDocument&&<GovbrSignatureModal process={process} documentType={govbrDocument.type as 'ATA'|'TERMO'|'DECLARACAO'} canApprove={isMasterAdmin} initialJob={signatureJobs.find(job=>job.documentType===govbrDocument.type&&job.provider==='GOV_BR'&&job.sourceDataRevision===process.dataRevision&&job.status!=='CANCELED')} onChange={()=>void loadData({quiet:true})} onClose={()=>setGovbrDocument(null)}/>}
+      {govbrDocument&&<GovbrSignatureModal process={process} documentType={govbrDocument.type as 'ATA'|'TERMO'|'DECLARACAO'} canApprove={isMasterAdmin} initialJob={signatureJobs.find(job=>job.documentType===govbrDocument.type&&job.provider==='GOV_BR'&&job.sourceDataRevision===signatureDocumentRevision(process,govbrDocument.type)&&job.status!=='CANCELED')} onChange={()=>void loadData({quiet:true})} onClose={()=>setGovbrDocument(null)}/>}
       <PortalModalShell zIndexClass="z-[1000002]" open={downloadPicker} onClose={()=>setDownloadPicker(false)} title="Baixar documentos" icon={Download} maxWidthClass="max-w-lg" bodyClassName="p-4" footer={<div className="flex justify-end gap-2"><button type="button" className="portal-action" onClick={()=>setDownloadPicker(false)}>Fechar</button><button type="button" disabled={isDownloadingDossier||!downloadSelection.length} className="portal-action" onClick={()=>void handleDownloadDossier()}>{isDownloadingDossier?'Preparando…':'Baixar selecionados'}</button></div>}>
         <div className="space-y-2">{documents.map(doc=><label key={doc.id} className="flex items-center gap-2 rounded-lg border p-3"><input type="checkbox" disabled={!['DISPONIVEL','ASSINADO'].includes(doc.status)} checked={downloadSelection.includes(doc.type)} onChange={event=>setDownloadSelection(current=>event.target.checked?[...current,doc.type]:current.filter(type=>type!==doc.type))}/><span>{doc.title}<small className="block">{doc.status==='DISPONIVEL'?'Disponível':doc.status==='ASSINADO'?'Assinado':'Não disponível'}</small></span></label>)}</div>
       </PortalModalShell>
@@ -1196,8 +1208,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           </section>
           <section className="portal-modal-card space-y-2 p-4 text-xs">
             <strong>Exclusão completa do TCC</strong>
-            <p>Serão removidos os arquivos, as solicitações de assinatura, os eventos de agenda e o histórico vinculados a este trabalho nas plataformas integradas.</p>
-            <p>Se algum serviço não confirmar a remoção, a limpeza continuará pendente em Configurações → Integrações e Plataforma. Modelos e registros de outros trabalhos serão preservados.</p>
+            <p>Serão removidos os registros deste TCC no Portal e no Supabase, seus arquivos no Google Drive, os eventos de agenda e o histórico vinculados a este trabalho. Modelos e registros de outros trabalhos serão preservados.</p>
+            <p>A exclusão dos envelopes e documentos na Asten deve ser feita manualmente na própria Asten. Excluir o TCC no Portal não confirma o expurgo das assinaturas no provedor.</p>
+            <p>Se a limpeza dos registros e arquivos do Portal não for confirmada, a pendência aparecerá em Configurações → Integrações e Plataforma.</p>
           </section>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => { setShowDeleteModal(false); setDeleteConfirmInput(''); }} className="portal-action">Cancelar</button>

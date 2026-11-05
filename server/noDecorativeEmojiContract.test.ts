@@ -15,15 +15,11 @@ const institutionalUiFiles=[
   'src/pages/HomePage.tsx',
   'src/pages/MeusProcessosPage.tsx',
   'src/pages/ProcessoDetailPage.tsx',
-  'src/components/UnifiedFlowSystem.tsx',
-  'src/components/UnifiedPortalEditorModal.tsx',
-  'src/components/editor/PopupPreviewSection.tsx',
-  'src/components/editor/SpreadsheetPreviewSection.tsx',
+  'src/components/IntegrationStudioPanel.tsx',
+  'src/components/SettingsWorkspaceModal.tsx',
+  'src/components/HeaderSettingsPopover.tsx',
   'src/components/AuditAndSecuritySection.tsx',
-  'src/components/CalendarPopupEditorModal.tsx',
   'src/components/EmergencyRecoveryModal.tsx',
-  'src/components/LoginPopupEditorModal.tsx',
-  'src/components/TccDetailPopupEditorModal.tsx',
   'src/utils/calendarPopupConfig.ts',
 ];
 

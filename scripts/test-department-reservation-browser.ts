@@ -25,7 +25,7 @@ try{
  const page=await browser.newPage({viewport:{width:820,height:1050}});
  const token=reservationToken({processId:p.id,revision:0,recipient:'department@example.invalid',expiresAt:Date.now()+600000},secret),href=base+'/api/reservation-confirmation/'+token;
  const request=reservationRequestEmail({process:p,baseUrl:base,courseName:'Curso de Enfermagem e Obstetrícia — CCS/UFES',confirmationUrl:href});
- const logo='data:image/png;base64,'+(await readFile('public/colenf-logo.png')).toString('base64');
+ const logo='data:image/png;base64,'+(await readFile('public/ufes-crest.png')).toString('base64');
  const email=operationalEmailLayout({text:request.text,subject:`Solicitação de reserva · ${p.protocolo}`,href,label:`Confirmar reserva · ${p.protocolo}`,studio:{brandKit:{courseName:'Enfermagem e Obstetrícia — UFES',primaryColor:'#005830',courseLogoUrl:logo} as any}});
  await page.setContent(email.html);assert.equal(await page.locator('a').count(),1);assert.equal(await page.locator('img').evaluate((img:any)=>img.complete&&img.naturalWidth>0),true);
  await page.screenshot({path:path.join(out,'email.png'),fullPage:true});await writeFile(path.join(out,'email.html'),email.html);

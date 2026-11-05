@@ -1,5 +1,6 @@
+import {formatDateNumericWithWeekday,formatTime24h} from '../utils/formatters';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {CheckCheck, Eye, Image, Lightbulb, RefreshCw} from 'lucide-react';
+import {CheckCheck, Eye, Image, Lightbulb, ListFilter, RefreshCw} from 'lucide-react';
 import {useAuth} from '../context/AuthContext';
 import {apiClient} from '../services/apiClient';
 import type {FeedbackEntry} from '../types/feedback';
@@ -23,7 +24,7 @@ const COLUMNS: ColumnDef[] = [
 ];
 const ORDER=COLUMNS.map(column=>column.key);
 const VISIBLE=Object.fromEntries(ORDER.map(key=>[key,true]));
-const dateText=(value:string|null)=>value&&Number.isFinite(Date.parse(value))?new Date(value).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}):'—';
+const dateText=(value:string|null)=>value&&Number.isFinite(Date.parse(value))?`${formatDateNumericWithWeekday(value)}, ${formatTime24h(value)}`:'—';
 const searchable=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');
 
 /** The existing feedback store, presented in the same administrative sheet as logs. */
@@ -108,9 +109,12 @@ export function FeedbackInboxPanel({embedded=false}:{embedded?:boolean}) {
   if(!isMasterAdmin)return <p className="portal-instruction p-4 text-sm">Sugestões disponíveis somente para o usuário Master.</p>;
 
   const toolbar=<>
-    <select aria-label="Filtrar sugestões por situação" value={status} onChange={event=>setStatus(event.target.value as typeof status)} className="portal-input max-w-40 text-xs">
-      <option value="ALL">Todas</option><option value="NEW">Novas</option><option value="REVIEWED">Revisadas</option>
-    </select>
+    <label className="portal-settings-header-selector portal-feedback-status-filter" title="Filtrar sugestões por situação">
+      <ListFilter className="h-3.5 w-3.5 shrink-0" aria-hidden="true"/>
+      <select aria-label="Filtrar sugestões por situação" value={status} onChange={event=>setStatus(event.target.value as typeof status)}>
+        <option value="ALL">Todas</option><option value="NEW">Novas</option><option value="REVIEWED">Revisadas</option>
+      </select>
+    </label>
     <button type="button" className="portal-toolbar-icon-button" disabled={loading||loadingMore||Boolean(reviewingId)} onClick={()=>void load()} title="Atualizar sugestões" aria-label="Atualizar sugestões"><RefreshCw className="h-3.5 w-3.5"/></button>
     <span className="portal-toolbar-group-divider" role="separator" aria-orientation="vertical"/>
     <SearchPopover value={search} onChange={setSearch} placeholder="Descrição, referência ou responsável" textFormat={textFormat}/>

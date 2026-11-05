@@ -97,3 +97,41 @@ test('converte DOCX em Google Doc temporário antes da exportação', async () =
   assert.equal(calls.some(call => call.url.includes('/upload/drive/v3/files?uploadType=multipart')), true);
   assert.equal(calls.filter(call => call.method === 'DELETE').length, 1);
 });
+
+test('normaliza o cabeçalho após a revisão do corpo usando a revisão atual da cópia temporária',async()=>{
+ const headings=['UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO','CENTRO DE CIÊNCIAS DA SAÚDE','CURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA'];
+ const body=['ATA DA DEFESA','Título: Cuidados na Saúde da Mulher','Parecer: Trabalho aprovado.','Comissão de Trabalho de Conclusão de Curso','Departamento de Enfermagem','Curso de Enfermagem e Obstetrícia — CCS/UFES'];
+ const original=[...headings,...body].join('\n')+'\n';
+ let documentText=original,revision=1;
+ const batches:any[]=[],calls:Array<{url:string;method:string}>=[];
+ const readback=()=>{
+  let index=1;
+  return {documentId:'tmpGoogleDoc12345',revisionId:`rev-${revision}`,body:{content:documentText.match(/[^\n]*\n|[^\n]+$/g)!.map(text=>{
+   const startIndex=index;index+=text.length;return {startIndex,endIndex:index,paragraph:{elements:[{startIndex,textRun:{content:text}}]}};
+  })}};
+ };
+ const fetchImpl=(async(resource:URL|RequestInfo,init:RequestInit={})=>{
+  const url=String(resource),method=String(init.method||'GET');calls.push({url,method});
+  if(url.includes('/files/1AbCdEfGhIjKlMnOp?fields='))return jsonResponse({id:'1AbCdEfGhIjKlMnOp',name:'Ata',mimeType:'application/vnd.google-apps.document',capabilities:{canCopy:true}});
+  if(url.includes('/copy?'))return jsonResponse({id:'tmpGoogleDoc12345'});
+  if(url.includes('/documents/tmpGoogleDoc12345?'))return jsonResponse(readback());
+  if(url.endsWith('/documents/tmpGoogleDoc12345:batchUpdate')){
+   const batch=JSON.parse(String(init.body));assert.equal(batch.writeControl.requiredRevisionId,`rev-${revision}`);batches.push(batch);
+   let indexed='\n'+documentText;
+   for(const request of batch.requests){
+    if(request.deleteContentRange){const {startIndex,endIndex}=request.deleteContentRange.range;indexed=indexed.slice(0,startIndex)+indexed.slice(endIndex);}
+    if(request.insertText){const {location,text}=request.insertText;indexed=indexed.slice(0,location.index)+text+indexed.slice(location.index);}
+   }
+   documentText=indexed.slice(1);revision++;return jsonResponse({documentId:'tmpGoogleDoc12345',replies:[]});
+  }
+  if(url.includes('/export?')){assert.equal(documentText,original);return new Response(Buffer.from('%PDF-1.4\nheader-normalized'));}
+  if(url.includes('/files/tmpGoogleDoc12345?supportsAllDrives=true')&&method==='DELETE')return new Response(null,{status:204});
+  throw new Error(`Chamada inesperada: ${method} ${url}`);
+ }) as typeof fetch;
+ const result=await renderGoogleDriveTemplateToPdf({accessToken:'token-for-test-only',templateUrlOrId:'1AbCdEfGhIjKlMnOp',replacements:{},institutionalCrestUrl:'https://portal.example/national-arms.png',documentText:[...headings.map(text=>text.toLocaleLowerCase('pt-BR')),...body].join('\n'),fetchImpl});
+ assert.equal(batches.length,2);
+ assert.equal(batches[1].requests.filter((request:any)=>request.updateParagraphStyle?.paragraphStyle.alignment==='CENTER').length,3);
+ assert.equal(result.documentText,original.trimEnd());
+ assert.equal(calls.some(call=>call.url.includes('/files/1AbCdEfGhIjKlMnOp?')&&['PATCH','DELETE'].includes(call.method)),false);
+ assert.equal(calls.filter(call=>call.method==='DELETE').length,1);
+});

@@ -4,7 +4,7 @@ import type { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
 import { PortalModalShell } from './PortalModalShell';
 import { RegistrationFieldPreview } from './RegistrationFieldPreview';
-import { formatDatePt, formatTimeExtenso, formatTccTitle } from '../utils/formatters';
+import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatTccTitle } from '../utils/formatters';
 import { isOtherDefenseLocation, OTHER_DEFENSE_LOCATION, renderCustomLocationName } from '../utils/customDefenseLocation';
 import { operationalConfig } from '../utils/operationalConfig';
 import { reservationStatusAlert } from '../utils/reservationStatusAlert';
@@ -14,6 +14,7 @@ type ProcessSummaryProps = {
   process: ProcessData;
   canEdit: boolean;
   canEditReservation?: boolean;
+  isAuthenticated?: boolean;
   onEditingChange?: (editing:boolean)=>void;
   studio?: Partial<IntegrationStudioSettings>;
   onUpdated: () => Promise<void>;
@@ -34,7 +35,7 @@ const fieldLabel = 'text-[10px] font-semibold text-slate-600';
 const fieldValue = 'text-[11px] font-semibold leading-4 text-slate-900';
 
 export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
-  process, canEdit, canEditReservation=canEdit, onEditingChange, studio, onUpdated,
+  process, canEdit, canEditReservation=false, isAuthenticated=false, onEditingChange, studio, onUpdated,
 }) => {
   const [titleEditing, setTitleEditing] = useState(false);
   const [title, setTitle] = useState(process.titulo);
@@ -48,9 +49,9 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
   const [requested, setRequested] = useState(() => dateTimeForInput(process.defesa?.startAt || ''));
   const [locationChoice, setLocationChoice] = useState(process.defesa?.local || '');
   const [customLocation, setCustomLocation] = useState('');
-  const alert = reservationStatusAlert(process);
+  const alert = reservationStatusAlert(process, canEditReservation ? 'author' : isAuthenticated ? 'other' : 'visitor');
   const denial = alert?.kind === 'denied';
-  const outstanding = ['PENDING', 'SENT'].includes(
+  const outstanding = alert?.kind === 'waiting' && ['PENDING', 'SENT'].includes(
     String(process.defesa?.reservationChangeRequest?.status || ''),
   );
 
@@ -164,11 +165,11 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
           </div>
           <div className={`${compactField} sm:col-span-2`}>
             <span className={fieldLabel}>Data de registro</span>
-            <span className={fieldValue}>{process.createdAt ? new Date(process.createdAt).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—'}</span>
+            <span className={fieldValue}>{process.createdAt ? formatDateNumericWithWeekday(process.createdAt) : '—'}</span>
           </div>
           <div className={`${compactField} sm:col-span-3`}>
             <span className={fieldLabel}>Data da defesa</span>
-            <span className={fieldValue}>{process.defesa?.startAt ? formatDatePt(process.defesa.startAt) : 'A definir'}</span>
+            <span className={fieldValue}>{process.defesa?.startAt ? formatDateWithWeekday(process.defesa.startAt) : 'A definir'}</span>
           </div>
           <div className={`${compactField} sm:col-span-2`}>
             <span className={fieldLabel}>Horário</span>
@@ -184,20 +185,20 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
                 type="button"
                 onClick={openReservation}
                 disabled={outstanding}
-                aria-label="Alterar reserva da defesa"
-                title={outstanding ? 'Há uma solicitação de alteração aguardando resolução.' : 'Solicitar nova reserva'}
+                aria-label={denial ? 'Refazer reserva' : 'Alterar reserva da defesa'}
+                title={outstanding ? 'Há uma solicitação de alteração aguardando resolução.' : denial ? 'Refazer a reserva negada' : 'Solicitar nova reserva'}
                 className={`inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-bold shadow-sm disabled:cursor-not-allowed disabled:opacity-60 ${denial
                   ? 'border-red-700 bg-red-700 text-white hover:bg-red-800'
                   : 'border-emerald-700 bg-emerald-800 text-white hover:bg-emerald-900'}`}
               >
                 <RotateCcw className="h-3.5 w-3.5" aria-hidden="true"/>
-                Alterar reserva
+                {denial ? 'Refazer reserva' : 'Alterar reserva'}
               </button>
             )}
           </div>
         </div>
         {alert && (
-          <p role="alert" className="mt-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-[11px] font-semibold leading-4 text-red-800">
+          <p role="alert" className={`mt-2 rounded-lg border px-3 py-2 text-[11px] leading-4 ${denial ? 'border-red-300 bg-red-50 text-center font-bold text-red-800' : alert.kind === 'waiting' ? 'border-slate-300 bg-slate-100 font-semibold text-slate-800' : 'border-red-300 bg-red-50 font-semibold text-red-800'}`}>
             {alert.text}
           </p>
         )}
@@ -213,20 +214,20 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
         onClose={() => { if (!reservationSending) setReservationOpen(false); }}
         closeOnBackdrop={!reservationSending}
         closeOnEscape={!reservationSending}
-        title="Alterar reserva da defesa"
-        subtitle={process.protocolo}
+        title={`${process.protocolo} - ${denial ? 'Refazer reserva' : 'Alterar reserva de defesa'}`}
         icon={CalendarClock}
         maxWidthClass="max-w-lg"
         bodyClassName="p-4"
       >
         <form id="reservation-change-form" onSubmit={(event) => void submitReservationChange(event)} className="space-y-3">
           <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-950">
-            O envio cria uma <strong>nova solicitação</strong> ao responsável pelo local. A confirmação anterior deixa de valer. O novo local e horário ficam reservados no sistema enquanto aguardam aceite ou recusa.
+            Antes de enviar, consulte o Departamento de Enfermagem para conciliar a defesa com aulas, eventos e outras reservas dos espaços. O envio cria uma <strong>nova solicitação</strong> ao responsável pelo local e invalida a confirmação anterior. O novo local e horário ficam bloqueados no Portal por 1h30 de defesa enquanto aguardam aceite ou recusa. Para outro local, combine a disponibilidade com o orientador.
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className={compactField}>
               <span className={fieldLabel}>Nova data *</span>
               <input required type="date" value={requested.date} onChange={(event) => setRequested((current) => ({ ...current, date: event.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs" />
+              {requested.date&&<span className="text-[11px] font-medium text-emerald-900">{formatDateWithWeekday(requested.date)}</span>}
             </label>
             <label className={compactField}>
               <span className={fieldLabel}>Novo horário *</span>

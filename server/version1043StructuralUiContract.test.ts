@@ -62,15 +62,15 @@ test('calendário remove fins de semana da grade e preserva popup nativo por cli
   assert.match(home,/selectedDayDefenses\.map/);
 });
 
-test('fluxo do TCC usa caminho responsivo em minhoca',()=>{
+test('fluxo do TCC segue a ordem de leitura nas duas linhas',()=>{
   const flow=read('src/pages/FluxoTccPage.tsx');
   const css=readPortalCss();
   assert.match(flow,/max-w-none/);
   assert.match(flow,/portal-flow-snake/);
   assert.match(flow,/portal-flow-step/);
   assert.match(css,/grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(css,/nth-child\(4\)::before/);
-  assert.match(css,/content:\s*["']↓["']/);
+  assert.match(css,/\.portal-flow-step:not\(:nth-child\(4n\)\)::after\s*\{\s*content:\s*["']→["']/);
+  assert.doesNotMatch(css,/\.portal-flow-step:nth-child\(\d+\)\s*\{/);
 });
 
 test('replicar portal mantém somente download agregado dos modelos',()=>{

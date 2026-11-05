@@ -1,5 +1,27 @@
 import {documentSignatureCompleted} from './documentSignatureState';
+import type { ProcessData, ProcessDocument } from '../types';
 import type { SignatureJob } from '../types/signatures';
+
+interface DeclarationPerson {
+  nome: string;
+  instituicao?: string;
+}
+
+export interface PresidencyProcess extends Pick<ProcessData, 'id' | 'protocolo' | 'titulo' | 'status' | 'dataRevision'> {
+  aluno1: DeclarationPerson;
+  aluno2: DeclarationPerson | null;
+  orientador: DeclarationPerson;
+  coorientador: DeclarationPerson | null;
+  banca: (DeclarationPerson & {funcao: string})[];
+  defesa: Pick<ProcessData['defesa'], 'startAt' | 'local'>;
+  acervo: {resumoSintese?: string; palavrasChave?: string[]};
+}
+
+export interface PresidencyQueueItem {
+  process: PresidencyProcess;
+  documents: Pick<ProcessDocument, 'type' | 'requiresSignature' | 'status'>[];
+  jobs: SignatureJob[];
+}
 
 export interface CoordinatorSignatureQueueItem {
   process?: { id?: string };

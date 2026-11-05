@@ -1,26 +1,29 @@
-import {withOperationalCatalog} from '../utils/studioOperationalCatalog';
-import {applyProcessEmailGreeting} from '../utils/processEmailGreeting';
-import {withoutGenericProcessFooter} from '../utils/processEmailMessage';
-import {invitationEmail} from '../utils/invitationEmail';
-import {ReservationSchedulingNotice} from './ReservationSchedulingNotice';
-import {operationalEmailLayout} from '../utils/operationalEmailLayout';
-import {reservationRequestEmail} from '../utils/reservationRequestEmail';
-import {finalDocumentsEmail,isFinalDocumentsEmail} from '../utils/finalDocumentsEmail';
-import {registrationIdentitySentence} from '../utils/registrationIdentity';
-import {processLink} from '../utils/processLink';
-import {saveStudioAutomatically} from '../services/studioAutosave';
+import {DynamicStudioForms} from './DynamicStudioForms';
+import {EmailAuditSettings} from './EmailAuditSettings';
+import {ConfigurableRegistration} from './ConfigurableRegistration';
+import {studioEmailPreview,studioEditableEmail,studioSampleProcess} from '../utils/studioRuntimePreview';
+import {receiptDesign as resolveReceiptDesign} from '../utils/receiptDesign';
+import {reservationConfirmationView,reservationPage} from '../utils/reservationConfirmationView';
+import {formatDateTimeWithWeekday} from '../utils/formatters';
+import {reservationRecipientField} from '../utils/reservationRecipientField';
+import {institutionalDocumentLogo} from '../utils/institutionalDocumentLogo';
+import {operationalEmailRouting,withOperationalCatalog} from '../utils/studioOperationalCatalog';
+import {saveStudioAutomatically,saveStudioImageAutomatically} from '../services/studioAutosave';
 import {mergeStudioDraft} from '../utils/studioDraftMerge';
 import { signatureWorkflowBinding } from '../utils/signatureWorkflowBindings';
 import { orderEmailTemplates } from '../utils/emailTemplateIdentity';
-import {processEmailGuidance,withProcessEmailGuidance,emailProcessSection} from '../utils/processEmailGuidance';
+import {processEmailGuidance} from '../utils/processEmailGuidance';
 import {consolidateProcessForms} from '../utils/processFormConsolidation';
-import { portalConfirm } from '../services/portalDialogs';
+import { portalConfirm, portalPrompt } from '../services/portalDialogs';
 import { retryAfterPortalReauthentication } from '../services/reauthentication';
 import { upgradeStudioDraft } from '../utils/studioUpgrade';
 import { OperationalDesignerPanel } from './OperationalDesignerPanel';
+import { WorkflowSimulationPanel } from './WorkflowSimulationPanel';
+import {REGISTRATION_QUESTIONS} from '../utils/operationalConfig';
 import { registrationQuestions, operationalConfig as resolveOperationalConfig } from '../utils/operationalConfig';
 import { evaluateStudioCondition } from '../utils/courseStudioValidator';
 import type { OperationalConfig } from '../types/operationalConfig';
+import type { StudioVersionRecord } from '../types/courseOperations';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -97,11 +100,12 @@ import type {
   WorkflowStageItem
 } from '../pages/ConfiguracoesPage';
 
-type StudioTab = 'operation' | 'overview' | 'brand' | 'documents' | 'emails' | 'forms' | 'workflow' | 'variables' | 'audit';
+type StudioTab = 'operation' | 'overview' | 'brand' | 'documents' | 'emails' | 'receipts' | 'forms' | 'workflow' | 'variables' | 'audit';
 
 interface IntegrationStudioPanelProps {
   actorEmail: string;
   initialStudio?: IntegrationStudioSettings;
+  reservationDepartmentEmail?:string;
   matrixColumns: MatrixColumn[];
   setMatrixColumns: React.Dispatch<React.SetStateAction<MatrixColumn[]>>;
   matrixRows: MatrixRow[];
@@ -120,7 +124,7 @@ interface IntegrationStudioPanelProps {
   onScanDrive: () => Promise<void>;
   isScanningDrive: boolean;
   notify: (message: string) => void;
-  initialTab?: 'documents' | 'emails' | 'forms' | 'workflow' | 'variables';
+  initialTab?: 'documents' | 'emails' | 'receipts' | 'forms' | 'workflow' | 'variables';
   hideTabs?: boolean;
 }
 
@@ -152,7 +156,7 @@ const PREVIEW_VARIABLES: Record<string,string> = {
   TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TCC_TITULO:'Segurança do paciente e qualidade da assistência de enfermagem', TITULO_TRABALHO:'Segurança do paciente e qualidade da assistência de enfermagem', CAMPO_02:'Segurança do paciente e qualidade da assistência de enfermagem',
   ALUNOS_NOMES:'Ana Carolina Souza e Bruno Martins Lima', ALUNO_NOME:'Ana Carolina Souza', NOME_ALUNO:'Ana Carolina Souza', CAMPO_01:'Ana Carolina Souza e Bruno Martins Lima',
   ORIENTADOR_NOME:'Professora Doutora Maria Silva', CAMPO_03:'Professora Doutora Maria Silva', DEFESA_DATA_HORA:'15 de outubro de 2026 às 14h', DEFESA_DATA_HORA_EXTENSO:'15 de outubro de 2026 às 14h', CAMPO_04:'15 de outubro de 2026 às 14h',
-  DEFESA_LOCAL:'Auditório do CCS — UFES', LOCAL_DEFESA:'Auditório do CCS — UFES', CAMPO_07_LOCAL:'Auditório do CCS — UFES', PROTOCOLO:'TCC-2026-0001', CAMPO_12:'TCC-2026-0001',
+  DEFESA_LOCAL:'Auditório do CCS — UFES', LOCAL_DEFESA:'Auditório do CCS — UFES', CAMPO_07_LOCAL:'Auditório do CCS — UFES', PROTOCOLO:'TCC - 00001', CAMPO_12:'TCC - 00001',
   ALUNO_1_EMAIL:'ana.souza@exemplo.edu.br',ALUNO_2_EMAIL:'bruno.martins@exemplo.edu.br',
   DEPARTAMENTO_EMAIL:'departamento@exemplo.ufes.br',ORIENTADOR_EMAIL:'maria.silva@exemplo.ufes.br',
   LOCAL_ALTERNATIVO:'Sala de reuniões do CCS',EXAMINADOR_2_NOME:'Prof. João Oliveira',EXAMINADOR_3_NOME:'Profa. Carla Santos',
@@ -268,34 +272,35 @@ const FormQuestionEditor: React.FC<{
   index: number;
   variables: Array<{ id: string; name: string; label?: string }>;
   previousQuestions: FormQuestionItem[];
+  coreField?:boolean;
   onChange: (updates: Partial<FormQuestionItem>) => void;
   onDelete: () => void;
-}> = ({ question, index, variables, previousQuestions, onChange, onDelete }) => {
+}> = ({ question, index, variables, previousQuestions, onChange, onDelete, coreField=false }) => {
   const condition = question.visibleWhen || { fieldKey: '', operator: 'EQUALS' as const, value: '' };
   const validation = question.validation || {};
   return <article className="rounded-xl border border-slate-200 bg-white p-3" aria-label={`Campo ${index + 1}: ${question.label}`}>
     <div className="grid gap-2 sm:grid-cols-[1fr_.8fr_.7fr_auto]">
-      <input aria-label="Rótulo do campo" value={question.label} onChange={(event) => onChange({ label: event.target.value })} className={inputClass} placeholder="Pergunta" />
-      <select aria-label="Variável vinculada" value={question.fieldKey} onChange={event=>onChange({fieldKey:event.target.value,isReuseOfFieldKey:Boolean(event.target.value)})} className={inputClass}>
+      <input disabled={coreField&&/_MATRICULA$|_SIAPE$/.test(question.fieldKey)} aria-label="Rótulo do campo" value={question.label} onChange={(event) => onChange({ label: event.target.value })} className={inputClass} placeholder="Pergunta" />
+      <select aria-label="Variável vinculada" disabled={coreField} value={question.fieldKey} onChange={event=>onChange({fieldKey:event.target.value,isReuseOfFieldKey:Boolean(event.target.value)})} className={inputClass}>
         <option value="">Selecione a variável…</option>
         {variables.filter((variable,index,all)=>all.findIndex(item=>item.id===variable.id)===index).map(variable=><option key={variable.id} value={normalizeVariableKey(/^CAMPO_/i.test(variable.id)?variable.id:(variable.name||variable.id))}>{variable.label||variable.name}</option>)}
       </select>
-      <select aria-label="Tipo do campo" value={question.fieldType} onChange={(event) => onChange({ fieldType: event.target.value as FormQuestionItem['fieldType'] })} className={inputClass}>{['text', 'textarea', 'date', 'datetime-local', 'email', 'number', 'select', 'radio', 'checkbox', 'file'].map((type) => <option key={type}>{type}</option>)}</select>
-      <button type="button" onClick={onDelete} aria-label={`Excluir campo ${question.label}`} className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5" /></button>
+      <select disabled={coreField} aria-label="Tipo do campo" value={question.fieldType} onChange={(event) => onChange({ fieldType: event.target.value as FormQuestionItem['fieldType'] })} className={inputClass}>{['text', 'textarea', 'date', 'datetime-local', 'email', 'number', 'select', 'radio', 'checkbox', 'file'].map((type) => <option key={type}>{type}</option>)}</select>
+      <button type="button" disabled={coreField} onClick={onDelete} aria-label={`Excluir campo ${question.label}`} className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-700"><Trash2 className="h-3.5 w-3.5" /></button>
     </div>
     <div className="mt-2 grid gap-2 sm:grid-cols-2">
-      <input value={question.helpText || ''} onChange={(event) => onChange({ helpText: event.target.value })} className={inputClass} placeholder="Texto de ajuda opcional" />
+      <input disabled={coreField&&(/_NOME$/.test(question.fieldKey)||['ALUNO_1_EMAIL','DEFESA_LOCAL_PERSONALIZADO'].includes(question.fieldKey))} value={question.helpText || ''} onChange={(event) => onChange({ helpText: event.target.value })} className={inputClass} placeholder="Texto de ajuda opcional" />
       <input value={question.placeholder || ''} onChange={(event) => onChange({ placeholder: event.target.value })} className={inputClass} placeholder="Exemplo/placeholder" />
     </div>
     <div className="mt-2 flex flex-wrap gap-3 text-[10px] font-bold text-slate-600">
-      <label className="flex items-center gap-2"><input type="checkbox" checked={question.required} onChange={(event) => onChange({ required: event.target.checked })} />Campo obrigatório</label>
-      <label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(question.visibleWhen?.fieldKey)} onChange={(event) => onChange({ visibleWhen: event.target.checked ? { fieldKey: previousQuestions[0]?.fieldKey || '', operator: 'EQUALS', value: '' } : undefined })} />Exibição condicional</label>
+      <label className="flex items-center gap-2"><input disabled={coreField} type="checkbox" checked={question.required} onChange={(event) => onChange({ required: event.target.checked })} />Campo obrigatório</label>
+      <label className="flex items-center gap-2"><input disabled={coreField} type="checkbox" checked={Boolean(question.visibleWhen?.fieldKey)} onChange={(event) => onChange({ visibleWhen: event.target.checked ? { fieldKey: previousQuestions[0]?.fieldKey || '', operator: 'EQUALS', value: '' } : undefined })} />Exibição condicional</label>
       <label className="flex items-center gap-2"><input type="checkbox" checked={question.availableToTemplates !== false} onChange={(event) => onChange({ availableToTemplates: event.target.checked })} />Disponível para e-mails e documentos</label>
     </div>
-    {(question.fieldType === 'select' || question.fieldType === 'radio') && <div className="mt-2"><label className={labelClass}>Opções (uma por linha)</label><textarea rows={3} value={(question.options || []).join('\n')} onChange={(event) => onChange({ options: event.target.value.split('\n').map((value) => value.trim()).filter(Boolean) })} className={inputClass}/></div>}
-    {question.visibleWhen?.fieldKey !== undefined && <div className="mt-2 grid gap-2 rounded-lg border border-slate-300 bg-slate-50 p-2 sm:grid-cols-3"><select value={condition.fieldKey} onChange={(event) => onChange({ visibleWhen: { ...condition, fieldKey: event.target.value } })} className={inputClass}><option value="">Campo anterior…</option>{previousQuestions.filter((item) => item.fieldKey).map((item) => <option key={item.id} value={item.fieldKey}>{item.label}</option>)}</select><select value={condition.operator} onChange={(event) => onChange({ visibleWhen: { ...condition, operator: event.target.value as typeof condition.operator } })} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">Está marcado</option></select>{!['NOT_EMPTY', 'IS_TRUE'].includes(condition.operator) && <input value={condition.value || ''} onChange={(event) => onChange({ visibleWhen: { ...condition, value: event.target.value } })} className={inputClass} placeholder="Valor esperado"/>}</div>}
+    {(question.fieldType === 'select' || question.fieldType === 'radio') && <div className="mt-2"><label className={labelClass}>Opções (uma por linha)</label><textarea disabled={coreField} rows={3} value={(question.options || []).join('\n')} onChange={(event) => onChange({ options: event.target.value.split('\n').map((value) => value.trim()).filter(Boolean) })} className={inputClass}/></div>}
+    {!coreField&&question.visibleWhen?.fieldKey !== undefined && <div className="mt-2 grid gap-2 rounded-lg border border-slate-300 bg-slate-50 p-2 sm:grid-cols-3"><select value={condition.fieldKey} onChange={(event) => onChange({ visibleWhen: { ...condition, fieldKey: event.target.value } })} className={inputClass}><option value="">Campo anterior…</option>{previousQuestions.filter((item) => item.fieldKey).map((item) => <option key={item.id} value={item.fieldKey}>{item.label}</option>)}</select><select value={condition.operator} onChange={(event) => onChange({ visibleWhen: { ...condition, operator: event.target.value as typeof condition.operator } })} className={inputClass}><option value="EQUALS">É igual a</option><option value="NOT_EQUALS">É diferente de</option><option value="CONTAINS">Contém</option><option value="NOT_EMPTY">Foi preenchido</option><option value="IS_TRUE">Está marcado</option></select>{!['NOT_EMPTY', 'IS_TRUE'].includes(condition.operator) && <input value={condition.value || ''} onChange={(event) => onChange({ visibleWhen: { ...condition, value: event.target.value } })} className={inputClass} placeholder="Valor esperado"/>}</div>}
     <label className="mt-2 block text-xs">Seção do cadastro<input value={question.section || ''} onChange={event=>onChange({section:event.target.value})} className={inputClass}/></label>
-    <details className="mt-2 rounded-lg border border-slate-200 bg-white p-2"><summary className="cursor-pointer text-[10px] font-black normal-case text-slate-600">Validação avançada</summary><div className="mt-2 grid gap-2 sm:grid-cols-3"><input type="number" min={0} value={validation.minLength ?? ''} onChange={(event) => onChange({ validation: { ...validation, minLength: event.target.value === '' ? undefined : Number(event.target.value) } })} className={inputClass} placeholder="Mín. caracteres"/><input type="number" min={0} value={validation.maxLength ?? ''} onChange={(event) => onChange({ validation: { ...validation, maxLength: event.target.value === '' ? undefined : Number(event.target.value) } })} className={inputClass} placeholder="Máx. caracteres"/><input value={validation.pattern || ''} onChange={(event) => onChange({ validation: { ...validation, pattern: event.target.value } })} className={inputClass} placeholder="Expressão regular"/><input value={validation.errorMessage || ''} onChange={(event) => onChange({ validation: { ...validation, errorMessage: event.target.value } })} className={`${inputClass} sm:col-span-3`} placeholder="Mensagem de erro personalizada"/></div></details>
+    {coreField?<p className="mt-2 text-xs text-slate-600">Campo do cadastro: vínculo, tipo, obrigatoriedade, opções e condições seguem as regras do processo. Consulte a prévia para conferir o resultado.</p>:<details className="mt-2 rounded-lg border border-slate-200 bg-white p-2"><summary className="cursor-pointer text-[10px] font-black normal-case text-slate-600">Validação avançada</summary><div className="mt-2 grid gap-2 sm:grid-cols-3"><input type="number" min={0} value={validation.minLength ?? ''} onChange={(event) => onChange({ validation: { ...validation, minLength: event.target.value === '' ? undefined : Number(event.target.value) } })} className={inputClass} placeholder="Mín. caracteres"/><input type="number" min={0} value={validation.maxLength ?? ''} onChange={(event) => onChange({ validation: { ...validation, maxLength: event.target.value === '' ? undefined : Number(event.target.value) } })} className={inputClass} placeholder="Máx. caracteres"/><input value={validation.pattern || ''} onChange={(event) => onChange({ validation: { ...validation, pattern: event.target.value } })} className={inputClass} placeholder="Expressão regular"/><input value={validation.errorMessage || ''} onChange={(event) => onChange({ validation: { ...validation, errorMessage: event.target.value } })} className={`${inputClass} sm:col-span-3`} placeholder="Mensagem de erro personalizada"/></div></details>}
   </article>;
 };
 
@@ -314,6 +319,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [documentDesigns, setDocumentDesigns] = useState<Record<string, DocumentDesignConfig>>(initialMeta.documentDesigns || {});
   const [emailDesigns, setEmailDesigns] = useState<Record<string, EmailDesignConfig>>(initialMeta.emailDesigns || {});
   const [processFieldSchemas,setProcessFieldSchemas]=useState(initialMeta.processFieldSchemas||{});
+  const [receiptConfig,setReceiptConfig]=useState(initialMeta.receiptDesign||{});
+  const [receiptOutcome,setReceiptOutcome]=useState<'CONFIRMED'|'UNAVAILABLE'>('CONFIRMED');
+  const [receiptPreview,setReceiptPreview]=useState('');
+  const [receiptError,setReceiptError]=useState('');
+  const [receiptBusy,setReceiptBusy]=useState(false);
   const [formDesigns, setFormDesigns] = useState<Record<string, FormDesignConfig>>(initialMeta.formDesigns || {});
   const [operationalConfig, setOperationalConfig] = useState<OperationalConfig>(resolveOperationalConfig(initialMeta));
   const [operationsPolicy, setOperationsPolicy] = useState<CourseOperationsPolicy>(initialMeta.operationsPolicy || DEFAULT_COURSE_OPERATIONS_POLICY);
@@ -326,6 +336,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const orderedEmailTemplates = useMemo(() => orderEmailTemplates(emailTemplates), [emailTemplates]);
   const [selectedEmailId, setSelectedEmailId] = useState(orderedEmailTemplates[0]?.id || '');
   const [previewMode, setPreviewMode] = useState<'email'|'form'|null>(null);
+  const [sendingEmailTest, setSendingEmailTest] = useState(false);
+  const [emailTestResult, setEmailTestResult] = useState<{id:string; message:string} | null>(null);
   const [documentPreviewOpen, setDocumentPreviewOpen] = useState(false);
   useEffect(()=>{
     if(!previewMode&&!documentPreviewOpen)return;
@@ -355,7 +367,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [mergeTargetId, setMergeTargetId] = useState('');
   const [newVariableKey, setNewVariableKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [hasSavedIncompleteDraft,setHasSavedIncompleteDraft]=useState(initialMeta.publication?.status==='DRAFT');
+  const [hasSavedDraft,setHasSavedDraft]=useState(initialMeta.publication?.status==='DRAFT');
+  const [publishedVersions,setPublishedVersions]=useState<Array<Pick<StudioVersionRecord,'revision'|'createdAt'|'createdBy'>&{active:boolean}>|null>(null);
   const [lastSavedAt, setLastSavedAt] = useState(initialMeta.savedAt || '');
   const [draftSavedAt, setDraftSavedAt] = useState('');
   const [isDirty, setIsDirty] = useState(false);
@@ -375,7 +388,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
   const selectedDoc = docTemplates.find((item) => item.id === selectedDocId) || docTemplates[0];
   useEffect(()=>{documentPreviewRequestRef.current+=1;setDocumentPreview(null);setDocumentPreviewError('');setDocumentPreviewLoading(false);},[selectedDocId]);
-  const selectedEmail = emailTemplates.find((item) => item.id === selectedEmailId) || emailTemplates[0];
+  const visibleEmailTemplates=emailTemplates.filter(item=>item.id!=='email-resposta-departamento');
+  const selectedEmail = visibleEmailTemplates.find((item) => item.id === selectedEmailId) || visibleEmailTemplates[0];
   const selectedForm = useMemo(()=>{
     const form=formTemplates.find(item=>item.id===selectedFormId)||formTemplates[0];
     if(form?.id!=='form-reserva-aluno')return form;
@@ -438,6 +452,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     if (source.brandKit) setBrandKit(source.brandKit);
     if (source.documentDesigns) setDocumentDesigns(source.documentDesigns);
     if (source.emailDesigns) setEmailDesigns(source.emailDesigns);
+    setReceiptConfig(source.receiptDesign||{});
     if (source.formDesigns) setFormDesigns(source.formDesigns);
     setProcessFieldSchemas(source.processFieldSchemas||{});
     setOperationalConfig(resolveOperationalConfig(source));
@@ -458,7 +473,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     }
     if (source.matrixRows?.length) setMatrixRows(source.matrixRows as unknown as MatrixRow[]);
     if (source.docTemplates?.length) setDocTemplates((source.docTemplates as unknown as DocTemplateItem[]).map((doc) => ({ ...doc, templateContentText: '' })));
-    if (source.emailTemplates?.length) setEmailTemplates(source.emailTemplates as unknown as EmailTemplateItem[]);
+    if (source.emailTemplates?.length) setEmailTemplates(source.emailTemplates.map(email=>email.id==='email-reserva'?{...email,recipient:reservationRecipientField(email.recipient,props.reservationDepartmentEmail)}:email) as unknown as EmailTemplateItem[]);
     if (source.formTemplates?.length) setFormTemplates(source.formTemplates as unknown as FormTemplateItem[]);
     if (source.workflowStages?.length) {
       const eventFallback=['TCC_CREATED','LOCATION_CONFIRMED','INVITATION_SENT','EVALUATION_SUBMITTED','REPOSITORY_SUBMITTED','SIGNATURE_REQUESTED','SIGNATURE_COMPLETED','PROCESS_COMPLETED'];
@@ -471,6 +486,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     if (source.driveModelosFolderUrl) setDriveModelosFolderUrl(source.driveModelosFolderUrl);
     setRevision(source.revision || 0);
     setLastSavedAt(source.savedAt || '');
+    setHasSavedDraft(source.publication?.status==='DRAFT');
     setLastDriveSyncAt(source.lastDriveSyncAt || '');
     setLastDriveSyncStatus(source.lastDriveSyncStatus || 'never');
     setIsDirty(false);
@@ -505,6 +521,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     documentDesigns,
     emailDesigns,
     formDesigns,
+    receiptDesign:receiptConfig,
     processFieldSchemas,
     matrixColumns: matrixColumns as unknown as Array<Record<string, unknown>>,
     matrixRows: matrixRows as unknown as Array<Record<string, unknown>>,
@@ -528,7 +545,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
   currentStudioSnapshotRef.current=buildSnapshot();
 
-  const draftFingerprint = useMemo(() => JSON.stringify({ brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl }), [brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl]);
+  const draftFingerprint = useMemo(() => JSON.stringify({ receiptConfig, brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl }), [receiptConfig, brandKit, documentDesigns, emailDesigns, formDesigns, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates, workflowStages, operationalConfig, operationsPolicy, replicationGuide, driveModelosFolderUrl]);
   currentDraftFingerprintRef.current=draftFingerprint;
   const flushDraftRef = useRef<() => void>(()=>{});
   flushDraftRef.current = () => { if(!hasHydratedRef.current||!isDirty)return; const draft=buildSnapshot(); draft.revision=revision; draft.savedAt=new Date().toISOString(); draft.publication={status:'DRAFT',publishedRevision:initialMeta.publication?.publishedRevision,publishedAt:initialMeta.publication?.publishedAt,validationScore:validationReport.score}; saveLocalStudio(draft); if(hideTabs&&!imageMergeBlocked){void saveStudioAutomatically(serverStudioRef.current,draft).then(saved=>saveLocalStudio(mergeStudioDraft(draft,currentStudioSnapshotRef.current||draft,saved))).catch(error=>console.error('Salvamento ao fechar o editor falhou',error));} };
@@ -559,7 +576,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         saveLocalStudio(next);serverStudioRef.current=saved;
         if(!mountedRef.current)return;
         applyStudioSource(next);
-        setLastSavedAt(saved.savedAt);setHasSavedIncompleteDraft(saved.publication?.status==='DRAFT');setDraftSavedAt('');setAutosaveError('');
+        setLastSavedAt(saved.savedAt);setHasSavedDraft(saved.publication?.status==='DRAFT');setDraftSavedAt('');setAutosaveError('');
         setIsDirty(currentDraftFingerprintRef.current!==fingerprint);
         if(currentDraftFingerprintRef.current!==fingerprint)setAutosaveRetry(value=>value+1);
         appliedSnapshotRef.current=`${saved.savedAt}:${saved.revision}`;
@@ -577,25 +594,31 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     if (isSaving) return;
     if(imageMergeBlocked){notify('Seu rascunho foi preservado. Resolva o conflito indicado antes de publicar outras alterações.');return;}
     if (!validationReport.ready) {
-      setActiveTab('overview');
+      if(!hideTabs)setActiveTab('overview');
       notify(`Publicação bloqueada: corrija ${validationReport.errors} erro(s) na configuração operacional do portal.`);
       return;
     }
+    const nextAudit = withAudit
+      ? [createAuditEntry('STUDIO_SAVED', 'studio', 'integration-studio', 'Configuração integrada salva e publicada no servidor.', actorEmail), ...auditTrail].slice(0, 500)
+      : auditTrail;
+    const snapshot = buildSnapshot(nextAudit);
+    const expectedRevision=Number(serverStudioRef.current.revision||0);
+    snapshot.revision=expectedRevision+1;
     setIsSaving(true);
     try {
-      const nextAudit = withAudit
-        ? [createAuditEntry('STUDIO_SAVED', 'studio', 'integration-studio', 'Configuração integrada salva e publicada no servidor.', actorEmail), ...auditTrail].slice(0, 500)
-        : auditTrail;
-      const snapshot = buildSnapshot(nextAudit);
-      saveLocalStudio(snapshot);
-      await apiClient.updateSettings({ integrationStudio: snapshot,studioExpectedRevision:Number(serverStudioRef.current.revision||0) });
-      serverStudioRef.current=snapshot;
+      if(!(await portalConfirm('Publicar o rascunho de Configurações? A nova versão passará a valer para os próximos eventos do Portal.')))return;
+      const settings=await retryAfterPortalReauthentication(()=>apiClient.updateSettings({ integrationStudio: snapshot,studioExpectedRevision:expectedRevision,studioSaveMode:'publish' }));
+      const published=settings.integrationStudio!;
+      saveLocalStudio(published);
+      serverStudioRef.current=published;
       setAuditTrail(nextAudit);
-      setRevision(snapshot.revision);
-      setLastSavedAt(snapshot.savedAt);
+      setRevision(published.revision);
+      setLastSavedAt(published.savedAt);
+      setHasSavedDraft(false);
       setDraftSavedAt('');
-      appliedSnapshotRef.current = `${snapshot.savedAt}:${snapshot.revision}`;
+      appliedSnapshotRef.current = `${published.savedAt}:${published.revision}`;
       setIsDirty(false);
+      if (publishedVersions!==null) await loadPublishedVersions();
       if (withAudit) notify('Estúdio integrado salvo e publicado para todo o portal.');
     } catch (error: any) {
       console.error(error);
@@ -604,6 +627,31 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       setIsSaving(false);
     }
   };
+
+  async function loadPublishedVersions() {
+    try { setPublishedVersions(await apiClient.getStudioVersions()); }
+    catch { notify('Não foi possível consultar as configurações publicadas.'); }
+  }
+
+  async function restorePublishedVersion(version: number) {
+    if(isDirty||isSaving)return;
+    const expectedRevision=Number(serverStudioRef.current.revision||0);
+    setIsSaving(true);
+    try {
+      const reason=await portalPrompt(`Informe o motivo para restaurar a revisão ${version}. Se houver um rascunho salvo, ele será preservado.`,'',{title:'Restaurar configuração',confirmLabel:'Restaurar'});
+      if(reason===null)return;
+      const result=await retryAfterPortalReauthentication(()=>apiClient.restoreStudioVersion(version,expectedRevision,reason));
+      const source=result.draft||result.studio;
+      serverStudioRef.current=source;
+      appliedSnapshotRef.current=`${source.savedAt}:${source.revision}`;
+      saveLocalStudio(source);
+      applyStudioSource(source);
+      await loadPublishedVersions();
+      notify(`Configuração restaurada como revisão ${result.studio.revision}.`);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Não foi possível restaurar a configuração.');
+    } finally { setIsSaving(false); }
+  }
 
   const updateBrand = <K extends keyof IntegrationBrandKit>(key: K, value: IntegrationBrandKit[K]) => {
     setBrandKit((previous) => ({ ...previous, [key]: value }));
@@ -646,10 +694,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       const collection=kind==='email'?'emailDesigns':'formDesigns';
       const base=serverStudioRef.current;
       const imageInput={kind,templateId,field,value,expectedRevision:Number(base.revision||0),expectedImageValue:(base[collection]?.[templateId] as any)?.[field]||''};
-      const saved=await retryAfterPortalReauthentication(
-        () => apiClient.saveStudioImage(imageInput),
-        'Digite o código enviado ao seu e-mail para salvar a imagem. A imagem selecionada será mantida e o envio continuará após a confirmação.'
-      );
+      const saved=await saveStudioImageAutomatically(base,imageInput);
       const local=structuredClone(currentStudioSnapshotRef.current||buildSnapshot());
       (local[collection] as any)[templateId]={...(local[collection] as any)[templateId],[field]:saved.imageUrl};
       const baseline=structuredClone(base);
@@ -660,7 +705,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         setIsDirty(true);setImageMergeBlocked(false);
       }catch(error){setImageMergeBlocked(true);saveLocalStudio(local);throw error;}
       setRevision(saved.revision);setLastSavedAt(saved.savedAt);setImageSavedAt(saved.savedAt);setAutosaveError('');
-      notify('Imagem salva no servidor.');
+      notify('Imagem salva no rascunho. Publique a configuração para aplicar a alteração.');
     }catch(error){
       if(preparedImage){
         const draft=structuredClone(currentStudioSnapshotRef.current||buildSnapshot());const collection=kind==='email'?'emailDesigns':'formDesigns';
@@ -668,18 +713,17 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         saveLocalStudio(draft);
         if(kind==='email')setEmailDesigns(draft.emailDesigns);else setFormDesigns(draft.formDesigns);
         setImageMergeBlocked(true);setIsDirty(true);
-        setAutosaveError('A imagem foi preservada no rascunho deste navegador. Reabra o editor, confira a alteração de outra sessão e selecione a imagem para tentar novamente.');
+        setAutosaveError(`${error instanceof Error?error.message:'Não foi possível salvar a imagem.'} A imagem foi preservada no rascunho deste navegador. Reabra o editor e selecione a imagem para tentar novamente.`);
       }
       notify(error instanceof Error?error.message:'Não foi possível salvar a imagem.');
     }
     finally{imageSaveInFlightRef.current=false;setIsSaving(false);}
   };
 
-  const uploadFormImage = (file?:File) => uploadTemplateImage(file,'form','logoUrl');
 
   const updateSelectedDoc = (updates: Partial<DocTemplateItem>) => {
     if (!selectedDoc) return;
-    setDocTemplates((previous) => previous.map((item) => item.id === selectedDoc.id ? { ...item, ...updates, lastUpdated: new Date().toLocaleString('pt-BR') } : item));
+    setDocTemplates((previous) => previous.map((item) => item.id === selectedDoc.id ? { ...item, ...updates, lastUpdated: formatDateTimeWithWeekday(new Date().toISOString()) } : item));
     setIsDirty(true);
   };
 
@@ -703,8 +747,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     setEmailTemplates((previous) => previous.map((item) => {
       if(item.id!==selectedEmail.id)return item;
       // O editor direto é a fonte de verdade: descarta HTML antigo para evitar envios desatualizados.
-      if(Object.prototype.hasOwnProperty.call(updates,'body') && updates.body!==item.body && item.htmlBody?.trim())return {...item,...updates,operationalCatalogEditable:true,htmlBody:''};
-      return {...item,...updates,operationalCatalogEditable:true};
+      if(Object.prototype.hasOwnProperty.call(updates,'body') && updates.body!==item.body && item.htmlBody?.trim())return {...item,subject:String(effectiveEmail?.subject||item.subject),body:String(effectiveEmail?.body||item.body),...updates,operationalCatalogEditable:true,htmlBody:''};
+      return {...item,subject:String(effectiveEmail?.subject||item.subject),body:String(effectiveEmail?.body||item.body),...updates,operationalCatalogEditable:true};
     }));
     setIsDirty(true);
   };
@@ -877,7 +921,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   // New routines immediately feed the variable matrix; the explicit scan button
   // remains available for a full reconciliation with the Google Drive folder.
   useEffect(() => {
-    if (!hasHydratedRef.current) return;
+    if (!hasHydratedRef.current || !isDirty) return;
     const keys = discoverVariables({ matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates });
     const existing = new Set<string>();
     matrixColumns.forEach((column) => [column.id, column.name, column.label, ...(column.aliases || [])].filter(Boolean).forEach((value) => {
@@ -909,7 +953,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       ...previous
     ].slice(0, 500));
     setIsDirty(true);
-  }, [docTemplates, emailTemplates, formTemplates]);
+  }, [isDirty, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates]);
 
   const handleCreateVariable = () => {
     const key = normalizeVariableKey(newVariableKey);
@@ -1093,29 +1137,42 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     setIsDirty(true);
   };
 
-  const selectedEmailEvent=workflowStages.find(stage=>stage.actions?.some(action=>action.refId===selectedEmail?.id))?.triggerEvent||'';
-  const selectedEmailGuidance=processEmailGuidance({id:'amostra',protocolo:'TCC-2026-0001',etapaAtual:'CADASTRO'},PREVIEW_VARIABLES.LINK_PROCESSO,selectedEmailEvent,selectedEmail?.id);
-  const emailPreviewHtml = useMemo(() => {
-    if (!selectedEmail) return '';
-    const wrap=(text:string)=>operationalEmailLayout({text:withoutGenericProcessFooter(applyProcessEmailGreeting(text,selectedEmail.id,selectedEmailEvent,selectedEmail.id==='email-reserva')),subject:applyPreviewVariables(selectedEmail.subject),href:processLink(PREVIEW_VARIABLES.LINK_PROCESSO,'amostra',emailProcessSection(selectedEmailEvent,selectedEmail.id)),label:selectedEmail.id==='email-reserva'?'Confirmar reserva · TCC-2026-0001':'TCC-2026-0001',studio:{brandKit,emailDesigns:{[selectedEmail.id]:selectedEmailDesign}},templateId:selectedEmail.id}).html;
-    if(selectedEmail.id==='email-reserva')return wrap(reservationRequestEmail({process:{id:'amostra',protocolo:'TCC-2026-0001',titulo:'Segurança do paciente e qualidade da assistência de enfermagem',aluno1:{nome:'Mariana Alves da Silva',email:'mariana@example.invalid',matricula:'001'},orientador:{nome:'Maria Silva',email:'orientacao@example.invalid',siape:'001',tratamento:'Professora',titulacao:'Doutora'},defesa:{startAt:'2026-10-30T14:00:00-03:00',endAt:'2026-10-30T15:30:00-03:00',local:'Auditório do Departamento de Enfermagem — CCS/UFES',alternateLocation:'Sala de reuniões do Departamento de Enfermagem — CCS/UFES',localStatus:'PENDENTE'}},baseUrl:PREVIEW_VARIABLES.LINK_PROCESSO,courseName:brandKit.courseName,color:brandKit.primaryColor}).text);
-    if(selectedEmail.id==='email-convite'){const message=invitationEmail({aluno2:null,protocolo:'TCC-2026-0001',titulo:'Segurança do paciente e qualidade da assistência de enfermagem',aluno1:{nome:'Mariana Alves da Silva',email:'mariana@example.invalid',matricula:'001'},orientador:{nome:'Maria Silva',email:'orientacao@example.invalid',tratamento:'Professora',titulacao:'Doutora'},banca:[{id:'amostra-2',nome:'Beatriz Oliveira Santos',email:'banca@example.invalid',funcao:'EXAMINER_2',tratamento:'Professora',titulacao:'Mestra'},{id:'amostra-3',nome:'Rafael Almeida Lima',email:'rafael@example.invalid',funcao:'EXAMINER_3',tratamento:'Professor',titulacao:'Doutor'}],defesa:{startAt:'2026-11-20T14:10:00-03:00',endAt:'2026-11-20T15:40:00-03:00',local:'Auditório do Departamento de Enfermagem — CCS/UFES'}});return operationalEmailLayout({text:withoutGenericProcessFooter(message.text+'\n\n'+processEmailGuidance({id:'amostra',protocolo:'TCC-2026-0001',etapaAtual:'CONVITE'},PREVIEW_VARIABLES.LINK_PROCESSO,'INVITATION_SENT','email-convite')),subject:message.subject,href:processLink(PREVIEW_VARIABLES.LINK_PROCESSO,'amostra','docs'),label:'TCC-2026-0001',studio:{brandKit,emailDesigns:{[selectedEmail.id]:selectedEmailDesign}},templateId:selectedEmail.id}).html;}
-    if(isFinalDocumentsEmail(selectedEmailEvent,selectedEmail.id))return wrap(finalDocumentsEmail({process:{id:'amostra',protocolo:'TCC-2026-0001',titulo:'Segurança do paciente e qualidade da assistência de enfermagem',aluno1:{nome:'Mariana Alves da Silva',email:'mariana@example.invalid'},orientador:{nome:'Maria Silva',email:'orientacao@example.invalid'},banca:[{nome:'Beatriz Oliveira Santos',email:'banca@example.invalid'}]},recipient:'banca@example.invalid',baseUrl:PREVIEW_VARIABLES.LINK_PROCESSO,courseName:brandKit.courseName,color:brandKit.primaryColor}).text);
+  const selectedEmailRoute=operationalEmailRouting(selectedEmail?.id);
+  const selectedEmailEvent=selectedEmailRoute?.event||workflowStages.find(stage=>stage.actions?.some(action=>action.refId===selectedEmail?.id))?.triggerEvent||'';
+  const selectedEmailGuidance=processEmailGuidance({id:'amostra',protocolo:'TCC - 00001',etapaAtual:'CADASTRO'},PREVIEW_VARIABLES.LINK_PROCESSO,selectedEmailEvent,selectedEmail?.id);
+  const previewStudio=useMemo(()=>({brandKit,emailDesigns,formDesigns,emailTemplates,formTemplates,operationalConfig,operationsPolicy,receiptDesign:receiptConfig} as unknown as Partial<IntegrationStudioSettings>),[brandKit,emailDesigns,formDesigns,emailTemplates,formTemplates,operationalConfig,operationsPolicy,receiptConfig]);
+  const effectiveEmail=selectedEmail?studioEditableEmail(previewStudio,selectedEmail.id):undefined;
+  const emailPreviewHtml=selectedEmail?studioEmailPreview(previewStudio,selectedEmail.id).html:'';
+  async function sendSelectedEmailTest() {
+    if (!selectedEmail || sendingEmailTest || isDirty || isSaving || autosaveError) return;
+    const id = selectedEmail.id;
+    const revision = serverStudioRef.current.revision || 0;
+    setSendingEmailTest(true);
+    setEmailTestResult(null);
+    try {
+      await retryAfterPortalReauthentication(() => apiClient.sendStudioEmailTest(id, revision));
+      setEmailTestResult({id,message:'O Gmail aceitou a mensagem de teste para o e-mail da sua sessão.'});
+    } catch (error) {
+      setEmailTestResult({id,message:error instanceof Error ? error.message : 'Não foi possível enviar a mensagem de teste.'});
+    } finally {
+      setSendingEmailTest(false);
+    }
+  }
 
-    const previewProcessUrl=processLink(PREVIEW_VARIABLES.LINK_PROCESSO,'amostra',emailProcessSection(selectedEmailEvent,selectedEmail.id));
-    const previewVariables={LINK_PORTAL:previewProcessUrl,LINK_PROCESSO:previewProcessUrl};
-    const previewSubject=applyPreviewVariables(selectedEmail.subject,previewVariables);
-    const source=selectedEmail.htmlBody?.trim()?selectedEmail.htmlBody:selectedEmail.body||'';
-    const guidanceValue=selectedEmail.htmlBody?.trim()?safeHtmlText(selectedEmailGuidance).replaceAll('\n','<br>'):selectedEmailGuidance;
-    const bodySource=applyPreviewVariables(source.replaceAll('<<ORIENTACOES_ACESSO>>',guidanceValue).replaceAll('{{ORIENTACOES_ACESSO}}',guidanceValue),previewVariables);
-    const guided=withProcessEmailGuidance({text:bodySource,html:selectedEmail.htmlBody?.trim()?bodySource:undefined},selectedEmailGuidance);
-    return wrap(guided.text);
-  }, [selectedEmail, selectedEmailDesign, brandKit, selectedEmailGuidance,selectedEmailEvent]);
+  const nativeReservationView=reservationConfirmationView({process:studioSampleProcess(),studio:previewStudio,action:'#',preview:true});
+  const nativeReservationHtml=reservationPage(nativeReservationView.title,nativeReservationView.content,true);
+  const generateReceiptPreview=async()=>{
+    setReceiptBusy(true);setReceiptError('');setReceiptPreview('');
+    try{const result=await apiClient.previewReceipt(receiptOutcome,receiptConfig);setReceiptPreview(result.contentBase64);}
+    catch(error){setReceiptError(error instanceof Error?error.message:'Não foi possível gerar a prévia.');}
+    finally{setReceiptBusy(false);}
+  };
 
   const tabs: Array<{ id: StudioTab; label: string; icon: React.ElementType }> = [
     { id: 'documents', label: 'Documentos', icon: FileText },
     { id: 'emails', label: 'E-mails', icon: Mail },
     { id: 'forms', label: 'Formulários', icon: ClipboardList },
+    { id: 'receipts', label: 'Comprovantes', icon: FileText },
     { id: 'workflow', label: 'Fluxo', icon: Workflow },
     { id: 'variables', label: 'Variáveis', icon: Variable }
   ];
@@ -1182,7 +1239,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       {previewMode==='email'&&selectedEmail&&<div role="presentation" data-portal-preview-dialog="true" className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-4" onMouseDown={event=>{if(event.target===event.currentTarget)setPreviewMode(null);}}>
         <section role="dialog" aria-modal="true" aria-label="Prévia do e-mail com dados fictícios" className="portal-standard-modal flex h-[min(86dvh,840px)] w-full max-w-4xl flex-col overflow-hidden bg-white">
           <header className="portal-modal-header shrink-0 justify-between"><strong className="text-xs font-black normal-case">Ver modelo · E-mail demonstrativo</strong><button type="button" onClick={()=>setPreviewMode(null)} className="rounded-full bg-white px-4 py-1 text-xs font-bold text-slate-900">Fechar</button></header>
-          <p className="shrink-0 bg-amber-50 p-2 text-xs text-amber-950">Prévia com dados fictícios. Nenhum e-mail será enviado.</p>
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 bg-amber-50 p-2 text-xs text-amber-950">
+            <p>Prévia com dados fictícios. O teste usa somente o e-mail da sua sessão.</p>
+            {operationalEmailRouting(selectedEmail.id) && <button type="button" disabled={sendingEmailTest || isDirty || isSaving || Boolean(autosaveError)} onClick={sendSelectedEmailTest} className="portal-button-secondary disabled:opacity-50">{sendingEmailTest ? 'Enviando teste…' : 'Enviar teste para mim'}</button>}
+            {emailTestResult?.id === selectedEmail.id && <p role="status" className="w-full">{emailTestResult.message}</p>}
+          </div>
           <iframe title="E-mail fictício preenchido" sandbox="" referrerPolicy="no-referrer" srcDoc={emailPreviewHtml} className="min-h-0 flex-1 bg-white" />
         </section>
       </div>}
@@ -1190,14 +1251,9 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         <section role="dialog" aria-modal="true" aria-label="Prévia do formulário com respostas fictícias" className="portal-standard-modal flex h-[min(86dvh,840px)] w-full max-w-3xl flex-col overflow-hidden bg-white">
           <header className="portal-modal-header shrink-0 justify-between"><strong className="flex items-center gap-2 text-xs font-black normal-case"><ClipboardList className="h-4 w-4" aria-hidden="true"/>Ver modelo · Formulário demonstrativo</strong><button type="button" onClick={()=>setPreviewMode(null)} className="rounded-full bg-white px-4 py-1 text-xs font-bold text-slate-900">Fechar</button></header>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[var(--portal-surface-page)] p-4">
-            <p className="rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-950">Demonstração somente leitura, com respostas fictícias. Nada será salvo nem enviado.</p>
-            <div className="overflow-hidden rounded-xl border border-slate-300 bg-white">
-              <div className="flex flex-col items-center justify-center gap-3 bg-[var(--portal-brand-header)] p-4 text-center text-xs font-bold text-white"><ClipboardList className="h-5 w-5 shrink-0" aria-hidden="true"/>{selectedFormDesign.logoUrl&&<img src={selectedFormDesign.logoUrl} alt="Imagem do formulário" className="h-14 w-14 rounded-lg bg-white object-contain p-1"/>}<span>{brandKit.institutionName} — {brandKit.courseName}</span></div>
-              <div className="space-y-3 p-4"><h2 className="text-lg font-bold">{selectedForm.title}</h2><p className="text-xs text-slate-600">{selectedForm.description}</p>{selectedForm.id==='form-reserva-aluno'&&<ReservationSchedulingNotice/>}
-                {selectedForm.questions.filter(question=>evaluateStudioCondition(question.visibleWhen,PREVIEW_VARIABLES)).map((question,index)=><div key={question.id} className="rounded-lg border border-slate-200 bg-[var(--portal-surface-inner)] p-3"><label className="block text-xs font-bold">{index+1}. {question.label}{question.required?' *':''}</label><div className="mt-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">{question.fieldKey==='AUTORIA_REFERENCIA'?registrationIdentitySentence(PREVIEW_VARIABLES):question.fieldType==='checkbox'?'☑ Sim':PREVIEW_VARIABLES[normalizeVariableKey(question.fieldKey)]||question.options?.[0]||'Exemplo de preenchimento'}</div></div>)}
-                <p className="rounded-full bg-slate-100 px-4 py-2 text-center text-xs font-semibold text-slate-500">{selectedFormDesign.submitLabel||'Enviar formulário'} · somente prévia</p>
-              </div>
-            </div>
+            <p className="text-xs text-slate-600">Demonstração com dados fictícios. Nenhum cadastro, rascunho, e-mail ou reserva será enviado.</p>
+            {selectedForm.id==='form-reserva-departamento' ? <iframe title="Prévia real da confirmação do agendamento" sandbox="" srcDoc={nativeReservationHtml} className="h-[600px] w-full border-0"/> : selectedForm.id==='form-reserva-aluno' ? <ConfigurableRegistration previewStudio={previewStudio} onSuccess={()=>{}} onCancel={()=>setPreviewMode(null)}/> : <DynamicStudioForms processId="amostra-configuracoes" previewForm={{...selectedForm,presentation:selectedFormDesign}}/>}
+
           </div>
         </section>
       </div>}
@@ -1207,11 +1263,22 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
           <div className="min-h-0 flex-1 overflow-auto p-3"><PdfCanvasPreview base64={documentPreview.base64} remoteUrl={documentPreview.remoteUrl} label={selectedDoc.label}/></div>
         </section>
       </div>}
-      {hideTabs&&!autosaveError&&<p role="status" className="mx-3 my-2 text-right text-[10px] text-slate-600">{isDirty||isSaving?'Salvando automaticamente…':lastSavedAt?(hasSavedIncompleteDraft?'Alterações salvas automaticamente. Há campos obrigatórios a completar.':'Alterações salvas automaticamente.'):''}</p>}
+      {hideTabs&&!autosaveError&&<div className="mx-3 my-2 flex flex-wrap items-center justify-end gap-2">
+        {(isDirty||hasSavedDraft)&&<p role="status" className="text-[10px] text-slate-600">{isDirty?'Alterações no rascunho.':'Rascunho salvo. O Portal continua usando a versão publicada.'}</p>}
+        <button type="button" onClick={()=>publishedVersions===null?void loadPublishedVersions():setPublishedVersions(null)} aria-expanded={publishedVersions!==null} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-900"><History className="h-3.5 w-3.5"/>Versões publicadas</button>
+        {(isDirty||hasSavedDraft)&&<button type="button" onClick={()=>void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-900 disabled:opacity-50"><Save className="h-3.5 w-3.5"/>Publicar configurações</button>}
+      </div>}
+      {hideTabs&&publishedVersions!==null&&<section className="mx-3 my-2 rounded-lg border border-slate-300 bg-white p-3 text-xs" aria-label="Histórico de configurações publicadas">
+        {!publishedVersions.length&&<p>Nenhuma versão foi registrada no histórico.</p>}
+        <ul className="space-y-2">{publishedVersions.map(version=><li key={version.revision} className="flex flex-wrap items-center justify-between gap-2">
+          <span>Revisão {version.revision} · {formatDateTimeWithWeekday(version.createdAt)} · {version.createdBy}</span>
+          {version.active?<span className="font-semibold">Em uso</span>:<button type="button" onClick={()=>void restorePublishedVersion(version.revision)} disabled={isDirty||isSaving} className="rounded-md border border-slate-300 px-2 py-1 font-semibold disabled:opacity-50">Restaurar revisão {version.revision}</button>}
+        </li>)}</ul>
+      </section>}
       {hideTabs && autosaveError && <div role="alert" className="mx-3 my-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950"><span>Não foi possível concluir o salvamento automático: {autosaveError}</span><button type="button" className="rounded-md border border-amber-400 bg-white px-2 py-1 font-bold" onClick={()=>imageMergeBlocked?window.location.reload():setAutosaveRetry(value=>value+1)}>{imageMergeBlocked?'Reabrir e conferir':'Tentar salvar novamente'}</button></div>}
       <div className={`${hideTabs ? 'hidden' : 'portal-studio-heading flex flex-wrap items-center justify-between gap-2 border-b border-[var(--portal-brand-action-border)] bg-[var(--portal-brand-action)] px-3 py-2.5 text-white'}`}>
         <div><h3 className="text-xs font-black normal-case tracking-wide">Editor de modelos e variáveis</h3><p className="mt-0.5 text-[9px] text-white/80">Selecione uma área acima e trabalhe com seleção, edição e visualização no mesmo contexto.</p></div>
-        <div className="flex items-center gap-2"><div className="hidden text-right text-[9px] font-semibold text-white/80 md:block">{isDirty ? (draftSavedAt ? `Rascunho automático ${new Date(draftSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Salvando rascunho…') : (lastSavedAt ? `Publicado ${new Date(lastSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Ainda não publicado')}</div><button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-white bg-white px-3 py-1.5 text-[10px] font-black normal-case tracking-wide text-black shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Publicando…' : 'Publicar'}</button></div>
+        <div className="flex items-center gap-2"><div className="hidden text-right text-[9px] font-semibold text-white/80 md:block">{isDirty ? (draftSavedAt ? `Rascunho automático ${new Date(draftSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Salvando rascunho…') : hasSavedDraft ? 'Rascunho salvo' : (lastSavedAt ? `Publicado ${new Date(lastSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Ainda não publicado')}</div><button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-white bg-white px-3 py-1.5 text-[10px] font-black normal-case tracking-wide text-black shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Publicando…' : 'Publicar'}</button></div>
       </div>
       <div className={hideTabs ? 'min-h-0' : 'min-h-[68vh]'} style={{ backgroundColor: hideTabs ? 'transparent' : 'var(--portal-surface-panel)' }}>
         <nav className={`${hideTabs ? 'hidden' : 'portal-studio-tabs flex flex-wrap items-center gap-1.5 border-b border-slate-300 p-2.5'}`} style={{ backgroundColor: 'var(--portal-surface-card)' }} aria-label="Áreas de modelos e variáveis">
@@ -1284,8 +1351,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                 <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-slate-700" /><h4 className="text-xs font-black normal-case text-slate-900">Estado da integração</h4></div>
                 <div className="mt-3 space-y-2 text-[11px]">
                   <div className="flex justify-between border-b border-slate-100 pb-2"><span className="text-slate-500">Revisão publicada</span><strong>#{revision}</strong></div>
-                  <div className="flex justify-between border-b border-slate-100 pb-2"><span className="text-slate-500">Último salvamento</span><strong>{lastSavedAt ? new Date(lastSavedAt).toLocaleString('pt-BR') : 'Ainda não publicado'}</strong></div>
-                  <div className="flex justify-between border-b border-slate-100 pb-2"><span className="text-slate-500">Último Drive</span><strong>{lastDriveSyncAt ? new Date(lastDriveSyncAt).toLocaleString('pt-BR') : 'Ainda não sincronizado'}</strong></div>
+                  <div className="flex justify-between border-b border-slate-100 pb-2"><span className="text-slate-500">Último salvamento</span><strong>{lastSavedAt ? formatDateTimeWithWeekday(lastSavedAt) : 'Ainda não publicado'}</strong></div>
+                  <div className="flex justify-between border-b border-slate-100 pb-2"><span className="text-slate-500">Último Drive</span><strong>{lastDriveSyncAt ? formatDateTimeWithWeekday(lastDriveSyncAt) : 'Ainda não sincronizado'}</strong></div>
                   <div className="flex justify-between"><span className="text-slate-500">Status Drive</span><strong className={lastDriveSyncStatus === 'error' ? 'text-rose-700' : 'text-emerald-700'}>{lastDriveSyncStatus === 'success' ? 'Íntegro' : lastDriveSyncStatus === 'error' ? 'Com erro' : 'Pendente'}</strong></div>
                 </div>
               </div>
@@ -1300,7 +1367,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-950"><strong>Identidade fixa:</strong> Universidade Federal do Espírito Santo · Curso de Graduação em Enfermagem e Obstetrícia. Esta instalação atende exclusivamente à Enfermagem/UFES.</div>
                 <div><label className={labelClass}>Logo institucional — URL pública</label><input value={brandKit.universityLogoUrl} onChange={(e) => updateBrand('universityLogoUrl', e.target.value)} className={inputClass} placeholder="https://.../logo-institucional.png" /></div>
-                <div><label className={labelClass}>Logo do colegiado — URL ou arquivo</label><input value={brandKit.courseLogoUrl} onChange={(e) => updateBrand('courseLogoUrl', e.target.value)} className={inputClass} /></div>
+                <div><label className={labelClass}>Logo do departamento — URL ou arquivo</label><input value={brandKit.courseLogoUrl} onChange={(e) => updateBrand('courseLogoUrl', e.target.value)} className={inputClass} /></div>
               </div>
               <div className="grid gap-2 sm:grid-cols-3">
                 {([['universityLogoUrl', 'Enviar logo institucional'], ['courseLogoUrl', 'Enviar logo do curso'], ['emailBannerUrl', 'Enviar banner']] as const).map(([field, label]) => <label key={field} className={`${actionClass} cursor-pointer border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}><Image className="h-3.5 w-3.5" />{label}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={(e) => void handleImageFile(e.target.files?.[0], field)} /></label>)}
@@ -1316,7 +1383,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
             </div>
             <div className={`${panelClass} overflow-hidden`}>
               <div className="p-5 text-white" style={{ background: `linear-gradient(135deg, ${brandKit.primaryColor}, ${brandKit.secondaryColor})`, fontFamily: brandKit.fontFamily }}>
-                <div className="flex items-center gap-3">{brandKit.courseLogoUrl && <img src={brandKit.courseLogoUrl} alt="Logo" className="h-11 w-11 rounded-lg bg-white object-contain p-1" />}<div><div className="text-[10px] font-bold normal-case tracking-wider opacity-80">{brandKit.institutionName}</div><div className="text-center text-lg font-black">{brandKit.courseName}</div></div></div>
+                <div className="flex items-center gap-3">{brandKit.courseLogoUrl && <img src={institutionalDocumentLogo({brandKit})} alt="Logo" className="h-11 w-11 rounded-lg bg-white object-contain p-1" />}<div><div className="text-[10px] font-bold normal-case tracking-wider opacity-80">{brandKit.institutionName}</div><div className="text-center text-lg font-black">{brandKit.courseName}</div></div></div>
               </div>
               <div className="space-y-4 p-5" style={{ fontFamily: brandKit.fontFamily, color: brandKit.textColor }}><span className="rounded-full px-2 py-1 text-[9px] font-black normal-case text-white" style={{ backgroundColor: brandKit.accentColor }}>Identidade ativa</span><h3 className="text-lg font-black">Documento institucional profissional</h3><p className="text-xs leading-relaxed text-slate-600">Esta identidade é reutilizada no cabeçalho dos documentos, na moldura dos e-mails e na apresentação dos formulários.</p><div className="border-t border-slate-200 pt-3 text-[10px] text-slate-500">{brandKit.documentFooterText}</div></div>
             </div>
@@ -1335,6 +1402,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
           </div>
         )}
 
+        {activeTab === 'emails' && <div className="mx-auto w-full max-w-[880px]"><EmailAuditSettings /></div>}
+
         {activeTab === 'emails' && selectedEmail && (
           <div className="min-h-0 bg-[var(--portal-surface-page)]" data-portal-email-direct-editor="true">
 
@@ -1344,7 +1413,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                 <button type="button" onClick={createEmailTemplate} className="portal-toolbar-icon-button" title="Adicionar outro modelo de e-mail" aria-label="Adicionar modelo de e-mail"><Plus className="h-3.5 w-3.5"/></button>
 
                 <SettingsWorkspaceSelector icon={Mail} aria-label="Selecionar e-mail" title={selectedEmail.name} value={selectedEmail.id} onChange={setSelectedEmailId}>
-                  {orderedEmailTemplates.map(email=><option key={email.id} value={email.id}>{email.name}</option>)}
+                  {orderedEmailTemplates.filter(item=>item.id!=='email-resposta-departamento').map(email=><option key={email.id} value={email.id}>{email.name}</option>)}
                 </SettingsWorkspaceSelector>
               </div>
             </SettingsWorkspaceHeaderPortal>
@@ -1353,18 +1422,25 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               <div className="portal-email-panels space-y-4">
                 <section aria-label="Dados iniciais do e-mail" className="grid gap-3 rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] p-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="col-span-full flex items-center justify-between gap-2">
-                    <strong className="text-[10px] font-black normal-case text-slate-700">Configuração deste e-mail</strong>
+                    <div><strong className="text-[10px] font-black normal-case text-slate-700">Configuração deste e-mail</strong><p className="mt-1 text-[10px] text-slate-600">{isDirty||hasSavedDraft?'Alterações em edição':'Revisão '+revision} · Códigos de acesso e avisos do Asten têm fluxos próprios.</p></div>
                     <div className="flex items-center gap-1.5">
                       <button type="button" onClick={()=>setPreviewMode('email')} className="portal-toolbar-icon-button" title="Ver modelo de e-mail com dados fictícios" aria-label="Ver modelo de e-mail com dados fictícios"><Eye className="h-3.5 w-3.5"/></button>
                       <button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-30" title="Excluir somente este modelo de e-mail" aria-label={`Excluir e-mail ${selectedEmail.name}`}><Trash2 className="h-3.5 w-3.5"/></button>
                     </div>
                   </div>
                   <label className="lg:col-span-2"><span className={labelClass}>Nome da rotina</span><input value={selectedEmail.name} onChange={event=>updateSelectedEmail({name:event.target.value})} className={inputClass}/></label>
-                  <label><span className={labelClass}>Destinatário</span><TemplateVariableControl value={selectedEmail.recipient||''} onChange={value=>updateSelectedEmail({recipient:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Destinatário"/></label>
-                  <label><span className={labelClass}>Responder para</span><TemplateVariableControl value={selectedEmail.replyTo||''} onChange={value=>updateSelectedEmail({replyTo:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Responder para"/></label>
-                  <label><span className={labelClass}>CC</span><TemplateVariableControl value={selectedEmail.cc||''} onChange={value=>updateSelectedEmail({cc:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="CC"/></label>
-                  <label><span className={labelClass}>CCO</span><TemplateVariableControl value={selectedEmail.bcc||''} onChange={value=>updateSelectedEmail({bcc:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="CCO"/></label>
-                  <label className="sm:col-span-2"><span className={labelClass}>Assunto</span><TemplateVariableControl value={selectedEmail.subject} onChange={value=>updateSelectedEmail({subject:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Assunto"/></label>
+                  {selectedEmailRoute?.audience==='reservation-approver'
+                    ? <label><span className={labelClass}>E-mail do departamento para reservas</span><input type="email" value={selectedEmail.recipient||''} onChange={event=>updateSelectedEmail({recipient:event.target.value})} className={inputClass}/></label>
+                    : selectedEmailRoute
+                      ? <div><span className={labelClass}>Destinatários por papel</span><p className={inputClass}>{selectedEmailRoute.recipients}</p></div>
+                      : <label><span className={labelClass}>Destinatário</span><TemplateVariableControl value={selectedEmail.recipient||''} onChange={value=>updateSelectedEmail({recipient:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Destinatário"/></label>}
+                  <p className="col-span-full text-xs text-slate-600"><strong>{selectedEmail.id}</strong> · {selectedEmailRoute?.trigger|| (selectedEmailEvent ? `Vinculado ao evento ${selectedEmailEvent}.` : 'Modelo sem evento de fluxo vinculado.')}</p>
+                  {selectedEmailRoute?.audience==='reservation-approver'&&<p className="col-span-full text-xs text-slate-600">{selectedEmailRoute.recipients}.</p>}
+                  {selectedEmail.id==='email-reserva'&&<p className="col-span-full text-xs text-slate-600">Altere o destinatário neste campo para os próximos pedidos. Solicitações já enviadas mantêm o endereço original até a resposta ou um novo agendamento.</p>}
+
+
+
+                  <label className="sm:col-span-2"><span className={labelClass}>Assunto</span><TemplateVariableControl value={String(effectiveEmail?.subject||'')} onChange={value=>updateSelectedEmail({subject:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Assunto"/></label>
                 </section>
 
                 <article aria-label="Modelo do e-mail" className="overflow-hidden rounded-xl border border-[var(--portal-border)] bg-white">
@@ -1375,13 +1451,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                 </label> : <label className="flex cursor-pointer items-center justify-center gap-2 border-b border-dashed border-slate-300 bg-white px-4 py-3 text-[10px] font-bold text-slate-600"><Image className="h-3.5 w-3.5"/>Adicionar imagem ao e-mail<input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event=>{void uploadTemplateImage(event.target.files?.[0],'email','heroImageUrl');event.target.value='';}}/></label>}
 
                 <div className="flex items-center gap-3 border-b-[5px] border-white bg-[var(--portal-brand-header)] px-4 py-3">
-                  <label className="group relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white p-1" title="Alterar logo do e-mail">
-                    {(selectedEmailDesign.logoUrl||brandKit.courseLogoUrl)
-                      ? <img src={selectedEmailDesign.logoUrl||brandKit.courseLogoUrl} alt="Logo" className="h-full w-full object-contain"/>
-                      : <Image className="h-5 w-5 text-slate-500"/>}
-                    <span className="absolute inset-0 hidden items-center justify-center bg-black/45 text-white group-hover:flex"><Pencil className="h-3.5 w-3.5"/></span>
-                    <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event=>{void uploadTemplateImage(event.target.files?.[0],'email','logoUrl');event.target.value='';}}/>
-                  </label>
+                  <img src={institutionalDocumentLogo({brandKit},selectedEmail.id)} alt="Brasão de Armas" className="h-11 w-11 shrink-0 rounded-full bg-white object-contain p-1"/>
                   <input
                     value={selectedEmailDesign.headerText}
                     onChange={event=>updateSelectedEmailDesign({headerText:event.target.value})}
@@ -1393,7 +1463,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
                 <div className="bg-white p-5">
                   <div className="mb-3 text-[9px] font-bold normal-case tracking-wider text-slate-500">Assunto</div>
-                  <TemplateVariableControl value={selectedEmail.subject} onChange={value=>updateSelectedEmail({subject:value})} variables={templateVariables} className="w-full border-0 bg-transparent p-0 text-lg font-black text-slate-900 outline-none" ariaLabel="Assunto no modelo do e-mail"/>
+                  <TemplateVariableControl value={String(effectiveEmail?.subject||'')} onChange={value=>updateSelectedEmail({subject:value})} variables={templateVariables} className="w-full border-0 bg-transparent p-0 text-lg font-black text-slate-900 outline-none" ariaLabel="Assunto no modelo do e-mail"/>
                   <div className="my-4 h-px bg-slate-200"/>
 
                   <div className="relative">
@@ -1404,7 +1474,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                     <TemplateVariableControl
                       multiline
                       rows={12}
-                      value={selectedEmail.body}
+                      value={String(effectiveEmail?.body||'')}
                       onChange={value=>updateSelectedEmail({body:value})}
                       variables={templateVariables}
                       className="min-h-[300px] w-full resize-y border-0 bg-transparent p-0 text-[13px] leading-6 text-slate-900 outline-none"
@@ -1419,24 +1489,25 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                     <textarea readOnly aria-label="Orientações por participante" rows={10} value={selectedEmailGuidance} className="portal-input w-full text-xs leading-5"/>
                   </section>
 
-                  <div className="mt-5 flex flex-wrap items-center gap-2">
-                    <input value={selectedEmailDesign.buttonLabel} onChange={event=>updateSelectedEmailDesign({buttonLabel:event.target.value})} className="min-w-[180px] rounded-lg border-0 px-3 py-2 text-[10px] font-black normal-case text-white outline-none" style={{backgroundColor:brandKit.primaryColor}} aria-label="Texto do botão do e-mail"/>
-                    <TemplateVariableControl value={selectedEmailDesign.buttonUrl} onChange={value=>updateSelectedEmailDesign({buttonUrl:value})} variables={templateVariables} className="min-w-[260px] flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-[10px] text-slate-700 outline-none" placeholder="Destino do botão" ariaLabel="Destino do botão do e-mail"/>
-                  </div>
+                  <p className="mt-4 text-xs text-slate-600">As cópias são reunidas automaticamente conforme os participantes e a finalidade da mensagem. Os botões e seus destinos são definidos pelo processo. Somente o responsável recebe os botões de decisão; autores e orientador recebem a cópia informativa. O brasão e a identificação da Comissão seguem o padrão institucional.</p>
                 </div>
-
-                <div className="border-t border-slate-300 bg-[var(--portal-surface-card)] p-3">
-                  <textarea value={selectedEmailDesign.footerText} onChange={event=>updateSelectedEmailDesign({footerText:event.target.value})} rows={2} className="w-full resize-y border-0 bg-transparent text-[10px] text-slate-600 outline-none" aria-label="Rodapé do e-mail"/>
-                </div>
-
                 </article>
-                <p className="rounded-lg border border-slate-300 bg-[var(--portal-surface-panel)] p-3 text-xs text-slate-700">Os documentos são acessados pelo link do TCC, na aba Documentos do processo. O Portal envia orientações e links, sem anexos PDF.</p>
+                <p className="rounded-lg border border-slate-300 bg-[var(--portal-surface-panel)] p-3 text-xs text-slate-700">Os documentos são acessados pelo link do TCC, na aba Documentos administrativos. O Portal envia orientações e links, sem anexos PDF.</p>
 
 
               </div>
             </div>
           </div>
         )}
+
+        {activeTab === 'receipts' && <section className="space-y-4 p-4" aria-label="Configuração dos comprovantes">
+          <p className="text-sm text-slate-600">O Portal gera os comprovantes de reserva em PDF. Os textos abaixo valem para as próximas respostas. A prévia usa o mesmo gerador com dados fictícios. Protocolo, título, autoria, local, data, horário, decisão e responsável vêm do registro da reserva.</p>
+          <label className="block text-sm font-semibold">Resultado da reserva<select aria-label="Resultado da reserva" disabled={receiptBusy} value={receiptOutcome} onChange={event=>{setReceiptOutcome(event.target.value as typeof receiptOutcome);setReceiptPreview('');}} className="portal-input mt-2"><option value="CONFIRMED">Reserva confirmada</option><option value="UNAVAILABLE">Reserva recusada</option></select></label>
+          {([receiptOutcome==='CONFIRMED'?'confirmedTitle':'declinedTitle',receiptOutcome==='CONFIRMED'?'confirmedText':'declinedText'] as const).map(key=><label key={key} className="block text-sm font-semibold">{key.endsWith('Title')?'Título do comprovante':'Texto de apresentação'}<textarea disabled={receiptBusy} aria-label={key.endsWith('Title')?'Título do comprovante':'Texto de apresentação'} rows={key.endsWith('Title')?1:3} maxLength={key.endsWith('Title')?100:500} value={resolveReceiptDesign({receiptDesign:receiptConfig})[key]} onChange={event=>{setReceiptConfig(previous=>({...previous,[key]:event.target.value}));setIsDirty(true);setReceiptPreview('');}} className="portal-input mt-2"/></label>)}
+          <button type="button" disabled={receiptBusy} onClick={()=>void generateReceiptPreview()} className="portal-action portal-action-primary">{receiptBusy?'Gerando prévia…':'Ver comprovante em PDF'}</button>
+          {receiptError&&<p role="alert" className="text-sm text-red-800">{receiptError}</p>}
+          {receiptPreview&&<PdfCanvasPreview base64={receiptPreview} label="Comprovante de demonstração — sem validade"/>}
+        </section>}
 
         {activeTab === 'forms' && selectedForm && (
           <div className="min-h-0 bg-[var(--portal-surface-page)]" data-portal-form-direct-editor="true">
@@ -1453,16 +1524,12 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               <article className="overflow-hidden rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] shadow-sm" style={{fontFamily:brandKit.fontFamily}}>
                 <div className="flex items-center gap-3 border-b-[5px] border-white bg-[var(--portal-brand-header)] px-4 py-3">
                   <ClipboardList className="h-5 w-5 shrink-0 text-white" aria-hidden="true" />
-                  <label className="flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-white/40 bg-white p-1 text-slate-600" title="Alterar imagem do formulário">
-                    {selectedFormDesign.logoUrl ? <img src={selectedFormDesign.logoUrl} alt="Imagem do formulário" className="h-full w-full object-contain" /> : <Image className="h-5 w-5" aria-hidden="true" />}
-                    <input type="file" accept="image/png,image/jpeg,image/webp" aria-label="Imagem do formulário" className="hidden" onChange={event=>{void uploadFormImage(event.target.files?.[0]);event.target.value='';}} />
-                  </label>
                   <div className="min-w-0 flex-1 text-center">
                     <div className="text-[9px] font-black normal-case tracking-[0.14em] text-white/85">{brandKit.institutionName}</div>
                     <div className="mt-1 text-[11px] font-black normal-case leading-tight text-white">{brandKit.courseName}</div>
                   </div>
                   <button type="button" onClick={()=>setPreviewMode('form')} className="portal-toolbar-icon-button" title="Ver formulário preenchido com dados fictícios" aria-label="Ver formulário preenchido com dados fictícios"><Eye className="h-3.5 w-3.5"/></button>
-                  <button type="button" onClick={()=>void deleteSelectedForm()} disabled={formTemplates.length<=1} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-40" title="Excluir somente este formulário" aria-label={`Excluir formulário ${selectedForm.title}`}><Trash2 className="h-3.5 w-3.5"/></button>
+                  <button type="button" onClick={()=>void deleteSelectedForm()} disabled={formTemplates.length<=1||['form-reserva-aluno','form-reserva-departamento'].includes(selectedForm.id)} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-40" title="Excluir somente este formulário" aria-label={`Excluir formulário ${selectedForm.title}`}><Trash2 className="h-3.5 w-3.5"/></button>
                 </div>
 
                 <div className="p-4">
@@ -1471,8 +1538,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                       {editingFormPart==='stage'
                         ? <input autoFocus value={selectedForm.stage} onChange={event=>updateSelectedForm({stage:event.target.value})} onBlur={()=>setEditingFormPart(null)} className="max-w-[260px] rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-black normal-case text-[var(--portal-brand-action)]"/>
                         : <button type="button" onDoubleClick={()=>setEditingFormPart('stage')} onClick={()=>setEditingFormPart('stage')} className="group inline-flex items-center gap-1 text-[9px] font-black normal-case tracking-wider text-[var(--portal-brand-action)]" title="Editar etapa"><span>{selectedForm.stage||'Definir etapa'}</span><Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100"/></button>}
-                      <select value={selectedForm.targetRole} onChange={event=>updateSelectedForm({targetRole:event.target.value as FormTemplateItem['targetRole']})} className="rounded-full border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-700" aria-label="Público do formulário">
-                        {['Aluno','Orientador','Banca','Presidente da Comissão','Departamento'].map(role=><option key={role}>{role}</option>)}
+                      <select disabled={selectedForm.id==='form-reserva-departamento'} value={selectedForm.targetRole} onChange={event=>updateSelectedForm({targetRole:event.target.value as FormTemplateItem['targetRole']})} className="rounded-full border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-700" aria-label="Público do formulário">
+                        {['Aluno','Orientador','Banca','Presidente da Comissão','Departamento','Departamento ou orientador'].map(role=><option key={role}>{role}</option>)}
                       </select>
                     </div>
 
@@ -1485,8 +1552,9 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                       : <button type="button" onDoubleClick={()=>setEditingFormPart('description')} onClick={()=>setEditingFormPart('description')} className="group mt-1 flex max-w-full items-start gap-2 text-left" title="Editar descrição"><p className="text-xs text-slate-600">{selectedForm.description||selectedFormDesign.introText||'Clique para adicionar uma descrição.'}</p><Pencil className="mt-0.5 h-3 w-3 shrink-0 text-slate-400 opacity-0 group-hover:opacity-100"/></button>}
                   </div>
 
-                  {selectedFormDesign.showProgress && <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full w-1/3 rounded-full" style={{backgroundColor:brandKit.primaryColor}}/></div>}
+                  {selectedForm.id==='form-reserva-aluno' && selectedFormDesign.showProgress && <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full w-1/3 rounded-full" style={{backgroundColor:brandKit.primaryColor}}/></div>}
 
+                  {selectedForm.id==='form-reserva-departamento' ? <div className="space-y-3"><p className="text-xs text-slate-600">O título e a descrição acima são usados na página real de resposta. A data, o horário e o local vêm do pedido; os botões de aceite e recusa e a autorização do responsável são fixos.</p><iframe title="Confirmação do agendamento — página real com exemplo" sandbox="" srcDoc={nativeReservationHtml} className="h-[540px] w-full rounded-lg border border-slate-300"/></div> : <>
                   <div className="space-y-3">
                     {selectedForm.questions.map((question,index)=>{
                       const editingLabel=editingFormQuestionLabelId===question.id;
@@ -1496,7 +1564,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                           <div className="min-w-0 flex-1">
                             {editingLabel
                               ? <input autoFocus value={question.label} onChange={event=>updateSelectedForm({questions:selectedForm.questions.map(item=>item.id===question.id?{...item,label:event.target.value}:item)})} onBlur={()=>setEditingFormQuestionLabelId('')} className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs font-bold text-slate-900"/>
-                              : <button type="button" onDoubleClick={()=>setEditingFormQuestionLabelId(question.id)} className="group flex max-w-full items-center gap-1.5 text-left" title="Duplo clique para editar a pergunta"><span className="text-xs font-bold text-slate-800">{index+1}. {question.label}{question.required&&<span className="ml-1 text-rose-600">*</span>}</span><Pencil className="h-3 w-3 shrink-0 text-slate-400 opacity-0 group-hover:opacity-100"/></button>}
+                              : <button type="button" onDoubleClick={()=>{if(!(selectedForm.id==='form-reserva-aluno'&&/_MATRICULA$|_SIAPE$/.test(question.fieldKey)))setEditingFormQuestionLabelId(question.id);}} className="group flex max-w-full items-center gap-1.5 text-left" title="Duplo clique para editar a pergunta"><span className="text-xs font-bold text-slate-800">{index+1}. {question.label}{question.required&&<span className="ml-1 text-rose-600">*</span>}</span><Pencil className="h-3 w-3 shrink-0 text-slate-400 opacity-0 group-hover:opacity-100"/></button>}
                             <div className="mt-1 text-[9px] font-semibold text-slate-500">Variável: {question.fieldKey||'não vinculada'}</div>
                           </div>
                           <div className="flex items-center gap-1">
@@ -1516,7 +1584,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                                 : <input disabled type={question.fieldType==='date'?'date':question.fieldType==='number'?'number':question.fieldType==='email'?'email':question.fieldType==='file'?'file':'text'} className={inputClass} placeholder={question.placeholder||`Variável: ${question.fieldKey||'não vinculada'}`}/>}
                         </div>
 
-                        {selectedQuestion && <div className="mt-3 rounded-lg border border-[var(--portal-border)] bg-[var(--portal-surface-nested)] p-3"><FormQuestionEditor question={question} index={index} variables={matrixColumns} previousQuestions={selectedForm.questions.slice(0,index)} onChange={updates=>updateSelectedForm({questions:selectedForm.questions.map(item=>item.id===question.id?{...item,...updates}:item)})} onDelete={()=>updateSelectedForm({questions:selectedForm.questions.filter(item=>item.id!==question.id)})}/></div>}
+                        {selectedQuestion && <div className="mt-3 rounded-lg border border-[var(--portal-border)] bg-[var(--portal-surface-nested)] p-3"><FormQuestionEditor coreField={selectedForm.id==='form-reserva-aluno'&&REGISTRATION_QUESTIONS.some(field=>field.fieldKey===question.fieldKey)} question={question} index={index} variables={matrixColumns} previousQuestions={selectedForm.questions.slice(0,index)} onChange={updates=>updateSelectedForm({questions:selectedForm.questions.map(item=>item.id===question.id?{...item,...updates}:item)})} onDelete={()=>updateSelectedForm({questions:selectedForm.questions.filter(item=>item.id!==question.id)})}/></div>}
                       </section>;
                     })}
                   </div>
@@ -1550,6 +1618,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                       ? <textarea autoFocus rows={2} value={selectedFormDesign.confirmationMessage||''} onChange={event=>updateSelectedFormDesign({confirmationMessage:event.target.value})} onBlur={()=>setEditingFormPart(null)} className="mt-2 w-full rounded-lg border border-slate-300 bg-white p-2 text-center text-[10px] text-slate-700" aria-label="Mensagem após envio"/>
                       : <button type="button" onClick={()=>setEditingFormPart('confirmation')} className="group mt-2 w-full text-center text-[9px] text-slate-500" title="Editar mensagem após envio"><span>{selectedFormDesign.confirmationMessage||'Adicionar mensagem após envio'}</span><Pencil className="ml-1 inline h-3 w-3 opacity-0 group-hover:opacity-100"/></button>}
                   </div>
+                  </>}
+
                 </div>
               </article>
             </div>
@@ -1558,6 +1628,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
         {activeTab === 'workflow' && (
           <div className="space-y-3 pb-5" data-portal-workflow-editor="true">
+            <div className="px-3"><WorkflowSimulationPanel studio={currentStudioSnapshotRef.current!} showTrace /></div>
             <section
               className="overflow-hidden rounded-lg"
               style={{ backgroundColor: 'var(--portal-surface-panel)' }}
@@ -1642,6 +1713,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                         const action=row.action;
                         const actionIndex=action?selectedWorkflowStage.actions.findIndex(item=>item.id===action.id):-1;
                         const condition=action?.condition;
+                        const emailRoute=row.type==='email'?operationalEmailRouting(row.value.split(':',2)[1]):undefined;
                         const binding=row.type==='doc'?signatureWorkflowBinding(docTemplates.find(item=>`doc:${item.id}`===row.value||item.id===action?.refId)):undefined;
                         return <tr key={row.value} className="border-b border-slate-300" style={{ backgroundColor:'var(--portal-surface-panel)' }}>
                           <td className="border-r border-slate-300 px-2 py-2 text-center">
@@ -1652,8 +1724,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                           </td>
                           <td className="border-r border-slate-300 px-2 py-2 text-center font-black normal-case text-slate-600">{row.detail}</td>
                           <td className="border-r border-slate-300 px-2 py-2"><input disabled={!action||Boolean(binding)} value={binding?row.label:action?.title||row.label} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{title:event.target.value})} className={inputClass}/></td>
-                          <td className="border-r border-slate-300 px-2 py-2">{binding ? <div title={`${binding.recipient}. ${binding.source}`} aria-label={`${binding.recipient}. ${binding.source}`} className="max-w-[240px] truncate whitespace-nowrap text-[10px] font-semibold leading-4 text-slate-800">{binding.recipient}</div> : action?.type==='email'&&action.refId==='email-reserva'
-                            ? <button type="button" onClick={()=>{setSelectedEmailId('email-reserva');setActiveTab('emails');}} title={emailTemplates.find(item=>item.id===action.refId)?.recipient||'Definir destinatário no modelo de e-mail'} aria-label="Definir destinatário no modelo de e-mail" className="w-full max-w-[240px] truncate whitespace-nowrap cursor-pointer rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-center text-[10px] font-semibold text-[var(--portal-brand-action)] underline underline-offset-2">{emailTemplates.find(item=>item.id===action.refId)?.recipient||'Definir destinatário'}</button>
+                          <td className="border-r border-slate-300 px-2 py-2">{binding ? <div title={`${binding.recipient}. ${binding.source}`} aria-label={`${binding.recipient}. ${binding.source}`} className="max-w-[240px] truncate whitespace-nowrap text-[10px] font-semibold leading-4 text-slate-800">{binding.recipient}</div> : emailRoute
+                            ? <button type="button" onClick={()=>{setSelectedEmailId(row.value.split(':',2)[1]);setActiveTab('emails');}} title={emailRoute.recipients} aria-label={`Abrir destinatários do modelo ${row.label}`} className="w-full max-w-[240px] truncate whitespace-nowrap cursor-pointer rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-center text-[10px] font-semibold text-[var(--portal-brand-action)] underline underline-offset-2">{emailRoute.recipients}</button>
                             : <input disabled={!action} value={action?.recipientOrDetail||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder={action?'Detalhe opcional':'Selecione o item'}/>}</td>
                           <td className="border-r border-slate-300 px-2 py-2">
                             <div className="grid grid-cols-3 gap-1">
@@ -1718,7 +1790,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         )}
 
         {activeTab === 'audit' && (
-          <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-3"><div className={`${panelClass} p-3`}><FileClock className="h-4 w-4 text-slate-600" /><div className="mt-2 text-xl font-black">{auditTrail.length}</div><div className="text-[9px] font-black normal-case text-slate-500">eventos registrados</div></div><div className={`${panelClass} p-3`}><Merge className="h-4 w-4 text-[var(--portal-brand-action)]" /><div className="mt-2 text-xl font-black">{auditTrail.filter((item) => item.action === 'VARIABLE_MERGED').length}</div><div className="text-[9px] font-black normal-case text-slate-500">mesclas de variável</div></div><div className={`${panelClass} p-3`}><Cloud className="h-4 w-4 text-emerald-700" /><div className="mt-2 text-xl font-black">{auditTrail.filter((item) => item.entityType === 'drive').length}</div><div className="text-[9px] font-black normal-case text-slate-500">operações no Drive</div></div></div><div className={`${panelClass} overflow-hidden`}><div className="border-b border-slate-200 bg-slate-50 px-4 py-3"><h4 className="text-xs font-black normal-case text-slate-900">Registro imutável de alterações do estúdio</h4><p className="mt-1 text-[10px] text-slate-500">Cada evento registra autor, data, entidade e artefatos atingidos. O histórico é publicado junto com a configuração central.</p></div><div className="max-h-[620px] overflow-auto"><table className="w-full border-collapse text-left"><thead className="sticky top-0 z-10 bg-slate-100 text-[9px] font-black normal-case text-slate-600"><tr><th className="p-3">Data</th><th className="p-3">Ação</th><th className="p-3">Descrição</th><th className="p-3">Autor</th><th className="p-3">Impacto</th></tr></thead><tbody className="divide-y divide-slate-100">{auditTrail.map((entry) => <tr key={entry.id} className="bg-white text-[10px]"><td className="whitespace-nowrap p-3 text-slate-500">{new Date(entry.timestamp).toLocaleString('pt-BR')}</td><td className="p-3"><span className="rounded-full bg-slate-100 px-2 py-1 font-black text-slate-700">{formatAuditAction(entry.action)}</span></td><td className="max-w-md p-3 font-medium text-slate-700">{entry.description}</td><td className="p-3 text-slate-500">{entry.actorEmail}</td><td className="p-3 font-bold text-slate-600">{entry.affectedArtifacts?.length || 0} artefato(s)</td></tr>)}{auditTrail.length === 0 && <tr><td colSpan={5} className="p-10 text-center text-xs text-slate-400">O primeiro salvamento ou sincronização iniciará o histórico.</td></tr>}</tbody></table></div></div></div>
+          <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-3"><div className={`${panelClass} p-3`}><FileClock className="h-4 w-4 text-slate-600" /><div className="mt-2 text-xl font-black">{auditTrail.length}</div><div className="text-[9px] font-black normal-case text-slate-500">eventos registrados</div></div><div className={`${panelClass} p-3`}><Merge className="h-4 w-4 text-[var(--portal-brand-action)]" /><div className="mt-2 text-xl font-black">{auditTrail.filter((item) => item.action === 'VARIABLE_MERGED').length}</div><div className="text-[9px] font-black normal-case text-slate-500">mesclas de variável</div></div><div className={`${panelClass} p-3`}><Cloud className="h-4 w-4 text-emerald-700" /><div className="mt-2 text-xl font-black">{auditTrail.filter((item) => item.entityType === 'drive').length}</div><div className="text-[9px] font-black normal-case text-slate-500">operações no Drive</div></div></div><div className={`${panelClass} overflow-hidden`}><div className="border-b border-slate-200 bg-slate-50 px-4 py-3"><h4 className="text-xs font-black normal-case text-slate-900">Registro imutável de alterações do estúdio</h4><p className="mt-1 text-[10px] text-slate-500">Cada evento registra autor, data, entidade e artefatos atingidos. O histórico é publicado junto com a configuração central.</p></div><div className="max-h-[620px] overflow-auto"><table className="w-full border-collapse text-left"><thead className="sticky top-0 z-10 bg-slate-100 text-[9px] font-black normal-case text-slate-600"><tr><th className="p-3">Data</th><th className="p-3">Ação</th><th className="p-3">Descrição</th><th className="p-3">Autor</th><th className="p-3">Impacto</th></tr></thead><tbody className="divide-y divide-slate-100">{auditTrail.map((entry) => <tr key={entry.id} className="bg-white text-[10px]"><td className="whitespace-nowrap p-3 text-slate-500">{formatDateTimeWithWeekday(entry.timestamp)}</td><td className="p-3"><span className="rounded-full bg-slate-100 px-2 py-1 font-black text-slate-700">{formatAuditAction(entry.action)}</span></td><td className="max-w-md p-3 font-medium text-slate-700">{entry.description}</td><td className="p-3 text-slate-500">{entry.actorEmail}</td><td className="p-3 font-bold text-slate-600">{entry.affectedArtifacts?.length || 0} artefato(s)</td></tr>)}{auditTrail.length === 0 && <tr><td colSpan={5} className="p-10 text-center text-xs text-slate-400">O primeiro salvamento ou sincronização iniciará o histórico.</td></tr>}</tbody></table></div></div></div>
         )}
         </div>
       </div>

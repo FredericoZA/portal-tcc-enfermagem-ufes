@@ -28,14 +28,20 @@ test('confirmação identifica autores e comprovante do departamento registra as
  const common={process,recipient:'departamento@example.invalid',subject:'Reserva confirmada',text:'Corpo antigo',templateId:'email-comprovante-reserva',baseUrl:'https://portal.example',courseName:'Enfermagem',departmentUrl:'https://portal.example/receipt'};
  for(const decision of ['CONFIRMED','UNAVAILABLE'] as const){
   process.defesa.departmentResponse={revision:1,decision,respondedAt:'2026-10-26',respondedBy:common.recipient,startAt:process.defesa.startAt,endAt:process.defesa.endAt,local:process.defesa.local};
-  const result=processEmailMessage(common);assert.match(result.subject,decision==='CONFIRMED'?/Reserva confirmada/:/Agendamento recusado/);assert.match(result.text,/Resposta registrada em \d{2}\/\d{2}\/\d{4}/);assert.match(result.text,decision==='CONFIRMED'?/Resultado: reserva confirmada/:/Resultado: reserva recusada/);if(decision==='CONFIRMED')assert.match(result.text,/Avaliação e ata/);assert.equal((result.html.match(/<a /g)||[]).length,1);
+  const result=processEmailMessage(common);assert.match(result.subject,decision==='CONFIRMED'?/Reserva confirmada/:/Agendamento recusado/);assert.match(result.text,/Resposta registrada em [a-zçáéíóú-]+, \d{2}\/\d{2}\/\d{4}/);assert.match(result.text,decision==='CONFIRMED'?/Resultado: reserva confirmada/:/Resultado: reserva recusada/);if(decision==='CONFIRMED')assert.match(result.text,/Avaliação e ata/);assert.equal((result.html.match(/<a /g)||[]).length,decision==='CONFIRMED'?1:2);
+  if(decision==='UNAVAILABLE'){
+   assert.match(result.text,/É necessário solicitar novamente a reserva/);
+   assert.match(result.text,/abram o mesmo TCC.*Dados do processo.*Refazer reserva/);
+   assert.match(result.text,/O código do TCC será mantido; não criem outro trabalho/);
+   assert.match(result.html,/Refazer reserva/);
+  }
  }
  process.defesa.departmentResponse!.decision='CONFIRMED';
  const authors=processEmailMessage({...common,recipient:process.aluno1.email,departmentUrl:undefined});assert.match(authors.text,/^Prezados departamento, autores e orientador,/);assert.match(authors.text,/Autores: confiram/);assert.doesNotMatch(authors.text,/Participantes:/);
 });
 test('ata tem métodos em lista menor e termo exige um PDF conjunto, com observação da entrega sem negrito',()=>{
  const process=structuredClone(DEMO_PROCESSES[0]),common={process,recipient:process.orientador.email,subject:'Documento',text:'Prezado participante,\n\nDocumento disponível.',baseUrl:'https://portal.example',courseName:'Enfermagem'};
- const ata=processEmailMessage({...common,templateId:'email-assinatura-ata',eventCode:'EVALUATION_SUBMITTED'});assert.match(ata.text,/^Prezado orientador,/);assert.match(ata.text,/Somente o orientador/);assert.doesNotMatch(ata.text,/assinaturas dos autores|Autores e orientador:/);assert.match(ata.html,/<ul style="[^"]*font-size:13px/);assert.equal((ata.html.match(/<li /g)||[]).length,2);
+ const ata=processEmailMessage({...common,templateId:'email-assinatura-ata',eventCode:'EVALUATION_SUBMITTED'});assert.match(ata.text,/^Prezado orientador,/);assert.match(ata.text,/Orientador e examinadores: a ata exige as três assinaturas/);assert.doesNotMatch(ata.text,/Somente o orientador.*assina a ata/);assert.doesNotMatch(ata.text,/assinaturas dos autores|Autores e orientador:/);assert.match(ata.html,/<ul style="[^"]*font-size:13px/);assert.equal((ata.html.match(/<li /g)||[]).length,2);
  const term=processEmailMessage({...common,templateId:'email-assinatura-termo',eventCode:'REPOSITORY_SUBMITTED'});assert.match(term.text,/Todos assinam no mesmo nível/);assert.match(term.text,/único arquivo completo/);assert.match(term.text,/botão Asten em Documentos administrativos/);assert.match(term.text,/receberão o link por e-mail/);
  const delivery=processEmailMessage({...common,templateId:'email-entrega-repositorio',eventCode:'SIGNATURE_COMPLETED'});assert.match(delivery.text,/^Prezados autores,/);assert.match(delivery.text,/o Termo ficará disponível/);assert.match(delivery.html,/Observação: a entrega pode ser feita por qualquer um dos autores\./);assert.doesNotMatch(delivery.html,/<strong>Observação/);
 });

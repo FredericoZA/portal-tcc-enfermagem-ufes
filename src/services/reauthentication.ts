@@ -8,7 +8,12 @@ export function requiresPortalReauthentication(error: unknown): boolean {
 
 export async function confirmPortalIdentity(message = 'Confirme sua identidade com o código enviado ao seu e-mail. Você permanece no Portal.'): Promise<void> {
   const me = await apiClient.getMe();
-  await apiClient.requestLoginCode(me.userEmail);
+  try {
+    const result = await apiClient.requestLoginCode(me.userEmail);
+    if (!result.sent) throw new Error(result.message);
+  } catch (error) {
+    if (!(error instanceof ApiRequestError) || error.code !== 'OTP_CHALLENGE_ACTIVE') throw error;
+  }
   const code = await portalPrompt(message, '', {
     title: 'Confirmar identidade',
     confirmLabel: 'Validar',

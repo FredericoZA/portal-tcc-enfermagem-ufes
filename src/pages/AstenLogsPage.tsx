@@ -1,3 +1,4 @@
+import {formatDateTimeWithWeekday} from '../utils/formatters';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Eye, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -31,12 +32,12 @@ const SIGNATURE_COLUMNS: ColumnDef[] = [
 ];
 const DEFAULT_ORDER = SIGNATURE_COLUMNS.map((column) => column.key);
 const DEFAULT_VISIBLE = Object.fromEntries(SIGNATURE_COLUMNS.map((column) => [column.key, !['attempts','signedSha256','lastError'].includes(column.key)]));
-const dateTime = (value?: string) => value ? new Date(value).toLocaleString('pt-BR') : '—';
+const dateTime = (value?: string) => value ? formatDateTimeWithWeekday(value) : '—';
 const providerLabel = (value?: string) => value === 'ASTEN' ? 'Asten' : value === 'GOV_BR' ? 'Gov.br' : (value || '—');
 const RETRYABLE_STATUSES = new Set<SignatureJobStatus>(['PROVIDER_ERROR', 'WAITING_INTEGRATION', 'DRIVE_SYNC_PENDING', 'EXPIRED']);
 const FINAL_STATUSES = new Set<SignatureJobStatus>(['ARCHIVED', 'CANCELED', 'DECLINED']);
 
-const roleLabel = (role: SignatureSignerSnapshot['role']) => role === 'ADVISOR' ? 'Orientador(a)' : role === 'STUDENT' ? 'Aluno(a)' : 'Presidência';
+const roleLabel = (role: SignatureSignerSnapshot['role']) => role === 'ADVISOR' ? 'Orientador(a)' : role === 'EXAMINER' ? 'Examinador(a)' : role === 'STUDENT' ? 'Aluno(a)' : 'Presidência';
 const signerSummary = (signers: SignatureSignerSnapshot[]) => signers.length ? signers.map((signer) => signer.name || signer.email).join('; ') : '—';
 const signedSigners = (job: SignatureJob) => job.signers.filter((signer) => signer.status === 'SIGNED');
 const signedBySummary = (job: SignatureJob) => {
@@ -45,14 +46,6 @@ const signedBySummary = (job: SignatureJob) => {
   if (['SIGNED', 'DRIVE_SYNC_PENDING', 'ARCHIVED'].includes(job.status)) return 'Concluído pelo provedor; detalhe individual não informado';
   return '—';
 };
-
-const DEMO_JOB = {
-  id: 'demo-signature-local', createdAt: '2026-09-24T12:00:00-03:00', updatedAt: '2026-09-24T12:01:00-03:00', createdBy: 'demonstração@portal.local',
-  processId: 'demo-process', protocol: '2026-000', documentTitle: 'Declaração de participação — demonstração', documentType: 'DECLARACAO', documentVersion: 1,
-  sourceDataRevision: 1, fileName: 'declaracao-demo.pdf', mimeType: 'application/pdf', contentSha256: 'demo', idempotencyKey: 'demo',
-  signers: [{ id: 'demo-signer', role: 'ADVISOR', name: 'Prof. Demonstração', email: 'demo@portal.local', signingOrder: 1, status: 'SIGNED', signedAt: '2026-09-24T12:01:00-03:00' }],
-  provider: 'ASTEN', status: 'SIGNED', providerEnvelopeId: 'DEMO-LOCAL', sentAt: '2026-09-24T12:00:00-03:00', completedAt: '2026-09-24T12:01:00-03:00', signedAt: '2026-09-24T12:01:00-03:00',
-} as SignatureJob;
 
 export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const { isMasterAdmin } = useAuth();
@@ -97,12 +90,10 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   }, [jobs, search, startDate, endDate]);
 
   const shown = filtered;
-  const showDemo = jobs.length === 0 && !search.trim() && !startDate && !endDate;
-  const renderedJobs = showDemo ? [DEMO_JOB] : shown;
+  const renderedJobs = shown;
   const activeColumns = ['protocol', ...columnOrder.filter((key) => key !== 'protocol' && (visibleColumns[key] !== false || key === 'actions'))];
 
   const retry = async (job: SignatureJob) => {
-    if (job.id === DEMO_JOB.id) return;
     if (!(await portalConfirm(`Reenviar a solicitação de assinatura do processo ${job.protocol || job.processId}?`))) return;
     setWorkingId(job.id);
     try { await apiClient.retrySignatureJob(job.id); await load(true); }
@@ -111,7 +102,6 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   };
 
   const reconcile = async (job: SignatureJob) => {
-    if (job.id === DEMO_JOB.id) return;
     setWorkingId(job.id);
     try { await apiClient.reconcileSignatureJob(job.id); await load(true); }
     catch (error: any) { portalNotice(error?.message || 'Não foi possível reconciliar o estado da assinatura.'); }
@@ -122,9 +112,8 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
 
   const renderActions = (job: SignatureJob) => {
     const busy = workingId === job.id;
-    const demo = job.id === DEMO_JOB.id;
-    const canRetry = !demo && RETRYABLE_STATUSES.has(job.status) && job.providerCreationState !== 'UNCERTAIN';
-    const canReconcile = !demo && Boolean(job.providerEnvelopeId) && !FINAL_STATUSES.has(job.status);
+    const canRetry = RETRYABLE_STATUSES.has(job.status) && job.providerCreationState !== 'UNCERTAIN';
+    const canReconcile = Boolean(job.providerEnvelopeId) && !FINAL_STATUSES.has(job.status);
     return <div className="flex items-center justify-center gap-1 whitespace-nowrap">
       <button type="button" onClick={() => setSelectedJob(job)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50"><Eye className="h-3 w-3"/>Auditar</button>
       {canRetry && <button type="button" onClick={() => void retry(job)} disabled={busy} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50 disabled:opacity-50"><RefreshCw className={`h-3 w-3 ${busy ? 'animate-spin' : ''}`}/>Reenviar</button>}
@@ -162,11 +151,10 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
 
     <div className="portal-signature-table-shell flex min-h-0 flex-1 flex-col p-0">
       <>
-        {showDemo && <div className="border-b border-amber-300 bg-amber-50 px-3 py-1.5 text-[9px] font-semibold text-amber-900">Demonstração visual: este registro existe apenas na interface, não é salvo e não entra em estatísticas.</div>}
         <TableScrollWrapper fillHeight>
           <table className="portal-spreadsheet-table w-full min-w-[1900px] border-collapse text-center text-xs">
-            <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black normal-case tracking-wide ${key === 'actions' ? 'text-center' : ''}`} style={key === 'actions' ? { backgroundColor: 'var(--portal-brand-header)' } : undefined}>{SIGNATURE_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
-            <tbody className="divide-y divide-slate-200">{(loading || renderedJobs.length === 0) && <tr><td colSpan={activeColumns.length} className="portal-sheet-empty-cell" role="status">{loading ? 'Carregando registros de assinatura…' : 'Nenhum registro de assinatura encontrado com os filtros atuais.'}</td></tr>}{renderedJobs.map((job) => <tr key={job.id}>{activeColumns.map((key) => <td key={key} className={`px-3 py-1 text-slate-950 ${key === 'actions' ? 'text-center' : ''}`}>{renderCell(job, key)}</td>)}</tr>)}</tbody>
+            <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black normal-case tracking-wide ${key === 'actions' ? 'text-center sticky right-0 z-20' : ''}`} style={key === 'actions' ? { backgroundColor: 'var(--portal-brand-header)' } : undefined}>{SIGNATURE_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
+            <tbody className="divide-y divide-slate-200">{(loading || renderedJobs.length === 0) && <tr><td colSpan={activeColumns.length} className="portal-sheet-empty-cell" role="status">{loading ? 'Carregando registros de assinatura…' : 'Nenhum registro de assinatura encontrado com os filtros atuais.'}</td></tr>}{renderedJobs.map((job) => <tr key={job.id}>{activeColumns.map((key) => <td key={key} className={`px-3 py-1 text-slate-950 ${key === 'actions' ? 'text-center sticky right-0 z-20 bg-[var(--portal-surface-panel)]' : ''}`}>{renderCell(job, key)}</td>)}</tr>)}</tbody>
           </table>
         </TableScrollWrapper>
       </>

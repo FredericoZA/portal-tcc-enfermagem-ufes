@@ -47,12 +47,16 @@ test('integrações mantêm Asten visível e exibem infraestrutura diretamente',
 });
 
 test('personalização expõe apenas superfícies atuais sem camada corretiva global', async () => {
-  const [hub, main] = await Promise.all([
-    source('src/components/PortalPersonalizationHubModal.tsx'),
+  const [settings, main, columns] = await Promise.all([
+    source('src/pages/ConfiguracoesPage.tsx'),
     source('src/main.tsx'),
+    source('src/components/HeaderSettingsPopover.tsx'),
   ]);
-  assert.ok(hub.includes("onOpenAppearance('site_header')"));
-  assert.ok(!hub.includes("onOpenAppearance('quick_presets')"));
+  assert.ok(settings.includes('<SettingsWorkspaceModal'));
+  assert.ok(settings.includes('<IntegrationStudioPanel'));
+  assert.ok(!settings.includes('PortalPersonalizationHubModal'));
+  assert.ok(columns.includes('/api/admin/table-defaults/'));
+  assert.ok(columns.includes('/api/table-preferences/'));
   assert.ok(!main.includes('PortalUiEnhancer'));
 });
 

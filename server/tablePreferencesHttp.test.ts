@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {spawn,type ChildProcess} from 'node:child_process';
+import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {INITIAL_SETTINGS} from '../src/services/demoSeed';
+test('shared defaults and personal table preferences persist across restart without leaking or granting Master writes',{timeout:50000},async()=>{
+ const directory=await mkdtemp(path.join(tmpdir(),'portal-table-preferences-'));
+ const port=47100+Math.floor(Math.random()*200),base=`http://127.0.0.1:${port}`,secret='table-fixture-secret-0123456789abcdef';
+ await writeFile(path.join(directory,'portal-state.json'),JSON.stringify({settings:INITIAL_SETTINGS,processes:[],memberships:[],emailDeliveries:[],signatureJobs:[]}));
+ let child:ChildProcess|undefined;
+ const start=async()=>{child=spawn(process.execPath,['--import','tsx','server.ts'],{cwd:process.cwd(),env:{...process.env,NODE_ENV:'development',PORT:String(port),HOST:'127.0.0.1',PORTAL_DATA_DIR:directory,PORTAL_PERSISTENCE_PROVIDER:'local_file',PORTAL_ALLOW_INSECURE_DEMO_AUTH:'true',PORTAL_ALLOW_LOCAL_OTP_STORE:'true',PORTAL_ALLOW_LOCAL_SECRET_STORE:'true',PORTAL_SESSION_SECRET:secret,PORTAL_OTP_PEPPER:'parity-fixture-otp-secret-0123456789',PORTAL_OTP_DELIVERY_MODE:'log',ASTEN_INTEGRATION_ENABLED:'false',SUPABASE_URL:'',SUPABASE_SECRET_KEY:'',SUPABASE_SERVICE_ROLE_KEY:'',VERCEL:''},stdio:'ignore'});const until=Date.now()+20000;while(true){try{if((await fetch(base+'/api/health')).ok)break;}catch{}if(Date.now()>until||child.exitCode!==null)throw Error('Fixture did not start');await new Promise(r=>setTimeout(r,100));}};
+ const stop=async()=>{if(child&&child.exitCode===null){const ended=new Promise(r=>child!.once('exit',r));child.kill('SIGTERM');await ended;}};
+ const headers={'content-type':'application/json','x-demo-user-email':'master@portal.local'};
+ try{
+  await start();
+  const url='/api/admin/table-defaults/acervo',own='/api/table-preferences/acervo';
+  const call=(endpoint:string,method:string,email?:string,body?:unknown)=>fetch(base+endpoint,{method,headers:{'content-type':'application/json',...(email?{'x-demo-user-email':email}:{})},...(body?{body:JSON.stringify(body)}:{})});
+  assert.equal((await call(url,'PUT',undefined,{pageSize:50})).status,401);
+  assert.equal((await call(url,'PUT','a@example.invalid',{pageSize:50})).status,403);
+  assert.equal((await call('/api/admin/table-defaults/not_a_table','PUT','master@portal.local',{})).status,400);
+  assert.equal((await call(own,'GET')).status,401);
+  const saved=await call(url,'PUT','master@portal.local',{pageSize:50,wrapMode:'nowrap',columnOrder:['protocolo','titulo'],visibleColumns:{titulo:true},updatedBy:'secret@example.invalid',masterEmail:'attacker@example.invalid'});assert.equal(saved.status,200);
+  const defaults=await(await call('/api/settings','GET')).json();assert.equal(defaults.tableLayouts.acervo.pageSize,50);assert.equal(defaults.tableLayouts.acervo.updatedBy,undefined);assert.equal(defaults.masterEmail,undefined);
+  assert.equal((await call(own,'PUT','a@example.invalid',{pageSize:100,wrapMode:'wrap'})).status,200);
+  assert.equal((await call(own,'PUT','b@example.invalid',{pageSize:25})).status,200);
+  assert.equal((await(await call(own,'GET','a@example.invalid')).json()).pageSize,100);
+  assert.equal((await(await call(own,'GET','b@example.invalid')).json()).pageSize,25);
+  assert.equal(await(await call(own,'GET','new@example.invalid')).json(),null);
+  assert.equal((await call(own+'?email=a@example.invalid','GET','b@example.invalid')).status,200);
+  assert.equal((await(await call(own+'?email=a@example.invalid','GET','b@example.invalid')).json()).pageSize,25);
+  await stop();await start();
+  assert.equal((await(await call(own,'GET','a@example.invalid')).json()).pageSize,100);
+  assert.equal((await(await call('/api/settings','GET')).json()).tableLayouts.acervo.pageSize,50);
+  assert.equal((await call(own,'DELETE','a@example.invalid')).status,200);
+  assert.deepEqual(await(await call(own,'GET','a@example.invalid')).json(),{});
+  assert.equal((await(await call(own,'GET','b@example.invalid')).json()).pageSize,25);
+  const state=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(state.settings.masterEmail,INITIAL_SETTINGS.masterEmail);assert.equal(state.emailDeliveries.length,0);assert.equal(state.signatureJobs.length,0);
+ }finally{await stop();await rm(directory,{recursive:true,force:true});}
+});

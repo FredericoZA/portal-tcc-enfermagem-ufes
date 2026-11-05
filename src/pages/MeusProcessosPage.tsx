@@ -3,14 +3,14 @@ import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { ProcessData, ProcessRole } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
-import { 
-  formatDatePt, 
-  formatDateNumeric, 
-  formatTimeExtenso, 
-  cleanPersonName, 
-  formatProfessorName, 
-  formatTccTitle, 
-  formatStudentsString, 
+import {
+  formatDateWithWeekday,
+  formatDateNumericWithWeekday,
+  formatTimeExtenso,
+  cleanPersonName,
+  formatProfessorName,
+  formatTccTitle,
+  formatStudentsString,
   normalizeEmail,
   getProcessProgress,
   getStepNumberLabel
@@ -24,16 +24,16 @@ import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
 import { TccAbstractPopover } from '../components/TccAbstractPopover';
 import { ProgressIndicator } from '../components/ProgressIndicator';
-import { 
-  TableTextFormat, 
-  DEFAULT_TABLE_TEXT_FORMAT, 
-  GLOBAL_TABLE_EVENT, 
+import {
+  TableTextFormat,
+  DEFAULT_TABLE_TEXT_FORMAT,
+  GLOBAL_TABLE_EVENT,
   loadGlobalTableConfig,
-  getTableStyles, 
+  getTableStyles,
   getActionPillStyles,
   getFilterChipProps,
-  formatColumnLabel, 
-  formatCellText, 
+  formatColumnLabel,
+  formatCellText,
   getColWidthClass,
   getEditableTableText,
   getColumnWeightClass
@@ -119,7 +119,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
   onSelectProcess,
   onNavigateToWizard
 }) => {
-  const { userEmail, memberships, isMasterAdmin, settings } = useAuth();
+  const { userEmail, memberships, isMasterAdmin, canRegisterProcess, settings } = useAuth();
   const installationProfile=resolveInstallationProfile(settings);
   const [processes, setProcesses] = useState<ProcessData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -242,7 +242,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     return counts;
   }, [processes, userEmail, memberships]);
 
-  const canCreateStudentTcc = roleCounts.ALUNO === 0;
+  const canCreateStudentTcc = canRegisterProcess && roleCounts.ALUNO === 0;
 
   // Available categories depending on user privileges (4 for Master/Presidente, 3 for standard users)
   const availableCategories: ProcessRoleCategory[] = React.useMemo(() => {
@@ -373,7 +373,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
         const row = activeCols.map((k) => {
           switch (k) {
             case 'protocolo': return `"${p.protocolo}"`;
-            case 'defesaDataHora': return `"${p.defesa?.startAt ? `${formatDateNumeric(p.defesa.startAt)} ${formatTimeExtenso(p.defesa.startAt)}` : 'A definir'}"`;
+            case 'defesaDataHora': return `"${p.defesa?.startAt ? `${formatDateNumericWithWeekday(p.defesa.startAt)} ${formatTimeExtenso(p.defesa.startAt)}` : 'A definir'}"`;
             case 'progresso': return `"${getStepNumberLabel(progress.label).replace('Fase ', '')}"`;
             case 'titulo': return `"${(p.titulo || '').replace(/"/g, '""')}"`;
             case 'aluno1': return `"${cleanPersonName(p.aluno1?.nome || '').replace(/"/g, '""')}"`;
@@ -458,7 +458,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     switch (colKey) {
       case 'protocolo':
         return (
-          <td 
+          <td
             key="protocolo"
             onClick={(e) => {
               e.stopPropagation();
@@ -479,7 +479,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
         return (
           <td key="defesaDataHora" className={`${styles.cellPadClass} ${widthClass} ${styles.cellWeightClass} ${styles.cellTextColorClass} ${alignClass} ${styles.borderClass} align-middle`}>
             <div className={`flex items-center justify-center ${styles.cellFontSizeClass}`}>
-              <span className="font-normal text-black">{formatDateNumeric(proc.defesa?.startAt)}</span>
+              <span className="font-normal text-black">{formatDateNumericWithWeekday(proc.defesa?.startAt)}</span>
             </div>
             <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa?.startAt)}</div>
           </td>
@@ -510,7 +510,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                 {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), meusProcessosTextFormat, '')}
               </div>
               <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 tracking-tight">Matrícula</div>
-              <div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno1?.matricula || '2026101890'}</div>
+              {proc.aluno1?.matricula&&<div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno1.matricula}</div>}
             </div>
           </td>
         );
@@ -524,7 +524,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                     {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), meusProcessosTextFormat, '')}
                   </div>
                   <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 tracking-tight">Matrícula</div>
-                  <div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno2.matricula || '2026101891'}</div>
+                  {proc.aluno2.matricula&&<div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno2.matricula}</div>}
                 </>
               ) : (
                 <span className="text-slate-400 font-mono text-[11px]">—</span>
@@ -768,13 +768,13 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               <p className="text-xs text-slate-500 max-w-md mx-auto">
                 Não foram encontrados Trabalhos de Conclusão de Curso associados a esta busca ou ao e-mail ativo ({userEmail}).
               </p>
-              <button
+              {canCreateStudentTcc&&<button
                 type="button"
                 onClick={onNavigateToWizard}
                 className="mt-2 inline-flex items-center gap-1.5 bg-emerald-950 hover:bg-black text-white px-3.5 py-1.5 border border-emerald-500 rounded-full text-xs font-extrabold normal-case tracking-wider cursor-pointer transition-all shadow-2xs h-8"
               >
                 <span>Cadastrar Novo Trabalho de TCC</span>
-              </button>
+              </button>}
             </div>
           ) : (
             <div>
@@ -853,7 +853,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                           <StudentNames aluno1={proc.aluno1} aluno2={proc.aluno2} align="left" itemClassName="text-xs font-bold text-slate-900" />
                         </div>
                         <div><strong>Orientador:</strong> {proc.orientador?.nome || 'Não definido'}</div>
-                        <div><strong>Data:</strong> {formatDatePt(proc.defesa?.startAt)}</div>
+                        <div><strong>Data:</strong> {formatDateWithWeekday(proc.defesa?.startAt)}</div>
                       </div>
 
                       <div className="pt-2 flex items-center justify-between border-t border-slate-300/50">

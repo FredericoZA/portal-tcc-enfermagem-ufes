@@ -1,6 +1,6 @@
 import type { DocumentType } from './index';
 
-export type SignatureSignerRole = 'ADVISOR' | 'STUDENT' | 'PRESIDENT';
+export type SignatureSignerRole = 'ADVISOR' | 'EXAMINER' | 'STUDENT' | 'PRESIDENT';
 export type SignatureSignerStatus = 'WAITING' | 'VIEWED' | 'SIGNED' | 'DECLINED';
 export type SignatureJobStatus = 'WAITING_INTEGRATION' | 'QUEUED' | 'READY_FOR_REVIEW' | 'APPROVED' | 'SENDING' | 'SENT' | 'PARTIALLY_SIGNED' | 'SIGNED' | 'DECLINED' | 'EXPIRED' | 'CANCELED' | 'PROVIDER_ERROR' | 'DRIVE_SYNC_PENDING' | 'ARCHIVED';
 
@@ -10,6 +10,8 @@ export interface SignatureSignerSnapshot {
 }
 
 export interface SignatureJob {
+  /** Excluded from operational lists; archived evidence remains valid. */
+  removedFromLogsAt?: string; removedFromLogsBy?: string;
   signedAt?: string;
   id: string; processId: string; protocol: string; documentType: Exclude<DocumentType, 'CONVITE'>;
   documentTitle: string; documentVersion: number; sourceDataRevision: number; fileName: string; mimeType: string;
@@ -24,6 +26,7 @@ export interface SignatureJob {
   /** Falhas ambíguas de encaminhamento não autorizam novo envio automático. */
   providerDispatchState?: 'PENDING' | 'SENDING' | 'SENT' | 'UNCERTAIN';
   sentAt?: string; completedAt?: string; lastError?: string; driveUnsignedFileId?: string; driveSignedFileId?: string;
+  postArchivePending?: boolean;
   driveSignedWebViewLink?: string; signedSha256?: string; verificationCode?: string; artifactBase64?: string;
   /** Snapshot normalizado das variáveis usadas para renderizar esta versão. */
   renderVariables?: Record<string, string>;

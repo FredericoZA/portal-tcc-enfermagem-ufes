@@ -1,9 +1,12 @@
 import type { ProcessData } from '../types';
+import {isDefenseReservationPending} from './defenseReservationState';
+
+export const DEFENSE_PENDING_CONFIRMATION_LABEL = '(aguardando confirmação)';
 
 export type DefenseState = 'upcoming' | 'defended';
 export type DefenseFilter = 'all' | DefenseState;
 
-type DefenseSummaryProcess = Pick<ProcessData, 'titulo' | 'defesa'> & Partial<Pick<ProcessData, 'aluno1' | 'aluno2'>>;
+type DefenseSummaryProcess = Pick<ProcessData, 'titulo' | 'defesa'> & {aluno1?: {nome?: string} | null; aluno2?: {nome?: string} | null};
 
 const validTimestamp = (value?: string) => {
   if (!value) return null;
@@ -43,7 +46,7 @@ export function matchesDefenseFilter(
   return filter === 'all' || getDefenseState(process, now) === filter;
 }
 
-export function getDefenseCalendarSummaryParts(process: DefenseSummaryProcess): { primary: string; secondary: string; location: string } {
+export function getDefenseCalendarSummaryParts(process: DefenseSummaryProcess): { primary: string; time: string; title: string; secondary: string; location: string } {
   const timestamp = validTimestamp(process.defesa?.startAt);
   const time = timestamp === null
     ? 'Horário a definir'
@@ -53,7 +56,8 @@ export function getDefenseCalendarSummaryParts(process: DefenseSummaryProcess): 
     .map((name) => String(name || '').replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .join(' · ');
-  return { primary: [time, title].filter(Boolean).join(' · '), secondary: students, location: process.defesa?.local ? `${process.defesa.local}${process.defesa.localStatus==='CONFIRMADO'?'':' (a confirmar)'}` : 'Local a confirmar' };
+  const timeWithStatus = time + (isDefenseReservationPending(process) ? ` ${DEFENSE_PENDING_CONFIRMATION_LABEL}` : '');
+  return {primary: [timeWithStatus, title].filter(Boolean).join(' · '), time, title, secondary: students, location: process.defesa?.local || 'Local não informado'};
 }
 
 export function formatDefenseCalendarSummary(process: DefenseSummaryProcess, maxTitleLength = 46): string {
@@ -69,5 +73,6 @@ export function formatDefenseCalendarSummary(process: DefenseSummaryProcess, max
     .map((name) => String(name || '').replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .join(' · ');
-  return [time, title, students,process.defesa?.local].filter(Boolean).join(' · ');
+  const timeWithStatus = time + (isDefenseReservationPending(process) ? ` ${DEFENSE_PENDING_CONFIRMATION_LABEL}` : '');
+  return [timeWithStatus, title, students,process.defesa?.local].filter(Boolean).join(' · ');
 }

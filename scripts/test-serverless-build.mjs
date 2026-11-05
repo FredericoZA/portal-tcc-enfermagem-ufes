@@ -76,6 +76,13 @@ try {
   };
 
   let result = await get('/api/health');
+  assert.equal(result.status, 503);
+  assert.equal((await result.json()).code, 'SUPABASE_CONNECTION_UNAVAILABLE');
+  const callsBeforeCooldown = (await (await get('/__smoke/calls')).json()).calls.length;
+  assert.equal((await get('/api/health')).status, 503);
+  assert.equal((await (await get('/__smoke/calls')).json()).calls.length, callsBeforeCooldown);
+  await new Promise(resolve => setTimeout(resolve, 10_050));
+  result = await get('/api/health');
   assert.equal(result.status, 200, 'Main wrapper must load the real app bundle. ' + await result.clone().text());
   assert.equal((await result.json()).status, 'ok');
   result = await get('/api/me');
@@ -92,9 +99,20 @@ try {
   assert.equal(result.status, 200, 'Replication wrapper must load OAuth/Drive/ZIP dependencies. ' + await result.clone().text());
   assert.equal(result.headers.get('content-type'), 'application/zip');
   assert.equal(Buffer.from(await result.arrayBuffer()).subarray(0, 2).toString('hex'), '504b');
+  const beforeIndicators = (await (await get('/__smoke/calls')).json()).calls.length;
   result = await get('/indicators');
   assert.equal(result.status, 200);
-  assert.equal((await result.json()).privacy.containsPersonalData, false);
+  const indicators=await result.json();
+  assert.equal(indicators.totals.registered,6);
+  assert.equal(indicators.totals.completed,6);
+  assert.equal(indicators.totals.published,3);
+  assert.doesNotMatch(JSON.stringify(indicators),/Private historical|private_historical|private-historical|legado-|sourceFingerprint|attachments|@/);
+  assert.match(result.headers.get('cache-control'), /private, no-store/);
+  const indicatorReads=(await (await get('/__smoke/calls')).json()).calls.slice(beforeIndicators);
+  assert.equal(indicatorReads.length,1,'Indicators read only the necessary state projection.');
+  assert.deepEqual(indicatorReads[0],{host:'database.example.invalid',path:'/rest/v1/portal_runtime_state',method:'GET'});
+  const indicatorBundle=await readFile(path.join(directory,'dist/server/vercel/public-indicators.cjs'),'utf8');
+  assert.doesNotMatch(indicatorBundle,/loadIntegrationSecret|GOOGLE_OAUTH_CLIENT_SECRET|sendGmailMessage|ASTEN_|createPortalApp/,'Public aggregates must not load the application or provider credential modules.');
 
   // Exhaust the download admission budget without provider access. A valid
   // provider operation must then stop at 429, before OAuth or Drive is called.
@@ -107,7 +125,7 @@ try {
   assert.deepEqual(final.unexpected, [], 'All upstream requests must be expected synthetic reads.');
   assert.ok(final.calls.some((call) => call.host === 'oauth2.googleapis.com'));
   assert.ok(final.calls.some((call) => call.path === '/drive/v3/files/image_fixture_123'));
-  console.log('Serverless artifacts: old ESM failure reproduced; four emitted wrappers, real app startup, SVG/Drive images, OAuth/ZIP and admission passed in plain Node. No real provider traffic.');
+  console.log('Serverless artifacts: old ESM failure reproduced; four emitted wrappers, real app startup, SVG/Drive images, OAuth/ZIP, public historical aggregates and admission passed in plain Node. No real provider traffic.');
 } finally {
   if (child && child.exitCode === null) {
     child.kill('SIGTERM');

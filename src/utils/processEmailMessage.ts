@@ -1,6 +1,6 @@
 import {operationalEmailVariant,OPERATIONAL_EMAIL_CATALOG} from './studioOperationalCatalog';
 import {academicName} from './personPresentation';
-import {formatDateNumeric,formatTime24h} from './formatters';
+import {formatDateNumericWithWeekday,formatTime24h} from './formatters';
 import {defenseEndAt} from './defenseSchedule';
 import {applyProcessEmailGreeting} from './processEmailGreeting';
 import {invitationEmail} from './invitationEmail';
@@ -28,13 +28,13 @@ export function processEmailMessage(input:{process:ProcessData;recipient:string;
  }else if(isFinalDocumentsEmail(input.eventCode,input.templateId)){
   const final=finalDocumentsEmail({process:p,recipient:input.recipient,baseUrl:input.baseUrl,courseName:input.courseName});text=final.text;subject=final.subject;
  }else if(input.templateId==='email-comprovante-reserva'){
-  href=`${input.baseUrl.replace(/\/$/,'')}/api/public/processes/${encodeURIComponent(p.protocolo)}/reservation-receipt`;
+  href=`${input.baseUrl.replace(/\/$/,'')}/api/public/processes/${encodeURIComponent(p.protocolo)}/reservation-receipt${p.defesa.departmentResponse?`?receipt=revision-${p.defesa.departmentResponse.revision}`:''}`;
   const response=p.defesa.departmentResponse,confirmed=response?.decision==='CONFIRMED';
   label=confirmed?`Comprovante de reserva · ${p.protocolo}`:`Comprovante de indisponibilidade · ${p.protocolo}`;
   if(response){
    subject=`[${p.protocolo}] ${confirmed?'Reserva confirmada':'Agendamento recusado'}`;
-   const registered=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(response.respondedAt));
-   text=['Prezados departamento, autores e orientador,',confirmed?'O departamento confirmou a reserva para a defesa do TCC.':'O responsável recusou o agendamento solicitado.',[confirmed?`Resultado: reserva confirmada.\nLocal: ${response.local||p.defesa.local}`:`Resultado: reserva recusada.\nLocal solicitado: ${p.defesa.local}`,`Data: ${formatDateNumeric(response.startAt)}\nHorário: ${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt||defenseEndAt(response.startAt))}`,`Resposta registrada em ${registered}.`].join('\n'),...(confirmed?[processEmailGuidance(p,input.baseUrl,'LOCATION_CONFIRMED','email-confirmacao',input.recipient)]:['ORIENTAÇÕES DO PROCESSO','Autores: ajustem o agendamento no Portal para solicitar uma nova reserva.'])].join('\n\n');
+   const registered=`${formatDateNumericWithWeekday(response.respondedAt)}, ${formatTime24h(response.respondedAt)}`;
+   text=['Prezados departamento, autores e orientador,',confirmed?'O departamento confirmou a reserva para a defesa do TCC.':'O responsável recusou o agendamento solicitado. É necessário solicitar novamente a reserva para realizar a defesa.',[confirmed?`Resultado: reserva confirmada.\nLocal: ${response.local||p.defesa.local}`:`Resultado: reserva recusada.\nLocal solicitado: ${p.defesa.local}`,`Data: ${formatDateNumericWithWeekday(response.startAt)}\nHorário: ${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt||defenseEndAt(response.startAt))}`,`Resposta registrada em ${registered}.`].join('\n'),...(confirmed?[processEmailGuidance(p,input.baseUrl,'LOCATION_CONFIRMED','email-confirmacao',input.recipient)]:['ORIENTAÇÕES DO PROCESSO','Autores: abram o mesmo TCC, entrem em Dados do processo e cliquem em Refazer reserva. Confiram a disponibilidade com o responsável pelo local e enviem uma nova data, horário e local, para evitar retrabalho. O código do TCC será mantido; não criem outro trabalho.'])].join('\n\n');
   }
  }else{
   text=text.split('ORIENTAÇÕES DO PROCESSO')[0].replace(/\n[ \t]*(Local alternativo:)/gi,'\n\n$1').trim()+'\n\n'+processEmailGuidance(p,input.baseUrl,input.eventCode||'',input.templateId||'',input.recipient);
@@ -43,18 +43,20 @@ export function processEmailMessage(input:{process:ProcessData;recipient:string;
  const configured=input.studio?.emailTemplates?.find(item=>item.id===variant);
  const stock=OPERATIONAL_EMAIL_CATALOG.find(item=>item[0]===variant);
  // Existing operational messages stay intact; explicit edits to a catalog variant take effect.
- if(configured&&stock&&configured.operationalCatalogEditable===true){
-  const values:Record<string,string>={...input.templateVariables,PROTOCOLO:p.protocolo,TITULO:p.titulo,ALUNOS:[p.aluno1.nome,p.aluno2?.nome].filter(Boolean).join(' e '),ORIENTADOR_NOME_COMPLETO:academicName(p.orientador,'abbreviated'),DEFESA_LOCAL:p.defesa.local,LOCAL_ALTERNATIVO:p.defesa.alternateLocation||'',DEFESA_DATA_HORA:formatDateNumeric(p.defesa.startAt)+' às '+formatTime24h(p.defesa.startAt),LINK_PROCESSO:href,ORIENTACOES_ACESSO:processEmailGuidance(p,input.baseUrl,input.eventCode||'',input.templateId||'',input.recipient)};
-  const expand=(source:string)=>source.replace(/<<([A-Z0-9_]+)>>|\{\{([A-Z0-9_]+)\}\}/g,(all,a,b)=>values[a||b]??all);
-  if(configured.body!==stock[4]&&!(input.templateId==='email-reserva'&&/LOCAL_ALTERNATIVO|local alternativo/i.test(String(configured.body))))text=expand(String(configured.body||''));
-  if(configured.subject!==stock[3])subject=expand(String(configured.subject||''));
+ const values:Record<string,string>={...input.templateVariables,PROTOCOLO:p.protocolo,TITULO:p.titulo,ALUNO_1_NOME:p.aluno1.nome,ALUNO_2_NOME:p.aluno2?.nome||'',COORIENTADOR_NOME_COMPLETO:p.coorientador?academicName(p.coorientador,'abbreviated'):'',BANCA_NOMES:p.banca.map(person=>academicName(person,'abbreviated')).join('\n'),DEFESA_HORA:formatTime24h(p.defesa.startAt),DEFESA_DATA:formatDateNumericWithWeekday(p.defesa.startAt),DEFESA_HORARIO:formatTime24h(p.defesa.startAt)+' às '+formatTime24h(defenseEndAt(p.defesa.startAt)),RESPOSTA_REGISTRADA_EM:p.defesa.departmentResponse?formatDateNumericWithWeekday(p.defesa.departmentResponse.respondedAt)+', '+formatTime24h(p.defesa.departmentResponse.respondedAt):'',ALUNOS:[p.aluno1.nome,p.aluno2?.nome].filter(Boolean).join(' e '),ORIENTADOR_NOME_COMPLETO:academicName(p.orientador,'abbreviated'),DEFESA_LOCAL:p.defesa.local,LOCAL_ALTERNATIVO:p.defesa.alternateLocation||'',DEFESA_DATA_HORA:formatDateNumericWithWeekday(p.defesa.startAt)+' às '+formatTime24h(p.defesa.startAt),LINK_PROCESSO:href,ORIENTACOES_ACESSO:processEmailGuidance(p,input.baseUrl,input.eventCode||'',input.templateId||'',input.recipient)};
+ const expand=(source:string)=>source.replace(/<<([A-Z0-9_]+)>>|\{\{([A-Z0-9_]+)\}\}/g,(all,a,b)=>values[a||b]??all);
+ if(configured&&configured.operationalCatalogEditable===true){
+  if((!stock||configured.body!==stock[4])&&!(input.templateId==='email-reserva'&&/LOCAL_ALTERNATIVO|local alternativo/i.test(String(configured.body)))){text=expand(String(configured.body||''));if(!text.includes('ORIENTAÇÕES DO PROCESSO'))text+='\n\n'+values.ORIENTACOES_ACESSO;}
+  if(!stock||configured.subject!==stock[3])subject=expand(String(configured.subject||''));
  }
- text=text.replace(/^Local alternativo:.*$/gmi,'');
- if(input.templateId==='email-entrega-repositorio')subject=`[Portal TCC] Ata assinada — entrega final dos documentos no Repositório acadêmico · ${p.protocolo}`;
+ text=expand(text);subject=expand(subject);
+ text=text.replace(/^Local alternativo:.*$/gmi,'').replace(/^Coorientador:[ \t]*$/gmi,'');
+
  text=withoutGenericProcessFooter(input.templateId==='email-comprovante-reserva'?text:applyProcessEmailGreeting(text,input.templateId,input.eventCode,Boolean(input.departmentUrl)));
  if(input.advisorApproval&&['email-reserva','email-comprovante-reserva'].includes(input.templateId||''))text=text.replace('Prezado Departamento,','Prezado orientador,').replace(/departamento/gi,'orientador');
- const actions=input.templateId==='email-reserva'&&input.departmentUrl?[{href:href+'?decision=accept',label:'Aceitar reserva'},{href:href+'?decision=decline',label:'Recusar reserva'}]:undefined;
+ const actions=input.templateId==='email-reserva'&&input.departmentUrl?[{href:href+'?decision=accept',label:'Aceitar reserva'},{href:href+'?decision=decline',label:'Recusar reserva'}]:input.templateId==='email-comprovante-reserva'&&p.defesa.departmentResponse?.decision==='UNAVAILABLE'?[{href,label},{href:processLink(input.baseUrl,p.id,'cadastral'),label:'Refazer reserva'}]:undefined;
  const message=operationalEmailLayout({text,subject,href,label,studio:input.studio,templateId:variant,actions});
- if(actions)message.text=message.text.replace(`${label}: ${href}`,actions.map(action=>`${action.label}: ${action.href}`).join('\n'));
- return {subject,...message};
+ if(actions&&input.templateId==='email-reserva')message.text=message.text.replace(`${label}: ${href}`,actions.map(action=>`${action.label}: ${action.href}`).join('\n'));
+ if(actions&&input.templateId==='email-comprovante-reserva')message.text+='\n\nRefazer reserva: '+processLink(input.baseUrl,p.id,'cadastral');
+ return {subject,...message,bodyText:text};
 }

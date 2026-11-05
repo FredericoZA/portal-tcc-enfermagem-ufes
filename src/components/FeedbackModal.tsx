@@ -76,7 +76,6 @@ export const FeedbackModal:React.FC<FeedbackModalProps>=({open,onClose})=>{
     closeOnBackdrop={!submitting}
     closeOnEscape={!submitting}
     title="Sugestões"
-    subtitle="Ajude a melhorar o Portal TCC"
     icon={Lightbulb}
     maxWidthClass="max-w-lg"
     heightClass="max-h-[90vh]"
@@ -91,7 +90,7 @@ export const FeedbackModal:React.FC<FeedbackModalProps>=({open,onClose})=>{
       </div>
     ):(
       <form onSubmit={(e)=>void submit(e)} className="space-y-4">
-        <p className="text-xs leading-5 text-slate-600">Descreva o que aconteceu ou o que pode melhorar. Não é necessário entrar no Portal.</p>
+        <p className="text-xs leading-5 text-slate-600">Ajude a melhorar o Portal TCC: descreva o que aconteceu ou o que pode melhorar. Não é necessário entrar no Portal. Para proteger a privacidade, não inclua nomes, e-mails, matrículas, documentos ou outras informações pessoais de estudantes e terceiros no texto ou nas imagens.</p>
         <label className="block space-y-1.5 text-xs font-bold text-slate-800">
           <span>Descrição da sugestão *</span>
           <textarea

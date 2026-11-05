@@ -5,7 +5,7 @@ export * from './integrationStudio';
 export * from './tccDetailFormat';
 export * from './signatures';
 export * from './courseOperations';
-export * from './continuousIntelligence';
+export * from './statistics';
 
 export type GlobalRole = 'MASTER_ADMIN' | 'COMMISSION_PRESIDENT';
 
@@ -120,9 +120,11 @@ export interface ExaminerInfo {
 }
 
 export interface DefesaInfo {
-  departmentResponse?: {receiptBody?:string;revision:number;decision:'CONFIRMED'|'UNAVAILABLE';respondedAt:string;respondedBy:string;local?:string;startAt:string;endAt:string};
+  departmentResponse?: {departmentEmail?:string;attribution?:'EMAIL_LINK';receiptBody?:string;receiptPresentation?:{institution:string;course:string;color:string;timezone:string;participants:Array<{role:string;name:string}>};receiptDesign?:NonNullable<import('./integrationStudio').IntegrationStudioSettings['receiptDesign']>;revision:number;decision:'CONFIRMED'|'UNAVAILABLE';respondedAt:string;respondedBy:string;local?:string;startAt:string;endAt:string};
+  /** Address fixed when the current reservation request is sent. */
+  reservationRequestRecipient?: string;
   reservationRevision?: number;
-  reservationHistory?: Array<{invitationDriveFileId?:string;invitationSentAt?:string;invitationRecipients?:string[];startAt:string;endAt:string;local:string;alternateLocation?:string;locationProof?:import('./workflowOperations').LocationProof;departmentResponse?:DefesaInfo['departmentResponse'];localStatus?:DefesaInfo['localStatus'];localConfirmedAt?:string;localConfirmedBy?:string;localEvidenceUrl?:string;invalidatedAt:string;invalidatedBy:string}>;
+  reservationHistory?: Array<{reservationRevision?:number;receiptContext?:Pick<ProcessData,'titulo'|'aluno1'|'aluno2'|'orientador'|'coorientador'|'banca'>;invitationDriveFileId?:string;invitationSentAt?:string;invitationRecipients?:string[];startAt:string;endAt:string;local:string;alternateLocation?:string;locationProof?:import('./workflowOperations').LocationProof;departmentResponse?:DefesaInfo['departmentResponse'];localStatus?:DefesaInfo['localStatus'];localConfirmedAt?:string;localConfirmedBy?:string;localEvidenceUrl?:string;invalidatedAt:string;invalidatedBy:string}>;
   locationProof?: import('./workflowOperations').LocationProof;
   alternateLocation?: string;
   startAt: string;
@@ -163,6 +165,7 @@ export interface EvaluationOutcomeOption {
 
 export interface EvaluationInfo {
   documentText?: string;
+  documentRevision?: number;
   answers?: Record<string, string | number | boolean>;
   dataReview?: {
     sourceDataRevision: number;
@@ -269,6 +272,7 @@ export interface ProcessData {
   driveFolderUrl?: string;
   driveSyncedAt?: string;
   signatureProviderPreferences?: Partial<Record<'ATA'|'TERMO'|'DECLARACAO', 'ASTEN'|'GOV_BR'>>;
+  astenSignatureIntent?: { documentType: 'ATA'|'TERMO'|'DECLARACAO'; revision: number; queuedAt: string; attemptedAt?: string };
   dataRevision: number;
   createdAt: string;
   updatedAt: string;
@@ -349,6 +353,11 @@ export interface DocumentCorrectionRequest {
 export interface AuditLog {
   id: string;
   processId?: string;
+  processProtocol?: string;
+  processTitle?: string;
+  actorName?: string;
+  source?: 'activity' | 'email';
+  emailDeliveryId?: string;
   actorEmail: string;
   actorRoles: UserRole[];
   action: string;
@@ -425,7 +434,7 @@ export interface GlobalSettings {
   calendarId?: string;
   driveRootFolderId?: string;
   templateIds?: Record<string, string>;
-  emailConfig?: Record<string, any>;
+  emailConfig?: { auditEmailsEnabled?: boolean; [key: string]: any };
   integrationStudio?: IntegrationStudioSettings;
   integrationStudioDraft?: IntegrationStudioSettings;
   documentModels?: Record<string, {
@@ -471,6 +480,7 @@ export interface AuthState {
 
 export interface GoogleCalendarSyncedEvent {
   id: string;
+  portalTccProtocol?: string;
   summary: string;
   description?: string;
   location?: string;

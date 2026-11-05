@@ -17,6 +17,17 @@ export interface LocationProof {
   reservationRevision?:number;
   driveFileId: string; fileName: string; sha256: string; uploadedAt: string; uploadedBy: string; version: number;
 }
+export interface ReservationReceiptSummary {
+  id: string;
+  revision?: number;
+  decision: 'CONFIRMED' | 'UNAVAILABLE';
+  startAt: string;
+  endAt?: string;
+  local: string;
+  respondedAt?: string;
+  current: boolean;
+  url: string;
+}
 export interface ReminderRecord {
   id: string; processId: string; milestone: WaitingMilestone; policyId: string; dueDate: string;
   recipient: string; ordinal: number; status: 'SENDING'|'SENT'|'FAILED'; createdAt: string; sentAt?: string; error?: string;

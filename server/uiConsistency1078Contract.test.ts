@@ -70,7 +70,7 @@ test('e-mail usa cabeçalho configurável, acesso por links e sintaxe canônica'
   assert.doesNotMatch(studio,/false && similarVariableSuggestions/);
   assert.match(config,/recipient: String\(settings\?\.emailConfig\?\.roomReservationDepartmentEmail \|\| ''\)/);
   assert.match(config,/<<PROTOCOLO>>/);
-  assert.match(service,/Comissão de TCC do Departamento de Enfermagem • UFES/);
+  assert.match(service,/Comissão de Trabalho de Conclusão de Curso do Departamento de Enfermagem • UFES/);
 });
 
 test('registros administrativos são planilhas full-bleed',()=>{

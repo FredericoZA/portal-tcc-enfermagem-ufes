@@ -25,14 +25,14 @@ test('horário do formulário respeita o fuso institucional e rejeita data inexi
   assert.equal(localDateTimeToIso('2026-09-08T14:30','America/Sao_Paulo'),'2026-09-08T17:30:00.000Z');
   assert.throws(()=>localDateTimeToIso('2026-02-30T14:30','America/Sao_Paulo'));
 });
-test('cadastro publicado mantém SIAPE, opções do Master e bloqueia campo obrigatório ausente',()=>{
+test('cadastro publicado dispensa registros pessoais, mantém opções do Master e valida os demais obrigatórios',()=>{
   const s=studio();s.formTemplates=[{id:'form-reserva-aluno',questions:[{id:'extra',fieldKey:'PERGUNTA_NOVA',label:'Pergunta da secretaria',required:true,fieldType:'text'}]}];
-  const fields=registrationQuestions(s);assert.ok(fields.some(f=>f.fieldKey==='ORIENTADOR_SIAPE'&&f.required));assert.ok(fields.some(f=>f.fieldKey==='COORIENTADOR_SIAPE'&&!f.required));assert.deepEqual(fields.find(f=>f.fieldKey==='DEFESA_LOCAL')?.options,['Sala','Auditório','__OUTRO_LOCAL__']);
+  const fields=registrationQuestions(s);assert.ok(!fields.some(f=>/MATRICULA|SIAPE|CIAP|CPF/.test(f.fieldKey)));assert.deepEqual(fields.find(f=>f.fieldKey==='DEFESA_LOCAL')?.options,['Sala','Auditório','__OUTRO_LOCAL__']);
   assert.throws(()=>acceptRegistration({registrationAnswers:{}},s),/Pergunta da secretaria/);
 });
 test('a mesma data tem apresentação numérica e por extenso sem mudar sua origem',()=>{
   const s=studio();s.operationalConfig!.presentations={'tmpl-convite':[{marker:'DATA',source:'DEFESA_DATA_HORA',format:'date',letterCase:'original',bold:false},{marker:'HORA',source:'DEFESA_DATA_HORA',format:'time',letterCase:'original',bold:false}]};
-  const result=presentVariables({DEFESA_DATA_HORA:'2026-09-08T17:30:00Z'},'tmpl-convite',s);assert.equal(result.DATA,'08/09/2026');assert.equal(result.HORA,'14:30');assert.equal(result.DEFESA_DATA_HORA,'2026-09-08T17:30:00Z');
+  const result=presentVariables({DEFESA_DATA_HORA:'2026-09-08T17:30:00Z'},'tmpl-convite',s);assert.equal(result.DATA,'terça-feira, 08/09/2026');assert.equal(result.HORA,'14:30');assert.equal(result.DEFESA_DATA_HORA,'2026-09-08T17:30:00Z');
 });
 test('negrito localiza marcador dividido entre runs sem formatar o restante do texto',()=>{
   const requests=buildMarkerBoldRequests({tabs:[{tabProperties:{tabId:'t.0'},documentTab:{body:{content:[{paragraph:{elements:[{startIndex:1,textRun:{content:'Olá <<NO'}},{startIndex:9,textRun:{content:'ME>> fim'}}]}}]}}}]},['NOME']);
@@ -49,7 +49,16 @@ test('a declaração espera o Termo vigente e a Ata arquivados',()=>{
 });
 test('simulação percorre papéis sem efeitos externos e espera confirmação de local',async()=>{
   const hold=await simulateWorkflow(studio(),{locationConfirmed:false});assert.equal(hold.emails.length,1);assert.match(hold.events.at(-1)!.state,/BLOQUEADO/);
-  const full=await simulateWorkflow(studio(),{secondAuthor:true});assert.equal(full.externalEffects,false);assert.ok(full.events.some(e=>e.event==='PUBLICATION_CLEARED'));assert.ok(full.events.some(e=>e.event==='PROCESS_COMPLETED'));
+  const denied=await simulateWorkflow(studio(),{locationOutcome:'UNAVAILABLE'});
+  assert.deepEqual(denied.events.map(event=>event.event),['TCC_CREATED','LOCATION_UNAVAILABLE','RESERVATION_RESCHEDULED']);
+  assert.equal(denied.externalEffects,false);
+  const full=await simulateWorkflow(studio(),{secondAuthor:true});assert.equal(full.externalEffects,false);assert.equal(full.events.find(e=>e.event==='ATA_ASSINADA')?.role,'Orientador e dois examinadores');assert.match(full.events.find(e=>e.event==='ATA_ASSINADA')!.state,/TRÊS ASSINATURAS/);assert.ok(full.events.some(e=>e.event==='PUBLICATION_CLEARED'));assert.ok(full.events.some(e=>e.event==='PROCESS_COMPLETED'));
+  const pending=await simulateWorkflow(studio(),{ataSignaturePending:true});
+  assert.equal(pending.events.at(-1)!.event,'SIGNATURE_PENDING');
+  assert.ok(!pending.events.some(event=>event.event==='REPOSITORY_SUBMITTED'));
+  const privateDelivery=await simulateWorkflow(studio(),{publication:false});
+  assert.ok(!privateDelivery.events.some(event=>event.event==='TERMO_ASSINADO'));
+  assert.ok(privateDelivery.events.some(event=>event.event==='PROCESS_COMPLETED'));
   const failure=await simulateWorkflow(studio(),{failActionId:'doc-CONVITE'});assert.equal(failure.emails.length,1);assert.equal(failure.events.at(-1)!.state,'PARTIAL_FAILURE');
 });
 test('catálogo resolve sinônimos e respeita datas de vigência',()=>{

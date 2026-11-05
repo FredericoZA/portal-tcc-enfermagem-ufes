@@ -33,7 +33,7 @@
   box-shadow: 0 2px 7px rgba(15, 23, 42, .08);
 }
 
-/* Fluxo do TCC — geometria em minhoca preservada sem CSS histórico. */
+/* Fluxo do TCC */
 .portal-flow-snake {
   display: grid;
   grid-template-columns: 1fr;
@@ -225,8 +225,18 @@
   gap: 20px;
 }
 
-#portal-tutorial-page .portal-guide-instructions {
-  max-width: 74ch;
+#portal-tutorial-page .portal-guide-instructions > ol {
+  font-size: var(--portal-type-navigation);
+  line-height: 1.65;
+}
+
+#portal-tutorial-page .portal-guide-content :is(.portal-guide-result, .portal-guide-help, figcaption) {
+  font-size: var(--portal-type-navigation);
+  line-height: 1.6;
+}
+
+#portal-tutorial-page .portal-guide-content :is(ol, .portal-guide-result, .portal-guide-help, figcaption) * {
+  font-size: inherit;
 }
 
 #portal-tutorial-page .portal-guide-image-link {
@@ -278,6 +288,15 @@
 
 @media (min-width: 1024px) {
   #portal-tutorial-page .portal-guide-content {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, min(52%, 760px)) minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  #portal-tutorial-page .portal-guide-image-link {
+    margin-inline: 0;
+  }
+
+  #portal-tutorial-page :is([data-guide-activity="acesso"], [data-guide-activity="sugestoes"]) .portal-guide-figure {
+    justify-self: start;
   }
 }

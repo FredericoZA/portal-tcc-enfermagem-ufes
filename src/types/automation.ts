@@ -76,6 +76,25 @@ export interface WorkflowActionExecution {
   error?: string;
 }
 
+export interface WorkflowSimulationScenario {
+  publication?: boolean;
+  secondAuthor?: boolean;
+  locationOutcome?: 'CONFIRMED' | 'PENDING' | 'UNAVAILABLE';
+  locationConfirmed?: boolean;
+  failActionId?: string;
+  ataSignaturePending?: boolean;
+}
+
+export interface WorkflowSimulationResult {
+  simulated: true;
+  externalEffects: false;
+  events: Array<{ event: string; role: string; state: string; details?: WorkflowActionExecution[]; issues?: WorkflowValidationIssue[] }>;
+  emails: Array<{ to: string[]; subject: string; text: string; html?: string; attachments: string[] }>;
+  note: string;
+}
+
+export type WorkflowTraceEntry = Pick<WorkflowRun, 'id' | 'protocol' | 'eventCode' | 'startedAt' | 'completedAt' | 'status' | 'studioRevision'> & { failedActions: number };
+
 export interface WorkflowRun {
   studioRevision?: number;
   sourceDataRevision?: number;
@@ -103,6 +122,8 @@ export interface EmailDeliveryAttempt {
   status: EmailDeliveryStatus;
   gmailMessageId?: string;
   gmailThreadId?: string;
+  /** Conta autenticada retornada pelo provedor ao aceitar esta tentativa. */
+  sender?: string;
   errorCode?: string;
   errorMessage?: string;
 }
@@ -124,8 +145,13 @@ export interface EmailDeliveryRecord {
   idempotencyKey: string;
   recipient: string;
   cc?: string[];
+  workflowCc?: string[];
+  auditCopyMode?: 'operational' | 'sensitive';
+  auditCopyEmail?: string;
+  requestedBy?: string;
+  sender?: string;
   subject: string;
-  /** Conteúdo efetivamente renderizado no momento da primeira tentativa. */
+  /** Conteúdo efetivamente enviado à última tentativa, inclusive se ela falhar. */
   renderedText?: string;
   renderedHtml?: string;
   status: EmailDeliveryStatus;
@@ -133,6 +159,9 @@ export interface EmailDeliveryRecord {
   maxAttempts: number;
   nextRetryAt?: string;
   acceptedAt?: string;
+  dispatchState?: 'SENDING' | 'UNCERTAIN';
+  dispatchStartedAt?: string;
+  dispatchLeaseUntil?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -192,7 +221,7 @@ export interface AstenOperationalDashboard {
 }
 
 export interface CanonicalSignatureRecipient {
-  role: 'STUDENT' | 'ADVISOR' | 'PRESIDENT';
+  role: 'STUDENT' | 'ADVISOR' | 'EXAMINER' | 'PRESIDENT';
   name: string;
   email: string;
   order: 1;

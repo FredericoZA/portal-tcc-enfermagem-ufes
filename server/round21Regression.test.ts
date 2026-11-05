@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DEMO_PROCESSES,INITIAL_SETTINGS} from '../src/services/demoSeed';
 import {processLink,readProcessLink,processWorkflowSection} from '../src/utils/processLink';
+import {formatProcessLabel} from '../src/components/PortalProcessPill';
 import {recipientEmailVariables,upgradeOperationalEmailTemplate} from '../src/utils/operationalEmails';
 import {buildProcessVariables,executeWorkflowEvent} from './workflow/runtime';
 import {acceptEvaluation,EvaluationError} from './workflow/evaluation';
@@ -17,13 +18,17 @@ test('links únicos preservam ID e seção e não aceitam esquema executável',(
  const first=processLink('https://portal.example/',p.id,'avaliacao');const second=processLink('https://portal.example/','outro');assert.notEqual(first,second);
  assert.deepEqual(readProcessLink(new URL(first).search),{id:p.id,section:'avaliacao'});
  assert.equal(readProcessLink('?tcc=%3Cscript%3E'),null);assert.throws(()=>processLink('javascript:alert(1)','x'));
+ const serial=processLink('https://portal.example/','TCC - 20001','docs');
+ assert.deepEqual(readProcessLink(new URL(serial).search),{id:'TCC - 20001',section:'docs'});
+ assert.equal(formatProcessLabel('TCC - 20001'),'TCC - 20001');
+ assert.equal(formatProcessLabel('123 - Legado'),'123 - Legado');
 });
 test('texto e data personalizados respeitam o destinatário e o local escolhido',()=>{
  const common=buildProcessVariables({process:p,eventCode:'LOCATION_CONFIRMED',actorEmail:p.orientador.email,actorRoles:[]});
  const first=recipientEmailVariables(p,p.aluno1.email,common,'https://portal.example');
  const advisor=recipientEmailVariables(p,p.orientador.email,common,'https://portal.example');
  assert.equal(first.DESTINATARIO_NOME,p.aluno1.nome);assert.equal(advisor.DESTINATARIO_NOME,p.orientador.nome);
- assert.equal(first.CAMPO_04,'23/10/2026 às 20:00');assert.equal(first.CAMPO_07_LOCAL,'Sala de reuniões');
+ assert.equal(first.CAMPO_04,'sexta-feira, 23/10/2026 às 20:00');assert.equal(first.CAMPO_07_LOCAL,'Sala de reuniões');
  assert.match(first.ORIENTACOES_ACESSO,/Dados do processo|confira os dados/);assert.match(advisor.ORIENTACOES_ACESSO,/Avaliação e ata/);
  assert.match(advisor.LINK_PROCESSO,/secao=avaliacao/);assert.match(first.LINK_PROCESSO,/tcc=/);
 });
@@ -51,9 +56,17 @@ test('execução efetiva personaliza cada e-mail e corrige apresentação antiga
 });
 
 test('link público para avaliação mantém dados privados ausentes sem quebrar a tela',()=>{
- const publicProcess={...p,avaliacao:undefined} as any;
- const html=renderToString(React.createElement(AdvisorEvaluationPanel,{process:publicProcess,canEvaluate:false,canReopen:false,onReopen:()=>{},onUpdated:async()=>{}}));
- assert.match(html,/Você não possui permissão/);assert.doesNotMatch(html,/id="evaluation-PARECER"/);
+ const publicProcess={...p,defesa:{...p.defesa,invitationSentAt:undefined},avaliacao:undefined} as any;
+ const render=(process:typeof publicProcess,canEvaluate=false)=>renderToString(React.createElement(AdvisorEvaluationPanel,{process,canEvaluate,canReopen:false,onReopen:()=>{},onUpdated:async()=>{}}));
+ const html=render(publicProcess);
+ assert.match(html,/Conceito e ata ainda não disponíveis/);
+ assert.doesNotMatch(html,/id="evaluation-PARECER"|portal-instruction|Portal do Professor/);
+ const earlyAdvisor=render(publicProcess,true);
+ assert.match(earlyAdvisor,/portal-instruction.*Portal do Professor/);
+ assert.doesNotMatch(earlyAdvisor,/id="evaluation-PARECER"/);
+ const released=render({...publicProcess,defesa:{...publicProcess.defesa,localStatus:'CONFIRMADO',startAt:'2000-01-01T13:00:00Z',invitationSentAt:'2000-01-01T00:00:00Z'}});
+ assert.match(released,/Conceito e ata ainda não registrados/);
+ assert.doesNotMatch(released,/id="evaluation-PARECER"|portal-instruction|Portal do Professor/);
 });
 
 test('aba acompanha o avanço do convite até documentos e repositório',()=>{

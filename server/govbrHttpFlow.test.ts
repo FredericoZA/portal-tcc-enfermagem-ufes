@@ -15,11 +15,20 @@ test('Gov.br HTTP isolado: permissões, PDF pendente, conferência por hash, arq
   const fixture=structuredClone(DEMO_PROCESSES.find(item=>item.id==='demo-proc-3')!);
   Object.assign(fixture,{id:'govbr-test',protocolo:'TESTE-GOV-1',dataRevision:1,etapaAtual:'ASSINATURA',status:'AGUARDANDO_ASSINATURA'});
   fixture.avaliacao.status='CONCLUIDO';fixture.acervo={palavrasChave:['um','dois','tres','quatro','cinco'],resumoSintese:'Resumo de teste.',trabalhoCompletoFileUrl:'/private/test.pdf',submittedAt:new Date().toISOString(),publishFullWork:false,publishExpandedAbstract:false};
-  const ataFixture={...structuredClone(fixture),id:'govbr-ata',protocolo:'TESTE-GOV-ATA',acervo:undefined};
+  const ataFixture={...structuredClone(fixture),id:'govbr-ata',protocolo:'TESTE-GOV-ATA',dataRevision:2,avaliacao:{...fixture.avaliacao,documentRevision:1},acervo:undefined};
+  const examinerEmail=ataFixture.banca.find(member=>member.funcao==='EXAMINER_2')!.email;
   const concurrent={...structuredClone(fixture),id:'govbr-concurrent',protocolo:'TESTE-PARALLEL'};
   const conflicting={...structuredClone(fixture),id:'govbr-conflict',protocolo:'TESTE-GOV-2'};
+  conflicting.acervo={...conflicting.acervo,publishFullWork:true,authorizationConfirmedAt:'2026-11-05T12:00:00Z'};
+  conflicting.driveFolderId=undefined;
   const archivedAta=(processId:string)=>({id:`ata-${processId}`,processId,documentType:'ATA',documentVersion:1,sourceDataRevision:1,status:'ARCHIVED',driveSignedFileId:'fixture-ata',updatedAt:new Date().toISOString(),createdAt:new Date().toISOString(),signers:[]});
-  await writeFile(path.join(directory,'portal-state.json'),JSON.stringify({settings:{...INITIAL_SETTINGS,featureFlags:INITIAL_SETTINGS.featureFlags?.map(flag=>flag.key==='PUBLIC_AUTHENTICITY'?{...flag,enabled:true}:flag),commissionPresidentName:'Presidente de Teste',documentModels:{ATA:{type:'ATA',driveFileId:'fixture-model-ata'},DECLARACAO:{type:'DECLARACAO',driveFileId:'fixture-model'}}},processes:[fixture,conflicting,ataFixture,concurrent],memberships:[{id:'ata-student',processId:ataFixture.id,email:ataFixture.aluno1.email,roles:['STUDENT'],active:true},{id:'ata-advisor',processId:ataFixture.id,email:ataFixture.orientador.email,roles:['ADVISOR'],active:true}],signatureJobs:[archivedAta(concurrent.id),archivedAta(fixture.id),archivedAta(conflicting.id),{id:'asten-sent',processId:conflicting.id,documentType:'DECLARACAO',sourceDataRevision:1,provider:'ASTEN',status:'SENT',providerEnvelopeId:'123',documentVersion:1,updatedAt:new Date().toISOString()}]}));
+  const archivedTerm={...archivedAta(conflicting.id),id:'conflicting-term',documentType:'TERMO'};
+  const memberships=[
+    {id:'ata-student',processId:ataFixture.id,email:ataFixture.aluno1.email,roles:['STUDENT'],active:true},
+    {id:'ata-advisor',processId:ataFixture.id,email:ataFixture.orientador.email,roles:['ADVISOR'],active:true},
+    {id:'ata-examiner',processId:ataFixture.id,email:examinerEmail,roles:['EXAMINER'],active:true},
+  ];
+  await writeFile(path.join(directory,'portal-state.json'),JSON.stringify({settings:{...INITIAL_SETTINGS,featureFlags:INITIAL_SETTINGS.featureFlags?.map(flag=>flag.key==='PUBLIC_AUTHENTICITY'?{...flag,enabled:true}:flag),commissionPresidentName:'Presidente de Teste',documentModels:{ATA:{type:'ATA',driveFileId:'fixture-model-ata'},DECLARACAO:{type:'DECLARACAO',driveFileId:'fixture-model'}}},processes:[fixture,conflicting,ataFixture,concurrent],memberships,signatureJobs:[archivedAta(concurrent.id),archivedAta(fixture.id),archivedAta(conflicting.id),archivedTerm,{id:'asten-sent',processId:conflicting.id,documentType:'DECLARACAO',sourceDataRevision:1,provider:'ASTEN',status:'SENT',providerEnvelopeId:'123',documentVersion:1,updatedAt:new Date().toISOString()}]}));
   let child:ChildProcess|undefined;let logs='';
   const start=async()=>{
     child=spawn(process.execPath,['--import','tsx','--import','./scripts/fixtures/asten-readonly-preload.ts','server.ts'],{cwd:process.cwd(),env:{...process.env,NODE_ENV:'development',PORT:String(port),HOST:'127.0.0.1',PORTAL_DATA_DIR:directory,PORTAL_PERSISTENCE_PROVIDER:'local_file',PORTAL_ALLOW_INSECURE_DEMO_AUTH:'true',PORTAL_TEST_DOCUMENT_RENDERER:'true',ASTEN_INTEGRATION_ENABLED:'false',PORTAL_SESSION_SECRET:'govbr-test-session-secret-0123456789',SUPABASE_URL:'',SUPABASE_SECRET_KEY:'',SUPABASE_SERVICE_ROLE_KEY:'',VERCEL:''},stdio:['ignore','pipe','pipe']});
@@ -73,7 +82,7 @@ test('Gov.br HTTP isolado: permissões, PDF pendente, conferência por hash, arq
     assert.equal((await request(prepare,{provider:'GOV_BR'})).body.job.id,job.id);
     const endpoint=`/api/signatures/jobs/${job.id}/govbr`;
     assert.equal((await request(`${endpoint}/download`,undefined,'')).status,401);
-    assert.equal((await request(`${endpoint}/download`,undefined,fixture.aluno1.email)).status,403);
+    assert.equal((await request(`${endpoint}/download`,undefined,fixture.aluno1.email)).status,404);
     const originalResponse=await fetch(`${base}${endpoint}/download`,{headers:sessionHeaders('master@portal.local'),redirect:'manual'});
     assert.equal(originalResponse.status,200);
     assert.match(originalResponse.headers.get('content-type')||'',/application\/pdf/);
@@ -104,29 +113,72 @@ test('Gov.br HTTP isolado: permissões, PDF pendente, conferência por hash, arq
     assert.equal((await request(`${endpoint}/approve`,confirmation)).body.status,'ARCHIVED','Gov.br arquivado permanece preservado');
     const archivedDownload=await fetch(`${base}/api/processes/govbr-test/documents/doc-declaracao/download`,{headers:sessionHeaders('master@portal.local')});
     assert.equal(archivedDownload.status,200);assert.deepEqual(Buffer.from(await archivedDownload.arrayBuffer()),returned);
-    const ataPrepared=await request('/api/processes/govbr-ata/documents/ATA/sign',{provider:'GOV_BR'},ataFixture.orientador.email);
+    const prepareAta='/api/processes/govbr-ata/documents/ATA/sign';
+    for(const provider of ['ASTEN','GOV_BR']){
+      assert.equal((await request(prepareAta,{provider},examinerEmail)).status,403);
+    }
+    const ataPrepared=await request(prepareAta,{provider:'GOV_BR'},ataFixture.orientador.email);
     assert.equal(ataPrepared.status,200,JSON.stringify(ataPrepared.body));
-    assert.deepEqual(ataPrepared.body.job.signers.map((s:any)=>s.role),['ADVISOR']);assert.deepEqual(ataPrepared.body.job.signers.map((s:any)=>s.signingOrder),[1]);
+    assert.equal(ataPrepared.body.job.sourceDataRevision,1,'a ata usa a revisão do conceito, inclusive após mudanças alheias à ata');
+    assert.deepEqual(ataPrepared.body.job.signers.map((s:any)=>s.role),['ADVISOR','EXAMINER','EXAMINER']);assert.deepEqual(ataPrepared.body.job.signers.map((s:any)=>s.signingOrder),[1,1,1]);
     const ataEndpoint=`/api/signatures/jobs/${ataPrepared.body.job.id}/govbr`;
     const ataOriginal=Buffer.from(await(await fetch(`${base}${ataEndpoint}/download`,{headers:sessionHeaders(ataFixture.orientador.email)})).arrayBuffer());
     assert.equal(ataOriginal.subarray(0,5).toString(),'%PDF-');
+    const examinerPdf=await fetch(`${base}${ataEndpoint}/download`,{headers:sessionHeaders(examinerEmail)});
+    assert.equal(examinerPdf.status,200);assert.deepEqual(Buffer.from(await examinerPdf.arrayBuffer()),ataOriginal);
     assert.equal((await fetch(`${base}${ataEndpoint}/download`,{headers:sessionHeaders(ataFixture.aluno1.email)})).status,403);
-    assert.equal((await request(`${ataEndpoint}/complete`,{fileName:'ata.pdf',contentBase64:ataOriginal.toString('base64')},ataFixture.aluno1.email)).status,403,'somente o orientador assina e devolve a ata');
-    const ataReturned=await pdfWithTestSignature(ataOriginal);
+    assert.equal((await request(`${ataEndpoint}/complete`,{fileName:'ata.pdf',contentBase64:ataOriginal.toString('base64')},examinerEmail)).status,403);
+    assert.equal((await request(`${ataEndpoint}/complete`,{fileName:'ata.pdf',contentBase64:ataOriginal.toString('base64')},ataFixture.aluno1.email)).status,403,'o aluno não devolve a ata: o orientador reúne as três assinaturas');
+    for(const signatureCount of [1,2]){
+      const incomplete=await pdfWithTestSignature(ataOriginal,{signatureCount});
+      const rejected=await request(`${ataEndpoint}/complete`,{fileName:'ata-incompleta.pdf',contentBase64:incomplete.toString('base64')},ataFixture.orientador.email);
+      assert.equal(rejected.status,409);assert.match(rejected.body.error,/exige 3 assinaturas/);
+    }
+    const ataReturned=await pdfWithTestSignature(ataOriginal,{signatureCount:3,earlierRevisionSignatures:true});
     const ataReceived=await request(`${ataEndpoint}/complete`,{fileName:'ata-teste.pdf',contentBase64:ataReturned.toString('base64')},ataFixture.orientador.email);
     assert.equal(ataReceived.status,200,JSON.stringify(ataReceived.body));
+    assert.equal((await request(`${ataEndpoint}/download?kind=returned`,undefined,examinerEmail)).status,403);
     const ataApproval={sha256:ataReceived.body.govbrReview.sha256,itiApproved:true,signerMatches:true,documentMatches:true};
     assert.equal((await request(`${ataEndpoint}/approve`,ataApproval,ataFixture.orientador.email)).status,403);
     assert.equal((await request(`${ataEndpoint}/approve`,ataApproval)).body.status,'ARCHIVED');
+    const duplicateAta=await request('/api/processes/govbr-ata/documents/ATA/sign',{provider:'GOV_BR'},ataFixture.orientador.email);
+    assert.equal(duplicateAta.status,409);
+    assert.match(duplicateAta.body.error,/já está assinado/);
+    const failedPublicationEndpoint=`/api/signatures/jobs/${alongside.body.job.id}/govbr`;
+    const publicationOriginal=await fetch(`${base}${failedPublicationEndpoint}/download`,{headers:sessionHeaders('master@portal.local')});
+    assert.equal(publicationOriginal.status,200);
+    const publicationSigned=await pdfWithTestSignature(Buffer.from(await publicationOriginal.arrayBuffer()));
+    const receivedWithPublication=await request(`${failedPublicationEndpoint}/complete`,{fileName:'declaracao-publicacao-teste.pdf',contentBase64:publicationSigned.toString('base64')});
+    assert.equal(receivedWithPublication.status,200,JSON.stringify(receivedWithPublication.body));
+    const publishedApproval={...confirmation,sha256:receivedWithPublication.body.govbrReview.sha256};
+    const archivedWithPublication=await request(`${failedPublicationEndpoint}/approve`,publishedApproval);
+    assert.equal(archivedWithPublication.status,200,JSON.stringify(archivedWithPublication.body));
+    assert.equal(archivedWithPublication.body.status,'ARCHIVED','uma falha posterior de publicação não retira o PDF arquivado');
+    assert.equal(archivedWithPublication.body.postArchivePending,true);
+    const archiveId=archivedWithPublication.body.driveSignedFileId;
     await stop();await start();
     assert.equal((await request(`${endpoint}/approve`,confirmation)).body.status,'ARCHIVED');
+    const queued=await request('/api/admin/workflow/operations');
+    const pendingArchive=queued.body.queue.find((item:{id:string;kind:string})=>item.id===alongside.body.job.id&&item.kind==='POST_SIGNATURE');
+    assert.ok(pendingArchive);
+    assert.match(pendingArchive.retryPath,/^\/api\/signatures\/jobs\/[^/]+\/reconcile$/);
+    const retriedArchive=await request(pendingArchive.retryPath,{});
+    assert.equal(retriedArchive.status,200);assert.equal(retriedArchive.body.postArchivePending,true);
+    assert.deepEqual((await request('/api/admin/workflow/maintenance',{})).body.archivedWorkflows,{retried:1,pending:1});
     await stop();
     const state=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));
+    const persistedArchive=state.signatureJobs.find((item:{id:string})=>item.id===alongside.body.job.id);
+    assert.equal(persistedArchive.status,'ARCHIVED');assert.equal(persistedArchive.driveSignedFileId,archiveId);
+    assert.equal(persistedArchive.postArchivePending,true);
     const events=state.auditLogs.filter((item:{action:string;processId?:string})=>item.action==='GOVBR_CONFERENCIA_MANUAL_APROVADA'&&item.processId===fixture.id);
     assert.equal(events.length,1);assert.equal(events[0].after.signedSha256,sha256);assert.equal(events[0].after.originalSha256,job.contentSha256);
     state.processes.find((item:{id:string})=>item.id===fixture.id).dataRevision++;
+    Object.assign(state.signatureJobs.find((item:{id:string})=>item.id===parallel[0].body.job.id),{status:'ARCHIVED',driveSignedFileId:'archived-asten-fixture'});
     await writeFile(path.join(directory,'portal-state.json'),JSON.stringify(state));await start();
     assert.equal((await request(`${endpoint}/approve`,confirmation)).status,409);
+    const competing=await request(`/api/signatures/jobs/${parallel[1].body.job.id}/govbr/download`);
+    assert.equal(competing.status,409);
+    assert.match(competing.body.error,/já foi arquivada por outra solicitação/);
   }finally{await stop();await rm(directory,{recursive:true,force:true});}
 });
 

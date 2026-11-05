@@ -1,16 +1,21 @@
 import {mergeStudioDraft} from '../utils/studioDraftMerge';
 import {syncCatalogTemplates,syncCatalogColumns} from '../utils/documentCatalogSync';
+import {isReferenceDocumentModel, REFERENCE_DOCUMENT_MODEL_LABELS} from '../utils/referenceDocumentModels';
 import {saveStudioAutomatically} from '../services/studioAutosave';
 import {DocumentFilePreview} from './DocumentFilePreview';
 import { portalConfirm } from '../services/portalDialogs';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Eye, FileText, FilePlus2, FileUp, Link2, Loader2, Merge, Plus, ShieldAlert, Sparkles, Trash2 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
+import { downloadBlankAttendanceDeclaration } from '../utils/blankAttendanceDeclaration';
 import { getVariableUsage, mergeVariableAcrossArtifacts, normalizeVariableKey, saveLocalStudio } from '../services/integrationStudioService';
 import { SettingsWorkspaceHeaderPortal, SettingsWorkspaceSelector } from './SettingsWorkspaceModal';
 
+const RESERVATION_RECEIPTS = 'COMPROVANTES_RESERVA';
+const ATTENDANCE_DECLARATION = 'DECLARACAO_COMPARECIMENTO';
 const BASE_SLOTS: Array<[string, string]> = [
-  ['CONVITE', 'Carta-convite'], ['ATA', 'Ata de defesa'], ['TERMO', 'Termo de autorização para publicação'], ['DECLARACAO', 'Declaração de participação na banca']
+  ['CONVITE', 'Carta-convite'], ['ATA', 'Ata de defesa'], ['TERMO', 'Termo de autorização para publicação'], ['DECLARACAO', 'Declaração de participação na banca'],
+  ...Object.entries(REFERENCE_DOCUMENT_MODEL_LABELS) as Array<[string, string]>
 ];
 
 const normalizeModelKey = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 48);
@@ -24,6 +29,7 @@ type StudioEmailTemplate = { id:string; name:string; recipient?:string; subject:
 type StudioFormTemplate = { id:string; title:string; questions:Array<{fieldKey:string;availableToTemplates?:boolean;[key:string]:any}>; [key:string]:any };
 
 interface MasterDocumentModelsPanelProps {
+  receiptEditor: React.ReactNode;
   onCatalogChanged?: (models: Record<string, any>) => void;
   actorEmail?: string;
   matrixColumns: VariableColumn[];
@@ -38,7 +44,7 @@ interface MasterDocumentModelsPanelProps {
   setFormTemplates: React.Dispatch<React.SetStateAction<StudioFormTemplate[]>>;
 }
 
-export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps> = ({ onCatalogChanged, actorEmail='', matrixColumns, setMatrixColumns, matrixRows, setMatrixRows, docTemplates, setDocTemplates, emailTemplates, setEmailTemplates, formTemplates, setFormTemplates }) => {
+export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps> = ({ receiptEditor, onCatalogChanged, actorEmail='', matrixColumns, setMatrixColumns, matrixRows, setMatrixRows, docTemplates, setDocTemplates, emailTemplates, setEmailTemplates, formTemplates, setFormTemplates }) => {
   const [models, setModels] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState('');
@@ -67,9 +73,11 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   useEffect(()=>()=>{(Object.values(previewUrlsRef.current) as string[]).forEach(url=>{if(url.startsWith('blob:'))URL.revokeObjectURL(url);});},[]);
   const [samplePreviewLoading, setSamplePreviewLoading] = useState('');
   const [selectedType, setSelectedType] = useState('CONVITE');
+  const [referenceFolders,setReferenceFolders]=useState<Record<string,{name:string;url:string}>>({});
   const studioAutosaveReadyRef=useRef(false);
   const studioAutosaveInFlightRef=useRef(false);
   const studioAutosavePendingRef=useRef(false);
+  const studioHasEditsRef=useRef(false);
   const linkImportEnabled = Boolean(models.__capabilities?.existingModelLinkImportEnabled);
 
   const lastSavedStudioFingerprintRef=useRef('');
@@ -96,10 +104,17 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const studioAutosaveCurrentRef=useRef({matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates});
   const studioBaseCollectionsRef=useRef({matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates});
   studioAutosaveCurrentRef.current={matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates};
+  const markStudioEdit=()=>{
+    if(!studioHasEditsRef.current){
+      studioBaseCollectionsRef.current=studioAutosaveCurrentRef.current;
+      lastSavedStudioFingerprintRef.current=studioAutosaveFingerprint;
+    }
+    studioHasEditsRef.current=true;
+  };
   if(!lastSavedStudioFingerprintRef.current)lastSavedStudioFingerprintRef.current=studioAutosaveFingerprint;
   const flushStudioRef=useRef(()=>{});
   flushStudioRef.current=()=>{
-    if(!studioAutosaveReadyRef.current||loading||lastSavedStudioFingerprintRef.current===studioAutosaveFingerprint)return;
+    if(!studioAutosaveReadyRef.current||!studioHasEditsRef.current||loading||lastSavedStudioFingerprintRef.current===studioAutosaveFingerprint)return;
     const current=studioAutosaveCurrentRef.current;
     void apiClient.getSettings().then(latest=>{const base=(latest.integrationStudioDraft||latest.integrationStudio||{}) as any;const merged=mergeStudioDraft({...base,...studioBaseCollectionsRef.current},{...base,...current},base);return saveStudioAutomatically(base,{...merged,schemaVersion:3,revision:Number(base.revision||0)+1,savedAt:new Date().toISOString(),savedBy:actorEmail||'',docTemplates:(merged.docTemplates||[]).map((doc:any)=>({...doc,templateContentText:''}))} as any);}).then(saveLocalStudio).catch(error=>console.error('Salvamento de documentos ao fechar falhou',error));
   };
@@ -107,7 +122,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   useEffect(()=>{
     if(loading)return;
     if(!studioAutosaveReadyRef.current){studioAutosaveReadyRef.current=true;lastSavedStudioFingerprintRef.current=studioAutosaveFingerprint;studioBaseCollectionsRef.current=studioAutosaveCurrentRef.current;return;}
-    if(lastSavedStudioFingerprintRef.current===studioAutosaveFingerprint)return;
+    if(!studioHasEditsRef.current||lastSavedStudioFingerprintRef.current===studioAutosaveFingerprint)return;
     const timer=window.setTimeout(()=>{
       if(studioAutosaveInFlightRef.current){studioAutosavePendingRef.current=true;return;}
       studioAutosaveInFlightRef.current=true;setMessage('Salvando automaticamente…');
@@ -126,12 +141,13 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
               savedAt:new Date().toISOString(),
               savedBy:actorEmail||base.savedBy||'',
               docTemplates:(merged.docTemplates||[]).map((doc:any)=>({...doc,templateContentText:''})),
-              publication:{...(base.publication||{}),status:'PUBLISHED',publishedRevision:Number(base.revision||0)+1,publishedAt:new Date().toISOString()}
+              publication:{...(base.publication||{}),status:'DRAFT'}
             };
             const saved=await saveStudioAutomatically(base,snapshot as any);
             saveLocalStudio(saved);
             lastSavedStudioFingerprintRef.current=JSON.stringify(current);studioBaseCollectionsRef.current=current;
-            setMessage(saved.publication?.status==='DRAFT'?'Alterações salvas automaticamente. Há campos obrigatórios a completar.':'Alterações salvas automaticamente.');
+            if(JSON.stringify(studioAutosaveCurrentRef.current)===lastSavedStudioFingerprintRef.current)studioHasEditsRef.current=false;
+            setMessage('Variáveis salvas no rascunho. Use Publicar configurações na aba Variáveis para aplicar as alterações.');
           }while(studioAutosavePendingRef.current);
         }catch(error){
           console.error('Autosave de documentos e variáveis falhou',error);
@@ -203,7 +219,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
     if (file.type !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || !file.name.toLowerCase().endsWith('.docx')) { setMessage('Envie um arquivo DOCX válido.'); return; }
     if (file.size > 12 * 1024 * 1024) { setMessage('O arquivo ultrapassa o limite de 12 MB.'); return; }
     setWorking(type); setMessage('');
-    try { await apiClient.uploadDocumentModelFile(type, file); setPendingSlots(current => current.filter(([slot]) => slot !== type)); setMessage('Modelo cadastrado e versionado.'); await load(); }
+    try { await apiClient.uploadDocumentModelFile(type, file); setPendingSlots(current => current.filter(([slot]) => slot !== type)); setMessage(isReferenceDocumentModel(type)?'DOCX de referência cadastrado e versionado.':'Modelo cadastrado e versionado.'); await load(); }
     catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível cadastrar o modelo.'); }
     finally { setWorking(''); }
   };
@@ -232,7 +248,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const importLink = async (type: string) => {
     const link = (links[type] || '').trim(); if (!link) { setMessage('Informe o link ou ID do modelo no Google Drive.'); return; }
     setWorking(type); setMessage('');
-    try { await apiClient.importDocumentModelFromDrive(type, link); setLinks(current => ({ ...current, [type]: '' })); setPendingSlots(current => current.filter(([slot]) => slot !== type)); setMessage('Modelo copiado, validado e versionado.'); await load(); }
+    try { await apiClient.importDocumentModelFromDrive(type, link); setLinks(current => ({ ...current, [type]: '' })); setPendingSlots(current => current.filter(([slot]) => slot !== type)); setMessage(isReferenceDocumentModel(type)?'DOCX de referência copiado, validado e versionado.':'Modelo copiado, validado e versionado.'); await load(); }
     catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível importar o modelo.'); }
     finally { setWorking(''); }
   };
@@ -240,7 +256,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const restore = async (type: string, version: number) => {
     if (!(await portalConfirm(`Restaurar a versão ${version} deste modelo?`))) return;
     setWorking(`${type}-${version}`);
-    try { await apiClient.restoreDocumentModelVersion(type, version); await load(); setMessage(`Versão ${version} restaurada como modelo ativo.`); }
+    try { await apiClient.restoreDocumentModelVersion(type, version); await load(); setMessage(isReferenceDocumentModel(type)?`Versão ${version} selecionada como referência.`:`Versão ${version} restaurada como modelo ativo.`); }
     catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível restaurar a versão.'); }
     finally { setWorking(''); }
   };
@@ -270,6 +286,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
     const usage=getVariableUsage([source.id,source.name,...(source.aliases||[])],{matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates});
     if(!(await portalConfirm(`Mesclar “${source.label||source.name}” em “${target.label||target.name}”? A variável antiga será preservada como alias.`)))return;
     const result=mergeVariableAcrossArtifacts({matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates},source.id,target.id);
+    markStudioEdit();
     setMatrixColumns(result.matrixColumns);
     setMatrixRows(result.matrixRows);
     setDocTemplates(result.docTemplates);
@@ -301,12 +318,30 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const hasFile=Boolean(model?.driveFileId);
   const integrityReady=Boolean(model?.configured&&model?.contentSha256);
   const deleting=working===`delete-${type}`;
+  const referenceOnly=isReferenceDocumentModel(type);
+  const referenceFolder=referenceFolders[type];
+  const verifyReferenceFolder=async()=>{
+    setWorking(`folder-${type}`);setMessage('');
+    try{
+      const folder=await apiClient.getReferenceDocumentModelFolder(type);
+      setReferenceFolders(current=>({...current,[type]:folder}));
+    }catch(error){
+      setReferenceFolders(current=>{const next={...current};delete next[type];return next;});
+      setMessage(error instanceof Error?error.message:'Não foi possível conferir a pasta no Drive.');
+    }finally{setWorking('');}
+  };
+  const downloadAttendance=async()=>{
+    setWorking(ATTENDANCE_DECLARATION);setMessage('');
+    try{await downloadBlankAttendanceDeclaration();}
+    catch(error){setMessage(error instanceof Error?error.message:'Não foi possível baixar a declaração.');}
+    finally{setWorking('');}
+  };
 
   return <section className="portal-master-models-catalog min-h-0 bg-[var(--portal-surface-panel)] pb-0" data-portal-document-direct-editor="true">
     <SettingsWorkspaceHeaderPortal>
       <button type="button" onClick={()=>setShowNewModel(value=>!value)} className="portal-toolbar-icon-button" title="Criar outro modelo" aria-label="Novo modelo"><Plus className="h-3.5 w-3.5"/></button>
-      <SettingsWorkspaceSelector icon={FileText} aria-label="Selecionar documento" title={String(model?.label||label)} value={type} onChange={setSelectedType}>
-        {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{models[slotType]?.label||slotLabel}</option>)}
+      <SettingsWorkspaceSelector icon={FileText} aria-label="Selecionar documento" title={String(referenceOnly?label:model?.label||label)} value={type} onChange={setSelectedType}>
+        {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{slotType===RESERVATION_RECEIPTS||slotType===ATTENDANCE_DECLARATION?slotLabel:models[slotType]?.label||slotLabel}</option>)}
       </SettingsWorkspaceSelector>
     </SettingsWorkspaceHeaderPortal>
 
@@ -325,14 +360,20 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
 
     {message&&<p role="status" className="mx-3 mt-3 rounded-lg border border-slate-300 px-2.5 py-1.5 text-[10px] font-semibold text-slate-700" style={{backgroundColor:'var(--portal-surface-panel)'}}>{message}</p>}
 
+    {type===RESERVATION_RECEIPTS&&receiptEditor}
+    {type===ATTENDANCE_DECLARATION&&<article className="mt-2 space-y-3 rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)] p-4">
+      <h3 className="text-sm font-bold">{label}</h3>
+      <p className="text-xs text-slate-700">Modelo em branco gerado pelo Portal para preenchimento manual. O mesmo PDF está disponível no menu lateral.</p>
+      <button type="button" disabled={Boolean(working)} onClick={()=>void downloadAttendance()} className={action}><FileText className="h-3.5 w-3.5"/>{working===ATTENDANCE_DECLARATION?'Gerando…':'Baixar modelo em PDF'}</button>
+    </article>}
     <article className="mt-2 overflow-hidden rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 p-3">
         <div className="min-w-0">
-          <strong className="block truncate text-[12px] text-slate-900">{model?.label||label}</strong>
+          <strong className="block truncate text-[12px] text-slate-900">{referenceOnly?'DOCX de referência':model?.label||label}</strong>
           <span className="block truncate text-[9px] text-slate-500">{hasFile?`${model.fileName} · v${model.activeVersion||1}`:'Aguardando DOCX'}{model?.variables?.length?` · ${model.variables.length} variáveis`:''}</span>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-1.5">
-          {hasFile&&['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)&&<button type="button" onClick={()=>void generateSamplePreview(type)} disabled={samplePreviewLoading===type} className="portal-toolbar-icon-button disabled:opacity-40" title="Ver modelo demonstrativo" aria-label="Ver modelo demonstrativo" aria-busy={samplePreviewLoading===type}>{samplePreviewLoading===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Eye className="h-3.5 w-3.5"/>}</button>}
+          {hasFile&&(['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)||model.driveFileId.startsWith('local_model_'))&&<button type="button" onClick={()=>void generateSamplePreview(type)} disabled={samplePreviewLoading===type} className="portal-toolbar-icon-button disabled:opacity-40" title={referenceOnly?'Ver DOCX de referência':'Ver modelo demonstrativo'} aria-label={referenceOnly?'Ver DOCX de referência':'Ver modelo demonstrativo'} aria-busy={samplePreviewLoading===type}>{samplePreviewLoading===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Eye className="h-3.5 w-3.5"/>}</button>}
           <button type="button" onClick={()=>documentInputRef.current?.click()} disabled={Boolean(working)} className="portal-toolbar-icon-button disabled:opacity-40" title={hasFile?'Substituir documento':'Adicionar documento'} aria-label={hasFile?'Substituir documento':'Adicionar documento'}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}</button>
           <input ref={documentInputRef} type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" aria-label="Arquivo DOCX do modelo" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/>
           <button type="button" onClick={()=>void removeModel(type,String(model?.label||label))} disabled={Boolean(working)} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-40" title="Excluir somente este documento" aria-label={`Excluir o documento ${model?.label||label}`}>{deleting?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Trash2 className="h-3.5 w-3.5"/>}</button>
@@ -341,20 +382,28 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
       </div>
 
       <div className="space-y-3 p-3">
+        {referenceOnly&&<div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
+          <p className="w-full">Cadastre e versione o DOCX para consulta da administração. Os PDFs continuam sendo gerados pelos modelos do Portal.</p>
+          <button type="button" onClick={()=>void verifyReferenceFolder()} disabled={Boolean(working)} className={action}>{working===`folder-${type}`?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Link2 className="h-3.5 w-3.5"/>}Conferir pasta no Drive</button>
+          {referenceFolder&&<a href={referenceFolder.url} target="_blank" rel="noreferrer" className={action} aria-label={`Abrir pasta ${referenceFolder.name} no Drive`}>{referenceFolder.name}</a>}
+        </div>}
         {(linkImportEnabled||!hasFile)&&<div className="space-y-2 rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-2" aria-label="Gerenciar arquivo do modelo">
           {linkImportEnabled&&<div className="flex gap-1.5">
-            <input aria-label={`Link do modelo ${label}`} value={links[type]||''} onChange={event=>setLinks(current=>({...current,[type]:event.target.value}))} placeholder="Link ou ID do Drive" className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px]"/>
+            <input aria-label={`Link do modelo ${label}`} value={links[type]||''} onChange={event=>setLinks(current=>({...current,[type]:event.target.value}))} placeholder={referenceOnly?'Link de um DOCX na pasta de referência':'Link ou ID do Drive'} className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px]"/>
             <button type="button" onClick={()=>void importLink(type)} disabled={Boolean(working)||!(links[type]||'').trim()} className={action}><Link2 className="h-3 w-3"/>Importar</button>
           </div>}
           <label className={`${action} cursor-pointer`}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}{hasFile?'Substituir DOCX':'Enviar DOCX'}<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/></label>
         </div>}
 
         <div className="flex flex-wrap gap-1.5">
-          {hasFile&&model?.driveFileUrl&&<a href={model.driveFileUrl} target="_blank" rel="noreferrer" className={action}><Eye className="h-3.5 w-3.5"/>Visualizar modelo original</a>}
-          {hasFile&&<button type="button" onClick={()=>void detectVariables(type)} disabled={working===`detect-${type}`} className={action}>{working===`detect-${type}`?<Loader2 className="h-3 w-3 animate-spin"/>:<Sparkles className="h-3 w-3"/>}Atualizar variáveis</button>}
+          {hasFile&&model?.driveFileUrl&&<a href={model.driveFileUrl} target="_blank" rel="noreferrer" className={action} title="Abrir modelo no Google Drive"><Eye className="h-3.5 w-3.5"/>Visualizar modelo original</a>}
+          {hasFile&&!referenceOnly&&<button type="button" onClick={()=>void detectVariables(type)} disabled={working===`detect-${type}`} className={action}>{working===`detect-${type}`?<Loader2 className="h-3 w-3 animate-spin"/>:<Sparkles className="h-3 w-3"/>}Atualizar variáveis</button>}
         </div>
 
-        <section className="border-t border-[var(--portal-border)] pt-3" aria-label="Variáveis do documento">
+        {referenceOnly?<section className="border-t border-[var(--portal-border)] pt-3 text-xs" aria-label="Variáveis do DOCX de referência">
+          <h4 className="font-bold">Variáveis encontradas no arquivo</h4>
+          {model?.variables?.length?<ul className="mt-2 flex flex-wrap gap-2">{(model.variables as string[]).map(variable=><li key={variable}><code>{variable}</code></li>)}</ul>:<p className="mt-2 text-slate-600">{hasFile?'Nenhuma variável foi encontrada.':'As variáveis encontradas aparecerão após o envio do DOCX.'}</p>}
+        </section>:<section className="border-t border-[var(--portal-border)] pt-3" aria-label="Variáveis do documento">
           {model?.variables?.length
             ? <div className="space-y-1.5">{(model.variables as string[])
               .filter((variable,index,all)=>all.findIndex(other=>normalizeVariableKey(other)===normalizeVariableKey(variable))===index)
@@ -364,14 +413,14 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
                 const mergeKey=`${type}:${key}`;
                 return <div key={variable} title={variableUsageTitle(variable)} className="grid gap-1.5 rounded-lg border border-slate-300 bg-[var(--portal-surface-nested)] p-2 lg:grid-cols-[minmax(150px,.9fr)_minmax(170px,1fr)_120px_minmax(180px,1fr)_auto] lg:items-center">
                   <code className="truncate text-[8.5px] font-black text-[var(--portal-brand-action)]">{variable}</code>
-                  {column?<input value={column.label||''} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,label:event.target.value}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]" placeholder="Nome legível"/>:<span className="text-[9px] text-amber-800">Variável ainda não vinculada</span>}
-                  {column?<select value={column.dataType||'text'} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,dataType:event.target.value as VariableColumn['dataType']}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]"><option value="text">Texto</option><option value="date">Data</option><option value="email">E-mail</option><option value="number">Número</option><option value="url">URL</option></select>:<span/>}
+                  {column?<input value={column.label||''} onChange={event=>{markStudioEdit();setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,label:event.target.value}:item));}} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]" placeholder="Nome legível"/>:<span className="text-[9px] text-amber-800">Variável ainda não vinculada</span>}
+                  {column?<select value={column.dataType||'text'} onChange={event=>{markStudioEdit();setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,dataType:event.target.value as VariableColumn['dataType']}:item));}} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]"><option value="text">Texto</option><option value="date">Data</option><option value="email">E-mail</option><option value="number">Número</option><option value="url">URL</option></select>:<span/>}
                   {column?<select value={mergeTargets[mergeKey]||''} onChange={event=>setMergeTargets(current=>({...current,[mergeKey]:event.target.value}))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]"><option value="">Mesclar com…</option>{matrixColumns.filter(item=>item.id!==column.id).map(item=><option key={item.id} value={item.id}>{item.label||item.name}</option>)}</select>:<span/>}
                   {column&&mergeTargets[mergeKey]?<button type="button" onClick={()=>void mergeDocumentVariable(type,variable)} className={action}><Merge className="h-3 w-3"/>Mesclar</button>:<span className="text-right text-[8px] text-slate-400">{column?'Canônica':'Pendente'}</span>}
                 </div>;
               })}</div>
             : <p className="rounded-lg border border-dashed border-slate-300 bg-white p-3 text-[9px] text-slate-500">{hasFile?'Nenhuma variável foi detectada neste arquivo. Use “Atualizar variáveis”.':'As variáveis aparecerão aqui depois do envio do DOCX.'}</p>}
-        </section>
+        </section>}
 
 
 

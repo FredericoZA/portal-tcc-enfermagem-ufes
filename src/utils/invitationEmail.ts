@@ -1,6 +1,6 @@
 import type {ProcessData} from '../types';
 import {academicName,authorNames} from './personPresentation';
-import {formatDateNumeric,formatTime24h} from './formatters';
+import {formatDateNumericWithWeekday,formatTime24h} from './formatters';
 import {defenseEndAt} from './defenseSchedule';
 
 type InvitationProcess=Pick<ProcessData,'titulo'|'protocolo'|'aluno1'|'aluno2'|'orientador'|'defesa'|'authorOrder'>&{banca?:ProcessData['banca'];coorientador?:ProcessData['coorientador']};
@@ -20,7 +20,7 @@ export function invitationEmail(process:InvitationProcess){
  const text=[
   'Prezados,',
   'Convidamos Vossas Senhorias para participarem da banca de defesa do Trabalho de Conclusão de Curso identificado abaixo.',
-  [`Título: ${process.titulo}`,`Autoria: ${authorNames(process)}`,`Data: ${formatDateNumeric(process.defesa.startAt)}`,`Horário: ${formatTime24h(process.defesa.startAt)} às ${formatTime24h(defenseEndAt(process.defesa.startAt))}`,`Local: ${process.defesa.local}`,`Orientador: ${academicName(process.orientador,'abbreviated')}`,...(process.coorientador?[`Coorientador: ${academicName(process.coorientador,'abbreviated')}`]:[])].join('\n'),
+  [`Título: ${process.titulo}`,`Autoria: ${authorNames(process)}`,`Data: ${formatDateNumericWithWeekday(process.defesa.startAt)}`,`Horário: ${formatTime24h(process.defesa.startAt)} às ${formatTime24h(defenseEndAt(process.defesa.startAt))}`,`Local: ${process.defesa.local}`,`Orientador: ${academicName(process.orientador,'abbreviated')}`,...(process.coorientador?[`Coorientador: ${academicName(process.coorientador,'abbreviated')}`]:[])].join('\n'),
   'Avaliadores da banca:\n'+guests.map(person=>academicName(person,'abbreviated')).join('\n')
  ].join('\n\n');
  return {subject,text};

@@ -18,7 +18,7 @@ test('Asten mantém fluxo automático e Gov.br exige conferência manual por doc
   const [server,client,page,types]=await Promise.all([source('server.ts'),source('src/services/apiClient.ts'),source('src/pages/ProcessoDetailPage.tsx'),source('src/types/signatures.ts')]);
   assert.ok(types.includes("provider: 'ASTEN' | 'GOV_BR'")); // histórico permanece legível
   assert.ok(server.includes("canInitiateSignature(identity.email,process,type)"));
-  assert.ok(server.includes('assertGovbrManualApproval(job,process.dataRevision,confirmation)'));
+  assert.ok(server.includes('assertGovbrManualApproval(job,signatureDocumentRevision(process,job.documentType),confirmation)'));
   assert.ok(server.includes('GOVBR_CONFERENCIA_MANUAL_APROVADA'));
   assert.ok(server.includes("/api/signatures/jobs/:id/govbr/download"));
   assert.ok(server.includes("/api/signatures/jobs/:id/govbr/complete"));

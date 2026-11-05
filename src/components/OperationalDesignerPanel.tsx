@@ -3,28 +3,18 @@ import type { IntegrationStudioSettings } from '../types/integrationStudio';
 import type { CatalogEntry, OperationalConfig, VariablePresentation } from '../types/operationalConfig';
 import { formatVariable, registrationQuestions } from '../utils/operationalConfig';
 import { variableLineage } from '../utils/variableLineage';
-import { apiClient } from '../services/apiClient';
+import { WorkflowSimulationPanel } from './WorkflowSimulationPanel';
 import { WorkflowWorkbenchPanel } from './WorkflowWorkbenchPanel';
 const labels = { AREA_TEMATICA: 'Área temática', TEMA_PRINCIPAL: 'Tema', TIPO_DE_ESTUDO: 'Tipo de estudo', FINALIDADE_DO_TRABALHO: 'Finalidade' };
 const formats = { original: 'Original', date: 'Data numérica', date_long: 'Data por extenso', time: 'Hora numérica', time_long: 'Hora por extenso', datetime: 'Data e hora numéricas', datetime_long: 'Data e hora por extenso' };
 export function OperationalDesignerPanel({ studio, config, onChange, onInitialForm }: { studio: IntegrationStudioSettings; config: OperationalConfig; onChange: (value: OperationalConfig)=>void; onInitialForm: (questions: any[])=>void }) {
   const [artifact, setArtifact] = useState('tmpl-convite');
-  const [simulation, setSimulation] = useState<any>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [publication, setPublication] = useState(true);
-  const [secondAuthor, setSecondAuthor] = useState(false);
-  const [locationConfirmed, setLocationConfirmed] = useState(true);
-  const [failActionId, setFailActionId] = useState('');
-  const [mobile, setMobile] = useState(false);
-  const [dark, setDark] = useState(false);
   const [search, setSearch] = useState('');
   const rules = config.presentations[artifact] || [];
   const lineage = variableLineage(studio);
   const changeRules = (value: VariablePresentation[]) => onChange({ ...config, presentations: { ...config.presentations, [artifact]: value } });
   const catalogChange = (id: string, update: Partial<CatalogEntry>) => onChange({ ...config, catalogs: config.catalogs.map(e=>e.id===id?{...e,...update}:e) });
   const changeReservation = (updates: Partial<OperationalConfig['reservation']>) => onChange({ ...config, reservation: { ...config.reservation, ...updates } });
-  const run = async () => { setBusy(true); setError(''); try { setSimulation(await apiClient.simulateWorkflow(studio,{publication,secondAuthor,locationConfirmed,failActionId})); } catch(e) {setError(e instanceof Error?e.message:'Falha na simulação.');} finally {setBusy(false);} };
   return <section className="portal-workspace space-y-5" aria-label="Oficina operacional">
     <header className="portal-card p-5"><h3 className="text-xl font-bold">Oficina da secretaria</h3><p className="mt-2 leading-6">Prepare o cadastro, teste a sequência e confira como cada variável aparece nos documentos e e-mails. As alterações entram em uso ao publicar o Estúdio.</p></header>
     <details open className="portal-card p-5"><summary className="cursor-pointer text-lg font-semibold">1. Cadastro e pedido de reserva</summary>
@@ -58,15 +48,7 @@ export function OperationalDesignerPanel({ studio, config, onChange, onInitialFo
     </details>
     <details className="portal-card p-5"><summary className="cursor-pointer text-lg font-semibold">4. Mapa de origem e utilização das variáveis</summary><label className="mt-4 block">Buscar variável<input className="portal-input" value={search} onChange={e=>setSearch(e.target.value)}/></label><div className="mt-4 overflow-x-auto"><table className="portal-data-table"><caption className="sr-only">Linhagem de variáveis, origens e destinos</caption><thead><tr><th scope="col">Variável</th><th scope="col">Onde nasce</th><th scope="col">Onde é utilizada</th></tr></thead><tbody>{lineage.filter(r=>JSON.stringify(r).toLowerCase().includes(search.toLowerCase())).map(r=><tr key={r.key}><th scope="row">{r.key}</th><td>{r.origins.join('; ')||'Dados do processo ou configuração institucional'}</td><td>{r.uses.join('; ')||'Sem uso identificado no pacote atual'}</td></tr>)}</tbody></table></div></details>
     <details className="portal-card p-5"><summary className="cursor-pointer text-lg font-semibold">5. Critérios para sugerir melhorias</summary><div className="mt-4 grid gap-4 md:grid-cols-3"><label>Dias sem movimentação<input type="number" min={1} max={365} className="portal-input" value={config.diagnostics.staleDays} onChange={e=>onChange({...config,diagnostics:{...config.diagnostics,staleDays:Number(e.target.value)}})}/></label><label>Cobertura mínima dos dados (%)<input type="number" min={1} max={100} className="portal-input" value={config.diagnostics.minimumCoverage} onChange={e=>onChange({...config,diagnostics:{...config.diagnostics,minimumCoverage:Number(e.target.value)}})}/></label><label>Prioridade da recomendação<select className="portal-input" value={config.diagnostics.priority} onChange={e=>onChange({...config,diagnostics:{...config.diagnostics,priority:e.target.value as 'P1'|'P2'|'P3'}})}><option value="P1">Alta</option><option value="P2">Normal</option><option value="P3">Planejada</option></select></label></div><p className="mt-3 text-sm">Falhas de integração mantêm prioridade alta. Os dois arquivos vivos registram evidências e decisões; mudanças operacionais continuam sendo publicadas pelo Master.</p></details>
-    <details open className="portal-card p-5"><summary className="cursor-pointer text-lg font-semibold">6. Simular o percurso e conferir e-mails</summary><div className="my-4 flex flex-wrap gap-4">{[[publication,setPublication,'Autoriza publicação'],[secondAuthor,setSecondAuthor,'Dois autores'],[locationConfirmed,setLocationConfirmed,'Departamento confirmou o local']].map(([value,setter,label])=><label key={String(label)} className="flex items-center gap-2"><input type="checkbox" checked={Boolean(value)} onChange={e=>(setter as (v:boolean)=>void)(e.target.checked)}/>{String(label)}</label>)}</div>
-      <label>Ensaio de falha em documento<select className="portal-input mb-3" value={failActionId} onChange={e=>setFailActionId(e.target.value)}><option value="">Nenhuma falha simulada</option>{studio.workflowStages.flatMap(s=>((s.actions||[]) as any[]).filter(a=>a.type==='doc'||a.kind==='DOCUMENT').map(a=><option key={a.id} value={a.id}>{String(s.title)} · {a.title}</option>))}</select></label>
-      <button className="portal-action portal-action-primary" type="button" disabled={busy} onClick={()=>void run()}>{busy?'Executando cenário…':'Simular configuração atual'}</button>
-      {error&&<p role="alert" className="my-3 text-red-800">{error}</p>}
-      {simulation&&<div className="mt-4 space-y-4"><p role="status" className="rounded-lg border p-3">{simulation.note}</p><ol className="space-y-3">{simulation.events.map((event:any,i:number)=><li key={i} className="portal-card border-l-4 p-3"><p className="font-semibold">{i+1}. {event.role}</p><p className="text-sm">{event.event} · {event.state}</p>{Array.isArray(event.details)&&<ul className="mt-2 space-y-1 text-sm">{event.details.map((a:any)=><li key={a.actionId}>{a.kind}: {a.status}{a.error?` — ${a.error}`:''}</li>)}</ul>}</li>)}</ol>
-      <div className="flex gap-4"><label><input type="checkbox" checked={mobile} onChange={e=>setMobile(e.target.checked)}/> Prévia de celular</label><label><input type="checkbox" checked={dark} onChange={e=>setDark(e.target.checked)}/> Fundo escuro</label></div>
-      {simulation.emails.map((mail:any,i:number)=><article key={i} className="portal-card p-4"><h4 className="font-bold">{mail.subject}</h4><p className="my-2 text-sm break-all">Destinatários calculados: {mail.to.join('; ')}<br/>Anexos previstos: {mail.attachments.join(', ')||'Nenhum'}</p><iframe title={`Prévia isolada do e-mail ${i+1}`} sandbox="" className="mx-auto block h-80 max-w-full rounded-lg border" style={{width:mobile?360:720}} srcDoc={`<html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:16px/1.6 Arial;padding:20px;overflow-wrap:anywhere;background:${dark?'#111827':'#ffffff'};color:${dark?'#ffffff':'#111827'}}pre{white-space:pre-wrap;font:inherit}</style></head><body>${mail.html||'<pre>'+String(mail.text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</pre>'}</body></html>`}/></article>)}
-      <p className="text-sm">Homologação real: execute o roteiro em docs/HOMOLOGACAO_RC8.md após conectar as contas. Uma prévia não comprova entrega pelo Gmail, conversão fiel do modelo ou assinatura pela Asten.</p></div>}
-    </details>
+    <WorkflowSimulationPanel studio={studio}/>
     <WorkflowWorkbenchPanel studio={studio} config={config} onChange={onChange}/>
   </section>;
 }

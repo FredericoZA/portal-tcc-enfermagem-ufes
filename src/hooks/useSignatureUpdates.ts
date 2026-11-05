@@ -10,6 +10,7 @@ interface UseSignatureUpdatesOptions {
   /** Omit for the administrator's signature list; process pages use their authorized endpoint. */
   processId?: string;
   scopeKey?: string;
+  fetchJobs?: () => Promise<SignatureJob[]>;
 }
 
 export function useSignatureUpdates(options: UseSignatureUpdatesOptions): void {
@@ -23,7 +24,7 @@ export function useSignatureUpdates(options: UseSignatureUpdatesOptions): void {
     if (!enabled) return;
     const watcher = createSignatureUpdateWatcher({
       getKnownJobs: () => latest.current.jobs,
-      fetchJobs: () => processId ? apiClient.getProcessSignatureJobs(processId) : apiClient.getSignatureJobs(),
+      fetchJobs: () => latest.current.fetchJobs?.() ?? (processId ? apiClient.getProcessSignatureJobs(processId) : apiClient.getSignatureJobs()),
       onChange: () => latest.current.onChange(),
       isActive: () => document.visibilityState !== 'hidden',
     });

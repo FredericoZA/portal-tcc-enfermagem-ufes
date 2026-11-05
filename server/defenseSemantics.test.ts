@@ -72,5 +72,10 @@ test('resumo da agenda mostra sala confirmada e identifica preferência ainda pe
  process.defesa.local='Sala de reuniões';process.defesa.localStatus='CONFIRMADO';
  assert.equal(getDefenseCalendarSummaryParts(process).location,'Sala de reuniões');
  assert.match(formatDefenseCalendarSummary(process),/Sala de reuniões/);
- process.defesa.localStatus='PENDENTE';assert.equal(getDefenseCalendarSummaryParts(process).location,'Sala de reuniões (a confirmar)');
+ process.defesa.localStatus='PENDENTE';
+ const parts=getDefenseCalendarSummaryParts(process);
+ assert.equal(parts.location,'Sala de reuniões');
+ assert.ok(parts.primary.startsWith(parts.time+' (aguardando confirmação) · '));
+ assert.match(formatDefenseCalendarSummary(process),/^\d{2}:\d{2} \(aguardando confirmação\) · /);
+ assert.doesNotMatch(parts.location,/confirmar/);
 });

@@ -76,10 +76,21 @@ test('Meus TCCs e Presidente usam o mesmo separador branco canônico após os fi
   assert.doesNotMatch(css, /portal-coordinator-filter-row[\s\S]*border-bottom:\s*2px/);
 });
 
-test('tutorial usa a superfície canônica e instruções integradas, sem cartões ou avisos decorativos', () => {
+test('tutorial integra as instruções e destaca somente o manual detalhado antes do guia', () => {
   const tutorial = read('src/pages/PortalTutorialPage.tsx');
   assert.match(tutorial, /portal-layer-panel/);
-  assert.doesNotMatch(tutorial, /portal-layer-card|portal-instruction|Erros a evitar/);
+  assert.doesNotMatch(tutorial, /portal-layer-card|Erros a evitar/);
+  const notices = tutorial.match(/<aside\b[^>]*\bid="tutorial-manual-notice"[^>]*>[\s\S]*?<\/aside>/g) || [];
+  assert.equal(notices.length, 1);
+  const notice = notices[0];
+  assert.match(notice, /aria-labelledby="tutorial-manual-heading"[^>]*className="portal-instruction\b/);
+  assert.match(notice, /<h2 id="tutorial-manual-heading"[^>]*>Acesse o manual detalhado<\/h2>/);
+  assert.match(notice, /Consulte as orientações completas para acessar e acompanhar seu TCC\./);
+  assert.match(notice, /<a id="tutorial-manual-pdf" href="\/manual\/manual-portal-tcc\.pdf" target="_blank" rel="noopener noreferrer"/);
+  assert.match(notice, /<span>Manual em PDF<\/span>/);
+  assert.doesNotMatch(tutorial.replace(notice, ''), /portal-instruction|tutorial-manual-notice/);
+  assert.match(tutorial, /<PortalIllustratedGuide role=\{role\}/);
+  assert.ok(tutorial.indexOf(notice) < tutorial.indexOf('<PortalIllustratedGuide role={role}'));
   assert.doesNotMatch(tutorial, /bg-\[#(?:e1e6e9|d5dce0|005830|337959)\]/i);
 });
 
@@ -111,7 +122,7 @@ test('e-mail do Departamento é definido no modelo de e-mail e permanece fail-cl
   assert.match(configPage, /id: 'email-reserva'/);
   assert.match(server, /configuredRoomReservationDepartmentEmail\(studio/);
   assert.match(server, /templateId==='email-reserva'/);
-  assert.match(server, /reservationConfirmationRecipient/);
+  assert.match(server, /configuredRoomReservationDepartmentEmail\(studio\):normalizeEmail\(process\.orientador\.email\)/);
   assert.match(server, /destinatário diverge do responsável definido para o local escolhido/);
   assert.match(server, /reservationApproverEmail\(process,studio\)/);
   assert.match(server, /recipients.length!==1\|\|recipients\[0\]!==configured/);

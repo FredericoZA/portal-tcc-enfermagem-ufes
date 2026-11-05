@@ -1,6 +1,6 @@
 import { formatNameTitleCase } from './formatters';
 import { renderInstitutionName } from './institutionName';
-import { participantIsFemale } from './officialParticipants';
+import { participantIsFemale, participantRole } from './officialParticipants';
 import type { RegistrationAnswers } from '../types/operationalConfig';
 
 export interface RegistrationMemberRow {
@@ -15,12 +15,12 @@ export interface RegistrationMemberRow {
 }
 
 const PARTICIPANTS = [
-  { prefix: 'ALUNO_1', role: 'Aluno autor', kind: 'student' },
-  { prefix: 'ALUNO_2', role: 'Aluno autor', kind: 'student' },
-  { prefix: 'ORIENTADOR', role: 'Orientador(a)', kind: 'teacher' },
-  { prefix: 'EXAMINADOR_2', role: 'Examinador', kind: 'teacher' },
-  { prefix: 'EXAMINADOR_3', role: 'Examinador', kind: 'teacher' },
-  { prefix: 'COORIENTADOR', role: 'Coorientador(a)', kind: 'teacher' },
+  { prefix: 'ALUNO_1', kind: 'student' },
+  { prefix: 'ALUNO_2', kind: 'student' },
+  { prefix: 'ORIENTADOR', kind: 'advisor' },
+  { prefix: 'EXAMINADOR_2', kind: 'examiner' },
+  { prefix: 'EXAMINADOR_3', kind: 'examiner' },
+  { prefix: 'COORIENTADOR', kind: 'coadvisor' },
 ] as const;
 
 const read = (answers: RegistrationAnswers, key: string): string =>
@@ -38,7 +38,7 @@ export function buildRegistrationMemberRows(
   answers: RegistrationAnswers,
   studentInstitution = 'UFES',
 ): RegistrationMemberRow[] {
-  return PARTICIPANTS.flatMap(({ prefix, role, kind }) => {
+  return PARTICIPANTS.flatMap(({ prefix, kind }) => {
     if (prefix === 'ALUNO_2' && read(answers, 'TEM_ALUNO_2') !== 'Sim') return [];
     if (prefix === 'COORIENTADOR' && read(answers, 'TEM_COORIENTADOR') !== 'Sim') return [];
 
@@ -47,17 +47,13 @@ export function buildRegistrationMemberRows(
 
     const student = kind === 'student';
     const female = participantIsFemale(answers,prefix);
-    const standardizedRole = student ? (female?'Aluna autora':'Aluno autor') :
-      prefix==='ORIENTADOR' ? (female?'Orientadora':'Orientador') :
-      prefix==='COORIENTADOR' ? (female?'Coorientadora':'Coorientador') :
-      (female?'Examinadora':'Examinador');
     const institutionRaw = firstNonempty(answers, `${prefix}_INSTITUICAO`);
     return [{
       key: prefix,
-      role: standardizedRole,
+      role: participantRole(kind,answers,prefix),
       name: formatNameTitleCase(name),
       reference: student
-        ? 'Aluno'
+        ? (female ? 'Aluna' : 'Aluno')
         : firstNonempty(answers, `${prefix}_TRATAMENTO`, `${prefix}_REFERENCIA`) || 'Professor',
       qualification: student
         ? '—'

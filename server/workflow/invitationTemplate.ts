@@ -1,6 +1,6 @@
 import type { ProcessData } from '../../src/types';
 import { officialParticipantLines } from '../../src/utils/officialParticipants';
-import { formatDatePt } from '../../src/utils/formatters';
+import { formatDateWithWeekday } from '../../src/utils/formatters';
 
 export type LiteralReplacement = { find: string; replace: string };
 
@@ -15,7 +15,7 @@ export function invitationTemplateCorrections(process: ProcessData, now = new Da
   const evaluators = lines.filter(p => p.key.startsWith('EXAMINADOR_'));
   const coadvisor = lines.find(p => p.key === 'COORIENTADOR');
   const label = ({role,name}: typeof lines[number]) => `${role}: ${name}`;
-  const data = formatDatePt(now.toISOString());
+  const data = formatDateWithWeekday(now.toISOString());
   return [
     {find:'Autoria: <<alunos>>',replace:students.map(label).join('\n')},
     {find:'Orientação e presidência: <<orientador (1)>>',replace:advisor?label(advisor):''},

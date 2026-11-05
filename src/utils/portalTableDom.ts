@@ -1,3 +1,4 @@
+import {TABLE_PREFERENCE_EVENT} from './tablePreferences';
 import { normalizePortalTableText, readPortalHeaderLabel, slugPortalTableText, stableTableIdentity } from './portalTableIdentity';
 
 type TableState = {
@@ -314,6 +315,7 @@ function readWrapMode(table: HTMLTableElement) {
 function applyColumnWidth(table: HTMLTableElement, index: number, width: number) {
   const px = `${Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, Math.round(width)))}px`;
   const header = table.tHead?.rows[0]?.cells[index] as HTMLTableCellElement | undefined;
+  if (header) header.dataset.portalResized = 'true';
   if (header) header.style.width = header.style.minWidth = header.style.maxWidth = px;
   Array.from(table.tBodies).forEach((body) => Array.from(body.rows).forEach((row) => {
     const cell = row.cells[index] as HTMLTableCellElement | undefined;
@@ -332,16 +334,18 @@ function installResizer(table: HTMLTableElement, header: HTMLTableCellElement, i
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    const columnIndex = header.cellIndex;
     const startX = event.clientX;
     const startWidth = Math.max(MIN_WIDTH, header.getBoundingClientRect().width);
     document.documentElement.classList.add('portal-core-resizing');
-    const onMove = (moveEvent: PointerEvent) => applyColumnWidth(table, index, startWidth + moveEvent.clientX - startX);
+    const onMove = (moveEvent: PointerEvent) => applyColumnWidth(table, columnIndex, startWidth + moveEvent.clientX - startX);
     const onUp = () => {
       document.removeEventListener('pointermove', onMove);
       document.documentElement.classList.remove('portal-core-resizing');
       const widths = readWidths(table);
-      widths[keyForHeader(header, index)] = Math.round(header.getBoundingClientRect().width);
+      widths[keyForHeader(header, columnIndex)] = Math.round(header.getBoundingClientRect().width);
       try { localStorage.setItem(widthStorageKey(table), JSON.stringify(widths)); } catch {}
+      window.dispatchEvent(new CustomEvent(TABLE_PREFERENCE_EVENT, {detail: {key: tableKey(table)}}));
     };
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp, { once: true });
@@ -355,6 +359,12 @@ function restoreWidths(table: HTMLTableElement) {
     const header = cell as HTMLTableCellElement;
     const saved = widths[keyForHeader(header, index)];
     if (Number.isFinite(saved)) applyColumnWidth(table, index, saved);
+    else if (header.dataset.portalResized === 'true') {
+      delete header.dataset.portalResized;
+      [header,...Array.from(table.tBodies).flatMap(body=>Array.from(body.rows).map(row=>row.cells[index]).filter(Boolean))].forEach(cell=>{
+        cell.style.removeProperty('width');cell.style.removeProperty('min-width');cell.style.removeProperty('max-width');
+      });
+    }
   });
 }
 

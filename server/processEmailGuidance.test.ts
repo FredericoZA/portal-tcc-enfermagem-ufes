@@ -11,7 +11,7 @@ test('cadastro orienta espera pela confirmação direta do departamento, sem upl
 test('convite, assinatura e entrega mantêm instruções curtas próprias da etapa',()=>{
  const invitation=processEmailGuidance(process,base,'INVITATION_SENT');assert.match(invitation,/carta-convite/);assert.match(invitation,/Avaliadores e coorientador: usem o botão/);assert.doesNotMatch(invitation,/Orientador:|Participantes:|Avaliação e ata/);
  const signature=processEmailGuidance(process,base,'SIGNATURE_REQUESTED');assert.match(signature,/Asten/);assert.match(signature,/Gov.br/);assert.doesNotMatch(signature,/Repositório|https?:/);
- const ata=processEmailGuidance(process,base,'EVALUATION_SUBMITTED');assert.match(ata,/Orientador: confira a ata/);assert.match(ata,/Autores: após a assinatura do orientador, aguardem/);
+ const ata=processEmailGuidance(process,base,'EVALUATION_SUBMITTED');assert.match(ata,/Orientador e examinadores: a ata exige as três assinaturas/);assert.match(ata,/solicitem pelo botão Asten ou Gov.br/);assert.match(ata,/os três assinam o mesmo PDF/);assert.match(ata,/aguardem as três assinaturas e o arquivamento/);assert.doesNotMatch(ata,/Somente o orientador.*assina a ata|e-mail automático/);
  const next=processEmailGuidance({...process,etapaAtual:'REPOSITORIO'},base,'SIGNATURE_COMPLETED');assert.match(next,/ata assinada foi arquivada/);assert.match(next,/Repositório/);
 });
 test('texto e HTML recebem orientações uma vez e escapam conteúdo',()=>{

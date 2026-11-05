@@ -1,6 +1,6 @@
 # Declarações: Gov.br e conferência manual no VALIDAR/ITI
 
-Gov.br pode ser usado junto com a Asten para ata, termo de autorização e declaração, conforme o papel e os pré-requisitos do processo. O orientador assina a ata; autores e orientador assinam o termo; a Presidência assina a declaração. A escolha segue a decisão do usuário de conferir no VALIDAR/ITI e aprovar no Portal.
+Gov.br pode ser usado junto com a Asten para ata, termo de autorização e declaração, conforme o papel e os pré-requisitos do processo. O orientador e os dois examinadores assinam a ata (três assinaturas no mesmo PDF); autores e orientador assinam o termo; a Presidência assina a declaração. A escolha segue a decisão do usuário de conferir no VALIDAR/ITI e aprovar no Portal.
 
 O fluxo usa a sessão autenticada vigente do Portal, sem solicitar outro código para preparar, devolver ou conferir o PDF. Sessões encerradas ou expiradas continuam exigindo o login normal. Na ata e no termo, o orientador reúne as assinaturas exigidas, assina por último e devolve o PDF; na declaração, a devolução cabe à Presidência. Administradores mantêm acesso operacional, sem substituir os signatários cadastrados.
 
@@ -52,3 +52,8 @@ O servidor confere arquivo, versão publicada e hash da amostra. Uma mudança
 posterior exige nova revisão. O histórico anterior e a auditoria são preservados.
 Alunos e outros participantes não podem publicar modelos. Não há repetição de
 OTP nessa operação autenticada de revisão do fluxo Gov.br.
+
+
+## Quantidade de assinaturas
+
+O servidor verifica a presença de assinaturas digitais distintas no envio e novamente antes da aprovação: três na ata, todos os autores e o orientador no termo, e a presidência na declaração. Assinaturas de revisões incrementais anteriores são consideradas; deve existir uma assinatura que cubra o PDF devolvido. Campos repetidos referenciando a mesma assinatura não contam como pessoas diferentes. Essa é uma verificação estrutural: a validade criptográfica e a correspondência de cada titular continuam dependendo da conferência administrativa no VALIDAR/ITI.

@@ -1,8 +1,10 @@
 import {withPortalOperation,requestOperationLabel} from './portalOperations';
 import { ProcessData, GlobalSettings, AuditLog, DocumentCorrectionRequest, GoogleCalendarSyncedEvent, SignatureJob, AstenIntegrationStatus } from '../types';
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
+import type { WorkflowSimulationResult, WorkflowSimulationScenario, WorkflowTraceEntry } from '../types/automation';
 import type { FeedbackEntry, FeedbackPage } from '../types/feedback';
 import type {AstenDocumentFoldersStatus,AstenDocumentFolderType} from '../types/signatures';
+import type { PresidencyQueueItem } from '../utils/coordinatorSignatureActions';
 import { isLocalDemoFrontend } from '../utils/runtimeEnvironment';
 import {verifyPublicPdfLocally,type PublicDocumentVerification} from '../utils/publicPdfVerification';
 import {
@@ -22,7 +24,7 @@ function reportExpiredSession(status:number,code:string|undefined,revision:numbe
 type WorkflowProcessResponse = ProcessData & { workflowPending?: boolean; workflowError?: string };
 
 export class ApiRequestError extends Error {
-  constructor(message: string, readonly status: number, readonly code?: string, readonly issues?: Record<string, string>) {
+  constructor(message: string, readonly status: number, readonly code?: string, readonly issues?: Record<string, string>, readonly retryAfterSeconds?: number) {
     super(message);
     this.name = 'ApiRequestError';
   }
@@ -106,7 +108,8 @@ export async function fetchApiRequest<T>(endpoint: string, options: ApiRequestOp
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       reportExpiredSession(response.status,errorData.code,identityRevision);
-      throw new ApiRequestError(errorData.error || errorData.message || `Erro HTTP ${response.status}`, response.status, errorData.code, errorData.issues);
+      const retryAfter = response.headers.get('Retry-After');
+      throw new ApiRequestError(errorData.error || errorData.message || `Erro HTTP ${response.status}`, response.status, errorData.code, errorData.issues, retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) : undefined);
     }
 
     return response.json();
@@ -194,7 +197,7 @@ export const apiClient = {
   getRegistrationDraft:()=>fetchApi<import('../types/workflowOperations').RegistrationDraft|null>('/api/registration/draft'),
   saveRegistrationDraft:(data:unknown)=>fetchApiRequest<import('../types/workflowOperations').RegistrationDraft>('/api/registration/draft',{method:'PUT',body:JSON.stringify(data)}),
   deleteRegistrationDraft:()=>fetchApi<{deleted:boolean}>('/api/registration/draft',{method:'DELETE'}),
-  getMe: () => fetchApi<{ userEmail: string; globalRoles: any[]; memberships: any[]; isAuthenticated: boolean }>('/api/me'),
+  getMe: () => fetchApi<{ userEmail: string; globalRoles: any[]; memberships: any[]; isAuthenticated: boolean; canRegisterProcess: boolean }>('/api/me'),
   getAuthStatus:()=>fetchApi<{otp:{configured:boolean};google:{oauthConfigured:boolean;connected:boolean};bootstrapMasterConfigured:boolean}>('/api/setup/status'),
   requestLoginCode:(email:string)=>fetchApi<{sent:boolean;expiresInMinutes:number;message:string}>('/api/auth/request-code',{method:'POST',body:JSON.stringify({email})}),
   verifyLoginCode:(email:string,code:string)=>fetchApi<any>('/api/auth/verify-code',{method:'POST',body:JSON.stringify({email,code})}),
@@ -202,7 +205,7 @@ export const apiClient = {
   getPublicProcess:(id:string)=>fetchApi<any>(`/api/public/processes/${encodeURIComponent(id)}`),
   getSettings: () => fetchApi<GlobalSettings>('/api/settings'),
   saveStudioImage:(input:{kind:'email'|'form';templateId:string;field:'logoUrl'|'heroImageUrl';value:string;expectedRevision:number;expectedImageValue?:string})=>fetchApi<{revision:number;savedAt:string;imageUrl:string;studio:IntegrationStudioSettings}>('/api/admin/studio/image',{method:'PATCH',body:JSON.stringify(input)}),
-  updateSettings: (settings: Partial<GlobalSettings>&{studioExpectedRevision?:number;studioSaveMode?:'autosave'}) => (settings.studioSaveMode==='autosave'?fetchApiRequest<GlobalSettings>:fetchApi<GlobalSettings>)('/api/admin/settings', {
+  updateSettings: (settings: Partial<GlobalSettings>&{studioExpectedRevision?:number;studioSaveMode?:'autosave'|'publish'}) => (settings.studioSaveMode==='autosave'?fetchApiRequest<GlobalSettings>:fetchApi<GlobalSettings>)('/api/admin/settings', {
     method: 'PATCH',
     body: JSON.stringify(settings)
   }),
@@ -224,7 +227,7 @@ export const apiClient = {
     method: 'POST',
     body: JSON.stringify(data)
   }),
-  updateProcess: (id: string, data: Partial<ProcessData> & { expectedDataRevision?: number }) => fetchApi<WorkflowProcessResponse&{reservationRestarted?:boolean}>(`/api/processes/${id}`, {
+  updateProcess: (id: string, data: Omit<Partial<ProcessData>, 'aluno1' | 'aluno2'> & { aluno1?: Partial<ProcessData['aluno1']>; aluno2?: Partial<NonNullable<ProcessData['aluno2']>> | null; expectedDataRevision?: number }) => fetchApi<WorkflowProcessResponse&{reservationRestarted?:boolean}>(`/api/processes/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data)
   }),
@@ -243,7 +246,7 @@ export const apiClient = {
     method: 'DELETE',body:JSON.stringify({confirmation:'EXCLUIR',expectedProcessId:id,deleteFiles:true,clearHistory:true})
   }),
   getProcessDeletions:()=>fetchApi<import('../../server/workflow/processDeletion').ProcessDeletionTask[]>('/api/admin/process-deletions'),
-  retryProcessDeletion:(id:string)=>fetchApi('/api/admin/process-deletions/'+encodeURIComponent(id)+'/retry',{method:'POST',body:JSON.stringify({})}),
+  retryProcessDeletion:(id:string)=>fetchApi<import('../../server/workflow/processDeletion').ProcessDeletionTask>('/api/admin/process-deletions/'+encodeURIComponent(id)+'/retry',{method:'POST',body:JSON.stringify({})}),
   getEvaluationSchema: (id: string) => fetchApi<{ studio: Partial<IntegrationStudioSettings>; outcomes: GlobalSettings['evaluationOutcomeOptions'];ataModelFingerprint?:string }>(`/api/processes/${id}/evaluation/schema`),
   getEvaluationDraft:(id:string)=>fetchApi<{processId:string;dataRevision:number;answers:Record<string,string|number|boolean>;documentText?:string;savedAt:string;modelFingerprint?:string;documentTextReset?:boolean}|null>(`/api/processes/${encodeURIComponent(id)}/evaluation/draft`),
   saveEvaluationDraft:(id:string,answers:Record<string,string|number|boolean>,expectedDataRevision:number,documentText?:string,expectedModelFingerprint?:string)=>fetchApiRequest<{savedAt:string;answers:Record<string,string|number|boolean>;documentText?:string}>(`/api/processes/${encodeURIComponent(id)}/evaluation/draft`,{method:'PUT',body:JSON.stringify({answers,expectedDataRevision,documentText,expectedModelFingerprint})}),
@@ -258,7 +261,9 @@ export const apiClient = {
   }),
   getProcessDocuments: (id: string) => fetchApi<any[]>(`/api/processes/${id}/documents`),
   downloadProcessDocument: (id: string, documentId: string) =>
-    downloadApiFile(`/api/processes/${id}/documents/${documentId}/download`),
+    downloadApiFile(`/api/processes/${encodeURIComponent(id)}/documents/${encodeURIComponent(documentId)}/download`),
+  downloadPublicProcessDocument: (id: string, documentId: string) =>
+    downloadApiFile(`/api/public/processes/${encodeURIComponent(id)}/documents/${encodeURIComponent(documentId)}/download`),
   getProcessSignatureJobs:(id:string)=>fetchApi<SignatureJob[]>(`/api/processes/${id}/signatures`),
   signProcessDocument:(id:string,type:string,provider:'ASTEN'|'GOV_BR'='ASTEN')=>fetchApi<{job:SignatureJob;message:string}>(`/api/processes/${id}/documents/${type}/sign`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({provider})}),
   downloadGovbrPdf:(jobId:string,returned=false)=>downloadApiFile(`/api/signatures/jobs/${encodeURIComponent(jobId)}/govbr/download${returned?'?kind=returned':''}`),
@@ -271,7 +276,7 @@ export const apiClient = {
     method: 'POST',
     body: JSON.stringify(data)
   }),
-  getCoordinatorQueue: () => fetchApi<any[]>('/api/coordinator/signature-queue'),
+  getCoordinatorQueue: () => fetchApi<PresidencyQueueItem[]>('/api/coordinator/signature-queue'),
   uploadSignedDocument: (processId: string, fileName: string) => fetchApi<any>('/api/coordinator/upload-signed', {
     method: 'POST',
     body: JSON.stringify({ processId, fileName })
@@ -288,14 +293,16 @@ export const apiClient = {
   getAstenDashboard:()=>fetchApi<any>('/api/admin/asten/dashboard'),
   getEmailDeliveries:()=>fetchApi<any[]>('/api/admin/email-deliveries'),
   retryEmailDelivery:(id:string)=>fetchApi<any>(`/api/admin/email-deliveries/${encodeURIComponent(id)}/retry`,{method:'POST'}),
+  recoverReservationNotices:()=>fetchApi<{checked:number;failed:number}>('/api/admin/reservation-notices/recover',{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   getWorkflowRuns:()=>fetchApi<any[]>('/api/admin/workflow-runs'),
+  getWorkflowProcessTrace:(protocol:string)=>fetchApi<WorkflowTraceEntry[]>(`/api/admin/workflow-runs?protocol=${encodeURIComponent(protocol)}`),
   getNotificationPreferences:()=>fetchApi<any>('/api/notification-preferences'),
   updateNotificationPreferences:(data:any)=>fetchApi<any>('/api/notification-preferences',{method:'PATCH',body:JSON.stringify(data)}),
   getNotifications:()=>fetchApi<any[]>('/api/notifications'),
   validateCourseStudio:(studio?:any)=>fetchApi<any>('/api/admin/studio/validate',{method:'POST',body:JSON.stringify({studio})}),
   getStudioVersions:()=>fetchApi<any[]>('/api/admin/studio/versions'),
   compareStudioVersion:(revision:number)=>fetchApi<any>(`/api/admin/studio/versions/${revision}/compare`),
-  restoreStudioVersion:(revision:number)=>fetchApi<any>(`/api/admin/studio/versions/${revision}/restore`,{method:'POST'}),
+  restoreStudioVersion:(revision:number,expectedRevision:number,reason:string)=>fetchApi<{studio:IntegrationStudioSettings;draft?:IntegrationStudioSettings}>(`/api/admin/studio/versions/${revision}/restore`,{method:'POST',body:JSON.stringify({expectedRevision,reason})}),
   runBackupDrill:()=>fetchApi<any>('/api/admin/backup/drill',{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   getRetentionPreview:()=>fetchApi<any>('/api/admin/retention/preview'),
   getLegalHolds:()=>fetchApi<any[]>('/api/admin/legal-holds'),
@@ -312,14 +319,15 @@ export const apiClient = {
   getSignatureJobs:()=>fetchApi<SignatureJob[]>('/api/signatures/jobs'),
   retrySignatureJob:(id:string)=>fetchApi<SignatureJob>(`/api/signatures/jobs/${id}/retry`,{method:'POST'}),
   reconcileSignatureJob:(id:string)=>fetchApi<SignatureJob>(`/api/signatures/jobs/${id}/reconcile`,{method:'POST'}),
+  previewReceipt:(decision:'CONFIRMED'|'UNAVAILABLE',receiptDesign:IntegrationStudioSettings['receiptDesign'])=>fetchApi<{contentBase64:string;fileName:string}>('/api/admin/receipts/preview',{method:'POST',body:JSON.stringify({decision,receiptDesign})}),
   previewDocumentModel:(type:'CONVITE'|'ATA'|'TERMO'|'DECLARACAO',studio:any)=>fetchApi<{analysis:unknown;fileName:string;downloadUrl?:string;contentBase64?:string}>(`/api/admin/models/${type}/preview`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({studio})}),
   getAuthorizedStudents:()=>fetchApi<any[]>('/api/admin/access-list'),
   getAccessListGoogleTemplate:()=>fetchApi<{url:string}>('/api/admin/access-list/google-template',{method:'POST'}),
   getLocalDocumentModelFile:(type:string)=>downloadApiFile(`/api/admin/models/${encodeURIComponent(type)}/local-source`),
-  addAuthorizedStudent:(data:{nome:string;email:string;matricula?:string;role?:'STUDENT'|'ADVISOR'|'CO_ADVISOR'|'EXAMINER';memberType?:'INTERNAL'|'EXTERNAL'})=>fetchApi<any>('/api/admin/access-list',{method:'POST',body:JSON.stringify(data)}),
+  addAuthorizedStudent:(data:{nome:string;email:string;role?:'STUDENT'|'ADVISOR'|'CO_ADVISOR'|'EXAMINER';memberType?:'INTERNAL'|'EXTERNAL'})=>fetchApi<any>('/api/admin/access-list',{method:'POST',body:JSON.stringify(data)}),
   updateAuthorizedStudent:(id:string,data:any)=>fetchApi<any>(`/api/admin/access-list/${id}`,{method:'PATCH',body:JSON.stringify(data)}),
   deleteAuthorizedStudent:(id:string)=>fetchApi<{deleted:boolean}>(`/api/admin/access-list/${id}`,{method:'DELETE'}),
-  importAuthorizedStudents:(records:Array<{nome:string;email:string;matricula?:string}>)=>fetchApi<{batchHash:string;created:number;updated:number;preservedRevocations:number;reused:boolean}>('/api/admin/access-list/import',{method:'POST',body:JSON.stringify({records})}),
+  importAuthorizedStudents:(records:Array<{nome:string;email:string}>)=>fetchApi<{batchHash:string;created:number;updated:number;preservedRevocations:number;reused:boolean}>('/api/admin/access-list/import',{method:'POST',body:JSON.stringify({records})}),
   getInstallationProfile:()=>fetchApi<any>('/api/admin/installation-profile'),
   updateInstallationProfile:(profile:any,expectedUpdatedAt?:string)=>fetchApi<any>('/api/admin/installation-profile',{method:'PATCH',body:JSON.stringify({profile,expectedUpdatedAt})}),
   getAcademicCycles:()=>fetchApi<any[]>('/api/admin/academic-cycles'),
@@ -336,14 +344,16 @@ export const apiClient = {
   cancelAdministrationTransfer:(id:string)=>fetchApi<any>(`/api/admin/administration-transfers/${encodeURIComponent(id)}/cancel`,{method:'POST'}),
   updateRecoveryEmails:(emails:string[])=>fetchApi<GlobalSettings>('/api/admin/recovery-emails',{method:'PATCH',body:JSON.stringify({emails})}),
   getAdminMetrics:(cycleId?:string)=>fetchApi<any>(`/api/admin/metrics${cycleId?`?cycleId=${encodeURIComponent(cycleId)}`:''}`),
+  getIndicators:(options:Pick<ApiRequestOptions,'signal'>={})=>fetchApi<any>('/api/public/indicators',options),
   getAdvancedAnalytics:(period='',compare='')=>fetchApi<any>(`/api/admin/analytics/advanced?${new URLSearchParams({period,compare})}`),
   downloadAdvancedAnalytics:(format:'csv'|'pdf',period='',compare='')=>downloadApiFile(`/api/admin/analytics/advanced?${new URLSearchParams({format,period,compare})}`),
-  simulateWorkflow:(studio: unknown,scenario: unknown)=>fetchApi<any>('/api/admin/workflow/simulate',{method:'POST',body:JSON.stringify({studio,scenario})}),
+  simulateWorkflow:(studio:IntegrationStudioSettings|undefined,scenario:WorkflowSimulationScenario)=>fetchApi<WorkflowSimulationResult>('/api/admin/workflow/simulate',{method:'POST',body:JSON.stringify({studio,scenario})}),
   getProcessVerifications:(id:string)=>fetchApi<any[]>(`/api/processes/${id}/verifications`),
   getPublicVerification:(code:string)=>fetchApi<any>(`/api/public/verification/${encodeURIComponent(code)}`),
   checkVerificationPdfFile:(code:string,file:File)=>verifyPublicPdfLocally(file,()=>fetchApi<PublicDocumentVerification>(`/api/public/verification/${encodeURIComponent(code)}`)),
   downloadInstitutionalDossier:(id:string,types?:string[])=>downloadApiFile(`/api/admin/processes/${encodeURIComponent(id)}/dossier${types?`?types=${encodeURIComponent(types.join(','))}`:''}`),
   getDocumentModels:()=>fetchApi<Record<string,any>>('/api/admin/models'),
+  getReferenceDocumentModelFolder:(type:string)=>fetchApi<{name:string;url:string}>(`/api/admin/models/${encodeURIComponent(type)}/reference-folder`),
   detectDocumentModelVariables:(type:string)=>fetchApi<{type:string;variables:string[];detectedAt:string}>(`/api/admin/models/${encodeURIComponent(type)}/detect-variables`,{method:'POST'}),
   uploadDocumentModelFile:(type:string,file:File)=>withDevelopmentFallback(file,async()=>{
     const staged=await stageFile(file,{purpose:'DOCUMENT_MODEL'});
@@ -352,16 +362,9 @@ export const apiClient = {
   importDocumentModelFromDrive:(type:string,linkOrId:string)=>fetchApi<any>(`/api/admin/models/${type}/link`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({linkOrId})}),
   restoreDocumentModelVersion:(type:string,version:number)=>fetchApi<any>(`/api/admin/models/${type}/versions/${version}/restore`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   deleteDocumentModel:(type:string)=>fetchApi<{deleted:boolean;type:string}>(`/api/admin/models/${encodeURIComponent(type)}`,{method:'DELETE'}),
-  confirmDefenseLocation:(id:string,data:{local:string;confirmationReceived:boolean;localEvidenceUrl?:string})=>fetchApi<WorkflowProcessResponse>(`/api/processes/${id}/confirm-location`,{method:'POST',body:JSON.stringify(data)}),
-  uploadLocationProof:async(id:string,file:File)=>{
-    if(file.size>24*1024*1024)throw new Error('O comprovante ultrapassa 24 MB. Envie uma versão menor do PDF.');
-    return withDevelopmentFallback(file,async()=>{
-      const staged=await stageFile(file,{purpose:'LOCATION_PROOF',processId:id});
-      return fetchApi<import('../types/workflowOperations').LocationProof>(`/api/processes/${encodeURIComponent(id)}/location-proof`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type})});
-    },async()=>fetchApi<import('../types/workflowOperations').LocationProof>(`/api/processes/${encodeURIComponent(id)}/location-proof`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})}));
-  },
   downloadLocationProof:(id:string)=>downloadApiFile(`/api/processes/${encodeURIComponent(id)}/location-proof/download`),
-  downloadReservationReceipt:(protocol:string)=>downloadApiFile(`/api/public/processes/${encodeURIComponent(protocol)}/reservation-receipt`),
+  getReservationReceipts:(protocol:string)=>fetchApi<{items:import('../types/workflowOperations').ReservationReceiptSummary[];currentStatus?:'PENDENTE'|'CONFIRMADO'|'RECUSADO'}>(`/api/public/processes/${encodeURIComponent(protocol)}/reservation-receipts`),
+  downloadReservationReceipt:(protocol:string,receiptId?:string)=>downloadApiFile(`/api/public/processes/${encodeURIComponent(protocol)}/reservation-receipt${receiptId?`?receipt=${encodeURIComponent(receiptId)}`:''}`),
   publishReviewedDocumentModel:(type:string,review:{fileId:string;version:number;sha256:string})=>fetchApi<any>(`/api/admin/models/${encodeURIComponent(type)}/publish-reviewed`,{method:'POST',body:JSON.stringify(review)}),
   previewOfficialModel:(type:string,studio:unknown,answers:unknown)=>fetchApi<any>(`/api/admin/models/${encodeURIComponent(type)}/preview`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({studio,answers})}),
   compareStudioDraft:(studio:unknown,baseRevision?:number)=>fetchApi<any>('/api/admin/studio/compare',{method:'POST',body:JSON.stringify({studio,baseRevision})}),
@@ -379,6 +382,8 @@ export const apiClient = {
   getProcessAuditLogs:(id:string)=>fetchApi<AuditLog[]>(`/api/processes/${encodeURIComponent(id)}/audit-logs`),
   downloadProcessAuditLogs:(id:string)=>downloadApiFile(`/api/processes/${encodeURIComponent(id)}/audit-logs/pdf`),
   getAuditLogs: () => fetchApi<AuditLog[]>('/api/admin/audit-logs'),
+  sendStudioEmailTest: (id: string, expectedRevision: number) => fetchApi<{status:'ACCEPTED_BY_GMAIL';deliveryId:string}>(`/api/admin/email-models/${encodeURIComponent(id)}/test`, {method:'POST', body:JSON.stringify({expectedRevision})}),
+  getEmailDeliveryPreview: (id: string) => fetchApi<{subject:string;text:string;sensitive:boolean}>(`/api/admin/email-deliveries/${encodeURIComponent(id)}/preview`),
   rollbackAuditLog: (logId: string) => fetchApi<{ message: string; process?: ProcessData; settings?: GlobalSettings }>(`/api/admin/rollback-log/${logId}`, {
     method: 'POST'
   }),
