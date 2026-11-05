@@ -18,7 +18,7 @@ export default async function handler(req:Request,res:Response){
     res.setHeader('Allow','GET');
     return res.status(405).json({error:'Método não permitido.'});
   }
-  const key=assetKey(req.query?.key);
+  const key=assetKey(req.params?.key??req.query?.key);
   if(!key)return res.status(404).json({error:'Ativo não localizado.'});
   if(!supabaseUrl()||!supabaseSecret())return res.status(503).json({error:'Ativo temporariamente indisponível.'});
   try{

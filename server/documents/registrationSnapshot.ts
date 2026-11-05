@@ -1,4 +1,5 @@
-import {DOCUMENT_ISSUER_LINES} from '../../src/utils/institutionalIdentity';
+import {DOCUMENT_ISSUER_LINES,documentHeaderLines} from '../../src/utils/institutionalIdentity';
+import {drawInstitutionalPdfHeader} from '../../src/utils/institutionalPdfHeader';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {PDFDocument,rgb,type PDFFont,type PDFPage} from 'pdf-lib';
@@ -20,11 +21,11 @@ export function registrationSnapshotSections(process:ProcessData,settings:Global
  const field=(label:string,value:unknown,wide=false):Field=>({label,value:String(value??'').trim()||'Não informado',wide});
  sections.push({title:'Trabalho',fields:[field('Título do TCC',process.titulo,true)]});
  for(const student of [process.aluno1,process.aluno2])if(student){
-  sections.push({title:'Aluno autor',fields:[field('Nome',student.nome,true),field('E-mail',student.email),field('Matrícula ou outro registro',student.matricula),field('Forma de referência',student.tratamento)]});
+  sections.push({title:'Aluno autor',fields:[field('Nome',student.nome,true),field('E-mail',student.email),...(student.matricula?[field('Matrícula ou outro registro',student.matricula)]:[]),field('Forma de referência',student.tratamento)]});
  }
  for(const [title,person]of [['Orientador',process.orientador],...process.banca.filter(person=>person.funcao!=='ORIENTADOR').map(person=>['Examinador',person] as const),['Coorientador',process.coorientador]] as const){
   if(!person?.nome?.trim())continue;
-  sections.push({title,fields:[field('Nome nos documentos',academicName(person,'abbreviated'),true),field('E-mail',person.email),field('Matrícula, SIAPE ou outro registro',person.siape),field('Instituição',person.instituicao,true)]});
+  sections.push({title,fields:[field('Nome nos documentos',academicName(person,'abbreviated'),true),field('E-mail',person.email),...(person.siape?[field('Matrícula, SIAPE ou outro registro',person.siape)]:[]),field('Instituição',person.instituicao,true)]});
  }
  sections.push({title:'Agendamento solicitado',fields:[field('Data',formatDateWithWeekday(process.defesa.startAt)),field('Horário',`${formatTime24h(process.defesa.startAt)} às ${formatTime24h(process.defesa.endAt)}`),field('Local',process.defesa.local,true),...(process.defesa.alternateLocation?[field('Local alternativo',process.defesa.alternateLocation,true)]:[])]});
  const answers=process.registrationAnswers||{};
@@ -77,13 +78,9 @@ async function renderBrandedRecordPdf(input:{title:string;protocol:string;revisi
  };
  const text=(value:string,x:number,top:number,size=9,font=normal,color=ink)=>page.drawText(value,{x,y:top,size,font,color});
  const header=()=>{
-  page=doc.addPage([595,842]);page.drawRectangle({x:0,y:714,width:595,height:128,color:green});
-  page.drawCircle({x:297,y:811,size:21,color:rgb(1,1,1)});page.drawImage(logo,{x:277,y:791,width:40,height:40});
-  let top=775;
-  for(const [value,size,font]of [[institution,11,bold],['Centro de Ciências da Saúde',9,normal],[course,9,normal]] as const)for(const row of wrap(value,font,size,width)){
-   text(row,(595-font.widthOfTextAtSize(row,size))/2,top,size,font,rgb(1,1,1));top-=15;
-  }
-  y=690;for(const titleRow of wrap(input.title,bold,18,width)){text(titleRow,margin,y,18,bold,green);y-=23;}
+  page=doc.addPage([595,842]);page.drawRectangle({x:0,y:742,width:595,height:100,color:green});
+  drawInstitutionalPdfHeader(page,{box:{x:0,y:742,width:595,height:100},lines:documentHeaderLines({institution,course}),font:bold,color:rgb(1,1,1),arms:logo,armsSize:48,armsBackground:rgb(1,1,1),fontSize:9});
+  y=718;for(const titleRow of wrap(input.title.toLocaleUpperCase('pt-BR'),bold,18,width)){text(titleRow,margin,y,18,bold,green);y-=23;}
   text(input.protocol,margin,y,10,bold);const revision=input.revision?`Revisão ${input.revision}`:'';text(revision,553-normal.widthOfTextAtSize(revision,8),y,8,normal,muted);y-=20;
  };
  const ensure=(height:number)=>{if(y-height<112)header();};

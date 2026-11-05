@@ -75,14 +75,18 @@ class NumberedCanvas(__import__('reportlab.pdfgen.canvas', fromlist=['Canvas']).
 
 def header(canvas, doc):
     canvas.saveState()
-    canvas.setFillColor(HexColor(GREEN)); canvas.rect(0, 722, 596, 120, fill=1, stroke=0)
-    canvas.drawImage(logo, 275, 785, width=45, height=45, mask='auto', preserveAspectRatio=True)
+    page_width, page_height = doc.pagesize
+    canvas.setFillColor(HexColor(GREEN)); canvas.rect(0, page_height-120, page_width, 120, fill=1, stroke=0)
+    logo_width, logo_height = logo.getSize(); width=42; height=width*logo_height/logo_width
+    canvas.drawImage(logo, (page_width-width)/2, page_height-52, width=width, height=height, mask='auto')
     canvas.setFillColor(HexColor('#FFFFFF')); canvas.setFont('PortalBold', 10)
-    canvas.drawCentredString(297.5, 767, 'Universidade Federal do Espírito Santo')
-    canvas.setFont('Portal', 9)
-    canvas.drawCentredString(297.5, 750, 'Curso de Graduação em Enfermagem e Obstetrícia')
+    canvas.drawCentredString(page_width/2, page_height-68, 'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO')
+    canvas.setFont('PortalBold', 9)
+    canvas.drawCentredString(page_width/2, page_height-82, 'CENTRO DE CIÊNCIAS DA SAÚDE')
+    canvas.setFont('PortalBold', 8.4)
+    canvas.drawCentredString(page_width/2, page_height-96, 'CURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA')
     canvas.setFont('PortalBold', 8)
-    canvas.drawCentredString(297.5, 733, 'Portal TCC · Identidade visual e formatação')
+    canvas.drawCentredString(page_width/2, page_height-110, 'PORTAL TCC · IDENTIDADE VISUAL E FORMATAÇÃO')
     canvas.restoreState()
 
 story = []

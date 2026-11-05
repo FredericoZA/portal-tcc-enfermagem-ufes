@@ -29,7 +29,7 @@ O portal não recria cabeçalho, margens ou diagramação dos modelos. A geraç�
 - [LGPD — Lei nº 13.709/2018](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm) e [orientações da ANPD para titulares](https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados).
 - Portaria Normativa GR/Ufes nº 310/2026: transcrição fornecida em `public/legislacao/PORTARIA_NORMATIVA_GR_UFES_310_2026.md`, com data de 23/10/2026 e publicação indicada em 27/10/2026. A fonte oficial assinada não foi localizada nesta revisão; o endereço institucional disponível é uma coleção, não a página individual do ato. A transcrição é material de consulta, sem autenticação nesta rodada.
 
-O funcionamento convencional do Portal não prova dispensa de transparência ou de análise institucional sobre ferramentas usadas no desenvolvimento. A transcrição trata dessa declaração no art. 19. Dados pessoais continuam sujeitos às medidas e responsabilidades descritas no aviso de privacidade e na nota técnica; a revisão de código não certifica conformidade jurídica.
+O funcionamento convencional do Portal não prova dispensa de transparência ou de análise institucional sobre ferramentas usadas no desenvolvimento. A transcrição trata dessa declaração no art. 19. Dados pessoais continuam sujeitos às medidas e responsabilidades descritas no aviso de privacidade; a revisão de código não certifica conformidade jurídica.
 
 ## Disciplina no termo de autorização — revisão local de 24/10/2026
 

@@ -24,8 +24,8 @@ test('declaração aprovada gera PDF A4 íntegro, com brasão da UFES e Comissã
 test('modelo contém estrutura institucional aprovada e assinatura do orientador', () => {
   const source = readFileSync('src/utils/blankAttendanceDeclaration.ts', 'utf8')+readFileSync('src/utils/institutionalIdentity.ts','utf8');
   for (const text of [
-    'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO',
-    'CENTRO DE CIÊNCIAS DA SAÚDE',
+    'documentHeaderLines',
+    'drawInstitutionalPdfHeader',
     'Departamento de Enfermagem',
     'Comissão de Trabalho de Conclusão de Curso',
     'DECLARAÇÃO DE COMPARECIMENTO',

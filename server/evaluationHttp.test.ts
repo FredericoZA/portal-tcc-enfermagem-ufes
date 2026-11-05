@@ -15,6 +15,7 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
   const custom = { id: 'form-extra-rc10', title: 'Conferência adicional', targetRole: 'Orientador', isActive: true, questions: [
     { id: 'choice', fieldKey: 'ESCOLHA', label: 'Escolha', fieldType: 'select', required: true, options: ['Sim', 'Não'] },
     { id: 'accepted', fieldKey: 'ACEITO', label: 'Confirmo', fieldType: 'checkbox', required: true },
+    { id: 'old-cpf', fieldKey: 'CAMPO_PESSOAL', label: 'CPF', fieldType: 'text', required: true },
   ] };
   settings.integrationStudio = { ...settings.integrationStudio, formTemplates: [...(settings.integrationStudio?.formTemplates || []), custom] } as any;
   const local = structuredClone(p);
@@ -70,14 +71,17 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     assert.equal(customSaved.status, 202);
     assert.equal(customSaved.body.workflowPending, true);
     assert.equal(customSaved.body.formSnapshot.title, custom.title);
+    assert.ok(!customSaved.body.formSnapshot.questions.some((q:any)=>q.label==='CPF'));
     const repeated = await request(customRoute, master, formBody);
     assert.equal(repeated.status, 202);
     assert.equal(repeated.body.id, customSaved.body.id);
     const confirmed = await request(`/api/processes/${local.id}/confirm-location`, master, { local: local.defesa.local, confirmationReceived: true });
-    assert.equal(confirmed.status, 202);
-    assert.equal(confirmed.body.dataRevision, local.dataRevision);
-    assert.equal(confirmed.body.defesa.localConfirmedAt, local.defesa.localConfirmedAt);
-    assert.equal((await request(`/api/processes/${local.id}/confirm-location`, master, { local: 'Outro local', confirmationReceived: true })).status, 409);
+    assert.equal(confirmed.status, 404);
+    assert.equal(confirmed.body.code,'API_NOT_FOUND');
+    const unchanged=await request(`/api/processes/${local.id}`,master);
+    assert.equal(unchanged.body.dataRevision,local.dataRevision);
+    assert.equal(unchanged.body.defesa.localConfirmedAt,local.defesa.localConfirmedAt);
+    assert.equal((await request(`/api/processes/${local.id}/confirm-location`, master, { local: 'Outro local', confirmationReceived: true })).status, 404);
     assert.equal((await request('/api/does-not-exist')).status, 404);
     assert.equal((await request(route + '/schema', p.aluno1.email)).status, 403);
     const schema = await request(route + '/schema');
@@ -101,7 +105,8 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     const draftInput={answers:{RESULTADO:'APROVADO',PARECER:body.parecer},documentText,expectedDataRevision:p.dataRevision};
     assert.equal((await saveDraft(p.aluno1.email,draftInput)).status,403);
     assert.equal((await saveDraft(p.orientador.email,{...draftInput,documentText:'x'.repeat(60001)})).status,400);
-    assert.equal((await saveDraft(p.orientador.email,draftInput)).status,200);
+    const savedDraft=await saveDraft(p.orientador.email,{...draftInput,answers:{...draftInput.answers,CPF:'NOVO-DESCARTAR',ORIENTADOR_SIAPE:'NOVO-DESCARTAR',CAMPO_NAO_PUBLICADO:'NOVO-DESCARTAR'}});
+    assert.equal(savedDraft.status,200);assert.doesNotMatch(JSON.stringify(savedDraft.body),/NOVO-DESCARTAR/);
     const draft=await request(route+'/draft');assert.equal(draft.body.documentText,documentText);
     assert.equal((await request(route+'/draft',p.aluno1.email)).status,403);
 

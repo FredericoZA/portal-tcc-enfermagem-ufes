@@ -27,6 +27,20 @@ test('eventos sem prova de envio não são rotulados como aceitos nem atribuem o
  record.status='FAILED';assert.equal(buildAuditFeed({logs:[],deliveries:[record],processes:[p]})[0].action,'EMAIL_ENVIO_FALHOU');
 });
 
+test('envio em processamento ou incerto preserva o estado sem afirmar falha definitiva',()=>{
+ const record=mail();record.dispatchStartedAt=record.createdAt;record.dispatchLeaseUntil='2099-11-04T12:02:00Z';
+ record.dispatchState='SENDING';
+ let [row]=buildAuditFeed({logs:[],deliveries:[record],processes:[p]});
+ assert.equal(row.action,'EMAIL_ENVIO_EM_PROCESSAMENTO');assert.equal(row.after.dispatchState,'SENDING');assert.equal(row.after.dispatchStartedAt,record.createdAt);
+ assert.equal(row.after.dispatchLeaseUntil,record.dispatchLeaseUntil);
+ record.dispatchLeaseUntil='2000-01-01T00:00:00Z';
+ [row]=buildAuditFeed({logs:[],deliveries:[record],processes:[p]});
+ assert.equal(row.action,'EMAIL_ENVIO_NAO_CONFIRMADO');assert.equal(row.after.dispatchState,'UNCERTAIN');assert.equal(record.dispatchState,'SENDING','apresentar o resultado não altera o registro persistido');
+ record.dispatchState='UNCERTAIN';record.status='FAILED';
+ [row]=buildAuditFeed({logs:[],deliveries:[record],processes:[p]});
+ assert.equal(row.action,'EMAIL_ENVIO_NAO_CONFIRMADO');assert.equal(row.after.dispatchState,'UNCERTAIN');
+});
+
 test('referência de processo excluído pode ser recuperada do próprio registro histórico',()=>{
  const row:AuditLog={id:'created',processId:p.id,actorEmail:p.aluno1.email,actorRoles:['STUDENT'],action:'CRIACAO_PROCESSO',entityType:'processo',entityId:p.id,after:p,timestamp:p.createdAt};
  const [shown]=buildAuditFeed({logs:[row],deliveries:[],processes:[]});assert.equal(shown.processProtocol,p.protocolo);assert.equal(shown.processTitle,p.titulo);assert.equal(shown.actorName,p.aluno1.nome);

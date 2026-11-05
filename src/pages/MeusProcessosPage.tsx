@@ -510,7 +510,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                 {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), meusProcessosTextFormat, '')}
               </div>
               <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 tracking-tight">Matrícula</div>
-              <div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno1?.matricula || '2026101890'}</div>
+              {proc.aluno1?.matricula&&<div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno1.matricula}</div>}
             </div>
           </td>
         );
@@ -524,7 +524,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                     {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), meusProcessosTextFormat, '')}
                   </div>
                   <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 tracking-tight">Matrícula</div>
-                  <div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno2.matricula || '2026101891'}</div>
+                  {proc.aluno2.matricula&&<div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno2.matricula}</div>}
                 </>
               ) : (
                 <span className="text-slate-400 font-mono text-[11px]">—</span>

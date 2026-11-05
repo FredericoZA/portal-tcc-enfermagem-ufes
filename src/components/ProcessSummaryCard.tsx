@@ -213,7 +213,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
         onClose={() => { if (!reservationSending) setReservationOpen(false); }}
         closeOnBackdrop={!reservationSending}
         closeOnEscape={!reservationSending}
-        title={`${denial ? 'Refazer reserva' : 'Alterar reserva da defesa'} - ${process.protocolo}`}
+        title={`${process.protocolo} - ${denial ? 'Refazer reserva' : 'Alterar reserva de defesa'}`}
         icon={CalendarClock}
         maxWidthClass="max-w-lg"
         bodyClassName="p-4"

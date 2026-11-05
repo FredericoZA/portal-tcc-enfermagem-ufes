@@ -1,30 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import {mkdtemp, writeFile, readFile, rm} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {mkdtemp, mkdir, writeFile, readFile, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {DEMO_PROCESSES, INITIAL_SETTINGS} from '../src/services/demoSeed';
 import {createProfessionalPdf} from './documents/simplePdf';
+import {reservationToken} from './workflow/reservationConfirmation';
 
-test('manual confirmation cannot turn a student-uploaded PDF into reservation approval', {timeout: 45000}, async () => {
+test('retired manual reservation routes are absent for every role while signed links and historical downloads remain available', {timeout: 45000}, async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'portal-manual-reservation-'));
   const p = structuredClone(DEMO_PROCESSES[0]);
   p.status = 'AGUARDANDO_CONFIRMACAO_LOCAL'; p.etapaAtual = 'CONFIRMACAO_LOCAL';
   p.avaliacao = {status: 'PENDENTE'}; p.acervo.submittedAt = undefined;
   p.defesa = {...p.defesa, localStatus: 'PENDENTE', reservationRevision: 0,
     invitationSentAt: undefined, invitationDriveFileId: undefined, departmentResponse: undefined, locationProof: undefined};
-  const settings = {...INITIAL_SETTINGS, driveRootFolderId: 'local-test-root', documentModels: {CONVITE: {driveFileId: 'fixture-model'}}};
-  const memberships = [
-    {email: p.aluno1.email, roles: ['STUDENT']},
-    {email: p.orientador.email, roles: ['ADVISOR']},
-    ...p.banca.filter(m => m.email !== p.orientador.email).map(m => ({email: m.email, roles: ['EXAMINER']})),
-  ].map((member, i) => ({...member, id: `membership-${i}`, processId: p.id, active: true}));
-  const refused = structuredClone(p); refused.id = 'refused-manual-test'; refused.defesa.localStatus = 'RECUSADO';
-  refused.defesa.departmentResponse = {decision: 'UNAVAILABLE', revision: 0, respondedAt: new Date().toISOString(), respondedBy: 'department@example.invalid', startAt: p.defesa.startAt, endAt: p.defesa.endAt};
-  await writeFile(path.join(directory, 'portal-state.json'), JSON.stringify({settings, processes: [p, refused], memberships, signatureJobs: []}));
-  const port = 46800 + Math.floor(Math.random() * 300), base = `http://127.0.0.1:${port}`;
-  // Only OS essentials are inherited: the test cannot load provider credentials.
+  const settings = {...INITIAL_SETTINGS, driveRootFolderId: 'local-test-root', documentModels: {CONVITE: {driveFileId: 'fixture-model'}},
+    emailConfig:{...INITIAL_SETTINGS.emailConfig,roomReservationDepartmentEmail:'department@example.invalid'}};
+  const historical = structuredClone(p); historical.id = 'historical-reservation-proof'; historical.protocolo = 'TCC-2026-0998'; historical.defesa.localStatus='RECUSADO';
+  const pdf = createProfessionalPdf({title: 'Comprovante histórico fictício', protocol: historical.protocolo, body: 'Arquivo anteriormente preservado.'});
+  const sha256 = createHash('sha256').update(pdf).digest('hex');
+  const key = createHash('sha256').update(JSON.stringify([historical.id,'COMPROVANTE_LOCAL',sha256])).digest('hex');
+  historical.defesa.locationProof = {driveFileId:`local_review_${key}`,fileName:'historico.pdf',sha256,version:1,reservationRevision:0,uploadedAt:'2026-10-01T12:00:00Z',uploadedBy:p.aluno1.email};
+  await mkdir(path.join(directory,'arquivos-demonstrativos'));
+  await writeFile(path.join(directory,'arquivos-demonstrativos',key+'.pdf'),pdf);
+  await writeFile(path.join(directory,'arquivos-demonstrativos',key+'.json'),JSON.stringify({processId:historical.id,artifactType:'COMPROVANTE_LOCAL',fileName:'historico.pdf',sha256}));
+  const memberships = [p,historical].flatMap(process => [
+    {email: process.aluno1.email, roles: ['STUDENT']},
+    {email: process.orientador.email, roles: ['ADVISOR']},
+    ...process.banca.filter(m => m.email !== process.orientador.email).map(m => ({email: m.email, roles: ['EXAMINER']})),
+  ].map((member,i) => ({...member,id:`membership-${process.id}-${i}`,processId:process.id,active:true})));
+  await writeFile(path.join(directory, 'portal-state.json'), JSON.stringify({settings, processes: [p,historical], memberships, signatureJobs: []}));
+  const port = 46800 + Math.floor(Math.random() * 300), base = `http://127.0.0.1:${port}`,secret='manual-reservation-test-0123456789abcdef';
   const systemEnv = Object.fromEntries(['PATH', 'HOME', 'TMPDIR', 'LANG'].flatMap(key => process.env[key] ? [[key, process.env[key]!]] : []));
   const bootstrap = "import{createRequire}from'node:module';import{pathToFileURL}from'node:url';const require=createRequire(import.meta.url);require('dotenv').config=()=>({parsed:{}});await import(pathToFileURL(process.cwd()+'/server.ts').href);";
   const child = spawn(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', bootstrap], {cwd: process.cwd(), env: {...systemEnv,
@@ -32,55 +40,42 @@ test('manual confirmation cannot turn a student-uploaded PDF into reservation ap
     PORTAL_DATA_DIR: directory, PORTAL_PERSISTENCE_PROVIDER: 'local_file',
     PORTAL_LOCAL_REVIEW_DATA: 'true', PORTAL_TEST_DOCUMENT_RENDERER: 'true', PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'true',
     PORTAL_ALLOW_LOCAL_OTP_STORE: 'true', PORTAL_ALLOW_LOCAL_SECRET_STORE: 'true',
-    PORTAL_SESSION_SECRET: 'manual-reservation-test-0123456789abcdef', PORTAL_OTP_PEPPER: 'manual-reservation-pepper-0123456789abcdef',
+    PORTAL_SESSION_SECRET: secret, PORTAL_OTP_PEPPER: 'manual-reservation-pepper-0123456789abcdef',
     ASTEN_INTEGRATION_ENABLED: 'false', DOTENV_CONFIG_PATH: path.join(directory, 'absent.env')}, stdio: 'ignore'});
   const disk = async () => JSON.parse(await readFile(path.join(directory, 'portal-state.json'), 'utf8'));
-  const confirm = (email: string, extra: Record<string, unknown> = {}) => fetch(`${base}/api/processes/${p.id}/confirm-location`, {
-    method: 'POST', headers: {'content-type': 'application/json', ...(email ? {'x-demo-user-email': email} : {})},
-    body: JSON.stringify({local: p.defesa.local, confirmationReceived: true, ...extra}),
-  });
+  const post = (route:string,email:string,body:unknown) => fetch(base+route,{method:'POST',headers:{'content-type':'application/json',...(email?{'x-demo-user-email':email}:{})},body:JSON.stringify(body)});
   try {
     const deadline = Date.now() + 20000;
     while (true) {try {if ((await fetch(base + '/api/health')).ok) break;} catch {}
       if (Date.now() > deadline || child.exitCode !== null) throw new Error('Isolated server failed to start');
       await new Promise(r => setTimeout(r, 100));}
-    const pdf = createProfessionalPdf({title: 'Comprovante fictício', protocol: p.protocolo, body: 'Arquivo sem autorização do responsável.'});
-    const upload = await fetch(`${base}/api/processes/${p.id}/location-proof`, {method: 'POST',
-      headers: {'content-type': 'application/json', 'x-demo-user-email': p.aluno1.email},
-      body: JSON.stringify({fileName: 'teste.pdf', contentBase64: pdf.toString('base64')})});
-    assert.equal(upload.status, 201, await upload.clone().text());
-    const before = (await disk()).processes[0];
-    assert.equal(before.defesa.locationProof.uploadedBy, p.aluno1.email);
-    const unauthorized = [p.aluno1.email, p.orientador.email, ...p.banca.map(m => m.email)];
-    for (const email of new Set(unauthorized)) {
-      const response = await confirm(email, {manualConfirmationReason: 'Tentativa de contornar a autorização', departmentResponse: {decision: 'CONFIRMED'}});
-      assert.equal(response.status, 403, email);
-      assert.equal((await response.json()).code, 'MANUAL_CONFIRMATION_FORBIDDEN');
+    const before = (await disk()).processes;
+    const users = ['',p.aluno1.email,p.orientador.email,...p.banca.map(m=>m.email),settings.masterEmail,settings.commissionPresidentEmail,'stranger@example.invalid'];
+    for(const email of new Set(users)){
+      for(const target of [p,historical]){
+        const confirmation=await post(`/api/processes/${target.id}/confirm-location`,email,{local:target.defesa.local,confirmationReceived:true,manualConfirmationReason:'Tentativa por rota removida'});
+        assert.equal(confirmation.status,404,email);assert.equal((await confirmation.json()).code,'API_NOT_FOUND');
+        const upload=await post(`/api/processes/${target.id}/location-proof`,email,{fileName:'reserva.pdf',contentBase64:pdf.toString('base64'),stagedUploadId:'old-ticket'});
+        assert.equal(upload.status,404,email);assert.equal((await upload.json()).code,'API_NOT_FOUND');
+      }
+      const staging=await post('/api/uploads/staging',email,{purpose:'LOCATION_PROOF',processId:p.id,fileName:'reserva.pdf',size:pdf.length,mimeType:'application/pdf',sha256});
+      assert.equal(staging.status,400,email);assert.match((await staging.json()).error,/Finalidade de upload inválida/);
     }
-    assert.equal((await confirm('')).status, 401);
-    assert.equal((await confirm('stranger@example.invalid')).status, 404);
-    assert.deepEqual((await disk()).processes[0], before, 'rejected requests must not change process state');
-    assert.equal((await disk()).workflowRuns?.length || 0, 0);
-    const noReason = await confirm('master@portal.local');
-    assert.equal((await noReason.json()).code, 'MANUAL_CONFIRMATION_REASON_REQUIRED');
-    const oversized = await confirm('master@portal.local', {manualConfirmationReason: 'x'.repeat(1001)});
-    assert.equal(oversized.status, 400);
-    const decision = await fetch(`${base}/api/processes/${refused.id}/confirm-location`, {method: 'POST',
-      headers: {'content-type': 'application/json', 'x-demo-user-email': 'master@portal.local'},
-      body: JSON.stringify({local: refused.defesa.local, confirmationReceived: true, manualConfirmationReason: 'Não deve substituir recusa'})});
-    assert.equal(decision.status, 409);
-    assert.equal((await decision.json()).code, 'RESERVATION_DECISION_RECORDED');
-    assert.equal((await disk()).processes.find((item: {id: string}) => item.id === refused.id).defesa.localStatus, 'RECUSADO');
-    // A valid administrative exception preserves its origin and reason in audit.
-    const accepted = await confirm('master@portal.local', {manualConfirmationReason: 'Autorização documental conferida pela secretaria'});
-    assert.ok([200, 202].includes(accepted.status), await accepted.clone().text());
-    const after = await disk();
-    assert.equal(after.processes[0].defesa.localStatus, 'CONFIRMADO');
-    const log = after.auditLogs.find((l: {action: string}) => l.action === 'CONFIRMACAO_LOCAL_ADMINISTRATIVA');
-    assert.equal(log.actorEmail, 'master@portal.local');
-    assert.equal(log.after.reason, 'Autorização documental conferida pela secretaria');
-    assert.equal(log.after.proofSha256, before.defesa.locationProof.sha256);
-    assert.equal(after.processes[0].defesa.departmentResponse, undefined, 'manual exception must not impersonate email approval');
+    const unchanged=await disk();assert.deepEqual(unchanged.processes,before);assert.equal(unchanged.workflowRuns?.length||0,0);assert.equal(unchanged.emailDeliveries?.length||0,0);
+    const historicalRoute=`/api/processes/${historical.id}/location-proof/download`;
+    assert.equal((await fetch(base+historicalRoute)).status,401);
+    assert.equal((await fetch(base+historicalRoute,{headers:{'x-demo-user-email':'stranger@example.invalid'}})).status,404);
+    const preserved=await fetch(base+historicalRoute,{headers:{'x-demo-user-email':p.aluno1.email}});
+    assert.equal(preserved.status,200);assert.deepEqual(Buffer.from(await preserved.arrayBuffer()),pdf);
+    const token=reservationToken({processId:p.id,revision:0,recipient:'department@example.invalid',expiresAt:Date.now()+600000},secret);
+    const url=base+'/api/reservation-confirmation/'+token;
+    assert.equal((await fetch(url)).status,200);
+    const response=await fetch(url,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded',origin:base},body:'decision=accept&confirmed=yes'});
+    assert.equal(response.status,200);assert.match(response.headers.get('content-type')||'',/application\/pdf/);
+    const accepted=(await disk()).processes.find((item:any)=>item.id===p.id);
+    assert.equal(accepted.protocolo,p.protocolo);assert.equal(accepted.defesa.localStatus,'CONFIRMADO');assert.equal(accepted.defesa.departmentResponse.respondedBy,'department@example.invalid');assert.equal(accepted.defesa.locationProof,undefined);
+    const receipt=await fetch(url+'/receipt');assert.equal(receipt.status,200);assert.equal(Buffer.from(await receipt.arrayBuffer()).subarray(0,5).toString(),'%PDF-');
+    assert.deepEqual((await disk()).processes.find((item:any)=>item.id===historical.id).defesa.locationProof,historical.defesa.locationProof);
   } finally {
     child.kill('SIGTERM'); await new Promise<void>(resolve => child.exitCode !== null ? resolve() : child.once('exit', () => resolve()));
     await rm(directory, {recursive: true, force: true});

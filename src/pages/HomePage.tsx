@@ -1421,6 +1421,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <div className="space-y-3">
                           <div className={`grid ${gridColsClass}`}>
                             {selectedDayDefenses.map((proc) => {
+                              const reservationPending = isDefenseReservationPending(proc);
                               const progress = proc.legacyRecord?{percent:100,label:'Registro histórico',color:'text-emerald-700'}:getProcessProgress(proc);
                               const showTopRow = calendarPopupFormat.showTime !== false || (calendarPopupFormat.showLocation !== false && proc.defesa?.local) || calendarPopupFormat.showProtocol !== false;
                               const showDetails = calendarPopupFormat.showStudents !== false || calendarPopupFormat.showAdvisor !== false || (calendarPopupFormat.showCoAdvisor !== false && proc.coorientador) || (calendarPopupFormat.showCommittee !== false && proc.banca && proc.banca.length > 0);
@@ -1433,7 +1434,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                     setSelectedDayGcalEvents(null);
                                     setProcessLink(proc.id,null,true);window.dispatchEvent(new CustomEvent('portal:open-process',{detail:{id:proc.id,readOnly:true}}));
                                   }}
-                                  data-reservation-status={isDefenseReservationPending(proc) ? 'pending' : undefined}
+                                  data-reservation-status={reservationPending ? 'pending' : undefined}
                                   className={`portal-calendar-day-defense text-slate-900 ${cardPaddingClass} ${cardRadiusClass} ${cardBorderClass} ${cardGapClass} ${cardShadowClass} hover:shadow-md cursor-pointer transition-all group flex flex-col`}
                                   style={{
                                     backgroundColor: calendarPopupFormat.cardBgColor || '#ffffff',
@@ -1447,7 +1448,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                       {calendarPopupFormat.showTime !== false ? (
                                         <div
                                           className="flex items-center gap-1.5 font-black"
-                                          style={{ color: calendarPopupFormat.timeTextColor || '#065f46' }}
+                                          style={{ color: reservationPending ? undefined : calendarPopupFormat.timeTextColor || '#065f46' }}
                                         >
                                           <Clock className="w-4 h-4 shrink-0" />
                                           <span>{getStartAndEndTime(proc.defesa?.startAt)}<PendingDefenseConfirmationNote process={proc} /></span>
@@ -1464,7 +1465,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                             className="font-mono font-bold px-2 py-0.5 rounded-md border border-slate-250 text-[10px]"
                                             style={{
                                               backgroundColor: calendarPopupFormat.protocolBadgeBg || 'var(--portal-surface-page)',
-                                              color: calendarPopupFormat.protocolBadgeText || '#1e293b'
+                                              color: reservationPending ? undefined : calendarPopupFormat.protocolBadgeText || '#1e293b'
                                             }}
                                           >
                                             {proc.protocolo}
@@ -1480,7 +1481,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                       className={`${cardTitleWeightClass} leading-snug ${cardTitleSizeClass} ${
                                         calendarPopupFormat.cardTitleUppercase !== false ? 'uppercase' : ''
                                       }`}
-                                      style={{ color: calendarPopupFormat.cardTitleColor || '#0f172a' }}
+                                      style={{ color: reservationPending ? undefined : calendarPopupFormat.cardTitleColor || '#0f172a' }}
                                     >
                                       {formatTccTitle(proc.titulo)}
                                     </h4>

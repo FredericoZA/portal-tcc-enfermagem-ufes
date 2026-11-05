@@ -17,10 +17,17 @@ test('manual público é PDF legível, com navegação e as três seções de pa
   }
 });
 
-test('manual em PDF fica no topo de Como usar e é compartilhado pelos perfis',()=>{
+test('manual em PDF fica em aviso antes do guia e é compartilhado pelos perfis',()=>{
   const sidebar=readFileSync('src/components/Sidebar.tsx','utf8');
   const tutorial=readFileSync('src/pages/PortalTutorialPage.tsx','utf8');
   assert.doesNotMatch(sidebar,/id="nav-item-manual"/);
   assert.match(tutorial,/id="tutorial-manual-pdf" href="\/manual\/manual-portal-tcc\.pdf" target="_blank" rel="noopener noreferrer"/);
-  assert.ok(tutorial.indexOf('id="tutorial-manual-pdf"')<tutorial.indexOf('Meu perfil:'));
+  const headerEnd=tutorial.indexOf('</section>'),guideStart=tutorial.indexOf('<PortalIllustratedGuide');
+  const linkStart=tutorial.indexOf('id="tutorial-manual-pdf"');
+  assert.ok(headerEnd>=0&&guideStart>headerEnd);
+  assert.ok(linkStart>headerEnd&&linkStart<guideStart,'O manual fica fora do cabeçalho e antes do guia');
+  const notice=tutorial.slice(headerEnd,guideStart);
+  assert.match(notice,/portal-instruction/);
+  assert.match(notice,/Acesse o manual detalhado/);
+  assert.match(notice,/Manual em PDF/);
 });

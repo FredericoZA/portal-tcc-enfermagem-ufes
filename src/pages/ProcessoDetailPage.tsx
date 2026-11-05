@@ -9,9 +9,9 @@ import {defenseEndAt} from '../utils/defenseSchedule';
 import {STUDENT_TREATMENTS,FACULTY_TREATMENTS,ACADEMIC_DEGREES} from '../utils/personPresentation';
 import {downloadPortalDocument} from '../utils/documentDownload';
 import {auditChanges} from '../utils/processAudit';
-import {publicationDeclined,finalDeliveryMessage} from '../utils/finalDeliveryPresentation';
+import {administrativeDocumentAvailability,finalDeliveryMessage} from '../utils/finalDeliveryPresentation';
 import {InlineProcessField} from '../components/InlineProcessField';
-import {localDateTimeToIso} from '../utils/operationalConfig';
+import {localDateTimeToIso,isRegistrationIdentifierField} from '../utils/operationalConfig';
 import {readProcessLink,setProcessLink,processLink,processWorkflowSection,type ProcessSection} from '../utils/processLink';
 import { portalConfirm, portalNotice, portalPrompt } from '../services/portalDialogs';
 import { AdvisorEvaluationPanel } from '../components/AdvisorEvaluationPanel';
@@ -95,6 +95,9 @@ interface AuditLogEntry {
   details: string;
 }
 
+function withoutRegistrationIdentifiers<T extends object>(person:T):Partial<T> {
+  return Object.fromEntries(Object.entries(person).filter(([key])=>!isRegistrationIdentifierField(key)&&!/^(?:registro|ra)$/i.test(key))) as Partial<T>;
+}
 
 export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   processId,
@@ -212,11 +215,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     cargaHoraria: '60 Horas Aula (TCC II)',
     aluno1Nome: '',
     aluno1Email: '',
-    aluno1Matricula: '',
     hasAluno2: false,
     aluno2Nome: '',
     aluno2Email: '',
-    aluno2Matricula: '',
     orientadorNome: '',
     orientadorEmail: '',
     orientadorInstituicao: '',
@@ -308,11 +309,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         cargaHoraria: '60 Horas Aula (TCC II)',
         aluno1Nome: pData.aluno1?.nome || '',
         aluno1Email: pData.aluno1?.email || '',
-        aluno1Matricula: pData.aluno1?.matricula || '',
         hasAluno2: Boolean(pData.aluno2),
         aluno2Nome: pData.aluno2?.nome || '',
         aluno2Email: pData.aluno2?.email || '',
-        aluno2Matricula: pData.aluno2?.matricula || '',
         orientadorNome: pData.orientador?.nome || '',
         orientadorEmail: pData.orientador?.email || '',
         orientadorInstituicao: pData.orientador?.instituicao || installationProfile.defaultInstitutionName,
@@ -453,6 +452,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const isAdvisor = !readOnly && normalizeEmail(process.orientador.email) === normEmail;
   const isCoAdvisor = !readOnly && process.coorientador && normalizeEmail(process.coorientador.email) === normEmail;
   const isExaminer = process.banca.some((b) => (b.funcao === 'EXAMINER_2' || b.funcao === 'EXAMINER_3') && normalizeEmail(b.email) === normEmail);
+  const hasHistoricalRegistration = !readOnly && [process.aluno1, process.aluno2, process.orientador, ...process.banca, process.coorientador].some(person => person && (('matricula' in person && String(person.matricula || '').trim()) || ('siape' in person && String(person.siape || '').trim())));
 
   const isEvaluationSubmitted = Boolean(process.avaliacao?.submittedAt) || process.avaliacao?.status === 'CONCLUIDO' || process.avaliacao?.notaFinal !== undefined;
   const isAcervoSubmitted = Boolean(process.acervo?.submittedAt);
@@ -511,20 +511,19 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     if (!process) return;
     try {
       const updatedAluno1 = {
-        ...process.aluno1,
+        ...withoutRegistrationIdentifiers(process.aluno1),
         nome: cadastralForm.aluno1Nome.trim(),
-        email: cadastralForm.aluno1Email.trim(),
-        matricula: cadastralForm.aluno1Matricula.trim()
+        email: cadastralForm.aluno1Email.trim()
       };
 
       const updatedAluno2 = cadastralForm.hasAluno2 && cadastralForm.aluno2Nome.trim() ? {
+        ...withoutRegistrationIdentifiers(process.aluno2 || {}),
         nome: cadastralForm.aluno2Nome.trim(),
-        email: cadastralForm.aluno2Email.trim(),
-        matricula: cadastralForm.aluno2Matricula.trim()
+        email: cadastralForm.aluno2Email.trim()
       } : null;
 
       const updatedOrientador = {
-        ...process.orientador,
+        ...withoutRegistrationIdentifiers(process.orientador),
         nome: cadastralForm.orientadorNome.trim(),
         email: cadastralForm.orientadorEmail.trim(),
         instituicao: cadastralForm.orientadorInstituicao.trim() || installationProfile.defaultInstitutionName
@@ -837,8 +836,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 <div className="portal-members-table-scroll" role="region" aria-label="Tabela de membros com rolagem horizontal" tabIndex={0}>
                   <table className="portal-members-table">
                     <caption className="sr-only">Participantes do TCC e seus dados cadastrais</caption>
-                    {!readOnly&&<colgroup><col style={{width:'10%'}}/><col style={{width:'18%'}}/><col style={{width:'10%'}}/><col style={{width:'9%'}}/><col style={{width:'23%'}}/><col style={{width:'13%'}}/><col style={{width:'17%'}}/></colgroup>}
-                    <thead><tr><th scope="col">Função</th><th scope="col">Nome</th><th scope="col">Referência</th><th scope="col">Titulação</th>{!readOnly&&<><th scope="col">E-mail</th><th scope="col" title="Matrícula, SIAPE ou outro registro">Registro</th></>}<th scope="col">Instituição</th></tr></thead>
+                    {!readOnly&&<colgroup><col style={{width:hasHistoricalRegistration?'10%':'12%'}}/><col style={{width:hasHistoricalRegistration?'18%':'23%'}}/><col style={{width:'10%'}}/><col style={{width:'9%'}}/><col style={{width:hasHistoricalRegistration?'23%':'26%'}}/>{hasHistoricalRegistration&&<col style={{width:'13%'}}/>}<col style={{width:hasHistoricalRegistration?'17%':'20%'}}/></colgroup>}
+                    <thead><tr><th scope="col">Função</th><th scope="col">Nome</th><th scope="col">Referência</th><th scope="col">Titulação</th>{!readOnly&&<th scope="col">E-mail</th>}{hasHistoricalRegistration&&<th scope="col" title="Matrícula, SIAPE ou outro registro histórico">Registro</th>}<th scope="col">Instituição</th></tr></thead>
                     <tbody>
                 {[
                   {role:participantRole('student',process.registrationAnswers,'ALUNO_1',process.aluno1),person:process.aluno1,student:true,key:'aluno1'},
@@ -847,14 +846,14 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   ...process.banca.filter(person=>readOnly?person.funcao!=='ORIENTADOR':normalizeEmail(person.email)!==normalizeEmail(process.orientador.email)&&normalizeEmail(person.email)!==normalizeEmail(process.coorientador?.email||'')).map((person,index)=>({role:participantRole('examiner',process.registrationAnswers,`EXAMINADOR_${person.funcao.match(/EXAMINER_(\d+)/)?.[1]||index+2}`,person),person,student:false,key:'banca'})),
                   ...(process.coorientador?.nome?.trim()?[{role:participantRole('coadvisor',process.registrationAnswers,'COORIENTADOR',process.coorientador),person:process.coorientador,student:false,key:'coorientador'}]:[])
                 ].map(({role,person,student,key})=>{
-                  const field=(property:string,value:string)=>key==='banca'?{banca:process.banca.map(member=>member===person?{...member,[property]:value}:member)}:{[key]:{...person,[property]:value}};
+                  const field=(property:string,value:string)=>key==='banca'?{banca:process.banca.map(member=>member===person?{...withoutRegistrationIdentifiers(member),[property]:value}:withoutRegistrationIdentifiers(member))}:{[key]:{...withoutRegistrationIdentifiers(person),[property]:value}};
                   return <tr key={`${key}-${person.email||person.nome}`}>
                     <th scope="row">{role}</th>
                     <td className="font-bold">{inlineField(`Nome — ${role}`,person.nome,value=>field('nome',value))}</td>
                     <td>{inlineField(`Tratamento — ${role}`,person.tratamento||'',value=>field('tratamento',value),'text',person.tratamento||'Não informado',canEditData,false,student?STUDENT_TREATMENTS:FACULTY_TREATMENTS)}</td>
                     <td>{student?<span aria-label="Não se aplica">—</span>:inlineField(`Titulação — ${role}`,'titulacao' in person?person.titulacao||'':'',value=>field('titulacao',value),'text','titulacao' in person?person.titulacao||'Não informada':'Não informada',canEditData,false,ACADEMIC_DEGREES)}</td>
-                    {!readOnly&&<><td>{(student?localFormat.showStudentEmail:localFormat.showAdvisorEmail)!==false?inlineField(`E-mail — ${role}`,person.email,value=>field('email',value),'email'):<span aria-label="Não exibido">—</span>}</td>
-                    <td>{(!student||localFormat.showStudentMatricula!==false)?inlineField(`Número de registro — ${role}`,String(student?('matricula' in person?person.matricula:''):('siape' in person?person.siape||'':'')),value=>field(student?'matricula':'siape',value)):<span aria-label="Não exibido">—</span>}</td></>}
+                    {!readOnly&&<td>{(student?localFormat.showStudentEmail:localFormat.showAdvisorEmail)!==false?inlineField(`E-mail — ${role}`,person.email,value=>field('email',value),'email'):<span aria-label="Não exibido">—</span>}</td>}
+                    {hasHistoricalRegistration&&<td>{(!student||localFormat.showStudentMatricula!==false)?<span className="portal-inline-field-value">{String(student?('matricula' in person?person.matricula||'—':'—'):('siape' in person?person.siape||'—':'—'))}</span>:<span aria-label="Não exibido">—</span>}</td>}
                     <td>{student?<span className="portal-inline-field-value">UFES</span>:localFormat.showAdvisorInstitution!==false?inlineField(`Instituição — ${role}`,String(('instituicao' in person&&person.instituicao)||''),value=>field('instituicao',value)):<span aria-label="Não exibido">—</span>}</td>
                   </tr>;
                 })}
@@ -908,8 +907,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
               <ReservationReceiptCard protocol={process.protocolo} revision={process.defesa.reservationRevision} currentStatus={effectiveDefenseReservationStatus(process)} downloadUrl={hasReservationReceipt ? `/api/public/processes/${encodeURIComponent(process.protocolo)}/reservation-receipt` : undefined}/>
               {documents.map((doc) => {
-                const termDeclined=doc.type==='TERMO'&&publicationDeclined(process);
-                const isDownloadable = !termDeclined&&(doc.status === 'DISPONIVEL' || doc.status === 'ASSINADO');
+                const {publicationDeclined:termDeclined,available:isDownloadable}=administrativeDocumentAvailability(process,doc,readOnly);
                 const canRequestSignature=!readOnly&&doc.status!=='ASSINADO'&&!documentSignatureCompleted(signatureJobs,process.id,doc.type,process.dataRevision)&&!termDeclined&&doc.requiresSignature&&doc.status!=='NAO_DISPONIVEL'&&(isMasterAdmin||isCommissionPresident||(doc.type==='ATA'&&(isAdvisor||isExaminer))||(doc.type==='TERMO'&&(isStudent||isAdvisor)));
 
                 const getDocInfo = (type: string) => {
@@ -1199,8 +1197,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           </section>
           <section className="portal-modal-card space-y-2 p-4 text-xs">
             <strong>Exclusão completa do TCC</strong>
-            <p>Serão removidos os arquivos, as solicitações de assinatura, os eventos de agenda e o histórico vinculados a este trabalho nas plataformas integradas.</p>
-            <p>Se algum serviço não confirmar a remoção, a limpeza continuará pendente em Configurações → Integrações e Plataforma. Modelos e registros de outros trabalhos serão preservados.</p>
+            <p>Serão removidos os registros deste TCC no Portal e no Supabase, seus arquivos no Google Drive, os eventos de agenda e o histórico vinculados a este trabalho. Modelos e registros de outros trabalhos serão preservados.</p>
+            <p>A exclusão dos envelopes e documentos na Asten deve ser feita manualmente na própria Asten. Excluir o TCC no Portal não confirma o expurgo das assinaturas no provedor.</p>
+            <p>Se a limpeza dos registros e arquivos do Portal não for confirmada, a pendência aparecerá em Configurações → Integrações e Plataforma.</p>
           </section>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => { setShowDeleteModal(false); setDeleteConfirmInput(''); }} className="portal-action">Cancelar</button>

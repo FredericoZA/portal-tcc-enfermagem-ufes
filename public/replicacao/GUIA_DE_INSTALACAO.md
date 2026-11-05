@@ -24,7 +24,6 @@ O Portal TCC é um sistema administrativo para o ciclo completo do trabalho de c
 
 **Legislação:** a Portaria Normativa GR/Ufes nº 310/2026 é referência para a revisão técnica desta instalação. Não existem chamadas a modelos de IA nos fluxos operacionais descritos. Isso não substitui as verificações de LGPD, segurança da informação, contratos, registros de tratamento e demais exigências institucionais aplicáveis.
 
-O responsável técnico pode consultar `docs/NOTA_TECNICA_PORTARIA_310_LGPD_2026-11-04.md` para revisar as evidências de controles, riscos residuais, requisitos institucionais e o checklist de pré-publicação. A nova instalação deve produzir sua própria avaliação de riscos e privacidade.
 
 ## Arquitetura
 

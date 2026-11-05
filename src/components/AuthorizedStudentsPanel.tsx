@@ -16,6 +16,7 @@ import type { AuthorizedStudent, ProcessRole } from '../types';
 import {
   parseStudentImportFile,
   parseStudentImportText,
+  accessImportRowsWithoutIdentifiers,
   type StudentImportRow,
 } from '../utils/studentImport';
 import { accessImportIssues } from '../utils/accessImportValidation';
@@ -74,7 +75,6 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
   const [saving, setSaving] = useState(false);
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
-  const [matricula, setMatricula] = useState('');
   const [role, setRole] = useState<ProcessRole>('STUDENT');
   const [search, setSearch] = useState('');
   const [recordsLimit, setRecordsLimit] = useState<number | 'all'>(initialConfig.recordsLimit || 25);
@@ -103,8 +103,8 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
   const add = async (event: React.FormEvent) => {
     event.preventDefault(); setSaving(true);
     try {
-      await apiClient.addAuthorizedStudent({ nome, email, matricula: matricula.trim() || undefined, role });
-      setNome(''); setEmail(''); setMatricula(''); setRole('STUDENT'); setModal(null); await load();
+      await apiClient.addAuthorizedStudent({ nome, email, role });
+      setNome(''); setEmail(''); setRole('STUDENT'); setModal(null); await load();
     } catch (error) { portalNotice(error instanceof Error ? error.message : 'Falha ao cadastrar acesso.'); }
     finally { setSaving(false); }
   };
@@ -133,7 +133,7 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
       const rows=importFile?await parseStudentImportFile(importFile):parseStudentImportText(pasteText);
       if(revision!==importRevision.current)return;
       if(!rows.length)throw new Error('Nenhuma pessoa encontrada. Informe nome e e-mail, uma pessoa por linha.');
-      setImportRows(rows);
+      setImportRows(accessImportRowsWithoutIdentifiers(rows));
     } catch(error) {
       if(revision===importRevision.current)setImportError(error instanceof Error?error.message:'Não foi possível ler a lista.');
     } finally {if(revision===importRevision.current)setReading(false);}
@@ -143,7 +143,7 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
     if(reading||saving||!importRows.length||issues.length)return;
     setSaving(true);setImportError('');
     try {
-      const result=await apiClient.importAuthorizedStudents(importRows);
+      const result=await apiClient.importAuthorizedStudents(accessImportRowsWithoutIdentifiers(importRows));
       setImportRows([]);setPasteText('');setImportFile(null);setModal(null);await load();
       portalNotice(result.reused?'Esta lista já foi importada.':`${result.created} acesso(s) criado(s) e ${result.updated} atualizado(s).${result.preservedRevocations?' Acessos revogados permaneceram inativos.':''}`);
     } catch (error) {
@@ -182,7 +182,8 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
       .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR', { sensitivity: 'base' }));
   }, [entries, search]);
   const shown = filtered;
-  const activeColumns = columnOrder.filter((key) => visibleColumns[key] !== false || key === 'nome');
+  const hasHistoricalRegistration = entries.some(entry => Boolean(String(entry.matricula || '').trim()));
+  const activeColumns = columnOrder.filter((key) => (key !== 'matricula' || hasHistoricalRegistration) && (visibleColumns[key] !== false || key === 'nome'));
 
   const renderCell = (entry: AuthorizedStudent, key: string) => {
     const adminRole = administrativeRole(entry);
@@ -224,7 +225,7 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
       </TableScrollWrapper>
     </div>
 
-    {modal === 'add' && <CompactModal title="Adicionar acesso" onClose={() => setModal(null)}><form onSubmit={add} className="space-y-2"><div className="grid gap-2 sm:grid-cols-2"><label><span className="mb-1 block text-[9px] font-black normal-case text-slate-600">Nome completo</span><input required value={nome} onChange={(event) => setNome(event.target.value)} className={inputClass} /></label><label><span className="mb-1 block text-[9px] font-black normal-case text-slate-600">E-mail</span><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} placeholder="usuario@gmail.com" /></label><label><span className="mb-1 block text-[9px] font-black normal-case text-slate-600">Matrícula — opcional</span><input value={matricula} onChange={(event) => setMatricula(event.target.value)} className={inputClass} /></label></div><p className="text-[10px] leading-4 text-slate-600">O acesso é definido por esta lista. O e-mail não precisa pertencer a um domínio institucional.</p><div className="flex justify-end pt-1"><button disabled={saving} className={popupActionButton}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}Adicionar</button></div></form></CompactModal>}
+    {modal === 'add' && <CompactModal title="Adicionar acesso" onClose={() => setModal(null)}><form onSubmit={add} className="space-y-2"><div className="grid gap-2 sm:grid-cols-2"><label><span className="mb-1 block text-[9px] font-black normal-case text-slate-600">Nome completo</span><input required value={nome} onChange={(event) => setNome(event.target.value)} className={inputClass} /></label><label><span className="mb-1 block text-[9px] font-black normal-case text-slate-600">E-mail</span><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} placeholder="usuario@gmail.com" /></label></div><p className="text-[10px] leading-4 text-slate-600">O acesso é definido por esta lista. O e-mail não precisa pertencer a um domínio institucional.</p><div className="flex justify-end pt-1"><button disabled={saving} className={popupActionButton}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}Adicionar</button></div></form></CompactModal>}
 
     {modal === 'list' && <CompactModal title="Envio de lista" onClose={() => {if(!saving){sourceChanged();setModal(null);}}}><div className="space-y-4" data-access-import="true">
       <div className="flex flex-wrap gap-2">
@@ -237,7 +238,7 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
         onDrop={event=>{event.preventDefault();setDragging(false);if(saving)return;sourceChanged();const file=event.dataTransfer.files[0];if(file){setImportFile(file);setPasteText('');}else{setPasteText(event.dataTransfer.getData('text/plain'));setImportFile(null);}}}>
         <label htmlFor="access-import-text" className="mb-2 block text-xs font-bold">Dados da lista de acesso</label>
         <div className="relative">
-          <textarea id="access-import-text" aria-label="Dados da lista de acesso" aria-describedby="access-import-file-status" value={pasteText} disabled={saving} onChange={event=>{sourceChanged();setPasteText(event.target.value);setImportFile(null);}} rows={6} className={`${inputClass} block min-h-40 resize-y pb-14 font-mono`} placeholder={'Cole uma pessoa por linha, em qualquer ordem: nome, e-mail e matrícula opcional. Não precisa de cabeçalho.\nMaria Silva\tmaria@example.invalid\t202612345'}/>
+          <textarea id="access-import-text" aria-label="Dados da lista de acesso" aria-describedby="access-import-file-status" value={pasteText} disabled={saving} onChange={event=>{sourceChanged();setPasteText(event.target.value);setImportFile(null);}} rows={6} className={`${inputClass} block min-h-40 resize-y pb-14 font-mono`} placeholder={'Cole uma pessoa por linha: nome e e-mail, em qualquer ordem. Não precisa de cabeçalho.\nMaria Silva\tmaria@example.invalid'}/>
           <label className={`${whiteButton} absolute bottom-3 right-3 cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--portal-brand-header)]`}><Upload className="h-3.5 w-3.5"/>Adicionar arquivo<input aria-label="Selecionar planilha ou PDF" disabled={saving} className="sr-only" type="file" accept=".xlsx,.csv,.txt,.pdf" onChange={event=>{const file=event.target.files?.[0];if(file){sourceChanged();setImportFile(file);setPasteText('');}event.currentTarget.value='';}}/></label>
         </div>
         <p id="access-import-file-status" className="mt-2 break-words text-xs text-slate-600" role="status">{importFile?`Arquivo: ${importFile.name}`:'XLSX, CSV, TXT ou PDF com texto selecionável, até 5 MB'}</p>
@@ -246,7 +247,7 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
       {reading&&<p role="status" className="text-xs">Lendo o arquivo e preparando a conferência…</p>}
       {importError&&<p role="alert" className="portal-instruction p-3 text-xs">{importError}</p>}
       {issues.length>0&&<div role="alert" className="portal-instruction p-3 text-xs"><p className="font-bold">Corrija a lista e clique em Interpretar dados novamente.</p><ul>{issues.slice(0,20).map(issue=><li key={issue.row}>Linha {issue.row}: {issue.reason}.</li>)}</ul>{issues.length>20&&<p>Mais {issues.length-20} linha(s) precisam de correção.</p>}</div>}
-      {importRows.length>0&&<div className="overflow-hidden rounded-lg border border-slate-300 bg-white"><div className="border-b border-slate-200 px-3 py-2 text-xs font-bold">{importRows.length} pessoa(s) para conferência{importRows.length>100?' — exibindo as primeiras 100':''}</div><div className="max-h-48 overflow-auto"><table className="w-full text-left text-xs"><thead><tr><th className="p-2">Linha</th><th className="p-2">Nome</th><th className="p-2">E-mail</th><th className="p-2">Matrícula</th></tr></thead><tbody>{importRows.slice(0,100).map(row=><tr key={`${row.row}-${row.email}`}><td className="p-2">{row.row}</td><td className="p-2">{row.nome||'—'}</td><td className="p-2">{row.email||'—'}</td><td className="p-2">{row.matricula||'—'}</td></tr>)}</tbody></table></div><div className="flex justify-end border-t p-2"><button type="button" disabled={saving||reading||issues.length>0} onClick={()=>void confirmImport()} className={popupActionButton}>{saving?'Importando…':`Importar ${importRows.length}`}</button></div></div>}
+      {importRows.length>0&&<div className="overflow-hidden rounded-lg border border-slate-300 bg-white"><div className="border-b border-slate-200 px-3 py-2 text-xs font-bold">{importRows.length} pessoa(s) para conferência{importRows.length>100?' — exibindo as primeiras 100':''}</div><div className="max-h-48 overflow-auto"><table className="w-full text-left text-xs"><thead><tr><th className="p-2">Linha</th><th className="p-2">Nome</th><th className="p-2">E-mail</th></tr></thead><tbody>{importRows.slice(0,100).map(row=><tr key={`${row.row}-${row.email}`}><td className="p-2">{row.row}</td><td className="p-2">{row.nome||'—'}</td><td className="p-2">{row.email||'—'}</td></tr>)}</tbody></table></div><div className="flex justify-end border-t p-2"><button type="button" disabled={saving||reading||issues.length>0} onClick={()=>void confirmImport()} className={popupActionButton}>{saving?'Importando…':`Importar ${importRows.length}`}</button></div></div>}
     </div></CompactModal>}
   </section>;
 };

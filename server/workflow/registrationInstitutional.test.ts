@@ -27,10 +27,10 @@ test('cadastro institucional corrige caixa alta e normaliza os campos operaciona
   const result = acceptRegistration({ registrationAnswers: validAnswers() });
   assert.equal(result.aluno1.nome, 'Maria das Dores Silva');
   assert.equal(result.aluno1.email, 'maria@edu.ufes.br');
-  assert.equal(result.aluno1.matricula, '202600123');
+  assert.equal(result.aluno1.matricula, '');
   assert.equal(result.orientador.nome, 'João de Souza');
   assert.equal(result.orientador.email, 'joao@ufes.br');
-  assert.equal(result.orientador.siape, '1234567');
+  assert.equal(result.orientador.siape, '');
   assert.equal(result.titulo, 'Impacto do Cuidado de Enfermagem na UTI');
   assert.equal(result.banca[1].email, 'beatriz@fiocruz.br');
 });
@@ -43,12 +43,14 @@ test('cadastro aceita nomes internacionais sem exigir sobrenome ou alfabeto lati
   }
 });
 
-test('registros de alunos e docentes aceitam comprimentos variados e preservam zeros', () => {
+test('cadastros novos descartam registros recebidos de formulários antigos', () => {
   for(const registro of ['1','00001','123456','0'.repeat(600)+'123','ABC123']){
     const answers=validAnswers();answers.ALUNO_1_MATRICULA=registro;answers.ORIENTADOR_SIAPE=registro;
     const legacyStudio={formTemplates:[{id:'form-reserva-aluno',questions:[{fieldKey:'ALUNO_1_MATRICULA',validation:{maxLength:20,minLength:5,pattern:'^\\d{5,20}$'}},{fieldKey:'ORIENTADOR_SIAPE',validation:{maxLength:7,minLength:7,pattern:'^\\d{7}$'}}]}]};
     const result=acceptRegistration({registrationAnswers:answers},legacyStudio as any);
-    assert.equal(result.aluno1.matricula,registro);assert.equal(result.orientador.siape,registro);
+    assert.equal(result.aluno1.matricula,'');assert.equal(result.orientador.siape,'');
+    assert.equal(result.registrationAnswers.ALUNO_1_MATRICULA,undefined);
+    assert.equal(result.registrationAnswers.ORIENTADOR_SIAPE,undefined);
   }
 });
 

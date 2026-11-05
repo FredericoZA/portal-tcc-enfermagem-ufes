@@ -162,6 +162,53 @@ test('HTTP: student and advisor cannot forge a conflict override, while a Master
   } finally { await f.close(); }
 });
 
+test('HTTP: editing the board cannot promote an examiner into the advisor role', { timeout: 45_000 }, async () => {
+  const process = processFixture();
+  const examiner = process.banca[0].email;
+  const state = initialState([process]);
+  state.memberships.push({ id: 'examiner-membership', processId: process.id, email: examiner, roles: ['EXAMINER'], active: true, createdAt: now(), updatedAt: now() });
+  state.authorizedStudents.push({ id: 'examiner-access', email: examiner, nome: 'Examinador de teste', roles: ['EXAMINER'], accessType: 'EXAMINER', active: true, processIds: [process.id], origin: 'MASTER_LIST', createdBy: master, createdAt: now(), updatedAt: now() });
+  const f = await fixture(state);
+  try {
+    const schema = () => f.request(`/api/processes/${process.id}/evaluation/schema`, examiner);
+    assert.equal((await schema()).status, 403);
+    for (const roles of [['ORIENTADOR', 'EXAMINER_3'], ['EXAMINER_2', 'EXAMINER_2'], ['EXAMINER_3', 'EXAMINER_3'], ['MASTER_ADMIN', 'EXAMINER_3'], [undefined, 'EXAMINER_3']]) {
+      const alteredBoard = process.banca.map((member, index) => ({ ...member, funcao: roles[index] }));
+      const response = await f.request(`/api/processes/${process.id}`, student, 'PATCH', { banca: alteredBoard });
+      assert.deepEqual({ patchStatus: response.status, examinerSchemaStatus: (await schema()).status }, { patchStatus: 400, examinerSchemaStatus: 403 }, JSON.stringify(roles));
+    }
+    const saved = await f.state();
+    assert.equal(saved.processes[0].orientador.email, advisor);
+    assert.equal(saved.processes[0].banca[0].funcao, 'EXAMINER_2');
+    assert.deepEqual(saved.memberships.find((member: { email: string }) => member.email === examiner).roles, ['EXAMINER']);
+    const corrected = process.banca.map(member => ({ ...member, nome: member.nome + ' Corrigido' }));
+    assert.equal((await f.request(`/api/processes/${process.id}`, student, 'PATCH', { banca: corrected })).status, 200);
+    assert.equal((await schema()).status, 403);
+    const accepted = await f.state();
+    assert.equal(accepted.processes[0].banca[0].nome, corrected[0].nome);
+    assert.deepEqual(accepted.memberships.filter((member: { roles: string[] }) => member.roles.includes('ADVISOR')).map((member: { email: string }) => member.email), [advisor]);
+  } finally { await f.close(); }
+});
+
+test('HTTP: historical board roles cannot override the registered advisor', { timeout: 45_000 }, async () => {
+  const process = processFixture();
+  const examiner = process.banca[0].email;
+  process.banca[0].funcao = 'ORIENTADOR';
+  const state = initialState([process]);
+  state.memberships.push({ id: 'historical-examiner-membership', processId: process.id, email: examiner, roles: ['EXAMINER', 'ADVISOR'], active: true, createdAt: now(), updatedAt: now() });
+  state.authorizedStudents.push({ id: 'historical-examiner-access', email: examiner, nome: 'Examinador de teste', roles: ['EXAMINER', 'ADVISOR'], accessType: 'EXAMINER', active: true, processIds: [process.id], origin: 'MASTER_LIST', createdBy: master, createdAt: now(), updatedAt: now() });
+  const f = await fixture(state);
+  try {
+    assert.equal((await f.request(`/api/processes/${process.id}`, examiner)).status, 200);
+    assert.equal((await f.request(`/api/processes/${process.id}/evaluation/schema`, examiner)).status, 403);
+    assert.equal((await f.request(`/api/processes/${process.id}/evaluation/draft`, examiner, 'PUT', { expectedDataRevision: 1, answers: { RESULTADO: 'Aprovado' } })).status, 403);
+    assert.equal((await f.request(`/api/processes/${process.id}/reopen`, examiner, 'POST', { reason: 'Não é o orientador registrado deste TCC.' })).status, 403);
+    const me = await (await f.request('/api/me', examiner)).json();
+    assert.deepEqual(me.memberships.find((member: { processId: string }) => member.processId === process.id).roles, ['EXAMINER']);
+    assert.equal((await f.request(`/api/processes/${process.id}/evaluation/schema`, advisor)).status, 200);
+  } finally { await f.close(); }
+});
+
 test('HTTP: correction descriptions are typed and bounded before creating tickets', { timeout: 45_000 }, async () => {
   const process = processFixture();
   const f = await fixture(initialState([process]));

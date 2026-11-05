@@ -86,13 +86,6 @@
 .portal-sheet-toolbar-terminal {
   display: inline-flex;
   align-items: center;
-}
-
-.portal-sheet-toolbar-actions {
-  gap: var(--portal-toolbar-pair-gap);
-}
-
-.portal-sheet-toolbar-terminal {
   gap: var(--portal-toolbar-pair-gap);
 }
 
@@ -1100,12 +1093,11 @@ button[aria-label^="Configurar exibição"],
   opacity: .88;
 }
 
-/* Reservation status changes the event text, while temporal background colors stay intact. */
 .portal-calendar-defense-summary[data-reservation-status="pending"],
 .portal-calendar-defense-summary[data-reservation-status="pending"] span,
 .portal-calendar-day-defense[data-reservation-status="pending"],
 .portal-calendar-day-defense[data-reservation-status="pending"] :is(span, h4, p, div) {
-  color: var(--portal-danger) !important;
+  color: var(--portal-danger);
 }
 
 .portal-calendar-defense-summary[data-reservation-status="pending"] .portal-calendar-defense-secondary {
@@ -1274,18 +1266,12 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-settings-single-pane,
-.portal-settings-workspace-main {
-  background: var(--portal-surface-page);
-}
-
+.portal-settings-workspace-main,
 .portal-settings-workspace-content[data-portal-full-bleed="true"] {
   background: var(--portal-surface-page);
 }
 
-.portal-settings-workspace[data-portal-compact="true"] {
-  min-height: 0;
-}
-
+.portal-settings-workspace[data-portal-compact="true"],
 .portal-settings-workspace[data-portal-compact="true"] .portal-settings-single-pane {
   min-height: 0;
 }
@@ -2238,7 +2224,7 @@ button:has(svg[class*="lucide-trash"]) svg[class*="lucide-trash"] {
 
 /* Private process roster: shared column labels and one compact row per person. */
 form[aria-labelledby="registration-title"] .portal-input[readonly] { background-color: var(--portal-surface-panel); }
-.portal-tcc-members-box { padding: 10px; }
+.portal-tcc-members-box,
 .portal-tcc-data-box { padding: 10px; }
 .portal-tcc-record-row { gap: 8px; }
 .portal-tcc-record-row-defense { margin-top: 8px; }

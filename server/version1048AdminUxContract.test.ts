@@ -76,9 +76,9 @@ test('Registros de Assinatura mostra a linha completa e somente ações suportad
   assert.ok(page.includes("{ key: 'actions', label: 'Ações' }"));
   assert.ok(page.includes('min-w-[1900px]'));
   assert.ok(page.includes('sticky right-0'));
-  assert.ok(page.includes('Excluir registro'));
-  assert.ok(client.includes('deleteSignatureJob'));
-  assert.ok(server.includes("app.delete('/api/signatures/jobs/:id'"));
+  assert.ok(!page.includes('Excluir registro'));
+  assert.ok(!page.includes('Trash2'));
+  assert.ok(!client.includes('deleteSignatureJob'));
   assert.ok(page.includes('Reenviar'));
   assert.ok(page.includes('Reconciliar'));
   assert.ok(client.includes('reconcileSignatureJob'));

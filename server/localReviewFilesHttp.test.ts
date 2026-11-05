@@ -56,9 +56,7 @@ test('HTTP local uploads persist real PDF bytes, enforce roles, version replacem
   const dl=await fetch(base+route+'/download',{headers:{'x-demo-user-email':p.aluno1.email}});assert.equal(dl.status,200);assert.deepEqual(Buffer.from(await dl.arrayBuffer()),pdf);
   assert.equal((await fetch(base+route+'/download')).status,401);assert.equal((await upload('/api/processes/other-review/files/trabalho-completo')).status,404);
   const next=createProfessionalPdf({title:'FICTÍCIO 2',protocol:p.protocolo,body:'Segunda versão.'});const replaced=await upload(route,next);assert.equal(replaced.status,201);assert.equal((await replaced.json()).version,2);
-  const largeProof=Buffer.concat([pdf,Buffer.from('\n%'),Buffer.alloc(1200*1024,0x20),Buffer.from('\n')]);
-  const proof=await upload(`/api/processes/${p.id}/location-proof`,largeProof);assert.equal(proof.status,201,await proof.clone().text());
-  const proofDl=await fetch(`${base}/api/processes/${p.id}/location-proof/download`,{headers:{'x-demo-user-email':p.aluno1.email}});assert.equal(proofDl.status,200);assert.deepEqual(Buffer.from(await proofDl.arrayBuffer()),largeProof);
-  const state=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(state.processes[0].acervo.trabalhoCompletoVersion,2);assert.ok(state.auditLogs.some((log:any)=>log.action==='VERSAO_ARQUIVO_SUBSTITUIDA'));assert.ok(state.auditLogs.some((log:any)=>log.action==='COMPROVANTE_LOCAL_ARQUIVADO'));
+  const proof=await upload(`/api/processes/${p.id}/location-proof`);assert.equal(proof.status,404);assert.equal((await proof.json()).code,'API_NOT_FOUND');
+  const state=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(state.processes[0].acervo.trabalhoCompletoVersion,2);assert.ok(state.auditLogs.some((log:any)=>log.action==='VERSAO_ARQUIVO_SUBSTITUIDA'));assert.equal(state.processes[0].defesa.locationProof,undefined);
  }finally{const exit=new Promise(r=>child.once('exit',r));if(child.exitCode===null){child.kill('SIGTERM');await exit;}await rm(directory,{recursive:true,force:true});}
 });

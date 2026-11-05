@@ -71,7 +71,7 @@ try{
  let dialog=await open('geral');await save('ficha',dialog,'Dados do processo fictício, identidade e quatro abas atuais');
  await login(advisor);dialog=await open('geral');
  const edit=dialog.getByRole('button',{name:'Alterar reserva da defesa',exact:true});await edit.waitFor();await edit.click();
- const reservationDialog=page.getByRole('dialog',{name:`Alterar reserva da defesa - ${fixture.protocolo}`,exact:true});await reservationDialog.waitFor();await save('confirmacao',reservationDialog,'Alteração de reserva pelo orientador, cabeçalho com protocolo e orientação de disponibilidade, sem enviar nova solicitação');await page.keyboard.press('Escape');
+ const reservationDialog=page.getByRole('dialog',{name:`${fixture.protocolo} - Alterar reserva de defesa`,exact:true});await reservationDialog.waitFor();await save('confirmacao',reservationDialog,'Alteração de reserva pelo orientador, cabeçalho com protocolo e orientação de disponibilidade, sem enviar nova solicitação');await page.keyboard.press('Escape');
  await login(advisor);dialog=await open('avaliacao');
  await dialog.getByRole('combobox',{name:'Resultado da defesa',exact:false}).selectOption('APROVADO');
  await dialog.getByRole('textbox',{name:'Parecer da banca',exact:false}).fill('O trabalho demonstrativo apresenta coerência entre objetivos, método e resultados. A banca recomenda a aprovação.');

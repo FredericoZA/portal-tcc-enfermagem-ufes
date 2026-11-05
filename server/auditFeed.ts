@@ -25,8 +25,10 @@ function snapshot(log: AuditLog): Partial<ProcessData> {
 }
 
 export function emailDeliveryAuditMetadata(record: EmailDeliveryRecord): Record<string, unknown> {
+  const dispatchState = record.dispatchState === 'SENDING' && !(record.dispatchLeaseUntil && Date.parse(record.dispatchLeaseUntil) > Date.now()) ? 'UNCERTAIN' : record.dispatchState;
   return safeAuditValue({recipient:record.recipient,cc:record.cc || [],subject:record.subject,status:record.status,
     createdAt:record.createdAt,updatedAt:record.updatedAt,acceptedAt:record.acceptedAt,nextRetryAt:record.nextRetryAt,
+    dispatchState,dispatchStartedAt:record.dispatchStartedAt,dispatchLeaseUntil:record.dispatchLeaseUntil,
     attempts:record.attempts,maxAttempts:record.maxAttempts,requestedBy:record.requestedBy,sender:record.sender,
     provider:'Gmail',auditCopyMode:record.auditCopyMode,auditCopyEmail:record.auditCopyEmail}) as Record<string, unknown>;
 }
@@ -52,7 +54,10 @@ export function buildAuditFeed(input: {logs: AuditLog[]; deliveries: EmailDelive
   const emails: AuditLog[] = input.deliveries.map(record => {
     const process = processes.get(record.processId || '');
     const requestedBy = record.requestedBy || '';
-    const statusAction = record.status === 'ACCEPTED_BY_GMAIL' ? 'EMAIL_ENVIO_ACEITO_GMAIL'
+    const metadata = emailDeliveryAuditMetadata(record);
+    const statusAction = metadata.dispatchState === 'SENDING' ? 'EMAIL_ENVIO_EM_PROCESSAMENTO'
+      : metadata.dispatchState === 'UNCERTAIN' ? 'EMAIL_ENVIO_NAO_CONFIRMADO'
+      : record.status === 'ACCEPTED_BY_GMAIL' ? 'EMAIL_ENVIO_ACEITO_GMAIL'
       : record.status === 'FAILED' ? 'EMAIL_ENVIO_FALHOU'
         : record.attempts.length ? 'EMAIL_ENVIO_NOVA_TENTATIVA' : 'EMAIL_ENVIO_PENDENTE';
     return {
@@ -61,7 +66,7 @@ export function buildAuditFeed(input: {logs: AuditLog[]; deliveries: EmailDelive
       processTitle: process?.titulo, actorEmail: requestedBy || 'Sistema', actorName: nameOf(requestedBy, process), actorRoles: [],
       action: statusAction, entityType: 'email_delivery', entityId: record.id,
       timestamp: record.updatedAt || record.createdAt,
-      after: emailDeliveryAuditMetadata(record),
+      after: metadata,
     };
   });
   return [...activities, ...emails].sort((a,b) => (Date.parse(b.timestamp) || 0) - (Date.parse(a.timestamp) || 0) || a.id.localeCompare(b.id));

@@ -42,14 +42,14 @@ export const guideActivities: GuideActivity[] = [
     steps: [
       'Em Meus TCCs, clique em Cadastrar TCC. Se o trabalho já existe, abra seu código em vez de criar outro processo.',
       'Preencha o autor e, se houver, o segundo autor. A ordem dos autores será mantida nos documentos. O e-mail do primeiro autor é o da conta e fica bloqueado.',
-      'Informe orientador, examinadores e coorientador, quando houver, com nome, e-mail, registro, tratamento, titulação e instituição nos campos solicitados. Confira as sugestões antes de aceitá-las.',
+      'Informe orientador, examinadores e coorientador, quando houver, com nome, e-mail, tratamento, titulação e instituição nos campos solicitados. Confira as sugestões antes de aceitá-las.',
       'Em títulos e instituições, escreva *UFES* para preservar uma sigla e/ou acrônimo em maiúsculas. Os asteriscos não aparecem nos documentos. Nomes de pessoas seguem a capitalização do Portal.',
       'Use Continuar para salvar e avançar. Salvar e sair guarda o rascunho para retomar depois. A reserva é preenchida na última etapa; confira todas as tabelas antes de Cadastrar e solicitar reserva.',
     ],
     done: 'Um protocolo foi criado e o pedido de reserva foi registrado. O agendamento ainda aguarda a decisão do responsável.',
     help: [
       'Campo incorreto na conferência: use Voltar para corrigir a etapa correspondente.',
-      'Dados repetidos entre pessoas: confira quem ocupa cada função, os nomes, os e-mails e os registros antes de enviar.',
+      'Dados repetidos entre pessoas: confira quem ocupa cada função, os nomes e os e-mails antes de enviar.',
       'Rascunho alterado em outra aba: mantenha uma única aba de preenchimento e siga a orientação exibida antes de salvar.',
     ],
   },
@@ -107,7 +107,7 @@ export const guideActivities: GuideActivity[] = [
     relatedImages: [{id: 'ata-previa', caption: 'Conferência da prévia: confirme os dados antes de registrar o conceito e continuar nos documentos.'}],
     steps: [
       'Entre com o e-mail do orientador, abra o TCC e a aba Conceito e Ata. O registro é liberado com local confirmado, convite enviado e a partir do horário da defesa.',
-      'Selecione Aprovado, Aprovado com ressalva ou Reprovado e preencha o Parecer da banca. Usar texto-padrão é uma sugestão: revise-o conforme o que a banca decidiu.',
+      'Selecione Aprovado, Aprovado com ressalva ou Reprovado e preencha o Parecer da banca. Gerar rascunho de parecer fornece um texto-base fixo: revise-o conforme o que a banca decidiu.',
       'Neste Portal, registre o conceito e a documentação. Faça a avaliação e lance a nota no Portal do Professor, em professor.ufes.br.',
       'Clique em Visualizar ata. Confira os dados e o texto da prévia, marque a confirmação de conferência e clique em Registrar avaliação e ir para documentos.',
       'O Portal abre Documentos administrativos. O registro não envia uma assinatura automaticamente: escolha Asten ou Gov.br na caixa da ata.',
@@ -130,7 +130,7 @@ export const guideActivities: GuideActivity[] = [
     ],
     done: 'Sua assinatura foi registrada no documento; a etapa só termina depois das três assinaturas e do arquivamento da ata.',
     help: [
-      'Sem botão na ata: confirme que seu e-mail está registrado como segundo ou terceiro examinador e que o conceito já foi registrado.',
+      'Sem botão na ata: confirme que seu e-mail está registrado como examinador da banca e que o conceito já foi registrado.',
       'Asten pendente: não duplique a solicitação; use o link pessoal enviado por e-mail e aguarde os demais integrantes.',
       'Gov.br: não devolva uma versão com uma única assinatura como arquivo final. O orientador reúne todas as assinaturas.',
     ],

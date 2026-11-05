@@ -1,5 +1,4 @@
 export type StagedUploadPurpose =
-  | 'LOCATION_PROOF'
   | 'DOCUMENT_MODEL'
   | 'PROCESS_FULL_WORK'
   | 'PROCESS_EXPANDED_ABSTRACT'

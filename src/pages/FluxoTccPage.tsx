@@ -40,6 +40,7 @@ const phases = [
       'Antes do pedido, alunos e orientador podem conferir mapa de salas, aulas, eventos, reservas e horários do prédio. Em caso de dúvida, a consulta ao departamento evita retrabalho.',
       'O departamento homologa auditório e sala de reuniões. Outro local é confirmado pelo orientador, que viabiliza a reserva junto ao espaço escolhido.',
       'O pedido bloqueia apenas o local selecionado durante o intervalo da defesa, de 1h30. A recusa libera esse intervalo; o Portal não controla reservas externas.',
+      'Enquanto aguarda resposta, o agendamento aparece em vermelho no Calendário, com (aguardando confirmação) após o horário. O aceite retira o aviso; a recusa retira o agendamento e mantém o código do TCC.',
       'Alunos e orientador recebem o resultado. Para corrigir o agendamento, use Alterar reserva em Dados do processo; após recusa, Refazer reserva. O novo pedido exige outro aceite.',
     ],
     gate: 'Aceite do responsável registrado para a data, o horário e o local atuais.',

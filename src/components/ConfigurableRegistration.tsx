@@ -18,7 +18,7 @@ import { isOtherDefenseLocation, normalizeCustomLocationInput, renderCustomLocat
 import { apiClient } from '../services/apiClient';
 import { portalNotice } from '../services/portalDialogs';
 import { evaluateStudioCondition, validateStudioAnswer } from '../utils/courseStudioValidator';
-import { registrationQuestions, registrationPayload } from '../utils/operationalConfig';
+import { registrationQuestions, registrationPayload, registrationAnswersWithoutIdentifiers } from '../utils/operationalConfig';
 import { registrationFindings, workflowPolicy } from '../utils/workflowOperations';
 import type {StudentInfo} from '../types';
 import type { RegistrationAnswers, RegistrationQuestion } from '../types/operationalConfig';
@@ -43,7 +43,7 @@ function Question({ field, value, readOnly, onChange,optionLabels,recent=[], pre
   const previewKind = registrationPreviewKind(field.fieldKey, field.label, field.fieldType);
   const [touched,setTouched]=useState(false);
   const [directory,setDirectory]=useState<string[]>([]);
-  const lookupField=/_NOME$/.test(field.fieldKey)?'nome':/_EMAIL$/.test(field.fieldKey)?'email':/_(MATRICULA|SIAPE)$/.test(field.fieldKey)?'matricula':'';
+  const lookupField=/_NOME$/.test(field.fieldKey)?'nome':/_EMAIL$/.test(field.fieldKey)?'email':'';
   useEffect(()=>{let alive=true;setDirectory([]);const query=String(value||'').trim();if(preview||readOnly||!lookupField||query.length<3)return;const timer=setTimeout(()=>{apiClient.getRegistrationSuggestions(lookupField,query).then(values=>{if(alive)setDirectory(values);}).catch(()=>{});},300);return()=>{alive=false;clearTimeout(timer);};},[lookupField,value,readOnly,preview]);
   const suggestions=matchingRegistrationSuggestions([...recent,...directory],String(value||''));
 
@@ -54,7 +54,7 @@ function Question({ field, value, readOnly, onChange,optionLabels,recent=[], pre
     {field.fieldType==='datetime-local'?<span className="portal-registration-date-time grid grid-cols-2 gap-3"><input aria-label="Data da defesa" className="portal-input" type="date" value={String(value??'').split('T')[0]||''} onChange={e=>onChange(`${e.target.value}T${String(value??'').split('T')[1]||'14:00'}`)}/><input aria-label="Horário da defesa" className="portal-input" type="time" step={300} value={String(value??'').split('T')[1]||''} onChange={e=>onChange(`${String(value??'').split('T')[0]||''}T${e.target.value}`)}/></span>:field.fieldType==='checkbox'?<input type="checkbox" className="h-6 w-6" checked={value===true} onChange={e=>onChange(e.target.checked)}/>:
       field.fieldType==='textarea'?<textarea className="portal-input" rows={5} value={String(value??'')} maxLength={field.validation?.maxLength||10000} onChange={e=>onChange(e.target.value)}/>:
       ['select','radio'].includes(field.fieldType)?<select className="portal-input" value={String(value??'')} onChange={e=>onChange(e.target.value)}><option value="">Selecione…</option>{field.options?.map(option=><option key={option} value={option}>{option==='__OUTRO_LOCAL__'?'Outro local — informar endereço/nome':optionLabels?.[option]||option}</option>)}</select>:
-      <input list={identityField(field.fieldKey)?`registration-${field.fieldKey}`:undefined} autoComplete="off" className="portal-input" type={['email','number','date','datetime-local'].includes(field.fieldType)?field.fieldType:'text'} readOnly={readOnly} value={String(value??'')} aria-invalid={issue?true:undefined} onBlur={()=>{onChange(String(normalizeRegistrationValue(field.fieldKey,field.fieldType,value??'')));setTouched(true);}} placeholder={field.placeholder} maxLength={/_MATRICULA$|_SIAPE$/.test(field.fieldKey)?undefined:field.validation?.maxLength||500} onChange={e=>onChange(e.target.value)}/>}
+      <input list={identityField(field.fieldKey)?`registration-${field.fieldKey}`:undefined} autoComplete="off" className="portal-input" type={['email','number','date','datetime-local'].includes(field.fieldType)?field.fieldType:'text'} readOnly={readOnly} value={String(value??'')} aria-invalid={issue?true:undefined} onBlur={()=>{onChange(String(normalizeRegistrationValue(field.fieldKey,field.fieldType,value??'')));setTouched(true);}} placeholder={field.placeholder} maxLength={field.validation?.maxLength||500} onChange={e=>onChange(e.target.value)}/>}
     {field.fieldType==='datetime-local' && String(value||'').split('T')[0] &&
       <span className="mt-1 block text-xs font-semibold text-emerald-900" aria-live="polite">
         {formatDateWithWeekday(String(value).split('T')[0])}
@@ -93,7 +93,7 @@ export function ConfigurableRegistration({ onSuccess, onCancel, previewStudio }:
   useEffect(()=>{
     if(previewStudio){
       const p=studioSampleProcess(),sample:RegistrationAnswers={TEM_ALUNO_2:'Sim',TEM_COORIENTADOR:'Sim',AUTORIA_REFERENCIA:'os alunos',TITULO:p.titulo,DEFESA_DATA_HORA:'2026-11-20T14:00',DEFESA_LOCAL:p.defesa.local};
-      for(const [prefix,person] of [['ALUNO_1',p.aluno1],['ALUNO_2',p.aluno2],['ORIENTADOR',p.orientador],['COORIENTADOR',p.coorientador],['EXAMINADOR_2',p.banca[0]],['EXAMINADOR_3',p.banca[1]]] as const){if(person){sample[prefix+'_NOME']=person.nome;sample[prefix+'_EMAIL']=person.email;sample[prefix+'_TRATAMENTO']=person.tratamento||'';if('titulacao' in person)sample[prefix+'_TITULACAO']=person.titulacao||'';if('matricula' in person)sample[prefix+'_MATRICULA']=person.matricula||'';if('siape' in person)sample[prefix+'_SIAPE']=person.siape||'';if('instituicao' in person)sample[prefix+'_INSTITUICAO']=person.instituicao||'';}}
+      for(const [prefix,person] of [['ALUNO_1',p.aluno1],['ALUNO_2',p.aluno2],['ORIENTADOR',p.orientador],['COORIENTADOR',p.coorientador],['EXAMINADOR_2',p.banca[0]],['EXAMINADOR_3',p.banca[1]]] as const){if(person){sample[prefix+'_NOME']=person.nome;sample[prefix+'_EMAIL']=person.email;sample[prefix+'_TRATAMENTO']=person.tratamento||'';if('titulacao' in person)sample[prefix+'_TITULACAO']=person.titulacao||'';if('instituicao' in person)sample[prefix+'_INSTITUICAO']=person.instituicao||'';}}
       setAnswers(sample);setStudio(previewStudio);return;
     }
     let cancelled=false;
@@ -101,7 +101,7 @@ export function ConfigurableRegistration({ onSuccess, onCancel, previewStudio }:
       if(cancelled)return;setStudio(schema);
       const local=readRegistrationMemory(localStorage,userEmail);if(local){setRecent(local.recent);if(isMasterAdmin){setAnswers(current=>({...current,...local.answers}));setSection(local.section);}}
       const existing=!isMasterAdmin&&processes.some(p=>[p.aluno1.email,p.aluno2?.email].some(email=>email?.toLowerCase()===userEmail.toLowerCase()));
-      if(draft&&!existing&&!isMasterAdmin){setAnswers({...Object.fromEntries(Object.entries(draft.answers).map(([key,value])=>[key,/_NOME$/.test(key)&&typeof value==='string'?normalizePersonName(value):value])),ALUNO_1_EMAIL:userEmail});setSection(draft.section);draftRevision.current=draft.revision;setDraftStatus('Rascunho recuperado do servidor.');if(draft.schemaRevision!==schema.revision){paused.current=true;setDraftReview(true);}}
+      if(draft&&!existing&&!isMasterAdmin){setAnswers({...Object.fromEntries(Object.entries(registrationAnswersWithoutIdentifiers(draft.answers)).map(([key,value])=>[key,/_NOME$/.test(key)&&typeof value==='string'?normalizePersonName(value):value])),ALUNO_1_EMAIL:userEmail});setSection(draft.section);draftRevision.current=draft.revision;setDraftStatus('Rascunho recuperado do servidor.');if(draft.schemaRevision!==schema.revision){paused.current=true;setDraftReview(true);}}
       setEligibility(existing?'existing':'ready');
     }).catch(()=>{if(!cancelled)setEligibility('error');});
     return()=>{cancelled=true;};
@@ -113,7 +113,7 @@ export function ConfigurableRegistration({ onSuccess, onCancel, previewStudio }:
     setDraftStatus('Salvando rascunho…');
     draftQueue.current=draftQueue.current.then(async()=>{
       if(paused.current)return;
-      try{const saved=await apiClient.saveRegistrationDraft({answers,section:targetSection,expectedRevision:draftRevision.current,schemaRevision:Number(studio?.revision||0)});draftRevision.current=saved.revision;setDraftStatus('Rascunho salvo no servidor.');}
+      try{const saved=await apiClient.saveRegistrationDraft({answers:registrationAnswersWithoutIdentifiers(answers),section:targetSection,expectedRevision:draftRevision.current,schemaRevision:Number(studio?.revision||0)});draftRevision.current=saved.revision;setDraftStatus('Rascunho salvo no servidor.');}
       catch(e){paused.current=true;setDraftStatus(e instanceof Error?e.message:'Falha ao salvar. Seus campos continuam nesta tela.');}
     });
   };

@@ -22,7 +22,7 @@ test('o Portal não executa analisador generativo nem motor de propostas',()=>{
   assert.equal(existsSync('server/continuousIntelligence.ts'),false);
   assert.equal(existsSync('src/components/AIAnalyzerModal.tsx'),false);
   assert.equal(existsSync('src/components/ContinuousIntelligencePanel.tsx'),false);
-  assert.match(server,/\/api\/admin\/continuous-intelligence\/refresh'[\s\S]*?status\(410\)/);
+  assert.doesNotMatch(server,/app\.(?:all|get|post)\('\/api\/admin\/continuous-intelligence/);
   assert.equal(existsSync('server/statisticalSnapshot.ts'),true);
   assert.doesNotMatch(read('src/services/apiClient.ts'),/getContinuousIntelligence\b/);
   const deps=JSON.parse(read('package.json')).dependencies;

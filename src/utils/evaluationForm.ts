@@ -5,6 +5,7 @@ import type { IntegrationStudioSettings } from '../types/integrationStudio';
 import type { RegistrationAnswers, RegistrationQuestion } from '../types/operationalConfig';
 import { canonicalKey, registrationQuestions } from './operationalConfig';
 import { evaluateStudioCondition, validateStudioAnswer } from './courseStudioValidator';
+import {formQuestionsWithoutIdentifiers} from './studioFormAnswers';
 
 export const EVALUATION_OUTCOMES:EvaluationOutcomeOption[] = [
  {code:'APROVADO',label:'Aprovado'},
@@ -61,7 +62,7 @@ export const EVALUATION_QUESTIONS: RegistrationQuestion[] = [
 export function evaluationQuestions(studio?: Partial<IntegrationStudioSettings>): RegistrationQuestion[] {
   const configured = studio?.processFieldSchemas?.evaluation || studio?.formTemplates?.find(f => f.id === EVALUATION_FORM_ID)?.questions;
   const fields = new Map<string, RegistrationQuestion>();
-  for (const custom of (Array.isArray(configured) ? configured : []) as RegistrationQuestion[]) {
+  for (const custom of formQuestionsWithoutIdentifiers((Array.isArray(configured) ? configured : []) as RegistrationQuestion[])) {
     const rawKey = canonicalKey(custom.fieldKey);
     if (LEGACY_GRADE_KEYS.has(rawKey)) continue;
     const fieldKey = aliases[rawKey] || rawKey;

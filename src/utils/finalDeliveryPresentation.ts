@@ -1,7 +1,11 @@
-import type {ProcessData} from '../types';
+import type {ProcessData,ProcessDocument} from '../types';
 export function publicationDeclined(process:Pick<ProcessData,'acervo'>):boolean{
  const delivery=process.acervo;
  return Boolean(delivery?.submittedAt&&!delivery.publishFullWork&&!delivery.publishExpandedAbstract&&!delivery.publicationWithdrawnAt);
+}
+export function administrativeDocumentAvailability(process:Pick<ProcessData,'acervo'>,document:Pick<ProcessDocument,'type'|'status'>,publicReadOnly=false):{publicationDeclined:boolean;available:boolean}{
+ const declined=!publicReadOnly&&document.type==='TERMO'&&publicationDeclined(process);
+ return {publicationDeclined:declined,available:!declined&&(document.status==='DISPONIVEL'||document.status==='ASSINADO')};
 }
 export function finalDeliveryMessage(process:Pick<ProcessData,'status'|'acervo'|'signatureProviderPreferences'> & {workflowPending?:boolean}):string{
  if(process.status==='CONCLUIDO')return 'Toda a documentação necessária foi entregue e o processo está concluído. Os documentos finais estão disponíveis em Documentos do processo.';

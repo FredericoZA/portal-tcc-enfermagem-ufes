@@ -28,7 +28,7 @@ test('Replicar Portal oferece um único download agregado dos quatro modelos',as
 
 test('Indicadores mantêm carregamento automático e painel analítico denso',async()=>{
   const page=await source('src/pages/IndicadoresPage.tsx');
-  assert.ok(page.includes('apiClient.getIndicators()'));
+  assert.ok(page.includes('apiClient.getIndicators({signal:controller.signal})'));
   assert.ok(page.includes('const LineTrend'));
   assert.ok(page.includes('const Funnel'));
   assert.ok(page.includes('Evolução anual'));

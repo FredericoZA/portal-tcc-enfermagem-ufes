@@ -29,6 +29,12 @@ test('confirmação identifica autores e comprovante do departamento registra as
  for(const decision of ['CONFIRMED','UNAVAILABLE'] as const){
   process.defesa.departmentResponse={revision:1,decision,respondedAt:'2026-10-26',respondedBy:common.recipient,startAt:process.defesa.startAt,endAt:process.defesa.endAt,local:process.defesa.local};
   const result=processEmailMessage(common);assert.match(result.subject,decision==='CONFIRMED'?/Reserva confirmada/:/Agendamento recusado/);assert.match(result.text,/Resposta registrada em [a-zçáéíóú-]+, \d{2}\/\d{2}\/\d{4}/);assert.match(result.text,decision==='CONFIRMED'?/Resultado: reserva confirmada/:/Resultado: reserva recusada/);if(decision==='CONFIRMED')assert.match(result.text,/Avaliação e ata/);assert.equal((result.html.match(/<a /g)||[]).length,decision==='CONFIRMED'?1:2);
+  if(decision==='UNAVAILABLE'){
+   assert.match(result.text,/É necessário solicitar novamente a reserva/);
+   assert.match(result.text,/abram o mesmo TCC.*Dados do processo.*Refazer reserva/);
+   assert.match(result.text,/O código do TCC será mantido; não criem outro trabalho/);
+   assert.match(result.html,/Refazer reserva/);
+  }
  }
  process.defesa.departmentResponse!.decision='CONFIRMED';
  const authors=processEmailMessage({...common,recipient:process.aluno1.email,departmentUrl:undefined});assert.match(authors.text,/^Prezados departamento, autores e orientador,/);assert.match(authors.text,/Autores: confiram/);assert.doesNotMatch(authors.text,/Participantes:/);

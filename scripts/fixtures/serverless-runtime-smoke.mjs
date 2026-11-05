@@ -20,6 +20,9 @@ const secretRow = { provider: 'google_workspace', ciphertext: ciphertext.toStrin
 const calls = [];
 const unexpected = [];
 const json = (value) => Response.json(value);
+const runtimePayload={settings:{driveRootFolderId:'root_fixture_123'},processes:[],legacyAcademicRecords:Array.from({length:6},(_,index)=>({
+  id:`legado-${String(index+1).padStart(4,'0')}`,protocolo:`${String(index+1).padStart(3,'0')} - Legado`,sourceFingerprint:createHash('sha256').update(String(index)).digest('hex'),titulo:'Private historical title',autores:['Private historical person'],orientador:'Private historical advisor',coorientador:'',coorientadorInstituicao:'',examinadores:[],resumo:'Private historical summary',palavrasChave:['Private historical keyword'],dataDefesa:'2025-08-28',horaDefesa:'',localDefesa:'Private historical location',isPublic:index<3,publishFullWork:index<3,publishExpandedAbstract:false,publicationState:index<3?'PUBLIC':'NOT_REQUESTED',authorizationDecision:index<3?'AUTHORIZED':'DENIED',provenance:{originalConsent:[index<3?'Sim':'Não']},attachments:[{driveFileId:`private_historical_file_${index}`,fileName:'private-historical.pdf',kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64),evidence:'Original histórico'}],
+}))};
 
 globalThis.fetch = async (input, init = {}) => {
   const url = new URL(String(input));
@@ -30,7 +33,8 @@ globalThis.fetch = async (input, init = {}) => {
       return json({ transactional_runtime: true, secure_file_transport: 'SUPABASE_PRIVATE_STORAGE', asten_transactional_outbox: true, schema_version: 6 });
     }
     if (method === 'GET' && url.pathname === '/rest/v1/portal_runtime_state') {
-      return json([{ payload: { settings: { driveRootFolderId: 'root_fixture_123' }, processes: [] }, revision: 1 }]);
+      if(url.searchParams.get('select')==='processes:payload->processes,legacyAcademicRecords:payload->legacyAcademicRecords')return json([{processes:runtimePayload.processes,legacyAcademicRecords:runtimePayload.legacyAcademicRecords}]);
+      return json([{payload:runtimePayload,revision:1}]);
     }
     if (method === 'GET' && url.pathname === '/rest/v1/portal_runtime_assets') {
       if (url.searchParams.get('asset_key') === 'eq.' + 'b'.repeat(64)) {

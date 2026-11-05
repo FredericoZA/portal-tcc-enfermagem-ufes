@@ -44,6 +44,23 @@ test('admissão aceita os cabeçalhos Node recebidos na Vercel', () => {
   }
 });
 
+test('rotas de indicadores compartilham a cota antes da hidratação e não contam duas vezes o mesmo pedido',()=>{
+  const previousVercel=process.env.VERCEL;process.env.VERCEL='1';
+  let status=0;
+  const response={setHeader(){},status(value:number){status=value;return this;},json(){}} as unknown as Response;
+  const request=(route:string)=>({method:'GET',url:route,headers:{'x-real-ip':'192.0.2.239'},socket:{remoteAddress:'127.0.0.1'}} as unknown as Request);
+  try{
+    const routes=['/api/public/indicators','/api/admin/indicators','/api/public-indicators'];
+    for(let index=0;index<120;index++){
+      const req=request(routes[index%routes.length]);
+      assert.equal(admitPortalRequest(req,response),true);
+      assert.equal(admitPortalRequest(req,response,'indicators'),true);
+    }
+    assert.equal(admitPortalRequest(request(routes[0]),response),false);assert.equal(status,429);
+    assert.equal(admitPortalRequest(request('/api/settings'),response),true);
+  }finally{if(previousVercel===undefined)delete process.env.VERCEL;else process.env.VERCEL=previousVercel;}
+});
+
 test('recusa ocorre antes do parser e hidratação; headers falsos e mudança de URL não reiniciam cota', async () => {
   const previousVercel = process.env.VERCEL;
   delete process.env.VERCEL;

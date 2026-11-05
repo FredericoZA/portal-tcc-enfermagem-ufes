@@ -224,7 +224,7 @@ export const apiClient = {
     method: 'POST',
     body: JSON.stringify(data)
   }),
-  updateProcess: (id: string, data: Partial<ProcessData> & { expectedDataRevision?: number }) => fetchApi<WorkflowProcessResponse&{reservationRestarted?:boolean}>(`/api/processes/${id}`, {
+  updateProcess: (id: string, data: Omit<Partial<ProcessData>, 'aluno1' | 'aluno2'> & { aluno1?: Partial<ProcessData['aluno1']>; aluno2?: Partial<NonNullable<ProcessData['aluno2']>> | null; expectedDataRevision?: number }) => fetchApi<WorkflowProcessResponse&{reservationRestarted?:boolean}>(`/api/processes/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data)
   }),
@@ -288,6 +288,7 @@ export const apiClient = {
   getAstenDashboard:()=>fetchApi<any>('/api/admin/asten/dashboard'),
   getEmailDeliveries:()=>fetchApi<any[]>('/api/admin/email-deliveries'),
   retryEmailDelivery:(id:string)=>fetchApi<any>(`/api/admin/email-deliveries/${encodeURIComponent(id)}/retry`,{method:'POST'}),
+  recoverReservationNotices:()=>fetchApi<{checked:number;failed:number}>('/api/admin/reservation-notices/recover',{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   getWorkflowRuns:()=>fetchApi<any[]>('/api/admin/workflow-runs'),
   getNotificationPreferences:()=>fetchApi<any>('/api/notification-preferences'),
   updateNotificationPreferences:(data:any)=>fetchApi<any>('/api/notification-preferences',{method:'PATCH',body:JSON.stringify(data)}),
@@ -309,7 +310,6 @@ export const apiClient = {
   getFormArchives:()=>fetchApi<any[]>('/api/admin/form-archives'),
   retryFormArchive:(id:string)=>fetchApi<any>(`/api/admin/form-archives/${encodeURIComponent(id)}/retry`,{method:'POST'}),
   connectAsten:(token:string,repositoryId?:string)=>fetchApi<AstenIntegrationStatus>('/api/integrations/asten/connect',{method:'POST',body:JSON.stringify({token,repositoryId})}),
-  deleteSignatureJob:(id:string)=>fetchApi<{deleted:boolean;id:string}>(`/api/signatures/jobs/${encodeURIComponent(id)}`,{method:'DELETE'}),
   getSignatureJobs:()=>fetchApi<SignatureJob[]>('/api/signatures/jobs'),
   retrySignatureJob:(id:string)=>fetchApi<SignatureJob>(`/api/signatures/jobs/${id}/retry`,{method:'POST'}),
   reconcileSignatureJob:(id:string)=>fetchApi<SignatureJob>(`/api/signatures/jobs/${id}/reconcile`,{method:'POST'}),
@@ -318,10 +318,10 @@ export const apiClient = {
   getAuthorizedStudents:()=>fetchApi<any[]>('/api/admin/access-list'),
   getAccessListGoogleTemplate:()=>fetchApi<{url:string}>('/api/admin/access-list/google-template',{method:'POST'}),
   getLocalDocumentModelFile:(type:string)=>downloadApiFile(`/api/admin/models/${encodeURIComponent(type)}/local-source`),
-  addAuthorizedStudent:(data:{nome:string;email:string;matricula?:string;role?:'STUDENT'|'ADVISOR'|'CO_ADVISOR'|'EXAMINER';memberType?:'INTERNAL'|'EXTERNAL'})=>fetchApi<any>('/api/admin/access-list',{method:'POST',body:JSON.stringify(data)}),
+  addAuthorizedStudent:(data:{nome:string;email:string;role?:'STUDENT'|'ADVISOR'|'CO_ADVISOR'|'EXAMINER';memberType?:'INTERNAL'|'EXTERNAL'})=>fetchApi<any>('/api/admin/access-list',{method:'POST',body:JSON.stringify(data)}),
   updateAuthorizedStudent:(id:string,data:any)=>fetchApi<any>(`/api/admin/access-list/${id}`,{method:'PATCH',body:JSON.stringify(data)}),
   deleteAuthorizedStudent:(id:string)=>fetchApi<{deleted:boolean}>(`/api/admin/access-list/${id}`,{method:'DELETE'}),
-  importAuthorizedStudents:(records:Array<{nome:string;email:string;matricula?:string}>)=>fetchApi<{batchHash:string;created:number;updated:number;preservedRevocations:number;reused:boolean}>('/api/admin/access-list/import',{method:'POST',body:JSON.stringify({records})}),
+  importAuthorizedStudents:(records:Array<{nome:string;email:string}>)=>fetchApi<{batchHash:string;created:number;updated:number;preservedRevocations:number;reused:boolean}>('/api/admin/access-list/import',{method:'POST',body:JSON.stringify({records})}),
   getInstallationProfile:()=>fetchApi<any>('/api/admin/installation-profile'),
   updateInstallationProfile:(profile:any,expectedUpdatedAt?:string)=>fetchApi<any>('/api/admin/installation-profile',{method:'PATCH',body:JSON.stringify({profile,expectedUpdatedAt})}),
   getAcademicCycles:()=>fetchApi<any[]>('/api/admin/academic-cycles'),
@@ -338,7 +338,7 @@ export const apiClient = {
   cancelAdministrationTransfer:(id:string)=>fetchApi<any>(`/api/admin/administration-transfers/${encodeURIComponent(id)}/cancel`,{method:'POST'}),
   updateRecoveryEmails:(emails:string[])=>fetchApi<GlobalSettings>('/api/admin/recovery-emails',{method:'PATCH',body:JSON.stringify({emails})}),
   getAdminMetrics:(cycleId?:string)=>fetchApi<any>(`/api/admin/metrics${cycleId?`?cycleId=${encodeURIComponent(cycleId)}`:''}`),
-  getIndicators:()=>fetchApi<any>('/api/admin/indicators'),
+  getIndicators:(options:Pick<ApiRequestOptions,'signal'>={})=>fetchApi<any>('/api/public/indicators',options),
   getAdvancedAnalytics:(period='',compare='')=>fetchApi<any>(`/api/admin/analytics/advanced?${new URLSearchParams({period,compare})}`),
   downloadAdvancedAnalytics:(format:'csv'|'pdf',period='',compare='')=>downloadApiFile(`/api/admin/analytics/advanced?${new URLSearchParams({format,period,compare})}`),
   simulateWorkflow:(studio: unknown,scenario: unknown)=>fetchApi<any>('/api/admin/workflow/simulate',{method:'POST',body:JSON.stringify({studio,scenario})}),
@@ -355,14 +355,6 @@ export const apiClient = {
   importDocumentModelFromDrive:(type:string,linkOrId:string)=>fetchApi<any>(`/api/admin/models/${type}/link`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({linkOrId})}),
   restoreDocumentModelVersion:(type:string,version:number)=>fetchApi<any>(`/api/admin/models/${type}/versions/${version}/restore`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   deleteDocumentModel:(type:string)=>fetchApi<{deleted:boolean;type:string}>(`/api/admin/models/${encodeURIComponent(type)}`,{method:'DELETE'}),
-  confirmDefenseLocation:(id:string,data:{local:string;confirmationReceived:boolean;manualConfirmationReason:string;localEvidenceUrl?:string})=>fetchApi<WorkflowProcessResponse>(`/api/processes/${id}/confirm-location`,{method:'POST',body:JSON.stringify(data)}),
-  uploadLocationProof:async(id:string,file:File)=>{
-    if(file.size>24*1024*1024)throw new Error('O comprovante ultrapassa 24 MB. Envie uma versão menor do PDF.');
-    return withDevelopmentFallback(file,async()=>{
-      const staged=await stageFile(file,{purpose:'LOCATION_PROOF',processId:id});
-      return fetchApi<import('../types/workflowOperations').LocationProof>(`/api/processes/${encodeURIComponent(id)}/location-proof`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type})});
-    },async()=>fetchApi<import('../types/workflowOperations').LocationProof>(`/api/processes/${encodeURIComponent(id)}/location-proof`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})}));
-  },
   downloadLocationProof:(id:string)=>downloadApiFile(`/api/processes/${encodeURIComponent(id)}/location-proof/download`),
   getReservationReceipts:(protocol:string)=>fetchApi<{items:import('../types/workflowOperations').ReservationReceiptSummary[];currentStatus?:'PENDENTE'|'CONFIRMADO'|'RECUSADO'}>(`/api/public/processes/${encodeURIComponent(protocol)}/reservation-receipts`),
   downloadReservationReceipt:(protocol:string,receiptId?:string)=>downloadApiFile(`/api/public/processes/${encodeURIComponent(protocol)}/reservation-receipt${receiptId?`?receipt=${encodeURIComponent(receiptId)}`:''}`),

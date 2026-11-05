@@ -126,6 +126,7 @@ export interface EmailDeliveryRecord {
   idempotencyKey: string;
   recipient: string;
   cc?: string[];
+  workflowCc?: string[];
   auditCopyMode?: 'operational' | 'sensitive';
   auditCopyEmail?: string;
   requestedBy?: string;
@@ -139,6 +140,9 @@ export interface EmailDeliveryRecord {
   maxAttempts: number;
   nextRetryAt?: string;
   acceptedAt?: string;
+  dispatchState?: 'SENDING' | 'UNCERTAIN';
+  dispatchStartedAt?: string;
+  dispatchLeaseUntil?: string;
   createdAt: string;
   updatedAt: string;
 }

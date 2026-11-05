@@ -45,7 +45,7 @@ pages=[
  ('Abra “Meus TCCs” e clique no código do trabalho.','Se veio de um link por e-mail, o Portal pode manter a ficha do TCC aberta. Confira se a conta exibida é a sua.')],note='O código serve para acessar o Portal. O link de assinatura do Asten é outra mensagem, enviada em uma etapa posterior. Ambos são pessoais.'),
  dict(tag='ALUNO • CADASTRO',title='3. Cadastrar o trabalho',image='cadastro',image_h=167,steps=[
  ('Entre em “Meus TCCs” e clique em “Cadastrar TCC”.','Somente um autor inicia o cadastro. Se o TCC já existe, abra seu código; não cadastre o mesmo trabalho novamente.'),
- ('Preencha os participantes e os dados do trabalho.','Informe autor(es), orientador, dois examinadores e coorientador, quando houver. Confira nomes completos, e-mails, registros, titulações e instituições.'),
+ ('Preencha os participantes e os dados do trabalho.','Informe nomes completos, e-mails, tratamentos, titulações e instituições de autor(es), orientador, dois examinadores e coorientador, se houver. O cadastro não solicita CPF, matrícula ou SIAPE.'),
  ('Use “Continuar” para avançar nas sete etapas.','O e-mail do primeiro autor é o da conta de acesso e fica bloqueado. Use “Voltar” para corrigir ou “Salvar e sair” para retomar depois.'),
  ('Confira o título e as siglas.','No título e na instituição, escreva *UFES* para preservar uma sigla e/ou acrônimo em maiúsculas. Os asteriscos não aparecerão nos documentos.')]),
  dict(tag='ALUNO • AGENDAMENTO',title='4. Solicitar e acompanhar a reserva',steps=[
@@ -111,7 +111,7 @@ pages=[
  dict(tag='ACESSO E PROTEÇÃO DE DADOS',title='17. Quem pode entrar e o que é público',steps=[
  ('Aluno: autorização pela secretaria.','A secretaria autoriza previamente os alunos, normalmente com e-mail institucional da UFES. A administração pode autorizar outros endereços. Quem não tem autorização nem vínculo com um TCC não entra na área do usuário.'),
  ('Docentes e demais participantes: vínculo pelo TCC.','Ao concluir o cadastro, o autor vincula os demais autores, orientador, coorientador e examinadores pelos e-mails informados. Um examinador externo também pode entrar com esse mesmo endereço e o código enviado por e-mail. O vínculo libera apenas as funções do seu papel, sem acesso administrativo.'),
- ('Consulta pública e dados restritos.','Visitantes consultam título, autoria, docentes, resumo textual e dados públicos da defesa. E-mails e matrículas não aparecem na ficha pública. Nome, matrícula e e-mail são dados pessoais; também são tratados documentos, informações acadêmicas e registros técnicos necessários ao processo.'),
+ ('Consulta pública e dados restritos.','Visitantes consultam título, autoria, docentes, resumo textual e dados públicos da defesa. O cadastro novo não solicita CPF, matrícula ou SIAPE. Os registros históricos são preservados. E-mails e identificadores pessoais antigos não aparecem na ficha pública.'),
  ('Arquivos e comunicações.','Os originais ficam no Drive privado. A entrega obrigatória não autoriza a publicação do PDF. E-mails são usados para acesso, avisos e assinaturas; destinatários de mensagens do mesmo TCC podem conhecer os endereços dos demais destinatários.'),
  ('Regras programadas e decisões humanas.','A operação do Portal não usa modelos de inteligência artificial, agentes autônomos ou treinamento com dados dos participantes. Conceitos, pareceres, reservas e autorizações dependem dos responsáveis. Consulte o Aviso de privacidade e a legislação em Informações gerais do TCC.')]),
 ]
@@ -159,12 +159,14 @@ def step(number,title,text):
 
 def header(tag,title):
  global y
- c.setFillColor(GREEN);c.rect(0,H-58,W,58,fill=1,stroke=0)
- c.setFillColor(colors.white);c.setFont('PortalBold',11);c.drawImage(str(ROOT/'public/national-arms.png'),M,H-47,29,31,mask='auto')
- c.drawString(M+40,H-19,'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO')
- c.setFont('Portal',8);c.drawString(M+40,H-33,'CENTRO DE CIÊNCIAS DA SAÚDE')
- c.drawString(M+40,H-46,'Curso de Graduação em Enfermagem e Obstetrícia')
- y=H-84
+ c.setFillColor(GREEN);c.rect(0,H-100,W,100,fill=1,stroke=0)
+ arms=ImageReader(str(ROOT/'public/national-arms.png'));iw,ih=arms.getSize();aw=38;ah=aw*ih/iw
+ c.drawImage(arms,(W-aw)/2,H-49,aw,ah,mask='auto')
+ c.setFillColor(colors.white);c.setFont('PortalBold',10)
+ c.drawCentredString(W/2,H-63,'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO')
+ c.setFont('PortalBold',8.5);c.drawCentredString(W/2,H-76,'CENTRO DE CIÊNCIAS DA SAÚDE')
+ c.drawCentredString(W/2,H-89,'CURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA')
+ y=H-126
  c.setFillColor(GREEN);c.setFont('PortalBold',10);c.drawString(M,y,tag);y-=15
  para(escape(title).replace('\n','<br/>'),style='title',gap=17)
 
@@ -173,7 +175,7 @@ def footer():
  c.setFillColor(MUTED);c.setFont('Portal',7)
  for i,line in enumerate(['Comissão de Trabalho de Conclusão de Curso','Departamento de Enfermagem','Curso de Enfermagem e Obstetrícia — CCS/UFES']):
   c.drawRightString(W-M,46-i*10,line)
- c.drawRightString(W-M,14,'Atualizado em quarta-feira, 04/11/2026 • Assinatura pelo Asten')
+ c.drawRightString(W-M,14,'Atualizado em quinta-feira, 05/11/2026 • Assinatura pelo Asten')
  c.drawString(M,14,f'{page_number} / {len(pages)}')
  bounds.append({'page':page_number,'lastContentY':round(y,2)})
 
@@ -182,13 +184,14 @@ for page_number,page in enumerate(pages,1):
  c.addOutlineEntry(page['title'].replace('\n',' '),f'page-{page_number}',level=0)
  if page.get('kind')=='cover':
   c.setFillColor(GREEN);c.rect(0,H-262,W,262,fill=1,stroke=0)
-  c.setFillColor(colors.white);c.circle(M+32.5,H-69.5,34,fill=1,stroke=0)
-  c.drawImage(str(ROOT/'public/national-arms.png'),M,H-102,65,65,mask='auto')
-  c.setFillColor(colors.white);c.setFont('PortalBold',11);c.drawString(M+82,H-59,'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO')
-  c.setFont('Portal',10.5);c.drawString(M+82,H-77,'Centro de Ciências da Saúde')
-  c.setFont('Portal',8.5);c.drawString(M+82,H-91,'Curso de Graduação em Enfermagem e Obstetrícia')
-  c.setFont('PortalBold',31);c.drawString(M,H-155,'Guia prático do');c.drawString(M,H-193,'Portal de TCC')
-  c.setFont('Portal',13);c.drawString(M,H-229,'O que fazer, onde clicar e como concluir cada etapa')
+  arms=ImageReader(str(ROOT/'public/national-arms.png'));iw,ih=arms.getSize();aw=58;ah=aw*ih/iw
+  c.setFillColor(colors.white);c.circle(W/2,H-46,33,fill=1,stroke=0)
+  c.drawImage(arms,(W-aw)/2,H-76,aw,ah,mask='auto')
+  c.setFillColor(colors.white);c.setFont('PortalBold',11);c.drawCentredString(W/2,H-100,'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO')
+  c.setFont('PortalBold',10);c.drawCentredString(W/2,H-116,'CENTRO DE CIÊNCIAS DA SAÚDE')
+  c.setFont('PortalBold',9.4);c.drawCentredString(W/2,H-132,'CURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA')
+  c.setFont('PortalBold',31);c.drawString(M,H-178,'Guia prático do');c.drawString(M,H-214,'Portal de TCC')
+  c.setFont('Portal',13);c.drawString(M,H-245,'O que fazer, onde clicar e como concluir cada etapa')
   y=H-290
   para('Para alunos, orientadores e examinadores',style='title',gap=13)
   para('Mantenha este PDF aberto enquanto usa o Portal. Comece pelo acesso e, depois, consulte a seção do seu papel. Os títulos dos botões aparecem em <b>negrito</b>.',gap=16)
@@ -215,7 +218,7 @@ for page_number,page in enumerate(pages,1):
    ('QUEM ASSINA CADA DOCUMENTO','Ata: orientador e dois examinadores. Termo: todos os autores e orientador, somente quando houver publicação autorizada. Declaração da banca: Presidência da Comissão. Comprovante e carta-convite não exigem assinatura.')]:
    box('<b>'+title+'</b><br/>'+text)
   para('<b>Acessos de apoio</b><br/>No menu lateral, Sugestões e Declaração de comparecimento ficam em Informações. Replicar Portal fica abaixo, na seção Replicação. O manual completo em PDF está fixado no topo de Como usar.',gap=14)
-  para('<b>Referências e edição</b><br/>Nomes de telas e botões conferidos no código e em capturas locais da versão consolidada em quarta-feira, 04/11/2026. Asten: <link href="'+ASTEN+'" color="#005830">Como assinar um documento?</link>. As figuras usam dados fictícios. Este guia não substitui a conferência do documento antes de assiná-lo.',style='small')
+  para('<b>Referências e edição</b><br/>Nomes de telas e botões conferidos no código e em capturas locais. Cadastro atualizado em quinta-feira, 05/11/2026. Asten: <link href="'+ASTEN+'" color="#005830">Como assinar um documento?</link>. As figuras usam dados fictícios. Este guia não substitui a conferência do documento antes de assiná-lo.',style='small')
  else:
   header(page['tag'],page['title'])
   if page.get('intro'):para(escape(page['intro']),gap=17)
@@ -231,6 +234,6 @@ for i,p in enumerate(r.pages):
  assert len(p.extract_text() or '')>300,(i,'Missing text')
 assert '/Annots' in r.pages[0], 'Cover navigation must be clickable'
 PUBLIC.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(OUT,PUBLIC)
-manifest={'edition':'2026-11-04','pages':len(pages),'bodyFontPoints':13,'lineHeightPoints':18.5,'pdf':str(PUBLIC.relative_to(ROOT)),'sha256':hashlib.sha256(OUT.read_bytes()).hexdigest(),'signaturePolicy':'ATA: advisor and two examiners; TERMO: authors and advisor; DECLARACAO: commission president','sources':['server/workflow/signaturePolicy.ts','src/components/PortalIllustratedGuide.tsx','src/components/AdvisorEvaluationPanel.tsx','src/pages/HomePage.tsx','src/pages/ProcessoDetailPage.tsx','src/utils/blankAttendanceDeclaration.ts',ASTEN],'screenshots':'Synthetic captures; no provider dispatch or real personal data','layoutChecks':bounds}
+manifest={'edition':'2026-11-05','pages':len(pages),'bodyFontPoints':13,'lineHeightPoints':18.5,'pdf':str(PUBLIC.relative_to(ROOT)),'sha256':hashlib.sha256(OUT.read_bytes()).hexdigest(),'signaturePolicy':'ATA: advisor and two examiners; TERMO: authors and advisor; DECLARACAO: commission president','sources':['server/workflow/signaturePolicy.ts','src/components/PortalIllustratedGuide.tsx','src/components/AdvisorEvaluationPanel.tsx','src/pages/HomePage.tsx','src/pages/ProcessoDetailPage.tsx','src/utils/blankAttendanceDeclaration.ts',ASTEN],'screenshots':'Synthetic captures; no provider dispatch or real personal data','layoutChecks':bounds}
 (ROOT/'output/pdf/manual-verification.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
 print(json.dumps({'pdf':str(OUT),'public':str(PUBLIC),'pages':len(r.pages),'bytes':OUT.stat().st_size,'sha256':manifest['sha256']},ensure_ascii=False))

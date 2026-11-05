@@ -1,6 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
-import {DOCUMENT_ISSUER_LINES} from '../src/utils/institutionalIdentity';
+import {DOCUMENT_ISSUER_LINES,documentHeaderLines} from '../src/utils/institutionalIdentity';
+import {drawInstitutionalPdfHeader} from '../src/utils/institutionalPdfHeader';
 import {formatDateWithWeekday,formatTime24h} from '../src/utils/formatters';
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import type { buildAdvancedAnalytics } from './advancedAnalytics';
@@ -17,7 +18,7 @@ export async function buildInstitutionalReport(report:Report,profile:{courseName
   const doc=await PDFDocument.create(),regular=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold);
   const arms=await doc.embedPng(await readFile(path.join(process.cwd(),'server/documents/assets/national-arms.png')));
   const primary=rgb(...theme.primary),accent=rgb(...theme.accent),ink=rgb(.09,.12,.16),muted=rgb(.37,.41,.46),lineColor=rgb(.83,.86,.89);let page:PDFPage,y=0;
-  const addPage=(chapter='Relatório institucional')=>{page=doc.addPage(A4);y=A4[1]-margin;page.drawImage(arms,{x:A4[0]/2-20,y:y-25,width:40,height:42});y-=44;page.drawText(clean(profile.institutionName),{x:margin,y,size:8,font:bold,color:primary});page.drawText(clean(chapter),{x:A4[0]-margin-bold.widthOfTextAtSize(clean(chapter),8),y,size:8,font:bold,color:muted});y-=22;for(const value of ['Centro de Ciências da Saúde',profile.courseName]){page.drawText(clean(value),{x:margin,y,size:8,font:regular,color:muted});y-=12;}y-=12;};
+  const addPage=(chapter='Relatório institucional')=>{page=doc.addPage(A4);drawInstitutionalPdfHeader(page,{box:{x:margin,y:A4[1]-124,width:A4[0]-2*margin,height:96},lines:documentHeaderLines({institution:clean(profile.institutionName),course:clean(profile.courseName)}),font:bold,color:primary,arms,armsSize:50,fontSize:8});y=A4[1]-139;const headerTitle=clean(chapter).toLocaleUpperCase('pt-BR');page.drawText(headerTitle,{x:A4[0]-margin-bold.widthOfTextAtSize(headerTitle,8),y,size:8,font:bold,color:muted});y=A4[1]-154;};
   const ensure=(height:number,chapter?:string)=>{if(!page||y-height<margin+24)addPage(chapter);};
   const heading=(text:string,level=1)=>{const size=level===1?18:13;ensure(size+20,text);y-=4;page.drawText(clean(text),{x:margin,y,size,font:bold,color:level===1?primary:ink});y-=size+10;};
   const paragraph=(text:string,options:{bold?:boolean;color?:typeof ink;size?:number}={})=>{const font=options.bold?bold:regular,size=options.size||9.5;const lines=wrap(text,font,size,A4[0]-2*margin);ensure(lines.length*(size+4)+8);for(const item of lines){page.drawText(item,{x:margin,y,size,font,color:options.color||ink});y-=size+4;}y-=5;};

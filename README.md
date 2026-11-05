@@ -32,7 +32,6 @@ O estado da assinatura, da organização por pastas e do piloto separado em 15/1
 - Os dois formulários nativos são o cadastro inicial e a homologação da reserva pelo responsável, acessada pelo link enviado por e-mail. Nos locais predefinidos, esse responsável é o departamento; em outro local, é o orientador. Conceito/ata e entrega final são preenchidos nas abas do processo; seus campos e registros históricos são preservados.
 - Formulários personalizados criados no Estúdio aparecem automaticamente no processo apenas para o papel definido, preservam a revisão usada, geram PDF no Drive e podem disparar eventos `FORM_<ID>_SUBMITTED`.
 - Área temática, tema principal, tipo de estudo e finalidade podem ser coletados por campos canônicos configuráveis. Os relatórios não inferem esses dados do título ou do resumo.
-- Os antigos arquivos de propostas automáticas não fazem parte do fluxo ativo. O estado histórico é preservado somente por compatibilidade; não há motor de aprendizagem, agente autônomo ou chamada a modelos em execução. Os indicadores atuais seguem as regras de acesso e agregação abaixo.
 - Indicadores exigem identificação do Master ou da Presidência; as rotas públicas antigas retornam HTTP 410 e não consultam dados. O relatório institucional usa dados agregados, filtros de período, comparação, gráficos vetoriais e metodologia explícita; grupos pequenos continuam protegidos.
 
 > **Migração local (Portal TCC 16):** consulte [Guia de continuidade local e estado das plataformas](./docs/TRANSICAO_LOCAL_PORTAL_TCC16_2026-10-13.md). O modo padrão é isolado; nunca copie segredos da Vercel nem uma base de produção para o computador.
@@ -77,7 +76,6 @@ Siga, nesta ordem:
 7. [Atualização e rollback](./docs/ATUALIZACAO_E_ROLLBACK.md)
 8. [Fluxo operacional RC9](./docs/FLUXO_OPERACIONAL_RC9.md)
 9. [Guia de entrega ao Codex de implantação](./docs/ENTREGA_AO_CODEX.md)
-10. [Operação, privacidade e referência normativa](./docs/NOTA_TECNICA_PORTARIA_310_LGPD_2026-11-04.md)
 
 As integrações externas só podem ser consideradas homologadas depois de um piloto no ambiente do proprietário das credenciais. A instalação deve usar projetos e credenciais próprios, diferentes entre desenvolvimento e produção. Nunca publique ou envie chaves Supabase, OAuth Google, token Asten, segredos de sessão ou webhook.
 

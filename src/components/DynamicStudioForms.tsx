@@ -5,7 +5,7 @@ import type { FormQuestionItem, FormTemplateItem } from '../pages/ConfiguracoesP
 import type { StudioFormSubmission } from '../types/courseOperations';
 import { apiClient, ApiRequestError } from '../services/apiClient';
 import { evaluateStudioCondition } from '../utils/courseStudioValidator';
-import { normalizeAnswerKey as normalizeKey, validateFormAnswers } from '../utils/studioFormAnswers';
+import { normalizeAnswerKey as normalizeKey, validateFormAnswers, formQuestionsWithoutIdentifiers } from '../utils/studioFormAnswers';
 import { formatDateTimeWithWeekday } from '../utils/formatters';
 import { getPortalMessages } from '../utils/i18n';
 
@@ -46,9 +46,11 @@ export const DynamicStudioForms: React.FC<{ processId: string; locale?: string; 
     return () => { requestGeneration.current++; activeProcess.current = null; };
   }, [processId,previewForm]);
 
+  const runtimeForms = useMemo(() => forms.map(form => ({...form,questions:formQuestionsWithoutIdentifiers(form.questions || [])})), [forms]);
   const priorByForm = useMemo(() => new Map(forms.map(form => [form.id, submissions.filter(item => item.formId === form.id)])), [forms, submissions]);
 
   const updateAnswer = (formId: string, question: FormQuestionItem, value: string | number | boolean) => {
+    if (!formQuestionsWithoutIdentifiers([question]).length) return;
     const field = normalizeKey(question.fieldKey);
     setAnswers(previous => ({ ...previous, [formId]: { ...(previous[formId] || {}), [field]: value } }));
     setErrors(previous => ({ ...previous, [formId]: { ...(previous[formId] || {}), [field]: '' } }));
@@ -57,7 +59,7 @@ export const DynamicStudioForms: React.FC<{ processId: string; locale?: string; 
   const submit = async (form: RuntimeForm) => {
     if (previewForm||submitting.current) return;
     const values = answers[form.id] || {};
-    const { answers: accepted, issues: nextErrors } = validateFormAnswers(form.questions || [], values);
+    const { answers: accepted, issues: nextErrors } = validateFormAnswers(formQuestionsWithoutIdentifiers(form.questions || []), values);
     if (Object.keys(nextErrors).length) { setErrors(previous => ({ ...previous, [form.id]: nextErrors })); return; }
     submitting.current = true; setWorking(form.id); setNotice(null);
     try {
@@ -95,8 +97,8 @@ export const DynamicStudioForms: React.FC<{ processId: string; locale?: string; 
     <div className="space-y-4 p-4">
     {notice && <div role="status" className={`flex items-start gap-2 rounded-xl border p-3 text-sm ${notice.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-950'}`}>{notice.ok ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <AlertCircle className="h-5 w-5 shrink-0" />}<span>{notice.text}</span></div>}
     {!forms.length && <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-600">{copy.emptyForms}</div>}
-    {forms.map(form => {
-      const values = answers[form.id] || {}, prior = priorByForm.get(form.id) || [];
+    {runtimeForms.map(form => {
+      const values = validateFormAnswers(form.questions, answers[form.id] || {}).answers, prior = priorByForm.get(form.id) || [];
       return <article key={form.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <header className="border-b border-slate-200 bg-slate-50 px-5 py-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><div className="text-[10px] font-black normal-case tracking-wider" style={{ color: accentColor }}>{form.stage} · {form.targetRole}</div><h3 className="mt-1 text-base font-black text-slate-900">{form.title}</h3><p className="mt-1 text-sm text-slate-600">{form.description}</p></div><span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600">{copy.revision} {form.revision || 0}</span></div></header>
         <div className="space-y-5 p-5">{(form.questions || []).filter(question => evaluateStudioCondition(question.visibleWhen, values)).map((question, index) => { const field = normalizeKey(question.fieldKey), issue = errors[form.id]?.[field]; return <div key={question.id}><label htmlFor={`${form.id}-${field}`} className="mb-1.5 block text-sm font-bold text-slate-800">{index + 1}. {question.label}{question.required && <span className="ml-1 text-rose-600">*</span>}</label>{renderField(form, question)}<div id={`${form.id}-${field}-help`} className={`mt-1 text-xs ${issue ? 'font-semibold text-rose-700' : 'text-slate-500'}`}>{issue || question.helpText}</div></div>; })}

@@ -1,9 +1,9 @@
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { buildSupabaseAdminHeaders, getSupabaseRuntimeStatus } from './supabase';
 import { assertSafeUploadedDocument, UnsafeUploadError } from '../security/fileSafety';
+import {readBoundedResponse,ResponseSizeError} from '../security/boundedResponse';
 
 export type StagedUploadPurpose =
-  | 'LOCATION_PROOF'
   | 'DOCUMENT_MODEL'
   | 'PROCESS_FULL_WORK'
   | 'PROCESS_EXPANDED_ABSTRACT'
@@ -54,7 +54,6 @@ interface DownloadTransferRow {
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const PDF_MIME = 'application/pdf';
 const MAX_BYTES:Record<StagedUploadPurpose,number> = {
-  LOCATION_PROOF: 24 * 1024 * 1024,
   DOCUMENT_MODEL: 12 * 1024 * 1024,
   PROCESS_FULL_WORK: 24 * 1024 * 1024,
   PROCESS_EXPANDED_ABSTRACT: 24 * 1024 * 1024,
@@ -62,7 +61,6 @@ const MAX_BYTES:Record<StagedUploadPurpose,number> = {
   VERIFICATION_PDF: 50 * 1024 * 1024
 };
 const MIME_TYPES:Record<StagedUploadPurpose,string> = {
-  LOCATION_PROOF: PDF_MIME,
   DOCUMENT_MODEL: DOCX_MIME,
   PROCESS_FULL_WORK: PDF_MIME,
   PROCESS_EXPANDED_ABSTRACT: PDF_MIME,
@@ -125,7 +123,7 @@ export function validateStagedUploadDescriptor(input:StagedUploadDescriptor):voi
   if(input.fileName.length<1||input.fileName.length>240||/[\u0000-\u001f]/.test(input.fileName))throw new Error('Nome de arquivo inválido.');
   const expectedExtension=input.purpose==='DOCUMENT_MODEL'?'.docx':'.pdf';
   if(!input.fileName.toLowerCase().endsWith(expectedExtension))throw new Error(`A extensão esperada é ${expectedExtension}.`);
-  if((input.purpose==='LOCATION_PROOF'||input.purpose==='PROCESS_FULL_WORK'||input.purpose==='PROCESS_EXPANDED_ABSTRACT'||input.purpose==='GOV_BR_SIGNED_PDF')&&!input.processId?.trim())throw new Error('O upload deve estar vinculado a um processo.');
+  if((input.purpose==='PROCESS_FULL_WORK'||input.purpose==='PROCESS_EXPANDED_ABSTRACT'||input.purpose==='GOV_BR_SIGNED_PDF')&&!input.processId?.trim())throw new Error('O upload deve estar vinculado a um processo.');
   if(input.purpose==='VERIFICATION_PDF'&&!input.verificationCode?.trim())throw new Error('A verificação pública deve estar vinculada ao código consultado.');
   if((input.processId?.length||0)>200||(input.verificationCode?.length||0)>200)throw new Error('O vínculo do upload excede o limite permitido.');
 }
@@ -241,9 +239,24 @@ export async function createSupabaseStagedUpload(input:StagedUploadDescriptor):P
   }
 }
 
-async function claimTicket(uploadId:string):Promise<StagedUploadRow>{
-  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uploadId))throw new Error('Identificador de upload inválido.');
-  const response=await fetch(`${dataBaseUrl()}/portal_upload_staging?id=eq.${encodeURIComponent(uploadId)}&status=eq.PENDING&select=*`,{
+interface StagedUploadClaim {
+  uploadId:string;
+  purpose:StagedUploadPurpose;
+  requesterBinding:string;
+  processId?:string;
+  verificationCode?:string;
+}
+
+async function claimTicket(input:StagedUploadClaim):Promise<StagedUploadRow>{
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.uploadId))throw new Error('Identificador de upload inválido.');
+  const filters=new URLSearchParams({
+    id:`eq.${input.uploadId}`,status:'eq.PENDING',purpose:`eq.${input.purpose}`,
+    requester_hash:`eq.${bindingHash(input.requesterBinding)}`,
+    process_external_id:input.processId?`eq.${input.processId}`:'is.null',
+    verification_code_hash:input.verificationCode?`eq.${bindingHash(input.verificationCode)}`:'is.null',
+    expires_at:`gt.${new Date().toISOString()}`,select:'*'
+  });
+  const response=await fetch(`${dataBaseUrl()}/portal_upload_staging?${filters}`,{
     method:'PATCH',headers:{...buildSupabaseAdminHeaders(),Prefer:'return=representation'},
     body:JSON.stringify({status:'CONSUMING',updated_at:new Date().toISOString()}),signal:AbortSignal.timeout(10_000)
   });
@@ -252,33 +265,37 @@ async function claimTicket(uploadId:string):Promise<StagedUploadRow>{
   return rows[0];
 }
 
-export async function withSupabaseStagedUpload<T>(input:{
-  uploadId:string;
-  purpose:StagedUploadPurpose;
-  requesterBinding:string;
-  processId?:string;
-  verificationCode?:string;
-},consumer:(file:{bytes:Buffer;fileName:string;mimeType:string;sha256:string})=>Promise<T>):Promise<T>{
+export async function withSupabaseStagedUpload<T>(input:StagedUploadClaim,consumer:(file:{bytes:Buffer;fileName:string;mimeType:string;sha256:string})=>Promise<T>):Promise<T>{
   assertConfigured();
-  const row=await claimTicket(input.uploadId);
+  const row=await claimTicket(input);
   const bindingMatches=row.requester_hash===bindingHash(input.requesterBinding);
   const processMatches=(row.process_external_id||'')===(input.processId||'');
   const verificationMatches=(row.verification_code_hash||'')===(input.verificationCode?bindingHash(input.verificationCode):'');
-  if(row.purpose!==input.purpose||!bindingMatches||!processMatches||!verificationMatches||Date.parse(row.expires_at)<=Date.now()){
-    await removeObject(row.object_path).catch(()=>undefined);
-    await updateTicket(row.id,Date.parse(row.expires_at)<=Date.now()?'EXPIRED':'REJECTED','BINDING_MISMATCH');
+  if(row.id!==input.uploadId||row.purpose!==input.purpose||!bindingMatches||!processMatches||!verificationMatches||!Number.isFinite(Date.parse(row.expires_at))||Date.parse(row.expires_at)<=Date.now()){
     throw new Error('O upload não pertence a esta sessão, processo ou finalidade.');
   }
   let result:T;
+  let rejected=false;
   try{
     const downloaded=await fetch(`${storageBaseUrl()}/object/authenticated/${encodeURIComponent(stagingBucket())}/${encodePath(row.object_path)}`,{
       headers:buildSupabaseAdminHeaders(),cache:'no-store',signal:AbortSignal.timeout(30_000)
     });
     if(!downloaded.ok)throw new Error(`O binário temporário não foi localizado (${downloaded.status}).`);
-    const bytes=Buffer.from(await downloaded.arrayBuffer());
+    let bytes:Buffer;
+    try{
+      bytes=await readBoundedResponse(downloaded,MAX_BYTES[row.purpose],row.expected_size);
+    }catch(error){
+      if(error instanceof ResponseSizeError){
+        rejected=true;
+        await removeObject(row.object_path).catch(()=>undefined);
+        await updateTicket(row.id,'REJECTED','INTEGRITY_MISMATCH');
+      }
+      throw error;
+    }
     const actualMime=String(downloaded.headers.get('content-type')||'').split(';')[0].toLowerCase();
     const actualSha256=hash(bytes);
     if(bytes.byteLength!==row.expected_size||actualMime!==row.mime_type||actualSha256!==row.expected_sha256){
+      rejected=true;
       await removeObject(row.object_path).catch(()=>undefined);
       await updateTicket(row.id,'REJECTED','INTEGRITY_MISMATCH');
       throw new Error('O arquivo recebido não corresponde ao tamanho, MIME ou checksum autorizado.');
@@ -287,6 +304,7 @@ export async function withSupabaseStagedUpload<T>(input:{
       await assertSafeUploadedDocument(bytes,row.mime_type===DOCX_MIME?'DOCX':'PDF');
     } catch (error) {
       if (error instanceof UnsafeUploadError) {
+        rejected=true;
         await removeObject(row.object_path).catch(()=>undefined);
         await updateTicket(row.id,'REJECTED',error.code).catch(()=>undefined);
       }
@@ -294,8 +312,7 @@ export async function withSupabaseStagedUpload<T>(input:{
     }
     result=await consumer({bytes,fileName:row.original_file_name,mimeType:row.mime_type,sha256:actualSha256});
   }catch(error){
-    const message=error instanceof Error?error.message:'';
-    if(!(error instanceof UnsafeUploadError)&&!message.includes('não corresponde'))await updateTicket(row.id,'PENDING','CONSUMER_FAILED').catch(()=>undefined);
+    if(!rejected&&!(error instanceof UnsafeUploadError))await updateTicket(row.id,'PENDING','CONSUMER_FAILED').catch(()=>undefined);
     throw error;
   }
   // Marque como consumido antes da limpeza. Se a exclusão falhar, o mesmo

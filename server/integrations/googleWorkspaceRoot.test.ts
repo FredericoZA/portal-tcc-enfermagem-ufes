@@ -1,8 +1,40 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { bootstrapGoogleDriveStructure,ensurePortalRenderFolder } from './googleWorkspace';
+import { bootstrapGoogleDriveStructure,ensurePortalRenderFolder,readPrivatePortalBackup,verifyPrivateDriveFolder } from './googleWorkspace';
 
 const rootId = 'pasta_raiz_institucional_123';
+test('destinos privados rejeitam grupos e permissões desconhecidas, preservando acesso nominal',async t=>{
+  let permissions:any[]=[];
+  t.mock.method(globalThis,'fetch',async()=>reply({permissions}));
+  for(const permission of [{type:'group',role:'reader'},{type:'user',role:'unknown'},{type:'unknown',role:'reader'}]){
+    permissions=[{type:'user',role:'owner'},permission];
+    await assert.rejects(verifyPrivateDriveFolder('test-token',rootId),/compartilhada|permissão|grupo/);
+  }
+  permissions=[{type:'user',role:'owner'},{type:'user',role:'writer'},{type:'user',role:'reader'}];
+  await assert.doesNotReject(verifyPrivateDriveFolder('test-token',rootId));
+});
+
+test('permissão ampla na segunda página impede o uso do destino privado',async t=>{
+  const pages:string[]=[];
+  t.mock.method(globalThis,'fetch',async(input:unknown)=>{
+    const query=new URL(String(input)).searchParams;
+    assert.match(query.get('fields')||'',/nextPageToken/);
+    const page=query.get('pageToken')||'';pages.push(page);
+    return page?reply({permissions:[{type:'group',role:'reader'}]}):reply({permissions:[{type:'user',role:'owner'}],nextPageToken:'second/page+'});
+  });
+  await assert.rejects(verifyPrivateDriveFolder('test-token',rootId),/grupo/);
+  assert.deepEqual(pages,['','second/page+']);
+});
+
+test('releitura de backup privado aplica limite antes de consumir o corpo',async t=>{
+  let cancelled=false;
+  t.mock.method(globalThis,'fetch',async(input:unknown)=>{
+    if(String(input).includes('/permissions?'))return reply({permissions:[{type:'user',role:'owner'}]});
+    return new Response(new ReadableStream<Uint8Array>({pull(controller){controller.enqueue(new Uint8Array(4));},cancel(){cancelled=true;}},{highWaterMark:0}),{headers:{'content-length':String(32*1024*1024+1)}});
+  });
+  await assert.rejects(readPrivatePortalBackup('test-token','backup-file-id-123'),/limite seguro/);
+  assert.equal(cancelled,true);
+});
 test('conversões ficam dentro do Sistema e não soltas na raiz nem entre modelos ativos',async t=>{
   const created:any[]=[];
   t.mock.method(globalThis,'fetch',async(input:unknown,init?:RequestInit)=>{

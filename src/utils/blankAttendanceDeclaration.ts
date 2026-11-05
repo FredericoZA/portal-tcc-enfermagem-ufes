@@ -1,4 +1,5 @@
-import {DOCUMENT_ISSUER_LINES} from './institutionalIdentity';
+import {DOCUMENT_ISSUER_LINES,documentHeaderLines} from './institutionalIdentity';
+import {drawInstitutionalPdfHeader} from './institutionalPdfHeader';
 /**
  * Declaração pública institucional aprovada: modelo A4 para preenchimento à mão.
  * A Comissão de Trabalho de Conclusão de Curso integra o Departamento de Enfermagem; a declaração é
@@ -69,13 +70,8 @@ export async function createBlankAttendanceDeclarationPdf(crestBytes?:Uint8Array
 
   // Cabeçalho institucional com o brasão de armas original, sem alterar a arte.
   framed(22, 22, pageWidth - 44, pageHeight - 44);
-  page.drawRectangle({x:23,y:716,width:pageWidth-46,height:103,color:green});
-  page.drawCircle({x:74,y:767,size:31,color:rgb(1,1,1)});
-  page.drawImage(crest,{x:45,y:738,width:58,height:58});
-  const header=(value:string,y:number,size:number,font=sans)=>draw(value,119,y,size,font,rgb(1,1,1));
-  header('UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO',790,10,sansBold);
-  header('CENTRO DE CIÊNCIAS DA SAÚDE',773,9);
-  header('Curso de Graduação em Enfermagem e Obstetrícia',757,8.7);
+  page.drawRectangle({x:23,y:719,width:pageWidth-46,height:100,color:green});
+  drawInstitutionalPdfHeader(page,{box:{x:23,y:719,width:pageWidth-46,height:100},lines:documentHeaderLines(),font:sansBold,color:rgb(1,1,1),arms:crest,armsSize:48,armsBackground:rgb(1,1,1),fontSize:9});
 
 
   // Título e campos livres para preenchimento manuscrito.

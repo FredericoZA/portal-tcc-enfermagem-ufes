@@ -1,6 +1,6 @@
 import {formatDateTimeWithWeekday} from '../utils/formatters';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Eye, RefreshCw, RotateCcw, ShieldCheck, Trash2 } from 'lucide-react';
+import { Eye, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { portalConfirm, portalNotice } from '../services/portalDialogs';
@@ -110,27 +110,11 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
 
   if (!isMasterAdmin) return <section className="rounded-xl border border-slate-300 bg-white p-6 text-sm font-semibold text-slate-700">Registros de Assinatura disponíveis somente para o usuário Master.</section>;
 
-  const remove = async (job: SignatureJob) => {
-    if (workingId) return;
-    const message = job.status === 'ARCHIVED'
-      ? `Excluir o registro de ${job.documentTitle} — ${job.protocol}? Ele deixará de aparecer nos registros de assinatura. O documento já assinado e arquivado será preservado.`
-      : `Excluir a solicitação de ${job.documentTitle} — ${job.protocol}? A solicitação pendente será cancelada e o registro sairá da lista.`;
-    if (!(await portalConfirm(message, {title:'Excluir registro de assinatura',confirmLabel:'Excluir',tone:'warning'}))) return;
-    setWorkingId(job.id);
-    try {
-      await apiClient.deleteSignatureJob(job.id);
-      setJobs(previous => previous.filter(item => item.id !== job.id));
-      if (selectedJob?.id === job.id) setSelectedJob(null);
-    } catch (error: unknown) { portalNotice(error instanceof Error ? error.message : 'Não foi possível excluir o registro.'); }
-    finally { setWorkingId(''); }
-  };
-
   const renderActions = (job: SignatureJob) => {
     const busy = workingId === job.id;
     const canRetry = RETRYABLE_STATUSES.has(job.status) && job.providerCreationState !== 'UNCERTAIN';
     const canReconcile = Boolean(job.providerEnvelopeId) && !FINAL_STATUSES.has(job.status);
     return <div className="flex items-center justify-center gap-1 whitespace-nowrap">
-      <button type="button" onClick={() => void remove(job)} disabled={Boolean(workingId)} aria-label={`Excluir registro de ${job.documentTitle} — ${job.protocol}`} title="Excluir registro" className="portal-toolbar-icon-button text-[var(--portal-danger)] disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" aria-hidden="true"/></button>
       <button type="button" onClick={() => setSelectedJob(job)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50"><Eye className="h-3 w-3"/>Auditar</button>
       {canRetry && <button type="button" onClick={() => void retry(job)} disabled={busy} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50 disabled:opacity-50"><RefreshCw className={`h-3 w-3 ${busy ? 'animate-spin' : ''}`}/>Reenviar</button>}
       {canReconcile && <button type="button" onClick={() => void reconcile(job)} disabled={busy} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50 disabled:opacity-50"><RotateCcw className={`h-3 w-3 ${busy ? 'animate-spin' : ''}`}/>Reconciliar</button>}

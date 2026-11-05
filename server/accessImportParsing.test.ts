@@ -43,7 +43,9 @@ test('XLSX com colunas reconhecidas preserva registro sem números e com espaço
  for(const matricula of ['ABC','2026 001']){
   const blob=await studentImportTemplateXlsx(),zip=await JSZip.loadAsync(await blob.arrayBuffer());
   let sheet=await zip.file('xl/worksheets/sheet1.xml')!.async('string');
-  for(const value of ['Maria Silva','maria@example.invalid',matricula])sheet=sheet.replace('<t xml:space="preserve"></t>',`<t xml:space="preserve">${value}</t>`);
+  for(const value of ['Maria Silva','maria@example.invalid'])sheet=sheet.replace('<t xml:space="preserve"></t>',`<t xml:space="preserve">${value}</t>`);
+  sheet=sheet.replace('</row>','<c r="C1" t="inlineStr"><is><t>Matrícula</t></is></c></row>');
+  sheet=sheet.replace(/(<row r="2"[^>]*>[\s\S]*?)(<\/row>)/,`$1<c r="C2" t="inlineStr"><is><t>${matricula}</t></is></c>$2`);
   zip.file('xl/worksheets/sheet1.xml',sheet);
   const bytes=await zip.generateAsync({type:'uint8array'});
   assert.deepEqual(await parseStudentImportFile(new File([bytes],'lista.xlsx')),[{row:2,nome:'Maria Silva',email:'maria@example.invalid',matricula}]);

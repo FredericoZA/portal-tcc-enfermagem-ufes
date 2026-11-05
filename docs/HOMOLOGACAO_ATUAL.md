@@ -8,7 +8,7 @@ A publicação anterior foi confirmada em 27/10/2026 às 23:34 (Brasília), depl
 
 O envio real da declaração do TCC de teste 2026-0003 foi confirmado na Asten, envelope 93108, em 27/10/2026. Envio confirmado não significa assinatura concluída ou arquivamento. Não criar outro envelope para comprovar o mesmo envio.
 
-A exclusão definitiva de envelopes Asten permanece pendente de contrato de API confirmado. Cancelar a assinatura ou mover para a lixeira não comprova expurgo. A fila de limpeza deve permanecer pendente até a remoção efetiva; não marcar sucesso para esconder resíduos. As rotinas de Drive, Calendar, armazenamento temporário e banco exigem evidências próprias de execução real.
+A exclusão do TCC é centralizada na lixeira dos detalhes do trabalho. Ela remove os registros do Portal e limpa Drive, Calendar, armazenamento temporário e banco; falhas nessas etapas permanecem na fila para nova tentativa. A exclusão dos envelopes na Asten é manual e separada: os identificadores são informados ao Master, sem impedir a conclusão da limpeza do Portal. Cancelar uma assinatura ou excluir o TCC não comprova expurgo na Asten. As operações nos serviços externos exigem evidências próprias de execução real.
 
 A homologação ponta a ponta permanece **não confirmada** até concluir os pilotos abaixo e conferir o arquivamento dos documentos realmente assinados. Testes isolados não comprovam operação dos serviços externos.
 
@@ -69,7 +69,7 @@ Provoque, em ambiente de teste, pelo menos uma falha controlada em uma etapa ext
 
 ## Exclusão Master
 
-Em um processo fictício separado, verifique a exclusão independentemente da etapa. Confira os artefatos vinculados no Drive, eventos no Calendar, objetos temporários, histórico e referências do banco. Não remover modelos compartilhados, a pasta raiz ou arquivos de outro processo. Repita a limpeza para comprovar idempotência. Com envelopes Asten, exigir evidência de expurgo definitivo antes de encerrar a fila. Não usar processos ativos ou documentos institucionais como material descartável.
+Em um processo fictício separado, verifique a exclusão independentemente da etapa. Confira os artefatos vinculados no Drive, eventos no Calendar, objetos temporários, histórico e referências do banco. Reinicie o Portal e confirme que o TCC e seus registros de assinatura não reaparecem. Preserve modelos compartilhados, a pasta raiz e arquivos de outro processo. Repita a limpeza para comprovar idempotência. Os envelopes Asten devem ser informados para exclusão manual no provedor, sem manter o TCC na fila do Portal por esse motivo. A sequência de protocolos continua crescente após a exclusão e o reinício; números excluídos não são reutilizados. Não usar processos ativos ou documentos institucionais como material descartável.
 
 ## Interface
 

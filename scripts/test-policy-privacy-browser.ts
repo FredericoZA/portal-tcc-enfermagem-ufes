@@ -21,13 +21,13 @@ try{
   await page.route(base+'/api/me',(route:any)=>route.fulfill({json:{userEmail:email,globalRoles:roles,memberships:[],isAuthenticated:Boolean(email)}}));
   await page.route(base+'/api/processes',(route:any)=>route.fulfill({json:[]}));
   await page.route(base+'/api/legacy-academic-records',(route:any)=>route.fulfill({json:[]}));
-  let requests=0;
-  await page.route(base+'/api/admin/indicators',(route:any)=>{requests++;return route.fulfill({json:buildPublicIndicators(Array.from({length:6},()=>structuredClone(DEMO_PROCESSES[0])))});});
+  let requests=0,administrativeRequests=0;
+  await page.route(base+'/api/public/indicators',(route:any)=>{requests++;return route.fulfill({json:buildPublicIndicators(Array.from({length:6},()=>structuredClone(DEMO_PROCESSES[0])))});});
+  await page.route(base+'/api/admin/indicators',(route:any)=>{administrativeRequests++;return route.abort();});
   await page.goto(base+'/');await page.getByRole('button',{name:'Calendário',exact:true}).waitFor();
   const indicators=page.locator('#sidebar-nav').getByRole('button',{name:'Indicadores',exact:true});
-  if(roles.length){await indicators.waitFor();await indicators.click();await page.locator('#indicadores-publicos-page').waitFor();await page.getByText('Carregando estatísticas acadêmicas…').waitFor({state:'detached'});assert.equal(requests,1);await page.screenshot({path:`${out}/${role}-indicadores.png`,fullPage:false});}
-  else{await page.waitForTimeout(600);assert.equal(await indicators.count(),0);assert.equal(requests,0);await page.screenshot({path:`${out}/${role}-menu.png`,fullPage:false});}
-  checks.push({role,indicatorsAllowed:roles.length>0,statisticRequests:requests});
+  await indicators.waitFor();await indicators.click();await page.locator('#indicadores-publicos-page').waitFor();await page.getByText('Carregando estatísticas acadêmicas…').waitFor({state:'detached'});assert.equal(requests,1);assert.equal(administrativeRequests,0);await page.screenshot({path:`${out}/${role}-indicadores.png`,fullPage:false});
+  checks.push({role,indicatorsAllowed:true,statisticRequests:requests,administrativeRequests});
   await context.close();
  }
  assert.deepEqual(errors,[]);

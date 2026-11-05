@@ -15,8 +15,10 @@ const visualCss = [
 ].join('\n');
 const auth = read('src/context/AuthContext.tsx');
 const session = read('server/security/firebaseAuth.ts');
-const personalizationHub = read('src/components/PortalPersonalizationHubModal.tsx');
-const editor = read('src/components/UnifiedPortalEditorModal.tsx');
+const settingsPage = read('src/pages/ConfiguracoesPage.tsx');
+const workspace = read('src/components/SettingsWorkspaceModal.tsx');
+const tableSettings = read('src/components/HeaderSettingsPopover.tsx');
+const appearanceLinks = read('src/utils/portalAppearanceLinks.ts');
 const access = read('src/components/AuthorizedStudentsPanel.tsx');
 const importUtil = read('src/utils/studentImport.ts');
 const integrations = read('src/components/InfrastructureIntegrationsPanel.tsx');
@@ -83,16 +85,20 @@ assert.match(auth, /ApiRequestError/);
 assert.match(auth, /window\.addEventListener\('online'/);
 assert.match(auth, /syncPortalFavicon/);
 
-assert.match(personalizationHub, /onOpenAppearance\('site_header'\)/);
-assert.doesNotMatch(personalizationHub, /onOpenAppearance\('quick_presets'\)/);
-assert.doesNotMatch(personalizationHub, /role="dialog"/);
+assert.match(settingsPage, /<SettingsWorkspaceModal/);
+assert.match(settingsPage, /<IntegrationStudioPanel/);
+assert.doesNotMatch(settingsPage, /PortalPersonalizationHubModal|UnifiedPortalEditorModal|quick_presets/);
+assert.match(workspace, /data-portal-workflow-workspace/);
+assert.match(tableSettings, /if\(!isMaster\|\|!storageKey\|\|isSavingDefault\)return/);
+assert.match(tableSettings, /\/api\/admin\/table-defaults\//);
+assert.match(tableSettings, /\/api\/table-preferences\//);
 assert.doesNotMatch(main, /PortalUiEnhancer|PortalTableTextPolicy/);
 for (const removedLabel of ['Botões no Topo', 'Estilo Base Planilhas', 'Colunas, ordem e linhas', 'Estilo Base Pop-ups', 'Análise Hipoar', 'Solicitação de Correção']) {
-  assert.ok(!editor.includes(`renderNavRow('${removedLabel}`) && !editor.includes(`, '${removedLabel}',`), `O editor não pode voltar a expor “${removedLabel}”.`);
+  assert.ok(!settingsPage.includes(`title: '${removedLabel}'`), `A configuração não pode voltar a expor “${removedLabel}”.`);
 }
-for (const canonicalSheet of ["sheet_calendar", "sheet_repository", "sheet_my_tccs", "sheet_coordinator"]) assert.ok(editor.includes(canonicalSheet));
+for (const canonicalSheet of ["sheet_calendar", "sheet_repository", "sheet_my_tccs", "sheet_coordinator"]) assert.ok(appearanceLinks.includes(canonicalSheet));
 
-assert.match(access, /Matrícula — opcional/);
+assert.doesNotMatch(access, /Matrícula — opcional/, 'O cadastro de acesso não deve pedir um identificador sem finalidade operacional.');
 assert.match(access, /parseStudentImportFile/);
 assert.match(access, /\/api\/public\/templates\/access-list\.xlsx/);
 assert.match(access, />Excel<\/button>/);

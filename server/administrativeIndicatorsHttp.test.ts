@@ -5,19 +5,18 @@ import {mkdtemp,writeFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {DEMO_PROCESSES,INITIAL_SETTINGS} from '../src/services/demoSeed';
-import retiredHandler from './vercel/public-indicators';
+import {canonicalLegacyRecord} from './legacyArchive';
 
-test('função Vercel antiga encerra consulta sem carregar dados',()=>{
- const headers:Record<string,string>={};let status=0;let body:any;
- const response:any={setHeader:(k:string,v:string)=>{headers[k]=v;},status:(v:number)=>{status=v;return response;},json:(v:unknown)=>{body=v;return response;}};
- retiredHandler({method:'GET',headers:{},socket:{remoteAddress:'127.0.0.1'}} as any,response);
- assert.equal(status,410);assert.equal(body.code,'PUBLIC_INDICATORS_RETIRED');assert.match(headers['Cache-Control'],/private, no-store/);assert.equal(body.totals,undefined);
-});
-
-test('HTTP: indicadores exigem sessão e papel; saídas não ficam em cache público',{timeout:45000},async()=>{
+test('HTTP: indicadores públicos incluem legados sem dados individuais; rota administrativa mantém autorização',{timeout:45000},async()=>{
  const dir=await mkdtemp(path.join(tmpdir(),'portal-indicators-private-'));
  const processRecord=structuredClone(DEMO_PROCESSES[0]);
- await writeFile(path.join(dir,'portal-state.json'),JSON.stringify({settings:INITIAL_SETTINGS,processes:[processRecord],signatureJobs:[]}));
+ const legacyAcademicRecords=Array.from({length:6},(_,index)=>canonicalLegacyRecord({
+  id:`legado-000${index+1}`,protocolo:`00${index+1} - Legado`,sourceFingerprint:String(index+1).repeat(64),
+  titulo:'Título privado de teste',autores:['Pessoa demonstrativa'],orientador:'Docente demonstrativo',coorientador:'',coorientadorInstituicao:'',examinadores:[],resumo:'Resumo privado de teste',palavrasChave:[],
+  dataDefesa:'2023-06-01',horaDefesa:'',localDefesa:'Local individual',isPublic:false,publishFullWork:false,publishExpandedAbstract:false,publicationState:'NOT_REQUESTED',authorizationDecision:'UNSPECIFIED',
+  attachments:[{driveFileId:'private_file_123456',fileName:'documento-privado.pdf',kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64),evidence:'Conferido'}],provenance:{originalConsent:[index<3?'Sim':'Não']},
+ }));
+ await writeFile(path.join(dir,'portal-state.json'),JSON.stringify({settings:INITIAL_SETTINGS,processes:[processRecord],legacyAcademicRecords,signatureJobs:[]}));
  const port=47000+Math.floor(Math.random()*900),base=`http://127.0.0.1:${port}`;
  const child=spawn(process.execPath,['--import','tsx','server.ts'],{cwd:process.cwd(),env:{PATH:process.env.PATH,HOME:process.env.HOME,NODE_ENV:'development',HOST:'127.0.0.1',PORT:String(port),APP_URL:base,PORTAL_PUBLIC_URL:base,PORTAL_DATA_DIR:dir,PORTAL_PERSISTENCE_PROVIDER:'local_file',PORTAL_ALLOW_INSECURE_DEMO_AUTH:'true',PORTAL_ALLOW_LOCAL_OTP_STORE:'true',PORTAL_ALLOW_LOCAL_SECRET_STORE:'true',PORTAL_SESSION_SECRET:'indicators-test-session-secret-0123456789abcdef',PORTAL_OTP_PEPPER:'indicators-test-otp-secret-0123456789abcdef',ASTEN_INTEGRATION_ENABLED:'false',SUPABASE_URL:'',SUPABASE_SECRET_KEY:'',SUPABASE_SERVICE_ROLE_KEY:'',VERCEL:''},stdio:'ignore'});
  try{
@@ -27,9 +26,12 @@ test('HTTP: indicadores exigem sessão e papel; saídas não ficam em cache púb
   assert.equal((await fetch(route,{headers:{'x-demo-user-email':processRecord.aluno1.email}})).status,403);
   for(const email of ['master@portal.local','presidente@portal.local']){
    const response=await fetch(route,{headers:{'x-demo-user-email':email}});assert.equal(response.status,200);assert.match(response.headers.get('cache-control')||'',/private, no-store/);
-   const result=await response.json();assert.equal(result.totals.registered,1);assert.equal(result.privacy.smallGroupSuppressed,true);assert.deepEqual(result.themes,[]);assert.doesNotMatch(JSON.stringify(result),/@|matricula|parecer|aluno1/);
+   const result=await response.json();assert.equal(result.totals.registered,7);assert.equal(result.totals.published,3);assert.equal(result.privacy.smallGroupSuppressed,false);assert.deepEqual(result.themes,[]);assert.doesNotMatch(JSON.stringify(result),/@|matricula|parecer|aluno1|private_file|Título privado|Pessoa demonstrativa|Resumo privado|Local individual/);
   }
-  for(const method of ['GET','POST']){const response=await fetch(base+'/api/public/indicators',{method});assert.equal(response.status,410);assert.equal((await response.json()).totals,undefined);assert.match(response.headers.get('cache-control')||'',/no-store/);}
-  for(const endpoint of ['/api/admin/continuous-intelligence','/api/admin/continuous-intelligence/refresh','/api/admin/continuous-intelligence/proposals/example']){const response=await fetch(base+endpoint,{method:'POST',headers:{'x-demo-user-email':'master@portal.local'}});assert.equal(response.status,410);}
+  for(const email of ['',processRecord.aluno1.email,'master@portal.local']){
+   const response=await fetch(base+'/api/public/indicators',{headers:email?{'x-demo-user-email':email}:{}});assert.equal(response.status,200);const result=await response.json();assert.equal(result.totals.registered,7);assert.equal(result.totals.published,3);assert.equal(result.privacy.containsPersonalData,false);assert.deepEqual(result.locations,[]);assert.doesNotMatch(JSON.stringify(result),/@|matricula|parecer|aluno1|private_file|Título privado|Pessoa demonstrativa|Resumo privado|Local individual/);
+  }
+  const post=await fetch(base+'/api/public/indicators',{method:'POST'});assert.equal(post.status,405);assert.equal((await post.json()).totals,undefined);
+  for(const endpoint of ['/api/admin/continuous-intelligence','/api/admin/continuous-intelligence/refresh','/api/admin/continuous-intelligence/proposals/example']){const response=await fetch(base+endpoint,{method:'POST',headers:{'x-demo-user-email':'master@portal.local'}});assert.equal(response.status,404);assert.equal((await response.json()).code,'API_NOT_FOUND');}
  }finally{if(child.exitCode===null){const stopped=new Promise(r=>child.once('exit',r));child.kill('SIGTERM');await stopped;}await rm(dir,{recursive:true,force:true});}
 });

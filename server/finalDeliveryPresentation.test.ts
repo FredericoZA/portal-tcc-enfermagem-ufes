@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {publicationDeclined,finalDeliveryMessage} from '../src/utils/finalDeliveryPresentation';
+import {administrativeDocumentAvailability,publicationDeclined,finalDeliveryMessage} from '../src/utils/finalDeliveryPresentation';
+import {publicProcessDetail} from '../src/utils/publicProcessDetail';
 import {withDeclarationAfterTerm} from '../src/utils/declarationWorkflow';
 import {ataClosingTime} from '../src/utils/ataClosingTime';
 import {withProcessEmailButton} from './workflow/processEmailButton';
@@ -12,6 +13,16 @@ test('termo distingue recusa de publicação de entrega ainda pendente e publica
  assert.equal(publicationDeclined({acervo}),true);
  assert.equal(publicationDeclined({acervo:{...acervo,publishExpandedAbstract:true}}),false);
  assert.equal(publicationDeclined({acervo:{...acervo,publicationWithdrawnAt:'2026-10-23'}}),false);
+});
+test('documento administrativo assinado listado pela API pública não depende da publicação dos PDFs acadêmicos',()=>{
+ const data={id:'TCC-2026-0042',protocolo:'TCC-2026-0042',aluno1:{nome:'Autora de exemplo'},orientador:{nome:'Docente de exemplo'},banca:[],acervo:{submittedAt:'2026-11-04T12:00:00Z',publishFullWork:false,publishExpandedAbstract:false},documents:[{id:'term-public',type:'TERMO',status:'ASSINADO',version:1,url:'/api/public/processes/TCC-2026-0042/documents/term-public/download'}]};
+ const {process,documents}=publicProcessDetail(data),term=documents.find(document=>document.type==='TERMO')!;
+ assert.equal(publicationDeclined(process),true,'a projeção dos arquivos acadêmicos não representa a emissão do termo');
+ assert.deepEqual(administrativeDocumentAvailability(process,term,true),{publicationDeclined:false,available:true});
+ assert.equal(term.driveDownloadUrl,data.documents[0].url);
+ assert.equal(process.acervo?.publishFullWork,false);assert.equal(process.acervo?.publishExpandedAbstract,false);
+ assert.equal(administrativeDocumentAvailability(process,documents.find(document=>document.type==='ATA')!,true).available,false,'documento ausente da lista pública continua indisponível');
+ assert.deepEqual(administrativeDocumentAvailability(process,term,false),{publicationDeclined:true,available:false},'a regra da entrega privada permanece inalterada');
 });
 test('mensagem confirma entrega, instrui sobre termo e não oculta pendência de envio',()=>{
  const process={status:'AGUARDANDO_ASSINATURA' as const,acervo:{publishFullWork:true} as any};

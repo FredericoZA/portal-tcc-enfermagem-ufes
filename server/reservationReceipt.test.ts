@@ -9,7 +9,7 @@ test('department receipt has institutional identity, preserves the recorded resp
  const p=structuredClone(DEMO_PROCESSES[0]);p.aluno1.matricula='202699991';p.titulo='Título atual diferente';
  p.defesa.departmentResponse={revision:0,decision:'CONFIRMED',respondedAt:'2026-10-27T02:26:01Z',respondedBy:'departamento@example.invalid',startAt:'2026-10-23T17:00:00Z',endAt:'2026-10-23T18:30:00Z',local:'Sala de reuniões',receiptBody:'Título: TÍTULO REGISTRADO NO SUS\nAutoria: 202699991 - Nome Social\n'};
  const bytes=await createReservationReceiptPdf(p,INITIAL_SETTINGS),pdf=await PDFDocument.load(bytes);assert.equal(pdf.getPageCount(),1);
- const text=await textOf(bytes);assert.match(text,/Universidade Federal do Espírito Santo/);assert.match(text,/Curso de Graduação em Enfermagem e Obstetrícia/);assert.match(text,/RESERVA CONFIRMADA/);assert.match(text,/Título Registrado no SUS/);assert.match(text,/Nome Social/);assert.match(text,/14:00 às 15:30/);assert.match(text,/sexta-feira, 23 de outubro de 2026/);assert.match(text,/26\/10\/2026, 23:26/);assert.doesNotMatch(text,/202699991|NÃO CONFIGURAD|Título atual diferente|2026-10-27T|Revisão da solicitação/);
+ const text=await textOf(bytes);assert.match(text,/UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO/);assert.match(text,/CURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA/);assert.match(text,/RESERVA CONFIRMADA/);assert.match(text,/Título Registrado no SUS/);assert.match(text,/Nome Social/);assert.match(text,/14:00 às 15:30/);assert.match(text,/sexta-feira, 23 de outubro de 2026/);assert.match(text,/26\/10\/2026, 23:26/);assert.doesNotMatch(text,/202699991|NÃO CONFIGURAD|Título atual diferente|2026-10-27T|Revisão da solicitação/);
  p.defesa.departmentResponse.decision='UNAVAILABLE';const denied=await textOf(await createReservationReceiptPdf(p,INITIAL_SETTINGS));assert.match(denied,/RESERVA RECUSADA/);assert.doesNotMatch(denied,/RESERVA CONFIRMADA/);
 });
 
@@ -17,7 +17,7 @@ test('legacy local confirmations use the same branded receipt without inventing 
  const p=structuredClone(DEMO_PROCESSES[0]);delete p.defesa.departmentResponse;
  p.defesa.localStatus='CONFIRMADO';p.defesa.localConfirmedAt='2026-10-27T02:26:01Z';p.defesa.localConfirmedBy='departamento@example.invalid';
  const text=await textOf(await createReservationReceiptPdf(p,INITIAL_SETTINGS));
- assert.match(text,/Universidade Federal do Espírito Santo/);assert.match(text,/Comprovante de reserva/);assert.match(text,/departamento@example.invalid/);
+ assert.match(text,/UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO/);assert.match(text,/COMPROVANTE DE RESERVA/);assert.match(text,/departamento@example.invalid/);
  p.defesa.localConfirmedAt=undefined;await assert.rejects(createReservationReceiptPdf(p,INITIAL_SETTINGS),/não registrada/);
 });
 

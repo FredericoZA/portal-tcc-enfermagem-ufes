@@ -10,7 +10,7 @@ import {readRegistrationMemory,saveRegistrationMemory} from '../src/utils/regist
 test('histórico pessoal: preserva última digitação, limita sugestões e expira em sete dias',()=>{
  const values=new Map<string,string>();const storage={getItem:(k:string)=>values.get(k)||null,setItem:(k:string,v:string)=>{values.set(k,v);},removeItem:(k:string)=>{values.delete(k);}};
  saveRegistrationMemory(storage,'one@example.invalid',{ALUNO_1_NOME:"D'Ávila",ALUNO_1_MATRICULA:'000123'},2,1000);
- assert.equal(readRegistrationMemory(storage,'one@example.invalid',1001)?.answers.ALUNO_1_MATRICULA,'000123');
+ assert.equal(readRegistrationMemory(storage,'one@example.invalid',1001)?.answers.ALUNO_1_MATRICULA,undefined);
  assert.equal(readRegistrationMemory(storage,'other@example.invalid',1001),null);
  saveRegistrationMemory(storage,'one@example.invalid',{ALUNO_1_NOME:"D'Ávila"},2,1002,true);
  assert.deepEqual(readRegistrationMemory(storage,'one@example.invalid',1003)?.answers,{});

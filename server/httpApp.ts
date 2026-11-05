@@ -1,6 +1,7 @@
 import express, { type RequestHandler, type ErrorRequestHandler } from 'express';
 import { randomUUID } from 'node:crypto';
 import { portalRequestAdmission } from './security/requestAdmission';
+import { beginRuntimeRequestTask } from './runtimeRequestQueue';
 
 function normalizedOrigin(value: string): string | null {
   try { return new URL(value).origin; }
@@ -83,8 +84,17 @@ export function createPortalHttpApp() {
     if (Array.isArray(value)) return value.map(wrap);
     if (typeof value !== 'function' || value.length === 4) return value;
     return ((req, res, next) => {
-      try { Promise.resolve(value(req, res, next)).catch(error => next(error || new Error('Handler rejected'))); }
-      catch (error) { next(error); }
+      const finish=beginRuntimeRequestTask(req);
+      try {
+        Promise.resolve(value(req, res, next)).then(finish,error=>{
+          try { next(error || new Error('Handler rejected')); }
+          finally { finish(); }
+        });
+      }
+      catch (error) {
+        try { next(error); }
+        finally { finish(); }
+      }
     }) as RequestHandler;
   };
   for (const method of ['use', 'get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'all'] as const) {

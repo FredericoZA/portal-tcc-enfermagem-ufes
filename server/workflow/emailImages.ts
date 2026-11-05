@@ -15,7 +15,7 @@ export function withEmailImages(studio:Partial<IntegrationStudioSettings>|undefi
   const institutional=!!studio?.brandKit?.institutionName;
   const logoSource=institutional?institutionalDocumentLogo(studio,templateId):design.logoUrl;
   const hero=imageUrl(design.heroImageUrl),logo=imageUrl(logoSource?.startsWith('/')?new URL(logoSource,baseUrl).href:logoSource);
-  const images=`${hero?`<img src="${escape(hero)}" alt="Imagem institucional" style="display:block;max-width:100%;width:640px;height:auto">`:''}${logo?`<img src="${escape(logo)}" alt="Logo institucional" style="display:block;max-width:100%;height:64px;width:auto;margin:16px 0">`:''}`;
+  const images=`${hero?`<img src="${escape(hero)}" alt="Imagem institucional" style="display:block;max-width:100%;width:640px;height:auto">`:''}${logo?`<img src="${escape(logo)}" alt="Logo institucional" style="display:block;max-width:100%;height:64px;width:auto;margin:16px auto">`:''}`;
   if(!images)return html;
   if(html&&/<body\b[^>]*>/i.test(html))return html.replace(/<body\b[^>]*>/i,match=>match+images);
   return images+(html||`<div style="white-space:pre-wrap;font-family:Arial,sans-serif">${escape(text)}</div>`);

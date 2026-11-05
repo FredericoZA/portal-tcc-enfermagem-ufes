@@ -1,8 +1,8 @@
 import { operationalConfig, resolveCatalogValue } from '../src/utils/operationalConfig';
 import type { IntegrationStudioSettings } from '../src/types/integrationStudio';
-import type { ProcessData, StatisticalDistribution, StudioFormSubmission, TccStatisticalSnapshot } from '../src/types';
+import type { ProcessData, StudioFormSubmission } from '../src/types';
+import type { StatisticalDistribution, TccStatisticalSnapshot } from '../src/types/statistics';
 
-// Somente cálculos estatísticos determinísticos; nenhum mecanismo de proposta ou modelo generativo.
 const MINIMUM_CATEGORY_SIZE=3;
 const DAY_MS=86_400_000;
 export interface StatisticalSnapshotInput {

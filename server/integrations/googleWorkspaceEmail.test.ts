@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildGmailRawMessage, getGoogleWorkspaceAccessToken, persistGoogleWorkspaceAuthorization, sendGmailMessage } from './googleWorkspace';
 import {deleteIntegrationSecret,saveIntegrationSecret} from './integrationSecrets';
+import {GmailDeliveryError} from './gmailDeliveryError';
 
 test('gera mensagem MIME com corpo alternativo e PDF anexado', () => {
   const raw = buildGmailRawMessage({
@@ -69,4 +70,26 @@ test('envio retorna a conta Google autenticada sem pedir perfil nem carregar out
  assert.equal(calls.length,3);
  await saveIntegrationSecret('google_workspace','synthetic-refresh',{});
  assert.equal((await sendGmailMessage({to:'author@example.invalid',subject:'Aviso',text:'Teste'})).sender,undefined,'não inventa remetente para conexões antigas sem e-mail registrado');
+});
+
+test('distingue falha anterior ao POST, rejeição explícita e retorno incerto do Gmail',async t=>{
+ const keys=['NODE_ENV','PORTAL_ALLOW_LOCAL_SECRET_STORE','SUPABASE_URL','SUPABASE_SECRET_KEY','SUPABASE_SERVICE_ROLE_KEY','GOOGLE_OAUTH_CLIENT_ID','GOOGLE_OAUTH_CLIENT_SECRET'];
+ const previous=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
+ process.env.NODE_ENV='development';process.env.PORTAL_ALLOW_LOCAL_SECRET_STORE='true';
+ for(const key of ['SUPABASE_URL','SUPABASE_SECRET_KEY','SUPABASE_SERVICE_ROLE_KEY'])delete process.env[key];
+ process.env.GOOGLE_OAUTH_CLIENT_ID='synthetic-client';process.env.GOOGLE_OAUTH_CLIENT_SECRET='synthetic-client-secret';
+ t.after(async()=>{await deleteIntegrationSecret('google_workspace');for(const [key,value]of Object.entries(previous)){if(value===undefined)delete process.env[key];else process.env[key]=value;}});
+ await persistGoogleWorkspaceAuthorization({email:'portal@example.invalid',refreshToken:'synthetic-refresh',scopes:['gmail.send']});
+ let mode='credentials',providerCalls=0;
+ t.mock.method(globalThis,'fetch',async(input:unknown)=>{
+  if(String(input)==='https://oauth2.googleapis.com/token')return mode==='credentials'?new Response(JSON.stringify({error:'temporarily_unavailable'}),{status:503}):new Response(JSON.stringify({access_token:'synthetic-access'}),{status:200});
+  assert.equal(String(input),'https://gmail.googleapis.com/gmail/v1/users/me/messages/send');providerCalls++;
+  if(mode==='timeout')throw Error('Timeout aguardando o resultado do POST');
+  return new Response(JSON.stringify({error:{message:'Quota excedida'}}),{status:429});
+ });
+ const input={to:'author@example.invalid',subject:'Aviso',text:'Teste fictício'};
+ await assert.rejects(sendGmailMessage(input),error=>error instanceof GmailDeliveryError&&error.deliveryOutcome==='NOT_SENT');assert.equal(providerCalls,0);
+ mode='rejected';await assert.rejects(sendGmailMessage(input),error=>error instanceof GmailDeliveryError&&error.deliveryOutcome==='REJECTED'&&error.providerStatus===429);assert.equal(providerCalls,1);
+ mode='timeout';await assert.rejects(sendGmailMessage(input),error=>error instanceof GmailDeliveryError&&error.deliveryOutcome==='UNCERTAIN');assert.equal(providerCalls,2);
+ mode='invalid-content';await assert.rejects(sendGmailMessage({...input,cc:['invalid-address']}),error=>error instanceof GmailDeliveryError&&error.deliveryOutcome==='NOT_SENT');assert.equal(providerCalls,2);
 });

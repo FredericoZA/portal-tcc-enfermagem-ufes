@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {auditActionLabel,auditActor,auditReference,auditSearchText,auditChangesTable,auditStatusLabel,canRestoreAudit,emailAuditData,redactAuditText,type ReadableAuditLog} from '../src/utils/auditLogPresentation';
+import {auditActionLabel,auditActor,auditReference,auditSearchText,auditChangesTable,auditStatusLabel,canRestoreAudit,canRetryEmailDelivery,emailAuditData,emailDeliveryStatusLabel,redactAuditText,type ReadableAuditLog} from '../src/utils/auditLogPresentation';
 
 const log=(extra:Partial<ReadableAuditLog>={}):ReadableAuditLog=>({id:'audit-1',processId:'proc-internal-code',processProtocol:'TCC-2026-0006',processTitle:'Cuidado de Enfermagem',actorEmail:'aluna@example.invalid',actorName:'Gabriela de Exemplo',actorRoles:[],action:'CRIACAO_PROCESSO',entityType:'processo',entityId:'proc-internal-code',timestamp:'2026-11-04T15:41:00Z',...extra});
 
@@ -24,7 +24,7 @@ test('aceite pelo Gmail não é apresentado como confirmação de entrega ou lei
  assert.equal(data.sender,'portal@example.invalid');assert.equal(data.attemptCount,1);assert.equal(data.status,'Aceito pelo Gmail');
  assert.match(data.explanation,/não confirma.*caixa de entrada.*lida/);
  assert.equal(canRestoreAudit(item),false,'envio não oferece restauração de estado');
- assert.equal(auditStatusLabel('RETRY'),'Nova tentativa programada');
+ assert.equal(auditStatusLabel('RETRY'),'Nova tentativa pendente');
  assert.equal(auditStatusLabel('FAILED'),'Falha no envio');
 });
 
@@ -51,6 +51,41 @@ test('fila sem tentativa não é apresentada como reenvio nem como envio conclu�
  assert.equal(auditActionLabel(item),'E-mail: aguardando envio');
  assert.equal(emailAuditData(item).status,'Aguardando envio');
  assert.match(emailAuditData(item).explanation,/Ainda não há tentativa/);
+});
+
+test('envio em processamento bloqueia reenvio e não aparece como pendente ainda não iniciado',()=>{
+ const item=log({source:'email',emailDeliveryId:'mail-sending',after:{status:'RETRY',dispatchState:'SENDING',dispatchLeaseUntil:'2099-11-04T12:02:00Z',nextRetryAt:'2026-11-04T15:42:00Z',attempts:[]}});
+ const data=emailAuditData(item);
+ assert.equal(data.status,'Envio em processamento');assert.equal(data.canRetry,false);assert.equal(data.nextRetryAt,'');
+ assert.equal(auditActionLabel(item),'E-mail: envio em processamento');assert.match(data.explanation,/Aguarde a conclusão/);
+ assert.equal(canRetryEmailDelivery(item.after),false);assert.equal(emailDeliveryStatusLabel(item.after),data.status);
+});
+
+test('resultado incerto pede conferência no Gmail sem afirmar falha nem permitir reenvio',()=>{
+ const item=log({source:'email',emailDeliveryId:'mail-uncertain',after:{status:'FAILED',dispatchState:'UNCERTAIN',acceptedAt:'2026-11-04T15:42:00Z',attempts:[{status:'FAILED',errorCode:'GMAIL_DELIVERY_UNCERTAIN',errorMessage:'O retorno do Gmail não foi confirmado.'}]}});
+ const data=emailAuditData(item);
+ assert.equal(data.status,'Resultado do envio não confirmado; conferir no Gmail');assert.equal(data.canRetry,false);assert.equal(data.acceptedAt,'');
+ assert.equal(data.attempts[0].status,data.status);assert.match(data.explanation,/Confira a caixa Enviados do Gmail/);
+ assert.doesNotMatch(auditActionLabel(item),/falhou|falha|aceito|entregue/i);
+ assert.ok(auditSearchText(item).includes('resultado do envio não confirmado'));
+});
+
+test('envio sem retorno com prazo esgotado é incerto e não oferece nova tentativa',()=>{
+ for(const dispatchLeaseUntil of ['2000-01-01T00:00:00Z','inválido',undefined]){
+  const item=log({source:'email',emailDeliveryId:'mail-expired',after:{status:'RETRY',dispatchState:'SENDING',dispatchLeaseUntil,attempts:[]}});
+  const data=emailAuditData(item);
+  assert.equal(data.status,'Resultado do envio não confirmado; conferir no Gmail');assert.equal(data.canRetry,false);
+  assert.match(data.explanation,/Confira a caixa Enviados do Gmail/);assert.doesNotMatch(auditActionLabel(item),/processamento/);
+ }
+});
+
+test('nova tentativa pendente não promete reenvio automático em horário determinado',()=>{
+ const item=log({source:'email',emailDeliveryId:'mail-retry',after:{status:'RETRY',nextRetryAt:'2026-11-04T15:42:00Z',attempts:[{status:'RETRY'}]}});
+ const data=emailAuditData(item);
+ assert.equal(data.status,'Nova tentativa pendente');assert.equal(data.canRetry,true);assert.ok(data.nextRetryAt);
+ assert.match(data.explanation,/pendente/);assert.doesNotMatch(data.explanation,/tentará novamente|programad|no horário indicado/i);
+ assert.equal(canRetryEmailDelivery({status:'ACCEPTED_BY_GMAIL'}),false);
+ assert.equal(canRetryEmailDelivery({status:'FAILED'}),true);
 });
 
 test('falha ao solicitar código não afirma tentativa de envio nem autoria anônima',()=>{

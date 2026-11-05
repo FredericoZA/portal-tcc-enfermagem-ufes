@@ -1,4 +1,5 @@
 import {DynamicStudioForms} from './DynamicStudioForms';
+import {EmailAuditSettings} from './EmailAuditSettings';
 import {ConfigurableRegistration} from './ConfigurableRegistration';
 import {studioEmailPreview,studioEditableEmail,studioSampleProcess} from '../utils/studioRuntimePreview';
 import {receiptDesign as resolveReceiptDesign} from '../utils/receiptDesign';
@@ -1331,6 +1332,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
             <div className="rounded-2xl border border-slate-300 bg-slate-100 p-4 sm:p-5"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><strong className="text-xs normal-case text-slate-900">Prévia fiel do PDF final</strong><p className="mt-1 text-[10px] text-slate-600">Mesmo pipeline oficial do Google Drive, com dados fictícios estáveis; o modelo original não é alterado.</p></div><button type="button" onClick={()=>void generateFaithfulDocumentPreview()} disabled={documentPreviewLoading} className="portal-action rounded-full border-emerald-700 bg-emerald-700 text-white disabled:opacity-50"><FileText className="h-3.5 w-3.5"/>{documentPreviewLoading?'Gerando…':'Gerar prévia fiel'}</button></div>{documentPreviewError?<div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-800">{documentPreviewError}</div>:null}{documentPreview?.docId===selectedDoc.id?<PdfCanvasPreview base64={documentPreview.base64} remoteUrl={documentPreview.remoteUrl} label={selectedDoc.label}/>:<div className="flex min-h-[420px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-600">Gere a amostra para conferir margens, cores, paginação, tabelas e substituição das variáveis.</div>}</div>
           </div>
         )}
+
+        {activeTab === 'emails' && <div className="mx-auto w-full max-w-[880px]"><EmailAuditSettings /></div>}
 
         {activeTab === 'emails' && selectedEmail && (
           <div className="min-h-0 bg-[var(--portal-surface-page)]" data-portal-email-direct-editor="true">

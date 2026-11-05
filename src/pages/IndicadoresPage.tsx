@@ -3,7 +3,6 @@ import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { BarChart3, BookOpen, CalendarDays, CheckCircle2, Clock3, FileText, Gauge, ShieldCheck, TrendingUp, Users2 } from 'lucide-react';
 import { PortalSectionDivider } from '../components/PortalSectionDivider';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
-import {useAuth} from '../context/AuthContext';
 import {apiClient} from '../services/apiClient';
 
 type Bucket = { label: string; count: number; key?: string };
@@ -91,8 +90,6 @@ const Funnel: React.FC<{ data: PublicIndicators }> = ({ data }) => {
 };
 
 export const IndicadoresPage: React.FC = () => {
-  const {isAuthenticated, isMasterAdmin, isCommissionPresident, userEmail}=useAuth();
-  const canViewIndicators=isAuthenticated && (isMasterAdmin || isCommissionPresident);
   const [data, setData] = useState<PublicIndicators | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -100,22 +97,30 @@ export const IndicadoresPage: React.FC = () => {
   useEffect(() => {
     setData(null);
     setError('');
-    if (!canViewIndicators) {setLoading(false);return;}
     let active = true;
-    const load = () => { setLoading(true);void apiClient.getIndicators()
+    let revision = 0;
+    let controller: AbortController | undefined;
+    const load = () => {
+      const requestRevision = ++revision;
+      controller?.abort();
+      controller = new AbortController();
+      setLoading(true);
+      setError('');
+      void apiClient.getIndicators({signal:controller.signal})
       .then((payload) => {
-        if (!active) return;
+        if (!active || requestRevision !== revision) return;
         const arrays = ['byStatus', 'years', 'months', 'themes', 'workTypes', 'locations', 'outcomes', 'formats', 'weekdays', 'dayparts'];
         const normalized = { ...payload, totals: { registered: 0, completed: 0, published: 0, defended: 0, inProgress: 0, completionRate: 0, publicationRate: 0, coauthorRate: 0, ...(payload?.totals || {}) } } as any;
         arrays.forEach((key) => { if (!Array.isArray(normalized[key])) normalized[key] = []; });
         setData(normalized as PublicIndicators);
       })
-      .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : 'Indicadores indisponíveis.'); })
-      .finally(() => { if (active) setLoading(false); }); };
+      .catch((reason) => { if (active && requestRevision === revision) setError(reason instanceof Error ? reason.message : 'Indicadores indisponíveis.'); })
+      .finally(() => { if (active && requestRevision === revision) setLoading(false); });
+    };
     load();
     window.addEventListener(PORTAL_LIVE_UPDATE_EVENT,load);
-    return () => { active = false; window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT,load); };
-  }, [canViewIndicators,userEmail]);
+    return () => { active = false; controller?.abort(); window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT,load); };
+  }, []);
 
   const analytics = useMemo(() => {
     if (!data) return null;
@@ -124,17 +129,19 @@ export const IndicadoresPage: React.FC = () => {
     const months = data.months;
     const latest = months.at(-1);
     const previous = months.at(-2);
-    const monthOverMonth = latest && previous && previous.count > 0 ? Math.round(((latest.count - previous.count) / previous.count) * 100) : null;
+    const monthIndex=(bucket:Bucket|undefined)=>bucket?.key&&/^\d{4}-\d{2}$/.test(bucket.key)?Number(bucket.key.slice(0,4))*12+Number(bucket.key.slice(5,7)):null;
+    const latestMonthIndex=monthIndex(latest),previousMonthIndex=monthIndex(previous);
+    const monthOverMonth = latest && previous && previous.count > 0 && latestMonthIndex!==null && previousMonthIndex!==null && latestMonthIndex-previousMonthIndex===1 ? Math.round(((latest.count - previous.count) / previous.count) * 100) : null;
     const yearly = data.years;
     const latestYear = yearly.at(-1);
     const previousYear = yearly.at(-2);
-    const yearOverYear = latestYear && previousYear && previousYear.count > 0 ? Math.round(((latestYear.count - previousYear.count) / previousYear.count) * 100) : null;
+    const yearOverYear = latestYear && previousYear && previousYear.count > 0 && Number(latestYear.label)-Number(previousYear.label)===1 ? Math.round(((latestYear.count - previousYear.count) / previousYear.count) * 100) : null;
     return {
       defenseRate: pct(t.defended, t.registered),
       defenseToCompletion: pct(t.completed, t.defended),
       completionToPublication: pct(t.published, t.completed),
       inProgressRate: pct(t.inProgress, t.registered),
-      monthlyCv: d && d.monthlyMean > 0 ? Math.round((d.monthlyStdDev / d.monthlyMean) * 100) : 0,
+      monthlyCv: d && d.monthlyMean > 0 ? Math.round((d.monthlyStdDev / d.monthlyMean) * 100) : null,
       peakShare: d ? pct(d.peakMonthCount, Math.max(1, t.defended)) : 0,
       monthOverMonth,
       yearOverYear,
@@ -143,7 +150,6 @@ export const IndicadoresPage: React.FC = () => {
     };
   }, [data]);
 
-  if (!canViewIndicators) return <div className="portal-layer-card rounded-xl p-4 text-sm" role="status">Indicadores disponíveis somente ao Master e à Presidência da Comissão, após identificação no Portal.</div>;
   return <div id="indicadores-publicos-page" className="mx-auto max-w-none overflow-hidden">
     <section className="portal-public-header">
       <div className="portal-public-title-row gap-2">
@@ -175,7 +181,7 @@ export const IndicadoresPage: React.FC = () => {
           [TrendingUp, 'Defesa → conclusão', `${analytics.defenseToCompletion}%`, 'conversão agregada'],
           [BookOpen, 'Conclusão → publicação', `${analytics.completionToPublication}%`, 'conversão agregada'],
           [Clock3, 'Em andamento', `${analytics.inProgressRate}%`, `${data.totals.inProgress} processos`],
-          [BarChart3, 'Volatilidade mensal', `${analytics.monthlyCv}%`, 'coeficiente de variação'],
+          [BarChart3, 'Volatilidade mensal', analytics.monthlyCv===null?'—':`${analytics.monthlyCv}%`, 'coeficiente de variação'],
           [CalendarDays, 'Concentração no pico', `${analytics.peakShare}%`, monthLabel(data.descriptive?.peakMonth)],
           [Users2, 'Coautoria', `${data.totals.coauthorRate}%`, 'do acervo'],
           [TrendingUp, 'Último mês', analytics.monthOverMonth === null ? '—' : `${analytics.monthOverMonth >= 0 ? '+' : ''}${analytics.monthOverMonth}%`, analytics.latestMonth],
@@ -183,7 +189,7 @@ export const IndicadoresPage: React.FC = () => {
       </section>
 
       <section className="grid gap-3 xl:grid-cols-[1.7fr_1fr]">
-        <article className={panel}><h2 className="text-xs font-black normal-case text-slate-950">Defesas por mês — tendência</h2><p className="mb-2 mt-1 text-[10px] text-slate-600">Evolução temporal com todos os períodos agregados disponíveis.</p><LineTrend items={data.months}/></article>
+        <article className={panel}><h2 className="text-xs font-black normal-case text-slate-950">Defesas por mês — tendência</h2><p className="mb-2 mt-1 text-[10px] text-slate-600">Meses com volume suficiente para divulgação. As medidas mensais consideram esses mesmos meses.</p><LineTrend items={data.months}/></article>
         <article className={panel}><h2 className="text-xs font-black normal-case text-slate-950">Funil agregado</h2><p className="mb-3 mt-1 text-[10px] text-slate-600">Conversão acumulada da base registrada até publicação.</p><Funnel data={data}/></article>
       </section>
 

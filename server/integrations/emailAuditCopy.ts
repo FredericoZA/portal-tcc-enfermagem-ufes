@@ -15,7 +15,6 @@ function decodedEmailContent(content: string): string {
   });
 }
 
-/** Personal decision/access links must remain exclusively with their recipient. */
 export function hasPersonalEmailAccess(text: string, html = ''): boolean {
   const content = decodedEmailContent(`${text}\n${html}`);
   const plain = content.replace(/<[^>]*>/g, ' ').normalize('NFD').replace(/\p{M}|\p{Cf}/gu, '').replace(/\s+/g, ' ');
@@ -38,9 +37,8 @@ export function emailAuditCopy(input: {
   if (auditCopyEmail && !EMAIL.test(auditCopyEmail)) throw new Error('E-mail de auditoria inválido.');
   const auditCopyMode = input.auditCopyMode === 'sensitive' || hasPersonalEmailAccess(input.text, input.html)
     ? 'sensitive' : 'operational';
-  // A metadata-only audit does not authorize copying any personal bearer link.
-  if (auditCopyMode === 'sensitive') return { cc: [], auditCopyMode, auditCopyEmail };
   const recipient = normalize(input.recipient);
+  if (auditCopyMode === 'sensitive') return { cc: auditCopyEmail && auditCopyEmail !== recipient ? [auditCopyEmail] : [], auditCopyMode, auditCopyEmail };
   const cc = [...new Set([...(input.cc || []), ...(auditCopyEmail ? [auditCopyEmail] : [])].map(normalize))]
     .filter(email => email !== recipient);
   if (cc.some(email => !EMAIL.test(email))) throw new Error('E-mail de cópia inválido.');

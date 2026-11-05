@@ -5,7 +5,7 @@ export * from './integrationStudio';
 export * from './tccDetailFormat';
 export * from './signatures';
 export * from './courseOperations';
-export * from './continuousIntelligence';
+export * from './statistics';
 
 export type GlobalRole = 'MASTER_ADMIN' | 'COMMISSION_PRESIDENT';
 
@@ -432,7 +432,7 @@ export interface GlobalSettings {
   calendarId?: string;
   driveRootFolderId?: string;
   templateIds?: Record<string, string>;
-  emailConfig?: Record<string, any>;
+  emailConfig?: { auditEmailsEnabled?: boolean; [key: string]: any };
   integrationStudio?: IntegrationStudioSettings;
   integrationStudioDraft?: IntegrationStudioSettings;
   documentModels?: Record<string, {

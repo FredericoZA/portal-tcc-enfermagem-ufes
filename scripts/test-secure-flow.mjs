@@ -35,7 +35,7 @@ function includesEvery(haystack, needles) {
 }
 
 async function staticChecks() {
-  const [server, types, auth, otp, asten, envExample, pdfHelpers, presidentPage, popupPreview, studioPanel, supabaseRuntime, transactionalMigration, outboxMigration] = await Promise.all([
+  const [server, types, auth, otp, asten, envExample, pdfHelpers, presidentPage, loginPage, studioPanel, supabaseRuntime, transactionalMigration, outboxMigration] = await Promise.all([
     readFile(path.join(projectRoot, 'server.ts'), 'utf8'),
     readFile(path.join(projectRoot, 'src/types/index.ts'), 'utf8'),
     readFile(path.join(projectRoot, 'server/security/firebaseAuth.ts'), 'utf8'),
@@ -44,7 +44,7 @@ async function staticChecks() {
     readFile(path.join(projectRoot, '.env.example'), 'utf8'),
     readFile(path.join(projectRoot, 'src/utils/pdfHelpers.ts'), 'utf8'),
     readFile(path.join(projectRoot, 'src/pages/CoordenadorPage.tsx'), 'utf8'),
-    readFile(path.join(projectRoot, 'src/components/editor/PopupPreviewSection.tsx'), 'utf8'),
+    readFile(path.join(projectRoot, 'src/pages/HomePage.tsx'), 'utf8'),
     readFile(path.join(projectRoot, 'src/components/IntegrationStudioPanel.tsx'), 'utf8'),
     readFile(path.join(projectRoot, 'server/integrations/supabase.ts'), 'utf8'),
     readFile(path.join(projectRoot, 'supabase/migrations/202608310001_portal_transactional_runtime.sql'), 'utf8'),
@@ -78,7 +78,7 @@ async function staticChecks() {
       "role:'STUDENT',origin:'TCC_FORM'",
       "role:'ADVISOR',origin:'TCC_FORM'",
       "role:'CO_ADVISOR',origin:'TCC_FORM'",
-      "role:examiner.funcao==='ORIENTADOR'?'ADVISOR':'EXAMINER'"
+      "role:'EXAMINER',origin:'TCC_FORM'"
     ]);
   });
 
@@ -150,10 +150,12 @@ async function staticChecks() {
     assert.ok(presidentPage.includes("downloadProcessDocument(proc.id, 'doc-declaracao')"), 'Área do Presidente não baixa a declaração assinada pela rota autenticada');
   });
 
-  await check('prévia de login representa o acesso por e-mail e código',()=>{
-    assert.ok(!popupPreview.includes('CPF ou Matrícula'), 'prévia ainda solicita CPF ou matrícula');
-    assert.ok(!popupPreview.includes('Senha de Acesso'), 'prévia ainda solicita senha');
-    includesEvery(popupPreview, ['E-mail institucional ou cadastrado', 'Código de confirmação']);
+  await check('login ativo exige e-mail e código, sem senha ou CPF',()=>{
+    const start=loginPage.indexOf('<div data-portal-login-modal');
+    assert.ok(start>=0,'modal ativo de acesso não encontrado');
+    const login=loginPage.slice(start,loginPage.indexOf('</form>',start));
+    assert.doesNotMatch(login,/type="password"|CPF ou Matrícula|Senha de Acesso/);
+    includesEvery(login, ['type="email"', 'autoComplete="email"', 'Código de confirmação', 'autoComplete="one-time-code"', 'pattern="[0-9]{6}"']);
   });
 
   await check('convite usa o modelo de e-mail publicado pelo Master',()=>{
@@ -499,14 +501,14 @@ async function liveChecks() {
       assert.equal((await request('/api/registration/draft',{method:'DELETE',headers:asUser(draftStudent)})).response.status,200);
     });
 
-    await check('runtime: confirmação do local exige declaração explícita e comprovante válido', async () => {
+    await check('runtime: não existe confirmação manual nem envio de comprovante de reserva', async () => {
       const processes=(await request('/api/processes',{headers:asUser(master)})).body;const target=processes.find(process=>process.aluno1?.email===newStudent);assert.ok(target?.id);
-      const blocked=await request(`/api/processes/${target.id}/confirm-location`,{method:'POST',headers:asUser(master),body:JSON.stringify({local:'Auditório',confirmationReceived:false})});assert.equal(blocked.response.status,400);
       const before=await request(`/api/processes/${target.id}`,{headers:asUser(master)});
       const missing=await request(`/api/processes/${target.id}/confirm-location`,{method:'POST',headers:asUser(master),body:JSON.stringify({local:'Auditório',confirmationReceived:true,manualConfirmationReason:'Conferência administrativa de teste'})});
-      assert.equal(missing.response.status,400);assert.equal(missing.body.code,'LOCATION_PROOF_REQUIRED');assert.match(missing.body.error,/Anexe.*e-mail/);
+      assert.equal(missing.response.status,404);assert.equal(missing.body.code,'API_NOT_FOUND');
+      const badProof=await request(`/api/processes/${target.id}/location-proof`,{method:'POST',headers:asUser(master),body:JSON.stringify({fileName:'texto.pdf',contentBase64:Buffer.from('isto não é pdf').toString('base64')})});assert.equal(badProof.response.status,404);assert.equal(badProof.body.code,'API_NOT_FOUND');
+      const staging=await request('/api/uploads/staging',{method:'POST',headers:asUser(master),body:JSON.stringify({purpose:'LOCATION_PROOF',processId:target.id,fileName:'reserva.pdf',size:1024,mimeType:'application/pdf',sha256:'a'.repeat(64)})});assert.equal(staging.response.status,400);
       const after=await request(`/api/processes/${target.id}`,{headers:asUser(master)});assert.equal(after.body.dataRevision,before.body.dataRevision);assert.equal(after.body.defesa.localStatus,before.body.defesa.localStatus);
-      const badProof=await request(`/api/processes/${target.id}/location-proof`,{method:'POST',headers:asUser(master),body:JSON.stringify({fileName:'texto.pdf',contentBase64:Buffer.from('isto não é pdf').toString('base64')})});assert.equal(badProof.response.status,422);
     });
 
     await check('runtime: central de fluxo é administrativa e a prévia real falha fechada sem Google', async () => {

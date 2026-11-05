@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 'crypto';
 import { normalizeEmail } from '../../src/utils/formatters';
 import { sendGmailMessage } from '../integrations/googleWorkspace';
+import { emailAuditCopy } from '../integrations/emailAuditCopy';
 
 interface OtpChallenge {
   id: string;
@@ -161,7 +162,7 @@ export function getOtpRuntimeStatus() {
   } as const;
 }
 
-export async function requestPortalOtp(input: { email: string; ip?: string; portalName?:string }): Promise<string> {
+export async function requestPortalOtp(input: { email: string; ip?: string; portalName?:string; auditCopyEmail?:string }): Promise<string> {
   assertConfigured();
   const email = normalizeEmail(input.email);
   if(input.ip&&(await recentChallengesForIp(input.ip))>=10)throw new Error('Limite temporário de solicitações atingido. Tente novamente mais tarde.');
@@ -196,11 +197,15 @@ export async function requestPortalOtp(input: { email: string; ip?: string; port
   try {
     const portalName=String(input.portalName||'Portal de TCC').replace(/[\r\n]+/g,' ').trim().slice(0,120)||'Portal de TCC';
     const safePortalName=portalName.replace(/[&<>"']/g,(character)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character]||character));
+    const text=`Seu código de acesso é ${code}. Ele expira em 10 minutos e só pode ser usado uma vez. Se você não solicitou este acesso, ignore esta mensagem.`;
+    const html=`<div style="font-family:Arial,sans-serif;color:#172033;max-width:560px;margin:auto"><h2 style="color:#005a3c">${safePortalName}</h2><p>Use o código abaixo para concluir seu acesso:</p><div style="font-size:30px;letter-spacing:8px;font-weight:800;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;padding:18px;text-align:center">${code}</div><p style="font-size:13px;color:#475569">O código expira em 10 minutos e só pode ser usado uma vez.</p></div>`;
+    const {cc}=emailAuditCopy({recipient:email,text,html,auditCopyEmail:input.auditCopyEmail,auditCopyMode:'sensitive'});
     await sendGmailMessage({
       to: email,
+      cc,
       subject: `Código de acesso — ${portalName}`,
-      text: `Seu código de acesso é ${code}. Ele expira em 10 minutos e só pode ser usado uma vez. Se você não solicitou este acesso, ignore esta mensagem.`,
-      html: `<div style="font-family:Arial,sans-serif;color:#172033;max-width:560px;margin:auto"><h2 style="color:#005a3c">${safePortalName}</h2><p>Use o código abaixo para concluir seu acesso:</p><div style="font-size:30px;letter-spacing:8px;font-weight:800;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;padding:18px;text-align:center">${code}</div><p style="font-size:13px;color:#475569">O código expira em 10 minutos e só pode ser usado uma vez.</p></div>`
+      text,
+      html
     });
   } catch (error) {
     await updateChallenge(id, { consumed_at: new Date().toISOString() }).catch(() => undefined);

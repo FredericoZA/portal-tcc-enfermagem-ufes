@@ -23,7 +23,7 @@ test('registration PDF has brand identity and paginates very long answers inside
  const p=structuredClone(DEMO_PROCESSES[0]);p.registrationAnswers={AREA_TEMATICA:'Saúde coletiva '.repeat(700)};
  const pages=await pagesOf(await createRegistrationSnapshotPdf(p,INITIAL_SETTINGS));assert.ok(pages.length>2);
  const text=pages.flatMap(p=>p.items.map((i:any)=>i.str||'')).join(' ');
- assert.match(text,/Universidade Federal do Espírito Santo/);assert.match(text,/Cadastro inicial de TCC/);assert.doesNotMatch(text,/ALUNO_1_NOME|NÃO CONFIGURAD/);
+ assert.match(text,/UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO/);assert.match(text,/CADASTRO INICIAL DE TCC/);assert.doesNotMatch(text,/ALUNO_1_NOME|NÃO CONFIGURAD/);
  for(const page of pages)for(const item of page.items as any[])if(item.str?.trim()){
   assert.ok(item.transform[5]>=29,`Text outside printable area: ${item.str}`);
   if(item.transform[5]<80)assert.match(item.str,/^(?:Comissão de Trabalho de Conclusão de Curso|Departamento de Enfermagem|Curso de Enfermagem e Obstetrícia — CCS\/UFES|Registro do cadastro inicial · Portal TCC|\d+ \/ \d+)$/,`Body overlaps footer: ${item.str}`);
@@ -35,6 +35,6 @@ test('additional records have the same logo header, Unicode text and printable w
  const bytes=await createBrandedTextPdf({title:'Histórico e registro complementar de um formulário com título muito longo',protocol:'TCC-TESTE',body:'Nome: Anne-Marie D’Ávila\nParecer: Informação acadêmica registrada.'},INITIAL_SETTINGS);
  const pages=await pagesOf(bytes);assert.equal(pages.length,1);
  const text=pages.flatMap(p=>p.items.map((i:any)=>i.str||'')).join(' ');
- assert.match(text,/Anne-Marie D’Ávila/);assert.match(text,/Universidade Federal do Espírito Santo/);
+ assert.match(text,/Anne-Marie D’Ávila/);assert.match(text,/UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO/);
  const {PDFDocument}=await import('pdf-lib');const doc=await PDFDocument.load(bytes);assert.ok(doc.getPage(0).node.Resources()?.toString().includes('/XObject'));
 });

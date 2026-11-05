@@ -5,6 +5,7 @@ test('shared email envelope renders green header, configured images and exactly 
  const output=operationalEmailLayout({text:'Olá.\n\nConsulte https://portal.example/?tcc=p e https://portal.example/?tcc=p&secao=docs\n\nORIENTAÇÕES DO PROCESSO\n\nConfira a pendência.',subject:'Reserva',href:'https://portal.example/action',label:'Confirmar reserva',studio:{brandKit:{courseName:'Enfermagem',primaryColor:'#005830',courseLogoUrl:'https://images.example/logo.png',emailBannerUrl:'https://images.example/banner.png'} as any}});
  assert.equal((output.html.match(/<a /g)||[]).length,1);assert.equal((output.text.match(/https?:\/\/\S+/g)||[]).length,1);
  assert.match(output.html,/background:#005830/);assert.match(output.html,/national-arms.png/);assert.match(output.html,/banner.png/);assert.ok(output.html.indexOf('<a ')<output.html.indexOf('<h2 '));assert.doesNotMatch(output.html,/E-mail de acesso/);
+ assert.match(output.html,/>ENFERMAGEM<\/div>/);assert.match(output.text,/Olá\./);
 });
 
 import {processEmailGuidance} from '../src/utils/processEmailGuidance';

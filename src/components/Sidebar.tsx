@@ -139,7 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             'meus-processos': { id: 'meus-processos', label: getNavLabel('meus-processos', 'Meus TCCs'), icon: FileText, emoji: '', visible: !isVisitor },
             coordenador: { id: 'coordenador', label: getNavLabel('coordenador', 'Área do Presidente'), icon: Award, emoji: '', visible: (isMasterAdmin || isCommissionPresident) && !isVisitor },
             configuracoes: { id: 'configuracoes', label: getNavLabel('configuracoes', 'Configurações'), icon: Settings, emoji: '', visible: isMasterAdmin && !isVisitor },
-            analise: { id: 'analise', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: '', visible: (isMasterAdmin || isCommissionPresident) && !isVisitor },
+            analise: { id: 'analise', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: '', visible: true },
             replicar: { id: 'replicar', label: getNavLabel('replicar', 'Replicar Portal'), icon: Copy, emoji: '', visible: true },
             'declaracao-comparecimento': { id: 'declaracao-comparecimento', label: 'Declaração de comparecimento', icon: FileDown, emoji: '', visible: true },
             sugestoes: { id: 'sugestoes', label: 'Sugestões', icon: Lightbulb, emoji: '', visible: true }

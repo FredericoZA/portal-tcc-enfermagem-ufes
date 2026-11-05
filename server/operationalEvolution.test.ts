@@ -25,9 +25,9 @@ test('horário do formulário respeita o fuso institucional e rejeita data inexi
   assert.equal(localDateTimeToIso('2026-09-08T14:30','America/Sao_Paulo'),'2026-09-08T17:30:00.000Z');
   assert.throws(()=>localDateTimeToIso('2026-02-30T14:30','America/Sao_Paulo'));
 });
-test('cadastro publicado mantém SIAPE, opções do Master e bloqueia campo obrigatório ausente',()=>{
+test('cadastro publicado dispensa registros pessoais, mantém opções do Master e valida os demais obrigatórios',()=>{
   const s=studio();s.formTemplates=[{id:'form-reserva-aluno',questions:[{id:'extra',fieldKey:'PERGUNTA_NOVA',label:'Pergunta da secretaria',required:true,fieldType:'text'}]}];
-  const fields=registrationQuestions(s);assert.ok(fields.some(f=>f.fieldKey==='ORIENTADOR_SIAPE'&&f.required));assert.ok(fields.some(f=>f.fieldKey==='COORIENTADOR_SIAPE'&&!f.required));assert.deepEqual(fields.find(f=>f.fieldKey==='DEFESA_LOCAL')?.options,['Sala','Auditório','__OUTRO_LOCAL__']);
+  const fields=registrationQuestions(s);assert.ok(!fields.some(f=>/MATRICULA|SIAPE|CIAP|CPF/.test(f.fieldKey)));assert.deepEqual(fields.find(f=>f.fieldKey==='DEFESA_LOCAL')?.options,['Sala','Auditório','__OUTRO_LOCAL__']);
   assert.throws(()=>acceptRegistration({registrationAnswers:{}},s),/Pergunta da secretaria/);
 });
 test('a mesma data tem apresentação numérica e por extenso sem mudar sua origem',()=>{

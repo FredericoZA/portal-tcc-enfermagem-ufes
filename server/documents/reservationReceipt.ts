@@ -1,5 +1,6 @@
 import {receiptDesign} from '../../src/utils/receiptDesign';
-import {DOCUMENT_ISSUER_LINES} from '../../src/utils/institutionalIdentity';
+import {DOCUMENT_ISSUER_LINES,documentHeaderLines} from '../../src/utils/institutionalIdentity';
+import {drawInstitutionalPdfHeader} from '../../src/utils/institutionalPdfHeader';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {PDFDocument,rgb,type PDFFont,type PDFPage} from 'pdf-lib';
@@ -49,17 +50,15 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  };
  const draw=(text:string,x:number,top:number,size=10,font=regular,color=ink)=>page.drawText(text,{x,y:top,size,font,color});
  const newPage=()=>{
-  page=doc.addPage([595,842]);page.drawRectangle({x:0,y:705,width:595,height:137,color:green});
-  const logoSize=48;page.drawCircle({x:595/2,y:805,size:25,color:rgb(1,1,1)});page.drawImage(logo,{x:(595-logoSize)/2,y:781,width:logoSize,height:logoSize});
-  let top=764;
-  for(const [text,size,font] of [[institution,11,bold],['Centro de Ciências da Saúde',9,regular],[course,9,regular]] as const){for(const row of wrap(text,font,size,width)){draw(row,(595-font.widthOfTextAtSize(row,size))/2,top,size,font,rgb(1,1,1));top-=14;}}
-  y=678;
+  page=doc.addPage([595,842]);page.drawRectangle({x:0,y:742,width:595,height:100,color:green});
+  drawInstitutionalPdfHeader(page,{box:{x:0,y:742,width:595,height:100},lines:documentHeaderLines({institution,course}),font:bold,color:rgb(1,1,1),arms:logo,armsSize:48,armsBackground:rgb(1,1,1),fontSize:9});
+  y=718;
  };
  const ensure=(height:number)=>{if(y-height<88)newPage();};
  const paragraph=(text:string,size=10,font=regular,color=ink)=>{const rows=wrap(text,font,size,width);for(const row of rows){ensure(size+6);draw(row,margin,y,size,font,color);y-=size+6;}};
  const section=(label:string)=>{ensure(62);y-=16;draw(label,margin,y,9,bold,green);y-=10;page.drawLine({start:{x:margin,y},end:{x:549,y},thickness:.7,color:line});y-=21;};
  const field=(label:string,value:string)=>{ensure(32);draw(label,margin,y,9,bold,muted);y-=12;paragraph(value,9);y-=2;};
- newPage();paragraph(receiptTitle,20,bold,green);y-=1;paragraph(process.protocolo,10,bold,muted);y-=12;
+ newPage();paragraph(receiptTitle.toLocaleUpperCase('pt-BR'),20,bold,green);y-=1;paragraph(process.protocolo,10,bold,muted);y-=12;
  const statement=confirmed?design.confirmedText:design.declinedText;
  const statementRows=wrap(statement,regular,9,width-68),bannerHeight=Math.max(80,statementRows.length*14+48);ensure(bannerHeight+8);
  page.drawRectangle({x:margin,y:y-bannerHeight+12,width,height:bannerHeight,color:confirmed?rgb(.90,.96,.92):rgb(1,.97,.88),borderColor:confirmed?rgb(.68,.82,.72):rgb(.90,.79,.45),borderWidth:.7});

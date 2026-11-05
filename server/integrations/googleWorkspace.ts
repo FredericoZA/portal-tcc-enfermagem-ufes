@@ -2,6 +2,9 @@ import {defenseEndAt} from '../../src/utils/defenseSchedule';
 import {DocumentModelError} from '../../src/utils/documentModelErrors';
 import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import { loadIntegrationSecret, saveIntegrationSecret } from './integrationSecrets';
+import { GmailDeliveryError } from './gmailDeliveryError';
+import {isUnsafePrivateContainerPermission,listDriveFilePermissions} from './googleDriveArchive';
+import {readBoundedResponse} from '../security/boundedResponse';
 import type { GoogleCalendarSyncedEvent, ProcessData } from '../../src/types';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -332,16 +335,31 @@ export async function synchronizeDefenseCalendar(input:{accessToken:string;proce
   const timeMin=new Date(Date.now()-366*24*60*60_000).toISOString();
   const timeMax=new Date(Date.now()+4*366*24*60*60_000).toISOString();
   const listUrl=`${CALENDAR_API}/calendars/${encoded}/events?singleEvents=true&maxResults=2500&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`;
-  const current=await googleCalendarJson<{items?:any[]}>(input.accessToken,listUrl);
-  const byProtocol=new Map((current.items||[]).map(event=>[String(event?.extendedProperties?.private?.portalTccProtocol||''),event]));
-  let created=0;
+  type CalendarEvent={id:string;status?:string;summary?:string;description?:string;location?:string;start?:{dateTime?:string;date?:string};end?:{dateTime?:string;date?:string};extendedProperties?:{private?:Record<string,string>;shared?:Record<string,string>}};
+  const current=await googleCalendarJson<{items?:CalendarEvent[]}>(input.accessToken,listUrl);
+  const eventsByProcessId=new Map((current.items||[]).filter(event=>event.id&&event.status!=='cancelled'&&event.extendedProperties?.private?.portalTccProcessId).map(event=>[event.extendedProperties!.private!.portalTccProcessId,event]));
+  const protocolOwners=new Map(input.processes.map(process=>[process.protocolo,process.id]));
+  const sameInstant=(value:string|undefined,expected:string)=>Boolean(value&&Number.isFinite(Date.parse(value))&&Date.parse(value)===Date.parse(expected));
+  const sameLocation=(left:string|undefined,right:string)=>String(left||'').normalize('NFC').trim()===right.normalize('NFC').trim();
+  let created=0,changed=false;
   for(const process of input.processes.filter(item=>item.defesa?.startAt&&item.defesa.localStatus==='CONFIRMADO')){
-    if(byProtocol.has(process.protocolo))continue;
     const students=[process.aluno1.nome,process.aluno2?.nome].filter(Boolean).join(' e ');
     const payload={summary:`Defesa de TCC — ${students}`,description:[`Trabalho: ${process.titulo}`,`Orientador: ${process.orientador.nome}`,process.coorientador?`Coorientador: ${process.coorientador.nome}`:'',`Banca: ${process.banca.map(member=>member.nome).join(', ')}`,`Protocolo: ${process.protocolo}`].filter(Boolean).join('\n'),location:process.defesa.local,start:{dateTime:process.defesa.startAt},end:{dateTime:defenseEndAt(process.defesa.startAt)},extendedProperties:{private:{portalTccProtocol:process.protocolo,portalTccProcessId:process.id}}};
-    const event=await googleCalendarJson<any>(input.accessToken,`${CALENDAR_API}/calendars/${encoded}/events`,{method:'POST',body:JSON.stringify(payload)});byProtocol.set(process.protocolo,event);created++;
+    const references=new Set([process.protocolo,...(process.previousProtocols||[]).filter(reference=>!protocolOwners.has(reference)||protocolOwners.get(reference)===process.id)]);
+    const existing=eventsByProcessId.get(process.id)||(current.items||[]).find(event=>event.id&&event.status!=='cancelled'&&!event.extendedProperties?.private?.portalTccProcessId&&references.has(event.extendedProperties?.private?.portalTccProtocol||'')&&sameInstant(event.start?.dateTime,payload.start.dateTime)&&sameInstant(event.end?.dateTime,payload.end.dateTime)&&sameLocation(event.location,payload.location));
+    if(existing){
+      const properties=existing.extendedProperties?.private;
+      const unchanged=properties?.portalTccProcessId===process.id&&properties.portalTccProtocol===process.protocolo&&existing.summary===payload.summary&&existing.description===payload.description&&sameLocation(existing.location,payload.location)&&sameInstant(existing.start?.dateTime,payload.start.dateTime)&&sameInstant(existing.end?.dateTime,payload.end.dateTime);
+      if(unchanged)continue;
+      const update={...payload,extendedProperties:{...existing.extendedProperties,private:{...properties,...payload.extendedProperties.private}}};
+      const event=await googleCalendarJson<CalendarEvent>(input.accessToken,`${CALENDAR_API}/calendars/${encoded}/events/${encodeURIComponent(existing.id)}`,{method:'PATCH',body:JSON.stringify(update)});
+      eventsByProcessId.set(process.id,{...existing,...update,...event});changed=true;
+    }else{
+      const event=await googleCalendarJson<CalendarEvent>(input.accessToken,`${CALENDAR_API}/calendars/${encoded}/events`,{method:'POST',body:JSON.stringify(payload)});
+      eventsByProcessId.set(process.id,event);created++;changed=true;
+    }
   }
-  const refreshed=created?await googleCalendarJson<{items?:any[]}>(input.accessToken,listUrl):current;
+  const refreshed=changed?await googleCalendarJson<{items?:CalendarEvent[]}>(input.accessToken,listUrl):current;
   const syncedAt=new Date().toISOString();
   const events=(refreshed.items||[]).map(event=>({id:String(event.id),summary:String(event.summary||'Defesa de TCC'),portalTccProtocol:event.extendedProperties?.private?.portalTccProtocol?String(event.extendedProperties.private.portalTccProtocol):undefined,description:event.description?String(event.description):undefined,location:event.location?String(event.location):undefined,start:String(event.start?.dateTime||event.start?.date||''),end:String(event.end?.dateTime||event.end?.date||''),syncedAt})).filter(event=>event.id&&event.start);
   return{calendarId,created,events};
@@ -400,9 +418,9 @@ async function ensureFolder(accessToken: string, name: string, parentId?: string
 }
 
 export async function verifyPrivateDriveFolder(accessToken:string,folderId:string):Promise<void>{
-  const permissions=await driveJson<{permissions?:Array<{id:string;type:string;role:string;domain?:string}>}>(accessToken,`${DRIVE_API}/files/${encodeURIComponent(folderId)}/permissions?fields=permissions(id,type,role,domain)&supportsAllDrives=true`);
-  const broad=(permissions.permissions||[]).filter(permission=>permission.type==='anyone'||permission.type==='domain');
-  if(broad.length)throw new Error('A pasta raiz do portal está compartilhada por link ou domínio. Remova essas permissões no Google Drive antes de armazenar documentos sigilosos.');
+  const permissions=await listDriveFilePermissions(accessToken,folderId);
+  const broad=permissions.filter(isUnsafePrivateContainerPermission);
+  if(broad.length)throw new Error('A pasta do portal está compartilhada por link, domínio, grupo ou permissão não reconhecida. Remova essas permissões no Google Drive antes de armazenar documentos sigilosos.');
 }
 
 /** Separate operational storage from the academic folders browsed by users. */
@@ -475,12 +493,11 @@ export async function storePrivatePortalBackup(input:{accessToken:string;rootFol
 
 export async function readPrivatePortalBackup(accessToken:string,fileId:string):Promise<Buffer>{
   if(!/^[a-zA-Z0-9_-]{10,}$/.test(fileId))throw new Error('ID do backup inválido.');
-  const permissions=await driveJson<{permissions?:Array<{type:string;role:string}>}>(accessToken,`${DRIVE_API}/files/${encodeURIComponent(fileId)}/permissions?fields=permissions(type,role)&supportsAllDrives=true`);
-  if((permissions.permissions||[]).some(permission=>permission.type==='anyone'||permission.type==='domain'||permission.type==='group'))throw new Error('O backup não está restrito a usuários nominais.');
+  const permissions=await listDriveFilePermissions(accessToken,fileId);
+  if(permissions.some(isUnsafePrivateContainerPermission))throw new Error('O backup não está restrito a usuários nominais.');
   const response=await fetch(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,{headers:{Authorization:`Bearer ${accessToken}`},signal:AbortSignal.timeout(30_000)});
   if(!response.ok)throw new Error(`Não foi possível reler o backup cifrado no Drive (${response.status}).`);
-  const bytes=Buffer.from(await response.arrayBuffer());
-  if(!bytes.length||bytes.length>32*1024*1024)throw new Error('Backup relido fora do limite seguro.');
+  const bytes=await readBoundedResponse(response,32*1024*1024);
   return bytes;
 }
 
@@ -592,7 +609,7 @@ export async function readDriveModelFingerprint(accessToken:string,fileId:string
     :`${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`;
   const response=await fetch(mediaUrl,{headers:{Authorization:`Bearer ${accessToken}`},signal:AbortSignal.timeout(30_000)});
   if(!response.ok)throw new Error(`Não foi possível fixar a versão do modelo no Drive (${response.status}).`);
-  const bytes=Buffer.from(await response.arrayBuffer());
+  const bytes=await readBoundedResponse(response,12*1024*1024);
   if(!bytes.length||bytes.length>12*1024*1024||bytes.subarray(0,2).toString('hex')!=='504b')throw new Error('O modelo ativo não é um DOCX válido ou ultrapassa 12 MB.');
   return{
     contentSha256:await canonicalDocxSha256(bytes),
@@ -618,9 +635,9 @@ export async function accessListGoogleSheetsTemplate(input:{accessToken:string;r
   await verifyPrivateDriveFolder(token,input.rootFolderId);
   const system=await ensureFolder(token,DRIVE_FOLDER_NAMES.system,input.rootFolderId);
   const mimeType='application/vnd.google-apps.spreadsheet';
-  const name='MODELO_LISTA_ACESSO_V2';
+  const name='MODELO_LISTA_ACESSO_V3';
   const existing=await findChild(token,name,system.file.id,mimeType);
-  const file=existing||await uploadBinary(token,{name,parentId:system.file.id,mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',targetMimeType:mimeType,content:input.content,appProperties:{purpose:'access-list-template',schema:'2'}});
+  const file=existing||await uploadBinary(token,{name,parentId:system.file.id,mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',targetMimeType:mimeType,content:input.content,appProperties:{purpose:'access-list-template',schema:'3'}});
   return {id:file.id,url:`https://docs.google.com/spreadsheets/d/${encodeURIComponent(file.id)}/copy`,created:!existing};
 }
 
@@ -658,7 +675,7 @@ export async function registerMasterDocumentModelFromDrive(input:{type:string;li
   }else{
     const response=await fetch(`${DRIVE_API}/files/${encodeURIComponent(sourceId)}?alt=media&supportsAllDrives=true`,{headers:{Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(20_000)});
     if(!response.ok)throw new Error(`Não foi possível validar o DOCX do Drive (${response.status}).`);
-    const bytes=Buffer.from(await response.arrayBuffer());
+    const bytes=await readBoundedResponse(response,12*1024*1024);
     if(!bytes.length||bytes.length>12*1024*1024||bytes.subarray(0,2).toString('hex')!=='504b')throw new Error('O DOCX do Drive é inválido ou ultrapassa 12 MB.');
     // O conteúdo será inspecionado novamente pelo motor durante a geração; aqui
     // registramos as variáveis detectáveis sem armazenar o arquivo no portal.
@@ -742,9 +759,16 @@ export function buildGmailRawMessage(input: GmailMessageInput, boundarySeed = Da
 export async function sendGmailMessage(input: GmailMessageInput): Promise<{id?:string;threadId?:string;sender?:string}> {
   // The authenticated account's email comes from the same credential read used
   // for the token; no extra userinfo/profile request or secret lookup is needed.
-  const {accessToken,sender} = await getGoogleWorkspaceCredentials();
-  const raw = buildGmailRawMessage(input);
-  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+  let credentials:Awaited<ReturnType<typeof getGoogleWorkspaceCredentials>>,raw:string;
+  try {
+    credentials = await getGoogleWorkspaceCredentials();
+    raw = buildGmailRawMessage(input);
+  } catch (error) {
+    throw new GmailDeliveryError(error instanceof Error?error.message:'Não foi possível preparar o envio ao Gmail.','NOT_SENT');
+  }
+  const {accessToken,sender}=credentials;
+  let response:Response;
+  try { response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -753,10 +777,12 @@ export async function sendGmailMessage(input: GmailMessageInput): Promise<{id?:s
     },
     body: JSON.stringify({ raw: Buffer.from(raw, 'utf8').toString('base64url'),...(input.threadId?{threadId:input.threadId}:{}) }),
     signal: AbortSignal.timeout(20_000)
-  });
+  }); } catch (error) {
+    throw new GmailDeliveryError(error instanceof Error?error.message:'O retorno do Gmail não foi confirmado.','UNCERTAIN');
+  }
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(String(payload?.error?.message || `Gmail respondeu ${response.status}.`));
+    throw new GmailDeliveryError(String(payload?.error?.message || `Gmail respondeu ${response.status}.`),'REJECTED',response.status);
   }
   const payload=await response.json().catch(()=>({}));
   return {id:payload?.id?String(payload.id):undefined,threadId:payload?.threadId?String(payload.threadId):undefined,sender};

@@ -21,6 +21,7 @@ export function RegistrationReview({ fields, valueFor, findings = [] }: {
   const values = new Map(fields.map(field => [field.fieldKey, valueFor(field)]));
   const value = (key: string) => values.get(key) || '';
   const participants = PARTICIPANTS.filter(([prefix]) => value(`${prefix}_NOME`));
+  const hasHistoricalRegistration = participants.some(([prefix]) => value(`${prefix}_MATRICULA`) || value(`${prefix}_SIAPE`));
   const processFields = fields.filter(field => !PERSON_FIELD.test(field.fieldKey) && valueFor(field) !== '');
   const processRows = Array.from({ length: Math.ceil(processFields.length / 2) }, (_, index) => processFields.slice(index * 2, index * 2 + 2));
 
@@ -42,12 +43,12 @@ export function RegistrationReview({ fields, valueFor, findings = [] }: {
       <h2 className="mb-2 font-bold">Dados dos participantes</h2>
       <div className="portal-members-table-scroll" role="region" aria-label="Conferência dos participantes com rolagem horizontal" tabIndex={0}>
         <table className="portal-members-table portal-registration-review-table" aria-label="Conferência dos participantes">
-          <colgroup><col style={{width:'27%'}}/><col style={{width:'28%'}}/><col style={{width:'20%'}}/><col style={{width:'25%'}}/></colgroup>
-          <thead><tr>{['Participante', 'E-mail', 'Matrícula, SIAPE ou outro registro', 'Dados institucionais'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
+          <colgroup><col style={{width:hasHistoricalRegistration?'27%':'35%'}}/><col style={{width:hasHistoricalRegistration?'28%':'35%'}}/>{hasHistoricalRegistration&&<col style={{width:'20%'}}/>}<col style={{width:hasHistoricalRegistration?'25%':'30%'}}/></colgroup>
+          <thead><tr>{['Participante', 'E-mail', ...(hasHistoricalRegistration?['Matrícula, SIAPE ou outro registro']:[]), 'Dados institucionais'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
           <tbody>{participants.map(([prefix, role]) => <tr key={prefix}>
             <th scope="row"><span className="block font-normal">{role}</span><strong className="block text-[var(--portal-text-dark)]">{value(`${prefix}_NOME`)}</strong></th>
             <td>{value(`${prefix}_EMAIL`) || '—'}</td>
-            <td>{value(`${prefix}_MATRICULA`) || value(`${prefix}_SIAPE`) || '—'}</td>
+            {hasHistoricalRegistration&&<td>{value(`${prefix}_MATRICULA`) || value(`${prefix}_SIAPE`) || '—'}</td>}
             <td>{[value(`${prefix}_TRATAMENTO`), value(`${prefix}_TITULACAO`)].filter(Boolean).length > 0 && <span className="block">{[value(`${prefix}_TRATAMENTO`), value(`${prefix}_TITULACAO`)].filter(Boolean).join(' · ')}</span>}<span className="block">{value(`${prefix}_INSTITUICAO`) || (prefix.startsWith('ALUNO_') ? 'UFES' : '—')}</span></td>
           </tr>)}</tbody>
         </table>

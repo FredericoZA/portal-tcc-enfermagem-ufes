@@ -29,7 +29,7 @@ test('comissão reúne identidade, contatos e membros em formulário único com 
   assert.ok(!panel.includes('courseLogoDataUrl'));
 });
 
-test('configurações não exibem blocos redundantes e Indicadores exigem acesso administrativo', async () => {
+test('configurações não exibem blocos redundantes e Indicadores públicos não expõem monitor administrativo', async () => {
   const [config, infrastructure, indicators, publicApi] = await Promise.all([
     source('src/pages/ConfiguracoesPage.tsx'),
     source('src/components/InfrastructureIntegrationsPanel.tsx'),
@@ -40,8 +40,8 @@ test('configurações não exibem blocos redundantes e Indicadores exigem acesso
   assert.ok(!config.includes('Drive gerenciado pelo servidor.'));
   assert.ok(!infrastructure.includes('Central segura de integrações'));
   assert.ok(!indicators.includes('<OperationsMonitorPanel'));
-  assert.ok(indicators.includes('canViewIndicators'));
-  assert.ok(publicApi.includes('/api/admin/indicators'));
+  assert.ok(!indicators.includes('canViewIndicators'));
+  assert.match(publicApi,/getIndicators:[^\n]*\/api\/public\/indicators/);
 });
 
 test('paleta principal usa quatro superfícies e identidade canônica sem oliva legado', async () => {

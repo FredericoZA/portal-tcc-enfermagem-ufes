@@ -1,7 +1,7 @@
 import type { RegistrationDraft } from '../../src/types/workflowOperations';
 import type { RegistrationAnswers } from '../../src/types/operationalConfig';
 import type { IntegrationStudioSettings } from '../../src/types/integrationStudio';
-import { registrationQuestions } from '../../src/utils/operationalConfig';
+import { isRegistrationIdentifierField, registrationQuestions } from '../../src/utils/operationalConfig';
 import { workflowPolicy } from '../../src/utils/workflowOperations';
 export class DraftConflict extends Error { status = 409; }
 export function saveRegistrationDraft(previous: RegistrationDraft|undefined, input: any, owner: string, studio?: Partial<IntegrationStudioSettings>, now = new Date()): RegistrationDraft {
@@ -11,6 +11,7 @@ export function saveRegistrationDraft(previous: RegistrationDraft|undefined, inp
   if(!input?.answers || typeof input.answers !== 'object' || Array.isArray(input.answers)) throw new Error('Rascunho inválido.');
   const answers: RegistrationAnswers = {};
   for (const question of registrationQuestions(studio)) {
+    if (isRegistrationIdentifierField(question.fieldKey, question.label)) continue;
     const value = input.answers[question.fieldKey];
     if(value===undefined) continue;
     if(!['string','number','boolean'].includes(typeof value)||String(value).length>10000) throw new Error(`Valor inválido em ${question.label}.`);

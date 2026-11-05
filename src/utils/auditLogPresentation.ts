@@ -15,6 +15,7 @@ const labels: Record<string, string> = {
   CRIACAO_PROCESSO: 'Cadastro do TCC concluído', EDICAO_DADOS_PROCESSO: 'Dados do TCC alterados',
   SOLICITACAO_RESERVA_REGISTRADA: 'Solicitação de reserva registrada',
   REENVIO_EMAIL_SOLICITADO: 'Nova tentativa de envio solicitada',
+  RECUPERACAO_AVISOS_RESERVA: 'Recuperação de avisos de reserva',
   EMAIL_CODIGO_ACESSO_ACEITO_GMAIL: 'Código de acesso: envio aceito pelo Gmail',
   EMAIL_CODIGO_ACESSO_FALHOU: 'Solicitação de código não concluída',
   EMAIL_CODIGO_ACESSO_SIMULADO: 'Código de acesso: teste local sem envio',
@@ -54,8 +55,8 @@ const labels: Record<string, string> = {
   TROCA_DONO_EMERGENCIA_MASTER: 'Responsável Master alterado', SOBRESCRITA_CONFLITO_DEFESA: 'Conflito de agendamento autorizado pela administração',
 };
 const statuses: Record<string, string> = {
-  REQUEST_FAILED: 'Solicitação de código não concluída', SIMULATED: 'Teste local sem envio', ACCEPTED_BY_GMAIL: 'Aceito pelo Gmail', RETRY: 'Nova tentativa programada', FAILED: 'Falha no envio',
-  SENDING: 'Envio em andamento', SENT: 'Encaminhado', PENDING: 'Aguardando envio', CANCELED: 'Envio cancelado',
+  REQUEST_FAILED: 'Solicitação de código não concluída', SIMULATED: 'Teste local sem envio', ACCEPTED_BY_GMAIL: 'Aceito pelo Gmail', RETRY: 'Nova tentativa pendente', FAILED: 'Falha no envio',
+  SENDING: 'Envio em processamento', UNCERTAIN: 'Resultado do envio não confirmado; conferir no Gmail', SENT: 'Encaminhado', PENDING: 'Aguardando envio', CANCELED: 'Envio cancelado',
   CONFIRMED: 'Reserva aceita', UNAVAILABLE: 'Reserva recusada', CONFIRMADO: 'Confirmada', RECUSADO: 'Recusada', NEGADO: 'Negada', REJEITADO: 'Recusada',
   form: 'Formulário', email: 'E-mail', receipt: 'Comprovante', headerImageUrl: 'Imagem do cabeçalho', headerLogo: 'Imagem do cabeçalho',
   ORIENTADOR: 'Orientador', ADVISOR: 'Orientador', EXAMINER_2: 'Examinador', EXAMINER_3: 'Examinador',
@@ -81,7 +82,8 @@ const fields: Record<string, string> = {
   startAt: 'Data e horário da defesa', endAt: 'Fim da defesa', local: 'Local da defesa', localStatus: 'Situação da reserva',
   status: 'Situação', decision: 'Resposta à reserva', recipient: 'Destinatário', recipients: 'Destinatários', cc: 'Em cópia',
   requestedBy: 'Solicitado por', requestedAt: 'Solicitado em', respondedBy: 'Resposta registrada por', respondedAt: 'Resposta registrada em',
-  subject: 'Assunto', provider: 'Serviço de envio', acceptedAt: 'Aceito pelo Gmail em', nextRetryAt: 'Próxima tentativa',
+  subject: 'Assunto', provider: 'Serviço de envio', acceptedAt: 'Aceito pelo Gmail em', nextRetryAt: 'Nova tentativa pendente a partir de',
+  dispatchState: 'Confirmação do envio', dispatchStartedAt: 'Envio iniciado em',
   source: 'Origem', fileName: 'Nome do arquivo', documentType: 'Documento', active: 'Acesso ativo', roles: 'Permissões',
   origin: 'Origem do cadastro', memberType: 'Tipo de participante', resumoSintese: 'Resumo síntese', palavrasChave: 'Palavras-chave',
   allowPublicFullText: 'Publicação do TCC autorizada', allowPublicExtendedAbstract: 'Publicação do resumo expandido autorizada',
@@ -90,6 +92,7 @@ const fields: Record<string, string> = {
   commissionPresidentName: 'Nome da presidência', contactEmail: 'E-mail de contato', title: 'Título', description: 'Descrição',
   headerLogo: 'Imagem do cabeçalho', logoUrl: 'Imagem do cabeçalho', imageUrl: 'Imagem', image: 'Imagem', headerImage: 'Imagem do cabeçalho',
   body: 'Texto do modelo', name: 'Nome', text: 'Texto', enabled: 'Disponível', format: 'Formato', imageMimeType: 'Formato da imagem',
+  checked: 'Itens verificados', failed: 'Pendências',
 };
 const hiddenField = /(?:^|\.)(?:id|processId|entityId|dataRevision|reservationRevision|revision|createdAt|updatedAt|workflowRunId|driveFileId|driveFolderId|sha256|contentSha256|signedSha256|encryptedSha256|sourceSha256|idempotencyKey|rfcMessageId|replyThreadId|replyMessageId|gmailMessageId|gmailThreadId|emailHash|emailHashes|callbackFingerprint|sourceDataRevision)(?:\.|$)|base64|token|secret|password|credential|api[_-]?key|artifact|contentText|htmlBody|renderedHtml|renderedText/i;
 const participantField = (path: string) => path.startsWith('aluno1.') || path.startsWith('aluno2.') ? 'Autor' : path.startsWith('orientador.') ? 'Orientador' : path.startsWith('coorientador.') ? 'Coorientador' : /^banca\.\d+\./.test(path) ? 'Examinador' : '';
@@ -113,10 +116,23 @@ function queuedWithoutAttempt(data: RecordValue): boolean {
   const count = Array.isArray(data.attempts) ? data.attempts.length : Number(data.attempts || 0);
   return data.status === 'RETRY' && count === 0;
 }
+export function emailDeliveryStatusLabel(data: RecordValue): string {
+  const dispatchState = emailDispatchState(data);
+  if (dispatchState === 'SENDING' || dispatchState === 'UNCERTAIN') return auditStatusLabel(dispatchState);
+  return queuedWithoutAttempt(data) ? 'Aguardando envio' : auditStatusLabel(data.status);
+}
+function emailDispatchState(data: RecordValue): unknown {
+  if (data.dispatchState === 'SENDING' && !(typeof data.dispatchLeaseUntil === 'string' && Date.parse(data.dispatchLeaseUntil) > Date.now())) return 'UNCERTAIN';
+  return data.dispatchState;
+}
+export function canRetryEmailDelivery(data: { status?: unknown; dispatchState?: unknown }): boolean {
+  return !data.dispatchState && (data.status === 'FAILED' || data.status === 'RETRY');
+}
 export function auditActionLabel(log: ReadableAuditLog): string {
+  if (isEmailAudit(log) && object(log.after).dispatchState) return `E-mail: ${emailDeliveryStatusLabel(object(log.after)).replace(/^./u, char => char.toLocaleLowerCase('pt-BR'))}`;
   if (log.action.startsWith('EMAIL_CODIGO_ACESSO_')) return labels[log.action] || 'Solicitação de código de acesso';
   if (isEmailAudit(log) && queuedWithoutAttempt(object(log.after))) return 'E-mail: aguardando envio';
-  if (isEmailAudit(log)) return `E-mail: ${auditStatusLabel(object(log.after).status).replace(/^./u, char => char.toLocaleLowerCase('pt-BR'))}`;
+  if (isEmailAudit(log)) return `E-mail: ${emailDeliveryStatusLabel(object(log.after)).replace(/^./u, char => char.toLocaleLowerCase('pt-BR'))}`;
   if (log.action === 'CONFIRMACAO_LOCAL_ADMINISTRATIVA' || log.action === 'RESPOSTA_RESERVA_REGISTRADA') {
     const after = object(log.after), response = object(object(after.defesa).departmentResponse);
     const decision = after.decision || response.decision;
@@ -175,20 +191,24 @@ export function canRestoreAudit(log: ReadableAuditLog): boolean {
 }
 export function emailAuditData(log: ReadableAuditLog) {
   const data = object(log.after);
+  const dispatchState = emailDispatchState(data);
   const attempts = Array.isArray(data.attempts) ? data.attempts.map(item => object(item)) : [];
   return {
     recipient: auditDisplayValue(data.recipient), cc: auditDisplayValue(data.cc || []), subject: auditDisplayValue(data.subject),
     sender: data.sender ? auditDisplayValue(data.sender) : 'Não registrado neste envio',
     sensitive: data.auditCopyMode === 'sensitive' || log.action.startsWith('EMAIL_CODIGO_ACESSO_'),
     provider: auditDisplayValue(data.provider || 'Gmail'), requestedBy: data.requestedBy ? auditDisplayValue(data.requestedBy) : auditActor(log).email ? auditDisplayValue(log.actorEmail) : 'Não identificada no registro',
-    status: queuedWithoutAttempt(data) ? 'Aguardando envio' : auditStatusLabel(data.status), rawStatus: String(data.status || ''),
-    acceptedAt: data.acceptedAt ? auditDisplayValue(data.acceptedAt) : '', nextRetryAt: data.nextRetryAt ? auditDisplayValue(data.nextRetryAt) : '',
-    attempts: attempts.map((attempt, index) => ({number: String(attempt.number || index + 1), at: auditDisplayValue(attempt.completedAt || attempt.startedAt), status: auditStatusLabel(attempt.status), error: redactAuditText(attempt.errorMessage || '')})),
+    status: emailDeliveryStatusLabel(data), rawStatus: String(data.status || ''), canRetry: canRetryEmailDelivery(data),
+    acceptedAt: !data.dispatchState && data.status === 'ACCEPTED_BY_GMAIL' && data.acceptedAt ? auditDisplayValue(data.acceptedAt) : '',
+    nextRetryAt: !data.dispatchState && data.status === 'RETRY' && data.nextRetryAt ? auditDisplayValue(data.nextRetryAt) : '',
+    attempts: attempts.map((attempt, index) => ({number: String(attempt.number || index + 1), at: auditDisplayValue(attempt.completedAt || attempt.startedAt), status: auditStatusLabel(attempt.errorCode === 'GMAIL_DELIVERY_UNCERTAIN' ? 'UNCERTAIN' : attempt.status), error: redactAuditText(attempt.errorMessage || '')})),
     attemptCount: Array.isArray(data.attempts) ? attempts.length : Number(data.attempts || 0),
-    explanation: data.status === 'ACCEPTED_BY_GMAIL'
+    explanation: dispatchState === 'SENDING' ? 'O envio está em processamento. Aguarde a conclusão e atualize este registro antes de tentar novamente.'
+      : dispatchState === 'UNCERTAIN' ? 'A tentativa foi iniciada, mas o retorno do Gmail não foi confirmado. Confira a caixa Enviados do Gmail antes de autorizar outra mensagem.'
+      : data.status === 'ACCEPTED_BY_GMAIL'
       ? 'O Gmail aceitou o envio. Este registro não confirma que a mensagem chegou à caixa de entrada ou foi lida.'
-      : queuedWithoutAttempt(data) ? 'O e-mail está na fila. Ainda não há tentativa de envio registrada.'
-      : data.status === 'RETRY' ? 'O envio ainda não foi confirmado. O Portal tentará novamente no horário indicado.'
+      : queuedWithoutAttempt(data) ? 'O e-mail está pendente. Ainda não há tentativa de envio registrada.'
+      : data.status === 'RETRY' ? 'O envio não foi confirmado. Há uma nova tentativa pendente; a data indicada não confirma que ela foi executada.'
       : data.status === 'FAILED' ? 'O envio falhou. Confira o destinatário e a situação da integração antes de tentar novamente.'
       : data.status === 'REQUEST_FAILED' ? 'A solicitação não foi concluída. Este registro não confirma que uma tentativa de envio chegou a ser iniciada.'
       : data.status === 'SIMULATED' ? 'Este registro pertence a um teste local. Nenhuma mensagem foi enviada pelo Gmail.'

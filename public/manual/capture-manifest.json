@@ -39,10 +39,11 @@
     {
       "id": "cadastro",
       "file": "/manual/cadastro.jpg",
-      "scenario": "Cadastro inicial, etapa 1, usuário de demonstração",
-      "sha256": "cb7ffea214bb7a7305bd999ed71cee64026bef72353fc131fab5fe612f2b7cf0",
+      "scenario": "Cadastro inicial do aluno sem CPF, matrícula ou SIAPE, e-mail bloqueado, dados fictícios",
+      "sha256": "e9e079a70190ed8a0943214c755833ac63b3d9db159bdef0762760a71775e85a",
       "width": 1152,
-      "height": 576
+      "height": 500,
+      "capturedAt": "2026-11-05T03:37:46.447Z"
     },
     {
       "id": "ficha",
@@ -151,10 +152,11 @@
     {
       "id": "reserva",
       "file": "/manual/reserva.jpg",
-      "scenario": "Última etapa do cadastro: orientações e reserva do único local, dados fictícios, sem enviar",
-      "sha256": "44ca9331185d3f38ec9f51d83c630f07fdc1efcc5f6612d3db4ceb5455e222ba",
+      "scenario": "Última etapa do cadastro: reserva e conferência sem identificadores pessoais novos, dados fictícios, sem enviar",
+      "sha256": "5746177e29f935983ea515d9c8dc0cbc50f7a35725868e4b9883888ecb5308b3",
       "width": 1152,
-      "height": 1368
+      "height": 1368,
+      "capturedAt": "2026-11-05T03:37:46.447Z"
     },
     {
       "id": "presidencia",
@@ -165,5 +167,6 @@
       "height": 225
     }
   ],
-  "errors": []
+  "errors": [],
+  "updatedAt": "2026-11-05T03:37:46.447Z"
 }

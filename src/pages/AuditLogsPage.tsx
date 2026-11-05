@@ -1,6 +1,6 @@
 import {formatDateTimeWithWeekday} from '../utils/formatters';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Download, FileCheck2, Upload, ListFilter } from 'lucide-react';
+import { Download, FileCheck2, Upload, ListFilter, MailCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { portalConfirm, portalNotice } from '../services/portalDialogs';
@@ -12,7 +12,7 @@ import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { loadTableConfig, type ColumnDef } from '../components/TableColumnSelectorPanel';
 import { loadGlobalTableConfig, type TableTextFormat } from '../utils/tableFormatters';
 import { AuditLogDetails } from '../components/AuditLogDetails';
-import { auditActionLabel, auditIsReservationEmailDecision, auditActor, auditReference, auditSearchText, canRestoreAudit, isEmailAudit } from '../utils/auditLogPresentation';
+import { auditActionLabel, auditIsReservationEmailDecision, auditActor, auditReference, auditSearchText, canRestoreAudit, emailAuditData, isEmailAudit } from '../utils/auditLogPresentation';
 
 const LOG_COLUMNS: ColumnDef[] = [
   { key: 'timestamp', label: 'Data / Hora', isFixed: true },
@@ -39,11 +39,17 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   const [textFormat] = useState<TableTextFormat>(() => ({ ...loadGlobalTableConfig(), ...(initialConfig.textFormat || {}) }));
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [rollingBack, setRollingBack] = useState('');
+  const [recoveringNotices, setRecoveringNotices] = useState(false);
+  const [recoveryMessage, setRecoveryMessage] = useState('');
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
   const load = async (silent = false) => {
     if (!silent) setLoading(true);
-    try { setLogs((await apiClient.getAuditLogs()) || []); }
+    try {
+      const rows = (await apiClient.getAuditLogs()) || [];
+      setLogs(rows);
+      setSelectedLog(current => current ? rows.find(row => row.id === current.id) || current : null);
+    }
     catch (error) { console.error('Erro ao carregar logs:', error); portalNotice('Não foi possível carregar o registro de logs.'); }
     finally { if (!silent) setLoading(false); }
   };
@@ -99,6 +105,20 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
     finally { setRollingBack(''); }
   };
 
+  const recoverReservationNotices = async () => {
+    if (recoveringNotices) return;
+    setRecoveringNotices(true); setRecoveryMessage('');
+    try {
+      const result = await apiClient.recoverReservationNotices();
+      setRecoveryMessage(`${result.checked} aviso(s) verificado(s); ${result.failed} ainda pendente(s). Consulte os registros.`);
+    } catch (error) {
+      setRecoveryMessage(error instanceof Error ? error.message : 'Não foi possível confirmar o resultado. Confira os registros antes de repetir.');
+    } finally {
+      await load(true);
+      setRecoveringNotices(false);
+    }
+  };
+
   if (!isMasterAdmin) return <section className="rounded-xl border border-slate-300 bg-white p-6 text-sm font-semibold text-slate-700">Registro de logs disponível somente para o usuário Master.</section>;
 
   const renderCell = (log: AuditLog, key: string) => {
@@ -107,7 +127,10 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
       const actor = auditActor(log);
       return <span className="break-words text-[11px] font-semibold">{actor.name}{auditIsReservationEmailDecision(log) && <span className="block text-[10px] font-normal text-slate-600">Destinatário do link de resposta</span>}{actor.email && actor.email !== actor.name && <span className="mt-0.5 block break-all text-[10px] font-normal text-slate-600">{actor.email}</span>}</span>;
     }
-    if (key === 'action') return <span className="font-semibold text-[11px] normal-case text-slate-900">{auditActionLabel(log)}</span>;
+    if (key === 'action') {
+      const email = isEmailAudit(log) ? emailAuditData(log) : null;
+      return <span className="block font-semibold text-[11px] normal-case text-slate-900">{auditActionLabel(log)}{email && <span className="mt-0.5 block max-w-[52ch] truncate text-[10px] font-normal text-slate-600" title={`${email.subject} · ${email.recipient}`}>{email.subject}<span className="block truncate">{email.recipient}</span></span>}</span>;
+    }
     if (key === 'reference') {
       const reference = auditReference(log);
       return <span className="block min-w-0 text-[11px] font-semibold">{reference.title}{reference.detail && <span className="mt-0.5 block max-w-[52ch] truncate text-[10px] font-normal text-slate-600" title={reference.detail}>{reference.detail}</span>}</span>;
@@ -125,6 +148,7 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
         <option value="all">Todos os registros</option><option value="activity">Atividades</option><option value="email">Envios de e-mail</option>
       </select>
     </label>
+    <button type="button" onClick={() => void recoverReservationNotices()} disabled={loading || recoveringNotices} className="portal-settings-header-selector inline-flex items-center gap-1.5 text-[10px] disabled:opacity-50" style={{ backgroundColor: 'var(--portal-brand-sage)' }} title="Recuperar avisos de reserva pendentes" aria-label="Recuperar avisos de reserva pendentes"><MailCheck className={`h-3.5 w-3.5${recoveringNotices ? ' animate-pulse' : ''}`} aria-hidden="true"/><span>{recoveringNotices ? 'Recuperando avisos…' : 'Recuperar avisos'}</span></button>
     <button type="button" onClick={() => void downloadBackup()} className="portal-toolbar-icon-button" title="Baixar backup JSON" aria-label="Baixar backup JSON"><Download className="h-3.5 w-3.5"/></button>
     <button type="button" onClick={() => restoreInputRef.current?.click()} className="portal-toolbar-icon-button" title="Restaurar backup JSON" aria-label="Restaurar backup JSON"><Upload className="h-3.5 w-3.5"/></button>
     <input ref={restoreInputRef} type="file" accept=".json,application/json" className="hidden" onChange={event => restoreBackup(event.target.files?.[0])}/>
@@ -137,6 +161,7 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
     {embedded ? <SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal> : <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><div className="flex items-center gap-2"><FileCheck2 className="h-5 w-5 shrink-0"/><h1 className="text-sm font-black normal-case tracking-wide">Registro de logs</h1></div>{toolbar}</header>}
 
     <div className="portal-audit-table-shell flex min-h-0 flex-1 flex-col">
+      {recoveryMessage && <p role="status" className="border-b border-slate-300 px-4 py-3 text-xs leading-5 text-slate-800">{recoveryMessage}</p>}
       <TableScrollWrapper fillHeight>
         <table className="portal-spreadsheet-table portal-audit-table w-full min-w-[860px] border-collapse text-center text-xs">
           <thead><tr>{activeColumns.map(key => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black normal-case tracking-wide ${key === 'options' ? 'text-center' : ''}`}>{LOG_COLUMNS.find(column => column.key === key)?.label || key}</th>)}</tr></thead>
@@ -145,6 +170,6 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
       </TableScrollWrapper>
     </div>
 
-    {selectedLog && <AuditLogDetails log={selectedLog} onClose={() => setSelectedLog(null)} />}
+    {selectedLog && <AuditLogDetails log={selectedLog} onClose={() => setSelectedLog(null)} onRefresh={() => load(true)} />}
   </div>;
 };

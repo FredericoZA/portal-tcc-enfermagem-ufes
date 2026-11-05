@@ -41,11 +41,14 @@ test('real active Master cookie older than ten minutes can operate while expired
   const importCheck=await request('/api/admin/models/ATA/link','POST',{linkOrId:''});assert.equal(importCheck.status,400);assert.notEqual((await importCheck.json()).code,'REAUTHENTICATION_REQUIRED');
   const critical=await request('/api/admin/administration-transfers','POST',{role:'MASTER_ADMIN',targetEmail:'another@portal.local'});assert.equal(critical.status,428);
   const deleted=await request('/api/processes/deletable','DELETE',confirm);assert.equal(deleted.status,200,await deleted.clone().text());
-  const cleanup=await request('/api/processes/cleanup','DELETE',{confirmation:'EXCLUIR',expectedProcessId:'cleanup',deleteFiles:true,clearHistory:true});assert.equal(cleanup.status,202,await cleanup.clone().text());
+  const cleanup=await request('/api/processes/cleanup','DELETE',{confirmation:'EXCLUIR',expectedProcessId:'cleanup',deleteFiles:true,clearHistory:true});assert.equal(cleanup.status,200,await cleanup.clone().text());
+  assert.deepEqual((await cleanup.json()).manualAstenEnvelopes,['synthetic-envelope']);
   await assert.rejects(access(path.join(dir,'arquivos-demonstrativos',key+'.pdf')));
-  const queue=await(await request('/api/admin/process-deletions')).json();assert.equal(queue.length,2);assert.equal(queue.find((item:any)=>item.processId==='protected').deleteFiles,true);assert.equal(queue.find((item:any)=>item.processId==='protected').clearHistory,false);const cleanupTask=queue.find((item:any)=>item.processId==='cleanup');assert.match(cleanupTask.errors.join(' '),/expurgo/);
-  assert.equal((await request('/api/admin/process-deletions/'+cleanupTask.id+'/retry','POST',{},cookie('student@edu.ufes.br'))).status,403);
-  const finish=await request('/api/admin/process-deletions/'+cleanupTask.id+'/retry','POST',{astenExpunged:true,expectedProtocol:'TCC-2026-0999'});assert.equal(finish.status,200);assert.equal((await(await request('/api/admin/process-deletions')).json()).length,2);
+  const queue=await(await request('/api/admin/process-deletions')).json();assert.equal(queue.length,1);
+  const protectedTask=queue.find((item:any)=>item.processId==='protected');assert.equal(protectedTask.deleteFiles,true);assert.equal(protectedTask.clearHistory,false);
+  assert.equal(queue.some((item:any)=>item.processId==='cleanup'),false);
+  assert.equal((await request('/api/admin/process-deletions/'+protectedTask.id+'/retry','POST',{},cookie('student@edu.ufes.br'))).status,403);
+  const finish=await request('/api/admin/process-deletions/'+protectedTask.id+'/retry','POST',{});assert.equal(finish.status,200);assert.equal((await(await request('/api/admin/process-deletions')).json()).length,1);
   const disk=JSON.parse(await readFile(path.join(dir,'portal-state.json'),'utf8'));assert.equal(disk.processes.some((p:any)=>p.id==='deletable'),false);assert.equal(disk.processes.some((p:any)=>p.id==='protected'),false);assert.equal(disk.auditLogs.some((l:any)=>l.processId==='cleanup'||l.entityId==='cleanup'),false);assert.equal(disk.signatureJobs.some((j:any)=>j.processId==='cleanup'),false);assert.equal(disk.auditLogs.some((l:any)=>l.action==='EXCLUSAO_PROCESSO_TCC'&&l.entityId==='deletable'),false);
  }finally{if(child.exitCode===null){const stopped=new Promise(r=>child.once('exit',r));child.kill('SIGTERM');await stopped;}await rm(dir,{recursive:true,force:true});}
 });

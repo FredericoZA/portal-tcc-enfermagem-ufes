@@ -309,7 +309,7 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
     );
     const readback = await readbackResponse.json() as GoogleDocumentReadback;
     if(String(readback.documentId||'')!==temporaryFileId)throw new Error('O Google Docs devolveu um documento diferente da cópia temporária.');
-    const logoRequests=[...institutionalLogoRequests(readback,input.institutionalCrestUrl),...(input.institutionalCrestUrl?.endsWith('/national-arms.png')?institutionalHeadingRequests(readback):[])];
+    const logoRequests=institutionalLogoRequests(readback,input.institutionalCrestUrl);
     if(logoRequests.length)await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:logoRequests,...(readback.revisionId?{writeControl:{requiredRevisionId:readback.revisionId}}:{})})},'Falha ao aplicar o brasão institucional');
     // The logo batch advances the revision; read it back before writing text.
     if(logoRequests.length){const fresh=await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}?includeTabsContent=true`,{},'Falha ao conferir o brasão institucional');Object.assign(readback,await fresh.json());}
@@ -379,6 +379,21 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
       const emphasis=[...(input.institutionalCrestUrl?.endsWith('/national-arms.png')?institutionalClosingStyleRequests(mergedDocument):[]),...(['ATA','TERMO'].includes(input.presentation.documentType)?individualAuthorSignatureStyleRequests(mergedDocument,p):[]),...buildValueBoldRequests(mergedDocument,[...names,p.avaliacao?.resultadoLabel||'',personPresentationVariables(p).RESULTADO_CONCORDANTE,p.avaliacao?.parecer||'']),...(input.presentation.documentType==='TERMO'?buildAuthorizationChoiceStyleRequests(mergedDocument):[]),...(input.presentation.documentType==='DECLARACAO'?buildDeclarationCoAdvisorNormalRequests(mergedDocument):[])];
       if(emphasis.length)await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:emphasis,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao formatar resultado e parecer');
       documentText=documentMainBody(mergedDocument)?.text||documentText;
+    }
+    if(input.institutionalCrestUrl?.endsWith('/national-arms.png')){
+      const readLetterhead=async()=>{
+        const response=await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}?includeTabsContent=true`,{},'Falha ao conferir o cabeçalho institucional');
+        const current=await response.json();
+        if(String(current.documentId||'')!==temporaryFileId)throw new Error('O Google Docs devolveu um documento diferente da cópia temporária.');
+        return current;
+      };
+      mergedDocument=await readLetterhead();
+      const headings=institutionalHeadingRequests(mergedDocument);
+      if(headings.length){
+        await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:headings,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao padronizar o cabeçalho institucional');
+        mergedDocument=await readLetterhead();
+        documentText=documentMainBody(mergedDocument)?.text||documentText;
+      }
     }
     const unresolvedMarkers = input.documentText!==undefined?findUnresolvedTemplateMarkers({textRun:{content:documentText||input.documentText}}):findUnresolvedTemplateMarkers(mergedDocument);
     if(input.invitationLayout&&input.presentation)assertInvitationIdentification(mergedDocument,input.presentation.process);

@@ -55,6 +55,8 @@ test('inventário crítico da produção corresponde ao tutorial atual', () => {
   const manifest = JSON.parse(read('docs/PRODUCTION_CLI_SOURCE_MANIFEST_2026-11-02.json')) as { criticalSourcePaths: string[] };
   assert.ok(manifest.criticalSourcePaths.includes('public/replicacao/GUIA_DE_INSTALACAO.md'));
   assert.ok(!manifest.criticalSourcePaths.includes('public/replicacao/GUIA_PARA_IA.md'));
+  assert.ok(manifest.criticalSourcePaths.includes('src/pages/ProcessoDetailPage.tsx'));
+  assert.ok(manifest.criticalSourcePaths.includes('src/components/ProcessSummaryCard.tsx'));
   assert.doesNotThrow(() => execFileSync(process.execPath, ['scripts/verify-production-source.mjs'], {
     env: { ...process.env, PORTAL_REQUIRE_SOURCE_PARITY: 'true' },
     stdio: 'pipe',
@@ -72,8 +74,7 @@ test('rotas de recomendações legadas não permitem recriar propostas nem alert
   assert.equal(existsSync('server/statisticalSnapshot.ts'),true);
   assert.doesNotMatch(read('src/services/apiClient.ts'), /getContinuousIntelligence|refreshContinuousIntelligence/);
 
-  assert.match(server, /app\.all\('\/api\/admin\/continuous-intelligence\/refresh',[\s\S]*?res\.status\(410\)/);
-  assert.match(server, /app\.all\('\/api\/admin\/continuous-intelligence\/proposals\/:id',[\s\S]*?res\.status\(410\)/);
+  assert.doesNotMatch(server, /app\.(?:all|get|post)\('\/api\/admin\/continuous-intelligence/);
   assert.doesNotMatch(server, /notifications\.push\(\{id:`intelligence-/);
   assert.doesNotMatch(server, /id:'continuous-intelligence',label:'Arquivos vivos'/);
   assert.match(server, /continuousIntelligence:continuousIntelligenceStore/);
