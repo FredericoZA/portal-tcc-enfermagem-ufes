@@ -1,3 +1,4 @@
+import {RE2JS} from 're2js';
 import {isEmailAddress} from './emailAddress';
 import {studioMarkerPatterns} from './templateMarkerPattern';
 import {DOCUMENT_VARIABLE_KEYS} from './documentVariables';
@@ -146,6 +147,13 @@ export function evaluateStudioCondition(condition: StudioCondition | undefined, 
   return String(actual ?? '') === expected;
 }
 
+function compileFormPattern(pattern: string): RE2JS {
+  if (pattern.length > 256) throw new Error('Expressão de validação longa demais.');
+  const compiled = RE2JS.compile(RE2JS.translateRegExp(pattern));
+  if (compiled.programSize() > 4096) throw new Error('Expressão de validação complexa demais.');
+  return compiled;
+}
+
 export function validateStudioAnswer(value: unknown, rule: StudioValidationRule | undefined): string | null {
   if (!rule) return null;
   const source = String(value ?? '');
@@ -155,8 +163,8 @@ export function validateStudioAnswer(value: unknown, rule: StudioValidationRule 
   if (rule.min !== undefined && Number.isFinite(numeric) && numeric < rule.min) return rule.errorMessage || `O valor mínimo é ${rule.min}.`;
   if (rule.max !== undefined && Number.isFinite(numeric) && numeric > rule.max) return rule.errorMessage || `O valor máximo é ${rule.max}.`;
   if (rule.pattern) {
-    try { if (!new RegExp(rule.pattern).test(source)) return rule.errorMessage || 'O valor não segue o formato esperado.'; }
-    catch { return 'A expressão de validação configurada é inválida.'; }
+    try { if (!compileFormPattern(rule.pattern).test(source)) return rule.errorMessage || 'O valor não segue o formato esperado.'; }
+    catch { return 'O formato configurado para este campo precisa ser revisado.'; }
   }
   return null;
 }
@@ -252,7 +260,7 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
         if (!seen.has(source) || source === fieldKey) add({ code: 'INVALID_FORM_RULE', path: `formTemplates.${formIndex}.questions.${questionIndex}.visibleWhen`, message: 'A condição deve usar um campo anterior do mesmo formulário.', severity: 'ERROR', area: 'FORM' });
       }
       const pattern = text(record(question.validation).pattern);
-      if (pattern) try { new RegExp(pattern); } catch { add({ code: 'INVALID_PATTERN', path: `formTemplates.${formIndex}.questions.${questionIndex}.validation.pattern`, message: 'A expressão de validação é inválida.', severity: 'ERROR', area: 'FORM' }); }
+      if (pattern) try { compileFormPattern(pattern); } catch { add({ code: 'INVALID_PATTERN', path: `formTemplates.${formIndex}.questions.${questionIndex}.validation.pattern`, message: 'Use uma expressão compatível com RE2, com até 256 caracteres e sem retroreferências ou verificações de contexto.', severity: 'ERROR', area: 'FORM' }); }
     });
   });
 
