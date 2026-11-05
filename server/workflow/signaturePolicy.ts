@@ -1,4 +1,4 @@
-import {documentSignatureCompleted} from '../../src/utils/documentSignatureState';
+import {currentAtaArchived,documentSignatureCompleted,signatureDocumentRevision} from '../../src/utils/documentSignatureState';
 import {academicName} from '../../src/utils/personPresentation';
 import type { GlobalRole, GlobalSettings, ProcessData, SignatureJob } from '../../src/types';
 import type { SignatureSignerSnapshot } from '../../src/types/signatures';
@@ -98,8 +98,7 @@ export function canInitiateSignature(
   if (!isValidSignatureEmail(email)) return false;
   if (globalRoles.includes('MASTER_ADMIN')) return true;
   const actor = normalizeSignatureEmail(email);
-  if (type === 'ATA') return [process.orientador, ...(process.banca || []).filter(member => member.funcao === 'EXAMINER_2' || member.funcao === 'EXAMINER_3')]
-    .some(person => normalizeSignatureEmail(person?.email) === actor);
+  if (type === 'ATA') return normalizeSignatureEmail(process.orientador?.email) === actor;
   if (type === 'TERMO') {
     return [process.aluno1, process.aluno2, process.orientador]
       .some(person => normalizeSignatureEmail(person?.email) === actor);
@@ -152,5 +151,15 @@ export function assertCurrentSignatureRecipients(process:ProcessData,type:Signab
 
 /** Prevent a new request through either provider once this revision is signed. */
 export function assertDocumentSignatureOpen(process:ProcessData,type:SignableDocumentType,jobs:SignatureJob[]):void{
- if(process.status==='CONCLUIDO'||process.etapaAtual==='CONCLUIDO'||documentSignatureCompleted(jobs,process.id,type,process.dataRevision))throw new Error('Este documento já está assinado. Utilize Ver ou Baixar PDF.');
+ if(process.status==='CONCLUIDO'||process.etapaAtual==='CONCLUIDO'||(type==='ATA'&&currentAtaArchived(process,jobs))||documentSignatureCompleted(jobs,process.id,type,signatureDocumentRevision(process,type)))throw new Error('Este documento já está assinado. Utilize Ver ou Baixar PDF.');
+}
+
+export function signatureJobMatchesCurrentRevision(process:ProcessData,job:Pick<SignatureJob,'documentType'|'sourceDataRevision'|'status'|'removedFromLogsAt'>):boolean{
+ return !job.removedFromLogsAt&&job.status!=='CANCELED'&&job.sourceDataRevision===signatureDocumentRevision(process,job.documentType);
+}
+
+export function hasCompetingSignatureArchive(process:ProcessData,job:SignatureJob,jobs:SignatureJob[]):boolean{
+ return jobs.some(other=>other.id!==job.id&&other.processId===job.processId&&other.documentType===job.documentType
+   &&other.sourceDataRevision===job.sourceDataRevision&&other.status==='ARCHIVED'&&Boolean(other.driveSignedFileId)
+   &&(job.documentType!=='ATA'||currentAtaArchived(process,[other])));
 }

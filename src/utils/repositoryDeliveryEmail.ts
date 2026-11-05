@@ -2,12 +2,15 @@ import {registrationFirst} from './workflowStageOrder';
 import type {IntegrationStudioSettings} from '../types/integrationStudio';
 import type {ProcessData} from '../types';
 import type {SignatureJob} from '../types/signatures';
+import {currentAtaArchived,signatureDocumentRevision} from './documentSignatureState';
 
 export const REPOSITORY_DELIVERY_EMAIL_ID='email-entrega-repositorio';
 export const REPOSITORY_DELIVERY_READY='ENTREGA_FINAL_LIBERADA';
-export function repositoryDeliveryEmailKey(process:Pick<ProcessData,'id'|'dataRevision'>,recipient:string):string{return `repository-delivery:${process.id}:${process.dataRevision}:${recipient.trim().toLowerCase()}`;}
+export function repositoryDeliveryEmailKey(process:Pick<ProcessData,'id'|'dataRevision'|'avaliacao'>,recipient:string):string{return `repository-delivery:${process.id}:${signatureDocumentRevision(process,'ATA')}:${recipient.trim().toLowerCase()}`;}
 export function repositoryDeliveryReady(process:ProcessData,jobs:SignatureJob[]):boolean{
- return process.etapaAtual==='REPOSITORIO'&&!process.acervo?.submittedAt&&jobs.some(job=>job.processId===process.id&&job.documentType==='ATA'&&job.status==='ARCHIVED'&&job.sourceDataRevision===process.dataRevision);
+ if(process.etapaAtual!=='REPOSITORIO'||process.acervo?.submittedAt)return false;
+ const currentJobs=jobs.filter(job=>job.sourceDataRevision===signatureDocumentRevision(process,'ATA'));
+ return currentAtaArchived(process,currentJobs);
 }
 
 /** Preserve editable templates and add the missing post-ata notification once. */

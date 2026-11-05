@@ -4,7 +4,7 @@ import {ProcessSummaryCard} from '../components/ProcessSummaryCard';
 import {LegacyAdministrativeDocuments} from '../components/LegacyAdministrativeDocuments';
 import {ProcessDocumentCard, ProcessDocumentsPanel, ReservationReceiptCard} from '../components/ProcessDocumentCard';
 import {publicProcessDetail} from '../utils/publicProcessDetail';
-import {currentAtaArchived,documentSignatureCompleted} from '../utils/documentSignatureState';
+import {currentAtaArchived,documentSignatureCompleted,signatureDocumentRevision} from '../utils/documentSignatureState';
 import {defenseEndAt} from '../utils/defenseSchedule';
 import {STUDENT_TREATMENTS,FACULTY_TREATMENTS,ACADEMIC_DEGREES} from '../utils/personPresentation';
 import {downloadPortalDocument} from '../utils/documentDownload';
@@ -885,7 +885,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {process.legacyRecord && localFormat.showSectionDocs !== false && isTabVisible('docs') && <LegacyAdministrativeDocuments processId={process.id} canAccessOriginals={isMasterAdmin}/>}
       {!process.legacyRecord && localFormat.showSectionDocs !== false && isTabVisible('docs') && (
         <ProcessDocumentsPanel count={Object.keys(administrativeDocumentLabels).length+1} toolbar={
-          !readOnly&&(isMasterAdmin||isCommissionPresident)?<button type="button" onClick={()=>{setDownloadSelection(documents.filter(doc=>doc.status==='DISPONIVEL'||doc.status==='ASSINADO').map(doc=>doc.type));setDownloadPicker(true);}} disabled={isDownloadingDossier} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 disabled:opacity-60" aria-label="Escolher documentos para baixar" title="Baixar documentos"><Download className="h-4 w-4"/></button>:undefined
+          !readOnly&&isMasterAdmin?<button type="button" onClick={()=>{setDownloadSelection(documents.filter(doc=>doc.status==='DISPONIVEL'||doc.status==='ASSINADO').map(doc=>doc.type));setDownloadPicker(true);}} disabled={isDownloadingDossier} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 disabled:opacity-60" aria-label="Escolher documentos para baixar" title="Baixar documentos"><Download className="h-4 w-4"/></button>:undefined
         } notices={<>
             {!readOnly&&documents.some(doc=>doc.requiresSignature&&doc.status!=='ASSINADO'&&doc.status!=='NAO_DISPONIVEL')&&<aside className="portal-instruction p-3 text-xs"><p className="font-semibold">Orientações</p><ul className="mt-1 list-disc space-y-1 pl-5"><li>Somente os responsáveis indicados em cada documento podem assiná-lo.</li><li>Prefira o Asten: solicite a assinatura pelo botão e siga o link recebido por e-mail.</li><li>Pelo Gov.br, baixe o documento, assine e devolva o PDF com todas as assinaturas exigidas.</li></ul></aside>}
             {signatureNotice&&(!signatureNotice.documentType||!documents.some(doc=>doc.type===signatureNotice.documentType&&doc.status==='ASSINADO'))&&<div role="status" className={`rounded-lg border p-3 text-xs font-bold flex items-start justify-between gap-3 ${signatureNotice.ok?'portal-instruction':'border-red-200 bg-red-50 text-red-900'}`}><span>{signatureNotice.text}</span><button type="button" onClick={()=>setSignatureNotice(null)} className="shrink-0 underline" aria-label="Fechar aviso de documento">Fechar aviso</button></div>}
@@ -912,7 +912,15 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 if (!doc) return <ProcessDocumentCard key={type} title={docInfo.title} signerNote={docInfo.signer}
                   status={docInfo.pending} available={false} onView={()=>{}} onDownload={()=>{}} />;
                 const {publicationDeclined:termDeclined,available:isDownloadable}=administrativeDocumentAvailability(process,doc,readOnly);
-                const canRequestSignature=!readOnly&&doc.status!=='ASSINADO'&&!documentSignatureCompleted(signatureJobs,process.id,doc.type,process.dataRevision)&&!termDeclined&&doc.requiresSignature&&doc.status!=='NAO_DISPONIVEL'&&(isMasterAdmin||(doc.type==='DECLARACAO'&&isCommissionPresident)||(doc.type==='ATA'&&(isAdvisor||isExaminer))||(doc.type==='TERMO'&&(isStudent||isAdvisor)));
+                const revision = signatureDocumentRevision(process, doc.type);
+                const signatureOpen = !readOnly && doc.status !== 'ASSINADO' && doc.status !== 'NAO_DISPONIVEL'
+                  && doc.requiresSignature && !termDeclined && !documentSignatureCompleted(signatureJobs, process.id, doc.type, revision);
+                const canRequestSignature = signatureOpen && (isMasterAdmin || (doc.type === 'DECLARACAO' && isCommissionPresident)
+                  || (doc.type === 'ATA' && isAdvisor) || (doc.type === 'TERMO' && (isStudent || isAdvisor)));
+                const canUseGovbr = canRequestSignature || (signatureOpen && doc.type === 'ATA' && isExaminer && signatureJobs.some(job =>
+                  job.documentType === 'ATA' && job.provider === 'GOV_BR' && job.status === 'READY_FOR_REVIEW'
+                  && job.sourceDataRevision === revision && job.driveUnsignedFileId
+                  && job.signers.some(signer => signer.role === 'EXAMINER' && normalizeEmail(signer.email) === normEmail)));
                 const signingJob = doc.status === 'NAO_DISPONIVEL' ? undefined : signatureJobs.find(job =>
                   job.documentType === doc.type && job.documentVersion === doc.currentVersion && job.status !== 'CANCELED'
                   && (doc.type !== 'ATA' || process.avaliacao.documentRevision === undefined || job.sourceDataRevision === process.avaliacao.documentRevision));
@@ -937,10 +945,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   status={status}
                   statusDescription={statusDescription}
                   tone={termDeclined?'denied':isDownloadable||signingJob?.driveUnsignedFileId?'available':'pending'}
-                  available={isDownloadable} unavailable={!isDownloadable&&!canRequestSignature}
+                  available={isDownloadable} unavailable={!isDownloadable&&!canUseGovbr}
                   onView={()=>setSelectedPreviewDoc(doc)} onDownload={()=>void handleDirectDownload(doc)}>
-                  {canRequestSignature&&<div className="portal-document-signature-actions flex flex-col gap-2">
-                    <button type="button" onClick={()=>handleSignDocument(doc)} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><ShieldCheck className="h-4 w-4"/>Asten</button>
+                  {canUseGovbr&&<div className="portal-document-signature-actions flex flex-col gap-2">
+                    {canRequestSignature&&<button type="button" onClick={()=>handleSignDocument(doc)} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><ShieldCheck className="h-4 w-4"/>Asten</button>}
                     <button type="button" onClick={()=>setGovbrDocument(doc)} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><FileCheck className="h-4 w-4"/>Gov.br</button>
                   </div>}
                 </ProcessDocumentCard>;
@@ -1122,7 +1130,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* ========================================================================= */}
 
       {/* Audit Log Modal (Full dialog view via gear) */}
-      {govbrDocument&&<GovbrSignatureModal process={process} documentType={govbrDocument.type as 'ATA'|'TERMO'|'DECLARACAO'} canApprove={isMasterAdmin} initialJob={signatureJobs.find(job=>job.documentType===govbrDocument.type&&job.provider==='GOV_BR'&&job.sourceDataRevision===process.dataRevision&&job.status!=='CANCELED')} onChange={()=>void loadData({quiet:true})} onClose={()=>setGovbrDocument(null)}/>}
+      {govbrDocument&&<GovbrSignatureModal process={process} documentType={govbrDocument.type as 'ATA'|'TERMO'|'DECLARACAO'} canApprove={isMasterAdmin} initialJob={signatureJobs.find(job=>job.documentType===govbrDocument.type&&job.provider==='GOV_BR'&&job.sourceDataRevision===signatureDocumentRevision(process,govbrDocument.type)&&job.status!=='CANCELED')} onChange={()=>void loadData({quiet:true})} onClose={()=>setGovbrDocument(null)}/>}
       <PortalModalShell zIndexClass="z-[1000002]" open={downloadPicker} onClose={()=>setDownloadPicker(false)} title="Baixar documentos" icon={Download} maxWidthClass="max-w-lg" bodyClassName="p-4" footer={<div className="flex justify-end gap-2"><button type="button" className="portal-action" onClick={()=>setDownloadPicker(false)}>Fechar</button><button type="button" disabled={isDownloadingDossier||!downloadSelection.length} className="portal-action" onClick={()=>void handleDownloadDossier()}>{isDownloadingDossier?'Preparando…':'Baixar selecionados'}</button></div>}>
         <div className="space-y-2">{documents.map(doc=><label key={doc.id} className="flex items-center gap-2 rounded-lg border p-3"><input type="checkbox" disabled={!['DISPONIVEL','ASSINADO'].includes(doc.status)} checked={downloadSelection.includes(doc.type)} onChange={event=>setDownloadSelection(current=>event.target.checked?[...current,doc.type]:current.filter(type=>type!==doc.type))}/><span>{doc.title}<small className="block">{doc.status==='DISPONIVEL'?'Disponível':doc.status==='ASSINADO'?'Assinado':'Não disponível'}</small></span></label>)}</div>
       </PortalModalShell>

@@ -28,8 +28,13 @@ test('settings survive restart and control the real form, registration schema an
   changed.formTemplates!.find(t=>t.id==='form-reserva-departamento')!.title='Responder ao pedido de espaço';changed.formTemplates!.find(t=>t.id==='form-reserva-departamento')!.description='Verifique a disponibilidade antes da decisão.';
   changed.formDesigns['form-reserva-aluno']={templateId:'form-reserva-aluno',introText:'Instrução configurada para os participantes.',submitLabel:'Solicitar o agendamento',confirmationMessage:'Pedido registrado.',showProgress:false,logoUrl:'',universityLogoUrl:'',bannerImageUrl:''};
   changed.receiptDesign={confirmedTitle:'Comprovante da resposta ao agendamento',declinedTitle:'Registro de indisponibilidade'};
-  const saved=await fetch(base+'/api/admin/settings',{method:'PATCH',headers,body:JSON.stringify({integrationStudio:changed,studioExpectedRevision:1,studioSaveMode:'autosave'})});assert.equal(saved.status,200);const result=await saved.json();assert.equal(result.integrationStudio.revision,2,JSON.stringify(result.integrationStudioDraft?.publication));
+  const saved=await fetch(base+'/api/admin/settings',{method:'PATCH',headers,body:JSON.stringify({integrationStudio:changed,studioExpectedRevision:1,studioSaveMode:'autosave'})});assert.equal(saved.status,200);const result=await saved.json();assert.equal(result.integrationStudio.revision,1);assert.equal(result.integrationStudioDraft.revision,2);
   const token=reservationToken({processId:p.id,revision:0,recipient:'department@example.invalid',expiresAt:Date.now()+600000},secret);
+  assert.doesNotMatch(await(await fetch(base+'/api/reservation-confirmation/'+token)).text(),/Responder ao pedido de espaço/);
+  const oldSchema=await(await fetch(base+'/api/forms/registration-schema',{headers})).json();
+  assert.notEqual(oldSchema.formDesigns['form-reserva-aluno']?.submitLabel,'Solicitar o agendamento');
+  const published=await fetch(base+'/api/admin/settings',{method:'PATCH',headers,body:JSON.stringify({integrationStudio:{...result.integrationStudioDraft,revision:3},studioExpectedRevision:2,studioSaveMode:'publish'})});
+  assert.equal(published.status,200,await published.clone().text());
   const form=await(await fetch(base+'/api/reservation-confirmation/'+token)).text();assert.match(form,/Responder ao pedido de espaço/);assert.match(form,/Verifique a disponibilidade/);
   const schema=await(await fetch(base+'/api/forms/registration-schema',{headers})).json();assert.equal(schema.formDesigns['form-reserva-aluno'].submitLabel,'Solicitar o agendamento');assert.equal(schema.formDesigns['form-reserva-aluno'].showProgress,false);assert.equal(schema.receiptDesign,undefined);
   assert.equal((await fetch(base+'/api/admin/receipts/preview',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({decision:'CONFIRMED'})})).status,401);
@@ -37,5 +42,35 @@ test('settings survive restart and control the real form, registration schema an
   const preview=await fetch(base+'/api/admin/receipts/preview',{method:'POST',headers,body:JSON.stringify({decision:'CONFIRMED',receiptDesign:changed.receiptDesign})});assert.equal(preview.status,200);const bytes=Buffer.from((await preview.json()).contentBase64,'base64');const pdf=await PDFDocument.load(bytes);assert.match(pdf.getTitle()||'',/sem validade/);const {getDocument}=await import('pdfjs-dist/legacy/build/pdf.mjs');const task=getDocument({data:new Uint8Array(bytes),verbosity:0});const rendered=await task.promise;try{const text=(await(await rendered.getPage(1)).getTextContent()).items.map((item:any)=>item.str||'').join(' ');assert.ok(text.includes(changed.receiptDesign.confirmedTitle.toLocaleUpperCase('pt-BR')));assert.match(text,/RESERVA CONFIRMADA/);}finally{await task.destroy();}
   const state=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(state.processes.length,1);assert.equal(state.emailDeliveries.length,0);assert.equal(state.signatureJobs.length,0);assert.equal(state.processes[0].defesa.localStatus,'PENDENTE');
   await stop();await start();const reopened=await(await fetch(base+'/api/settings',{headers})).json();assert.equal(reopened.integrationStudio.receiptDesign.confirmedTitle,changed.receiptDesign.confirmedTitle);assert.match(await(await fetch(base+'/api/reservation-confirmation/'+token)).text(),/Responder ao pedido de espaço/);
+  const versions=await(await fetch(base+'/api/admin/studio/versions',{headers})).json();
+  assert.deepEqual(versions.map((item:any)=>[item.revision,item.active]),[[3,true],[1,false]]);
+  const nextDraft=structuredClone(reopened.integrationStudio);nextDraft.revision=4;nextDraft.receiptDesign.confirmedTitle='Novo rascunho de comprovante';
+  const savedDraft=await fetch(base+'/api/admin/settings',{method:'PATCH',headers,body:JSON.stringify({integrationStudio:nextDraft,studioExpectedRevision:3,studioSaveMode:'autosave'})});
+  assert.equal(savedDraft.status,200,await savedDraft.clone().text());
+  const restore=(expectedRevision:number,reason:string)=>fetch(base+'/api/admin/studio/versions/1/restore',{method:'POST',headers,body:JSON.stringify({expectedRevision,reason})});
+  assert.equal((await restore(3,'Teste de restauração')).status,409);
+  assert.equal((await restore(4,'')).status,400);
+  const rollback=await restore(4,'Teste de restauração');assert.equal(rollback.status,200,await rollback.clone().text());
+  const restored=await rollback.json();assert.equal(restored.studio.revision,5);assert.equal(restored.draft.revision,6);assert.equal(restored.draft.receiptDesign.confirmedTitle,'Novo rascunho de comprovante');
+  assert.doesNotMatch(await(await fetch(base+'/api/reservation-confirmation/'+token)).text(),/Responder ao pedido de espaço/);
+  const sendTest=(id:string,expectedRevision:number,email?:string)=>fetch(`${base}/api/admin/email-models/${id}/test`,{method:'POST',headers:{'content-type':'application/json',...(email?{'x-demo-user-email':email}:{})},body:JSON.stringify({expectedRevision,recipient:'terceiro@example.invalid'})});
+  const mailRevision=restored.draft.revision;
+  assert.equal((await sendTest('email-reserva',mailRevision)).status,401);
+  assert.equal((await sendTest('email-reserva',mailRevision,'student@example.invalid')).status,403);
+  assert.equal((await sendTest('__proto__',mailRevision,'master@portal.local')).status,404);
+  assert.equal((await sendTest('email-reserva',mailRevision-1,'master@portal.local')).status,409);
+  const simulatedSend=await sendTest('email-reserva',mailRevision,'master@portal.local');
+  assert.equal(simulatedSend.status,502,await simulatedSend.clone().text());
+  const afterTest=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));
+  assert.equal(afterTest.emailDeliveries.length,1);
+  const [testDelivery]=afterTest.emailDeliveries;
+  assert.equal(testDelivery.recipient,'master@portal.local');
+  assert.deepEqual(testDelivery.cc,[]);
+  assert.equal(testDelivery.processId,undefined);
+  assert.equal(testDelivery.status,'FAILED');
+  assert.match(testDelivery.renderedText,/portal\.example\.invalid/);
+  assert.deepEqual(afterTest.processes,state.processes);
+  assert.deepEqual(afterTest.workflowRuns,state.workflowRuns);
+
  }finally{await stop();await rm(directory,{recursive:true,force:true});}
 });

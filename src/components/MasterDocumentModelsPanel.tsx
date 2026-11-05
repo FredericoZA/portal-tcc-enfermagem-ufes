@@ -75,6 +75,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const studioAutosaveReadyRef=useRef(false);
   const studioAutosaveInFlightRef=useRef(false);
   const studioAutosavePendingRef=useRef(false);
+  const studioHasEditsRef=useRef(false);
   const linkImportEnabled = Boolean(models.__capabilities?.existingModelLinkImportEnabled);
 
   const lastSavedStudioFingerprintRef=useRef('');
@@ -101,10 +102,17 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const studioAutosaveCurrentRef=useRef({matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates});
   const studioBaseCollectionsRef=useRef({matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates});
   studioAutosaveCurrentRef.current={matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates};
+  const markStudioEdit=()=>{
+    if(!studioHasEditsRef.current){
+      studioBaseCollectionsRef.current=studioAutosaveCurrentRef.current;
+      lastSavedStudioFingerprintRef.current=studioAutosaveFingerprint;
+    }
+    studioHasEditsRef.current=true;
+  };
   if(!lastSavedStudioFingerprintRef.current)lastSavedStudioFingerprintRef.current=studioAutosaveFingerprint;
   const flushStudioRef=useRef(()=>{});
   flushStudioRef.current=()=>{
-    if(!studioAutosaveReadyRef.current||loading||lastSavedStudioFingerprintRef.current===studioAutosaveFingerprint)return;
+    if(!studioAutosaveReadyRef.current||!studioHasEditsRef.current||loading||lastSavedStudioFingerprintRef.current===studioAutosaveFingerprint)return;
     const current=studioAutosaveCurrentRef.current;
     void apiClient.getSettings().then(latest=>{const base=(latest.integrationStudioDraft||latest.integrationStudio||{}) as any;const merged=mergeStudioDraft({...base,...studioBaseCollectionsRef.current},{...base,...current},base);return saveStudioAutomatically(base,{...merged,schemaVersion:3,revision:Number(base.revision||0)+1,savedAt:new Date().toISOString(),savedBy:actorEmail||'',docTemplates:(merged.docTemplates||[]).map((doc:any)=>({...doc,templateContentText:''}))} as any);}).then(saveLocalStudio).catch(error=>console.error('Salvamento de documentos ao fechar falhou',error));
   };
@@ -112,7 +120,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   useEffect(()=>{
     if(loading)return;
     if(!studioAutosaveReadyRef.current){studioAutosaveReadyRef.current=true;lastSavedStudioFingerprintRef.current=studioAutosaveFingerprint;studioBaseCollectionsRef.current=studioAutosaveCurrentRef.current;return;}
-    if(lastSavedStudioFingerprintRef.current===studioAutosaveFingerprint)return;
+    if(!studioHasEditsRef.current||lastSavedStudioFingerprintRef.current===studioAutosaveFingerprint)return;
     const timer=window.setTimeout(()=>{
       if(studioAutosaveInFlightRef.current){studioAutosavePendingRef.current=true;return;}
       studioAutosaveInFlightRef.current=true;setMessage('Salvando automaticamente…');
@@ -131,12 +139,13 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
               savedAt:new Date().toISOString(),
               savedBy:actorEmail||base.savedBy||'',
               docTemplates:(merged.docTemplates||[]).map((doc:any)=>({...doc,templateContentText:''})),
-              publication:{...(base.publication||{}),status:'PUBLISHED',publishedRevision:Number(base.revision||0)+1,publishedAt:new Date().toISOString()}
+              publication:{...(base.publication||{}),status:'DRAFT'}
             };
             const saved=await saveStudioAutomatically(base,snapshot as any);
             saveLocalStudio(saved);
             lastSavedStudioFingerprintRef.current=JSON.stringify(current);studioBaseCollectionsRef.current=current;
-            setMessage(saved.publication?.status==='DRAFT'?'Alterações salvas automaticamente. Há campos obrigatórios a completar.':'Alterações salvas automaticamente.');
+            if(JSON.stringify(studioAutosaveCurrentRef.current)===lastSavedStudioFingerprintRef.current)studioHasEditsRef.current=false;
+            setMessage('Variáveis salvas no rascunho. Use Publicar configurações na aba Variáveis para aplicar as alterações.');
           }while(studioAutosavePendingRef.current);
         }catch(error){
           console.error('Autosave de documentos e variáveis falhou',error);
@@ -275,6 +284,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
     const usage=getVariableUsage([source.id,source.name,...(source.aliases||[])],{matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates});
     if(!(await portalConfirm(`Mesclar “${source.label||source.name}” em “${target.label||target.name}”? A variável antiga será preservada como alias.`)))return;
     const result=mergeVariableAcrossArtifacts({matrixColumns,matrixRows,docTemplates,emailTemplates,formTemplates},source.id,target.id);
+    markStudioEdit();
     setMatrixColumns(result.matrixColumns);
     setMatrixRows(result.matrixRows);
     setDocTemplates(result.docTemplates);
@@ -382,8 +392,8 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
                 const mergeKey=`${type}:${key}`;
                 return <div key={variable} title={variableUsageTitle(variable)} className="grid gap-1.5 rounded-lg border border-slate-300 bg-[var(--portal-surface-nested)] p-2 lg:grid-cols-[minmax(150px,.9fr)_minmax(170px,1fr)_120px_minmax(180px,1fr)_auto] lg:items-center">
                   <code className="truncate text-[8.5px] font-black text-[var(--portal-brand-action)]">{variable}</code>
-                  {column?<input value={column.label||''} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,label:event.target.value}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]" placeholder="Nome legível"/>:<span className="text-[9px] text-amber-800">Variável ainda não vinculada</span>}
-                  {column?<select value={column.dataType||'text'} onChange={event=>setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,dataType:event.target.value as VariableColumn['dataType']}:item))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]"><option value="text">Texto</option><option value="date">Data</option><option value="email">E-mail</option><option value="number">Número</option><option value="url">URL</option></select>:<span/>}
+                  {column?<input value={column.label||''} onChange={event=>{markStudioEdit();setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,label:event.target.value}:item));}} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]" placeholder="Nome legível"/>:<span className="text-[9px] text-amber-800">Variável ainda não vinculada</span>}
+                  {column?<select value={column.dataType||'text'} onChange={event=>{markStudioEdit();setMatrixColumns(previous=>previous.map(item=>item.id===column.id?{...item,dataType:event.target.value as VariableColumn['dataType']}:item));}} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]"><option value="text">Texto</option><option value="date">Data</option><option value="email">E-mail</option><option value="number">Número</option><option value="url">URL</option></select>:<span/>}
                   {column?<select value={mergeTargets[mergeKey]||''} onChange={event=>setMergeTargets(current=>({...current,[mergeKey]:event.target.value}))} className="min-h-7 rounded-md border border-slate-300 bg-white px-2 text-[9px]"><option value="">Mesclar com…</option>{matrixColumns.filter(item=>item.id!==column.id).map(item=><option key={item.id} value={item.id}>{item.label||item.name}</option>)}</select>:<span/>}
                   {column&&mergeTargets[mergeKey]?<button type="button" onClick={()=>void mergeDocumentVariable(type,variable)} className={action}><Merge className="h-3 w-3"/>Mesclar</button>:<span className="text-right text-[8px] text-slate-400">{column?'Canônica':'Pendente'}</span>}
                 </div>;

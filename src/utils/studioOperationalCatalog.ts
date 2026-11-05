@@ -22,7 +22,7 @@ export const OPERATIONAL_EMAIL_ROUTING = {
  'email-conclusao': {audience:'all-participants', event:'PROCESS_COMPLETED', trigger:'Conclusão após arquivamento dos documentos exigidos', recipients:'Autores, orientador, coorientador, examinadores e presidência conforme os vínculos do TCC'},
 } as const;
 export function operationalEmailRouting(id: string | undefined) {
- return id ? OPERATIONAL_EMAIL_ROUTING[id as keyof typeof OPERATIONAL_EMAIL_ROUTING] : undefined;
+ return id && Object.hasOwn(OPERATIONAL_EMAIL_ROUTING, id) ? OPERATIONAL_EMAIL_ROUTING[id as keyof typeof OPERATIONAL_EMAIL_ROUTING] : undefined;
 }
 export const DEPARTMENT_FORM={id:'form-reserva-departamento',title:'Confirmação do agendamento',stage:'Reserva do local',targetRole:'Departamento ou orientador',description:'O responsável aceita ou recusa o local, a data e o horário solicitados. O comprovante e os avisos são gerados automaticamente.',questions:[{id:'reservation-decision',fieldKey:'DECISAO_AGENDAMENTO',label:'Resposta ao agendamento',fieldType:'select',required:true,options:['Aceitar reserva','Recusar reserva']}]};
 /** Add missing operational artifacts without replacing user edits or custom artifacts. */

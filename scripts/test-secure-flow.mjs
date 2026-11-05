@@ -248,7 +248,7 @@ async function liveChecks() {
       return;
     }
 
-    await check('runtime: só Master e Presidente administram a lista', async () => {
+    await check('runtime: só Master administra a lista', async () => {
       const unauth = await request('/api/admin/access-list');
       const masterResponse = await request('/api/admin/access-list', { headers: asUser(master) });
       const presidentResponse = await request('/api/admin/access-list', { headers: asUser(president) });
@@ -256,7 +256,7 @@ async function liveChecks() {
       const inventedCoordinator = await request('/api/admin/access-list', { headers: asUser('coordenacao.teste@ufes.br') });
       assert.equal(unauth.response.status, 401);
       assert.equal(masterResponse.response.status, 200);
-      assert.equal(presidentResponse.response.status, 200);
+      assert.equal(presidentResponse.response.status, 403);
       assert.equal(studentResponse.response.status, 403);
       assert.equal(inventedCoordinator.response.status, 403);
     });
@@ -387,14 +387,15 @@ async function liveChecks() {
       const models = Object.fromEntries(['CONVITE', 'ATA', 'TERMO', 'DECLARACAO'].map((type) => [type, {
         id: `model-${type.toLowerCase()}`, type, label: type, fileName: `${type}.docx`, driveFileId: `drive-model-${type.toLowerCase()}`, templateContentText: ''
       }]));
+      const settings = (await request('/api/settings', { headers: asUser(master) })).body;
+      const expectedRevision = (settings.integrationStudioDraft || settings.integrationStudio)?.revision || 0;
       const configured = await request('/api/admin/settings', {
         method: 'PATCH', headers: asUser(master),
         body: JSON.stringify({
-          documentModels: models,
-          // Publicar o Estúdio força a atualização do armazenamento de modelos
-          // em memória, sem enviar qualquer arquivo para uma integração externa.
+          studioExpectedRevision: expectedRevision,
+          studioSaveMode: 'publish',
           integrationStudio: {
-            schemaVersion: 3, revision: 999999, savedAt: new Date().toISOString(), savedBy: master,
+            schemaVersion: 3, revision: expectedRevision + 1, savedAt: new Date().toISOString(), savedBy: master,
             brandKit: { institutionName: 'Universidade de Teste', courseName: 'Curso de Teste', primaryColor: '#005830', secondaryColor: '#ffffff', accentColor: '#0f766e', textColor: '#172033', universityLogoUrl: '', courseLogoUrl: '', emailBannerUrl: '', fontFamily: 'Arial', documentHeaderText: '', documentFooterText: '', emailFooterText: '' },
             driveModelosFolderUrl: '', documentDesigns: {}, emailDesigns: {}, formDesigns: {}, matrixColumns: [{ id: 'AUTORIZACAO_TESTE', name: 'AUTORIZACAO_TESTE', label: 'Autorização de teste', dataType: 'text' }, { id: 'PUBLICAR_TRABALHO', name: 'PUBLICAR_TRABALHO', label: 'Publicar trabalho', dataType: 'text' }], matrixRows: [],
             docTemplates: Object.values(models).map((model) => ({ ...model, driveFileUrl: `https://drive.google.com/file/d/${model.driveFileId}/view` })),
@@ -456,13 +457,13 @@ async function liveChecks() {
       assert.ok(!result.body?.job, 'um trabalho Asten não deveria ser criado antes do arquivamento no Drive');
     });
 
-    await check('runtime: Gov.br exige documento preparado e permite Ata sem aprovar automaticamente',async()=>{
+    await check('runtime: Gov.br exige documento preparado e preserva a Ata arquivada',async()=>{
       const headers=asUser(master);
       const upload=await request('/api/uploads/staging',{method:'POST',headers,body:JSON.stringify({purpose:'GOV_BR_SIGNED_PDF',processId:'demo-proc-3'})});
       assert.equal(upload.response.status,409);assert.equal(upload.body.code,'GOVBR_JOB_REQUIRED');
-      const signed=await request('/api/signatures/jobs/qualquer/govbr/complete',{method:'POST',headers,body:'{}'});assert.equal(signed.response.status,409);
-      const download=await request('/api/signatures/jobs/qualquer/govbr/download',{headers});assert.equal(download.response.status,409);
-      const manual=await request('/api/processes/demo-proc-3/documents/ATA/sign',{method:'POST',headers,body:JSON.stringify({provider:'GOV_BR'})});assert.equal(manual.response.status,200);assert.equal(manual.body.job.provider,'GOV_BR');assert.equal(manual.body.job.status,'READY_FOR_REVIEW');
+      const signed=await request('/api/signatures/jobs/qualquer/govbr/complete',{method:'POST',headers,body:'{}'});assert.equal(signed.response.status,404);
+      const download=await request('/api/signatures/jobs/qualquer/govbr/download',{headers});assert.equal(download.response.status,404);
+      const manual=await request('/api/processes/demo-proc-3/documents/ATA/sign',{method:'POST',headers,body:JSON.stringify({provider:'GOV_BR'})});assert.equal(manual.response.status,409,JSON.stringify(manual.body));assert.match(manual.body.error,/já está assinado/);
     });
 
     await check('runtime: webhook exige segredo, envelope válido e vínculo com o portal', async () => {
@@ -501,6 +502,10 @@ async function liveChecks() {
 
     await check('runtime: rascunho é privado, versionado e não aceita conflito silencioso', async () => {
       const draftStudent='rascunho.seguro@aluno.ufes.br';
+      for (const email of [draftStudent,'outro@aluno.ufes.br']) {
+        const enrollment=await request('/api/admin/access-list',{method:'POST',headers:asUser(master),body:JSON.stringify({nome:'Aluno de teste',email})});
+        assert.equal(enrollment.response.status,201);
+      }
       assert.equal((await request('/api/registration/draft')).response.status,401);
       const schema=(await request('/api/forms/registration-schema',{headers:asUser(draftStudent)})).body;
       const saved=await request('/api/registration/draft',{method:'PUT',headers:asUser(draftStudent),body:JSON.stringify({expectedRevision:0,schemaRevision:schema.revision,section:0,answers:{ALUNO_1_NOME:'Aluno de Rascunho',ALUNO_1_EMAIL:'redirecionado@example.org'}})});

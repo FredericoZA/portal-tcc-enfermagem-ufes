@@ -142,7 +142,7 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     assert.equal((disk.formArchiveJobs||[]).some((job:any)=>job.formType==='AVALIACAO'),false,'A avaliação integrada não gera outro formulário em PDF.');
     const reopenRoute=`/api/processes/${p.id}/reopen`,reason={reason:'Correção do parecer registrado na defesa.'};
     assert.equal((await request(reopenRoute,p.aluno1.email,reason)).status,403);
-    assert.equal((await request(reopenRoute,'presidente@portal.local',reason)).status,403);
+    assert.equal((await request(reopenRoute,'presidente@portal.local',reason)).status,404);
     const reopened=await request(reopenRoute,p.orientador.email,reason);
     assert.equal(reopened.status,200,JSON.stringify(reopened.body));assert.equal(reopened.body.avaliacao.status,'PENDENTE');
     assert.equal((await request(reopenRoute,'master@portal.local',reason)).status,200);

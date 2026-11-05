@@ -12,6 +12,7 @@ interface AuthContextType {
   settings: GlobalSettings | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  canRegisterProcess: boolean;
   switchUser: (email: string) => Promise<void>;
   refreshAuth: () => Promise<void>;
   hasAdvisorRole: boolean;
@@ -25,6 +26,7 @@ interface CachedPortalIdentity {
   globalRoles: GlobalRole[];
   memberships: ProcessMembership[];
   isAuthenticated: boolean;
+  canRegisterProcess: boolean;
   cachedAt: number;
 }
 
@@ -88,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [settings, setSettings] = useState<GlobalSettings | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated,setIsAuthenticated]=useState(false);
+  const [canRegisterProcess,setCanRegisterProcess]=useState(false);
   // Respostas anteriores a uma saída/troca de conta não pertencem à sessão atual.
   const identityRevision = useRef(0);
 
@@ -109,16 +112,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if(rawSettings.integrationStudio?.operationsPolicy&&typeof document!=='undefined'){const policy=rawSettings.integrationStudio.operationsPolicy;document.documentElement.lang=policy.defaultLocale||'pt-BR';document.documentElement.style.setProperty('--portal-target-size',`${policy.accessibility?.minimumTargetSize||44}px`);document.documentElement.dataset.portalMotion=policy.accessibility?.reducedMotionByDefault?'reduced':'system';}
   };
 
-  const applyIdentity = (meRes: { userEmail: string; globalRoles: any[]; memberships: any[]; isAuthenticated: boolean }) => {
+  const applyIdentity = (meRes: Awaited<ReturnType<typeof apiClient.getMe>>) => {
     setUserEmailState(meRes.userEmail);
     setIsAuthenticated(meRes.isAuthenticated);
+    setCanRegisterProcess(meRes.canRegisterProcess===true);
     setGlobalRoles(meRes.globalRoles);
     setMemberships(meRes.memberships);
     if (meRes.isAuthenticated) saveCachedIdentity({
       userEmail: meRes.userEmail,
       globalRoles: meRes.globalRoles,
       memberships: meRes.memberships,
-      isAuthenticated: true
+      isAuthenticated: true,
+      canRegisterProcess: meRes.canRegisterProcess===true
     }); else clearCachedIdentity();
   };
 
@@ -126,6 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearCachedIdentity();
     setUserEmailState('');
     setIsAuthenticated(false);
+    setCanRegisterProcess(false);
     setGlobalRoles([]);
     setMemberships([]);
   };
@@ -149,6 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('Falha transitória ao confirmar a sessão; mantendo a identidade em cache até a API responder.', err);
         setUserEmailState(cached.userEmail);
         setIsAuthenticated(true);
+        setCanRegisterProcess(cached.canRegisterProcess===true);
         setGlobalRoles(cached.globalRoles);
         setMemberships(cached.memberships);
         return;
@@ -247,6 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         settings,
         isLoading,
         isAuthenticated,
+        canRegisterProcess,
         switchUser,
         refreshAuth,
         hasAdvisorRole,

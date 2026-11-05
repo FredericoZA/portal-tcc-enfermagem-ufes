@@ -1,4 +1,3 @@
-import {isDefenseOnCalendar} from '../src/utils/defenseReservationState';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
@@ -24,7 +23,17 @@ test('HTTP: departamento confirma sem sessão, sem upload e sem duplicar respost
   const deadline=Date.now()+20000;while(true){try{if((await fetch(base+'/api/health')).ok)break;}catch{}if(Date.now()>deadline||child.exitCode!==null)throw Error('Servidor não iniciou');await new Promise(r=>setTimeout(r,100));}
   const page=await fetch(url);assert.equal(page.status,200);assert.match(await page.text(),/Confirmação do agendamento/);assert.equal((await disk()).processes[0].defesa.localStatus,'PENDENTE');
   const publicRow=async()=>{const rows=await(await fetch(base+'/api/processes')).json();return rows.find((item:any)=>item.protocolo===p.protocolo);};
-  assert.equal(isDefenseOnCalendar(await publicRow()),true,'solicitação aparece antes do aceite');
+  const calendarRow=async()=>{
+    const response=await fetch(base+'/api/public/calendar');assert.equal(response.status,200);
+    return (await response.json()).find((item:{protocolo:string})=>item.protocolo===p.protocolo);
+  };
+  const calendarExport=async()=>{
+    const response=await fetch(base+'/api/public/calendar.ics');assert.equal(response.status,200);
+    return (await response.text()).split('\r\n');
+  };
+  const exportedDefense=()=>`UID:${p.id}@${new URL(base).host}`;
+  assert.equal((await calendarRow()).defesa.localStatus,'PENDENTE','solicitação aparece antes do aceite');
+  assert.ok(!(await calendarExport()).includes(exportedDefense()),'pedido pendente não entra no calendário externo');
   assert.equal((await fetch(url+'x')).status,410);
   assert.equal((await post('local=Outro&confirmed=yes')).status,400);
   assert.equal((await post('local=Auditório')).status,400);
@@ -33,8 +42,8 @@ test('HTTP: departamento confirma sem sessão, sem upload e sem duplicar respost
   const preview=await fetch(url+'?decision=accept');assert.equal(preview.status,200);assert.match(await preview.text(),/data-reservation-auto-submit="true" hidden/);assert.equal((await disk()).processes[0].defesa.localStatus,'PENDENTE','abrir o botão do e-mail não aceita a reserva');
   const response=await post('decision=accept&confirmed=yes');assert.equal(response.status,200);assert.match(response.headers.get('content-type')||'',/application\/pdf/);assert.equal(Buffer.from(await response.arrayBuffer()).subarray(0,4).toString(),'%PDF');
   const state=await disk();const result=state.processes[0];assert.equal(result.defesa.localStatus,'CONFIRMADO');assert.equal(result.defesa.local,'Auditório');assert.equal(result.defesa.localConfirmedBy,'department@example.invalid');assert.equal(result.defesa.locationProof,undefined);assert.ok(result.defesa.departmentResponse.receiptBody);assert.ok(state.formArchiveJobs.some((j:any)=>j.formType==='CONFIRMACAO_LOCAL'));assert.ok(state.emailDeliveries.some((j:any)=>j.templateId==='email-comprovante-reserva'));assert.notEqual(result.status,'CONCLUIDO');
-  assert.equal(isDefenseOnCalendar(await publicRow()),true,'aceite mantém a defesa na agenda');
-  assert.equal((await publicRow()).defesa.localStatus,'CONFIRMADO');
+  assert.equal((await calendarRow()).defesa.localStatus,'CONFIRMADO','aceite mantém a defesa na agenda');
+  assert.ok((await calendarExport()).includes(exportedDefense()),'o aceite libera a exportação com o mesmo identificador');
   const receipt=await fetch(url+'/receipt');assert.equal(receipt.status,200);assert.ok(Buffer.from(await receipt.arrayBuffer()).subarray(0,4).toString()==='%PDF');
   const count=state.emailDeliveries.length;assert.equal((await post('local=Auditório&confirmed=yes')).status,200);assert.equal((await disk()).emailDeliveries.length,count);assert.equal((await disk()).processes[0].defesa.local,'Auditório');
   await fetch(`${base}/api/processes/${p.id}`,{method:'PATCH',headers:{'content-type':'application/json','x-demo-user-email':p.aluno1.email},body:JSON.stringify({defesa:{startAt:'2026-12-01T12:00:00Z'}})});
@@ -59,7 +68,7 @@ test('HTTP: departamento confirma sem sessão, sem upload e sem duplicar respost
   const wrong=reservationToken({processId:p.id,revision:1,recipient:'other@example.invalid',expiresAt:Date.now()+600000},secret);assert.equal((await fetch(base+'/api/reservation-confirmation/'+wrong)).status,410);
   const next=reservationToken({processId:p.id,revision:1,recipient:'department@example.invalid',expiresAt:Date.now()+600000},secret);
   const denied=await fetch(base+'/api/reservation-confirmation/'+next,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded',origin:base,'x-demo-user-email':'forwarding-observer@example.invalid'},body:'local=__UNAVAILABLE__&confirmed=yes'});assert.equal(denied.status,200);
-  const unavailable=(await disk()).processes[0];assert.equal(unavailable.defesa.departmentResponse.decision,'UNAVAILABLE');assert.equal(unavailable.defesa.departmentResponse.respondedBy,'department@example.invalid','um link encaminhado não depende do login do Master nem inventa o e-mail de quem abriu');assert.equal(unavailable.defesa.departmentResponse.attribution,'EMAIL_LINK');assert.equal(unavailable.defesa.localStatus,'RECUSADO');assert.match(unavailable.defesa.departmentResponse.receiptBody,/Reserva recusada/);assert.equal(unavailable.defesa.invitationSentAt,undefined);const deniedNotices=(await disk()).emailDeliveries.filter((e:any)=>e.subject.includes('Agendamento recusado'));assert.ok(deniedNotices.length);for(const notice of deniedNotices){assert.match(notice.renderedText,/comprovante de indisponibilidade/i);assert.match(notice.renderedHtml,/Comprovante de indisponibilidade/);}assert.equal(isDefenseOnCalendar(await publicRow()),false,'recusa retira o agendamento da agenda pública');assert.equal((await publicRow()).protocolo,p.protocolo);assert.equal((await publicRow()).defesa.localStatus,'RECUSADO');
+  const unavailable=(await disk()).processes[0];assert.equal(unavailable.defesa.departmentResponse.decision,'UNAVAILABLE');assert.equal(unavailable.defesa.departmentResponse.respondedBy,'department@example.invalid','um link encaminhado não depende do login do Master nem inventa o e-mail de quem abriu');assert.equal(unavailable.defesa.departmentResponse.attribution,'EMAIL_LINK');assert.equal(unavailable.defesa.localStatus,'RECUSADO');assert.match(unavailable.defesa.departmentResponse.receiptBody,/Reserva recusada/);assert.equal(unavailable.defesa.invitationSentAt,undefined);const deniedNotices=(await disk()).emailDeliveries.filter((e:any)=>e.subject.includes('Agendamento recusado'));assert.ok(deniedNotices.length);for(const notice of deniedNotices){assert.match(notice.renderedText,/comprovante de indisponibilidade/i);assert.match(notice.renderedHtml,/Comprovante de indisponibilidade/);}assert.equal(await calendarRow(),undefined,'recusa retira o agendamento da agenda pública');assert.ok(!(await calendarExport()).includes(exportedDefense()),'recusa retira a defesa da exportação');assert.equal((await publicRow()).protocolo,p.protocolo);assert.equal((await publicRow()).defesa.localStatus,'RECUSADO');
   assert.ok(deniedNotices.every((notice:any)=>notice.renderedText.includes('Refazer reserva')&&notice.renderedText.includes('evitar retrabalho')));
   const deniedReceipt=await fetch(base+'/api/reservation-confirmation/'+next+'/receipt');assert.match(deniedReceipt.headers.get('content-disposition')||'',/indisponibilidade.pdf/);
 
@@ -70,7 +79,11 @@ test('HTTP: departamento confirma sem sessão, sem upload e sem duplicar respost
   const rebook=await fetch(`${base}/api/processes/${p.id}/reservation-change`,{method:'POST',headers:{'content-type':'application/json','x-demo-user-email':p.aluno1.email},body:JSON.stringify({date:'2026-12-07',time:'14:00',locationChoice:unavailable.defesa.local,expectedDataRevision:unavailable.dataRevision})});
   assert.equal(rebook.status,202);const rebooked=await rebook.json();
   assert.equal(rebooked.id,p.id);assert.equal(rebooked.protocolo,p.protocolo);assert.equal(rebooked.defesa.localStatus,'PENDENTE');assert.equal(rebooked.defesa.reservationRequestRecipient,'new-department@example.invalid','novo agendamento usa o novo endereço configurado');
-  assert.equal(isDefenseOnCalendar(await publicRow()),true,'nova data volta ao calendário, com o mesmo protocolo');
+  const newCalendarRow=await calendarRow();
+  assert.equal(newCalendarRow.protocolo,p.protocolo,'nova data volta ao calendário com o mesmo protocolo');
+  assert.equal(newCalendarRow.defesa.localStatus,'PENDENTE');
+  assert.equal(newCalendarRow.defesa.startAt,rebooked.defesa.startAt);
+  assert.ok(!(await calendarExport()).includes(exportedDefense()),'novo pedido só entra no calendário externo após o aceite');
 
  }finally{if(child.exitCode===null){const stopped=new Promise(r=>child.once('exit',r));child.kill('SIGTERM');await stopped;}await rm(directory,{recursive:true,force:true});}
 });

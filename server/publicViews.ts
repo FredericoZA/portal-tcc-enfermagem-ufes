@@ -113,11 +113,7 @@ export function publicRepositoryView(process: ProcessData) {
       hasReservationReceipt: receiptCount > 0,
       reservationReceiptCount: receiptCount,
     },
-    avaliacao: {
-      status: process.avaliacao.status,
-      resultadoCode: process.avaliacao.resultadoCode,
-      resultadoLabel: process.avaliacao.resultadoLabel,
-    },
+    avaliacao: { status: process.avaliacao.status },
     acervo: process.acervo
       ? {
           palavrasChave: [...(process.acervo.palavrasChave || [])],

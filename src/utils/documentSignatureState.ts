@@ -1,5 +1,10 @@
 import type {ProcessData} from '../types';
 import type {SignatureJob} from '../types/signatures';
+
+export function signatureDocumentRevision(process: {dataRevision:number; avaliacao?: Pick<ProcessData['avaliacao'],'documentRevision'>}, type: string): number {
+ return type === 'ATA' ? process.avaliacao?.documentRevision ?? process.dataRevision : process.dataRevision;
+}
+
 /** A pending provider remains independent; a completed signature closes the document. */
 export function documentSignatureCompleted(jobs:SignatureJob[],processId:string,documentType:string,dataRevision?:number):boolean{
  const matching=jobs.filter(job=>job.processId===processId&&job.documentType===documentType&&job.status!=='CANCELED');

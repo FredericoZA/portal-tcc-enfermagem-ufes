@@ -135,13 +135,12 @@ export const guideActivities: GuideActivity[] = [
     steps: [
       'Use seu próprio e-mail cadastrado como examinador para entrar no Portal e abra o TCC em Meus TCCs ou pelo link do convite.',
       'Depois que o orientador registrar o conceito e o parecer, abra Documentos administrativos e confira a ata. O examinador não registra o conceito nem altera o parecer.',
-      'Em Asten, abra a solicitação da ata, se ainda não existir, e assine pelo link pessoal recebido no seu e-mail. A ata só será arquivada quando orientador e os dois examinadores assinarem.',
+      'Quando o orientador solicitar a assinatura pelo Asten, abra o link pessoal recebido no seu e-mail e assine. A ata só será arquivada quando orientador e os dois examinadores assinarem.',
       'Se usarem Gov.br, baixe o PDF preparado, assine o mesmo arquivo e encaminhe a versão assinada ao orientador para reunir as três assinaturas e devolver o PDF completo no Portal.',
     ],
     done: 'Sua assinatura foi registrada no documento; a etapa só termina depois das três assinaturas e do arquivamento da ata.',
     help: [
-      'Sem botão na ata: confirme que seu e-mail está registrado como examinador da banca e que o conceito já foi registrado.',
-      'Asten pendente: não duplique a solicitação; use o link pessoal enviado por e-mail e aguarde os demais integrantes.',
+      'Sem acesso à ata: confira se entrou com o e-mail registrado na banca. Se o link do Asten ainda não chegou, confirme com o orientador se a assinatura foi solicitada.',
       'Gov.br: não devolva uma versão com uma única assinatura como arquivo final. O orientador reúne todas as assinaturas.',
     ],
   },
@@ -166,7 +165,7 @@ export const guideActivities: GuideActivity[] = [
     id: 'assinatura-gov', title: 'Assinar e devolver pelo Gov.br', roles: ['aluno', 'orientador', 'examinador'], imageId: 'gov',
     imageCaption: 'Janela Gov.br com download e devolução. A conferência administrativa é uma etapa posterior.',
     steps: [
-      'Em Documentos administrativos, abra Gov.br na caixa do documento. O orientador ou um dos examinadores pode preparar a ata; o orientador também pode preparar o termo, quando aplicável.',
+      'Em Documentos administrativos, abra Gov.br na caixa do documento. O orientador prepara a ata. Os examinadores podem baixar o PDF depois que ele for preparado. O orientador também pode preparar o termo, quando aplicável.',
       'Em 1. Baixar o documento, clique em Gerar e baixar PDF ou Baixar PDF para assinar. Use Abrir assinador Gov.br para assinar esse arquivo. Não o imprima nem gere outro PDF por cima dele.',
       'Na ata, orientador e dois examinadores devem assinar o mesmo PDF, que é devolvido pelo orientador. No termo, todos os autores e o orientador precisam assinar o mesmo PDF. O aluno encaminha sua assinatura ao orientador, que reúne o arquivo completo.',
       'O orientador usa 2. Devolver o documento assinado → Devolver PDF assinado e seleciona o PDF completo. O Portal aceita PDF de até 50 MB.',

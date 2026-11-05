@@ -196,7 +196,9 @@ export function AdvisorEvaluationPanel({ publicReadOnly = false, process, canEva
 
 
       {error && <p role="alert" className="portal-error">{error}<button type="button" onClick={()=>{attemptedFinalization.current='';setAutosaveRetry(n=>n+1);}} className="ml-2 rounded-full border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900">Tentar novamente</button></p>}
-      {process.avaliacao?.status === 'CONCLUIDO' || process.legacyRecord ? <>
+      {publicReadOnly && !process.legacyRecord && process.avaliacao?.status === 'CONCLUIDO' && !process.avaliacao.resultadoCode
+        ? <p role="status" className="text-center text-sm">Conceito e ata ainda não disponíveis.</p>
+        : process.avaliacao?.status === 'CONCLUIDO' || process.legacyRecord ? <>
         <dl className="grid gap-4 sm:grid-cols-2"><div><dt>Conceito</dt><dd className="font-semibold">{process.avaliacao.resultadoLabel || process.avaliacao.resultadoCode || 'Não informado'}</dd></div>{!publicReadOnly&&<div><dt>Responsável pelo registro</dt><dd>{process.avaliacao.submittedBy}</dd></div>}</dl>
         <p className="whitespace-pre-wrap">{process.avaliacao.parecer || (process.legacyRecord ? 'Parecer não informado no acervo importado.' : '')}</p>
 

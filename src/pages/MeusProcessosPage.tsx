@@ -119,7 +119,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
   onSelectProcess,
   onNavigateToWizard
 }) => {
-  const { userEmail, memberships, isMasterAdmin, settings } = useAuth();
+  const { userEmail, memberships, isMasterAdmin, canRegisterProcess, settings } = useAuth();
   const installationProfile=resolveInstallationProfile(settings);
   const [processes, setProcesses] = useState<ProcessData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -242,7 +242,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     return counts;
   }, [processes, userEmail, memberships]);
 
-  const canCreateStudentTcc = roleCounts.ALUNO === 0;
+  const canCreateStudentTcc = canRegisterProcess && roleCounts.ALUNO === 0;
 
   // Available categories depending on user privileges (4 for Master/Presidente, 3 for standard users)
   const availableCategories: ProcessRoleCategory[] = React.useMemo(() => {
@@ -768,13 +768,13 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               <p className="text-xs text-slate-500 max-w-md mx-auto">
                 Não foram encontrados Trabalhos de Conclusão de Curso associados a esta busca ou ao e-mail ativo ({userEmail}).
               </p>
-              <button
+              {canCreateStudentTcc&&<button
                 type="button"
                 onClick={onNavigateToWizard}
                 className="mt-2 inline-flex items-center gap-1.5 bg-emerald-950 hover:bg-black text-white px-3.5 py-1.5 border border-emerald-500 rounded-full text-xs font-extrabold normal-case tracking-wider cursor-pointer transition-all shadow-2xs h-8"
               >
                 <span>Cadastrar Novo Trabalho de TCC</span>
-              </button>
+              </button>}
             </div>
           ) : (
             <div>

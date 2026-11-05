@@ -21,12 +21,13 @@ test('ata: exige orientador e dois examinadores titulares, na mesma prioridade',
   assert.equal(new Set(signers.map(signer=>signer.email)).size,3);
 });
 
-test('ata: examinadores titulares podem solicitar assinatura, aluno e coorientador não', () => {
+test('ata: apenas orientador e Master podem iniciar a solicitação', () => {
   const item = process();
   assert.equal(canInitiateSignature(item.orientador.email,item,'ATA',settings),true);
   for (const examiner of item.banca.filter(member=>member.funcao==='EXAMINER_2'||member.funcao==='EXAMINER_3')) {
-    assert.equal(canInitiateSignature(examiner.email,item,'ATA',settings),true);
+    assert.equal(canInitiateSignature(examiner.email,item,'ATA',settings),false);
   }
+  assert.equal(canInitiateSignature('master@example.com',item,'ATA',settings,['MASTER_ADMIN']),true);
   assert.equal(canInitiateSignature(item.aluno1.email,item,'ATA',settings),false);
   if (item.coorientador) assert.equal(canInitiateSignature(item.coorientador.email,item,'ATA',settings),false);
 });

@@ -3,10 +3,11 @@ import type { WorkflowRun, EmailDeliveryRecord } from '../../src/types/automatio
 export interface RecoveryItem { id:string;kind:string;processId:string;protocol:string;title:string;state:string;reason:string;retryPath?:string;actionLabel?:string;completedActions:string[] }
 export function buildRecoveryQueue(input:{processes:ProcessData[];runs:WorkflowRun[];jobs:SignatureJob[];emails:EmailDeliveryRecord[];forms:any[];customForms:any[]}) {
   const items:RecoveryItem[]=[];
-  const add=(row:Omit<RecoveryItem,'protocol'|'completedActions'>&{completedActions?:string[]})=>{const p=input.processes.find(p=>p.id===row.processId);if(p&&p.status!=='CONCLUIDO')items.push({...row,protocol:p.protocolo,completedActions:row.completedActions||[]});};
+  const add=(row:Omit<RecoveryItem,'protocol'|'completedActions'>&{completedActions?:string[]})=>{const p=input.processes.find(p=>p.id===row.processId);if(p&&(p.status!=='CONCLUIDO'||row.kind==='POST_SIGNATURE'))items.push({...row,protocol:p.protocolo,completedActions:row.completedActions||[]});};
   const latest=new Map<string,WorkflowRun>();for(const run of [...input.runs].sort((a,b)=>a.startedAt.localeCompare(b.startedAt)))latest.set(`${run.processId}:${run.eventCode}`,run);
   for(const run of latest.values())if(run.status!=='COMPLETED')add({id:run.id,kind:'WORKFLOW',processId:run.processId,title:run.eventCode,state:run.status,reason:run.actions.find(a=>a.status==='FAILED')?.error||'Revise a configuração da etapa.',retryPath:`/api/admin/workflow/runs/${encodeURIComponent(run.id)}/retry`,actionLabel:'Retomar etapa',completedActions:run.actions.filter(a=>a.status==='COMPLETED').map(a=>a.actionId)});
   for(const job of input.jobs){
+    if(job.status==='ARCHIVED'&&job.postArchivePending)add({id:job.id,kind:'POST_SIGNATURE',processId:job.processId,title:job.documentTitle||job.documentType,state:'PENDING',reason:job.lastError||'PDF arquivado. As ações posteriores aguardam retomada.',retryPath:`/api/signatures/jobs/${encodeURIComponent(job.id)}/reconcile`,actionLabel:'Retomar ações posteriores',completedActions:['PDF assinado no Drive']});
     if(input.jobs.some(other=>other.processId===job.processId&&other.documentType===job.documentType&&other.provider===job.provider&&other.status!=='CANCELED'&&other.documentVersion>job.documentVersion))continue;
     if(!['PROVIDER_ERROR','WAITING_INTEGRATION','DRIVE_SYNC_PENDING','SIGNED','SENDING'].includes(job.status))continue;
     const ambiguous=['UNCERTAIN','CREATING'].includes(job.providerCreationState||'');

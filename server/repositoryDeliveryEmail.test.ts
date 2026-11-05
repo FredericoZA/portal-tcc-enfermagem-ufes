@@ -5,9 +5,10 @@ import {executeWorkflowEvent,planWorkflowEvent} from './workflow/runtime';
 import {DEMO_PROCESSES} from '../src/services/demoSeed';
 import type {IntegrationStudioSettings} from '../src/types/integrationStudio';
 import type {SignatureJob} from '../src/types/signatures';
+import {deriveSignatureSigners} from './workflow/signaturePolicy';
 
 const processFixture={...structuredClone(DEMO_PROCESSES[0]),etapaAtual:'REPOSITORIO' as const,acervo:undefined};
-const job={processId:processFixture.id,documentType:'ATA',status:'ARCHIVED',sourceDataRevision:processFixture.dataRevision} as SignatureJob;
+const job={processId:processFixture.id,documentType:'ATA',status:'ARCHIVED',sourceDataRevision:processFixture.dataRevision,driveSignedFileId:'fixture-pdf',signers:deriveSignatureSigners(processFixture,'ATA',{}).map(signer=>({...signer,status:'SIGNED' as const}))} as SignatureJob;
 const studio=withRepositoryDeliveryEmail({revision:1,emailTemplates:[],workflowStages:[],docTemplates:[],formTemplates:[]} as unknown as IntegrationStudioSettings);
 const context=(ready:boolean)=>({process:processFixture,eventCode:'SIGNATURE_COMPLETED',actorEmail:'webhook@asten.local',actorRoles:[],extraVariables:{[REPOSITORY_DELIVERY_READY]:ready}});
 
@@ -18,6 +19,14 @@ test('entrega final só é liberada pela ata arquivada da revisão atual e antes
  assert.equal(repositoryDeliveryReady(processFixture,[{...job,sourceDataRevision:processFixture.dataRevision+1}]),false);
  assert.equal(repositoryDeliveryReady({...processFixture,acervo:{submittedAt:new Date().toISOString()} as any},[job]),false);
  assert.equal(repositoryDeliveryReady({...processFixture,etapaAtual:'ASSINATURA'},[job]),false);
+});
+test('o aviso exige as três assinaturas da ata atual e mantém a chave após mudanças no repositório',()=>{
+ const evaluated={...processFixture,avaliacao:{status:'CONCLUIDO' as const,documentRevision:processFixture.dataRevision}};
+ const afterUpload={...evaluated,dataRevision:evaluated.dataRevision+1};
+ assert.equal(repositoryDeliveryReady(afterUpload,[job]),true);
+ assert.equal(repositoryDeliveryReady(afterUpload,[{...job,signers:job.signers.slice(0,2)}]),false);
+ assert.equal(repositoryDeliveryReady(afterUpload,[{...job,driveSignedFileId:undefined}]),false);
+ assert.equal(repositoryDeliveryEmailKey(afterUpload,'aluno@example.org'),repositoryDeliveryEmailKey(evaluated,'aluno@example.org'));
 });
 test('rotina fica configurável sem duplicar estágio, ação ou modelo',()=>{
  assert.deepEqual(withRepositoryDeliveryEmail(studio),studio);

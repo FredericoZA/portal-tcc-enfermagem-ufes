@@ -26,6 +26,7 @@ export interface SignatureJob {
   /** Falhas ambíguas de encaminhamento não autorizam novo envio automático. */
   providerDispatchState?: 'PENDING' | 'SENDING' | 'SENT' | 'UNCERTAIN';
   sentAt?: string; completedAt?: string; lastError?: string; driveUnsignedFileId?: string; driveSignedFileId?: string;
+  postArchivePending?: boolean;
   driveSignedWebViewLink?: string; signedSha256?: string; verificationCode?: string; artifactBase64?: string;
   /** Snapshot normalizado das variáveis usadas para renderizar esta versão. */
   renderVariables?: Record<string, string>;

@@ -7,12 +7,19 @@ import {useAuth} from '../context/AuthContext';
 import {isLocalDemoFrontend} from '../utils/runtimeEnvironment';
 import {DocumentFilePreview} from './DocumentFilePreview';
 import {PortalModalShell} from './PortalModalShell';
+import {signatureDocumentRevision} from '../utils/documentSignatureState';
 
-interface Props {documentType?:'ATA'|'TERMO'|'DECLARACAO';canApprove?:boolean;process:ProcessData;initialJob?:SignatureJob;onChange:(job:SignatureJob)=>void;onClose:()=>void;}
+type GovbrProcess = Pick<ProcessData, 'id' | 'protocolo' | 'titulo' | 'dataRevision'> & {
+  avaliacao?: Pick<ProcessData['avaliacao'], 'documentRevision'>;
+  orientador: {nome: string; email?: string};
+};
+interface Props {documentType?:'ATA'|'TERMO'|'DECLARACAO';canApprove?:boolean;process:GovbrProcess;initialJob?:SignatureJob;onChange:(job:SignatureJob)=>void;onClose:()=>void;}
 export const GovbrSignatureModal:React.FC<Props>=({process,initialJob,onChange,onClose,documentType='DECLARACAO',canApprove=true})=>{
   const {userEmail,isMasterAdmin,isCommissionPresident}=useAuth();
-  const isRegisteredAdvisor=userEmail.trim().toLowerCase()===process.orientador.email.trim().toLowerCase();
-  const canReturn=isMasterAdmin||(documentType==='TERMO'?isRegisteredAdvisor:isCommissionPresident||(documentType!=='DECLARACAO'&&isRegisteredAdvisor));
+  const isRegisteredAdvisor=Boolean(process.orientador.email&&userEmail.trim().toLowerCase()===process.orientador.email.trim().toLowerCase());
+  const canReturn=isMasterAdmin||(documentType==='DECLARACAO'?isCommissionPresident:isRegisteredAdvisor);
+  const canPrepare=documentType!=='ATA'||canReturn;
+  const revision=signatureDocumentRevision(process,documentType);
   const [job,setJob]=useState(initialJob);
   const [loadingJob,setLoadingJob]=useState(!initialJob);
   useEffect(()=>{
@@ -20,11 +27,11 @@ export const GovbrSignatureModal:React.FC<Props>=({process,initialJob,onChange,o
     let active=true;setLoadingJob(true);
     void apiClient.getProcessSignatureJobs(process.id).then(jobs=>{
       if(!active)return;
-      const existing=jobs.filter(item=>item.documentType===documentType&&item.provider==='GOV_BR'&&item.status!=='CANCELED'&&item.sourceDataRevision===process.dataRevision).sort((a,b)=>b.documentVersion-a.documentVersion)[0];
+      const existing=jobs.filter(item=>item.documentType===documentType&&item.provider==='GOV_BR'&&item.status!=='CANCELED'&&item.sourceDataRevision===revision).sort((a,b)=>b.documentVersion-a.documentVersion)[0];
       setJob(existing);
     }).catch(cause=>{if(active)setError(cause instanceof Error?cause.message:'Não foi possível carregar o documento preparado.');}).finally(()=>{if(active)setLoadingJob(false);});
     return()=>{active=false;};
-  },[initialJob,process.id,process.dataRevision,documentType]);
+  },[initialJob,process.id,revision,documentType]);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const [modelChanged,setModelChanged]=useState(false);
@@ -49,6 +56,7 @@ export const GovbrSignatureModal:React.FC<Props>=({process,initialJob,onChange,o
   };
   const download=async(returned=false)=>{if(job)await downloadPdf(job,returned);};
   const prepareDocument=async()=>{
+    if(!canPrepare)return;
     const next=(await apiClient.signProcessDocument(process.id,documentType,'GOV_BR')).job;
     // Preserve the prepared job if downloading fails: retry its download, not generation.
     update(next);
@@ -95,9 +103,9 @@ export const GovbrSignatureModal:React.FC<Props>=({process,initialJob,onChange,o
   return <PortalModalShell zIndexClass="z-[1000002]" open onClose={()=>{if(!busy)onClose();}} closeOnBackdrop={!busy} closeOnEscape={!busy} title="Assinatura gov.br" icon={FileSignature} maxWidthClass="max-w-2xl" heightClass="max-h-[90dvh]" bodyClassName="portal-govbr-flow overflow-y-auto p-4" footer={<button type="button" className="portal-action" disabled={busy} onClick={onClose}>Fechar</button>}>
     <div className="space-y-4 text-xs" aria-busy={busy}>
       <div className="portal-instruction space-y-1 p-3" role="note">
-        <p>Baixe o PDF, assine no Gov.br e devolva o arquivo assinado abaixo.</p>
-        {!job&&<p>Baixe o documento na etapa 1 para liberar a devolução.</p>}
-        {!review&&!archived&&<p>O envio deixa o arquivo pendente de conferência.</p>}
+        <p>{canReturn?'Baixe o PDF, assine no Gov.br e devolva o arquivo assinado abaixo.':'Baixe o PDF, assine no Gov.br e encaminhe o arquivo ao orientador.'}</p>
+        {!job&&canReturn&&<p>Baixe o documento na etapa 1 para liberar a devolução.</p>}
+        {!review&&!archived&&canReturn&&<p>O envio deixa o arquivo pendente de conferência.</p>}
         {job&&!archived&&<p>Assine o original baixado, sem editar ou imprimir novamente.</p>}
         {!canReturn&&<p>{documentType==='DECLARACAO'?'A devolução da declaração é feita pela Presidência ou pelo Master.':'A devolução deste documento é feita pelo orientador responsável ou pelo Master.'}</p>}
         <p>{documentType==='DECLARACAO'?'A Presidência assina e devolve a declaração.':documentType==='ATA'?'O orientador e os dois examinadores assinam o mesmo PDF da ata. O orientador reúne as três assinaturas e devolve o arquivo completo.':'O orientador reúne todas as assinaturas no mesmo PDF, assina por último e devolve o arquivo.'}</p>
@@ -105,7 +113,7 @@ export const GovbrSignatureModal:React.FC<Props>=({process,initialJob,onChange,o
       <div className="rounded-lg border border-slate-300 bg-white p-3"><strong>{process.protocolo}</strong><p className="mt-1">{process.titulo}</p></div>
       {isLocalDemoFrontend()&&<p className="rounded-lg border border-amber-300 bg-amber-50 p-3">Ambiente de demonstração: o documento de teste não substitui o documento oficial.</p>}
       {error&&<p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-800">{error}</p>}
-      {modelChanged&&(isMasterAdmin||isCommissionPresident)&&<section className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
+      {modelChanged&&isMasterAdmin&&<section className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
         <h3 className="font-bold">Revisão do modelo</h3>
         <p className="portal-instruction p-3">O arquivo atual difere da versão publicada. Confira a amostra antes de publicar uma nova versão e gerar o documento deste TCC.</p>
         <button type="button" className="portal-action" disabled={busy} onClick={()=>void run(reviewModel)}>Visualizar modelo atual</button>
@@ -114,9 +122,9 @@ export const GovbrSignatureModal:React.FC<Props>=({process,initialJob,onChange,o
       {archived?<div role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-3"><strong>Documento conferido e arquivado</strong><p className="mt-1">Conferência manual no VALIDAR/ITI registrada por {review?.approvedBy} em {review?.approvedAt?formatDateTimeWithWeekday(review.approvedAt):''}.</p></div>:<>
         <section className="space-y-2 rounded-lg border border-slate-300 bg-white p-3">
           <h3 className="font-bold">1. Baixar o documento</h3>
-          {loadingJob?<p role="status">Carregando o documento…</p>:job?<><p>Versão {job.documentVersion} · Responsável: {job.signers.map(signer=>`${signer.name} (${signer.email})`).join(', ')}</p><div className="flex flex-wrap gap-2"><button type="button" disabled={busy} className="portal-action" onClick={()=>void run(()=>download())}><Download className="h-3.5 w-3.5"/>Baixar PDF para assinar</button><a className="portal-action" href="https://assinador.iti.br/" target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5"/>Abrir assinador Gov.br</a></div></>:<button type="button" disabled={busy} className="portal-action portal-button-primary" onClick={()=>void run(prepareDocument)}>{busy?'Gerando e baixando PDF…':'Gerar e baixar PDF'}</button>}
+          {loadingJob?<p role="status">Carregando o documento…</p>:job?<><p>Versão {job.documentVersion} · Responsável: {job.signers.map(signer=>signer.name).join(', ')}</p><div className="flex flex-wrap gap-2"><button type="button" disabled={busy} className="portal-action" onClick={()=>void run(()=>download())}><Download className="h-3.5 w-3.5"/>Baixar PDF para assinar</button><a className="portal-action" href="https://assinador.iti.br/" target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5"/>Abrir assinador Gov.br</a></div></>:canPrepare?<button type="button" disabled={busy} className="portal-action portal-button-primary" onClick={()=>void run(prepareDocument)}>{busy?'Gerando e baixando PDF…':'Gerar e baixar PDF'}</button>:<p>A ata ainda não foi preparada pelo orientador.</p>}
         </section>
-        {<section className="space-y-2 rounded-lg border border-slate-300 bg-white p-3">
+        {canReturn&&<section className="space-y-2 rounded-lg border border-slate-300 bg-white p-3">
           <h3 className="font-bold">2. Devolver o documento assinado</h3>
           <input ref={fileInput} type="file" accept="application/pdf,.pdf" className="hidden" aria-label="PDF assinado no Gov.br" disabled={busy||loadingJob||!job||approved||!canReturn} onChange={event=>{const file=event.currentTarget.files?.[0];event.currentTarget.value='';if(file)void run(()=>upload(file));}}/>
           <div className="rounded-lg border-2 border-dashed border-[var(--portal-border)] bg-[var(--portal-surface-panel)] p-4 text-center">

@@ -7,7 +7,7 @@ import path from 'node:path';
 import {INITIAL_SETTINGS} from '../src/services/demoSeed';
 import {courseStudioFixture} from './fixtures/courseStudioFixture';
 
-test('autosave persists incomplete edits, reopens after restart and activates the corrected package without a Save button',{timeout:45000},async()=>{
+test('autosave preserves valid and incomplete drafts after restart and activation requires explicit publication',{timeout:45000},async()=>{
  const directory=await mkdtemp(path.join(tmpdir(),'portal-autosave-'));
  const port=47800+Math.floor(Math.random()*500),base=`http://127.0.0.1:${port}`;
  const active=courseStudioFixture();
@@ -34,7 +34,15 @@ test('autosave persists incomplete edits, reopens after restart and activates th
   const image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
   const imageResponse=await fetch(base+'/api/admin/studio/image',{method:'PATCH',headers:{'content-type':'application/json','x-demo-user-email':'master@portal.local'},body:JSON.stringify({kind:'email',templateId:'confirmacao',field:'heroImageUrl',value:image,expectedRevision:3,expectedImageValue:''})});assert.equal(imageResponse.status,200,await imageResponse.text());
   reopened=await settings();assert.equal(reopened.integrationStudioDraft.revision,4);assert.equal(reopened.integrationStudioDraft.emailDesigns.confirmacao.heroImageUrl,image);assert.equal(reopened.integrationStudio.revision,1);
-  const completed=structuredClone(reopened.integrationStudioDraft);completed.revision=5;completed.emailTemplates[0].recipient='autores@example.org';const published=await save(completed,4);assert.equal(published.status,200,JSON.stringify(published.body));assert.equal(published.body.integrationStudioDraft,undefined);assert.equal(published.body.integrationStudio.revision,5);assert.equal(published.body.integrationStudio.publication.status,'PUBLISHED');assert.equal(published.body.integrationStudio.emailTemplates[0].recipient,'autores@example.org');
-  const durable=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(durable.settings.integrationStudio.revision,5);assert.ok(durable.auditLogs.some((r:any)=>r.action==='SALVAMENTO_AUTOMATICO_ESTUDIO'));assert.ok(durable.auditLogs.some((r:any)=>r.action==='PUBLICACAO_ESTUDIO_INTEGRADO'));
+  const completed=structuredClone(reopened.integrationStudioDraft);completed.revision=5;completed.emailTemplates[0].recipient='autores@example.org';
+  const draft=await save(completed,4);assert.equal(draft.status,200,JSON.stringify(draft.body));
+  assert.equal(draft.body.integrationStudioDraft.revision,5);assert.equal(draft.body.integrationStudioDraft.publication.status,'DRAFT');
+  assert.equal(draft.body.integrationStudio.emailTemplates[0].recipient,active.emailTemplates[0].recipient);
+  const candidate={...draft.body.integrationStudioDraft,revision:6};
+  assert.equal((await save(null,5,'master@portal.local','publish')).status,400,'a malformed payload cannot clear the active configuration');
+  assert.equal((await save(candidate,5,'master@portal.local','')).status,400,'publication mode must be explicit');
+  assert.equal((await save(candidate,1,'master@portal.local','publish')).status,409,'publication cannot overwrite an unseen draft');
+  const published=await save(candidate,5,'master@portal.local','publish');assert.equal(published.status,200,JSON.stringify(published.body));assert.equal(published.body.integrationStudioDraft,undefined);assert.equal(published.body.integrationStudio.revision,6);assert.equal(published.body.integrationStudio.publication.status,'PUBLISHED');assert.equal(published.body.integrationStudio.emailTemplates[0].recipient,'autores@example.org');
+  const durable=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(durable.settings.integrationStudio.revision,6);assert.ok(durable.auditLogs.some((r:any)=>r.action==='SALVAMENTO_AUTOMATICO_ESTUDIO'));assert.ok(durable.auditLogs.some((r:any)=>r.action==='PUBLICACAO_ESTUDIO_INTEGRADO'));
  }finally{await stop();await rm(directory,{recursive:true,force:true});}
 });

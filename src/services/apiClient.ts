@@ -3,6 +3,7 @@ import { ProcessData, GlobalSettings, AuditLog, DocumentCorrectionRequest, Googl
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
 import type { FeedbackEntry, FeedbackPage } from '../types/feedback';
 import type {AstenDocumentFoldersStatus,AstenDocumentFolderType} from '../types/signatures';
+import type { PresidencyQueueItem } from '../utils/coordinatorSignatureActions';
 import { isLocalDemoFrontend } from '../utils/runtimeEnvironment';
 import {verifyPublicPdfLocally,type PublicDocumentVerification} from '../utils/publicPdfVerification';
 import {
@@ -195,7 +196,7 @@ export const apiClient = {
   getRegistrationDraft:()=>fetchApi<import('../types/workflowOperations').RegistrationDraft|null>('/api/registration/draft'),
   saveRegistrationDraft:(data:unknown)=>fetchApiRequest<import('../types/workflowOperations').RegistrationDraft>('/api/registration/draft',{method:'PUT',body:JSON.stringify(data)}),
   deleteRegistrationDraft:()=>fetchApi<{deleted:boolean}>('/api/registration/draft',{method:'DELETE'}),
-  getMe: () => fetchApi<{ userEmail: string; globalRoles: any[]; memberships: any[]; isAuthenticated: boolean }>('/api/me'),
+  getMe: () => fetchApi<{ userEmail: string; globalRoles: any[]; memberships: any[]; isAuthenticated: boolean; canRegisterProcess: boolean }>('/api/me'),
   getAuthStatus:()=>fetchApi<{otp:{configured:boolean};google:{oauthConfigured:boolean;connected:boolean};bootstrapMasterConfigured:boolean}>('/api/setup/status'),
   requestLoginCode:(email:string)=>fetchApi<{sent:boolean;expiresInMinutes:number;message:string}>('/api/auth/request-code',{method:'POST',body:JSON.stringify({email})}),
   verifyLoginCode:(email:string,code:string)=>fetchApi<any>('/api/auth/verify-code',{method:'POST',body:JSON.stringify({email,code})}),
@@ -203,7 +204,7 @@ export const apiClient = {
   getPublicProcess:(id:string)=>fetchApi<any>(`/api/public/processes/${encodeURIComponent(id)}`),
   getSettings: () => fetchApi<GlobalSettings>('/api/settings'),
   saveStudioImage:(input:{kind:'email'|'form';templateId:string;field:'logoUrl'|'heroImageUrl';value:string;expectedRevision:number;expectedImageValue?:string})=>fetchApi<{revision:number;savedAt:string;imageUrl:string;studio:IntegrationStudioSettings}>('/api/admin/studio/image',{method:'PATCH',body:JSON.stringify(input)}),
-  updateSettings: (settings: Partial<GlobalSettings>&{studioExpectedRevision?:number;studioSaveMode?:'autosave'}) => (settings.studioSaveMode==='autosave'?fetchApiRequest<GlobalSettings>:fetchApi<GlobalSettings>)('/api/admin/settings', {
+  updateSettings: (settings: Partial<GlobalSettings>&{studioExpectedRevision?:number;studioSaveMode?:'autosave'|'publish'}) => (settings.studioSaveMode==='autosave'?fetchApiRequest<GlobalSettings>:fetchApi<GlobalSettings>)('/api/admin/settings', {
     method: 'PATCH',
     body: JSON.stringify(settings)
   }),
@@ -272,7 +273,7 @@ export const apiClient = {
     method: 'POST',
     body: JSON.stringify(data)
   }),
-  getCoordinatorQueue: () => fetchApi<any[]>('/api/coordinator/signature-queue'),
+  getCoordinatorQueue: () => fetchApi<PresidencyQueueItem[]>('/api/coordinator/signature-queue'),
   uploadSignedDocument: (processId: string, fileName: string) => fetchApi<any>('/api/coordinator/upload-signed', {
     method: 'POST',
     body: JSON.stringify({ processId, fileName })
@@ -297,7 +298,7 @@ export const apiClient = {
   validateCourseStudio:(studio?:any)=>fetchApi<any>('/api/admin/studio/validate',{method:'POST',body:JSON.stringify({studio})}),
   getStudioVersions:()=>fetchApi<any[]>('/api/admin/studio/versions'),
   compareStudioVersion:(revision:number)=>fetchApi<any>(`/api/admin/studio/versions/${revision}/compare`),
-  restoreStudioVersion:(revision:number)=>fetchApi<any>(`/api/admin/studio/versions/${revision}/restore`,{method:'POST'}),
+  restoreStudioVersion:(revision:number,expectedRevision:number,reason:string)=>fetchApi<{studio:IntegrationStudioSettings;draft?:IntegrationStudioSettings}>(`/api/admin/studio/versions/${revision}/restore`,{method:'POST',body:JSON.stringify({expectedRevision,reason})}),
   runBackupDrill:()=>fetchApi<any>('/api/admin/backup/drill',{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   getRetentionPreview:()=>fetchApi<any>('/api/admin/retention/preview'),
   getLegalHolds:()=>fetchApi<any[]>('/api/admin/legal-holds'),
@@ -376,6 +377,7 @@ export const apiClient = {
   getProcessAuditLogs:(id:string)=>fetchApi<AuditLog[]>(`/api/processes/${encodeURIComponent(id)}/audit-logs`),
   downloadProcessAuditLogs:(id:string)=>downloadApiFile(`/api/processes/${encodeURIComponent(id)}/audit-logs/pdf`),
   getAuditLogs: () => fetchApi<AuditLog[]>('/api/admin/audit-logs'),
+  sendStudioEmailTest: (id: string, expectedRevision: number) => fetchApi<{status:'ACCEPTED_BY_GMAIL';deliveryId:string}>(`/api/admin/email-models/${encodeURIComponent(id)}/test`, {method:'POST', body:JSON.stringify({expectedRevision})}),
   getEmailDeliveryPreview: (id: string) => fetchApi<{subject:string;text:string;sensitive:boolean}>(`/api/admin/email-deliveries/${encodeURIComponent(id)}/preview`),
   rollbackAuditLog: (logId: string) => fetchApi<{ message: string; process?: ProcessData; settings?: GlobalSettings }>(`/api/admin/rollback-log/${logId}`, {
     method: 'POST'

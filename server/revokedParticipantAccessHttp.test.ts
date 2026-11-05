@@ -57,8 +57,8 @@ test('revoking or deleting access takes effect on an existing advisor session wi
     const notices = await (await request('/api/notifications', advisorCookie)).json();
     assert.ok(notices.some((item: any) => item.id === 'email-private-notice'));
     assert.ok(!notices.some((item: any) => item.id === 'email-global-notice'));
-    for (const email of [student, president]) {
-      assert.equal((await request(`/api/processes/${p.id}/reopen`, session(email), 'POST', {reason: 'Tentativa de reabrir a avaliação.'})).status, 403, 'process access does not grant the advisor role');
+    for (const [email, status] of [[student, 403], [president, 404]] as const) {
+      assert.equal((await request(`/api/processes/${p.id}/reopen`, session(email), 'POST', {reason: 'Tentativa de reabrir a avaliação.'})).status, status, 'process access does not grant the advisor role');
     }
     assert.equal((await reopen()).status, 200, 'active advisor can reopen');
     for (const action of ['deactivate', 'delete'] as const) {

@@ -20,7 +20,8 @@ test('HTTP: exemplos persistem somente localmente e a Presidência tem acesso à
   assert.equal((await fetch(base+'/api/coordinator/signature-queue',{headers})).status,200);
   assert.equal((await fetch(base+'/api/coordinator/signature-queue',{headers:{'x-demo-user-email':'mariana.silva@aluno.ufes.br'}})).status,403);
   assert.equal((await fetch(base+'/api/coordinator/signature-queue')).status,401);
-  const processes=await(await fetch(base+'/api/processes',{headers})).json();assert.ok(processes.length>=7);
+  const scoped=await(await fetch(base+'/api/processes',{headers})).json();assert.deepEqual(scoped,[]);
+  const processes=await(await fetch(base+'/api/processes',{headers:{'x-demo-user-email':'master@portal.local'}})).json();assert.ok(processes.length>=7);
   const disk=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(disk.processes.length,processes.length);assert.equal(disk.settings.contactEmail,settings.contactEmail);assert.equal(disk.signatureJobs.length,0);
  }finally{child.kill('SIGTERM');await new Promise(r=>child.once('exit',r));await rm(directory,{recursive:true,force:true});}
 });

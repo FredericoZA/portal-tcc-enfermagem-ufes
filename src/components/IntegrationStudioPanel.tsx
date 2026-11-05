@@ -14,7 +14,7 @@ import { signatureWorkflowBinding } from '../utils/signatureWorkflowBindings';
 import { orderEmailTemplates } from '../utils/emailTemplateIdentity';
 import {processEmailGuidance} from '../utils/processEmailGuidance';
 import {consolidateProcessForms} from '../utils/processFormConsolidation';
-import { portalConfirm } from '../services/portalDialogs';
+import { portalConfirm, portalPrompt } from '../services/portalDialogs';
 import { retryAfterPortalReauthentication } from '../services/reauthentication';
 import { upgradeStudioDraft } from '../utils/studioUpgrade';
 import { OperationalDesignerPanel } from './OperationalDesignerPanel';
@@ -22,6 +22,7 @@ import {REGISTRATION_QUESTIONS} from '../utils/operationalConfig';
 import { registrationQuestions, operationalConfig as resolveOperationalConfig } from '../utils/operationalConfig';
 import { evaluateStudioCondition } from '../utils/courseStudioValidator';
 import type { OperationalConfig } from '../types/operationalConfig';
+import type { StudioVersionRecord } from '../types/courseOperations';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -334,6 +335,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const orderedEmailTemplates = useMemo(() => orderEmailTemplates(emailTemplates), [emailTemplates]);
   const [selectedEmailId, setSelectedEmailId] = useState(orderedEmailTemplates[0]?.id || '');
   const [previewMode, setPreviewMode] = useState<'email'|'form'|null>(null);
+  const [sendingEmailTest, setSendingEmailTest] = useState(false);
+  const [emailTestResult, setEmailTestResult] = useState<{id:string; message:string} | null>(null);
   const [documentPreviewOpen, setDocumentPreviewOpen] = useState(false);
   useEffect(()=>{
     if(!previewMode&&!documentPreviewOpen)return;
@@ -363,7 +366,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [mergeTargetId, setMergeTargetId] = useState('');
   const [newVariableKey, setNewVariableKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [hasSavedIncompleteDraft,setHasSavedIncompleteDraft]=useState(initialMeta.publication?.status==='DRAFT');
+  const [hasSavedDraft,setHasSavedDraft]=useState(initialMeta.publication?.status==='DRAFT');
+  const [publishedVersions,setPublishedVersions]=useState<Array<Pick<StudioVersionRecord,'revision'|'createdAt'|'createdBy'>&{active:boolean}>|null>(null);
   const [lastSavedAt, setLastSavedAt] = useState(initialMeta.savedAt || '');
   const [draftSavedAt, setDraftSavedAt] = useState('');
   const [isDirty, setIsDirty] = useState(false);
@@ -481,6 +485,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     if (source.driveModelosFolderUrl) setDriveModelosFolderUrl(source.driveModelosFolderUrl);
     setRevision(source.revision || 0);
     setLastSavedAt(source.savedAt || '');
+    setHasSavedDraft(source.publication?.status==='DRAFT');
     setLastDriveSyncAt(source.lastDriveSyncAt || '');
     setLastDriveSyncStatus(source.lastDriveSyncStatus || 'never');
     setIsDirty(false);
@@ -570,7 +575,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         saveLocalStudio(next);serverStudioRef.current=saved;
         if(!mountedRef.current)return;
         applyStudioSource(next);
-        setLastSavedAt(saved.savedAt);setHasSavedIncompleteDraft(saved.publication?.status==='DRAFT');setDraftSavedAt('');setAutosaveError('');
+        setLastSavedAt(saved.savedAt);setHasSavedDraft(saved.publication?.status==='DRAFT');setDraftSavedAt('');setAutosaveError('');
         setIsDirty(currentDraftFingerprintRef.current!==fingerprint);
         if(currentDraftFingerprintRef.current!==fingerprint)setAutosaveRetry(value=>value+1);
         appliedSnapshotRef.current=`${saved.savedAt}:${saved.revision}`;
@@ -588,25 +593,31 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     if (isSaving) return;
     if(imageMergeBlocked){notify('Seu rascunho foi preservado. Resolva o conflito indicado antes de publicar outras alterações.');return;}
     if (!validationReport.ready) {
-      setActiveTab('overview');
+      if(!hideTabs)setActiveTab('overview');
       notify(`Publicação bloqueada: corrija ${validationReport.errors} erro(s) na configuração operacional do portal.`);
       return;
     }
+    const nextAudit = withAudit
+      ? [createAuditEntry('STUDIO_SAVED', 'studio', 'integration-studio', 'Configuração integrada salva e publicada no servidor.', actorEmail), ...auditTrail].slice(0, 500)
+      : auditTrail;
+    const snapshot = buildSnapshot(nextAudit);
+    const expectedRevision=Number(serverStudioRef.current.revision||0);
+    snapshot.revision=expectedRevision+1;
     setIsSaving(true);
     try {
-      const nextAudit = withAudit
-        ? [createAuditEntry('STUDIO_SAVED', 'studio', 'integration-studio', 'Configuração integrada salva e publicada no servidor.', actorEmail), ...auditTrail].slice(0, 500)
-        : auditTrail;
-      const snapshot = buildSnapshot(nextAudit);
-      saveLocalStudio(snapshot);
-      await apiClient.updateSettings({ integrationStudio: snapshot,studioExpectedRevision:Number(serverStudioRef.current.revision||0) });
-      serverStudioRef.current=snapshot;
+      if(!(await portalConfirm('Publicar o rascunho de Configurações? A nova versão passará a valer para os próximos eventos do Portal.')))return;
+      const settings=await retryAfterPortalReauthentication(()=>apiClient.updateSettings({ integrationStudio: snapshot,studioExpectedRevision:expectedRevision,studioSaveMode:'publish' }));
+      const published=settings.integrationStudio!;
+      saveLocalStudio(published);
+      serverStudioRef.current=published;
       setAuditTrail(nextAudit);
-      setRevision(snapshot.revision);
-      setLastSavedAt(snapshot.savedAt);
+      setRevision(published.revision);
+      setLastSavedAt(published.savedAt);
+      setHasSavedDraft(false);
       setDraftSavedAt('');
-      appliedSnapshotRef.current = `${snapshot.savedAt}:${snapshot.revision}`;
+      appliedSnapshotRef.current = `${published.savedAt}:${published.revision}`;
       setIsDirty(false);
+      if (publishedVersions!==null) await loadPublishedVersions();
       if (withAudit) notify('Estúdio integrado salvo e publicado para todo o portal.');
     } catch (error: any) {
       console.error(error);
@@ -615,6 +626,31 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       setIsSaving(false);
     }
   };
+
+  async function loadPublishedVersions() {
+    try { setPublishedVersions(await apiClient.getStudioVersions()); }
+    catch { notify('Não foi possível consultar as configurações publicadas.'); }
+  }
+
+  async function restorePublishedVersion(version: number) {
+    if(isDirty||isSaving)return;
+    const expectedRevision=Number(serverStudioRef.current.revision||0);
+    setIsSaving(true);
+    try {
+      const reason=await portalPrompt(`Informe o motivo para restaurar a revisão ${version}. Se houver um rascunho salvo, ele será preservado.`,'',{title:'Restaurar configuração',confirmLabel:'Restaurar'});
+      if(reason===null)return;
+      const result=await retryAfterPortalReauthentication(()=>apiClient.restoreStudioVersion(version,expectedRevision,reason));
+      const source=result.draft||result.studio;
+      serverStudioRef.current=source;
+      appliedSnapshotRef.current=`${source.savedAt}:${source.revision}`;
+      saveLocalStudio(source);
+      applyStudioSource(source);
+      await loadPublishedVersions();
+      notify(`Configuração restaurada como revisão ${result.studio.revision}.`);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Não foi possível restaurar a configuração.');
+    } finally { setIsSaving(false); }
+  }
 
   const updateBrand = <K extends keyof IntegrationBrandKit>(key: K, value: IntegrationBrandKit[K]) => {
     setBrandKit((previous) => ({ ...previous, [key]: value }));
@@ -668,7 +704,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         setIsDirty(true);setImageMergeBlocked(false);
       }catch(error){setImageMergeBlocked(true);saveLocalStudio(local);throw error;}
       setRevision(saved.revision);setLastSavedAt(saved.savedAt);setImageSavedAt(saved.savedAt);setAutosaveError('');
-      notify('Imagem salva no servidor.');
+      notify('Imagem salva no rascunho. Publique a configuração para aplicar a alteração.');
     }catch(error){
       if(preparedImage){
         const draft=structuredClone(currentStudioSnapshotRef.current||buildSnapshot());const collection=kind==='email'?'emailDesigns':'formDesigns';
@@ -884,7 +920,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   // New routines immediately feed the variable matrix; the explicit scan button
   // remains available for a full reconciliation with the Google Drive folder.
   useEffect(() => {
-    if (!hasHydratedRef.current) return;
+    if (!hasHydratedRef.current || !isDirty) return;
     const keys = discoverVariables({ matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates });
     const existing = new Set<string>();
     matrixColumns.forEach((column) => [column.id, column.name, column.label, ...(column.aliases || [])].filter(Boolean).forEach((value) => {
@@ -916,7 +952,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       ...previous
     ].slice(0, 500));
     setIsDirty(true);
-  }, [docTemplates, emailTemplates, formTemplates]);
+  }, [isDirty, matrixColumns, matrixRows, docTemplates, emailTemplates, formTemplates]);
 
   const handleCreateVariable = () => {
     const key = normalizeVariableKey(newVariableKey);
@@ -1106,6 +1142,22 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const previewStudio=useMemo(()=>({brandKit,emailDesigns,formDesigns,emailTemplates,formTemplates,operationalConfig,operationsPolicy,receiptDesign:receiptConfig} as unknown as Partial<IntegrationStudioSettings>),[brandKit,emailDesigns,formDesigns,emailTemplates,formTemplates,operationalConfig,operationsPolicy,receiptConfig]);
   const effectiveEmail=selectedEmail?studioEditableEmail(previewStudio,selectedEmail.id):undefined;
   const emailPreviewHtml=selectedEmail?studioEmailPreview(previewStudio,selectedEmail.id).html:'';
+  async function sendSelectedEmailTest() {
+    if (!selectedEmail || sendingEmailTest || isDirty || isSaving || autosaveError) return;
+    const id = selectedEmail.id;
+    const revision = serverStudioRef.current.revision || 0;
+    setSendingEmailTest(true);
+    setEmailTestResult(null);
+    try {
+      await retryAfterPortalReauthentication(() => apiClient.sendStudioEmailTest(id, revision));
+      setEmailTestResult({id,message:'O Gmail aceitou a mensagem de teste para o e-mail da sua sessão.'});
+    } catch (error) {
+      setEmailTestResult({id,message:error instanceof Error ? error.message : 'Não foi possível enviar a mensagem de teste.'});
+    } finally {
+      setSendingEmailTest(false);
+    }
+  }
+
   const nativeReservationView=reservationConfirmationView({process:studioSampleProcess(),studio:previewStudio,action:'#',preview:true});
   const nativeReservationHtml=reservationPage(nativeReservationView.title,nativeReservationView.content,true);
   const generateReceiptPreview=async()=>{
@@ -1186,7 +1238,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
       {previewMode==='email'&&selectedEmail&&<div role="presentation" data-portal-preview-dialog="true" className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-4" onMouseDown={event=>{if(event.target===event.currentTarget)setPreviewMode(null);}}>
         <section role="dialog" aria-modal="true" aria-label="Prévia do e-mail com dados fictícios" className="portal-standard-modal flex h-[min(86dvh,840px)] w-full max-w-4xl flex-col overflow-hidden bg-white">
           <header className="portal-modal-header shrink-0 justify-between"><strong className="text-xs font-black normal-case">Ver modelo · E-mail demonstrativo</strong><button type="button" onClick={()=>setPreviewMode(null)} className="rounded-full bg-white px-4 py-1 text-xs font-bold text-slate-900">Fechar</button></header>
-          <p className="shrink-0 bg-amber-50 p-2 text-xs text-amber-950">Prévia com dados fictícios. Nenhum e-mail será enviado.</p>
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 bg-amber-50 p-2 text-xs text-amber-950">
+            <p>Prévia com dados fictícios. O teste usa somente o e-mail da sua sessão.</p>
+            {operationalEmailRouting(selectedEmail.id) && <button type="button" disabled={sendingEmailTest || isDirty || isSaving || Boolean(autosaveError)} onClick={sendSelectedEmailTest} className="portal-button-secondary disabled:opacity-50">{sendingEmailTest ? 'Enviando teste…' : 'Enviar teste para mim'}</button>}
+            {emailTestResult?.id === selectedEmail.id && <p role="status" className="w-full">{emailTestResult.message}</p>}
+          </div>
           <iframe title="E-mail fictício preenchido" sandbox="" referrerPolicy="no-referrer" srcDoc={emailPreviewHtml} className="min-h-0 flex-1 bg-white" />
         </section>
       </div>}
@@ -1206,11 +1262,22 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
           <div className="min-h-0 flex-1 overflow-auto p-3"><PdfCanvasPreview base64={documentPreview.base64} remoteUrl={documentPreview.remoteUrl} label={selectedDoc.label}/></div>
         </section>
       </div>}
-      {hideTabs&&!autosaveError&&<p role="status" className="mx-3 my-2 text-right text-[10px] text-slate-600">{isDirty||isSaving?'Salvando automaticamente…':lastSavedAt?(hasSavedIncompleteDraft?'Rascunho salvo. Há pendências no pacote; o Portal continua usando a última versão publicada.':'Alterações salvas automaticamente.'):''}</p>}
+      {hideTabs&&!autosaveError&&<div className="mx-3 my-2 flex flex-wrap items-center justify-end gap-2">
+        {(isDirty||hasSavedDraft)&&<p role="status" className="text-[10px] text-slate-600">{isDirty?'Alterações no rascunho.':'Rascunho salvo. O Portal continua usando a versão publicada.'}</p>}
+        <button type="button" onClick={()=>publishedVersions===null?void loadPublishedVersions():setPublishedVersions(null)} aria-expanded={publishedVersions!==null} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-900"><History className="h-3.5 w-3.5"/>Versões publicadas</button>
+        {(isDirty||hasSavedDraft)&&<button type="button" onClick={()=>void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-900 disabled:opacity-50"><Save className="h-3.5 w-3.5"/>Publicar configurações</button>}
+      </div>}
+      {hideTabs&&publishedVersions!==null&&<section className="mx-3 my-2 rounded-lg border border-slate-300 bg-white p-3 text-xs" aria-label="Histórico de configurações publicadas">
+        {!publishedVersions.length&&<p>Nenhuma versão foi registrada no histórico.</p>}
+        <ul className="space-y-2">{publishedVersions.map(version=><li key={version.revision} className="flex flex-wrap items-center justify-between gap-2">
+          <span>Revisão {version.revision} · {formatDateTimeWithWeekday(version.createdAt)} · {version.createdBy}</span>
+          {version.active?<span className="font-semibold">Em uso</span>:<button type="button" onClick={()=>void restorePublishedVersion(version.revision)} disabled={isDirty||isSaving} className="rounded-md border border-slate-300 px-2 py-1 font-semibold disabled:opacity-50">Restaurar revisão {version.revision}</button>}
+        </li>)}</ul>
+      </section>}
       {hideTabs && autosaveError && <div role="alert" className="mx-3 my-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950"><span>Não foi possível concluir o salvamento automático: {autosaveError}</span><button type="button" className="rounded-md border border-amber-400 bg-white px-2 py-1 font-bold" onClick={()=>imageMergeBlocked?window.location.reload():setAutosaveRetry(value=>value+1)}>{imageMergeBlocked?'Reabrir e conferir':'Tentar salvar novamente'}</button></div>}
       <div className={`${hideTabs ? 'hidden' : 'portal-studio-heading flex flex-wrap items-center justify-between gap-2 border-b border-[var(--portal-brand-action-border)] bg-[var(--portal-brand-action)] px-3 py-2.5 text-white'}`}>
         <div><h3 className="text-xs font-black normal-case tracking-wide">Editor de modelos e variáveis</h3><p className="mt-0.5 text-[9px] text-white/80">Selecione uma área acima e trabalhe com seleção, edição e visualização no mesmo contexto.</p></div>
-        <div className="flex items-center gap-2"><div className="hidden text-right text-[9px] font-semibold text-white/80 md:block">{isDirty ? (draftSavedAt ? `Rascunho automático ${new Date(draftSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Salvando rascunho…') : (lastSavedAt ? `Publicado ${new Date(lastSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Ainda não publicado')}</div><button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-white bg-white px-3 py-1.5 text-[10px] font-black normal-case tracking-wide text-black shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Publicando…' : 'Publicar'}</button></div>
+        <div className="flex items-center gap-2"><div className="hidden text-right text-[9px] font-semibold text-white/80 md:block">{isDirty ? (draftSavedAt ? `Rascunho automático ${new Date(draftSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Salvando rascunho…') : hasSavedDraft ? 'Rascunho salvo' : (lastSavedAt ? `Publicado ${new Date(lastSavedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'Ainda não publicado')}</div><button type="button" onClick={() => void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-white bg-white px-3 py-1.5 text-[10px] font-black normal-case tracking-wide text-black shadow-sm disabled:opacity-50"><Save className="h-3.5 w-3.5" />{isSaving ? 'Publicando…' : 'Publicar'}</button></div>
       </div>
       <div className={hideTabs ? 'min-h-0' : 'min-h-[68vh]'} style={{ backgroundColor: hideTabs ? 'transparent' : 'var(--portal-surface-panel)' }}>
         <nav className={`${hideTabs ? 'hidden' : 'portal-studio-tabs flex flex-wrap items-center gap-1.5 border-b border-slate-300 p-2.5'}`} style={{ backgroundColor: 'var(--portal-surface-card)' }} aria-label="Áreas de modelos e variáveis">
@@ -1354,7 +1421,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               <div className="portal-email-panels space-y-4">
                 <section aria-label="Dados iniciais do e-mail" className="grid gap-3 rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] p-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="col-span-full flex items-center justify-between gap-2">
-                    <div><strong className="text-[10px] font-black normal-case text-slate-700">Configuração deste e-mail</strong><p className="mt-1 text-[10px] text-slate-600">{isDirty||hasSavedIncompleteDraft?'Alterações em edição':'Revisão '+revision} · Códigos de acesso e avisos do Asten têm fluxos próprios.</p></div>
+                    <div><strong className="text-[10px] font-black normal-case text-slate-700">Configuração deste e-mail</strong><p className="mt-1 text-[10px] text-slate-600">{isDirty||hasSavedDraft?'Alterações em edição':'Revisão '+revision} · Códigos de acesso e avisos do Asten têm fluxos próprios.</p></div>
                     <div className="flex items-center gap-1.5">
                       <button type="button" onClick={()=>setPreviewMode('email')} className="portal-toolbar-icon-button" title="Ver modelo de e-mail com dados fictícios" aria-label="Ver modelo de e-mail com dados fictícios"><Eye className="h-3.5 w-3.5"/></button>
                       <button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-30" title="Excluir somente este modelo de e-mail" aria-label={`Excluir e-mail ${selectedEmail.name}`}><Trash2 className="h-3.5 w-3.5"/></button>

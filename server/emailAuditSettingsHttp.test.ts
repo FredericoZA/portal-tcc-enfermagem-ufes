@@ -129,12 +129,12 @@ test('HTTP: only Master can change the boolean audit switch, preserving configur
     await f.toggle(true);
     for(const body of [null,[],false,'disabled',0])assert.equal((await f.request('/api/admin/settings',master,'PATCH',body)).status,400);
     for(const value of [null,'false',0,1,[],{}])assert.equal((await f.request('/api/admin/settings',master,'PATCH',{emailConfig:{auditEmailsEnabled:value}})).status,400);
-    for(const email of [master,president])for(const value of [null,[],false,'disabled',0])assert.equal((await f.request('/api/admin/settings',email,'PATCH',{emailConfig:value})).status,400);
+    for(const value of [null,[],false,'disabled',0])assert.equal((await f.request('/api/admin/settings',master,'PATCH',{emailConfig:value})).status,400);
     assert.equal((await f.request('/api/admin/settings',master,'PATCH',{emailConfig:{auditCopyEmail:'foreign-destination@audit-settings.invalid'}})).status,400);
     assert.deepEqual((await f.settings()).emailConfig,{...preservedEmailConfig,auditEmailsEnabled:true});
-    const normal=await f.request('/api/admin/settings',president,'PATCH',{emailConfig:{senderLabel:'Updated sender'}});assert.equal(normal.status,200);
+    const normal=await f.request('/api/admin/settings',president,'PATCH',{emailConfig:{senderLabel:'Updated sender'}});assert.equal(normal.status,403);
     await f.toggle(false);await f.restart();
-    assert.deepEqual((await f.settings()).emailConfig,{...preservedEmailConfig,senderLabel:'Updated sender',auditEmailsEnabled:false});
+    assert.deepEqual((await f.settings()).emailConfig,{...preservedEmailConfig,auditEmailsEnabled:false});
     assert.equal((await f.state()).settings.emailConfig.auditEmailsEnabled,false);
     assert.deepEqual(f.sent,[]);assert.deepEqual(f.unexpected,[]);
   }finally{await f.close();}
@@ -171,16 +171,16 @@ test('HTTP: restoring history or a backup cannot change the current audit policy
   const restoreBackup=async(enabled:boolean)=>{
     const exported=await f.request('/api/admin/backup');assert.equal(exported.status,200);
     const backup=await exported.json();backup.settings.emailConfig.auditEmailsEnabled=enabled;
-    const preview=await f.request('/api/admin/restore-full-backup',president,'POST',backup);assert.equal(preview.status,200,await preview.clone().text());
+    const preview=await f.request('/api/admin/restore-full-backup',master,'POST',backup);assert.equal(preview.status,200,await preview.clone().text());
     const confirmation=await preview.json();assert.equal(confirmation.requiresConfirmation,true);
-    const restored=await f.request('/api/admin/restore-full-backup',president,'POST',{...backup,confirmHash:confirmation.confirmHash});assert.equal(restored.status,200,await restored.clone().text());
+    const restored=await f.request('/api/admin/restore-full-backup',master,'POST',{...backup,confirmHash:confirmation.confirmHash});assert.equal(restored.status,200,await restored.clone().text());
   };
   try{
-    assert.equal((await f.request('/api/admin/rollback-log/historical-audit-true',president,'POST',{})).status,200);
+    assert.equal((await f.request('/api/admin/rollback-log/historical-audit-true',master,'POST',{})).status,200);
     assert.equal((await f.settings()).emailConfig.auditEmailsEnabled,false);
     await restoreBackup(true);assert.equal((await f.settings()).emailConfig.auditEmailsEnabled,false);
     await f.toggle(true);
-    assert.equal((await f.request('/api/admin/rollback-log/historical-audit-false',president,'POST',{})).status,200);
+    assert.equal((await f.request('/api/admin/rollback-log/historical-audit-false',master,'POST',{})).status,200);
     assert.equal((await f.settings()).emailConfig.auditEmailsEnabled,true);
     await restoreBackup(false);assert.equal((await f.settings()).emailConfig.auditEmailsEnabled,true);
     await f.restart();assert.equal((await f.state()).settings.emailConfig.auditEmailsEnabled,true);
