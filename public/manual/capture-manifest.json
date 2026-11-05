@@ -24,17 +24,19 @@
       "id": "acesso",
       "file": "/manual/acesso.jpg",
       "scenario": "Acesso público por e-mail; nenhum código real solicitado",
-      "sha256": "277d39cb5b5e5e7bb04c6ac6f80098fbed9ab3eedab7880f67a27af393fd9323",
+      "sha256": "6147fadc85bcc4a9013f1b570a8c48dc770fa8563df95958bbbd52dbcc0dc534",
       "width": 512,
-      "height": 396
+      "height": 396,
+      "capturedAt": "2026-11-05T16:24:05.119Z"
     },
     {
       "id": "codigo-acesso",
       "file": "/manual/codigo-acesso.jpg",
       "scenario": "Código de seis dígitos; resposta interceptada localmente, nenhum e-mail enviado",
-      "sha256": "bbf5585fa96eab1fa2ceac32a4a0efdfbd37be055f4a3092614575445578efad",
+      "sha256": "97d941d0990dd4b99bd12150e2ca76626591adefc36d4dd560e386e80bc1e83e",
       "width": 512,
-      "height": 568
+      "height": 568,
+      "capturedAt": "2026-11-05T16:24:05.125Z"
     },
     {
       "id": "cadastro",

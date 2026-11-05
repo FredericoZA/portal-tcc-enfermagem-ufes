@@ -287,7 +287,7 @@ export function PortalIllustratedGuide({role = 'aluno'}: {role?: string}) {
   const selectedId = selected.role === role ? selected.id : '';
   const current = available.find(item => item.id === selectedId) || available[0];
   if (!current) return null;
-  const imageUrl = `/manual/${current.imageId}.jpg?v=2026-11-05-revisao`;
+  const imageUrl = `/manual/${current.imageId}.jpg?v=2026-11-05-guia`;
   const index = available.indexOf(current);
   const selectScreen = (next: number) => {
     if (available[next]) setSelected({role, id: available[next].id});
@@ -308,9 +308,9 @@ export function PortalIllustratedGuide({role = 'aluno'}: {role?: string}) {
         </div>
         <div className="portal-guide-content mt-3">
           <div className="portal-guide-instructions min-w-0">
-            <ol className="my-0 list-decimal space-y-2 pl-5 text-sm leading-6 sm:text-base">{current.steps.map(step => <li key={step}><GuideText text={step} /></li>)}</ol>
-            <p className="portal-guide-result mt-3 text-xs leading-5"><strong>Como saber que terminou:</strong> {current.done}</p>
-            <details key={`${role}-${current.id}`} className="portal-guide-help mt-3 text-xs leading-5">
+            <ol className="my-0 list-decimal space-y-2 pl-5">{current.steps.map(step => <li key={step}><GuideText text={step} /></li>)}</ol>
+            <p className="portal-guide-result mt-3"><strong>Como saber que terminou:</strong> {current.done}</p>
+            <details key={`${role}-${current.id}`} className="portal-guide-help mt-3">
               <summary className="cursor-pointer font-semibold">Dúvidas desta atividade</summary>
               <ul className="mt-2 list-disc space-y-1 pl-5">{current.help.map(item => <li key={item}>{item}</li>)}</ul>
             </details>
@@ -319,11 +319,11 @@ export function PortalIllustratedGuide({role = 'aluno'}: {role?: string}) {
             <a href={imageUrl} target="_blank" rel="noreferrer" aria-label={`Ampliar imagem: ${current.title}`} className="portal-guide-image-link">
               <img src={imageUrl} alt={current.imageCaption} loading="lazy" className="portal-guide-image" />
             </a>
-            <figcaption className="mt-2 text-xs leading-5 text-slate-600">{current.imageCaption} <a className="inline-flex items-center gap-1 underline" href={imageUrl} target="_blank" rel="noreferrer">Abrir imagem em tamanho maior<ExternalLink className="h-3 w-3" aria-hidden="true" /></a></figcaption>
+            <figcaption className="mt-2 text-slate-600">{current.imageCaption} <a className="inline-flex items-center gap-1 underline" href={imageUrl} target="_blank" rel="noreferrer">Abrir imagem em tamanho maior<ExternalLink className="h-3 w-3" aria-hidden="true" /></a></figcaption>
           </figure>
         </div>
         {current.relatedImages?.map(related => {
-          const url = `/manual/${related.id}.jpg?v=2026-11-05-revisao`;
+          const url = `/manual/${related.id}.jpg?v=2026-11-05-guia`;
           return <details key={related.id} className="portal-guide-related mt-3">
             <summary className="cursor-pointer text-xs font-semibold">Ver exemplo: {related.caption}</summary>
             <a href={url} target="_blank" rel="noreferrer" className="portal-guide-image-link mt-3" aria-label={`Ampliar imagem: ${related.caption}`}><img src={url} alt={related.caption} loading="lazy" className="portal-guide-image" /></a>

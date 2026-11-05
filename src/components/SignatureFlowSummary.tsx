@@ -5,12 +5,12 @@ const signatureSteps = [
   {document: 'Comprovante de reserva', signers: 'Não requer assinatura.', procedure: 'Disponível após o aceite ou a recusa do responsável pelo local.'},
   {document: 'Carta-convite da banca', signers: 'Não requer assinatura.', procedure: 'Disponível após a confirmação da reserva e o envio do convite.'},
   {document: 'Ata da defesa', signers: 'Orientador e dois examinadores.', procedure: 'Após registrar o conceito e o parecer, solicite a ata na caixa correspondente. Os três assinam na prioridade 1; somente depois do arquivamento a entrega final é liberada.'},
-  {document: 'Termo de autorização de publicação', signers: 'Orientador e todos os autores.', procedure: 'Após a entrega final, fica disponível somente se algum PDF tiver publicação autorizada. No Asten, todos assinam no mesmo nível; pelo Gov.br, o orientador devolve um único PDF com todas as assinaturas.'},
+  {document: 'Termo de autorização de publicação', signers: 'Orientador e todos os autores.', procedure: 'Após a entrega final, fica disponível somente se algum PDF tiver publicação autorizada. No Asten, todos assinam no mesmo nível; pelo Gov.br, o orientador devolve um único PDF com todas as assinaturas. O termo deve ser arquivado antes da declaração.'},
   {document: 'Declaração de participação na banca', signers: 'Presidente da Comissão.', procedure: 'Solicite pela Área do Presidente, após a entrega final e o arquivamento da ata e do termo, quando aplicável. A declaração assinada e arquivada permite concluir o processo.'},
 ];
 
-const headingClasses = 'border border-[var(--portal-border-strong)] px-2 py-1.5 text-left text-[11px] font-bold text-[var(--portal-text-dark)]';
-const cellClasses = 'border border-[var(--portal-border)] px-2 py-1.5 align-top text-[11px] leading-[18px] text-[var(--portal-text-dark)]';
+const headingClasses = 'border border-[var(--portal-border-strong)] px-2 py-1.5 text-center text-[11px] font-bold text-[var(--portal-text-dark)]';
+const cellClasses = 'border border-[var(--portal-border)] px-2 py-1.5 text-center align-middle text-[11px] leading-[18px] text-[var(--portal-text-dark)]';
 
 export const SignatureFlowSummary: React.FC = () => (
   <section
@@ -38,13 +38,13 @@ export const SignatureFlowSummary: React.FC = () => (
             <th scope="col" className={headingClasses}>Procedimento</th>
           </tr></thead>
           <tbody>{signatureSteps.map(step => <tr key={step.document}>
-            <th scope="row" className={`${cellClasses} text-left font-bold`}>{step.document}</th>
+            <th scope="row" className={`${cellClasses} font-bold`}>{step.document}</th>
             <td className={cellClasses}>{step.signers}</td>
             <td className={cellClasses}>{step.procedure}</td>
           </tr>)}</tbody>
           <tfoot>
-            <tr><th scope="row" className={`${cellClasses} text-left font-bold`}>Asten · preferencial</th><td colSpan={2} className={cellClasses}>Solicite pelo botão Asten e siga o link recebido por e-mail. Aguarde o arquivamento antes de repetir o pedido. Registrar o conceito ou confirmar a entrega não dispara assinaturas automaticamente.</td></tr>
-            <tr><th scope="row" className={`${cellClasses} text-left font-bold`}>Gov.br</th><td colSpan={2} className={cellClasses}>Baixe, assine e devolva o mesmo PDF: o orientador devolve a ata com as três assinaturas e o termo com as assinaturas aplicáveis; a presidência, a declaração. O Master confere no VALIDAR/ITI e registra o arquivamento; a presidência também pode conferir a declaração.</td></tr>
+            <tr><th scope="row" className={`${cellClasses} font-bold`}>Asten · preferencial</th><td colSpan={2} className={cellClasses}>Solicite pelo botão Asten e siga o link recebido por e-mail. Aguarde o arquivamento antes de repetir o pedido. Registrar o conceito ou confirmar a entrega não dispara assinaturas automaticamente.</td></tr>
+            <tr><th scope="row" className={`${cellClasses} font-bold`}>Gov.br</th><td colSpan={2} className={cellClasses}>Baixe, assine e devolva o mesmo PDF: o orientador devolve a ata com as três assinaturas e o termo com as assinaturas aplicáveis; a presidência, a declaração. O Master confere no VALIDAR/ITI e registra o arquivamento; a presidência também pode conferir a declaração.</td></tr>
           </tfoot>
         </table>
       </div>

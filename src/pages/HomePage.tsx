@@ -2622,7 +2622,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               {/* Header with Institutional Identity */}
               <div className="portal-modal-header border-b px-5 py-3.5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Lock size={32} className="shrink-0 text-white" aria-hidden="true" />
+                  <Lock className="h-4 w-4 shrink-0 text-white" aria-hidden="true" />
                   <div>
                     <h3 className="font-black text-sm leading-tight text-white">
                       {loginPopupConfig.title || 'Acesso ao Portal do TCC'}

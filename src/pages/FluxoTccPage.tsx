@@ -93,7 +93,7 @@ const phases = [
   },
   {
     n: 6,
-    title: 'Assinar o termo, se houver',
+    title: 'Assinar o termo de autorização',
     actor: 'Todos os autores e orientador',
     icon: FileSignature,
     where: 'Documentos administrativos → Termo de Autorização e Publicação',
@@ -104,7 +104,7 @@ const phases = [
       'Pelo Gov.br, o orientador reúne todas as assinaturas no mesmo PDF, assina por último e devolve o arquivo completo. O Master registra a conferência antes do arquivamento.',
     ],
     gate: 'Termo assinado e arquivado, quando houver publicação autorizada.',
-    result: 'Escolhas de publicação formalizadas; declaração da banca liberada quando as demais entregas estiverem resolvidas.',
+    result: 'Quando houver publicação autorizada, o arquivamento do termo libera a etapa da declaração da banca.',
   },
   {
     n: 7,
