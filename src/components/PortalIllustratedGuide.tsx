@@ -30,7 +30,7 @@ export const guideActivities: GuideActivity[] = [
     done: 'Sua conta aparece no Portal e o processo exibe as ações correspondentes ao seu papel.',
     help: [
       'Código não recebido: confira o endereço digitado e a pasta de spam. Aguarde o prazo exibido antes de solicitar outro código.',
-      'Código vencido: solicite um novo e use o mais recente. Não envie códigos ou credenciais em sugestões de melhoria.',
+      'Se a janela fechou ou a página recarregou, informe o mesmo e-mail e clique em Já tenho um código. Se o código venceu, solicite outro e use o mais recente.',
       'Acesso ou TCC indisponível: confira se o e-mail está autorizado e se é o mesmo do cadastro do processo. Alunos sem cadastro inicial podem consultar a secretaria.',
     ],
   },
@@ -287,7 +287,7 @@ export function PortalIllustratedGuide({role = 'aluno'}: {role?: string}) {
   const selectedId = selected.role === role ? selected.id : '';
   const current = available.find(item => item.id === selectedId) || available[0];
   if (!current) return null;
-  const imageUrl = `/manual/${current.imageId}.jpg?v=2026-11-05-guia`;
+  const imageUrl = `/manual/${current.imageId}.jpg?v=2026-11-05-acesso`;
   const index = available.indexOf(current);
   const selectScreen = (next: number) => {
     if (available[next]) setSelected({role, id: available[next].id});
@@ -323,7 +323,7 @@ export function PortalIllustratedGuide({role = 'aluno'}: {role?: string}) {
           </figure>
         </div>
         {current.relatedImages?.map(related => {
-          const url = `/manual/${related.id}.jpg?v=2026-11-05-guia`;
+          const url = `/manual/${related.id}.jpg?v=2026-11-05-acesso`;
           return <details key={related.id} className="portal-guide-related mt-3">
             <summary className="cursor-pointer text-xs font-semibold">Ver exemplo: {related.caption}</summary>
             <a href={url} target="_blank" rel="noreferrer" className="portal-guide-image-link mt-3" aria-label={`Ampliar imagem: ${related.caption}`}><img src={url} alt={related.caption} loading="lazy" className="portal-guide-image" /></a>

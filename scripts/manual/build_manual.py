@@ -41,7 +41,7 @@ pages=[
  ('Informe seu e-mail e clique em “Enviar código”.','Use o endereço cadastrado no TCC e autorizado no Portal. Ele pode ser institucional ou pessoal. Confira a grafia antes de enviar.')],note='O código chega por e-mail. Não feche o Portal: você voltará a esta janela para digitá-lo.'),
  dict(tag='ACESSO • PARA TODOS',title='2. Entrar com o código recebido',image='codigo-acesso',image_h=205,steps=[
  ('Abra a mensagem na sua caixa de e-mail.','Procure o código de seis números. Se não encontrar, consulte Spam ou Lixo eletrônico.'),
- ('Volte à aba do Portal.','Digite o código no campo “Código de confirmação” e clique em “Entrar”. O código expira em 10 minutos; use o mais recente.'),
+ ('Volte à aba do Portal.','Se a janela fechou, informe o mesmo e-mail e clique em “Já tenho um código”. Digite os seis números e clique em “Entrar”. Use o código mais recente, válido por 10 minutos.'),
  ('Abra “Meus TCCs” e clique no código do trabalho.','Se veio de um link por e-mail, o Portal pode manter a ficha do TCC aberta. Confira se a conta exibida é a sua.')],note='O código serve para acessar o Portal. O link de assinatura do Asten é outra mensagem, enviada em uma etapa posterior. Ambos são pessoais.'),
  dict(tag='ALUNO • CADASTRO',title='3. Cadastrar o trabalho',image='cadastro',image_h=167,steps=[
  ('Entre em “Meus TCCs” e clique em “Cadastrar TCC”.','Somente um autor inicia o cadastro. Se o TCC já existe, abra seu código; não cadastre o mesmo trabalho novamente.'),
