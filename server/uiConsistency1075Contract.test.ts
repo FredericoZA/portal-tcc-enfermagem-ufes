@@ -7,7 +7,7 @@ const read = (path: string) => readFileSync(new URL('../' + path, import.meta.ur
 test('modal de acesso preserva o cabeçalho institucional e usa cadeado', () => {
   const home = read('src/pages/HomePage.tsx');
   assert.match(home, /portal-modal-header border-b/);
-  assert.match(home, /<Lock size=\{32\}[^>]*aria-hidden="true"/);
+  assert.match(home, /<Lock className="h-4 w-4[^"]*"[^>]*aria-hidden="true"/);
   assert.doesNotMatch(home, /<NursingEmblemLogo/);
   assert.doesNotMatch(home, />🎓<|currentTheme\.headerBg|cardBgColor \?/);
   assert.doesNotMatch(home, /aria-label="Fechar acesso ao portal"/);
