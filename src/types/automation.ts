@@ -76,6 +76,25 @@ export interface WorkflowActionExecution {
   error?: string;
 }
 
+export interface WorkflowSimulationScenario {
+  publication?: boolean;
+  secondAuthor?: boolean;
+  locationOutcome?: 'CONFIRMED' | 'PENDING' | 'UNAVAILABLE';
+  locationConfirmed?: boolean;
+  failActionId?: string;
+  ataSignaturePending?: boolean;
+}
+
+export interface WorkflowSimulationResult {
+  simulated: true;
+  externalEffects: false;
+  events: Array<{ event: string; role: string; state: string; details?: WorkflowActionExecution[]; issues?: WorkflowValidationIssue[] }>;
+  emails: Array<{ to: string[]; subject: string; text: string; html?: string; attachments: string[] }>;
+  note: string;
+}
+
+export type WorkflowTraceEntry = Pick<WorkflowRun, 'id' | 'protocol' | 'eventCode' | 'startedAt' | 'completedAt' | 'status' | 'studioRevision'> & { failedActions: number };
+
 export interface WorkflowRun {
   studioRevision?: number;
   sourceDataRevision?: number;

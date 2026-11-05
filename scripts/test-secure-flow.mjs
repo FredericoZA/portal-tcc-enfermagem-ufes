@@ -159,7 +159,8 @@ async function staticChecks() {
   });
 
   await check('convite usa o modelo de e-mail publicado pelo Master',()=>{
-    includesEvery(server, ['buildPublishedInvitationEmail', 'Publique o modelo de e-mail', 'mergeWorkflowVariables']);
+    includesEvery(server, ['workflowEmailTemplateId(template.id)', 'processEmailMessage({process,recipient:input.recipient', 'studio:emailStudioWithPublicImages()']);
+    assert.ok(!server.includes('officialInvitationEmail('), 'o convite ainda possui um renderizador paralelo');
     assert.ok(!server.includes('const inviteSubject='), 'o assunto do convite continua fixo no servidor');
     assert.ok(!server.includes('const inviteText='), 'o corpo do convite continua fixo no servidor');
   });
@@ -419,6 +420,10 @@ async function liveChecks() {
         workType: 'MONOGRAFIA'
       };
       const initialReopen=await request('/api/processes/demo-proc-3/repository/reopen',{method:'POST',headers:asUser('lucas.almeida@aluno.ufes.br'),body:'{}'});assert.equal(initialReopen.response.status,200,JSON.stringify(initialReopen.body));
+      for(const malformed of [{resumoSintese:{text:'Resumo'}},{palavrasChave:['Oncologia','Quimioterapia','Enfermagem','Segurança',{}]},{workType:['ARTIGO']}]){
+        const invalid=await request('/api/processes/demo-proc-3/final-data',{method:'POST',headers:asUser('lucas.almeida@aluno.ufes.br'),body:JSON.stringify({...baseFinalData,...malformed})});
+        assert.equal(invalid.response.status,400,JSON.stringify(invalid.body));
+      }
       const privateSubmission = await request('/api/processes/demo-proc-3/final-data', {
         method: 'POST', headers: asUser('lucas.almeida@aluno.ufes.br'),
         body: JSON.stringify({ ...baseFinalData, publishFullWork: false, publishExpandedAbstract: false })

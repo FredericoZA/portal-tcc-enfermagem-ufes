@@ -272,6 +272,7 @@ export interface ProcessData {
   driveFolderUrl?: string;
   driveSyncedAt?: string;
   signatureProviderPreferences?: Partial<Record<'ATA'|'TERMO'|'DECLARACAO', 'ASTEN'|'GOV_BR'>>;
+  astenSignatureIntent?: { documentType: 'ATA'|'TERMO'|'DECLARACAO'; revision: number; queuedAt: string; attemptedAt?: string };
   dataRevision: number;
   createdAt: string;
   updatedAt: string;

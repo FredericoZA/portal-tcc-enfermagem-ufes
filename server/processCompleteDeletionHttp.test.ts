@@ -86,6 +86,9 @@ test('Master deletion removes the complete local process without contacting Aste
     assert.deepEqual((await json('/api/admin/email-deliveries')).map((record:any)=>record.id),['kept-mail']);
     assert.deepEqual((await json('/api/admin/workflow-runs')).map((record:any)=>record.id),['kept-run']);
     assert.deepEqual(await json('/api/admin/process-deletions'),[]);
+    const restore=await request('/api/admin/restore-full-backup','POST',{settings,processes:[target,other]});
+    assert.equal(restore.status,409);
+    assert.equal((await restore.json()).code,'PROCESS_BACKUP_RESTORE_DELETED');
     assert.equal((await json('/api/admin/access-list')).some((entry:any)=>entry.id==='target-derived'||entry.processIds.includes(target.id)),false);
     assert.equal((await json('/api/admin/audit-logs')).some((entry:any)=>entry.processId===target.id||entry.entityId===target.id||entry.entityId===targetJob.id),false);
     const persisted=JSON.parse(await readFile(stateFile,'utf8'));
@@ -128,11 +131,26 @@ test('Master deletion removes the complete local process without contacting Aste
     const held=await request(`/api/processes/${other.id}`,'DELETE',{confirmation:'EXCLUIR',expectedProcessId:other.id});
     assert.equal(held.status,409);
     assert.equal((await held.json()).code,'PROCESS_LEGAL_HOLD');
+    const omitHeld=await request('/api/admin/restore-full-backup','POST',{settings,processes:[target]});
+    assert.equal(omitHeld.status,409);
+    assert.equal((await omitHeld.json()).code,'PROCESS_LEGAL_HOLD');
+    const omitActive=await request('/api/admin/restore-full-backup','POST',{settings,processes:[other]});
+    assert.equal(omitActive.status,409);
+    assert.equal((await omitActive.json()).code,'PROCESS_BACKUP_RESTORE_WOULD_DELETE');
     assert.deepEqual(await json('/api/admin/process-deletions'),[]);
     const response=await request(`/api/processes/${target.id}`,'DELETE',{confirmation:'EXCLUIR',expectedProcessId:target.id,deleteFiles:true,clearHistory:true});
     assert.equal(response.status,200,await response.clone().text());
     const result=await response.json();assert.equal(result.cleanupPending,false);assert.deepEqual(result.cleanupErrors,[]);assert.deepEqual(result.manualAstenEnvelopes,['external-envelope-manual']);assert.match(result.message,/manualmente.*Asten/i);
     await verify();
     await stop();await start();await verify();
+    const backupWithoutHold={settings,processes:[other],legalHolds:[]};
+    const preview=await request('/api/admin/restore-full-backup','POST',backupWithoutHold);
+    assert.equal(preview.status,200,await preview.clone().text());
+    const {confirmHash}=await preview.json();
+    const confirmed=await request('/api/admin/restore-full-backup','POST',{...backupWithoutHold,confirmHash});
+    assert.equal(confirmed.status,200,await confirmed.clone().text());
+    const heldAfterRestore=await request(`/api/processes/${other.id}`,'DELETE',{confirmation:'EXCLUIR',expectedProcessId:other.id});
+    assert.equal(heldAfterRestore.status,409);
+    assert.equal((await heldAfterRestore.json()).code,'PROCESS_LEGAL_HOLD');
   }finally{await stop();await rm(directory,{recursive:true,force:true});}
 });

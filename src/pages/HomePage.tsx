@@ -527,6 +527,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [loginResendAt,setLoginResendAt]=useState(0);
   const [loginResendSeconds,setLoginResendSeconds]=useState(0);
   const loginRequestInFlight=useRef(false);
+  const loginEmailField=useRef<HTMLInputElement>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const loginDestinationRef=useRef('');
   useEffect(()=>{
@@ -946,7 +947,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       const session=await apiClient.verifyLoginCode(emailToUse,loginCodeInput);
       await switchUser(emailToUse);
       setShowLoginModal(false);
-      setLoginStep('email');setLoginCodeInput('');setLoginMessage('');
+      setLoginStep('email');setLoginCodeInput('');setLoginMessage('');setLoginResendAt(0);setLoginResendSeconds(0);
       if(readProcessLink(window.location.search))return;
       if (session.globalRoles?.length) {
         onNavigate('coordenador');
@@ -2654,8 +2655,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   {loginStep==='email'&&bootstrapStatus?.bootstrapMasterConfigured&&bootstrapStatus.google.oauthConfigured&&!bootstrapStatus.google.connected&&<div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900"><strong>Primeira ativação do portal</strong><p className="mt-1 leading-5">Antes do primeiro código, o Master definido na implantação precisa autorizar a conta Google que enviará os e-mails.</p><button type="button" onClick={()=>{window.location.href='/api/integrations/google/oauth/start?returnTo=/?google=connected';}} className="mt-2 rounded-lg bg-slate-700 px-3 py-2 font-black text-white hover:bg-slate-800">Autorizar Google e continuar</button></div>}
 
                   <label className="block text-xs font-bold text-slate-800">E-mail
-                    <input type="email" required disabled={loginStep==='code'||loginWorking} value={loginEmailInput} onChange={event=>setLoginEmailInput(event.target.value)} autoComplete="email" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm disabled:bg-slate-100" placeholder="nome@exemplo.com"/>
+                    <input ref={loginEmailField} type="email" required disabled={loginStep==='code'||loginWorking} value={loginEmailInput} onChange={event=>setLoginEmailInput(event.target.value)} autoComplete="email" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm disabled:bg-slate-100" placeholder="nome@exemplo.com"/>
                   </label>
+                  {loginStep==='email'&&<button type="button" className="portal-popup-secondary-action" disabled={loginWorking} onClick={()=>{
+                    if(!loginEmailField.current?.reportValidity())return;
+                    setLoginMessage('');setLoginCodeInput('');setLoginStep('code');
+                  }}>Já tenho um código</button>}
                   {loginStep==='code'&&<label className="block text-xs font-bold text-slate-800">Código de confirmação
                     <input autoFocus type="text" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={loginCodeInput} onChange={event=>setLoginCodeInput(event.target.value.replace(/\D/g,'').slice(0,6))} autoComplete="one-time-code" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-3 text-center text-xl font-black tracking-[0.35em]" placeholder="000000"/>
                   </label>}

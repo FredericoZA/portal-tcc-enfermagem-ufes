@@ -18,6 +18,7 @@ import { portalConfirm, portalPrompt } from '../services/portalDialogs';
 import { retryAfterPortalReauthentication } from '../services/reauthentication';
 import { upgradeStudioDraft } from '../utils/studioUpgrade';
 import { OperationalDesignerPanel } from './OperationalDesignerPanel';
+import { WorkflowSimulationPanel } from './WorkflowSimulationPanel';
 import {REGISTRATION_QUESTIONS} from '../utils/operationalConfig';
 import { registrationQuestions, operationalConfig as resolveOperationalConfig } from '../utils/operationalConfig';
 import { evaluateStudioCondition } from '../utils/courseStudioValidator';
@@ -1627,6 +1628,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
 
         {activeTab === 'workflow' && (
           <div className="space-y-3 pb-5" data-portal-workflow-editor="true">
+            <div className="px-3"><WorkflowSimulationPanel studio={currentStudioSnapshotRef.current!} showTrace /></div>
             <section
               className="overflow-hidden rounded-lg"
               style={{ backgroundColor: 'var(--portal-surface-panel)' }}

@@ -1,6 +1,7 @@
 import {withPortalOperation,requestOperationLabel} from './portalOperations';
 import { ProcessData, GlobalSettings, AuditLog, DocumentCorrectionRequest, GoogleCalendarSyncedEvent, SignatureJob, AstenIntegrationStatus } from '../types';
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
+import type { WorkflowSimulationResult, WorkflowSimulationScenario, WorkflowTraceEntry } from '../types/automation';
 import type { FeedbackEntry, FeedbackPage } from '../types/feedback';
 import type {AstenDocumentFoldersStatus,AstenDocumentFolderType} from '../types/signatures';
 import type { PresidencyQueueItem } from '../utils/coordinatorSignatureActions';
@@ -292,6 +293,7 @@ export const apiClient = {
   retryEmailDelivery:(id:string)=>fetchApi<any>(`/api/admin/email-deliveries/${encodeURIComponent(id)}/retry`,{method:'POST'}),
   recoverReservationNotices:()=>fetchApi<{checked:number;failed:number}>('/api/admin/reservation-notices/recover',{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   getWorkflowRuns:()=>fetchApi<any[]>('/api/admin/workflow-runs'),
+  getWorkflowProcessTrace:(protocol:string)=>fetchApi<WorkflowTraceEntry[]>(`/api/admin/workflow-runs?protocol=${encodeURIComponent(protocol)}`),
   getNotificationPreferences:()=>fetchApi<any>('/api/notification-preferences'),
   updateNotificationPreferences:(data:any)=>fetchApi<any>('/api/notification-preferences',{method:'PATCH',body:JSON.stringify(data)}),
   getNotifications:()=>fetchApi<any[]>('/api/notifications'),
@@ -343,12 +345,13 @@ export const apiClient = {
   getIndicators:(options:Pick<ApiRequestOptions,'signal'>={})=>fetchApi<any>('/api/public/indicators',options),
   getAdvancedAnalytics:(period='',compare='')=>fetchApi<any>(`/api/admin/analytics/advanced?${new URLSearchParams({period,compare})}`),
   downloadAdvancedAnalytics:(format:'csv'|'pdf',period='',compare='')=>downloadApiFile(`/api/admin/analytics/advanced?${new URLSearchParams({format,period,compare})}`),
-  simulateWorkflow:(studio: unknown,scenario: unknown)=>fetchApi<any>('/api/admin/workflow/simulate',{method:'POST',body:JSON.stringify({studio,scenario})}),
+  simulateWorkflow:(studio:IntegrationStudioSettings|undefined,scenario:WorkflowSimulationScenario)=>fetchApi<WorkflowSimulationResult>('/api/admin/workflow/simulate',{method:'POST',body:JSON.stringify({studio,scenario})}),
   getProcessVerifications:(id:string)=>fetchApi<any[]>(`/api/processes/${id}/verifications`),
   getPublicVerification:(code:string)=>fetchApi<any>(`/api/public/verification/${encodeURIComponent(code)}`),
   checkVerificationPdfFile:(code:string,file:File)=>verifyPublicPdfLocally(file,()=>fetchApi<PublicDocumentVerification>(`/api/public/verification/${encodeURIComponent(code)}`)),
   downloadInstitutionalDossier:(id:string,types?:string[])=>downloadApiFile(`/api/admin/processes/${encodeURIComponent(id)}/dossier${types?`?types=${encodeURIComponent(types.join(','))}`:''}`),
   getDocumentModels:()=>fetchApi<Record<string,any>>('/api/admin/models'),
+  getReferenceDocumentModelFolder:(type:string)=>fetchApi<{name:string;url:string}>(`/api/admin/models/${encodeURIComponent(type)}/reference-folder`),
   detectDocumentModelVariables:(type:string)=>fetchApi<{type:string;variables:string[];detectedAt:string}>(`/api/admin/models/${encodeURIComponent(type)}/detect-variables`,{method:'POST'}),
   uploadDocumentModelFile:(type:string,file:File)=>withDevelopmentFallback(file,async()=>{
     const staged=await stageFile(file,{purpose:'DOCUMENT_MODEL'});

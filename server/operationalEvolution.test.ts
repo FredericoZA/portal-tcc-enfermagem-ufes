@@ -49,7 +49,16 @@ test('a declaração espera o Termo vigente e a Ata arquivados',()=>{
 });
 test('simulação percorre papéis sem efeitos externos e espera confirmação de local',async()=>{
   const hold=await simulateWorkflow(studio(),{locationConfirmed:false});assert.equal(hold.emails.length,1);assert.match(hold.events.at(-1)!.state,/BLOQUEADO/);
+  const denied=await simulateWorkflow(studio(),{locationOutcome:'UNAVAILABLE'});
+  assert.deepEqual(denied.events.map(event=>event.event),['TCC_CREATED','LOCATION_UNAVAILABLE','RESERVATION_RESCHEDULED']);
+  assert.equal(denied.externalEffects,false);
   const full=await simulateWorkflow(studio(),{secondAuthor:true});assert.equal(full.externalEffects,false);assert.equal(full.events.find(e=>e.event==='ATA_ASSINADA')?.role,'Orientador e dois examinadores');assert.match(full.events.find(e=>e.event==='ATA_ASSINADA')!.state,/TRÊS ASSINATURAS/);assert.ok(full.events.some(e=>e.event==='PUBLICATION_CLEARED'));assert.ok(full.events.some(e=>e.event==='PROCESS_COMPLETED'));
+  const pending=await simulateWorkflow(studio(),{ataSignaturePending:true});
+  assert.equal(pending.events.at(-1)!.event,'SIGNATURE_PENDING');
+  assert.ok(!pending.events.some(event=>event.event==='REPOSITORY_SUBMITTED'));
+  const privateDelivery=await simulateWorkflow(studio(),{publication:false});
+  assert.ok(!privateDelivery.events.some(event=>event.event==='TERMO_ASSINADO'));
+  assert.ok(privateDelivery.events.some(event=>event.event==='PROCESS_COMPLETED'));
   const failure=await simulateWorkflow(studio(),{failActionId:'doc-CONVITE'});assert.equal(failure.emails.length,1);assert.equal(failure.events.at(-1)!.state,'PARTIAL_FAILURE');
 });
 test('catálogo resolve sinônimos e respeita datas de vigência',()=>{

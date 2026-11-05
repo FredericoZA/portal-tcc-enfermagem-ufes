@@ -5,6 +5,7 @@ import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {PDFDocument} from 'pdf-lib';
+import JSZip from 'jszip';
 import {INITIAL_SETTINGS} from '../src/services/demoSeed';
 import {courseStudioFixture} from './fixtures/courseStudioFixture';
 import {withOperationalCatalog} from '../src/utils/studioOperationalCatalog';
@@ -18,13 +19,25 @@ test('settings survive restart and control the real form, registration schema an
  const studio=withOperationalCatalog(courseStudioFixture());studio.emailTemplates!.find(t=>t.id==='email-reserva')!.recipient='department@example.invalid';
  studio.formTemplates!.push({id:'form-reserva-aluno',title:'Cadastro inicial',targetRole:'Aluno',description:'Preencha os participantes.',questions:registrationQuestions(studio)});
  const p=studioSampleProcess();const settings={...INITIAL_SETTINGS,integrationStudio:studio,emailConfig:{roomReservationDepartmentEmail:'department@example.invalid'}};
- await writeFile(path.join(directory,'portal-state.json'),JSON.stringify({settings,processes:[p],memberships:[],emailDeliveries:[],signatureJobs:[]}));
+ const priorRun={id:'workflow-fixture',processId:p.id,protocol:p.protocolo,studioRevision:1,eventCode:'TCC_CREATED',startedAt:p.createdAt,completedAt:p.createdAt,status:'COMPLETED',actions:[],issues:[],actorEmail:'private@example.invalid',eventVariables:{PRIVATE_FIELD:'private'}};
+ await writeFile(path.join(directory,'portal-state.json'),JSON.stringify({settings,processes:[p],memberships:[],emailDeliveries:[],signatureJobs:[],workflowRuns:[priorRun]}));
  let child:ChildProcess|undefined;
- const start=async()=>{child=spawn(process.execPath,['--import','tsx','server.ts'],{cwd:process.cwd(),env:{...process.env,NODE_ENV:'development',PORT:String(port),HOST:'127.0.0.1',PORTAL_DATA_DIR:directory,PORTAL_PERSISTENCE_PROVIDER:'local_file',PORTAL_ALLOW_INSECURE_DEMO_AUTH:'true',PORTAL_ALLOW_LOCAL_OTP_STORE:'true',PORTAL_ALLOW_LOCAL_SECRET_STORE:'true',PORTAL_SESSION_SECRET:secret,PORTAL_OTP_PEPPER:'parity-fixture-otp-secret-0123456789',PORTAL_OTP_DELIVERY_MODE:'log',ASTEN_INTEGRATION_ENABLED:'false',SUPABASE_URL:'',SUPABASE_SECRET_KEY:'',SUPABASE_SERVICE_ROLE_KEY:'',VERCEL:''},stdio:'ignore'});const until=Date.now()+20000;while(true){try{if((await fetch(base+'/api/health')).ok)break;}catch{}if(Date.now()>until||child.exitCode!==null)throw Error('Fixture did not start');await new Promise(r=>setTimeout(r,100));}};
+ const start=async()=>{child=spawn(process.execPath,['--import','tsx','server.ts'],{cwd:process.cwd(),env:{...process.env,NODE_ENV:'development',PORT:String(port),HOST:'127.0.0.1',PORTAL_DATA_DIR:directory,PORTAL_PERSISTENCE_PROVIDER:'local_file',PORTAL_ALLOW_INSECURE_DEMO_AUTH:'true',PORTAL_ALLOW_LOCAL_OTP_STORE:'true',PORTAL_ALLOW_LOCAL_SECRET_STORE:'true',PORTAL_TEST_DOCUMENT_RENDERER:'true',PORTAL_SESSION_SECRET:secret,PORTAL_OTP_PEPPER:'parity-fixture-otp-secret-0123456789',PORTAL_OTP_DELIVERY_MODE:'log',ASTEN_INTEGRATION_ENABLED:'false',SUPABASE_URL:'',SUPABASE_SECRET_KEY:'',SUPABASE_SERVICE_ROLE_KEY:'',VERCEL:''},stdio:'ignore'});const until=Date.now()+20000;while(true){try{if((await fetch(base+'/api/health')).ok)break;}catch{}if(Date.now()>until||child.exitCode!==null)throw Error('Fixture did not start');await new Promise(r=>setTimeout(r,100));}};
  const stop=async()=>{if(child&&child.exitCode===null){const ended=new Promise(r=>child!.once('exit',r));child.kill('SIGTERM');await ended;}};
  const headers={'content-type':'application/json','x-demo-user-email':'master@portal.local'};
  try{
   await start();const changed=structuredClone(studio);changed.revision=2;
+  const tracePath=base+'/api/admin/workflow-runs?protocol='+encodeURIComponent(p.protocolo.toLowerCase());
+  assert.equal((await fetch(tracePath)).status,401);
+  assert.equal((await fetch(tracePath,{headers:{...headers,'x-demo-user-email':'student@example.invalid'}})).status,403);
+  const trace=await fetch(tracePath,{headers});assert.equal(trace.status,200);assert.equal(trace.headers.get('Cache-Control'),'private, no-store');
+  assert.deepEqual(await trace.json(),[{id:priorRun.id,protocol:p.protocolo,studioRevision:1,eventCode:'TCC_CREATED',startedAt:p.createdAt,completedAt:p.createdAt,status:'COMPLETED',failedActions:0}]);
+  const simulationPath=base+'/api/admin/workflow/simulate';
+  assert.equal((await fetch(simulationPath,{method:'POST',headers:{'content-type':'application/json'},body:'{}'})).status,401);
+  const simulated=await fetch(simulationPath,{method:'POST',headers,body:JSON.stringify({scenario:{locationOutcome:'UNAVAILABLE'}})});
+  assert.equal(simulated.status,200);const walkthrough=await simulated.json();
+  assert.equal(walkthrough.externalEffects,false);
+  assert.deepEqual(walkthrough.events.map((event:{event:string})=>event.event),['TCC_CREATED','LOCATION_UNAVAILABLE','RESERVATION_RESCHEDULED']);
   changed.formTemplates!.find(t=>t.id==='form-reserva-departamento')!.title='Responder ao pedido de espaço';changed.formTemplates!.find(t=>t.id==='form-reserva-departamento')!.description='Verifique a disponibilidade antes da decisão.';
   changed.formDesigns['form-reserva-aluno']={templateId:'form-reserva-aluno',introText:'Instrução configurada para os participantes.',submitLabel:'Solicitar o agendamento',confirmationMessage:'Pedido registrado.',showProgress:false,logoUrl:'',universityLogoUrl:'',bannerImageUrl:''};
   changed.receiptDesign={confirmedTitle:'Comprovante da resposta ao agendamento',declinedTitle:'Registro de indisponibilidade'};
@@ -40,7 +53,7 @@ test('settings survive restart and control the real form, registration schema an
   assert.equal((await fetch(base+'/api/admin/receipts/preview',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({decision:'CONFIRMED'})})).status,401);
   assert.equal((await fetch(base+'/api/admin/receipts/preview',{method:'POST',headers:{...headers,'x-demo-user-email':'student@example.invalid'},body:JSON.stringify({decision:'CONFIRMED'})})).status,403);
   const preview=await fetch(base+'/api/admin/receipts/preview',{method:'POST',headers,body:JSON.stringify({decision:'CONFIRMED',receiptDesign:changed.receiptDesign})});assert.equal(preview.status,200);const bytes=Buffer.from((await preview.json()).contentBase64,'base64');const pdf=await PDFDocument.load(bytes);assert.match(pdf.getTitle()||'',/sem validade/);const {getDocument}=await import('pdfjs-dist/legacy/build/pdf.mjs');const task=getDocument({data:new Uint8Array(bytes),verbosity:0});const rendered=await task.promise;try{const text=(await(await rendered.getPage(1)).getTextContent()).items.map((item:any)=>item.str||'').join(' ');assert.ok(text.includes(changed.receiptDesign.confirmedTitle.toLocaleUpperCase('pt-BR')));assert.match(text,/RESERVA CONFIRMADA/);}finally{await task.destroy();}
-  const state=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(state.processes.length,1);assert.equal(state.emailDeliveries.length,0);assert.equal(state.signatureJobs.length,0);assert.equal(state.processes[0].defesa.localStatus,'PENDENTE');
+  const state=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(state.processes.length,1);assert.equal(state.emailDeliveries.length,0);assert.equal(state.signatureJobs.length,0);assert.equal(state.processes[0].defesa.localStatus,'PENDENTE');assert.deepEqual(state.workflowRuns,[priorRun]);
   await stop();await start();const reopened=await(await fetch(base+'/api/settings',{headers})).json();assert.equal(reopened.integrationStudio.receiptDesign.confirmedTitle,changed.receiptDesign.confirmedTitle);assert.match(await(await fetch(base+'/api/reservation-confirmation/'+token)).text(),/Responder ao pedido de espaço/);
   const versions=await(await fetch(base+'/api/admin/studio/versions',{headers})).json();
   assert.deepEqual(versions.map((item:any)=>[item.revision,item.active]),[[3,true],[1,false]]);
@@ -71,6 +84,28 @@ test('settings survive restart and control the real form, registration schema an
   assert.match(testDelivery.renderedText,/portal\.example\.invalid/);
   assert.deepEqual(afterTest.processes,state.processes);
   assert.deepEqual(afterTest.workflowRuns,state.workflowRuns);
+
+  const referencePath=base+'/api/admin/models/COMPROVANTES_RESERVA';
+  const visitorHeaders={...headers,'x-demo-user-email':'student@example.invalid'};
+  assert.equal((await fetch(`${referencePath}/reference-folder`)).status,401);
+  assert.equal((await fetch(`${referencePath}/reference-folder`,{headers:visitorHeaders})).status,403);
+  assert.equal((await fetch(`${base}/api/admin/models/ATA/reference-folder`,{headers})).status,404);
+  const uploadReference=async(fileName:string,variable:string,requestHeaders=headers)=>{
+    const zip=new JSZip();
+    zip.file('word/document.xml',`<w:document><w:body><w:p><w:r><w:t>{{${variable}}}</w:t></w:r></w:p></w:body></w:document>`);
+    return fetch(referencePath,{method:'POST',headers:requestHeaders,body:JSON.stringify({fileName,contentBase64:await zip.generateAsync({type:'base64'})})});
+  };
+  assert.equal((await uploadReference('proibido.docx','VARIAVEL_TESTE',visitorHeaders)).status,403);
+  const firstReference=await uploadReference('primeiro.docx','PROTOCOLO');assert.equal(firstReference.status,201,await firstReference.clone().text());
+  const secondReference=await uploadReference('segundo.docx','DEFESA_LOCAL');assert.equal(secondReference.status,201,await secondReference.clone().text());
+  const referenceCatalog=await(await fetch(`${base}/api/admin/models`,{headers})).json();
+  assert.equal(referenceCatalog.COMPROVANTES_RESERVA.activeVersion,2);
+  assert.deepEqual(referenceCatalog.COMPROVANTES_RESERVA.versions.map((version:{version:number})=>version.version),[1,2]);
+  const restoredReference=await fetch(`${referencePath}/versions/1/restore`,{method:'POST',headers});assert.equal(restoredReference.status,200,await restoredReference.clone().text());
+  assert.equal((await restoredReference.json()).fileName,'primeiro.docx');
+  const withReference=await(await fetch(`${base}/api/settings`,{headers})).json();
+  assert.equal(withReference.integrationStudio.docTemplates.some((template:{type:string})=>template.type==='COMPROVANTES_RESERVA'),false);
+  assert.equal(withReference.integrationStudio.receiptDesign?.confirmedTitle,restored.studio.receiptDesign?.confirmedTitle);
 
  }finally{await stop();await rm(directory,{recursive:true,force:true});}
 });

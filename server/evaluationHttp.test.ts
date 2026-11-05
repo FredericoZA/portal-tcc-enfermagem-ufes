@@ -26,14 +26,18 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
   const memberships = DEMO_MEMBERSHIPS.filter(m => m.processId === p.id);
   const archived=structuredClone(p);archived.id='fixture-reopen-archived';archived.status='AGUARDANDO_DADOS_FINAIS';archived.avaliacao.status='CONCLUIDO';archived.acervo.firstSubmittedAt=undefined;
   const archivedJob={id:'fixture-archived-ata',processId:archived.id,documentType:'ATA',provider:'ASTEN',documentVersion:1,sourceDataRevision:archived.dataRevision,status:'ARCHIVED',driveSignedFileId:'fixture-signed-ata',signers:[]};
-  await writeFile(path.join(directory, 'portal-state.json'), JSON.stringify({ settings, processes: [p, local,archived],signatureJobs:[archivedJob], memberships: [...memberships, ...[local,archived].flatMap(process=>memberships.map(m => ({ ...m, id: m.id + '-'+process.id, processId: process.id })))] }));
+  const auto={...structuredClone(p),id:'fixture-asten-intent',protocolo:'TESTE-ASTEN-AUTO'};
+  const resumed={...structuredClone(archived),id:'fixture-asten-sent',protocolo:'TESTE-ASTEN-SENT',astenSignatureIntent:{documentType:'ATA' as const,revision:archived.dataRevision,queuedAt:'2026-01-01T00:00:00Z'}};
+  const sentJob={...archivedJob,id:'fixture-sent-ata',processId:resumed.id,status:'SENT',driveSignedFileId:undefined,providerEnvelopeId:'12345'};
+  const originalJobs=[archivedJob,sentJob];
+  await writeFile(path.join(directory, 'portal-state.json'), JSON.stringify({ settings, processes: [p,local,archived,auto,resumed],signatureJobs:originalJobs, memberships: [...memberships, ...[local,archived,auto,resumed].flatMap(process=>memberships.map(m => ({ ...m, id: m.id + '-'+process.id, processId: process.id })))] }));
   const port = 41000 + Math.floor(Math.random() * 1000);
   const child = spawn(process.execPath, ['--import', 'tsx', 'server.ts'], {
     cwd: fileURLToPath(new URL('..', import.meta.url)),
     env: { ...process.env, NODE_ENV: 'development', PORT: String(port), PORTAL_DATA_DIR: directory,
       PORTAL_SESSION_SECRET: 'test-session-secret-0123456789-abcdef', PORTAL_OTP_PEPPER: 'test-otp-pepper-0123456789-abcdef',
       PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'true', PORTAL_ALLOW_LOCAL_OTP_STORE: 'true', PORTAL_ALLOW_LOCAL_SECRET_STORE: 'true',
-      PORTAL_TEST_DOCUMENT_RENDERER:'true', PORTAL_OTP_DELIVERY_MODE: 'log', ASTEN_INTEGRATION_ENABLED: 'false', PORTAL_PERSISTENCE_PROVIDER: 'local_file',
+      PORTAL_TEST_DOCUMENT_RENDERER:'true', PORTAL_OTP_DELIVERY_MODE: 'log', ASTEN_INTEGRATION_ENABLED: 'false', ASTEN_AUTOMATIC_WORKFLOW_ENABLED:'true', PORTAL_PERSISTENCE_PROVIDER: 'local_file',
       SUPABASE_URL: '', SUPABASE_SERVICE_ROLE_KEY: '', SUPABASE_SECRET_KEY: '',
     }, stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -138,7 +142,8 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     assert.equal(disk.studioFormSubmissions[0].formSnapshot.questions[0].label, 'Escolha');
     assert.equal(disk.settings.portalAppearance, undefined);
     assert.equal(disk.processes[0].avaliacao.notaFinal, undefined);
-    assert.deepEqual(disk.signatureJobs,[archivedJob],'Registering evaluation must preserve the historical job and not create an Asten or Gov.br job.');
+    assert.deepEqual(disk.signatureJobs,JSON.parse(JSON.stringify(originalJobs)),'Registering evaluation must preserve the historical jobs and not create an Asten or Gov.br job.');
+    assert.equal(disk.processes[0].astenSignatureIntent,undefined,'a opção Gov.br não enfileira Asten');
     assert.equal((disk.formArchiveJobs||[]).some((job:any)=>job.formType==='AVALIACAO'),false,'A avaliação integrada não gera outro formulário em PDF.');
     const reopenRoute=`/api/processes/${p.id}/reopen`,reason={reason:'Correção do parecer registrado na defesa.'};
     assert.equal((await request(reopenRoute,p.aluno1.email,reason)).status,403);
@@ -157,8 +162,27 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     assert.equal(historicalSaved.body.avaliacao.documentRevision,historicalSaved.body.dataRevision);
     const staleArchiveUpload=await request(`/api/processes/${archived.id}/files/trabalho-completo`,p.aluno1.email,{});
     assert.equal(staleArchiveUpload.body.code,'ATA_SIGNATURE_REQUIRED','a ata assinada antes da reabertura não libera o repositório');
+    const autoRoute=`/api/processes/${auto.id}/evaluation`;
+    const autoDraft=await fetch(base+autoRoute+'/draft',{method:'PUT',headers:{'content-type':'application/json','x-demo-user-email':p.orientador.email},body:JSON.stringify(draftInput)});
+    assert.equal(autoDraft.status,200);
+    assert.equal((await request(`/api/processes/${auto.id}`)).body.astenSignatureIntent,undefined,'rascunho não cria intenção de envio');
+    const autoBody={...body,signatureProvider:'ASTEN'};
+    const autoPreview=await request(autoRoute+'/preview',p.orientador.email,autoBody);
+    assert.equal(autoPreview.status,200);
+    const autoResult=await request(autoRoute,p.orientador.email,{...autoBody,previewToken:autoPreview.body.previewToken});
+    assert.ok([200,202].includes(autoResult.status),JSON.stringify(autoResult.body));
+    assert.equal(autoResult.body.astenSignatureIntent.documentType,'ATA');
+    assert.equal(autoResult.body.astenSignatureIntent.revision,autoResult.body.avaliacao.documentRevision);
+    assert.equal((await request(autoRoute,p.orientador.email,{...autoBody,previewToken:autoPreview.body.previewToken})).status,409);
+    for(let attempt=0;attempt<2;attempt++){
+      const maintenance=await request('/api/admin/workflow/maintenance',master,{});
+      assert.equal(maintenance.status,200,JSON.stringify(maintenance.body));
+      assert.ok(maintenance.body.configurationErrors.some((item:string)=>item.includes(auto.protocolo)&&item.includes('Asten')));
+    }
     const finalDisk=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));
-    assert.deepEqual(finalDisk.signatureJobs,[archivedJob],'the signed previous ATA remains immutable after corrected evaluation');
+    assert.deepEqual(finalDisk.signatureJobs,JSON.parse(JSON.stringify(originalJobs)),'a manutenção sem integração não envia nem duplica uma assinatura conhecida');
+    assert.equal(finalDisk.processes.find((item:any)=>item.id===resumed.id).astenSignatureIntent,undefined,'retomada reconhece envelope já encaminhado');
+    assert.ok(finalDisk.processes.find((item:any)=>item.id===auto.id).astenSignatureIntent.attemptedAt,'intenção persiste para próxima tentativa');
 
   } finally {
     if (child.exitCode === null) {

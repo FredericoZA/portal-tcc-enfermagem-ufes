@@ -1,6 +1,8 @@
 import {defenseEndAt} from '../../src/utils/defenseSchedule';
+import {isEmailHeaderAddress} from '../../src/utils/emailAddress';
 import {DocumentModelError} from '../../src/utils/documentModelErrors';
-import { createHash, createHmac, timingSafeEqual } from 'crypto';
+import {isReferenceDocumentModel, type ReferenceDocumentModelType} from '../../src/utils/referenceDocumentModels';
+import { createHash, createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { loadIntegrationSecret, saveIntegrationSecret } from './integrationSecrets';
 import { GmailDeliveryError } from './gmailDeliveryError';
 import {isUnsafePrivateContainerPermission,listDriveFilePermissions} from './googleDriveArchive';
@@ -71,6 +73,11 @@ interface DriveFile {
 
 const GOOGLE_DOC_MIME = 'application/vnd.google-apps.document';
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const FOLDER_MIME = 'application/vnd.google-apps.folder';
+const REFERENCE_MODEL_FOLDERS: Record<ReferenceDocumentModelType, readonly string[]> = {
+  COMPROVANTES_RESERVA: ['06_COMPORVANTES_RESERVA', '06_COMPROVANTES_RESERVA'],
+  DECLARACAO_COMPARECIMENTO: ['07_DECLARACAO_COMPARECIMENTO', '107 — Declaração Comparecimento']
+};
 
 function extractDriveFileId(value: string): string {
   const input = String(value || '').trim();
@@ -305,7 +312,7 @@ async function getGoogleWorkspaceCredentials(): Promise<{accessToken: string; se
     grant_type: 'refresh_token'
   }));
   const email = String(stored.metadata.email || '').trim().toLowerCase();
-  return {accessToken: tokens.access_token, sender: /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email) ? email : undefined};
+  return {accessToken: tokens.access_token, sender: isEmailHeaderAddress(email) ? email : undefined};
 }
 
 export async function getGoogleWorkspaceAccessToken(): Promise<string> {
@@ -392,13 +399,22 @@ async function findChild(accessToken: string, name: string, parentId?: string, m
   if (mimeType) filters.push(`mimeType = '${escapeDriveQuery(mimeType)}'`);
   const params = new URLSearchParams({
     q: filters.join(' and '),
-    fields: 'files(id,name,mimeType,webViewLink,parents)',
+    fields: 'nextPageToken,files(id,name,mimeType,webViewLink,parents)',
     pageSize: '10',
     spaces: 'drive'
   });
-  const result = await driveJson<{ files?: DriveFile[] }>(accessToken, `${DRIVE_API}/files?${params}`);
-  if ((result.files || []).length > 1) throw new Error(`Há mais de um item chamado "${name}" no mesmo local do Drive.`);
-  return result.files?.[0] || null;
+  const matches: DriveFile[] = [];
+  const seenTokens = new Set<string>();
+  do {
+    const result = await driveJson<{files?: DriveFile[]; nextPageToken?: string}>(accessToken, `${DRIVE_API}/files?${params}`);
+    matches.push(...(result.files || []));
+    if (matches.length > 1) throw new Error(`Há mais de um item chamado "${name}" no mesmo local do Drive.`);
+    if (!result.nextPageToken) return matches[0] || null;
+    if (seenTokens.has(result.nextPageToken)) throw new Error('A lista de pastas do Drive não pôde ser confirmada.');
+    seenTokens.add(result.nextPageToken);
+    params.set('pageToken', result.nextPageToken);
+  } while (seenTokens.size < 20);
+  throw new Error('A lista de pastas do Drive não pôde ser confirmada.');
 }
 
 async function ensureFolder(accessToken: string, name: string, parentId?: string): Promise<{ file: DriveFile; created: boolean }> {
@@ -421,6 +437,29 @@ export async function verifyPrivateDriveFolder(accessToken:string,folderId:strin
   const permissions=await listDriveFilePermissions(accessToken,folderId);
   const broad=permissions.filter(isUnsafePrivateContainerPermission);
   if(broad.length)throw new Error('A pasta do portal está compartilhada por link, domínio, grupo ou permissão não reconhecida. Remova essas permissões no Google Drive antes de armazenar documentos sigilosos.');
+}
+
+export async function resolveReferenceDocumentModelFolder(accessToken: string, type: ReferenceDocumentModelType, configuredRootId?: string, forWrite = false) {
+  const rootId = String(configuredRootId || process.env.PORTAL_DRIVE_ROOT_FOLDER_ID || '').trim();
+  if (!/^[a-zA-Z0-9_-]{10,}$/.test(rootId)) throw new Error('Configure a pasta raiz do Google Drive para cadastrar documentos de referência.');
+  const root = await driveJson<DriveFile & {trashed?: boolean}>(accessToken, `${DRIVE_API}/files/${encodeURIComponent(rootId)}?fields=id,mimeType,trashed&supportsAllDrives=true`);
+  if (root.id !== rootId || root.mimeType !== FOLDER_MIME || root.trashed !== false) throw new Error('A raiz configurada no Drive precisa ser uma pasta ativa.');
+  await verifyPrivateDriveFolder(accessToken, rootId);
+
+  const documents = await findChild(accessToken, DRIVE_FOLDER_NAMES.models, rootId, FOLDER_MIME);
+  if (!documents || documents.name !== DRIVE_FOLDER_NAMES.models || documents.mimeType !== FOLDER_MIME || !documents.parents?.includes(rootId) || !/^[a-zA-Z0-9_-]{10,}$/.test(documents.id)) throw new Error('A pasta 01_DOCUMENTOS não foi localizada na raiz configurada do Portal.');
+  await verifyPrivateDriveFolder(accessToken, documents.id);
+
+  const candidates = (await Promise.all(REFERENCE_MODEL_FOLDERS[type].map(name => findChild(accessToken, name, documents.id, FOLDER_MIME)))).filter(folder => folder !== null);
+  if (candidates.length !== 1) throw new Error(candidates.length ? 'Há mais de uma pasta de referência correspondente. Confira a organização do Drive.' : 'A pasta de referência não foi localizada em 01_DOCUMENTOS no Google Drive.');
+  const folder = candidates[0];
+  if (!REFERENCE_MODEL_FOLDERS[type].includes(folder.name) || !folder.parents?.includes(documents.id) || folder.mimeType !== FOLDER_MIME || !/^[a-zA-Z0-9_-]{10,}$/.test(folder.id)) throw new Error('O destino dos documentos de referência não pôde ser validado.');
+  await verifyPrivateDriveFolder(accessToken, folder.id);
+  if (forWrite) {
+    const writable = await driveJson<DriveFile & {capabilities?: {canAddChildren?: boolean}}>(accessToken, `${DRIVE_API}/files/${encodeURIComponent(folder.id)}?fields=id,capabilities(canAddChildren)&supportsAllDrives=true`);
+    if (writable.id !== folder.id || writable.capabilities?.canAddChildren !== true) throw new Error('A conta Google do Portal precisa ter permissão para gravar na pasta de referência.');
+  }
+  return {id: folder.id, name: folder.name, url: `https://drive.google.com/drive/folders/${encodeURIComponent(folder.id)}`, rootFolderId: rootId};
 }
 
 /** Separate operational storage from the academic folders browsed by users. */
@@ -630,6 +669,15 @@ export async function verifyMasterDocumentModelFingerprint(input:{accessToken:st
   return current;
 }
 
+export async function verifyReferenceDocumentModelVersion(input: {type: ReferenceDocumentModelType; rootFolderId?: string; fileId: string; contentSha256: string}) {
+  const token = await getGoogleWorkspaceAccessToken();
+  const destination = await resolveReferenceDocumentModelFolder(token, input.type, input.rootFolderId);
+  const file = await driveJson<DriveFile & {trashed?: boolean}>(token, `${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,parents,mimeType,trashed&supportsAllDrives=true`);
+  if (file.id !== input.fileId || file.mimeType !== DOCX_MIME || file.trashed !== false || !file.parents?.includes(destination.id)) throw new Error('Esta versão não está na pasta privada de referência configurada.');
+  await verifyPrivateDriveFolder(token, file.id);
+  await verifyMasterDocumentModelFingerprint({accessToken: token, fileId: file.id, contentSha256: input.contentSha256});
+}
+
 export async function accessListGoogleSheetsTemplate(input:{accessToken:string;rootFolderId:string;content:Buffer}){
   const token=input.accessToken;
   await verifyPrivateDriveFolder(token,input.rootFolderId);
@@ -641,10 +689,18 @@ export async function accessListGoogleSheetsTemplate(input:{accessToken:string;r
   return {id:file.id,url:`https://docs.google.com/spreadsheets/d/${encodeURIComponent(file.id)}/copy`,created:!existing};
 }
 
-export async function publishMasterDocumentModel(input:{type:string;fileName:string;content:Buffer;rootFolderName?:string}){
+export async function publishMasterDocumentModel(input:{type:string;fileName:string;content:Buffer;rootFolderName?:string;rootFolderId?:string}){
   if(!input.content.length||input.content.length>12*1024*1024)throw new Error('O modelo deve ter entre 1 byte e 12 MB.');
   if(input.content.subarray(0,2).toString('hex')!=='504b')throw new Error('O arquivo informado não é um DOCX válido.');
   const token=await getGoogleWorkspaceAccessToken();
+  if (isReferenceDocumentModel(input.type)) {
+    const type = input.type;
+    const fingerprint = await canonicalDocxSha256(input.content);
+    const destination = await resolveReferenceDocumentModelFolder(token, type, input.rootFolderId, true);
+    const name = referenceModelFileName(type);
+    const uploaded = await uploadBinary(token, {name, parentId: destination.id, mimeType: DOCX_MIME, content: input.content, appProperties: {documentType: type, lifecycle: 'reference-model'}});
+    return await validateWrittenReferenceModel(token, uploaded, destination, fingerprint);
+  }
   const manifest=await bootstrapGoogleDriveStructure(token,{rootFolderName:input.rootFolderName});
   const {type,activeFolderId,historyFolderId}=await ensureDocumentModelFolders(token,manifest,input.type);
   for(const current of await listChildren(token,activeFolderId)){
@@ -657,18 +713,37 @@ export async function publishMasterDocumentModel(input:{type:string;fileName:str
   return {id:uploaded.id,name:uploaded.name,webViewLink:uploaded.webViewLink||`https://drive.google.com/file/d/${uploaded.id}/view`,rootFolderId:manifest.rootFolderId,...fingerprint};
 }
 
-export async function registerMasterDocumentModelFromDrive(input:{type:string;linkOrId:string;rootFolderName?:string}){
+function referenceModelFileName(type: ReferenceDocumentModelType): string {
+  return `MODELO_REFERENCIA_${type}_${randomUUID()}.docx`;
+}
+
+async function validateWrittenReferenceModel(token: string, file: DriveFile, destination: {id: string; rootFolderId: string}, expectedHash: string) {
+  if (!/^[a-zA-Z0-9_-]{10,}$/.test(file.id) || file.mimeType !== DOCX_MIME || !file.parents?.includes(destination.id)) throw new Error('O Drive não confirmou a pasta do DOCX de referência.');
+  await verifyPrivateDriveFolder(token, file.id);
+  const verified = await readDriveModelFingerprint(token, file.id);
+  if (expectedHash !== verified.contentSha256) throw new Error('O DOCX enviado ao Drive não corresponde ao arquivo original.');
+  return {id: file.id, name: file.name, webViewLink: `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`, rootFolderId: destination.rootFolderId, ...verified};
+}
+
+export async function registerMasterDocumentModelFromDrive(input:{type:string;linkOrId:string;rootFolderName?:string;rootFolderId?:string}){
   if(!existingDriveModelLinkImportEnabled()){
     throw new Error('A importação por link está desativada nesta instalação. Envie o arquivo DOCX; para habilitar links, o administrador precisa autorizar explicitamente o escopo Google Drive somente leitura.');
   }
   const sourceId=extractDriveFileId(input.linkOrId);
   const token=await getGoogleWorkspaceAccessToken();
+  const referenceType = isReferenceDocumentModel(input.type) ? input.type : undefined;
+  const referenceFolder = referenceType ? await resolveReferenceDocumentModelFolder(token, referenceType, input.rootFolderId, true) : undefined;
   const source=await driveJson<DriveFile&{trashed?:boolean;capabilities?:{canCopy?:boolean}}>(token,`${DRIVE_API}/files/${encodeURIComponent(sourceId)}?fields=id,name,mimeType,webViewLink,parents,trashed,capabilities(canCopy)&supportsAllDrives=true`);
   if(source.trashed)throw new Error('O modelo selecionado está na lixeira.');
   if(source.mimeType!==GOOGLE_DOC_MIME&&source.mimeType!==DOCX_MIME)throw new Error('O modelo deve ser um Google Docs nativo ou um arquivo DOCX.');
   if(source.capabilities?.canCopy===false)throw new Error('A conta Google conectada não pode copiar este modelo. Compartilhe o arquivo com essa conta ou envie o DOCX.');
+  if(referenceFolder){
+    if(source.id!==sourceId||source.trashed!==false||source.mimeType!==DOCX_MIME||!source.parents?.includes(referenceFolder.id))throw new Error('Para importar um DOCX de referência, use um arquivo na pasta privada exibida no Portal.');
+    await verifyPrivateDriveFolder(token,sourceId);
+  }
 
   let variables:string[]=[];
+  let referenceHash='';
   if(source.mimeType===GOOGLE_DOC_MIME){
     const document=await driveJson<Record<string,unknown>>(token,`https://docs.googleapis.com/v1/documents/${encodeURIComponent(sourceId)}?includeTabsContent=true`);
     variables=extractModelVariables(collectGoogleDocText(document).join('\n'));
@@ -677,6 +752,7 @@ export async function registerMasterDocumentModelFromDrive(input:{type:string;li
     if(!response.ok)throw new Error(`Não foi possível validar o DOCX do Drive (${response.status}).`);
     const bytes=await readBoundedResponse(response,12*1024*1024);
     if(!bytes.length||bytes.length>12*1024*1024||bytes.subarray(0,2).toString('hex')!=='504b')throw new Error('O DOCX do Drive é inválido ou ultrapassa 12 MB.');
+    if(referenceFolder)referenceHash=await canonicalDocxSha256(bytes);
     // O conteúdo será inspecionado novamente pelo motor durante a geração; aqui
     // registramos as variáveis detectáveis sem armazenar o arquivo no portal.
     const JSZip=(await import('jszip')).default;
@@ -687,6 +763,11 @@ export async function registerMasterDocumentModelFromDrive(input:{type:string;li
       pieces.push(xml.replace(/<w:tab\/?\s*>/g,'\t').replace(/<\/w:p>/g,'\n').replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&'));
     }
     variables=extractModelVariables(pieces.join('\n'));
+  }
+
+  if(referenceType&&referenceFolder){
+    const copied=await driveJson<DriveFile>(token,`${DRIVE_API}/files/${encodeURIComponent(sourceId)}/copy?fields=id,name,mimeType,parents&supportsAllDrives=true`,{method:'POST',body:JSON.stringify({name:referenceModelFileName(referenceType),parents:[referenceFolder.id],appProperties:{portal:'portal-tcc',documentType:referenceType,lifecycle:'reference-model',sourceModelId:sourceId}})});
+    return{...await validateWrittenReferenceModel(token,copied,referenceFolder,referenceHash),mimeType:copied.mimeType,variables};
   }
 
   const manifest=await bootstrapGoogleDriveStructure(token,{rootFolderName:input.rootFolderName});
@@ -747,7 +828,7 @@ export function buildGmailRawMessage(input: GmailMessageInput, boundarySeed = Da
   ].join('\r\n'):body;
   return [
     `To: ${sanitizeHeader(input.to)}`,
-    ...(input.cc?.length?[`Cc: ${input.cc.map(email=>{if(!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email))throw new Error('E-mail de cópia inválido.');return email.trim().toLowerCase();}).join(', ')}`]:[]),
+    ...(input.cc?.length?[`Cc: ${input.cc.map(email=>{if(!isEmailHeaderAddress(email))throw new Error('E-mail de cópia inválido.');return email.trim().toLowerCase();}).join(', ')}`]:[]),
     `Subject: ${encodeMimeHeader(input.subject)}`,
     ...(input.messageId?[`Message-ID: <${sanitizeHeader(input.messageId)}>`]:[]),
     ...(input.inReplyTo?[`In-Reply-To: <${sanitizeHeader(input.inReplyTo)}>`,`References: <${sanitizeHeader(input.inReplyTo)}>`]:[]),

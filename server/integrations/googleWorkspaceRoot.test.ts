@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { bootstrapGoogleDriveStructure,ensurePortalRenderFolder,readPrivatePortalBackup,verifyPrivateDriveFolder } from './googleWorkspace';
+import { bootstrapGoogleDriveStructure,ensurePortalRenderFolder,readPrivatePortalBackup,resolveReferenceDocumentModelFolder,verifyPrivateDriveFolder } from './googleWorkspace';
 
 const rootId = 'pasta_raiz_institucional_123';
 test('destinos privados rejeitam grupos e permissões desconhecidas, preservando acesso nominal',async t=>{
@@ -48,6 +48,44 @@ test('conversões ficam dentro do Sistema e não soltas na raiz nem entre modelo
 function reply(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
+
+test('DOCX de referência encontra apenas a pasta privada existente dentro de 01_DOCUMENTOS', async t => {
+  const documentsId='pasta_de_documentos';
+  const attendanceId='pasta_comparecimento';
+  const receiptsId='pasta_de_comprovantes';
+  const folderMime='application/vnd.google-apps.folder';
+  const folder=(id:string,name:string,parentId:string)=>({id,name,parents:[parentId],mimeType:folderMime});
+  let attendanceFolders=[folder(attendanceId,'07_DECLARACAO_COMPARECIMENTO',documentsId)];
+  let broadPermission=false;
+  let writable=true;
+  t.mock.method(globalThis,'fetch',async(input:unknown,init?:RequestInit)=>{
+    assert.ok(!init?.method||init.method==='GET','A localização nunca cria ou move pastas');
+    const url=new URL(String(input));
+    if(url.pathname.endsWith('/permissions'))return reply({permissions:broadPermission&&url.pathname.includes(attendanceId)?[{type:'anyone',role:'reader'}]:[{type:'user',role:'owner'}]});
+    if(url.pathname.endsWith(`/files/${rootId}`))return reply({id:rootId,mimeType:folderMime,trashed:false});
+    if(url.pathname.endsWith(`/files/${attendanceId}`))return reply({id:attendanceId,capabilities:{canAddChildren:writable}});
+    const query=url.searchParams.get('q')||'';
+    assert.match(query,/trashed = false/);
+    if(query.includes("name = '01_DOCUMENTOS'")){
+      assert.ok(query.includes(`'${rootId}' in parents`));
+      return reply({files:[folder(documentsId,'01_DOCUMENTOS',rootId)]});
+    }
+    assert.ok(query.includes(`'${documentsId}' in parents`));
+    if(query.includes("name = '06_COMPORVANTES_RESERVA'"))return reply({files:[folder(receiptsId,'06_COMPORVANTES_RESERVA',documentsId)]});
+    return reply({files:attendanceFolders.filter(({name})=>query.includes(`name = '${name}'`))});
+  });
+  assert.deepEqual(await resolveReferenceDocumentModelFolder('fixture','DECLARACAO_COMPARECIMENTO',rootId,true),{id:attendanceId,name:'07_DECLARACAO_COMPARECIMENTO',url:`https://drive.google.com/drive/folders/${attendanceId}`,rootFolderId:rootId});
+  assert.equal((await resolveReferenceDocumentModelFolder('fixture','COMPROVANTES_RESERVA',rootId)).id,receiptsId);
+  writable=false;
+  await assert.rejects(resolveReferenceDocumentModelFolder('fixture','DECLARACAO_COMPARECIMENTO',rootId,true),/permissão para gravar/);
+  broadPermission=true;
+  await assert.rejects(resolveReferenceDocumentModelFolder('fixture','DECLARACAO_COMPARECIMENTO',rootId),/compartilhada/);
+  broadPermission=false;
+  attendanceFolders.push(folder('pasta_107_comparecimento','107 — Declaração Comparecimento',documentsId));
+  await assert.rejects(resolveReferenceDocumentModelFolder('fixture','DECLARACAO_COMPARECIMENTO',rootId),/mais de uma pasta/);
+  attendanceFolders=[folder('pasta_107_legado','107 - Legado',documentsId)];
+  await assert.rejects(resolveReferenceDocumentModelFolder('fixture','DECLARACAO_COMPARECIMENTO',rootId),/não foi localizada/);
+});
 
 test('raiz existente é reutilizada e todas as novas pastas ficam dentro dela', async (t) => {
   const created: Array<{name: string; parents: string[]}> = [];

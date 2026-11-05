@@ -1,4 +1,4 @@
-import type {ProcessData,SignatureJob} from '../../src/types';
+import type {AuditLog,ProcessData,SignatureJob} from '../../src/types';
 export interface ProcessDeletionTask {id:string;processId:string;protocol:string;rootFolderId:string;calendarId?:string;calendarCleaned?:boolean;storageCleaned?:boolean;driveCleaned?:boolean;folderId?:string;fileIds:string[];protectedIds:string[];envelopes:string[];jobIds:string[];clearHistory:boolean;deleteFiles:boolean;status:'PENDING'|'COMPLETED';errors:string[];createdAt:string;attemptCount?:number;lastAttemptAt?:string;nextRetryAt?:string;processingUntil?:string;}
 export function collectProcessDriveFileIds(...values:unknown[]):string[]{
  const ids=new Set<string>(),seen=new WeakSet<object>();
@@ -16,6 +16,26 @@ export function collectProcessDriveFileIds(...values:unknown[]):string[]{
 export function processDeletionTask(p:ProcessData,jobs:SignatureJob[],forms:Array<{processId:string;driveFileId?:string}>,options:{deleteFiles:boolean;clearHistory:boolean;rootFolderId:string;protectedIds:string[]}):ProcessDeletionTask{
  const ownJobs=jobs.filter(job=>job.processId===p.id),ownForms=forms.filter(form=>form.processId===p.id);
  return {id:`delete_${p.id}_${Date.now()}`,processId:p.id,protocol:p.protocolo,folderId:p.driveFolderId,rootFolderId:options.rootFolderId,fileIds:collectProcessDriveFileIds(p,ownJobs,ownForms),protectedIds:[...new Set(options.protectedIds.filter(Boolean))],envelopes:[...new Set(ownJobs.filter(job=>job.provider==='ASTEN').map(job=>job.providerEnvelopeId?.trim()).filter(Boolean))] as string[],jobIds:[...new Set(ownJobs.map(job=>job.id))],deleteFiles:options.deleteFiles,clearHistory:options.clearHistory,status:'PENDING',errors:[],createdAt:new Date().toISOString()};
+}
+
+export function restoresDeletedProcess(
+ restored:Pick<ProcessData,'id'|'protocolo'>[],
+ current:Pick<ProcessData,'id'>[],
+ tasks:Pick<ProcessDeletionTask,'processId'|'protocol'>[],
+ logs:Pick<AuditLog,'action'|'entityId'|'processProtocol'>[],
+):boolean {
+ const normalize=(value:string|undefined)=>String(value||'').trim().toUpperCase();
+ const currentIds=new Set(current.map(process=>process.id));
+ const deletedIds=new Set(tasks.map(task=>task.processId));
+ const deletedProtocols=new Set(tasks.map(task=>normalize(task.protocol)).filter(Boolean));
+ for(const log of logs){
+  if(log.action!=='EXCLUSAO_PROCESSO_TCC')continue;
+  const id=/^delete_(.+)_\d+$/.exec(log.entityId)?.[1];
+  if(id)deletedIds.add(id);
+  const protocol=normalize(log.processProtocol);
+  if(protocol)deletedProtocols.add(protocol);
+ }
+ return restored.some(process=>!currentIds.has(process.id)&&(deletedIds.has(process.id)||deletedProtocols.has(normalize(process.protocolo))));
 }
 
 const maxAutomaticDeletionAttempts = 7;

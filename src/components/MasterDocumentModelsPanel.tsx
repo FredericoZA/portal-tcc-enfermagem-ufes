@@ -1,5 +1,6 @@
 import {mergeStudioDraft} from '../utils/studioDraftMerge';
 import {syncCatalogTemplates,syncCatalogColumns} from '../utils/documentCatalogSync';
+import {isReferenceDocumentModel, REFERENCE_DOCUMENT_MODEL_LABELS} from '../utils/referenceDocumentModels';
 import {saveStudioAutomatically} from '../services/studioAutosave';
 import {DocumentFilePreview} from './DocumentFilePreview';
 import { portalConfirm } from '../services/portalDialogs';
@@ -14,7 +15,7 @@ const RESERVATION_RECEIPTS = 'COMPROVANTES_RESERVA';
 const ATTENDANCE_DECLARATION = 'DECLARACAO_COMPARECIMENTO';
 const BASE_SLOTS: Array<[string, string]> = [
   ['CONVITE', 'Carta-convite'], ['ATA', 'Ata de defesa'], ['TERMO', 'Termo de autorização para publicação'], ['DECLARACAO', 'Declaração de participação na banca'],
-  [RESERVATION_RECEIPTS, 'Comprovantes de reserva'], [ATTENDANCE_DECLARATION, 'Declaração de comparecimento']
+  ...Object.entries(REFERENCE_DOCUMENT_MODEL_LABELS) as Array<[string, string]>
 ];
 
 const normalizeModelKey = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 48);
@@ -72,6 +73,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   useEffect(()=>()=>{(Object.values(previewUrlsRef.current) as string[]).forEach(url=>{if(url.startsWith('blob:'))URL.revokeObjectURL(url);});},[]);
   const [samplePreviewLoading, setSamplePreviewLoading] = useState('');
   const [selectedType, setSelectedType] = useState('CONVITE');
+  const [referenceFolders,setReferenceFolders]=useState<Record<string,{name:string;url:string}>>({});
   const studioAutosaveReadyRef=useRef(false);
   const studioAutosaveInFlightRef=useRef(false);
   const studioAutosavePendingRef=useRef(false);
@@ -217,7 +219,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
     if (file.type !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || !file.name.toLowerCase().endsWith('.docx')) { setMessage('Envie um arquivo DOCX válido.'); return; }
     if (file.size > 12 * 1024 * 1024) { setMessage('O arquivo ultrapassa o limite de 12 MB.'); return; }
     setWorking(type); setMessage('');
-    try { await apiClient.uploadDocumentModelFile(type, file); setPendingSlots(current => current.filter(([slot]) => slot !== type)); setMessage('Modelo cadastrado e versionado.'); await load(); }
+    try { await apiClient.uploadDocumentModelFile(type, file); setPendingSlots(current => current.filter(([slot]) => slot !== type)); setMessage(isReferenceDocumentModel(type)?'DOCX de referência cadastrado e versionado.':'Modelo cadastrado e versionado.'); await load(); }
     catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível cadastrar o modelo.'); }
     finally { setWorking(''); }
   };
@@ -246,7 +248,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const importLink = async (type: string) => {
     const link = (links[type] || '').trim(); if (!link) { setMessage('Informe o link ou ID do modelo no Google Drive.'); return; }
     setWorking(type); setMessage('');
-    try { await apiClient.importDocumentModelFromDrive(type, link); setLinks(current => ({ ...current, [type]: '' })); setPendingSlots(current => current.filter(([slot]) => slot !== type)); setMessage('Modelo copiado, validado e versionado.'); await load(); }
+    try { await apiClient.importDocumentModelFromDrive(type, link); setLinks(current => ({ ...current, [type]: '' })); setPendingSlots(current => current.filter(([slot]) => slot !== type)); setMessage(isReferenceDocumentModel(type)?'DOCX de referência copiado, validado e versionado.':'Modelo copiado, validado e versionado.'); await load(); }
     catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível importar o modelo.'); }
     finally { setWorking(''); }
   };
@@ -254,7 +256,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const restore = async (type: string, version: number) => {
     if (!(await portalConfirm(`Restaurar a versão ${version} deste modelo?`))) return;
     setWorking(`${type}-${version}`);
-    try { await apiClient.restoreDocumentModelVersion(type, version); await load(); setMessage(`Versão ${version} restaurada como modelo ativo.`); }
+    try { await apiClient.restoreDocumentModelVersion(type, version); await load(); setMessage(isReferenceDocumentModel(type)?`Versão ${version} selecionada como referência.`:`Versão ${version} restaurada como modelo ativo.`); }
     catch (error) { setMessage(error instanceof Error ? error.message : 'Não foi possível restaurar a versão.'); }
     finally { setWorking(''); }
   };
@@ -316,7 +318,18 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const hasFile=Boolean(model?.driveFileId);
   const integrityReady=Boolean(model?.configured&&model?.contentSha256);
   const deleting=working===`delete-${type}`;
-  const generatedByPortal=type===RESERVATION_RECEIPTS||type===ATTENDANCE_DECLARATION;
+  const referenceOnly=isReferenceDocumentModel(type);
+  const referenceFolder=referenceFolders[type];
+  const verifyReferenceFolder=async()=>{
+    setWorking(`folder-${type}`);setMessage('');
+    try{
+      const folder=await apiClient.getReferenceDocumentModelFolder(type);
+      setReferenceFolders(current=>({...current,[type]:folder}));
+    }catch(error){
+      setReferenceFolders(current=>{const next={...current};delete next[type];return next;});
+      setMessage(error instanceof Error?error.message:'Não foi possível conferir a pasta no Drive.');
+    }finally{setWorking('');}
+  };
   const downloadAttendance=async()=>{
     setWorking(ATTENDANCE_DECLARATION);setMessage('');
     try{await downloadBlankAttendanceDeclaration();}
@@ -327,7 +340,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   return <section className="portal-master-models-catalog min-h-0 bg-[var(--portal-surface-panel)] pb-0" data-portal-document-direct-editor="true">
     <SettingsWorkspaceHeaderPortal>
       <button type="button" onClick={()=>setShowNewModel(value=>!value)} className="portal-toolbar-icon-button" title="Criar outro modelo" aria-label="Novo modelo"><Plus className="h-3.5 w-3.5"/></button>
-      <SettingsWorkspaceSelector icon={FileText} aria-label="Selecionar documento" title={String(generatedByPortal?label:model?.label||label)} value={type} onChange={setSelectedType}>
+      <SettingsWorkspaceSelector icon={FileText} aria-label="Selecionar documento" title={String(referenceOnly?label:model?.label||label)} value={type} onChange={setSelectedType}>
         {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{slotType===RESERVATION_RECEIPTS||slotType===ATTENDANCE_DECLARATION?slotLabel:models[slotType]?.label||slotLabel}</option>)}
       </SettingsWorkspaceSelector>
     </SettingsWorkspaceHeaderPortal>
@@ -353,14 +366,14 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
       <p className="text-xs text-slate-700">Modelo em branco gerado pelo Portal para preenchimento manual. O mesmo PDF está disponível no menu lateral.</p>
       <button type="button" disabled={Boolean(working)} onClick={()=>void downloadAttendance()} className={action}><FileText className="h-3.5 w-3.5"/>{working===ATTENDANCE_DECLARATION?'Gerando…':'Baixar modelo em PDF'}</button>
     </article>}
-    {!generatedByPortal&&<article className="mt-2 overflow-hidden rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)]">
+    <article className="mt-2 overflow-hidden rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 p-3">
         <div className="min-w-0">
-          <strong className="block truncate text-[12px] text-slate-900">{model?.label||label}</strong>
+          <strong className="block truncate text-[12px] text-slate-900">{referenceOnly?'DOCX de referência':model?.label||label}</strong>
           <span className="block truncate text-[9px] text-slate-500">{hasFile?`${model.fileName} · v${model.activeVersion||1}`:'Aguardando DOCX'}{model?.variables?.length?` · ${model.variables.length} variáveis`:''}</span>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-1.5">
-          {hasFile&&['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)&&<button type="button" onClick={()=>void generateSamplePreview(type)} disabled={samplePreviewLoading===type} className="portal-toolbar-icon-button disabled:opacity-40" title="Ver modelo demonstrativo" aria-label="Ver modelo demonstrativo" aria-busy={samplePreviewLoading===type}>{samplePreviewLoading===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Eye className="h-3.5 w-3.5"/>}</button>}
+          {hasFile&&(['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)||model.driveFileId.startsWith('local_model_'))&&<button type="button" onClick={()=>void generateSamplePreview(type)} disabled={samplePreviewLoading===type} className="portal-toolbar-icon-button disabled:opacity-40" title={referenceOnly?'Ver DOCX de referência':'Ver modelo demonstrativo'} aria-label={referenceOnly?'Ver DOCX de referência':'Ver modelo demonstrativo'} aria-busy={samplePreviewLoading===type}>{samplePreviewLoading===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Eye className="h-3.5 w-3.5"/>}</button>}
           <button type="button" onClick={()=>documentInputRef.current?.click()} disabled={Boolean(working)} className="portal-toolbar-icon-button disabled:opacity-40" title={hasFile?'Substituir documento':'Adicionar documento'} aria-label={hasFile?'Substituir documento':'Adicionar documento'}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}</button>
           <input ref={documentInputRef} type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" aria-label="Arquivo DOCX do modelo" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/>
           <button type="button" onClick={()=>void removeModel(type,String(model?.label||label))} disabled={Boolean(working)} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-40" title="Excluir somente este documento" aria-label={`Excluir o documento ${model?.label||label}`}>{deleting?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Trash2 className="h-3.5 w-3.5"/>}</button>
@@ -369,9 +382,14 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
       </div>
 
       <div className="space-y-3 p-3">
+        {referenceOnly&&<div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
+          <p className="w-full">Cadastre e versione o DOCX para consulta da administração. Os PDFs continuam sendo gerados pelos modelos do Portal.</p>
+          <button type="button" onClick={()=>void verifyReferenceFolder()} disabled={Boolean(working)} className={action}>{working===`folder-${type}`?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Link2 className="h-3.5 w-3.5"/>}Conferir pasta no Drive</button>
+          {referenceFolder&&<a href={referenceFolder.url} target="_blank" rel="noreferrer" className={action} aria-label={`Abrir pasta ${referenceFolder.name} no Drive`}>{referenceFolder.name}</a>}
+        </div>}
         {(linkImportEnabled||!hasFile)&&<div className="space-y-2 rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] p-2" aria-label="Gerenciar arquivo do modelo">
           {linkImportEnabled&&<div className="flex gap-1.5">
-            <input aria-label={`Link do modelo ${label}`} value={links[type]||''} onChange={event=>setLinks(current=>({...current,[type]:event.target.value}))} placeholder="Link ou ID do Drive" className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px]"/>
+            <input aria-label={`Link do modelo ${label}`} value={links[type]||''} onChange={event=>setLinks(current=>({...current,[type]:event.target.value}))} placeholder={referenceOnly?'Link de um DOCX na pasta de referência':'Link ou ID do Drive'} className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[10px]"/>
             <button type="button" onClick={()=>void importLink(type)} disabled={Boolean(working)||!(links[type]||'').trim()} className={action}><Link2 className="h-3 w-3"/>Importar</button>
           </div>}
           <label className={`${action} cursor-pointer`}>{working===type?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileUp className="h-3.5 w-3.5"/>}{hasFile?'Substituir DOCX':'Enviar DOCX'}<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={Boolean(working)} onChange={event=>{void upload(type,event.target.files?.[0]);event.currentTarget.value='';}}/></label>
@@ -379,10 +397,13 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
 
         <div className="flex flex-wrap gap-1.5">
           {hasFile&&model?.driveFileUrl&&<a href={model.driveFileUrl} target="_blank" rel="noreferrer" className={action} title="Abrir modelo no Google Drive"><Eye className="h-3.5 w-3.5"/>Visualizar modelo original</a>}
-          {hasFile&&<button type="button" onClick={()=>void detectVariables(type)} disabled={working===`detect-${type}`} className={action}>{working===`detect-${type}`?<Loader2 className="h-3 w-3 animate-spin"/>:<Sparkles className="h-3 w-3"/>}Atualizar variáveis</button>}
+          {hasFile&&!referenceOnly&&<button type="button" onClick={()=>void detectVariables(type)} disabled={working===`detect-${type}`} className={action}>{working===`detect-${type}`?<Loader2 className="h-3 w-3 animate-spin"/>:<Sparkles className="h-3 w-3"/>}Atualizar variáveis</button>}
         </div>
 
-        <section className="border-t border-[var(--portal-border)] pt-3" aria-label="Variáveis do documento">
+        {referenceOnly?<section className="border-t border-[var(--portal-border)] pt-3 text-xs" aria-label="Variáveis do DOCX de referência">
+          <h4 className="font-bold">Variáveis encontradas no arquivo</h4>
+          {model?.variables?.length?<ul className="mt-2 flex flex-wrap gap-2">{(model.variables as string[]).map(variable=><li key={variable}><code>{variable}</code></li>)}</ul>:<p className="mt-2 text-slate-600">{hasFile?'Nenhuma variável foi encontrada.':'As variáveis encontradas aparecerão após o envio do DOCX.'}</p>}
+        </section>:<section className="border-t border-[var(--portal-border)] pt-3" aria-label="Variáveis do documento">
           {model?.variables?.length
             ? <div className="space-y-1.5">{(model.variables as string[])
               .filter((variable,index,all)=>all.findIndex(other=>normalizeVariableKey(other)===normalizeVariableKey(variable))===index)
@@ -399,7 +420,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
                 </div>;
               })}</div>
             : <p className="rounded-lg border border-dashed border-slate-300 bg-white p-3 text-[9px] text-slate-500">{hasFile?'Nenhuma variável foi detectada neste arquivo. Use “Atualizar variáveis”.':'As variáveis aparecerão aqui depois do envio do DOCX.'}</p>}
-        </section>
+        </section>}
 
 
 
@@ -408,7 +429,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
           <div className="mt-1 space-y-1">{[...model.versions].reverse().map((version:any)=><div key={version.version} className="flex items-center justify-between gap-2 text-[8.5px]"><span className="truncate"><strong>v{version.version}</strong> · {version.fileName}</span>{version.version!==model.activeVersion&&version.contentSha256&&<button type="button" onClick={()=>void restore(type,version.version)} className={action}>Restaurar</button>}</div>)}</div>
         </details>}
       </div>
-    </article>}
+    </article>
     {loading&&<p className="px-3 pb-2 pt-2 text-[9px] text-slate-500">Consultando modelos…</p>}
   </section>;
 };
