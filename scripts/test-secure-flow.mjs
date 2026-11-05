@@ -175,7 +175,8 @@ async function staticChecks() {
   await check('Supabase usa commit transacional com revisão otimista e projeções normalizadas',()=>{
     includesEvery(supabaseRuntime, ['/rest/v1/rpc/portal_commit_runtime_state', 'expected_revision', 'portal_runtime_capabilities', 'transactionalRuntimeReady']);
     includesEvery(transactionalMigration, ['for update', "errcode='40001'", 'portal_project_runtime_state', 'portal_runtime_commits', 'portal_signature_jobs', 'portal_email_deliveries', 'portal_audit_events']);
-    assert.ok(server.includes('incluindo a outbox transacional Asten v6'), 'produção não bloqueia a ausência do runtime seguro v6');
+    assert.match(server, /if \(!databaseStatus\.transactionalRuntimeReady\) \{[\s\S]{0,500}throw Object\.assign/, 'produção não bloqueia a ausência do runtime transacional');
+    includesEvery(supabaseRuntime, ['payload?.asten_transactional_outbox===true', 'Number(payload?.schema_version)>=6']);
     assert.ok(outboxMigration.includes("'outcome','UNCERTAIN'"), 'resultado ambíguo da Asten não fica bloqueado contra recriação');
     assert.ok(!server.includes('const queued = remotePersistenceQueue;'), 'a resposta ainda captura uma fila antiga antes de a rota agendar o próprio commit');
     assert.match(server, /res\.json = \(\(body: unknown\) => \{[\s\S]{0,700}remotePersistenceQueue\.then\(\(\) => originalJson\(body\)\)/, 'resposta de escrita não aguarda a fila vigente no momento do envio');
