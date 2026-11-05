@@ -12,7 +12,7 @@ const ETAPAS_CONFIG: { code: ProcessEtapa; label: string; description: string }[
   { code: 'AGENDAMENTO', label: 'Agendamento', description: 'Data, horário e local da defesa em confirmação.' },
   { code: 'CONVITE', label: 'Convite e Banca', description: 'Banca definida e convite encaminhado aos participantes.' },
   { code: 'DEFESA', label: 'Defesa', description: 'Apresentação do Trabalho de Conclusão de Curso.' },
-  { code: 'AVALIACAO', label: 'Avaliação', description: 'Parecer e registros da avaliação da defesa.' },
+  { code: 'AVALIACAO', label: 'Conceito e Ata', description: 'Registro do conceito deliberado pela banca e da ata da defesa.' },
   { code: 'ASSINATURA', label: 'Assinaturas', description: 'Documentos encaminhados para assinatura eletrônica.' },
   { code: 'DOCUMENTOS', label: 'Documentos', description: 'Documentos finais gerados, assinados, enviados ao repositório e arquivados.' },
   { code: 'CONCLUIDO', label: 'Concluído', description: 'Fluxo acadêmico e documental finalizado.' },

@@ -21,18 +21,17 @@ export const guideActivities: GuideActivity[] = [
     id: 'acesso', title: 'Entrar com o e-mail do processo', roles: ['aluno', 'orientador', 'examinador'], imageId: 'acesso',
     imageCaption: 'Janela de acesso por e-mail. O código é pessoal e não deve ser compartilhado.',
     steps: [
-      'No menu lateral, clique em Entrar no Portal. Se veio de um e-mail do TCC, use a janela de acesso aberta sobre a ficha.',
-      'A secretaria autoriza previamente os alunos na lista de acesso, normalmente pelo e-mail institucional da UFES. Quem ainda não tem autorização não pode entrar na área do usuário; solicitar um código não cria um cadastro.',
-      'Ao concluir o cadastro do TCC, o autor vincula os demais participantes pelos e-mails informados. Orientador, coorientador e examinadores passam a acessar os trabalhos aos quais estão vinculados, conforme seu papel, inclusive com e-mail externo à UFES.',
-      'Informe o e-mail autorizado e solicite o código. Digite os seis dígitos recebidos nesse endereço para concluir o acesso. O endereço precisa estar ativo; a administração pode autorizar exceções ao e-mail institucional.',
-      'Use o mesmo endereço registrado como autor, orientador ou examinador. Depois do acesso, abra Meus TCCs ou continue no trabalho e na aba do link recebido.',
-      'Sem entrar, você pode consultar os dados públicos. Entrar libera apenas as ações e os documentos permitidos ao seu vínculo.',
+      'No menu lateral, selecione Entrar no Portal.',
+      'Informe o e-mail autorizado ou vinculado ao seu TCC. A secretaria libera o acesso inicial dos alunos. Os demais participantes acessam os trabalhos conforme seu vínculo.',
+      'Clique em Enviar código e digite os seis números recebidos por e-mail. Guarde o código para uso pessoal.',
+      'Após entrar, abra Meus TCCs para localizar o trabalho ou continue na ficha aberta pelo link que recebeu.',
+      'Sem login, consulte as informações públicas. As ações disponíveis após o acesso dependem do seu papel no processo.',
     ],
     done: 'Sua conta aparece no Portal e o processo exibe as ações correspondentes ao seu papel.',
     help: [
       'Código não recebido: confira o endereço digitado e a pasta de spam. Aguarde o prazo exibido antes de solicitar outro código.',
       'Código vencido: solicite um novo e use o mais recente. Não envie códigos ou credenciais em sugestões de melhoria.',
-      'TCC não aparece: confira se o e-mail do cadastro é o mesmo do acesso e informe o protocolo à comissão.',
+      'Acesso ou TCC indisponível: confira se o e-mail está autorizado e se é o mesmo do cadastro do processo. Alunos sem cadastro inicial podem consultar a secretaria.',
     ],
   },
   {
@@ -69,8 +68,8 @@ export const guideActivities: GuideActivity[] = [
     ],
   },
   {
-    id: 'agenda', title: 'Escolher ou alterar a reserva', roles: ['aluno', 'orientador'], imageId: 'confirmacao',
-    imageCaption: 'Alteração de reserva em Dados do processo, disponível ao autor e ao orientador enquanto a etapa permitir. Um novo pedido exige outro aceite.',
+    id: 'agenda', title: 'Escolher ou alterar a reserva', roles: ['aluno'], imageId: 'confirmacao',
+    imageCaption: 'Alteração de reserva em Dados do processo, disponível aos autores enquanto a etapa permitir.',
     steps: [
       'Na última etapa do cadastro, escolha um único local e informe data e horário. Para auditório e sala de reuniões, a homologação cabe ao departamento. Para outro local, informe o nome exato: ele aparecerá nos documentos e o orientador receberá o pedido.',
       'Considere mapa de salas, aulas, eventos, reservas e horários de uso do prédio. A consulta prévia pode evitar retrabalho; o Portal não controla os agendamentos externos.',
@@ -102,21 +101,32 @@ export const guideActivities: GuideActivity[] = [
     ],
   },
   {
+    id: 'reserva-orientador', title: 'Conferir a reserva e o convite', roles: ['orientador'], imageId: 'documentos',
+    imageCaption: 'Confira o comprovante e a carta-convite em Documentos administrativos.',
+    steps: [
+      'Abra Dados do processo e confira data, horário e local com os autores.',
+      'Para auditório ou sala de reuniões, acompanhe a homologação do departamento. Se o pedido for para outro local, confira a disponibilidade com o espaço escolhido e use o botão de aceite ou recusa no e-mail de solicitação.',
+      'Confira o comprovante e a carta-convite em Documentos administrativos. Se a proposta precisar mudar, combine os novos dados com os autores para que solicitem outra reserva.',
+    ],
+    done: 'A reserva atual foi confirmada e as informações da defesa no convite estão corretas.',
+    help: ['Divergência após o bloqueio de edição: informe o protocolo e os dados corretos à comissão.'],
+  },
+  {
     id: 'avaliacao', title: 'Registrar o conceito e conferir a ata', roles: ['orientador'], imageId: 'avaliacao',
     imageCaption: 'Conceito e Ata: preenchimento pelo orientador. A escolha da assinatura acontece em outra aba.',
     relatedImages: [{id: 'ata-previa', caption: 'Conferência da prévia: confirme os dados antes de registrar o conceito e continuar nos documentos.'}],
     steps: [
       'Entre com o e-mail do orientador, abra o TCC e a aba Conceito e Ata. O registro é liberado com local confirmado, convite enviado e a partir do horário da defesa.',
       'Selecione Aprovado, Aprovado com ressalva ou Reprovado e preencha o Parecer da banca. Gerar rascunho de parecer fornece um texto-base fixo: revise-o conforme o que a banca decidiu.',
-      'Neste Portal, registre o conceito e a documentação. Faça a avaliação e lance a nota no Portal do Professor, em professor.ufes.br.',
-      'Clique em Visualizar ata. Confira os dados e o texto da prévia, marque a confirmação de conferência e clique em Registrar avaliação e ir para documentos.',
+      'Registre o conceito e o parecer deliberados pela banca. Se houve ressalvas, descreva-as no parecer. Lance notas e frequência no Portal do Professor, em professor.ufes.br.',
+      'Clique em Visualizar ata. Confira os dados e o texto da prévia, marque a confirmação de conferência e clique em Registrar conceito e ata e ir para documentos.',
       'O Portal abre Documentos administrativos. O registro não envia uma assinatura automaticamente: escolha Asten ou Gov.br na caixa da ata.',
     ],
     done: 'O conceito e o parecer foram registrados; a ata está pronta para o orientador solicitar a assinatura em Documentos administrativos.',
     help: [
       'Registro indisponível: confira o horário da defesa, a confirmação do local, o envio do convite e se está na conta do orientador.',
       'Prévia incorreta: corrija o preenchimento antes de confirmar. A prévia por si só não registra o conceito.',
-      'Reabrir avaliação só aparece para orientador e Master enquanto permitido. A primeira entrega final bloqueia a reabertura, mesmo se a entrega for reaberta depois.',
+      'Reabrir conceito e ata só aparece enquanto o registro puder ser corrigido. A primeira entrega final bloqueia a reabertura, mesmo se a entrega for reaberta depois.',
     ],
   },
   {
@@ -257,7 +267,7 @@ export const guideActivities: GuideActivity[] = [
 
 export const guideActivityOrder: Record<GuideRole, string[]> = {
   aluno: ['acesso', 'cadastro', 'ficha', 'agenda', 'confirmacao', 'repositorio', 'documentos', 'assinatura-gov', 'sugestoes'],
-  orientador: ['acesso', 'ficha', 'agenda', 'avaliacao', 'documentos', 'assinatura-gov', 'sugestoes'],
+  orientador: ['acesso', 'ficha', 'reserva-orientador', 'avaliacao', 'documentos', 'assinatura-gov', 'sugestoes'],
   examinador: ['acesso', 'ficha', 'assinatura-examinador', 'documentos', 'assinatura-gov', 'sugestoes'],
   visitante: ['consulta-publica', 'local-publico', 'repositorio-publico', 'legados', 'sugestoes'],
 };
@@ -278,7 +288,7 @@ export function PortalIllustratedGuide({role = 'aluno'}: {role?: string}) {
   const selectedId = selected.role === role ? selected.id : '';
   const current = available.find(item => item.id === selectedId) || available[0];
   if (!current) return null;
-  const imageUrl = `/manual/${current.imageId}.jpg?v=2026-11-04-identidade-ufes`;
+  const imageUrl = `/manual/${current.imageId}.jpg?v=2026-11-05-revisao`;
   const index = available.indexOf(current);
   const selectScreen = (next: number) => {
     if (available[next]) setSelected({role, id: available[next].id});
@@ -299,7 +309,7 @@ export function PortalIllustratedGuide({role = 'aluno'}: {role?: string}) {
         </div>
         <div className="portal-guide-content mt-3">
           <div className="portal-guide-instructions min-w-0">
-            <ol className="my-0 list-decimal space-y-2 pl-5 text-sm leading-6">{current.steps.map(step => <li key={step}><GuideText text={step} /></li>)}</ol>
+            <ol className="my-0 list-decimal space-y-2 pl-5 text-sm leading-6 sm:text-base">{current.steps.map(step => <li key={step}><GuideText text={step} /></li>)}</ol>
             <p className="portal-guide-result mt-3 text-xs leading-5"><strong>Como saber que terminou:</strong> {current.done}</p>
             <details key={`${role}-${current.id}`} className="portal-guide-help mt-3 text-xs leading-5">
               <summary className="cursor-pointer font-semibold">Dúvidas desta atividade</summary>
@@ -314,7 +324,7 @@ export function PortalIllustratedGuide({role = 'aluno'}: {role?: string}) {
           </figure>
         </div>
         {current.relatedImages?.map(related => {
-          const url = `/manual/${related.id}.jpg?v=2026-11-04-identidade-ufes`;
+          const url = `/manual/${related.id}.jpg?v=2026-11-05-revisao`;
           return <details key={related.id} className="portal-guide-related mt-3">
             <summary className="cursor-pointer text-xs font-semibold">Ver exemplo: {related.caption}</summary>
             <a href={url} target="_blank" rel="noreferrer" className="portal-guide-image-link mt-3" aria-label={`Ampliar imagem: ${related.caption}`}><img src={url} alt={related.caption} loading="lazy" className="portal-guide-image" /></a>

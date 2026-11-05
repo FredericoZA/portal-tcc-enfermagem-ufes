@@ -19,6 +19,7 @@ test('documento administrativo assinado listado pela API pública não depende d
  const {process,documents}=publicProcessDetail(data),term=documents.find(document=>document.type==='TERMO')!;
  assert.equal(publicationDeclined(process),true,'a projeção dos arquivos acadêmicos não representa a emissão do termo');
  assert.deepEqual(administrativeDocumentAvailability(process,term,true),{publicationDeclined:false,available:true});
+ assert.equal(administrativeDocumentAvailability(process,{...term,driveDownloadUrl:undefined},true).available,false,'estado assinado sem PDF não habilita consulta');
  assert.equal(term.driveDownloadUrl,data.documents[0].url);
  assert.equal(process.acervo?.publishFullWork,false);assert.equal(process.acervo?.publishExpandedAbstract,false);
  assert.equal(administrativeDocumentAvailability(process,documents.find(document=>document.type==='ATA')!,true).available,false,'documento ausente da lista pública continua indisponível');
@@ -26,7 +27,7 @@ test('documento administrativo assinado listado pela API pública não depende d
 });
 test('mensagem confirma entrega, instrui sobre termo e não oculta pendência de envio',()=>{
  const process={status:'AGUARDANDO_ASSINATURA' as const,acervo:{publishFullWork:true} as any};
- assert.match(finalDeliveryMessage(process),/conferir e assinar o Termo/);
+ assert.match(finalDeliveryMessage(process),/abra o Termo de Autorização para solicitar a assinatura/);
  assert.match(finalDeliveryMessage({...process,signatureProviderPreferences:{TERMO:'GOV_BR'}}),/abra Gov.br.*baixar o PDF.*orientador deve devolver.*todas as assinaturas/);
  const pending=finalDeliveryMessage({...process,workflowPending:true});assert.match(pending,/comissão precisa resolver/);assert.doesNotMatch(pending,/DECLARACAO|O fluxo/);
  assert.match(finalDeliveryMessage({...process,acervo:{publishFullWork:false} as any}),/sem necessidade de assinatura/);

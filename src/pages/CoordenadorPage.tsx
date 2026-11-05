@@ -313,8 +313,8 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
     if (job.status === 'SENDING') return { label: 'Enviando', tone: 'border-sky-300 bg-sky-50 text-sky-900' };
     if (job.status === 'SENT') return { label: 'Aguardando assinatura', tone: 'border-blue-300 bg-blue-50 text-blue-900' };
     if (job.status === 'PARTIALLY_SIGNED') return { label: 'Parcialmente assinada', tone: 'border-indigo-300 bg-indigo-50 text-indigo-900' };
-    if (job.status === 'SIGNED') return { label: 'Assinada', tone: 'border-emerald-300 bg-emerald-50 text-emerald-900' };
-    if (job.status === 'DRIVE_SYNC_PENDING') return { label: 'Assinada · arquivando', tone: 'border-emerald-300 bg-emerald-50 text-emerald-900' };
+    if (job.status === 'SIGNED') return { label: 'Assinatura em conferência', tone: 'border-amber-300 bg-amber-50 text-amber-900' };
+    if (job.status === 'DRIVE_SYNC_PENDING') return { label: 'Conferência ou arquivamento pendente', tone: 'border-amber-300 bg-amber-50 text-amber-900' };
     if (job.status === 'ARCHIVED') return { label: 'Assinada · arquivada', tone: 'border-emerald-300 bg-emerald-50 text-emerald-900' };
     if (job.status === 'PROVIDER_ERROR') return { label: 'Falha recuperável', tone: 'border-red-300 bg-red-50 text-red-900' };
     if (job.status === 'DECLINED') return { label: 'Recusada', tone: 'border-red-300 bg-red-50 text-red-900' };

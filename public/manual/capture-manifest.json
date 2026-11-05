@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-11-04T19:23:03.878Z",
+  "capturedAt": "2026-11-05T14:52:13.779Z",
   "source": "Current compiled local UI, built from workspace; isolated temporary local_file backend",
   "synthetic": true,
   "providerTrafficBlocked": true,
@@ -24,7 +24,7 @@
       "id": "acesso",
       "file": "/manual/acesso.jpg",
       "scenario": "Acesso público por e-mail; nenhum código real solicitado",
-      "sha256": "94769b20ce9885ee5874e6ecfe96feb7c015d3e0d2e66b738d676c60bab6aa2c",
+      "sha256": "277d39cb5b5e5e7bb04c6ac6f80098fbed9ab3eedab7880f67a27af393fd9323",
       "width": 512,
       "height": 396
     },
@@ -32,32 +32,31 @@
       "id": "codigo-acesso",
       "file": "/manual/codigo-acesso.jpg",
       "scenario": "Código de seis dígitos; resposta interceptada localmente, nenhum e-mail enviado",
-      "sha256": "fd19d8ee246dfcb6a33e1ddee38b7fa92d32b592807c037a954d853880ec4845",
+      "sha256": "bbf5585fa96eab1fa2ceac32a4a0efdfbd37be055f4a3092614575445578efad",
       "width": 512,
-      "height": 522
+      "height": 568
     },
     {
       "id": "cadastro",
       "file": "/manual/cadastro.jpg",
-      "scenario": "Cadastro inicial do aluno sem CPF, matrícula ou SIAPE, e-mail bloqueado, dados fictícios",
-      "sha256": "e9e079a70190ed8a0943214c755833ac63b3d9db159bdef0762760a71775e85a",
+      "scenario": "Cadastro inicial, etapa 1, usuário de demonstração",
+      "sha256": "1cb5ee5b3dc6736f90850579884b87a29e1a9230033eebe701469c69c5433aa7",
       "width": 1152,
-      "height": 500,
-      "capturedAt": "2026-11-05T03:37:46.447Z"
+      "height": 476
     },
     {
       "id": "ficha",
       "file": "/manual/ficha.jpg",
       "scenario": "Dados do processo fictício, identidade e quatro abas atuais",
-      "sha256": "dbed7046940fe7ac2094ad6c32774fef52592c54047238f2f8883ee00c9d898b",
+      "sha256": "a5fad740e8e44773994d964d1469413f0d32330e5dc6d95fb107ce2cf0c8bb26",
       "width": 1512,
       "height": 805
     },
     {
       "id": "confirmacao",
       "file": "/manual/confirmacao.jpg",
-      "scenario": "Alteração de reserva pelo orientador, cabeçalho com protocolo e orientação de disponibilidade, sem enviar nova solicitação",
-      "sha256": "d5f282da03f5965942cd7689a172b71d7c3954c6787df2fab8636cf09fbe44ff",
+      "scenario": "Alteração de reserva pelo aluno autor, sem enviar nova solicitação",
+      "sha256": "d93e8e706e5cf34c1d1a922ca55504ad87774913c9c24cf19dff13d40af1e192",
       "width": 512,
       "height": 432
     },
@@ -65,15 +64,15 @@
       "id": "avaliacao",
       "file": "/manual/avaliacao.jpg",
       "scenario": "Conceito e parecer do orientador antes do registro; sem assinatura disparada",
-      "sha256": "f39e77966695cc4eba105ab677298170ce219eb5eef9a4bad06b114285ec991e",
+      "sha256": "5b52a40224d360cc61f5c814f877b31c9adda8913305f02a89d31d829aaf2d67",
       "width": 1512,
-      "height": 798
+      "height": 749
     },
     {
       "id": "ata-previa",
       "file": "/manual/ata-previa.jpg",
       "scenario": "Controles de conferência da prévia; PDF de teste não exibido, nenhum registro ou assinatura enviado",
-      "sha256": "fd5d8363ba415781a3f5ad2ded217c8c577d5fde4bef8609b31cd0d201b88a12",
+      "sha256": "3d708a0b5402a1acf58bdada4acb46368703eefdd39816a951fbce6e7becdb24",
       "width": 1024,
       "height": 104
     },
@@ -81,7 +80,7 @@
       "id": "documentos",
       "file": "/manual/documentos.jpg",
       "scenario": "Cinco caixas administrativas, ata aguardando assinatura, orientador autorizado",
-      "sha256": "a9cbe79a15aa8745c5f23ac246af438989e10378a40703f80e8c3b0918bffe35",
+      "sha256": "14361d24250c82beb1f610f04e37a681aa3b446fd0c5984bcd0af07405513493",
       "width": 1512,
       "height": 810
     },
@@ -97,7 +96,7 @@
       "id": "repositorio",
       "file": "/manual/repositorio.jpg",
       "scenario": "Entrega final pelo autor após ata arquivada; publicação opcional por arquivo",
-      "sha256": "34c40531023f2e6bb2cd5f650f05077c58481138b0cbc4acfca60663128685d1",
+      "sha256": "c7782f61305c9519a9d87690992992661645aade01a8e10fb8c97deb052324a1",
       "width": 1512,
       "height": 1097
     },
@@ -105,7 +104,7 @@
       "id": "entrega-confirmada",
       "file": "/manual/entrega-confirmada.jpg",
       "scenario": "Entrega final registrada: campos bloqueados e botão Editar entrega enquanto permitido",
-      "sha256": "21fd833b56663f38b21e7a9d6771362fef83e12eb56f57b1c1e55937bddf2632",
+      "sha256": "6465dba9109b31a37d0ac328dca30f1c7582e24a9f23761de84bf13f0fb534e8",
       "width": 1512,
       "height": 936
     },
@@ -113,31 +112,31 @@
       "id": "documentos-concluidos",
       "file": "/manual/documentos-concluidos.jpg",
       "scenario": "Processo fictício concluído: cinco caixas disponíveis, assinaturas representadas, nenhuma assinatura real solicitada",
-      "sha256": "4ad5f5d2e8a693dff39c0bd7ed44563caca18e6a98b1fbbceb02872d217a5f5d",
+      "sha256": "cc3df7acb2c5c058a8b66fe570c36da46adf5dc955c510907cbca78d69032533",
       "width": 1512,
-      "height": 632
+      "height": 634
     },
     {
       "id": "calendario",
       "file": "/manual/calendario.jpg",
       "scenario": "Calendário público, defesa fictícia",
-      "sha256": "7cd27b00184b4a4da2fa4720ff3df2ac99670c5facec0018d2fa7d765f90843f",
+      "sha256": "c415151dde92c5e098f2eaece0fb60db06a2552421a8f0acceecd69a92c3a1e8",
       "width": 1256,
       "height": 726
     },
     {
       "id": "consulta-publica",
       "file": "/manual/consulta-publica.jpg",
-      "scenario": "Repositório público, consulta sem login",
-      "sha256": "3278305b92d7f4eed514f800b7ace3fa4428c1d0b47ce3fe104ac29d3ba67392",
+      "scenario": "Repositório público com registro fictício, consulta sem login",
+      "sha256": "91ea9dc22919641bf68bee799fe6dcb540218d6921b9bd6831bc56632ebaf11f",
       "width": 1256,
-      "height": 162
+      "height": 202
     },
     {
       "id": "legados",
       "file": "/manual/legados.jpg",
       "scenario": "Modelo público compartilhado para registro histórico fictício",
-      "sha256": "590a6c6af9ab35e455bd79f6ead1bbce13c08afb856188421cc36cadde6fa532",
+      "sha256": "365b91eeb0fa5ad3720d29e5e4fcf951910bbc8de6f2b0b2ca9ae5b533fbc531",
       "width": 1512,
       "height": 646
     },
@@ -152,11 +151,10 @@
     {
       "id": "reserva",
       "file": "/manual/reserva.jpg",
-      "scenario": "Última etapa do cadastro: reserva e conferência sem identificadores pessoais novos, dados fictícios, sem enviar",
+      "scenario": "Última etapa do cadastro: orientações e reserva do único local, dados fictícios, sem enviar",
       "sha256": "5746177e29f935983ea515d9c8dc0cbc50f7a35725868e4b9883888ecb5308b3",
       "width": 1152,
-      "height": 1368,
-      "capturedAt": "2026-11-05T03:37:46.447Z"
+      "height": 1368
     },
     {
       "id": "presidencia",
@@ -167,6 +165,5 @@
       "height": 225
     }
   ],
-  "errors": [],
-  "updatedAt": "2026-11-05T03:37:46.447Z"
+  "errors": []
 }

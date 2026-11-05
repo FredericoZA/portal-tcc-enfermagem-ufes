@@ -4,17 +4,17 @@ import { readFileSync, existsSync } from 'node:fs';
 
 const read=(path:string)=>readFileSync(path,'utf8');
 
-test('Informações Gerais contém a Portaria UFES 310/2026 e sua transcrição para consulta',()=>{
+test('Informações Gerais apresenta LGPD e aviso de privacidade sem duplicar a transcrição normativa',()=>{
   const page=read('src/pages/InformacoesGeraisTccPage.tsx');
   assert.match(page,/Legislação e proteção de dados/);
-  assert.match(page,/Portaria Normativa GR\/Ufes nº 310/);
-  assert.match(page,/\/legislacao\/PORTARIA_NORMATIVA_GR_UFES_310_2026\.md/);
+  assert.match(page,/www2\.camara\.leg\.br\/legin\/fed\/lei\/2018\/lei-13709/);
+  assert.match(page,/href="\/privacidade\.html"/);
+  assert.doesNotMatch(page,/Transcrição para leitura|PORTARIA_NORMATIVA_GR_UFES_310|atosnormativos\.ufes\.br|gov\.br\/anpd/i);
   assert.ok(existsSync('public/legislacao/PORTARIA_NORMATIVA_GR_UFES_310_2026.md'));
   const norm=read('public/legislacao/PORTARIA_NORMATIVA_GR_UFES_310_2026.md');
   assert.match(norm,/Art\. 17\./);
   assert.match(norm,/Art\. 19\./);
   assert.match(norm,/Art\. 32\./);
-  assert.match(page,/não substituem as exigências institucionais/);
 });
 
 test('o Portal não executa analisador generativo nem motor de propostas',()=>{

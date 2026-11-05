@@ -12,13 +12,17 @@ test('HTTP: alterações reiniciam reserva, invalidam comprovante e registram re
  const second=structuredClone(p);second.id='reservation-competing';second.protocolo='TCC-2026-0999';second.defesa.startAt='2026-11-20T18:00:00Z';second.defesa.locationProof=undefined;second.defesa.local='Outro local';second.defesa.alternateLocation=undefined;
  second.aluno1.email='competing@edu.ufes.br';if(second.aluno2)second.aluno2.email='competing-two@edu.ufes.br';second.orientador.email='competing-advisor@ufes.br';if(second.coorientador)second.coorientador.email='competing-coadvisor@ufes.br';second.banca.forEach((member,index)=>member.email=`competing-examiner-${index}@ufes.br`);
  const settings={...INITIAL_SETTINGS,emailConfig:{...INITIAL_SETTINGS.emailConfig,roomReservationDepartmentEmail:'department@example.invalid'},documentModels:{CONVITE:{driveFileId:'fixture-model'}}};
- await writeFile(path.join(directory,'portal-state.json'),JSON.stringify({settings,processes:[p,second],memberships:DEMO_MEMBERSHIPS.filter(m=>m.processId===p.id),signatureJobs:[]}));
+ const memberships=DEMO_MEMBERSHIPS.filter(m=>m.processId===p.id);
+ await writeFile(path.join(directory,'portal-state.json'),JSON.stringify({settings,processes:[p,second],memberships:[...memberships,{id:'member-competing-author',email:second.aluno1.email,processId:second.id,roles:['STUDENT'],active:true}],signatureJobs:[]}));
  const port=45000+Math.floor(Math.random()*500),base=`http://127.0.0.1:${port}`;
  const child=spawn(process.execPath,['--import','tsx','server.ts'],{cwd:process.cwd(),env:{...process.env,NODE_ENV:'development',HOST:'127.0.0.1',PORT:String(port),PORTAL_PUBLIC_URL:base,PORTAL_DATA_DIR:directory,PORTAL_PERSISTENCE_PROVIDER:'local_file',PORTAL_ALLOW_INSECURE_DEMO_AUTH:'true',PORTAL_ALLOW_LOCAL_OTP_STORE:'true',PORTAL_ALLOW_LOCAL_SECRET_STORE:'true',PORTAL_SESSION_SECRET:'restart-session-test-secret-0123456789abcdef',PORTAL_OTP_PEPPER:'restart-otp-test-secret-0123456789abcdef',ASTEN_INTEGRATION_ENABLED:'false',SUPABASE_URL:'',SUPABASE_SECRET_KEY:'',SUPABASE_SERVICE_ROLE_KEY:'',VERCEL:''},stdio:'ignore'});
- const patch=(defesa:unknown,email='master@portal.local')=>fetch(`${base}/api/processes/${p.id}`,{method:'PATCH',headers:{'content-type':'application/json','x-demo-user-email':email},body:JSON.stringify({defesa})});
+ const patch=(defesa:unknown,email=p.aluno1.email)=>fetch(`${base}/api/processes/${p.id}`,{method:'PATCH',headers:{'content-type':'application/json','x-demo-user-email':email},body:JSON.stringify({defesa})});
  try{
   const deadline=Date.now()+20000;while(true){try{if((await fetch(base+'/api/health')).ok)break;}catch{}if(Date.now()>deadline||child.exitCode!==null)throw Error('Servidor não iniciou');await new Promise(r=>setTimeout(r,100));}
   assert.ok([403,404].includes((await patch({startAt:'2026-11-20T14:00:00Z'},p.banca.find(member=>member.email!==p.orientador.email)!.email)).status));
+  for(const email of ['master@portal.local',p.orientador.email]){
+    assert.equal((await patch({startAt:'2026-11-20T14:00:00Z'},email)).status,403);
+  }
   const changed=await patch({startAt:'2026-11-20T14:00:00Z'});assert.equal(changed.status,202);const result=await changed.json();assert.equal(result.reservationRestarted,true);assert.equal(result.workflowPending,true);assert.equal(result.defesa.localStatus,'PENDENTE');assert.equal(result.defesa.locationProof,undefined);assert.equal(result.defesa.reservationRevision,1);assert.equal(result.defesa.reservationHistory[0].locationProof.driveFileId,'previous-proof');assert.equal(result.etapaAtual,'CONFIRMACAO_LOCAL');assert.equal(result.defesa.invitationSentAt,undefined);assert.equal(result.defesa.invitationDriveFileId,undefined);assert.equal(result.defesa.reservationHistory[0].invitationDriveFileId,'old-invitation');
   const disk=async()=>JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));
   const first=await disk();assert.equal(first.workflowRuns.length,1);assert.equal(first.workflowRuns[0].eventCode,'RESERVATION_RESCHEDULED');const recipients=[...new Set(['department@example.invalid',p.aluno1.email,p.aluno2?.email,p.orientador.email,INITIAL_SETTINGS.masterEmail].filter(Boolean))];assert.equal(first.emailDeliveries.length,2);assert.deepEqual([...new Set(first.emailDeliveries.flatMap((e:any)=>[e.recipient,...(e.cc||[])]))].sort(),recipients.sort());assert.notEqual(first.emailDeliveries[0].status,'ACCEPTED_BY_GMAIL');assert.match(first.emailDeliveries[0].renderedText,/20\/11\/2026/);
@@ -28,13 +32,17 @@ test('HTTP: alterações reiniciam reserva, invalidam comprovante e registram re
   // A nova interface deve usar a mesma transação de reserva e links de decisão.
   const current=(await disk()).processes.find((item:any)=>item.id===p.id);
   const proposal={date:'2026-12-03',time:'14:00',locationChoice:current.defesa.local,expectedDataRevision:current.dataRevision};
-  const change=(body:unknown,email='master@portal.local')=>fetch(`${base}/api/processes/${p.id}/reservation-change`,{method:'POST',headers:{'content-type':'application/json','x-demo-user-email':email},body:JSON.stringify(body)});
+  const change=(body:unknown,email=p.aluno1.email)=>fetch(`${base}/api/processes/${p.id}/reservation-change`,{method:'POST',headers:{'content-type':'application/json',...(email?{'x-demo-user-email':email}:{})},body:JSON.stringify(body)});
+  assert.equal((await change(proposal,'')).status,401);
+  for(const email of ['master@portal.local',p.orientador.email]){
+    assert.equal((await change(proposal,email)).status,403);
+  }
   const stale=await change({...proposal,expectedDataRevision:current.dataRevision-1});assert.equal(stale.status,409);assert.equal((await stale.json()).code,'STALE_DATA_REVISION');
   assert.equal((await change(proposal,p.banca.find(member=>member.email!==p.orientador.email)!.email)).status,403);
   const proposed=await change(proposal);assert.equal(proposed.status,202);const proposedBody=await proposed.json();assert.equal(proposedBody.reservationRestarted,true);assert.equal(proposedBody.defesa.localStatus,'PENDENTE');assert.equal(proposedBody.defesa.reservationRevision,3);assert.equal(proposedBody.defesa.startAt,'2026-12-03T17:00:00.000Z');assert.equal(proposedBody.defesa.reservationChangeRequest,undefined);
   const afterProposal=await disk();assert.equal(afterProposal.workflowRuns.at(-1).eventCode,'RESERVATION_RESCHEDULED');assert.ok(afterProposal.emailDeliveries.some((delivery:any)=>delivery.templateId==='email-reserva'&&Number(delivery.workflowEventVariables?.RESERVATION_REVISION)===3));
-  const competingPatch=(id:string,local:string,alternateLocation:string)=>fetch(`${base}/api/processes/${id}`,{method:'PATCH',headers:{'content-type':'application/json','x-demo-user-email':'master@portal.local'},body:JSON.stringify({defesa:{startAt:'2026-10-30T14:00:00Z',local}})});
-  const competing=await Promise.all([competingPatch(p.id,'Auditório','Sala de reuniões'),competingPatch(second.id,'Auditório','Sala de reuniões')]);
+  const competingPatch=(candidate:typeof p)=>fetch(`${base}/api/processes/${candidate.id}`,{method:'PATCH',headers:{'content-type':'application/json','x-demo-user-email':candidate.aluno1.email},body:JSON.stringify({defesa:{startAt:'2026-10-30T14:00:00Z',local:'Auditório'}})});
+  const competing=await Promise.all([competingPatch(p),competingPatch(second)]);
   assert.deepEqual(competing.map(response=>response.status).sort(),[202,409],'somente um pedido concorrente pode bloquear o local escolhido');
   const rejected=await competing.find(response=>response.status===409)!.json();assert.equal(rejected.code,'DEFENSE_CONFLICT');assert.equal(rejected.conflicts[0].sameLocation,true);
   const saved=await disk();assert.equal(saved.processes.filter((process:any)=>Date.parse(process.defesa.startAt)===Date.parse('2026-10-30T14:00:00Z')).length,1,'o pedido recusado não ocupa o intervalo nem substitui o vencedor');

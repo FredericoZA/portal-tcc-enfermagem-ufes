@@ -73,7 +73,7 @@ const entities: Record<string, string> = {
   signature_job: 'Registro de assinatura', system_backup: 'Backup do Portal', installation_profile: 'Identificação do Portal',
   academic_cycle: 'Período acadêmico', feature_flag: 'Funções do Portal', security: 'Segurança do acesso',
   administration_transfer: 'Administração do Portal', workflow_run: 'Fluxos do TCC', publication: 'Publicação dos arquivos',
-  email_delivery: 'Envio de e-mail', form_submission: 'Formulários', spreadsheet: 'Padrão das planilhas',
+  process_deletion: 'Exclusão de TCC', email_delivery: 'Envio de e-mail', form_submission: 'Formulários', spreadsheet: 'Padrão das planilhas',
 };
 const fields: Record<string, string> = {
   kind: 'Tipo de modelo', field: 'Imagem alterada', funcao: 'Função',
@@ -92,7 +92,8 @@ const fields: Record<string, string> = {
   commissionPresidentName: 'Nome da presidência', contactEmail: 'E-mail de contato', title: 'Título', description: 'Descrição',
   headerLogo: 'Imagem do cabeçalho', logoUrl: 'Imagem do cabeçalho', imageUrl: 'Imagem', image: 'Imagem', headerImage: 'Imagem do cabeçalho',
   body: 'Texto do modelo', name: 'Nome', text: 'Texto', enabled: 'Disponível', format: 'Formato', imageMimeType: 'Formato da imagem',
-  checked: 'Itens verificados', failed: 'Pendências',
+  checked: 'Itens verificados', failed: 'Pendências', cleanupStatus: 'Situação da limpeza', deleteFiles: 'Limpeza de arquivos solicitada',
+  manualAstenEnvelopes: 'Envelopes para conferência manual no Asten', clearHistory: 'Limpeza do histórico solicitada',
 };
 const hiddenField = /(?:^|\.)(?:id|processId|entityId|dataRevision|reservationRevision|revision|createdAt|updatedAt|workflowRunId|driveFileId|driveFolderId|sha256|contentSha256|signedSha256|encryptedSha256|sourceSha256|idempotencyKey|rfcMessageId|replyThreadId|replyMessageId|gmailMessageId|gmailThreadId|emailHash|emailHashes|callbackFingerprint|sourceDataRevision)(?:\.|$)|base64|token|secret|password|credential|api[_-]?key|artifact|contentText|htmlBody|renderedHtml|renderedText/i;
 const participantField = (path: string) => path.startsWith('aluno1.') || path.startsWith('aluno2.') ? 'Autor' : path.startsWith('orientador.') ? 'Orientador' : path.startsWith('coorientador.') ? 'Coorientador' : /^banca\.\d+\./.test(path) ? 'Examinador' : '';
@@ -108,6 +109,9 @@ export function auditStatusLabel(status: unknown): string {
 }
 export function isEmailAudit(log: ReadableAuditLog): boolean {
   return log.source === 'email' || Boolean(log.emailDeliveryId) || log.entityType === 'email_delivery' || log.action.startsWith('EMAIL_CODIGO_ACESSO_');
+}
+export function isEmailNotificationAudit(log: ReadableAuditLog): boolean {
+  return isEmailAudit(log) || ['REENVIO_EMAIL_SOLICITADO', 'RECUPERACAO_AVISOS_RESERVA'].includes(log.action);
 }
 export function auditIsReservationEmailDecision(log: ReadableAuditLog): boolean {
   return ['CONFIRMACAO_LOCAL_DEPARTAMENTO', 'LOCAL_INDISPONIVEL_DEPARTAMENTO'].includes(log.action) || object(log.after).attribution === 'EMAIL_LINK';
@@ -199,6 +203,8 @@ export function emailAuditData(log: ReadableAuditLog) {
     sensitive: data.auditCopyMode === 'sensitive' || log.action.startsWith('EMAIL_CODIGO_ACESSO_'),
     provider: auditDisplayValue(data.provider || 'Gmail'), requestedBy: data.requestedBy ? auditDisplayValue(data.requestedBy) : auditActor(log).email ? auditDisplayValue(log.actorEmail) : 'Não identificada no registro',
     status: emailDeliveryStatusLabel(data), rawStatus: String(data.status || ''), canRetry: canRetryEmailDelivery(data),
+    requestedAt: data.createdAt ? auditDisplayValue(data.createdAt) : '',
+    templateId: data.templateId ? auditDisplayValue(data.templateId) : '',
     acceptedAt: !data.dispatchState && data.status === 'ACCEPTED_BY_GMAIL' && data.acceptedAt ? auditDisplayValue(data.acceptedAt) : '',
     nextRetryAt: !data.dispatchState && data.status === 'RETRY' && data.nextRetryAt ? auditDisplayValue(data.nextRetryAt) : '',
     attempts: attempts.map((attempt, index) => ({number: String(attempt.number || index + 1), at: auditDisplayValue(attempt.completedAt || attempt.startedAt), status: auditStatusLabel(attempt.errorCode === 'GMAIL_DELIVERY_UNCERTAIN' ? 'UNCERTAIN' : attempt.status), error: redactAuditText(attempt.errorMessage || '')})),

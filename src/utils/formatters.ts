@@ -403,7 +403,7 @@ export function getFriendlyEtapaLabel(etapa: string): string {
     case 'AGENDAMENTO': return 'Agendamento';
     case 'CONVITE': return 'Banca';
     case 'DEFESA': return 'Defesa';
-    case 'AVALIACAO': return 'Avaliação';
+    case 'AVALIACAO': return 'Conceito e Ata';
     case 'ASSINATURA': return 'Assinatura';
     case 'DOCUMENTOS': return 'Documentos';
     case 'CONCLUIDO': return 'Concluído';

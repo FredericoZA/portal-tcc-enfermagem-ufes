@@ -1,6 +1,7 @@
 import type {ProcessData} from '../types';
 import type {IntegrationStudioSettings} from '../types/integrationStudio';
 import {processEmailMessage} from './processEmailMessage';
+import {operationalEmailRouting} from './studioOperationalCatalog';
 import {academicName} from './personPresentation';
 import {formatDateNumericWithWeekday,formatTime24h} from './formatters';
 
@@ -17,7 +18,7 @@ export function studioSampleProcess():ProcessData {
 }
 export function studioEmailPreview(studio:Partial<IntegrationStudioSettings>,id:string){
  const process=studioSampleProcess(),selected=studio.emailTemplates?.find(item=>item.id===id);
- let templateId=id,eventCode='TCC_CREATED',departmentUrl:string|undefined;
+ let templateId=id,eventCode:string=operationalEmailRouting(id)?.event||'TCC_CREATED',departmentUrl:string|undefined;
  if(id==='email-reserva')departmentUrl='https://portal.example.invalid/api/reservation-confirmation/amostra-sem-validade';
  if(id==='email-reserva-autores')templateId='email-reserva';
  if(['email-comprovante-reserva','email-resposta-departamento','email-local-indisponivel'].includes(id)){
@@ -25,8 +26,6 @@ export function studioEmailPreview(studio:Partial<IntegrationStudioSettings>,id:
   process.defesa.departmentResponse={decision:id==='email-local-indisponivel'?'UNAVAILABLE':'CONFIRMED',revision:0,respondedBy:'departamento@example.invalid',departmentEmail:'departamento@example.invalid',respondedAt:'2026-11-04T15:41:00.000Z',startAt:process.defesa.startAt,endAt:process.defesa.endAt,local:process.defesa.local};
   if(id==='email-resposta-departamento')departmentUrl='https://portal.example.invalid/api/reservation-confirmation/amostra-sem-validade';
  }
- if(id==='email-convite')eventCode='INVITATION_SENT';
- if(id==='email-entrega-repositorio')eventCode='ATA_SIGNED';
  return processEmailMessage({process,recipient:'mariana@example.invalid',subject:String(selected?.subject||''),text:String(selected?.body||''),templateId,eventCode,baseUrl:'https://portal.example.invalid',courseName:studio.brandKit?.courseName||'Curso de Graduação em Enfermagem e Obstetrícia',studio,departmentUrl});
 }
 /** Start customization from the effective message, retaining live variables rather than sample identities. */

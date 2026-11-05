@@ -85,7 +85,7 @@ test('tutorial integra as instruções e destaca somente o manual detalhado ante
   const notice = notices[0];
   assert.match(notice, /aria-labelledby="tutorial-manual-heading"[^>]*className="portal-instruction\b/);
   assert.match(notice, /<h2 id="tutorial-manual-heading"[^>]*>Acesse o manual detalhado<\/h2>/);
-  assert.match(notice, /Consulte as orientações completas de acesso, cadastro, reserva e assinatura dos documentos\./);
+  assert.match(notice, /Consulte as orientações completas para acessar e acompanhar seu TCC\./);
   assert.match(notice, /<a id="tutorial-manual-pdf" href="\/manual\/manual-portal-tcc\.pdf" target="_blank" rel="noopener noreferrer"/);
   assert.match(notice, /<span>Manual em PDF<\/span>/);
   assert.doesNotMatch(tutorial.replace(notice, ''), /portal-instruction|tutorial-manual-notice/);

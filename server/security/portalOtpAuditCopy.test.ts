@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHmac, randomBytes} from 'node:crypto';
-import {requestPortalOtp, verifyPortalOtp} from './portalOtp';
+import {OtpResendCooldownError, requestPortalOtp, verifyPortalOtp} from './portalOtp';
 import {saveIntegrationSecret} from '../integrations/integrationSecrets';
 
 const recipient = 'student@otp-audit.invalid';
@@ -92,7 +92,8 @@ test('endereço de auditoria inválido e falha de entrega não deixam um desafio
 test('ativar a cópia do OTP preserva a espera de 60 segundos e não provoca um segundo envio',async()=>{
   await withDeliveryFixture(async({sent,challenges})=>{
     await requestPortalOtp({email:recipient,auditCopyEmail:master});
-    await assert.rejects(requestPortalOtp({email:recipient,auditCopyEmail:master}),/60 segundos/);
+    await assert.rejects(requestPortalOtp({email:recipient,auditCopyEmail:master}),error=>
+      error instanceof OtpResendCooldownError&&error.retryAfterSeconds>0&&error.retryAfterSeconds<=60);
     assert.equal(sent.length,1);assert.equal(challenges.length,1);
   });
 });

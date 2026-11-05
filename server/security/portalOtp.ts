@@ -17,6 +17,13 @@ interface OtpChallenge {
 }
 
 const localChallenges = new Map<string, OtpChallenge>();
+const OTP_RESEND_INTERVAL_MS = 60_000;
+
+export class OtpResendCooldownError extends Error {
+  constructor(readonly retryAfterSeconds: number, readonly canVerifyExistingCode: boolean) {
+    super('Aguarde antes de solicitar outro código.');
+  }
+}
 
 function supabaseUrl(): string { return String(process.env.SUPABASE_URL || '').trim().replace(/\/$/, ''); }
 function validatedSupabaseUrl(): string {
@@ -162,14 +169,22 @@ export function getOtpRuntimeStatus() {
   } as const;
 }
 
-export async function requestPortalOtp(input: { email: string; ip?: string; portalName?:string; auditCopyEmail?:string }): Promise<string> {
+export async function requestPortalOtp(input: { email: string; ip?: string; portalName?:string; auditCopyEmail?:string; browserChallengeId?: string }): Promise<string> {
   assertConfigured();
   const email = normalizeEmail(input.email);
   if(input.ip&&(await recentChallengesForIp(input.ip))>=10)throw new Error('Limite temporário de solicitações atingido. Tente novamente mais tarde.');
   const recent = await recentChallenges(email);
   const newest = recent[0];
-  if (newest && Date.now() - new Date(newest.created_at).getTime() < 60_000) {
-    throw new Error('Aguarde 60 segundos antes de solicitar outro código.');
+  const nowMs = Date.now();
+  const retryAfterSeconds = newest ? Math.ceil((Date.parse(newest.created_at) + OTP_RESEND_INTERVAL_MS - nowMs) / 1000) : 0;
+  if (retryAfterSeconds > 0) {
+    const canVerifyExistingCode = recent.some(challenge =>
+      challenge.id === input.browserChallengeId &&
+      !challenge.consumed_at &&
+      Date.parse(challenge.expires_at) > nowMs &&
+      challenge.attempts < challenge.max_attempts,
+    );
+    throw new OtpResendCooldownError(retryAfterSeconds, canVerifyExistingCode);
   }
   if (recent.length >= 5) throw new Error('Limite temporário de códigos atingido. Tente novamente mais tarde.');
 

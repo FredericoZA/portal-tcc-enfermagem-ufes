@@ -40,13 +40,11 @@ export const PortalTutorialPage: React.FC<PortalTutorialPageProps> = () => {
       </section>
       <PortalSectionDivider />
       <div className="p-3 sm:p-4" key={role}>
-        <aside id="tutorial-manual-notice" aria-labelledby="tutorial-manual-heading" className="portal-instruction mb-3 flex flex-col gap-3 rounded-xl p-3 sm:mb-4 sm:flex-row sm:items-center sm:justify-between sm:p-4">
-          <div className="flex min-w-0 items-start gap-2.5">
-            <BookOpen className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true"/>
-            <div>
-              <h2 id="tutorial-manual-heading" className="text-sm font-bold">Acesse o manual detalhado</h2>
-              <p className="mt-1 text-xs leading-relaxed">Consulte as orientações completas de acesso, cadastro, reserva e assinatura dos documentos.</p>
-            </div>
+        <aside id="tutorial-manual-notice" aria-labelledby="tutorial-manual-heading" className="portal-instruction mb-3 grid items-center gap-3 rounded-xl p-3 sm:mb-4 sm:grid-cols-[1.75rem_minmax(0,1fr)_auto] sm:p-4">
+          <BookOpen className="mx-auto h-5 w-5 shrink-0" aria-hidden="true"/>
+          <div className="min-w-0 text-center">
+            <h2 id="tutorial-manual-heading" className="text-sm font-bold">Acesse o manual detalhado</h2>
+            <p className="mt-1 text-sm leading-relaxed">Consulte as orientações completas para acessar e acompanhar seu TCC.</p>
           </div>
           <a id="tutorial-manual-pdf" href="/manual/manual-portal-tcc.pdf" target="_blank" rel="noopener noreferrer" className="portal-action min-h-10 shrink-0 justify-center gap-2 px-4 py-2 text-xs font-bold" aria-label="Abrir manual completo do Portal de TCC em PDF"><Download className="h-4 w-4" aria-hidden="true"/><span>Manual em PDF</span></a>
         </aside>

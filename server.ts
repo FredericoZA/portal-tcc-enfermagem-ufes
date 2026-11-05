@@ -10,18 +10,19 @@ import { legacyRepositoryProcess } from './src/utils/legacyRepository';
 import { readLegacyAcademicPdf } from './server/legacyArchiveFiles';
 import { validateLegacyBatch, mergeLegacyBatch, legacyCatalogRevision, publicLegacyAcademicView, privateLegacyAcademicView, canonicalLegacyRecord, legacyFileIsPublic, legacyAdministrativeFiles } from './server/legacyArchive';
 import type { LegacyAcademicRecord } from './src/types/legacyArchive';
-import {EVALUATION_OUTCOMES,evaluationQuestions} from './src/utils/evaluationForm';
+import {EVALUATION_OUTCOMES,evaluationQuestions,isConceptRegistrationReleased} from './src/utils/evaluationForm';
 import {renderInstitutionName} from './src/utils/institutionName';
 import {accessImportIssues} from './src/utils/accessImportValidation';
 import {isManagedDefenseLocation} from './src/utils/reservationLocation';
 import {createRegistrationSnapshotPdf,createBrandedTextPdf} from './server/documents/registrationSnapshot';
 import {processWithPendingAtaStage,documentSignatureCompleted} from './src/utils/documentSignatureState';
 import {createReservationReceiptPdf} from './server/documents/reservationReceipt';
+import {receiptDesign} from './src/utils/receiptDesign';
 import {mergeProcessProtocolCounters,reserveNextProcessProtocol,seedProcessProtocolCounters,type ProcessProtocolCounters} from './server/workflow/processProtocol';
 import {deleteProcessCalendarEvents} from './server/integrations/googleWorkspace';
 import {deleteProcessSupabaseObjects} from './server/integrations/supabaseStorageStaging';
 import {unlinkSync} from 'node:fs';
-import {collectProcessDriveFileIds,processDeletionTask,type ProcessDeletionTask} from './server/workflow/processDeletion';
+import {collectProcessDriveFileIds,isProcessDeletionInProgress,processDeletionLeaseMs,processDeletionNextRetryAt,processDeletionTask,selectDueProcessDeletions,type ProcessDeletionTask} from './server/workflow/processDeletion';
 import {deleteProcessDriveArtifacts} from './server/integrations/googleDriveArchive';
 import {purgeSupabaseProcessHistory} from './server/integrations/supabase';
 import {publicAcademicDocuments,assertPublicAcademicPdf} from './server/publicAcademicDocuments';
@@ -157,7 +158,7 @@ import { reservationReceipts, reservationReceiptStatus } from './server/reservat
 import { buildProcessVariables, compileWorkflow, executeWorkflowEvent, mergeWorkflowHtmlVariables, mergeWorkflowVariables, normalizeWorkflowEventCode } from './server/workflow/runtime';
 import { buildAstenOperationalDashboard, isReconcileableAstenWebhookEvent, normalizeAstenWebhookEvent } from './server/integrations/astenEventLedger';
 import { buildPortalDriveFileName } from './src/services/googleDriveOrganizer';
-import { getOtpRuntimeStatus, requestPortalOtp, verifyPortalOtp, setOtpChallengeCookie, readOtpChallengeCookie } from './server/security/portalOtp';
+import { getOtpRuntimeStatus, requestPortalOtp, verifyPortalOtp, setOtpChallengeCookie, readOtpChallengeCookie, OtpResendCooldownError } from './server/security/portalOtp';
 import { ensurePortalRenderFolder, accessListGoogleSheetsTemplate, bootstrapGoogleDriveStructure, buildGoogleAuthorizationUrl, safeGoogleReturnTo, decodeGoogleOAuthState, exchangeGoogleAuthorizationCode, getGoogleOAuthSecurityPreflight, getGoogleWorkspaceAccessToken, getGoogleWorkspaceStatus, persistGoogleWorkspaceAuthorization, publishMasterDocumentModel, registerMasterDocumentModelFromDrive, sendGmailMessage, synchronizeDefenseCalendar, verifyMasterDocumentModelFingerprint, readDriveModelFingerprint, verifyPrivateDriveFolder } from './server/integrations/googleWorkspace';
 import { deleteIntegrationSecret, getSecretStoreStatus } from './server/integrations/integrationSecrets';
 import { emailMatchesDomains, isPortalFeatureEnabled, resolveInstallationProfile } from './src/utils/installationProfile';
@@ -283,7 +284,12 @@ let processesStore: ProcessData[] = Array.isArray(persistedPortalState.processes
 let processProtocolCountersStore=seedProcessProtocolCounters(persistedPortalState.processProtocolCounters,[...processesStore.map(process=>process.protocolo),...(persistedPortalState.processProtocolCounters===undefined?processDeletionTasksStore.map(task=>task.protocol):[])]);
 reconcileRecordedReservationStatuses();
 function reconcileRecordedReservationStatuses(): void {
-  for (const process of processesStore) process.defesa.localStatus = effectiveDefenseReservationStatus(process);
+  const design=receiptDesign(currentSettings.integrationStudio);
+  for (const process of processesStore) {
+    process.defesa.localStatus=effectiveDefenseReservationStatus(process);
+    const responses=[process.defesa.departmentResponse,...(process.defesa.reservationHistory||[]).map(entry=>entry.departmentResponse)];
+    for(const response of responses)if(response&&!response.receiptDesign)response.receiptDesign=design;
+  }
 }
 let membershipsStore: ProcessMembership[] = Array.isArray(persistedPortalState.memberships) ? persistedPortalState.memberships : productionRuntime?[]:JSON.parse(JSON.stringify(DEMO_MEMBERSHIPS));
 let auditLogsStore: AuditLog[] = Array.isArray(persistedPortalState.auditLogs)
@@ -650,8 +656,9 @@ function generateDefaultDocuments(process: ProcessData): ProcessDocument[] {
   for(const type of ['ATA','TERMO','DECLARACAO']){const job=latestSignature(process,signatureJobsStore,type);if(job)latestJobs.set(type,job);}
   const withSignatureState=applicableDocs.map(doc=>{
     const job=latestJobs.get(doc.type);if(!job)return doc;
-    const status=job.status==='ARCHIVED'?'ASSINADO':job.status==='PROVIDER_ERROR'||job.status==='DECLINED'||job.status==='EXPIRED'?'COM_ERRO':'AGUARDANDO_ASSINATURA';
-    return{...doc,status:status as ProcessDocument['status'],currentVersion:job.documentVersion,updatedAt:job.updatedAt,driveFileId:job.driveSignedFileId,driveDownloadUrl:job.status==='ARCHIVED'?`/api/processes/${process.id}/documents/${doc.id}/download`:undefined};
+    const archived=job.status==='ARCHIVED'&&Boolean(job.driveSignedFileId)&&(doc.type!=='ATA'||ataArchived(process,[job]));
+    const status=archived?'ASSINADO':job.status==='PROVIDER_ERROR'||job.status==='DECLINED'||job.status==='EXPIRED'?'COM_ERRO':'AGUARDANDO_ASSINATURA';
+    return{...doc,status:status as ProcessDocument['status'],currentVersion:job.documentVersion,updatedAt:job.updatedAt,driveFileId:archived?job.driveSignedFileId:undefined,driveDownloadUrl:archived?`/api/processes/${process.id}/documents/${doc.id}/download`:undefined};
   });
   return enrichProcessDocumentsWithDrive(withSignatureState, process);
 }
@@ -679,6 +686,10 @@ function canAccessProcess(email:string,id:string):boolean{
 }
 function hasFullAdministration(email:string):boolean{const roles=getUserRolesForEmail(email).globalRoles;return roles.includes('MASTER_ADMIN')||roles.includes('COMMISSION_PRESIDENT');}
 function getActiveProcessRoles(email:string,processId:string):ProcessRole[]{return getUserRolesForEmail(email).memberships.filter(m=>m.processId===processId&&m.active).flatMap(m=>m.roles);}
+function isReservationAuthor(email:string,process:ProcessData):boolean{
+  const authorEmails=[process.aluno1.email,process.aluno2?.email].filter(Boolean).map(value=>normalizeEmail(String(value)));
+  return authorEmails.includes(normalizeEmail(email))&&getActiveProcessRoles(email,process.id).includes('STUDENT');
+}
 function canUseStudioForm(email:string,processId:string,form:{targetRole?:string}):boolean{
   const roles=getActiveProcessRoles(email,processId);
   const global=getUserRolesForEmail(email).globalRoles;
@@ -878,7 +889,12 @@ async function createInstitutionalDossier(process:ProcessData,actorEmail:string,
 }
 const emailDeliveryJournal={
   async findByIdempotencyKey(key:string){return emailDeliveriesStore.find(item=>item.idempotencyKey===key)||null;},
-  async save(record:EmailDeliveryRecord){const index=emailDeliveriesStore.findIndex(item=>item.id===record.id);if(index>=0)emailDeliveriesStore[index]=record;else emailDeliveriesStore.push(record);await persistPortalStateDurably();}
+  async save(record:EmailDeliveryRecord){
+    if(record.processId&&!processesStore.some(process=>process.id===record.processId))throw new Error('O TCC deste e-mail não está mais disponível.');
+    const index=emailDeliveriesStore.findIndex(item=>item.id===record.id);
+    if(index>=0)emailDeliveriesStore[index]=record;else emailDeliveriesStore.push(record);
+    await persistPortalStateDurably();
+  }
 };
 async function requestAuditedPortalOtp(input: Parameters<typeof requestPortalOtp>[0], requestedBy?: string): Promise<string> {
   const simulated = process.env.NODE_ENV !== 'production' && process.env.PORTAL_OTP_DELIVERY_MODE === 'log';
@@ -895,7 +911,7 @@ async function requestAuditedPortalOtp(input: Parameters<typeof requestPortalOtp
   };
   let challengeId: string;
   try { challengeId=await requestPortalOtp({...input,auditCopyEmail}); }
-  catch(error){await record(false);throw error;}
+  catch(error){if(!(error instanceof OtpResendCooldownError))await record(false);throw error;}
   await record(true);
   return challengeId;
 }
@@ -1343,9 +1359,9 @@ async function dispatchSignatureJobAutomatically(job:SignatureJob):Promise<Signa
 function updateProcessCompletion(processId:string):void{
   const process=processesStore.find(item=>item.id===processId);if(!process)return;
   const latestByType=new Map<string,SignatureJob>();
-  for(const type of ['ATA','TERMO','DECLARACAO']){const job=latestSignature(process,signatureJobsStore,type);if(job)latestByType.set(type,job);}
-  const requiredTypes=publicationRequested(process)?['ATA','TERMO','DECLARACAO']:['ATA','DECLARACAO'];
-  if(process.acervo?.submittedAt&&requiredTypes.every(type=>{const job=latestByType.get(type);return job?.status==='ARCHIVED'&&Boolean(job.driveSignedFileId)&&(type==='ATA'||job.sourceDataRevision===process.dataRevision);})) {
+  for(const type of ['TERMO','DECLARACAO']){const job=latestSignature(process,signatureJobsStore,type);if(job)latestByType.set(type,job);}
+  const requiredTypes=publicationRequested(process)?['TERMO','DECLARACAO']:['DECLARACAO'];
+  if(process.acervo?.submittedAt&&repositoryDataComplete(process)&&ataArchived(process,signatureJobsStore)&&requiredTypes.every(type=>{const job=latestByType.get(type);return job?.status==='ARCHIVED'&&Boolean(job.driveSignedFileId)&&job.sourceDataRevision===process.dataRevision;})) {
     process.etapaAtual='CONCLUIDO';process.status='CONCLUIDO';process.completedAt=process.completedAt||new Date().toISOString();process.updatedAt=process.completedAt;
   }
 }
@@ -1646,7 +1662,8 @@ export async function createPortalApp() {
       if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
       if(process.acervo?.submittedAt||finalDocumentFilesLocked(process,signatureJobsStore))return res.status(409).json({error:'Reabra a entrega antes de enviar novos arquivos finais.',code:'FINAL_FILES_LOCKED_BY_SIGNATURE'});
       const roles=getActiveProcessRoles(identity.email,process.id);
-      {if(!hasFullAdministration(identity.email)&&!roles.includes('STUDENT'))return res.status(403).json({error:'Seu perfil não pode anexar arquivos finais.'});if(process.avaliacao.status!=='CONCLUIDO')return res.status(409).json({error:'A avaliação precisa ser concluída antes do envio dos arquivos finais.'});}
+      if(!roles.includes('STUDENT'))return res.status(403).json({error:'Somente um dos autores pode anexar os arquivos finais.'});
+      if(!ataArchived(process,signatureJobsStore))return res.status(409).json({error:'A entrega final será liberada após o arquivamento da ata assinada.',code:'ATA_SIGNATURE_REQUIRED'});
       requesterBinding=sessionUploadBinding(identity);
     }else return res.status(400).json({error:'Finalidade de upload inválida.'});
     try{
@@ -1672,7 +1689,7 @@ export async function createPortalApp() {
     if(expected.length<32||!supplied||!timingSafeEqual(expectedDigest,suppliedDigest))return res.status(401).json({error:'Não autorizado.'});
     const[uploadsResult,downloadsResult]=await Promise.allSettled([cleanupExpiredStagedUploads(500),cleanupExpiredDownloadTransfers(500)]);
     const failures=[uploadsResult,downloadsResult].filter(result=>result.status==='rejected').map(result=>result.status==='rejected'?(result.reason instanceof Error?result.reason.message:String(result.reason)):'');
-    const processCleanups=[];for(const task of processDeletionTasksStore.slice(0,2)){try{const result=await retryProcessDeletion(task);processCleanups.push({id:task.id,status:result.status});if(result.status==='PENDING')failures.push('Há limpezas de TCC pendentes nas plataformas integradas.');}catch(error){failures.push(error instanceof Error?error.message:'Falha na limpeza de TCC.');}}
+    const processCleanups=[];for(const task of selectDueProcessDeletions(processDeletionTasksStore)){try{const result=await retryProcessDeletion(task);processCleanups.push({id:task.id,status:result.status});if(result.status==='PENDING')failures.push('Há limpezas de TCC pendentes nas plataformas integradas.');}catch(error){failures.push(error instanceof Error?error.message:'Falha na limpeza de TCC.');}}
     let workflow:Awaited<ReturnType<typeof runWorkflowMaintenance>>|null=null;
     try{workflow=await runWorkflowMaintenance();if(workflow.failed||workflow.configurationErrors.length)failures.push('Há lembretes com falha; confira a central de andamento.');}catch(error){failures.push(error instanceof Error?error.message:'Falha na manutenção do fluxo.');}
     res.setHeader('Cache-Control','no-store');
@@ -1874,12 +1891,19 @@ export async function createPortalApp() {
       return res.json({sent:false,code:'EMAIL_NOT_REGISTERED',expiresInMinutes:0,message:'Este e-mail não está cadastrado ou autorizado no Portal TCC. Confira o endereço ou solicite acesso à secretaria.'});
     }
     try {
-      const challengeId=await requestAuditedPortalOtp({email,ip:req.ip,portalName:resolveInstallationProfile(currentSettings).portalName});
+      const challengeId=await requestAuditedPortalOtp({email,ip:req.ip,portalName:resolveInstallationProfile(currentSettings).portalName,browserChallengeId:readOtpChallengeCookie(req)});
       setOtpChallengeCookie(res,challengeId);
       await enforceMinimumResponseTime(startedAt);
       return res.json({sent:true,expiresInMinutes:10,message:'Código solicitado com sucesso. Confira sua caixa de entrada.'});
     }catch(error){
       await enforceMinimumResponseTime(startedAt);
+      if(error instanceof OtpResendCooldownError){
+        res.setHeader('Retry-After',String(error.retryAfterSeconds));
+        return res.status(429).json({
+          code:error.canVerifyExistingCode?'OTP_CHALLENGE_ACTIVE':'OTP_RESEND_COOLDOWN',
+          error:error.canVerifyExistingCode?'Use o código já enviado para este e-mail.':`Aguarde ${error.retryAfterSeconds} segundos antes de solicitar outro código neste navegador.`
+        });
+      }
       return res.status(503).json({error:error instanceof Error?error.message:'Não foi possível enviar o código. Tente novamente mais tarde.'});
     }
   });
@@ -2509,7 +2533,7 @@ export async function createPortalApp() {
     const view=publicRepositoryView(p);
     if(view.acervo.trabalhoCompletoFileUrl)view.acervo.trabalhoCompletoFileUrl=`/api/public/processes/${encodeURIComponent(p.protocolo)}/files/trabalho-completo/download`;
     if(view.acervo.resumoExpandidoFileUrl)view.acervo.resumoExpandidoFileUrl=`/api/public/processes/${encodeURIComponent(p.protocolo)}/files/resumo-expandido/download`;
-    res.setHeader('Cache-Control','private, no-store');res.json({...view,canAccessPrivate,...(canAccessPrivate?{privateProcessId:p.id}:{}),documents:publicAcademicDocuments(p,generateDefaultDocuments(p))});
+    res.setHeader('Cache-Control','private, no-store');res.json({...view,defesa:{...view.defesa,invitationSentAt:p.defesa.invitationSentAt},canAccessPrivate,...(canAccessPrivate?{privateProcessId:p.id}:{}),documents:publicAcademicDocuments(p,generateDefaultDocuments(p))});
   });
   app.get('/api/public/processes/:id/reservation-receipts',(req,res)=>{
     const p=findProcessByReference(req.params.id);
@@ -2960,7 +2984,7 @@ export async function createPortalApp() {
     const before=structuredClone(p);
     p.defesa.reservationRequestRecipient=claim.recipient;
     const now=new Date().toISOString();
-    p.defesa.departmentResponse={departmentEmail:isManagedDefenseLocation(p.defesa.local,operationalConfig(currentSettings.integrationStudio).reservation.locations)?claim.recipient:undefined,attribution:'EMAIL_LINK',revision:claim.revision,decision:available?'CONFIRMED':'UNAVAILABLE',respondedAt:now,respondedBy:claim.recipient,local:available?local:undefined,startAt:p.defesa.startAt,endAt:defenseEndAt(p.defesa.startAt)};
+    p.defesa.departmentResponse={departmentEmail:isManagedDefenseLocation(p.defesa.local,operationalConfig(currentSettings.integrationStudio).reservation.locations)?claim.recipient:undefined,attribution:'EMAIL_LINK',receiptDesign:receiptDesign(currentSettings.integrationStudio),revision:claim.revision,decision:available?'CONFIRMED':'UNAVAILABLE',respondedAt:now,respondedBy:claim.recipient,local:available?local:undefined,startAt:p.defesa.startAt,endAt:defenseEndAt(p.defesa.startAt)};
     if(available){p.defesa.local=local;p.defesa.localStatus='CONFIRMADO';p.defesa.localConfirmedAt=now;p.defesa.localConfirmedBy=claim.recipient;p.defesa.localEvidenceUrl=`/api/processes/${p.id}/location-proof/download`;}
     else p.defesa.localStatus='RECUSADO';
     p.defesa.departmentResponse.receiptBody=[`Protocolo: ${p.protocolo}`,`Título: ${p.titulo}`,...officialParticipantLines(p).filter(person=>person.key.startsWith('ALUNO_')).map(person=>`Autor: ${person.name}`),`Resposta: ${available?'Reserva confirmada':'Reserva recusada'}`,`Local: ${p.defesa.local}`,`Data: ${formatDateWithWeekday(p.defesa.startAt)}`,`Horário: ${formatTime24h(p.defesa.startAt)} às ${formatTime24h(defenseEndAt(p.defesa.startAt))}`,`Resposta registrada pelo link enviado a: ${claim.recipient}`,`Registrado em: ${formatDateTimeWithWeekday(now)}`,`Revisão da solicitação: ${claim.revision}`].join('\n');
@@ -2982,13 +3006,12 @@ export async function createPortalApp() {
     const identity=getPortalIdentity(req)!;
     const process=processesStore.find(item=>item.id===req.params.id);
     if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
+    if(!isReservationAuthor(identity.email,process))return res.status(403).json({error:'Somente um aluno autor deste TCC pode solicitar ou refazer a reserva.'});
     if(Number(req.body?.expectedDataRevision)!==process.dataRevision)return res.status(409).json({error:'Os dados do TCC mudaram. Reabra o processo antes do envio.',code:'STALE_DATA_REVISION'});
     let proposed:ReturnType<typeof validateReservationChange>;
     try {
       proposed=validateReservationChange(req.body||{},process,operationalConfig(currentSettings.integrationStudio).reservation.locations.filter(Boolean),currentSettings.slotDurationMinutes||90);
     }catch(error){return res.status(400).json({error:error instanceof Error?error.message:'Confira os dados solicitados.'});}
-    const academicError=validateAcademicWindow(proposed.startAt);
-    if(academicError)return res.status(409).json({error:academicError,code:'ACADEMIC_WINDOW_CLOSED'});
     req.body={defesa:{startAt:proposed.startAt,endAt:proposed.endAt,local:proposed.local},expectedDataRevision:req.body.expectedDataRevision};
     return updateProcessHandler(req,res);
   });
@@ -3021,9 +3044,10 @@ export async function createPortalApp() {
     if(existing.avaliacao.status==='CONCLUIDO'||existing.avaliacao.submittedAt||existing.acervo?.submittedAt||existing.status==='CONCLUIDO')return res.status(409).json({error:'Os dados do processo foram encerrados com a avaliação.',code:'PROCESS_DATA_LOCKED'});
     const activeRoles=getActiveProcessRoles(actorEmail,existing.id);
     const isFullAdministrator=hasFullAdministration(actorEmail);
-    if(!isFullAdministrator&&!activeRoles.some(role=>role==='STUDENT'||role==='ADVISOR'))return res.status(403).json({error:'Somente o aluno, o Master ou o Presidente da Comissão pode alterar os dados cadastrais do TCC.'});
+    if(!isFullAdministrator&&!activeRoles.some(role=>role==='STUDENT'||role==='ADVISOR'))return res.status(403).json({error:'Somente alunos autores, orientador ou administração podem alterar os dados cadastrais do TCC.'});
     // The three scheduling fields remain editable after confirmation; other data keeps its existing locks.
     const proposedSchedule=req.body?.defesa;
+    if(proposedSchedule&&!isReservationAuthor(actorEmail,existing))return res.status(403).json({error:'Somente um aluno autor deste TCC pode solicitar ou refazer a reserva.'});
     const scheduleOnly=Boolean(proposedSchedule&&typeof proposedSchedule==='object'&&!Array.isArray(proposedSchedule)&&Object.keys(proposedSchedule).length&&Object.keys(req.body||{}).every(key=>['defesa','conflictOverrideReason','expectedDataRevision'].includes(key))&&Object.keys(proposedSchedule).every(key=>['startAt','endAt','local'].includes(key)));
     if(!scheduleOnly&&signatureJobsStore.some(job=>job.processId===existing.id&&['SENDING','SENT','PARTIALLY_SIGNED','SIGNED','DRIVE_SYNC_PENDING'].includes(job.status)))return res.status(409).json({error:'Há documento em assinatura. Cancele ou conclua o envelope antes de alterar os dados do TCC.',code:'ACTIVE_SIGNATURE_ENVELOPE'});
     if(!scheduleOnly&&(existing.defesa.invitationDriveFileId||signatureJobsStore.some(job=>job.processId===existing.id&&job.status!=='CANCELED'&&(job.driveUnsignedFileId||job.driveSignedFileId)))&&Object.keys(req.body||{}).some(key=>['protocolo','titulo','authorOrder','aluno1','aluno2','orientador','coorientador','banca','defesa'].includes(key)))return res.status(409).json({error:'Já existe documento emitido com estes dados. Use a reabertura formal da etapa ou registre uma correção, preservando o histórico.',code:'ISSUED_DOCUMENT_LOCK'});
@@ -3092,12 +3116,19 @@ export async function createPortalApp() {
     if(['aluno1','aluno2'].some(key=>Object.hasOwn(acceptedUpdates,key))){const studentEmails=[updated.aluno1.email,updated.aluno2?.email].filter(Boolean).map(email=>normalizeEmail(String(email)));if(studentEmails.some(email=>!studentRegistrationEmailAllowed(email)))return res.status(400).json({error:'Informe e-mails válidos para os autores.'});const conflict=processesStore.find(process=>process.id!==existing.id&&studentEmails.some(email=>[process.aluno1.email,process.aluno2?.email].filter(Boolean).map(value=>normalizeEmail(String(value))).includes(email)));if(conflict)return res.status(409).json({error:`Cada aluno pode participar como autor de apenas um TCC. Já existe o processo ${conflict.protocolo}.`});}
     }
     const scheduleChanged=reservationScheduleChanged(existing,updated);
+    if(proposedSchedule){
+      const academicError=validateAcademicWindow(updated.defesa.startAt);
+      if(academicError)return res.status(409).json({error:academicError,code:'ACADEMIC_WINDOW_CLOSED'});
+      if(scheduleChanged&&signatureJobsStore.some(job=>job.processId===existing.id&&job.status!=='CANCELED'&&(job.driveUnsignedFileId||job.driveSignedFileId))){
+        return res.status(409).json({error:'O agendamento está vinculado a um documento emitido. Solicite uma correção administrativa.',code:'ISSUED_DOCUMENT_LOCK'});
+      }
+    }
     let overriddenConflicts:ReturnType<typeof findDefenseConflicts>=[];
     const conflictOverrideReason=typeof req.body?.conflictOverrideReason==='string'?req.body.conflictOverrideReason.trim():'';
     if(updated.defesa?.startAt&&(updated.defesa.departmentResponse?.decision!=='UNAVAILABLE'||scheduleChanged)&&(req.body?.defesa||['aluno1','aluno2','orientador','coorientador','banca'].some(key=>Object.hasOwn(acceptedUpdates,key)))){
       const endAt=defenseEndAt(updated.defesa.startAt);
       const conflicts=findDefenseConflicts({startAt:updated.defesa.startAt,endAt,local:updated.defesa.local,alternateLocation:updated.defesa.localStatus==='CONFIRMADO'&&!scheduleChanged?undefined:updated.defesa.alternateLocation,emails:participantEmails(updated),excludeProcessId:updated.id});
-      if(conflicts.length&&(!isFullAdministrator||!conflictOverrideReason))return res.status(409).json({error:'A alteração cria conflito de sala ou participante.',code:'DEFENSE_CONFLICT',conflicts});
+      if(conflicts.length&&(proposedSchedule||!isFullAdministrator||!conflictOverrideReason))return res.status(409).json({error:'A alteração cria conflito de sala ou participante.',code:'DEFENSE_CONFLICT',conflicts});
       overriddenConflicts=conflicts;
     }
 
@@ -3145,11 +3176,23 @@ export async function createPortalApp() {
   // DELETE /api/processes/:id (Master admin deletes a process)
   const deletionCleanupLocks=new Set<string>();
   const retryProcessDeletion=async(task:ProcessDeletionTask)=>{
-    if(deletionCleanupLocks.has(task.id))return task;
+    if(deletionCleanupLocks.has(task.id)||isProcessDeletionInProgress(task))return task;
     deletionCleanupLocks.add(task.id);
     try{
+    const now=Date.now();
+    task.attemptCount=(task.attemptCount||0)+1;
+    task.lastAttemptAt=new Date(now).toISOString();
+    task.processingUntil=new Date(now+processDeletionLeaseMs).toISOString();
+    task.nextRetryAt=processDeletionNextRetryAt(task.attemptCount,now);
+    await persistPortalStateDurably();
     task.calendarId ??= currentSettings.calendarId;
     task.errors=[];
+    if(processesStore.some(process=>process.id===task.processId)){
+      task.errors.push('O TCC voltou ao Portal. A limpeza foi interrompida para preservar os recursos restaurados.');
+      task.processingUntil=undefined;
+      await persistPortalStateDurably();
+      return task;
+    }
     if(task.deleteFiles&&!task.driveCleaned){
       if(task.rootFolderId||task.folderId||task.fileIds.some(id=>!id.startsWith('local_'))){try{await deleteProcessDriveArtifacts({...task,accessToken:await getGoogleWorkspaceAccessToken()});task.folderId=undefined;task.fileIds=task.fileIds.filter(id=>id.startsWith('local_'));}catch(e){task.errors.push(e instanceof Error?e.message:'Drive: limpeza pendente.');}}
       for(const id of [...task.fileIds])if(id.startsWith('local_')){
@@ -3166,7 +3209,16 @@ export async function createPortalApp() {
     if(task.deleteFiles&&!task.storageCleaned){try{await deleteProcessSupabaseObjects(task.processId);task.storageCleaned=true;}catch(e){task.errors.push(e instanceof Error?e.message:'Supabase Storage: limpeza pendente.');}}
     if(task.clearHistory&&(!task.deleteFiles||task.storageCleaned)){try{await purgeSupabaseProcessHistory(task.processId,task.protocol,task.jobIds);task.clearHistory=false;}catch(e){task.errors.push(e instanceof Error?e.message:'Histórico externo pendente.');}}
     task.status=task.errors.length?'PENDING':'COMPLETED';
-    if(task.status==='COMPLETED')processDeletionTasksStore=processDeletionTasksStore.filter(item=>item.id!==task.id);
+    task.processingUntil=undefined;
+    if(task.status==='COMPLETED'){
+      const deletionLog=auditLogsStore.find(log=>log.id===`log-${task.id}`);
+      if(deletionLog)deletionLog.after={
+        deleteFiles:task.deleteFiles,
+        cleanupStatus:'Limpeza do Portal concluída',
+        ...(task.envelopes.length?{manualAstenEnvelopes:task.envelopes}:{}),
+      };
+      processDeletionTasksStore=processDeletionTasksStore.filter(item=>item.id!==task.id);
+    }
     await persistPortalStateDurably();return task;
     }finally{deletionCleanupLocks.delete(task.id);}
   };
@@ -3194,12 +3246,15 @@ export async function createPortalApp() {
     }
 
     const target=processesStore[procIndex],isMaster=globalRoles.includes('MASTER_ADMIN');
+    if(legalHoldsStore.some(hold=>hold.processId===target.id&&hold.active))return res.status(409).json({error:'Este TCC está sob bloqueio legal de exclusão.',code:'PROCESS_LEGAL_HOLD'});
     const hasExternalRecord=Boolean(target.driveFolderId||target.defesa.invitationDriveFileId||formArchiveJobsStore.some(job=>job.processId===target.id)||signatureJobsStore.some(job=>job.processId===target.id));
     if(!isMaster&&hasExternalRecord)return res.status(403).json({error:'A exclusão de TCC com arquivos e assinaturas é reservada ao Master.'});
     if(!isMaster&&(req.body.deleteFiles||req.body.clearHistory))return res.status(403).json({error:'A limpeza de arquivos e histórico é reservada ao Master.'});
     const deleteFiles=isMaster,clearHistory=isMaster;
     const jobs=signatureJobsStore.filter(job=>job.processId===target.id),forms=formArchiveJobsStore.filter(job=>job.processId===target.id);
     const jobIds=new Set(jobs.map(job=>job.id));
+    const hasActiveEmail=emailDeliveriesStore.some(record=>record.processId===target.id&&record.dispatchState==='SENDING'&&Date.parse(record.dispatchLeaseUntil||'')>Date.now());
+    if(hasActiveEmail)return res.status(409).json({error:'Há um envio de e-mail em andamento neste TCC. Aguarde a conclusão antes de excluir.',code:'PROCESS_OPERATION_IN_PROGRESS'});
     if([...signatureJobCreationLocks.keys()].some(key=>key.startsWith(target.id+'|'))||jobs.some(job=>signatureDispatchLocks.has(job.id))||astenWebhookEventsStore.some(event=>jobIds.has(event.matchedJobId||'')&&!event.processedAt&&Date.parse(event.processingLeaseUntil||'')>Date.now()))return res.status(409).json({error:'Há uma operação de assinatura em andamento neste TCC. Aguarde a conclusão antes de excluir.',code:'PROCESS_OPERATION_IN_PROGRESS'});
     const protectedIds=collectProcessDriveFileIds(
       processesStore.filter(process=>process.id!==target.id),
@@ -3223,16 +3278,18 @@ export async function createPortalApp() {
     if(clearHistory){
       auditLogsStore=auditLogsStore.filter(item=>item.processId!==target.id&&item.entityId!==target.id&&!task.jobIds.includes(item.entityId||''));
       signatureJobsStore=signatureJobsStore.filter(item=>item.processId!==target.id);emailDeliveriesStore=emailDeliveriesStore.filter(item=>item.processId!==target.id);workflowRunsStore=workflowRunsStore.filter(item=>item.processId!==target.id);astenWebhookEventsStore=astenWebhookEventsStore.filter(item=>!task.jobIds.includes(item.matchedJobId||'')&&!task.envelopes.includes(item.envelopeId||''));
-      legalHoldsStore=legalHoldsStore.filter(item=>item.processId!==target.id);
     }else{
       for(const job of jobs)if(job.status!=='ARCHIVED')job.status='CANCELED';
       for(const mail of emailDeliveriesStore.filter(item=>item.processId===target.id&&item.status!=='ACCEPTED_BY_GMAIL')){mail.maxAttempts=mail.attempts.length;mail.nextRetryAt=undefined;}
-      auditLogsStore.push({id:`log-${Date.now()}`,processId:target.id,actorEmail,actorRoles:globalRoles,action:'EXCLUSAO_PROCESSO_TCC',entityType:'processo',entityId:target.id,before:{process:target,signatureJobs:jobs,formArchives:forms},after:{deleteFiles,clearHistory},timestamp:new Date().toISOString()});
     }
+    auditLogsStore.push({id:`log-${task.id}`,processProtocol:target.protocolo,actorEmail,actorRoles:globalRoles,action:'EXCLUSAO_PROCESSO_TCC',entityType:'process_deletion',entityId:task.id,after:{deleteFiles,clearHistory},timestamp:task.createdAt});
     processDeletionTasksStore.push(task);
     try{await persistPortalStateDurably();}catch(error){applyPersistedState(rollback);throw error;}
     googleCalendarEventsStore=generateGoogleEventsFromProcesses(processesStore);
-    const result=await retryProcessDeletion(task);
+    let result=task;
+    try{result=await retryProcessDeletion(task);}catch{
+      result={...task,status:'PENDING',errors:['O Portal não confirmou o resultado da limpeza. Confira a fila de exclusões.']};
+    }
     const cleanupPending=result.status==='PENDING';
     const cleanupMessage=cleanupPending
       ? 'TCC excluído. Há etapas de limpeza pendentes; confira a fila de exclusões.'
@@ -3252,7 +3309,8 @@ export async function createPortalApp() {
     const actorEmail = getPortalIdentity(req)!.email;
     const process = processesStore.find(p => p.id === req.params.id);
     if (!process || !canAccessProcess(actorEmail, process.id)) return res.status(404).json({ error: 'Processo não encontrado.' });
-    if (!getUserRolesForEmail(actorEmail).globalRoles.includes('MASTER_ADMIN') && !getActiveProcessRoles(actorEmail, process.id).includes('ADVISOR')) return res.status(403).json({ error: 'O formulário de avaliação pertence ao orientador.' });
+    if (!getActiveProcessRoles(actorEmail, process.id).includes('ADVISOR')) return res.status(403).json({ error: 'O formulário de conceito e ata pertence ao orientador responsável.' });
+    if (!isConceptRegistrationReleased(process)) return res.status(409).json({error:'O registro de conceito e ata ainda não está disponível.',code:'CONCEPT_STAGE_NOT_RELEASED'});
     const studio = currentSettings.integrationStudio;
     res.setHeader('Cache-Control', 'private, no-store');
     res.json({ ataModelFingerprint:ataModelFingerprint(currentSettings.documentModels?.ATA), outcomes: EVALUATION_OUTCOMES, studio: {
@@ -3269,7 +3327,8 @@ export async function createPortalApp() {
     const email=getPortalIdentity(req)!.email;
     const process=processesStore.find(item=>item.id===req.params.id);
     if(!process||!canAccessProcess(email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
-    if(!getUserRolesForEmail(email).globalRoles.includes('MASTER_ADMIN')&&!getActiveProcessRoles(email,process.id).includes('ADVISOR'))return res.status(403).json({error:'Apenas o orientador autorizado pode acessar este rascunho.'});
+    if(!getActiveProcessRoles(email,process.id).includes('ADVISOR'))return res.status(403).json({error:'Apenas o orientador autorizado pode acessar este rascunho.'});
+    if(!isConceptRegistrationReleased(process))return res.status(409).json({error:'O registro de conceito e ata ainda não está disponível.',code:'CONCEPT_STAGE_NOT_RELEASED'});
     const draft=evaluationDraftsStore.get(process.id);
     res.setHeader('Cache-Control','private, no-store');
     return res.json(draft?.dataRevision===process.dataRevision?recoverEvaluationDocument(draft,ataModelFingerprint(currentSettings.documentModels?.ATA)):null);
@@ -3278,8 +3337,9 @@ export async function createPortalApp() {
     const email=getPortalIdentity(req)!.email;
     const process=processesStore.find(item=>item.id===req.params.id);
     if(!process||!canAccessProcess(email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
-    if(!getUserRolesForEmail(email).globalRoles.includes('MASTER_ADMIN')&&!getActiveProcessRoles(email,process.id).includes('ADVISOR'))return res.status(403).json({error:'Apenas o orientador autorizado pode editar este rascunho.'});
-    if(process.avaliacao.status==='CONCLUIDO')return res.status(409).json({error:'Avaliação já concluída.'});
+    if(!getActiveProcessRoles(email,process.id).includes('ADVISOR'))return res.status(403).json({error:'Apenas o orientador autorizado pode editar este rascunho.'});
+    if(!isConceptRegistrationReleased(process))return res.status(409).json({error:'O registro de conceito e ata ainda não está disponível.',code:'CONCEPT_STAGE_NOT_RELEASED'});
+    if(process.avaliacao.status==='CONCLUIDO')return res.status(409).json({error:'Conceito e ata já registrados.'});
     if(Number(req.body?.expectedDataRevision)!==process.dataRevision)return res.status(409).json({error:'Os dados do TCC foram alterados. Atualize a ficha antes de continuar.'});
     const raw=req.body?.answers;
     if(!raw||typeof raw!=='object'||Array.isArray(raw))return res.status(400).json({error:'Rascunho inválido.'});
@@ -3309,8 +3369,9 @@ export async function createPortalApp() {
     const actor=getPortalIdentity(req)!.email;
     const p=processesStore.find(item=>item.id===req.params.id);
     if(!p||!canAccessProcess(actor,p.id))return res.status(404).json({error:'Processo não encontrado.'});
-    if(!getUserRolesForEmail(actor).globalRoles.includes('MASTER_ADMIN')&&!getActiveProcessRoles(actor,p.id).includes('ADVISOR'))return res.status(403).json({error:'A prévia da ata pertence ao orientador ou Master.'});
-    if(p.avaliacao.status==='CONCLUIDO')return res.status(409).json({error:'A avaliação já foi concluída. Consulte a Ata em Documentos oficiais do processo.'});
+    if(!getActiveProcessRoles(actor,p.id).includes('ADVISOR'))return res.status(403).json({error:'A prévia da ata pertence ao orientador responsável.'});
+    if(!isConceptRegistrationReleased(p))return res.status(409).json({error:'O registro de conceito e ata ainda não está disponível.',code:'CONCEPT_STAGE_NOT_RELEASED'});
+    if(p.avaliacao.status==='CONCLUIDO')return res.status(409).json({error:'Conceito e ata já registrados. Consulte a ata em Documentos administrativos.'});
     try{
       const provider=req.body?.signatureProvider||'ASTEN';if(!['ASTEN','GOV_BR'].includes(provider))return res.status(400).json({error:'Provedor inválido.'});
       if(req.body?.documentText!==undefined&&ataModelFingerprint(currentSettings.documentModels?.ATA)&&req.body?.expectedModelFingerprint!==ataModelFingerprint(currentSettings.documentModels?.ATA))return res.status(409).json({error:'O modelo da ata mudou. Atualize a página antes de usar um texto revisado.',code:'ATA_MODEL_CHANGED'});
@@ -3339,10 +3400,10 @@ export async function createPortalApp() {
 
     const proc = processesStore[procIndex];
     if(!canAccessProcess(actorEmail,proc.id))return res.status(404).json({error:'Processo não encontrado.'});
-    const evaluatorRoles=getUserRolesForEmail(actorEmail);const canEvaluate=evaluatorRoles.globalRoles.includes('MASTER_ADMIN')||evaluatorRoles.memberships.some(m=>m.processId===proc.id&&m.roles.includes('ADVISOR'));
-    if(!canEvaluate)return res.status(403).json({error:'Somente o orientador ou um administrador pode registrar a avaliação.'});
-    if(proc.avaliacao.status==='CONCLUIDO'||signatureJobsStore.some(job=>job.processId===proc.id&&job.documentType==='ATA'&&job.sourceDataRevision===proc.dataRevision&&job.status!=='CANCELED'))return res.status(409).json({error:'A avaliação já foi concluída e vinculada à Ata. Somente uma reabertura administrativa formal pode criar nova versão.',code:'EVALUATION_ALREADY_SUBMITTED'});
-    if(proc.defesa.localStatus!=='CONFIRMADO'||!proc.defesa.invitationSentAt)return res.status(409).json({error:'Confirme o local e envie a carta-convite antes de registrar a avaliação.',code:'PREVIOUS_STAGE_REQUIRED'});
+    const activeRoles=getActiveProcessRoles(actorEmail,proc.id);
+    if(!activeRoles.includes('ADVISOR'))return res.status(403).json({error:'Somente o orientador responsável pode registrar o conceito e a ata.'});
+    if(proc.avaliacao.status==='CONCLUIDO'||signatureJobsStore.some(job=>job.processId===proc.id&&job.documentType==='ATA'&&job.sourceDataRevision===proc.dataRevision&&job.status!=='CANCELED'))return res.status(409).json({error:'Conceito e ata já registrados. Somente uma reabertura formal pode criar nova versão.',code:'EVALUATION_ALREADY_SUBMITTED'});
+    if(!isConceptRegistrationReleased(proc))return res.status(409).json({error:'O registro de conceito e ata ainda não está disponível.',code:'CONCEPT_STAGE_NOT_RELEASED'});
     const signatureProvider=req.body?.signatureProvider||'ASTEN';
     if(!['ASTEN','GOV_BR'].includes(signatureProvider))return res.status(400).json({error:'Provedor de assinatura inválido.'});
     if(req.body?.documentText!==undefined&&ataModelFingerprint(currentSettings.documentModels?.ATA)&&req.body?.expectedModelFingerprint!==ataModelFingerprint(currentSettings.documentModels?.ATA))return res.status(409).json({error:'O modelo da ata mudou. Atualize a página antes de usar um texto revisado.',code:'ATA_MODEL_CHANGED'});
@@ -3353,7 +3414,7 @@ export async function createPortalApp() {
       throw error;
     }
     if(!validEvaluationPreview(req.body?.previewToken,evaluationPreviewSecret(),evaluationPreviewBinding(proc,actorEmail,evaluation,signatureProvider)))return res.status(409).json({error:'Visualize a ata atualizada antes de confirmar o registro.',code:'ATA_PREVIEW_REQUIRED'});
-    const missing=missingDocumentModels(['ATA']);if(missing.length)return res.status(409).json({error:'O Master precisa cadastrar o modelo da ata antes da avaliação.',code:'DOCUMENT_MODEL_REQUIRED',missingModels:missing});
+    const missing=missingDocumentModels(['ATA']);if(missing.length)return res.status(409).json({error:'O Master precisa cadastrar o modelo da ata antes do registro.',code:'DOCUMENT_MODEL_REQUIRED',missingModels:missing});
     const nowISO = new Date().toISOString();
     const before = JSON.parse(JSON.stringify(proc));
 
@@ -3365,6 +3426,7 @@ export async function createPortalApp() {
       avaliacao: {
         status: 'CONCLUIDO',
         ...evaluation,
+        documentRevision: proc.dataRevision + 1,
         submittedBy: actorEmail,
         submittedAt: nowISO,
         updatedAt: nowISO
@@ -3379,7 +3441,7 @@ export async function createPortalApp() {
       id: `log-${Date.now()}`,
       processId: proc.id,
       actorEmail,
-      actorRoles: [...evaluatorRoles.globalRoles, ...getActiveProcessRoles(actorEmail, proc.id)],
+      actorRoles: [...getUserRolesForEmail(actorEmail).globalRoles, ...activeRoles],
       action: 'CONCLUSAO_AVALIACAO',
       entityType: 'avaliacao',
       entityId: proc.id,
@@ -3389,7 +3451,7 @@ export async function createPortalApp() {
     });
 
     evaluationDraftsStore.delete(proc.id);
-    await persistPortalStateDurably();const evaluationRun=await executeConfiguredWorkflowEvent(updated,'EVALUATION_SUBMITTED',actorEmail);if(!evaluationRun||evaluationRun.status!=='COMPLETED')return res.status(202).json({...updated,workflowPending:true,workflowError:evaluationRun?.actions.find(action=>action.status==='FAILED')?.error||'O registro da avaliação aguarda a conclusão das ações configuradas.'});res.json(updated);
+    await persistPortalStateDurably();const evaluationRun=await executeConfiguredWorkflowEvent(updated,'EVALUATION_SUBMITTED',actorEmail);if(!evaluationRun||evaluationRun.status!=='COMPLETED')return res.status(202).json({...updated,workflowPending:true,workflowError:evaluationRun?.actions.find(action=>action.status==='FAILED')?.error||'O registro de conceito e ata aguarda a conclusão das ações configuradas.'});res.json(updated);
   });
 
   app.post('/api/processes/:id/files/:kind',requireAuthenticated,async(req,res)=>{
@@ -3399,8 +3461,8 @@ export async function createPortalApp() {
     const process=processesStore[index];
     if(!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
     const roles=getActiveProcessRoles(identity.email,process.id);
-    if(!hasFullAdministration(identity.email)&&!roles.includes('STUDENT'))return res.status(403).json({error:'Somente o aluno, o Master ou o Presidente da Comissão pode anexar os arquivos finais.'});
-    if(process.avaliacao.status!=='CONCLUIDO')return res.status(409).json({error:'A avaliação precisa ser concluída antes do envio dos arquivos finais.'});
+    if(!roles.includes('STUDENT'))return res.status(403).json({error:'Somente um dos autores pode anexar os arquivos finais.'});
+    if(process.avaliacao.status!=='CONCLUIDO')return res.status(409).json({error:'O conceito e a ata precisam ser registrados antes do envio dos arquivos finais.'});
     if(!ataArchived(process,signatureJobsStore))return res.status(409).json({error:'A entrega final será liberada após o recebimento, a validação e o arquivamento da ata assinada.',code:'ATA_SIGNATURE_REQUIRED'});
     if(process.acervo?.submittedAt||finalDocumentFilesLocked(process,signatureJobsStore))return res.status(409).json({error:'Os arquivos finais ficam bloqueados após a preparação do Termo ou da Declaração. Use o fluxo administrativo de nova versão.',code:'FINAL_FILES_LOCKED_BY_SIGNATURE'});
     const artifactType=req.params.kind==='trabalho-completo'?'TRABALHO_COMPLETO':req.params.kind==='resumo-expandido'?'RESUMO_EXPANDIDO':null;
@@ -3466,7 +3528,7 @@ export async function createPortalApp() {
     const identity=getPortalIdentity(req)!;
     const process=processesStore.find(item=>item.id===req.params.id);
     if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
-    if(!hasFullAdministration(identity.email)&&!getActiveProcessRoles(identity.email,process.id).includes('STUDENT'))return res.status(403).json({error:'A entrega é editada por um dos autores.'});
+    if(!getActiveProcessRoles(identity.email,process.id).includes('STUDENT'))return res.status(403).json({error:'A entrega é editada por um dos autores.'});
     if(process.status==='CONCLUIDO'||documentSignatureCompleted(signatureJobsStore,process.id,'DECLARACAO'))return res.status(409).json({error:'Os documentos finais já foram assinados. A entrega está encerrada.',code:'REPOSITORY_CLOSED'});
     if(!process.acervo?.submittedAt)return res.json(process);
     if(repositoryReopenLocks.has(process.id))return res.status(409).json({error:'A entrega está sendo reaberta. Aguarde.'});
@@ -3500,8 +3562,8 @@ export async function createPortalApp() {
     const process=processesStore[index];
     if(!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
     const finalDataRoles=getActiveProcessRoles(identity.email,process.id);
-    if(!hasFullAdministration(identity.email)&&!finalDataRoles.includes('STUDENT'))return res.status(403).json({error:'Somente o aluno, o Master ou o Presidente da Comissão pode concluir os dados de publicação.'});
-    if(process.avaliacao.status!=='CONCLUIDO')return res.status(409).json({error:'A avaliação precisa ser concluída antes dos dados finais.'});
+    if(!finalDataRoles.includes('STUDENT'))return res.status(403).json({error:'Somente um dos autores pode confirmar a entrega final.'});
+    if(process.avaliacao.status!=='CONCLUIDO')return res.status(409).json({error:'O conceito e a ata precisam ser registrados antes dos dados finais.'});
     if(!ataArchived(process,signatureJobsStore))return res.status(409).json({error:'Aguarde a ata assinada pelo orientador e pelos dois examinadores e arquivada no Drive.',code:'ATA_SIGNATURE_REQUIRED'});
     if(process.status==='CONCLUIDO'||process.acervo?.submittedAt||signatureJobsStore.some(job=>job.processId===process.id&&job.documentType!=='ATA'&&job.sourceDataRevision===process.dataRevision&&job.status!=='CANCELED'))return res.status(409).json({error:'Os dados finais ficam bloqueados após a criação do Termo ou da Declaração. Use o fluxo administrativo de retirada ou gere uma nova versão formal.',code:'FINAL_DATA_LOCKED_BY_SIGNATURE'});
     const palavrasChave=Array.isArray(req.body?.palavrasChave)?req.body.palavrasChave.map((value:unknown)=>String(value).trim()).filter(Boolean):[];
@@ -3515,7 +3577,7 @@ export async function createPortalApp() {
     const missing=missingDocumentModels(wantsPublication?['TERMO','DECLARACAO']:['DECLARACAO']);if(missing.length)return res.status(409).json({error:`O Master precisa cadastrar ${wantsPublication?'os modelos do termo e da declaração':'o modelo da declaração'} antes desta etapa.`,code:'DOCUMENT_MODEL_REQUIRED',missingModels:missing});
     if(palavrasChave.length!==5)return res.status(400).json({error:'Informe exatamente cinco palavras-chave.'});
     if(!resumoSintese||resumoSintese.length>2000||resumoSintese.split(/\n\s*\n/).filter(part=>part.trim()).length>3)return res.status(400).json({error:'Informe o resumo do TCC em até três parágrafos e 2.000 caracteres (aproximadamente 120 palavras).'});
-    if(!trabalhoCompletoFileUrl)return res.status(400).json({error:'Anexe o trabalho de conclusão de curso.'});
+    if(!trabalhoCompletoFileUrl||(process.avaliacao.documentRevision!==undefined&&!process.acervo?.trabalhoCompletoFileId))return res.status(400).json({error:'Anexe o PDF do trabalho de conclusão de curso.'});
     if(publishExpandedAbstract&&!process.acervo?.resumoExpandidoFileId)return res.status(400).json({error:'Anexe o resumo expandido antes de autorizar sua publicação.'});
     const now=new Date().toISOString();
     const updated:ProcessData={...process,signatureProviderPreferences:{...process.signatureProviderPreferences,TERMO:signatureProvider},etapaAtual:'ASSINATURA',status:'AGUARDANDO_ASSINATURA',acervo:{...process.acervo,palavrasChave,resumoSintese,trabalhoCompletoFileUrl,publishFullWork,publishExpandedAbstract,workType:req.body?.workType||'MONOGRAFIA',isPublic:publishFullWork,authorizationConfirmedAt:wantsPublication?now:undefined,publicationRequestedAt:wantsPublication?now:undefined,publicationWithdrawnAt:undefined,publicationWithdrawnBy:undefined,publicationWithdrawalReason:undefined,firstSubmittedAt:process.acervo?.firstSubmittedAt||now,submittedAt:now,submittedBy:identity.email},dataRevision:process.dataRevision+1,updatedAt:now};
@@ -3573,6 +3635,7 @@ export async function createPortalApp() {
       avaliacao: {
         ...proc.avaliacao,
         status: 'PENDENTE',
+        documentRevision: proc.dataRevision + 1,
         updatedAt: now
       },
       acervo:{...proc.acervo,publishFullWork:false,publishExpandedAbstract:false,isPublic:false,authorizationConfirmedAt:undefined,publicationRequestedAt:undefined,submittedAt:undefined,submittedBy:undefined},
@@ -3621,7 +3684,7 @@ export async function createPortalApp() {
     if(!document||!['DISPONIVEL','ASSINADO'].includes(document.status))return res.status(404).json({error:'Documento não encontrado.'});
     let fileId='';let signatureJob:SignatureJob|undefined;
     if(document.type==='CONVITE')fileId=String(process.defesa.invitationDriveFileId||'');
-    else{signatureJob=signatureJobsStore.filter(job=>job.processId===process.id&&job.documentType===document.type&&job.status==='ARCHIVED'&&job.driveSignedFileId).sort((a,b)=>b.documentVersion-a.documentVersion)[0];fileId=String(signatureJob?.driveSignedFileId||'');}
+    else{signatureJob=signatureJobsStore.find(job=>job.processId===process.id&&job.documentType===document.type&&job.documentVersion===document.currentVersion&&job.status==='ARCHIVED'&&job.driveSignedFileId);fileId=String(signatureJob?.driveSignedFileId||'');}
     if(!fileId)return res.status(404).json({error:'Documento não encontrado.'});
     if(signatureJob?.provider==='GOV_BR'&&fileId.startsWith('local_govbr_')){try{const pdf=await readGovbrPdf(signatureJob,fileId,String(signatureJob.signedSha256||''));await deliverPortalDownload({res,processId:process.id,bytes:pdf,fileName:signatureJob.govbrReview?.fileName||signatureJob.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch{return res.status(409).json({error:'PDF de demonstração indisponível.'});}return;}
     try{const accessToken=await (localReviewFilesEnabled()&&fileId.startsWith('local_review_')?sourceFilesAccessToken():getGoogleWorkspaceAccessToken());const file=await downloadSourceFile(accessToken,fileId,{processId:process.id,artifactType:document.type,...(signatureJob?{signatureJobId:signatureJob.id}:{})});await deliverPortalDownload({res,processId:process.id,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Falha ao recuperar o documento.'});}

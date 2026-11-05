@@ -1,11 +1,10 @@
 import {calendarEventMatchesProcess, currentDefenseSelection, isDefenseOnCalendar, isDefenseReservationPending} from '../utils/defenseReservationState';
 import { legacyRepositoryProcess } from '../utils/legacyRepository';
-import { NursingEmblemLogo } from '../components/NursingEmblemLogo';
 import {readProcessLink,setProcessLink} from '../utils/processLink';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { ProcessData } from '../types';
-import { apiClient } from '../services/apiClient';
+import { apiClient, ApiRequestError } from '../services/apiClient';
 import { portalConfirm } from '../services/portalDialogs';
 import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
 import { OnlineSystemTutorial } from '../components/OnlineSystemTutorial';
@@ -52,6 +51,7 @@ import {
   FileCheck,
   RotateCcw,
   Pencil,
+  Lock,
   X
 } from 'lucide-react';
 import {
@@ -524,8 +524,22 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [loginStep,setLoginStep]=useState<'email'|'code'>('email');
   const [loginWorking,setLoginWorking]=useState(false);
   const [loginMessage,setLoginMessage]=useState('');
+  const [loginResendAt,setLoginResendAt]=useState(0);
+  const [loginResendSeconds,setLoginResendSeconds]=useState(0);
+  const loginRequestInFlight=useRef(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const loginDestinationRef=useRef('');
+  useEffect(()=>{
+    if(!showLoginModal||loginStep!=='code'||!loginResendAt)return;
+    const update=()=>{
+      const seconds=Math.max(0,Math.ceil((loginResendAt-Date.now())/1000));
+      setLoginResendSeconds(seconds);
+      if(seconds===0)setLoginResendAt(0);
+    };
+    update();
+    const timer=window.setInterval(update,1000);
+    return()=>window.clearInterval(timer);
+  },[showLoginModal,loginStep,loginResendAt]);
   useEffect(()=>{
     if(authLoading)return;
     if(isAuthenticated){loginDestinationRef.current='';return;}
@@ -892,17 +906,43 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     );
   });
 
+  const requestLoginCode = async () => {
+    if(loginRequestInFlight.current)return;
+    loginRequestInFlight.current=true;
+    setLoginWorking(true);setLoginMessage('');
+    try {
+      const response=await apiClient.requestLoginCode(loginEmailInput.trim().toLowerCase());
+      if(!response.sent){
+        setLoginMessage(response.message||'Confira o endereço ou solicite acesso à secretaria.');
+        return;
+      }
+      setLoginStep('code');
+      setLoginCodeInput('');
+      setLoginResendSeconds(60);
+      setLoginResendAt(Date.now()+60_000);
+      setLoginMessage('Código enviado. Consulte seu e-mail. Ele expira em 10 minutos.');
+    } catch(error) {
+      if(error instanceof ApiRequestError&&error.code==='OTP_CHALLENGE_ACTIVE'){
+        const remaining=error.retryAfterSeconds??60;
+        setLoginStep('code');
+        setLoginResendSeconds(remaining);
+        setLoginResendAt(Date.now()+remaining*1000);
+      }
+      setLoginMessage(error instanceof Error?error.message:'Não foi possível solicitar o código.');
+    } finally {
+      loginRequestInFlight.current=false;
+      setLoginWorking(false);
+    }
+  };
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(loginStep==='email'){await requestLoginCode();return;}
+    if(loginRequestInFlight.current)return;
+    loginRequestInFlight.current=true;
     setLoginWorking(true);setLoginMessage('');
     try {
       const emailToUse=loginEmailInput.trim().toLowerCase();
-      if(loginStep==='email'){
-        const response=await apiClient.requestLoginCode(emailToUse);
-        if(!response.sent){setLoginStep('email');setLoginMessage(response.message||'Este e-mail não está cadastrado no Portal TCC. Entre em contato com a secretaria.');return;}
-        setLoginStep('code');setLoginMessage('Código solicitado. Consulte seu e-mail; ele expira em 10 minutos.');
-        return;
-      }
       const session=await apiClient.verifyLoginCode(emailToUse,loginCodeInput);
       await switchUser(emailToUse);
       setShowLoginModal(false);
@@ -915,7 +955,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       }
     } catch (error) {
       setLoginMessage(error instanceof Error?error.message:'Não foi possível concluir o acesso.');
-    } finally {setLoginWorking(false);}
+    } finally {loginRequestInFlight.current=false;setLoginWorking(false);}
   };
 
   // Calendar Grid Generation Logic
@@ -2582,7 +2622,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               {/* Header with Institutional Identity */}
               <div className="portal-modal-header border-b px-5 py-3.5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <NursingEmblemLogo size={32} />
+                  <Lock size={32} className="shrink-0 text-white" aria-hidden="true" />
                   <div>
                     <h3 className="font-black text-sm leading-tight text-white">
                       {loginPopupConfig.title || 'Acesso ao Portal do TCC'}
@@ -2614,23 +2654,31 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   {loginStep==='email'&&bootstrapStatus?.bootstrapMasterConfigured&&bootstrapStatus.google.oauthConfigured&&!bootstrapStatus.google.connected&&<div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900"><strong>Primeira ativação do portal</strong><p className="mt-1 leading-5">Antes do primeiro código, o Master definido na implantação precisa autorizar a conta Google que enviará os e-mails.</p><button type="button" onClick={()=>{window.location.href='/api/integrations/google/oauth/start?returnTo=/?google=connected';}} className="mt-2 rounded-lg bg-slate-700 px-3 py-2 font-black text-white hover:bg-slate-800">Autorizar Google e continuar</button></div>}
 
                   <label className="block text-xs font-bold text-slate-800">E-mail
-                    <input type="email" required disabled={loginStep==='code'} value={loginEmailInput} onChange={event=>setLoginEmailInput(event.target.value)} autoComplete="email" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm disabled:bg-slate-100" placeholder="nome@exemplo.com"/>
+                    <input type="email" required disabled={loginStep==='code'||loginWorking} value={loginEmailInput} onChange={event=>setLoginEmailInput(event.target.value)} autoComplete="email" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm disabled:bg-slate-100" placeholder="nome@exemplo.com"/>
                   </label>
                   {loginStep==='code'&&<label className="block text-xs font-bold text-slate-800">Código de confirmação
-                    <input type="text" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={loginCodeInput} onChange={event=>setLoginCodeInput(event.target.value.replace(/\D/g,'').slice(0,6))} autoComplete="one-time-code" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-3 text-center text-xl font-black tracking-[0.35em]" placeholder="000000"/>
+                    <input autoFocus type="text" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={loginCodeInput} onChange={event=>setLoginCodeInput(event.target.value.replace(/\D/g,'').slice(0,6))} autoComplete="one-time-code" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-3 text-center text-xl font-black tracking-[0.35em]" placeholder="000000"/>
                   </label>}
+                  {loginStep==='code'&&(
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                      <button type="button" className="portal-popup-secondary-action disabled:opacity-50" disabled={loginWorking||loginResendSeconds>0} onClick={()=>void requestLoginCode()}>Reenviar código</button>
+                      {loginResendSeconds>0&&<span>Disponível em {loginResendSeconds} s</span>}
+                    </div>
+                  )}
                   {loginMessage&&<p role="status" className={`rounded-lg border px-3 py-2 text-xs ${loginMessage.startsWith('Código enviado')?'border-emerald-200 bg-emerald-50 text-emerald-800':'border-amber-200 bg-amber-50 text-amber-900'}`}>{loginMessage}</p>}
 
                   <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                     <button
                       type="button"
-                      onClick={() => {if(loginStep==='code'){setLoginStep('email');setLoginCodeInput('');setLoginMessage('');}else setShowLoginModal(false);}}
+                      disabled={loginWorking}
+                      onClick={() => {if(loginStep==='code'){setLoginStep('email');setLoginCodeInput('');setLoginMessage('');setLoginResendAt(0);setLoginResendSeconds(0);}else setShowLoginModal(false);}}
                       className="portal-popup-secondary-action min-w-[96px]"
                     >
                       {loginStep==='code'?'Trocar e-mail':'Cancelar'}
                     </button>
                     <button
                       type="submit"
+                      disabled={loginWorking}
                       className="portal-popup-action min-w-[96px]"
                     >
                       <span>{loginWorking?'Aguarde…':loginStep==='email'?'Enviar código':'Entrar'}</span>

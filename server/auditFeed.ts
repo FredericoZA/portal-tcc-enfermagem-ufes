@@ -26,7 +26,7 @@ function snapshot(log: AuditLog): Partial<ProcessData> {
 
 export function emailDeliveryAuditMetadata(record: EmailDeliveryRecord): Record<string, unknown> {
   const dispatchState = record.dispatchState === 'SENDING' && !(record.dispatchLeaseUntil && Date.parse(record.dispatchLeaseUntil) > Date.now()) ? 'UNCERTAIN' : record.dispatchState;
-  return safeAuditValue({recipient:record.recipient,cc:record.cc || [],subject:record.subject,status:record.status,
+  return safeAuditValue({templateId:record.templateId,recipient:record.recipient,cc:record.cc || [],subject:record.subject,status:record.status,
     createdAt:record.createdAt,updatedAt:record.updatedAt,acceptedAt:record.acceptedAt,nextRetryAt:record.nextRetryAt,
     dispatchState,dispatchStartedAt:record.dispatchStartedAt,dispatchLeaseUntil:record.dispatchLeaseUntil,
     attempts:record.attempts,maxAttempts:record.maxAttempts,requestedBy:record.requestedBy,sender:record.sender,

@@ -72,14 +72,14 @@ pages=[
  ('Abra a carta-convite em “Documentos administrativos”.','Use “Ver” ou “Baixar PDF” quando liberados. Se houver dado incorreto e a edição estiver bloqueada, informe a comissão com o protocolo do TCC.')]),
  dict(tag='ORIENTADOR • APÓS A DEFESA',title='9. Registrar conceito e parecer',image='avaliacao',image_h=181,steps=[
  ('Abra o TCC e clique em “Conceito e Ata”.','O registro exige acesso como orientador, local confirmado, convite enviado e o início do horário da defesa.'),
- ('Selecione o resultado da defesa.','Escolha “Aprovado”, “Aprovado com ressalva” ou “Reprovado”, conforme a decisão da banca.'),
+ ('Selecione o conceito da defesa.','Escolha “Aprovado”, “Aprovado com ressalva” ou “Reprovado”, conforme a decisão da banca.'),
  ('Preencha o “Parecer da banca”.','Escreva a fundamentação deliberada. “Gerar rascunho de parecer” fornece um texto-base fixo; revise-o e substitua as instruções entre colchetes.'),
- ('Clique em “Visualizar ata”.','Leia a prévia antes de confirmar. O preenchimento do conceito ainda não solicita a assinatura do documento.')],note='A avaliação acadêmica e o lançamento da nota são feitos em professor.ufes.br. O Portal de TCC registra o conceito, o parecer e a documentação.'),
+ ('Clique em “Visualizar ata”.','Leia a prévia antes de confirmar. O preenchimento do conceito ainda não solicita a assinatura do documento.')],note='Registre o conceito e o parecer deliberados pela banca, incluindo eventuais ressalvas. Notas e frequência são lançadas em professor.ufes.br.'),
  dict(tag='ORIENTADOR • CONFERÊNCIA',title='10. Conferir e registrar a ata',image='ata-previa',image_h=117,steps=[
  ('Leia a ata inteira na prévia.','Confira título, nomes completos, data, local, participantes, resultado e parecer. O coorientador aparece quando cadastrado; isso não o torna signatário da ata.'),
  ('Se houver erro, clique em “Voltar e corrigir”.','Ajuste os dados antes de registrar. Não confirme uma ata com informação incorreta.'),
  ('Marque a confirmação de conferência.','Assinale “Visualizei a ata. Confirmo que o resultado, o parecer e os dados correspondem à defesa e autorizo o registro e a preparação para assinatura”.'),
- ('Clique em “Registrar avaliação e ir para documentos”.','O Portal abre “Documentos administrativos”. A ata registrada ainda precisa da assinatura do orientador e dos dois examinadores.')],note='Registrar o conceito não envia uma solicitação Asten automaticamente. A solicitação é feita na caixa da ata, na próxima etapa.'),
+ ('Clique em “Registrar conceito e ata e ir para documentos”.','O Portal abre “Documentos administrativos”. A ata registrada ainda precisa da assinatura do orientador e dos dois examinadores.')],note='Registrar o conceito não envia uma solicitação Asten automaticamente. A solicitação é feita na caixa da ata, na próxima etapa.'),
  dict(tag='ORIENTADOR • TRÊS ASSINATURAS',title='11. Solicitar as assinaturas da ata',image='documentos',image_h=199,steps=[
  ('Em “Documentos administrativos”, localize “Ata”.','O conceito e o parecer precisam estar registrados. Confira os responsáveis indicados: orientador e dois examinadores.'),
  ('Clique em “Asten” uma única vez.','A solicitação prepara o mesmo documento para os três integrantes. Aguarde o resultado; não repita o pedido enquanto estiver pendente.'),
@@ -113,7 +113,7 @@ pages=[
  ('Docentes e demais participantes: vínculo pelo TCC.','Ao concluir o cadastro, o autor vincula os demais autores, orientador, coorientador e examinadores pelos e-mails informados. Um examinador externo também pode entrar com esse mesmo endereço e o código enviado por e-mail. O vínculo libera apenas as funções do seu papel, sem acesso administrativo.'),
  ('Consulta pública e dados restritos.','Visitantes consultam título, autoria, docentes, resumo textual e dados públicos da defesa. O cadastro novo não solicita CPF, matrícula ou SIAPE. Os registros históricos são preservados. E-mails e identificadores pessoais antigos não aparecem na ficha pública.'),
  ('Arquivos e comunicações.','Os originais ficam no Drive privado. A entrega obrigatória não autoriza a publicação do PDF. E-mails são usados para acesso, avisos e assinaturas; destinatários de mensagens do mesmo TCC podem conhecer os endereços dos demais destinatários.'),
- ('Regras programadas e decisões humanas.','A operação do Portal não usa modelos de inteligência artificial, agentes autônomos ou treinamento com dados dos participantes. Conceitos, pareceres, reservas e autorizações dependem dos responsáveis. Consulte o Aviso de privacidade e a legislação em Informações gerais do TCC.')]),
+ ('Regras programadas e decisões dos responsáveis.','O Portal registra os conceitos, os pareceres, as reservas e as autorizações informados pelas pessoas responsáveis. Consulte o Aviso de Privacidade em Informações gerais do TCC.')]),
 ]
 styles={
  'body':ParagraphStyle('body',fontName='Portal',fontSize=13,leading=18.5,textColor=INK,spaceAfter=0),

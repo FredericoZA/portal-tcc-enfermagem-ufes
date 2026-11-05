@@ -14,8 +14,21 @@ export function documentSignatureArchived(jobs:SignatureJob[],processId:string,d
  return matching.some(job=>job.sourceDataRevision===revision&&job.status==='ARCHIVED'&&Boolean(job.driveSignedFileId));
 }
 
+export function currentAtaArchived(process: Pick<ProcessData, 'id' | 'avaliacao'>, jobs: SignatureJob[]): boolean {
+ const revision = process.avaliacao?.documentRevision;
+ if (revision === undefined) return documentSignatureArchived(jobs, process.id, 'ATA');
+ return process.avaliacao.status === 'CONCLUIDO' && jobs.some(job =>
+   job.processId === process.id && job.documentType === 'ATA' && job.sourceDataRevision === revision
+   && job.status === 'ARCHIVED' && Boolean(job.driveSignedFileId)
+   && job.signers?.length === 3 && job.signers.every(signer => signer.status === 'SIGNED')
+   && job.signers.filter(signer => signer.role === 'ADVISOR').length === 1
+   && job.signers.filter(signer => signer.role === 'EXAMINER').length === 2
+   && new Set(job.signers.map(signer => signer.email)).size === 3
+ );
+}
+
 /** Repair the displayed legacy stage without treating PDF preparation as signing. */
 export function processWithPendingAtaStage(process:ProcessData,jobs:SignatureJob[]):ProcessData{
- if(process.etapaAtual==='REPOSITORIO'&&process.avaliacao?.status==='CONCLUIDO'&&!process.acervo?.submittedAt&&!documentSignatureArchived(jobs,process.id,'ATA'))return {...process,etapaAtual:'ASSINATURA',status:'AGUARDANDO_ASSINATURA'};
+ if(process.etapaAtual==='REPOSITORIO'&&process.avaliacao?.status==='CONCLUIDO'&&!process.acervo?.submittedAt&&!currentAtaArchived(process,jobs))return {...process,etapaAtual:'ASSINATURA',status:'AGUARDANDO_ASSINATURA'};
  return process;
 }

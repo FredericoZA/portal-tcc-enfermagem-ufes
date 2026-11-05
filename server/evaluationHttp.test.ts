@@ -84,11 +84,14 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     assert.equal((await request(`/api/processes/${local.id}/confirm-location`, master, { local: 'Outro local', confirmationReceived: true })).status, 404);
     assert.equal((await request('/api/does-not-exist')).status, 404);
     assert.equal((await request(route + '/schema', p.aluno1.email)).status, 403);
+    assert.equal((await request(route + '/schema', master)).status, 403);
+    assert.equal((await request(`/api/processes/${local.id}/evaluation/schema`)).body.code, 'CONCEPT_STAGE_NOT_RELEASED');
     const schema = await request(route + '/schema');
     assert.equal(schema.status, 200);
     assert.equal(schema.body.studio.docTemplates, undefined);
     const body = { signatureProvider:'GOV_BR',dataConfirmed: true, expectedDataRevision: p.dataRevision, expectedSchemaRevision: schema.body.studio.revision, resultadoCode: 'APROVADO', parecer: 'Avaliação realizada e dados conferidos.' };
     assert.equal((await request(route, p.aluno1.email, body)).status, 403);
+    assert.equal((await request(route, master, body)).status, 403);
     assert.equal((await request(route, p.orientador.email, { ...body, dataConfirmed: false })).body.code, 'DATA_REVIEW_REQUIRED');
     assert.equal((await request(route, p.orientador.email, { ...body, expectedDataRevision: 0 })).status, 409);
     assert.equal((await request(route,p.orientador.email,body)).body.code,'ATA_PREVIEW_REQUIRED');
@@ -113,7 +116,8 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
 
     assert.equal((await request(route,p.orientador.email,{...body,parecer:'Parecer alterado após a prévia.',previewToken:preview.body.previewToken})).body.code,'ATA_PREVIEW_REQUIRED');
     const earlyPreview=await request(`/api/processes/${local.id}/evaluation/preview`,p.orientador.email,body);
-    assert.equal(earlyPreview.status,200,JSON.stringify(earlyPreview.body));
+    assert.equal(earlyPreview.status,409,JSON.stringify(earlyPreview.body));
+    assert.equal(earlyPreview.body.code,'CONCEPT_STAGE_NOT_RELEASED');
     const saved = await request(route, p.orientador.email, {...body,previewToken:preview.body.previewToken});
     assert.equal(saved.status, 200); // Registration no longer contacts a signature provider.
     assert.equal(saved.body.avaliacao.notaFinal, undefined);
@@ -150,6 +154,9 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     const historicalSaved=await request(`/api/processes/${archived.id}/evaluation`,p.orientador.email,{...revisedBody,previewToken:historicalPreview.body.previewToken});
     assert.equal(historicalSaved.status,200,JSON.stringify(historicalSaved.body));
     assert.equal(historicalSaved.body.avaliacao.status,'CONCLUIDO');
+    assert.equal(historicalSaved.body.avaliacao.documentRevision,historicalSaved.body.dataRevision);
+    const staleArchiveUpload=await request(`/api/processes/${archived.id}/files/trabalho-completo`,p.aluno1.email,{});
+    assert.equal(staleArchiveUpload.body.code,'ATA_SIGNATURE_REQUIRED','a ata assinada antes da reabertura não libera o repositório');
     const finalDisk=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));
     assert.deepEqual(finalDisk.signatureJobs,[archivedJob],'the signed previous ATA remains immutable after corrected evaluation');
 

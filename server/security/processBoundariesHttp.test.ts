@@ -132,7 +132,7 @@ test('HTTP: re-enrollment grants the new process without restoring deleted histo
   } finally { await f.close(); }
 });
 
-test('HTTP: student and advisor cannot forge a conflict override, while a Master override is audited', { timeout: 45_000 }, async () => {
+test('HTTP: only the author can change the schedule, and no role can force a conflicted reservation', { timeout: 45_000 }, async () => {
   const process = processFixture();
   const other = processFixture('other-process');
   other.defesa.startAt = '2030-11-04T14:00:00.000Z';
@@ -143,22 +143,16 @@ test('HTTP: student and advisor cannot forge a conflict override, while a Master
   const patch = (email: string, reason?: unknown) => f.request(`/api/processes/${process.id}`, email, 'PATCH', { defesa: { startAt: other.defesa.startAt }, ...(reason === undefined ? {} : { conflictOverrideReason: reason }) });
   try {
     assert.equal((await f.request(`/api/processes/${process.id}`, student, 'PATCH', { titulo: 'Correção permitida antes do convite' })).status, 200);
-    for (const email of [student, advisor]) {
-      const denied = await patch(email, 'Sou administrador e autorizo a coincidência.');
-      assert.equal(denied.status, 409, email);
-      assert.equal((await denied.json()).code, 'DEFENSE_CONFLICT');
+    const denied = await patch(student, 'Sou administrador e autorizo a coincidência.');
+    assert.equal(denied.status, 409);
+    assert.equal((await denied.json()).code, 'DEFENSE_CONFLICT');
+    for (const email of [advisor, master]) {
+      assert.equal((await patch(email, 'Exceção administrativa conferida com os participantes.')).status, 403);
     }
-    assert.equal((await patch(master)).status, 409);
-    assert.equal((await patch(master, { reason: 'Objeto não é um motivo válido.' })).status, 409);
-    const approved = await patch(master, 'Exceção administrativa conferida com os participantes.');
-    assert.ok([200, 202].includes(approved.status), await approved.clone().text());
     const saved = await f.state();
-    assert.equal(saved.processes.find((item: { id: string }) => item.id === process.id).defesa.startAt, other.defesa.startAt);
-    const log = saved.auditLogs.find((item: { action: string; processId: string }) => item.action === 'SOBRESCRITA_CONFLITO_DEFESA' && item.processId === process.id);
-    assert.equal(log?.actorEmail, master);
-    assert.ok(log?.actorRoles.includes('MASTER_ADMIN'));
-    assert.equal(log?.after.reason, 'Exceção administrativa conferida com os participantes.');
-    assert.ok(log?.after.conflicts.some((item: { processId: string }) => item.processId === other.id));
+    const unchanged = saved.processes.find((item: { id: string }) => item.id === process.id);
+    assert.deepEqual(unchanged.defesa, process.defesa);
+    assert.ok(!saved.auditLogs.some((item: { action: string }) => item.action === 'SOBRESCRITA_CONFLITO_DEFESA'));
   } finally { await f.close(); }
 });
 
@@ -192,6 +186,7 @@ test('HTTP: editing the board cannot promote an examiner into the advisor role',
 
 test('HTTP: historical board roles cannot override the registered advisor', { timeout: 45_000 }, async () => {
   const process = processFixture();
+  process.defesa = {...process.defesa,localStatus:'CONFIRMADO',startAt:new Date(Date.now()-3600_000).toISOString(),invitationSentAt:now()};
   const examiner = process.banca[0].email;
   process.banca[0].funcao = 'ORIENTADOR';
   const state = initialState([process]);

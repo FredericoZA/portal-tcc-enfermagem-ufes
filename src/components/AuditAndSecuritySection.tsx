@@ -1,7 +1,8 @@
 import {formatDateTimeWithWeekday} from '../utils/formatters';
-import { portalNotice, portalConfirm, portalPrompt } from '../services/portalDialogs';
+import { portalNotice, portalConfirm } from '../services/portalDialogs';
+import { retryAfterPortalReauthentication } from '../services/reauthentication';
 import React, { useState, useEffect } from 'react';
-import { apiClient, ApiRequestError } from '../services/apiClient';
+import { apiClient } from '../services/apiClient';
 import { GlobalSettings, AuditLog } from '../types';
 import { FileCheck2, Save } from 'lucide-react';
 
@@ -38,23 +39,11 @@ export const MasterAndPresidentConfigForm: React.FC<Omit<AuditAndSecuritySection
     setPresidentEmail(settings.commissionPresidentEmail || '');
   }, [settings]);
 
-  const createTransferWithInlineReauthentication = async (role:'MASTER_ADMIN'|'COMMISSION_PRESIDENT', targetEmail:string) => {
-    try {
-      return await apiClient.createAdministrationTransfer(role, targetEmail);
-    } catch (error) {
-      if (!(error instanceof ApiRequestError) || (error.code !== 'REAUTHENTICATION_REQUIRED' && error.status !== 428)) throw error;
-      const me = await apiClient.getMe();
-      await apiClient.requestLoginCode(me.userEmail);
-      const code = await portalPrompt(
-        'Para confirmar a alteração segura dos e-mails administrativos, informe o código enviado ao seu e-mail. Você não precisa sair do Portal.',
-        '',
-        { title: 'Confirmar identidade', confirmLabel: 'Validar e salvar', cancelLabel: 'Cancelar' }
-      );
-      if (!code?.trim()) throw new Error('A alteração de e-mail foi cancelada antes da confirmação de identidade.');
-      await apiClient.verifyLoginCode(me.userEmail, code.trim());
-      return apiClient.createAdministrationTransfer(role, targetEmail);
-    }
-  };
+  const createTransferWithInlineReauthentication = (role:'MASTER_ADMIN'|'COMMISSION_PRESIDENT', targetEmail:string) =>
+    retryAfterPortalReauthentication(
+      () => apiClient.createAdministrationTransfer(role, targetEmail),
+      'Para confirmar a alteração dos e-mails administrativos, informe o código enviado ao seu e-mail. Você permanece no Portal.',
+    );
 
   const handleSaveAccounts = async (e: React.FormEvent) => {
     e.preventDefault();

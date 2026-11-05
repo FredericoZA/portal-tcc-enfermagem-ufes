@@ -32,7 +32,10 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  for(const person of [process.aluno1,process.aluno2].filter(Boolean)){if(person!.matricula){authors=authors.replaceAll(`${person!.matricula} - `,'').replaceAll(` (${person!.matricula})`,'');}}
  const title=formatTccTitle(snapshot.get('Título')||process.titulo);
  const confirmed=response.decision==='CONFIRMED';
- const design=receiptDesign(settings.integrationStudio),receiptTitle=confirmed?design.confirmedTitle:design.declinedTitle;
+ const design=receiptDesign(process.defesa.departmentResponse?.receiptDesign
+  ? {receiptDesign:process.defesa.departmentResponse.receiptDesign}
+  : settings.integrationStudio);
+ const receiptTitle=confirmed?design.confirmedTitle:design.declinedTitle;
  const doc=await PDFDocument.create();doc.registerFontkit(fontkit);
  const [regularBytes,boldBytes]=await fontBytes;
  const logo=await doc.embedPng(await logoBytes);

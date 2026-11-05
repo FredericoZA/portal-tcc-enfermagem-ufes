@@ -96,7 +96,7 @@ export function canInitiateSignature(
   globalRoles: readonly GlobalRole[] = [],
 ): boolean {
   if (!isValidSignatureEmail(email)) return false;
-  if (globalRoles.includes('MASTER_ADMIN') || globalRoles.includes('COMMISSION_PRESIDENT')) return true;
+  if (globalRoles.includes('MASTER_ADMIN')) return true;
   const actor = normalizeSignatureEmail(email);
   if (type === 'ATA') return [process.orientador, ...(process.banca || []).filter(member => member.funcao === 'EXAMINER_2' || member.funcao === 'EXAMINER_3')]
     .some(person => normalizeSignatureEmail(person?.email) === actor);
@@ -119,7 +119,6 @@ export function canReturnGovbrDocument(
   if (!isValidSignatureEmail(email)) return false;
   if (globalRoles.includes('MASTER_ADMIN')) return true;
   if (type === 'TERMO') return normalizeSignatureEmail(email) === normalizeSignatureEmail(process.orientador.email);
-  if (globalRoles.includes('COMMISSION_PRESIDENT')) return true;
   const responsible = type === 'DECLARACAO' ? settings.commissionPresidentEmail : process.orientador?.email;
   return normalizeSignatureEmail(email) === normalizeSignatureEmail(responsible);
 }

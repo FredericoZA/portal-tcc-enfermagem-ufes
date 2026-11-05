@@ -6,11 +6,15 @@ import { portalConfirm } from '../services/portalDialogs';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Eye, FileText, FilePlus2, FileUp, Link2, Loader2, Merge, Plus, ShieldAlert, Sparkles, Trash2 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
+import { downloadBlankAttendanceDeclaration } from '../utils/blankAttendanceDeclaration';
 import { getVariableUsage, mergeVariableAcrossArtifacts, normalizeVariableKey, saveLocalStudio } from '../services/integrationStudioService';
 import { SettingsWorkspaceHeaderPortal, SettingsWorkspaceSelector } from './SettingsWorkspaceModal';
 
+const RESERVATION_RECEIPTS = 'COMPROVANTES_RESERVA';
+const ATTENDANCE_DECLARATION = 'DECLARACAO_COMPARECIMENTO';
 const BASE_SLOTS: Array<[string, string]> = [
-  ['CONVITE', 'Carta-convite'], ['ATA', 'Ata de defesa'], ['TERMO', 'Termo de autorização para publicação'], ['DECLARACAO', 'Declaração de participação na banca']
+  ['CONVITE', 'Carta-convite'], ['ATA', 'Ata de defesa'], ['TERMO', 'Termo de autorização para publicação'], ['DECLARACAO', 'Declaração de participação na banca'],
+  [RESERVATION_RECEIPTS, 'Comprovantes de reserva'], [ATTENDANCE_DECLARATION, 'Declaração de comparecimento']
 ];
 
 const normalizeModelKey = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 48);
@@ -24,6 +28,7 @@ type StudioEmailTemplate = { id:string; name:string; recipient?:string; subject:
 type StudioFormTemplate = { id:string; title:string; questions:Array<{fieldKey:string;availableToTemplates?:boolean;[key:string]:any}>; [key:string]:any };
 
 interface MasterDocumentModelsPanelProps {
+  receiptEditor: React.ReactNode;
   onCatalogChanged?: (models: Record<string, any>) => void;
   actorEmail?: string;
   matrixColumns: VariableColumn[];
@@ -38,7 +43,7 @@ interface MasterDocumentModelsPanelProps {
   setFormTemplates: React.Dispatch<React.SetStateAction<StudioFormTemplate[]>>;
 }
 
-export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps> = ({ onCatalogChanged, actorEmail='', matrixColumns, setMatrixColumns, matrixRows, setMatrixRows, docTemplates, setDocTemplates, emailTemplates, setEmailTemplates, formTemplates, setFormTemplates }) => {
+export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps> = ({ receiptEditor, onCatalogChanged, actorEmail='', matrixColumns, setMatrixColumns, matrixRows, setMatrixRows, docTemplates, setDocTemplates, emailTemplates, setEmailTemplates, formTemplates, setFormTemplates }) => {
   const [models, setModels] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState('');
@@ -301,12 +306,19 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
   const hasFile=Boolean(model?.driveFileId);
   const integrityReady=Boolean(model?.configured&&model?.contentSha256);
   const deleting=working===`delete-${type}`;
+  const generatedByPortal=type===RESERVATION_RECEIPTS||type===ATTENDANCE_DECLARATION;
+  const downloadAttendance=async()=>{
+    setWorking(ATTENDANCE_DECLARATION);setMessage('');
+    try{await downloadBlankAttendanceDeclaration();}
+    catch(error){setMessage(error instanceof Error?error.message:'Não foi possível baixar a declaração.');}
+    finally{setWorking('');}
+  };
 
   return <section className="portal-master-models-catalog min-h-0 bg-[var(--portal-surface-panel)] pb-0" data-portal-document-direct-editor="true">
     <SettingsWorkspaceHeaderPortal>
       <button type="button" onClick={()=>setShowNewModel(value=>!value)} className="portal-toolbar-icon-button" title="Criar outro modelo" aria-label="Novo modelo"><Plus className="h-3.5 w-3.5"/></button>
-      <SettingsWorkspaceSelector icon={FileText} aria-label="Selecionar documento" title={String(model?.label||label)} value={type} onChange={setSelectedType}>
-        {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{models[slotType]?.label||slotLabel}</option>)}
+      <SettingsWorkspaceSelector icon={FileText} aria-label="Selecionar documento" title={String(generatedByPortal?label:model?.label||label)} value={type} onChange={setSelectedType}>
+        {slots.map(([slotType,slotLabel])=><option key={slotType} value={slotType}>{slotType===RESERVATION_RECEIPTS||slotType===ATTENDANCE_DECLARATION?slotLabel:models[slotType]?.label||slotLabel}</option>)}
       </SettingsWorkspaceSelector>
     </SettingsWorkspaceHeaderPortal>
 
@@ -325,7 +337,13 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
 
     {message&&<p role="status" className="mx-3 mt-3 rounded-lg border border-slate-300 px-2.5 py-1.5 text-[10px] font-semibold text-slate-700" style={{backgroundColor:'var(--portal-surface-panel)'}}>{message}</p>}
 
-    <article className="mt-2 overflow-hidden rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)]">
+    {type===RESERVATION_RECEIPTS&&receiptEditor}
+    {type===ATTENDANCE_DECLARATION&&<article className="mt-2 space-y-3 rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)] p-4">
+      <h3 className="text-sm font-bold">{label}</h3>
+      <p className="text-xs text-slate-700">Modelo em branco gerado pelo Portal para preenchimento manual. O mesmo PDF está disponível no menu lateral.</p>
+      <button type="button" disabled={Boolean(working)} onClick={()=>void downloadAttendance()} className={action}><FileText className="h-3.5 w-3.5"/>{working===ATTENDANCE_DECLARATION?'Gerando…':'Baixar modelo em PDF'}</button>
+    </article>}
+    {!generatedByPortal&&<article className="mt-2 overflow-hidden rounded-xl border border-slate-300 bg-[var(--portal-surface-panel)]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 p-3">
         <div className="min-w-0">
           <strong className="block truncate text-[12px] text-slate-900">{model?.label||label}</strong>
@@ -350,7 +368,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
         </div>}
 
         <div className="flex flex-wrap gap-1.5">
-          {hasFile&&model?.driveFileUrl&&<a href={model.driveFileUrl} target="_blank" rel="noreferrer" className={action}><Eye className="h-3.5 w-3.5"/>Visualizar modelo original</a>}
+          {hasFile&&model?.driveFileUrl&&<a href={model.driveFileUrl} target="_blank" rel="noreferrer" className={action} title="Abrir modelo no Google Drive"><Eye className="h-3.5 w-3.5"/>Visualizar modelo original</a>}
           {hasFile&&<button type="button" onClick={()=>void detectVariables(type)} disabled={working===`detect-${type}`} className={action}>{working===`detect-${type}`?<Loader2 className="h-3 w-3 animate-spin"/>:<Sparkles className="h-3 w-3"/>}Atualizar variáveis</button>}
         </div>
 
@@ -380,7 +398,7 @@ export const MasterDocumentModelsPanel: React.FC<MasterDocumentModelsPanelProps>
           <div className="mt-1 space-y-1">{[...model.versions].reverse().map((version:any)=><div key={version.version} className="flex items-center justify-between gap-2 text-[8.5px]"><span className="truncate"><strong>v{version.version}</strong> · {version.fileName}</span>{version.version!==model.activeVersion&&version.contentSha256&&<button type="button" onClick={()=>void restore(type,version.version)} className={action}>Restaurar</button>}</div>)}</div>
         </details>}
       </div>
-    </article>
+    </article>}
     {loading&&<p className="px-3 pb-2 pt-2 text-[9px] text-slate-500">Consultando modelos…</p>}
   </section>;
 };

@@ -120,7 +120,7 @@ export interface ExaminerInfo {
 }
 
 export interface DefesaInfo {
-  departmentResponse?: {departmentEmail?:string;attribution?:'EMAIL_LINK';receiptBody?:string;revision:number;decision:'CONFIRMED'|'UNAVAILABLE';respondedAt:string;respondedBy:string;local?:string;startAt:string;endAt:string};
+  departmentResponse?: {departmentEmail?:string;attribution?:'EMAIL_LINK';receiptBody?:string;receiptDesign?:NonNullable<import('./integrationStudio').IntegrationStudioSettings['receiptDesign']>;revision:number;decision:'CONFIRMED'|'UNAVAILABLE';respondedAt:string;respondedBy:string;local?:string;startAt:string;endAt:string};
   /** Address fixed when the current reservation request is sent. */
   reservationRequestRecipient?: string;
   reservationRevision?: number;
@@ -165,6 +165,7 @@ export interface EvaluationOutcomeOption {
 
 export interface EvaluationInfo {
   documentText?: string;
+  documentRevision?: number;
   answers?: Record<string, string | number | boolean>;
   dataReview?: {
     sourceDataRevision: number;

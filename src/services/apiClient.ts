@@ -22,7 +22,7 @@ function reportExpiredSession(status:number,code:string|undefined,revision:numbe
 type WorkflowProcessResponse = ProcessData & { workflowPending?: boolean; workflowError?: string };
 
 export class ApiRequestError extends Error {
-  constructor(message: string, readonly status: number, readonly code?: string, readonly issues?: Record<string, string>) {
+  constructor(message: string, readonly status: number, readonly code?: string, readonly issues?: Record<string, string>, readonly retryAfterSeconds?: number) {
     super(message);
     this.name = 'ApiRequestError';
   }
@@ -106,7 +106,8 @@ export async function fetchApiRequest<T>(endpoint: string, options: ApiRequestOp
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       reportExpiredSession(response.status,errorData.code,identityRevision);
-      throw new ApiRequestError(errorData.error || errorData.message || `Erro HTTP ${response.status}`, response.status, errorData.code, errorData.issues);
+      const retryAfter = response.headers.get('Retry-After');
+      throw new ApiRequestError(errorData.error || errorData.message || `Erro HTTP ${response.status}`, response.status, errorData.code, errorData.issues, retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) : undefined);
     }
 
     return response.json();
@@ -243,7 +244,7 @@ export const apiClient = {
     method: 'DELETE',body:JSON.stringify({confirmation:'EXCLUIR',expectedProcessId:id,deleteFiles:true,clearHistory:true})
   }),
   getProcessDeletions:()=>fetchApi<import('../../server/workflow/processDeletion').ProcessDeletionTask[]>('/api/admin/process-deletions'),
-  retryProcessDeletion:(id:string)=>fetchApi('/api/admin/process-deletions/'+encodeURIComponent(id)+'/retry',{method:'POST',body:JSON.stringify({})}),
+  retryProcessDeletion:(id:string)=>fetchApi<import('../../server/workflow/processDeletion').ProcessDeletionTask>('/api/admin/process-deletions/'+encodeURIComponent(id)+'/retry',{method:'POST',body:JSON.stringify({})}),
   getEvaluationSchema: (id: string) => fetchApi<{ studio: Partial<IntegrationStudioSettings>; outcomes: GlobalSettings['evaluationOutcomeOptions'];ataModelFingerprint?:string }>(`/api/processes/${id}/evaluation/schema`),
   getEvaluationDraft:(id:string)=>fetchApi<{processId:string;dataRevision:number;answers:Record<string,string|number|boolean>;documentText?:string;savedAt:string;modelFingerprint?:string;documentTextReset?:boolean}|null>(`/api/processes/${encodeURIComponent(id)}/evaluation/draft`),
   saveEvaluationDraft:(id:string,answers:Record<string,string|number|boolean>,expectedDataRevision:number,documentText?:string,expectedModelFingerprint?:string)=>fetchApiRequest<{savedAt:string;answers:Record<string,string|number|boolean>;documentText?:string}>(`/api/processes/${encodeURIComponent(id)}/evaluation/draft`,{method:'PUT',body:JSON.stringify({answers,expectedDataRevision,documentText,expectedModelFingerprint})}),

@@ -7,7 +7,7 @@ import {reservationConfirmationView,reservationPage} from '../utils/reservationC
 import {formatDateTimeWithWeekday} from '../utils/formatters';
 import {reservationRecipientField} from '../utils/reservationRecipientField';
 import {institutionalDocumentLogo} from '../utils/institutionalDocumentLogo';
-import {withOperationalCatalog} from '../utils/studioOperationalCatalog';
+import {operationalEmailRouting,withOperationalCatalog} from '../utils/studioOperationalCatalog';
 import {saveStudioAutomatically,saveStudioImageAutomatically} from '../services/studioAutosave';
 import {mergeStudioDraft} from '../utils/studioDraftMerge';
 import { signatureWorkflowBinding } from '../utils/signatureWorkflowBindings';
@@ -1100,7 +1100,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     setIsDirty(true);
   };
 
-  const selectedEmailEvent=workflowStages.find(stage=>stage.actions?.some(action=>action.refId===selectedEmail?.id))?.triggerEvent||'';
+  const selectedEmailRoute=operationalEmailRouting(selectedEmail?.id);
+  const selectedEmailEvent=selectedEmailRoute?.event||workflowStages.find(stage=>stage.actions?.some(action=>action.refId===selectedEmail?.id))?.triggerEvent||'';
   const selectedEmailGuidance=processEmailGuidance({id:'amostra',protocolo:'TCC-2026-0001',etapaAtual:'CADASTRO'},PREVIEW_VARIABLES.LINK_PROCESSO,selectedEmailEvent,selectedEmail?.id);
   const previewStudio=useMemo(()=>({brandKit,emailDesigns,formDesigns,emailTemplates,formTemplates,operationalConfig,operationsPolicy,receiptDesign:receiptConfig} as unknown as Partial<IntegrationStudioSettings>),[brandKit,emailDesigns,formDesigns,emailTemplates,formTemplates,operationalConfig,operationsPolicy,receiptConfig]);
   const effectiveEmail=selectedEmail?studioEditableEmail(previewStudio,selectedEmail.id):undefined;
@@ -1353,14 +1354,20 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
               <div className="portal-email-panels space-y-4">
                 <section aria-label="Dados iniciais do e-mail" className="grid gap-3 rounded-xl border border-[var(--portal-border)] bg-[var(--portal-surface-panel)] p-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="col-span-full flex items-center justify-between gap-2">
-                    <strong className="text-[10px] font-black normal-case text-slate-700">Configuração deste e-mail</strong>
+                    <div><strong className="text-[10px] font-black normal-case text-slate-700">Configuração deste e-mail</strong><p className="mt-1 text-[10px] text-slate-600">{isDirty||hasSavedIncompleteDraft?'Alterações em edição':'Revisão '+revision} · Códigos de acesso e avisos do Asten têm fluxos próprios.</p></div>
                     <div className="flex items-center gap-1.5">
                       <button type="button" onClick={()=>setPreviewMode('email')} className="portal-toolbar-icon-button" title="Ver modelo de e-mail com dados fictícios" aria-label="Ver modelo de e-mail com dados fictícios"><Eye className="h-3.5 w-3.5"/></button>
                       <button type="button" onClick={()=>void deleteSelectedEmail()} disabled={emailTemplates.length<=1} className="portal-toolbar-icon-button text-rose-700 disabled:opacity-30" title="Excluir somente este modelo de e-mail" aria-label={`Excluir e-mail ${selectedEmail.name}`}><Trash2 className="h-3.5 w-3.5"/></button>
                     </div>
                   </div>
                   <label className="lg:col-span-2"><span className={labelClass}>Nome da rotina</span><input value={selectedEmail.name} onChange={event=>updateSelectedEmail({name:event.target.value})} className={inputClass}/></label>
-                  <label><span className={labelClass}>{selectedEmail.id==='email-reserva'?'E-mail do departamento para reservas':'Destinatário'}</span>{['email-reserva-autores','email-comprovante-reserva','email-local-indisponivel','email-convite','email-entrega-repositorio','email-conclusao'].includes(selectedEmail.id)?<p className={inputClass}>{selectedEmail.id==='email-convite'?'Examinadores e coorientador, se houver':selectedEmail.id==='email-conclusao'?'Participantes do processo':selectedEmail.id.includes('comprovante')||selectedEmail.id.includes('indisponivel')?'Responsável pela reserva, autores e orientador':'Autores e orientador'}</p>:<TemplateVariableControl value={selectedEmail.recipient||''} onChange={value=>updateSelectedEmail({recipient:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Destinatário"/>}</label>
+                  {selectedEmailRoute?.audience==='reservation-approver'
+                    ? <label><span className={labelClass}>E-mail do departamento para reservas</span><input type="email" value={selectedEmail.recipient||''} onChange={event=>updateSelectedEmail({recipient:event.target.value})} className={inputClass}/></label>
+                    : selectedEmailRoute
+                      ? <div><span className={labelClass}>Destinatários por papel</span><p className={inputClass}>{selectedEmailRoute.recipients}</p></div>
+                      : <label><span className={labelClass}>Destinatário</span><TemplateVariableControl value={selectedEmail.recipient||''} onChange={value=>updateSelectedEmail({recipient:value})} variables={templateVariables} className={inputClass} placeholder="Digite << para inserir variável" ariaLabel="Destinatário"/></label>}
+                  <p className="col-span-full text-xs text-slate-600"><strong>{selectedEmail.id}</strong> · {selectedEmailRoute?.trigger|| (selectedEmailEvent ? `Vinculado ao evento ${selectedEmailEvent}.` : 'Modelo sem evento de fluxo vinculado.')}</p>
+                  {selectedEmailRoute?.audience==='reservation-approver'&&<p className="col-span-full text-xs text-slate-600">{selectedEmailRoute.recipients}.</p>}
                   {selectedEmail.id==='email-reserva'&&<p className="col-span-full text-xs text-slate-600">Altere o destinatário neste campo para os próximos pedidos. Solicitações já enviadas mantêm o endereço original até a resposta ou um novo agendamento.</p>}
 
 
@@ -1426,7 +1433,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         )}
 
         {activeTab === 'receipts' && <section className="space-y-4 p-4" aria-label="Configuração dos comprovantes">
-          <p className="text-sm text-slate-600">Comprovantes da resposta à reserva. A prévia usa o mesmo gerador PDF do Portal, com participantes fictícios e marca de amostra. Dados do pedido, decisão, responsável, data e brasão são preenchidos pelo sistema.</p>
+          <p className="text-sm text-slate-600">O Portal gera os comprovantes de reserva em PDF. Os textos abaixo valem para as próximas respostas. A prévia usa o mesmo gerador com dados fictícios. Protocolo, título, autoria, local, data, horário, decisão e responsável vêm do registro da reserva.</p>
           <label className="block text-sm font-semibold">Resultado da reserva<select aria-label="Resultado da reserva" disabled={receiptBusy} value={receiptOutcome} onChange={event=>{setReceiptOutcome(event.target.value as typeof receiptOutcome);setReceiptPreview('');}} className="portal-input mt-2"><option value="CONFIRMED">Reserva confirmada</option><option value="UNAVAILABLE">Reserva recusada</option></select></label>
           {([receiptOutcome==='CONFIRMED'?'confirmedTitle':'declinedTitle',receiptOutcome==='CONFIRMED'?'confirmedText':'declinedText'] as const).map(key=><label key={key} className="block text-sm font-semibold">{key.endsWith('Title')?'Título do comprovante':'Texto de apresentação'}<textarea disabled={receiptBusy} aria-label={key.endsWith('Title')?'Título do comprovante':'Texto de apresentação'} rows={key.endsWith('Title')?1:3} maxLength={key.endsWith('Title')?100:500} value={resolveReceiptDesign({receiptDesign:receiptConfig})[key]} onChange={event=>{setReceiptConfig(previous=>({...previous,[key]:event.target.value}));setIsDirty(true);setReceiptPreview('');}} className="portal-input mt-2"/></label>)}
           <button type="button" disabled={receiptBusy} onClick={()=>void generateReceiptPreview()} className="portal-action portal-action-primary">{receiptBusy?'Gerando prévia…':'Ver comprovante em PDF'}</button>
@@ -1637,6 +1644,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                         const action=row.action;
                         const actionIndex=action?selectedWorkflowStage.actions.findIndex(item=>item.id===action.id):-1;
                         const condition=action?.condition;
+                        const emailRoute=row.type==='email'?operationalEmailRouting(row.value.split(':',2)[1]):undefined;
                         const binding=row.type==='doc'?signatureWorkflowBinding(docTemplates.find(item=>`doc:${item.id}`===row.value||item.id===action?.refId)):undefined;
                         return <tr key={row.value} className="border-b border-slate-300" style={{ backgroundColor:'var(--portal-surface-panel)' }}>
                           <td className="border-r border-slate-300 px-2 py-2 text-center">
@@ -1647,8 +1655,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                           </td>
                           <td className="border-r border-slate-300 px-2 py-2 text-center font-black normal-case text-slate-600">{row.detail}</td>
                           <td className="border-r border-slate-300 px-2 py-2"><input disabled={!action||Boolean(binding)} value={binding?row.label:action?.title||row.label} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{title:event.target.value})} className={inputClass}/></td>
-                          <td className="border-r border-slate-300 px-2 py-2">{binding ? <div title={`${binding.recipient}. ${binding.source}`} aria-label={`${binding.recipient}. ${binding.source}`} className="max-w-[240px] truncate whitespace-nowrap text-[10px] font-semibold leading-4 text-slate-800">{binding.recipient}</div> : action?.type==='email'&&action.refId==='email-reserva'
-                            ? <button type="button" onClick={()=>{setSelectedEmailId('email-reserva');setActiveTab('emails');}} title={emailTemplates.find(item=>item.id===action.refId)?.recipient||'Definir destinatário no modelo de e-mail'} aria-label="Definir destinatário no modelo de e-mail" className="w-full max-w-[240px] truncate whitespace-nowrap cursor-pointer rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-center text-[10px] font-semibold text-[var(--portal-brand-action)] underline underline-offset-2">{emailTemplates.find(item=>item.id===action.refId)?.recipient||'Definir destinatário'}</button>
+                          <td className="border-r border-slate-300 px-2 py-2">{binding ? <div title={`${binding.recipient}. ${binding.source}`} aria-label={`${binding.recipient}. ${binding.source}`} className="max-w-[240px] truncate whitespace-nowrap text-[10px] font-semibold leading-4 text-slate-800">{binding.recipient}</div> : emailRoute
+                            ? <button type="button" onClick={()=>{setSelectedEmailId(row.value.split(':',2)[1]);setActiveTab('emails');}} title={emailRoute.recipients} aria-label={`Abrir destinatários do modelo ${row.label}`} className="w-full max-w-[240px] truncate whitespace-nowrap cursor-pointer rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-center text-[10px] font-semibold text-[var(--portal-brand-action)] underline underline-offset-2">{emailRoute.recipients}</button>
                             : <input disabled={!action} value={action?.recipientOrDetail||''} onChange={event=>action&&updateWorkflowAction(selectedWorkflowStage.id,action.id,{recipientOrDetail:event.target.value})} className={inputClass} placeholder={action?'Detalhe opcional':'Selecione o item'}/>}</td>
                           <td className="border-r border-slate-300 px-2 py-2">
                             <div className="grid grid-cols-3 gap-1">

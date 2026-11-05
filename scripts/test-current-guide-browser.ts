@@ -77,7 +77,8 @@ try {
     await manual.locator('[data-guide-activity]').getByRole('heading', {name: activities[1].title, exact: false}).waitFor();
     await manual.screenshot({path: path.join(output, `manual-atual-${role}.png`)});
   }
-  assert.equal(await manual.locator('.portal-instruction').count(), 0);
+  assert.equal(await manual.locator('.portal-instruction').count(), 1);
+  assert.equal(await manual.getByRole('link', {name: 'Abrir manual completo do Portal de TCC em PDF'}).getAttribute('href'), '/manual/manual-portal-tcc.pdf');
   assert.equal(await manual.getByRole('button', {name: 'Ver o Fluxo do TCC', exact: true}).count(), 0);
   await page.getByRole('button', {name: 'Fluxo do TCC', exact: true}).click();
   const flow = page.locator('#fluxo-tcc-page');
@@ -121,6 +122,20 @@ try {
     }
     await manual.screenshot({path: path.join(output, `manual-atual-${width}.png`)});
   }
+  await page.setViewportSize({width: 1440, height: 950});
+  await page.getByRole('button', {name: 'Informações gerais', exact: true}).click();
+  const info = page.locator('#informacoes-gerais-tcc-page');
+  const course = info.getByRole('region', {name: 'Sobre o Trabalho de Conclusão de Curso'});
+  const portal = info.getByRole('region', {name: 'Informações sobre o Portal TCC'});
+  await course.waitFor();
+  assert.equal(await course.getByRole('heading', {level: 3}).count(), 9);
+  assert.equal(await portal.getByRole('heading', {level: 3}).count(), 2);
+  assert.equal(await portal.getByRole('link').count(), 5);
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({width, height: 950});
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Overflow das informações gerais em ${width}px`);
+  }
+  await info.screenshot({path: path.join(output, 'informacoes-gerais-atual.png')});
   assert.deepEqual(errors, []);
   await writeFile(path.join(output, 'manual-atual-browser-qa.json'), JSON.stringify({base, checked, viewports: [1440, 768, 390], errors, dataMutations: false}, null, 2));
   console.log(`PASS: ${checked.length} atividades, quatro perfis, imagens, teclado, oito passos, um quadro de assinaturas e três larguras. Nenhum login ou envio realizado.`);

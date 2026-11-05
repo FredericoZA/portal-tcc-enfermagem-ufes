@@ -225,10 +225,6 @@
   gap: 20px;
 }
 
-#portal-tutorial-page .portal-guide-instructions {
-  max-width: 74ch;
-}
-
 #portal-tutorial-page .portal-guide-image-link {
   display: block;
   width: fit-content;
@@ -279,5 +275,9 @@
 @media (min-width: 1024px) {
   #portal-tutorial-page .portal-guide-content {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  #portal-tutorial-page [data-guide-activity="acesso"] .portal-guide-content {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
   }
 }

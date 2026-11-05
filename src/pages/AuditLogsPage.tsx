@@ -12,7 +12,7 @@ import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { loadTableConfig, type ColumnDef } from '../components/TableColumnSelectorPanel';
 import { loadGlobalTableConfig, type TableTextFormat } from '../utils/tableFormatters';
 import { AuditLogDetails } from '../components/AuditLogDetails';
-import { auditActionLabel, auditIsReservationEmailDecision, auditActor, auditReference, auditSearchText, canRestoreAudit, emailAuditData, isEmailAudit } from '../utils/auditLogPresentation';
+import { auditActionLabel, auditIsReservationEmailDecision, auditActor, auditReference, auditSearchText, canRestoreAudit, emailAuditData, isEmailAudit, isEmailNotificationAudit } from '../utils/auditLogPresentation';
 
 const LOG_COLUMNS: ColumnDef[] = [
   { key: 'timestamp', label: 'Data / Hora', isFixed: true },
@@ -60,7 +60,8 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
     const start = startDate ? new Date(`${startDate}T00:00:00`).getTime() : 0;
     const end = endDate ? new Date(`${endDate}T23:59:59.999`).getTime() : Number.POSITIVE_INFINITY;
     return logs.filter(log => {
-      if (kind === 'email' && !isEmailAudit(log) || kind === 'activity' && isEmailAudit(log)) return false;
+      const notification = isEmailNotificationAudit(log);
+      if ((kind === 'email' && !notification) || (kind === 'activity' && notification)) return false;
       const timestamp = new Date(log.timestamp).getTime();
       if (Number.isFinite(timestamp) && (timestamp < start || timestamp > end)) return false;
       if (!term) return true;
@@ -110,7 +111,9 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
     setRecoveringNotices(true); setRecoveryMessage('');
     try {
       const result = await apiClient.recoverReservationNotices();
-      setRecoveryMessage(`${result.checked} aviso(s) verificado(s); ${result.failed} ainda pendente(s). Consulte os registros.`);
+      setRecoveryMessage(result.checked
+        ? `${result.checked} aviso(s) processado(s). ${result.checked - result.failed} aceito(s) pelo Gmail e ${result.failed} sem envio confirmado.`
+        : 'Nenhum aviso de reserva elegível para reprocessamento neste momento.');
     } catch (error) {
       setRecoveryMessage(error instanceof Error ? error.message : 'Não foi possível confirmar o resultado. Confira os registros antes de repetir.');
     } finally {
@@ -142,13 +145,13 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   };
 
   const toolbar = <div className="portal-audit-toolbar flex flex-wrap items-center justify-end gap-1.5">
-    <label className="portal-settings-header-selector text-[10px]" style={{ backgroundColor: 'var(--portal-brand-sage)' }} title="Filtrar registro de logs">
+    <label className="portal-settings-header-selector text-[10px]" title="Filtrar registro de logs">
       <ListFilter className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       <select aria-label="Tipo de registro" value={kind} onChange={event => setKind(event.target.value as 'all' | 'activity' | 'email')}>
-        <option value="all">Todos os registros</option><option value="activity">Atividades</option><option value="email">Envios de e-mail</option>
+        <option value="all">Todos os registros</option><option value="activity">Atividades do Portal</option><option value="email">E-mails e notificações</option>
       </select>
     </label>
-    <button type="button" onClick={() => void recoverReservationNotices()} disabled={loading || recoveringNotices} className="portal-settings-header-selector inline-flex items-center gap-1.5 text-[10px] disabled:opacity-50" style={{ backgroundColor: 'var(--portal-brand-sage)' }} title="Recuperar avisos de reserva pendentes" aria-label="Recuperar avisos de reserva pendentes"><MailCheck className={`h-3.5 w-3.5${recoveringNotices ? ' animate-pulse' : ''}`} aria-hidden="true"/><span>{recoveringNotices ? 'Recuperando avisos…' : 'Recuperar avisos'}</span></button>
+    <button type="button" onClick={() => void recoverReservationNotices()} disabled={loading || recoveringNotices} className="portal-settings-header-selector inline-flex items-center gap-1.5 text-[10px] disabled:opacity-50" title="Tentar enviar os avisos de reserva que ainda estão pendentes" aria-label="Reprocessar avisos de reserva"><MailCheck className={`h-3.5 w-3.5${recoveringNotices ? ' animate-pulse' : ''}`} aria-hidden="true"/><span>{recoveringNotices ? 'Reprocessando avisos…' : 'Reprocessar avisos'}</span></button>
     <button type="button" onClick={() => void downloadBackup()} className="portal-toolbar-icon-button" title="Baixar backup JSON" aria-label="Baixar backup JSON"><Download className="h-3.5 w-3.5"/></button>
     <button type="button" onClick={() => restoreInputRef.current?.click()} className="portal-toolbar-icon-button" title="Restaurar backup JSON" aria-label="Restaurar backup JSON"><Upload className="h-3.5 w-3.5"/></button>
     <input ref={restoreInputRef} type="file" accept=".json,application/json" className="hidden" onChange={event => restoreBackup(event.target.files?.[0])}/>

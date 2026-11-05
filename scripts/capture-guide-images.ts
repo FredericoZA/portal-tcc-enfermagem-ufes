@@ -69,11 +69,11 @@ try{
  await page.keyboard.press('Escape');
  await login(master);await home();await page.getByRole('button',{name:'Meus TCCs',exact:true}).click();await page.getByRole('button',{name:'Cadastrar TCC',exact:true}).click();await save('cadastro',page.getByRole('dialog').last(),'Cadastro inicial, etapa 1, usuário de demonstração');await page.keyboard.press('Escape');
  let dialog=await open('geral');await save('ficha',dialog,'Dados do processo fictício, identidade e quatro abas atuais');
- await login(advisor);dialog=await open('geral');
+ await login('alice@example.invalid');dialog=await open('geral');
  const edit=dialog.getByRole('button',{name:'Alterar reserva da defesa',exact:true});await edit.waitFor();await edit.click();
- const reservationDialog=page.getByRole('dialog',{name:`${fixture.protocolo} - Alterar reserva de defesa`,exact:true});await reservationDialog.waitFor();await save('confirmacao',reservationDialog,'Alteração de reserva pelo orientador, cabeçalho com protocolo e orientação de disponibilidade, sem enviar nova solicitação');await page.keyboard.press('Escape');
+ const reservationDialog=page.getByRole('dialog',{name:`${fixture.protocolo} - Alterar reserva de defesa`,exact:true});await reservationDialog.waitFor();await save('confirmacao',reservationDialog,'Alteração de reserva pelo aluno autor, sem enviar nova solicitação');await page.keyboard.press('Escape');
  await login(advisor);dialog=await open('avaliacao');
- await dialog.getByRole('combobox',{name:'Resultado da defesa',exact:false}).selectOption('APROVADO');
+ await dialog.getByRole('combobox',{name:'Conceito da defesa',exact:false}).selectOption('APROVADO');
  await dialog.getByRole('textbox',{name:'Parecer da banca',exact:false}).fill('O trabalho demonstrativo apresenta coerência entre objetivos, método e resultados. A banca recomenda a aprovação.');
  await save('avaliacao',dialog,'Conceito e parecer do orientador antes do registro; sem assinatura disparada');
  await dialog.getByRole('button',{name:'Visualizar ata',exact:true}).click();
@@ -91,7 +91,7 @@ try{
  await page.route(base+`/api/processes/${fixture.id}`,r=>r.fulfill({json:{...completed,etapaAtual:'ASSINATURA',status:'AGUARDANDO_ASSINATURA',acervo:{...fixture.acervo,submittedAt:'2026-11-03T15:00:00.000Z',trabalhoCompletoFileName:'TCC-2026-0123_TRABALHO_COMPLETO_v001.pdf',trabalhoCompletoFileUrl:'/exemplo.pdf',publishFullWork:true,publishExpandedAbstract:false}}}));dialog=await open('acervo');await save('entrega-confirmada',dialog,'Entrega final registrada: campos bloqueados e botão Editar entrega enquanto permitido');
  // Render a fully completed example without changing persisted data or contacting signers.
  await page.route(base+`/api/processes/${fixture.id}`,r=>r.fulfill({json:{...completed,etapaAtual:'CONCLUIDO',status:'CONCLUIDO',acervo:{...fixture.acervo,submittedAt:'2026-11-03T15:00:00.000Z',publishFullWork:true,publishExpandedAbstract:true}}}));
- await page.route(base+`/api/processes/${fixture.id}/documents`,r=>r.fulfill({json:documents.map(doc=>({...doc,status:doc.requiresSignature?'ASSINADO':'DISPONIVEL'}))}));
+ await page.route(base+`/api/processes/${fixture.id}/documents`,r=>r.fulfill({json:documents.map(doc=>({...doc,status:doc.requiresSignature?'ASSINADO':'DISPONIVEL',driveDownloadUrl:`/api/processes/${fixture.id}/documents/${doc.id}/download`}))}));
  await page.route(base+`/api/processes/${fixture.id}/signatures`,r=>r.fulfill({json:['ATA','TERMO','DECLARACAO'].map(documentType=>({...archived,id:`guide-archived-${documentType}`,documentType,driveSignedFileId:`synthetic-signed-${documentType}`}))}));
  dialog=await open('docs');
  const cards=dialog.locator('.portal-tcc-document-card');
@@ -99,7 +99,12 @@ try{
  const aligned=await cards.evaluateAll(items=>items.map(item=>({top:item.getBoundingClientRect().top,bottom:item.getBoundingClientRect().bottom,actions:item.querySelector('.portal-document-actions')!.getBoundingClientRect().top})));
  if(['top','bottom','actions'].some(key=>Math.max(...aligned.map(item=>item[key]))-Math.min(...aligned.map(item=>item[key]))>1))throw Error('Completed example cards are not aligned.');
  await save('documentos-concluidos',dialog,'Processo fictício concluído: cinco caixas disponíveis, assinaturas representadas, nenhuma assinatura real solicitada');
- await context.clearCookies();await home();await page.getByRole('button',{name:'Calendário',exact:true}).click();await save('calendario',page.locator('#formal-monthly-calendar-section'),'Calendário público, defesa fictícia');await page.getByRole('button',{name:'Repositório',exact:true}).click();await save('consulta-publica',page.locator('[data-portal-sheet=repository]'),'Repositório público, consulta sem login');
+ await page.route(base+'/api/legacy-academic-records',r=>r.fulfill({json:[{
+  id:'legado-0123',protocolo:'123 - Legado',titulo:'Educação em Saúde na Atenção Primária — Exemplo Histórico',
+  autores:[fixture.aluno1.nome],orientador:fixture.orientador.nome,examinadores:[],
+  dataDefesa:'2025-09-16',localDefesa:'Auditório de Enfermagem',publicFiles:[],resumo:fixture.acervo?.resumoSintese,
+ }]}));
+ await context.clearCookies();await home();await page.getByRole('button',{name:'Calendário',exact:true}).click();await save('calendario',page.locator('#formal-monthly-calendar-section'),'Calendário público, defesa fictícia');await page.getByRole('button',{name:'Repositório',exact:true}).click();const publicRepository=page.locator('[data-portal-sheet=repository]');await publicRepository.getByText('123 - Legado',{exact:true}).waitFor();await save('consulta-publica',publicRepository,'Repositório público com registro fictício, consulta sem login');
  // A historical example shares the regular four-tab process model. No original personal data.
  await page.route(base+'/api/public/processes/legado-0123',r=>r.fulfill({json:{...fixture,id:'legado-0123',protocolo:'123 - Legado',legacyRecord:true,etapaAtual:'CONCLUIDO',status:'CONCLUIDO',titulo:'Educação em Saúde na Atenção Primária — Exemplo Histórico',canAccessPrivate:false,createdAt:'',updatedAt:'',aluno1:{nome:'Alice Martins Pereira'},aluno2:null,orientador:{nome:'Carolina Souza Lima'},coorientador:null,banca:[],avaliacao:{status:'PENDENTE'},documents:[]}}));
  await page.goto(base+'/?tcc=legado-0123&secao=geral');await page.waitForTimeout(700);await save('legados',page.getByRole('dialog').last(),'Modelo público compartilhado para registro histórico fictício');

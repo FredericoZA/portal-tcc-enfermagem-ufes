@@ -24,12 +24,12 @@ export function ProcessDocumentCard({title, signerLabel = 'Assinatura', signerNo
 }) {
   const titleId = React.useId();
   return <article aria-labelledby={titleId} className={`portal-tcc-document-card ${unavailable ? 'portal-document-unavailable' : ''} border border-slate-200/90 rounded-xl p-3.5`}>
-    <div className="portal-document-heading flex items-start gap-2.5 min-w-0">
+    <div className="portal-document-heading flex items-center gap-2.5 min-w-0">
       <div className="w-8 h-8 rounded-lg bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border border-[var(--portal-border)] flex items-center justify-center shrink-0"><FileCheck className="w-4 h-4 text-[var(--portal-brand-header)]" aria-hidden="true"/></div>
       <h3 id={titleId} className="portal-document-title min-w-0 font-extrabold text-xs sm:text-[13px] text-slate-900 leading-snug">{title}</h3>
     </div>
     <div className="portal-document-signers p-1.5 bg-white border border-slate-200 rounded text-[10px] text-slate-600 font-medium"><span className="font-bold">{signerLabel}</span><span>{signerNote}</span></div>
-    <div className={`portal-document-status font-black normal-case text-[10px] px-2.5 py-0.5 rounded-md border tracking-wide ${tone === 'available' ? 'portal-document-status-available' : tone === 'error' ? 'bg-rose-50 text-rose-800 border-rose-200' : tone === 'denied' ? 'bg-red-50 text-red-800 border-red-300' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
+    <div className={`portal-document-status font-black normal-case text-[10px] px-2.5 py-0.5 rounded-md border tracking-wide ${tone === 'available' ? 'portal-document-status-available' : tone === 'error' ? 'bg-rose-50 text-rose-800 border-rose-200' : tone === 'denied' ? 'bg-red-50 text-red-800 border-red-300' : 'bg-[var(--portal-surface-inner)] text-[var(--portal-text-muted)] border-[var(--portal-border)]'}`}>
       {status}{statusDescription && <span className="block text-[11px] font-medium normal-case leading-snug tracking-normal">{statusDescription}</span>}
     </div>
     <div className="portal-document-extra">{children}</div>
@@ -134,17 +134,20 @@ export function ReservationReceiptCard({protocol, currentStatus, revision, downl
     setPicker(null);
     if (mode === 'view') view(item); else if (mode === 'download') void download(item);
   };
-  const status = refused ? 'Reserva recusada' : loading ? 'Consultando comprovantes…' : error ? 'Consulta indisponível' : pending ? 'Aguardando resposta' : available ? 'Disponível' : historical ? 'Não disponível' : 'Aguardando resposta';
+  const accepted = effectiveStatus === 'CONFIRMADO';
+  const hasCurrentReceipt = available && items.some(item => item.current);
+  const status = refused ? 'Reserva recusada' : accepted ? 'Reserva aceita' : loading ? 'Consultando comprovantes…' : error ? 'Consulta indisponível' : pending ? 'Aguardando resposta da reserva' : historical ? 'Não disponível' : 'Ainda não solicitado';
   const statusDescription = error ? 'Não foi possível consultar o histórico. Tente novamente.'
-    : refused ? available ? 'O comprovante da recusa está disponível para consulta.' : 'A solicitação de reserva foi recusada.'
+    : refused ? hasCurrentReceipt ? 'O comprovante da recusa está disponível para consulta.' : 'A solicitação de reserva foi recusada.'
+    : accepted ? hasCurrentReceipt ? 'O comprovante está disponível para consulta.' : undefined
     : loading ? undefined
     : pending && available ? 'O pedido atual aguarda resposta. Os comprovantes anteriores continuam disponíveis.'
     : available ? undefined
-    : historical ? 'Comprovante não localizado no acervo importado.' : 'Aguarda o aceite ou a recusa do responsável pelo local.';
+    : historical ? 'Comprovante não localizado no acervo importado.' : pending ? 'Aguarda o aceite ou a recusa do responsável pelo local.' : undefined;
 
   return <><ProcessDocumentCard title={available ? `Comprovante de reserva (${items.length})` : 'Comprovante de reserva'} signerNote="Não necessária"
     status={status} statusDescription={statusDescription}
-    tone={refused ? 'denied' : available && !pending ? 'available' : 'pending'} available={available} unavailable={false} working={downloading}
+    tone={refused ? 'denied' : accepted ? 'available' : 'pending'} available={available} unavailable={false} working={downloading}
     viewRef={viewButtonRef} onView={() => choose('view')} onDownload={() => choose('download')}>
     {error && <button type="button" className="text-xs font-bold underline text-[var(--portal-brand-header)]" onClick={() => setRetry(value => value + 1)}>Tentar novamente</button>}
   </ProcessDocumentCard>

@@ -51,9 +51,17 @@ test('execução efetiva personaliza cada e-mail e corrige apresentação antiga
 });
 
 test('link público para avaliação mantém dados privados ausentes sem quebrar a tela',()=>{
- const publicProcess={...p,avaliacao:undefined} as any;
- const html=renderToString(React.createElement(AdvisorEvaluationPanel,{process:publicProcess,canEvaluate:false,canReopen:false,onReopen:()=>{},onUpdated:async()=>{}}));
- assert.match(html,/Você não possui permissão/);assert.doesNotMatch(html,/id="evaluation-PARECER"/);
+ const publicProcess={...p,defesa:{...p.defesa,invitationSentAt:undefined},avaliacao:undefined} as any;
+ const render=(process:typeof publicProcess,canEvaluate=false)=>renderToString(React.createElement(AdvisorEvaluationPanel,{process,canEvaluate,canReopen:false,onReopen:()=>{},onUpdated:async()=>{}}));
+ const html=render(publicProcess);
+ assert.match(html,/Conceito e ata ainda não disponíveis/);
+ assert.doesNotMatch(html,/id="evaluation-PARECER"|portal-instruction|Portal do Professor/);
+ const earlyAdvisor=render(publicProcess,true);
+ assert.match(earlyAdvisor,/portal-instruction.*Portal do Professor/);
+ assert.doesNotMatch(earlyAdvisor,/id="evaluation-PARECER"/);
+ const released=render({...publicProcess,defesa:{...publicProcess.defesa,localStatus:'CONFIRMADO',startAt:'2000-01-01T13:00:00Z',invitationSentAt:'2000-01-01T00:00:00Z'}});
+ assert.match(released,/Conceito e ata ainda não registrados/);
+ assert.doesNotMatch(released,/id="evaluation-PARECER"|portal-instruction|Portal do Professor/);
 });
 
 test('aba acompanha o avanço do convite até documentos e repositório',()=>{

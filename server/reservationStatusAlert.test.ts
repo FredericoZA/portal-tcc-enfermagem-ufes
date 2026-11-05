@@ -25,12 +25,13 @@ const process = (localStatus: string, requestStatus = '', locationChoice = '') =
   registrationAnswers: { DEFESA_LOCAL: 'Auditório do Departamento' },
 }) as unknown as ProcessData;
 
-test('negativa do departamento mostra somente a mensagem exata da recusa', () => {
-  const alert = reservationStatusAlert(process('NEGADO'));
-  assert.deepEqual(alert, {
-    kind: 'denied',
-    text: 'Reserva negada pelo responsável pelo local. Clique em “Refazer reserva” para enviar uma nova solicitação.',
+test('negativa apresenta instruções distintas para autor, visitante e demais usuários', () => {
+  const denied = process('NEGADO');
+  assert.deepEqual(reservationStatusAlert(denied, 'other'), {
+    kind: 'denied', text: 'A solicitação de reserva do local para a defesa não foi aprovada.',
   });
+  assert.match(reservationStatusAlert(denied, 'visitor')?.text || '', /o aluno deverá fazer login.*“Refazer reserva”/);
+  assert.match(reservationStatusAlert(denied, 'author')?.text || '', /clique em “Refazer reserva”/);
 });
 
 test('resposta salva prevalece sobre PENDENTE e sobre aviso antigo de envio, sem confundir revisões', () => {
@@ -82,13 +83,27 @@ test('recusa elimina a caixa operacional e mantém um aviso vermelho com Refazer
     const summary = renderToStaticMarkup(createElement(ProcessSummaryCard, {process: p, canEdit: false, canEditReservation: true, onUpdated: async () => {}}));
     assert.equal((summary.match(/role="alert"/g) || []).length, 1);
     assert.match(summary, /role="alert"[^>]*bg-red-50/);
-    assert.match(summary, /Reserva negada pelo responsável pelo local/);
+    assert.match(summary, /não foi aprovada/);
+    assert.match(summary, /text-center font-bold/);
     const button = summary.match(/<button[^>]*aria-label="Refazer reserva"[^>]*>[\s\S]*?<\/button>/)?.[0] || '';
     assert.match(button, /border-red-700 bg-red-700/);
     assert.match(button, />Refazer reserva<\/button>/);
     assert.doesNotMatch(button, /disabled=/);
     assert.doesNotMatch(summary, /Aguardando o aceite|Solicitar nova data/);
   }
+});
+
+test('visitante e orientador não recebem botão para refazer uma reserva recusada', () => {
+  const p = process('RECUSADO');
+  const render = (isAuthenticated: boolean) => renderToStaticMarkup(createElement(ProcessSummaryCard, {
+    process: p, canEdit: isAuthenticated, isAuthenticated, onUpdated: async () => {},
+  }));
+  const visitor = render(false);
+  const other = render(true);
+  assert.match(visitor, /o aluno deverá fazer login/);
+  assert.doesNotMatch(visitor, /<button[^>]+aria-label="Refazer reserva"/);
+  assert.match(other, /não foi aprovada/);
+  assert.doesNotMatch(other, /Refazer reserva/);
 });
 
 test('uma nova revisão pendente não herda a recusa nem o botão vermelho do pedido anterior', () => {
@@ -107,7 +122,7 @@ test('uma nova revisão pendente não herda a recusa nem o botão vermelho do pe
 
 test('componente usa um único bloco vermelho para avisos e botão vermelho na recusa', () => {
   const src = readFileSync(new URL('../src/components/ProcessSummaryCard.tsx', import.meta.url), 'utf8');
-  assert.match(src, /const alert = reservationStatusAlert\(process\)/);
+  assert.match(src, /const alert = reservationStatusAlert\(process, /);
   assert.match(src, /const denial = alert\?\.kind === 'denied'/);
   assert.match(src, /\{alert && \([\s\S]*?role="alert"[\s\S]*?border-red-300 bg-red-50/);
   assert.match(src, /denial[\s\S]*?'border-red-700 bg-red-700/);

@@ -6,6 +6,15 @@ import type { RegistrationAnswers, RegistrationQuestion } from '../types/operati
 import { canonicalKey, registrationQuestions } from './operationalConfig';
 import { evaluateStudioCondition, validateStudioAnswer } from './courseStudioValidator';
 import {formQuestionsWithoutIdentifiers} from './studioFormAnswers';
+import {effectiveDefenseReservationStatus} from './defenseReservationState';
+
+export function isConceptRegistrationReleased(process: Pick<ProcessData, 'defesa'>, now = Date.now()): boolean {
+  const defenseAt = Date.parse(process.defesa.startAt);
+  return effectiveDefenseReservationStatus(process) === 'CONFIRMADO'
+    && Boolean(process.defesa.invitationSentAt)
+    && Number.isFinite(defenseAt)
+    && defenseAt <= now;
+}
 
 export const EVALUATION_OUTCOMES:EvaluationOutcomeOption[] = [
  {code:'APROVADO',label:'Aprovado'},
@@ -55,7 +64,7 @@ const aliases: Record<string, string> = { CAMPO_09: 'RESULTADO', CAMPO_11: 'PARE
 const LEGACY_GRADE_KEYS = new Set(['CAMPO_10', 'NOTA', 'NOTA_FINAL', 'AVALIACAO_NOTA', 'AVALIACAO_GRADE', 'EVALUATION_GRADE']);
 
 export const EVALUATION_QUESTIONS: RegistrationQuestion[] = [
-  { id: 'evaluation-result', fieldKey: 'RESULTADO', label: 'Resultado da defesa', fieldType: 'select', required: true },
+  { id: 'evaluation-result', fieldKey: 'RESULTADO', label: 'Conceito da defesa', fieldType: 'select', required: true },
   { id: 'evaluation-report', fieldKey: 'PARECER', label: 'Parecer da banca', fieldType: 'textarea', required: true, validation: { maxLength: 10000 } },
 ];
 
@@ -69,7 +78,7 @@ export function evaluationQuestions(studio?: Partial<IntegrationStudioSettings>)
     if (!fieldKey || fieldKey === 'DADOS_CONFERIDOS' || LEGACY_GRADE_KEYS.has(fieldKey)) continue;
     const core = EVALUATION_QUESTIONS.find(q => q.fieldKey === fieldKey);
     fields.set(fieldKey, core
-      ? { ...custom, ...core, label: custom.label || core.label, helpText: custom.helpText || core.helpText || '', visibleWhen: undefined }
+      ? { ...custom, ...core, label: fieldKey === 'RESULTADO' ? core.label : custom.label || core.label, helpText: custom.helpText || core.helpText || '', visibleWhen: undefined }
       : { ...custom, fieldKey });
   }
   for (const core of EVALUATION_QUESTIONS) {

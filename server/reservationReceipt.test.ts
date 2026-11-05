@@ -53,3 +53,14 @@ test('public historical author text removes old registrations even after current
  const text=await textOf(await createReservationReceiptPdf(p,INITIAL_SETTINGS,{publicView:true}));
  assert.doesNotMatch(text,/2022101234/);assert.match(text,/Nome não disponível no registro original/);
 });
+
+
+test('a recorded reservation receipt keeps its wording when the Studio design changes',async()=>{
+ const p=structuredClone(DEMO_PROCESSES[0]);
+ p.defesa.departmentResponse={revision:1,decision:'CONFIRMED',respondedAt:'2026-11-05T13:00:00Z',respondedBy:'department@example.invalid',startAt:p.defesa.startAt,endAt:p.defesa.endAt,receiptDesign:{confirmedTitle:'Comprovante original',confirmedText:'Texto válido na data da decisão.'}};
+ const settings={...INITIAL_SETTINGS,integrationStudio:{...INITIAL_SETTINGS.integrationStudio!,receiptDesign:{confirmedTitle:'Novo comprovante',confirmedText:'Novo texto do Estúdio.'}}};
+ const text=await textOf(await createReservationReceiptPdf(p,settings));
+ assert.match(text,/COMPROVANTE ORIGINAL/);
+ assert.match(text,/Texto válido na data da decisão/);
+ assert.doesNotMatch(text,/NOVO COMPROVANTE|Novo texto do Estúdio/);
+});

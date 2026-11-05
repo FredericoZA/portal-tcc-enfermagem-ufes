@@ -39,7 +39,8 @@ test('Master deletion removes the complete local process without contacting Aste
   const webhook=(id:string,jobId:string,envelopeId:string)=>({id,fingerprint:key(id),envelopeId,status:'SIGNED',receivedAt:timestamp,duplicate:false,matchedJobId:jobId,safePayload:{},processedAt:timestamp});
   const entry=(id:string,email:string,origin:string,processIds:string[])=>({id,nome:id,email,active:true,processIds,origin,roles:['STUDENT'],accessType:'STUDENT',createdAt:timestamp,createdBy:master,updatedAt:timestamp});
   const draft={ownerEmail:master,answers:{ALUNO_1_EMAIL:master},section:0,revision:1,schemaRevision:0,updatedAt:timestamp,expiresAt:new Date(Date.now()+86400000).toISOString()};
-  const state={settings,processProtocolCounters:{'TCC-2026':42},processes:[target,other],
+  const legalHolds=[{id:'held-other',processId:other.id,reason:'Retenção acadêmica',active:true,createdAt:timestamp,createdBy:master}];
+  const state={settings,legalHolds,processProtocolCounters:{'TCC-2026':42},processes:[target,other],
     memberships:[target,other].map(record=>({id:`member-${record.id}`,processId:record.id,email:record.aluno1.email,roles:['STUDENT'],active:true,createdAt:timestamp,updatedAt:timestamp})),
     authorizedStudents:[entry('target-derived',target.aluno1.email,'TCC_FORM',[target.id]),entry('manual-access','manual@example.invalid','MASTER_LIST',[target.id]),entry('shared-access','shared@example.invalid','TCC_FORM',[target.id,other.id]),entry('other-access',other.aluno1.email,'TCC_FORM',[other.id])],
     removedAccessProcessKeys:[createHash('sha256').update(`shared@example.invalid|${target.id}`).digest('hex')],
@@ -91,7 +92,14 @@ test('Master deletion removes the complete local process without contacting Aste
     for(const field of ['memberships','signatureJobs','formArchiveJobs','studioFormSubmissions','emailDeliveries','workflowRuns','reminders','correctionRequests'])assert.deepEqual(persisted[field],state[field].filter((record:any)=>record.processId!==target.id),field);
     assert.deepEqual(persisted.processes,[other]);assert.deepEqual(persisted.signatureJobs,[keptJob]);
     assert.deepEqual(persisted.astenWebhookEvents,[state.astenWebhookEvents[1]]);
-    assert.deepEqual(persisted.auditLogs,[state.auditLogs[2]]);
+    assert.deepEqual(persisted.auditLogs.filter((log:any)=>log.action!=='EXCLUSAO_PROCESSO_TCC'),[state.auditLogs[2]]);
+    const deletionLogs=persisted.auditLogs.filter((log:any)=>log.action==='EXCLUSAO_PROCESSO_TCC');
+    assert.equal(deletionLogs.length,1);
+    assert.equal(deletionLogs[0].processProtocol,target.protocolo);
+    assert.equal(deletionLogs[0].before,undefined);
+    assert.equal(deletionLogs[0].after.cleanupStatus,'Limpeza do Portal concluída');
+    assert.deepEqual(deletionLogs[0].after.manualAstenEnvelopes,['external-envelope-manual']);
+    assert.deepEqual(persisted.legalHolds,legalHolds);
     assert.equal(persisted.evaluationDrafts[target.id],undefined);assert.deepEqual(persisted.evaluationDrafts[other.id],state.evaluationDrafts[other.id]);
     assert.deepEqual(persisted.registrationDrafts,{[master]:draft});
     assert.equal(persisted.authorizedStudents.some((entry:any)=>entry.id==='target-derived'||entry.processIds.includes(target.id)),false);
@@ -107,8 +115,20 @@ test('Master deletion removes the complete local process without contacting Aste
     await assert.rejects(access(networkLog));
   };
   try{
+    const activeMail={...mail('active-mail',target.id),status:'RETRY',dispatchState:'SENDING',dispatchLeaseUntil:new Date(Date.now()+60_000).toISOString()};
+    await writeFile(stateFile,JSON.stringify({...state,emailDeliveries:[...state.emailDeliveries,activeMail]}));
+    await start();
+    const sending=await request(`/api/processes/${target.id}`,'DELETE',{confirmation:'EXCLUIR',expectedProcessId:target.id});
+    assert.equal(sending.status,409);
+    assert.equal((await sending.json()).code,'PROCESS_OPERATION_IN_PROGRESS');
+    await stop();
+    await writeFile(stateFile,JSON.stringify(state));
     await start();
     assert.equal((await json('/api/signatures/jobs')).length,2);
+    const held=await request(`/api/processes/${other.id}`,'DELETE',{confirmation:'EXCLUIR',expectedProcessId:other.id});
+    assert.equal(held.status,409);
+    assert.equal((await held.json()).code,'PROCESS_LEGAL_HOLD');
+    assert.deepEqual(await json('/api/admin/process-deletions'),[]);
     const response=await request(`/api/processes/${target.id}`,'DELETE',{confirmation:'EXCLUIR',expectedProcessId:target.id,deleteFiles:true,clearHistory:true});
     assert.equal(response.status,200,await response.clone().text());
     const result=await response.json();assert.equal(result.cleanupPending,false);assert.deepEqual(result.cleanupErrors,[]);assert.deepEqual(result.manualAstenEnvelopes,['external-envelope-manual']);assert.match(result.message,/manualmente.*Asten/i);

@@ -1,4 +1,5 @@
 import type { ProcessData, ProcessDocument, DocumentType } from '../types';
+import {administrativeDocumentLabels} from './finalDeliveryPresentation';
 
 /** Adapt only the server's public projection to the shared, read-only detail view. */
 export function publicProcessDetail(data: any): { process: ProcessData; documents: ProcessDocument[] } {
@@ -11,14 +12,10 @@ export function publicProcessDetail(data: any): { process: ProcessData; document
     avaliacao: data.avaliacao || { status: 'PENDENTE' },
     dataRevision: 0,
   } as ProcessData;
-  const titles: Record<DocumentType, string> = {
-    CONVITE: 'Carta-convite da banca', ATA: 'Ata',
-    TERMO: 'Termo de autorização e publicação', DECLARACAO: 'Declaração de participação na banca',
-  };
-  const documents = (data.legacyRecord?[]:Object.keys(titles) as DocumentType[]).map(type => {
+  const documents = (data.legacyRecord?[]:Object.keys(administrativeDocumentLabels) as DocumentType[]).map(type => {
     const published = data.documents?.find((doc: any) => doc.type === type);
     return {
-      id: published?.id || `public-${type}`, type, title: titles[type],
+      id: published?.id || `public-${type}`, type, title: administrativeDocumentLabels[type].title,
       status: published?.status || 'NAO_DISPONIVEL', currentVersion: published?.version || 1,
       visibleToRoles: [], requiresSignature: type !== 'CONVITE',
       createdAt: data.createdAt, updatedAt: data.updatedAt,

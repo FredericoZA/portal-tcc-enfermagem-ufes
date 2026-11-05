@@ -1,10 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {withOperationalCatalog,OPERATIONAL_EMAIL_CATALOG,operationalEmailVariant} from '../src/utils/studioOperationalCatalog';
+import {withOperationalCatalog,OPERATIONAL_EMAIL_CATALOG,OPERATIONAL_EMAIL_ROUTING,operationalEmailVariant} from '../src/utils/studioOperationalCatalog';
 import {processEmailMessage} from '../src/utils/processEmailMessage';
 import {DEMO_PROCESSES} from '../src/services/demoSeed';
-test('catalog exposes nine operational emails and both forms, preserving Master edits',()=>{
+test('catalog identifies eight operational templates and retains the legacy department template and Master edits',()=>{
  const original={emailTemplates:[{id:'email-reserva',body:'Texto do Master',subject:'Reserva'}],formTemplates:[{id:'form-reserva-aluno',title:'Cadastro'}]};
- const result=withOperationalCatalog(original as any);assert.equal(result.emailTemplates.length,9);assert.equal(result.formTemplates.length,2);assert.equal(result.emailTemplates[0].body,'Texto do Master');assert.deepEqual(withOperationalCatalog(result),result);assert.equal(original.emailTemplates.length,1);
+ const result=withOperationalCatalog(original as any);assert.equal(result.emailTemplates.length,9);assert.deepEqual(Object.keys(OPERATIONAL_EMAIL_ROUTING),OPERATIONAL_EMAIL_CATALOG.map(item=>item[0]).filter(id=>id!=='email-resposta-departamento'));assert.equal(result.formTemplates.length,2);assert.equal(result.emailTemplates[0].body,'Texto do Master');assert.deepEqual(withOperationalCatalog(result),result);assert.equal(original.emailTemplates.length,1);
  assert.equal(operationalEmailVariant('email-reserva',false,false),'email-reserva-autores');assert.equal(operationalEmailVariant('email-comprovante-reserva',true,false),'email-comprovante-reserva');assert.equal(operationalEmailVariant('email-comprovante-reserva',false,true),'email-local-indisponivel');
 });
 test('Master edits to an email variant reach the actual shared delivery renderer',()=>{

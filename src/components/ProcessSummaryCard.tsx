@@ -14,6 +14,7 @@ type ProcessSummaryProps = {
   process: ProcessData;
   canEdit: boolean;
   canEditReservation?: boolean;
+  isAuthenticated?: boolean;
   onEditingChange?: (editing:boolean)=>void;
   studio?: Partial<IntegrationStudioSettings>;
   onUpdated: () => Promise<void>;
@@ -34,7 +35,7 @@ const fieldLabel = 'text-[10px] font-semibold text-slate-600';
 const fieldValue = 'text-[11px] font-semibold leading-4 text-slate-900';
 
 export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
-  process, canEdit, canEditReservation=canEdit, onEditingChange, studio, onUpdated,
+  process, canEdit, canEditReservation=false, isAuthenticated=false, onEditingChange, studio, onUpdated,
 }) => {
   const [titleEditing, setTitleEditing] = useState(false);
   const [title, setTitle] = useState(process.titulo);
@@ -48,7 +49,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
   const [requested, setRequested] = useState(() => dateTimeForInput(process.defesa?.startAt || ''));
   const [locationChoice, setLocationChoice] = useState(process.defesa?.local || '');
   const [customLocation, setCustomLocation] = useState('');
-  const alert = reservationStatusAlert(process);
+  const alert = reservationStatusAlert(process, canEditReservation ? 'author' : isAuthenticated ? 'other' : 'visitor');
   const denial = alert?.kind === 'denied';
   const outstanding = alert?.kind === 'waiting' && ['PENDING', 'SENT'].includes(
     String(process.defesa?.reservationChangeRequest?.status || ''),
@@ -197,7 +198,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
           </div>
         </div>
         {alert && (
-          <p role="alert" className="mt-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-[11px] font-semibold leading-4 text-red-800">
+          <p role="alert" className={`mt-2 rounded-lg border px-3 py-2 text-[11px] leading-4 ${denial ? 'border-red-300 bg-red-50 text-center font-bold text-red-800' : alert.kind === 'waiting' ? 'border-slate-300 bg-slate-100 font-semibold text-slate-800' : 'border-red-300 bg-red-50 font-semibold text-red-800'}`}>
             {alert.text}
           </p>
         )}

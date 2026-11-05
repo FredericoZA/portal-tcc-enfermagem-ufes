@@ -304,6 +304,15 @@ async function liveChecks() {
       const requested = await request('/api/auth/request-code', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: newStudent }) });
       assert.equal(requested.response.status, 200, JSON.stringify(requested.body));
       const otpCookie = requested.response.headers.get('set-cookie').split(';')[0];
+      const fromNewBrowser = await request('/api/auth/request-code', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: newStudent }) });
+      assert.equal(fromNewBrowser.response.status, 429);
+      assert.equal(fromNewBrowser.body.code, 'OTP_RESEND_COOLDOWN');
+      assert.equal(fromNewBrowser.response.headers.has('set-cookie'), false);
+      const resumed = await request('/api/auth/request-code', { method: 'POST', headers: { 'content-type': 'application/json', cookie: otpCookie }, body: JSON.stringify({ email: newStudent }) });
+      assert.equal(resumed.response.status, 429);
+      assert.equal(resumed.body.code, 'OTP_CHALLENGE_ACTIVE');
+      assert.ok(Number(resumed.response.headers.get('retry-after')) > 0);
+      assert.equal(resumed.response.headers.has('set-cookie'), false);
       for(let attempt=0;attempt<5;attempt++){
         const unrelated = await request('/api/auth/verify-code',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:newStudent,code:'000000'})});
         assert.equal(unrelated.response.status,401);
