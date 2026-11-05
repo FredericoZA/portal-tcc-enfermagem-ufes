@@ -99,6 +99,9 @@ export function ReservationReceiptCard({protocol, currentStatus, revision, downl
   const effectiveStatus = loaded ? collection.currentStatus || currentStatus : currentStatus;
   const refused = ['RECUSADO', 'NEGADO', 'REJEITADO'].includes(effectiveStatus || '');
   const pending = effectiveStatus === 'PENDENTE';
+  const accepted = effectiveStatus === 'CONFIRMADO';
+  const currentReceipt = items.find(item => item.current &&
+    (item.decision === 'CONFIRMED' ? accepted : refused));
   const available = !loading && !error && items.length > 0;
   const downloading = downloadingScope === scope;
   const visiblePreview = preview?.scope === scope ? preview : null;
@@ -126,20 +129,20 @@ export function ReservationReceiptCard({protocol, currentStatus, revision, downl
   };
   const choose = (mode: 'view' | 'download') => {
     if (!available) return;
-    if (items.length > 1) { setPicker({scope, mode}); return; }
-    if (mode === 'view') view(items[0]); else void download(items[0]);
+    if (items.length > 1 || !currentReceipt) { setPicker({scope, mode}); return; }
+    if (mode === 'view') view(currentReceipt); else void download(currentReceipt);
   };
   const select = (item: ReservationReceiptSummary) => {
     const mode = visiblePicker?.mode;
     setPicker(null);
     if (mode === 'view') view(item); else if (mode === 'download') void download(item);
   };
-  const accepted = effectiveStatus === 'CONFIRMADO';
-  const hasCurrentReceipt = available && items.some(item => item.current);
+  const hasCurrentReceipt = available && Boolean(currentReceipt);
+  const historyDescription = available ? 'Os comprovantes dos pedidos anteriores estão disponíveis para consulta.' : undefined;
   const status = refused ? 'Reserva recusada' : accepted ? 'Reserva aceita' : loading ? 'Consultando comprovantes…' : error ? 'Consulta indisponível' : pending ? 'Aguardando resposta da reserva' : historical ? 'Não disponível' : 'Ainda não solicitado';
   const statusDescription = error ? 'Não foi possível consultar o histórico. Tente novamente.'
-    : refused ? hasCurrentReceipt ? 'O comprovante da recusa está disponível para consulta.' : 'A solicitação de reserva foi recusada.'
-    : accepted ? hasCurrentReceipt ? 'O comprovante está disponível para consulta.' : undefined
+    : refused ? hasCurrentReceipt ? 'O comprovante da recusa está disponível para consulta.' : historyDescription
+    : accepted ? hasCurrentReceipt ? 'O comprovante está disponível para consulta.' : historyDescription
     : loading ? undefined
     : pending && available ? 'O pedido atual aguarda resposta. Os comprovantes anteriores continuam disponíveis.'
     : available ? undefined
@@ -154,7 +157,7 @@ export function ReservationReceiptCard({protocol, currentStatus, revision, downl
     <PortalModalShell open={Boolean(visiblePicker)} onClose={closePicker} title="Escolher comprovante de reserva" icon={FileCheck} maxWidthClass="max-w-2xl" heightClass="max-h-[85vh]" bodyClassName="p-3 sm:p-4 overflow-auto" footer={<button type="button" className="portal-action" onClick={closePicker}>Cancelar</button>}>
       <div className="space-y-2">
         {items.map(item => <button key={item.id} type="button" onClick={() => select(item)} style={{borderRadius: 8}} className="w-full text-left rounded-lg border border-[var(--portal-border)] bg-[var(--portal-surface-inner)] p-3 hover:border-[var(--portal-brand-header)] focus-visible:outline-2 focus-visible:outline-[var(--portal-brand-header)]" aria-label={`${visiblePicker?.mode === 'download' ? 'Baixar' : 'Ver'} comprovante de reserva ${item.decision === 'CONFIRMED' ? 'confirmada' : 'recusada'} de ${formatDateNumericWithWeekday(item.startAt)} às ${formatTime24h(item.startAt)}`}>
-          <div className="flex flex-wrap items-center justify-between gap-2"><span className={`rounded-md border px-2 py-0.5 text-xs font-bold ${item.decision === 'CONFIRMED' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-300'}`}>{item.decision === 'CONFIRMED' ? 'Reserva confirmada' : 'Reserva recusada'}</span>{item.current && <span className="text-[11px] font-bold text-slate-600">Pedido atual</span>}</div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><span className={`rounded-md border px-2 py-0.5 text-xs font-bold ${item.decision === 'CONFIRMED' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-300'}`}>{item.decision === 'CONFIRMED' ? 'Reserva confirmada' : 'Reserva recusada'}</span><span className="text-[11px] font-bold text-slate-600">{item === currentReceipt ? 'Pedido atual' : 'Pedido anterior'}</span></div>
           <p className="mt-2 text-xs font-bold text-slate-900">{formatDateNumericWithWeekday(item.startAt)} · {formatTime24h(item.startAt)}{item.endAt ? ` às ${formatTime24h(item.endAt)}` : ''}</p>
           <p className="mt-1 text-xs text-slate-700 break-words">{item.local}</p>
           {item.respondedAt && <p className="mt-1 text-[11px] text-slate-600">Resposta: {formatDateNumericWithWeekday(item.respondedAt)}, {formatTime24h(item.respondedAt)}.</p>}

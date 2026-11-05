@@ -261,7 +261,9 @@ export const apiClient = {
   }),
   getProcessDocuments: (id: string) => fetchApi<any[]>(`/api/processes/${id}/documents`),
   downloadProcessDocument: (id: string, documentId: string) =>
-    downloadApiFile(`/api/processes/${id}/documents/${documentId}/download`),
+    downloadApiFile(`/api/processes/${encodeURIComponent(id)}/documents/${encodeURIComponent(documentId)}/download`),
+  downloadPublicProcessDocument: (id: string, documentId: string) =>
+    downloadApiFile(`/api/public/processes/${encodeURIComponent(id)}/documents/${encodeURIComponent(documentId)}/download`),
   getProcessSignatureJobs:(id:string)=>fetchApi<SignatureJob[]>(`/api/processes/${id}/signatures`),
   signProcessDocument:(id:string,type:string,provider:'ASTEN'|'GOV_BR'='ASTEN')=>fetchApi<{job:SignatureJob;message:string}>(`/api/processes/${id}/documents/${type}/sign`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({provider})}),
   downloadGovbrPdf:(jobId:string,returned=false)=>downloadApiFile(`/api/signatures/jobs/${encodeURIComponent(jobId)}/govbr/download${returned?'?kind=returned':''}`),

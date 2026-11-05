@@ -25,7 +25,7 @@ test('customizing any effective operational message retains variables and reache
   assert.doesNotMatch(String(editable.body),/example\.invalid|Mariana Alves|Lucas Pereira|20\/11\/2026|14:00|DEMO00/);
   studio.emailTemplates=studio.emailTemplates!.map(t=>t.id===id?{...editable,subject:'Assunto revisto <<PROTOCOLO>>',body:String(editable.body)+'\nTexto aprovado pelo Master.',operationalCatalogEditable:true}:t);
   const message=studioEmailPreview(studio,id);
-  assert.match(message.subject,/Assunto revisto TCC-2026-0001/);assert.match(message.html,/Texto aprovado pelo Master/);
+  assert.equal(message.subject,`Assunto revisto ${studioSampleProcess().protocolo}`);assert.match(message.html,/Texto aprovado pelo Master/);
   assert.doesNotMatch(message.html,/&lt;&lt;[A-Z_0-9]+&gt;&gt;/);
  }
 });
@@ -51,6 +51,6 @@ test('receipt PDF uses configured presentation and preserves the decision and at
  const p=studioSampleProcess();p.defesa.departmentResponse={decision:'UNAVAILABLE',revision:0,respondedBy:'secretaria@example.invalid',respondedAt:'2026-11-04T15:41:00Z',startAt:p.defesa.startAt,endAt:p.defesa.endAt};
  const settings={...INITIAL_SETTINGS,integrationStudio:{...INITIAL_SETTINGS.integrationStudio,receiptDesign:{declinedTitle:'Retorno do pedido de sala',declinedText:'Combine uma nova proposta antes de reenviar.'}}} as any;
  const pdf=await PDFDocument.load(await createReservationReceiptPdf(p,settings));
- assert.equal(pdf.getTitle(),'TCC-2026-0001 - Retorno do pedido de sala');assert.equal(pdf.getPageCount(),1);
+ assert.equal(pdf.getTitle(),`${p.protocolo} - Retorno do pedido de sala`);assert.equal(pdf.getPageCount(),1);
  assert.equal(p.defesa.departmentResponse.decision,'UNAVAILABLE');
 });

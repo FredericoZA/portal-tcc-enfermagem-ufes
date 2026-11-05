@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PDFDocument} from 'pdf-lib';
-import {createReservationReceiptPdf} from './documents/reservationReceipt';
+import {createReservationReceiptPdf,reservationReceiptPresentation} from './documents/reservationReceipt';
 import {DEMO_PROCESSES,INITIAL_SETTINGS} from '../src/services/demoSeed';
 
 async function textOf(bytes:Buffer){const {getDocument}=await import('pdfjs-dist/legacy/build/pdf.mjs');const task=getDocument({data:new Uint8Array(bytes),verbosity:0});const pdf=await task.promise;try{const rows=[];for(let i=1;i<=pdf.numPages;i++){const content=await(await pdf.getPage(i)).getTextContent();rows.push(content.items.map((item:any)=>item.str||'').join(' '));}return rows.join('\n');}finally{await task.destroy();}}
@@ -63,4 +63,23 @@ test('a recorded reservation receipt keeps its wording when the Studio design ch
  assert.match(text,/COMPROVANTE ORIGINAL/);
  assert.match(text,/Texto válido na data da decisão/);
  assert.doesNotMatch(text,/NOVO COMPROVANTE|Novo texto do Estúdio/);
+});
+
+test('a receipt can be reproduced byte for byte after changes to the process and Studio',async()=>{
+ const p=structuredClone(DEMO_PROCESSES[0]);
+ p.defesa.departmentResponse={
+   revision:1,decision:'UNAVAILABLE',respondedAt:'2026-11-05T13:00:00Z',respondedBy:'department@example.invalid',
+   startAt:p.defesa.startAt,endAt:p.defesa.endAt,receiptBody:`Título: ${p.titulo}\nAutor: ${p.aluno1.nome}\nLocal: ${p.defesa.local}`,
+   receiptPresentation:reservationReceiptPresentation(p,INITIAL_SETTINGS),
+   receiptDesign:{declinedTitle:'Comprovante original',declinedText:'Texto da decisão registrada.'},
+ };
+ const original=await createReservationReceiptPdf(p,INITIAL_SETTINGS);
+ const restored=JSON.parse(JSON.stringify(p)) as typeof p;
+ restored.titulo='Outro título';
+ restored.aluno1.nome='Nome Atualizado';
+ restored.orientador.nome='Pessoa Diferente';
+ restored.banca=[];
+ const settings={...INITIAL_SETTINGS,timezone:'UTC',integrationStudio:{...INITIAL_SETTINGS.integrationStudio!,
+   brandKit:{...INITIAL_SETTINGS.integrationStudio?.brandKit,courseName:'Outro curso',primaryColor:'#ff0088'}}};
+ assert.deepEqual(await createReservationReceiptPdf(restored,settings),original);
 });

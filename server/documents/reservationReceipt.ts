@@ -14,6 +14,16 @@ import {formatTccTitle,formatDateWithWeekday,formatDateNumericWithWeekday,format
 const fontBytes=Promise.all(['Regular','Bold'].map(weight=>readFile(path.join(process.cwd(),'server/documents/fonts',`NotoSans-${weight}.ttf`))));
 const logoBytes=readFile(path.join(process.cwd(),'server/documents/assets/national-arms.png'));
 const ink=rgb(.13,.23,.19),muted=rgb(.35,.42,.39),line=rgb(.82,.87,.84),paper=rgb(.96,.98,.97);
+export function reservationReceiptPresentation(process:ProcessData,settings:GlobalSettings){
+ const profile=resolveInstallationProfile(settings),brand=settings.integrationStudio?.brandKit;
+ return {
+  institution:brand?.institutionName?.trim()||profile.institutionName,
+  course:brand?.courseName?.trim()||profile.courseName,
+  color:/^#[a-f\d]{6}$/i.test(brand?.primaryColor||'')?brand!.primaryColor!:'#005830',
+  timezone:settings.timezone||'America/Sao_Paulo',
+  participants:officialParticipantLines(process).filter(person=>!person.key.startsWith('ALUNO_')).map(({role,name})=>({role,name})),
+ };
+}
 export async function createReservationReceiptPdf(process:ProcessData,settings:GlobalSettings,options:{publicView?:boolean}={}):Promise<Buffer>{
  // Older confirmations predate the department micro-form; retain their recorded facts.
  const response=process.defesa.departmentResponse||(process.defesa.localStatus==='CONFIRMADO'&&process.defesa.localConfirmedAt?{
@@ -22,10 +32,8 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
   startAt:process.defesa.startAt,endAt:process.defesa.endAt,local:process.defesa.local,receiptBody:''
  }:null);
  if(!response)throw new Error('Resposta ao agendamento não registrada.');
- const profile=resolveInstallationProfile(settings),brand=settings.integrationStudio?.brandKit;
- const institution=brand?.institutionName?.trim()||profile.institutionName;
- const course=brand?.courseName?.trim()||profile.courseName;
- const color=/^#[a-f\d]{6}$/i.test(brand?.primaryColor||'')?brand!.primaryColor!:'#005830';
+ const {institution,course,color,timezone,participants}=process.defesa.departmentResponse?.receiptPresentation
+  ||reservationReceiptPresentation(process,settings);
  const green=rgb(...[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255) as [number,number,number]);
  const snapshot=new Map((response.receiptBody||'').split('\n').map(row=>{const i=row.indexOf(':');return [row.slice(0,i),row.slice(i+1).trim()];}));
  let authors=snapshot.get('Autoria')||authorNames(process);
@@ -37,6 +45,9 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
   : settings.integrationStudio);
  const receiptTitle=confirmed?design.confirmedTitle:design.declinedTitle;
  const doc=await PDFDocument.create();doc.registerFontkit(fontkit);
+ const recordedAt=new Date(response.respondedAt);
+ doc.setCreationDate(recordedAt);
+ doc.setModificationDate(recordedAt);
  const [regularBytes,boldBytes]=await fontBytes;
  const logo=await doc.embedPng(await logoBytes);
  const regular=await doc.embedFont(regularBytes,{subset:true}),bold=await doc.embedFont(boldBytes,{subset:true});
@@ -83,7 +94,7 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
   return /\d|@/.test(name)?'Nome não disponível no registro original':name;
  };
  for(const name of authorRows)paragraph(`Autor: ${options.publicView?publicAuthorName(name):name}`,9);
- for(const participant of officialParticipantLines(process).filter(person=>!person.key.startsWith('ALUNO_')))paragraph(`${participant.role}: ${participant.name}`,9);
+ for(const participant of participants)paragraph(`${participant.role}: ${participant.name}`,9);
  section('Dados da defesa');
  const date=formatDateWithWeekday(response.startAt),time=`${formatTime24h(response.startAt)} às ${formatTime24h(response.endAt)}`;
  const dateRows=wrap(date,bold,11,240);const height=Math.max(60,dateRows.length*16+36);ensure(height+8);
@@ -92,7 +103,7 @@ export async function createReservationReceiptPdf(process:ProcessData,settings:G
  field(confirmed?'Local autorizado':'Local solicitado',confirmed?(response.local||snapshot.get('Local')||process.defesa.local):process.defesa.local);
  section('Registro da resposta');
  if(!options.publicView||('departmentEmail' in response&&response.departmentEmail===response.respondedBy))field('attribution' in response&&response.attribution==='EMAIL_LINK'?'Resposta registrada pelo link enviado a':'Resposta registrada por',response.respondedBy);
- const registered=new Intl.DateTimeFormat('pt-BR',{timeZone:settings.timezone||'America/Sao_Paulo',weekday:'long',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(response.respondedAt));
+ const registered=new Intl.DateTimeFormat('pt-BR',{timeZone:timezone,weekday:'long',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(response.respondedAt));
  field('Data e hora do registro',registered);
  const pages=doc.getPages();for(let i=0;i<pages.length;i++){page=pages[i];page.drawLine({start:{x:margin,y:60},end:{x:549,y:60},thickness:.7,color:line});DOCUMENT_ISSUER_LINES.forEach((value,index)=>draw(value,549-regular.widthOfTextAtSize(value,8),48-index*12,8,regular,muted));if(i===pages.length-1){const issued=`Vitória - ES, ${formatDateWithWeekday(response.respondedAt)}.`;draw(issued,549-regular.widthOfTextAtSize(issued,9),77,9,regular,ink);}const number=`${i+1} / ${pages.length}`;draw(number,margin,44,8,regular,muted);}
  return Buffer.from(await doc.save());

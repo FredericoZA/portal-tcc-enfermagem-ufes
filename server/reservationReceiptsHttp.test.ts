@@ -73,7 +73,8 @@ test('HTTP: reservation receipt history exposes one safe summary per answer and 
   });
   await t.test('pending revision still exposes previous receipts without presenting a current acceptance',async()=>{
    const body=await(await list(pending.protocolo)).json();assert.equal(body.currentStatus,'PENDENTE');assert.equal(body.items.length,3);assert.ok(body.items.every((item:any)=>item.current===false));
-   const fallback=await receipt(undefined,pending.protocolo);assert.equal(fallback.status,200);assert.match(await textOf(await fallback.arrayBuffer()),/Auditório Atual/);
+   assert.equal((await receipt(undefined,pending.protocolo)).status,404);
+   const historical=await receipt('revision-2',pending.protocolo);assert.equal(historical.status,200);assert.match(await textOf(await historical.arrayBuffer()),/Auditório Atual/);
    const noHistory=await(await list(empty.protocolo)).json();assert.deepEqual(noHistory.items,[]);assert.equal(noHistory.currentStatus,'PENDENTE');assert.equal((await receipt(undefined,empty.protocolo)).status,404);
   });
   await t.test('a refusal overrides a stale pending flag and a duplicate historical acceptance',async()=>{

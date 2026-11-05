@@ -2178,8 +2178,7 @@ button:has(svg[class*="lucide-trash"]) svg[class*="lucide-trash"] {
 .portal-feedback-dialog[data-tone="warning"] .portal-action-primary { background: #a42f3a; color: white; border-color: #a42f3a; }
 
 /* Documentos pendentes permanecem legíveis, com hierarquia visual reduzida. */
-.portal-document-unavailable { opacity: .6; box-shadow: none; }
-.portal-document-unavailable:focus-within { opacity: 1; }
+.portal-document-unavailable { box-shadow: none; }
 
 .portal-tcc-document-card .portal-document-sign { background: var(--portal-brand-header); color: white; }
 .portal-tcc-document-card .portal-document-sign:disabled { background: #e2e8f0; color: var(--portal-text-muted); }

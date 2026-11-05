@@ -17,7 +17,7 @@ import {accessImportIssues} from './src/utils/accessImportValidation';
 import {isManagedDefenseLocation} from './src/utils/reservationLocation';
 import {createRegistrationSnapshotPdf,createBrandedTextPdf} from './server/documents/registrationSnapshot';
 import {processWithPendingAtaStage,documentSignatureCompleted} from './src/utils/documentSignatureState';
-import {createReservationReceiptPdf} from './server/documents/reservationReceipt';
+import {createReservationReceiptPdf,reservationReceiptPresentation} from './server/documents/reservationReceipt';
 import {receiptDesign} from './src/utils/receiptDesign';
 import {mergeProcessProtocolCounters,ProcessProtocolExhausted,reserveNextProcessProtocol,seedProcessProtocolCounters,type ProcessProtocolCounters} from './server/workflow/processProtocol';
 import {deleteProcessCalendarEvents} from './server/integrations/googleWorkspace';
@@ -156,6 +156,7 @@ import { buildProcessArchiveFileName, renamePortalProcessFolder, downloadDrivePd
 import { renderGoogleDriveTemplateToPdf } from './server/integrations/googleDocsRenderer';
 import { dispatchTrackedEmail, workflowEmailCopies } from './server/integrations/trackedGmail';
 import { buildAuditFeed, emailDeliveryPreview, emailDeliveryAuditSummary } from './server/auditFeed';
+import { administrativeDocumentLabels } from './src/utils/finalDeliveryPresentation';
 import { reservationReceipts, reservationReceiptStatus } from './server/reservationReceipts';
 import { buildProcessVariables, compileWorkflow, executeWorkflowEvent, mergeWorkflowHtmlVariables, mergeWorkflowVariables, normalizeWorkflowEventCode } from './server/workflow/runtime';
 import { buildAstenOperationalDashboard, isReconcileableAstenWebhookEvent, normalizeAstenWebhookEvent } from './server/integrations/astenEventLedger';
@@ -240,7 +241,7 @@ interface AdministrationTransfer {
 
 interface FormArchiveJob {
   id:string;processId:string;formType:ProcessFormArchiveType;version:number;sha256:string;artifactBase64:string;
-  status:'PENDING'|'ARCHIVED'|'FAILED';driveFileId?:string;fileName?:string;lastError?:string;createdAt:string;updatedAt:string;
+  status:'PENDING'|'ARCHIVED'|'FAILED';reservationRevision?:number;driveFileId?:string;fileName?:string;lastError?:string;createdAt:string;updatedAt:string;
 }
 
 const portalDataDirectory = process.env.PORTAL_DATA_DIR || path.join(process.cwd(), '.portal-data');
@@ -576,8 +577,8 @@ function generateDefaultDocuments(process: ProcessData): ProcessDocument[] {
     {
       id: 'doc-convite',
       type: 'CONVITE',
-      title: `1. Convite de Banca Examinadora - ${process.titulo}`,
-      status: invitationReady && Boolean(configuredModels.CONVITE) ? 'DISPONIVEL' : 'NAO_DISPONIVEL',
+      title: `${administrativeDocumentLabels.CONVITE.title} - ${process.titulo}`,
+      status: invitationReady ? 'DISPONIVEL' : 'NAO_DISPONIVEL',
       visibleToRoles: ['STUDENT', 'ADVISOR', 'CO_ADVISOR', 'EXAMINER'],
       requiresSignature: false,
       currentVersion: 1,
@@ -585,7 +586,7 @@ function generateDefaultDocuments(process: ProcessData): ProcessDocument[] {
       updatedAt: process.updatedAt,
       driveFileId:process.defesa.invitationDriveFileId,
       driveDownloadUrl:invitationReady?`/api/processes/${process.id}/documents/doc-convite/download`:undefined,
-      versions: invitationReady && configuredModels.CONVITE ? [
+      versions: invitationReady ? [
         {
           id: 'v1',
           version: 1,
@@ -600,7 +601,7 @@ function generateDefaultDocuments(process: ProcessData): ProcessDocument[] {
     {
       id: 'doc-ata',
       type: 'ATA',
-      title: `2. Ata Oficial da Defesa Final - ${process.titulo}`,
+      title: `${administrativeDocumentLabels.ATA.title} - ${process.titulo}`,
       status: isEvaluated && Boolean(configuredModels.ATA) ? 'AGUARDANDO_ASSINATURA' : 'NAO_DISPONIVEL',
       visibleToRoles: ['STUDENT', 'ADVISOR', 'CO_ADVISOR', 'EXAMINER'],
       requiresSignature: true,
@@ -622,7 +623,7 @@ function generateDefaultDocuments(process: ProcessData): ProcessDocument[] {
     {
       id: 'doc-termo',
       type: 'TERMO',
-      title: `3. Termo de Autorização para Publicação - ${process.titulo}`,
+      title: `${administrativeDocumentLabels.TERMO.title} - ${process.titulo}`,
       status: isEvaluated && repositoryReady && needsPublicationTerm && Boolean(configuredModels.TERMO) ? 'AGUARDANDO_ASSINATURA' : 'NAO_DISPONIVEL',
       visibleToRoles: ['STUDENT', 'ADVISOR'],
       requiresSignature: true,
@@ -644,7 +645,7 @@ function generateDefaultDocuments(process: ProcessData): ProcessDocument[] {
     {
       id: 'doc-declaracao',
       type: 'DECLARACAO',
-      title: `4. Declaração da Banca Examinadora - ${process.titulo}`,
+      title: `${administrativeDocumentLabels.DECLARACAO.title} - ${process.titulo}`,
       status: isEvaluated && repositoryReady && declarationReady(process,signatureJobsStore) && Boolean(configuredModels.DECLARACAO) ? 'AGUARDANDO_ASSINATURA' : 'NAO_DISPONIVEL',
       visibleToRoles: ['STUDENT', 'ADVISOR', 'CO_ADVISOR', 'EXAMINER'],
       requiresSignature: true,
@@ -850,20 +851,55 @@ function buildFormSnapshotBody(process:ProcessData,formType:ProcessFormArchiveTy
   return [...common,`Palavras-chave: ${process.acervo?.palavrasChave?.join('; ')||''}`,`Resumo sintético: ${process.acervo?.resumoSintese||''}`,`Trabalho completo público: ${process.acervo?.publishFullWork?'SIM':'NÃO'}`,`Resumo expandido público: ${process.acervo?.publishExpandedAbstract?'SIM':'NÃO'}`,`Autorização confirmada: ${process.acervo?.authorizationConfirmedAt||'NÃO SE APLICA'}`].join('\n');
 }
 async function archiveProcessFormSnapshot(process:ProcessData,formType:ProcessFormArchiveType):Promise<FormArchiveJob>{
-  const pdf=formType==='CADASTRO_INICIAL'?await createRegistrationSnapshotPdf(process,currentSettings):formType==='CONFIRMACAO_LOCAL'?await createReservationReceiptPdf(process,currentSettings):await createBrandedTextPdf({title:`Formulário - ${formType.replaceAll('_',' ').toLowerCase()}`,protocol:process.protocolo,body:buildFormSnapshotBody(process,formType),footer:'Cópia imutável arquivada pelo Portal de TCC'},currentSettings);const sha256=createHash('sha256').update(pdf).digest('hex');const id=createHash('sha256').update(`${process.id}|${formType}|${process.dataRevision}|${sha256}`).digest('hex').slice(0,28);let job=formArchiveJobsStore.find(item=>item.id===`form_${id}`);if(!job){const now=new Date().toISOString();job={id:`form_${id}`,processId:process.id,formType,version:process.dataRevision,sha256,artifactBase64:pdf.toString('base64'),status:'PENDING',createdAt:now,updatedAt:now};formArchiveJobsStore.push(job);}try{const accessToken=await getGoogleWorkspaceAccessToken();if(!currentSettings.driveRootFolderId)throw new Error('Pasta raiz do Drive não configurada.');if(!process.driveFolderId){const folder=await ensurePortalProcessDriveFolder({accessToken,rootFolderId:currentSettings.driveRootFolderId,protocol:process.protocolo,processId:process.id});process.driveFolderId=folder.id;process.driveFolderUrl=folder.webViewLink;process.driveSyncedAt=new Date().toISOString();}const uploaded=await uploadProcessFormPdf({accessToken,processFolderId:process.driveFolderId,processId:process.id,protocol:process.protocolo,studentNames:[process.aluno1.nome,process.aluno2?.nome].filter(Boolean) as string[],formType,version:process.dataRevision,pdf,sha256});job.status='ARCHIVED';job.driveFileId=String(uploaded.id);job.fileName=String(uploaded.name||'');job.artifactBase64='';job.lastError=undefined;job.updatedAt=new Date().toISOString();}catch(error){job.status='FAILED';job.lastError=error instanceof Error?error.message:'Falha ao arquivar o formulário.';job.updatedAt=new Date().toISOString();}await persistPortalStateDurably();return job;
+  const pdf=formType==='CADASTRO_INICIAL'?await createRegistrationSnapshotPdf(process,currentSettings)
+    :await createBrandedTextPdf({title:`Formulário - ${formType.replaceAll('_',' ').toLowerCase()}`,protocol:process.protocolo,body:buildFormSnapshotBody(process,formType),footer:'Cópia imutável arquivada pelo Portal de TCC'},currentSettings);
+  const sha256=createHash('sha256').update(pdf).digest('hex');
+  const id='form_'+createHash('sha256').update(`${process.id}|${formType}|${process.dataRevision}|${sha256}`).digest('hex').slice(0,28);
+  let job=formArchiveJobsStore.find(item=>item.id===id);
+  if(!job){
+    const now=new Date().toISOString();
+    job={id,processId:process.id,formType,version:process.dataRevision,sha256,artifactBase64:pdf.toString('base64'),status:'PENDING',createdAt:now,updatedAt:now};
+    formArchiveJobsStore.push(job);
+  }else if(job.status!=='ARCHIVED'&&!job.artifactBase64){
+    job.artifactBase64=pdf.toString('base64');
+  }
+  return retryExistingFormArchiveJob(job,process);
 }
-async function retryExistingFormArchiveJob(job:FormArchiveJob,process:ProcessData):Promise<FormArchiveJob>{
+
+function queueReservationArchive(process:ProcessData,revision:number,now:string):FormArchiveJob{
+  const id='form_'+createHash('sha256').update(`${process.id}|CONFIRMACAO_LOCAL|${revision}`).digest('hex').slice(0,28);
+  const job:FormArchiveJob={id,processId:process.id,formType:'CONFIRMACAO_LOCAL',reservationRevision:revision,
+    version:process.dataRevision,sha256:'',artifactBase64:'',status:'PENDING',createdAt:now,updatedAt:now};
+  formArchiveJobsStore.push(job);
+  return job;
+}
+
+const reservationArchiveTasks=new Map<string,Promise<FormArchiveJob>>();
+function retryExistingFormArchiveJob(job:FormArchiveJob,process:ProcessData):Promise<FormArchiveJob>{
+  if(job.reservationRevision===undefined)return uploadFormArchiveJob(job,process);
+  const running=reservationArchiveTasks.get(job.id);
+  if(running)return running;
+  const task=uploadFormArchiveJob(job,process).finally(()=>reservationArchiveTasks.delete(job.id));
+  reservationArchiveTasks.set(job.id,task);
+  return task;
+}
+async function uploadFormArchiveJob(job:FormArchiveJob,process:ProcessData):Promise<FormArchiveJob>{
   if(job.status==='ARCHIVED')return job;
-  if(!job.artifactBase64)throw new Error('A cópia imutável do formulário não está disponível para nova tentativa.');
-  const pdf=Buffer.from(job.artifactBase64,'base64');
+  const selected=job.reservationRevision===undefined?undefined
+    :reservationReceipts(process).find(item=>item.summary.revision===job.reservationRevision);
+  const snapshot=selected?.process||process;
+  const pdf=job.artifactBase64?Buffer.from(job.artifactBase64,'base64')
+    :selected?await createReservationReceiptPdf(snapshot,currentSettings):undefined;
+  if(!pdf)throw new Error('A cópia imutável do formulário não está disponível para nova tentativa.');
   if(!pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('A cópia imutável do formulário não é um PDF válido.');
   const actualSha=createHash('sha256').update(pdf).digest('hex');
-  if(actualSha!==job.sha256)throw new Error('A cópia imutável do formulário falhou na verificação de integridade.');
+  if(job.sha256&&actualSha!==job.sha256)throw new Error('A cópia imutável do formulário falhou na verificação de integridade.');
+  job.sha256=actualSha;
   try{
     const accessToken=await getGoogleWorkspaceAccessToken();
     if(!currentSettings.driveRootFolderId)throw new Error('Pasta raiz do Drive não configurada.');
     if(!process.driveFolderId){const folder=await ensurePortalProcessDriveFolder({accessToken,rootFolderId:currentSettings.driveRootFolderId,protocol:process.protocolo,processId:process.id});process.driveFolderId=folder.id;process.driveFolderUrl=folder.webViewLink;process.driveSyncedAt=new Date().toISOString();}
-    const uploaded=await uploadProcessFormPdf({accessToken,processFolderId:process.driveFolderId,processId:process.id,protocol:process.protocolo,studentNames:[process.aluno1.nome,process.aluno2?.nome].filter(Boolean) as string[],formType:job.formType,version:job.version,pdf,sha256:job.sha256});
+    const uploaded=await uploadProcessFormPdf({accessToken,processFolderId:process.driveFolderId,processId:process.id,protocol:process.protocolo,studentNames:[snapshot.aluno1.nome,snapshot.aluno2?.nome].filter(Boolean) as string[],formType:job.formType,version:job.version,pdf,sha256:job.sha256});
     job.status='ARCHIVED';job.driveFileId=String(uploaded.id);job.fileName=String(uploaded.name||'');job.artifactBase64='';job.lastError=undefined;job.updatedAt=new Date().toISOString();
   }catch(error){job.status='FAILED';job.lastError=error instanceof Error?error.message:'Falha ao arquivar o formulário.';job.updatedAt=new Date().toISOString();}
   await persistPortalStateDurably();return job;
@@ -872,7 +908,7 @@ async function retryExistingFormArchiveJob(job:FormArchiveJob,process:ProcessDat
 async function resumeWorkflowAfterNativeFormArchive(process:ProcessData,formType:ProcessFormArchiveType,actorEmail:string,resumeRun?:WorkflowRun):Promise<void>{
   if(formType==='CADASTRO_INICIAL'){await executeConfiguredWorkflowEvent(process,'TCC_CREATED',actorEmail,undefined,resumeRun);return;}
   if(formType==='CONFIRMACAO_LOCAL'){
-    if(process.defesa.departmentResponse?.decision==='UNAVAILABLE')return;
+    if(reservationReceiptStatus(process)!=='CONFIRMADO'||process.defesa.invitationSentAt)return;
     const run=await executeConfiguredWorkflowEvent(process,'LOCATION_CONFIRMED',actorEmail,undefined,resumeRun);
     if(run?.status==='COMPLETED'&&process.defesa.invitationDriveFileId){
       const deliveryIds=run.actions.filter(action=>action.kind==='EMAIL'&&action.status==='COMPLETED').flatMap(action=>String(action.externalId||'').split(',').filter(Boolean));
@@ -1014,6 +1050,17 @@ async function notifyReservationResponse(p: ProcessData): Promise<EmailDeliveryR
   });
   await persistPortalStateDurably();
   return delivery;
+}
+
+async function completeReservationFollowup(process:ProcessData,actor:string,revision:number,archive?:FormArchiveJob){
+ const failures:unknown[]=[];
+ try{await notifyReservationResponse(process);}catch(error){failures.push(error);}
+ if(archive)try{await retryExistingFormArchiveJob(archive,process);}catch(error){failures.push(error);}
+ const response=process.defesa.departmentResponse;
+ if(response?.revision===revision&&response.decision==='CONFIRMED'&&!process.defesa.invitationSentAt){
+   await finishConfirmedReservation(process,actor).catch(error=>failures.push(error));
+ }
+ if(failures.length)throw failures[0];
 }
 
 async function finishConfirmedReservation(portalProcess:ProcessData,actor:string){
@@ -2775,7 +2822,7 @@ export async function createPortalApp() {
     if(!p||p.status==='EM_RASCUNHO')return res.status(404).json({error:'Comprovante não disponível.'});
     const receipts=reservationReceipts(p),receiptId=typeof req.query.receipt==='string'?req.query.receipt:undefined;
     if(req.query.receipt!==undefined&&!receiptId)return res.status(400).json({error:'Selecione um comprovante válido.'});
-    const selected=receiptId?receipts.find(item=>item.summary.id===receiptId):receipts.find(item=>item.summary.current)||receipts[0];
+    const selected=receiptId?receipts.find(item=>item.summary.id===receiptId):receipts.find(item=>item.summary.current);
     if(!selected)return res.status(404).json({error:'Comprovante não disponível.'});
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
     const suffix=receiptId?`-${selected.summary.id}`:'';
@@ -3168,8 +3215,13 @@ export async function createPortalApp() {
   app.get('/api/processes/:id/location-proof/download',requireAuthenticated,async(req,res)=>{
     const identity=getPortalIdentity(req)!;const process=processesStore.find(p=>p.id===req.params.id);
     if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Comprovante não encontrado.'});
-    if(process.defesa.departmentResponse){const pdf=await createReservationReceiptPdf(process,currentSettings);return res.type('application/pdf').attachment(`${process.protocolo}-${process.defesa.departmentResponse?.decision==='UNAVAILABLE'?'indisponibilidade':'reserva'}.pdf`).send(pdf);}
-    if(!process.defesa.locationProof)return res.status(404).json({error:'Comprovante não encontrado.'});
+    const currentReceipt=reservationReceipts(process).find(item=>item.summary.current);
+    if(currentReceipt){
+      res.setHeader('Cache-Control','private, no-store');
+      const kind=currentReceipt.summary.decision==='UNAVAILABLE'?'indisponibilidade':'reserva';
+      return res.type('application/pdf').attachment(`${process.protocolo}-${kind}.pdf`).send(await createReservationReceiptPdf(currentReceipt.process,currentSettings));
+    }
+    if(reservationReceiptStatus(process)!=='CONFIRMADO' || !process.defesa.locationProof || (process.defesa.locationProof.reservationRevision??0)!==(process.defesa.reservationRevision??0))return res.status(404).json({error:'Comprovante não encontrado.'});
     try{const file=await downloadSourceFile(await sourceFilesAccessToken(),process.defesa.locationProof.driveFileId,{processId:process.id,artifactType:'COMPROVANTE_LOCAL'});await deliverPortalDownload({res,processId:process.id,bytes:file.pdf,fileName:process.defesa.locationProof.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:'Não foi possível consultar o comprovante no Drive.'});}
   });
   // A scoped bearer link authorizes only this reservation revision. GET never mutates.
@@ -3208,7 +3260,12 @@ export async function createPortalApp() {
     if(!context)return res.status(410).type('html').send(reservationPage('Solicitação indisponível','Utilize a solicitação mais recente.'));
     const {process:p,claim}=context;
     const receiptPath=reservationActionPath(req.params.token)+'/receipt';
-    if(p.defesa.departmentResponse){await notifyReservationResponse(p);return res.redirect(303,receiptPath);}
+    if(p.defesa.departmentResponse){
+      responseSaved=true;
+      const archive=formArchiveJobsStore.find(item=>item.processId===p.id&&item.reservationRevision===claim.revision);
+      await completeReservationFollowup(p,claim.recipient,claim.revision,archive);
+      return res.redirect(303,receiptPath);
+    }
     const decision=String(req.body?.decision||'');
     const local=decision==='accept'?p.defesa.local:decision==='decline'?'__UNAVAILABLE__':String(req.body?.local||'');
     if(req.body?.confirmed!=='yes'||![p.defesa.local,'__UNAVAILABLE__'].includes(local))return res.status(400).type('html').send(reservationPage('Confira os campos','Aceite ou recuse o agendamento apresentado.'));
@@ -3218,17 +3275,16 @@ export async function createPortalApp() {
     const before=structuredClone(p);
     p.defesa.reservationRequestRecipient=claim.recipient;
     const now=new Date().toISOString();
-    p.defesa.departmentResponse={departmentEmail:isManagedDefenseLocation(p.defesa.local,operationalConfig(currentSettings.integrationStudio).reservation.locations)?claim.recipient:undefined,attribution:'EMAIL_LINK',receiptDesign:receiptDesign(currentSettings.integrationStudio),revision:claim.revision,decision:available?'CONFIRMED':'UNAVAILABLE',respondedAt:now,respondedBy:claim.recipient,local:available?local:undefined,startAt:p.defesa.startAt,endAt:defenseEndAt(p.defesa.startAt)};
+    p.defesa.departmentResponse={departmentEmail:isManagedDefenseLocation(p.defesa.local,operationalConfig(currentSettings.integrationStudio).reservation.locations)?claim.recipient:undefined,attribution:'EMAIL_LINK',receiptDesign:receiptDesign(currentSettings.integrationStudio),receiptPresentation:reservationReceiptPresentation(p,currentSettings),revision:claim.revision,decision:available?'CONFIRMED':'UNAVAILABLE',respondedAt:now,respondedBy:claim.recipient,local:available?local:undefined,startAt:p.defesa.startAt,endAt:defenseEndAt(p.defesa.startAt)};
     if(available){p.defesa.local=local;p.defesa.localStatus='CONFIRMADO';p.defesa.localConfirmedAt=now;p.defesa.localConfirmedBy=claim.recipient;p.defesa.localEvidenceUrl=`/api/processes/${p.id}/location-proof/download`;}
     else p.defesa.localStatus='RECUSADO';
     p.defesa.departmentResponse.receiptBody=[`Protocolo: ${p.protocolo}`,`Título: ${p.titulo}`,...officialParticipantLines(p).filter(person=>person.key.startsWith('ALUNO_')).map(person=>`Autor: ${person.name}`),`Resposta: ${available?'Reserva confirmada':'Reserva recusada'}`,`Local: ${p.defesa.local}`,`Data: ${formatDateWithWeekday(p.defesa.startAt)}`,`Horário: ${formatTime24h(p.defesa.startAt)} às ${formatTime24h(defenseEndAt(p.defesa.startAt))}`,`Resposta registrada pelo link enviado a: ${claim.recipient}`,`Registrado em: ${formatDateTimeWithWeekday(now)}`,`Revisão da solicitação: ${claim.revision}`].join('\n');
     p.dataRevision++;p.updatedAt=now;
     auditLogsStore.push({id:`reservation-${p.id}-${claim.revision}`,processId:p.id,actorEmail:claim.recipient,actorRoles:[],action:available?'CONFIRMACAO_LOCAL_DEPARTAMENTO':'LOCAL_INDISPONIVEL_DEPARTAMENTO',entityType:'processo',entityId:p.id,after:{...p.defesa.departmentResponse},timestamp:now});
     googleCalendarEventsStore=generateGoogleEventsFromProcesses(processesStore);
-    try{await persistPortalStateDurably();responseSaved=true;}catch(error){Object.assign(p,before);auditLogsStore=auditLogsStore.filter(log=>log.id!==`reservation-${p.id}-${claim.revision}`);googleCalendarEventsStore=generateGoogleEventsFromProcesses(processesStore);throw error;}
-    await notifyReservationResponse(p);
-    await archiveProcessFormSnapshot(p,'CONFIRMACAO_LOCAL');
-    if(available)await finishConfirmedReservation(p,claim.recipient).catch(()=>undefined);
+    const archive=queueReservationArchive(p,claim.revision,now);
+    try{await persistPortalStateDurably();responseSaved=true;}catch(error){Object.assign(p,before);formArchiveJobsStore=formArchiveJobsStore.filter(job=>job.id!==archive.id);auditLogsStore=auditLogsStore.filter(log=>log.id!==`reservation-${p.id}-${claim.revision}`);googleCalendarEventsStore=generateGoogleEventsFromProcesses(processesStore);throw error;}
+    await completeReservationFollowup(p,claim.recipient,claim.revision,archive);
     res.redirect(303,receiptPath);
     }catch{res.status(responseSaved?202:503).type('html').send(reservationPage(responseSaved?'Resposta registrada':'Não foi possível salvar',responseSaved?'Sua resposta está salva. As próximas comunicações aguardam conclusão pela secretaria.':'Tente enviar a resposta novamente. A confirmação não foi concluída.'));}
   });
@@ -4229,7 +4285,7 @@ export async function createPortalApp() {
     res.json(trace);
   });
   app.get('/api/admin/form-archives',requireAuthenticated,requireAdministrator,(_req,res)=>res.json(formArchiveJobsStore.slice().reverse().map(({artifactBase64:_artifact,...item})=>item)));
-  app.post('/api/admin/form-archives/:id/retry',requireAuthenticated,requireAdministrator,async(req,res)=>{const identity=getPortalIdentity(req)!;const job=formArchiveJobsStore.find(item=>item.id===req.params.id);if(!job)return res.status(404).json({error:'Arquivamento não encontrado.'});const process=processesStore.find(item=>item.id===job.processId);if(!process)return res.status(409).json({error:'O processo do formulário não está disponível.'});const updated=await retryExistingFormArchiveJob(job,process);if(updated.status==='ARCHIVED')await resumeWorkflowAfterNativeFormArchive(process,updated.formType,identity.email);const{artifactBase64:_artifact,...safe}=updated;res.status(updated.status==='ARCHIVED'?200:409).json(safe);});
+  app.post('/api/admin/form-archives/:id/retry',requireAuthenticated,requireAdministrator,async(req,res)=>{const identity=getPortalIdentity(req)!;const job=formArchiveJobsStore.find(item=>item.id===req.params.id);if(!job)return res.status(404).json({error:'Arquivamento não encontrado.'});const process=processesStore.find(item=>item.id===job.processId);if(!process)return res.status(409).json({error:'O processo do formulário não está disponível.'});const updated=await retryExistingFormArchiveJob(job,process);if(updated.status==='ARCHIVED'&&(updated.reservationRevision===undefined||updated.reservationRevision===(process.defesa.reservationRevision||0)))await resumeWorkflowAfterNativeFormArchive(process,updated.formType,identity.email);const{artifactBase64:_artifact,...safe}=updated;res.status(updated.status==='ARCHIVED'?200:409).json(safe);});
   app.get('/api/admin/studio-form-submissions',requireAuthenticated,requireAdministrator,(_req,res)=>res.json(studioFormSubmissionsStore.slice().reverse()));
   app.post('/api/admin/studio-form-submissions/:id/retry', requireAuthenticated, requireAdministrator, async (req, res) => {
     const identity = getPortalIdentity(req)!;
