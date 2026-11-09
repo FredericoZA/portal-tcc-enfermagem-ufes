@@ -19,7 +19,7 @@ export const PortalLiveSync:React.FC = () => {
     let inFlight = false;
     let lastRevision: string | null = null;
     let retryMs = PORTAL_LIVE_POLL_INTERVAL_MS;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let timer: number | undefined;
 
     const schedule = (delay:number) => {
       if (timer !== undefined) window.clearTimeout(timer);
