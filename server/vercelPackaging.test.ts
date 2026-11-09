@@ -12,8 +12,14 @@ test('every deployed API function uses an explicit compiled artifact and package
     const name = adapter.slice(0, -3);
     assert.ok(source.includes("loadBundle('../dist/server/vercel/" + name + ".cjs')"));
     assert.doesNotMatch(source, /from ['"]\.\.\/server\//);
-    assert.match(config.functions['api/' + adapter].includeFiles, /dist\/server\/\*\*/);
-    assert.match(config.functions['api/' + adapter].includeFiles, /server\/documents\/fonts\/\*\*/);
-    assert.match(config.functions['api/' + adapter].includeFiles, /pdf\.worker\.mjs/);
+    const includes=String(config.functions['api/' + adapter].includeFiles);
+    assert.ok(includes.includes('dist/server/vercel/' + name + '.cjs'));
+    if (name === 'index') {
+      assert.match(includes,/dist\/server\/server\.cjs/);
+      assert.match(includes,/server\/documents\/fonts\/\*\*/);
+      assert.match(includes,/pdf\.worker\.mjs/);
+    } else {
+      assert.doesNotMatch(includes,/dist\/server\/server\.cjs|dist\/server\/\*\*|documents\/fonts/);
+    }
   }
 });
