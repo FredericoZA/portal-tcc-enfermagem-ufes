@@ -17,6 +17,7 @@
     "PORTAL_ALLOW_LOCAL_OTP_STORE": "false",
     "PORTAL_ALLOW_LOCAL_SECRET_STORE": "false",
     "PORTAL_PERSISTENCE_PROVIDER": "supabase",
+    "PORTAL_RUNTIME_PATCH": "1",
     "SUPABASE_URL": "https://vvgdmycmotazqjvpywmk.supabase.co",
     "SUPABASE_SECURE_FILES_BUCKET": "portal-secure-transfer",
     "PORTAL_DRIVE_ROOT_FOLDER_ID": "1zkG3fBm2tJESZjZP0_7jStUuPNXCwRPS",

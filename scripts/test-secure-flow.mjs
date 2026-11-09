@@ -174,7 +174,7 @@ async function staticChecks() {
   });
 
   await check('Supabase usa commit transacional com revisão otimista e projeções normalizadas',()=>{
-    includesEvery(supabaseRuntime, ['/rest/v1/rpc/portal_commit_runtime_state', 'expected_revision', 'portal_runtime_capabilities', 'transactionalRuntimeReady']);
+    includesEvery(supabaseRuntime, ['/rest/v1/rpc/${routine}', 'portal_commit_runtime_patch_v1', 'portal_commit_runtime_state', 'expected_revision', 'portal_runtime_capabilities', 'transactionalRuntimeReady']);
     includesEvery(transactionalMigration, ['for update', "errcode='40001'", 'portal_project_runtime_state', 'portal_runtime_commits', 'portal_signature_jobs', 'portal_email_deliveries', 'portal_audit_events']);
     assert.match(server, /if \(!databaseStatus\.transactionalRuntimeReady\) \{[\s\S]{0,500}throw Object\.assign/, 'produção não bloqueia a ausência do runtime transacional');
     assert.match(supabaseRuntime, /payload(?:\?)?\.asten_transactional_outbox\s*===\s*true/);
