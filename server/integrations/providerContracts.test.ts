@@ -185,7 +185,12 @@ test('contrato Vercel encaminha API ao handler e SPA ao build estático', () => 
   assert.match(packageJson.scripts.build,/node scripts\/build-server\.mjs/);
   const buildSource=readFileSync(new URL('../../scripts/build-server.mjs',import.meta.url),'utf8');
   assert.match(buildSource,/outfile: 'dist\/server\/server\.cjs'/);
-  for(const entry of ['index','runtime-asset','replication-model','public-indicators'])assert.match(config.functions['api/'+entry+'.ts'].includeFiles,/dist\/server\/\*\*/);
+  for(const entry of ['index','runtime-asset','replication-model','public-indicators']) {
+    const included=String(config.functions['api/'+entry+'.ts'].includeFiles);
+    assert.ok(included.includes('dist/server/vercel/'+entry+'.cjs'));
+    if(entry==='index')assert.match(included,/dist\/server\/server\.cjs/);
+    else assert.ok(!included.includes('dist/server/server.cjs'));
+  }
   assert.doesNotMatch(packageJson.scripts.build,/--sourcemap/);
   assert.match(viteConfig,/outDir:\s*'dist\/client'/);
   assert.match(serverSource,/dotenv\.config\(\{path:'\.env\.local',override:false,quiet:true\}\)/);
