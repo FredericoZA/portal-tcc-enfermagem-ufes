@@ -115,7 +115,7 @@ try {
     await mkdir(path.join(isolated,'dist/server/vercel'),{recursive:true});
     await cp(path.join(directory,'api',name+'.js'),path.join(isolated,'api',name+'.js'));
     await cp(path.join(root,'dist/server/vercel',name+'.cjs'),path.join(isolated,'dist/server/vercel',name+'.cjs'));
-    await writeFile(path.join(isolated,'package.json'),'{"type":"module"}\\n');
+    await writeFile(path.join(isolated,'package.json'),JSON.stringify({type:'module'}));
     await symlink(path.join(root,'node_modules'),path.join(isolated,'node_modules'),'dir');
     const entry=path.join(isolated,'api',name+'.js');
     const startup=spawn(process.execPath,['--input-type=module','-e',
