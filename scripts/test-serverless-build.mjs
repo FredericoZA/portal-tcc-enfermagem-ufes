@@ -107,6 +107,25 @@ try {
   assert.deepEqual(final.unexpected, [], 'All upstream requests must be expected synthetic reads.');
   assert.ok(final.calls.some((call) => call.host === 'oauth2.googleapis.com'));
   assert.ok(final.calls.some((call) => call.path === '/drive/v3/files/image_fixture_123'));
+  // Testar cold import de cada função leve com SOMENTE seu artefato dedicado.
+  // O bundle monolítico não pode ser requisito oculto das rotas especializadas.
+  for (const name of ['runtime-asset','replication-model','public-indicators']) {
+    const isolated=path.join(directory,'isolated-'+name);
+    await mkdir(path.join(isolated,'api'),{recursive:true});
+    await mkdir(path.join(isolated,'dist/server/vercel'),{recursive:true});
+    await cp(path.join(directory,'api',name+'.js'),path.join(isolated,'api',name+'.js'));
+    await cp(path.join(root,'dist/server/vercel',name+'.cjs'),path.join(isolated,'dist/server/vercel',name+'.cjs'));
+    await writeFile(path.join(isolated,'package.json'),'{"type":"module"}\\n');
+    await symlink(path.join(root,'node_modules'),path.join(isolated,'node_modules'),'dir');
+    const entry=path.join(isolated,'api',name+'.js');
+    const startup=spawn(process.execPath,['--input-type=module','-e',
+      'const mod=await import('+JSON.stringify(new URL('file://'+entry).href)+');if(typeof mod.default!=="function")process.exit(15);'
+    ],{cwd:isolated,env:{PATH:process.env.PATH,NODE_ENV:'test'},stdio:['ignore','pipe','pipe']});
+    let diagnostic='';
+    startup.stderr.on('data',chunk=>{diagnostic+=String(chunk);});
+    const [exitCode]=await once(startup,'exit');
+    assert.equal(exitCode,0,name+' deve carregar sem dist/server/server.cjs nem os demais bundles. '+diagnostic.slice(-1700));
+  }
   console.log('Serverless artifacts: old ESM failure reproduced; four emitted wrappers, real app startup, SVG/Drive images, OAuth/ZIP and admission passed in plain Node. No real provider traffic.');
 } finally {
   if (child && child.exitCode === null) {
