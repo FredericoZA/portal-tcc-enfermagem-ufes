@@ -2868,7 +2868,9 @@ export async function createPortalApp() {
     googleCalendarEventsStore=generateGoogleEventsFromProcesses(processesStore);
     try{await persistPortalStateDurably();responseSaved=true;}catch(error){Object.assign(p,before);auditLogsStore=auditLogsStore.filter(log=>log.id!==`reservation-${p.id}-${claim.revision}`);googleCalendarEventsStore=generateGoogleEventsFromProcesses(processesStore);throw error;}
     const receiptArchive=await archiveProcessFormSnapshot(p,'CONFIRMACAO_LOCAL');
-    if(receiptArchive.status!=='ARCHIVED')throw new Error('A resposta foi salva, mas o comprovante ainda não foi arquivado no Drive. Retome pelo painel de arquivamentos.');
+    // Em produção, não concluir uma resposta sem arquivo confirmado no Drive.
+    // A demonstração local sem Google preserva seu fluxo de testes de reserva.
+    if(receiptArchive.status!=='ARCHIVED'&&productionRuntime)throw new Error('A resposta foi salva, mas o comprovante ainda não foi arquivado no Drive. Retome pelo painel de arquivamentos.');
     const recipients=[...new Set([claim.recipient,p.aluno1.email,p.aluno2?.email,p.orientador.email].filter(Boolean) as string[])];
     for(const recipient of recipients.slice(0,1))await sendTrackedPortalEmail({process:p,recipient,cc:recipients.filter(item=>item!==recipient),subject:`[${p.protocolo}] ${available?'Reserva confirmada':'Agendamento recusado'}`,text:`Prezado participante,\n\n${available?`O departamento confirmou a reserva de ${local}.`:'O responsável recusou o agendamento solicitado.\n\nPara solicitar uma nova reserva, os autores podem ajustar o agendamento no Portal.'}\n\n${formatDatePt(p.defesa.startAt)}, ${formatTime24h(p.defesa.startAt)} às ${formatTime24h(defenseEndAt(p.defesa.startAt))}\n\nResposta registrada em ${now}. ${recipient===claim.recipient?(available?'Use o botão abaixo para consultar o comprovante.':'Use o botão abaixo para consultar o comprovante de indisponibilidade.'):(available?'O comprovante está disponível em Dados do processo.':'O comprovante de indisponibilidade está disponível em Dados do processo.')}`,templateId:'email-comprovante-reserva',workflowEventVariables:{RESERVATION_REVISION:String(claim.revision)},idempotencyKey:`reservation-receipt:${p.id}:${claim.revision}:${recipient}`});
     let pending=false;
@@ -2908,7 +2910,7 @@ export async function createPortalApp() {
       auditLogsStore.push({id:`log-${Date.now()}`,processId:process.id,actorEmail:identity.email,actorRoles:[...getUserRolesForEmail(identity.email).globalRoles,...roles],action:'CONFIRMACAO_LOCAL',entityType:'processo',entityId:process.id,before:{defesa:process.defesa},after:{defesa:updated.defesa},timestamp:now});
       await persistPortalStateDurably();
       const receiptArchive=await archiveProcessFormSnapshot(updated,'CONFIRMACAO_LOCAL');
-      if(receiptArchive.status!=='ARCHIVED')return res.status(202).json({...updated,workflowPending:true,workflowError:'O local foi confirmado, mas o comprovante de reserva aguarda arquivamento no Drive. A secretaria pode retomar pela fila de arquivamentos.'});
+      if(receiptArchive.status!=='ARCHIVED'&&productionRuntime)return res.status(202).json({...updated,workflowPending:true,workflowError:'O local foi confirmado, mas o comprovante de reserva aguarda arquivamento no Drive. A secretaria pode retomar pela fila de arquivamentos.'});
       await finishConfirmedReservation(updated,identity.email);
       return res.status(updated.defesa.invitationSentAt?200:202).json({...updated,workflowPending:!updated.defesa.invitationSentAt});
     }catch(error){res.status(502).json({error:error instanceof Error?error.message:'Não foi possível executar o fluxo da carta-convite.'});}
