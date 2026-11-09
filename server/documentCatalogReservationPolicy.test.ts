@@ -2,17 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { uploadProcessFormPdf } from './googleDriveArchive';
-import { DRIVE_FOLDER_NAMES } from './googleWorkspace';
-import { PORTAL_DRIVE_STRUCTURE } from '../../src/services/googleDriveOrganizer';
+import { uploadProcessFormPdf } from './integrations/googleDriveArchive';
+import { DRIVE_FOLDER_NAMES } from './integrations/googleWorkspace';
+import { PORTAL_DRIVE_STRUCTURE } from '../src/services/googleDriveOrganizer';
 
 test('catálogo institucional mantém tipos documentais e não cria pasta de declaração de comparecimento',()=>{
   assert.equal(DRIVE_FOLDER_NAMES.modelTypes.COMPROVANTE_RESERVA,'06_COMPROVANTE_RESERVA');
   assert.equal(DRIVE_FOLDER_NAMES.modelTypes.INSTRUMENTO_AVALIACAO_LEGADO,'05_INSTRUMENTO_AVALIACAO_LEGADO');
   assert.ok(PORTAL_DRIVE_STRUCTURE.modelChildren.includes('06_COMPROVANTE_RESERVA'));
   assert.equal(Object.values(DRIVE_FOLDER_NAMES.modelTypes).some(item=>item.includes('COMPARECIMENTO')),false);
-  const workspace=readFileSync(new URL('./googleWorkspace.ts',import.meta.url),'utf8');
-  const organizer=readFileSync(new URL('../../src/services/googleDriveOrganizer.ts',import.meta.url),'utf8');
+  const workspace=readFileSync(new URL('./integrations/googleWorkspace.ts',import.meta.url),'utf8');
+  const organizer=readFileSync(new URL('../src/services/googleDriveOrganizer.ts',import.meta.url),'utf8');
   assert.match(workspace,/COMPROVANTE_RESERVA'.*includes\(type\)/);
   assert.match(organizer,/06_COMPROVANTE_RESERVA.*includes\(name\)/);
 });
@@ -58,8 +58,8 @@ test('comprovante é arquivado uma vez em DOCUMENTOS/06_COMPROVANTE_RESERVA/02_G
 });
 
 test('contrato visual não exibe caixa de título genérico em Configurações',()=>{
-  const app=readFileSync(new URL('../../src/App.tsx',import.meta.url),'utf8');
-  const page=readFileSync(new URL('../../src/pages/ConfiguracoesPage.tsx',import.meta.url),'utf8');
+  const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
+  const page=readFileSync(new URL('../src/pages/ConfiguracoesPage.tsx',import.meta.url),'utf8');
   assert.doesNotMatch(app,/Configurações & Modelos de Arquivos/);
   assert.doesNotMatch(page,/Configurações do Portal/i);
   assert.match(page,/portal-settings-hub/);
