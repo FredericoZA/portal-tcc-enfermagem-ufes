@@ -3,12 +3,13 @@ import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 
 export { PORTAL_LIVE_UPDATE_EVENT, PORTAL_LIVE_POLL_INTERVAL_MS } from '../utils/portalLiveEvents';
-import { PORTAL_LIVE_UPDATE_EVENT, PORTAL_LIVE_POLL_INTERVAL_MS, type PortalLiveUpdate } from '../utils/portalLiveEvents';
+import { PORTAL_LIVE_UPDATE_EVENT, PORTAL_LIVE_POLL_INTERVAL_MS, PORTAL_LIVE_IDLE_POLL_MAX_MS, type PortalLiveUpdate } from '../utils/portalLiveEvents';
 
 /**
- * Consulta somente a revisão transacional (não carrega todos os processos).
- * Desliga o polling quando a aba está oculta/offline. Ao voltar para a aba
- * revalida imediatamente e avisa os componentes que usam o estado remoto.
+ * Consulta somente revisão, sem atualizar dados em massa.
+ * O intervalo cresce até 60s quando nada muda, e volta ao início quando muda.
+ * Não faz chamadas em aba oculta/offline; ao recuperar o foco revalida já.
+ * A checagem de concorrência no backend continua obrigatória em TODA escrita.
  */
 export const PortalLiveSync:React.FC = () => {
   const { isAuthenticated, userEmail } = useAuth();
@@ -17,9 +18,19 @@ export const PortalLiveSync:React.FC = () => {
     let active = true;
     let inFlight = false;
     let lastRevision: string | null = null;
+    let retryMs = PORTAL_LIVE_POLL_INTERVAL_MS;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
+    const schedule = (delay:number) => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      if (active) timer = window.setTimeout(() => { void poll(); }, delay);
+    };
     const poll = async () => {
-      if (!active || inFlight || document.visibilityState === 'hidden' || !navigator.onLine) return;
+      if (!active || inFlight) return;
+      if (document.visibilityState === 'hidden' || !navigator.onLine) {
+        schedule(PORTAL_LIVE_IDLE_POLL_MAX_MS);
+        return;
+      }
       inFlight = true;
       try {
         const revision = isAuthenticated
@@ -30,27 +41,31 @@ export const PortalLiveSync:React.FC = () => {
           window.dispatchEvent(new CustomEvent<PortalLiveUpdate>(PORTAL_LIVE_UPDATE_EVENT, {
             detail: {revision},
           }));
+          retryMs = PORTAL_LIVE_POLL_INTERVAL_MS;
+        } else {
+          retryMs = Math.min(PORTAL_LIVE_IDLE_POLL_MAX_MS, Math.round(retryMs * 1.5));
         }
-        lastRevision=revision;
+        lastRevision = revision;
       } catch {
-        // Uma falha de conexão não equivale a exclusão de TCC.
-        // Mantém a última revisão até a próxima consulta bem-sucedida.
+        // Sem inventar "não há dados" em erros transitórios.
+        // Uma falha não altera a revisão nem invalida o estado da tela.
+        retryMs = Math.min(PORTAL_LIVE_IDLE_POLL_MAX_MS, retryMs * 2);
       } finally {
         inFlight = false;
+        if (active) schedule(retryMs);
       }
     };
 
     const resumed = () => {
-      if (document.visibilityState !== 'hidden') void poll();
+      if (document.visibilityState !== 'hidden' && navigator.onLine) schedule(0);
     };
     void poll();
-    const timer = window.setInterval(() => void poll(), PORTAL_LIVE_POLL_INTERVAL_MS);
     window.addEventListener('focus',resumed);
     window.addEventListener('online',resumed);
     document.addEventListener('visibilitychange',resumed);
     return () => {
       active = false;
-      window.clearInterval(timer);
+      if (timer !== undefined) window.clearTimeout(timer);
       window.removeEventListener('focus',resumed);
       window.removeEventListener('online',resumed);
       document.removeEventListener('visibilitychange',resumed);
