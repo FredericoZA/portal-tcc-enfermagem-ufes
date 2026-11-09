@@ -1,4 +1,5 @@
 import { createHash, createHmac, randomUUID } from 'node:crypto';
+import { AuditSnapshotAssembler } from './supabaseAuditSnapshot';
 import { storePrivatePortalImage, readPrivatePortalImage, normalizePortalImage, type PrivatePortalImage } from './googleDriveImages';
 
 export interface SupabaseRuntimeStatus {
@@ -18,6 +19,7 @@ const providerEnabled = () => process.env.PORTAL_PERSISTENCE_PROVIDER === 'supab
 const stateEndpoint = () => `${supabaseUrl()}/rest/v1/portal_runtime_state`;
 const runtimeAssetsEndpoint = () => `${supabaseUrl()}/rest/v1/portal_runtime_assets`;
 let knownRevision:number|null=null;
+const auditSnapshotAssembler=new AuditSnapshotAssembler();
 /** Revisão do estado operacional confirmada pelo banco, após a leitura/commit da requisição. */
 export function currentPortalRuntimeRevision():number|null { return knownRevision; }
 /** Após falha de commit, os objetos em memória podem divergir do banco.
@@ -230,8 +232,25 @@ export async function portalRuntimeStateNeedsRefresh():Promise<boolean>{
   return revision!==knownRevision;
 }
 
+/** O snapshot transacional com chunks é opt-in durante a homologação.
+ * O fallback legado continua intacto; não ativar em produção antes do
+ * teste de paridade contra a leitura integral e do histórico de auditoria.
+ */
 export async function loadPortalRuntimeState<T extends object>(trackRevision=true): Promise<T | null> {
   if (!getSupabaseRuntimeStatus().durablePersistenceReady) return null;
+  if(process.env.PORTAL_AUDIT_DELTA_ENABLED==='true'){
+    const namespace=supabaseUrl();
+    const response=await fetch(`${namespace}/rest/v1/rpc/portal_read_runtime_snapshot_v1`,{
+      method:'POST',
+      headers:adminHeaders(),
+      body:JSON.stringify({known_audit_chunks:auditSnapshotAssembler.fingerprints(namespace)}),
+      signal:AbortSignal.timeout(20_000),
+    });
+    if(!response.ok)throw new Error(`Falha ao carregar os blocos transacionais do Supabase (${response.status}).`);
+    const row=auditSnapshotAssembler.reconstruct(namespace,await response.json());
+    if(trackRevision)knownRevision=row.revision;
+    return row.payload as T;
+  }
   const response = await fetchPortalStateSnapshot();
   if (!response.ok) throw new Error(`Falha ao carregar o estado do Supabase (${response.status}).`);
   const rows = await response.json();
