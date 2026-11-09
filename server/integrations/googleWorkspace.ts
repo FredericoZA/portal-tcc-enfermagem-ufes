@@ -42,7 +42,9 @@ export const DRIVE_FOLDER_NAMES = {
     CONVITE: '01_CARTA_CONVITE',
     ATA: '02_ATA_DEFESA',
     TERMO: '03_TERMO_AUTORIZACAO',
-    DECLARACAO: '04_DECLARACAO_PARTICIPACAO'
+    DECLARACAO: '04_DECLARACAO_PARTICIPACAO',
+    INSTRUMENTO_AVALIACAO_LEGADO: '05_INSTRUMENTO_AVALIACAO_LEGADO',
+    COMPROVANTE_RESERVA: '06_COMPROVANTE_RESERVA'
   },
   modelLifecycles: ['00_MODELO_ATIVO', '01_HISTORICO_MODELOS', '02_GERADOS', '03_ASSINADOS']
 } as const;
@@ -517,7 +519,7 @@ export async function bootstrapGoogleDriveStructure(accessToken?: string, option
     const typeFolder = await ensureFolder(token, folderName, folders.models);
     typeFolder.created ? createdFolders++ : existingFolders++;
     folders[`documents.${type}`] = typeFolder.file.id;
-    for (const lifecycle of DRIVE_FOLDER_NAMES.modelLifecycles.filter(name=>type!=='CONVITE'||name!=='03_ASSINADOS')) {
+    for (const lifecycle of DRIVE_FOLDER_NAMES.modelLifecycles.filter(name=>!['CONVITE','COMPROVANTE_RESERVA'].includes(type)||name!=='03_ASSINADOS')) {
       const lifecycleFolder = await ensureFolder(token, lifecycle, typeFolder.file.id);
       lifecycleFolder.created ? createdFolders++ : existingFolders++;
       folders[`documents.${type}.${lifecycle}`] = lifecycleFolder.file.id;
@@ -551,7 +553,7 @@ async function ensureDocumentModelFolders(accessToken:string,manifest:GoogleDriv
     typeFolderId=(await ensureFolder(accessToken,folderName,manifest.folders.models)).file.id;
     manifest.folders[`documents.${type}`]=typeFolderId;
   }
-  for(const lifecycle of DRIVE_FOLDER_NAMES.modelLifecycles.filter(name=>type!=='CONVITE'||name!=='03_ASSINADOS')){
+  for(const lifecycle of DRIVE_FOLDER_NAMES.modelLifecycles.filter(name=>!['CONVITE','COMPROVANTE_RESERVA'].includes(type)||name!=='03_ASSINADOS')){
     const key=`documents.${type}.${lifecycle}`;
     if(!manifest.folders[key])manifest.folders[key]=(await ensureFolder(accessToken,lifecycle,typeFolderId)).file.id;
   }
