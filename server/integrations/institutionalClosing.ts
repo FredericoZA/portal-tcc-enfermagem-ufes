@@ -21,7 +21,8 @@ function paragraphsOf(document:any):Paragraph[]{
   }));
 }
 
-const isIssuer=(text:string)=>/^(?:Comissão (?:de |dos? )?Trabalhos? de Conclusão de Curso(?: do)?|Departamento de Enfermagem|Curso (?:de Graduação em|de) Enfermagem e Obstetrícia(?:\s*[·—–-]?\s*CCS\s*\/\s*UFES)?|Curso de Enfermagem e Obstetrícia(?:\s*[·—–-]?\s*CCS\s*\/\s*UFES)?)$/iu.test(text);
+const isIssuer=(text:string)=>/^(?:Comissão (?:de |dos? )?Trabalhos? de Conclusão de Curso(?: do)?|Departamento de Enfermagem|Curso (?:de Graduação em|de) Enfermagem e Obstetrícia(?:\s*[·—–-]?\s*CCS\s*[/—–-]\s*UFES)?|Curso de Enfermagem e Obstetrícia(?:\s*[·—–-]?\s*CCS\s*[/—–-]\s*UFES)?)$/iu.test(text);
+const isIssuerRow=(text:string)=>Boolean(text)&&text.split(/\r?\n/).every(line=>isIssuer(line.trim()));
 const isCommission=(text:string)=>/^Comissão (?:de |dos? )?Trabalhos? de Conclusão de Curso(?: do)?$/iu.test(text);
 const isDate=(text:string)=>/^Vitória\s*(?:[-–—,]\s*)?(?:ES|Espírito Santo)\s*,\s*.+\d/iu.test(text);
 
@@ -64,6 +65,16 @@ export function institutionalClosingRequests(document:unknown,type:string,issued
       edits.push({start:last.endIndex-1,end:last.endIndex-1,text:`\n\n${closing}`,tabId:last.tabId});
       for(const row of dates)edits.push({start:row.startIndex,end:row===last?row.endIndex-1:row.endIndex,text:'',tabId:row.tabId});
     }
+  }else if(type==='DECLARACAO'){
+    const dateIndex=paragraphs.findIndex(row=>isDate(row.text));
+    const issuerRows=paragraphs.slice(dateIndex>=0?dateIndex+1:Math.max(0,issuerStart)).filter(row=>isIssuerRow(row.text));
+    if(!issuerRows.length){
+      edits.push({start:last.endIndex-1,end:last.endIndex-1,text:`\n\n${issuer}`,tabId:last.tabId});
+    }else if(issuerRows.map(row=>row.text).join('\n')!==issuer){
+      for(const row of issuerRows.slice(0,-1))edits.push({start:row.startIndex,end:row.endIndex,text:'',tabId:row.tabId});
+      const finalIssuer=issuerRows.at(-1)!;
+      edits.push({start:finalIssuer.startIndex,end:finalIssuer.endIndex-1,text:issuer,tabId:finalIssuer.tabId});
+    }
   }else if(issuerStart>=0){
     if(paragraphs.slice(issuerStart,issuerEnd+1).map(row=>row.text).join('\n').trim()!==issuer)edits.push({start:paragraphs[issuerStart].startIndex,end:paragraphs[issuerEnd].endIndex-1,text:issuer,tabId:paragraphs[issuerStart].tabId});
   }else{
@@ -76,12 +87,12 @@ export function institutionalClosingRequests(document:unknown,type:string,issued
 }
 
 /** True right alignment, without the old fixed 260pt indent. */
-export function institutionalClosingStyleRequests(document:unknown):Array<Record<string,unknown>>{
+export function institutionalClosingStyleRequests(document:unknown,type?:string):Array<Record<string,unknown>>{
   const paragraphs=paragraphsOf(document);
   const issuerStart=paragraphs.findIndex(row=>isCommission(row.text));
   return paragraphs.filter((row,index)=>isDate(row.text)||/^Atenciosamente,?$/iu.test(row.text)||(index>=issuerStart&&issuerStart>=0&&isIssuer(row.text))).map(row=>({updateParagraphStyle:{
     range:{startIndex:row.startIndex,endIndex:row.endIndex,...(row.tabId?{tabId:row.tabId}:{})},
-    paragraphStyle:{alignment:'END',indentStart:{magnitude:0,unit:'PT'},indentEnd:{magnitude:0,unit:'PT'},spaceAbove:{magnitude:0,unit:'PT'},spaceBelow:{magnitude:0,unit:'PT'}},
+    paragraphStyle:{alignment:'END',indentStart:{magnitude:0,unit:'PT'},indentEnd:{magnitude:0,unit:'PT'},spaceAbove:{magnitude:type==='DECLARACAO'&&isDate(row.text)?12:0,unit:'PT'},spaceBelow:{magnitude:0,unit:'PT'}},
     fields:'alignment,indentStart,indentEnd,spaceAbove,spaceBelow',
   }}));
 }

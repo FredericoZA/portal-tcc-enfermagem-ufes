@@ -14,17 +14,17 @@ test('consolidação remove avisos genéricos e duplicados, preservando entrega 
  const final=next.workflowStages.filter(s=>s.triggerEvent==='PROCESS_COMPLETED').flatMap(s=>s.actions as any[]);assert.equal(final.filter(a=>a.type==='email').length,1);assert.ok(final.some(a=>a.id==='keep'));
  assert.equal(isConsolidatedEmailNotice('SIGNATURE_COMPLETED','old-signature'),true);assert.equal(isConsolidatedEmailNotice('TCC_CREATED','email-instrucoes-cadastro'),true);assert.equal(isConsolidatedEmailNotice('LOCATION_CONFIRMED','email-confirmacao'),true);assert.equal(isConsolidatedEmailNotice('SIGNATURE_COMPLETED','email-entrega-repositorio'),false);
 });
-test('encerramento tem um envio por participante e revisão, independentemente de novas execuções',async()=>{
+test('encerramento tem um envio para todos os participantes por revisão, independentemente de novas execuções',async()=>{
  const studio=withConsolidatedEmailNotifications({...source,workflowStages:source.workflowStages.map((s:any)=>({...s,actions:s.actions.filter((a:any)=>a.type==='email')}))});
- const records=new Map<string,any>(),delivered:string[]=[];const president='president@example.invalid';
+ const records=new Map<string,any>(),delivered:string[][]=[];const president='president@example.invalid';
  const ports={createDocument:async()=>({}),createFormTask:async()=>({}),resolveEmailRecipients:({template,recipients}:any)=>operationalEmailRecipients(template.id,p,'department@example.invalid',recipients,president),sendEmail:async(input:any)=>{
-  const recipient=input.to[0],key=finalProcessEmailKey(p,recipient);
-  const mail=await dispatchTrackedEmail({processId:p.id,recipient,subject:input.subject,text:input.text,idempotencyKey:key},{journal:{findByIdempotencyKey:async k=>records.get(k)||null,save:async r=>{records.set(r.idempotencyKey,r);}},send:async()=>{delivered.push(recipient);return{id:'gmail-local-fixture'};}});return{externalId:mail.id};}};
+  const recipient=input.to[0],key=finalProcessEmailKey(p);
+  const mail=await dispatchTrackedEmail({processId:p.id,recipient,additionalRecipients:input.to.slice(1),subject:input.subject,text:input.text,idempotencyKey:key},{journal:{findByIdempotencyKey:async k=>records.get(k)||null,save:async r=>{records.set(r.idempotencyKey,r);}},send:async()=>{delivered.push(input.to);return{id:'gmail-local-fixture'};}});return{externalId:mail.id};}};
  const context={process:p,eventCode:'PROCESS_COMPLETED',actorEmail:p.orientador.email,actorRoles:[]};
  assert.equal((await executeWorkflowEvent(studio,context,ports)).status,'COMPLETED');
- const expected=operationalEmailRecipients('email-conclusao',p,'',[],president);assert.deepEqual(delivered.sort(),expected.sort());assert.ok(!delivered.includes('department@example.invalid'));
- await executeWorkflowEvent(studio,{...context,actorEmail:president},ports);assert.equal(delivered.length,expected.length);
- assert.equal(finalProcessEmailKey(p,' USER@EXAMPLE.INVALID '),finalProcessEmailKey(p,'user@example.invalid'));
+ const expected=operationalEmailRecipients('email-conclusao',p,'',[],president);assert.deepEqual(delivered,[expected]);assert.ok(!delivered.flat().includes('department@example.invalid'));
+ await executeWorkflowEvent(studio,{...context,actorEmail:president},ports);assert.equal(delivered.length,1);
+ assert.notEqual(finalProcessEmailKey(p),finalProcessEmailKey({...p,dataRevision:p.dataRevision+1}));
 });
 
 

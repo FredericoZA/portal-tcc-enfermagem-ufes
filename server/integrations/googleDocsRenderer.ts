@@ -9,7 +9,7 @@ import {academicName,personPresentationVariables} from '../../src/utils/personPr
 import type {ProcessData} from '../../src/types';
 import type {SignatureSignerSnapshot} from '../../src/types/signatures';
 import {configuredSignatureBlockRequests,assertConfiguredSignatureBlocks} from './documentSignatureBlocks';
-import { buildValueBoldRequests,buildMarkerBoldRequests,buildAtaOpeningTitleRequests,buildAtaNarrativeStyleRequests,buildAuthorizationChoiceStyleRequests,buildAuthorizationBodyStyleRequests,buildDeclarationCoAdvisorNormalRequests,buildAtaCoadvisorRoleNormalRequests } from './googleDocsStyles';
+import { buildValueBoldRequests,buildMarkerBoldRequests,buildAtaOpeningTitleRequests,buildAtaNarrativeStyleRequests,buildAuthorizationChoiceStyleRequests,buildAuthorizationBodyStyleRequests,buildDeclarationBodyNormalRequests,buildAtaCoadvisorRoleNormalRequests } from './googleDocsStyles';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
 const DOCS_API = 'https://docs.googleapis.com/v1';
@@ -352,7 +352,7 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
     const invitationLiteralRequests=(input.literalReplacements||[]).filter(item=>item.find).map(item=>({replaceAllText:{containsText:{text:item.find,matchCase:true},replaceText:item.replace,...(tabIds.length?{tabsCriteria:{tabIds}}:{})}}));
     const literalRequests=[...buildLegacyLocationRequests(input.legacyDefenseLocations,tabIds),...invitationLiteralRequests];
     const openingRequests=input.presentation?.documentType==='ATA'?buildAtaOpeningTitleRequests(readback):[];
-    const boldRequests=input.presentation?.documentType==='CONVITE'?[]:buildMarkerBoldRequests(readback,[...new Set([...Object.keys(input.replacements||{}).map(normalizeVariableKey),...(input.boldMarkers||[]).map(normalizeVariableKey)])]);
+    const boldRequests=['CONVITE','DECLARACAO'].includes(input.presentation?.documentType||'')?[]:buildMarkerBoldRequests(readback,[...new Set([...Object.keys(input.replacements||{}).map(normalizeVariableKey),...(input.boldMarkers||[]).map(normalizeVariableKey)])]);
     const optionalRequests=input.presentation?optionalAuthorBlockRequests(readback,input.presentation.process):[];
     const pageLayoutRequests=input.presentation?.documentType==='ATA'?ataPageLayoutRequests():[];
     const requests = [...openingRequests,...boldRequests, ...optionalRequests, ...literalRequests, ...buildGoogleDocsReplacementRequests(input.replacements, tabIds),...pageLayoutRequests];
@@ -407,7 +407,7 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
         const coadvisorEdits=ataCoadvisorBlockRequests(mergedDocument,input.presentation.process);
         if(coadvisorEdits.length){await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:coadvisorEdits,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao incluir o coorientador na ata');mergedDocument=await readCurrent();}
       }
-      if(input.presentation.documentType==='ATA'||input.institutionalCrestUrl?.endsWith('/national-arms.png')){
+      if(['ATA','DECLARACAO'].includes(input.presentation.documentType)||input.institutionalCrestUrl?.endsWith('/national-arms.png')){
         const closing=institutionalClosingRequests(mergedDocument,input.presentation.documentType);
         if(closing.length){await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:closing,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao organizar o encerramento institucional');mergedDocument=await readCurrent();}
       }
@@ -425,7 +425,7 @@ export async function renderGoogleDriveTemplateToPdf(input: GoogleTemplateRender
       // Grammar adaptation may insert abbreviated prefixes after marker replacement.
       // Reapply emphasis to the complete participant names as well as the opinion.
       const names=[p.aluno1?.nome,p.aluno2?.nome,...[p.orientador,p.coorientador,...(p.banca||[])].filter(Boolean).map(person=>academicName(person,'abbreviated'))].filter((value):value is string=>Boolean(value));
-      const emphasis=[...(input.institutionalCrestUrl?.endsWith('/national-arms.png')?institutionalClosingStyleRequests(mergedDocument):[]),...(['ATA','TERMO'].includes(input.presentation.documentType)?individualAuthorSignatureStyleRequests(mergedDocument,p):[]),...(input.presentation.documentType==='CONVITE'?[]:buildValueBoldRequests(mergedDocument,[...names,p.avaliacao?.resultadoLabel||'',personPresentationVariables(p).RESULTADO_CONCORDANTE,p.avaliacao?.parecer||''])),...(input.presentation.documentType==='TERMO'?[...buildAuthorizationChoiceStyleRequests(mergedDocument),...buildAuthorizationBodyStyleRequests(mergedDocument)]:[]),...(input.presentation.documentType==='DECLARACAO'?buildDeclarationCoAdvisorNormalRequests(mergedDocument):[]),...(input.presentation.documentType==='ATA'?[...buildAtaCoadvisorRoleNormalRequests(mergedDocument),...buildAtaNarrativeStyleRequests(mergedDocument)]:[])];
+      const emphasis=[...(input.presentation.documentType==='DECLARACAO'||input.institutionalCrestUrl?.endsWith('/national-arms.png')?institutionalClosingStyleRequests(mergedDocument,input.presentation.documentType):[]),...(['ATA','TERMO'].includes(input.presentation.documentType)?individualAuthorSignatureStyleRequests(mergedDocument,p):[]),...(['CONVITE','DECLARACAO'].includes(input.presentation.documentType)?[]:buildValueBoldRequests(mergedDocument,[...names,p.avaliacao?.resultadoLabel||'',personPresentationVariables(p).RESULTADO_CONCORDANTE,p.avaliacao?.parecer||''])),...(input.presentation.documentType==='TERMO'?[...buildAuthorizationChoiceStyleRequests(mergedDocument),...buildAuthorizationBodyStyleRequests(mergedDocument)]:[]),...(input.presentation.documentType==='DECLARACAO'?buildDeclarationBodyNormalRequests(mergedDocument):[]),...(input.presentation.documentType==='ATA'?[...buildAtaCoadvisorRoleNormalRequests(mergedDocument),...buildAtaNarrativeStyleRequests(mergedDocument)]:[])];
       if(emphasis.length)await googleRequest(fetchImpl,input.accessToken,`${DOCS_API}/documents/${encodeURIComponent(temporaryFileId)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:emphasis,...(mergedDocument.revisionId?{writeControl:{requiredRevisionId:mergedDocument.revisionId}}:{})})},'Falha ao formatar resultado e parecer');
       documentText=documentMainBody(mergedDocument)?.text||documentText;
     }

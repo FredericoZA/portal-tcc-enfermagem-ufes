@@ -1241,6 +1241,7 @@ function emailStudioWithPublicImages(){
  return studio;
 }
 function selectedEmailAudience(process:ProcessData,templateId:string|undefined,studio=currentSettings.integrationStudio){
+ if(templateId==='email-conclusao')return{to:operationalEmailRecipients(templateId,process,'',[],currentSettings.commissionPresidentEmail),cc:[]};
  const template=studio?.emailTemplates?.find(item=>workflowEmailTemplateId(String(item.id||''))===templateId);
  const responsible=templateId==='email-reserva'?reservationApproverEmail(process,studio):(isManagedDefenseLocation(process.defesa.local,operationalConfig(studio).reservation.locations)?configuredRoomReservationDepartmentEmail(studio):normalizeEmail(process.orientador.email));
  return configuredEmailAudience(template,process,responsible,currentSettings.commissionPresidentEmail);
@@ -1297,6 +1298,13 @@ async function sendTrackedPortalEmail(input:{process?:ProcessData;requestedBy?:s
  if(input.templateId==='email-reserva'&&![reservationApproverEmail(process),...(selectedEmailAudience(process,'email-reserva-autores')?.to??reservationCopies(process,''))].includes(normalizeEmail(input.recipient)))throw new Error('O destinatário não corresponde ao responsável pelo local nem aos autores deste pedido.');
  const personalReservation=input.templateId==='email-reserva'&&normalizeEmail(input.recipient)===reservationApproverEmail(process);
  const selectedTemplateId=input.templateId==='email-reserva'&&!personalReservation?'email-reserva-autores':input.templateId;
+ const finalNotice=input.templateId==='email-conclusao';
+ const finalKey=finalNotice?finalProcessEmailKey(process):undefined;
+ if(finalKey){
+  const prior=emailDeliveriesStore.find(record=>record.processId===process.id&&record.templateId==='email-conclusao'
+    &&record.idempotencyKey.startsWith(finalKey+':')&&(record.status==='ACCEPTED_BY_GMAIL'||record.dispatchState==='SENDING'||record.dispatchState==='UNCERTAIN'));
+  if(prior)return prior;
+ }
  const selected=selectedEmailAudience(process,selectedTemplateId);
  if(selected?.to){
   input={...input,recipient:selected.to[0]};
@@ -1339,7 +1347,7 @@ async function sendTrackedPortalEmail(input:{process?:ProcessData;requestedBy?:s
   const fileName=`${process.protocolo}-${recorded.decision==='CONFIRMED'?'comprovante-de-reserva':'comprovante-de-indisponibilidade'}.pdf`;
   attachments=[{fileName,mimeType:'application/pdf',content:await createReservationReceiptPdf(process,currentSettings)}];
  }
- const delivery=await dispatchTrackedEmail({...input,...message,...reply,sourceDataRevision:process.dataRevision,studioRevision:currentSettings.integrationStudio?.revision,auditCopyMode:input.templateId==='email-reserva'&&departmentLink?'sensitive':'operational',additionalRecipients:hasPersonalEmailAccess(message.text,message.html)?[]:directRecipients,cc:selected?.cc??(invitation?invitationCopies:[]),workflowCc:selected?.cc??(invitation?invitationCopies:[]),processId:process.id,protocol:process.protocolo,idempotencyKey:input.templateId==='email-conclusao'?finalProcessEmailKey(process,input.recipient):input.templateId===REPOSITORY_DELIVERY_EMAIL_ID?repositoryDeliveryEmailKey(process,input.recipient):input.idempotencyKey,attachments},{send:sendGmailMessage,journal:emailDeliveryJournal,auditCopyEmail:emailAuditMailbox(currentSettings)});
+ const delivery=await dispatchTrackedEmail({...input,...message,...reply,sourceDataRevision:process.dataRevision,studioRevision:currentSettings.integrationStudio?.revision,auditCopyMode:input.templateId==='email-reserva'&&departmentLink?'sensitive':'operational',additionalRecipients:hasPersonalEmailAccess(message.text,message.html)?[]:directRecipients,cc:selected?.cc??(invitation?invitationCopies:[]),workflowCc:selected?.cc??(invitation?invitationCopies:[]),processId:process.id,protocol:process.protocolo,idempotencyKey:finalKey??(input.templateId===REPOSITORY_DELIVERY_EMAIL_ID?repositoryDeliveryEmailKey(process,input.recipient):input.idempotencyKey),attachments},{send:sendGmailMessage,journal:emailDeliveryJournal,auditCopyEmail:emailAuditMailbox(currentSettings)});
  if(input.templateId==='email-reserva'&&departmentLink){
   const copies=[];
   const recipients=selectedEmailAudience(process,'email-reserva-autores')?.to??reservationCopies(process,'');

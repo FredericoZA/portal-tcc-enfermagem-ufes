@@ -3,14 +3,14 @@ import {processLink} from './processLink';
 export const isFinalDocumentsEmail=(eventCode='',templateId='')=>templateId==='email-conclusao'||(!templateId&&eventCode==='PROCESS_COMPLETED');
 const escape=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 
-/** One notification, one destination. Shared by delivery and the Studio preview. */
+/** One shared notification. Shared by delivery and the Studio preview. */
 export function finalDocumentsEmail(input:{process:{id:string;protocolo:string;titulo:string;aluno1:{nome:string;email:string};aluno2?:{nome:string;email:string};orientador:{nome:string;email:string};banca:Array<{nome:string;email:string}>};recipient:string;baseUrl:string;courseName:string;color?:string}){
- const {process:p,recipient}=input;
+ const {process:p}=input;
  const names=[p.aluno1.nome,p.aluno2?.nome].filter(Boolean).join(' e ');
  const href=processLink(input.baseUrl,p.id,'docs');
  const greeting='Prezados participantes do TCC,';
  const intro='As assinaturas do TCC foram concluídas. Na aba Documentos administrativos, consulte e baixe os documentos assinados.';
- const access=`Para entrar, use ${recipient} e informe o código enviado a esse endereço.`;
+ const access='Para entrar, use seu e-mail cadastrado no TCC e informe o código enviado a esse endereço.';
  const note='As opções de publicação do trabalho e do resumo expandido podem ser consultadas na aba Repositório.';
  const subject=`[Portal TCC] Assinaturas concluídas e documentos disponíveis | ${p.protocolo}`;
  const text=[greeting,intro,`Trabalho: ${p.titulo}\nAutoria: ${names}`,`${p.protocolo}: ${href}`,access,note,`Atenciosamente,\nComissão de Trabalho de Conclusão de Curso\n${input.courseName}`].join('\n\n');

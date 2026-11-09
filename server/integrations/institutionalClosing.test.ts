@@ -71,3 +71,17 @@ test('invitation validation rejects a missing or repeated identification instead
  assert.throws(()=>assertInvitationIdentification(document(rows.slice(1).join('\n')),p),/linhas separadas/);
  assert.throws(()=>assertInvitationIdentification(document([...rows,rows[0]].join('\n')),p),/linhas separadas/);
 });
+
+test('declaration removes the old issuer block and keeps the date and signature',()=>{
+ const date='Vitória - ES, segunda-feira, 9 de novembro de 2026.';
+ const source=['DECLARAÇÃO','Declaro para os devidos fins.',date,
+  'Comissão de Trabalho de Conclusão de Curso do','Departamento de Enfermagem',
+  'Curso de Enfermagem e Obstetrícia CCS - UFES','Assinatura da presidência',...DOCUMENT_ISSUER_LINES].join('\n');
+ const output=apply(source,institutionalClosingRequests(document(source),'DECLARACAO',issued));
+ assert.equal(output,['DECLARAÇÃO','Declaro para os devidos fins.',date,'Assinatura da presidência',...DOCUMENT_ISSUER_LINES].join('\n'));
+ assert.deepEqual(institutionalClosingRequests(document(output),'DECLARACAO',issued),[]);
+ const styles=institutionalClosingStyleRequests(document(output),'DECLARACAO') as any[];
+ assert.equal(styles.length,4);
+ assert.ok(styles.every(style=>style.updateParagraphStyle.paragraphStyle.alignment==='END'));
+ assert.equal(styles[0].updateParagraphStyle.paragraphStyle.spaceAbove.magnitude,12);
+});

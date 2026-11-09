@@ -47,6 +47,10 @@ export function processEmailMessage(input:{process:ProcessData;recipient:string;
  const stock=OPERATIONAL_EMAIL_CATALOG.find(item=>item[0]===variant);
  // Existing operational messages stay intact; explicit edits to a catalog variant take effect.
  const values:Record<string,string>={...input.templateVariables,PROTOCOLO:p.protocolo,TITULO:p.titulo,ALUNO_1_NOME:p.aluno1.nome,ALUNO_2_NOME:p.aluno2?.nome||'',COORIENTADOR_NOME_COMPLETO:p.coorientador?academicName(p.coorientador,'abbreviated'):'',BANCA_NOMES:p.banca.map(person=>academicName(person,'abbreviated')).join('\n'),DEFESA_HORA:formatTime24h(p.defesa.startAt),DEFESA_DATA:formatDateNumericWithWeekday(p.defesa.startAt),DEFESA_HORARIO:formatTime24h(p.defesa.startAt)+' às '+formatTime24h(defenseEndAt(p.defesa.startAt)),RESPOSTA_REGISTRADA_EM:p.defesa.departmentResponse?formatDateNumericWithWeekday(p.defesa.departmentResponse.respondedAt)+', '+formatTime24h(p.defesa.departmentResponse.respondedAt):'',ALUNOS:[p.aluno1.nome,p.aluno2?.nome].filter(Boolean).join(' e '),ORIENTADOR_NOME_COMPLETO:academicName(p.orientador,'abbreviated'),DEFESA_LOCAL:p.defesa.local,LOCAL_ALTERNATIVO:p.defesa.alternateLocation||'',DEFESA_DATA_HORA:formatDateNumericWithWeekday(p.defesa.startAt)+' às '+formatTime24h(p.defesa.startAt),LINK_PROCESSO:href,ORIENTACOES_ACESSO:processEmailGuidance(p,input.baseUrl,input.eventCode||'',input.templateId||'',input.recipient,input.advisorApproval)};
+ if(isFinalDocumentsEmail(input.eventCode,input.templateId)){
+  values.DESTINATARIO_NOME='participantes do TCC';
+  values.DESTINATARIO_EMAIL='';
+ }
  if(input.templateId==='email-convite'){
   const participants=invitationParticipantLines(p);
   values.CONVITE_AUTORES=participants.authors;

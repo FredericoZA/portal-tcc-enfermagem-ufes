@@ -161,10 +161,9 @@ export function buildAuthorizationChoiceStyleRequests(document: any): any[] {
 }
 
 
-/** The declaration's co-advisor role uses the same regular weight as other roles.
- * Complete participant names are emphasized again afterwards. */
-export function buildDeclarationCoAdvisorNormalRequests(document:any):any[]{
- return buildCoadvisorNormalRequests(document,/^\s*Coorientador(?:a)?\s/iu);
+/** Keep the declaration prose, board listing and date in regular weight. */
+export function buildDeclarationBodyNormalRequests(document:any):any[]{
+ return buildCoadvisorNormalRequests(document,/^\s*(?:Declaro\b|Orienta(?:dor|dora|ção)\s*(?::|\s)|Examinador(?:a)?\s*(?::|\s)|Coorientador(?:a)?\s*(?::|\s)|Vitória\s*[-–—,])/iu);
 }
 
 export function buildAtaCoadvisorRoleNormalRequests(document:any):any[]{

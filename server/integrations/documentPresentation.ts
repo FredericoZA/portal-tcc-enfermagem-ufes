@@ -111,7 +111,7 @@ export function authorizationSignatureLayoutRequests(document:any,process:Proces
  walk(document);return groups.sort((a,b)=>b.index-a.index).map(group=>group.request);
 }
 
-/** Remove the extra gap immediately before the declaration's standalone date. */
+/** Keep one line of space before the declaration’s standalone date. */
 export function declarationDateLayoutRequests(document:any):any[]{
  const groups:Array<{index:number;request:any}>=[];
  const walk=(node:any,tabId?:string)=>{
@@ -122,9 +122,12 @@ export function declarationDateLayoutRequests(document:any):any[]{
    const entry=content[i],text=entry.paragraph?.elements?.map((e:any)=>e.textRun?.content||'').join('').trim()||'';
    if(!/^[\p{L} .’'-]+(?:[-–]\s*[A-Z]{2})?[, -]+(?:(?:(?:segunda|terça|quarta|quinta|sexta)-feira|sábado|domingo),\s*)?\d{1,2} de [\p{L}]+ de \d{4}\.?$/u.test(text))continue;
    const range=(value:any)=>({startIndex:value.startIndex,endIndex:value.endIndex,...(scope?{tabId:scope}:{})});
-   groups.push({index:entry.startIndex,request:{updateParagraphStyle:{range:range(entry),paragraphStyle:{alignment:'END',spaceAbove:{magnitude:6,unit:'PT'},spaceBelow:{magnitude:6,unit:'PT'},lineSpacing:100},fields:'alignment,spaceAbove,spaceBelow,lineSpacing'}}});
-   const previous=content[i-1],before=previous?.paragraph?.elements;
-   if(before?.length&&before.every((element:any)=>element.textRun&&!element.textRun.content.trim()))groups.push({index:previous.startIndex,request:{deleteContentRange:{range:range(previous)}}});
+   groups.push({index:entry.startIndex,request:{updateParagraphStyle:{range:range(entry),paragraphStyle:{alignment:'END',spaceAbove:{magnitude:12,unit:'PT'},spaceBelow:{magnitude:6,unit:'PT'},lineSpacing:100},fields:'alignment,spaceAbove,spaceBelow,lineSpacing'}}});
+   for(let j=i-1;j>=0;j--){
+    const previous=content[j],before=previous.paragraph?.elements;
+    if(!before?.length||!before.every((element:any)=>element.textRun&&!element.textRun.content.trim()))break;
+    groups.push({index:previous.startIndex,request:{deleteContentRange:{range:range(previous)}}});
+   }
   }
   for(const[key,value]of Object.entries(node))if(!['body','table','headers','footers'].includes(key))walk(value,scope);
  };

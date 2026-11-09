@@ -425,7 +425,7 @@ export async function executeWorkflowEvent(
         if (!recipients.length) throw new Error(`E-mail ${action.referenceId} sem destinatário válido.`);
         const personalizedTemplate=upgradeOperationalEmailTemplate(template);
         const deliveries:Array<{externalId?:string}>=[];
-        const recipientGroups=Array.isArray(template.recipientRoles)||['email-entrega-repositorio','email-convite','CARTA_CONVITE'].includes(String(template.id))?[recipients]:recipients.map(recipient=>[recipient]);
+        const recipientGroups=Array.isArray(template.recipientRoles)||['email-entrega-repositorio','email-conclusao','email-convite','CARTA_CONVITE'].includes(String(template.id))?[recipients]:recipients.map(recipient=>[recipient]);
         for(const group of recipientGroups){
           const recipient=group[0];
           const personal=filterTemplateVariables(recipientEmailVariables(context.process,recipient,renderedVariables,plan.variables.LINK_PORTAL,context.eventCode,String(template.id)),studio);
