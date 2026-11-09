@@ -8,10 +8,12 @@ const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8
 test('checagem remota ocorre sem recarregar página e somente com aba visível',()=>{
   const runtime=read('src/components/PortalLiveSync.tsx');
   assert.equal(PORTAL_LIVE_UPDATE_EVENT,'portal:remote-data-changed');
-  assert.equal(PORTAL_LIVE_POLL_INTERVAL_MS,15000);
+  assert.equal(PORTAL_LIVE_POLL_INTERVAL_MS,30000);
   assert.match(runtime,/document\.visibilityState === 'hidden'/);
   assert.match(runtime,/!navigator\.onLine/);
   assert.match(runtime,/window\.addEventListener\('focus',resumed\)/);
+  assert.match(runtime,/retryMs = Math.min\(PORTAL_LIVE_IDLE_POLL_MAX_MS/);
+  assert.doesNotMatch(runtime,/setInterval\(/);
   assert.match(runtime,/document\.addEventListener\('visibilitychange',resumed\)/);
   assert.match(runtime,/window\.dispatchEvent\(new CustomEvent/);
   assert.doesNotMatch(runtime,/location\.reload\(/);
