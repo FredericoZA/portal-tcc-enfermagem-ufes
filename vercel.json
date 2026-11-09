@@ -34,19 +34,19 @@
   "functions": {
     "api/index.ts": {
       "maxDuration": 300,
-      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs,node_modules/pdfjs-dist/legacy/build/pdf.mjs}"
+      "includeFiles": "{dist/server/server.cjs,dist/server/vercel/index.cjs,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs,node_modules/pdfjs-dist/legacy/build/pdf.mjs}"
     },
     "api/replication-model.ts": {
       "maxDuration": 60,
-      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs,node_modules/pdfjs-dist/legacy/build/pdf.mjs}"
+      "includeFiles": "dist/server/vercel/replication-model.cjs"
     },
     "api/runtime-asset.ts": {
       "maxDuration": 30,
-      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs,node_modules/pdfjs-dist/legacy/build/pdf.mjs}"
+      "includeFiles": "dist/server/vercel/runtime-asset.cjs"
     },
     "api/public-indicators.ts": {
       "maxDuration": 30,
-      "includeFiles": "{dist/server/**,server/documents/fonts/**,server/documents/assets/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs,node_modules/pdfjs-dist/legacy/build/pdf.mjs}"
+      "includeFiles": "dist/server/vercel/public-indicators.cjs"
     }
   },
   "crons": [
