@@ -1083,7 +1083,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 const pendingSignature=Boolean(progress?.generated&&!isDownloadable&&!termDeclined);
                 if(pendingSignature&&progress){
                   status=type==='ATA'?'Ata gerada — pendente de assinatura':`${docInfo.generated} — pendente de assinatura`;
-                  statusDescription=signatureProgressDescription(progress);
+                  statusDescription=signatureProgressDescription(progress, doc.type);
                 }else if(isDownloadable&&doc.requiresSignature){
                   statusDescription=`Documento disponível para consulta.${doc.signatureProvider==='ASTEN'?' Assinatura realizada pela ASTEN, com solicitação enviada automaticamente por e-mail.':doc.signatureProvider==='GOV_BR'?' Assinatura realizada pelo Gov.br.':''}`;
                 }

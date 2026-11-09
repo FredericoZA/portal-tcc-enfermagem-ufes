@@ -231,12 +231,12 @@
 }
 
 #portal-tutorial-page .portal-guide-instructions > ol {
-  font-size: max(1rem, var(--portal-type-navigation));
+  font-size: var(--portal-type-navigation);
   line-height: 1.65;
 }
 
 #portal-tutorial-page .portal-guide-content :is(.portal-guide-result, .portal-guide-help, figcaption) {
-  font-size: max(.9375rem, var(--portal-type-navigation));
+  font-size: var(--portal-type-navigation);
   line-height: 1.6;
 }
 

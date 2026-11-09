@@ -1,6 +1,6 @@
 # Tutorial de instalação e replicação do Portal TCC
 
-Revisão documental: 04/11/2026.
+Revisão documental: 09/11/2026.
 
 Este guia prepara uma instalação independente. Ele não autoriza o acesso aos dados, arquivos ou credenciais da instalação de origem.
 
@@ -14,7 +14,7 @@ O Portal TCC é um sistema administrativo para o ciclo completo do trabalho de c
 
 **Caminho de um TCC:** cadastro dos autores e membros da banca → solicitação e confirmação de local e horário → convite → defesa e registro da deliberação pelo orientador → conferência e assinatura da ata → entrega do trabalho final → termo de autorização, quando houver publicação → declaração e encerramento.
 
-**Documentos e parecer:** os modelos DOCX cadastrados pelo administrador são preenchidos com informações do processo e convertidos para PDF. O rascunho do parecer é montado por um dos três textos-base fixos — aprovado, aprovado com ressalva ou reprovado — e pode incorporar o título cadastrado do trabalho. O sistema não analisa o conteúdo acadêmico nem gera argumentos sobre mérito. O orientador deve preencher a fundamentação efetivamente deliberada pela banca, conferir a ata e confirmar o envio.
+**Documentos e parecer:** os modelos DOCX cadastrados pelo administrador são preenchidos com informações do processo e convertidos para PDF. O rascunho do parecer é montado por um dos três textos-base fixos — aprovado, aprovado com ressalva ou reprovado — com variações programadas de redação. O sistema não analisa o conteúdo acadêmico nem gera argumentos sobre mérito. O orientador deve preencher a fundamentação efetivamente deliberada pela banca, conferir a ata e confirmar o envio.
 
 **Indicadores:** o servidor calcula contagens, percentuais, medianas e distribuições por fórmulas comuns. O acesso exige autenticação do Master ou da Presidência, validada no servidor. O relatório não inclui nomes, contatos nem campos livres e suprime grupos pequenos. As antigas rotas públicas foram encerradas. Essa estatística não utiliza modelos generativos, pontuação de estudantes nem inferência de resultados acadêmicos.
 
@@ -35,7 +35,7 @@ O Portal TCC é um sistema administrativo para o ciclo completo do trabalho de c
 | Supabase | Estado operacional, revisões, permissões, auditoria, idempotência e filas. O transporte temporário de arquivos usa armazenamento privado com prazo de limpeza. |
 | Google Drive e Docs | Arquivo definitivo de trabalhos, documentos e modelos privados; mesclagem dos DOCX e exportação dos PDFs. |
 | Gmail e Calendar | Código de acesso, comunicações do processo e divulgação das defesas. |
-| Asten | Solicitação explícita de assinatura, retorno autenticado e conferência do documento antes do arquivamento. |
+| Asten | Solicitação automática de assinatura nas etapas previstas, retorno autenticado e conferência do documento antes do arquivamento. |
 | Gov.br | Assinatura externa do PDF e devolução ao Portal, seguida da conferência administrativa prevista no sistema. |
 
 As integrações do produto usam suas próprias APIs e OAuth. Elas não dependem das ferramentas pessoais do desenvolvedor. Segredos ficam no backend, nunca no navegador, nas variáveis `VITE_`, no pacote ou no GitHub. Tabelas e arquivos internos permanecem privados.
@@ -50,13 +50,14 @@ Para instituições públicas, a adoção do portal deve ser alinhada às regras
 
 1. Confira origem, branch, commit e alterações locais. Preserve o trabalho existente e prepare recuperação antes de modificar uma instalação com dados.
 2. Use contas e projetos próprios na Vercel, Supabase, Google Cloud e Asten. Crie uma raiz privada no Drive da nova instituição. Não reutilize a base, os usuários, as pastas ou os envelopes da Enfermagem UFES.
-3. Confira Node e npm em `package.json`, instale com `npm ci` e use `.env.example` como checklist das variáveis. O arquivo de demonstração local não serve para produção.
+3. Confira Node e npm em `package.json`, instale com `npm ci` e use `.env.example` como referência. Antes de publicar, revise também o bloco `env` em `vercel.json`: a cópia do repositório contém o domínio, o projeto Supabase, as referências de pastas do Drive e a URL de retorno da ASTEN da instalação de Enfermagem. Substitua esses valores pelos da nova instalação e confira o Master inicial. Guarde os segredos nas variáveis protegidas do projeto Vercel. Mantenha o envio automático da ASTEN desligado até conferir a nova configuração.
 4. Aplique as migrações necessárias na ordem. Confira runtime transacional, RLS, privilégios das funções, revisões, filas e armazenamento temporário privado.
 5. Configure o Master inicial, a identidade do curso, a presidência da Comissão, os destinatários de reserva, os locais e as regras acadêmicas da nova instituição. A autorização de acesso deve refletir os e-mails efetivamente cadastrados e ativos.
 6. Configure OAuth e callbacks do novo domínio. Autorize a conta Google institucional e conecte Gmail, Drive, Docs e Calendar. Configure o Asten e os destinos documentais na própria instalação.
 7. Envie quatro DOCX próprios: convite, ata, termo e declaração. O ZIP de modelos desta página é uma referência de estrutura; adapte cópias e confira variáveis e dados institucionais. Se o download não estiver disponível, obtenha modelos com o responsável pela nova instituição. Não solicite credenciais da origem e não use documentos preenchidos de alunos como modelos.
-8. Revise e publique os formulários, os modelos de e-mail, os destinatários, as ações do fluxo e a aparência nas Configurações. A contagem de modelos de e-mail não define quantas mensagens cada processo deve enviar.
-9. Execute os testes automatizados e o piloto real descritos abaixo. Publique somente com autorização do responsável e registre a revisão implantada.
+8. Em Configurações, revise o conteúdo em E-mails, os campos em Formulários e os modelos em Documentos e Variáveis. Em Fluxos, selecione cada etapa e confira suas atividades, os papéis em Destinatários e os gatilhos. Em Integrações e Plataforma, confira o endereço de auditoria e o responsável pelo auditório e pela sala de reuniões. Publique a configuração após conferir o encadeamento.
+9. Se a instalação oferecer a declaração de comparecimento, publique um PDF em branco pelo catálogo de documentos. A declaração de participação na banca é gerada no processo e segue para assinatura da Presidência.
+10. Execute os testes automatizados e o piloto real descritos abaixo. Publique somente com autorização do responsável e registre a revisão implantada.
 
 ## Fluxo atual dos processos novos
 

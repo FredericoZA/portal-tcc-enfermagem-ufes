@@ -9,7 +9,7 @@ const tools = [
   {icon:BookOpen, title:'Tutorial de instalação', text:'Passo a passo para instalar o Portal em outro curso, configurar os serviços e conferir o funcionamento.', href:'/replicacao/GUIA_DE_INSTALACAO.md', action:'Baixar tutorial', download:true},
   {icon:FileText, title:'Modelos', text:'Convite, ata, termo e declaração em um único arquivo ZIP. Importe cópias próprias e confira as variáveis antes de usar.', href:'/api/public/replication-models/all/download', action:'Baixar modelos', download:true},
   {icon:Database, title:'Supabase, Vercel e Google Workspace', text:'Supabase guarda registros, permissões e filas; Google Drive guarda os arquivos; Vercel mantém o Portal online. O transporte temporário privado de arquivos é removido após o uso.'},
-  {icon:FileSignature, title:'Asten e Gov.br', text:'Ata pelo orientador; Termo pelos autores e orientador, se houver publicação; Declaração pela presidência. O guia explica Asten e Gov.br.'},
+  {icon:FileSignature, title:'Asten e Gov.br', text:'Assinam a ata o orientador, os dois examinadores, os autores e o coorientador presente. O termo, quando houver publicação, é assinado pelos autores e pelo orientador. A declaração de participação é assinada pela Presidência da Comissão.'},
 ];
 const CARD_CLASS = 'portal-layer-card flex h-full min-h-[112px] flex-col rounded-xl border border-slate-300 p-4 shadow-2xs';
 

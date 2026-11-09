@@ -13,11 +13,18 @@ export function documentSignatureProgress(process:ProcessData,doc:ProcessDocumen
  const total=job?.signers.length|| (doc.type==='ATA'?3+1+Number(Boolean(process.aluno2))+Number(Boolean(process.coorientador&&process.avaliacao?.coadvisorPresent)):doc.type==='TERMO'?2+Number(Boolean(process.aluno2)):1);
  return {generated:true,total,signed:job?.signers.filter(s=>s.status==='SIGNED').length||0,status:job?.status,provider:job?.provider||doc.signatureProvider||'ASTEN',emailSent:Boolean(job?.provider==='ASTEN'&&(job.sentAt||job.providerDispatchState==='SENT'||job.status==='PARTIALLY_SIGNED'))};
 }
-export function signatureProgressDescription(progress:DocumentSignatureProgress):string{
- const count=`Assinaturas: ${progress.signed} de ${progress.total}.`;
- if(progress.status==='SIGNED'||progress.status==='DRIVE_SYNC_PENDING'||progress.status==='ARCHIVED')return `${count} Assinaturas concluídas; aguardando a disponibilização do documento.`;
- if(progress.provider==='GOV_BR')return `${count} Aguardando o PDF com todas as assinaturas pelo Gov.br.`;
- if(progress.emailSent)return `${count} Solicitação de assinatura enviada por e-mail (ASTEN). Aguardando as assinaturas restantes.`;
- if(['PROVIDER_ERROR','WAITING_INTEGRATION','DECLINED','EXPIRED'].includes(progress.status||''))return `${count} O envio ou a assinatura pela ASTEN está pendente de regularização.`;
- return `${count} Preparando o envio da solicitação por e-mail (ASTEN).`;
+export function signatureProgressDescription(progress:DocumentSignatureProgress, documentType?:ProcessDocument['type']):string{
+ const declaration = documentType === 'DECLARACAO';
+ const count = declaration ? '' : `Assinaturas: ${progress.signed} de ${progress.total}. `;
+ if(progress.status==='SIGNED'||progress.status==='DRIVE_SYNC_PENDING'||progress.status==='ARCHIVED')return declaration
+  ? 'Assinatura concluída. Aguardando a disponibilização do documento.'
+  : `${count}Assinaturas concluídas; aguardando a disponibilização do documento.`;
+ if(progress.provider==='GOV_BR')return declaration
+  ? 'Aguardando o PDF assinado pela Presidência da Comissão via Gov.br.'
+  : `${count}Aguardando o PDF com todas as assinaturas pelo Gov.br.`;
+ if(progress.emailSent)return declaration
+  ? 'Solicitação enviada por e-mail (ASTEN). Aguardando a assinatura da Presidência da Comissão.'
+  : `${count}Solicitação de assinatura enviada por e-mail (ASTEN). Aguardando as assinaturas restantes.`;
+ if(['PROVIDER_ERROR','WAITING_INTEGRATION','DECLINED','EXPIRED'].includes(progress.status||''))return `${count}O envio ou a assinatura pela ASTEN está pendente de regularização.`;
+ return `${count}Preparando o envio da solicitação por e-mail (ASTEN).`;
 }

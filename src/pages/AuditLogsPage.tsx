@@ -178,7 +178,7 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean; processId?:string }> 
   const toolbar = <div className="portal-audit-toolbar flex flex-wrap items-center justify-end gap-1.5">
     <label className="portal-settings-header-selector !h-8 !min-h-8 !gap-1 !px-2 !py-0 text-[10px]" title="Filtrar registro de logs">
       <ListFilter className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-      <select className="!w-[138px] !min-w-0 !text-[10px]" aria-label="Tipo de registro" value={kind} onChange={event => setKind(event.target.value as 'all' | 'activity' | 'email')}>
+      <select className="!w-[138px] !min-w-0 !text-[11px]" aria-label="Tipo de registro" value={kind} onChange={event => setKind(event.target.value as 'all' | 'activity' | 'email')}>
         <option value="all">Todos os registros</option><option value="activity">Atividades do Portal</option><option value="email">E-mails e notificações</option>
       </select>
     </label>
