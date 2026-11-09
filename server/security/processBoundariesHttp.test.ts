@@ -132,7 +132,7 @@ test('HTTP: re-enrollment grants the new process without restoring deleted histo
   } finally { await f.close(); }
 });
 
-test('HTTP: only the author can change the schedule, and no role can force a conflicted reservation', { timeout: 45_000 }, async () => {
+test('HTTP: authors and the advisor cannot override a reservation conflict; Master cannot reschedule', { timeout: 45_000 }, async () => {
   const process = processFixture();
   const other = processFixture('other-process');
   other.defesa.startAt = '2030-11-04T14:00:00.000Z';
@@ -154,9 +154,10 @@ test('HTTP: only the author can change the schedule, and no role can force a con
     const denied = await change(student,proposal);
     assert.equal(denied.status, 409);
     assert.equal((await denied.json()).code, 'DEFENSE_CONFLICT');
-    for (const email of [advisor, master]) {
-      assert.equal((await change(email,proposal)).status, 403);
-    }
+    const advisorDenied = await change(advisor, proposal);
+    assert.equal(advisorDenied.status, 409);
+    assert.equal((await advisorDenied.json()).code, 'DEFENSE_CONFLICT');
+    assert.equal((await change(master, proposal)).status, 403);
     const saved = await f.state();
     const unchanged = saved.processes.find((item: { id: string }) => item.id === process.id);
     assert.deepEqual(unchanged.defesa, process.defesa);
