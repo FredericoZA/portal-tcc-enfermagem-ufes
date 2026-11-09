@@ -22,3 +22,16 @@ test('release Asten autorizado preserva autenticação e cofre durável', () => 
   assert.equal(config.env?.PORTAL_ALLOW_INSECURE_DEMO_AUTH, 'false');
   assert.equal(config.env?.PORTAL_ALLOW_LOCAL_SECRET_STORE, 'false');
 });
+
+test('funções especializadas não empacotam o servidor monolítico nem fontes de documentos',()=>{
+  const functions=JSON.parse(readFileSync(new URL('../vercel.json',import.meta.url),'utf8')).functions as Record<string,{includeFiles:string}>;
+  const core=functions['api/index.ts'].includeFiles;
+  assert.match(core,/dist\/server\/server\.cjs/);
+  assert.match(core,/dist\/server\/vercel\/index\.cjs/);
+  assert.match(core,/server\/documents\/fonts/);
+  for(const route of ['runtime-asset','public-indicators','replication-model']){
+    const include=functions[`api/${route}.ts`].includeFiles;
+    assert.equal(include,`dist/server/vercel/${route}.cjs`);
+    assert.doesNotMatch(include,/server\.cjs|dist\/server\/\*\*|documents\/fonts/);
+  }
+});
