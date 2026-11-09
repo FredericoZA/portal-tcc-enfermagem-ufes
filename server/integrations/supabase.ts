@@ -203,6 +203,29 @@ async function fetchPortalStateSnapshot(): Promise<Response> {
   throw new Error('Leitura do estado não retornou resposta.');
 }
 
+/** Consulta somente a revisão antes de reidratar a instância.
+ * Cada requisição autenticada verifica o banco; não há TTL que possa
+ * manter permissões ou revogações desatualizadas.
+ * No cold start (revisão desconhecida), força leitura integral.
+ */
+export async function portalRuntimeStateNeedsRefresh():Promise<boolean>{
+  if(!getSupabaseRuntimeStatus().durablePersistenceReady)return false;
+  if(knownRevision===null)return true;
+  const response=await fetch(`${stateEndpoint()}?id=eq.global&select=revision&limit=1`,{
+    headers:adminHeaders(),signal:AbortSignal.timeout(12_000),
+  });
+  if(!response.ok)throw new Error(`Falha ao verificar a revisão do Supabase (${response.status}).`);
+  const rows=await response.json();
+  if(!Array.isArray(rows)||rows.length!==1){
+    throw new Error('Revisão do estado indisponível; acesso bloqueado preventivamente.');
+  }
+  const revision=Number(rows[0]?.revision);
+  if(!Number.isSafeInteger(revision)||revision<1){
+    throw new Error('Revisão do estado inválida; acesso bloqueado preventivamente.');
+  }
+  return revision!==knownRevision;
+}
+
 export async function loadPortalRuntimeState<T extends object>(trackRevision=true): Promise<T | null> {
   if (!getSupabaseRuntimeStatus().durablePersistenceReady) return null;
   const response = await fetchPortalStateSnapshot();
