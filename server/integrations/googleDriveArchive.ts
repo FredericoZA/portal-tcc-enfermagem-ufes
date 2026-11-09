@@ -152,11 +152,21 @@ async function markDriveFileSuperseded(accessToken:string,fileId:string,supersed
   await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?fields=id&supportsAllDrives=true`,accessToken,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({appProperties})});
 }
 
-export async function uploadProcessSourcePdf(input:{accessToken:string;processFolderId:string;processId:string;artifactType:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO'|'COMPROVANTE_LOCAL';fileName:string;version:number;previousFileId?:string;pdf:Buffer;sha256:string}){
+export async function uploadProcessSourcePdf(input:{accessToken:string;processFolderId:string;rootFolderId?:string;processId:string;artifactType:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO'|'COMPROVANTE_LOCAL';fileName:string;version:number;previousFileId?:string;pdf:Buffer;sha256:string}){
   await assertPrivateContainer(input.accessToken,input.processFolderId);
   if(!input.pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('Envie um arquivo PDF válido.');
   if(input.pdf.length>24*1024*1024)throw new Error('O PDF não pode ultrapassar 24 MB.');
-  const destination=await ensureFolder(input.accessToken,input.processFolderId,input.artifactType==='COMPROVANTE_LOCAL'?'09_COMPROVANTE_RESERVA':SOURCE_FOLDER[input.artifactType]);
+  // Os comprovantes anexados pelo departamento também pertencem ao catálogo
+  // 06_COMPROVANTE_RESERVA, mantendo arquivos legados no lugar onde já estão.
+  let destination:{id:string};
+  if(input.artifactType==='COMPROVANTE_LOCAL' && input.rootFolderId){
+    await assertPrivateContainer(input.accessToken,input.rootFolderId);
+    const documents=await ensureFolder(input.accessToken,input.rootFolderId,'01_DOCUMENTOS');
+    const receipts=await ensureFolder(input.accessToken,documents.id,'06_COMPROVANTE_RESERVA');
+    destination=await ensureFolder(input.accessToken,receipts.id,'02_GERADOS');
+  }else{
+    destination=await ensureFolder(input.accessToken,input.processFolderId,input.artifactType==='COMPROVANTE_LOCAL'?'09_COMPROVANTE_RESERVA':SOURCE_FOLDER[input.artifactType]);
+  }
   const duplicateQuery=`'${escapeQuery(destination.id)}' in parents and appProperties has { key='portalProcessId' and value='${escapeQuery(input.processId)}' } and appProperties has { key='artifactType' and value='${input.artifactType}' } and appProperties has { key='sha256' and value='${input.sha256}' } and trashed = false`;
   const existingResponse=await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(duplicateQuery)}&fields=files(id,name,webViewLink,appProperties)&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true`,input.accessToken);
   const existing=(await existingResponse.json()).files||[];
