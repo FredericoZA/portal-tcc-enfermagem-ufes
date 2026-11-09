@@ -20,6 +20,10 @@ const runtimeAssetsEndpoint = () => `${supabaseUrl()}/rest/v1/portal_runtime_ass
 let knownRevision:number|null=null;
 /** Revisão do estado operacional confirmada pelo banco, após a leitura/commit da requisição. */
 export function currentPortalRuntimeRevision():number|null { return knownRevision; }
+/** Após falha de commit, os objetos em memória podem divergir do banco.
+ * Na próxima requisição, obriga a recarga antes de qualquer autorização.
+ */
+export function invalidatePortalRuntimeRevision():void { knownRevision=null; }
 
 /** Sinal opaco de revisão: não revela registros privados nem o contador de operações. */
 export async function publicPortalRevisionToken():Promise<string> {
