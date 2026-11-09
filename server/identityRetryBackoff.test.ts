@@ -33,3 +33,20 @@ test('a requested wait longer than thirty seconds is not ignored by an automatic
  t.mock.method(apiClient,'getMe',async()=>{calls++;throw limited;});
  await assert.rejects(getIdentityWithRetry(),error=>error===limited);assert.equal(calls,1);
 });
+
+test('presidency change retries a rejected admission once, but never retries an ambiguous response', async t => {
+  const fetchMock = t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({
+    error: 'O Portal está ocupado.',
+    code: 'RUNTIME_BUSY',
+  }), { status: 503, headers: { 'Retry-After': '0' } }));
+  fetchMock.mock.mockImplementationOnce(async () => Response.json({ status: 'COMPLETED' }), 1);
+
+  const transfer = await apiClient.createAdministrationTransfer('COMMISSION_PRESIDENT', 'president@example.invalid');
+  assert.equal(transfer.status, 'COMPLETED');
+  assert.equal(fetchMock.mock.callCount(), 2);
+
+  fetchMock.mock.mockImplementation(async () => Response.json({ error: 'Resultado desconhecido.' }, { status: 500 }));
+  await assert.rejects(apiClient.createAdministrationTransfer('COMMISSION_PRESIDENT', 'other@example.invalid'),
+    (error: unknown) => error instanceof ApiRequestError && error.status === 500);
+  assert.equal(fetchMock.mock.callCount(), 3);
+});

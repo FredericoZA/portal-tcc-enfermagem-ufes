@@ -33,13 +33,14 @@ export interface RegistrationBootstrap {
   hasExistingProcess:boolean;
 }
 
-async function readAfterRuntimeBusy<T>(path:string,options:Pick<ApiRequestOptions,'signal'>={},retries=1):Promise<T>{
+// RUNTIME_BUSY with Retry-After is returned before the server runs the route.
+async function requestAfterRuntimeBusy<T>(path:string,options:ApiRequestOptions={},retries=1):Promise<T>{
   const signal=options.signal||new AbortController().signal;
   const identityRevision=activeIdentityRevision;
   for(let attempt=0;;attempt++){
     if(signal.aborted||identityRevision!==activeIdentityRevision)throw new ApiRequestError('Consulta cancelada.',0,'REQUEST_CANCELED');
     try{
-      const result=await fetchApi<T>(path,options.signal?{signal}:{});
+      const result=await fetchApi<T>(path,options);
       if(identityRevision!==activeIdentityRevision)throw new ApiRequestError('Consulta cancelada.',0,'REQUEST_CANCELED');
       return result;
     }catch(error){
@@ -51,7 +52,7 @@ async function readAfterRuntimeBusy<T>(path:string,options:Pick<ApiRequestOption
 }
 
 function getRegistrationBootstrap(options:Pick<ApiRequestOptions,'signal'>={}):Promise<RegistrationBootstrap>{
-  return readAfterRuntimeBusy<RegistrationBootstrap>('/api/registration/bootstrap',{signal:options.signal||new AbortController().signal});
+  return requestAfterRuntimeBusy<RegistrationBootstrap>('/api/registration/bootstrap',{signal:options.signal||new AbortController().signal});
 }
 
 export interface AtaReviewParagraph { alignment?:'START'|'CENTER'|'END'|'JUSTIFIED'; tabStops?:Array<{offset:number;alignment?:'START'|'CENTER'|'END'}>; runs:Array<{text:string;bold?:boolean;italic?:boolean;underline?:boolean;size?:number;font?:string}> }
@@ -261,7 +262,7 @@ export const apiClient = {
   },
   logout:()=>fetchApi<{signedOut:boolean}>('/api/auth/logout',{method:'POST'}),
   getPublicProcess:(id:string)=>fetchApi<any>(`/api/public/processes/${encodeURIComponent(id)}`),
-  getSettings: () => readAfterRuntimeBusy<GlobalSettings & { automaticAstenEnabled?: boolean }>('/api/settings'),
+  getSettings: () => requestAfterRuntimeBusy<GlobalSettings & { automaticAstenEnabled?: boolean }>('/api/settings'),
   saveStudioImage:(input:{kind:'email'|'form';templateId:string;field:'logoUrl'|'heroImageUrl';value:string;expectedRevision:number;expectedImageValue?:string})=>fetchApi<{revision:number;savedAt:string;imageUrl:string;studio:IntegrationStudioSettings}>('/api/admin/studio/image',{method:'PATCH',body:JSON.stringify(input)}),
   updateSettings: (settings: Partial<GlobalSettings>&{studioExpectedRevision?:number;studioSaveMode?:'autosave'|'publish'}) => (settings.studioSaveMode==='autosave'?fetchApiRequest<GlobalSettings>:fetchApi<GlobalSettings>)('/api/admin/settings', {
     method: 'PATCH',
@@ -278,7 +279,7 @@ export const apiClient = {
   getPortalSyncVersion:()=>fetchApi<{revision:number}>('/api/sync/version'),
   getPublicSyncVersion:()=>fetchApi<{token:string}>('/api/public/sync/version',{credentials:'omit'}),
   getProcesses: (options: Pick<ApiRequestOptions, 'signal'> = {}) => fetchApi<ProcessData[]>('/api/processes', options),
-  getProcessDetail: (id: string) => readAfterRuntimeBusy<{
+  getProcessDetail: (id: string) => requestAfterRuntimeBusy<{
     process: ProcessData;
     documents: ProcessDocument[];
     signatures: SignatureJob[];
@@ -416,7 +417,7 @@ export const apiClient = {
   respondCoauthorInvitation:(id:string,decision:'ACCEPT'|'REJECT')=>fetchApi<ProcessData>(`/api/processes/${id}/coauthor-acceptance`,{method:'POST',body:JSON.stringify({decision})}),
   getAdministrationTransfers:()=>fetchApi<any[]>('/api/admin/administration-transfers'),
   getMyPendingAdministrationTransfers:()=>fetchApi<any[]>('/api/administration-transfers/pending'),
-  createAdministrationTransfer:(role:'MASTER_ADMIN'|'COMMISSION_PRESIDENT',targetEmail:string)=>fetchApi<any>('/api/admin/administration-transfers',{method:'POST',body:JSON.stringify({role,targetEmail})}),
+  createAdministrationTransfer:(role:'MASTER_ADMIN'|'COMMISSION_PRESIDENT',targetEmail:string)=>requestAfterRuntimeBusy<any>('/api/admin/administration-transfers',{method:'POST',body:JSON.stringify({role,targetEmail})}),
   acceptAdministrationTransfer:(id:string)=>fetchApi<any>(`/api/admin/administration-transfers/${encodeURIComponent(id)}/accept`,{method:'POST'}),
   cancelAdministrationTransfer:(id:string)=>fetchApi<any>(`/api/admin/administration-transfers/${encodeURIComponent(id)}/cancel`,{method:'POST'}),
   updateRecoveryEmails:(emails:string[])=>fetchApi<GlobalSettings>('/api/admin/recovery-emails',{method:'PATCH',body:JSON.stringify({emails})}),
