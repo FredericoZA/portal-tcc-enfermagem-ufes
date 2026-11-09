@@ -266,6 +266,30 @@ export async function savePortalRuntimeState(payload: object): Promise<void> {
   knownRevision=revision;
 }
 
+/** Gate de inicialização: uma única RPC verificável em vez de introspecção
+ * sequencial/paralela das 20 tabelas em cada cold start da Vercel.
+ * A conferência completa de tabelas continua no diagnóstico administrativo.
+ * O carregamento autoritativo do estado é executado imediatamente depois.
+ */
+export async function verifySupabaseStartupRequirements():Promise<void>{
+  if(!getSupabaseRuntimeStatus().durablePersistenceReady){
+    throw new Error('Persistência durável indisponível na inicialização.');
+  }
+  const response=await fetch(`${supabaseUrl()}/rest/v1/rpc/portal_runtime_capabilities`,{
+    method:'POST',headers:adminHeaders(),body:'{}',signal:AbortSignal.timeout(12_000),
+  });
+  if(!response.ok)throw new Error(`Capacidades de persistência indisponíveis (${response.status}).`);
+  const value=await response.json();
+  const capability=Array.isArray(value)?value[0]:value;
+  const ready=capability?.transactional_runtime===true
+    && capability?.optimistic_concurrency===true
+    && capability?.normalized_core_projection===true
+    && capability?.secure_file_transport==='SUPABASE_PRIVATE_STORAGE'
+    && capability?.asten_transactional_outbox===true
+    && Number(capability?.schema_version)>=6;
+  if(!ready)throw new Error('Esquema de persistência transacional incompatível com o Portal.');
+}
+
 export async function testSupabaseRuntimeConnection(): Promise<SupabaseRuntimeStatus> {
   const base = getSupabaseRuntimeStatus();
   if (!base.configured) return { ...base, connected: false };
