@@ -65,13 +65,25 @@ export function buildProcessArchiveFileName(input:{protocol:string;studentNames:
   return `${protocol}__${students}__${title?`${title}__`:''}${label}__v${version}.${extension}`;
 }
 
-export async function uploadProcessFormPdf(input:{accessToken:string;processFolderId:string;processId:string;protocol:string;studentNames:string[];formType:ProcessFormArchiveType;version:number;pdf:Buffer;sha256:string}){
+export async function uploadProcessFormPdf(input:{accessToken:string;processFolderId:string;rootFolderId?:string;processId:string;protocol:string;studentNames:string[];formType:ProcessFormArchiveType;version:number;pdf:Buffer;sha256:string}){
   await assertPrivateContainer(input.accessToken,input.processFolderId);
   if(!input.pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('O formulário gerado não é um PDF válido.');
   if(input.pdf.length>16*1024*1024)throw new Error('O PDF do formulário não pode ultrapassar 16 MB.');
-  const formsRoot=await ensureFolder(input.accessToken,input.processFolderId,'00_FORMULARIOS');
-  const destinationName=FORM_FOLDER[input.formType as keyof typeof FORM_FOLDER]||`05_PERSONALIZADO_${archiveNamePart(input.formType,48)}`;
-  const destination=await ensureFolder(input.accessToken,formsRoot.id,destinationName);
+  // Comprovantes de reserva emitidos pelo Portal ficam no catálogo documental
+  // institucional (06_COMPROVANTE_RESERVA/02_GERADOS), sem assinatura.
+  // Arquivamentos legados de formulários permanecem nos caminhos já existentes.
+  // O arquivo não é duplicado na pasta do processo.
+  let destination:{id:string};
+  if(input.formType==='CONFIRMACAO_LOCAL' && input.rootFolderId){
+    await assertPrivateContainer(input.accessToken,input.rootFolderId);
+    const documents=await ensureFolder(input.accessToken,input.rootFolderId,'01_DOCUMENTOS');
+    const receipts=await ensureFolder(input.accessToken,documents.id,'06_COMPROVANTE_RESERVA');
+    destination=await ensureFolder(input.accessToken,receipts.id,'02_GERADOS');
+  }else{
+    const formsRoot=await ensureFolder(input.accessToken,input.processFolderId,'00_FORMULARIOS');
+    const destinationName=FORM_FOLDER[input.formType as keyof typeof FORM_FOLDER]||`05_PERSONALIZADO_${archiveNamePart(input.formType,48)}`;
+    destination=await ensureFolder(input.accessToken,formsRoot.id,destinationName);
+  }
   const version=String(Math.max(1,Math.floor(input.version||1)));
   const duplicateQuery=`'${escapeQuery(destination.id)}' in parents and appProperties has { key='portalProcessId' and value='${escapeQuery(input.processId)}' } and appProperties has { key='formType' and value='${input.formType}' } and appProperties has { key='formVersion' and value='${version}' } and trashed = false`;
   const existingResponse=await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(duplicateQuery)}&fields=files(id,name,webViewLink,appProperties)&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true`,input.accessToken);
