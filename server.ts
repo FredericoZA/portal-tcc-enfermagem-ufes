@@ -146,7 +146,7 @@ import {
 import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngine';
 import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie } from './server/security/firebaseAuth';
 import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSecurityPreflight, getAstenSigningProfile, getPersistentAstenConnection, getAstenSignerPhones, getPersistentAstenStatus, safeCompareWebhookSecret } from './server/integrations/asten';
-import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, currentPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalRuntimeState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
+import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, currentPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalRuntimeState, portalRuntimeStateNeedsRefresh, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
 import { buildProcessArchiveFileName, renamePortalProcessFolder, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePrivatePublicationSource, withdrawDriveFilePublicAccess, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadProcessSourcePdf, uploadSignedPdfToDrive, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
@@ -1434,9 +1434,14 @@ export async function createPortalApp() {
     try {
       remotePersistenceQueue=settlePreviousRuntimeWrites(remotePersistenceQueue);
       await remotePersistenceQueue;
-      const remote = await loadPortalRuntimeState<PersistedPortalState>();
+      // Mantém a checagem de atualização em TODA requisição, mas evita
+      // buscar megabytes quando outra instância não alterou a revisão.
+      if(await portalRuntimeStateNeedsRefresh()){
+        const remote = await loadPortalRuntimeState<PersistedPortalState>();
+        if(res.destroyed||req.aborted)return;
+        if(remote)applyPersistedState(remote);
+      }
       if(res.destroyed||req.aborted)return;
-      if (remote) applyPersistedState(remote);
       hydrating=false;
       next();
     } catch (error) {
@@ -1884,11 +1889,8 @@ export async function createPortalApp() {
   app.get('/api/public/indicators',async(_req,res)=>{
     res.setHeader('Cache-Control','public, max-age=60, s-maxage=300, stale-while-revalidate=600');
     try{
-      if(getSupabaseRuntimeStatus().durablePersistenceReady){
-        await remotePersistenceQueue;
-        const remote=await loadPortalRuntimeState<PersistedPortalState>();
-        if(remote)applyPersistedState(remote);
-      }
+      // O middleware /api já assegurou hidratação e exclusividade.
+      // Não transferir o snapshot pela segunda vez nesta requisição.
       res.json(buildPublicIndicators(processesStore));
     }catch(error){
       console.error('[Indicadores públicos] Falha ao gerar estatísticas:',error);
