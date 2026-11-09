@@ -123,6 +123,9 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
   const installationProfile=resolveInstallationProfile(settings);
   const [processes, setProcesses] = useState<ProcessData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  // Respostas de outra identidade ou da navegação anterior nunca preenchem a tabela.
+  const loadGeneration = useRef(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAllRoles, setShowAllRoles] = useState(true);
   const [selectedRoleCategories, setSelectedRoleCategories] = useState<ProcessRoleCategory[]>([]);
@@ -171,20 +174,30 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
   // A tabela nasce ordenada por data; novas ordenações são tratadas pelo menu canônico de cada coluna.
   const sortColumn: string = 'defesaDataHora';
 
-  const loadProcesses = async (background = false) => {
+  const loadProcesses = async (background = false, generation = loadGeneration.current) => {
     if (!background) setIsLoading(true);
     try {
       const data = await apiClient.getProcesses();
+      if (generation !== loadGeneration.current) return;
       setProcesses(data);
+      setLoadError(false);
     } catch (err) {
+      if (generation !== loadGeneration.current) return;
+      // Não exibir "nenhum TCC" em uma falha de rede ou de banco.
+      // Os dados já carregados permanecem visíveis.
+      setLoadError(true);
       console.error('Erro ao buscar processos:', err);
     } finally {
-      if (!background) setIsLoading(false);
+      if (generation === loadGeneration.current && !background) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    void loadProcesses();
+    const generation = ++loadGeneration.current;
+    setProcesses([]); // evita expor TCCs de uma identidade anterior
+    setLoadError(false);
+    void loadProcesses(false,generation);
+    return () => { loadGeneration.current += 1; };
   }, [userEmail]);
 
   useEffect(() => {
@@ -757,11 +770,19 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
 
           {/* Table Container Inside Unified Card */}
           <div className="w-full">
+          {loadError && !isLoading && (
+            <div role="alert" className="m-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
+              <span>Não foi possível atualizar a lista de TCCs. Isso não significa que os dados foram perdidos.</span>
+              <button type="button" onClick={() => void loadProcesses()} className="ml-2 underline font-semibold">
+                Tentar novamente
+              </button>
+            </div>
+          )}
           {isLoading ? (
             <div className="p-12 text-center text-slate-500 text-xs font-semibold">
               Carregando trabalhos de TCC...
             </div>
-          ) : displayedProcesses.length === 0 ? (
+          ) : loadError && processes.length === 0 ? null : displayedProcesses.length === 0 ? (
             <div className="p-12 text-center space-y-3">
               <AlertCircle className="w-8 h-8 text-slate-400 mx-auto" />
               <h3 className="font-bold text-slate-800 text-sm">Nenhum trabalho de TCC encontrado</h3>
