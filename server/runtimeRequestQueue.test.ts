@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createRuntimeRequestQueue,RuntimeRequestAdmissionError,settlePreviousRuntimeWrites} from './runtimeRequestQueue';
+import {attachRuntimeRequestLifecycle,beginRuntimeRequestTask,createRuntimeRequestQueue,RuntimeRequestAdmissionError,settlePreviousRuntimeWrites} from './runtimeRequestQueue';
 
 function fakeClock(){
   let now=0,nextId=0;
@@ -158,4 +158,54 @@ test('cancelamento depois do handoff de uma espera não invalida o novo dono nem
   releaseSecond();
   (await third)();
   assert.equal(clock.timerCount(),0);
+});
+
+test('fechar a resposta durante hidratação mantém o runtime até o término da leitura',async()=>{
+  const acquire=createRuntimeRequestQueue();
+  const request={};
+  const lifecycle=attachRuntimeRequestLifecycle(request,await acquire());
+  let entered=false;
+  const waiting=acquire().then(release=>{entered=true;return release;});
+  lifecycle.responseFinished();
+  await Promise.resolve();
+  assert.equal(entered,false);
+  lifecycle.hydrationFinished();
+  (await waiting)();
+  lifecycle.hydrationFinished();
+  lifecycle.responseFinished();
+  (await acquire())();
+});
+
+test('fechar a resposta não libera os handlers pendentes nem perde tarefas aninhadas',async()=>{
+  const acquire=createRuntimeRequestQueue();
+  const request={};
+  const lifecycle=attachRuntimeRequestLifecycle(request,await acquire());
+  const finishOuter=beginRuntimeRequestTask(request);
+  const finishInner=beginRuntimeRequestTask(request);
+  lifecycle.hydrationFinished();
+  lifecycle.responseFinished();
+  let entered=false;
+  const waiting=acquire().then(release=>{entered=true;return release;});
+  finishOuter();
+  finishOuter();
+  await Promise.resolve();
+  assert.equal(entered,false);
+  finishInner();
+  (await waiting)();
+  assert.equal(entered,true);
+  const finishUnmanaged=beginRuntimeRequestTask(request);
+  finishUnmanaged();
+});
+
+test('um handler concluído aguarda o fechamento da resposta antes de liberar o runtime',()=>{
+  const request={};let releases=0;
+  const lifecycle=attachRuntimeRequestLifecycle(request,()=>{releases++;});
+  const finish=beginRuntimeRequestTask(request);
+  lifecycle.hydrationFinished();
+  finish();
+  assert.equal(releases,0);
+  lifecycle.responseFinished();
+  lifecycle.responseFinished();
+  finish();
+  assert.equal(releases,1);
 });

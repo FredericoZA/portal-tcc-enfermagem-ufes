@@ -1,14 +1,14 @@
 # Padrão visual e formatação - Portal TCC
 
-Revisão 5.2 · 03/11/2026
+Revisão 5.3 · 04/11/2026
 
 Guia da identidade visual aplicada ao Portal TCC do Curso de Graduação em Enfermagem e Obstetrícia da Universidade Federal do Espírito Santo. Substitui as orientações visuais conflitantes das revisões anteriores. A referência é a implementação local atual; este documento não comprova publicação na Vercel ou atualização de arquivos já arquivados no Drive.
 
 ## 1. Identidade e paleta
 
-A logomarca COLENF identifica os cabeçalhos institucionais, o acesso, os e-mails e os registros em PDF gerados pelo Portal. Usar a imagem original, com proporção preservada e fundo transparente. Não acrescentar um retângulo preto, distorcer, cortar ou substituir por imagem ilustrativa.
+O brasão da Universidade Federal do Espírito Santo identifica o acesso, os formulários, os e-mails e os registros em PDF gerados. No topo da barra lateral, a navegação é identificada por uma lâmpada a óleo, no estilo da lâmpada do Aladdin, sem a marca do colegiado. A organização responsável é a Comissão de Trabalho de Conclusão de Curso, do Departamento de Enfermagem. Usar o nome completo da comissão e preservar a proporção e a arte original do brasão, sem recortes ou distorções.
 
-A imagem utilizada pela interface é public/colenf-logo.png. Os geradores do servidor usam server/documents/assets/colenf-logo.png, com conteúdo idêntico. Configurações de identidade da instalação continuam sendo respeitadas. A marca institucional não substitui os ícones funcionais dos botões nem deve ser repetida em cada campo. O rodapé de contatos não repete a logomarca acima dos responsáveis.
+A imagem utilizada pela interface é public/ufes-crest.png. Os geradores do servidor usam server/documents/assets/ufes-crest.png. A marca do colegiado não é utilizada nesta instalação. A marca institucional não substitui os ícones funcionais dos botões nem deve ser repetida em cada campo. O rodapé de contatos identifica a Comissão de Trabalho de Conclusão de Curso, sem repetir a logomarca acima dos responsáveis. Documentos históricos assinados permanecem íntegros; a nova identidade aplica-se aos documentos gerados a partir desta revisão.
 
 As superfícies seguem esta hierarquia: página e janela branco-gelo #F6F7F8; painel cinza-claro #E9EDEF; grupo interno cinza médio #D8DFE3; campos e conteúdo branco #FFFFFF. Na planilha compacta dos membros, o cabeçalho é cinza #B7C1C8 e o corpo usa #C4CED4, com conteúdo centralizado.
 
@@ -66,7 +66,7 @@ Cadastro inicial: seções de trabalho, autores, orientador, coorientador, avali
 
 Os quatro modelos administrativos continuam vinculados às versões publicadas pelo Master: carta-convite, ata, termo e declaração. O comprovante de reserva completa o conjunto de cinco documentos da tela. Não alterar bytes de documentos já assinados para acrescentar marca ou reformatação. Brasão e conteúdo do modelo aprovado são preservados.
 
-Na ata, texto fixo do corpo em peso normal e dados preenchidos em negrito. Usar margens laterais compactas e numeração contínua de todas as linhas, incluindo linhas em branco, cabeçalho e rodapé. Prefixos acadêmicos são abreviados. Data final alinhada à direita, sem hora. Cada aluno tem bloco próprio de nome e identificação Aluno autor ou Aluna autora, na ordem do cadastro, com um intervalo entre blocos. Examinadores não recebem números. O coorientador, quando houver, aparece ao final no texto e nos blocos do modelo. A assinatura eletrônica da ata continua exclusiva do orientador, presidente da sessão.
+Na ata, texto fixo do corpo em peso normal e dados preenchidos em negrito. Usar margens laterais compactas e numeração contínua de todas as linhas, incluindo linhas em branco, cabeçalho e rodapé. Prefixos acadêmicos são abreviados. Data final alinhada à direita, sem hora. Cada aluno tem bloco próprio de nome e identificação Aluno autor ou Aluna autora, na ordem do cadastro, com um intervalo entre blocos. Examinadores não recebem números. O coorientador, quando houver, aparece ao final no texto e nos blocos do modelo. A assinatura eletrônica da ata exige o orientador, presidente da sessão, e os dois examinadores titulares, todos na prioridade 1. O coorientador aparece ao final do documento quando cadastrado, sem integrar essas três assinaturas.
 
 O termo só é gerado quando há autorização de alguma publicação. Cada opção usa marcação grande e inequívoca e texto que distingue autorização e recusa. Todos os autores e o orientador assinam o mesmo termo. No Gov.br, o orientador reúne as assinaturas e devolve o PDF. Na declaração, coorientador e data seguem a formatação do modelo: cargo em peso normal e data à direita.
 
@@ -89,3 +89,16 @@ O conteúdo legado fica no mesmo repositório, com código próprio e os arquivo
 Validar o PDF renderizado, especialmente quebras de página, nomes longos, rodapés e contraste. Executar TypeScript, build e os testes afetados. Alterações visuais não comprovam integração real com Google, Asten ou Supabase.
 
 Publicação na Vercel e atualização de documentos no Drive são operações separadas do trabalho local. Registrar o ambiente efetivamente conferido. Este guia não altera permissões, contratos externos, pastas ou políticas de exclusão.
+
+No menu lateral, Sugestões e Declaração de comparecimento encerram o grupo Informações, nessa ordem. Replicar Portal aparece em uma seção própria chamada Replicação, depois de Informações, separada por uma linha e com o mesmo padrão dos demais botões. O manual em PDF fica no topo de Como usar, junto da navegação por perfis e das telas ilustradas. A declaração é baixada diretamente, sem pop-up.
+
+
+## Identidade dos documentos — 04/11/2026
+
+Documentos emitidos pelo Portal usam o brasão de armas da República, reproduzido do modelo original da carta-convite. O brasão da UFES fica no cabeçalho superior do site; os ícones operacionais usam a lâmpada ou o ícone da atividade. A logomarca do colegiado não integra os documentos nem as telas operacionais.
+
+O cabeçalho apresenta o brasão de armas, Universidade Federal do Espírito Santo, Centro de Ciências da Saúde e Curso de Graduação em Enfermagem e Obstetrícia. O encerramento, alinhado à direita e sem recuo fixo, apresenta Comissão de Trabalho de Conclusão de Curso, Departamento de Enfermagem e Curso de Enfermagem e Obstetrícia — CCS/UFES. Na carta-convite, a data fica depois de Atenciosamente e antes desse bloco, também alinhada à direita. Cada autor e examinador ocupa sua própria linha de identificação. A comissão é a unidade emissora; isso não substitui as assinaturas pessoais exigidas para cada documento. Na ata, assinam orientador e dois examinadores.
+
+Datas de leitura exibem o dia da semana, incluindo e-mails, comprovantes, atas, convites, cadastro e históricos. Datas técnicas, valores dos campos date e integrações mantêm o formato original. O dia da semana da defesa aparece ao lado do campo de data na escolha e na alteração da reserva.
+
+Documentos antigos assinados e arquivos legados originais são preservados. A padronização aplica-se às novas emissões e às cópias temporárias ainda não assinadas.

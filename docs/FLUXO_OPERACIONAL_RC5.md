@@ -1,5 +1,7 @@
 > Histórico RC5. A sequência vigente está em [FLUXO_OPERACIONAL_RC8.md](./FLUXO_OPERACIONAL_RC8.md), que substitui este procedimento.
 
+> Registro histórico. A regra antiga de assinatura exclusiva do orientador foi substituída: a ata exige orientador e dois examinadores. Não use este registro como roteiro vigente. Consulte [a diretriz atual](ASSINATURA_ATA_TRES_DOCENTES.md), o manual e `HOMOLOGACAO_ATUAL.md`.
+
 # Fluxo operacional RC5
 
 ## Regra principal

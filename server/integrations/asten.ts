@@ -1,3 +1,4 @@
+import type { SignatureJobStatus } from '../../src/types';
 import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { loadIntegrationSecret, saveIntegrationSecret } from './integrationSecrets';
 
@@ -9,8 +10,8 @@ const MAX_ASTEN_TOKEN_LENGTH = 4096;
 const MAX_PROVIDER_ERROR_LENGTH = 300;
 const MAX_ASTEN_SESSION_ID_LENGTH = 16 * 1024;
 const ASTEN_WEBHOOK_PATH = '/api/integrations/asten/webhook';
-type Service = 'getIdentificador' | 'getRepositoriosDoUsuario' | 'getPastasDoRepositorio' | 'getDadosPasta' | 'inserirEnvelope' | 'encaminharEnvelopeParaAssinaturas' | 'getDadosEnvelope' | 'getSignatariosPorEnvelope' | 'downloadPDFEnvelopeDocs' | 'getDocumentosEXMLsAssinadosDoEnvelope' | 'reenviarLinksDeAssinatura' | 'cancelarEnvelope';
-const allowed = new Set<Service>(['getIdentificador','getRepositoriosDoUsuario','getPastasDoRepositorio','getDadosPasta','inserirEnvelope','encaminharEnvelopeParaAssinaturas','getDadosEnvelope','getSignatariosPorEnvelope','downloadPDFEnvelopeDocs','getDocumentosEXMLsAssinadosDoEnvelope','reenviarLinksDeAssinatura','cancelarEnvelope']);
+type Service = 'getIdentificador' | 'getRepositoriosDoUsuario' | 'getPastasDoRepositorio' | 'getDadosPasta' | 'inserirEnvelope' | 'encaminharEnvelopeParaAssinaturas' | 'getDadosEnvelope' | 'getSignatariosPorEnvelope' | 'downloadPDFEnvelopeDocs' | 'getDocumentosEXMLsAssinadosDoEnvelope' | 'reenviarLinksDeAssinatura' | 'cancelarEnvelope' | 'expurgarEnvelope';
+const allowed = new Set<Service>(['getIdentificador','getRepositoriosDoUsuario','getPastasDoRepositorio','getDadosPasta','inserirEnvelope','encaminharEnvelopeParaAssinaturas','getDadosEnvelope','getSignatariosPorEnvelope','downloadPDFEnvelopeDocs','getDocumentosEXMLsAssinadosDoEnvelope','reenviarLinksDeAssinatura','cancelarEnvelope','expurgarEnvelope']);
 interface Session { token: string; ownerEmail: string; identifier: string; repositoryId?: number; expiresAt: number; }
 const sessions = new Map<string, Session>();
 const readonlyAstenServices = new Set<Service>(['getIdentificador', 'getRepositoriosDoUsuario', 'getPastasDoRepositorio', 'getDadosPasta', 'getDadosEnvelope', 'getSignatariosPorEnvelope', 'downloadPDFEnvelopeDocs', 'getDocumentosEXMLsAssinadosDoEnvelope']);
@@ -174,7 +175,7 @@ function openSealedSession(id: string): Session | null {
   } catch { throw new Error('Sessão Asten inválida ou adulterada.'); }
 }
 
-export async function callAsten(service: Service, params: Record<string, unknown>, token: string): Promise<any> {
+export async function callAsten(service: Service, params: Record<string, unknown>, token: string, timeoutMs = 30_000): Promise<any> {
   // Consulta de envelopes existentes permanece disponível durante suspensão de novos envios.
   // Mutações de envelopes exigem autorização dupla e permanecem bloqueadas no modo seguro.
   if (!enabled() && !readonlyAstenServices.has(service)) throw new Error('A integração Asten está bloqueada para operações de documentos.');
@@ -182,7 +183,7 @@ export async function callAsten(service: Service, params: Record<string, unknown
   const apiToken = String(token || '').trim();
   if (new URL(API_BASE).protocol !== 'https:' || new URL(API_BASE).hostname !== 'plataforma.astenassinatura.com.br') throw new Error('Configuração Asten inválida.');
   assertValidAstenToken(apiToken);
-  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 30000);
+  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(`${API_BASE}/${service}`, {
       method: 'POST',
@@ -196,7 +197,9 @@ export async function callAsten(service: Service, params: Record<string, unknown
     if (Number.isFinite(contentLength) && contentLength > MAX_ASTEN_JSON_BYTES) throw new Error('A resposta da Asten excedeu o limite seguro do portal.');
     const raw = await response.text();
     if (Buffer.byteLength(raw, 'utf8') > MAX_ASTEN_JSON_BYTES) throw new Error('A resposta da Asten excedeu o limite seguro do portal.');
-    const payload = (() => { try { return raw ? JSON.parse(raw) : {}; } catch { return {}; } })();
+    let payload;
+    try { payload = JSON.parse(raw); }
+    catch { payload = null; }
     if (!response.ok || payload?.error) {
       if (response.status === 401 || response.status === 403) {
         throw new Error('Asten rejeitou a credencial ou a autorização da conta.');
@@ -206,10 +209,20 @@ export async function callAsten(service: Service, params: Record<string, unknown
       throw new Error(safeProviderError(providerError, apiToken, fallback));
     }
     const result=payload?.response ?? payload;
-    const providerNotices=result?.data?.listaAvisos?.aviso;
-    const notices=Array.isArray(providerNotices)?providerNotices:providerNotices?[providerNotices]:[];
-    const failure=notices.find((notice:any)=>String(notice?.tipo||'').toUpperCase()==='E');
-    if(failure)throw new Error(safeProviderError(failure.mensagem,apiToken,'A Asten rejeitou a operação.'));
+    if (!result || typeof result !== 'object' || (!Array.isArray(result) && !Object.keys(result).length)) {
+      throw new Error('A Asten não retornou uma resposta válida para a operação.');
+    }
+    let confirmed = false;
+    for (const source of [result, result.data]) {
+      const providerNotices = source?.listaAvisos?.aviso;
+      const notices = Array.isArray(providerNotices) ? providerNotices : providerNotices ? [providerNotices] : [];
+      const failure = notices.find((notice: any) => String(notice?.tipo || '').toUpperCase() === 'E');
+      if (failure) throw new Error(safeProviderError(failure.mensagem, apiToken, 'A Asten rejeitou a operação.'));
+      confirmed ||= notices.some((notice: any) => String(notice?.tipo || '').toUpperCase() === 'S');
+    }
+    if ((service === 'encaminharEnvelopeParaAssinaturas' || service === 'expurgarEnvelope') && !confirmed) {
+      throw new Error(service === 'expurgarEnvelope' ? 'A ASTEN não confirmou a exclusão definitiva do envelope.' : 'A Asten não confirmou o encaminhamento do envelope.');
+    }
     return result;
   } finally { clearTimeout(timer); }
 }
@@ -389,7 +402,7 @@ export function assertAstenEnvelopeAuthentication(response:unknown, expected:Arr
 }
 export function extractAstenEnvelopeIdentity(response: any) {
   const data = response?.data ?? response;
-  const rawId = data?.idEnvelope ?? data?.Envelope?.id ?? data?.id;
+  const rawId = data?.idEnvelope ?? data?.Envelope?.id ?? data?.envelope?.id ?? data?.id;
   const id = String(rawId ?? '').trim();
   // A própria reconciliação e os callbacks usam IDs numéricos com até 24 dígitos.
   // Jamais persistir um ID inválido ou encaminhar assinatura para ele.
@@ -400,6 +413,43 @@ export function extractAstenEnvelopeIdentity(response: any) {
   const hash = rawHash == null ? undefined : String(rawHash).trim();
   return { id, ...(hash ? { hash } : {}) };
 }
+export function assertAstenEnvelopeDestination(
+  response: unknown, expected: { envelopeId: string; repositoryId: number; folderId: number }
+): void {
+  const result = response as { data?: unknown } | null;
+  const data = (result?.data ?? result) as { Repositorio?: { id?: unknown }; Pasta?: { id?: unknown } } | null;
+  if (extractAstenEnvelopeIdentity(data).id !== expected.envelopeId ||
+      String(data?.Repositorio?.id) !== String(expected.repositoryId) ||
+      String(data?.Pasta?.id) !== String(expected.folderId)) {
+    throw new Error('A Asten não confirmou o envelope na pasta esperada. O convite não foi encaminhado.');
+  }
+}
+
+export function inferAstenJobStatus(response: unknown, current: SignatureJobStatus, envelopeId: string): SignatureJobStatus {
+  if (extractAstenEnvelopeIdentity(response).id !== envelopeId) {
+    throw new Error('A Asten retornou dados de outro envelope. A situação anterior foi preservada.');
+  }
+  if (current === 'ARCHIVED' || current === 'SIGNED' || current === 'DRIVE_SYNC_PENDING') return current;
+  const result = response as { data?: unknown } | null;
+  const data = (result?.data ?? result) as {
+    Envelope?: { status?: unknown; dataHoraConclusao?: unknown }; envelope?: { status?: unknown; dataHoraConclusao?: unknown };
+    statusEnvelope?: unknown; status?: unknown; operacao?: unknown; evento?: unknown; dataHoraConclusao?: unknown;
+  } | null;
+  const status = Number(data?.Envelope?.status ?? data?.envelope?.status ?? data?.statusEnvelope ?? data?.status);
+  if (status === 3) return 'SIGNED';
+  if (status === 4) {
+    const completedAt = data?.Envelope?.dataHoraConclusao ?? data?.envelope?.dataHoraConclusao ?? data?.dataHoraConclusao;
+    return typeof completedAt === 'string' && Number.isFinite(Date.parse(completedAt)) ? 'SIGNED' : current;
+  }
+  if (status === 5) return 'CANCELED';
+  if (status === 6) return 'EXPIRED';
+  if (status === 2) return current === 'PARTIALLY_SIGNED' ? current : 'SENT';
+  const operation = String(data?.operacao || data?.evento || '').toLowerCase();
+  if (operation.includes('recus')) return 'DECLINED';
+  if (operation.includes('assin')) return 'PARTIALLY_SIGNED';
+  return current;
+}
+
 export function assertAstenEnvelopeSigners(response: unknown, expected: Array<{email:string;order:number}>): Array<{email:string;order:number;signedAt?:string}> {
   const evidence:Array<{email:string;order:number;signed:boolean;signedAt?:string}>=[];
   const normalizedStatus=(value:unknown)=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();

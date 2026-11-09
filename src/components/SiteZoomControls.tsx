@@ -44,7 +44,7 @@ export const SiteZoomControls: React.FC = () => {
       id="site-zoom-controls"
       role="group"
       aria-label="Controle de zoom do portal"
-      className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-slate-200 bg-white p-1"
+      className="inline-flex h-[30px] shrink-0 items-center gap-0 rounded-full border border-slate-200 bg-white px-0.5"
     >
       <button
         id="site-zoom-out"
@@ -53,14 +53,14 @@ export const SiteZoomControls: React.FC = () => {
         disabled={zoom <= MIN_ZOOM}
         aria-label="Diminuir zoom do portal"
         title="Diminuir zoom"
-        className="flex h-9 w-9 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+        className="flex h-6 w-6 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
       >
-        <Minus className="h-4 w-4" aria-hidden="true" />
+        <Minus className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
       <output
         aria-live="polite"
         aria-atomic="true"
-        className="min-w-10 text-center text-[11px] font-bold tabular-nums text-slate-700"
+        className="min-w-8 text-center text-[10px] font-bold tabular-nums text-slate-700"
       >
         {zoom}%
       </output>
@@ -71,9 +71,9 @@ export const SiteZoomControls: React.FC = () => {
         disabled={zoom >= MAX_ZOOM}
         aria-label="Aumentar zoom do portal"
         title="Aumentar zoom"
-        className="flex h-9 w-9 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+        className="flex h-6 w-6 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
       >
-        <Plus className="h-4 w-4" aria-hidden="true" />
+        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
     </div>
   );

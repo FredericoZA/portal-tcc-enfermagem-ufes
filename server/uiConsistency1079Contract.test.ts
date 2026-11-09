@@ -33,7 +33,8 @@ test('pop-ups usam a hierarquia cromática canônica',()=>{
 
 test('e-mail e formulário usam apresentação institucional UFES em edição direta',()=>{
   const studio=read('src/components/IntegrationStudioPanel.tsx');
-  assert.match(studio,/operationalEmailLayout/);
+  assert.match(studio,/studioEmailPreview/);
+  assert.match(read('src/utils/studioRuntimePreview.ts'),/processEmailMessage/);
   assert.match(read('src/utils/operationalEmailLayout.ts'),/brand.*primaryColor/);
   assert.match(studio,/bg-\[var\(--portal-brand-header\)\]/);
   assert.match(studio,/data-portal-email-direct-editor="true"/);

@@ -21,6 +21,7 @@ interface SignatureUpdateWatcherOptions<T extends SignatureUpdateRecord> {
   fetchJobs: () => Promise<T[]>;
   onChange: (jobs: T[]) => Promise<unknown> | void;
   isActive: () => boolean;
+  watchWithoutJobs?: () => boolean;
   intervalMs?: number;
   schedule?: (callback: () => void, delay: number) => unknown;
   cancel?: (timer: unknown) => void;
@@ -38,7 +39,7 @@ export function createSignatureUpdateWatcher<T extends SignatureUpdateRecord>(op
     if (timer !== undefined) cancel(timer);
     timer = undefined;
   };
-  const canWatch = () => !disposed && options.isActive() && hasPendingSignatureUpdates(options.getKnownJobs());
+  const canWatch = () => !disposed && options.isActive() && (options.watchWithoutJobs?.() || hasPendingSignatureUpdates(options.getKnownJobs()));
   const queue = () => {
     clearTimer();
     if (canWatch()) timer = schedule(() => { timer = undefined; void poll(); }, options.intervalMs ?? 10_000);

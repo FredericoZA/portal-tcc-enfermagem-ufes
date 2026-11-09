@@ -17,6 +17,6 @@ export function astenInfrastructureCheck(status:{configured:boolean;dispatchEnab
 
 /** Missing checks must fail closed, including the only supported signing provider. */
 export function infrastructureReadyForProduction(checks:InfrastructureCheck[],vercelProduction:boolean):boolean {
-  const required=['secret-store','google-oauth-security','supabase','supabase-transactional','google','asten','asten-folders','vercel','models'];
+  const required=['secret-store','google-oauth-security','supabase','supabase-transactional','google','gmail','asten','asten-folders','vercel','models'];
   return vercelProduction&&required.every(id=>checks.some(check=>check.id===id&&check.status==='PASS'))&&checks.every(check=>check.status==='PASS');
 }

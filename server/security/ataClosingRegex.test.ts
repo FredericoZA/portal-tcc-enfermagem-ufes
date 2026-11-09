@@ -4,7 +4,7 @@ import test from 'node:test';
 import {DEMO_PROCESSES} from '../../src/services/demoSeed';
 import {adaptDocumentLanguage} from '../../src/utils/documentLanguage';
 
-const closing = 'Nada mais havendo a tratar, às quinze horas foi encerrada a sessão e lavrada a presente ata que segue para ser assinada.';
+const closing = 'Nada mais havendo a tratar, às quinze horas foi encerrada a sessão e lavrada a presente ata, que segue para ser assinada.';
 const prefix = 'Nada mais havendo a tratar,';
 const body = 'foi encerrada a sessão e lavrada a presente ata';
 const processFixture = () => {
@@ -17,7 +17,8 @@ const processFixture = () => {
 /** The old expression is a bounded compatibility oracle, never a long-input path. */
 function legacyReplacement(source: string): string {
   if (source.length > 1000) throw new Error('Compatibility oracle accepts at most 1000 characters.');
-  return source.replace(/Nada mais havendo a tratar,\s*(?:às [^,]+?\s+)?foi encerrada a sessão e lavrada a presente ata,?\s*que (?:será assinada(?: por quem de direito)?|segue para ser assinada)\.?/gi, closing);
+  return source.replace(/Nada mais havendo a tratar,\s*(?:às [^,]+?\s+)?foi encerrada a sessão e lavrada a presente ata,?\s*que (?:será assinada(?: por quem de direito)?|segue para ser assinada)\.?/gi, closing)
+    .replace(/(?<=[.!?])\.?[ \t\r\n\u000b]+(?=Nada mais havendo a tratar,)/giu, ' ');
 }
 
 test('ata closing preserves optional time grammar, casing, punctuation and global replacement', () => {

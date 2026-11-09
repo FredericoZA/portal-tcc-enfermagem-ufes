@@ -22,7 +22,8 @@ test('sessão assinada valida integridade temporal, identidade e bloqueia demo e
   assert.ok(auth.includes('identity.expiresAt > absoluteExpiry'));
   assert.ok(auth.includes('const expectedUid = isDemoIdentity ? `demo:${normalizedEmail}` : `email:${normalizedEmail}`'));
   assert.ok(auth.includes('identity.uid !== expectedUid'));
-  assert.ok(auth.includes('secureRuntime() && isDemoIdentity'));
+  assert.ok(auth.includes('identity?.isDemo && !demoAuthenticationEnabled(req)'));
+  assert.ok(auth.includes('const demoAuthenticationEnabled = (req: Request) => !secureRuntime()'));
 });
 
 test('atividade real renova a sessão sem timer agressivo e F5 reconfirma identidade', async () => {
@@ -34,5 +35,14 @@ test('atividade real renova a sessão sem timer agressivo e F5 reconfirma identi
   assert.ok(client.includes("credentials: 'include'"));
   assert.ok(client.includes("headers['x-demo-user-email']=getActiveUserEmail()"));
   assert.ok(context.includes("['pointerdown', 'keydown', 'touchstart', 'wheel', 'focus']"));
-  assert.ok(context.includes('getIdentityWithRetry().then(value=>{if(isCurrent())applyIdentity(value);}'));
+  assert.ok(context.includes('const identityReadSequence = useRef(0)'));
+  assert.ok(context.includes('const isCurrent=()=>identityRevision.current===revision'));
+  assert.ok(context.includes('const isIdentityCurrent=()=>isCurrent()&&identitySequence===identityReadSequence.current'));
+  assert.ok(context.includes('getIdentityWithRetry().then(value=>{if(isIdentityCurrent())applyIdentity(value);}'));
+  assert.ok(context.includes('if(!isIdentityCurrent())return;'));
+  assert.ok(context.includes('const isCurrent=()=>active&&revision===identityRevision.current&&identitySequence===identityReadSequence.current'));
+  assert.ok(context.includes('touchInFlight || now - lastTouchAt < SESSION_ACTIVITY_TOUCH_INTERVAL_MS'));
+  assert.ok(context.includes('touchInFlight = true'));
+  assert.ok(context.includes('touchInFlight = false'));
+  assert.doesNotMatch(context, /setInterval\(/, 'activity renewal must remain event-driven');
 });

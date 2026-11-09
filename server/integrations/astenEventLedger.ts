@@ -1,3 +1,4 @@
+import type {IntegrationStudioSettings} from '../../src/types/integrationStudio';
 import { createHash } from 'crypto';
 import {deriveSignatureSigners,publicationRequested} from '../workflow/signaturePolicy';
 import type { ProcessData } from '../../src/types';
@@ -140,10 +141,10 @@ export function publicationAuthorizationRequired(process: ProcessData): boolean 
 export function buildCanonicalSignaturePlan(
   process: ProcessData,
   documentType: 'ATA' | 'TERMO' | 'DECLARACAO',
-  president: { name: string; email: string }
+  president: { name: string; email: string; studio?:IntegrationStudioSettings }
 ): CanonicalSignaturePlan {
   if (documentType==='TERMO'&&!publicationAuthorizationRequired(process)) return { documentType, required: false, reason: 'O aluno não solicitou publicação do trabalho nem do resumo expandido.', signers: [] };
-  const signers:CanonicalSignaturePlan['signers']=deriveSignatureSigners(process,documentType,{commissionPresidentName:president.name,commissionPresidentEmail:president.email}).map(signer=>({role:signer.role,name:signer.name,email:signer.email,order:1 as const}));
+  const signers:CanonicalSignaturePlan['signers']=deriveSignatureSigners(process,documentType,{commissionPresidentName:president.name,commissionPresidentEmail:president.email,integrationStudio:president.studio}).map(signer=>({role:signer.role,name:signer.name,email:signer.email,order:1 as const}));
   return { documentType, required: true, signers };
 }
 

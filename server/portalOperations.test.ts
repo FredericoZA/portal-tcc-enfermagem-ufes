@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {portalOperations,withPortalOperation} from '../src/services/portalOperations';
+import {portalOperations,withPortalOperation,withBlockingPortalOperation} from '../src/services/portalOperations';
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done;});return {promise,resolve};};
 test('mantém o indicador enquanto houver operações concorrentes e libera ao terminar',async()=>{
  const first=deferred(),second=deferred();
@@ -12,6 +12,17 @@ test('mantém o indicador enquanto houver operações concorrentes e libera ao t
  assert.equal(portalOperations.getSnapshot().pending,1);
  assert.equal(portalOperations.getSnapshot().label,'Preparando download…');
  second.resolve();await b;
+ assert.deepEqual(portalOperations.getSnapshot(),{label:'',pending:0});
+});
+test('salvamento bloqueante aparece imediatamente, prevalece sobre consultas e libera após falha',async()=>{
+ const background=deferred(),save=deferred();
+ const read=withPortalOperation('Preparando consulta…',()=>background.promise);
+ const saving=withBlockingPortalOperation('Salvando rascunho…',()=>save.promise);
+ assert.deepEqual(portalOperations.getSnapshot(),{label:'Salvando rascunho…',pending:2,blocking:true});
+ save.resolve();await saving;
+ assert.deepEqual(portalOperations.getSnapshot(),{label:'Preparando consulta…',pending:1});
+ background.resolve();await read;
+ await assert.rejects(withBlockingPortalOperation('Salvando rascunho…',async()=>{throw Error('Não salvo');}),/Não salvo/);
  assert.deepEqual(portalOperations.getSnapshot(),{label:'',pending:0});
 });
 test('falha na transferência remove o indicador e preserva o erro para a tela',async()=>{

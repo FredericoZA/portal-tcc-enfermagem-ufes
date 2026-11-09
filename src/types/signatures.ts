@@ -1,6 +1,9 @@
+import type {SignatureRecipientRole} from './integrationStudio';
 import type { DocumentType } from './index';
 
-export type SignatureSignerRole = 'ADVISOR' | 'STUDENT' | 'PRESIDENT';
+export interface SignaturePolicySnapshot {version:1;configured:boolean;documentType:'ATA'|'TERMO'|'DECLARACAO';templateId:string;studioRevision:number;roles:SignatureRecipientRole[];signers:Array<Pick<SignatureSignerSnapshot,'role'|'name'|'email'|'signingOrder'>>;digest:string;}
+
+export type SignatureSignerRole = 'ADVISOR' | 'EXAMINER' | 'STUDENT' | 'CO_ADVISOR' | 'PRESIDENT';
 export type SignatureSignerStatus = 'WAITING' | 'VIEWED' | 'SIGNED' | 'DECLINED';
 export type SignatureJobStatus = 'WAITING_INTEGRATION' | 'QUEUED' | 'READY_FOR_REVIEW' | 'APPROVED' | 'SENDING' | 'SENT' | 'PARTIALLY_SIGNED' | 'SIGNED' | 'DECLINED' | 'EXPIRED' | 'CANCELED' | 'PROVIDER_ERROR' | 'DRIVE_SYNC_PENDING' | 'ARCHIVED';
 
@@ -10,6 +13,11 @@ export interface SignatureSignerSnapshot {
 }
 
 export interface SignatureJob {
+  /** Immutable contract for newly prepared minutes; absent on historical board-only jobs. */
+  ataSignerPolicy?: 'BOARD_AUTHORS_V1';
+  signerPolicySnapshot?:SignaturePolicySnapshot;
+  /** Excluded from operational lists; archived evidence remains valid. */
+  removedFromLogsAt?: string; removedFromLogsBy?: string;
   signedAt?: string;
   id: string; processId: string; protocol: string; documentType: Exclude<DocumentType, 'CONVITE'>;
   documentTitle: string; documentVersion: number; sourceDataRevision: number; fileName: string; mimeType: string;
@@ -23,7 +31,9 @@ export interface SignatureJob {
   providerAuthenticationProfile?: 'CONFIDENTIAL_SMS' | 'EMAIL_LOGIN' | 'EMAIL_LINK';
   /** Falhas ambíguas de encaminhamento não autorizam novo envio automático. */
   providerDispatchState?: 'PENDING' | 'SENDING' | 'SENT' | 'UNCERTAIN';
+  providerStatusCheckedAt?: string;
   sentAt?: string; completedAt?: string; lastError?: string; driveUnsignedFileId?: string; driveSignedFileId?: string;
+  postArchivePending?: boolean;
   driveSignedWebViewLink?: string; signedSha256?: string; verificationCode?: string; artifactBase64?: string;
   /** Snapshot normalizado das variáveis usadas para renderizar esta versão. */
   renderVariables?: Record<string, string>;
@@ -53,4 +63,10 @@ export interface AstenDocumentFoldersStatus {
   missingTypes:AstenDocumentFolderType[];
   issues:string[];
   updatedAt?:string;
+}
+
+/** Public aggregate; never includes signatory identities or personal access links. */
+export interface DocumentSignatureProgress {
+ generated:boolean; signed:number; total:number; status?:SignatureJobStatus;
+ provider:'ASTEN'|'GOV_BR'; emailSent:boolean;
 }

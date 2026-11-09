@@ -25,8 +25,31 @@ test('line numbers cover header, split runs, signatures, footer and continue acr
   for(const pageNo of [1,2]){
    const content=await(await pdf.getPage(pageNo)).getTextContent();
    const gutter=content.items.filter((item:any)=>item.str&&item.transform[4]<30).map((item:any)=>Number(item.str));
-   if(pageNo===1)assert.ok(gutter.length>40,'blank lines between header, body, signatures and footer are numbered');
+   if(pageNo===1)assert.equal(gutter.length,4,'only the four written baselines receive numbers, despite large blank gaps');
+   else assert.equal(gutter.length,1);
    for(const number of gutter)assert.equal(number,++previous);
   }
  }finally{await task.destroy();}
+});
+test('ata oficial exige uma página e recusa excedente sem cortar o texto',async()=>{
+ const doc=await PDFDocument.create();doc.addPage([595,842]).drawText('Ata integral',{x:43,y:740});
+ const one=Buffer.from(await doc.save());
+ assert.equal((await PDFDocument.load(await numberAtaLines(one,{requireSinglePage:true}))).getPageCount(),1);
+ doc.addPage([595,842]).drawText('Texto excedente que não pode desaparecer');
+ const two=Buffer.from(await doc.save());
+ await assert.rejects(numberAtaLines(two,{requireSinglePage:true}),/2 páginas.*nenhum conteúdo foi cortado/);
+ assert.equal((await PDFDocument.load(two)).getPageCount(),2);
+});
+
+test('numbering skips blank and whitespace lines, shares a baseline across columns and preserves every original text position',async()=>{
+ const doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.TimesRoman),page=doc.addPage([595,842]);
+ for(const [text,x,y] of [['CABECALHO',150,760],['TITULO',43,710],['Corpo da ata.',43,680],['   ',43,660],['Orientador',80,350],['Aluno',360,350],['Presidente',80,330],['Autor',360,330],['Rodape',160,40]] as const)page.drawText(text,{x,y,size:11,font});
+ const source=Buffer.from(await doc.save()),result=await numberAtaLines(source);
+ const {getDocument}=await import('pdfjs-dist/legacy/build/pdf.mjs');
+ const read=async(bytes:Buffer)=>{const task=getDocument({data:new Uint8Array(bytes),useSystemFonts:true,verbosity:0});try{return(await(await(await task.promise).getPage(1)).getTextContent()).items.filter((item:any)=>item.str?.trim()).map((item:any)=>({text:item.str,x:item.transform[4],y:item.transform[5]}));}finally{await task.destroy();}};
+ const before=await read(source),after=await read(result);
+ assert.deepEqual(after.filter(item=>item.x>30),before,'adding gutter numbers must not move, remove or rewrite text');
+ const numbers=after.filter(item=>item.x<30);
+ assert.deepEqual(numbers.map(item=>item.text),['1','2','3','4','5','6']);
+ assert.deepEqual(numbers.map(item=>item.y),[760,710,680,350,330,40]);
 });

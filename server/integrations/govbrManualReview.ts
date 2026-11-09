@@ -4,7 +4,8 @@ import type {SignatureJob} from '../../src/types/signatures';
 import {assertSafeUploadedDocument} from '../security/fileSafety';
 
 /** Structural binding only. Cryptographic validity and holder identity require human ITI review. */
-export async function inspectGovbrReturnedPdf(original:Buffer,returned:Buffer,expectedOriginalSha256:string):Promise<string>{
+export async function inspectGovbrReturnedPdf(original:Buffer,returned:Buffer,expectedOriginalSha256:string,minimumSignatures=1):Promise<string>{
+  if(!Number.isSafeInteger(minimumSignatures)||minimumSignatures<1)throw new Error('Quantidade de signatários esperados inválida.');
   if(createHash('sha256').update(original).digest('hex')!==expectedOriginalSha256)throw new Error('O original não corresponde à versão preparada pelo Portal.');
   if(!returned.length||returned.length>50*1024*1024||!returned.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('Envie um PDF de até 50 MB.');
   await assertSafeUploadedDocument(returned,'PDF');
@@ -30,17 +31,24 @@ export async function inspectGovbrReturnedPdf(original:Buffer,returned:Buffer,ex
       canonical(left.node.Contents(),before.context)!==canonical(right.node.Contents(),after.context)||
       canonical(left.node.Resources(),before.context)!==canonical(right.node.Resources(),after.context))throw new Error('O conteúdo do PDF difere do original. Assine o arquivo baixado do Portal sem editar ou imprimir novamente.');
   }
-  const hasSignature=after.getForm().getFields().some(field=>{
-    if(field.acroField.dict.get(PDFName.of('FT'))?.toString()!=='/Sig')return false;
+  // Earlier signatures cover earlier incremental revisions; the last must cover the returned PDF.
+  // Counting CMS values prevents repeated fields referencing one signature from satisfying the gate.
+  const signatures=new Set<string>();
+  let coversReturnedPdf=false;
+  for(const field of after.getForm().getFields()){
+    if(field.acroField.dict.get(PDFName.of('FT'))?.toString()!=='/Sig')continue;
     const value=field.acroField.dict.lookup(PDFName.of('V'));
-    if(!(value instanceof PDFDict))return false;
+    if(!(value instanceof PDFDict))continue;
     const range=value.lookup(PDFName.of('ByteRange')),contents=value.lookup(PDFName.of('Contents'));
-    if(!(range instanceof PDFArray)||range.size()!==4||!(contents instanceof PDFHexString)||!contents.asBytes().some(byte=>byte!==0))return false;
-    const entries=range.asArray();if(!entries.every(item=>item instanceof PDFNumber))return false;
+    if(!(range instanceof PDFArray)||range.size()!==4||!(contents instanceof PDFHexString)||!contents.asBytes().some(byte=>byte!==0))continue;
+    const entries=range.asArray();if(!entries.every(item=>item instanceof PDFNumber))continue;
     const [start,length,next,last]=entries.map(item=>(item as PDFNumber).asNumber());
-    return entries.every(item=>Number.isSafeInteger((item as PDFNumber).asNumber()))&&start===0&&length>0&&next>length&&last>0&&next+last===returned.length;
-  });
-  if(!hasSignature)throw new Error('Não foi encontrada uma assinatura digital incorporada que cubra o PDF. Uma imagem de assinatura não é suficiente.');
+    if(!entries.every(item=>Number.isSafeInteger((item as PDFNumber).asNumber()))||start!==0||length<=0||next<=length||last<=0||next+last>returned.length)continue;
+    signatures.add(createHash('sha256').update(contents.asBytes()).digest('hex'));
+    if(next+last===returned.length)coversReturnedPdf=true;
+  }
+  if(!coversReturnedPdf)throw new Error('Não foi encontrada uma assinatura digital incorporada que cubra o PDF. Uma imagem de assinatura não é suficiente.');
+  if(signatures.size<minimumSignatures)throw new Error(`O documento exige ${minimumSignatures} assinaturas digitais distintas; foram encontradas ${signatures.size}. Reúna todas as assinaturas no mesmo PDF antes de devolver.`);
   return createHash('sha256').update(returned).digest('hex');
 }
 
@@ -49,5 +57,5 @@ export function assertGovbrManualApproval(job:SignatureJob,currentRevision:numbe
   if(job.provider!=='GOV_BR'||!['ATA','TERMO','DECLARACAO'].includes(job.documentType)||job.status==='CANCELED')throw new Error('Esta assinatura não pertence ao fluxo Gov.br.');
   if(job.sourceDataRevision!==currentRevision)throw new Error('Os dados do TCC mudaram. Prepare uma nova versão antes de conferir.');
   if(!job.govbrReview||job.govbrReview.sha256!==input.sha256)throw new Error('O PDF foi substituído ou ainda não foi enviado. Confira novamente o arquivo atual.');
-  if(input.itiApproved!==true||input.signerMatches!==true||input.documentMatches!==true)throw new Error('Confirme o resultado aprovado no VALIDAR/ITI, o titular esperado e o conteúdo do documento.');
+  if(input.itiApproved!==true||input.signerMatches!==true||input.documentMatches!==true)throw new Error('Confirme o resultado aprovado no VALIDAR/ITI, todos os titulares esperados e o conteúdo do documento.');
 }

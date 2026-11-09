@@ -7,23 +7,26 @@ interface UseSignatureUpdatesOptions {
   jobs: SignatureJob[];
   onChange: () => Promise<unknown> | void;
   enabled?: boolean;
+  watchWithoutJobs?: boolean;
   /** Omit for the administrator's signature list; process pages use their authorized endpoint. */
   processId?: string;
   scopeKey?: string;
+  fetchJobs?: () => Promise<SignatureJob[]>;
 }
 
 export function useSignatureUpdates(options: UseSignatureUpdatesOptions): void {
   const latest = useRef(options);
   latest.current = options;
-  const enabled = options.enabled !== false && hasPendingSignatureUpdates(options.jobs);
+  const enabled = options.enabled !== false && (options.watchWithoutJobs || hasPendingSignatureUpdates(options.jobs));
   const processId = options.processId;
   const scopeKey = options.scopeKey;
 
   useEffect(() => {
     if (!enabled) return;
     const watcher = createSignatureUpdateWatcher({
+      watchWithoutJobs: () => latest.current.watchWithoutJobs === true,
       getKnownJobs: () => latest.current.jobs,
-      fetchJobs: () => processId ? apiClient.getProcessSignatureJobs(processId) : apiClient.getSignatureJobs(),
+      fetchJobs: () => latest.current.fetchJobs?.() ?? (processId ? apiClient.getProcessSignatureJobs(processId) : apiClient.getSignatureJobs()),
       onChange: () => latest.current.onChange(),
       isActive: () => document.visibilityState !== 'hidden',
     });

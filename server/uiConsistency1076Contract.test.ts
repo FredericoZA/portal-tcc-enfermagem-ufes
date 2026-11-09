@@ -4,17 +4,17 @@ import { readFileSync } from 'node:fs';
 
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('calendário público exibe somente segunda a sexta', () => {
+test('calendário público mantém dias semanais e acrescenta fins de semana com defesas', () => {
   const home = read('src/pages/HomePage.tsx');
 
-  assert.match(home, /const businessDays = Array\.from/);
-  assert.match(home, /dayOfWeek >= 1 && dayOfWeek <= 5/);
-  assert.match(home, /const firstBusinessDayOffset/);
-  assert.match(home, /const trailingBusinessDayCells/);
-  assert.match(home, /grid grid-cols-5 text-center/);
-  assert.match(home, /<div>Seg<\/div>[\s\S]*<div>Ter<\/div>[\s\S]*<div>Qua<\/div>[\s\S]*<div>Qui<\/div>[\s\S]*<div>Sex<\/div>/);
+  assert.match(home, /buildCalendarMonthGrid\(year,month,calendarStarts\)/);
+  assert.match(home, /calendarGrid\.weekdays/);
+  assert.match(home, /const firstCalendarDayOffset/);
+  assert.match(home, /const trailingCalendarDayCells/);
+  assert.match(home, /gridTemplateColumns:calendarGrid\.gridTemplateColumns/);
+  assert.match(home, /CALENDAR_WEEKDAY_LABELS\[day\]/);
   assert.doesNotMatch(home, /<div>DOM<\/div>|<div>SÁB<\/div>|portal-core-calendar-weekend/);
-  assert.match(home, /businessDays\.map\(\(dayNum, idx\)/);
+  assert.match(home, /calendarDays\.map\(\(dayNum, idx\)/);
 });
 
 test('número do dia não fica menor que o cabeçalho semanal', () => {

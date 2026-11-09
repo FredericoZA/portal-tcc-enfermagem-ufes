@@ -16,6 +16,7 @@ function apply(text:string,requests:any[]){
 }
 test('ata inclui coorientador no texto e após os autores, sem duplicar',()=>{
  const p=structuredClone(DEMO_PROCESSES[0]);p.aluno1.nome='Alex Silva';p.aluno2={...p.aluno1,nome:'Maria Souza',tratamento:'Aluna'};p.coorientador={nome:'Paula Souza',email:'paula@example.invalid',tratamento:'Professora',titulacao:'Doutora'};
+ p.avaliacao={...p.avaliacao,coadvisorPresent:true} as any;
  const body='A orientadora prosseguiu, apresentando os demais examinadores: Prof. Dr. João Lima e Prof. Dr. Rui Silva. Foi dada a palavra aos autores.';
  const adapted=adaptDocumentLanguage(body,p,'ATA');assert.match(adapted,/coorientadora Prof\.ª Dr\.ª Paula Souza/);assert.equal(adaptDocumentLanguage(adapted,p,'ATA'),adapted);
  const source='Alex Silva\nAluno autor\nMaria Souza\nAluna autora\nRodapé\n';

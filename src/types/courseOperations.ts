@@ -13,11 +13,19 @@ export interface NotificationPreferences {
 export interface PortalNotification {
   id: string;
   severity: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
-  category: 'WORKFLOW' | 'EMAIL' | 'SIGNATURE' | 'DRIVE' | 'SYSTEM';
+  category: 'WORKFLOW' | 'EMAIL' | 'SIGNATURE' | 'FORM_ARCHIVE' | 'DRIVE' | 'SYSTEM';
   title: string;
   message: string;
+  status: string;
+  read: boolean;
   processId?: string;
+  protocol?: string;
   createdAt: string;
+}
+
+export interface PortalNotificationDetail extends PortalNotification {
+  context?: string;
+  destination?: { kind: 'PROCESS'; processId: string; section: 'cadastral' | 'docs' } | { kind: 'PRESIDENCY' };
 }
 
 export interface StudioVersionRecord {

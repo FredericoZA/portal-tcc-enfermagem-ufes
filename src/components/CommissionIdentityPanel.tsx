@@ -257,7 +257,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
         </div>
         <div className="space-y-1 p-1">
           {members.map(member => (
-            <div key={member.id} className="grid gap-2 rounded-md bg-white p-2 sm:grid-cols-[1fr_1fr_34px]">
+            <div key={member.id} className="grid gap-2 rounded-md p-2 sm:grid-cols-[1fr_1fr_34px]" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
               <input value={member.name} onChange={event => updateMember(member.id, { name: event.target.value })} onBlur={() => void persistRegularFields()} className={inputClass} placeholder="Nome completo"/>
               <input type="email" value={member.email || ''} onChange={event => updateMember(member.id, { email: event.target.value })} onBlur={() => void persistRegularFields()} className={inputClass} placeholder="email@instituicao.br"/>
               <button type="button" onClick={() => setMembers(prev => prev.filter(item => item.id !== member.id))} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-rose-700" aria-label={`Excluir ${member.name || 'membro'}`}><Trash2 className="h-3.5 w-3.5"/></button>

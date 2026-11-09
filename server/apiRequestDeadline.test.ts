@@ -206,10 +206,10 @@ test('upload transmite o sinal ao PUT e encerra uma transferência travada sem r
   let signal!: AbortSignal;
   const fetch = mockFetch(t, async (input, options) => {
     if (input === '/api/uploads/staging') return Response.json({
-      uploadId: 'fixture-local', uploadUrl: 'https://storage.example.invalid/upload',
+      uploadId: 'fixture-local', provider:'drive', uploadUrl: 'https://www.googleapis.com/upload/drive/v3/files?upload_id=fixture',
       expiresAt: new Date(Date.now() + 600_000).toISOString(), maxSizeBytes: 1024,
     });
-    assert.equal(input, 'https://storage.example.invalid/upload');
+    assert.equal(input, 'https://www.googleapis.com/upload/drive/v3/files?upload_id=fixture');
     signal = options!.signal!;
     started.resolve();
     return never();
@@ -224,6 +224,8 @@ test('upload transmite o sinal ao PUT e encerra uma transferência travada sem r
   assert.equal(fetch.mock.callCount(), 2);
   assert.equal(fetch.mock.calls[1].arguments[1]?.credentials, 'omit');
   assert.equal(fetch.mock.calls[1].arguments[1]?.method, 'PUT');
+  assert.equal(fetch.mock.calls[1].arguments[1]?.body, file);
+  assert.equal(new Headers(fetch.mock.calls[1].arguments[1]?.headers).get('content-range'), `bytes 0-${file.size - 1}/${file.size}`);
   assert.equal(portalOperations.getSnapshot().pending, 0);
 });
 

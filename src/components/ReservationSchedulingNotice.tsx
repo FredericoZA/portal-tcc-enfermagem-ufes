@@ -9,7 +9,7 @@ export function ReservationSchedulingNotice(){
   <ul className="mt-2 list-disc space-y-2 pl-5 text-sm leading-6">
    <li><strong>Locais do departamento:</strong> O Auditório de Enfermagem e a Sala de Reuniões são usados para aulas e outras atividades. Se necessário, alunos e orientador podem consultar o Departamento de Enfermagem antes de enviar o pedido, para evitar retrabalho. A reserva depende da homologação do departamento.</li>
    <li><strong>Defesa em outros locais:</strong> Se a defesa ocorrer em um local diferente dos padrões, digite o nome completo do espaço exatamente como deseja que apareça nos documentos. Nesses casos, o próprio orientador receberá a notificação para aceitar ou recusar o agendamento, ficando responsável por garantir a reserva junto ao local escolhido.</li>
-   <li><strong>Bloqueio temporário:</strong> Ao enviar o pedido, o sistema bloqueia o local no intervalo da defesa (1h30). O aceite mantém a reserva; a recusa libera o horário. Esse controle abrange apenas as defesas deste sistema, sem verificar agendamentos externos.</li>
+   <li><strong>Bloqueio temporário:</strong> Ao enviar o pedido, o sistema bloqueia o local no intervalo da defesa (1h30). O aceite mantém a reserva; a recusa libera o horário. Os locais padrão cadastrados são o Auditório de Enfermagem e a Sala de Reuniões. O bloqueio considera somente as defesas registradas neste Portal e não consulta as agendas dos espaços. Em outros locais, pode haver conflito com aulas, eventos ou reservas que não aparecem aqui. Confirme a disponibilidade com o orientador e com o responsável pelo espaço.</li>
   </ul>
  </aside>;
 }

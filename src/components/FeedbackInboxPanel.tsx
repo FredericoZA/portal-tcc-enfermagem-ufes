@@ -1,5 +1,6 @@
+import {formatAuditTimestamp,timestampInSaoPauloDateRange} from '../utils/formatters';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {CheckCheck, Eye, Image, Lightbulb, RefreshCw} from 'lucide-react';
+import {CheckCheck, Eye, Image, Lightbulb, ListFilter, RefreshCw} from 'lucide-react';
 import {useAuth} from '../context/AuthContext';
 import {apiClient} from '../services/apiClient';
 import type {FeedbackEntry} from '../types/feedback';
@@ -21,9 +22,10 @@ const COLUMNS: ColumnDef[] = [
   {key:'reviewed_by',label:'Responsável'},
   {key:'actions',label:'Ações'},
 ];
+const MOBILE_CELLS: Record<string, string> = { created_at: 'summary', actions: 'actions' };
 const ORDER=COLUMNS.map(column=>column.key);
 const VISIBLE=Object.fromEntries(ORDER.map(key=>[key,true]));
-const dateText=(value:string|null)=>value&&Number.isFinite(Date.parse(value))?new Date(value).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}):'—';
+const dateText=(value:string|null)=>value&&Number.isFinite(Date.parse(value))?formatAuditTimestamp(value):'—';
 const searchable=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');
 
 /** The existing feedback store, presented in the same administrative sheet as logs. */
@@ -96,21 +98,23 @@ export function FeedbackInboxPanel({embedded=false}:{embedded?:boolean}) {
 
   const filtered=useMemo(()=>{
     const term=searchable(search.trim());
-    const start=startDate?Date.parse(`${startDate}T00:00:00-03:00`):0;
-    const end=endDate?Date.parse(`${endDate}T23:59:59.999-03:00`):Infinity;
-    return rows.filter(item=>{
-      const time=Date.parse(item.created_at);
-      return (status==='ALL'||item.status===status)&&time>=start&&time<=end&&(!term||searchable([item.id,item.description,item.reviewed_by||'',item.status==='NEW'?'Nova':'Revisada'].join(' ')).includes(term));
-    });
+    return rows.filter(item =>
+      (status==='ALL'||item.status===status) &&
+      timestampInSaoPauloDateRange(item.created_at, startDate, endDate) &&
+      (!term||searchable([item.id,item.description,item.reviewed_by||'',item.status==='NEW'?'Nova':'Revisada'].join(' ')).includes(term))
+    ).sort((a, b) => (Date.parse(b.created_at) || 0) - (Date.parse(a.created_at) || 0) || a.id.localeCompare(b.id));
   },[rows,search,status,startDate,endDate]);
   const columns=columnOrder.filter(key=>visibleColumns[key]!==false);
 
   if(!isMasterAdmin)return <p className="portal-instruction p-4 text-sm">Sugestões disponíveis somente para o usuário Master.</p>;
 
   const toolbar=<>
-    <select aria-label="Filtrar sugestões por situação" value={status} onChange={event=>setStatus(event.target.value as typeof status)} className="portal-input max-w-40 text-xs">
-      <option value="ALL">Todas</option><option value="NEW">Novas</option><option value="REVIEWED">Revisadas</option>
-    </select>
+    <label className="portal-settings-header-selector portal-feedback-status-filter" title="Filtrar sugestões por situação">
+      <ListFilter className="h-3.5 w-3.5 shrink-0" aria-hidden="true"/>
+      <select aria-label="Filtrar sugestões por situação" value={status} onChange={event=>setStatus(event.target.value as typeof status)}>
+        <option value="ALL">Todas</option><option value="NEW">Novas</option><option value="REVIEWED">Revisadas</option>
+      </select>
+    </label>
     <button type="button" className="portal-toolbar-icon-button" disabled={loading||loadingMore||Boolean(reviewingId)} onClick={()=>void load()} title="Atualizar sugestões" aria-label="Atualizar sugestões"><RefreshCw className="h-3.5 w-3.5"/></button>
     <span className="portal-toolbar-group-divider" role="separator" aria-orientation="vertical"/>
     <SearchPopover value={search} onChange={setSearch} placeholder="Descrição, referência ou responsável" textFormat={textFormat}/>
@@ -119,25 +123,36 @@ export function FeedbackInboxPanel({embedded=false}:{embedded?:boolean}) {
   function statusBadge(item:FeedbackEntry) {
     return <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold ${item.status==='NEW'?'border-amber-300 bg-amber-50 text-amber-900':'border-slate-300 bg-slate-100 text-slate-700'}`}>{item.status==='NEW'?'Nova':'Revisada'}</span>;
   }
-  function cell(item:FeedbackEntry,key:string):React.ReactNode {
+  function cell(item:FeedbackEntry,key:string,receivedAt:string):React.ReactNode {
     switch(key){
-      case 'created_at':case 'reviewed_at':return <span className="whitespace-nowrap">{dateText(item[key])}</span>;
+      case 'created_at':return <>
+        <span className="portal-record-desktop-label whitespace-nowrap">{receivedAt}</span>
+        <div className="portal-record-summary">
+          <strong className="line-clamp-2">{item.description}</strong>
+          <span className="block text-slate-600">{receivedAt}</span>
+          {statusBadge(item)}
+        </div>
+      </>;
+      case 'reviewed_at':return <span className="whitespace-nowrap">{dateText(item[key])}</span>;
       case 'id':return <span title={item.id} className="font-mono text-[10px]">{item.id.slice(0,8)}</span>;
       case 'description':return <button type="button" onClick={()=>setSelected(item)} className="max-w-96 cursor-pointer rounded px-1 text-left hover:underline" aria-label={`Ver sugestão ${item.id.slice(0,8)}`}><span className="line-clamp-2 break-words">{item.description}</span></button>;
       case 'image':return item.image_mime?<button type="button" onClick={()=>setSelected(item)} className="portal-action" aria-label={`Ver imagem da sugestão ${item.id.slice(0,8)}`}><Image className="h-3.5 w-3.5"/><span>Ver imagem</span></button>:'—';
       case 'status':return statusBadge(item);
       case 'reviewed_by':return <span className="break-all">{item.reviewed_by||'—'}</span>;
-      default:return <div className="flex justify-center gap-1.5 whitespace-nowrap"><button type="button" className="portal-action" onClick={()=>setSelected(item)}><Eye className="h-3.5 w-3.5"/>Detalhes</button>{item.status==='NEW'&&<button type="button" className="portal-action" disabled={Boolean(reviewingId)} onClick={()=>void review(item)}><CheckCheck className="h-3.5 w-3.5"/>{reviewingId===item.id?'Salvando…':'Marcar revisada'}</button>}</div>;
+      default:return <div className="portal-record-actions flex justify-center gap-1.5 whitespace-nowrap"><button type="button" className="portal-action" onClick={()=>setSelected(item)}><Eye className="h-3.5 w-3.5"/>Detalhes</button>{item.status==='NEW'&&<button type="button" className="portal-action" disabled={Boolean(reviewingId)} onClick={()=>void review(item)}><CheckCheck className="h-3.5 w-3.5"/>{reviewingId===item.id?'Salvando…':'Marcar revisada'}</button>}</div>;
     }
   }
   return <div id="feedback-inbox-panel" data-settings-sheet="true" data-embedded={embedded?'true':'false'} className="flex min-h-0 flex-1 flex-col" style={{backgroundColor:'var(--portal-surface-panel)'}}>
     {embedded?<SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal>:<header className="portal-modal-header flex flex-wrap justify-between gap-3"><h2 className="flex items-center gap-2 text-sm font-bold"><Lightbulb className="h-4 w-4"/>Sugestões</h2><div className="flex flex-wrap items-center gap-1.5">{toolbar}</div></header>}
     {error&&<p role="alert" className="portal-instruction m-3 p-3 text-xs">{error}</p>}
     <TableScrollWrapper fillHeight>
-      <table className="portal-spreadsheet-table w-full min-w-[1180px] border-collapse text-center text-xs">
+      <table className="portal-spreadsheet-table portal-responsive-records w-full min-w-[1180px] border-collapse text-center text-xs">
         <caption className="sr-only">Sugestões recebidas e histórico de revisão. Horários de Brasília.</caption>
-        <thead><tr>{columns.map(key=><th key={key} scope="col" data-portal-column-key={key} className="px-3 py-1.5 text-[10px] font-black">{COLUMNS.find(column=>column.key===key)?.label||key}</th>)}</tr></thead>
-        <tbody>{(loading||filtered.length===0)&&<tr><td colSpan={columns.length} className="portal-sheet-empty-cell" role="status">{loading?'Carregando sugestões…':error?'Lista indisponível.':'Nenhuma sugestão encontrada.'}</td></tr>}{!loading&&filtered.map(item=><tr key={item.id}>{columns.map(key=><td key={key} className="px-3 py-1 text-slate-950">{cell(item,key)}</td>)}</tr>)}</tbody>
+        <thead><tr>{columns.map(key=><th key={key} scope="col" data-portal-column-key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} className="px-3 py-1.5 text-[10px] font-black">{COLUMNS.find(column=>column.key===key)?.label||key}</th>)}</tr></thead>
+        <tbody>{(loading||filtered.length===0)&&<tr><td colSpan={columns.length} className="portal-sheet-empty-cell" role="status">{loading?'Carregando sugestões…':error?'Lista indisponível.':'Nenhuma sugestão encontrada.'}</td></tr>}{!loading&&filtered.map(item=>{
+          const receivedAt=dateText(item.created_at);
+          return <tr key={item.id} data-portal-row-id={item.id}>{columns.map(key=><td key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} data-portal-filter-value={key === 'created_at' ? receivedAt : undefined} data-portal-sort-value={key==='created_at'||key==='reviewed_at'?String(Date.parse(item[key]||'')||0):undefined} className="px-3 py-1 text-slate-950">{cell(item,key,receivedAt)}</td>)}</tr>;
+          })}</tbody>
       </table>
     </TableScrollWrapper>
     {nextCursor&&<div className="flex justify-center border-t border-slate-300 p-2"><button type="button" className="portal-action" disabled={loadingMore||loading} onClick={()=>void load(nextCursor)}>{loadingMore?'Carregando…':'Carregar sugestões anteriores'}</button></div>}

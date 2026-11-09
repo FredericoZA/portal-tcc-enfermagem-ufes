@@ -28,21 +28,37 @@ test('confirmação identifica autores e comprovante do departamento registra as
  const common={process,recipient:'departamento@example.invalid',subject:'Reserva confirmada',text:'Corpo antigo',templateId:'email-comprovante-reserva',baseUrl:'https://portal.example',courseName:'Enfermagem',departmentUrl:'https://portal.example/receipt'};
  for(const decision of ['CONFIRMED','UNAVAILABLE'] as const){
   process.defesa.departmentResponse={revision:1,decision,respondedAt:'2026-10-26',respondedBy:common.recipient,startAt:process.defesa.startAt,endAt:process.defesa.endAt,local:process.defesa.local};
-  const result=processEmailMessage(common);assert.match(result.subject,decision==='CONFIRMED'?/Reserva confirmada/:/Agendamento recusado/);assert.match(result.text,/Resposta registrada em \d{2}\/\d{2}\/\d{4}/);assert.match(result.text,decision==='CONFIRMED'?/Resultado: reserva confirmada/:/Resultado: reserva recusada/);if(decision==='CONFIRMED')assert.match(result.text,/Avaliação e ata/);assert.equal((result.html.match(/<a /g)||[]).length,1);
+  const result=processEmailMessage(common);assert.match(result.subject,decision==='CONFIRMED'?/Reserva confirmada/:/Agendamento recusado/);assert.match(result.text,/Resposta registrada em [a-zçáéíóú-]+, \d{2}\/\d{2}\/\d{4}/);assert.match(result.text,decision==='CONFIRMED'?/Resultado: reserva confirmada/:/Resultado: reserva recusada/);if(decision==='CONFIRMED')assert.match(result.text,/Conceito e Ata/);assert.equal((result.html.match(/<a /g)||[]).length,decision==='CONFIRMED'?1:2);
+  if(decision==='UNAVAILABLE'){
+   assert.match(result.text,/É necessário solicitar novamente a reserva/);
+   assert.match(result.text,/abram o mesmo TCC.*Dados do processo.*Refazer reserva/);
+   assert.match(result.text,/O código do TCC será mantido; não criem outro trabalho/);
+   assert.match(result.html,/Refazer reserva/);
+  }
  }
  process.defesa.departmentResponse!.decision='CONFIRMED';
- const authors=processEmailMessage({...common,recipient:process.aluno1.email,departmentUrl:undefined});assert.match(authors.text,/^Prezados departamento, autores e orientador,/);assert.match(authors.text,/Autores: confiram/);assert.doesNotMatch(authors.text,/Participantes:/);
+ const authors=processEmailMessage({...common,recipient:process.aluno1.email,departmentUrl:undefined});assert.match(authors.text,/^Prezados autores e orientador,/);assert.match(authors.text,/Autores: confiram/);assert.doesNotMatch(authors.text,/Participantes:/);
+});
+test('comprovante de outro local identifica o orientador e preserva o nome do espaço',()=>{
+ const process=structuredClone(DEMO_PROCESSES[0]);
+ const local='Sala do Departamento de Saúde Coletiva';
+ process.defesa.local=local;
+ process.defesa.departmentResponse={decision:'CONFIRMED',revision:1,respondedAt:'2026-11-06T12:00:00Z',respondedBy:process.orientador.email,startAt:process.defesa.startAt,endAt:process.defesa.endAt,local};
+ const message=processEmailMessage({process,recipient:process.aluno1.email,subject:'Reserva confirmada',text:'',templateId:'email-comprovante-reserva',baseUrl:'https://portal.example',courseName:'Enfermagem',advisorApproval:true});
+ assert.match(message.text,/^Prezados autores e orientador,/);
+ assert.match(message.text,/O orientador confirmou a reserva/);
+ assert.ok(message.text.includes(local));
 });
 test('ata tem métodos em lista menor e termo exige um PDF conjunto, com observação da entrega sem negrito',()=>{
  const process=structuredClone(DEMO_PROCESSES[0]),common={process,recipient:process.orientador.email,subject:'Documento',text:'Prezado participante,\n\nDocumento disponível.',baseUrl:'https://portal.example',courseName:'Enfermagem'};
- const ata=processEmailMessage({...common,templateId:'email-assinatura-ata',eventCode:'EVALUATION_SUBMITTED'});assert.match(ata.text,/^Prezado orientador,/);assert.match(ata.text,/Somente o orientador/);assert.doesNotMatch(ata.text,/assinaturas dos autores|Autores e orientador:/);assert.match(ata.html,/<ul style="[^"]*font-size:13px/);assert.equal((ata.html.match(/<li /g)||[]).length,2);
- const term=processEmailMessage({...common,templateId:'email-assinatura-termo',eventCode:'REPOSITORY_SUBMITTED'});assert.match(term.text,/Todos assinam no mesmo nível/);assert.match(term.text,/único arquivo completo/);assert.match(term.text,/botão Asten em Documentos administrativos/);assert.match(term.text,/receberão o link por e-mail/);
+ const ata=processEmailMessage({...common,templateId:'email-assinatura-ata',eventCode:'EVALUATION_SUBMITTED'});assert.match(ata.text,/^Prezado orientador,/);assert.match(ata.text,/Orientador, examinadores e autores: a ata exige a assinatura/);assert.doesNotMatch(ata.text,/Somente o orientador.*assina a ata/);assert.doesNotMatch(ata.text,/assinaturas dos autores|Autores e orientador:/);assert.match(ata.html,/<ul style="[^"]*font-size:13px/);assert.equal((ata.html.match(/<li /g)||[]).length,2);
+ const term=processEmailMessage({...common,templateId:'email-assinatura-termo',eventCode:'REPOSITORY_SUBMITTED'});assert.match(term.text,/Cada autor e o orientador assinam no mesmo nível/);assert.match(term.text,/único arquivo completo/);assert.doesNotMatch(term.text,/botão Asten/i);assert.match(term.text,/link individual recebido por e-mail/);
  const delivery=processEmailMessage({...common,templateId:'email-entrega-repositorio',eventCode:'SIGNATURE_COMPLETED'});assert.match(delivery.text,/^Prezados autores,/);assert.match(delivery.text,/o Termo ficará disponível/);assert.match(delivery.html,/Observação: a entrega pode ser feita por qualquer um dos autores\./);assert.doesNotMatch(delivery.html,/<strong>Observação/);
 });
 test('convite mantém orientação e coorientação no mesmo bloco e não inventa coorientação',()=>{
  const process=structuredClone(DEMO_PROCESSES[0]);process.banca=[{id:'guest1',nome:'Beatriz Santos',email:'guest1@example.invalid',funcao:'EXAMINER_2'},{id:'guest2',nome:'Rafael Lima',email:'guest2@example.invalid',funcao:'EXAMINER_3'}];process.coorientador={...process.orientador,nome:'Ana Souza',email:'ana@example.invalid'};
  const common={process,recipient:'guest1@example.invalid',subject:'Convite',text:'',templateId:'email-convite',eventCode:'INVITATION_SENT',baseUrl:'https://portal.example',courseName:'Enfermagem'};
- const invitation=processEmailMessage(common);assert.match(invitation.text,/Local: [^\n]+\nOrientador: [^\n]+\nCoorientador: [^\n]+\n\nAvaliadores da banca:/);process.coorientador=null;assert.doesNotMatch(processEmailMessage(common).text,/Coorientador:/);
+ const invitation=processEmailMessage(common);assert.match(invitation.text,/Examinadores da banca:\n[^\n]+\n[^\n]+\n\nTítulo:[\s\S]+Local: [^\n]+\nOrientador: [^\n]+\nCoorientador: [^\n]+/);process.coorientador=null;assert.doesNotMatch(processEmailMessage(common).text,/Coorientador:/);
 });
 test('modelo salvo de entrega usa orientador, preserva instruções e retira alternativa de versão sem correções',()=>{
  const process=structuredClone(DEMO_PROCESSES[0]);

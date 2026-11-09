@@ -15,3 +15,5 @@ O Supabase Storage recebe somente uploads temporários de DOCX e PDF por URL ass
 As variáveis `SUPABASE_URL` e `SUPABASE_SECRET_KEY` são exclusivas do servidor. Nunca use prefixo `VITE_` para a chave secreta.
 
 O painel diferencia conexão do Supabase, esquema normalizado, runtime transacional v6, outbox Asten e transporte privado. Teste real de upload, concorrência, carga e failover permanece obrigatório antes de abrir o ambiente definitivo.
+
+A migração `20261106001943_runtime_audit_delta.sql` habilita a leitura incremental do histórico de auditoria. Uma instância aquecida pode reutilizar blocos já confirmados, e uma instância nova recebe o histórico completo. A revisão e os dados vêm da mesma leitura PostgreSQL. O commit, os backups e a restauração mantêm o snapshot completo. Em produção, o Portal tenta a RPC por padrão e usa a leitura integral quando o PostgREST confirma que a RPC ainda não existe. Defina `PORTAL_RUNTIME_AUDIT_DELTA=false` para voltar à leitura integral.

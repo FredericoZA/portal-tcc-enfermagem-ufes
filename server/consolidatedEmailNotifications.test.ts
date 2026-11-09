@@ -32,8 +32,8 @@ test('cadastro e confirmação não geram avisos duplicados; solicitação, conv
  const next=withConsolidatedEmailNotifications({...source,workflowStages:[{id:'created',triggerEvent:'TCC_CREATED',actions:[{id:'request',type:'email',refId:'email-reserva'},{id:'ack',type:'email',refId:'email-instrucoes-cadastro'}]},{id:'confirmed',triggerEvent:'LOCATION_CONFIRMED',actions:[{id:'duplicate',type:'email',refId:'email-confirmacao'},{id:'invite',type:'email',refId:'email-convite'}]}]});
  assert.deepEqual((next.workflowStages[0].actions as any[]).map(a=>a.refId),['email-reserva']);assert.deepEqual((next.workflowStages[1].actions as any[]).map(a=>a.refId),['email-convite']);
  const common={process:{...p,defesa:{...p.defesa,departmentResponse:{decision:'CONFIRMED',revision:1,respondedAt:'2026-10-26',respondedBy:'department@example.invalid',startAt:p.defesa.startAt,endAt:p.defesa.endAt}}},recipient:p.aluno1.email,subject:'Reserva confirmada',text:'O departamento confirmou a reserva.',templateId:'email-comprovante-reserva',baseUrl:'https://portal.example',courseName:'Enfermagem'} as const;
- const confirmation=processEmailMessage(common);assert.match(confirmation.text,/no dia da defesa.*Avaliação e ata/);assert.equal((confirmation.html.match(/<a /g)||[]).length,1);
- const department=processEmailMessage({...common,recipient:'department@example.invalid',departmentUrl:'https://portal.example/department-receipt'});assert.match(department.text,/Avaliação e ata/);
+ const confirmation=processEmailMessage(common);assert.match(confirmation.text,/no dia da defesa.*Conceito e Ata/);assert.equal((confirmation.html.match(/<a /g)||[]).length,1);
+ const department=processEmailMessage({...common,recipient:'department@example.invalid',departmentUrl:'https://portal.example/department-receipt'});assert.match(department.text,/Conceito e Ata/);
  const request=processEmailMessage({...common,templateId:'email-reserva',departmentUrl:undefined});assert.match(request.text,/cadastro do trabalho foi recebido/);assert.match(request.text,/confirmação do departamento/);
 });
 test('retira apenas aviso de declaração à presidência, preservando criação e assinatura do documento',()=>{

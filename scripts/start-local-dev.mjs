@@ -26,10 +26,14 @@ const child = spawn(process.platform === 'win32' ? 'npm.cmd' : 'npm', [
     HOST: '127.0.0.1',
     DISABLE_HMR: 'false',
     PORTAL_PERSISTENCE_PROVIDER: 'local_file',
-    PORTAL_LOCAL_REVIEW_DATA: process.env.PORTAL_LOCAL_REVIEW_DATA || 'true',
     PORTAL_GIT_COMMIT: commit,
     PORTAL_SERVE_COMPILED_CLIENT: 'false',
-    VITE_PORTAL_LOCAL_DEMO_AUTH: 'true',
+    VITE_PORTAL_LOCAL_DEMO_AUTH: 'false',
+    PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'false',
+    PORTAL_TEST_DOCUMENT_RENDERER: 'false',
+    PORTAL_LOCAL_REVIEW_DATA: 'false',
+    PORTAL_OTP_DELIVERY_MODE: 'log',
+    PORTAL_ALLOW_LOCAL_OTP_STORE: 'true',
   },
 });
 child.on('error', error => {

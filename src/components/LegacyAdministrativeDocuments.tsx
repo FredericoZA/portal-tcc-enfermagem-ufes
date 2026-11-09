@@ -11,7 +11,7 @@ const groups: {kind:LegacyAdministrativeFileView['kind'];label:string}[]=[
   {kind:'ATA',label:'Ata'},
   {kind:'TERMO',label:'Termo de Autorização e Publicação'},
   {kind:'DECLARACAO',label:'Declaração de Participação na Banca'},
-  {kind:'AVALIACAO',label:'Instrumento de avaliação'},
+  {kind:'AVALIACAO',label:'Instrumento histórico da banca'},
 ];
 
 /** Existing administrative tab, with original historical files and no live signature actions. */

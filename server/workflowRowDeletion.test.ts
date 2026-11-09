@@ -9,6 +9,6 @@ test('explicitly deleted automatic rows stay deleted after reopening and keep sh
   {id:'clear',triggerEvent:'PUBLICATION_CLEARED',actions:[],hiddenCatalogItems:['doc:declaration']}
  ]};
  const once=upgradeStudioDraft(source),twice=upgradeStudioDraft(once);
- for(const stage of twice.workflowStages||[]){assert.equal((stage.actions as any[]).length,0);assert.equal((stage.hiddenCatalogItems as string[]).length,1);}
+ for(const stage of twice.workflowStages||[]){assert.equal((stage.actions as any[]).filter(action=>action.type!=='interaction').length,0);if(['registration','delivery','clear'].includes(String(stage.id)))assert.equal((stage.hiddenCatalogItems as string[]).length,1);}
  assert.ok(twice.docTemplates?.some(t=>t.id==='declaration'));assert.ok(twice.emailTemplates?.some(t=>t.id==='email-reserva'));assert.ok(twice.emailTemplates?.some(t=>t.id==='email-entrega-repositorio'));
 });

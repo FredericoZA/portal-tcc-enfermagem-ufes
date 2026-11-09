@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { IntegrationStudioSettings } from '../../src/types/integrationStudio';
 import type { ProcessData } from '../../src/types';
-import { compileWorkflow, executeWorkflowEvent, mergeWorkflowHtmlVariables, mergeWorkflowVariables, planWorkflowEvent } from './runtime';
+import { buildProcessVariables, compileWorkflow, executeWorkflowEvent, mergeWorkflowHtmlVariables, mergeWorkflowVariables, planWorkflowEvent } from './runtime';
 
 const processFixture: ProcessData = {
   id: 'process-1', protocolo: 'TCC-2026-0001', titulo: 'Cuidado seguro', etapaAtual: 'CADASTRO', status: 'EM_RASCUNHO', createdByEmail: 'ana@aluno.ufes.br',
@@ -11,6 +11,17 @@ const processFixture: ProcessData = {
   defesa: { startAt: '2026-09-01T13:00:00.000Z', endAt: '2026-09-01T14:30:00.000Z', local: 'Sala 1' },
   avaliacao: { status: 'PENDENTE' }, dataRevision: 2, createdAt: '2026-08-01T00:00:00.000Z', updatedAt: '2026-08-01T00:00:00.000Z'
 };
+
+test('historical identifiers stay in the private record and cannot enter newly rendered workflow messages',()=>{
+ const process=structuredClone(processFixture);
+ process.orientador.siape='HISTORICAL-SIAPE';
+ process.avaliacao.answers={ALUNO_1_CPF:'HISTORICAL-CPF',EXAMINADOR_2_CIAP:'HISTORICAL-CIAP',OBSERVACAO:'Comentário acadêmico'};
+ const values=buildProcessVariables({process,eventCode:'TCC_CREATED',actorEmail:process.aluno1.email,extraVariables:{ALUNO_RA:'HISTORICAL-RA'}} as any);
+ const rendered=mergeWorkflowVariables('<<ALUNO_1_MATRICULA>> <<ORIENTADOR_SIAPE>> <<ALUNO_1_CPF>> <<EXAMINADOR_2_CIAP>> <<ALUNO_RA>> <<OBSERVACAO>>',values);
+ assert.doesNotMatch(rendered,/20260001|HISTORICAL-/);
+ assert.match(rendered,/Comentário acadêmico/);
+ assert.equal(process.aluno1.matricula,'20260001');assert.equal(process.orientador.siape,'HISTORICAL-SIAPE');
+});
 
 const studioFixture = {
   schemaVersion: 2, revision: 1, savedAt: '2026-08-01T00:00:00.000Z', savedBy: 'master@ufes.br', driveModelosFolderUrl: '',
@@ -198,4 +209,48 @@ test('nenhum formato de marcador permite encaminhar anexos por resposta livre', 
     assert.equal(sent, false, marker);
     assert.equal(run.status, 'PARTIAL_FAILURE');
   }
+});
+
+test('form task receives configured participant roles; invalid audience does not create a task',async()=>{
+ const studio=structuredClone(studioFixture) as any;
+ studio.formTemplates[0].recipientRoles=['AUTHORS','COADVISOR'];
+ const tasks:any[]=[];
+ const ports={async createDocument(){return{};},async createFormTask(input:any){tasks.push(input);return{};},async sendEmail(){return{};}};
+ const context={process:processFixture,actorEmail:processFixture.aluno1.email,actorRoles:['STUDENT'] as any,eventCode:'TCC_CREATED' as any,occurredAt:'2026-08-01T10:00:00.000Z'};
+ const run=await executeWorkflowEvent(studio,context,ports);
+ assert.equal(run.status,'COMPLETED');assert.equal(tasks.length,1);
+ assert.deepEqual(tasks[0].recipientRoles,['AUTHORS','COADVISOR']);
+ assert.deepEqual(run.actions.find(action=>action.kind==='FORM')?.formRecipientRoles,['AUTHORS','COADVISOR']);
+ assert.equal(run.actions.filter(action=>action.kind!=='FORM').some(action=>action.formRecipientRoles!==undefined),false);
+ studio.formTemplates[0].recipientRoles=['RESERVATION_RESPONSIBLE'];tasks.length=0;
+ const rejected=await executeWorkflowEvent(studio,context,ports);
+ assert.equal(rejected.status,'PARTIAL_FAILURE');assert.equal(tasks.length,0);
+});
+
+
+test('activity system trigger executes only at its event and preserves other stage activities and prerequisites',()=>{
+ const value=structuredClone(studioFixture) as IntegrationStudioSettings;
+ const actions=value.workflowStages[0].actions as any[];
+ actions[1].executionEvent='SIGNATURE_COMPLETED';
+ actions[1].condition={fieldKey:'ACEITE_CUSTOM',operator:'IS_TRUE'};
+ const context={process:processFixture,actorEmail:processFixture.aluno1.email,actorRoles:[]};
+ const created=planWorkflowEvent(value,{...context,eventCode:'TCC_CREATED'});
+ assert.deepEqual(created.actions.map(a=>a.id),['make-doc','ask-local']);
+ assert.equal(planWorkflowEvent(value,{...context,eventCode:'SIGNATURE_COMPLETED',extraVariables:{ACEITE_CUSTOM:false}}).actions.length,0);
+ const signed=planWorkflowEvent(value,{...context,eventCode:'SIGNATURE_COMPLETED',extraVariables:{ACEITE_CUSTOM:true}});
+ assert.deepEqual(signed.actions.map(a=>a.id),['send-mail']);
+ assert.equal(signed.actions[0].stageId,'stage-created');
+ assert.equal(planWorkflowEvent(value,{...context,eventCode:'LOCATION_CONFIRMED'}).actions.length,0);
+ delete actions[1].executionEvent;
+ assert.equal(planWorkflowEvent(value,{...context,eventCode:'TCC_CREATED',extraVariables:{ACEITE_CUSTOM:true}}).actions.length,3);
+});
+test('unsupported activity trigger fails compilation and cannot dispatch an external action',async()=>{
+ const value=structuredClone(studioFixture) as IntegrationStudioSettings;
+ (value.workflowStages[0].actions as any[])[1].executionEvent='MANUAL_BYPASS';
+ const calls:string[]=[];
+ const result=await executeWorkflowEvent(value,{process:processFixture,actorEmail:processFixture.aluno1.email,actorRoles:[],eventCode:'TCC_CREATED'}, {
+  async createDocument(){calls.push('doc');return{};},async createFormTask(){calls.push('form');return{};},async sendEmail(){calls.push('email');return{};}
+ });
+ assert.ok(compileWorkflow(value).issues.some(issue=>issue.path.endsWith('.executionEvent')));
+ assert.deepEqual(calls,[]);
 });

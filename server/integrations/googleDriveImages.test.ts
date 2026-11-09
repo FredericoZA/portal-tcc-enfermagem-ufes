@@ -70,8 +70,10 @@ test('imagens usam raiz do snapshot ou configuração persistida sem depender do
   let reads=0;let savedRoot:string|undefined=ctx.academicRootId;
   t.mock.method(globalThis,'fetch',async(input:unknown,init?:RequestInit)=>{
     reads++;assert.equal(init?.method,undefined);
-    assert.match(String(input),/portal_runtime_state\?id=eq.global&select=payload,revision&limit=1$/);
-    return Response.json([{revision:12,payload:{settings:{driveRootFolderId:savedRoot}}}]);
+    const target=new URL(String(input));
+    assert.ok(target.pathname.endsWith('/portal_runtime_state'));
+    assert.equal(target.searchParams.get('select'),'driveRootFolderId:payload->settings->>driveRootFolderId');
+    return Response.json([{driveRootFolderId:savedRoot}]);
   });
   assert.equal(await resolvePortalImageRoot(),ctx.academicRootId);
   process.env.PORTAL_DRIVE_ROOT_FOLDER_ID='bootstrap_root_123456';

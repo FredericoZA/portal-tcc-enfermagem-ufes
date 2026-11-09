@@ -60,7 +60,7 @@ O job conserva os IDs de repositório e pasta fixados na criação. Antes do enc
 
 | Documento | E-mail usado automaticamente |
 | --- | --- |
-| Ata de defesa | Orientador cadastrado no trabalho |
+| Ata de defesa | Orientador e dois examinadores titulares cadastrados no trabalho, todos na prioridade 1 |
 | Termo de autorização de publicação | Aluno(s) e orientador cadastrados, todos na prioridade 1 |
 | Declaração de banca | Presidente da Comissão cadastrado nas configurações |
 
@@ -68,7 +68,7 @@ O envio não aceita trocar os destinatários na requisição. E-mails ausentes, 
 
 Após a confirmação humana na Asten, o callback persiste o aviso e o servidor consulta o provedor, recebe o PDF original e o arquiva no Drive privado. O usuário baixa o documento pela rota autorizada do Portal; não precisa anexar uma cópia assinada. Enquanto há assinatura pendente, as telas de processo e coordenação consultam o estado do Portal a cada 10 segundos quando ativas. Esse intervalo de consulta não é um prazo garantido de entrega do provedor ou do Drive.
 
-Ações individuais e em lote usam o mesmo fluxo de declaração. O lote envia uma solicitação por vez, preserva falhas e itens ainda não tentados e interrompe em falha de autenticação/autorização. É necessário manter a aba aberta para continuar a enviar os itens restantes; o retorno de envelopes já enviados é processado no servidor mesmo com a aba fechada.
+Na instalação com envio automático ativo, a rotina do servidor prepara e encaminha os pedidos elegíveis, incluindo a declaração. O painel acompanha o estado do documento e os participantes assinam pelo link individual recebido por e-mail. O processamento de pedidos e retornos continua no servidor com a aba fechada. Falhas ou respostas incertas permanecem registradas para tratamento pelo fluxo normal.
 
 ## 3 — Piloto controlado (responsável técnico + Master)
 - Criar uma **Ata fictícia**, com nomes e e-mails autorizados apenas para teste; escolher método de identificação aprovado pelo setor jurídico/LGPD. O método 2 solicita **documento com foto** e exige tratamento cuidadoso de dados pessoais.

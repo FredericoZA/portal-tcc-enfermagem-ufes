@@ -1,7 +1,7 @@
 import {academicName,orderedAuthors,facultyRole} from '../../src/utils/personPresentation';
 import type {ProcessData} from '../../src/types';
 import {adaptDocumentLanguage} from '../../src/utils/documentLanguage';
-import {bodyEditRequests} from './googleDocsBody';
+import {documentMainBody,bodyEditRequests} from './googleDocsBody';
 /** Keep separate text runs between edits (names, title and institutional formatting). */
 function paragraphRequests(node:any,before:string,after:string):any[]{
  const tokens=(text:string)=>text.match(/[\p{L}\p{N}]+|[^\p{L}\p{N}]/gu)||[];
@@ -120,7 +120,7 @@ export function declarationDateLayoutRequests(document:any):any[]{
   const scope=node.tabProperties?.tabId||tabId,content=node.body?.content;
   if(Array.isArray(content))for(let i=0;i<content.length;i++){
    const entry=content[i],text=entry.paragraph?.elements?.map((e:any)=>e.textRun?.content||'').join('').trim()||'';
-   if(!/^[\p{L} .’'-]+(?:[-–]\s*[A-Z]{2})?[, -]+\d{1,2} de [\p{L}]+ de \d{4}\.?$/u.test(text))continue;
+   if(!/^[\p{L} .’'-]+(?:[-–]\s*[A-Z]{2})?[, -]+(?:(?:(?:segunda|terça|quarta|quinta|sexta)-feira|sábado|domingo),\s*)?\d{1,2} de [\p{L}]+ de \d{4}\.?$/u.test(text))continue;
    const range=(value:any)=>({startIndex:value.startIndex,endIndex:value.endIndex,...(scope?{tabId:scope}:{})});
    groups.push({index:entry.startIndex,request:{updateParagraphStyle:{range:range(entry),paragraphStyle:{alignment:'END',spaceAbove:{magnitude:6,unit:'PT'},spaceBelow:{magnitude:6,unit:'PT'},lineSpacing:100},fields:'alignment,spaceAbove,spaceBelow,lineSpacing'}}});
    const previous=content[i-1],before=previous?.paragraph?.elements;
@@ -182,10 +182,10 @@ export function authorizationOptionsLayoutRequests(document:any):any[]{
 const authorSignatureLabel = (person: ProcessData['aluno1']) => person.tratamento === 'Aluna' ? 'Aluna autora' : person.tratamento === 'Aluno' ? 'Aluno autor' : 'Autoria';
 const studentSignatureRole = /^(?:Alun[oa]s?(?: autor(?:a|es|as)?)?|Autor(?:a|es|as)?|Autoria|Discentes?)$/iu;
 
-/** Add the coadvisor after the authors, without adding them as a required signer. */
+/** Include the coadvisor signature block only after explicit presence confirmation. */
 export function ataCoadvisorBlockRequests(document:any,process:ProcessData):any[]{
  const co=process.coorientador,last=orderedAuthors(process).filter(person=>person.nome.trim()).at(-1);
- if(!co?.nome?.trim()||!last)return [];
+ if(process.avaliacao?.coadvisorPresent!==true||!co?.nome?.trim()||!last)return [];
  const requests:any[]=[];
  const walk=(node:any,tabId?:string)=>{
   if(!node||typeof node!=='object')return;
@@ -287,4 +287,16 @@ export function coadvisorIdentificationRequests(document:any,process:ProcessData
  const index=last.node.endIndex-1,scope=last.tabId?{tabId:last.tabId}:{};
  const line=`\n${facultyRole(co,'coorientador').replace(/^\p{L}/u,letter=>letter.toLocaleUpperCase('pt-BR'))}: ${academicName(co,'abbreviated')}`;
  return [{insertText:{location:{index,...scope},text:line}},{updateTextStyle:{range:{startIndex:index+1,endIndex:index+line.length,...scope},textStyle:{bold:false},fields:'bold'}}];
+}
+
+/** Join only the closing formula to the opinion; leave all styled text in place. */
+export function ataClosingContinuationRequests(document:any):any[]{
+ const body=documentMainBody(document);
+ if(!body)return [];
+ const matches=[...body.text.matchAll(/(?<=[.!?])[ \t\r\n]+(?=Nada mais havendo a tratar,)/giu)];
+ const scope=body.tabId?{tabId:body.tabId}:{};
+ return matches.filter(match=>/[\r\n]/.test(match[0])).reverse().flatMap(match=>{
+  const startIndex=body.startIndex+match.index!,endIndex=startIndex+match[0].length;
+  return [{deleteContentRange:{range:{startIndex,endIndex,...scope}}},{insertText:{location:{index:startIndex,...scope},text:' '}}];
+ });
 }

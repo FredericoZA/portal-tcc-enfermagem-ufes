@@ -12,7 +12,7 @@ test('rodapé apresenta um membro por linha, independentemente da quantidade', (
 });
 
 test('rodapé ordena a lista sem alterar configurações nem nomes originais', () => {
-  assert.match(footer, /const membersList=\[\.\.\.\(configured\.length\?configured:legacy\.length\?legacy:layout\)\]/);
+  assert.match(footer, /const membersList[^=]*=\s*\[\.\.\.\(configured\.length\?configured:legacy\.length\?legacy:layout\.length\?layout:cachedMembers\)\]/);
   assert.match(footer, /\.sort\(\(a,b\)=>compareCommissionMemberNames\(a\.name,b\.name\)\)/);
   const names = [
     'Profª. Drª. Roseane Vargas Rohr',

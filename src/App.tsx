@@ -157,7 +157,8 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <PortalLiveSync />
+      <PortalLiveSync viewingPublicData={Boolean(selectedProcessId) ||
+        !['tutorial', 'fluxo-tcc', 'informacoes-gerais', 'como-chegar', 'replicar'].includes(currentTab)} />
       <PortalDialogs />
       <PortalOperationStatus />
       <PortalAccessRedirect />
@@ -180,6 +181,7 @@ export default function App() {
 
           <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
             <Header
+              isMobileSidebarOpen={isOpenMobileSidebar}
               onOpenMobileSidebar={() => setIsOpenMobileSidebar(true)}
               onGoHome={() => {
                 setProcessLink(null);
@@ -198,7 +200,7 @@ export default function App() {
                   : currentTab === 'meus-processos' ? 'Meus Trabalhos de TCC'
                   : currentTab === 'novo-processo' ? 'Cadastrar Trabalho de TCC'
                   : currentTab === 'agenda' ? 'Agenda de Defesas'
-                  : currentTab === 'avaliacoes' ? 'Avaliações de TCC'
+                  : currentTab === 'avaliacoes' ? 'Conceito e Ata'
                   : currentTab === 'documentos' ? 'Documentos'
                   : currentTab === 'coordenador' ? 'Área do Presidente'
                   : currentTab === 'configuracoes' ? 'Configurações & Modelos de Arquivos'

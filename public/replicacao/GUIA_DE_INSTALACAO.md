@@ -14,15 +14,16 @@ O Portal TCC é um sistema administrativo para o ciclo completo do trabalho de c
 
 **Caminho de um TCC:** cadastro dos autores e membros da banca → solicitação e confirmação de local e horário → convite → defesa e registro da deliberação pelo orientador → conferência e assinatura da ata → entrega do trabalho final → termo de autorização, quando houver publicação → declaração e encerramento.
 
-**Documentos e parecer:** os modelos DOCX cadastrados pelo administrador são preenchidos com informações do processo e convertidos para PDF. O rascunho do parecer é montado por um texto-base fixo associado ao resultado selecionado, sem consulta a modelos de linguagem, e precisa receber a fundamentação efetiva da banca antes do registro. O orientador confere a ata e confirma o envio.
+**Documentos e parecer:** os modelos DOCX cadastrados pelo administrador são preenchidos com informações do processo e convertidos para PDF. O rascunho do parecer é montado por um dos três textos-base fixos — aprovado, aprovado com ressalva ou reprovado — e pode incorporar o título cadastrado do trabalho. O sistema não analisa o conteúdo acadêmico nem gera argumentos sobre mérito. O orientador deve preencher a fundamentação efetivamente deliberada pela banca, conferir a ata e confirmar o envio.
 
-**Indicadores:** o servidor calcula contagens, percentuais, medianas e distribuições por fórmulas comuns. A visualização pública oculta dados pessoais e campos livres, e suprime resultados com poucos registros. Essa estatística não utiliza modelos generativos, pontuação de estudantes nem inferência de resultados acadêmicos.
+**Indicadores:** o servidor calcula contagens, percentuais, medianas e distribuições por fórmulas comuns. O acesso exige autenticação do Master ou da Presidência, validada no servidor. O relatório não inclui nomes, contatos nem campos livres e suprime grupos pequenos. As antigas rotas públicas foram encerradas. Essa estatística não utiliza modelos generativos, pontuação de estudantes nem inferência de resultados acadêmicos.
 
 **Sugestões:** visitantes podem enviar voluntariamente melhorias pelo formulário público. O administrador lê e analisa as mensagens; elas não alimentam um mecanismo de recomendações ou de alteração automática do código.
 
-**Acesso e segurança:** os participantes têm permissões associadas a seus papéis no processo. O banco Supabase guarda os registros operacionais; documentos e modelos ficam no Google Drive privado. A Asten, o Gov.br e o Gmail são utilizados somente conforme as etapas e autorizações configuradas.
+**Acesso e segurança:** os participantes têm permissões associadas a seus papéis no processo. O banco Supabase guarda registros, permissões, auditoria e transporte privado temporário de arquivos; o arquivo definitivo de documentos, modelos e trabalhos é o Google Drive privado. A Asten, o Gov.br e o Gmail são utilizados somente conforme as etapas e autorizações configuradas.
 
-**Legislação:** esta instalação da UFES observa a Portaria Normativa GR/Ufes nº 310/2026 quanto à não utilização de sistemas de IA generativa nas operações descritas. Isso não substitui as verificações de LGPD, segurança da informação, contratos, registros de tratamento e demais exigências institucionais aplicáveis.
+**Legislação:** a Portaria Normativa GR/Ufes nº 310/2026 é referência para a revisão técnica desta instalação. Não existem chamadas a modelos de IA nos fluxos operacionais descritos. Isso não substitui as verificações de LGPD, segurança da informação, contratos, registros de tratamento e demais exigências institucionais aplicáveis.
+
 
 ## Arquitetura
 
@@ -65,17 +66,17 @@ Um autor autenticado, cadastrado e autorizado usa **Meus TCCs → Cadastrar TCC*
 
 Na última etapa, o autor escolhe um local e informa data e horário, com intervalo de 1h30. Auditório e sala de reuniões dependem do departamento; outro local informado pelo autor depende do orientador. Consultar mapa de salas, aulas, eventos, reservas e funcionamento do prédio evita retrabalho. Não se exige comparecimento prévio ao departamento.
 
-O pedido já contém local, data e horário. O responsável apenas aceita ou recusa; não escolhe um local alternativo. Os botões de decisão são enviados somente ao responsável. Autores e orientador recebem comunicação informativa, sem esses botões. O processamento registra a resposta, prepara o comprovante e comunica os envolvidos.
+O pedido já contém local, data e horário. O responsável apenas aceita ou recusa; não escolhe um local alternativo. Os botões de decisão são enviados somente ao responsável. Autores e orientador recebem comunicação informativa, sem esses botões. O resultado é enviado como resposta à conversa do responsável, com o comprovante em PDF. Responsável, autores e orientador são destinatários diretos; somente o endereço de auditoria configurado fica em cópia.
 
-O bloqueio do local evita conflitos entre defesas do Portal; não verifica reservas externas. **Solicitar nova data** e **Alterar reserva** permitem um novo pedido conforme a etapa, invalidando a confirmação anterior. Links de versões antigas não confirmam uma solicitação nova.
+O bloqueio do local evita conflitos entre defesas do Portal; não verifica reservas externas. **Refazer reserva** e **Alterar reserva** permitem um novo pedido conforme a etapa, invalidando a confirmação anterior. Links de versões antigas não confirmam uma solicitação nova.
 
 ### Convite, conceito e ata
 
-Com a reserva confirmada, o convite é enviado em uma mensagem conjunta aos examinadores e ao coorientador, quando houver, com os destinatários em cópia conforme a configuração. Não gere um convite idêntico para cada examinador. A carta-convite fica em **Documentos administrativos** e não exige assinatura.
+Com a reserva confirmada, o convite é enviado automaticamente em uma mensagem conjunta aos dois examinadores como destinatários, com cópia aos autores, orientador e coorientador, quando houver, além da auditoria configurada. Não gere um convite idêntico para cada examinador. A carta-convite fica em **Documentos administrativos** e não exige assinatura.
 
 A partir do horário da defesa, com os requisitos anteriores concluídos, o orientador registra **Aprovado**, **Aprovado com ressalva** ou **Reprovado**, com parecer. O Portal TCC registra conceito e documentação. A avaliação acadêmica e o lançamento da nota são feitos em https://professor.ufes.br/ nesta instalação; outra instituição deve configurar sua referência própria.
 
-O orientador visualiza e confere a ata e confirma o registro. O Portal abre **Documentos administrativos**. Esse registro não solicita assinatura automaticamente. O método é escolhido no cartão do documento: Asten ou Gov.br. Somente o orientador assina a ata.
+O orientador visualiza e confere a ata e confirma o registro. O Portal abre **Documentos administrativos** e encaminha automaticamente o pedido pelo ASTEN. Assinam o orientador, os dois examinadores, os autores e o coorientador que participou da sessão, até seis pessoas. O ASTEN informa o estado do envio no cartão; cada signatário assina pelo link pessoal recebido por e-mail. Gov.br permanece como alternativa.
 
 ### Entrega e publicação
 
@@ -83,13 +84,13 @@ Após a ata assinada e arquivada, qualquer um dos autores preenche o resumo e as
 
 Entrega e publicação são decisões distintas. Cada PDF tem sua própria autorização de publicação. O resumo textual do catálogo é apresentado como metadado do trabalho, sem usar a autorização do PDF para ocultá-lo.
 
-**Confirmar entrega e ir para documentos** registra a entrega e abre **Documentos administrativos**. Essa ação não dispara automaticamente o Asten. Sem publicação autorizada de nenhum arquivo, não há Termo. Havendo autorização, os autores e o orientador assinam o mesmo Termo a partir do cartão desse documento.
+**Confirmar entrega e ir para documentos** registra a entrega e abre **Documentos administrativos**. Sem publicação autorizada de nenhum arquivo, não há Termo. Havendo autorização, essa ação gera o termo e encaminha automaticamente o pedido ASTEN aos autores e ao orientador. Todos assinam o mesmo documento pelo link individual recebido por e-mail.
 
 No Asten, todos assinam o Termo no mesmo nível. Pelo Gov.br, os autores e o orientador assinam o mesmo PDF; o orientador devolve o arquivo completo. O Master mantém a função administrativa prevista, sem dispensar assinaturas exigidas. O envio isolado não conclui a conferência.
 
 ### Declaração e encerramento
 
-Após a entrega, a ata e o termo arquivados quando aplicável, a presidência da Comissão assina a declaração pela **Área do Presidente**. Essa presidência não se confunde com o orientador, que preside a sessão de defesa.
+Após a entrega, a ata e o termo arquivados quando aplicável, a declaração é encaminhada automaticamente pelo ASTEN à presidência da Comissão. A pendência é acompanhada pela **Área do Presidente**, e a assinatura é feita pelo link pessoal recebido por e-mail ou pelo fluxo alternativo Gov.br. Essa presidência não se confunde com o orientador, que preside a sessão de defesa.
 
 O processo só conclui após o arquivamento dos documentos exigidos. Criar envelope, enviar e-mail ou anexar PDF não comprova, por si só, uma assinatura concluída. Preserve idempotência, reconciliação e recuperação; não reenvie automaticamente um envelope de resultado incerto.
 
@@ -97,7 +98,7 @@ O processo só conclui após o arquivamento dos documentos exigidos. Criar envel
 
 Processos novos usam cinco cartões em **Documentos administrativos**: comprovante de reserva, carta-convite, ata, termo e declaração. O Termo só se aplica quando houver publicação autorizada. Ver e Baixar PDF respeitam a disponibilidade e a permissão de cada documento.
 
-Registros legados usam as mesmas telas do Portal, com código `NNN - Legado`, campos ausentes preservados e documentos originais. Neles há um sexto cartão para o instrumento de avaliação antigo, quando localizado. Esse instrumento não aparece em Conceito e Ata nem é criado para trabalhos novos.
+Registros legados usam as mesmas telas do Portal, com código `NNN - Legado`, campos ausentes preservados e documentos originais. Neles há um sexto cartão para o instrumento histórico da banca, quando localizado. Esse instrumento não aparece em Conceito e Ata nem é criado para trabalhos novos.
 
 Importar histórico não deve disparar novas assinaturas ou comunicações, inventar dados, recriar documentos assinados nem autorizar arquivos automaticamente. Preserve IDs, hashes e proveniência. Só publique os PDFs cuja autorização esteja comprovada.
 

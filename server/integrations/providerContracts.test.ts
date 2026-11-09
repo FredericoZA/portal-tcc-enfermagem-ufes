@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, AstenRepositorySelectionError, parseAstenAccountAndRepository, extractAstenSignedPdf, extractAstenEnvelopeIdentity, callAsten } from './asten';
+import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeDestination, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, AstenRepositorySelectionError, parseAstenAccountAndRepository, extractAstenSignedPdf, extractAstenEnvelopeIdentity, inferAstenJobStatus, callAsten } from './asten';
 import { buildGoogleAuthorizationUrl, decodeGoogleOAuthState, getGoogleWorkspaceScopes } from './googleWorkspace';
 import { buildSupabaseAdminHeaders } from './supabase';
 import { buildProtocol, emailMatchesDomains } from '../../src/utils/installationProfile';
@@ -156,15 +156,15 @@ test('chave moderna do Supabase nunca é enviada como Bearer', () => {
 
 test('instalação por curso controla protocolo e domínios sem alterar o código', () => {
   const profile={...DEFAULT_INSTALLATION_PROFILE,protocolPrefix:'MED',studentEmailDomains:['alunos.universidade.br']};
-  assert.equal(buildProtocol(profile,2027,9),'MED-2027-0009');
+  assert.equal(buildProtocol(profile,9),'MED - 00009');
   assert.equal(emailMatchesDomains('ana@alunos.universidade.br',profile.studentEmailDomains),true);
   assert.equal(emailMatchesDomains('ana@externo.test',profile.studentEmailDomains),false);
 });
 
-test('importação CSV aceita ponto e vírgula, acentos e matrícula', async () => {
+test('importação CSV aceita ponto e vírgula e acentos, sem coletar matrícula', async () => {
   const file=new File(['\uFEFFnome;email;matrícula\nAna Silva;ANA@ALUNOS.UNIVERSIDADE.BR;20270001\n'],'alunos.csv',{type:'text/csv'});
   const rows=await parseStudentImportFile(file);
-  assert.deepEqual(rows,[{row:2,nome:'Ana Silva',email:'ana@alunos.universidade.br',matricula:'20270001'}]);
+  assert.deepEqual(rows,[{row:2,nome:'Ana Silva',email:'ana@alunos.universidade.br'}]);
 });
 
 test('contrato Vercel encaminha API ao handler e SPA ao build estático', () => {
@@ -181,7 +181,7 @@ test('contrato Vercel encaminha API ao handler e SPA ao build estático', () => 
   assert.equal(config.outputDirectory,'dist/client');
   assert.equal(config.functions['api/index.ts'].maxDuration,300);
   assert.equal(config.functions['api/replication-model.ts'].maxDuration,60);
-  assert.deepEqual(config.crons,[{path:'/api/cron/storage-cleanup',schedule:'17 3 * * *'},{path:'/api/cron/asten-reconcile',schedule:'23 4 * * *'}]);
+  assert.deepEqual(config.crons,[{path:'/api/cron/storage-cleanup',schedule:'17 3 * * *'},{path:'/api/cron/asten-reconcile',schedule:'23 4 * * *'},{path:'/api/cron/reservation-notices',schedule:'31 4 * * *'}]);
   assert.match(packageJson.scripts.build,/node scripts\/build-server\.mjs/);
   const buildSource=readFileSync(new URL('../../scripts/build-server.mjs',import.meta.url),'utf8');
   assert.match(buildSource,/outfile: 'dist\/server\/server\.cjs'/);
@@ -237,6 +237,61 @@ test('Asten bloqueia mutações mas permite consultar envelopes sem habilitar en
     if(savedPilot===undefined)delete process.env.ASTEN_PILOT_APPROVED;
     else process.env.ASTEN_PILOT_APPROVED=savedPilot;
   }
+});
+
+test('Asten valida envelope e destino nas respostas planas e sob data', () => {
+  const expected = { envelopeId: '123', repositoryId: 42, folderId: 11 };
+  const destination = { Repositorio: { id: 42 }, Pasta: { id: '11' } };
+  const flat = { idEnvelope: 123, statusEnvelope: 3, ...destination };
+  const wrapped = { data: { Envelope: { id: '123', status: '3' }, ...destination } };
+  for (const response of [flat, wrapped]) {
+    assert.doesNotThrow(() => assertAstenEnvelopeDestination(response, expected));
+    assert.equal(inferAstenJobStatus(response, 'SENT', '123'), 'SIGNED');
+    for (const mismatch of [{ envelopeId: '456' }, { repositoryId: 43 }, { folderId: 12 }]) {
+      assert.throws(() => assertAstenEnvelopeDestination(response, { ...expected, ...mismatch }), /pasta esperada/);
+    }
+  }
+  assert.throws(() => assertAstenEnvelopeDestination(destination, expected), /ID numérico/);
+  assert.equal(inferAstenJobStatus({ data: { id: 123, status: 2 } }, 'PARTIALLY_SIGNED', '123'), 'PARTIALLY_SIGNED');
+  assert.equal(inferAstenJobStatus({ data: { id: 123, status: 2 } }, 'DRIVE_SYNC_PENDING', '123'), 'DRIVE_SYNC_PENDING');
+  assert.equal(inferAstenJobStatus({ data: { Envelope: { id: 123, status: 5 } } }, 'SENT', '123'), 'CANCELED');
+});
+
+test('reconciliação preserva a versão local com resposta sem identidade ou de outro envelope', () => {
+  assert.throws(() => inferAstenJobStatus({ id: '456', status: 3 }, 'SENT', '123'), /outro envelope/);
+  assert.throws(() => inferAstenJobStatus({ status: 3 }, 'SENT', '123'), /ID numérico/);
+  assert.equal(inferAstenJobStatus({ id: '123', status: 4 }, 'SENT', '123'), 'SENT');
+  const completed = { id: '123', status: 4, dataHoraConclusao: '2026-11-06T17:00:00' };
+  assert.equal(inferAstenJobStatus(completed, 'SENT', '123'), 'SIGNED');
+  assert.equal(inferAstenJobStatus(completed, 'ARCHIVED', '123'), 'ARCHIVED');
+});
+
+test('Asten recusa respostas HTTP 200 inválidas ou com erro do provedor', async t => {
+  const token = 'token-de-teste-exclusivamente-ficticio';
+  const error = { listaAvisos: { aviso: { tipo: 'E', mensagem: 'Operação recusada' } } };
+  const payloads = ['<html>Indisponível</html>', '{}', JSON.stringify({ response: error }),
+    JSON.stringify({ response: { data: error } }), JSON.stringify({ response: [] })];
+  t.mock.method(globalThis, 'fetch', async () => new Response(payloads.shift(), { status: 200 }));
+  for (const message of [/resposta válida/, /resposta válida/, /Operação recusada/, /Operação recusada/]) {
+    await assert.rejects(callAsten('getDadosEnvelope', { idEnvelope: 123 }, token), message);
+  }
+  assert.deepEqual(await callAsten('getPastasDoRepositorio', { idRepositorio: 42 }, token), []);
+});
+
+test('Asten exige o aviso de sucesso documentado antes de registrar o encaminhamento', async t => {
+  const flags = ['ASTEN_INTEGRATION_ENABLED', 'ASTEN_PILOT_APPROVED', 'ASTEN_PRODUCTION_RELEASE_APPROVED'];
+  const previous = flags.map(flag => process.env[flag]);
+  for (const flag of flags) process.env[flag] = 'true';
+  t.after(() => flags.forEach((flag, index) => {
+    if (previous[index] === undefined) delete process.env[flag];
+    else process.env[flag] = previous[index];
+  }));
+  const provider = (tipo: string) => ({ response: { data: { listaAvisos: { aviso: { tipo } } } } });
+  const payloads = [provider('I'), provider('S')];
+  t.mock.method(globalThis, 'fetch', async () => Response.json(payloads.shift()));
+  const send = () => callAsten('encaminharEnvelopeParaAssinaturas', { Envelope: { id: 123 } }, 'token-de-teste-exclusivamente-ficticio');
+  await assert.rejects(send, /não confirmou o encaminhamento/);
+  assert.deepEqual(await send(), provider('S').response);
 });
 
 test('assinatura simples usa somente link de e-mail, sem login, identificação adicional ou celular',()=>{

@@ -16,11 +16,11 @@ test('estado de defesa é calculado na página pública sem pós-processamento g
   assert.doesNotMatch(runtime, /normalizeDefenseRows|formal-monthly-calendar-section|fetch\('\/api\/processes'/);
 });
 
-test('calendário filtra dias úteis no React e abre agenda sem busca paralela', () => {
+test('calendário filtra colunas por eventos no React e abre agenda sem busca paralela', () => {
   const home = read('src/pages/HomePage.tsx');
   const runtime = read('src/utils/portalTableDom.ts');
-  assert.match(home, /const businessDays = Array\.from/);
-  assert.match(home, /dayOfWeek >= 1 && dayOfWeek <= 5/);
+  assert.match(home, /buildCalendarMonthGrid\(year,month,calendarStarts\)/);
+  assert.match(home, /calendarGrid\.weekdays/);
   assert.match(home, /if \(hasEvents\)/);
   assert.doesNotMatch(home, /isWeekend|portal-core-calendar-weekend/);
   assert.doesNotMatch(runtime, /enhanceCalendar/);
@@ -125,6 +125,6 @@ test('rolagem canônica usa mouse no documento e wheel no mesmo host', () => {
 
 test('quatro papéis usam famílias cromáticas amarelo, laranja, verde e azul', () => {
   const css = readPortalCss();
-  for (const color of ['#fde68a', '#fdba74', '#bbf7d0', '#bfdbfe']) assert.match(css, new RegExp(color));
-  for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(css, new RegExp(border));
+  for (const color of ['#fde68a', '#fecaca', '#bbf7d0', '#bfdbfe']) assert.match(css, new RegExp(color));
+  for (const border of ['#d4a300', '#dc2626', '#16a34a', '#2563eb']) assert.match(css, new RegExp(border));
 });

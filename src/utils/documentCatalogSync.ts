@@ -1,5 +1,7 @@
+import {isReferenceDocumentModel} from './referenceDocumentModels';
+
 type Catalog=Record<string,any>;
-const entries=(catalog:Catalog)=>Object.entries(catalog||{}).filter(([key,value])=>key!=='__capabilities'&&value&&typeof value==='object');
+const entries=(catalog:Catalog)=>Object.entries(catalog||{}).filter(([key,value])=>key!=='__capabilities'&&!isReferenceDocumentModel(key)&&value&&typeof value==='object');
 
 /** Read-only catalog metadata is a new baseline, not a user's Studio edit. */
 export function syncCatalogTemplates<T extends {id:string;[key:string]:any}>(previous:T[],catalog:Catalog):T[]{

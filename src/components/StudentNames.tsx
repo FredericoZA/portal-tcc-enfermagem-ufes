@@ -4,7 +4,6 @@ import { formatNameTitleCase } from '../utils/formatters';
 
 export interface StudentInfo {
   nome: string;
-  matricula: string;
 }
 
 interface StudentNamesProps {
@@ -15,7 +14,6 @@ interface StudentNamesProps {
   itemClassName?: string;
   showIcon?: boolean;
   truncate?: boolean;
-  showMatricula?: boolean;
 }
 
 export const StudentNames: React.FC<StudentNamesProps> = ({
@@ -26,7 +24,6 @@ export const StudentNames: React.FC<StudentNamesProps> = ({
   itemClassName = 'text-xs font-bold text-slate-900',
   showIcon = false,
   truncate = false,
-  showMatricula = true,
 }) => {
   if (!aluno1 || !aluno1.nome) return null;
 
@@ -47,12 +44,11 @@ export const StudentNames: React.FC<StudentNamesProps> = ({
     <div className={`flex flex-col gap-0.5 ${alignClass} ${className}`}>
       {sortedStudents.map((st, idx) => {
         const formattedName = formatNameTitleCase(st.nome);
-        const matriculaStr = showMatricula && st.matricula ? `${st.matricula} - ` : '';
         return (
-          <div key={st.matricula || idx} className={`flex items-center gap-1 ${alignClass} ${itemClassName}`}>
+          <div key={idx} className={`flex items-center gap-1 ${alignClass} ${itemClassName}`}>
             {showIcon && <IdCard className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
             <span className={truncate ? 'truncate' : ''}>
-              {matriculaStr}{formattedName}
+              {formattedName}
             </span>
           </div>
         );

@@ -42,11 +42,11 @@ test('resumo apresenta os seis participantes na ordem usada em Dados dos membros
   assert.equal(rows[0].name, 'Ana Maria de Souza');
   assert.equal(rows[0].reference, 'Aluno');
   assert.equal(rows[0].qualification, '—');
-  assert.equal(rows[1].registration, '202612346');
+  assert.doesNotMatch(JSON.stringify(rows), /20261234[56]|1234567|2345678|3456789|4567890/);
   assert.equal(rows[2].reference, 'Professora');
   assert.equal(rows[2].qualification, 'Doutora');
-  assert.equal(rows[2].institution, 'Não informado');
-  assert.equal(rows[3].institution, 'Universidade Federal do ESPÍRITO SANTO');
+  assert.equal(rows[2].institution, 'Universidade Federal do Espírito Santo');
+  assert.equal(rows[3].institution, 'Universidade Federal do Espírito Santo');
   assert.equal(rows[5].email, 'roberto@ufes.br');
 });
 
@@ -64,4 +64,21 @@ test('resumo mantém a instituição da instalação sem presumir UFES em outro 
   const rows = buildRegistrationMemberRows(answers, 'IFES');
   assert.equal(rows[0].institution, 'IFES');
   assert.equal(rows[1].institution, 'IFES');
+  assert.equal(rows[2].institution, 'IFES');
+});
+
+test('rótulo e referência acompanham o tratamento feminino cadastrado', () => {
+  const rows = buildRegistrationMemberRows({
+    ...answers,
+    ALUNO_1_TRATAMENTO: 'Aluna',
+    ALUNO_2_TRATAMENTO: 'Aluno',
+    EXAMINADOR_2_TRATAMENTO: 'Professora',
+    COORIENTADOR_TRATAMENTO: 'Professora',
+  });
+  assert.deepEqual(rows.map(({role}) => role), [
+    'Aluna autora', 'Aluno autor', 'Orientadora', 'Examinadora', 'Examinadora', 'Coorientadora',
+  ]);
+  assert.equal(rows[0].reference, 'Aluna');
+  assert.equal(rows[1].reference, 'Aluno');
+  assert.equal(rows.some(({role}) => /\(a\)|\d/.test(role)), false);
 });

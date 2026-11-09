@@ -26,3 +26,29 @@ test('editor recusa converter tabela estruturada em texto',()=>{
  assert.equal(documentMainBody({body:{content:[{table:{}}]}}),null);
  assert.throws(()=>bodyEditRequests({body:{content:[{table:{}}]}},'Texto'),/DOCX/);
 });
+
+test('preserva o nome em negrito entre duas correções no mesmo parágrafo',()=>{
+ const runs=[
+  {textRun:{content:'A sessão foi iniciada por '}},
+  {textRun:{content:'Ana da Silva',textStyle:{bold:true}}},
+  {textRun:{content:', às quatorze horas.\n'}},
+ ];
+ const original=runs.map(run=>run.textRun.content).join('').trimEnd();
+ const revised='A sessão foi aberta por Ana da Silva, às quinze horas.';
+ const document={body:{content:[{startIndex:1,endIndex:original.length+2,paragraph:{elements:runs}}]}};
+ const boldStart=original.indexOf('Ana da Silva')+1;
+ const boldEnd=boldStart+'Ana da Silva'.length;
+ let actual=original;
+ for(const request of bodyEditRequests(document,revised)){
+  if(request.deleteContentRange){
+   const {startIndex,endIndex}=request.deleteContentRange.range;
+   assert.ok(endIndex<=boldStart||startIndex>=boldEnd);
+   actual=actual.slice(0,startIndex-1)+actual.slice(endIndex-1);
+  }else if(request.insertText){
+   const {location,text}=request.insertText;
+   actual=actual.slice(0,location.index-1)+text+actual.slice(location.index-1);
+  }
+ }
+ assert.equal(actual,revised);
+ assert.equal(documentMainBody(document)?.layout[0].runs[1].bold,true);
+});

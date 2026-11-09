@@ -1,5 +1,7 @@
 # Piloto necessário antes do uso institucional — RC10
 
+> Registro histórico. A regra antiga de assinatura exclusiva do orientador foi substituída: a ata exige orientador e dois examinadores. Não use este registro como roteiro vigente. Consulte [a diretriz atual](ASSINATURA_ATA_TRES_DOCENTES.md), o manual e `HOMOLOGACAO_ATUAL.md`.
+
 > **Documento histórico.** Este roteiro registra o estado da RC10 e não deve ser usado como instrução operacional atual. O fluxo vigente está em `docs/HOMOLOGACAO_ATUAL.md`. Em particular, a avaliação atual registra **resultado e parecer sem nota numérica** e o contrato público atual não expõe matrícula, e-mail, SIAPE ou identificadores internos.
 
 Situação registrada naquela entrega: testes automatizados e compilação aprovados no Node.js 22.23.2. Integrações nas contas do proprietário e inspeção visual em navegador: **não confirmado**. O navegador de automação não estava disponível; as tentativas de instalação não concluíram. Use o ambiente de implantação para a inspeção visual.

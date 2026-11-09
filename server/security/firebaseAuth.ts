@@ -18,6 +18,11 @@ const LEGACY_COOKIE_NAME = 'portal_tcc_session';
 export const SESSION_IDLE_TTL_SECONDS = 3 * 60 * 60;
 export const SESSION_ABSOLUTE_TTL_SECONDS = 12 * 60 * 60;
 const secureRuntime = () => process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
+const demoAuthenticationEnabled = (req: Request) => !secureRuntime()
+  && process.env.PORTAL_ALLOW_INSECURE_DEMO_AUTH === 'true'
+  && (!process.env.PORTAL_PERSISTENCE_PROVIDER || process.env.PORTAL_PERSISTENCE_PROVIDER === 'local_file')
+  && !process.env.SUPABASE_SECRET_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY
+  && ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket?.remoteAddress || '');
 const cookieName = () => secureRuntime() ? '__Host-portal_tcc_session' : LEGACY_COOKIE_NAME;
 
 function sessionSecret(): string {
@@ -98,7 +103,6 @@ function decodeSession(value: string): PortalIdentity {
   const normalizedEmail = normalizeEmail(identity.email);
   const isDemoIdentity = identity.method === 'DEVELOPMENT_DEMO';
   if (!normalizedEmail || identity.isDemo !== isDemoIdentity) throw new Error('Sessão inválida.');
-  if (secureRuntime() && isDemoIdentity) throw new Error('Sessão inválida.');
   const expectedUid = isDemoIdentity ? `demo:${normalizedEmail}` : `email:${normalizedEmail}`;
   if (identity.uid !== expectedUid) throw new Error('Sessão inválida.');
   return { ...identity, email: normalizedEmail };
@@ -116,7 +120,7 @@ function parseCookies(req: Request): Record<string, string> {
 }
 
 function demoIdentity(req: Request): PortalIdentity | null {
-  if (secureRuntime() || process.env.PORTAL_ALLOW_INSECURE_DEMO_AUTH !== 'true') return null;
+  if (!demoAuthenticationEnabled(req)) return null;
   const email = normalizeEmail(String(req.headers['x-demo-user-email'] || ''));
   if (!email) return null;
   const now = Math.floor(Date.now() / 1000);
@@ -177,6 +181,7 @@ export async function attachPortalIdentity(req: Request, res: Response, next: Ne
     const cookies = parseCookies(req);
     const token = cookies[cookieName()];
     let identity = token ? decodeSession(token) : demoIdentity(req);
+    if (identity?.isDemo && !demoAuthenticationEnabled(req)) throw new Error('Sessão inválida.');
     if (token && identity && !identity.isDemo && shouldRefreshForUserActivity(req)) {
       identity = refreshPortalIdentity(identity);
       writePortalSessionCookie(res, identity);

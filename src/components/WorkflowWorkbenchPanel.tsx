@@ -6,13 +6,13 @@ import { workflowPolicy } from '../utils/workflowOperations';
 import { registrationQuestions } from '../utils/operationalConfig';
 import { apiClient } from '../services/apiClient';
 
-const milestones:Record<WaitingMilestone,string>={LOCATION:'Confirmação do local',EVALUATION:'Avaliação da defesa',ATA:'Assinatura da Ata',FINAL_DELIVERY:'Entrega final',TERM:'Assinatura do Termo',DECLARATION:'Assinatura da Declaração'};
+const milestones:Record<WaitingMilestone,string>={LOCATION:'Confirmação do local',EVALUATION:'Conceito e Ata',ATA:'Assinatura da Ata',FINAL_DELIVERY:'Entrega final',TERM:'Assinatura do Termo',DECLARATION:'Assinatura da Declaração'};
 const changes:Record<string,string>={ADDED:'Incluído',REMOVED:'Removido',CHANGED:'Alterado'};
 export function WorkflowWorkbenchPanel({ studio, config, onChange }:{studio:IntegrationStudioSettings;config:OperationalConfig;onChange:(config:OperationalConfig)=>void}){
   const policy=workflowPolicy({...studio,operationalConfig:config});
   const [type,setType]=useState('CONVITE');
   const [samples,setSamples]=useState<Record<string,string>>({TITULO:'Trabalho fictício para conferência do modelo',ALUNO_1_NOME:'Ana Maria de Demonstração',DEFESA_DATA_HORA:'2026-10-20T14:30'});
-  const [sampleKey,setSampleKey]=useState('ALUNO_1_MATRICULA');
+  const [sampleKey,setSampleKey]=useState('ALUNO_1_NOME');
   const [preview,setPreview]=useState<any>(null);
   const [comparison,setComparison]=useState<any>(null);
   const [working,setWorking]=useState('');
@@ -39,7 +39,7 @@ export function WorkflowWorkbenchPanel({ studio, config, onChange }:{studio:Inte
     <details className="portal-card p-5"><summary className="cursor-pointer text-lg font-semibold">8. Comparar com o fluxo publicado</summary><p className="my-3">Veja o que mudou em formulários, modelos, e-mails, etapas e aparência antes de publicar.</p><button type="button" className="portal-action" disabled={Boolean(working)} onClick={()=>void run('compare')}>Conferir alterações do rascunho</button>
       {comparison&&<div className="mt-4 space-y-3"><p>{comparison.activeProcesses} TCC(s) em andamento. {comparison.notice}</p><p>{comparison.changes.length} alteração(ões) em relação à revisão {comparison.baseRevision}.</p><div className="overflow-x-auto"><table className="portal-data-table"><caption className="sr-only">Alterações em relação à versão publicada</caption><thead><tr><th scope="col">Área</th><th scope="col">Alteração</th><th scope="col">Detalhe</th></tr></thead><tbody>{comparison.changes.map((item:any)=><tr key={item.key}><th scope="row">{item.area}</th><td>{changes[item.change]}</td><td className="break-words">{item.key}: {item.detail}</td></tr>)}</tbody></table></div></div>}
     </details>
-    <details className="portal-card p-5"><summary className="cursor-pointer text-lg font-semibold">9. Prazos, lembretes e conferência do cadastro</summary><p className="my-3">Os prazos contam dias úteis a partir da entrada na etapa. Na avaliação, a contagem começa na data agendada da defesa. A rotina diária envia apenas lembretes publicados, com os destinatários do modelo escolhido.</p>
+    <details className="portal-card p-5"><summary className="cursor-pointer text-lg font-semibold">9. Prazos, lembretes e conferência do cadastro</summary><p className="my-3">Os prazos contam dias úteis a partir da entrada na etapa. Para conceito e ata, a contagem começa na data agendada da defesa. A rotina diária envia apenas lembretes publicados, com os destinatários do modelo escolhido.</p>
       <div className="grid gap-4 sm:grid-cols-3"><label>Validade do rascunho (dias)<input type="number" min={1} max={180} className="portal-input" value={policy.draftExpiryDays} onChange={e=>update({draftExpiryDays:Number(e.target.value)})}/></label></div>
       <fieldset className="my-4 flex flex-wrap gap-4"><legend className="mb-2 font-semibold">Dias úteis</legend>{['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'].map((day,i)=><label className="flex items-center gap-2" key={day}><input type="checkbox" checked={policy.weekdays.includes(i)} onChange={e=>update({weekdays:e.target.checked?[...policy.weekdays,i]:policy.weekdays.filter(value=>value!==i)})}/>{day}</label>)}</fieldset>
       <label className="block">Feriados e recessos (uma data AAAA-MM-DD por linha)<textarea rows={4} className="portal-input mt-1" value={policy.holidays.join('\n')} onChange={e=>update({holidays:e.target.value.split('\n')})} onBlur={()=>update({holidays:policy.holidays.map(day=>day.trim()).filter(Boolean)})}/></label>

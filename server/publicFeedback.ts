@@ -69,13 +69,16 @@ export function fingerprintFeedbackVisitor(ip:string,secret:string):string {
   return createHmac('sha256',secret).update(ip).digest('hex');
 }
 
-async function feedbackRequest(url:string, options:RequestInit):Promise<Response> {
-  let response:Response;
+async function fetchFeedback(url:string, options:RequestInit):Promise<Response> {
   try{
-    response=await fetch(url,{...options,signal:AbortSignal.timeout(12_000)});
+    return await fetch(url,{...options,signal:AbortSignal.timeout(12_000)});
   }catch{
     throw new FeedbackError(503,'Não foi possível conectar ao recebimento de sugestões. Tente novamente.');
   }
+}
+
+async function feedbackRequest(url:string, options:RequestInit):Promise<Response> {
+  const response=await fetchFeedback(url,options);
   if(!response.ok){
     throw new FeedbackError(503,'Não foi possível confirmar o armazenamento da sugestão. Tente novamente.');
   }
@@ -158,15 +161,26 @@ export async function listFeedbackPageForAdmin(before?:unknown):Promise<Feedback
 
 export async function feedbackImageForAdmin(id:string,read=readPrivatePortalImage):Promise<{bytes:Buffer;mime:string}|null> {
   if(!uuidPattern.test(id))throw new FeedbackError(400,'Identificador inválido.');
-  // select=* also supports the old schema during a rolling deployment.
-  const query=new URLSearchParams({select:'*',id:'eq.'+id,limit:'1'});
-  const response=await feedbackRequest(endpoint()+'?'+query,{headers:credentialHeaders()});
-  const items=await response.json() as Array<{image_mime:string|null;image_base64:string|null;image_size:number|null;image_drive_file_id?:string|null;image_sha256?:string|null}>;
-  const item=items[0];
-  if(item?.image_drive_file_id&&item.image_mime){
-    const bytes=await read({driveFileId:item.image_drive_file_id,contentSha256:String(item.image_sha256||''),mimeType:item.image_mime,byteLength:Number(item.image_size)},'FEEDBACK_IMAGE');
-    return {bytes,mime:item.image_mime};
+  const headers=credentialHeaders();
+  const query=new URLSearchParams({select:'image_mime,image_size,image_drive_file_id,image_sha256',id:'eq.'+id,limit:'1'});
+  const url=()=>endpoint()+'?'+query;
+  const response=await fetchFeedback(url(),{headers});
+  if(response.ok){
+    const [item]=await response.json() as Array<{image_mime:string|null;image_size:number|null;image_drive_file_id:string|null;image_sha256:string|null}>;
+    if(!item?.image_mime)return null;
+    if(item.image_drive_file_id){
+      const bytes=await read({driveFileId:item.image_drive_file_id,contentSha256:String(item.image_sha256||''),mimeType:item.image_mime,byteLength:Number(item.image_size)},'FEEDBACK_IMAGE');
+      return {bytes,mime:item.image_mime};
+    }
+  }else{
+    // PostgREST reports undefined columns with PostgreSQL code 42703 on the pre-Drive schema.
+    const error=response.status===400 ? await response.json().catch(()=>null) : null;
+    if(error?.code!=='42703')throw new FeedbackError(503,'Não foi possível consultar a imagem da sugestão. Tente novamente.');
   }
+
+  query.set('select','image_mime,image_base64');
+  const legacy=await feedbackRequest(url(),{headers});
+  const [item]=await legacy.json() as Array<{image_mime:string|null;image_base64:string|null}>;
   if(!item?.image_mime||!item.image_base64)return null;
   const found=checkFeedbackImage(`data:${item.image_mime};base64,${item.image_base64}`);
   return found?{bytes:Buffer.from(found.base64,'base64'),mime:found.mime}:null;

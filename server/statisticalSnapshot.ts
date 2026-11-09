@@ -1,8 +1,9 @@
+import {recordedDefense,recordedCompletionDays,registeredIndicatorProcesses} from './indicatorFacts';
 import { operationalConfig, resolveCatalogValue } from '../src/utils/operationalConfig';
 import type { IntegrationStudioSettings } from '../src/types/integrationStudio';
-import type { ProcessData, StatisticalDistribution, StudioFormSubmission, TccStatisticalSnapshot } from '../src/types';
+import type { ProcessData, StudioFormSubmission } from '../src/types';
+import type { StatisticalDistribution, TccStatisticalSnapshot } from '../src/types/statistics';
 
-// Somente cálculos estatísticos determinísticos; nenhum mecanismo de proposta ou modelo generativo.
 const MINIMUM_CATEGORY_SIZE=3;
 const DAY_MS=86_400_000;
 export interface StatisticalSnapshotInput {
@@ -71,7 +72,7 @@ const STATUS_LABELS: Record<string, string> = {
   EM_RASCUNHO: 'Em rascunho',
   AGUARDANDO_CONFIRMACAO_LOCAL: 'Aguardando confirmação de local',
   AGUARDANDO_DEFESA: 'Aguardando defesa',
-  EM_AVALIACAO: 'Em avaliação',
+  EM_AVALIACAO: 'Aguardando registro de conceito e ata',
   AGUARDANDO_DADOS_FINAIS: 'Aguardando dados finais',
   AGUARDANDO_ASSINATURA: 'Aguardando assinatura',
   CONCLUIDO: 'Concluído'
@@ -81,7 +82,7 @@ const WORK_TYPE_LABELS: Record<string, string> = { MONOGRAFIA: 'Monografia', ART
 
 export function buildTccStatisticalSnapshot(input: Pick<StatisticalSnapshotInput, 'processes' | 'formSubmissions' | 'generatedAt' | 'studio'>): TccStatisticalSnapshot {
   const generatedAt = input.generatedAt || new Date().toISOString();
-  const processes = input.processes;
+  const processes = registeredIndicatorProcesses(input.processes);
   const total = processes.length;
   const answersByProcess = latestAnswersByProcess(input.formSubmissions);
   const areas: string[] = [];
@@ -102,11 +103,8 @@ export function buildTccStatisticalSnapshot(input: Pick<StatisticalSnapshotInput
     if (keywords.length) keywordCovered++;
   }
 
-  const completionDurations = processes
-    .filter((process) => process.status === 'CONCLUIDO')
-    .map((process) => (Date.parse(process.completedAt || process.updatedAt) - Date.parse(process.createdAt)) / DAY_MS)
-    .filter((value) => value >= 0);
   const generatedAtMs = Date.parse(generatedAt);
+  const completionDurations = processes.map(process=>recordedCompletionDays(process,generatedAtMs)).filter((value):value is number=>value!==null);
   const openAges = processes
     .filter((process) => process.status !== 'CONCLUIDO')
     .map((process) => (generatedAtMs - Date.parse(process.createdAt)) / DAY_MS)
@@ -129,7 +127,7 @@ export function buildTccStatisticalSnapshot(input: Pick<StatisticalSnapshotInput
       processes: total,
       authors: processes.reduce((sum, process) => sum + (process.aluno2 ? 2 : 1), 0),
       coauthoredProcesses: coauthored,
-      defended: processes.filter((process) => process.avaliacao?.status === 'CONCLUIDO').length,
+      defended: processes.filter(process=>recordedDefense(process,generatedAtMs)!==null).length,
       completed,
       publicationRequested: published
     },

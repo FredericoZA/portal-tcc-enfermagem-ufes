@@ -1,27 +1,20 @@
-import { formatNameTitleCase } from './formatters';
+import {formatTccTitle} from './formatters';
 
 export const INSTITUTION_ACRONYM_HELP =
-  'Para manter siglas e/ou acrônimos em maiúsculas, escreva *UFES*. Os asteriscos não aparecem nos documentos.';
+  'Por padrão, não é permitido manter o texto inteiro em letras maiúsculas ou minúsculas: o Portal ajusta as iniciais automaticamente. Algumas siglas reconhecidas, como UFES, SUS e CNPQ, são mantidas em maiúsculas, sem precisar de asteriscos.';
 
-/** Preserva siglas marcadas enquanto o campo está sendo editado. */
+/** Input and documents use the same deterministic, marker-free casing. */
 export function normalizeInstitutionInput(raw: string): string {
-  const acronyms: string[] = [];
-  const source = String(raw || '')
-    .normalize('NFC')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .replace(/\+([^+\n]+?)-|\*([^*]+)\*/g, (_match, explicit: string, legacy: string) => {
-      const part = explicit || legacy;
-      acronyms.push(part.trim().toLocaleUpperCase('pt-BR'));
-      return `institutionacronym${acronyms.length - 1}`;
-    });
-
-  return formatNameTitleCase(source)
-    .replace(/\b(ufes|ufrj|usp|unesp|unicamp|ifes|ccs|sus|cnpq|capes)\b/gi, (word) => word.toUpperCase())
-    .replace(/institutionacronym(\d+)/gi, (_match, index) => `*${acronyms[Number(index)]}*`);
+  return formatTccTitle(String(raw || ''));
+}
+export function renderInstitutionName(raw: string): string {
+  return normalizeInstitutionInput(raw);
 }
 
-/** Usa a mesma grafia das instituições nos documentos, sem mostrar os delimitadores. */
-export function renderInstitutionName(raw: string): string {
-  return normalizeInstitutionInput(raw).replace(/\*([^*]+)\*/g, '$1');
+/** Search alias only: never rewrites the stored or displayed institution. */
+export function institutionSearchText(raw: string): string {
+  const text=renderInstitutionName(raw).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');
+  return /^(?:ufes|universidade federal do espirito santo)$/.test(text.trim())
+    ? 'ufes universidade federal do espirito santo'
+    : text;
 }

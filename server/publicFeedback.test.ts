@@ -103,17 +103,66 @@ test('captura nova é arquivada no Drive e somente referências são gravadas no
   assert.equal(inserted?.image_sha256,'b'.repeat(64));
 });
 
-test('captura antiga continua legível e captura Drive usa o leitor privado autorizado',async()=>{
-  let row:any={image_mime:'image/png',image_base64:png,image_size:24};
-  await withPrivateFeedbackMock(()=>[row],async()=>{
-    const id='11111111-1111-4111-8111-111111111111';
-    assert.deepEqual((await feedbackImageForAdmin(id))?.bytes,Buffer.from(png,'base64'));
-    row={...row,image_base64:null,image_drive_file_id:'private_feedback_123',image_sha256:'b'.repeat(64)};
-    const image=await feedbackImageForAdmin(id,async(ref,kind)=>{
-      assert.equal(kind,'FEEDBACK_IMAGE');assert.equal(ref.driveFileId,'private_feedback_123');return Buffer.from(png,'base64');
+const imageId='11111111-1111-4111-8111-111111111111';
+const driveImageSelect='image_mime,image_size,image_drive_file_id,image_sha256';
+const legacyImageSelect='image_mime,image_base64';
+
+test('captura no Drive consulta somente metadados, mesmo quando existe cópia legada',async()=>{
+  const queries:string[]=[];
+  await withPrivateFeedbackMock(url=>{
+    const select=url.searchParams.get('select')||'';
+    queries.push(select);
+    assert.equal(url.searchParams.get('id'),'eq.'+imageId);
+    assert.equal(url.searchParams.get('limit'),'1');
+    const row={image_mime:'image/png',image_size:24,image_drive_file_id:'private_feedback_123',image_sha256:'b'.repeat(64),image_base64:png,ip_fingerprint:'fingerprint'};
+    return [Object.fromEntries(select.split(',').map(key=>[key,row[key as keyof typeof row]]))];
+  },async()=>{
+    const image=await feedbackImageForAdmin(imageId,async(ref,kind)=>{
+      assert.equal(kind,'FEEDBACK_IMAGE');
+      assert.deepEqual(ref,{driveFileId:'private_feedback_123',contentSha256:'b'.repeat(64),mimeType:'image/png',byteLength:24});
+      return Buffer.from(png,'base64');
     });
-    assert.equal(image?.mime,'image/png');assert.equal(image?.bytes.length,24);
+    assert.deepEqual(image,{mime:'image/png',bytes:Buffer.from(png,'base64')});
   });
+  assert.deepEqual(queries,[driveImageSelect]);
+});
+
+test('captura antiga lê somente as duas colunas legadas quando falta referência ao Drive',async()=>{
+  for(const preDriveSchema of [false,true]){
+    const queries:string[]=[];
+    await withPrivateFeedbackMock(url=>{
+      const select=url.searchParams.get('select')||'';
+      queries.push(select);
+      if(select===legacyImageSelect)return [{image_mime:'image/png',image_base64:png}];
+      if(preDriveSchema)return Response.json({code:'42703',message:'column portal_feedback.image_drive_file_id does not exist'},{status:400});
+      return [{image_mime:'image/png',image_size:24,image_drive_file_id:null,image_sha256:null}];
+    },async()=>{
+      assert.deepEqual(await feedbackImageForAdmin(imageId),{mime:'image/png',bytes:Buffer.from(png,'base64')});
+    });
+    assert.deepEqual(queries,[driveImageSelect,legacyImageSelect]);
+  }
+});
+
+test('ausência e erros da consulta ou do Drive não buscam os bytes legados',async()=>{
+  const cases=[
+    {data:[],failure:false},
+    {data:[{image_mime:null}],failure:false},
+    {data:Response.json({code:'42501'},{status:403}),failure:true},
+    {data:Response.json({code:'PGRST100'},{status:400}),failure:true},
+    {data:[{image_mime:'image/png',image_drive_file_id:'private_feedback_123'}],failure:true},
+  ];
+  for(const {data,failure} of cases){
+    const queries:string[]=[];
+    await withPrivateFeedbackMock(url=>{
+      queries.push(url.searchParams.get('select')||'');
+      return data;
+    },async()=>{
+      const result=feedbackImageForAdmin(imageId,async()=>{throw Error('Drive indisponível');});
+      if(failure)await assert.rejects(result);
+      else assert.equal(await result,null);
+    });
+    assert.deepEqual(queries,[driveImageSelect]);
+  }
 });
 
 async function withPrivateFeedbackMock<T>(handler:(url:URL,options:RequestInit)=>unknown,run:()=>Promise<T>):Promise<T>{
@@ -121,7 +170,10 @@ async function withPrivateFeedbackMock<T>(handler:(url:URL,options:RequestInit)=
   const nativeFetch=globalThis.fetch;
   try{
     process.env.SUPABASE_URL='https://example.supabase.co';process.env.SUPABASE_SECRET_KEY='sb_secret_fixture';process.env.PORTAL_PERSISTENCE_PROVIDER='supabase';
-    globalThis.fetch=(async(input:any,options:RequestInit={})=>new Response(JSON.stringify(handler(new URL(String(input)),options)),{status:200,headers:{'content-type':'application/json'}})) as typeof fetch;
+    globalThis.fetch=(async(input:any,options:RequestInit={})=>{
+      const result=handler(new URL(String(input)),options);
+      return result instanceof Response ? result : Response.json(result);
+    }) as typeof fetch;
     return await run();
   }finally{globalThis.fetch=nativeFetch;for(const [key,value]of Object.entries(prior)){if(value===undefined)delete process.env[key];else process.env[key]=value;}}
 }

@@ -46,7 +46,9 @@ test('replicar portal mantém cartões com a mesma altura', () => {
 test('tutorial público contém orientação operacional detalhada por perfil', () => {
   const page = read('src/pages/PortalTutorialPage.tsx');
   assert.match(page, /<PortalIllustratedGuide role=\{role\}/);
-  assert.doesNotMatch(page, /Conferência antes de encerrar|Antes de começar|Passo a passo|checklist|active\.description|active\.before|Erros a evitar|Ver o Fluxo do TCC|portal-instruction/);
+  assert.doesNotMatch(page, /Conferência antes de encerrar|Antes de começar|Passo a passo|checklist|active\.description|active\.before|Erros a evitar|Ver o Fluxo do TCC/);
+  assert.match(page, /Acesse o manual detalhado em PDF/);
+  assert.doesNotMatch(page, /tutorial-manual-notice/);
   assert.doesNotMatch(page, /Presidente da Comissão/);
   assert.match(read('src/components/PortalIllustratedGuide.tsx'), /não autoriza sua publicação/);
 });

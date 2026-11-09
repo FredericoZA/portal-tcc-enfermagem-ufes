@@ -33,8 +33,12 @@ function publicProcessProtocol(input: RequestInfo | URL, init?: RequestInit): st
   if (!details || details.method !== 'GET' || details.url.origin !== window.location.origin) return null;
   const match = details.url.pathname.match(/^\/api\/processes\/([^/]+)$/);
   if (!match) return null;
-  const identifier = decodeURIComponent(match[1]);
-  return /^TCC[-/]/i.test(identifier) ? identifier : null;
+  try {
+    const identifier = decodeURIComponent(match[1]);
+    return /^TCC(?:[-/]| - \d{5}$)/i.test(identifier) ? identifier : null;
+  } catch {
+    return null;
+  }
 }
 
 function wait(milliseconds: number) {

@@ -5,3 +5,7 @@ export function isEmailAddress(value: string): boolean {
   const dot = value.indexOf('.', at + 2);
   return dot > at + 1 && dot < value.length - 1;
 }
+
+export function isEmailHeaderAddress(value: string): boolean {
+  return value.length <= 254 && !/[,;<>]/.test(value) && isEmailAddress(value);
+}

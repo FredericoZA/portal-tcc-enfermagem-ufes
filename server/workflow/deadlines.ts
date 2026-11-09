@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { ProcessData, SignatureJob } from '../../src/types';
 import type { ReminderRecord, WaitingMilestone, WorkflowOperationsPolicy } from '../../src/types/workflowOperations';
 import { latestSignature, ataArchived, declarationReady } from './gates';
-export const MILESTONE_LABELS: Record<WaitingMilestone,string>={LOCATION:'Confirmação do local',EVALUATION:'Avaliação da defesa',ATA:'Assinatura da Ata',FINAL_DELIVERY:'Entrega final',TERM:'Assinatura do Termo',DECLARATION:'Assinatura da Declaração'};
+export const MILESTONE_LABELS: Record<WaitingMilestone,string>={LOCATION:'Confirmação do local',EVALUATION:'Conceito e Ata',ATA:'Assinatura da Ata',FINAL_DELIVERY:'Entrega final',TERM:'Assinatura do Termo',DECLARATION:'Assinatura da Declaração'};
 const dayMs=86400000;
 export function calendarDate(instant:string,timezone='America/Sao_Paulo'){return new Intl.DateTimeFormat('sv-SE',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(instant));}
 const timestamp=(date:string)=>Date.parse(date+'T12:00:00Z');

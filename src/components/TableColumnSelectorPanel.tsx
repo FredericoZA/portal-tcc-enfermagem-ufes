@@ -1,3 +1,6 @@
+import {fetchApiRequest} from '../services/apiClient';
+import {sanitizeTablePreference,TABLE_DEFAULTS_EVENT} from '../utils/tablePreferences';
+import {readStoredTablePreference} from '../utils/tablePreferences';
 import React, { useState } from 'react';
 import { Shield, Lock, ArrowUp, ArrowDown, RotateCcw, Check, List, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -210,7 +213,7 @@ export const DEFAULT_TABLE_TEXT_FORMAT: TableTextFormat = {
   filterItemsConfig: {
     aluno: { key: 'aluno', label: 'Aluno', emoji: '', dotColor: '#eab308', bgColor: '#fef9c3', textColor: '#713f12', borderColor: '#eab308', badgeBgColor: '#eab308', badgeTextColor: '#ffffff' },
     banca: { key: 'banca', label: 'Banca', emoji: '', dotColor: '#f97316', bgColor: '#fff7ed', textColor: '#7c2d12', borderColor: '#f97316', badgeBgColor: '#f97316', badgeTextColor: '#ffffff' },
-    avaliador: { key: 'avaliador', label: 'Avaliador', emoji: '', dotColor: '#0284c7', bgColor: '#f0f9ff', textColor: '#0369a1', borderColor: '#38bdf8', badgeBgColor: '#0284c7', badgeTextColor: '#ffffff' },
+    avaliador: { key: 'avaliador', label: 'Examinador', emoji: '', dotColor: '#0284c7', bgColor: '#f0f9ff', textColor: '#0369a1', borderColor: '#38bdf8', badgeBgColor: '#0284c7', badgeTextColor: '#ffffff' },
     visualizador: { key: 'visualizador', label: 'Visualizador', emoji: '', dotColor: '#64748b', bgColor: '#f8fafc', textColor: '#1e293b', borderColor: '#94a3b8', badgeBgColor: '#64748b', badgeTextColor: '#ffffff' },
     modelos: { key: 'modelos', label: 'Modelos', emoji: '', dotColor: '#f97316', bgColor: '#fff7ed', textColor: '#7c2d12', borderColor: '#f97316', badgeBgColor: '#f97316', badgeTextColor: '#ffffff' },
     formularios: { key: 'formularios', label: 'Formulários', emoji: '', dotColor: '#0284c7', bgColor: '#f0f9ff', textColor: '#0369a1', borderColor: '#38bdf8', badgeBgColor: '#0284c7', badgeTextColor: '#ffffff' },
@@ -301,7 +304,8 @@ export function loadTableConfig(
   storageKey: string,
   defaultOrder: string[],
   defaultVisible: Record<string, boolean>,
-  defaultRecordsLimit: number | 'all' = 25
+  defaultRecordsLimit: number | 'all' = 25,
+  includePersonal = true
 ) {
   const globalFormat = loadGlobalTableConfig();
   if (typeof window === 'undefined') {
@@ -319,8 +323,8 @@ export function loadTableConfig(
   }
   try {
     const saved = localStorage.getItem(`default_table_config_${storageKey}`);
-    if (saved) {
-      const parsed = JSON.parse(saved);
+    if (saved || (includePersonal && localStorage.getItem('portal_tcc_active_email'))) {
+      const parsed = {...JSON.parse(saved || '{}'), ...readStoredTablePreference(storageKey, includePersonal ? localStorage.getItem('portal_tcc_active_email') || '' : '')};
       let order: string[] = parsed.columnOrder || defaultOrder;
       
       // Process tables keep their protocol column fixed; generic tables do not invent it.
@@ -413,7 +417,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
   };
 
   // Save as default for all users (Master Admin function)
-  const handleSetAsDefault = () => {
+  const handleSetAsDefault = async () => {
     try {
       const existingRaw = localStorage.getItem(`default_table_config_${storageKey}`);
       const existing = existingRaw ? JSON.parse(existingRaw) : {};
@@ -427,8 +431,10 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
         updatedAt: new Date().toISOString(),
         updatedBy: userEmail,
       };
-      localStorage.setItem(`default_table_config_${storageKey}`, JSON.stringify(payload));
-      setSaveMessage(`Ordem e colunas salvas para "${tabTitle}". Use “Publicar” na Personalização do Portal para sincronizar com todos os usuários.`);
+      const saved = await fetchApiRequest(`/api/admin/table-defaults/${encodeURIComponent(storageKey)}`, {method:'PUT',body:JSON.stringify(sanitizeTablePreference(payload))});
+      localStorage.setItem(`default_table_config_${storageKey}`, JSON.stringify(saved));
+      window.dispatchEvent(new Event(TABLE_DEFAULTS_EVENT));
+      setSaveMessage(`Padrão de "${tabTitle}" salvo para todos os usuários.`);
       setTimeout(() => setSaveMessage(null), 5000);
     } catch (e) {
       console.error(e);

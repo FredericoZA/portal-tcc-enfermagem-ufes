@@ -52,7 +52,7 @@ test('Meus TCCs mantém combinação de filtros com quatro cores bem separadas e
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.board/);
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.evaluator/);
   assert.match(page, /PORTAL_SEMANTIC_COLORS\.processRole\.viewer/);
-  for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(tokens, new RegExp(border));
+  for (const border of ['#d4a300', '#dc2626', '#16a34a', '#2563eb']) assert.match(tokens, new RegExp(border));
   assert.match(css, /portal-native-all-filter\[data-selected="true"\][\s\S]*background:\s*var\(--portal-neutral-bg\)/);
 });
 
@@ -76,10 +76,11 @@ test('Meus TCCs e Presidente usam o mesmo separador branco canônico após os fi
   assert.doesNotMatch(css, /portal-coordinator-filter-row[\s\S]*border-bottom:\s*2px/);
 });
 
-test('tutorial usa a superfície canônica e instruções integradas, sem cartões ou avisos decorativos', () => {
+test('tutorial preserva a hierarquia visual e o guia por perfil', () => {
   const tutorial = read('src/pages/PortalTutorialPage.tsx');
   assert.match(tutorial, /portal-layer-panel/);
-  assert.doesNotMatch(tutorial, /portal-layer-card|portal-instruction|Erros a evitar/);
+  assert.doesNotMatch(tutorial, /portal-layer-card|Erros a evitar/);
+  assert.match(tutorial, /<PortalIllustratedGuide role=\{role\}/);
   assert.doesNotMatch(tutorial, /bg-\[#(?:e1e6e9|d5dce0|005830|337959)\]/i);
 });
 
@@ -106,16 +107,17 @@ test('Rodapé e Integrações são entradas independentes e workspaces diretos',
   assert.match(integrations, /flex min-h-0 flex-col/);
 });
 
-test('e-mail do Departamento é definido no modelo de e-mail e permanece fail-closed', () => {
+test('e-mail do Departamento usa configuração central e permanece fail-closed', () => {
   assert.match(configPage, /roomReservationDepartmentEmail/);
   assert.match(configPage, /id: 'email-reserva'/);
   assert.match(server, /configuredRoomReservationDepartmentEmail\(studio/);
   assert.match(server, /templateId==='email-reserva'/);
-  assert.match(server, /reservationConfirmationRecipient/);
+  assert.match(server, /configuredRoomReservationDepartmentEmail\(studio\):normalizeEmail\(process\.orientador\.email\)/);
   assert.match(server, /destinatário diverge do responsável definido para o local escolhido/);
   assert.match(server, /reservationApproverEmail\(process,studio\)/);
   assert.match(server, /recipients.length!==1\|\|recipients\[0\]!==configured/);
-  assert.match(server, /Configurações → Modelos e Variáveis → E-mails/);
+  assert.match(server, /Configurações → E-mails/);
+  assert.match(read('src/components/ReservationEmailSettings.tsx'), /Responsável pela reserva de salas/);
   assert.doesNotMatch(operational, /dptenfccs@gmail\.com/);
   assert.match(courseStudioValidator, /Informe diretamente o e-mail do Departamento de Enfermagem/);
 });

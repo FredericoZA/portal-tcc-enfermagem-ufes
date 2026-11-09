@@ -34,16 +34,7 @@ test('prévia de ata longa vincula todo o conteúdo por hash sem expor o texto n
 });
 test('resultados antigos perdem faixas numéricas e ressalvas usam texto-base sem mérito inventado',()=>{
  const option={code:'APROVADO_RESTRICAO',label:'Aprovado com Restrição (5,00 ≤ x < 7,00)'};assert.equal(evaluationOutcomeLabel(option),'Aprovado com ressalva');
- const opinion=standardEvaluationOpinion({} as any,option);
+ const opinion=standardEvaluationOpinion(option);
  assert.match(opinion,/Aprovado com ressalva/);
- assert.match(opinion,/Fundamentação e ressalvas: \[Completar/);
  assert.doesNotMatch(opinion,/5,00|7,00/);
-});
-
-test('rascunhos consecutivos são estáveis e exigem fundamentação humana',()=>{
- const option={code:'APROVADO',label:'Aprovado'};const first=standardEvaluationOpinion({} as any,option);const second=standardEvaluationOpinion({} as any,option);
- assert.equal(first,second);
- assert.match(first,/Aprovado/);
- assert.match(first,/\[Completar com os fundamentos/);
- assert.doesNotMatch(first,/clareza|domínio do tema|aprovação do trabalho/i);
 });

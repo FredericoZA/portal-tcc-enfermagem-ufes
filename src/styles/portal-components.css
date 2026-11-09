@@ -86,13 +86,6 @@
 .portal-sheet-toolbar-terminal {
   display: inline-flex;
   align-items: center;
-}
-
-.portal-sheet-toolbar-actions {
-  gap: var(--portal-toolbar-pair-gap);
-}
-
-.portal-sheet-toolbar-terminal {
   gap: var(--portal-toolbar-pair-gap);
 }
 
@@ -1100,6 +1093,17 @@ button[aria-label^="Configurar exibição"],
   opacity: .88;
 }
 
+.portal-calendar-defense-summary[data-reservation-status="pending"],
+.portal-calendar-defense-summary[data-reservation-status="pending"] span,
+.portal-calendar-day-defense[data-reservation-status="pending"],
+.portal-calendar-day-defense[data-reservation-status="pending"] :is(span, h4, p, div) {
+  color: var(--portal-danger);
+}
+
+.portal-calendar-defense-summary[data-reservation-status="pending"] .portal-calendar-defense-secondary {
+  opacity: 1;
+}
+
 /* Navegação lateral: texto corrido, menor e mais encorpado. */
 .portal-sidebar-nav-item {
   font-size: var(--portal-sidebar-nav-font-size);
@@ -1234,6 +1238,27 @@ button[aria-label^="Configurar exibição"],
   cursor: pointer;
 }
 
+/* Filtro compacto da caixa de sugestões; também funciona no cabeçalho por portal. */
+.portal-feedback-status-filter {
+  box-sizing: border-box;
+  width: 128px;
+  max-width: min(150px, 50vw);
+  height: var(--portal-toolbar-button-size);
+  min-height: var(--portal-toolbar-button-size);
+  padding-inline: 10px;
+  background: var(--portal-surface-inner);
+  border-color: var(--portal-border);
+  transition: background-color 150ms ease-out;
+}
+.portal-feedback-status-filter:hover {
+  background: var(--portal-surface-panel);
+}
+.portal-feedback-status-filter select {
+  height: 100%;
+  min-height: 0;
+  padding-block: 0;
+}
+
 .portal-settings-workspace-divider {
   height: var(--portal-sheet-content-divider);
   min-height: var(--portal-sheet-content-divider);
@@ -1241,18 +1266,12 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-settings-single-pane,
-.portal-settings-workspace-main {
-  background: var(--portal-surface-page);
-}
-
+.portal-settings-workspace-main,
 .portal-settings-workspace-content[data-portal-full-bleed="true"] {
   background: var(--portal-surface-page);
 }
 
-.portal-settings-workspace[data-portal-compact="true"] {
-  min-height: 0;
-}
-
+.portal-settings-workspace[data-portal-compact="true"],
 .portal-settings-workspace[data-portal-compact="true"] .portal-settings-single-pane {
   min-height: 0;
 }
@@ -1610,8 +1629,8 @@ button[aria-label^="Configurar exibição"],
 }
 
 .portal-settings-workspace[data-portal-sheet-workspace="true"] {
-  width: min(1360px, calc(100vw - 48px));
-  height: min(760px, calc(100dvh - 48px));
+  width: calc(100vw - 48px);
+  height: calc(100dvh - 48px);
 }
 
 .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-settings-workspace-divider {
@@ -1662,6 +1681,103 @@ button[aria-label^="Configurar exibição"],
   width: 100%;
   margin: 0;
   border-radius: 0;
+}
+
+@media (min-width: 1280px) {
+  .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-scroll-host > .min-w-max {
+    min-width: 0;
+  }
+
+  .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-table {
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-table :is(th, td) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+.portal-responsive-records .portal-record-summary {
+  display: none;
+}
+
+.portal-responsive-records .portal-record-actions {
+  flex-wrap: wrap;
+}
+
+@media (min-width: 851px) {
+  .portal-responsive-records :is(th, td)[data-portal-resized="true"] {
+    width: var(--portal-record-column-width);
+    min-width: var(--portal-record-column-width);
+    max-width: var(--portal-record-column-width);
+  }
+}
+
+@media (max-width: 850px) {
+  .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-spreadsheet-scroll-host > .min-w-max:has(> .portal-responsive-records) {
+    min-width: 0;
+  }
+
+  .portal-settings-workspace[data-portal-sheet-workspace="true"] .portal-responsive-records {
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .portal-responsive-records :is(th, td):not([data-portal-mobile-cell], .portal-sheet-empty-cell),
+  .portal-responsive-records .portal-record-desktop-label,
+  .portal-responsive-records .portal-core-resizer {
+    display: none;
+  }
+
+  .portal-responsive-records :is(th, td)[data-portal-mobile-cell] {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .portal-responsive-records thead th[data-portal-mobile-cell]:has(> .portal-core-column-menu) {
+    padding-inline: 6px 22px;
+  }
+
+  .portal-responsive-records td[data-portal-mobile-cell] {
+    padding: 8px 6px;
+  }
+
+  .portal-responsive-records td[data-portal-mobile-cell="summary"] {
+    padding-inline: 10px;
+    text-align: left;
+  }
+
+  .portal-responsive-records th[data-portal-mobile-cell="actions"] {
+    width: 114px;
+  }
+
+  .portal-responsive-records th[data-portal-mobile-cell="status"] {
+    width: 82px;
+  }
+
+  .portal-responsive-records th[data-portal-mobile-cell="delete"] {
+    width: 68px;
+  }
+
+  .portal-responsive-records .portal-record-summary {
+    display: block;
+  }
+
+  .portal-responsive-records details.portal-record-summary summary {
+    width: fit-content;
+    padding-block: 6px;
+    color: var(--portal-brand-header);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .portal-responsive-records td[data-portal-mobile-cell] button {
+    min-height: 32px;
+    max-width: 100%;
+    white-space: normal;
+  }
 }
 
 .portal-settings-workspace[data-portal-workflow-workspace="true"] .portal-studio,
@@ -2159,8 +2275,7 @@ button:has(svg[class*="lucide-trash"]) svg[class*="lucide-trash"] {
 .portal-feedback-dialog[data-tone="warning"] .portal-action-primary { background: #a42f3a; color: white; border-color: #a42f3a; }
 
 /* Documentos pendentes permanecem legíveis, com hierarquia visual reduzida. */
-.portal-document-unavailable { opacity: .6; box-shadow: none; }
-.portal-document-unavailable:focus-within { opacity: 1; }
+.portal-document-unavailable { box-shadow: none; }
 
 .portal-tcc-document-card .portal-document-sign { background: var(--portal-brand-header); color: white; }
 .portal-tcc-document-card .portal-document-sign:disabled { background: #e2e8f0; color: var(--portal-text-muted); }
@@ -2205,7 +2320,7 @@ button:has(svg[class*="lucide-trash"]) svg[class*="lucide-trash"] {
 
 /* Private process roster: shared column labels and one compact row per person. */
 form[aria-labelledby="registration-title"] .portal-input[readonly] { background-color: var(--portal-surface-panel); }
-.portal-tcc-members-box { padding: 10px; }
+.portal-tcc-members-box,
 .portal-tcc-data-box { padding: 10px; }
 .portal-tcc-record-row { gap: 8px; }
 .portal-tcc-record-row-defense { margin-top: 8px; }
@@ -2233,6 +2348,13 @@ form[aria-labelledby="registration-title"] .portal-input[readonly] { background-
 
 /* Registration review shares one compact spreadsheet layout across its blocks. */
 .portal-registration-review-table { min-width: 700px; }
+.portal-registration-review-data { container: registration-review / inline-size; }
+.portal-registration-review-columns { display: grid; gap: 16px; align-items: start; }
+.portal-registration-review-columns > * { min-width: 0; }
+.portal-registration-review-data .portal-registration-review-table { min-width: 0; }
+@container registration-review (min-width: 800px) {
+ .portal-registration-review-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .portal-registration-review-findings .portal-members-table-scroll { border-color: #fcd34d; }
 .portal-registration-review-findings .portal-registration-review-table { min-width: 480px; }
 .portal-registration-review-findings .portal-registration-review-table thead th { background: #fef3c7; color: #78350f; }
@@ -2266,3 +2388,19 @@ form[aria-labelledby="registration-title"] .portal-input[readonly] { background-
 :is(.portal-modal-surface,.portal-process-dialog,[role="dialog"]) button:not([role="tab"]):not([role="switch"]):not(.portal-inline-field-trigger):not(.portal-guide-tab):not(.portal-tcc-workspace-tabs button):not(.portal-table-filter-option):not(.portal-calendar-day):not(.portal-workflow-step) {
  border-radius: var(--portal-control-radius);
 }
+dialog.portal-operation-blocking::backdrop {
+  background: rgba(15, 23, 42, 0.3);
+  cursor: progress;
+}
+
+.portal-document-status-progress { background: #fffbeb; color: #78350f; border-color: #fbbf24; }
+
+/* Compact overview, scoped to the settings editor; process progress stays unchanged. */
+.portal-workflow-overview .portal-workflow-sequence { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); }
+.portal-workflow-overview .portal-workflow-overview-step { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; }
+.portal-workflow-overview-number { display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; border: 1px solid var(--portal-border); border-radius: 50%; color: var(--portal-brand-header); font-size: 11px; font-weight: 700; }
+.portal-workflow-overview-step[aria-pressed="true"] .portal-workflow-overview-number { background: var(--portal-brand-header); border-color: var(--portal-brand-header); color: white; }
+.portal-workflow-overview-title { flex: 1; font-size: 11px; font-weight: 600; line-height: 1.45; color: var(--portal-text-main, #1e293b); }
+.portal-workflow-overview-step[aria-pressed="true"] .portal-workflow-overview-title { font-weight: 800; }
+.portal-workflow-overview-count { font-size: 11px; color: var(--portal-text-muted, #64748b); }
+.portal-workflow-overview .portal-workflow-add { min-height: 88px; }

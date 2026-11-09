@@ -14,11 +14,11 @@ test('visitante consulta sem receber tarefas de avaliação, devolução ou aute
   assert.match(html, /Repositório/);
   assert.doesNotMatch(html, /Registrar o conceito e conferir|Assinar e devolver pelo Gov|seis dígitos|\/manual\/ficha/);
   assert.match(content('visitante'), /Não é necessário entrar/);
-  assert.match(content('visitante'), /E-mails, matrículas e registros não aparecem/);
+  assert.match(content('visitante'), /E-mails e outros dados pessoais não aparecem/);
 });
 
-test('manual possui apenas os três perfis solicitados; perfil desconhecido não recebe tarefas', () => {
-  assert.deepEqual(Object.keys(guideActivityOrder), ['aluno', 'orientador', 'visitante']);
+test('manual possui os quatro perfis, incluindo examinador; perfil desconhecido não recebe tarefas', () => {
+  assert.deepEqual(Object.keys(guideActivityOrder), ['aluno', 'orientador', 'examinador', 'visitante']);
   assert.equal(guide('presidente'), '');
   assert.deepEqual(activitiesForRole('__proto__'), []);
   const source = readFileSync(new URL('../src/pages/PortalTutorialPage.tsx', import.meta.url), 'utf8');
@@ -35,6 +35,14 @@ test('aluno e orientador recebem somente as atividades correspondentes', () => {
   assert.doesNotMatch(advisor, /Entregar os arquivos e escolher/);
 });
 
+test('examinador tem assinatura própria sem autorização para avaliar ou entregar o trabalho', () => {
+  const examiner = content('examinador');
+  assert.match(examiner, /dois examinadores/);
+  assert.match(examiner, /todas as assinaturas exigidas/);
+  assert.match(examiner, /link pessoal/);
+  assert.doesNotMatch(activitiesForRole('examinador').map(activity => activity.title).join('\n'), /Registrar o conceito e conferir a ata|Entregar os arquivos e escolher/);
+});
+
 test('atividades têm instruções, condição de conclusão, ajuda contextual e imagem existente', () => {
   assert.equal(new Set(guideActivities.map(activity => activity.id)).size, guideActivities.length);
   for (const activity of guideActivities) {
@@ -44,6 +52,10 @@ test('atividades têm instruções, condição de conclusão, ajuda contextual e
     assert.ok(existsSync(file), `${activity.id}: imagem ausente`);
     const bytes = readFileSync(file);
     assert.equal(bytes.subarray(0, 3).toString('hex'), 'ffd8ff', `${activity.id}: JPEG inválido`);
+    for (const illustration of Object.values(activity.illustrationsByRole || {})) {
+      const image = readFileSync(new URL(`../public/manual/${illustration.imageId}.jpg`, import.meta.url));
+      assert.equal(image.subarray(0, 3).toString('hex'), 'ffd8ff', `${illustration.imageId}: JPEG inválido`);
+    }
     for (const related of activity.relatedImages || []) {
       assert.ok(existsSync(new URL(`../public/manual/${related.id}.jpg`, import.meta.url)), `${related.id}: imagem complementar ausente`);
     }
@@ -82,12 +94,13 @@ test('conceito, entrega e assinatura respeitam os caminhos e as condições reai
   assert.match(advisor, /Conceito e Ata/);
   assert.match(advisor, /Aprovado, Aprovado com ressalva ou Reprovado/);
   assert.match(advisor, /Portal do Professor/);
-  assert.match(advisor, /não envia uma assinatura automaticamente/);
+  assert.match(advisor, /Confira o estado da ata e as opções de assinatura disponíveis/);
+  assert.match(advisor, /ASTEN envia o pedido de assinatura automaticamente/);
   assert.match(advisor, /Master confere/);
   assert.match(advisor, /primeira entrega final bloqueia a reabertura/);
   assert.match(student, /exatamente cinco palavras-chave/);
   assert.match(student, /não autoriza sua publicação/);
-  assert.match(student, /Sem nenhuma autorização, não haverá termo/);
+  assert.match(student, /Sem nenhuma caixa assinalada, nenhum PDF será publicado e não haverá termo/);
   assert.match(student, /Confirmar entrega e ir para documentos/);
   assert.match(student, /Enviar nova solicitação/);
   assert.match(student, /sem os botões reservados ao responsável/);

@@ -2,53 +2,24 @@
    RESPONSIVIDADE — regras @media isoladas da implementação base
    ========================================================================== */
 
-@media (min-width: 900px) {
+@media (min-width: 768px) {
   .portal-flow-snake {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 36px 18px;
   }
+}
 
-  .portal-flow-step:nth-child(1) { grid-column: 1; grid-row: 1; }
-  .portal-flow-step:nth-child(2) { grid-column: 2; grid-row: 1; }
-  .portal-flow-step:nth-child(3) { grid-column: 3; grid-row: 1; }
-  .portal-flow-step:nth-child(4) { grid-column: 4; grid-row: 1; }
-  .portal-flow-step:nth-child(5) { grid-column: 4; grid-row: 2; }
-  .portal-flow-step:nth-child(6) { grid-column: 3; grid-row: 2; }
-  .portal-flow-step:nth-child(7) { grid-column: 2; grid-row: 2; }
-  .portal-flow-step:nth-child(8) { grid-column: 1; grid-row: 2; }
+@media (min-width: 1280px) {
+  .portal-flow-snake {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 
-  .portal-flow-step:nth-child(1)::after,
-  .portal-flow-step:nth-child(2)::after,
-  .portal-flow-step:nth-child(3)::after {
+  .portal-flow-step:not(:nth-child(4n))::after {
     content: "→";
     position: absolute;
     top: 50%;
     right: -17px;
     transform: translateY(-50%);
-    color: var(--portal-brand-action);
-    font-size: var(--portal-type-title);
-    font-weight: 900;
-  }
-
-  .portal-flow-step:nth-child(5)::after,
-  .portal-flow-step:nth-child(6)::after,
-  .portal-flow-step:nth-child(7)::after {
-    content: "←";
-    position: absolute;
-    top: 50%;
-    left: -17px;
-    transform: translateY(-50%);
-    color: var(--portal-brand-action);
-    font-size: var(--portal-type-title);
-    font-weight: 900;
-  }
-
-  .portal-flow-step:nth-child(4)::before {
-    content: "↓";
-    position: absolute;
-    bottom: -31px;
-    left: 50%;
-    transform: translateX(-50%);
     color: var(--portal-brand-action);
     font-size: var(--portal-type-title);
     font-weight: 900;
@@ -219,5 +190,40 @@ body #portal-app-root .portal-sidebar-subtitle * {
     body dialog.portal-modal-surface :is(input, select, textarea):focus {
       font-size: 16px;
     }
+  }
+}
+
+/* The calendar title includes location and month controls; allow its rows to wrap. */
+[data-portal-sheet="calendar"][data-portal-has-filter="false"] [data-portal-sheet-title="true"] {
+  height: auto;
+  padding-block: 8px;
+}
+
+/* Sheet titles stack their toolbars on narrow screens; reserve their full height. */
+@media (max-width: 639px) {
+  [data-portal-sheet] [data-portal-sheet-title="true"],
+  [data-portal-sheet][data-portal-has-filter="false"] [data-portal-sheet-title="true"] {
+    height: auto;
+    padding-block: 8px;
+  }
+}
+
+/* Preserve the beginning of tall dialogs when zoom makes them exceed the viewport. */
+.portal-modal-backdrop {
+  align-items: safe center;
+}
+
+/* Use the content width beside the sidebar, including when the site is zoomed. */
+.portal-location-container {
+  container-type: inline-size;
+}
+@container (min-width: 640px) {
+  .portal-location-grid {
+    grid-template-columns: minmax(0, 1.45fr) minmax(280px, .8fr);
+  }
+}
+@container (min-width: 1000px) {
+  .portal-location-grid {
+    grid-template-columns: minmax(0, 1.65fr) minmax(330px, .72fr);
   }
 }

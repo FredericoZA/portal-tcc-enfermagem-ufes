@@ -14,10 +14,10 @@ const rules = config.headers || [];
 const globalHeaders = Object.fromEntries((rules.find((rule) => rule.source === '/(.*)')?.headers || []).map(({ key, value }) => [key.toLowerCase(), value]));
 const apiHeaders = Object.fromEntries((rules.find((rule) => rule.source === '/api/(.*)')?.headers || []).map(({ key, value }) => [key.toLowerCase(), value]));
 
-test('CSP usa origem exata do Supabase e bloqueia vetores estruturais', () => {
+test('CSP permite transferências para o Drive e bloqueia conexões do navegador com o Supabase', () => {
   const csp = globalHeaders['content-security-policy'] || '';
-  assert.match(csp, /connect-src[^;]*https:\/\/vvgdmycmotazqjvpywmk\.supabase\.co/);
-  assert.doesNotMatch(csp, /\*\.supabase\.co/);
+  const connectSrc = csp.split(';').map(directive => directive.trim()).find(directive => directive.startsWith('connect-src '));
+  assert.equal(connectSrc, "connect-src 'self' blob: https://www.googleapis.com");
   assert.match(csp, /object-src 'none'/);
   assert.match(csp, /base-uri 'self'/);
   assert.match(csp, /form-action 'self'/);

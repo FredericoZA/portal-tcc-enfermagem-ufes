@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync,readFileSync } from 'node:fs';
 
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
@@ -38,11 +38,12 @@ test('cadastro de TCC abre em popup flutuante, não como navegação normal',()=
 });
 
 test('estúdio operacional não conserva backdrops e botões X dos antigos modais',()=>{
-  const studio=read('src/components/UnifiedFlowSystem.tsx');
+  const studio=read('src/components/IntegrationStudioPanel.tsx');
   assert.doesNotMatch(studio,/fixed inset-0 z-50 bg-slate-900\/60/);
   assert.doesNotMatch(studio,/aria-label="Fechar configuração da variável"/);
-  assert.match(studio,/portal-flow-modal/);
-  assert.match(studio,/portal-flow-modal-header/);
+  assert.match(studio,/data-portal-workflow-editor="true"/);
+  assert.match(studio,/SettingsWorkspaceHeaderPortal/);
+  assert.match(studio,/data-portal-preview-dialog="true"/);
 });
 
 test('popups principais abandonam superfícies estruturais escuras',()=>{
@@ -68,17 +69,14 @@ test('popups públicos e administrativos usam superfície canônica',()=>{
   assert.match(home,/Selecionar mês/);
   assert.match(home,/Selecionar data/);
   assert.match(home,/portal-modal-divider/);
-  assert.match(access,/portal-standard-modal portal-modal-surface/);
+  assert.match(access,/<PortalModalShell/);
   assert.match(audit,/portal-standard-modal portal-modal-surface/);
 });
 
 
 test('editores e workspaces restantes seguem o mesmo shell e não reintroduzem botão X',()=>{
   const modalPaths=[
-    'src/components/CalendarPopupEditorModal.tsx',
-    'src/components/LoginPopupEditorModal.tsx',
-    'src/components/TccDetailPopupEditorModal.tsx',
-    'src/components/UnifiedPortalEditorModal.tsx',
+    'src/components/IntegrationStudioPanel.tsx',
     'src/components/SettingsWorkspaceModal.tsx',
   ];
   for(const path of modalPaths){
@@ -100,13 +98,24 @@ test('Indicadores usa título full-width, faixa branca e respiro antes das caixa
 });
 
 
-test('editor do popup de login usa autosave e não exibe salvar ou X',()=>{
-  const source=read('src/components/LoginPopupEditorModal.tsx');
-  assert.match(source,/window\.setTimeout\(\(\) => \{/);
-  assert.match(source,/saveLoginPopupConfig\(config\)/);
-  assert.doesNotMatch(source,/Salvar Alterações/);
-  assert.doesNotMatch(source,/<X\b/);
-  assert.doesNotMatch(source,/handleSave/);
+test('login ativo preserva configurações publicadas e acesso por e-mail e código',()=>{
+  const source=read('src/pages/HomePage.tsx');
+  assert.match(source,/loadLoginPopupConfig\(\)/);
+  assert.match(source,/setLoginPopupConfig\(newConfig\)/);
+  const start=source.indexOf('<div data-portal-login-modal');
+  assert.ok(start>=0);
+  const login=source.slice(start,source.indexOf('</form>',start));
+  assert.match(login,/type="email"/);
+  assert.match(login,/autoComplete="one-time-code"/);
+  assert.doesNotMatch(login,/type="password"|<X\b/);
+});
+
+test('editores paralelos aposentados não permanecem como superfícies alternativas',()=>{
+  for(const file of ['UnifiedFlowSystem','UnifiedPortalEditorModal','CalendarPopupEditorModal','LoginPopupEditorModal','TccDetailPopupEditorModal','SiteLayoutEditorModal','ModalPortal','YinYangIcon','ImageUploadField','PortalPersonalizationHubModal','editor/EditorFields','editor/PopupPreviewSection','editor/SpreadsheetPreviewSection'])assert.equal(existsSync(new URL(`../src/components/${file}.tsx`,import.meta.url)),false,file);
+  const settings=read('src/pages/ConfiguracoesPage.tsx');
+  assert.match(settings,/<SettingsWorkspaceModal/);
+  assert.match(settings,/<IntegrationStudioPanel/);
+  assert.doesNotMatch(settings,/UnifiedFlowSystem|UnifiedPortalEditorModal|PortalPersonalizationHubModal/);
 });
 
 
@@ -116,7 +125,7 @@ test('os quatro workspaces de registros são popups-planilha full-bleed com rola
   assert.match(modal,/new Set\(\['authorizations', 'signature-ledger', 'audit-ledger', 'feedback-ledger'\]\)/);
   assert.match(modal,/sheetWorkspace \? 'flex flex-col overflow-hidden'/);
   const css=read('src/styles/portal-components.css');
-  assert.match(css,/\.portal-settings-workspace\[data-portal-sheet-workspace="true"\]\s*\{[^}]*height:\s*min\(760px, calc\(100dvh - 48px\)\)/);
+  assert.match(css,/\.portal-settings-workspace\[data-portal-sheet-workspace="true"\]\s*\{[^}]*height:\s*calc\(100dvh - 48px\)/);
   assert.match(css,/\[data-portal-sheet-workspace="true"\] \.portal-settings-workspace-divider\s*\{\s*display: block;[\s\S]*?height:\s*15px/);
   assert.match(scroll,/fillHeight \? 'none'/);
   assert.match(scroll,/fillHeight \? '100%' : undefined/);
@@ -183,14 +192,17 @@ test('fila da Presidência valida a elegibilidade Asten e aceita uma seleção',
 test('editor de fluxo usa timeline clicável e planilha da etapa sem paleta de arraste',()=>{
   const studio=read('src/components/IntegrationStudioPanel.tsx');
   assert.match(studio,/data-portal-workflow-editor="true"/);
-  assert.match(studio,/id="workflow-timeline-title"/);
-  assert.match(studio,/onClick=\{\(\)=>setSelectedWorkflowStageId\(stage\.id\)\}/);
-  assert.match(studio,/title="Adicionar etapa"/);
+  const overview=read('src/components/WorkflowStageOverview.tsx');
+  assert.match(studio,/onSelect=\{setSelectedWorkflowStageId\}/);
+  assert.match(overview,/id="workflow-timeline-title"/);
+  assert.match(overview,/onClick=\{\(\)=>onSelect\(stage\.id\)\}/);
+  assert.match(overview,/aria-label="Adicionar etapa"/);
   assert.match(studio,/data-portal-workflow-stage-sheet="true"/);
-  assert.match(studio,/>Usar<\/th>/);
+  assert.doesNotMatch(studio,/>Usar<\/th>/);
+  assert.match(studio,/workflowStageRows<WorkflowActionItem>/);
   assert.match(studio,/>Ordem<\/th>/);
-  assert.match(studio,/>Condição para execução<\/th>/);
-  assert.match(studio,/type="checkbox" checked=\{Boolean\(action\)\}/);
+  assert.match(studio,/>Gatilho para execução<\/th>/);
+  assert.match(studio,/>Adicionar atividade<\/label>/);
   assert.match(studio,/pb-5/);
   assert.doesNotMatch(studio,/Arraste para uma etapa/);
   assert.doesNotMatch(studio,/application\/x-portal-workflow/);

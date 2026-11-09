@@ -1,28 +1,31 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
-import { BarChart3, BookOpen, CalendarDays, CheckCircle2, Clock3, FileText, Gauge, ShieldCheck, TrendingUp, Users2 } from 'lucide-react';
+import { BarChart3, CalendarDays, CheckCircle2, Clock3, FileText, Gauge, ShieldCheck, TrendingUp, Users2 } from 'lucide-react';
 import { PortalSectionDivider } from '../components/PortalSectionDivider';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
+import {apiClient} from '../services/apiClient';
+import { saoPauloCalendarDate } from '../utils/formatters';
+import { disclosedBucketKey, disclosedMonthYears, filterDisclosedMonths, filterDisclosedPeriod } from '../utils/publicIndicatorFilters';
 
 type Bucket = { label: string; count: number; key?: string };
 type PublicIndicators = {
   generatedAt: string;
   privacy: { containsPersonalData: boolean; smallGroupSuppressed: boolean; minimumGroupSize: number; minimumBucketSize: number };
-  totals: { registered: number; completed: number; published: number; defended: number; inProgress: number; completionRate: number; publicationRate: number; coauthorRate: number };
-  descriptive: null | { monthlyMean: number; monthlyMedian: number; monthlyStdDev: number; peakMonth: string | null; peakMonthCount: number; completionDaysMean: number; completionDaysMedian: number; observedMonths: number };
+  totals: { registered: number; completed: number; defended: number; inProgress: number; completionRate: number; coauthorRate: number };
+  descriptive: null | { monthlyMean: number; monthlyMedian: number; monthlyStdDev: number; peakMonth: string | null; peakMonthCount: number; completionDaysMean: number | null; completionDaysMedian: number | null; observedMonths: number };
   byStatus: Array<{ key: string; label: string; count: number }>;
   years: Bucket[];
   months: Bucket[];
+  academicPeriods: Bucket[];
   themes: Bucket[];
   workTypes: Bucket[];
   locations: Bucket[];
   outcomes: Bucket[];
-  formats: Bucket[];
   weekdays: Bucket[];
   dayparts: Bucket[];
 };
 
-const panel = 'portal-layer-card h-full rounded-2xl border border-slate-300 p-4 shadow-sm';
+const panel = 'portal-layer-card min-w-0 h-full rounded-2xl border border-slate-300 p-4 shadow-sm';
 const pct = (n: number, d: number) => d > 0 ? Math.round((n / d) * 100) : 0;
 const num = (value: number, digits = 1) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: digits }).format(value || 0);
 const monthLabel = (value?: string | null) => {
@@ -32,10 +35,20 @@ const monthLabel = (value?: string | null) => {
   return new Intl.DateTimeFormat('pt-BR', { month: 'short', year: 'numeric' }).format(new Date(Number(match[1]), Number(match[2]) - 1, 1)).replace('.', '');
 };
 
-const BarList: React.FC<{ items?: Bucket[]; percentage?: boolean; empty?: string }> = ({ items = [], percentage = false, empty = 'Sem volume suficiente.' }) => {
+const monthIndex = (bucket?: Bucket) => {
+  const match = /^([0-9]{4})-(0[1-9]|1[0-2])$/.exec(bucket?.key || bucket?.label || '');
+  return match ? Number(match[1]) * 12 + Number(match[2]) : null;
+};
+const consecutiveMonths = (before: Bucket, after: Bucket) => {
+  const previous = monthIndex(before);
+  const current = monthIndex(after);
+  return previous !== null && current !== null && current - previous === 1;
+};
+
+const BarList: React.FC<{ items?: Bucket[]; percentage?: boolean; denominator?: number; empty?: string }> = ({ items = [], percentage = false, denominator, empty = 'Sem volume suficiente.' }) => {
   if (!items.length) return <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-500">{empty}</div>;
   const max = Math.max(1, ...items.map((item) => item.count));
-  const total = items.reduce((sum, item) => sum + item.count, 0);
+  const total = denominator ?? items.reduce((sum, item) => sum + item.count, 0);
   return <div className="space-y-2">
     {items.map((item) => <div key={`${item.key || item.label}-${item.label}`} className="grid grid-cols-[minmax(96px,170px)_1fr_58px] items-center gap-2 text-[11px]">
       <span className="truncate font-bold text-slate-800" title={item.label}>{item.label}</span>
@@ -57,8 +70,12 @@ const LineTrend: React.FC<{ items?: Bucket[] }> = ({ items = [] }) => {
     y: height - padY - (item.count / max) * (height - padY * 2),
     item,
   }));
-  const path = points.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ');
-  return <div className="overflow-x-auto">
+  const path = points.map((point, index) => {
+    const previous = points[index - 1];
+    const command = previous && consecutiveMonths(previous.item, point.item) ? 'L' : 'M';
+    return `${command} ${point.x} ${point.y}`;
+  }).join(' ');
+  return <div className="overflow-x-auto" role="region" aria-label="Gráfico mensal: role horizontalmente para consultar todos os meses" tabIndex={0}>
     <svg viewBox={`0 0 ${width} ${height}`} className="h-[230px] min-w-[620px] w-full" role="img" aria-label="Tendência mensal de defesas">
       {[0.25, 0.5, 0.75, 1].map((ratio) => <line key={ratio} x1={padX} x2={width - padX} y1={height - padY - ratio * (height - padY * 2)} y2={height - padY - ratio * (height - padY * 2)} stroke="var(--portal-border)" strokeWidth="1" />)}
       <path d={path} fill="none" stroke="var(--portal-brand-action)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
@@ -78,12 +95,11 @@ const Funnel: React.FC<{ data: PublicIndicators }> = ({ data }) => {
     { label: 'Cadastrados', count: data.totals.registered },
     { label: 'Defendidos', count: data.totals.defended },
     { label: 'Concluídos', count: data.totals.completed },
-    { label: 'Publicados', count: data.totals.published },
   ];
-  const base = Math.max(1, data.totals.registered);
+  const base = data.totals.registered;
   return <div className="space-y-2.5">{rows.map((row, index) => <div key={row.label} className="grid grid-cols-[100px_1fr_70px] items-center gap-2 text-[11px]">
     <strong className="text-slate-800">{row.label}</strong>
-    <div className="h-8 overflow-hidden rounded-lg border border-slate-300 bg-white"><div className="flex h-full items-center justify-end rounded-lg bg-[var(--portal-brand-action)] pr-2 text-[10px] font-black text-white" style={{ width: `${Math.max(8, (row.count / base) * 100)}%` }}>{row.count}</div></div>
+    <div className="h-8 overflow-hidden rounded-lg border border-slate-300 bg-white">{row.count > 0 && <div className="flex h-full items-center justify-end rounded-lg bg-[var(--portal-brand-action)] pr-2 text-[10px] font-black text-white" style={{ width: `${Math.max(8, (row.count / base) * 100)}%` }}>{row.count}</div>}</div>
     <span className="text-right font-black text-slate-950">{index === 0 ? '100%' : `${pct(row.count, base)}%`}</span>
   </div>)}</div>;
 };
@@ -92,51 +108,72 @@ export const IndicadoresPage: React.FC = () => {
   const [data, setData] = useState<PublicIndicators | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [monthlyYear, setMonthlyYear] = useState('');
+  const [academicPeriod, setAcademicPeriod] = useState('');
+  const monthlyYears = disclosedMonthYears(data?.months || []);
+  const effectiveYear = monthlyYears.includes(monthlyYear) ? monthlyYear : '';
+  const effectivePeriod = data?.academicPeriods.some((item) => disclosedBucketKey(item) === academicPeriod) ? academicPeriod : '';
 
   useEffect(() => {
+    setData(null);
+    setError('');
     let active = true;
-    const load = () => { void fetch('/api/public/indicators', { headers: { Accept: 'application/json' } })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Não foi possível carregar os indicadores.');
-        return response.json();
-      })
+    let revision = 0;
+    let controller: AbortController | undefined;
+    const load = () => {
+      const requestRevision = ++revision;
+      controller?.abort();
+      controller = new AbortController();
+      setLoading(true);
+      setError('');
+      void apiClient.getIndicators({signal:controller.signal})
       .then((payload) => {
-        if (!active) return;
-        const arrays = ['byStatus', 'years', 'months', 'themes', 'workTypes', 'locations', 'outcomes', 'formats', 'weekdays', 'dayparts'];
-        const normalized = { ...payload, totals: { registered: 0, completed: 0, published: 0, defended: 0, inProgress: 0, completionRate: 0, publicationRate: 0, coauthorRate: 0, ...(payload?.totals || {}) } } as any;
+        if (!active || requestRevision !== revision) return;
+        const arrays = ['byStatus', 'years', 'months', 'academicPeriods', 'themes', 'workTypes', 'locations', 'outcomes', 'weekdays', 'dayparts'];
+        const normalized = { ...payload, totals: { registered: 0, completed: 0, defended: 0, inProgress: 0, completionRate: 0, coauthorRate: 0, ...(payload?.totals || {}) } } as any;
         arrays.forEach((key) => { if (!Array.isArray(normalized[key])) normalized[key] = []; });
         setData(normalized as PublicIndicators);
       })
-      .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : 'Indicadores indisponíveis.'); })
-      .finally(() => { if (active) setLoading(false); }); };
+      .catch((reason) => { if (active && requestRevision === revision) setError(reason instanceof Error ? reason.message : 'Indicadores indisponíveis.'); })
+      .finally(() => { if (active && requestRevision === revision) setLoading(false); });
+    };
     load();
     window.addEventListener(PORTAL_LIVE_UPDATE_EVENT,load);
-    return () => { active = false; window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT,load); };
+    return () => { active = false; controller?.abort(); window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT,load); };
   }, []);
 
   const analytics = useMemo(() => {
-    if (!data) return null;
+    if (!data?.totals.registered) return null;
     const t = data.totals;
     const d = data.descriptive;
     const months = data.months;
     const latest = months.at(-1);
     const previous = months.at(-2);
-    const monthOverMonth = latest && previous && previous.count > 0 ? Math.round(((latest.count - previous.count) / previous.count) * 100) : null;
+    const generatedAt = Date.parse(data.generatedAt);
+    const asOf = Number.isFinite(generatedAt) ? saoPauloCalendarDate(new Date(generatedAt)) : '';
+    const currentMonth = asOf.slice(0, 7);
+    const latestMonthIsPartial = Boolean(latest && (latest.key || latest.label) === currentMonth);
+    const monthOverMonth = latest && previous && previous.count > 0 && !latestMonthIsPartial && consecutiveMonths(previous, latest)
+      ? Math.round(((latest.count - previous.count) / previous.count) * 100)
+      : null;
     const yearly = data.years;
     const latestYear = yearly.at(-1);
     const previousYear = yearly.at(-2);
-    const yearOverYear = latestYear && previousYear && previousYear.count > 0 ? Math.round(((latestYear.count - previousYear.count) / previousYear.count) * 100) : null;
+    const latestYearIsPartial = Boolean(latestYear && latestYear.label === asOf.slice(0, 4));
+    const yearOverYear = latestYear && previousYear && previousYear.count > 0 && !latestYearIsPartial && Number(latestYear.label) - Number(previousYear.label) === 1
+      ? Math.round(((latestYear.count - previousYear.count) / previousYear.count) * 100)
+      : null;
     return {
       defenseRate: pct(t.defended, t.registered),
-      defenseToCompletion: pct(t.completed, t.defended),
-      completionToPublication: pct(t.published, t.completed),
       inProgressRate: pct(t.inProgress, t.registered),
-      monthlyCv: d && d.monthlyMean > 0 ? Math.round((d.monthlyStdDev / d.monthlyMean) * 100) : 0,
-      peakShare: d ? pct(d.peakMonthCount, Math.max(1, t.defended)) : 0,
+      monthlyCv: d && d.monthlyMean > 0 ? Math.round((d.monthlyStdDev / d.monthlyMean) * 100) : null,
+      peakShare: d?.peakMonth && t.defended > 0 ? pct(d.peakMonthCount, t.defended) : null,
       monthOverMonth,
       yearOverYear,
-      latestMonth: latest?.label || '—',
-      latestYear: latestYear?.label || '—',
+      latestMonth: latest
+        ? `Último mês divulgado: ${monthLabel(latest.key || latest.label)}${latestMonthIsPartial ? ' (período parcial)' : ''}`
+        : 'Nenhum mês divulgado',
+      latestYearIsPartial,
     };
   }, [data]);
 
@@ -155,38 +192,39 @@ export const IndicadoresPage: React.FC = () => {
 
     {data && data.privacy.smallGroupSuppressed && <div className="flex gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950"><ShieldCheck className="h-4 w-4 shrink-0"/><span>Proteção de grupos pequenos ativa. As distribuições detalhadas permanecem ocultas até o volume mínimo de {data.privacy.minimumGroupSize} TCCs.</span></div>}
 
+    {data && !data.totals.registered && !data.privacy.smallGroupSuppressed && <p role="status" className="rounded-xl border border-dashed border-slate-300 p-4 text-xs text-slate-600">Sem TCCs cadastrados para calcular os indicadores.</p>}
+
     {data && !data.privacy.smallGroupSuppressed && analytics && <div className="space-y-3">
-      <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-2 sm:grid-cols-3">
         {[
           [FileText, 'TCCs cadastrados', data.totals.registered, 'base total registrada'],
           [CheckCircle2, 'Defesas realizadas', data.totals.defended, `${analytics.defenseRate}% dos cadastrados`],
           [TrendingUp, 'TCCs concluídos', data.totals.completed, `${data.totals.completionRate}% dos cadastrados`],
-          [BookOpen, 'Publicações', data.totals.published, `${data.totals.publicationRate}% dos cadastrados`],
         ].map(([Icon, label, value, detail]: any) => <article key={label} className={panel}><div className="flex items-start justify-between"><div><div className="text-3xl font-black text-[var(--portal-brand-action)]">{value}</div><h2 className="mt-1 text-xs font-black normal-case text-slate-950">{label}</h2></div><Icon className="h-5 w-5 text-[var(--portal-brand-action)]"/></div><p className="mt-2 text-[11px] text-slate-600">{detail}</p></article>)}
       </section>
 
-      <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+      <section className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(8rem,1fr))]">
         {[
           [Gauge, 'Taxa de defesa', `${analytics.defenseRate}%`, 'cadastrado → defendido'],
-          [TrendingUp, 'Defesa → conclusão', `${analytics.defenseToCompletion}%`, 'conversão agregada'],
-          [BookOpen, 'Conclusão → publicação', `${analytics.completionToPublication}%`, 'conversão agregada'],
           [Clock3, 'Em andamento', `${analytics.inProgressRate}%`, `${data.totals.inProgress} processos`],
-          [BarChart3, 'Volatilidade mensal', `${analytics.monthlyCv}%`, 'coeficiente de variação'],
-          [CalendarDays, 'Concentração no pico', `${analytics.peakShare}%`, monthLabel(data.descriptive?.peakMonth)],
+          [BarChart3, 'Volatilidade mensal', analytics.monthlyCv===null?'—':`${analytics.monthlyCv}%`, 'coeficiente de variação'],
+          [CalendarDays, 'Concentração no pico', analytics.peakShare === null ? '—' : `${analytics.peakShare}%`, monthLabel(data.descriptive?.peakMonth)],
           [Users2, 'Coautoria', `${data.totals.coauthorRate}%`, 'do acervo'],
-          [TrendingUp, 'Último mês', analytics.monthOverMonth === null ? '—' : `${analytics.monthOverMonth >= 0 ? '+' : ''}${analytics.monthOverMonth}%`, analytics.latestMonth],
+          [TrendingUp, 'Variação mensal', analytics.monthOverMonth === null ? '—' : `${analytics.monthOverMonth >= 0 ? '+' : ''}${analytics.monthOverMonth}%`, analytics.latestMonth],
         ].map(([Icon, label, value, detail]: any) => <article key={label} className="portal-indicator-summary portal-layer-card rounded-xl border border-slate-300 p-3 shadow-sm"><Icon className="h-4 w-4 text-[var(--portal-brand-action)]"/><strong className="mt-2 block text-xl text-slate-950">{value}</strong><h3 className="text-[9px] font-black normal-case text-slate-800">{label}</h3><p className="mt-1 text-[9px] text-slate-500">{detail}</p></article>)}
       </section>
 
       <section className="grid gap-3 xl:grid-cols-[1.7fr_1fr]">
-        <article className={panel}><h2 className="text-xs font-black normal-case text-slate-950">Defesas por mês — tendência</h2><p className="mb-2 mt-1 text-[10px] text-slate-600">Evolução temporal com todos os períodos agregados disponíveis.</p><LineTrend items={data.months}/></article>
-        <article className={panel}><h2 className="text-xs font-black normal-case text-slate-950">Funil agregado</h2><p className="mb-3 mt-1 text-[10px] text-slate-600">Conversão acumulada da base registrada até publicação.</p><Funnel data={data}/></article>
+        <article className={panel}><h2 className="text-xs font-black normal-case text-slate-950">Defesas por mês — tendência</h2><p className="mb-2 mt-1 text-[10px] text-slate-600">O gráfico e as medidas incluem apenas meses com volume suficiente para divulgação. A linha liga meses consecutivos. Períodos omitidos podem ter tido defesas.</p><label className="mb-3 block text-xs font-bold text-slate-800">Ano — somente neste gráfico<select className="mt-1 block w-full max-w-full rounded-lg border border-slate-300 bg-white p-2 text-xs" value={effectiveYear} onChange={(event) => setMonthlyYear(event.target.value)}><option value="">Todos os anos divulgados</option>{monthlyYears.map((year) => <option key={year} value={year}>{year}</option>)}</select></label><LineTrend items={filterDisclosedMonths(data.months, effectiveYear)}/><p className="mt-2 text-[10px] text-slate-600">Este filtro altera apenas a série mensal. Totais e medidas gerais permanecem relativos à base completa.</p></article>
+        <article className={panel}><h2 className="text-xs font-black normal-case text-slate-950">Etapas acadêmicas</h2><p className="mb-3 mt-1 text-[10px] text-slate-600">Defesas e conclusões em relação ao total de TCCs cadastrados.</p><Funnel data={data}/></article>
       </section>
 
       <section className="grid gap-3 xl:grid-cols-2">
-        <article className={panel}><h2 className="text-xs font-black normal-case text-slate-950">Evolução anual</h2><p className="mb-3 mt-1 text-[10px] text-slate-600">Comparação do volume entre os anos disponíveis. Variação mais recente: {analytics.yearOverYear === null ? 'não disponível' : `${analytics.yearOverYear >= 0 ? '+' : ''}${analytics.yearOverYear}%`}.</p><BarList items={data.years}/></article>
-        <article className={panel}><h2 className="text-xs font-black normal-case text-slate-950">Situação dos processos</h2><p className="mb-3 mt-1 text-[10px] text-slate-600">Distribuição da base por situação registrada.</p><BarList items={data.byStatus} percentage/></article>
+        <article className={panel}><h2 className="text-xs font-black normal-case text-slate-950">Evolução anual</h2><p className="mb-3 mt-1 text-[10px] text-slate-600">Comparação do volume entre os anos disponíveis. Variação mais recente: {analytics.yearOverYear === null ? 'não disponível' : `${analytics.yearOverYear >= 0 ? '+' : ''}${analytics.yearOverYear}%`}.{analytics.latestYearIsPartial ? ' O ano mais recente ainda está em curso.' : ''}</p><BarList items={data.years}/></article>
+        <article className={panel}><h2 className="text-xs font-black normal-case text-slate-950">Situação dos processos</h2><p className="mb-3 mt-1 text-[10px] text-slate-600">Participação de cada situação exibida no total de TCCs cadastrados.</p><BarList items={data.byStatus} percentage denominator={data.totals.registered}/></article>
       </section>
+
+      <article className={panel}><h2 className="text-xs font-black normal-case text-slate-950">TCCs por período acadêmico informado</h2><p className="mb-3 mt-1 text-[10px] text-slate-600">Período declarado pelo aluno no cadastro, como 2026-1 ou 2026-2. A contagem inclui os TCCs cadastrados. Trabalhos sem essa informação aparecem em Não informado quando há volume suficiente para divulgação. As datas reais da defesa continuam nos gráficos de calendário.</p><label className="mb-3 block text-xs font-bold text-slate-800">Período informado — somente neste gráfico<select className="mt-1 block w-full max-w-full rounded-lg border border-slate-300 bg-white p-2 text-xs" value={effectivePeriod} onChange={(event) => setAcademicPeriod(event.target.value)}><option value="">Todos os períodos divulgados</option>{data.academicPeriods.map((item) => <option key={disclosedBucketKey(item)} value={disclosedBucketKey(item)}>{item.label}</option>)}</select></label><BarList items={filterDisclosedPeriod(data.academicPeriods, effectivePeriod)}/><p className="mt-2 text-[10px] text-slate-600">Este filtro altera apenas as barras de período informado. Os demais indicadores mantêm a base completa.</p></article>
 
       {data.descriptive && <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {[
@@ -194,18 +232,17 @@ export const IndicadoresPage: React.FC = () => {
           ['Mediana mensal', num(data.descriptive.monthlyMedian)],
           ['Desvio-padrão', num(data.descriptive.monthlyStdDev)],
           ['Mês de pico', `${monthLabel(data.descriptive.peakMonth)} · ${data.descriptive.peakMonthCount}`],
-          ['Tempo médio', `${num(data.descriptive.completionDaysMean)} d`],
-          ['Tempo mediano', `${num(data.descriptive.completionDaysMedian)} d`],
+          ['Tempo médio', data.descriptive.completionDaysMean === null ? 'Amostra insuficiente' : `${num(data.descriptive.completionDaysMean)} d`],
+          ['Tempo mediano', data.descriptive.completionDaysMedian === null ? 'Amostra insuficiente' : `${num(data.descriptive.completionDaysMedian)} d`],
         ].map(([label, value]) => <article key={label} className="portal-layer-card rounded-xl border border-slate-300 p-3"><strong className="text-lg text-slate-950">{value}</strong><div className="mt-1 text-[9px] font-black normal-case text-slate-700">{label}</div></article>)}
       </section>}
 
-      <section className="grid gap-3 lg:grid-cols-3">
+      <section className="grid gap-3 lg:grid-cols-2">
         <article className={panel}><h2 className="text-xs font-black normal-case">Dia da semana</h2><div className="mt-3"><BarList items={data.weekdays} percentage/></div></article>
         <article className={panel}><h2 className="text-xs font-black normal-case">Faixa de horário</h2><div className="mt-3"><BarList items={data.dayparts} percentage/></div></article>
-        <article className={panel}><h2 className="text-xs font-black normal-case">Modalidade</h2><div className="mt-3"><BarList items={data.formats} percentage/></div></article>
       </section>
 
-      <p className="text-xs leading-5 text-slate-600">Indicadores calculados por regras estatísticas. Dados livres, como palavras-chave e locais informados, não são publicados nesta página; categorias com poucas ocorrências são suprimidas para proteger os participantes.</p>
+      <p className="text-xs leading-5 text-slate-600">Indicadores calculados sobre os TCCs cadastrados. Categorias com poucas ocorrências são omitidas para proteger os participantes. Por isso, a soma das categorias visíveis pode ser menor que o total. Nos gráficos de dia da semana, horário, tipos e resultados, as porcentagens consideram as categorias exibidas. Dados livres, como palavras-chave e locais informados, ficam fora do painel.</p>
       <section className="grid gap-3 xl:grid-cols-2">
         <article className={panel}><h2 className="text-xs font-black normal-case">Tipos de trabalho</h2><div className="mt-3"><BarList items={data.workTypes} percentage/></div></article>
         <article className={panel}><h2 className="text-xs font-black normal-case">Resultados das bancas</h2><div className="mt-3"><BarList items={data.outcomes} percentage/></div></article>

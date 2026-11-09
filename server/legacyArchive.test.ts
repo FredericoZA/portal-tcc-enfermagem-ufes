@@ -41,6 +41,39 @@ test('legacy import is idempotent, preserves stable identifiers and rejects coll
   assert.throws(()=>validateLegacyBatch([{...legacyFixture(),attachments:[{...legacyFixture().attachments[0],driveFileId:'../../credential'}]}]));
 });
 
+test('legacy 011 restores the two documented internal examiners at import and hydration',()=>{
+  const grouped = [
+    { nome: 'Carolina Maia Martins Sales - Márcia Valéria de Souza Almeida', instituicao: '' },
+    { nome: '', instituicao: '' },
+  ];
+  const input = {
+    ...legacyFixture(),
+    id: 'legado-0011',
+    protocolo: '011 - Legado',
+    dataDefesa: '2025-02-21',
+    examinadores: grouped,
+  };
+  const expected = [
+    { nome: 'Carolina Maia Martins Sales', instituicao: 'Universidade Federal do Espírito Santo' },
+    { nome: 'Márcia Valéria de Souza Almeida', instituicao: 'Universidade Federal do Espírito Santo' },
+  ];
+  const [imported] = validateLegacyBatch([input]);
+  assert.deepEqual(imported.examinadores, expected);
+  const hydrated = canonicalLegacyRecord({ ...imported, examinadores: grouped, provenance: input.provenance });
+  assert.deepEqual(hydrated, imported);
+  assert.deepEqual(publicLegacyAcademicView(hydrated).examinadores, expected);
+  assert.deepEqual((hydrated.provenance.legacy011BoardCorrection as { originalExaminers: unknown }).originalExaminers, grouped);
+  assert.ok(!('provenance' in publicLegacyAcademicView(hydrated)));
+  assert.deepEqual(canonicalLegacyRecord(hydrated), hydrated);
+  assert.deepEqual(mergeLegacyBatch([hydrated], validateLegacyBatch([input])), [hydrated]);
+
+  const [unrelated] = validateLegacyBatch([{ ...input, id: 'legado-0012', protocolo: '012 - Legado' }]);
+  assert.deepEqual(unrelated.examinadores, grouped);
+  const changedBoard = [grouped[0], { nome: 'Docente Externa', instituicao: 'Outra universidade' }];
+  const [independentCorrection] = validateLegacyBatch([{ ...input, examinadores: changedBoard }]);
+  assert.deepEqual(independentCorrection.examinadores, changedBoard);
+});
+
 test('legacy consent authorizes only available files and supports missing full TCC',()=>{
   const fixture = legacyFixture();
   const authorized = canonicalLegacyRecord({...fixture,provenance:{originalConsent:['Sim']}} as any);
@@ -76,6 +109,9 @@ test('legacy consent authorizes only available files and supports missing full T
   assert.equal(process.legacyRecord,true);assert.equal(process.createdAt,'');assert.equal(process.orientador.titulacao,undefined);
   assert.equal(process.aluno1.email,'');assert.equal(process.aluno1.matricula,'');assert.equal(process.acervo?.trabalhoCompletoFileUrl,undefined);
   assert.deepEqual(publicProcessDetail(process).documents,[]);
+  const withPlaceholders={...record,palavrasChave:[' Saúde ', '.', '-', '△△▽▲', 'Nenhuma', 'Educação']};
+  assert.deepEqual(publicLegacyAcademicView(withPlaceholders).palavrasChave,['Saúde','Educação']);
+  assert.deepEqual(privateLegacyAcademicView(withPlaceholders).palavrasChave,withPlaceholders.palavrasChave);
  });
 
 test('administrative legacy references fail closed and stay outside public projections', async()=>{

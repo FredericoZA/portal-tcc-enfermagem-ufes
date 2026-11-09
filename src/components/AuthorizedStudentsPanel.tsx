@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { PortalModalShell } from './PortalModalShell';
 import {
   ClipboardPaste,
   Download,
@@ -35,7 +35,7 @@ const roleLabels: Record<ProcessRole, string> = {
   STUDENT: 'Aluno',
   ADVISOR: 'Orientador',
   CO_ADVISOR: 'Coorientador',
-  EXAMINER: 'Membro da banca',
+  EXAMINER: 'Examinador',
 };
 const roles: ProcessRole[] = ['STUDENT', 'ADVISOR', 'CO_ADVISOR', 'EXAMINER'];
 function administrativeRole(entry: AuthorizedStudent): ProcessRole { return (entry.accessType || entry.roles?.[0] || 'STUDENT') as ProcessRole; }
@@ -43,28 +43,26 @@ function administrativeRole(entry: AuthorizedStudent): ProcessRole { return (ent
 const ACCESS_COLUMNS: ColumnDef[] = [
   { key: 'nome', label: 'Nome', isFixed: true },
   { key: 'email', label: 'E-mail' },
-  { key: 'matricula', label: 'Matrícula' },
   { key: 'origin', label: 'Origem' },
   { key: 'active', label: 'Acesso' },
   { key: 'actions', label: 'Excluir' },
 ];
+const MOBILE_CELLS: Record<string, string> = { nome: 'summary', active: 'status', actions: 'delete' };
+const ACCESS_STATUS = { active: 'Ativo', inactive: 'Inativo' } as const;
 const DEFAULT_ORDER = ACCESS_COLUMNS.map((column) => column.key);
 const DEFAULT_VISIBLE = Object.fromEntries(ACCESS_COLUMNS.map((column) => [column.key, true]));
 
 function CompactModal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   if (typeof document === 'undefined') return null;
-  return createPortal(
-    <div className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-3" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-label={title} className="portal-standard-modal portal-modal-surface w-full max-w-3xl overflow-hidden">
-        <div className="portal-modal-header px-3">
-          {title === 'Envio de lista' ? <FileSpreadsheet className="h-4 w-4 shrink-0" aria-hidden="true"/> : <UserCheck className="h-4 w-4 shrink-0" aria-hidden="true"/>}
-          <h3 className="text-xs font-black normal-case tracking-wide">{title}</h3>
-        </div>
-        <div className="portal-modal-divider" aria-hidden="true" />
-        <div className="max-h-[78vh] overflow-y-auto bg-[var(--portal-surface-page)] p-3">{children}</div>
-      </div>
-    </div>, document.body,
-  );
+  return <PortalModalShell
+    open
+    title={title}
+    onClose={onClose}
+    icon={title === 'Envio de lista' ? FileSpreadsheet : UserCheck}
+    maxWidthClass="max-w-3xl"
+    bodyClassName="max-h-[78vh] p-3"
+    zIndexClass="z-[1000012]"
+  >{children}</PortalModalShell>;
 }
 
 export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: boolean }> = ({ canManage, embedded = false }) => {
@@ -74,7 +72,6 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
   const [saving, setSaving] = useState(false);
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
-  const [matricula, setMatricula] = useState('');
   const [role, setRole] = useState<ProcessRole>('STUDENT');
   const [search, setSearch] = useState('');
   const [recordsLimit, setRecordsLimit] = useState<number | 'all'>(initialConfig.recordsLimit || 25);
@@ -103,8 +100,8 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
   const add = async (event: React.FormEvent) => {
     event.preventDefault(); setSaving(true);
     try {
-      await apiClient.addAuthorizedStudent({ nome, email, matricula: matricula.trim() || undefined, role });
-      setNome(''); setEmail(''); setMatricula(''); setRole('STUDENT'); setModal(null); await load();
+      await apiClient.addAuthorizedStudent({ nome, email, role });
+      setNome(''); setEmail(''); setRole('STUDENT'); setModal(null); await load();
     } catch (error) { portalNotice(error instanceof Error ? error.message : 'Falha ao cadastrar acesso.'); }
     finally { setSaving(false); }
   };
@@ -178,24 +175,32 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
   const filtered = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('pt-BR');
     return entries
-      .filter((entry) => !term || `${entry.nome} ${entry.email} ${entry.matricula || ''} ${roleLabels[administrativeRole(entry)] || ''} ${entry.origin || ''}`.toLocaleLowerCase('pt-BR').includes(term))
+      .filter((entry) => !term || `${entry.nome} ${entry.email} ${roleLabels[administrativeRole(entry)] || ''} ${entry.origin || ''}`.toLocaleLowerCase('pt-BR').includes(term))
       .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR', { sensitivity: 'base' }));
   }, [entries, search]);
   const shown = filtered;
-  const activeColumns = columnOrder.filter((key) => visibleColumns[key] !== false || key === 'nome');
+  const activeColumns = columnOrder.filter((key) => DEFAULT_ORDER.includes(key) && (visibleColumns[key] !== false || key === 'nome'));
 
   const renderCell = (entry: AuthorizedStudent, key: string) => {
     const adminRole = administrativeRole(entry);
-    if (key === 'nome') return <span className="font-bold">{entry.nome}</span>;
+    if (key === 'nome') return <>
+      <span className="font-bold">{entry.nome}</span>
+      <details className="portal-record-summary">
+        <summary>Detalhes</summary>
+        <dl className="space-y-1">
+          <div><dt className="font-semibold">E-mail</dt><dd>{entry.email}</dd></div>
+          <div><dt className="font-semibold">Origem</dt><dd>{entry.origin === 'MASTER_LIST' ? 'Lista / manual' : 'Processo'}</dd></div>
+        </dl>
+      </details>
+    </>;
     if (key === 'email') return <span className="break-all">{entry.email}</span>;
-    if (key === 'matricula') return entry.matricula || '—';
     if (key === 'origin') return <span className="text-[9px] font-bold">{entry.origin === 'MASTER_LIST' ? 'Lista / manual' : 'Processo'}</span>;
     if (key === 'role') return canManage && entry.origin === 'MASTER_LIST'
       ? <select aria-label={`Qualidade de ${entry.nome}`} value={adminRole} onChange={(event) => void changeRole(entry, event.target.value as ProcessRole)} className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold">{roles.map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}</select>
       : <span className="text-[9px] font-bold">{roleLabels[adminRole]}</span>;
     if (key === 'active') return canManage
-      ? <button type="button" onClick={() => void toggle(entry)} className={`inline-flex min-h-7 items-center gap-1 rounded-md border px-2 py-1 text-[8px] font-black normal-case ${entry.active ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-300 bg-slate-100 text-slate-700'}`}>{entry.active ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}{entry.active ? 'Ativo' : 'Inativo'}</button>
-      : <span className="text-[9px]">{entry.active ? 'Ativo' : 'Inativo'}</span>;
+      ? <button type="button" onClick={() => void toggle(entry)} className={`inline-flex min-h-7 items-center gap-1 rounded-md border px-2 py-1 text-[8px] font-black normal-case ${entry.active ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-300 bg-slate-100 text-slate-700'}`}>{entry.active ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}{entry.active ? ACCESS_STATUS.active : ACCESS_STATUS.inactive}</button>
+      : <span className="text-[9px]">{entry.active ? ACCESS_STATUS.active : ACCESS_STATUS.inactive}</span>;
     if (key === 'actions') return canManage
       ? <button type="button" onClick={() => void remove(entry)} className="rounded-md border border-slate-200 bg-white p-1.5 text-rose-700 hover:bg-rose-50" title="Excluir da lista de acesso" aria-label={`Excluir ${entry.nome}`}><Trash2 className="h-3.5 w-3.5" /></button>
       : <span className="text-slate-300">—</span>;
@@ -208,7 +213,7 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
       <button type="button" onClick={() => {sourceChanged();setModal('list');}} className="portal-toolbar-icon-button" title="Enviar lista de acessos" aria-label="Enviar lista de acessos"><FileSpreadsheet className="h-3.5 w-3.5" /></button>
     </>}
     {canManage && <span className="portal-toolbar-group-divider" role="separator" aria-orientation="vertical" />}
-    <SearchPopover value={search} onChange={setSearch} placeholder="Buscar por nome, e-mail ou matrícula" textFormat={textFormat}/>
+    <SearchPopover value={search} onChange={setSearch} placeholder="Buscar por nome ou e-mail" textFormat={textFormat}/>
     <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} allColumns={ACCESS_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="authorized_access" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Acesso"/>
   </div>;
 
@@ -217,14 +222,14 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
 
     <div className="portal-access-table-shell flex min-h-0 flex-1 flex-col p-0">
       <TableScrollWrapper fillHeight>
-        <table className="portal-spreadsheet-table w-full min-w-[900px] border-collapse text-center text-xs">
-          <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black normal-case tracking-wide ${['active','actions'].includes(key) ? 'text-center' : ''}`}>{ACCESS_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
-          <tbody className="divide-y divide-slate-200">{(loading || shown.length === 0) && <tr><td colSpan={activeColumns.length} className="portal-sheet-empty-cell" role="status">{loading ? 'Carregando acessos…' : 'Nenhum acesso encontrado.'}</td></tr>}{shown.map((entry, entryIndex) => <tr key={`${entry.id}-${entry.origin}-${entryIndex}`}>{activeColumns.map((key) => <td key={key} className={`px-3 py-1 text-slate-950 ${['active','actions'].includes(key) ? 'text-center' : ''}`}>{renderCell(entry, key)}</td>)}</tr>)}</tbody>
+        <table className="portal-spreadsheet-table portal-responsive-records w-full min-w-[900px] border-collapse text-center text-xs">
+          <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} data-portal-filter-options={key === 'active' ? Object.values(ACCESS_STATUS).join('|') : undefined} className={`px-3 py-1.5 text-[10px] font-black normal-case tracking-wide ${['active','actions'].includes(key) ? 'text-center' : ''}`}>{ACCESS_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
+          <tbody className="divide-y divide-slate-200">{(loading || shown.length === 0) && <tr><td colSpan={activeColumns.length} className="portal-sheet-empty-cell" role="status">{loading ? 'Carregando acessos…' : 'Nenhum acesso encontrado.'}</td></tr>}{shown.map((entry, entryIndex) => <tr key={`${entry.id}-${entry.origin}-${entryIndex}`}>{activeColumns.map((key) => <td key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} data-portal-filter-value={key === 'nome' ? entry.nome : undefined} className={`px-3 py-1 text-slate-950 ${['active','actions'].includes(key) ? 'text-center' : ''}`}>{renderCell(entry, key)}</td>)}</tr>)}</tbody>
         </table>
       </TableScrollWrapper>
     </div>
 
-    {modal === 'add' && <CompactModal title="Adicionar acesso" onClose={() => setModal(null)}><form onSubmit={add} className="space-y-2"><div className="grid gap-2 sm:grid-cols-2"><label><span className="mb-1 block text-[9px] font-black normal-case text-slate-600">Nome completo</span><input required value={nome} onChange={(event) => setNome(event.target.value)} className={inputClass} /></label><label><span className="mb-1 block text-[9px] font-black normal-case text-slate-600">E-mail</span><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} placeholder="usuario@gmail.com" /></label><label><span className="mb-1 block text-[9px] font-black normal-case text-slate-600">Matrícula — opcional</span><input value={matricula} onChange={(event) => setMatricula(event.target.value)} className={inputClass} /></label></div><p className="text-[10px] leading-4 text-slate-600">O acesso é definido por esta lista. O e-mail não precisa pertencer a um domínio institucional.</p><div className="flex justify-end pt-1"><button disabled={saving} className={popupActionButton}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}Adicionar</button></div></form></CompactModal>}
+    {modal === 'add' && <CompactModal title="Adicionar acesso" onClose={() => setModal(null)}><form onSubmit={add} className="space-y-2"><div className="grid gap-2 sm:grid-cols-2"><label><span className="mb-1 block text-[9px] font-black normal-case text-slate-600">Nome completo</span><input required value={nome} onChange={(event) => setNome(event.target.value)} className={inputClass} /></label><label><span className="mb-1 block text-[9px] font-black normal-case text-slate-600">E-mail</span><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} placeholder="usuario@gmail.com" /></label></div><p className="text-[10px] leading-4 text-slate-600">O acesso é definido por esta lista. O e-mail não precisa pertencer a um domínio institucional.</p><div className="flex justify-end pt-1"><button disabled={saving} className={popupActionButton}>{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}Adicionar</button></div></form></CompactModal>}
 
     {modal === 'list' && <CompactModal title="Envio de lista" onClose={() => {if(!saving){sourceChanged();setModal(null);}}}><div className="space-y-4" data-access-import="true">
       <div className="flex flex-wrap gap-2">
@@ -237,7 +242,7 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
         onDrop={event=>{event.preventDefault();setDragging(false);if(saving)return;sourceChanged();const file=event.dataTransfer.files[0];if(file){setImportFile(file);setPasteText('');}else{setPasteText(event.dataTransfer.getData('text/plain'));setImportFile(null);}}}>
         <label htmlFor="access-import-text" className="mb-2 block text-xs font-bold">Dados da lista de acesso</label>
         <div className="relative">
-          <textarea id="access-import-text" aria-label="Dados da lista de acesso" aria-describedby="access-import-file-status" value={pasteText} disabled={saving} onChange={event=>{sourceChanged();setPasteText(event.target.value);setImportFile(null);}} rows={6} className={`${inputClass} block min-h-40 resize-y pb-14 font-mono`} placeholder={'Cole uma pessoa por linha, em qualquer ordem: nome, e-mail e matrícula opcional. Não precisa de cabeçalho.\nMaria Silva\tmaria@example.invalid\t202612345'}/>
+          <textarea id="access-import-text" aria-label="Dados da lista de acesso" aria-describedby="access-import-file-status" value={pasteText} disabled={saving} onChange={event=>{sourceChanged();setPasteText(event.target.value);setImportFile(null);}} rows={6} className={`${inputClass} block min-h-40 resize-y pb-14 font-mono`} placeholder={'Cole uma pessoa por linha: nome e e-mail, em qualquer ordem. Não precisa de cabeçalho.\nMaria Silva\tmaria@example.invalid'}/>
           <label className={`${whiteButton} absolute bottom-3 right-3 cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--portal-brand-header)]`}><Upload className="h-3.5 w-3.5"/>Adicionar arquivo<input aria-label="Selecionar planilha ou PDF" disabled={saving} className="sr-only" type="file" accept=".xlsx,.csv,.txt,.pdf" onChange={event=>{const file=event.target.files?.[0];if(file){sourceChanged();setImportFile(file);setPasteText('');}event.currentTarget.value='';}}/></label>
         </div>
         <p id="access-import-file-status" className="mt-2 break-words text-xs text-slate-600" role="status">{importFile?`Arquivo: ${importFile.name}`:'XLSX, CSV, TXT ou PDF com texto selecionável, até 5 MB'}</p>
@@ -246,7 +251,7 @@ export const AuthorizedStudentsPanel: React.FC<{ canManage: boolean; embedded?: 
       {reading&&<p role="status" className="text-xs">Lendo o arquivo e preparando a conferência…</p>}
       {importError&&<p role="alert" className="portal-instruction p-3 text-xs">{importError}</p>}
       {issues.length>0&&<div role="alert" className="portal-instruction p-3 text-xs"><p className="font-bold">Corrija a lista e clique em Interpretar dados novamente.</p><ul>{issues.slice(0,20).map(issue=><li key={issue.row}>Linha {issue.row}: {issue.reason}.</li>)}</ul>{issues.length>20&&<p>Mais {issues.length-20} linha(s) precisam de correção.</p>}</div>}
-      {importRows.length>0&&<div className="overflow-hidden rounded-lg border border-slate-300 bg-white"><div className="border-b border-slate-200 px-3 py-2 text-xs font-bold">{importRows.length} pessoa(s) para conferência{importRows.length>100?' — exibindo as primeiras 100':''}</div><div className="max-h-48 overflow-auto"><table className="w-full text-left text-xs"><thead><tr><th className="p-2">Linha</th><th className="p-2">Nome</th><th className="p-2">E-mail</th><th className="p-2">Matrícula</th></tr></thead><tbody>{importRows.slice(0,100).map(row=><tr key={`${row.row}-${row.email}`}><td className="p-2">{row.row}</td><td className="p-2">{row.nome||'—'}</td><td className="p-2">{row.email||'—'}</td><td className="p-2">{row.matricula||'—'}</td></tr>)}</tbody></table></div><div className="flex justify-end border-t p-2"><button type="button" disabled={saving||reading||issues.length>0} onClick={()=>void confirmImport()} className={popupActionButton}>{saving?'Importando…':`Importar ${importRows.length}`}</button></div></div>}
+      {importRows.length>0&&<div className="overflow-hidden rounded-lg border border-slate-300 bg-white"><div className="border-b border-slate-200 px-3 py-2 text-xs font-bold">{importRows.length} pessoa(s) para conferência{importRows.length>100?' — exibindo as primeiras 100':''}</div><div className="max-h-48 overflow-auto"><table className="w-full text-left text-xs"><thead><tr><th className="p-2">Linha</th><th className="p-2">Nome</th><th className="p-2">E-mail</th></tr></thead><tbody>{importRows.slice(0,100).map(row=><tr key={`${row.row}-${row.email}`}><td className="p-2">{row.row}</td><td className="p-2">{row.nome||'—'}</td><td className="p-2">{row.email||'—'}</td></tr>)}</tbody></table></div><div className="flex justify-end border-t p-2"><button type="button" disabled={saving||reading||issues.length>0} onClick={()=>void confirmImport()} className={popupActionButton}>{saving?'Importando…':`Importar ${importRows.length}`}</button></div></div>}
     </div></CompactModal>}
   </section>;
 };

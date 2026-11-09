@@ -1,9 +1,12 @@
+import { driveTransferFileId, openDriveTransfer, readDriveTransfer, removeDriveTransfer } from './driveFileTransfer';
+import { getGoogleWorkspaceAccessToken } from './googleWorkspace';
+import { reserveProcessFormPdfId } from './googleDriveArchive';
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { buildSupabaseAdminHeaders, getSupabaseRuntimeStatus } from './supabase';
 import { assertSafeUploadedDocument, UnsafeUploadError } from '../security/fileSafety';
+import {readBoundedResponse,ResponseSizeError} from '../security/boundedResponse';
 
 export type StagedUploadPurpose =
-  | 'LOCATION_PROOF'
   | 'DOCUMENT_MODEL'
   | 'PROCESS_FULL_WORK'
   | 'PROCESS_EXPANDED_ABSTRACT'
@@ -28,6 +31,7 @@ export interface StagedUploadTicket {
   uploadUrl: string;
   expiresAt: string;
   maxSizeBytes: number;
+  provider: 'drive';
 }
 
 interface StagedUploadRow {
@@ -54,7 +58,6 @@ interface DownloadTransferRow {
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const PDF_MIME = 'application/pdf';
 const MAX_BYTES:Record<StagedUploadPurpose,number> = {
-  LOCATION_PROOF: 24 * 1024 * 1024,
   DOCUMENT_MODEL: 12 * 1024 * 1024,
   PROCESS_FULL_WORK: 24 * 1024 * 1024,
   PROCESS_EXPANDED_ABSTRACT: 24 * 1024 * 1024,
@@ -62,7 +65,6 @@ const MAX_BYTES:Record<StagedUploadPurpose,number> = {
   VERIFICATION_PDF: 50 * 1024 * 1024
 };
 const MIME_TYPES:Record<StagedUploadPurpose,string> = {
-  LOCATION_PROOF: PDF_MIME,
   DOCUMENT_MODEL: DOCX_MIME,
   PROCESS_FULL_WORK: PDF_MIME,
   PROCESS_EXPANDED_ABSTRACT: PDF_MIME,
@@ -92,7 +94,6 @@ const uploadBindingSecretSeparated = () => process.env.NODE_ENV !== 'production'
   process.env.ASTEN_WEBHOOK_SECRET
 ].map((value) => String(value || '').trim()).filter(Boolean).includes(uploadBindingSecret());
 const bindingHash = (value:string) => createHmac('sha256',uploadBindingSecret()).update(value).digest('hex');
-const encodePath = (value:string) => value.split('/').map(encodeURIComponent).join('/');
 const sanitizeDownloadName = (value:string) => value
   .normalize('NFKC')
   .replace(/[\u0000-\u001f\u007f]/g,'')
@@ -113,7 +114,7 @@ export function getSupabaseStagingSecurityStatus(){
   const bindingSecretStrong=uploadBindingSecret().length>=32;
   const bindingSecretSeparated=uploadBindingSecretSeparated();
   const bucketNameValid=/^[a-z0-9][a-z0-9-]{2,62}$/.test(stagingBucket());
-  return{configured:getSupabaseRuntimeStatus().durablePersistenceReady&&bindingSecretStrong&&bindingSecretSeparated&&bucketNameValid,bindingSecretStrong,bindingSecretSeparated,bucketNameValid,bucket:stagingBucket()} as const;
+  return{configured:getSupabaseRuntimeStatus().durablePersistenceReady&&bindingSecretStrong&&bindingSecretSeparated&&bucketNameValid,bindingSecretStrong,bindingSecretSeparated,bucketNameValid,bucket:stagingBucket(),binaryProvider:'GOOGLE_DRIVE'} as const;
 }
 
 export function validateStagedUploadDescriptor(input:StagedUploadDescriptor):void {
@@ -125,16 +126,9 @@ export function validateStagedUploadDescriptor(input:StagedUploadDescriptor):voi
   if(input.fileName.length<1||input.fileName.length>240||/[\u0000-\u001f]/.test(input.fileName))throw new Error('Nome de arquivo inválido.');
   const expectedExtension=input.purpose==='DOCUMENT_MODEL'?'.docx':'.pdf';
   if(!input.fileName.toLowerCase().endsWith(expectedExtension))throw new Error(`A extensão esperada é ${expectedExtension}.`);
-  if((input.purpose==='LOCATION_PROOF'||input.purpose==='PROCESS_FULL_WORK'||input.purpose==='PROCESS_EXPANDED_ABSTRACT'||input.purpose==='GOV_BR_SIGNED_PDF')&&!input.processId?.trim())throw new Error('O upload deve estar vinculado a um processo.');
+  if((input.purpose==='PROCESS_FULL_WORK'||input.purpose==='PROCESS_EXPANDED_ABSTRACT'||input.purpose==='GOV_BR_SIGNED_PDF')&&!input.processId?.trim())throw new Error('O upload deve estar vinculado a um processo.');
   if(input.purpose==='VERIFICATION_PDF'&&!input.verificationCode?.trim())throw new Error('A verificação pública deve estar vinculada ao código consultado.');
   if((input.processId?.length||0)>200||(input.verificationCode?.length||0)>200)throw new Error('O vínculo do upload excede o limite permitido.');
-}
-
-export function buildStagingObjectPath(input:Pick<StagedUploadDescriptor,'purpose'|'requesterBinding'|'processId'|'fileName'>,id=randomUUID()):string {
-  const extension=input.fileName.toLowerCase().endsWith('.docx')?'docx':'pdf';
-  const requesterHash=bindingHash(input.requesterBinding.trim().toLowerCase()).slice(0,20);
-  const processHash=input.processId?hash(input.processId).slice(0,20):'sem-processo';
-  return `pending/${input.purpose.toLowerCase()}/${requesterHash}/${processHash}/${id}.${extension}`;
 }
 
 async function jsonOrThrow<T>(response:Response,operation:string):Promise<T>{
@@ -143,24 +137,6 @@ async function jsonOrThrow<T>(response:Response,operation:string):Promise<T>{
     throw new Error(`${operation} falhou (HTTP ${response.status})${detail?`: ${detail.slice(0,160)}`:''}.`);
   }
   return response.json() as Promise<T>;
-}
-
-/**
- * Supabase returns paths relative to /storage/v1. Refuse redirects to any
- * other origin/path so a compromised or malformed response cannot turn the
- * portal into an SSRF/open-redirect primitive.
- */
-export function resolveSupabaseStorageSignedUrl(value:string,downloadFileName?:string):string{
-  const storageBase=new URL(`${storageBaseUrl()}/`);
-  let resolved:URL;
-  if(/^https:\/\//i.test(value))resolved=new URL(value);
-  else if(value.startsWith('/storage/v1/'))resolved=new URL(value,storageBase.origin);
-  else resolved=new URL(value.replace(/^\//,''),storageBase);
-  if(resolved.protocol!=='https:'||resolved.origin!==storageBase.origin||!resolved.pathname.startsWith('/storage/v1/object/')){
-    throw new Error('O Supabase devolveu uma URL assinada fora da origem de armazenamento autorizada.');
-  }
-  if(downloadFileName)resolved.searchParams.set('download',sanitizeDownloadName(downloadFileName));
-  return resolved.toString();
 }
 
 async function updateTicket(id:string,status:StagedUploadRow['status'],errorCode?:string):Promise<void>{
@@ -180,41 +156,25 @@ async function deleteTicket(id:string):Promise<void>{
   if(!response.ok)throw new Error(`Falha ao excluir o ticket temporário (${response.status}).`);
 }
 
-async function removeObject(path:string):Promise<void>{
+async function removeObject(path:string, transferId:string):Promise<void>{
+  const driveFileId = driveTransferFileId(path);
+  if (driveFileId) return removeDriveTransfer(driveFileId, transferId);
   const response=await fetch(`${storageBaseUrl()}/object/${encodeURIComponent(stagingBucket())}`,{
     method:'DELETE',headers:buildSupabaseAdminHeaders(),body:JSON.stringify({prefixes:[path]}),signal:AbortSignal.timeout(15_000)
   });
   if(!response.ok&&response.status!==404)throw new Error(`Falha ao excluir o objeto temporário (${response.status}).`);
 }
 
-export async function ensurePrivateStagingBucket():Promise<void>{
-  assertConfigured();
-  const id=encodeURIComponent(stagingBucket());
-  const current=await fetch(`${storageBaseUrl()}/bucket/${id}`,{headers:buildSupabaseAdminHeaders(),signal:AbortSignal.timeout(10_000)});
-  if(current.ok){
-    const bucket=await current.json() as {public?:boolean;file_size_limit?:number};
-    if(bucket.public)throw new Error('O bucket de staging está público. Torne-o privado antes de aceitar uploads.');
-    if(!Number.isSafeInteger(bucket.file_size_limit)||bucket.file_size_limit!<=0||bucket.file_size_limit!>110*1024*1024)throw new Error('O bucket deve impor um limite por arquivo de até 110 MB para garantir a reserva de capacidade.');
-    return;
-  }
-  if(current.status!==404)throw new Error(`Não foi possível validar o bucket de staging (${current.status}).`);
-  const created=await fetch(`${storageBaseUrl()}/bucket`,{
-    method:'POST',headers:buildSupabaseAdminHeaders(),
-    body:JSON.stringify({id:stagingBucket(),name:stagingBucket(),public:false,file_size_limit:110*1024*1024,allowed_mime_types:[PDF_MIME,DOCX_MIME,'application/zip']}),
-    signal:AbortSignal.timeout(10_000)
-  });
-  if(!created.ok&&created.status!==409)throw new Error(`Não foi possível criar o bucket privado de staging (${created.status}).`);
-}
-
-export async function createSupabaseStagedUpload(input:StagedUploadDescriptor):Promise<StagedUploadTicket>{
+export async function createDriveStagedUpload(input:StagedUploadDescriptor, drive:{rootFolderId:string;origin:string}):Promise<StagedUploadTicket>{
   // Legacy ticket rows remain readable for cleanup, but public authenticity
   // verification now compares bytes locally and must never allocate storage.
   if(input.purpose==='VERIFICATION_PDF')throw new Error('A conferência do PDF acontece no navegador. O envio público de arquivos para verificação foi desativado.');
   assertConfigured();
   validateStagedUploadDescriptor(input);
-  await ensurePrivateStagingBucket();
+  const accessToken = await getGoogleWorkspaceAccessToken();
+  const driveFileId = await reserveProcessFormPdfId(accessToken);
   const uploadId=randomUUID();
-  const objectPath=buildStagingObjectPath(input,uploadId);
+  const objectPath=`pending/drive/${driveFileId}`;
   const expiresAt=new Date(Date.now()+15*60_000).toISOString();
   const row={
     id:uploadId,purpose:input.purpose,requester_hash:bindingHash(input.requesterBinding),
@@ -229,21 +189,35 @@ export async function createSupabaseStagedUpload(input:StagedUploadDescriptor):P
   if(inserted.status===429)throw new StagedUploadCapacityError('Limite temporário de uploads atingido. Aguarde a expiração das autorizações anteriores.');
   if(!inserted.ok)throw new Error(`Não foi possível registrar o upload temporário (${inserted.status}).`);
   try{
-    const signedResponse=await fetch(`${storageBaseUrl()}/object/upload/sign/${encodeURIComponent(stagingBucket())}/${encodePath(objectPath)}`,{
-      method:'POST',headers:{...buildSupabaseAdminHeaders(),'x-upsert':'false'},body:'{}',signal:AbortSignal.timeout(10_000)
+    const uploadUrl = await openDriveTransfer({
+      accessToken, rootFolderId:drive.rootFolderId, origin:drive.origin, fileId:driveFileId, transferId:uploadId,
+      mimeType:row.mime_type, size:input.size,
     });
-    const signed=await jsonOrThrow<{url:string}>(signedResponse,'Criação da URL assinada');
-    const uploadUrl=resolveSupabaseStorageSignedUrl(signed.url);
-    return {uploadId,uploadUrl,expiresAt,maxSizeBytes:MAX_BYTES[input.purpose]};
+    return {uploadId,uploadUrl,expiresAt,maxSizeBytes:MAX_BYTES[input.purpose],provider:'drive'};
   }catch(error){
     await updateTicket(uploadId,'REJECTED','SIGNING_FAILED').catch(()=>undefined);
     throw error;
   }
 }
 
-async function claimTicket(uploadId:string):Promise<StagedUploadRow>{
-  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uploadId))throw new Error('Identificador de upload inválido.');
-  const response=await fetch(`${dataBaseUrl()}/portal_upload_staging?id=eq.${encodeURIComponent(uploadId)}&status=eq.PENDING&select=*`,{
+interface StagedUploadClaim {
+  uploadId:string;
+  purpose:StagedUploadPurpose;
+  requesterBinding:string;
+  processId?:string;
+  verificationCode?:string;
+}
+
+async function claimTicket(input:StagedUploadClaim):Promise<StagedUploadRow>{
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.uploadId))throw new Error('Identificador de upload inválido.');
+  const filters=new URLSearchParams({
+    id:`eq.${input.uploadId}`,status:'eq.PENDING',purpose:`eq.${input.purpose}`,
+    requester_hash:`eq.${bindingHash(input.requesterBinding)}`,
+    process_external_id:input.processId?`eq.${input.processId}`:'is.null',
+    verification_code_hash:input.verificationCode?`eq.${bindingHash(input.verificationCode)}`:'is.null',
+    expires_at:`gt.${new Date().toISOString()}`,select:'*'
+  });
+  const response=await fetch(`${dataBaseUrl()}/portal_upload_staging?${filters}`,{
     method:'PATCH',headers:{...buildSupabaseAdminHeaders(),Prefer:'return=representation'},
     body:JSON.stringify({status:'CONSUMING',updated_at:new Date().toISOString()}),signal:AbortSignal.timeout(10_000)
   });
@@ -252,34 +226,41 @@ async function claimTicket(uploadId:string):Promise<StagedUploadRow>{
   return rows[0];
 }
 
-export async function withSupabaseStagedUpload<T>(input:{
-  uploadId:string;
-  purpose:StagedUploadPurpose;
-  requesterBinding:string;
-  processId?:string;
-  verificationCode?:string;
-},consumer:(file:{bytes:Buffer;fileName:string;mimeType:string;sha256:string})=>Promise<T>):Promise<T>{
+export async function withDriveStagedUpload<T>(input:StagedUploadClaim,consumer:(file:{bytes:Buffer;fileName:string;mimeType:string;sha256:string})=>Promise<T>):Promise<T>{
   assertConfigured();
-  const row=await claimTicket(input.uploadId);
+  const row=await claimTicket(input);
   const bindingMatches=row.requester_hash===bindingHash(input.requesterBinding);
   const processMatches=(row.process_external_id||'')===(input.processId||'');
   const verificationMatches=(row.verification_code_hash||'')===(input.verificationCode?bindingHash(input.verificationCode):'');
-  if(row.purpose!==input.purpose||!bindingMatches||!processMatches||!verificationMatches||Date.parse(row.expires_at)<=Date.now()){
-    await removeObject(row.object_path).catch(()=>undefined);
-    await updateTicket(row.id,Date.parse(row.expires_at)<=Date.now()?'EXPIRED':'REJECTED','BINDING_MISMATCH');
+  if(row.id!==input.uploadId||row.purpose!==input.purpose||!bindingMatches||!processMatches||!verificationMatches||!Number.isFinite(Date.parse(row.expires_at))||Date.parse(row.expires_at)<=Date.now()){
     throw new Error('O upload não pertence a esta sessão, processo ou finalidade.');
   }
+  const driveFileId = driveTransferFileId(row.object_path);
+  if (!driveFileId || !row.object_path.startsWith('pending/drive/')) {
+    await updateTicket(row.id,'REJECTED','LEGACY_TRANSPORT_DISABLED');
+    throw new Error('Selecione o arquivo novamente para enviá-lo pelo Drive.');
+  }
   let result:T;
+  let rejected=false;
   try{
-    const downloaded=await fetch(`${storageBaseUrl()}/object/authenticated/${encodeURIComponent(stagingBucket())}/${encodePath(row.object_path)}`,{
-      headers:buildSupabaseAdminHeaders(),cache:'no-store',signal:AbortSignal.timeout(30_000)
-    });
+    const downloaded = await readDriveTransfer(driveFileId, row.id, row.expected_size, row.mime_type);
     if(!downloaded.ok)throw new Error(`O binário temporário não foi localizado (${downloaded.status}).`);
-    const bytes=Buffer.from(await downloaded.arrayBuffer());
+    let bytes:Buffer;
+    try{
+      bytes=await readBoundedResponse(downloaded,MAX_BYTES[row.purpose],row.expected_size);
+    }catch(error){
+      if(error instanceof ResponseSizeError){
+        rejected=true;
+        await removeObject(row.object_path,row.id).catch(()=>undefined);
+        await updateTicket(row.id,'REJECTED','INTEGRITY_MISMATCH');
+      }
+      throw error;
+    }
     const actualMime=String(downloaded.headers.get('content-type')||'').split(';')[0].toLowerCase();
     const actualSha256=hash(bytes);
     if(bytes.byteLength!==row.expected_size||actualMime!==row.mime_type||actualSha256!==row.expected_sha256){
-      await removeObject(row.object_path).catch(()=>undefined);
+      rejected=true;
+      await removeObject(row.object_path,row.id).catch(()=>undefined);
       await updateTicket(row.id,'REJECTED','INTEGRITY_MISMATCH');
       throw new Error('O arquivo recebido não corresponde ao tamanho, MIME ou checksum autorizado.');
     }
@@ -287,21 +268,21 @@ export async function withSupabaseStagedUpload<T>(input:{
       await assertSafeUploadedDocument(bytes,row.mime_type===DOCX_MIME?'DOCX':'PDF');
     } catch (error) {
       if (error instanceof UnsafeUploadError) {
-        await removeObject(row.object_path).catch(()=>undefined);
+        rejected=true;
+        await removeObject(row.object_path,row.id).catch(()=>undefined);
         await updateTicket(row.id,'REJECTED',error.code).catch(()=>undefined);
       }
       throw error;
     }
     result=await consumer({bytes,fileName:row.original_file_name,mimeType:row.mime_type,sha256:actualSha256});
   }catch(error){
-    const message=error instanceof Error?error.message:'';
-    if(!(error instanceof UnsafeUploadError)&&!message.includes('não corresponde'))await updateTicket(row.id,'PENDING','CONSUMER_FAILED').catch(()=>undefined);
+    if(!rejected&&!(error instanceof UnsafeUploadError))await updateTicket(row.id,'PENDING','CONSUMER_FAILED').catch(()=>undefined);
     throw error;
   }
   // Marque como consumido antes da limpeza. Se a exclusão falhar, o mesmo
   // binário não será processado de novo; apenas a limpeza será repetida.
   await updateTicket(row.id,'CONSUMED');
-  try{await removeObject(row.object_path);}catch{await updateTicket(row.id,'CLEANUP_PENDING','DELETE_FAILED').catch(()=>undefined);}
+  try{await removeObject(row.object_path,row.id);}catch{await updateTicket(row.id,'CLEANUP_PENDING','DELETE_FAILED').catch(()=>undefined);}
   return result;
 }
 
@@ -316,24 +297,9 @@ export async function cleanupExpiredStagedUploads(limit=100):Promise<number>{
   const rows=await jsonOrThrow<StagedUploadRow[]>(response,'Listagem de uploads expirados');
   let cleaned=0;
   for(const row of rows){
-    try{await removeObject(row.object_path);await deleteTicket(row.id);cleaned+=1;}catch{/* uma execução futura tentará novamente */}
+    try{await removeObject(row.object_path,row.id);await deleteTicket(row.id);cleaned+=1;}catch{/* uma execução futura tentará novamente */}
   }
   return cleaned;
-}
-
-export function shouldUseSupabaseDownloadGateway():boolean{
-  return Boolean(process.env.VERCEL||process.env.PORTAL_SECURE_DOWNLOAD_GATEWAY==='true')
-    && getSupabaseRuntimeStatus().durablePersistenceReady;
-}
-
-async function uploadPrivateObject(path:string,bytes:Buffer,mimeType:string):Promise<void>{
-  const response=await fetch(`${storageBaseUrl()}/object/${encodeURIComponent(stagingBucket())}/${encodePath(path)}`,{
-    method:'POST',
-    headers:{...buildSupabaseAdminHeaders(),'Content-Type':mimeType,'Cache-Control':'no-store','x-upsert':'false'},
-    body:bytes,
-    signal:AbortSignal.timeout(45_000)
-  });
-  if(!response.ok){const detail=await response.text().catch(()=>'');throw new Error(`Falha ao preparar o download protegido (${response.status})${detail?`: ${detail.slice(0,120)}`:''}.`);}
 }
 
 async function recordDownloadTransfer(row:{id:string;objectPath:string;fileName:string;mimeType:string;size:number;sha256:string;requesterBinding:string;expiresAt:string;processId?:string}):Promise<void>{
@@ -346,7 +312,8 @@ async function recordDownloadTransfer(row:{id:string;objectPath:string;fileName:
   if(!response.ok)throw new Error(`Não foi possível registrar o download temporário (${response.status}).`);
 }
 
-export async function createSupabaseEphemeralDownload(input:{
+export async function createDrivePreviewTransfer(input:{
+  rootFolderId:string;
   bytes:Buffer;
   fileName:string;
   mimeType:'application/pdf'|'application/zip';
@@ -362,10 +329,11 @@ export async function createSupabaseEphemeralDownload(input:{
   if(!fileName.toLowerCase().endsWith(`.${extension}`))throw new Error(`O download deve usar a extensão .${extension}.`);
   if(input.mimeType==='application/pdf'&&!input.bytes.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('O conteúdo de download não é um PDF válido.');
   if(input.mimeType==='application/zip'&&!input.bytes.subarray(0,2).equals(Buffer.from('PK')))throw new Error('O conteúdo de download não é um ZIP válido.');
-  await ensurePrivateStagingBucket();
+  const accessToken = await getGoogleWorkspaceAccessToken();
+  const driveFileId = await reserveProcessFormPdfId(accessToken);
   const id=randomUUID();
   const sha256=hash(input.bytes);
-  const objectPath=`downloads/${new Date().toISOString().slice(0,10)}/${sha256.slice(0,20)}/${id}.${extension}`;
+  const objectPath=`downloads/drive/${driveFileId}`;
   const expiresInSeconds=Math.min(Math.max(Number(input.expiresInSeconds||60),30),300);
   const expiresAt=new Date(Date.now()+expiresInSeconds*1000).toISOString();
   // Reserve quota atomically before allocating any storage bytes.
@@ -378,18 +346,50 @@ export async function createSupabaseEphemeralDownload(input:{
     await recordDownloadTransfer({...reservation,processId:input.processId});
   }
   try{
-    await uploadPrivateObject(objectPath,input.bytes,input.mimeType);
-    const signedResponse=await fetch(`${storageBaseUrl()}/object/sign/${encodeURIComponent(stagingBucket())}/${encodePath(objectPath)}`,{
-      method:'POST',headers:buildSupabaseAdminHeaders(),body:JSON.stringify({expiresIn:expiresInSeconds}),signal:AbortSignal.timeout(10_000)
+    const uploadUrl = await openDriveTransfer({
+      accessToken, rootFolderId:input.rootFolderId, fileId:driveFileId, transferId:id,
+      mimeType:input.mimeType, size:input.bytes.length,
     });
-    const signed=await jsonOrThrow<{signedURL?:string;signedUrl?:string}>(signedResponse,'Assinatura do download privado');
-    const signedPath=String(signed.signedURL||signed.signedUrl||'');
-    if(!signedPath)throw new Error('O Supabase não devolveu a URL assinada do download.');
-    return{url:resolveSupabaseStorageSignedUrl(signedPath,fileName),expiresAt,sha256};
+    const response = await fetch(uploadUrl,{
+      method:'PUT',
+      headers:{'Content-Type':input.mimeType,'Content-Range':`bytes 0-${input.bytes.length - 1}/${input.bytes.length}`},
+      body:input.bytes, redirect:'error', signal:AbortSignal.timeout(45_000),
+    });
+    if (!response.ok || (await response.json()).id !== driveFileId) throw new Error('O Drive não confirmou a prévia.');
+    return {url:`/api/files/previews/${id}`,expiresAt,sha256};
   }catch(error){
-    await removeObject(objectPath).catch(()=>undefined);
+    await removeObject(objectPath,id).catch(()=>undefined);
     throw error;
   }
+}
+
+export async function readDrivePreviewTransfer(
+  id:string, requesterBinding:string, canAccessPreview:(processId:string|null)=>boolean,
+):Promise<{bytes:Buffer; fileName:string; mimeType:'application/pdf'|'application/zip'}|null>{
+  if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)) return null;
+  assertConfigured();
+  const filters=new URLSearchParams({
+    id:`eq.${id}`,status:'eq.ACTIVE',requester_hash:`eq.${bindingHash(requesterBinding)}`,
+    expires_at:`gt.${new Date().toISOString()}`,limit:'1',
+    select:'id,object_path,requester_hash,process_external_id,expires_at,file_name,mime_type,size_bytes,sha256',
+  });
+  const response=await fetch(`${dataBaseUrl()}/portal_download_transfers?${filters}`,{
+    headers:buildSupabaseAdminHeaders(),cache:'no-store',signal:AbortSignal.timeout(10_000),
+  });
+  const [row]=await jsonOrThrow<Array<DownloadTransferRow & {
+    requester_hash:string;process_external_id:string|null;file_name:string;mime_type:'application/pdf'|'application/zip';
+    size_bytes:number;sha256:string;
+  }>>(response,'Consulta da prévia privada');
+  if (!row || row.id!==id || row.requester_hash!==bindingHash(requesterBinding)
+    || !(Date.parse(row.expires_at)>Date.now())
+    || !canAccessPreview(row.process_external_id)) return null;
+  const fileId=driveTransferFileId(row.object_path);
+  if (!fileId || !row.object_path.startsWith('downloads/drive/')) return null;
+  const downloaded=await readDriveTransfer(fileId,id,row.size_bytes,row.mime_type);
+  if (!downloaded.ok) throw new Error('O Drive não devolveu a prévia.');
+  const bytes=await readBoundedResponse(downloaded,110*1024*1024,row.size_bytes);
+  if (hash(bytes)!==row.sha256) throw new Error('A integridade da prévia não foi confirmada.');
+  return {bytes,fileName:row.file_name,mimeType:row.mime_type};
 }
 
 export async function cleanupExpiredDownloadTransfers(limit=100):Promise<number>{
@@ -401,7 +401,7 @@ export async function cleanupExpiredDownloadTransfers(limit=100):Promise<number>
   let cleaned=0;
   for(const row of rows){
     try{
-      await removeObject(row.object_path);
+      await removeObject(row.object_path,row.id);
       const updated=await fetch(`${dataBaseUrl()}/portal_download_transfers?id=eq.${encodeURIComponent(row.id)}`,{method:'PATCH',headers:{...buildSupabaseAdminHeaders(),Prefer:'return=minimal'},body:JSON.stringify({status:'EXPIRED',deleted_at:new Date().toISOString()}),signal:AbortSignal.timeout(10_000)});
       if(!updated.ok)throw new Error('Falha ao confirmar a limpeza.');
       cleaned+=1;
@@ -422,7 +422,7 @@ export async function deleteProcessSupabaseObjects(processId:string):Promise<voi
    if(!rows.length)break;
    for(const row of rows){
     if(!row.object_path||row.object_path.startsWith('/')||row.object_path.split('/').includes('..'))throw Error('Caminho de arquivo temporário inválido.');
-    await removeObject(row.object_path);
+    await removeObject(row.object_path,row.id);
     const deleted=await fetch(`${dataBaseUrl()}/${table}?id=eq.${encodeURIComponent(row.id)}&process_external_id=eq.${encodeURIComponent(processId)}`,{method:'DELETE',headers:{...buildSupabaseAdminHeaders(),Prefer:'return=minimal'},signal:AbortSignal.timeout(10000)});
     if(!deleted.ok)throw Error(`Supabase: remoção do registro temporário pendente (${deleted.status}).`);
    }

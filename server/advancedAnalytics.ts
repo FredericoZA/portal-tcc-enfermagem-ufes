@@ -1,3 +1,5 @@
+import {ACADEMIC_PERIOD_FIELD,academicPeriod} from '../src/utils/academicPeriod';
+import {registeredIndicatorProcesses} from './indicatorFacts';
 import type { DocumentCorrectionRequest, ProcessData, SignatureJob, StudioFormSubmission } from '../src/types';
 import type { EmailDeliveryRecord, WorkflowRun } from '../src/types/automation';
 import type { IntegrationStudioSettings } from '../src/types/integrationStudio';
@@ -18,13 +20,13 @@ import { latestSignature } from './workflow/gates';
 const day = 86400000;
 const median = (values: number[]) => { const sorted = values.filter(Number.isFinite).sort((a,b) => a-b); return sorted.length < 3 ? null : Number(((sorted[Math.floor(sorted.length/2)] + sorted[Math.floor((sorted.length-1)/2)])/2).toFixed(2)); };
 export function processPeriod(p: ProcessData): string {
-  if (p.academicCycleId) return p.academicCycleId;
-  const date = p.defesa?.startAt || p.createdAt;
-  return /^\d{4}-\d{2}/.test(date) ? `${date.slice(0,4)}.${Number(date.slice(5,7)) <= 6 ? 1 : 2}` : 'SEM_PERIODO';
+  // Calendar dates do not identify academic semesters, especially after strikes.
+  return academicPeriod(p.registrationAnswers?.[ACADEMIC_PERIOD_FIELD]) || p.academicCycleId || 'SEM_PERIODO';
 }
 export function buildAdvancedAnalytics(input: AdvancedAnalyticsInput, period?: string, compare?: string) {
-  const periods = [...new Set(input.processes.map(processPeriod))].sort().reverse();
-  const selected = period ? input.processes.filter(p => processPeriod(p) === period) : input.processes;
+  const registered=registeredIndicatorProcesses(input.processes);
+  const periods = [...new Set(registered.map(processPeriod))].sort().reverse();
+  const selected = period ? registered.filter(p => processPeriod(p) === period) : registered;
   const ids = new Set(selected.map(p => p.id));
   const jobs = input.signatureJobs.filter(j => ids.has(j.processId));
   const snapshot = buildTccStatisticalSnapshot({ ...input, processes: selected });
@@ -40,10 +42,10 @@ export function buildAdvancedAnalytics(input: AdvancedAnalyticsInput, period?: s
   for (const p of selected) {
     sample('Cadastro → confirmação do local', p.createdAt, p.defesa.localConfirmedAt);
     sample('Local confirmado → convite enviado', p.defesa.localConfirmedAt, p.defesa.invitationSentAt);
-    sample('Defesa agendada → avaliação', p.defesa.startAt, p.avaliacao.submittedAt);
+    sample('Defesa agendada → registro do conceito', p.defesa.startAt, p.avaliacao.submittedAt);
     const ata = latestSignature(p, jobs, 'ATA');
     const archivedAta = ata?.status === 'ARCHIVED' ? ata.completedAt : undefined;
-    sample('Avaliação → Ata arquivada', p.avaliacao.submittedAt, archivedAta);
+    sample('Registro do conceito → ata arquivada', p.avaliacao.submittedAt, archivedAta);
     sample('Ata arquivada → entrega final', archivedAta, p.acervo?.submittedAt);
   }
   for (const job of jobs.filter(j => j.status !== 'CANCELED')) {
@@ -60,11 +62,11 @@ export function buildAdvancedAnalytics(input: AdvancedAnalyticsInput, period?: s
   return {
     generatedAt: snapshot.generatedAt, period: period || 'TODOS', compare: compare || null,
     periods, snapshot,
-    comparison: compare ? summary(input.processes.filter(p => processPeriod(p) === compare)) : null,
-    trends: periods.map(key => ({ ...summary(input.processes.filter(p => processPeriod(p) === key)), period: key })),
+    comparison: compare ? summary(registered.filter(p => processPeriod(p) === compare)) : null,
+    trends: periods.map(key => ({ ...summary(registered.filter(p => processPeriod(p) === key)), period: key })),
     stages: Object.entries(samples).map(([label,r]) => ({ label, completed: r.durations.length >= 3 ? r.durations.length : null, waiting: r.waiting.length >= 3 ? r.waiting.length : null, medianDays: median(r.durations), medianWaitingDays: median(r.waiting), unknown: r.unknown })),
     actions: [...actionDurations].map(([label,values])=>({label, count: values.length >= 3 ? values.length : null, medianSeconds: median(values)})),
-    note: 'Medianas e indicadores comparativos exigem pelo menos três observações. Ausência de medida não significa zero. Tempos históricos sem marcação específica permanecem desconhecidos.'
+    note: 'O período acadêmico vem da informação declarada ou do ciclo cadastrado, sem dedução pela data da defesa. Medianas e indicadores comparativos exigem pelo menos três observações. Ausência de medida não significa zero. Tempos históricos sem marcação específica permanecem desconhecidos.'
   };
 }
 export function analyticsCsv(report: ReturnType<typeof buildAdvancedAnalytics>): string {

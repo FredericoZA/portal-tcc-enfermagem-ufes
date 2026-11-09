@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
+import {mkdtemp,writeFile,readFile,rm,mkdir} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
+import {createHash} from 'node:crypto';
 import path from 'node:path';
 import {DEMO_PROCESSES,DEMO_MEMBERSHIPS,INITIAL_SETTINGS} from '../src/services/demoSeed';
 import {createProfessionalPdf} from './documents/simplePdf';
@@ -46,9 +47,24 @@ test('HTTP local uploads persist real PDF bytes, enforce roles, version replacem
   const stopped=new Promise(resolve=>child.once('exit',resolve));child.kill('SIGTERM');await stopped;
   const issuedState=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));
   issuedState.processes[0].avaliacao.status='CONCLUIDO';
+  const invitationKey='1'.repeat(64), reviewDir=path.join(directory,'arquivos-demonstrativos');
+  await mkdir(reviewDir);
+  await writeFile(path.join(reviewDir,invitationKey+'.pdf'),pdf);
+  await writeFile(path.join(reviewDir,invitationKey+'.json'),JSON.stringify({processId:p.id,artifactType:'CONVITE',fileName:'convite-teste.pdf',sha256:createHash('sha256').update(pdf).digest('hex')}));
+  Object.assign(issuedState.processes[0].defesa,{localStatus:'CONFIRMADO',invitationDriveFileId:'local_review_'+invitationKey,invitationSentAt:undefined});
   issuedState.signatureJobs=[{id:'archived-ata',processId:p.id,documentType:'ATA',documentVersion:1,sourceDataRevision:issuedState.processes[0].dataRevision,status:'ARCHIVED',driveSignedFileId:'fixture-signed-ata'}];
   await writeFile(path.join(directory,'portal-state.json'),JSON.stringify(issuedState));child=start();
   const restartDeadline=Date.now()+20000;while(true){try{if((await fetch(base+'/api/health')).ok)break;}catch{}if(Date.now()>restartDeadline||child.exitCode!==null)throw new Error('Servidor não reiniciou');await new Promise(r=>setTimeout(r,100));}
+  const privateHeaders={'x-demo-user-email':'master@portal.local'};
+  const privateDocs=await fetch(`${base}/api/processes/${p.id}/documents`,{headers:privateHeaders});
+  assert.equal(privateDocs.status,200);
+  const invitation=(await privateDocs.json()).find((item:any)=>item.type==='CONVITE');
+  assert.equal(invitation.status,'DISPONIVEL');
+  const privatePdf=await fetch(base+invitation.driveDownloadUrl,{headers:privateHeaders});
+  assert.equal(privatePdf.status,200);
+  assert.deepEqual(Buffer.from(await privatePdf.arrayBuffer()),pdf);
+  assert.equal((await fetch(base+invitation.driveDownloadUrl)).status,401);
+  assert.equal((await fetch(`${base}/api/public/processes/${p.id}/documents/doc-convite/download`)).status,404);
   const route=`/api/processes/${p.id}/files/trabalho-completo`;
   assert.equal((await upload(route,pdf,'')).status,401);assert.equal((await upload(route,pdf,p.orientador.email)).status,403);assert.equal((await upload(route,Buffer.from('inválido'))).status,400);
   const r=await upload(route);assert.equal(r.status,201,await r.clone().text());const saved=await r.json();assert.match(saved.id,/^local_review_/);assert.equal(saved.version,1);
@@ -56,9 +72,7 @@ test('HTTP local uploads persist real PDF bytes, enforce roles, version replacem
   const dl=await fetch(base+route+'/download',{headers:{'x-demo-user-email':p.aluno1.email}});assert.equal(dl.status,200);assert.deepEqual(Buffer.from(await dl.arrayBuffer()),pdf);
   assert.equal((await fetch(base+route+'/download')).status,401);assert.equal((await upload('/api/processes/other-review/files/trabalho-completo')).status,404);
   const next=createProfessionalPdf({title:'FICTÍCIO 2',protocol:p.protocolo,body:'Segunda versão.'});const replaced=await upload(route,next);assert.equal(replaced.status,201);assert.equal((await replaced.json()).version,2);
-  const largeProof=Buffer.concat([pdf,Buffer.from('\n%'),Buffer.alloc(1200*1024,0x20),Buffer.from('\n')]);
-  const proof=await upload(`/api/processes/${p.id}/location-proof`,largeProof);assert.equal(proof.status,201,await proof.clone().text());
-  const proofDl=await fetch(`${base}/api/processes/${p.id}/location-proof/download`,{headers:{'x-demo-user-email':p.aluno1.email}});assert.equal(proofDl.status,200);assert.deepEqual(Buffer.from(await proofDl.arrayBuffer()),largeProof);
-  const state=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(state.processes[0].acervo.trabalhoCompletoVersion,2);assert.ok(state.auditLogs.some((log:any)=>log.action==='VERSAO_ARQUIVO_SUBSTITUIDA'));assert.ok(state.auditLogs.some((log:any)=>log.action==='COMPROVANTE_LOCAL_ARQUIVADO'));
+  const proof=await upload(`/api/processes/${p.id}/location-proof`);assert.equal(proof.status,404);assert.equal((await proof.json()).code,'API_NOT_FOUND');
+  const state=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(state.processes[0].acervo.trabalhoCompletoVersion,2);assert.ok(state.auditLogs.some((log:any)=>log.action==='VERSAO_ARQUIVO_SUBSTITUIDA'));assert.equal(state.processes[0].defesa.locationProof,undefined);
  }finally{const exit=new Promise(r=>child.once('exit',r));if(child.exitCode===null){child.kill('SIGTERM');await exit;}await rm(directory,{recursive:true,force:true});}
 });

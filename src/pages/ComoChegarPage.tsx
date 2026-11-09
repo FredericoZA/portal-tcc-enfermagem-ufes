@@ -45,8 +45,8 @@ export const ComoChegarPage: React.FC = () => {
       </section>
       <PortalSectionDivider />
 
-      <section className="portal-layer-panel p-3 sm:p-4">
-        <div className="grid items-start gap-3 md:grid-cols-[minmax(0,1.45fr)_minmax(280px,.8fr)] xl:grid-cols-[minmax(0,1.65fr)_minmax(330px,.72fr)]">
+      <section className="portal-location-container portal-layer-panel p-3 sm:p-4">
+        <div className="portal-location-grid grid grid-cols-1 items-start gap-3">
           <div className="portal-layer-card overflow-hidden rounded-2xl border border-slate-300 shadow-sm">
             <iframe
               title="Mapa do Campus de Maruípe com o Departamento de Enfermagem"
@@ -105,7 +105,7 @@ export const ComoChegarPage: React.FC = () => {
                 <Building2 className="h-4 w-4 text-[var(--portal-brand-action)]" />
                 Locais atuais de apresentação
               </h2>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <div className="mt-2 grid gap-2 sm:grid-cols-3">
                 <div className="portal-layer-inner rounded-xl border border-slate-200 bg-white px-3 py-2.5">
                   <div className="text-[10px] font-extrabold normal-case tracking-wide text-slate-900">Auditório de Enfermagem</div>
                   <div className="mt-0.5 text-[10px] text-slate-600">1º pavimento</div>
@@ -113,6 +113,10 @@ export const ComoChegarPage: React.FC = () => {
                 <div className="portal-layer-inner rounded-xl border border-slate-200 bg-white px-3 py-2.5">
                   <div className="text-[10px] font-extrabold normal-case tracking-wide text-slate-900">Sala de Reuniões</div>
                   <div className="mt-0.5 text-[10px] text-slate-600">2º pavimento</div>
+                </div>
+                <div className="portal-layer-inner rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+                  <div className="text-[10px] font-extrabold normal-case tracking-wide text-slate-900">Outro local</div>
+                  <div className="mt-0.5 text-[10px] text-slate-600">Definido pelo aluno e orientador.</div>
                 </div>
               </div>
               <p className="mt-2 text-[10px] leading-4 text-slate-600">O local específico de cada defesa continua indicado no calendário e no convite da apresentação.</p>

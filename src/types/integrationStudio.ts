@@ -1,3 +1,7 @@
+export type SignatureRecipientRole = 'AUTHORS'|'ADVISOR'|'EXAMINERS'|'COADVISOR_PRESENT'|'COMMISSION_PRESIDENT';
+export type EmailRecipientRole = 'RESERVATION_RESPONSIBLE'|'AUTHORS'|'ADVISOR'|'COADVISOR'|'EXAMINERS'|'COMMISSION_PRESIDENT';
+export interface EmailRecipientSelection { recipientRoles?:EmailRecipientRole[]; ccRoles?:EmailRecipientRole[]; }
+
 export type StudioVariableDataType = 'text' | 'date' | 'email' | 'number' | 'url';
 
 export interface IntegrationBrandKit {
@@ -155,10 +159,11 @@ export interface IntegrationStudioSettings {
   documentDesigns: Record<string, DocumentDesignConfig>;
   emailDesigns: Record<string, EmailDesignConfig>;
   formDesigns: Record<string, FormDesignConfig>;
+  receiptDesign?: { confirmedTitle?: string; declinedTitle?: string; confirmedText?: string; declinedText?: string };
   matrixColumns: Array<Record<string, unknown>>;
   matrixRows: Array<Record<string, unknown>>;
-  docTemplates: Array<Record<string, unknown>>;
-  emailTemplates: Array<Record<string, unknown>>;
+  docTemplates: Array<Record<string, unknown>&{signatureRecipientRoles?:SignatureRecipientRole[];id?:unknown}>;
+  emailTemplates: Array<Record<string, unknown>&EmailRecipientSelection&{id?:unknown}>;
   formTemplates: Array<Record<string, unknown>>;
   processFieldSchemas?: Record<string, import('./operationalConfig').RegistrationQuestion[]>;
   workflowStages: Array<Record<string, unknown>>;

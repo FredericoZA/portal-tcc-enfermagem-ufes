@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProcessData } from '../types';
 import { apiClient } from '../services/apiClient';
-import { formatDatePt, formatTimeExtenso } from '../utils/formatters';
+import { formatDateWithWeekday, formatTimeExtenso } from '../utils/formatters';
 import { StudentNames } from '../components/StudentNames';
 import { PortalProcessPill } from '../components/PortalProcessPill';
 import { Clock, Download, MapPin } from 'lucide-react';
@@ -25,7 +25,9 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ onSelectProcess }) => {
 
   useEffect(() => {
     apiClient.getProcesses().then((data) => {
-      setProcesses(data);
+      setProcesses([...data].sort((a, b) =>
+        (Date.parse(b.defesa?.startAt || '') || 0) - (Date.parse(a.defesa?.startAt || '') || 0)
+      ));
       setIsLoading(false);
     });
 
@@ -55,7 +57,7 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ onSelectProcess }) => {
           </h1>
         </div>
         <p className="text-[10px] sm:text-[11px] font-medium leading-normal mt-0.5 opacity-90">
-          Apresentações públicas registradas pela comissão de TCC. Consulte data, horário e local de cada defesa.
+          Apresentações públicas registradas pela Comissão de Trabalho de Conclusão de Curso. Consulte data, horário e local de cada defesa.
         </p>
         <div className="pt-2">
           <a href="/api/public/calendar.ics" className="inline-flex items-center gap-2 rounded-xl border border-current/20 bg-white/10 px-3 py-2 text-[10px] font-black normal-case tracking-wide hover:bg-white/20" title="Baixar agenda para Google Calendar, Outlook ou Apple Calendar">
@@ -108,7 +110,7 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ onSelectProcess }) => {
                 <div className="pt-3 border-t border-slate-200 space-y-1 text-xs font-medium text-slate-700">
                   <div className="flex items-center gap-1.5 font-bold normal-case text-[11px] tracking-wider" style={{ color: 'var(--portal-tone-text)' }}>
                     <Clock className="w-3.5 h-3.5" />
-                    <span>{formatDatePt(proc.defesa.startAt)} • {formatTimeExtenso(proc.defesa.startAt)}</span>
+                    <span>{formatDateWithWeekday(proc.defesa.startAt)} • {formatTimeExtenso(proc.defesa.startAt)}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-500 text-[11px] truncate">
                     <MapPin className="w-3.5 h-3.5 shrink-0 text-slate-400" />

@@ -17,3 +17,19 @@ test('cadastro que estava na etapa 7 volta ao início sem perder ações ou reor
 test('fluxo personalizado sem cadastro não recebe uma etapa inventada pela ordenação',()=>{
  const stages=[{id:'custom',triggerEvent:'CUSTOM',stageNumber:9}];assert.deepEqual(registrationFirst(stages),[{...stages[0],stageNumber:1}]);
 });
+
+test('reordenação mantém cadastro fixo e move as outras etapas sem perder ações ou alterar a entrada',async()=>{
+ const {moveWorkflowStageOrder,workflowStageMoveBlockReason}=await import('../src/utils/workflowStageOrder');
+ const stages=[{id:'registration',triggerEvent:'TCC_CREATED',stageNumber:1,actions:[{id:'reserve'}]},{id:'location',triggerEvent:'LOCATION_CONFIRMED',stageNumber:2,actions:[{id:'invite'}]},{id:'minutes',triggerEvent:'EVALUATION_SUBMITTED',stageNumber:3,actions:[{id:'ata'}]}];
+ const before=structuredClone(stages);
+ assert.equal(moveWorkflowStageOrder(stages,0,1),stages);
+ assert.match(workflowStageMoveBlockReason(stages,1,-1)!,/cadastro inicia/);
+ const moved=moveWorkflowStageOrder(stages,1,1);
+ assert.deepEqual(moved.map(s=>s.id),['registration','minutes','location']);
+ assert.deepEqual(moved.map(s=>s.stageNumber),[1,2,3]);
+ assert.deepEqual(moved[2].actions,stages[1].actions);
+ assert.equal(moved[2].triggerEvent,'LOCATION_CONFIRMED');
+ assert.match(workflowStageMoveBlockReason(moved,2,1)!,/última/);
+ assert.deepEqual(stages,before);
+ assert.deepEqual(moveWorkflowStageOrder(moved,2,-1).map(s=>s.id),stages.map(s=>s.id));
+});

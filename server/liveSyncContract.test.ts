@@ -1,19 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { PORTAL_LIVE_UPDATE_EVENT, PORTAL_LIVE_POLL_INTERVAL_MS } from '../src/utils/portalLiveEvents';
+import { PORTAL_LIVE_UPDATE_EVENT, PORTAL_LIVE_POLL_INTERVAL_MS, PORTAL_PUBLIC_POLL_INTERVAL_MS } from '../src/utils/portalLiveEvents';
 
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 test('checagem remota ocorre sem recarregar página e somente com aba visível',()=>{
   const runtime=read('src/components/PortalLiveSync.tsx');
   assert.equal(PORTAL_LIVE_UPDATE_EVENT,'portal:remote-data-changed');
-  assert.equal(PORTAL_LIVE_POLL_INTERVAL_MS,15000);
+  assert.equal(PORTAL_LIVE_POLL_INTERVAL_MS,30_000);
+  assert.equal(PORTAL_PUBLIC_POLL_INTERVAL_MS,60_000);
   assert.match(runtime,/document\.visibilityState === 'hidden'/);
   assert.match(runtime,/!navigator\.onLine/);
   assert.match(runtime,/window\.addEventListener\('focus',resumed\)/);
   assert.match(runtime,/document\.addEventListener\('visibilitychange',resumed\)/);
   assert.match(runtime,/window\.dispatchEvent\(new CustomEvent/);
+  assert.match(runtime,/getPublicSyncVersion\(\)/);
+  assert.doesNotMatch(runtime,/getPortalSyncVersion\(\)/);
   assert.doesNotMatch(runtime,/location\.reload\(/);
 });
 
@@ -23,7 +26,7 @@ test('versão pública é opaca e não divulga IDs ou quantidades privadas',()=>
   assert.match(src,/app\.get\('\/api\/public\/sync\/version'/);
   assert.match(src,/app\.get\('\/api\/sync\/version',requireAuthenticated/);
   assert.match(integration,/createHmac\('sha256',supabaseSecret\(\)\)/);
-  assert.match(integration,/select=revision&limit=1/);
+  assert.match(integration,/fetchPortalState\('revision',/);
   assert.match(src,/req\.path === '\/public\/sync\/version'/);
   assert.doesNotMatch(integration,/new EventSource|service_role.*browser/);
 });
@@ -47,7 +50,7 @@ test('processo excluído deixa de permanecer aberto e falha transitória não eq
   assert.match(detail,/err instanceof ApiRequestError && err\.status===404/);
   assert.match(detail,/onBackRef\.current\(\)/);
   assert.match(detail,/pode ter sido excluído ou seu acesso foi alterado/);
-  assert.match(detail,/if\(!background\s*&&\s*!quiet\)setErrorMsg/);
+  assert.match(detail,/if\(!background\s*&&\s*!quiet\)\{\s*setErrorMsg/);
   assert.match(detail,/if\(background && editingSectionRef\.current\)/);
   assert.match(detail,/setRemoteUpdatePending\(true\)/);
   assert.match(detail,/Descartar edição e atualizar/);

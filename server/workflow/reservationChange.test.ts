@@ -41,11 +41,12 @@ test('outro local é normalizado, com sigla marcada preservada', () => {
   assert.equal(next.local, 'Auditório Central da UFES');
 });
 
-test('datas inválidas, fins de semana e locais não cadastrados são bloqueados', () => {
-  assert.throws(
-    () => validateReservationChange({ date: '2026-11-07', time: '14:00', locationChoice: fixedLocations[0] }, process, fixedLocations, 90, now),
-    /segunda a sexta-feira/,
-  );
+test('finais de semana são permitidos, mas datas passadas e locais não cadastrados continuam bloqueados', () => {
+  for(const date of ['2026-11-07','2026-11-08']){
+    const result=validateReservationChange({date,time:'14:00',locationChoice:fixedLocations[0]},process,fixedLocations,90,now);
+    assert.equal(result.startAt,`${date}T17:00:00.000Z`);
+  }
+  assert.throws(()=>validateReservationChange({date:'2026-11-01',time:'14:00',locationChoice:fixedLocations[0]},process,fixedLocations,90,now),/futuros/);
   assert.throws(
     () => validateReservationChange({ date: '2026-11-02', time: '14:00', locationChoice: fixedLocations[0] }, process, fixedLocations, 90, now),
     /futuros/,

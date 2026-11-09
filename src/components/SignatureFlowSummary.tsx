@@ -4,13 +4,13 @@ import { FileSignature } from 'lucide-react';
 const signatureSteps = [
   {document: 'Comprovante de reserva', signers: 'Não requer assinatura.', procedure: 'Disponível após o aceite ou a recusa do responsável pelo local.'},
   {document: 'Carta-convite da banca', signers: 'Não requer assinatura.', procedure: 'Disponível após a confirmação da reserva e o envio do convite.'},
-  {document: 'Ata da defesa', signers: 'Professor orientador.', procedure: 'Após registrar o conceito e o parecer, a partir do horário da defesa, solicite a assinatura na caixa Ata. O arquivamento libera a entrega final.'},
-  {document: 'Termo de autorização de publicação', signers: 'Orientador e todos os autores.', procedure: 'Após a entrega final, fica disponível somente se algum PDF tiver publicação autorizada. No Asten, todos assinam no mesmo nível; pelo Gov.br, o orientador devolve um único PDF com todas as assinaturas.'},
-  {document: 'Declaração de participação na banca', signers: 'Presidente da Comissão.', procedure: 'Solicite pela Área do Presidente, após a entrega final e o arquivamento da ata e do termo, quando aplicável. A declaração assinada e arquivada permite concluir o processo.'},
+  {document: 'Ata da defesa', signers: 'Orientador, dois examinadores, cada autor e coorientador que participou da sessão.', procedure: 'Após o registro e a conferência da ata, o ASTEN encaminha os links individuais aos signatários. A entrega final é liberada após todas as assinaturas exigidas e o arquivamento.'},
+  {document: 'Termo de autorização de publicação', signers: 'Orientador e todos os autores.', procedure: 'Após a entrega final, fica disponível somente se algum PDF tiver publicação autorizada. No Asten, todos assinam no mesmo nível; pelo Gov.br, o orientador devolve um único PDF com todas as assinaturas. O termo deve ser arquivado antes da declaração.'},
+  {document: 'Declaração de participação na banca', signers: 'Presidente da Comissão.', procedure: 'Após a entrega final e o arquivamento da ata e do termo, quando aplicável, o ASTEN encaminha a declaração à presidência. A declaração assinada e arquivada permite concluir o processo.'},
 ];
 
-const headingClasses = 'border border-[var(--portal-border-strong)] px-2 py-1.5 text-left text-[11px] font-bold text-[var(--portal-text-dark)]';
-const cellClasses = 'border border-[var(--portal-border)] px-2 py-1.5 align-top text-[11px] leading-[18px] text-[var(--portal-text-dark)]';
+const headingClasses = 'border border-[var(--portal-border-strong)] px-2 py-1.5 text-center text-[11px] font-bold text-[var(--portal-text-dark)]';
+const cellClasses = 'border border-[var(--portal-border)] px-2 py-1.5 text-center align-middle text-[11px] leading-[18px] text-[var(--portal-text-dark)]';
 
 export const SignatureFlowSummary: React.FC = () => (
   <section
@@ -26,7 +26,7 @@ export const SignatureFlowSummary: React.FC = () => (
       </h2>
     </div>
 
-    <p className="mb-3 text-xs leading-5 text-slate-700">Em <strong>Documentos administrativos</strong>, consulte a disponibilidade de cada documento e use <strong>Ver</strong> ou <strong>Baixar PDF</strong>. As assinaturas são solicitadas pelos botões do documento, após o registro do conceito ou da entrega.</p>
+    <p className="mb-3 text-xs leading-5 text-slate-700">Em <strong>Documentos administrativos</strong>, consulte a disponibilidade de cada documento e use <strong>Ver</strong> ou <strong>Baixar PDF</strong>. O ASTEN encaminha automaticamente os pedidos quando os documentos ficam disponíveis. Cada responsável assina pelo link individual recebido por e-mail.</p>
 
     <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]" data-signature-layout>
       <div className="min-w-0 overflow-x-auto rounded-xl border border-slate-300" role="region" aria-label="Tabela de assinaturas do processo" tabIndex={0}>
@@ -38,13 +38,13 @@ export const SignatureFlowSummary: React.FC = () => (
             <th scope="col" className={headingClasses}>Procedimento</th>
           </tr></thead>
           <tbody>{signatureSteps.map(step => <tr key={step.document}>
-            <th scope="row" className={`${cellClasses} text-left font-bold`}>{step.document}</th>
+            <th scope="row" className={`${cellClasses} font-bold`}>{step.document}</th>
             <td className={cellClasses}>{step.signers}</td>
             <td className={cellClasses}>{step.procedure}</td>
           </tr>)}</tbody>
           <tfoot>
-            <tr><th scope="row" className={`${cellClasses} text-left font-bold`}>Asten · preferencial</th><td colSpan={2} className={cellClasses}>Solicite pelo botão Asten e siga o link recebido por e-mail. Aguarde o arquivamento antes de repetir o pedido. Registrar o conceito ou confirmar a entrega não dispara assinaturas automaticamente.</td></tr>
-            <tr><th scope="row" className={`${cellClasses} text-left font-bold`}>Gov.br</th><td colSpan={2} className={cellClasses}>Baixe, assine e devolva o mesmo PDF: o orientador devolve a ata e o termo; a presidência, a declaração. O Master confere no VALIDAR/ITI e registra o arquivamento; a presidência também pode conferir a declaração.</td></tr>
+            <tr><th scope="row" className={`${cellClasses} font-bold`}>Asten · preferencial</th><td colSpan={2} className={cellClasses}>O ASTEN envia o pedido quando o documento fica disponível para assinatura. Acompanhe o estado no Portal e assine pelo link pessoal recebido por e-mail.</td></tr>
+            <tr><th scope="row" className={`${cellClasses} font-bold`}>Gov.br</th><td colSpan={2} className={cellClasses}>Baixe, assine e devolva o mesmo PDF: o orientador devolve a ata e o termo com todas as assinaturas aplicáveis; a presidência, a declaração. O Master confere no VALIDAR/ITI e registra o arquivamento; a presidência também pode conferir a declaração.</td></tr>
           </tfoot>
         </table>
       </div>

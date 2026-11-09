@@ -33,3 +33,17 @@ test('aprovação manual exige hash exato, revisão atual, provedor correto e tr
   assert.throws(()=>assertGovbrManualApproval({...job,provider:'ASTEN'},4,confirmation),/fluxo Gov/);
   assert.throws(()=>assertGovbrManualApproval({...job,status:'CANCELED'},4,confirmation),/fluxo Gov/);
 });
+
+
+test('ata exige três assinaturas distintas, incluindo assinaturas de revisões incrementais anteriores',async()=>{
+  const bytes=await original();
+  for(const signatureCount of [1,2]){
+    const returned=await pdfWithTestSignature(bytes,{signatureCount});
+    await assert.rejects(inspectGovbrReturnedPdf(bytes,returned,hash(bytes),3),new RegExp(`exige 3.*encontradas ${signatureCount}`));
+  }
+  const returned=await pdfWithTestSignature(bytes,{signatureCount:3,earlierRevisionSignatures:true});
+  assert.equal(await inspectGovbrReturnedPdf(bytes,returned,hash(bytes),3),hash(returned));
+  const repeated=await pdfWithTestSignature(bytes,{signatureCount:3,duplicateSignatureContents:true});
+  await assert.rejects(inspectGovbrReturnedPdf(bytes,repeated,hash(bytes),3),/exige 3.*encontradas 1/);
+  await assert.rejects(inspectGovbrReturnedPdf(bytes,bytes,hash(bytes),0),/signatários esperados inválida/);
+});

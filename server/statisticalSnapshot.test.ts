@@ -10,7 +10,7 @@ function process(id: string, overrides: Partial<ProcessData> = {}): ProcessData 
     protocolo: `TCC-2026-${id}`,
     titulo: `Título pessoal sensível ${id}`,
     etapaAtual: 'CADASTRO',
-    status: 'EM_RASCUNHO',
+    status: 'AGUARDANDO_DEFESA',
     createdByEmail: `aluno-${id}@example.edu`,
     aluno1: { nome: `Pessoa ${id}`, matricula: `M${id}`, email: `aluno-${id}@example.edu` },
     aluno2: null,

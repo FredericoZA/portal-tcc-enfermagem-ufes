@@ -1,3 +1,9 @@
+import {nativeWorkflowActivity} from './nativeWorkflowActivities';
+import {isWorkflowExecutionEvent,workflowExecutionEvent} from './workflowExecutionTrigger';
+import {validateSignatureRecipientRoles} from './signatureRecipientRoles';
+import {validateFormRecipientSelection} from './formRecipientRoles';
+import {validateEmailRecipientSelection} from './emailRecipientRoles';
+import {RE2JS} from 're2js';
 import {isEmailAddress} from './emailAddress';
 import {studioMarkerPatterns} from './templateMarkerPattern';
 import {DOCUMENT_VARIABLE_KEYS} from './documentVariables';
@@ -87,7 +93,8 @@ const BUILT_IN_WORKFLOW_VARIABLES = new Set([
   'COORIENTADOR_SIAPE', 'COORIENTADOR_INSTITUICAO',
   'EXAMINADOR_2_NOME', 'EXAMINADOR_2_EMAIL', 'EXAMINADOR_2_SIAPE', 'EXAMINADOR_2_INSTITUICAO',
   'EXAMINADOR_3_NOME', 'EXAMINADOR_3_EMAIL', 'EXAMINADOR_3_SIAPE', 'EXAMINADOR_3_INSTITUICAO',
-  'BANCA_NOMES', 'BANCA_EMAILS', 'PARTICIPANTES_EMAILS',
+  'BANCA_NOMES', 'BANCA_EMAILS', 'PARTICIPANTES_EMAILS', 'CONVITE_AUTORES', 'CONVITE_EXAMINADORES',
+  'DEFESA_DATA','DEFESA_HORARIO','DEFESA_HORA','RESPOSTA_REGISTRADA_EM','COORIENTADOR_NOME_COMPLETO','ALUNOS',
   'DEFESA_DATA_HORA', 'DEFESA_LOCAL', 'RESULTADO', 'PARECER', 'ENTREGA_FINAL_LIBERADA',
   'PUBLICAR_TRABALHO', 'PUBLICAR_TRABALHO_COMPLETO', 'INCLUIR_RESUMO_EXPANDIDO',
   'PUBLICAR_RESUMO_EXPANDIDO', 'PALAVRAS_CHAVE', 'RESUMO_SINTETICO',
@@ -112,11 +119,10 @@ function templateVariableKeys(source: unknown): string[] {
   return Array.from(new Set(matches.map((match) => key(match[1])).filter(Boolean)));
 }
 
-function expectedDocumentTrigger(documentType: string): string | null {
-  const canonicalType = key(documentType);
-  const type = (Object.keys(SAFE_DOCUMENT_TRIGGER_BY_TYPE) as Array<keyof typeof SAFE_DOCUMENT_TRIGGER_BY_TYPE>)
-    .find((candidate) => canonicalType.includes(candidate));
-  return type ? SAFE_DOCUMENT_TRIGGER_BY_TYPE[type] : null;
+export function operationalDocumentType(document?: {type?: unknown; documentType?: unknown; id?: unknown}): keyof typeof SAFE_DOCUMENT_TRIGGER_BY_TYPE | undefined {
+  const declared = key(document?.type || document?.documentType);
+  const candidate = declared || key(document?.id).replace(/^(TMPL|MASTER)_/, '');
+  return Object.hasOwn(SAFE_DOCUMENT_TRIGGER_BY_TYPE, candidate) ? candidate as keyof typeof SAFE_DOCUMENT_TRIGGER_BY_TYPE : undefined;
 }
 
 function luminance(hex: string): number | null {
@@ -145,6 +151,13 @@ export function evaluateStudioCondition(condition: StudioCondition | undefined, 
   return String(actual ?? '') === expected;
 }
 
+function compileFormPattern(pattern: string): RE2JS {
+  if (pattern.length > 256) throw new Error('Expressão de validação longa demais.');
+  const compiled = RE2JS.compile(RE2JS.translateRegExp(pattern));
+  if (compiled.programSize() > 4096) throw new Error('Expressão de validação complexa demais.');
+  return compiled;
+}
+
 export function validateStudioAnswer(value: unknown, rule: StudioValidationRule | undefined): string | null {
   if (!rule) return null;
   const source = String(value ?? '');
@@ -154,8 +167,8 @@ export function validateStudioAnswer(value: unknown, rule: StudioValidationRule 
   if (rule.min !== undefined && Number.isFinite(numeric) && numeric < rule.min) return rule.errorMessage || `O valor mínimo é ${rule.min}.`;
   if (rule.max !== undefined && Number.isFinite(numeric) && numeric > rule.max) return rule.errorMessage || `O valor máximo é ${rule.max}.`;
   if (rule.pattern) {
-    try { if (!new RegExp(rule.pattern).test(source)) return rule.errorMessage || 'O valor não segue o formato esperado.'; }
-    catch { return 'A expressão de validação configurada é inválida.'; }
+    try { if (!compileFormPattern(rule.pattern).test(source)) return rule.errorMessage || 'O valor não segue o formato esperado.'; }
+    catch { return 'O formato configurado para este campo precisa ser revisado.'; }
   }
   return null;
 }
@@ -225,6 +238,7 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
 
   const docIds = new Set<string>();
   docs.forEach((doc, index) => {
+    try{validateSignatureRecipientRoles(doc);}catch(error){add({code:'INVALID_SIGNATURE_RECIPIENT_ROLES',path:`docTemplates.${index}.signatureRecipientRoles`,message:error instanceof Error?error.message:'Signatários inválidos.',severity:'ERROR',area:'DOCUMENT'});}
     const id = text(doc.id);
     if (!id || docIds.has(id)) add({ code: 'DUPLICATE_DOCUMENT', path: `docTemplates.${index}.id`, message: 'Cada modelo precisa de um identificador único.', severity: 'ERROR', area: 'DOCUMENT' });
     docIds.add(id);
@@ -233,13 +247,14 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
   });
 
   forms.forEach((form, formIndex) => {
+    try{validateFormRecipientSelection(form);}catch(error){add({code:'INVALID_FORM_RECIPIENT_ROLES',path:`formTemplates.${formIndex}.recipientRoles`,message:error instanceof Error?error.message:'Seleção de responsáveis inválida.',severity:'ERROR',area:'FORM'});}
     const seen = new Set<string>();
     const questions = rows(form.questions);
     if (!text(form.title) || !questions.length) add({ code: 'EMPTY_FORM', path: `formTemplates.${formIndex}`, message: 'Todo formulário ativo precisa de título e ao menos um campo.', severity: 'ERROR', area: 'FORM' });
     questions.forEach((question, questionIndex) => {
       const fieldKey = key(question.fieldKey);
       if(form.id==='form-reserva-aluno'&&question.fieldType==='file')add({code:'INITIAL_FILE_UNSUPPORTED',path:`formTemplates.${formIndex}.questions.${questionIndex}`,message:'Anexos são enviados na etapa de entrega final; use um campo de texto no cadastro inicial.',severity:'ERROR',area:'FORM'});
-      if(form.id==='form-parecer-banca'&&question.fieldType==='file')add({code:'EVALUATION_FILE_UNSUPPORTED',path:`formTemplates.${formIndex}.questions.${questionIndex}`,message:'Use texto para observações da avaliação. A ata é gerada pelo modelo DOCX.',severity:'ERROR',area:'FORM'});
+      if(form.id==='form-parecer-banca'&&question.fieldType==='file')add({code:'EVALUATION_FILE_UNSUPPORTED',path:`formTemplates.${formIndex}.questions.${questionIndex}`,message:'Use texto para observações do parecer. A ata é gerada pelo modelo DOCX.',severity:'ERROR',area:'FORM'});
       if (!text(question.label)) add({ code: 'UNLABELED_FIELD', path: `formTemplates.${formIndex}.questions.${questionIndex}.label`, message: 'O campo precisa de um rótulo visível.', severity: 'ERROR', area: 'FORM' });
       if (!fieldKey) add({ code: 'UNBOUND_FIELD', path: `formTemplates.${formIndex}.questions.${questionIndex}.fieldKey`, message: 'Vincule o campo a uma variável para reutilizar a informação.', severity: 'WARNING', area: 'FORM' });
       else if (!variables.has(fieldKey)) add({ code: 'UNKNOWN_VARIABLE', path: `formTemplates.${formIndex}.questions.${questionIndex}.fieldKey`, message: `A variável ${fieldKey} não existe na matriz.`, severity: 'ERROR', area: 'FORM' });
@@ -251,21 +266,23 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
         if (!seen.has(source) || source === fieldKey) add({ code: 'INVALID_FORM_RULE', path: `formTemplates.${formIndex}.questions.${questionIndex}.visibleWhen`, message: 'A condição deve usar um campo anterior do mesmo formulário.', severity: 'ERROR', area: 'FORM' });
       }
       const pattern = text(record(question.validation).pattern);
-      if (pattern) try { new RegExp(pattern); } catch { add({ code: 'INVALID_PATTERN', path: `formTemplates.${formIndex}.questions.${questionIndex}.validation.pattern`, message: 'A expressão de validação é inválida.', severity: 'ERROR', area: 'FORM' }); }
+      if (pattern) try { compileFormPattern(pattern); } catch { add({ code: 'INVALID_PATTERN', path: `formTemplates.${formIndex}.questions.${questionIndex}.validation.pattern`, message: 'Use uma expressão compatível com RE2, com até 256 caracteres e sem retroreferências ou verificações de contexto.', severity: 'ERROR', area: 'FORM' }); }
     });
   });
 
   emails.forEach((email, index) => {
     if (!text(email.name) || !text(email.subject) || !text(email.body)) add({ code: 'INCOMPLETE_EMAIL', path: `emailTemplates.${index}`, message: 'Cada e-mail precisa de nome, assunto e corpo em texto.', severity: 'ERROR', area: 'EMAIL' });
-    if (!text(email.recipient)) add({ code: 'MISSING_RECIPIENT', path: `emailTemplates.${index}.recipient`, message: `Defina o destinatário de “${text(email.name) || text(email.id)}”.`, severity: 'ERROR', area: 'EMAIL' });
-    if (text(email.id) === 'email-reserva' && !isEmailAddress(text(email.recipient))) add({
+    try{validateEmailRecipientSelection(email);}catch(error){add({code:'INVALID_RECIPIENT_ROLES',path:`emailTemplates.${index}.recipientRoles`,message:error instanceof Error?error.message:'Seleção de destinatários inválida.',severity:'ERROR',area:'EMAIL'});}
+    const usesRecipientRoles=Array.isArray(email.recipientRoles);
+    if (!usesRecipientRoles&&!text(email.recipient)) add({ code: 'MISSING_RECIPIENT', path: `emailTemplates.${index}.recipient`, message: `Defina o destinatário de “${text(email.name) || text(email.id)}”.`, severity: 'ERROR', area: 'EMAIL' });
+    if (!usesRecipientRoles&&text(email.id) === 'email-reserva' && !isEmailAddress(text(email.recipient))) add({
       code: 'RESERVATION_EMAIL_RECIPIENT_MUST_BE_CONFIGURED',
       path: `emailTemplates.${index}.recipient`,
       message: 'Informe diretamente o e-mail do Departamento de Enfermagem no modelo de solicitação de reserva.',
       severity: 'ERROR',
       area: 'EMAIL'
     });
-    const unsafeRecipientVariables = templateVariableKeys(email.recipient).filter((variable) => !SAFE_EMAIL_RECIPIENT_VARIABLES.has(variable));
+    const unsafeRecipientVariables = templateVariableKeys(usesRecipientRoles?'':email.recipient).filter((variable) => !SAFE_EMAIL_RECIPIENT_VARIABLES.has(variable));
     if (unsafeRecipientVariables.length) add({
       code: 'UNSAFE_EMAIL_RECIPIENT_VARIABLE',
       path: `emailTemplates.${index}.recipient`,
@@ -273,7 +290,7 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
       severity: 'ERROR',
       area: 'EMAIL'
     });
-    const unknownVariables = templateVariableKeys([email.recipient, email.subject, email.body, email.htmlBody].filter(Boolean).join('\n'))
+    const unknownVariables = templateVariableKeys([usesRecipientRoles?'':email.recipient, email.subject, email.body, email.htmlBody].filter(Boolean).join('\n'))
       .filter((variable) => !variables.has(variable) && !BUILT_IN_WORKFLOW_VARIABLES.has(variable));
     if (unknownVariables.length) add({
       code: 'UNKNOWN_EMAIL_VARIABLE',
@@ -290,25 +307,37 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
     if (!stageId || stageIds.has(stageId)) add({ code: 'DUPLICATE_STAGE', path: `workflowStages.${stageIndex}.id`, message: 'Cada etapa precisa de um identificador único.', severity: 'ERROR', area: 'WORKFLOW' });
     stageIds.add(stageId);
     if (!text(stage.triggerEvent)) add({ code: 'MISSING_TRIGGER', path: `workflowStages.${stageIndex}.triggerEvent`, message: 'Defina o evento que inicia a etapa.', severity: 'ERROR', area: 'WORKFLOW' });
+    if(!rows(stage.actions).length)add({code:'EMPTY_STAGE',path:`workflowStages.${stageIndex}.actions`,message:'A etapa não possui atividades. Vincule uma atividade ou remova a etapa vazia.',severity:'ERROR',area:'WORKFLOW'});
     rows(stage.actions).forEach((action, actionIndex) => {
       const type = key(action.type).toLowerCase().replace('document', 'doc');
       const refId = text(action.refId || action.referenceId);
+      if(type==='interaction'){const activity=nativeWorkflowActivity(action);if(!activity||activity.event!==stage.triggerEvent||action.executionEvent||action.condition)add({code:'INVALID_NATIVE_ACTIVITY',path:`workflowStages.${stageIndex}.actions.${actionIndex}`,message:'Atividade nativa precisa manter sua etapa e as regras de acesso do processo.',severity:'ERROR',area:'WORKFLOW'});return;}
       if (type !== 'action' && type !== 'system_action' && (!refId || !(references as any)[type]?.has(refId))) add({ code: 'BROKEN_WORKFLOW_REFERENCE', path: `workflowStages.${stageIndex}.actions.${actionIndex}`, message: `A ação “${text(action.title)}” aponta para um artefato inexistente.`, severity: 'ERROR', area: 'WORKFLOW' });
       if (type === 'action' || type === 'system_action') add({ code: 'SYSTEM_ACTION_WITHOUT_EXECUTOR', path: `workflowStages.${stageIndex}.actions.${actionIndex}`, message: `A ação interna “${text(action.title)}” não possui executor seguro. Substitua por formulário, documento ou e-mail.`, severity: 'ERROR', area: 'WORKFLOW' });
+      const executionEvent = workflowExecutionEvent(action, text(stage.triggerEvent));
+      if (action.executionEvent && !isWorkflowExecutionEvent(action.executionEvent)) add({code:'INVALID_TRIGGER',path:`workflowStages.${stageIndex}.actions.${actionIndex}.executionEvent`,message:'Selecione um gatilho emitido pelo sistema.',severity:'ERROR',area:'WORKFLOW'});
+      if (refId==='email-reserva' && executionEvent!=='TCC_CREATED') add({code:'INVALID_RESERVATION_TRIGGER',path:`workflowStages.${stageIndex}.actions.${actionIndex}.executionEvent`,message:'A solicitação inicial de reserva deve acompanhar a criação do processo.',severity:'ERROR',area:'WORKFLOW'});
       const condition = record(action.condition);
       if (text(condition.fieldKey) && !variables.has(key(condition.fieldKey))) add({ code: 'INVALID_CONDITION', path: `workflowStages.${stageIndex}.actions.${actionIndex}.condition`, message: 'A condição da ação usa uma variável inexistente.', severity: 'ERROR', area: 'WORKFLOW' });
       const referencedDocument = docs.find(doc => text(doc.id) === refId);
-      const documentType = key(referencedDocument?.type || referencedDocument?.id);
-      const expectedTrigger = expectedDocumentTrigger(documentType);
-      if (type === 'doc' && expectedTrigger && key(stage.triggerEvent) !== expectedTrigger) add({
+      const documentType = operationalDocumentType(referencedDocument);
+      const expectedTrigger = documentType && SAFE_DOCUMENT_TRIGGER_BY_TYPE[documentType];
+      if (type === 'doc' && referencedDocument && !documentType) add({
+        code: 'DOCUMENT_WITHOUT_EXECUTOR',
+        path: `workflowStages.${stageIndex}.actions.${actionIndex}`,
+        message: 'O modelo pode ser mantido no catálogo. A geração automática exige uma regra implementada para este tipo.',
+        severity: 'ERROR',
+        area: 'WORKFLOW'
+      });
+      if (type === 'doc' && expectedTrigger && executionEvent !== expectedTrigger) add({
         code: 'INVALID_DOCUMENT_EVENT',
         path: `workflowStages.${stageIndex}.actions.${actionIndex}`,
         message: `O documento ${documentType} só pode ser executado pelo evento ${expectedTrigger}.`,
         severity: 'ERROR',
         area: 'WORKFLOW'
       });
-      if (type === 'doc' && documentType.includes('TERMO') && (key(condition.fieldKey) !== 'PUBLICAR_TRABALHO' || key(condition.operator) !== 'IS_TRUE')) add({ code: 'TERM_WITHOUT_PUBLICATION_CONDITION', path: `workflowStages.${stageIndex}.actions.${actionIndex}.condition`, message: 'O Termo precisa da condição “PUBLICAR_TRABALHO é verdadeiro”.', severity: 'ERROR', area: 'WORKFLOW' });
-      if (type === 'doc' && ['CONVITE', 'ATA', 'DECLARACAO'].some((requiredType) => documentType.includes(requiredType)) && Object.keys(condition).some((conditionKey) => condition[conditionKey] !== undefined && condition[conditionKey] !== null && String(condition[conditionKey]).trim() !== '')) add({
+      if (type === 'doc' && documentType === 'TERMO' && (key(condition.fieldKey) !== 'PUBLICAR_TRABALHO' || key(condition.operator) !== 'IS_TRUE')) add({ code: 'TERM_WITHOUT_PUBLICATION_CONDITION', path: `workflowStages.${stageIndex}.actions.${actionIndex}.condition`, message: 'O Termo precisa da condição “PUBLICAR_TRABALHO é verdadeiro”.', severity: 'ERROR', area: 'WORKFLOW' });
+      if (type === 'doc' && documentType && documentType !== 'TERMO' && Object.keys(condition).some((conditionKey) => condition[conditionKey] !== undefined && condition[conditionKey] !== null && String(condition[conditionKey]).trim() !== '')) add({
         code: 'REQUIRED_DOCUMENT_CANNOT_BE_CONDITIONAL',
         path: `workflowStages.${stageIndex}.actions.${actionIndex}.condition`,
         message: `${documentType} é obrigatório e não pode depender de uma condição opcional.`,
@@ -317,15 +346,15 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
       });
       const referencedEmail = emails.find(email => text(email.id) === refId);
       const attachments = Array.isArray(referencedEmail?.attachments) ? referencedEmail.attachments.map(key) : [];
-      if (type === 'email' && attachments.some(item => item.includes('CONVITE')) && key(stage.triggerEvent) === 'TCC_CREATED') add({ code: 'INVITATION_ATTACHMENT_TOO_EARLY', path: `workflowStages.${stageIndex}.actions.${actionIndex}`, message: 'A carta-convite só pode ser anexada em LOCATION_CONFIRMED ou depois, quando o PDF já foi gerado e arquivado.', severity: 'ERROR', area: 'WORKFLOW' });
-      if (type === 'email' && attachments.some(item => ['ATA', 'TERMO', 'DECLARACAO'].some(document => item.includes(document))) && key(stage.triggerEvent) !== 'PROCESS_COMPLETED') add({ code: 'SIGNED_ATTACHMENT_TOO_EARLY', path: `workflowStages.${stageIndex}.actions.${actionIndex}`, message: 'E-mails com documentos assináveis devem ser enviados em PROCESS_COMPLETED, após o arquivamento do retorno da Asten.', severity: 'ERROR', area: 'WORKFLOW' });
+      if (type === 'email' && attachments.some(item => item.includes('CONVITE')) && executionEvent === 'TCC_CREATED') add({ code: 'INVITATION_ATTACHMENT_TOO_EARLY', path: `workflowStages.${stageIndex}.actions.${actionIndex}`, message: 'A carta-convite só pode ser anexada em LOCATION_CONFIRMED ou depois, quando o PDF já foi gerado e arquivado.', severity: 'ERROR', area: 'WORKFLOW' });
+      if (type === 'email' && attachments.some(item => ['ATA', 'TERMO', 'DECLARACAO'].some(document => item.includes(document))) && executionEvent !== 'PROCESS_COMPLETED') add({ code: 'SIGNED_ATTACHMENT_TOO_EARLY', path: `workflowStages.${stageIndex}.actions.${actionIndex}`, message: 'E-mails com documentos assináveis devem ser enviados em PROCESS_COMPLETED, após o arquivamento do retorno da Asten.', severity: 'ERROR', area: 'WORKFLOW' });
     });
   });
   if (!stages.length) add({ code: 'EMPTY_WORKFLOW', path: 'workflowStages', message: 'O portal precisa de ao menos uma etapa de fluxo.', severity: 'ERROR', area: 'WORKFLOW' });
 
   const requiredDocumentTypes = Object.keys(SAFE_DOCUMENT_TRIGGER_BY_TYPE) as Array<keyof typeof SAFE_DOCUMENT_TRIGGER_BY_TYPE>;
   for (const requiredType of requiredDocumentTypes) {
-    const document = docs.find((item) => key(item.type || item.id || item.label).includes(requiredType));
+    const document = docs.find((item) => operationalDocumentType(item) === requiredType);
     if (!document) {
       add({ code: 'MISSING_REQUIRED_DOCUMENT', path: 'docTemplates', message: `Cadastre o modelo externo obrigatório ${requiredType}.`, severity: 'ERROR', area: 'DOCUMENT' });
       continue;
@@ -341,7 +370,7 @@ export function validateCourseStudio(studio: Partial<IntegrationStudioSettings>)
   const invitationActions = rows(invitationStage?.actions);
   const invitationDocumentIndex = invitationActions.findIndex((action) => {
     const referenced = docs.find((doc) => text(doc.id) === text(action.refId || action.referenceId));
-    return key(action.type).toLowerCase().replace('document', 'doc') === 'doc' && key(referenced?.type || referenced?.id).includes('CONVITE');
+    return key(action.type).toLowerCase().replace('document', 'doc') === 'doc' && operationalDocumentType(referenced) === 'CONVITE';
   });
   const invitationEmailIndex = invitationActions.findIndex((action) => {
     if (key(action.type).toLowerCase() !== 'email') return false;

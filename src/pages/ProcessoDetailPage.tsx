@@ -1,17 +1,27 @@
+import {signatureSignerNote,currentDocumentSignatureJob,frozenGovbrDownloadJob} from '../utils/signatureRecipientPresentation';
+import {repositorySubmissionConfirmed} from '../utils/repositorySubmissionConfirmation';
+import {hasPendingAutomaticSignature} from '../utils/pendingAutomaticSignature';
+import {documentSignatureProgress,signatureProgressDescription} from '../utils/documentSignatureProgress';
+import {AuditLogsPage} from './AuditLogsPage';
+import {formatDateTimeWithWeekday} from '../utils/formatters';
+import {participantRole} from '../utils/officialParticipants';
+import {WorkflowRecoveryPanel} from '../components/WorkflowRecoveryPanel';
 import {ProcessSummaryCard} from '../components/ProcessSummaryCard';
 import {LegacyAdministrativeDocuments} from '../components/LegacyAdministrativeDocuments';
 import {ProcessDocumentCard, ProcessDocumentsPanel, ReservationReceiptCard} from '../components/ProcessDocumentCard';
 import {publicProcessDetail} from '../utils/publicProcessDetail';
-import {documentSignatureCompleted,documentSignatureArchived} from '../utils/documentSignatureState';
+import {currentAtaArchived,documentSignatureCompleted,signatureDocumentRevision} from '../utils/documentSignatureState';
 import {defenseEndAt} from '../utils/defenseSchedule';
 import {STUDENT_TREATMENTS,FACULTY_TREATMENTS,ACADEMIC_DEGREES} from '../utils/personPresentation';
 import {downloadPortalDocument} from '../utils/documentDownload';
 import {auditChanges} from '../utils/processAudit';
-import {publicationDeclined,finalDeliveryMessage} from '../utils/finalDeliveryPresentation';
+import {administrativeDocumentAvailability,administrativeDocumentLabels,finalDeliveryMessage} from '../utils/finalDeliveryPresentation';
+import { automaticAstenDocumentStatus } from '../utils/signatureGuidance';
 import {InlineProcessField} from '../components/InlineProcessField';
-import {localDateTimeToIso} from '../utils/operationalConfig';
+import {localDateTimeToIso,isRegistrationIdentifierField} from '../utils/operationalConfig';
 import {readProcessLink,setProcessLink,processLink,processWorkflowSection,type ProcessSection} from '../utils/processLink';
 import { portalConfirm, portalNotice, portalPrompt } from '../services/portalDialogs';
+import { withBlockingPortalOperation } from '../services/portalOperations';
 import { AdvisorEvaluationPanel } from '../components/AdvisorEvaluationPanel';
 import React, { useState, useEffect, useRef } from 'react';
 import { ProcessData, ProcessDocument, ProcessRole, SignatureJob } from '../types';
@@ -23,13 +33,17 @@ import { useSignatureUpdates } from '../hooks/useSignatureUpdates';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../utils/portalLiveEvents';
 import { formatDatePt, formatDateExtensoTotal, formatTimeExtenso, formatStudentsString, normalizeEmail, formatNameTitleCase } from '../utils/formatters';
 import { ProcessFlowPanel } from '../components/ProcessFlowPanel';
+import { reservationStatusAlert } from '../utils/reservationStatusAlert';
+import { effectiveDefenseReservationStatus } from '../utils/defenseReservationState';
 import { GovbrSignatureModal } from '../components/GovbrSignatureModal';
 import { PortalModalShell } from '../components/PortalModalShell';
+import {ProcessDeletionDialog} from '../components/ProcessDeletionDialog';
+import type {DeletionDialogTarget} from '../utils/processDeletionDialog';
 import { EtapaProgressBar } from '../components/EtapaProgressBar';
 import { StudentNames } from '../components/StudentNames';
 import { DocumentPreviewModal } from '../components/DocumentPreviewModal';
 import { CorrectionRequestModal } from '../components/CorrectionRequestModal';
-import { resolveInstallationProfile,isPortalFeatureEnabled } from '../utils/installationProfile';
+import { resolveInstallationProfile } from '../utils/installationProfile';
 import { RegistrationFieldPreview } from '../components/RegistrationFieldPreview';
 import {
   Link as LinkIcon,
@@ -54,7 +68,6 @@ import {
   Save,
   Tag,
   Trash2,
-  AlertTriangle,
   HardDrive,
   ExternalLink,
   Settings,
@@ -71,7 +84,8 @@ import {
   Layers,
   Plus,
   Mail,
-  IdCard
+  IdCard,
+  RefreshCw,
 } from 'lucide-react';
 
 interface ProcessoDetailPageProps {
@@ -92,6 +106,9 @@ interface AuditLogEntry {
   details: string;
 }
 
+function withoutRegistrationIdentifiers<T extends object>(person:T):Partial<T> {
+  return Object.fromEntries(Object.entries(person).filter(([key])=>!isRegistrationIdentifierField(key)&&!/^(?:registro|ra)$/i.test(key))) as Partial<T>;
+}
 
 export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   processId,
@@ -103,17 +120,20 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 }) => {
   const { isAuthenticated, userEmail, isMasterAdmin, isCommissionPresident, memberships, settings } = useAuth();
   const installationProfile = resolveInstallationProfile(settings);
+  const automaticAsten = settings?.automaticAstenEnabled === true;
   const [process, setProcess] = useState<ProcessData | null>(null);
   const [documents, setDocuments] = useState<ProcessDocument[]>([]);
+  const [receiptItems,setReceiptItems]=useState<import('../types/workflowOperations').ReservationReceiptSummary[]|undefined>(undefined);
   const [signatureJobs,setSignatureJobs]=useState<SignatureJob[]>([]);
-  const ataIsArchived=Boolean(process&&documentSignatureArchived(signatureJobs,process.id,'ATA'));
+  const ataIsArchived=Boolean(process&&currentAtaArchived(process,signatureJobs));
   const [signatureWorking,setSignatureWorking]=useState('');
   const [signatureNotice,setSignatureNotice]=useState<{ok:boolean;text:string;documentType?:string}|null>(null);
   const [verifications,setVerifications]=useState<Array<{documentType:string;version:number;code:string;url:string;sha256?:string;signedAt?:string}>>([]);
   const [isDownloadingDossier,setIsDownloadingDossier]=useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
-  const legacyAccessKey = `${processId}|${userEmail}|${isAuthenticated}|${isMasterAdmin}`;
+  const [canRetryLoad, setCanRetryLoad] = useState(false);
+  const legacyAccessKey = `${processId}|${userEmail}|${isAuthenticated}|${isMasterAdmin}|${readOnly}`;
   const legacyAccessScope = useRef(legacyAccessKey);
   legacyAccessScope.current = legacyAccessKey;
   const [privateLegacyAcademic, setPrivateLegacyAcademic] = useState<{accessKey:string;data:PrivateLegacyAcademicView|null;error:string}|null>(null);
@@ -147,7 +167,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const [downloadPicker, setDownloadPicker] = useState(false);
   const [downloadSelection, setDownloadSelection] = useState<string[]>([]);
   const [govbrDocument, setGovbrDocument] = useState<ProcessDocument | null>(null);
+  const [govbrDownloadOnly,setGovbrDownloadOnly]=useState(false);
   const [activeTab, setActiveTab] = useState<string>(()=>typeof window==='undefined'?'cadastral':readProcessLink(window.location.search)?.section||'cadastral');
+  useEffect(()=>{if(activeTab==='andamento'&&(!isMasterAdmin||readOnly)){setActiveTab('cadastral');setProcessLink(processId,'cadastral');}},[activeTab,isMasterAdmin,readOnly,processId]);
 
   const [copyFeedback,setCopyFeedback]=useState<{ok:boolean;text:string;documentType?:string}|null>(null);
   useEffect(()=>{
@@ -170,7 +192,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     const stage=process.legacyRecord?'cadastral':processWorkflowSection(process),previous=workflowTab.current;
     const initial=!previous||previous.id!==process.id;
     const explicitlyLinked=typeof window!=='undefined'&&new URLSearchParams(window.location.search).has('secao');
-    if((initial&&!explicitlyLinked)||(!initial&&previous.stage!==stage)){
+    if(activeTab!=='andamento'&&((initial&&!explicitlyLinked)||(!initial&&previous.stage!==stage))){
       setActiveTab(stage);setProcessLink(process.id,stage);
     }
     workflowTab.current={id:process.id,stage};
@@ -188,14 +210,24 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const [selectedPreviewDoc, setSelectedPreviewDoc] = useState<ProcessDocument | null>(null);
   const [correctionDoc, setCorrectionDoc] = useState<ProcessDocument | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletionTarget,setDeletionTarget]=useState<DeletionDialogTarget|null>(null);
+  const deletionScopeRef=useRef('');
+  const deletionDialogRef=useRef(false);
+  const deletionScope=`${processId}|${userEmail}`;
+  const deletionDialogActive=Boolean(showDeleteModal&&deletionTarget?.id===processId&&deletionScopeRef.current===deletionScope&&isMasterAdmin&&!readOnly);
+  deletionDialogRef.current=deletionDialogActive;
+  useEffect(()=>{deletionDialogRef.current=false;deletionScopeRef.current='';setShowDeleteModal(false);setDeletionTarget(null);},[processId,userEmail,isMasterAdmin,readOnly]);
 
   // Section-specific Edit Mode state
   const [editingSection, setEditingSection] = useState<'cadastral' | 'defesa' | 'banca' | 'avaliacao' | 'acervo' | null>(null);
   const [remoteUpdatePending,setRemoteUpdatePending]=useState(false);
+  const [summaryEditing,setSummaryEditingState]=useState(false);
   const editingSectionRef=useRef(editingSection);
-  const setSummaryEditing=React.useCallback((editing:boolean)=>{editingSectionRef.current=editing?'cadastral':null;},[]);
+  const setSummaryEditing=React.useCallback((editing:boolean)=>{
+    if(editing)editingSectionRef.current='cadastral';
+    else if(editingSectionRef.current==='cadastral')editingSectionRef.current=null;
+    setSummaryEditingState(editing);
+  },[]);
 
   const lastProcessRevision=useRef<{revision:number;updatedAt:string}|null>(null);
   const liveRefreshInFlight=useRef(false);
@@ -209,11 +241,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     cargaHoraria: '60 Horas Aula (TCC II)',
     aluno1Nome: '',
     aluno1Email: '',
-    aluno1Matricula: '',
     hasAluno2: false,
     aluno2Nome: '',
     aluno2Email: '',
-    aluno2Matricula: '',
     orientadorNome: '',
     orientadorEmail: '',
     orientadorInstituicao: '',
@@ -237,6 +267,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const [acervoIsPublic, setAcervoIsPublic] = useState(false);
   const [acervoExpandedPublic, setAcervoExpandedPublic] = useState(false);
   const [isSubmittingAcervo, setIsSubmittingAcervo] = useState(false);
+  const repositoryReopenInFlight=useRef(false);
+  const repositorySubmitInFlight=useRef(false);
+  const [repositoryReopenNotice,setRepositoryReopenNotice]=useState('');
+  useEffect(()=>{repositorySubmitInFlight.current=false;setRepositoryReopenNotice('');setIsSubmittingAcervo(false);},[processId,userEmail]);
   const [acervoUploading, setAcervoUploading] = useState<'trabalho-completo'|'resumo-expandido'|''>('');
 
   const handleSaveFormat = (newFmt: TccDetailPopupFormat) => {
@@ -250,11 +284,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   };
 
   const loadData = async (options: { preserveAcervoDraft?: boolean; quiet?:boolean } | boolean = {}) => {
+    if(deletionDialogRef.current)return;
     const requestScope = legacyAccessScope.current;
     const background=options===true;
+    if(background&&repositorySubmitInFlight.current)return;
     const {preserveAcervoDraft=false,quiet=background}=typeof options==='boolean'?{}:options;
     if(!quiet)setIsLoading(true);
-    if(!quiet)setErrorMsg('');
+    if(!quiet){setErrorMsg('');setCanRetryLoad(false);}
     try {
       if (readOnly) {
         const data = await apiClient.getPublicProcess(processId);
@@ -272,30 +308,31 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           }
         }
         // A response started by a previous identity must never populate private content.
-        if (requestScope !== legacyAccessScope.current) return;
+        if (requestScope !== legacyAccessScope.current || deletionDialogRef.current) return;
         setPrivateLegacyAcademic(academicAccess);
-        setProcess(publicDetail.process); setDocuments(publicDetail.documents);
+        setProcess(publicDetail.process); setDocuments(publicDetail.documents);setReceiptItems(data.reservationReceipts);
         setSignatureJobs([]); setVerifications([]); setAuditLogs([]);
         return;
       }
-      const [pData, docsData,signatureData,verificationData,recordedLogs] = await Promise.all([
-        apiClient.getProcessById(processId),
-        apiClient.getProcessDocuments(processId).catch(() => []),
-        apiClient.getProcessSignatureJobs(processId).catch(() => []),
-        isPortalFeatureEnabled(settings,'PUBLIC_AUTHENTICITY')?apiClient.getProcessVerifications(processId).catch(() => []):Promise.resolve([]),
-        apiClient.getProcessAuditLogs(processId)
-      ]);
+      const {process:pData,documents:docsData,signatures:signatureData,verifications:verificationData,auditLogs:recordedLogs,reservationReceipts:receiptData}
+        = await apiClient.getProcessDetail(processId);
+      if (requestScope !== legacyAccessScope.current || deletionDialogRef.current) return;
+      if(lastProcessRevision.current&&(pData.dataRevision<lastProcessRevision.current.revision||(pData.dataRevision===lastProcessRevision.current.revision&&Date.parse(pData.updatedAt)<Date.parse(lastProcessRevision.current.updatedAt))))return;
+      if(background&&repositorySubmitInFlight.current)return;
       if(background && editingSectionRef.current){
         const latest=lastProcessRevision.current;
-        if(latest && (latest.revision!==pData.dataRevision || latest.updatedAt!==pData.updatedAt)){
+        if(latest && (pData.dataRevision>latest.revision || (pData.dataRevision===latest.revision && Date.parse(pData.updatedAt)>Date.parse(latest.updatedAt)))){
           setRemoteUpdatePending(true);
         }
         return;
       }
       lastProcessRevision.current={revision:pData.dataRevision,updatedAt:pData.updatedAt};
       setRemoteUpdatePending(false);
-      setProcess(pData);
+      setErrorMsg('');
+      setCanRetryLoad(false);
+      setProcess(pData);setReceiptItems(receiptData);
       setDocuments(docsData);
+      setRepositoryReopenNotice('');
       setSignatureJobs(signatureData);
       setVerifications(verificationData);
 
@@ -305,11 +342,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         cargaHoraria: '60 Horas Aula (TCC II)',
         aluno1Nome: pData.aluno1?.nome || '',
         aluno1Email: pData.aluno1?.email || '',
-        aluno1Matricula: pData.aluno1?.matricula || '',
         hasAluno2: Boolean(pData.aluno2),
         aluno2Nome: pData.aluno2?.nome || '',
         aluno2Email: pData.aluno2?.email || '',
-        aluno2Matricula: pData.aluno2?.matricula || '',
         orientadorNome: pData.orientador?.nome || '',
         orientadorEmail: pData.orientador?.email || '',
         orientadorInstituicao: pData.orientador?.instituicao || installationProfile.defaultInstitutionName,
@@ -335,18 +370,22 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         }
       }
 
-      setAuditLogs(recordedLogs.map(log=>({id:log.id,timestamp:new Date(log.timestamp).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}),user:log.actorEmail,role:log.actorRoles.join(', '),action:log.action,details:auditChanges(log)})));
+      setAuditLogs(recordedLogs.map(log=>({id:log.id,timestamp:formatDateTimeWithWeekday(log.timestamp),user:log.actorEmail,role:log.actorRoles.join(', '),action:log.action,details:auditChanges(log)})));
 
     } catch (err: any) {
+      if (requestScope !== legacyAccessScope.current || deletionDialogRef.current) return;
       if(background && err instanceof ApiRequestError && err.status===404){
         portalNotice('Este TCC não está mais disponível. Ele pode ter sido excluído ou seu acesso foi alterado.');
         onBackRef.current();
         return;
       }
-      if(!background && !quiet)setErrorMsg(err.message || 'Erro ao carregar o processo.');
+      if(!background && !quiet){
+        setErrorMsg(err.message || 'Erro ao carregar o processo.');
+        setCanRetryLoad(!(err instanceof ApiRequestError) || err.status === 0 || err.status >= 500);
+      }
       if(quiet)throw err;
     } finally {
-      if(!quiet)setIsLoading(false);
+      if(!quiet && requestScope === legacyAccessScope.current)setIsLoading(false);
     }
   };
 
@@ -354,6 +393,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     lastProcessRevision.current=null;
     setRemoteUpdatePending(false);
     setSignatureNotice(null);
+    setRepositoryReopenNotice('');
     loadData();
   }, [processId, userEmail, readOnly, isAuthenticated, isMasterAdmin]);
 
@@ -376,29 +416,56 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     jobs: signatureJobs,
     processId,
     scopeKey: userEmail,
-    enabled: !readOnly && !isLoading && !errorMsg && !editingSection && !signatureWorking,
-    onChange: ()=>loadData(true),
+    watchWithoutJobs: Boolean(process && (hasPendingAutomaticSignature(process,signatureJobs) || (process.avaliacao.status==='CONCLUIDO' && !ataIsArchived
+      && process.signatureProviderPreferences?.ATA!=='GOV_BR'
+      && !signatureJobs.some(job=>job.documentType==='ATA' && job.sourceDataRevision===signatureDocumentRevision(process,'ATA'))))),
+    enabled: activeTab==='docs' && !deletionDialogActive && !readOnly && !isLoading && !errorMsg && !editingSection && !summaryEditing && !signatureWorking,
+    onChange: async()=>{
+      if(liveRefreshInFlight.current)return;
+      liveRefreshInFlight.current=true;
+      try{await loadData(true);}finally{liveRefreshInFlight.current=false;}
+    },
   });
 
+  // Recover a failed document refresh without repeating the confirmed delivery.
+  useEffect(() => {
+    if (!repositoryReopenNotice || activeTab !== 'docs' || readOnly || deletionDialogActive || editingSection) return;
+    const scope = legacyAccessScope.current;
+    const timer = window.setTimeout(async () => {
+      if (scope !== legacyAccessScope.current || deletionDialogRef.current || editingSectionRef.current ||
+          repositoryReopenInFlight.current || liveRefreshInFlight.current || document.visibilityState === 'hidden') return;
+      liveRefreshInFlight.current = true;
+      try {
+        await loadData(true);
+      } catch {
+        // Keep the manual refresh available if the service is still unavailable.
+      } finally {
+        liveRefreshInFlight.current = false;
+      }
+    }, 5_000);
+    return () => window.clearTimeout(timer);
+  }, [repositoryReopenNotice, activeTab, processId, userEmail, readOnly, deletionDialogActive, editingSection]);
+
+  const waitingForReservation=Boolean(!readOnly&&process&&effectiveDefenseReservationStatus(process)==='PENDENTE');
   useEffect(()=>{
     let active=true;
     const verify=async()=>{
-      if(!active||liveRefreshInFlight.current||document.visibilityState==='hidden')return;
+      if(!active||deletionDialogRef.current||repositorySubmitInFlight.current||liveRefreshInFlight.current||document.visibilityState==='hidden')return;
       liveRefreshInFlight.current=true;
       try{
         // Detecta exclusão mesmo quando há campos em edição, sem tocar no rascunho.
         if(editingSectionRef.current){
           const latest=await apiClient.getProcessById(processId);
-          if(!active)return;
+          if(!active||deletionDialogRef.current||repositorySubmitInFlight.current)return;
           const current=lastProcessRevision.current;
-          if(current && (latest.dataRevision!==current.revision||latest.updatedAt!==current.updatedAt)){
+          if(current && (latest.dataRevision>current.revision||(latest.dataRevision===current.revision&&Date.parse(latest.updatedAt)>Date.parse(current.updatedAt)))){
             setRemoteUpdatePending(true);
           }
         }else{
           await loadData(true);
         }
       }catch(err){
-        if(active&&err instanceof ApiRequestError&&err.status===404){
+        if(active&&!deletionDialogRef.current&&err instanceof ApiRequestError&&err.status===404){
           portalNotice('Este TCC não está mais disponível. Ele pode ter sido excluído ou seu acesso foi alterado.');
           onBackRef.current();
         }
@@ -408,18 +475,28 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     };
     const onUpdate=()=>{void verify();};
     window.addEventListener(PORTAL_LIVE_UPDATE_EVENT,onUpdate);
+    // A revisão global pode já ter sido anunciada enquanto esta leitura estava ocupada.
+    const timer=waitingForReservation?window.setInterval(onUpdate,60_000):undefined;
     return()=>{
       active=false;
       window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT,onUpdate);
+      if(timer!==undefined)window.clearInterval(timer);
     };
-  },[processId,userEmail]);
+  },[processId,userEmail,readOnly,waitingForReservation]);
 
   useEffect(()=>{
-    if(!editingSection && remoteUpdatePending){
+    if(!editingSectionRef.current && remoteUpdatePending){
       // Cancelar a edição permite reaplicar o estado mais recente com segurança.
       void loadData(true);
     }
-  },[editingSection,remoteUpdatePending]);
+  },[editingSection,summaryEditing,remoteUpdatePending]);
+
+  if(deletionDialogActive&&deletionTarget){
+    return <ProcessDeletionDialog key={deletionScope} target={deletionTarget} onDismiss={started=>{
+      deletionDialogRef.current=false;setShowDeleteModal(false);setDeletionTarget(null);
+      if(started)onBackRef.current();
+    }}/>;
+  }
 
   if (isLoading) {
     return (
@@ -437,6 +514,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           <AlertCircle className="w-5 h-5" />
           <span>{errorMsg || 'Processo de TCC não encontrado.'}</span>
         </div>
+        {canRetryLoad && <button type="button" onClick={() => void loadData()} className="portal-action mr-2">
+          Tentar novamente
+        </button>}
         <button onClick={onBack} className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-colors cursor-pointer">
           &larr; Voltar para Lista de Processos
         </button>
@@ -449,13 +529,52 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const isStudent = !readOnly && (normalizeEmail(process.aluno1.email) === normEmail || Boolean(process.aluno2 && normalizeEmail(process.aluno2.email) === normEmail));
   const isAdvisor = !readOnly && normalizeEmail(process.orientador.email) === normEmail;
   const isCoAdvisor = !readOnly && process.coorientador && normalizeEmail(process.coorientador.email) === normEmail;
-  const isExaminer = process.banca.some((b) => normalizeEmail(b.email) === normEmail);
+  const isExaminer = process.banca.some((b) => (b.funcao === 'EXAMINER_2' || b.funcao === 'EXAMINER_3') && normalizeEmail(b.email) === normEmail);
 
   const isEvaluationSubmitted = Boolean(process.avaliacao?.submittedAt) || process.avaliacao?.status === 'CONCLUIDO' || process.avaliacao?.notaFinal !== undefined;
   const isAcervoSubmitted = Boolean(process.acervo?.submittedAt);
-  const hasReservationReceipt = Boolean(process.defesa.departmentResponse || (process.defesa as { hasReservationReceipt?: boolean }).hasReservationReceipt);
-  const canSubmitAcervo = !readOnly && Boolean(isMasterAdmin || isCommissionPresident || isStudent);
+  const hasReservationReceipt = Boolean(process.defesa.departmentResponse || process.defesa.reservationHistory?.some(item=>item.departmentResponse||item.localConfirmedAt) || (process.defesa as { hasReservationReceipt?: boolean }).hasReservationReceipt);
+  const canSubmitAcervo = isAuthenticated && isStudent;
   const acervoFieldsLocked = !canSubmitAcervo || isAcervoSubmitted || !ataIsArchived || isSubmittingAcervo || Boolean(acervoUploading);
+  const handleReopenRepository=async()=>{
+    if(repositoryReopenInFlight.current||!canSubmitAcervo||readOnly)return;
+    repositoryReopenInFlight.current=true;
+    const scope=legacyAccessScope.current;
+    const previousEditing=editingSectionRef.current;
+    let reopenedConfirmed=false;
+    try{
+      const reason=await portalPrompt('Ao editar a entrega final, as solicitações pendentes do termo de autorização e dos documentos finais serão canceladas. A autorização de publicação anterior deixará de valer para a nova entrega: você precisará escolher novamente o que deseja publicar e confirmar a entrega. Se você autorizar a publicação, será gerado um novo termo, que exigirá novas assinaturas dos autores e do orientador. A ata e os documentos já assinados serão preservados no histórico.','',{title:'Atenção: reabrir a entrega final',tone:'warning',confirmLabel:'Sim, editar entrega',cancelLabel:'Manter entrega atual',inputLabel:'Motivo da edição (mínimo de 10 caracteres)',minLength:10,maxLength:1000,multiline:true});
+      if(reason===null||scope!==legacyAccessScope.current)return;
+      if(reason.trim().length<10||reason.trim().length>1000){portalNotice('Informe o motivo da edição com 10 a 1.000 caracteres.');return;}
+      editingSectionRef.current='acervo';
+      setIsSubmittingAcervo(true);setRepositoryReopenNotice('');
+      await withBlockingPortalOperation('Reabrindo a entrega final…',async()=>{
+        const reopened=await apiClient.reopenRepository(process.id,reason.trim());
+        if(scope!==legacyAccessScope.current)return;
+        if(reopened.id!==process.id||reopened.acervo?.submittedAt)throw new Error('O servidor ainda não confirmou a reabertura da entrega. Confira o andamento antes de tentar novamente.');
+        reopenedConfirmed=true;
+        setProcess(reopened);
+        lastProcessRevision.current={revision:reopened.dataRevision,updatedAt:reopened.updatedAt};
+        setAcervoKeywords(reopened.acervo?.palavrasChave?.join(', ')||'');
+        setAcervoResumo(reopened.acervo?.resumoSintese||'');
+        setAcervoResumoExpandido(reopened.acervo?.resumoExpandidoFileName||'');
+        setAcervoTrabalhoCompleto(reopened.acervo?.trabalhoCompletoFileName||'');
+        setAcervoIsPublic(Boolean(reopened.acervo?.publishFullWork));
+        setAcervoExpandedPublic(Boolean(reopened.acervo?.publishExpandedAbstract));
+        try{await loadData({quiet:true,preserveAcervoDraft:true});}
+        catch{if(scope===legacyAccessScope.current)setRepositoryReopenNotice('Entrega reaberta. Não foi possível atualizar a lista de documentos. Seus campos estão disponíveis; atualize os documentos antes de conferi-los.');}
+      });
+    }catch(error){if(scope===legacyAccessScope.current)portalNotice(error instanceof Error?error.message:'Não foi possível reabrir a entrega.');}
+    finally{repositoryReopenInFlight.current=false;if(scope===legacyAccessScope.current){if(!reopenedConfirmed)editingSectionRef.current=previousEditing;setIsSubmittingAcervo(false);}}
+  };
+  const retryRepositoryDocuments=async()=>{
+    if(repositoryReopenInFlight.current)return;
+    repositoryReopenInFlight.current=true;setIsSubmittingAcervo(true);
+    const scope=legacyAccessScope.current;
+    try{await withBlockingPortalOperation('Atualizando documentos…',()=>loadData({quiet:true,preserveAcervoDraft:true}));if(scope===legacyAccessScope.current)setRepositoryReopenNotice('');}
+    catch{if(scope===legacyAccessScope.current)setRepositoryReopenNotice(`${process.acervo?.submittedAt?'Entrega confirmada.':'Entrega reaberta.'} A lista de documentos ainda não pôde ser atualizada. Tente atualizar os documentos novamente.`);}
+    finally{repositoryReopenInFlight.current=false;if(scope===legacyAccessScope.current)setIsSubmittingAcervo(false);}
+  };
 
   const canStudentEdit = isStudent && !isEvaluationSubmitted && !isAcervoSubmitted && !readOnly;
   const canAdvisorEdit = (isAdvisor || isCoAdvisor) && !isAcervoSubmitted && !readOnly;
@@ -463,10 +582,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const canEditData = canCoordinatorEdit || Boolean((isStudent || isAdvisor) && !isEvaluationSubmitted && !readOnly && !process.defesa.invitationDriveFileId && !process.defesa.invitationSentAt);
 
-  const canEditDefense=canCoordinatorEdit||Boolean((isStudent||isAdvisor)&&!isEvaluationSubmitted&&!isAcervoSubmitted&&!readOnly);
+  const canEditDefense=isAuthenticated&&(canStudentEdit||canAdvisorEdit&&!isEvaluationSubmitted&&isAdvisor)&&!process.legacyRecord&&process.status!=='CONCLUIDO';
   const defenseDate=new Date(process.defesa.startAt);
   const defenseLocal=Number.isFinite(defenseDate.getTime())?new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(defenseDate).replace(' ','T'):'';
-  const inlineField=(label:string,value:string,patch:(value:string)=>Record<string,unknown>,type='text',display=value,editable=canEditData,confirmDefenseChange=false,options?:readonly string[])=><InlineProcessField onEditingChange={editing=>{editingSectionRef.current=editing?'cadastral':null;}} options={options} label={label} value={value} display={display} type={type} editable={!readOnly && editable} beforeEdit={confirmDefenseChange?()=>portalConfirm(`Tem certeza de que deseja alterar ${label==='Data da defesa'?'a data da defesa':label==='Horário da defesa'?'o horário da defesa':'o local da defesa'}? ${!process.defesa.invitationDriveFileId&&!process.defesa.invitationSentAt&&process.avaliacao.status!=='CONCLUIDO'?'Ao salvar, a solicitação de reserva será reenviada ao responsável pelo local e a etapa de confirmação será reiniciada. A confirmação e o comprovante anteriores deixarão de valer. O responsável receberá um novo pedido e deverá confirmar o agendamento novamente.':'Essa mudança afeta o calendário da defesa. Confirme o novo agendamento com o departamento e preserve os documentos já emitidos.'} Ao salvar, o histórico registrará quem realizou a alteração, a data e hora do registro e os valores anteriores e novos.`,{title:'Atenção: alterar agendamento da defesa',tone:'warning',confirmLabel:'Sim, quero alterar',cancelLabel:'Manter como está'}):undefined} onSave={async next=>{const result=await apiClient.updateProcess(process.id,{...patch(next.trim()),expectedDataRevision:process.dataRevision});await loadData({quiet:true,preserveAcervoDraft:true});if(result.reservationRestarted)portalNotice(result.workflowPending?`Agendamento atualizado e confirmação reiniciada. O novo pedido de reserva aguarda envio: ${result.workflowError||'a secretaria deve acompanhar a pendência.'}`:'Agendamento atualizado e novo pedido enviado ao responsável pelo local. Aguarde a confirmação pelo novo pedido.',{title:'Solicitação de reserva reiniciada'});}}/>;
+  const inlineField=(label:string,value:string,patch:(value:string)=>Record<string,unknown>,type='text',display=value,editable=canEditData,confirmDefenseChange=false,options?:readonly string[])=><InlineProcessField onEditingChange={setSummaryEditing} options={options} label={label} value={value} display={display} type={type} editable={!readOnly && editable} beforeEdit={confirmDefenseChange?()=>portalConfirm(`Tem certeza de que deseja alterar ${label==='Data da defesa'?'a data da defesa':label==='Horário da defesa'?'o horário da defesa':'o local da defesa'}? ${!process.defesa.invitationDriveFileId&&!process.defesa.invitationSentAt&&process.avaliacao.status!=='CONCLUIDO'?'Ao salvar, a solicitação de reserva será reenviada ao responsável pelo local e a etapa de confirmação será reiniciada. A confirmação e o comprovante anteriores deixarão de valer. O responsável receberá um novo pedido e deverá confirmar o agendamento novamente.':'Essa mudança afeta o calendário da defesa. Confirme o novo agendamento com o departamento e preserve os documentos já emitidos.'} Ao salvar, o histórico registrará quem realizou a alteração, a data e hora do registro e os valores anteriores e novos.`,{title:'Atenção: alterar agendamento da defesa',tone:'warning',confirmLabel:'Sim, quero alterar',cancelLabel:'Manter como está'}):undefined} onSave={async next=>{const result=await apiClient.updateProcess(process.id,{...patch(next.trim()),expectedDataRevision:process.dataRevision});await loadData({quiet:true,preserveAcervoDraft:true});if(result.reservationRestarted)portalNotice(result.workflowPending?`Agendamento atualizado e confirmação reiniciada. O novo pedido de reserva aguarda envio: ${result.workflowError||'a secretaria deve acompanhar a pendência.'}`:'Agendamento atualizado e novo pedido enviado ao responsável pelo local. Aguarde a confirmação pelo novo pedido.',{title:'Solicitação de reserva reiniciada'});}}/>;
 
   const handleSignDocument=async(doc:ProcessDocument)=>{
     setSignatureWorking(doc.type);setSignatureNotice(null);
@@ -508,20 +627,19 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     if (!process) return;
     try {
       const updatedAluno1 = {
-        ...process.aluno1,
+        ...withoutRegistrationIdentifiers(process.aluno1),
         nome: cadastralForm.aluno1Nome.trim(),
-        email: cadastralForm.aluno1Email.trim(),
-        matricula: cadastralForm.aluno1Matricula.trim()
+        email: cadastralForm.aluno1Email.trim()
       };
 
       const updatedAluno2 = cadastralForm.hasAluno2 && cadastralForm.aluno2Nome.trim() ? {
+        ...withoutRegistrationIdentifiers(process.aluno2 || {}),
         nome: cadastralForm.aluno2Nome.trim(),
-        email: cadastralForm.aluno2Email.trim(),
-        matricula: cadastralForm.aluno2Matricula.trim()
+        email: cadastralForm.aluno2Email.trim()
       } : null;
 
       const updatedOrientador = {
-        ...process.orientador,
+        ...withoutRegistrationIdentifiers(process.orientador),
         nome: cadastralForm.orientadorNome.trim(),
         email: cadastralForm.orientadorEmail.trim(),
         instituicao: cadastralForm.orientadorInstituicao.trim() || installationProfile.defaultInstitutionName
@@ -566,7 +684,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const handleRemoveExaminer = (index: number) => {
     if (bancaForm.length <= 2) {
-      portalNotice('A banca examinadora deve possuir dois avaliadores além do orientador.');
+      portalNotice('A banca examinadora deve possuir dois examinadores além do orientador.');
       return;
     }
     setBancaForm(prev => prev.filter((_, idx) => idx !== index));
@@ -623,7 +741,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const handleSubmitAcervo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmitAcervo || isAcervoSubmitted || isSubmittingAcervo || acervoUploading) return;
+    if (!canSubmitAcervo || isAcervoSubmitted || isSubmittingAcervo || repositorySubmitInFlight.current || acervoUploading) return;
     if (!ataIsArchived) {
       portalNotice('Aguarde o arquivamento da Ata assinada para salvar a entrega final.');
       return;
@@ -653,26 +771,51 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       return;
     }
     const keywordsFormatted = keywordsList;
+    const requestScope=legacyAccessScope.current;
 
-    setIsSubmittingAcervo(true);
-    try {
-      const result = await apiClient.submitFinalData(processId, {
+    const submission={
         palavrasChave: keywordsFormatted,
         resumoSintese: acervoResumo.trim(),
         publishFullWork: acervoIsPublic,
         publishExpandedAbstract: acervoExpandedPublic,
         workType: 'MONOGRAFIA',
         signatureProvider: termSignatureProvider
-      });
+    };
+    repositorySubmitInFlight.current=true;
+    setIsSubmittingAcervo(true);
+    try {
+      let result;
+      try{result=await apiClient.submitFinalData(processId,submission);}
+      catch(error){
+        // A timeout is an unknown result, not proof that the write failed.
+        // Reconcile once by an authorized read; never resend the POST or emails.
+        if(!(error instanceof ApiRequestError)||(error.status!==0&&error.status<500))throw error;
+        if(requestScope!==legacyAccessScope.current)return;
+        const recorded=await apiClient.getProcessById(processId,{timeoutMs:10_000}).catch(()=>null);
+        if(!recorded||!repositorySubmissionConfirmed(process,recorded,submission,userEmail))throw error;
+        result=recorded;
+      }
 
-
-      await loadData({quiet:true});
+      if(requestScope!==legacyAccessScope.current)return;
+      if(result.id!==process.id||!result.acervo?.submittedAt)throw new Error('O servidor ainda não confirmou a entrega final. Seus campos foram preservados.');
+      setProcess(result);
+      lastProcessRevision.current={revision:result.dataRevision,updatedAt:result.updatedAt};
+      editingSectionRef.current=null;
+      setEditingSection(null);
+      setRemoteUpdatePending(false);
+      setRepositoryReopenNotice('');
       setActiveTab('docs');setProcessLink(process.id,'docs');
-      setSignatureNotice({ok:true,text:finalDeliveryMessage(result)});
+      setSignatureNotice({ok:true,text:finalDeliveryMessage(result, automaticAsten)});
+      // The durable POST acknowledgement is sufficient to leave the form.
+      // Drive/ASTEN follow-up may still hold the runtime lease: this read must
+      // never keep a confirmed save busy or turn a refresh failure into a save error.
+      void loadData({quiet:true}).catch(()=>{
+        if(requestScope===legacyAccessScope.current)setRepositoryReopenNotice('Entrega confirmada. Não foi possível atualizar a lista de documentos. Atualize os documentos para conferir as assinaturas.');
+      });
     } catch (err: any) {
-      portalNotice(err.message || 'Erro ao salvar dados do acervo.');
+      if(requestScope===legacyAccessScope.current)portalNotice(err.message || 'Erro ao salvar dados do acervo.');
     } finally {
-      setIsSubmittingAcervo(false);
+      if(requestScope===legacyAccessScope.current){repositorySubmitInFlight.current=false;setIsSubmittingAcervo(false);}
     }
   };
 
@@ -691,34 +834,16 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   };
 
   const handleReopenEvaluation = async () => {
-    const reason=(await portalPrompt('Informe o motivo formal da reabertura da avaliação (mínimo de 10 caracteres):',''));
+    const reason=(await portalPrompt('Informe o motivo formal da reabertura de conceito e ata (mínimo de 10 caracteres).',''));
     if (reason!==null) {
       try {
         if(reason.trim().length<10){portalNotice('O motivo precisa ter pelo menos 10 caracteres.');return;}
         await apiClient.reopenEvaluation(process.id,reason.trim());
-        portalNotice('Avaliação reaberta com sucesso.');
+        portalNotice('Registro de conceito e ata reaberto.');
         await loadData();
       } catch (err: any) {
-        portalNotice(err.message || 'Erro ao reabrir avaliação.');
+        portalNotice(err.message || 'Não foi possível reabrir conceito e ata.');
       }
-    }
-  };
-
-  const handleDeleteProcess = async () => {
-    if (deleteConfirmInput.trim().toUpperCase() !== 'EXCLUIR') {
-      portalNotice("Digite 'EXCLUIR' em maiúsculas para confirmar.");
-      return;
-    }
-    setIsDeleting(true);
-    try {
-      const result=await apiClient.deleteProcess(process.id);
-      portalNotice([result.message,...(result.cleanupErrors||[])].join('\n'));
-      setShowDeleteModal(false);
-      onBack();
-    } catch (err: any) {
-      portalNotice('Erro ao excluir trabalho: ' + (err.message || 'Falha na requisição'));
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -800,25 +925,26 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
             <span role="status" aria-live="polite" aria-atomic="true" className={copyFeedback?'portal-copy-feedback pointer-events-none absolute right-0 top-full z-50 mt-2 w-max max-w-[min(300px,80vw)] whitespace-normal rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] px-3 py-2 text-xs font-normal normal-case text-slate-800 shadow-sm':'sr-only'}>{copyFeedback?.text||''}</span>
           <button type="button" className="portal-toolbar-icon-button rounded-full bg-white text-slate-950" aria-label="Copiar link do trabalho" title="Copiar link do trabalho" onClick={()=>void copyProcessLink()}><LinkIcon className="h-4 w-4"/></button>
             {!readOnly&&<button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-slate-950" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/></button>}
-            {isMasterAdmin&&!readOnly&&<button type="button" onClick={()=>setShowDeleteModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-rose-700" aria-label="Excluir trabalho"><Trash2 className="h-4 w-4"/></button>}
+            {isMasterAdmin&&!readOnly&&<button type="button" onClick={()=>{deletionScopeRef.current=deletionScope;deletionDialogRef.current=true;setDeletionTarget({id:process.id,protocol:process.protocolo,title:process.titulo||'',authors:formatStudentsString(process.aluno1,process.aluno2)});setShowDeleteModal(true);}} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-rose-700" aria-label="Excluir trabalho"><Trash2 className="h-4 w-4"/></button>}
           </div>
         </header>
       ) : null}
       {isModal && <div className="portal-modal-divider" aria-hidden="true" />}
       {remoteUpdatePending&&(
         <div role="alert" className="mx-3 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
-          <span>Este TCC foi alterado em outra sessão. Seus campos em edição não foram sobrescritos. Cancele a edição para consultar os dados atuais antes de salvar.</span>
+          <span>Há uma versão mais recente deste TCC. Seu preenchimento foi preservado. Ao terminar ou cancelar a edição, os dados serão atualizados.</span>
           <button type="button" onClick={()=>{setEditingSection(null);editingSectionRef.current=null;void loadData(true);}} className="rounded-lg bg-amber-800 px-3 py-2 font-bold text-white">Descartar edição e atualizar</button>
         </div>
       )}
       {localFormat.showStateMachine !== false && <div className="px-3 pt-3"><EtapaProgressBar currentEtapa={process.etapaAtual} historical={process.legacyRecord}/></div>}
       <section id="tcc-detail-workspace" className="portal-tcc-workspace mx-3 mt-3">
       <section aria-label="Seções do TCC" className="portal-tcc-workspace-tabs"><div className="portal-tcc-tab-list flex flex-wrap items-stretch gap-1">{[
-        {id:'cadastral',label:'Dados do processo',icon:FileText,show:localFormat.showSectionCadastral!==false||localFormat.showSectionBanca!==false},{id:'avaliacao',label:'Conceito e Ata',icon:Award,show:localFormat.showSectionAvaliacao!==false},{id:'acervo',label:'Repositório acadêmico',icon:BookOpen,show:localFormat.showSectionAcervo!==false},{id:'docs',label:'Documentos administrativos',icon:FileCheck,show:localFormat.showSectionDocs!==false}
+        {id:'cadastral',label:'Dados do processo',icon:FileText,show:localFormat.showSectionCadastral!==false||localFormat.showSectionBanca!==false},{id:'avaliacao',label:'Conceito e Ata',icon:Award,show:localFormat.showSectionAvaliacao!==false},{id:'acervo',label:'Repositório acadêmico',icon:BookOpen,show:localFormat.showSectionAcervo!==false},{id:'docs',label:'Documentos administrativos',icon:FileCheck,show:localFormat.showSectionDocs!==false},{id:'andamento',label:'Andamento e retomada do processo',icon:RefreshCw,show:isMasterAdmin&&!readOnly}
       ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} type="button" onClick={()=>{setActiveTab(tab.id);setProcessLink(process.id,tab.id as ProcessSection);}} aria-pressed={selected} className={`flex min-h-9 min-w-0 flex-1 justify-center items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold ${selected?'portal-tcc-tab-selected border-[var(--portal-brand-header)] bg-white text-slate-950':'border-white bg-white text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
       <div className="portal-tcc-workspace-content p-3">
+      {isMasterAdmin&&!readOnly&&isTabVisible('andamento')&&<div key={process.id}><WorkflowRecoveryPanel processId={process.id} onUpdated={()=>loadData({quiet:true})}/><section aria-label="Registro de logs deste TCC" className="mt-4"><AuditLogsPage embedded processId={process.id}/></section></div>}
 
-      {!readOnly && !process.legacyRecord && isTabVisible('cadastral') && process.defesa.localStatus !== 'CONFIRMADO' && <ProcessFlowPanel process={process} jobs={signatureJobs} canConfirm={(isStudent || isMasterAdmin) && !readOnly} onUpdated={loadData} onChangeReservation={canEditDefense?()=>{document.querySelector<HTMLButtonElement>('[aria-label="Alterar reserva da defesa"]')?.click();}:undefined}/> }
+      {!readOnly && !process.legacyRecord && isTabVisible('cadastral') && effectiveDefenseReservationStatus(process) !== 'CONFIRMADO' && <ProcessFlowPanel process={process} jobs={signatureJobs} canConfirm={(isStudent || isMasterAdmin) && !readOnly} showStatus={localFormat.showSectionCadastral === false || !reservationStatusAlert(process)} onUpdated={loadData}/> }
 
       {/* ========================================================================= */}
       {/* SECTION 1: FICHA CADASTRAL E IDENTIFICAÇÃO DO PROCESSO                    */}
@@ -828,30 +954,29 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
           <div className="p-4 sm:p-5">
             <div className="space-y-3">
-              <ProcessSummaryCard process={process} canEdit={!readOnly&&canEditData} canEditReservation={!readOnly&&canEditDefense&&!process.legacyRecord} studio={settings.integrationStudio} onEditingChange={setSummaryEditing} onUpdated={()=>loadData({quiet:true,preserveAcervoDraft:true})}/>
+              <ProcessSummaryCard process={process} advisorViewerEmail={isAuthenticated && isAdvisor ? normEmail : undefined} canEdit={!readOnly&&canEditData} canEditReservation={canEditDefense} isAuthenticated={isAuthenticated} studio={settings?.integrationStudio} onEditingChange={setSummaryEditing} onReservationSaved={saved=>{if(legacyAccessScope.current!==legacyAccessKey||saved.id!==processId)return;const previous=lastProcessRevision.current;if(previous&&(saved.dataRevision<previous.revision||(saved.dataRevision===previous.revision&&Date.parse(saved.updatedAt)<Date.parse(previous.updatedAt))))return;lastProcessRevision.current={revision:saved.dataRevision,updatedAt:saved.updatedAt};setRemoteUpdatePending(false);setProcess(saved);}} onUpdated={()=>loadData({quiet:true,preserveAcervoDraft:true})}/>
               <section className="portal-tcc-members-box" aria-label="Dados dos membros">
                 <h2 className="mb-2 text-xs font-bold normal-case">Dados dos membros</h2>
                 <div className="portal-members-table-scroll" role="region" aria-label="Tabela de membros com rolagem horizontal" tabIndex={0}>
                   <table className="portal-members-table">
                     <caption className="sr-only">Participantes do TCC e seus dados cadastrais</caption>
-                    {!readOnly&&<colgroup><col style={{width:'10%'}}/><col style={{width:'18%'}}/><col style={{width:'10%'}}/><col style={{width:'9%'}}/><col style={{width:'23%'}}/><col style={{width:'13%'}}/><col style={{width:'17%'}}/></colgroup>}
-                    <thead><tr><th scope="col">Função</th><th scope="col">Nome</th><th scope="col">Referência</th><th scope="col">Titulação</th>{!readOnly&&<><th scope="col">E-mail</th><th scope="col" title="Matrícula, SIAPE ou outro registro">Registro</th></>}<th scope="col">Instituição</th></tr></thead>
+                    {!readOnly&&<colgroup><col style={{width:'12%'}}/><col style={{width:'23%'}}/><col style={{width:'10%'}}/><col style={{width:'9%'}}/><col style={{width:'26%'}}/><col style={{width:'20%'}}/></colgroup>}
+                    <thead><tr><th scope="col">Função</th><th scope="col">Nome</th><th scope="col">Referência</th><th scope="col">Titulação</th>{!readOnly&&<th scope="col">E-mail</th>}<th scope="col">Instituição</th></tr></thead>
                     <tbody>
                 {[
-                  {role:'Aluno autor',person:process.aluno1,student:true,key:'aluno1'},
-                  ...(process.aluno2?[{role:'Aluno autor',person:process.aluno2,student:true,key:'aluno2'}]:[]),
-                  {role:'Orientador(a)',person:process.orientador,student:false,key:'orientador'},
-                  ...process.banca.filter(person=>readOnly?person.funcao!=='ORIENTADOR':normalizeEmail(person.email)!==normalizeEmail(process.orientador.email)&&normalizeEmail(person.email)!==normalizeEmail(process.coorientador?.email||'')).map(person=>({role:'Examinador',person,student:false,key:'banca'})),
-                  ...(process.coorientador?.nome?.trim()?[{role:'Coorientador(a)',person:process.coorientador,student:false,key:'coorientador'}]:[])
+                  {role:participantRole('student',process.registrationAnswers,'ALUNO_1',process.aluno1),person:process.aluno1,student:true,key:'aluno1'},
+                  ...(process.aluno2?[{role:participantRole('student',process.registrationAnswers,'ALUNO_2',process.aluno2),person:process.aluno2,student:true,key:'aluno2'}]:[]),
+                  {role:participantRole('advisor',process.registrationAnswers,'ORIENTADOR',process.orientador),person:process.orientador,student:false,key:'orientador'},
+                  ...process.banca.filter(person=>readOnly?person.funcao!=='ORIENTADOR':normalizeEmail(person.email)!==normalizeEmail(process.orientador.email)&&normalizeEmail(person.email)!==normalizeEmail(process.coorientador?.email||'')).map((person,index)=>({role:participantRole('examiner',process.registrationAnswers,`EXAMINADOR_${person.funcao.match(/EXAMINER_(\d+)/)?.[1]||index+2}`,person),person,student:false,key:'banca'})),
+                  ...(process.coorientador?.nome?.trim()?[{role:participantRole('coadvisor',process.registrationAnswers,'COORIENTADOR',process.coorientador),person:process.coorientador,student:false,key:'coorientador'}]:[])
                 ].map(({role,person,student,key})=>{
-                  const field=(property:string,value:string)=>key==='banca'?{banca:process.banca.map(member=>member===person?{...member,[property]:value}:member)}:{[key]:{...person,[property]:value}};
+                  const field=(property:string,value:string)=>key==='banca'?{banca:process.banca.map(member=>member===person?{...withoutRegistrationIdentifiers(member),[property]:value}:withoutRegistrationIdentifiers(member))}:{[key]:{...withoutRegistrationIdentifiers(person),[property]:value}};
                   return <tr key={`${key}-${person.email||person.nome}`}>
                     <th scope="row">{role}</th>
                     <td className="font-bold">{inlineField(`Nome — ${role}`,person.nome,value=>field('nome',value))}</td>
                     <td>{inlineField(`Tratamento — ${role}`,person.tratamento||'',value=>field('tratamento',value),'text',person.tratamento||'Não informado',canEditData,false,student?STUDENT_TREATMENTS:FACULTY_TREATMENTS)}</td>
                     <td>{student?<span aria-label="Não se aplica">—</span>:inlineField(`Titulação — ${role}`,'titulacao' in person?person.titulacao||'':'',value=>field('titulacao',value),'text','titulacao' in person?person.titulacao||'Não informada':'Não informada',canEditData,false,ACADEMIC_DEGREES)}</td>
-                    {!readOnly&&<><td>{(student?localFormat.showStudentEmail:localFormat.showAdvisorEmail)!==false?inlineField(`E-mail — ${role}`,person.email,value=>field('email',value),'email'):<span aria-label="Não exibido">—</span>}</td>
-                    <td>{(!student||localFormat.showStudentMatricula!==false)?inlineField(`Número de registro — ${role}`,String(student?('matricula' in person?person.matricula:''):('siape' in person?person.siape||'':'')),value=>field(student?'matricula':'siape',value)):<span aria-label="Não exibido">—</span>}</td></>}
+                    {!readOnly&&<td>{(student?localFormat.showStudentEmail:localFormat.showAdvisorEmail)!==false?inlineField(`E-mail — ${role}`,person.email,value=>field('email',value),'email'):<span aria-label="Não exibido">—</span>}</td>}
                     <td>{student?<span className="portal-inline-field-value">UFES</span>:localFormat.showAdvisorInstitution!==false?inlineField(`Instituição — ${role}`,String(('instituicao' in person&&person.instituicao)||''),value=>field('instituicao',value)):<span aria-label="Não exibido">—</span>}</td>
                   </tr>;
                 })}
@@ -868,12 +993,19 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* SECTION 3: COMPOSIÇÃO DA BANCA EXAMINADORA                                */}
       {/* ========================================================================= */}
       {/* ========================================================================= */}
-      {/* SECTION 4: CAMPO DE AVALIAÇÃO E NOTAS DA BANCA                            */}
+      {/* SECTION 4: CONCEITO E ATA                                               */}
       {/* ========================================================================= */}
       {localFormat.showSectionAvaliacao !== false && isTabVisible('avaliacao') && (
         <>
-        <AdvisorEvaluationPanel publicReadOnly={readOnly} process={process} canEvaluate={!process.legacyRecord && (isAdvisor || isMasterAdmin) && !readOnly}
-          canReopen={!process.legacyRecord && (isMasterAdmin || isAdvisor) && !readOnly && !isAcervoSubmitted && !process.acervo?.firstSubmittedAt && process.status!=='CONCLUIDO'} onReopen={handleReopenEvaluation} onUpdated={async()=>{await loadData();setActiveTab('docs');setProcessLink(process.id,'docs');}} />
+        <AdvisorEvaluationPanel publicReadOnly={readOnly} process={process} canEvaluate={!process.legacyRecord && isAuthenticated && isAdvisor}
+          canReopen={!process.legacyRecord && (isMasterAdmin || isAdvisor) && !readOnly && !isAcervoSubmitted && !process.acervo?.firstSubmittedAt && process.status!=='CONCLUIDO'} onReopen={handleReopenEvaluation} onUpdated={(recorded,updatedDocuments,recovered)=>{
+            setProcess(recorded);
+            if(updatedDocuments)setDocuments(updatedDocuments);
+            if(recovered)setSignatureNotice({ok:true,documentType:'ATA',text:'A ata já consta como registrada. Confira a versão salva abaixo.'});
+            setActiveTab('docs');
+            setProcessLink(recorded.id,'docs');
+            if(!updatedDocuments)void loadData({quiet:true,preserveAcervoDraft:true}).catch(()=>undefined);
+          }} />
         </>
       )}
 
@@ -881,11 +1013,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* SECTION 5: PAINEL DE DOCUMENTOS E ASSINATURAS GERENCIADAS                */}
       {/* ========================================================================= */}
       {process.legacyRecord && localFormat.showSectionDocs !== false && isTabVisible('docs') && <LegacyAdministrativeDocuments processId={process.id} canAccessOriginals={isMasterAdmin}/>}
-      {!process.legacyRecord && localFormat.showSectionDocs !== false && isTabVisible('docs') && (
-        <ProcessDocumentsPanel count={documents.length+1} toolbar={
-          !readOnly&&(isMasterAdmin||isCommissionPresident)?<button type="button" onClick={()=>{setDownloadSelection(documents.filter(doc=>doc.status==='DISPONIVEL'||doc.status==='ASSINADO').map(doc=>doc.type));setDownloadPicker(true);}} disabled={isDownloadingDossier} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 disabled:opacity-60" aria-label="Escolher documentos para baixar" title="Baixar documentos"><Download className="h-4 w-4"/></button>:undefined
+      {!process.legacyRecord && localFormat.showSectionDocs !== false && isTabVisible('docs') && (repositoryReopenNotice?<aside role="status" className="portal-instruction p-3 text-sm"><p>{repositoryReopenNotice}</p><button type="button" disabled={isSubmittingAcervo} className="portal-action mt-2" onClick={()=>void retryRepositoryDocuments()}>Atualizar documentos</button></aside>:<ProcessDocumentsPanel count={Object.keys(administrativeDocumentLabels).length+1} toolbar={
+          !readOnly&&isMasterAdmin?<button type="button" onClick={()=>{setDownloadSelection(documents.filter(doc=>doc.status==='DISPONIVEL'||doc.status==='ASSINADO').map(doc=>doc.type));setDownloadPicker(true);}} disabled={isDownloadingDossier} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 disabled:opacity-60" aria-label="Escolher documentos para baixar" title="Baixar documentos"><Download className="h-4 w-4"/></button>:undefined
         } notices={<>
-            {!readOnly&&documents.some(doc=>doc.requiresSignature&&doc.status!=='ASSINADO'&&doc.status!=='NAO_DISPONIVEL')&&<aside className="portal-instruction p-3 text-xs"><p className="font-semibold">Orientações</p><ul className="mt-1 list-disc space-y-1 pl-5"><li>Somente os responsáveis indicados em cada documento podem assiná-lo.</li><li>Prefira o Asten: solicite a assinatura pelo botão e siga o link recebido por e-mail.</li><li>Pelo Gov.br, baixe o documento, assine e devolva o PDF com todas as assinaturas exigidas.</li></ul></aside>}
+            {!readOnly&&documents.some(doc=>doc.requiresSignature&&doc.status!=='ASSINADO'&&doc.status!=='NAO_DISPONIVEL')&&<aside className="portal-instruction p-3 text-xs"><p className="font-semibold">Orientações</p><ul className="mt-1 list-disc space-y-1 pl-5"><li>O termo de autorização e publicação deve ser assinado pelos autores e pelo orientador.</li><li>A ASTEN envia automaticamente um e-mail aos signatários. Para assinar, abra a mensagem e acesse o link recebido.</li><li>A geração do documento e o envio do e-mail com o link de assinatura pela ASTEN podem levar alguns minutos.</li><li>Se houver falha na ASTEN, utilize a opção Gov.br: baixe o documento, assine e devolva o PDF com todas as assinaturas exigidas.</li></ul></aside>}
             {signatureNotice&&(!signatureNotice.documentType||!documents.some(doc=>doc.type===signatureNotice.documentType&&doc.status==='ASSINADO'))&&<div role="status" className={`rounded-lg border p-3 text-xs font-bold flex items-start justify-between gap-3 ${signatureNotice.ok?'portal-instruction':'border-red-200 bg-red-50 text-red-900'}`}><span>{signatureNotice.text}</span><button type="button" onClick={()=>setSignatureNotice(null)} className="shrink-0 underline" aria-label="Fechar aviso de documento">Fechar aviso</button></div>}
 
             {verifications.length > 0 && (
@@ -903,41 +1034,72 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
         </>}>
 
-              <ReservationReceiptCard downloadUrl={hasReservationReceipt ? `/api/public/processes/${encodeURIComponent(process.protocolo)}/reservation-receipt` : undefined}/>
-              {documents.map((doc) => {
-                const termDeclined=doc.type==='TERMO'&&publicationDeclined(process);
-                const isDownloadable = !termDeclined&&(doc.status === 'DISPONIVEL' || doc.status === 'ASSINADO');
-                const canRequestSignature=!readOnly&&doc.status!=='ASSINADO'&&!documentSignatureCompleted(signatureJobs,process.id,doc.type,process.dataRevision)&&!termDeclined&&doc.requiresSignature&&doc.status!=='NAO_DISPONIVEL'&&(isMasterAdmin||isCommissionPresident||(doc.type==='ATA'&&isAdvisor)||(doc.type==='TERMO'&&(isStudent||isAdvisor)));
+              <ReservationReceiptCard initialItems={receiptItems} protocol={process.protocolo} privateProcessId={readOnly?undefined:process.id} revision={process.defesa.reservationRevision} currentStatus={effectiveDefenseReservationStatus(process)} downloadUrl={hasReservationReceipt ? `/api/public/processes/${encodeURIComponent(process.protocolo)}/reservation-receipt` : undefined}/>
+              {(Object.keys(administrativeDocumentLabels) as ProcessDocument['type'][]).map(type => {
+                const docInfo = administrativeDocumentLabels[type];
+                const doc = documents.find(item => item.type === type);
+                if (!doc) return <ProcessDocumentCard key={type} title={docInfo.title} signerNote={docInfo.signer}
+                  status={docInfo.pending} available={false} onView={()=>{}} onDownload={()=>{}} />;
+                const {publicationDeclined:termDeclined,available:isDownloadable}=administrativeDocumentAvailability(process,doc,readOnly);
+                const revision = signatureDocumentRevision(process, doc.type);
+                const signatureOpen = !readOnly && doc.status !== 'ASSINADO' && doc.status !== 'NAO_DISPONIVEL'
+                  && doc.requiresSignature && !termDeclined && !documentSignatureCompleted(signatureJobs, process.id, doc.type, revision);
+                const canRequestSignature = signatureOpen && (isMasterAdmin || (doc.type === 'DECLARACAO' && isCommissionPresident)
+                  || (doc.type === 'ATA' && isAdvisor) || (doc.type === 'TERMO' && (isStudent || isAdvisor)));
+                const frozenDownloadJob=frozenGovbrDownloadJob(process.id,doc.type,revision,doc.currentVersion,signatureJobs,userEmail);
+                const canUseGovbr = canRequestSignature || (signatureOpen && Boolean(frozenDownloadJob));
+                const signingJob = doc.status === 'NAO_DISPONIVEL' ? undefined : currentDocumentSignatureJob(process.id,doc.type,revision,doc.currentVersion,signatureJobs);
+                const astenJob = signatureJobs.find(job => job.documentType === doc.type && job.provider === 'ASTEN' && !job.removedFromLogsAt && job.sourceDataRevision === revision);
+                const usesAutomaticAsten = automaticAsten || ['ATA','TERMO','DECLARACAO'].includes(doc.type);
+                const canSendAsten = canRequestSignature && !usesAutomaticAsten;
+                const astenIntent = process.astenSignatureIntent;
+                const automaticStatus = usesAutomaticAsten && doc.status!=='ASSINADO' && !readOnly && !termDeclined && (signatureOpen || astenJob)
+                  ? automaticAstenDocumentStatus(astenJob, astenIntent?.documentType === doc.type && astenIntent.revision === revision, doc.type !== 'CONVITE' && process.signatureProviderPreferences?.[doc.type] === 'GOV_BR', Boolean(astenIntent?.documentType === doc.type && astenIntent.revision === revision && astenIntent.attemptedAt), astenIntent?.documentType === doc.type && astenIntent.revision === revision ? astenIntent.lastError : undefined)
+                  : null;
+                let status = docInfo.pending;
+                let statusDescription: string | undefined;
+                if (termDeclined) {
+                  status = 'Publicação não autorizada';
+                  statusDescription = 'O termo de autorização não foi gerado.';
+                } else if (isDownloadable) {
+                  status = type==='ATA'?'Ata assinada':docInfo.generated;
+                  statusDescription = doc.signatureProvider
+                    ? doc.signatureProvider==='ASTEN'?'Assinatura realizada pela ASTEN, com solicitação enviada automaticamente por e-mail.':'Assinatura realizada pelo Gov.br.'
+                    : readOnly
+                    ? 'Documento emitido. O Portal confere a versão pública ao abrir o PDF.'
+                    : type === 'CONVITE' && !process.defesa.invitationSentAt
+                      ? 'Documento disponível para consulta. Envio à banca pendente.'
+                      : 'Documento disponível para consulta.';
+                } else if (signingJob?.driveUnsignedFileId || (type==='ATA' && process.avaliacao.reviewedAta)) {
+                  status = type==='ATA'?'Ata gerada':docInfo.generated;
+                  statusDescription = signingJob?.status==='DRIVE_SYNC_PENDING'
+                    ? 'Aguarda a conferência e o arquivamento do PDF.'
+                    : 'Aguarda as assinaturas exigidas.';
+                }
+                if (doc.status === 'GERANDO') statusDescription = 'O PDF está sendo gerado.';
+                if (doc.status === 'COM_ERRO') statusDescription = 'A comissão deve conferir a pendência de assinatura.';
 
-                const getDocInfo = (type: string) => {
-                  switch (type) {
-                    case 'CONVITE':
-                      return { title: 'Carta-Convite da Banca', signNote: 'Não requer assinatura', availability: 'Confirme o local e envie o convite à banca.' };
-                    case 'ATA':
-                      return { title: 'Ata', signNote: 'Professor orientador', availability: 'Aguarda confirmação da ata após a defesa.' };
-                    case 'TERMO':
-                      return { title: 'Termo de Autorização e Publicação', signNote: 'Orientador e todos os autores', availability: 'Solicite publicação na entrega do Repositório.' };
-                    case 'DECLARACAO':
-                      return { title: 'Declaração de Participação na Banca', signNote: 'Presidência', availability: 'Aguarda entrega final, ata e termo aplicável assinados.' };
-                    default:
-                      return { title: doc.title, signNote: 'Assinatura gerenciada pelo portal', availability: 'Após concluir a etapa responsável pela geração deste documento.' };
-                  }
-                };
-
-                const docInfo = getDocInfo(doc.type);
-                const downloadPending=termDeclined?'Não foi autorizada a publicação do trabalho nem do resumo expandido por autores e orientador.':doc.status==='NAO_DISPONIVEL'?docInfo.availability:doc.status==='GERANDO'?'O PDF está sendo gerado.':doc.status==='AGUARDANDO_ASSINATURA'?'Aguarda as assinaturas e o arquivamento do PDF.':doc.status==='COM_ERRO'?'A geração falhou. A comissão deve verificar a pendência.':'Consulte a versão atual deste documento.';
+                const progress=doc.signatureProgress||documentSignatureProgress(process,doc,signatureJobs);
+                const pendingSignature=Boolean(progress?.generated&&!isDownloadable&&!termDeclined);
+                if(pendingSignature&&progress){
+                  status=type==='ATA'?'Ata gerada — pendente de assinatura':`${docInfo.generated} — pendente de assinatura`;
+                  statusDescription=signatureProgressDescription(progress);
+                }else if(isDownloadable&&doc.requiresSignature){
+                  statusDescription=`Documento disponível para consulta.${doc.signatureProvider==='ASTEN'?' Assinatura realizada pela ASTEN, com solicitação enviada automaticamente por e-mail.':doc.signatureProvider==='GOV_BR'?' Assinatura realizada pelo Gov.br.':''}`;
+                }
 
                 return <ProcessDocumentCard key={doc.id}
-                  title={doc.type==='CONVITE'?<>Carta-Convite<br/>da Banca</>:doc.type==='ATA'?<>Ata</>:docInfo.title}
-                  signerNote={termDeclined||doc.type==='CONVITE'?'Não necessária':docInfo.signNote}
-                  status={termDeclined?'Não autorizado':doc.status==='NAO_DISPONIVEL'?'Não disponível':({DISPONIVEL:'Disponível',ASSINADO:'Assinado',AGUARDANDO_ASSINATURA:'Aguardando assinatura'}[doc.status]||'Não disponível')}
-                  statusDescription={!isDownloadable?downloadPending:undefined}
-                  tone={doc.status==='ASSINADO'||doc.status==='DISPONIVEL'?'available':doc.status==='COM_ERRO'?'error':'pending'}
-                  available={isDownloadable} unavailable={!isDownloadable&&!canRequestSignature}
+                  title={docInfo.title}
+                  signerNote={signatureSignerNote(signingJob,docInfo.signer)}
+                  status={status}
+                  statusDescription={statusDescription}
+                  tone={termDeclined?'denied':pendingSignature?'progress':isDownloadable?'available':'pending'}
+                  available={isDownloadable} unavailable={!isDownloadable&&!canUseGovbr}
                   onView={()=>setSelectedPreviewDoc(doc)} onDownload={()=>void handleDirectDownload(doc)}>
-                  {canRequestSignature&&<div className="portal-document-signature-actions flex flex-col gap-2">
-                    <button type="button" onClick={()=>handleSignDocument(doc)} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><ShieldCheck className="h-4 w-4"/>Asten</button>
-                    <button type="button" onClick={()=>setGovbrDocument(doc)} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><FileCheck className="h-4 w-4"/>Gov.br</button>
+                  {(automaticStatus || canUseGovbr || canSendAsten) && <div className="portal-document-signature-actions flex flex-col gap-2">
+                    {automaticStatus && !pendingSignature && <p role="status" className="text-center text-xs font-semibold">{automaticStatus}</p>}
+                    {canSendAsten && <button type="button" onClick={()=>handleSignDocument(doc)} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><ShieldCheck className="h-4 w-4"/>Asten</button>}
+                    {canUseGovbr && <button type="button" onClick={()=>{setGovbrDownloadOnly(!canRequestSignature);setGovbrDocument(doc);}} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><FileCheck className="h-4 w-4"/>Gov.br</button>}
                   </div>}
                 </ProcessDocumentCard>;
               })}
@@ -967,7 +1129,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
               </div>
             ) : (
               <form id="repository-delivery-form" data-delivery-locked={acervoFieldsLocked} onSubmit={handleSubmitAcervo} className="space-y-2">
-                {!isAcervoSubmitted&&<aside role="status" className="portal-instruction p-3 text-sm"><p className="font-semibold">Orientações</p><ul className="mt-1 list-disc space-y-1 pl-5">{ataIsArchived&&<li>A entrega final está liberada. Qualquer um dos autores pode enviar os documentos.</li>}<li>Preencha o resumo e as palavras-chave e anexe o PDF do trabalho completo. O envio do TCC é obrigatório.</li><li>A publicação do trabalho e do resumo expandido é opcional. Selecione apenas os arquivos que deseja tornar públicos.</li><li>Confirme a entrega. Se houver publicação autorizada, o Termo ficará disponível para assinatura em Documentos administrativos.</li></ul></aside>}
+                {repositoryReopenNotice&&<aside role="status" className="portal-instruction p-3 text-sm"><p>{repositoryReopenNotice}</p><button type="button" disabled={isSubmittingAcervo} className="portal-action mt-2" onClick={()=>void retryRepositoryDocuments()}>Atualizar documentos</button></aside>}
+                {!isAcervoSubmitted&&<aside role="status" className="portal-instruction p-3 text-sm"><p className="font-semibold">Orientações</p><ul className="mt-1 list-disc space-y-1 pl-5">{ataIsArchived&&<li>A entrega final está liberada. Qualquer um dos autores pode enviar os documentos.</li>}<li>Preencha o resumo e as palavras-chave e anexe o PDF do trabalho completo. O envio do TCC é obrigatório.</li><li>A publicação do trabalho completo e do resumo expandido é opcional. Assinale a caixa de seleção abaixo de cada arquivo que deseja tornar público. Se nenhuma caixa for assinalada, nenhum dos dois arquivos será publicado.</li><li>Confirme a entrega. Se você autorizar a publicação de algum arquivo, o termo de autorização será gerado automaticamente, e a ASTEN enviará por e-mail a solicitação de assinatura aos autores e ao orientador. Cada signatário deverá assinar pelo link recebido.</li></ul></aside>}
                 <fieldset disabled={acervoFieldsLocked} className={`portal-repository-grid ${acervoFieldsLocked?'portal-repository-locked':''}`}>
                                   {/* Card 2: Resumo Síntese */}
                   <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
@@ -977,8 +1140,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <span>Resumo Síntese do TCC</span>
                         <span className="text-rose-500">*</span>
                       </label>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoResumo.trim() ? 'bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border-[var(--portal-border)]' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
-                        {acervoResumo.trim() ? 'Preenchido' : 'Pendente'}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoResumo.trim() ? 'bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border-[var(--portal-border)]' : 'bg-rose-50 text-rose-800 border-rose-200'}`}>
+                        {acervoResumo.trim() ? 'Preenchido' : 'Obrigatório'}
                       </span>
                     </div>
 
@@ -1003,8 +1166,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                         <span>Palavras-Chave</span>
                         <span className="text-rose-500">*</span>
                       </label>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoKeywords.trim() ? 'bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border-[var(--portal-border)]' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
-                        {acervoKeywords.trim() ? 'Preenchido' : 'Pendente'}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${acervoKeywords.split(',').filter(word=>word.trim()).length===5 ? 'bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border-[var(--portal-border)]' : 'bg-rose-50 text-rose-800 border-rose-200'}`}>
+                        {acervoKeywords.split(',').filter(word=>word.trim()).length===5 ? 'Preenchido' : 'Obrigatório'}
                       </span>
                     </div>
 
@@ -1097,7 +1260,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
                   <div className="flex justify-center py-2 text-center" aria-label="Confirmação da entrega final">
                     {isAcervoSubmitted ? <>
-                      {canSubmitAcervo&&process.status!=='CONCLUIDO'&&!documentSignatureCompleted(signatureJobs,process.id,'DECLARACAO')&&<button type="button" disabled={isSubmittingAcervo} className="portal-action" onClick={async()=>{if(!await portalConfirm('Editar a entrega final? As solicitações pendentes serão canceladas e os dados alterados precisarão de novas assinaturas.'))return;setIsSubmittingAcervo(true);try{await apiClient.reopenRepository(process.id);await loadData();}catch(error){portalNotice(error instanceof Error?error.message:'Não foi possível reabrir a entrega.');}finally{setIsSubmittingAcervo(false);}}}>Editar entrega</button>}
+                      {canSubmitAcervo&&process.status!=='CONCLUIDO'&&!documentSignatureCompleted(signatureJobs,process.id,'DECLARACAO')&&<button type="button" disabled={isSubmittingAcervo} className="portal-action" onClick={()=>void handleReopenRepository()}>Editar entrega</button>}
                     </> : <>
                       {canSubmitAcervo ? <button type="submit" disabled={acervoFieldsLocked} className="portal-action portal-button-primary"><Save className="h-4 w-4"/>{isSubmittingAcervo?'Confirmando entrega…':'Confirmar entrega e ir para documentos'}</button> : <p className="text-xs">A confirmação da entrega é feita por um dos autores.</p>}
                     </>}
@@ -1118,7 +1281,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* ========================================================================= */}
 
       {/* Audit Log Modal (Full dialog view via gear) */}
-      {govbrDocument&&<GovbrSignatureModal process={process} documentType={govbrDocument.type as 'ATA'|'TERMO'|'DECLARACAO'} canApprove={isMasterAdmin} initialJob={signatureJobs.find(job=>job.documentType===govbrDocument.type&&job.provider==='GOV_BR'&&job.sourceDataRevision===process.dataRevision&&job.status!=='CANCELED')} onChange={()=>void loadData({quiet:true})} onClose={()=>setGovbrDocument(null)}/>}
+      {govbrDocument&&<GovbrSignatureModal process={process} documentType={govbrDocument.type as 'ATA'|'TERMO'|'DECLARACAO'} canApprove={isMasterAdmin&&!govbrDownloadOnly} downloadOnly={govbrDownloadOnly} initialJob={frozenGovbrDownloadJob(process.id,govbrDocument.type,signatureDocumentRevision(process,govbrDocument.type),govbrDocument.currentVersion,signatureJobs,userEmail)||signatureJobs.find(job=>job.documentType===govbrDocument.type&&job.provider==='GOV_BR'&&job.sourceDataRevision===signatureDocumentRevision(process,govbrDocument.type)&&job.status!=='CANCELED')} onChange={()=>void loadData({quiet:true})} onClose={()=>setGovbrDocument(null)}/>}
       <PortalModalShell zIndexClass="z-[1000002]" open={downloadPicker} onClose={()=>setDownloadPicker(false)} title="Baixar documentos" icon={Download} maxWidthClass="max-w-lg" bodyClassName="p-4" footer={<div className="flex justify-end gap-2"><button type="button" className="portal-action" onClick={()=>setDownloadPicker(false)}>Fechar</button><button type="button" disabled={isDownloadingDossier||!downloadSelection.length} className="portal-action" onClick={()=>void handleDownloadDossier()}>{isDownloadingDossier?'Preparando…':'Baixar selecionados'}</button></div>}>
         <div className="space-y-2">{documents.map(doc=><label key={doc.id} className="flex items-center gap-2 rounded-lg border p-3"><input type="checkbox" disabled={!['DISPONIVEL','ASSINADO'].includes(doc.status)} checked={downloadSelection.includes(doc.type)} onChange={event=>setDownloadSelection(current=>event.target.checked?[...current,doc.type]:current.filter(type=>type!==doc.type))}/><span>{doc.title}<small className="block">{doc.status==='DISPONIVEL'?'Disponível':doc.status==='ASSINADO'?'Assinado':'Não disponível'}</small></span></label>)}</div>
       </PortalModalShell>
@@ -1170,43 +1333,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         onSuccess={() => loadData()}
       />
 
-      {/* Master Admin Delete Confirmation Modal */}
-      <PortalModalShell
-        open={Boolean(showDeleteModal && process)}
-        onClose={() => { setShowDeleteModal(false); setDeleteConfirmInput(''); }}
-        title="Exclusão de Trabalho de TCC"
-        subtitle="Ação administrativa do Master"
-        icon={AlertTriangle}
-        maxWidthClass="max-w-lg"
-        zIndexClass="z-[1000003]"
-      >
-        <div className="space-y-4">
-          <section className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-xs text-rose-950">
-            <p className="font-black">Você está prestes a excluir definitivamente este Trabalho de TCC.</p>
-            <div className="mt-3 rounded-lg border border-rose-200 bg-white p-3 font-mono text-[11px] font-bold text-slate-900">
-              <div>Protocolo: {process.protocolo}</div>
-              <div className="truncate">Título: {process.titulo}</div>
-              <div>Aluno(s): {formatStudentsString(process.aluno1, process.aluno2)}</div>
-            </div>
-            <p className="mt-3 text-[11px] font-semibold leading-5">Esta ação removerá os registros vinculados ao processo. Use somente quando a exclusão definitiva for realmente necessária.</p>
-          </section>
-          <section className="portal-modal-card p-4">
-            <label className="mb-1 block text-xs font-bold text-slate-800">Para autorizar, digite <span className="font-mono font-black text-rose-700">Excluir</span>.</label>
-            <input type="text" placeholder="Digite EXCLUIR para autorizar" value={deleteConfirmInput} onChange={(e) => setDeleteConfirmInput(e.target.value)} className="portal-input font-mono font-bold normal-case" />
-          </section>
-          <section className="portal-modal-card space-y-2 p-4 text-xs">
-            <strong>Exclusão completa do TCC</strong>
-            <p>Serão removidos os arquivos, as solicitações de assinatura, os eventos de agenda e o histórico vinculados a este trabalho nas plataformas integradas.</p>
-            <p>Se algum serviço não confirmar a remoção, a limpeza continuará pendente em Configurações → Integrações e Plataforma. Modelos e registros de outros trabalhos serão preservados.</p>
-          </section>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => { setShowDeleteModal(false); setDeleteConfirmInput(''); }} className="portal-action">Cancelar</button>
-            <button type="button" onClick={handleDeleteProcess} disabled={isDeleting || deleteConfirmInput.trim().toUpperCase() !== 'EXCLUIR'} className="portal-action border-rose-700 bg-rose-700 text-white disabled:cursor-not-allowed disabled:opacity-40">
-              {isDeleting ? 'Excluindo...' : 'Confirmar exclusão definitiva'}
-            </button>
-          </div>
-        </div>
-      </PortalModalShell>
+
 
     </div>
   );

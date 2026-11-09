@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { documentHeaderLines, EMAIL_ISSUER_LINES } from '../src/utils/institutionalIdentity';
+import { DEFAULT_BRAND_KIT, defaultEmailDesign } from '../src/services/integrationStudioService';
 
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
@@ -40,7 +42,7 @@ test('identidade do rodapé é única e usa autosave',()=>{
 test('integrações não duplicam título nem editam destino do departamento',()=>{
   const integrations=read('src/components/InfrastructureIntegrationsPanel.tsx');
   assert.match(integrations,/SettingsWorkspaceHeaderPortal/);
-  assert.match(integrations,/Executar testes/);
+  assert.match(integrations,/Enviar e-mail de teste ao Master e verificar as integrações/);
   assert.doesNotMatch(integrations,/Salvar destino/);
   assert.doesNotMatch(integrations,/saveDepartmentEmail/);
   assert.match(integrations,/bg-\[var\(--portal-brand-header\)\]/);
@@ -65,12 +67,29 @@ test('e-mail usa cabeçalho configurável, acesso por links e sintaxe canônica'
   const config=read('src/pages/ConfiguracoesPage.tsx');
   const service=read('src/services/integrationStudioService.ts');
   assert.match(studio,/Texto do cabeçalho/);
-  assert.match(studio,/sem anexos PDF/);
+  assert.match(studio,/Os links do TCC abrem os documentos na aba Documentos administrativos/);
+  assert.match(studio,/Os comprovantes de reserva seguem também em PDF anexo/);
   assert.match(studio,/similarVariableSuggestions\.length > 0/);
   assert.doesNotMatch(studio,/false && similarVariableSuggestions/);
   assert.match(config,/recipient: String\(settings\?\.emailConfig\?\.roomReservationDepartmentEmail \|\| ''\)/);
   assert.match(config,/<<PROTOCOLO>>/);
-  assert.match(service,/Comissão de TCC do Departamento de Enfermagem • UFES/);
+  assert.match(service,/import \{documentHeaderLines,EMAIL_ISSUER_LINES\} from '\.\.\/utils\/institutionalIdentity'/);
+  const expectedHeader = [
+    'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO',
+    'CENTRO DE CIÊNCIAS DA SAÚDE',
+    'CURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA',
+  ];
+  const expectedFooter = [
+    'Comissão de Trabalho de Conclusão de Curso',
+    'Departamento de Enfermagem',
+    'Curso de Graduação em Enfermagem e Obstetrícia - CCS/UFES',
+  ];
+  assert.deepEqual(documentHeaderLines(),expectedHeader);
+  assert.deepEqual([...EMAIL_ISSUER_LINES],expectedFooter);
+  assert.equal(DEFAULT_BRAND_KIT.emailFooterText,expectedFooter.join('\n'));
+  const design=defaultEmailDesign('email-convite');
+  assert.deepEqual(design.headerText.split('\n'),expectedHeader);
+  assert.deepEqual(design.footerText.split('\n'),expectedFooter);
 });
 
 test('registros administrativos são planilhas full-bleed',()=>{

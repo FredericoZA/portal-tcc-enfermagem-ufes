@@ -1,16 +1,17 @@
+import {matchesDefenseDateRange} from '../utils/repositoryQuery';
 import React, { useState, useEffect, useRef } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
 import { ProcessData, ProcessRole } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
-import { 
-  formatDatePt, 
-  formatDateNumeric, 
-  formatTimeExtenso, 
-  cleanPersonName, 
-  formatProfessorName, 
-  formatTccTitle, 
-  formatStudentsString, 
+import {
+  formatDateWithWeekday,
+  formatDateNumericWithWeekday,
+  formatTimeExtenso,
+  cleanPersonName,
+  formatProfessorName,
+  formatTccTitle,
+  formatStudentsString,
   normalizeEmail,
   getProcessProgress,
   getStepNumberLabel
@@ -24,16 +25,16 @@ import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
 import { TccAbstractPopover } from '../components/TccAbstractPopover';
 import { ProgressIndicator } from '../components/ProgressIndicator';
-import { 
-  TableTextFormat, 
-  DEFAULT_TABLE_TEXT_FORMAT, 
-  GLOBAL_TABLE_EVENT, 
+import {
+  TableTextFormat,
+  DEFAULT_TABLE_TEXT_FORMAT,
+  GLOBAL_TABLE_EVENT,
   loadGlobalTableConfig,
-  getTableStyles, 
+  getTableStyles,
   getActionPillStyles,
   getFilterChipProps,
-  formatColumnLabel, 
-  formatCellText, 
+  formatColumnLabel,
+  formatCellText,
   getColWidthClass,
   getEditableTableText,
   getColumnWeightClass
@@ -67,8 +68,8 @@ const ALL_MEUS_PROCESSOS_COLUMNS: ColumnDef[] = [
   { key: 'aluno1', label: 'Aluno 1' },
   { key: 'aluno2', label: 'Aluno 2' },
   { key: 'orientador', label: 'Orientador(a)' },
-  { key: 'membro1', label: '1º Membro' },
-  { key: 'membro2', label: '2º Membro' },
+  { key: 'membro1', label: 'Examinador 1' },
+  { key: 'membro2', label: 'Examinador 2' },
   { key: 'coorientador', label: 'Coorientador(a)' },
   { key: 'resumo', label: 'Resumo do TCC' },
   { key: 'palavrasChave', label: 'Palavras-Chave' },
@@ -92,25 +93,28 @@ const DEFAULT_MEUS_PROCESSOS_VISIBLE: Record<string, boolean> = {
   defesaLocal: true
 };
 
-export type ProcessRoleCategory = 'ALUNO' | 'BANCA' | 'AVALIADOR' | 'VISUALIZADOR';
+export type ProcessRoleCategory = 'ALUNO' | 'BANCA' | 'AVALIADOR' | 'COORIENTADOR' | 'VISUALIZADOR';
 
 export const getRoleCategoryForProcess = (roles: ProcessRole[]): ProcessRoleCategory => {
   if (roles.includes('STUDENT')) return 'ALUNO';
-  if (roles.includes('ADVISOR') || roles.includes('CO_ADVISOR')) return 'BANCA';
+  if (roles.includes('ADVISOR')) return 'BANCA';
+  if (roles.includes('CO_ADVISOR')) return 'COORIENTADOR';
   if (roles.includes('EXAMINER')) return 'AVALIADOR';
   return 'VISUALIZADOR';
 };
 
-export const ROLE_CONFIGS: Record<ProcessRoleCategory, { label: string; badgeLabel: string; bgColor: string; borderColor: string; textHex: string; dotColor: string }> = {
-  ALUNO: { label: 'Aluno', badgeLabel: 'Aluno', bgColor: PORTAL_SEMANTIC_COLORS.processRole.student.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.student.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.student.text, dotColor: PORTAL_SEMANTIC_COLORS.processRole.student.border },
-  BANCA: { label: 'Banca', badgeLabel: 'Banca (Orientador / Coorientador)', bgColor: PORTAL_SEMANTIC_COLORS.processRole.board.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.board.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.board.text, dotColor: PORTAL_SEMANTIC_COLORS.processRole.board.border },
-  AVALIADOR: { label: 'Avaliador', badgeLabel: 'Avaliador (Membro da Banca)', bgColor: PORTAL_SEMANTIC_COLORS.processRole.evaluator.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.evaluator.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.evaluator.text, dotColor: PORTAL_SEMANTIC_COLORS.processRole.evaluator.border },
-  VISUALIZADOR: { label: 'Visualizador', badgeLabel: 'Visualizador / Acompanhamento', bgColor: PORTAL_SEMANTIC_COLORS.processRole.viewer.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.viewer.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.viewer.text, dotColor: PORTAL_SEMANTIC_COLORS.processRole.viewer.border },
+export const ROLE_CONFIGS: Record<ProcessRoleCategory, { label: string; badgeLabel: string; bgColor: string; borderColor: string; textHex: string; solidTextHex: string; dotColor: string }> = {
+  ALUNO: { label: 'Autor', badgeLabel: 'Autor', bgColor: PORTAL_SEMANTIC_COLORS.processRole.student.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.student.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.student.text, solidTextHex: PORTAL_SEMANTIC_COLORS.processRole.student.solidText, dotColor: PORTAL_SEMANTIC_COLORS.processRole.student.border },
+  BANCA: { label: 'Orientador', badgeLabel: 'Orientador', bgColor: PORTAL_SEMANTIC_COLORS.processRole.board.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.board.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.board.text, solidTextHex: PORTAL_SEMANTIC_COLORS.processRole.board.solidText, dotColor: PORTAL_SEMANTIC_COLORS.processRole.board.border },
+  COORIENTADOR: { label: 'Coorientador', badgeLabel: 'Coorientador', bgColor: PORTAL_SEMANTIC_COLORS.processRole.coadvisor.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.coadvisor.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.coadvisor.text, solidTextHex: PORTAL_SEMANTIC_COLORS.processRole.coadvisor.solidText, dotColor: PORTAL_SEMANTIC_COLORS.processRole.coadvisor.border },
+  AVALIADOR: { label: 'Examinador', badgeLabel: 'Examinador da banca', bgColor: PORTAL_SEMANTIC_COLORS.processRole.evaluator.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.evaluator.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.evaluator.text, solidTextHex: PORTAL_SEMANTIC_COLORS.processRole.evaluator.solidText, dotColor: PORTAL_SEMANTIC_COLORS.processRole.evaluator.border },
+  VISUALIZADOR: { label: 'Visualizador', badgeLabel: 'Visualizador / Acompanhamento', bgColor: PORTAL_SEMANTIC_COLORS.processRole.viewer.bg, borderColor: PORTAL_SEMANTIC_COLORS.processRole.viewer.border, textHex: PORTAL_SEMANTIC_COLORS.processRole.viewer.text, solidTextHex: PORTAL_SEMANTIC_COLORS.processRole.viewer.solidText, dotColor: PORTAL_SEMANTIC_COLORS.processRole.viewer.border },
 };
 
 const ROLE_TONES: Record<ProcessRoleCategory, string> = {
   ALUNO: 'student',
   BANCA: 'board',
+  COORIENTADOR: 'board',
   AVALIADOR: 'evaluator',
   VISUALIZADOR: 'viewer',
 };
@@ -119,7 +123,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
   onSelectProcess,
   onNavigateToWizard
 }) => {
-  const { userEmail, memberships, isMasterAdmin, settings } = useAuth();
+  const { userEmail, memberships, isMasterAdmin, canRegisterProcess, settings } = useAuth();
   const installationProfile=resolveInstallationProfile(settings);
   const [processes, setProcesses] = useState<ProcessData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -231,6 +235,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     const counts: Record<ProcessRoleCategory, number> = {
       ALUNO: 0,
       BANCA: 0,
+      COORIENTADOR: 0,
       AVALIADOR: 0,
       VISUALIZADOR: 0
     };
@@ -242,14 +247,14 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     return counts;
   }, [processes, userEmail, memberships]);
 
-  const canCreateStudentTcc = roleCounts.ALUNO === 0;
+  const canCreateStudentTcc = canRegisterProcess && roleCounts.ALUNO === 0;
 
-  // Available categories depending on user privileges (4 for Master/Presidente, 3 for standard users)
+  // Cada participação tem seu filtro; acompanhamento permanece disponível quando aplicável.
   const availableCategories: ProcessRoleCategory[] = React.useMemo(() => {
     if (isMasterAdmin || (roleCounts.VISUALIZADOR > 0)) {
-      return ['ALUNO', 'BANCA', 'AVALIADOR', 'VISUALIZADOR'];
+      return ['ALUNO', 'BANCA', 'AVALIADOR', 'COORIENTADOR', 'VISUALIZADOR'];
     }
-    return ['ALUNO', 'BANCA', 'AVALIADOR'];
+    return ['ALUNO', 'BANCA', 'AVALIADOR', 'COORIENTADOR'];
   }, [isMasterAdmin, roleCounts]);
 
   // Cada botão é um toggle independente. "Todos" também pode coexistir visualmente com outros filtros.
@@ -257,20 +262,6 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     setSelectedRoleCategories((prev) =>
       prev.includes(cat) ? prev.filter((current) => current !== cat) : [...prev, cat]
     );
-  };
-
-  // Contextual action button recommendation for row
-  const getNextActionText = (proc: ProcessData, roles: ProcessRole[]) => {
-    if (roles.includes('ADVISOR') && proc.avaliacao.status === 'PENDENTE') {
-      return 'Realizar Avaliação';
-    }
-    if (roles.includes('STUDENT') && proc.avaliacao.status === 'PENDENTE') {
-      return 'Acompanhar / Revisar';
-    }
-    if (isMasterAdmin && proc.etapaAtual === 'ASSINATURA') {
-      return 'Assinar Documento';
-    }
-    return 'Visualizar Detalhes';
   };
 
   // Filter processes by search, date range and the native role toggles.
@@ -290,9 +281,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
 
       if (!matchesSearch) return false;
 
-      const defenseDate = proc.defesa?.startAt?.slice(0, 10) || '';
-      if (startDate && (!defenseDate || defenseDate < startDate)) return false;
-      if (endDate && (!defenseDate || defenseDate > endDate)) return false;
+      if (!matchesDefenseDateRange(proc,startDate,endDate)) return false;
 
       if (showAllRoles) return true;
       if (selectedRoleCategories.length === 0) return false;
@@ -373,7 +362,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
         const row = activeCols.map((k) => {
           switch (k) {
             case 'protocolo': return `"${p.protocolo}"`;
-            case 'defesaDataHora': return `"${p.defesa?.startAt ? `${formatDateNumeric(p.defesa.startAt)} ${formatTimeExtenso(p.defesa.startAt)}` : 'A definir'}"`;
+            case 'defesaDataHora': return `"${p.defesa?.startAt ? `${formatDateNumericWithWeekday(p.defesa.startAt)} ${formatTimeExtenso(p.defesa.startAt)}` : 'A definir'}"`;
             case 'progresso': return `"${getStepNumberLabel(progress.label).replace('Fase ', '')}"`;
             case 'titulo': return `"${(p.titulo || '').replace(/"/g, '""')}"`;
             case 'aluno1': return `"${cleanPersonName(p.aluno1?.nome || '').replace(/"/g, '""')}"`;
@@ -458,7 +447,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
     switch (colKey) {
       case 'protocolo':
         return (
-          <td 
+          <td
             key="protocolo"
             onClick={(e) => {
               e.stopPropagation();
@@ -469,7 +458,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
           >
             <div
               className={`${styles.firstColBtnClass} portal-role-process-button whitespace-nowrap`}
-              style={{ '--portal-role-bg': roleConfig.bgColor, '--portal-role-border': roleConfig.borderColor, '--portal-role-text': roleConfig.textHex } as React.CSSProperties}
+              style={{ '--portal-role-bg': roleConfig.dotColor, '--portal-role-border': roleConfig.borderColor, '--portal-role-text': roleConfig.solidTextHex } as React.CSSProperties}
             >
               {formatProcessLabel(proc.protocolo || proc.id)}
             </div>
@@ -479,7 +468,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
         return (
           <td key="defesaDataHora" className={`${styles.cellPadClass} ${widthClass} ${styles.cellWeightClass} ${styles.cellTextColorClass} ${alignClass} ${styles.borderClass} align-middle`}>
             <div className={`flex items-center justify-center ${styles.cellFontSizeClass}`}>
-              <span className="font-normal text-black">{formatDateNumeric(proc.defesa?.startAt)}</span>
+              <span className="font-normal text-black">{formatDateNumericWithWeekday(proc.defesa?.startAt)}</span>
             </div>
             <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa?.startAt)}</div>
           </td>
@@ -509,8 +498,6 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
                 {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), meusProcessosTextFormat, '')}
               </div>
-              <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 tracking-tight">Matrícula</div>
-              <div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno1?.matricula || '2026101890'}</div>
             </div>
           </td>
         );
@@ -523,8 +510,6 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
                     {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), meusProcessosTextFormat, '')}
                   </div>
-                  <div className="text-[9px] text-slate-500 font-mono font-medium mt-0.5 tracking-tight">Matrícula</div>
-                  <div className="text-[9px] text-slate-500 font-mono font-medium leading-tight">{proc.aluno2.matricula || '2026101891'}</div>
                 </>
               ) : (
                 <span className="text-slate-400 font-mono text-[11px]">—</span>
@@ -713,7 +698,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                   aria-pressed={showAllRoles}
                   className="portal-standard-filter-chip portal-table-filter-chip portal-native-all-filter shrink-0 cursor-pointer select-none transition-colors"
                   style={showAllRoles
-                    ? { backgroundColor: '#d7ded9', color: '#1f2937', borderColor: '#9aac9f', boxShadow: 'inset 0 0 0 1px #9aac9f' }
+                    ? { backgroundColor: '#ffffff', color: '#1f2937', borderColor: '#9aac9f', boxShadow: 'inset 0 0 0 1px #9aac9f' }
                     : { backgroundColor: '#ffffff', color: '#334155', borderColor: '#cbd5e1', boxShadow: 'none' }}
                   title="Exibir ou ocultar todos os vínculos"
                 >
@@ -744,7 +729,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                       <span className="whitespace-nowrap font-extrabold">{cfg.label}</span>
                       <span
                         className="text-[9px] px-1.5 py-0.2 rounded-full font-black shadow-2xs"
-                        style={{ backgroundColor: cfg.borderColor, color: '#ffffff' }}
+                        style={{ backgroundColor: cfg.borderColor, color: cfg.solidTextHex }}
                       >
                         {count}
                       </span>
@@ -768,18 +753,18 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               <p className="text-xs text-slate-500 max-w-md mx-auto">
                 Não foram encontrados Trabalhos de Conclusão de Curso associados a esta busca ou ao e-mail ativo ({userEmail}).
               </p>
-              <button
+              {canCreateStudentTcc&&<button
                 type="button"
                 onClick={onNavigateToWizard}
                 className="mt-2 inline-flex items-center gap-1.5 bg-emerald-950 hover:bg-black text-white px-3.5 py-1.5 border border-emerald-500 rounded-full text-xs font-extrabold normal-case tracking-wider cursor-pointer transition-all shadow-2xs h-8"
               >
                 <span>Cadastrar Novo Trabalho de TCC</span>
-              </button>
+              </button>}
             </div>
           ) : (
             <div>
-              {/* Desktop Table View */}
-              <div className="hidden lg:block">
+              {/* Preserve the configured spreadsheet at every viewport width. */}
+              <div>
                 <TableScrollWrapper>
                   <table id="meus-processos-table" className="w-full text-center border-collapse text-xs">
                     <thead className={`${styles.headerTheadClass} ${styles.headerTextColorClass} ${styles.headerFontSizeClass} ${styles.headerWeightClass} ${styles.headerCasingClass} ${styles.headerBorderClass}`} style={styles.theadStyle}>
@@ -808,75 +793,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
                 </TableScrollWrapper>
               </div>
 
-              {/* Mobile Card Stack View */}
-              <div className="lg:hidden divide-y divide-slate-200">
-                {displayedProcesses.map((proc) => {
-                  const roles = getUserRolesForProcess(proc.id);
-                  const roleCat = getRoleCategoryForProcess(roles);
-                  const roleConfig = ROLE_CONFIGS[roleCat];
-                  const nextAction = getNextActionText(proc, roles);
 
-                  return (
-                    <div
-                      key={proc.id}
-                      onClick={() => onSelectProcess(proc.id)}
-                      style={{
-                        backgroundColor: roleConfig.bgColor,
-                        borderLeftWidth: '10px',
-                        borderLeftColor: roleConfig.borderColor
-                      }}
-                      className="p-2.5 space-y-1.5 cursor-pointer hover:opacity-90"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-slate-900 text-xs">
-                          {formatProcessLabel(proc.protocolo || proc.id)}
-                        </span>
-                        <span
-                          className="text-[10px] font-black px-2 py-0.5 rounded normal-case border"
-                          style={{
-                            backgroundColor: '#FFFFFF',
-                            borderColor: roleConfig.borderColor,
-                            color: roleConfig.textHex
-                          }}
-                        >
-                          {roleConfig.label}
-                        </span>
-                      </div>
-
-                      <h4 className="font-bold text-slate-900 text-sm leading-snug">
-                        {proc.titulo}
-                      </h4>
-
-                      <div className="text-xs text-slate-700 space-y-1">
-                        <div>
-                          <strong>Aluno(s):</strong>
-                          <StudentNames aluno1={proc.aluno1} aluno2={proc.aluno2} align="left" itemClassName="text-xs font-bold text-slate-900" />
-                        </div>
-                        <div><strong>Orientador:</strong> {proc.orientador?.nome || 'Não definido'}</div>
-                        <div><strong>Data:</strong> {formatDatePt(proc.defesa?.startAt)}</div>
-                      </div>
-
-                      <div className="pt-2 flex items-center justify-between border-t border-slate-300/50">
-                        <div className="flex gap-1">
-                          <span
-                            className="text-[10px] font-black px-2 py-0.5 rounded normal-case border"
-                            style={{
-                              backgroundColor: '#FFFFFF',
-                              borderColor: roleConfig.borderColor,
-                              color: roleConfig.textHex
-                            }}
-                          >
-                            {roleConfig.label}
-                          </span>
-                        </div>
-                        <span className="text-xs font-bold text-emerald-800 flex items-center gap-1">
-                          {nextAction} &rarr;
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
 
             </div>
           )}

@@ -1,3 +1,4 @@
+import {academicAcronym,stripAcademicCaseMarkers} from './academicTextCase';
 // Formatadores de data, hora e texto para o fluxo acadêmico configurável.
 import type { ProcessData } from '../types';
 
@@ -147,7 +148,7 @@ export function isFemaleName(originalName: string): boolean {
  */
 export function formatProfessorName(name: string): string {
   if (!name) return 'N/A';
-  if (name.trim() === 'Comissão de TCC' || name.trim() === 'Presidência da Comissão') return name;
+  if (name.trim() === 'Comissão de Trabalho de Conclusão de Curso' || name.trim() === 'Presidência da Comissão') return name;
   const clean = cleanPersonName(name);
   const female = isFemaleName(name);
   return female ? `Profª. Drª. ${clean}` : `Prof. Dr. ${clean}`;
@@ -158,27 +159,24 @@ export function formatProfessorName(name: string): string {
  */
 export function formatTccTitle(title: string): string {
   if (!title) return '';
-  const protectedAcronyms:string[]=[];
-  const clean = title.normalize('NFC').trim().replace(/\s+/gu, ' ').replace(/\+([^+\n]+?)-|\*([^*\n]+)\*/g,(_match,old:string,current:string)=>{protectedAcronyms.push((old||current).trim().toLocaleUpperCase('pt-BR'));return `protectedacronym${protectedAcronyms.length-1}`;});
-  const acronyms = new Set(['SUS', 'TCC', 'UFES', 'UTI', 'UTIN', 'CCS', 'AIDS', 'HIV', 'SAMU', 'CAPS', 'UBS', 'EAD', 'EPI', 'EPIS', 'COVID', 'COVID19', 'ICU', 'OMS', 'OPAS', 'IST', 'DST', 'DNA', 'RNA', 'LGPD', 'CNS', 'ESF', 'APS', 'ABNT', 'CNPQ', 'CAPES', 'SAE', 'COFEN', 'COREN', 'ANVISA', 'IBGE', 'CEP', 'CONEP', 'TCLE', 'UBSF', 'UPA', 'PIB', 'PNAISC', 'PNSIPN']);
+  const clean = stripAcademicCaseMarkers(title).normalize('NFC').trim().replace(/\s+/gu, ' ');
   // Preserve recognized acronyms and alphanumeric codes without keeping ordinary words in capitals.
   let wordIndex = 0;
   const smallWords = new Set(['a', 'as', 'o', 'os', 'de', 'da', 'do', 'das', 'dos', 'e', 'é', 'em', 'no', 'na', 'nos', 'nas', 'por', 'para', 'com']);
   const formatted = clean.replace(/[\p{L}\p{M}\p{N}]+(?:[-/][\p{L}\p{M}\p{N}]+)*/gu, token => {
     const first = wordIndex++ === 0;
-    const upper = token.toUpperCase();
     const code = /\p{L}/u.test(token) && /\p{N}/u.test(token);
-    if (code) return token.replace(/\p{L}+/gu, part => acronyms.has(part.toUpperCase()) ? part.toUpperCase() : part);
-    if (token.includes('-') || token.includes('/')) return token.split(/([-/])/u).map(part => acronyms.has(part.toUpperCase()) ? part.toUpperCase() : part.toLowerCase().replace(/^\p{L}/u, letter => letter.toLocaleUpperCase('pt-BR'))).join('');
-    if (acronyms.has(upper)) return upper;
-    if (/^[B-DF-HJ-NP-TV-Z]{2,6}$/u.test(token)) return token;
+    if (code) return token.replace(/\p{L}+/gu, part => academicAcronym(part) || part);
+    if (token.includes('-') || token.includes('/')) return token.split(/([-/])/u).map(part => academicAcronym(part) || part.toLowerCase().replace(/^\p{L}/u, letter => letter.toLocaleUpperCase('pt-BR'))).join('');
+    const acronym = academicAcronym(token);
+    if (acronym) return acronym;
     const lower = token.toLocaleLowerCase('pt-BR');
     return !first && smallWords.has(lower) ? lower : lower.replace(/^\p{L}/u, letter => letter.toLocaleUpperCase('pt-BR'));
   });
-  return formatted.replace(/\p{L}/u, letter => letter.toUpperCase()).replace(/protectedacronym(\d+)/gi,(_match,index)=>`*${protectedAcronyms[Number(index)]}*`);
+  return formatted.replace(/\p{L}/u, letter => letter.toUpperCase());
 }
 
-/** Display the title without acronym-editing delimiters. */
+/** Input, preview and documents share automatic acronym capitalization. */
 export function renderTccTitle(title:string):string {
   return formatTccTitle(title).replace(/\*([^*]+)\*/g,'$1');
 }
@@ -192,6 +190,67 @@ export function formatDatePt(dateStr: string): string {
   const parts = parsePortalDateTime(dateStr);
   if (!parts) return dateStr;
   return `${parts.day} de ${MONTHS_PT[parts.month - 1]} de ${parts.year}`;
+}
+
+const WEEKDAYS_PT = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'] as const;
+
+/**
+ * Dia da semana da data civil apresentada pelo portal.
+ * Calcula em UTC a partir dos componentes civis para que o fuso do servidor
+ * não mude o dia; timestamps com offset são antes convertidos para Vitória.
+ */
+export function formatWeekdayPt(dateStr:string):string {
+  const parts=parsePortalDateTime(dateStr);
+  if(!parts)return '';
+  const day=new Date(Date.UTC(parts.year,parts.month-1,parts.day));
+  if(day.getUTCFullYear()!==parts.year||day.getUTCMonth()!==parts.month-1||day.getUTCDate()!==parts.day)return '';
+  return WEEKDAYS_PT[day.getUTCDay()];
+}
+
+/** Exibição humana: "segunda-feira, 7 de dezembro de 2026". */
+export function formatDateWithWeekday(dateStr:string):string {
+  const weekday=formatWeekdayPt(dateStr);
+  const date=formatDatePt(dateStr);
+  return weekday?`${weekday}, ${date}`:date;
+}
+
+/** Exibição compacta: "segunda-feira, 07/12/2026". Não usar em campos date nem integrações. */
+export function formatDateNumericWithWeekday(dateStr:string):string {
+  const weekday=formatWeekdayPt(dateStr);
+  const date=formatDateNumeric(dateStr);
+  return weekday?`${weekday}, ${date}`:date;
+}
+
+/** Timestamp de leitura em Brasília; mantém o valor técnico original fora da apresentação. */
+export function formatDateTimeWithWeekday(value:string,timezone='America/Sao_Paulo'):string {
+ const date=new Date(value);if(!Number.isFinite(date.getTime()))return value;
+ return new Intl.DateTimeFormat('pt-BR',{timeZone:timezone,weekday:'long',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(date);
+}
+
+const auditTimestampFormatter = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: PORTAL_TIME_ZONE,
+  weekday: 'long',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+/** Exibição de registros administrativos, com o dia da semana como complemento. */
+export function formatAuditTimestamp(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return value;
+  const parts = Object.fromEntries(auditTimestampFormatter.formatToParts(date).map(({type,value}) => [type, value]));
+  return `${parts.day}/${parts.month}/${parts.year}, ${parts.hour}:${parts.minute} (${parts.weekday})`;
+}
+
+/** Exibição formal: "segunda-feira, sete de dezembro de dois mil e vinte e seis". */
+export function formatDateExtensoWithWeekday(dateStr:string):string {
+  const weekday=formatWeekdayPt(dateStr);
+  const date=formatDateExtensoTotal(dateStr);
+  return weekday?`${weekday}, ${date}`:date;
 }
 
 /**
@@ -257,28 +316,13 @@ export function getSortedStudents<T extends { nome: string; matricula?: string }
   return list.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
 }
 
-/**
- * Format student display string for document headers and tables:
- * Always sorted alphabetically. Example: "MATRÍCULA - Nome A e MATRÍCULA - Nome B"
- */
+/** Format student names in alphabetical order for document headers and tables. */
 export function formatStudentsString(
-  aluno1: { nome: string; matricula: string },
-  aluno2?: { nome: string; matricula: string } | null,
-  includeBadge = true
+  aluno1: { nome: string },
+  aluno2?: { nome: string } | null
 ): string {
-  const sorted = getSortedStudents(aluno1, aluno2);
-  if (sorted.length === 0) return 'Discente não informado';
-
-  const parts = sorted.map(a => 
-    includeBadge && a.matricula
-      ? `${a.matricula} - ${formatNameTitleCase(a.nome)}`
-      : `${formatNameTitleCase(a.nome)}${a.matricula ? ` (${a.matricula})` : ''}`
-  );
-
-  if (parts.length === 2) {
-    return `${parts[0]} e ${parts[1]}`;
-  }
-  return parts[0];
+  const names = getSortedStudents(aluno1, aluno2).map(student => formatNameTitleCase(student.nome));
+  return names.join(' e ') || 'Discente não informado';
 }
 
 /**
@@ -337,7 +381,7 @@ export function getProcessProgress(
   } else if (proc.status === 'EM_AVALIACAO') {
     stepNumber = Math.max(1, totalStages - 1);
     percent = Math.round((stepNumber / totalStages) * 100);
-    label = `Etapa ${stepNumber}/${totalStages}: Defesa Realizada & Em Avaliação`;
+    label = `Etapa ${stepNumber}/${totalStages}: Defesa realizada · Conceito e Ata`;
   } else if (proc.status === 'AGUARDANDO_DEFESA' || proc.etapaAtual === 'DEFESA' || proc.etapaAtual === 'AGENDAMENTO') {
     stepNumber = Math.max(1, totalStages - 2);
     percent = Math.round((stepNumber / totalStages) * 100);
@@ -361,7 +405,7 @@ export function getFriendlyEtapaLabel(etapa: string): string {
     case 'AGENDAMENTO': return 'Agendamento';
     case 'CONVITE': return 'Banca';
     case 'DEFESA': return 'Defesa';
-    case 'AVALIACAO': return 'Avaliação';
+    case 'AVALIACAO': return 'Conceito e Ata';
     case 'ASSINATURA': return 'Assinatura';
     case 'DOCUMENTOS': return 'Documentos';
     case 'CONCLUIDO': return 'Concluído';
@@ -376,4 +420,20 @@ export function getStepNumberLabel(label: string): string {
     return `Fase ${current}`;
   }
   return '';
+}
+
+const dateInSaoPaulo = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+});
+
+export function saoPauloCalendarDate(now = new Date()): string {
+  return dateInSaoPaulo.format(now);
+}
+
+export function timestampInSaoPauloDateRange(timestamp: string, start: string, end: string): boolean {
+  if (!start && !end) return true;
+  const instant = new Date(timestamp);
+  if (!Number.isFinite(instant.getTime())) return false;
+  const date = dateInSaoPaulo.format(instant);
+  return (!start || date >= start) && (!end || date <= end);
 }

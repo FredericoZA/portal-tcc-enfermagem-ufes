@@ -1,5 +1,4 @@
 import { PORTAL_THEME } from '../theme/portalTheme';
-import { isLocalDemoFrontend } from './runtimeEnvironment';
 
 // Site Layout Configuration System (Header, Sidebar, Footer)
 // Nesta instalação UFES, a identidade visual estrutural é fixa no código.
@@ -118,7 +117,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   headerCourseTitle: 'Curso de Graduação em Enfermagem e Obstetrícia · CCS/UFES',
   headerShowRoleBadges: true,
   headerShowEmblem: true,
-  headerCustomLogoUrl: isLocalDemoFrontend() ? '/colenf-logo.png' : '/api/public/runtime-assets/2466f8db8eb7c79073c197bea09fa53946ca0ca1392a192792fa0d4f0f2e420f',
+  headerCustomLogoUrl: '/ufes-crest.png',
   headerBgColor: PORTAL_THEME.brand.headerInstitution,
   headerTextColor: PORTAL_THEME.text.dark,
   headerTitleColor: PORTAL_THEME.brand.action,
@@ -126,7 +125,7 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   sidebarTitle: 'Portal de TCC',
   sidebarSubtitle: 'Enfermagem',
   sidebarLogoType: 'custom',
-  sidebarCustomLogoUrl: isLocalDemoFrontend() ? '/colenf-logo.png' : '/api/public/runtime-assets/0d8980ef61e92bca98fabe43a9ce190da409935f5ebfccc2c5f991066c7c77d7',
+  sidebarCustomLogoUrl: '/ufes-crest.png',
   sidebarNavLabels: { ...DEFAULT_NAV_LABELS },
   sidebarNavEmojis: { ...DEFAULT_NAV_EMOJIS },
   sidebarIconMode: 'lucide',
@@ -145,9 +144,9 @@ export const DEFAULT_SITE_LAYOUT_CONFIG: SiteLayoutConfig = {
   sidebarShowDividers: true,
   sidebarNavOrder: ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'logs', 'asten-logs', 'DIVIDER_2', 'indicadores', 'como-chegar', 'informacoes-gerais', 'tutorial', 'fluxo-tcc', 'replicar'],
   footerLocationText: 'Departamento de Enfermagem • CCS/UFES • Campus de Maruípe • Vitória/ES',
-  footerPresidentLabel: 'Presidente da Comissão',
+  footerPresidentLabel: 'Presidente da Comissão de Trabalho de Conclusão de Curso',
   footerPresidentName: '',
-  footerMembersLabel: 'Membros da Comissão',
+  footerMembersLabel: 'Membros da Comissão de Trabalho de Conclusão de Curso',
   footerMembersList: [],
   footerDevTitle: 'Desenvolvimento da Plataforma e Suporte',
   footerDevName: '',

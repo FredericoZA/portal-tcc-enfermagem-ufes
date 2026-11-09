@@ -25,15 +25,23 @@ function run(bin, args, env) {
   });
 }
 
+if (process.env.VERCEL || (process.env.PORTAL_PERSISTENCE_PROVIDER && process.env.PORTAL_PERSISTENCE_PROVIDER !== 'local_file')) {
+  console.error('[Portal TCC] Este comando exige desenvolvimento com dados locais.');
+  process.exit(2);
+}
+
 const commit = gitCommit();
 const baseEnv = {
   ...process.env,
   PORTAL_GIT_COMMIT: commit,
-  VITE_PORTAL_LOCAL_DEMO_AUTH: 'true',
-  PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'true',
+  HOST: '127.0.0.1',
+  PORTAL_PERSISTENCE_PROVIDER: 'local_file',
+  PORTAL_LOCAL_REVIEW_DATA: 'false',
+  VITE_PORTAL_LOCAL_DEMO_AUTH: 'false',
+  PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'false',
   PORTAL_ALLOW_LOCAL_OTP_STORE: 'true',
   PORTAL_ALLOW_LOCAL_SECRET_STORE: 'true',
-  PORTAL_TEST_DOCUMENT_RENDERER: 'true',
+  PORTAL_TEST_DOCUMENT_RENDERER: 'false',
   PORTAL_OTP_DELIVERY_MODE: 'log'
 };
 
