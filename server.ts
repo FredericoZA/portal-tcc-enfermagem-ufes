@@ -978,6 +978,11 @@ function findDefenseConflicts(input:{startAt:string;endAt:string;local:string;al
   return inspectDefenseConflicts(processesStore,input,isPortalFeatureEnabled(currentSettings,'DEFENSE_CONFLICTS'));
 }
 
+function visibleDefenseConflicts(email:string, conflicts:ReturnType<typeof findDefenseConflicts>){
+  const visible=conflicts.filter(conflict=>canAccessProcess(email,conflict.processId));
+  return visible.length===conflicts.length?visible:[...visible,{restricted:true}];
+}
+
 function missingDocumentModels(types:Array<'CONVITE'|'ATA'|'TERMO'|'DECLARACAO'>):string[]{return types.filter(type=>!currentSettings.documentModels?.[type]?.driveFileId);}
 function publicSignatureJob(job:SignatureJob):SignatureJob{
   const {artifactBase64:_artifact,renderVariables:_variables,providerEnvelopeHash:_envelopeHash,removedFromLogsBy:_removedBy,...safe}=job;
@@ -2255,6 +2260,17 @@ export async function createPortalApp() {
   });
   app.all('/api/public/runtime-assets/:key',runtimeAssetHandler);
 
+  app.use('/api',(req,res,next)=>{if(!['POST','PATCH','PUT','DELETE'].includes(req.method))return next();if(String(req.get('sec-fetch-site')||'').toLowerCase()==='cross-site')return res.status(403).json({error:'Requisição entre sites bloqueada.',code:'CROSS_SITE_REQUEST_BLOCKED'});const origin=String(req.get('origin')||'').trim();if(!origin)return next();const configured=String(process.env.PORTAL_PUBLIC_URL||process.env.APP_URL||'').trim();const expected=configured?new URL(/^https?:\/\//i.test(configured)?configured:`https://${configured}`).origin:`${req.protocol}://${req.get('host')}`;try{
+    const allowed=new Set([expected]);
+    // Cada deployment Vercel pode ter uma URL própria de prévia. Liberar somente
+    // URLs fornecidas pela infraestrutura, sem aceitar um Host arbitrário.
+    for(const host of [process.env.VERCEL_URL,process.env.VERCEL_BRANCH_URL]){
+      const value=String(host||'').trim();
+      if(value)allowed.add(new URL(/^https?:\/\//i.test(value)?value:`https://${value}`).origin);
+    }
+    if(!allowed.has(new URL(origin).origin))return res.status(403).json({error:'Origem da requisição não autorizada.',code:'ORIGIN_NOT_ALLOWED'});
+  }catch{return res.status(403).json({error:'Origem da requisição inválida.',code:'ORIGIN_NOT_ALLOWED'});}next();});
+
   // Em produção os uploads vão direto ao Drive privado. O limite abaixo só
   // cobre JSON e o fallback local de até 2 MB, nunca os PDFs/DOCX completos.
   // Callbacks Asten devem ser pequenos; limitar antes do parser geral impede payloads volumosos.
@@ -2389,16 +2405,6 @@ export async function createPortalApp() {
 
   app.use('/api', attachPortalIdentity);
   app.use('/api',(req,res,next)=>{const identity=getPortalIdentity(req);if(identity&&(identity.issuedAt<Number(currentSettings.sessionValidAfter||0)||revokedSessionIdsStore.has(identity.sessionId))){(req as any).portalIdentity=null;clearPortalSessionCookie(res);}next();});
-  app.use('/api',(req,res,next)=>{if(!['POST','PATCH','PUT','DELETE'].includes(req.method))return next();if(String(req.get('sec-fetch-site')||'').toLowerCase()==='cross-site')return res.status(403).json({error:'Requisição entre sites bloqueada.',code:'CROSS_SITE_REQUEST_BLOCKED'});const origin=String(req.get('origin')||'').trim();if(!origin)return next();const configured=String(process.env.PORTAL_PUBLIC_URL||process.env.APP_URL||'').trim();const expected=configured?new URL(/^https?:\/\//i.test(configured)?configured:`https://${configured}`).origin:`${req.protocol}://${req.get('host')}`;try{
-    const allowed=new Set([expected]);
-    // Cada deployment Vercel pode ter uma URL própria de prévia. Liberar somente
-    // URLs fornecidas pela infraestrutura, sem aceitar um Host arbitrário.
-    for(const host of [process.env.VERCEL_URL,process.env.VERCEL_BRANCH_URL]){
-      const value=String(host||'').trim();
-      if(value)allowed.add(new URL(/^https?:\/\//i.test(value)?value:`https://${value}`).origin);
-    }
-    if(!allowed.has(new URL(origin).origin))return res.status(403).json({error:'Origem da requisição não autorizada.',code:'ORIGIN_NOT_ALLOWED'});
-  }catch{return res.status(403).json({error:'Origem da requisição inválida.',code:'ORIGIN_NOT_ALLOWED'});}next();});
   const requireGlobalRoles=(...roles:GlobalRole[])=>(req:express.Request,res:express.Response,next:express.NextFunction)=>{const identity=getPortalIdentity(req);if(!identity)return res.status(401).json({error:'Autenticação institucional obrigatória.'});const userRoles=getUserRolesForEmail(identity.email).globalRoles;if(!roles.some(role=>userRoles.includes(role)))return res.status(403).json({error:'Seu perfil não tem permissão para esta operação.'});next();};
   const requireAdministrator=requireGlobalRoles('MASTER_ADMIN');
   const requirePresidencyOperator=requireGlobalRoles('MASTER_ADMIN','COMMISSION_PRESIDENT');
@@ -3988,7 +3994,7 @@ export async function createPortalApp() {
     const startDate = new Date(defesa?.startAt || nowISO);
     const endDate = new Date(defenseEndAt(startDate.toISOString()));
     const defenseConflicts=findDefenseConflicts({startAt:startDate.toISOString(),endAt:endDate.toISOString(),local:String(defesa?.local||''),alternateLocation:String(defesa?.alternateLocation||''),emails:[...studentEmails,normalizeEmail(orientador.email),coorientador?.email?normalizeEmail(coorientador.email):'',...banca.map((member:any)=>normalizeEmail(String(member.email||'')))].filter(Boolean)});
-    if(defenseConflicts.length&&(!isAdministrative||!String(req.body?.conflictOverrideReason||'').trim()))return res.status(409).json({error:'O agendamento conflita com outra defesa, sala ou participante.',code:'DEFENSE_CONFLICT',conflicts:defenseConflicts});
+    if(defenseConflicts.length&&(!isAdministrative||!String(req.body?.conflictOverrideReason||'').trim()))return res.status(409).json({error:'O agendamento conflita com outra defesa, sala ou participante.',code:'DEFENSE_CONFLICT',conflicts:visibleDefenseConflicts(actorEmail,defenseConflicts)});
 
     const finishProtocolTiming=registrationRequestTiming(req)?.measure('protocol_lookup');
     let protocolReservation: ReturnType<typeof reserveNextProcessProtocol>;
@@ -4172,7 +4178,9 @@ export async function createPortalApp() {
 
   app.post('/api/processes/defense-conflicts/check',requireAuthenticated,requireFeature('DEFENSE_CONFLICTS'),(req,res)=>{
     const startAt=String(req.body?.startAt||'');if(!Number.isFinite(Date.parse(startAt)))return res.status(400).json({error:'Data inicial inválida.'});const endAt=defenseEndAt(startAt);
-    res.json({conflicts:findDefenseConflicts({startAt,endAt,local:String(req.body?.local||''),alternateLocation:String(req.body?.alternateLocation||''),emails:Array.isArray(req.body?.emails)?req.body.emails.map((value:any)=>normalizeEmail(String(value))):[],excludeProcessId:String(req.body?.excludeProcessId||'')||undefined})});
+    const email=getPortalIdentity(req)!.email;
+    const excluded=String(req.body?.excludeProcessId||'');
+    res.json({conflicts:visibleDefenseConflicts(email,findDefenseConflicts({startAt,endAt,local:String(req.body?.local||''),alternateLocation:String(req.body?.alternateLocation||''),emails:Array.isArray(req.body?.emails)?req.body.emails.map((value:any)=>normalizeEmail(String(value))):[],excludeProcessId:excluded&&canAccessProcess(email,excluded)?excluded:undefined}))});
   });
   app.post('/api/processes/:id/coauthor-acceptance',requireAuthenticated,(_req,res)=>res.status(410).json({error:'O cadastro por um dos autores é suficiente. Não é necessário confirmar a autoria separadamente.'}));
 
@@ -4456,7 +4464,7 @@ export async function createPortalApp() {
     if(updated.defesa?.startAt&&(updated.defesa.departmentResponse?.decision!=='UNAVAILABLE'||scheduleChanged)&&(proposedSchedule||['aluno1','aluno2','orientador','coorientador','banca'].some(key=>Object.hasOwn(acceptedUpdates,key)))){
       const endAt=defenseEndAt(updated.defesa.startAt);
       const conflicts=findDefenseConflicts({startAt:updated.defesa.startAt,endAt,local:updated.defesa.local,alternateLocation:updated.defesa.localStatus==='CONFIRMADO'&&!scheduleChanged?undefined:updated.defesa.alternateLocation,emails:participantEmails(updated),excludeProcessId:updated.id});
-      if(conflicts.length&&(proposedSchedule||!isFullAdministrator||!conflictOverrideReason))return res.status(409).json({error:'A alteração cria conflito de sala ou participante.',code:'DEFENSE_CONFLICT',conflicts});
+      if(conflicts.length&&(proposedSchedule||!isFullAdministrator||!conflictOverrideReason))return res.status(409).json({error:'A alteração cria conflito de sala ou participante.',code:'DEFENSE_CONFLICT',conflicts:visibleDefenseConflicts(actorEmail,conflicts)});
       overriddenConflicts=conflicts;
     }
 
