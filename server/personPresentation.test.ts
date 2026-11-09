@@ -49,11 +49,12 @@ test('workflow derives formal names from stored participants, not extra variable
  const p=fixture();const vars=buildProcessVariables({process:p,eventCode:'TEST',actorEmail:'master@portal.local',actorRoles:[],extraVariables:{ORIENTADOR_NOME_COMPLETO:'invasor',ALUNO_1_TRATAMENTO:'Aluno'}});assert.equal(vars.ORIENTADOR_NOME_COMPLETO,'Professora Doutora Maria Oliveira');assert.equal(vars.ORIENTADOR_TRATAMENTO,'Professora');assert.equal(vars.ALUNO_1_TRATAMENTO,'Aluna');
 });
 
-test('temporary Google copy receives grammar and bold corrections for all four documents',async()=>{
+test('temporary Google copy receives grammar and body formatting corrections for all four documents',async()=>{
  const {renderGoogleDriveTemplateToPdf}=await import('./integrations/googleDocsRenderer');
  const pdf=await PDFDocument.create();const page=pdf.addPage();page.drawText('Universidade - ata de teste',{x:43,y:790,size:11,font:await pdf.embedFont(StandardFonts.Helvetica)});const pdfBytes=await pdf.save();
  for(const documentType of ['CONVITE','ATA','TERMO','DECLARACAO']){
-  const p=fixture(),source='do(a)(s) graduando(a)(s) Maria da Silva. o(a) Prof(ª). Dr(ª). Maria Oliveira. Aprovado. O estudo atende aos objetivos. Nada mais havendo a tratar, foi encerrada a sessão e lavrada a presente ata que será assinada por quem de direito.';
+  const opening: Record<string, string>={ATA:'Às quatorze horas, ',TERMO:'Eu, ',DECLARACAO:'Declaro que o trabalho '};
+  const p=fixture(),source=(opening[documentType]||'')+'do(a)(s) graduando(a)(s) Maria da Silva. o(a) Prof(ª). Dr(ª). Maria Oliveira. Aprovado. O estudo atende aos objetivos. Nada mais havendo a tratar, foi encerrada a sessão e lavrada a presente ata que será assinada por quem de direito.';
   p.banca=[{id:'b2',nome:'Beatriz Oliveira Santos',email:'beatriz@example.invalid',tratamento:'Professora',titulacao:'Mestra',funcao:'EXAMINER_2'},{id:'b3',nome:'Rafael Almeida Lima',email:'rafael@example.invalid',tratamento:'Professor',titulacao:'Doutor',funcao:'EXAMINER_3'}];
   let text=source+'\nExaminadora Professora Mestra Beatriz Oliveira Santos\nExaminador Professor Doutor Rafael Almeida Lima\n',revision=0,deleted=false;const styles:any[]=[];
   const json=(v:any)=>new Response(JSON.stringify(v),{headers:{'content-type':'application/json'}});
@@ -72,10 +73,16 @@ test('temporary Google copy receives grammar and bold corrections for all four d
    throw Error(`Unexpected ${method} ${url}`);
   }) as typeof fetch;
   const result=await renderGoogleDriveTemplateToPdf({accessToken:'test-only',templateUrlOrId:'sourceTemplate123',replacements:{},presentation:{process:p,documentType},fetchImpl});
-  assert.deepEqual(result.unresolvedMarkers,[]);assert.equal(deleted,true);assert.match(text,/da graduanda Maria da Silva/);assert.match(text,/a Prof\.ª Dr\.ª Maria Oliveira/);assert.doesNotMatch(text,/\(a\)|\(ª\)|\(s\)/);if(documentType==='CONVITE'){assert.ok(styles.every(style=>style.textStyle.bold!==true));continue;}assert.ok(styles.some(style=>style.rendered==='Aprovada'));assert.ok(styles.some(style=>style.rendered===p.avaliacao.parecer));assert.ok(styles.some(style=>style.rendered===academicName(p.orientador,'abbreviated')),'complete abbreviated advisor name stays bold after grammar adaptation');assert.ok(styles.some(style=>style.rendered===p.aluno1.nome));assert.ok(styles.filter(style=>style.textStyle.bold!==false).every(style=>style.textStyle.bold===true&&style.textStyle.underline===false));if(['CONVITE','DECLARACAO'].includes(documentType)&&p.coorientador)assert.ok(styles.some(style=>style.textStyle.bold===false&&style.rendered.includes(p.coorientador!.nome)),'coadvisor identification remains normal weight');
-  for(const member of p.banca){
-   const complete=academicName(member,'abbreviated');
-   assert.ok(styles.some(style=>style.rendered===complete),`${documentType}: prefix and entire examiner name are bold: ${complete}`);
+  assert.deepEqual(result.unresolvedMarkers,[]);assert.equal(deleted,true);assert.match(text,/da graduanda Maria da Silva/);assert.match(text,/a Prof\.ª Dr\.ª Maria Oliveira/);assert.doesNotMatch(text,/\(a\)|\(ª\)|\(s\)/);
+  if(documentType==='CONVITE'){
+   assert.ok(styles.every(style=>style.textStyle.bold!==true));
+  }else{
+   for(const value of [p.aluno1.nome,academicName(p.orientador,'abbreviated')]){
+    const index=text.indexOf(value)+1;
+    assert.ok(index>0,`${documentType}: ${value}`);
+    const effective=styles.filter(style=>style.range.startIndex<=index&&style.range.endIndex>=index+value.length&&style.textStyle.bold!==undefined).at(-1);
+    assert.equal(effective?.textStyle.bold,false,`${documentType}: ${value} uses normal weight`);
+   }
   }
   if(documentType==='ATA'){assert.match(text,/às quinze horas/);assert.doesNotMatch(text,/por quem de direito/);}
  }
