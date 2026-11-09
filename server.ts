@@ -146,7 +146,7 @@ import {
 import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngine';
 import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie } from './server/security/firebaseAuth';
 import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSecurityPreflight, getAstenSigningProfile, getPersistentAstenConnection, getAstenSignerPhones, getPersistentAstenStatus, safeCompareWebhookSecret } from './server/integrations/asten';
-import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, currentPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, invalidatePortalRuntimeRevision, loadPortalRuntimeState, portalRuntimeStateNeedsRefresh, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
+import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, currentPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, invalidatePortalRuntimeRevision, loadPortalRuntimeState, portalRuntimeStateNeedsRefresh, savePortalRuntimeState, testSupabaseRuntimeConnection, verifySupabaseStartupRequirements, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
 import { buildProcessArchiveFileName, renamePortalProcessFolder, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePrivatePublicationSource, withdrawDriveFilePublicAccess, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadProcessSourcePdf, uploadSignedPdfToDrive, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
@@ -1352,7 +1352,8 @@ export async function createPortalApp() {
     const cronSecretReused=[process.env.PORTAL_SESSION_SECRET,process.env.PORTAL_OTP_PEPPER,process.env.PORTAL_UPLOAD_BINDING_SECRET,process.env.PORTAL_VERIFICATION_SECRET,process.env.ASTEN_WEBHOOK_SECRET].map(value=>String(value||'').trim()).filter(Boolean).includes(cronSecret);
     if(process.env.VERCEL&&(cronSecret.length<32||cronSecretReused))throw new Error('Implantação bloqueada: configure CRON_SECRET exclusivo com pelo menos 32 caracteres para a limpeza diária do transporte privado.');
     const verificationSecret=String(process.env.PORTAL_VERIFICATION_SECRET||'').trim();if(verificationSecret.length<32)throw new Error('Implantação bloqueada: configure PORTAL_VERIFICATION_SECRET com pelo menos 32 caracteres.');
-        const databaseStatus=await testSupabaseRuntimeConnection();if(!databaseStatus.connected||!databaseStatus.transactionalRuntimeReady)throw new Error('Implantação bloqueada: aplique todas as migrações do Supabase, incluindo a outbox transacional Asten v6, antes de iniciar o portal em produção.');
+        // Gate de capabilities leve na partida a frio, mantendo diagnóstico completo disponível ao Master.
+    await verifySupabaseStartupRequirements();
   }
   if (getSupabaseRuntimeStatus().durablePersistenceReady) {
     try {
