@@ -22,7 +22,6 @@ test('comprovante é arquivado uma vez em DOCUMENTOS/06_COMPROVANTE_RESERVA/02_G
   const pdf=Buffer.from('%PDF-1.4\nfixture-receipt\n');
   const created:string[]=[];
   let fileUploads=0;
-  const directories=new Map<string,string>();
   try{
     globalThis.fetch=async(input,init)=>{
       const url=new URL(String(input));
@@ -33,12 +32,10 @@ test('comprovante é arquivado uma vez em DOCUMENTOS/06_COMPROVANTE_RESERVA/02_G
         return Response.json({id:body.name,name:body.name});
       }
       if(url.pathname==='/drive/v3/files'){
-        const query=String(url.searchParams.get('q')||'');
         return Response.json({files:[]});
       }
       if(url.pathname==='/upload/drive/v3/files'&&init?.method==='POST'){
         fileUploads++;
-        const raw=String(init.body) || '';
         const buf=init.body as Buffer;
         assert.match(buf.toString('utf8'),/"formType":"CONFIRMACAO_LOCAL"/);
         assert.match(buf.toString('utf8'),/"portalProcessId":"process-fixture"/);
