@@ -27,7 +27,7 @@ globalThis.fetch = async (input, init = {}) => {
   calls.push({ host: url.host, path: url.pathname, method });
   if (url.origin === 'https://database.example.invalid') {
     if (method === 'POST' && url.pathname === '/rest/v1/rpc/portal_runtime_capabilities') {
-      return json({ transactional_runtime: true, secure_file_transport: 'SUPABASE_PRIVATE_STORAGE', asten_transactional_outbox: true, schema_version: 6 });
+      return json({ transactional_runtime: true, optimistic_concurrency: true, normalized_core_projection: true, secure_file_transport: 'SUPABASE_PRIVATE_STORAGE', asten_transactional_outbox: true, schema_version: 6 });
     }
     if (method === 'GET' && url.pathname === '/rest/v1/portal_runtime_state') {
       return json([{ payload: { settings: { driveRootFolderId: 'root_fixture_123' }, processes: [] }, revision: 1 }]);
