@@ -8,8 +8,8 @@ const tools = [
   {icon:Github, title: 'GitHub', text:'Código-fonte e documentação da instalação. Comece lendo README, implantação e política de segurança.', href:REPOSITORY_URL, action:'Abrir no GitHub'},
   {icon:BookOpen, title:'Tutorial de instalação', text:'Passo a passo para instalar o Portal em outro curso, configurar os serviços e conferir o funcionamento.', href:'/replicacao/GUIA_DE_INSTALACAO.md', action:'Baixar tutorial', download:true},
   {icon:FileText, title:'Modelos', text:'Convite, ata, termo e declaração em um único arquivo ZIP. Importe cópias próprias e confira as variáveis antes de usar.', href:'/api/public/replication-models/all/download', action:'Baixar modelos', download:true},
-  {icon:Database, title:'Supabase, Vercel e Google Workspace', text:'Supabase guarda registros, permissões e filas; Google Drive guarda os arquivos; Vercel mantém o Portal online. O transporte temporário privado de arquivos é removido após o uso.'},
-  {icon:FileSignature, title:'Asten e Gov.br', text:'Assinam a ata o orientador, os dois examinadores, os autores e o coorientador presente. O termo, quando houver publicação, é assinado pelos autores e pelo orientador. A declaração de participação é assinada pela Presidência da Comissão.'},
+  {icon:Database, title:'Supabase, Vercel e Google Workspace', text:'Supabase guarda os registros. O Drive guarda os arquivos definitivos. A Vercel mantém o Portal online.'},
+  {icon:FileSignature, title:'Asten e Gov.br', text:'Ata: orientação, examinadores, autores e coorientação presente. Termo: autores e orientação. Declaração da banca: Presidência.'},
 ];
 const CARD_CLASS = 'portal-layer-card flex h-full min-h-[112px] flex-col rounded-xl border border-slate-300 p-4 shadow-2xs';
 
