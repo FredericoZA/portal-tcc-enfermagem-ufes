@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { loadPortalRuntimeState, portalRuntimeStateNeedsRefresh } from './supabase';
+import { invalidatePortalRuntimeRevision, loadPortalRuntimeState, portalRuntimeStateNeedsRefresh } from './supabase';
 
 test('consulta apenas revisão quando snapshot local está atualizado e falha fechada em erro remoto', async () => {
   const originalFetch=globalThis.fetch;
@@ -44,6 +44,11 @@ test('consulta apenas revisão quando snapshot local está atualizado e falha fe
     assert.deepEqual(await loadPortalRuntimeState(),{safe:'state'});
     assert.equal(await portalRuntimeStateNeedsRefresh(),false);
     assert.equal(fullReads,2);
+    // Falha de commit invalida o estado em memória e exige hidratação.
+    invalidatePortalRuntimeRevision();
+    assert.equal(await portalRuntimeStateNeedsRefresh(),true);
+    assert.deepEqual(await loadPortalRuntimeState(),{safe:'state'});
+    assert.equal(fullReads,3);
     // Indisponibilidade do controle de versão nunca permite usar
     // silenciosamente permissões potencialmente revogadas.
     failRevision=true;
