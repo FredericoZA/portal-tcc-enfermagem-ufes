@@ -34,6 +34,10 @@ export function createProcessDeletionSession(target:DeletionDialogTarget,ports:{
   return {phase:cleanup.status==='COMPLETED'?'completed':'pending',busy:false,taskId:cleanup.id,cleanup,
    message:cleanup.status==='COMPLETED'?'TCC excluído e limpeza concluída.':'A exclusão foi iniciada. A limpeza dos recursos vinculados ainda não foi confirmada.'};
  };
+ const preserveAcknowledgement=(prior:DeletionDialogState,next:DeletionDialogState):DeletionDialogState=>
+  prior.phase==='pending'&&next.phase==='uncertain'
+   ? {...prior,busy:false,message:'O TCC já foi excluído do Portal. Não foi possível atualizar o andamento da limpeza agora.'}
+   : next;
  const readState=async(taskId?:string,signal?:AbortSignal):Promise<DeletionDialogState>=>{
   const scope=generation;
   readController=new AbortController();
@@ -90,18 +94,18 @@ export function createProcessDeletionSession(target:DeletionDialogTarget,ports:{
       }
      }
     }else next=await readState(prior.taskId,checkSignal);
-    update(next,scope);
+    update(preserveAcknowledgement(prior,next),scope);
    }catch(error){
     if(!active||generation!==scope)return;
     if(action==='delete'&&ports.rejectsBeforeDelete?.(error))deletionMayBeRunning=false;
     // A lost response is ambiguous: only read back; never repeat DELETE or POST.
-    if(!mutationRequested){update({phase:'uncertain',busy:false,taskId:prior.taskId,message:'Não foi possível consultar o andamento. Tente verificar novamente nesta janela.'},scope);return;}
+    if(!mutationRequested){update(preserveAcknowledgement(prior,{phase:'uncertain',busy:false,taskId:prior.taskId,message:'Não foi possível consultar o andamento. Tente verificar novamente nesta janela.'}),scope);return;}
     try{
      const next=await readState(prior.taskId);
      if(next.phase==='confirm')next.message=error instanceof Error?error.message:'A exclusão não foi iniciada.';
-     update(next,scope);
+     update(preserveAcknowledgement(prior,next),scope);
     }catch{
-     update({phase:'uncertain',busy:false,taskId:prior.taskId,message:'Não foi possível confirmar o resultado. Use Verificar andamento nesta janela antes de tentar outra ação.'},scope);
+     update(preserveAcknowledgement(prior,{phase:'uncertain',busy:false,taskId:prior.taskId,message:'Não foi possível confirmar o resultado. Use Verificar andamento nesta janela antes de tentar outra ação.'}),scope);
     }
    }
   },

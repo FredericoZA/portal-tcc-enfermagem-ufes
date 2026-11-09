@@ -18,14 +18,14 @@ export function deletionStatusAuthorization(identity:PortalIdentity,state:Pick<S
  if(identity.issuedAt<Number(state.settings.sessionValidAfter||0)||state.revokedSessionIds.includes(identity.sessionId))return 'REVOKED';
  const email=normalizeEmail(identity.email);return [state.settings.masterEmail,state.settings.ownerEmail].map(value=>normalizeEmail(value||'')).filter(Boolean).includes(email)?'MASTER':'FORBIDDEN';
 }
-export function createDeletionStatusReader(ports:{durable:()=>boolean;readRevision:()=>Promise<number|null>;readDurable:()=>Promise<DeletionSnapshot|null>;readLocal:()=>DeletionSnapshot}) {
+export function createDeletionStatusReader(ports:{durable:()=>boolean;readRevision:()=>Promise<number|null>;readDurable:(revision:number)=>Promise<DeletionSnapshot|null>;readLocal:()=>DeletionSnapshot}) {
  let pending:Promise<StatusProjection>|undefined;let cached:{revision:number;value:StatusProjection}|undefined;
  return async()=>{
   if(!pending){const task=Promise.resolve().then(async()=>{
    if(!ports.durable()){cached=undefined;return project(structuredClone(ports.readLocal()));}
    const revision=await ports.readRevision();if(revision===null||!Number.isSafeInteger(revision)||revision<1)throw new Error('Revisão administrativa não confirmada.');
    if(cached?.revision===revision)return cached.value;cached=undefined;
-   const snapshot=await ports.readDurable();if(!snapshot)throw new Error('Estado administrativo ausente.');const value=project(snapshot);
+   const snapshot=await ports.readDurable(revision);if(!snapshot)throw new Error('Estado administrativo ausente.');const value=project(snapshot);
    if(await ports.readRevision()!==revision)throw new Error('A revisão administrativa mudou durante a consulta.');
    cached={revision,value};return value;
   });pending=task;void task.finally(()=>{if(pending===task)pending=undefined;}).catch(()=>undefined);}

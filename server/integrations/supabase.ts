@@ -439,6 +439,13 @@ export async function loadPortalRuntimeState<T extends object>(trackRevision=tru
   return (trackRevision||delta?structuredClone(payload):payload) as T;
 }
 
+export function readCachedPortalRuntimeState<T extends object>(revision:number):T|null {
+  const snapshot=cachedSnapshot;
+  return snapshot?.revision===revision&&snapshot.endpoint===stateEndpoint()
+    ? structuredClone(snapshot.payload) as T
+    : null;
+}
+
 /** Chamado sob a fila do runtime, depois que as escritas anteriores terminam. */
 export async function refreshPortalRuntimeState<T extends object>(): Promise<T | null> {
   if (!getSupabaseRuntimeStatus().durablePersistenceReady) return null;

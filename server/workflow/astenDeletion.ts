@@ -126,11 +126,12 @@ export async function reconcileDeletedAstenEnvelope(envelope: DeletionEnvelope, 
       const notices = Array.isArray(listed) ? listed : listed ? [listed] : [];
       const types = notices.map(value => String((value as {tipo?: unknown})?.tipo || '').toUpperCase());
       if (!types.includes('S') || types.includes('E')) throw new Error('Unconfirmed purge');
-      update('PURGED', 'A ASTEN confirmou a exclusão definitiva do envelope.');
-      await ports.persist();
     } catch {
       update('REVIEW', 'A exclusão definitiva do envelope não foi confirmada. Confira o resultado na ASTEN antes de outra ação.');
+      return;
     }
+    update('PURGED', 'A ASTEN confirmou a exclusão definitiva do envelope.');
+    await ports.persist();
     return;
   }
   if (status === 3) { update('PRESERVED', 'A Asten confirmou a conclusão do envelope.'); return; }

@@ -152,3 +152,17 @@ test('expurgo bloqueia propriedade divergente, conexão sem permissão e persist
   const envelope:DeletionEnvelope={...fixture(),purgeRequired:true};
   await assert.rejects(reconcileDeletedAstenEnvelope(envelope,{repositoryId:42,read:async()=>details(3),readSigners:async()=>({}),persist:async()=>{throw Error('durable failure');},purge:async()=>assert.fail('Sem marcador durável não chama provedor')}),/durable failure/);
 });
+
+test('a confirmed purge is not downgraded or repeated when saving its receipt fails',async()=>{
+ const envelope:DeletionEnvelope={...fixture(),purgeRequired:true};
+ let purges=0;
+ const ports={
+  repositoryId:42,read:async()=>details(3),readSigners:async()=>({}),
+  persist:async()=>{if(envelope.state==='PURGED')throw Error('durable failure');},
+  purge:async()=>{purges++;return purgeSuccess;},
+ };
+ await assert.rejects(reconcileDeletedAstenEnvelope(envelope,ports),/durable failure/);
+ assert.equal(envelope.state,'PURGED');
+ await reconcileDeletedAstenEnvelope(envelope,ports);
+ assert.equal(purges,1);
+});

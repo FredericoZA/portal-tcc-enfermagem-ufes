@@ -26,7 +26,7 @@ export const ProcessDeletionDialog:React.FC<{target:DeletionDialogTarget;onDismi
   read:apiClient.getProcessDeletionStatus,
   retry:apiClient.retryProcessDeletion,
   change:setState,
-  rejectsBeforeDelete:error=>error instanceof ApiRequestError&&(error.status===403||([400,409].includes(error.status)&&['PROCESS_DELETE_CONFIRMATION_REQUIRED','PROCESS_LEGAL_HOLD','PROCESS_OPERATION_IN_PROGRESS'].includes(error.code||''))),
+  rejectsBeforeDelete:error=>error instanceof ApiRequestError&&(error.status===403||(error.status===503&&['RUNTIME_BUSY','RUNTIME_STATE_UNAVAILABLE'].includes(error.code||''))||([400,409].includes(error.status)&&['PROCESS_DELETE_CONFIRMATION_REQUIRED','PROCESS_LEGAL_HOLD','PROCESS_OPERATION_IN_PROGRESS'].includes(error.code||''))),
  }));
  const [watcher]=useState(()=>createDeletionStatusWatcher({snapshot:session.snapshot,check:signal=>session.run('check','',signal)}));
  useEffect(()=>{session.activate();watcher.start();return()=>{watcher.stop();session.dispose();};},[session,watcher]);

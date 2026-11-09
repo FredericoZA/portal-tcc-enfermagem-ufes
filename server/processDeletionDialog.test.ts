@@ -57,7 +57,7 @@ test('a confirmed NOT_STARTED result permits a manual fresh confirmation',async(
 
 test('another process with the same protocol never authorizes cleanup or completion',async()=>{
  const f=fixture({read:async()=>({...completed,processId:'another'})});await f.session.run('delete','Excluir');await f.session.run('check');
- assert.equal(f.session.snapshot().phase,'uncertain');assert.equal(f.writes.length,1);
+ assert.equal(f.session.snapshot().phase,'pending');assert.equal(f.session.snapshot().taskId,taskId);assert.equal(f.writes.length,1);
 });
 
 test('an active cleanup lease prevents another POST; otherwise one retry uses the original task',async()=>{
@@ -167,4 +167,19 @@ test('new 202 acknowledgement without attemptCount or a cleanup lease starts bou
  let state:DeletionDialogState={phase:'pending',busy:false,message:'Accepted',cleanup:initial};let reads=0;
  const watcher=createDeletionStatusWatcher({snapshot:()=>state,check:async()=>{reads++;state={phase:'completed',busy:false,message:'Confirmed'};},...clock});
  watcher.start();await clock.advance(3_000);assert.equal(reads,1);assert.equal(clock.size(),0);
+});
+
+test('a failed status lookup preserves the confirmed deletion and never retries cleanup on stale data',async()=>{
+ let available=false;
+ const f=fixture({read:async()=>{if(!available)throw new Error('503');return completed;}});
+ await f.session.run('delete','Excluir');
+ await f.session.run('check');
+ assert.equal(f.session.snapshot().phase,'pending');
+ assert.equal(f.session.snapshot().taskId,taskId);
+ assert.match(f.session.snapshot().message,/já foi excluído/);
+ await f.session.run('retry');
+ assert.deepEqual(f.writes,['DELETE:'+target.id]);
+ available=true;
+ await f.session.run('check');
+ assert.equal(f.session.snapshot().phase,'completed');
 });

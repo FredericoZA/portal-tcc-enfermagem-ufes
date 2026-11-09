@@ -175,7 +175,7 @@ import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngi
 import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie } from './server/security/firebaseAuth';
 import {astenStatusCheckDue,ASTEN_STATUS_CHECK_INTERVAL_MS} from './server/workflow/astenAtaStatus';
 import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeDestination, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSigningProfile, getPersistentAstenConnection, getAstenSignerPhones, getPersistentAstenStatus, inferAstenJobStatus, safeCompareWebhookSecret } from './server/integrations/asten';
-import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, refreshPortalRuntimeState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
+import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, refreshPortalRuntimeState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
 import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGeneratedInvitation, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePrivatePublicationSource, withdrawDriveFilePublicAccess, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadSignedPdfToDrive, reserveProcessFormPdfId, readProcessFormPdfById, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
@@ -2270,7 +2270,7 @@ export async function createPortalApp() {
 
   installDeletionStatusRoute(app,createDeletionStatusReader({
     durable:()=>getSupabaseRuntimeStatus().durablePersistenceReady,readRevision:readPortalRuntimeRevision,
-    readDurable:()=>loadPortalRuntimeState<PersistedPortalState>(false),
+    readDurable:async revision=>readCachedPortalRuntimeState<PersistedPortalState>(revision)??await loadPortalRuntimeState<PersistedPortalState>(false),
     readLocal:()=>{const state=loadPersistedPortalState();return state.processes?{...state,settings:state.settings||structuredClone(currentSettings)}:{processes:structuredClone(processesStore),settings:structuredClone(currentSettings),revokedSessionIds:[...revokedSessionIdsStore],processDeletionTasks:structuredClone(processDeletionTasksStore),auditLogs:structuredClone(auditLogsStore)};},
   }));
 
@@ -3981,6 +3981,16 @@ export async function createPortalApp() {
     const academicError=validateAcademicWindow(defesa?.startAt);if(academicError&&!isAdministrative)return res.status(409).json({error:academicError,code:'ACADEMIC_WINDOW_CLOSED'});
 
     if(!reservationDepartmentEnabled(currentSettings.emailConfig)&&isManagedDefenseLocation(String(defesa?.local||''),operationalConfig(currentSettings.integrationStudio).reservation.locations))return res.status(409).json({error:'O contato responsável pelas reservas de auditório e sala de reuniões está desativado. Aguarde a ativação pela comissão ou selecione outro local, cuja confirmação será solicitada ao orientador.',code:'ROOM_RESERVATION_CONTACT_DISABLED'});
+    const newId = attemptId || `proc-${Date.now()}`;
+    const nowISO = new Date().toISOString();
+
+    // End time is start time + 90 min by default
+    const startDate = new Date(defesa?.startAt || nowISO);
+    const endDate = new Date(defenseEndAt(startDate.toISOString()));
+    const defenseConflicts=findDefenseConflicts({startAt:startDate.toISOString(),endAt:endDate.toISOString(),local:String(defesa?.local||''),alternateLocation:String(defesa?.alternateLocation||''),emails:[...studentEmails,normalizeEmail(orientador.email),coorientador?.email?normalizeEmail(coorientador.email):'',...banca.map((member:any)=>normalizeEmail(String(member.email||'')))].filter(Boolean)});
+    if(defenseConflicts.length&&(!isAdministrative||!String(req.body?.conflictOverrideReason||'').trim()))return res.status(409).json({error:'O agendamento conflita com outra defesa, sala ou participante.',code:'DEFENSE_CONFLICT',conflicts:defenseConflicts});
+
+    const finishProtocolTiming=registrationRequestTiming(req)?.measure('protocol_lookup');
     let protocolReservation: ReturnType<typeof reserveNextProcessProtocol>;
     try {
       const occupiedProtocols=[
@@ -3992,15 +4002,9 @@ export async function createPortalApp() {
     } catch (error) {
       if (!(error instanceof ProcessProtocolExhausted)) throw error;
       return res.status(409).json({error:error.message,code:'PROCESS_PROTOCOL_EXHAUSTED'});
+    } finally {
+      finishProtocolTiming?.();
     }
-    const newId = attemptId || `proc-${Date.now()}`;
-    const nowISO = new Date().toISOString();
-
-    // End time is start time + 90 min by default
-    const startDate = new Date(defesa?.startAt || nowISO);
-    const endDate = new Date(defenseEndAt(startDate.toISOString()));
-    const defenseConflicts=findDefenseConflicts({startAt:startDate.toISOString(),endAt:endDate.toISOString(),local:String(defesa?.local||''),alternateLocation:String(defesa?.alternateLocation||''),emails:[...studentEmails,normalizeEmail(orientador.email),coorientador?.email?normalizeEmail(coorientador.email):'',...banca.map((member:any)=>normalizeEmail(String(member.email||'')))].filter(Boolean)});
-    if(defenseConflicts.length&&(!isAdministrative||!String(req.body?.conflictOverrideReason||'').trim()))return res.status(409).json({error:'O agendamento conflita com outra defesa, sala ou participante.',code:'DEFENSE_CONFLICT',conflicts:defenseConflicts});
 
     const newProcess: ProcessData = {
       id: newId,
@@ -4155,7 +4159,8 @@ export async function createPortalApp() {
     };
     formArchiveJobsStore.push(initialArchive);
     delete registrationDraftsStore[actorEmail];
-    await persistPortalStateDurably();
+    const finishCreateCommitTiming=registrationRequestTiming(req)?.measure('process_commit');
+    try { await persistPortalStateDurably(); } finally { finishCreateCommitTiming?.(); }
 
     afterReservationChangeResponse(req,res,async()=>{
       const archived=await retryExistingFormArchiveJob(initialArchive,newProcess);
