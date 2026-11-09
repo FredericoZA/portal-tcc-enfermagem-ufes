@@ -201,7 +201,7 @@ export default function App() {
                   : currentTab === 'avaliacoes' ? 'Avaliações de TCC'
                   : currentTab === 'documentos' ? 'Documentos'
                   : currentTab === 'coordenador' ? 'Área do Presidente'
-                  : currentTab === 'configuracoes' ? 'Configurações & Modelos de Arquivos'
+                  : currentTab === 'configuracoes' ? ''
                   : currentTab === 'logs' ? 'Registro de Logs'
                   : currentTab === 'asten-logs' ? 'Registros de Assinatura'
                   : (currentTab === 'analise' || currentTab === 'indicadores') ? 'Indicadores'
