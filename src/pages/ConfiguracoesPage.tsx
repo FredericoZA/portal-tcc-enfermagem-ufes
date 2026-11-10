@@ -926,12 +926,7 @@ export const ConfiguracoesPage: React.FC = () => {
       {/* Configurações operacionais: aparência global removida; o visual do Portal é mantido pelo código. */}
       {isMasterAdmin && (
         <>
-          <section id="portal-settings-hub" className="portal-settings-list space-y-2 bg-transparent" aria-labelledby="portal-settings-heading">
-            <div className="portal-layer-card rounded-xl border border-slate-300 px-3.5 py-3">
-              <h1 id="portal-settings-heading" className="text-sm font-black text-slate-950">Configurações do Portal</h1>
-
-            </div>
-
+          <section id="portal-settings-hub" className="portal-settings-list space-y-2 bg-transparent" aria-label="Configurações">
             {SETTINGS_GROUPS.map(({ id: groupId, label, panels }) => (
               <section key={groupId} className="space-y-2" aria-labelledby={`portal-settings-${groupId}`}>
                 <div className="flex items-center gap-2 py-1 pt-3">
