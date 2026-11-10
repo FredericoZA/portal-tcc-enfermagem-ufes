@@ -245,7 +245,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
             <span className={fieldLabel}>Local da defesa</span>
             <span className={`${fieldValue} break-words`}>{process.defesa?.local || 'A confirmar'}</span>
           </div>
-          <div className={`flex flex-wrap items-end justify-start gap-2 sm:justify-end ${webmailUrl && canEditReservation ? 'sm:col-span-4' : 'sm:col-span-2'}`}>
+          <div className={`flex flex-wrap items-center justify-center gap-2 ${webmailUrl && canEditReservation ? 'sm:col-span-4' : 'sm:col-span-2'}`}>
             {webmailUrl && (
               <a href={webmailUrl} target="_blank" rel="noopener noreferrer" className="portal-action inline-flex items-center gap-1.5">
                 <Mail className="h-3.5 w-3.5" aria-hidden="true"/>
@@ -268,18 +268,18 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
           </div>
         </div>
         {confirmed && (
-          <p role="status" className="mt-2 rounded-lg border border-[var(--portal-brand-action-border)] bg-[var(--portal-brand-sage)] px-3 py-2 text-[11px] leading-4 text-[var(--portal-text-dark)]">
+          <p role="status" className="mx-auto mt-2 w-fit max-w-full rounded-lg border text-center border-[var(--portal-brand-action-border)] bg-[var(--portal-brand-sage)] px-3 py-2 text-[11px] leading-4 text-[var(--portal-text-dark)]">
             <strong>Reserva confirmada.</strong>
             {canEditReservation && ' Se precisar mudar a data, o horário ou o local, use “Alterar reserva”. A mudança inicia uma nova solicitação, que precisa ser confirmada.'}
           </p>
         )}
         {alert && (
-          <p role="alert" className={`mt-2 rounded-lg border px-3 py-2 text-[11px] leading-4 ${denial ? 'border-red-300 bg-red-50 text-center font-bold text-red-800' : 'border-red-300 bg-red-50 font-semibold text-red-800'}`}>
+          <p role="alert" className={`mx-auto mt-2 w-fit max-w-full rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-center text-[11px] leading-4 text-red-800 ${denial ? 'font-bold' : 'font-semibold'}`}>
             {alert.text}
           </p>
         )}
         {notice && !alert && (
-          <p role="status" className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-950">
+          <p role="status" className="mx-auto mt-2 w-fit max-w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-center text-[11px] text-amber-950">
             {notice}
           </p>
         )}

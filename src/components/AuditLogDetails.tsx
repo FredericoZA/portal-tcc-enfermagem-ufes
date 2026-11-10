@@ -135,6 +135,9 @@ export function AuditLogDetails({ log, onClose, onRefresh, allowActions = true }
         {phases.current && <DetailField label="Fase atual do processo">{phases.current}</DetailField>}
         {reference.detail && <DetailField label="Trabalho">{reference.detail}</DetailField>}
       </dl>
+      {log.after?.attribution==='MASTER_ADMIN'&&<p className="mt-3 text-xs text-slate-700">
+        Decisão administrativa sobre a reserva. Pedido originalmente enviado a {String(log.after.originalRecipient||'—')}. Motivo: {String(log.after.reason||'—')}
+      </p>}
       {auditIsReservationEmailDecision(log) && <p className="mt-3 text-[11px] leading-5 text-slate-600">A resposta foi registrada pelo link enviado a esse endereço. O registro identifica o destinatário do link, sem confirmar a identidade de quem o acionou.</p>}
     </section>
     <AuditDocumentSummary log={displayedLog} details/>

@@ -64,6 +64,8 @@ test('settings survive restart and control the real form, registration schema an
   const versionPreview=await comparison.json();
   assert.equal(versionPreview.toRevision,3);
   assert.ok(versionPreview.workflowStages.some((stage:any)=>stage.title&&stage.actions.some((action:any)=>action.title)));
+  assert.ok(versionPreview.formTemplates.find((form:any)=>form.id==='form-reserva-aluno')?.questions.some((question:any)=>question.label&&question.required));
+  assert.ok(versionPreview.emailTemplates.find((email:any)=>email.id==='email-reserva')?.subject);
   const nextDraft=structuredClone(reopened.integrationStudio);nextDraft.revision=4;nextDraft.receiptDesign.confirmedTitle='Novo rascunho de comprovante';
   const savedDraft=await fetch(base+'/api/admin/settings',{method:'PATCH',headers,body:JSON.stringify({integrationStudio:nextDraft,studioExpectedRevision:3,studioSaveMode:'autosave'})});
   assert.equal(savedDraft.status,200,await savedDraft.clone().text());

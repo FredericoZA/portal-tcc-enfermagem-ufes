@@ -1549,6 +1549,10 @@ button[aria-label^="Configurar exibição"],
   background: var(--portal-surface-page);
 }
 
+.portal-reservation-calendar-modal > :is(.portal-modal-divider, .portal-modal-body, .portal-modal-footer) {
+  background: var(--portal-surface-panel);
+}
+
 .portal-modal-card {
   border: 1px solid var(--portal-border);
   border-radius: 12px;
@@ -2353,7 +2357,7 @@ form[aria-labelledby="registration-title"] .portal-input[readonly] { background-
 .portal-registration-review-columns > * { min-width: 0; }
 .portal-registration-review-data .portal-registration-review-table { min-width: 0; }
 @container registration-review (min-width: 800px) {
- .portal-registration-review-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+ .portal-registration-review-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; }
 }
 .portal-registration-review-findings .portal-members-table-scroll { border-color: #fcd34d; }
 .portal-registration-review-findings .portal-registration-review-table { min-width: 480px; }

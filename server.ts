@@ -1697,6 +1697,11 @@ function recoverableAtaSignature(process:ProcessData){
   return intent;
 }
 
+function pendingReservationRecovery(process:ProcessData){
+  const defense=process.defesa;
+  if(!defense||defense.localStatus!=='PENDENTE'||defense.departmentResponse||defense.invitationSentAt||defense.invitationDriveFileId||!defense.reservationRequestRecipient)return null;
+  return {recipient:defense.reservationRequestRecipient,local:defense.local,startAt:defense.startAt,dataRevision:process.dataRevision};
+}
 function workflowOperationsOverview(processId?:string,view='recovery'){
   const selectedProcesses=processId?processesStore.filter(process=>process.id===processId):processesStore;
   const scoped=<T extends {processId?:string}>(items:T[])=>processId?items.filter(item=>item.processId===processId):items;
@@ -1729,7 +1734,7 @@ function workflowOperationsOverview(processId?:string,view='recovery'){
   let deadlines:ReturnType<typeof plannedDeadlines>=[],planningError:string|undefined;
   try{deadlines=plannedDeadlines(selectedProcesses,signatureJobsStore,workflowPolicy(studio),studio?.operationsPolicy?.timezone||'America/Sao_Paulo');}
   catch(error){planningError=error instanceof Error?error.message:'Não foi possível calcular os prazos publicados.';}
-  return {processId,protocol:selectedProcesses[0]?.protocolo,studioRevision:studio?.revision||0,queueTotal:queue.length,queue:queue.slice(0,500),deadlineTotal:deadlines.length,deadlineOverdueTotal:deadlines.filter(item=>item.overdue).length,deadlines:deadlines.slice(0,500),reminders:scoped(reminderRecordsStore).slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,200).map(item=>({...item,protocol:selectedProcesses.find(process=>process.id===item.processId)?.protocolo})),planningError};
+  return {processId,protocol:selectedProcesses[0]?.protocolo,pendingReservation:processId&&selectedProcesses[0]?pendingReservationRecovery(selectedProcesses[0]):null,studioRevision:studio?.revision||0,queueTotal:queue.length,queue:queue.slice(0,500),deadlineTotal:deadlines.length,deadlineOverdueTotal:deadlines.filter(item=>item.overdue).length,deadlines:deadlines.slice(0,500),reminders:scoped(reminderRecordsStore).slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,200).map(item=>({...item,protocol:selectedProcesses.find(process=>process.id===item.processId)?.protocolo})),planningError};
 }
 async function runWorkflowMaintenance(processId?:string){
   const selectedProcesses=processId?processesStore.filter(process=>process.id===processId):processesStore;
@@ -3292,7 +3297,7 @@ export async function createPortalApp() {
 
   app.post('/api/admin/studio/validate',requireAuthenticated,requireAdministrator,(req,res)=>res.json(validateCourseStudio(req.body?.studio||currentSettings.integrationStudio||{})));
   app.get('/api/admin/studio/versions',requireAuthenticated,requireAdministrator,(_req,res)=>res.json(studioVersionsStore.slice().sort((a,b)=>b.revision-a.revision).map(({snapshot,...item})=>({...item,active:item.revision===currentSettings.integrationStudio?.revision,counts:{documents:snapshot.docTemplates?.length||0,emails:snapshot.emailTemplates?.length||0,forms:snapshot.formTemplates?.length||0,stages:snapshot.workflowStages?.length||0,variables:snapshot.matrixColumns?.length||0}}))));
-  app.get('/api/admin/studio/versions/:revision/compare',requireAuthenticated,requireAdministrator,(req,res)=>{const target=studioVersionsStore.find(item=>item.revision===Number(req.params.revision));const current=currentSettings.integrationStudio;if(!target||!current)return res.status(404).json({error:'Revisão não encontrada.'});const count=(value:any)=>Array.isArray(value)?value.length:0;res.json({fromRevision:target.revision,toRevision:current.revision,workflowStages:(target.snapshot.workflowStages||[]).map(stage=>({id:String(stage.id||''),title:String(stage.title||''),triggerEvent:String(stage.triggerEvent||''),actions:Array.isArray(stage.actions)?stage.actions.map(action=>({id:String(action?.id||''),title:String(action?.title||'')})):[]})),changed:target.checksum!==createHash('sha256').update(JSON.stringify(current)).digest('hex'),counts:{documents:[count(target.snapshot.docTemplates),count(current.docTemplates)],emails:[count(target.snapshot.emailTemplates),count(current.emailTemplates)],forms:[count(target.snapshot.formTemplates),count(current.formTemplates)],stages:[count(target.snapshot.workflowStages),count(current.workflowStages)],variables:[count(target.snapshot.matrixColumns),count(current.matrixColumns)]}});});
+  app.get('/api/admin/studio/versions/:revision/compare',requireAuthenticated,requireAdministrator,(req,res)=>{const target=studioVersionsStore.find(item=>item.revision===Number(req.params.revision));const current=currentSettings.integrationStudio;if(!target||!current)return res.status(404).json({error:'Revisão não encontrada.'});const count=(value:any)=>Array.isArray(value)?value.length:0;res.json({fromRevision:target.revision,toRevision:current.revision,emailTemplates:(target.snapshot.emailTemplates||[]).map(email=>({id:String(email.id||''),name:String(email.name||''),subject:String(email.subject||''),body:String(email.body||'')})),formTemplates:(target.snapshot.formTemplates||[]).map(form=>({id:form.id,title:form.title,description:form.description,questions:(Array.isArray(form.questions)?form.questions:[]).map(question=>({label:String(question?.label||''),required:Boolean(question?.required)}))})), workflowStages:(target.snapshot.workflowStages||[]).map(stage=>({id:String(stage.id||''),title:String(stage.title||''),triggerEvent:String(stage.triggerEvent||''),actions:Array.isArray(stage.actions)?stage.actions.map(action=>({id:String(action?.id||''),title:String(action?.title||'')})):[]})),changed:target.checksum!==createHash('sha256').update(JSON.stringify(current)).digest('hex'),counts:{documents:[count(target.snapshot.docTemplates),count(current.docTemplates)],emails:[count(target.snapshot.emailTemplates),count(current.emailTemplates)],forms:[count(target.snapshot.formTemplates),count(current.formTemplates)],stages:[count(target.snapshot.workflowStages),count(current.workflowStages)],variables:[count(target.snapshot.matrixColumns),count(current.matrixColumns)]}});});
   app.post('/api/admin/studio/versions/:revision/restore',requireAuthenticated,requireAdministrator,async(req,res)=>{
     const identity=getPortalIdentity(req)!;
     if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Confirme seu acesso para restaurar a configuração.',code:'REAUTHENTICATION_REQUIRED'});
@@ -4303,18 +4308,23 @@ export async function createPortalApp() {
     const context=reservationContext(req.params.token);if(!context?.process.defesa.departmentResponse)return res.status(404).send('Comprovante indisponível.');
     const p=context.process;res.type('application/pdf').attachment(`${p.protocolo}-${p.defesa.departmentResponse?.decision==='UNAVAILABLE'?'indisponibilidade':'reserva'}.pdf`).send(await createReservationReceiptPdf(p,currentSettings));
   });
-  app.post('/api/reservation-confirmation/:token',async(req,res)=>{
+  const handleReservationResponse=async(req:express.Request,res:express.Response,master?:{process:ProcessData;email:string;reason:string})=>{
     let responseSaved=false;
     try{
     res.setHeader('Cache-Control','no-store');res.setHeader('Referrer-Policy','same-origin');
-    const context=reservationContext(req.params.token);
+    const context=master?{
+      process:master.process,
+      claim:{recipient:reservationApproverEmail(master.process),revision:master.process.defesa.reservationRevision??0},
+    }:reservationContext(String(req.params.token));
     if(!context)return res.status(410).type('html').send(reservationPage('Solicitação indisponível','Utilize a solicitação mais recente.'));
     const {process:p,claim}=context;
-    const receiptPath=reservationActionPath(req.params.token)+'/receipt';
+    const receiptPath=master?undefined:reservationActionPath(String(req.params.token))+'/receipt';
     const alreadyAnswered=(decision:'CONFIRMED'|'UNAVAILABLE')=>res.status(409)
-      .setHeader('X-Reservation-Decision',decision).type('html').send(reservationAlreadyAnsweredPage(decision,receiptPath));
-    const wantsPdf=req.get('accept')==='application/pdf';
-    const wantsDecision=req.get('accept')==='application/json';
+      .setHeader('X-Reservation-Decision',decision).type('html').send(reservationAlreadyAnsweredPage(decision,receiptPath!));
+    const respondError=(status:number,title:string,message:string)=>master?res.status(status).json({error:message}):res.status(status).type('html').send(reservationPage(title,message));
+    const actorEmail=master?.email??claim.recipient;
+    const wantsPdf=!master&&req.get('accept')==='application/pdf';
+    const wantsDecision=Boolean(master)||req.get('accept')==='application/json';
     const sendReceipt=async()=>{
       const decision=p.defesa.departmentResponse!.decision;
       const pdf=await createReservationReceiptPdf(p,currentSettings);
@@ -4324,19 +4334,19 @@ export async function createPortalApp() {
     if(p.defesa.departmentResponse)return alreadyAnswered(p.defesa.departmentResponse.decision);
     const decision=String(req.body?.decision||'');
     const local=decision==='accept'?p.defesa.local:decision==='decline'?'__UNAVAILABLE__':String(req.body?.local||'');
-    if(req.body?.confirmed!=='yes'||![p.defesa.local,'__UNAVAILABLE__'].includes(local))return res.status(400).type('html').send(reservationPage('Confira os campos','Aceite ou recuse o agendamento apresentado.'));
-    if(p.defesa.invitationSentAt||p.defesa.invitationDriveFileId)return res.status(409).type('html').send(reservationPage('Agendamento encerrado','O convite deste agendamento já foi emitido. Solicite uma correção à comissão.'));
+    if(req.body?.confirmed!=='yes'||![p.defesa.local,'__UNAVAILABLE__'].includes(local))return respondError(400,'Confira os campos','Aceite ou recuse o agendamento apresentado.');
+    if(p.defesa.invitationSentAt||p.defesa.invitationDriveFileId)return respondError(409,'Agendamento encerrado','O convite deste agendamento já foi emitido. Solicite uma correção à comissão.');
     const available=local!=='__UNAVAILABLE__';
-    if(available&&findDefenseConflicts({startAt:p.defesa.startAt,endAt:p.defesa.endAt,local,emails:participantEmails(p),excludeProcessId:p.id}).length)return res.status(409).type('html').send(reservationPage('Conflito de agendamento','Este local ou um participante já está reservado nesse intervalo. Volte e selecione outro local, ou informe a indisponibilidade.'));
+    if(available&&findDefenseConflicts({startAt:p.defesa.startAt,endAt:p.defesa.endAt,local,emails:participantEmails(p),excludeProcessId:p.id}).length)return respondError(409,'Conflito de agendamento','Este local ou um participante já está reservado nesse intervalo. Volte e selecione outro local, ou informe a indisponibilidade.');
     const before=structuredClone(p);
     p.defesa.reservationRequestRecipient=claim.recipient;
     const now=new Date().toISOString();
-    p.defesa.departmentResponse={departmentEmail:isManagedDefenseLocation(p.defesa.local,operationalConfig(currentSettings.integrationStudio).reservation.locations)?claim.recipient:undefined,attribution:'EMAIL_LINK',receiptDesign:receiptDesign(currentSettings.integrationStudio),receiptPresentation:reservationReceiptPresentation(p,currentSettings),revision:claim.revision,decision:available?'CONFIRMED':'UNAVAILABLE',respondedAt:now,respondedBy:claim.recipient,local:p.defesa.local,startAt:p.defesa.startAt,endAt:defenseEndAt(p.defesa.startAt)};
-    if(available){p.defesa.local=local;p.defesa.localStatus='CONFIRMADO';p.defesa.localConfirmedAt=now;p.defesa.localConfirmedBy=claim.recipient;p.defesa.localEvidenceUrl=`/api/processes/${p.id}/location-proof/download`;}
+    p.defesa.departmentResponse={departmentEmail:isManagedDefenseLocation(p.defesa.local,operationalConfig(currentSettings.integrationStudio).reservation.locations)?claim.recipient:undefined,attribution:master?'MASTER_ADMIN':'EMAIL_LINK',receiptDesign:receiptDesign(currentSettings.integrationStudio),receiptPresentation:reservationReceiptPresentation(p,currentSettings),revision:claim.revision,decision:available?'CONFIRMED':'UNAVAILABLE',respondedAt:now,respondedBy:actorEmail,local:p.defesa.local,startAt:p.defesa.startAt,endAt:defenseEndAt(p.defesa.startAt)};
+    if(available){p.defesa.local=local;p.defesa.localStatus='CONFIRMADO';p.defesa.localConfirmedAt=now;p.defesa.localConfirmedBy=actorEmail;p.defesa.localEvidenceUrl=`/api/processes/${p.id}/location-proof/download`;}
     else p.defesa.localStatus='RECUSADO';
-    p.defesa.departmentResponse.receiptBody=[`Protocolo: ${p.protocolo}`,`Título: ${p.titulo}`,...officialParticipantLines(p).filter(person=>person.key.startsWith('ALUNO_')).map(person=>`Autor: ${person.name}`),`Resposta: ${available?'Reserva confirmada':'Reserva recusada'}`,`Local: ${p.defesa.local}`,`Data: ${formatDateWithWeekday(p.defesa.startAt)}`,`Horário: ${formatTime24h(p.defesa.startAt)} às ${formatTime24h(defenseEndAt(p.defesa.startAt))}`,`Resposta registrada pelo link enviado a: ${claim.recipient}`,`Registrado em: ${formatDateTimeWithWeekday(now)}`,`Revisão da solicitação: ${claim.revision}`].join('\n');
+    p.defesa.departmentResponse.receiptBody=[`Protocolo: ${p.protocolo}`,`Título: ${p.titulo}`,...officialParticipantLines(p).filter(person=>person.key.startsWith('ALUNO_')).map(person=>`Autor: ${person.name}`),`Resposta: ${available?'Reserva confirmada':'Reserva recusada'}`,`Local: ${p.defesa.local}`,`Data: ${formatDateWithWeekday(p.defesa.startAt)}`,`Horário: ${formatTime24h(p.defesa.startAt)} às ${formatTime24h(defenseEndAt(p.defesa.startAt))}`,master?`Resposta administrativa registrada por: ${actorEmail}`:`Resposta registrada pelo link enviado a: ${claim.recipient}`,`Registrado em: ${formatDateTimeWithWeekday(now)}`,`Revisão da solicitação: ${claim.revision}`].join('\n');
     p.dataRevision++;p.updatedAt=now;
-    auditLogsStore.push({id:`reservation-${p.id}-${claim.revision}`,processId:p.id,actorEmail:claim.recipient,actorRoles:[],action:available?'CONFIRMACAO_LOCAL_DEPARTAMENTO':'LOCAL_INDISPONIVEL_DEPARTAMENTO',entityType:'processo',entityId:p.id,after:{...p.defesa.departmentResponse},timestamp:now});
+    auditLogsStore.push({id:`reservation-${p.id}-${claim.revision}`,processId:p.id,actorEmail,actorRoles:master?['MASTER_ADMIN']:[],action:available?'CONFIRMACAO_LOCAL_DEPARTAMENTO':'LOCAL_INDISPONIVEL_DEPARTAMENTO',entityType:'processo',entityId:p.id,after:{...p.defesa.departmentResponse,...(master?{reason:master.reason,originalRecipient:claim.recipient}:{})},timestamp:now});
     googleCalendarEventsStore=generateGoogleEventsFromProcesses(processesStore);
     const archive=queueReservationArchive(p,claim.revision,now);
     try{await persistPortalStateDurably();responseSaved=true;}catch(error){
@@ -4347,7 +4357,7 @@ export async function createPortalApp() {
         auditLogsStore=auditLogsStore.filter(log=>log.id!==`reservation-${p.id}-${claim.revision}`);
         googleCalendarEventsStore=generateGoogleEventsFromProcesses(processesStore);
       }
-      const saved=reservationContext(req.params.token)?.process.defesa.departmentResponse;
+      const saved=master?undefined:reservationContext(String(req.params.token))?.process.defesa.departmentResponse;
       if(saved)return alreadyAnswered(saved.decision);
       throw error;
     }
@@ -4362,15 +4372,26 @@ export async function createPortalApp() {
       }
       finally{
         const followup=new Promise<void>(resolve=>setImmediate(resolve))
-          .then(()=>completeReservationFollowup(p,claim.recipient,claim.revision,archive))
+          .then(()=>completeReservationFollowup(p,actorEmail,claim.revision,archive))
           .catch(()=>{console.error('[Reserva] Resposta salva; processamento posterior pendente.');})
           .finally(settle);
         if(process.env.VERCEL)waitUntil(followup);
       }
     }
     await completeReservationFollowup(p,claim.recipient,claim.revision,archive);
-    res.redirect(303,receiptPath);
-    }catch{res.status(responseSaved?202:503).type('html').send(reservationPage(responseSaved?'Resposta registrada':'Não foi possível salvar',responseSaved?'Sua resposta está salva. As próximas comunicações aguardam conclusão pela secretaria.':'Tente enviar a resposta novamente. A confirmação não foi concluída.'));}
+    res.redirect(303,receiptPath!);
+    }catch{if(master)return res.status(503).json({error:'Não foi possível confirmar a decisão. Atualize o andamento antes de repetir a ação.'});res.status(responseSaved?202:503).type('html').send(reservationPage(responseSaved?'Resposta registrada':'Não foi possível salvar',responseSaved?'Sua resposta está salva. As próximas comunicações aguardam conclusão pela secretaria.':'Tente enviar a resposta novamente. A confirmação não foi concluída.'));}
+  };
+  app.post('/api/reservation-confirmation/:token',(req,res)=>handleReservationResponse(req,res));
+  app.post('/api/admin/workflow/reservations/:id/decision',requireAuthenticated,requireAdministrator,(req,res)=>{
+    const process=processesStore.find(item=>item.id===req.params.id);
+    if(!process)return res.status(404).json({error:'Processo não encontrado.'});
+    if(!pendingReservationRecovery(process)||req.body?.dataRevision!==process.dataRevision)
+      return res.status(409).json({error:'A solicitação mudou ou já foi respondida. Atualize o andamento.'});
+    const reason=typeof req.body?.reason==='string'?req.body.reason.trim():'';
+    if(!['accept','decline'].includes(req.body?.decision)||req.body?.confirmed!=='yes'||!reason||reason.length>500)
+      return res.status(400).json({error:'Informe a decisão e o motivo administrativo, com até 500 caracteres.'});
+    return handleReservationResponse(req,res,{process,email:getPortalIdentity(req)!.email,reason});
   });
 
   // Todas as alterações usam a mesma transação de reagendamento: bloqueio,

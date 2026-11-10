@@ -1,3 +1,5 @@
+import { RefreshCw } from 'lucide-react';
+import { PortalModalShell } from './PortalModalShell';
 import {formatAuditTimestamp} from '../utils/formatters';
 import {processLink} from '../utils/processLink';
 import { portalConfirm } from '../services/portalDialogs';
@@ -8,16 +10,19 @@ import { PORTAL_REPOSITORY_CHANGED_EVENT } from '../utils/portalLiveEvents';
 type WorkflowRecoveryProps=({processId:string;historyOnly?:false}|{processId?:never;historyOnly:true})&{onUpdated?:()=>void|Promise<void>};
 export function WorkflowRecoveryPanel({processId,onUpdated,historyOnly=false}:WorkflowRecoveryProps){
   const [data,setData]=useState<any>(null),[busy,setBusy]=useState(''),[message,setMessage]=useState('');
+  const [open,setOpen]=useState(false);
+  const [reason,setReason]=useState('');
+  const [decision,setDecision]=useState<''|'accept'|'decline'>('');
   const actionInProgress=useRef(false);
   const load=useCallback(async(preserveResult=false)=>{
-    if(!preserveResult)setBusy('load');
+    if(!preserveResult){setBusy('load');setMessage('');setData(null);}
     try{const current=await apiClient.getWorkflowOperations(processId,historyOnly?'reminders':'recovery');if(processId&&current.processId!==processId)throw new Error('A consulta retornou outro processo. Atualize o andamento.');setData(current);}
     catch(e){setMessage(previous=>preserveResult
       ? `${previous} Não foi possível atualizar a lista. O resultado acima foi mantido; use Atualizar andamento antes de repetir a ação.`
       :e instanceof Error?e.message:'Não foi possível consultar o andamento.');}
     finally{if(!preserveResult)setBusy('');}
   },[processId,historyOnly]);
-  useEffect(()=>{void load();},[load]);
+  useEffect(()=>{if(open||historyOnly)void load();},[open,historyOnly,load]);
   const retry=async(path:string)=>{
     if(actionInProgress.current)return;
     actionInProgress.current=true;setBusy(path);
@@ -40,9 +45,43 @@ export function WorkflowRecoveryPanel({processId,onUpdated,historyOnly=false}:Wo
     }catch(e){setMessage(e instanceof Error?e.message:'A retomada não foi confirmada. Atualize o andamento antes de tentar novamente.');}
     finally{actionInProgress.current=false;setBusy('');}
   };
-  return <section className="portal-card space-y-4 p-5" aria-labelledby={historyOnly?'workflow-reminders-title':'workflow-recovery-title'}>
+  const saveDecision=async()=>{
+    if(!processId||!decision||!reason.trim()||!data?.pendingReservation||actionInProgress.current)return;
+    actionInProgress.current=true;
+    setBusy('decision');
+    try{
+      const result=await apiClient.decideReservationAsMaster(processId,data.pendingReservation.dataRevision,decision,reason.trim());
+      setMessage(result.decision==='CONFIRMED'?'Reserva aceita. O Portal dará continuidade ao fluxo.':'Reserva recusada. O Portal dará continuidade ao fluxo.');
+      setReason('');
+      setDecision('');
+      await load(true);
+      await onUpdated?.();
+    }catch(error){
+      setMessage(error instanceof Error?error.message:'Não foi possível confirmar a decisão.');
+    }finally{
+      actionInProgress.current=false;
+      setBusy('');
+    }
+  };
+  const content=<section className="portal-card space-y-4 p-5" aria-labelledby={historyOnly?'workflow-reminders-title':'workflow-recovery-title'}>
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 id={historyOnly?'workflow-reminders-title':'workflow-recovery-title'} className="text-lg font-bold">{historyOnly?'Prazos e histórico de lembretes':'Andamento e retomada do processo'}</h3>{!historyOnly&&<p className="mt-1">Acompanhe o que impede este TCC de avançar e preserve os documentos e envios já concluídos.</p>}</div><button type="button" className="portal-action" disabled={Boolean(busy)} onClick={()=>void load()}>{historyOnly?'Atualizar lembretes':'Atualizar andamento'}</button></div>
     {message&&<p role="status" className="rounded-lg border p-3">{message}</p>}
+    {busy==='load'&&<p role="status">Consultando as ações deste TCC…</p>}
+    {data?.pendingReservation&&<form className="portal-card space-y-3 p-4 text-left" onSubmit={event=>{event.preventDefault();void saveDecision();}}>
+      <h4 className="font-bold">Decidir sobre a reserva</h4>
+      <p>{data.pendingReservation.local} · {formatAuditTimestamp(data.pendingReservation.startAt)}</p>
+      <p>Solicitação encaminhada a <strong>{data.pendingReservation.recipient}</strong>.</p>
+      <p>A decisão será registrada em seu nome como usuário Master.</p>
+      <label className="block">Decisão
+        <select className="portal-input block w-full" required value={decision} disabled={Boolean(busy)} onChange={event=>setDecision(event.target.value as typeof decision)}>
+          <option value="">Selecione a decisão</option><option value="accept">Aceitar reserva</option><option value="decline">Recusar reserva</option>
+        </select>
+      </label>
+      <label className="block">Motivo administrativo
+        <textarea className="portal-input block w-full" required maxLength={500} value={reason} disabled={Boolean(busy)} onChange={event=>setReason(event.target.value)}/>
+      </label>
+      <button type="submit" className="portal-action" disabled={Boolean(busy)||!decision||!reason.trim()}>Confirmar decisão</button>
+    </form>}
     {data&&<>
       {data.planningError&&<p role="alert" className="rounded-lg border border-amber-500 bg-amber-50 p-3 text-amber-950">Os prazos publicados estão incoerentes: {data.planningError} Corrija e publique novamente o Estúdio antes de executar lembretes.</p>}
 {!historyOnly&&<><p>{data.queueTotal} pendência(s) de fluxo, documentos ou arquivamento. {data.deadlineOverdueTotal} prazo(s) vencido(s).{data.queueTotal>data.queue.length||data.deadlineTotal>data.deadlines.length?' A tela mostra os 500 primeiros registros; use os filtros dos TCCs para investigar o restante.':''}</p>
@@ -52,4 +91,17 @@ export function WorkflowRecoveryPanel({processId,onUpdated,historyOnly=false}:Wo
       <details className="rounded-lg border p-4"><summary className="cursor-pointer font-semibold">Histórico de lembretes (últimos 200)</summary>{data.reminders.length===0&&<p className="mt-3">Nenhum lembrete registrado.</p>}<ul className="mt-3 space-y-3">{data.reminders.map((item:any)=><li className="rounded-lg border p-3" key={item.id}><p className="break-words"><a className="underline" href={processLink(window.location.href,item.processId,'andamento')}>{item.protocol||'Abrir TCC'}</a> · {formatAuditTimestamp(item.createdAt)} · {item.recipient} · prazo {item.dueDate} · tentativa {item.ordinal}: {item.status==='SENT'?'Aceito pelo Gmail':item.status==='FAILED'?'Falha de envio':'Resultado ainda não confirmado'}</p>{item.error&&<p>{item.error}</p>}{item.status==='FAILED'&&<button type="button" className="portal-action mt-2" disabled={Boolean(busy)} onClick={()=>void retry(`/api/admin/workflow/reminders/${item.id}/retry`)}>Revisar e tentar novamente</button>}</li>)}</ul></details>
     </>}</>}
   </section>;
+  if(historyOnly)return content;
+  const close=()=>{
+    if(actionInProgress.current)return;
+    setOpen(false);
+    setReason('');
+    setDecision('');
+  };
+  return <>
+    <button className="portal-action" type="button" onClick={()=>setOpen(true)}>Acelerar processo</button>
+    <PortalModalShell open={open} onClose={close} title="Acelerar processo" icon={RefreshCw} maxWidthClass="max-w-4xl" bodyClassName="p-4" footer={<button className="portal-action" type="button" disabled={Boolean(busy)} onClick={close}>Fechar</button>}>
+      {content}
+    </PortalModalShell>
+  </>;
 }

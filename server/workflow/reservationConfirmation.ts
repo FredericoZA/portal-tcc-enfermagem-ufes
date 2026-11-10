@@ -34,7 +34,8 @@ export async function readSavedReservationDecision(
   const response=defense?.departmentResponse;
   if(!defense||!response||(defense.reservationRevision??0)!==claim.revision
     ||(response.revision??0)!==claim.revision
-    ||response.attribution!=='EMAIL_LINK'||response.respondedBy!==claim.recipient)return null;
+    ||!(response.attribution==='EMAIL_LINK'&&response.respondedBy===claim.recipient
+      ||response.attribution==='MASTER_ADMIN'&&defense.reservationRequestRecipient===claim.recipient))return null;
   if(response.decision!=='CONFIRMED'&&response.decision!=='UNAVAILABLE')return null;
   return {decision:response.decision,receiptPath:`/api/reservation-confirmation/${token}/receipt`};
  }catch{return null;}

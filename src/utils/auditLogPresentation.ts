@@ -131,6 +131,7 @@ export function isEmailNotificationAudit(log: ReadableAuditLog): boolean {
   return isEmailAudit(log) || ['REENVIO_EMAIL_SOLICITADO', 'RECUPERACAO_AVISOS_RESERVA'].includes(log.action);
 }
 export function auditIsReservationEmailDecision(log: ReadableAuditLog): boolean {
+  if (object(log.after).attribution === 'MASTER_ADMIN') return false;
   return ['CONFIRMACAO_LOCAL_DEPARTAMENTO', 'LOCAL_INDISPONIVEL_DEPARTAMENTO'].includes(log.action) || object(log.after).attribution === 'EMAIL_LINK';
 }
 function queuedWithoutAttempt(data: RecordValue): boolean {

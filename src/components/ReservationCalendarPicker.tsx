@@ -91,14 +91,14 @@ export function ReservationCalendarPicker({value, location, timezone, onSelect}:
       setProcesses(null);setError(false);setOpen(true);
     }}><CalendarDays size={16} aria-hidden="true"/> Ver calendário de horários</button>
     {!normalizeDefenseLocation(location)&&<p className="mt-1 text-sm">Informe o local para consultar os horários.</p>}
-    <PortalModalShell key={showDay?'day':'month'} open={open} onClose={()=>showDay?setShowDay(false):setOpen(false)} title={showDay?`Horários da defesa — ${dateLabel.format(new Date(day+'T00:00:00Z'))}`:'Calendário de Defesas'} icon={CalendarDays} maxWidthClass={showDay?'max-w-3xl':'max-w-5xl'} heightClass="max-h-[90dvh]" zIndexClass="z-[1000020]" footer={<div className="flex flex-wrap justify-end gap-2">
+    <PortalModalShell key={showDay?'day':'month'} open={open} onClose={()=>showDay?setShowDay(false):setOpen(false)} title={showDay?`Horários da defesa — ${dateLabel.format(new Date(day+'T00:00:00Z'))}`:'Calendário de Defesas'} icon={CalendarDays} maxWidthClass={showDay?'max-w-3xl':'max-w-5xl'} heightClass="max-h-[90dvh]" className="portal-reservation-calendar-modal" zIndexClass="z-[1000020]" footer={<div className="flex flex-wrap justify-end gap-2">
       <button type="button" className="portal-action" onClick={()=>showDay?setShowDay(false):setOpen(false)}>{showDay?'Voltar ao calendário':'Cancelar'}</button>
       {showDay&&<button type="button" className="portal-action portal-action-primary disabled:opacity-50" disabled={!entries||invalid||clash} onClick={()=>{onSelect(`${day}T${time}`);setOpen(false);}}>Usar data e horário</button>}
     </div>}>
       <p className="mb-4 text-sm"><strong>{location}</strong> · O calendário mostra as reservas do Portal, inclusive as que aguardam confirmação. Agendamentos externos precisam ser consultados com o responsável pelo espaço.</p>
       {error?<div role="alert"><p>Não foi possível consultar os horários.</p><button type="button" className="portal-action mt-2" onClick={()=>reload(n=>n+1)}>Tentar novamente</button></div>:
        !entries?<p role="status">Carregando horários…</p>:
-       !showDay?<section className="overflow-hidden rounded-xl border border-slate-200" aria-label="Calendário mensal de defesas">
+       !showDay?<section className="overflow-hidden rounded-xl border border-slate-200 bg-[var(--portal-surface-page)]" aria-label="Calendário mensal de defesas">
           <div className="portal-modal-header flex flex-wrap items-center justify-between gap-2">
             <strong className="capitalize">{monthLabel.format(firstDay)}</strong>
             <div className="flex flex-wrap gap-2 text-slate-900">

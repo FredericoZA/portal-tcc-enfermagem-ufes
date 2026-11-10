@@ -147,5 +147,33 @@ test('HTTP: departamento confirma sem sessão, sem upload e sem duplicar respost
   assert.equal((await calendarRow()).defesa.local,roomConfirmed.defesa.local);assert.equal((await calendarRow()).defesa.localStatus,'CONFIRMADO');
   assert.equal((await publicRow()).defesa.local,roomConfirmed.defesa.local);assert.equal((await publicRow()).protocolo,p.protocolo);
 
+  const restart=await fetch(`${base}/api/processes/${custom.id}/reservation-change`,{method:'POST',headers:{'content-type':'application/json','x-demo-user-email':custom.aluno1.email},body:JSON.stringify({date:'2030-12-05',time:'09:00',locationChoice:custom.defesa.local,expectedDataRevision:customSaved.dataRevision})});
+  assert.equal(restart.status,202,await restart.clone().text());
+  await waitReservationEmails(custom.id,4);
+  const masterEmail='master@portal.local';
+  const pending=(await disk()).processes.find((item:any)=>item.id===custom.id);
+  const masterHeaders={'content-type':'application/json','x-demo-user-email':masterEmail,origin:base};
+  const operations=await fetch(`${base}/api/admin/workflow/operations?processId=${custom.id}`,{headers:masterHeaders});
+  assert.equal(operations.status,200);
+  assert.equal((await operations.json()).pendingReservation.recipient,custom.orientador.email);
+  const decide=(email:string,dataRevision:number,reason='Confirmação administrativa do local')=>fetch(`${base}/api/admin/workflow/reservations/${custom.id}/decision`,{
+    method:'POST',headers:{...masterHeaders,'x-demo-user-email':email},body:JSON.stringify({dataRevision,decision:'accept',reason,confirmed:'yes'}),
+  });
+  assert.equal((await decide(custom.aluno1.email,pending.dataRevision)).status,403);
+  assert.equal((await decide(masterEmail,pending.dataRevision-1)).status,409);
+  assert.equal((await decide(masterEmail,pending.dataRevision,'')).status,400);
+  const administrativeDecision=await decide(masterEmail,pending.dataRevision);
+  assert.equal(administrativeDecision.status,200,await administrativeDecision.clone().text());
+  assert.equal((await administrativeDecision.json()).decision,'CONFIRMED');
+  const afterMaster=await disk();
+  const savedByMaster=afterMaster.processes.find((item:any)=>item.id===custom.id);
+  assert.equal(savedByMaster.defesa.departmentResponse.attribution,'MASTER_ADMIN');
+  assert.equal(savedByMaster.defesa.departmentResponse.respondedBy,masterEmail);
+  assert.equal(savedByMaster.defesa.reservationRequestRecipient,custom.orientador.email);
+  assert.equal(afterMaster.auditLogs.find((item:any)=>item.processId===custom.id&&item.after?.attribution==='MASTER_ADMIN').after.reason,'Confirmação administrativa do local');
+  assert.equal((await decide(masterEmail,pending.dataRevision)).status,409);
+  const originalLink=reservationToken({processId:custom.id,revision:pending.defesa.reservationRevision,recipient:custom.orientador.email,expiresAt:Date.now()+600000},secret);
+  assert.match(await(await fetch(base+'/api/reservation-confirmation/'+originalLink+'?decision=decline')).text(),/Reserva aceita/);
+
  }finally{if(child.exitCode===null){const stopped=new Promise(r=>child.once('exit',r));child.kill('SIGTERM');await stopped;}await rm(directory,{recursive:true,force:true});}
 });

@@ -28,7 +28,7 @@ const MOBILE_CELLS: Record<string, string> = { timestamp: 'summary', options: 'a
 const DEFAULT_ORDER = LOG_COLUMNS.map(column => column.key);
 const DEFAULT_VISIBLE = Object.fromEntries(LOG_COLUMNS.map(column => [column.key, true]));
 
-export const AuditLogsPage: React.FC<{ embedded?: boolean; processId?:string }> = ({ embedded = false,processId }) => {
+export const AuditLogsPage: React.FC<{ embedded?: boolean; processId?:string; processRecovery?:React.ReactNode; recoveryVersion?:number }> = ({ embedded = false,processId,processRecovery,recoveryVersion }) => {
   const { isMasterAdmin, isAuthenticated, userEmail } = useAuth();
   const identityKey = isMasterAdmin && isAuthenticated ? userEmail.trim().toLocaleLowerCase('pt-BR') : '';
   const initialConfig = loadTableConfig('audit_logs', DEFAULT_ORDER, DEFAULT_VISIBLE, 25);
@@ -103,7 +103,7 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean; processId?:string }> 
       window.clearTimeout(timer);
       request.current?.abort();
     };
-  }, [identityKey, load, search]);
+  }, [identityKey, load, search,recoveryVersion]);
 
   const activeColumns = columnOrder.filter(key => visibleColumns[key] !== false);
 
@@ -187,10 +187,12 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean; processId?:string }> 
       </div>}
       <TableScrollWrapper fillHeight>
         <table className="portal-spreadsheet-table portal-responsive-records portal-audit-table w-full min-w-[860px] border-collapse text-center text-xs">
-          <thead><tr>{activeColumns.map(key => <th key={key} data-portal-column-key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} className={`px-3 py-1.5 text-[10px] font-black normal-case tracking-wide text-center`}>{LOG_COLUMNS.find(column => column.key === key)?.label || key}</th>)}</tr></thead>
-          <tbody className="divide-y divide-slate-200">{((loading && !loadingOlder) || view.showEmpty) && <tr><td colSpan={activeColumns.length} className="portal-sheet-empty-cell" role="status">{loading ? 'Carregando histórico…' : 'Nenhum registro encontrado com os filtros atuais.'}</td></tr>}{shown.map(log => {
+          <thead><tr>{activeColumns.map(key => <th key={key} data-portal-column-key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} className={`px-3 py-1.5 text-[10px] font-black normal-case tracking-wide text-center`}>{LOG_COLUMNS.find(column => column.key === key)?.label || key}</th>)}{processRecovery&&<th scope="col" className="text-center">Acelerar processo</th>}</tr></thead>
+          <tbody className="divide-y divide-slate-200">{processRecovery&&<tr><td colSpan={activeColumns.length} className="text-center font-semibold">Ações para a etapa atual</td><td className="p-2 text-center">{processRecovery}</td></tr>}{((loading && !loadingOlder) || view.showEmpty) && <tr><td colSpan={activeColumns.length+(processRecovery?1:0)} className="portal-sheet-empty-cell" role="status">{loading ? 'Carregando histórico…' : 'Nenhum registro encontrado com os filtros atuais.'}</td></tr>}{shown.map(log => {
             const timestamp = formatAuditTimestamp(log.timestamp);
-            return <tr key={log.id} data-portal-row-id={log.id}>{activeColumns.map(key => <td key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} data-portal-filter-value={key === 'timestamp' ? timestamp : undefined} data-portal-sort-value={key === 'timestamp' ? String(Date.parse(log.timestamp) || 0) : undefined} className={`px-3 py-1 text-slate-950 text-center`}>{renderCell(log, key, timestamp)}</td>)}</tr>;
+            return <tr key={log.id} data-portal-row-id={log.id}>{activeColumns.map(key => <td key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} data-portal-filter-value={key === 'timestamp' ? timestamp : undefined} data-portal-sort-value={key === 'timestamp' ? String(Date.parse(log.timestamp) || 0) : undefined} className={`px-3 py-1 text-slate-950 text-center`}>{renderCell(log, key, timestamp)}</td>)}{processRecovery&&<td className="text-center">{log.emailDeliveryId&&isEmailAudit(log)
+              ?<button type="button" className="portal-action" onClick={()=>setSelectedLogSelection({key:queryKey,log})}>Revisar envio</button>
+              : '—'}</td>}</tr>;
           })}</tbody>
         </table>
       </TableScrollWrapper>

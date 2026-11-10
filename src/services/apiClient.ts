@@ -379,7 +379,7 @@ export const apiClient = {
   markNotificationRead:(id:string,createdAt:string)=>fetchApiRequest<{read:true}>(`/api/notifications/${encodeURIComponent(id)}/read`,{method:'PUT',body:JSON.stringify({createdAt})}),
   validateCourseStudio:(studio?:any)=>fetchApi<any>('/api/admin/studio/validate',{method:'POST',body:JSON.stringify({studio})}),
   getStudioVersions:()=>fetchApi<any[]>('/api/admin/studio/versions'),
-  compareStudioVersion:(revision:number)=>fetchApi<{fromRevision:number;toRevision:number;workflowStages:Array<{id:string;title:string;triggerEvent:string;actions:Array<{id:string;title:string}>}>}>(`/api/admin/studio/versions/${revision}/compare`),
+  compareStudioVersion:(revision:number)=>fetchApi<{fromRevision:number;toRevision:number;emailTemplates:Array<{id:string;name:string;subject:string;body:string}>;formTemplates:Array<{id:string;title:string;description?:string;questions:Array<{label:string;required:boolean}>}>;workflowStages:Array<{id:string;title:string;triggerEvent:string;actions:Array<{id:string;title:string}>}>}>(`/api/admin/studio/versions/${revision}/compare`),
   restoreStudioVersion:(revision:number,expectedRevision:number,reason:string)=>fetchApi<{studio:IntegrationStudioSettings;draft?:IntegrationStudioSettings}>(`/api/admin/studio/versions/${revision}/restore`,{method:'POST',body:JSON.stringify({expectedRevision,reason})}),
   runBackupDrill:()=>fetchApi<any>('/api/admin/backup/drill',{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   getRetentionPreview:()=>fetchApi<any>('/api/admin/retention/preview'),
@@ -447,6 +447,10 @@ export const apiClient = {
   previewOfficialModel:(type:string,studio:unknown,answers:unknown)=>fetchApi<any>(`/api/admin/models/${encodeURIComponent(type)}/preview`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({studio,answers})}),
   compareStudioDraft:(studio:unknown,baseRevision?:number)=>fetchApi<any>('/api/admin/studio/compare',{method:'POST',body:JSON.stringify({studio,baseRevision})}),
   getWorkflowOperations:(processId?:string,view:'recovery'|'reminders'='recovery')=>fetchApi<any>('/api/admin/workflow/operations?'+new URLSearchParams({...processId?{processId}:{},view}).toString()),
+  decideReservationAsMaster:(id:string,dataRevision:number,decision:'accept'|'decline',reason:string)=>
+    fetchApi<{decision:'CONFIRMED'|'UNAVAILABLE'}>(`/api/admin/workflow/reservations/${encodeURIComponent(id)}/decision`,{
+      method:'POST',body:JSON.stringify({dataRevision,decision,reason,confirmed:'yes'}),
+    }),
   runWorkflowMaintenance:(processId?:string)=>fetchApi<any>('/api/admin/workflow/maintenance',{method:'POST',body:JSON.stringify(processId?{processId}:{}),timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   retryWorkflowOperation:(path:string,reviewedStudioRevision?:number)=>{
     if(!/^\/api\/(?:admin\/(?:workflow\/(?:runs|reminders|invitations|ata-signatures)|email-deliveries|form-archives|studio-form-submissions)|signatures\/jobs)\/[^/]+\/(?:retry|reconcile)$/.test(path))throw new Error('Ação de recuperação inválida.');

@@ -27,9 +27,6 @@ try{
  await page.getByRole('button',{name:'Meus TCCs',exact:true}).click();
  await page.getByRole('button',{name:'Cadastrar TCC',exact:true}).click();
  const notice=page.getByRole('note',{name:'Antes de solicitar o agendamento'});
- await notice.waitFor();assert.match(await notice.innerText(),/orientador.*secretaria do departamento/);assert.match(await notice.innerText(),/Só depois dessa consulta/);
- assert.equal(await notice.locator('input').count(),0);
- await page.screenshot({path:'.portal-data/scheduling-notice-inicio.png',fullPage:true});
  let reached=false;
  for(let step=0;step<12;step++){
   if(await page.getByRole('heading',{name:'Reserva do local',exact:true}).count()){reached=true;break;}
@@ -45,9 +42,43 @@ try{
   await page.getByRole('button',{name:'Continuar',exact:true}).click();
  }
  assert.equal(reached,true,'scheduling section reached without creating a process');await notice.waitFor();
- const before=await notice.boundingBox(),date=await page.getByLabel('Data da defesa',{exact:true}).boundingBox();assert.ok(before&&date&&before.y<date.y,'notice precedes date fields');
+ assert.match(await notice.innerText(),/Bloqueio temporário/);
+ assert.equal(await notice.locator('input').count(),0);
+ const location=page.getByLabel(/Local da defesa/);
+ const picker=page.getByRole('button',{name:'Ver calendário de horários'});
+ const before=await notice.boundingBox(),venue=await location.boundingBox(),calendar=await picker.boundingBox();
+ assert.ok(before&&venue&&calendar&&before.y<venue.y&&venue.x<calendar.x,'notice and location precede the calendar');
+ assert.equal(await page.locator('form[aria-labelledby="registration-title"] input:is([type="date"],[type="time"])').count(),0);
+ assert.equal(await picker.isEnabled(),false);
+ await location.selectOption({index:1});
+ assert.equal(await picker.isEnabled(),true);
+ await picker.click();
+ const month=page.getByRole('region',{name:'Calendário mensal de defesas'});
+ await month.waitFor();
+ const surfaces=await month.evaluate(element=>{
+  const dialog=element.closest('[role="dialog"]')!;
+  const reference=document.createElement('div');
+  reference.style.backgroundColor='var(--portal-surface-panel)';
+  dialog.append(reference);
+  const lightGray=getComputedStyle(reference).backgroundColor;
+  reference.remove();
+  return {
+   lightGray,
+   chrome:[...dialog.querySelectorAll(':scope > :is(.portal-modal-divider,.portal-modal-body,.portal-modal-footer)')].map(part=>getComputedStyle(part).backgroundColor),
+   month:getComputedStyle(element).backgroundColor,
+  };
+ });
+ assert.deepEqual(surfaces.chrome,Array(3).fill(surfaces.lightGray));
+ assert.notEqual(surfaces.month,surfaces.lightGray);
+ await month.getByRole('button',{name:/^\d{1,2} de /}).first().click();
+ const daily=page.getByRole('dialog',{name:/Horários da defesa/});
+ await daily.getByRole('heading',{name:'Faixa de horários do local'}).waitFor();
+ const dailyBackgrounds=await daily.locator(':scope > :is(.portal-modal-divider,.portal-modal-body,.portal-modal-footer)').evaluateAll(parts=>parts.map(part=>getComputedStyle(part).backgroundColor));
+ assert.deepEqual(dailyBackgrounds,surfaces.chrome);
+ await daily.getByRole('button',{name:'Voltar ao calendário'}).click();
+ await page.getByRole('button',{name:'Cancelar',exact:true}).click();
  await page.screenshot({path:'.portal-data/scheduling-notice-agendamento.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});await notice.scrollIntoViewIfNeeded();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:'.portal-data/scheduling-notice-mobile.png',fullPage:true});
- assert.equal(loginRequests,0);console.log('PASS: prior consultation notice visible at the start and before scheduling, mobile layout, no extra checkbox, no registration submitted.');
+ assert.equal(loginRequests,0);console.log('PASS: location before calendar, monthly view without manual date fields, mobile layout, no registration submitted.');
 
 }catch(error){if(page){console.log(await page.locator('body').innerText());await page.screenshot({path:'.portal-data/scheduling-notice-failure.png'});}throw error;}finally{if(browser)await browser.close();if(child.exitCode===null){const stopped=new Promise(r=>child.once('exit',r));child.kill('SIGTERM');await stopped;}await rm(dir,{recursive:true,force:true});}

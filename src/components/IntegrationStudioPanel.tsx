@@ -621,7 +621,13 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     snapshot.revision=expectedRevision+1;
     setIsSaving(true);
     try {
-      if(!(await portalConfirm('Ao publicar, as alterações de etapas, gatilhos e destinatários passarão a orientar os próximos eventos do Portal. Confira as atividades e os papéis selecionados antes de continuar.', {title:'Publicar configurações?', confirmLabel:'Publicar versão'})))return;
+      const scopeWarning = {
+        forms: 'Os formulários atualizados passarão a aparecer no Portal. Confira as perguntas e os campos obrigatórios.',
+        emails: 'Os modelos atualizados passarão a valer nos próximos envios do Portal. Confira o assunto, o conteúdo e os destinatários definidos em Fluxos.',
+        workflow: 'As alterações de etapas, gatilhos e destinatários passarão a orientar os próximos eventos do Portal.',
+      }[activeTab as 'forms' | 'emails' | 'workflow'] || 'As alterações passarão a valer no Portal.';
+      const warning = `${scopeWarning} A publicação aplica todas as alterações do rascunho de Configurações.`;
+      if (!(await portalConfirm(warning, {title:'Publicar configurações?', confirmLabel:'Publicar versão'}))) return;
       const settings=await retryAfterPortalReauthentication(()=>apiClient.updateSettings({ integrationStudio: snapshot,studioExpectedRevision:expectedRevision,studioSaveMode:'publish' }));
       const published=settings.integrationStudio!;
       saveLocalStudio(published);
@@ -788,10 +794,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     notify('Modelo de e-mail atualizado e propagado.');
   };
 
-  const createEmailTemplate = () => {
+  const createEmailTemplate = async () => {
+    if (!(await portalConfirm('Você vai adicionar um modelo de e-mail ao rascunho. Preencha o assunto e o conteúdo. Em Fluxos, vincule o modelo à etapa e defina quando e para quem ele será enviado.', {title:'Adicionar novo e-mail?', confirmLabel:'Adicionar ao rascunho'}))) return;
     const id=`email-${Date.now()}`;
     const next: EmailTemplateItem={id,name:'Novo e-mail',triggerStage:'',subject:'',body:'',recipient:'',cc:'',bcc:'',attachments:[],attachmentModes:{}};
-    setEmailTemplates(previous=>[...previous,next]);setSelectedEmailId(id);setIsDirty(true);
+    setEmailTemplates(previous=>[...previous,next]);setSelectedEmailId(id);setActiveTab('emails');setIsDirty(true);
   };
   const deleteSelectedEmail = async () => {
     if(!selectedEmail||emailTemplates.length<=1)return;
@@ -810,10 +817,11 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     setFormDesigns((previous) => ({ ...previous, [selectedForm.id]: { ...selectedFormDesign, ...updates, templateId: selectedForm.id } }));
     setIsDirty(true);
   };
-  const createFormTemplate = () => {
+  const createFormTemplate = async () => {
+    if (!(await portalConfirm('Você vai adicionar um novo formulário ao rascunho. Dê um nome ao formulário, configure as perguntas e confira a prévia antes de publicar.', {title:'Adicionar novo formulário?', confirmLabel:'Adicionar ao rascunho'}))) return;
     const id=`form-${Date.now()}`;
     const next: FormTemplateItem={id,title:'Novo formulário',stage:'',targetRole:'Aluno',description:'',questions:[],isActive:true};
-    setFormTemplates(previous=>[...previous,next]);setSelectedFormId(id);setIsDirty(true);
+    setFormTemplates(previous=>[...previous,next]);setSelectedFormId(id);setActiveTab('forms');setIsDirty(true);
   };
   const deleteSelectedForm = async () => {
     if(!selectedForm||formTemplates.length<=1)return;
@@ -1271,7 +1279,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" disabled={loadingVersionPreview} onClick={()=>publishedVersions===null?void loadPublishedVersions():setPublishedVersions(null)} aria-expanded={publishedVersions!==null} className="portal-action inline-flex items-center gap-2"><History className="h-4 w-4"/>Versões publicadas</button>
-          <button type="button" onClick={()=>void persistSnapshot(true)} disabled={isSaving||Boolean(autosaveError)||(!isDirty&&!hasSavedDraft)} className="portal-action-primary inline-flex items-center gap-2 disabled:opacity-50"><Save className="h-4 w-4"/>Publicar configurações</button>
+          <button type="button" onClick={()=>void persistSnapshot(true)} disabled={isSaving||Boolean(autosaveError)||(!isDirty&&!hasSavedDraft)} className="portal-action-primary inline-flex items-center gap-2 !border-red-800 !bg-red-700 !text-white enabled:hover:!bg-red-800 disabled:opacity-50"><Save className="h-4 w-4"/>Publicar configurações</button>
         </div>
       </div>}
       {hideTabs&&publishedVersions!==null&&<section className="mx-3 my-2 rounded-lg border border-slate-300 bg-white p-3 text-xs" aria-label="Histórico de configurações publicadas">
@@ -1287,15 +1295,39 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
         {loadingVersionPreview&&<p role="status">Carregando versão…</p>}
         {versionPreview&&<div className="mt-3 rounded-lg border border-slate-300 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-bold">Fluxo da revisão {versionPreview.fromRevision}</h3>
+            <h3 className="text-sm font-bold">{activeTab === 'forms' ? 'Formulários' : activeTab === 'emails' ? 'E-mails' : 'Fluxo'} da revisão {versionPreview.fromRevision}</h3>
             <button type="button" className="portal-action" onClick={()=>setVersionPreview(null)}>Fechar prévia</button>
           </div>
-          <ol className="mt-2 grid list-decimal gap-2 pl-5 sm:grid-cols-2">
+          {activeTab === 'emails' ? (
+            <ul className="mt-2 space-y-2">
+              {versionPreview.emailTemplates.map(email => <li key={email.id}>
+                <details className="rounded-md border border-slate-200 p-2">
+                  <summary className="cursor-pointer font-semibold">{email.name}</summary>
+                  <p className="mt-2"><strong>Assunto</strong> · {email.subject}</p>
+                  {email.body && <p className="mt-2 whitespace-pre-wrap break-words">{email.body}</p>}
+                </details>
+              </li>)}
+              {!versionPreview.emailTemplates.length && <li>Nenhum e-mail registrado nesta revisão.</li>}
+            </ul>
+          ) : activeTab === 'forms' ? (
+            <ul className="mt-2 space-y-2">
+              {versionPreview.formTemplates.map(form => <li key={form.id}>
+                <details className="rounded-md border border-slate-200 p-2">
+                  <summary className="cursor-pointer font-semibold">{form.title} · {form.questions.length} pergunta(s)</summary>
+                  {form.description && <p className="mt-2">{form.description}</p>}
+                  <ol className="mt-2 list-decimal space-y-1 pl-5">
+                    {form.questions.map((question, index) => <li key={index}>{question.label}{question.required && <span className="font-semibold"> · Obrigatória</span>}</li>)}
+                  </ol>
+                </details>
+              </li>)}
+              {!versionPreview.formTemplates.length && <li>Nenhum formulário registrado nesta revisão.</li>}
+            </ul>
+          ) : <ol className="mt-2 grid list-decimal gap-2 pl-5 sm:grid-cols-2">
             {versionPreview.workflowStages.map(stage=><li key={stage.id}>
               <strong>{stage.title}</strong>
               <ul className="mt-1 space-y-1">{stage.actions.map(action=><li key={action.id}>{action.title}</li>)}</ul>
             </li>)}
-          </ol>
+          </ol>}
         </div>}
       </section>}
       {hideTabs && autosaveError && <div role="alert" className="mx-3 my-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950"><span>Não foi possível concluir o salvamento automático: {autosaveError}</span><button type="button" className="rounded-md border border-amber-400 bg-white px-2 py-1 font-bold" onClick={()=>imageMergeBlocked?window.location.reload():setAutosaveRetry(value=>value+1)}>{imageMergeBlocked?'Reabrir e conferir':'Tentar salvar novamente'}</button></div>}
@@ -1714,8 +1746,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
                   <label className="text-xs font-semibold whitespace-nowrap" htmlFor="workflow-add-item">Adicionar atividade</label>
                   <select id="workflow-add-item" value="" className={`${inputClass} max-w-sm`} onChange={event=>{
                     const value=event.target.value;
-                    if(value==='new-email'){createEmailTemplate();setActiveTab('emails');}
-                    else if(value==='new-form'){createFormTemplate();setActiveTab('forms');}
+                    if(value==='new-email'){void createEmailTemplate();}
+                    else if(value==='new-form'){void createFormTemplate();}
                     else if(value)addWorkflowAction(selectedWorkflowStage.id,value);
                   }}>
                     <option value="" disabled>Selecione uma atividade para esta etapa</option>
