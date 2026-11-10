@@ -5,7 +5,7 @@ import JSZip from 'jszip';
 import {parseStudentImportText,parseStudentImportFile,studentImportTemplateXlsx} from '../src/utils/studentImport';
 import {accessImportIssues} from '../src/utils/accessImportValidation';
 
-const person={nome:'Maria Silva',email:'maria@example.invalid',matricula:'0000123'};
+const person={nome:'Maria Silva',email:'maria@example.invalid'};
 test('acesso aceita cabeçalhos usuais, separadores de Excel e células entre aspas',()=>{
  for(const delimiter of [';',',','\t']){
   const rows=parseStudentImportText(`Nome completo${delimiter}E-mail institucional${delimiter}Matrícula\nMaria Silva${delimiter}maria@example.invalid${delimiter}0000123`);
@@ -25,28 +25,30 @@ test('erros e duplicações aparecem antes da autorização sem descartar linhas
  assert.throws(()=>parseStudentImportText('nome;email\n"Maria;maria@example.invalid'),/aspas/);
  assert.throws(()=>parseStudentImportText(Array(1001).fill('Maria;maria@example.invalid').join('\n')),/1.000/);
 });
-test('CSV Windows preserva acentos e zeros à esquerda',async()=>{
+test('CSV Windows preserva acentos e ignora a matrícula',async()=>{
  const content=Buffer.from('Nome;E-mail;Matrícula\r\nAndr\xe9 Silva;andre@example.invalid;0000123','latin1');
  const rows=await parseStudentImportFile(new File([content],'LISTA.CSV'));
- assert.equal(rows[0].nome,'André Silva');assert.equal(rows[0].matricula,'0000123');
+ assert.equal(rows[0].nome,'André Silva');assert.ok(!Object.hasOwn(rows[0],'matricula'));
 });
-test('cabeçalho reconhecido preserva registros alfabéticos, espaçados e zeros à esquerda',()=>{
+test('cabeçalho reconhecido ignora registros alfabéticos, espaçados e com zeros à esquerda',()=>{
  for(const delimiter of [';',',','\t'])for(const matricula of ['ABC','2026 001','0000123','AB 001 / XY']){
   const input=`Nome completo${delimiter}E-mail${delimiter}Matrícula\nMaria Silva${delimiter}maria@example.invalid${delimiter}${matricula}`;
-  assert.deepEqual(parseStudentImportText(input),[{row:2,nome:'Maria Silva',email:'maria@example.invalid',matricula}]);
+  assert.deepEqual(parseStudentImportText(input),[{row:2,nome:'Maria Silva',email:'maria@example.invalid'}]);
   const reordered=`Matrícula${delimiter}Nome completo${delimiter}E-mail\n${matricula}${delimiter}Maria Silva${delimiter}maria@example.invalid`;
-  assert.deepEqual(parseStudentImportText(reordered),[{row:2,nome:'Maria Silva',email:'maria@example.invalid',matricula}]);
+  assert.deepEqual(parseStudentImportText(reordered),[{row:2,nome:'Maria Silva',email:'maria@example.invalid'}]);
  }
- assert.deepEqual(parseStudentImportText('nome;email;matricula\n"Maria; Silva";maria@example.invalid;ABC'),[{row:2,nome:'Maria; Silva',email:'maria@example.invalid',matricula:'ABC'}]);
+ assert.deepEqual(parseStudentImportText('nome;email;matricula\n"Maria; Silva";maria@example.invalid;ABC'),[{row:2,nome:'Maria; Silva',email:'maria@example.invalid'}]);
 });
-test('XLSX com colunas reconhecidas preserva registro sem números e com espaços',async()=>{
+test('XLSX com colunas reconhecidas ignora registros sem números e com espaços',async()=>{
  for(const matricula of ['ABC','2026 001']){
   const blob=await studentImportTemplateXlsx(),zip=await JSZip.loadAsync(await blob.arrayBuffer());
   let sheet=await zip.file('xl/worksheets/sheet1.xml')!.async('string');
-  for(const value of ['Maria Silva','maria@example.invalid',matricula])sheet=sheet.replace('<t xml:space="preserve"></t>',`<t xml:space="preserve">${value}</t>`);
+  for(const value of ['Maria Silva','maria@example.invalid'])sheet=sheet.replace('<t xml:space="preserve"></t>',`<t xml:space="preserve">${value}</t>`);
+  sheet=sheet.replace('</row>','<c r="C1" t="inlineStr"><is><t>Matrícula</t></is></c></row>');
+  sheet=sheet.replace(/(<row r="2"[^>]*>[\s\S]*?)(<\/row>)/,`$1<c r="C2" t="inlineStr"><is><t>${matricula}</t></is></c>$2`);
   zip.file('xl/worksheets/sheet1.xml',sheet);
   const bytes=await zip.generateAsync({type:'uint8array'});
-  assert.deepEqual(await parseStudentImportFile(new File([bytes],'lista.xlsx')),[{row:2,nome:'Maria Silva',email:'maria@example.invalid',matricula}]);
+  assert.deepEqual(await parseStudentImportFile(new File([bytes],'lista.xlsx')),[{row:2,nome:'Maria Silva',email:'maria@example.invalid'}]);
  }
 });
 test('PDF textual é lido localmente e PDF sem texto informa alternativa',async()=>{
@@ -58,10 +60,10 @@ test('PDF textual é lido localmente e PDF sem texto informa alternativa',async(
  const bytes=await blank.save();await assert.rejects(()=>parseStudentImportFile(new File([bytes],'sem-texto.pdf')),/apenas imagens/);
 });
 
-test('lista colada recupera matrícula, nome e email quando a ordem diverge do cabeçalho',()=>{
+test('lista colada recupera nome e e-mail sem a matrícula quando a ordem diverge do cabeçalho',()=>{
  for(const delimiter of ['\t','  ',' ']){
   const rows=parseStudentImportText(`Nome completo E-mail Matrícula\n0002022100663${delimiter}Pessoa de Teste${delimiter}pessoa@example.invalid\n2022100660${delimiter}Outra Pessoa${delimiter}outra@example.invalid`);
-  assert.deepEqual(rows,[{row:2,nome:'Pessoa de Teste',email:'pessoa@example.invalid',matricula:'0002022100663'},{row:3,nome:'Outra Pessoa',email:'outra@example.invalid',matricula:'2022100660'}]);
+  assert.deepEqual(rows,[{row:2,nome:'Pessoa de Teste',email:'pessoa@example.invalid'},{row:3,nome:'Outra Pessoa',email:'outra@example.invalid'}]);
   assert.deepEqual(accessImportIssues(rows),[]);
  }
 });
@@ -71,10 +73,10 @@ test('sem cabeçalho identifica as seis ordens, espaços mistos e matrícula alf
  const permutations=[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
  for(const order of permutations)for(const separator of [' ','  ','\t',';']){
   const rows=parseStudentImportText(order.map(i=>fields[i]).join(separator));
-  assert.deepEqual(rows,[{row:1,nome:fields[0],email:fields[1],matricula:fields[2]}]);
+  assert.deepEqual(rows,[{row:1,nome:fields[0],email:fields[1]}]);
  }
- assert.deepEqual(parseStudentImportText('Maria Silva 000123 maria@example.invalid'),[{row:1,...person}].map(p=>({...p,matricula:'000123'})));
- assert.deepEqual(parseStudentImportText('anne@example.invalid Anne O’Neill'),[{row:1,nome:'Anne O’Neill',email:'anne@example.invalid',matricula:undefined}]);
- assert.throws(()=>parseStudentImportText('Maria 123 456 maria@example.invalid'),/mais de um código/);
+ assert.deepEqual(parseStudentImportText('Maria Silva 000123 maria@example.invalid'),[{row:1,...person}]);
+ assert.deepEqual(parseStudentImportText('anne@example.invalid Anne O’Neill'),[{row:1,nome:'Anne O’Neill',email:'anne@example.invalid'}]);
+ assert.deepEqual(parseStudentImportText('Maria Silva 123 456 maria@example.invalid'),[{row:1,...person}]);
  assert.throws(()=>parseStudentImportText('Maria maria@example.invalid outra@example.invalid'),/único e-mail/);
 });

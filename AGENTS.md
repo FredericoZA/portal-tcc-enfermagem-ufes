@@ -21,6 +21,10 @@ antes de alterações. Não recomece o sistema do zero.
 - O desenvolvimento usa `local_file` e dados demonstrativos em `.portal-data/`.
   Uma alteração de dados/configuração local não atualiza automaticamente o site
   publicado. Supabase real, Gmail, Drive e Asten exigem verificação separada.
+- Valide o fluxo no navegador com dados fictícios e as mesmas ações, permissões
+  e transições de um usuário comum. Não adicione atalhos de autenticação,
+  reserva, assinatura ou conclusão para viabilizar testes. Isole dados e
+  serviços externos no ambiente de teste.
 - Teste o fluxo afetado no navegador e execute os checks adequados. Quando mudar
   autenticação ou permissões, valide também o fluxo seguro. Nunca afirme que uma
   integração real foi homologada usando apenas simulações locais.

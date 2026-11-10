@@ -62,3 +62,20 @@ test('retomada preserva ação já concluída e executa somente a pendente',asyn
   let docs=0,mails=0;const run=await executeWorkflowEvent(studio,{process:process(),actorEmail:'master@ufes.br',actorRoles:[],eventCode:'TCC_CREATED',completedActions:[{actionId:'doc',stageId:'s',kind:'DOCUMENT',status:'COMPLETED',externalId:'drive-1'}]}, {createDocument:async()=>{docs++;return{};},createFormTask:async()=>({}),sendEmail:async()=>{mails++;return{};}});
   assert.equal(run.status,'COMPLETED');assert.equal(docs,0);assert.equal(mails,1);
 });
+
+test('retomada distingue confirmação de local atual dos agendamentos anteriores sem alterar ações',()=>{
+  const p=process({dataRevision:4});p.defesa.reservationRevision=1;
+  const forms=[
+    {id:'old-reservation',processId:p.id,formType:'CONFIRMACAO_LOCAL',version:3,reservationRevision:0,status:'FAILED',lastError:'Tempo limite'},
+    {id:'old-data',processId:p.id,formType:'CONFIRMACAO_LOCAL',version:3,reservationRevision:1,status:'FAILED'},
+    {id:'current',processId:p.id,formType:'CONFIRMACAO_LOCAL',version:4,reservationRevision:1,status:'FAILED'},
+    {id:'other',processId:p.id,formType:'CADASTRO',version:4,status:'FAILED'},
+  ];
+  const before=structuredClone(forms);
+  const queue=buildRecoveryQueue({processes:[p],runs:[],jobs:[],emails:[],forms,customForms:[]});
+  assert.deepEqual(queue.map(item=>item.title),['Confirmação de local — agendamento anterior','Confirmação de local — agendamento anterior','Confirmação de local — agendamento atual','Formulário CADASTRO']);
+  assert.match(queue[0].reason,/Tempo limite.*Reserva 0; versão dos dados 3/);
+  assert.match(queue[2].reason,/Reserva 1; versão dos dados 4/);
+  for(const item of queue){assert.equal(item.retryPath,`/api/admin/form-archives/${item.id}/retry`);assert.equal(item.actionLabel,'Arquivar e continuar');}
+  assert.deepEqual(forms,before);
+});

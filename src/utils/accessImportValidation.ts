@@ -1,4 +1,4 @@
-export interface AccessImportRecord { nome: string; email: string; matricula?: string; row?: number; }
+export interface AccessImportRecord { nome: string; email: string; row?: number; }
 export interface AccessImportIssue { row: number; reason: string; }
 
 /** Shared by preview and API: a Master access list is not a TCC registration. */

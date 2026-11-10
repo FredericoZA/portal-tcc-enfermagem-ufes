@@ -1,5 +1,6 @@
+import { DEFENSE_WEEKDAY_MESSAGE, isDefenseWeekday } from '../../src/utils/defenseSchedule';
 import { OTHER_DEFENSE_LOCATION, isOtherDefenseLocation, renderCustomLocationName } from '../../src/utils/customDefenseLocation';
-import { formatDatePt, formatTimeExtenso } from '../../src/utils/formatters';
+import { formatDateWithWeekday, formatTimeExtenso } from '../../src/utils/formatters';
 import { officialParticipantLines } from '../../src/utils/officialParticipants';
 import { localDateTimeToIso } from '../../src/utils/operationalConfig';
 import type { ProcessData } from '../../src/types';
@@ -24,12 +25,10 @@ export function validateReservationChange(
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
     throw new Error('Informe data e horário válidos para a nova solicitação.');
   }
+  if (!isDefenseWeekday(date)) throw new Error(DEFENSE_WEEKDAY_MESSAGE);
   const requested = new Date(localDateTimeToIso(`${date}T${time}`, 'America/Sao_Paulo'));
   if (!Number.isFinite(requested.getTime()) || requested.getTime() <= now.getTime()) {
     throw new Error('Informe uma data e um horário futuros para a nova reserva.');
-  }
-  if ([0, 6].includes(new Date(`${date}T12:00:00Z`).getUTCDay())) {
-    throw new Error('As defesas devem ser marcadas de segunda a sexta-feira.');
   }
 
   const custom = isOtherDefenseLocation(choice);
@@ -69,12 +68,12 @@ export function buildReservationChangeEmail(
     ...officialParticipantLines(process).map(item => `${item.role}: ${item.name}`),
     '',
     'Reserva informada anteriormente:',
-    `Data: ${formatDatePt(process.defesa.startAt)}`,
+    `Data: ${formatDateWithWeekday(process.defesa.startAt)}`,
     `Horário: ${formatTimeExtenso(process.defesa.startAt)}`,
     `Local: ${process.defesa.local}`,
     '',
     'Nova solicitação:',
-    `Data: ${formatDatePt(proposal.startAt)}`,
+    `Data: ${formatDateWithWeekday(proposal.startAt)}`,
     `Horário: ${formatTimeExtenso(proposal.startAt)}`,
     `Local: ${proposal.local}`,
     '',

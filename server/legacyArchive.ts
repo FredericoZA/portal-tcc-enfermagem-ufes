@@ -40,6 +40,27 @@ export function legacyFileIsPublic(record: LegacyAcademicRecord, file: LegacyAtt
   return legacyAuthorization(record.provenance) === 'AUTHORIZED' &&
     (file.kind === 'TRABALHO_COMPLETO' ? record.publishFullWork : file.kind === 'RESUMO_EXPANDIDO' && record.publishExpandedAbstract) && /^[a-f0-9]{64}$/.test(file.sha256 || '');
 }
+const legacy011BoardSource = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQucIwgv0TbpZzsFIqGvaCh7meVsKRZtF8o17sBNh604utu_cY3m4syMp7jao69-LNIBaxZzS8IcriE/pubhtml';
+
+function legacy011Board(record: LegacyAcademicRecord): Pick<LegacyAcademicRecord, 'examinadores' | 'provenance'> {
+  const { examinadores, provenance } = record;
+  const [first, ...remaining] = examinadores || [];
+  const names = ['Carolina Maia Martins Sales', 'Márcia Valéria de Souza Almeida'];
+  // The official sheet lists both names in Membro Interno and leaves Membro Externo empty.
+  if (record.id !== 'legado-0011' || record.dataDefesa !== '2025-02-21' ||
+      !first || normalizePersonName(first.nome || '') !== names.join(' - ') || first.instituicao?.trim() ||
+      remaining.some(person => person?.nome?.trim() || person?.instituicao?.trim())) {
+    return { examinadores, provenance };
+  }
+  return {
+    examinadores: names.map(nome => ({ nome, instituicao: 'Universidade Federal do Espírito Santo' })),
+    provenance: {
+      ...provenance,
+      legacy011BoardCorrection: { source: legacy011BoardSource, row: 98, originalExaminers: examinadores },
+    },
+  };
+}
+
 /** Read compatibility for the initial private-only archive, without changing its identity. */
 export function canonicalLegacyRecord(record: LegacyAcademicRecord): LegacyAcademicRecord {
   const protocol = legacyProtocol(record.id);
@@ -49,7 +70,8 @@ export function canonicalLegacyRecord(record: LegacyAcademicRecord): LegacyAcade
   const publishFullWork = authorized && attachments.some(f => f.kind === 'TRABALHO_COMPLETO' && /^[a-f0-9]{64}$/.test(f.sha256));
   const publishExpandedAbstract = authorized && attachments.some(f => f.kind === 'RESUMO_EXPANDIDO' && /^[a-f0-9]{64}$/.test(f.sha256));
   const isPublic = publishFullWork || publishExpandedAbstract;
-  return {...record, titulo: renderTccTitle(record.titulo), autores: record.autores.map(normalizePersonName), orientador: normalizePersonName(record.orientador), coorientador: normalizePersonName(record.coorientador), examinadores: record.examinadores.map(p=>({...p,nome:normalizePersonName(p.nome)})), protocolo: protocol, attachments, authorizationDecision,
+  const { examinadores, provenance } = legacy011Board(record);
+  return {...record, titulo: renderTccTitle(record.titulo), autores: record.autores.map(normalizePersonName), orientador: normalizePersonName(record.orientador), coorientador: normalizePersonName(record.coorientador), examinadores: examinadores.map(p=>({...p,nome:normalizePersonName(p.nome)})), provenance, protocolo: protocol, attachments, authorizationDecision,
     publishFullWork, publishExpandedAbstract, isPublic, publicationState: isPublic ? 'PUBLIC' : authorized ? 'AUTHORIZED' : 'NOT_REQUESTED'};
 }
 export function validateLegacyBatch(value: unknown): LegacyAcademicRecord[] {
@@ -110,7 +132,9 @@ export function publicLegacyAcademicView(r: LegacyAcademicRecord): PublicLegacyA
   // to the attached full work / expanded abstract PDFs, never to this cell.
   return {id:r.id,protocolo:r.protocolo,titulo:r.titulo,autores:r.autores,
     orientador:r.orientador,coorientador:r.coorientador,coorientadorInstituicao:r.coorientadorInstituicao,
-    examinadores:r.examinadores,resumo:r.resumo,palavrasChave:r.palavrasChave,dataDefesa:r.dataDefesa,horaDefesa:r.horaDefesa,localDefesa:r.localDefesa,filesRestricted:!r.attachments.some(file=>legacyFileIsPublic(r,file)),authorizationDecision:legacyAuthorization(r.provenance),
+    examinadores:r.examinadores,resumo:r.resumo,
+    palavrasChave:r.palavrasChave.map(word => word.trim()).filter(word => /[\p{L}\p{N}]/u.test(word) && !/^nenhum(?:a)?$/i.test(word)),
+    dataDefesa:r.dataDefesa,horaDefesa:r.horaDefesa,localDefesa:r.localDefesa,filesRestricted:!r.attachments.some(file=>legacyFileIsPublic(r,file)),authorizationDecision:legacyAuthorization(r.provenance),
     publicFiles:r.attachments.flatMap((file,index)=>legacyFileIsPublic(r,file)?[{index,kind:file.kind,downloadUrl:`/api/legacy-academic-records/${encodeURIComponent(r.id)}/files/${index}/download`}]:[])};
 }
 

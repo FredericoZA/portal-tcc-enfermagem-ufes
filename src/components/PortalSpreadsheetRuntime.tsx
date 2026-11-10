@@ -1,6 +1,7 @@
+import {tablePreferenceKey} from '../utils/tablePreferences';
 import { useLayoutEffect } from 'react';
 import { PORTAL_TABLE_KEYS, inferManagedTableKey, isPortalProcessHeader, normalizePortalTableText, readPortalHeaderLabel, type PortalTableKey } from '../utils/portalTableIdentity';
-import { closePortalTablePopup, enhancePortalTable } from '../utils/portalTableDom';
+import { cleanupDetachedPortalTableInteractions, cleanupPortalTableInteractions, enhancePortalTable } from '../utils/portalTableDom';
 
 type TableKey = PortalTableKey;
 type PageSize = 25 | 50 | 100 | 'all';
@@ -35,18 +36,10 @@ function currentPageKey(key: TableKey) {
 }
 
 function storageKeysForTable(key: TableKey) {
-  const keys = [`default_table_config_${key}`];
-  try {
-    for (let index = 0; index < localStorage.length; index += 1) {
-      const candidate = localStorage.key(index);
-      if (candidate?.startsWith('portal_user_table_config_') && candidate.endsWith(`_${key}`)) {
-        keys.push(candidate);
-      }
-    }
-  } catch {
-    // localStorage pode estar indisponível em alguns ambientes.
-  }
-  return keys;
+  // Only the active account may contribute a personal preference.
+  let email = '';
+  try { email = localStorage.getItem('portal_tcc_active_email') || ''; } catch { /* Browser storage may be blocked; keep only the shared default. */ }
+  return [...(email ? [tablePreferenceKey(email, key)] : []), `default_table_config_${key}`];
 }
 
 let legacyLimitsMigrated = false;
@@ -327,9 +320,12 @@ function applyPagination(table: HTMLTableElement) {
 
   const signature = `${pageSize}|${current}|${visibleRows.length}|${totalPages}`;
   if (pager.dataset.portalSignature === signature && pager.childElementCount > 0) return;
+  const focusedButton = document.activeElement;
+  const focusedLabel = focusedButton instanceof HTMLButtonElement && pager.contains(focusedButton)
+    ? focusedButton.textContent
+    : null;
   pager.dataset.portalSignature = signature;
   pager.dataset.portalTotalPages = String(totalPages);
-  pager.replaceChildren();
 
   const controls = document.createElement('div');
   controls.className = 'portal-spreadsheet-pager-controls';
@@ -363,7 +359,14 @@ function applyPagination(table: HTMLTableElement) {
     previous = page;
   });
   controls.appendChild(makeButton('Próxima', Math.min(totalPages, current + 1), current === totalPages));
-  pager.appendChild(controls);
+  pager.replaceChildren(controls);
+
+  if (focusedLabel !== null) {
+    const buttons = Array.from(controls.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+    const target = buttons.find((button) => button.textContent === focusedLabel)
+      ?? buttons.find((button) => button.getAttribute('aria-current') === 'page');
+    target?.focus({ preventScroll: true });
+  }
 }
 
 function removeOrphanPagers(root: HTMLElement) {
@@ -486,6 +489,15 @@ export const PortalSpreadsheetRuntime = () => {
     const refresh = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
+        // The runtime lives across page navigation; detached hosts must not keep
+        // old tables, listeners or an in-progress drag alive until a full reload.
+        for (const [host, unbind] of unbinders) {
+          if (!host.isConnected || !root.contains(host)) {
+            unbind();
+            unbinders.delete(host);
+          }
+        }
+        cleanupDetachedPortalTableInteractions();
         root.querySelectorAll<HTMLTableElement>('table').forEach((table) => {
           if (!tableKey(table)) return;
           enhancePortalTable(table);
@@ -498,7 +510,17 @@ export const PortalSpreadsheetRuntime = () => {
       });
     };
 
-    const observer = new MutationObserver(refresh);
+    const affectsTables = (mutation: MutationRecord) => {
+      const target = mutation.target.nodeType === 1 ? mutation.target as Element : mutation.target.parentElement;
+      if (target?.closest('table')) return true;
+      if (mutation.type !== 'childList') return false;
+      return [...mutation.addedNodes, ...mutation.removedNodes].some(node => node.nodeType === 1 &&
+        ((node as Element).matches('table') || Boolean((node as Element).querySelector('table'))));
+    };
+    const observer = new MutationObserver(mutations => {
+      // Clock, sidebar, notices and generated pager text do not change table geometry/data.
+      if (mutations.some(affectsTables)) refresh();
+    });
     observer.observe(root, { childList: true, subtree: true, characterData: true });
     window.addEventListener('storage', refresh);
     window.addEventListener('portal-table-layouts-updated', refresh as EventListener);
@@ -516,7 +538,7 @@ export const PortalSpreadsheetRuntime = () => {
       window.removeEventListener('resize', refresh);
       unbinders.forEach((unbind) => unbind());
       unbinders.clear();
-      closePortalTablePopup();
+      cleanupPortalTableInteractions();
     };
   }, []);
 

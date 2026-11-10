@@ -79,6 +79,49 @@ export function createRuntimeRequestQueue(options:RuntimeRequestQueueOptions={})
   };
 }
 
+interface RuntimeRequestWork {
+  pendingHandlers:number;
+  hydrating:boolean;
+  responseFinished:boolean;
+  released:boolean;
+  release:()=>void;
+}
+
+const runtimeRequestWork=new WeakMap<object,RuntimeRequestWork>();
+
+function releaseSettledRuntimeRequest(request:object,work:RuntimeRequestWork):void {
+  if(work.released||work.hydrating||!work.responseFinished||work.pendingHandlers!==0)return;
+  work.released=true;
+  runtimeRequestWork.delete(request);
+  work.release();
+}
+
+export function attachRuntimeRequestLifecycle(request:object,release:()=>void):{
+  hydrationFinished:()=>void;
+  responseFinished:()=>void;
+} {
+  if(runtimeRequestWork.has(request))throw new Error('A requisição já possui uma operação ativa.');
+  const work:RuntimeRequestWork={pendingHandlers:0,hydrating:true,responseFinished:false,released:false,release};
+  runtimeRequestWork.set(request,work);
+  return{
+    hydrationFinished:()=>{work.hydrating=false;releaseSettledRuntimeRequest(request,work);},
+    responseFinished:()=>{work.responseFinished=true;releaseSettledRuntimeRequest(request,work);},
+  };
+}
+
+export function beginRuntimeRequestTask(request:object):()=>void {
+  const work=runtimeRequestWork.get(request);
+  if(!work||work.released)return()=>{};
+  work.pendingHandlers++;
+  let settled=false;
+  return()=>{
+    if(settled)return;
+    settled=true;
+    work.pendingHandlers--;
+    releaseSettledRuntimeRequest(request,work);
+  };
+}
+
 /** A failed previous response must not poison the next fresh database read.
  * Call only under the request lock, then reload authoritative state before use. */
 export function settlePreviousRuntimeWrites(pending:Promise<void>):Promise<void>{

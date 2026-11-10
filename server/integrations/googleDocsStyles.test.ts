@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildMarkerBoldRequests,buildAtaOpeningNormalRequests} from './googleDocsStyles';
+import {buildMarkerBoldRequests,buildAtaOpeningTitleRequests,buildAtaCoadvisorRoleNormalRequests,buildAtaNarrativeStyleRequests} from './googleDocsStyles';
 import {renderGoogleDriveTemplateToPdf} from './googleDocsRenderer';
 test('bold marker ranges cover split runs, tabs, headers and tables without styling fixed text',()=>{
  const entry=(text:string,startIndex:number)=>({paragraph:{elements:[{startIndex,textRun:{content:text}}]}});
@@ -30,14 +30,45 @@ for(const type of ['CONVITE','ATA','TERMO','DECLARACAO'])test(`${type}: every me
  assert.deepEqual(styles,['<<nome completo aluno (1)>>','{{ORIENTADOR_NOME}}','[[EXAMINADOR_2_NOME]]','«DATA»','-LOCAL-']);
 });
 
-test('ata opening resets inherited bold before restoring only its variable markers',()=>{
+test('ata opening emphasizes the whole title, including split variable markers',()=>{
  const prefix='Ata da Sessão de Defesa Final de Trabalho de Conclusão de Curso de ',name='<<ALUNOS>>',suffix=', do curso de Graduação em Enfermagem e Obstetrícia da Universidade Federal do Espírito Santo.\n';
- const doc={tabs:[{tabProperties:{tabId:'main'},documentTab:{body:{content:[{paragraph:{elements:[{startIndex:1,textRun:{content:prefix,textStyle:{bold:true}}},{startIndex:1+prefix.length,textRun:{content:name+suffix,textStyle:{bold:true}}}]}}]}}}]};
- const normal=buildAtaOpeningNormalRequests(doc),bold=buildMarkerBoldRequests(doc,['ALUNOS']);
- assert.equal(normal.length,1);assert.equal(normal[0].updateTextStyle.textStyle.bold,false);
+ const doc={tabs:[{tabProperties:{tabId:'main'},documentTab:{body:{content:[{paragraph:{elements:[{startIndex:1,textRun:{content:prefix,textStyle:{bold:false}}},{startIndex:1+prefix.length,textRun:{content:name+suffix,textStyle:{bold:false}}}]}}]}}}]};
+ const normal=buildAtaOpeningTitleRequests(doc),bold=buildMarkerBoldRequests(doc,['ALUNOS']);
+ assert.equal(normal.length,1);assert.equal(normal[0].updateTextStyle.textStyle.bold,true);
  assert.deepEqual(normal[0].updateTextStyle.range,{tabId:'main',startIndex:1,endIndex:1+prefix.length+name.length+suffix.length});
  assert.equal(bold.length,1);assert.equal(bold[0].updateTextStyle.range.startIndex,1+prefix.length);
  assert.equal(bold[0].updateTextStyle.range.endIndex,1+prefix.length+name.length);
  assert.equal(bold[0].updateTextStyle.textStyle.bold,true);
- assert.deepEqual(buildAtaOpeningNormalRequests({body:{content:[{paragraph:{elements:[{startIndex:1,textRun:{content:'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO'}}]}}]}}),[]);
+ assert.deepEqual(buildAtaOpeningTitleRequests({body:{content:[{paragraph:{elements:[{startIndex:1,textRun:{content:'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO'}}]}}]}}),[]);
+});
+
+test('ata resets only the coadvisor signature role, including split styled runs',()=>{
+ const entry=(...runs:string[])=>{
+  let startIndex=1;
+  return {paragraph:{elements:runs.map(content=>{
+   const run={startIndex,textRun:{content}};startIndex+=content.length;return run;
+  })}};
+ };
+ const document={tabs:[{tabProperties:{tabId:'ata'},documentTab:{body:{content:[
+  entry('Prof.ª Dr.ª Paula Souza\n'),entry('Co','orientadora\n'),entry('Coorientadora participou da sessão.\n'),
+ ]}}}]};
+ assert.deepEqual(buildAtaCoadvisorRoleNormalRequests(document),[{updateTextStyle:{
+  range:{tabId:'ata',startIndex:1,endIndex:'Coorientadora\n'.length+1},textStyle:{bold:false},fields:'bold',
+ }}]);
+});
+
+test('ata narrative uses regular text while title and signatures keep their styles',()=>{
+ const title='ATA DA SESSÃO DE DEFESA FINAL.\u000b';
+ const opening='Às dezesseis horas foi aberta a sessão. ';
+ const closing='Nada mais havendo a tratar, foi lavrada a presente ata, que segue para ser assinada.';
+ const signature='\nMaria Oliveira\nOrientadora e Presidente\n';
+ const first={startIndex:1,textRun:{content:title+opening}};
+ const last={startIndex:1+title.length+opening.length,textRun:{content:closing+signature}};
+ const doc={tabs:[{tabProperties:{tabId:'ata'},documentTab:{body:{content:[{paragraph:{elements:[first,last]}}]}}}]};
+ const requests=buildAtaNarrativeStyleRequests(doc).map(request=>request.updateTextStyle);
+ assert.deepEqual(requests.map(request=>request.range),[
+  {tabId:'ata',startIndex:1+title.length,endIndex:last.startIndex},
+  {tabId:'ata',startIndex:last.startIndex,endIndex:last.startIndex+closing.length}
+ ]);
+ assert.ok(requests.every(request=>request.textStyle.bold===false&&request.textStyle.italic===false));
 });

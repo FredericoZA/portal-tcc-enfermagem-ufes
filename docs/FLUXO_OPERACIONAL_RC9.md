@@ -1,5 +1,7 @@
 # Fluxo vigente — RC9
 
+> Registro histórico. A regra antiga de assinatura exclusiva do orientador foi substituída: a ata exige orientador e dois examinadores. Não use este registro como roteiro vigente. Consulte [a diretriz atual](ASSINATURA_ATA_TRES_DOCENTES.md), o manual e `HOMOLOGACAO_ATUAL.md`.
+
 Esta versão incorpora a confirmação da reserva declarada pelo próprio aluno, conforme a orientação mais recente do proprietário. Não existe exigência de login ou aprovação do departamento dentro do portal.
 
 | Etapa | Responsável | Entrada e condição para avançar |

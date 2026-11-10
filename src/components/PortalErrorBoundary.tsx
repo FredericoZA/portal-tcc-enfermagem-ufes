@@ -24,13 +24,13 @@ export class PortalErrorBoundary extends Component<{ children: ReactNode }, { fa
   componentDidCatch(error: unknown, _info: ErrorInfo) {
     if (!isStaleLazyChunkError(error) || typeof window === 'undefined') return;
 
-    const appVersion = String(import.meta.env.VITE_APP_VERSION || 'unknown');
-    const recoveryMarker = `${appVersion}:${window.location.pathname}`;
+    const buildIdentity = String(import.meta.env.VITE_GIT_COMMIT || import.meta.env.VITE_APP_VERSION || 'unknown');
+    const recoveryMarker = `${buildIdentity}:${window.location.pathname}`;
     const currentUrl = new URL(window.location.href);
 
     // Guard independente de storage: após uma tentativa automática, um novo
     // erro permanece no fallback acionável em vez de entrar em loop.
-    if (currentUrl.searchParams.get(CHUNK_RECOVERY_PARAM) === appVersion) return;
+    if (currentUrl.searchParams.get(CHUNK_RECOVERY_PARAM) === buildIdentity) return;
 
     try {
       if (window.sessionStorage.getItem(CHUNK_RECOVERY_KEY) === recoveryMarker) return;
@@ -40,7 +40,7 @@ export class PortalErrorBoundary extends Component<{ children: ReactNode }, { fa
       // abaixo ainda limita a recuperação automática a uma única tentativa.
     }
 
-    currentUrl.searchParams.set(CHUNK_RECOVERY_PARAM, appVersion);
+    currentUrl.searchParams.set(CHUNK_RECOVERY_PARAM, buildIdentity);
     window.location.replace(currentUrl.toString());
   }
 

@@ -1,9 +1,14 @@
 import type { RegistrationAnswers, RegistrationQuestion } from '../types/operationalConfig';
 import { evaluateStudioCondition, validateStudioAnswer } from './courseStudioValidator';
+import {isRegistrationIdentifierField} from './operationalConfig';
 
 // These forms update the process through their dedicated endpoints and gates.
 export const NATIVE_PROCESS_FORM_IDS = new Set(['form-reserva-aluno', 'form-banca-orientador', 'form-parecer-banca', 'form-homologacao-coordenador']);
 export const normalizeAnswerKey = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').toUpperCase();
+
+export function formQuestionsWithoutIdentifiers<T extends RegistrationQuestion>(questions:readonly T[]):T[]{
+  return questions.filter(question=>!isRegistrationIdentifierField(question.fieldKey,question.label));
+}
 
 /** One validator for the screen and API; hidden and undeclared answers are discarded. */
 export function validateFormAnswers(questions: RegistrationQuestion[], input: unknown) {
@@ -12,7 +17,7 @@ export function validateFormAnswers(questions: RegistrationQuestion[], input: un
     for (const [key, value] of Object.entries(input)) values[normalizeAnswerKey(key)] = value;
   }
   const answers: RegistrationAnswers = {}, issues: Record<string, string> = {};
-  for (const question of questions) {
+  for (const question of formQuestionsWithoutIdentifiers(questions)) {
     const field = normalizeAnswerKey(question.fieldKey);
     if (!field || !evaluateStudioCondition(question.visibleWhen, answers)) continue;
     const value = values[field];

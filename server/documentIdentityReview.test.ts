@@ -16,10 +16,11 @@ test('document name uses chosen spelling and references, including social name',
  }
  const fields=registrationQuestions();for(const key of ['ALUNO_1_NOME','ALUNO_2_NOME','ORIENTADOR_NOME','EXAMINADOR_2_NOME'])assert.match(fields.find(field=>field.fieldKey===key)!.helpText||'',/nome social/);
 });
-test('declaration date loses one spacer and receives compact spacing without changing text',()=>{
+test('declaration date replaces empty paragraphs with one line of spacing without changing text',()=>{
  let start=1;const paragraphs=['Examinadora Prof.ª Ma. Ana Silva\n','\n','\n','Vitória - ES, 15 de outubro de 2026.\n','Comissão de TCC\n'].map(text=>{const node={startIndex:start,endIndex:start+text.length,paragraph:{elements:[{textRun:{content:text}}]}};start+=text.length;return node;});
  const requests=declarationDateLayoutRequests({body:{content:paragraphs}});
  assert.deepEqual(requests[0].updateParagraphStyle.range,{startIndex:paragraphs[3].startIndex,endIndex:paragraphs[3].endIndex});
  assert.deepEqual(requests[1],{deleteContentRange:{range:{startIndex:paragraphs[2].startIndex,endIndex:paragraphs[2].endIndex}}});
- assert.equal(requests.length,2);
+ assert.deepEqual(requests[2],{deleteContentRange:{range:{startIndex:paragraphs[1].startIndex,endIndex:paragraphs[1].endIndex}}});
+ assert.equal(requests.length,3);
 });

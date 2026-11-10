@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import {isEmailAddress} from './emailAddress';
 
-export interface StudentImportRow { nome: string; email: string; matricula?: string; row: number; }
+export interface StudentImportRow { nome: string; email: string; row: number; }
 
 const normalizeHeader=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_');
 const decodeXml=(value:string)=>value.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&apos;/g,"'");
@@ -33,7 +33,6 @@ async function parseXlsx(buffer:ArrayBuffer):Promise<string[][]>{
 
 const nameHeaders=['nome','nome_completo','nome_do_aluno','nome_do_discente','nome_do_estudante','aluno','discente','estudante'];
 const emailHeaders=['email','e_mail','email_institucional','e_mail_institucional','correio_eletronico','email_do_aluno','e_mail_do_aluno'];
-const registrationHeaders=['matricula','numero_de_matricula','numero_matricula','n_de_matricula','registro','siape','matricula_siape_ou_outro_registro'];
 const emailPattern=/[^\s<>;,\[\]()]+@[^\s<>;,\[\]()]+\.[^\s<>;,\[\]()]+/g;
 function inferStudent(row:string[],index:number):StudentImportRow{
   const cells=row.map(value=>String(value||'').trim());
@@ -42,13 +41,9 @@ function inferStudent(row:string[],index:number):StudentImportRow{
   const match=matches[0];
   const remaining=text.slice(0,match.index)+' '+text.slice((match.index||0)+match[0].length);
   const tokens=remaining.replace(/[<>]/g,' ').trim().split(/\s+/).filter(Boolean);
-  // Registrations may contain letters, punctuation and leading zeros.
-  // A numeric component distinguishes them from the person's name.
-  const registrations=tokens.filter(token=>/\d/u.test(token)&&/^[\p{L}\p{N}./_-]+$/u.test(token));
-  if(registrations.length>1)throw new Error(`Linha ${index+1}: há mais de um código de registro. Confira a matrícula.`);
-  const matricula=registrations[0];
-  const nome=tokens.filter(token=>token!==matricula).join(' ');
-  return{row:index+1,nome,email:match[0].toLowerCase(),matricula};
+  // Ignore legacy registration codes in pasted lines without a header.
+  const nome=tokens.filter(token => !/\d/u.test(token)).join(' ');
+  return{row:index+1,nome,email:match[0].toLowerCase()};
 }
 function tableToStudents(table:string[][]):StudentImportRow[]{
   const headerIndex=table.slice(0,20).findIndex(row=>{const keys=row.map(normalizeHeader);return keys.some(key=>nameHeaders.includes(key))&&keys.some(key=>emailHeaders.includes(key));});
@@ -56,16 +51,14 @@ function tableToStudents(table:string[][]):StudentImportRow[]{
     if(!table.length)return[];
     return table.map((row,index)=>inferStudent(row,index));
   }
-  const headers=table[headerIndex].map(normalizeHeader),nameIndex=headers.findIndex(header=>nameHeaders.includes(header)),emailIndex=headers.findIndex(header=>emailHeaders.includes(header)),registrationIndex=headers.findIndex(header=>registrationHeaders.includes(header));
+  const headers=table[headerIndex].map(normalizeHeader),nameIndex=headers.findIndex(header=>nameHeaders.includes(header)),emailIndex=headers.findIndex(header=>emailHeaders.includes(header));
   return table.slice(headerIndex+1).map((row,index)=>({cells:row,index})).filter(({cells})=>!cells.every((cell,i)=>normalizeHeader(cell)===headers[i])).map(({cells:row,index})=>{
-    const mapped={row:index+headerIndex+2,nome:String(row[nameIndex]||'').trim(),email:String(row[emailIndex]||'').trim().toLowerCase(),matricula:registrationIndex>=0?String(row[registrationIndex]||'').trim()||undefined:undefined};
-    // Keep recognized columns, including arbitrary registration codes. Infer
-    // pasted/PDF rows only when their email does not match the header position.
+    const mapped={row:index+headerIndex+2,nome:String(row[nameIndex]||'').trim(),email:String(row[emailIndex]||'').trim().toLowerCase()};
     if(!isEmailAddress(mapped.email)&&(row.join(' ').match(emailPattern)||[]).length===1){
       return inferStudent(row,index+headerIndex+1);
     }
     return mapped;
-  }).filter(row=>row.nome||row.email||row.matricula);
+  }).filter(row=>row.nome||row.email);
 }
 
 export function parseStudentImportText(text:string):StudentImportRow[]{
@@ -93,10 +86,10 @@ export async function parseStudentImportFile(file:File):Promise<StudentImportRow
   return rows;
 }
 
-export function studentImportTemplateCsv():string{return '\uFEFFnome;email;matricula\nNome completo;usuario@gmail.com;0000000000\n';}
+export function studentImportTemplateCsv():string{return '\uFEFFnome;email\nNome completo;usuario@gmail.com\n';}
 
 export function studentImportTemplateGoogleSheetsTsv():string{
-  return 'nome\temail\tmatricula\nNome completo\tusuario@gmail.com\t0000000000\n';
+  return 'nome\temail\nNome completo\tusuario@gmail.com\n';
 }
 
 export async function studentImportTemplateXlsx():Promise<Blob>{
@@ -110,10 +103,10 @@ export async function studentImportTemplateXlsx():Promise<Blob>{
   zip.file('xl/_rels/workbook.xml.rels',`${xmlHeader}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${relation}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${relation}/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="${relation}/styles" Target="styles.xml"/></Relationships>`);
   zip.file('xl/styles.xml',`${xmlHeader}<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><color rgb="FF0F172A"/><name val="Calibri"/></font><font><b/><sz val="12"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FF005830"/><name val="Calibri"/></font></fonts><fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF005830"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE9EDEF"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFC4CED4"/></left><right style="thin"><color rgb="FFC4CED4"/></right><top style="thin"><color rgb="FFC4CED4"/></top><bottom style="thin"><color rgb="FFC4CED4"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5"><xf numFmtId="49" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"><alignment vertical="center"/></xf><xf numFmtId="49" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment vertical="center"/></xf><xf numFmtId="49" fontId="0" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"><alignment vertical="center"/></xf><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"><alignment wrapText="1" vertical="top"/></xf><xf numFmtId="49" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment wrapText="1" vertical="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`);
   const cell=(ref:string,text:string,style:number)=>`<c r="${ref}" t="inlineStr" s="${style}"><is><t xml:space="preserve">${encodeXml(text)}</t></is></c>`;
-  const rows=[`<row r="1" ht="30" customHeight="1">${['Nome completo','E-mail','Matrícula'].map((text,index)=>cell(`${'ABC'[index]}1`,text,1)).join('')}</row>`];
-  for(let row=2;row<=101;row++)rows.push(`<row r="${row}" ht="24" customHeight="1">${['A','B','C'].map(col=>cell(`${col}${row}`,'',row%2===0?0:2)).join('')}</row>`);
-  zip.file('xl/worksheets/sheet1.xml',`${xmlHeader}<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:C101"/><sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews><cols><col min="1" max="1" width="42" customWidth="1" style="0"/><col min="2" max="2" width="44" customWidth="1" style="0"/><col min="3" max="3" width="22" customWidth="1" style="0"/></cols><sheetData>${rows.join('')}</sheetData><autoFilter ref="A1:C101"/><pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.3" footer="0.3"/></worksheet>`);
-  const guidance=[['LISTA DE ACESSO AO PORTAL TCC',''],['Preenchimento','Na aba Acessos, preencha uma pessoa por linha, a partir da linha 2.'],['Nome completo','Obrigatório. Informe o nome da pessoa.'],['E-mail','Obrigatório. Informe um e-mail válido, sem espaços.'],['Matrícula','Opcional. A coluna está formatada como texto para preservar zeros à esquerda.'],['Envio','Salve como XLSX e arraste o arquivo para Dados da lista de acesso.'],['Google Planilhas','Arquivo > Importar > Fazer upload. Selecione este modelo; ao concluir, baixe como Microsoft Excel (.xlsx).'],['Conferência','Clique em Interpretar dados e confira a prévia antes de importar.'],['EXEMPLO FICTÍCIO (não é importado)',''],['Nome completo','Maria Silva'],['E-mail','maria@example.invalid'],['Matrícula','000012345']];
-  zip.file('xl/worksheets/sheet2.xml',`${xmlHeader}<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:B12"/><sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews><cols><col min="1" max="1" width="42" customWidth="1"/><col min="2" max="2" width="92" customWidth="1"/></cols><sheetData>${guidance.map((row,index)=>`<row r="${index+1}" ht="38" customHeight="1">${row.map((value,col)=>cell(`${'AB'[col]}${index+1}`,value,index===0?1:index===8?4:3)).join('')}</row>`).join('')}</sheetData></worksheet>`);
+  const rows=[`<row r="1" ht="30" customHeight="1">${['Nome completo','E-mail'].map((text,index)=>cell(`${'AB'[index]}1`,text,1)).join('')}</row>`];
+  for(let row=2;row<=101;row++)rows.push(`<row r="${row}" ht="24" customHeight="1">${['A','B'].map(col=>cell(`${col}${row}`,'',row%2===0?0:2)).join('')}</row>`);
+  zip.file('xl/worksheets/sheet1.xml',`${xmlHeader}<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:B101"/><sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews><cols><col min="1" max="1" width="42" customWidth="1" style="0"/><col min="2" max="2" width="44" customWidth="1" style="0"/></cols><sheetData>${rows.join('')}</sheetData><autoFilter ref="A1:B101"/><pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.3" footer="0.3"/></worksheet>`);
+  const guidance=[['LISTA DE ACESSO AO PORTAL TCC',''],['Preenchimento','Na aba Acessos, preencha uma pessoa por linha, a partir da linha 2.'],['Nome completo','Obrigatório. Informe o nome da pessoa.'],['E-mail','Obrigatório. Informe um e-mail válido, sem espaços.'],['Envio','Salve como XLSX e arraste o arquivo para Dados da lista de acesso.'],['Google Planilhas','Arquivo > Importar > Fazer upload. Selecione este modelo; ao concluir, baixe como Microsoft Excel (.xlsx).'],['Conferência','Clique em Interpretar dados e confira a prévia antes de importar.'],['EXEMPLO FICTÍCIO (não é importado)',''],['Nome completo','Maria Silva'],['E-mail','maria@example.invalid']];
+  zip.file('xl/worksheets/sheet2.xml',`${xmlHeader}<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:B${guidance.length}"/><sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews><cols><col min="1" max="1" width="42" customWidth="1"/><col min="2" max="2" width="92" customWidth="1"/></cols><sheetData>${guidance.map((row,index)=>`<row r="${index+1}" ht="38" customHeight="1">${row.map((value,col)=>cell(`${'AB'[col]}${index+1}`,value,index===0?1:index===7?4:3)).join('')}</row>`).join('')}</sheetData></worksheet>`);
   return zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }

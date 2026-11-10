@@ -1,4 +1,4 @@
-import { formatNameTitleCase, normalizeEmail } from './formatters';
+import { formatTccTitle, normalizeEmail } from './formatters';
 
 export { CUSTOM_DEFENSE_LOCATION as OTHER_DEFENSE_LOCATION } from './reservationLocation';
 export const CUSTOM_LOCATION_FIELD = 'DEFESA_LOCAL_PERSONALIZADO';
@@ -16,7 +16,7 @@ export function isOtherDefenseLocation(value: unknown): boolean {
   return /^outro local(?:\s*-\s*informar (?:endereco\/nome|nome\/endereco))?$/.test(normalized);
 }
 
-/** Aceita caixa alta apenas nos trechos marcados por asteriscos. */
+/** Reconhece siglas automaticamente e preserva marcações antigas por compatibilidade. */
 export function normalizeCustomLocationInput(raw: string): string {
   const original = String(raw ?? '').normalize('NFC').trim().replace(/\s+/g, ' ');
   if (!original) return '';
@@ -25,7 +25,7 @@ export function normalizeCustomLocationInput(raw: string): string {
     marked.push(acronym.trim().toLocaleUpperCase('pt-BR'));
     return `locationacronym${marked.length - 1}`;
   });
-  return formatNameTitleCase(masked)
+  return formatTccTitle(masked)
     .replace(/locationacronym(\d+)/gi, (_match, index: string) => `*${marked[Number(index)]}*`);
 }
 

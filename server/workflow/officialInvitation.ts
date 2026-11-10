@@ -1,6 +1,6 @@
 import type { ProcessData } from '../../src/types';
 import { officialParticipantLines, officialIdentificationLines } from '../../src/utils/officialParticipants';
-import { formatDatePt } from '../../src/utils/formatters';
+import { formatDateWithWeekday } from '../../src/utils/formatters';
 
 const clean = (s: string) => String(s || '').replace(/[\u0000-\u001f]/g, ' ').trim();
 const escapeHtml = (s: string) => clean(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c));
@@ -16,7 +16,7 @@ function defenseTime(date: string): string {
 export function officialInvitationEmail(process: ProcessData, portalUrl?: string): {
   subject: string; text: string; html: string;
 } {
-  const date = process.defesa?.startAt ? formatDatePt(process.defesa.startAt) : 'A definir';
+  const date = process.defesa?.startAt ? formatDateWithWeekday(process.defesa.startAt) : 'A definir';
   const time = defenseTime(process.defesa?.startAt);
   const location = process.defesa?.local || 'A confirmar';
   const subject = '[Portal TCC] Convite para a banca de TCC — '+process.protocolo;
@@ -60,8 +60,8 @@ export function officialInvitationEmail(process: ProcessData, portalUrl?: string
     '<p>Prezados(as),</p><p style="text-align:justify">'+escapeHtml(intro)+'</p>',
     lines,
     ...(url ? ['<p style="margin-top:22px"><a style="color:#005830;font-weight:bold" href="'+escapeHtml(url)+'">Acessar o Portal TCC</a></p>'] : []),
-    '<p style="margin-top:22px">Atenciosamente,</p>',
-    '<p>Comissão de Trabalho de Conclusão de Curso<br>Departamento de Enfermagem<br>Curso de Enfermagem e Obstetrícia — CCS/UFES</p>',
+    '<p style="margin-top:22px;text-align:right">Atenciosamente,</p>',
+    '<p style="text-align:right">Comissão de Trabalho de Conclusão de Curso<br>Departamento de Enfermagem<br>Curso de Enfermagem e Obstetrícia — CCS/UFES</p>',
     '</div></article></div>',
   ].join('');
   return {subject,text,html};

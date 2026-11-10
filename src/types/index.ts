@@ -1,3 +1,7 @@
+export interface PublicBlankPdfArtifact {
+  driveFileId:string; sha256:string; byteLength:number;
+  sourceContentSha256:string; sourceVersion:number; publishedAt:string;
+}
 // Tipos compartilhados do Portal Institucional de TCC
 
 import type { IntegrationStudioSettings } from './integrationStudio';
@@ -5,7 +9,7 @@ export * from './integrationStudio';
 export * from './tccDetailFormat';
 export * from './signatures';
 export * from './courseOperations';
-export * from './continuousIntelligence';
+export * from './statistics';
 
 export type GlobalRole = 'MASTER_ADMIN' | 'COMMISSION_PRESIDENT';
 
@@ -120,9 +124,11 @@ export interface ExaminerInfo {
 }
 
 export interface DefesaInfo {
-  departmentResponse?: {receiptBody?:string;revision:number;decision:'CONFIRMED'|'UNAVAILABLE';respondedAt:string;respondedBy:string;local?:string;startAt:string;endAt:string};
+  departmentResponse?: {departmentEmail?:string;attribution?:'EMAIL_LINK'|'MASTER_ADMIN';receiptBody?:string;receiptPresentation?:{institution:string;course:string;color:string;timezone:string;participants:Array<{role:string;name:string}>};receiptDesign?:NonNullable<import('./integrationStudio').IntegrationStudioSettings['receiptDesign']>;revision:number;decision:'CONFIRMED'|'UNAVAILABLE';respondedAt:string;respondedBy:string;local?:string;startAt:string;endAt:string};
+  /** Address fixed when the current reservation request is sent. */
+  reservationRequestRecipient?: string;
   reservationRevision?: number;
-  reservationHistory?: Array<{invitationDriveFileId?:string;invitationSentAt?:string;invitationRecipients?:string[];startAt:string;endAt:string;local:string;alternateLocation?:string;locationProof?:import('./workflowOperations').LocationProof;departmentResponse?:DefesaInfo['departmentResponse'];localStatus?:DefesaInfo['localStatus'];localConfirmedAt?:string;localConfirmedBy?:string;localEvidenceUrl?:string;invalidatedAt:string;invalidatedBy:string}>;
+  reservationHistory?: Array<{reservationRevision?:number;receiptContext?:Pick<ProcessData,'titulo'|'aluno1'|'aluno2'|'orientador'|'coorientador'|'banca'>;invitationDriveFileId?:string;invitationSentAt?:string;invitationRecipients?:string[];startAt:string;endAt:string;local:string;alternateLocation?:string;locationProof?:import('./workflowOperations').LocationProof;departmentResponse?:DefesaInfo['departmentResponse'];localStatus?:DefesaInfo['localStatus'];localConfirmedAt?:string;localConfirmedBy?:string;localEvidenceUrl?:string;invalidatedAt:string;invalidatedBy:string}>;
   locationProof?: import('./workflowOperations').LocationProof;
   alternateLocation?: string;
   startAt: string;
@@ -162,7 +168,12 @@ export interface EvaluationOutcomeOption {
 }
 
 export interface EvaluationInfo {
+  /** Explicitly confirmed by the advisor; registration alone never implies attendance. */
+  coadvisorPresent?: boolean;
+  submissionSha256?: string;
+  reviewedAta?: {fileId:string;version:number;verificationCode:string;signaturePolicySnapshot?:import('./signatures').SignaturePolicySnapshot};
   documentText?: string;
+  documentRevision?: number;
   answers?: Record<string, string | number | boolean>;
   dataReview?: {
     sourceDataRevision: number;
@@ -219,7 +230,6 @@ export interface AuthorizedStudent {
   id: string;
   nome: string;
   email: string;
-  matricula?: string;
   active: boolean;
   processIds: string[];
   createdAt: string;
@@ -269,6 +279,7 @@ export interface ProcessData {
   driveFolderUrl?: string;
   driveSyncedAt?: string;
   signatureProviderPreferences?: Partial<Record<'ATA'|'TERMO'|'DECLARACAO', 'ASTEN'|'GOV_BR'>>;
+  astenSignatureIntent?: { documentType: 'ATA'|'TERMO'|'DECLARACAO'; revision: number; queuedAt: string; attemptedAt?: string; lastError?: string; lastErrorCode?: string; studioRevision?: number };
   dataRevision: number;
   createdAt: string;
   updatedAt: string;
@@ -314,6 +325,7 @@ export interface DocumentVersion {
 }
 
 export interface ProcessDocument {
+  signatureProgress?: import('./signatures').DocumentSignatureProgress;
   id: string;
   type: DocumentType;
   title: string;
@@ -327,6 +339,7 @@ export interface ProcessDocument {
   driveFileId?: string;
   driveWebViewLink?: string;
   driveDownloadUrl?: string;
+  signatureProvider?: 'ASTEN' | 'GOV_BR';
 }
 
 export type CorrectionRequestStatus = 'ABERTO' | 'EM_ANALISE' | 'CORRIGIDO' | 'RECUSADO';
@@ -347,8 +360,14 @@ export interface DocumentCorrectionRequest {
 }
 
 export interface AuditLog {
+  currentProcessStage?: ProcessEtapa;
   id: string;
   processId?: string;
+  processProtocol?: string;
+  processTitle?: string;
+  actorName?: string;
+  source?: 'activity' | 'email';
+  emailDeliveryId?: string;
   actorEmail: string;
   actorRoles: UserRole[];
   action: string;
@@ -425,7 +444,7 @@ export interface GlobalSettings {
   calendarId?: string;
   driveRootFolderId?: string;
   templateIds?: Record<string, string>;
-  emailConfig?: Record<string, any>;
+  emailConfig?: { auditEmailsEnabled?: boolean; auditCopyEmail?: string; roomReservationDepartmentEmail?: string; roomReservationDepartmentEnabled?: boolean; roomReservationEmailCentralized?: boolean; [key: string]: any };
   integrationStudio?: IntegrationStudioSettings;
   integrationStudioDraft?: IntegrationStudioSettings;
   documentModels?: Record<string, {
@@ -442,6 +461,7 @@ export interface GlobalSettings {
     contentSha256?: string;
     driveRevisionId?: string;
     driveModifiedTime?: string;
+    publicPdf?: PublicBlankPdfArtifact;
     activeVersion?: number;
     versions?: Array<{
       version: number;
@@ -454,6 +474,7 @@ export interface GlobalSettings {
       contentSha256?: string;
       driveRevisionId?: string;
       driveModifiedTime?: string;
+      publicPdf?: PublicBlankPdfArtifact;
     }>;
   }>;
   createdAt: string;
@@ -471,6 +492,7 @@ export interface AuthState {
 
 export interface GoogleCalendarSyncedEvent {
   id: string;
+  portalTccProtocol?: string;
   summary: string;
   description?: string;
   location?: string;

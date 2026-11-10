@@ -30,6 +30,12 @@ test('ata closing includes defense plus one hour, removes old formula and handle
  const p=fixture(),text='Nada mais havendo a tratar, foi encerrada a sessão e lavrada a presente ata que será assinada por quem de direito.';const out=adaptDocumentLanguage(text,p,'ATA');assert.match(out,/às quinze horas/);assert.match(out,/que segue para ser assinada\./);assert.doesNotMatch(out,/por quem de direito/);assert.equal(adaptDocumentLanguage(out,p,'ATA'),out);
  p.defesa.startAt='2026-10-15T23:30:00-03:00';assert.match(adaptDocumentLanguage(text,p,'ATA'),/zero horas e trinta minutos|meia-noite e trinta minutos/);
 });
+test('ata continues the opinion without a paragraph break and removes a duplicated period',()=>{
+ const p=fixture(),text='A banca registrou o parecer.. Nada mais havendo a tratar, foi encerrada a sessão e lavrada a presente ata que será assinada.';
+ const output=adaptDocumentLanguage(text,p,'ATA');
+ assert.match(output,/parecer\. Nada mais havendo a tratar, às quinze horas foi encerrada a sessão e lavrada a presente ata, que segue para ser assinada\./);
+ assert.equal(adaptDocumentLanguage(output,p,'ATA'),output);
+});
 test('new native fields precede names, preserve choices and validate a complete new payload',()=>{
  const questions=registrationQuestions({formTemplates:[{id:'form-reserva-aluno',questions:[{fieldKey:'ORIENTADOR_NOME',label:'Nome',fieldType:'text'}]}]} as any);for(const prefix of ['ALUNO_1','ALUNO_2','ORIENTADOR','COORIENTADOR','EXAMINADOR_2','EXAMINADOR_3'])assert.ok(questions.findIndex(q=>q.fieldKey===prefix+'_TRATAMENTO')<questions.findIndex(q=>q.fieldKey===prefix+'_NOME'));
  const p=fixture();const a:any={ALUNO_1_NOME:p.aluno1.nome,ALUNO_1_MATRICULA:'202600001',ALUNO_1_EMAIL:'aluna@edu.ufes.br',ALUNO_1_TRATAMENTO:'Aluna',TEM_ALUNO_2:'Não',TEM_COORIENTADOR:'Não',ORIENTADOR_NOME:p.orientador.nome,ORIENTADOR_EMAIL:'orientacao@ufes.br',ORIENTADOR_SIAPE:'1234567',ORIENTADOR_TRATAMENTO:'Professora',ORIENTADOR_TITULACAO:'Doutora',EXAMINADOR_2_NOME:'Ana Ferreira Lima',EXAMINADOR_2_EMAIL:'ana@ufes.br',EXAMINADOR_2_INSTITUICAO:'UFES',EXAMINADOR_2_TRATAMENTO:'Professora',EXAMINADOR_2_TITULACAO:'Mestra',EXAMINADOR_3_NOME:'Carlos Ferreira Lima',EXAMINADOR_3_EMAIL:'carlos@ufes.br',EXAMINADOR_3_INSTITUICAO:'UFES',EXAMINADOR_3_TRATAMENTO:'Professor',EXAMINADOR_3_TITULACAO:'Doutor',TITULO:'Cuidados de enfermagem',DEFESA_DATA_HORA:'2026-10-15T14:00',DEFESA_LOCAL:questions.find(q=>q.fieldKey==='DEFESA_LOCAL')!.options![0]};
@@ -43,11 +49,12 @@ test('workflow derives formal names from stored participants, not extra variable
  const p=fixture();const vars=buildProcessVariables({process:p,eventCode:'TEST',actorEmail:'master@portal.local',actorRoles:[],extraVariables:{ORIENTADOR_NOME_COMPLETO:'invasor',ALUNO_1_TRATAMENTO:'Aluno'}});assert.equal(vars.ORIENTADOR_NOME_COMPLETO,'Professora Doutora Maria Oliveira');assert.equal(vars.ORIENTADOR_TRATAMENTO,'Professora');assert.equal(vars.ALUNO_1_TRATAMENTO,'Aluna');
 });
 
-test('temporary Google copy receives grammar and bold corrections for all four documents',async()=>{
+test('temporary Google copy receives grammar and body formatting corrections for all four documents',async()=>{
  const {renderGoogleDriveTemplateToPdf}=await import('./integrations/googleDocsRenderer');
  const pdf=await PDFDocument.create();const page=pdf.addPage();page.drawText('Universidade - ata de teste',{x:43,y:790,size:11,font:await pdf.embedFont(StandardFonts.Helvetica)});const pdfBytes=await pdf.save();
  for(const documentType of ['CONVITE','ATA','TERMO','DECLARACAO']){
-  const p=fixture(),source='do(a)(s) graduando(a)(s) Maria da Silva. o(a) Prof(ª). Dr(ª). Maria Oliveira. Aprovado. O estudo atende aos objetivos. Nada mais havendo a tratar, foi encerrada a sessão e lavrada a presente ata que será assinada por quem de direito.';
+  const opening: Record<string, string>={ATA:'Às quatorze horas, ',TERMO:'Eu, ',DECLARACAO:'Declaro que o trabalho '};
+  const p=fixture(),source=(opening[documentType]||'')+'do(a)(s) graduando(a)(s) Maria da Silva. o(a) Prof(ª). Dr(ª). Maria Oliveira. Aprovado. O estudo atende aos objetivos. Nada mais havendo a tratar, foi encerrada a sessão e lavrada a presente ata que será assinada por quem de direito.';
   p.banca=[{id:'b2',nome:'Beatriz Oliveira Santos',email:'beatriz@example.invalid',tratamento:'Professora',titulacao:'Mestra',funcao:'EXAMINER_2'},{id:'b3',nome:'Rafael Almeida Lima',email:'rafael@example.invalid',tratamento:'Professor',titulacao:'Doutor',funcao:'EXAMINER_3'}];
   let text=source+'\nExaminadora Professora Mestra Beatriz Oliveira Santos\nExaminador Professor Doutor Rafael Almeida Lima\n',revision=0,deleted=false;const styles:any[]=[];
   const json=(v:any)=>new Response(JSON.stringify(v),{headers:{'content-type':'application/json'}});
@@ -66,10 +73,16 @@ test('temporary Google copy receives grammar and bold corrections for all four d
    throw Error(`Unexpected ${method} ${url}`);
   }) as typeof fetch;
   const result=await renderGoogleDriveTemplateToPdf({accessToken:'test-only',templateUrlOrId:'sourceTemplate123',replacements:{},presentation:{process:p,documentType},fetchImpl});
-  assert.deepEqual(result.unresolvedMarkers,[]);assert.equal(deleted,true);assert.match(text,/da graduanda Maria da Silva/);assert.match(text,/a Prof\.ª Dr\.ª Maria Oliveira/);assert.doesNotMatch(text,/\(a\)|\(ª\)|\(s\)/);assert.ok(styles.some(style=>style.rendered==='Aprovada'));assert.ok(styles.some(style=>style.rendered===p.avaliacao.parecer));assert.ok(styles.some(style=>style.rendered===academicName(p.orientador,'abbreviated')),'complete abbreviated advisor name stays bold after grammar adaptation');assert.ok(styles.some(style=>style.rendered===p.aluno1.nome));assert.ok(styles.filter(style=>style.textStyle.bold!==false).every(style=>style.textStyle.bold===true&&style.textStyle.underline===false));if(['CONVITE','DECLARACAO'].includes(documentType)&&p.coorientador)assert.ok(styles.some(style=>style.textStyle.bold===false&&style.rendered.includes(p.coorientador!.nome)),'coadvisor identification remains normal weight');
-  for(const member of p.banca){
-   const complete=academicName(member,'abbreviated');
-   assert.ok(styles.some(style=>style.rendered===complete),`${documentType}: prefix and entire examiner name are bold: ${complete}`);
+  assert.deepEqual(result.unresolvedMarkers,[]);assert.equal(deleted,true);assert.match(text,/da graduanda Maria da Silva/);assert.match(text,/a Prof\.ª Dr\.ª Maria Oliveira/);assert.doesNotMatch(text,/\(a\)|\(ª\)|\(s\)/);
+  if(documentType==='CONVITE'){
+   assert.ok(styles.every(style=>style.textStyle.bold!==true));
+  }else{
+   for(const value of [p.aluno1.nome,academicName(p.orientador,'abbreviated')]){
+    const index=text.indexOf(value)+1;
+    assert.ok(index>0,`${documentType}: ${value}`);
+    const effective=styles.filter(style=>style.range.startIndex<=index&&style.range.endIndex>=index+value.length&&style.textStyle.bold!==undefined).at(-1);
+    assert.equal(effective?.textStyle.bold,false,`${documentType}: ${value} uses normal weight`);
+   }
   }
   if(documentType==='ATA'){assert.match(text,/às quinze horas/);assert.doesNotMatch(text,/por quem de direito/);}
  }
@@ -122,4 +135,18 @@ test('only an absent second author removes its signature paragraph and one adjac
  const doc={body:{content:[{startIndex:1,endIndex:6,paragraph:{elements:[{textRun:{content:'Ana\n'}}]}},{startIndex:6,endIndex:7,paragraph:{elements:[{textRun:{content:'\n'}}]}},{startIndex:7,endIndex:40,paragraph:{elements:[{textRun:{content:'<<nome completo aluno (2)>>\n'}}]}},{startIndex:40,endIndex:47,paragraph:{elements:[{textRun:{content:'Aluna\n'}}]}}]}};
  assert.deepEqual(optionalAuthorBlockRequests(doc,p),[{deleteContentRange:{range:{startIndex:6,endIndex:40}}}]);
  p.aluno2={...p.aluno1,nome:'Ana Pereira'};assert.deepEqual(optionalAuthorBlockRequests(doc,p),[]);
+});
+
+test('ata opening is an uppercase title while narrative, names and signatures keep their casing',()=>{
+ const p=fixture();
+ const title='Ata da Sessão de Defesa Final de Trabalho de Conclusão de curso dos graduandos Maria da Silva, do curso de Graduação em Enfermagem e Obstetrícia da Universidade Federal do Espírito Santo.';
+ const narrative='Às quatorze horas foi instalada a sessão. O trabalho aborda a assistência em Enfermagem.';
+ const signature='Prof.ª Dr.ª Maria Oliveira\nOrientadora e Presidente';
+ const output=adaptDocumentLanguage(title+'\n'+narrative+'\n\n'+signature,p,'ATA');
+ assert.equal(output.split('\n')[0],title.toLocaleUpperCase('pt-BR'));
+ assert.ok(output.includes('\n'+narrative+'\n\n'+signature));
+ assert.equal(adaptDocumentLanguage(output,p,'ATA'),output);
+ assert.equal(adaptDocumentLanguage(title+'\u000b'+narrative,p,'ATA'),title.toLocaleUpperCase('pt-BR')+'\u000b'+narrative);
+ assert.equal(adaptDocumentLanguage(title+' '+narrative,p,'ATA'),title.toLocaleUpperCase('pt-BR')+' '+narrative);
+ assert.equal(adaptDocumentLanguage(title,p,'CONVITE'),title);
 });

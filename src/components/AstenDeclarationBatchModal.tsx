@@ -1,3 +1,4 @@
+import {formatDateTimeWithWeekday} from '../utils/formatters';
 import {ASTEN_SIGNATURE_GUIDANCE} from '../utils/signatureGuidance';
 import React,{useEffect,useState} from 'react';
 import {Shield} from 'lucide-react';
@@ -29,7 +30,7 @@ export const AstenDeclarationBatchModal:React.FC<Props>=({processIds,onClose,onS
       {error&&<p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3">{error}</p>}
       {!loading&&items.map(item=><div key={item.processId} className={`flex items-start gap-3 rounded-lg border border-slate-300 p-3 ${item.ready?'bg-white':'bg-[var(--portal-surface-panel)]'}`}>
         {item.ready&&<input type="checkbox" className="mt-1 h-4 w-4 shrink-0" aria-label={`Selecionar ${item.protocol}`} disabled={!item.ready} checked={item.ready&&selected.includes(item.processId)} onChange={event=>setSelected(current=>event.target.checked?[...current,item.processId]:current.filter(id=>id!==item.processId))}/>}
-        <span><strong>{item.protocol}</strong>{item.recipientEmail&&<span className="mt-1 block">Assinatura da presidência: {item.recipientName} · {item.recipientEmail}</span>}<span className={`mt-1 block ${item.ready?'text-emerald-800':'text-amber-900'}`}>{item.reason}</span>{item.sentAt&&<span className="mt-1 block text-slate-600">Enviada em {new Date(item.sentAt).toLocaleString('pt-BR')}</span>}{item.jobId&&<button type="button" className="portal-action mt-3" disabled={!!refreshing} onClick={()=>void refresh(item.jobId!)}>{refreshing===item.jobId?'Atualizando…':'Atualizar andamento na Asten'}</button>}</span>
+        <span><strong>{item.protocol}</strong>{item.recipientEmail&&<span className="mt-1 block">Assinatura da presidência: {item.recipientName} · {item.recipientEmail}</span>}<span className={`mt-1 block ${item.ready?'text-emerald-800':'text-amber-900'}`}>{item.reason}</span>{item.sentAt&&<span className="mt-1 block text-slate-600">Enviada em {formatDateTimeWithWeekday(item.sentAt)}</span>}{item.jobId&&<button type="button" className="portal-action mt-3" disabled={!!refreshing} onClick={()=>void refresh(item.jobId!)}>{refreshing===item.jobId?'Atualizando…':'Atualizar andamento na Asten'}</button>}</span>
       </div>)}
     </div>
   </PortalModalShell>;

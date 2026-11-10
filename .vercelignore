@@ -15,6 +15,20 @@ review_inputs/
 .DS_Store
 
 output/
+tmp/
 .playwright-cli/
 
 .playwright-mcp/
+.supabase/
+.supabase-temp/
+supabase/.temp/
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+credentials*.json
+client_secret*.json
+service-account*.json
+service_account*.json

@@ -18,10 +18,16 @@ test('desenvolvimento oferece bootstrap único, modo compilado e verificação d
   const compiled=read('scripts/start-local-compiled.mjs');
   assert.match(compiled,/PORTAL_SERVE_COMPILED_CLIENT: 'true'/);
   assert.match(compiled,/PORTAL_GIT_COMMIT: commit/);
-  assert.match(compiled,/VITE_PORTAL_LOCAL_DEMO_AUTH: 'true'/);
-  assert.match(compiled,/PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'true'/);
+  assert.match(compiled,/VITE_PORTAL_LOCAL_DEMO_AUTH: 'false'/);
+  assert.match(compiled,/PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'false'/);
   assert.match(compiled,/PORTAL_ALLOW_LOCAL_OTP_STORE: 'true'/);
   assert.match(compiled,/PORTAL_OTP_DELIVERY_MODE: 'log'/);
+  const dev=read('scripts/start-local-dev.mjs');
+  for (const launcher of [dev,compiled]) {
+    assert.match(launcher,/PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'false'/);
+    assert.match(launcher,/PORTAL_TEST_DOCUMENT_RENDERER: 'false'/);
+    assert.doesNotMatch(launcher,/PORTAL_OTP_TEST_CODE/);
+  }
 });
 
 test('build local identifica o mesmo commit que CI e Vercel',()=>{
@@ -66,11 +72,11 @@ test('bundle compilado local preserva autenticação demo e seletor de usuário'
 test('bootstrap gera segredos locais sem versioná-los',()=>{
   const env=read('.env.development.example');
   const prepare=read('scripts/prepare-local.mjs');
-  assert.match(env,/PORTAL_ALLOW_INSECURE_DEMO_AUTH="true"/);
+  assert.match(env,/PORTAL_ALLOW_INSECURE_DEMO_AUTH="false"/);
   assert.match(env,/PORTAL_SESSION_SECRET=""/);
   assert.match(env,/PORTAL_OTP_PEPPER=""/);
   assert.match(env,/PORTAL_OTP_DELIVERY_MODE="log"/);
-  assert.match(env,/PORTAL_OTP_TEST_CODE="\d{6}"/);
+  assert.doesNotMatch(env,/PORTAL_OTP_TEST_CODE/);
   assert.match(prepare,/randomBytes\(36\)\.toString\('base64url'\)/);
   assert.match(prepare,/ensureSecret\('PORTAL_SESSION_SECRET'\)/);
   assert.match(prepare,/ensureSecret\('PORTAL_OTP_PEPPER'\)/);

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { apiClient } from '../services/apiClient';
+import { apiClient, ApiRequestError } from '../services/apiClient';
 import { retryAfterPortalReauthentication } from '../services/reauthentication';
 
 interface Props { isMaster: boolean; }
@@ -63,6 +63,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
   const emailDrafts=useRef<{master?:string;president?:string}>({});
   const [statusText, setStatusText] = useState('');
   const [errorText, setErrorText] = useState('');
+  const [presidentSaveFailed, setPresidentSaveFailed] = useState(false);
   const timerRef = useRef<number | null>(null);
   const hydratedRef = useRef(false);
   const lastSavedRef = useRef('');
@@ -182,6 +183,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
 
   const persistSensitiveEmails = async (role:'MASTER_ADMIN'|'COMMISSION_PRESIDENT',rawTarget:string) => {
     if (!isMaster||sensitiveLock.current) return;
+    setPresidentSaveFailed(false);
     const target=rawTarget.trim().toLowerCase();
     if(!validEmail(target)){setErrorText('Informe um e-mail administrativo válido.');return;}
     const current=role==='MASTER_ADMIN'?masterEmailRef.current:presidentEmailRef.current;
@@ -193,11 +195,20 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
     }
     sensitiveLock.current=true;setSensitiveSaving(true);setErrorText('');setStatusText('');
     try {
-      const transfer=await reauthenticateAndTransfer(role,target);
+      const transfer = await reauthenticateAndTransfer(role, target).catch(async (error: unknown) => {
+        if (role !== 'COMMISSION_PRESIDENT' || !(error instanceof ApiRequestError)
+          || (error.code !== 'REQUEST_TIMEOUT' && error.status < 500)
+          || error.code === 'RUNTIME_BUSY') throw error;
+        const confirmed = await apiClient.getSettings().catch(() => undefined);
+        if (confirmed?.commissionPresidentEmail?.trim().toLowerCase() === target) {
+          return { status: 'COMPLETED' };
+        }
+        throw new Error('Não foi possível confirmar a alteração da Presidência. O endereço digitado foi mantido nesta tela.');
+      });
       if(transfer.status==='COMPLETED'){
         setPendingTransfers(items=>items.filter(item=>item.role!==role));
         if(role==='MASTER_ADMIN'){masterEmailRef.current=target;emailDrafts.current.master=undefined;setMasterEmail(target);}
-        else{presidentEmailRef.current=target;emailDrafts.current.president=undefined;setPresidentEmail(target);}
+        else{presidentEmailRef.current=target;emailDrafts.current.president=target;setPresidentEmail(target);}
         setStatusText(`E-mail ${role==='MASTER_ADMIN'?'do Master':'da Presidência'} atualizado para ${target}. Alteração aplicada e registrada no histórico.`);
       }else{
         setPendingTransfers(items=>[...items.filter(item=>item.role!==role),transfer]);
@@ -205,6 +216,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
       }
       await refreshAuth();
     } catch (error: any) {
+      setPresidentSaveFailed(role === 'COMMISSION_PRESIDENT');
       setErrorText(error instanceof Error ? error.message : 'Não foi possível confirmar a alteração administrativa.');
     } finally {sensitiveLock.current=false;setSensitiveSaving(false);}
   };
@@ -234,6 +246,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
   return (
     <section className="portal-identity-panel space-y-[5px] p-0" style={{ backgroundColor: 'var(--portal-surface-page)' }} aria-label="Dados de rodapé e identidade">
       {(saving || (regularSaveMessage && fingerprint === lastSavedRef.current)) && <p role="status" className="text-right text-[10px] font-semibold text-slate-600">{saving ? 'Salvando alterações…' : regularSaveMessage}</p>}
+      {sensitiveSaving && <p role="status" className="text-right text-[10px] font-semibold text-slate-600">Confirmando alteração administrativa…</p>}
       {statusText && <div className="text-right text-[9px] font-bold text-[var(--portal-brand-action)]">{statusText}</div>}
       <div className="grid gap-[5px] md:grid-cols-2">
         <label className={fieldClass} style={{ backgroundColor: 'var(--portal-surface-panel)' }}><span className={labelClass}>Nome da Secretaria / Administrador Master</span><input value={masterName} onChange={event => setMasterName(event.target.value)} onBlur={() => void persistRegularFields()} className={inputClass}/></label>
@@ -257,7 +270,7 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
         </div>
         <div className="space-y-1 p-1">
           {members.map(member => (
-            <div key={member.id} className="grid gap-2 rounded-md bg-white p-2 sm:grid-cols-[1fr_1fr_34px]">
+            <div key={member.id} className="grid gap-2 rounded-md p-2 sm:grid-cols-[1fr_1fr_34px]" style={{ backgroundColor: 'var(--portal-surface-panel)' }}>
               <input value={member.name} onChange={event => updateMember(member.id, { name: event.target.value })} onBlur={() => void persistRegularFields()} className={inputClass} placeholder="Nome completo"/>
               <input type="email" value={member.email || ''} onChange={event => updateMember(member.id, { email: event.target.value })} onBlur={() => void persistRegularFields()} className={inputClass} placeholder="email@instituicao.br"/>
               <button type="button" onClick={() => setMembers(prev => prev.filter(item => item.id !== member.id))} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-rose-700" aria-label={`Excluir ${member.name || 'membro'}`}><Trash2 className="h-3.5 w-3.5"/></button>
@@ -267,7 +280,11 @@ export const CommissionIdentityPanel: React.FC<Props> = ({ isMaster }) => {
         </div>
 
       </div>
-      {errorText && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-semibold text-rose-800" role="alert">{errorText}</div>}
+      {errorText && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-semibold text-rose-800" role="alert">{errorText}
+        {presidentSaveFailed && !sensitiveSaving && (
+          <button type="button" className="ml-2 underline" onClick={() => void persistSensitiveEmails('COMMISSION_PRESIDENT', presidentEmail)}>Tentar novamente</button>
+        )}
+      </div>}
     </section>
   );
 };

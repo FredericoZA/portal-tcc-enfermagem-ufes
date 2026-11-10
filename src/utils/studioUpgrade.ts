@@ -1,3 +1,4 @@
+import {withNativeWorkflowActivities} from './nativeWorkflowActivities';
 import {withConsolidatedEmailNotifications} from './consolidatedEmailNotifications';
 import {withDeclarationAfterTerm} from './declarationWorkflow';
 import {withRepositoryDeliveryEmail} from './repositoryDeliveryEmail';
@@ -35,5 +36,5 @@ export function upgradeStudioDraft(source: Partial<IntegrationStudioSettings>): 
   const registration=value.formTemplates.find(f=>f.id==='form-reserva-aluno');
   if(registration)registration.questions=questions;
   else value.formTemplates.unshift({id:'form-reserva-aluno',title:'Cadastro inicial do TCC',targetRole:'Aluno',questions});
-  return withConsolidatedEmailNotifications(withDeclarationAfterTerm(withRepositoryDeliveryEmail(value as IntegrationStudioSettings)),{ensureFinalStage:false});
+  return withNativeWorkflowActivities(withConsolidatedEmailNotifications(withDeclarationAfterTerm(withRepositoryDeliveryEmail(value as IntegrationStudioSettings)),{ensureFinalStage:false}));
 }

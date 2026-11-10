@@ -1,0 +1,12 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {runInNewContext} from 'node:vm';import {createHash} from 'node:crypto';import ts from 'typescript';
+
+test('ATA incompatível falha antes de renderizar; CHECK abortado não deixa job envenenando próxima gravação',async()=>{
+ const server=readFileSync('server.ts','utf8');const start=server.indexOf('async function createSignatureJobUnlocked(');const source=server.slice(start,server.indexOf('\n}\n',start)+2);
+ let ready=false,rendered=0,persistError='23514 check constraint';const jobs:any[]=[];
+ const p={id:'unit-process',protocolo:'TCC - 00001',dataRevision:1,avaliacao:{},aluno1:{nome:'Autor'},astenSignatureIntent:{documentType:'ATA',revision:1}};
+ const ports:any={auditLogsStore:[],recordSignatureAudit:()=>{},Error,Buffer,Date,createHash,currentSettings:{},assertCurrentSignatureRecipients:()=>{},captureSignaturePolicySnapshot:()=>({version:1,configured:false}),signatureJobsStore:jobs,assertDocumentSignatureOpen:()=>{},assertSignatureEligibility:()=>{},signatureDocumentRevision:()=>1,reusableAstenSignatureJob:()=>undefined,getSupabaseRuntimeStatus:()=>({durablePersistenceReady:true}),getSupabaseRuntimeConnectionStatus:async()=>({signatureSignerRolesReady:ready}),deriveSignatureSigners:()=>[{role:'ADVISOR',email:'advisor@example.invalid',signingOrder:1}],isValidPortalEmail:()=>true,getPersistentAstenConnection:async()=>({repositoryId:1}),resolveAstenDocumentFolder:async()=>2,buildDocumentVerificationCode:()=> 'unit-code',renderOfficialTemplatePdf:async()=>{rendered++;return Buffer.from('%PDF-unit');},getAstenSigningProfile:()=> 'EMAIL_LINK',buildPortalDriveFileName:()=> 'ata.pdf',localDocumentModelsEnabled:()=>true,storeLocalGovbrPdf:()=> 'unit-file',persistPortalStateDurably:async()=>{throw Error(persistError);}};
+ const create=runInNewContext(ts.transpileModule('('+source+')',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,ports);
+ await assert.rejects(create(p,'ATA','advisor@example.invalid'),/banco ainda não suporta/);assert.equal(rendered,0);assert.equal(jobs.length,0);
+ ready=true;await assert.rejects(create(p,'ATA','advisor@example.invalid'),/23514/);assert.equal(jobs.length,0);assert.equal(p.astenSignatureIntent.documentType,'ATA');
+ persistError='ambiguous persistence';await assert.rejects(create(p,'ATA','advisor@example.invalid'),/ambiguous/);assert.equal(jobs.length,1,'ambiguous outcome must retain identity for reconciliation instead of regenerating a document');
+});

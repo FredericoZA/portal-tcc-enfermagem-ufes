@@ -45,21 +45,31 @@ export const PORTAL_THEME = {
         bg: 'var(--portal-role-student-bg)',
         border: 'var(--portal-role-student-border)',
         text: 'var(--portal-role-student-text)',
+        solidText: 'var(--portal-role-student-solid-text)',
       },
       board: {
         bg: 'var(--portal-role-board-bg)',
         border: 'var(--portal-role-board-border)',
         text: 'var(--portal-role-board-text)',
+        solidText: 'var(--portal-role-board-solid-text)',
+      },
+      coadvisor: {
+        bg: 'var(--portal-role-coadvisor-bg)',
+        border: 'var(--portal-role-coadvisor-border)',
+        text: 'var(--portal-role-coadvisor-text)',
+        solidText: 'var(--portal-role-coadvisor-solid-text)',
       },
       evaluator: {
         bg: 'var(--portal-role-evaluator-bg)',
         border: 'var(--portal-role-evaluator-border)',
         text: 'var(--portal-role-evaluator-text)',
+        solidText: 'var(--portal-role-evaluator-solid-text)',
       },
       viewer: {
         bg: 'var(--portal-role-viewer-bg)',
         border: 'var(--portal-role-viewer-border)',
         text: 'var(--portal-role-viewer-text)',
+        solidText: 'var(--portal-role-viewer-solid-text)',
       },
     },
     signature: {

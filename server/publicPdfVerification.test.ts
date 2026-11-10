@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createHash,webcrypto} from 'node:crypto';
 import {apiClient} from '../src/services/apiClient';
 import {MAX_PUBLIC_VERIFICATION_PDF_BYTES,verifyPublicPdfLocally} from '../src/utils/publicPdfVerification';
-import {createSupabaseStagedUpload} from './integrations/supabaseStorageStaging';
+import {createDriveStagedUpload} from './integrations/supabaseStorageStaging';
 
 const originalBytes='%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF';
 const originalSha256=createHash('sha256').update(originalBytes).digest('hex');
@@ -96,7 +96,7 @@ test('staging público de verificação é recusado antes de alocar ticket, buck
   let requests=0;
   globalThis.fetch=async()=>{requests++;throw new Error('não deve alcançar armazenamento');};
   try{
-    await assert.rejects(createSupabaseStagedUpload({purpose:'VERIFICATION_PDF',requesterBinding:'public:codigo',verificationCode:'codigo',fileName:'ata.pdf',mimeType:'application/pdf',size:originalFile().size,sha256:originalSha256}),/envio público.*desativado/);
+    await assert.rejects(createDriveStagedUpload({purpose:'VERIFICATION_PDF',requesterBinding:'public:codigo',verificationCode:'codigo',fileName:'ata.pdf',mimeType:'application/pdf',size:originalFile().size,sha256:originalSha256},{rootFolderId:'root_fixture_123',origin:'https://portal.example.invalid'}),/envio público.*desativado/);
     assert.equal(requests,0);
   }finally{globalThis.fetch=previousFetch;}
 });

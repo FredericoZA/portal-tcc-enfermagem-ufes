@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ProcessData } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
-import { formatDatePt, formatStudentsString } from '../utils/formatters';
+import { formatDateWithWeekday, formatStudentsString } from '../utils/formatters';
 import { StudentNames } from '../components/StudentNames';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
 import { CheckSquare, ArrowRight, AlertCircle } from 'lucide-react';
@@ -36,7 +36,7 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
         <div className="flex items-center gap-2 mt-1">
           <ColorfulHeaderIcon type="evaluation" />
           <h1 className="text-sm sm:text-base font-black text-white normal-case tracking-tight">
-            Avaliações dos TCCs em que você é orientador
+            Conceito e ata dos TCCs que você orienta
           </h1>
         </div>
         <p className="text-[10px] sm:text-[11px] text-emerald-100/95 font-medium leading-normal mt-0.5">
@@ -46,14 +46,14 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
 
       {isLoading ? (
         <div className="bg-white p-6 text-center text-xs font-semibold text-slate-500 border border-slate-200">
-          Carregando avaliações...
+          Carregando os registros de conceito e ata...
         </div>
       ) : processes.length === 0 ? (
         <div className="bg-white p-8 text-center border border-slate-200 space-y-2">
           <CheckSquare className="w-8 h-8 text-slate-400 mx-auto" />
-          <h3 className="font-bold text-slate-800 text-sm normal-case">Nenhuma avaliação pendente</h3>
+          <h3 className="font-bold text-slate-800 text-sm normal-case">Nenhum registro de conceito e ata pendente</h3>
           <p className="text-xs text-slate-500">
-            Você não possui processos de TCC aguardando avaliação no momento.
+            Seus TCCs estão sem pendências de conceito e ata.
           </p>
         </div>
       ) : (
@@ -69,7 +69,7 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
                   <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-sm normal-case tracking-wider ${
                     proc.avaliacao.status === 'CONCLUIDO' ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-950 border border-amber-300'
                   }`}>
-                    {proc.avaliacao.status === 'CONCLUIDO' ? 'Avaliação Concluída' : 'Avaliação Pendente'}
+                    {proc.avaliacao.status === 'CONCLUIDO' ? 'Conceito e ata registrados' : 'Conceito e ata pendentes'}
                   </span>
                 </div>
 
@@ -79,7 +79,7 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
                     <strong>Aluno(s):</strong>
                     <StudentNames aluno1={proc.aluno1} aluno2={proc.aluno2} align="left" itemClassName="text-xs font-bold text-slate-900" />
                   </div>
-                  <div><strong>Data da Defesa:</strong> {formatDatePt(proc.defesa.startAt)}</div>
+                  <div><strong>Data da Defesa:</strong> {formatDateWithWeekday(proc.defesa.startAt)}</div>
                 </div>
               </div>
 
@@ -87,7 +87,7 @@ export const AvaliacoesPage: React.FC<AvaliacoesPageProps> = ({ onSelectProcess 
                 onClick={() => onSelectProcess(proc.id)}
                 className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs normal-case tracking-wider px-5 py-2.5 rounded-sm shadow-xs transition-colors"
               >
-                <span>{proc.avaliacao.status === 'CONCLUIDO' ? 'Ver Parecer Registrado' : 'Realizar Avaliação'}</span>
+                <span>{proc.avaliacao.status === 'CONCLUIDO' ? 'Ver Parecer Registrado' : 'Registrar conceito e ata'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>

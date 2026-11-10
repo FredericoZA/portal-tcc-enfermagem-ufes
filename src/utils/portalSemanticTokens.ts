@@ -26,6 +26,7 @@ export type PortalSemanticTone =
   | 'upcoming'
   | 'student'
   | 'board'
+  | 'coadvisor'
   | 'evaluator'
   | 'viewer'
   | 'pending'
@@ -40,6 +41,7 @@ export function getPortalToneColors(tone: PortalSemanticTone): PortalToneColors 
     case 'upcoming': return PORTAL_SEMANTIC_COLORS.defense.upcoming;
     case 'student': return PORTAL_SEMANTIC_COLORS.processRole.student;
     case 'board': return PORTAL_SEMANTIC_COLORS.processRole.board;
+    case 'coadvisor': return PORTAL_SEMANTIC_COLORS.processRole.coadvisor;
     case 'evaluator': return PORTAL_SEMANTIC_COLORS.processRole.evaluator;
     case 'viewer': return PORTAL_SEMANTIC_COLORS.processRole.viewer;
     case 'pending': return PORTAL_SEMANTIC_COLORS.signature.pending;
@@ -91,6 +93,12 @@ const FILTER_TONE_ALIASES: Record<string, PortalSemanticTone> = {
   aluno: 'student',
   discente: 'student',
   board: 'board',
+  orientador: 'board',
+  advisor: 'board',
+  coadvisor: 'coadvisor',
+  co_advisor: 'coadvisor',
+  coorientador: 'coadvisor',
+  co_orientador: 'coadvisor',
   banca: 'board',
   evaluator: 'evaluator',
   avaliador: 'evaluator',

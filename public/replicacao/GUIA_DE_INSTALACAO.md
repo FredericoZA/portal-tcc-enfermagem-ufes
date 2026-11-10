@@ -1,6 +1,6 @@
 # Tutorial de instalação e replicação do Portal TCC
 
-Revisão documental: 04/11/2026.
+Revisão documental: 09/11/2026.
 
 Este guia prepara uma instalação independente. Ele não autoriza o acesso aos dados, arquivos ou credenciais da instalação de origem.
 
@@ -14,15 +14,16 @@ O Portal TCC é um sistema administrativo para o ciclo completo do trabalho de c
 
 **Caminho de um TCC:** cadastro dos autores e membros da banca → solicitação e confirmação de local e horário → convite → defesa e registro da deliberação pelo orientador → conferência e assinatura da ata → entrega do trabalho final → termo de autorização, quando houver publicação → declaração e encerramento.
 
-**Documentos e parecer:** os modelos DOCX cadastrados pelo administrador são preenchidos com informações do processo e convertidos para PDF. O rascunho do parecer é montado por um texto-base fixo associado ao resultado selecionado, sem consulta a modelos de linguagem, e precisa receber a fundamentação efetiva da banca antes do registro. O orientador confere a ata e confirma o envio.
+**Documentos e parecer:** os modelos DOCX cadastrados pelo administrador são preenchidos com informações do processo e convertidos para PDF. O rascunho do parecer é montado por um dos três textos-base fixos — aprovado, aprovado com ressalva ou reprovado — com variações programadas de redação. O sistema não analisa o conteúdo acadêmico nem gera argumentos sobre mérito. O orientador deve preencher a fundamentação efetivamente deliberada pela banca, conferir a ata e confirmar o envio.
 
-**Indicadores:** o servidor calcula contagens, percentuais, medianas e distribuições por fórmulas comuns. A visualização pública oculta dados pessoais e campos livres, e suprime resultados com poucos registros. Essa estatística não utiliza modelos generativos, pontuação de estudantes nem inferência de resultados acadêmicos.
+**Indicadores:** o servidor calcula contagens, percentuais, medianas e distribuições por fórmulas comuns. O acesso exige autenticação do Master ou da Presidência, validada no servidor. O relatório não inclui nomes, contatos nem campos livres e suprime grupos pequenos. As antigas rotas públicas foram encerradas. Essa estatística não utiliza modelos generativos, pontuação de estudantes nem inferência de resultados acadêmicos.
 
 **Sugestões:** visitantes podem enviar voluntariamente melhorias pelo formulário público. O administrador lê e analisa as mensagens; elas não alimentam um mecanismo de recomendações ou de alteração automática do código.
 
-**Acesso e segurança:** os participantes têm permissões associadas a seus papéis no processo. O banco Supabase guarda os registros operacionais; documentos e modelos ficam no Google Drive privado. A Asten, o Gov.br e o Gmail são utilizados somente conforme as etapas e autorizações configuradas.
+**Acesso e segurança:** os participantes têm permissões associadas a seus papéis no processo. O banco Supabase guarda registros, permissões, auditoria e transporte privado temporário de arquivos; o arquivo definitivo de documentos, modelos e trabalhos é o Google Drive privado. A Asten, o Gov.br e o Gmail são utilizados somente conforme as etapas e autorizações configuradas.
 
-**Legislação:** esta instalação da UFES observa a Portaria Normativa GR/Ufes nº 310/2026 quanto à não utilização de sistemas de IA generativa nas operações descritas. Isso não substitui as verificações de LGPD, segurança da informação, contratos, registros de tratamento e demais exigências institucionais aplicáveis.
+**Legislação:** a Portaria Normativa GR/Ufes nº 310/2026 é referência para a revisão técnica desta instalação. Não existem chamadas a modelos de IA nos fluxos operacionais descritos. Isso não substitui as verificações de LGPD, segurança da informação, contratos, registros de tratamento e demais exigências institucionais aplicáveis.
+
 
 ## Arquitetura
 
@@ -34,7 +35,7 @@ O Portal TCC é um sistema administrativo para o ciclo completo do trabalho de c
 | Supabase | Estado operacional, revisões, permissões, auditoria, idempotência e filas. O transporte temporário de arquivos usa armazenamento privado com prazo de limpeza. |
 | Google Drive e Docs | Arquivo definitivo de trabalhos, documentos e modelos privados; mesclagem dos DOCX e exportação dos PDFs. |
 | Gmail e Calendar | Código de acesso, comunicações do processo e divulgação das defesas. |
-| Asten | Solicitação explícita de assinatura, retorno autenticado e conferência do documento antes do arquivamento. |
+| Asten | Solicitação automática de assinatura nas etapas previstas, retorno autenticado e conferência do documento antes do arquivamento. |
 | Gov.br | Assinatura externa do PDF e devolução ao Portal, seguida da conferência administrativa prevista no sistema. |
 
 As integrações do produto usam suas próprias APIs e OAuth. Elas não dependem das ferramentas pessoais do desenvolvedor. Segredos ficam no backend, nunca no navegador, nas variáveis `VITE_`, no pacote ou no GitHub. Tabelas e arquivos internos permanecem privados.
@@ -49,13 +50,14 @@ Para instituições públicas, a adoção do portal deve ser alinhada às regras
 
 1. Confira origem, branch, commit e alterações locais. Preserve o trabalho existente e prepare recuperação antes de modificar uma instalação com dados.
 2. Use contas e projetos próprios na Vercel, Supabase, Google Cloud e Asten. Crie uma raiz privada no Drive da nova instituição. Não reutilize a base, os usuários, as pastas ou os envelopes da Enfermagem UFES.
-3. Confira Node e npm em `package.json`, instale com `npm ci` e use `.env.example` como checklist das variáveis. O arquivo de demonstração local não serve para produção.
+3. Confira Node e npm em `package.json`, instale com `npm ci` e use `.env.example` como referência. Antes de publicar, revise também o bloco `env` em `vercel.json`: a cópia do repositório contém o domínio, o projeto Supabase, as referências de pastas do Drive e a URL de retorno da ASTEN da instalação de Enfermagem. Substitua esses valores pelos da nova instalação e confira o Master inicial. Guarde os segredos nas variáveis protegidas do projeto Vercel. Mantenha o envio automático da ASTEN desligado até conferir a nova configuração.
 4. Aplique as migrações necessárias na ordem. Confira runtime transacional, RLS, privilégios das funções, revisões, filas e armazenamento temporário privado.
 5. Configure o Master inicial, a identidade do curso, a presidência da Comissão, os destinatários de reserva, os locais e as regras acadêmicas da nova instituição. A autorização de acesso deve refletir os e-mails efetivamente cadastrados e ativos.
 6. Configure OAuth e callbacks do novo domínio. Autorize a conta Google institucional e conecte Gmail, Drive, Docs e Calendar. Configure o Asten e os destinos documentais na própria instalação.
 7. Envie quatro DOCX próprios: convite, ata, termo e declaração. O ZIP de modelos desta página é uma referência de estrutura; adapte cópias e confira variáveis e dados institucionais. Se o download não estiver disponível, obtenha modelos com o responsável pela nova instituição. Não solicite credenciais da origem e não use documentos preenchidos de alunos como modelos.
-8. Revise e publique os formulários, os modelos de e-mail, os destinatários, as ações do fluxo e a aparência nas Configurações. A contagem de modelos de e-mail não define quantas mensagens cada processo deve enviar.
-9. Execute os testes automatizados e o piloto real descritos abaixo. Publique somente com autorização do responsável e registre a revisão implantada.
+8. Em Configurações, revise o conteúdo em E-mails, os campos em Formulários e os modelos em Documentos e Variáveis. Em Fluxos, selecione cada etapa e confira suas atividades, os papéis em Destinatários e os gatilhos. Em Integrações e Plataforma, confira o endereço de auditoria e o responsável pelo auditório e pela sala de reuniões. Publique a configuração após conferir o encadeamento.
+9. Se a instalação oferecer a declaração de comparecimento, publique um PDF em branco pelo catálogo de documentos. A declaração de participação na banca é gerada no processo e segue para assinatura da Presidência.
+10. Execute os testes automatizados e o piloto real descritos abaixo. Publique somente com autorização do responsável e registre a revisão implantada.
 
 ## Fluxo atual dos processos novos
 
@@ -65,17 +67,17 @@ Um autor autenticado, cadastrado e autorizado usa **Meus TCCs → Cadastrar TCC*
 
 Na última etapa, o autor escolhe um local e informa data e horário, com intervalo de 1h30. Auditório e sala de reuniões dependem do departamento; outro local informado pelo autor depende do orientador. Consultar mapa de salas, aulas, eventos, reservas e funcionamento do prédio evita retrabalho. Não se exige comparecimento prévio ao departamento.
 
-O pedido já contém local, data e horário. O responsável apenas aceita ou recusa; não escolhe um local alternativo. Os botões de decisão são enviados somente ao responsável. Autores e orientador recebem comunicação informativa, sem esses botões. O processamento registra a resposta, prepara o comprovante e comunica os envolvidos.
+O pedido já contém local, data e horário. O responsável apenas aceita ou recusa; não escolhe um local alternativo. Os botões de decisão são enviados somente ao responsável. Autores e orientador recebem comunicação informativa, sem esses botões. O resultado é enviado como resposta à conversa do responsável, com o comprovante em PDF. Responsável, autores e orientador são destinatários diretos; somente o endereço de auditoria configurado fica em cópia.
 
-O bloqueio do local evita conflitos entre defesas do Portal; não verifica reservas externas. **Solicitar nova data** e **Alterar reserva** permitem um novo pedido conforme a etapa, invalidando a confirmação anterior. Links de versões antigas não confirmam uma solicitação nova.
+O bloqueio do local evita conflitos entre defesas do Portal; não verifica reservas externas. **Refazer reserva** e **Alterar reserva** permitem um novo pedido conforme a etapa, invalidando a confirmação anterior. Links de versões antigas não confirmam uma solicitação nova.
 
 ### Convite, conceito e ata
 
-Com a reserva confirmada, o convite é enviado em uma mensagem conjunta aos examinadores e ao coorientador, quando houver, com os destinatários em cópia conforme a configuração. Não gere um convite idêntico para cada examinador. A carta-convite fica em **Documentos administrativos** e não exige assinatura.
+Com a reserva confirmada, o convite é enviado automaticamente em uma mensagem conjunta aos dois examinadores como destinatários, com cópia aos autores, orientador e coorientador, quando houver, além da auditoria configurada. Não gere um convite idêntico para cada examinador. A carta-convite fica em **Documentos administrativos** e não exige assinatura.
 
 A partir do horário da defesa, com os requisitos anteriores concluídos, o orientador registra **Aprovado**, **Aprovado com ressalva** ou **Reprovado**, com parecer. O Portal TCC registra conceito e documentação. A avaliação acadêmica e o lançamento da nota são feitos em https://professor.ufes.br/ nesta instalação; outra instituição deve configurar sua referência própria.
 
-O orientador visualiza e confere a ata e confirma o registro. O Portal abre **Documentos administrativos**. Esse registro não solicita assinatura automaticamente. O método é escolhido no cartão do documento: Asten ou Gov.br. Somente o orientador assina a ata.
+O orientador visualiza e confere a ata e confirma o registro. O Portal abre **Documentos administrativos** e encaminha automaticamente o pedido pelo ASTEN. Assinam o orientador, os dois examinadores, os autores e o coorientador que participou da sessão, até seis pessoas. O ASTEN informa o estado do envio no cartão; cada signatário assina pelo link pessoal recebido por e-mail. Gov.br permanece como alternativa.
 
 ### Entrega e publicação
 
@@ -83,13 +85,13 @@ Após a ata assinada e arquivada, qualquer um dos autores preenche o resumo e as
 
 Entrega e publicação são decisões distintas. Cada PDF tem sua própria autorização de publicação. O resumo textual do catálogo é apresentado como metadado do trabalho, sem usar a autorização do PDF para ocultá-lo.
 
-**Confirmar entrega e ir para documentos** registra a entrega e abre **Documentos administrativos**. Essa ação não dispara automaticamente o Asten. Sem publicação autorizada de nenhum arquivo, não há Termo. Havendo autorização, os autores e o orientador assinam o mesmo Termo a partir do cartão desse documento.
+**Confirmar entrega e ir para documentos** registra a entrega e abre **Documentos administrativos**. Sem publicação autorizada de nenhum arquivo, não há Termo. Havendo autorização, essa ação gera o termo e encaminha automaticamente o pedido ASTEN aos autores e ao orientador. Todos assinam o mesmo documento pelo link individual recebido por e-mail.
 
 No Asten, todos assinam o Termo no mesmo nível. Pelo Gov.br, os autores e o orientador assinam o mesmo PDF; o orientador devolve o arquivo completo. O Master mantém a função administrativa prevista, sem dispensar assinaturas exigidas. O envio isolado não conclui a conferência.
 
 ### Declaração e encerramento
 
-Após a entrega, a ata e o termo arquivados quando aplicável, a presidência da Comissão assina a declaração pela **Área do Presidente**. Essa presidência não se confunde com o orientador, que preside a sessão de defesa.
+Após a entrega, a ata e o termo arquivados quando aplicável, a declaração é encaminhada automaticamente pelo ASTEN à presidência da Comissão. A pendência é acompanhada pela **Área do Presidente**, e a assinatura é feita pelo link pessoal recebido por e-mail ou pelo fluxo alternativo Gov.br. Essa presidência não se confunde com o orientador, que preside a sessão de defesa.
 
 O processo só conclui após o arquivamento dos documentos exigidos. Criar envelope, enviar e-mail ou anexar PDF não comprova, por si só, uma assinatura concluída. Preserve idempotência, reconciliação e recuperação; não reenvie automaticamente um envelope de resultado incerto.
 
@@ -97,7 +99,7 @@ O processo só conclui após o arquivamento dos documentos exigidos. Criar envel
 
 Processos novos usam cinco cartões em **Documentos administrativos**: comprovante de reserva, carta-convite, ata, termo e declaração. O Termo só se aplica quando houver publicação autorizada. Ver e Baixar PDF respeitam a disponibilidade e a permissão de cada documento.
 
-Registros legados usam as mesmas telas do Portal, com código `NNN - Legado`, campos ausentes preservados e documentos originais. Neles há um sexto cartão para o instrumento de avaliação antigo, quando localizado. Esse instrumento não aparece em Conceito e Ata nem é criado para trabalhos novos.
+Registros legados usam as mesmas telas do Portal, com código `NNN - Legado`, campos ausentes preservados e documentos originais. Neles há um sexto cartão para o instrumento histórico da banca, quando localizado. Esse instrumento não aparece em Conceito e Ata nem é criado para trabalhos novos.
 
 Importar histórico não deve disparar novas assinaturas ou comunicações, inventar dados, recriar documentos assinados nem autorizar arquivos automaticamente. Preserve IDs, hashes e proveniência. Só publique os PDFs cuja autorização esteja comprovada.
 

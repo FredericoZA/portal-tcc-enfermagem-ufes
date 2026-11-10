@@ -49,12 +49,12 @@ test('paleta de calendário e processo é compartilhada e não fluorescente',()=
   assert.match(css,/portal-core-calendar-card\.is-defended/);
 });
 
-test('calendário remove fins de semana da grade e preserva popup nativo por clique do dia',()=>{
+test('calendário condiciona fins de semana e preserva popup nativo por clique do dia',()=>{
   const runtime=read('src/utils/portalTableDom.ts');
   const home=read('src/pages/HomePage.tsx');
-  assert.match(home,/const businessDays = Array\.from/);
-  assert.match(home,/dayOfWeek >= 1 && dayOfWeek <= 5/);
-  assert.match(home,/businessDays\.map/);
+  assert.match(home,/buildCalendarMonthGrid\(year,month,\[\]\)/);
+  assert.match(home,/calendarGrid\.weekdays/);
+  assert.match(home,/calendarDays\.map/);
   assert.doesNotMatch(home,/portal-core-calendar-weekend|<div>DOM<\/div>|<div>SÁB<\/div>/);
   assert.doesNotMatch(runtime,/enhanceCalendar|weekday === 0/);
   assert.match(home,/setSelectedDayDefenses\(dayDefenses\.length > 0 \? dayDefenses : null\)/);
@@ -62,15 +62,15 @@ test('calendário remove fins de semana da grade e preserva popup nativo por cli
   assert.match(home,/selectedDayDefenses\.map/);
 });
 
-test('fluxo do TCC usa caminho responsivo em minhoca',()=>{
+test('fluxo do TCC segue a ordem de leitura nas duas linhas',()=>{
   const flow=read('src/pages/FluxoTccPage.tsx');
   const css=readPortalCss();
   assert.match(flow,/max-w-none/);
   assert.match(flow,/portal-flow-snake/);
   assert.match(flow,/portal-flow-step/);
   assert.match(css,/grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(css,/nth-child\(4\)::before/);
-  assert.match(css,/content:\s*["']↓["']/);
+  assert.match(css,/\.portal-flow-step:not\(:nth-child\(4n\)\)::after\s*\{\s*content:\s*["']→["']/);
+  assert.doesNotMatch(css,/\.portal-flow-step:nth-child\(\d+\)\s*\{/);
 });
 
 test('replicar portal mantém somente download agregado dos modelos',()=>{

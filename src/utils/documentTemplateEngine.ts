@@ -2,7 +2,8 @@ import {documentVariables} from './documentVariables';
 import {authorNames,academicName} from './personPresentation';
 import {adaptDocumentLanguage} from './documentLanguage';
 import { ProcessData } from '../types';
-import { formatDateExtensoTotal, formatTimeExtenso, formatStudentsString } from './formatters';
+import { formatDateExtensoWithWeekday, formatTimeExtenso, formatStudentsString } from './formatters';
+import {isRegistrationIdentifierField} from './operationalConfig';
 
 export interface BaseDocumentTemplate {
   id: string;
@@ -118,12 +119,12 @@ export function generateOfficialDocumentText(
     .join(', ') || 'Professores Examinadores Designados';
 
   const dataHoraStr = process.defesa?.startAt
-    ? `${formatDateExtensoTotal(process.defesa.startAt)} às ${formatTimeExtenso(process.defesa.startAt)}`
+    ? `${formatDateExtensoWithWeekday(process.defesa.startAt)} às ${formatTimeExtenso(process.defesa.startAt)}`
     : 'Data a ser agendada';
 
   const localFormatText = process.defesa?.local || (isOnline ? 'Defesa on-line — link ainda não informado' : 'Local da defesa ainda não informado');
 
-  const resultadoText = process.avaliacao?.resultadoLabel || (process.avaliacao?.status === 'CONCLUIDO' ? 'APROVADO' : 'PENDENTE DE AVALIAÇÃO');
+  const resultadoText = process.avaliacao?.resultadoLabel || (process.avaliacao?.status === 'CONCLUIDO' ? 'APROVADO' : 'PENDENTE DE REGISTRO DO CONCEITO');
   const gradeVal = process.avaliacao?.nota ?? process.avaliacao?.notaFinal;
   const notaText = gradeVal !== undefined && Number.isFinite(gradeVal) ? gradeVal.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '';
   const parecerText = process.avaliacao?.parecer || 'Parecer favorável registrado pela Comissão Examinadora.';
@@ -156,7 +157,7 @@ export function generateOfficialDocumentText(
     ALUNO_NOME: process.aluno1.nome,
     NOME_ALUNO: process.aluno1.nome,
     ALUNO_2_NOME: process.aluno2?.nome || '',
-    ALUNO_MATRICULA: process.aluno1.matricula,
+    ALUNO_MATRICULA: '',
     ALUNO_EMAIL: process.aluno1.email,
     EMAIL_ALUNO: process.aluno1.email,
     TCC_TITULO: process.titulo,
@@ -165,8 +166,8 @@ export function generateOfficialDocumentText(
     NOME_ORIENTADOR: academicName(process.orientador),
     COORIENTADOR_NOME: coorientadorName,
     DEFESA_DATA_HORA_EXTENSO: dataHoraStr,
-    DEFESA_DATA: process.defesa?.startAt ? formatDateExtensoTotal(process.defesa.startAt) : '',
-    DATA_DEFESA: process.defesa?.startAt ? formatDateExtensoTotal(process.defesa.startAt) : '',
+    DEFESA_DATA: process.defesa?.startAt ? formatDateExtensoWithWeekday(process.defesa.startAt) : '',
+    DATA_DEFESA: process.defesa?.startAt ? formatDateExtensoWithWeekday(process.defesa.startAt) : '',
     DEFESA_LOCAL: localFormatText,
     LOCAL_DEFESA: localFormatText,
     BANCA_NOMES: bancaNames,
@@ -180,8 +181,8 @@ export function generateOfficialDocumentText(
     ,'Orientador (1)': academicName(process.orientador)
     ,'Examinador (2)': academicName(process.banca?.find(item=>item.funcao==='EXAMINER_2') || process.banca?.filter(item=>item.funcao!=='ORIENTADOR')[0])
     ,'Examinador (3)': academicName(process.banca?.find(item=>item.funcao==='EXAMINER_3') || process.banca?.filter(item=>item.funcao!=='ORIENTADOR')[1])
-    ,'Data do Preenchimento': formatDateExtensoTotal(new Date().toISOString())
-    ,'Data da Defesa (por extenso total)': process.defesa?.startAt ? formatDateExtensoTotal(process.defesa.startAt) : ''
+    ,'Data do Preenchimento': formatDateExtensoWithWeekday(new Date().toISOString())
+    ,'Data da Defesa (por extenso total)': process.defesa?.startAt ? formatDateExtensoWithWeekday(process.defesa.startAt) : ''
     ,'Hora de Início da Defesa (por extenso)': process.defesa?.startAt ? formatTimeExtenso(process.defesa.startAt) : ''
     ,'Local da Defesa': localFormatText
     ,Situação: resultadoText
@@ -205,7 +206,13 @@ export function generateOfficialDocumentText(
     patterns.forEach((pattern) => { text = text.replace(pattern, value); });
   });
 
-  const unresolved = text.match(/(?:-(?:CAMPO|FIELD)_[A-Z0-9_]+-|<<\s*[A-Z][A-Z0-9_]+\s*>>|\[\[\s*[A-Z][A-Z0-9_]+\s*\]\]|«\s*[A-Z][A-Z0-9_]+\s*»|\{\{\s*(?!SE_|FIM_)[A-Z][A-Z0-9_]+\s*\}\})/g);
+  const placeholders = text.match(/(?:-(?:CAMPO|FIELD)_[A-Z0-9_]+-|<<\s*[A-Z][A-Z0-9_]+\s*>>|\[\[\s*[A-Z][A-Z0-9_]+\s*\]\]|«\s*[A-Z][A-Z0-9_]+\s*»|\{\{\s*(?!SE_|FIM_)[A-Z][A-Z0-9_]+\s*\}\})/g);
+  const unresolved = placeholders?.filter(placeholder => {
+    const key = placeholder.match(/[A-Z][A-Z0-9_]+/)?.[0];
+    if (!isRegistrationIdentifierField(key)) return true;
+    text = text.replaceAll(placeholder, '');
+    return false;
+  });
   if (unresolved?.length) throw new Error(`Variáveis obrigatórias não resolvidas: ${Array.from(new Set(unresolved)).join(', ')}`);
 
   return adaptDocumentLanguage(text.trim(),process,docType);

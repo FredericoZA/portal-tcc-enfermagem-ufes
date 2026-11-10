@@ -9,9 +9,16 @@ test('assinatura obrigatória exige conexão, despacho, callback e inbox duráve
   for(const key of Object.keys(connected))assert.equal(astenInfrastructureCheck({...connected,[key]:false},true).status,'FAIL');
 });
 test('produção não passa com Asten ausente, bloqueada ou apenas callback configurado',()=>{
-  const checks:InfrastructureCheck[]=['secret-store','google-oauth-security','supabase','supabase-transactional','google','asten-folders','vercel','models'].map(id=>({id,label:id,status:'PASS',message:''}));
+  const checks:InfrastructureCheck[]=['secret-store','google-oauth-security','supabase','supabase-transactional','google','gmail','asten-folders','vercel','models'].map(id=>({id,label:id,status:'PASS',message:''}));
   assert.equal(infrastructureReadyForProduction(checks,true),false);
   assert.equal(infrastructureReadyForProduction([...checks,astenInfrastructureCheck(connected,false)],true),false);
   assert.equal(infrastructureReadyForProduction([...checks,astenInfrastructureCheck(connected,true)],false),false);
   assert.equal(infrastructureReadyForProduction([...checks,astenInfrastructureCheck(connected,true)],true),true);
+});
+
+test('infraestrutura exige aceite do e-mail de teste, não apenas configuração Gmail',()=>{
+ const checks:InfrastructureCheck[]=['secret-store','google-oauth-security','supabase','supabase-transactional','google','asten','asten-folders','vercel','models'].map(id=>({id,label:id,status:'PASS',message:''}));
+ assert.equal(infrastructureReadyForProduction(checks,true),false);
+ assert.equal(infrastructureReadyForProduction([...checks,{id:'gmail',label:'Gmail',status:'FAIL',message:''}],true),false);
+ assert.equal(infrastructureReadyForProduction([...checks,{id:'gmail',label:'Gmail',status:'PASS',message:''}],true),true);
 });

@@ -1,3 +1,4 @@
+import {TABLE_PREFERENCE_EVENT} from './tablePreferences';
 import { normalizePortalTableText, readPortalHeaderLabel, slugPortalTableText, stableTableIdentity } from './portalTableIdentity';
 
 type TableState = {
@@ -17,6 +18,18 @@ const MAX_WIDTH = 720;
 let activePopup: HTMLElement | null = null;
 let activeButton: HTMLButtonElement | null = null;
 let activePopupCleanup: (() => void) | null = null;
+let activeResize: {table:HTMLTableElement; cancel:()=>void} | null = null;
+
+/** Route changes can detach a sheet before pointerup or popup dismissal. */
+export function cleanupDetachedPortalTableInteractions(){
+  if(activeButton&&!activeButton.isConnected)closePortalTablePopup();
+  if(activeResize&&!activeResize.table.isConnected)activeResize.cancel();
+}
+export function cleanupPortalTableInteractions(){
+  closePortalTablePopup();
+  activeResize?.cancel();
+}
+
 
 
 
@@ -89,9 +102,12 @@ function sortRows(table: HTMLTableElement, key: string, index: number, direction
   const collator = new Intl.Collator('pt-BR', { numeric: true, sensitivity: 'base' });
   const rows = Array.from(body.rows);
   rows.sort((a, b) => {
-    const av = comparable(cellValue(a, index));
-    const bv = comparable(cellValue(b, index));
+    const av = comparable(a.cells[index]?.dataset.portalSortValue || cellValue(a, index));
+    const bv = comparable(b.cells[index]?.dataset.portalSortValue || cellValue(b, index));
     const result = typeof av === 'number' && typeof bv === 'number' ? av - bv : collator.compare(String(av), String(bv));
+    if (result === 0 && a.dataset.portalRowId && b.dataset.portalRowId) {
+      return a.dataset.portalRowId.localeCompare(b.dataset.portalRowId);
+    }
     return direction === 'asc' ? result : -result;
   });
   rows.forEach((row) => body.appendChild(row));
@@ -113,13 +129,16 @@ function menuButton(label: string, className: string, onClick: () => void) {
   return button;
 }
 
-function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, index: number, anchor: HTMLButtonElement) {
+function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, anchor: HTMLButtonElement) {
   closePortalTablePopup();
   const state = tableState.get(table) || { filters: new Map<string, Set<string>>() };
   tableState.set(table, state);
+  const index = header.cellIndex;
   const key = keyForHeader(header, index);
   const label = readPortalHeaderLabel(header);
-  const values = Array.from(new Set(Array.from(table.tBodies[0]?.rows || []).map((row) => cellValue(row, index))))
+  const options = header.dataset.portalFilterOptions?.split('|')
+    ?? Array.from(table.tBodies[0]?.rows || [], (row) => cellValue(row, index));
+  const values = Array.from(new Set(options))
     .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
 
   const popup = document.createElement('div');
@@ -138,11 +157,11 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, i
   sortActions.className = 'portal-core-sort-actions';
   sortActions.append(
     menuButton('Ordenar A → Z / menor → maior', 'portal-core-menu-action', () => {
-      sortRows(table, key, index, 'asc');
+      sortRows(table, key, header.cellIndex, 'asc');
       closePortalTablePopup();
     }),
     menuButton('Ordenar Z → A / maior → menor', 'portal-core-menu-action', () => {
-      sortRows(table, key, index, 'desc');
+      sortRows(table, key, header.cellIndex, 'desc');
       closePortalTablePopup();
     }),
   );
@@ -314,11 +333,20 @@ function readWrapMode(table: HTMLTableElement) {
 function applyColumnWidth(table: HTMLTableElement, index: number, width: number) {
   const px = `${Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, Math.round(width)))}px`;
   const header = table.tHead?.rows[0]?.cells[index] as HTMLTableCellElement | undefined;
-  if (header) header.style.width = header.style.minWidth = header.style.maxWidth = px;
-  Array.from(table.tBodies).forEach((body) => Array.from(body.rows).forEach((row) => {
-    const cell = row.cells[index] as HTMLTableCellElement | undefined;
-    if (cell) cell.style.width = cell.style.minWidth = cell.style.maxWidth = px;
-  }));
+  const hasResponsiveRecords = table.classList.contains('portal-responsive-records');
+  if (header) header.dataset.portalResized = 'true';
+  const cells = Array.from(table.tBodies).flatMap((body) =>
+    Array.from(body.rows, (row) => row.cells[index]),
+  );
+  [header, ...cells].forEach((cell) => {
+    if (!cell) return;
+    if (hasResponsiveRecords) {
+      cell.dataset.portalResized = 'true';
+      cell.style.setProperty('--portal-record-column-width', px);
+    } else {
+      cell.style.width = cell.style.minWidth = cell.style.maxWidth = px;
+    }
+  });
 }
 
 function installResizer(table: HTMLTableElement, header: HTMLTableCellElement, index: number) {
@@ -332,19 +360,34 @@ function installResizer(table: HTMLTableElement, header: HTMLTableCellElement, i
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    activeResize?.cancel();
+    const columnIndex = header.cellIndex;
     const startX = event.clientX;
     const startWidth = Math.max(MIN_WIDTH, header.getBoundingClientRect().width);
     document.documentElement.classList.add('portal-core-resizing');
-    const onMove = (moveEvent: PointerEvent) => applyColumnWidth(table, index, startWidth + moveEvent.clientX - startX);
-    const onUp = () => {
+    const onMove = (moveEvent: PointerEvent) => applyColumnWidth(table, columnIndex, startWidth + moveEvent.clientX - startX);
+    const release = () => {
       document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', cancel);
+      window.removeEventListener('blur', cancel);
       document.documentElement.classList.remove('portal-core-resizing');
-      const widths = readWidths(table);
-      widths[keyForHeader(header, index)] = Math.round(header.getBoundingClientRect().width);
-      try { localStorage.setItem(widthStorageKey(table), JSON.stringify(widths)); } catch {}
+      if(activeResize?.cancel===cancel)activeResize=null;
     };
+    const cancel = () => release();
+    const onUp = () => {
+      release();
+      if(!table.isConnected)return;
+      const widths = readWidths(table);
+      widths[keyForHeader(header, columnIndex)] = Math.round(header.getBoundingClientRect().width);
+      try { localStorage.setItem(widthStorageKey(table), JSON.stringify(widths)); } catch {}
+      window.dispatchEvent(new CustomEvent(TABLE_PREFERENCE_EVENT, {detail: {key: tableKey(table)}}));
+    };
+    activeResize={table,cancel};
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp, { once: true });
+    document.addEventListener('pointercancel', cancel, { once:true });
+    window.addEventListener('blur', cancel, { once:true });
   });
   header.appendChild(handle);
 }
@@ -355,6 +398,12 @@ function restoreWidths(table: HTMLTableElement) {
     const header = cell as HTMLTableCellElement;
     const saved = widths[keyForHeader(header, index)];
     if (Number.isFinite(saved)) applyColumnWidth(table, index, saved);
+    else if (header.dataset.portalResized === 'true') {
+      delete header.dataset.portalResized;
+      [header,...Array.from(table.tBodies).flatMap(body=>Array.from(body.rows).map(row=>row.cells[index]).filter(Boolean))].forEach(cell=>{
+        cell.style.removeProperty('width');cell.style.removeProperty('min-width');cell.style.removeProperty('max-width');
+      });
+    }
   });
 }
 
@@ -392,7 +441,7 @@ export function enhancePortalTable(table: HTMLTableElement) {
         event.preventDefault();
         event.stopPropagation();
         if (activeButton === button && activePopup) closePortalTablePopup();
-        else openColumnMenu(table, header, index, button);
+        else openColumnMenu(table, header, button);
       });
       header.appendChild(button);
     }

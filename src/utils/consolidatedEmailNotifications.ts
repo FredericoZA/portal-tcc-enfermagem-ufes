@@ -22,7 +22,7 @@ export function withConsolidatedEmailNotifications(source:IntegrationStudioSetti
  if(notifyFinal&&!templates.some(template=>template.id===FINAL_PROCESS_EMAIL_ID))templates.push({id:FINAL_PROCESS_EMAIL_ID,name:'Assinaturas concluídas e documentos disponíveis',recipient:'{{PARTICIPANTES_EMAILS}}',subject:'[Portal TCC] Assinaturas concluídas e documentos disponíveis · <<PROTOCOLO>>',body:'Olá, <<DESTINATARIO_NOME>>.\n\nAs assinaturas foram concluídas. Consulte os documentos no processo do TCC.\n\n<<ORIENTACOES_ACESSO>>',attachments:[],attachmentModes:{}});
  return {...source,emailTemplates:templates,workflowStages:stages};
 }
-export function finalProcessEmailKey(process:Pick<ProcessData,'id'|'dataRevision'>,recipient:string){return `process-completed:${process.id}:${process.dataRevision}:${recipient.trim().toLowerCase()}`;}
+export function finalProcessEmailKey(process:Pick<ProcessData,'id'|'dataRevision'>){return `process-completed:${process.id}:${process.dataRevision}`;}
 export function isConsolidatedEmailNotice(eventCode='',templateId=''){
  return ['email-assinatura-registrada','email-instrucoes-cadastro','email-confirmacao','email-assinatura-declaracao','email-assinatura-ata'].includes(templateId)||eventCode.toUpperCase()==='SIGNATURE_COMPLETED'&&templateId!==REPOSITORY_DELIVERY_EMAIL_ID;
 }

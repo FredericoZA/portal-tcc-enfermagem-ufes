@@ -147,6 +147,9 @@
   margin: 0;
   padding: 0 var(--portal-bar-padding-x);
   display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
   align-items: center;
   background: var(--portal-brand-header);
   color: var(--portal-text-light);

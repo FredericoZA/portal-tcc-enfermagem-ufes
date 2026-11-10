@@ -2,12 +2,15 @@ import {registrationFirst} from './workflowStageOrder';
 import type {IntegrationStudioSettings} from '../types/integrationStudio';
 import type {ProcessData} from '../types';
 import type {SignatureJob} from '../types/signatures';
+import {currentAtaArchived,signatureDocumentRevision} from './documentSignatureState';
 
 export const REPOSITORY_DELIVERY_EMAIL_ID='email-entrega-repositorio';
 export const REPOSITORY_DELIVERY_READY='ENTREGA_FINAL_LIBERADA';
-export function repositoryDeliveryEmailKey(process:Pick<ProcessData,'id'|'dataRevision'>,recipient:string):string{return `repository-delivery:${process.id}:${process.dataRevision}:${recipient.trim().toLowerCase()}`;}
+export function repositoryDeliveryEmailKey(process:Pick<ProcessData,'id'|'dataRevision'|'avaliacao'>,recipient:string):string{return `repository-delivery:${process.id}:${signatureDocumentRevision(process,'ATA')}:${recipient.trim().toLowerCase()}`;}
 export function repositoryDeliveryReady(process:ProcessData,jobs:SignatureJob[]):boolean{
- return process.etapaAtual==='REPOSITORIO'&&!process.acervo?.submittedAt&&jobs.some(job=>job.processId===process.id&&job.documentType==='ATA'&&job.status==='ARCHIVED'&&job.sourceDataRevision===process.dataRevision);
+ if(process.etapaAtual!=='REPOSITORIO'||process.acervo?.submittedAt)return false;
+ const currentJobs=jobs.filter(job=>job.sourceDataRevision===signatureDocumentRevision(process,'ATA'));
+ return currentAtaArchived(process,currentJobs);
 }
 
 /** Preserve editable templates and add the missing post-ata notification once. */
@@ -17,8 +20,8 @@ export function withRepositoryDeliveryEmail(source:IntegrationStudioSettings):In
   id:REPOSITORY_DELIVERY_EMAIL_ID,name:'Orientações para entrega no Repositório após assinatura da ata',
   recipient:'{{ALUNO_1_EMAIL}}, {{ALUNO_2_EMAIL}}, {{ORIENTADOR_EMAIL}}',
   subject:'[Portal TCC] Ata assinada — entrega final no Repositório · <<PROTOCOLO>>',
-  body:'Prezado(a) <<DESTINATARIO_NOME>>,\n\nA ata da defesa do trabalho <<PROTOCOLO>> foi assinada e arquivada. Concluam os ajustes solicitados pelo orientador e pela banca, se houver, e enviem o trabalho revisado pelo Portal.\n\n<<ORIENTACOES_ACESSO>>\n\nO orientador recebe esta mensagem para ciência e acompanhamento.\n\nAtenciosamente,\nComissão de TCC',
-  htmlBody:'<p>Prezado(a) <<DESTINATARIO_NOME>>,</p><p>A ata da defesa do trabalho <<PROTOCOLO>> foi assinada e arquivada. Concluam os ajustes solicitados pelo orientador e pela banca, se houver, e enviem o trabalho revisado pelo Portal.</p><p><<ORIENTACOES_ACESSO>></p><p><a href="<<LINK_PROCESSO>>" style="display:inline-block;padding:12px 20px;background:#005b3b;color:#ffffff;border-radius:8px;text-decoration:none;font-family:Arial,sans-serif;font-weight:bold">Acessar entrega no Repositório</a></p><p>O orientador recebe esta mensagem para ciência e acompanhamento.</p><p>Atenciosamente,<br>Comissão de TCC</p>',attachments:[],attachmentModes:{}
+  body:'Prezado(a) <<DESTINATARIO_NOME>>,\n\nA ata da defesa do trabalho <<PROTOCOLO>> foi assinada e arquivada. Concluam os ajustes solicitados pelo orientador e pela banca, se houver, e enviem o trabalho revisado pelo Portal.\n\n<<ORIENTACOES_ACESSO>>\n\nO orientador recebe esta mensagem para ciência e acompanhamento.\n\nAtenciosamente,\nComissão de Trabalho de Conclusão de Curso',
+  htmlBody:'<p>Prezado(a) <<DESTINATARIO_NOME>>,</p><p>A ata da defesa do trabalho <<PROTOCOLO>> foi assinada e arquivada. Concluam os ajustes solicitados pelo orientador e pela banca, se houver, e enviem o trabalho revisado pelo Portal.</p><p><<ORIENTACOES_ACESSO>></p><p><a href="<<LINK_PROCESSO>>" style="display:inline-block;padding:12px 20px;background:#005b3b;color:#ffffff;border-radius:8px;text-decoration:none;font-family:Arial,sans-serif;font-weight:bold">Acessar entrega no Repositório</a></p><p>O orientador recebe esta mensagem para ciência e acompanhamento.</p><p>Atenciosamente,<br>Comissão de Trabalho de Conclusão de Curso</p>',attachments:[],attachmentModes:{}
  });
  if(!studio.workflowStages.some(stage=>(stage.actions as Record<string,unknown>[]).some(action=>action.refId===REPOSITORY_DELIVERY_EMAIL_ID||action.referenceId===REPOSITORY_DELIVERY_EMAIL_ID))){
   const action={id:'action-repository-delivery-guidance',type:'email',refId:REPOSITORY_DELIVERY_EMAIL_ID,title:'Orientar autores e orientador sobre a entrega final',condition:{fieldKey:REPOSITORY_DELIVERY_READY,operator:'IS_TRUE'}};

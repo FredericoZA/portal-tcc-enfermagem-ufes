@@ -2,8 +2,8 @@
 export const signatureWorkflowBindings = {
   ATA: {
     label: 'Assinatura da ata', event: 'EVALUATION_SUBMITTED',
-    recipient: 'Orientador · e-mail do TCC',
-    source: 'Dados do processo → Orientador → E-mail',
+    recipient: 'Orientador, dois examinadores, autores e coorientador presente · e-mails do TCC',
+    source: 'Dados do processo → Participantes → E-mail; Conceito e Ata → Presença do coorientador',
   },
   TERMO: {
     label: 'Assinatura do termo de autorização', event: 'REPOSITORY_SUBMITTED',

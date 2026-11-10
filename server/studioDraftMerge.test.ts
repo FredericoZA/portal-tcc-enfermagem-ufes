@@ -24,6 +24,8 @@ test('image patch merges unrelated revisions but refuses a concurrent change to 
  const input={kind:'email',templateId:'a',field:'logoUrl',value:png,expectedRevision:2,expectedImageValue:'old'};
  const result=applyStudioImage(studio,input,'master@example.org');
  assert.equal(result.revision,5);assert.equal(result.emailDesigns.a.logoUrl,png);
+ assert.equal(applyStudioImage(studio,input,'master@example.org','/api/public/studio-assets/test').emailDesigns.a.logoUrl,'/api/public/studio-assets/test');
+ assert.throws(()=>applyStudioImage({...studio,emailTemplates:[{id:'__proto__'}]},{...input,templateId:'__proto__'},'master@example.org'),/Salve o formulário/);
  assert.deepEqual(result.emailTemplates,studio.emailTemplates);
  assert.throws(()=>applyStudioImage({...studio,emailDesigns:{a:{logoUrl:'concurrent'}}},input,'master@example.org'),/STUDIO_REVISION_CONFLICT/);
  assert.throws(()=>applyStudioImage(studio,{...input,expectedRevision:99},'master@example.org'),/STUDIO_REVISION_CONFLICT/);

@@ -18,8 +18,9 @@ http://localhost:3000 quando o servidor estiver pronto. Mantenha a janela do
 Terminal aberta; pressione **Control + C** nela para encerrar o servidor.
 Abrir o atalho outra vez enquanto o portal estiver ativo apenas abre o navegador.
 
-Na barra **Simulação de perfil**, escolha **Administrador Master** para testar a administração.
-Os demais perfis permitem conferir a visão de alunos, orientadores e presidente.
+Entre pelo botão de acesso do Portal com uma conta fictícia autorizada.
+O código de uso único é gerado pelo fluxo normal e aparece no Terminal local.
+Cada perfil usa sua própria sessão e passa pelas mesmas verificações de acesso.
 
 Este ambiente usa os dados de demonstração já fornecidos pelo projeto. As
 alterações de dados ficam em `.portal-data/`, e os segredos locais em `.env.local`.

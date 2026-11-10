@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadPortalRuntimeState } from './supabase';
+import { loadPortalCalendarSnapshot, loadPortalRuntimeState, refreshPortalRuntimeState } from './supabase';
 
 test('a leitura do estado tenta novamente apenas após erro transitório do PostgREST', async () => {
   const originalFetch = globalThis.fetch;
@@ -56,4 +56,64 @@ test('negações 403 não são repetidas e indisponibilidade persistente falha f
       if (value === undefined) delete process.env[name]; else process.env[name] = value;
     }
   }
+});
+
+
+test('uma revisão igual restaura o estado confirmado sem reutilizar objetos mutáveis', async t => {
+  const overrides = {
+    SUPABASE_URL: 'https://revision-fixture.supabase.co',
+    SUPABASE_SECRET_KEY: 'fixture-only-revision-key',
+    PORTAL_PERSISTENCE_PROVIDER: 'supabase',
+  };
+  for (const [key, value] of Object.entries(overrides)) {
+    const previous = process.env[key];
+    process.env[key] = value;
+    t.after(() => {
+      if (previous === undefined) delete process.env[key];
+      else process.env[key] = previous;
+    });
+  }
+  const selections: Array<string | null> = [];
+  t.mock.method(globalThis, 'fetch', async (url: string) => {
+    const selection = new URL(url).searchParams.get('select');
+    selections.push(selection);
+    return Response.json(selection === 'revision'
+      ? [{revision: 3}]
+      : [{revision: 3, payload: {access: {allowed: true}}}]);
+  });
+
+  const initial = await loadPortalRuntimeState<{access: {allowed: boolean}}>();
+  assert.ok(initial);
+  initial.access.allowed = false;
+  const refreshed = await refreshPortalRuntimeState<{access: {allowed: boolean}}>();
+  assert.deepEqual(refreshed, {access: {allowed: true}});
+  assert.deepEqual(selections, ['payload,revision', 'revision']);
+});
+
+
+test('calendário consulta somente processos e perfil, sem baixar o estado integral', async t => {
+  const overrides = {
+    SUPABASE_URL: 'https://calendar-fixture.supabase.co',
+    SUPABASE_SECRET_KEY: 'fixture-only-calendar-key',
+    PORTAL_PERSISTENCE_PROVIDER: 'supabase',
+  };
+  for (const [key, value] of Object.entries(overrides)) {
+    const previous = process.env[key];
+    process.env[key] = value;
+    t.after(() => {
+      if (previous === undefined) delete process.env[key];
+      else process.env[key] = previous;
+    });
+  }
+  const installationProfile = {defaultDefenseLocation: 'Auditório'};
+  const fetchMock = t.mock.method(globalThis, 'fetch', async (url: string) => {
+    const request = new URL(url);
+    assert.equal(request.pathname, '/rest/v1/portal_runtime_state');
+    assert.equal(request.searchParams.get('id'), 'eq.global');
+    assert.equal(request.searchParams.get('select'), 'revision,processes:payload->processes,installationProfile:payload->settings->installationProfile');
+    return Response.json([{revision: 42, processes: [], installationProfile}]);
+  });
+
+  assert.deepEqual(await loadPortalCalendarSnapshot(), {revision: 42, processes: [], settings: {installationProfile}});
+  assert.equal(fetchMock.mock.callCount(), 1);
 });

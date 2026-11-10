@@ -29,8 +29,8 @@ export function registrationFindings(answers: RegistrationAnswers, policy = DEFA
   for (const [key, raw] of Object.entries(answers)) {
     const value = String(raw ?? '').trim(); if (!value) continue;
     if(/^(ALUNO_[12]|ORIENTADOR|COORIENTADOR|EXAMINADOR_[23])_EMAIL$/.test(key)){const normalized=value.toLowerCase();const previous=emails.get(normalized);if(previous)findings.push({fieldKey:key,message:`O e-mail ${value} também foi informado para ${registrationParticipantLabel(previous).replace(' (e-mail)','').toLowerCase()}. Cada participante deve usar um e-mail diferente. Corrija antes de cadastrar.`,severity:'ERROR'});emails.set(normalized,key);}
-    if (/_NOME$/.test(key)) {
-      if (value.split(/\s+/).length < 2 || /\d/.test(value)) findings.push({ fieldKey:key, message:'Confira o nome completo, sem matrícula ou números no campo.', severity:'WARNING' });
+    if (/^(ALUNO_[12]|ORIENTADOR|COORIENTADOR|EXAMINADOR_[23])_NOME$/.test(key)) {
+      if (value.split(/\s+/).length < 2 || /\d/.test(value)) findings.push({ fieldKey:key, message:'Confira se o nome está completo e escrito corretamente.', severity:'WARNING' });
       if (/\s{2,}/.test(String(raw))) findings.push({ fieldKey:key, message:'Há espaços repetidos no nome. Confira antes de emitir documentos.', severity:'WARNING' });
       const normalized = value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
       const previous = names.find(([,name]) => name === normalized);

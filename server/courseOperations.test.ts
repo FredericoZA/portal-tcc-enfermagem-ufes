@@ -21,6 +21,12 @@ test('modelo embutido e condição que aponta para campo futuro bloqueiam public
   assert.ok(report.issues.some((issue) => issue.code === 'INVALID_FORM_RULE'));
 });
 
+test('validação configurável mantém formatos simples e processa padrões ambíguos sem backtracking', () => {
+  assert.equal(validateStudioAnswer('20260001', { pattern: '^\\d{8}$' }), null);
+  assert.match(validateStudioAnswer('a'.repeat(10_000), { pattern: '^(a+)+b$' }) || '', /formato esperado/);
+  assert.match(validateStudioAnswer('abc', { pattern: '(?<=a)b' }) || '', /precisa ser revisado/);
+});
+
 test('condições e validações são determinísticas', () => {
   assert.equal(evaluateStudioCondition({ fieldKey: 'PUBLICAR', operator: 'EQUALS', value: 'Sim' }, { PUBLICAR: 'Sim' }), true);
   assert.equal(evaluateStudioCondition({ fieldKey: 'PUBLICAR', operator: 'NOT_EQUALS', value: 'Sim' }, { PUBLICAR: 'Sim' }), false);
@@ -66,6 +72,19 @@ test('mantém obrigatória a condição de publicação do Termo no evento corre
   const report = validateCourseStudio(value);
   assert.ok(report.issues.some((issue) => issue.code === 'TERM_WITHOUT_PUBLICATION_CONDITION'));
   assert.equal(report.issues.some((issue) => issue.code === 'INVALID_DOCUMENT_EVENT'), false);
+});
+
+test('modelo complementar pode integrar o catálogo, mas não se torna ata por semelhança do identificador', () => {
+  const value = studio();
+  const ata = value.docTemplates.find(model => model.type === 'ATA')!;
+  const reference = { ...ata, id: 'master-ata_complementar', type: 'ATA_COMPLEMENTAR', label: 'Ata complementar' };
+  value.docTemplates.unshift(reference);
+  assert.equal(validateCourseStudio(value).ready, true);
+  value.workflowStages[1].actions[0].refId = reference.id;
+  const invalid = validateCourseStudio(value);
+  assert.equal(invalid.ready, false);
+  assert.ok(invalid.issues.some(issue => issue.code === 'DOCUMENT_WITHOUT_EXECUTOR'));
+  assert.ok(invalid.issues.some(issue => issue.code === 'MISSING_REQUIRED_DOCUMENT_ACTION'));
 });
 
 test('documentos obrigatórios não podem desaparecer por condição opcional', () => {

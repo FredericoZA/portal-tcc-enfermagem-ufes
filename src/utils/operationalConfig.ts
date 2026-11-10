@@ -1,10 +1,11 @@
 import {isEmailAddress} from './emailAddress';
 import {renderInstitutionName} from './institutionName';
 import {CUSTOM_DEFENSE_LOCATION} from './reservationLocation';
+import {ACADEMIC_PERIOD_FIELD, ACADEMIC_PERIOD_LABEL, academicPeriodHelpText, academicPeriodOptions} from './academicPeriod';
 import {normalizePersonName} from './personNameCase';
 import {AUTHOR_REFERENCE_OPTIONS,authorReferenceOptions,withAuthorReference} from './registrationIdentity';
 import {STUDENT_TREATMENTS,FACULTY_TREATMENTS,ACADEMIC_DEGREES,isPresentationField} from './personPresentation';
-import { formatTimeExtenso, formatDateExtensoTotal, renderTccTitle, normalizeEmail } from './formatters';
+import { formatTimeExtenso, formatDateExtensoWithWeekday, formatWeekdayPt, renderTccTitle, normalizeEmail } from './formatters';
 import type { IntegrationStudioSettings, StudioValidationRule } from '../types/integrationStudio';
 import { CUSTOM_LOCATION_FIELD, OTHER_DEFENSE_LOCATION, getCustomLocationFieldValue, isOtherDefenseLocation, renderCustomLocationName } from './customDefenseLocation';
 import type { CatalogEntry, OperationalConfig, RegistrationAnswers, RegistrationQuestion, VariablePresentation } from '../types/operationalConfig';
@@ -87,6 +88,16 @@ export const canonicalKey = (value: unknown) => String(value ?? '')
   .replace(/^_+|_+$/g, '')
   .toUpperCase();
 
+export function isRegistrationIdentifierField(fieldKey: unknown, label?: unknown): boolean {
+  const identifies = (value: unknown) => /(?:^|_)(?:MATRICULA|MATRICULAS|SIAPE|CIAP|CPF|CPFS)(?:_|$)/.test(canonicalKey(value));
+  return identifies(fieldKey) || identifies(label)
+    || /^(?:ALUNO(?:_[12])?|ORIENTADOR|COORIENTADOR|EXAMINADOR(?:_[123])?|AVALIADOR(?:_[12])?)_(?:REGISTRO|RA)$/.test(canonicalKey(fieldKey));
+}
+
+export function registrationAnswersWithoutIdentifiers(answers: RegistrationAnswers): RegistrationAnswers {
+  return Object.fromEntries(Object.entries(answers).filter(([key]) => !isRegistrationIdentifierField(key)));
+}
+
 export function operationalConfig(studio?: Partial<IntegrationStudioSettings>): OperationalConfig {
   const config = studio?.operationalConfig;
   const reservationRecipient=String(studio?.emailTemplates?.find(item=>item.id==='email-reserva')?.recipient||'').trim();
@@ -112,10 +123,6 @@ const FULL_NAME_VALIDATION: StudioValidationRule = {
   maxLength: 160,
   errorMessage: 'Informe o nome que deve aparecer nos documentos (até 160 caracteres).'
 };
-
-// Institutional registries vary; retain them as text without digit-count rules.
-const STUDENT_ID_VALIDATION: StudioValidationRule = {};
-const SIAPE_VALIDATION: StudioValidationRule = {};
 
 const q = (
   fieldKey: string,
@@ -145,36 +152,33 @@ const personPresentationQuestions=(prefix:string,section:string,student=false,vi
 
 export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   {...q('ALUNO_1_NOME', 'Nome completo do Aluno 1', 'Aluno', 'text', undefined, FULL_NAME_VALIDATION),helpText:'Informe o nome que deve aparecer nos documentos, incluindo o nome social quando utilizado. Este nome aparecerá primeiro. Cadastre os autores na ordem em que devem ser apresentados.'},
-  q('ALUNO_1_MATRICULA', 'Matrícula, SIAPE ou outro registro do aluno', 'Aluno', 'text', undefined, STUDENT_ID_VALIDATION),
   {...q('ALUNO_1_EMAIL', 'E-mail do aluno', 'Aluno', 'email'),helpText:'Use o e-mail cadastrado na lista de acesso.'},
 
   { ...q('TEM_ALUNO_2', 'O trabalho tem segundo autor?', 'Segundo autor', 'select'), options: ['Não', 'Sim'] },
   {...q('ALUNO_2_NOME', 'Nome completo do Aluno 2', 'Segundo autor', 'text', when('TEM_ALUNO_2'), FULL_NAME_VALIDATION),helpText:'Informe o nome que deve aparecer nos documentos, incluindo o nome social quando utilizado. Este nome aparecerá depois do Aluno 1.'},
-  q('ALUNO_2_MATRICULA', 'Matrícula, SIAPE ou outro registro do segundo autor', 'Segundo autor', 'text', when('TEM_ALUNO_2'), STUDENT_ID_VALIDATION),
   q('ALUNO_2_EMAIL', 'E-mail do segundo autor', 'Segundo autor', 'email', when('TEM_ALUNO_2')),
   {...q('AUTORIA_REFERENCIA','Complete a frase para os documentos','Segundo autor','select'),options:[...AUTHOR_REFERENCE_OPTIONS],helpText:'Escolha como a autoria deste trabalho deve ser mencionada. A frase será usada nos quatro documentos.'},
 
   ...personPresentationQuestions('ORIENTADOR','Orientador',false),
   q('ORIENTADOR_NOME', 'Nome completo do orientador', 'Orientador', 'text', undefined, FULL_NAME_VALIDATION),
   q('ORIENTADOR_EMAIL', 'E-mail do orientador', 'Orientador', 'email'),
-  q('ORIENTADOR_SIAPE', 'Matrícula, SIAPE ou outro registro do orientador', 'Orientador', 'text', undefined, SIAPE_VALIDATION),
 
   { ...q('TEM_COORIENTADOR', 'Há coorientador?', 'Coorientador', 'select'), options: ['Não', 'Sim'] },
   ...personPresentationQuestions('COORIENTADOR','Coorientador',false,when('TEM_COORIENTADOR')),
   q('COORIENTADOR_NOME', 'Nome completo do coorientador', 'Coorientador', 'text', when('TEM_COORIENTADOR'), FULL_NAME_VALIDATION),
   q('COORIENTADOR_EMAIL', 'E-mail do coorientador', 'Coorientador', 'email', when('TEM_COORIENTADOR')),
-  { ...q('COORIENTADOR_SIAPE', 'Matrícula, SIAPE ou outro registro do coorientador, se aplicável', 'Coorientador', 'text', when('TEM_COORIENTADOR'), SIAPE_VALIDATION), required: false },
   { ...q('COORIENTADOR_INSTITUICAO', 'Instituição do coorientador', 'Coorientador', 'text', when('TEM_COORIENTADOR')), required: false },
 
   ...[2, 3].flatMap(n => [
     ...personPresentationQuestions(`EXAMINADOR_${n}`,'Banca'),
     q(`EXAMINADOR_${n}_NOME`, `Nome completo do avaliador ${n - 1}`, 'Banca', 'text', undefined, FULL_NAME_VALIDATION),
     q(`EXAMINADOR_${n}_EMAIL`, `E-mail do avaliador ${n - 1}`, 'Banca', 'email'),
-    q(`EXAMINADOR_${n}_INSTITUICAO`, `Instituição do avaliador ${n - 1}`, 'Banca'),
-    { ...q(`EXAMINADOR_${n}_SIAPE`, `Matrícula, SIAPE ou outro registro do avaliador ${n - 1}, se aplicável`, 'Banca', 'text', undefined, SIAPE_VALIDATION), required: false }
+    q(`EXAMINADOR_${n}_INSTITUICAO`, `Instituição do avaliador ${n - 1}`, 'Banca')
   ]),
 
   q('TITULO', 'Título completo do TCC', 'Trabalho'),
+  {...q(ACADEMIC_PERIOD_FIELD,ACADEMIC_PERIOD_LABEL,'Trabalho','select'),required:false,
+    helpText:academicPeriodHelpText()},
   { ...q('AREA_TEMATICA', 'Área temática', 'Trabalho', 'select'), required: false, helpText: 'Escolha a área que melhor representa o trabalho. Ex.: saúde da mulher, saúde mental, segurança do paciente.' },
   { ...q('TEMA_PRINCIPAL', 'Tema principal', 'Trabalho', 'select'), required: false, helpText: 'Escolha o foco principal. Ex.: assistência de enfermagem, educação em saúde, gestão do cuidado.' },
   { ...q('TIPO_DE_ESTUDO', 'Tipo de estudo', 'Trabalho', 'select'), required: false, helpText: 'Ex.: estudo qualitativo, revisão integrativa, estudo transversal ou relato de experiência.' },
@@ -188,16 +192,11 @@ export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
 const aliases: Record<string, string> = {
   CAMPO_01: 'ALUNO_1_NOME',
   ALUNO_NOME: 'ALUNO_1_NOME',
-  ALUNO_MATRICULA: 'ALUNO_1_MATRICULA',
   CAMPO_02: 'TITULO',
   CAMPO_03: 'ORIENTADOR_NOME',
   CAMPO_COORIENTADOR: 'COORIENTADOR_NOME',
   CAMPO_04: 'DEFESA_DATA_HORA',
-  CAMPO_07_LOCAL: 'DEFESA_LOCAL',
-  ORIENTADOR_CIAP: 'ORIENTADOR_SIAPE',
-  COORIENTADOR_CIAP: 'COORIENTADOR_SIAPE',
-  EXAMINADOR_2_CIAP: 'EXAMINADOR_2_SIAPE',
-  EXAMINADOR_3_CIAP: 'EXAMINADOR_3_SIAPE'
+  CAMPO_07_LOCAL: 'DEFESA_LOCAL'
 };
 
 export function catalogIsValid(entry: CatalogEntry, at = new Date().toISOString()): boolean {
@@ -219,6 +218,7 @@ export function registrationQuestions(studio?: Partial<IntegrationStudioSettings
 
   for (const custom of configured) {
     const fieldKey = aliases[canonicalKey(custom.fieldKey)] || canonicalKey(custom.fieldKey);
+    if (isRegistrationIdentifierField(fieldKey, custom.label)) continue;
     if (['ALUNO_1_TRATAMENTO','ALUNO_2_TRATAMENTO','AUTORIA_ORDEM','LOCAL_ALTERNATIVO'].includes(fieldKey))continue;
     if (!fieldKey || seen.has(fieldKey) || ['CAMPO_06', 'BANCA_EMAILS'].includes(fieldKey)) continue;
     seen.add(fieldKey);
@@ -253,6 +253,7 @@ export function registrationQuestions(studio?: Partial<IntegrationStudioSettings
       return {...field,helpText: /^ALUNO_[12]_NOME$/.test(field.fieldKey) ? 'Informe o nome completo ou nome social. A ordem dos autores será a mesma nos documentos.' : 'Informe o nome completo ou nome social para os documentos.'};
     }
     if(field.fieldKey==='AUTORIA_REFERENCIA')return {...field,fieldType:'select',options:answers?authorReferenceOptions(answers.TEM_ALUNO_2==='Sim'):[...AUTHOR_REFERENCE_OPTIONS]};
+    if(field.fieldKey===ACADEMIC_PERIOD_FIELD)return {...field,label:ACADEMIC_PERIOD_LABEL,helpText:academicPeriodHelpText(),required:false,fieldType:'select',options:academicPeriodOptions(answers?.[ACADEMIC_PERIOD_FIELD])};
     if (field.fieldKey==='DEFESA_LOCAL') return { ...field, fieldType:'select', options:[...config.reservation.locations.filter(Boolean),CUSTOM_DEFENSE_LOCATION] };
     if(field.fieldKey==='DEFESA_LOCAL_PERSONALIZADO')return {...field,validation:{maxLength:250},helpText:REGISTRATION_QUESTIONS.find(q=>q.fieldKey===field.fieldKey)?.helpText};
     const options = config.catalogs.filter(e => e.kind === field.fieldKey && catalogIsValid(e)).map(e => e.label);
@@ -278,17 +279,13 @@ function cleanText(value: unknown): string {
   return String(value ?? '').normalize('NFC').trim().replace(/\s+/g, ' ');
 }
 
-function normalizeStudentId(value: unknown): string {
-  return String(value ?? '').trim().replace(/[.\s-]+/g, '');
-}
-
 function canonicalPerson(prefix: string, answers: RegistrationAnswers) {
   const name = cleanText(answers[`${prefix}_NOME`]);
   return {
     nome: normalizePersonName(name),
     email: normalizeEmail(cleanText(answers[`${prefix}_EMAIL`])),
-    matricula: normalizeStudentId(answers[`${prefix}_MATRICULA`]),
-    siape: normalizeStudentId(answers[`${prefix}_SIAPE`]),
+    matricula: '',
+    siape: '',
     instituicao: renderInstitutionName(cleanText(answers[`${prefix}_INSTITUICAO`])),
     tratamento: cleanText(answers[`${prefix}_TRATAMENTO`]),
     titulacao: cleanText(answers[`${prefix}_TITULACAO`])
@@ -297,7 +294,7 @@ function canonicalPerson(prefix: string, answers: RegistrationAnswers) {
 
 export function registrationPayload(a: RegistrationAnswers, timezone: string) {
   const {AUTORIA_ORDEM:_legacyOrder,...currentAnswers}=a;
-  a=withAuthorReference(currentAnswers);
+  a=withAuthorReference(registrationAnswersWithoutIdentifiers(currentAnswers));
   const s = (k: string) => cleanText(a[k]);
   return {
     personPresentationVersion:s('AUTORIA_REFERENCIA')?3:2,
@@ -329,10 +326,15 @@ export function formatVariable(value: unknown, presentation: VariablePresentatio
       ...(hasDate ? { dateStyle: long ? 'long' : 'short' } as const : {}),
       ...(hasTime ? { timeStyle: 'short' } as const : {})
     }).format(date);
+    if (hasDate && !long) {
+      const civilDay = new Intl.DateTimeFormat('sv-SE', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+      const weekday = formatWeekdayPt(civilDay);
+      if (weekday) output = `${weekday}, ${output}`;
+    }
     if (long && hasDate) {
       const day = new Intl.DateTimeFormat('sv-SE', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
       const time = new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date);
-      output = formatDateExtensoTotal(day + 'T12:00:00') + (hasTime ? ' às ' + time : '');
+      output = formatDateExtensoWithWeekday(day + 'T12:00:00') + (hasTime ? ' às ' + time : '');
     }
     if (long && hasTime) {
       const time = new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date);

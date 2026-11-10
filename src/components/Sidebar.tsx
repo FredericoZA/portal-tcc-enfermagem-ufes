@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { portalNotice } from '../services/portalDialogs';
-import { NursingEmblemLogo } from './NursingEmblemLogo';
+import { OilLampIcon } from './OilLampIcon';
 import { FeedbackModal } from './FeedbackModal';
 import {
   Award,
@@ -32,55 +32,8 @@ interface SidebarProps {
   setIsOpenMobile: (open: boolean) => void;
 }
 
-const USER_LOCATION_CACHE_KEY = 'portal_tcc_user_location_v1';
-const USER_LOCATION_CACHE_MS = 24 * 60 * 60 * 1000;
-function readCachedUserLocation(): string | null {
-  try {
-    const raw = localStorage.getItem(USER_LOCATION_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed?.label || !parsed?.savedAt || Date.now() - Number(parsed.savedAt) > USER_LOCATION_CACHE_MS) return null;
-    return String(parsed.label);
-  } catch {
-    return null;
-  }
-}
-
-function saveCachedUserLocation(label: string) {
-  try { localStorage.setItem(USER_LOCATION_CACHE_KEY, JSON.stringify({ label, savedAt: Date.now() })); } catch { /* cache opcional */ }
-}
-
-async function reverseGeocodeUserLocation(latitude: number, longitude: number): Promise<string> {
-  try {
-    const params = new URLSearchParams({
-      format: 'jsonv2',
-      lat: String(latitude),
-      lon: String(longitude),
-      zoom: '18',
-      addressdetails: '1',
-      'accept-language': 'pt-BR',
-    });
-    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, { headers: { Accept: 'application/json' } });
-    if (!response.ok) throw new Error('reverse geocoding unavailable');
-    const payload: any = await response.json();
-    const address = payload?.address || {};
-    const neighborhood = address.neighbourhood || address.suburb || address.quarter || address.city_district || '';
-    const city = address.city || address.town || address.municipality || address.village || address.county || '';
-    const iso = String(address['ISO3166-2-lvl4'] || address['ISO3166-2-lvl6'] || '');
-    const uf = iso.startsWith('BR-') ? iso.slice(3) : '';
-    if (neighborhood && city) return `${neighborhood} · ${city}${uf ? `/${uf}` : ''}`;
-    if (city) return `${city}${uf ? `/${uf}` : ''}`;
-    if (payload?.display_name) return String(payload.display_name).split(',').slice(0, 2).join(',').trim();
-  } catch {
-    // O fallback por coordenadas evita uma segunda chamada a qualquer serviço externo.
-  }
-  return `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`;
-}
-
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isOpenMobile, setIsOpenMobile }) => {
   const { isMasterAdmin, isCommissionPresident, isAuthenticated, settings, userEmail, logout } = useAuth();
-  const courseLogo = String((settings as any)?.courseLogoDataUrl || '');
-  const configuredLogo = settings?.integrationStudio?.brandKit?.courseLogoUrl || settings?.integrationStudio?.brandKit?.universityLogoUrl || '';
   const isVisitor = !isAuthenticated;
   const isCollapsed = false;
   const [isHovered, setIsHovered] = useState(false);
@@ -101,52 +54,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
     };
   }, []);
 
+  useLayoutEffect(() => {
+    if (!isOpenMobile) return;
+    const sidebar = document.getElementById('portal-sidebar');
+    document.getElementById('close-mobile-sidebar-btn')?.focus({ preventScroll: true });
+    return () => {
+      if (document.activeElement === document.body || sidebar?.contains(document.activeElement)) {
+        document.getElementById('open-mobile-sidebar-btn')?.focus({ preventScroll: true });
+      }
+    };
+  }, [isOpenMobile]);
+
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDownloadingAttendance, setIsDownloadingAttendance] = useState(false);
   const [feedbackMode,setFeedbackMode]=useState<'submit'|null>(null);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
   const appVersion = String((import.meta as any).env?.VITE_APP_VERSION || '0.0.0');
   const buildCommit = String((import.meta as any).env?.VITE_GIT_COMMIT || '').slice(0, 7);
-  const [userLocation, setUserLocation] = useState('Obtendo localização do usuário…');
 
   useEffect(() => {
     const handleLayoutChange = (event: Event) => setLayoutConfig((event as CustomEvent<SiteLayoutConfig>).detail || loadSiteLayoutConfig());
     window.addEventListener(SITE_LAYOUT_EVENT, handleLayoutChange);
     return () => window.removeEventListener(SITE_LAYOUT_EVENT, handleLayoutChange);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    const cached = readCachedUserLocation();
-    if (cached) {
-      setUserLocation(cached);
-      return () => { active = false; };
-    }
-    const policyDocument = document as Document & {
-      permissionsPolicy?: { allowsFeature(name: string): boolean };
-      featurePolicy?: { allowsFeature(name: string): boolean };
-    };
-    const permissionsPolicy = policyDocument.permissionsPolicy || policyDocument.featurePolicy;
-    if (!navigator.geolocation || (permissionsPolicy && !permissionsPolicy.allowsFeature('geolocation'))) {
-      setUserLocation('Localização do usuário indisponível');
-      return () => { active = false; };
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        void reverseGeocodeUserLocation(latitude, longitude).then((label) => {
-          if (!active) return;
-          setUserLocation(label);
-          saveCachedUserLocation(label);
-        });
-      },
-      (error) => {
-        if (!active) return;
-        setUserLocation(error.code === error.PERMISSION_DENIED ? 'Localização não compartilhada' : 'Localização do usuário indisponível');
-      },
-      { enableHighAccuracy: false, timeout: 6000, maximumAge: 12 * 60 * 60 * 1000 }
-    );
-    return () => { active = false; };
   }, []);
 
   const handleNav = (tab: string) => { setCurrentTab(tab); setIsOpenMobile(false); };
@@ -190,18 +119,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   const renderNavIcon = (_id: string, Icon: React.ComponentType<{ className?: string }>, _defaultEmoji: string, _isActive: boolean) => (
     <Icon className="h-4 w-4 shrink-0 text-white" aria-hidden="true" />
   );
-  // A identidade pública salva pelo Master é a fonte de verdade. Configurações privadas
-  // de integração ficam apenas como fallback de migração e nunca substituem a logo pública.
-  const sidebarLogoSrc = (layoutConfig.sidebarLogoType === 'custom' && layoutConfig.sidebarCustomLogoUrl ? layoutConfig.sidebarCustomLogoUrl : '') || courseLogo || configuredLogo || '/colenf-logo.png';
 
   return <>
     {isOpenMobile && <div id="sidebar-mobile-backdrop" className="fixed inset-0 bg-slate-900/60 z-40 lg:hidden backdrop-blur-xs" onClick={() => setIsOpenMobile(false)} />}
     {isCollapsed && <div id="sidebar-hover-trigger" className="hidden lg:flex fixed left-0 top-0 bottom-0 w-3 z-45 bg-slate-200/40 hover:bg-emerald-600/10 border-r border-slate-300/30 hover:border-emerald-500/50 items-center justify-center transition-all duration-150 cursor-pointer group" onMouseEnter={() => setIsHovered(true)} title="Passe o mouse aqui para abrir o menu lateral"><ChevronLeft className="w-3.5 h-3.5 text-slate-500 opacity-0 group-hover:opacity-100 rotate-180 transition-opacity duration-150" /></div>}
     <div id="sidebar-layout-spacer" className={`hidden lg:block transition-all duration-300 ease-in-out shrink-0 overflow-hidden ${isCollapsed ? 'w-0' : 'w-64'}`} />
-    <aside id="portal-sidebar" data-keyboard-navigation={keyboardNavigation ? 'true' : 'false'} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} style={{backgroundColor: layoutConfig.sidebarBgColor || PORTAL_THEME.chrome.sidebarFooter,borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider,color: layoutConfig.sidebarTextColor || PORTAL_THEME.text.light}} className={`fixed top-0 bottom-0 left-0 z-50 w-64 text-slate-100 flex flex-col border-r transition-all duration-300 ease-in-out ${isOpenMobile ? 'translate-x-0' : '-translate-x-full'} ${isCollapsed ? (isHovered ? 'lg:translate-x-0 lg:shadow-2xl' : 'lg:-translate-x-full') : 'lg:translate-x-0'}`}>
+    <aside id="portal-sidebar" onKeyDown={(event) => {
+      if (isOpenMobile && event.key === 'Escape') {
+        event.stopPropagation();
+        setIsOpenMobile(false);
+      }
+    }} data-keyboard-navigation={keyboardNavigation ? 'true' : 'false'} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} style={{backgroundColor: layoutConfig.sidebarBgColor || PORTAL_THEME.chrome.sidebarFooter,borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider,color: layoutConfig.sidebarTextColor || PORTAL_THEME.text.light}} className={`fixed top-0 bottom-0 left-0 z-50 w-64 max-w-full text-slate-100 flex flex-col border-r transition-transform duration-300 ease-in-out ${isOpenMobile ? 'translate-x-0' : 'invisible -translate-x-full lg:visible'} ${isCollapsed ? (isHovered ? 'lg:translate-x-0 lg:shadow-2xl' : 'lg:-translate-x-full') : 'lg:translate-x-0'}`}>
       <div style={{backgroundColor: layoutConfig.sidebarHeaderBgColor || PORTAL_THEME.chrome.sidebarFooter,borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider}} className="px-2.5 py-3.5 border-b flex items-center justify-between relative group">
         <button type="button" onClick={() => handleNav('home')} className="flex items-center gap-2 hover:opacity-95 transition-opacity focus:outline-none cursor-pointer flex-1 min-w-0" title="Ir para o Calendário Público Inicial">
-          <NursingEmblemLogo size={64.8} className="shrink-0" customSrc={sidebarLogoSrc} />
+          <OilLampIcon size={64.8} />
           <div className="flex flex-col flex-1 min-w-0 items-center justify-center text-center pr-1">
             <h1 className="font-black text-[14.4px] sm:text-[15.3px] tracking-tight uppercase leading-tight text-center whitespace-normal w-full" style={{ color: sidebarHeaderTitleColor }}>{layoutConfig.sidebarTitle || 'Portal de TCC'}</h1>
             <div className="portal-sidebar-subtitle mt-1.5 w-full text-center font-black tracking-[0.055em] leading-[1.25] uppercase" style={{ color: sidebarAccent }}>
@@ -209,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             </div>
           </div>
         </button>
-        <button id="close-mobile-sidebar-btn" onClick={() => setIsOpenMobile(false)} className="lg:hidden text-slate-300 hover:text-white p-1" aria-label="Fechar menu"><ChevronLeft className="w-5 h-5" /></button>
+        <button id="close-mobile-sidebar-btn" type="button" onClick={() => setIsOpenMobile(false)} className="lg:hidden text-slate-300 hover:text-white p-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white" aria-label="Fechar menu"><ChevronLeft className="w-5 h-5" /></button>
       </div>
 
       <nav id="sidebar-nav" className="flex flex-1 min-h-0 flex-col gap-4 p-3 overflow-y-auto">
@@ -239,6 +170,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           if (!order.includes('informacoes-gerais')) { const tutorialIndex = order.indexOf('tutorial'); order.splice(tutorialIndex >= 0 ? tutorialIndex : order.length, 0, 'informacoes-gerais'); }
           if (!order.includes('fluxo-tcc')) { const replicationIndex = order.indexOf('replicar'); order.splice(replicationIndex >= 0 ? replicationIndex : order.length, 0, 'fluxo-tcc'); }
           if (!order.includes('replicar')) order.push('replicar');
+          const informationEnd = order.indexOf('replicar');
+          order.splice(informationEnd, 0, 'sugestoes', 'declaracao-comparecimento');
           const renderNavItem = (itemKey: string, idx: number) => {
             if (itemKey.startsWith('DIVIDER')) { if (layoutConfig.sidebarShowDividers === false || layoutConfig.sidebarDividerStyle === 'none') return null; return <div key={`${itemKey}-${idx}`} className="my-2.5 pt-0.5 border-t transition-colors" style={{ borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider, borderStyle: layoutConfig.sidebarDividerStyle || 'solid' }} />; }
             const item = allNavMap[itemKey]; if (!item || !item.visible) return null; const Icon = item.icon; const isActive = currentTab === item.id || (item.id === 'home' && currentTab === 'calendario');
@@ -253,8 +186,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           };
           const publicKeys = order.filter((key) => ['home', 'biblioteca'].includes(key));
           const userKeys = order.filter((key) => ['meus-processos', 'coordenador', 'configuracoes'].includes(key));
+          const replicationKeys = order.filter((key) => key === 'replicar');
           const informationKeys = order.filter((key) =>
-            !key.startsWith('DIVIDER') && !publicKeys.includes(key) && !userKeys.includes(key)
+            !key.startsWith('DIVIDER') && !publicKeys.includes(key) && !userKeys.includes(key) && !replicationKeys.includes(key)
           );
           const showSectionDividers = layoutConfig.sidebarShowDividers !== false && layoutConfig.sidebarDividerStyle !== 'none';
           const sectionDividerStyle = {
@@ -280,11 +214,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
               {renderSection('CONSULTA PÚBLICA', publicKeys, 0)}
               {renderSection('ÁREA DO USUÁRIO', userKeys, 1)}
               {renderSection('INFORMAÇÕES', informationKeys, 2)}
+              {renderSection('REPLICAÇÃO', replicationKeys, 3)}
             </div>
-            <div className={`mt-auto shrink-0 space-y-1 pt-2.5 ${showSectionDividers ? 'border-t' : ''}`} style={showSectionDividers ? sectionDividerStyle : undefined}>
-              {renderNavItem('declaracao-comparecimento', order.length)}
-              {renderNavItem('sugestoes', order.length + 1)}
-            </div>
+
           </>;
         })()}
       </nav>
@@ -297,7 +229,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             <div className="mt-1 text-xs font-semibold break-all text-center" style={{ color: sidebarFooterTextColor }} title={userEmail}>{userEmail}</div>
           </div>
         </>}
-        <div className="flex items-center justify-center gap-1.5 text-[10px] whitespace-normal leading-4 text-center" style={{ color: sidebarFooterMutedColor }} title={userLocation}><MapPin className="h-3 w-3 shrink-0"/><span>{userLocation}</span></div>
         <div className="text-[9px] font-medium tracking-wide text-center" style={{ color: sidebarFooterMutedColor }} title={buildCommit ? `Fingerprint do build: ${buildCommit}` : undefined}>Versão do sistema: {appVersion}{buildCommit ? ` · ${buildCommit}` : ''}</div>
       </div>
     </aside>

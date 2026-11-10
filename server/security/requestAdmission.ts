@@ -47,6 +47,7 @@ function requestFamily(req: Request): Family | null {
   if (['GET', 'HEAD'].includes(req.method) && ['/api/health', '/health'].includes(route)) return null;
   if (route === '/api/integrations/asten/webhook') return 'callback';
   if (route === '/api/public/sync/version' || route === '/api/sync/version') return 'sync';
+  if (['/api/public/indicators','/api/admin/indicators','/api/public-indicators'].includes(route)) return 'indicators';
   return 'api';
 }
 

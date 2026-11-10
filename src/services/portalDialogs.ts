@@ -1,4 +1,4 @@
-export type PortalDialogOptions = { title?: string; confirmLabel?: string; cancelLabel?: string; tone?: 'default' | 'warning' };
+export type PortalDialogOptions = { title?: string; confirmLabel?: string; cancelLabel?: string; tone?: 'default' | 'warning'; inputLabel?:string; minLength?:number; maxLength?:number; multiline?:boolean };
 
 export type PortalDialog = {
   kind: 'notice' | 'confirm' | 'prompt';
@@ -8,6 +8,10 @@ export type PortalDialog = {
   title: string;
   confirmLabel: string;
   cancelLabel: string;
+  inputLabel?:string;
+  minLength?:number;
+  maxLength?:number;
+  multiline?:boolean;
   resolve: (value: string | boolean | null) => void;
 };
 
@@ -31,6 +35,7 @@ function request(kind: PortalDialog['kind'], message: unknown, initialValue = ''
       title: options.title?.trim() || defaults.title,
       confirmLabel: options.confirmLabel?.trim() || defaults.confirmLabel,
       cancelLabel: options.cancelLabel?.trim() || defaults.cancelLabel,
+      inputLabel:options.inputLabel,minLength:options.minLength,maxLength:options.maxLength,multiline:options.multiline,
       resolve,
     });
     listeners.forEach(listener => listener());

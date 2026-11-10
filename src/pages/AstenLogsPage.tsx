@@ -1,3 +1,5 @@
+import { signatureStatusLabel } from '../utils/signatureGuidance';
+import {formatAuditTimestamp, timestampInSaoPauloDateRange} from '../utils/formatters';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Eye, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -6,6 +8,7 @@ import { portalConfirm, portalNotice } from '../services/portalDialogs';
 import type { SignatureJob, SignatureJobStatus, SignatureSignerSnapshot } from '../types';
 import { SearchPopover } from '../components/SearchPopover';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
+import { PortalModalShell } from '../components/PortalModalShell';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { SettingsWorkspaceHeaderPortal } from '../components/SettingsWorkspaceModal';
 import { loadTableConfig, type ColumnDef } from '../components/TableColumnSelectorPanel';
@@ -29,14 +32,26 @@ const SIGNATURE_COLUMNS: ColumnDef[] = [
   { key: 'lastError', label: 'Último erro' },
   { key: 'actions', label: 'Ações' },
 ];
+const MOBILE_CELLS: Record<string, string> = { protocol: 'summary', actions: 'actions' };
 const DEFAULT_ORDER = SIGNATURE_COLUMNS.map((column) => column.key);
 const DEFAULT_VISIBLE = Object.fromEntries(SIGNATURE_COLUMNS.map((column) => [column.key, !['attempts','signedSha256','lastError'].includes(column.key)]));
-const dateTime = (value?: string) => value ? new Date(value).toLocaleString('pt-BR') : '—';
+const dateTime = (value?: string) => value ? formatAuditTimestamp(value) : '—';
+const signatureTimestamps = {
+  createdAt: (job: SignatureJob) => job.createdAt,
+  signedAt: (job: SignatureJob) => job.signedAt,
+  sentAt: (job: SignatureJob) => job.sentAt,
+  completedAt: (job: SignatureJob) => job.completedAt || job.signedAt,
+};
+function signatureSortValue(job: SignatureJob, key: string): string | undefined {
+  if (!Object.hasOwn(signatureTimestamps, key)) return;
+  const timestamp = signatureTimestamps[key as keyof typeof signatureTimestamps](job);
+  return String(Date.parse(timestamp || '') || 0);
+}
 const providerLabel = (value?: string) => value === 'ASTEN' ? 'Asten' : value === 'GOV_BR' ? 'Gov.br' : (value || '—');
 const RETRYABLE_STATUSES = new Set<SignatureJobStatus>(['PROVIDER_ERROR', 'WAITING_INTEGRATION', 'DRIVE_SYNC_PENDING', 'EXPIRED']);
 const FINAL_STATUSES = new Set<SignatureJobStatus>(['ARCHIVED', 'CANCELED', 'DECLINED']);
 
-const roleLabel = (role: SignatureSignerSnapshot['role']) => role === 'ADVISOR' ? 'Orientador(a)' : role === 'STUDENT' ? 'Aluno(a)' : 'Presidência';
+const roleLabel = (role: SignatureSignerSnapshot['role']) => role === 'ADVISOR' ? 'Orientador(a)' : role === 'EXAMINER' ? 'Examinador(a)' : role === 'STUDENT' ? 'Aluno(a)' : role === 'CO_ADVISOR' ? 'Coorientador(a)' : 'Presidência';
 const signerSummary = (signers: SignatureSignerSnapshot[]) => signers.length ? signers.map((signer) => signer.name || signer.email).join('; ') : '—';
 const signedSigners = (job: SignatureJob) => job.signers.filter((signer) => signer.status === 'SIGNED');
 const signedBySummary = (job: SignatureJob) => {
@@ -45,14 +60,6 @@ const signedBySummary = (job: SignatureJob) => {
   if (['SIGNED', 'DRIVE_SYNC_PENDING', 'ARCHIVED'].includes(job.status)) return 'Concluído pelo provedor; detalhe individual não informado';
   return '—';
 };
-
-const DEMO_JOB = {
-  id: 'demo-signature-local', createdAt: '2026-09-24T12:00:00-03:00', updatedAt: '2026-09-24T12:01:00-03:00', createdBy: 'demonstração@portal.local',
-  processId: 'demo-process', protocol: '2026-000', documentTitle: 'Declaração de participação — demonstração', documentType: 'DECLARACAO', documentVersion: 1,
-  sourceDataRevision: 1, fileName: 'declaracao-demo.pdf', mimeType: 'application/pdf', contentSha256: 'demo', idempotencyKey: 'demo',
-  signers: [{ id: 'demo-signer', role: 'ADVISOR', name: 'Prof. Demonstração', email: 'demo@portal.local', signingOrder: 1, status: 'SIGNED', signedAt: '2026-09-24T12:01:00-03:00' }],
-  provider: 'ASTEN', status: 'SIGNED', providerEnvelopeId: 'DEMO-LOCAL', sentAt: '2026-09-24T12:00:00-03:00', completedAt: '2026-09-24T12:01:00-03:00', signedAt: '2026-09-24T12:01:00-03:00',
-} as SignatureJob;
 
 export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const { isMasterAdmin } = useAuth();
@@ -85,24 +92,19 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
 
   const filtered = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('pt-BR');
-    const start = startDate ? new Date(`${startDate}T00:00:00`).getTime() : 0;
-    const end = endDate ? new Date(`${endDate}T23:59:59.999`).getTime() : Number.POSITIVE_INFINITY;
     return jobs.filter((job) => {
-      const created = new Date(job.createdAt).getTime();
-      if (Number.isFinite(created) && (created < start || created > end)) return false;
+      if (!timestampInSaoPauloDateRange(job.createdAt, startDate, endDate)) return false;
       if (!term) return true;
-      return [job.createdBy, job.protocol, job.processId, job.documentTitle, job.documentType, job.provider, job.status, job.providerEnvelopeId, job.lastError, signerSummary(job.signers), signedBySummary(job)]
+      return [job.createdBy, job.protocol, job.processId, job.documentTitle, job.documentType, job.provider, job.status, signatureStatusLabel(job.status), job.providerEnvelopeId, job.lastError, signerSummary(job.signers), signedBySummary(job)]
         .filter(Boolean).join(' ').toLocaleLowerCase('pt-BR').includes(term);
-    });
+    }).sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0) || a.id.localeCompare(b.id));
   }, [jobs, search, startDate, endDate]);
 
   const shown = filtered;
-  const showDemo = jobs.length === 0 && !search.trim() && !startDate && !endDate;
-  const renderedJobs = showDemo ? [DEMO_JOB] : shown;
+  const renderedJobs = shown;
   const activeColumns = ['protocol', ...columnOrder.filter((key) => key !== 'protocol' && (visibleColumns[key] !== false || key === 'actions'))];
 
   const retry = async (job: SignatureJob) => {
-    if (job.id === DEMO_JOB.id) return;
     if (!(await portalConfirm(`Reenviar a solicitação de assinatura do processo ${job.protocol || job.processId}?`))) return;
     setWorkingId(job.id);
     try { await apiClient.retrySignatureJob(job.id); await load(true); }
@@ -111,7 +113,6 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   };
 
   const reconcile = async (job: SignatureJob) => {
-    if (job.id === DEMO_JOB.id) return;
     setWorkingId(job.id);
     try { await apiClient.reconcileSignatureJob(job.id); await load(true); }
     catch (error: any) { portalNotice(error?.message || 'Não foi possível reconciliar o estado da assinatura.'); }
@@ -122,10 +123,9 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
 
   const renderActions = (job: SignatureJob) => {
     const busy = workingId === job.id;
-    const demo = job.id === DEMO_JOB.id;
-    const canRetry = !demo && RETRYABLE_STATUSES.has(job.status) && job.providerCreationState !== 'UNCERTAIN';
-    const canReconcile = !demo && Boolean(job.providerEnvelopeId) && !FINAL_STATUSES.has(job.status);
-    return <div className="flex items-center justify-center gap-1 whitespace-nowrap">
+    const canRetry = RETRYABLE_STATUSES.has(job.status) && job.providerCreationState !== 'UNCERTAIN';
+    const canReconcile = Boolean(job.providerEnvelopeId) && !FINAL_STATUSES.has(job.status);
+    return <div className="portal-record-actions flex items-center justify-center gap-1 whitespace-nowrap">
       <button type="button" onClick={() => setSelectedJob(job)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50"><Eye className="h-3 w-3"/>Auditar</button>
       {canRetry && <button type="button" onClick={() => void retry(job)} disabled={busy} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50 disabled:opacity-50"><RefreshCw className={`h-3 w-3 ${busy ? 'animate-spin' : ''}`}/>Reenviar</button>}
       {canReconcile && <button type="button" onClick={() => void reconcile(job)} disabled={busy} className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[9px] font-bold text-slate-900 hover:bg-slate-50 disabled:opacity-50"><RotateCcw className={`h-3 w-3 ${busy ? 'animate-spin' : ''}`}/>Reconciliar</button>}
@@ -135,10 +135,16 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
   const renderCell = (job: SignatureJob, key: string) => {
     if (key === 'createdAt') return dateTime(job.createdAt);
     if (key === 'createdBy') return job.createdBy || 'Sistema';
-    if (key === 'protocol') return job.protocol || job.processId || '—';
+    if (key === 'protocol') return <>
+      <span className="font-semibold">{job.protocol || job.processId || '—'}</span>
+      <div className="portal-record-summary">
+        <span className="block">{job.documentTitle || job.documentType || '—'}</span>
+        <span className="block text-slate-600">{providerLabel(job.provider)} · {signatureStatusLabel(job.status)}</span>
+      </div>
+    </>;
     if (key === 'documentTitle') return job.documentTitle || job.documentType || '—';
     if (key === 'provider') return providerLabel(job.provider);
-    if (key === 'status') return job.status;
+    if (key === 'status') return <span title={job.status}>{signatureStatusLabel(job.status)}</span>;
     if (key === 'signers') return signerSummary(job.signers);
     if (key === 'signedBy') return signedBySummary(job);
     if (key === 'signedAt') return dateTime(job.signedAt || (job.provider==='ASTEN'?job.completedAt:undefined));
@@ -162,23 +168,29 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
 
     <div className="portal-signature-table-shell flex min-h-0 flex-1 flex-col p-0">
       <>
-        {showDemo && <div className="border-b border-amber-300 bg-amber-50 px-3 py-1.5 text-[9px] font-semibold text-amber-900">Demonstração visual: este registro existe apenas na interface, não é salvo e não entra em estatísticas.</div>}
         <TableScrollWrapper fillHeight>
-          <table className="portal-spreadsheet-table w-full min-w-[1900px] border-collapse text-center text-xs">
-            <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} className={`px-3 py-1.5 text-[10px] font-black normal-case tracking-wide ${key === 'actions' ? 'text-center' : ''}`} style={key === 'actions' ? { backgroundColor: 'var(--portal-brand-header)' } : undefined}>{SIGNATURE_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
-            <tbody className="divide-y divide-slate-200">{(loading || renderedJobs.length === 0) && <tr><td colSpan={activeColumns.length} className="portal-sheet-empty-cell" role="status">{loading ? 'Carregando registros de assinatura…' : 'Nenhum registro de assinatura encontrado com os filtros atuais.'}</td></tr>}{renderedJobs.map((job) => <tr key={job.id}>{activeColumns.map((key) => <td key={key} className={`px-3 py-1 text-slate-950 ${key === 'actions' ? 'text-center' : ''}`}>{renderCell(job, key)}</td>)}</tr>)}</tbody>
+          <table className="portal-spreadsheet-table portal-responsive-records w-full min-w-[1900px] border-collapse text-center text-xs">
+            <thead><tr>{activeColumns.map((key) => <th key={key} data-portal-column-key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} className={`px-3 py-1.5 text-[10px] font-black normal-case tracking-wide ${key === 'actions' ? 'text-center sticky right-0 z-20' : ''}`} style={key === 'actions' ? { backgroundColor: 'var(--portal-brand-header)' } : undefined}>{SIGNATURE_COLUMNS.find((column) => column.key === key)?.label || key}</th>)}</tr></thead>
+            <tbody className="divide-y divide-slate-200">{(loading || renderedJobs.length === 0) && <tr><td colSpan={activeColumns.length} className="portal-sheet-empty-cell" role="status">{loading ? 'Carregando registros de assinatura…' : 'Nenhum registro de assinatura encontrado com os filtros atuais.'}</td></tr>}{renderedJobs.map((job) => <tr key={job.id} data-portal-row-id={job.id}>{activeColumns.map((key) => <td key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} data-portal-filter-value={key === 'protocol' ? job.protocol || job.processId || '—' : undefined} data-portal-sort-value={signatureSortValue(job, key)} className={`px-3 py-1 text-slate-950 ${key === 'actions' ? 'text-center sticky right-0 z-20 bg-[var(--portal-surface-panel)]' : ''}`}>{renderCell(job, key)}</td>)}</tr>)}</tbody>
           </table>
         </TableScrollWrapper>
       </>
     </div>
 
-    {selectedJob && <div className="portal-modal-backdrop fixed inset-0 z-[1000009] flex items-center justify-center p-4" onClick={() => setSelectedJob(null)}>
-      <section role="dialog" aria-modal="true" aria-label="Auditoria do registro de assinatura" className="portal-standard-modal portal-modal-surface w-full max-w-5xl overflow-hidden" style={{ backgroundColor: 'var(--portal-surface-page)' }} onClick={(event) => event.stopPropagation()}>
-        <header className="portal-modal-header px-4"><ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true"/><strong className="text-xs normal-case">Auditoria da assinatura</strong></header><div className="portal-modal-divider" aria-hidden="true" />
-        <div className="max-h-[78vh] overflow-y-auto p-3" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
+    <PortalModalShell
+      open={selectedJob !== null}
+      onClose={() => setSelectedJob(null)}
+      title="Auditoria do registro de assinatura"
+      icon={ShieldCheck}
+      maxWidthClass="max-w-5xl"
+      heightClass="max-h-[90dvh]"
+      bodyClassName="p-3"
+      footer={<div className="flex justify-end"><button type="button" className="portal-action" onClick={() => setSelectedJob(null)}>Fechar</button></div>}
+    >
+      {selectedJob && <>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{[
             ['Processo', selectedJob.protocol || selectedJob.processId], ['Documento', selectedJob.documentTitle], ['Método', providerLabel(selectedJob.provider)],
-            ['Situação', selectedJob.status], ['Solicitado por', selectedJob.createdBy], ['Solicitado em', dateTime(selectedJob.createdAt)],
+            ['Situação', signatureStatusLabel(selectedJob.status)], ['Solicitado por', selectedJob.createdBy], ['Solicitado em', dateTime(selectedJob.createdAt)],
             ['Protocolo externo', selectedJob.providerEnvelopeId || '—'], ['Enviado em', dateTime(selectedJob.sentAt)], ['Assinado / concluído em', dateTime(selectedJob.signedAt || selectedJob.completedAt)],
             ...(selectedJob.govbrReview?[
               ['Conferência', 'Manual no VALIDAR/ITI'], ['Conferido por', selectedJob.govbrReview.approvedBy||'Pendente'], ['Conferido em', dateTime(selectedJob.govbrReview.approvedAt)],
@@ -188,11 +200,10 @@ export const AstenLogsPage: React.FC<{ embedded?: boolean }> = ({ embedded = fal
 
           <section className="mt-3 overflow-hidden rounded-xl border border-slate-300 bg-white">
             <div className="px-3 py-2 text-[10px] font-black normal-case tracking-wide text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}>Signatários e evidências</div>
-            <div className="overflow-x-auto"><table className="portal-spreadsheet-table w-full min-w-[760px] border-collapse text-left text-xs"><thead><tr><th className="px-3 py-1.5">Ordem</th><th className="px-3 py-1.5">Pessoa</th><th className="px-3 py-1.5">E-mail</th><th className="px-3 py-1.5">Papel</th><th className="px-3 py-1.5">Estado</th><th className="px-3 py-1.5">Assinado em</th></tr></thead><tbody>{selectedJob.signers.length ? selectedJob.signers.slice().sort((a,b)=>a.signingOrder-b.signingOrder).map((signer)=><tr key={signer.id}><td className="px-3 py-1">{signer.signingOrder}</td><td className="px-3 py-1 font-semibold">{signer.name || '—'}</td><td className="px-3 py-1">{signer.email}</td><td className="px-3 py-1">{roleLabel(signer.role)}</td><td className="px-3 py-1">{signer.status}</td><td className="px-3 py-1">{dateTime(signer.signedAt)}</td></tr>) : <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-500">Nenhum signatário registrado.</td></tr>}</tbody></table></div>
+            <div className="overflow-x-auto"><table className="portal-spreadsheet-table w-full min-w-[760px] border-collapse text-left text-xs"><thead><tr><th className="px-3 py-1.5">Ordem</th><th className="px-3 py-1.5">Pessoa</th><th className="px-3 py-1.5">E-mail</th><th className="px-3 py-1.5">Papel</th><th className="px-3 py-1.5">Estado</th><th className="px-3 py-1.5">Assinado em</th></tr></thead><tbody>{selectedJob.signers.length ? selectedJob.signers.slice().sort((a,b)=>a.signingOrder-b.signingOrder).map((signer)=><tr key={signer.id}><td className="px-3 py-1">{signer.signingOrder}</td><td className="px-3 py-1 font-semibold">{signer.name || '—'}</td><td className="px-3 py-1">{signer.email}</td><td className="px-3 py-1">{roleLabel(signer.role)}</td><td className="px-3 py-1">{signatureStatusLabel(signer.status)}</td><td className="px-3 py-1">{dateTime(signer.signedAt)}</td></tr>) : <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-500">Nenhum signatário registrado.</td></tr>}</tbody></table></div>
           </section>
           <div className="mt-3 rounded-xl border border-slate-300 bg-white p-3 text-[10px] leading-4 text-slate-600">O Portal preserva a identidade dos signatários, documento, método, protocolo externo e marcos temporais disponíveis. Quando o provedor não devolve horário individual por signatário, o sistema exibe apenas o horário confirmado do documento, sem inventar evidência individual.</div>
-        </div>
-      </section>
-    </div>}
+      </>}
+    </PortalModalShell>
   </div>;
 };

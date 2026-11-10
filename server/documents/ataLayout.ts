@@ -9,11 +9,12 @@ export function ataPageLayoutRequests(){
  * Runs from the exported unsigned PDF so wrapped lines use their actual baselines.
  * Never apply to a signed file: rewriting it would invalidate its signatures.
  */
-export async function numberAtaLines(bytes:Buffer):Promise<Buffer>{
+export async function numberAtaLines(bytes:Buffer,options:{requireSinglePage?:boolean}={}):Promise<Buffer>{
  const {getDocument}=await import('pdfjs-dist/legacy/build/pdf.mjs');
  const task=getDocument({data:new Uint8Array(bytes),useSystemFonts:true,verbosity:0});
  const source=await task.promise;
  try{
+  if(options.requireSinglePage&&source.numPages!==1)throw new Error(`A ata ocupa ${source.numPages} páginas. Revise o texto e o modelo para manter a ata completa em uma página; nenhum conteúdo foi cortado.`);
   const pdf=await PDFDocument.load(bytes),font=await pdf.embedFont(StandardFonts.Helvetica);
   let counter=1;
   for(let index=0;index<source.numPages;index++){
@@ -29,18 +30,7 @@ export async function numberAtaLines(bytes:Buffer):Promise<Buffer>{
    }
    rows.sort((a,b)=>b.y-a.y);
    const page=pdf.getPage(index);
-   const gaps=rows.slice(1).map((row,i)=>rows[i].y-row.y).filter(gap=>gap>=8&&gap<=24).sort((a,b)=>a-b);
-   const pitch=gaps.length?gaps[Math.floor(gaps.length/2)]:13;
-   const numberedRows:Array<{y:number;left:number}>=[];
-   for(let i=0;i<rows.length;i++){
-    numberedRows.push(rows[i]);
-    if(i+1<rows.length){
-     const gap=rows[i].y-rows[i+1].y;
-     const spaces=Math.max(1,Math.round(gap/pitch));
-     for(let step=1;step<spaces;step++)numberedRows.push({y:rows[i].y-gap*step/spaces,left:43});
-    }
-   }
-   for(const row of numberedRows){
+   for(const row of rows){
     const label=String(counter++),size=8;
     // Shared gutter at 7 mm, to the left of the 15 mm text margin.
     const x=Math.min(28,row.left-8)-font.widthOfTextAtSize(label,size);

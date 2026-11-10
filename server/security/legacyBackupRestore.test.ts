@@ -71,7 +71,7 @@ test('HTTP backup round trip preserves historical consent, Drive references and 
     const {checksum,...backupBody}=exported.body;
     assert.equal(checksum,createHash('sha256').update(JSON.stringify(backupBody)).digest('hex'));
     const publicRecords=(await request('/api/public/repository',undefined,'')).body;
-    assert.equal(publicRecords.length,2);
+    assert.deepEqual(publicRecords.map((entry:{protocolo:string})=>entry.protocolo),[processFixture.protocolo,...records.map(record=>record.protocolo)]);
     const denied=(await request('/api/legacy-academic-records',undefined,'')).body.find((record:{id:string})=>record.id==='legado-0001');
     assert.deepEqual(denied.publicFiles,[]);
     assert.ok(!JSON.stringify(publicRecords).includes('private_admin_file'));

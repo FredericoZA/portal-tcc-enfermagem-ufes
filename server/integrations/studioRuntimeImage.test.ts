@@ -40,11 +40,29 @@ test('sem migração ou com falha de arquivo não cria registro incompleto no ba
 test('leitor usa referência Drive e preserva leitura do legado durante implantação', async t => {
   const bytes = Buffer.from('iVBORw0KGgo=', 'base64');
   let record: Record<string, unknown> = { drive_file_id: 'private_image_123', content_sha256: 'b'.repeat(64), byte_length: bytes.length, mime_type: 'image/png', data_url: 'data:image/png;base64,broken' };
-  t.mock.method(globalThis, 'fetch', async () => Response.json([record]));
+  const selections:Array<string|null>=[];
+  let metadataError:string|undefined;
+  t.mock.method(globalThis, 'fetch', async (url:string) => {
+    const select=new URL(url,'https://fixture.invalid').searchParams.get('select');
+    selections.push(select);
+    if(select==='data_url')return Response.json([{data_url:record.data_url}]);
+    if(metadataError)return Response.json({code:metadataError},{status:400});
+    const {data_url: _legacy, ...metadata}=record;
+    return Response.json([metadata]);
+  });
   const image = await loadRuntimeImage('a'.repeat(64), async (ref, kind) => { assert.equal(kind, 'RUNTIME_ASSET'); assert.equal(ref.driveFileId, 'private_image_123'); return bytes; });
   assert.deepEqual(image, { bytes, mimeType: 'image/png' });
+  assert.deepEqual(selections,['drive_file_id,content_sha256,mime_type,byte_length']);
+  await assert.rejects(loadRuntimeImage('a'.repeat(64),async()=>{throw new Error('hash inválido');}),/hash inválido/);
+  assert.ok(!selections.includes('data_url'));
   record = { data_url: 'data:image/png;base64,iVBORw0KGgo=', mime_type: 'image/png' };
   assert.deepEqual(await loadRuntimeImage('a'.repeat(64)), { bytes, mimeType: 'image/png' });
+  assert.equal(selections.at(-1),'data_url');
+  metadataError='42703';
+  assert.deepEqual(await loadRuntimeImage('a'.repeat(64)), { bytes, mimeType: 'image/png' });
+  metadataError='42501';
+  await assert.rejects(loadRuntimeImage('a'.repeat(64)),/não confirmou a leitura/);
+  assert.equal(selections.at(-1),'drive_file_id,content_sha256,mime_type,byte_length');
 });
 
 test('snapshot com SVG preserva a chave, usa sua raiz e grava metadados dos bytes convertidos',async t=>{

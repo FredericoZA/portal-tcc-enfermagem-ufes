@@ -10,7 +10,7 @@ test('diagnóstico administrativo agrupa consultas e expira sem guardar falha ou
   let now=100_000;
   let requests=0;
   let fail=false;
-  const batchSize=22; // one state probe, twenty private tables and one capability RPC
+  const batchSize=1; // The RPC validates tables, grants and capabilities in the database.
   try{
     process.env.SUPABASE_URL='https://diagnostic-test.supabase.co';
     process.env.SUPABASE_SERVICE_ROLE_KEY='fake-diagnostic-key';
@@ -20,8 +20,8 @@ test('diagnóstico administrativo agrupa consultas e expira sem guardar falha ou
     globalThis.fetch=async(url)=>{
       requests++;
       if(fail)return new Response('{}',{status:503});
-      if(String(url).includes('/rpc/portal_runtime_capabilities'))return Response.json({schema_version:6,transactional_runtime:true,secure_file_transport:'SUPABASE_PRIVATE_STORAGE',asten_transactional_outbox:true});
-      return Response.json([]);
+      assert.match(String(url), /\/rpc\/portal_check_runtime_v1$/);
+      return Response.json({normalized_tables_ready:true,schema_version:6,transactional_runtime:true,secure_file_transport:'SUPABASE_PRIVATE_STORAGE',asten_transactional_outbox:true});
     };
     const [one,two]=await Promise.all([getSupabaseRuntimeConnectionStatus(),getSupabaseRuntimeConnectionStatus()]);
     assert.equal(one.transactionalRuntimeReady,true);
@@ -52,5 +52,41 @@ test('diagnóstico administrativo agrupa consultas e expira sem guardar falha ou
     globalThis.fetch=originalFetch;
     Date.now=originalNow;
     for(const key of envNames){const value=previous[key];if(value===undefined)delete process.env[key];else process.env[key]=value;}
+  }
+});
+
+test('preflight SQL blocks anonymous callers and detects missing tables and SELECT grants', async () => {
+  const {PGlite} = await import('@electric-sql/pglite');
+  const {readFile} = await import('node:fs/promises');
+  const migration = await readFile('supabase/migrations/20261106012000_portal_runtime_preflight.sql', 'utf8');
+  const tables = Array.from(migration.matchAll(/'(portal_[a-z_]+)'/g), match => match[1]);
+  assert.equal(tables.length, 20);
+  const db = new PGlite();
+  try {
+    await db.exec(`
+      create role anon; create role authenticated; create role service_role;
+      create table public.portal_runtime_state(id text);
+      grant select on public.portal_runtime_state to service_role;
+      create function public.portal_runtime_capabilities() returns jsonb language sql
+        as $$ select '{"schema_version":6}'::jsonb $$;
+    `);
+    await db.exec(migration);
+    const check = async (ready: boolean) => {
+      await db.exec('set role service_role');
+      const result = await db.query('select public.portal_check_runtime_v1() as readiness');
+      assert.deepEqual(result.rows, [{readiness: {schema_version: 6, normalized_tables_ready: ready}}]);
+      await db.exec('reset role');
+    };
+    await check(false);
+    for (const table of tables) {
+      await db.exec(`create table public.${table}(id text); grant select on public.${table} to service_role;`);
+    }
+    await check(true);
+    await db.exec('revoke select on public.portal_users from service_role');
+    await check(false);
+    await db.exec('set role anon');
+    await assert.rejects(db.query('select public.portal_check_runtime_v1()'), /permission denied/);
+  } finally {
+    await db.close();
   }
 });

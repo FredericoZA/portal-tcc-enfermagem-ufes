@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { admitPortalRequest } from '../security/requestAdmission';
+import { getSupabaseRuntimeStatus, publicPortalRevisionToken } from '../integrations/supabase';
 
 type StartupFailure = { code: string; message: string; missingGroups?: string[]; runtimeSignal?: string };
 type StartupStage = 'IMPORT_SERVER' | 'CREATE_APP';
@@ -55,7 +56,7 @@ function runtimeSignal(error: unknown): string {
 
 function safeStartupLog(stage: StartupStage, error: unknown): void {
   const name = error instanceof Error && /^[A-Za-z0-9_.-]{1,64}$/.test(error.name) ? error.name : 'Error';
-  console.error('[Startup] Falha ao inicializar o Portal TCC.', JSON.stringify({ stage, name, signal: runtimeSignal(error) }));
+  console.error('[Startup] Falha ao inicializar o Portal TCC.', JSON.stringify({ stage, name, code: classifyStartupFailure(error, stage).code, signal: runtimeSignal(error) }));
 }
 
 function classifyStartupFailure(error: unknown, stage?: StartupStage): StartupFailure {
@@ -83,15 +84,18 @@ function classifyStartupFailure(error: unknown, stage?: StartupStage): StartupFa
   if (detail.includes('PORTAL_VERIFICATION_SECRET')) return { code: 'VERIFICATION_SECRET_REQUIRED', message: 'A chave de verificação documental ainda não está configurada.' };
   if (detail.includes('GOOGLE_') || detail.toLowerCase().includes('oauth')) return { code: 'GOOGLE_OAUTH_SECURITY_REQUIRED', message: 'A integração Google ainda não passou na verificação de segurança.' };
   if (detail.includes('PORTAL_SESSION_SECRET') || detail.toLowerCase().includes('sessão')) return { code: 'SESSION_SECRET_REQUIRED', message: 'A proteção de sessão ainda não está configurada.' };
-  if (detail.includes('migrações do Supabase') || detail.includes('outbox transacional')) return { code: 'SUPABASE_SCHEMA_REQUIRED', message: 'O esquema transacional do banco ainda não foi validado.' };
+  if (signal === 'SUPABASE_CONNECTION_FAILED' || /^SUPABASE_HTTP_\d{3}$/.test(signal)) return { code: 'SUPABASE_CONNECTION_UNAVAILABLE', message: 'A conexão do Portal com o banco está indisponível.' };
+  if (signal === 'SUPABASE_CAPABILITY_FAILED' || signal === 'SUPABASE_TABLE_CHECK_FAILED') return { code: 'SUPABASE_SCHEMA_REQUIRED', message: 'O esquema transacional do banco ainda não foi validado.' };
   if (detail.includes('Asten') || detail.includes('ASTEN_')) return { code: 'ASTEN_SECURITY_REQUIRED', message: 'A integração de assinatura ainda não passou na verificação de segurança.' };
   return { code: 'PORTAL_APP_INITIALIZATION_ERROR', message: 'A aplicação foi carregada, mas uma validação interna ainda impede a inicialização segura.', runtimeSignal: signal };
 }
 
 let startupPromise: Promise<StartupState> | null = null;
+let retryStartupAt = 0;
 
 function startup(): Promise<StartupState> {
-  if (!startupPromise) {
+  if (!startupPromise || (retryStartupAt && Date.now() >= retryStartupAt)) {
+    retryStartupAt = 0;
     // This handler is emitted at dist/server/vercel/index.cjs. Keep the main
     // application lazy: admission must run before loading or hydrating it.
     startupPromise = Promise.resolve().then(() => require('../server.cjs'))
@@ -102,6 +106,9 @@ function startup(): Promise<StartupState> {
           return { app: app as StartupState['app'], error: null };
         } catch (error) {
           safeStartupLog('CREATE_APP', error);
+          if (classifyStartupFailure(error, 'CREATE_APP').code === 'SUPABASE_RUNTIME_STATE_ERROR' || runtimeSignal(error).startsWith('SUPABASE_')) {
+            retryStartupAt = Date.now() + 10_000;
+          }
           return { app: null, error, stage: 'CREATE_APP' as const };
         }
       })
@@ -114,6 +121,8 @@ function startup(): Promise<StartupState> {
 }
 
 function unavailable(res: Response, diagnostic: StartupFailure) {
+  const retrySeconds=Math.ceil((retryStartupAt-Date.now())/1000);
+  if(retrySeconds>0)res.setHeader('Retry-After',String(retrySeconds));
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   return res.status(503).json({
@@ -132,10 +141,23 @@ export default async function handler(req: Request, res: Response) {
   const preflight = productionPreflight();
   if (preflight) return unavailable(res, preflight);
 
+  const requestPath = String(req.url || '').split('?')[0];
+  if ((req.method === 'GET' || req.method === 'HEAD') && requestPath === '/api/public/sync/version'
+    && getSupabaseRuntimeStatus().durablePersistenceReady) {
+    try {
+      const token = await publicPortalRevisionToken();
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=10');
+      return res.json({token});
+    } catch {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(503).json({error:'Não foi possível consultar a atualização do portal.'});
+    }
+  }
+
   const state = await startup();
   if (!state.app) return unavailable(res, classifyStartupFailure(state.error, state.stage));
 
-  const requestPath = String(req.url || '').split('?')[0];
   if (requestPath === '/api/health' || requestPath === '/health') {
     res.setHeader('Cache-Control', 'no-store');
     return res.json({ status: 'ok', timestamp: new Date().toISOString(), commit: deployedCommit() });

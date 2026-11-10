@@ -1,3 +1,4 @@
+import type {EmailRecipientRole} from './integrationStudio';
 import type { DocumentType, ProcessData, ProcessRole } from './index';
 import type { SignatureJob, SignatureJobStatus } from './signatures';
 
@@ -12,7 +13,7 @@ export type WorkflowEventCode =
   | 'PROCESS_COMPLETED'
   | (string & {});
 
-export type WorkflowActionKind = 'DOCUMENT' | 'EMAIL' | 'FORM' | 'SYSTEM_ACTION';
+export type WorkflowActionKind = 'DOCUMENT' | 'EMAIL' | 'FORM' | 'SYSTEM_ACTION' | 'NATIVE_ACTIVITY';
 
 export interface ExecutableWorkflowAction {
   id: string;
@@ -20,6 +21,7 @@ export interface ExecutableWorkflowAction {
   referenceId?: string;
   title: string;
   detail?: string;
+  executionEvent?: WorkflowEventCode;
   condition?: import('./integrationStudio').StudioCondition;
 }
 
@@ -66,15 +68,38 @@ export interface WorkflowPlan {
 export type WorkflowActionStatus = 'COMPLETED' | 'SKIPPED' | 'FAILED';
 
 export interface WorkflowActionExecution {
+  /** Participant roles captured when a form task is released; never an authorization grant. */
+  formRecipientRoles?: EmailRecipientRole[];
   startedAt?: string;
   completedAt?: string;
   actionId: string;
   stageId: string;
   kind: WorkflowActionKind;
+  /** Server-recorded identity of this exact action, retained across recovery. */
+  idempotencyKey?: string;
   status: WorkflowActionStatus;
   externalId?: string;
   error?: string;
 }
+
+export interface WorkflowSimulationScenario {
+  publication?: boolean;
+  secondAuthor?: boolean;
+  locationOutcome?: 'CONFIRMED' | 'PENDING' | 'UNAVAILABLE';
+  locationConfirmed?: boolean;
+  failActionId?: string;
+  ataSignaturePending?: boolean;
+}
+
+export interface WorkflowSimulationResult {
+  simulated: true;
+  externalEffects: false;
+  events: Array<{ event: string; role: string; state: string; details?: WorkflowActionExecution[]; issues?: WorkflowValidationIssue[] }>;
+  emails: Array<{ to: string[]; subject: string; text: string; html?: string; attachments: string[] }>;
+  note: string;
+}
+
+export type WorkflowTraceEntry = Pick<WorkflowRun, 'id' | 'protocol' | 'eventCode' | 'startedAt' | 'completedAt' | 'status' | 'studioRevision'> & { failedActions: number };
 
 export interface WorkflowRun {
   studioRevision?: number;
@@ -103,11 +128,17 @@ export interface EmailDeliveryAttempt {
   status: EmailDeliveryStatus;
   gmailMessageId?: string;
   gmailThreadId?: string;
+  /** Conta autenticada retornada pelo provedor ao aceitar esta tentativa. */
+  sender?: string;
   errorCode?: string;
   errorMessage?: string;
 }
 
 export interface EmailDeliveryRecord {
+  /** Metadata only; original bytes remain in their document storage. */
+  attachmentManifest?: Array<{fileName:string;mimeType:string;sha256:string;byteLength:number}>;
+  communicationCopy?: {sourceDeliveryId:string;sourceTemplateId?:string;operationId:string;reason:string;confirmedBy:string;confirmedAt:string};
+  sourceDataRevision?: number;
   rfcMessageId?:string;
   replyThreadId?:string;
   replyMessageId?:string;
@@ -115,6 +146,7 @@ export interface EmailDeliveryRecord {
   processId?: string;
   protocol?: string;
   workflowRunId?: string;
+  studioRevision?: number;
   /** Evento e respostas mínimas necessários para reconstruir uma tentativa
    * sem depender de um WorkflowRun que pode ter falhado antes de registrar o
    * identificador externo da entrega. */
@@ -123,9 +155,15 @@ export interface EmailDeliveryRecord {
   templateId?: string;
   idempotencyKey: string;
   recipient: string;
+  additionalRecipients?: string[];
   cc?: string[];
+  workflowCc?: string[];
+  auditCopyMode?: 'operational' | 'sensitive';
+  auditCopyEmail?: string;
+  requestedBy?: string;
+  sender?: string;
   subject: string;
-  /** Conteúdo efetivamente renderizado no momento da primeira tentativa. */
+  /** Conteúdo efetivamente enviado à última tentativa, inclusive se ela falhar. */
   renderedText?: string;
   renderedHtml?: string;
   status: EmailDeliveryStatus;
@@ -133,6 +171,9 @@ export interface EmailDeliveryRecord {
   maxAttempts: number;
   nextRetryAt?: string;
   acceptedAt?: string;
+  dispatchState?: 'SENDING' | 'UNCERTAIN';
+  dispatchStartedAt?: string;
+  dispatchLeaseUntil?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -192,7 +233,7 @@ export interface AstenOperationalDashboard {
 }
 
 export interface CanonicalSignatureRecipient {
-  role: 'STUDENT' | 'ADVISOR' | 'PRESIDENT';
+  role: 'STUDENT' | 'ADVISOR' | 'EXAMINER' | 'CO_ADVISOR' | 'PRESIDENT';
   name: string;
   email: string;
   order: 1;
@@ -208,6 +249,8 @@ export interface CanonicalSignaturePlan {
 export interface WorkflowRuntimeContext {
   /** Completed effects preserved during a reviewed recovery of this event. */
   completedActions?: WorkflowActionExecution[];
+  /** Server enables this only for the same stored process and studio revisions. */
+  preserveActionIdentity?: boolean;
   process: ProcessData;
   actorEmail: string;
   actorRoles: ProcessRole[];

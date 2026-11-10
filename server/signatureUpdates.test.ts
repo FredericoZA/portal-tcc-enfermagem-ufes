@@ -140,3 +140,25 @@ test('falha temporária preserva estado e tenta novamente; sessão inválida enc
     watcher.stop();
   }
 });
+
+test('documentos acompanham a ata registrada antes do primeiro envelope', async()=>{
+  const clock=timers();
+  let known:SignatureJob[]=[];
+  let server:SignatureJob[]=[];
+  let reloads=0;
+  const watcher=createSignatureUpdateWatcher({
+    getKnownJobs:()=>known,fetchJobs:async()=>server,watchWithoutJobs:()=>known.length===0,
+    onChange:jobs=>{known=jobs;reloads++;},isActive:()=>true,
+    schedule:clock.schedule,cancel:clock.cancel,
+  });
+  watcher.start();
+  await clock.run();
+  assert.equal(reloads,0);
+  server=[job('SENT')];
+  await clock.run();
+  assert.equal(reloads,1);
+  server=[{...job('ARCHIVED'),driveSignedFileId:'ata-privada'}];
+  await clock.run();
+  assert.equal(reloads,2);
+  assert.equal(clock.pending.size,0);
+});

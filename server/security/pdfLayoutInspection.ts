@@ -7,6 +7,7 @@ export interface PdfLayoutOptions {
   signatureReservePoints?: number;
   maximumPages?: number;
   needsSignature?: boolean;
+  requiredText?: readonly string[];
 }
 export interface PdfQualityReport {
   pages: number;
@@ -94,6 +95,8 @@ DecodeStream.prototype.ensureBuffer = function(requested) {
     task = getDocument({data:new Uint8Array(bytes),useSystemFonts:true,verbosity:0,isEvalSupported:false,maxImageSize:16000000,isImageDecoderSupported:false});
     doc = await task.promise;
     if (await doc.getJSActions()) report.issues.push({page:0,code:'ACTIVE_CONTENT',severity:'ERROR',message:'O PDF contém ações JavaScript. Remova o conteúdo ativo.'});
+    const normalize = text => text.toLocaleLowerCase('pt-BR').replace(/\s+/g,' ').trim();
+    const missingText = new Set((options.requiredText || []).map(normalize));
     let operationCount = 0;
     for (let number=1; number<=doc.numPages; number++) {
       const page = await doc.getPage(number);
@@ -101,6 +104,10 @@ DecodeStream.prototype.ensureBuffer = function(requested) {
       const items = content.items.filter(i => typeof i.str === 'string');
       const text = items.map(i => i.str).join(' ');
       report.extractedCharacters += text.trim().length;
+      if (missingText.size) {
+        const normalized = normalize(text);
+        for (const value of missingText) if (value && normalized.includes(value)) missingText.delete(value);
+      }
       if (items.length > 100000 || report.extractedCharacters > 2000000) throw Error('O PDF excede o limite de texto seguro.');
       if (/<<[^<>]{1,100}>>|\{\{[^{}]{1,100}\}\}|\[\[[^\[\]]{1,100}\]\]|«[^«»]{1,100}»/.test(text)) report.issues.push({page:number,code:'UNRESOLVED_MARKER',severity:'ERROR',message:'Há um marcador sem preenchimento no PDF.'});
       const operators = await page.getOperatorList();
@@ -121,6 +128,7 @@ DecodeStream.prototype.ensureBuffer = function(requested) {
       if (options.needsSignature && number===doc.numPages && lowest<(options.signatureReservePoints??90)) report.issues.push({page:number,code:'SIGNATURE_SPACE',severity:'WARNING',message:'O texto ocupa a reserva inferior configurada para assinaturas. Confira a composição final.'});
       page.cleanup();
     }
+    if (missingText.size) report.issues.push({page:0,code:'REQUIRED_TEXT_MISSING',severity:'ERROR',message:'O PDF não contém todas as informações obrigatórias.'});
     parentPort.postMessage({ok:true,report});
   } catch (error) {
     const message = error instanceof Error && /^O PDF excede/.test(error.message) ? error.message : 'Não foi possível analisar o PDF com segurança.';

@@ -344,7 +344,7 @@ export const DEMO_PROCESSES: ProcessData[] = [
   {
     id: 'demo-proc-8',
     protocolo: 'TCC-2026-0008',
-    titulo: 'Avaliação dos Fatores de Risco em Unidades de Terapia Intensiva Neonatal',
+    titulo: 'Fatores de Risco em Unidades de Terapia Intensiva Neonatal',
     etapaAtual: 'DEFESA',
     status: 'AGUARDANDO_DEFESA',
     createdByEmail: 'ana.souza@aluno.ufes.br',

@@ -27,10 +27,10 @@ test('cadastro institucional corrige caixa alta e normaliza os campos operaciona
   const result = acceptRegistration({ registrationAnswers: validAnswers() });
   assert.equal(result.aluno1.nome, 'Maria das Dores Silva');
   assert.equal(result.aluno1.email, 'maria@edu.ufes.br');
-  assert.equal(result.aluno1.matricula, '202600123');
+  assert.equal(result.aluno1.matricula, '');
   assert.equal(result.orientador.nome, 'João de Souza');
   assert.equal(result.orientador.email, 'joao@ufes.br');
-  assert.equal(result.orientador.siape, '1234567');
+  assert.equal(result.orientador.siape, '');
   assert.equal(result.titulo, 'Impacto do Cuidado de Enfermagem na UTI');
   assert.equal(result.banca[1].email, 'beatriz@fiocruz.br');
 });
@@ -43,32 +43,38 @@ test('cadastro aceita nomes internacionais sem exigir sobrenome ou alfabeto lati
   }
 });
 
-test('registros de alunos e docentes aceitam comprimentos variados e preservam zeros', () => {
+test('cadastros novos descartam registros recebidos de formulários antigos', () => {
   for(const registro of ['1','00001','123456','0'.repeat(600)+'123','ABC123']){
     const answers=validAnswers();answers.ALUNO_1_MATRICULA=registro;answers.ORIENTADOR_SIAPE=registro;
     const legacyStudio={formTemplates:[{id:'form-reserva-aluno',questions:[{fieldKey:'ALUNO_1_MATRICULA',validation:{maxLength:20,minLength:5,pattern:'^\\d{5,20}$'}},{fieldKey:'ORIENTADOR_SIAPE',validation:{maxLength:7,minLength:7,pattern:'^\\d{7}$'}}]}]};
     const result=acceptRegistration({registrationAnswers:answers},legacyStudio as any);
-    assert.equal(result.aluno1.matricula,registro);assert.equal(result.orientador.siape,registro);
+    assert.equal(result.aluno1.matricula,'');assert.equal(result.orientador.siape,'');
+    assert.equal(result.registrationAnswers.ALUNO_1_MATRICULA,undefined);
+    assert.equal(result.registrationAnswers.ORIENTADOR_SIAPE,undefined);
   }
 });
 
 test('banca externa continua permitida sem SIAPE quando e-mail e instituição são válidos', () => {
   const result = acceptRegistration({ registrationAnswers: validAnswers() });
-  assert.equal(result.banca[1].instituicao, 'Fiocruz');
+  assert.equal(result.banca[1].instituicao, 'FIOCRUZ');
   assert.equal(result.banca[1].email, 'beatriz@fiocruz.br');
   assert.equal(result.banca[1].siape, '');
 });
 
-test('cadastro rejeita defesa no sábado', () => {
+test('cadastro permite defesa no sábado pelo fluxo normal', () => {
   const answers = validAnswers();
   answers.DEFESA_DATA_HORA = '2026-09-26T09:00';
-  assert.throws(() => acceptRegistration({ registrationAnswers: answers }), /segunda a sexta-feira/i);
+  const accepted=acceptRegistration({registrationAnswers:answers});
+  assert.ok(accepted.defesa.startAt);
+  assert.equal(accepted.defesa.local,answers.DEFESA_LOCAL);
 });
 
-test('cadastro rejeita defesa no domingo', () => {
+test('cadastro permite defesa no domingo pelo fluxo normal', () => {
   const answers = validAnswers();
   answers.DEFESA_DATA_HORA = '2026-09-27T09:00';
-  assert.throws(() => acceptRegistration({ registrationAnswers: answers }), /segunda a sexta-feira/i);
+  const accepted=acceptRegistration({registrationAnswers:answers});
+  assert.ok(accepted.defesa.startAt);
+  assert.equal(accepted.defesa.local,answers.DEFESA_LOCAL);
 });
 test('instituição interpreta siglas marcadas no servidor e remove asteriscos dos dados persistidos',()=>{
  const result=acceptRegistration({registrationAnswers:{...validAnswers(),EXAMINADOR_2_INSTITUICAO:'*faesa*',EXAMINADOR_3_INSTITUICAO:'Centro de Pesquisa *ucl*'}});
@@ -76,4 +82,13 @@ test('instituição interpreta siglas marcadas no servidor e remove asteriscos d
  assert.equal(result.banca[1].instituicao,'Centro de Pesquisa UCL');
  assert.equal(result.registrationAnswers.EXAMINADOR_2_INSTITUICAO,'FAESA');
  assert.equal(result.registrationAnswers.EXAMINADOR_3_INSTITUICAO,'Centro de Pesquisa UCL');
+});
+
+
+test('cadastro normaliza título e instituições sem exigir marcadores',()=>{
+ const result=acceptRegistration({registrationAnswers:{...validAnswers(),TITULO:'CUIDADO DE ENFERMAGEM NO SUS E NA UFES',EXAMINADOR_2_INSTITUICAO:'FAESA',EXAMINADOR_3_INSTITUICAO:'UNIVERSIDADE FEDERAL DO RIO DE JANEIRO'}});
+ assert.equal(result.titulo,'Cuidado de Enfermagem no SUS e na UFES');
+ assert.equal(result.banca[0].instituicao,'FAESA');
+ assert.equal(result.banca[1].instituicao,'Universidade Federal do Rio de Janeiro');
+ assert.equal(result.registrationAnswers.EXAMINADOR_2_INSTITUICAO,'FAESA');
 });

@@ -1,11 +1,16 @@
+import {nativeWorkflowActivity} from '../../src/utils/nativeWorkflowActivities';
+import {isWorkflowExecutionEvent,workflowExecutionEvent} from '../../src/utils/workflowExecutionTrigger';
+import {formRecipientRoles,validateFormRecipientSelection} from '../../src/utils/formRecipientRoles';
+import type {EmailRecipientRole} from '../../src/types/integrationStudio';
+import {configuredEmailAudience} from '../../src/utils/emailRecipientRoles';
 import {isEmailAddress} from '../../src/utils/emailAddress';
 import {workflowMarkerPattern} from '../../src/utils/templateMarkerPattern';
 import {DOCUMENT_VARIABLE_KEYS,documentVariables} from '../../src/utils/documentVariables';
 import {authorNames,academicName} from '../../src/utils/personPresentation';
 import {upgradeOperationalEmailTemplate,recipientEmailVariables} from '../../src/utils/operationalEmails';
 import {processLink} from '../../src/utils/processLink';
-import {formatDateNumeric,formatTime24h} from '../../src/utils/formatters';
-import { presentVariables } from '../../src/utils/operationalConfig';
+import {formatDateNumericWithWeekday,formatTime24h} from '../../src/utils/formatters';
+import { isRegistrationIdentifierField, presentVariables } from '../../src/utils/operationalConfig';
 import { createHash } from 'crypto';
 import nodeProcess from 'node:process';
 import type { IntegrationStudioSettings } from '../../src/types/integrationStudio';
@@ -25,6 +30,7 @@ import { evaluateStudioCondition, SAFE_EMAIL_RECIPIENT_VARIABLES } from '../../s
 type GenericRecord = Record<string, unknown>;
 
 export interface WorkflowRuntimePorts {
+  checkpointBeforeAction?(run: WorkflowRun): Promise<void>;
   resolveEmailRecipients?(input:{template:GenericRecord;recipients:string[];variables:Record<string,string>}):string[];
   createDocument(input: {
     template: GenericRecord;
@@ -37,6 +43,7 @@ export interface WorkflowRuntimePorts {
     variables: Record<string, string>;
     processId: string;
     targetRole?: string;
+    recipientRoles?: EmailRecipientRole[];
     idempotencyKey: string;
   }): Promise<{ externalId?: string }>;
   sendEmail(input: {
@@ -94,6 +101,7 @@ function normalizeActionKind(value: unknown): ExecutableWorkflowAction['kind'] {
   const normalized = normalizeWorkflowEventCode(value);
   if (normalized === 'DOC' || normalized === 'DOCUMENT' || normalized === 'DOCUMENTO') return 'DOCUMENT';
   if (normalized === 'EMAIL' || normalized === 'E_MAIL') return 'EMAIL';
+  if (normalized === 'INTERACTION') return 'NATIVE_ACTIVITY';
   if (normalized === 'FORM' || normalized === 'FORMULARIO') return 'FORM';
   return 'SYSTEM_ACTION';
 }
@@ -124,6 +132,8 @@ export function compileWorkflow(studio: IntegrationStudioSettings): {
       actionIds.add(actionId);
       const kind = normalizeActionKind(action.type);
       const referenceId = text(action.refId || action.referenceId) || undefined;
+      const executionEvent = text(action.executionEvent) || undefined;
+      if (executionEvent && !isWorkflowExecutionEvent(executionEvent)) issues.push({code:'MISSING_TRIGGER',path:`workflowStages.${index}.actions.${actionIndex}.executionEvent`,message:'Selecione um gatilho emitido pelo sistema.',severity:'ERROR'});
       const rawCondition = isRecord(action.condition) ? action.condition : undefined;
       const condition = rawCondition && text(rawCondition.fieldKey) ? {
         fieldKey: normalizeWorkflowEventCode(rawCondition.fieldKey),
@@ -134,13 +144,15 @@ export function compileWorkflow(studio: IntegrationStudioSettings): {
         issues.push({ code: 'INVALID_CONDITION', path: `workflowStages.${index}.actions.${actionIndex}.condition`, message: `Operador de condição inválido em ${actionId}.`, severity: 'ERROR' });
       }
       if (kind !== 'SYSTEM_ACTION' && !referenceId) issues.push({ code: 'MISSING_REFERENCE', path: `workflowStages.${index}.actions.${actionIndex}.refId`, message: `${kind} precisa apontar para um artefato do Estúdio.`, severity: 'ERROR' });
-      if (referenceId && kind !== 'SYSTEM_ACTION' && !references[kind].has(referenceId)) issues.push({ code: 'UNKNOWN_REFERENCE', path: `workflowStages.${index}.actions.${actionIndex}.refId`, message: `Referência inexistente: ${referenceId}.`, severity: 'ERROR' });
+      if (kind==='NATIVE_ACTIVITY'&&(!nativeWorkflowActivity(action)||nativeWorkflowActivity(action)?.event!==eventCode||action.executionEvent||action.condition))issues.push({code:'INVALID_TEMPLATE',path:`workflowStages.${index}.actions.${actionIndex}`,message:'Atividade nativa deve permanecer vinculada à etapa e às regras do processo.',severity:'ERROR'});
+      if (referenceId && kind !== 'SYSTEM_ACTION' && kind !== 'NATIVE_ACTIVITY' && !references[kind].has(referenceId)) issues.push({ code: 'UNKNOWN_REFERENCE', path: `workflowStages.${index}.actions.${actionIndex}.refId`, message: `Referência inexistente: ${referenceId}.`, severity: 'ERROR' });
       return {
         id: actionId,
         kind,
         referenceId,
         title: text(action.title) || `${kind} ${actionIndex + 1}`,
         detail: text(action.recipientOrDetail || action.detail) || undefined,
+        executionEvent,
         condition
       };
     });
@@ -216,14 +228,16 @@ export function buildProcessVariables(context: WorkflowRuntimeContext): Record<s
     BANCA_NOMES: bankNames,
     BANCA_EMAILS: bankEmails,
     PARTICIPANTES_EMAILS: participantEmails,
-    DEFESA_DATA_HORA: `${formatDateNumeric(process.defesa.startAt)} às ${formatTime24h(process.defesa.startAt)}`,
+    DEFESA_DATA_HORA: `${formatDateNumericWithWeekday(process.defesa.startAt)} às ${formatTime24h(process.defesa.startAt)}`,
     DEFESA_LOCAL: process.defesa.local,
     RESULTADO: process.avaliacao.resultadoLabel || '',
+    AVALIACAO_RESULTADO: process.avaliacao.resultadoLabel || '',
     // Compatibilidade com modelos históricos: esta instalação não registra nota numérica.
     NOTA_FINAL: '',
     NOTA: '',
     AVALIACAO_NOTA: '',
     PARECER: process.avaliacao.parecer || '',
+    AVALIACAO_PARECER: process.avaliacao.parecer || '',
     PUBLICAR_TRABALHO: process.acervo?.publishFullWork || process.acervo?.publishExpandedAbstract ? 'true' : 'false',
     PUBLICAR_TRABALHO_COMPLETO: process.acervo?.publishFullWork ? 'SIM' : 'NÃO',
     INCLUIR_RESUMO_EXPANDIDO: process.acervo?.resumoExpandidoFileId ? 'SIM' : 'NÃO',
@@ -258,6 +272,9 @@ export function buildProcessVariables(context: WorkflowRuntimeContext): Record<s
   Object.assign(variables,documentVariables(process));
   variables.ORIENTADOR_NOME=academicName(process.orientador);variables.COORIENTADOR_NOME=academicName(process.coorientador);variables.CAMPO_03=variables.ORIENTADOR_NOME;
   variables.EXAMINADOR_2_NOME=academicName(examiner2);variables.EXAMINADOR_3_NOME=academicName(examiner3);
+  // Keep historical identifiers in their original private record, but do not
+  // propagate them into newly issued emails, PDFs or custom template aliases.
+  for(const key of Object.keys(variables))if(isRegistrationIdentifierField(key))variables[key]='';
   return variables;
 }
 
@@ -316,8 +333,7 @@ export function planWorkflowEvent(studio: IntegrationStudioSettings, context: Wo
   const eventCode = normalizeWorkflowEventCode(context.eventCode);
   const variables = buildProcessVariables({ ...context, eventCode });
   const actions = compiled.stages
-    .filter((stage) => stage.eventCode === eventCode)
-    .flatMap((stage) => stage.actions.filter((action) => evaluateStudioCondition(action.condition, variables)).map((action): WorkflowPlanAction => ({
+    .flatMap((stage) => stage.actions.filter((action) => action.kind!=='NATIVE_ACTIVITY' && workflowExecutionEvent(action, stage.eventCode) === eventCode && evaluateStudioCondition(action.condition, variables)).map((action): WorkflowPlanAction => ({
       ...action,
       stageId: stage.id,
       idempotencyKey: makeIdempotencyKey([
@@ -370,31 +386,46 @@ export async function executeWorkflowEvent(
   }
 
   const executions: WorkflowActionExecution[] = [];
+  const runContext={id:runId,studioRevision:studio.revision,sourceDataRevision:context.process.dataRevision,
+    processId:plan.processId,protocol:plan.protocol,eventCode:plan.eventCode,actorEmail:context.actorEmail,startedAt,
+    issues:plan.issues,eventVariables};
   for (const action of plan.actions) {
     const preserved=context.completedActions?.find(previous=>previous.actionId===action.id&&previous.stageId===action.stageId&&previous.kind===action.kind&&previous.status==='COMPLETED');
     if(preserved){executions.push({...preserved});continue;}
+    const prior=context.completedActions?.find(previous=>previous.actionId===action.id&&previous.stageId===action.stageId&&previous.kind===action.kind);
+    const actionKey=context.preserveActionIdentity&&prior?.idempotencyKey&&/^[a-f0-9]{64}$/.test(prior.idempotencyKey)?prior.idempotencyKey:action.idempotencyKey;
     const actionStartedAt = new Date().toISOString();
+    if(ports.checkpointBeforeAction&&action.kind==='EMAIL'&&executions.some(item=>item.kind==='DOCUMENT'&&item.status==='COMPLETED')){
+      await ports.checkpointBeforeAction({...runContext,completedAt:actionStartedAt,status:'PARTIAL_FAILURE',actions:[
+        ...executions,{actionId:action.id,stageId:action.stageId,kind:action.kind,idempotencyKey:actionKey,status:'FAILED',
+          error:'Carta-convite disponível. O envio à banca aguarda conclusão.'}
+      ]});
+    }
     try {
       let output: { externalId?: string } = {};
+      let formAudience:EmailRecipientRole[]|undefined;
       if (action.kind === 'DOCUMENT') {
         const template = artifactById(studio.docTemplates, action.referenceId);
         if (!template) throw new Error(`Modelo ${action.referenceId} não localizado.`);
-        output = await ports.createDocument({ template, variables: filterTemplateVariables(plan.variables,studio), processId: plan.processId, idempotencyKey: action.idempotencyKey });
+        output = await ports.createDocument({ template, variables: filterTemplateVariables(plan.variables,studio), processId: plan.processId, idempotencyKey: actionKey });
       } else if (action.kind === 'FORM') {
         const form = artifactById(studio.formTemplates, action.referenceId);
         if (!form) throw new Error(`Formulário ${action.referenceId} não localizado.`);
-        output = await ports.createFormTask({ form, variables: plan.variables, processId: plan.processId, targetRole: text(form.targetRole), idempotencyKey: action.idempotencyKey });
+        validateFormRecipientSelection(form);
+        formAudience=formRecipientRoles(form);
+        output = await ports.createFormTask({ form, variables: plan.variables, processId: plan.processId, targetRole: text(form.targetRole), recipientRoles:formAudience, idempotencyKey: actionKey });
       } else if (action.kind === 'EMAIL') {
         const template = artifactById(studio.emailTemplates, action.referenceId);
         if (!template) throw new Error(`E-mail ${action.referenceId} não localizado.`);
         const allowedVariables=filterTemplateVariables(plan.variables,studio);
         const renderedVariables = presentVariables(allowedVariables, String(template.id), studio);
         const configuredRecipients = parseRecipients(text(template.recipient) || action.detail || '', allowedVariables);
-        const recipients = ports.resolveEmailRecipients?ports.resolveEmailRecipients({template,recipients:configuredRecipients,variables:allowedVariables}):configuredRecipients;
+        const selectedAudience=ports.resolveEmailRecipients?undefined:configuredEmailAudience(template,context.process,allowedVariables.DEPARTAMENTO_EMAIL||'',allowedVariables.PRESIDENTE_EMAIL);
+        const recipients = ports.resolveEmailRecipients?ports.resolveEmailRecipients({template,recipients:configuredRecipients,variables:allowedVariables}):selectedAudience?.to??configuredRecipients;
         if (!recipients.length) throw new Error(`E-mail ${action.referenceId} sem destinatário válido.`);
         const personalizedTemplate=upgradeOperationalEmailTemplate(template);
         const deliveries:Array<{externalId?:string}>=[];
-        const recipientGroups=String(template.id)==='email-entrega-repositorio'?[recipients]:recipients.map(recipient=>[recipient]);
+        const recipientGroups=Array.isArray(template.recipientRoles)||['email-entrega-repositorio','email-conclusao','email-convite','CARTA_CONVITE'].includes(String(template.id))?[recipients]:recipients.map(recipient=>[recipient]);
         for(const group of recipientGroups){
           const recipient=group[0];
           const personal=filterTemplateVariables(recipientEmailVariables(context.process,recipient,renderedVariables,plan.variables.LINK_PORTAL,context.eventCode,String(template.id)),studio);
@@ -403,21 +434,22 @@ export async function executeWorkflowEvent(
             subject:mergeWorkflowVariables(text(personalizedTemplate.subject),personal),
             text:mergeWorkflowVariables(text(personalizedTemplate.body),personal),
             html:text(personalizedTemplate.htmlBody)?mergeWorkflowHtmlVariables(text(personalizedTemplate.htmlBody),personal):undefined,
-            variables:allowedVariables,processId:plan.processId,protocol:plan.protocol,eventVariables,idempotencyKey:action.idempotencyKey,
+            variables:allowedVariables,processId:plan.processId,protocol:plan.protocol,eventVariables,idempotencyKey:actionKey,
           }));
         }
         output={externalId:deliveries.map(item=>item.externalId).filter(Boolean).join(',')};
 
       } else if (ports.executeSystemAction) {
-        output = await ports.executeSystemAction({ action, variables: plan.variables, processId: plan.processId, idempotencyKey: action.idempotencyKey });
+        output = await ports.executeSystemAction({ action, variables: plan.variables, processId: plan.processId, idempotencyKey: actionKey });
       } else throw new Error(`A ação interna “${action.title}” não possui executor seguro.`);
-      executions.push({ actionId: action.id, stageId: action.stageId, kind: action.kind, status: 'COMPLETED', startedAt: actionStartedAt, completedAt: new Date().toISOString(), externalId: output.externalId });
+      executions.push({ actionId: action.id, stageId: action.stageId, kind: action.kind, idempotencyKey:actionKey, status: 'COMPLETED', startedAt: actionStartedAt, completedAt: new Date().toISOString(), externalId: output.externalId, ...(formAudience?{formRecipientRoles:[...formAudience]}:{}) });
     } catch (error) {
       const failedExternalId = isRecord(error) ? text(error.externalId) : '';
       executions.push({
         actionId: action.id,
         stageId: action.stageId,
         kind: action.kind,
+        idempotencyKey:actionKey,
         status: 'FAILED',
         startedAt: actionStartedAt, completedAt: new Date().toISOString(),
         error: error instanceof Error ? error.message : 'Falha desconhecida.',

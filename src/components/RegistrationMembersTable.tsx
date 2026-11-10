@@ -1,3 +1,4 @@
+import { displayParticipantInstitution } from '../utils/institutionName';
 import React from 'react';
 import type { RegistrationAnswers } from '../types/operationalConfig';
 import { buildRegistrationMemberRows } from '../utils/registrationMembers';
@@ -37,16 +38,15 @@ export const RegistrationMembersTable: React.FC<RegistrationMembersTableProps> =
         <table className="w-full min-w-[1050px] table-fixed border-collapse bg-[#d4dde2]">
           <colgroup>
             <col className="w-[10%]" />
-            <col className="w-[18%]" />
+            <col className="w-[24%]" />
             <col className="w-[10%]" />
             <col className="w-[9%]" />
             <col className="w-[23%]" />
-            <col className="w-[12%]" />
-            <col className="w-[18%]" />
+            <col className="w-[24%]" />
           </colgroup>
           <thead className="bg-[#bac7ce] text-[11px] font-bold text-slate-950">
             <tr>
-              {['Função', 'Nome', 'Referência', 'Titulação', 'E-mail', 'Registro', 'Instituição'].map((heading) => (
+              {['Função', 'Nome', 'Referência', 'Titulação', 'E-mail', 'Instituição'].map((heading) => (
                 <th key={heading} scope="col" className="px-2 py-2 text-center font-bold">
                   {heading}
                 </th>
@@ -61,8 +61,7 @@ export const RegistrationMembersTable: React.FC<RegistrationMembersTableProps> =
                 <td className={cellClass}><span className={pillClass}>{member.reference}</span></td>
                 <td className={cellClass}><span className={pillClass}>{member.qualification}</span></td>
                 <td className={cellClass}><span className={`${pillClass} break-all`}>{member.email}</span></td>
-                <td className={cellClass}><span className={pillClass}>{member.registration}</span></td>
-                <td className={cellClass}><span className={`${pillClass} break-words`}>{member.institution}</span></td>
+                <td className={cellClass}><span className={`${pillClass} break-words`}>{displayParticipantInstitution(member.institution)}</span></td>
               </tr>
             ))}
           </tbody>

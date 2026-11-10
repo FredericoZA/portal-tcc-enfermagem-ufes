@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { ProcessData } from '../src/types';
 import { publicCalendarView, publicRepositoryView } from './publicViews';
+import {ufesFacultyInstitution} from './ufesFacultyInstitution';
 
 function processData(patch: Partial<ProcessData> = {}): ProcessData {
   return {
@@ -50,6 +51,30 @@ test('calendário público não serializa acervo, avaliação ou dados pessoais 
   for (const forbidden of ['20260001', 'ana@aluno.ufes.br', 'bruno@ufes.br', 'carla@ufes.br', 'internal-process-id', 'member-internal-id', 'private-full-id']) {
     assert.ok(!json.includes(forbidden), `Calendário expôs ${forbidden}`);
   }
+});
+
+test('docente com nome e e-mail documentados recebe vínculo em todos os papéis públicos',()=>{
+  const docente={nome:'Carolina Maia Martins Sales',email:'carolina.sales@ufes.br'};
+  const process=processData({orientador:docente,coorientador:docente,banca:[{...docente,id:'verified-examiner',funcao:'EXAMINER_2'}]});
+  const before=structuredClone(process);
+  for(const view of [publicCalendarView(process),publicRepositoryView(process)]){
+    assert.equal(view.orientador?.instituicao,'Universidade Federal do Espírito Santo');
+    assert.equal(view.coorientador?.instituicao,'Universidade Federal do Espírito Santo');
+    assert.equal(view.banca[0].instituicao,'Universidade Federal do Espírito Santo');
+    assert.doesNotMatch(JSON.stringify(view),/carolina\.sales@/);
+  }
+  assert.deepEqual(process,before);
+});
+
+test('vínculo docente exige identidade completa e preserva instituição externa ou histórico sem e-mail',()=>{
+  assert.equal(ufesFacultyInstitution({nome:'  MARCIA  VALERIA DE SOUZA ALMEIDA ',email:'SOUZAMARCIA30@YAHOO.COM.BR'}),'Universidade Federal do Espírito Santo');
+  for(const person of [
+    {nome:'Carolina Maia Martins Sales',email:'homonimo@example.invalid'},
+    {nome:'Outra Carolina Sales',email:'carolina.sales@ufes.br'},
+    {nome:'Carolina Maia Martins Sales'},
+    {nome:'Pessoa externa',email:'externa@ufes.br'},
+  ]) assert.equal(ufesFacultyInstitution(person),undefined);
+  assert.equal(ufesFacultyInstitution({nome:'Carolina Maia Martins Sales',email:'carolina.sales@ufes.br',instituicao:'Instituição declarada no registro'}),'Instituição declarada no registro');
 });
 
 test('repositório distingue arquivo privado, público e resumo não apresentado', () => {

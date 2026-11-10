@@ -8,7 +8,7 @@ A publicação anterior foi confirmada em 27/10/2026 às 23:34 (Brasília), depl
 
 O envio real da declaração do TCC de teste 2026-0003 foi confirmado na Asten, envelope 93108, em 27/10/2026. Envio confirmado não significa assinatura concluída ou arquivamento. Não criar outro envelope para comprovar o mesmo envio.
 
-A exclusão definitiva de envelopes Asten permanece pendente de contrato de API confirmado. Cancelar a assinatura ou mover para a lixeira não comprova expurgo. A fila de limpeza deve permanecer pendente até a remoção efetiva; não marcar sucesso para esconder resíduos. As rotinas de Drive, Calendar, armazenamento temporário e banco exigem evidências próprias de execução real.
+A exclusão do TCC é centralizada na lixeira dos detalhes do trabalho. Ela remove os registros do Portal e limpa Drive, Calendar, armazenamento temporário e banco; falhas nessas etapas permanecem na fila para nova tentativa. A exclusão dos envelopes na Asten é manual e separada: os identificadores são informados ao Master, sem impedir a conclusão da limpeza do Portal. Cancelar uma assinatura ou excluir o TCC não comprova expurgo na Asten. As operações nos serviços externos exigem evidências próprias de execução real.
 
 A homologação ponta a ponta permanece **não confirmada** até concluir os pilotos abaixo e conferir o arquivamento dos documentos realmente assinados. Testes isolados não comprovam operação dos serviços externos.
 
@@ -30,8 +30,8 @@ A homologação ponta a ponta permanece **não confirmada** até concluir os pil
 4. Abra o formulário enviado ao departamento, confirme um local e valide o comprovante, a comunicação e a continuidade. Repita com negativa: o comprovante deve indicar indisponibilidade.
 5. Verifique o convite gerado pelo modelo ativo, sem marcadores pendentes, o envio pelo Gmail e o evento no Calendar.
 6. Entre como orientador, confira os dados e registre apenas **resultado e parecer**, sem nota numérica.
-7. Confirme que a Ata é gerada com os dados revisados. Teste Asten somente com o orientador como signatário. Em outro cenário, prepare pelo Gov.br: o processo deve continuar pendente até a devolução, conferência e arquivamento. As ações ficam em Documentos do processo.
-8. Confirme que a entrega permanece bloqueada antes da Ata assinada/arquivada. Depois, preencha o Repositório e use Confirmar entrega final; confira o bloqueio dos campos e o botão centralizado Acompanhar documentos.
+7. Confirme que a Ata é gerada com os dados revisados. Teste Asten com orientador e dois examinadores como signatários, todos na prioridade 1. Com uma ou duas assinaturas, a ata deve permanecer pendente e a entrega bloqueada. Em outro cenário, prepare pelo Gov.br: os três assinam o mesmo PDF, devolvido pelo orientador. PDFs com menos de três assinaturas são recusados. A conferência administrativa no VALIDAR/ITI deve confirmar todos os titulares antes do arquivamento. As ações ficam em Documentos administrativos. O registro do conceito não dispara assinaturas automaticamente.
+8. Confirme que a entrega permanece bloqueada antes da Ata assinada/arquivada. Depois, preencha o Repositório e use Confirmar entrega final; confira o bloqueio dos campos e o botão centralizado Editar entrega, enquanto permitido.
 9. Teste as escolhas de publicação do trabalho completo e do resumo expandido.
 10. Quando houver conteúdo autorizado, confirme o Termo com aluno e orientador como signatários aplicáveis.
 11. Na Área do Presidente, confira e envie a declaração à Asten; confirme assinatura e arquivamento.
@@ -69,7 +69,7 @@ Provoque, em ambiente de teste, pelo menos uma falha controlada em uma etapa ext
 
 ## Exclusão Master
 
-Em um processo fictício separado, verifique a exclusão independentemente da etapa. Confira os artefatos vinculados no Drive, eventos no Calendar, objetos temporários, histórico e referências do banco. Não remover modelos compartilhados, a pasta raiz ou arquivos de outro processo. Repita a limpeza para comprovar idempotência. Com envelopes Asten, exigir evidência de expurgo definitivo antes de encerrar a fila. Não usar processos ativos ou documentos institucionais como material descartável.
+Em um processo fictício separado, verifique a exclusão independentemente da etapa. Confira os artefatos vinculados no Drive, eventos no Calendar, objetos temporários, histórico e referências do banco. Reinicie o Portal e confirme que o TCC e seus registros de assinatura não reaparecem. Preserve modelos compartilhados, a pasta raiz e arquivos de outro processo. Repita a limpeza para comprovar idempotência. Os envelopes Asten devem ser informados para exclusão manual no provedor, sem manter o TCC na fila do Portal por esse motivo. A sequência de protocolos continua crescente após a exclusão e o reinício; números excluídos não são reutilizados. Não usar processos ativos ou documentos institucionais como material descartável.
 
 ## Interface
 
@@ -90,3 +90,8 @@ Para cada cenário registre:
 ## Critério de aprovação
 
 O Portal só pode ser aberto aos alunos quando todos os itens críticos acima estiverem aprovados, a Asten real estiver validada, o piloto individual e em dupla estiverem concluídos e não houver pendência crítica aberta.
+
+
+## Regra vigente da ata — 04/11/2026
+
+Consulte `ASSINATURA_ATA_TRES_DOCENTES.md`. Atas históricas arquivadas são preservadas; solicitações pendentes com apenas um signatário não podem ser reutilizadas. O piloto deve incluir o acesso de cada examinador com seu próprio e-mail e comprovar as três assinaturas no provedor. Testes locais não substituem esse piloto real.

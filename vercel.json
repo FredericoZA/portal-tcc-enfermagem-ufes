@@ -17,12 +17,14 @@
     "PORTAL_ALLOW_LOCAL_OTP_STORE": "false",
     "PORTAL_ALLOW_LOCAL_SECRET_STORE": "false",
     "PORTAL_PERSISTENCE_PROVIDER": "supabase",
+    "PORTAL_RUNTIME_PATCH": "1",
     "SUPABASE_URL": "https://vvgdmycmotazqjvpywmk.supabase.co",
     "SUPABASE_SECURE_FILES_BUCKET": "portal-secure-transfer",
     "PORTAL_DRIVE_ROOT_FOLDER_ID": "1zkG3fBm2tJESZjZP0_7jStUuPNXCwRPS",
     "PORTAL_DRIVE_TECHNICAL_FOLDER_ID": "1j1_8TCUjo09I9AA2QSP9gcNIMp2Rv3bn",
     "GOOGLE_ALLOW_EXISTING_MODEL_LINKS": "true",
     "ASTEN_INTEGRATION_ENABLED": "true",
+    "ASTEN_AUTOMATIC_WORKFLOW_ENABLED": "true",
     "ASTEN_AUTHENTICATION_OPTION": "0",
     "ASTEN_REQUIRE_LOGIN": "false",
     "ASTEN_REQUIRE_CODE": "false",
@@ -57,6 +59,10 @@
     {
       "path": "/api/cron/asten-reconcile",
       "schedule": "23 4 * * *"
+    },
+    {
+      "path": "/api/cron/reservation-notices",
+      "schedule": "31 4 * * *"
     }
   ],
   "headers": [
@@ -77,7 +83,7 @@
         },
         {
           "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=(self), payment=(), usb=()"
+          "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
         },
         {
           "key": "Strict-Transport-Security",
@@ -101,7 +107,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' blob: https://vvgdmycmotazqjvpywmk.supabase.co https://nominatim.openstreetmap.org; frame-src 'self' https://www.google.com https://maps.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' blob: https://www.googleapis.com; frame-src 'self' https://www.google.com https://maps.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
         }
       ]
     },

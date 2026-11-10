@@ -36,10 +36,3 @@ export interface SampleZipOption {
   fileCount: number;
   generator: () => Promise<Blob>;
 }
-
-export interface AIAnalysisResponse {
-  text?: string;
-  error?: string;
-  loading?: boolean;
-}
-

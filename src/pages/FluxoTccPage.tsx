@@ -37,10 +37,11 @@ const phases = [
     where: 'E-mail do responsável → Aceitar reserva ou Recusar reserva',
     summary: 'O responsável decide sobre o local, a data e o horário solicitados.',
     details: [
-      'Antes do pedido, alunos e orientador podem conferir mapa de salas, aulas, eventos, reservas e horários do prédio. Em caso de dúvida, a consulta ao departamento evita retrabalho.',
+      'Antes do pedido, alunos e orientador podem conferir mapa de salas, aulas, eventos, reservas e horários do prédio. Para auditório ou sala de reuniões, consulte o Departamento; para outro local, consulte o orientador.',
       'O departamento homologa auditório e sala de reuniões. Outro local é confirmado pelo orientador, que viabiliza a reserva junto ao espaço escolhido.',
       'O pedido bloqueia apenas o local selecionado durante o intervalo da defesa, de 1h30. A recusa libera esse intervalo; o Portal não controla reservas externas.',
-      'Alunos e orientador recebem o resultado. Para corrigir o agendamento, use Alterar reserva em Dados do processo; após recusa, Solicitar nova data. O novo pedido exige outro aceite.',
+      'Enquanto aguarda resposta, o agendamento aparece em vermelho no Calendário, com (aguardando confirmação) após o horário. O aceite retira o aviso; a recusa retira o agendamento e mantém o código do TCC.',
+      'O resultado responde ao pedido enviado ao responsável, com o comprovante em PDF. Responsável, autores e orientador são destinatários diretos; o aviso inicial aos autores permanece separado. Para corrigir o agendamento, um dos autores usa Alterar reserva em Dados do processo ou Refazer reserva após uma recusa. O novo pedido exige outro aceite.',
     ],
     gate: 'Aceite do responsável registrado para a data, o horário e o local atuais.',
     result: 'Reserva confirmada e comprovante disponível em Documentos administrativos.',
@@ -53,7 +54,7 @@ const phases = [
     where: 'Calendário e Documentos administrativos → Carta-Convite da Banca',
     summary: 'Com o local confirmado, o Portal prepara a carta-convite e comunica a defesa.',
     details: [
-      'Os examinadores e o coorientador, quando houver, recebem o convite em uma mensagem de grupo, com autores e orientador em cópia.',
+      'Os dois examinadores recebem o convite juntos como destinatários. Os autores, o orientador e o coorientador, quando houver, recebem cópia.',
       'O link do TCC abre os documentos administrativos. A carta-convite é consultada no Portal; nenhum PDF é anexado ao e-mail de convite.',
       'Confira a defesa no Calendário. Dados públicos podem ser consultados sem login; ações e informações restritas dependem do acesso do participante.',
     ],
@@ -68,11 +69,11 @@ const phases = [
     where: 'Meus TCCs → TCC → Conceito e Ata',
     summary: 'A partir do horário da defesa, registre o conceito e o parecer para a documentação.',
     details: [
-      'Os conceitos são Aprovado, Aprovado com ressalva e Reprovado. A avaliação e o lançamento da nota são feitos no Portal do Professor, em professor.ufes.br.',
-      'Clique em Visualizar ata, confira a prévia e confirme a conferência. Use Registrar avaliação e ir para documentos.',
-      'Em Documentos administrativos, escolha Asten ou Gov.br na caixa da ata. Somente o orientador assina. Registrar o conceito não solicita assinatura automaticamente.',
+      'Registre o conceito deliberado pela banca: Aprovado, Aprovado com ressalva ou Reprovado. Registre as ressalvas no parecer, quando houver. O docente faz a avaliação e lança notas e frequência no Portal do Professor, em professor.ufes.br.',
+      'Clique em Visualizar ata, confira a prévia e confirme a conferência. Use Registrar conceito e ata e ir para documentos.',
+      'Em Documentos administrativos, acompanhe a assinatura da ata pelo orientador, pelos dois examinadores, por cada autor e pelo coorientador que participou da sessão. Veja o estado do ASTEN ou use Gov.br quando disponível.',
     ],
-    gate: 'Ata assinada pelo orientador e arquivada; escolher um método ou enviar um PDF ainda não conclui a assinatura.',
+    gate: 'Ata com todas as assinaturas exigidas e arquivada; escolher um método ou enviar um PDF ainda não conclui a assinatura.',
     result: 'Entrega final liberada aos autores, com aviso também ao orientador.',
   },
   {
@@ -85,37 +86,37 @@ const phases = [
     details: [
       'Informe o resumo e exatamente cinco palavras-chave. Anexe o PDF final do TCC, obrigatório para os trabalhos novos. O resumo expandido é opcional.',
       'Escolha separadamente se autoriza publicar o trabalho completo, o resumo expandido, ambos ou nenhum. Entregar o TCC não significa autorizar sua publicação.',
-      'Use Confirmar entrega e ir para documentos. Os campos ficam bloqueados; Editar entrega permite corrigir enquanto a etapa estiver aberta e pode exigir novas assinaturas.',
+      'Use Confirmar entrega e ir para documentos. Para corrigir enquanto a etapa permitir, use Editar entrega e informe o motivo. Confirme novamente as escolhas de publicação; uma nova autorização exige novo termo e novas assinaturas.',
     ],
     gate: 'Arquivo obrigatório, resumo, palavras-chave e escolhas de publicação registrados.',
     result: 'Entrega confirmada e continuidade em Documentos administrativos.',
   },
   {
     n: 6,
-    title: 'Assinar o termo, se houver',
+    title: 'Assinar o termo de autorização',
     actor: 'Todos os autores e orientador',
     icon: FileSignature,
     where: 'Documentos administrativos → Termo de Autorização e Publicação',
     summary: 'O termo existe somente quando pelo menos um arquivo foi escolhido para publicação.',
     details: [
       'Sem publicação autorizada, esta assinatura não se aplica. O Portal prossegue sem gerar um termo vazio.',
-      'Na caixa do termo, escolha Asten ou Gov.br. Todos os autores e o orientador assinam o mesmo documento; no Asten, as assinaturas têm o mesmo nível.',
+      'Após a entrega com publicação autorizada, o Portal gera o termo e solicita automaticamente as assinaturas pela ASTEN. Todos os autores e o orientador recebem links pessoais por e-mail. Acompanhe na caixa do termo; Gov.br permanece como alternativa.',
       'Pelo Gov.br, o orientador reúne todas as assinaturas no mesmo PDF, assina por último e devolve o arquivo completo. O Master registra a conferência antes do arquivamento.',
     ],
     gate: 'Termo assinado e arquivado, quando houver publicação autorizada.',
-    result: 'Escolhas de publicação formalizadas; declaração da banca liberada quando as demais entregas estiverem resolvidas.',
+    result: 'Quando houver publicação autorizada, o arquivamento do termo libera a etapa da declaração da banca.',
   },
   {
     n: 7,
     title: 'Assinar a declaração',
     actor: 'Presidente da Comissão',
     icon: UserCheck,
-    where: 'Área do Presidente → declaração do TCC → Asten ou Gov.br',
+    where: 'Detalhes do TCC → Documentos administrativos',
     summary: 'A presidência da comissão assina a declaração de participação na banca.',
     details: [
       'A declaração depende da entrega final, da ata arquivada e do termo assinado e arquivado, quando aplicável.',
-      'A presidência da comissão assina a declaração; o orientador preside a sessão e assina a ata. São responsabilidades diferentes.',
-      'Pelo Asten, solicite e siga o e-mail de assinatura. Pelo Gov.br, baixe, assine e devolva o PDF; a conferência administrativa ainda é necessária.',
+      'A presidência da comissão assina a declaração; o orientador preside a sessão e assina a ata com os dois examinadores, os autores e o coorientador presente na sessão. São responsabilidades diferentes.',
+      'Pelo Asten, acompanhe o estado e siga o link pessoal recebido por e-mail. Pelo Gov.br, baixe, assine e devolva o PDF para conferência.',
     ],
     gate: 'Declaração assinada e arquivada, sem pendências obrigatórias.',
     result: 'Documentação final pronta para o encerramento do processo.',
@@ -129,7 +130,7 @@ const phases = [
     summary: 'O Portal conclui o processo após o arquivamento dos documentos obrigatórios.',
     details: [
       'Autores, orientador, banca e presidência recebem o aviso final. Os documentos disponíveis podem ser consultados por Ver e Baixar PDF.',
-      'A consulta pública não exige login. E-mails, matrículas e outros registros pessoais permanecem restritos; os arquivos acadêmicos dependem da autorização de publicação.',
+      'A consulta pública não exige login. E-mails e outros dados pessoais permanecem restritos; os arquivos acadêmicos dependem da autorização de publicação.',
       'Após a assinatura da declaração ou a conclusão, a entrega não pode mais ser editada. O histórico permanece vinculado ao protocolo.',
     ],
     gate: 'Nenhuma entrega, assinatura ou conferência obrigatória pendente.',
@@ -149,7 +150,7 @@ export const FluxoTccPage: React.FC = () => (
 
     <section className="portal-layer-panel p-3 sm:p-5">
       <h2 className="mb-2 text-sm font-bold text-slate-950">Passos do processo</h2>
-      <p className="mb-5 text-xs leading-5 text-slate-700">Os passos abaixo mostram quem faz cada ação. Na ficha do TCC, o indicador acompanha as etapas Cadastro, Agendamento, Convite e Banca, Defesa, Avaliação, Assinaturas, Documentos e Concluído. Ele avança conforme os registros e arquivamentos; apenas selecionar um método de assinatura não conclui a etapa.</p>
+      <p className="mb-5 text-xs leading-5 text-slate-700">Os passos abaixo mostram quem faz cada ação. Na ficha do TCC, o indicador acompanha as etapas Cadastro, Confirmação dos dados e local, Convite e Banca, Defesa, Conceito e Ata, Assinaturas, Documentos e Concluído. Ele avança conforme os registros e arquivamentos; apenas selecionar um método de assinatura não conclui a etapa.</p>
       <div className="portal-flow-snake" aria-label="Passos para concluir o TCC">
         {phases.map(({ n, title, actor, icon: Icon, where, summary, details, gate, result }) => (
           <article key={n} className="portal-flow-step portal-layer-card flex h-full flex-col rounded-2xl border border-slate-300 p-4 shadow-sm">

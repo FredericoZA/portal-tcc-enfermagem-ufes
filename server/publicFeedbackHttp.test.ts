@@ -17,6 +17,17 @@ test('feedback HTTP exige Master para lista, imagens e análise, inclusive contr
     const until=Date.now()+30000;
     while(true){try{if((await fetch(base+'/api/health')).ok)break;}catch{}if(Date.now()>until||child.exitCode!==null)throw Error('Servidor isolado não iniciou');await new Promise(r=>setTimeout(r,200));}
     const me=await request('/api/me',president);assert.equal(me.status,200);assert.ok((await me.json()).globalRoles.includes('COMMISSION_PRESIDENT'));
+    const anonymousLookup=await request('/api/forms/registration-suggestions?field=email&q=ana');
+    assert.equal(anonymousLookup.status,401);
+    assert.doesNotMatch(await anonymousLookup.text(),/example\.invalid|matr[ií]cula/i);
+    const publicList=await request('/api/public/feedback');
+    assert.equal(publicList.status,404);
+    const feedbackInput={description:'Sugestão fictícia com contato privado@example.invalid e matrícula PRIVATE-123.',extraField:'preenchido'};
+    // The honeypot exercises the public acknowledgement without sending a suggestion or calling providers.
+    const publicAcknowledgement=await fetch(`${base}/api/public/feedback`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(feedbackInput)});
+    assert.equal(publicAcknowledgement.status,201);
+    assert.deepEqual(await publicAcknowledgement.json(),{received:true});
+    assert.equal(publicAcknowledgement.headers.get('cache-control'),'no-store');
     const id='11111111-1111-4111-8111-111111111111';
     for(const [url,method]of [['/api/admin/feedback','GET'],['/api/admin/feedback?paginated=true','GET'],[`/api/admin/feedback/${id}/image`,'GET'],[`/api/admin/feedback/${id}/review`,'PATCH']]){
       assert.equal((await request(url,'',method)).status,401,`anônimo ${url}`);

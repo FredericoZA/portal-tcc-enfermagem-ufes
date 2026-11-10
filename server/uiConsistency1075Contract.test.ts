@@ -4,10 +4,11 @@ import { readFileSync } from 'node:fs';
 
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('modal de acesso usa cabeçalho institucional e logomarca do curso', () => {
+test('modal de acesso preserva o cabeçalho institucional e usa cadeado', () => {
   const home = read('src/pages/HomePage.tsx');
   assert.match(home, /portal-modal-header border-b/);
-  assert.match(home, /<NursingEmblemLogo size=\{32\}/);
+  assert.match(home, /<h3 className="flex items-center[^"]*">\s*<Lock className="h-\[1em\] w-\[1em\][^"]*"[^>]*aria-hidden="true"/);
+  assert.doesNotMatch(home, /<NursingEmblemLogo/);
   assert.doesNotMatch(home, />🎓<|currentTheme\.headerBg|cardBgColor \?/);
   assert.doesNotMatch(home, /aria-label="Fechar acesso ao portal"/);
 });

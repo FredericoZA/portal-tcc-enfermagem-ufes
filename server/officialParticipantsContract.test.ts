@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { ProcessData } from '../src/types';
-import { officialParticipantLines, officialIdentificationLines } from '../src/utils/officialParticipants';
+import { officialParticipantLines, officialIdentificationLines, participantRole } from '../src/utils/officialParticipants';
 import { officialInvitationEmail } from './workflow/officialInvitation';
 import { invitationTemplateCorrections } from './workflow/invitationTemplate';
 import { buildOfficialInvitationParagraphStyles } from './integrations/googleDocsRenderer';
@@ -63,17 +63,43 @@ test('carta substitui trechos aglutinados do modelo ativo sem alterar o arquivo 
   const map=Object.fromEntries(corrections.map(({find,replace})=>[find,replace]));
   assert.match(map['Autoria: <<alunos>>'],/Aluna autora: Ana Maria\nAluno autor: Pedro Silva/);
   assert.match(map['Demais integrantes da comissão: <<examinador (2)>> e <<examinador (3)>>'],/Examinador:.*\nExaminadora:.*\nCoorientador:/);
-  assert.match(map['Atenciosamente,'],/Vitória-ES, 3 de novembro de 2026/);
+  assert.match(map['Atenciosamente,'],/Vitória-ES, terça-feira, 3 de novembro de 2026/);
 });
 
-test('carta alinha data à direita, assinatura recuada e parágrafo justificado',()=>{
+test('carta alinha data e comissão à direita, sem recuo fixo',()=>{
   const entries=[
     {startIndex:10,endIndex:90,paragraph:{elements:[{textRun:{content:'A Comissão de Trabalho de Conclusão de Curso do Curso de Enfermagem convida\n'}}]}},
-    {startIndex:90,endIndex:120,paragraph:{elements:[{textRun:{content:'Vitória-ES, 3 de novembro de 2026.\n'}}]}},
+    {startIndex:90,endIndex:120,paragraph:{elements:[{textRun:{content:'Vitória-ES, terça-feira, 3 de novembro de 2026.\n'}}]}},
     {startIndex:120,endIndex:150,paragraph:{elements:[{textRun:{content:'Comissão de Trabalho de Conclusão de Curso\n'}}]}},
   ];
   const requests=buildOfficialInvitationParagraphStyles({tabs:[{tabProperties:{tabId:'t.0'},documentTab:{body:{content:entries}}}]});
-  assert.equal(requests.length,3);
-  assert.deepEqual(requests.map((r:any)=>r.updateParagraphStyle.paragraphStyle.alignment),['JUSTIFIED','END','START']);
-  assert.equal((requests[2] as any).updateParagraphStyle.paragraphStyle.indentStart.magnitude,260);
+  const alignment=requests.flatMap((r:any)=>r.updateParagraphStyle?[r.updateParagraphStyle]:[]);
+  assert.deepEqual(alignment.map(style=>style.paragraphStyle.alignment),['JUSTIFIED','END','END']);
+  assert.equal(alignment[2].paragraphStyle.indentStart.magnitude,0);
+  const weight=requests.flatMap((r:any)=>r.updateTextStyle?[r.updateTextStyle]:[]);
+  assert.deepEqual(weight,[{range:{startIndex:10,endIndex:90,tabId:'t.0'},textStyle:{bold:false},fields:'bold'}]);
+});
+
+
+test('carta mantém os dados e o texto do convite em peso normal, preservando o título institucional',()=>{
+  const paragraphs=['CARTA-CONVITE','Aos docentes convidados','Título: Trabalho','Aluno autor: João','Aluna autora: Maria',
+    'Orientadora e Presidente: Ana','Examinador: Pedro','Examinadora: Paula','Coorientadora: Rita',
+    'Data: domingo','Horário: 22:15','Local: Auditório','Agradecemos a atenção ao convite.','Atenciosamente,'];
+  let startIndex=1;
+  const content=paragraphs.map(text=>{
+    const entry={startIndex,endIndex:startIndex+text.length+1,paragraph:{elements:[{textRun:{content:text+'\n',textStyle:{bold:true}}}]}};
+    startIndex=entry.endIndex;
+    return entry;
+  });
+  const weights=buildOfficialInvitationParagraphStyles({body:{content}}).flatMap((request:any)=>request.updateTextStyle?[request.updateTextStyle]:[]);
+  assert.deepEqual(weights.map(style=>style.range.startIndex),content.slice(1,-1).map(item=>item.startIndex));
+  assert.ok(weights.every(style=>style.fields==='bold'&&style.textStyle.bold===false));
+});
+
+test('tabela usa tratamento do participante mesmo sem respostas de formulário nos legados',()=>{
+  assert.equal(participantRole('student',undefined,'ALUNO_1',{nome:'Nome de exemplo',tratamento:'Aluna'}),'Aluna autora');
+  assert.equal(participantRole('advisor',{},'ORIENTADOR',{tratamento:'Professora'}),'Orientadora');
+  assert.equal(participantRole('examiner',{},'EXAMINADOR_2',{tratamento:'Professora'}),'Examinadora');
+  assert.equal(participantRole('coadvisor',{},'COORIENTADOR',{tratamento:'Professora'}),'Coorientadora');
+  assert.equal(participantRole('examiner',{},'EXAMINADOR_3',{nome:'Maria',tratamento:'Professor'}),'Examinador');
 });

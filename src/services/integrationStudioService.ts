@@ -1,3 +1,4 @@
+import {documentHeaderLines,EMAIL_ISSUER_LINES} from '../utils/institutionalIdentity';
 import type {
   DocumentDesignConfig,
   EmailDesignConfig,
@@ -25,7 +26,7 @@ export const DEFAULT_BRAND_KIT: IntegrationBrandKit = {
   fontFamily: 'Arial',
   documentHeaderText: 'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO\nCURSO DE GRADUAÇÃO EM ENFERMAGEM E OBSTETRÍCIA',
   documentFooterText: 'Departamento de Enfermagem • Centro de Ciências da Saúde • Vitória/ES',
-  emailFooterText: 'Comissão de TCC do Departamento de Enfermagem • UFES'
+  emailFooterText: EMAIL_ISSUER_LINES.join('\n')
 };
 
 export const DEFAULT_REPLICATION_GUIDE: PortalReplicationGuide = {
@@ -65,7 +66,7 @@ export function defaultDocumentDesign(templateId: string, brand = DEFAULT_BRAND_
 export function defaultEmailDesign(templateId: string, brand = DEFAULT_BRAND_KIT): EmailDesignConfig {
   return {
     templateId,
-    headerText: brand.courseName,
+    headerText: /\bUFES\b|Universidade Federal do Esp[íi]rito Santo/iu.test(brand.institutionName)?documentHeaderLines({institution:brand.institutionName,course:brand.courseName}).join('\n'):brand.courseName,
     logoUrl: brand.courseLogoUrl,
     heroImageUrl: brand.emailBannerUrl,
     buttonLabel: 'Acessar o Portal de TCC',
@@ -82,9 +83,9 @@ export function defaultFormDesign(templateId: string, brand = DEFAULT_BRAND_KIT)
     logoUrl: brand.courseLogoUrl,
     universityLogoUrl: brand.universityLogoUrl,
     bannerImageUrl: brand.emailBannerUrl,
-    introText: 'Preencha os dados abaixo. As informações reutilizadas serão aproveitadas automaticamente nas etapas seguintes.',
-    confirmationMessage: 'Dados recebidos com sucesso. Você receberá a confirmação por e-mail.',
-    submitLabel: 'Enviar informações',
+    introText: templateId==='form-reserva-aluno'?'Preencha os dados dos autores, do trabalho e da banca. O agendamento será solicitado na última etapa.':'',
+    confirmationMessage: 'Pedido de reserva enviado ao responsável pelo local. Aguarde o resultado por e-mail.',
+    submitLabel: templateId==='form-reserva-aluno'?'Cadastrar e solicitar reserva':'Enviar informações',
     showProgress: true
   };
 }

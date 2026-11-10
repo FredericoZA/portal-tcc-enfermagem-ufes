@@ -35,7 +35,7 @@ function includesEvery(haystack, needles) {
 }
 
 async function staticChecks() {
-  const [server, types, auth, otp, asten, envExample, pdfHelpers, presidentPage, popupPreview, studioPanel, supabaseRuntime, transactionalMigration, outboxMigration] = await Promise.all([
+  const [server, types, auth, otp, asten, envExample, pdfHelpers, presidentPage, loginPage, studioPanel, supabaseRuntime, transactionalMigration, outboxMigration] = await Promise.all([
     readFile(path.join(projectRoot, 'server.ts'), 'utf8'),
     readFile(path.join(projectRoot, 'src/types/index.ts'), 'utf8'),
     readFile(path.join(projectRoot, 'server/security/firebaseAuth.ts'), 'utf8'),
@@ -44,7 +44,7 @@ async function staticChecks() {
     readFile(path.join(projectRoot, '.env.example'), 'utf8'),
     readFile(path.join(projectRoot, 'src/utils/pdfHelpers.ts'), 'utf8'),
     readFile(path.join(projectRoot, 'src/pages/CoordenadorPage.tsx'), 'utf8'),
-    readFile(path.join(projectRoot, 'src/components/editor/PopupPreviewSection.tsx'), 'utf8'),
+    readFile(path.join(projectRoot, 'src/pages/HomePage.tsx'), 'utf8'),
     readFile(path.join(projectRoot, 'src/components/IntegrationStudioPanel.tsx'), 'utf8'),
     readFile(path.join(projectRoot, 'server/integrations/supabase.ts'), 'utf8'),
     readFile(path.join(projectRoot, 'supabase/migrations/202608310001_portal_transactional_runtime.sql'), 'utf8'),
@@ -78,7 +78,7 @@ async function staticChecks() {
       "role:'STUDENT',origin:'TCC_FORM'",
       "role:'ADVISOR',origin:'TCC_FORM'",
       "role:'CO_ADVISOR',origin:'TCC_FORM'",
-      "role:examiner.funcao==='ORIENTADOR'?'ADVISOR':'EXAMINER'"
+      "role:'EXAMINER',origin:'TCC_FORM'"
     ]);
   });
 
@@ -150,14 +150,17 @@ async function staticChecks() {
     assert.ok(presidentPage.includes("downloadProcessDocument(proc.id, 'doc-declaracao')"), 'Área do Presidente não baixa a declaração assinada pela rota autenticada');
   });
 
-  await check('prévia de login representa o acesso por e-mail e código',()=>{
-    assert.ok(!popupPreview.includes('CPF ou Matrícula'), 'prévia ainda solicita CPF ou matrícula');
-    assert.ok(!popupPreview.includes('Senha de Acesso'), 'prévia ainda solicita senha');
-    includesEvery(popupPreview, ['E-mail institucional ou cadastrado', 'Código de confirmação']);
+  await check('login ativo exige e-mail e código, sem senha ou CPF',()=>{
+    const start=loginPage.indexOf('<div data-portal-login-modal');
+    assert.ok(start>=0,'modal ativo de acesso não encontrado');
+    const login=loginPage.slice(start,loginPage.indexOf('</form>',start));
+    assert.doesNotMatch(login,/type="password"|CPF ou Matrícula|Senha de Acesso/);
+    includesEvery(login, ['type="email"', 'autoComplete="email"', 'Código de confirmação', 'autoComplete="one-time-code"', 'pattern="[0-9]{6}"']);
   });
 
   await check('convite usa o modelo de e-mail publicado pelo Master',()=>{
-    includesEvery(server, ['buildPublishedInvitationEmail', 'Publique o modelo de e-mail', 'mergeWorkflowVariables']);
+    includesEvery(server, ['workflowEmailTemplateId(template.id)', 'processEmailMessage({process,recipient:input.recipient', 'studio:emailStudioWithPublicImages()']);
+    assert.ok(!server.includes('officialInvitationEmail('), 'o convite ainda possui um renderizador paralelo');
     assert.ok(!server.includes('const inviteSubject='), 'o assunto do convite continua fixo no servidor');
     assert.ok(!server.includes('const inviteText='), 'o corpo do convite continua fixo no servidor');
   });
@@ -171,9 +174,11 @@ async function staticChecks() {
   });
 
   await check('Supabase usa commit transacional com revisão otimista e projeções normalizadas',()=>{
-    includesEvery(supabaseRuntime, ['/rest/v1/rpc/portal_commit_runtime_state', 'expected_revision', 'portal_runtime_capabilities', 'transactionalRuntimeReady']);
+    includesEvery(supabaseRuntime, ['/rest/v1/rpc/${routine}', 'portal_commit_runtime_patch_v1', 'portal_commit_runtime_state', 'expected_revision', 'portal_runtime_capabilities', 'transactionalRuntimeReady']);
     includesEvery(transactionalMigration, ['for update', "errcode='40001'", 'portal_project_runtime_state', 'portal_runtime_commits', 'portal_signature_jobs', 'portal_email_deliveries', 'portal_audit_events']);
-    assert.ok(server.includes('incluindo a outbox transacional Asten v6'), 'produção não bloqueia a ausência do runtime seguro v6');
+    assert.match(server, /if \(!databaseStatus\.transactionalRuntimeReady\) \{[\s\S]{0,500}throw Object\.assign/, 'produção não bloqueia a ausência do runtime transacional');
+    assert.match(supabaseRuntime, /payload(?:\?)?\.asten_transactional_outbox\s*===\s*true/);
+    assert.match(supabaseRuntime, /Number\(payload(?:\?)?\.schema_version\)\s*>=\s*6/);
     assert.ok(outboxMigration.includes("'outcome','UNCERTAIN'"), 'resultado ambíguo da Asten não fica bloqueado contra recriação');
     assert.ok(!server.includes('const queued = remotePersistenceQueue;'), 'a resposta ainda captura uma fila antiga antes de a rota agendar o próprio commit');
     assert.match(server, /res\.json = \(\(body: unknown\) => \{[\s\S]{0,700}remotePersistenceQueue\.then\(\(\) => originalJson\(body\)\)/, 'resposta de escrita não aguarda a fila vigente no momento do envio');
@@ -213,7 +218,6 @@ async function liveChecks() {
       PORTAL_ALLOW_LOCAL_OTP_STORE: 'true',
       PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'true',
       PORTAL_OTP_DELIVERY_MODE: 'log',
-      PORTAL_OTP_TEST_CODE: '123456',
       ASTEN_INTEGRATION_ENABLED: 'false',
       ASTEN_WEBHOOK_SECRET: 'test-webhook-secret-0123456789abcdef',
       PORTAL_TEST_DOCUMENT_RENDERER: 'true',
@@ -246,7 +250,7 @@ async function liveChecks() {
       return;
     }
 
-    await check('runtime: só Master e Presidente administram a lista', async () => {
+    await check('runtime: só Master administra a lista', async () => {
       const unauth = await request('/api/admin/access-list');
       const masterResponse = await request('/api/admin/access-list', { headers: asUser(master) });
       const presidentResponse = await request('/api/admin/access-list', { headers: asUser(president) });
@@ -254,7 +258,7 @@ async function liveChecks() {
       const inventedCoordinator = await request('/api/admin/access-list', { headers: asUser('coordenacao.teste@ufes.br') });
       assert.equal(unauth.response.status, 401);
       assert.equal(masterResponse.response.status, 200);
-      assert.equal(presidentResponse.response.status, 200);
+      assert.equal(presidentResponse.response.status, 403);
       assert.equal(studentResponse.response.status, 403);
       assert.equal(inventedCoordinator.response.status, 403);
     });
@@ -302,14 +306,26 @@ async function liveChecks() {
       const requested = await request('/api/auth/request-code', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: newStudent }) });
       assert.equal(requested.response.status, 200, JSON.stringify(requested.body));
       const otpCookie = requested.response.headers.get('set-cookie').split(';')[0];
+      const otpLine = output.join('').split(/\r?\n/).find(line => line.startsWith(`[Portal OTP desenvolvimento] ${newStudent}: `));
+      const code = otpLine?.match(/\d{6}$/)?.[0];
+      assert.ok(code, 'O canal de entrega local deve receber o código gerado.');
+      const fromNewBrowser = await request('/api/auth/request-code', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: newStudent }) });
+      assert.equal(fromNewBrowser.response.status, 429);
+      assert.equal(fromNewBrowser.body.code, 'OTP_RESEND_COOLDOWN');
+      assert.equal(fromNewBrowser.response.headers.has('set-cookie'), false);
+      const resumed = await request('/api/auth/request-code', { method: 'POST', headers: { 'content-type': 'application/json', cookie: otpCookie }, body: JSON.stringify({ email: newStudent }) });
+      assert.equal(resumed.response.status, 429);
+      assert.equal(resumed.body.code, 'OTP_CHALLENGE_ACTIVE');
+      assert.ok(Number(resumed.response.headers.get('retry-after')) > 0);
+      assert.equal(resumed.response.headers.has('set-cookie'), false);
       for(let attempt=0;attempt<5;attempt++){
         const unrelated = await request('/api/auth/verify-code',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:newStudent,code:'000000'})});
         assert.equal(unrelated.response.status,401);
       }
-      const verified = await request('/api/auth/verify-code', { method: 'POST', headers: { 'content-type': 'application/json', cookie:otpCookie }, body: JSON.stringify({ email: newStudent, code: '123456' }) });
+      const verified = await request('/api/auth/verify-code', { method: 'POST', headers: { 'content-type': 'application/json', cookie:otpCookie }, body: JSON.stringify({ email: newStudent, code }) });
       assert.equal(verified.response.status, 200, JSON.stringify(verified.body));
       assert.match(verified.response.headers.get('set-cookie') || '', /HttpOnly/i);
-      const reused = await request('/api/auth/verify-code', { method: 'POST', headers: { 'content-type': 'application/json', cookie:otpCookie }, body: JSON.stringify({ email: newStudent, code: '123456' }) });
+      const reused = await request('/api/auth/verify-code', { method: 'POST', headers: { 'content-type': 'application/json', cookie:otpCookie }, body: JSON.stringify({ email: newStudent, code }) });
       assert.equal(reused.response.status, 401, JSON.stringify(reused.body));
     });
 
@@ -376,14 +392,15 @@ async function liveChecks() {
       const models = Object.fromEntries(['CONVITE', 'ATA', 'TERMO', 'DECLARACAO'].map((type) => [type, {
         id: `model-${type.toLowerCase()}`, type, label: type, fileName: `${type}.docx`, driveFileId: `drive-model-${type.toLowerCase()}`, templateContentText: ''
       }]));
+      const settings = (await request('/api/settings', { headers: asUser(master) })).body;
+      const expectedRevision = (settings.integrationStudioDraft || settings.integrationStudio)?.revision || 0;
       const configured = await request('/api/admin/settings', {
         method: 'PATCH', headers: asUser(master),
         body: JSON.stringify({
-          documentModels: models,
-          // Publicar o Estúdio força a atualização do armazenamento de modelos
-          // em memória, sem enviar qualquer arquivo para uma integração externa.
+          studioExpectedRevision: expectedRevision,
+          studioSaveMode: 'publish',
           integrationStudio: {
-            schemaVersion: 3, revision: 999999, savedAt: new Date().toISOString(), savedBy: master,
+            schemaVersion: 3, revision: expectedRevision + 1, savedAt: new Date().toISOString(), savedBy: master,
             brandKit: { institutionName: 'Universidade de Teste', courseName: 'Curso de Teste', primaryColor: '#005830', secondaryColor: '#ffffff', accentColor: '#0f766e', textColor: '#172033', universityLogoUrl: '', courseLogoUrl: '', emailBannerUrl: '', fontFamily: 'Arial', documentHeaderText: '', documentFooterText: '', emailFooterText: '' },
             driveModelosFolderUrl: '', documentDesigns: {}, emailDesigns: {}, formDesigns: {}, matrixColumns: [{ id: 'AUTORIZACAO_TESTE', name: 'AUTORIZACAO_TESTE', label: 'Autorização de teste', dataType: 'text' }, { id: 'PUBLICAR_TRABALHO', name: 'PUBLICAR_TRABALHO', label: 'Publicar trabalho', dataType: 'text' }], matrixRows: [],
             docTemplates: Object.values(models).map((model) => ({ ...model, driveFileUrl: `https://drive.google.com/file/d/${model.driveFileId}/view` })),
@@ -405,7 +422,11 @@ async function liveChecks() {
         resumoSintese: 'Primeiro parágrafo do resumo sintético, com objetivos e método.\n\nSegundo parágrafo do resumo sintético, com resultados e conclusões.',
         workType: 'MONOGRAFIA'
       };
-      const initialReopen=await request('/api/processes/demo-proc-3/repository/reopen',{method:'POST',headers:asUser('lucas.almeida@aluno.ufes.br'),body:'{}'});assert.equal(initialReopen.response.status,200,JSON.stringify(initialReopen.body));
+      const initialReopen=await request('/api/processes/demo-proc-3/repository/reopen',{method:'POST',headers:asUser('lucas.almeida@aluno.ufes.br'),body:JSON.stringify({reason:'Correção dos arquivos da entrega'})});assert.equal(initialReopen.response.status,200,JSON.stringify(initialReopen.body));
+      for(const malformed of [{resumoSintese:{text:'Resumo'}},{palavrasChave:['Oncologia','Quimioterapia','Enfermagem','Segurança',{}]},{workType:['ARTIGO']}]){
+        const invalid=await request('/api/processes/demo-proc-3/final-data',{method:'POST',headers:asUser('lucas.almeida@aluno.ufes.br'),body:JSON.stringify({...baseFinalData,...malformed})});
+        assert.equal(invalid.response.status,400,JSON.stringify(invalid.body));
+      }
       const privateSubmission = await request('/api/processes/demo-proc-3/final-data', {
         method: 'POST', headers: asUser('lucas.almeida@aluno.ufes.br'),
         body: JSON.stringify({ ...baseFinalData, publishFullWork: false, publishExpandedAbstract: false })
@@ -420,7 +441,7 @@ async function liveChecks() {
       const prohibitedTerm = await request('/api/processes/demo-proc-3/documents/TERMO/sign', { method: 'POST', headers: asUser('lucas.almeida@aluno.ufes.br'), body: '{}' });
       assert.equal(prohibitedTerm.response.status, 409, JSON.stringify(prohibitedTerm.body));
 
-      const reopen=await request('/api/processes/demo-proc-3/repository/reopen',{method:'POST',headers:asUser('lucas.almeida@aluno.ufes.br'),body:'{}'});assert.equal(reopen.response.status,200,JSON.stringify(reopen.body));
+      const reopen=await request('/api/processes/demo-proc-3/repository/reopen',{method:'POST',headers:asUser('lucas.almeida@aluno.ufes.br'),body:JSON.stringify({reason:'Correção dos arquivos da entrega'})});assert.equal(reopen.response.status,200,JSON.stringify(reopen.body));
       const publicSubmission = await request('/api/processes/demo-proc-3/final-data', {
         method: 'POST', headers: asUser('lucas.almeida@aluno.ufes.br'),
         body: JSON.stringify({ ...baseFinalData, publishFullWork: true, publishExpandedAbstract: false })
@@ -445,13 +466,13 @@ async function liveChecks() {
       assert.ok(!result.body?.job, 'um trabalho Asten não deveria ser criado antes do arquivamento no Drive');
     });
 
-    await check('runtime: Gov.br exige documento preparado e permite Ata sem aprovar automaticamente',async()=>{
+    await check('runtime: Gov.br exige documento preparado e preserva a Ata arquivada',async()=>{
       const headers=asUser(master);
       const upload=await request('/api/uploads/staging',{method:'POST',headers,body:JSON.stringify({purpose:'GOV_BR_SIGNED_PDF',processId:'demo-proc-3'})});
       assert.equal(upload.response.status,409);assert.equal(upload.body.code,'GOVBR_JOB_REQUIRED');
-      const signed=await request('/api/signatures/jobs/qualquer/govbr/complete',{method:'POST',headers,body:'{}'});assert.equal(signed.response.status,409);
-      const download=await request('/api/signatures/jobs/qualquer/govbr/download',{headers});assert.equal(download.response.status,409);
-      const manual=await request('/api/processes/demo-proc-3/documents/ATA/sign',{method:'POST',headers,body:JSON.stringify({provider:'GOV_BR'})});assert.equal(manual.response.status,200);assert.equal(manual.body.job.provider,'GOV_BR');assert.equal(manual.body.job.status,'READY_FOR_REVIEW');
+      const signed=await request('/api/signatures/jobs/qualquer/govbr/complete',{method:'POST',headers,body:'{}'});assert.equal(signed.response.status,404);
+      const download=await request('/api/signatures/jobs/qualquer/govbr/download',{headers});assert.equal(download.response.status,404);
+      const manual=await request('/api/processes/demo-proc-3/documents/ATA/sign',{method:'POST',headers,body:JSON.stringify({provider:'GOV_BR'})});assert.equal(manual.response.status,409,JSON.stringify(manual.body));assert.match(manual.body.error,/já está assinado/);
     });
 
     await check('runtime: webhook exige segredo, envelope válido e vínculo com o portal', async () => {
@@ -490,6 +511,10 @@ async function liveChecks() {
 
     await check('runtime: rascunho é privado, versionado e não aceita conflito silencioso', async () => {
       const draftStudent='rascunho.seguro@aluno.ufes.br';
+      for (const email of [draftStudent,'outro@aluno.ufes.br']) {
+        const enrollment=await request('/api/admin/access-list',{method:'POST',headers:asUser(master),body:JSON.stringify({nome:'Aluno de teste',email})});
+        assert.equal(enrollment.response.status,201);
+      }
       assert.equal((await request('/api/registration/draft')).response.status,401);
       const schema=(await request('/api/forms/registration-schema',{headers:asUser(draftStudent)})).body;
       const saved=await request('/api/registration/draft',{method:'PUT',headers:asUser(draftStudent),body:JSON.stringify({expectedRevision:0,schemaRevision:schema.revision,section:0,answers:{ALUNO_1_NOME:'Aluno de Rascunho',ALUNO_1_EMAIL:'redirecionado@example.org'}})});
@@ -499,14 +524,14 @@ async function liveChecks() {
       assert.equal((await request('/api/registration/draft',{method:'DELETE',headers:asUser(draftStudent)})).response.status,200);
     });
 
-    await check('runtime: confirmação do local exige declaração explícita e comprovante válido', async () => {
+    await check('runtime: não existe confirmação manual nem envio de comprovante de reserva', async () => {
       const processes=(await request('/api/processes',{headers:asUser(master)})).body;const target=processes.find(process=>process.aluno1?.email===newStudent);assert.ok(target?.id);
-      const blocked=await request(`/api/processes/${target.id}/confirm-location`,{method:'POST',headers:asUser(master),body:JSON.stringify({local:'Auditório',confirmationReceived:false})});assert.equal(blocked.response.status,400);
       const before=await request(`/api/processes/${target.id}`,{headers:asUser(master)});
-      const missing=await request(`/api/processes/${target.id}/confirm-location`,{method:'POST',headers:asUser(master),body:JSON.stringify({local:'Auditório',confirmationReceived:true})});
-      assert.equal(missing.response.status,400);assert.equal(missing.body.code,'LOCATION_PROOF_REQUIRED');assert.match(missing.body.error,/Anexe.*e-mail/);
+      const missing=await request(`/api/processes/${target.id}/confirm-location`,{method:'POST',headers:asUser(master),body:JSON.stringify({local:'Auditório',confirmationReceived:true,manualConfirmationReason:'Conferência administrativa de teste'})});
+      assert.equal(missing.response.status,404);assert.equal(missing.body.code,'API_NOT_FOUND');
+      const badProof=await request(`/api/processes/${target.id}/location-proof`,{method:'POST',headers:asUser(master),body:JSON.stringify({fileName:'texto.pdf',contentBase64:Buffer.from('isto não é pdf').toString('base64')})});assert.equal(badProof.response.status,404);assert.equal(badProof.body.code,'API_NOT_FOUND');
+      const staging=await request('/api/uploads/staging',{method:'POST',headers:asUser(master),body:JSON.stringify({purpose:'LOCATION_PROOF',processId:target.id,fileName:'reserva.pdf',size:1024,mimeType:'application/pdf',sha256:'a'.repeat(64)})});assert.equal(staging.response.status,400);
       const after=await request(`/api/processes/${target.id}`,{headers:asUser(master)});assert.equal(after.body.dataRevision,before.body.dataRevision);assert.equal(after.body.defesa.localStatus,before.body.defesa.localStatus);
-      const badProof=await request(`/api/processes/${target.id}/location-proof`,{method:'POST',headers:asUser(master),body:JSON.stringify({fileName:'texto.pdf',contentBase64:Buffer.from('isto não é pdf').toString('base64')})});assert.equal(badProof.response.status,422);
     });
 
     await check('runtime: central de fluxo é administrativa e a prévia real falha fechada sem Google', async () => {
@@ -554,7 +579,7 @@ async function liveChecks() {
     });
     await rm(dataDir, { recursive: true, force: true });
     if (failures.length && process.env.PORTAL_TEST_VERBOSE === 'true') {
-      console.error('\n--- saída do servidor local ---\n' + output.join('').slice(-12000));
+      console.error('\n--- saída do servidor local ---\n' + output.join('').replace(/^\[Portal OTP desenvolvimento\].*$/gm, '[Portal OTP desenvolvimento] [omitido]').slice(-12000));
     }
   }
 }

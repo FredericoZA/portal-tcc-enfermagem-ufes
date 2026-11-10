@@ -45,11 +45,11 @@ Cada mensagem apresenta título, autoria, data, intervalo da defesa, local, orie
 A composição é compartilhada pelo envio, prévia do Estúdio e galeria local. Esta alteração não envia convites reais nem altera as permissões de acesso ao processo.
 
 
-## Avaliação, ata e entrega final
+## Avaliação, ata e entrega final — regra atualizada em 04/11/2026
 
 O aviso de agendamento confirmado orienta o professor a acessar Avaliação e ata no dia da defesa, registrar a avaliação e prosseguir para a assinatura. O convite continua dirigido apenas aos convidados, sem essas tarefas da orientação.
 
-Nas novas solicitações de ata, somente o orientador é signatário, na prioridade 1. Autores não iniciam assinatura da ata; no Gov.br, apenas o orientador (ou a administração autorizada) devolve o PDF assinado. A exigência de avaliação concluída e a conferência das assinaturas permanecem no servidor. Documentos já assinados não são reabertos; solicitações antigas ainda pendentes, com destinatários diferentes, exigem uma nova versão antes do envio.
+Nas novas solicitações de ata, o orientador e os dois examinadores titulares são signatários, todos na prioridade 1. Autores não iniciam assinatura da ata; no Gov.br, apenas o orientador (ou a administração autorizada) devolve o PDF assinado. A exigência de avaliação concluída e a conferência das assinaturas permanecem no servidor. Documentos já assinados não são reabertos; solicitações antigas ainda pendentes, com destinatários diferentes, exigem uma nova versão antes do envio.
 
 As instruções de Asten e Gov.br ficam em parágrafos separados. A entrega final pode ser realizada por qualquer um dos autores, após o arquivamento da ata assinada. A orientação acompanha a entrega e assina o termo quando houver publicação autorizada.
 
@@ -81,13 +81,13 @@ A galeria apresenta nove e-mails numerados em sequência. O quarto é a confirma
 
 O convite agrupa título, autoria, data, horário, local, orientação e coorientação (quando cadastrada) em um bloco. Os dois convidados aparecem em seguida.
 
-O aviso de ata disponível para assinatura foi retirado do fluxo e dos reenvios. Suas instruções ficam dentro de Avaliação e ata, sem alterar a geração da ata ou o e-mail próprio da Asten. Somente o orientador é signatário. O e-mail 07 dirige a entrega aos autores, com observação sem negrito de que qualquer autor pode fazer a entrega. Havendo publicação autorizada, todos aguardam o termo.
+O aviso de ata disponível para assinatura foi retirado do fluxo e dos reenvios. As instruções de assinatura ficam em Documentos administrativos. O registro do conceito não envia solicitações à Asten; elas partem do botão do documento. O orientador e os dois examinadores titulares assinam a ata, todos na prioridade 1. O e-mail 07 dirige a entrega aos autores, com observação sem negrito de que qualquer autor pode fazer a entrega. Havendo publicação autorizada, todos aguardam o termo.
 
 O e-mail 08 explica a preferência por Asten e o e-mail automático do provedor; autores e orientador assinam o termo no mesmo nível. Pelo Gov.br, todos assinam o mesmo PDF e o orientador devolve o arquivo completo. O aviso separado à presidência foi excluído das ações de e-mail e das tentativas de reenvio; ações documentais permanecem. O e-mail 09 avisa o encerramento a todos os participantes acadêmicos, incluindo a presidência.
 
 Mudanças locais, sem publicação nem envio real de e-mail nesta revisão.
 
-A entrega no Repositório informa explicitamente que aguarda a assinatura do orientador e o arquivamento da ata; após o arquivamento, informa a liberação para qualquer um dos autores. O aviso de entrega final já existente foi preservado, sem criar outra notificação.
+A entrega no Repositório informa explicitamente que aguarda as assinaturas do orientador e dos dois examinadores e o arquivamento da ata; após o arquivamento, informa a liberação para qualquer um dos autores. O aviso de entrega final já existente foi preservado, sem criar outra notificação.
 
 
 ## Nomenclatura do responsável
@@ -98,3 +98,6 @@ As mensagens, os rótulos de cadastro e as instruções do Portal usam “orient
 ## Aplicabilidade do termo e devolução Gov.br
 
 Sem autorização para publicar o trabalho completo ou o resumo expandido, não há geração nem solicitação de assinatura do termo; o aviso de termo disponível também é excluído da execução e bloqueado no reenvio. Se qualquer opção estiver autorizada, o termo permanece aplicável. Pelo Gov.br, somente o orientador cadastrado pode devolver o termo, reunindo todas as assinaturas no mesmo PDF. O acesso administrativo de conferência não concede permissão de devolução do termo. O botão do e-mail do termo abre o TCC em Documentos do processo; o botão da entrega final abre Repositório.
+
+
+A devolução Gov.br exige tantas assinaturas digitais distintas quanto os signatários esperados, incluindo três na ata. A contagem estrutural não substitui a confirmação administrativa de todos os titulares no VALIDAR/ITI. A entrega somente é liberada após o arquivamento da ata completa. Para o roteiro atual, consulte `ASSINATURA_ATA_TRES_DOCENTES.md`; as descrições de reserva e envios datadas acima registram versões anteriores.

@@ -45,15 +45,23 @@
   --portal-role-student-bg: #fde68a;
   --portal-role-student-border: #d4a300;
   --portal-role-student-text: #3f3000;
-  --portal-role-board-bg: #fdba74;
-  --portal-role-board-border: #ea580c;
-  --portal-role-board-text: #431407;
+  --portal-role-student-solid-text: #3f3000;
+  --portal-role-board-bg: #fecaca;
+  --portal-role-board-border: #dc2626;
+  --portal-role-board-text: #450a0a;
+  --portal-role-board-solid-text: #ffffff;
+  --portal-role-coadvisor-bg: #fed7aa;
+  --portal-role-coadvisor-border: #f97316;
+  --portal-role-coadvisor-text: #431407;
+  --portal-role-coadvisor-solid-text: #431407;
   --portal-role-evaluator-bg: #bbf7d0;
   --portal-role-evaluator-border: #16a34a;
   --portal-role-evaluator-text: #14532d;
+  --portal-role-evaluator-solid-text: #0f172a;
   --portal-role-viewer-bg: #bfdbfe;
   --portal-role-viewer-border: #2563eb;
   --portal-role-viewer-text: #1e3a8a;
+  --portal-role-viewer-solid-text: #ffffff;
 
   --portal-signature-pending-bg: #d8c98f;
   --portal-signature-pending-border: #9b884b;

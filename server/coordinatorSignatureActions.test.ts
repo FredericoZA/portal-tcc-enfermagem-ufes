@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { SignatureJob } from '../src/types/signatures';
+import {automaticAstenDocumentStatus} from '../src/utils/signatureGuidance';
 import {
   createSignatureActionLock,
   dispatchDeclarationBatch,
@@ -9,6 +10,7 @@ import {
   canSendDeclarationToAsten,
   canReviewDeclarationWithGovbr,
   hasPendingDeclaration,
+  hasArchivedDeclaration,
 } from '../src/utils/coordinatorSignatureActions';
 
 const queue = [{
@@ -51,6 +53,25 @@ test('Gov.br abre independentemente de solicitações Asten existentes',()=>{
   assert.equal(canReviewDeclarationWithGovbr([job('GOV_BR','READY_FOR_REVIEW')],'p1',1),true);
   assert.equal(canReviewDeclarationWithGovbr([job('GOV_BR','DRIVE_SYNC_PENDING')],'p1',1),false);
   assert.equal(canReviewDeclarationWithGovbr([job('GOV_BR','ARCHIVED',{sourceDataRevision:0})],'p1',1),true);
+});
+
+test('Presidência separa arquivo final de estados pendentes e históricos sem PDF', () => {
+  const process = {id:'p1', dataRevision:1, status:'AGUARDANDO_ASSINATURA' as const};
+  assert.equal(hasArchivedDeclaration(process, [job('ASTEN','SIGNED')]), false);
+  assert.equal(hasArchivedDeclaration(process, [job('ASTEN','ARCHIVED')]), false);
+  assert.equal(hasArchivedDeclaration(process, [job('GOV_BR','ARCHIVED',{driveSignedFileId:'private-archive'})]), true);
+  const previous = job('ASTEN','ARCHIVED',{sourceDataRevision:0, driveSignedFileId:'historical-archive'});
+  assert.equal(hasArchivedDeclaration(process, [previous]), false);
+  assert.equal(hasArchivedDeclaration({...process,status:'CONCLUIDO'}, [previous]), true);
+  assert.equal(hasArchivedDeclaration({...process,status:'CONCLUIDO'}, []), false);
+});
+
+test('estado automático só anuncia convite após confirmação do provedor', () => {
+  assert.match(automaticAstenDocumentStatus(undefined,true,false), /Preparando/);
+  assert.doesNotMatch(automaticAstenDocumentStatus(job('ASTEN','SENT'),true,false), /enviada/);
+  assert.match(automaticAstenDocumentStatus(job('ASTEN','SENT',{providerDispatchState:'SENT'}),false,false), /E-mail enviado/);
+  assert.match(automaticAstenDocumentStatus(job('ASTEN','PROVIDER_ERROR'),true,false), /não concluídos/);
+  assert.match(automaticAstenDocumentStatus(undefined,false,true), /Gov.br selecionada/);
 });
 
 test('Asten permite retomar apenas estados recuperáveis', () => {

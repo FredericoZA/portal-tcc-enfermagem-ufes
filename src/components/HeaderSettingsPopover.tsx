@@ -1,3 +1,6 @@
+import {enqueueTablePreferenceWrite} from '../services/tablePreferenceWrites';
+import {fetchApiRequest} from '../services/apiClient';
+import {applyTableRuntimePreference,mergeTablePreferences,readStoredTablePreference,sanitizeTablePreference,tablePreferenceKey,TABLE_DEFAULTS_EVENT,TABLE_PREFERENCE_EVENT,type TablePreference} from '../utils/tablePreferences';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowUp, Columns3, ListFilter, Lock, RotateCcw, Settings, Star } from 'lucide-react';
@@ -16,18 +19,7 @@ export interface HeaderSettingsPopoverProps {
 type PageSize = number | 'all';
 type WrapMode = 'wrap' | 'nowrap';
 
-type UserTablePreference = {
-  columnOrder?: string[];
-  visibleColumns?: Record<string, boolean>;
-  recordsLimit?: PageSize; // legado: páginas React antigas truncavam o DOM
-  pageSize?: PageSize;
-  startDate?: string;
-  endDate?: string;
-  updatedAt?: string;
-};
-
-const normalizeEmailKey=(value:string)=>value.trim().toLowerCase().replace(/[^a-z0-9@._+-]/g,'_');
-const preferenceKey=(email:string,storageKey:string)=>`portal_user_table_config_${normalizeEmailKey(email)}_${storageKey}`;
+const preferenceKey = tablePreferenceKey;
 const pageSizeKey=(storageKey:string)=>`portal_table_page_size_${storageKey}`;
 const currentPageKey=(storageKey:string)=>`portal_table_current_page_${storageKey}`;
 const wrapModeKey=(storageKey:string)=>`portal_tcc_v1043_wrap_${storageKey}`;
@@ -42,7 +34,8 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
   const {
     recordsLimit,setRecordsLimit,allowedLimits=[25,50,100,'all'],textFormat=DEFAULT_TABLE_TEXT_FORMAT,
     defaultRecordsLimit=25,startDate,setStartDate,endDate,setEndDate,allColumns=[],visibleColumns={},
-    setVisibleColumns,columnOrder=[],setColumnOrder,storageKey,defaultColumnOrder,defaultVisibleColumns,defaultTableTitle
+    setVisibleColumns,columnOrder=[],setColumnOrder,storageKey,defaultColumnOrder,defaultVisibleColumns,defaultTableTitle,
+    customLabels={},setCustomLabels,columnWidths={},setColumnWidths
   }=props;
   const {globalRoles,userEmail,isAuthenticated}=useAuth();
   const isMaster=globalRoles.includes('MASTER_ADMIN');
@@ -54,7 +47,10 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
   const popupRef=useRef<HTMLDivElement>(null);
   const [popoverPos,setPopoverPos]=useState({top:0,left:0});
   const hydratedPreferenceRef=useRef('');
-  const inheritMasterDefaultRef=useRef(false);
+  const personalRef=useRef<TablePreference | null>(null);
+  const dirtyRef=useRef(false);
+  const lastSavedPreferenceRef=useRef('');
+  const [isSavingDefault,setIsSavingDefault]=useState(false);
   const currentPreferenceKey=storageKey&&userEmail?preferenceKey(userEmail,storageKey):'';
 
   const readStoredPageSize=():PageSize=>{
@@ -104,44 +100,69 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
   const persistWrapMode=(next:WrapMode)=>{
     setWrapMode(next);
     if(storageKey){
-      try{localStorage.setItem(wrapModeKey(storageKey),next);}catch{/* preferência visual não bloqueia a tabela */}
+      try{localStorage.setItem(wrapModeKey(storageKey),next);localStorage.setItem(`portal_table_wrap_${storageKey}`,next);}catch{/* preferência visual não bloqueia a tabela */}
     }
     window.dispatchEvent(new CustomEvent('portal-table-layouts-updated'));
   };
 
   useEffect(()=>{
-    if(!isAuthenticated||!currentPreferenceKey||!canManageColumns)return;
-    if(hydratedPreferenceRef.current===currentPreferenceKey)return;
+    if(!storageKey)return;
+    let active=true;
+    dirtyRef.current=false;
     hydratedPreferenceRef.current=currentPreferenceKey;
-    inheritMasterDefaultRef.current=false;
-    try{
-      const raw=localStorage.getItem(currentPreferenceKey);
-      if(!raw){setRecordsLimit('all');return;}
-      const saved=JSON.parse(raw) as UserTablePreference;
-      if(Array.isArray(saved.columnOrder)&&saved.columnOrder.length)setColumnOrder?.(saved.columnOrder);
-      if(saved.visibleColumns&&typeof saved.visibleColumns==='object')setVisibleColumns?.(saved.visibleColumns);
-      const legacyOrPageSize=saved.pageSize??saved.recordsLimit;
-      if(legacyOrPageSize!==undefined){
-        const next=parsePageSize(legacyOrPageSize,allowedLimits,readStoredPageSize());
-        persistPageSize(next);
-      }else setRecordsLimit('all');
-      if(saved.startDate!==undefined)setStartDate?.(saved.startDate);
-      if(saved.endDate!==undefined)setEndDate?.(saved.endDate);
-    }catch(error){console.warn('Não foi possível restaurar a preferência individual da planilha.',error);setRecordsLimit('all');}
-  },[isAuthenticated,currentPreferenceKey,canManageColumns,setColumnOrder,setVisibleColumns,setRecordsLimit,setStartDate,setEndDate]);
+    let localRaw:string|null=null;try{localRaw=isAuthenticated&&currentPreferenceKey?localStorage.getItem(currentPreferenceKey):null;}catch{/* use server preference */}
+    personalRef.current=localRaw?(()=>{try{return sanitizeTablePreference(JSON.parse(localRaw));}catch{return null;}})():null;
+    const apply=()=>{
+      const base=loadTableConfig(storageKey,defaultColumnOrder||allColumns.map(c=>c.key),defaultVisibleColumns||Object.fromEntries(allColumns.map(c=>[c.key,true])),defaultRecordsLimit,false);
+      const merged=mergeTablePreferences(readStoredTablePreference(storageKey),personalRef.current||{});
+      setColumnOrder?.(merged.columnOrder||base.columnOrder);
+      setVisibleColumns?.({...base.visibleColumns,...merged.visibleColumns,...(fixedColumnKey?{[fixedColumnKey]:true}:{})});
+      setCustomLabels?.(merged.customLabels||base.customLabels||{});
+      setColumnWidths?.(merged.columnWidths||base.columnWidths||{});
+      setPageSize(parsePageSize(merged.pageSize,allowedLimits,parsePageSize(defaultRecordsLimit,allowedLimits,25)));
+      setWrapMode(merged.wrapMode||'wrap');
+      setStartDate?.(merged.startDate||'');setEndDate?.(merged.endDate||'');setRecordsLimit('all');
+      applyTableRuntimePreference(storageKey,{...merged,pageSize:parsePageSize(merged.pageSize,allowedLimits,parsePageSize(defaultRecordsLimit,allowedLimits,25))});
+    };
+    apply();
+    const onDefaults=()=>{if(!dirtyRef.current)apply();};
+    window.addEventListener(TABLE_DEFAULTS_EVENT,onDefaults);
+    if(isAuthenticated&&currentPreferenceKey){
+      const editKey=currentPreferenceKey;
+      void fetchApiRequest<TablePreference|null>(`/api/table-preferences/${encodeURIComponent(storageKey)}`).then(saved=>{
+        if(!active||dirtyRef.current||hydratedPreferenceRef.current!==editKey)return;
+        if(saved){personalRef.current=sanitizeTablePreference(saved);try{localStorage.setItem(editKey,JSON.stringify(personalRef.current));}catch{/* optional cache */}apply();}
+        else if(personalRef.current){ // Preserve and migrate preferences already saved in this browser.
+          const migrated=JSON.stringify(personalRef.current);
+          void enqueueTablePreferenceWrite(editKey,()=>hydratedPreferenceRef.current===editKey?fetchApiRequest(`/api/table-preferences/${encodeURIComponent(storageKey)}`,{method:'PUT',body:migrated}):Promise.resolve()).catch(()=>{if(active)setSaveMessage('Sua exibição foi mantida neste navegador; não foi possível sincronizar com sua conta.');});
+        }
+      }).catch(()=>{if(active)setSaveMessage('Exibição local recuperada. Não foi possível consultar a preferência da conta.');});
+    }
+    return()=>{active=false;window.removeEventListener(TABLE_DEFAULTS_EVENT,onDefaults);};
+  },[storageKey,currentPreferenceKey,isAuthenticated]);
 
   useEffect(()=>{
-    if(!isAuthenticated||!currentPreferenceKey||!canManageColumns||hydratedPreferenceRef.current!==currentPreferenceKey||inheritMasterDefaultRef.current)return;
-    const timer=window.setTimeout(()=>{
-      try{
-        const normalizedVisible={...visibleColumns};
-        if(fixedColumnKey)normalizedVisible[fixedColumnKey]=true;
-        const payload:UserTablePreference={columnOrder:normalizedOrder,visibleColumns:normalizedVisible,recordsLimit:'all',pageSize,startDate:startDate||'',endDate:endDate||'',updatedAt:new Date().toISOString()};
-        localStorage.setItem(currentPreferenceKey,JSON.stringify(payload));
-      }catch(error){console.warn('Não foi possível salvar a preferência individual da planilha.',error);}
-    },180);
-    return()=>window.clearTimeout(timer);
-  },[isAuthenticated,currentPreferenceKey,canManageColumns,normalizedOrder,visibleColumns,pageSize,startDate,endDate,fixedColumnKey]);
+    if(!storageKey)return;
+    const resized=(event:Event)=>{if((event as CustomEvent).detail?.key!==storageKey)return;dirtyRef.current=true;setResizeRevision(value=>value+1);};
+    window.addEventListener(TABLE_PREFERENCE_EVENT,resized);
+    return()=>window.removeEventListener(TABLE_PREFERENCE_EVENT,resized);
+  },[storageKey]);
+  const [resizeRevision,setResizeRevision]=useState(0);
+  useEffect(()=>{
+    if(!isAuthenticated||!storageKey||!currentPreferenceKey||!dirtyRef.current||hydratedPreferenceRef.current!==currentPreferenceKey)return;
+    const visible={...visibleColumns,...(fixedColumnKey?{[fixedColumnKey]:true}:{})};
+    let resizedWidths={};try{resizedWidths=JSON.parse(localStorage.getItem(`portal_table_widths_${storageKey}`)||'{}');}catch{/* use empty widths */}
+    const payload=sanitizeTablePreference({columnOrder:normalizedOrder,visibleColumns:visible,customLabels,columnWidths,resizedWidths,recordsLimit:'all',pageSize,wrapMode,startDate:startDate||'',endDate:endDate||''});
+    const signature=currentPreferenceKey+JSON.stringify(payload);
+    if(lastSavedPreferenceRef.current===signature)return;
+    lastSavedPreferenceRef.current=signature;
+    personalRef.current=payload;
+    try{localStorage.setItem(currentPreferenceKey,JSON.stringify(payload));}catch{/* server storage still works */}
+    let active=true;
+    // Quiet persistence: visual preferences must not open the global loading overlay.
+    void enqueueTablePreferenceWrite(currentPreferenceKey,()=>hydratedPreferenceRef.current===currentPreferenceKey?fetchApiRequest(`/api/table-preferences/${encodeURIComponent(storageKey)}`,{method:'PUT',body:JSON.stringify(payload)}):Promise.resolve()).catch(()=>{if(active)setSaveMessage('Exibição mantida neste navegador; sincronização da conta pendente.');});
+    return()=>{active=false;};
+  },[isAuthenticated,currentPreferenceKey,storageKey,normalizedOrder,visibleColumns,pageSize,wrapMode,startDate,endDate,customLabels,columnWidths,resizeRevision]);
 
   const handleToggle=()=>{
     if(isOpen){setIsOpen(false);return;}
@@ -165,7 +186,7 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
     return()=>{window.removeEventListener('keydown',key);document.removeEventListener('mousedown',outside);};
   },[isOpen]);
 
-  const markPersonal=()=>{inheritMasterDefaultRef.current=false;};
+  const markPersonal=()=>{dirtyRef.current=true;};
 
   const moveColumn=(index:number,direction:-1|1)=>{
     if(!setColumnOrder)return;
@@ -182,32 +203,29 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
     markPersonal();setVisibleColumns(prev=>({...prev,[key]:checked,...(fixedColumnKey?{[fixedColumnKey]:true}:{})}));
   };
 
-  const restoreDefault=()=>{
+  const restoreDefault=async()=>{
     if(!storageKey)return;
-    try{if(currentPreferenceKey)localStorage.removeItem(currentPreferenceKey);}catch{/* noop */}
-    inheritMasterDefaultRef.current=true;
-    const loaded=loadTableConfig(storageKey,defaultColumnOrder||allColumns.map(c=>c.key),defaultVisibleColumns||Object.fromEntries(allColumns.map(c=>[c.key,true])),defaultRecordsLimit);
-    setColumnOrder?.(loaded.columnOrder);
-    setVisibleColumns?.(loaded.visibleColumns);
-    setRecordsLimit('all');
-    let restoredPageSize=parsePageSize(defaultRecordsLimit,allowedLimits,25);
     try{
-      const raw=localStorage.getItem(`default_table_config_${storageKey}`);
-      if(raw){const parsed=JSON.parse(raw);restoredPageSize=parsePageSize(parsed.pageSize??parsed.recordsLimit,allowedLimits,restoredPageSize);}
-    }catch{/* noop */}
-    persistPageSize(restoredPageSize);
-    setStartDate?.(loaded.startDate||'');setEndDate?.(loaded.endDate||'');
-    setSaveMessage('Visualização restaurada para o padrão desta planilha.');
+      if(isAuthenticated)await enqueueTablePreferenceWrite(currentPreferenceKey,()=>fetchApiRequest(`/api/table-preferences/${encodeURIComponent(storageKey)}`,{method:'DELETE'}));
+      if(currentPreferenceKey)localStorage.removeItem(currentPreferenceKey);
+      dirtyRef.current=false;personalRef.current=null;
+      window.dispatchEvent(new Event(TABLE_DEFAULTS_EVENT));
+      setSaveMessage('Exibição restaurada para o padrão definido pelo Master.');
+    }catch{setSaveMessage('Não foi possível restaurar o padrão. Sua configuração foi preservada.');}
   };
 
-  const saveMasterDefault=()=>{
-    if(!isMaster||!storageKey)return;
+  const saveMasterDefault=async()=>{
+    if(!isMaster||!storageKey||isSavingDefault)return;
+    setIsSavingDefault(true);
     try{
-      const existingRaw=localStorage.getItem(`default_table_config_${storageKey}`);
-      const existing=existingRaw?JSON.parse(existingRaw):{};
-      localStorage.setItem(`default_table_config_${storageKey}`,JSON.stringify({...existing,columnOrder:normalizedOrder,visibleColumns:{...visibleColumns,...(fixedColumnKey?{[fixedColumnKey]:true}:{})},recordsLimit:'all',pageSize,startDate:startDate||'',endDate:endDate||'',updatedAt:new Date().toISOString(),updatedBy:userEmail}));
-      setSaveMessage('Padrão desta planilha atualizado pelo Master. Publique a Personalização para distribuir o padrão.');
-    }catch{setSaveMessage('Não foi possível salvar o padrão desta planilha.');}
+      let resizedWidths={};try{resizedWidths=JSON.parse(localStorage.getItem(`portal_table_widths_${storageKey}`)||'{}');}catch{/* noop */}
+      const payload=sanitizeTablePreference({columnOrder:normalizedOrder,visibleColumns:{...visibleColumns,...(fixedColumnKey?{[fixedColumnKey]:true}:{})},customLabels,columnWidths,resizedWidths,pageSize,wrapMode,startDate:startDate||'',endDate:endDate||''});
+      const saved=await fetchApiRequest<TablePreference>(`/api/admin/table-defaults/${encodeURIComponent(storageKey)}`,{method:'PUT',body:JSON.stringify(payload)});
+      localStorage.setItem(`default_table_config_${storageKey}`,JSON.stringify(saved));
+      window.dispatchEvent(new Event(TABLE_DEFAULTS_EVENT));
+      setSaveMessage('Padrão salvo para todos. As preferências pessoais de cada usuário foram preservadas.');
+    }catch{setSaveMessage('Não foi possível salvar o padrão geral. Tente novamente.');}
+    finally{setIsSavingDefault(false);}
   };
 
   return <div className="inline-flex items-center gap-1.5 shrink-0">
@@ -245,7 +263,7 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
         {canManageColumns&&<section className="portal-settings-columns-card" aria-label={`Colunas e ordem de ${defaultTableTitle||'planilha'}`}>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div><span className="flex items-center gap-1.5 text-[9.5px] font-black normal-case tracking-wider text-slate-800"><Columns3 className="h-3.5 w-3.5"/>Colunas e ordem</span><p className="mt-0.5 text-[8.5px] text-slate-500">Marque para exibir. Use as setas para alterar a ordem.</p></div>
-            {isMaster&&<button type="button" onClick={saveMasterDefault} className="portal-popup-action"><Star className="h-3 w-3"/>Definir padrão</button>}
+            {isMaster&&<button type="button" onClick={saveMasterDefault} disabled={isSavingDefault} className="portal-popup-action"><Star className="h-3 w-3"/>{isSavingDefault?'Salvando…':'Definir padrão'}</button>}
           </div>
           <div className="portal-settings-column-grid">
             {normalizedOrder.map((key,index)=>{const column=columnMap.get(key)||{key,label:key};const fixed=key===fixedColumnKey;const shown=fixed||visibleColumns[key]!==false;return <div key={key} className="portal-settings-column-item" data-visible={shown?'true':'false'}>

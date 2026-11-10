@@ -29,9 +29,8 @@ function validMime(value: string): value is ImageMime { return Object.hasOwn(MIM
 export async function resolvePortalImageRoot(snapshotRootId?: string): Promise<string> {
   let root = snapshotRootId;
   if (root === undefined) {
-    const { loadPortalRuntimeState } = await import('./supabase');
-    const saved = await loadPortalRuntimeState<{ settings?: { driveRootFolderId?: string } }>(false);
-    root = saved?.settings?.driveRootFolderId || process.env.PORTAL_DRIVE_ROOT_FOLDER_ID;
+    const { loadRuntimeDriveRootId } = await import('./supabase');
+    root = await loadRuntimeDriveRootId() || process.env.PORTAL_DRIVE_ROOT_FOLDER_ID;
   }
   const academicRootId = String(root || '').trim();
   if (!validFileId(academicRootId)) throw new Error('Configure a raiz privada do Drive antes de armazenar imagens.');

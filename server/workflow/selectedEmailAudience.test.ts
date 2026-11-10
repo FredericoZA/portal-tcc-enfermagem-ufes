@@ -1,0 +1,24 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {runInNewContext} from 'node:vm';
+import ts from 'typescript';
+import {configuredEmailAudience} from '../../src/utils/emailRecipientRoles';
+import {studioSampleProcess} from '../../src/utils/studioRuntimePreview';
+const source=readFileSync('server.ts','utf8');
+const start=source.indexOf('function selectedEmailAudience('),end=source.indexOf('function currentEmailRetryBlocker',start);
+const compile=(text:string)=>ts.transpileModule(text,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+test('actual server selection keeps personal-link approver bound but receipts use changed central contact',()=>{
+ let currentContact='new@example.invalid';const original='original@example.invalid';
+ const process=studioSampleProcess();process.defesa.reservationRequestRecipient=original;
+ const templates=['email-reserva','email-comprovante-reserva','email-local-indisponivel'].map(id=>({id,recipientRoles:['RESERVATION_RESPONSIBLE'],ccRoles:[]}));
+ const context:any={configuredEmailAudience,workflowEmailTemplateId:(id:string)=>id,currentSettings:{commissionPresidentEmail:'president@example.invalid',integrationStudio:{emailTemplates:templates}},reservationApproverEmail:()=>original,isManagedDefenseLocation:()=>true,operationalConfig:()=>({reservation:{locations:[]}}),configuredRoomReservationDepartmentEmail:()=>currentContact,normalizeEmail:(value:string)=>value.toLowerCase()};
+ const resolve=runInNewContext(compile(`${source.slice(start,end)};selectedEmailAudience`),context);
+ assert.deepEqual(resolve(process,'email-reserva').to,[original]);
+ assert.deepEqual(resolve(process,'email-comprovante-reserva').to,[currentContact]);
+ currentContact='newer@example.invalid';
+ assert.deepEqual(resolve(process,'email-local-indisponivel').to,[currentContact]);
+ assert.deepEqual(resolve(process,'email-reserva').to,[original]);
+ context.isManagedDefenseLocation=()=>false;
+ assert.deepEqual(resolve(process,'email-comprovante-reserva').to,[process.orientador.email]);
+});

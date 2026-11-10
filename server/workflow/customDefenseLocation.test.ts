@@ -12,6 +12,10 @@ import {
 } from '../../src/utils/customDefenseLocation';
 import { registrationQuestions } from '../../src/utils/operationalConfig';
 import { acceptRegistration } from './registration';
+import { officialInvitationEmail } from './officialInvitation';
+import { buildProcessVariables } from './runtime';
+import { publicCalendarView } from '../publicViews';
+import { DEMO_PROCESSES } from '../../src/services/demoSeed';
 
 const makeRegistration = () => ({
   registrationAnswers: {
@@ -36,11 +40,13 @@ const makeRegistration = () => ({
   } as Record<string, string>,
 });
 
-test('formata iniciais, mantém sigla marcada e remove asteriscos da exibição', () => {
+test('formata iniciais, reconhece siglas sem marcação e mantém entradas antigas compatíveis', () => {
   assert.equal(normalizeCustomLocationInput('AUDITÓRIO CENTRAL DA *UFES*'), 'Auditório Central da *UFES*');
   assert.equal(renderCustomLocationName('AUDITÓRIO CENTRAL DA *UFES*'), 'Auditório Central da UFES');
   assert.equal(renderCustomLocationName('SALA DE REUNIÕES'), 'Sala de Reuniões');
-  assert.equal(renderCustomLocationName('AUDITÓRIO DA UFES'), 'Auditório da Ufes');
+  assert.equal(renderCustomLocationName('AUDITÓRIO DA UFES'), 'Auditório da UFES');
+  assert.equal(renderCustomLocationName('auditório do ccs/ufes'), 'Auditório do CCS/UFES');
+  assert.equal(renderCustomLocationName('SALA DO SUS NO HUCAM'), 'Sala do SUS no HUCAM');
 });
 
 test('reconhece Outro local sem confundir locais fixos', () => {
@@ -69,6 +75,28 @@ test('cadastro de outro local persiste nome formatado e escolha original para ro
   assert.equal(process.defesa.local, 'Auditório Central da UFES');
   assert.equal(process.registrationAnswers.DEFESA_LOCAL, OTHER_DEFENSE_LOCATION);
   assert.equal(process.registrationAnswers[CUSTOM_LOCATION_FIELD], 'Auditório Central da *UFES*');
+  const unmarked=makeRegistration();unmarked.registrationAnswers[CUSTOM_LOCATION_FIELD]='AUDITÓRIO CENTRAL DA UFES';
+  const automatic=acceptRegistration(unmarked);
+  assert.equal(automatic.defesa.local,process.defesa.local);
+  assert.equal(automatic.registrationAnswers[CUSTOM_LOCATION_FIELD],'Auditório Central da UFES');
+});
+
+test('calendário, convite e variáveis dos documentos usam o endereço da defesa', () => {
+  const registered = acceptRegistration(makeRegistration());
+  const demo = DEMO_PROCESSES[0];
+  const process = {...demo, defesa: {...demo.defesa, local: registered.defesa.local}};
+  const location = 'Auditório Central da UFES';
+  const calendar = publicCalendarView(process);
+  const invitation = officialInvitationEmail(process);
+  const variables = buildProcessVariables({
+    process, eventCode: 'LOCATION_CONFIRMED', actorEmail: 'orientador@ufes.br', actorRoles: [],
+    extraVariables: {DEFESA_LOCAL: OTHER_DEFENSE_LOCATION},
+  });
+  assert.equal(calendar.defesa.local, location);
+  assert.match(invitation.text, /Local: Auditório Central da UFES/);
+  assert.match(invitation.html, /Local:<\/strong> Auditório Central da UFES/);
+  assert.equal(variables.DEFESA_LOCAL, location);
+  assert.equal(variables.CAMPO_07_LOCAL, location);
 });
 
 test('cadastro de outro local sem nome é bloqueado', () => {

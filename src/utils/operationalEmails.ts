@@ -3,12 +3,13 @@ import {reviewOperationalEmailCopy} from './operationalEmailCopy';
 import {academicName} from './personPresentation';
 import {processEmailGuidance,emailProcessSection} from './processEmailGuidance';
 import type {ProcessData} from '../types';
-import {formatDateNumeric,formatTime24h} from './formatters';
+import {formatDateNumericWithWeekday,formatTime24h} from './formatters';
 import {processLink} from './processLink';
 
 type EmailTemplate={id?:unknown;body?:unknown;htmlBody?:unknown;subject?:unknown;[key:string]:unknown};
 /** Upgrade known legacy copy while retaining recipients, layout and custom paragraphs. */
 export function upgradeOperationalEmailTemplate<T extends EmailTemplate>(template:T):T {
+ if(template.operationalCatalogEditable===true)return template;
  let body=String(template.body||''),html=String(template.htmlBody||'');
  const greeting=String(template.id)==='email-reserva'?'Prezado Departamento,':'Prezado(a) <<DESTINATARIO_NOME>>,';
  body=replaceLegacySalutation(body,greeting,false);
@@ -48,6 +49,6 @@ export function recipientEmailVariables(p:ProcessData,recipient:string,variables
  const advisor=p.orientador.email.toLowerCase()===email;
  const person=student||(advisor?p.orientador:null)||p.coorientador&&p.coorientador.email.toLowerCase()===email&&p.coorientador||p.banca.find(member=>member.email.toLowerCase()===email);
  const link=baseUrl?processLink(baseUrl,p.id,emailProcessSection(eventCode,templateId,advisor)):'';
- const date=`${formatDateNumeric(p.defesa.startAt)} às ${formatTime24h(p.defesa.startAt)}`;
+ const date=`${formatDateNumericWithWeekday(p.defesa.startAt)} às ${formatTime24h(p.defesa.startAt)}`;
  return {...variables,DESTINATARIO_NOME:person?person.nome:'representante da instituição',DESTINATARIO_EMAIL:recipient,ORIENTADOR_TRATAMENTO:p.orientador.tratamento||'',ORIENTADOR_NOME_COMPLETO:academicName(p.orientador,'abbreviated'),DEFESA_DATA_HORA:date,CAMPO_04:date,DEFESA_LOCAL:p.defesa.local,CAMPO_07_LOCAL:p.defesa.local,LINK_PORTAL:link,LINK_PROCESSO:link,ORIENTACOES_ACESSO:processEmailGuidance(p,baseUrl,eventCode,templateId,recipient)};
 }

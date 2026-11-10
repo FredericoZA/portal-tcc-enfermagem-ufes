@@ -78,7 +78,7 @@ test('Meus TCCs mantém filtros React com paleta amarelo, laranja, verde e azul'
   assert.match(page, /selectedRoleCategories\.includes\(roleCat\)/);
   assert.match(page, /ROLE_CONFIGS/);
   assert.doesNotMatch(runtime, /enhanceMyTccFilters|selectedMyTccRoles|portal-runtime-all-filter/);
-  for (const border of ['#d4a300', '#ea580c', '#16a34a', '#2563eb']) assert.match(css, new RegExp(border));
+  for (const border of ['#d4a300', '#dc2626', '#16a34a', '#2563eb']) assert.match(css, new RegExp(border));
   assert.match(css, /portal-native-all-filter\[data-selected="true"\][\s\S]*background:\s*var\(--portal-neutral-bg\)/);
   assert.match(contract, /data-portal-has-filter="true"[\s\S]*border-bottom:\s*var\(--portal-sheet-content-divider\) solid var\(--portal-surface-inner\)/);
 });
