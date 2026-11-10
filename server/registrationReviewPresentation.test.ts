@@ -13,7 +13,7 @@ test('orientador usa a instituição do Portal sem inferir vínculo pelo e-mail;
  const answers:Record<string,string>={ORIENTADOR_NOME:'Orientador de Teste',ORIENTADOR_EMAIL:'advisor@example.invalid',ORIENTADOR_INSTITUICAO:'Valor antigo incorreto',EXAMINADOR_2_NOME:'Examinador de Teste',EXAMINADOR_2_INSTITUICAO:'Instituição Externa',COORIENTADOR_NOME:'Coorientador de Teste',COORIENTADOR_INSTITUICAO:'Outra Instituição'};
  const before=structuredClone(answers);
  const render=(institutionName?:string)=>renderToStaticMarkup(React.createElement(RegistrationReview,{fields,valueFor:item=>answers[item.fieldKey]||'',institutionName}));
- assert.match(render(),/Universidade Federal do Espírito Santo/);
+ assert.match(render(),/>UFES</);
  assert.doesNotMatch(render(),/Valor antigo incorreto/);
  assert.match(render(),/Instituição Externa/);assert.match(render(),/Outra Instituição/);
  assert.match(render('Instituição de Outra Instalação'),/Instituição de Outra Instalação/);

@@ -71,7 +71,7 @@ test('HTTP: novo cadastro não coleta registros; edição preserva apenas identi
    COORIENTADOR_NOME:'Coorientadora da Dupla',COORIENTADOR_EMAIL:'paired-coadvisor@example.invalid',COORIENTADOR_INSTITUICAO:'UFES',
    EXAMINADOR_2_NOME:'Primeira Examinadora',EXAMINADOR_2_EMAIL:'paired-examiner-one@example.invalid',EXAMINADOR_2_INSTITUICAO:'UFES',
    EXAMINADOR_3_NOME:'Segunda Examinadora',EXAMINADOR_3_EMAIL:'paired-examiner-two@example.invalid',EXAMINADOR_3_INSTITUICAO:'UFES',
-   TITULO:'Cuidado em Dupla',DEFESA_DATA_HORA:'2026-12-12T10:00',DEFESA_LOCAL:'Outro local — informar endereço/nome',DEFESA_LOCAL_PERSONALIZADO:'Sala fictícia da Dupla',
+   TITULO:'Cuidado em Dupla',DEFESA_DATA_HORA:'2026-12-14T10:00',DEFESA_LOCAL:'Outro local — informar endereço/nome',DEFESA_LOCAL_PERSONALIZADO:'Sala fictícia da Dupla',
   }});
   assert.ok([201,202].includes(pairedResponse.status),await pairedResponse.clone().text());
   const paired=await pairedResponse.json();
