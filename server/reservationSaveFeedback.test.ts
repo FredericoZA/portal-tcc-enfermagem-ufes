@@ -1,11 +1,12 @@
 import test from'node:test';import assert from'node:assert/strict';import{readFileSync}from'node:fs';import{runInNewContext}from'node:vm';import ts from'typescript';
 import{DEMO_PROCESSES}from'../src/services/demoSeed';import{ApiRequestError}from'../src/services/apiClient';import{savedReservationMatches}from'../src/utils/reservationChangeConfirmation';
+import {DEFENSE_WEEKDAY_MESSAGE,isDefenseWeekday} from '../src/utils/defenseSchedule';
 function fixture(options:{error?:Error;latest?:any;readError?:boolean;send?:()=>Promise<any>;snapshot?:boolean;refreshError?:boolean}={}){
  const p=structuredClone(DEMO_PROCESSES[0]);p.dataRevision=6;p.defesa.reservationRevision=2;
  const saved={...structuredClone(p),dataRevision:7,reservationRestarted:true,workflowPending:true,workflowProcessing:true,defesa:{...p.defesa,startAt:'2030-11-20T17:00:00Z',local:'Sala Alternativa',reservationRevision:3}};
  const source=readFileSync('src/components/ProcessSummaryCard.tsx','utf8');const start=source.indexOf('  const acceptReservationSave='),end=source.indexOf('  const closeReservation',start);
  let notice='',error='',open=true,needsRefresh=false,sending=false,posts=0,reads=0,refreshes=0;const snapshots:any[]=[];const inFlight={current:false};
- const context:any={process:p,reservationSending:false,reservationNeedsRefresh:false,reservationInFlight:inFlight,reservationBaseline:{current:p},requested:{date:'2030-11-20',time:'14:00'},locationChoice:'__OUTRO_LOCAL__',customLocation:'Sala alternativa',reservationBaseRevision:6,ApiRequestError,TypeError,savedReservationMatches,
+ const context:any={process:p,reservationSending:false,reservationNeedsRefresh:false,reservationInFlight:inFlight,reservationBaseline:{current:p},requested:{date:'2030-11-20',time:'14:00'},locationChoice:'__OUTRO_LOCAL__',customLocation:'Sala alternativa',reservationBaseRevision:6,ApiRequestError,TypeError,savedReservationMatches,isDefenseWeekday,DEFENSE_WEEKDAY_MESSAGE,
   isOtherDefenseLocation:(choice:string)=>choice==='__OUTRO_LOCAL__',renderCustomLocationName:(value:string)=>value,
   setReservationOpen:(v:boolean)=>{open=v;},setReservationNeedsRefresh:(v:boolean)=>{needsRefresh=v;},setReservationBaseRevision:()=>{},setError:(v:string)=>{error=v;},setNotice:(v:string)=>{notice=v;},setReservationSending:(v:boolean)=>{sending=v;},
   onReservationSaved:options.snapshot===false?undefined:(value:any)=>snapshots.push(value),onUpdated:async()=>{refreshes++;if(options.refreshError)throw Error('read refresh failed');},

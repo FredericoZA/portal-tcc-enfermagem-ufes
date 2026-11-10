@@ -23,14 +23,14 @@ test('slow archive and recovery POSTs use the long timeout without automatic rep
     assert.equal((method.match(/fetchApi</g) || []).length, 1);
   }
   const recoveryPanel = readFileSync('src/components/WorkflowRecoveryPanel.tsx', 'utf8');
-  assert.match(recoveryPanel, /useEffect\(\(\)=>\{void load\(\);\},\[load\]\)/);
+  assert.match(recoveryPanel, /useEffect\(\(\)=>\{if\(open\|\|historyOnly\)void load\(\);\}/);
   assert.match(recoveryPanel, /if\(!\(await portalConfirm\(warning\)\)\)return/);
 });
 
 
-test('reminder history belongs to the logs and mounts only after the Master opens it',()=>{
+test('central audit keeps its focus on process records',()=>{
  const logs=readFileSync('src/pages/AuditLogsPage.tsx','utf8');
- assert.match(logs,/identityKey&&!processId&&<details/);assert.match(logs,/remindersOpen&&.*WorkflowRecoveryPanel historyOnly/);
+ assert.doesNotMatch(logs,/WorkflowRecoveryPanel historyOnly|Prazos e histórico de lembretes/);
  const source=readFileSync('src/components/WorkflowRecoveryPanel.tsx','utf8');
  assert.match(source,/historyOnly&&<><details/);assert.doesNotMatch(source,/runWorkflowMaintenance|Executar lembretes vencidos/);
  assert.match(source,/getWorkflowOperations\(processId,historyOnly\?'reminders':'recovery'\)/);
@@ -39,8 +39,8 @@ test('reminder history belongs to the logs and mounts only after the Master open
 
 test('Master process recovery mirrors the central audit page with a server process filter',()=>{
  const detail=readFileSync('src/pages/ProcessoDetailPage.tsx','utf8');
- assert.match(detail,/<AuditLogsPage embedded processId={process.id}\/>/);
+ assert.match(detail,/<AuditLogsPage embedded processId={process.id}[^>]*processRecovery=/);
  const logs=readFileSync('src/pages/AuditLogsPage.tsx','utf8');
  assert.match(logs,/before, focusId,processId}, controller.signal/);
- assert.match(logs,/!processId&&<><button type="button" onClick={\(\) => void downloadBackup\(\)}/);
+ assert.match(logs,/!processId\s*&&\s*<button type="button" onClick={\(\) => void downloadBackup\(\)}/);
 });

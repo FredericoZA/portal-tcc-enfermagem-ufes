@@ -8,7 +8,7 @@ import {PORTAL_REPOSITORY_CHANGED_EVENT} from '../src/utils/portalLiveEvents';
 function panelFixture(input:{result?:unknown;requestError?:Error;refreshError?:boolean;confirm?:()=>Promise<boolean>}={}){
  const source=readFileSync('src/components/WorkflowRecoveryPanel.tsx','utf8');
  const loadStart=source.indexOf('  const load='),loadEnd=source.indexOf('  useEffect(',loadStart);
- const retryStart=source.indexOf('  const retry='),retryEnd=source.indexOf('  return <section',retryStart);
+ const retryStart=source.indexOf('  const retry='),retryEnd=source.indexOf('  const content=',retryStart);
  const code=ts.transpileModule(`(function(){${source.slice(loadStart,loadEnd)}${source.slice(retryStart,retryEnd)};return retry;})()`,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
  let message='',busy='',calls=0,refreshes=0,confirmations=0,blockingCalls=0,blocking=false;const events:string[]=[];
  const actionInProgress={current:false};

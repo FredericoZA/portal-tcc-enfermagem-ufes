@@ -96,7 +96,7 @@ test('recusa elimina a caixa operacional e mantém um aviso vermelho com Refazer
     assert.equal((summary.match(/role="alert"/g) || []).length, 1);
     assert.match(summary, /role="alert"[^>]*bg-red-50/);
     assert.match(summary, /não foi aprovada/);
-    assert.match(summary, /text-center font-bold/);
+    assert.match(summary, /text-center[^"]*font-bold|font-bold[^"]*text-center/);
     const button = summary.match(/<button[^>]*aria-label="Refazer reserva"[^>]*>[\s\S]*?<\/button>/)?.[0] || '';
     assert.match(button, /border-red-700 bg-red-700/);
     assert.match(button, />Refazer reserva<\/button>/);

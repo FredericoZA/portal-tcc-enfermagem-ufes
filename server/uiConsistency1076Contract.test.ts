@@ -30,7 +30,7 @@ test('título da seção de cadastro fica dentro do cartão', () => {
   const css = read('src/styles/portal-components.css');
 
   assert.match(registration, /<legend className="sr-only">\{sections\[currentSection\]\}<\/legend>/);
-  assert.match(registration, /<h2 className="portal-registration-section-title sm:col-span-2">\{sections\[currentSection\]==='Segundo autor'\?'Autoria nos documentos':sections\[currentSection\]\}<\/h2>/);
+  assert.match(registration, /<h2 className="portal-registration-section-title col-span-full">\{sections\[currentSection\]==='Segundo autor'\?'Autoria nos documentos':sections\[currentSection\]\}<\/h2>/);
   assert.doesNotMatch(registration, /<legend className="px-2 text-lg font-bold">/);
   assert.match(css, /\.portal-registration-section-title \{[\s\S]*grid-column: 1 \/ -1/);
 });

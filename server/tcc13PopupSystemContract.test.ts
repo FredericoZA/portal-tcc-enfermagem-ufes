@@ -148,7 +148,7 @@ test('toolbars dos popups-planilha usam ações circulares sem botões retangula
   assert.match(access,/className="portal-toolbar-icon-button" title="Adicionar acesso"/);
   assert.match(access,/className="portal-toolbar-icon-button" title="Enviar lista de acessos"/);
   assert.match(audit,/className="portal-toolbar-icon-button" title="Baixar backup JSON"/);
-  assert.match(audit,/className="portal-toolbar-icon-button" title="Restaurar backup JSON"/);
+  assert.doesNotMatch(audit,/title="Restaurar backup JSON"/);
 });
 
 test('planilhas dentro do popup recebem ordenar, filtrar e resize do runtime canônico',()=>{
