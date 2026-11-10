@@ -74,12 +74,12 @@ async function fixture(state:ReturnType<typeof initialState>){
   };
 }
 
-function registerProcess(f:Awaited<ReturnType<typeof fixture>>,index:number,coauthorIndex?:number,defenseAt=`2030-11-${String(index+11).padStart(2,'0')}T10:00`){
+function registerProcess(f:Awaited<ReturnType<typeof fixture>>,index:number,coauthorIndex?:number,defenseAt=`2030-11-${String(index+11).padStart(2,'0')}T10:00`,distinctBoard=false){
   return f.request('/api/processes',authors[index],'POST',{registrationAnswers:{
     ALUNO_1_NOME:'Autora de Teste',ALUNO_1_MATRICULA:`2030000${index}`,ALUNO_1_EMAIL:authors[index],TEM_ALUNO_2:'Não',
-    ORIENTADOR_NOME:'Orientador de Teste',ORIENTADOR_EMAIL:advisor,ORIENTADOR_SIAPE:'1234567',TEM_COORIENTADOR:'Não',
-    EXAMINADOR_2_NOME:'Examinador de Teste',EXAMINADOR_2_EMAIL:'examiner-1@protocol.invalid',EXAMINADOR_2_INSTITUICAO:'UFES',
-    EXAMINADOR_3_NOME:'Examinadora de Teste',EXAMINADOR_3_EMAIL:'examiner-2@protocol.invalid',EXAMINADOR_3_INSTITUICAO:'UFES',
+    ORIENTADOR_NOME:'Orientador de Teste',ORIENTADOR_EMAIL:distinctBoard?`advisor-${index}@protocol.invalid`:advisor,ORIENTADOR_SIAPE:'1234567',TEM_COORIENTADOR:'Não',
+    EXAMINADOR_2_NOME:'Examinador de Teste',EXAMINADOR_2_EMAIL:distinctBoard?`examiner-1-${index}@protocol.invalid`:'examiner-1@protocol.invalid',EXAMINADOR_2_INSTITUICAO:'UFES',
+    EXAMINADOR_3_NOME:'Examinadora de Teste',EXAMINADOR_3_EMAIL:distinctBoard?`examiner-2-${index}@protocol.invalid`:'examiner-2@protocol.invalid',EXAMINADOR_3_INSTITUICAO:'UFES',
     TITULO:'Trabalho de Teste da Sequência',DEFESA_DATA_HORA:defenseAt,DEFESA_LOCAL:'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES',
     ...(coauthorIndex === undefined ? {} : {
       TEM_ALUNO_2: 'Sim', ALUNO_2_NOME: 'Segundo autor de teste',
@@ -335,4 +335,23 @@ test('HTTP: 202 pending deletion returns an exact cleanup summary and status sur
   assert.deepEqual(await f.state(),beforeStatus,'consulting pending cleanup must not retry or persist');
   assert.equal((await f.state()).processes.length,0);
  }finally{await f.close();}
+});
+
+test('HTTP: cadastros simultâneos bloqueiam o mesmo local e o calendário já mostra a reserva pendente',{timeout:30000},async()=>{
+  const f=await fixture(initialState());
+  try{
+    const responses=await Promise.all([0,1].map(index=>registerProcess(f,index,undefined,'2030-11-20T12:00',true)));
+    assert.deepEqual(responses.map(response=>response.status).sort(),[202,409]);
+    const winner=await responses.find(response=>response.status===202)!.json();
+    const conflict=await responses.find(response=>response.status===409)!.json();
+    assert.equal(conflict.code,'DEFENSE_CONFLICT');
+    assert.deepEqual(conflict.conflicts,[{restricted:true}]);
+    const calendar=await f.request('/api/public/calendar','');
+    assert.equal(calendar.status,200);
+    const entries=await calendar.json();
+    assert.equal(entries.length,1);
+    assert.equal(entries[0].protocolo,winner.protocolo);
+    assert.equal(entries[0].defesa.localStatus,'PENDENTE');
+    assert.equal((await f.state()).processes.length,1);
+  }finally{await f.close();}
 });

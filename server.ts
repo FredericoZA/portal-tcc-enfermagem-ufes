@@ -3993,16 +3993,25 @@ export async function createPortalApp() {
     // End time is start time + 90 min by default
     const startDate = new Date(defesa?.startAt || nowISO);
     const endDate = new Date(defenseEndAt(startDate.toISOString()));
-    const defenseConflicts=findDefenseConflicts({startAt:startDate.toISOString(),endAt:endDate.toISOString(),local:String(defesa?.local||''),alternateLocation:String(defesa?.alternateLocation||''),emails:[...studentEmails,normalizeEmail(orientador.email),coorientador?.email?normalizeEmail(coorientador.email):'',...banca.map((member:any)=>normalizeEmail(String(member.email||'')))].filter(Boolean)});
-    if(defenseConflicts.length&&(!isAdministrative||!String(req.body?.conflictOverrideReason||'').trim()))return res.status(409).json({error:'O agendamento conflita com outra defesa, sala ou participante.',code:'DEFENSE_CONFLICT',conflicts:visibleDefenseConflicts(actorEmail,defenseConflicts)});
+    const reservationConflictInput={
+      startAt:startDate.toISOString(),endAt:endDate.toISOString(),local:String(defesa?.local||''),
+      alternateLocation:String(defesa?.alternateLocation||''),
+      emails:[...studentEmails,normalizeEmail(orientador.email),coorientador?.email?normalizeEmail(coorientador.email):'',...banca.map((member:any)=>normalizeEmail(String(member.email||'')))].filter(Boolean),
+    };
+    const rejectDefenseConflict=(conflicts:ReturnType<typeof findDefenseConflicts>)=>res.status(409).json({
+      error:'O local ou um dos participantes já tem uma defesa reservada nesse intervalo.',
+      code:'DEFENSE_CONFLICT',conflicts:visibleDefenseConflicts(actorEmail,conflicts),
+    });
+    const mayOverrideConflict=isAdministrative&&Boolean(String(req.body?.conflictOverrideReason||'').trim());
 
     const finishProtocolTiming=registrationRequestTiming(req)?.measure('protocol_lookup');
     let protocolReservation: ReturnType<typeof reserveNextProcessProtocol>;
     try {
+      const retainedProtocols=await loadRetainedProcessProtocols();
       const occupiedProtocols=[
         ...processesStore.map(process=>process.protocolo),
         ...processDeletionTasksStore.filter(task=>task.status!=='COMPLETED').map(task=>task.protocol),
-        ...await loadRetainedProcessProtocols(),
+        ...retainedProtocols,
       ];
       protocolReservation=reserveNextProcessProtocol(installationProfile,processProtocolCountersStore,occupiedProtocols);
     } catch (error) {
@@ -4011,6 +4020,9 @@ export async function createPortalApp() {
     } finally {
       finishProtocolTiming?.();
     }
+
+    const defenseConflicts=findDefenseConflicts(reservationConflictInput);
+    if(defenseConflicts.length&&!mayOverrideConflict)return rejectDefenseConflict(defenseConflicts);
 
     const newProcess: ProcessData = {
       id: newId,
@@ -4166,7 +4178,18 @@ export async function createPortalApp() {
     formArchiveJobsStore.push(initialArchive);
     delete registrationDraftsStore[actorEmail];
     const finishCreateCommitTiming=registrationRequestTiming(req)?.measure('process_commit');
-    try { await persistPortalStateDurably(); } finally { finishCreateCommitTiming?.(); }
+    try {
+      await persistPortalStateDurably();
+    } catch(error) {
+      // The persistence layer reloads committed state after a revision conflict.
+      if(error instanceof Error&&error.message.includes('Conflito de concorrência')){
+        const conflicts=findDefenseConflicts({...reservationConflictInput,excludeProcessId:newId});
+        if(conflicts.length&&!mayOverrideConflict)return rejectDefenseConflict(conflicts);
+      }
+      throw error;
+    } finally {
+      finishCreateCommitTiming?.();
+    }
 
     afterReservationChangeResponse(req,res,async()=>{
       const archived=await retryExistingFormArchiveJob(initialArchive,newProcess);
