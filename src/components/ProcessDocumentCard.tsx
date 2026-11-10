@@ -153,9 +153,15 @@ export function ReservationReceiptCard({protocol, currentStatus, revision, downl
     : available ? undefined
     : historical ? 'Comprovante não localizado no acervo importado.' : pending ? 'Aguarda o aceite ou a recusa do responsável pelo local.' : undefined;
 
+  const tone = error ? 'error'
+    : refused ? 'denied'
+    : accepted ? 'available'
+    : pending && !loading ? 'progress'
+    : 'pending';
+
   return <><ProcessDocumentCard title={available ? `Comprovante de reserva (${items.length})` : 'Comprovante de reserva'} signerNote="Não necessária"
     status={status} statusDescription={statusDescription}
-    tone={error?'error':refused ? 'denied' : accepted ? 'available' : 'pending'} available={available} unavailable={false} working={downloading}
+    tone={tone} available={available} unavailable={false} working={downloading}
     viewRef={viewButtonRef} onView={() => choose('view')} onDownload={() => choose('download')}>
     {error && <button type="button" className="text-xs font-bold underline text-[var(--portal-brand-header)]" onClick={() => setRetry(value => value + 1)}>Tentar novamente</button>}
   </ProcessDocumentCard>
