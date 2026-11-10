@@ -18,10 +18,18 @@ export function auditDocumentEvent(log:AuditLog){
  const total=Number.isInteger(data.expectedSignerCount)&&Number(data.expectedSignerCount)>0?Number(data.expectedSignerCount):undefined;
  const count=Number.isInteger(data.verifiedSignerCount)&&Number(data.verifiedSignerCount)>=0&&total!==undefined&&Number(data.verifiedSignerCount)<=total?Number(data.verifiedSignerCount):undefined;
  const verified=Array.isArray(data.verifiedSigners)?data.verifiedSigners.slice(0,12).map(record).filter(person=>text(person.name)||text(person.email)).map(person=>({name:text(person.name)||text(person.email),email:text(person.email,254),role:roles[text(person.role)]||text(person.role),signedAt:text(person.signedAt,60)})):[];
+ const expected = Array.isArray(data.expectedSigners) ? data.expectedSigners.slice(0, 12).map(record)
+   .filter(person => text(person.name)).map(person => ({name: text(person.name), role: roles[text(person.role)] || text(person.role)})) : [];
+ const outstanding = Array.isArray(data.outstandingSigners) ? data.outstandingSigners.slice(0, 12).map(record)
+   .filter(person => text(person.name) || text(person.email)).map(person => ({
+     name: text(person.name) || text(person.email),
+     role: roles[text(person.role)] || text(person.role),
+     status: person.status === 'DECLINED' ? 'Recusou a assinatura' : person.status === 'VIEWED' ? 'Visualizou, assinatura pendente' : 'Aguardando assinatura',
+   })) : [];
  const status=text(data.status,80);const previousStatus=text(before.status,80);
  const generated=log.action==='DOCUMENTO_PREPARADO_PARA_ASSINATURA'||log.action==='CONVITE_GERADO_PELO_FLUXO';
  const archived=log.action==='DOCUMENTO_ASSINADO_ARQUIVADO';
  const result=archived?'Documento assinado e arquivado no Drive':generated?'Documento gerado':status?auditStatusLabel(status):'';
- return {title,type,version,provider,stage,result,previousStatus:previousStatus&&previousStatus!==status?auditStatusLabel(previousStatus):'',total,count,verified,evidence:text(data.evidenceSource,120),archived,generated};
+ return {title,type,version,provider,stage,result,previousStatus:previousStatus&&previousStatus!==status?auditStatusLabel(previousStatus):'',total,count,verified,expected,outstanding,evidence:text(data.evidenceSource,120),archived,generated};
 }
 export function auditDocumentSearchText(log:AuditLog):string{const event=auditDocumentEvent(log);return event?[event.title,event.version,event.provider,event.stage,event.result,...event.verified.flatMap(person=>[person.name,person.email,person.role])].filter(Boolean).join(' '):'';}

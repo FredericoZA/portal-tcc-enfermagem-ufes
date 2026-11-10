@@ -360,6 +360,7 @@ export interface DocumentCorrectionRequest {
 }
 
 export interface AuditLog {
+  currentProcessStage?: ProcessEtapa;
   id: string;
   processId?: string;
   processProtocol?: string;

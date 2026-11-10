@@ -9,6 +9,7 @@ export type ReadableAuditLog = AuditLog & {
   actorName?: string;
   source?: 'activity' | 'email';
   emailDeliveryId?: string;
+  currentProcessStage?: string;
 };
 export type AuditChange = { field: string; before: string; after: string };
 const object = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
@@ -196,9 +197,32 @@ export function auditReference(log: ReadableAuditLog): { title: string; detail: 
   if (log.processId) return { title: 'Processo de TCC', detail: log.processTitle || 'Referência histórica sem protocolo disponível' };
   return { title: entities[log.entityType] || 'Administração do Portal', detail: '' };
 }
+const phaseNames = ['Cadastro', 'Agendamento', 'Convite e Banca', 'Defesa', 'Conceito e Ata', 'Assinaturas', 'Documentos', 'Concluído'];
+const phaseNumbers: Record<string, number> = {
+  CADASTRO: 1, TCC_CREATED: 1, CRIACAO_PROCESSO: 1,
+  AGENDAMENTO: 2, CONFIRMACAO_LOCAL: 2, LOCATION_CONFIRMED: 2, LOCATION_UNAVAILABLE: 2,
+  RESERVATION_RESCHEDULED: 2, SOLICITACAO_RESERVA_REGISTRADA: 2, RESERVA_ACEITA: 2, RESERVA_RECUSADA: 2,
+  CONFIRMACAO_LOCAL_DEPARTAMENTO: 2, LOCAL_INDISPONIVEL_DEPARTAMENTO: 2, RESPOSTA_RESERVA_REGISTRADA: 2,
+  CONVITE: 3, INVITATION_SENT: 3, CONVITE_GERADO_PELO_FLUXO: 3, FLUXO_CONVITE_CONCLUIDO: 3,
+  DEFESA: 4, AVALIACAO: 5, EVALUATION_SUBMITTED: 5, CONCLUSAO_AVALIACAO: 5, REABERTURA_AVALIACAO: 5,
+  ASSINATURA: 6, SIGNATURE_COMPLETED: 6, ATA_SIGNED: 6,
+  DOCUMENTOS: 7, REPOSITORIO: 7, REPOSITORY_SUBMITTED: 7, PUBLICATION_CLEARED: 7,
+  CONCLUSAO_DADOS_REPOSITORIO: 7, REABERTURA_ENTREGA_FINAL: 7,
+  CONCLUIDO: 8, PROCESS_COMPLETED: 8,
+};
+
+export function auditProcessPhases(log: ReadableAuditLog) {
+  const after = object(log.after);
+  const numberFor = (value: unknown) => typeof value === 'string' && Object.hasOwn(phaseNumbers, value) ? phaseNumbers[value] : undefined;
+  const labelFor = (number?: number) => number ? `Fase ${number} · ${phaseNames[number - 1]}` : '';
+  const event = numberFor(after.etapaAtual) ?? numberFor(after.workflowEventCode) ?? numberFor(after.eventCode)
+    ?? numberFor(after.eventStage) ?? numberFor(log.action) ?? (log.entityType === 'signature_job' ? 6 : undefined);
+  return { event: labelFor(event), current: labelFor(numberFor(log.currentProcessStage)) };
+}
+
 export function auditSearchText(log: ReadableAuditLog): string {
   const actor = auditActor(log), reference = auditReference(log), after = object(log.after);
-  return [actor.name, actor.email, auditActionLabel(log), reference.title, reference.detail, after.recipient, ...(Array.isArray(after.cc) ? after.cc : []), after.subject, after.requestedBy, after.templateId, after.workflowEventCode, after.studioRevision, after.documentType, after.documentTitle, after.documentVersion, after.eventStage, after.status, ...(Array.isArray(after.verifiedSigners)?after.verifiedSigners.flatMap(person=>{const signer=object(person);return [signer.name,signer.email,signer.role];}):[]), auditOperationReference(log), auditActivityOutcome(log), log.action, log.processId].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR');
+  return [actor.name, actor.email, auditActionLabel(log), ...Object.values(auditProcessPhases(log)), reference.title, reference.detail, after.recipient, ...(Array.isArray(after.cc) ? after.cc : []), after.subject, after.requestedBy, after.templateId, after.workflowEventCode, after.studioRevision, after.documentType, after.documentTitle, after.documentVersion, after.eventStage, after.status, ...[after.verifiedSigners, after.expectedSigners, after.outstandingSigners].flatMap(signers => Array.isArray(signers) ? signers.flatMap(person => { const signer = object(person); return [signer.name, signer.email, signer.role]; }) : []), auditOperationReference(log), auditActivityOutcome(log), log.action, log.processId].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR');
 }
 export function auditDisplayValue(value: unknown): string {
   if (value === undefined || value === null || value === '') return 'Não informado';

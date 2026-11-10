@@ -61,7 +61,7 @@ function auditFeedProjector(input:AuditFeedInput) {
     const deletion = log.action === 'EXCLUSAO_PROCESSO_TCC' ? deletions.get(log.entityId) : undefined;
     const deletionDetails = deletion ? processDeletionSummary(deletion) : undefined;
     const process = processes.get(log.processId || '') || snapshot(log);
-    return safeAuditValue({...log, source: 'activity',
+    return safeAuditValue({...log, source: 'activity', currentProcessStage: processes.get(log.processId || '')?.etapaAtual,
       ...(deletionDetails ? {after:{...log.after,cleanupTaskId:deletionDetails.id,cleanupPending:deletionDetails.status==='PENDING',cleanupStatus:deletionDetails.status==='COMPLETED'?'Limpeza concluída':deletionDetails.externalPending>0?'Limpeza pendente nas plataformas externas':'Limpeza pendente',
         attempts:deletionDetails.attemptCount || 0,lastAttemptAt:deletionDetails.lastAttemptAt,nextRetryAt:deletionDetails.nextRetryAt,
         processingUntil:deletionDetails.processingUntil,errors:deletionDetails.errors,externalPending:deletionDetails.externalPending}} : {}),
@@ -89,7 +89,7 @@ function auditFeedProjector(input:AuditFeedInput) {
     return safeAuditValue({
       id: `email-delivery:${record.id}`, source: 'email', emailDeliveryId: record.id,
       processId: record.processId, processProtocol: record.protocol || process?.protocolo,
-      processTitle: process?.titulo, actorEmail: requestedBy || 'Sistema', actorName: nameOf(requestedBy, process), actorRoles: [],
+      processTitle: process?.titulo, currentProcessStage: process?.etapaAtual, actorEmail: requestedBy || 'Sistema', actorName: nameOf(requestedBy, process), actorRoles: [],
       action: statusAction, entityType: 'email_delivery', entityId: record.id,
       timestamp: record.updatedAt || record.createdAt,
       after: metadata,

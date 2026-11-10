@@ -8,7 +8,7 @@ import { ApiRequestError, apiClient } from '../services/apiClient';
 import { portalConfirm, portalPrompt } from '../services/portalDialogs';
 import { PortalModalShell } from './PortalModalShell';
 import { formatAuditTimestamp } from '../utils/formatters';
-import { auditActionLabel, auditActivityOutcome, auditOperationReference, auditIsReservationEmailDecision, auditActor, auditChangesTable, auditReference, emailAuditData, emailDeliveryStatusLabel, isEmailAudit, isEmailNotificationAudit, type ReadableAuditLog } from '../utils/auditLogPresentation';
+import { auditActionLabel, auditProcessPhases, auditActivityOutcome, auditOperationReference, auditIsReservationEmailDecision, auditActor, auditChangesTable, auditReference, emailAuditData, emailDeliveryStatusLabel, isEmailAudit, isEmailNotificationAudit, type ReadableAuditLog } from '../utils/auditLogPresentation';
 
 function DetailField({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="min-w-0"><dt className="text-[10px] font-semibold text-slate-600">{label}</dt><dd className="mt-1 break-words text-xs font-semibold text-slate-900">{children}</dd></div>;
@@ -31,7 +31,7 @@ export function ProcessDeletionRetryAction({ log, isMaster, working, onRetry }: 
 }
 
 /** Human-readable audit data only. Message HTML is never executed in the administration. */
-export function AuditLogDetails({ log, onClose, onRefresh }: { log: ReadableAuditLog | null; onClose: () => void; onRefresh?: () => Promise<void> }) {
+export function AuditLogDetails({ log, onClose, onRefresh, allowActions = true }: { log: ReadableAuditLog | null; onClose: () => void; onRefresh?: () => Promise<void>; allowActions?: boolean }) {
   const { isMasterAdmin, userEmail } = useAuth();
   const [retrying, setRetrying] = useState(false);
   const retryInProgress = useRef(false);
@@ -45,6 +45,7 @@ export function AuditLogDetails({ log, onClose, onRefresh }: { log: ReadableAudi
   if (!log) return null;
   const displayedLog=confirmedRetry?.key===retryIdentity ? {...log,after:{...log.after,...confirmedRetry.record,recipient:log.after?.recipient,additionalRecipients:log.after?.additionalRecipients,cc:log.after?.cc}} : log;
   const actor = auditActor(log), reference = auditReference(log), email = isEmailAudit(log) ? emailAuditData(displayedLog) : null;
+  const phases = auditProcessPhases(log);
   const changes = email ? [] : auditChangesTable(log);
   const operationReference = auditOperationReference(log), outcome = !email ? auditActivityOutcome(log) : '';
   const finishRetry = (refresh?: () => Promise<void>) => finishAuditAction({
@@ -119,7 +120,7 @@ export function AuditLogDetails({ log, onClose, onRefresh }: { log: ReadableAudi
       await finishRetry(onRefresh);
     }
   };
-  return <PortalModalShell open={Boolean(log)} onClose={onClose} closeOnBackdrop={!retrying} closeOnEscape={!retrying} title="Detalhes do registro" icon={FileCheck2} maxWidthClass="max-w-4xl" bodyClassName="p-3 sm:p-4" footer={<div className="flex justify-end"><button type="button" className="portal-action disabled:opacity-50" disabled={retrying} onClick={onClose}>Fechar</button></div>}>
+  return <PortalModalShell open={Boolean(log)} onClose={onClose} closeOnBackdrop={!retrying} closeOnEscape={!retrying} title="Detalhes do registro" icon={FileCheck2} maxWidthClass="max-w-4xl" bodyClassName="p-3 text-center sm:p-4" footer={<div className="flex justify-center"><button type="button" className="portal-action disabled:opacity-50" disabled={retrying} onClick={onClose}>Fechar</button></div>}>
     <section aria-label="Resumo da atividade" className="rounded-lg border border-slate-300 p-3" style={{ backgroundColor: 'var(--portal-surface-card)' }}>
       <h3 className="mb-3 text-sm font-bold text-slate-950">{auditActionLabel(displayedLog)}</h3>
       <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
@@ -130,12 +131,14 @@ export function AuditLogDetails({ log, onClose, onRefresh }: { log: ReadableAudi
         {operationReference && <DetailField label="Referência da operação">{operationReference}</DetailField>}
         {outcome && <DetailField label="Resultado registrado">{outcome}</DetailField>}
         <DetailField label="Referência">{reference.title}</DetailField>
+        {phases.event && <DetailField label="Fase do evento">{phases.event}</DetailField>}
+        {phases.current && <DetailField label="Fase atual do processo">{phases.current}</DetailField>}
         {reference.detail && <DetailField label="Trabalho">{reference.detail}</DetailField>}
       </dl>
       {auditIsReservationEmailDecision(log) && <p className="mt-3 text-[11px] leading-5 text-slate-600">A resposta foi registrada pelo link enviado a esse endereço. O registro identifica o destinatário do link, sem confirmar a identidade de quem o acionou.</p>}
     </section>
     <AuditDocumentSummary log={displayedLog} details/>
-    {isMasterAdmin && auditDeletionTaskId(log) && <section aria-label="Retomada da limpeza" className="mt-3 rounded-lg border border-slate-300 p-3">
+    {allowActions && isMasterAdmin && auditDeletionTaskId(log) && <section aria-label="Retomada da limpeza" className="mt-3 rounded-lg border border-slate-300 p-3">
       <p className="text-xs leading-5 text-slate-700">O TCC já foi excluído. Esta ação retoma somente a conferência e a limpeza dos recursos pendentes, mantendo as proteções do processo.</p>
       {retryMessage && <p role="status" className="mt-2 text-xs font-semibold">{retryMessage}</p>}
       <ProcessDeletionRetryAction log={log} isMaster={isMasterAdmin} working={retrying} onRetry={() => void retryDeletion()} />
@@ -155,6 +158,7 @@ export function AuditLogDetails({ log, onClose, onRefresh }: { log: ReadableAudi
         </dl>
         <p className="mt-3 text-xs leading-5 text-slate-700">{email.explanation}</p>
         {retryMessage && <p role="status" className="mt-3 text-xs font-semibold leading-5 text-slate-800">{retryMessage}</p>}
+        {allowActions && <>
         {(!emailId || !log.processId || !email.canRetry) && <p className="mt-2 text-xs text-slate-600">
           {!emailId || !log.processId
             ? 'Este registro não está vinculado a um envio de TCC que possa ser repetido por aqui.'
@@ -163,12 +167,13 @@ export function AuditLogDetails({ log, onClose, onRefresh }: { log: ReadableAudi
         <EmailCommunicationCopyAction log={displayedLog} isMaster={isMasterAdmin} working={retrying} onCopy={()=>void copyEmail()}/>
         {isMasterAdmin&&log.after?.communicationCopyBlockedReason&&<p className="mt-2 text-xs text-slate-600">{String(log.after.communicationCopyBlockedReason)}</p>}
         <EmailDeliveryRetryAction log={displayedLog} working={retrying} onRetry={() => void retryEmail()} />
+        </>}
       </section>
       {email.attempts.length > 0 && <section aria-label="Tentativas de envio" className="overflow-x-auto rounded-lg border border-slate-300">
-        <table className="w-full min-w-[460px] border-collapse text-left text-[11px]"><thead style={{ backgroundColor: 'var(--portal-surface-card)' }}><tr><th className="px-3 py-2">Tentativa</th><th className="px-3 py-2">Data e horário</th><th className="px-3 py-2">Resultado</th></tr></thead><tbody className="divide-y divide-slate-200">{email.attempts.map((attempt, index) => <tr key={index}><td className="px-3 py-2">{attempt.number}</td><td className="px-3 py-2">{attempt.at}</td><td className="px-3 py-2">{attempt.status}{attempt.error && <p className="mt-1 max-w-[50ch] break-words text-red-800">{attempt.error}</p>}</td></tr>)}</tbody></table>
+        <table className="w-full min-w-[460px] border-collapse text-center text-[11px]"><thead style={{ backgroundColor: 'var(--portal-surface-card)' }}><tr><th className="px-3 py-2">Tentativa</th><th className="px-3 py-2">Data e horário</th><th className="px-3 py-2">Resultado</th></tr></thead><tbody className="divide-y divide-slate-200">{email.attempts.map((attempt, index) => <tr key={index}><td className="px-3 py-2">{attempt.number}</td><td className="px-3 py-2">{attempt.at}</td><td className="px-3 py-2">{attempt.status}{attempt.error && <p className="mt-1 max-w-[50ch] break-words text-red-800">{attempt.error}</p>}</td></tr>)}</tbody></table>
       </section>}
     </div> : changes.length > 0 ? <section aria-label="Dados registrados ou alterados" className="mt-3 overflow-x-auto rounded-lg border border-slate-300">
-      <table className="w-full min-w-[480px] table-fixed border-collapse text-left text-[11px]"><thead style={{ backgroundColor: 'var(--portal-surface-card)' }}><tr><th className="w-1/3 px-3 py-2">Informação</th><th className="px-3 py-2">Antes</th><th className="px-3 py-2">Depois</th></tr></thead><tbody className="divide-y divide-slate-200">{changes.map((change, index) => <tr key={index}><th scope="row" className="break-words px-3 py-2 font-semibold">{change.field}</th><td className="whitespace-pre-wrap break-words px-3 py-2">{change.before}</td><td className="whitespace-pre-wrap break-words px-3 py-2">{change.after}</td></tr>)}</tbody></table>
+      <table className="w-full min-w-[480px] table-fixed border-collapse text-center text-[11px]"><thead style={{ backgroundColor: 'var(--portal-surface-card)' }}><tr><th className="w-1/3 px-3 py-2">Informação</th><th className="px-3 py-2">Antes</th><th className="px-3 py-2">Depois</th></tr></thead><tbody className="divide-y divide-slate-200">{changes.map((change, index) => <tr key={index}><th scope="row" className="break-words px-3 py-2 font-semibold">{change.field}</th><td className="whitespace-pre-wrap break-words px-3 py-2">{change.before}</td><td className="whitespace-pre-wrap break-words px-3 py-2">{change.after}</td></tr>)}</tbody></table>
     </section> : <p className="mt-3 text-xs leading-5 text-slate-700">A atividade foi registrada com a data, o responsável e a referência acima. Este evento não possui outros campos de alteração.</p>}
   </PortalModalShell>;
 }

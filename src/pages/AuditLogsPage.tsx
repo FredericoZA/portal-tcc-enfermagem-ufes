@@ -1,8 +1,7 @@
 import {AuditDocumentSummary} from '../components/AuditDocumentSummary';
-import {WorkflowRecoveryPanel} from '../components/WorkflowRecoveryPanel';
 import {formatAuditTimestamp} from '../utils/formatters';
 import React, { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { Download, FileCheck2, Upload, ListFilter } from 'lucide-react';
+import { Download, FileCheck2, ListFilter } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient, ApiRequestError } from '../services/apiClient';
 import { portalConfirm, portalNotice } from '../services/portalDialogs';
@@ -15,12 +14,13 @@ import { loadTableConfig, type ColumnDef } from '../components/TableColumnSelect
 import { loadGlobalTableConfig, type TableTextFormat } from '../utils/tableFormatters';
 import { AuditLogDetails } from '../components/AuditLogDetails';
 import { auditLogPageReducer, auditLogPageView, initialAuditLogPageState, waitForAuditLogRetry } from '../utils/auditLogPageState';
-import { auditActionLabel, auditIsReservationEmailDecision, auditActor, auditReference, canRestoreAudit, emailAuditData, isEmailAudit } from '../utils/auditLogPresentation';
+import { auditActionLabel, auditProcessPhases, auditIsReservationEmailDecision, auditActor, auditReference, canRestoreAudit, emailAuditData, isEmailAudit } from '../utils/auditLogPresentation';
 
 const LOG_COLUMNS: ColumnDef[] = [
   { key: 'timestamp', label: 'Data / Hora', isFixed: true },
   { key: 'actorEmail', label: 'Usuário' },
   { key: 'action', label: 'Ação / Atividade' },
+  { key: 'phase', label: 'Fase do processo' },
   { key: 'reference', label: 'Referência do Trabalho' },
   { key: 'options', label: 'Ações' },
 ];
@@ -34,7 +34,6 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean; processId?:string }> 
   const initialConfig = loadTableConfig('audit_logs', DEFAULT_ORDER, DEFAULT_VISIBLE, 25);
   const [pageState, dispatchPage] = useReducer(auditLogPageReducer, undefined, initialAuditLogPageState);
   const [search, setSearch] = useState('');
-  const [remindersOpen,setRemindersOpen]=useState(false);
   const [kind, setKind] = useState<'all' | 'activity' | 'email'>('all');
   const [recordsLimit, setRecordsLimit] = useState<number | 'all'>(initialConfig.recordsLimit || 25);
   const [startDate, setStartDate] = useState(initialConfig.startDate || '');
@@ -44,7 +43,6 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean; processId?:string }> 
   const [textFormat] = useState<TableTextFormat>(() => ({ ...loadGlobalTableConfig(), ...(initialConfig.textFormat || {}) }));
   const [selectedLogSelection, setSelectedLogSelection] = useState<{key: string; log: AuditLog} | null>(null);
   const [rollingBack, setRollingBack] = useState('');
-  const restoreInputRef = useRef<HTMLInputElement>(null);
   const request = useRef<AbortController | null>(null);
   const requestSequence = useRef(0);
   const queryKey = JSON.stringify([identityKey, search.trim(), kind, startDate, endDate,processId]);
@@ -118,24 +116,6 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean; processId?:string }> 
     } catch (error: any) { portalNotice(`Erro ao gerar backup: ${error?.message || 'falha inesperada'}`); }
   };
 
-  const restoreBackup = (file?: File) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async event => {
-      try {
-        const parsed = JSON.parse(String(event.target?.result || ''));
-        if (!parsed.processes && !parsed.settings) throw new Error('Arquivo JSON de backup inválido.');
-        const preview = await apiClient.restoreFullBackup(parsed);
-        if (!preview.requiresConfirmation || !preview.confirmHash) throw new Error('O servidor não devolveu a prévia segura da restauração.');
-        const count = preview.summary?.processCount ?? '?';
-        if (!(await portalConfirm(`Backup validado: ${count} processo(s). Master, Presidência e auditoria atual serão preservados. Confirmar restauração?`))) return;
-        await apiClient.restoreFullBackup({ ...parsed, confirmHash: preview.confirmHash }); window.location.reload();
-      } catch (error: any) { portalNotice(`Erro ao restaurar backup: ${error?.message || 'falha inesperada'}`); }
-      finally { if (restoreInputRef.current) restoreInputRef.current.value = ''; }
-    };
-    reader.readAsText(file);
-  };
-
   const rollback = async (log: AuditLog) => {
     if (!(await portalConfirm('Deseja restaurar o estado registrado neste ponto do histórico?'))) return;
     setRollingBack(log.id);
@@ -161,17 +141,24 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean; processId?:string }> 
     }
     if (key === 'action') {
       const email = isEmailAudit(log) ? emailAuditData(log) : null;
-      return <span className="block font-semibold text-[11px] normal-case text-slate-900">{auditActionLabel(log)}<AuditDocumentSummary log={log}/>{email && <span className="mt-0.5 block max-w-[52ch] truncate text-[10px] font-normal text-slate-600" title={`${email.subject} · ${email.recipient}`}>{email.subject}<span className="block truncate">{email.recipient}</span></span>}</span>;
+      return <span className="block font-semibold text-[11px] normal-case text-slate-900">{auditActionLabel(log)}<AuditDocumentSummary log={log}/>{email && <span className="mt-0.5 block break-words text-[10px] font-normal text-slate-600" title={`${email.subject} · ${email.recipient}`}>{email.subject}<span className="block break-words">{email.recipient}</span></span>}</span>;
+    }
+    if (key === 'phase') {
+      const {event, current} = auditProcessPhases(log);
+      return <span className="block text-[11px] font-semibold">
+        {event || (log.processId ? 'Fase do evento não registrada' : '—')}
+        {current && <span className="block text-[10px] font-normal text-slate-600">Atual · {current}</span>}
+      </span>;
     }
     if (key === 'reference') {
       const reference = auditReference(log);
-      return <span className="block min-w-0 text-[11px] font-semibold">{reference.title}{reference.detail && <span className="mt-0.5 block max-w-[52ch] truncate text-[10px] font-normal text-slate-600" title={reference.detail}>{reference.detail}</span>}</span>;
+      return <span className="block min-w-0 text-[11px] font-semibold">{reference.title}{reference.detail && <span className="mt-0.5 block break-words text-[10px] font-normal text-slate-600" title={reference.detail}>{reference.detail}</span>}</span>;
     }
     return <div className="portal-record-actions flex justify-center gap-1.5 whitespace-nowrap">
       <button type="button" onClick={() => setSelectedLogSelection({key:queryKey, log})} className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-bold hover:bg-slate-50">
-        {log.emailDeliveryId && log.processId && isEmailAudit(log) && emailAuditData(log).canRetry ? 'Reenviar e-mail' : 'Detalhes'}
+        {processId && log.emailDeliveryId && log.processId && isEmailAudit(log) && emailAuditData(log).canRetry ? 'Reenviar e-mail' : 'Detalhes'}
       </button>
-      {canRestoreAudit(log) && <button type="button" onClick={() => void rollback(log)} disabled={rollingBack === log.id} className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-bold hover:bg-slate-50 disabled:opacity-50">{rollingBack === log.id ? 'Restaurando…' : 'Restaurar'}</button>}
+      {processId && canRestoreAudit(log) && <button type="button" onClick={() => void rollback(log)} disabled={rollingBack === log.id} className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[9px] font-bold hover:bg-slate-50 disabled:opacity-50">{rollingBack === log.id ? 'Restaurando…' : 'Restaurar'}</button>}
     </div>;
   };
 
@@ -182,9 +169,7 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean; processId?:string }> 
         <option value="all">Todos os registros</option><option value="activity">Atividades do Portal</option><option value="email">E-mails e notificações</option>
       </select>
     </label>
-    {!processId&&<><button type="button" onClick={() => void downloadBackup()} className="portal-toolbar-icon-button" title="Baixar backup JSON" aria-label="Baixar backup JSON"><Download className="h-3.5 w-3.5"/></button>
-    <button type="button" onClick={() => restoreInputRef.current?.click()} className="portal-toolbar-icon-button" title="Restaurar backup JSON" aria-label="Restaurar backup JSON"><Upload className="h-3.5 w-3.5"/></button>
-    <input ref={restoreInputRef} type="file" accept=".json,application/json" className="hidden" onChange={event => restoreBackup(event.target.files?.[0])}/></>}
+    {!processId && <button type="button" onClick={() => void downloadBackup()} className="portal-toolbar-icon-button" title="Baixar backup JSON" aria-label="Baixar backup JSON"><Download className="h-3.5 w-3.5"/></button>}
     <span className="portal-toolbar-group-divider" role="separator" aria-orientation="vertical" />
     <SearchPopover value={search} onChange={setSearch} placeholder="Nome, e-mail, atividade ou TCC" textFormat={textFormat}/>
     <HeaderSettingsPopover recordsLimit={recordsLimit} setRecordsLimit={setRecordsLimit} allowedLimits={[25,50,100,'all']} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} allColumns={LOG_COLUMNS} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} columnOrder={columnOrder} setColumnOrder={setColumnOrder} storageKey="audit_logs" defaultColumnOrder={DEFAULT_ORDER} defaultVisibleColumns={DEFAULT_VISIBLE} defaultRecordsLimit={25} defaultTableTitle="Registro de logs"/>
@@ -193,23 +178,19 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean; processId?:string }> 
   return <div id="audit-logs-page" data-settings-sheet="true" data-embedded={embedded ? 'true' : 'false'} className={embedded ? 'flex min-h-0 flex-col' : 'space-y-0 overflow-hidden rounded-2xl border border-slate-300 shadow-sm'} style={{ backgroundColor: embedded ? 'var(--portal-surface-panel)' : 'var(--portal-surface-page)' }}>
     {embedded&&!processId ? <SettingsWorkspaceHeaderPortal>{toolbar}</SettingsWorkspaceHeaderPortal> : <header className="flex flex-wrap items-center justify-between gap-3 border-b-[16px] border-white px-4 py-3 text-white" style={{ backgroundColor: 'var(--portal-brand-header)' }}><div className="flex items-center gap-2"><FileCheck2 className="h-5 w-5 shrink-0"/><h1 className="text-sm font-black normal-case tracking-wide">{processId?'Registro de logs deste TCC':'Registro de logs'}</h1></div>{toolbar}</header>}
 
-    {identityKey&&!processId&&<details className="m-3 rounded-lg border border-slate-300 p-3" onToggle={event=>setRemindersOpen(event.currentTarget.open)}>
-      <summary className="cursor-pointer font-semibold">Prazos e histórico de lembretes</summary>
-      {remindersOpen&&<div key={identityKey} className="mt-3"><WorkflowRecoveryPanel historyOnly/></div>}
-    </details>}
     <div className="portal-audit-table-shell flex min-h-0 flex-1 flex-col">
-      {view.showCount && <p role="status" className="px-3 py-1 text-[10px] font-semibold text-slate-700">{shown.length} de {total} registros</p>}
-      {loadError && <div role="alert" className="portal-error m-3 rounded-lg border p-3 text-xs">
+      {view.showCount && <p role="status" className="px-3 py-1 text-center text-[10px] font-semibold text-slate-700">{shown.length} de {total} registros</p>}
+      {loadError && <div role="alert" className="portal-error m-3 rounded-lg border p-3 text-center text-xs">
         <p>{loadError}</p>
         {shown.length > 0 && <p className="mt-1">Os registros abaixo pertencem à última consulta confirmada; a atualização não foi concluída.</p>}
         <button type="button" className="portal-action mt-2" disabled={loading} onClick={() => void load({before:view.retryBefore})}>Tentar carregar novamente</button>
       </div>}
       <TableScrollWrapper fillHeight>
         <table className="portal-spreadsheet-table portal-responsive-records portal-audit-table w-full min-w-[860px] border-collapse text-center text-xs">
-          <thead><tr>{activeColumns.map(key => <th key={key} data-portal-column-key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} className={`px-3 py-1.5 text-[10px] font-black normal-case tracking-wide ${key === 'options' ? 'text-center' : ''}`}>{LOG_COLUMNS.find(column => column.key === key)?.label || key}</th>)}</tr></thead>
+          <thead><tr>{activeColumns.map(key => <th key={key} data-portal-column-key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} className={`px-3 py-1.5 text-[10px] font-black normal-case tracking-wide text-center`}>{LOG_COLUMNS.find(column => column.key === key)?.label || key}</th>)}</tr></thead>
           <tbody className="divide-y divide-slate-200">{((loading && !loadingOlder) || view.showEmpty) && <tr><td colSpan={activeColumns.length} className="portal-sheet-empty-cell" role="status">{loading ? 'Carregando histórico…' : 'Nenhum registro encontrado com os filtros atuais.'}</td></tr>}{shown.map(log => {
             const timestamp = formatAuditTimestamp(log.timestamp);
-            return <tr key={log.id} data-portal-row-id={log.id}>{activeColumns.map(key => <td key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} data-portal-filter-value={key === 'timestamp' ? timestamp : undefined} data-portal-sort-value={key === 'timestamp' ? String(Date.parse(log.timestamp) || 0) : undefined} className={`px-3 py-1 text-slate-950 ${key === 'options' ? 'text-center' : ''}`}>{renderCell(log, key, timestamp)}</td>)}</tr>;
+            return <tr key={log.id} data-portal-row-id={log.id}>{activeColumns.map(key => <td key={key} data-portal-mobile-cell={MOBILE_CELLS[key]} data-portal-filter-value={key === 'timestamp' ? timestamp : undefined} data-portal-sort-value={key === 'timestamp' ? String(Date.parse(log.timestamp) || 0) : undefined} className={`px-3 py-1 text-slate-950 text-center`}>{renderCell(log, key, timestamp)}</td>)}</tr>;
           })}</tbody>
         </table>
       </TableScrollWrapper>
@@ -220,6 +201,6 @@ export const AuditLogsPage: React.FC<{ embedded?: boolean; processId?:string }> 
       </div>}
     </div>
 
-    {selectedLog && <AuditLogDetails log={selectedLog} onClose={() => setSelectedLogSelection(null)} onRefresh={() => load({silent:true, focusId:selectedLog.id})} />}
+    {selectedLog && <AuditLogDetails log={selectedLog} allowActions={Boolean(processId)} onClose={() => setSelectedLogSelection(null)} onRefresh={() => load({silent:true, focusId:selectedLog.id})} />}
   </div>;
 };

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {timestampInSaoPauloDateRange} from '../src/utils/formatters';
-import {auditActionLabel,auditActor,auditReference,auditSearchText,auditChangesTable,auditStatusLabel,canRestoreAudit,canRetryEmailDelivery,emailAuditData,emailDeliveryStatusLabel,redactAuditText,type ReadableAuditLog} from '../src/utils/auditLogPresentation';
+import {auditActionLabel,auditProcessPhases,auditActor,auditReference,auditSearchText,auditChangesTable,auditStatusLabel,canRestoreAudit,canRetryEmailDelivery,emailAuditData,emailDeliveryStatusLabel,redactAuditText,type ReadableAuditLog} from '../src/utils/auditLogPresentation';
 
 const log=(extra:Partial<ReadableAuditLog>={}):ReadableAuditLog=>({id:'audit-1',processId:'proc-internal-code',processProtocol:'TCC-2026-0006',processTitle:'Cuidado de Enfermagem',actorEmail:'aluna@example.invalid',actorName:'Gabriela de Exemplo',actorRoles:[],action:'CRIACAO_PROCESSO',entityType:'processo',entityId:'proc-internal-code',timestamp:'2026-11-04T15:41:00Z',...extra});
 
@@ -140,4 +140,11 @@ test('resultado administrativo distingue solicitação de assinatura, retorno at
  assert.match(auditActivityOutcome(log({action:'CALLBACK_ASTEN_VERSAO_ENCERRADA'})),/versão anterior/);
  assert.match(auditActivityOutcome(log({action:'FLUXO_CONFIGURADO_COM_PENDENCIA'})),/ações pendentes/);
  for(const event of [log({entityType:'document_model',entityId:'drive-file-id'}),log({entityType:'signature_job',entityId:'https://provider.invalid/sign/token'}),log({entityType:'signature_job',entityId:'eyJfixture.fake'})])assert.equal(auditOperationReference(event),'');
+});
+
+test('separa a fase histórica da atual e não presume a fase de eventos desconhecidos', () => {
+ const entry = log({currentProcessStage: 'ASSINATURA'});
+ assert.deepEqual(auditProcessPhases(entry), {event: 'Fase 1 · Cadastro', current: 'Fase 6 · Assinaturas'});
+ assert.deepEqual(auditProcessPhases(log({action: 'EVENTO_ANTIGO'})), {event: '', current: ''});
+ assert.match(auditSearchText(entry), /fase 6/);
 });

@@ -38,3 +38,14 @@ test('produção somente consulta signatários na leitura existente e registra d
  assert.equal(body.match(/callAsten\('getSignatariosPorEnvelope'/g)?.length,1);
  assert.ok(body.indexOf('recordSignatureAudit(')>body.indexOf('assertAstenEnvelopeSigners('));assert.ok(body.indexOf('recordSignatureAudit(')<body.indexOf('downloadPDFEnvelopeDocs'));
 });
+
+test('distingue participantes previstos, assinaturas verificadas e pendências com evidência', () => {
+ const job = makeJob();
+ job.signers[1].status = 'PENDING';
+ const preparation = signatureAuditMetadata(job, 'DOCUMENT_PREPARED');
+ assert.deepEqual(preparation.expectedSigners?.map(person => person.name), ['Pessoa sintética', 'Autor sintético']);
+ assert.equal(preparation.outstandingSigners, undefined);
+ const evidence = signatureAuditMetadata(job, 'PROVIDER_SIGNERS_VERIFIED', 'ASTEN_SIGNERS_READBACK');
+ assert.equal(evidence.verifiedSignerCount, 1);
+ assert.deepEqual(evidence.outstandingSigners?.map(person => person.name), ['Autor sintético']);
+});

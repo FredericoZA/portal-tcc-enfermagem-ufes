@@ -10,6 +10,14 @@ export function signatureAuditMetadata(job:SignatureJob,eventStage:SignatureAudi
     documentType:job.documentType,documentTitle:short(job.documentTitle),documentVersion:job.documentVersion,
     sourceDataRevision:job.sourceDataRevision,provider:job.provider,eventStage,signatureJobId:job.id,
     status:job.status,expectedSignerCount:job.signers.length,
+    ...(eventStage === 'DOCUMENT_PREPARED' ? {
+      expectedSigners: job.signers.slice(0, 12).map(signer => ({role: signer.role, name: short(signer.name)})),
+    } : {}),
+    ...(evidenceSource ? {
+      outstandingSigners: job.signers.filter(signer => signer.status !== 'SIGNED').slice(0, 12).map(signer => ({
+        role: signer.role, name: short(signer.name), email: short(signer.email), status: signer.status,
+      })),
+    } : {}),
     ...(verified ? {verifiedSignerCount:verified.length,verifiedSigners:verified.slice(0,12).map(signer=>({
       role:signer.role,name:short(signer.name),email:short(signer.email),
       ...(signer.signedAt&&Number.isFinite(Date.parse(signer.signedAt))?{signedAt:signer.signedAt}:{}),
