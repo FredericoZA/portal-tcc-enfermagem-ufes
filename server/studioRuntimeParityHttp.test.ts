@@ -59,6 +59,11 @@ test('settings survive restart and control the real form, registration schema an
   assert.ok(reopened.integrationStudio.workflowStages.some((stage:any)=>(stage.actions||[]).some((action:any)=>action.type==='interaction'&&action.refId==='reservation-response')));
   const versions=await(await fetch(base+'/api/admin/studio/versions',{headers})).json();
   assert.deepEqual(versions.map((item:any)=>[item.revision,item.active]),[[3,true],[1,false]]);
+  const comparison=await fetch(base+'/api/admin/studio/versions/1/compare',{headers});
+  assert.equal(comparison.status,200);
+  const versionPreview=await comparison.json();
+  assert.equal(versionPreview.toRevision,3);
+  assert.ok(versionPreview.workflowStages.some((stage:any)=>stage.title&&stage.actions.some((action:any)=>action.title)));
   const nextDraft=structuredClone(reopened.integrationStudio);nextDraft.revision=4;nextDraft.receiptDesign.confirmedTitle='Novo rascunho de comprovante';
   const savedDraft=await fetch(base+'/api/admin/settings',{method:'PATCH',headers,body:JSON.stringify({integrationStudio:nextDraft,studioExpectedRevision:3,studioSaveMode:'autosave'})});
   assert.equal(savedDraft.status,200,await savedDraft.clone().text());
@@ -115,6 +120,21 @@ test('settings survive restart and control the real form, registration schema an
   const withReference=await(await fetch(`${base}/api/settings`,{headers})).json();
   assert.equal(withReference.integrationStudio.docTemplates.some((template:{type:string})=>template.type==='COMPROVANTES_RESERVA'),false);
   assert.equal(withReference.integrationStudio.receiptDesign?.confirmedTitle,restored.studio.receiptDesign?.confirmedTitle);
+
+  let expectedRevision=restored.draft.revision;
+  const newRevisions:number[]=[];
+  for(let count=0;count<4;count++){
+    const revision=expectedRevision+1;
+    const published=await fetch(base+'/api/admin/settings',{method:'PATCH',headers,body:JSON.stringify({integrationStudio:{...restored.studio,revision},studioExpectedRevision:expectedRevision,studioSaveMode:'publish'})});
+    assert.equal(published.status,200,await published.clone().text());
+    expectedRevision=revision;
+    newRevisions.unshift(revision);
+  }
+  await stop();await start();
+  const retained=await(await fetch(base+'/api/admin/studio/versions',{headers})).json();
+  assert.deepEqual(retained.map((version:any)=>version.revision),newRevisions);
+  assert.equal(retained[0].active,true);
+  assert.equal((await fetch(base+'/api/admin/studio/versions/1/compare',{headers})).status,404);
 
  }finally{await stop();await rm(directory,{recursive:true,force:true});}
 });

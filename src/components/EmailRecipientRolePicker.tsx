@@ -1,5 +1,4 @@
 import React from 'react';
-import {X} from 'lucide-react';
 import type {EmailRecipientRole} from '../types/integrationStudio';
 import {EMAIL_RECIPIENT_ROLES,getEmailRecipientSelection} from '../utils/emailRecipientRoles';
 
@@ -19,11 +18,11 @@ export function emailRecipientSummary(template:RecipientTemplate):string{
   return cc?`${to} · Cópia: ${cc}`:to;
 }
 
-export function EmailRecipientRolePicker({template,onChange}:{template:RecipientTemplate;onChange:(value:{recipientRoles:EmailRecipientRole[];ccRoles:EmailRecipientRole[]})=>void}){
+export function EmailRecipientRolePicker({template,onChange}:{template:RecipientTemplate;onChange:(value:{recipientRoles?:EmailRecipientRole[];ccRoles?:EmailRecipientRole[]})=>void}){
   const selection=getEmailRecipientSelection(template);
   const personalRequest=template.id==='email-reserva';
   const invitation=template.id==='email-convite';
-  const change=(field:'recipientRoles'|'ccRoles',roles:EmailRecipientRole[])=>onChange({recipientRoles:selection.recipientRoles,ccRoles:selection.ccRoles,[field]:roles});
+  const change=(field:'recipientRoles'|'ccRoles',roles:EmailRecipientRole[])=>onChange({[field]:roles});
   return <div className="space-y-2" aria-label="Destinatários por papel">
     <div className="grid gap-3 sm:grid-cols-2">
       {(personalRequest?(['recipientRoles'] as const):(['recipientRoles','ccRoles'] as const)).map(field=>{
@@ -32,20 +31,21 @@ export function EmailRecipientRolePicker({template,onChange}:{template:Recipient
         const legacy=field==='recipientRoles'?selection.legacyRecipient:selection.legacyCc;
         return <fieldset key={field} className="min-w-0 space-y-2">
           <legend className="text-xs font-semibold text-slate-700">{title}</legend>
-          <div className="flex min-h-11 flex-wrap items-center gap-1.5">
-            {selected.map(role=><span key={role} className="inline-flex items-center gap-1 rounded-lg border border-[var(--portal-border)] bg-white py-1 pl-2 text-xs font-semibold text-slate-800">
-              {EMAIL_RECIPIENT_ROLE_LABELS[role]}
-              {personalRequest||invitation&&field==='recipientRoles'&&role==='EXAMINERS'?<span className="px-2 text-[10px] font-normal text-slate-500">{personalRequest?'Automático':'Obrigatório'}</span>:<button type="button" onClick={()=>change(field,selected.filter(value=>value!==role))} className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--portal-brand-action)]" aria-label={`Remover ${EMAIL_RECIPIENT_ROLE_LABELS[role]} de ${title}`}><X className="h-3.5 w-3.5" aria-hidden="true"/></button>}
-            </span>)}
-            {!selected.length&&!legacy&&<span className="text-xs text-slate-500">{field==='ccRoles'?'Sem cópia adicional':'Selecione um destinatário'}</span>}
+          <div className="space-y-1">
+            {(personalRequest ? selected : EMAIL_RECIPIENT_ROLES).map(role => {
+              const checked = selected.includes(role);
+              const required = personalRequest || (invitation && field === 'recipientRoles' && role === 'EXAMINERS');
+              const otherField = field === 'recipientRoles' ? 'ccRoles' : 'recipientRoles';
+              const inOtherField = selection[otherField].includes(role);
+              return <label key={role} className="flex min-h-8 items-center gap-2 text-xs text-slate-800">
+                <input type="checkbox" checked={checked} disabled={required || inOtherField}
+                  onChange={() => change(field, checked ? selected.filter(value => value !== role) : [...selected, role])}
+                  className="size-4 accent-[var(--portal-brand-action)]"/>
+                <span>{EMAIL_RECIPIENT_ROLE_LABELS[role]}{required && <small className="ml-1 text-slate-600">{personalRequest ? 'Automático' : 'Obrigatório'}</small>}
+                  {inOtherField && !required && <small className="ml-1 text-slate-600">{field === 'recipientRoles' ? 'Em cópia' : 'Em Para'}</small>}</span>
+              </label>;
+            })}
           </div>
-          {!personalRequest&&<label className="block">
-            <span className="sr-only">Adicionar destinatário em {title}</span>
-            <select value="" onChange={event=>{if(event.target.value)change(field,[...selected,event.target.value as EmailRecipientRole]);}} className="portal-input w-full bg-white text-xs">
-              <option value="">Adicionar destinatário…</option>
-              {EMAIL_RECIPIENT_ROLES.filter(role=>!selection.recipientRoles.includes(role)&&!selection.ccRoles.includes(role)).map(role=><option key={role} value={role}>{EMAIL_RECIPIENT_ROLE_LABELS[role]}</option>)}
-            </select>
-          </label>}
           {legacy&&<p className="break-words text-xs text-slate-600">Destinatário atual: {legacy}. Ao escolher papéis, eles substituem os destinatários atuais.</p>}
         </fieldset>;
       })}

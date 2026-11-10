@@ -382,6 +382,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   const [isSaving, setIsSaving] = useState(false);
   const [hasSavedDraft,setHasSavedDraft]=useState(initialMeta.publication?.status==='DRAFT');
   const [publishedVersions,setPublishedVersions]=useState<Array<Pick<StudioVersionRecord,'revision'|'createdAt'|'createdBy'>&{active:boolean}>|null>(null);
+  const [versionPreview, setVersionPreview] = useState<Awaited<ReturnType<typeof apiClient.compareStudioVersion>> | null>(null);
+  const [loadingVersionPreview, setLoadingVersionPreview] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(initialMeta.savedAt || '');
   const [draftSavedAt, setDraftSavedAt] = useState('');
   const [isDirty, setIsDirty] = useState(false);
@@ -619,7 +621,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     snapshot.revision=expectedRevision+1;
     setIsSaving(true);
     try {
-      if(!(await portalConfirm('Publicar o rascunho de Configurações? A nova versão passará a valer para os próximos eventos do Portal.')))return;
+      if(!(await portalConfirm('Ao publicar, as alterações de etapas, gatilhos e destinatários passarão a orientar os próximos eventos do Portal. Confira as atividades e os papéis selecionados antes de continuar.', {title:'Publicar configurações?', confirmLabel:'Publicar versão'})))return;
       const settings=await retryAfterPortalReauthentication(()=>apiClient.updateSettings({ integrationStudio: snapshot,studioExpectedRevision:expectedRevision,studioSaveMode:'publish' }));
       const published=settings.integrationStudio!;
       saveLocalStudio(published);
@@ -642,8 +644,16 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   };
 
   async function loadPublishedVersions() {
+    setVersionPreview(null);
     try { setPublishedVersions(await apiClient.getStudioVersions()); }
     catch { notify('Não foi possível consultar as configurações publicadas.'); }
+  }
+
+  async function previewPublishedVersion(version: number) {
+    setLoadingVersionPreview(true);
+    try { setVersionPreview(await apiClient.compareStudioVersion(version)); }
+    catch { notify('Não foi possível abrir a prévia desta revisão.'); }
+    finally { setLoadingVersionPreview(false); }
   }
 
   async function restorePublishedVersion(version: number) {
@@ -651,7 +661,7 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
     const expectedRevision=Number(serverStudioRef.current.revision||0);
     setIsSaving(true);
     try {
-      const reason=await portalPrompt(`Informe o motivo para restaurar a revisão ${version}. Se houver um rascunho salvo, ele será preservado.`,'',{title:'Restaurar configuração',confirmLabel:'Restaurar'});
+      const reason=await portalPrompt(`Restaurar a revisão ${version} publica uma nova versão e passa a valer para os próximos eventos do Portal. O rascunho salvo será preservado. Informe o motivo para continuar.`,'',{title:'Restaurar configuração',confirmLabel:'Restaurar'});
       if(reason===null)return;
       const result=await retryAfterPortalReauthentication(()=>apiClient.restoreStudioVersion(version,expectedRevision,reason));
       const source=result.draft||result.studio;
@@ -1091,7 +1101,8 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
   };
 
   const workflowEvents = WORKFLOW_EXECUTION_EVENTS;
-  const addWorkflowStage = () => {
+  const addWorkflowStage = async () => {
+    if (!(await portalConfirm('A nova etapa será adicionada ao rascunho. Escolha o gatilho, adicione as atividades e confira seus destinatários antes de publicar.', {title:'Adicionar nova etapa?', confirmLabel:'Adicionar ao rascunho'}))) return;
     const stageNumber=workflowStages.length+1;
     const id=`stage-${Date.now()}`;
     setWorkflowStages(previous=>[...previous,{id,stageNumber,title:`Nova etapa ${stageNumber}`,triggerEvent:'TCC_CREATED',description:'Descreva a condição e o resultado esperado desta etapa.',actions:[]}]);
@@ -1253,17 +1264,39 @@ export const IntegrationStudioPanel: React.FC<IntegrationStudioPanelProps> = (pr
           <div className="min-h-0 flex-1 overflow-auto p-3"><PdfCanvasPreview base64={documentPreview.base64} remoteUrl={documentPreview.remoteUrl} label={selectedDoc.label}/></div>
         </section>
       </div>}
-      {hideTabs&&!autosaveError&&<div className="mx-3 my-2 flex flex-wrap items-center justify-end gap-2">
-        {(isDirty||hasSavedDraft)&&<p role="status" className="text-[10px] text-slate-600">{isDirty?'Alterações no rascunho.':'Rascunho salvo. O Portal continua usando a versão publicada.'}</p>}
-        <button type="button" onClick={()=>publishedVersions===null?void loadPublishedVersions():setPublishedVersions(null)} aria-expanded={publishedVersions!==null} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-900"><History className="h-3.5 w-3.5"/>Versões publicadas</button>
-        {(isDirty||hasSavedDraft)&&<button type="button" onClick={()=>void persistSnapshot(true)} disabled={isSaving} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-900 disabled:opacity-50"><Save className="h-3.5 w-3.5"/>Publicar configurações</button>}
+      {hideTabs&&<div className="mx-3 my-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white p-3">
+        <div>
+          <p className="text-sm font-bold">Versão em uso {serverStudioRef.current.publication?.publishedRevision || (!hasSavedDraft ? revision : '') || ''}</p>
+          <p role="status" className="text-xs text-slate-600">{isDirty?'Alterações no rascunho.':hasSavedDraft?'Rascunho salvo. O Portal continua usando a versão publicada.':'Nenhuma alteração pendente de publicação.'}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" disabled={loadingVersionPreview} onClick={()=>publishedVersions===null?void loadPublishedVersions():setPublishedVersions(null)} aria-expanded={publishedVersions!==null} className="portal-action inline-flex items-center gap-2"><History className="h-4 w-4"/>Versões publicadas</button>
+          <button type="button" onClick={()=>void persistSnapshot(true)} disabled={isSaving||Boolean(autosaveError)||(!isDirty&&!hasSavedDraft)} className="portal-action-primary inline-flex items-center gap-2 disabled:opacity-50"><Save className="h-4 w-4"/>Publicar configurações</button>
+        </div>
       </div>}
       {hideTabs&&publishedVersions!==null&&<section className="mx-3 my-2 rounded-lg border border-slate-300 bg-white p-3 text-xs" aria-label="Histórico de configurações publicadas">
+        <p className="mb-2 text-slate-600">A versão em uso e até três anteriores ficam disponíveis para consulta.</p>
         {!publishedVersions.length&&<p>Nenhuma versão foi registrada no histórico.</p>}
-        <ul className="space-y-2">{publishedVersions.map(version=><li key={version.revision} className="flex flex-wrap items-center justify-between gap-2">
-          <span>Revisão {version.revision} · {formatDateTimeWithWeekday(version.createdAt)} · {version.createdBy}</span>
-          {version.active?<span className="font-semibold">Em uso</span>:<button type="button" onClick={()=>void restorePublishedVersion(version.revision)} disabled={isDirty||isSaving} className="rounded-md border border-slate-300 px-2 py-1 font-semibold disabled:opacity-50">Restaurar revisão {version.revision}</button>}
+        <ul className="divide-y divide-slate-200">{publishedVersions.map(version=><li key={version.revision} className="flex flex-wrap items-center justify-between gap-2 py-2">
+          <span>Revisão {version.revision} · {formatDateTimeWithWeekday(version.createdAt)} · {version.createdBy}{version.active&&<strong className="ml-2">Em uso</strong>}</span>
+          <div className="flex gap-2">
+            <button type="button" onClick={()=>void previewPublishedVersion(version.revision)} disabled={loadingVersionPreview||isSaving} className="portal-action" aria-label={`Ver revisão ${version.revision}`}>Ver versão</button>
+            {!version.active&&<button type="button" onClick={()=>void restorePublishedVersion(version.revision)} disabled={isDirty||isSaving||loadingVersionPreview} className="portal-action" aria-label={`Restaurar revisão ${version.revision}`}>Restaurar</button>}
+          </div>
         </li>)}</ul>
+        {loadingVersionPreview&&<p role="status">Carregando versão…</p>}
+        {versionPreview&&<div className="mt-3 rounded-lg border border-slate-300 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-bold">Fluxo da revisão {versionPreview.fromRevision}</h3>
+            <button type="button" className="portal-action" onClick={()=>setVersionPreview(null)}>Fechar prévia</button>
+          </div>
+          <ol className="mt-2 grid list-decimal gap-2 pl-5 sm:grid-cols-2">
+            {versionPreview.workflowStages.map(stage=><li key={stage.id}>
+              <strong>{stage.title}</strong>
+              <ul className="mt-1 space-y-1">{stage.actions.map(action=><li key={action.id}>{action.title}</li>)}</ul>
+            </li>)}
+          </ol>
+        </div>}
       </section>}
       {hideTabs && autosaveError && <div role="alert" className="mx-3 my-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950"><span>Não foi possível concluir o salvamento automático: {autosaveError}</span><button type="button" className="rounded-md border border-amber-400 bg-white px-2 py-1 font-bold" onClick={()=>imageMergeBlocked?window.location.reload():setAutosaveRetry(value=>value+1)}>{imageMergeBlocked?'Reabrir e conferir':'Tentar salvar novamente'}</button></div>}
       <div className={`${hideTabs ? 'hidden' : 'portal-studio-heading flex flex-wrap items-center justify-between gap-2 border-b border-[var(--portal-brand-action-border)] bg-[var(--portal-brand-action)] px-3 py-2.5 text-white'}`}>

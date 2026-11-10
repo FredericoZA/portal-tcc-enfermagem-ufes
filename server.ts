@@ -500,7 +500,11 @@ let tablePreferencesStore: Record<string, Record<string, TablePreference>> = per
 let notificationPreferencesStore:Record<string,NotificationPreferences>=persistedPortalState.notificationPreferences||{};
 let dataSubjectRequestsStore:DataSubjectRequest[]=persistedPortalState.dataSubjectRequests||[];
 let legalHoldsStore:LegalHold[]=persistedPortalState.legalHolds||[];
-let studioVersionsStore:StudioVersionRecord[]=persistedPortalState.studioVersions||[];
+const STUDIO_VERSION_LIMIT = 4;
+function retainStudioVersions(versions: StudioVersionRecord[]) {
+  return [...versions].sort((a, b) => a.revision - b.revision).slice(-STUDIO_VERSION_LIMIT);
+}
+let studioVersionsStore = retainStudioVersions(persistedPortalState.studioVersions || []);
 let studioFormSubmissionsStore:StudioFormSubmission[]=persistedPortalState.studioFormSubmissions||[];
 // Dados históricos legados são preservados, mas nenhum diagnóstico automático é executado.
 let continuousIntelligenceStore:unknown=persistedPortalState.continuousIntelligence;
@@ -599,7 +603,7 @@ function snapshotPortalState() {
     const identifiers = historicalAccessIdentifiers.get(accessHistoryKey(entry));
     return identifiers ? {...entry, ...identifiers} : entry;
   });
-  return { processProtocolCounters:processProtocolCountersStore, legacyAcademicRecords:legacyAcademicRecordsStore, processDeletionTasks:processDeletionTasksStore, registrationDrafts:registrationDraftsStore, evaluationDrafts:Object.fromEntries(evaluationDraftsStore), reminders:reminderRecordsStore, settings: currentSettings, processes: processesStore.map(processForPersistence), memberships: membershipsStore, correctionRequests: correctionRequestsStore, signatureJobs: signatureMetadata, astenCallbackFingerprints: Array.from(astenCallbackFingerprints).slice(-5000), revokedSessionIds:Array.from(revokedSessionIdsStore).slice(-10000), authorizedStudents, removedAccessProcessKeys:Array.from(removedAccessProcessKeys), formArchiveJobs:formMetadata, studioFormSubmissions:studioFormSubmissionsStore.slice(-10000),emailDeliveries:emailDeliveriesStore.slice(-10000),workflowRuns:workflowRunsStore.slice(-10000),astenWebhookEvents:astenWebhookEventsStore.slice(-10000),administrationTransfers:administrationTransfersStore.slice(-1000),tablePreferences:tablePreferencesStore,notificationPreferences:notificationPreferencesStore,dataSubjectRequests:dataSubjectRequestsStore.slice(-5000),legalHolds:legalHoldsStore.slice(-5000),studioVersions:studioVersionsStore.slice(-30),continuousIntelligence:continuousIntelligenceStore,auditLogs: auditLogsStore.slice(-5000) };
+  return { processProtocolCounters:processProtocolCountersStore, legacyAcademicRecords:legacyAcademicRecordsStore, processDeletionTasks:processDeletionTasksStore, registrationDrafts:registrationDraftsStore, evaluationDrafts:Object.fromEntries(evaluationDraftsStore), reminders:reminderRecordsStore, settings: currentSettings, processes: processesStore.map(processForPersistence), memberships: membershipsStore, correctionRequests: correctionRequestsStore, signatureJobs: signatureMetadata, astenCallbackFingerprints: Array.from(astenCallbackFingerprints).slice(-5000), revokedSessionIds:Array.from(revokedSessionIdsStore).slice(-10000), authorizedStudents, removedAccessProcessKeys:Array.from(removedAccessProcessKeys), formArchiveJobs:formMetadata, studioFormSubmissions:studioFormSubmissionsStore.slice(-10000),emailDeliveries:emailDeliveriesStore.slice(-10000),workflowRuns:workflowRunsStore.slice(-10000),astenWebhookEvents:astenWebhookEventsStore.slice(-10000),administrationTransfers:administrationTransfersStore.slice(-1000),tablePreferences:tablePreferencesStore,notificationPreferences:notificationPreferencesStore,dataSubjectRequests:dataSubjectRequestsStore.slice(-5000),legalHolds:legalHoldsStore.slice(-5000),studioVersions:retainStudioVersions(studioVersionsStore),continuousIntelligence:continuousIntelligenceStore,auditLogs: auditLogsStore.slice(-5000) };
 }
 
 function persistPortalState(throwOnFailure = false): void {
@@ -653,7 +657,7 @@ function applyPersistedState(state: PersistedPortalState) {
   if (state.notificationPreferences) notificationPreferencesStore = state.notificationPreferences;
   if (state.dataSubjectRequests) dataSubjectRequestsStore = state.dataSubjectRequests;
   if (state.legalHolds) legalHoldsStore = state.legalHolds;
-  if (state.studioVersions) studioVersionsStore = state.studioVersions;
+  if (state.studioVersions) studioVersionsStore = retainStudioVersions(state.studioVersions);
   if (state.studioFormSubmissions) studioFormSubmissionsStore = state.studioFormSubmissions;
   if (state.continuousIntelligence) continuousIntelligenceStore = state.continuousIntelligence;
   googleCalendarEventsStore = generateGoogleEventsFromProcesses(processesStore);
@@ -670,11 +674,11 @@ function recordStudioVersion(studio:GlobalSettings['integrationStudio'],actorEma
   if(!studio||studioVersionsStore.some(item=>item.revision===studio.revision))return;
   const snapshot=structuredClone(studio);
   for(const template of snapshot.docTemplates||[])template.templateContentText='';
-  studioVersionsStore=[...studioVersionsStore,{
+  studioVersionsStore=retainStudioVersions([...studioVersionsStore,{
     id:`studio-version-${studio.revision}`,revision:studio.revision,createdAt:studio.savedAt||new Date().toISOString(),
     createdBy:studio.savedBy||actorEmail,validationScore:validateCourseStudio(snapshot).score,
     checksum:createHash('sha256').update(JSON.stringify(snapshot)).digest('hex'),snapshot
-  }].sort((a,b)=>a.revision-b.revision).slice(-30);
+  }]);
 }
 
 function decodeXmlEntities(value:string):string{return value.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&apos;/g,"'");}
@@ -3288,7 +3292,7 @@ export async function createPortalApp() {
 
   app.post('/api/admin/studio/validate',requireAuthenticated,requireAdministrator,(req,res)=>res.json(validateCourseStudio(req.body?.studio||currentSettings.integrationStudio||{})));
   app.get('/api/admin/studio/versions',requireAuthenticated,requireAdministrator,(_req,res)=>res.json(studioVersionsStore.slice().sort((a,b)=>b.revision-a.revision).map(({snapshot,...item})=>({...item,active:item.revision===currentSettings.integrationStudio?.revision,counts:{documents:snapshot.docTemplates?.length||0,emails:snapshot.emailTemplates?.length||0,forms:snapshot.formTemplates?.length||0,stages:snapshot.workflowStages?.length||0,variables:snapshot.matrixColumns?.length||0}}))));
-  app.get('/api/admin/studio/versions/:revision/compare',requireAuthenticated,requireAdministrator,(req,res)=>{const target=studioVersionsStore.find(item=>item.revision===Number(req.params.revision));const current=currentSettings.integrationStudio;if(!target||!current)return res.status(404).json({error:'Revisão não encontrada.'});const count=(value:any)=>Array.isArray(value)?value.length:0;res.json({fromRevision:target.revision,toRevision:current.revision,changed:target.checksum!==createHash('sha256').update(JSON.stringify(current)).digest('hex'),counts:{documents:[count(target.snapshot.docTemplates),count(current.docTemplates)],emails:[count(target.snapshot.emailTemplates),count(current.emailTemplates)],forms:[count(target.snapshot.formTemplates),count(current.formTemplates)],stages:[count(target.snapshot.workflowStages),count(current.workflowStages)],variables:[count(target.snapshot.matrixColumns),count(current.matrixColumns)]}});});
+  app.get('/api/admin/studio/versions/:revision/compare',requireAuthenticated,requireAdministrator,(req,res)=>{const target=studioVersionsStore.find(item=>item.revision===Number(req.params.revision));const current=currentSettings.integrationStudio;if(!target||!current)return res.status(404).json({error:'Revisão não encontrada.'});const count=(value:any)=>Array.isArray(value)?value.length:0;res.json({fromRevision:target.revision,toRevision:current.revision,workflowStages:(target.snapshot.workflowStages||[]).map(stage=>({id:String(stage.id||''),title:String(stage.title||''),triggerEvent:String(stage.triggerEvent||''),actions:Array.isArray(stage.actions)?stage.actions.map(action=>({id:String(action?.id||''),title:String(action?.title||'')})):[]})),changed:target.checksum!==createHash('sha256').update(JSON.stringify(current)).digest('hex'),counts:{documents:[count(target.snapshot.docTemplates),count(current.docTemplates)],emails:[count(target.snapshot.emailTemplates),count(current.emailTemplates)],forms:[count(target.snapshot.formTemplates),count(current.formTemplates)],stages:[count(target.snapshot.workflowStages),count(current.workflowStages)],variables:[count(target.snapshot.matrixColumns),count(current.matrixColumns)]}});});
   app.post('/api/admin/studio/versions/:revision/restore',requireAuthenticated,requireAdministrator,async(req,res)=>{
     const identity=getPortalIdentity(req)!;
     if(!hasRecentAuthentication(identity))return res.status(428).json({error:'Confirme seu acesso para restaurar a configuração.',code:'REAUTHENTICATION_REQUIRED'});
@@ -3407,7 +3411,7 @@ export async function createPortalApp() {
       const now=new Date().toISOString();
       req.body.integrationStudio={...req.body.integrationStudio,savedBy:actorEmail,savedAt:now,publication:{
         status:autosave?'DRAFT':'PUBLISHED',
-        publishedRevision:autosave?currentSettings.integrationStudio?.publication?.publishedRevision:req.body.integrationStudio.revision,
+        publishedRevision:autosave?(currentSettings.integrationStudio?.publication?.publishedRevision ?? currentSettings.integrationStudio?.revision):req.body.integrationStudio.revision,
         publishedAt:autosave?currentSettings.integrationStudio?.publication?.publishedAt:now,
         validationScore:packageValidation.score
       }};
@@ -6514,7 +6518,7 @@ ${auditChanges(log)}`).join('\n\n');
     notificationPreferencesStore=JSON.parse(JSON.stringify(restorePayload.notificationPreferences));
     dataSubjectRequestsStore=JSON.parse(JSON.stringify(restorePayload.dataSubjectRequests));
     legalHoldsStore=JSON.parse(JSON.stringify(restorePayload.legalHolds));
-    studioVersionsStore=JSON.parse(JSON.stringify(restorePayload.studioVersions)).slice(-30);
+    studioVersionsStore=retainStudioVersions(JSON.parse(JSON.stringify(restorePayload.studioVersions)));
     membershipsStore=[];for(const process of processesStore)synchronizeProcessParticipants(process,actorEmail);
     signatureJobsStore=operationalMetadata.signatureJobs;formArchiveJobsStore=operationalMetadata.formArchiveJobs;emailDeliveriesStore=operationalMetadata.emailDeliveries;workflowRunsStore=operationalMetadata.workflowRuns;astenWebhookEventsStore=operationalMetadata.astenWebhookEvents;
 
