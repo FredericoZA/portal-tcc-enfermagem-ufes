@@ -45,7 +45,7 @@ test('HTTP: alterações reiniciam reserva, invalidam comprovante e registram re
   const compete=(candidate:typeof p,expectedDataRevision:number)=>change({date:'2030-10-30',time:'11:00',locationChoice:'__OUTRO_LOCAL__',customLocation:'Sala concorrente',expectedDataRevision},candidate.aluno1.email,candidate.id);
   const competing=await Promise.all([compete(p,proposedBody.dataRevision),compete(second,second.dataRevision)]);
   assert.deepEqual(competing.map(response=>response.status).sort(),[202,409],'somente um pedido concorrente pode bloquear o local escolhido');
-  const rejected=await competing.find(response=>response.status===409)!.json();assert.equal(rejected.code,'DEFENSE_CONFLICT');assert.equal(rejected.conflicts[0].sameLocation,true);
+  const rejected=await competing.find(response=>response.status===409)!.json();assert.equal(rejected.code,'DEFENSE_CONFLICT');assert.deepEqual(rejected.conflicts,[{restricted:true}],'o conflito bloqueia a reserva sem revelar dados do outro processo');
   const saved=await disk();assert.equal(saved.processes.filter((process:any)=>Date.parse(process.defesa.startAt)===Date.parse('2030-10-30T14:00:00Z')).length,1,'o pedido recusado não ocupa o intervalo nem substitui o vencedor');
  }finally{if(child.exitCode===null){const stopped=new Promise(r=>child.once('exit',r));child.kill('SIGTERM');await stopped;}await rm(directory,{recursive:true,force:true});}
 });

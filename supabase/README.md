@@ -1,6 +1,6 @@
 # Preparação do Supabase
 
-Este diretório contém apenas o SQL de referência. Nenhuma alteração foi aplicada a um projeto remoto.
+Este diretório versiona as migrações do Portal. Em uma instalação nova, aplique a cadeia em ordem. Em uma instalação existente, confira primeiro o histórico remoto por nome e versão: algumas migrações da produção foram registradas pelo painel com outro horário. Uma diferença no prefixo do arquivo não autoriza reaplicar o SQL.
 
 1. Instale e autentique a CLI do Supabase.
 2. Vincule este repositório ao projeto correto.
@@ -10,7 +10,7 @@ Este diretório contém apenas o SQL de referência. Nenhuma alteração foi apl
 
 O runtime v6 grava o agregado do portal e as projeções relacionais normalizadas na mesma transação PostgreSQL. Cada commit exige a revisão esperada, impedindo sobrescrita silenciosa entre instâncias. As migrações v4 e v5 incluem identidade da instalação, períodos, flags, aceite de coautoria, hash de assinados, transferências administrativas e transporte privado temporário de arquivos. A migração `202609060001_asten_transactional_outbox_v6.sql` acrescenta a outbox transacional que impede criação duplicada de envelope Asten entre instâncias. O Drive continua sendo o arquivo definitivo dos documentos binários.
 
-O Supabase Storage recebe somente uploads temporários de DOCX e PDF por URL assinada. O servidor vincula cada ticket à sessão, finalidade e processo, confere tamanho, MIME e SHA-256, envia o arquivo ao destino definitivo e remove o objeto temporário. O bucket deve permanecer privado, sem política de leitura anônima.
+No fluxo atual, PDFs e DOCX vão para a pasta técnica privada do Google Drive e depois para o destino definitivo no Drive. O Supabase registra os metadados da transferência. O bucket antigo fica privado para compatibilidade com registros anteriores; não o use para novos documentos. Veja [a configuração de produção no README](../README.md).
 
 As variáveis `SUPABASE_URL` e `SUPABASE_SECRET_KEY` são exclusivas do servidor. Nunca use prefixo `VITE_` para a chave secreta.
 
