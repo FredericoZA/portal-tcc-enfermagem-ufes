@@ -1,3 +1,4 @@
+import { displayParticipantInstitution } from '../utils/institutionName';
 import React from 'react';
 import type { RegistrationQuestion } from '../types/operationalConfig';
 import type { RegistrationFinding } from '../types/workflowOperations';
@@ -49,7 +50,7 @@ export function RegistrationReview({ fields, valueFor, findings = [], institutio
           <tbody>{participants.map(([prefix, role]) => <tr key={prefix}>
             <th scope="row"><span className="block font-normal">{role}</span><strong className="block text-[var(--portal-text-dark)]">{value(`${prefix}_NOME`)}</strong></th>
             <td>{value(`${prefix}_EMAIL`) || '—'}</td>
-            <td>{[value(`${prefix}_TRATAMENTO`), value(`${prefix}_TITULACAO`)].filter(Boolean).length > 0 && <span className="block">{[value(`${prefix}_TRATAMENTO`), value(`${prefix}_TITULACAO`)].filter(Boolean).join(' · ')}</span>}<span className="block">{prefix === 'ORIENTADOR' ? institutionName : value(`${prefix}_INSTITUICAO`) || (prefix.startsWith('ALUNO_') ? 'UFES' : '—')}</span></td>
+            <td>{[value(`${prefix}_TRATAMENTO`), value(`${prefix}_TITULACAO`)].filter(Boolean).length > 0 && <span className="block">{[value(`${prefix}_TRATAMENTO`), value(`${prefix}_TITULACAO`)].filter(Boolean).join(' · ')}</span>}<span className="block">{displayParticipantInstitution(prefix === 'ORIENTADOR' ? institutionName : value(`${prefix}_INSTITUICAO`) || (prefix.startsWith('ALUNO_') ? 'UFES' : '—'))}</span></td>
           </tr>)}</tbody>
         </table>
       </div>

@@ -1,3 +1,4 @@
+import { displayParticipantInstitution } from '../utils/institutionName';
 import {signatureSignerNote,currentDocumentSignatureJob,frozenGovbrDownloadJob} from '../utils/signatureRecipientPresentation';
 import {repositorySubmissionConfirmed} from '../utils/repositorySubmissionConfirmation';
 import {hasPendingAutomaticSignature} from '../utils/pendingAutomaticSignature';
@@ -971,13 +972,14 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   ...(process.coorientador?.nome?.trim()?[{role:participantRole('coadvisor',process.registrationAnswers,'COORIENTADOR',process.coorientador),person:process.coorientador,student:false,key:'coorientador'}]:[])
                 ].map(({role,person,student,key})=>{
                   const field=(property:string,value:string)=>key==='banca'?{banca:process.banca.map(member=>member===person?{...withoutRegistrationIdentifiers(member),[property]:value}:withoutRegistrationIdentifiers(member))}:{[key]:{...withoutRegistrationIdentifiers(person),[property]:value}};
+                  const institution = ('instituicao' in person && person.instituicao) || '';
                   return <tr key={`${key}-${person.email||person.nome}`}>
                     <th scope="row">{role}</th>
                     <td className="font-bold">{inlineField(`Nome — ${role}`,person.nome,value=>field('nome',value))}</td>
                     <td>{inlineField(`Tratamento — ${role}`,person.tratamento||'',value=>field('tratamento',value),'text',person.tratamento||'Não informado',canEditData,false,student?STUDENT_TREATMENTS:FACULTY_TREATMENTS)}</td>
                     <td>{student?<span aria-label="Não se aplica">—</span>:inlineField(`Titulação — ${role}`,'titulacao' in person?person.titulacao||'':'',value=>field('titulacao',value),'text','titulacao' in person?person.titulacao||'Não informada':'Não informada',canEditData,false,ACADEMIC_DEGREES)}</td>
                     {!readOnly&&<td>{(student?localFormat.showStudentEmail:localFormat.showAdvisorEmail)!==false?inlineField(`E-mail — ${role}`,person.email,value=>field('email',value),'email'):<span aria-label="Não exibido">—</span>}</td>}
-                    <td>{student?<span className="portal-inline-field-value">UFES</span>:localFormat.showAdvisorInstitution!==false?inlineField(`Instituição — ${role}`,String(('instituicao' in person&&person.instituicao)||''),value=>field('instituicao',value)):<span aria-label="Não exibido">—</span>}</td>
+                    <td>{student?<span className="portal-inline-field-value">UFES</span>:localFormat.showAdvisorInstitution!==false?inlineField(`Instituição — ${role}`,institution,value=>field('instituicao',value),'text',displayParticipantInstitution(institution)):<span aria-label="Não exibido">—</span>}</td>
                   </tr>;
                 })}
                     </tbody>

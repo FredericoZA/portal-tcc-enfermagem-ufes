@@ -1,3 +1,4 @@
+import { displayParticipantInstitution } from '../utils/institutionName';
 import React from 'react';
 import type { RegistrationAnswers } from '../types/operationalConfig';
 import { buildRegistrationMemberRows } from '../utils/registrationMembers';
@@ -60,7 +61,7 @@ export const RegistrationMembersTable: React.FC<RegistrationMembersTableProps> =
                 <td className={cellClass}><span className={pillClass}>{member.reference}</span></td>
                 <td className={cellClass}><span className={pillClass}>{member.qualification}</span></td>
                 <td className={cellClass}><span className={`${pillClass} break-all`}>{member.email}</span></td>
-                <td className={cellClass}><span className={`${pillClass} break-words`}>{member.institution}</span></td>
+                <td className={cellClass}><span className={`${pillClass} break-words`}>{displayParticipantInstitution(member.institution)}</span></td>
               </tr>
             ))}
           </tbody>
