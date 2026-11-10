@@ -41,7 +41,7 @@ test('calendário mantém superfície do portal e mostra horário, título e alu
     readPortalCss(),
   ]);
 
-  assert.ok(home.includes('buildCalendarMonthGrid(year,month,calendarStarts)'));
+  assert.ok(home.includes('buildCalendarMonthGrid(year,month,[])'));
   assert.ok(home.includes('calendarGrid.weekdays'));
   assert.ok(!home.includes('portal-core-calendar-weekend'));
   assert.ok(home.includes('portal-calendar-defense-summary'));

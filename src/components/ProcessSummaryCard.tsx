@@ -1,3 +1,4 @@
+import {DEFENSE_WEEKDAY_MESSAGE,isDefenseWeekday} from '../utils/defenseSchedule';
 import {savedReservationMatches} from '../utils/reservationChangeConfirmation';
 import React, { useEffect, useRef, useState } from 'react';
 import { CalendarClock, Mail, MapPin, Pencil, RotateCcw } from 'lucide-react';
@@ -161,6 +162,9 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
     setError('');
     if (!requested.date || !requested.time || !locationChoice) {
       setError('Preencha data, horário e local da nova solicitação.');return;
+    }
+    if (!isDefenseWeekday(requested.date)) {
+      setError(DEFENSE_WEEKDAY_MESSAGE);return;
     }
     if (isOtherDefenseLocation(locationChoice) && !renderCustomLocationName(customLocation).trim()) {
       setError('Informe o nome ou endereço completo do outro local.');return;

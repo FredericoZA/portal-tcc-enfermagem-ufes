@@ -58,7 +58,7 @@ test('calendário usa dias semanais fixos e fins de semana condicionais com prev
   const runtime = read('src/utils/portalTableDom.ts');
   const home = read('src/pages/HomePage.tsx');
   const css = readPortalCss();
-  assert.match(home, /buildCalendarMonthGrid\(year,month,calendarStarts\)/);
+  assert.match(home, /buildCalendarMonthGrid\(year,month,\[\]\)/);
   assert.match(home, /calendarGrid\.weekdays/);
   assert.match(home, /gridTemplateColumns:calendarGrid\.gridTemplateColumns/);
   assert.doesNotMatch(home, /portal-core-calendar-weekend|<div>DOM<\/div>|<div>SÁB<\/div>/);

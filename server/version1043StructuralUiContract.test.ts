@@ -52,7 +52,7 @@ test('paleta de calendário e processo é compartilhada e não fluorescente',()=
 test('calendário condiciona fins de semana e preserva popup nativo por clique do dia',()=>{
   const runtime=read('src/utils/portalTableDom.ts');
   const home=read('src/pages/HomePage.tsx');
-  assert.match(home,/buildCalendarMonthGrid\(year,month,calendarStarts\)/);
+  assert.match(home,/buildCalendarMonthGrid\(year,month,\[\]\)/);
   assert.match(home,/calendarGrid\.weekdays/);
   assert.match(home,/calendarDays\.map/);
   assert.doesNotMatch(home,/portal-core-calendar-weekend|<div>DOM<\/div>|<div>SÁB<\/div>/);

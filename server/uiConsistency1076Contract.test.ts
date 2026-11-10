@@ -7,7 +7,7 @@ const read = (path: string) => readFileSync(new URL('../' + path, import.meta.ur
 test('calendário público mantém dias semanais e acrescenta fins de semana com defesas', () => {
   const home = read('src/pages/HomePage.tsx');
 
-  assert.match(home, /buildCalendarMonthGrid\(year,month,calendarStarts\)/);
+  assert.match(home, /buildCalendarMonthGrid\(year,month,\[\]\)/);
   assert.match(home, /calendarGrid\.weekdays/);
   assert.match(home, /const firstCalendarDayOffset/);
   assert.match(home, /const trailingCalendarDayCells/);

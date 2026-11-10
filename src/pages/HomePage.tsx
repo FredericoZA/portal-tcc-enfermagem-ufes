@@ -1136,11 +1136,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const year = currentCalendarDate.getFullYear();
   const month = currentCalendarDate.getMonth();
 
-  const calendarStarts=ownsCalendarData ? [
-    ...filteredProcesses.filter(process=>isDefenseOnCalendar(process)&&matchesCalendarLocation(process.defesa.local,calendarLocations)).map(process=>process.defesa.startAt),
-    ...standaloneGoogleEvents.filter(event=>matchesCalendarLocation(calendarGoogleEventLocation(event),calendarLocations)).map(event=>event.start),
-  ] : [];
-  const calendarGrid=buildCalendarMonthGrid(year,month,calendarStarts);
+  const calendarGrid=buildCalendarMonthGrid(year,month,[]);
   const calendarDays=calendarGrid.days;
   const firstCalendarDayOffset=calendarGrid.leading;
   const trailingCalendarDayCells=calendarGrid.trailing;

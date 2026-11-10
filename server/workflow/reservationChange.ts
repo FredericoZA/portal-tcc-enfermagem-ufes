@@ -1,3 +1,4 @@
+import { DEFENSE_WEEKDAY_MESSAGE, isDefenseWeekday } from '../../src/utils/defenseSchedule';
 import { OTHER_DEFENSE_LOCATION, isOtherDefenseLocation, renderCustomLocationName } from '../../src/utils/customDefenseLocation';
 import { formatDateWithWeekday, formatTimeExtenso } from '../../src/utils/formatters';
 import { officialParticipantLines } from '../../src/utils/officialParticipants';
@@ -24,6 +25,7 @@ export function validateReservationChange(
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
     throw new Error('Informe data e horário válidos para a nova solicitação.');
   }
+  if (!isDefenseWeekday(date)) throw new Error(DEFENSE_WEEKDAY_MESSAGE);
   const requested = new Date(localDateTimeToIso(`${date}T${time}`, 'America/Sao_Paulo'));
   if (!Number.isFinite(requested.getTime()) || requested.getTime() <= now.getTime()) {
     throw new Error('Informe uma data e um horário futuros para a nova reserva.');

@@ -162,12 +162,13 @@ test('HTTP: authors and the advisor cannot override a reservation conflict; Mast
     const unchanged = saved.processes.find((item: { id: string }) => item.id === process.id);
     assert.deepEqual(unchanged.defesa, process.defesa);
     assert.ok(!saved.auditLogs.some((item: { action: string }) => item.action === 'SOBRESCRITA_CONFLITO_DEFESA'));
-    const weekend = await change(student, { ...proposal, date: '2030-11-09' });
-    assert.equal(weekend.status, 202, await weekend.clone().text());
-    const rescheduled = (await f.state()).processes.find((item: { id: string }) => item.id === process.id);
-    assert.equal(rescheduled.defesa.startAt.slice(0, 10), '2030-11-09');
-    assert.equal(rescheduled.defesa.localStatus, 'PENDENTE', 'a weekend proposal still requires the normal reservation decision');
-    assert.equal(rescheduled.defesa.departmentResponse, undefined, 'rescheduling must not manufacture an acceptance');
+    for (const date of ['2030-11-09', '2030-11-10']) {
+      const weekend = await change(student, { ...proposal, date });
+      assert.equal(weekend.status, 400, await weekend.clone().text());
+      assert.match((await weekend.json()).error, /segunda a sexta/);
+    }
+    const afterWeekend = (await f.state()).processes.find((item: { id: string }) => item.id === process.id);
+    assert.deepEqual(afterWeekend.defesa, process.defesa);
   } finally { await f.close(); }
 });
 

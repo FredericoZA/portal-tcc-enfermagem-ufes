@@ -74,7 +74,7 @@ async function fixture(state:ReturnType<typeof initialState>){
   };
 }
 
-function registerProcess(f:Awaited<ReturnType<typeof fixture>>,index:number,coauthorIndex?:number,defenseAt=`2030-11-${String(index+11).padStart(2,'0')}T10:00`,distinctBoard=false){
+function registerProcess(f:Awaited<ReturnType<typeof fixture>>,index:number,coauthorIndex?:number,defenseAt=`2030-11-${String(11+index+Math.floor(index/5)*2).padStart(2,'0')}T10:00`,distinctBoard=false){
   return f.request('/api/processes',authors[index],'POST',{registrationAnswers:{
     ALUNO_1_NOME:'Autora de Teste',ALUNO_1_MATRICULA:`2030000${index}`,ALUNO_1_EMAIL:authors[index],TEM_ALUNO_2:'Não',
     ORIENTADOR_NOME:'Orientador de Teste',ORIENTADOR_EMAIL:distinctBoard?`advisor-${index}@protocol.invalid`:advisor,ORIENTADOR_SIAPE:'1234567',TEM_COORIENTADOR:'Não',
@@ -106,19 +106,17 @@ async function awaitDeletionStatus(f:Awaited<ReturnType<typeof fixture>>,process
  assert.fail('Cleanup did not reach its expected durable result: '+JSON.stringify(last));
 }
 
-test('HTTP: weekend defenses use normal registration and still await the reservation decision', {timeout:45000}, async()=>{
+test('HTTP: rejects Saturday and Sunday before allocating a protocol', {timeout:45000}, async()=>{
   const f=await fixture(initialState());
   try{
     for(const [index,weekday] of [6,0].entries()){
       const date=new Date(Date.UTC(year+4,10,1,12));
       while(date.getUTCDay()!==weekday)date.setUTCDate(date.getUTCDate()+1);
       const response=await registerProcess(f,index,undefined,`${date.toISOString().slice(0,10)}T14:00`);
-      assert.ok([201,202].includes(response.status),await response.clone().text());
-      const registered=await response.json() as ProcessData;
-      assert.equal(registered.defesa.localStatus,'PENDENTE');
-      assert.equal(registered.defesa.departmentResponse,undefined,'nenhum aceite é fabricado para o fim de semana');
-      assert.equal(registered.protocolo,code(index+1));
+      assert.equal(response.status,400,await response.clone().text());
+      assert.equal((await response.json()).code,'DEFENSE_WEEKEND');
     }
+    assert.equal((await createProcess(f,0)).protocolo,code(1));
   }finally{await f.close();}
 });
 

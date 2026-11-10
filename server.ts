@@ -57,7 +57,7 @@ import {formatTccTitle} from './src/utils/formatters';
 import {studentRegistrationEmailAllowed} from './src/utils/studentRegistrationEmail';
 import {publishReviewedModel} from './server/documents/reviewedModelPublication';
 import {inspectDefenseConflicts} from './server/defenseConflicts';
-import {defenseEndAt} from './src/utils/defenseSchedule';
+import {DEFENSE_WEEKDAY_MESSAGE, defenseEndAt, isDefenseWeekday} from './src/utils/defenseSchedule';
 import {DocumentModelError} from './src/utils/documentModelErrors';
 import {isReferenceDocumentModel, REFERENCE_DOCUMENT_MODEL_LABELS} from './src/utils/referenceDocumentModels';
 import {assertCurrentSignatureRecipients,canReturnGovbrDocument,signatureJobMatchesCurrentRevision,hasCompetingSignatureArchive,type SignableDocumentType} from './server/workflow/signaturePolicy';
@@ -3983,6 +3983,9 @@ export async function createPortalApp() {
 
     if (!timestampInSaoPauloDateRange(defesa?.startAt, saoPauloCalendarDate(), '')) {
       return res.status(400).json({error:'A data da defesa deve ser hoje ou um dia posterior.',code:'DEFENSE_DATE_IN_PAST',fieldKey:'DEFESA_DATA_HORA'});
+    }
+    if (!isDefenseWeekday(saoPauloCalendarDate(new Date(defesa.startAt)))) {
+      return res.status(400).json({error:DEFENSE_WEEKDAY_MESSAGE,code:'DEFENSE_WEEKEND',fieldKey:'DEFESA_DATA_HORA'});
     }
     const academicError=validateAcademicWindow(defesa?.startAt);if(academicError&&!isAdministrative)return res.status(409).json({error:academicError,code:'ACADEMIC_WINDOW_CLOSED'});
 

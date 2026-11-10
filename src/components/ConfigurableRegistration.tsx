@@ -1,3 +1,4 @@
+import {DEFENSE_WEEKDAY_MESSAGE,isDefenseWeekday} from '../utils/defenseSchedule';
 import {ReservationCalendarPicker} from './ReservationCalendarPicker';
 import { PORTAL_REPOSITORY_CHANGED_EVENT } from '../utils/portalLiveEvents';
 import {studioSampleProcess} from '../utils/studioRuntimePreview';
@@ -188,6 +189,7 @@ export function ConfigurableRegistration({ onSuccess, onCancel, previewStudio }:
     for(const field of all?visible:selected){const value=normalizeRegistrationValue(field.fieldKey,field.fieldType,answers[field.fieldKey]);
       if(field.required&&(!String(value??'').trim()||field.fieldType==='checkbox'&&value!==true))return `Preencha: ${field.label}.`;
       if(field.fieldKey==='DEFESA_DATA_HORA'&&value&&String(value).split('T')[0]<saoPauloCalendarDate())return 'A data da defesa deve ser hoje ou um dia posterior.';
+      if(field.fieldKey==='DEFESA_DATA_HORA'&&value&&!isDefenseWeekday(String(value).split('T')[0]))return DEFENSE_WEEKDAY_MESSAGE;
       if(value&&field.fieldType==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value)))return `Revise o e-mail: ${field.label}.`;
       if(value&&field.options?.length&&!field.options.includes(String(value)))return `Selecione uma opção válida: ${field.label}.`;
       const issue=value!==undefined&&value!==''?validateStudioAnswer(value,field.validation):null;if(issue)return `${field.label}: ${issue}`;

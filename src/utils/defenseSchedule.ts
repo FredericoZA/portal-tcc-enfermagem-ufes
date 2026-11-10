@@ -9,3 +9,10 @@ export const normalizeDefenseLocation=(value:string)=>value.normalize('NFD').rep
 export function defenseIntervalsOverlap(start:number,end:number,otherStart:number,otherEnd:number):boolean {
   return start < otherEnd && otherStart < end;
 }
+
+export const DEFENSE_WEEKDAY_MESSAGE = 'Agende a defesa de segunda a sexta-feira.';
+
+export function isDefenseWeekday(date: string): boolean {
+  const weekday = new Date(date + 'T00:00:00Z').getUTCDay();
+  return weekday >= 1 && weekday <= 5;
+}

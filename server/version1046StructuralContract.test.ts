@@ -19,7 +19,7 @@ test('estado de defesa é calculado na página pública sem pós-processamento g
 test('calendário filtra colunas por eventos no React e abre agenda sem busca paralela', () => {
   const home = read('src/pages/HomePage.tsx');
   const runtime = read('src/utils/portalTableDom.ts');
-  assert.match(home, /buildCalendarMonthGrid\(year,month,calendarStarts\)/);
+  assert.match(home, /buildCalendarMonthGrid\(year,month,\[\]\)/);
   assert.match(home, /calendarGrid\.weekdays/);
   assert.match(home, /if \(hasEvents\)/);
   assert.doesNotMatch(home, /isWeekend|portal-core-calendar-weekend/);
