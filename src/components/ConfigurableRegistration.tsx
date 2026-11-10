@@ -1,3 +1,4 @@
+import {ReservationCalendarPicker} from './ReservationCalendarPicker';
 import { PORTAL_REPOSITORY_CHANGED_EVENT } from '../utils/portalLiveEvents';
 import {studioSampleProcess} from '../utils/studioRuntimePreview';
 import {INSTITUTION_ACRONYM_HELP,renderInstitutionName} from '../utils/institutionName';
@@ -16,7 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { RegistrationFieldPreview, registrationPreviewKind } from './RegistrationFieldPreview';
 import { RegistrationMembersTable } from './RegistrationMembersTable';
 import { resolveInstallationProfile } from '../utils/installationProfile';
-import { isOtherDefenseLocation, normalizeCustomLocationInput, renderCustomLocationName } from '../utils/customDefenseLocation';
+import { getCustomLocationFieldValue, isOtherDefenseLocation, normalizeCustomLocationInput, renderCustomLocationName } from '../utils/customDefenseLocation';
 import { apiClient, ApiRequestError } from '../services/apiClient';
 import { portalNotice } from '../services/portalDialogs';
 import {withBlockingPortalOperation} from '../services/portalOperations';
@@ -242,6 +243,12 @@ export function ConfigurableRegistration({ onSuccess, onCancel, previewStudio }:
     });
   };
   const renderRegistrationField=(field:RegistrationQuestion)=>{
+      if(field.fieldKey==='DEFESA_DATA_HORA'){
+        const selectedLocation=String(answers.DEFESA_LOCAL||'');
+        const location=isOtherDefenseLocation(selectedLocation)?renderCustomLocationName(getCustomLocationFieldValue(answers)):selectedLocation;
+        return <React.Fragment key={field.fieldKey}>{renderQuestion(field)}<ReservationCalendarPicker value={String(answers.DEFESA_DATA_HORA||'')} location={location} timezone={studio?.operationsPolicy?.timezone||'America/Sao_Paulo'} onSelect={value=>changeAnswer(field.fieldKey,value)}/></React.Fragment>;
+      }
+
       if(field.fieldKey==='AUTORIA_REFERENCIA')return <div key={field.fieldKey} className="sm:col-span-2 space-y-2"><label className="block text-sm font-semibold">Complete a frase para os documentos *<span className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-slate-300 bg-[var(--portal-surface-panel)] p-3"><span>{answers.TEM_ALUNO_2==='Sim'?'Estavam presentes':'Estava presente'}</span><select aria-label="Referência da autoria nos documentos" required className="portal-input !w-auto" value={String(answers.AUTORIA_REFERENCIA||'')} onChange={event=>changeAnswer('AUTORIA_REFERENCIA',event.target.value)}><option value="">Selecione…</option>{field.options?.map(option=><option key={option} value={option}>{option}</option>)}</select><strong>{registrationIdentityNames(answers)||'nome preenchido no cadastro'}.</strong></span></label><p className="sr-only" role="status" aria-live="polite">{registrationIdentitySentence(answers)}</p></div>;
       const prefix=field.fieldKey.replace(/_(?:TRATAMENTO|TITULACAO|NOME)$/,'');
       const faculty=/^(?:ORIENTADOR|COORIENTADOR|EXAMINADOR_[23])$/.test(prefix);
