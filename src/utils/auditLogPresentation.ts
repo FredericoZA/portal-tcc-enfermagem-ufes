@@ -236,6 +236,18 @@ export function auditDisplayValue(value: unknown): string {
   return redactAuditText(statuses[raw] || raw);
 }
 export function auditChangesTable(log: ReadableAuditLog): AuditChange[] {
+  // New settings events only include changed paths and a digest in AFTER.
+  // Do not compare the full BEFORE to this compact metadata: absent values
+  // are not removals, and exposing the whole previous settings is unnecessary.
+  const compactAfter = object(log.after);
+  if (log.action === 'ALTERACAO_CONFIGURACOES' && typeof compactAfter.fingerprint === 'string' && Array.isArray(compactAfter.changedPaths)) {
+    const paths = compactAfter.changedPaths.filter((path): path is string => typeof path === 'string' && path.length > 0).slice(0, 80);
+    return paths.length ? paths.map(path => ({
+      field: path.split('.').map(part => fields[part] || words(part)).join(' · '),
+      before: 'Estado anterior preservado para restauração',
+      after: 'Campo alterado (valor não duplicado no histórico)',
+    })) : [{field: 'Configurações', before: 'Estado anterior preservado para restauração', after: 'Atualização de metadados'}];
+  }
   const flatten = (value: unknown, prefix = '', out: RecordValue = {}, depth = 0): RecordValue => {
     // Historical snapshots remain intact for recovery; unnecessary personal identifiers are not displayed.
     if (hiddenField.test(prefix) || prefix.split('.').some(part => isRegistrationIdentifierField(part)) || depth > 6 || Object.keys(out).length >= 250) return out;
