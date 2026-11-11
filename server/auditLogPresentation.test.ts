@@ -162,3 +162,17 @@ test('ALTERACAO_CONFIGURACOES compacta mostra apenas campos alterados sem falsos
   assert.doesNotMatch(JSON.stringify(changes),/private|mantido|Não informado|fingerprint|truncated/);
   assert.equal(canRestoreAudit(item),true);
 });
+
+test('auditoria antiga arquivada apresenta apenas campos alterados sem hash obrigatorio',()=>{
+  const item=log({
+    action:'ALTERACAO_CONFIGURACOES',entityType:'settings',
+    before:{archivedAuditId:'log-1793000000000'},
+    after:{archivedAuditId:'log-1793000000000',changedPaths:['emailConfig'],truncated:false}
+  });
+  const changes=auditChangesTable(item);
+  assert.equal(changes.length,1);
+  assert.match(changes[0].field,/Email|E-mail|Config/i);
+  assert.match(changes[0].after,/Campo alterado/);
+  assert.doesNotMatch(JSON.stringify(changes),/archivedAuditId|Não informado|truncated/);
+  assert.equal(canRestoreAudit(item),true);
+});
