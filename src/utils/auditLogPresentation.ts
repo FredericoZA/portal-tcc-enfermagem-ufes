@@ -240,7 +240,8 @@ export function auditChangesTable(log: ReadableAuditLog): AuditChange[] {
   // Do not compare the full BEFORE to this compact metadata: absent values
   // are not removals, and exposing the whole previous settings is unnecessary.
   const compactAfter = object(log.after);
-  if (log.action === 'ALTERACAO_CONFIGURACOES' && typeof compactAfter.fingerprint === 'string' && Array.isArray(compactAfter.changedPaths)) {
+  if (log.action === 'ALTERACAO_CONFIGURACOES' && Array.isArray(compactAfter.changedPaths) &&
+    (typeof compactAfter.fingerprint === 'string' || typeof compactAfter.archivedAuditId === 'string')) {
     const paths = compactAfter.changedPaths.filter((path): path is string => typeof path === 'string' && path.length > 0).slice(0, 80);
     return paths.length ? paths.map(path => ({
       field: path.split('.').map(part => fields[part] || words(part)).join(' · '),
