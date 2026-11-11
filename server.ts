@@ -583,10 +583,20 @@ function synchronizeProcessParticipants(process:ProcessData,actor:string):void{
   let index=0;for(const[email,participant]of participants){const roles=Array.from(participant.roles);for(const role of roles)if(!removedAccessProcessKeys.has(accessProcessKey(email,process.id)))upsertAuthorizedAccess({nome:participant.nome,email,processId:process.id,role,origin:'TCC_FORM',actor});membershipsStore.push({id:`mem-${process.id}-${index++}`,processId:process.id,email,roles,active:true,createdAt:process.createdAt,updatedAt:new Date().toISOString()});}
 }
 
+// A instância inicializada por leitura leve não dispõe de auditLogs.
+// Nenhuma gravação de estado completo pode ocorrer antes de hidratar a linha
+// canônica, sob pena de substituir evidências históricas por [].
+let canonicalAuditHistoryHydrated = !getSupabaseRuntimeStatus().durablePersistenceReady;
+function requireCanonicalAuditForPersistence():void{
+  if(getSupabaseRuntimeStatus().durablePersistenceReady&&!canonicalAuditHistoryHydrated)
+    throw new Error('Gravação bloqueada: histórico de auditoria ainda não foi hidratado integralmente.');
+}
+
 let remotePersistenceQueue: Promise<void> = Promise.resolve();
 let localPortalChangeSequence = 0;
 
 async function saveRemoteSnapshotWithRecovery(snapshot:PersistedPortalState):Promise<void>{
+  requireCanonicalAuditForPersistence();
   try{await savePortalRuntimeState(snapshot);}catch(error){
     if(error instanceof Error&&error.message.includes('Conflito de concorrência')){
       const remote=await loadPortalRuntimeState<PersistedPortalState>().catch(()=>null);
@@ -607,6 +617,7 @@ function snapshotPortalState() {
 }
 
 function persistPortalState(throwOnFailure = false): void {
+  requireCanonicalAuditForPersistence();
   const snapshot = snapshotPortalState();
   if (getSupabaseRuntimeStatus().durablePersistenceReady) {
     remotePersistenceQueue = remotePersistenceQueue.catch(() => undefined).then(() => saveRemoteSnapshotWithRecovery(snapshot));
@@ -625,6 +636,7 @@ function persistPortalState(throwOnFailure = false): void {
 }
 
 async function persistPortalStateDurably():Promise<void>{
+  requireCanonicalAuditForPersistence();
   if(!getSupabaseRuntimeStatus().durablePersistenceReady){persistPortalState(true);return;}
   const snapshot=snapshotPortalState();
   remotePersistenceQueue=remotePersistenceQueue.catch(()=>undefined).then(()=>saveRemoteSnapshotWithRecovery(snapshot));
@@ -632,6 +644,7 @@ async function persistPortalStateDurably():Promise<void>{
 }
 
 function applyPersistedState(state: PersistedPortalState) {
+  if(Array.isArray(state.auditLogs))canonicalAuditHistoryHydrated=true;
   legacyAcademicRecordsStore=(state.legacyAcademicRecords||[]).map(canonicalLegacyRecord);
   registrationDraftsStore=pruneDrafts(state.registrationDrafts||{});
   evaluationDraftsStore=new Map(Object.entries(state.evaluationDrafts||{}));
