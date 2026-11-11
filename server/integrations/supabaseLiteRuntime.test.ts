@@ -60,7 +60,7 @@ test('snapshot leve armazena cache apenas quando a revisão é confirmada; não 
   assert.deepEqual(await refreshPortalRuntimeLiteState(),{settings:{version:8},processes:[]});
   assert.deepEqual(calls.slice(-2),['/rest/v1/portal_runtime_state',rpc]);
   denied=true;
-  await assert.rejects(loadPortalRuntimeLiteState(),/Supabase \\(403\\)/);
+  await assert.rejects(loadPortalRuntimeLiteState(),error=>error instanceof Error&&error.message.includes('Supabase (403)'));
 });
 
 test('RPC ausente usa leitura canônica; payload inválido falha sem aceitar cache',async t=>{
