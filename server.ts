@@ -2275,6 +2275,13 @@ export async function createPortalApp() {
         ? await loadPortalRuntimeLiteState<PersistedPortalState>()
         : await loadPortalRuntimeState<PersistedPortalState>();
       if (remote) applyPersistedState(remote);
+      else {
+        // O estado inicial vazio é permitido somente após confirmação no banco.
+        // A leitura leve vazia, por si só, não comprova ausência canônica.
+        const revision=await readPortalRuntimeRevision();
+        if(revision===null)canonicalAuditHistoryHydrated=true;
+        else throw new Error('A inicialização não conseguiu carregar o estado atual do Portal.');
+      }
     } catch (error) {
       throw Object.assign(new Error('Persistência Supabase configurada, mas indisponível.',{cause:error}),{code:typeof (error as {code?:unknown})?.code==='string'?(error as {code:string}).code:'SUPABASE_RUNTIME_READ_FAILED'});
     }
