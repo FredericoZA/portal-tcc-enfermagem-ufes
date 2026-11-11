@@ -3528,7 +3528,9 @@ export async function createPortalApp() {
       action: isStudioPublication ? (publishStudio?'PUBLICACAO_ESTUDIO_INTEGRADO':'SALVAMENTO_AUTOMATICO_ESTUDIO') : 'ALTERACAO_CONFIGURACOES',
       entityType: isStudioPublication ? 'integration_studio' : 'settings',
       entityId: isStudioPublication ? 'studio-v2' : 'global',
-      before: isStudioPublication ? summarizeStudio(before) : compactAudit!.before,
+      // A restauração administrativa depende do estado anterior íntegro.
+      // Reduzimos o AFTER, que era a segunda cópia integral redundante.
+      before: isStudioPublication ? summarizeStudio(before) : before,
       after: isStudioPublication ? summarizeStudio(currentSettings) : compactAudit!.after,
       timestamp: new Date().toISOString()
     });
