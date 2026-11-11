@@ -76,5 +76,8 @@ test('o middleware preserva o catalogo carregado quando a projeção omite acerv
   const server=await readFile('server.ts','utf8');
   assert.match(server,/if \(Array\.isArray\(state\.legacyAcademicRecords\)\) legacyAcademicRecordsStore=/);
   assert.match(server,/isLeanRuntimeRead\(req\.method,req\.path\)/);
+  assert.match(server,/const remote = liteRuntimeReadsEnabled\s*\? await loadPortalRuntimeLeanState/);
+  assert.match(server,/const LITE_RUNTIME_READ_PATHS = new Set/);
+  assert.match(server,/\'\/public\/repository\'/);
   assert.match(server,/await readArchivedSettingsBefore\(log\.id\)/);
 });
