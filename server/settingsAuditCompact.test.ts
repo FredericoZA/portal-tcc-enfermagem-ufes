@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { compactSettingsAudit } from './settingsAuditCompact';
@@ -27,4 +28,10 @@ test('log compacto não interpreta rascunhos grandes nem perde indicacao de muda
   const x = compactSettingsAudit(before, after);
   assert.deepEqual(x.after.changedPaths, ['integrationStudio.matrixRows']);
   assert.equal(x.after.truncated, false);
+});
+
+test('o log administrativo conserva o BEFORE restauravel e compacta apenas o AFTER', () => {
+  const source=readFileSync('server.ts','utf8');
+  assert.match(source,/before: isStudioPublication \? summarizeStudio\(before\) : before,/);
+  assert.match(source,/after: isStudioPublication \? summarizeStudio\(currentSettings\) : compactAudit!\.after,/);
 });
