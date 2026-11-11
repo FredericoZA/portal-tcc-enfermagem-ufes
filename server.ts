@@ -1755,7 +1755,8 @@ async function runWorkflowMaintenance(processId?:string){
   const selectedProcesses=processId?processesStore.filter(process=>process.id===processId):processesStore;
   const now=new Date(),studio=currentSettings.integrationStudio,policy=workflowPolicy(studio);
   const previousDraftCount=Object.keys(registrationDraftsStore).length;if(!processId)registrationDraftsStore=pruneDrafts(registrationDraftsStore,now);
-  const completedEvaluationDraftsRemoved=pruneFinalizedEvaluationDrafts(selectedProcesses,evaluationDraftsStore,process=>ataArchived(process,signatureJobsStore));
+  const completedEvaluationDraftsRemoved=pruneFinalizedEvaluationDrafts(selectedProcesses,evaluationDraftsStore,process=>
+    !legalHoldsStore.some(hold=>hold.processId===process.id&&hold.active) && ataArchived(process,signatureJobsStore));
   // Resolve only acknowledgements already persisted by Gmail; an ambiguous send
   // remains visible and never becomes an automatic new delivery.
   for(const record of reminderRecordsStore.filter(item=>item.status!=='SENT'&&(!processId||item.processId===processId))){
