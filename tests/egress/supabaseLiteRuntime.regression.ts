@@ -36,7 +36,7 @@ test('lite RPC entrega uma revisão atômica, preserva o banco e nega usuários 
 });
 
 test('snapshot leve armazena cache apenas quando a revisão é confirmada; não usa histórico',async t=>{
-  const env={SUPABASE_URL:'https://lite-egress.invalid',SUPABASE_SECRET_KEY:fixtureServerKey,PORTAL_PERSISTENCE_PROVIDER:'supabase',PORTAL_RUNTIME_WIRE_SNAPSHOT:'false',PORTAL_RUNTIME_AUDIT_DELTA:'false'};
+  const env={SUPABASE_URL:'https://lite-egress.invalid',SUPABASE_SECRET_KEY:String(fixtureServerKey),PORTAL_PERSISTENCE_PROVIDER:'supabase',PORTAL_RUNTIME_WIRE_SNAPSHOT:'false',PORTAL_RUNTIME_AUDIT_DELTA:'false'};
   for(const [key,value] of Object.entries(env)){
     const prev=process.env[key];process.env[key]=value;
     t.after(()=>{if(prev===undefined)delete process.env[key];else process.env[key]=prev;});
@@ -65,7 +65,7 @@ test('snapshot leve armazena cache apenas quando a revisão é confirmada; não 
 });
 
 test('RPC ausente usa leitura canônica; payload inválido falha sem aceitar cache',async t=>{
-  const env={SUPABASE_URL:'https://lite-missing.invalid',SUPABASE_SECRET_KEY:fixtureServerKey,PORTAL_PERSISTENCE_PROVIDER:'supabase',PORTAL_RUNTIME_WIRE_SNAPSHOT:'false',PORTAL_RUNTIME_AUDIT_DELTA:'false'};
+  const env={SUPABASE_URL:'https://lite-missing.invalid',SUPABASE_SECRET_KEY:String(fixtureServerKey),PORTAL_PERSISTENCE_PROVIDER:'supabase',PORTAL_RUNTIME_WIRE_SNAPSHOT:'false',PORTAL_RUNTIME_AUDIT_DELTA:'false'};
   for(const [key,value] of Object.entries(env)){
     const prev=process.env[key];process.env[key]=value;
     t.after(()=>{if(prev===undefined)delete process.env[key];else process.env[key]=prev;});
