@@ -508,6 +508,64 @@ export async function refreshPortalRuntimeLiteState<T extends object>():Promise<
   return loadPortalRuntimeLiteState<T>();
 }
 
+/**
+ * Lean reads are used only on explicitly whitelisted GETs. The omitted legacy
+ * catalogue stays hydrated from the bootstrap; it is never written or replaced
+ * from an incomplete payload. Full snapshot and CAS remain mandatory on writes.
+ */
+let cachedLeanSnapshot:{endpoint:string;revision:number;payload:object}|undefined;
+export async function loadPortalRuntimeLeanState<T extends object>():Promise<T|null>{
+  if(!getSupabaseRuntimeStatus().durablePersistenceReady)return null;
+  const endpoint=stateEndpoint();
+  const response=await readSupabase(
+    `${supabaseUrl()}/rest/v1/rpc/portal_read_runtime_lean_v1`,20_000,'{}',true
+  );
+  if(response.status===404){
+    const detail=await response.clone().json().catch(()=>null);
+    if(detail?.code==='PGRST202')return loadPortalRuntimeLiteState<T>();
+  }
+  if(!response.ok)throw await runtimeReadFailure(response,'SNAPSHOT');
+  const rows:unknown=await response.json();
+  if(!Array.isArray(rows)||rows.length>1)throw new Error('A projeção mínima retornou um estado inválido.');
+  const row=rows[0];
+  if(!row){
+    const revision=await readPortalRuntimeRevision();
+    if(revision!==null)throw new Error('O estado operacional atual não foi encontrado.');
+    return null;
+  }
+  const {payload,revision}=row;
+  if(!payload||typeof payload!=='object'||Array.isArray(payload)||
+    Object.hasOwn(payload,'auditLogs')||Object.hasOwn(payload,'legacyAcademicRecords')||
+    !Number.isSafeInteger(revision)||revision<1)throw new Error('A projeção mínima retornou dados ou revisão inválidos.');
+  cachedLeanSnapshot={endpoint,revision,payload};
+  return structuredClone(payload) as T;
+}
+export async function refreshPortalRuntimeLeanState<T extends object>():Promise<T|null>{
+  if(!getSupabaseRuntimeStatus().durablePersistenceReady)return null;
+  const cached=cachedLeanSnapshot;
+  if(cached?.endpoint===stateEndpoint()){
+    const revision=await readPortalRuntimeRevision();
+    if(revision===null)throw new Error('O estado persistido não foi encontrado.');
+    if(revision===cached.revision)return structuredClone(cached.payload) as T;
+  }
+  return loadPortalRuntimeLeanState<T>();
+}
+
+/** A historical settings snapshot is recoverable only on a private, authorized
+ * admin rollback. The normalized immutable audit event is its source of truth.
+ */
+export async function readArchivedSettingsBefore(externalId:string):Promise<Record<string,unknown>|null>{
+  if(!/^log-[0-9]{10,16}$/.test(externalId))throw new Error('Identificador de auditoria arquivada inválido.');
+  if(!getSupabaseRuntimeStatus().durablePersistenceReady)throw new Error('Histórico arquivado indisponível no modo local.');
+  const url=`${supabaseUrl()}/rest/v1/portal_audit_events?external_id=eq.${encodeURIComponent(externalId)}&event_type=eq.ALTERACAO_CONFIGURACOES&select=details&limit=1`;
+  const response=await readSupabase(url,12_000);
+  if(!response.ok)throw await runtimeReadFailure(response,'SNAPSHOT');
+  const rows:unknown=await response.json();
+  if(!Array.isArray(rows)||rows.length>1)throw new Error('Auditoria arquivada inválida.');
+  const value=rows[0]?.details?.before;
+  return value&&typeof value==='object'&&!Array.isArray(value)?value:null;
+}
+
 /** Resolve an ambiguous acknowledgement by reading the database, never by repeating a write. */
 async function confirmAmbiguousRuntimeCommit(endpoint:string,expected:number,nextPayload:object):Promise<boolean>{
   try{
