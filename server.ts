@@ -175,7 +175,7 @@ import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngi
 import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie } from './server/security/firebaseAuth';
 import {astenStatusCheckDue,ASTEN_STATUS_CHECK_INTERVAL_MS} from './server/workflow/astenAtaStatus';
 import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeDestination, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSigningProfile, getPersistentAstenConnection, getAstenSignerPhones, getPersistentAstenStatus, inferAstenJobStatus, safeCompareWebhookSecret } from './server/integrations/asten';
-import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, refreshPortalRuntimeLeanState, readArchivedSettingsBefore, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
+import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, loadPortalRuntimeLeanState, refreshPortalRuntimeLeanState, readArchivedSettingsBefore, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
 import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGeneratedInvitation, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePrivatePublicationSource, withdrawDriveFilePublicAccess, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadSignedPdfToDrive, reserveProcessFormPdfId, readProcessFormPdfById, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
@@ -2296,7 +2296,7 @@ export async function createPortalApp() {
   if (getSupabaseRuntimeStatus().durablePersistenceReady) {
     try {
       const remote = liteRuntimeReadsEnabled
-        ? await loadPortalRuntimeLiteState<PersistedPortalState>()
+        ? await loadPortalRuntimeLeanState<PersistedPortalState>()
         : await loadPortalRuntimeState<PersistedPortalState>();
       if (remote) applyPersistedState(remote);
       else {
