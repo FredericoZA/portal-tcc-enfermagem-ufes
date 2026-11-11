@@ -41,7 +41,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npm run test:unit 2>&1 | tee unit-test.log
+          node --import tsx --test --test-concurrency=2 --test-force-exit "server/**/*.test.ts" 2>&1 | tee unit-test.log
       - name: Preservar diagnóstico dos testes unitários
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
