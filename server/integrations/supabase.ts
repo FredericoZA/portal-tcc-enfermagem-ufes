@@ -508,6 +508,44 @@ export async function refreshPortalRuntimeLiteState<T extends object>():Promise<
   return loadPortalRuntimeLiteState<T>();
 }
 
+/**
+ * Only for explicitly whitelisted GETs that do not require the legacy catalog.
+ * This independent read cache must never supply the CAS write baseline.
+ */
+let cachedCoreSnapshot:{endpoint:string;revision:number;payload:object}|undefined;
+export async function loadPortalRuntimeCoreState<T extends object>():Promise<T|null>{
+  if(!getSupabaseRuntimeStatus().durablePersistenceReady)return null;
+  const endpoint=stateEndpoint();
+  const response=await readSupabase(`${supabaseUrl()}/rest/v1/rpc/portal_read_runtime_core_v1`,20_000,'{}',true);
+  if(response.status===404){
+    const detail=await response.clone().json().catch(()=>null);
+    if(detail?.code==='PGRST202')return loadPortalRuntimeLiteState<T>();
+  }
+  if(!response.ok)throw await runtimeReadFailure(response,'SNAPSHOT');
+  const rows:unknown=await response.json();
+  if(!Array.isArray(rows)||rows.length>1)throw new Error('A leitura compacta retornou uma resposta inválida.');
+  if(!rows.length){
+    if(knownRevision!==null&&knownRevision>0)throw new Error('O estado persistido não foi encontrado no Supabase.');
+    return null;
+  }
+  const {revision,payload}=rows[0];
+  if(!Number.isSafeInteger(revision)||revision<1||!payload||typeof payload!=='object'||Array.isArray(payload)
+    ||Object.hasOwn(payload,'auditLogs')||Object.hasOwn(payload,'legacyAcademicRecords'))
+    throw new Error('O Supabase retornou uma projeção operacional inválida.');
+  cachedCoreSnapshot={endpoint,revision,payload};
+  return structuredClone(payload) as T;
+}
+export async function refreshPortalRuntimeCoreState<T extends object>():Promise<T|null>{
+  if(!getSupabaseRuntimeStatus().durablePersistenceReady)return null;
+  const cached=cachedCoreSnapshot;
+  if(cached?.endpoint===stateEndpoint()){
+    const revision=await readPortalRuntimeRevision();
+    if(revision===null)throw new Error('O estado persistido não foi encontrado no Supabase.');
+    if(revision===cached.revision)return structuredClone(cached.payload) as T;
+  }
+  return loadPortalRuntimeCoreState<T>();
+}
+
 /** Resolve an ambiguous acknowledgement by reading the database, never by repeating a write. */
 async function confirmAmbiguousRuntimeCommit(endpoint:string,expected:number,nextPayload:object):Promise<boolean>{
   try{
