@@ -175,7 +175,7 @@ import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngi
 import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie } from './server/security/firebaseAuth';
 import {astenStatusCheckDue,ASTEN_STATUS_CHECK_INTERVAL_MS} from './server/workflow/astenAtaStatus';
 import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeDestination, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSigningProfile, getPersistentAstenConnection, getAstenSignerPhones, getPersistentAstenStatus, inferAstenJobStatus, safeCompareWebhookSecret } from './server/integrations/asten';
-import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
+import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, refreshPortalRuntimeLeanState, readArchivedSettingsBefore, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
 import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGeneratedInvitation, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePrivatePublicationSource, withdrawDriveFilePublicAccess, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadSignedPdfToDrive, reserveProcessFormPdfId, readProcessFormPdfById, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
@@ -646,7 +646,7 @@ async function persistPortalStateDurably():Promise<void>{
 
 function applyPersistedState(state: PersistedPortalState) {
   if(Array.isArray(state.auditLogs))canonicalAuditHistoryHydrated=true;
-  legacyAcademicRecordsStore=(state.legacyAcademicRecords||[]).map(canonicalLegacyRecord);
+  if (Array.isArray(state.legacyAcademicRecords)) legacyAcademicRecordsStore=state.legacyAcademicRecords.map(canonicalLegacyRecord);
   registrationDraftsStore=pruneDrafts(state.registrationDrafts||{});
   evaluationDraftsStore=new Map(Object.entries(state.evaluationDrafts||{}));
   reminderRecordsStore=state.reminders||[];
@@ -2239,6 +2239,26 @@ const LITE_RUNTIME_READ_PATHS = new Set([
   '/administration-transfers/pending','/admin/administration-transfers',
   '/sync/version',
 ]);
+// O acervo historico nao participa de rotas sem consultas a TCCs legados.
+// Rotas de repositorio, indicadores e exportacoes mantem a projecao completa.
+const LEAN_RUNTIME_READ_PATHS = new Set([
+  '/me','/settings','/setup/status','/capabilities',
+  '/academic-cycles','/admin/academic-cycles','/admin/feature-flags',
+  '/admin/installation-profile','/admin/metrics','/admin/metrics/definitions',
+  '/admin/analytics/advanced','/public/installation-profile','/public/calendar',
+  '/processes','/registration/bootstrap','/registration/draft',
+  '/forms/registration-schema','/admin/studio/versions',
+  '/notification-preferences','/administration-transfers/pending',
+  '/admin/administration-transfers','/sync/version'
+]);
+function isLeanRuntimeRead(method:string,requestPath:string):boolean{
+  return method==='GET' && (
+    LEAN_RUNTIME_READ_PATHS.has(requestPath)
+    || (requestPath.startsWith('/processes/') && requestPath.slice('/processes/'.length).length>0 && !requestPath.slice('/processes/'.length).includes('/'))
+    || (requestPath.startsWith('/table-preferences/') && requestPath.slice('/table-preferences/'.length).length>0 && !requestPath.slice('/table-preferences/'.length).includes('/'))
+  );
+}
+
 function isLiteRuntimeRead(method:string,requestPath:string):boolean{
   return method==='GET' && (
     LITE_RUNTIME_READ_PATHS.has(requestPath)
@@ -2410,9 +2430,11 @@ export async function createPortalApp() {
       finishPreviousWrites?.();
       const finishHydration=registrationTiming?.measure('hydrate');
       let remote:PersistedPortalState|null;
-      try{remote=liteRuntimeReadsEnabled&&isLiteRuntimeRead(req.method,req.path)
-        ?await refreshPortalRuntimeLiteState<PersistedPortalState>()
-        :await refreshPortalRuntimeState<PersistedPortalState>();}finally{finishHydration?.();}
+      try{remote=liteRuntimeReadsEnabled&&isLeanRuntimeRead(req.method,req.path)
+        ?await refreshPortalRuntimeLeanState<PersistedPortalState>()
+        :liteRuntimeReadsEnabled&&isLiteRuntimeRead(req.method,req.path)
+          ?await refreshPortalRuntimeLiteState<PersistedPortalState>()
+          :await refreshPortalRuntimeState<PersistedPortalState>();}finally{finishHydration?.();}
       if(res.destroyed||req.aborted)return;
       const finishApplyState=registrationTiming?.measure('apply_state');
       try{if(remote)applyPersistedState(remote);}finally{finishApplyState?.();}
@@ -6428,7 +6450,7 @@ ${auditChanges(log)}`).join('\n\n');
   });
 
   // POST /api/admin/rollback-log/:logId (Guarantee Rollback / Restoration)
-  app.post('/api/admin/rollback-log/:logId', requireAuthenticated, requireAdministrativeOperator, (req, res) => {
+  app.post('/api/admin/rollback-log/:logId', requireAuthenticated, requireAdministrativeOperator, async (req, res) => {
     const identity=getPortalIdentity(req)!;const actorEmail=identity.email;
     const { globalRoles } = getUserRolesForEmail(actorEmail);
 
@@ -6442,7 +6464,17 @@ ${auditChanges(log)}`).join('\n\n');
       return res.status(404).json({ error: 'Registro de edição não encontrado.' });
     }
 
-    const snapshotToRestore = log.before || log.after;
+    let snapshotToRestore = log.before || log.after;
+    // Historical settings events may carry only a compact reference to the
+    // immutable normalized audit row. Resolve it on demand, AFTER authorization.
+    if(log.entityType==='settings'&&log.action==='ALTERACAO_CONFIGURACOES'&&
+      snapshotToRestore&&typeof snapshotToRestore==='object'&&
+      (snapshotToRestore as {archivedAuditId?:unknown}).archivedAuditId){
+      if((snapshotToRestore as {archivedAuditId?:unknown}).archivedAuditId!==log.id)
+        return res.status(409).json({error:'Vínculo do histórico arquivado inválido.'});
+      try{snapshotToRestore=await readArchivedSettingsBefore(log.id) as typeof snapshotToRestore;}
+      catch{return res.status(503).json({error:'Não foi possível confirmar o histórico arquivado. Nenhuma alteração foi aplicada.'});}
+    }
     if (!snapshotToRestore) {
       return res.status(400).json({ error: 'Nenhum estado válido encontrado neste registro para restauração.' });
     }
