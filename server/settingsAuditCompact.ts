@@ -19,7 +19,7 @@ function isRecord(value: unknown): value is AuditValue {
  * snapshots. Full settings remain in the canonical state, not in audit events.
  * Paths are metadata; values, OAuth secrets and document templates are omitted.
  */
-export function compactSettingsAudit(before: AuditValue, after: AuditValue): CompactAudit {
+export function compactSettingsAudit(before: object, after: object): CompactAudit {
   const paths: string[] = [];
   let truncated = false;
   const visit = (oldValue: unknown, newValue: unknown, path: string, depth: number): void => {
