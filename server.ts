@@ -2228,8 +2228,8 @@ const LITE_RUNTIME_READ_PATHS = new Set([
 function isLiteRuntimeRead(method:string,requestPath:string):boolean{
   return method==='GET' && (
     LITE_RUNTIME_READ_PATHS.has(requestPath)
-    || /^\\/processes\\/[^/]+$/.test(requestPath)
-    || /^\\/table-preferences\\/[^/]+$/.test(requestPath)
+    || (requestPath.startsWith('/processes/') && requestPath.slice('/processes/'.length).length>0 && !requestPath.slice('/processes/'.length).includes('/'))
+    || (requestPath.startsWith('/table-preferences/') && requestPath.slice('/table-preferences/'.length).length>0 && !requestPath.slice('/table-preferences/'.length).includes('/'))
   );
 }
 
