@@ -458,6 +458,56 @@ export async function refreshPortalRuntimeState<T extends object>(): Promise<T |
   return loadPortalRuntimeState<T>();
 }
 
+/**
+ * Pequeno snapshot autenticado e somente-leitura. Não altera o cache canônico,
+ * que exige auditoria integral antes de qualquer escrita ou leitura de logs.
+ * Omissão de RPC só ocorre durante implantação gradual; 401/403/5xx não
+ * autorizam usar estado antigo ou dispensar verificações de acesso.
+ */
+let cachedLiteSnapshot: {endpoint:string;revision:number;payload:object}|undefined;
+
+export async function loadPortalRuntimeLiteState<T extends object>():Promise<T|null>{
+  if(!getSupabaseRuntimeStatus().durablePersistenceReady)return null;
+  const endpoint=stateEndpoint();
+  const response=await readSupabase(
+    `${supabaseUrl()}/rest/v1/rpc/portal_read_runtime_lite_v1`,
+    20_000, '{}', true
+  );
+  if(response.status===404){
+    const detail=await response.clone().json().catch(()=>null);
+    if(detail?.code==='PGRST202')return loadPortalRuntimeState<T>();
+  }
+  if(!response.ok)throw await runtimeReadFailure(response,'SNAPSHOT');
+  const rows:unknown=await response.json();
+  if(!Array.isArray(rows)||rows.length>1)throw new Error('A projeção reduzida retornou um estado inválido.');
+  const row=rows[0];
+  if(!row){
+    if(knownRevision!==null&&knownRevision>0)throw new Error('O estado persistido não foi encontrado no Supabase.');
+    return null;
+  }
+  const {payload,revision}=row;
+  if(!payload||typeof payload!=='object'||Array.isArray(payload)
+    ||Object.hasOwn(payload,'auditLogs')
+    ||!Number.isSafeInteger(revision)||revision<1){
+    throw new Error('A projeção reduzida retornou uma revisão ou um payload inválido.');
+  }
+  // Apenas revisão confirmada + leitura isolada da mesma linha do banco.
+  cachedLiteSnapshot={endpoint,revision,payload};
+  return structuredClone(payload) as T;
+}
+
+/** Mesmo GET de revisão existente; uma atualização não reutiliza snapshot antigo. */
+export async function refreshPortalRuntimeLiteState<T extends object>():Promise<T|null>{
+  if(!getSupabaseRuntimeStatus().durablePersistenceReady)return null;
+  const cached=cachedLiteSnapshot;
+  if(cached?.endpoint===stateEndpoint()){
+    const revision=await readPortalRuntimeRevision();
+    if(revision===null)throw new Error('O estado persistido não foi encontrado no Supabase.');
+    if(revision===cached.revision)return structuredClone(cached.payload) as T;
+  }
+  return loadPortalRuntimeLiteState<T>();
+}
+
 /** Resolve an ambiguous acknowledgement by reading the database, never by repeating a write. */
 async function confirmAmbiguousRuntimeCommit(endpoint:string,expected:number,nextPayload:object):Promise<boolean>{
   try{
