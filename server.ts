@@ -2466,14 +2466,21 @@ export async function createPortalApp() {
       res.status(503).json({error:'Não foi possível consultar a atualização do portal.'});
     }
   });
-  // Resposta mínima para atualização automática. A revisão já foi carregada
-  // pelo middleware que valida o estado durável antes de cada rota autenticada.
-  app.get('/api/sync/version',requireAuthenticated,(_req,res)=>{
+  // A leitura leve mantém uma revisão independente, sem contaminar o CAS
+  // canônico. Consultar a revisão de banco para não anunciar "0" ou valor
+  // obsoleto em workers hidratados apenas pelo snapshot reduzido.
+  app.get('/api/sync/version',requireAuthenticated,async(_req,res)=>{
     res.setHeader('Cache-Control','private, no-store, max-age=0');
-    const revision=getSupabaseRuntimeStatus().durablePersistenceReady
-      ? currentPortalRuntimeRevision()
-      : localPortalChangeSequence;
-    res.json({revision:revision ?? 0});
+    try{
+      const revision=getSupabaseRuntimeStatus().durablePersistenceReady
+        ? (liteRuntimeReadsEnabled
+            ? await readPortalRuntimeRevision()
+            : currentPortalRuntimeRevision())
+        : localPortalChangeSequence;
+      res.json({revision:revision ?? 0});
+    }catch{
+      res.status(503).json({error:'Não foi possível consultar a atualização do Portal.'});
+    }
   });
 
   const requireAdministrativeOperator=requireAdministrator;
