@@ -25,12 +25,15 @@ test('expurgo conservador conserva evidencias, backup e CAS; e idempotente',asyn
     const archived={id:'log-1793000000000',action:'ALTERACAO_CONFIGURACOES',
       entityType:'settings',before:{site:'anterior',unmodified:'mantido'},
       after:{site:'novo',unmodified:'mantido'},timestamp:'2026-11-01'};
+    const compact={...archived,id:'log-1793000000003',
+      after:{fingerprint:'a'.repeat(64),changedPaths:['site'],truncated:false}};
     const noArchive={...archived,id:'log-1793000000001',before:{site:'outro'}};
     const processLog={id:'log-1793000000002',action:'CRIACAO_PROCESSO',processId:'tcc-1',after:{status:'ABERTO'}};
-    const source={auditLogs:[archived,noArchive,processLog],legacyAcademicRecords:[{id:'legado'}],settings:{current:'sem mudanca'}};
+    const source={auditLogs:[archived,compact,noArchive,processLog],legacyAcademicRecords:[{id:'legado'}],settings:{current:'sem mudanca'}};
     await db.query('insert into portal_runtime_state(id,revision,payload) values($1,5,$2::jsonb)',['global',JSON.stringify(source)]);
-    await db.query('insert into portal_audit_events(external_id,event_type,details) values($1,$2,$3::jsonb)',[
-      archived.id,'ALTERACAO_CONFIGURACOES',JSON.stringify({before:archived.before,after:archived.after})
+    await db.query('insert into portal_audit_events(external_id,event_type,details) values($1,$2,$3::jsonb),($4,$5,$6::jsonb)',[
+      archived.id,'ALTERACAO_CONFIGURACOES',JSON.stringify({before:archived.before,after:archived.after}),
+      compact.id,'ALTERACAO_CONFIGURACOES',JSON.stringify({before:compact.before,after:compact.after})
     ]);
     const sql=await readFile('supabase/maintenance/20261111_compact_settings_audit.sql','utf8');
     await db.exec(sql);
@@ -38,8 +41,10 @@ test('expurgo conservador conserva evidencias, backup e CAS; e idempotente',asyn
     assert.equal(state.revision,6);
     assert.deepEqual(state.payload.auditLogs[0].before,{archivedAuditId:archived.id});
     assert.deepEqual(state.payload.auditLogs[0].after.changedPaths,['site']);
-    assert.deepEqual(state.payload.auditLogs[1],noArchive);
-    assert.deepEqual(state.payload.auditLogs[2],processLog);
+    assert.deepEqual(state.payload.auditLogs[1].after,{...compact.after,archivedAuditId:compact.id});
+    assert.deepEqual(state.payload.auditLogs[1].before,{archivedAuditId:compact.id});
+    assert.deepEqual(state.payload.auditLogs[2],noArchive);
+    assert.deepEqual(state.payload.auditLogs[3],processLog);
     assert.deepEqual(state.payload.legacyAcademicRecords,source.legacyAcademicRecords);
     assert.deepEqual(state.payload.settings,source.settings);
     const backup=(await db.query<{payload:any}>('select payload from portal_runtime_state_backups')).rows;
