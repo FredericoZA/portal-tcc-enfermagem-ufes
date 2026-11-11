@@ -175,7 +175,7 @@ import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngi
 import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie } from './server/security/firebaseAuth';
 import {astenStatusCheckDue,ASTEN_STATUS_CHECK_INTERVAL_MS} from './server/workflow/astenAtaStatus';
 import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeDestination, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSigningProfile, getPersistentAstenConnection, getAstenSignerPhones, getPersistentAstenStatus, inferAstenJobStatus, safeCompareWebhookSecret } from './server/integrations/asten';
-import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
+import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, loadPortalRuntimeCoreState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, refreshPortalRuntimeCoreState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
 import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGeneratedInvitation, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePrivatePublicationSource, withdrawDriveFilePublicAccess, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadSignedPdfToDrive, reserveProcessFormPdfId, readProcessFormPdfById, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
@@ -2239,6 +2239,26 @@ const LITE_RUNTIME_READ_PATHS = new Set([
   '/administration-transfers/pending','/admin/administration-transfers',
   '/sync/version',
 ]);
+// These handlers require operational state, not archived legacy TCCs or audit.
+// Public repository, historical catalog and audit endpoints are deliberately excluded.
+const CORE_RUNTIME_GET_PATHS = new Set([
+  '/me','/settings','/setup/status','/capabilities',
+  '/academic-cycles','/admin/academic-cycles','/admin/feature-flags',
+  '/admin/installation-profile','/admin/metrics','/admin/metrics/definitions',
+  '/admin/analytics/advanced','/public/installation-profile',
+  '/public/calendar','/processes','/registration/bootstrap',
+  '/registration/draft','/forms/registration-schema',
+  '/admin/studio/versions','/notification-preferences',
+  '/administration-transfers/pending','/admin/administration-transfers',
+  '/sync/version',
+]);
+function isCoreRuntimeRead(method:string,requestPath:string):boolean{
+  return method==='GET' && (
+    CORE_RUNTIME_GET_PATHS.has(requestPath)
+    || (requestPath.startsWith('/processes/') && requestPath.slice('/processes/'.length).length>0 && !requestPath.slice('/processes/'.length).includes('/'))
+    || (requestPath.startsWith('/table-preferences/') && requestPath.slice('/table-preferences/'.length).length>0 && !requestPath.slice('/table-preferences/'.length).includes('/'))
+  );
+}
 function isLiteRuntimeRead(method:string,requestPath:string):boolean{
   return method==='GET' && (
     LITE_RUNTIME_READ_PATHS.has(requestPath)
@@ -2273,7 +2293,7 @@ export async function createPortalApp() {
   if (getSupabaseRuntimeStatus().durablePersistenceReady) {
     try {
       const remote = liteRuntimeReadsEnabled
-        ? await loadPortalRuntimeLiteState<PersistedPortalState>()
+        ? await loadPortalRuntimeCoreState<PersistedPortalState>()
         : await loadPortalRuntimeState<PersistedPortalState>();
       if (remote) applyPersistedState(remote);
       else {
@@ -2410,9 +2430,11 @@ export async function createPortalApp() {
       finishPreviousWrites?.();
       const finishHydration=registrationTiming?.measure('hydrate');
       let remote:PersistedPortalState|null;
-      try{remote=liteRuntimeReadsEnabled&&isLiteRuntimeRead(req.method,req.path)
-        ?await refreshPortalRuntimeLiteState<PersistedPortalState>()
-        :await refreshPortalRuntimeState<PersistedPortalState>();}finally{finishHydration?.();}
+      try{remote=liteRuntimeReadsEnabled&&isCoreRuntimeRead(req.method,req.path)
+        ?await refreshPortalRuntimeCoreState<PersistedPortalState>()
+        :liteRuntimeReadsEnabled&&isLiteRuntimeRead(req.method,req.path)
+          ?await refreshPortalRuntimeLiteState<PersistedPortalState>()
+          :await refreshPortalRuntimeState<PersistedPortalState>();}finally{finishHydration?.();}
       if(res.destroyed||req.aborted)return;
       const finishApplyState=registrationTiming?.measure('apply_state');
       try{if(remote)applyPersistedState(remote);}finally{finishApplyState?.();}
