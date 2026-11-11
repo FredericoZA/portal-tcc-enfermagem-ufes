@@ -600,9 +600,9 @@ export const AuditLogsTable: React.FC<Omit<AuditAndSecuritySectionProps, 'viewMo
               </div>
 
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                <span className="font-extrabold text-slate-800 normal-case block text-[10px]">Estado Atual:</span>
+                <span className="font-extrabold text-slate-800 normal-case block text-[10px]">{selectedLogForDiff.action === 'ALTERACAO_CONFIGURACOES' && Array.isArray(selectedLogForDiff.after?.changedPaths) ? 'Campos alterados (registro compacto):' : 'Estado Atual:'}</span>
                 <pre className="font-mono text-[10px] bg-slate-100 p-2 rounded max-h-48 overflow-y-auto custom-scrollbar">
-                  {selectedLogForDiff.after ? JSON.stringify(selectedLogForDiff.after, null, 2) : '(Sem dados registrados)'}
+                  {selectedLogForDiff.action === 'ALTERACAO_CONFIGURACOES' && Array.isArray(selectedLogForDiff.after?.changedPaths) ? (selectedLogForDiff.after.changedPaths.join('\n') || 'Atualização de metadados') : selectedLogForDiff.after ? JSON.stringify(selectedLogForDiff.after, null, 2) : '(Sem dados registrados)'}
                 </pre>
               </div>
             </div>
