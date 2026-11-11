@@ -20,6 +20,7 @@ test('maintenance starts its work budget after confirming queued state', async()
   const ports={
     Date:Clock,currentSettings:{},workflowPolicy:()=>({}),configuredRoomReservationDepartmentEmail:()=>'department@example.invalid',
     registrationDraftsStore:{},pruneDrafts:(store:unknown)=>store,
+    pruneFinalizedEvaluationDrafts:()=>0,evaluationDraftsStore:new Map(),legalHoldsStore:[],
     reminderRecordsStore:[],emailDeliveriesStore:[],signatureJobsStore:[],processesStore:[process],
     workflowRunsStore:[],formArchiveJobsStore:[],selectConfirmedInvitationRecovery:()=>undefined,
     persistPortalStateDurably:async()=>{clock+=21_000;},
@@ -44,7 +45,7 @@ test('maintenance resumes repository workflow identity before dispatch and prese
   const process:any={id:'fixture',protocolo:'TCC - 00002',dataRevision:4,acervo:{submittedBy:'author@example.invalid'},astenSignatureIntent:{documentType:options.type||'TERMO',revision:4,studioRevision:3,queuedAt:'2000-01-01T00:00:00Z'}};
   const original:any={processId:process.id,eventCode:repositorySignatureEvent(process.astenSignatureIntent.documentType),sourceDataRevision:4,studioRevision:options.studioChanged?2:3,actorEmail:'original@example.invalid',eventVariables:{original:'value'},startedAt:'2026-11-08',actions:[{status:'COMPLETED',idempotencyKey:'original-key'}]};
   let commits=0,actions=0,dispatches=0;let observed:any[]=[];
-  const ports:any={Date,currentSettings:{integrationStudio:{revision:3}},workflowPolicy:()=>({}),configuredRoomReservationDepartmentEmail:()=>'department@example.invalid',registrationDraftsStore:{},pruneDrafts:(s:unknown)=>s,reminderRecordsStore:[],emailDeliveriesStore:[],signatureJobsStore:[],processesStore:[process],workflowRunsStore:[original],formArchiveJobsStore:[],selectConfirmedInvitationRecovery:()=>undefined,
+  const ports:any={Date,currentSettings:{integrationStudio:{revision:3}},workflowPolicy:()=>({}),configuredRoomReservationDepartmentEmail:()=>'department@example.invalid',registrationDraftsStore:{},pruneDrafts:(s:unknown)=>s,pruneFinalizedEvaluationDrafts:()=>0,evaluationDraftsStore:new Map(),legalHoldsStore:[],reminderRecordsStore:[],emailDeliveriesStore:[],signatureJobsStore:[],processesStore:[process],workflowRunsStore:[original],formArchiveJobsStore:[],selectConfirmedInvitationRecovery:()=>undefined,
    persistPortalStateDurably:async()=>{commits++;if(options.claimFailed&&commits===2)throw Error('CAS conflict');},automaticAstenEnabled:()=>true,
    canRecoverRepositorySignature:()=>!options.ineligible,repositorySignatureEvent,safeRepositorySignatureError,
    assertSignatureEligibility:()=>{if(options.eligibilityDenied)throw Error('Registered signature eligibility denied');},
