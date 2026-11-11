@@ -182,6 +182,7 @@ import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGen
 import { renderGoogleDriveTemplateToPdf,saveReviewedAta,exportReviewedAta,discardAtaCopy,cleanupExpiredAtaPreviews } from './server/integrations/googleDocsRenderer';
 import { dispatchTrackedEmail, workflowEmailCopies } from './server/integrations/trackedGmail';
 import { buildAuditFeed,buildPagedAuditFeed, decodeAuditCursor, emailDeliveryPreview, emailDeliveryAuditSummary } from './server/auditFeed';
+import { compactSettingsAudit } from './server/settingsAuditCompact';
 import { administrativeDocumentLabels } from './src/utils/finalDeliveryPresentation';
 import { reservationReceipts, reservationReceiptStatus } from './server/reservationReceipts';
 import { buildProcessVariables, compileWorkflow, executeWorkflowEvent, mergeWorkflowHtmlVariables, mergeWorkflowVariables, normalizeWorkflowEventCode } from './server/workflow/runtime';
@@ -3519,6 +3520,7 @@ export async function createPortalApp() {
       driveStatus: studio.lastDriveSyncStatus || 'never'
     } : undefined;};
 
+    const compactAudit = isStudioPublication ? null : compactSettingsAudit(before, currentSettings);
     auditLogsStore.push({
       id: `log-${Date.now()}`,
       actorEmail,
@@ -3526,8 +3528,8 @@ export async function createPortalApp() {
       action: isStudioPublication ? (publishStudio?'PUBLICACAO_ESTUDIO_INTEGRADO':'SALVAMENTO_AUTOMATICO_ESTUDIO') : 'ALTERACAO_CONFIGURACOES',
       entityType: isStudioPublication ? 'integration_studio' : 'settings',
       entityId: isStudioPublication ? 'studio-v2' : 'global',
-      before: isStudioPublication ? summarizeStudio(before) : before,
-      after: isStudioPublication ? summarizeStudio(currentSettings) : currentSettings,
+      before: isStudioPublication ? summarizeStudio(before) : compactAudit!.before,
+      after: isStudioPublication ? summarizeStudio(currentSettings) : compactAudit!.after,
       timestamp: new Date().toISOString()
     });
 
