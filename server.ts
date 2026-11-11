@@ -183,6 +183,7 @@ import { renderGoogleDriveTemplateToPdf,saveReviewedAta,exportReviewedAta,discar
 import { dispatchTrackedEmail, workflowEmailCopies } from './server/integrations/trackedGmail';
 import { buildAuditFeed,buildPagedAuditFeed, decodeAuditCursor, emailDeliveryPreview, emailDeliveryAuditSummary } from './server/auditFeed';
 import { compactSettingsAudit } from './server/settingsAuditCompact';
+import { pruneFinalizedEvaluationDrafts } from './server/workflow/pruneFinalizedEvaluationDrafts';
 import { administrativeDocumentLabels } from './src/utils/finalDeliveryPresentation';
 import { reservationReceipts, reservationReceiptStatus } from './server/reservationReceipts';
 import { buildProcessVariables, compileWorkflow, executeWorkflowEvent, mergeWorkflowHtmlVariables, mergeWorkflowVariables, normalizeWorkflowEventCode } from './server/workflow/runtime';
@@ -1754,6 +1755,7 @@ async function runWorkflowMaintenance(processId?:string){
   const selectedProcesses=processId?processesStore.filter(process=>process.id===processId):processesStore;
   const now=new Date(),studio=currentSettings.integrationStudio,policy=workflowPolicy(studio);
   const previousDraftCount=Object.keys(registrationDraftsStore).length;if(!processId)registrationDraftsStore=pruneDrafts(registrationDraftsStore,now);
+  const completedEvaluationDraftsRemoved=pruneFinalizedEvaluationDrafts(selectedProcesses,evaluationDraftsStore,process=>ataArchived(process,signatureJobsStore));
   // Resolve only acknowledgements already persisted by Gmail; an ambiguous send
   // remains visible and never becomes an automatic new delivery.
   for(const record of reminderRecordsStore.filter(item=>item.status!=='SENT'&&(!processId||item.processId===processId))){
@@ -1769,7 +1771,7 @@ async function runWorkflowMaintenance(processId?:string){
   }
   await persistPortalStateDurably();
   const workStartedAt=Date.now();
-  const result={expiredDrafts:previousDraftCount-Object.keys(registrationDraftsStore).length,sent:0,failed:0,configurationErrors:[] as string[],deferred:false,archivedWorkflows:{retried:0,pending:0}};
+  const result={expiredDrafts:previousDraftCount-Object.keys(registrationDraftsStore).length,completedEvaluationDraftsRemoved,sent:0,failed:0,configurationErrors:[] as string[],deferred:false,archivedWorkflows:{retried:0,pending:0}};
   // Resume one recorded transient reservation/document failure through its original
   // archive + configured workflow. No new event or academic state is invented.
   const reservationRecovery=selectConfirmedInvitationRecovery({processes:selectedProcesses,runs:workflowRunsStore,archives:formArchiveJobsStore,
