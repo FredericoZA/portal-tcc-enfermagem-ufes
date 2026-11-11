@@ -8,6 +8,11 @@ on:
       - "server/integrations/supabase.ts"
       - "tests/egress/supabaseLiteRuntime.test.ts"
       - "server.ts"
+      - "server/integrations/supabaseLeanRuntime.test.ts"
+      - "server/integrations/settingsAuditCompactionDatabase.test.ts"
+      - "server/workflow/pruneFinalizedEvaluationDrafts.ts"
+      - "supabase/maintenance/20261111_compact_settings_audit.sql"
+      - "supabase/migrations/20261111171000_runtime_lean_v1.sql"
       - "supabase/migrations/20261111113000_runtime_lite_snapshot.sql"
 permissions:
   contents: read
@@ -34,6 +39,9 @@ jobs:
             server/integrations/runtimeWireSnapshot.test.ts \
             server/integrations/supabaseAuditDelta.test.ts \
             server/integrations/supabaseColdSnapshotRecovery.test.ts \
+            server/integrations/supabaseLeanRuntime.test.ts \
+            server/integrations/settingsAuditCompactionDatabase.test.ts \
+            server/workflow/pruneFinalizedEvaluationDrafts.test.ts \
             server/runtimeRequestLifecycleHttp.test.ts
       - name: Production build
         run: npm run build
