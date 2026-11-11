@@ -65,7 +65,7 @@ test('ACK perdido confirma só payload completo e revisão exata sem repetir POS
  revision=31;remote={auditLogs:payload.auditLogs,signatureJobs:payload.signatureJobs};
  const {readFileSync}=await import('node:fs');const {runInNewContext}=await import('node:vm');const ts=await import('typescript');
  const server=readFileSync('server.ts','utf8');const start=server.indexOf('async function saveRemoteSnapshotWithRecovery(');const source=server.slice(start,server.indexOf('\n}\n',start)+2);
- const persist=runInNewContext(ts.transpileModule('('+source+')',{}).outputText,{savePortalRuntimeState,loadPortalRuntimeState,applyPersistedState:()=>assert.fail('Confirmed ACK must resolve before conflict recovery.')});
+ const persist=runInNewContext(ts.transpileModule('('+source+')',{}).outputText,{savePortalRuntimeState,loadPortalRuntimeState,requireCanonicalAuditForPersistence:()=>{},applyPersistedState:()=>assert.fail('Confirmed ACK must resolve before conflict recovery.')});
  let queue=Promise.resolve().then(()=>persist(payload));await queue;assert.equal(posts,1);assert.equal(currentPortalRuntimeRevision(),31);
  // A later identical state is not proof of this new CAS commit.
  const candidate={...payload,auditLogs:[...payload.auditLogs,{id:'audit-2',action:'updated'}]};

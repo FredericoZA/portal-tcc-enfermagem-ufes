@@ -175,7 +175,7 @@ import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngi
 import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie } from './server/security/firebaseAuth';
 import {astenStatusCheckDue,ASTEN_STATUS_CHECK_INTERVAL_MS} from './server/workflow/astenAtaStatus';
 import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeDestination, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSigningProfile, getPersistentAstenConnection, getAstenSignerPhones, getPersistentAstenStatus, inferAstenJobStatus, safeCompareWebhookSecret } from './server/integrations/asten';
-import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, refreshPortalRuntimeState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
+import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
 import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGeneratedInvitation, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePrivatePublicationSource, withdrawDriveFilePublicAccess, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadSignedPdfToDrive, reserveProcessFormPdfId, readProcessFormPdfById, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
@@ -583,10 +583,20 @@ function synchronizeProcessParticipants(process:ProcessData,actor:string):void{
   let index=0;for(const[email,participant]of participants){const roles=Array.from(participant.roles);for(const role of roles)if(!removedAccessProcessKeys.has(accessProcessKey(email,process.id)))upsertAuthorizedAccess({nome:participant.nome,email,processId:process.id,role,origin:'TCC_FORM',actor});membershipsStore.push({id:`mem-${process.id}-${index++}`,processId:process.id,email,roles,active:true,createdAt:process.createdAt,updatedAt:new Date().toISOString()});}
 }
 
+// A instância inicializada por leitura leve não dispõe de auditLogs.
+// Nenhuma gravação de estado completo pode ocorrer antes de hidratar a linha
+// canônica, sob pena de substituir evidências históricas por [].
+let canonicalAuditHistoryHydrated = !getSupabaseRuntimeStatus().durablePersistenceReady;
+function requireCanonicalAuditForPersistence():void{
+  if(getSupabaseRuntimeStatus().durablePersistenceReady&&!canonicalAuditHistoryHydrated)
+    throw new Error('Gravação bloqueada: histórico de auditoria ainda não foi hidratado integralmente.');
+}
+
 let remotePersistenceQueue: Promise<void> = Promise.resolve();
 let localPortalChangeSequence = 0;
 
 async function saveRemoteSnapshotWithRecovery(snapshot:PersistedPortalState):Promise<void>{
+  requireCanonicalAuditForPersistence();
   try{await savePortalRuntimeState(snapshot);}catch(error){
     if(error instanceof Error&&error.message.includes('Conflito de concorrência')){
       const remote=await loadPortalRuntimeState<PersistedPortalState>().catch(()=>null);
@@ -607,6 +617,7 @@ function snapshotPortalState() {
 }
 
 function persistPortalState(throwOnFailure = false): void {
+  requireCanonicalAuditForPersistence();
   const snapshot = snapshotPortalState();
   if (getSupabaseRuntimeStatus().durablePersistenceReady) {
     remotePersistenceQueue = remotePersistenceQueue.catch(() => undefined).then(() => saveRemoteSnapshotWithRecovery(snapshot));
@@ -625,6 +636,7 @@ function persistPortalState(throwOnFailure = false): void {
 }
 
 async function persistPortalStateDurably():Promise<void>{
+  requireCanonicalAuditForPersistence();
   if(!getSupabaseRuntimeStatus().durablePersistenceReady){persistPortalState(true);return;}
   const snapshot=snapshotPortalState();
   remotePersistenceQueue=remotePersistenceQueue.catch(()=>undefined).then(()=>saveRemoteSnapshotWithRecovery(snapshot));
@@ -632,6 +644,7 @@ async function persistPortalStateDurably():Promise<void>{
 }
 
 function applyPersistedState(state: PersistedPortalState) {
+  if(Array.isArray(state.auditLogs))canonicalAuditHistoryHydrated=true;
   legacyAcademicRecordsStore=(state.legacyAcademicRecords||[]).map(canonicalLegacyRecord);
   registrationDraftsStore=pruneDrafts(state.registrationDrafts||{});
   evaluationDraftsStore=new Map(Object.entries(state.evaluationDrafts||{}));
@@ -2209,7 +2222,32 @@ async function archiveSignatureJobAutomatically(job:SignatureJob):Promise<Signat
 }
 function findAstenEnvelopeId(b:any):string|null{const f=[b?.idEnvelope,b?.Envelope?.id,b?.envelope?.id,b?.data?.idEnvelope,b?.response?.data?.idEnvelope].find(v=>v!==undefined&&v!==null&&String(v));return f?String(f):null;}
 
+// Somente rotas GET conhecidas e sem gravação nem leitura de auditLogs.
+// Rotas de auditoria, callbacks, cron, exportações sensíveis e qualquer método
+// mutável continuam obrigatoriamente com o snapshot canônico integral.
+const LITE_RUNTIME_READ_PATHS = new Set([
+  '/me','/settings','/setup/status','/capabilities',
+  '/academic-cycles','/admin/academic-cycles','/admin/feature-flags',
+  '/admin/installation-profile','/admin/metrics','/admin/metrics/definitions',
+  '/admin/analytics/advanced','/admin/indicators',
+  '/public/installation-profile','/public/indicators','/public/repository',
+  '/public/calendar','/processes','/registration/bootstrap',
+  '/registration/draft','/forms/registration-schema',
+  '/admin/studio/versions','/legacy-academic-records',
+  '/admin/legacy-academic-records','/notification-preferences',
+  '/administration-transfers/pending','/admin/administration-transfers',
+  '/sync/version',
+]);
+function isLiteRuntimeRead(method:string,requestPath:string):boolean{
+  return method==='GET' && (
+    LITE_RUNTIME_READ_PATHS.has(requestPath)
+    || (requestPath.startsWith('/processes/') && requestPath.slice('/processes/'.length).length>0 && !requestPath.slice('/processes/'.length).includes('/'))
+    || (requestPath.startsWith('/table-preferences/') && requestPath.slice('/table-preferences/'.length).length>0 && !requestPath.slice('/table-preferences/'.length).includes('/'))
+  );
+}
+
 export async function createPortalApp() {
+  const liteRuntimeReadsEnabled=process.env.PORTAL_RUNTIME_LITE_READS==='true';
   if(productionRuntime&&!bootstrapMasterEmail&&!persistedPortalState.settings?.masterEmail)throw new Error('Implantação bloqueada: configure PORTAL_BOOTSTRAP_MASTER_EMAIL para definir o primeiro Master sem usar dados de demonstração.');
   if((process.env.NODE_ENV==='production'||Boolean(process.env.VERCEL))&&!getSupabaseRuntimeStatus().durablePersistenceReady)throw new Error('Implantação bloqueada: configure a persistência durável do Supabase antes de iniciar o portal em produção.');
   if(productionRuntime){
@@ -2233,8 +2271,17 @@ export async function createPortalApp() {
   }
   if (getSupabaseRuntimeStatus().durablePersistenceReady) {
     try {
-      const remote = await loadPortalRuntimeState<PersistedPortalState>();
+      const remote = liteRuntimeReadsEnabled
+        ? await loadPortalRuntimeLiteState<PersistedPortalState>()
+        : await loadPortalRuntimeState<PersistedPortalState>();
       if (remote) applyPersistedState(remote);
+      else {
+        // O estado inicial vazio é permitido somente após confirmação no banco.
+        // A leitura leve vazia, por si só, não comprova ausência canônica.
+        const revision=await readPortalRuntimeRevision();
+        if(revision===null)canonicalAuditHistoryHydrated=true;
+        else throw new Error('A inicialização não conseguiu carregar o estado atual do Portal.');
+      }
     } catch (error) {
       throw Object.assign(new Error('Persistência Supabase configurada, mas indisponível.',{cause:error}),{code:typeof (error as {code?:unknown})?.code==='string'?(error as {code:string}).code:'SUPABASE_RUNTIME_READ_FAILED'});
     }
@@ -2362,7 +2409,9 @@ export async function createPortalApp() {
       finishPreviousWrites?.();
       const finishHydration=registrationTiming?.measure('hydrate');
       let remote:PersistedPortalState|null;
-      try{remote=await refreshPortalRuntimeState<PersistedPortalState>();}finally{finishHydration?.();}
+      try{remote=liteRuntimeReadsEnabled&&isLiteRuntimeRead(req.method,req.path)
+        ?await refreshPortalRuntimeLiteState<PersistedPortalState>()
+        :await refreshPortalRuntimeState<PersistedPortalState>();}finally{finishHydration?.();}
       if(res.destroyed||req.aborted)return;
       const finishApplyState=registrationTiming?.measure('apply_state');
       try{if(remote)applyPersistedState(remote);}finally{finishApplyState?.();}
@@ -2437,14 +2486,21 @@ export async function createPortalApp() {
       res.status(503).json({error:'Não foi possível consultar a atualização do portal.'});
     }
   });
-  // Resposta mínima para atualização automática. A revisão já foi carregada
-  // pelo middleware que valida o estado durável antes de cada rota autenticada.
-  app.get('/api/sync/version',requireAuthenticated,(_req,res)=>{
+  // A leitura leve mantém uma revisão independente, sem contaminar o CAS
+  // canônico. Consultar a revisão de banco para não anunciar "0" ou valor
+  // obsoleto em workers hidratados apenas pelo snapshot reduzido.
+  app.get('/api/sync/version',requireAuthenticated,async(_req,res)=>{
     res.setHeader('Cache-Control','private, no-store, max-age=0');
-    const revision=getSupabaseRuntimeStatus().durablePersistenceReady
-      ? currentPortalRuntimeRevision()
-      : localPortalChangeSequence;
-    res.json({revision:revision ?? 0});
+    try{
+      const revision=getSupabaseRuntimeStatus().durablePersistenceReady
+        ? (liteRuntimeReadsEnabled
+            ? await readPortalRuntimeRevision()
+            : currentPortalRuntimeRevision())
+        : localPortalChangeSequence;
+      res.json({revision:revision ?? 0});
+    }catch{
+      res.status(503).json({error:'Não foi possível consultar a atualização do Portal.'});
+    }
   });
 
   const requireAdministrativeOperator=requireAdministrator;

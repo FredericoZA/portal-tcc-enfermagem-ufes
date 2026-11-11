@@ -1,0 +1,41 @@
+name: Supabase Egress Regression
+on:
+  push:
+    branches:
+      - work/reducao-egress-supabase-20261111
+  pull_request:
+    paths:
+      - "server/integrations/supabase.ts"
+      - "tests/egress/supabaseLiteRuntime.test.ts"
+      - "server.ts"
+      - "supabase/migrations/20261111113000_runtime_lite_snapshot.sql"
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Dependencies
+        run: npm ci
+      - name: TypeScript
+        run: npm run lint
+      - name: Targeted Supabase runtime tests
+        run: |
+          node --import tsx --test --test-concurrency=1 \
+            tests/egress/supabaseLiteRuntime.test.ts \
+            server/integrations/runtimeWireSnapshot.test.ts \
+            server/integrations/supabaseAuditDelta.test.ts \
+            server/integrations/supabaseColdSnapshotRecovery.test.ts \
+            server/runtimeRequestLifecycleHttp.test.ts
+      - name: Production build
+        run: npm run build
+      - name: Serverless packaging
+        run: npm run test:serverless
