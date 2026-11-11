@@ -45,19 +45,27 @@ begin
       )
       then (event.value - 'before' - 'after') || jsonb_build_object(
         'before',jsonb_build_object('archivedAuditId',event.value->>'id'),
-        'after',jsonb_build_object(
-          'archivedAuditId',event.value->>'id',
-          'changedPaths',(
-            select coalesce(jsonb_agg(changed.key order by changed.key),'[]'::jsonb)
-            from (
-              select k.key from jsonb_object_keys(event.value->'before') k(key)
-              union select k.key from jsonb_object_keys(event.value->'after') k(key)
-            ) changed
-            where event.value->'before'->changed.key
-              is distinct from event.value->'after'->changed.key
-          ),
-          'truncated',false
-        )
+        'after',case
+          -- Event already compacted by the application: preserve the original
+          -- changes/fingerprint; only add the immutable archive reference.
+          when jsonb_typeof(event.value->'after'->'changedPaths')='array'
+            and jsonb_typeof(event.value->'after'->'fingerprint')='string'
+          then (event.value->'after') ||
+             jsonb_build_object('archivedAuditId',event.value->>'id')
+          else jsonb_build_object(
+            'archivedAuditId',event.value->>'id',
+            'changedPaths',(
+              select coalesce(jsonb_agg(changed.key order by changed.key),'[]'::jsonb)
+              from (
+                select k.key from jsonb_object_keys(event.value->'before') k(key)
+                union select k.key from jsonb_object_keys(event.value->'after') k(key)
+              ) changed
+              where event.value->'before'->changed.key
+                is distinct from event.value->'after'->changed.key
+            ),
+            'truncated',false
+          )
+        end
       )
       else event.value end
     order by event.ordinality
