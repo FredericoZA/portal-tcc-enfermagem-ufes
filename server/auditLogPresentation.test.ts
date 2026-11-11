@@ -148,3 +148,17 @@ test('separa a fase histórica da atual e não presume a fase de eventos desconh
  assert.deepEqual(auditProcessPhases(log({action: 'EVENTO_ANTIGO'})), {event: '', current: ''});
  assert.match(auditSearchText(entry), /fase 6/);
 });
+
+test('ALTERACAO_CONFIGURACOES compacta mostra apenas campos alterados sem falsos removidos', () => {
+  const item=log({
+    action:'ALTERACAO_CONFIGURACOES',entityType:'settings',
+    before:{emailConfig:{enabled:false,secret:'private'},other:'mantido'},
+    after:{fingerprint:'f'.repeat(64),changedPaths:['emailConfig.enabled'],truncated:false},
+  });
+  const changes=auditChangesTable(item);
+  assert.equal(changes.length,1);
+  assert.match(changes[0].field,/Email|enabled|Enabled/i);
+  assert.match(changes[0].after,/Campo alterado/);
+  assert.doesNotMatch(JSON.stringify(changes),/private|mantido|Não informado|fingerprint|truncated/);
+  assert.equal(canRestoreAudit(item),true);
+});
