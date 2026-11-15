@@ -71,3 +71,9 @@ test('withdrawal of multiple PDFs continues after an individual source failure',
  });
  await assert.rejects(withdrawManyPublicDriveFiles('fixture',['inaccessible_source','other_source_123']),/pendentes/);assert.equal(revoked.length,1);
 });
+
+test('an invalid copy response can never delete or share the private source',async t=>{
+ const f=fixture(t);f.copyMetadata.id=f.source;
+ await assert.rejects(publicRepositoryDriveLinks(f.input),/cópia do PDF/);
+ assert.ok(!f.calls.some(c=>c.method==='DELETE'));assert.ok(!f.calls.some(c=>c.method==='POST'&&c.path.endsWith('/permissions')));
+});
