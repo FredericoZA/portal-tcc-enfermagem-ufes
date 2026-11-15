@@ -37,6 +37,7 @@ const LITE_PATHS = new Set([
 ]);
 
 const LEAN_PATHS = new Set([
+  '/admin/resource-usage',
   '/me',
   '/settings',
   '/setup/status',
