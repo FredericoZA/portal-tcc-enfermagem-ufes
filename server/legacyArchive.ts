@@ -30,6 +30,7 @@ export function legacyProtocol(id: string): string {
 }
 /** Historical consent is independent of live-process signatures and required uploads. */
 export function legacyAuthorization(provenance: Record<string, unknown>): LegacyAcademicRecord['authorizationDecision'] {
+  if(provenance?.publicationWithdrawal&&typeof provenance.publicationWithdrawal==='object'&&typeof (provenance.publicationWithdrawal as any).withdrawnAt==='string')return 'DENIED';
   const values = Array.isArray(provenance?.originalConsent) ? provenance.originalConsent : [];
   const normalized = values.map(v => String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase());
   if (!normalized.length || normalized.some(v => !['sim','nao'].includes(v))) return 'UNSPECIFIED';
@@ -141,6 +142,7 @@ export function publicLegacyAcademicView(r: LegacyAcademicRecord): PublicLegacyA
 /** This projection is served exclusively by the Master-authorized route. */
 export function privateLegacyAcademicView(record: LegacyAcademicRecord): PrivateLegacyAcademicView {
   return {
+    ...((record.provenance.publicationWithdrawal as any)?.withdrawnAt?{publicationWithdrawal:{withdrawnAt:String((record.provenance.publicationWithdrawal as any).withdrawnAt),drivePending:(record.provenance.publicationWithdrawal as any).drivePending===true}}:{}),
     resumo: record.resumo,
     palavrasChave: [...record.palavrasChave],
     files: record.attachments.map((file, index) => ({
