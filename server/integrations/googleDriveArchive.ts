@@ -290,7 +290,7 @@ export async function withdrawManyPublicDriveFiles(accessToken:string,fileIds:st
  if(results.some(result=>result.status==='rejected'))throw Error('Há retiradas de acesso pendentes no Google Drive. Repita a operação para concluir.');
 }
 
-export async function inspectPortalDriveArtifact(input:{accessToken:string;fileId:string;expectedSha256?:string;expectedVersion?:number;expectPublic:boolean;expectedSourceFileId?:string}){
+export async function inspectPortalDriveArtifact(input:{accessToken:string;fileId:string;expectedSha256?:string;expectedVersion?:number;expectPublic:boolean;expectedSourceFileId?:string;publicReadOptional?:boolean}){
   if(!/^[a-zA-Z0-9_-]{10,}$/.test(input.fileId))return{ok:false,issues:['ID de arquivo inválido.']};
   const issues:string[]=[];
   try{
@@ -305,16 +305,17 @@ export async function inspectPortalDriveArtifact(input:{accessToken:string;fileI
     const permissions=await listDriveFilePermissions(input.accessToken,input.fileId);
     const broad=permissions.filter(isUnsafePrivateContainerPermission);
     const hasPublicReader=permissions.some((permission:any)=>permission.type==='anyone'&&permission.role==='reader');
-    if(input.expectPublic&&!hasPublicReader)issues.push('Cópia autorizada não possui leitura pública.');
+    if(input.expectPublic&&!input.publicReadOptional&&!hasPublicReader)issues.push('Cópia autorizada não possui leitura pública.');
     if(!input.expectPublic&&broad.length)issues.push('Arquivo privado possui compartilhamento amplo.');
     if(input.expectPublic&&broad.some((permission:any)=>permission.type!=='anyone'||permission.role!=='reader'))issues.push('Cópia pública possui permissão ampla além de anyone:reader.');
     return{ok:issues.length===0,issues,name:String(metadata.name||'')};
   }catch(error){return{ok:false,issues:[error instanceof Error?error.message:'Falha ao inspecionar arquivo no Drive.']};}
 }
 
-export async function downloadDrivePdf(accessToken:string,fileId:string,expected?:{processId?:string;artifactType?:string;signatureJobId?:string;formType?:string;formVersion?:number;allowPublicRead?:boolean;expectedSha256?:string}):Promise<{pdf:Buffer;fileName:string}>{
+export async function downloadDrivePdf(accessToken:string,fileId:string,expected?:{processId?:string;artifactType?:string;signatureJobId?:string;formType?:string;formVersion?:number;allowPublicRead?:boolean;expectedSha256?:string},legacyAcademicSha256?:string):Promise<{pdf:Buffer;fileName:string}>{
   if(!/^[a-zA-Z0-9_-]{10,}$/.test(fileId))throw new Error('Identificador de arquivo inválido.');
-  const publicAcademic=expected?.allowPublicRead===true&&Boolean(expected.processId)&&['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(expected.artifactType||'')&&/^[a-f0-9]{64}$/i.test(expected.expectedSha256||'');
+  const legacyPublic=!expected&&/^[a-f0-9]{64}$/i.test(legacyAcademicSha256||'');
+  const publicAcademic=legacyPublic||expected?.allowPublicRead===true&&Boolean(expected.processId)&&['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(expected.artifactType||'')&&/^[a-f0-9]{64}$/i.test(expected.expectedSha256||'');
   if(publicAcademic){
     const acl=await listDriveFilePermissions(accessToken,fileId);
     if(acl.some(p=>isUnsafePrivateContainerPermission(p)&&!(p.type==='anyone'&&p.role==='reader')))throw Error('Compartilhamento amplo não permitido no PDF.');
@@ -334,7 +335,7 @@ export async function downloadDrivePdf(accessToken:string,fileId:string,expected
   let pdf:Buffer;
   try{pdf=await readBoundedResponse(contentResponse,50*1024*1024);}
   catch(error){if(error instanceof ResponseSizeError)throw new Error('O PDF armazenado ultrapassa o limite seguro de 50 MB ou possui tamanho inválido.');throw error;}
-  if(publicAcademic&&createHash('sha256').update(pdf).digest('hex')!==expected!.expectedSha256!.toLowerCase())throw Error('O PDF difere do arquivo autorizado para publicação.');
+  if(publicAcademic&&createHash('sha256').update(pdf).digest('hex')!==String(legacyPublic?legacyAcademicSha256:expected!.expectedSha256).toLowerCase())throw Error('O PDF difere do arquivo autorizado para publicação.');
   if(!pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('O arquivo armazenado não é um PDF válido.');
   const storedSha256=String(metadata.appProperties?.sha256||'').toLowerCase();
   if(storedSha256&&createHash('sha256').update(pdf).digest('hex')!==storedSha256)throw new Error('O conteúdo do PDF no Drive diverge do hash registrado pelo portal.');
