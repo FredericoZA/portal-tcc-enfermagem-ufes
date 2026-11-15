@@ -30,7 +30,7 @@ export async function listDriveFilePermissions(accessToken:string,fileId:string)
   const permissions:any[]=[],seen=new Set<string>();
   let pageToken='';
   do{
-    const params=new URLSearchParams({fields:'permissions(id,type,role,domain,emailAddress),nextPageToken',pageSize:'100',supportsAllDrives:'true',...(pageToken?{pageToken}:{})});
+    const params=new URLSearchParams({fields:'permissions(id,type,role,domain,emailAddress,view),nextPageToken',pageSize:'100',supportsAllDrives:'true',...(pageToken?{pageToken}:{})});
     const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}/permissions?${params}`,accessToken);
     const result=await response.json();
     if(result.permissions!==undefined&&!Array.isArray(result.permissions))throw new Error('Não foi possível conferir as permissões do Google Drive.');
