@@ -246,14 +246,13 @@ export async function uploadProcessSourcePdf(input:{accessToken:string;processFo
   return created;
 }
 
-/** Publication serves the authorized process source through the Portal; Drive remains private. */
-export async function preparePrivatePublicationSource(input:{accessToken:string;processFolderId:string;sourceFileId:string;processId:string;artifactType:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO';sha256?:string;version?:number}){
+/** Synchronize the authorized original with read-only public access, without copying bytes. */
+export async function prepareAuthorizedPublicationSource(input:{accessToken:string;processFolderId:string;sourceFileId:string;processId:string;artifactType:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO';sha256?:string;version?:number;assertAuthorized:()=>Promise<boolean>}){
   await assertPrivateContainer(input.accessToken,input.processFolderId);
-  if(!/^[a-f0-9]{64}$/i.test(input.sha256||''))throw new Error('O arquivo autorizado precisa de um hash SHA-256 válido.');
-  const source=await downloadDrivePdf(input.accessToken,input.sourceFileId,{processId:input.processId,artifactType:input.artifactType});
-  if(createHash('sha256').update(source.pdf).digest('hex')!==input.sha256!.toLowerCase())throw new Error('O arquivo mudou desde a autorização de publicação.');
+  const {publicRepositoryDriveLinks}=await import('./publicRepositoryDrive');
+  const links=await publicRepositoryDriveLinks({accessToken:input.accessToken,sourceFileId:input.sourceFileId,scope:input.processId,artifactType:input.artifactType,sha256:input.sha256||'',assertAuthorized:input.assertAuthorized});
   const kind=input.artifactType==='TRABALHO_COMPLETO'?'trabalho-completo':'resumo-expandido';
-  return {id:input.sourceFileId,webViewLink:`/api/public/processes/${encodeURIComponent(input.processId)}/files/${kind}/download`,name:source.fileName,sha256:input.sha256!,version:input.version||1};
+  return {id:input.sourceFileId,webViewLink:`/api/public/processes/${encodeURIComponent(input.processId)}/files/${kind}/download`,driveViewLink:links.view,sha256:input.sha256!,version:input.version||1};
 }
 
 export async function withdrawDriveFilePublicAccess(accessToken:string,fileId:string):Promise<{removed:number}>{
