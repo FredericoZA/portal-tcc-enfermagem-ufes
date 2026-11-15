@@ -62,7 +62,8 @@ test('link público para avaliação mantém dados privados ausentes sem quebrar
  assert.match(html,/Conceito e ata ainda não disponíveis/);
  assert.doesNotMatch(html,/id="evaluation-PARECER"|portal-instruction|Portal do Professor/);
  const earlyAdvisor=render(publicProcess,true);
- assert.match(earlyAdvisor,/portal-instruction.*aguarda a confirmação/);
+ assert.match(earlyAdvisor,/role="status"[^>]*>O registro de conceito e ata aguarda a confirmação/);
+ assert.doesNotMatch(earlyAdvisor,/portal-instruction/);
  assert.doesNotMatch(earlyAdvisor,/Portal do Professor/);
  assert.doesNotMatch(earlyAdvisor,/id="evaluation-PARECER"/);
  const pendingInvitation=render({...publicProcess,defesa:{...publicProcess.defesa,localStatus:'CONFIRMADO',startAt:'2000-01-01T13:00:00Z'}},true);

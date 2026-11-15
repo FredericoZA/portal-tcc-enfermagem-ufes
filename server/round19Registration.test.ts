@@ -11,7 +11,7 @@ import {dispatchTrackedEmail,MemoryEmailDeliveryJournal} from './integrations/tr
 test('cadastro normaliza espaços, nomes e e-mails antes da validação, preservando acentos e siglas',()=>{
  assert.equal(normalizeRegistrationValue('EXAMINADOR_2_NOME','text','  JOÃO   DA SILVA  '),'João da Silva');
  assert.equal(normalizeRegistrationValue('ALUNO_1_EMAIL','email','  ALUNO@EDU.UFES.BR '),'aluno@edu.ufes.br');
- assert.equal(normalizeRegistrationValue('ORIENTADOR_INSTITUICAO','text',' UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO - UFES '),'Universidade Federal do Espírito Santo - UFES');
+ assert.equal(normalizeRegistrationValue('ORIENTADOR_INSTITUICAO','text',' UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO - UFES '),'UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO - UFES');
  assert.equal(normalizeRegistrationValue('ALUNO_1_MATRICULA','text','00001234'),'00001234');
 });
 test('e-mail usa data brasileira e horário de Brasília inclusive quando o UTC muda o dia',()=>{

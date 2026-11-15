@@ -8,7 +8,8 @@ Projeto `vvgdmycmotazqjvpywmk` (Portal TCC), ativo. Antes da publicação do apl
 
 | Medida | Resultado |
 | --- | ---: |
-| Banco completo, `pg_database_size` | 45.968.531 bytes |
+| Banco da aplicação `postgres`, `pg_database_size` | 45.968.531 bytes |
+| Total do cluster, incluindo os dois bancos de modelo do Postgres | 61.092.017 bytes |
 | Tabela de backups de manutenção, incluindo índices/TOAST | 15.622.144 bytes |
 | Quantidade de backups explícitos | 11 |
 | Backup mais recente | 11/11/2026 |
@@ -17,7 +18,7 @@ Projeto `vvgdmycmotazqjvpywmk` (Portal TCC), ativo. Antes da publicação do apl
 | Estado operacional canônico, incluindo índices/TOAST | 1.417.216 bytes |
 | JSON canônico, sem compressão | 1.875.041 bytes |
 
-A captura enviada pelo usuário está em “All projects”: 0,061/0,5 GB de Database Size, 0,32/5 GB de egress e 17,327/100 GB de Log Query. O tamanho SQL de um projeto e o indicador agregado da organização têm escopos e horários diferentes. A captura anterior mostrava 0,060 GB de banco; a diferença exibida é cerca de 1 MB, sem crescimento comprovadamente linear.
+A captura enviada pelo usuário está em “All projects”: 0,061/0,5 GB de Database Size, 0,32/5 GB de egress e 17,327/100 GB de Log Query. A conferência adicional do cluster encontrou `postgres` com 45.976.723 bytes, `template0` com 7.520.783 e `template1` com 7.594.511. A soma, 61.092.017 bytes, corresponde ao valor arredondado de 0,061 GB da captura. Cerca de 15,1 MB são dos bancos de modelo do próprio Postgres, que não devem ser apagados. A captura anterior mostrava 0,060 GB de banco; a diferença exibida é cerca de 1 MB, sem crescimento comprovadamente linear.
 
 Não foram apagados backups, documentos, processos ou auditoria histórica. Os backups são explícitos de manutenção; a última inclusão foi em 11/11, não um backup novo a cada consulta. Não foi executado VACUUM FULL nem removidos índices apenas por estarem sem uso nas estatísticas.
 
