@@ -1,3 +1,7 @@
+import {archiveRetiredRuntimeBackups} from './server/backup/retention';
+import {createPublicRepositoryReader,installPublicRepositoryRoute} from './server/publicRepositoryData';
+import {loadPortalRepositorySnapshot} from './server/integrations/supabase';
+import {resourceUsageSnapshot} from './server/resourceUsage';
 import {conceptRegistrationBlocker} from './src/utils/evaluationForm';
 import {publicPdfEtag,matchesPublicPdfEtag,PUBLIC_PDF_CACHE_CONTROL} from './server/publicDownloadRevalidation';
 import {canReadPagedAudit} from './server/auditPageRead';
@@ -2328,6 +2332,8 @@ export async function createPortalApp() {
     readLocal:()=>{const state=loadPersistedPortalState();return state.processes?state:{processes:structuredClone(processesStore),settings:structuredClone(currentSettings)};},
   }));
 
+  installPublicRepositoryRoute(app,createPublicRepositoryReader({durable:()=>getSupabaseRuntimeStatus().durablePersistenceReady,readRevision:readPortalRuntimeRevision,readDurable:loadPortalRepositorySnapshot,readLocal:()=>{const s=loadPersistedPortalState();return {processes:s.processes||structuredClone(processesStore),legacyAcademicRecords:s.legacyAcademicRecords||structuredClone(legacyAcademicRecordsStore)};}}));
+
   installDeletionStatusRoute(app,createDeletionStatusReader({
     durable:()=>getSupabaseRuntimeStatus().durablePersistenceReady,readRevision:readPortalRuntimeRevision,
     readDurable:async revision=>readCachedPortalRuntimeState<PersistedPortalState>(revision)??await loadPortalRuntimeState<PersistedPortalState>(false),
@@ -2629,11 +2635,13 @@ export async function createPortalApp() {
         await persistPortalStateDurably();
       }catch(error){failures.push(error instanceof Error?error.message:'Falha no backup cifrado automático.');}
     }
+    let retention:{archived:number;retained:boolean}|null=null;
+    try{if(getSupabaseRuntimeStatus().durablePersistenceReady)retention=await archiveRetiredRuntimeBackups(currentSettings.driveRootFolderId||'');}catch{failures.push('Backups antigos preservados: arquivamento verificado pendente.');}
     if(failures.length)console.warn('[Maintenance] Rotina com pendências', {
       failures:failures.length,workflowDeferred:workflow?.deferred,
       workflowConfigurationErrors:workflow?.configurationErrors.length,backupCreatedInThisRun:Boolean(backup)
     });
-    res.status(failures.length?502:200).json({ok:failures.length===0,backup,uploads:uploadsResult.status==='fulfilled'?uploadsResult.value:null,downloads:downloadsResult.status==='fulfilled'?downloadsResult.value:null,processCleanups,workflow,failures,executedAt:new Date().toISOString()});
+    res.status(failures.length?502:200).json({ok:failures.length===0,backup,retention,uploads:uploadsResult.status==='fulfilled'?uploadsResult.value:null,downloads:downloadsResult.status==='fulfilled'?downloadsResult.value:null,processCleanups,workflow,failures,executedAt:new Date().toISOString()});
   });
 
   // Callback confirmado com commit antes de 200; worker reivindica lease
@@ -3808,7 +3816,7 @@ export async function createPortalApp() {
 
   // GET /api/processes
   app.get('/api/public/calendar',(_req,res)=>res.json(processesStore.filter(p=>p.status!=='EM_RASCUNHO'&&p.status!=='CONCLUIDO'&&isDefenseOnCalendar(p)).map(publicCalendarView)));
-  app.get('/api/public/repository',(_req,res)=>res.json(buildPublicRepository(processesStore,legacyAcademicRecordsStore)));
+
   app.get('/api/public/processes/:id',(req,res)=>{
     const legacy=legacyAcademicRecordsStore.find(r=>r.id===req.params.id||r.protocolo===req.params.id);
     if(legacy){res.setHeader('Cache-Control','private, no-store');return res.json({...legacyRepositoryProcess(publicLegacyAcademicView(legacy)),canAccessPrivate:false,documents:[]});}
@@ -5167,7 +5175,7 @@ export async function createPortalApp() {
     if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Arquivo não encontrado.'});
     const fileId=req.params.kind==='trabalho-completo'?process.acervo?.trabalhoCompletoFileId:req.params.kind==='resumo-expandido'?process.acervo?.resumoExpandidoFileId:'';
     if(!fileId)return res.status(404).json({error:'Arquivo não encontrado.'});
-    try{const accessToken=await sourceFilesAccessToken();const artifactType=req.params.kind==='trabalho-completo'?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO';const file=await downloadSourceFile(accessToken,fileId,{processId:process.id,artifactType});await deliverPortalDownload({res,processId:process.id,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Falha ao recuperar o PDF.'});}
+    try{const accessToken=await sourceFilesAccessToken();const artifactType=req.params.kind==='trabalho-completo'?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO';const expectedSha256=req.params.kind==='trabalho-completo'?process.acervo?.trabalhoCompletoSha256:process.acervo?.resumoExpandidoSha256;const links=await resolvePrivateDriveBrowserLinks({accessToken,fileId,email:identity.email,processId:process.id,artifactType,expectedSha256});res.setHeader('Cache-Control','private, no-store');if(req.query.delivery==='drive-links')return res.json({links});if(links)return res.redirect(302,req.query.view==='1'?links.view:links.download);const file=await downloadSourceFile(accessToken,fileId,{processId:process.id,artifactType});await deliverPortalDownload({res,processId:process.id,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Falha ao recuperar o PDF.'});}
   });
 
   const repositoryReopenLocks=new Set<string>();
@@ -6393,6 +6401,8 @@ ${auditChanges(log)}`).join('\n\n');
     return res.send(pdf);
     }catch(error){next(error);}
   });
+
+  app.get('/api/admin/resource-usage',requireAuthenticated,requireAdministrator,(_req,res)=>{res.setHeader('Cache-Control','private, no-store');res.json(resourceUsageSnapshot());});
 
   // GET /api/admin/audit-logs
   app.get('/api/admin/audit-logs', requireAuthenticated, requireAdministrator, async (req, res, next) => {

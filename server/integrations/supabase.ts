@@ -1,3 +1,4 @@
+import {measuredSupabaseFetch as fetch} from '../resourceUsage';
 import {runtimeCommitPayloadHash} from './runtimeCommitHash';
 import {isDeepStrictEqual} from 'node:util';
 import {existingSignatureJobPatch} from './signatureJobPatch';
@@ -978,4 +979,23 @@ export async function readCriticalAuditPage(input:{revision:number;processId?:st
   const value=await response.json();
   if(!value||value.revision!==input.revision||!Number.isSafeInteger(value.total)||value.total<0||!Array.isArray(value.logs)||!Array.isArray(value.deliveries)||value.logs.length+value.deliveries.length>101)throw new Error('Página de auditoria inválida no Supabase.');
   return value;
+}
+
+/** Read-only catalog projection; never install this as a write baseline. */
+export async function loadPortalRepositorySnapshot(){
+ const response=await readSupabase(`${supabaseUrl()}/rest/v1/rpc/portal_read_repository_v1`,20_000,'{}');
+ if(!response.ok)throw await runtimeReadFailure(response,'SNAPSHOT');
+ const rows=await response.json();const row=rows?.[0];
+ if(!row||!Number.isSafeInteger(row.revision)||!Array.isArray(row.payload?.processes)||!Array.isArray(row.payload?.legacyAcademicRecords))throw Error('Catálogo sem estado confirmado.');
+ return {...row.payload,revision:row.revision};
+}
+export async function listRetirableRuntimeBackups(){
+ const response=await fetch(`${supabaseUrl()}/rest/v1/rpc/portal_list_retirable_backups_v1`,{method:'POST',headers:adminHeaders(),body:'{}',signal:AbortSignal.timeout(20_000)});
+ if(!response.ok)throw Error('Não foi possível consultar a retenção de backups.');
+ return await response.json() as Array<{backup_id:number;revision:number;reason:string;created_at:string;payload:any;payload_sha256:string}>;
+}
+export async function finalizeRuntimeBackupArchive(input:{backupId:number;payloadSha256:string;driveFileId:string;encryptedSha256:string;sourceSha256:string}){
+ const response=await fetch(`${supabaseUrl()}/rest/v1/rpc/portal_finalize_backup_archive_v1`,{method:'POST',headers:adminHeaders(),body:JSON.stringify({backup_id_input:input.backupId,payload_sha256_input:input.payloadSha256,drive_file_id_input:input.driveFileId,encrypted_sha256_input:input.encryptedSha256,source_sha256_input:input.sourceSha256}),signal:AbortSignal.timeout(20_000)});
+ if(!response.ok)throw Error('O backup foi preservado: o banco não confirmou o arquivamento.');
+ return response.json();
 }
