@@ -14,7 +14,7 @@ async function driveRequest(url: string, accessToken: string, init: RequestInit 
   const response = await fetch(url, { ...init, signal:init.signal??AbortSignal.timeout(30_000), headers: { Authorization: `Bearer ${accessToken}`, ...(init.headers || {}) } });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(String(payload?.error?.message || `Google Drive respondeu ${response.status}.`));
+    throw Object.assign(new Error(String(payload?.error?.message || `Google Drive respondeu ${response.status}.`)),{status:response.status});
   }
   return response;
 }
@@ -269,16 +269,25 @@ export async function withdrawDriveFilePublicAccess(accessToken:string,fileId:st
     for(const file of result.files){if(!/^[\w-]{10,150}$/.test(String(file.id)))throw Error('Cópia pública inválida.');ids.add(file.id);}
     pageToken=result.nextPageToken||'';if(pageToken){if(seen.has(pageToken)||seen.size>=100)throw Error('Inventário público incompleto.');seen.add(pageToken);}
   }while(pageToken);
-  let removed=0;
+  let removed=0,pending=0;
+  const absent=(error:unknown)=>[404,410].includes(Number((error as {status?:number})?.status));
   for(const targetId of ids){
-  const permissions=await listDriveFilePermissions(accessToken,targetId);
-  const publicPermissions=permissions.filter((permission:any)=>permission.type==='anyone');
-  for(const permission of publicPermissions){
-    await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(targetId)}/permissions/${encodeURIComponent(permission.id)}?supportsAllDrives=true`,accessToken,{method:'DELETE'});
+    let permissions:any[];
+    try{permissions=await listDriveFilePermissions(accessToken,targetId);}
+    catch(error){if(!absent(error))pending++;continue;}
+    for(const permission of permissions.filter((p:any)=>p.type==='anyone')){
+      try{await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(targetId)}/permissions/${encodeURIComponent(permission.id)}?supportsAllDrives=true`,accessToken,{method:'DELETE'});removed++;}
+      catch(error){if(!absent(error))pending++;}
+    }
   }
-  removed+=publicPermissions.length;
-  }
+  if(pending)throw Error('A retirada das cópias acessíveis foi executada, mas ainda há permissões pendentes no Drive. Repita a operação para concluir.');
   return {removed};
+}
+
+/** A failure for one source never prevents revoking the other authorized PDFs. */
+export async function withdrawManyPublicDriveFiles(accessToken:string,fileIds:string[]):Promise<void>{
+ const results=await Promise.allSettled([...new Set(fileIds.filter(Boolean))].map(id=>withdrawDriveFilePublicAccess(accessToken,id)));
+ if(results.some(result=>result.status==='rejected'))throw Error('Há retiradas de acesso pendentes no Google Drive. Repita a operação para concluir.');
 }
 
 export async function inspectPortalDriveArtifact(input:{accessToken:string;fileId:string;expectedSha256?:string;expectedVersion?:number;expectPublic:boolean;expectedSourceFileId?:string}){

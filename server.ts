@@ -191,7 +191,7 @@ import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeDestination, asse
 import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, portalRuntimeSnapshotRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, loadPortalRuntimeLeanState, refreshPortalRuntimeLeanState, readArchivedSettingsBefore, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
-import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGeneratedInvitation, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePrivatePublicationSource, withdrawDriveFilePublicAccess, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadSignedPdfToDrive, reserveProcessFormPdfId, readProcessFormPdfById, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
+import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGeneratedInvitation, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePrivatePublicationSource, withdrawDriveFilePublicAccess, withdrawManyPublicDriveFiles, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadSignedPdfToDrive, reserveProcessFormPdfId, readProcessFormPdfById, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
 import { renderGoogleDriveTemplateToPdf,saveReviewedAta,exportReviewedAta,discardAtaCopy,cleanupExpiredAtaPreviews } from './server/integrations/googleDocsRenderer';
 import { dispatchTrackedEmail, workflowEmailCopies } from './server/integrations/trackedGmail';
 import { createCriticalAuditJournal, visibleCriticalAudit } from './server/criticalAuditPolicy';
@@ -3915,7 +3915,7 @@ export async function createPortalApp() {
     try{await persistPortalStateDurably();}catch{return res.status(503).json({error:'A retirada não foi confirmada no banco. Recarregue antes de tentar novamente.'});}
     try{
       const token=await getGoogleWorkspaceAccessToken();
-      for(const id of new Set(current.attachments.filter(f=>['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(f.kind)).map(f=>f.driveFileId)))await withdrawDriveFilePublicAccess(token,id);
+      await withdrawManyPublicDriveFiles(token,current.attachments.filter(f=>['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(f.kind)).map(f=>f.driveFileId));
       legacyAcademicRecordsStore[index]=canonicalLegacyRecord({...legacyAcademicRecordsStore[index],provenance:{...legacyAcademicRecordsStore[index].provenance,publicationWithdrawal:{...withdrawal,drivePending:false}}});
       await persistPortalStateDurably();
     }catch{return res.status(502).json({error:'Os PDFs foram bloqueados no Portal. A retirada das cópias do Drive está pendente; use Concluir retirada no Drive para tentar novamente.',code:'PUBLIC_DRIVE_REVOCATION_PENDING'});}
@@ -5385,7 +5385,7 @@ export async function createPortalApp() {
     try{await persistPortalStateDurably();}catch{return res.status(503).json({error:'A retirada não foi confirmada no banco. Recarregue antes de tentar novamente.'});}
     try{
       const accessToken=await getGoogleWorkspaceAccessToken();
-      for(const id of new Set([process.acervo?.publicFullWorkFileId,process.acervo?.publicExpandedAbstractFileId,process.acervo?.trabalhoCompletoFileId,process.acervo?.resumoExpandidoFileId].filter(Boolean) as string[]))await withdrawDriveFilePublicAccess(accessToken,id);
+      await withdrawManyPublicDriveFiles(accessToken,[process.acervo?.publicFullWorkFileId,process.acervo?.publicExpandedAbstractFileId,process.acervo?.trabalhoCompletoFileId,process.acervo?.resumoExpandidoFileId].filter(Boolean) as string[]);
     }catch{return res.status(502).json({error:'A publicação foi bloqueada no Portal. A retirada das cópias do Drive está pendente; repita a retirada para concluir.',code:'PUBLIC_DRIVE_REVOCATION_PENDING'});}
     res.json({processId:process.id,withdrawnAt:now,public:false});
   });

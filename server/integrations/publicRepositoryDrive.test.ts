@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {publicRepositoryDriveLinks} from './publicRepositoryDrive';import {withdrawDriveFilePublicAccess} from './googleDriveArchive';
+import {publicRepositoryDriveLinks} from './publicRepositoryDrive';import {withdrawDriveFilePublicAccess,withdrawManyPublicDriveFiles} from './googleDriveArchive';
 function fixture(t:any){
  const calls:{path:string;method:string;body:any}[]=[],sha='a'.repeat(64),source='private_source_123',copy='public_copy_1234',parent='private_folder_123';
  const props={portal:'portal-tcc',portalProcessId:'process-1',publicationSourceFileId:source,sha256:sha,artifactType:'PUBLIC_REPOSITORY_COPY'};
@@ -43,4 +43,31 @@ test('withdrawal revokes every derivative and never removes private owner access
 test('a modified public copy loses the permission behind previously issued Drive links',async t=>{
  const f=fixture(t);f.state.existing=true;f.state.shared=true;f.copyMetadata.sha256Checksum='b'.repeat(64);
  await assert.rejects(publicRepositoryDriveLinks(f.input),/cópia pública mudou/);assert.equal(f.state.shared,false);assert.ok(!f.calls.some(c=>c.method==='POST'));
+});
+
+test('withdrawal reaches every public copy even if the original is deleted or inaccessible',async t=>{
+ for(const status of [404,403]){
+  let copyRevoked=false;
+  t.mock.method(globalThis,'fetch',async(input:any,init?:RequestInit)=>{
+   const u=new URL(String(input));
+   if(u.pathname==='/drive/v3/files')return Response.json({files:[{id:'public_copy_1234'}]});
+   if(u.pathname.includes('private_source_123'))return Response.json({error:{message:'Original unavailable'}},{status});
+   if(init?.method==='DELETE'){copyRevoked=true;return new Response(null,{status:204});}
+   return Response.json({permissions:[{id:'public-reader',type:'anyone',role:'reader'}]});
+  });
+  const run=withdrawDriveFilePublicAccess('fixture','private_source_123');
+  if(status===404)assert.equal((await run).removed,1);else await assert.rejects(run,/pendentes/);
+  assert.equal(copyRevoked,true);
+ }
+});
+
+test('withdrawal of multiple PDFs continues after an individual source failure',async t=>{
+ const revoked:string[]=[];
+ t.mock.method(globalThis,'fetch',async(input:any,init?:RequestInit)=>{
+  const u=new URL(String(input));if(u.pathname==='/drive/v3/files')return Response.json({files:[]});
+  if(u.pathname.includes('inaccessible_source'))return Response.json({error:{message:'No access'}},{status:403});
+  if(init?.method==='DELETE'){revoked.push(u.pathname);return new Response(null,{status:204});}
+  return Response.json({permissions:[{id:'reader',type:'anyone',role:'reader'}]});
+ });
+ await assert.rejects(withdrawManyPublicDriveFiles('fixture',['inaccessible_source','other_source_123']),/pendentes/);assert.equal(revoked.length,1);
 });
