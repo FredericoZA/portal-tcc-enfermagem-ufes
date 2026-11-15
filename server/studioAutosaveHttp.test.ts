@@ -43,6 +43,6 @@ test('autosave preserves valid and incomplete drafts after restart and activatio
   assert.equal((await save(candidate,5,'master@portal.local','')).status,400,'publication mode must be explicit');
   assert.equal((await save(candidate,1,'master@portal.local','publish')).status,409,'publication cannot overwrite an unseen draft');
   const published=await save(candidate,5,'master@portal.local','publish');assert.equal(published.status,200,JSON.stringify(published.body));assert.equal(published.body.integrationStudioDraft,undefined);assert.equal(published.body.integrationStudio.revision,6);assert.equal(published.body.integrationStudio.publication.status,'PUBLISHED');assert.equal(published.body.integrationStudio.emailTemplates[0].recipient,'autores@example.org');
-  const durable=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(durable.settings.integrationStudio.revision,6);assert.ok(durable.auditLogs.some((r:any)=>r.action==='SALVAMENTO_AUTOMATICO_ESTUDIO'));assert.ok(durable.auditLogs.some((r:any)=>r.action==='PUBLICACAO_ESTUDIO_INTEGRADO'));
+  const durable=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(durable.settings.integrationStudio.revision,6);assert.equal(durable.auditLogs.some((r:any)=>r.action==='SALVAMENTO_AUTOMATICO_ESTUDIO'),false,'routine draft autosaves do not create critical audit records');assert.ok(durable.auditLogs.some((r:any)=>r.action==='PUBLICACAO_ESTUDIO_INTEGRADO'));
  }finally{await stop();await rm(directory,{recursive:true,force:true});}
 });

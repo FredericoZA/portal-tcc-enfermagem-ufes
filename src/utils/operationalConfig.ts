@@ -1,3 +1,4 @@
+import {normalizeReviewedTccTitle} from './reviewedTccTitle';
 import {isEmailAddress} from './emailAddress';
 import {renderInstitutionName} from './institutionName';
 import {CUSTOM_DEFENSE_LOCATION} from './reservationLocation';
@@ -146,7 +147,7 @@ const q = (
 const when = (fieldKey: string) => ({ fieldKey, operator: 'EQUALS' as const, value: 'Sim' });
 
 const personPresentationQuestions=(prefix:string,section:string,student=false,visibleWhen?:RegistrationQuestion['visibleWhen']):RegistrationQuestion[]=>[
- {...q(`${prefix}_TRATAMENTO`,student?'Forma de referência':'Tratamento docente',section,'select',visibleWhen),options:[...(student?STUDENT_TREATMENTS:FACULTY_TREATMENTS)],helpText:student?'Escolha como a pessoa deve ser referida nos documentos.':'Escolha o tratamento que deve acompanhar o nome nos documentos.'},
+ {...q(`${prefix}_TRATAMENTO`,student?'Forma de referência':'Tratamento docente',section,'select',visibleWhen),required:!prefix.startsWith('EXAMINADOR_'),options:[...(student?STUDENT_TREATMENTS:FACULTY_TREATMENTS)],helpText:student?'Escolha como a pessoa deve ser referida nos documentos.':'Escolha o tratamento que deve acompanhar o nome nos documentos.'},
  ...(!student?[{...q(`${prefix}_TITULACAO`,'Titulação',section,'select',visibleWhen),options:[...ACADEMIC_DEGREES]}]:[])
 ];
 
@@ -224,7 +225,7 @@ export function registrationQuestions(studio?: Partial<IntegrationStudioSettings
     seen.add(fieldKey);
     const core = REGISTRATION_QUESTIONS.find(f => f.fieldKey === fieldKey);
     result.push(core
-      ? { ...core, ...custom, fieldKey, label:/_MATRICULA$|_SIAPE$/.test(fieldKey)?core.label:custom.label||core.label, fieldType: core.fieldType, options:isPresentationField(fieldKey)?core.options:custom.options, required: core.required || custom.required, visibleWhen: core.visibleWhen, validation: core.validation || custom.validation, helpText: fieldKey==='ALUNO_1_EMAIL'?core.helpText:/_NOME$/.test(fieldKey)?(core.helpText&&custom.helpText?.includes(core.helpText)?custom.helpText:[core.helpText,custom.helpText].filter(Boolean).filter((text,index,list)=>list.indexOf(text)===index).join(' ')):custom.helpText || core.helpText }
+      ? { ...core, ...custom, fieldKey, label:/_MATRICULA$|_SIAPE$/.test(fieldKey)?core.label:custom.label||core.label, fieldType: core.fieldType, options:isPresentationField(fieldKey)?core.options:custom.options, required: /^EXAMINADOR_[23]_TRATAMENTO$/.test(fieldKey)?false:core.required || custom.required, visibleWhen: core.visibleWhen, validation: core.validation || custom.validation, helpText: fieldKey==='ALUNO_1_EMAIL'?core.helpText:/_NOME$/.test(fieldKey)?(core.helpText&&custom.helpText?.includes(core.helpText)?custom.helpText:[core.helpText,custom.helpText].filter(Boolean).filter((text,index,list)=>list.indexOf(text)===index).join(' ')):custom.helpText || core.helpText }
       : { ...custom, fieldKey, section: custom.section || 'Trabalho' });
   }
 
@@ -303,7 +304,7 @@ export function registrationPayload(a: RegistrationAnswers, timezone: string) {
     aluno2: s('TEM_ALUNO_2') === 'Sim' ? canonicalPerson('ALUNO_2', a) : null,
     orientador: canonicalPerson('ORIENTADOR', a),
     coorientador: s('TEM_COORIENTADOR') === 'Sim' ? canonicalPerson('COORIENTADOR', a) : null,
-    titulo: renderTccTitle(s('TITULO')),
+    titulo: normalizeReviewedTccTitle(s('TITULO')),
     banca: [2, 3].map(n => ({ ...canonicalPerson(`EXAMINADOR_${n}`, a), funcao: `EXAMINER_${n}` })),
     defesa: {
       startAt: localDateTimeToIso(s('DEFESA_DATA_HORA'), timezone),

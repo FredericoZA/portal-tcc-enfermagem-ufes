@@ -25,6 +25,7 @@ export function signatureAuditMetadata(job:SignatureJob,eventStage:SignatureAudi
   };
 }
 export function recordSignatureAudit(logs:AuditLog[],process:ProcessData,job:SignatureJob,actorEmail:string,eventStage:SignatureAuditStage,evidenceSource?:'ASTEN_SIGNERS_READBACK'|'GOV_BR_MANUAL_REVIEW',beforeStatus?:SignatureJob['status']):void {
+  if(job.provider==='ASTEN'&&eventStage==='PROVIDER_SIGNERS_VERIFIED')return;
   const id=`signature:${job.id}:${eventStage}`;
   if(logs.some(log=>log.id===id))return;
   const action=eventStage==='DOCUMENT_PREPARED'?'DOCUMENTO_PREPARADO_PARA_ASSINATURA':eventStage==='PROVIDER_SIGNERS_VERIFIED'?'SIGNATARIOS_CONFIRMADOS_PELO_PROVEDOR':'DOCUMENTO_ASSINADO_ARQUIVADO';

@@ -2,6 +2,7 @@ import {withPortalOperation,requestOperationLabel} from './portalOperations';
 import {waitForAuditLogRetry} from '../utils/auditLogPageState';
 import { ProcessData, ProcessDocument, GlobalSettings, AuditLog, DocumentCorrectionRequest, GoogleCalendarSyncedEvent, SignatureJob, AstenIntegrationStatus } from '../types';
 import type { IntegrationStudioSettings } from '../types/integrationStudio';
+import type {ProcessDataReviewInput} from '../types/processDataReview';
 import type { WorkflowSimulationResult, WorkflowSimulationScenario, WorkflowTraceEntry } from '../types/automation';
 import type { FeedbackEntry, FeedbackPage } from '../types/feedback';
 import type {AstenDocumentFoldersStatus,AstenDocumentFolderType} from '../types/signatures';
@@ -239,6 +240,7 @@ async function withDevelopmentFallback<T>(file:File, operation:()=>Promise<T>, f
 }
 
 export const apiClient = {
+  getDocumentDriveLinks:(processId:string,documentId:string)=>fetchApi<{links:{view:string;download:string}|null}>(`/api/processes/${encodeURIComponent(processId)}/documents/${encodeURIComponent(documentId)}/download?delivery=drive-links`),
   importLegacyAcademicRecords:(records:unknown[],expectedRevision:string)=>fetchApi<{imported:number;total:number;revision:string}>('/api/admin/legacy-academic-records/import',{method:'POST',body:JSON.stringify({records,expectedRevision})}),
   getPublicRepository: () => fetchApi<ProcessData[]>('/api/public/repository'),
   getPublicCalendarData: (options: Pick<ApiRequestOptions, 'signal'> = {}) => fetchApi<{processes:ProcessData[];googleEvents:GoogleCalendarSyncedEvent[]}>('/api/public/calendar-data', options),
@@ -309,6 +311,13 @@ export const apiClient = {
   ) => fetchApi<WorkflowProcessResponse & {reservationRestarted?:boolean}>(
     `/api/processes/${encodeURIComponent(id)}/reservation-change`,
     { method: 'POST', body: JSON.stringify(data) },
+  ),
+  reviewProcessData:(id:string,data:ProcessDataReviewInput)=>fetchApi<ProcessData>(
+    `/api/processes/${encodeURIComponent(id)}/data-review`,
+    {method:'POST',body:JSON.stringify(data)},
+  ),
+  getProcessDataReviewSchema:(id:string)=>fetchApi<Partial<IntegrationStudioSettings>>(
+    `/api/processes/${encodeURIComponent(id)}/data-review/schema`,
   ),
   getStudioForm:(processId:string,formId:string)=>fetchApi<any>(`/api/processes/${processId}/forms/${formId}`),
   getStudioForms:(processId:string)=>fetchApi<any[]>(`/api/processes/${processId}/forms`),

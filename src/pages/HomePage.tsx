@@ -1,3 +1,4 @@
+import {displayParticipantInstitution} from '../utils/institutionName';
 import {matchesRepositoryQuery} from '../utils/repositoryQuery';
 import {institutionSearchText} from '../utils/institutionName';
 import {createPortal} from 'react-dom';
@@ -1633,7 +1634,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                 >
                                   {/* Header: Time & Protocol */}
                                   {showTopRow && (
-                                    <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200 text-xs">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200 text-xs">
                                       {calendarPopupFormat.showTime !== false ? (
                                         <div
                                           className="flex items-center gap-1.5 font-black"
@@ -1643,15 +1644,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           <span>{getStartAndEndTime(proc.defesa?.startAt)}<PendingDefenseConfirmationNote process={proc} /></span>
                                         </div>
                                       ) : <div />}
-                                      <div className="flex items-center gap-2">
+                                      <div className="contents">
                                         {calendarPopupFormat.showLocation !== false && proc.defesa?.local && (
-                                          <span className="text-[10.5px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-[140px]" title={proc.defesa.local}>
+                                          <span className="order-last w-full whitespace-normal break-words text-[10.5px] font-normal text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md" title={proc.defesa.local}>
                                             {proc.defesa.local}
                                           </span>
                                         )}
                                         {calendarPopupFormat.showProtocol !== false && (
                                           <span
-                                            className="font-mono font-bold px-2 py-0.5 rounded-md border border-slate-250 text-[10px]"
+                                            className="order-first shrink-0 whitespace-nowrap font-mono font-bold px-2 py-0.5 rounded-md border border-slate-250 text-[10px]"
                                             style={{
                                               backgroundColor: calendarPopupFormat.protocolBadgeBg || 'var(--portal-surface-page)',
                                               color: reservationPending ? undefined : calendarPopupFormat.protocolBadgeText || '#1e293b'
@@ -1668,11 +1669,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                   {calendarPopupFormat.showTitle !== false && (
                                     <h4
                                       className={`${cardTitleWeightClass} leading-snug ${cardTitleSizeClass} ${
-                                        calendarPopupFormat.cardTitleUppercase !== false ? 'uppercase' : ''
+                                        'normal-case'
                                       }`}
                                       style={{ color: reservationPending ? undefined : calendarPopupFormat.cardTitleColor || '#0f172a' }}
                                     >
-                                      {formatTccTitle(proc.titulo)}
+                                      {proc.titulo}
                                     </h4>
                                   )}
 
@@ -1700,7 +1701,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block">
                                             {calendarPopupFormat.advisorLabel || 'Orientador(a):'}
                                           </span>
-                                          <span className="font-bold text-slate-900">{(proc.legacyRecord?cleanPersonName(proc.orientador?.nome):formatProfessorName(proc.orientador?.nome))}</span>
+                                          <span className="font-normal text-slate-900">{(proc.legacyRecord?cleanPersonName(proc.orientador?.nome):formatProfessorName(proc.orientador?.nome))}</span>
                                           {calendarPopupFormat.showAdvisorInstitution !== false && (
                                             <span className="text-[10px] text-slate-500 font-mono font-normal ml-1">({proc.orientador?.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})</span>
                                           )}
@@ -1711,7 +1712,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block">
                                             {calendarPopupFormat.coAdvisorLabel || 'Coorientador(a):'}
                                           </span>
-                                          <span className="font-bold text-slate-900">{(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))}</span>
+                                          <span className="font-normal text-slate-900">{(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))}</span>
                                           {calendarPopupFormat.showAdvisorInstitution !== false && (
                                             <span className="text-[10px] text-slate-500 font-mono font-normal ml-1">({proc.coorientador.instituicao || installationProfile.defaultInstitutionName})</span>
                                           )}
@@ -2133,8 +2134,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 case 'titulo':
                   return (
                     <td key="titulo" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
-                      <div className={`${defStyles.cellWrapClass} ${alignClass} ${defStyles.cellFontSizeClass}`} title={formatTccTitle(proc.titulo)}>
-                        {formatCellText('titulo', formatTccTitle(proc.titulo), defensesTextFormat, '')}
+                      <div className={`${defStyles.cellWrapClass} ${alignClass} ${defStyles.cellFontSizeClass}`} title={proc.titulo}>
+                        {formatCellText('titulo', proc.titulo, defensesTextFormat, '')}
                       </div>
                     </td>
                   );
@@ -2279,7 +2280,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                       const cleanInst = (str?: string) => {
                         if (!str) return '';
-                        return str.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '').trim();
+                        return displayParticipantInstitution(str.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '').trim());
                       };
 
                       return (
@@ -2510,8 +2511,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   case 'titulo':
                     return (
                       <td key="titulo" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
-                        <div className={`${acervoStyles.cellWrapClass} ${alignClass} ${acervoStyles.cellFontSizeClass}`} title={formatTccTitle(proc.titulo)}>
-                          {formatCellText('titulo', formatTccTitle(proc.titulo), acervoTextFormat, '')}
+                        <div className={`${acervoStyles.cellWrapClass} ${alignClass} ${acervoStyles.cellFontSizeClass}`} title={proc.titulo}>
+                          {formatCellText('titulo', proc.titulo, acervoTextFormat, '')}
                           <PendingDefenseConfirmationNote process={proc} />
                         </div>
                       </td>
@@ -2665,7 +2666,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                         const cleanInst = (str?: string) => {
                           if (!str) return '';
-                          return str.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '').trim();
+                          return displayParticipantInstitution(str.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '').trim());
                         };
 
                         return (

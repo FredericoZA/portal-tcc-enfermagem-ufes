@@ -17,14 +17,13 @@ const process = {
     localStatus: 'CONFIRMADO',
   },
 } as unknown as ProcessData;
-const now = new Date('2026-11-03T09:00:00.000Z');
 const fixedLocations = ['Auditório do Departamento', 'Sala de Reuniões'];
 
 test('novo pedido retorna dados propostos sem modificar a reserva vigente', () => {
   const before = JSON.stringify(process.defesa);
   const next = validateReservationChange(
     { date: '2026-11-06', time: '14:00', locationChoice: 'Sala de Reuniões' },
-    process, fixedLocations, 90, now,
+    process, fixedLocations, 90,
   );
   assert.equal(next.startAt, '2026-11-06T17:00:00.000Z');
   assert.equal(next.endAt, '2026-11-06T18:30:00.000Z');
@@ -35,23 +34,18 @@ test('novo pedido retorna dados propostos sem modificar a reserva vigente', () =
 test('outro local é normalizado, com sigla marcada preservada', () => {
   const next = validateReservationChange(
     { date: '2026-11-06', time: '14:00', locationChoice: OTHER_DEFENSE_LOCATION, customLocation: 'AUDITÓRIO CENTRAL DA *UFES*' },
-    process, fixedLocations, 90, now,
+    process, fixedLocations, 90,
   );
   assert.equal(next.custom, true);
   assert.equal(next.local, 'Auditório Central da UFES');
 });
 
-test('finais de semana, datas passadas e locais não cadastrados são bloqueados', () => {
+test('finais de semana e locais não cadastrados continuam bloqueados', () => {
   for(const date of ['2026-11-07','2026-11-08']){
-    assert.throws(()=>validateReservationChange({date,time:'14:00',locationChoice:fixedLocations[0]},process,fixedLocations,90,now),/segunda a sexta-feira/);
+    assert.throws(()=>validateReservationChange({date,time:'14:00',locationChoice:fixedLocations[0]},process,fixedLocations,90),/segunda a sexta-feira/);
   }
-  assert.throws(()=>validateReservationChange({date:'2026-10-30',time:'14:00',locationChoice:fixedLocations[0]},process,fixedLocations,90,now),/futuros/);
   assert.throws(
-    () => validateReservationChange({ date: '2026-11-02', time: '14:00', locationChoice: fixedLocations[0] }, process, fixedLocations, 90, now),
-    /futuros/,
-  );
-  assert.throws(
-    () => validateReservationChange({ date: '2026-11-06', time: '14:00', locationChoice: 'Local inventado' }, process, fixedLocations, 90, now),
+    () => validateReservationChange({ date: '2026-11-06', time: '14:00', locationChoice: 'Local inventado' }, process, fixedLocations, 90),
     /local publicado/,
   );
 });
@@ -66,4 +60,12 @@ test('mensagem indica nova solicitação e conserva dados anteriores', () => {
   assert.match(message.text, /Auditório do Departamento/);
   assert.match(message.text, /Sala de Reuniões/);
   assert.match(message.text, /permanecerá no Portal/);
+});
+
+test('datas retrospectivas e horários noturnos conservam a precisão de minuto e 90 minutos de duração', () => {
+  const next=validateReservationChange({date:'2020-11-06',time:'23:47',locationChoice:fixedLocations[0]},process,fixedLocations,90);
+  assert.equal(next.startAt,'2020-11-07T02:47:00.000Z');
+  assert.equal(next.endAt,'2020-11-07T04:17:00.000Z');
+  assert.throws(()=>validateReservationChange({date:'2026-02-30',time:'23:47',locationChoice:fixedLocations[0]},process,fixedLocations,90),/horário|data|fuso/);
+  assert.throws(()=>validateReservationChange({date:'2026-11-06',time:'24:00',locationChoice:fixedLocations[0]},process,fixedLocations,90),/válidos/);
 });

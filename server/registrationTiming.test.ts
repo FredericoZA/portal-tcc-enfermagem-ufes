@@ -10,6 +10,7 @@ import type {ProcessData} from '../src/types';
 import {beginRegistrationRequestTiming,registrationRequestTiming} from './registrationTiming';
 import {reservationRuntimeUnavailablePage,reservationAlreadyAnsweredPage,readSavedReservationDecision,reservationToken} from './workflow/reservationConfirmation';
 import {createRuntimeRequestQueue,attachRuntimeRequestLifecycle,settlePreviousRuntimeWrites} from './runtimeRequestQueue';
+import {portalRuntimeSnapshotRevision} from './integrations/supabase';
 
 test('registration timing measures fixed stages and response status without retaining request data',async()=>{
   let clock=10;const reports:unknown[]=[];
@@ -67,7 +68,7 @@ test('actual runtime middleware keeps the lock and records busy admission and hy
     id:'fixture',defesa:{reservationRevision:2,departmentResponse:{revision:2,respondedBy:recipient,attribution:'EMAIL_LINK',decision}},
   } as ProcessData]});
   const context={app,AbortController,reservationRuntimeUnavailablePage,reservationAlreadyAnsweredPage,readSavedReservationDecision,reservationSecret:()=>secret,loadPortalCalendarSnapshot,console:{error:()=>{}},createRuntimeRequestQueue:()=>createRuntimeRequestQueue({waitTimeoutMs:20}),attachRuntimeRequestLifecycle,settlePreviousRuntimeWrites,remotePersistenceQueue:Promise.resolve(),getSupabaseRuntimeStatus:()=>({durablePersistenceReady:true}),liteRuntimeReadsEnabled:false,beginRegistrationRequestTiming:(req:any,res:any)=>beginRegistrationRequestTiming(req,res,()=>performance.now(),value=>reports.push(value)),refreshPortalRuntimeState:async()=>{reads++;if(failRead)throw Error('PRIVATE_DATABASE_DETAIL');if(reads===1){entered();await held;}return {};},applyPersistedState:()=>{}};
-  runInNewContext(ts.transpileModule(middleware,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
+  runInNewContext(ts.transpileModule(middleware,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,{...context,portalRuntimeSnapshotRevision});
   app.use((_req,res)=>{res.json({ok:true});});
   const server=createServer(app);server.listen(0,'127.0.0.1');await once(server,'listening');
   const base=`http://127.0.0.1:${(server.address() as {port:number}).port}`;

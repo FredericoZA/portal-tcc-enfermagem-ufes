@@ -23,7 +23,7 @@ const validAnswers = () => ({
   LOCAL_ALTERNATIVO: ''
 });
 
-test('cadastro institucional corrige caixa alta e normaliza os campos operacionais', () => {
+test('cadastro institucional preserva grafia do título e normaliza os campos pessoais e operacionais', () => {
   const result = acceptRegistration({ registrationAnswers: validAnswers() });
   assert.equal(result.aluno1.nome, 'Maria das Dores Silva');
   assert.equal(result.aluno1.email, 'maria@edu.ufes.br');
@@ -31,7 +31,7 @@ test('cadastro institucional corrige caixa alta e normaliza os campos operaciona
   assert.equal(result.orientador.nome, 'João de Souza');
   assert.equal(result.orientador.email, 'joao@ufes.br');
   assert.equal(result.orientador.siape, '');
-  assert.equal(result.titulo, 'Impacto do Cuidado de Enfermagem na UTI');
+  assert.equal(result.titulo, 'IMPACTO DO CUIDADO DE ENFERMAGEM NA UTI');
   assert.equal(result.banca[1].email, 'beatriz@fiocruz.br');
 });
 
@@ -56,7 +56,7 @@ test('cadastros novos descartam registros recebidos de formulários antigos', ()
 
 test('banca externa continua permitida sem SIAPE quando e-mail e instituição são válidos', () => {
   const result = acceptRegistration({ registrationAnswers: validAnswers() });
-  assert.equal(result.banca[1].instituicao, 'FIOCRUZ');
+  assert.equal(result.banca[1].instituicao, 'Fiocruz');
   assert.equal(result.banca[1].email, 'beatriz@fiocruz.br');
   assert.equal(result.banca[1].siape, '');
 });
@@ -85,10 +85,10 @@ test('instituição interpreta siglas marcadas no servidor e remove asteriscos d
 });
 
 
-test('cadastro normaliza título e instituições sem exigir marcadores',()=>{
+test('cadastro preserva a grafia escolhida para título e instituições sem exigir marcadores',()=>{
  const result=acceptRegistration({registrationAnswers:{...validAnswers(),TITULO:'CUIDADO DE ENFERMAGEM NO SUS E NA UFES',EXAMINADOR_2_INSTITUICAO:'FAESA',EXAMINADOR_3_INSTITUICAO:'UNIVERSIDADE FEDERAL DO RIO DE JANEIRO'}});
- assert.equal(result.titulo,'Cuidado de Enfermagem no SUS e na UFES');
+ assert.equal(result.titulo,'CUIDADO DE ENFERMAGEM NO SUS E NA UFES');
  assert.equal(result.banca[0].instituicao,'FAESA');
- assert.equal(result.banca[1].instituicao,'Universidade Federal do Rio de Janeiro');
+ assert.equal(result.banca[1].instituicao,'UNIVERSIDADE FEDERAL DO RIO DE JANEIRO');
  assert.equal(result.registrationAnswers.EXAMINADOR_2_INSTITUICAO,'FAESA');
 });

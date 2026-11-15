@@ -9,7 +9,7 @@ test('instituições usam siglas automáticas e aceitam notação antiga sem emi
   assert.equal(normalizeInstitutionInput(normalized),normalized);
   assert.equal(renderInstitutionName(normalized),expected);
  }
- assert.equal(renderInstitutionName('UNIVERSIDADE FEDERAL DE SÃO PAULO'),'Universidade Federal de São Paulo');
+ assert.equal(renderInstitutionName('UNIVERSIDADE FEDERAL DE SÃO PAULO'),'UNIVERSIDADE FEDERAL DE SÃO PAULO');
  for(const prefix of ['ORIENTADOR','COORIENTADOR','EXAMINADOR_2','EXAMINADOR_3'])assert.equal(normalizeRegistrationValue(`${prefix}_INSTITUICAO`,'text','*faesa*'),'FAESA');
  assert.equal(normalizeRegistrationValue('ORIENTADOR_NOME','text','*maria*'),'*maria*');
  assert.equal(normalizeRegistrationValue('ORIENTADOR_EMAIL','email','TESTE@EXAMPLE.INVALID'),'teste@example.invalid');
@@ -36,13 +36,13 @@ test('busca resolve sigla e nome extenso da UFES sem alterar dados ou inferir v�
 });
 
 
-test('instituições e títulos reconhecem siglas sem marcação e corrigem caixa alta comum',()=>{
+test('sugestões reconhecem siglas e a grafia escolhida permanece no cadastro e na exibição',()=>{
  const cases=[['ufes','UFES'],['FAESA','FAESA'],['UNIVIX','UNIVIX'],['UCL','UCL'],['ufmg','UFMG'],['UFRGS','UFRGS'],['ifsp','IFSP'],['PUC-SP','PUC-SP'],['UNIVERSIDADE FEDERAL DO ESPÍRITO SANTO','Universidade Federal do Espírito Santo'],['CENTRO UNIVERSITÁRIO DE VITÓRIA - UNIVIX','Centro Universitário de Vitória - UNIVIX'],['HOSPITAL UNIVERSITÁRIO HUCAM/UFES','Hospital Universitário HUCAM/UFES']];
  for(const [input,expected] of cases){
   assert.equal(normalizeInstitutionInput(input),expected);
-  assert.equal(renderInstitutionName(input),expected);
+  assert.equal(renderInstitutionName(input),input);
   assert.equal(normalizeInstitutionInput(expected),expected);
-  for(const key of ['COORIENTADOR_INSTITUICAO','EXAMINADOR_2_INSTITUICAO','EXAMINADOR_3_INSTITUICAO'])assert.equal(normalizeRegistrationValue(key,'text',input),expected);
+  for(const key of ['COORIENTADOR_INSTITUICAO','EXAMINADOR_2_INSTITUICAO','EXAMINADOR_3_INSTITUICAO'])assert.equal(normalizeRegistrationValue(key,'text',input),input);
  }
  for(const input of ['ESTUDO SOBRE HIV NO SUS E NA UFES','estudo sobre hiv no sus e na ufes','ESTUDO SOBRE *HIV* NO *SUS* E NA *UFES*']){
   assert.equal(formatTccTitle(input),'Estudo Sobre HIV no SUS e na UFES');

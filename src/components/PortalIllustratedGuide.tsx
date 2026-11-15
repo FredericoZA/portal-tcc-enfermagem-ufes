@@ -70,7 +70,7 @@ export const guideActivities: GuideActivity[] = [
     done: 'A ficha corresponde ao trabalho e os dados conferidos estão corretos.',
     help: [
       'Sem controles de edição: confira seu acesso, seu papel e a etapa do trabalho. Campos de consulta não ficam editáveis apenas por clicar neles.',
-      'Informação incorreta em etapa bloqueada: informe o protocolo e a correção à comissão. Não crie outro processo para contornar o bloqueio.',
+      'Se houver dados incorretos antes do registro da ata, peça ao orientador que use Verificar dados do processo em Conceito e Ata. Após o encerramento dessa possibilidade, procure a comissão com o protocolo. Não crie outro processo para contornar o bloqueio.',
     ],
   },
   {
@@ -115,7 +115,7 @@ export const guideActivities: GuideActivity[] = [
       'Confira o comprovante e a carta-convite em Documentos administrativos. Se a proposta precisar mudar, combine os novos dados com os autores para que solicitem outra reserva.',
     ],
     done: 'A reserva atual foi confirmada e as informações da defesa no convite estão corretas.',
-    help: ['Divergência após o bloqueio de edição: informe o protocolo e os dados corretos à comissão.'],
+    help: ['Antes de registrar a ata, corrija eventuais divergências em Conceito e Ata → Verificar dados do processo. Se a etapa de correção já tiver sido encerrada, procure a comissão com o protocolo do trabalho.'],
   },
   {
     id: 'avaliacao', title: 'Registrar o conceito e conferir a ata', roles: ['orientador'], imageId: 'avaliacao',
@@ -123,6 +123,10 @@ export const guideActivities: GuideActivity[] = [
     relatedImages: [{id: 'ata-previa', caption: 'Conferência da prévia: confirme os dados antes de registrar o conceito e continuar nos documentos.'}],
     steps: [
       'Entre com o e-mail do orientador, abra o TCC e a aba Conceito e Ata. O registro é liberado com local confirmado, convite enviado e a partir do horário da defesa.',
+      'Quando a etapa de registro da ata estiver liberada, se houver dados preenchidos incorretamente no cadastro, clique em Verificar dados do processo antes de registrar a ata. Se o cadastro estiver correto, siga sem abrir essa conferência.',
+      'Nas abas Trabalho, Autores, Orientação, Examinadores e Data e local, corrija as informações necessárias. É possível informar uma data passada ou futura, mantendo a verificação de conflitos no calendário.',
+      'O acesso à correção é exclusivo do orientador vinculado ao trabalho. Apenas o e-mail do orientador não pode ser alterado. Escreva nomes completos e o nome ou endereço do local corretamente, sem abreviações: a grafia informada será usada na documentação.',
+      'Confirme a conferência e clique em Salvar dados e voltar à ata. Depois, confira a prévia da ata com as informações corrigidas antes de registrar.',
       'Selecione Aprovado, Aprovado com ressalva ou Reprovado e preencha o Parecer da banca. Use Gerar rascunho de parecer para preencher um parágrafo completo com o conceito escolhido. Revise o texto e, se quiser, acrescente as considerações da banca ao final.',
       'Registre o conceito e o parecer deliberados pela banca. Se houve ressalvas, descreva-as no parecer. Faça a avaliação e lance notas e frequência no Portal do Professor, em professor.ufes.br.',
       'Clique em Visualizar ata. Confira os dados e o texto da prévia, marque a confirmação de conferência e clique em Registrar conceito e ata e ir para documentos.',
@@ -131,7 +135,7 @@ export const guideActivities: GuideActivity[] = [
     done: 'O conceito e o parecer foram registrados. Acompanhe a assinatura da ata em Documentos administrativos.',
     help: [
       'Registro indisponível: confira o horário da defesa, a confirmação do local, o envio do convite e se está na conta do orientador.',
-      'Prévia incorreta: abra Corrigir ata, ajuste o texto, marque a confirmação e clique em Salvar e continuar. A prévia por si só não registra o conceito.',
+      'Dados cadastrais incorretos: volte a Verificar dados do processo antes do registro. Para ajustar o texto da prévia formatada, use Corrigir ata, marque a confirmação e clique em Salvar e continuar. A prévia por si só não registra o conceito.',
       'Reabrir conceito e ata só aparece enquanto o registro puder ser corrigido. A primeira entrega final bloqueia a reabertura, mesmo se a entrega for reaberta depois.',
     ],
   },

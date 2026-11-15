@@ -1,3 +1,4 @@
+import {displayParticipantInstitution} from '../utils/institutionName';
 import {matchesDefenseDateRange} from '../utils/repositoryQuery';
 import React, { useState, useEffect, useRef } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
@@ -409,7 +410,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
 
   const cleanInst = (str?: string) => {
     if (!str) return '';
-    return str.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '').trim();
+    return displayParticipantInstitution(str.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '').trim());
   };
 
   const activeColumns = columnOrder.filter((k) => visibleColumns[k]);
@@ -486,8 +487,8 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
       case 'titulo':
         return (
           <td key="titulo" className={`${styles.cellPadClass} ${widthClass} ${styles.cellWeightClass} ${styles.cellTextColorClass} ${alignClass} ${styles.borderClass} align-middle`}>
-            <div className={`${styles.cellWrapClass} ${alignClass} ${styles.cellFontSizeClass}`} title={formatTccTitle(proc.titulo)}>
-              {formatCellText('titulo', formatTccTitle(proc.titulo), meusProcessosTextFormat, '')}
+            <div className={`${styles.cellWrapClass} ${alignClass} ${styles.cellFontSizeClass}`} title={proc.titulo}>
+              {formatCellText('titulo', proc.titulo, meusProcessosTextFormat, '')}
             </div>
           </td>
         );

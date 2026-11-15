@@ -54,7 +54,7 @@ export function buildRegistrationMemberRows(
       name: formatNameTitleCase(name),
       reference: student
         ? (female ? 'Aluna' : 'Aluno')
-        : firstNonempty(answers, `${prefix}_TRATAMENTO`, `${prefix}_REFERENCIA`) || 'Professor',
+        : firstNonempty(answers, `${prefix}_TRATAMENTO`, `${prefix}_REFERENCIA`) || (prefix.startsWith('EXAMINADOR_')?'—':'Professor'),
       qualification: student
         ? '—'
         : firstNonempty(answers, `${prefix}_TITULACAO`, `${prefix}_TITULACAO_ACADEMICA`) || '—',

@@ -5,7 +5,7 @@ import { PortalSectionDivider } from '../components/PortalSectionDivider';
 import { useAuth } from '../context/AuthContext';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 
-const NORMAS_TCC_URL = 'https://enfermagem.vitoria.ufes.br/sites/enfermagem.vitoria.ufes.br/files/field/anexo/normas_do_tcc_-_de-ufes.pdf';
+const NORMAS_TCC_URL = 'https://drive.google.com/file/d/1Nz9KSlts3sh7vFRIfEYw1VkBlu8ZF1IZ/view';
 const PPC_URL = 'https://prograd.ufes.br/sites/prograd.ufes.br/files/field/anexo/ppc_enfermagem_e_obstetricia_ccs.pdf';
 const MATRIZ_CURRICULAR_URL = 'https://enfermagem.vitoria.ufes.br/pt-br/matriz-curricular-2020';
 const LGPD_URL = 'https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html';
@@ -99,7 +99,7 @@ export const InformacoesGeraisTccPage: React.FC<InformacoesGeraisTccPageProps> =
                 <p>O TCC pode ser apresentado como monografia ou artigo científico, em comum acordo com o professor orientador. Independentemente do formato, o trabalho deve atender às normas acadêmicas de estrutura, referências e apresentação adotadas pelo curso. Antes de preparar a versão final, consulte as orientações de elaboração do TCC em vigor.</p>
               </RuleCard>
               <RuleCard title="Apresentação e defesa" icon={ClipboardList}>
-                <p>A defesa do TCC é a apresentação oral do trabalho perante a banca examinadora, em sessão pública previamente agendada. Os autores e o orientador devem conferir data, horário e local. Após a defesa, o orientador registra no Portal TCC um dos três conceitos previstos e prepara a ata. A avaliação e o lançamento de notas e frequência são feitos no <SourceLink href="https://professor.ufes.br/">Portal do Professor</SourceLink>.</p>
+                <p>A defesa do TCC é a apresentação oral do trabalho perante a banca examinadora, em sessão pública previamente agendada. Os autores e o orientador devem conferir data, horário e local. Após a defesa, o orientador registra no Portal TCC um dos três conceitos previstos e prepara a ata. Antes de registrar a ata, o orientador vinculado ao trabalho pode usar Verificar dados do processo, em Conceito e Ata, para corrigir dados preenchidos incorretamente no cadastro. Se o cadastro estiver correto, essa conferência é dispensável. Apenas o e-mail do orientador não pode ser alterado. Os dados corrigidos serão usados na ata e nos demais termos. A avaliação e o lançamento de notas e frequência são feitos no <SourceLink href="https://professor.ufes.br/">Portal do Professor</SourceLink>.</p>
               </RuleCard>
               <RuleCard title="Entrega e publicação do TCC" icon={CheckCircle2}>
                 <p>A entrega do TCC final em PDF é obrigatória para concluir o processo acadêmico. Sua disponibilização pública para consulta ou download, porém, depende de autorização expressa dos autores. Também é possível anexar um resumo expandido e decidir separadamente sobre sua divulgação, quando essa opção estiver disponível. Entrega e publicação são decisões distintas: não autorizar a divulgação não dispensa o envio do trabalho.</p>
@@ -113,8 +113,8 @@ export const InformacoesGeraisTccPage: React.FC<InformacoesGeraisTccPageProps> =
               <RuleCard title="Documentos e próximos passos" icon={FileText}>
                 <p>O Portal TCC organiza o cadastro do trabalho, a reserva do local, a composição da banca, o registro de conceito e ata, a coleta de assinaturas e a entrega final. Para conhecer as normas do curso e acompanhar cada etapa, consulte os documentos institucionais e o manual de uso.</p>
                 <ul className="space-y-1.5">
-                  <li><SourceLink href={NORMAS_TCC_URL}>Normas para elaboração do TCC</SourceLink></li>
-                  <li><SourceLink href={PPC_URL}>Projeto Pedagógico do Curso (PPC)</SourceLink></li>
+                  <li className="space-y-1"><SourceLink href={NORMAS_TCC_URL}>Normas para elaboração do TCC</SourceLink></li>
+                  <li><SourceLink href={PPC_URL}>Projeto Pedagógico do Curso (PPC) — versão em conferência</SourceLink></li>
                   <li><SourceLink href="/manual/manual-portal-tcc.pdf">Manual de uso do Portal</SourceLink></li>
                 </ul>
               </RuleCard>

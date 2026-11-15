@@ -17,7 +17,7 @@ export function plainPersonName(person?:AcademicPerson|null):string{
 }
 /** Canonical participant data stays separate; document representations are derived. */
 export function academicName(person?:AcademicPerson|null,style:'full'|'abbreviated'='full'):string{
- if(!person)return '';if(!person.tratamento)return person.nome.trim();
+ if(!person)return '';if(person.tratamento===undefined||person.tratamento===null)return person.nome.trim();
  const name=plainPersonName(person),short=style==='abbreviated';
  const treatment=person.tratamento==='Professora'?(short?'Prof.ª':'Professora'):person.tratamento==='Professor'?(short?'Prof.':'Professor'):'';
  const degrees:Record<string,string>=short?{Doutor:'Dr.',Doutora:'Dr.ª',Mestre:'Me.',Mestra:'Ma.',Especialista:'Esp.'}:{Doutor:'Doutor',Doutora:'Doutora',Mestre:'Mestre',Mestra:'Mestra',Especialista:'Especialista'};

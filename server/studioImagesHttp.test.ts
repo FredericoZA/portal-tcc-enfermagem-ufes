@@ -45,7 +45,7 @@ test('HTTP: imagem persiste mesmo com pacote incompleto, sem publicar outros cam
   assert.deepEqual(state.settings.integrationStudio.formTemplates,studio.formTemplates);
   assert.equal(state.settings.integrationStudio.formDesigns['incomplete-form'],undefined);
   assert.equal(state.settings.integrationStudioDraft.formDesigns['incomplete-form'].logoUrl,image);
-  assert.equal(state.auditLogs.filter((log:any)=>log.action==='ALTERACAO_IMAGEM_ESTUDIO').length,2);
+  assert.equal(state.auditLogs.filter((log:any)=>log.action==='ALTERACAO_IMAGEM_ESTUDIO').length,0,'cosmetic draft image changes do not create critical audit records');
   assert.equal(state.processes.length,0);
  }finally{child.kill('SIGTERM');await new Promise(resolve=>child.once('exit',resolve));await rm(directory,{recursive:true,force:true});}
 });

@@ -23,7 +23,7 @@ export function RegistrationFieldPreview({
     ? renderInstitutionName(input)
     : kind === 'location'
       ? renderCustomLocationName(input)
-      : formatTccTitle(input);
+      : input;
 
   if (!formatted) return null;
 

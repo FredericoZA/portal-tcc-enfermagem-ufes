@@ -1,3 +1,6 @@
+import {CapitalizationReview} from './CapitalizationReview';
+import {allowsCapitalizationChoice,needsCapitalizationReview} from '../utils/capitalizationReview';
+import {normalizeReviewedTccTitle} from '../utils/reviewedTccTitle';
 import {DEFENSE_WEEKDAY_MESSAGE,isDefenseWeekday} from '../utils/defenseSchedule';
 import {ReservationCalendarPicker} from './ReservationCalendarPicker';
 import { PORTAL_REPOSITORY_CHANGED_EVENT } from '../utils/portalLiveEvents';
@@ -12,7 +15,7 @@ import {withAuthorReference,registrationIdentityNames,registrationIdentitySenten
 import {academicName,authorIntroduction} from '../utils/personPresentation';
 import { ClipboardList } from 'lucide-react';
 import {normalizeRegistrationValue} from '../utils/registrationNormalization';
-import {renderTccTitle,formatDateNumericWithWeekday,formatDateWithWeekday,saoPauloCalendarDate} from '../utils/formatters';
+import {renderTccTitle,formatDateNumericWithWeekday,formatDateWithWeekday} from '../utils/formatters';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { RegistrationFieldPreview, registrationPreviewKind } from './RegistrationFieldPreview';
@@ -32,7 +35,7 @@ import type { IntegrationStudioSettings } from '../types/integrationStudio';
 
 export function registrationReviewValue(field:RegistrationQuestion,value:unknown):string {
   if(value===undefined||value===null||value==='')return '';
-  if(field.fieldKey==='TITULO')return renderTccTitle(String(value));
+  if(field.fieldKey==='TITULO')return String(normalizeRegistrationValue('TITULO','text',value));
   if(/_INSTITUICAO$/.test(field.fieldKey))return renderInstitutionName(String(value));
   if(registrationPreviewKind(field.fieldKey,field.label,field.fieldType)==='location')return renderCustomLocationName(String(value));
   if(field.fieldKey==='DEFESA_LOCAL'&&value==='__OUTRO_LOCAL__')return 'Outro local';
@@ -45,7 +48,7 @@ function registrationAuthorPreview(answers:RegistrationAnswers){
  const student=(n:number):StudentInfo=>({nome:normalizePersonName(String(answers[`ALUNO_${n}_NOME`]||'')),email:'',matricula:'',tratamento:answers[`ALUNO_${n}_TRATAMENTO`]==='Aluna'?'Aluna':answers[`ALUNO_${n}_TRATAMENTO`]==='Aluno'?'Aluno':undefined});
  return authorIntroduction({aluno1:student(1),aluno2:answers.TEM_ALUNO_2==='Sim'?student(2):null,authorOrder:'ALUNO_1_FIRST'});
 }
-function Question({ field, value, readOnly, onChange,optionLabels,recent=[], preview=false,suspended=false }: { field: RegistrationQuestion; value: unknown; readOnly: boolean;optionLabels?:Record<string,string>; recent?:string[]; preview?:boolean;suspended?:boolean; onChange: (value: string|boolean)=>void }) {
+function Question({ field, value, readOnly, onChange,optionLabels,recent=[], preview=false,suspended=false,confirmedCase,onConfirmCase }: { field: RegistrationQuestion; value: unknown; readOnly: boolean;optionLabels?:Record<string,string>; recent?:string[]; preview?:boolean;suspended?:boolean; confirmedCase?:string;onConfirmCase:(value:string)=>void; onChange: (value: string|boolean)=>void }) {
   const previewKind = registrationPreviewKind(field.fieldKey, field.label, field.fieldType);
   const helpText = registrationFieldHelpText(field.fieldKey, field.helpText);
   const [touched,setTouched]=useState(false);
@@ -67,9 +70,9 @@ function Question({ field, value, readOnly, onChange,optionLabels,recent=[], pre
   const issue=touched?(field.required&&!String(normalized??'').trim()?'Preencha este campo.':field.fieldType==='email'&&normalized&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(normalized))?'Confira o e-mail. Use nome@domínio, sem espaços.':validateStudioAnswer(normalized,field.validation)):null;
   return <label className={`block ${field.fieldType==='textarea'||['DEFESA_LOCAL','LOCAL_ALTERNATIVO','DEFESA_DATA_HORA'].includes(field.fieldKey)?'sm:col-span-2':''}`}>
     <span className="mb-2 block text-sm font-semibold">{({DEFESA_LOCAL:'Local da defesa',LOCAL_ALTERNATIVO:'Local alternativo',DEFESA_DATA_HORA:'Data e horário da defesa'} as Record<string,string>)[field.fieldKey]||field.label.replace(/\b(?:Aluno|avaliador) [123]\b/gi, match => /^aluno/i.test(match)?'aluno autor':'examinador')}{field.required?' *':''}</span>
-    {field.fieldType==='datetime-local'?<span className="portal-registration-date-time grid grid-cols-2 gap-3"><input aria-label="Data da defesa" className="portal-input" type="date" min={field.fieldKey==='DEFESA_DATA_HORA'&&!preview?saoPauloCalendarDate():undefined} value={String(value??'').split('T')[0]||''} onChange={e=>onChange(`${e.target.value}T${String(value??'').split('T')[1]||'14:00'}`)}/><input aria-label="Horário da defesa" className="portal-input" type="time" step={60} value={String(value??'').split('T')[1]||''} onChange={e=>onChange(`${String(value??'').split('T')[0]||''}T${e.target.value}`)}/></span>:field.fieldType==='checkbox'?<input type="checkbox" className="h-6 w-6" checked={value===true} onChange={e=>onChange(e.target.checked)}/>:
+    {field.fieldType==='datetime-local'?<span className="portal-registration-date-time grid grid-cols-2 gap-3"><input aria-label="Data da defesa" className="portal-input" type="date" value={String(value??'').split('T')[0]||''} onChange={e=>onChange(`${e.target.value}T${String(value??'').split('T')[1]||'14:00'}`)}/><input aria-label="Horário da defesa" className="portal-input" type="time" step={60} value={String(value??'').split('T')[1]||''} onChange={e=>onChange(`${String(value??'').split('T')[0]||''}T${e.target.value}`)}/></span>:field.fieldType==='checkbox'?<input type="checkbox" className="h-6 w-6" checked={value===true} onChange={e=>onChange(e.target.checked)}/>:
       field.fieldType==='textarea'?<textarea className="portal-input" rows={5} value={String(value??'')} maxLength={field.validation?.maxLength||10000} onChange={e=>onChange(e.target.value)}/>:
-      ['select','radio'].includes(field.fieldType)?<select className="portal-input" value={String(value??'')} onChange={e=>onChange(e.target.value)}><option value="">Selecione…</option>{field.options?.map(option=><option key={option} value={option}>{option==='__OUTRO_LOCAL__'?'Outro local — informar endereço/nome':optionLabels?.[option]||option}</option>)}</select>:
+      ['select','radio'].includes(field.fieldType)?<select className="portal-input" value={String(value??'')} onChange={e=>onChange(e.target.value)}><option value="">{/^EXAMINADOR_[23]_TRATAMENTO$/.test(field.fieldKey)?'Sem tratamento docente':'Selecione…'}</option>{field.options?.map(option=><option key={option} value={option}>{option==='__OUTRO_LOCAL__'?'Outro local — informar endereço/nome':optionLabels?.[option]||option}</option>)}</select>:
       <input list={identityField(field.fieldKey)?`registration-${field.fieldKey}`:undefined} autoComplete="off" className="portal-input" type={['email','number','date','datetime-local'].includes(field.fieldType)?field.fieldType:'text'} readOnly={readOnly} value={String(value??'')} aria-invalid={issue?true:undefined} onBlur={()=>{onChange(String(normalizeRegistrationValue(field.fieldKey,field.fieldType,value??'')));setTouched(true);}} placeholder={field.placeholder} maxLength={field.validation?.maxLength||500} onChange={e=>{setLookupQuery(e.target.value.trim().toLowerCase());onChange(e.target.value);}}/>}
     {field.fieldType==='datetime-local' && String(value||'').split('T')[0] &&
       <span className="mt-1 block text-xs font-semibold text-emerald-900" aria-live="polite">
@@ -79,6 +82,7 @@ function Question({ field, value, readOnly, onChange,optionLabels,recent=[], pre
     {issue&&<span role="alert" className="mt-1 block text-xs text-red-800">{issue}</span>}
     {(field.fieldKey==='TITULO'||/_INSTITUICAO$/.test(field.fieldKey))&&<span className="mt-1 block text-sm opacity-80">{INSTITUTION_ACRONYM_HELP}</span>}
     {helpText&&field.fieldKey!=='DEFESA_LOCAL_PERSONALIZADO'&&<span className="mt-1 block text-sm opacity-80">{field.fieldKey==='ALUNO_1_EMAIL'?'Use o e-mail cadastrado na lista de acesso.':helpText.replace(/depois do Aluno 1/gi,'após o primeiro nome informado')}</span>}
+    {allowsCapitalizationChoice(field.fieldKey)&&!readOnly&&<CapitalizationReview value={String(value??'')} kind={field.fieldKey==='TITULO'?'title':'institution'} confirmed={confirmedCase} onApply={suggestion=>{onChange(suggestion);onConfirmCase(suggestion);}} onKeep={onConfirmCase}/> }
     {previewKind && <RegistrationFieldPreview kind={previewKind} value={String(value ?? '')} />}
   </label>;
 }
@@ -89,6 +93,7 @@ export function ConfigurableRegistration({ onSuccess, onCancel, previewStudio }:
   const [studio,setStudio]=useState<Partial<IntegrationStudioSettings>|undefined>(previewStudio||settings?.integrationStudio);
   const [answers,setAnswers]=useState<RegistrationAnswers>({ALUNO_1_EMAIL:userEmail,TEM_ALUNO_2:'Não',TEM_COORIENTADOR:'Não'});
   const [section,setSection]=useState(0);
+  const [confirmedCases,setConfirmedCases]=useState<Record<string,string>>({});
   const [recent,setRecent]=useState<Record<string,string[]>>({});
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
@@ -120,7 +125,7 @@ export function ConfigurableRegistration({ onSuccess, onCancel, previewStudio }:
   const selected=visible.filter(f=>(f.section||'Trabalho')===sections[currentSection]);
   const reviewValue=(field:RegistrationQuestion)=>registrationReviewValue(field,answers[field.fieldKey]);
   const changeAnswer=(key:string,value:string|boolean)=>setAnswers(current=>key==='TEM_ALUNO_2'?{...current,[key]:value,AUTORIA_REFERENCIA:''}:{...current,[key]:value});
-  const renderQuestion=(field:RegistrationQuestion)=><Question suspended={busy} preview={Boolean(previewStudio)} recent={registrationFieldHistory(recent,field.fieldKey)} field={field} value={answers[field.fieldKey]} readOnly={field.fieldKey==='ALUNO_1_EMAIL'&&(!isMasterAdmin||Boolean(previewStudio))} onChange={value=>changeAnswer(field.fieldKey,value)}/>;
+  const renderQuestion=(field:RegistrationQuestion)=><Question confirmedCase={confirmedCases[field.fieldKey]} onConfirmCase={value=>setConfirmedCases(current=>({...current,[field.fieldKey]:value}))} suspended={busy} preview={Boolean(previewStudio)} recent={registrationFieldHistory(recent,field.fieldKey)} field={field} value={answers[field.fieldKey]} readOnly={field.fieldKey==='ALUNO_1_EMAIL'&&(!isMasterAdmin||Boolean(previewStudio))} onChange={value=>changeAnswer(field.fieldKey,value)}/>;
 
   const findings=registrationFindings(Object.fromEntries(visible.map(f=>[f.fieldKey,answers[f.fieldKey]??''])),workflowPolicy(studio));
   useEffect(()=>{
@@ -187,8 +192,8 @@ export function ConfigurableRegistration({ onSuccess, onCancel, previewStudio }:
   };
   const check=(all:boolean)=>{
     for(const field of all?visible:selected){const value=normalizeRegistrationValue(field.fieldKey,field.fieldType,answers[field.fieldKey]);
+      if(allowsCapitalizationChoice(field.fieldKey)&&needsCapitalizationReview(value,field.fieldKey==='TITULO'?'title':'institution',confirmedCases[field.fieldKey]))return `Confira a capitalização de ${field.label}: use a sugestão ou escolha Manter como escrevi.`;
       if(field.required&&(!String(value??'').trim()||field.fieldType==='checkbox'&&value!==true))return `Preencha: ${field.label}.`;
-      if(field.fieldKey==='DEFESA_DATA_HORA'&&value&&String(value).split('T')[0]<saoPauloCalendarDate())return 'A data da defesa deve ser hoje ou um dia posterior.';
       if(field.fieldKey==='DEFESA_DATA_HORA'&&value&&!isDefenseWeekday(String(value).split('T')[0]))return DEFENSE_WEEKDAY_MESSAGE;
       if(value&&field.fieldType==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value)))return `Revise o e-mail: ${field.label}.`;
       if(value&&field.options?.length&&!field.options.includes(String(value)))return `Selecione uma opção válida: ${field.label}.`;
@@ -256,7 +261,7 @@ export function ConfigurableRegistration({ onSuccess, onCancel, previewStudio }:
         </div>;
       }
 
-      if(field.fieldKey==='AUTORIA_REFERENCIA')return <div key={field.fieldKey} className="sm:col-span-2 space-y-2"><label className="block text-sm font-semibold">Complete a frase para os documentos *<span className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-slate-300 bg-[var(--portal-surface-panel)] p-3"><span>{answers.TEM_ALUNO_2==='Sim'?'Estavam presentes':'Estava presente'}</span><select aria-label="Referência da autoria nos documentos" required className="portal-input !w-auto" value={String(answers.AUTORIA_REFERENCIA||'')} onChange={event=>changeAnswer('AUTORIA_REFERENCIA',event.target.value)}><option value="">Selecione…</option>{field.options?.map(option=><option key={option} value={option}>{option}</option>)}</select><strong>{registrationIdentityNames(answers)||'nome preenchido no cadastro'}.</strong></span></label><p className="sr-only" role="status" aria-live="polite">{registrationIdentitySentence(answers)}</p></div>;
+      if(field.fieldKey==='AUTORIA_REFERENCIA')return <div key={field.fieldKey} className="sm:col-span-2 space-y-2"><label className="block text-sm font-semibold">Complete a frase para os documentos *<span className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-slate-300 bg-[var(--portal-surface-panel)] p-3"><span>{answers.TEM_ALUNO_2==='Sim'?'Estavam presentes':'Estava presente'}</span><select aria-label="Referência da autoria nos documentos" required className="portal-input !w-auto" value={String(answers.AUTORIA_REFERENCIA||'')} onChange={event=>changeAnswer('AUTORIA_REFERENCIA',event.target.value)}><option value="">{/^EXAMINADOR_[23]_TRATAMENTO$/.test(field.fieldKey)?'Sem tratamento docente':'Selecione…'}</option>{field.options?.map(option=><option key={option} value={option}>{option}</option>)}</select><strong>{registrationIdentityNames(answers)||'nome preenchido no cadastro'}.</strong></span></label><p className="sr-only" role="status" aria-live="polite">{registrationIdentitySentence(answers)}</p></div>;
       const prefix=field.fieldKey.replace(/_(?:TRATAMENTO|TITULACAO|NOME)$/,'');
       const faculty=/^(?:ORIENTADOR|COORIENTADOR|EXAMINADOR_[23])$/.test(prefix);
       const trio=faculty?['TRATAMENTO','TITULACAO','NOME'].map(suffix=>selected.find(item=>item.fieldKey===`${prefix}_${suffix}`)):[];

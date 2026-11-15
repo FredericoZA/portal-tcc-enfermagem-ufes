@@ -116,8 +116,7 @@ test('HTTP: login copies the full OTP message to the configured Master only whil
     const code=body.match(/Seu código de acesso é (\d{6})/)?.[1];
     assert.ok(code);assert.ok(body.includes(`>${code}</div>`));
     const recorded=(await f.state()).auditLogs.find((log:any)=>log.action==='EMAIL_CODIGO_ACESSO_ACEITO_GMAIL');
-    assert.deepEqual(recorded.after.cc,[master]);
-    assert.ok(!JSON.stringify(recorded).includes(code));
+    assert.equal(recorded,undefined,'OTP delivery keeps the full MIME copy without adding routine Portal history');
     await f.toggle(false);
     await requestCode(examiner);
     assert.deepEqual(cc((await f.messages(2))[1]),[]);

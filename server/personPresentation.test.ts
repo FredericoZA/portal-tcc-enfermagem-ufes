@@ -150,3 +150,8 @@ test('ata opening is an uppercase title while narrative, names and signatures ke
  assert.equal(adaptDocumentLanguage(title+' '+narrative,p,'ATA'),title.toLocaleUpperCase('pt-BR')+' '+narrative);
  assert.equal(adaptDocumentLanguage(title,p,'CONVITE'),title);
 });
+
+test('blank examiner treatment omits professor while preserving the academic degree',()=>{
+ assert.equal(academicName({nome:'Carlos Eduardo Rocha',tratamento:'',titulacao:'Doutor'}),'Doutor Carlos Eduardo Rocha');
+ assert.equal(academicName({nome:'Beatriz Ferreira Mendes',tratamento:'',titulacao:'Doutora'},'abbreviated'),'Dr.ª Beatriz Ferreira Mendes');
+});

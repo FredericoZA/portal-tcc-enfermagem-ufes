@@ -7,7 +7,7 @@ test('manual público é PDF legível, com navegação e seções dos quatro per
   const bytes=readFileSync('public/manual/manual-portal-tcc.pdf');
   assert.equal(bytes.subarray(0,5).toString(),'%PDF-');
   const pdf=await PDFDocument.load(bytes);
-  assert.equal(pdf.getPageCount(),20);
+  assert.equal(pdf.getPageCount(),21);
   assert.match(pdf.getTitle()||'',/Manual do Portal de TCC/);
   assert.match(pdf.getSubject()||'',/Aluno, orientador e examinador/);
   assert.match(pdf.getSubject()||'',/entrega obrigatória, publicação opcional/);

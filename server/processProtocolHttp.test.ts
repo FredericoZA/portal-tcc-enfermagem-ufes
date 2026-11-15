@@ -120,14 +120,18 @@ test('HTTP: rejects Saturday and Sunday before allocating a protocol', {timeout:
   }finally{await f.close();}
 });
 
-test('HTTP: rejects a past defense before allocating a protocol', {timeout:45000}, async()=>{
+test('HTTP: accepts a historical night defense at minute precision', {timeout:45000}, async()=>{
   const f=await fixture(initialState());
   try{
-    const rejected=await registerProcess(f,0,undefined,'2020-11-06T14:00');
-    assert.equal(rejected.status,400,await rejected.clone().text());
-    assert.equal((await rejected.json()).code,'DEFENSE_DATE_IN_PAST');
-    const registered=await createProcess(f,0);
+    const response=await registerProcess(f,0,undefined,'2020-11-06T23:47');
+    assert.ok([201,202].includes(response.status),await response.clone().text());
+    const registered=await response.json() as ProcessData;
     assert.equal(registered.protocolo,'TCC - 00001');
+    assert.equal(registered.defesa.startAt,'2020-11-07T02:47:00.000Z');
+    assert.equal(Date.parse(registered.defesa.endAt)-Date.parse(registered.defesa.startAt),90*60000);
+    assert.equal(registered.defesa.localStatus,'PENDENTE');
+    assert.equal(registered.avaliacao.status,'PENDENTE');
+    assert.equal((await f.state()).signatureJobs.length,0);
   }finally{await f.close();}
 });
 
@@ -201,6 +205,148 @@ function renamedProcess():ProcessData{
     departmentResponse:{revision:0,decision:'UNAVAILABLE',startAt:'2030-11-05T14:00:00Z',endAt:'2030-11-05T15:30:00Z',respondedAt:'2030-10-01T12:00:00Z',respondedBy:'department@protocol.invalid'}};
   return process;
 }
+
+function reviewableProcess():ProcessData{
+  const process=renamedProcess();
+  process.id='advisor-data-review';
+  process.aluno1={nome:'Autora de Teste',email:authors[0],matricula:'',tratamento:'Aluna'};
+  process.aluno2={nome:'Segundo Autor de Teste',email:authors[1],matricula:'',tratamento:'Aluno'};
+  process.orientador={nome:'Orientador de Teste',email:advisor,tratamento:'Professor',titulacao:'Doutor',instituicao:'UFES'};
+  process.coorientador=null;
+  process.banca=[
+    {id:'review-examiner-2',nome:'Primeira Examinadora',email:'examiner-1@protocol.invalid',tratamento:'Professora',titulacao:'Doutora',instituicao:'UFES',funcao:'EXAMINER_2',membroTipo:'INTERNO'},
+    {id:'review-examiner-3',nome:'Segundo Examinador',email:'examiner-2@protocol.invalid',tratamento:'Professor',titulacao:'Mestre',instituicao:'UFES',funcao:'EXAMINER_3',membroTipo:'INTERNO'},
+  ];
+  process.registrationAnswers={TITULO:process.titulo,ALUNO_1_NOME:process.aluno1.nome,ALUNO_1_EMAIL:authors[0],ALUNO_1_MATRICULA:'discarded-identifier',TEMA_PRINCIPAL:'Formação e trabalho em enfermagem'};
+  process.status='AGUARDANDO_DEFESA';process.etapaAtual='CONVITE';
+  process.defesa={...process.defesa,startAt:'2020-11-05T14:00:00Z',endAt:'2020-11-05T15:30:00Z',localStatus:'CONFIRMADO',invitationDriveFileId:'original-invitation-file',invitationSentAt:'2030-10-01T13:00:00Z',localConfirmedAt:'2030-10-01T12:00:00Z',localConfirmedBy:advisor,
+    departmentResponse:{...process.defesa.departmentResponse!,startAt:'2020-11-05T14:00:00Z',endAt:'2020-11-05T15:30:00Z',decision:'CONFIRMED',respondedBy:advisor}};
+  return process;
+}
+
+function reviewState(process:ProcessData,extra:Record<string,unknown>={}){
+  const roles=[{email:authors[0],role:'STUDENT'},{email:authors[1],role:'STUDENT'},{email:advisor,role:'ADVISOR'},...process.banca.map(member=>({email:member.email,role:'EXAMINER'}))];
+  return initialState([process],{memberships:roles.map(({email,role},index)=>({id:`review-member-${index}`,email,processId:process.id,roles:[role],active:true,createdAt:process.createdAt,updatedAt:process.updatedAt})),...extra});
+}
+
+const reviewInput=(process:ProcessData,updates:Record<string,unknown>={})=>({expectedDataRevision:process.dataRevision,confirmed:true,...updates});
+
+test('HTTP: advisor corrects defense facts after invitation without replaying reservation or signature workflow',{timeout:45000},async()=>{
+  const process=reviewableProcess();
+  const f=await fixture(reviewState(process));
+  try{
+    const schema=await f.request(`/api/processes/${process.id}/data-review/schema`,advisor);
+    assert.equal(schema.status,200,await schema.clone().text());
+    assert.match(schema.headers.get('cache-control')||'',/private, no-store/);
+    assert.ok((await schema.json()).operationalConfig.reservation.locations.length>0);
+    const baseline=await(await f.request(`/api/processes/${process.id}`,advisor)).json() as ProcessData;
+    const response=await f.request(`/api/processes/${process.id}/data-review`,advisor,'POST',reviewInput(process,{
+      titulo:'Contribuições para o cuidado de Enfermagem no CAPS III',
+      aluno1:{...process.aluno1,nome:'Autora com Nome Corrigido'},
+      authorOrder:'ALUNO_2_FIRST',
+      defesa:{date:'2020-11-06',time:'23:47',locationChoice:'__OUTRO_LOCAL__',customLocation:'Sala de Defesa Corrigida'},
+      registrationAnswers:{AREA_TEMATICA:'Saúde mental'},
+    }));
+    assert.equal(response.status,200,await response.clone().text());
+    const updated=await response.json() as ProcessData;
+    assert.equal(updated.dataRevision,process.dataRevision+1);
+    assert.equal(updated.titulo,'Contribuições para o cuidado de Enfermagem no CAPS III');
+    assert.equal(updated.defesa.startAt,'2020-11-07T02:47:00.000Z');
+    assert.equal(Date.parse(updated.defesa.endAt)-Date.parse(updated.defesa.startAt),90*60000);
+    for(const field of ['localStatus','localConfirmedAt','localConfirmedBy','invitationDriveFileId','invitationSentAt','reservationRevision','departmentResponse'] as const)assert.deepEqual(updated.defesa[field],baseline.defesa[field],field);
+    assert.equal(updated.status,process.status);assert.equal(updated.etapaAtual,process.etapaAtual);
+    assert.deepEqual(updated.avaliacao,process.avaliacao);
+    assert.equal(updated.authorOrder,'ALUNO_2_FIRST');assert.equal(updated.aluno1.email,authors[0]);assert.equal(updated.aluno2?.email,authors[1]);
+    assert.equal(updated.registrationAnswers?.AREA_TEMATICA,'Saúde mental');
+    assert.equal(updated.registrationAnswers?.TEMA_PRINCIPAL,process.registrationAnswers!.TEMA_PRINCIPAL);
+    assert.equal(updated.registrationAnswers?.TITULO,updated.titulo);
+    assert.equal(updated.registrationAnswers?.ALUNO_1_NOME,updated.aluno1.nome);
+    assert.equal(updated.registrationAnswers?.AUTORIA_ORDEM,'Segundo autor, depois primeiro autor');
+    assert.equal(updated.registrationAnswers?.DEFESA_DATA_HORA,'2020-11-06T23:47');
+    assert.equal(updated.registrationAnswers?.DEFESA_LOCAL,'__OUTRO_LOCAL__');
+    assert.equal(updated.registrationAnswers?.DEFESA_LOCAL_PERSONALIZADO,updated.defesa.local);
+    assert.ok(!Object.keys(updated.registrationAnswers!).some(key=>/MATRICULA|SIAPE/.test(key)));
+    const saved=await f.state();
+    assert.deepEqual(saved.signatureJobs,[]);
+    assert.equal(saved.auditLogs.filter((item:any)=>item.action==='REVISAO_DADOS_PARA_ATA').length,1);
+    assert.ok(!saved.auditLogs.some((item:any)=>['REINICIO_SOLICITACAO_RESERVA','ENVIO_CONVITE','EMAIL_SENT'].includes(item.action)));
+    const audit=saved.auditLogs.find((item:any)=>item.action==='REVISAO_DADOS_PARA_ATA');
+    assert.equal(audit.actorEmail,advisor);assert.equal(audit.after.confirmed,true);
+    assert.equal(Object.hasOwn(audit.after,'reason'),false);
+    assert.equal(audit.after.changes.aluno1.nome,updated.aluno1.nome);
+    assert.ok(!JSON.stringify(audit).includes('original-invitation-file'));
+    assert.ok(!JSON.stringify(audit).includes('departmentResponse'));
+    assert.ok(audit.after.fields.includes('defesa'));
+    await f.restart();
+    assert.equal((await(await f.request(`/api/processes/${process.id}`,advisor)).json()).dataRevision,updated.dataRevision);
+  }finally{await f.close();}
+});
+
+test('HTTP: review is scoped to advisor/Master and requires deliberate validated correction',{timeout:45000},async()=>{
+  const process=reviewableProcess();const route=`/api/processes/${process.id}/data-review`;
+  const f=await fixture(reviewState(process));
+  try{
+    for(const actor of [authors[0],process.banca[0].email]){
+      assert.equal((await f.request(route+'/schema',actor)).status,403);
+      assert.equal((await f.request(route,actor,'POST',reviewInput(process,{titulo:'Não permitido'}))).status,403);
+    }
+    assert.equal((await f.request(route+'/schema',authors[3])).status,404);
+    assert.equal((await f.request(route,authors[3],'POST',reviewInput(process))).status,404);
+    assert.equal((await f.request(route,'','POST',reviewInput(process))).status,401);
+    for(const [updates,status,code] of [
+      [{confirmed:false},400,'DATA_REVIEW_CONFIRMATION_REQUIRED'],
+      [{expectedDataRevision:0},409,'STALE_DATA_REVISION'],
+      [{expectedDataRevision:undefined},409,'STALE_DATA_REVISION'],
+      [{status:'CONCLUIDO'},400,'PROTECTED_WORKFLOW_FIELDS'],
+      [{registrationAnswers:{PUBLICAR_TRABALHO:true}},400,'INVALID_REGISTRATION_REVIEW'],
+      [{registrationAnswers:{TEMA_PRINCIPAL:'Unpublished option'}},400,'INVALID_REGISTRATION_REVIEW'],
+    ] as const){
+      const response=await f.request(route,advisor,'POST',reviewInput(process,updates));
+      assert.equal(response.status,status,await response.clone().text());assert.equal((await response.json()).code,code);
+    }
+    for(const updates of [{titulo:123},{aluno1:null},{banca:[]},{coorientador:{nome:'Sem endereço',email:''}}])assert.equal((await f.request(route,advisor,'POST',reviewInput(process,updates))).status,400);
+    assert.equal((await f.request(route,advisor,'POST',reviewInput(process,{orientador:{...process.orientador,email:'other-advisor@protocol.invalid'}}))).status,403);
+    assert.equal((await f.state()).processes[0].dataRevision,process.dataRevision);
+    const response=await f.request(route,master,'POST',reviewInput(process,{titulo:'Correção Administrativa do Trabalho'}));
+    assert.equal(response.status,200,await response.clone().text());
+  }finally{await f.close();}
+});
+
+test('HTTP: review rejects weekend and 90-minute overlap including pending holds; adjacent slot succeeds',{timeout:45000},async()=>{
+  const process=reviewableProcess();
+  const occupied=reviewableProcess();occupied.id='pending-other-defense';occupied.protocolo=code(2);occupied.aluno1={...occupied.aluno1,email:authors[2]};occupied.aluno2=null;
+  occupied.defesa={startAt:'2020-11-07T00:00:00Z',endAt:'2020-11-07T01:30:00Z',local:'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES',localStatus:'PENDENTE',reservationRevision:0};
+  const f=await fixture({...reviewState(process),processes:[process,occupied]});
+  try{
+    const route=`/api/processes/${process.id}/data-review`;
+    for(const date of ['2020-11-07','2020-11-08'])assert.equal((await f.request(route,advisor,'POST',reviewInput(process,{defesa:{date,time:'23:47',locationChoice:occupied.defesa.local}}))).status,400);
+    for(const actor of [advisor,master]){
+      const response=await f.request(route,actor,'POST',reviewInput(process,{defesa:{date:'2020-11-06',time:'22:29',locationChoice:occupied.defesa.local}}));
+      assert.equal(response.status,409,await response.clone().text());assert.equal((await response.json()).code,'DEFENSE_CONFLICT');
+    }
+    assert.equal((await f.state()).processes[0].dataRevision,process.dataRevision);
+    const accepted=await f.request(route,advisor,'POST',reviewInput(process,{defesa:{date:'2020-11-06',time:'22:30',locationChoice:occupied.defesa.local}}));
+    assert.equal(accepted.status,200,await accepted.clone().text());
+    const stale=await f.request(route,advisor,'POST',reviewInput(process,{titulo:'Segunda correção antiga'}));
+    assert.equal(stale.status,409);assert.equal((await stale.json()).code,'STALE_DATA_REVISION');
+  }finally{await f.close();}
+});
+
+test('HTTP: registered or queued ata must use normal formal reopening before correcting defense data',{timeout:45000},async()=>{
+  for(const locked of ['QUEUED','REGISTERED'] as const){
+    const process=reviewableProcess();
+    if(locked==='REGISTERED')process.avaliacao={...process.avaliacao,status:'CONCLUIDO',submittedAt:'2030-10-01T14:00:00Z'};
+    const job={id:'ata-existing',processId:process.id,documentType:'ATA',status:'QUEUED',documentVersion:1,sourceDataRevision:process.dataRevision,provider:'ASTEN',signers:[]};
+    const f=await fixture(reviewState(process,{signatureJobs:locked==='QUEUED'?[job]:[]}));
+    try{
+      const response=await f.request(`/api/processes/${process.id}/data-review`,advisor,'POST',reviewInput(process,{titulo:'Não deve substituir ata'}));
+      assert.equal(response.status,409,await response.clone().text());
+      assert.equal((await response.json()).code,locked==='REGISTERED'?'PROCESS_DATA_LOCKED':'ATA_REOPEN_REQUIRED');
+      const saved=await f.state();assert.equal(saved.processes[0].dataRevision,process.dataRevision);
+      if(locked==='QUEUED')assert.equal(saved.signatureJobs[0].status,'QUEUED');
+    }finally{await f.close();}
+  }
+});
 
 test('HTTP: a corrected protocol keeps its alias without importing old cleanup numbers into the new counter',{timeout:45000},async()=>{
   const process=renamedProcess();
@@ -352,4 +498,36 @@ test('HTTP: cadastros simultâneos bloqueiam o mesmo local e o calendário já m
     assert.equal(entries[0].defesa.localStatus,'PENDENTE');
     assert.equal((await f.state()).processes.length,1);
   }finally{await f.close();}
+});
+
+
+test('HTTP: advisor data review waits for the same release conditions as the ata',{timeout:45000},async()=>{
+ for(const state of ['pending-location','pending-invitation','future-defense']){
+  const process=reviewableProcess();
+  if(state==='pending-location'){process.defesa.localStatus='PENDENTE';process.defesa.departmentResponse=undefined;}
+  if(state==='pending-invitation')process.defesa.invitationSentAt=undefined;
+  if(state==='future-defense'){
+   process.defesa.startAt='2099-11-05T14:00:00Z';process.defesa.endAt='2099-11-05T15:30:00Z';
+   process.defesa.departmentResponse={...process.defesa.departmentResponse!,startAt:process.defesa.startAt,endAt:process.defesa.endAt};
+  }
+  const f=await fixture(reviewState(process));
+  try{
+   const route=`/api/processes/${process.id}/data-review`;
+   for(const response of [await f.request(route+'/schema',advisor),await f.request(route,advisor,'POST',reviewInput(process,{titulo:'Premature change'}))]){
+    assert.equal(response.status,409,state);assert.equal((await response.json()).code,'DATA_REVIEW_NOT_RELEASED');
+   }
+   assert.equal((await f.state()).processes[0].titulo,process.titulo);
+  }finally{await f.close();}
+ }
+});
+
+
+test('HTTP: advisor saves examiners without teaching treatment and keeps it blank',{timeout:45000},async()=>{
+ const process=reviewableProcess();const f=await fixture(reviewState(process));
+ try{
+  const board=process.banca.map(member=>({...member,tratamento:''}));
+  const response=await f.request(`/api/processes/${process.id}/data-review`,advisor,'POST',reviewInput(process,{banca:board}));
+  assert.equal(response.status,200,await response.clone().text());
+  assert.deepEqual((await f.state()).processes[0].banca.map((person:any)=>person.tratamento),['','']);
+ }finally{await f.close();}
 });

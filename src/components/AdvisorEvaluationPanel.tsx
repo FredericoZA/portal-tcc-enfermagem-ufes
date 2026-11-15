@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {FileText, LoaderCircle} from 'lucide-react';
+import {ClipboardCheck, FileText, LoaderCircle} from 'lucide-react';
 import type { ProcessData, ProcessDocument } from '../types';
 import type { RegistrationAnswers } from '../types/operationalConfig';
 import { apiClient, ApiRequestError, type AtaReviewParagraph } from '../services/apiClient';
@@ -7,8 +7,10 @@ import { acceptEvaluationAnswers, evaluationQuestions, standardEvaluationOpinion
 import { evaluateStudioCondition } from '../utils/courseStudioValidator';
 import {recoverEvaluationDocument} from '../utils/evaluationDraftModel';
 import {ataReviewColumns,joinAtaReviewColumns} from '../utils/ataReviewLayout';
+import {processDataReviewBlocker} from '../utils/processDataReview';
 
 const DocumentFilePreview=React.lazy(()=>import('./DocumentFilePreview').then(module=>({default:module.DocumentFilePreview})));
+const ProcessDataReviewModal=React.lazy(()=>import('./ProcessDataReviewModal').then(module=>({default:module.ProcessDataReviewModal})));
 
 function AtaReviewEditor({paragraphs,disabled,onChange}:{
   paragraphs:AtaReviewParagraph[];disabled:boolean;onChange:(text:string)=>void;
@@ -105,9 +107,11 @@ function clearDraft(processId: string) {
   try { sessionStorage.removeItem(draftKey(processId)); } catch { /* noop */ }
 }
 
-export function AdvisorEvaluationPanel({ publicReadOnly = false, process, canEvaluate, canReopen, onReopen, onUpdated }: {
-  publicReadOnly?: boolean; process: ProcessData; canEvaluate: boolean; canReopen: boolean; onReopen: () => void; onUpdated: (recorded: ProcessData, documents?: ProcessDocument[], recovered?:boolean) => void;
+export function AdvisorEvaluationPanel({ publicReadOnly = false, process, canEvaluate, canReviewData=false, canChangeAdvisorEmail=false, onDataReviewed, onEditingChange, canReopen, onReopen, onUpdated }: {
+  publicReadOnly?: boolean; process: ProcessData; canEvaluate: boolean; canReviewData?:boolean; canChangeAdvisorEmail?:boolean; onDataReviewed?:(updated:ProcessData)=>void; onEditingChange?:(editing:boolean)=>void; canReopen: boolean; onReopen: () => void; onUpdated: (recorded: ProcessData, documents?: ProcessDocument[], recovered?:boolean) => void;
 }) {
+  const [reviewingData,setReviewingData]=useState(false);
+  const closeDataReview=()=>{setReviewingData(false);onEditingChange?.(false);};
   const [schema, setSchema] = useState<Awaited<ReturnType<typeof apiClient.getEvaluationSchema>> | null>(null);
   const initialDraft = useMemo(() => readDraft(process), [process.id, process.dataRevision]);
   const [answers, setAnswers] = useState<RegistrationAnswers>(initialDraft?.answers || {});
@@ -129,6 +133,7 @@ export function AdvisorEvaluationPanel({ publicReadOnly = false, process, canEva
   const releaseBlocker = conceptRegistrationBlocker(process, now);
   const released = releaseBlocker === undefined;
   const canFillConcept = canEvaluate && released && process.avaliacao?.status !== 'CONCLUIDO';
+  const canOpenDataReview=canFillConcept&&canReviewData&&!publicReadOnly&&!process.legacyRecord&&!processDataReviewBlocker(process,[]);
   const [schemaRetry, setSchemaRetry] = useState(0);
   const [draftSavedAt, setDraftSavedAt] = useState(initialDraft?.savedAt || '');
   const [serverSavedAt,setServerSavedAt]=useState('');
@@ -178,7 +183,7 @@ export function AdvisorEvaluationPanel({ publicReadOnly = false, process, canEva
   }, [answers, confirmed, documentText, documentEdited, canFillConcept, process.id, process.dataRevision,draftLoaded,schema]);
 
   useEffect(()=>{
-    if(!draftLoaded||!canFillConcept||!schema||draftFingerprint===savedServerFingerprint.current)return;
+    if(reviewingData||!draftLoaded||!canFillConcept||!schema||draftFingerprint===savedServerFingerprint.current)return;
     const timer=window.setTimeout(()=>{
       if(saveInFlight.current){savePending.current=true;return;}
       saveInFlight.current=true;
@@ -191,7 +196,7 @@ export function AdvisorEvaluationPanel({ publicReadOnly = false, process, canEva
       });
     },30000);
     return()=>window.clearTimeout(timer);
-  },[answers,draftFingerprint,documentText,documentEdited,canFillConcept,schema,process.id,process.dataRevision,autosaveRetry,draftLoaded]);
+  },[answers,draftFingerprint,documentText,documentEdited,canFillConcept,schema,process.id,process.dataRevision,autosaveRetry,draftLoaded,reviewingData]);
 
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer); }, []);
   const studio = schema?.studio;
@@ -258,8 +263,15 @@ export function AdvisorEvaluationPanel({ publicReadOnly = false, process, canEva
     {preparingSignature&&!preview&&signatureFeedback}
     {process.avaliacao?.status==='CONCLUIDO'&&canReopen&&<button type="button" className="portal-action m-4" onClick={onReopen}>Reabrir conceito e ata</button>}
     <div className="portal-card space-y-5 p-4 sm:p-5">
-
-
+      {canFillConcept&&<p role="note" className="mx-auto w-fit max-w-full rounded-lg border border-red-300 bg-red-50 p-3 text-center text-sm font-semibold text-red-800">A avaliação e o lançamento de notas e frequência devem ser feitos no <a className="font-bold underline text-red-800" href="https://professor.ufes.br/" target="_blank" rel="noopener noreferrer">Portal do Professor</a>.</p>}
+      {canOpenDataReview&&<aside className="portal-instruction mx-auto max-w-4xl space-y-3 p-4 text-sm leading-6">
+        <p className="font-semibold">Última oportunidade de corrigir os dados do processo para a geração da ata e dos demais termos!</p>
+        <p>A conferência pelo botão só é necessária se houver erro, informação incompleta ou alteração nos dados cadastrais. Se o cadastro estiver correto e completo, siga com o registro da ata.</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="min-w-0 flex-1 basis-80">Você pode corrigir os dados do trabalho e dos participantes. Apenas o e-mail do orientador não pode ser alterado!</p>
+          <button type="button" className="portal-action shrink-0" disabled={busy} onClick={()=>{setReviewingData(true);onEditingChange?.(true);}}><ClipboardCheck className="mr-2 h-4 w-4"/>Verificar dados do processo</button>
+        </div>
+      </aside>}
       {error && <p role="alert" className="portal-error">{error}<button type="button" onClick={()=>{attemptedFinalization.current='';setAutosaveRetry(n=>n+1);}} className="ml-2 rounded-full border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900">Tentar novamente</button></p>}
       {publicReadOnly && !process.legacyRecord && process.avaliacao?.status === 'CONCLUIDO' && !process.avaliacao.resultadoCode
         ? <p role="status" className="text-center text-sm">Conceito e ata ainda não disponíveis.</p>
@@ -268,11 +280,11 @@ export function AdvisorEvaluationPanel({ publicReadOnly = false, process, canEva
         <p className="whitespace-pre-wrap">{process.avaliacao.parecer || (process.legacyRecord ? 'Parecer não informado no acervo importado.' : '')}</p>
 
       </> : !canFillConcept ? !released && canEvaluate
-        ? <p role="status" className="portal-instruction p-3 text-center text-sm">{releaseBlocker} A avaliação e o lançamento de notas e frequência devem ser feitos no Portal do Professor.</p>
+        ? <p role="status" className="mx-auto w-fit max-w-full text-center text-sm">{releaseBlocker}</p>
         : <p role="status" className="text-center text-sm">{released ? 'Conceito e ata ainda não registrados.' : 'Conceito e ata ainda não disponíveis.'}</p>
         : !schema ? error ? <button type="button" className="portal-action" onClick={() => setSchemaRetry(n => n + 1)}>Tentar carregar o formulário novamente</button> : <p role="status">Carregando o formulário do orientador…</p> : <div className="space-y-5">
 
-        <p role="note" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-800">Nesta tela, registre o conceito da defesa e preencha a ata. Faça a avaliação e lance as notas e a frequência diretamente no <a className="font-bold underline text-red-800" href="https://professor.ufes.br/" target="_blank" rel="noopener noreferrer">Portal do Professor</a>.</p>
+
 
         <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-2">
           <legend className="sr-only">Conceito e parecer da defesa</legend>
@@ -295,6 +307,11 @@ export function AdvisorEvaluationPanel({ publicReadOnly = false, process, canEva
 
       </div>}
     </div>
+    {reviewingData&&canOpenDataReview&&<React.Suspense fallback={<p role="status">Abrindo a conferência dos dados…</p>}><ProcessDataReviewModal process={process} canChangeAdvisorEmail={canChangeAdvisorEmail} onClose={closeDataReview} onSaved={saved=>{
+      // Preserve the unfinished opinion, but invalidate a preview made from old names or dates.
+      writeDraft(saved,answers,false,undefined,schema?.ataModelFingerprint);
+      closePreview();closeDataReview();onDataReviewed?.(saved);setNotice('Dados conferidos e salvos. Continue o preenchimento da ata.');
+    }}/></React.Suspense>}
     {preview&&<div className="portal-modal-backdrop fixed inset-0 z-[1000012] flex items-center justify-center p-4" onMouseDown={event=>{if(event.currentTarget===event.target&&!busy&&!editingDocument)closePreview();}}>
       <div role="dialog" aria-modal="true" aria-label="Conferir Ata da defesa" style={preparingSignature?{cursor:'wait'}:undefined} className="flex h-full max-h-screen w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white">
         <header className="portal-modal-header"><FileText className="h-5 w-5"/><h2>{editingDocument?'Corrigir ata':'Conferir ata da defesa'}</h2></header>

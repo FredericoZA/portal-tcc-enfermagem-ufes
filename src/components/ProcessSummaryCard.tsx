@@ -6,7 +6,7 @@ import type { ProcessData } from '../types';
 import { apiClient, ApiRequestError } from '../services/apiClient';
 import { PortalModalShell } from './PortalModalShell';
 import { RegistrationFieldPreview } from './RegistrationFieldPreview';
-import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatTccTitle, saoPauloCalendarDate } from '../utils/formatters';
+import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatTccTitle } from '../utils/formatters';
 import { isOtherDefenseLocation, OTHER_DEFENSE_LOCATION, renderCustomLocationName } from '../utils/customDefenseLocation';
 import { operationalConfig } from '../utils/operationalConfig';
 import { isManagedDefenseLocation } from '../utils/reservationLocation';
@@ -302,7 +302,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className={compactField}>
               <span className={fieldLabel}>Nova data *</span>
-              <input required type="date" min={saoPauloCalendarDate()} value={requested.date} onChange={(event) => setRequested((current) => ({ ...current, date: event.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs" />
+              <input required type="date" value={requested.date} onChange={(event) => setRequested((current) => ({ ...current, date: event.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs" />
               {requested.date&&<span className="text-[11px] font-medium text-emerald-900">{formatDateWithWeekday(requested.date)}</span>}
             </label>
             <label className={compactField}>

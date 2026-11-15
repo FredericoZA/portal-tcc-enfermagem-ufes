@@ -8,6 +8,7 @@ import {formatDateTimeWithWeekday} from '../utils/formatters';
 import {participantRole} from '../utils/officialParticipants';
 import {WorkflowRecoveryPanel} from '../components/WorkflowRecoveryPanel';
 import {ProcessSummaryCard} from '../components/ProcessSummaryCard';
+import {processDataReviewBlocker} from '../utils/processDataReview';
 import {LegacyAdministrativeDocuments} from '../components/LegacyAdministrativeDocuments';
 import {ProcessDocumentCard, ProcessDocumentsPanel, ReservationReceiptCard} from '../components/ProcessDocumentCard';
 import {publicProcessDetail} from '../utils/publicProcessDetail';
@@ -723,6 +724,18 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     }
   };
 
+  const handleDocumentAccess = async (doc:ProcessDocument,mode:'view'|'download') => {
+    // Open synchronously so browsers do not block a window after the permission read.
+    const destination=window.open('about:blank','_blank');
+    if(destination)destination.opener=null;
+    try{
+      const {links}=readOnly?{links:null}:await apiClient.getDocumentDriveLinks(processId,doc.id);
+      if(links&&destination){destination.location.replace(mode==='view'?links.view:links.download);return;}
+      destination?.close();
+      if(mode==='view')setSelectedPreviewDoc(doc);else handleDirectDownload(doc);
+    }catch(error){destination?.close();portalNotice(error instanceof Error?error.message:'Não foi possível abrir o documento.');}
+  };
+
   const handleDirectDownload = (doc: ProcessDocument) => {
     const isDownloadable = doc.status === 'DISPONIVEL' || doc.status === 'ASSINADO';
     if (!isDownloadable) {
@@ -942,7 +955,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       <section id="tcc-detail-workspace" className="portal-tcc-workspace mx-3 mt-3">
       <section aria-label="Seções do TCC" className="portal-tcc-workspace-tabs"><div className="portal-tcc-tab-list flex flex-wrap items-stretch gap-1">{[
         {id:'cadastral',label:'Dados do processo',icon:FileText,show:localFormat.showSectionCadastral!==false||localFormat.showSectionBanca!==false},{id:'avaliacao',label:'Conceito e Ata',icon:Award,show:localFormat.showSectionAvaliacao!==false},{id:'acervo',label:'Repositório acadêmico',icon:BookOpen,show:localFormat.showSectionAcervo!==false},{id:'docs',label:'Documentos administrativos',icon:FileCheck,show:localFormat.showSectionDocs!==false},{id:'andamento',label:'Andamento e retomada do processo',icon:RefreshCw,show:isMasterAdmin&&!readOnly}
-      ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} type="button" onClick={()=>{setActiveTab(tab.id);setProcessLink(process.id,tab.id as ProcessSection);}} aria-pressed={selected} className={`flex min-h-9 min-w-0 flex-1 justify-center items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold ${selected?'portal-tcc-tab-selected border-[var(--portal-brand-header)] bg-white text-slate-950':'border-white bg-white text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
+      ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} data-process-tab={tab.id} type="button" onClick={()=>{setActiveTab(tab.id);setProcessLink(process.id,tab.id as ProcessSection);}} aria-pressed={selected} className={`flex min-h-9 min-w-0 flex-1 justify-center items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold ${selected?'portal-tcc-tab-selected border-[var(--portal-brand-header)] bg-white text-slate-950':'border-white bg-white text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
       <div className="portal-tcc-workspace-content p-3">
       {isMasterAdmin&&!readOnly&&isTabVisible('andamento')&&<section key={process.id} aria-label="Registro de logs deste TCC"><AuditLogsPage embedded processId={process.id} recoveryVersion={recoveryVersion} processRecovery={<WorkflowRecoveryPanel processId={process.id} onUpdated={async()=>{setRecoveryVersion(version=>version+1);await loadData({quiet:true});}}/>}/></section>}
 
@@ -1001,6 +1014,11 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {localFormat.showSectionAvaliacao !== false && isTabVisible('avaliacao') && (
         <>
         <AdvisorEvaluationPanel publicReadOnly={readOnly} process={process} canEvaluate={!process.legacyRecord && isAuthenticated && isAdvisor}
+          canReviewData={isAuthenticated&&!readOnly&&(isAdvisor||isMasterAdmin)&&!processDataReviewBlocker(process,signatureJobs)} canChangeAdvisorEmail={isMasterAdmin} onEditingChange={setSummaryEditing} onDataReviewed={saved=>{
+            if(legacyAccessScope.current!==legacyAccessKey||saved.id!==processId)return;
+            lastProcessRevision.current={revision:saved.dataRevision,updatedAt:saved.updatedAt};
+            setRemoteUpdatePending(false);setProcess(saved);
+          }}
           canReopen={!process.legacyRecord && (isMasterAdmin || isAdvisor) && !readOnly && !isAcervoSubmitted && !process.acervo?.firstSubmittedAt && process.status!=='CONCLUIDO'} onReopen={handleReopenEvaluation} onUpdated={(recorded,updatedDocuments,recovered)=>{
             setProcess(recorded);
             if(updatedDocuments)setDocuments(updatedDocuments);
@@ -1098,7 +1116,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   statusDescription={statusDescription}
                   tone={termDeclined?'denied':pendingSignature?'progress':isDownloadable?'available':'pending'}
                   available={isDownloadable} unavailable={!isDownloadable&&!canUseGovbr}
-                  onView={()=>setSelectedPreviewDoc(doc)} onDownload={()=>void handleDirectDownload(doc)}>
+                  onView={()=>void handleDocumentAccess(doc,'view')} onDownload={()=>void handleDocumentAccess(doc,'download')}>
                   {(automaticStatus || canUseGovbr || canSendAsten) && <div className="portal-document-signature-actions flex flex-col gap-2">
                     {automaticStatus && !pendingSignature && <p role="status" className="text-center text-xs font-semibold">{automaticStatus}</p>}
                     {canSendAsten && <button type="button" onClick={()=>handleSignDocument(doc)} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><ShieldCheck className="h-4 w-4"/>Asten</button>}
