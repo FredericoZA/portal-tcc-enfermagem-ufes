@@ -38,7 +38,7 @@ function harness(p:any,jobs:any[],persist:()=>Promise<void>,options:{durable?:bo
  let role='STUDENT',access=true;
  const context:any={Date,Set,Error,structuredClone,setImmediate,process:{env:{VERCEL:'fixture'}},waitUntil:(task:Promise<unknown>)=>background.push(task),beginRuntimeRequestTask:()=>()=>{},processesStore:[p],signatureJobsStore:jobs,auditLogsStore:[],requireAuthenticated:'authenticated',remotePersistenceQueue:Promise.resolve(),settlePreviousRuntimeWrites,
   getSupabaseRuntimeStatus:()=>({durablePersistenceReady:options.durable===true}),loadPortalRuntimeState:options.read||(async()=>{throw Error('Read not configured');}),applyPersistedState:(remote:any)=>{context.processesStore=structuredClone(remote.processes);context.signatureJobsStore=structuredClone(remote.signatureJobs||[]);context.auditLogsStore=structuredClone(remote.auditLogs||[]);if(remote.access===false)access=false;},inferAstenJobStatus,
-  app:{post:(path:string,auth:unknown,handler:any)=>{assert.equal(auth,'authenticated');handlers.set(path,handler);}},getPortalIdentity:()=>({email:p.aluno1.email}),canAccessProcess:()=>access,getActiveProcessRoles:()=>[role],getUserRolesForEmail:()=>({globalRoles:[],memberships:[{roles:[role]}]}),documentSignatureCompleted,ataArchived,declarationReady,publicationRequested,
+  app:{post:(path:string,auth:unknown,handler:any)=>{assert.equal(auth,'authenticated');handlers.set(path,handler);}},getPortalIdentity:()=>({email:p.aluno1.email}),canAccessProcess:()=>access,getActiveProcessRoles:()=>[role],getUserRolesForEmail:()=>({globalRoles:[],memberships:[{roles:[role]}]}),documentSignatureCompleted,ataArchived,declarationReady,publicationRequested,localReviewFilesEnabled:()=>false,
   getGoogleWorkspaceAccessToken:async()=>{calls.external++;return 'fixture-only';},withdrawManyPublicDriveFiles:async()=>{calls.external++;},
   getPersistentAstenConnection:async()=>{calls.external++;throw Error('External call forbidden in this fixture');},callAsten:async()=>{calls.external++;throw Error('External call forbidden in this fixture');},persistPortalStateDurably:async()=>{const pending=persist();context.remotePersistenceQueue=pending;await pending;},
   missingDocumentModels:()=>[],signatureDocumentRevision,queueAutomaticAsten:(process:any,type:string)=>{calls.queued++;process.astenSignatureIntent={documentType:type,revision:signatureDocumentRevision(process,type),queuedAt:now};},executeConfiguredWorkflowEvent:async()=>({status:'COMPLETED',actions:[]}),executeAutomaticAsten:async()=>{calls.automatic++;},updateProcessCompletion:()=>{},};
@@ -155,4 +155,12 @@ test('reopening a consented original revokes Drive reading before clearing conse
   const result=await h.request('/api/processes/:id/repository/reopen');
   assert.equal(result.code,fail?409:200);assert.equal(commits,fail?0:1);assert.equal(Boolean(h.context.processesStore[0].acervo.publishFullWork),fail);
  }
+});
+
+test('local review reopening keeps fictional originals isolated from Google without skipping real Drive IDs',async()=>{
+ const {p,jobs}=fixture();Object.assign(jobs[1],{status:'ARCHIVED',driveSignedFileId:'signed-term-fixture'});p.acervo.trabalhoCompletoFileId='local_review_'+ 'a'.repeat(64);p.acervo.resumoExpandidoFileId='local_review_'+ 'b'.repeat(64);
+ const h=harness(p,jobs,async()=>{});h.context.localReviewFilesEnabled=()=>true;
+ assert.equal((await h.request('/api/processes/:id/repository/reopen')).code,200);assert.equal(h.calls.external,0);
+ const second=fixture();Object.assign(second.jobs[1],{status:'ARCHIVED',driveSignedFileId:'signed-term-fixture'});const remote=harness(second.p,second.jobs,async()=>{});remote.context.localReviewFilesEnabled=()=>true;
+ assert.equal((await remote.request('/api/processes/:id/repository/reopen')).code,200);assert.equal(remote.calls.external,2);
 });
