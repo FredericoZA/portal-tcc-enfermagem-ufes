@@ -7,6 +7,8 @@ const ACADEMIC_ACRONYMS = new Set([
 export function academicAcronym(token:string):string|null{
   const upper=token.toLocaleUpperCase('pt-BR');
   if(ACADEMIC_ACRONYMS.has(upper))return upper;
+  // Preserve explicit Roman numerals without turning ordinary words such as 'mix' into numbers.
+  if(/^[IVXLCDM]+$/.test(token)&&/^(?=[IVXLCDM]+$)M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/.test(token))return token;
   // Federal/state universities and federal institutes use established prefixes.
   if(/^(?:UF|UE|IF)[A-Z]{1,5}$/.test(upper))return upper;
   if(/^[B-DF-HJ-NP-TV-Z]{2,6}$/.test(token))return token;

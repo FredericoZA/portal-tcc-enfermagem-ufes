@@ -2408,3 +2408,19 @@ dialog.portal-operation-blocking::backdrop {
 .portal-workflow-overview-step[aria-pressed="true"] .portal-workflow-overview-title { font-weight: 800; }
 .portal-workflow-overview-count { font-size: 11px; color: var(--portal-text-muted, #64748b); }
 .portal-workflow-overview .portal-workflow-add { min-height: 88px; }
+
+/* The active process-data tab joins its sheet without a dividing hairline. */
+.portal-tcc-tab-list button[data-process-tab="cadastral"][aria-pressed="true"] {
+  border-bottom-color: var(--portal-surface-panel);
+  box-shadow: 0 2px 0 var(--portal-surface-panel);
+}
+
+/* Make the scheduling day under the pointer or keyboard focus explicit. */
+.portal-reservation-calendar-modal .portal-calendar-day-cell {
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.portal-reservation-calendar-modal .portal-calendar-day-cell:is(:hover, :focus-visible) {
+  background: var(--portal-brand-sage);
+  box-shadow: inset 0 0 0 2px var(--portal-brand-primary, #005b36);
+}

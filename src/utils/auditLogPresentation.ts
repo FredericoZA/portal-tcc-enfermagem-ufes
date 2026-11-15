@@ -15,6 +15,7 @@ export type AuditChange = { field: string; before: string; after: string };
 const object = (value: unknown): RecordValue => value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
 const labels: Record<string, string> = {
   CRIACAO_PROCESSO: 'Cadastro do TCC concluído', EDICAO_DADOS_PROCESSO: 'Dados do TCC alterados',
+  REVISAO_DADOS_PARA_ATA: 'Dados da defesa conferidos e corrigidos para a ata',
   SOLICITACAO_RESERVA_REGISTRADA: 'Solicitação de reserva registrada',
   REENVIO_EMAIL_SOLICITADO: 'Nova tentativa de envio solicitada',
   COPIA_COMUNICACAO_EMAIL_SOLICITADA: 'Nova cópia da comunicação autorizada pelo Master',

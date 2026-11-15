@@ -111,7 +111,7 @@ export interface AdvisorInfo {
 }
 
 export interface ExaminerInfo {
-  tratamento?: 'Professor'|'Professora';
+  tratamento?: ''|'Professor'|'Professora';
   siape?: string;
   id: string;
   nome: string;

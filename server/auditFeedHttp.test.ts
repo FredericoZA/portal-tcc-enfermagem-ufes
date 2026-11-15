@@ -54,16 +54,16 @@ test('HTTP: auditoria de envios é restrita ao Master e prévia não expõe link
    assert.equal((await fetch(base+endpoint,{headers:{'x-demo-user-email':p.aluno1.email}})).status,403);
   }
   const headers={'x-demo-user-email':'master@portal.local'},response=await fetch(base+feed,{headers});assert.equal(response.status,200);assert.match(response.headers.get('cache-control')||'',/no-store/);
-  const rows=await response.json();assert.equal(rows.filter((row:any)=>row.source==='email').length,12);assert.equal(rows.find((row:any)=>row.emailDeliveryId===visible.id).actorEmail,p.aluno1.email);assert.equal(rows.find((row:any)=>row.id==='created').processProtocol,p.protocolo);assert.doesNotMatch(JSON.stringify(rows),/do-not-disclose-this-token|renderedHtml|renderedText/);
+  const rows=await response.json();const operational=await (await fetch(base+'/api/admin/email-deliveries',{headers})).json();assert.ok(rows.filter((row:any)=>row.source==='email').length<12);assert.equal(rows.some((row:any)=>row.emailDeliveryId===visible.id),false,'successful delivery is not a critical event');assert.equal(rows.find((row:any)=>row.id==='created').processProtocol,p.protocolo);assert.doesNotMatch(JSON.stringify(rows),/do-not-disclose-this-token|renderedHtml|renderedText/);
   const paginated=await fetch(base+feed+'?paginated=true&kind=email',{headers});
   assert.equal(paginated.status,200);
   assert.match(paginated.headers.get('cache-control')||'',/no-store/);
   const page=await paginated.json();
-  assert.equal(page.items.length,12);assert.equal(page.total,12);assert.equal(page.nextCursor,null);
+  assert.equal(page.items.length,rows.filter((row:any)=>row.source==='email').length);assert.equal(page.total,page.items.length);assert.equal(page.nextCursor,null);
   assert.doesNotMatch(JSON.stringify(page),/do-not-disclose-this-token|renderedHtml|renderedText/);
   assert.equal((await fetch(base+feed+'?paginated=true&before=invalid',{headers})).status,400);
   const summary=await (await fetch(base+'/api/admin/email-deliveries',{headers})).json();
-  for(const entry of [rows.find((row:any)=>row.emailDeliveryId===visible.id).after,summary.find((row:any)=>row.id===visible.id)]){
+  for(const entry of [operational.find((row:any)=>row.id===visible.id),summary.find((row:any)=>row.id===visible.id)]){
    assert.equal(entry.templateId,visible.templateId);
    assert.equal(entry.workflowEventCode,visible.workflowEventCode);
    assert.equal(entry.studioRevision,23,'audit follows the revision of the actual attempt rather than the latest Studio');
@@ -90,6 +90,6 @@ test('HTTP: auditoria de envios é restrita ao Master e prévia não expõe link
   const acceptedRetry=await fetch(`${base}/api/admin/email-deliveries/${visible.id}/retry`,{method:'POST',headers:{...headers,'content-type':'application/json'},body:'{}'});assert.equal(acceptedRetry.status,200);assert.doesNotMatch(await acceptedRetry.text(),/renderedText|renderedHtml|idempotencyKey/);
   const retried=await (await fetch(base+feed,{headers})).json();assert.equal(retried.find((row:any)=>row.emailDeliveryId===sensitive.id).actorEmail,'Sistema','não inventa o solicitante original do registro antigo');assert.equal(retried.find((row:any)=>row.action==='REENVIO_EMAIL_SOLICITADO').actorEmail,'master@portal.local','a nova tentativa possui seu próprio responsável');
   const code=await fetch(base+'/api/auth/request-code',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:'master@portal.local'})});assert.equal(code.status,200);
-  const updated=await (await fetch(base+feed,{headers})).json();const otp=updated.find((row:any)=>row.action==='EMAIL_CODIGO_ACESSO_SIMULADO');assert.ok(otp);assert.equal(otp.actorEmail,'Sistema');assert.equal(otp.after.recipient,'master@portal.local');assert.equal(otp.after.status,'SIMULATED');assert.equal(otp.after.method,'EMAIL_OTP');assert.equal(otp.after.requestedBy,undefined);assert.equal(otp.after.code,undefined);assert.equal(otp.after.challengeId,undefined);
+  const updated=await (await fetch(base+feed,{headers})).json();const otp=updated.find((row:any)=>row.action==='EMAIL_CODIGO_ACCESO_SIMULADO'||row.action==='EMAIL_CODIGO_ACESSO_SIMULADO');assert.equal(otp,undefined,'successful OTP does not write routine Portal history');
  }finally{child.kill('SIGTERM');await new Promise<void>(r=>child.exitCode!==null?r():child.once('exit',()=>r()));await rm(directory,{recursive:true,force:true});}
 });

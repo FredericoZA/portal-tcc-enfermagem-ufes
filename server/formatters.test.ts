@@ -1,5 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {ETAPAS_CONFIG} from '../src/utils/processStagePresentation';
+
+test('default public progress matches the real detail phases and aliases',()=>{
+  for(const [index,phase] of ETAPAS_CONFIG.entries()){
+    const progress=getProcessProgress({status:'AGUARDANDO_DEFESA',etapaAtual:phase.code});
+    assert.equal(progress.label,`Etapa ${index+1}/${ETAPAS_CONFIG.length}: ${phase.label}`);
+  }
+  assert.match(getProcessProgress({status:'AGUARDANDO_DEFESA',etapaAtual:'CONFIRMACAO_LOCAL'}).label,/Etapa 2\/8: Confirmação/);
+  assert.match(getProcessProgress({status:'AGUARDANDO_DADOS_FINAIS',etapaAtual:'REPOSITORIO'}).label,/Etapa 7\/8: Repositório/);
+});
 import { formatDateExtensoTotal, formatDateNumeric, formatDatePt, formatWeekdayPt, formatDateWithWeekday, formatDateNumericWithWeekday, formatDateExtensoWithWeekday, formatTimeExtenso, getProcessProgress, getWorkflowStagesCount, getStepNumberLabel } from '../src/utils/formatters';
 
 test('formatadores preservam valores civis informados no horário institucional', () => {
@@ -56,8 +66,8 @@ test('preferência de etapas ausente, inválida ou bloqueada preserva a renderiz
   }
   assert.equal(getWorkflowStagesCount({ getItem: () => { throw new Error('Storage blocked'); } }), 5);
   const fallback = getProcessProgress({ status: 'AGUARDANDO_DADOS_FINAIS', etapaAtual: 'REPOSITORIO' });
-  assert.equal(fallback.label, 'Etapa 5/5: Dados finais e repositório');
-  assert.equal(fallback.percent, 90);
+  assert.equal(fallback.label, 'Etapa 7/8: Repositório');
+  assert.equal(fallback.percent, 88);
 });
 
 test('ordenação por progresso acompanha a sequência do fluxo e só termina após conclusão', () => {

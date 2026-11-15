@@ -1,3 +1,4 @@
+import {ETAPAS_CONFIG,ETAPA_PROGRESS_ALIAS,ETAPA_CURRENT_LABEL} from './processStagePresentation';
 import {academicAcronym,stripAcademicCaseMarkers} from './academicTextCase';
 // Formatadores de data, hora e texto para o fluxo acadêmico configurável.
 import type { ProcessData } from '../types';
@@ -360,8 +361,18 @@ export function getWorkflowStagesCount(storage?: Pick<Storage, 'getItem'>): numb
  */
 export function getProcessProgress(
   proc: Pick<ProcessData, 'status' | 'etapaAtual'>,
-  totalStages: number = getWorkflowStagesCount()
+  totalStages?: number
 ) {
+  // Default UI progress follows the same real phases as the detail sheet,
+  // rather than an unrelated, possibly stale browser preference.
+  if (totalStages === undefined) {
+    const etapa = proc.status === 'CONCLUIDO' ? 'CONCLUIDO' : proc.etapaAtual;
+    const code = ETAPA_PROGRESS_ALIAS[etapa] || etapa;
+    const index = ETAPAS_CONFIG.findIndex(item => item.code === code);
+    if (index < 0) return {percent:0,label:'Etapa não identificada',color:'bg-emerald-600'};
+    const label = ETAPA_CURRENT_LABEL[etapa] || ETAPAS_CONFIG[index].label;
+    return {percent:Math.round((index+1)/ETAPAS_CONFIG.length*100),label:`Etapa ${index+1}/${ETAPAS_CONFIG.length}: ${label}`,color:'bg-emerald-600'};
+  }
   let stepNumber = 1;
   let percent = 20;
   let label = '';

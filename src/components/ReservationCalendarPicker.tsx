@@ -18,8 +18,8 @@ const monthLabel = new Intl.DateTimeFormat('pt-BR', {month:'long', year:'numeric
 type CalendarProcess = Awaited<ReturnType<typeof apiClient.getPublicCalendarData>>['processes'][number];
 type Slot = {start:number;end:number;pending:boolean};
 
-export function ReservationCalendarPicker({value, location, timezone, onSelect}: {
-  value:string; location:string; timezone:string; onSelect:(value:string)=>void;
+export function ReservationCalendarPicker({value, location, timezone, excludeProcessId, onSelect}: {
+  value:string; location:string; timezone:string; excludeProcessId?:string; onSelect:(value:string)=>void;
 }) {
   const [open,setOpen] = useState(false);
   const today = dayFormat(timezone).format(new Date());
@@ -36,10 +36,10 @@ export function ReservationCalendarPicker({value, location, timezone, onSelect}:
     setError(false);
     setProcesses(null);
     apiClient.getPublicCalendarData({signal:controller.signal}).then(({processes})=>{
-      if(!controller.signal.aborted) setProcesses(processes);
+      if(!controller.signal.aborted) setProcesses(processes.filter(process=>process.id!==excludeProcessId));
     }).catch(()=>{if(!controller.signal.aborted)setError(true);});
     return ()=>controller.abort();
-  },[open,attempt]);
+  },[open,attempt,excludeProcessId]);
   const entries = useMemo(() => processes?.flatMap(({defesa}): Slot[] => {
     const start = Date.parse(defesa?.startAt || '');
     if (!Number.isFinite(start) || normalizeDefenseLocation(defesa.local || '') !== normalizeDefenseLocation(location)) return [];
@@ -55,7 +55,7 @@ export function ReservationCalendarPicker({value, location, timezone, onSelect}:
   const visibleSlots=entries?.filter(slot=>defenseIntervalsOverlap(dayStart,dayStart+1440*minuteMs,slot.start,slot.end)) ?? [];
   const start=instant(day,time);
   const clash=entries?.some(slot=>defenseIntervalsOverlap(start,start+duration,slot.start,slot.end));
-  const invalid=!Number.isFinite(start)||day<today||!isDefenseWeekday(day);
+  const invalid=!Number.isFinite(start)||!isDefenseWeekday(day);
   const minute = time ? Number(time.slice(0,2))*60+Number(time.slice(3)) : 0;
   const firstDay = new Date(month+'-01T00:00:00Z');
   const {weekdays,days,leading}=buildCalendarMonthGrid(firstDay.getUTCFullYear(),firstDay.getUTCMonth(),[]);
@@ -86,7 +86,7 @@ export function ReservationCalendarPicker({value, location, timezone, onSelect}:
   return <div className="sm:col-span-2" onKeyDown={event=>{if(open&&event.key==='Enter'&&event.target instanceof HTMLInputElement)event.preventDefault();}}>
     <button type="button" className="portal-action inline-flex items-center gap-2" disabled={!normalizeDefenseLocation(location)} onClick={()=>{
       const [date,hour]=value.split('T');
-      const initial=/^\d{4}-\d{2}-\d{2}$/.test(date)&&date>=today?date:today;
+      const initial=/^\d{4}-\d{2}-\d{2}$/.test(date)?date:today;
       setDay(initial);setMonth(initial.slice(0,7));setShowDay(false);setTime(/^\d{2}:\d{2}$/.test(hour)?hour:'14:00');
       setProcesses(null);setError(false);setOpen(true);
     }}><CalendarDays size={16} aria-hidden="true"/> Ver calendário de horários</button>
@@ -130,7 +130,7 @@ export function ReservationCalendarPicker({value, location, timezone, onSelect}:
               </div>
             </div>
           </div>
-          <p className="p-3 text-sm">Selecione um dia para ver as defesas e escolher o horário.</p>
+          <p className="p-3 text-sm">Clique em um dia para ver as defesas e escolher o horário.</p>
         </section>:
         <section className="portal-card min-w-0 p-3" aria-label="Horários do dia">
           <h3 className="font-bold">Faixa de horários do local</h3>
@@ -148,7 +148,7 @@ export function ReservationCalendarPicker({value, location, timezone, onSelect}:
             <li className="flex items-center gap-1.5"><span aria-hidden="true" className="size-3 rounded-sm bg-amber-300"/>Outras defesas no mesmo local</li>
             <li className="flex items-center gap-1.5"><span aria-hidden="true" className="size-3 rounded-sm bg-red-600/70"/>Seu horário em conflito</li>
           </ul>
-          <p className={`mt-3 text-sm font-semibold ${clash?'text-red-800':''}`} role="status">{time&&(invalid?(day<today?'Esta data já passou.':'Horário inválido.'):`${time}–${clock(minute+DEFENSE_DURATION_MINUTES)}${minute+DEFENSE_DURATION_MINUTES>=1440?' (dia seguinte)':''} · ${clash?'Horário ocupado':'Sem conflito no calendário do local'}`)}</p>
+          <p className={`mt-3 text-sm font-semibold ${clash?'text-red-800':''}`} role="status">{time&&(invalid?(!isDefenseWeekday(day)?'Agende a defesa de segunda a sexta-feira.':'Horário inválido.'):`${time}–${clock(minute+DEFENSE_DURATION_MINUTES)}${minute+DEFENSE_DURATION_MINUTES>=1440?' (dia seguinte)':''} · ${clash?'Horário ocupado':'Sem conflito no calendário do local'}`)}</p>
           {visibleSlots.length>0&&<ul className="mt-2 space-y-1 text-xs">{visibleSlots.map((slot,index)=>{
             const format=(timestamp:number)=>new Intl.DateTimeFormat('pt-BR',{timeZone:timezone,hour:'2-digit',minute:'2-digit'}).format(timestamp);
             return <li key={index}>{format(slot.start)}–{format(slot.end)} · {slot.pending?'Aguardando confirmação':'Ocupado'}</li>;

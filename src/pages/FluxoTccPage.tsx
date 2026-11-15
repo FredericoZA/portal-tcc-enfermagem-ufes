@@ -69,6 +69,9 @@ const phases = [
     where: 'Meus TCCs → TCC → Conceito e Ata',
     summary: 'A partir do horário da defesa, registre o conceito e o parecer para a documentação.',
     details: [
+      'Quando o registro da ata estiver liberado para o orientador, use Verificar dados do processo somente se houver dados preenchidos incorretamente no cadastro. Se os dados estiverem corretos, prossiga sem abrir a conferência.',
+      'O orientador vinculado ao trabalho pode corrigir os dados nas abas Trabalho, Autores, Orientação, Examinadores e Data e local. Apenas o e-mail do orientador não pode ser alterado. É possível informar uma defesa com data passada ou futura; o calendário continua verificando conflitos.',
+      'Confira nomes completos, grafia do título e nome ou endereço do local: essas informações serão usadas na ata e nos demais termos. Depois de revisar, confirme a conferência e clique em Salvar dados e voltar à ata; confira novamente a prévia antes do registro.',
       'Registre o conceito deliberado pela banca: Aprovado, Aprovado com ressalva ou Reprovado. Registre as ressalvas no parecer, quando houver. O docente faz a avaliação e lança notas e frequência no Portal do Professor, em professor.ufes.br.',
       'Clique em Visualizar ata, confira a prévia e confirme a conferência. Use Registrar conceito e ata e ir para documentos.',
       'Em Documentos administrativos, acompanhe a assinatura da ata pelo orientador, pelos dois examinadores, por cada autor e pelo coorientador que participou da sessão. Veja o estado do ASTEN ou use Gov.br quando disponível.',

@@ -21,7 +21,7 @@ export const StudentNames: React.FC<StudentNamesProps> = ({
   aluno2,
   align = 'center',
   className = '',
-  itemClassName = 'text-xs font-bold text-slate-900',
+  itemClassName = 'text-xs font-normal text-slate-900',
   showIcon = false,
   truncate = false,
 }) => {
@@ -69,7 +69,7 @@ export const GcalStudentNames: React.FC<GcalStudentNamesProps> = ({
   alunoStr,
   align = 'center',
   className = '',
-  itemClassName = 'text-xs font-bold text-slate-900',
+  itemClassName = 'text-xs font-normal text-slate-900',
   showIcon = false,
 }) => {
   if (!alunoStr) return null;

@@ -52,7 +52,7 @@ pages=[
  ('Use “Continuar” para avançar nas sete etapas.','O e-mail do primeiro autor é o da conta de acesso e fica bloqueado. Use “Voltar” para corrigir ou “Salvar e sair” para retomar depois.'),
  ('Confira o título e as siglas.','No título e nas instituições dos examinadores e do coorientador, digite o texto normalmente: o Portal reconhece siglas automaticamente e ajusta a capitalização.')]),
  dict(tag='ALUNO • AGENDAMENTO',title='4. Solicitar e acompanhar a reserva',steps=[
- ('Na última etapa, escolha data, horário e local.','Escolha hoje ou uma data futura, inclusive sábado ou domingo. Antes de enviar, confira a disponibilidade do espaço com o Departamento ou, para outro local, com o orientador.'),
+ ('Na última etapa, escolha o local e abra o calendário.','Clique em um dia e ajuste o horário da defesa. Antes de enviar, confira a disponibilidade do espaço com o Departamento ou, para outro local, com o orientador.'),
  ('Confira as tabelas e clique em “Cadastrar e solicitar reserva”.','Auditório e sala de reuniões dependem do aceite do Departamento. Para outro local, escreva o nome completo como deverá aparecer nos documentos; o orientador receberá o pedido e deverá viabilizar a reserva externa.'),
  ('Aguarde a resposta ao pedido.','O intervalo da defesa é de 1h30. O local escolhido fica bloqueado no Portal enquanto a solicitação aguarda resposta. Isso não controla reservas realizadas fora do sistema.'),
  ('Acompanhe em “Dados do processo”.','Enquanto aguarda resposta, o pedido aparece no Calendário com o texto em vermelho e “(aguardando confirmação)” após o horário. O aceite retira o aviso; a recusa retira só o agendamento, preservando o código do TCC. O resultado responde ao pedido do responsável, com PDF e com responsável, autores e orientador como destinatários diretos.'),
@@ -70,17 +70,17 @@ pages=[
  ('Assine pelo método em uso no processo.','No Asten, cada pessoa usa seu link. Pelo Gov.br, o orientador reúne as assinaturas e devolve o PDF. Consulte as seções dos dois métodos.')],note='A autorização do TCC e a do resumo expandido são independentes. Autorizar um arquivo não autoriza automaticamente o outro.'),
  dict(tag='ORIENTADOR • ANTES DA DEFESA',title='8. Conferir o processo e a banca',image='ficha-orientador',image_h=175,steps=[
  ('Entre com o e-mail cadastrado como orientador.','Use o acesso por código das páginas 2 e 3. Abra “Meus TCCs” e selecione o código do trabalho.'),
- ('Confira “Dados do processo”.','Revise título, autores, examinadores, coorientador, nomes, e-mails, titulações, instituições e dados da defesa. Corrija título e participantes enquanto a edição estiver aberta. Combine mudanças de reserva e data com os autores, que enviam o novo pedido.'),
+ ('Confira “Dados do processo”.','Se o cadastro precisar de correção, use “Verificar dados do processo” em “Conceito e Ata”, antes de registrar a ata. Veja o passo a passo na página 21. Se estiver correto, prossiga sem abrir a conferência.'),
  ('Verifique o local e acompanhe o convite.','Nos espaços do Departamento, aguarde a homologação. Para outro local, confira o pedido recebido e clique em “Aceitar reserva” ou “Recusar reserva”. O aceite no Portal não efetua uma reserva fora dele.'),
- ('Abra a carta-convite em “Documentos administrativos”.','Use “Ver” ou “Baixar PDF” quando liberados. Se houver dado incorreto e a edição estiver bloqueada, informe a comissão com o protocolo do TCC.')]),
+ ('Abra a carta-convite em “Documentos administrativos”.','Use “Ver” ou “Baixar PDF” quando liberados. Para corrigir o cadastro antes do registro da ata, siga a página 21. Após o encerramento dessa possibilidade, procure a comissão com o protocolo do TCC.')]),
  dict(tag='ORIENTADOR • APÓS A DEFESA',title='9. Registrar conceito e parecer',image='avaliacao',image_h=181,steps=[
- ('Abra o TCC e clique em “Conceito e Ata”.','O registro exige acesso como orientador, local confirmado, convite enviado e o início do horário da defesa.'),
+ ('Abra o TCC e clique em “Conceito e Ata”.','Se houver dados preenchidos incorretamente, use antes “Verificar dados do processo” (página 21). Com os dados corretos, registre a ata conforme as condições da etapa.'),
  ('Selecione o conceito da defesa.','Escolha “Aprovado”, “Aprovado com ressalva” ou “Reprovado”, conforme a decisão da banca.'),
  ('Preencha o “Parecer da banca”.','“Gerar rascunho de parecer” preenche um parágrafo com o conceito escolhido. Revise o texto e, se quiser, acrescente as considerações da banca ao final.'),
  ('Clique em “Visualizar ata”.','Leia a prévia antes de confirmar. O preenchimento do conceito ainda não solicita a assinatura do documento.')],note='Registre o conceito e o parecer deliberados pela banca, incluindo eventuais ressalvas. Notas e frequência são lançadas em professor.ufes.br.'),
  dict(tag='ORIENTADOR • CONFERÊNCIA',title='10. Conferir e registrar a ata',image='ata-previa',image_h=117,steps=[
  ('Leia a ata inteira na prévia.','Confira título, nomes completos, data, local, participantes, resultado e parecer. Confirme a presença do coorientador: ele assina a ata quando participou da sessão.'),
- ('Se houver erro, clique em “Corrigir ata”.','Edite o texto na própria ata formatada. Confira as alterações, marque a confirmação e clique em “Salvar e continuar”.'),
+ ('Diferencie cadastro e texto da ata.','Para corrigir os dados do trabalho, participantes ou agendamento antes do registro, veja a página 21. Para ajustar o texto, use “Corrigir ata” na prévia formatada. Confira as alterações, marque a confirmação e clique em “Salvar e continuar”.'),
  ('Marque a confirmação de conferência.','Assinale “Visualizei a ata. Confirmo que o resultado, o parecer e os dados correspondem à defesa e autorizo o registro e a preparação para assinatura”.'),
  ('Clique em “Registrar conceito e ata e ir para documentos”.','O Portal abre “Documentos administrativos” e inicia o envio automático pelo ASTEN a todos os signatários da ata. Acompanhe o estado confirmado da solicitação.')],note='Depois do registro, acompanhe o estado da ata em Documentos administrativos.'),
  dict(tag='ORIENTADOR • ASSINATURAS DA ATA',title='11. Acompanhar as assinaturas da ata',image='documentos',image_h=245,steps=[
@@ -126,6 +126,13 @@ pages=[
  ('Consulte “Repositório”.','Busque pelo título ou pela autoria. Abra a ficha e consulte apenas os arquivos liberados em “Repositório acadêmico”.'),
  ('Confira “Documentos administrativos”.','As ações “Ver” e “Baixar PDF” aparecem somente quando o arquivo está disponível para consulta.'),
  ('Envie um relato pelo menu “Sugestões”, se necessário.','Informe a tela e o que aconteceu. Evite compartilhar dados pessoais ou credenciais.')],note='A consulta pública não permite alterar dados, registrar conceito, reservar espaço nem assinar documentos.'),
+
+ dict(tag='ORIENTADOR • CORREÇÃO OPCIONAL',title='20. Corrigir dados antes da ata',steps=[
+ ('Use somente se precisar corrigir o cadastro.','Quando o registro da ata estiver liberado, se houver dados preenchidos incorretamente, abra “Meus TCCs”, selecione o trabalho e entre em “Conceito e Ata”. Se os dados estiverem corretos, prossiga sem abrir a conferência.'),
+ ('Clique em “Verificar dados do processo”.','Somente o orientador vinculado ao trabalho tem acesso a essa correção. Apenas o e-mail do orientador não pode ser alterado.'),
+ ('Escolha a aba correspondente.','Use “Trabalho”, “Autores”, “Orientação”, “Examinadores” ou “Data e local”. A data pode ser passada ou futura; o calendário mantém a verificação de conflitos.'),
+ ('Confira a grafia que aparecerá nos documentos.','Revise título, nomes completos, instituições e nome ou endereço do local, sem abreviações indevidas. As informações salvas serão usadas na ata e nos demais termos.'),
+ ('Salve e volte à ata.','Confirme a conferência e clique em “Salvar dados e voltar à ata”. Confira novamente a prévia antes de registrar. “Corrigir ata” ajusta o texto da prévia; a correção cadastral é feita em “Verificar dados do processo”.')]),
 
 ]
 styles={
@@ -188,7 +195,7 @@ def footer():
  c.setFillColor(MUTED);c.setFont('Portal',7)
  for i,line in enumerate(['Comissão de Trabalho de Conclusão de Curso','Departamento de Enfermagem','Curso de Graduação em Enfermagem e Obstetrícia — CCS/UFES']):
   c.drawRightString(W-M,46-i*10,line)
- c.drawRightString(W-M,14,'Atualizado em 08/11/2026')
+ c.drawRightString(W-M,14,'Atualizado em 15/11/2026')
  c.drawString(M,14,f'{page_number} / {len(pages)}')
  bounds.append({'page':page_number,'lastContentY':round(y,2)})
 
@@ -208,7 +215,7 @@ for page_number,page in enumerate(pages,1):
   y=H-290
   para('Para participantes e visitantes',style='title',gap=13)
   para('Consulte a seção do seu papel. Os nomes dos botões aparecem em <b>negrito</b>.',gap=16)
-  for label,num in [('Acesso por código de e-mail',2),('Aluno: cadastro, reserva e entrega',4),('Entregar não é tornar público',6),('Orientador: conceito, ata e assinatura',9),('Assinar pelo Asten',13),('Examinador: convite, defesa e ata',14),('Acesso e proteção de dados',18),('Assinar e devolver pelo Gov.br',19),('Visitante: consulta pública',20)]:
+  for label,num in [('Acesso por código de e-mail',2),('Aluno: cadastro, reserva e entrega',4),('Entregar não é tornar público',6),('Orientador: conceito, ata e assinatura',9),('Orientador: corrigir dados antes da ata',21),('Assinar pelo Asten',13),('Examinador: convite, defesa e ata',14),('Acesso e proteção de dados',18),('Assinar e devolver pelo Gov.br',19),('Visitante: consulta pública',20)]:
    ptop=y;para(f'<b>{label}</b> <font color="#4a5d66"> — página {num}</font>',gap=6)
    c.linkRect('',f'page-{num}',(M,y+7,W-M,ptop+1),relative=0,thickness=0)
   y-=8
@@ -226,12 +233,12 @@ for page_number,page in enumerate(pages,1):
   header(page['tag'],page['title'])
   for title,text in [
    ('ALUNO','Cadastra e acompanha o trabalho. Solicita, altera ou refaz a reserva enquanto a etapa permite. Assina a ata, entrega o PDF final e assina o termo quando houver publicação autorizada.'),
-   ('ORIENTADOR','Pode corrigir título e participantes na etapa permitida. Registra conceito e ata. Assina a ata e o termo aplicável. O aluno envia pedidos de reserva e alteração de data.'),
+   ('ORIENTADOR','Antes de registrar a ata, pode corrigir o cadastro em Verificar dados do processo, se necessário (página 21). Apenas seu e-mail não pode ser alterado. Registra conceito e ata e assina os documentos aplicáveis.'),
    ('EXAMINADORES','Consultam os dados autorizados, participam da defesa e assinam a ata quando convocados.'),
    ('QUEM ASSINA CADA DOCUMENTO','Ata: orientador, dois examinadores, autores e coorientador presente na sessão. Termo: todos os autores e orientador, somente quando houver publicação autorizada. Declaração da banca: Presidência da Comissão. Comprovante e carta-convite não exigem assinatura.')]:
    box('<b>'+title+'</b><br/>'+text)
   para('<b>Acessos de apoio</b><br/>No menu lateral, Sugestões e Declaração de comparecimento ficam em Informações. Replicar Portal fica abaixo, na seção Replicação. O manual completo em PDF está fixado no topo de Como usar.',gap=14)
-  para('<b>Referências e edição</b><br/>Nomes de telas e botões conferidos no código e em capturas locais. Revisão dos textos em domingo, 08/11/2026. Asten: <link href="'+ASTEN+'" color="#005830">Como assinar um documento?</link>. As figuras usam dados fictícios.',style='small')
+  para('<b>Referências e edição</b><br/>Nomes de telas e botões conferidos no código e em capturas locais. Revisão dos textos em 15/11/2026. Asten: <link href="'+ASTEN+'" color="#005830">Como assinar um documento?</link>. As figuras usam dados fictícios.',style='small')
  else:
   header(page['tag'],page['title'])
   if page.get('intro'):para(escape(page['intro']),gap=17)
@@ -249,6 +256,6 @@ for i,p in enumerate(r.pages):
  assert len(p.extract_text() or '')>300,(i,'Missing text')
 assert '/Annots' in r.pages[0], 'Cover navigation must be clickable'
 PUBLIC.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(OUT,PUBLIC)
-manifest={'edition':'2026-11-08','pages':len(pages),'bodyFontPoints':13,'lineHeightPoints':18.5,'pdf':str(PUBLIC.relative_to(ROOT)),'sha256':hashlib.sha256(OUT.read_bytes()).hexdigest(),'signaturePolicy':'ATA: advisor, two examiners, authors and attending co-advisor; TERMO: authors and advisor; DECLARACAO: commission president','sources':['server/workflow/signaturePolicy.ts','src/components/PortalIllustratedGuide.tsx','src/components/AdvisorEvaluationPanel.tsx','src/pages/HomePage.tsx','src/pages/ProcessoDetailPage.tsx','src/utils/blankAttendanceDeclaration.ts',ASTEN,GOVBR,ITI],'screenshots':'Synthetic captures; no provider dispatch or real personal data','layoutChecks':bounds}
+manifest={'edition':'2026-11-15','pages':len(pages),'bodyFontPoints':13,'lineHeightPoints':18.5,'pdf':str(PUBLIC.relative_to(ROOT)),'sha256':hashlib.sha256(OUT.read_bytes()).hexdigest(),'signaturePolicy':'ATA: advisor, two examiners, authors and attending co-advisor; TERMO: authors and advisor; DECLARACAO: commission president','sources':['server/workflow/signaturePolicy.ts','src/components/PortalIllustratedGuide.tsx','src/components/AdvisorEvaluationPanel.tsx','src/pages/HomePage.tsx','src/pages/ProcessoDetailPage.tsx','src/utils/blankAttendanceDeclaration.ts',ASTEN,GOVBR,ITI],'screenshots':'Synthetic captures; no provider dispatch or real personal data','layoutChecks':bounds}
 (ROOT/'output/pdf/manual-verification.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
 print(json.dumps({'pdf':str(OUT),'public':str(PUBLIC),'pages':len(r.pages),'bytes':OUT.stat().st_size,'sha256':manifest['sha256']},ensure_ascii=False))

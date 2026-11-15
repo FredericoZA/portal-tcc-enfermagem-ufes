@@ -1,3 +1,4 @@
+import {visibleCriticalAudit, criticalEmailDelivery} from './criticalAuditPolicy';
 import type {AuditLog, ProcessData} from '../src/types';
 import type {EmailDeliveryRecord} from '../src/types/automation';
 import {communicationCopyBlocker} from './workflow/emailCommunicationCopy';
@@ -48,7 +49,7 @@ export function emailDeliveryAuditSummary(record: EmailDeliveryRecord): Record<s
     ...emailDeliveryAuditMetadata(record),recipient:[record.recipient,...(record.additionalRecipients||[])].map(email=>email.replace(/^(.{2}).*(@.*)$/,'$1***$2')).join(', ')};
 }
 
-type AuditFeedInput = {logs: AuditLog[]; deliveries: EmailDeliveryRecord[]; processes: ProcessData[]; deletionTasks?: ProcessDeletionTask[]; copyBlocker?: (record:EmailDeliveryRecord,process?:ProcessData)=>{code:string;error:string}|undefined; retryBlocker?: (record:EmailDeliveryRecord,process?:ProcessData)=>{code:string;error:string}|undefined};
+type AuditFeedInput = {criticalOnly?: boolean; logs: AuditLog[]; deliveries: EmailDeliveryRecord[]; processes: ProcessData[]; deletionTasks?: ProcessDeletionTask[]; copyBlocker?: (record:EmailDeliveryRecord,process?:ProcessData)=>{code:string;error:string}|undefined; retryBlocker?: (record:EmailDeliveryRecord,process?:ProcessData)=>{code:string;error:string}|undefined};
 
 function auditFeedProjector(input:AuditFeedInput) {
   const processes = new Map(input.processes.map(p => [p.id, p]));
@@ -98,10 +99,10 @@ function auditFeedProjector(input:AuditFeedInput) {
   return {activity,email};
 }
 
-const compareAuditRows=(a:AuditLog,b:AuditLog)=>(Date.parse(b.timestamp)||0)-(Date.parse(a.timestamp)||0)||a.id.localeCompare(b.id);
+const compareAuditRows=(a:AuditLog,b:AuditLog)=>(Date.parse(b.timestamp)||0)-(Date.parse(a.timestamp)||0)||(a.id<b.id?-1:a.id>b.id?1:0);
 export function buildAuditFeed(input:AuditFeedInput):AuditLog[] {
   const project=auditFeedProjector(input);
-  return [...input.logs.map(project.activity),...input.deliveries.map(project.email)].sort(compareAuditRows);
+  return [...input.logs.filter(log=>!input.criticalOnly||visibleCriticalAudit(log)).map(project.activity),...input.deliveries.filter(record=>!input.criticalOnly||criticalEmailDelivery(record)).map(project.email)].sort(compareAuditRows);
 }
 
 const auditPageSize = 100;
@@ -130,7 +131,7 @@ export function pageAuditFeed(rows: AuditLog[], query:AuditPageQuery) {
   const before = query.before;
   const start = before ? matches.findIndex(log => {
     const current = auditPosition(log);
-    return current.at < before.at || (current.at === before.at && current.id.localeCompare(before.id) > 0);
+    return current.at < before.at || (current.at === before.at && current.id > before.id);
   }) : 0;
   const items = start < 0 ? [] : matches.slice(start, start + auditPageSize);
   const last = items.at(-1);
@@ -149,10 +150,12 @@ export function buildPagedAuditFeed(input:AuditFeedInput,query:AuditPageQuery) {
   const loaders=new Map<AuditLog,()=>AuditLog>();
   const positions:AuditLog[]=[];
   for(const log of input.logs){
+    if(input.criticalOnly&&!visibleCriticalAudit(log))continue;
     const position={id:log.id,timestamp:log.timestamp,action:log.action,entityType:log.entityType,emailDeliveryId:log.emailDeliveryId,source:'activity'} as AuditLog;
     positions.push(position);loaders.set(position,()=>project.activity(log));
   }
   for(const record of input.deliveries){
+    if(input.criticalOnly&&!criticalEmailDelivery(record))continue;
     const position={id:`email-delivery:${record.id}`,timestamp:record.updatedAt||record.createdAt,action:'EMAIL_ENVIO_PENDENTE',entityType:'email_delivery',source:'email'} as AuditLog;
     positions.push(position);loaders.set(position,()=>project.email(record));
   }

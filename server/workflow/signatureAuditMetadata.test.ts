@@ -18,9 +18,10 @@ test('readback preserva quem assinou e só a data individual comprovada; metadad
  assert.deepEqual(safeAuditValue(result),result);assert.equal(JSON.stringify(result).includes('secret'),false);
  job.signers=Array.from({length:20},()=>job.signers[0]);assert.equal(signatureAuditMetadata(job,'PROVIDER_SIGNERS_VERIFIED','ASTEN_SIGNERS_READBACK').verifiedSigners?.length,12);
 });
-test('evento determinístico e snapshot histórico sobrevivem feed sem lookup atual',()=>{
- const logs:any[]=[];const job=makeJob();recordSignatureAudit(logs,process,job,'system@example.invalid','PROVIDER_SIGNERS_VERIFIED','ASTEN_SIGNERS_READBACK');
- job.signers[0].name='Nome alterado';recordSignatureAudit(logs,process,job,'system@example.invalid','PROVIDER_SIGNERS_VERIFIED','ASTEN_SIGNERS_READBACK');assert.equal(logs.length,1);
+test('ASTEN signers stay in the job without a duplicate Portal event; archived evidence remains historical',()=>{
+ const routine:any[]=[];recordSignatureAudit(routine,process,makeJob(),'system@example.invalid','PROVIDER_SIGNERS_VERIFIED','ASTEN_SIGNERS_READBACK');assert.equal(routine.length,0);
+ const logs:any[]=[];const job=makeJob();recordSignatureAudit(logs,process,job,'system@example.invalid','SIGNED_DOCUMENT_ARCHIVED','ASTEN_SIGNERS_READBACK');
+ job.signers[0].name='Nome alterado';recordSignatureAudit(logs,process,job,'system@example.invalid','SIGNED_DOCUMENT_ARCHIVED','ASTEN_SIGNERS_READBACK');assert.equal(logs.length,1);
  const row=buildAuditFeed({logs,deliveries:[],processes:[]})[0];assert.equal(row.after.verifiedSigners[0].name,'Pessoa sintética');assert.equal(row.processProtocol,'TCC - 00002');
  const historical:any={id:'old',action:'CALLBACK_ASTEN_RECONCILIADO',actorEmail:'system',entityType:'signature_job',entityId:'j',timestamp:'2026-01-01'};
  assert.equal(buildAuditFeed({logs:[historical],deliveries:[],processes:[]})[0].after,undefined);

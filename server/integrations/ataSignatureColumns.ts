@@ -49,7 +49,7 @@ export async function ataSignatureColumnRequests(document:any,process:ProcessDat
  };
  const cap=(text:string)=>text.replace(/^\p{L}/u,c=>c.toLocaleUpperCase('pt-BR'));
  const student=(person:ProcessData['aluno1']|null|undefined)=>person?{name:person.nome.trim(),role:person.tratamento==='Aluna'?'Aluna autora':person.tratamento==='Aluno'?'Aluno autor':'Autoria'}:null;
- const faculty=(person:ProcessData['orientador'],role:'orientador'|'examinador'|'coorientador')=>({name:academicName(person,'abbreviated'),role:cap(facultyRole(person,role))+(role==='orientador'?' e Presidente':'')});
+ const faculty=(person:ProcessData['orientador']|ProcessData['banca'][number],role:'orientador'|'examinador'|'coorientador')=>({name:academicName(person,'abbreviated'),role:cap(facultyRole(person,role))+(role==='orientador'?' e Presidente':'')});
  let pairs:Array<Array<{name:string;role:string}|null>>=[
   [faculty(process.orientador,'orientador'),student(process.aluno1)],
   [faculty(examiners[0],'examinador'),student(process.aluno2)],

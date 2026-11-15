@@ -1,14 +1,14 @@
 import {formatTccTitle} from './formatters';
 
 export const INSTITUTION_ACRONYM_HELP =
-  'Por padrão, não é permitido manter o texto inteiro em letras maiúsculas ou minúsculas: o Portal ajusta as iniciais automaticamente. Algumas siglas reconhecidas, como UFES, SUS e CNPQ, são mantidas em maiúsculas, sem precisar de asteriscos.';
+  'Confira a grafia. Você pode usar a sugestão de capitalização ou manter o texto como escreveu, inclusive siglas e acrônimos.';
 
 /** Input and documents use the same deterministic, marker-free casing. */
 export function normalizeInstitutionInput(raw: string): string {
   return formatTccTitle(String(raw || ''));
 }
 export function renderInstitutionName(raw: string): string {
-  return normalizeInstitutionInput(raw);
+  return /\*[^*]+\*|\+[^+]+-/u.test(raw) ? normalizeInstitutionInput(raw) : String(raw || '').normalize('NFC').trim().replace(/\s+/gu,' ');
 }
 
 const UNIVERSITY_ACRONYMS: ReadonlyMap<string, string> = new Map([

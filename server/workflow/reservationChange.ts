@@ -17,7 +17,6 @@ export function validateReservationChange(
   current: ProcessData,
   publishedLocations: string[],
   slotDurationMinutes: number,
-  now = new Date(),
 ): { startAt: string; endAt: string; local: string; custom: boolean } {
   const date = String(input.date ?? '').trim();
   const time = String(input.time ?? '').trim();
@@ -27,8 +26,8 @@ export function validateReservationChange(
   }
   if (!isDefenseWeekday(date)) throw new Error(DEFENSE_WEEKDAY_MESSAGE);
   const requested = new Date(localDateTimeToIso(`${date}T${time}`, 'America/Sao_Paulo'));
-  if (!Number.isFinite(requested.getTime()) || requested.getTime() <= now.getTime()) {
-    throw new Error('Informe uma data e um horário futuros para a nova reserva.');
+  if (!Number.isFinite(requested.getTime())) {
+    throw new Error('Informe data e horário válidos para a nova solicitação.');
   }
 
   const custom = isOtherDefenseLocation(choice);

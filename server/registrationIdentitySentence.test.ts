@@ -21,5 +21,14 @@ test('new registration rejects missing choice or singular/plural mismatch and ke
  const payload=registrationPayload({...base(),AUTORIA_REFERENCIA:'a aluna'},'America/Sao_Paulo');
  assert.throws(()=>acceptRegistration({...payload,registrationAnswers:{...payload.registrationAnswers,AUTORIA_REFERENCIA:''}}),/obrigatório/);
  assert.throws(()=>acceptRegistration({...payload,registrationAnswers:{...payload.registrationAnswers,TEM_ALUNO_2:'Sim',ALUNO_2_NOME:'Beatriz Lima',ALUNO_2_EMAIL:'beatriz@edu.ufes.br',ALUNO_2_MATRICULA:'202600002'}}),/opção publicada/);
- const fields=registrationQuestions();for(const key of ['ORIENTADOR_TRATAMENTO','ORIENTADOR_TITULACAO','EXAMINADOR_2_TRATAMENTO','EXAMINADOR_3_TITULACAO']){const field=fields.find(q=>q.fieldKey===key)!;assert.equal(field.fieldType,'select');assert.equal(field.required,true);}
+ const fields=registrationQuestions();for(const key of ['ORIENTADOR_TRATAMENTO','ORIENTADOR_TITULACAO','EXAMINADOR_2_TRATAMENTO','EXAMINADOR_3_TITULACAO']){const field=fields.find(q=>q.fieldKey===key)!;assert.equal(field.fieldType,'select');assert.equal(field.required,key!=='EXAMINADOR_2_TRATAMENTO');}
+});
+
+
+test('examiners may omit the teaching treatment in new and previously configured forms',()=>{
+ const answers={...base(),AUTORIA_REFERENCIA:'a aluna',EXAMINADOR_2_TRATAMENTO:'',EXAMINADOR_3_TRATAMENTO:''};
+ const payload=registrationPayload(answers,'America/Sao_Paulo');const accepted=acceptRegistration(payload);
+ assert.deepEqual(accepted.banca.map(person=>person.tratamento),['','']);
+ const configured={formTemplates:[{id:'form-reserva-aluno',questions:[{fieldKey:'EXAMINADOR_2_TRATAMENTO',fieldType:'select',required:true,label:'Tratamento docente'}]}]} as any;
+ assert.equal(registrationQuestions(configured).find(q=>q.fieldKey==='EXAMINADOR_2_TRATAMENTO')!.required,false);
 });

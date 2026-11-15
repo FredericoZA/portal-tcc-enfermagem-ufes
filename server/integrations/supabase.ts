@@ -464,11 +464,69 @@ export async function refreshPortalRuntimeState<T extends object>(): Promise<T |
  * Omissão de RPC só ocorre durante implantação gradual; 401/403/5xx não
  * autorizam usar estado antigo ou dispensar verificações de acesso.
  */
-let cachedLiteSnapshot: {endpoint:string;revision:number;payload:object}|undefined;
+type RuntimeReadProjection = 'LITE'|'LEAN';
+type CachedRuntimeReadProjection = {endpoint:string;revision:number;payload:object;fingerprint?:string};
+let cachedLiteSnapshot: CachedRuntimeReadProjection|undefined;
+let conditionalProjectionBackoff: {endpoint:string;retryAfter:number}|undefined;
+
+/** A revision can change because of an audit event without changing anything
+ * this GET needs. The DB confirms the current projection hash in one MVCC read
+ * and omits its bytes only when they match this worker's verified copy. Every
+ * permission/session field remains in that hash. This cache is never used for
+ * writes and a denied/failed read never authorizes reusing an old snapshot.
+ */
+async function readConditionalRuntimeProjection(
+  kind:RuntimeReadProjection,cached:CachedRuntimeReadProjection|undefined,
+):Promise<{available:false}|{available:true;snapshot:CachedRuntimeReadProjection|null}>{
+  const endpoint=stateEndpoint();
+  if(process.env.PORTAL_RUNTIME_CONDITIONAL_READS==='false'
+    ||(conditionalProjectionBackoff?.endpoint===endpoint&&conditionalProjectionBackoff.retryAfter>Date.now()))return{available:false};
+  const known=cached?.endpoint===endpoint?cached:undefined;
+  const response=await readSupabase(
+    `${supabaseUrl()}/rest/v1/rpc/portal_read_runtime_projection_v1`,20_000,
+    JSON.stringify({projection_kind:kind,known_fingerprint:known?.fingerprint??null}),true,
+  );
+  if(response.status===404){
+    const detail=await response.clone().json().catch(()=>null);
+    if(detail?.code==='PGRST202'){
+      // An additive rollout may deploy the code before the migration. Do not
+      // repeat a missing RPC on every GET; the installed readers remain valid.
+      conditionalProjectionBackoff={endpoint,retryAfter:Date.now()+60_000};
+      return{available:false};
+    }
+  }
+  if(!response.ok)throw await runtimeReadFailure(response,'SNAPSHOT');
+  const rows:unknown=await response.json();
+  if(!Array.isArray(rows)||rows.length>1)throw new Error('A projeção condicional retornou um estado inválido.');
+  const row=rows[0];
+  if(rows.length===0){
+    if(known||(knownRevision!==null&&knownRevision>0))throw new Error('O estado persistido não foi encontrado no Supabase.');
+    return{available:true,snapshot:null};
+  }
+  if(!row||typeof row!=='object'||Array.isArray(row))throw new Error('A projeção condicional retornou um estado inválido.');
+  const{revision,fingerprint,payload}=row;
+  if(!Number.isSafeInteger(revision)||revision<1||typeof fingerprint!=='string'||!/^[a-f0-9]{64}$/.test(fingerprint)){
+    throw new Error('A projeção condicional retornou revisão ou identidade inválida.');
+  }
+  if(payload===null){
+    if(!known?.fingerprint||known.fingerprint!==fingerprint)throw new Error('A projeção condicional não confirmou o conteúdo em cache.');
+    return{available:true,snapshot:{...known,revision}};
+  }
+  if(!payload||typeof payload!=='object'||Array.isArray(payload)||Object.hasOwn(payload,'auditLogs')
+    ||(kind==='LEAN'&&Object.hasOwn(payload,'legacyAcademicRecords'))){
+    throw new Error('A projeção condicional retornou dados inválidos.');
+  }
+  return{available:true,snapshot:{endpoint,revision,payload,fingerprint}};
+}
 
 export async function loadPortalRuntimeLiteState<T extends object>():Promise<T|null>{
   if(!getSupabaseRuntimeStatus().durablePersistenceReady)return null;
   const endpoint=stateEndpoint();
+  const conditional=await readConditionalRuntimeProjection('LITE',cachedLiteSnapshot);
+  if(conditional.available){
+    cachedLiteSnapshot=conditional.snapshot??undefined;
+    return conditional.snapshot?structuredClone(conditional.snapshot.payload) as T:null;
+  }
   const response=await readSupabase(
     `${supabaseUrl()}/rest/v1/rpc/portal_read_runtime_lite_v1`,
     20_000, '{}', true
@@ -513,10 +571,15 @@ export async function refreshPortalRuntimeLiteState<T extends object>():Promise<
  * catalogue stays hydrated from the bootstrap; it is never written or replaced
  * from an incomplete payload. Full snapshot and CAS remain mandatory on writes.
  */
-let cachedLeanSnapshot:{endpoint:string;revision:number;payload:object}|undefined;
+let cachedLeanSnapshot:CachedRuntimeReadProjection|undefined;
 export async function loadPortalRuntimeLeanState<T extends object>():Promise<T|null>{
   if(!getSupabaseRuntimeStatus().durablePersistenceReady)return null;
   const endpoint=stateEndpoint();
+  const conditional=await readConditionalRuntimeProjection('LEAN',cachedLeanSnapshot);
+  if(conditional.available){
+    cachedLeanSnapshot=conditional.snapshot??undefined;
+    return conditional.snapshot?structuredClone(conditional.snapshot.payload) as T:null;
+  }
   const response=await readSupabase(
     `${supabaseUrl()}/rest/v1/rpc/portal_read_runtime_lean_v1`,20_000,'{}',true
   );
@@ -891,4 +954,16 @@ export async function purgeSupabaseProcessHistory(processId:string,protocol:stri
  if(!getSupabaseRuntimeStatus().durablePersistenceReady)return;
  const response=await fetch(`${supabaseUrl()}/rest/v1/rpc/portal_master_purge_process_history`,{method:'POST',headers:adminHeaders(),body:JSON.stringify({p_external_id:processId,p_protocol:protocol,p_job_ids:jobIds}),signal:AbortSignal.timeout(20000)});
  if(!response.ok){const detail=await response.json().catch(()=>({}));const code=String(detail?.code||'UNKNOWN').replace(/[^A-Z0-9_]/gi,'').slice(0,24);throw Error(code==='PGRST202'?'Supabase: a atualização da rotina de limpeza ainda não foi instalada.':`Supabase: limpeza pendente (HTTP ${response.status}; código ${code}).`);}
+}
+
+/** A revision-bound audit page must never populate the canonical write cache. */
+export async function readCriticalAuditPage(input:{revision:number;processId?:string;before?:{at:number;id:string}}):Promise<{revision:number;total:number;logs:import('../../src/types').AuditLog[];deliveries:import('../../src/types/automation').EmailDeliveryRecord[]}|null>{
+  if(!providerEnabled()||!supabaseUrl()||!supabaseSecret())return null;
+  const response=await readSupabase(`${supabaseUrl()}/rest/v1/rpc/portal_read_critical_audit_page_v1`,20_000,
+    JSON.stringify({expected_revision:input.revision,process_id:input.processId??null,before_at:input.before?.at??null,before_id:input.before?.id??null,read_at:Date.now()}),true);
+  if(response.status===404&&(await response.clone().json().catch(()=>null))?.code==='PGRST202')return null;
+  if(!response.ok)throw await runtimeReadFailure(response,'SNAPSHOT');
+  const value=await response.json();
+  if(!value||value.revision!==input.revision||!Number.isSafeInteger(value.total)||value.total<0||!Array.isArray(value.logs)||!Array.isArray(value.deliveries)||value.logs.length+value.deliveries.length>101)throw new Error('Página de auditoria inválida no Supabase.');
+  return value;
 }

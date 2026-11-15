@@ -312,6 +312,22 @@ export async function downloadDrivePdf(accessToken:string,fileId:string,expected
   return{pdf,fileName:String(metadata.name||'documento.pdf').replace(/[\r\n"]/g,'_')};
 }
 
+/** Resolve browser links without downloading PDF bytes or changing Drive permissions. */
+export async function resolvePrivateDriveBrowserLinks(input:{accessToken:string;fileId:string;email:string;processId:string;artifactType:string;signatureJobId?:string;expectedSha256?:string}):Promise<{view:string;download:string}|null>{
+  if(!/^[a-zA-Z0-9_-]{10,}$/.test(input.fileId))return null;
+  const permissions=await listDriveFilePermissions(input.accessToken,input.fileId);
+  if(permissions.some(isUnsafePrivateContainerPermission))throw new Error('Arquivo privado possui compartilhamento amplo no Google Drive.');
+  // Portal membership alone does not grant access to the Google account.
+  if(!permissions.some(p=>p.type==='user'&&String(p.emailAddress||'').trim().toLowerCase()===input.email.trim().toLowerCase()&&['owner','organizer','fileOrganizer','writer','commenter','reader'].includes(p.role)))return null;
+  const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,mimeType,trashed,appProperties,webViewLink,webContentLink&supportsAllDrives=true`,input.accessToken);
+  const file=await response.json(),properties=file.appProperties||{};
+  if(file.id!==input.fileId||file.trashed||file.mimeType!=='application/pdf'||properties.portal!=='portal-tcc'||properties.portalProcessId!==input.processId||properties.artifactType!==input.artifactType||(input.signatureJobId&&properties.portalSignatureJobId!==input.signatureJobId))throw new Error('O arquivo do Drive não corresponde ao documento solicitado.');
+  if(input.expectedSha256&&String(properties.sha256||'').toLowerCase()!==input.expectedSha256.toLowerCase())return null;
+  const safe=(value:unknown)=>{try{const url=new URL(String(value));return url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&['drive.google.com','docs.google.com','drive.usercontent.google.com'].includes(url.hostname)&&!['access_token','token','key'].some(key=>url.searchParams.has(key))?url.href:'';}catch{return '';}};
+  const view=safe(file.webViewLink),download=safe(file.webContentLink);
+  return view&&download?{view,download}:null;
+}
+
 export async function renamePortalProcessFolder(input:{accessToken:string;fileId:string;previousProtocol:string;protocol:string}){
  await assertPrivateContainer(input.accessToken,input.fileId);
  const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,name,mimeType,trashed&supportsAllDrives=true`,input.accessToken);

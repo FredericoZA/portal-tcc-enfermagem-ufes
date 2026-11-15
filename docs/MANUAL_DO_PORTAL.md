@@ -2,7 +2,7 @@
 
 O botão **Manual em PDF** fica fixado no cabeçalho de **Como usar**, disponível nos quatro perfis: Aluno, Orientador, Examinador e Visitante. Abre diretamente `/manual/manual-portal-tcc.pdf`, em nova aba, sem solicitar login. Não contém informações reais dos participantes.
 
-O guia de 08/11/2026 tem 20 páginas para alunos, orientadores e examinadores. Ensina
+O guia revisado em 15/11/2026 tem 21 páginas para alunos, orientadores e examinadores. Ensina
 acesso por código de e-mail, cadastro, reserva, conceito, conferência documental,
 entrega obrigatória do PDF do TCC e publicação opcional por arquivo. O tutorial de
 assinatura apresenta o envio automático pelo ASTEN e a alternativa Gov.br.
@@ -21,6 +21,16 @@ As ilustrações foram conferidas novamente em08/11/2026. O manifesto em
 `public/manual/capture-manifest.json` identifica, por arquivo, as recapturas feitas
 com os componentes React atuais e participantes fictícios. Essa conferência
 visual não executa reservas, entregas, e-mails ou assinaturas reais.
+
+## Correção opcional antes da ata
+
+Em **Meus TCCs → TCC → Conceito e Ata**, o orientador vinculado ao trabalho pode usar **Verificar dados do processo** quando a etapa de registro da ata estiver liberada, somente se houver dados preenchidos incorretamente no cadastro. Se estiver correto, pode prosseguir sem abrir a conferência.
+
+As abas **Trabalho**, **Autores**, **Orientação**, **Examinadores** e **Data e local** permitem corrigir as informações correspondentes. Apenas o e-mail do orientador não pode ser alterado. A data pode ser passada ou futura, respeitando a verificação de conflitos do calendário.
+
+Nomes completos, título, instituições e nome ou endereço do local devem ser conferidos: a grafia salva será usada na ata e nos demais termos. Após confirmar a conferência, use **Salvar dados e voltar à ata** e confira a prévia antes do registro. **Corrigir ata** ajusta o texto da prévia e não substitui a correção cadastral.
+
+A página 21 do PDF apresenta o passo a passo; as páginas de preparação e registro da ata apontam para ela. As ilustrações anteriores conservam suas datas de captura; a revisão textual não equivale a uma recaptura integral das telas.
 
 ## Atualizar o guia
 

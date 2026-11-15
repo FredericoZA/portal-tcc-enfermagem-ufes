@@ -32,7 +32,7 @@ test('leitura minima usa somente revisao confirmada e nunca aceita payload incom
   for(const [key,value] of Object.entries({
     SUPABASE_URL:'https://lean-runtime.invalid',SUPABASE_SECRET_KEY:'fixture',
     PORTAL_PERSISTENCE_PROVIDER:'supabase',PORTAL_RUNTIME_WIRE_SNAPSHOT:'false',
-    PORTAL_RUNTIME_AUDIT_DELTA:'false'
+    PORTAL_RUNTIME_AUDIT_DELTA:'false',PORTAL_RUNTIME_CONDITIONAL_READS:'false'
   })){const prev=process.env[key];process.env[key]=value;t.after(()=>{if(prev===undefined)delete process.env[key];else process.env[key]=prev;});}
   let revision=7,invalid=false,denied=false;
   const paths:string[]=[];
@@ -74,10 +74,11 @@ test('recuperacao privada de configuracoes arquivadas busca somente o evento esp
 });
 test('o middleware preserva o catalogo carregado quando a projeção omite acervo',async()=>{
   const server=await readFile('server.ts','utf8');
+  const projection=await readFile('server/runtimeReadProjection.ts','utf8');
   assert.match(server,/if \(Array\.isArray\(state\.legacyAcademicRecords\)\) legacyAcademicRecordsStore=/);
-  assert.match(server,/isLeanRuntimeRead\(req\.method,req\.path\)/);
+  assert.ok(/runtimeReadProjection\(req\.method,req\.path\)/.test(server),'server hydration must use the reviewed route projection classifier');
   assert.match(server,/const remote = liteRuntimeReadsEnabled\s*\? await loadPortalRuntimeLeanState/);
-  assert.match(server,/const LITE_RUNTIME_READ_PATHS = new Set/);
-  assert.match(server,/\'\/public\/repository\'/);
+  assert.match(projection,/const LITE_PATHS = new Set/);
+  assert.match(projection,/\'\/public\/repository\'/);
   assert.match(server,/await readArchivedSettingsBefore\(log\.id\)/);
 });
