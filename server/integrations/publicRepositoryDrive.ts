@@ -23,7 +23,13 @@ export async function publicRepositoryDriveLinks(input:{accessToken:string;sourc
   let copy:any;
   for(const item of found.files){
    const f=await metadata(String(item.id));
-   if(!valid(f)||f.appProperties?.portal!=='portal-tcc'||f.appProperties?.portalProcessId!==scope||f.appProperties?.publicationSourceFileId!==sourceFileId||f.appProperties?.sha256!==sha||f.appProperties?.artifactType!=='PUBLIC_REPOSITORY_COPY')throw Error('A cópia pública mudou. A publicação precisa ser revisada.');
+   if(f.appProperties?.portal!=='portal-tcc'||f.appProperties?.portalProcessId!==scope||f.appProperties?.publicationSourceFileId!==sourceFileId||f.appProperties?.artifactType!=='PUBLIC_REPOSITORY_COPY')throw Error('Cópia pública de outro vínculo.');
+   if(!valid(f)||f.appProperties?.sha256!==sha){
+    // A known public copy that changed must lose its public permission too;
+    // refusing the new Portal link alone would leave previously issued Drive links usable.
+    for(const permission of await listDriveFilePermissions(token,f.id))if(permission.type==='anyone')await request(token,`/files/${encodeURIComponent(f.id)}/permissions/${encodeURIComponent(permission.id)}?supportsAllDrives=true`,{method:'DELETE'});
+    throw Error('A cópia pública mudou. A publicação precisa ser revisada.');
+   }
    const acl=await listDriveFilePermissions(token,f.id);
    if(acl.some(p=>isUnsafePrivateContainerPermission(p)&&!(p.type==='anyone'&&p.role==='reader')))throw Error('Compartilhamento público inválido.');
    // Never turn a revoked/private existing copy public again from a visitor request.

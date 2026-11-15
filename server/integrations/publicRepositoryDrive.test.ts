@@ -39,3 +39,8 @@ test('an existing withdrawn copy is never republished by GET',async t=>{
 test('withdrawal revokes every derivative and never removes private owner access',async t=>{
  const f=fixture(t);f.state.existing=true;f.state.shared=true;assert.equal((await withdrawDriveFilePublicAccess('fixture',f.source)).removed,1);assert.equal(f.state.shared,false);assert.ok(f.calls.filter(c=>c.method==='DELETE').every(c=>c.path.endsWith('/public-permission')));
 });
+
+test('a modified public copy loses the permission behind previously issued Drive links',async t=>{
+ const f=fixture(t);f.state.existing=true;f.state.shared=true;f.copyMetadata.sha256Checksum='b'.repeat(64);
+ await assert.rejects(publicRepositoryDriveLinks(f.input),/cópia pública mudou/);assert.equal(f.state.shared,false);assert.ok(!f.calls.some(c=>c.method==='POST'));
+});
