@@ -9,7 +9,7 @@ function fixture(t:any){
  t.mock.method(globalThis,'fetch',async(input:any,init?:RequestInit)=>{
   const u=new URL(String(input)),method=init?.method||'GET',body=init?.body?JSON.parse(String(init.body)):null;calls.push({path:u.pathname,method,body});
   assert.equal(u.searchParams.has('alt'),false,'PDF bytes must stay in Drive');
-  if(u.pathname.endsWith('/copy')){assert.equal(method,'POST');assert.deepEqual(body.parents,[parent]);assert.equal(body.appProperties.publicationSourceFileId,source);state.existing=true;return Response.json(copyMetadata);}
+  if(u.pathname.endsWith('/copy')){assert.equal(method,'POST');assert.deepEqual(body.parents,[parent]);assert.equal(body.description,'');assert.equal(u.searchParams.get('ignoreDefaultVisibility'),'true');assert.equal(u.searchParams.get('copyComments'),'false');assert.equal(body.appProperties.publicationSourceFileId,source);state.existing=true;return Response.json(copyMetadata);}
   if(u.pathname.endsWith('/permissions')){
    const target=u.pathname.split('/').at(-2);
    if(method==='POST'){assert.equal(target,copy,'never share original or folder');assert.deepEqual(body,{type:'anyone',role:'reader',allowFileDiscovery:false});state.shared=true;return Response.json({id:'public-permission'});}

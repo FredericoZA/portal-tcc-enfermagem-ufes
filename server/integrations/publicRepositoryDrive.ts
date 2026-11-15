@@ -46,7 +46,7 @@ export async function publicRepositoryDriveLinks(input:{accessToken:string;sourc
    if(!Array.isArray(parents)||parents.length!==1||!idOk(parents[0]))throw Error('Pasta privada do original não confirmada.');
    if((await listDriveFilePermissions(token,parents[0])).some(isUnsafePrivateContainerPermission))throw Error('A pasta de origem precisa permanecer privada.');
    if(!await input.assertAuthorized())throw Error('A autorização mudou.');
-   const made=await (await request(token,`/files/${encodeURIComponent(sourceFileId)}/copy?fields=${fields}&supportsAllDrives=true`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:source.name,parents,appProperties:{portal:'portal-tcc',portalProcessId:scope,artifactType:'PUBLIC_REPOSITORY_COPY',publicationSourceFileId:sourceFileId,sha256:sha}})})).json();
+   const made=await (await request(token,`/files/${encodeURIComponent(sourceFileId)}/copy?fields=${fields}&supportsAllDrives=true&ignoreDefaultVisibility=true&copyComments=false`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:source.name,description:'',parents,appProperties:{portal:'portal-tcc',portalProcessId:scope,artifactType:'PUBLIC_REPOSITORY_COPY',publicationSourceFileId:sourceFileId,sha256:sha}})})).json();
    if(idOk(String(made.id)))createdId=made.id;
    if(!createdId||createdId===sourceFileId||!valid(made))throw Error('A cópia do PDF não foi confirmada.');
    if(!await input.assertAuthorized())throw Error('A autorização mudou.');
