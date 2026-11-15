@@ -35,6 +35,7 @@ export function existingDriveModelLinkImportEnabled(): boolean {
 }
 
 export function getGoogleWorkspaceScopes(): string[] {
+  if(process.env.GOOGLE_MANAGE_EXISTING_DRIVE_FILES==='true')return [...GOOGLE_WORKSPACE_SCOPES,'https://www.googleapis.com/auth/drive'];
   return existingDriveModelLinkImportEnabled()
     ? [...GOOGLE_WORKSPACE_SCOPES, 'https://www.googleapis.com/auth/drive.readonly']
     : [...GOOGLE_WORKSPACE_SCOPES];
@@ -213,6 +214,7 @@ export function getGoogleWorkspaceConfigStatus() {
     securityIssues: security.issues,
     redirectUri: redirectUri(),
     scopes: getGoogleWorkspaceScopes(),
+    existingFileManagementRequested:process.env.GOOGLE_MANAGE_EXISTING_DRIVE_FILES==='true',
     existingModelLinkImportEnabled: existingDriveModelLinkImportEnabled()
   };
 }
@@ -294,11 +296,12 @@ export async function persistGoogleWorkspaceAuthorization(input: { email: string
 
 export async function getGoogleWorkspaceStatus() {
   const config = getGoogleWorkspaceConfigStatus();
-  if (!config.oauthConfigured) return { ...config, connected: false, connectedEmail: '', connectedAt: '' };
+  if (!config.oauthConfigured) return { ...config, connected: false, connectedEmail: '', connectedAt: '',existingFileManagementAuthorized:false };
   const stored = await loadIntegrationSecret('google_workspace').catch(() => null);
   return {
     ...config,
     connected: Boolean(stored),
+    existingFileManagementAuthorized:Array.isArray(stored?.metadata?.scopes)&&stored.metadata.scopes.includes('https://www.googleapis.com/auth/drive'),
     connectedEmail: String(stored?.metadata?.email || ''),
     connectedAt: String(stored?.metadata?.connectedAt || stored?.updatedAt || '')
   };
