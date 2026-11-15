@@ -2,7 +2,7 @@
 const counters=new Map<string,{requests:number;bytes:number;errors:number;milliseconds:number}>();
 const startedAt=new Date().toISOString();
 function category(url:string){
- const path=new URL(url).pathname;
+ let path:string;try{path=new URL(url,'https://metrics.invalid').pathname;}catch{return 'other';}
  if(path.endsWith('/portal_runtime_state'))return 'runtime-state';
  if(path.endsWith('/portal_read_runtime_projection_v1'))return 'conditional-read';
  if(path.endsWith('/portal_read_critical_audit_page_v1'))return 'audit-page';
