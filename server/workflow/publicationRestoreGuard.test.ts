@@ -16,3 +16,11 @@ test('pending historical Drive withdrawal survives restoration until cleanup is 
  assert.equal(restoreChangesPublicFiles(before,{...before,legacy:[{...r,attachments:[]}]}),true);
  assert.equal(restoreChangesPublicFiles(before,{...before,legacy:[{...r,provenance:{...r.provenance,publicationWithdrawal:{...r.provenance.publicationWithdrawal,drivePending:false}}}]}),true);
 });
+
+test('current withdrawn publications retain status and source references for Drive retry',()=>{
+ const p:any={id:'p',status:'CONCLUIDO',acervo:{publicationState:'WITHDRAWN',publicationWithdrawnAt:'2026-11-15',trabalhoCompletoFileId:'private-source',trabalhoCompletoSha256:'a'.repeat(64),publicFullWorkFileId:'public-reference'}};
+ const before={processes:[p],jobs:[],legacy:[]};assert.equal(restoreChangesPublicFiles(before,structuredClone(before)),false);
+ assert.equal(restoreChangesPublicFiles(before,{...before,processes:[]}),true);
+ assert.equal(restoreChangesPublicFiles(before,{...before,processes:[{...p,acervo:{...p.acervo,publicationState:'NOT_REQUESTED'}}]}),true);
+ assert.equal(restoreChangesPublicFiles(before,{...before,processes:[{...p,acervo:{...p.acervo,publicFullWorkFileId:undefined}}]}),true);
+});
