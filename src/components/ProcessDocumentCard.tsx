@@ -8,7 +8,7 @@ import {formatDateNumericWithWeekday, formatTime24h} from '../utils/formatters';
 
 const DocumentFilePreview=React.lazy(()=>import('./DocumentFilePreview').then(module=>({default:module.DocumentFilePreview})));
 
-function ProcessDocumentActions({available, working = false, onView, onDownload, viewRef}: {available: boolean; working?: boolean; onView: () => void; onDownload: () => void; viewRef?: React.Ref<HTMLButtonElement>}) {
+export function ProcessDocumentActions({available, working = false, onView, onDownload, viewRef}: {available: boolean; working?: boolean; onView: () => void; onDownload: () => void; viewRef?: React.Ref<HTMLButtonElement>}) {
   return <div className="portal-document-actions flex flex-wrap items-stretch gap-2 pt-2.5 border-t border-slate-100">
     <button ref={viewRef} type="button" onClick={onView} disabled={!available || working} className="portal-document-view basis-20 flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer disabled:cursor-not-allowed" title="Visualizar documento em tela"><Eye className="w-3.5 h-3.5"/><span>Ver</span></button>
     <button type="button" onClick={onDownload} disabled={!available || working} className={`portal-document-download basis-20 flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-2xs ${available ? 'text-white bg-[var(--portal-brand-header)] hover:bg-[#004827] cursor-pointer' : 'bg-slate-200 text-[var(--portal-text-muted)] cursor-not-allowed'}`} title="Baixar PDF do documento"><Download className="w-3.5 h-3.5"/><span>{working ? 'Baixando…' : 'Baixar PDF'}</span></button>

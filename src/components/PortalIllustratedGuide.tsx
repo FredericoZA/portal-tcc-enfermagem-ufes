@@ -248,7 +248,7 @@ export const guideActivities: GuideActivity[] = [
       'No menu lateral, clique em Repositório. Abra a busca e digite título, autor ou outro dado do trabalho. A lista é filtrada enquanto você escreve, sem botão OK.',
       'Use os filtros e a paginação da tabela. Na coluna Resumo, passe o mouse sobre o ícone, use o foco do teclado ou toque no ícone no celular para ler o texto completo.',
       'Clique no código para abrir a mesma ficha do TCC em modo de consulta. E-mails e outros dados pessoais não aparecem na ficha pública.',
-      'Em Repositório acadêmico, abra os PDFs autorizados. A presença do trabalho na lista não torna todos os seus arquivos públicos.',
+      'Em Repositório acadêmico, use Ver para visualizar no Google Drive ou Baixar PDF para baixar diretamente do Drive. Esses botões aparecem somente para cada arquivo autorizado como público. A presença do trabalho na lista não torna todos os seus arquivos públicos.',
     ],
     done: 'Você localizou o trabalho, leu o resumo e acessou os arquivos liberados para publicação.',
     help: [

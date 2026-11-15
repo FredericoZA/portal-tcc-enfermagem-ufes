@@ -258,12 +258,27 @@ export async function preparePrivatePublicationSource(input:{accessToken:string;
 
 export async function withdrawDriveFilePublicAccess(accessToken:string,fileId:string):Promise<{removed:number}>{
   if(!fileId)return {removed:0};
-  const permissions=await listDriveFilePermissions(accessToken,fileId);
+  // Revoke the original/public reference and every derived repository copy.
+  // This also finds copies made for installations whose public reference is the private source ID.
+  const query=`trashed = false and appProperties has { key='portal' and value='portal-tcc' } and appProperties has { key='publicationSourceFileId' and value='${escapeQuery(fileId)}' }`;
+  const ids=new Set([fileId]);let pageToken='';const seen=new Set<string>();
+  do{
+    const params=new URLSearchParams({q:query,fields:'files(id),nextPageToken',pageSize:'100',supportsAllDrives:'true',includeItemsFromAllDrives:'true',...(pageToken?{pageToken}:{})});
+    const result=await (await driveRequest(`${DRIVE_API}/files?${params}`,accessToken)).json();
+    if(!Array.isArray(result.files))throw Error('Inventário público não confirmado.');
+    for(const file of result.files){if(!/^[\w-]{10,150}$/.test(String(file.id)))throw Error('Cópia pública inválida.');ids.add(file.id);}
+    pageToken=result.nextPageToken||'';if(pageToken){if(seen.has(pageToken)||seen.size>=100)throw Error('Inventário público incompleto.');seen.add(pageToken);}
+  }while(pageToken);
+  let removed=0;
+  for(const targetId of ids){
+  const permissions=await listDriveFilePermissions(accessToken,targetId);
   const publicPermissions=permissions.filter((permission:any)=>permission.type==='anyone');
   for(const permission of publicPermissions){
-    await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}/permissions/${encodeURIComponent(permission.id)}?supportsAllDrives=true`,accessToken,{method:'DELETE'});
+    await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(targetId)}/permissions/${encodeURIComponent(permission.id)}?supportsAllDrives=true`,accessToken,{method:'DELETE'});
   }
-  return {removed:publicPermissions.length};
+  removed+=publicPermissions.length;
+  }
+  return {removed};
 }
 
 export async function inspectPortalDriveArtifact(input:{accessToken:string;fileId:string;expectedSha256?:string;expectedVersion?:number;expectPublic:boolean;expectedSourceFileId?:string}){

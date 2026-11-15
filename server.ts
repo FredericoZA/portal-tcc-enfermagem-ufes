@@ -1,3 +1,5 @@
+import {restoreChangesPublicFiles} from './server/workflow/publicationRestoreGuard';
+import {publicRepositoryDriveLinks} from './server/integrations/publicRepositoryDrive';
 import {archiveRetiredRuntimeBackups} from './server/backup/retention';
 import {createPublicRepositoryReader,installPublicRepositoryRoute} from './server/publicRepositoryData';
 import {loadPortalRepositorySnapshot} from './server/integrations/supabase';
@@ -3884,6 +3886,12 @@ export async function createPortalApp() {
     const file=record?.attachments[index];
     // Denied, missing and conflicting consent never reach the storage provider.
     if(!record||!file||!legacyFileIsPublic(record,file))return res.status(404).json({error:'Arquivo não disponível para publicação.'});
+    if(req.query.delivery==='drive-links'){
+      res.setHeader('Cache-Control','private, no-store');
+      if(localReviewFilesEnabled())return res.json({links:null});
+      try{return res.json({links:await publicRepositoryDriveLinks({accessToken:await getGoogleWorkspaceAccessToken(),sourceFileId:file.driveFileId,scope:record.id,sha256:file.sha256,assertAuthorized:()=>repositoryPublicationStillCurrent(res)})});}
+      catch{return res.status(409).json({error:'Não foi possível confirmar o PDF público no Drive. A publicação permanece protegida até a revisão.'});}
+    }
     try{
       const pdf=await readLegacyAcademicPdf(file);
       await deliverPortalDownload({res,bytes:pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:`public:${req.ip||'unknown'}:${record.id}:${index}`,cacheControl:'no-store, max-age=0'});
@@ -5152,6 +5160,11 @@ export async function createPortalApp() {
     }catch(error){const message=error instanceof Error?error.message:'Falha ao armazenar o PDF no Google Drive.';const clientError=/arquivo|upload|checksum|MIME|sessão|processo|finalidade|fallback/i.test(message);res.status(clientError?400:502).json({error:message});}
   });
 
+  const repositoryPublicationStillCurrent=async(res:express.Response)=>{
+    const captured=res.locals.portalRuntimeReadRevision;
+    return Number.isSafeInteger(captured)&&captured>0&&await readPortalRuntimeRevision()===captured;
+  };
+
   app.get('/api/public/processes/:id/files/:kind/download',async(req,res)=>{
     if(!allowPublicDownload(req.ip||''))return res.status(429).json({error:'Limite temporário de downloads atingido. Tente novamente em instantes.'});
     const process=processesStore.find(item=>item.id===req.params.id||item.protocolo===req.params.id);
@@ -5162,6 +5175,12 @@ export async function createPortalApp() {
     const fileId=isFull?process.acervo?.trabalhoCompletoFileId:isExpanded?process.acervo?.resumoExpandidoFileId:'';
     if(!fileId)return res.status(404).json({error:'Arquivo não encontrado.'});
     const authorizedHash=isFull?process.acervo?.trabalhoCompletoSha256:process.acervo?.resumoExpandidoSha256;
+    if(req.query.delivery==='drive-links'){
+      res.setHeader('Cache-Control','private, no-store');
+      if(localReviewFilesEnabled()&&fileId.startsWith('local_review_'))return res.json({links:null});
+      try{return res.json({links:await publicRepositoryDriveLinks({accessToken:await getGoogleWorkspaceAccessToken(),sourceFileId:fileId,scope:process.id,sha256:String(authorizedHash||''),artifactType:isFull?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO',assertAuthorized:()=>repositoryPublicationStillCurrent(res)})});}
+      catch{return res.status(409).json({error:'Não foi possível confirmar o PDF público no Drive. A publicação permanece protegida até a revisão.'});}
+    }
     const etag=publicPdfEtag(authorizedHash);
     res.setHeader('Cache-Control',PUBLIC_PDF_CACHE_CONTROL);
     res.setHeader('Vary','Cookie');
@@ -5337,14 +5356,18 @@ export async function createPortalApp() {
     const reason=String(req.body?.reason||'').trim();
     if(reason.length<10)return res.status(400).json({error:'Informe o motivo da retirada com pelo menos 10 caracteres.'});
     const process=processesStore[index];
-    if(!publicationRequested(process))return res.status(409).json({error:'Este TCC não possui publicação ativa.'});
+    if(!publicationRequested(process)&&process.acervo?.publicationState!=='WITHDRAWN')return res.status(409).json({error:'Este TCC não possui publicação ativa.'});
     const now=new Date().toISOString();
     const before={publishFullWork:process.acervo?.publishFullWork,publishExpandedAbstract:process.acervo?.publishExpandedAbstract,publicFullWorkFileId:process.acervo?.publicFullWorkFileId,publicExpandedAbstractFileId:process.acervo?.publicExpandedAbstractFileId,trabalhoCompletoVersion:process.acervo?.trabalhoCompletoVersion,trabalhoCompletoSha256:process.acervo?.trabalhoCompletoSha256,resumoExpandidoVersion:process.acervo?.resumoExpandidoVersion,resumoExpandidoSha256:process.acervo?.resumoExpandidoSha256};
-    try{const accessToken=await getGoogleWorkspaceAccessToken();if(process.acervo?.publicFullWorkFileId)await withdrawDriveFilePublicAccess(accessToken,process.acervo.publicFullWorkFileId);if(process.acervo?.publicExpandedAbstractFileId)await withdrawDriveFilePublicAccess(accessToken,process.acervo.publicExpandedAbstractFileId);}catch(error){return res.status(502).json({error:error instanceof Error?error.message:'Não foi possível remover o acesso público no Drive.'});}
     const updated:ProcessData={...process,acervo:{...process.acervo,publishFullWork:false,publishExpandedAbstract:false,isPublic:false,publicationState:'WITHDRAWN',publicationWithdrawnAt:now,publicationWithdrawnBy:identity.email,publicationWithdrawalReason:reason},dataRevision:process.dataRevision+1,updatedAt:now};
     processesStore[index]=updated;
     auditLogsStore.push({id:`log-${Date.now()}`,processId:process.id,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'RETIRADA_PUBLICACAO_REPOSITORIO',entityType:'publication',entityId:process.id,before,after:{reason,withdrawnAt:now},timestamp:now});
-    persistPortalState();res.json({processId:process.id,withdrawnAt:now,public:false});
+    try{await persistPortalStateDurably();}catch{return res.status(503).json({error:'A retirada não foi confirmada no banco. Recarregue antes de tentar novamente.'});}
+    try{
+      const accessToken=await getGoogleWorkspaceAccessToken();
+      for(const id of new Set([process.acervo?.publicFullWorkFileId,process.acervo?.publicExpandedAbstractFileId,process.acervo?.trabalhoCompletoFileId,process.acervo?.resumoExpandidoFileId].filter(Boolean) as string[]))await withdrawDriveFilePublicAccess(accessToken,id);
+    }catch{return res.status(502).json({error:'A publicação foi bloqueada no Portal. A retirada das cópias do Drive está pendente; repita a retirada para concluir.',code:'PUBLIC_DRIVE_REVOCATION_PENDING'});}
+    res.json({processId:process.id,withdrawnAt:now,public:false});
   });
 
   // POST /api/processes/:id/reopen (registered advisor or Master reopens evaluation)
@@ -6692,6 +6715,7 @@ ${auditChanges(log)}`).join('\n\n');
     }
     let restoredProtocolCounters:ProcessProtocolCounters;
     try{restoredProtocolCounters=seedProcessProtocolCounters(mergeProcessProtocolCounters(processProtocolCountersStore,req.body?.processProtocolCounters),safeProcesses.map(process=>process.protocolo));}catch{return res.status(400).json({error:'Contador de protocolos inválido no backup.'});}
+    if(restoreChangesPublicFiles({processes:processesStore,legacy:legacyAcademicRecordsStore,jobs:signatureJobsStore},{processes:safeProcesses,legacy:safeLegacyAcademicRecords,jobs:operationalMetadata.signatureJobs}))return res.status(409).json({error:'A restauração não pode alterar a publicação vigente dos arquivos. Preserve as escolhas atuais no backup e use a retirada de publicação para revogar o acesso.',code:'BACKUP_PUBLICATION_CHANGE_BLOCKED'});
     const restorePayload={processProtocolCounters:restoredProtocolCounters,tablePreferences:safeTablePreferences,operationalMetadata,schemaVersion:Number(req.body?.schemaVersion||1),settings:safeSettings,processes:safeProcesses,legacyAcademicRecords:safeLegacyAcademicRecords,authorizedStudents:Array.isArray(authorizedStudents)?authorizedStudents:authorizedStudentsStore,notificationPreferences:notificationPreferences&&typeof notificationPreferences==='object'&&!Array.isArray(notificationPreferences)?notificationPreferences:{},dataSubjectRequests:Array.isArray(dataSubjectRequests)?dataSubjectRequests:[],legalHolds:safeLegalHolds,studioVersions:Array.isArray(studioVersions)?studioVersions:[]};
     const expectedHash=createHash('sha256').update(JSON.stringify(restorePayload)).digest('hex');
     if(String(confirmHash||'')!==expectedHash)return res.json({requiresConfirmation:true,confirmHash:expectedHash,summary:{processCount:processes.length,legacyCount:restorePayload.legacyAcademicRecords.length,authorizedCount:restorePayload.authorizedStudents.length,administratorsPreserved:true,auditTrailPreserved:true}});

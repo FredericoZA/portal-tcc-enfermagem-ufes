@@ -49,6 +49,7 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
     assert.equal((await request('/api/admin/legacy-academic-records')).status,401);
     assert.equal((await request(route,master,{...payload,expectedRevision:'stale'})).status,409);
     assert.equal((await request(route,master,payload)).body.imported,1);
+    assert.equal((await request('/api/legacy-academic-records/legado-0001/files/0/download?delivery=drive-links')).status,404);
     const publicRows=await request('/api/legacy-academic-records');assert.equal(publicRows.body.length,1);assert.ok(!JSON.stringify(publicRows.body).includes('private_file_123456'));assert.equal(publicRows.body[0].resumo,record.resumo);assert.deepEqual(publicRows.body[0].publicFiles,[]);
     const privateRows=await request('/api/admin/legacy-academic-records',master);assert.equal(privateRows.body.records[0].attachments[0].driveFileId,'private_file_123456');
     assert.equal((await request(route,master,{...payload,expectedRevision:privateRows.body.revision})).body.imported,0);

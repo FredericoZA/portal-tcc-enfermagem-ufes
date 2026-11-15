@@ -26,10 +26,10 @@ test('HTTP revalidation avoids rereading an approved PDF and checks publication 
  };
  const stop=async()=>{if(child?.exitCode===null){const done=new Promise(r=>child!.once('exit',r));child.kill('SIGTERM');await done;}};
  try{
- await start();const first=await fetch(route);assert.equal(first.status,200,await first.clone().text());assert.deepEqual(Buffer.from(await first.arrayBuffer()),bytes);assert.equal(first.headers.get('etag'),publicPdfEtag(hash));assert.match(first.headers.get('cache-control')!,/private.*no-cache/);
+ await start();assert.deepEqual(await (await fetch(route+'?delivery=drive-links')).json(),{links:null});assert.equal((await fetch(route.replace('trabalho-completo','resumo-expandido')+'?delivery=drive-links')).status,404);const first=await fetch(route);assert.equal(first.status,200,await first.clone().text());assert.deepEqual(Buffer.from(await first.arrayBuffer()),bytes);assert.equal(first.headers.get('etag'),publicPdfEtag(hash));assert.match(first.headers.get('cache-control')!,/private.*no-cache/);
  await rm(file);const reused=await fetch(route,{headers:{'if-none-match':first.headers.get('etag')!}});assert.equal(reused.status,304);assert.equal((await reused.arrayBuffer()).byteLength,0);
  assert.equal((await fetch(route,{headers:{'if-none-match':publicPdfEtag('a'.repeat(64))!}})).status,502,'a different hash cannot skip the file read');
  await stop();const state=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));state.processes.find((row:any)=>row.id===p.id).acervo.publicationWithdrawnAt=new Date().toISOString();await writeFile(path.join(directory,'portal-state.json'),JSON.stringify(state));await start();
- const revoked=await fetch(route,{headers:{'if-none-match':publicPdfEtag(hash)!}});assert.equal(revoked.status,404);assert.equal(revoked.headers.get('etag')===publicPdfEtag(hash),false);
+ assert.equal((await fetch(route+'?delivery=drive-links')).status,404);const revoked=await fetch(route,{headers:{'if-none-match':publicPdfEtag(hash)!}});assert.equal(revoked.status,404);assert.equal(revoked.headers.get('etag')===publicPdfEtag(hash),false);
  }finally{await stop();await rm(directory,{recursive:true,force:true});}
 });
